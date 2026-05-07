@@ -148,9 +148,9 @@ namespace {
         float ratio_1 = GetTitleProgressRatio(t1->title_id, title_1, show_overall_title_progress);
         float ratio_2 = GetTitleProgressRatio(t2->title_id, title_2, show_overall_title_progress);
 
-        return ratio_1 > ratio_2; // higher progress comes first
+        if (ratio_1 != ratio_2) return ratio_1 > ratio_2; // higher progress comes first
+            return t1->title_id < t2->title_id;               // stable tiebreaker
     }
-    
     int TitleSortHandler(uint32_t frame_id_1, uint32_t frame_id_2)
     {
         auto GetTitleInfo = [](uint32_t frame_id, GW::Constants::TitleID* title_id_out) -> GW::Title* {
@@ -163,6 +163,7 @@ namespace {
             if (title_id_out) *title_id_out = (GW::Constants::TitleID)title_id;
             return &w->titles[title_id];
         };
+
         auto title_id_1 = (GW::Constants::TitleID)0;
         auto title_id_2 = (GW::Constants::TitleID)0;
         const auto title_1 = GetTitleInfo(frame_id_1, &title_id_1);
@@ -170,31 +171,20 @@ namespace {
 
         if (!title_1 || !title_2) return 0;
 
-        // Check for unavailable titles (points_needed_next_rank == -1)
-        bool unavailable_1 = (title_1->points_needed_next_rank == 0xFFFFFFFF);
-        bool unavailable_2 = (title_2->points_needed_next_rank == 0xFFFFFFFF);
+        // Update progress bars as a side effect
+        auto update_progress = [](uint32_t frame_id, float ratio) {
+            const auto progress = (GW::ProgressBar*)GW::UI::GetChildFrame(GW::UI::GetFrameById(frame_id), 2);
+            if (progress) {
+                progress->SetMax(1000);
+                progress->SetValue(static_cast<uint32_t>(std::floor(ratio * 1000.0f)));
+            }
+        };
+        update_progress(frame_id_1, GetTitleProgressRatio(title_id_1, title_1, show_overall_title_progress));
+        update_progress(frame_id_2, GetTitleProgressRatio(title_id_2, title_2, show_overall_title_progress));
 
-        if (unavailable_1 != unavailable_2) {
-            return unavailable_1 ? 1 : 0; // unavailable title goes after available one
-        }
-
-        float ratio_1 = GetTitleProgressRatio(title_id_1, title_1, show_overall_title_progress);
-        float ratio_2 = GetTitleProgressRatio(title_id_2, title_2, show_overall_title_progress);
-
-        const auto progress_1 = (GW::ProgressBar*)GW::UI::GetChildFrame(GW::UI::GetFrameById(frame_id_1), 2);
-        if (progress_1) {
-            progress_1->SetMax(1000);
-            progress_1->SetValue(static_cast<uint32_t>(std::floor(ratio_1 * 1000.0f)));
-            // progress_1->SetStyle((GW::ProgressBar::ProgressBarStyle)8);
-        }
-        const auto progress_2 = (GW::ProgressBar*)GW::UI::GetChildFrame(GW::UI::GetFrameById(frame_id_2), 2);
-        if (progress_2) {
-            progress_2->SetMax(1000);
-            progress_2->SetValue(static_cast<uint32_t>(std::floor(ratio_2 * 1000.0f)));
-            // progress_2->SetStyle((GW::ProgressBar::ProgressBarStyle)8);
-        }
-
-        return (ratio_1 < ratio_2) ? 1 : 0; // higher progress comes first
+        // Reuse TitleProgress comparison logic via temporary wrappers
+        TitleProgress p1(title_id_1), p2(title_id_2);
+        return CompareTitleProgress(&p1, &p2) ? 1 : 0;
     }
     GW::ScrollableFrame::SortHandler_pt OriginalSortHandler = 0;
     bool OverrideTitleSortOrder(bool _override = true)
@@ -204,7 +194,8 @@ namespace {
         if (!OriginalSortHandler) {
             OriginalSortHandler = frame->GetSortHandler();
         }
-        return frame->SetSortHandler(0) && frame->SetSortHandler(_override ? TitleSortHandler : OriginalSortHandler);
+        if (_override) frame->SetSortHandler(0);
+        return frame->SetSortHandler(_override ? TitleSortHandler : OriginalSortHandler);
     }
 
     void RefreshTitleProgress()
