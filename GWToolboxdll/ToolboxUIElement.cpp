@@ -113,6 +113,7 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_titlebar);
     LOAD_BOOL(show_closebutton);
     LOAD_BOOL(show_breakout_button);
+    LOAD_BOOL(lock_breakout_button);
     LOAD_STRING(snapped_frame_label);
 }
 
@@ -127,6 +128,7 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_titlebar);
     SAVE_BOOL(show_closebutton);
     SAVE_BOOL(show_breakout_button);
+    SAVE_BOOL(lock_breakout_button);
     SAVE_STRING(snapped_frame_label);
 }
 
@@ -254,9 +256,26 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             MainWindow::Instance().pending_refresh_buttons = true;
         }
     }
-    ImGui::NextSpacedElement();
     ImGui::Checkbox("Show breakout button", &show_breakout_button);
     ImGui::ShowHelp("Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
+    if (show_breakout_button) {
+        ImGui::Indent();
+        ImGui::Checkbox("Lock breakout button position", &lock_breakout_button);
+        if (!lock_breakout_button) {
+            char breakout_window_id[256];
+            snprintf(breakout_window_id, sizeof(breakout_window_id), "%s##breakout_btn", Name());
+            const auto breakout_window = ImGui::FindWindowByName(breakout_window_id);
+            ImVec2 breakout_pos(0, 0);
+            if (breakout_window) {
+                breakout_pos = breakout_window->Pos;
+            }
+            if (ImGui::DragFloat2("Breakout position", reinterpret_cast<float*>(&breakout_pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
+                ImGui::SetWindowPos(breakout_window_id, breakout_pos);
+            }
+            ImGui::ShowHelp("You need to show the breakout button for this control to work");
+        }
+        ImGui::Unindent();
+    }
 }
 
 void ToolboxUIElement::ShowVisibleRadio()
@@ -283,7 +302,7 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     char window_id[256];
     snprintf(window_id, sizeof(window_id), "%s##breakout_btn", Name());
 
-    constexpr auto flags =
+    ImGuiWindowFlags flags =
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoScrollWithMouse |
@@ -291,15 +310,19 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         ImGuiWindowFlags_NoFocusOnAppearing |
         ImGuiWindowFlags_NoNav;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {2.f, 2.f});
+    if (!ToolboxSettings::move_all && lock_breakout_button) {
+        flags |= ImGuiWindowFlags_NoMove;
+    }
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {6.f, 6.f});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {10.f, 10.f});
 
     if (ImGui::Begin(window_id, nullptr, flags)) {
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {6.f, 4.f});
         const float btn_size = ImGui::GetTextLineHeight() + ImGui::GetStyle().FramePadding.y * 2.f;
         const char* icon = Icon();
 
-        const auto& style = ImGui::GetStyle();
-        const auto active_col = style.Colors[ImGuiCol_ButtonActive];
+        const auto active_col = ImGui::GetStyle().Colors[ImGuiCol_ButtonActive];
         const auto inactive_col = ImVec4(0.15f, 0.15f, 0.15f, 0.8f);
         ImGui::PushStyleColor(ImGuiCol_Button, visible ? active_col : inactive_col);
 
@@ -316,13 +339,18 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         }
 
         ImGui::PopStyleColor();
+        ImGui::PopStyleVar(); // FramePadding
 
         if (clicked) {
             ToggleVisible();
         }
 
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("%s", Name());
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {8.f, 6.f});
+            ImGui::BeginTooltip();
+            ImGui::Text("%s", Name());
+            ImGui::EndTooltip();
+            ImGui::PopStyleVar();
         }
 
         if (ImGui::BeginPopupContextWindow()) {

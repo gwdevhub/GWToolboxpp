@@ -48,6 +48,7 @@ public:
     bool show_menubutton = false;
     bool auto_size = false;
     bool show_breakout_button = false;
+    bool lock_breakout_button = false;
 
     bool* GetVisiblePtr()
     {
