@@ -2,6 +2,7 @@
 
 #include <Modules/Resources.h>
 #include <Windows/InventorySorting.h>
+#include <Windows/DailyQuestsWindow.h>
 #include <Modules/InventoryManager.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -18,6 +19,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <ctime>
 #include <sstream>
 #include <thread>
 #include <Utils/ToolboxUtils.h>
@@ -62,8 +64,17 @@ namespace {
     // Sort order configuration
     std::vector<GW::Constants::ItemType> sort_order;
 
+    // When true, Nicholas items are sorted by weeks until Nick asks for them (current week first)
+    bool sort_nick_by_cycle = true;
+
     /**
      * Gets the sort priority for an item (lower = higher priority).
+     *
+     * Layout when sort_nick_by_cycle is enabled:
+     *   - Nick items:     0x00000000 | weeks_until  (0 = this week, up to 136)
+     *   - Other items:    (type_priority + 1) << 24 | model_file_id
+     * Layout when sort_nick_by_cycle is disabled (original):
+     *   - All items:      type_priority << 24 | model_file_id
      */
     uint32_t GetItemSortPriority(GW::Item* item)
     {
@@ -74,13 +85,32 @@ namespace {
 
         // TODO: Add custom sorting my model id
 
+        if (sort_nick_by_cycle) {
+            const auto* nick_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
+            if (nick_info) {
+                const time_t now = time(nullptr);
+                const time_t next_active = DailyQuests::GetTimestampFromNicholasTheTraveller(
+                    const_cast<DailyQuests::NicholasCycleData*>(nick_info));
+                // 0 = active this week, 1 = next week, …
+                const uint32_t weeks_until = next_active > now
+                    ? static_cast<uint32_t>((next_active - now) / 604800)
+                    : 0u;
+                return weeks_until;
+            }
+        }
+
         size_t priority_by_type = 0;
-        for (priority_by_type; priority_by_type < sort_order.size(); priority_by_type++) {
+        for (; priority_by_type < sort_order.size(); priority_by_type++) {
             if (std::to_underlying(sort_order[priority_by_type]) == std::to_underlying(item->type))
                 break;
         }
 
-        // Fisrt 8 bits are priority, then next 8 bits is item type, then 16 bits are model_id
+        if (sort_nick_by_cycle) {
+            // Shift by 1 so that all non-Nick items (priority >= 0x01000000) sort after Nick items (0–136)
+            return ((static_cast<uint32_t>(priority_by_type) + 1u) << 24) | (item->model_file_id & 0xFFFFFF);
+        }
+
+        // Original encoding: first 8 bits are type priority, last 24 bits are model_id
         return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | (item->model_file_id & 0xffFFFF);
     }
 
@@ -270,11 +300,15 @@ void InventorySorting::LoadSettings(ToolboxIni* ini)
     if (sort_order.empty()) {
         ResetSortOrder();
     }
+
+    sort_nick_by_cycle = ini->GetBoolValue(Name(), "sort_nick_by_cycle", sort_nick_by_cycle);
 }
 
 void InventorySorting::SaveSettings(ToolboxIni* ini)
 {
     ToolboxUIElement::SaveSettings(ini);
+
+    ini->SetBoolValue(Name(), "sort_nick_by_cycle", sort_nick_by_cycle);
 
     // Save sort order to ini
     ini->SetLongValue(Name(), "sort_order_count", static_cast<long>(sort_order.size()));
@@ -294,6 +328,11 @@ void InventorySorting::Draw(IDirect3DDevice9*)
 void InventorySorting::DrawSettingsInternal()
 {
     ImGui::PushID("inventory_sorting_settings");
+    ImGui::Checkbox("Sort Nicholas items by weekly cycle", &sort_nick_by_cycle);
+    ImGui::ShowHelp("When enabled, items collected by Nicholas the Traveler are sorted by how soon\n"
+                    "Nick will ask for them (current week first). Nick items always appear before\n"
+                    "other inventory items in the sorted result.");
+    ImGui::Spacing();
     bool open = ImGui::CollapsingHeader("Change Storage Inventory Sorting Order", ImGuiTreeNodeFlags_SpanLabelWidth);
     ImGui::SameLine(0.f, 20.f);
     bool sort_inv = false;
