@@ -1719,20 +1719,12 @@ void GameSettings::Initialize()
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry, [this](GW::HookStatus* status, const GW::Packet::StoC::AgentModel* packet) {
-        if (!block_dervish_avatar_form)
-            return;
-        if (packet->agent_id != GW::Agents::GetControlledCharacterId())
-            return;
-        constexpr uint32_t avatar_model_file_ids[] = {0x3F8B, 0x32AE0, 0x32AEA, 0x32AEF, 0x32AF4};
+        constexpr std::array<uint32_t, 5> avatar_model_file_ids = {0x3F8B, 0x32AE0, 0x32AEA, 0x32AEF, 0x32AF4};
         const auto npc = GW::Agents::GetNPCByID(packet->model_id);
-        if (!npc)
+        if (!block_dervish_avatar_form || packet->agent_id != GW::Agents::GetControlledCharacterId() || !npc)
             return;
-        for (const auto model_file_id : avatar_model_file_ids) {
-            if (npc->model_file_id == model_file_id) {
-                status->blocked = true;
-                return;
-            }
-        }
+        if (std::ranges::contains(avatar_model_file_ids, npc->model_file_id))
+            status->blocked = true;
     });
 
     RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, OnChangeTarget);
