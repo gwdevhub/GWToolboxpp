@@ -19,6 +19,7 @@
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Quest.h>
