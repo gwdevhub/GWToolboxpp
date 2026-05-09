@@ -1720,7 +1720,7 @@ void GameSettings::Initialize()
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry, [this](GW::HookStatus* status, const GW::Packet::StoC::AgentModel* packet) {
-        constexpr std::array<uint32_t, 5> avatar_model_file_ids = {0x3F8B, 0x32AE0, 0x32AEA, 0x32AEF, 0x32AF4};
+        constexpr std::array<uint32_t, 5> avatar_model_file_ids = {0x3F8B, 0x3f4b, 0x3AAA, 0x3F81, 0x3212};
         const auto npc = GW::Agents::GetNPCByID(packet->model_id);
         if (!block_dervish_avatar_form || packet->agent_id != GW::Agents::GetControlledCharacterId() || !npc)
             return;
