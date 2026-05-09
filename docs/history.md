@@ -7,6 +7,28 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.18
+
+* [New] Added `/tb save [profile]` and `/tb load [profile]` chat commands to save/load Toolbox settings to disk with optional profile names
+* [New] Vanquish map overlay now detects and visualises unreachable areas (blocked gates, impassable terrain) using BFS pathfinding — distinct colours distinguish blocked vs reachable areas
+* [New] Daily Quests window: added toggle to show pre-searing dailies while in post-searing (and vice versa, including Vanguard Quest and Nicholas Sandford)
+* [New] Travel window: added option to show/hide the built-in destination buttons (ToA, DoA, Kamadan, Zaishen daily buttons, etc.)
+* [New] Travel window: improved nearest outpost algorithm using the full map adjacency graph via BFS for smarter outpost selection
+* [New] Hero Builds window: added checkbox to filter builds to only show those matching your primary profession
+* [New] Minimap: per-agent-type size controls for hostile, neutral, ally, ally NPC, ally NPC with quest marker, and ally spirit agents
+* [New] Minimap: profession-based colour customisation for agents on the minimap
+* [New] Game Settings: added option to prevent dervish avatar elites from changing your character's appearance
+* [New] Title Tracker widget: hover tooltip now shows current rank number, next tier name and point requirement
+* [New] Added `/resignlog pending` (or `/resignlog notresigned`) to filter the resign log to players who haven't resigned yet
+* [New] Added settings cog button to Toolbox window title bars for quick access to that window's settings (can be disabled in Toolbox Settings)
+* [New] Armory window: added many new weapon and offhand item model IDs (axes, bows, daggers, hammers, shields, scythes, focus items)
+* [Fix] Corrected model file IDs for dervish avatar forms in the Armory window
+* [Fix] Fixed title tracker using a deprecated API for bounty title detection
+* [Fix] Fixed auto-assigned quests overriding the player's manually chosen active quest
+* [Fix] Improved reliability of character auto-selection on the character select screen
+* [Minor] Completion window now hides empty categories when "hide completed" filters are active
+* [Minor] Custom quest markers are now correctly preserved across map loads
+
 ## Verion 8.17
 
 * [Fix] Fixed disconnect on reroll when gw was started with -character arg
