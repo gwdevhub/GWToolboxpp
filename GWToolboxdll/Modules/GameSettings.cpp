@@ -200,7 +200,6 @@ namespace {
     bool block_party_poppers = false;
     bool block_fireworks = false;
     bool block_bottle_rockets = false;
-    bool block_ghostinthebox_effect = false;
     bool block_sparkly_drops_effect = false;
     bool skip_characters_from_another_campaign_prompt = true;
     bool auto_age2_on_age = true;
@@ -228,8 +227,6 @@ namespace {
     bool check_message_on_party_change = true;
 
     bool is_prompting_hard_mode_mission = false;
-
-    bool add_agent_id_to_enemy_names = false;
 
     bool useful_level_progress_label = true;
     bool hide_store_page_on_char_select = false;
@@ -272,6 +269,110 @@ namespace {
     Color nametag_color_enemy = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ENEMY);
     Color nametag_color_item = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ITEM);
 
+    struct NametagColor {
+        const char* ini_key;
+        const char* label;
+        DEFAULT_NAMETAG_COLOR default_val;
+        Color* ptr;
+    };
+    NametagColor nametag_color_settings[] = {
+        {"nametag_color_npc",             "NPC",                      DEFAULT_NAMETAG_COLOR::NPC,            &nametag_color_npc},
+        {"nametag_color_player_self",     "Myself",                   DEFAULT_NAMETAG_COLOR::PLAYER_SELF,    &nametag_color_player_self},
+        {"nametag_color_player_other",    "Other Player",             DEFAULT_NAMETAG_COLOR::PLAYER_OTHER,   &nametag_color_player_other},
+        {"nametag_color_player_in_party", "Other Player (In Party)",  DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY,&nametag_color_player_in_party},
+        {"nametag_color_gadget",          "Gadget",                   DEFAULT_NAMETAG_COLOR::GADGET,         &nametag_color_gadget},
+        {"nametag_color_enemy",           "Enemy",                    DEFAULT_NAMETAG_COLOR::ENEMY,          &nametag_color_enemy},
+        {"nametag_color_item",            "Item",                     DEFAULT_NAMETAG_COLOR::ITEM,           &nametag_color_item},
+    };
+
+    struct ChannelColorDef { const char* key; GW::Chat::Channel chan; };
+    const ChannelColorDef channel_color_settings[] = {
+        {"local",    GW::Chat::Channel::CHANNEL_ALL},
+        {"guild",    GW::Chat::Channel::CHANNEL_GUILD},
+        {"team",     GW::Chat::Channel::CHANNEL_GROUP},
+        {"trade",    GW::Chat::Channel::CHANNEL_TRADE},
+        {"alliance", GW::Chat::Channel::CHANNEL_ALLIANCE},
+        {"whispers", GW::Chat::Channel::CHANNEL_WHISPER},
+        {"emotes",   GW::Chat::Channel::CHANNEL_EMOTE},
+        {"other",    GW::Chat::Channel::CHANNEL_GLOBAL},
+    };
+
+    struct BoolSetting { const char* key; bool* ptr; bool def; };
+    BoolSetting bool_settings[] = {
+        {"disable_camera_smoothing",                     &disable_camera_smoothing,                     false},
+        {"disable_camera_smoothing_with_controller",     &disable_camera_smoothing_with_controller,     false},
+        {"tick_is_toggle",                               &tick_is_toggle,                               false},
+        {"shorthand_item_ping",                          &shorthand_item_ping,                          true},
+        {"move_item_on_ctrl_click",                      &move_item_on_ctrl_click,                      false},
+        {"move_item_to_current_storage_pane",            &move_item_to_current_storage_pane,            true},
+        {"move_materials_to_current_storage_pane",       &move_materials_to_current_storage_pane,       false},
+        {"flash_window_on_zoning",                       &flash_window_on_zoning,                       false},
+        {"flash_window_on_cinematic",                    &flash_window_on_cinematic,                    true},
+        {"focus_window_on_launch",                       &focus_window_on_launch,                       true},
+        {"focus_window_on_zoning",                       &focus_window_on_zoning,                       false},
+        {"flash_window_on_trade",                        &flash_window_on_trade,                        true},
+        {"focus_window_on_trade",                        &focus_window_on_trade,                        false},
+        {"flash_window_on_name_ping",                    &flash_window_on_name_ping,                    true},
+        {"set_window_title_as_charname",                 &set_window_title_as_charname,                 true},
+        {"auto_set_away",                                &auto_set_away,                                false},
+        {"auto_set_online",                              &auto_set_online,                              false},
+        {"auto_return_on_defeat",                        &auto_return_on_defeat,                        false},
+        {"remove_min_skill_warmup_duration",             &remove_min_skill_warmup_duration,             false},
+        {"hide_known_skills",                            &hide_known_skills,                            false},
+        {"hide_nonelites_on_capture",                    &hide_nonelites_on_capture,                    false},
+        {"auto_skip_cinematic",                          &auto_skip_cinematic,                          false},
+        {"faction_warn_percent",                         &faction_warn_percent,                         true},
+        {"stop_screen_shake",                            &stop_screen_shake,                            false},
+        {"disable_gold_selling_confirmation",            &disable_gold_selling_confirmation,            false},
+        {"collectors_edition_emotes",                    &collectors_edition_emotes,                    true},
+        {"notify_when_friends_online",                   &notify_when_friends_online,                   true},
+        {"notify_when_friends_offline",                  &notify_when_friends_offline,                  false},
+        {"notify_when_friends_join_outpost",             &notify_when_friends_join_outpost,             true},
+        {"notify_when_friends_leave_outpost",            &notify_when_friends_leave_outpost,            false},
+        {"notify_when_party_member_leaves",              &notify_when_party_member_leaves,              false},
+        {"notify_when_party_member_joins",               &notify_when_party_member_joins,               false},
+        {"notify_when_players_join_outpost",             &notify_when_players_join_outpost,             false},
+        {"notify_when_players_leave_outpost",            &notify_when_players_leave_outpost,            false},
+        {"auto_age_on_vanquish",                         &auto_age_on_vanquish,                         false},
+        {"auto_screenshot_on_boss_kill",                 &auto_screenshot_on_boss_kill,                 false},
+        {"auto_screenshot_on_vanquish",                  &auto_screenshot_on_vanquish,                  false},
+        {"auto_screenshot_on_mission_complete",          &auto_screenshot_on_mission_complete,          false},
+        {"auto_screenshot_on_dungeon_complete",          &auto_screenshot_on_dungeon_complete,          false},
+        {"auto_screenshot_on_title_maxed",               &auto_screenshot_on_title_maxed,               false},
+        {"hide_dungeon_chest_popup",                     &hide_dungeon_chest_popup,                     false},
+        {"auto_age2_on_age",                             &auto_age2_on_age,                             true},
+        {"auto_accept_invites",                          &auto_accept_invites,                          false},
+        {"auto_accept_join_requests",                    &auto_accept_join_requests,                    false},
+        {"skip_entering_name_for_faction_donate",        &skip_entering_name_for_faction_donate,        false},
+        {"drop_ua_on_cast",                              &drop_ua_on_cast,                              false},
+        {"lazy_chest_looting",                           &lazy_chest_looting,                           false},
+        {"check_and_prompt_if_mission_already_completed",&check_and_prompt_if_mission_already_completed,true},
+        {"block_transmogrify_effect",                    &block_transmogrify_effect,                    false},
+        {"block_sugar_rush_effect",                      &block_sugar_rush_effect,                      false},
+        {"block_snowman_summoner",                       &block_snowman_summoner,                       false},
+        {"block_fireworks",                              &block_fireworks,                              false},
+        {"block_party_poppers",                          &block_party_poppers,                          false},
+        {"block_bottle_rockets",                         &block_bottle_rockets,                         false},
+        {"block_sparkly_drops_effect",                   &block_sparkly_drops_effect,                   false},
+        {"limit_signets_of_capture",                     &limit_signets_of_capture,                     true},
+        {"auto_open_locked_chest",                       &auto_open_locked_chest,                       false},
+        {"auto_open_locked_chest_with_key",              &auto_open_locked_chest_with_key,              false},
+        {"block_faction_gain",                           &block_faction_gain,                           false},
+        {"block_experience_gain",                        &block_experience_gain,                        false},
+        {"block_zero_experience_gain",                   &block_zero_experience_gain,                   true},
+        {"disable_skill_descriptions_in_outpost",        &disable_skill_descriptions_in_outpost,        false},
+        {"disable_skill_descriptions_in_explorable",     &disable_skill_descriptions_in_explorable,     false},
+        {"prevent_weapon_spell_animation_on_player",     &prevent_weapon_spell_animation_on_player,     false},
+        {"block_dervish_avatar_form",                    &block_dervish_avatar_form,                    false},
+        {"block_vanquish_complete_popup",                &block_vanquish_complete_popup,                false},
+        {"useful_level_progress_label",                  &useful_level_progress_label,                  true},
+        {"hide_store_page_on_char_select",               &hide_store_page_on_char_select,               false},
+        {"show_amount_of_lockpicks_under_locked_chest_nametag",&show_amount_of_lockpicks_under_locked_chest_nametag,false},
+        {"block_enter_area_message",                     &block_enter_area_message,                     false},
+        {"automatically_flag_pet_to_fight_called_target",&automatically_flag_pet_to_fight_called_target,true},
+        {"remember_online_status",                       &remember_online_status,                       true},
+    };
+
     GW::HookEntry ChatCmd_HookEntry;
 
     constexpr float checkbox_w = 270.f;
@@ -279,15 +380,6 @@ namespace {
     enum PING_PARTS {
         NAME = 1,
         DESC = 2
-    };
-
-    struct [[maybe_unused]] SkillData {
-        GW::Constants::Profession primary;
-        GW::Constants::Profession secondary;
-        uint32_t attribute_count;
-        GW::Constants::Attribute attribute_keys[12];
-        uint32_t attribute_values[12];
-        GW::Constants::SkillID skill_ids[8];
     };
 
     // prophecies = factions
@@ -346,7 +438,7 @@ namespace {
     } skillbar_packet;
 
 
-    // Takes SkillData* ptr, rectifies any missing dupe skills. True if bar has been tweaked.
+    // Rectifies any missing dupe skills. True if bar has been tweaked.
     bool FixLoadSkillData(GW::Constants::SkillID* skill_ids)
     {
         auto find_skill = [](const GW::Constants::SkillID* skill_ids, const GW::Constants::SkillID skill_id) {
@@ -1001,8 +1093,6 @@ namespace {
     }
 
 
-    auto player_requested_active_quest_id = GW::Constants::QuestID::None;
-
     GW::HookEntry OnQuestUIMessage_HookEntry;
 
 
@@ -1299,9 +1389,6 @@ namespace {
                 }
             }
             break;
-            case GW::UI::UIMessage::kSendSetActiveQuest:
-                player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
-                break;
             case GW::UI::UIMessage::kQuestAdded:
                 //OnQuestAdded(*static_cast<uint32_t*>(wParam));
                 break;
@@ -1562,15 +1649,7 @@ std::vector<std::wstring> PendingChatMessage::SanitiseForSend() const
 {
     const std::wstring sanitised = TextUtils::ctre_regex_replace<L"<[^>]+>", L"">(output_message);
     const std::wstring sanitised2 = TextUtils::ctre_regex_replace<L"\n", L"|">(sanitised);
-
-    // Split the string by '|' character
-    std::vector<std::wstring> parts;
-    std::wstringstream wss(sanitised2);
-    std::wstring temp;
-    while (std::getline(wss, temp, L'|')) {
-        parts.push_back(temp);
-    }
-    return parts;
+    return TextUtils::Split(sanitised2, std::wstring(1, L'|'));
 }
 
 bool PendingChatMessage::PrintMessage()
@@ -1790,8 +1869,6 @@ void GameSettings::Initialize()
 
     set_window_title_delay = TIMER_INIT();
 
-    player_requested_active_quest_id = GW::QuestMgr::GetActiveQuestId();
-
     last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
 
     //Log::Log("[GameSettings] Enqueueing CheckRemoveWindowBorder");
@@ -1843,9 +1920,7 @@ void GameSettings::MessageOnPartyChange()
                 found = previous_party_names[j] == current_party_names[i];
             }
             if (!found) {
-                wchar_t buffer[128];
-                swprintf(buffer, 128, L"<a=1>%ls</a> joined the party.", current_party_names[i].c_str());
-                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer, nullptr, true);
+                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> joined the party.", current_party_names[i]).c_str(), nullptr, true);
             }
         }
     }
@@ -1860,9 +1935,7 @@ void GameSettings::MessageOnPartyChange()
                 found = previous_party_names[i] == current_party_names[j];
             }
             if (!found) {
-                wchar_t buffer[128];
-                swprintf(buffer, 128, L"<a=1>%ls</a> left the party.", previous_party_names[i].c_str());
-                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, buffer, nullptr, true);
+                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> left the party.", previous_party_names[i]).c_str(), nullptr, true);
             }
         }
     }
@@ -1876,117 +1949,18 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     ToolboxModule::LoadSettings(ini);
 
 
-    LOAD_BOOL(disable_camera_smoothing);
-    LOAD_BOOL(disable_camera_smoothing_with_controller);
-    LOAD_BOOL(tick_is_toggle);
+    for (auto& s : bool_settings)
+        *s.ptr = ini->GetBoolValue(Name(), s.key, s.def);
 
-    LOAD_BOOL(shorthand_item_ping);
-    LOAD_BOOL(move_item_on_ctrl_click);
-    LOAD_BOOL(move_item_to_current_storage_pane);
-    LOAD_BOOL(move_materials_to_current_storage_pane);
-
-    LOAD_BOOL(flash_window_on_zoning);
-    LOAD_BOOL(flash_window_on_cinematic);
-    LOAD_BOOL(focus_window_on_launch);
-    LOAD_BOOL(focus_window_on_zoning);
-    LOAD_BOOL(flash_window_on_trade);
-    LOAD_BOOL(focus_window_on_trade);
-    LOAD_BOOL(flash_window_on_name_ping);
-    LOAD_BOOL(set_window_title_as_charname);
-
-    LOAD_BOOL(auto_set_away);
     LOAD_UINT(auto_set_away_delay);
-    LOAD_BOOL(auto_set_online);
-    LOAD_BOOL(auto_return_on_defeat);
-
-    LOAD_BOOL(remove_min_skill_warmup_duration);
-    LOAD_BOOL(hide_known_skills);
-    LOAD_BOOL(hide_nonelites_on_capture);
-    LOAD_BOOL(auto_skip_cinematic);
-
-    LOAD_BOOL(faction_warn_percent);
     LOAD_UINT(faction_warn_percent_amount);
-    LOAD_BOOL(stop_screen_shake);
-
-    LOAD_BOOL(disable_gold_selling_confirmation);
-    LOAD_BOOL(collectors_edition_emotes);
-
-    LOAD_BOOL(notify_when_friends_online);
-    LOAD_BOOL(notify_when_friends_offline);
-    LOAD_BOOL(notify_when_friends_join_outpost);
-    LOAD_BOOL(notify_when_friends_leave_outpost);
-
-    LOAD_BOOL(notify_when_party_member_leaves);
-    LOAD_BOOL(notify_when_party_member_joins);
-    LOAD_BOOL(notify_when_players_join_outpost);
-    LOAD_BOOL(notify_when_players_leave_outpost);
-
-    LOAD_BOOL(auto_age_on_vanquish);
-    LOAD_BOOL(auto_screenshot_on_boss_kill);
-    LOAD_BOOL(auto_screenshot_on_vanquish);
-    LOAD_BOOL(auto_screenshot_on_mission_complete);
-    LOAD_BOOL(auto_screenshot_on_dungeon_complete);
-    LOAD_BOOL(auto_screenshot_on_title_maxed);
-    LOAD_BOOL(hide_dungeon_chest_popup);
-    LOAD_BOOL(auto_age2_on_age);
-    LOAD_BOOL(auto_accept_invites);
-    LOAD_BOOL(auto_accept_join_requests);
-
-    LOAD_BOOL(skip_entering_name_for_faction_donate);
-    LOAD_BOOL(drop_ua_on_cast);
-
-    LOAD_BOOL(lazy_chest_looting);
-
-    LOAD_BOOL(check_and_prompt_if_mission_already_completed);
-
-    LOAD_BOOL(block_transmogrify_effect);
-    LOAD_BOOL(block_sugar_rush_effect);
-    LOAD_BOOL(block_snowman_summoner);
-    LOAD_BOOL(block_fireworks);
-    LOAD_BOOL(block_party_poppers);
-    LOAD_BOOL(block_bottle_rockets);
-    LOAD_BOOL(block_ghostinthebox_effect);
-    LOAD_BOOL(block_sparkly_drops_effect);
-    LOAD_BOOL(limit_signets_of_capture);
-    LOAD_BOOL(auto_open_locked_chest);
-    LOAD_BOOL(auto_open_locked_chest_with_key);
-    LOAD_BOOL(block_faction_gain);
-    LOAD_BOOL(block_experience_gain);
-    LOAD_BOOL(block_zero_experience_gain);
-
-    LOAD_BOOL(disable_skill_descriptions_in_outpost);
-    LOAD_BOOL(disable_skill_descriptions_in_explorable);
-
-    LOAD_BOOL(prevent_weapon_spell_animation_on_player);
-    LOAD_BOOL(block_dervish_avatar_form);
-    LOAD_BOOL(block_vanquish_complete_popup);
-
-    LOAD_BOOL(useful_level_progress_label);
-    LOAD_BOOL(hide_store_page_on_char_select);
-    LOAD_BOOL(show_amount_of_lockpicks_under_locked_chest_nametag);
-
-    LoadChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
-    LoadChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
-    LoadChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
-    LoadChannelColor(ini, Name(), "trade", GW::Chat::Channel::CHANNEL_TRADE);
-    LoadChannelColor(ini, Name(), "alliance", GW::Chat::Channel::CHANNEL_ALLIANCE);
-    LoadChannelColor(ini, Name(), "whispers", GW::Chat::Channel::CHANNEL_WHISPER);
-    LoadChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
-    LoadChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
-
-    LOAD_COLOR(nametag_color_enemy);
-    LOAD_COLOR(nametag_color_gadget);
-    LOAD_COLOR(nametag_color_item);
-    LOAD_COLOR(nametag_color_npc);
-    LOAD_COLOR(nametag_color_player_in_party);
-    LOAD_COLOR(nametag_color_player_other);
-    LOAD_COLOR(nametag_color_player_self);
-
-    LOAD_BOOL(block_enter_area_message);
-
-    LOAD_BOOL(automatically_flag_pet_to_fight_called_target);
-
     LOAD_UINT(last_online_status);
+
+    for (const auto& [key, chan] : channel_color_settings)
+        LoadChannelColor(ini, Name(), key, chan);
+
+    for (auto& c : nametag_color_settings)
+        *c.ptr = Colors::Load(ini, Name(), c.ini_key, static_cast<Color>(c.default_val));
 
     GW::PartyMgr::SetTickToggle(tick_is_toggle);
     SetWindowTitle(set_window_title_as_charname);
@@ -2068,119 +2042,18 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     ToolboxModule::SaveSettings(ini);
 
 
-    SAVE_BOOL(tick_is_toggle);
+    for (const auto& s : bool_settings)
+        ini->SetBoolValue(Name(), s.key, *s.ptr);
 
-    SAVE_BOOL(disable_camera_smoothing);
-    SAVE_BOOL(disable_camera_smoothing_with_controller);
-    SAVE_BOOL(auto_return_on_defeat);
-
-    SAVE_BOOL(shorthand_item_ping);
-    SAVE_BOOL(move_item_on_ctrl_click);
-    SAVE_BOOL(move_item_to_current_storage_pane);
-    SAVE_BOOL(move_materials_to_current_storage_pane);
-    SAVE_BOOL(stop_screen_shake);
-
-    SAVE_BOOL(flash_window_on_zoning);
-    SAVE_BOOL(focus_window_on_launch);
-    SAVE_BOOL(focus_window_on_zoning);
-    SAVE_BOOL(flash_window_on_cinematic);
-    SAVE_BOOL(flash_window_on_trade);
-    SAVE_BOOL(focus_window_on_trade);
-    SAVE_BOOL(flash_window_on_name_ping);
-    SAVE_BOOL(set_window_title_as_charname);
-
-    SAVE_BOOL(auto_set_away);
     SAVE_UINT(auto_set_away_delay);
-    SAVE_BOOL(auto_set_online);
-
-    SAVE_BOOL(remove_min_skill_warmup_duration);
-    SAVE_BOOL(hide_known_skills);
-    SAVE_BOOL(hide_nonelites_on_capture);
-    SAVE_BOOL(auto_skip_cinematic);
-
-    SAVE_BOOL(faction_warn_percent);
     SAVE_UINT(faction_warn_percent_amount);
-
-    SAVE_BOOL(disable_gold_selling_confirmation);
-    SAVE_BOOL(collectors_edition_emotes);
-
-    SAVE_BOOL(notify_when_friends_online);
-    SAVE_BOOL(notify_when_friends_offline);
-    SAVE_BOOL(notify_when_friends_join_outpost);
-    SAVE_BOOL(notify_when_friends_leave_outpost);
-
-    SAVE_BOOL(notify_when_party_member_leaves);
-    SAVE_BOOL(notify_when_party_member_joins);
-    SAVE_BOOL(notify_when_players_join_outpost);
-    SAVE_BOOL(notify_when_players_leave_outpost);
-
-    SAVE_BOOL(auto_age_on_vanquish);
-    SAVE_BOOL(hide_dungeon_chest_popup);
-    SAVE_BOOL(auto_age2_on_age);
-    SAVE_BOOL(auto_accept_invites);
-    SAVE_BOOL(auto_accept_join_requests);
-    SAVE_BOOL(skip_entering_name_for_faction_donate);
-    SAVE_BOOL(drop_ua_on_cast);
-
-    SAVE_BOOL(auto_screenshot_on_boss_kill);
-    SAVE_BOOL(auto_screenshot_on_vanquish);
-    SAVE_BOOL(auto_screenshot_on_mission_complete);
-    SAVE_BOOL(auto_screenshot_on_dungeon_complete);
-    SAVE_BOOL(auto_screenshot_on_title_maxed);
-
-    SAVE_BOOL(check_and_prompt_if_mission_already_completed);
-
-    SAVE_BOOL(lazy_chest_looting);
-
-    SAVE_BOOL(block_transmogrify_effect);
-    SAVE_BOOL(block_sugar_rush_effect);
-    SAVE_BOOL(block_fireworks);
-    SAVE_BOOL(block_snowman_summoner);
-    SAVE_BOOL(block_party_poppers);
-    SAVE_BOOL(block_bottle_rockets);
-    SAVE_BOOL(block_ghostinthebox_effect);
-    SAVE_BOOL(block_sparkly_drops_effect);
-    SAVE_BOOL(limit_signets_of_capture);
-    SAVE_BOOL(auto_open_locked_chest);
-    SAVE_BOOL(auto_open_locked_chest_with_key);
-
-    SAVE_BOOL(block_faction_gain);
-    SAVE_BOOL(block_experience_gain);
-    SAVE_BOOL(block_zero_experience_gain);
-
-    SAVE_BOOL(disable_skill_descriptions_in_outpost);
-    SAVE_BOOL(disable_skill_descriptions_in_explorable);
-
-    SAVE_BOOL(block_enter_area_message);
-
     SAVE_UINT(last_online_status);
 
-    SAVE_BOOL(prevent_weapon_spell_animation_on_player);
-    SAVE_BOOL(block_dervish_avatar_form);
+    for (const auto& [key, chan] : channel_color_settings)
+        SaveChannelColor(ini, Name(), key, chan);
 
-    SAVE_BOOL(useful_level_progress_label);
-    SAVE_BOOL(hide_store_page_on_char_select);
-
-    SaveChannelColor(ini, Name(), "local", GW::Chat::Channel::CHANNEL_ALL);
-    SaveChannelColor(ini, Name(), "guild", GW::Chat::Channel::CHANNEL_GUILD);
-    SaveChannelColor(ini, Name(), "team", GW::Chat::Channel::CHANNEL_GROUP);
-    SaveChannelColor(ini, Name(), "trade", GW::Chat::Channel::CHANNEL_TRADE);
-    SaveChannelColor(ini, Name(), "alliance", GW::Chat::Channel::CHANNEL_ALLIANCE);
-    SaveChannelColor(ini, Name(), "whispers", GW::Chat::Channel::CHANNEL_WHISPER);
-    SaveChannelColor(ini, Name(), "emotes", GW::Chat::Channel::CHANNEL_EMOTE);
-    SaveChannelColor(ini, Name(), "other", GW::Chat::Channel::CHANNEL_GLOBAL);
-
-    SAVE_COLOR(nametag_color_enemy);
-    SAVE_COLOR(nametag_color_gadget);
-    SAVE_COLOR(nametag_color_item);
-    SAVE_COLOR(nametag_color_npc);
-    SAVE_COLOR(nametag_color_player_in_party);
-    SAVE_COLOR(nametag_color_player_other);
-    SAVE_COLOR(nametag_color_player_self);
-
-    SAVE_BOOL(automatically_flag_pet_to_fight_called_target);
-    SAVE_BOOL(block_vanquish_complete_popup);
-    SAVE_BOOL(show_amount_of_lockpicks_under_locked_chest_nametag);
+    for (const auto& c : nametag_color_settings)
+        Colors::Save(ini, Name(), c.ini_key, *c.ptr);
 }
 
 void GameSettings::DrawInventorySettings()
@@ -2382,11 +2255,6 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Snowman Summoners", &block_snowman_summoner);
     ImGui::ShowHelp(doesnt_affect_me);
     ImGui::Checkbox("Fireworks", &block_fireworks);
-#if 0
-    //@Cleanup: Ghost in the box spawn effect suppressed, but still need to figure out how to suppress the death effect.
-    ImGui::SameLine(column_spacing); ImGui::Checkbox("Ghost-in-the-box", &block_ghostinthebox_effect);
-    ImGui::ShowHelp("Also applies to ghost-in-the-boxes that you use");
-#endif
     ImGui::Unindent();
     ImGui::NewLine();
     ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &show_amount_of_lockpicks_under_locked_chest_nametag);
@@ -2395,20 +2263,10 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     constexpr uint32_t flags = ImGuiColorEditFlags_NoInputs;
-    ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Myself", &nametag_color_player_self, flags);
-    ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("NPC", &nametag_color_npc, flags);
-    ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Enemy", &nametag_color_enemy, flags);
-    ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Gadget", &nametag_color_gadget, flags);
-    ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Other Player", &nametag_color_player_other, flags);
-    ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Other Player (In Party)", &nametag_color_player_in_party, flags);
-    ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Item", &nametag_color_item, flags);
+    for (auto& c : nametag_color_settings) {
+        ImGui::NextSpacedElement();
+        Colors::DrawSettingHueWheel(c.label, c.ptr, flags);
+    }
     ImGui::Unindent();
 
     ImGui::NewLine();
@@ -2444,50 +2302,24 @@ void GameSettings::FactionEarnedCheckAndWarn()
         faction_checked = false;
         return; // No world context yet.
     }
-    float percent;
-    // Avoid invalid user input values.
-    if (faction_warn_percent_amount < 0) {
-        faction_warn_percent_amount = 0;
-    }
-    if (faction_warn_percent_amount > 100) {
-        faction_warn_percent_amount = 100;
-    }
-    // Warn user to dump faction if we're in a luxon/kurzick mission outpost
-    switch (GW::Map::GetMapID()) {
-        case GW::Constants::MapID::The_Deep:
-        case GW::Constants::MapID::The_Jade_Quarry_Luxon_outpost:
-        case GW::Constants::MapID::Fort_Aspenwood_Luxon_outpost:
-        case GW::Constants::MapID::Zos_Shivros_Channel:
-        case GW::Constants::MapID::The_Aurios_Mines:
-            // Player is in luxon mission outpost
-            percent = 100.0f * static_cast<float>(world_context->current_luxon) / static_cast<float>(world_context->max_luxon);
-            if (percent >= static_cast<float>(faction_warn_percent_amount)) {
-                // Faction earned is over 75% capacity
+    faction_warn_percent_amount = std::clamp(faction_warn_percent_amount, 0, 100);
+    const auto titles = GW::Map::GetTitlesForMap(GW::Map::GetMapID());
+    const float threshold = static_cast<float>(faction_warn_percent_amount);
+    for (const auto title : titles) {
+        if (title == GW::Constants::TitleID::Luxon) {
+            const float pct = 100.0f * static_cast<float>(world_context->current_luxon) / static_cast<float>(world_context->max_luxon);
+            if (pct >= threshold)
                 Log::Warning("Luxon faction earned is %d of %d", world_context->current_luxon, world_context->max_luxon);
-            }
-            else if (world_context->current_kurzick > 4999 && world_context->current_kurzick > world_context->current_luxon) {
-                // Kurzick faction > Luxon faction
+            else if (world_context->current_kurzick > 4999 && world_context->current_kurzick > world_context->current_luxon)
                 Log::Warning("Kurzick faction earned is greater than Luxon");
-            }
-            break;
-        case GW::Constants::MapID::Urgozs_Warren:
-        case GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost:
-        case GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost:
-        case GW::Constants::MapID::Altrumm_Ruins:
-        case GW::Constants::MapID::Amatz_Basin:
-            // Player is in kurzick mission outpost
-            percent = 100.0f * static_cast<float>(world_context->current_kurzick) / static_cast<float>(world_context->max_kurzick);
-            if (percent >= static_cast<float>(faction_warn_percent_amount)) {
-                // Faction earned is over 75% capacity
+        }
+        else if (title == GW::Constants::TitleID::Kurzick) {
+            const float pct = 100.0f * static_cast<float>(world_context->current_kurzick) / static_cast<float>(world_context->max_kurzick);
+            if (pct >= threshold)
                 Log::Warning("Kurzick faction earned is %d of %d", world_context->current_kurzick, world_context->max_kurzick);
-            }
-            else if (world_context->current_luxon > 4999 && world_context->current_luxon > world_context->current_kurzick) {
-                // Luxon faction > Kurzick faction
+            else if (world_context->current_luxon > 4999 && world_context->current_luxon > world_context->current_kurzick)
                 Log::Warning("Luxon faction earned is greater than Kurzick");
-            }
-            break;
-        default:
-            break;
+        }
     }
 }
 
@@ -2742,9 +2574,6 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC
     }
 }
 
-// Automatically return to outpost on defeat
-void GameSettings::OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) {}
-
 // Automatically send /age2 on /age.
 void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::MessageServer* pak)
 {
@@ -2935,28 +2764,11 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
         return;
     }
     const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
-    switch (static_cast<DEFAULT_NAMETAG_COLOR>(tag->text_color)) {
-        case DEFAULT_NAMETAG_COLOR::NPC:
-            tag->text_color = nametag_color_npc;
+    for (const auto& c : nametag_color_settings) {
+        if (tag->text_color == static_cast<Color>(c.default_val)) {
+            tag->text_color = *c.ptr;
             break;
-        case DEFAULT_NAMETAG_COLOR::ENEMY:
-            tag->text_color = nametag_color_enemy;
-            break;
-        case DEFAULT_NAMETAG_COLOR::GADGET:
-            tag->text_color = nametag_color_gadget;
-            break;
-        case DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY:
-            tag->text_color = nametag_color_player_in_party;
-            break;
-        case DEFAULT_NAMETAG_COLOR::PLAYER_OTHER:
-            tag->text_color = nametag_color_player_other;
-            break;
-        case DEFAULT_NAMETAG_COLOR::PLAYER_SELF:
-            tag->text_color = nametag_color_player_self;
-            break;
-        case DEFAULT_NAMETAG_COLOR::ITEM:
-            tag->text_color = nametag_color_item;
-            break;
+        }
     }
     if (show_amount_of_lockpicks_under_locked_chest_nametag && tag->name_enc && wcseq(tag->name_enc, GW::EncStrings::LockedChest) && !tag->underline) {
         static wchar_t you_have_n_lockpicks[12];
