@@ -13,6 +13,7 @@ namespace GW {
         enum class MapID : uint32_t;
         enum class SkillID : uint32_t;
         enum class Language;
+        enum HeroID : uint32_t;
     }
 }
 
@@ -116,6 +117,9 @@ public:
 
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetMapName(GW::Constants::MapID map_id);
+
+    // Guaranteed to return a pointer, but may not yet be decoded.
+    static GuiUtils::EncString* GetHeroName(GW::Constants::HeroID hero_id);
 
     static const wchar_t* GetRegionName(GW::Constants::MapID map_id);
     // Guaranteed to return a pointer, but may not yet be decoded.

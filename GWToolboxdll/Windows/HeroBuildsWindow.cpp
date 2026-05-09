@@ -86,11 +86,6 @@ namespace {
         HeroID::GhostOfAlthea
     };
 
-    GuiUtils::EncString* GetHeroEncName(GW::Constants::HeroID hero_id) {
-        const auto c = GW::PartyMgr::GetHeroConstData(hero_id);
-        return Resources::DecodeStringId(c ? c->name_id : 1);
-    }
-
     // Returns hero IDs sorted by name; re-sorts each frame until all names are decoded.
     const std::vector<HeroID>& SortedHeroIDs() {
         static std::vector<HeroID> sorted;
@@ -102,13 +97,13 @@ namespace {
             }
             bool all_decoded = true;
             for (const auto id : sorted) {
-                if (GetHeroEncName(id)->string().empty()) {
+                if (Resources::GetHeroName(id)->string().empty()) {
                     all_decoded = false;
                     break;
                 }
             }
             std::ranges::sort(sorted, [](const HeroID a, const HeroID b) {
-                return _stricmp(GetHeroEncName(a)->string().c_str(), GetHeroEncName(b)->string().c_str()) < 0;
+                return _stricmp(Resources::GetHeroName(a)->string().c_str(), Resources::GetHeroName(b)->string().c_str()) < 0;
             });
             is_sorted = all_decoded;
         }
@@ -375,7 +370,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                             [](void*, const int idx, const char** out_text) -> bool {
                                 const auto& heroes = SortedHeroIDs();
                                 if (idx < 0 || idx >= static_cast<int>(heroes.size())) return false;
-                                *out_text = GetHeroEncName(heroes[idx])->string().c_str();
+                                *out_text = Resources::GetHeroName(heroes[idx])->string().c_str();
                                 return true;
                             },
                             nullptr, static_cast<int>(sorted_heroes.size()))) {
@@ -663,7 +658,7 @@ void HeroBuildsWindow::HeroBuildName(const TeamHeroBuild& tbuild, const size_t i
     if (name.empty() && code.empty() && id == HeroID::NoHero) {
         return; // nothing to do here
     }
-    const char* c = GetHeroEncName(id)->string().c_str();
+    const char* c = Resources::GetHeroName(id)->string().c_str();
 
     if (name.empty()) {
         if (idx > 0) {

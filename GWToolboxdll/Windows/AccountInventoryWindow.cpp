@@ -47,51 +47,7 @@ namespace {
     constexpr clock_t MAP_LOADED_DELAYED_TIMEOUT = 400;
     constexpr clock_t SAVE_DIRTY_INVENTORIES_TIMEOUT = 1000;
 
-const char* HERO_NAME[] = {
-        "(Player)",
-        "Norgu",
-        "Goren",
-        "Tahlkora",
-        "Master Of Whispers",
-        "Acolyte Jin",
-        "Koss",
-        "Dunkoro",
-        "Acolyte Sousuke",
-        "Melonni",
-        "Zhed Shadowhoof",
-        "General Morgahn",
-        "Margrid The Sly",
-        "Zenmai",
-        "Olias",
-        "Razah",
-        "MOX",
-        "Keiran Thackeray",
-        "Jora",
-        "Pyre Fierceshot",
-        "Anton",
-        "Livia",
-        "Hayda",
-        "Kahmu",
-        "Gwen",
-        "Xandra",
-        "Vekk",
-        "Ogden",
-        "Mercenary Hero 1",
-        "Mercenary Hero 2",
-        "Mercenary Hero 3",
-        "Mercenary Hero 4",
-        "Mercenary Hero 5",
-        "Mercenary Hero 6",
-        "Mercenary Hero 7",
-        "Mercenary Hero 8",
-        "Miku",
-        "Zei Ri",
-        "Devona",
-        "Ghost of Althea"
-    };
-
-
-  const char* BAG_NAME[] = {"",          "Backpack",  "Belt Pouch", "Bag 1",     "Bag 2",     "Equipment Pack", "Material Storage", "Unclaimed Items", "Storage 1",  "Storage 2",  "Storage 3",     "Storage 4",
+    const char* BAG_NAME[] = {"",          "Backpack",  "Belt Pouch", "Bag 1",     "Bag 2",     "Equipment Pack", "Material Storage", "Unclaimed Items", "Storage 1",  "Storage 2",  "Storage 3",     "Storage 4",
                           "Storage 5", "Storage 6", "Storage 7",  "Storage 8", "Storage 9", "Storage 10",     "Storage 11",       "Storage 12",      "Storage 13", "Storage 14", "Equipped Items"};
     uint32_t GetMaxBagCapacity(GW::Constants::Bag bag_id)
     {
@@ -862,7 +818,7 @@ struct MergeStack;
                 item.model_file_id = i->model_file_id;
                 item.interaction = i->interaction;
                 i->texture = Resources::GetItemImage(&item);
-                i->location = HERO_NAME[i->hero_id];
+                i->location = i->hero_id == GW::Constants::HeroID::NoHero ? "(Player)" : Resources::GetHeroName(i->hero_id)->string();
                 if (IsChestBag(i->bag_id)) {
                     i->location = BAG_NAME[(int)(i->bag_id)];
                 }
@@ -1074,7 +1030,7 @@ struct MergeStack;
         i->equipped = item->equipped;
         i->item_id = item->item_id;
         i->texture = Resources::GetItemImage(item);
-        i->location = HERO_NAME[i->hero_id];
+        i->location = i->hero_id == GW::Constants::HeroID::NoHero ? "(Player)" : Resources::GetHeroName(i->hero_id)->string();
         if (IsChestBag(i->bag_id)) {
             i->location = BAG_NAME[(int)(i->bag_id)];
         }

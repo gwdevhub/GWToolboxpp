@@ -7,11 +7,13 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Hero.h>
 
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
@@ -132,6 +134,7 @@ namespace {
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::unordered_map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
+    std::unordered_map<GW::Constants::HeroID, GuiUtils::EncString*> hero_names;
     std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
     constexpr size_t MAX_WORKERS = 20;
@@ -1176,6 +1179,17 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
 GuiUtils::EncString* Resources::GetSkillName(const GW::Constants::SkillID skill_id)
 {
     return DecodeStringId(GW::SkillbarMgr::GetSkillConstantData(skill_id)->name);
+}
+
+GuiUtils::EncString* Resources::GetHeroName(const GW::Constants::HeroID hero_id)
+{
+    const auto found = hero_names.find(hero_id);
+    if (found != hero_names.end()) {
+        return found->second;
+    }
+    const auto hero_data = GW::PartyMgr::GetHeroConstData(hero_id);
+    hero_names[hero_id] = DecodeStringId(hero_data ? hero_data->name_id : 0x3);
+    return hero_names[hero_id];
 }
 
 GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
