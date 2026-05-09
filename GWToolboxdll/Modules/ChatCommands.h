@@ -54,6 +54,7 @@ public:
     void Update(float delta) override;
 
     static void CHAT_CMD_FUNC(CmdReapplyTitle);
+    static void CHAT_CMD_FUNC(CmdCustomMarker);
 
     // Add a /setting <setting_name> [1|0|toggle] command to easily change a static setting in memory. NB: static_setting_ptr MUST be a pointer to a STATIC location in memory!
     static void RegisterSettingChatCommand(const wchar_t* setting_name, const bool* static_setting_ptr, const wchar_t* description = nullptr);

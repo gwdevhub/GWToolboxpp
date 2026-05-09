@@ -353,6 +353,9 @@ namespace {
                                 "Use '/useskill [slot]' to stop the skill.\n"
                                 "Use '/useskill [0|stop|off]' to stop all skills.";
 
+    constexpr auto custommarker_syntax = "'/custommarker <x> <y>' to place a custom marker at world map coordinates (x, y).\n"
+                                         "'/custommarker clear' to remove the custom marker.";
+
     void CHAT_CMD_FUNC(CmdChatTab)
     {
         if (argc < 2) {
@@ -1434,6 +1437,8 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
                     "\t'toggle' alternate between given value and configuration on disk.\n"
                     "\t'load' reset key to its disk configuration.");
         ImGui::Bullet();
+        ImGui::Text(custommarker_syntax);
+        ImGui::Bullet();
         ImGui::Text("'/damage' or '/dmg' to print party damage to chat.\n"
             "'/damage me' sends your own damage only.\n"
             "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
@@ -1893,6 +1898,19 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingQuest)
     Instance().quest_ping.Init();
 }
 
+void CHAT_CMD_FUNC(ChatCommands::CmdCustomMarker)
+{
+    if (argc == 2 && wcscmp(argv[1], L"clear") == 0) {
+        QuestModule::ClearCustomQuestMarker();
+        return;
+    }
+    float x, y;
+    if (argc < 3 || !TextUtils::ParseFloat(argv[1], &x) || !TextUtils::ParseFloat(argv[2], &y)) {
+        return Log::Error(custommarker_syntax);
+    }
+    QuestModule::SetCustomQuestMarker({x, y});
+}
+
 void ChatCommands::Initialize()
 {
     ToolboxModule::Initialize();
@@ -1975,6 +1993,7 @@ void ChatCommands::Initialize()
         {L"addhenchman", CmdAddHenchman},
         {L"addhero", CmdAddHero},
         {L"leave", CmdLeave},
+        {L"custommarker", CmdCustomMarker},
     };
 
 
