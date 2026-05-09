@@ -2045,6 +2045,8 @@ void GameSettings::Terminate()
     gold_confirm_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();
 
+    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry);
+
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
