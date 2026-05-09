@@ -47,51 +47,7 @@ namespace {
     constexpr clock_t MAP_LOADED_DELAYED_TIMEOUT = 400;
     constexpr clock_t SAVE_DIRTY_INVENTORIES_TIMEOUT = 1000;
 
-const char* HERO_NAME[] = {
-        "(Player)",
-        "Norgu",
-        "Goren",
-        "Tahlkora",
-        "Master Of Whispers",
-        "Acolyte Jin",
-        "Koss",
-        "Dunkoro",
-        "Acolyte Sousuke",
-        "Melonni",
-        "Zhed Shadowhoof",
-        "General Morgahn",
-        "Margrid The Sly",
-        "Zenmai",
-        "Olias",
-        "Razah",
-        "MOX",
-        "Keiran Thackeray",
-        "Jora",
-        "Pyre Fierceshot",
-        "Anton",
-        "Livia",
-        "Hayda",
-        "Kahmu",
-        "Gwen",
-        "Xandra",
-        "Vekk",
-        "Ogden",
-        "Mercenary Hero 1",
-        "Mercenary Hero 2",
-        "Mercenary Hero 3",
-        "Mercenary Hero 4",
-        "Mercenary Hero 5",
-        "Mercenary Hero 6",
-        "Mercenary Hero 7",
-        "Mercenary Hero 8",
-        "Miku",
-        "Zei Ri",
-        "Devona",
-        "Ghost of Althea"
-    };
-
-
-  const char* BAG_NAME[] = {"",          "Backpack",  "Belt Pouch", "Bag 1",     "Bag 2",     "Equipment Pack", "Material Storage", "Unclaimed Items", "Storage 1",  "Storage 2",  "Storage 3",     "Storage 4",
+    const char* BAG_NAME[] = {"",          "Backpack",  "Belt Pouch", "Bag 1",     "Bag 2",     "Equipment Pack", "Material Storage", "Unclaimed Items", "Storage 1",  "Storage 2",  "Storage 3",     "Storage 4",
                           "Storage 5", "Storage 6", "Storage 7",  "Storage 8", "Storage 9", "Storage 10",     "Storage 11",       "Storage 12",      "Storage 13", "Storage 14", "Equipped Items"};
     uint32_t GetMaxBagCapacity(GW::Constants::Bag bag_id)
     {
@@ -213,7 +169,7 @@ const char* HERO_NAME[] = {
 
     
 
-    struct InventoryItem {
+    struct AccountInventoryItem {
         // identifying attributes
         GUID account{};
         std::string character{};
@@ -233,7 +189,7 @@ const char* HERO_NAME[] = {
         IDirect3DTexture9** texture; // output of GetItemImage
         std::string location{};     // (Player) <Storage Pane> or <Hero Name>
 
-        void CopyKeyTo(InventoryItem* i)
+        void CopyKeyTo(AccountInventoryItem* i)
         {
             i->account = account;
             i->character = character;
@@ -249,13 +205,13 @@ struct MergeStack;
         ImGuiTableSortSpecs* sort_specs{};
         UUID current_account{};
         bool operator()(const MergeStack& lms, const MergeStack& rms) const;
-        bool operator()(InventoryItem* l, InventoryItem* r) const;
+        bool operator()(AccountInventoryItem* l, AccountInventoryItem* r) const;
     };
 
     struct MergeStack {
         uint16_t quantity;
         std::string description;
-        std::set<InventoryItem*, ItemCompare> i;
+        std::set<AccountInventoryItem*, ItemCompare> i;
         MergeStack(const UUID& account, const std::wstring& _description);
         std::string GetDescription() {
             std::string build_desc = description;
@@ -302,7 +258,7 @@ struct MergeStack;
         if (delta == 0) delta = memcmp(&l->account, &r->account, sizeof(l->account));
         return delta * sort_direction < 0;
     }
-    bool ItemCompare::operator()(InventoryItem* l, InventoryItem* r) const
+    bool ItemCompare::operator()(AccountInventoryItem* l, AccountInventoryItem* r) const
     {
         if (l->account != r->account) {
             // lowest item is the one that can be interacted with. Make sure it is one on this account if there is one
@@ -323,9 +279,9 @@ struct MergeStack;
 
     struct ItemHash {
         using is_transparent = void;
-        std::size_t operator()(const std::unique_ptr<InventoryItem>& i) const noexcept { return operator()(std::to_address(i)); }
-        std::size_t operator()(const InventoryItem* const* const i) const noexcept { return operator()(*i); }
-        std::size_t operator()(const InventoryItem* const i) const noexcept
+        std::size_t operator()(const std::unique_ptr<AccountInventoryItem>& i) const noexcept { return operator()(std::to_address(i)); }
+        std::size_t operator()(const AccountInventoryItem* const* const i) const noexcept { return operator()(*i); }
+        std::size_t operator()(const AccountInventoryItem* const i) const noexcept
         {
             return hash_combine(i->account.Data1, i->account.Data2, i->account.Data3,
                 std::bit_cast<uint64_t>(i->account.Data4),
@@ -335,10 +291,10 @@ struct MergeStack;
 
     struct ItemEqual {
         using is_transparent = void;
-        bool operator()(const std::unique_ptr<InventoryItem>& l, const std::unique_ptr<InventoryItem>& r) const { return operator()(std::to_address(l), std::to_address(r)); }
-        bool operator()(const InventoryItem* const l, const std::unique_ptr<InventoryItem>& r) const { return operator()(l, std::to_address(r)); }
-        bool operator()(const InventoryItem* const* const l, const std::unique_ptr<InventoryItem>& r) const { return operator()(*l, std::to_address(r)); }
-        bool operator()(const InventoryItem* const l, const InventoryItem* const r) const { return l->hero_id == r->hero_id && l->bag_id == r->bag_id && l->slot == r->slot && l->account == r->account && l->character == r->character; }
+        bool operator()(const std::unique_ptr<AccountInventoryItem>& l, const std::unique_ptr<AccountInventoryItem>& r) const { return operator()(std::to_address(l), std::to_address(r)); }
+        bool operator()(const AccountInventoryItem* const l, const std::unique_ptr<AccountInventoryItem>& r) const { return operator()(l, std::to_address(r)); }
+        bool operator()(const AccountInventoryItem* const* const l, const std::unique_ptr<AccountInventoryItem>& r) const { return operator()(*l, std::to_address(r)); }
+        bool operator()(const AccountInventoryItem* const l, const AccountInventoryItem* const r) const { return l->hero_id == r->hero_id && l->bag_id == r->bag_id && l->slot == r->slot && l->account == r->account && l->character == r->character; }
     };
 
     struct CharacterFreeSlots {
@@ -422,24 +378,24 @@ struct MergeStack;
     };
 
     void OnItemTooltip(const MergeStack* ms);
-    void OnInventoryItemClicked(InventoryItem* i, bool move);
+    void OnAccountInventoryItemClicked(AccountInventoryItem* i, bool move);
     static bool CheckIniDirty(InventoryIni* ini);
     InventoryIni* GetIni(const std::string& ini_ID, const GUID& account);
-    std::string ItemToSectionName(InventoryItem* i);
+    std::string ItemToSectionName(AccountInventoryItem* i);
     void LoadFromFiles(bool only_foreign);
     void SaveToFiles(bool include_foreign);
     void SortSlots(ImGuiTableSortSpecs* sort_specs);
-    void DescriptionDecode(InventoryItem* i, GW::Item* item);
+    void DescriptionDecode(AccountInventoryItem* i, GW::Item* item);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot);
 
     // collective callback hook
     GW::HookEntry OnUIMessage_HookEntry{};
     // main item storage
-    std::unordered_set<std::unique_ptr<InventoryItem>, ItemHash, ItemEqual> inventory{};
+    std::unordered_set<std::unique_ptr<AccountInventoryItem>, ItemHash, ItemEqual> inventory{};
     // On*SlotCleared send an item_id, but the information which bag and slot it was in
     // is already removed. In order to remove items from inventory without iterating,
-    // we keep track of the item_id->InventoryItem mapping
-    std::unordered_map<uint32_t, InventoryItem*> inventory_lookup{};
+    // we keep track of the item_id->AccountInventoryItem mapping
+    std::unordered_map<uint32_t, AccountInventoryItem*> inventory_lookup{};
     // sorted/filtered view for display
     std::vector<MergeStack> inventory_sorted{};
     // ini files, 1 per character/chest
@@ -511,7 +467,7 @@ struct MergeStack;
             stage_set_at = TIMER_INIT();
             current_stage = _stage;
         }
-        void Begin(InventoryItem* i, bool _move = false)
+        void Begin(AccountInventoryItem* i, bool _move = false)
         {
             if (current_stage != Stage::None) return;
             move = _move;
@@ -530,7 +486,7 @@ struct MergeStack;
     private:
         Stage current_stage = Stage::None;
         clock_t stage_set_at = 0;
-        InventoryItem item;
+        AccountInventoryItem item;
         bool move = false;
     };
     ItemReroller item_reroll;
@@ -544,7 +500,7 @@ struct MergeStack;
     clock_t map_loaded_delayed_timer{};
     clock_t save_dirty_inventories_timer{};
     bool map_loaded_delayed_trigger = false;
-    std::optional<InventoryItem> item_to_move;
+    std::optional<AccountInventoryItem> item_to_move;
 
     // config options
     bool detailed_view = false;
@@ -605,7 +561,7 @@ struct MergeStack;
 
     // jump to location of clicked item, i.e. open chest/add hero/change character
     // with Ctrl: move item to/from chest after jump
-    void OnInventoryItemClicked(InventoryItem* i, bool move)
+    void OnAccountInventoryItemClicked(AccountInventoryItem* i, bool move)
     {
         item_reroll.Begin(i, move);
     }
@@ -727,7 +683,7 @@ struct MergeStack;
     }
 
     // unique section name for item in ini file
-    std::string ItemToSectionName(InventoryItem* i)
+    std::string ItemToSectionName(AccountInventoryItem* i)
     {
         char buf[9];
         std::string out;
@@ -844,7 +800,7 @@ struct MergeStack;
                     continue;
                 }
 
-                auto i = std::make_unique<InventoryItem>();
+                auto i = std::make_unique<AccountInventoryItem>();
                 ;
                 i->account = account;
                 i->character = character;
@@ -862,7 +818,7 @@ struct MergeStack;
                 item.model_file_id = i->model_file_id;
                 item.interaction = i->interaction;
                 i->texture = Resources::GetItemImage(&item);
-                i->location = HERO_NAME[i->hero_id];
+                i->location = i->hero_id == GW::Constants::HeroID::NoHero ? "(Player)" : Resources::GetHeroName(i->hero_id)->string();
                 if (IsChestBag(i->bag_id)) {
                     i->location = BAG_NAME[(int)(i->bag_id)];
                 }
@@ -961,10 +917,10 @@ struct MergeStack;
         inventory_dirty.clear();
     }
 
-    void DescriptionDecode(InventoryItem* i, GW::Item* item)
+    void DescriptionDecode(AccountInventoryItem* i, GW::Item* item)
     {
         struct SyncDecode {
-            InventoryItem i;
+            AccountInventoryItem i;
             std::wstring enc;
         };
         struct SyncDecode* sync = new SyncDecode();
@@ -1027,7 +983,7 @@ struct MergeStack;
         // gather information for this items storage location, i.e.:
         // account, player character, hero, bag, slot within bag
 
-        auto i = std::make_unique<InventoryItem>();
+        auto i = std::make_unique<AccountInventoryItem>();
         i->account = current_account;
         i->bag_id = item->bag->bag_id();
         if (IsChestBag(i->bag_id)) {
@@ -1074,7 +1030,7 @@ struct MergeStack;
         i->equipped = item->equipped;
         i->item_id = item->item_id;
         i->texture = Resources::GetItemImage(item);
-        i->location = HERO_NAME[i->hero_id];
+        i->location = i->hero_id == GW::Constants::HeroID::NoHero ? "(Player)" : Resources::GetHeroName(i->hero_id)->string();
         if (IsChestBag(i->bag_id)) {
             i->location = BAG_NAME[(int)(i->bag_id)];
         }
@@ -1119,7 +1075,7 @@ struct MergeStack;
     bool RemoveItem(uint32_t item_id);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot)
     {
-        InventoryItem i;
+        AccountInventoryItem i;
         i.account = *account;
         i.bag_id = bag_id;
         i.character = character;
@@ -1802,11 +1758,11 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
             ImGui::TableNextColumn();
             if (is_current_account) {
                 if (ImGui::Button(free_slot->character.c_str())) {
-                    InventoryItem i;
+                    AccountInventoryItem i;
                     i.account = free_slot->account;
                     i.character = free_slot->character;
                     i.bag_id = is_chest ? GW::Constants::Bag::Storage_1 : GW::Constants::Bag::None;
-                    OnInventoryItemClicked(&i, false);
+                    OnAccountInventoryItemClicked(&i, false);
                 }
             }
             else {
@@ -1948,7 +1904,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         ImGui::PopStyleColor(style_count);
         ImGui::PopID();
 
-        if (clicked) OnInventoryItemClicked(i_front, ImGui::IsKeyDown(ImGuiMod_Ctrl));
+        if (clicked) OnAccountInventoryItemClicked(i_front, ImGui::IsKeyDown(ImGuiMod_Ctrl));
     };
 
     if (detailed_view) {

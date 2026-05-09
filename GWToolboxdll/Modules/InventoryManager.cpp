@@ -179,10 +179,6 @@ namespace {
     PendingItem pending_salvage_kit;
     PendingTransaction pending_transaction;
 
-    bool wcseq(const wchar_t* a, const wchar_t* b) {
-        return a && b && wcscmp(a, b) == 0;
-    }
-
     bool GetIsProfessionUnlocked(GW::Constants::ProfessionByte prof)
     {
         const auto world = GW::GetWorldContext();
@@ -2681,12 +2677,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
 #pragma warning(pop)
 }
 
-bool InventoryManager::Item::IsOfferedInTrade() const
-{
-    return GW::Trade::IsItemOffered(item_id) != nullptr;
-}
-
-bool InventoryManager::Item::CanOfferToTrade() const
+bool InventoryItem::CanOfferToTrade() const
 {
     auto* player_items = GetPlayerTradeItems();
     if (!player_items) {
@@ -2695,43 +2686,7 @@ bool InventoryManager::Item::CanOfferToTrade() const
     return IsTradable() && IsTradeWindowOpen() && !IsOfferedInTrade() && player_items->size() < 7;
 }
 
-bool InventoryManager::Item::CanBeIdentified() const
-{
-    if (GetIsIdentified()) return false;
-    if (IsSalvagable(false)) return true;
-    switch (type) {
-        case GW::Constants::ItemType::Bundle:
-        case GW::Constants::ItemType::Usable:
-        case GW::Constants::ItemType::Quest_Item:
-        case GW::Constants::ItemType::Storybook:
-            return false;
-    }
-    if (IsWeapon() || IsArmor()) return true;
-    if (IsGreen()) return false;
-    switch (model_file_id) {
-        case 0x44CAC:
-            return false;
-    }
-    return true;
-}
-
-bool InventoryManager::Item::IsOldSchool() const
-{
-    // Not OS if inscribable (Nightfall/EotN) or not salvagable
-    if (GetIsInscribable() || !IsSalvagable(false)) return false;
-
-    // OS off-hands (wand/focus/shield) have 2 inherent mods, no upgrade slots
-    switch (type) {
-        case GW::Constants::ItemType::Wand:
-        case GW::Constants::ItemType::Offhand:
-            return !IsUpgradable();
-    }
-
-    // Other OS weapons have 1 inherent + 1 suffix slot (so they ARE upgradable)
-    return IsWeapon() && !IsPrefixUpgradable();
-}
-
-bool InventoryManager::Item::IsSalvagable(bool check_bag, bool check_blocked_from_being_salvaged) const
+bool InventoryItem::IsSalvagable(bool check_bag, bool check_blocked_from_being_salvaged) const
 {
     if (item_formula == 0x5da) {
         return false;
@@ -2768,41 +2723,7 @@ bool InventoryManager::Item::IsSalvagable(bool check_bag, bool check_blocked_fro
     return false;
 }
 
-bool InventoryManager::Item::IsWeapon() const
-{
-    switch (static_cast<GW::Constants::ItemType>(type)) {
-        case GW::Constants::ItemType::Axe:
-        case GW::Constants::ItemType::Sword:
-        case GW::Constants::ItemType::Shield:
-        case GW::Constants::ItemType::Scythe:
-        case GW::Constants::ItemType::Bow:
-        case GW::Constants::ItemType::Wand:
-        case GW::Constants::ItemType::Staff:
-        case GW::Constants::ItemType::Offhand:
-        case GW::Constants::ItemType::Daggers:
-        case GW::Constants::ItemType::Hammer:
-        case GW::Constants::ItemType::Spear:
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool InventoryManager::Item::IsArmor() const
-{
-    switch (static_cast<GW::Constants::ItemType>(type)) {
-        case GW::Constants::ItemType::Headpiece:
-        case GW::Constants::ItemType::Chestpiece:
-        case GW::Constants::ItemType::Leggings:
-        case GW::Constants::ItemType::Boots:
-        case GW::Constants::ItemType::Gloves:
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool InventoryManager::Item::IsHiddenFromMerchants() const
+bool InventoryItem::IsHiddenFromMerchants() const
 {
     if (hide_unsellable_items && !value) {
         return true;
@@ -2817,80 +2738,6 @@ bool InventoryManager::Item::IsHiddenFromMerchants() const
         return true;
     }
     return false;
-}
-
-GW::ItemModifier* InventoryManager::Item::GetModifier(const uint32_t identifier) const
-{
-    for (size_t i = 0; i < mod_struct_size; i++) {
-        GW::ItemModifier* mod = &mod_struct[i];
-        if (mod->identifier() == identifier) {
-            return mod;
-        }
-    }
-    return nullptr;
-}
-
-// InventoryManager::Item definitions
-
-uint32_t InventoryManager::Item::GetUses() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x2458);
-    return (mod ? mod->arg2() : 1) * quantity;
-}
-
-bool InventoryManager::Item::IsSalvageKit() const
-{
-    return IsLesserKit() || IsExpertSalvageKit(); // || IsPerfectSalvageKit();
-}
-
-bool InventoryManager::Item::IsTome() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x2788);
-    const uint32_t use_id = mod ? mod->arg() : 0;
-    return use_id > 15 && use_id < 36;
-}
-
-bool InventoryManager::Item::IsIdentificationKit() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x25E8);
-    return mod && mod->arg1() == 1;
-}
-
-bool InventoryManager::Item::IsLesserKit() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x25E8);
-    return mod && mod->arg1() == 3;
-}
-
-bool InventoryManager::Item::IsExpertSalvageKit() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x25E8);
-    return mod && mod->arg1() == 2;
-}
-
-bool InventoryManager::Item::IsPerfectSalvageKit() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x25E8);
-    return mod && mod->arg1() == 6;
-}
-
-bool InventoryManager::Item::IsRareMaterial() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x2508);
-    return mod && mod->arg1() > 11;
-}
-bool InventoryManager::Item::IsInventoryItem() const
-{
-    return bag && (bag->IsInventoryBag() || bag->bag_type == GW::Constants::BagType::Equipped);
-}
-bool InventoryManager::Item::IsStorageItem() const
-{
-    return bag && (bag->IsStorageBag() || bag->IsMaterialStorage());
-}
-
-GW::Constants::Rarity InventoryManager::Item::GetRarity() const
-{
-    return GW::Items::GetRarity(this);
 }
 
 bool PendingItem::set(const InventoryManager::Item* item)

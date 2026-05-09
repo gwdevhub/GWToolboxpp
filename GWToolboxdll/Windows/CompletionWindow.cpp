@@ -1060,7 +1060,7 @@ void HeroUnlock::CheckProgress(const std::wstring& player_name)
 
 const char* HeroUnlock::Name()
 {
-    return hero_names[std::to_underlying(skill_id)];
+    return Resources::GetHeroName(static_cast<GW::Constants::HeroID>(std::to_underlying(skill_id)))->string().c_str();
 }
 
 size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
