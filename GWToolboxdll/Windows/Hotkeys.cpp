@@ -2024,6 +2024,9 @@ bool HotkeyGWKey::Draw()
 
 void HotkeyGWKey::Execute()
 {
+    if (!CanUse()) {
+        return;
+    }
     GW::GameThread::Enqueue([&] {
         const auto frame = GW::UI::GetFrameByLabel(L"Game");
         Keypress(action, GW::UI::GetChildFrame(frame, 6));
