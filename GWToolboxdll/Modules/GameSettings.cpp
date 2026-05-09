@@ -19,6 +19,7 @@
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Quest.h>
@@ -214,6 +215,7 @@ namespace {
     bool automatically_flag_pet_to_fight_called_target = true;
     bool remove_window_border_in_windowed_mode = false;
     bool prevent_weapon_spell_animation_on_player = false;
+    bool block_dervish_avatar_form = false;
     bool block_vanquish_complete_popup = false;
 
     bool was_leading = true;
@@ -1717,6 +1719,14 @@ void GameSettings::Initialize()
             check_message_on_party_change = true;
         });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry, [this](GW::HookStatus* status, const GW::Packet::StoC::AgentModel* packet) {
+        constexpr std::array<uint32_t, 5> avatar_model_file_ids = {0x3F8B, 0x32AE0, 0x32AEA, 0x32AEF, 0x32AF4};
+        const auto npc = GW::Agents::GetNPCByID(packet->model_id);
+        if (!block_dervish_avatar_form || packet->agent_id != GW::Agents::GetControlledCharacterId() || !npc)
+            return;
+        if (std::ranges::contains(avatar_model_file_ids, npc->model_file_id))
+            status->blocked = true;
+    });
 
     RegisterUIMessageCallback(&OnChangeTarget_Entry, GW::UI::UIMessage::kChangeTarget, OnChangeTarget);
     RegisterUIMessageCallback(&OnWriteChat_Entry, GW::UI::UIMessage::kWriteToChatLog, OnWriteChat);
@@ -1948,6 +1958,7 @@ void GameSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(disable_skill_descriptions_in_explorable);
 
     LOAD_BOOL(prevent_weapon_spell_animation_on_player);
+    LOAD_BOOL(block_dervish_avatar_form);
     LOAD_BOOL(block_vanquish_complete_popup);
 
     LOAD_BOOL(useful_level_progress_label);
@@ -2033,6 +2044,8 @@ void GameSettings::Terminate()
     ToolboxModule::Terminate();
     gold_confirm_patch.Reset();
     remove_skill_warmup_duration_patch.Reset();
+
+    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry);
 
     GW::UI::RemoveUIMessageCallback(&OnQuestUIMessage_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
@@ -2143,6 +2156,7 @@ void GameSettings::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(last_online_status);
 
     SAVE_BOOL(prevent_weapon_spell_animation_on_player);
+    SAVE_BOOL(block_dervish_avatar_form);
 
     SAVE_BOOL(useful_level_progress_label);
     SAVE_BOOL(hide_store_page_on_char_select);
@@ -2297,6 +2311,8 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Checkbox("Hide all non-elite skills when capturing a skill", &hide_nonelites_on_capture);
 
     ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
+
+    ImGui::Checkbox("Prevent dervish avatar elites from changing your character's appearance", &block_dervish_avatar_form);
 
     ImGui::Checkbox("Prompt if entering a mission you've already completed", &check_and_prompt_if_mission_already_completed);
     ImGui::ShowHelp(

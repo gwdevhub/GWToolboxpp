@@ -123,4 +123,5 @@ private:
     GW::HookEntry OnEnterMission_Entry;
     GW::HookEntry OnPreSendDialog_Entry;
     GW::HookEntry OnPostSendDialog_Entry;
+    GW::HookEntry OnAgentModel_Entry;
 };
