@@ -100,6 +100,7 @@
 #include <Widgets/InventoryOverlayWidget.h>
 #include <Widgets/TitleTrackerWidget.h>
 #include <Widgets/FavorTracker.h>
+#include <Widgets/BountyKillTrackerWidget.h>
 #include "ToolboxSettings.h"
 #include <Utils/ToolboxUtils.h>
 
@@ -196,6 +197,7 @@ namespace {
 #endif
         ActiveQuestWidget::Instance(),
         TitleTrackerWidget::Instance(),
+        BountyKillTrackerWidget::Instance(),
         PconsWindow::Instance(),
         HotkeysWindow::Instance(),
         BuildsWindow::Instance(),
