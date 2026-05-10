@@ -23,6 +23,7 @@ struct DistrictAlias {
 // Default outpost aliases shipped with toolbox. Used for initialization and reset.
 const std::map<const std::string, const OutpostAlias> default_outpost_aliases = {
     {"bestarea", {GW::Constants::MapID::The_Deep}},
+    {"kathandrax", {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1}},
     {"toa", {GW::Constants::MapID::Temple_of_the_Ages}},
     {"doa", {GW::Constants::MapID::Domain_of_Anguish}},
     {"goa", {GW::Constants::MapID::Domain_of_Anguish}},

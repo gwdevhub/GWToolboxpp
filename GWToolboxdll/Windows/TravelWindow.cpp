@@ -96,21 +96,16 @@ namespace {
         }
     };
 
-    // List of explorables with decoded area names, used for searching via chat command
-    std::vector<SearchableArea*> searchable_explorable_areas{};
-
     enum class FetchedMapNames : uint8_t {
         Pending,
         Decoding,
         Ready
     };
 
-    FetchedMapNames fetched_searchable_explorable_areas = FetchedMapNames::Pending;
+    // Unified list of all searchable travel destinations: outposts, explorable zones, and dungeons
+    std::vector<SearchableArea*> searchable_areas{};
 
-    // List of explorables with decoded area names, used for searching via chat command
-    std::vector<SearchableArea*> searchable_outposts{};
-
-    FetchedMapNames fetched_searchable_outposts = FetchedMapNames::Pending;
+    FetchedMapNames fetched_searchable_areas = FetchedMapNames::Pending;
 
     TravelWindow& Instance()
     {
@@ -308,16 +303,16 @@ namespace {
     // ==== Helpers ====
     GW::Constants::MapID IndexToOutpostID(const int index)
     {
-        if (static_cast<size_t>(index) < searchable_outposts.size()) {
-            return searchable_outposts[index]->map_id;
+        if (static_cast<size_t>(index) < searchable_areas.size()) {
+            return searchable_areas[index]->map_id;
         }
         return GW::Constants::MapID::Great_Temple_of_Balthazar_outpost;
     }
 
     int OutpostIDToIndex(GW::Constants::MapID map_id)
     {
-        for (size_t i = 0, size = searchable_outposts.size(); i < size; i++) {
-            if (searchable_outposts[i]->map_id == map_id)
+        for (size_t i = 0, size = searchable_areas.size(); i < size; i++) {
+            if (searchable_areas[i]->map_id == map_id)
                 return i;
         }
         return -1;
@@ -407,16 +402,8 @@ namespace {
             best_match_map_id = FindMatchingMap(compare.c_str(), presearing_map_names.data(), presearing_map_ids.data(), presearing_map_ids.size());
         }
         else {
-            if (best_match_map_id == GW::Constants::MapID::None && fetched_searchable_outposts == FetchedMapNames::Ready) {
-                // find explorable area matching this, and then find nearest unlocked outpost.
-                best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_outposts);
-            }
-            if (best_match_map_id == GW::Constants::MapID::None && fetched_searchable_explorable_areas == FetchedMapNames::Ready) {
-                // find explorable area matching this, and then find nearest unlocked outpost.
-                best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_explorable_areas);
-                if (best_match_map_id != GW::Constants::MapID::None) {
-                    best_match_map_id = TravelWindow::GetNearestOutpost(best_match_map_id);
-                }
+            if (best_match_map_id == GW::Constants::MapID::None && fetched_searchable_areas == FetchedMapNames::Ready) {
+                best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_areas);
             }
         }
 
@@ -591,11 +578,11 @@ namespace {
 
     bool outpost_name_array_getter(void* /* _data */, int idx, const char** out_text)
     {
-        if (idx < 0 || static_cast<size_t>(idx) > searchable_outposts.size()) {
+        if (idx < 0 || static_cast<size_t>(idx) > searchable_areas.size()) {
             return false;
         }
 
-        *out_text = GetMapName(searchable_outposts[idx]->map_id);
+        *out_text = GetMapName(searchable_areas[idx]->map_id);
         return true;
     }
 
@@ -656,10 +643,10 @@ void TravelWindow::Initialize()
 void TravelWindow::Terminate()
 {
     ToolboxWindow::Terminate();
-    for (auto& s : searchable_explorable_areas) {
+    for (auto& s : searchable_areas) {
         delete s;
     }
-    searchable_explorable_areas.clear();
+    searchable_areas.clear();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
@@ -713,7 +700,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
         else {
             ImGui::PushItemWidth(-1.0f);
             static int travelto_index = -1;
-            if (ImGui::MyCombo("###travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, searchable_outposts.size())) {
+            if (ImGui::MyCombo("###travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, searchable_areas.size())) {
                 const auto map_id = IndexToOutpostID(travelto_index);
                 Travel(map_id, district, district_number);
                 travelto_index = -1;
@@ -772,7 +759,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                     ImGui::PushItemWidth(((btn_w + spacing) * btn_count) * -1);
                     // find the index that matches the map from the array of map ids
                     const auto combo_val = OutpostIDToIndex(map_id);
-                    ImGui::MyCombo("", "Select a favorite", (int*)&combo_val, outpost_name_array_getter, nullptr, searchable_outposts.size());
+                    ImGui::MyCombo("", "Select a favorite", (int*)&combo_val, outpost_name_array_getter, nullptr, searchable_areas.size());
                     favourites[i] = IndexToOutpostID(combo_val);
                     ImGui::PopItemWidth();
 
@@ -839,35 +826,24 @@ void TravelWindow::Update(const float)
         ScrollToOutpost(scroll_to_outpost_id); // We're in the process of scrolling to an outpost
     }
 
-    // Dynamically generate a list of all explorable areas that the game has rather than storing another massive const array.
-    switch (fetched_searchable_explorable_areas) {
+    // Dynamically build a unified searchable list: outposts, world-map explorable zones, and dungeons
+    // with adjacency data (so GetNearestOutpost() can resolve them to a travelable outpost).
+    switch (fetched_searchable_areas) {
         case FetchedMapNames::Pending: {
-            BuildSearchableAreas(searchable_explorable_areas, [](GW::Constants::MapID, const GW::AreaInfo* map) {
-                return map && map->name_id && map->GetIsOnWorldMap() && map->type == GW::RegionType::ExplorableZone;
+            BuildSearchableAreas(searchable_areas, [](const GW::Constants::MapID map_id, const GW::AreaInfo* map) {
+                if (GW::Map::IsPreSearing(map_id)) return false;
+                if (!map || !map->name_id) return false;
+                if (IsValidOutpost(map_id)) return true;
+                if (map->GetIsOnWorldMap() && map->type == GW::RegionType::ExplorableZone) return true;
+                if (map->type == GW::RegionType::Dungeon && !MapAdjacency::GetNeighbors(map_id).empty()) return true;
+                return false;
             });
-            fetched_searchable_explorable_areas = FetchedMapNames::Decoding;
+            fetched_searchable_areas = FetchedMapNames::Decoding;
         }
         break;
         case FetchedMapNames::Decoding: {
-            if (CheckSearchableAreasDecoded(searchable_explorable_areas)) {
-                fetched_searchable_explorable_areas = FetchedMapNames::Ready;
-            }
-        }
-        break;
-    }
-
-    // Dynamically generate a list of all outposts that the game has rather than storing another massive const array.
-    switch (fetched_searchable_outposts) {
-        case FetchedMapNames::Pending: {
-            BuildSearchableAreas(searchable_outposts, [](const GW::Constants::MapID map_id, const GW::AreaInfo*) {
-                return IsValidOutpost(map_id) && !GW::Map::IsPreSearing(map_id);
-            });
-            fetched_searchable_outposts = FetchedMapNames::Decoding;
-        }
-        break;
-        case FetchedMapNames::Decoding: {
-            if (CheckSearchableAreasDecoded(searchable_outposts)) {
-                fetched_searchable_outposts = FetchedMapNames::Ready;
+            if (CheckSearchableAreasDecoded(searchable_areas)) {
+                fetched_searchable_areas = FetchedMapNames::Ready;
             }
         }
         break;
@@ -1102,6 +1078,12 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || map_id == GW::Constants::MapID::None) {
         return false;
     }
+    // Resolve non-outpost maps (explorable zones, dungeons) to nearest accessible outpost via adjacency
+    if (!IsValidOutpost(map_id)) {
+        const auto nearest = GetNearestOutpost(map_id);
+        if (nearest == GW::Constants::MapID::None) return false;
+        return Travel(nearest, _district, _district_number);
+    }
     if (!GW::Map::GetIsMapUnlocked(map_id)) {
         const GW::AreaInfo* map = GW::Map::GetMapInfo(map_id);
         wchar_t map_name_buf[8];
@@ -1195,7 +1177,7 @@ void TravelWindow::DrawSettingsInternal()
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-1);
             auto map_idx = OutpostIDToIndex(entry.map_id);
-            if (ImGui::MyCombo("##map", "Select map...", &map_idx, outpost_name_array_getter, nullptr, static_cast<int>(searchable_outposts.size()))) {
+            if (ImGui::MyCombo("##map", "Select map...", &map_idx, outpost_name_array_getter, nullptr, static_cast<int>(searchable_areas.size()))) {
                 entry.map_id = IndexToOutpostID(map_idx);
                 aliases_changed = true;
             }
