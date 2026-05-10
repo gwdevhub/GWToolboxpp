@@ -48,35 +48,21 @@ namespace {
     {
         using S = GW::Constants::SkillID;
         switch (skill_id) {
-            case S::Asuran_Bodyguard:    return 25;
-            case S::Asuran_Bodyguard1:   return 50;
-            case S::Asuran_Bodyguard2:   return 75;
-            case S::Asuran_Bodyguard3:   return 100;
-
-            case S::Dwarven_Raider:      return 25;
-            case S::Dwarven_Raider1:     return 50;
-            case S::Dwarven_Raider2:     return 75;
-            case S::Dwarven_Raider3:     return 100;
-            case S::Dwarven_Raider4:     return 25;
-            case S::Dwarven_Raider5:     return 50;
-            case S::Dwarven_Raider6:     return 75;
-            case S::Dwarven_Raider7:     return 100;
-
-            case S::Vanguard_Patrol:     return 25;
-            case S::Vanguard_Patrol1:    return 50;
-            case S::Vanguard_Patrol2:    return 75;
-            case S::Vanguard_Patrol3:    return 100;
-            case S::Vanguard_Patrol4:    return 25;
-
-            case S::Norn_Hunting_Party:  return 25;
-            case S::Norn_Hunting_Party1: return 50;
-            case S::Norn_Hunting_Party2: return 75;
-            case S::Norn_Hunting_Party3: return 100;
-            case S::Norn_Hunting_Party4: return 25;
-            case S::Norn_Hunting_Party5: return 50;
-            case S::Norn_Hunting_Party6: return 75;
-            case S::Norn_Hunting_Party7: return 100;
-
+            case S::Asuran_Bodyguard_Rank2:
+            case S::Dwarven_Raider_Rank2:
+            case S::Vanguard_Patrol_Rank2:
+            case S::Norn_Hunting_Party_Rank2:
+                return 2;
+            case S::Asuran_Bodyguard_Rank3:
+            case S::Dwarven_Raider_Rank3:
+            case S::Vanguard_Patrol_Rank3:
+            case S::Norn_Hunting_Party_Rank3:
+                return 3;
+            case S::Asuran_Bodyguard_Rank4:
+            case S::Dwarven_Raider_Rank4:
+            case S::Vanguard_Patrol_Rank4:
+            case S::Norn_Hunting_Party_Rank4:
+                return 4;
             default:
                 return 1;
         }
