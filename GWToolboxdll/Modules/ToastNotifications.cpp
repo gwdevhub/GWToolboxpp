@@ -8,6 +8,7 @@
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -120,6 +121,8 @@ namespace {
         }
         GuiUtils::FocusWindow();
     }
+
+    void SendEncodedToastMessage(const wchar_t* title, wchar_t* encoded_message);
 
     GW::HookEntry OnWhisper_Entry;
     GW::HookEntry OnTeamChat_Entry;
