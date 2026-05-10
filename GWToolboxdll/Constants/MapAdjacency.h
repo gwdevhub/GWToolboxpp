@@ -1443,6 +1443,41 @@ constexpr MapID adj_Frostmaws_Burrows_Level_1[] = {
 constexpr MapID adj_Darkrime_Delves_Level_1[] = {
     MapID::Bjora_Marches,
 };
+// Higher dungeon level chains: each level N points back to level N-1 so that
+// GetNearestOutpost() BFS can traverse from any level to the entrance outpost.
+constexpr MapID adj_Cathedral_of_Flames_Level_2[] = { MapID::Cathedral_of_Flames_Level_1 };
+constexpr MapID adj_Cathedral_of_Flames_Level_3[] = { MapID::Cathedral_of_Flames_Level_2 };
+constexpr MapID adj_Catacombs_of_Kathandrax_Level_2[] = { MapID::Catacombs_of_Kathandrax_Level_1 };
+constexpr MapID adj_Catacombs_of_Kathandrax_Level_3[] = { MapID::Catacombs_of_Kathandrax_Level_2 };
+constexpr MapID adj_Rragars_Menagerie_Level_2[] = { MapID::Rragars_Menagerie_Level_1 };
+constexpr MapID adj_Rragars_Menagerie_Level_3[] = { MapID::Rragars_Menagerie_Level_2 };
+constexpr MapID adj_Slavers_Exile_Level_2[] = { MapID::Slavers_Exile_Level_1 };
+constexpr MapID adj_Slavers_Exile_Level_3[] = { MapID::Slavers_Exile_Level_2 };
+constexpr MapID adj_Slavers_Exile_Level_4[] = { MapID::Slavers_Exile_Level_3 };
+constexpr MapID adj_Slavers_Exile_Level_5[] = { MapID::Slavers_Exile_Level_4 };
+constexpr MapID adj_Oolas_Lab_Level_2[] = { MapID::Oolas_Lab_Level_1 };
+constexpr MapID adj_Oolas_Lab_Level_3[] = { MapID::Oolas_Lab_Level_2 };
+constexpr MapID adj_Shards_of_Orr_Level_2[] = { MapID::Shards_of_Orr_Level_1 };
+constexpr MapID adj_Shards_of_Orr_Level_3[] = { MapID::Shards_of_Orr_Level_2 };
+constexpr MapID adj_Arachnis_Haunt_Level_2[] = { MapID::Arachnis_Haunt_Level_1 };
+constexpr MapID adj_Vloxen_Excavations_Level_2[] = { MapID::Vloxen_Excavations_Level_1 };
+constexpr MapID adj_Vloxen_Excavations_Level_3[] = { MapID::Vloxen_Excavations_Level_2 };
+constexpr MapID adj_Heart_of_the_Shiverpeaks_Level_2[] = { MapID::Heart_of_the_Shiverpeaks_Level_1 };
+constexpr MapID adj_Heart_of_the_Shiverpeaks_Level_3[] = { MapID::Heart_of_the_Shiverpeaks_Level_2 };
+constexpr MapID adj_Bloodstone_Caves_Level_2[] = { MapID::Bloodstone_Caves_Level_1 };
+constexpr MapID adj_Bloodstone_Caves_Level_3[] = { MapID::Bloodstone_Caves_Level_2 };
+constexpr MapID adj_Bogroot_Growths_Level_2[] = { MapID::Bogroot_Growths_Level_1 };
+constexpr MapID adj_Ravens_Point_Level_2[] = { MapID::Ravens_Point_Level_1 };
+constexpr MapID adj_Ravens_Point_Level_3[] = { MapID::Ravens_Point_Level_2 };
+constexpr MapID adj_Battledepths_Level_2[] = { MapID::Battledepths_Level_1 };
+constexpr MapID adj_Battledepths_Level_3[] = { MapID::Battledepths_Level_2 };
+constexpr MapID adj_Sepulchre_of_Dragrimmar_Level_2[] = { MapID::Sepulchre_of_Dragrimmar_Level_1 };
+constexpr MapID adj_Frostmaws_Burrows_Level_2[] = { MapID::Frostmaws_Burrows_Level_1 };
+constexpr MapID adj_Frostmaws_Burrows_Level_3[] = { MapID::Frostmaws_Burrows_Level_2 };
+constexpr MapID adj_Frostmaws_Burrows_Level_4[] = { MapID::Frostmaws_Burrows_Level_3 };
+constexpr MapID adj_Frostmaws_Burrows_Level_5[] = { MapID::Frostmaws_Burrows_Level_4 };
+constexpr MapID adj_Darkrime_Delves_Level_2[] = { MapID::Darkrime_Delves_Level_1 };
+constexpr MapID adj_Darkrime_Delves_Level_3[] = { MapID::Darkrime_Delves_Level_2 };
 constexpr MapID adj_Gadds_Encampment_outpost[] = {
     MapID::Sparkfly_Swamp,
     MapID::Shards_of_Orr_Level_1,
@@ -1889,6 +1924,39 @@ constexpr AdjacencyEntry adjacency_table[] = {
     {MapID::Sepulchre_of_Dragrimmar_Level_1, adj_Sepulchre_of_Dragrimmar_Level_1},
     {MapID::Frostmaws_Burrows_Level_1, adj_Frostmaws_Burrows_Level_1},
     {MapID::Darkrime_Delves_Level_1, adj_Darkrime_Delves_Level_1},
+    {MapID::Cathedral_of_Flames_Level_2, adj_Cathedral_of_Flames_Level_2},
+    {MapID::Cathedral_of_Flames_Level_3, adj_Cathedral_of_Flames_Level_3},
+    {MapID::Catacombs_of_Kathandrax_Level_2, adj_Catacombs_of_Kathandrax_Level_2},
+    {MapID::Catacombs_of_Kathandrax_Level_3, adj_Catacombs_of_Kathandrax_Level_3},
+    {MapID::Rragars_Menagerie_Level_2, adj_Rragars_Menagerie_Level_2},
+    {MapID::Rragars_Menagerie_Level_3, adj_Rragars_Menagerie_Level_3},
+    {MapID::Slavers_Exile_Level_2, adj_Slavers_Exile_Level_2},
+    {MapID::Slavers_Exile_Level_3, adj_Slavers_Exile_Level_3},
+    {MapID::Slavers_Exile_Level_4, adj_Slavers_Exile_Level_4},
+    {MapID::Slavers_Exile_Level_5, adj_Slavers_Exile_Level_5},
+    {MapID::Oolas_Lab_Level_2, adj_Oolas_Lab_Level_2},
+    {MapID::Oolas_Lab_Level_3, adj_Oolas_Lab_Level_3},
+    {MapID::Shards_of_Orr_Level_2, adj_Shards_of_Orr_Level_2},
+    {MapID::Shards_of_Orr_Level_3, adj_Shards_of_Orr_Level_3},
+    {MapID::Arachnis_Haunt_Level_2, adj_Arachnis_Haunt_Level_2},
+    {MapID::Vloxen_Excavations_Level_2, adj_Vloxen_Excavations_Level_2},
+    {MapID::Vloxen_Excavations_Level_3, adj_Vloxen_Excavations_Level_3},
+    {MapID::Heart_of_the_Shiverpeaks_Level_2, adj_Heart_of_the_Shiverpeaks_Level_2},
+    {MapID::Heart_of_the_Shiverpeaks_Level_3, adj_Heart_of_the_Shiverpeaks_Level_3},
+    {MapID::Bloodstone_Caves_Level_2, adj_Bloodstone_Caves_Level_2},
+    {MapID::Bloodstone_Caves_Level_3, adj_Bloodstone_Caves_Level_3},
+    {MapID::Bogroot_Growths_Level_2, adj_Bogroot_Growths_Level_2},
+    {MapID::Ravens_Point_Level_2, adj_Ravens_Point_Level_2},
+    {MapID::Ravens_Point_Level_3, adj_Ravens_Point_Level_3},
+    {MapID::Battledepths_Level_2, adj_Battledepths_Level_2},
+    {MapID::Battledepths_Level_3, adj_Battledepths_Level_3},
+    {MapID::Sepulchre_of_Dragrimmar_Level_2, adj_Sepulchre_of_Dragrimmar_Level_2},
+    {MapID::Frostmaws_Burrows_Level_2, adj_Frostmaws_Burrows_Level_2},
+    {MapID::Frostmaws_Burrows_Level_3, adj_Frostmaws_Burrows_Level_3},
+    {MapID::Frostmaws_Burrows_Level_4, adj_Frostmaws_Burrows_Level_4},
+    {MapID::Frostmaws_Burrows_Level_5, adj_Frostmaws_Burrows_Level_5},
+    {MapID::Darkrime_Delves_Level_2, adj_Darkrime_Delves_Level_2},
+    {MapID::Darkrime_Delves_Level_3, adj_Darkrime_Delves_Level_3},
     {MapID::Gadds_Encampment_outpost, adj_Gadds_Encampment_outpost},
     {MapID::Umbral_Grotto_outpost, adj_Umbral_Grotto_outpost},
     {MapID::Rata_Sum_outpost, adj_Rata_Sum_outpost},

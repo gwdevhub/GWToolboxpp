@@ -181,6 +181,40 @@ namespace {
         uint32_t district_number = 0;
     };
 
+    struct AliasEntry {
+        char alias[32]{};
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::District district = GW::Constants::District::Current;
+        uint8_t district_number = 0;
+    };
+
+    std::vector<AliasEntry> user_aliases{};
+
+    void PopulateDefaultAliases()
+    {
+        user_aliases.clear();
+        for (const auto& [key, val] : default_outpost_aliases) {
+            AliasEntry entry{};
+            strncpy(entry.alias, key.c_str(), sizeof(entry.alias) - 1);
+            entry.map_id = val.map_id;
+            entry.district = val.district;
+            entry.district_number = val.district_number;
+            user_aliases.push_back(entry);
+        }
+        std::ranges::sort(user_aliases, [](const AliasEntry& a, const AliasEntry& b) {
+            return strcmp(a.alias, b.alias) < 0;
+        });
+    }
+
+    int DistrictToAliasIndex(const GW::Constants::District d)
+    {
+        for (size_t i = 0; i < alias_district_ids.size(); i++) {
+            if (alias_district_ids[i] == d)
+                return static_cast<int>(i);
+        }
+        return 0;
+    }
+
     struct UIErrorMessage {
         int error_index;
         wchar_t* message;
@@ -302,14 +336,13 @@ namespace {
 
         // Shortcut words e.g "/tp doa" for domain of anguish
         const std::string first_word = compare.substr(0, compare.find(' '));
-        const auto& shorthand_outpost = shorthand_outpost_names.find(first_word);
-        if (shorthand_outpost != shorthand_outpost_names.end()) {
-            const OutpostAlias& outpost_info = shorthand_outpost->second;
-            outpost = outpost_info.map_id;
-            if (outpost_info.district != GW::Constants::District::Current) {
-                district = outpost_info.district;
+        for (const auto& entry : user_aliases) {
+            if (first_word == entry.alias) {
+                outpost = entry.map_id;
+                if (entry.district != GW::Constants::District::Current)
+                    district = entry.district;
+                return true;
             }
-            return true;
         }
 
         // Helper function
@@ -726,7 +759,6 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             }
 
             static int editing = -1;
-#
             const auto spacing = ImGui::GetStyle().ItemSpacing.x;
             const auto btn_w = (ImGui::FontScale() * 30.f);
             for (size_t i = 0, size = favourites.size(); i < size; i++) {
@@ -800,8 +832,6 @@ void TravelWindow::Draw(IDirect3DDevice9*)
     }
     ImGui::End();
 }
-
-bool GetMapLabelPos(const GW::AreaInfo* map, GW::Vec2f* out);
 
 void TravelWindow::Update(const float)
 {
@@ -1107,7 +1137,6 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
             break;
     }
     return true;
-    //return GW::Map::Travel(map_id, District, district_number);
 }
 
 bool TravelWindow::TravelFavorite(const unsigned int idx)
@@ -1132,12 +1161,96 @@ void TravelWindow::DrawSettingsInternal()
     ImGui::ShowHelp("If this is unchecked, the /tp command will use the localized map names based on your current language.");
     ImGui::Checkbox("Show default destinations", &show_default_destinations);
     ImGui::ShowHelp("Show the built-in destinations (Temple of the Ages, Domain of Anguish, Kamadan, Embark Beach, etc.) and Zaishen Daily buttons in the Travel window.");
+
+    ImGui::Separator();
+    ImGui::Text("Outpost Aliases");
+    ImGui::ShowHelp("Custom shorthand aliases used with the /tp command.\nDistrict and district number are optional.");
+
+    const auto btn_w = ImGui::FontScale() * 30.f;
+    const auto spacing = ImGui::GetStyle().ItemSpacing.x;
+
+    bool aliases_changed = false;
+
+    if (ImGui::BeginTable("##aliases", 5, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("Alias", ImGuiTableColumnFlags_WidthFixed, ImGui::FontScale() * 70.f);
+        ImGui::TableSetupColumn("Map", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("District", ImGuiTableColumnFlags_WidthFixed, ImGui::FontScale() * 100.f);
+        ImGui::TableSetupColumn("Dist #", ImGuiTableColumnFlags_WidthFixed, ImGui::FontScale() * 45.f);
+        ImGui::TableSetupColumn("##del", ImGuiTableColumnFlags_WidthFixed, btn_w);
+        ImGui::TableHeadersRow();
+
+        for (size_t i = 0; i < user_aliases.size(); i++) {
+            ImGui::PushID(static_cast<int>(i));
+            auto& entry = user_aliases[i];
+
+            ImGui::TableNextRow();
+
+            // Alias key
+            ImGui::TableSetColumnIndex(0);
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::InputText("##alias", entry.alias, sizeof(entry.alias)))
+                aliases_changed = true;
+
+            // Map combo
+            ImGui::TableSetColumnIndex(1);
+            ImGui::SetNextItemWidth(-1);
+            auto map_idx = OutpostIDToIndex(entry.map_id);
+            if (ImGui::MyCombo("##map", "Select map...", &map_idx, outpost_name_array_getter, nullptr, static_cast<int>(searchable_outposts.size()))) {
+                entry.map_id = IndexToOutpostID(map_idx);
+                aliases_changed = true;
+            }
+
+            // District combo
+            ImGui::TableSetColumnIndex(2);
+            ImGui::SetNextItemWidth(-1);
+            auto dist_idx = DistrictToAliasIndex(entry.district);
+            if (ImGui::Combo("##district", &dist_idx, alias_district_names.data(), static_cast<int>(alias_district_names.size()))) {
+                entry.district = alias_district_ids[dist_idx];
+                aliases_changed = true;
+            }
+
+            // District number
+            ImGui::TableSetColumnIndex(3);
+            ImGui::SetNextItemWidth(-1);
+            auto dist_num = static_cast<int>(entry.district_number);
+            if (ImGui::InputInt("##distnum", &dist_num, 0)) {
+                entry.district_number = static_cast<uint8_t>(std::max(0, dist_num));
+                aliases_changed = true;
+            }
+
+            // Delete button
+            ImGui::TableSetColumnIndex(4);
+            if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete alias", ImVec2(btn_w, 0))) {
+                user_aliases.erase(user_aliases.begin() + i);
+                aliases_changed = true;
+                ImGui::PopID();
+                break;
+            }
+
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+
+    if (ImGui::Button("Add Alias", ImVec2(btn_w * 3, 0))) {
+        user_aliases.push_back({});
+    }
+
+    ImGui::SameLine(0, spacing);
+
+    static bool reset_confirmed = false;
+    if (ImGui::ConfirmButton("Reset to Defaults", &reset_confirmed,
+        "Reset Outpost Aliases?\n\nThis will restore all aliases to the built-in defaults.\nCustom aliases will be lost.")) {
+        PopulateDefaultAliases();
+        reset_confirmed = false;
+    }
+
+    (void)aliases_changed;
 }
 
 void TravelWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-
 
     size_t fav_count = 0;
     LOAD_UINT(fav_count);
@@ -1149,6 +1262,29 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
         if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None)
             favourites.push_back(map_id);
     }
+
+    size_t alias_count = 0;
+    LOAD_UINT(alias_count);
+    user_aliases.clear();
+    for (size_t i = 0; i < alias_count; i++) {
+        char key[64];
+        AliasEntry entry{};
+        snprintf(key, sizeof(key), "Alias%zu_key", i);
+        const auto* alias_str = ini->GetValue(Name(), key, nullptr);
+        if (!alias_str || !*alias_str)
+            continue;
+        strncpy(entry.alias, alias_str, sizeof(entry.alias) - 1);
+        snprintf(key, sizeof(key), "Alias%zu_map", i);
+        entry.map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
+        snprintf(key, sizeof(key), "Alias%zu_district", i);
+        entry.district = static_cast<GW::Constants::District>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::District::Current)));
+        snprintf(key, sizeof(key), "Alias%zu_district_num", i);
+        entry.district_number = static_cast<uint8_t>(ini->GetLongValue(Name(), key, 0));
+        user_aliases.push_back(entry);
+    }
+    if (user_aliases.empty())
+        PopulateDefaultAliases();
+
     LOAD_BOOL(close_on_travel);
     LOAD_BOOL(collapse_on_travel);
     LOAD_BOOL(retry_map_travel);
@@ -1159,13 +1295,29 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
 void TravelWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    size_t fav_count = favourites.size();
+    const size_t fav_count = favourites.size();
     SAVE_UINT(fav_count);
     for (size_t i = 0, size = favourites.size(); i < size; i++) {
         char key[32];
         snprintf(key, _countof(key), "Fav%d", i);
         ini->SetLongValue(Name(), key, static_cast<int>(favourites[i]));
     }
+
+    const size_t alias_count = user_aliases.size();
+    SAVE_UINT(alias_count);
+    for (size_t i = 0; i < alias_count; i++) {
+        char key[64];
+        const auto& entry = user_aliases[i];
+        snprintf(key, sizeof(key), "Alias%zu_key", i);
+        ini->SetValue(Name(), key, entry.alias);
+        snprintf(key, sizeof(key), "Alias%zu_map", i);
+        ini->SetLongValue(Name(), key, static_cast<int>(entry.map_id));
+        snprintf(key, sizeof(key), "Alias%zu_district", i);
+        ini->SetLongValue(Name(), key, static_cast<int>(entry.district));
+        snprintf(key, sizeof(key), "Alias%zu_district_num", i);
+        ini->SetLongValue(Name(), key, entry.district_number);
+    }
+
     SAVE_BOOL(close_on_travel);
     SAVE_BOOL(collapse_on_travel);
     SAVE_BOOL(retry_map_travel);
