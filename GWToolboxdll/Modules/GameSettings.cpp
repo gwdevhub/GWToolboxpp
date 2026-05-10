@@ -2303,24 +2303,53 @@ void GameSettings::FactionEarnedCheckAndWarn()
         return; // No world context yet.
     }
     faction_warn_percent_amount = std::clamp(faction_warn_percent_amount, 0, 100);
-    const auto titles = GW::Map::GetTitlesForMap(GW::Map::GetMapID());
-    const float threshold = static_cast<float>(faction_warn_percent_amount);
-    for (const auto title : titles) {
-        if (title == GW::Constants::TitleID::Luxon) {
-            const float pct = 100.0f * static_cast<float>(world_context->current_luxon) / static_cast<float>(world_context->max_luxon);
-            if (pct >= threshold)
-                Log::Warning("Luxon faction earned is %d of %d", world_context->current_luxon, world_context->max_luxon);
-            else if (world_context->current_kurzick > 4999 && world_context->current_kurzick > world_context->current_luxon)
-                Log::Warning("Kurzick faction earned is greater than Luxon");
-        }
-        else if (title == GW::Constants::TitleID::Kurzick) {
-            const float pct = 100.0f * static_cast<float>(world_context->current_kurzick) / static_cast<float>(world_context->max_kurzick);
-            if (pct >= threshold)
-                Log::Warning("Kurzick faction earned is %d of %d", world_context->current_kurzick, world_context->max_kurzick);
-            else if (world_context->current_luxon > 4999 && world_context->current_luxon > world_context->current_kurzick)
-                Log::Warning("Luxon faction earned is greater than Kurzick");
-        }
+
+    using MapID = GW::Constants::MapID;
+    static constexpr std::array luxon_maps = {
+        MapID::The_Deep,
+        MapID::The_Jade_Quarry_Luxon_outpost,
+        MapID::Fort_Aspenwood_Luxon_outpost,
+        MapID::Zos_Shivros_Channel,
+        MapID::The_Aurios_Mines
+    };
+    static constexpr std::array kurzick_maps = {
+        MapID::Urgozs_Warren,
+        MapID::The_Jade_Quarry_Kurzick_outpost,
+        MapID::Fort_Aspenwood_Kurzick_outpost,
+        MapID::Altrumm_Ruins,
+        MapID::Amatz_Basin
+    };
+
+    const auto map_id = GW::Map::GetMapID();
+    const uint32_t* current;
+    const uint32_t* max;
+    const uint32_t* other_current;
+    const char* name;
+    const char* other_name;
+
+    if (std::ranges::find(luxon_maps, map_id) != luxon_maps.end()) {
+        current = &world_context->current_luxon;
+        max = &world_context->max_luxon;
+        other_current = &world_context->current_kurzick;
+        name = "Luxon";
+        other_name = "Kurzick";
     }
+    else if (std::ranges::find(kurzick_maps, map_id) != kurzick_maps.end()) {
+        current = &world_context->current_kurzick;
+        max = &world_context->max_kurzick;
+        other_current = &world_context->current_luxon;
+        name = "Kurzick";
+        other_name = "Luxon";
+    }
+    else {
+        return;
+    }
+
+    const float pct = 100.0f * static_cast<float>(*current) / static_cast<float>(*max);
+    if (pct >= static_cast<float>(faction_warn_percent_amount))
+        Log::Warning("%s faction earned is %d of %d", name, *current, *max);
+    else if (*other_current > 4999 && *other_current > *current)
+        Log::Warning("%s faction earned is greater than %s", other_name, name);
 }
 
 void GameSettings::Update(float)
