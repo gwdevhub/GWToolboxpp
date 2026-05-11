@@ -63,6 +63,7 @@ namespace {
 
     // Sort order configuration
     std::vector<GW::Constants::ItemType> sort_order;
+    bool sort_equipment_pack = false;
 
     // Primary key: item type (from sort_order). Secondary key: for Nicholas collectibles,
     // weeks until Nick requests them (0 = this week); for all other items, model_file_id.
@@ -280,6 +281,7 @@ void InventorySorting::LoadSettings(ToolboxIni* ini)
         ResetSortOrder();
     }
 
+    LOAD_BOOL(sort_equipment_pack);
 }
 
 void InventorySorting::SaveSettings(ToolboxIni* ini)
@@ -294,6 +296,8 @@ void InventorySorting::SaveSettings(ToolboxIni* ini)
         snprintf(key, sizeof(key), "sort_order_%zu", i);
         ini->SetLongValue(Name(), key, static_cast<long>(std::to_underlying(sort_order[i])));
     }
+
+    SAVE_BOOL(sort_equipment_pack);
 }
 
 void InventorySorting::Draw(IDirect3DDevice9*)
@@ -304,6 +308,26 @@ void InventorySorting::Draw(IDirect3DDevice9*)
 void InventorySorting::DrawSettingsInternal()
 {
     ImGui::PushID("inventory_sorting_settings");
+
+    // Character inventory sorting
+    {
+        bool sort_char_inv = false;
+        if (ImGui::ConfirmButton("Sort Character Inventory!", &sort_char_inv)) {
+            const auto end_bag = sort_equipment_pack
+                ? GW::Constants::Bag::Equipment_Pack
+                : GW::Constants::Bag::Bag_2;
+            Resources::EnqueueWorkerTask([end_bag]() {
+                SortInventory(GW::Constants::Bag::Backpack, end_bag);
+            });
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Include Equipment Pack", &sort_equipment_pack);
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
     bool open = ImGui::CollapsingHeader("Change Storage Inventory Sorting Order", ImGuiTreeNodeFlags_SpanLabelWidth);
     ImGui::SameLine(0.f, 20.f);
     bool sort_inv = false;
