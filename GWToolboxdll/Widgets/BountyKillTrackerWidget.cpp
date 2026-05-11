@@ -239,7 +239,6 @@ void BountyKillTrackerWidget::Draw(IDirect3DDevice9*)
     ImGui::PushFont(FontLoader::GetFont(), draw_list, font_size);
 
     for (const auto& [skill_id, state] : active_bounties) {
-        if (state.kill_count == 0) continue;
         const auto* skill_frame = GW::UI::GetChildFrame(effects_frame, static_cast<uint32_t>(skill_id) + 0x4);
         if (!skill_frame) continue;
         std::array<char, 16> count_str{};
