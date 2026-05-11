@@ -597,24 +597,15 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
             if (win && win->Viewport) {
                 const ImRect tb = win->TitleBarRect();
                 const float bar_h = tb.GetHeight();
-                const float radius = bar_h * 0.28f;
                 const float close_offset = GetVisiblePtr() ? bar_h : 0.f;
-                const ImVec2 icon_center(tb.Max.x - close_offset - bar_h * 0.5f, tb.GetCenter().y);
+                const char* icon = enabled ? ICON_FA_CHECK : ICON_FA_TIMES;
+                const ImVec2 text_size = ImGui::CalcTextSize(icon);
+                const ImVec2 icon_pos = {
+                    tb.Max.x - close_offset - bar_h * 0.5f - text_size.x * 0.5f,
+                    tb.GetCenter().y - text_size.y * 0.5f
+                };
                 auto* dl = ImGui::GetForegroundDrawList(win->Viewport);
-                dl->AddCircleFilled(icon_center, radius, enabled ? IM_COL32(0, 180, 0, 230) : IM_COL32(200, 0, 0, 230));
-                const float s = radius * 0.55f;
-                const float lw = ImMax(1.5f, radius * 0.22f);
-                if (enabled) {
-                    const ImVec2 p1(icon_center.x - s * 0.55f, icon_center.y + s * 0.05f);
-                    const ImVec2 p2(icon_center.x - s * 0.1f, icon_center.y + s * 0.55f);
-                    const ImVec2 p3(icon_center.x + s * 0.55f, icon_center.y - s * 0.45f);
-                    dl->AddLine(p1, p2, IM_COL32(255, 255, 255, 255), lw);
-                    dl->AddLine(p2, p3, IM_COL32(255, 255, 255, 255), lw);
-                }
-                else {
-                    dl->AddLine({icon_center.x - s, icon_center.y - s}, {icon_center.x + s, icon_center.y + s}, IM_COL32(255, 255, 255, 255), lw);
-                    dl->AddLine({icon_center.x + s, icon_center.y - s}, {icon_center.x - s, icon_center.y + s}, IM_COL32(255, 255, 255, 255), lw);
-                }
+                dl->AddText(icon_pos, enabled ? IM_COL32(0, 200, 0, 230) : IM_COL32(200, 0, 0, 230), icon);
             }
         }
         return ImGui::End();
