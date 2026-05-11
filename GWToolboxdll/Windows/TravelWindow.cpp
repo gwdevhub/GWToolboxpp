@@ -104,6 +104,8 @@ namespace {
 
     // Unified list of all searchable travel destinations: outposts, explorable zones, and dungeons
     std::vector<SearchableArea*> searchable_areas{};
+    // Non-owning runtime-filtered view of searchable_areas; rebuilt when IsPreSearing() state changes
+    std::vector<SearchableArea*> visible_searchable_areas{};
 
     FetchedMapNames fetched_searchable_areas = FetchedMapNames::Pending;
 
@@ -295,16 +297,16 @@ namespace {
     // ==== Helpers ====
     GW::Constants::MapID IndexToOutpostID(const int index)
     {
-        if (static_cast<size_t>(index) < searchable_areas.size()) {
-            return searchable_areas[index]->map_id;
+        if (static_cast<size_t>(index) < visible_searchable_areas.size()) {
+            return visible_searchable_areas[index]->map_id;
         }
         return GW::Constants::MapID::Great_Temple_of_Balthazar_outpost;
     }
 
     int OutpostIDToIndex(GW::Constants::MapID map_id)
     {
-        for (size_t i = 0, size = searchable_areas.size(); i < size; i++) {
-            if (searchable_areas[i]->map_id == map_id)
+        for (size_t i = 0, size = visible_searchable_areas.size(); i < size; i++) {
+            if (visible_searchable_areas[i]->map_id == map_id)
                 return i;
         }
         return -1;
@@ -391,7 +393,7 @@ namespace {
         };
         auto best_match_map_id = GW::Constants::MapID::None;
         if (fetched_searchable_areas == FetchedMapNames::Ready) {
-            best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_areas);
+            best_match_map_id = FindMatchingMapVec(compare.c_str(), visible_searchable_areas);
         }
 
         if (best_match_map_id != GW::Constants::MapID::None) {
@@ -565,11 +567,11 @@ namespace {
 
     bool outpost_name_array_getter(void* /* _data */, int idx, const char** out_text)
     {
-        if (idx < 0 || static_cast<size_t>(idx) > searchable_areas.size()) {
+        if (idx < 0 || static_cast<size_t>(idx) > visible_searchable_areas.size()) {
             return false;
         }
 
-        *out_text = GetMapName(searchable_areas[idx]->map_id);
+        *out_text = GetMapName(visible_searchable_areas[idx]->map_id);
         return true;
     }
 
@@ -687,7 +689,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
         else {
             ImGui::PushItemWidth(-1.0f);
             static int travelto_index = -1;
-            if (ImGui::MyCombo("###travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, searchable_areas.size())) {
+            if (ImGui::MyCombo("###travelto", "Travel To...", &travelto_index, outpost_name_array_getter, nullptr, visible_searchable_areas.size())) {
                 const auto map_id = IndexToOutpostID(travelto_index);
                 Travel(map_id, district, district_number);
                 travelto_index = -1;
@@ -746,7 +748,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                     ImGui::PushItemWidth(((btn_w + spacing) * btn_count) * -1);
                     // find the index that matches the map from the array of map ids
                     const auto combo_val = OutpostIDToIndex(map_id);
-                    ImGui::MyCombo("", "Select a favorite", (int*)&combo_val, outpost_name_array_getter, nullptr, searchable_areas.size());
+                    ImGui::MyCombo("", "Select a favorite", (int*)&combo_val, outpost_name_array_getter, nullptr, visible_searchable_areas.size());
                     favourites[i] = IndexToOutpostID(combo_val);
                     ImGui::PopItemWidth();
 
@@ -817,12 +819,11 @@ void TravelWindow::Update(const float)
     // with adjacency data (so GetNearestOutpost() can resolve them to a travelable outpost).
     switch (fetched_searchable_areas) {
         case FetchedMapNames::Pending: {
-            BuildSearchableAreas(searchable_areas, [am_i_in_presearing = GW::Map::IsPreSearing()](const GW::Constants::MapID map_id, const GW::AreaInfo* map) {
-                if (GW::Map::IsPreSearing(map_id) != am_i_in_presearing) return false;
+            BuildSearchableAreas(searchable_areas, [](const GW::Constants::MapID map_id, const GW::AreaInfo* map) {
                 if (!map || !map->name_id) return false;
                 if (IsValidOutpost(map_id)) return true;
-                if (!am_i_in_presearing && map->GetIsOnWorldMap() && map->type == GW::RegionType::ExplorableZone) return true;
-                if (!am_i_in_presearing && map->type == GW::RegionType::Dungeon && !MapAdjacency::GetNeighbors(map_id).empty()) return true;
+                if (map->GetIsOnWorldMap() && map->type == GW::RegionType::ExplorableZone) return true;
+                if (map->type == GW::RegionType::Dungeon && !MapAdjacency::GetNeighbors(map_id).empty()) return true;
                 return false;
             });
             fetched_searchable_areas = FetchedMapNames::Decoding;
@@ -834,6 +835,21 @@ void TravelWindow::Update(const float)
             }
         }
         break;
+    }
+
+    // Rebuild the visible subset whenever the pre-searing state changes (or on first ready)
+    if (fetched_searchable_areas == FetchedMapNames::Ready) {
+        static bool last_presearing_state = false;
+        const bool in_presearing = GW::Map::IsPreSearing();
+        if (visible_searchable_areas.empty() || last_presearing_state != in_presearing) {
+            last_presearing_state = in_presearing;
+            visible_searchable_areas.clear();
+            for (auto* area : searchable_areas) {
+                if (GW::Map::IsPreSearing(area->map_id) == in_presearing) {
+                    visible_searchable_areas.push_back(area);
+                }
+            }
+        }
     }
 }
 
@@ -1164,7 +1180,7 @@ void TravelWindow::DrawSettingsInternal()
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-1);
             auto map_idx = OutpostIDToIndex(entry.map_id);
-            if (ImGui::MyCombo("##map", "Select map...", &map_idx, outpost_name_array_getter, nullptr, static_cast<int>(searchable_areas.size()))) {
+            if (ImGui::MyCombo("##map", "Select map...", &map_idx, outpost_name_array_getter, nullptr, static_cast<int>(visible_searchable_areas.size()))) {
                 entry.map_id = IndexToOutpostID(map_idx);
                 aliases_changed = true;
             }
