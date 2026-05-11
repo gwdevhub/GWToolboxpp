@@ -789,7 +789,7 @@ namespace GW {
 
             GW::UI::UIPacket::kEffectAdd packet{};
             packet.agent_id = GW::Agents::GetControlledCharacterId();
-            packet.effect = ToolboxUtils::GwArrayPushBack(arr, new_effect);
+            packet.effect = GW::MemoryMgr::AddToGuildWarsArray(arr, new_effect);
             GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectAdd, &packet);
             return new_effect.effect_id;
         }
@@ -802,7 +802,7 @@ namespace GW {
             auto& arr = player_effects->effects;
             for (uint32_t i = 0; i < arr.m_size; i++) {
                 if (arr.m_buffer[i].effect_id != effect_id) continue;
-                ToolboxUtils::GwArrayErase(arr, i);
+                GW::MemoryMgr::RemoveFromGwArray(arr, i);
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRemove, reinterpret_cast<void*>(static_cast<uintptr_t>(effect_id)));
                 return true;
             }

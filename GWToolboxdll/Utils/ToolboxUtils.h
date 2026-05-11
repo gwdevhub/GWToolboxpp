@@ -1,6 +1,4 @@
 #pragma once
-#include <GWCA/GameContainers/Array.h>
-#include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
@@ -306,31 +304,4 @@ namespace ToolboxUtils {
 
     GuiUtils::EncString* GetProfessionName(GW::Constants::Profession profession);
     GuiUtils::EncString* GetProfessionAcronym(GW::Constants::Profession profession);
-
-    // Appends element to a GW-managed array, growing the buffer via MemRealloc if at capacity.
-    // Returns a pointer to the newly appended element in the (possibly reallocated) buffer.
-    template <typename T>
-    T* GwArrayPushBack(GW::BaseArray<T>& arr, const T& element)
-    {
-        if (arr.m_size >= arr.m_capacity) {
-            auto* new_buf = static_cast<T*>(GW::MemoryMgr::MemRealloc(arr.m_buffer, (arr.m_size + 1) * sizeof(T)));
-            GWCA_ASSERT(new_buf);
-            arr.m_buffer = new_buf;
-            arr.m_capacity++;
-        }
-        arr.m_buffer[arr.m_size] = element;
-        return &arr.m_buffer[arr.m_size++];
-    }
-
-    // Removes the element at index from a GW-managed array by shifting remaining elements left.
-    // Capacity is unchanged so future GwArrayPushBack calls can reuse the slack without reallocating.
-    template <typename T>
-    void GwArrayErase(GW::BaseArray<T>& arr, uint32_t index)
-    {
-        GWCA_ASSERT(index < arr.m_size);
-        const auto remaining = arr.m_size - index - 1;
-        if (remaining > 0)
-            memmove(&arr.m_buffer[index], &arr.m_buffer[index + 1], remaining * sizeof(T));
-        arr.m_size--;
-    }
 };
