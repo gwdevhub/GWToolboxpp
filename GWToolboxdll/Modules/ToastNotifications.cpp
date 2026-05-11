@@ -53,6 +53,13 @@ namespace {
     bool flash_window_on_everyone_ready = false;
     bool flash_window_on_self_resurrected = false;
 
+    bool change_title_on_notification = false;
+
+    // Original window title before any notification prefix was applied
+    std::wstring original_window_title;
+    // Descriptors of notifications pending since last window focus
+    std::vector<std::wstring> pending_title_notifications;
+
     const wchar_t* party_ready_toast_title = L"Party Ready";
 
     // Pointers deleted in ChatSettings::Terminate
@@ -97,6 +104,70 @@ namespace {
         }
     }
 
+    bool CanChangeTitle()
+    {
+        if (!change_title_on_notification) {
+            return false;
+        }
+        const auto whnd = GW::MemoryMgr::GetGWWindowHandle();
+        if (!whnd) {
+            return false;
+        }
+        if (IsIconic(whnd)) {
+            return ShouldNotifyInstanceType(show_notifications_when_minimised);
+        }
+        if (GetActiveWindow() != whnd) {
+            return ShouldNotifyInstanceType(show_notifications_when_in_background);
+        }
+        return false; // Window is focused; don't update title
+    }
+
+    void UpdateWindowTitle()
+    {
+        const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        if (!hwnd) {
+            return;
+        }
+        if (pending_title_notifications.empty()) {
+            if (!original_window_title.empty()) {
+                SetWindowTextW(hwnd, original_window_title.c_str());
+                original_window_title.clear();
+            }
+            return;
+        }
+        if (original_window_title.empty()) {
+            wchar_t buf[256] = {};
+            GetWindowTextW(hwnd, buf, 256);
+            original_window_title = buf;
+        }
+        std::wstring new_title;
+        if (pending_title_notifications.size() == 1) {
+            new_title = L"(" + pending_title_notifications.front() + L") " + original_window_title;
+        }
+        else {
+            new_title = L"(" + std::to_wstring(pending_title_notifications.size()) + L") " + original_window_title;
+        }
+        SetWindowTextW(hwnd, new_title.c_str());
+    }
+
+    void AddWindowTitleNotification(const wchar_t* descriptor)
+    {
+        if (!CanChangeTitle()) {
+            return;
+        }
+        pending_title_notifications.emplace_back(descriptor);
+        UpdateWindowTitle();
+    }
+
+    void ClearWindowTitleNotifications()
+    {
+        if (pending_title_notifications.empty()) {
+            return;
+        }
+        pending_title_notifications.clear();
+        UpdateWindowTitle();
+    }
+
     uint32_t GetPartyId()
     {
         const auto p = GW::PartyMgr::GetPartyInfo();
@@ -137,6 +208,7 @@ namespace {
         if (flash_window_on_whisper) {
             FlashWindow();
         }
+        AddWindowTitleNotification(L"PM");
     }
 
     void OnTeamChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
@@ -154,6 +226,7 @@ namespace {
         if (flash_window_on_team_chat) {
             FlashWindow();
         }
+        AddWindowTitleNotification(L"Team");
         if (!show_notifications_on_team_chat) {
             return;
         }
@@ -210,6 +283,7 @@ namespace {
                 if (flash_window_on_guild_chat) {
                     FlashWindow();
                 }
+                AddWindowTitleNotification(L"Guild");
                 break;
             case GW::Chat::Channel::CHANNEL_ALLIANCE:
                 if (show_notifications_on_ally_chat) {
@@ -218,6 +292,7 @@ namespace {
                 if (flash_window_on_ally_chat) {
                     FlashWindow();
                 }
+                AddWindowTitleNotification(L"Zone");
                 break;
         }
         if (!title) {
@@ -263,6 +338,7 @@ namespace {
             if (flash_window_on_last_to_ready) {
                 FlashWindow();
             }
+            AddWindowTitleNotification(L"Ticked");
         }
         else {
             // Everyone including me is ticked
@@ -272,6 +348,7 @@ namespace {
             if (flash_window_on_everyone_ready) {
                 FlashWindow();
             }
+            AddWindowTitleNotification(L"Ready");
         }
     }
 
@@ -311,6 +388,7 @@ namespace {
                 if (flash_window_on_self_resurrected) {
                     FlashWindow();
                 }
+                AddWindowTitleNotification(L"Rez");
             }
         }
     }
@@ -330,6 +408,7 @@ namespace {
         if (flash_window_on_invite) {
             FlashWindow();
         }
+        AddWindowTitleNotification(L"Inv");
     }
 
     struct StoC_Callback {
@@ -480,6 +559,15 @@ void ToastNotifications::Terminate()
         delete toast;
     }
     toasts.clear();
+    ClearWindowTitleNotifications();
+}
+
+bool ToastNotifications::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
+{
+    if (Message == WM_ACTIVATE && LOWORD(wParam) != WA_INACTIVE) {
+        ClearWindowTitleNotifications();
+    }
+    return false;
 }
 
 void ToastNotifications::DrawSettingsInternal()
@@ -533,6 +621,12 @@ void ToastNotifications::DrawSettingsInternal()
     NextCheckbox("In Explorable", &show_notifications_when_in_explorable);
     ImGui::Unindent();
 
+    ImGui::Separator();
+    ImGui::Checkbox("Change window title on notification", &change_title_on_notification);
+    if (change_title_on_notification) {
+        ImGui::TextDisabled("Window title shows a short descriptor e.g. \"(PM) Guild Wars\" when unfocused.\nFocusing the window restores the original title.");
+    }
+
     if (ImGui::Button("Show Test Notification")) {
         SendToast(L"Test toast", L"This is a test toast sent from GWToolbox");
     }
@@ -565,6 +659,8 @@ void ToastNotifications::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(flash_window_on_last_to_ready);
     LOAD_BOOL(flash_window_on_everyone_ready);
     LOAD_BOOL(flash_window_on_self_resurrected);
+
+    LOAD_BOOL(change_title_on_notification);
 }
 
 void ToastNotifications::SaveSettings(ToolboxIni* ini)
@@ -594,4 +690,6 @@ void ToastNotifications::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(flash_window_on_last_to_ready);
     SAVE_BOOL(flash_window_on_everyone_ready);
     SAVE_BOOL(flash_window_on_self_resurrected);
+
+    SAVE_BOOL(change_title_on_notification);
 }
