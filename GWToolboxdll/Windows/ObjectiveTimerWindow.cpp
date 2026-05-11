@@ -28,6 +28,7 @@
 #include <Utils/GuiUtils.h>
 #include <Logger.h>
 #include <GWCA/Context/CharContext.h>
+#include <Modules/ChatCommands.h>
 
 constexpr uint32_t TIME_UNKNOWN = std::numeric_limits<uint32_t>::max();
 unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
@@ -270,6 +271,7 @@ void ObjectiveTimerWindow::CheckIsMapLoaded()
 
 void ObjectiveTimerWindow::Terminate() {
     ToolboxWindow::Terminate();
+    ChatCommands::RemoveSettingChatCommand(L"objectives_current_run");
     for (size_t i = 0; i < 5000 && loading; i += 10) {
         Sleep(10);
     }
@@ -279,6 +281,7 @@ void ObjectiveTimerWindow::Terminate() {
 void ObjectiveTimerWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    ChatCommands::RegisterSettingChatCommand(L"objectives_current_run", &show_current_run_window, L"Toggles the current run separate window");
 
     static GW::HookEntry PartyDefeated_Entry;
     static GW::HookEntry GameSrvTransfer_Entry;
@@ -1015,6 +1018,7 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::Checkbox("Show run start date/time", &show_start_date_time);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
+    ImGui::ShowHelp("Toggle via chat: /tb_setting objectives_current_run");
     ImGui::NextSpacedElement();
     if (ImGui::Checkbox("Save/Load runs to disk", &save_to_disk)) {
         SaveRuns();
