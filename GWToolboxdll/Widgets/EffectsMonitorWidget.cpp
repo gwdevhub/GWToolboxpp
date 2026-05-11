@@ -51,8 +51,10 @@ namespace {
     // TODO: @3vcloud - populate this with the actual encoded names for tracked spirits.
     // To find enc_names: use GW::Agents::GetAgentEncName(agent) in-game and log the values.
     const std::unordered_map<std::wstring, GW::Constants::SkillID> spirit_enc_name_to_skill_id = {
-        // { L"\x????", GW::Constants::SkillID::Bloodsong },
-        // { L"\x????", GW::Constants::SkillID::Vampirism },
+        {L"\x416F\xD141\x9F0B\x5276", GW::Constants::SkillID::Disenchantment},
+        {L"\x4164\x825C\xA2F2\x1235", GW::Constants::SkillID::Pain}, 
+        {L"\x4171\xCD7A\xD7A6\x386D", GW::Constants::SkillID::Bloodsong}, 
+        {L"\x8102\x5F66\xBE02\xB9AB\x1073",GW::Constants::SkillID::Signet_of_Spirits}
     };
 
     // Maps spirit agent_id -> custom effect_id for currently tracked spirits.
@@ -66,7 +68,7 @@ namespace {
     float GetSpiritDuration(const GW::Constants::SkillID skill_id, const uint32_t npc_level)
     {
         const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-        if (!skill || skill->duration0 == 0) return 0.f;
+        if (!skill || skill->duration0 == 0) return 60.f;
         const float d0 = static_cast<float>(skill->duration0);
         const float d15 = static_cast<float>(skill->duration15);
         const float level = std::min(static_cast<float>(npc_level), 20.f);
@@ -265,7 +267,7 @@ void EffectsMonitorWidget::Update(float delta)
     const auto* agents = GW::Agents::GetAgentArray();
     if (!agents) return;
 
-    constexpr auto spirit_flags = GW::AgentTargetFlags::Include_SpiritPet | GW::AgentTargetFlags::Exclude_DeadSpiritPet;
+    const auto spirit_flags = GW::AgentTargetFlags::Include_SpiritPet | GW::AgentTargetFlags::Exclude_DeadSpiritPet;
     std::unordered_map<uint32_t, GW::Constants::SkillID> spirits_in_range;
     for (const auto* agent : *agents) {
         if (!GW::Agents::GetAgentMatchesFlags(agent, spirit_flags)) continue;
