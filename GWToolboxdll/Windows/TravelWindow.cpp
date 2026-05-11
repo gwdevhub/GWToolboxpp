@@ -112,14 +112,6 @@ namespace {
         return TravelWindow::Instance();
     }
 
-    bool ImInPresearing() {
-        static bool isInPresearing = false;
-        if (GW::Map::GetIsMapLoaded()) {
-            isInPresearing = GW::Map::IsPreSearing();
-        }
-        return isInPresearing;
-    }
-
     bool IsInGH()
     {
         const auto* p = GW::GuildMgr::GetPlayerGuild();
@@ -684,7 +676,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
     }
 
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        if (ImInPresearing()) {
+        if (GW::Map::IsPreSearing()) {
             TravelButton(GW::Constants::MapID::Ascalon_City_pre_searing, 0);
             TravelButton(GW::Constants::MapID::Ashford_Abbey_outpost, 1);
             TravelButton(GW::Constants::MapID::Foibles_Fair_outpost, 0);
