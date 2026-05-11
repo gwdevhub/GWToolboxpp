@@ -210,13 +210,13 @@ namespace GW {
     }
     namespace Effects {
         // Adds a synthetic effect to the local player's effects array and notifies the in-game UI.
-        // Uses effect IDs starting from 0xfff0 to avoid collisions with real effect IDs.
-        // If an existing custom effect with the same skill_id already exists it is updated instead.
+        // Effect ID is deterministic: 0x0f000000 | skill_id, so the same skill always reuses the same slot.
+        // If an existing custom effect for the same skill already exists it is updated instead.
         // Returns the effect_id on success, 0 on failure (e.g. no capacity in the effects array).
         uint32_t AddCustomEffect(GW::Constants::SkillID skill_id, float duration_seconds);
 
         // Removes a previously added custom effect from the local player's effects array and
-        // notifies the in-game UI.  Only removes effects whose effect_id >= 0xfff0.
+        // notifies the in-game UI.  Only removes effects whose effect_id has high byte 0x0f.
         // Returns true if the effect was found and removed.
         bool RemoveCustomEffect(uint32_t effect_id);
     }
