@@ -102,7 +102,7 @@ namespace {
             pending_spirit_spawn = {packet->skill_id, GW::MemoryMgr::GetSkillTimer()};
         } break;
         case GW::UI::UIMessage::kAgentUpdate: {
-            if (!track_spirit_effects || !pending_spirit_spawn.skill_id) break;
+            if (!track_spirit_effects || pending_spirit_spawn.skill_id == GW::Constants::SkillID::No_Skill) break;
             const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
             if (GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
                 pending_spirit_spawn = {};
@@ -304,7 +304,7 @@ void EffectsMonitorWidget::Update(float delta)
     }
 
     // Expire a pending spirit spawn that never produced a matching agent.
-    if (pending_spirit_spawn.skill_id && GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
+    if (pending_spirit_spawn.skill_id != GW::Constants::SkillID::No_Skill && GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
         pending_spirit_spawn = {};
     }
 
