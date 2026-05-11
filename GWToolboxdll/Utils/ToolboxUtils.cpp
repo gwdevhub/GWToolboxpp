@@ -779,7 +779,12 @@ namespace GW {
                 }
             }
 
-            if (arr.m_size >= arr.m_capacity) return 0;
+            if (arr.m_size >= arr.m_capacity) {
+                auto* new_buf = static_cast<GW::Effect*>(GW::MemoryMgr::MemRealloc(arr.m_buffer, (arr.m_size + 1) * sizeof(*arr.m_buffer)));
+                ASSERT(new_buf);
+                arr.m_buffer = new_buf;
+                arr.m_capacity++;
+            }
 
             GW::Effect new_effect{};
             new_effect.skill_id = skill_id;
@@ -807,10 +812,18 @@ namespace GW {
             auto& arr = player_effects->effects;
             for (uint32_t i = 0; i < arr.m_size; i++) {
                 if (arr.m_buffer[i].effect_id != effect_id) continue;
-                for (uint32_t j = i; j < arr.m_size - 1; j++) {
-                    arr.m_buffer[j] = arr.m_buffer[j + 1];
-                }
+                const auto remaining = arr.m_size - i - 1;
+                if (remaining > 0)
+                    memmove(&arr.m_buffer[i], &arr.m_buffer[i + 1], remaining * sizeof(*arr.m_buffer));
                 arr.m_size--;
+                arr.m_capacity--;
+                if (arr.m_size == 0) {
+                    GW::MemoryMgr::MemFree(arr.m_buffer);
+                    arr.m_buffer = nullptr;
+                } else {
+                    auto* new_buf = static_cast<GW::Effect*>(GW::MemoryMgr::MemRealloc(arr.m_buffer, arr.m_size * sizeof(*arr.m_buffer)));
+                    if (new_buf) arr.m_buffer = new_buf;
+                }
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRemove, reinterpret_cast<void*>(static_cast<uintptr_t>(effect_id)));
                 return true;
             }
