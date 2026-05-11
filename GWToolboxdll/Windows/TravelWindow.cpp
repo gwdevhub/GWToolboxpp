@@ -221,19 +221,25 @@ namespace {
     GW::HookEntry OnUIMessage_HookEntry;
 
 
-    const std::vector<GW::Constants::MapID> default_user_destinations = {
-        GW::Constants::MapID::Temple_of_the_Ages,
-        GW::Constants::MapID::Domain_of_Anguish,
-        GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost,
-        GW::Constants::MapID::Embark_Beach,
-        GW::Constants::MapID::Vloxs_Falls,
-        GW::Constants::MapID::Gadds_Encampment_outpost,
-        GW::Constants::MapID::Urgozs_Warren,
-        GW::Constants::MapID::The_Deep,
+    struct UserDestEntry {
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::District district = GW::Constants::District::Current;
+        uint8_t district_number = 0;
+    };
+
+    const std::vector<UserDestEntry> default_user_destinations = {
+        {GW::Constants::MapID::Temple_of_the_Ages},
+        {GW::Constants::MapID::Domain_of_Anguish},
+        {GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost},
+        {GW::Constants::MapID::Embark_Beach},
+        {GW::Constants::MapID::Vloxs_Falls},
+        {GW::Constants::MapID::Gadds_Encampment_outpost},
+        {GW::Constants::MapID::Urgozs_Warren},
+        {GW::Constants::MapID::The_Deep},
     };
 
     // ==== User-defined travel destinations (shown as 2-column buttons in main window) ====
-    std::vector<GW::Constants::MapID> user_destinations{};
+    std::vector<UserDestEntry> user_destinations{};
 
     void PopulateDefaultDestinations()
     {
@@ -666,7 +672,7 @@ void TravelWindow::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
-void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_idx) const
+void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_idx, const GW::Constants::District dest_district, const uint32_t dest_district_number) const
 {
     const auto text = GetMapName(mapid);
     if (!(text && *text))
@@ -686,7 +692,7 @@ void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_id
             break;
     }
     if (clicked) {
-        Instance().Travel(mapid, district, district_number);
+        Instance().Travel(mapid, dest_district, dest_district_number);
     }
 }
 
@@ -736,10 +742,12 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             ImGui::PopItemWidth();
 
             size_t render_idx = 0;
-            for (const auto dest_map_id : user_destinations) {
-                if (dest_map_id == GW::Constants::MapID::None)
+            for (const auto& dest : user_destinations) {
+                if (dest.map_id == GW::Constants::MapID::None)
                     continue;
-                TravelButton(dest_map_id, static_cast<int>(render_idx % 2));
+                const auto effective_district = dest.district != GW::Constants::District::Current ? dest.district : district;
+                const auto effective_district_number = dest.district != GW::Constants::District::Current ? dest.district_number : district_number;
+                TravelButton(dest.map_id, static_cast<int>(render_idx % 2), effective_district, effective_district_number);
                 render_idx++;
             }
             if (show_zaishen_buttons) {
@@ -1085,8 +1093,10 @@ bool TravelWindow::TravelFavorite(const unsigned int idx)
     if (idx >= user_destinations.size()) {
         return false;
     }
-    Travel(user_destinations[idx], district, district_number);
-
+    const auto& dest = user_destinations[idx];
+    const auto effective_district = dest.district != GW::Constants::District::Current ? dest.district : district;
+    const auto effective_district_number = dest.district != GW::Constants::District::Current ? dest.district_number : district_number;
+    Travel(dest.map_id, effective_district, effective_district_number);
     return true;
 }
 
@@ -1111,24 +1121,41 @@ void TravelWindow::DrawSettingsInternal()
         const auto dest_btn_w = ImGui::FontScale() * 30.f;
         const auto dest_spacing = ImGui::GetStyle().ItemSpacing.x;
 
-        if (ImGui::BeginTable("##destinations", 2, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
+        if (ImGui::BeginTable("##destinations", 4, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
             ImGui::TableSetupColumn("Map", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("District", ImGuiTableColumnFlags_WidthFixed, ImGui::FontScale() * 100.f);
+            ImGui::TableSetupColumn("Dist #", ImGuiTableColumnFlags_WidthFixed, ImGui::FontScale() * 45.f);
             ImGui::TableSetupColumn("##deldest", ImGuiTableColumnFlags_WidthFixed, dest_btn_w);
             ImGui::TableHeadersRow();
 
             for (size_t i = 0; i < user_destinations.size(); i++) {
                 ImGui::PushID(static_cast<int>(i));
                 ImGui::TableNextRow();
+                auto& dest = user_destinations[i];
 
                 ImGui::TableSetColumnIndex(0);
                 ImGui::SetNextItemWidth(-1);
-                auto map_idx = OutpostIDToIndex(user_destinations[i]);
+                auto map_idx = OutpostIDToIndex(dest.map_id);
                 if (ImGui::MyCombo("##destmap", "Select map...", &map_idx, outpost_name_array_getter, nullptr,
                     visible_searchable_areas ? static_cast<int>(visible_searchable_areas->size()) : 0)) {
-                    user_destinations[i] = IndexToOutpostID(map_idx);
+                    dest.map_id = IndexToOutpostID(map_idx);
                 }
 
                 ImGui::TableSetColumnIndex(1);
+                ImGui::SetNextItemWidth(-1);
+                auto dist_idx = DistrictToAliasIndex(dest.district);
+                if (ImGui::Combo("##destdistrict", &dist_idx, alias_district_names.data(), static_cast<int>(alias_district_names.size()))) {
+                    dest.district = alias_district_ids[dist_idx];
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                ImGui::SetNextItemWidth(-1);
+                auto dist_num = static_cast<int>(dest.district_number);
+                if (ImGui::InputInt("##destdistnum", &dist_num, 0)) {
+                    dest.district_number = static_cast<uint8_t>(std::max(0, dist_num));
+                }
+
+                ImGui::TableSetColumnIndex(3);
                 if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Remove destination", ImVec2(dest_btn_w, 0))) {
                     user_destinations.erase(user_destinations.begin() + i);
                     ImGui::PopID();
@@ -1141,7 +1168,7 @@ void TravelWindow::DrawSettingsInternal()
         }
 
         if (ImGui::Button("Add Destination", ImVec2(dest_btn_w * 3, 0))) {
-            user_destinations.push_back(GW::Constants::MapID::None);
+            user_destinations.push_back({});
         }
 
         ImGui::SameLine(0, dest_spacing);
@@ -1248,11 +1275,18 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
     if (ini->GetValue(Name(), "dest_count", nullptr)) {
         const auto dest_count = static_cast<size_t>(ini->GetLongValue(Name(), "dest_count", 0));
         for (size_t i = 0; i < dest_count; i++) {
-            char key[32];
-            snprintf(key, _countof(key), "Dest%d", i);
+            char key[64];
+            snprintf(key, _countof(key), "Dest%zu", i);
             const auto map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
-            if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None)
-                user_destinations.push_back(map_id);
+            if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None) {
+                UserDestEntry entry{};
+                entry.map_id = map_id;
+                snprintf(key, _countof(key), "Dest%zu_district", i);
+                entry.district = static_cast<GW::Constants::District>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::District::Current)));
+                snprintf(key, _countof(key), "Dest%zu_district_num", i);
+                entry.district_number = static_cast<uint8_t>(ini->GetLongValue(Name(), key, 0));
+                user_destinations.push_back(entry);
+            }
         }
     }
     else {
@@ -1264,7 +1298,7 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
             snprintf(key, _countof(key), "Fav%d", i);
             const auto map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
             if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None)
-                user_destinations.push_back(map_id);
+                user_destinations.push_back({map_id});
         }
         // If still empty, populate defaults (respecting old show_default_destinations setting)
         if (user_destinations.empty()) {
@@ -1310,9 +1344,14 @@ void TravelWindow::SaveSettings(ToolboxIni* ini)
     const size_t dest_count = user_destinations.size();
     ini->SetLongValue(Name(), "dest_count", static_cast<long>(dest_count));
     for (size_t i = 0; i < dest_count; i++) {
-        char key[32];
-        snprintf(key, _countof(key), "Dest%d", i);
-        ini->SetLongValue(Name(), key, static_cast<int>(user_destinations[i]));
+        char key[64];
+        const auto& dest = user_destinations[i];
+        snprintf(key, _countof(key), "Dest%zu", i);
+        ini->SetLongValue(Name(), key, static_cast<int>(dest.map_id));
+        snprintf(key, _countof(key), "Dest%zu_district", i);
+        ini->SetLongValue(Name(), key, static_cast<int>(dest.district));
+        snprintf(key, _countof(key), "Dest%zu_district_num", i);
+        ini->SetLongValue(Name(), key, dest.district_number);
     }
 
     const size_t alias_count = user_aliases.size();
