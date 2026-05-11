@@ -66,6 +66,8 @@ namespace {
     bool track_drops = false;
     std::map<ItemModelID, std::string> dont_hide_for_player{};
     std::map<ItemModelID, std::string> dont_hide_for_party{};
+    std::map<ItemModelID, std::string> always_hide_for_player{};
+    std::map<ItemModelID, std::string> always_hide_for_party{};
 
     void OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd*);
     void OnAgentRemove(GW::HookStatus*, GW::Packet::StoC::AgentRemove*);
@@ -262,6 +264,9 @@ namespace {
         const auto rarity = GW::Items::GetRarity(item);
 
         if (can_pick_up) {
+            if (always_hide_for_player.contains(item->model_id)) {
+                return true;
+            }
             if (dont_hide_for_player.contains(item->model_id)) {
                 return false;
             }
@@ -280,6 +285,9 @@ namespace {
             }
         }
 
+        if (always_hide_for_party.contains(item->model_id)) {
+            return true;
+        }
         if (dont_hide_for_party.contains(item->model_id)) {
             return false;
         }
@@ -549,6 +557,8 @@ void ItemDrops::LoadSettings(ToolboxIni* ini)
 
     dont_hide_for_player = GuiUtils::IniToMap<decltype(dont_hide_for_player)>(ini, Name(), "dont_hide_for_player", default_dont_hide_for_player);
     dont_hide_for_party = GuiUtils::IniToMap<decltype(dont_hide_for_party)>(ini, Name(), "dont_hide_for_party", default_dont_hide_for_party);
+    always_hide_for_player = GuiUtils::IniToMap<decltype(always_hide_for_player)>(ini, Name(), "always_hide_for_player", {});
+    always_hide_for_party = GuiUtils::IniToMap<decltype(always_hide_for_party)>(ini, Name(), "always_hide_for_party", {});
 }
 
 void ItemDrops::SaveSettings(ToolboxIni* ini)
@@ -568,6 +578,8 @@ void ItemDrops::SaveSettings(ToolboxIni* ini)
 
     GuiUtils::MapToIni(ini, Name(), "dont_hide_for_player", dont_hide_for_player);
     GuiUtils::MapToIni(ini, Name(), "dont_hide_for_party", dont_hide_for_party);
+    GuiUtils::MapToIni(ini, Name(), "always_hide_for_player", always_hide_for_player);
+    GuiUtils::MapToIni(ini, Name(), "always_hide_for_party", always_hide_for_party);
 }
 
 void ItemDrops::DrawSettingsInternal()
@@ -686,6 +698,91 @@ void ItemDrops::DrawSettingsInternal()
                 Log::Flash("Added Item %s with ID (%d)", buf, new_id);
                 std::ranges::fill(buf, '\0');
                 new_item_id_party = 0;
+            }
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::Separator();
+    ImGui::TextDisabled("Below, you can define items that should always be blocked by model id, regardless of rarity settings.");
+
+    ImGui::Separator();
+    if (ImGui::CollapsingHeader("Always hide items for you with model ids")) {
+        ImGui::PushID("AlwaysHidePlayerItems");
+
+        if (ImGui::Button("Clear all##always_player")) {
+            always_hide_for_player.clear();
+        }
+        ImGui::BeginChild("always_hide_for_player", ImVec2(0.0f, always_hide_for_player.size() * 26.f));
+        for (const auto& [item_id, item_name] : always_hide_for_player) {
+            ImGui::PushID(static_cast<int>(item_id));
+            ImGui::Text("%s (%d)", item_name.c_str(), item_id);
+            ImGui::SameLine();
+            const bool clicked = ImGui::Button(" X ");
+            ImGui::PopID();
+            if (clicked) {
+                always_hide_for_player.erase(item_id);
+                break;
+            }
+        }
+        ImGui::EndChild();
+        ImGui::Separator();
+        bool submitted = false;
+        ImGui::Text("Add new item:");
+        static int new_always_hide_player_id;
+        static char always_hide_player_buf[50];
+        ImGui::InputText("Item Name##always_player", always_hide_player_buf, 50);
+        ImGui::InputInt("Item Model ID##always_player", &new_always_hide_player_id);
+        submitted |= ImGui::Button("Add##always_player");
+        if (submitted && new_always_hide_player_id > 0) {
+            const auto new_id = static_cast<uint32_t>(new_always_hide_player_id);
+            if (!always_hide_for_player.contains(new_id)) {
+                always_hide_for_player[new_id] = std::string(always_hide_player_buf);
+                Log::Flash("Added Item %s with ID (%d)", always_hide_player_buf, new_id);
+                std::ranges::fill(always_hide_player_buf, '\0');
+                new_always_hide_player_id = 0;
+            }
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::Separator();
+    if (ImGui::CollapsingHeader("Always hide items for party members with model ids")) {
+        ImGui::PushID("AlwaysHidePartyItems");
+
+        if (ImGui::Button("Clear all##always_party")) {
+            always_hide_for_party.clear();
+        }
+        ImGui::BeginChild("always_hide_for_party", ImVec2(0.0f, always_hide_for_party.size() * 26.f));
+        for (const auto& [item_id, item_name] : always_hide_for_party) {
+            ImGui::PushID(static_cast<int>(item_id));
+            ImGui::Text("%s (%d)", item_name.c_str(), item_id);
+            ImGui::SameLine();
+            const bool clicked = ImGui::Button(" X ");
+            ImGui::PopID();
+            if (clicked) {
+                always_hide_for_party.erase(item_id);
+                break;
+            }
+        }
+        ImGui::EndChild();
+        ImGui::Separator();
+        bool submitted = false;
+        ImGui::Text("Add new item:");
+        static int new_always_hide_party_id;
+        static char always_hide_party_buf[50];
+        ImGui::InputText("Item Name##always_party", always_hide_party_buf, 50);
+        ImGui::InputInt("Item Model ID##always_party", &new_always_hide_party_id);
+        submitted |= ImGui::Button("Add##always_party");
+        if (submitted && new_always_hide_party_id > 0) {
+            const auto new_id = static_cast<uint32_t>(new_always_hide_party_id);
+            if (!always_hide_for_party.contains(new_id)) {
+                always_hide_for_party[new_id] = std::string(always_hide_party_buf);
+                Log::Flash("Added Item %s with ID (%d)", always_hide_party_buf, new_id);
+                std::ranges::fill(always_hide_party_buf, '\0');
+                new_always_hide_party_id = 0;
             }
         }
 
