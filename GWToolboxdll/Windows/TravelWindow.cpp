@@ -602,8 +602,16 @@ namespace {
                 return false;
             // Now that this one has decoded, check that there's nothing yet in the searchable areas that have the same name, e.g. festival outposts
             if (searchable_area_indeces_by_name.contains(it->Name())) {
-                vec.erase(vec.begin() + i);
-                delete it;
+                auto* existing = searchable_area_indeces_by_name[it->Name()];
+                // Prefer outposts over non-outposts (e.g. The Eternal Grove outpost vs explorable)
+                if (IsValidOutpost(it->map_id) && !IsValidOutpost(existing->map_id)) {
+                    auto existing_pos = std::ranges::find(vec, existing);
+                    vec.erase(existing_pos);
+                    delete existing;
+                } else {
+                    vec.erase(vec.begin() + i);
+                    delete it;
+                }
                 return CheckSearchableAreasDecoded(vec);
             }
             searchable_area_indeces_by_name[it->Name()] = it;
