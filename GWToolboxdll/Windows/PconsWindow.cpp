@@ -587,7 +587,10 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
         return;
     }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+    ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
+    const bool expanded = ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
+    ImGui::PopStyleColor();
+    if (!expanded) {
         return ImGui::End();
     }
     if (show_enable_button) {
