@@ -23,6 +23,7 @@ struct DistrictAlias {
 // Default outpost aliases shipped with toolbox. Used for initialization and reset.
 const std::map<const std::string, const OutpostAlias> default_outpost_aliases = {
     {"bestarea", {GW::Constants::MapID::The_Deep}},
+    {"kathandrax", {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1}},
     {"toa", {GW::Constants::MapID::Temple_of_the_Ages}},
     {"doa", {GW::Constants::MapID::Domain_of_Anguish}},
     {"goa", {GW::Constants::MapID::Domain_of_Anguish}},
@@ -61,23 +62,6 @@ const std::map<const std::string, const DistrictAlias> shorthand_district_names 
     {"jp", {GW::Constants::District::AsiaJapanese}},
 };
 
-constexpr std::array presearing_map_ids = {
-    GW::Constants::MapID::Ashford_Abbey_outpost,
-    GW::Constants::MapID::Ascalon_City_pre_searing,
-    GW::Constants::MapID::Foibles_Fair_outpost,
-    GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost,
-    GW::Constants::MapID::The_Barradin_Estate_outpost,
-    GW::Constants::MapID::Piken_Square_pre_Searing_outpost
-};
-
-constexpr std::array presearing_map_names = {
-    "ashford abbey",
-    "ascalon city",
-    "foibles fair",
-    "fort ranik",
-    "barradin estate",
-    "piken square"
-};
 
 constexpr std::array district_words = {
     "Current District",
