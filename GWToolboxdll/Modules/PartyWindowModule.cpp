@@ -526,7 +526,7 @@ namespace {
         switch (message_id) {
             case GW::UI::UIMessage::kPartySearchCreated:
             case GW::UI::UIMessage::kPartySearchUpdated: {
-                const auto* party_search = static_cast<GW::PartySearch*>(wparam);
+                const auto party_search = *(GW::PartySearch**)wparam;
                 if (!party_search) break;
                 const wchar_t* my_name = GW::PlayerMgr::GetPlayerName();
                 if (!my_name || wcscmp(my_name, party_search->party_leader) != 0) break;
