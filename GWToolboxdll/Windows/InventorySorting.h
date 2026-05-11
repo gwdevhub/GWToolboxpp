@@ -26,6 +26,7 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_SORT; }
 
     void Initialize() override;
+    void Terminate() override;
     void Draw(IDirect3DDevice9* device) override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
