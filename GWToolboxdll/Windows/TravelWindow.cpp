@@ -221,13 +221,35 @@ namespace {
     GW::HookEntry OnUIMessage_HookEntry;
 
 
-    // ==== Favorites ====
-    std::vector<GW::Constants::MapID> favourites{};
+    struct UserDestEntry {
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::District district = GW::Constants::District::Current;
+        uint8_t district_number = 0;
+    };
+
+    const std::vector<UserDestEntry> default_user_destinations = {
+        {GW::Constants::MapID::Temple_of_the_Ages},
+        {GW::Constants::MapID::Domain_of_Anguish},
+        {GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost},
+        {GW::Constants::MapID::Embark_Beach},
+        {GW::Constants::MapID::Vloxs_Falls},
+        {GW::Constants::MapID::Gadds_Encampment_outpost},
+        {GW::Constants::MapID::Urgozs_Warren},
+        {GW::Constants::MapID::The_Deep},
+    };
+
+    // ==== User-defined travel destinations (shown as 2-column buttons in main window) ====
+    std::vector<UserDestEntry> user_destinations{};
+
+    void PopulateDefaultDestinations()
+    {
+        user_destinations = default_user_destinations;
+    }
 
     // ==== options ====
     bool close_on_travel = false;
     bool collapse_on_travel = false;
-    bool show_default_destinations = true;
+    bool show_zaishen_buttons = true;
 
     // ==== scroll to outpost ====
     GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;   // Which outpost do we want to end up in?
@@ -650,7 +672,7 @@ void TravelWindow::Terminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
-void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_idx) const
+void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_idx, const GW::Constants::District dest_district, const uint32_t dest_district_number) const
 {
     const auto text = GetMapName(mapid);
     if (!(text && *text))
@@ -670,7 +692,7 @@ void TravelWindow::TravelButton(const GW::Constants::MapID mapid, const int x_id
             break;
     }
     if (clicked) {
-        Instance().Travel(mapid, district, district_number);
+        Instance().Travel(mapid, dest_district, dest_district_number);
     }
 }
 
@@ -719,15 +741,16 @@ void TravelWindow::Draw(IDirect3DDevice9*)
             }
             ImGui::PopItemWidth();
 
-            if (show_default_destinations) {
-                TravelButton(GW::Constants::MapID::Temple_of_the_Ages, 0);
-                TravelButton(GW::Constants::MapID::Domain_of_Anguish, 1);
-                TravelButton(GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost, 0);
-                TravelButton(GW::Constants::MapID::Embark_Beach, 1);
-                TravelButton(GW::Constants::MapID::Vloxs_Falls, 0);
-                TravelButton(GW::Constants::MapID::Gadds_Encampment_outpost, 1);
-                TravelButton(GW::Constants::MapID::Urgozs_Warren, 0);
-                TravelButton(GW::Constants::MapID::The_Deep, 1);
+            size_t render_idx = 0;
+            for (const auto& dest : user_destinations) {
+                if (dest.map_id == GW::Constants::MapID::None)
+                    continue;
+                const auto effective_district = dest.district != GW::Constants::District::Current ? dest.district : district;
+                const auto effective_district_number = dest.district != GW::Constants::District::Current ? dest.district_number : district_number;
+                TravelButton(dest.map_id, static_cast<int>(render_idx % 2), effective_district, effective_district_number);
+                render_idx++;
+            }
+            if (show_zaishen_buttons) {
                 const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - 2.f * ImGui::GetStyle().WindowPadding.x;
                 if (ImGui::Button("Zaishen Bounty", {w, 0})) {
                     GW::Chat::SendChat('/', "tp zb");
@@ -743,71 +766,6 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                 if (ImGui::Button("Zaishen Combat", {w, 0})) {
                     GW::Chat::SendChat('/', "tp zc");
                 }
-            }
-
-            static int editing = -1;
-            const auto spacing = ImGui::GetStyle().ItemSpacing.x;
-            const auto btn_w = (ImGui::FontScale() * 30.f);
-            for (size_t i = 0, size = favourites.size(); i < size; i++) {
-                ImGui::PushID(i);
-                const auto map_id = favourites[i];
-                if (editing == static_cast<int>(i) || map_id == GW::Constants::MapID::None) {
-                    auto btn_count = 4;
-                    if (i == 0 || i + 1 == size)
-                        btn_count--;
-
-                    ImGui::PushItemWidth(((btn_w + spacing) * btn_count) * -1);
-                    // find the index that matches the map from the array of map ids
-                    const auto combo_val = OutpostIDToIndex(map_id);
-                    ImGui::MyCombo("", "Select a favorite", (int*)&combo_val, outpost_name_array_getter, nullptr, visible_searchable_areas ? visible_searchable_areas->size() : 0);
-                    favourites[i] = IndexToOutpostID(combo_val);
-                    ImGui::PopItemWidth();
-
-                    if (i > 0) {
-                        ImGui::SameLine();
-                        if (ImGui::ButtonWithHint(ICON_FA_CHEVRON_UP, "Move up", ImVec2(btn_w, 0))) {
-                            auto tmp = favourites[i - 1];
-                            favourites[i - 1] = map_id;
-                            favourites[i] = tmp;
-                            editing = i - 1;
-                        }
-                    }
-                    if (i + 1 < size) {
-                        ImGui::SameLine();
-                        if (ImGui::ButtonWithHint(ICON_FA_CHEVRON_DOWN, "Move down", ImVec2(btn_w, 0))) {
-                            const auto tmp = favourites[i + 1];
-                            favourites[i + 1] = map_id;
-                            favourites[i] = tmp;
-                            editing = i + 1;
-                        }
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete", ImVec2(btn_w, 0))) {
-                        favourites.erase(favourites.begin() + i);
-                        editing = -1;
-                        ImGui::PopID();
-                        break;
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::ButtonWithHint(ICON_FA_CHECK, "Done", ImVec2(btn_w, 0))) {
-                        editing = -1;
-                    }
-                }
-                else {
-                    if (ImGui::Button(GetMapName(map_id), ImVec2((btn_w + spacing) * -1, 0))) {
-                        editing = -1;
-                        TravelFavorite(i);
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::ButtonWithHint(ICON_FA_PEN, "Edit", ImVec2(btn_w, 0))) {
-                        editing = i;
-                    }
-                }
-
-                ImGui::PopID();
-            }
-            if (ImGui::Button("Add", ImVec2(btn_w * 2, 0))) {
-                favourites.push_back(GW::Constants::MapID::None);
             }
         }
         if (pending_map_travel.map_id != GW::Constants::MapID::None && IsValidOutpost(pending_map_travel.map_id)) {
@@ -1132,11 +1090,13 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
 
 bool TravelWindow::TravelFavorite(const unsigned int idx)
 {
-    if (idx >= favourites.size()) {
+    if (idx >= user_destinations.size()) {
         return false;
     }
-    Travel(favourites[idx], district, district_number);
-
+    const auto& dest = user_destinations[idx];
+    const auto effective_district = dest.district != GW::Constants::District::Current ? dest.district : district;
+    const auto effective_district_number = dest.district != GW::Constants::District::Current ? dest.district_number : district_number;
+    Travel(dest.map_id, effective_district, effective_district_number);
     return true;
 }
 
@@ -1150,8 +1110,76 @@ void TravelWindow::DrawSettingsInternal()
     ImGui::ShowHelp("Use /tp stop to stop retrying.");
     ImGui::Checkbox("Use English map names", &search_in_english);
     ImGui::ShowHelp("If this is unchecked, the /tp command will use the localized map names based on your current language.");
-    ImGui::Checkbox("Show default destinations", &show_default_destinations);
-    ImGui::ShowHelp("Show the built-in destinations (Temple of the Ages, Domain of Anguish, Kamadan, Embark Beach, etc.) and Zaishen Daily buttons in the Travel window.");
+    ImGui::Checkbox("Show Zaishen quest buttons", &show_zaishen_buttons);
+    ImGui::ShowHelp("Show the Zaishen Bounty, Mission, Vanquish and Combat travel buttons in the Travel window.");
+
+    ImGui::Separator();
+    ImGui::Text("User Travel Destinations");
+    ImGui::ShowHelp("Destinations shown as half-width buttons in the Travel window. Add, remove or reorder them here. Use the reset button to restore the built-in defaults.");
+
+    {
+        const auto dest_btn_w = ImGui::FontScale() * 30.f;
+        const auto dest_spacing = ImGui::GetStyle().ItemSpacing.x;
+
+        if (ImGui::BeginTable("##destinations", 4, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn("Map", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("District", ImGuiTableColumnFlags_WidthFixed, ImGui::FontScale() * 100.f);
+            ImGui::TableSetupColumn("Dist #", ImGuiTableColumnFlags_WidthFixed, ImGui::FontScale() * 45.f);
+            ImGui::TableSetupColumn("##deldest", ImGuiTableColumnFlags_WidthFixed, dest_btn_w);
+            ImGui::TableHeadersRow();
+
+            for (size_t i = 0; i < user_destinations.size(); i++) {
+                ImGui::PushID(static_cast<int>(i));
+                ImGui::TableNextRow();
+                auto& dest = user_destinations[i];
+
+                ImGui::TableSetColumnIndex(0);
+                ImGui::SetNextItemWidth(-1);
+                auto map_idx = OutpostIDToIndex(dest.map_id);
+                if (ImGui::MyCombo("##destmap", "Select map...", &map_idx, outpost_name_array_getter, nullptr,
+                    visible_searchable_areas ? static_cast<int>(visible_searchable_areas->size()) : 0)) {
+                    dest.map_id = IndexToOutpostID(map_idx);
+                }
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::SetNextItemWidth(-1);
+                auto dist_idx = DistrictToAliasIndex(dest.district);
+                if (ImGui::Combo("##destdistrict", &dist_idx, alias_district_names.data(), static_cast<int>(alias_district_names.size()))) {
+                    dest.district = alias_district_ids[dist_idx];
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                ImGui::SetNextItemWidth(-1);
+                auto dist_num = static_cast<int>(dest.district_number);
+                if (ImGui::InputInt("##destdistnum", &dist_num, 0)) {
+                    dest.district_number = static_cast<uint8_t>(std::max(0, dist_num));
+                }
+
+                ImGui::TableSetColumnIndex(3);
+                if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Remove destination", ImVec2(dest_btn_w, 0))) {
+                    user_destinations.erase(user_destinations.begin() + i);
+                    ImGui::PopID();
+                    break;
+                }
+
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+
+        if (ImGui::Button("Add Destination", ImVec2(dest_btn_w * 3, 0))) {
+            user_destinations.push_back({});
+        }
+
+        ImGui::SameLine(0, dest_spacing);
+
+        static bool dest_reset_confirmed = false;
+        if (ImGui::ConfirmButton("Reset to Defaults", &dest_reset_confirmed,
+            "Reset Travel Destinations?\n\nThis will restore all destinations to the built-in defaults.")) {
+            PopulateDefaultDestinations();
+            dest_reset_confirmed = false;
+        }
+    }
 
     ImGui::Separator();
     ImGui::Text("Outpost Aliases");
@@ -1243,15 +1271,42 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
-    size_t fav_count = 0;
-    LOAD_UINT(fav_count);
-    favourites.clear();
-    for (size_t i = 0; i < fav_count; i++) {
-        char key[32];
-        snprintf(key, _countof(key), "Fav%d", i);
-        const auto map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, (int)GW::Constants::MapID::None));
-        if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None)
-            favourites.push_back(map_id);
+    user_destinations.clear();
+    if (ini->GetValue(Name(), "dest_count", nullptr)) {
+        const auto dest_count = static_cast<size_t>(ini->GetLongValue(Name(), "dest_count", 0));
+        for (size_t i = 0; i < dest_count; i++) {
+            char key[64];
+            snprintf(key, _countof(key), "Dest%zu", i);
+            const auto map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
+            if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None) {
+                UserDestEntry entry{};
+                entry.map_id = map_id;
+                snprintf(key, _countof(key), "Dest%zu_district", i);
+                entry.district = static_cast<GW::Constants::District>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::District::Current)));
+                snprintf(key, _countof(key), "Dest%zu_district_num", i);
+                entry.district_number = static_cast<uint8_t>(ini->GetLongValue(Name(), key, 0));
+                user_destinations.push_back(entry);
+            }
+        }
+    }
+    else {
+        // Migrate from old fav_ keys if present
+        size_t fav_count = 0;
+        LOAD_UINT(fav_count);
+        for (size_t i = 0; i < fav_count; i++) {
+            char key[32];
+            snprintf(key, _countof(key), "Fav%d", i);
+            const auto map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
+            if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None)
+                user_destinations.push_back({map_id});
+        }
+        // If still empty, populate defaults (respecting old show_default_destinations setting)
+        if (user_destinations.empty()) {
+            const bool old_show_defaults = ini->GetBoolValue(Name(), "show_default_destinations", true);
+            if (old_show_defaults) {
+                PopulateDefaultDestinations();
+            }
+        }
     }
 
     size_t alias_count = 0;
@@ -1280,18 +1335,23 @@ void TravelWindow::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(collapse_on_travel);
     LOAD_BOOL(retry_map_travel);
     LOAD_BOOL(search_in_english);
-    LOAD_BOOL(show_default_destinations);
+    LOAD_BOOL(show_zaishen_buttons);
 }
 
 void TravelWindow::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
-    const size_t fav_count = favourites.size();
-    SAVE_UINT(fav_count);
-    for (size_t i = 0, size = favourites.size(); i < size; i++) {
-        char key[32];
-        snprintf(key, _countof(key), "Fav%d", i);
-        ini->SetLongValue(Name(), key, static_cast<int>(favourites[i]));
+    const size_t dest_count = user_destinations.size();
+    ini->SetLongValue(Name(), "dest_count", static_cast<long>(dest_count));
+    for (size_t i = 0; i < dest_count; i++) {
+        char key[64];
+        const auto& dest = user_destinations[i];
+        snprintf(key, _countof(key), "Dest%zu", i);
+        ini->SetLongValue(Name(), key, static_cast<int>(dest.map_id));
+        snprintf(key, _countof(key), "Dest%zu_district", i);
+        ini->SetLongValue(Name(), key, static_cast<int>(dest.district));
+        snprintf(key, _countof(key), "Dest%zu_district_num", i);
+        ini->SetLongValue(Name(), key, dest.district_number);
     }
 
     const size_t alias_count = user_aliases.size();
@@ -1313,5 +1373,5 @@ void TravelWindow::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(collapse_on_travel);
     SAVE_BOOL(retry_map_travel);
     SAVE_BOOL(search_in_english);
-    SAVE_BOOL(show_default_destinations);
+    SAVE_BOOL(show_zaishen_buttons);
 }
