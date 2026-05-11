@@ -544,7 +544,7 @@ namespace GW {
                 case ItemType::Chestpiece:
                     return "Chestpiece";
                 case ItemType::Rune_Mod:
-                    return "Rune";
+                    return "Rune/Upgrade";
                 case ItemType::Usable:
                     return "Usable Item";
                 case ItemType::Dye:
