@@ -26,6 +26,7 @@ public:
         Op_MoveDown,
         Op_Delete,
         Op_BlockInput,
+        Op_Duplicate,
     };
 
     static const char* professions[];
@@ -38,6 +39,8 @@ public:
     static TBHotkey* HotkeyFactory(ToolboxIni* ini, const char* section);
 
     char group[128] = "";
+    char label[128] = {};       // Optional display name; shown in header instead of description when non-empty
+    int8_t open_state_override = -1; // -1 = no override, 0 = force close, 1 = force open (applied once)
     bool trigger_on_key_up = false;            // Should the key be triggered on key down, or key up
     bool pressed = false;                      // if the key has been pressed
     bool active = true;                        // if the hotkey is enabled/active
