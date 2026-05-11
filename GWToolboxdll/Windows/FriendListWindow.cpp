@@ -26,6 +26,7 @@
 #include <Windows/FriendListWindow.h>
 
 #include <Utils/ToolboxUtils.h>
+#include <Windows/TravelWindow.h>
 
 
 /* Out of scope namespecey lookups */
@@ -559,6 +560,7 @@ namespace {
         }
         if (lf->current_map_id != map_id) {
             // Map changed
+            lf->current_map_id = map_id;
             lf->current_map_name = Resources::GetMapName(static_cast<GW::Constants::MapID>(map_id));
         }
 
@@ -1150,8 +1152,9 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         ImGui::Button("", ImVec2(ImGui::GetContentRegionAvail().x, height));
         const bool left_clicked = ImGui::IsItemClicked(0);
         const bool right_clicked = ImGui::IsItemClicked(1);
-        // TODO: Rename, Remove, Ignore.
-        //ImGui::BeginPopupContextItem();
+        if (right_clicked) {
+            ImGui::OpenPopup("##friend_ctx");
+        }
 
         bool hovered = ImGui::IsItemHovered();
         ImGui::PopStyleVar(4);
@@ -1159,6 +1162,18 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         ImGui::PushStyleColor(ImGuiCol_Text, StatusColors[static_cast<size_t>(lfp->status)].Value);
         ImGui::Bullet();
         ImGui::PopStyleColor(4);
+        if (ImGui::BeginPopup("##friend_ctx")) {
+            if (lfp->current_map_id != 0) {
+                const auto& map_name = lfp->current_map_name && !lfp->current_map_name->string().empty()
+                                           ? lfp->current_map_name->string()
+                                           : "Unknown";
+                const auto label = std::format("Travel to {}", map_name);
+                if (ImGui::MenuItem(label.c_str())) {
+                    TravelWindow::Instance().TravelNearest(static_cast<GW::Constants::MapID>(lfp->current_map_id));
+                }
+            }
+            ImGui::EndPopup();
+        }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip(GetStatusText(lfp->status));
         }
@@ -1220,7 +1235,6 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         if (left_clicked && !lfp->IsOffline()) {
             lfp->StartWhisper();
         }
-        if (right_clicked) { }
     }
     if (!is_widget) {
         ImGui::EndChild();
