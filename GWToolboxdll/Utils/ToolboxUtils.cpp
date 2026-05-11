@@ -16,6 +16,7 @@
 #include <GWCA/GameEntities/NPC.h>
 
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
@@ -754,6 +755,62 @@ namespace GW {
         }
 
     } // namespace Items
+
+    namespace Effects {
+
+        // Effect IDs below this value are reserved for real game effects.
+        static constexpr uint32_t custom_effect_id_start = 0xfff0;
+        static uint32_t next_custom_effect_id = custom_effect_id_start;
+
+        uint32_t AddCustomEffect(const GW::Constants::SkillID skill_id, const float duration_seconds)
+        {
+            const auto player_effects = GW::Effects::GetPlayerEffectsArray();
+            if (!player_effects) return 0;
+            auto& arr = player_effects->effects;
+
+            // Update if a custom effect with this skill already exists.
+            for (uint32_t i = 0; i < arr.m_size; i++) {
+                auto& e = arr.m_buffer[i];
+                if (e.skill_id == skill_id && e.effect_id >= custom_effect_id_start) {
+                    e.duration = duration_seconds;
+                    e.timestamp = GW::MemoryMgr::GetSkillTimer();
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRenew, &e);
+                    return e.effect_id;
+                }
+            }
+
+            GW::Effect new_effect{};
+            new_effect.skill_id = skill_id;
+            new_effect.effect_id = next_custom_effect_id++;
+            new_effect.duration = duration_seconds;
+            new_effect.timestamp = GW::MemoryMgr::GetSkillTimer();
+            new_effect.attribute_level = 0;
+            new_effect.agent_id = 0;
+
+            GW::UI::UIPacket::kEffectAdd packet{};
+            packet.agent_id = GW::Agents::GetControlledCharacterId();
+            packet.effect = GW::MemoryMgr::AddToGuildWarsArray(arr, new_effect);
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectAdd, &packet);
+            return new_effect.effect_id;
+        }
+
+        bool RemoveCustomEffect(const uint32_t effect_id)
+        {
+            if (effect_id < custom_effect_id_start) return false;
+            const auto player_effects = GW::Effects::GetPlayerEffectsArray();
+            if (!player_effects) return false;
+            auto& arr = player_effects->effects;
+            for (uint32_t i = 0; i < arr.m_size; i++) {
+                if (arr.m_buffer[i].effect_id != effect_id) continue;
+                GW::MemoryMgr::RemoveFromGwArray(arr, i);
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRemove, reinterpret_cast<void*>(static_cast<uintptr_t>(effect_id)));
+                return true;
+            }
+            return false;
+        }
+
+    } // namespace Effects
+
 } // namespace GW
 
 namespace ToolboxUtils {
