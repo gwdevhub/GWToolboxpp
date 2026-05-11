@@ -588,22 +588,26 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
         return;
     }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-    const auto* existing_window = ImGui::FindWindowByName(Name());
-    const bool is_collapsed = existing_window && existing_window->Collapsed;
-    const bool show_status = show_enabled_status_in_title && is_collapsed;
     char title[256];
-    if (show_status) {
-        ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-        snprintf(title, sizeof(title), "%s %s###%s", Name(), enabled ? ICON_FA_CHECK : ICON_FA_TIMES, Name());
-    }
-    else {
-        snprintf(title, sizeof(title), "%s###%s", Name(), Name());
-    }
+    snprintf(title, sizeof(title), "%s###%s", Name(), Name());
     const bool expanded = ImGui::Begin(title, GetVisiblePtr(), GetWinFlags());
-    if (show_status) {
-        ImGui::PopStyleColor();
-    }
     if (!expanded) {
+        if (show_enabled_status_in_title) {
+            const ImGuiWindow* win = ImGui::GetCurrentWindow();
+            if (win && win->Viewport) {
+                const ImRect tb = win->TitleBarRect();
+                const float bar_h = tb.GetHeight();
+                const float close_offset = GetVisiblePtr() ? bar_h : 0.f;
+                const char* icon = enabled ? ICON_FA_CHECK : ICON_FA_TIMES;
+                const ImVec2 text_size = ImGui::CalcTextSize(icon);
+                const ImVec2 icon_pos = {
+                    tb.Max.x - (close_offset * 2) - bar_h * 0.5f - text_size.x * 0.5f,
+                    tb.GetCenter().y - text_size.y * 0.5f
+                };
+                auto* dl = ImGui::GetForegroundDrawList(win->Viewport);
+                dl->AddText(icon_pos, enabled ? IM_COL32(0, 200, 0, 230) : IM_COL32(200, 0, 0, 230), icon);
+            }
+        }
         return ImGui::End();
     }
     if (show_enable_button) {
@@ -934,8 +938,8 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show Enable/Disable button", &show_enable_button);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show tick/cross in collapsed title", &show_enabled_status_in_title);
-    ImGui::ShowHelp("Show a green tick or red cross after the window title when the window is collapsed");
+    ImGui::Checkbox("Show tick/cross icon on collapsed title bar", &show_enabled_status_in_title);
+    ImGui::ShowHelp("Overlay a green tick or red cross icon on the title bar when the window is collapsed");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
     ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
