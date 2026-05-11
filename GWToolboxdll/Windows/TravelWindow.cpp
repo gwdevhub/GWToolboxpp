@@ -398,13 +398,12 @@ namespace {
             return bestMatchMapID;
         };
         auto best_match_map_id = GW::Constants::MapID::None;
-        if (ImInPresearing()) {
-            best_match_map_id = FindMatchingMap(compare.c_str(), presearing_map_names.data(), presearing_map_ids.data(), presearing_map_ids.size());
+        if (fetched_searchable_areas == FetchedMapNames::Ready) {
+            best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_areas);
         }
-        else {
-            if (best_match_map_id == GW::Constants::MapID::None && fetched_searchable_areas == FetchedMapNames::Ready) {
-                best_match_map_id = FindMatchingMapVec(compare.c_str(), searchable_areas);
-            }
+        else if (ImInPresearing()) {
+            // Fallback while searchable_areas is still being decoded
+            best_match_map_id = FindMatchingMap(compare.c_str(), presearing_map_names.data(), presearing_map_ids.data(), presearing_map_ids.size());
         }
 
         if (best_match_map_id != GW::Constants::MapID::None) {
@@ -830,12 +829,12 @@ void TravelWindow::Update(const float)
     // with adjacency data (so GetNearestOutpost() can resolve them to a travelable outpost).
     switch (fetched_searchable_areas) {
         case FetchedMapNames::Pending: {
-            BuildSearchableAreas(searchable_areas, [](const GW::Constants::MapID map_id, const GW::AreaInfo* map) {
-                if (GW::Map::IsPreSearing(map_id)) return false;
+            BuildSearchableAreas(searchable_areas, [in_presearing = ImInPresearing()](const GW::Constants::MapID map_id, const GW::AreaInfo* map) {
+                if (GW::Map::IsPreSearing(map_id) != in_presearing) return false;
                 if (!map || !map->name_id) return false;
                 if (IsValidOutpost(map_id)) return true;
-                if (map->GetIsOnWorldMap() && map->type == GW::RegionType::ExplorableZone) return true;
-                if (map->type == GW::RegionType::Dungeon && !MapAdjacency::GetNeighbors(map_id).empty()) return true;
+                if (!in_presearing && map->GetIsOnWorldMap() && map->type == GW::RegionType::ExplorableZone) return true;
+                if (!in_presearing && map->type == GW::RegionType::Dungeon && !MapAdjacency::GetNeighbors(map_id).empty()) return true;
                 return false;
             });
             fetched_searchable_areas = FetchedMapNames::Decoding;
