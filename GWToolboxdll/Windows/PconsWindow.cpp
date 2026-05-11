@@ -601,7 +601,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
                 const char* icon = enabled ? ICON_FA_CHECK : ICON_FA_TIMES;
                 const ImVec2 text_size = ImGui::CalcTextSize(icon);
                 const ImVec2 icon_pos = {
-                    tb.Max.x - close_offset - bar_h * 0.5f - text_size.x * 0.5f,
+                    tb.Max.x - (close_offset * 2) - bar_h * 0.5f - text_size.x * 0.5f,
                     tb.GetCenter().y - text_size.y * 0.5f
                 };
                 auto* dl = ImGui::GetForegroundDrawList(win->Viewport);

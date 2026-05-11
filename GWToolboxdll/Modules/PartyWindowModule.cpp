@@ -527,10 +527,8 @@ namespace {
             case GW::UI::UIMessage::kPartySearchCreated:
             case GW::UI::UIMessage::kPartySearchUpdated: {
                 const auto party_search = *(GW::PartySearch**)wparam;
-                if (!party_search) break;
-                const wchar_t* my_name = GW::PlayerMgr::GetPlayerName();
-                if (!my_name || wcscmp(my_name, party_search->party_leader) != 0) break;
-                check_party_search_offline_reminder = true;
+                if (party_search && wcseq(GW::PlayerMgr::GetPlayerName(), party_search->party_leader)) 
+                   check_party_search_offline_reminder = true;
             } break;
             case GW::UI::UIMessage::kSetAgentProfession: {
                 const auto agent_id = *(uint32_t*)wparam;
