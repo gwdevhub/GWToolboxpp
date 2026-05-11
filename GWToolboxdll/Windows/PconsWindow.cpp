@@ -48,6 +48,7 @@ namespace {
 
     bool show_auto_refill_pcons_tickbox = true;
     bool show_auto_disable_pcons_tickbox = false;
+    bool show_enabled_status_in_title = true;
 
     GW::Agent* player = nullptr;
 
@@ -587,9 +588,21 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
         return;
     }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-    ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-    const bool expanded = ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags());
-    ImGui::PopStyleColor();
+    const auto* existing_window = ImGui::FindWindowByName(Name());
+    const bool is_collapsed = existing_window && existing_window->Collapsed;
+    const bool show_status = show_enabled_status_in_title && is_collapsed;
+    char title[256];
+    if (show_status) {
+        ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
+        snprintf(title, sizeof(title), "%s %s###%s", Name(), enabled ? ICON_FA_CHECK : ICON_FA_TIMES, Name());
+    }
+    else {
+        snprintf(title, sizeof(title), "%s###%s", Name(), Name());
+    }
+    const bool expanded = ImGui::Begin(title, GetVisiblePtr(), GetWinFlags());
+    if (show_status) {
+        ImGui::PopStyleColor();
+    }
     if (!expanded) {
         return ImGui::End();
     }
@@ -814,6 +827,7 @@ void PconsWindow::LoadSettings(ToolboxIni* ini)
     Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
     LOAD_BOOL(show_auto_refill_pcons_tickbox);
     LOAD_BOOL(show_auto_disable_pcons_tickbox);
+    LOAD_BOOL(show_enabled_status_in_title);
 
     LOAD_BOOL(show_storage_quantity);
     LOAD_BOOL(shift_click_toggles_category);
@@ -873,6 +887,7 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
     SAVE_BOOL(show_auto_refill_pcons_tickbox);
     SAVE_BOOL(show_auto_disable_pcons_tickbox);
+    SAVE_BOOL(show_enabled_status_in_title);
     SAVE_BOOL(shift_click_toggles_category);
     SAVE_BOOL(show_storage_quantity);
 
@@ -918,6 +933,9 @@ void PconsWindow::DrawSettingsInternal()
         "Categories: Conset, Rock Candies, Kabob+Soup+Salad");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show Enable/Disable button", &show_enable_button);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show tick/cross in collapsed title", &show_enabled_status_in_title);
+    ImGui::ShowHelp("Show a green tick or red cross after the window title when the window is collapsed");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
     ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
