@@ -229,16 +229,21 @@ void EffectsMonitorWidget::Terminate()
     }
     tracked_spirit_effects.clear();
 }
-void EffectsMonitorWidget::Update(float)
+void EffectsMonitorWidget::Update(float delta)
 {
+    static float update_timer = 0.f;
+    update_timer += delta;
+    if (update_timer < 1.f / 30.f) return;
+    update_timer = 0.f;
+
     for (auto [skill_id, timestamp] : effect_timestamps) {
         auto effect = GW::Effects::GetPlayerEffectBySkillId((GW::Constants::SkillID)skill_id);
         if (!effect) {
             effect_timestamps.erase(skill_id);
             break;
         }
-        const auto elapsed = effect->GetTimeElapsed();
-        if (!effect->duration || (elapsed / 1000.f) > effect->duration) {
+        const auto time_elapsed = effect->GetTimeElapsed();
+        if (!effect->duration || (time_elapsed / 1000.f) > effect->duration) {
             const auto now = GW::MemoryMgr::GetSkillTimer();
             const clock_t diff = (now - timestamp) / 1000;
 
@@ -246,12 +251,8 @@ void EffectsMonitorWidget::Update(float)
             // a 30s timer starts 100s after you enter the aspect
             // a 30s timer starts 200s after you enter the aspect
             long duration = 30 - diff % 30;
-            if (diff > 100) {
-                duration = std::min(duration, 30 - (diff - 100) % 30);
-            }
-            if (diff > 200) {
-                duration = std::min(duration, 30 - (diff - 200) % 30);
-            }
+            if (diff > 100) duration = std::min(duration, 30 - (diff - 100) % 30);
+            if (diff > 200) duration = std::min(duration, 30 - (diff - 200) % 30);
             effect->timestamp = now;
             effect->duration = (float)duration;
         }
@@ -261,49 +262,34 @@ void EffectsMonitorWidget::Update(float)
 
     const auto* me = GW::Agents::GetControlledCharacter();
     if (!me) return;
-
     const auto* agents = GW::Agents::GetAgentArray();
     if (!agents) return;
 
-    // Build a set of spirit agent_ids currently in earshot range with a known skill mapping.
+    constexpr auto spirit_flags = GW::AgentTargetFlags::Include_SpiritPet | GW::AgentTargetFlags::Exclude_DeadSpiritPet;
     std::unordered_map<uint32_t, GW::Constants::SkillID> spirits_in_range;
     for (const auto* agent : *agents) {
-        if (!agent) continue;
-        const auto* living = agent->GetAsAgentLiving();
-        if (!living) continue;
-        if (living->allegiance != GW::Constants::Allegiance::Spirit_Pet) continue;
-        if (!living->GetIsAlive()) continue;
+        if (!GW::Agents::GetAgentMatchesFlags(agent, spirit_flags)) continue;
+        const auto* living = static_cast<const GW::AgentLiving*>(agent);
         if (GetSquareDistance(me->pos, living->pos) > GW::Constants::SqrRange::Earshot) continue;
-
         const auto* enc_name = GW::Agents::GetAgentEncName(agent);
         if (!enc_name) continue;
         const auto it = spirit_enc_name_to_skill_id.find(enc_name);
         if (it == spirit_enc_name_to_skill_id.end()) continue;
-
         spirits_in_range[agent->agent_id] = it->second;
     }
 
-    // Remove effects for spirits no longer in range.
     std::vector<uint32_t> to_remove;
     for (const auto& [agent_id, effect_id] : tracked_spirit_effects) {
         if (!spirits_in_range.contains(agent_id)) to_remove.push_back(agent_id);
     }
-    for (const auto agent_id : to_remove) {
-        RemoveTrackedSpiritEffect(agent_id);
-    }
+    for (const auto agent_id : to_remove) RemoveTrackedSpiritEffect(agent_id);
 
-    // Add effects for spirits newly in range (skip already-tracked ones so the timer counts down).
     for (const auto& [agent_id, skill_id] : spirits_in_range) {
         if (tracked_spirit_effects.contains(agent_id)) continue;
-
         const auto* agent = GW::Agents::GetAgentByID(agent_id);
         if (!agent) continue;
-        const auto* agent_living = agent->GetAsAgentLiving();
-        if (!agent_living) continue;
-
-        const float duration = GetSpiritDuration(skill_id, agent_living->level);
+        const float duration = GetSpiritDuration(skill_id, static_cast<const GW::AgentLiving*>(agent)->level);
         if (duration <= 0.f) continue;
-
         const uint32_t effect_id = GW::Effects::AddCustomEffect(skill_id, duration);
         if (effect_id) tracked_spirit_effects[agent_id] = effect_id;
     }
