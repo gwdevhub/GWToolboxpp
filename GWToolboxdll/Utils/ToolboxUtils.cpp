@@ -816,14 +816,6 @@ namespace GW {
                 if (remaining > 0)
                     memmove(&arr.m_buffer[i], &arr.m_buffer[i + 1], remaining * sizeof(*arr.m_buffer));
                 arr.m_size--;
-                arr.m_capacity--;
-                if (arr.m_size == 0) {
-                    GW::MemoryMgr::MemFree(arr.m_buffer);
-                    arr.m_buffer = nullptr;
-                } else {
-                    auto* new_buf = static_cast<GW::Effect*>(GW::MemoryMgr::MemRealloc(arr.m_buffer, arr.m_size * sizeof(*arr.m_buffer)));
-                    if (new_buf) arr.m_buffer = new_buf;
-                }
                 GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRemove, reinterpret_cast<void*>(static_cast<uintptr_t>(effect_id)));
                 return true;
             }
