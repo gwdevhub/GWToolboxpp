@@ -68,21 +68,113 @@ namespace {
         }
     }
 
-    bool IsBountyTitle(const GW::Constants::TitleID title_id)
+    GW::Constants::TitleID GetBountyTitle(const GW::Constants::SkillID skill_id)
     {
+        using S = GW::Constants::SkillID;
         using T = GW::Constants::TitleID;
-        switch (title_id) {
-            case T::Sunspear:
-            case T::Lightbringer:
-            case T::Kurzick:
-            case T::Luxon:
-            case T::Asuran:
-            case T::Deldrimor:
-            case T::Vanguard:
-            case T::Norn:
-                return true;
+        switch (skill_id) {
+            // EotN - Asuran
+            case S::Asuran_Bodyguard:
+            case S::Asuran_Bodyguard_Rank2:
+            case S::Asuran_Bodyguard_Rank3:
+            case S::Asuran_Bodyguard_Rank4:
+            case S::Veteran_Asuran_Bodyguard:
+                return T::Asuran;
+            // EotN - Deldrimor
+            case S::Dwarven_Raider:
+            case S::Dwarven_Raider_Rank2:
+            case S::Dwarven_Raider_Rank3:
+            case S::Dwarven_Raider_Rank4:
+            case S::Veteran_Dwarven_Raider:
+            case S::Dwarven_Raider4:
+            case S::Dwarven_Raider5:
+            case S::Dwarven_Raider6:
+            case S::Dwarven_Raider7:
+                return T::Deldrimor;
+            // EotN - Vanguard
+            case S::Vanguard_Patrol:
+            case S::Vanguard_Patrol_Rank2:
+            case S::Vanguard_Patrol_Rank3:
+            case S::Vanguard_Patrol_Rank4:
+            case S::Veteran_Vanguard_Patrol:
+            case S::Vanguard_Patrol4:
+                return T::Vanguard;
+            // EotN - Norn
+            case S::Norn_Hunting_Party:
+            case S::Norn_Hunting_Party_Rank2:
+            case S::Norn_Hunting_Party_Rank3:
+            case S::Norn_Hunting_Party_Rank4:
+            case S::Veteran_Norn_Hunting_Party:
+            case S::Norn_Hunting_Party4:
+            case S::Norn_Hunting_Party5:
+            case S::Norn_Hunting_Party6:
+            case S::Norn_Hunting_Party7:
+                return T::Norn;
+            // Nightfall - Lightbringer (Abaddon's demons)
+            case S::Demon_Hunt:
+            case S::Margonite_Battle:
+            case S::Margonite_Battle1:
+            case S::Margonite_Battle2:
+            case S::Titan_Hunt:
+            case S::Titan_Hunt1:
+            case S::Titan_Hunt2:
+                return T::Lightbringer;
+            // Nightfall - Sunspear
+            case S::Skale_Hunt:
+            case S::Skale_Hunt1:
+            case S::Skale_Hunt2:
+            case S::Mandragor_Hunt:
+            case S::Mandragor_Hunt1:
+            case S::Mandragor_Hunt2:
+            case S::Mandragor_Hunt3:
+            case S::Skree_Battle:
+            case S::Skree_Battle1:
+            case S::Insect_Hunt:
+            case S::Insect_Hunt1:
+            case S::Insect_Hunt2:
+            case S::Corsair_Bounty:
+            case S::Corsair_Bounty1:
+            case S::Corsair_Bounty2:
+            case S::Corsair_Bounty3:
+            case S::Plant_Hunt:
+            case S::Plant_Hunt1:
+            case S::Plant_Hunt2:
+            case S::Undead_Hunt:
+            case S::Undead_Hunt1:
+            case S::Undead_Hunt2:
+            case S::Undead_Hunt3:
+            case S::Monster_Hunt:
+            case S::Monster_Hunt1:
+            case S::Monster_Hunt2:
+            case S::Monster_Hunt3:
+            case S::Monster_Hunt4:
+            case S::Monster_Hunt5:
+            case S::Monster_Hunt6:
+            case S::Monster_Hunt7:
+            case S::Monster_Hunt8:
+            case S::Elemental_Hunt:
+            case S::Elemental_Hunt1:
+            case S::Elemental_Hunt2:
+            case S::Minotaur_Hunt:
+            case S::Heket_Hunt:
+            case S::Heket_Hunt1:
+            case S::Kournan_Bounty:
+            case S::Kournan_Bounty1:
+            case S::Kournan_Bounty2:
+            case S::Kournan_Bounty3:
+            case S::Monolith_Hunt:
+            case S::Monolith_Hunt1:
+            case S::Giant_Hunt:
+                return T::Sunspear;
+            // Factions - Kurzick
+            case S::Blessing_of_the_Kurzicks:
+            case S::Blessing_of_the_Kurzicks1:
+                return T::Kurzick;
+            // Factions - Luxon
+            case S::Blessing_of_the_Luxons:
+                return T::Luxon;
             default:
-                return false;
+                return T::None;
         }
     }
 
@@ -97,8 +189,8 @@ namespace {
         const auto* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
         if (!skill_data) return;
         if (skill_data->type != GW::Constants::SkillType::Bounty) return;
-        const auto title_id = static_cast<GW::Constants::TitleID>(skill_data->title);
-        if (!IsBountyTitle(title_id)) return;
+        const auto title_id = GetBountyTitle(skill_id);
+        if (title_id == GW::Constants::TitleID::None) return;
 
         BountyState state{};
         state.title_id = title_id;

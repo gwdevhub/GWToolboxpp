@@ -97,6 +97,28 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Write MCP config
+        # Streamable-HTTP MCP server backed by a headless Ghidra against
+        # the latest Gw.exe. See:
+        #   https://github.com/gwdevhub/gwdevhub-core/blob/master/docs/ghidra-mcp.md
+        env:
+          GHIDRA_MCP_TOKEN: ${{ secrets.GHIDRA_MCP_TOKEN }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/claude"
+          cat > "$RUNNER_TEMP/claude/mcp.json" <<EOF
+          {
+            "mcpServers": {
+              "ghidra": {
+                "type": "http",
+                "url": "https://ghidra-mcp.gwtoolbox.com/mcp",
+                "headers": {
+                  "Authorization": "Bearer ${GHIDRA_MCP_TOKEN}"
+                }
+              }
+            }
+          }
+          EOF
+
       - name: Run Claude Code
         # Pinned to a commit before claude-code 2.1.131, which broke the
         # native installer (binary missing at /home/runner/.local/bin/claude).
@@ -113,3 +135,13 @@ jobs:
           # Branch off and target dev for any PRs Claude opens, since
           # master is reserved for releases and dev is the integration branch.
           base_branch: dev
+          # Wire in the Ghidra MCP server (see "Write MCP config" step).
+          # Tool restrictions: deny anything that would mutate the loaded
+          # program (rename_*, set_*_comment, *_save, delete_*, etc.) — the
+          # program is loaded in memory only, not in a Ghidra project, so
+          # those calls would either fail or silently lose work on reload.
+          # Instructions live in .github/claude/ghidra-mcp.md.
+          claude_args: |
+            --mcp-config ${{ runner.temp }}/claude/mcp.json
+            --append-system-prompt "$(cat .github/claude/ghidra-mcp.md)"
+            --disallowed-tools "mcp__ghidra__rename_*,mcp__ghidra__set_*_comment,mcp__ghidra__set_global,mcp__ghidra__set_disassembly_comment,mcp__ghidra__set_decompiler_comment,mcp__ghidra__set_plate_comment,mcp__ghidra__delete_*,mcp__ghidra__save_*,mcp__ghidra__commit_*,mcp__ghidra__create_*,mcp__ghidra__add_*,mcp__ghidra__modify_*,mcp__ghidra__remove_*,mcp__ghidra__apply_*,mcp__ghidra__import_*,mcp__ghidra__batch_set_*,mcp__ghidra__batch_create_*,mcp__ghidra__batch_delete_*,mcp__ghidra__batch_remove_*,mcp__ghidra__batch_add_*,mcp__ghidra__clear_*,mcp__ghidra__close_*,mcp__ghidra__archive_ingest_*,mcp__ghidra__merge_*,mcp__ghidra__move_*,mcp__ghidra__clone_*,mcp__ghidra__suggest_*,mcp__ghidra__can_rename_at_address,mcp__ghidra__run_analysis,mcp__ghidra__unload_tool_group"

@@ -16,6 +16,7 @@
 #include <GWCA/GameEntities/NPC.h>
 
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
@@ -543,7 +544,7 @@ namespace GW {
                 case ItemType::Chestpiece:
                     return "Chestpiece";
                 case ItemType::Rune_Mod:
-                    return "Rune";
+                    return "Rune/Upgrade";
                 case ItemType::Usable:
                     return "Usable Item";
                 case ItemType::Dye:
@@ -754,6 +755,64 @@ namespace GW {
         }
 
     } // namespace Items
+
+    namespace Effects {
+
+        // Effect IDs for custom (synthetic) effects use the high byte 0x0f to avoid collisions.
+        // The full ID is 0x0f000000 | skill_id, making it deterministic and recyclable per skill.
+        static constexpr uint32_t custom_effect_id_base = 0x0f000000;
+
+        uint32_t AddCustomEffect(const GW::Constants::SkillID skill_id, const float duration_seconds)
+        {
+            const auto player_effects = GW::Effects::GetPlayerEffectsArray();
+            if (!player_effects) return 0;
+            auto& arr = player_effects->effects;
+
+            const uint32_t target_id = custom_effect_id_base | static_cast<uint32_t>(skill_id);
+
+            // Update if this skill's custom effect already exists.
+            for (uint32_t i = 0; i < arr.m_size; i++) {
+                auto& e = arr.m_buffer[i];
+                if (e.effect_id == target_id) {
+                    e.duration = duration_seconds;
+                    e.timestamp = GW::MemoryMgr::GetSkillTimer();
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRenew, &e);
+                    return e.effect_id;
+                }
+            }
+
+            GW::Effect new_effect{};
+            new_effect.skill_id = skill_id;
+            new_effect.effect_id = target_id;
+            new_effect.duration = duration_seconds;
+            new_effect.timestamp = GW::MemoryMgr::GetSkillTimer();
+            new_effect.attribute_level = 0;
+            new_effect.agent_id = 0;
+
+            GW::UI::UIPacket::kEffectAdd packet{};
+            packet.agent_id = GW::Agents::GetControlledCharacterId();
+            packet.effect = GW::MemoryMgr::AddToGuildWarsArray(arr, new_effect);
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectAdd, &packet);
+            return target_id;
+        }
+
+        bool RemoveCustomEffect(const uint32_t effect_id)
+        {
+            if ((effect_id & 0xff000000) != custom_effect_id_base) return false;
+            const auto player_effects = GW::Effects::GetPlayerEffectsArray();
+            if (!player_effects) return false;
+            auto& arr = player_effects->effects;
+            for (uint32_t i = 0; i < arr.m_size; i++) {
+                if (arr.m_buffer[i].effect_id != effect_id) continue;
+                GW::MemoryMgr::RemoveFromGwArray(arr, i);
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRemove, reinterpret_cast<void*>(static_cast<uintptr_t>(effect_id)));
+                return true;
+            }
+            return false;
+        }
+
+    } // namespace Effects
+
 } // namespace GW
 
 namespace ToolboxUtils {
