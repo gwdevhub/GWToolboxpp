@@ -1,18 +1,28 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/WorldContext.h>
 
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+
+#include <GWCA/Packets/StoC.h>
+
+#include <GWCA/GameContainers/GamePos.h>
 
 #include <Utils/GuiUtils.h>
+#include <Utils/ToolboxUtils.h>
 #include <Color.h>
 #include <Defines.h>
 #include "EffectsMonitorWidget.h"
@@ -30,11 +40,51 @@ namespace {
     int only_under_seconds = 3600; // hide effect durations over n seconds
     bool round_up = true;          // round up or down?
     bool show_vanquish_counter = true;
+    bool track_spirit_effects = false;
 
     GW::UI::Frame* effects_frame = nullptr;
 
     ImGuiViewport* viewport = nullptr;
     ImDrawList* draw_list = nullptr;
+
+    // Maps an agent's encoded name to the skill_id of the spirit it represents.
+    // TODO: @3vcloud - populate this with the actual encoded names for tracked spirits.
+    // To find enc_names: use GW::Agents::GetAgentEncName(agent) in-game and log the values.
+    const std::unordered_map<std::wstring, GW::Constants::SkillID> spirit_enc_name_to_skill_id = {
+        // { L"\x????", GW::Constants::SkillID::Bloodsong },
+        // { L"\x????", GW::Constants::SkillID::Vampirism },
+    };
+
+    // Maps spirit agent_id -> custom effect_id for currently tracked spirits.
+    std::unordered_map<uint32_t, uint32_t> tracked_spirit_effects;
+
+    GW::HookEntry OnAgentRemove_SpiritEntry;
+
+    // Calculates the spirit duration in seconds based on the spirit skill and NPC level.
+    // Uses duration0/duration15 from skill data as a linear interpolation over NPC level.
+    // NB: Fine-tune the level-to-attribute mapping as needed.
+    float GetSpiritDuration(const GW::Constants::SkillID skill_id, const uint32_t npc_level)
+    {
+        const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+        if (!skill || skill->duration0 == 0) return 0.f;
+        const float d0 = static_cast<float>(skill->duration0);
+        const float d15 = static_cast<float>(skill->duration15);
+        const float level = std::min(static_cast<float>(npc_level), 20.f);
+        return d0 + (d15 - d0) * level / 15.f;
+    }
+
+    void RemoveTrackedSpiritEffect(const uint32_t agent_id)
+    {
+        const auto it = tracked_spirit_effects.find(agent_id);
+        if (it == tracked_spirit_effects.end()) return;
+        GW::Effects::RemoveCustomEffect(it->second);
+        tracked_spirit_effects.erase(it);
+    }
+
+    void OnSpiritAgentRemoved(const GW::HookStatus*, const GW::Packet::StoC::AgentRemove* packet)
+    {
+        RemoveTrackedSpiritEffect(packet->agent_id);
+    }
 
     int UptimeToString(char arr[8], int cd)
     {
@@ -166,11 +216,18 @@ void EffectsMonitorWidget::Initialize()
     for (auto message_id : message_ids) {
         GW::UI::RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x6000);
     }
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(
+        &OnAgentRemove_SpiritEntry, OnSpiritAgentRemoved);
 }
 void EffectsMonitorWidget::Terminate()
 {
     ToolboxWidget::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_SpiritEntry);
+    for (const auto& [agent_id, effect_id] : tracked_spirit_effects) {
+        GW::Effects::RemoveCustomEffect(effect_id);
+    }
+    tracked_spirit_effects.clear();
 }
 void EffectsMonitorWidget::Update(float)
 {
@@ -199,6 +256,57 @@ void EffectsMonitorWidget::Update(float)
             effect->duration = (float)duration;
         }
     }
+
+    if (!track_spirit_effects || spirit_enc_name_to_skill_id.empty()) return;
+
+    const auto* me = GW::Agents::GetControlledCharacter();
+    if (!me) return;
+
+    const auto* agents = GW::Agents::GetAgentArray();
+    if (!agents) return;
+
+    // Build a set of spirit agent_ids currently in earshot range with a known skill mapping.
+    std::unordered_map<uint32_t, GW::Constants::SkillID> spirits_in_range;
+    for (const auto* agent : *agents) {
+        if (!agent) continue;
+        const auto* living = agent->GetAsAgentLiving();
+        if (!living) continue;
+        if (living->allegiance != GW::Constants::Allegiance::Spirit_Pet) continue;
+        if (!living->GetIsAlive()) continue;
+        if (GetSquareDistance(me->pos, living->pos) > GW::Constants::SqrRange::Earshot) continue;
+
+        const auto* enc_name = GW::Agents::GetAgentEncName(agent);
+        if (!enc_name) continue;
+        const auto it = spirit_enc_name_to_skill_id.find(enc_name);
+        if (it == spirit_enc_name_to_skill_id.end()) continue;
+
+        spirits_in_range[agent->agent_id] = it->second;
+    }
+
+    // Remove effects for spirits no longer in range.
+    std::vector<uint32_t> to_remove;
+    for (const auto& [agent_id, effect_id] : tracked_spirit_effects) {
+        if (!spirits_in_range.contains(agent_id)) to_remove.push_back(agent_id);
+    }
+    for (const auto agent_id : to_remove) {
+        RemoveTrackedSpiritEffect(agent_id);
+    }
+
+    // Add effects for spirits newly in range (skip already-tracked ones so the timer counts down).
+    for (const auto& [agent_id, skill_id] : spirits_in_range) {
+        if (tracked_spirit_effects.contains(agent_id)) continue;
+
+        const auto* agent = GW::Agents::GetAgentByID(agent_id);
+        if (!agent) continue;
+        const auto* agent_living = agent->GetAsAgentLiving();
+        if (!agent_living) continue;
+
+        const float duration = GetSpiritDuration(skill_id, agent_living->level);
+        if (duration <= 0.f) continue;
+
+        const uint32_t effect_id = GW::Effects::AddCustomEffect(skill_id, duration);
+        if (effect_id) tracked_spirit_effects[agent_id] = effect_id;
+    }
 }
 
 void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
@@ -209,6 +317,7 @@ void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(only_under_seconds);
     LOAD_BOOL(round_up);
     LOAD_BOOL(show_vanquish_counter);
+    LOAD_BOOL(track_spirit_effects);
     LOAD_FLOAT(font_effects);
     LOAD_COLOR(color_text_effects);
     LOAD_COLOR(color_text_shadow);
@@ -225,6 +334,7 @@ void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(only_under_seconds);
     SAVE_BOOL(round_up);
     SAVE_BOOL(show_vanquish_counter);
+    SAVE_BOOL(track_spirit_effects);
     SAVE_FLOAT(font_effects);
     SAVE_COLOR(color_text_effects);
     SAVE_COLOR(color_text_shadow);
@@ -258,5 +368,6 @@ void EffectsMonitorWidget::DrawSettingsInternal()
     ImGui::Checkbox("Round up integers", &round_up);
     ImGui::SameLine();
     ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &show_vanquish_counter);
+    ImGui::Checkbox("Track nearby spirit timers (Bloodsong, Vampirism, etc.)", &track_spirit_effects);
     ImGui::PopID();
 }
