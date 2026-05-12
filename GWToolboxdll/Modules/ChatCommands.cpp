@@ -333,6 +333,9 @@ namespace {
                                           "If hero_index is not provided, all heroes behaviours will be adjusted.\n"
                                           "Add 'silent' to suppress chat message from the hero.";
 
+    constexpr auto disableheroskill_syntax = "'/disableheroskill <hero_index (1-7)> <slot (1-8)> [1|0]' to disable, enable, or toggle a hero's skill slot.\n"
+                                             "Omit the last argument to toggle the current state.";
+
     constexpr auto target_syntax = "'/target closest' to target the closest agent to you.\n"
                             "'/target ee' to target best ebon escape agent.\n"
                             "'/target hos' to target best vipers/hos agent.\n"
@@ -1032,8 +1035,30 @@ namespace {
         });
     }
 
+    void CHAT_CMD_FUNC(CmdDisableHeroSkill)
+    {
+        uint32_t hero_index = 0, slot_index = 0;
+        if (argc < 3
+            || !TextUtils::ParseUInt(argv[1], &hero_index) || hero_index < 1 || hero_index > 7
+            || !TextUtils::ParseUInt(argv[2], &slot_index) || slot_index < 1 || slot_index > 8)
+            return Log::Warning(disableheroskill_syntax);
+        const auto agent_id = GW::Agents::GetHeroAgentID(hero_index);
+        if (!agent_id)
+            return Log::Warning(disableheroskill_syntax);
+        bool disabled;
+        if (argc >= 4) {
+            uint32_t flag = 0;
+            if (!TextUtils::ParseUInt(argv[3], &flag) || flag > 1)
+                return Log::Warning(disableheroskill_syntax);
+            disabled = flag != 0;
+        }
+        else {
+            const auto skillbar = GW::SkillbarMgr::GetSkillbar(agent_id);
+            disabled = skillbar ? !((skillbar->disabled >> (slot_index - 1)) & 1) : true;
+        }
+        GW::PartyMgr::SetHeroSkillDisabled(agent_id, slot_index - 1, disabled);
+    }
 
-    
 const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::AgentTargetFlags::Accept_Player;
 
     static const std::unordered_map<std::wstring, GW::AgentTargetFlags> target_filters = {
@@ -1443,6 +1468,8 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
 
         ImGui::Bullet();
         ImGui::Text(CmdHeroBehaviour_syntax);
+        ImGui::Bullet();
+        ImGui::Text(disableheroskill_syntax);
         const auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
         ImGui::Bullet();
         ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
@@ -1801,6 +1828,7 @@ void ChatCommands::Initialize()
         {L"pingitem", CmdPingEquipment},
         {L"tick", CmdTick},
         {L"hero", CmdHeroBehaviour},
+        {L"disableheroskill", CmdDisableHeroSkill},
         {L"morale", CmdMorale},
         {L"volume", CmdVolume},
         {L"nm", CmdSetNormalMode},
