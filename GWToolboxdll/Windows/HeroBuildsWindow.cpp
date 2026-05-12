@@ -134,10 +134,6 @@ namespace {
         return ret;
     }
 
-    void SetHeroSkillDisabled(uint32_t /*agent_id*/, uint32_t /*skill_slot*/, bool /*disabled*/) {
-        // TODO: Implement via GWCA when API is available
-    }
-
     const GW::HeroFlag* GetHeroFlagInfo(const uint32_t hero_id)
     {
         const GW::GameContext* g = GW::GetGameContext();
@@ -966,9 +962,7 @@ bool HeroBuildsWindow::CodeOnHero::Process()
                 GW::SkillbarMgr::LoadSkillTemplate(hero->agent_id, code);
             }
             for (uint32_t k = 0; k < 8; k++) {
-                if ((disabled_skills >> k) & 1) {
-                    SetHeroSkillDisabled(hero->agent_id, k, true);
-                }
+                GW::PartyMgr::SetHeroSkillDisabled(hero->agent_id, k, ((disabled_skills >> k) & 1) != false);
             }
             if (show_panel) {
                 SendUIMessage(GW::UI::UIMessage::kShowHeroPanel, (void*)heroid);

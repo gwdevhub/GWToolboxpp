@@ -168,6 +168,10 @@ namespace GW {
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name);
     }
     namespace MemoryMgr {
+        template <typename T>
+        T* AddToGuildWarsArray(GW::BaseArray<T>& arr, const T& element);
+        template <typename T>
+        void RemoveFromGwArray(GW::BaseArray<T>& arr, uint32_t index);
         bool GetPersonalDir(std::wstring& out);
         std::filesystem::path GetBuildsDir();
     }

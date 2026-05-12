@@ -548,7 +548,7 @@ namespace GW {
             kShowHeroPanel,                 // 0x100001a3, wparam = hero_id
             kMessage_0x1000019e,            // 0x100001a4
             kMessage_0x1000019f,            // 0x100001a5
-            kMessage_0x100001a0,            // 0x100001a6
+            kQuerySuppressedKeyAction,      // 0x100001a6, wparam = 0, lparam = bool*. Used to check if the suppress action is pressed (usually shift)
             kGetInventoryAgentId,           // 0x100001a7, wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
             kInventoryRelated1,             // 0x100001a8, added to GW 2026-02-26
             kInventoryRelated2,             // 0x100001a9, added to GW 2026-02-26
