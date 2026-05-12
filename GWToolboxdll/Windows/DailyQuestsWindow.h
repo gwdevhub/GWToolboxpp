@@ -82,4 +82,12 @@ public:
     static NicholasCycleData* GetNicholasItemInfo(const wchar_t* item_name_encoded);
     // Returns info about the Nicholas Sandford (pre-searing) item if the given item name matches
     static QuestData* GetNicholasSandfordItemInfo(const wchar_t* item_name_encoded);
+
+    struct ZaishenCoinReward {
+        uint32_t nm;
+        uint32_t hm;
+    };
+    // Returns the copper zaishen coin reward for a given quest, or nullptr if not found.
+    // Generated from the Guild Wars wiki via tools/generate_zaishen_coins.py.
+    static const ZaishenCoinReward* GetZaishenCoinReward(GW::Constants::QuestID quest_id);
 };
