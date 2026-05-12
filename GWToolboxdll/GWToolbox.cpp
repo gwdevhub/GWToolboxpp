@@ -22,6 +22,7 @@
 #include <Modules/Resources.h>
 #include <Modules/CameraUnlockModule.h>
 #include <Modules/ChatCommands.h>
+#include <Modules/TransmoModule.h>
 #include <Modules/ToolboxTheme.h>
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
@@ -1172,6 +1173,7 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(GwDatTextureModule::Instance());
     ToggleModule(Updater::Instance());
     ToggleModule(ChatCommands::Instance());
+    ToggleModule(TransmoModule::Instance());
     ToggleModule(GameSettings::Instance());
     ToggleModule(ChatSettings::Instance());
     ToggleModule(InventoryManager::Instance());
