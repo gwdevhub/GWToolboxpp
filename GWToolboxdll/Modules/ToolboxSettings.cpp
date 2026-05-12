@@ -364,7 +364,6 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
 void ToolboxSettings::Draw(IDirect3DDevice9*)
 {
     ImGui::GetStyle().WindowBorderSize = move_all ? 1.0f : 0.0f;
-    DrawSettingsCogButtons();
 }
 
 void ToolboxSettings::DrawSettingsCogButtons()
@@ -394,7 +393,8 @@ void ToolboxSettings::DrawSettingsCogButtons()
         const bool hovered = mouse_pos.x >= btn_min.x && mouse_pos.x < btn_max.x
                           && mouse_pos.y >= btn_min.y && mouse_pos.y < btn_max.y;
 
-        ImDrawList* dl = ImGui::GetForegroundDrawList(window->Viewport);
+        ImDrawList* dl = window->DrawList;
+        dl->PushClipRect(tb.Min, tb.Max, false);
 
         if (hovered) {
             hovered_elem = const_cast<ToolboxUIElement*>(elem);
@@ -414,6 +414,7 @@ void ToolboxSettings::DrawSettingsCogButtons()
         ImVec4 col = ImGui::GetStyle().Colors[ImGuiCol_Text];
         if (!hovered) col.w *= 0.5f;
         dl->AddText(icon_pos, ImGui::ColorConvertFloat4ToU32(col), ICON_FA_COG);
+        dl->PopClipRect();
     }
 
     if (hovered_elem) {

@@ -202,6 +202,9 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section)
         memset(group, 0, sizeof(group));
         strncpy(group, ini_str.c_str(), _countof(group) - 1);
 
+        ini_str = ini->GetValue(section, VAR_NAME(label), "");
+        strncpy(label, ini_str.c_str(), _countof(label) - 1);
+
         instance_type = ini->GetLongValue(section, VAR_NAME(instance_type), instance_type);
         show_message_in_emote_channel =
             ini->GetBoolValue(section, VAR_NAME(show_message_in_emote_channel),
@@ -289,6 +292,8 @@ void TBHotkey::Save(ToolboxIni* ini, const char* section) const
         ini->SetValue(section, VAR_NAME(player_names), TextUtils::Join(player_names, ",").c_str());
     if(*group)
         ini->SetValue(section, VAR_NAME(group), group);
+    if(*label)
+        ini->SetValue(section, VAR_NAME(label), label);
 
     std::string out;
     std::vector<uint32_t> prof_ids_tmp;
@@ -401,7 +406,11 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
     char header[256]{};
 
     int written = 0;
-    written += Description(&header[written], _countof(header) - written);
+    if (*label) {
+        written += snprintf(&header[written], _countof(header) - written, "%s", label);
+    } else {
+        written += Description(&header[written], _countof(header) - written);
+    }
     switch (HasProfession()) {
         case 1:
             for (size_t i = 1; i < _countof(prof_ids); i++) {
@@ -453,6 +462,10 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
     const auto keybuf_s = ModKeyName(key_combo);
 
     ASSERT(snprintf(&header[written], _countof(header) - written, " [%s]###header%u", keybuf_s.c_str(), ui_id) != -1);
+    if (open_state_override >= 0) {
+        ImGui::SetNextItemOpen(open_state_override == 1, ImGuiCond_Always);
+        open_state_override = -1;
+    }
     constexpr ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_AllowOverlap;
     if (!ImGui::CollapsingHeader(header, flags)) {
         show_header_buttons();
@@ -469,6 +482,10 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
         const float indent_offset = ImGui::GetCurrentWindow()->DC.Indent.x;
         const float offset_sameline = indent_offset + ImGui::GetContentRegionAvail().x / 2;
         hotkey_changed |= ImGui::InputTextEx("Hotkey Group##hotkey_group", "No Hotkey Group", group, sizeof(group), ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue, nullptr, nullptr);
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            hotkey_changed = true;
+        }
+        hotkey_changed |= ImGui::InputTextEx("Label##hotkey_label", "Use description as label", label, sizeof(label), ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue, nullptr, nullptr);
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             hotkey_changed = true;
         }
@@ -657,7 +674,15 @@ e.g. A hotkey with Ctrl + H will NOT trigger if you've got the W key held aswell
         }
         ImGui::PopItemWidth();
 
-        // === Move and delete buttons ===
+        // === Duplicate and delete buttons ===
+        const float half_btn_w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2.f;
+        if (ImGui::Button("Duplicate", ImVec2(half_btn_w, 0))) {
+            *op = Op_Duplicate;
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Create a copy of this hotkey below");
+        }
+        ImGui::SameLine();
         if (ImGui::Button("Delete", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
             ImGui::OpenPopup("Delete Hotkey?");
         }

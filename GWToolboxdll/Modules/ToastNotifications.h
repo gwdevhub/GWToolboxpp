@@ -24,6 +24,7 @@ public:
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni*) override;
     void SaveSettings(ToolboxIni*) override;
+    bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     class Toast;
     // Runs when a toast is activated, deactivated or destructed. Will only trigger once.

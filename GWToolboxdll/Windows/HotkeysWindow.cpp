@@ -525,6 +525,45 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
                         }
                     }
                     break;
+                    case TBHotkey::Op_Duplicate: {
+                        const auto it = std::ranges::find(hotkeys, in[i]);
+                        if (it != hotkeys.end()) {
+                            ToolboxIni tmp_ini;
+                            char section_buf[64];
+                            snprintf(section_buf, sizeof(section_buf), "hotkey-dup:%s", in[i]->Name());
+                            in[i]->Save(&tmp_ini, section_buf);
+                            TBHotkey* copy = TBHotkey::HotkeyFactory(&tmp_ini, section_buf);
+                            if (copy) {
+                                // Determine base name: strip existing " (Copy N)" suffix if any
+                                char base[128];
+                                if (*in[i]->label) {
+                                    snprintf(base, sizeof(base), "%s", in[i]->label);
+                                    if (char* suffix = strstr(base, " (Copy "))
+                                        *suffix = '\0';
+                                } else {
+                                    in[i]->Description(base, sizeof(base));
+                                }
+                                // Find the highest existing copy number for this base
+                                int copy_num = 0;
+                                const size_t base_len = strlen(base);
+                                for (const auto* hk : hotkeys) {
+                                    if (!*hk->label) continue;
+                                    if (strncmp(hk->label, base, base_len) == 0 &&
+                                        strncmp(hk->label + base_len, " (Copy ", 7) == 0) {
+                                        int n = 0;
+                                        if (sscanf(hk->label + base_len + 7, "%d)", &n) == 1)
+                                            copy_num = std::max(copy_num, n);
+                                    }
+                                }
+                                snprintf(copy->label, sizeof(copy->label), "%s (Copy %d)", base, copy_num + 1);
+                                (*it)->open_state_override = 0; // collapse original
+                                copy->open_state_override = 1;  // expand copy
+                                hotkeys.insert(it + 1, copy);
+                                return true;
+                            }
+                        }
+                    }
+                    break;
                     default:
                         break;
                 }
