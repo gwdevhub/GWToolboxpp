@@ -113,10 +113,7 @@ namespace {
         if (IsIconic(whnd)) {
             return ShouldNotifyInstanceType(show_notifications_when_minimised);
         }
-        if (GetActiveWindow() != whnd) {
-            return ShouldNotifyInstanceType(show_notifications_when_in_background);
-        }
-        return false;
+        return GetActiveWindow() != whnd && ShouldNotifyInstanceType(show_notifications_when_in_background);
     }
 
     void UpdateWindowTitle()
@@ -125,21 +122,21 @@ namespace {
         if (!hwnd) {
             return;
         }
-        if (pending_title_notifications.empty()) {
-            if (!original_window_title.empty()) {
-                SetWindowTextW(hwnd, original_window_title.c_str());
-                original_window_title.clear();
+        if (!pending_title_notifications.empty()) {
+            if (original_window_title.empty()) {
+                wchar_t buf[256] = {};
+                GetWindowTextW(hwnd, buf, 256);
+                original_window_title = buf;
             }
+            const auto n = pending_title_notifications.size();
+            const auto label = n == 1 ? pending_title_notifications.front() : std::to_wstring(n);
+            SetWindowTextW(hwnd, (L"(" + label + L") " + original_window_title).c_str());
             return;
         }
-        if (original_window_title.empty()) {
-            wchar_t buf[256] = {};
-            GetWindowTextW(hwnd, buf, 256);
-            original_window_title = buf;
+        if (!original_window_title.empty()) {
+            SetWindowTextW(hwnd, original_window_title.c_str());
+            original_window_title.clear();
         }
-        const auto n = pending_title_notifications.size();
-        const auto label = n == 1 ? pending_title_notifications.front() : std::to_wstring(n);
-        SetWindowTextW(hwnd, (L"(" + label + L") " + original_window_title).c_str());
     }
 
     void AddWindowTitleNotification(const wchar_t* descriptor)
