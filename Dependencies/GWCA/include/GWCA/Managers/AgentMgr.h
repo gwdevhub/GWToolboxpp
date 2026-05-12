@@ -4,6 +4,7 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/Utilities/Export.h>
+#include <GWCA/Utilities/Hook.h>
 
 namespace GW {
     typedef uint32_t AgentID;
@@ -23,6 +24,15 @@ namespace GW {
 
     struct Module;
     extern Module AgentModule;
+
+#pragma warning(push)
+#pragma warning(disable: 4200) // nonstandard extension: zero-sized array in struct
+    struct AgentEffect {
+        uint32_t effect_type;
+        uint32_t data_size; // usually 0x34, detemines length of data in bytes
+        uint32_t data[];
+    };
+#pragma warning(pop)
 
     enum class WorldActionId : uint32_t {
         InteractEnemy,
@@ -113,6 +123,8 @@ namespace GW {
 
 
     namespace Agents {
+        typedef HookCallback<const GW::AgentLiving*, const AgentEffect*> AgentEffectCallback;
+
         // === Dialogs ===
         // Same as pressing button (id) while talking to an NPC.
         GWCA_API bool SendDialog(uint32_t dialog_id);
@@ -193,6 +205,13 @@ namespace GW {
         // Might be bugged, avoid to use.
         GWCA_API wchar_t* GetAgentEncName(const Agent* agent);
         GWCA_API wchar_t* GetAgentEncName(uint32_t agent_id);
+
+        GWCA_API void RegisterAgentEffectCallback(
+            HookEntry* entry,
+            const AgentEffectCallback& callback,
+            int altitude = -0x8000);
+        GWCA_API void RemoveFrameUIMessageCallback(
+            HookEntry* entry);
     };
 }
 // ============================================================

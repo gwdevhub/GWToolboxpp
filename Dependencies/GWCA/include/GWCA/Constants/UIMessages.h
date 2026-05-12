@@ -139,11 +139,11 @@ namespace GW {
             kMessage_0x1000000a,            // 0x1000000a
             kMessage_0x1000000b,            // 0x1000000b
             kDialogueMessage,               // 0x1000000c
-            kMessage_0x1000000d,            // 0x1000000d
+            kAgentOverheadFloat,            // 0x1000000d, // e.g. XP gain wparam = *GW::UI::UIPacket::kAgentOverheadNumber
             kMessage_0x1000000e,            // 0x1000000e
-            kMessage_0x1000000f,            // 0x1000000f
+            kAgentOverheadNumber,           // 0x1000000f, // e.g. damage, heal wparam = *GW::UI::UIPacket::kAgentOverheadNumber
             kMessage_0x10000010,            // 0x10000010
-            kMessage_0x10000011,            // 0x10000011
+            kAgentOverheadText,             // 0x10000011, // e.g. block, dodge wparam = *GW::UI::UIPacket::kAgentOverheadNumber
             kMessage_0x10000012,            // 0x10000012
             kMessage_0x10000013,            // 0x10000013
             kMessage_0x10000014,            // 0x10000014
@@ -621,6 +621,17 @@ namespace GW {
         //static_assert(GW::UI::UIMessage::kOpenTemplate == (GW::UI::UIMessage)0x100001c4);
 
         namespace UIPacket {
+            struct kAgentOverheadNumber {
+                uint32_t agent_id;
+                uint32_t h0004;
+                wchar_t* encoded_str;
+                uint32_t style;
+                uint32_t h0010;
+                uint32_t h0014;
+                uint32_t h0018;
+                uint32_t h001c;
+                uint32_t amount;
+            };
             struct kDialogueMessage {
                 uint32_t agent_id;
                 wchar_t* sender;
