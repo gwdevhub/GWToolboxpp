@@ -1164,9 +1164,7 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         ImGui::PopStyleColor(4);
         if (ImGui::BeginPopup("##friend_ctx")) {
             if (lfp->current_map_id != 0) {
-                const auto& map_name = lfp->current_map_name && !lfp->current_map_name->string().empty()
-                                           ? lfp->current_map_name->string()
-                                           : "Unknown";
+                const auto& map_name = Resources::GetMapName(static_cast<GW::Constants::MapID>(lfp->current_map_id))->string();
                 const auto label = std::format("Travel to {}", map_name);
                 if (ImGui::MenuItem(label.c_str())) {
                     TravelWindow::Instance().TravelNearest(static_cast<GW::Constants::MapID>(lfp->current_map_id));
