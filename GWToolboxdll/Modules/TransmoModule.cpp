@@ -5,6 +5,7 @@
 #include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
@@ -25,7 +26,20 @@
 
 #include <Modules/TransmoModule.h>
 
+#include <Defines.h>
+
 namespace {
+
+    struct PendingTransmo {
+        PendingTransmo(const DWORD _npcid = 0, const DWORD _scale = 0x64000000, const DWORD _npcmfid = 0, const DWORD _npcmfd = 0, const DWORD _flags = 0)
+            : npc_id(_npcid), scale(_scale), npc_model_file_id(_npcmfid), npc_model_file_data(_npcmfd), flags(_flags)
+        {}
+        DWORD npc_id = 0;
+        DWORD scale = 0x64000000;
+        DWORD npc_model_file_id = 0;
+        DWORD npc_model_file_data = 0;
+        DWORD flags = 0;
+    };
 
     struct TransmoEntry {
         char name[64] = "";
@@ -35,7 +49,7 @@ namespace {
         int model_file_data = 0;
         int flags = 0;
 
-        TransmoModule::PendingTransmo ToPending() const
+        PendingTransmo ToPending() const
         {
             return {static_cast<DWORD>(npc_id), static_cast<DWORD>(scale) << 24,
                     static_cast<DWORD>(model_file_id), static_cast<DWORD>(model_file_data),
@@ -43,9 +57,16 @@ namespace {
         }
     };
 
+    static void TransmoAgent(const DWORD agent_id, PendingTransmo& transmo);
+    static bool GetNPCInfoByName(const std::string& name, PendingTransmo& transmo);
+    static bool GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo);
+    static bool ParseScale(int scale, PendingTransmo& transmo);
+    static bool GetTargetTransmoInfo(PendingTransmo& transmo);
+    static bool ParseTransmoArgs(int argc, const LPWSTR* argv, int name_arg_index, PendingTransmo& transmo);
+
     std::vector<TransmoEntry*> npc_transmo_list;
 
-    TransmoModule::PendingTransmo pending_transmo_add_data;
+    PendingTransmo pending_transmo_add_data;
     std::unique_ptr<GuiUtils::EncString> pending_transmo_add_name;
 
     GW::HookEntry TransmoCmd_HookEntry;
@@ -142,6 +163,241 @@ namespace {
         pending_transmo_add_name = std::make_unique<GuiUtils::EncString>(enc_name);
         return true;
     }
+
+    void TransmoAgent(const DWORD agent_id, PendingTransmo& transmo)
+    {
+        if (!transmo.npc_id || !agent_id) {
+            return;
+        }
+        const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        if (!a || !a->GetIsLivingType()) {
+            return;
+        }
+        DWORD& npc_id = transmo.npc_id;
+        DWORD& scale = transmo.scale;
+        const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
+        if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max() - 1)) {
+            // Scale only
+            npc_id = a->player_number;
+            if (a->transmog_npc_id & 0x20000000) {
+                npc_id = a->transmog_npc_id ^ 0x20000000;
+            }
+        }
+        else if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max())) {
+            // Reset
+            npc_id = 0;
+            scale = 0x64000000;
+        }
+        else if (npc_id >= npcs.size() || !npcs[npc_id].model_file_id) {
+            const DWORD& npc_model_file_id = transmo.npc_model_file_id;
+            const DWORD& npc_model_file_data = transmo.npc_model_file_data;
+            const DWORD& flags = transmo.flags;
+            if (!npc_model_file_id) {
+                return;
+            }
+            // Need to create the NPC.
+            // Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
+            // We have to find the data that are in the NPC structure and feed them to those 2 packets.
+            GW::NPC npc = {0};
+            npc.model_file_id = npc_model_file_id;
+            npc.npc_flags = flags;
+            npc.primary = (GW::Constants::Profession)1;
+            npc.visual_adjustment = *(GW::CharAdjustment*)(&scale);
+            npc.default_level = 0;
+            GW::GameThread::Enqueue([npc_id, npc] {
+                GW::Packet::StoC::NpcGeneralStats packet{};
+                packet.npc_id = npc_id;
+                packet.file_id = npc.model_file_id;
+                packet.data1 = 0;
+                packet.scale = *(uint32_t*)(&npc.visual_adjustment);
+                packet.data2 = 0;
+                packet.flags = npc.npc_flags;
+                packet.profession = (uint32_t)npc.primary;
+                packet.level = npc.default_level;
+                packet.name[0] = 0;
+                GW::StoC::EmulatePacket(&packet);
+            });
+            if (npc_model_file_data) {
+                GW::GameThread::Enqueue([npc_id, npc_model_file_data] {
+                    GW::Packet::StoC::NPCModelFile packet;
+                    packet.npc_id = npc_id;
+                    packet.count = 1;
+                    packet.data[0] = npc_model_file_data;
+                    GW::StoC::EmulatePacket(&packet);
+                });
+            }
+        }
+        GW::GameThread::Enqueue([npc_id, agent_id, scale] {
+            if (npc_id) {
+                const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
+                const GW::NPC npc = npcs[npc_id];
+                if (!npc.model_file_id) {
+                    return;
+                }
+            }
+            GW::Packet::StoC::AgentScale packet1;
+            packet1.header = GW::Packet::StoC::AgentScale::STATIC_HEADER;
+            packet1.agent_id = agent_id;
+            packet1.scale = scale;
+            GW::StoC::EmulatePacket(&packet1);
+
+            GW::Packet::StoC::AgentModel packet2;
+            packet2.header = GW::Packet::StoC::AgentModel::STATIC_HEADER;
+            packet2.agent_id = agent_id;
+            packet2.model_id = npc_id;
+            GW::StoC::EmulatePacket(&packet2);
+        });
+    }
+
+    bool GetNPCInfoByName(const std::string& name, PendingTransmo& transmo)
+    {
+        for (const auto* entry : npc_transmo_list) {
+            if (std::string_view(entry->name).find(name) == std::string_view::npos) {
+                continue;
+            }
+            transmo = entry->ToPending();
+            return true;
+        }
+        return false;
+    }
+
+    bool GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo)
+    {
+        return GetNPCInfoByName(TextUtils::WStringToString(name), transmo);
+    }
+
+    bool ParseTransmoArgs(int argc, const LPWSTR* argv, int name_arg_index, PendingTransmo& transmo)
+    {
+        const wchar_t* name_arg = argv[name_arg_index];
+        int iscale;
+        if (wcsncmp(name_arg, L"reset", 5) == 0) {
+            transmo.npc_id = std::numeric_limits<int>::max();
+        }
+        else if (TextUtils::ParseInt(name_arg, &iscale)) {
+            if (!ParseScale(iscale, transmo)) return false;
+        }
+        else if (!GetNPCInfoByName(name_arg, transmo)) {
+            Log::Error("Unknown transmo '%ls'", name_arg);
+            return false;
+        }
+        const int scale_arg_index = name_arg_index + 1;
+        if (argc > scale_arg_index && TextUtils::ParseInt(argv[scale_arg_index], &iscale)) {
+            if (!ParseScale(iscale, transmo)) return false;
+        }
+        return true;
+    }
+
+    bool ParseScale(const int scale, PendingTransmo& transmo)
+    {
+        if (scale < 6 || scale > 255) {
+            Log::Error("scale must be between [6, 255]");
+            return false;
+        }
+        transmo.scale = static_cast<DWORD>(scale) << 24;
+        if (!transmo.npc_id) {
+            transmo.npc_id = std::numeric_limits<int>::max() - 1;
+        }
+        return true;
+    }
+
+    bool GetTargetTransmoInfo(PendingTransmo& transmo)
+    {
+        const auto target = GW::Agents::GetTargetAsAgentLiving();
+        if (!target) {
+            return false;
+        }
+        transmo.npc_id = target->player_number;
+        if (target->transmog_npc_id & 0x20000000) {
+            transmo.npc_id = target->transmog_npc_id ^ 0x20000000;
+        }
+        else if (target->IsPlayer()) {
+            return false;
+        }
+        return true;
+    }
+
+    void CHAT_CMD_FUNC(CmdTransmoParty)
+    {
+        GW::PartyInfo* pInfo = GW::PartyMgr::GetPartyInfo();
+        if (!pInfo) return;
+
+        PendingTransmo transmo;
+        if (argc > 1) {
+            if (!ParseTransmoArgs(argc, argv, 1, transmo)) return;
+        }
+        else {
+            if (!GetTargetTransmoInfo(transmo)) return;
+        }
+
+        for (const GW::HeroPartyMember& p : pInfo->heroes)
+            TransmoAgent(p.agent_id, transmo);
+        for (const GW::HenchmanPartyMember& p : pInfo->henchmen)
+            TransmoAgent(p.agent_id, transmo);
+        for (const GW::PlayerPartyMember& p : pInfo->players) {
+            const auto player = GW::PlayerMgr::GetPlayerByID(p.login_number);
+            if (player) TransmoAgent(player->agent_id, transmo);
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdTransmoTarget)
+    {
+        if (argc < 2) return Log::Error("Missing /transmotarget argument");
+        const auto target = GW::Agents::GetTargetAsAgentLiving();
+        if (!target) return Log::Error("Invalid /transmotarget target");
+        PendingTransmo transmo;
+        if (!ParseTransmoArgs(argc, argv, 1, transmo)) return;
+        TransmoAgent(target->agent_id, transmo);
+    }
+
+    void CHAT_CMD_FUNC(CmdTransmo)
+    {
+        PendingTransmo transmo;
+        if (argc > 1) {
+            if (wcscmp(argv[1], L"add") == 0) {
+                AddCurrentTargetToTransmoList();
+                return;
+            }
+            if (wcsncmp(argv[1], L"model", 5) == 0) {
+                if (argc < 6) {
+                    Log::Info("HELP for /transmo model");
+                    Log::Info("Usage: /transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [SCALE]");
+                    Log::Info("Example, transmo as Gehraz: /transmo model 4581 204020 245127 540 [15]");
+                    Log::Info("The numbers required by the command can be obtained from the GWToolbox 'Info' window, in the 'Advanced' section under the 'Target' menu. Note: the numbers must be converted from hexadecimal to decimal.");
+                    return;
+                }
+                int npc_id = transmo.npc_id, model_file_id = transmo.npc_model_file_id, model_file_data = transmo.npc_model_file_data, flags = transmo.flags;
+                unsigned int scale = transmo.scale;
+                if (!TextUtils::ParseInt(argv[2], &npc_id)) return Log::Error("Transmo model: invalid NPC ID '%ls', expected an integer. Example: 4581", argv[2]);
+                if (!TextUtils::ParseInt(argv[3], &model_file_id)) return Log::Error("Transmo model: invalid NPC ModelFileID '%ls', expected an integer. Example: 204020", argv[3]);
+                if (!TextUtils::ParseInt(argv[4], &model_file_data)) return Log::Error("Transmo model: invalid NPC ModelFile '%ls', expected an integer. Example: 245127", argv[4]);
+                if (!TextUtils::ParseInt(argv[5], &flags)) return Log::Error("Transmo model: invalid NPC Flags '%ls', expected an integer. Example: 540", argv[5]);
+                if (argc > 6 && !TextUtils::ParseUInt(argv[6], &scale)) return Log::Error("Transmo model: invalid scale '%ls', expected an integer between 6 and 255", argv[6]);
+                transmo.npc_id = npc_id;
+                transmo.npc_model_file_id = model_file_id;
+                transmo.npc_model_file_data = model_file_data;
+                transmo.flags = flags;
+                transmo.scale = argc > 6 ? scale << 24 : scale;
+            }
+            else if (!ParseTransmoArgs(argc, argv, 1, transmo)) {
+                return;
+            }
+        }
+        else {
+            if (!GetTargetTransmoInfo(transmo)) return;
+        }
+        TransmoAgent(GW::Agents::GetControlledCharacterId(), transmo);
+    }
+
+    void CHAT_CMD_FUNC(CmdTransmoAgent)
+    {
+        if (argc < 3) return Log::Error("Missing /transmoagent argument");
+        uint32_t agent_id;
+        if (!TextUtils::ParseUInt(argv[1], &agent_id)) return Log::Error("Invalid /transmoagent agent_id");
+        PendingTransmo transmo;
+        if (!ParseTransmoArgs(argc, argv, 2, transmo)) return;
+        TransmoAgent(agent_id, transmo);
+    }
+
 
 } // namespace
 
@@ -355,238 +611,4 @@ void TransmoModule::SaveSettings(ToolboxIni* ini)
                                      entry->model_file_id, entry->model_file_data, entry->flags);
         ini->SetValue(transmo_section, key.c_str(), val.c_str());
     }
-}
-
-void TransmoModule::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
-{
-    if (!transmo.npc_id || !agent_id) {
-        return;
-    }
-    const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-    if (!a || !a->GetIsLivingType()) {
-        return;
-    }
-    DWORD& npc_id = transmo.npc_id;
-    DWORD& scale = transmo.scale;
-    const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
-    if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max() - 1)) {
-        // Scale only
-        npc_id = a->player_number;
-        if (a->transmog_npc_id & 0x20000000) {
-            npc_id = a->transmog_npc_id ^ 0x20000000;
-        }
-    }
-    else if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max())) {
-        // Reset
-        npc_id = 0;
-        scale = 0x64000000;
-    }
-    else if (npc_id >= npcs.size() || !npcs[npc_id].model_file_id) {
-        const DWORD& npc_model_file_id = transmo.npc_model_file_id;
-        const DWORD& npc_model_file_data = transmo.npc_model_file_data;
-        const DWORD& flags = transmo.flags;
-        if (!npc_model_file_id) {
-            return;
-        }
-        // Need to create the NPC.
-        // Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
-        // We have to find the data that are in the NPC structure and feed them to those 2 packets.
-        GW::NPC npc = {0};
-        npc.model_file_id = npc_model_file_id;
-        npc.npc_flags = flags;
-        npc.primary = (GW::Constants::Profession)1;
-        npc.visual_adjustment = *(GW::CharAdjustment*)(&scale);
-        npc.default_level = 0;
-        GW::GameThread::Enqueue([npc_id, npc] {
-            GW::Packet::StoC::NpcGeneralStats packet{};
-            packet.npc_id = npc_id;
-            packet.file_id = npc.model_file_id;
-            packet.data1 = 0;
-            packet.scale = *(uint32_t*)(&npc.visual_adjustment);
-            packet.data2 = 0;
-            packet.flags = npc.npc_flags;
-            packet.profession = (uint32_t)npc.primary;
-            packet.level = npc.default_level;
-            packet.name[0] = 0;
-            GW::StoC::EmulatePacket(&packet);
-        });
-        if (npc_model_file_data) {
-            GW::GameThread::Enqueue([npc_id, npc_model_file_data] {
-                GW::Packet::StoC::NPCModelFile packet;
-                packet.npc_id = npc_id;
-                packet.count = 1;
-                packet.data[0] = npc_model_file_data;
-                GW::StoC::EmulatePacket(&packet);
-            });
-        }
-    }
-    GW::GameThread::Enqueue([npc_id, agent_id, scale] {
-        if (npc_id) {
-            const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
-            const GW::NPC npc = npcs[npc_id];
-            if (!npc.model_file_id) {
-                return;
-            }
-        }
-        GW::Packet::StoC::AgentScale packet1;
-        packet1.header = GW::Packet::StoC::AgentScale::STATIC_HEADER;
-        packet1.agent_id = agent_id;
-        packet1.scale = scale;
-        GW::StoC::EmulatePacket(&packet1);
-
-        GW::Packet::StoC::AgentModel packet2;
-        packet2.header = GW::Packet::StoC::AgentModel::STATIC_HEADER;
-        packet2.agent_id = agent_id;
-        packet2.model_id = npc_id;
-        GW::StoC::EmulatePacket(&packet2);
-    });
-}
-
-bool TransmoModule::GetNPCInfoByName(const std::string& name, PendingTransmo& transmo)
-{
-    for (const auto* entry : npc_transmo_list) {
-        if (std::string_view(entry->name).find(name) == std::string_view::npos) {
-            continue;
-        }
-        transmo = entry->ToPending();
-        return true;
-    }
-    return false;
-}
-
-bool TransmoModule::GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo)
-{
-    return GetNPCInfoByName(TextUtils::WStringToString(name), transmo);
-}
-
-bool TransmoModule::ParseTransmoArgs(int argc, const LPWSTR* argv, int name_arg_index, PendingTransmo& transmo)
-{
-    const wchar_t* name_arg = argv[name_arg_index];
-    int iscale;
-    if (wcsncmp(name_arg, L"reset", 5) == 0) {
-        transmo.npc_id = std::numeric_limits<int>::max();
-    }
-    else if (TextUtils::ParseInt(name_arg, &iscale)) {
-        if (!ParseScale(iscale, transmo)) return false;
-    }
-    else if (!GetNPCInfoByName(name_arg, transmo)) {
-        Log::Error("Unknown transmo '%ls'", name_arg);
-        return false;
-    }
-    const int scale_arg_index = name_arg_index + 1;
-    if (argc > scale_arg_index && TextUtils::ParseInt(argv[scale_arg_index], &iscale)) {
-        if (!ParseScale(iscale, transmo)) return false;
-    }
-    return true;
-}
-
-bool TransmoModule::ParseScale(const int scale, PendingTransmo& transmo)
-{
-    if (scale < 6 || scale > 255) {
-        Log::Error("scale must be between [6, 255]");
-        return false;
-    }
-    transmo.scale = static_cast<DWORD>(scale) << 24;
-    if (!transmo.npc_id) {
-        transmo.npc_id = std::numeric_limits<int>::max() - 1;
-    }
-    return true;
-}
-
-bool TransmoModule::GetTargetTransmoInfo(PendingTransmo& transmo)
-{
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) {
-        return false;
-    }
-    transmo.npc_id = target->player_number;
-    if (target->transmog_npc_id & 0x20000000) {
-        transmo.npc_id = target->transmog_npc_id ^ 0x20000000;
-    }
-    else if (target->IsPlayer()) {
-        return false;
-    }
-    return true;
-}
-
-void CHAT_CMD_FUNC(TransmoModule::CmdTransmoParty)
-{
-    GW::PartyInfo* pInfo = GW::PartyMgr::GetPartyInfo();
-    if (!pInfo) return;
-
-    PendingTransmo transmo;
-    if (argc > 1) {
-        if (!ParseTransmoArgs(argc, argv, 1, transmo)) return;
-    }
-    else {
-        if (!GetTargetTransmoInfo(transmo)) return;
-    }
-
-    for (const GW::HeroPartyMember& p : pInfo->heroes)
-        TransmoAgent(p.agent_id, transmo);
-    for (const GW::HenchmanPartyMember& p : pInfo->henchmen)
-        TransmoAgent(p.agent_id, transmo);
-    for (const GW::PlayerPartyMember& p : pInfo->players) {
-        const auto player = GW::PlayerMgr::GetPlayerByID(p.login_number);
-        if (player) TransmoAgent(player->agent_id, transmo);
-    }
-}
-
-void CHAT_CMD_FUNC(TransmoModule::CmdTransmoTarget)
-{
-    if (argc < 2) return Log::Error("Missing /transmotarget argument");
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) return Log::Error("Invalid /transmotarget target");
-    PendingTransmo transmo;
-    if (!ParseTransmoArgs(argc, argv, 1, transmo)) return;
-    TransmoAgent(target->agent_id, transmo);
-}
-
-void CHAT_CMD_FUNC(TransmoModule::CmdTransmo)
-{
-    PendingTransmo transmo;
-    if (argc > 1) {
-        if (wcscmp(argv[1], L"add") == 0) {
-            AddCurrentTargetToTransmoList();
-            return;
-        }
-        if (wcsncmp(argv[1], L"model", 5) == 0) {
-            if (argc < 6) {
-                Log::Info("HELP for /transmo model");
-                Log::Info("Usage: /transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [SCALE]");
-                Log::Info("Example, transmo as Gehraz: /transmo model 4581 204020 245127 540 [15]");
-                Log::Info("The numbers required by the command can be obtained from the GWToolbox 'Info' window, in the 'Advanced' section under the 'Target' menu. Note: the numbers must be converted from hexadecimal to decimal.");
-                return;
-            }
-            int npc_id = transmo.npc_id, model_file_id = transmo.npc_model_file_id, model_file_data = transmo.npc_model_file_data, flags = transmo.flags;
-            unsigned int scale = transmo.scale;
-            if (!TextUtils::ParseInt(argv[2], &npc_id)) return Log::Error("Transmo model: invalid NPC ID '%ls', expected an integer. Example: 4581", argv[2]);
-            if (!TextUtils::ParseInt(argv[3], &model_file_id)) return Log::Error("Transmo model: invalid NPC ModelFileID '%ls', expected an integer. Example: 204020", argv[3]);
-            if (!TextUtils::ParseInt(argv[4], &model_file_data)) return Log::Error("Transmo model: invalid NPC ModelFile '%ls', expected an integer. Example: 245127", argv[4]);
-            if (!TextUtils::ParseInt(argv[5], &flags)) return Log::Error("Transmo model: invalid NPC Flags '%ls', expected an integer. Example: 540", argv[5]);
-            if (argc > 6 && !TextUtils::ParseUInt(argv[6], &scale)) return Log::Error("Transmo model: invalid scale '%ls', expected an integer between 6 and 255", argv[6]);
-            transmo.npc_id = npc_id;
-            transmo.npc_model_file_id = model_file_id;
-            transmo.npc_model_file_data = model_file_data;
-            transmo.flags = flags;
-            transmo.scale = argc > 6 ? scale << 24 : scale;
-        }
-        else if (!ParseTransmoArgs(argc, argv, 1, transmo)) {
-            return;
-        }
-    }
-    else {
-        if (!GetTargetTransmoInfo(transmo)) return;
-    }
-    TransmoAgent(GW::Agents::GetControlledCharacterId(), transmo);
-}
-
-void CHAT_CMD_FUNC(TransmoModule::CmdTransmoAgent)
-{
-    if (argc < 3) return Log::Error("Missing /transmoagent argument");
-    uint32_t agent_id;
-    if (!TextUtils::ParseUInt(argv[1], &agent_id)) return Log::Error("Invalid /transmoagent agent_id");
-    PendingTransmo transmo;
-    if (!ParseTransmoArgs(argc, argv, 2, transmo)) return;
-    TransmoAgent(agent_id, transmo);
 }
