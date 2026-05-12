@@ -1106,6 +1106,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         //ImGui::ShowDemoWindow();
         //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
+        ToolboxSettings::DrawSettingsCogButtons();
         ImGui::DrawContextMenu();
         ImGui::DrawConfirmDialog();
         if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
