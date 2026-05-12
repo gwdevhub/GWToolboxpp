@@ -54,10 +54,7 @@ namespace {
     bool flash_window_on_self_resurrected = false;
 
     bool change_title_on_notification = false;
-
-    // Original window title before any notification prefix was applied
     std::wstring original_window_title;
-    // Descriptors of notifications pending since last window focus
     std::vector<std::wstring> pending_title_notifications;
 
     const wchar_t* party_ready_toast_title = L"Party Ready";
@@ -119,7 +116,7 @@ namespace {
         if (GetActiveWindow() != whnd) {
             return ShouldNotifyInstanceType(show_notifications_when_in_background);
         }
-        return false; // Window is focused; don't update title
+        return false;
     }
 
     void UpdateWindowTitle()
@@ -140,14 +137,9 @@ namespace {
             GetWindowTextW(hwnd, buf, 256);
             original_window_title = buf;
         }
-        std::wstring new_title;
-        if (pending_title_notifications.size() == 1) {
-            new_title = L"(" + pending_title_notifications.front() + L") " + original_window_title;
-        }
-        else {
-            new_title = L"(" + std::to_wstring(pending_title_notifications.size()) + L") " + original_window_title;
-        }
-        SetWindowTextW(hwnd, new_title.c_str());
+        const auto n = pending_title_notifications.size();
+        const auto label = n == 1 ? pending_title_notifications.front() : std::to_wstring(n);
+        SetWindowTextW(hwnd, (L"(" + label + L") " + original_window_title).c_str());
     }
 
     void AddWindowTitleNotification(const wchar_t* descriptor)
@@ -161,9 +153,6 @@ namespace {
 
     void ClearWindowTitleNotifications()
     {
-        if (pending_title_notifications.empty()) {
-            return;
-        }
         pending_title_notifications.clear();
         UpdateWindowTitle();
     }
@@ -659,7 +648,6 @@ void ToastNotifications::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(flash_window_on_last_to_ready);
     LOAD_BOOL(flash_window_on_everyone_ready);
     LOAD_BOOL(flash_window_on_self_resurrected);
-
     LOAD_BOOL(change_title_on_notification);
 }
 
@@ -690,6 +678,5 @@ void ToastNotifications::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(flash_window_on_last_to_ready);
     SAVE_BOOL(flash_window_on_everyone_ready);
     SAVE_BOOL(flash_window_on_self_resurrected);
-
     SAVE_BOOL(change_title_on_notification);
 }
