@@ -19,6 +19,8 @@ namespace GW {
     struct Vec3f;
     struct GamePos;
 
+    struct AgentEffect;
+
     struct VisibleEffect {
         uint32_t unk; //enchantment = 1, weapon spell = 9
         Constants::EffectID id;
@@ -265,8 +267,11 @@ namespace GW {
         /* +h0138 */ uint32_t max_hp; // Only works for yourself
         /* +h013C */ uint32_t effects; // Bitmap for effects to display when targetted. DOES include hexes
         /* +h0140 */ uint32_t h0140;
-        /* +h0144 */ uint8_t  hex; // Bitmap for the hex effect when targetted (apparently obsolete!) (yes)
-        /* +h0145 */ uint8_t  h0145[19];
+        /* +h0144 */ uint32_t h0144; 
+        /* +h0148 */ GW::AgentEffect* next_queued_agent_effect; // Points to the next effect that needs to be processed in the update loop for this agent.
+        /* +h014c */ uint32_t h014c;
+        /* +h0150 */ uint32_t h0150;
+        /* +h0154 */ uint32_t h0154;
         /* +h0158 */ uint32_t model_state; // Different values for different states of the model.
         /* +h015C */ uint32_t type_map; // Odd variable! 0x08 = dead, 0xC00 = boss, 0x40000 = spirit, 0x400000 = player
         /* +h0160 */ uint32_t h0160[4];

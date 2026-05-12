@@ -89,6 +89,7 @@ namespace GW {
         GWCA_API bool SetHeroTarget(uint32_t hero_agent_id, uint32_t target_agent_id = 0);
         GWCA_API bool SetHeroBehavior(uint32_t hero_agent_id, HeroBehavior behavior);
         GWCA_API bool SetPetBehavior(uint32_t owner_agent_id, HeroBehavior behavior);
+        GWCA_API bool SetHeroSkillDisabled(uint32_t hero_agent_id, uint32_t slot_index, bool disabled = true);
 
         GWCA_API PetInfo* GetPetInfo(uint32_t owner_agent_id = 0);
 

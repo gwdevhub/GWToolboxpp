@@ -422,6 +422,27 @@ namespace GW {
                    L"Templates" /
                    L"Skills";
         }
+        template <typename T>
+        T* AddToGuildWarsArray(GW::BaseArray<T>& arr, const T& element)
+        {
+            if (arr.m_size >= arr.m_capacity) {
+                auto* new_buf = static_cast<T*>(MemRealloc(arr.m_buffer, (arr.m_size + 1) * sizeof(T)));
+                GWCA_ASSERT(new_buf);
+                arr.m_buffer = new_buf;
+                arr.m_capacity++;
+            }
+            arr.m_buffer[arr.m_size] = element;
+            return &arr.m_buffer[arr.m_size++];
+        }
+
+        template <typename T>
+        void RemoveFromGwArray(GW::BaseArray<T>& arr, uint32_t index)
+        {
+            GWCA_ASSERT(index < arr.m_size);
+            const auto remaining = arr.m_size - index - 1;
+            if (remaining > 0) memmove(&arr.m_buffer[index], &arr.m_buffer[index + 1], remaining * sizeof(T));
+            arr.m_size--;
+        }
     } // namespace MemoryMgr
 
     namespace UI {

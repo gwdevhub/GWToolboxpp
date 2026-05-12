@@ -170,6 +170,15 @@ namespace GW {
     namespace MemoryMgr {
         bool GetPersonalDir(std::wstring& out);
         std::filesystem::path GetBuildsDir();
+        // Appends an element to a GW-managed array, growing the buffer via MemRealloc if at capacity.
+        // Returns a pointer to the newly appended element.
+        template <typename T>
+        T* AddToGuildWarsArray(GW::BaseArray<T>& arr, const T& element);
+
+        // Removes the element at index from a GW-managed array by shifting remaining elements left.
+        // Capacity is unchanged so future AddToGuildWarsArray calls reuse the slack without reallocating.
+        template <typename T>
+        void RemoveFromGwArray(GW::BaseArray<T>& arr, uint32_t index);
     }
     namespace UI {
         struct Frame;

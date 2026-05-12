@@ -139,11 +139,11 @@ namespace GW {
             kMessage_0x1000000a,            // 0x1000000a
             kMessage_0x1000000b,            // 0x1000000b
             kDialogueMessage,               // 0x1000000c
-            kMessage_0x1000000d,            // 0x1000000d
+            kAgentOverheadFloat,            // 0x1000000d, // e.g. XP gain wparam = *GW::UI::UIPacket::kAgentOverheadNumber
             kMessage_0x1000000e,            // 0x1000000e
-            kMessage_0x1000000f,            // 0x1000000f
+            kAgentOverheadNumber,           // 0x1000000f, // e.g. damage, heal wparam = *GW::UI::UIPacket::kAgentOverheadNumber
             kMessage_0x10000010,            // 0x10000010
-            kMessage_0x10000011,            // 0x10000011
+            kAgentOverheadText,             // 0x10000011, // e.g. block, dodge wparam = *GW::UI::UIPacket::kAgentOverheadNumber
             kMessage_0x10000012,            // 0x10000012
             kMessage_0x10000013,            // 0x10000013
             kMessage_0x10000014,            // 0x10000014
@@ -548,7 +548,7 @@ namespace GW {
             kShowHeroPanel,                 // 0x100001a3, wparam = hero_id
             kMessage_0x1000019e,            // 0x100001a4
             kMessage_0x1000019f,            // 0x100001a5
-            kMessage_0x100001a0,            // 0x100001a6
+            kQuerySuppressedKeyAction,      // 0x100001a6, wparam = 0, lparam = bool*. Used to check if the suppress action is pressed (usually shift)
             kGetInventoryAgentId,           // 0x100001a7, wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
             kInventoryRelated1,             // 0x100001a8, added to GW 2026-02-26
             kInventoryRelated2,             // 0x100001a9, added to GW 2026-02-26
@@ -621,6 +621,17 @@ namespace GW {
         //static_assert(GW::UI::UIMessage::kOpenTemplate == (GW::UI::UIMessage)0x100001c4);
 
         namespace UIPacket {
+            struct kAgentOverheadNumber {
+                uint32_t agent_id;
+                uint32_t h0004;
+                wchar_t* encoded_str;
+                uint32_t style;
+                uint32_t h0010;
+                uint32_t h0014;
+                uint32_t h0018;
+                uint32_t h001c;
+                uint32_t amount;
+            };
             struct kDialogueMessage {
                 uint32_t agent_id;
                 wchar_t* sender;
