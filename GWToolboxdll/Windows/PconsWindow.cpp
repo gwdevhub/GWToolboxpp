@@ -604,8 +604,10 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
                     tb.Max.x - (close_offset * 2) - bar_h * 0.5f - text_size.x * 0.5f,
                     tb.GetCenter().y - text_size.y * 0.5f
                 };
-                auto* dl = ImGui::GetForegroundDrawList(win->Viewport);
+                auto* dl = ImGui::GetWindowDrawList();
+                dl->PushClipRect(tb.Min, tb.Max, false);
                 dl->AddText(icon_pos, enabled ? IM_COL32(0, 200, 0, 230) : IM_COL32(200, 0, 0, 230), icon);
+                dl->PopClipRect();
             }
         }
         return ImGui::End();
