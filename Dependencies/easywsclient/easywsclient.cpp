@@ -78,9 +78,10 @@ typedef int socket_t;
 
 #include <string>
 #include <vector>
-#include <wolfssl/openssl/err.h>
-#include <wolfssl/openssl/rand.h>
-#include <wolfssl/openssl/ssl.h>
+#ifdef _WIN32
+#include <security.h>
+#include <schannel.h>
+#endif
 
 #include "easywsclient.hpp"
 
@@ -88,8 +89,18 @@ namespace { // private module-only namespace
 
     struct ConnectionContext {
         socket_t sockfd;
-        SSL* sslHandle;
-        SSL_CTX* sslContext;
+        bool is_ssl = false;
+#ifdef _WIN32
+        CredHandle credHandle = {};
+        CtxtHandle ctxtHandle = {};
+        bool cred_valid = false;
+        bool ctx_valid = false;
+        SecPkgContext_StreamSizes streamSizes = {};
+        std::vector<uint8_t> raw_buf;
+        size_t raw_buf_len = 0;
+        std::vector<uint8_t> plain_buf;
+        size_t plain_pos = 0;
+#endif
     };
 
     int log_error(const char* format, ...)
@@ -99,10 +110,6 @@ namespace { // private module-only namespace
         int written = vfprintf(stderr, format, vl);
         va_end(vl);
         return written;
-    }
-    int print_error_callback(const char* err, size_t len, void* userdata)
-    {
-        return log_error("ssl error: %s", err);
     }
 
     socket_t hostname_connect(const std::string& hostname, int port)
@@ -138,39 +145,145 @@ namespace { // private module-only namespace
     }
 
 
-    int kWrite(ConnectionContext* ptConnCtx, const char* buf, int len, int flags)
+    int kWrite(ConnectionContext* ctx, const char* buf, int len, int flags)
     {
-        if (ptConnCtx->sslHandle == NULL) {
-            return ::send(ptConnCtx->sockfd, buf, len, flags);
+        if (!ctx->is_ssl) {
+            return ::send(ctx->sockfd, buf, len, flags);
         }
-        else {
-            return SSL_write(ptConnCtx->sslHandle, buf, len);
+#ifdef _WIN32
+        const ULONG maxMsg = ctx->streamSizes.cbMaximumMessage;
+        int total_sent = 0;
+        while (len > 0) {
+            int chunk = (len > (int)maxMsg) ? (int)maxMsg : len;
+            ULONG msg_size = ctx->streamSizes.cbHeader + (ULONG)chunk + ctx->streamSizes.cbTrailer;
+            std::vector<uint8_t> msg(msg_size);
+            memcpy(msg.data() + ctx->streamSizes.cbHeader, buf, chunk);
+
+            SecBuffer bufs[4];
+            bufs[0].BufferType = SECBUFFER_STREAM_HEADER;
+            bufs[0].pvBuffer   = msg.data();
+            bufs[0].cbBuffer   = ctx->streamSizes.cbHeader;
+            bufs[1].BufferType = SECBUFFER_DATA;
+            bufs[1].pvBuffer   = msg.data() + ctx->streamSizes.cbHeader;
+            bufs[1].cbBuffer   = (ULONG)chunk;
+            bufs[2].BufferType = SECBUFFER_STREAM_TRAILER;
+            bufs[2].pvBuffer   = msg.data() + ctx->streamSizes.cbHeader + chunk;
+            bufs[2].cbBuffer   = ctx->streamSizes.cbTrailer;
+            bufs[3].BufferType = SECBUFFER_EMPTY;
+            bufs[3].pvBuffer   = nullptr;
+            bufs[3].cbBuffer   = 0;
+
+            SecBufferDesc desc = { SECBUFFER_VERSION, 4, bufs };
+            if (EncryptMessage(&ctx->ctxtHandle, 0, &desc, 0) != SEC_E_OK) return -1;
+
+            ULONG enc_size = bufs[0].cbBuffer + bufs[1].cbBuffer + bufs[2].cbBuffer;
+            int sent = ::send(ctx->sockfd, (char*)msg.data(), (int)enc_size, flags);
+            if (sent <= 0) return -1;
+
+            buf += chunk;
+            len -= chunk;
+            total_sent += chunk;
         }
+        return total_sent;
+#else
+        return -1;
+#endif
     }
 
-    int kRead(ConnectionContext* ptConnCtx, char* buf, int len, int flags)
+    int kRead(ConnectionContext* ctx, char* buf, int len, int flags)
     {
-        if (ptConnCtx->sslHandle == NULL) {
-            return ::recv(ptConnCtx->sockfd, buf, len, flags);
+        if (!ctx->is_ssl) {
+            return ::recv(ctx->sockfd, buf, len, flags);
         }
-        else {
-            return SSL_read(ptConnCtx->sslHandle, buf, len);
+#ifdef _WIN32
+        // Return already-decrypted buffered data first
+        if (ctx->plain_pos < ctx->plain_buf.size()) {
+            size_t avail   = ctx->plain_buf.size() - ctx->plain_pos;
+            size_t to_copy = avail < (size_t)len ? avail : (size_t)len;
+            memcpy(buf, ctx->plain_buf.data() + ctx->plain_pos, to_copy);
+            ctx->plain_pos += to_copy;
+            return (int)to_copy;
         }
+        ctx->plain_buf.clear();
+        ctx->plain_pos = 0;
+
+        // Accumulate encrypted data and decrypt one TLS record at a time
+        for (;;) {
+            if (ctx->raw_buf_len > 0) {
+                SecBuffer bufs[4] = {};
+                bufs[0].BufferType = SECBUFFER_DATA;
+                bufs[0].pvBuffer   = ctx->raw_buf.data();
+                bufs[0].cbBuffer   = (ULONG)ctx->raw_buf_len;
+                bufs[1].BufferType = SECBUFFER_EMPTY;
+                bufs[2].BufferType = SECBUFFER_EMPTY;
+                bufs[3].BufferType = SECBUFFER_EMPTY;
+
+                SecBufferDesc desc = { SECBUFFER_VERSION, 4, bufs };
+                SECURITY_STATUS ss = DecryptMessage(&ctx->ctxtHandle, &desc, 0, nullptr);
+
+                if (ss == SEC_E_OK || ss == SEC_I_CONTEXT_EXPIRED) {
+                    // Find the decrypted data buffer
+                    uint8_t* data     = nullptr;
+                    size_t   data_len = 0;
+                    size_t   extra_len = 0;
+                    uint8_t* extra_ptr = nullptr;
+                    for (int i = 0; i < 4; i++) {
+                        if (bufs[i].BufferType == SECBUFFER_DATA && !data) {
+                            data     = (uint8_t*)bufs[i].pvBuffer;
+                            data_len = bufs[i].cbBuffer;
+                        }
+                        if (bufs[i].BufferType == SECBUFFER_EXTRA) {
+                            extra_ptr = (uint8_t*)bufs[i].pvBuffer;
+                            extra_len = bufs[i].cbBuffer;
+                        }
+                    }
+                    // Handle leftover encrypted bytes (next TLS record)
+                    if (extra_len > 0 && extra_ptr) {
+                        memmove(ctx->raw_buf.data(), extra_ptr, extra_len);
+                    }
+                    ctx->raw_buf_len = extra_len;
+
+                    if (!data || data_len == 0) return 0;
+
+                    size_t to_copy = data_len < (size_t)len ? data_len : (size_t)len;
+                    memcpy(buf, data, to_copy);
+                    if (data_len > to_copy) {
+                        ctx->plain_buf.assign(data + to_copy, data + data_len);
+                        ctx->plain_pos = 0;
+                    }
+                    return (int)to_copy;
+                }
+                if (ss != SEC_E_INCOMPLETE_MESSAGE) return -1;
+                // Need more data — fall through to recv
+            }
+
+            // Receive more encrypted bytes from the socket
+            const size_t kChunk = 16384;
+            if (ctx->raw_buf.size() < ctx->raw_buf_len + kChunk) {
+                ctx->raw_buf.resize(ctx->raw_buf_len + kChunk);
+            }
+            int n = ::recv(ctx->sockfd,
+                           (char*)ctx->raw_buf.data() + ctx->raw_buf_len,
+                           (int)(ctx->raw_buf.size() - ctx->raw_buf_len),
+                           flags);
+            if (n <= 0) return n;
+            ctx->raw_buf_len += n;
+        }
+#else
+        return -1;
+#endif
     }
 
-    void klose(ConnectionContext* ptConnCtx)
+    void klose(ConnectionContext* ctx)
     {
-        if (ptConnCtx->sockfd) {
-            closesocket(ptConnCtx->sockfd);
+        if (ctx->sockfd != INVALID_SOCKET) {
+            closesocket(ctx->sockfd);
         }
-        if (ptConnCtx->sslHandle) {
-            SSL_shutdown(ptConnCtx->sslHandle);
-            SSL_free(ptConnCtx->sslHandle);
-        }
-        if (ptConnCtx->sslContext) {
-            SSL_CTX_free(ptConnCtx->sslContext);
-        }
-        free(ptConnCtx);
+#ifdef _WIN32
+        if (ctx->ctx_valid)  DeleteSecurityContext(&ctx->ctxtHandle);
+        if (ctx->cred_valid) FreeCredentialsHandle(&ctx->credHandle);
+#endif
+        delete ctx;
     }
 
     class _DummyWebSocket : public easywsclient::WebSocket {
@@ -484,12 +597,6 @@ namespace { // private module-only namespace
         }
     };
 
-    int verify_callback(int res, void*)
-    {
-        // Override ssl errors (!!)
-        return SSL_SUCCESS;
-    }
-
     easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, easywsclient::HeaderKeyValuePair additional_headers, const std::string& origin)
     {
         char sc[128];
@@ -528,17 +635,14 @@ namespace { // private module-only namespace
         is_ssl = sc[1] == 's';
         log_error("easywsclient: connecting: ssl=%s, host=%s port=%d path=/%s\n", is_ssl ? "true" : "false", host, port, path);
 
-        ConnectionContext* ptConnCtx;
-        ptConnCtx = (ConnectionContext*)malloc(sizeof(ConnectionContext));
-        ptConnCtx->sslContext = nullptr;
-        ptConnCtx->sslHandle = nullptr;
+        ConnectionContext* ptConnCtx = new ConnectionContext();
+        ptConnCtx->is_ssl = is_ssl;
         ptConnCtx->sockfd = hostname_connect(host, port);
         if (ptConnCtx->sockfd == INVALID_SOCKET) {
             log_error("ERROR: Unable to connect to %s:%d\n", host, port);
-            free(ptConnCtx);
+            delete ptConnCtx;
             return NULL;
         }
-        // After line 514, before SSL handshake
 #ifdef _WIN32
         DWORD timeout = 5000; // 5 seconds
         setsockopt(ptConnCtx->sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
@@ -550,40 +654,101 @@ namespace { // private module-only namespace
 #endif
 
         if (is_ssl) {
-            auto err_out = [ptConnCtx] {
-                ERR_print_errors_cb(print_error_callback, 0);
-                char err_str[255];
-                wolfSSL_ERR_error_string(SSL_get_error(ptConnCtx->sslHandle, 0), err_str);
-                log_error("SSL error: %s", err_str);
+#ifdef _WIN32
+            auto err_out = [ptConnCtx]() -> easywsclient::WebSocket::pointer {
+                log_error("SSL: Schannel handshake failed\n");
+                klose(ptConnCtx);
                 return nullptr;
             };
-            // ssl handshake
-            // Register the error strings for libcrypto & libssl
-            SSL_load_error_strings();
-            // Register the available ciphers and digests
-            SSL_library_init();
 
-            // New context saying we are a client using TLS 1.2
-            ptConnCtx->sslContext = SSL_CTX_new(TLSv1_2_client_method());
-            if (ptConnCtx->sslContext == NULL) return err_out();
+            // Acquire Schannel client credentials (cert validation disabled)
+            SCHANNEL_CRED sc_cred   = {};
+            sc_cred.dwVersion       = SCHANNEL_CRED_VERSION;
+            sc_cred.dwFlags         = SCH_CRED_MANUAL_CRED_VALIDATION | SCH_CRED_NO_DEFAULT_CREDS;
 
-            // Create an SSL struct for the connection
-            SSL_CTX_set_verify(ptConnCtx->sslContext, SSL_VERIFY_PEER, (VerifyCallback)verify_callback);
+            if (AcquireCredentialsHandleA(nullptr, (char*)UNISP_NAME_A, SECPKG_CRED_OUTBOUND,
+                    nullptr, &sc_cred, nullptr, nullptr, &ptConnCtx->credHandle, nullptr) != SEC_E_OK) {
+                return err_out();
+            }
+            ptConnCtx->cred_valid = true;
 
-            ptConnCtx->sslHandle = SSL_new(ptConnCtx->sslContext);
-            if (ptConnCtx->sslHandle == NULL) return err_out();
+            const DWORD kFlags = ISC_REQ_SEQUENCE_DETECT | ISC_REQ_REPLAY_DETECT |
+                                 ISC_REQ_CONFIDENTIALITY | ISC_RET_EXTENDED_ERROR  |
+                                 ISC_REQ_ALLOCATE_MEMORY | ISC_REQ_STREAM           |
+                                 ISC_REQ_MANUAL_CRED_VALIDATION;
+            DWORD dwOutFlags = 0;
 
-            // SSL_set_verify(ptConnCtx->sslHandle, SSL_VERIFY_NONE, (VerifyCallback)verify_callback);
+            // Initial token
+            SecBuffer out_buf       = { 0, SECBUFFER_TOKEN, nullptr };
+            SecBufferDesc out_desc  = { SECBUFFER_VERSION, 1, &out_buf };
+            SECURITY_STATUS ss = InitializeSecurityContextA(
+                &ptConnCtx->credHandle, nullptr, (char*)host, kFlags, 0,
+                SECURITY_NATIVE_DREP, nullptr, 0,
+                &ptConnCtx->ctxtHandle, &out_desc, &dwOutFlags, nullptr);
 
-            if (SSL_CTX_set_session_cache_mode(ptConnCtx->sslContext, SSL_SESS_CACHE_OFF) != SSL_SUCCESS) return err_out();
+            if (ss != SEC_I_CONTINUE_NEEDED) return err_out();
+            ptConnCtx->ctx_valid = true;
 
-            // Connect the SSL struct to our connection
-            if (SSL_set_fd(ptConnCtx->sslHandle, ptConnCtx->sockfd) != SSL_SUCCESS) return err_out();
+            if (out_buf.cbBuffer && out_buf.pvBuffer) {
+                ::send(ptConnCtx->sockfd, (char*)out_buf.pvBuffer, (int)out_buf.cbBuffer, 0);
+                FreeContextBuffer(out_buf.pvBuffer);
+                out_buf.pvBuffer = nullptr;
+            }
 
-            if (SSL_set_tlsext_host_name(ptConnCtx->sslHandle, host) != SSL_SUCCESS) return err_out();
+            // Handshake loop
+            std::vector<uint8_t> hs_buf(32768);
+            int hs_len = 0;
+            while (ss == SEC_I_CONTINUE_NEEDED || ss == SEC_E_INCOMPLETE_MESSAGE) {
+                int n = ::recv(ptConnCtx->sockfd,
+                               (char*)hs_buf.data() + hs_len,
+                               (int)hs_buf.size() - hs_len, 0);
+                if (n <= 0) return err_out();
+                hs_len += n;
 
-            // Initiate SSL handshake
-            if (SSL_connect(ptConnCtx->sslHandle) != SSL_SUCCESS) return err_out();
+                SecBuffer in_bufs[2]    = {};
+                in_bufs[0].pvBuffer     = hs_buf.data();
+                in_bufs[0].cbBuffer     = (ULONG)hs_len;
+                in_bufs[0].BufferType   = SECBUFFER_TOKEN;
+                in_bufs[1].BufferType   = SECBUFFER_EMPTY;
+                SecBufferDesc in_desc   = { SECBUFFER_VERSION, 2, in_bufs };
+
+                out_buf                 = { 0, SECBUFFER_TOKEN, nullptr };
+                out_desc                = { SECBUFFER_VERSION, 1, &out_buf };
+
+                ss = InitializeSecurityContextA(
+                    &ptConnCtx->credHandle, &ptConnCtx->ctxtHandle, nullptr, kFlags, 0,
+                    SECURITY_NATIVE_DREP, &in_desc, 0, nullptr, &out_desc, &dwOutFlags, nullptr);
+
+                if (out_buf.cbBuffer && out_buf.pvBuffer) {
+                    ::send(ptConnCtx->sockfd, (char*)out_buf.pvBuffer, (int)out_buf.cbBuffer, 0);
+                    FreeContextBuffer(out_buf.pvBuffer);
+                    out_buf.pvBuffer = nullptr;
+                }
+                if (ss == SEC_E_INCOMPLETE_MESSAGE) continue;
+
+                // Carry over any leftover bytes (next record or app data)
+                if (in_bufs[1].BufferType == SECBUFFER_EXTRA && in_bufs[1].cbBuffer > 0) {
+                    size_t extra = in_bufs[1].cbBuffer;
+                    memmove(hs_buf.data(), hs_buf.data() + hs_len - extra, extra);
+                    hs_len = (int)extra;
+                } else {
+                    hs_len = 0;
+                }
+            }
+            if (ss != SEC_E_OK) return err_out();
+
+            // Save any application data that arrived during the handshake
+            if (hs_len > 0) {
+                ptConnCtx->raw_buf.assign(hs_buf.begin(), hs_buf.begin() + hs_len);
+                ptConnCtx->raw_buf_len = hs_len;
+            }
+
+            QueryContextAttributes(&ptConnCtx->ctxtHandle, SECPKG_ATTR_STREAM_SIZES, &ptConnCtx->streamSizes);
+#else
+            log_error("SSL: not supported on this platform\n");
+            delete ptConnCtx;
+            return NULL;
+#endif
         }
         {
             // XXX: this should be done non-blocking,

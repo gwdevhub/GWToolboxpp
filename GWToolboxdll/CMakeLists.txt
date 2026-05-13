@@ -59,6 +59,7 @@ target_link_options(GWToolboxdll PRIVATE
     $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
     /IGNORE:4099 # pdb not found for github action
     "/DELAYLOAD:gwca.dll"
+    "/DELAYLOAD:libcurl.dll"
     )
 
 target_include_directories(GWToolboxdll PRIVATE
@@ -89,13 +90,13 @@ target_link_libraries(GWToolboxdll PRIVATE
     IconFontCppHeaders
     nativefiledialog
     wintoast
-    wolfssl::wolfssl
 	minhook::minhook
 	ctre::ctre
     unofficial::uwebsockets::uwebsockets
 
     # libs:
     Dbghelp.lib # for MiniDump
+    bcrypt.lib  # for SHA256 (Resources.cpp)
 	delayimp # for delay loading gwca
     )
 

@@ -33,7 +33,7 @@
 #include <nfd_win.cpp>
 #pragma warning(pop)
 #include <dxgiformat.h>
-#include <wolfssl/wolfcrypt/asn.h>
+#include <bcrypt.h>
 
 #include <Modules/GwDatTextureModule.h>
 #include <Constants/EncStrings.h>
@@ -235,9 +235,12 @@ namespace {
 
     const std::string HashStr(const std::string& str)
     {
-        const auto bytes_to_hash = std::vector<byte>(str.begin(), str.end());
-        auto hash = std::vector<byte>(WC_SHA256_DIGEST_SIZE);
-        wc_Sha256Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
+        constexpr ULONG SHA256_DIGEST_SIZE = 32;
+        auto hash = std::vector<byte>(SHA256_DIGEST_SIZE);
+        BCryptHash(BCRYPT_SHA256_ALG_HANDLE, nullptr, 0,
+                   reinterpret_cast<PUCHAR>(const_cast<char*>(str.data())),
+                   static_cast<ULONG>(str.size()),
+                   hash.data(), SHA256_DIGEST_SIZE);
         std::stringstream hexstream;
         hexstream << std::hex << std::setfill('0');
         for (auto b : hash) {

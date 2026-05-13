@@ -4,7 +4,7 @@
     {
       "name": "curl",
       "features": [
-        "wolfssl"
+        "schannel"
       ]
     },
     "directxtex",
@@ -13,8 +13,7 @@
     "minhook",
     "nlohmann-json",
     "simpleini",
-    "uwebsockets",
-    "wolfssl"
+    "uwebsockets"
   ],
   "overrides": [
     {
