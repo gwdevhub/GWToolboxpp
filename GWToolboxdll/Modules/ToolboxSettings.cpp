@@ -51,6 +51,7 @@
 #include <Windows/InfoWindow.h>
 #include <Windows/MaterialsWindow.h>
 #include <Windows/NotePadWindow.h>
+#include <Windows/SplitsWindow.h>
 #include <Windows/PartyStatisticsWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/ObjectiveTimerWindow.h>
@@ -208,6 +209,7 @@ namespace {
         TradeWindow::Instance(),
         NotePadWindow::Instance(),
         ObjectiveTimerWindow::Instance(),
+        SplitsWindow::Instance(),
         FactionLeaderboardWindow::Instance(),
         DailyQuests::Instance(),
         FriendListWindow::Instance(),
