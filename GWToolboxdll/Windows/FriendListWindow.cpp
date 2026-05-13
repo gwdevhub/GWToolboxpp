@@ -1240,17 +1240,14 @@ void FriendListWindow::DrawSettingsInternal()
     ImGui::SameLine();
     ImGui::Text("in explorable");
 
-    ImGui::Checkbox("Temporarily add offline players you whisper as friends", &add_offline_players_to_friends);
-    ImGui::ShowHelp("When you whisper someone and they are offline, toolbox will attempt to add these players to your friendlist"
+    ImGui::CheckboxWithHelp("Temporarily add offline players you whisper as friends", &add_offline_players_to_friends, "When you whisper someone and they are offline, toolbox will attempt to add these players to your friendlist"
         " to figure out if they are online on another character.\nIf they are, toolbox will redirect your whisper to that character instead.\n"
         "Afterwards, the player will be removed from your friendlist.");
 
     Colors::DrawSettingHueWheel("Widget background hover color", &hover_background_color);
-    ImGui::Checkbox("Show my status", &show_my_status);
-    ImGui::ShowHelp("e.g. 'You are: Online'");
+    ImGui::CheckboxWithHelp("Show my status", &show_my_status, "e.g. 'You are: Online'");
 
-    ImGui::Checkbox("Custom name tag color for friends", &friend_name_tag_enabled);
-    ImGui::ShowHelp("When targeting friends in an outpost");
+    ImGui::CheckboxWithHelp("Custom name tag color for friends", &friend_name_tag_enabled, "When targeting friends in an outpost");
     if (friend_name_tag_enabled) {
         Colors::DrawSettingHueWheel("Friend name tag color", &friend_name_tag_color);
     }

@@ -256,8 +256,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             MainWindow::Instance().pending_refresh_buttons = true;
         }
     }
-    ImGui::Checkbox("Show breakout button", &show_breakout_button);
-    ImGui::ShowHelp("Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
+    ImGui::CheckboxWithHelp("Show breakout button", &show_breakout_button, "Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
     if (show_breakout_button) {
         ImGui::Indent();
         ImGui::Checkbox("Lock breakout button position", &lock_breakout_button);

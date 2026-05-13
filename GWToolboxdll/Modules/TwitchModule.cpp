@@ -435,10 +435,8 @@ void TwitchModule::DrawSettingsInternal()
         if (Colors::DrawSettingHueWheel("Twitch Color:", &irc_chat_color, flags)) {
             SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, irc_chat_color);
         }
-        ImGui::Checkbox("Notify on user leave", &notify_on_user_leave);
-        ImGui::ShowHelp("Receive a message in the chat window when a viewer leaves the Twitch Channel");
-        ImGui::Checkbox("Notify on user join", &notify_on_user_join);
-        ImGui::ShowHelp("Receive a message in the chat window when a viewer joins the Twitch Channel");
+        ImGui::CheckboxWithHelp("Notify on user leave", &notify_on_user_leave, "Receive a message in the chat window when a viewer leaves the Twitch Channel");
+        ImGui::CheckboxWithHelp("Notify on user join", &notify_on_user_join, "Receive a message in the chat window when a viewer joins the Twitch Channel");
 
         const float width = ImGui::GetContentRegionAvail().x / 2;
         ImGui::PushItemWidth(width);

@@ -379,8 +379,7 @@ void SkillMonitorWidget::DrawSettingsInternal()
     ImGui::Checkbox("Flip history direction (left/right)", &history_flip_direction);
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show on top of health bars", &overlay_party_window);
-    ImGui::ShowHelp("Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("Show on top of health bars", &overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
     ImGui::DragInt("Party window offset", &user_offset);

@@ -164,8 +164,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9*)
 
 void AlcoholWidget::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Only show when drunk", &only_show_when_drunk);
-    ImGui::ShowHelp("Hides widget when not using alcohol");
+    ImGui::CheckboxWithHelp("Only show when drunk", &only_show_when_drunk, "Hides widget when not using alcohol");
     ImGui::Text("Note: only visible in explorable areas.");
 }
 

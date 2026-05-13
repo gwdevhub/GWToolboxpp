@@ -1008,17 +1008,14 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show 'Time' column", &show_time_column);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show detailed objectives", &show_detailed_objectives);
-    ImGui::ShowHelp("Currently only affects DoA objectives");
+    ImGui::CheckboxWithHelp("Show detailed objectives", &show_detailed_objectives, "Currently only affects DoA objectives");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Debug: log events", &show_debug_events);
-    ImGui::ShowHelp(
+    ImGui::CheckboxWithHelp("Debug: log events", &show_debug_events,
         "Will spam your chat with the events used in the objective timer. \nUse for debugging and to ask for more stuff to be added");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show run start date/time", &show_start_date_time);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
-    ImGui::ShowHelp("Toggle via chat: /tb_setting objectives_current_run");
+    ImGui::CheckboxWithHelp("Show current run in separate window", &show_current_run_window, "Toggle via chat: /tb_setting objectives_current_run");
     ImGui::NextSpacedElement();
     if (ImGui::Checkbox("Save/Load runs to disk", &save_to_disk)) {
         SaveRuns();
@@ -1026,11 +1023,9 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::ShowHelp(
         "Keep a record or your runs in JSON format on disk, and load past runs from disk when starting GWToolbox.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show past runs", &show_past_runs);
-    ImGui::ShowHelp("Display from previous days in the Objective Timer window.");
+    ImGui::CheckboxWithHelp("Show past runs", &show_past_runs, "Display from previous days in the Objective Timer window.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Automatic /age on completion", &auto_send_age);
-    ImGui::ShowHelp(
+    ImGui::CheckboxWithHelp("Automatic /age on completion", &auto_send_age,
         "As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();
     

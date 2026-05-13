@@ -1020,12 +1020,9 @@ void BuildsWindow::Terminate()
 void BuildsWindow::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide Build windows when entering explorable area", &hide_when_entering_explorable);
-    ImGui::Checkbox("Only show one teambuild window at a time", &one_teambuild_at_a_time);
-    ImGui::ShowHelp("Close other teambuild windows when you open a new one");
-    ImGui::Checkbox("Auto load pcons", &auto_load_pcons);
-    ImGui::ShowHelp("Automatically load pcons for a build when loaded onto a character");
-    ImGui::Checkbox("Send pcons when pinging a build", &auto_send_pcons);
-    ImGui::ShowHelp("Automatically send a second message after the build template in team chat,\nshowing the pcons that the build uses.");
+    ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
+    ImGui::CheckboxWithHelp("Auto load pcons", &auto_load_pcons, "Automatically load pcons for a build when loaded onto a character");
+    ImGui::CheckboxWithHelp("Send pcons when pinging a build", &auto_send_pcons, "Automatically send a second message after the build template in team chat,\nshowing the pcons that the build uses.");
     ImGui::Text("Order team builds by: ");
     ImGui::SameLine(0, -1);
     if (ImGui::Checkbox("Index", &order_by_index)) {

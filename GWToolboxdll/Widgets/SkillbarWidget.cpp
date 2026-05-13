@@ -566,8 +566,7 @@ void SkillbarWidget::DrawSettingsInternal()
     Colors::DrawSettingHueWheel("Text color", &color_text_recharge);
     Colors::DrawSettingHueWheel("Text outline color", &color_text_outline);
     Colors::DrawSettingHueWheel("Border color", &color_border);
-    ImGui::Checkbox("Paint skills according to effect duration", &display_skill_overlay);
-    ImGui::ShowHelp("Change the color of the skill dependent on the long/medium/short duration colors");
+    ImGui::CheckboxWithHelp("Paint skills according to effect duration", &display_skill_overlay, "Change the color of the skill dependent on the long/medium/short duration colors");
     if (display_skill_overlay) {
         DrawDurationThresholds();
     }
@@ -595,20 +594,16 @@ void SkillbarWidget::DrawSettingsInternal()
         else if (layout == Layout::Rows) {
             ImGui::Checkbox("Show effects above and below your skillbar", &effects_symmetric);
         }
-        ImGui::Checkbox("Display multiple effects", &display_multiple_effects);
-        ImGui::ShowHelp("Show stacking effects for casted enchantments e.g. Shroud of Distress with Shadow Form");
+        ImGui::CheckboxWithHelp("Display multiple effects", &display_multiple_effects, "Show stacking effects for casted enchantments e.g. Shroud of Distress with Shadow Form");
         if (display_multiple_effects) {
             ImGui::Indent();
-            ImGui::Checkbox("Flip effects order", &effects_flip_order);
-            ImGui::ShowHelp("Newest effect is displayed last instead of first");
+            ImGui::CheckboxWithHelp("Flip effects order", &effects_flip_order, "Newest effect is displayed last instead of first");
             ImGui::Unindent();
             ImGui::Spacing();
         }
 
-        ImGui::Checkbox("Color text according to effect duration", &effect_text_color);
-        ImGui::ShowHelp("Change the color of the font dependent on the long/medium/short duration colors");
-        ImGui::Checkbox("Paint effects according to effect duration", &effect_progress_bar_color);
-        ImGui::ShowHelp("Change the color of the effect progress bar dependent on the long/medium/short duration colors");
+        ImGui::CheckboxWithHelp("Color text according to effect duration", &effect_text_color, "Change the color of the font dependent on the long/medium/short duration colors");
+        ImGui::CheckboxWithHelp("Paint effects according to effect duration", &effect_progress_bar_color, "Change the color of the effect progress bar dependent on the long/medium/short duration colors");
         if (effect_text_color || effect_progress_bar_color) {
             DrawDurationThresholds();
         }

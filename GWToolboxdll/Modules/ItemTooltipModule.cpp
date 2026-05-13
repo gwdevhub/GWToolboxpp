@@ -484,8 +484,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
 
     // --- Salvage info --------------------------------------------------------
-    ImGui::Checkbox("Show salvage materials in item tooltip", &show_salvage_info);
-    ImGui::ShowHelp("When hovering over a salvageable item, display which common and rare materials can be salvaged from it");
+    ImGui::CheckboxWithHelp("Show salvage materials in item tooltip", &show_salvage_info, "When hovering over a salvageable item, display which common and rare materials can be salvaged from it");
     if (show_salvage_info) {
         ImGui::Indent();
 
@@ -502,8 +501,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
 
     // --- Nicholas info -------------------------------------------------------
-    ImGui::Checkbox("Show Nicholas the Traveler info in item tooltip", &show_nicholas_info);
-    ImGui::ShowHelp("When hovering over an item that Nicholas collects, display when he will collect it and how many he wants");
+    ImGui::CheckboxWithHelp("Show Nicholas the Traveler info in item tooltip", &show_nicholas_info, "When hovering over an item that Nicholas collects, display when he will collect it and how many he wants");
     if (show_nicholas_info) {
         ImGui::Indent();
 
@@ -518,8 +516,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
 
     // --- Trader prices -------------------------------------------------------
-    ImGui::Checkbox("Show trader prices in item tooltip", &show_trader_prices);
-    ImGui::ShowHelp("Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com");
+    ImGui::CheckboxWithHelp("Show trader prices in item tooltip", &show_trader_prices, "Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com");
     if (show_trader_prices) {
         ImGui::Indent();
 

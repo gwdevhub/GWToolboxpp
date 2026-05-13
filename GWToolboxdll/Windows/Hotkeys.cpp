@@ -503,8 +503,7 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
         }
         ImGui::ShowHelp("Will prevent Guild Wars from receiving the keypress event");
         ImGui::SameLine(offset_sameline);
-        hotkey_changed |= ImGui::Checkbox("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character);
-        ImGui::ShowHelp("Unless enabled, this hotkey will not activate when playing on a PvP only character.");
+        hotkey_changed |= ImGui::CheckboxWithHelp("Trigger hotkey when playing on PvP character", &trigger_on_pvp_character, "Unless enabled, this hotkey will not activate when playing on a PvP only character.");
         if (can_trigger_on_map_change) {
             hotkey_changed |= ImGui::Checkbox("Trigger hotkey when entering explorable area", &trigger_on_explorable);
             ImGui::SameLine(offset_sameline);
@@ -516,8 +515,7 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when using keyboard/mouse", &trigger_in_desktop_mode);
         ImGui::SameLine(offset_sameline);
         hotkey_changed |= ImGui::Checkbox("Trigger hotkey when using a gamepad", &trigger_in_controller_mode);
-        hotkey_changed |= ImGui::Checkbox("Block other hotkeys when triggered", &block_other_hotkeys_on_trigger);
-        ImGui::ShowHelp("If this hotkey is triggered, don't check any hotkeys that come after this one in the list");
+        hotkey_changed |= ImGui::CheckboxWithHelp("Block other hotkeys when triggered", &block_other_hotkeys_on_trigger, "If this hotkey is triggered, don't check any hotkeys that come after this one in the list");
         
         ImGui::Separator();
         ImGui::Text("Instance Type: ");

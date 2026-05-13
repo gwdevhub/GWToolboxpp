@@ -349,8 +349,7 @@ void PriceCheckerModule::LoadSettings(ToolboxIni* ini)
 
 void PriceCheckerModule::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Show merchant price for Melandru's Accord instead of trader price", &show_merchant_price_for_melandrus_accord_instead);
-    ImGui::ShowHelp("In Melandru's Accord, show fixed merchant prices for materials instead of live trader prices");
+    ImGui::CheckboxWithHelp("Show merchant price for Melandru's Accord instead of trader price", &show_merchant_price_for_melandrus_accord_instead, "In Melandru's Accord, show fixed merchant prices for materials instead of live trader prices");
 }
 
 const std::unordered_map<std::string, uint32_t>& PriceCheckerModule::FetchPrices()

@@ -1086,8 +1086,7 @@ void ChatFilter::DrawSettingsInternal()
     ImGui::Text("Warnings");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Unable to use item", &item_cannot_be_used);
-    ImGui::ShowHelp("'Item can only/cannot be used in towns or outposts.'\n\
+    ImGui::CheckboxWithHelp("Unable to use item", &item_cannot_be_used, "'Item can only/cannot be used in towns or outposts.'\n\
 'This item cannot be used here.'\n\
 'Cannot use this item when no party members are dead.'\n\
 'There is already an ally from a summoning stone present in this instance.'\n\
@@ -1096,8 +1095,7 @@ void ChatFilter::DrawSettingsInternal()
 'You must wait before using another tonic.'\n\
 'This item can only be used in a guild hall'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Invalid target", &invalid_target);
-    ImGui::ShowHelp("'Invalid spell/attack target.'\n\
+    ImGui::CheckboxWithHelp("Invalid target", &invalid_target, "'Invalid spell/attack target.'\n\
 'Spell failed. Spirits are not affected by this spell.'\n\
 'Your view of the target is obstructed.'\n\
 'That skill requires a different weapon type.'\n\
@@ -1106,8 +1104,7 @@ void ChatFilter::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Opening chests", &opening_chest_messages);
-    ImGui::ShowHelp("'Chest is being used'\n\
+    ImGui::CheckboxWithHelp("Opening chests", &opening_chest_messages, "'Chest is being used'\n\
 'The chest is locked. You must use a lockpick to open it.'\n\
 'The chest is locked. You must have the correct key or a lockpick.'\n\
 'The chest is empty.'");
@@ -1122,34 +1119,28 @@ void ChatFilter::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Earning skill points", &skill_points);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("PvP messages", &pvp_messages);
-    ImGui::ShowHelp("Such as 'A skill was updated for pvp!'");
+    ImGui::CheckboxWithHelp("PvP messages", &pvp_messages, "Such as 'A skill was updated for pvp!'");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("9 Rings messages", &ninerings);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Lunar fortunes messages", &lunars);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Challenge mission messages", &challenge_mission_messages);
-    ImGui::ShowHelp("Such as 'Hold-out bonus: +2 points'");
+    ImGui::CheckboxWithHelp("Challenge mission messages", &challenge_mission_messages, "Such as 'Hold-out bonus: +2 points'");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'Player x might not reply...", &away);
-    ImGui::ShowHelp("...because his / her status is set to away'");
+    ImGui::CheckboxWithHelp("'Player x might not reply...", &away, "...because his / her status is set to away'");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Salvaging messages", &salvage_messages);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Ashes dropped messages", &ashes_dropped);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Targetting messages from me", &targetting_messages_from_me);
-    ImGui::ShowHelp(targetting_messages_help);
+    ImGui::CheckboxWithHelp("Targetting messages from me", &targetting_messages_from_me, targetting_messages_help);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Targetting messages from others", &targetting_messages_from_others);
-    ImGui::ShowHelp(targetting_messages_help);
+    ImGui::CheckboxWithHelp("Targetting messages from others", &targetting_messages_from_others, targetting_messages_help);
 
     ImGui::Separator();
-    ImGui::Checkbox("Block messages from inactive chat channels", &block_messages_from_inactive_channels);
-    ImGui::ShowHelp("Chat history in Guild Wars isn't unlimited.\n\nEnable this to prevent the game from logging messages in channels that you have turned off.");
+    ImGui::CheckboxWithHelp("Block messages from inactive chat channels", &block_messages_from_inactive_channels, "Chat history in Guild Wars isn't unlimited.\n\nEnable this to prevent the game from logging messages in channels that you have turned off.");
     if (block_messages_from_inactive_channels) {
         ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "Messages from channels you have turned off in chat are not being logged in-game");
     }

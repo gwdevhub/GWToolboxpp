@@ -680,10 +680,8 @@ void TradeWindow::RegisterSettingsContent()
 void TradeWindow::DrawAlertsWindowContent(bool)
 {
     ImGui::Text("Alerts");
-    ImGui::Checkbox("Send Kamadan AE1 trade chat to your trade chat", &print_game_chat);
-    ImGui::ShowHelp("Only when trade chat channel is visible in-game");
-    ImGui::Checkbox("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &print_game_chat_asc);
-    ImGui::ShowHelp("Only when trade chat channel is visible in-game");
+    ImGui::CheckboxWithHelp("Send Kamadan AE1 trade chat to your trade chat", &print_game_chat, "Only when trade chat channel is visible in-game");
+    ImGui::CheckboxWithHelp("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &print_game_chat_asc, "Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Only show messages containing:", &filter_alerts);
     ImGui::Indent();
     ImGui::ShowHelp("Only shows messages from the currently active trade channel (Kamadan OR Ascalon)");
@@ -699,8 +697,7 @@ void TradeWindow::DrawAlertsWindowContent(bool)
 
 void TradeWindow::DrawChatSettings(const bool ownwindow)
 {
-    ImGui::Checkbox("Apply trade filters to local trade messages", &filter_local_trade);
-    ImGui::ShowHelp("If enabled, only trade messages matching your alerts will be shown in chat");
+    ImGui::CheckboxWithHelp("Apply trade filters to local trade messages", &filter_local_trade, "If enabled, only trade messages matching your alerts will be shown in chat");
     if (!ownwindow) {
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 120.f * ImGui::FontScale(), 0);
         if (ImGui::Button("Show Trade Alerts")) {

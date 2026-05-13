@@ -544,24 +544,18 @@ void ChatSettings::DrawSettingsInternal()
         }
         ImGui::Unindent();
     }
-    ImGui::Checkbox("Hide player chat speech bubbles", &hide_player_speech_bubbles);
-    ImGui::ShowHelp("Don't show in-game speech bubbles over player characters that send a message in chat");
-    ImGui::Checkbox("Hide all friendly speech bubbles", &hide_all_friendly_speech_bubbles);
-    ImGui::ShowHelp("Don't show any in-game speech bubbles");
-    ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
-    ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
-    ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
-    ImGui::ShowHelp("Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
-    ImGui::Checkbox("Redirect outgoing whispers to whisper channel", &redirect_outgoing_whisper_to_whisper_channel);
-    ImGui::ShowHelp("Whispers that you send are typically shown in colour of the global channel (green).\n"
+    ImGui::CheckboxWithHelp("Hide player chat speech bubbles", &hide_player_speech_bubbles, "Don't show in-game speech bubbles over player characters that send a message in chat");
+    ImGui::CheckboxWithHelp("Hide all friendly speech bubbles", &hide_all_friendly_speech_bubbles, "Don't show any in-game speech bubbles");
+    ImGui::CheckboxWithHelp("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat, "Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
+    ImGui::CheckboxWithHelp("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat, "Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
+    ImGui::CheckboxWithHelp("Redirect outgoing whispers to whisper channel", &redirect_outgoing_whisper_to_whisper_channel, "Whispers that you send are typically shown in colour of the global channel (green).\n"
                     "This setting makes them appear blue like an incoming message, with -> before the name.");
     if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
         GW::UI::SetOpenLinks(openlinks);
     }
     ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
-    ImGui::Checkbox("Automatically change urls into build templates.", &auto_url);
-    ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
+    ImGui::CheckboxWithHelp("Automatically change urls into build templates.", &auto_url, "When you write a message starting with 'http://' or 'https://', it will be converted in template format");
     ImGui::Checkbox("Clear chat message when hiding the in-game chat window", &clear_chat_message_when_hiding_chat);
 }
 
