@@ -42,9 +42,9 @@ void RangeRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
 
     const bool has_new_format = ini->GetValue(section, "range_circle_count", nullptr) != nullptr;
     if (has_new_format) {
-        const auto count = ini->GetLongValue(section, "range_circle_count", 0);
+        const auto range_circle_count = ini->GetLongValue(section, "range_circle_count", 0);
         circles_.clear();
-        for (long i = 0; i < count; i++) {
+        for (long i = 0; i < range_circle_count; i++) {
             char key[64];
             RangeCircle c;
             snprintf(key, sizeof(key), "range_circle_%ld_label", i);
