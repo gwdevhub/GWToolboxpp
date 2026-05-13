@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Hero.h>
@@ -118,6 +120,7 @@ private:
     static bool EncodePartyLoadout(const TeamHeroBuild& tbuild, std::wstring& out);
     static bool DecodePartyLoadout(const std::wstring& in, TeamHeroBuild& out);
     static void OnRecvWhisper(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*);
+    static void OnOpenTemplate(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*);
 
     bool builds_changed = false;
     std::vector<TeamHeroBuild> teambuilds{};
@@ -161,6 +164,14 @@ private:
     // Whisper send state: set from Draw(), consumed in Update()
     std::wstring pending_whisper_to{};
     std::wstring pending_whisper_msg{};
+
+    // Decoded teambuild received via whisper, keyed by a sequential ID for chat link lookup
+    struct ReceivedBuild {
+        std::wstring sender;
+        std::unique_ptr<TeamHeroBuild> build;
+    };
+    std::unordered_map<uint32_t, ReceivedBuild> received_teambuilds{};
+    uint32_t received_build_counter = 0;
 
     // Incoming party loadout whisper pending user confirmation
     struct {

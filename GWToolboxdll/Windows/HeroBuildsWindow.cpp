@@ -36,6 +36,7 @@ constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
     GW::HookEntry OnRecvWhisper_Entry;
+    GW::HookEntry OnOpenTemplate_Entry;
 
     // Each byte of the packed Daybreak bit stream is stored as wchar_t = byte + WCHAR_OFFSET.
     // Using Latin Extended-A (U+0100-U+01FF) gives 256 values (8 bits/wchar vs base64's 6),
@@ -310,12 +311,65 @@ void HeroBuildsWindow::OnRecvWhisper(GW::HookStatus* status, GW::UI::UIMessage, 
     if (!packet || !packet->message || !packet->from) return;
     const std::wstring msg(packet->message);
     if (msg.empty() || msg[0] != PARTY_LOADOUT_MAGIC_WCHAR) return;
-    auto tbuild = std::make_unique<TeamHeroBuild>("Imported Build");
+    auto tbuild = std::make_unique<TeamHeroBuild>("");
     if (!DecodePartyLoadout(msg, *tbuild)) return;
-    status->blocked = true; // suppress the garbled chars from appearing in chat
+    status->blocked = true;
+
     auto& self = Instance();
-    self.pending_import.sender = packet->from;
-    self.pending_import.build = std::move(tbuild);
+    const uint32_t build_id = ++self.received_build_counter;
+    const std::wstring sender(packet->from);
+
+    // Use the player's skill template as the link code so GW renders it as a clickable link
+    wchar_t player_code_w[BUFFER_SIZE]{};
+    if (tbuild->builds[0].code[0])
+        MultiByteToWideChar(CP_UTF8, 0, tbuild->builds[0].code, -1, player_code_w, BUFFER_SIZE);
+
+    wchar_t id_hex[16];
+    swprintf(id_hex, 16, L"%08X", build_id);
+    std::wstring link = L"[Teambuild:0x";
+    link += id_hex;
+    if (player_code_w[0]) {
+        link += L";";
+        link += player_code_w;
+    }
+    link += L"]";
+
+    self.received_teambuilds[build_id] = ReceivedBuild{sender, std::move(tbuild)};
+
+    // Inject a new whisper with the template link so GW renders it in chat
+    GW::GameThread::Enqueue([sender, link]() mutable {
+        GW::UI::UIPacket::kRecvWhisper new_packet{};
+        new_packet.from = sender.data();
+        new_packet.message = link.data();
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kRecvWhisper, &new_packet);
+    });
+}
+
+void HeroBuildsWindow::OnOpenTemplate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
+{
+    const auto t = static_cast<GW::UI::ChatTemplate*>(wparam);
+    if (!t || !t->name) return;
+    const std::wstring name(t->name);
+    constexpr std::wstring_view prefix = L"Teambuild:0x";
+    if (name.size() <= prefix.size() || name.substr(0, prefix.size()) != prefix) return;
+
+    const std::wstring hex_str = name.substr(prefix.size());
+    uint32_t build_id = 0;
+    try {
+        build_id = static_cast<uint32_t>(std::stoul(hex_str, nullptr, 16));
+    }
+    catch (...) {
+        return;
+    }
+
+    auto& self = Instance();
+    auto it = self.received_teambuilds.find(build_id);
+    if (it == self.received_teambuilds.end()) return;
+
+    status->blocked = true;
+    self.pending_import.sender = std::move(it->second.sender);
+    self.pending_import.build = std::move(it->second.build);
+    self.received_teambuilds.erase(it);
     self.pending_import.show_dialog = true;
 }
 
@@ -354,6 +408,7 @@ void HeroBuildsWindow::Initialize()
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
     GW::UI::RegisterUIMessageCallback(&OnRecvWhisper_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
+    GW::UI::RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kOpenTemplate, OnOpenTemplate);
 }
 
 void HeroBuildsWindow::Terminate()
@@ -362,6 +417,7 @@ void HeroBuildsWindow::Terminate()
     teambuilds.clear();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnRecvWhisper_Entry);
+    GW::UI::RemoveUIMessageCallback(&OnOpenTemplate_Entry);
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9*)
