@@ -41,7 +41,11 @@ public:
     static inline bool clamp_windows_to_screen = false;
     static inline bool hide_on_loading_screen = false;
     static inline bool send_anonymous_gameplay_info = true;
-    static inline bool show_settings_cog = false;
+    static inline bool show_cog_in_outpost = false;
+    static inline bool show_cog_in_explorable = false;
+    static inline bool show_close_in_outpost = true;
+    static inline bool show_close_in_explorable = true;
+    static inline bool is_in_explorable = false;
 private:
     // === location stuff ===
     clock_t location_timer = 0;
