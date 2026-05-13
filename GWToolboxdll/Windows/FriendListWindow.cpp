@@ -46,10 +46,6 @@ namespace {
                                     0xFF4444BB, 0xFF00AA55, 0xFF8800AA,
                                     0xFFBB3333, 0xFFAA0088, 0xFF00AAAA,
                                     0xFF996600, 0xFF7777CC};
-    const wchar_t* ProfNames[11] = {
-        L"Unknown", L"Warrior", L"Ranger", L"Monk",
-        L"Necromancer", L"Mesmer", L"Elementalist", L"Assassin",
-        L"Ritualist", L"Paragon", L"Dervish"};
     const ImColor StatusColors[5] = {
         IM_COL32(0x99, 0x99, 0x99, 255), // offline
         IM_COL32(0x0, 0xc8, 0x0, 255),   // online
@@ -73,27 +69,6 @@ namespace {
         }
         return "Unknown";
     }
-
-    GUID StringToGuid(const std::string& str)
-    {
-        GUID guid{};
-        sscanf(str.c_str(),
-               "%8lx-%4hx-%4hx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
-               &guid.Data1, &guid.Data2, &guid.Data3, &guid.Data4[0],
-               &guid.Data4[1], &guid.Data4[2], &guid.Data4[3], &guid.Data4[4],
-               &guid.Data4[5], &guid.Data4[6], &guid.Data4[7]);
-
-        return guid;
-    }
-
-    std::string GuidToString(const GUID& guid)
-    {
-        return std::format("{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-                           guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
-                           guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4],
-                           guid.Data4[5], guid.Data4[6], guid.Data4[7]);
-    }
-
 
     ToolboxIni inifile{};
     const wchar_t* ini_filename = L"friends.ini";
@@ -549,7 +524,7 @@ namespace {
             // UUID is different. This could be because GW has assigned a UUID to this friend.
             friends.erase(lf->uuid);
             lf->uuid_bytes = *(UUID*)uuid;
-            lf->uuid = GuidToString(lf->uuid_bytes);
+            lf->uuid = TextUtils::GuidToString(&lf->uuid_bytes);
             friends.emplace(lf->uuid, lf);
         }
         if (alias && alias_changed) {
@@ -788,9 +763,12 @@ std::string FriendListWindow::Friend::GetCharactersHover(const bool include_char
             cached_charnames_hover_ws += L"\n  ";
             cached_charnames_hover_ws += it2->first;
             if (it2->second.profession) {
-                cached_charnames_hover_ws += L" (";
-                cached_charnames_hover_ws += ProfNames[it2->second.profession];
-                cached_charnames_hover_ws += L")";
+                const auto prof_name = ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(it2->second.profession));
+                if (prof_name && !prof_name->wstring().empty()) {
+                    cached_charnames_hover_ws += L" (";
+                    cached_charnames_hover_ws += prof_name->wstring();
+                    cached_charnames_hover_ws += L")";
+                }
             }
         }
         cached_charnames_hover_str =
@@ -829,7 +807,7 @@ FriendListWindow::Friend* FriendListWindow::GetFriend(const GW::Friend* f)
 
 FriendListWindow::Friend* FriendListWindow::GetFriend(const uint8_t* uuid)
 {
-    return GetFriendByUUID(GuidToString(*(UUID*)uuid));
+    return GetFriendByUUID(TextUtils::GuidToString((GUID*)uuid));
 }
 
 // Find existing record for friend by uuid
@@ -1386,7 +1364,7 @@ void FriendListWindow::LoadFromFile()
         for (const ToolboxIni::Entry& entry : entries) {
             auto lf = new Friend(this);
             lf->uuid = entry.pItem;
-            lf->uuid_bytes = StringToGuid(lf->uuid);
+            TextUtils::StringToGuid(lf->uuid, &lf->uuid_bytes);
             lf->setAlias(TextUtils::StringToWString(inifile.GetValue(entry.pItem, "alias", "")));
             lf->type = static_cast<GW::FriendType>(inifile.GetLongValue(entry.pItem, "type", static_cast<long>(lf->type)));
             if (lf->uuid.empty() || lf->GetAliasW().empty()) {
