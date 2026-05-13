@@ -2060,8 +2060,7 @@ void GameSettings::DrawInventorySettings()
 {
     ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click);
     ImGui::Indent();
-    ImGui::Checkbox("Move items to current open storage pane on click", &move_item_to_current_storage_pane);
-    ImGui::ShowHelp("Materials follow different logic, see below");
+    ImGui::CheckboxWithHelp("Move items to current open storage pane on click", &move_item_to_current_storage_pane, "Materials follow different logic, see below");
     ImGui::Indent();
     auto logic = "Storage logic: Any available stack/slot";
     if (move_item_to_current_storage_pane) {
@@ -2082,11 +2081,9 @@ void GameSettings::DrawInventorySettings()
     ImGui::Unindent();
     ImGui::Unindent();
 
-    ImGui::Checkbox("Shorthand item description on weapon ping", &shorthand_item_ping);
-    ImGui::ShowHelp("Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
+    ImGui::CheckboxWithHelp("Shorthand item description on weapon ping", &shorthand_item_ping, "Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
 
-    ImGui::Checkbox("Lazy chest looting", &lazy_chest_looting);
-    ImGui::ShowHelp("Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
+    ImGui::CheckboxWithHelp("Lazy chest looting", &lazy_chest_looting, "Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
 
 
 }
@@ -2097,18 +2094,15 @@ void GameSettings::DrawPartySettings()
         GW::PartyMgr::SetTickToggle(tick_is_toggle);
     }
     ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
-    ImGui::Checkbox("Automatically accept party invitations when ticked", &auto_accept_invites);
-    ImGui::ShowHelp("When you're invited to join someone elses party");
-    ImGui::Checkbox("Automatically accept party join requests when ticked", &auto_accept_join_requests);
-    ImGui::ShowHelp("When a player wants to join your existing party");
+    ImGui::CheckboxWithHelp("Automatically accept party invitations when ticked", &auto_accept_invites, "When you're invited to join someone elses party");
+    ImGui::CheckboxWithHelp("Automatically accept party join requests when ticked", &auto_accept_join_requests, "When a player wants to join your existing party");
     ImGui::Checkbox("Automatically lock heroes and pets onto your called target", &automatically_flag_pet_to_fight_called_target);
 }
 
 void GameSettings::DrawSettingsInternal()
 {
     ImGui::Checkbox("Hide in-game store message on character select screen", &hide_store_page_on_char_select);
-    ImGui::Checkbox("Apply Collector's Edition animations on player dance", &collectors_edition_emotes);
-    ImGui::ShowHelp("Only applies to your own character");
+    ImGui::CheckboxWithHelp("Apply Collector's Edition animations on player dance", &collectors_edition_emotes, "Only applies to your own character");
 
     ImGui::Checkbox("Automatically cancel Unyielding Aura when re-casting", &drop_ua_on_cast);
 
@@ -2116,8 +2110,7 @@ void GameSettings::DrawSettingsInternal()
 
     ImGui::Checkbox("Automatically use lockpick when interacting with locked chest", &auto_open_locked_chest);
 
-    ImGui::Checkbox("Automatically return to outpost on defeat", &auto_return_on_defeat);
-    ImGui::ShowHelp("Automatically return party to outpost on party wipe if player is leading");
+    ImGui::CheckboxWithHelp("Automatically return to outpost on defeat", &auto_return_on_defeat, "Automatically return party to outpost on party wipe if player is leading");
 
     ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
     ImGui::SameLine();
@@ -2128,16 +2121,13 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Text("minutes of inactivity");
     ImGui::ShowHelp("Only if you were 'Online'");
 
-    ImGui::Checkbox("Automatically set 'Online' after an input to Guild Wars", &auto_set_online);
-    ImGui::ShowHelp("Only if you were 'Away'");
+    ImGui::CheckboxWithHelp("Automatically set 'Online' after an input to Guild Wars", &auto_set_online, "Only if you were 'Away'");
 
     ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
 
-    ImGui::Checkbox("Automatic /age on vanquish", &auto_age_on_vanquish);
-    ImGui::ShowHelp("As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
+    ImGui::CheckboxWithHelp("Automatic /age on vanquish", &auto_age_on_vanquish, "As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
 
-    ImGui::Checkbox("Automatic /age2 on /age", &auto_age2_on_age);
-    ImGui::ShowHelp("GWToolbox++ will show /age2 time after /age is shown in chat");
+    ImGui::CheckboxWithHelp("Automatic /age2 on /age", &auto_age2_on_age, "GWToolbox++ will show /age2 time after /age is shown in chat");
 
     ImGui::TextUnformatted("Automatic screenshot on:");
     ImGui::Indent();
@@ -2160,14 +2150,11 @@ void GameSettings::DrawSettingsInternal()
 
     ImGui::Checkbox("Block full screen popup what shows when opening a dungeon chest", &hide_dungeon_chest_popup);
 
-    ImGui::Checkbox("Block sparkle effect on dropped items", &block_sparkly_drops_effect);
-    ImGui::ShowHelp("Applies to drops that appear after this setting has been changed");
+    ImGui::CheckboxWithHelp("Block sparkle effect on dropped items", &block_sparkly_drops_effect, "Applies to drops that appear after this setting has been changed");
 
     auto hint = "The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.";
-    ImGui::Checkbox("Disable camera smoothing with mouse", &disable_camera_smoothing);
-    ImGui::ShowHelp(hint);
-    ImGui::Checkbox("Disable camera smoothing with controller", &disable_camera_smoothing_with_controller);
-    ImGui::ShowHelp(hint);
+    ImGui::CheckboxWithHelp("Disable camera smoothing with mouse", &disable_camera_smoothing, hint);
+    ImGui::CheckboxWithHelp("Disable camera smoothing with controller", &disable_camera_smoothing_with_controller, hint);
     if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
         gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
     }
@@ -2175,11 +2162,9 @@ void GameSettings::DrawSettingsInternal()
         "selling Gold and Green items introduced\n"
         "in February 5, 2019 update.");
 
-    ImGui::Checkbox("Limit signet of capture to 10 in skills window", &limit_signets_of_capture);
-    ImGui::ShowHelp("If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
+    ImGui::CheckboxWithHelp("Limit signet of capture to 10 in skills window", &limit_signets_of_capture, "If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
 
-    ImGui::Checkbox("Hide known skills when using a tome, capturing a skill or talking to a skill trainer", &hide_known_skills);
-    ImGui::ShowHelp("When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has.");
+    ImGui::CheckboxWithHelp("Hide known skills when using a tome, capturing a skill or talking to a skill trainer", &hide_known_skills, "When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has.");
 
     ImGui::Checkbox("Hide all non-elite skills when capturing a skill", &hide_nonelites_on_capture);
 
@@ -2187,13 +2172,11 @@ void GameSettings::DrawSettingsInternal()
 
     ImGui::Checkbox("Prevent dervish avatar elites from changing your character's appearance", &block_dervish_avatar_form);
 
-    ImGui::Checkbox("Prompt if entering a mission you've already completed", &check_and_prompt_if_mission_already_completed);
-    ImGui::ShowHelp(
+    ImGui::CheckboxWithHelp("Prompt if entering a mission you've already completed", &check_and_prompt_if_mission_already_completed,
         "Sometimes a player can forget to set Hard Mode/Normal Mode when starting a mission for their character.\nGwtoolbox can catch this and check your current character's achievements,\nand can show an 'Are you sure?' prompt if you're trying to do a mission\nthat you've already completed in the chosen mode."
     );
 
-    ImGui::Checkbox("Remember my online status when returning to character select screen", &remember_online_status);
-    ImGui::ShowHelp(
+    ImGui::CheckboxWithHelp("Remember my online status when returning to character select screen", &remember_online_status,
         "Guild Wars doesn't remember your friend list status when you return to the character select screen,\n and sets your status to 'Online' when you select a character to play.\nTick this to avoid having to change it when you switch characters."
     );
 
@@ -2217,8 +2200,7 @@ void GameSettings::DrawSettingsInternal()
 
     ImGui::Checkbox("Skip character name input when donating faction", &skip_entering_name_for_faction_donate);
 
-    ImGui::Checkbox("Stop screen shake from skills or effects", &stop_screen_shake);
-    ImGui::ShowHelp("e.g. Aftershock, Earth shaker, Avalanche effect");
+    ImGui::CheckboxWithHelp("Stop screen shake from skills or effects", &stop_screen_shake, "e.g. Aftershock, Earth shaker, Avalanche effect");
 
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character when:");
@@ -2241,19 +2223,15 @@ void GameSettings::DrawSettingsInternal()
     ImGui::StartSpacedElements(checkbox_w);
     constexpr auto doesnt_affect_me = "Only applies to other players";
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Tonics", &block_transmogrify_effect);
-    ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::CheckboxWithHelp("Tonics", &block_transmogrify_effect, doesnt_affect_me);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Sweets", &block_sugar_rush_effect);
-    ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::CheckboxWithHelp("Sweets", &block_sugar_rush_effect, doesnt_affect_me);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Bottle rockets", &block_bottle_rockets);
-    ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::CheckboxWithHelp("Bottle rockets", &block_bottle_rockets, doesnt_affect_me);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Party poppers", &block_party_poppers);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Snowman Summoners", &block_snowman_summoner);
-    ImGui::ShowHelp(doesnt_affect_me);
+    ImGui::CheckboxWithHelp("Snowman Summoners", &block_snowman_summoner, doesnt_affect_me);
     ImGui::Checkbox("Fireworks", &block_fireworks);
     ImGui::Unindent();
     ImGui::NewLine();

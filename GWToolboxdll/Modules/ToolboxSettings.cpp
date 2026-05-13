@@ -273,8 +273,7 @@ void ToolboxSettings::DrawSettingsInternal()
     Updater::Instance().DrawSettingsInternal();
     ImGui::Separator();
 
-    ImGui::Checkbox("Save Location Data", &save_location_data);
-    ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
+    ImGui::CheckboxWithHelp("Save Location Data", &save_location_data, "Toolbox will save your location every second in a file in Settings Folder.");
     const auto cols = static_cast<size_t>(floor(ImGui::GetWindowWidth() / (170.0f * ImGui::FontScale())));
 
     ImGui::Separator();
@@ -317,8 +316,7 @@ void ToolboxSettings::DrawFreezeSetting()
 {
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Unlock Move All", &move_all);
-    ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
+    ImGui::CheckboxWithHelp("Unlock Move All", &move_all, "Will allow movement and resize of all widgets and windows");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
     ImGui::NextSpacedElement();

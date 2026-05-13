@@ -818,8 +818,6 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 void MaterialsWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::Checkbox("Automatically manage gold", &manage_gold);
-    ImGui::ShowHelp("It will automatically withdraw and deposit gold while buying materials");
-    ImGui::Checkbox("Use stock", &use_stock);
-    ImGui::ShowHelp("Will take materials in inventory and storage into account when buying materials");
+    ImGui::CheckboxWithHelp("Automatically manage gold", &manage_gold, "It will automatically withdraw and deposit gold while buying materials");
+    ImGui::CheckboxWithHelp("Use stock", &use_stock, "Will take materials in inventory and storage into account when buying materials");
 }

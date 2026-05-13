@@ -585,8 +585,7 @@ void ItemDrops::SaveSettings(ToolboxIni* ini)
 void ItemDrops::DrawSettingsInternal()
 {
     ImGui::Text("Drop Tracking Settings");
-    ImGui::Checkbox("Drop Tracking Enabled", &track_drops);
-    ImGui::ShowHelp("This creates a CSV at DIRECTORY which contains all the information about drops you've gotten.");
+    ImGui::CheckboxWithHelp("Drop Tracking Enabled", &track_drops, "This creates a CSV at DIRECTORY which contains all the information about drops you've gotten.");
     ImGui::Separator();
     ImGui::Text("Item Filter Settings");
     ImGui::NewLine();

@@ -330,8 +330,7 @@ void HintsModule::Update(float)
 
 void HintsModule::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Only show hints once", &only_show_hints_once);
-    ImGui::ShowHelp("GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
+    ImGui::CheckboxWithHelp("Only show hints once", &only_show_hints_once, "GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
     if (only_show_hints_once) {
         ImGui::TextDisabled("%d hint(s) have already been shown in-game and won't be shown again", hints_shown.size());
         if (ImGui::Button("Clear cached hints")) {

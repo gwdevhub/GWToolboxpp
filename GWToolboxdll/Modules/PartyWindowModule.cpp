@@ -1045,10 +1045,8 @@ void PartyWindowModule::LoadDefaults()
 
 void PartyWindowModule::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Add player numbers to party window", &add_player_numbers_to_party_window);
-    ImGui::ShowHelp("Will update on next map");
-    ImGui::Checkbox("Rename Tengu and Imperial Guard Ally summons to their respective elite skill", &add_elite_skill_to_summons);
-    ImGui::ShowHelp("Only works on newly spawned summons.");
+    ImGui::CheckboxWithHelp("Add player numbers to party window", &add_player_numbers_to_party_window, "Will update on next map");
+    ImGui::CheckboxWithHelp("Rename Tengu and Imperial Guard Ally summons to their respective elite skill", &add_elite_skill_to_summons, "Only works on newly spawned summons.");
     ImGui::Checkbox(
         "Remove dead imperial guard allies", &remove_dead_imperials);
     if (ImGui::Checkbox("Add special NPCs to party window", &add_npcs_to_party_window)) {

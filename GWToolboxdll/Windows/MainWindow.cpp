@@ -28,8 +28,7 @@ void MainWindow::SaveSettings(ToolboxIni* ini)
 
 void MainWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Close other windows when opening a new one", &one_panel_at_time_only);
-    ImGui::ShowHelp("Only affects windows (with a title bar), not widgets");
+    ImGui::CheckboxWithHelp("Close other windows when opening a new one", &one_panel_at_time_only, "Only affects windows (with a title bar), not widgets");
 
     ImGui::Checkbox("Show Icons", &show_icons);
     ImGui::Checkbox("Center-align text", &center_align_text);

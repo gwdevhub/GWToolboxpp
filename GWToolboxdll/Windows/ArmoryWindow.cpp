@@ -1217,8 +1217,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
         ImGui::Text("Profession: %s", ToolboxUtils::GetProfessionName(current_profession)->string().c_str());
 
         ImGui::SameLine();
-        ImGui::Checkbox("Use same colour for all pieces", &use_global_color);
-        ImGui::ShowHelp("When this is selected, all armour pieces will be coloured this way.");
+        ImGui::CheckboxWithHelp("Use same colour for all pieces", &use_global_color, "When this is selected, all armour pieces will be coloured this way.");
 
         if (use_global_color) {
             ImGui::SameLine();

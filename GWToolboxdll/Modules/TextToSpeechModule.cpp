@@ -1887,24 +1887,20 @@ void TextToSpeechModule::DrawSettingsInternal()
 
     if (!is_api_locked_down) {
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Only process the first sentence of a dialog", &only_use_first_sentence);
-        ImGui::ShowHelp("If enabled, only the first sentence of an NPC dialog will be processed.");
+        ImGui::CheckboxWithHelp("Only process the first sentence of a dialog", &only_use_first_sentence, "If enabled, only the first sentence of an NPC dialog will be processed.");
         show_warning |= !only_use_first_sentence;
     }
     else {
         ImGui::TextDisabled("Note: With the chosen TTS API, only the first sentence of an NPC's dialog will be processed.");
     }
 
-    ImGui::Checkbox("Only process the first dialog of an NPC", &only_use_first_dialog);
-    ImGui::ShowHelp("If enabled, only the first dialog of an NPC conversation will be processed.");
+    ImGui::CheckboxWithHelp("Only process the first dialog of an NPC", &only_use_first_dialog, "If enabled, only the first dialog of an NPC conversation will be processed.");
     show_warning |= !only_use_first_dialog;
 
-    ImGui::Checkbox("Play goodbye message when closing NPC dialog", &play_goodbye_messages);
-    ImGui::ShowHelp("If enabled, NPCs will say a random goodbye when you close their dialog.\n\nNote: Only english language is currently supported.");
+    ImGui::CheckboxWithHelp("Play goodbye message when closing NPC dialog", &play_goodbye_messages, "If enabled, NPCs will say a random goodbye when you close their dialog.\n\nNote: Only english language is currently supported.");
     show_warning |= play_goodbye_messages;
 
-    ImGui::Checkbox("Play greetings from merchants and traders", &play_speech_from_vendors);
-    ImGui::ShowHelp("Note: For some types of traders, Only english language is currently supported.");
+    ImGui::CheckboxWithHelp("Play greetings from merchants and traders", &play_speech_from_vendors, "Note: For some types of traders, Only english language is currently supported.");
 
     ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
 
@@ -1921,15 +1917,12 @@ void TextToSpeechModule::DrawSettingsInternal()
     ImGui::Indent();
     ImGui::StartSpacedElements(264.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("When in an outpost", &play_speech_bubbles_in_outpost);
-    ImGui::ShowHelp("If enabled, speech bubbles above an NPC when in an outpost will be processed");
+    ImGui::CheckboxWithHelp("When in an outpost", &play_speech_bubbles_in_outpost, "If enabled, speech bubbles above an NPC when in an outpost will be processed");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("When in an explorable area", &play_speech_bubbles_in_explorable);
-    ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
+    ImGui::CheckboxWithHelp("When in an explorable area", &play_speech_bubbles_in_explorable, "If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
     show_warning |= play_speech_bubbles_in_explorable;
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("From other party members", &play_speech_bubbles_from_party_members);
-    ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
+    ImGui::CheckboxWithHelp("From other party members", &play_speech_bubbles_from_party_members, "If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
     show_warning |= play_speech_bubbles_from_party_members;
     ImGui::NextSpacedElement();
     ImGui::Checkbox("From non-friendly NPCs", &play_speech_from_non_friendly_npcs);
