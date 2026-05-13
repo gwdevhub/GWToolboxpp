@@ -4,25 +4,23 @@
 
 #include "RestClient.h"
 
+// ---------------------------------------------------------------------------
+// CurlMultiThread — stub implementation (no libcurl).
+// AsyncRestClient::ExecuteAsync() falls back to synchronous execution on a
+// worker thread.  Resources.cpp never calls ExecuteAsync(), so this is fine.
+// ---------------------------------------------------------------------------
 class CurlMultiThread : public Thread {
     using Container = std::deque<AsyncRestClient*>;
 
 public:
-    CurlMultiThread()
-        : m_pMulti(nullptr)
-    {
-        SetThreadName("CurlMultiThread");
-    }
+    CurlMultiThread() { SetThreadName("CurlMultiThread"); }
 
     void Start()
     {
         m_Running = true;
         StartThread();
-
-        // @Remark:
-        // Not ideal, but we have to wait for 'm_pMulti' to be setted and it is in the thread.
-        // Otherwise, there is cases where 'CurlMultiThread::Execute' block.
-        while (!m_pMulti) {
+        // Give the thread a moment to spin up
+        while (!m_Started) {
             Sleep(1);
         }
     }
@@ -37,83 +35,41 @@ public:
     {
         std::lock_guard Lock(m_Mutex);
         m_Clients.push_back(pClient);
-        m_pMulti->AddHandle(pClient);
     }
 
     void Abort(AsyncRestClient* pClient)
     {
         std::lock_guard Lock(m_Mutex);
-        const auto it = Search(pClient);
-        if (it != m_Clients.end()) {
-            m_pMulti->RemoveHandle(pClient);
-            m_Clients.erase(it);
-        }
+        const auto it = std::find(m_Clients.begin(), m_Clients.end(), pClient);
+        if (it != m_Clients.end()) m_Clients.erase(it);
     }
 
 private:
     void Run() override
     {
-        CurlMulti m_Multi;
-        m_pMulti = &m_Multi;
-
+        m_Started = true;
         while (m_Running) {
+            AsyncRestClient* pClient = nullptr;
             {
                 std::lock_guard Lock(m_Mutex);
-                m_Multi.Perform();
-
-                int MsgsLeft;
-                const CURLMsg* pMsg = curl_multi_info_read(m_Multi.GetHandle(), &MsgsLeft);
-                while (pMsg) {
-                    AsyncRestClient* pClient = SearchPop(pMsg->easy_handle);
-                    m_Multi.RemoveHandle(pClient);
-                    pClient->OnCompletion(pMsg->data.result);
-
-                    pMsg = curl_multi_info_read(m_Multi.GetHandle(), &MsgsLeft);
+                if (!m_Clients.empty()) {
+                    pClient = m_Clients.front();
+                    m_Clients.pop_front();
                 }
             }
-
-            Sleep(16);
-        }
-
-        m_pMulti = nullptr;
-    }
-
-    Container::iterator Search(const CURL* pHandle)
-    {
-        Container::iterator it;
-        for (it = m_Clients.begin(); it != m_Clients.end(); ++it) {
-            if ((*it)->GetHandle() == pHandle) {
-                break;
+            if (pClient) {
+                const bool ok = pClient->Perform();
+                pClient->OnCompletion(ok ? 0 : 1);
+            }
+            else {
+                Sleep(16);
             }
         }
-        return it;
-    }
-
-    Container::iterator Search(const AsyncRestClient* pClient)
-    {
-        Container::iterator it;
-        for (it = m_Clients.begin(); it != m_Clients.end(); ++it) {
-            if (*it == pClient) {
-                break;
-            }
-        }
-        return it;
-    }
-
-    AsyncRestClient* SearchPop(const CURL* pHandle)
-    {
-        const auto it = Search(pHandle);
-        if (it == m_Clients.end()) {
-            return nullptr;
-        }
-        AsyncRestClient* pClient = *it;
-        m_Clients.erase(it);
-        return pClient;
     }
 
     Container m_Clients;
-    CurlMulti* m_pMulti;
-    std::atomic<bool> m_Running;
+    std::atomic<bool> m_Running{false};
+    std::atomic<bool> m_Started{false};
     std::recursive_mutex m_Mutex;
 };
 
@@ -123,7 +79,7 @@ static std::atomic<int> s_InitializeCount;
 void InitAsyncRest()
 {
     if (++s_InitializeCount == 1) {
-        InitCurl();
+        InitCurl(); // no-op
         s_RestThread.Start();
     }
 }
@@ -133,7 +89,7 @@ void ShutdownAsyncRest()
     assert(s_InitializeCount > 0);
     if (--s_InitializeCount == 0) {
         s_RestThread.Stop();
-        ShutdownCurl();
+        ShutdownCurl(); // no-op
     }
 }
 
@@ -144,8 +100,7 @@ void RestClient::Execute()
     Perform();
 }
 
-AsyncRestClient::AsyncRestClient()
-    : m_Event(true, true) {}
+AsyncRestClient::AsyncRestClient() : m_Event(true, true) {}
 
 AsyncRestClient::~AsyncRestClient()
 {

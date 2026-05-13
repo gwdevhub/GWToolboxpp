@@ -5,8 +5,8 @@
 
 #include <Modules/Resources.h>
 #include <Modules/HallOfMonumentsModule.h>
-#include <CurlWrapper.h>
 #include <Utils/TextUtils.h>
+#include <RestClient.h>
 
 namespace {
     constexpr char _Base64ToValue[128] = {

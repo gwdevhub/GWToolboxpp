@@ -59,7 +59,6 @@ target_link_options(GWToolboxdll PRIVATE
     $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
     /IGNORE:4099 # pdb not found for github action
     "/DELAYLOAD:gwca.dll"
-    "/DELAYLOAD:libcurl.dll"
     )
 
 target_include_directories(GWToolboxdll PRIVATE

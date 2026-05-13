@@ -641,32 +641,25 @@ void ObserverExportWindow::ExportToGWRank()
 
     RestClient client;
     client.SetUrl(Instance().gwrank_endpoint.c_str());
-    const std::string auth_header = "Bearer " + Instance().gwrank_api_key;
-    client.SetHeader("Authorization", auth_header.c_str());
+    client.SetMethod(HttpMethod::Post);
     client.SetTimeoutSec(30);
     client.SetVerifyPeer(false);
     client.SetVerifyHost(false);
+    client.SetHeader("Authorization", ("Bearer " + Instance().gwrank_api_key).c_str());
     client.AddMimePart("json_file", json_str.c_str(), json_str.size(), "match.json", "application/json");
 
     GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, L"<c=#00FF00>Uploading match data to GWRank.com...</c>");
     client.Execute();
 
-    const int status_code = client.GetStatusCode();
-    if (client.GetStatus() != ResponseStatus::Completed) {
-        wchar_t error_msg[512];
-        swprintf(error_msg, 512, L"<c=#FF0000>Failed to upload: %S</c>", client.GetStatusStr());
+    if (!client.IsSuccessful()) {
+        wchar_t error_msg[256];
+        const std::string preview = client.GetContent().substr(0, 100);
+        swprintf(error_msg, _countof(error_msg), L"<c=#FF0000>Upload failed with HTTP status %d. Response: %S</c>", client.GetStatusCode(), preview.c_str());
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, error_msg);
+        return;
     }
-    else if (status_code >= 200 && status_code < 300) {
-        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, L"<c=#00FF00>Successfully uploaded match to GWRank.com!</c>");
-    }
-    else {
-        wchar_t error_msg[512];
-        const std::string response_preview = client.GetContent().substr(0, 100);
-        swprintf(error_msg, 512, L"<c=#FF0000>Upload failed with HTTP status %d. Response: %S</c>",
-                 status_code, response_preview.c_str());
-        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, error_msg);
-    }
+
+    GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, L"<c=#00FF00>Successfully uploaded match to GWRank.com!</c>");
 }
 
 

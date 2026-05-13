@@ -2,7 +2,7 @@
 
 #include <Event.h>
 
-#include "CurlWrapper.h"
+#include "WinHttpWrapper.h"
 
 void InitAsyncRest();
 void ShutdownAsyncRest();

@@ -374,7 +374,7 @@ namespace { // private module-only namespace
             while (true) {
                 // FD_ISSET(0, &rfds) will be true
                 int N = rxbuf.size();
-                ssize_t ret;
+                int ret;
                 rxbuf.resize(N + 1500);
                 ret = kRead(ptConnCtx, (char*)rxbuf.data() + N, 1500, 0);
                 if (false) {}
