@@ -3,6 +3,8 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Utilities/Hook.h>
 
 #include <Timer.h>
 #include <ToolboxWindow.h>
@@ -110,6 +112,13 @@ private:
     static void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
     TeamHeroBuild* GetTeambuildByName(const std::string& argBuildname);
 
+    // Encode/decode a teambuild as a wide-char whisper string (Daybreak party loadout format,
+    // bytes encoded as wchar_t values in U+0100-U+01FF, 8 bits per wchar vs base64's 6).
+    // A full 8-hero build encodes to ~83-101 wchars — within GW's 120-wchar whisper limit.
+    static bool EncodePartyLoadout(const TeamHeroBuild& tbuild, std::wstring& out);
+    static bool DecodePartyLoadout(const std::wstring& in, TeamHeroBuild& out);
+    static void OnRecvWhisper(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*);
+
     bool builds_changed = false;
     std::vector<TeamHeroBuild> teambuilds{};
 
@@ -144,11 +153,23 @@ private:
         bool Process();
     };
 
-
     clock_t send_timer = 0;
     clock_t kickall_timer = 0;
     std::vector<CodeOnHero> pending_hero_loads{};
     std::queue<std::string> send_queue{};
+
+    // Whisper send state: set from Draw(), consumed in Update()
+    std::wstring pending_whisper_to{};
+    std::wstring pending_whisper_msg{};
+
+    // Incoming party loadout whisper pending user confirmation
+    struct {
+        std::wstring sender;
+        std::unique_ptr<TeamHeroBuild> build;
+        bool show_dialog = false;
+    } pending_import{};
+
+    char whisper_target[BUFFER_SIZE]{};
 
     ToolboxIni* inifile = nullptr;
 };

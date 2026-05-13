@@ -18,6 +18,8 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <GWCA/Constants/UIMessages.h>
+
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
@@ -33,6 +35,95 @@ constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
+    GW::HookEntry OnRecvWhisper_Entry;
+
+    // Each byte of the packed Daybreak bit stream is stored as wchar_t = byte + WCHAR_OFFSET.
+    // Using Latin Extended-A (U+0100-U+01FF) gives 256 values (8 bits/wchar vs base64's 6),
+    // so a full 8-hero teambuild (~83-101 bytes) comfortably fits in one 120-wchar whisper.
+    constexpr wchar_t WCHAR_OFFSET = 0x0100;
+    // First byte of any Daybreak party loadout stream (header=15, type=1, LSB-first packed):
+    // bits 0-3 = 0xF, bits 4-7 = low nibble of type(1) = 0x1 → byte = 0x1F → wchar = U+011F
+    constexpr wchar_t PARTY_LOADOUT_MAGIC_WCHAR = static_cast<wchar_t>(WCHAR_OFFSET + 0x1Fu);
+
+    struct BitWriter {
+        std::vector<uint8_t> buf;
+        int pos = 0;
+        void write(const uint32_t val, const int n) {
+            for (int i = 0; i < n; i++) {
+                if (pos / 8 >= static_cast<int>(buf.size())) buf.push_back(0);
+                if ((val >> i) & 1u) buf[pos / 8] |= static_cast<uint8_t>(1u << (pos % 8));
+                pos++;
+            }
+        }
+    };
+
+    struct BitReader {
+        const uint8_t* data;
+        int byte_len;
+        int pos = 0;
+        bool ok = true;
+        BitReader(const uint8_t* d, const int len) : data(d), byte_len(len) {}
+        uint32_t read(const int n) {
+            uint32_t v = 0;
+            for (int i = 0; i < n; i++) {
+                if (pos / 8 >= byte_len) { ok = false; return 0; }
+                if ((data[pos / 8] >> (pos % 8)) & 1u) v |= 1u << i;
+                pos++;
+            }
+            return v;
+        }
+    };
+
+    void WriteEmbedded(const GW::SkillbarMgr::SkillTemplate& t, BitWriter& bw) {
+        const auto max_prof = std::max(static_cast<uint32_t>(t.primary), static_cast<uint32_t>(t.secondary));
+        const uint32_t prof_code = max_prof > 15 ? 1u : 0u;
+        const int p = static_cast<int>(prof_code) * 2 + 4;
+        bw.write(prof_code, 2);
+        bw.write(static_cast<uint32_t>(t.primary), p);
+        bw.write(static_cast<uint32_t>(t.secondary), p);
+        bw.write(t.attributes_count, 4);
+        uint32_t attr_code = 0;
+        for (uint32_t i = 0; i < t.attributes_count && i < 12; i++) {
+            if (static_cast<uint32_t>(t.attribute_ids[i]) > 15) { attr_code = 2; break; }
+        }
+        const int a = static_cast<int>(attr_code) + 4;
+        bw.write(attr_code, 4);
+        for (uint32_t i = 0; i < t.attributes_count && i < 12; i++) {
+            bw.write(static_cast<uint32_t>(t.attribute_ids[i]), a);
+            bw.write(t.attribute_values[i], 4);
+        }
+        uint32_t skill_code = 0;
+        for (int i = 0; i < 8; i++) {
+            if (static_cast<uint32_t>(t.skills[i]) > 255) { skill_code = 1; break; }
+        }
+        const int s = static_cast<int>(skill_code) + 8;
+        bw.write(skill_code, 4);
+        for (int i = 0; i < 8; i++) {
+            bw.write(static_cast<uint32_t>(t.skills[i]), s);
+        }
+    }
+
+    bool ReadEmbedded(BitReader& br, GW::SkillbarMgr::SkillTemplate& t) {
+        const uint32_t prof_code = br.read(2);
+        const int p = static_cast<int>(prof_code) * 2 + 4;
+        t.primary = static_cast<GW::Constants::Profession>(br.read(p));
+        t.secondary = static_cast<GW::Constants::Profession>(br.read(p));
+        t.attributes_count = br.read(4);
+        if (t.attributes_count > 12) return false;
+        const uint32_t attr_code = br.read(4);
+        const int a = static_cast<int>(attr_code) + 4;
+        for (uint32_t i = 0; i < t.attributes_count; i++) {
+            t.attribute_ids[i] = static_cast<GW::Constants::Attribute>(br.read(a));
+            t.attribute_values[i] = br.read(4);
+        }
+        const uint32_t skill_code = br.read(4);
+        const int s = static_cast<int>(skill_code) + 8;
+        for (int i = 0; i < 8; i++) {
+            t.skills[i] = static_cast<GW::Constants::SkillID>(br.read(s));
+        }
+        return br.ok;
+    }
+
 
     // GW file 0x268f6: 2x2 sprite sheet (tick/cross overlays)
     // Bottom-left sprite (col 0, row 1) = semi-transparent cross = "disabled" overlay
@@ -152,6 +243,82 @@ namespace {
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
+bool HeroBuildsWindow::EncodePartyLoadout(const TeamHeroBuild& tbuild, std::wstring& out)
+{
+    int party_size = 0;
+    for (const auto& b : tbuild.builds) {
+        if (b.code[0] || b.hero_id != HeroID::NoHero) party_size++;
+        else break;
+    }
+    if (!party_size) return false;
+
+    BitWriter bw;
+    bw.write(15u, 4); // extended template header
+    bw.write(1u, 8);  // type = party loadout
+    bw.write(1u, 4);  // version = 1
+    bw.write(static_cast<uint32_t>(party_size), 4);
+
+    for (int i = 0; i < party_size; i++) {
+        const auto& build = tbuild.builds[i];
+        const uint32_t member_type = i == 0 ? 0u : 2u; // 0 = player, 2 = hero
+        bw.write(member_type, 2);
+        if (i > 0) bw.write(static_cast<uint32_t>(build.hero_id), 6);
+        bw.write(build.behavior, 2);
+        GW::SkillbarMgr::SkillTemplate t{};
+        if (build.code[0]) GW::SkillbarMgr::DecodeSkillTemplate(t, build.code);
+        WriteEmbedded(t, bw);
+    }
+
+    out.clear();
+    out.reserve(bw.buf.size());
+    for (const uint8_t byte : bw.buf)
+        out += static_cast<wchar_t>(WCHAR_OFFSET + byte);
+    return !out.empty();
+}
+
+bool HeroBuildsWindow::DecodePartyLoadout(const std::wstring& in, TeamHeroBuild& out)
+{
+    if (in.empty() || in[0] != PARTY_LOADOUT_MAGIC_WCHAR) return false;
+
+    std::vector<uint8_t> bytes;
+    bytes.reserve(in.size());
+    for (const wchar_t wc : in) {
+        if (wc < WCHAR_OFFSET || wc >= WCHAR_OFFSET + 256) return false;
+        bytes.push_back(static_cast<uint8_t>(wc - WCHAR_OFFSET));
+    }
+
+    BitReader br(bytes.data(), static_cast<int>(bytes.size()));
+    if (br.read(4) != 15u || br.read(8) != 1u || br.read(4) != 1u) return false;
+    const int party_size = static_cast<int>(br.read(4));
+    if (party_size < 1 || party_size > 8) return false;
+
+    for (int i = 0; i < party_size; i++) {
+        auto& build = out.builds[i];
+        const uint32_t member_type = br.read(2);
+        if (member_type == 2u) build.hero_id = static_cast<HeroID>(br.read(6));
+        build.behavior = br.read(2);
+        GW::SkillbarMgr::SkillTemplate t{};
+        if (!ReadEmbedded(br, t)) return false;
+        if (!GW::SkillbarMgr::EncodeSkillTemplate(t, build.code, BUFFER_SIZE)) return false;
+    }
+    return br.ok;
+}
+
+void HeroBuildsWindow::OnRecvWhisper(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
+{
+    const auto packet = static_cast<GW::UI::UIPacket::kRecvWhisper*>(wparam);
+    if (!packet || !packet->message || !packet->from) return;
+    const std::wstring msg(packet->message);
+    if (msg.empty() || msg[0] != PARTY_LOADOUT_MAGIC_WCHAR) return;
+    auto tbuild = std::make_unique<TeamHeroBuild>("Imported Build");
+    if (!DecodePartyLoadout(msg, *tbuild)) return;
+    status->blocked = true; // suppress the garbled chars from appearing in chat
+    auto& self = Instance();
+    self.pending_import.sender = packet->from;
+    self.pending_import.build = std::move(tbuild);
+    self.pending_import.show_dialog = true;
+}
+
 GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const HeroID hero_id, size_t* out_hero_index)
 {
     GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
@@ -186,6 +353,7 @@ void HeroBuildsWindow::Initialize()
     skill_toggle_sprite = GwDatTextureModule::LoadTextureFromFileId(0x268f6);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
+    GW::UI::RegisterUIMessageCallback(&OnRecvWhisper_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
 }
 
 void HeroBuildsWindow::Terminate()
@@ -193,10 +361,15 @@ void HeroBuildsWindow::Terminate()
     ToolboxWindow::Terminate();
     teambuilds.clear();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnRecvWhisper_Entry);
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 {
+    // Force the main window open when an import is pending (popup needs a parent window)
+    if (pending_import.show_dialog && pending_import.build) {
+        visible = true;
+    }
     if (visible) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
@@ -337,6 +510,36 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     builds_changed = true;
                     teambuilds.push_back(new_tb);
                 }
+            }
+
+            // Import dialog shown when a party loadout whisper is received
+            if (pending_import.show_dialog && pending_import.build) {
+                ImGui::OpenPopup("Import Teambuild?");
+                pending_import.show_dialog = false;
+            }
+            if (ImGui::BeginPopupModal("Import Teambuild?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                if (pending_import.build) {
+                    const auto from_str = TextUtils::WStringToString(pending_import.sender);
+                    ImGui::Text("Received a teambuild from '%s'.", from_str.c_str());
+                    ImGui::Text("Import it into your Hero Builds list?");
+                    ImGui::Spacing();
+                    if (ImGui::Button("Import", ImVec2(120, 0))) {
+                        pending_import.build->edit_open = true;
+                        teambuilds.push_back(*pending_import.build);
+                        builds_changed = true;
+                        pending_import.build.reset();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Ignore", ImVec2(120, 0))) {
+                        pending_import.build.reset();
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+                else {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
         }
         ImGui::End();
@@ -607,9 +810,28 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
                 ImGui::EndPopup();
             }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Text("Send as Whisper:");
+            ImGui::SetNextItemWidth(200.0f);
+            ImGui::InputText("Player name##whisper_to", whisper_target, BUFFER_SIZE);
+            ImGui::SameLine();
+            if (ImGui::Button("Send##whisper_send")) {
+                std::wstring encoded;
+                if (whisper_target[0] && EncodePartyLoadout(tbuild, encoded)) {
+                    pending_whisper_to = TextUtils::StringToWString(std::string(whisper_target));
+                    pending_whisper_msg = std::move(encoded);
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Send teambuild to another Toolbox user via whisper.\n"
+                                  "Recipient must have GWToolbox installed to import it.");
+            }
         }
         ImGui::End();
     }
+
 }
 
 void HeroBuildsWindow::View(const TeamHeroBuild& tbuild, const size_t idx)
@@ -792,6 +1014,12 @@ void HeroBuildsWindow::Update(float)
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         GW::Chat::SendChat('#', send_queue.front().c_str());
         send_queue.pop();
+        send_timer = TIMER_INIT();
+    }
+    if (!pending_whisper_to.empty() && !pending_whisper_msg.empty() && TIMER_DIFF(send_timer) > 600) {
+        GW::Chat::SendChat(pending_whisper_to.c_str(), pending_whisper_msg.c_str());
+        pending_whisper_to.clear();
+        pending_whisper_msg.clear();
         send_timer = TIMER_INIT();
     }
     if (kickall_timer) {
