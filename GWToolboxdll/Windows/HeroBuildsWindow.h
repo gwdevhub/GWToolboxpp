@@ -3,6 +3,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/Utilities/Hook.h>
 
 #include <Timer.h>
 #include <ToolboxWindow.h>
@@ -95,6 +96,14 @@ public:
 
     // Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.
     static GW::HeroPartyMember* GetPartyHeroByID(GW::Constants::HeroID hero_id, size_t* out_hero_index);
+
+    // Encode/decode a TeamHeroBuild to/from the Daybreak party loadout format (extended template header 15, type 1, version 1).
+    static bool EncodePartyLoadout(const TeamHeroBuild& tbuild, std::string& out);
+    static bool DecodePartyLoadout(const std::string& encoded, TeamHeroBuild& out);
+
+    // Decode an incoming party loadout whisper and add it to the teambuild list.
+    void ImportTeamBuildFromWhisper(const std::string& encoded, const std::wstring& sender);
+
 private:
     bool hide_when_entering_explorable = false;
     bool one_teambuild_at_a_time = false;
@@ -149,6 +158,16 @@ private:
     clock_t kickall_timer = 0;
     std::vector<CodeOnHero> pending_hero_loads{};
     std::queue<std::string> send_queue{};
+
+    // Whisper send: recipient + encoded party loadout
+    struct PendingWhisperSend {
+        std::wstring recipient;
+        std::wstring message;
+        bool active = false;
+    };
+    PendingWhisperSend pending_whisper_send{};
+
+    static GW::HookEntry OnWhisper_Entry;
 
     ToolboxIni* inifile = nullptr;
 };

@@ -31,6 +31,168 @@
 
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
+// Party loadout encoding helpers (Daybreak extended template, header=15, type=1, version=1).
+// Bit stream uses LSB-first ordering throughout.
+namespace PartyLoadout {
+
+    // GW's base64 alphabet (same as standard base64)
+    constexpr char GW_B64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    // Reverse lookup: ASCII char → 6-bit index (0 for invalid chars)
+    constexpr uint8_t GW_B64_REV[128] = {
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 0-15
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 16-31
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,62, 0, 0, 0,63,  // 32-47  ('+', '/')
+        52,53,54,55,56,57,58,59,60,61, 0, 0, 0, 0, 0, 0,  // 48-63  ('0'-'9')
+         0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,  // 64-79  ('A'-'O')
+        15,16,17,18,19,20,21,22,23,24,25, 0, 0, 0, 0, 0,  // 80-95  ('P'-'Z')
+         0,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,  // 96-111 ('a'-'o')
+        41,42,43,44,45,46,47,48,49,50,51, 0, 0, 0, 0, 0,  // 112-127 ('p'-'z')
+    };
+
+    // LSB-first bit stream for encoding and decoding
+    struct BitStream {
+        std::vector<uint8_t> data;
+        size_t bit_count = 0;
+        size_t read_pos  = 0;
+
+        void write(uint32_t val, int n) {
+            for (int i = 0; i < n; i++) {
+                if (bit_count % 8 == 0)
+                    data.push_back(0);
+                if ((val >> i) & 1)
+                    data.back() |= static_cast<uint8_t>(1u << (bit_count % 8));
+                ++bit_count;
+            }
+        }
+
+        uint32_t read(int n) {
+            uint32_t val = 0;
+            for (int i = 0; i < n && read_pos < bit_count; i++) {
+                if (data[read_pos / 8] & (1u << (read_pos % 8)))
+                    val |= (1u << i);
+                ++read_pos;
+            }
+            return val;
+        }
+
+        bool ok() const { return read_pos <= bit_count; }
+
+        void to_base64(std::string& out) const {
+            out.clear();
+            size_t pos = 0;
+            while (pos < bit_count) {
+                const int bits = static_cast<int>(std::min<size_t>(6, bit_count - pos));
+                uint8_t val = 0;
+                for (int i = 0; i < bits; i++) {
+                    if (data[(pos + i) / 8] & (1u << ((pos + i) % 8)))
+                        val |= static_cast<uint8_t>(1u << i);
+                }
+                out += GW_B64[val];
+                pos += static_cast<size_t>(bits);
+            }
+        }
+
+        void from_base64(const std::string& s) {
+            data.clear();
+            bit_count = 0;
+            read_pos  = 0;
+            for (const char c : s) {
+                if (static_cast<unsigned char>(c) >= 128) continue;
+                const uint8_t v = GW_B64_REV[static_cast<unsigned char>(c)];
+                for (int i = 0; i < 6; i++) {
+                    if (bit_count % 8 == 0)
+                        data.push_back(0);
+                    if ((v >> i) & 1)
+                        data.back() |= static_cast<uint8_t>(1u << (bit_count % 8));
+                    ++bit_count;
+                }
+            }
+        }
+    };
+
+    // Encode a SkillTemplate (decoded from an existing code string) into the bit stream
+    // as an embedded build template (without standalone header/version bytes).
+    bool EncodeEmbeddedTemplate(BitStream& bs, const GW::SkillbarMgr::SkillTemplate& t) {
+        // Choose minimum profession bit width
+        const uint32_t max_prof = std::max(static_cast<uint32_t>(t.primary), static_cast<uint32_t>(t.secondary));
+        const uint8_t pl = (max_prof >= 16) ? 1 : 0;
+        const int p = pl * 2 + 4;
+
+        // Choose minimum attribute bit width
+        uint32_t max_attr = 0;
+        for (uint32_t i = 0; i < t.attributes_count && i < 12; i++)
+            max_attr = std::max(max_attr, static_cast<uint32_t>(t.attribute_ids[i]));
+        uint8_t al = 0;
+        while ((1u << (al + 4)) <= max_attr && al < 15) al++;
+        const int a = al + 4;
+
+        // Choose minimum skill bit width
+        uint32_t max_skill = 0;
+        for (int i = 0; i < 8; i++)
+            max_skill = std::max(max_skill, static_cast<uint32_t>(t.skills[i]));
+        uint8_t sl = 0;
+        while ((1u << (sl + 8)) <= max_skill && sl < 15) sl++;
+        const int s = sl + 8;
+
+        bs.write(pl, 2);
+        bs.write(static_cast<uint32_t>(t.primary), p);
+        bs.write(static_cast<uint32_t>(t.secondary), p);
+
+        const uint32_t ac = std::min<uint32_t>(t.attributes_count, 12);
+        bs.write(ac, 4);
+        bs.write(al, 4);
+        for (uint32_t i = 0; i < ac; i++) {
+            bs.write(static_cast<uint32_t>(t.attribute_ids[i]), a);
+            bs.write(t.attribute_values[i], 4);
+        }
+
+        bs.write(sl, 4);
+        for (int i = 0; i < 8; i++)
+            bs.write(static_cast<uint32_t>(t.skills[i]), s);
+
+        return true;
+    }
+
+    // Decode an embedded build template from the bit stream into a SkillTemplate.
+    bool DecodeEmbeddedTemplate(BitStream& bs, GW::SkillbarMgr::SkillTemplate& t) {
+        t = {};
+
+        const uint8_t pl = static_cast<uint8_t>(bs.read(2));
+        const int p = pl * 2 + 4;
+
+        t.primary   = static_cast<GW::Constants::Profession>(bs.read(p));
+        t.secondary = static_cast<GW::Constants::Profession>(bs.read(p));
+
+        const uint32_t ac = bs.read(4);
+        const uint8_t al  = static_cast<uint8_t>(bs.read(4));
+        const int a       = al + 4;
+        t.attributes_count = std::min<uint32_t>(ac, 12);
+
+        for (uint32_t i = 0; i < t.attributes_count; i++) {
+            t.attribute_ids[i]    = static_cast<GW::Constants::Attribute>(bs.read(a));
+            t.attribute_values[i] = bs.read(4);
+        }
+
+        const uint8_t sl = static_cast<uint8_t>(bs.read(4));
+        const int s = sl + 8;
+        for (int i = 0; i < 8; i++)
+            t.skills[i] = static_cast<GW::Constants::SkillID>(bs.read(s));
+
+        return bs.ok();
+    }
+
+    constexpr uint8_t MEMBER_PLAYER   = 0;
+    constexpr uint8_t MEMBER_HENCHMAN = 1;
+    constexpr uint8_t MEMBER_HERO     = 2;
+
+    // Detect the party loadout v1 magic prefix ("fA") in an ASCII string
+    inline bool IsPartyLoadout(const std::string& s) {
+        return s.size() >= 2 && s[0] == 'f' && s[1] == 'A';
+    }
+
+} // namespace PartyLoadout
+
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
 
@@ -151,6 +313,143 @@ namespace {
 }
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
+GW::HookEntry HeroBuildsWindow::OnWhisper_Entry;
+
+bool HeroBuildsWindow::EncodePartyLoadout(const TeamHeroBuild& tbuild, std::string& out)
+{
+    using namespace PartyLoadout;
+
+    // Count non-empty slots
+    int party_size = 0;
+    for (int i = 0; i < 8; i++) {
+        if (tbuild.builds[i].code[0] != 0)
+            ++party_size;
+    }
+    if (party_size == 0)
+        return false;
+
+    BitStream bs;
+    // Extended template header: 4 bits = 15, type: 8 bits = 1, version: 4 bits = 1
+    bs.write(15, 4);
+    bs.write(1, 8);
+    bs.write(1, 4);
+    bs.write(static_cast<uint32_t>(party_size), 4);
+
+    for (int i = 0; i < 8; i++) {
+        const HeroBuild& build = tbuild.builds[i];
+        if (build.code[0] == 0)
+            continue;
+
+        const uint8_t member_type = (i == 0) ? MEMBER_PLAYER
+            : (build.hero_id != HeroID::NoHero ? MEMBER_HERO : MEMBER_HENCHMAN);
+        bs.write(member_type, 2);
+        if (member_type == MEMBER_HERO)
+            bs.write(static_cast<uint32_t>(build.hero_id), 6);
+        bs.write(build.behavior, 2);
+
+        // Decode the existing code string to get the SkillTemplate fields
+        GW::SkillbarMgr::SkillTemplate tmpl{};
+        if (build.code[0])
+            GW::SkillbarMgr::DecodeSkillTemplate(tmpl, build.code);
+        EncodeEmbeddedTemplate(bs, tmpl);
+    }
+
+    bs.to_base64(out);
+    return !out.empty();
+}
+
+bool HeroBuildsWindow::DecodePartyLoadout(const std::string& encoded, TeamHeroBuild& out)
+{
+    using namespace PartyLoadout;
+
+    if (!IsPartyLoadout(encoded))
+        return false;
+
+    BitStream bs;
+    bs.from_base64(encoded);
+
+    // Validate header
+    if (bs.read(4) != 15) return false;  // extended template header
+    if (bs.read(8) != 1)  return false;  // type = party loadout
+    if (bs.read(4) != 1)  return false;  // version = 1
+
+    const uint32_t party_size = bs.read(4);
+    if (party_size == 0 || party_size > 8) return false;
+    if (!bs.ok()) return false;
+
+    int slot = 0;
+    for (uint32_t m = 0; m < party_size && slot < 8; m++) {
+        const auto member_type = static_cast<uint8_t>(bs.read(2));
+        uint32_t hero_id_val = 0;
+        if (member_type == MEMBER_HERO)
+            hero_id_val = bs.read(6);
+        const uint32_t behavior = bs.read(2);
+
+        GW::SkillbarMgr::SkillTemplate tmpl{};
+        if (!DecodeEmbeddedTemplate(bs, tmpl)) return false;
+
+        // Re-encode the skill template to a code string
+        char code[BUFFER_SIZE]{};
+        GW::SkillbarMgr::EncodeSkillTemplate(tmpl, code, sizeof(code));
+
+        const auto hero_id = static_cast<GW::Constants::HeroID>(hero_id_val);
+        out.builds[slot] = HeroBuild("", code, hero_id, 0, behavior, 0);
+        ++slot;
+    }
+
+    return bs.ok();
+}
+
+// Incoming whisper callback — detects party loadout templates and auto-imports them.
+static void OnIncomingWhisper(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
+{
+    const auto packet = static_cast<GW::UI::UIPacket::kWriteToChatLog*>(wparam);
+    if (packet->channel != GW::Chat::Channel::CHANNEL_WHISPER)
+        return;
+    const wchar_t* msg = packet->message;
+    if (!msg || static_cast<uint16_t>(msg[0]) != 0x76d)
+        return; // Not an incoming whisper message type
+
+    // Sender name is in the first \x107 ... \x1 segment
+    const wchar_t* name_start = wcschr(msg, 0x107);
+    if (!name_start) return;
+    name_start++;
+    const wchar_t* name_end = wcschr(name_start, 0x1);
+    if (!name_end) return;
+
+    // Message text is in the LAST \x107 ... \x1 segment
+    const wchar_t* text_start = wcsrchr(msg, 0x107);
+    if (!text_start || text_start <= name_end) return;
+    text_start++;
+    const wchar_t* text_end = wcschr(text_start, 0x1);
+    if (!text_end) return;
+
+    // Convert to ASCII; bail on any non-ASCII char (not a base64 template)
+    std::string encoded;
+    encoded.reserve(static_cast<size_t>(text_end - text_start));
+    for (const wchar_t* p = text_start; p < text_end; p++) {
+        if (*p >= 128) return;
+        encoded += static_cast<char>(*p);
+    }
+
+    if (!PartyLoadout::IsPartyLoadout(encoded))
+        return;
+
+    const std::wstring sender(name_start, name_end);
+    HeroBuildsWindow::Instance().ImportTeamBuildFromWhisper(encoded, sender);
+}
+
+void HeroBuildsWindow::ImportTeamBuildFromWhisper(const std::string& encoded, const std::wstring& sender)
+{
+    const auto sender_str = TextUtils::WStringToString(sender);
+    TeamHeroBuild received(std::format("Build from {}", sender_str));
+    if (!DecodePartyLoadout(encoded, received))
+        return;
+    received.edit_open = true;
+    teambuilds.push_back(std::move(received));
+    builds_changed = true;
+    Log::Flash("Received teambuild from %s!", sender_str.c_str());
+}
 
 GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const HeroID hero_id, size_t* out_hero_index)
 {
@@ -186,6 +485,7 @@ void HeroBuildsWindow::Initialize()
     skill_toggle_sprite = GwDatTextureModule::LoadTextureFromFileId(0x268f6);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
+    GW::UI::RegisterUIMessageCallback(&OnWhisper_Entry, GW::UI::UIMessage::kWriteToChatLog, OnIncomingWhisper);
 }
 
 void HeroBuildsWindow::Terminate()
@@ -193,6 +493,7 @@ void HeroBuildsWindow::Terminate()
     ToolboxWindow::Terminate();
     teambuilds.clear();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnWhisper_Entry);
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9*)
@@ -594,6 +895,32 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 ImGui::SetTooltip("Close this window");
             }
 
+            // Whisper send section
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+            static char whisper_target[64] = {};
+            ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 110.0f - ImGui::GetStyle().ItemInnerSpacing.x);
+            ImGui::InputText("###whisper_target", whisper_target, sizeof(whisper_target));
+            ImGui::PopItemWidth();
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Enter the recipient's character name");
+            }
+            ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::Button("Send Whisper", ImVec2(110.0f, 0))) {
+                if (whisper_target[0]) {
+                    std::string encoded;
+                    if (EncodePartyLoadout(tbuild, encoded)) {
+                        pending_whisper_send.recipient = TextUtils::StringToWString(whisper_target);
+                        pending_whisper_send.message   = TextUtils::StringToWString(encoded);
+                        pending_whisper_send.active    = true;
+                    }
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Send this teambuild to another Toolbox user via whisper.\nEnter the recipient's character name in the field to the left.");
+            }
+
             if (ImGui::BeginPopupModal("Delete Teambuild?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Are you sure?\nThis operation cannot be undone.\n\n");
                 if (ImGui::Button("OK", ImVec2(120, 0))) {
@@ -793,6 +1120,10 @@ void HeroBuildsWindow::Update(float)
         GW::Chat::SendChat('#', send_queue.front().c_str());
         send_queue.pop();
         send_timer = TIMER_INIT();
+    }
+    if (pending_whisper_send.active) {
+        GW::Chat::SendChat(pending_whisper_send.recipient.c_str(), pending_whisper_send.message.c_str());
+        pending_whisper_send.active = false;
     }
     if (kickall_timer) {
         if (TIMER_DIFF(kickall_timer) > 500 || instance_type != GW::Constants::InstanceType::Outpost || !GetPlayerHeroCount()) {
