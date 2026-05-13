@@ -60,6 +60,8 @@ namespace GuiUtils {
 
         EncString(const EncString&) = delete;
         EncString& operator=(const EncString&) = delete;
+        EncString(EncString&& other) noexcept;
+        EncString& operator=(EncString&& other) noexcept;
         ~EncString();
     };
 }

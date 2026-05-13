@@ -38,7 +38,7 @@ namespace {
     static constexpr auto PRICE_NOT_AVAILABLE = -4;
     int price[(uint32_t)GW::Constants::MaterialSlot::Count] = {};
 
-    
+
     bool quote_pending = false;
     bool trans_pending = false;
     DWORD quote_pending_time = 0;
@@ -55,6 +55,80 @@ namespace {
 
 
     clock_t last_transaction = 0;
+
+    const std::unordered_map<GW::Constants::MaterialSlot, const wchar_t*> material_enc_strings = {
+        {GW::Constants::MaterialSlot::BoltofCloth, GW::EncStrings::BoltofCloth},
+        {GW::Constants::MaterialSlot::Bone, GW::EncStrings::Bone},
+        {GW::Constants::MaterialSlot::ChitinFragment, GW::EncStrings::ChitinFragment},
+        {GW::Constants::MaterialSlot::Feather, GW::EncStrings::Feather},
+        {GW::Constants::MaterialSlot::GraniteSlab, GW::EncStrings::GraniteSlab},
+        {GW::Constants::MaterialSlot::IronIngot, GW::EncStrings::IronIngot},
+        {GW::Constants::MaterialSlot::PileofGlitteringDust, GW::EncStrings::PileofGlitteringDust},
+        {GW::Constants::MaterialSlot::PlantFiber, GW::EncStrings::PlantFiber},
+        {GW::Constants::MaterialSlot::Scale, GW::EncStrings::Scale},
+        {GW::Constants::MaterialSlot::TannedHideSquare, GW::EncStrings::TannedHideSquare},
+        {GW::Constants::MaterialSlot::WoodPlank, GW::EncStrings::WoodPlank},
+        {GW::Constants::MaterialSlot::AmberChunk, GW::EncStrings::AmberChunk},
+        {GW::Constants::MaterialSlot::BoltofDamask, GW::EncStrings::BoltofDamask},
+        {GW::Constants::MaterialSlot::BoltofLinen, GW::EncStrings::BoltofLinen},
+        {GW::Constants::MaterialSlot::BoltofSilk, GW::EncStrings::BoltofSilk},
+        {GW::Constants::MaterialSlot::DeldrimorSteelIngot, GW::EncStrings::DeldrimorSteelIngot},
+        {GW::Constants::MaterialSlot::Diamond, GW::EncStrings::Diamond},
+        {GW::Constants::MaterialSlot::ElonianLeatherSquare, GW::EncStrings::ElonianLeatherSquare},
+        {GW::Constants::MaterialSlot::FurSquare, GW::EncStrings::FurSquare},
+        {GW::Constants::MaterialSlot::GlobofEctoplasm, GW::EncStrings::GlobofEctoplasm},
+        {GW::Constants::MaterialSlot::JadeiteShard, GW::EncStrings::JadeiteShard},
+        {GW::Constants::MaterialSlot::LeatherSquare, GW::EncStrings::LeatherSquare},
+        {GW::Constants::MaterialSlot::LumpofCharcoal, GW::EncStrings::LumpofCharcoal},
+        {GW::Constants::MaterialSlot::MonstrousClaw, GW::EncStrings::MonstrousClaw},
+        {GW::Constants::MaterialSlot::MonstrousEye, GW::EncStrings::MonstrousEye},
+        {GW::Constants::MaterialSlot::MonstrousFang, GW::EncStrings::MonstrousFang},
+        {GW::Constants::MaterialSlot::ObsidianShard, GW::EncStrings::ObsidianShard},
+        {GW::Constants::MaterialSlot::OnyxGemstone, GW::EncStrings::OnyxGemstone},
+        {GW::Constants::MaterialSlot::RollofParchment, GW::EncStrings::RollofParchment},
+        {GW::Constants::MaterialSlot::RollofVellum, GW::EncStrings::RollofVellum},
+        {GW::Constants::MaterialSlot::Ruby, GW::EncStrings::Ruby},
+        {GW::Constants::MaterialSlot::Sapphire, GW::EncStrings::Sapphire},
+        {GW::Constants::MaterialSlot::SpiritwoodPlank, GW::EncStrings::SpiritwoodPlank},
+        {GW::Constants::MaterialSlot::SteelIngot, GW::EncStrings::SteelIngot},
+        {GW::Constants::MaterialSlot::TemperedGlassVial, GW::EncStrings::TemperedGlassVial},
+        {GW::Constants::MaterialSlot::VialofInk, GW::EncStrings::VialofInk},
+    };
+    std::unordered_map<GW::Constants::MaterialSlot, GuiUtils::EncString> material_names;
+
+    const GW::Constants::MaterialSlot common_materials[] = {
+        GW::Constants::MaterialSlot::Bone,       GW::Constants::MaterialSlot::IronIngot,      GW::Constants::MaterialSlot::TannedHideSquare,
+        GW::Constants::MaterialSlot::Scale,      GW::Constants::MaterialSlot::ChitinFragment, GW::Constants::MaterialSlot::BoltofCloth,
+        GW::Constants::MaterialSlot::WoodPlank,  GW::Constants::MaterialSlot::GraniteSlab,    GW::Constants::MaterialSlot::PileofGlitteringDust,
+        GW::Constants::MaterialSlot::PlantFiber, GW::Constants::MaterialSlot::Feather,
+    };
+    const GW::Constants::MaterialSlot rare_materials[] = {
+        GW::Constants::MaterialSlot::FurSquare,
+        GW::Constants::MaterialSlot::BoltofLinen,
+        GW::Constants::MaterialSlot::BoltofDamask,
+        GW::Constants::MaterialSlot::BoltofSilk,
+        GW::Constants::MaterialSlot::GlobofEctoplasm,
+        GW::Constants::MaterialSlot::SteelIngot,
+        GW::Constants::MaterialSlot::DeldrimorSteelIngot,
+        GW::Constants::MaterialSlot::MonstrousClaw,
+        GW::Constants::MaterialSlot::MonstrousEye,
+        GW::Constants::MaterialSlot::MonstrousFang,
+        GW::Constants::MaterialSlot::Ruby,
+        GW::Constants::MaterialSlot::Sapphire,
+        GW::Constants::MaterialSlot::Diamond,
+        GW::Constants::MaterialSlot::OnyxGemstone,
+        GW::Constants::MaterialSlot::LumpofCharcoal,
+        GW::Constants::MaterialSlot::ObsidianShard,
+        GW::Constants::MaterialSlot::TemperedGlassVial,
+        GW::Constants::MaterialSlot::LeatherSquare,
+        GW::Constants::MaterialSlot::ElonianLeatherSquare,
+        GW::Constants::MaterialSlot::VialofInk,
+        GW::Constants::MaterialSlot::RollofParchment,
+        GW::Constants::MaterialSlot::RollofVellum,
+        GW::Constants::MaterialSlot::SpiritwoodPlank,
+        GW::Constants::MaterialSlot::AmberChunk,
+        GW::Constants::MaterialSlot::JadeiteShard,
+    };
 
     uint32_t CountItemByMaterialSlot(GW::Constants::MaterialSlot material_slot, GW::Constants::Bag bag_start = GW::Constants::Bag::Backpack, GW::Constants::Bag bag_end = GW::Constants::Bag::Bag_2) {
         uint32_t count = 0;
@@ -347,6 +421,16 @@ void MaterialsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
+    if (material_names.empty()) {
+        material_names.reserve(material_enc_strings.size());
+        for (const auto& [slot, enc] : material_enc_strings) {
+            material_names.emplace(slot, enc); // EncString(const wchar_t*) — constructs in-place
+        }
+        for (auto& m : material_names) {
+            m.second.string();
+        }
+    }
+
     // @Cleanup: these need to be GW::Constants::ModelFileID insted of hard coded here
     tex_essence = GwDatTextureModule::LoadTextureFromFileId(0x458A7);
     tex_grail = GwDatTextureModule::LoadTextureFromFileId(0x24BB);
@@ -360,7 +444,7 @@ void MaterialsWindow::Initialize()
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kVendorQuote,
-        GW::UI::UIMessage::kVendorItems, 
+        GW::UI::UIMessage::kVendorItems,
         GW::UI::UIMessage::kVendorWindow
     };
     for (auto message_id : ui_messages) {
@@ -409,7 +493,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_essence, ImVec2(50, 50),
                      ImVec2(4.0f / 64, 9.0f / 64), ImVec2(47.0f / 64, 52.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Essence of Celerity\nFeathers and Dust");
+            ImGui::SetTooltip("Essence of Celerity\n%s and %s", material_names[GW::Constants::MaterialSlot::Feather].string().c_str(), material_names[GW::Constants::MaterialSlot::PileofGlitteringDust].string().c_str());
         }
         ImGui::SameLine();
         float x = ImGui::GetCursorPosX();
@@ -461,7 +545,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_grail, ImVec2(50, 50),
                      ImVec2(3.0f / 64, 11.0f / 64), ImVec2(49.0f / 64, 57.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Grail of Might\nIron and Dust");
+            ImGui::SetTooltip("Grail of Might\n%s and %s", material_names[GW::Constants::MaterialSlot::IronIngot].string().c_str(), material_names[GW::Constants::MaterialSlot::PileofGlitteringDust].string().c_str());
         }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
@@ -504,7 +588,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_armor, ImVec2(50, 50),
                      ImVec2(0, 1.0f / 64), ImVec2(59.0f / 64, 60.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Armor of Salvation\nIron and Bones");
+            ImGui::SetTooltip("Armor of Salvation\n%s and %s", material_names[GW::Constants::MaterialSlot::IronIngot].string().c_str(), material_names[GW::Constants::MaterialSlot::Bone].string().c_str());
         }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
@@ -547,7 +631,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_powerstone, ImVec2(50, 50),
                      ImVec2(0, 6.0f / 64), ImVec2(54.0f / 64, 60.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Powerstone of Courage\nGranite and Dust");
+            ImGui::SetTooltip("Powerstone of Courage\n%s and %s", material_names[GW::Constants::MaterialSlot::GraniteSlab].string().c_str(), material_names[GW::Constants::MaterialSlot::PileofGlitteringDust].string().c_str());
         }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
@@ -589,7 +673,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_resscroll, ImVec2(50, 50),
                      ImVec2(1.0f / 64, 4.0f / 64), ImVec2(56.0f / 64, 59.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Scroll of Resurrection\nFibers and Bones");
+            ImGui::SetTooltip("Scroll of Resurrection\n%s and %s", material_names[GW::Constants::MaterialSlot::PlantFiber].string().c_str(), material_names[GW::Constants::MaterialSlot::Bone].string().c_str());
         }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
@@ -631,43 +715,17 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         constexpr float width2 = 100.0f;
         const float width1 = ImGui::GetContentRegionAvail().x - width2 - 100.0f - ImGui::GetStyle().ItemSpacing.x * 2;
 
-        // === generic materials ===
+        // === Common materials ===
         static int common_idx = 0;
         static int common_qty = 1;
 
-        // 0xA3D 0x10A 0xA35 0x101 0x10A 0x10A 0x22D0 0xBEB5 0xC462 0x64B5 0x1 0x1
-
-        // @Cleanup: Localise this text by using encoded names for the materials used.
-        std::vector<const char*> common_names = {
-                "10 Bolts of Cloth",
-                "10 Bones",
-                "10 Chitin Fragments",
-                "10 Feathers",
-                "10 Granite Slabs",
-                "10 Iron Ingots",
-                "10 Piles of Glittering Dust",
-                "10 Plant Fibers",
-                "10 Scales",
-                "10 Tanned Hide Squares",
-                "10 Wood Planks"
-        };
-
-        std::vector<GW::Constants::MaterialSlot> materials = {
-            GW::Constants::MaterialSlot::BoltofCloth,
-            GW::Constants::MaterialSlot::Bone,
-            GW::Constants::MaterialSlot::ChitinFragment,
-            GW::Constants::MaterialSlot::Feather,
-            GW::Constants::MaterialSlot::GraniteSlab,
-            GW::Constants::MaterialSlot::IronIngot,
-            GW::Constants::MaterialSlot::PileofGlitteringDust,
-            GW::Constants::MaterialSlot::PlantFiber,
-            GW::Constants::MaterialSlot::Scale,
-            GW::Constants::MaterialSlot::TannedHideSquare,
-            GW::Constants::MaterialSlot::WoodPlank
-        };
-        ASSERT(common_names.size() == materials.size());
         ImGui::PushItemWidth(width1);
-        ImGui::Combo("##commoncombo", &common_idx, common_names.data(), common_names.size());
+        ImGui::Combo("##commoncombo", &common_idx,
+            [](void*, int n) {
+                return material_names[common_materials[n]].string().c_str();
+            },
+            nullptr, _countof(common_materials)
+        );
         ImGui::PopItemWidth();
         ImGui::SameLine();
         ImGui::PushItemWidth(width2);
@@ -678,7 +736,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const auto mat = materials[common_idx];
+            const auto mat = common_materials[common_idx];
             const int material_stock = CountItemByMaterialSlot(mat, stock_start, stock_end);
             const int to_buy = common_qty - (use_stock ? material_stock / 10 : 0);
             for (int i = 0; i < to_buy; i++) {
@@ -687,7 +745,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Sell##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const auto mat = materials[common_idx];
+            const auto mat = common_materials[common_idx];
             for (int i = 0; i < common_qty; i++) {
                 EnqueueSell(mat);
             }
@@ -696,64 +754,12 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         // === Rare materials ===
         static int rare_idx = 0;
         static int rare_qty = 1;
-        // @Cleanup: use encoded names for localisation here
-        constexpr std::array rare_names = {
-            "Amber Chunk",
-            "Bolt of Damask",
-            "Bolt of Linen",
-            "Bolt of Silk",
-            "Deldrimor Steel Ingot",
-            "Diamond",
-            "Elonian Leather Square",
-            "Fur Square",
-            "Glob of Ectoplasm",
-            "Jadeite Shard",
-            "Leather Square",
-            "Lump of Charcoal",
-            "Monstrous Claw",
-            "Monstrous Eye",
-            "Monstrous Fang",
-            "Obsidian Shard",
-            "Onyx Gemstone",
-            "Roll of Parchment",
-            "Roll of Vellum",
-            "Ruby",
-            "Sapphire",
-            "Spiritwood Plank",
-            "Steel Ingot",
-            "Tempered Glass Vial",
-            "Vial of Ink"
-        };
-        materials = {
-            GW::Constants::MaterialSlot::AmberChunk,
-            GW::Constants::MaterialSlot::BoltofDamask,
-            GW::Constants::MaterialSlot::BoltofLinen,
-            GW::Constants::MaterialSlot::BoltofSilk,
-            GW::Constants::MaterialSlot::DeldrimorSteelIngot,
-            GW::Constants::MaterialSlot::Diamond,
-            GW::Constants::MaterialSlot::ElonianLeatherSquare,
-            GW::Constants::MaterialSlot::FurSquare,
-            GW::Constants::MaterialSlot::GlobofEctoplasm,
-            GW::Constants::MaterialSlot::JadeiteShard,
-            GW::Constants::MaterialSlot::LeatherSquare,
-            GW::Constants::MaterialSlot::LumpofCharcoal,
-            GW::Constants::MaterialSlot::MonstrousClaw,
-            GW::Constants::MaterialSlot::MonstrousEye,
-            GW::Constants::MaterialSlot::MonstrousFang,
-            GW::Constants::MaterialSlot::ObsidianShard,
-            GW::Constants::MaterialSlot::OnyxGemstone,
-            GW::Constants::MaterialSlot::RollofParchment,
-            GW::Constants::MaterialSlot::RollofVellum,
-            GW::Constants::MaterialSlot::Ruby,
-            GW::Constants::MaterialSlot::Sapphire,
-            GW::Constants::MaterialSlot::SpiritwoodPlank,
-            GW::Constants::MaterialSlot::SteelIngot,
-            GW::Constants::MaterialSlot::TemperedGlassVial,
-            GW::Constants::MaterialSlot::VialofInk
-        };
-        ASSERT(rare_names.size() == materials.size());
+
         ImGui::PushItemWidth(width1);
-        ImGui::Combo("##rarecombo", &rare_idx, rare_names.data(), rare_names.size());
+        ImGui::Combo("##rarecombo", &rare_idx,
+            [](void*, int n) {
+                return material_names[rare_materials[n]].string().c_str();
+            }, nullptr, _countof(rare_materials));
         ImGui::PopItemWidth();
         ImGui::SameLine();
         ImGui::PushItemWidth(width2);
@@ -764,7 +770,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Buy##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const auto mat = materials[rare_idx];
+            const auto mat = rare_materials[rare_idx];
             const int material_stock = CountItemByMaterialSlot(mat, stock_start, stock_end);
             const int to_buy = rare_qty - (use_stock ? material_stock : 0);
             for (int i = 0; i < to_buy; i++) {
@@ -773,7 +779,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Sell##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const auto mat = materials[rare_idx];
+            const auto mat = rare_materials[rare_idx];
             for (int i = 0; i < rare_qty; i++) {
                 EnqueueSell(mat);
             }

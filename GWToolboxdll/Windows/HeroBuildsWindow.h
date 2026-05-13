@@ -43,6 +43,7 @@ class HeroBuildsWindow : public ToolboxWindow {
         bool edit_open = false;
         int mode = 0; // 0=don't change, 1=normal mode, 2=hard mode
         char name[BUFFER_SIZE]{};
+        char group[BUFFER_SIZE]{};
         std::array<HeroBuild, 8> builds{};
         unsigned int ui_id; // should be const but then assignment operator doesn't get created automatically, and I'm too lazy to redefine it, so just don't change this value, okay?
     };

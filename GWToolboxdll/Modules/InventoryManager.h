@@ -78,6 +78,12 @@ public:
     static std::pair<GW::Bag*, uint32_t> GetAvailableInventorySlot(GW::Item* like_item = nullptr);
     static uint16_t RefillUpToQuantity(uint16_t quantity, const std::vector<uint32_t>& model_ids);
     static uint16_t StoreItems(uint16_t quantity, const std::vector<uint32_t>& model_ids);
+    // Withdraw `amount` items matching the encoded name from storage to inventory.
+    // If check_already_withdrawn is true, items already in inventory count toward the amount.
+    static uint16_t WithdrawItemsByName(const wchar_t* name_enc, uint32_t amount, bool check_already_withdrawn = true);
+    // Withdraw `amount` items matching the model id from storage to inventory.
+    // If check_already_withdrawn is true, items already in inventory count toward the amount.
+    static uint16_t WithdrawItemsByModelID(uint32_t model_id, uint32_t amount, bool check_already_withdrawn = true);
     // Find an empty (or partially empty) inventory slot that this item can go into. !entire_stack = Returns slots that are the same item, but won't hold all of them.
     static GW::Item* GetAvailableInventoryStack(GW::Item* like_item, bool entire_stack = false);
     // Checks model info and struct info to make sure item is the same.
