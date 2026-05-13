@@ -1130,7 +1130,7 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         ImGui::Button("", ImVec2(ImGui::GetContentRegionAvail().x, height));
         const bool left_clicked = ImGui::IsItemClicked(0);
         const bool right_clicked = ImGui::IsItemClicked(1);
-        if (right_clicked) {
+        if (right_clicked && lfp->current_map_id != 0) {
             ImGui::OpenPopup("##friend_ctx");
         }
 
