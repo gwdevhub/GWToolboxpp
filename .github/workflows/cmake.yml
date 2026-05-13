@@ -109,9 +109,14 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Install vcpkg
+      shell: bash
+      env:
+        VCPKG_COMMIT: ce613c41372b23b1f51333815feb3edd87ef8a8b
       run: |
         git clone https://github.com/microsoft/vcpkg.git
-        .\vcpkg\bootstrap-vcpkg.bat
+        cd vcpkg
+        git checkout "$VCPKG_COMMIT"
+        ./bootstrap-vcpkg.bat
 
     - name: Install rust
       uses: dtolnay/rust-toolchain@stable
@@ -130,12 +135,13 @@ jobs:
         echo "VCPKG_ROOT=$(Get-Location)\vcpkg" >> $env:GITHUB_ENV
       shell: powershell
 
-    - name: Export GitHub Actions cache environment variables
-      uses: actions/github-script@v7
+    - name: Restore vcpkg binary cache
+      uses: actions/cache@v4
       with:
-        script: |
-          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+        path: ${{ github.workspace }}/vcpkg-bincache
+        key: vcpkg-bin-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg-overlays/**') }}
+        restore-keys: |
+          vcpkg-bin-${{ runner.os }}-
 
     - name: Write Beta version to CMake
       shell: bash
@@ -158,7 +164,7 @@ jobs:
       run: cmake $GITHUB_WORKSPACE --preset=vcpkg
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
-        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+        VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
 
     - name: Build
       working-directory: ${{runner.workspace}}/GWToolboxpp/build
