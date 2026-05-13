@@ -38,13 +38,25 @@ namespace {
     GW::HookEntry OnRecvWhisper_Entry;
     GW::HookEntry OnOpenTemplate_Entry;
 
-    // Each byte of the packed Daybreak bit stream is stored as wchar_t = byte + WCHAR_OFFSET.
-    // Using Latin Extended-A (U+0100-U+01FF) gives 256 values (8 bits/wchar vs base64's 6),
-    // so a full 8-hero teambuild (~83-101 bytes) comfortably fits in one 120-wchar whisper.
-    constexpr wchar_t WCHAR_OFFSET = 0x0100;
+    // Each byte of the Daybreak bit stream is encoded as a single wchar_t using two allowed ranges:
+    //   bytes 0x00–0x7F → U+0100–U+017F (Latin Extended-A)
+    //   bytes 0x80–0xFF → U+0391–U+0410 (Greek / early Cyrillic)
+    // GW whispers only pass through 0x100–0x17F and 0x391–0x45F, so 0x180–0x1FF are blocked.
     // First byte of any Daybreak party loadout stream (header=15, type=1, LSB-first packed):
     // bits 0-3 = 0xF, bits 4-7 = low nibble of type(1) = 0x1 → byte = 0x1F → wchar = U+011F
-    constexpr wchar_t PARTY_LOADOUT_MAGIC_WCHAR = static_cast<wchar_t>(WCHAR_OFFSET + 0x1Fu);
+    constexpr wchar_t PARTY_LOADOUT_MAGIC_WCHAR = 0x011Fu;
+
+    inline wchar_t ByteToWChar(const uint8_t b) {
+        return b < 0x80u
+            ? static_cast<wchar_t>(0x100u + b)
+            : static_cast<wchar_t>(0x391u + (b - 0x80u));
+    }
+
+    inline int WCharToByte(const wchar_t wc) {
+        if (wc >= 0x100 && wc <= 0x17F) return wc - 0x100;
+        if (wc >= 0x391 && wc <= 0x410) return 0x80 + (wc - 0x391);
+        return -1;
+    }
 
     struct BitWriter {
         std::vector<uint8_t> buf;
@@ -273,7 +285,7 @@ bool HeroBuildsWindow::EncodePartyLoadout(const TeamHeroBuild& tbuild, std::wstr
     out.clear();
     out.reserve(bw.buf.size());
     for (const uint8_t byte : bw.buf)
-        out += static_cast<wchar_t>(WCHAR_OFFSET + byte);
+        out += ByteToWChar(byte);
     return !out.empty();
 }
 
@@ -284,8 +296,9 @@ bool HeroBuildsWindow::DecodePartyLoadout(const std::wstring& in, TeamHeroBuild&
     std::vector<uint8_t> bytes;
     bytes.reserve(in.size());
     for (const wchar_t wc : in) {
-        if (wc < WCHAR_OFFSET || wc >= WCHAR_OFFSET + 256) return false;
-        bytes.push_back(static_cast<uint8_t>(wc - WCHAR_OFFSET));
+        const int b = WCharToByte(wc);
+        if (b < 0) return false;
+        bytes.push_back(static_cast<uint8_t>(b));
     }
 
     BitReader br(bytes.data(), static_cast<int>(bytes.size()));
