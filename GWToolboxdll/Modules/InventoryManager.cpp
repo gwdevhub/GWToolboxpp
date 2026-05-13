@@ -1947,6 +1947,61 @@ uint16_t InventoryManager::StoreItems(uint16_t quantity, const std::vector<unsig
     return moved;
 }
 
+uint16_t InventoryManager::WithdrawItemsByModelID(const uint32_t model_id, const uint32_t amount, const bool check_already_withdrawn)
+{
+    const auto is_same_item = [model_id](const Item* cmp) {
+        return cmp && cmp->model_id == model_id;
+    };
+    uint32_t to_move = amount;
+    if (check_already_withdrawn) {
+        const auto in_inventory = count_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Equipment_Pack, is_same_item);
+        if (in_inventory >= to_move) {
+            return 0;
+        }
+        to_move -= in_inventory;
+    }
+    uint16_t moved = 0;
+    const auto storage_items = filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, is_same_item);
+    for (const auto item : storage_items) {
+        const auto this_move = move_item_to_inventory(item, static_cast<uint16_t>(to_move));
+        moved += this_move;
+        to_move -= this_move;
+        if (to_move < 1) {
+            break;
+        }
+    }
+    return moved;
+}
+
+uint16_t InventoryManager::WithdrawItemsByName(const wchar_t* name_enc, const uint32_t amount, const bool check_already_withdrawn)
+{
+    if (!name_enc) {
+        return 0;
+    }
+    const auto is_same_item = [name_enc](const Item* cmp) {
+        return cmp && cmp->name_enc && wcscmp(cmp->name_enc, name_enc) == 0;
+    };
+    uint32_t to_move = amount;
+    if (check_already_withdrawn) {
+        const auto in_inventory = count_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Equipment_Pack, is_same_item);
+        if (in_inventory >= to_move) {
+            return 0;
+        }
+        to_move -= in_inventory;
+    }
+    uint16_t moved = 0;
+    const auto storage_items = filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, is_same_item);
+    for (const auto item : storage_items) {
+        const auto this_move = move_item_to_inventory(item, static_cast<uint16_t>(to_move));
+        moved += this_move;
+        to_move -= this_move;
+        if (to_move < 1) {
+            break;
+        }
+    }
+    return moved;
+}
+
 GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, const bool entire_stack)
 {
     if (!like_item || like_item->GetIsStackable()) {

@@ -692,6 +692,8 @@ namespace {
     bool show_weekly_bonus_pvp_in_window = true;
     bool show_other_searing_dailies = false;
 
+    int nicholas_withdraw_gott_count = 5;
+
     uint32_t subscriptions_lookahead_days = 7;
 
     float text_width = 200.0f;
@@ -873,6 +875,10 @@ namespace {
         ImGui::Separator();
         bool travel = ImGui::Button("Travel to nearest outpost", size);
         bool wiki = ImGui::Button("Guild Wars Wiki", size);
+        const auto withdraw_amount = static_cast<uint32_t>(info->quantity * nicholas_withdraw_gott_count);
+        char withdraw_label[64];
+        snprintf(withdraw_label, sizeof(withdraw_label), "Withdraw for %d GOTTs (%d items)", nicholas_withdraw_gott_count, withdraw_amount);
+        bool withdraw = ImGui::Button(withdraw_label, size);
 
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
@@ -881,6 +887,10 @@ namespace {
         }
         if (wiki) {
             GuiUtils::SearchWiki(info->GetWikiName());
+            return false;
+        }
+        if (withdraw) {
+            InventoryManager::WithdrawItemsByName(info->enc_name.c_str(), withdraw_amount);
             return false;
         }
         return true;
@@ -1470,6 +1480,7 @@ void DailyQuests::DrawSettingsInternal()
     ToolboxWindow::DrawSettingsInternal();
     ImGui::PushItemWidth(200.f * ImGui::FontScale());
     ImGui::InputInt("Show daily quests for the next N days", &daily_quest_window_count);
+    ImGui::InputInt("Number of GOTTs to withdraw items for (Nicholas)", &nicholas_withdraw_gott_count);
     ImGui::PopItemWidth();
     ImGui::Text("Quests to show in Daily Quests window:");
     ImGui::Indent();
@@ -1499,6 +1510,7 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
+    nicholas_withdraw_gott_count = static_cast<int>(ini->GetLongValue(Name(), "nicholas_withdraw_gott_count", nicholas_withdraw_gott_count));
     LOAD_BOOL(show_zaishen_bounty_in_window);
     LOAD_BOOL(show_zaishen_combat_in_window);
     LOAD_BOOL(show_zaishen_missions_in_window);
@@ -1568,6 +1580,7 @@ void DailyQuests::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWindow::SaveSettings(ini);
 
+    ini->SetLongValue(Name(), "nicholas_withdraw_gott_count", static_cast<long>(nicholas_withdraw_gott_count));
     SAVE_BOOL(show_zaishen_bounty_in_window);
     SAVE_BOOL(show_zaishen_combat_in_window);
     SAVE_BOOL(show_zaishen_missions_in_window);
