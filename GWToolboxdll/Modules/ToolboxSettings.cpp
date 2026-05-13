@@ -323,9 +323,17 @@ void ToolboxSettings::DrawFreezeSetting()
     ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide toolbox on loading screens", &hide_on_loading_screen);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show settings button in window title bars", &show_settings_cog);
+    ImGui::Text("Show close button in:");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost##close", &show_close_in_outpost);
+    ImGui::Checkbox("Explorable##close", &show_close_in_explorable);
+    ImGui::Unindent();
+    ImGui::Text("Show cog in:");
     ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost", &show_cog_in_outpost);
+    ImGui::Checkbox("Explorable", &show_cog_in_explorable);
+    ImGui::Unindent();
 }
 
 void ToolboxSettings::LoadSettings(ToolboxIni* ini)
@@ -337,7 +345,15 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(clamp_windows_to_screen);
     LOAD_BOOL(hide_on_loading_screen);
     LOAD_BOOL(send_anonymous_gameplay_info);
-    LOAD_BOOL(show_settings_cog);
+    LOAD_BOOL(show_cog_in_outpost);
+    LOAD_BOOL(show_cog_in_explorable);
+    // Migrate from old hide_close_in_explorable: if it was true, default both show vars to false
+    if (ini->GetBoolValue(Name(), "hide_close_in_explorable", false)) {
+        show_close_in_outpost = false;
+        show_close_in_explorable = false;
+    }
+    LOAD_BOOL(show_close_in_outpost);
+    LOAD_BOOL(show_close_in_explorable);
 
     for (auto& m : optional_modules) {
         m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -354,7 +370,10 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(clamp_windows_to_screen);
     SAVE_BOOL(hide_on_loading_screen);
     SAVE_BOOL(send_anonymous_gameplay_info);
-    SAVE_BOOL(show_settings_cog);
+    SAVE_BOOL(show_cog_in_outpost);
+    SAVE_BOOL(show_cog_in_explorable);
+    SAVE_BOOL(show_close_in_outpost);
+    SAVE_BOOL(show_close_in_explorable);
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -364,11 +383,12 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
 void ToolboxSettings::Draw(IDirect3DDevice9*)
 {
     ImGui::GetStyle().WindowBorderSize = move_all ? 1.0f : 0.0f;
+    is_in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
 }
 
 void ToolboxSettings::DrawSettingsCogButtons()
 {
-    if (!show_settings_cog) return;
+    if (is_in_explorable ? !show_cog_in_explorable : !show_cog_in_outpost) return;
 
     const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
     ToolboxUIElement* hovered_elem = nullptr;
