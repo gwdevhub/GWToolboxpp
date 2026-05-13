@@ -43,7 +43,8 @@ public:
     static inline bool send_anonymous_gameplay_info = true;
     static inline bool show_cog_in_outpost = false;
     static inline bool show_cog_in_explorable = false;
-    static inline bool hide_close_in_explorable = false;
+    static inline bool show_close_in_outpost = true;
+    static inline bool show_close_in_explorable = true;
     static inline bool is_in_explorable = false;
 private:
     // === location stuff ===

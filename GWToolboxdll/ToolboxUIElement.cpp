@@ -86,7 +86,7 @@ bool* ToolboxUIElement::GetVisiblePtr()
 {
     if (!has_closebutton) return &visible;
     if (!show_closebutton) return nullptr;
-    if (ToolboxSettings::hide_close_in_explorable && ToolboxSettings::is_in_explorable) return nullptr;
+    if (ToolboxSettings::is_in_explorable ? !ToolboxSettings::show_close_in_explorable : !ToolboxSettings::show_close_in_outpost) return nullptr;
     return &visible;
 }
 

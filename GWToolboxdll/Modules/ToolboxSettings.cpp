@@ -323,8 +323,11 @@ void ToolboxSettings::DrawFreezeSetting()
     ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide toolbox on loading screens", &hide_on_loading_screen);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide close button in explorable areas", &hide_close_in_explorable);
+    ImGui::Text("Show close button in:");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost##close", &show_close_in_outpost);
+    ImGui::Checkbox("Explorable##close", &show_close_in_explorable);
+    ImGui::Unindent();
     ImGui::Text("Show cog in:");
     ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
     ImGui::Indent();
@@ -344,7 +347,13 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(send_anonymous_gameplay_info);
     LOAD_BOOL(show_cog_in_outpost);
     LOAD_BOOL(show_cog_in_explorable);
-    LOAD_BOOL(hide_close_in_explorable);
+    // Migrate from old hide_close_in_explorable: if it was true, default both show vars to false
+    if (ini->GetBoolValue(Name(), "hide_close_in_explorable", false)) {
+        show_close_in_outpost = false;
+        show_close_in_explorable = false;
+    }
+    LOAD_BOOL(show_close_in_outpost);
+    LOAD_BOOL(show_close_in_explorable);
 
     for (auto& m : optional_modules) {
         m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -363,7 +372,8 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(send_anonymous_gameplay_info);
     SAVE_BOOL(show_cog_in_outpost);
     SAVE_BOOL(show_cog_in_explorable);
-    SAVE_BOOL(hide_close_in_explorable);
+    SAVE_BOOL(show_close_in_outpost);
+    SAVE_BOOL(show_close_in_explorable);
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
