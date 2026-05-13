@@ -265,7 +265,7 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device)
         for (auto i = 0; i <= static_cast<int>(circle_triangles); i += 2) {
             const auto angle = i / static_cast<float>(circle_triangles) * DirectX::XM_2PI;
             vertices.push_back({radius * cos(angle), radius * sin(angle), 0.f, color});
-            vertices.push_back({(radius - diff) * cos(angle), (radius - diff) * sin(angle), 0.f, color});
+            vertices.push_back({(radius + diff) * cos(angle), (radius + diff) * sin(angle), 0.f, color});
         }
     };
 
