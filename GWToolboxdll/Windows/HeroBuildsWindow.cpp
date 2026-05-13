@@ -18,8 +18,6 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <GWCA/Constants/UIMessages.h>
-
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
@@ -261,7 +259,6 @@ bool HeroBuildsWindow::EncodePartyLoadout(const TeamHeroBuild& tbuild, std::wstr
     int party_size = 0;
     for (const auto& b : tbuild.builds) {
         if (b.code[0] || b.hero_id != HeroID::NoHero) party_size++;
-        else break;
     }
     if (!party_size) return false;
 
@@ -332,29 +329,18 @@ void HeroBuildsWindow::OnRecvWhisper(GW::HookStatus* status, GW::UI::UIMessage, 
     const uint32_t build_id = ++self.received_build_counter;
     const std::wstring sender(packet->from);
 
-    // Use the player's skill template as the link code so GW renders it as a clickable link
-    wchar_t player_code_w[BUFFER_SIZE]{};
-    if (tbuild->builds[0].code[0])
-        MultiByteToWideChar(CP_UTF8, 0, tbuild->builds[0].code, -1, player_code_w, BUFFER_SIZE);
-
-    wchar_t id_hex[16];
-    swprintf(id_hex, 16, L"%08X", build_id);
-    std::wstring link = L"[Teambuild:0x";
-    link += id_hex;
-    if (player_code_w[0]) {
-        link += L";";
-        link += player_code_w;
-    }
-    link += L"]";
+    auto link = new wchar_t[128];
+    swprintf(link, 128, L"[Teambuild:0x%08X;xx]", build_id);
 
     self.received_teambuilds[build_id] = ReceivedBuild{sender, std::move(tbuild)};
 
     // Inject a new whisper with the template link so GW renders it in chat
-    GW::GameThread::Enqueue([sender, link]() mutable {
+    GW::GameThread::Enqueue([cpy = sender, link]() mutable {
         GW::UI::UIPacket::kRecvWhisper new_packet{};
-        new_packet.from = sender.data();
-        new_packet.message = link.data();
+        new_packet.from = cpy.data();
+        new_packet.message = link;
         GW::UI::SendUIMessage(GW::UI::UIMessage::kRecvWhisper, &new_packet);
+        delete[] link;
     });
 }
 
