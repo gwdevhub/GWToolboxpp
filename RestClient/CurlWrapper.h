@@ -93,6 +93,9 @@ public:
     void SetUploadFile(FILE* file, size_t size);
     void SetUploadFile(const char* path);
 
+    // Add a part to a multipart/form-data POST. Initializes the mime form on first call.
+    void AddMimePart(const char* name, const char* data, size_t size, const char* filename = nullptr, const char* content_type = nullptr);
+
     // Clear the response data and status flag
     void Clear();
 
@@ -159,6 +162,7 @@ protected:
 
     std::string m_UploadContent;
     UploadBuffer m_UploadBuffer;
+    curl_mime* m_MimeForm;
 
     // Those std::string can be replaced, but keep in mind that the small string optimisation
     // make those free if you don't use them (i.e. override OnHeader & OnContent) and that
