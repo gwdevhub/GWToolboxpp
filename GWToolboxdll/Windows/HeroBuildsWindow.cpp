@@ -256,11 +256,18 @@ unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
 bool HeroBuildsWindow::EncodePartyLoadout(const TeamHeroBuild& tbuild, std::wstring& out)
 {
-    int party_size = 0;
-    for (const auto& b : tbuild.builds) {
-        if (b.code[0] || b.hero_id != HeroID::NoHero) party_size++;
+    // Player slot (index 0) is only included when it has a skill code.
+    // Hero slots (indices 1-7) are included when they have a code or an assigned hero.
+    // We must count and iterate independently to avoid the bug where the loop bound
+    // equals the count of non-empty slots while the loop body always starts at index 0.
+    const bool include_player = tbuild.builds[0].code[0] != '\0';
+    int party_size = include_player ? 1 : 0;
+    for (int i = 1; i < 8; i++) {
+        if (tbuild.builds[i].code[0] || tbuild.builds[i].hero_id != HeroID::NoHero)
+            party_size++;
     }
     if (!party_size) return false;
+    ASSERT(party_size <= 8);
 
     BitWriter bw;
     bw.write(15u, 4); // extended template header
@@ -268,11 +275,20 @@ bool HeroBuildsWindow::EncodePartyLoadout(const TeamHeroBuild& tbuild, std::wstr
     bw.write(1u, 4);  // version = 1
     bw.write(static_cast<uint32_t>(party_size), 4);
 
-    for (int i = 0; i < party_size; i++) {
+    if (include_player) {
+        const auto& build = tbuild.builds[0];
+        bw.write(0u, 2); // member_type = player
+        bw.write(build.behavior, 2);
+        GW::SkillbarMgr::SkillTemplate t{};
+        GW::SkillbarMgr::DecodeSkillTemplate(t, build.code);
+        WriteEmbedded(t, bw);
+    }
+
+    for (int i = 1; i < 8; i++) {
         const auto& build = tbuild.builds[i];
-        const uint32_t member_type = i == 0 ? 0u : 2u; // 0 = player, 2 = hero
-        bw.write(member_type, 2);
-        if (i > 0) bw.write(static_cast<uint32_t>(build.hero_id), 6);
+        if (!build.code[0] && build.hero_id == HeroID::NoHero) continue;
+        bw.write(2u, 2); // member_type = hero
+        bw.write(static_cast<uint32_t>(build.hero_id), 6);
         bw.write(build.behavior, 2);
         GW::SkillbarMgr::SkillTemplate t{};
         if (build.code[0]) GW::SkillbarMgr::DecodeSkillTemplate(t, build.code);
@@ -303,14 +319,32 @@ bool HeroBuildsWindow::DecodePartyLoadout(const std::wstring& in, TeamHeroBuild&
     const int party_size = static_cast<int>(br.read(4));
     if (party_size < 1 || party_size > 8) return false;
 
+    // Route player (member_type=0) to builds[0], heroes (member_type=2) to slots 1-7 in order.
+    // Never index by loop counter i — that's what caused the original bugs.
+    int next_hero_slot = 1;
     for (int i = 0; i < party_size; i++) {
-        auto& build = out.builds[i];
         const uint32_t member_type = br.read(2);
-        if (member_type == 2u) build.hero_id = static_cast<HeroID>(br.read(6));
-        build.behavior = br.read(2);
+        HeroBuild* build = nullptr;
+        if (member_type == 0u) {
+            // Player — always slot 0
+            build = &out.builds[0];
+        }
+        else if (member_type == 2u) {
+            // Hero — next available slot
+            if (next_hero_slot > 7) return false;
+            build = &out.builds[next_hero_slot++];
+            build->hero_id = static_cast<HeroID>(br.read(6));
+        }
+        // Henchman (type=1) or unknown: no hero_id field per spec; build stays null
+
+        const uint32_t behavior = br.read(2);
         GW::SkillbarMgr::SkillTemplate t{};
         if (!ReadEmbedded(br, t)) return false;
-        if (!GW::SkillbarMgr::EncodeSkillTemplate(t, build.code, BUFFER_SIZE)) return false;
+
+        if (build) {
+            build->behavior = behavior;
+            if (!GW::SkillbarMgr::EncodeSkillTemplate(t, build->code, BUFFER_SIZE)) return false;
+        }
     }
     return br.ok;
 }
