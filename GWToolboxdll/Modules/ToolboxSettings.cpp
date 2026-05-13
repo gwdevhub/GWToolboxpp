@@ -324,12 +324,13 @@ void ToolboxSettings::DrawFreezeSetting()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide toolbox on loading screens", &hide_on_loading_screen);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show settings button in window title bars", &show_settings_cog);
-    ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide cog icon in explorable areas", &hide_cog_in_explorable);
-    ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide close button in explorable areas", &hide_close_in_explorable);
+    ImGui::Text("Show cog in:");
+    ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost", &show_cog_in_outpost);
+    ImGui::Checkbox("Explorable", &show_cog_in_explorable);
+    ImGui::Unindent();
 }
 
 void ToolboxSettings::LoadSettings(ToolboxIni* ini)
@@ -341,8 +342,8 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(clamp_windows_to_screen);
     LOAD_BOOL(hide_on_loading_screen);
     LOAD_BOOL(send_anonymous_gameplay_info);
-    LOAD_BOOL(show_settings_cog);
-    LOAD_BOOL(hide_cog_in_explorable);
+    LOAD_BOOL(show_cog_in_outpost);
+    LOAD_BOOL(show_cog_in_explorable);
     LOAD_BOOL(hide_close_in_explorable);
 
     for (auto& m : optional_modules) {
@@ -360,8 +361,8 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(clamp_windows_to_screen);
     SAVE_BOOL(hide_on_loading_screen);
     SAVE_BOOL(send_anonymous_gameplay_info);
-    SAVE_BOOL(show_settings_cog);
-    SAVE_BOOL(hide_cog_in_explorable);
+    SAVE_BOOL(show_cog_in_outpost);
+    SAVE_BOOL(show_cog_in_explorable);
     SAVE_BOOL(hide_close_in_explorable);
 
     for (const auto& m : optional_modules) {
@@ -377,8 +378,7 @@ void ToolboxSettings::Draw(IDirect3DDevice9*)
 
 void ToolboxSettings::DrawSettingsCogButtons()
 {
-    if (!show_settings_cog) return;
-    if (hide_cog_in_explorable && is_in_explorable) return;
+    if (is_in_explorable ? !show_cog_in_explorable : !show_cog_in_outpost) return;
 
     const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
     ToolboxUIElement* hovered_elem = nullptr;

@@ -41,8 +41,8 @@ public:
     static inline bool clamp_windows_to_screen = false;
     static inline bool hide_on_loading_screen = false;
     static inline bool send_anonymous_gameplay_info = true;
-    static inline bool show_settings_cog = false;
-    static inline bool hide_cog_in_explorable = false;
+    static inline bool show_cog_in_outpost = false;
+    static inline bool show_cog_in_explorable = false;
     static inline bool hide_close_in_explorable = false;
     static inline bool is_in_explorable = false;
 private:
