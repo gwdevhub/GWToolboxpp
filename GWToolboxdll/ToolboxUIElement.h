@@ -50,10 +50,7 @@ public:
     bool show_breakout_button = false;
     bool lock_breakout_button = false;
 
-    bool* GetVisiblePtr()
-    {
-        return has_closebutton && !show_closebutton ? nullptr : &visible;
-    }
+    bool* GetVisiblePtr();
 
     bool has_titlebar = false;
     bool show_titlebar = true;

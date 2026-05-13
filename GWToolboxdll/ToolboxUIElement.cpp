@@ -82,6 +82,14 @@ void ToolboxUIElement::UpdateLocationAgainstSnappedFrame()
     last_frame_pos = frame_pos;
 }
 
+bool* ToolboxUIElement::GetVisiblePtr()
+{
+    if (!has_closebutton) return &visible;
+    if (!show_closebutton) return nullptr;
+    if (ToolboxSettings::hide_close_in_explorable && ToolboxSettings::is_in_explorable) return nullptr;
+    return &visible;
+}
+
 const char* ToolboxUIElement::UIName() const
 {
     if (Icon()) {

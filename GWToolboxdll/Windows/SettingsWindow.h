@@ -38,5 +38,6 @@ public:
 private:
     std::map<std::string, bool> drawn_settings{};
     bool hide_when_entering_explorable = false;
+    bool pending_uncollapse = false;
     std::string pending_navigate_to;
 };
