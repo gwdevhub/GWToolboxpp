@@ -210,6 +210,9 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             }
             const float btn_width = 60.0f * ImGui::FontScale();
             const float& item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+
+            // Collect filtered builds, preserving order
+            std::vector<TeamHeroBuild*> filtered;
             for (TeamHeroBuild& tbuild : teambuilds) {
                 if (filter_by_profession && player_profession != GW::Constants::Profession::None) {
                     const char* player_code = tbuild.builds[0].code;
@@ -220,6 +223,22 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                         }
                     }
                 }
+                filtered.push_back(&tbuild);
+            }
+
+            // Build ordered group list
+            std::vector<std::string> group_order;
+            std::unordered_map<std::string, std::vector<TeamHeroBuild*>> by_group;
+            for (TeamHeroBuild* tbuild : filtered) {
+                const std::string g(tbuild->group);
+                if (!by_group.contains(g)) {
+                    by_group[g] = {};
+                    group_order.push_back(g);
+                }
+                by_group[g].push_back(tbuild);
+            }
+
+            auto draw_teambuild_row = [&](TeamHeroBuild& tbuild) {
                 ImGui::PushID(static_cast<int>(tbuild.ui_id));
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
                 if (ImGui::Button(tbuild.name, ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width, 0))) {
@@ -258,6 +277,27 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     ImGui::SetTooltip(ImGui::GetIO().KeyCtrl ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
                 }
                 ImGui::PopID();
+            };
+
+            for (const auto& group_name : group_order) {
+                auto& group_builds = by_group[group_name];
+                if (group_name.empty()) {
+                    for (TeamHeroBuild* tbuild : group_builds) {
+                        draw_teambuild_row(*tbuild);
+                    }
+                }
+                else {
+                    ImGui::PushID(group_name.c_str());
+                    const bool open = ImGui::CollapsingHeader(group_name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+                    if (open) {
+                        ImGui::Indent();
+                        for (TeamHeroBuild* tbuild : group_builds) {
+                            draw_teambuild_row(*tbuild);
+                        }
+                        ImGui::Unindent();
+                    }
+                    ImGui::PopID();
+                }
             }
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 auto tb = TeamHeroBuild(std::format("My New Hero Teambuild, {}", TextUtils::GetFormattedDateTime()));
@@ -315,6 +355,10 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
         if (ImGui::Begin(winname, &tbuild.edit_open)) {
             constexpr size_t name_buffer_size = 128;
             builds_changed |= ImGui::InputText("Hero Build Name", tbuild.name, name_buffer_size);
+            builds_changed |= ImGui::InputText("Group", tbuild.group, name_buffer_size);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Assign to a group. Builds sharing a group name are shown together under a collapsible header.");
+            }
             const float btn_width = 50.0f * ImGui::FontScale();
             const float icon_btn_width = btn_width / 1.75f;
             const float panel_width = btn_width + 12.0f;
@@ -847,6 +891,7 @@ void HeroBuildsWindow::LoadFromFile()
 
         TeamHeroBuild tb(inifile->GetValue(section, "buildname", ""));
         tb.mode = inifile->GetLongValue(section, "mode", false);
+        std::snprintf(tb.group, sizeof(tb.group), "%s", inifile->GetValue(section, "group", ""));
 
         for (auto i = 0; i < 8; i++) {
             constexpr size_t buffer_size = 16;
@@ -907,6 +952,8 @@ void HeroBuildsWindow::SaveToFile() const
             snprintf(section, buffer_size, "builds%03d", i);
             inifile->SetValue(section, "buildname", tbuild.name);
             inifile->SetLongValue(section, "mode", tbuild.mode);
+            if (tbuild.group[0])
+                inifile->SetValue(section, "group", tbuild.group);
             for (size_t j = 0; j < tbuild.builds.size(); ++j) {
                 const HeroBuild& build = tbuild.builds[j];
 
