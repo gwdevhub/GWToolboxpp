@@ -56,71 +56,79 @@ namespace {
 
     clock_t last_transaction = 0;
 
-    struct MaterialInfo {
-        GW::Constants::MaterialSlot slot;
-        const wchar_t* enc_name;
-    };
-
-    static const MaterialInfo common_materials[] = {
-        {GW::Constants::MaterialSlot::BoltofCloth,          GW::EncStrings::BoltofCloth},
-        {GW::Constants::MaterialSlot::Bone,                 GW::EncStrings::Bone},
-        {GW::Constants::MaterialSlot::ChitinFragment,       GW::EncStrings::ChitinFragment},
-        {GW::Constants::MaterialSlot::Feather,              GW::EncStrings::Feather},
-        {GW::Constants::MaterialSlot::GraniteSlab,          GW::EncStrings::GraniteSlab},
-        {GW::Constants::MaterialSlot::IronIngot,            GW::EncStrings::IronIngot},
+    const std::unordered_map<GW::Constants::MaterialSlot, const wchar_t*> material_enc_strings = {
+        {GW::Constants::MaterialSlot::BoltofCloth, GW::EncStrings::BoltofCloth},
+        {GW::Constants::MaterialSlot::Bone, GW::EncStrings::Bone},
+        {GW::Constants::MaterialSlot::ChitinFragment, GW::EncStrings::ChitinFragment},
+        {GW::Constants::MaterialSlot::Feather, GW::EncStrings::Feather},
+        {GW::Constants::MaterialSlot::GraniteSlab, GW::EncStrings::GraniteSlab},
+        {GW::Constants::MaterialSlot::IronIngot, GW::EncStrings::IronIngot},
         {GW::Constants::MaterialSlot::PileofGlitteringDust, GW::EncStrings::PileofGlitteringDust},
-        {GW::Constants::MaterialSlot::PlantFiber,           GW::EncStrings::PlantFiber},
-        {GW::Constants::MaterialSlot::Scale,                GW::EncStrings::Scale},
-        {GW::Constants::MaterialSlot::TannedHideSquare,     GW::EncStrings::TannedHideSquare},
-        {GW::Constants::MaterialSlot::WoodPlank,            GW::EncStrings::WoodPlank}
+        {GW::Constants::MaterialSlot::PlantFiber, GW::EncStrings::PlantFiber},
+        {GW::Constants::MaterialSlot::Scale, GW::EncStrings::Scale},
+        {GW::Constants::MaterialSlot::TannedHideSquare, GW::EncStrings::TannedHideSquare},
+        {GW::Constants::MaterialSlot::WoodPlank, GW::EncStrings::WoodPlank},
+        {GW::Constants::MaterialSlot::AmberChunk, GW::EncStrings::AmberChunk},
+        {GW::Constants::MaterialSlot::BoltofDamask, GW::EncStrings::BoltofDamask},
+        {GW::Constants::MaterialSlot::BoltofLinen, GW::EncStrings::BoltofLinen},
+        {GW::Constants::MaterialSlot::BoltofSilk, GW::EncStrings::BoltofSilk},
+        {GW::Constants::MaterialSlot::DeldrimorSteelIngot, GW::EncStrings::DeldrimorSteelIngot},
+        {GW::Constants::MaterialSlot::Diamond, GW::EncStrings::Diamond},
+        {GW::Constants::MaterialSlot::ElonianLeatherSquare, GW::EncStrings::ElonianLeatherSquare},
+        {GW::Constants::MaterialSlot::FurSquare, GW::EncStrings::FurSquare},
+        {GW::Constants::MaterialSlot::GlobofEctoplasm, GW::EncStrings::GlobofEctoplasm},
+        {GW::Constants::MaterialSlot::JadeiteShard, GW::EncStrings::JadeiteShard},
+        {GW::Constants::MaterialSlot::LeatherSquare, GW::EncStrings::LeatherSquare},
+        {GW::Constants::MaterialSlot::LumpofCharcoal, GW::EncStrings::LumpofCharcoal},
+        {GW::Constants::MaterialSlot::MonstrousClaw, GW::EncStrings::MonstrousClaw},
+        {GW::Constants::MaterialSlot::MonstrousEye, GW::EncStrings::MonstrousEye},
+        {GW::Constants::MaterialSlot::MonstrousFang, GW::EncStrings::MonstrousFang},
+        {GW::Constants::MaterialSlot::ObsidianShard, GW::EncStrings::ObsidianShard},
+        {GW::Constants::MaterialSlot::OnyxGemstone, GW::EncStrings::OnyxGemstone},
+        {GW::Constants::MaterialSlot::RollofParchment, GW::EncStrings::RollofParchment},
+        {GW::Constants::MaterialSlot::RollofVellum, GW::EncStrings::RollofVellum},
+        {GW::Constants::MaterialSlot::Ruby, GW::EncStrings::Ruby},
+        {GW::Constants::MaterialSlot::Sapphire, GW::EncStrings::Sapphire},
+        {GW::Constants::MaterialSlot::SpiritwoodPlank, GW::EncStrings::SpiritwoodPlank},
+        {GW::Constants::MaterialSlot::SteelIngot, GW::EncStrings::SteelIngot},
+        {GW::Constants::MaterialSlot::TemperedGlassVial, GW::EncStrings::TemperedGlassVial},
+        {GW::Constants::MaterialSlot::VialofInk, GW::EncStrings::VialofInk},
     };
+    std::unordered_map<GW::Constants::MaterialSlot, GuiUtils::EncString> material_names;
 
-    static const MaterialInfo rare_materials[] = {
-        {GW::Constants::MaterialSlot::AmberChunk,            GW::EncStrings::AmberChunk},
-        {GW::Constants::MaterialSlot::BoltofDamask,          GW::EncStrings::BoltofDamask},
-        {GW::Constants::MaterialSlot::BoltofLinen,           GW::EncStrings::BoltofLinen},
-        {GW::Constants::MaterialSlot::BoltofSilk,            GW::EncStrings::BoltofSilk},
-        {GW::Constants::MaterialSlot::DeldrimorSteelIngot,   GW::EncStrings::DeldrimorSteelIngot},
-        {GW::Constants::MaterialSlot::Diamond,               GW::EncStrings::Diamond},
-        {GW::Constants::MaterialSlot::ElonianLeatherSquare,  GW::EncStrings::ElonianLeatherSquare},
-        {GW::Constants::MaterialSlot::FurSquare,             GW::EncStrings::FurSquare},
-        {GW::Constants::MaterialSlot::GlobofEctoplasm,       GW::EncStrings::GlobofEctoplasm},
-        {GW::Constants::MaterialSlot::JadeiteShard,          GW::EncStrings::JadeiteShard},
-        {GW::Constants::MaterialSlot::LeatherSquare,         GW::EncStrings::LeatherSquare},
-        {GW::Constants::MaterialSlot::LumpofCharcoal,        GW::EncStrings::LumpofCharcoal},
-        {GW::Constants::MaterialSlot::MonstrousClaw,         GW::EncStrings::MonstrousClaw},
-        {GW::Constants::MaterialSlot::MonstrousEye,          GW::EncStrings::MonstrousEye},
-        {GW::Constants::MaterialSlot::MonstrousFang,         GW::EncStrings::MonstrousFang},
-        {GW::Constants::MaterialSlot::ObsidianShard,         GW::EncStrings::ObsidianShard},
-        {GW::Constants::MaterialSlot::OnyxGemstone,          GW::EncStrings::OnyxGemstone},
-        {GW::Constants::MaterialSlot::RollofParchment,       GW::EncStrings::RollofParchment},
-        {GW::Constants::MaterialSlot::RollofVellum,          GW::EncStrings::RollofVellum},
-        {GW::Constants::MaterialSlot::Ruby,                  GW::EncStrings::Ruby},
-        {GW::Constants::MaterialSlot::Sapphire,              GW::EncStrings::Sapphire},
-        {GW::Constants::MaterialSlot::SpiritwoodPlank,       GW::EncStrings::SpiritwoodPlank},
-        {GW::Constants::MaterialSlot::SteelIngot,            GW::EncStrings::SteelIngot},
-        {GW::Constants::MaterialSlot::TemperedGlassVial,     GW::EncStrings::TemperedGlassVial},
-        {GW::Constants::MaterialSlot::VialofInk,             GW::EncStrings::VialofInk}
+    const GW::Constants::MaterialSlot common_materials[] = {
+        GW::Constants::MaterialSlot::Bone,       GW::Constants::MaterialSlot::IronIngot,      GW::Constants::MaterialSlot::TannedHideSquare,
+        GW::Constants::MaterialSlot::Scale,      GW::Constants::MaterialSlot::ChitinFragment, GW::Constants::MaterialSlot::BoltofCloth,
+        GW::Constants::MaterialSlot::WoodPlank,  GW::Constants::MaterialSlot::GraniteSlab,    GW::Constants::MaterialSlot::PileofGlitteringDust,
+        GW::Constants::MaterialSlot::PlantFiber, GW::Constants::MaterialSlot::Feather,
     };
-
-    std::unordered_map<const wchar_t*, std::unique_ptr<GuiUtils::EncString>> material_enc_strings;
-    std::unordered_map<const wchar_t*, std::string> common_display_name_cache;
-
-    GuiUtils::EncString& GetMaterialEncString(const wchar_t* enc_name) {
-        auto [it, inserted] = material_enc_strings.emplace(enc_name, nullptr);
-        if (inserted) it->second = std::make_unique<GuiUtils::EncString>(enc_name);
-        return *it->second;
-    }
-
-    // Returns "10 <name>" for common materials, cached once decoded.
-    const char* GetCommonMaterialDisplayName(const wchar_t* enc_name) {
-        auto& display = common_display_name_cache[enc_name];
-        if (display.empty()) {
-            const auto& name = GetMaterialEncString(enc_name).string();
-            if (!name.empty()) display = "10 " + name;
-        }
-        return display.c_str();
-    }
+    const GW::Constants::MaterialSlot rare_materials[] = {
+        GW::Constants::MaterialSlot::FurSquare,
+        GW::Constants::MaterialSlot::BoltofLinen,
+        GW::Constants::MaterialSlot::BoltofDamask,
+        GW::Constants::MaterialSlot::BoltofSilk,
+        GW::Constants::MaterialSlot::GlobofEctoplasm,
+        GW::Constants::MaterialSlot::SteelIngot,
+        GW::Constants::MaterialSlot::DeldrimorSteelIngot,
+        GW::Constants::MaterialSlot::MonstrousClaw,
+        GW::Constants::MaterialSlot::MonstrousEye,
+        GW::Constants::MaterialSlot::MonstrousFang,
+        GW::Constants::MaterialSlot::Ruby,
+        GW::Constants::MaterialSlot::Sapphire,
+        GW::Constants::MaterialSlot::Diamond,
+        GW::Constants::MaterialSlot::OnyxGemstone,
+        GW::Constants::MaterialSlot::LumpofCharcoal,
+        GW::Constants::MaterialSlot::ObsidianShard,
+        GW::Constants::MaterialSlot::TemperedGlassVial,
+        GW::Constants::MaterialSlot::LeatherSquare,
+        GW::Constants::MaterialSlot::ElonianLeatherSquare,
+        GW::Constants::MaterialSlot::VialofInk,
+        GW::Constants::MaterialSlot::RollofParchment,
+        GW::Constants::MaterialSlot::RollofVellum,
+        GW::Constants::MaterialSlot::SpiritwoodPlank,
+        GW::Constants::MaterialSlot::AmberChunk,
+        GW::Constants::MaterialSlot::JadeiteShard,
+    };
 
     uint32_t CountItemByMaterialSlot(GW::Constants::MaterialSlot material_slot, GW::Constants::Bag bag_start = GW::Constants::Bag::Backpack, GW::Constants::Bag bag_end = GW::Constants::Bag::Bag_2) {
         uint32_t count = 0;
@@ -413,6 +421,16 @@ void MaterialsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
+    if (material_names.empty()) {
+        material_names.reserve(material_enc_strings.size());
+        for (const auto& [slot, enc] : material_enc_strings) {
+            material_names.emplace(slot, enc); // EncString(const wchar_t*) — constructs in-place
+        }
+        for (auto& m : material_names) {
+            m.second.string();
+        }
+    }
+
     // @Cleanup: these need to be GW::Constants::ModelFileID insted of hard coded here
     tex_essence = GwDatTextureModule::LoadTextureFromFileId(0x458A7);
     tex_grail = GwDatTextureModule::LoadTextureFromFileId(0x24BB);
@@ -440,8 +458,6 @@ void MaterialsWindow::Terminate()
     ToolboxWindow::Terminate();
     Cancel();
     GW::UI::RemoveUIMessageCallback(&PostUIMessage_Entry);
-    material_enc_strings.clear();
-    common_display_name_cache.clear();
 }
 
 void MaterialsWindow::LoadSettings(ToolboxIni* ini)
@@ -477,9 +493,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_essence, ImVec2(50, 50),
                      ImVec2(4.0f / 64, 9.0f / 64), ImVec2(47.0f / 64, 52.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Essence of Celerity\n%s and %s",
-                GetMaterialEncString(GW::EncStrings::Feather).string().c_str(),
-                GetMaterialEncString(GW::EncStrings::PileofGlitteringDust).string().c_str());
+            ImGui::SetTooltip("Essence of Celerity\n%s and %s", material_names[GW::Constants::MaterialSlot::Feather].string().c_str(), material_names[GW::Constants::MaterialSlot::PileofGlitteringDust].string().c_str());
         }
         ImGui::SameLine();
         float x = ImGui::GetCursorPosX();
@@ -531,9 +545,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_grail, ImVec2(50, 50),
                      ImVec2(3.0f / 64, 11.0f / 64), ImVec2(49.0f / 64, 57.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Grail of Might\n%s and %s",
-                GetMaterialEncString(GW::EncStrings::IronIngot).string().c_str(),
-                GetMaterialEncString(GW::EncStrings::PileofGlitteringDust).string().c_str());
+            ImGui::SetTooltip("Grail of Might\n%s and %s", material_names[GW::Constants::MaterialSlot::IronIngot].string().c_str(), material_names[GW::Constants::MaterialSlot::PileofGlitteringDust].string().c_str());
         }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
@@ -576,9 +588,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_armor, ImVec2(50, 50),
                      ImVec2(0, 1.0f / 64), ImVec2(59.0f / 64, 60.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Armor of Salvation\n%s and %s",
-                GetMaterialEncString(GW::EncStrings::IronIngot).string().c_str(),
-                GetMaterialEncString(GW::EncStrings::Bone).string().c_str());
+            ImGui::SetTooltip("Armor of Salvation\n%s and %s", material_names[GW::Constants::MaterialSlot::IronIngot].string().c_str(), material_names[GW::Constants::MaterialSlot::Bone].string().c_str());
         }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
@@ -621,9 +631,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_powerstone, ImVec2(50, 50),
                      ImVec2(0, 6.0f / 64), ImVec2(54.0f / 64, 60.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Powerstone of Courage\n%s and %s",
-                GetMaterialEncString(GW::EncStrings::GraniteSlab).string().c_str(),
-                GetMaterialEncString(GW::EncStrings::PileofGlitteringDust).string().c_str());
+            ImGui::SetTooltip("Powerstone of Courage\n%s and %s", material_names[GW::Constants::MaterialSlot::GraniteSlab].string().c_str(), material_names[GW::Constants::MaterialSlot::PileofGlitteringDust].string().c_str());
         }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
@@ -665,9 +673,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         ImGui::Image(*tex_resscroll, ImVec2(50, 50),
                      ImVec2(1.0f / 64, 4.0f / 64), ImVec2(56.0f / 64, 59.0f / 64));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Scroll of Resurrection\n%s and %s",
-                GetMaterialEncString(GW::EncStrings::PlantFiber).string().c_str(),
-                GetMaterialEncString(GW::EncStrings::Bone).string().c_str());
+            ImGui::SetTooltip("Scroll of Resurrection\n%s and %s", material_names[GW::Constants::MaterialSlot::PlantFiber].string().c_str(), material_names[GW::Constants::MaterialSlot::Bone].string().c_str());
         }
         ImGui::SameLine();
         x = ImGui::GetCursorPosX();
@@ -715,10 +721,11 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
         ImGui::PushItemWidth(width1);
         ImGui::Combo("##commoncombo", &common_idx,
-            [](void*, int n, const char** out_text) -> bool {
-                *out_text = GetCommonMaterialDisplayName(common_materials[n].enc_name);
-                return true;
-            }, nullptr, _countof(common_materials));
+            [](void*, int n) {
+                return material_names[common_materials[n]].string().c_str();
+            },
+            nullptr, _countof(common_materials)
+        );
         ImGui::PopItemWidth();
         ImGui::SameLine();
         ImGui::PushItemWidth(width2);
@@ -729,7 +736,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const auto mat = common_materials[common_idx].slot;
+            const auto mat = common_materials[common_idx];
             const int material_stock = CountItemByMaterialSlot(mat, stock_start, stock_end);
             const int to_buy = common_qty - (use_stock ? material_stock / 10 : 0);
             for (int i = 0; i < to_buy; i++) {
@@ -738,7 +745,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Sell##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const auto mat = common_materials[common_idx].slot;
+            const auto mat = common_materials[common_idx];
             for (int i = 0; i < common_qty; i++) {
                 EnqueueSell(mat);
             }
@@ -750,9 +757,8 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
         ImGui::PushItemWidth(width1);
         ImGui::Combo("##rarecombo", &rare_idx,
-            [](void*, int n, const char** out_text) -> bool {
-                *out_text = GetMaterialEncString(rare_materials[n].enc_name).string().c_str();
-                return true;
+            [](void*, int n) {
+                return material_names[rare_materials[n]].string().c_str();
             }, nullptr, _countof(rare_materials));
         ImGui::PopItemWidth();
         ImGui::SameLine();
@@ -764,7 +770,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Buy##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const auto mat = rare_materials[rare_idx].slot;
+            const auto mat = rare_materials[rare_idx];
             const int material_stock = CountItemByMaterialSlot(mat, stock_start, stock_end);
             const int to_buy = rare_qty - (use_stock ? material_stock : 0);
             for (int i = 0; i < to_buy; i++) {
@@ -773,7 +779,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         }
         ImGui::SameLine();
         if (ImGui::Button("Sell##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
-            const auto mat = rare_materials[rare_idx].slot;
+            const auto mat = rare_materials[rare_idx];
             for (int i = 0; i < rare_qty; i++) {
                 EnqueueSell(mat);
             }

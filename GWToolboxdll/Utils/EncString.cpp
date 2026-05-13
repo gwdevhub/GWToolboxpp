@@ -132,3 +132,50 @@ std::string& EncString::string()
     }
     return decoded_s;
 }
+
+EncString::EncString(EncString&& other) noexcept
+    : encoded_ws(std::move(other.encoded_ws)), decoded_ws(std::move(other.decoded_ws)), decoded_s(std::move(other.decoded_s)), decoding(other.decoding), decoded(other.decoded), sanitised(other.sanitised), sanitise_cb(std::move(other.sanitise_cb)),
+      language_id(other.language_id), pending_ctx_(other.pending_ctx_)
+{
+    // Retarget the in-flight decode context to our new address
+    if (pending_ctx_) {
+        pending_ctx_->owner = this;
+    }
+
+    // Leave source in a safe inert state — destructor must not double-abandon
+    other.pending_ctx_ = nullptr;
+    other.decoding = false;
+    other.decoded = false;
+    other.sanitised = false;
+}
+
+EncString& EncString::operator=(EncString&& other) noexcept
+{
+    if (this == &other) {
+        return *this;
+    }
+
+    // Drop any in-flight decode on our current state before overwriting
+    AbandonDecode();
+
+    encoded_ws = std::move(other.encoded_ws);
+    decoded_ws = std::move(other.decoded_ws);
+    decoded_s = std::move(other.decoded_s);
+    decoding = other.decoding;
+    decoded = other.decoded;
+    sanitised = other.sanitised;
+    sanitise_cb = std::move(other.sanitise_cb);
+    language_id = other.language_id;
+    pending_ctx_ = other.pending_ctx_;
+
+    if (pending_ctx_) {
+        pending_ctx_->owner = this;
+    }
+
+    other.pending_ctx_ = nullptr;
+    other.decoding = false;
+    other.decoded = false;
+    other.sanitised = false;
+
+    return *this;
+}
