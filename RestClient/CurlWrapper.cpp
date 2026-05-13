@@ -72,6 +72,7 @@ CurlEasy::CurlEasy()
     : m_Headers(nullptr)
     , m_File(nullptr)
     , m_UploadFile(nullptr)
+    , m_MimeForm(nullptr)
     , m_Status(ResponseStatus::None)
     , m_StatusCode(0)
     , m_MultiHandle(nullptr)
@@ -316,6 +317,22 @@ void CurlEasy::SetUploadFile(const char* path)
     }
 }
 
+void CurlEasy::AddMimePart(const char* name, const char* data, const size_t size, const char* filename, const char* content_type)
+{
+    if (!m_MimeForm) {
+        m_MimeForm = curl_mime_init(m_Handle);
+    }
+    curl_mimepart* part = curl_mime_addpart(m_MimeForm);
+    curl_mime_name(part, name);
+    curl_mime_data(part, data, size);
+    if (filename) {
+        curl_mime_filename(part, filename);
+    }
+    if (content_type) {
+        curl_mime_type(part, content_type);
+    }
+}
+
 void CurlEasy::Clear()
 {
     m_Header.clear();
@@ -341,6 +358,11 @@ void CurlEasy::Reset()
     m_UploadBuffer.size = 0;
     m_UploadBuffer.rpos = 0;
 
+    if (m_MimeForm) {
+        curl_mime_free(m_MimeForm);
+        m_MimeForm = nullptr;
+    }
+
     if (m_Headers) {
         curl_slist_free_all(m_Headers);
         m_Headers = nullptr;
@@ -360,6 +382,9 @@ bool CurlEasy::Perform()
 {
     Clear();
     CHECK_CURL_EASY_SETOPT(this, CURLOPT_HTTPHEADER, m_Headers);
+    if (m_MimeForm) {
+        CHECK_CURL_EASY_SETOPT(this, CURLOPT_MIMEPOST, m_MimeForm);
+    }
     const CURLcode status = curl_easy_perform(m_Handle);
     UpdateStatus(status);
     OnPerformed();
@@ -511,6 +536,9 @@ void CurlMulti::AddHandle(CurlEasy* easy) const
     assert(!easy->m_MultiHandle);
 
     CHECK_CURL_EASY_SETOPT(easy, CURLOPT_HTTPHEADER, easy->m_Headers);
+    if (easy->m_MimeForm) {
+        CHECK_CURL_EASY_SETOPT(easy, CURLOPT_MIMEPOST, easy->m_MimeForm);
+    }
     const CURLMcode code = curl_multi_add_handle(m_Handle, easy->m_Handle);
     assert(code == CURLM_OK);
     if (code == CURLM_OK) {
