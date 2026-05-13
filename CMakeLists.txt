@@ -27,7 +27,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 add_compile_definitions(
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
-	"WOLFSSL_NO_OPTIONS_H"
 
     "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""
     "GWTOOLBOXEXE_MODULE_VERSION=${GWTOOLBOXEXE_MODULE_VERSION}"
@@ -61,7 +60,6 @@ find_library(GAME_SDK discord_game_sdk)
 find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
 find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
-find_package(wolfssl CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)
