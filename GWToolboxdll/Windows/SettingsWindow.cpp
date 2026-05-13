@@ -17,6 +17,7 @@
 void SettingsWindow::NavigateToSection(const char* section)
 {
     visible = true;
+    pending_uncollapse = true;
     pending_navigate_to = section;
 }
 
@@ -46,6 +47,10 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
 
     if (!visible) {
         return;
+    }
+    if (pending_uncollapse) {
+        ImGui::SetNextWindowCollapsed(false, ImGuiCond_Always);
+        pending_uncollapse = false;
     }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(768, 768), ImGuiCond_FirstUseEver);
@@ -93,8 +98,8 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
 
         ToolboxSettings::DrawFreezeSetting();
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Send anonymous gameplay stats", &ToolboxSettings::send_anonymous_gameplay_info);
-        ImGui::ShowHelp("Some features of toolbox allow you to contribute to the community\nby sending in-game data to remote websites.\
+        ImGui::CheckboxWithHelp("Send anonymous gameplay stats", &ToolboxSettings::send_anonymous_gameplay_info,
+            "Some features of toolbox allow you to contribute to the community\nby sending in-game data to remote websites.\
         \n\nFeatures that use this info:\
         \n\t- Sending outpost party information to https://party.gwtoolbox.com");
         ImGui::NextSpacedElement();
@@ -270,6 +275,8 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     const bool should_navigate = !pending_navigate_to.empty() && pending_navigate_to == section;
     if (should_navigate) {
         ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+    } else if (!pending_navigate_to.empty()) {
+        ImGui::SetNextItemOpen(false, ImGuiCond_Always);
     }
     const bool is_showing = ImGui::CollapsingHeader(std::format("##{}",section).c_str(), ImGuiTreeNodeFlags_AllowOverlap);
     ImGui::SameLine(header_text_offset_x);
@@ -280,7 +287,6 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     ImGui::TextUnformatted(section);
     if (should_navigate) {
         ImGui::SetScrollHereY(0.0f);
-        pending_navigate_to.clear();
     }
 
     ImGui::PushID(section);

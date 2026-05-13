@@ -271,8 +271,7 @@ void FavorTracker::DrawSettingsInternal()
 
     ImGui::Separator();
 
-    ImGui::Checkbox("Enable Favor Tracking", &enabled);
-    ImGui::ShowHelp("Periodically runs /favor to check Favor of the Gods status. Automated queries are hidden from chat.");
+    ImGui::CheckboxWithHelp("Enable Favor Tracking", &enabled, "Periodically runs /favor to check Favor of the Gods status. Automated queries are hidden from chat.");
 
     ImGui::Checkbox("Play sound on favor activation", &play_sound_on_favor);
     if (play_sound_on_favor) {

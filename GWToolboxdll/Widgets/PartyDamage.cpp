@@ -838,8 +838,7 @@ void PartyDamage::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Print Player Damage by Ctrl + Click", &print_by_click);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Bars towards the left", &bars_left);
-    ImGui::ShowHelp("If unchecked, they will expand to the right");
+    ImGui::CheckboxWithHelp("Bars towards the left", &bars_left, "If unchecked, they will expand to the right");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show damage", &show_damage);
     ImGui::NextSpacedElement();
@@ -847,8 +846,7 @@ void PartyDamage::DrawSettingsInternal()
 
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show on top of health bars", &overlay_party_window);
-    ImGui::ShowHelp("Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("Show on top of health bars", &overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
     ImGui::DragInt("Party window offset", &user_offset);

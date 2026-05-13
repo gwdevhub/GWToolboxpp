@@ -1029,11 +1029,9 @@ void Minimap::DrawSettingsInternal()
         pending_refresh_quest_marker = true;
     }
     ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
-    ImGui::Checkbox("Draw all quest markers", &render_all_quests);
-    ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
+    ImGui::CheckboxWithHelp("Draw all quest markers", &render_all_quests, "Draw quest markers for all quests in your quest log, not just the active quest");
 
-    ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
-    ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
+    ImGui::CheckboxWithHelp("Hide GW compass drawings", &hide_compass_drawings, "Drawings made by other players will be visible on the minimap, but not the compass");
     if (ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws)) {
         GW::GameThread::Enqueue(OverrideCompassVisibility);
     }
@@ -1101,8 +1099,7 @@ void Minimap::DrawSettingsInternal()
     custom_renderer.DrawSettings();
     if (ImGui::TreeNodeEx("Hero flagging", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
-        ImGui::Checkbox("Attach to minimap", &hero_flag_window_attach);
-        ImGui::ShowHelp("If disabled, you can move/resize the window with 'Unlock Move All'.");
+        ImGui::CheckboxWithHelp("Attach to minimap", &hero_flag_window_attach, "If disabled, you can move/resize the window with 'Unlock Move All'.");
         Colors::DrawSettingHueWheel("Background", &hero_flag_controls_background);
         ImGui::TreePop();
     }
@@ -1141,11 +1138,9 @@ void Minimap::DrawSettingsInternal()
         ImGui::StartSpacedElements(300.f);
     }
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
-    ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
+    ImGui::CheckboxWithHelp("Show hidden NPCs", &agent_renderer.show_hidden_npcs, "Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap);
-    ImGui::ShowHelp("Show a star for NPCs that have quest progress available");
+    ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
 
     ImGui::SliderFloat("Agent Border thickness", &agent_renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
     ImGui::SliderFloat("Target Border thickness", &agent_renderer.target_border_thickness, 0.f, 100.f, "%.0f");
@@ -1185,20 +1180,15 @@ void Minimap::DrawSettingsInternal()
 
     ImGui::StartSpacedElements(256.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
-    ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
+    ImGui::CheckboxWithHelp("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam, "Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Map Rotation", &rotate_minimap);
-    ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
+    ImGui::CheckboxWithHelp("Map Rotation", &rotate_minimap, "Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Flip when reversed", &flip_on_reverse);
-    ImGui::ShowHelp("Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
+    ImGui::CheckboxWithHelp("Flip when reversed", &flip_on_reverse, "Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
-    ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
+    ImGui::CheckboxWithHelp("Map rotation smoothing", &smooth_rotation, "Minimap rotation speed matches compass rotation speed.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Circular", &circular_map);
-    ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
+    ImGui::CheckboxWithHelp("Circular", &circular_map, "Whether the map should be circular like the compass (default) or a square.");
 }
 
 void Minimap::LoadSettings(ToolboxIni* ini)

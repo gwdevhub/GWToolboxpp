@@ -487,8 +487,7 @@ void BondsWidget::DrawSettingsInternal()
     }
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show on top of health bars", &overlay_party_window);
-    ImGui::ShowHelp("Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("Show on top of health bars", &overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
     ImGui::DragInt("Party window offset", &user_offset);
@@ -509,10 +508,8 @@ void BondsWidget::DrawSettingsInternal()
     Colors::DrawSettingHueWheel("Background", &background, 0);
     ImGui::Checkbox("Click to cast bond", &click_to_cast);
     ImGui::Checkbox("Click to cancel bond", &click_to_drop);
-    ImGui::Checkbox("Show bonds for Allies", &show_allies);
-    ImGui::ShowHelp("'Allies' meaning the ones that show in party window, such as summoning stones");
-    ImGui::Checkbox("Flip bond order (left/right)", &flip_bonds);
-    ImGui::ShowHelp("Bond order is based on your build. Check this to flip them left <-> right");
+    ImGui::CheckboxWithHelp("Show bonds for Allies", &show_allies, "'Allies' meaning the ones that show in party window, such as summoning stones");
+    ImGui::CheckboxWithHelp("Flip bond order (left/right)", &flip_bonds, "Bond order is based on your build. Check this to flip them left <-> right");
     Colors::DrawSetting("Low Attribute Overlay", &low_attribute_overlay);
     ImGui::ShowHelp(
         "Overlays effects casted with less than current attribute level.\n"

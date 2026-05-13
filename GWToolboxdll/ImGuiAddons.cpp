@@ -181,6 +181,13 @@ namespace ImGui {
         }
     }
 
+    bool CheckboxWithHelp(const char* label, bool* v, const char* help_text)
+    {
+        const bool result = Checkbox(label, v);
+        ShowHelp(help_text);
+        return result;
+    }
+
     void TextShadowed(const char* label, const ImVec2 offset, const ImVec4& shadow_color)
     {
         const ImVec2 pos = GetCursorPos();

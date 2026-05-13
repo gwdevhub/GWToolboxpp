@@ -511,8 +511,7 @@ void AgentRenderer::DrawSettings()
         }
         // Right-align the checkbox
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::CalcItemWidth() - ImGui::GetFrameHeight());
-        ImGui::Checkbox("Marked Targets Inherit Custom Size/Shape", &marked_target_inherit_custom_agents);
-        ImGui::ShowHelp("When enabled, agents highlighted via /marktarget use their custom agent size and shape if one is defined");
+        ImGui::CheckboxWithHelp("Marked Targets Inherit Custom Size/Shape", &marked_target_inherit_custom_agents, "When enabled, agents highlighted via /marktarget use their custom agent size and shape if one is defined");
         static std::array items = {"Tear", "Circle", "Square", "Big Circle"};
         ImGui::Combo("Default Shape", reinterpret_cast<int*>(&default_shape), items.data(), items.size());
         ImGui::Combo("Player Shape", reinterpret_cast<int*>(&shape_player), items.data(), items.size());

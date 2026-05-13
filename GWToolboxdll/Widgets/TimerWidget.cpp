@@ -533,8 +533,7 @@ void TimerWidget::DrawSettingsInternal()
     ImGui::ShowHelp("Real-time timer does not reset when zoning between explorable areas.\n \
         You can use /resettimer to force a reset at the next loading screen.");
     ImGui::Indent();
-    ImGui::Checkbox("Never reset", &never_reset);
-    ImGui::ShowHelp(
+    ImGui::CheckboxWithHelp("Never reset", &never_reset,
         "Don't reset when entering outposts, explorables (from outposts), and dungeons. \n"
         "Useful for timing longer runs.\n"
         "Requires 'Use instance timer' above NOT ticked");
@@ -572,8 +571,7 @@ void TimerWidget::DrawSettingsInternal()
         ImGui::Checkbox(timers[i].first, timers[i].second);
     }
     ImGui::Unindent();
-    ImGui::Checkbox("Show spirit timers", &show_spirit_timers);
-    ImGui::ShowHelp("Time until spirits die in seconds");
+    ImGui::CheckboxWithHelp("Show spirit timers", &show_spirit_timers, "Time until spirits die in seconds");
     if (show_spirit_timers) {
         ImGui::Indent();
         ImGui::StartSpacedElements(140.f);

@@ -1102,16 +1102,11 @@ bool TravelWindow::TravelFavorite(const unsigned int idx)
 
 void TravelWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Close on travel", &close_on_travel);
-    ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
-    ImGui::Checkbox("Collapse on travel", &collapse_on_travel);
-    ImGui::ShowHelp("Will collapse the travel window when clicking on a travel destination");
-    ImGui::Checkbox("Automatically retry if the district is full", &retry_map_travel);
-    ImGui::ShowHelp("Use /tp stop to stop retrying.");
-    ImGui::Checkbox("Use English map names", &search_in_english);
-    ImGui::ShowHelp("If this is unchecked, the /tp command will use the localized map names based on your current language.");
-    ImGui::Checkbox("Show Zaishen quest buttons", &show_zaishen_buttons);
-    ImGui::ShowHelp("Show the Zaishen Bounty, Mission, Vanquish and Combat travel buttons in the Travel window.");
+    ImGui::CheckboxWithHelp("Close on travel", &close_on_travel, "Will close the travel window when clicking on a travel destination");
+    ImGui::CheckboxWithHelp("Collapse on travel", &collapse_on_travel, "Will collapse the travel window when clicking on a travel destination");
+    ImGui::CheckboxWithHelp("Automatically retry if the district is full", &retry_map_travel, "Use /tp stop to stop retrying.");
+    ImGui::CheckboxWithHelp("Use English map names", &search_in_english, "If this is unchecked, the /tp command will use the localized map names based on your current language.");
+    ImGui::CheckboxWithHelp("Show Zaishen quest buttons", &show_zaishen_buttons, "Show the Zaishen Bounty, Mission, Vanquish and Combat travel buttons in the Travel window.");
 
     ImGui::Separator();
     ImGui::Text("User Travel Destinations");

@@ -2048,8 +2048,7 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Checkbox("Hide unsellable items from merchant window", &hide_unsellable_items);
     ImGui::Checkbox("Hide weapon sets and customized items from merchant window", &hide_weapon_sets_and_customized_items);
     ImGui::Checkbox("Hide gold items from merchant window", &hide_golds_from_merchant);
-    ImGui::Checkbox("Move whole stacks by default", &trade_whole_stacks);
-    ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
+    ImGui::CheckboxWithHelp("Move whole stacks by default", &trade_whole_stacks, "Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
     ImGui::TextUnformatted("Move items to trade on:");
     ImGui::ShowHelp("When trading with another player, you normally have to drag an item from inventory to the trade window. Enable an option below to make it easier.");
     ImGui::Indent();
@@ -2069,11 +2068,9 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Text("Salvage All options:");
     ImGui::SameLine();
     ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
-    ImGui::Checkbox("Salvage Rare Materials", &salvage_rare_mats);
-    ImGui::ShowHelp("Untick to skip salvagable rare materials when checking for salvagable items");
+    ImGui::CheckboxWithHelp("Salvage Rare Materials", &salvage_rare_mats, "Untick to skip salvagable rare materials when checking for salvagable items");
     ImGui::SameLine();
-    ImGui::Checkbox("Salvage Nicholas Items", &salvage_nicholas_items);
-    ImGui::ShowHelp("Untick to skip items that Nicholas the Traveller collects when checking for salvagable items");
+    ImGui::CheckboxWithHelp("Salvage Nicholas Items", &salvage_nicholas_items, "Untick to skip items that Nicholas the Traveller collects when checking for salvagable items");
     ImGui::Text("Salvage from:");
     ImGui::ShowHelp("Only ticked bags will be checked for salvagable items");
     ImGui::Checkbox("Backpack", &bags_to_salvage_from[GW::Constants::Bag::Backpack]);
@@ -2083,16 +2080,11 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Checkbox("Bag 1", &bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     ImGui::SameLine();
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-    ImGui::Checkbox("Salvage All with Control+Click", &salvage_all_on_ctrl_click);
-    ImGui::ShowHelp("Control+Click a salvage kit to open the Salvage All window");
-    ImGui::Checkbox("Identify green items", &identify_greens);
-    ImGui::ShowHelp("Untick to skip green items when doing Identify All");
-    ImGui::Checkbox("Identify All with Control+Click", &identify_all_on_ctrl_click);
-    ImGui::ShowHelp("Control+Click an identification kit to identify all items with it");
-    ImGui::Checkbox("Auto re-use salvage kit", &auto_reuse_salvage_kit);
-    ImGui::ShowHelp("When a salvage kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been salvaged.");
-    ImGui::Checkbox("Auto re-use identification kit", &auto_reuse_id_kit);
-    ImGui::ShowHelp("When an identification kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been identified.");
+    ImGui::CheckboxWithHelp("Salvage All with Control+Click", &salvage_all_on_ctrl_click, "Control+Click a salvage kit to open the Salvage All window");
+    ImGui::CheckboxWithHelp("Identify green items", &identify_greens, "Untick to skip green items when doing Identify All");
+    ImGui::CheckboxWithHelp("Identify All with Control+Click", &identify_all_on_ctrl_click, "Control+Click an identification kit to identify all items with it");
+    ImGui::CheckboxWithHelp("Auto re-use salvage kit", &auto_reuse_salvage_kit, "When a salvage kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been salvaged.");
+    ImGui::CheckboxWithHelp("Auto re-use identification kit", &auto_reuse_id_kit, "When an identification kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been identified.");
     DrawMerchantHiddenItemsSettings();
 }
 

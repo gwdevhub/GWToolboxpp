@@ -82,6 +82,14 @@ void ToolboxUIElement::UpdateLocationAgainstSnappedFrame()
     last_frame_pos = frame_pos;
 }
 
+bool* ToolboxUIElement::GetVisiblePtr()
+{
+    if (!has_closebutton) return &visible;
+    if (!show_closebutton) return nullptr;
+    if (ToolboxSettings::is_in_explorable ? !ToolboxSettings::show_close_in_explorable : !ToolboxSettings::show_close_in_outpost) return nullptr;
+    return &visible;
+}
+
 const char* ToolboxUIElement::UIName() const
 {
     if (Icon()) {
@@ -256,8 +264,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             MainWindow::Instance().pending_refresh_buttons = true;
         }
     }
-    ImGui::Checkbox("Show breakout button", &show_breakout_button);
-    ImGui::ShowHelp("Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
+    ImGui::CheckboxWithHelp("Show breakout button", &show_breakout_button, "Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
     if (show_breakout_button) {
         ImGui::Indent();
         ImGui::Checkbox("Lock breakout button position", &lock_breakout_button);
