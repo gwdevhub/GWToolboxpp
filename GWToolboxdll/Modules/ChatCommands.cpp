@@ -215,7 +215,7 @@ namespace {
         constexpr auto max_distance = GW::Constants::SqrRange::Spellcast;
         float distance = 0.0f;
 
-        GW::Agent* closest = nullptr;
+        const GW::Agent* closest = nullptr;
         for (const auto agent : *agents) {
             if (agent == me || !GW::Agents::GetAgentMatchesFlags(agent, AgentEETargetType)) {
                 continue;
@@ -1079,7 +1079,7 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
 
         const bool is_nearest = IsNearestStr(arg1.c_str());
         const int name_arg = is_nearest ? 3 : 2;
-        const auto name_w = [&]() {
+        const auto name_w = [&] {
             return argc > name_arg ? GetRemainingArgsWstr(message, name_arg) : zero_w;
         };
         const std::wstring arg2 = is_nearest && argc > 2 ? TextUtils::ToLower(argv[2]) : L"npc";

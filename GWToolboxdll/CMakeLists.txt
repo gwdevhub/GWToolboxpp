@@ -89,7 +89,6 @@ target_link_libraries(GWToolboxdll PRIVATE
     IconFontCppHeaders
     nativefiledialog
     wintoast
-    wolfssl::wolfssl
 	minhook::minhook
 	ctre::ctre
     unofficial::uwebsockets::uwebsockets

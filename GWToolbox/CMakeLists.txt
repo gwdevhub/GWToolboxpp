@@ -22,7 +22,6 @@ target_link_libraries(GWToolbox PRIVATE
     GWToolboxdll
     Core
     RestClient
-    directxtex
     nlohmann_json::nlohmann_json
 
     version.lib # for GetFileVersionInfo
