@@ -37,8 +37,6 @@ jobs:
 
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Cache vcpkg toolchain
       id: cache-vcpkg-tool
@@ -136,7 +134,7 @@ jobs:
         echo "Target tag: $TAG_NAME"
         
         # Check if tag exists
-        if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+        if git ls-remote --tags origin "refs/tags/$TAG_NAME" | grep -q .; then
           echo "Tag $TAG_NAME already exists. Skipping release."
           exit 0
         fi
