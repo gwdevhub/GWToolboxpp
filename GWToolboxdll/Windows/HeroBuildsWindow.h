@@ -1,8 +1,14 @@
 #pragma once
 
+#include <memory>
+#include <queue>
+#include <vector>
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Utilities/Hook.h>
 
 #include <Timer.h>
 #include <ToolboxWindow.h>
@@ -110,6 +116,13 @@ private:
     static void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
     TeamHeroBuild* GetTeambuildByName(const std::string& argBuildname);
 
+    // Encode a teambuild into a Daybreak party loadout base64 string (header=15, type=1, version=1).
+    static std::string EncodeTeambuildToDaybreak(const TeamHeroBuild& tbuild);
+    // Decode a Daybreak party loadout base64 string into a teambuild.
+    static bool DecodeTeambuildFromDaybreak(const std::string& code, TeamHeroBuild& out);
+    static void OnRecvWhisper(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*);
+    static void OnOpenTemplate(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*);
+
     bool builds_changed = false;
     std::vector<TeamHeroBuild> teambuilds{};
 
@@ -144,11 +157,20 @@ private:
         bool Process();
     };
 
-
     clock_t send_timer = 0;
     clock_t kickall_timer = 0;
     std::vector<CodeOnHero> pending_hero_loads{};
     std::queue<std::string> send_queue{};
+
+    // Whisper send state: set from Draw(), consumed in Update()
+    std::wstring pending_whisper_to{};
+    std::wstring pending_whisper_msg{};
+
+    // Pool of received/detached teambuilds shown as standalone windows (not in the main list).
+    // Entries are removed when their window is closed and no other owner holds the shared_ptr.
+    std::vector<std::shared_ptr<TeamHeroBuild>> detached_pool{};
+
+    char whisper_target[BUFFER_SIZE]{};
 
     ToolboxIni* inifile = nullptr;
 };

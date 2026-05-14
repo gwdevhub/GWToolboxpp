@@ -10,6 +10,7 @@
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/Constants/Skills.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -33,6 +34,155 @@ constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
+    GW::HookEntry OnRecvWhisper_Entry;
+    GW::HookEntry OnOpenTemplate_Entry;
+
+    // GW base64 alphabet used by all template codes (same as standard base64).
+    constexpr char kDaybreakAlpha[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    // Convert a LSB-first packed byte buffer to a Daybreak base64 string.
+    std::string BytesToDaybreakCode(const std::vector<uint8_t>& bytes) {
+        std::string result;
+        const int total_bits = static_cast<int>(bytes.size()) * 8;
+        for (int bit = 0; bit < total_bits; bit += 6) {
+            uint32_t val = 0;
+            for (int i = 0; i < 6 && (bit + i) < total_bits; i++) {
+                if ((bytes[(bit + i) / 8] >> ((bit + i) % 8)) & 1u)
+                    val |= (1u << i);
+            }
+            result += kDaybreakAlpha[val & 0x3Fu];
+        }
+        return result;
+    }
+
+    // Convert a Daybreak base64 string back to a LSB-first packed byte buffer.
+    std::vector<uint8_t> DaybreakCodeToBytes(const std::string& code) {
+        std::vector<uint8_t> result;
+        int bit = 0;
+        for (const char c : code) {
+            const char* p = strchr(kDaybreakAlpha, c);
+            if (!p) break;
+            const uint32_t val = static_cast<uint32_t>(p - kDaybreakAlpha);
+            for (int i = 0; i < 6; i++) {
+                if (bit / 8 >= static_cast<int>(result.size())) result.push_back(0);
+                if ((val >> i) & 1u) result[bit / 8] |= (1u << (bit % 8));
+                bit++;
+            }
+        }
+        return result;
+    }
+
+    // Compress a Daybreak code for GW whisper transport.
+    // Decodes the base64 to raw bytes, then maps each byte to a wchar_t in GW-allowed code pages:
+    //   bytes 0x00–0x7F → U+0100–U+017F (Latin Extended-A)
+    //   bytes 0x80–0xFF → U+0391–U+0410 (Greek/early Cyrillic)
+    // This gives 8 bits/wchar instead of 6 bits/base64-char, so a 120-char Daybreak code
+    // becomes ~90 wchars — within GW's 120-wchar whisper limit.
+    std::wstring DaybreakCodeToWString(const std::string& code) {
+        const auto bytes = DaybreakCodeToBytes(code);
+        std::wstring result;
+        result.reserve(bytes.size());
+        for (const uint8_t b : bytes)
+            result += b < 0x80u ? static_cast<wchar_t>(0x100u + b) : static_cast<wchar_t>(0x391u + (b - 0x80u));
+        return result;
+    }
+
+    // Reverse of DaybreakCodeToWString: wchars → bytes → Daybreak base64.
+    std::string WStringToDaybreakCode(const std::wstring& wstr) {
+        std::vector<uint8_t> bytes;
+        bytes.reserve(wstr.size());
+        for (const wchar_t wc : wstr) {
+            int b = -1;
+            if (wc >= 0x100 && wc <= 0x17F) b = wc - 0x100;
+            else if (wc >= 0x391 && wc <= 0x410) b = 0x80 + (wc - 0x391);
+            if (b < 0) return {};
+            bytes.push_back(static_cast<uint8_t>(b));
+        }
+        return BytesToDaybreakCode(bytes);
+    }
+
+    // First byte of a Daybreak party loadout (header=15, type=1, LSB-first): 0x1F → U+011F
+    constexpr wchar_t PARTY_LOADOUT_MAGIC_WCHAR = 0x011Fu;
+
+    struct BitWriter {
+        std::vector<uint8_t> buf;
+        int pos = 0;
+        void write(const uint32_t val, const int n) {
+            for (int i = 0; i < n; i++) {
+                if (pos / 8 >= static_cast<int>(buf.size())) buf.push_back(0);
+                if ((val >> i) & 1u) buf[pos / 8] |= static_cast<uint8_t>(1u << (pos % 8));
+                pos++;
+            }
+        }
+    };
+
+    struct BitReader {
+        const uint8_t* data;
+        int byte_len;
+        int pos = 0;
+        bool ok = true;
+        BitReader(const uint8_t* d, const int len) : data(d), byte_len(len) {}
+        uint32_t read(const int n) {
+            uint32_t v = 0;
+            for (int i = 0; i < n; i++) {
+                if (pos / 8 >= byte_len) { ok = false; return 0; }
+                if ((data[pos / 8] >> (pos % 8)) & 1u) v |= 1u << i;
+                pos++;
+            }
+            return v;
+        }
+    };
+
+    void WriteEmbedded(const GW::SkillbarMgr::SkillTemplate& t, BitWriter& bw) {
+        const auto max_prof = std::max(static_cast<uint32_t>(t.primary), static_cast<uint32_t>(t.secondary));
+        const uint32_t prof_code = max_prof > 15 ? 1u : 0u;
+        const int p = static_cast<int>(prof_code) * 2 + 4;
+        bw.write(prof_code, 2);
+        bw.write(static_cast<uint32_t>(t.primary), p);
+        bw.write(static_cast<uint32_t>(t.secondary), p);
+        bw.write(t.attributes_count, 4);
+        uint32_t attr_code = 0;
+        for (uint32_t i = 0; i < t.attributes_count && i < 12; i++) {
+            if (static_cast<uint32_t>(t.attribute_ids[i]) > 15) { attr_code = 2; break; }
+        }
+        const int a = static_cast<int>(attr_code) + 4;
+        bw.write(attr_code, 4);
+        for (uint32_t i = 0; i < t.attributes_count && i < 12; i++) {
+            bw.write(static_cast<uint32_t>(t.attribute_ids[i]), a);
+            bw.write(t.attribute_values[i], 4);
+        }
+        uint32_t skill_code = 0;
+        for (int i = 0; i < 8; i++) {
+            if (static_cast<uint32_t>(t.skills[i]) > 255) { skill_code = 1; break; }
+        }
+        const int s = static_cast<int>(skill_code) + 8;
+        bw.write(skill_code, 4);
+        for (int i = 0; i < 8; i++) {
+            bw.write(static_cast<uint32_t>(t.skills[i]), s);
+        }
+    }
+
+    bool ReadEmbedded(BitReader& br, GW::SkillbarMgr::SkillTemplate& t) {
+        const uint32_t prof_code = br.read(2);
+        const int p = static_cast<int>(prof_code) * 2 + 4;
+        t.primary = static_cast<GW::Constants::Profession>(br.read(p));
+        t.secondary = static_cast<GW::Constants::Profession>(br.read(p));
+        t.attributes_count = br.read(4);
+        if (t.attributes_count > 12) return false;
+        const uint32_t attr_code = br.read(4);
+        const int a = static_cast<int>(attr_code) + 4;
+        for (uint32_t i = 0; i < t.attributes_count; i++) {
+            t.attribute_ids[i] = static_cast<GW::Constants::Attribute>(br.read(a));
+            t.attribute_values[i] = br.read(4);
+        }
+        const uint32_t skill_code = br.read(4);
+        const int s = static_cast<int>(skill_code) + 8;
+        for (int i = 0; i < 8; i++) {
+            t.skills[i] = static_cast<GW::Constants::SkillID>(br.read(s));
+        }
+        return br.ok;
+    }
+
 
     // GW file 0x268f6: 2x2 sprite sheet (tick/cross overlays)
     // Bottom-left sprite (col 0, row 1) = semi-transparent cross = "disabled" overlay
@@ -152,6 +302,144 @@ namespace {
 
 unsigned int HeroBuildsWindow::TeamHeroBuild::cur_ui_id = 0;
 
+std::string HeroBuildsWindow::EncodeTeambuildToDaybreak(const TeamHeroBuild& tbuild)
+{
+    const bool include_player = tbuild.builds[0].code[0] != '\0';
+    int party_size = include_player ? 1 : 0;
+    for (int i = 1; i < 8; i++) {
+        if (tbuild.builds[i].code[0] || tbuild.builds[i].hero_id != HeroID::NoHero)
+            party_size++;
+    }
+    if (!party_size) return {};
+    ASSERT(party_size <= 8);
+
+    BitWriter bw;
+    bw.write(15u, 4); // extended template header
+    bw.write(1u, 8);  // type = party loadout
+    bw.write(1u, 4);  // version = 1
+    bw.write(static_cast<uint32_t>(party_size), 4);
+
+    if (include_player) {
+        const auto& build = tbuild.builds[0];
+        bw.write(0u, 2); // member_type = player
+        bw.write(build.behavior, 2);
+        GW::SkillbarMgr::SkillTemplate t{};
+        GW::SkillbarMgr::DecodeSkillTemplate(t, build.code);
+        WriteEmbedded(t, bw);
+    }
+
+    for (int i = 1; i < 8; i++) {
+        const auto& build = tbuild.builds[i];
+        if (!build.code[0] && build.hero_id == HeroID::NoHero) continue;
+        bw.write(2u, 2); // member_type = hero
+        bw.write(static_cast<uint32_t>(build.hero_id), 6);
+        bw.write(build.behavior, 2);
+        GW::SkillbarMgr::SkillTemplate t{};
+        if (build.code[0]) GW::SkillbarMgr::DecodeSkillTemplate(t, build.code);
+        WriteEmbedded(t, bw);
+    }
+
+    return BytesToDaybreakCode(bw.buf);
+}
+
+bool HeroBuildsWindow::DecodeTeambuildFromDaybreak(const std::string& code, TeamHeroBuild& out)
+{
+    if (code.empty() || code[0] != 'f') return false;
+
+    const auto bytes = DaybreakCodeToBytes(code);
+    if (bytes.empty()) return false;
+
+    BitReader br(bytes.data(), static_cast<int>(bytes.size()));
+    if (br.read(4) != 15u || br.read(8) != 1u || br.read(4) != 1u) return false;
+    const int party_size = static_cast<int>(br.read(4));
+    if (party_size < 1 || party_size > 8) return false;
+
+    int next_hero_slot = 1;
+    for (int i = 0; i < party_size; i++) {
+        const uint32_t member_type = br.read(2);
+        HeroBuild* build = nullptr;
+        if (member_type == 0u) {
+            build = &out.builds[0];
+        }
+        else if (member_type == 2u) {
+            if (next_hero_slot > 7) return false;
+            build = &out.builds[next_hero_slot++];
+            build->hero_id = static_cast<HeroID>(br.read(6));
+        }
+
+        const uint32_t behavior = br.read(2);
+        GW::SkillbarMgr::SkillTemplate t{};
+        if (!ReadEmbedded(br, t)) return false;
+
+        if (build) {
+            build->behavior = behavior;
+            if (!GW::SkillbarMgr::EncodeSkillTemplate(t, build->code, BUFFER_SIZE)) return false;
+        }
+    }
+    return br.ok;
+}
+
+void HeroBuildsWindow::OnRecvWhisper(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
+{
+    const auto packet = static_cast<GW::UI::UIPacket::kRecvWhisper*>(wparam);
+    if (!packet || !packet->message || !packet->from) return;
+    const std::wstring msg(packet->message);
+    if (msg.empty() || msg[0] != PARTY_LOADOUT_MAGIC_WCHAR) return;
+
+    // Decompress wstring transport encoding back to Daybreak base64
+    const std::string daybreak_code = WStringToDaybreakCode(msg);
+    if (daybreak_code.empty() || daybreak_code[0] != 'f') return;
+
+    status->blocked = true;
+
+    const std::wstring sender(packet->from);
+    // Re-inject as a clickable template link: [SenderName's Teambuild;<daybreak_code>]
+    // Clicking fires kOpenTemplate where OnOpenTemplate decodes the Daybreak code.
+    const std::wstring link_name = sender + L"'s Teambuild";
+    const std::wstring link_code(daybreak_code.begin(), daybreak_code.end());
+    const std::wstring injected = L"[" + link_name + L";" + link_code + L"]";
+
+    GW::GameThread::Enqueue([sender_cpy = sender, injected_cpy = injected]() mutable {
+        GW::UI::UIPacket::kRecvWhisper new_packet{};
+        new_packet.from = sender_cpy.data();
+        new_packet.message = injected_cpy.data();
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kRecvWhisper, &new_packet);
+    });
+}
+
+void HeroBuildsWindow::OnOpenTemplate(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
+{
+    const auto t = static_cast<GW::UI::ChatTemplate*>(wparam);
+    if (!t || !t->code.m_buffer || t->code.m_size == 0) return;
+
+    // Daybreak party loadout codes are ASCII; reject anything with wide chars early
+    std::string code;
+    code.reserve(t->code.m_size);
+    for (size_t i = 0; i < t->code.m_size; i++) {
+        const wchar_t wc = t->code.m_buffer[i];
+        if (wc > 0x7F) return;
+        code += static_cast<char>(wc);
+    }
+
+    // Party loadout codes always start with 'f' (header=15 + type=1 LSB-first base64)
+    if (code.empty() || code[0] != 'f') return;
+
+    auto tbuild = std::make_shared<TeamHeroBuild>("");
+    if (!DecodeTeambuildFromDaybreak(code, *tbuild)) return;
+
+    status->blocked = true;
+
+    // Use the template link name as the teambuild name (e.g. "Jon's Teambuild")
+    if (t->name && t->name[0]) {
+        char name_buf[BUFFER_SIZE]{};
+        WideCharToMultiByte(CP_UTF8, 0, t->name, -1, name_buf, BUFFER_SIZE, nullptr, nullptr);
+        std::snprintf(tbuild->name, sizeof(tbuild->name), "%s", name_buf);
+    }
+
+    tbuild->edit_open = true;
+    Instance().detached_pool.push_back(std::move(tbuild));
+}
+
 GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const HeroID hero_id, size_t* out_hero_index)
 {
     GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
@@ -186,13 +474,18 @@ void HeroBuildsWindow::Initialize()
     skill_toggle_sprite = GwDatTextureModule::LoadTextureFromFileId(0x268f6);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
+    GW::UI::RegisterUIMessageCallback(&OnRecvWhisper_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
+    GW::UI::RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kOpenTemplate, OnOpenTemplate);
 }
 
 void HeroBuildsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     teambuilds.clear();
+    detached_pool.clear();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnRecvWhisper_Entry);
+    GW::UI::RemoveUIMessageCallback(&OnOpenTemplate_Entry);
 }
 
 void HeroBuildsWindow::Draw(IDirect3DDevice9*)
@@ -338,6 +631,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     teambuilds.push_back(new_tb);
                 }
             }
+
         }
         ImGui::End();
     }
@@ -607,6 +901,89 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
                 ImGui::EndPopup();
             }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Text("Send as Whisper:");
+            ImGui::SetNextItemWidth(200.0f);
+            ImGui::InputText("Player name##whisper_to", whisper_target, BUFFER_SIZE);
+            ImGui::SameLine();
+            if (ImGui::Button("Send##whisper_send")) {
+                if (whisper_target[0]) {
+                    const std::string daybreak_code = EncodeTeambuildToDaybreak(tbuild);
+                    if (!daybreak_code.empty()) {
+                        const std::wstring wstr = DaybreakCodeToWString(daybreak_code);
+                        if (!wstr.empty()) {
+                            pending_whisper_to = TextUtils::StringToWString(std::string(whisper_target));
+                            pending_whisper_msg = wstr;
+                        }
+                    }
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Send teambuild to another Toolbox user via whisper.\n"
+                                  "Recipient must have GWToolbox installed to import it.");
+            }
+        }
+        ImGui::End();
+    }
+
+    // Draw detached teambuild windows (received builds not in the main list).
+    // Build names are lazily populated with the elite skill from each slot.
+    for (auto& tbuild_ptr : detached_pool) {
+        TeamHeroBuild& tbuild = *tbuild_ptr;
+        if (!tbuild.edit_open) continue;
+
+        // Lazily label each slot by its elite skill name (resolves async via EncString)
+        for (auto& build : tbuild.builds) {
+            if (build.name[0] || !build.code[0]) continue;
+            GW::SkillbarMgr::SkillTemplate st{};
+            if (!GW::SkillbarMgr::DecodeSkillTemplate(st, build.code)) continue;
+            for (int k = 0; k < 8; k++) {
+                if (st.skills[k] == GW::Constants::SkillID::No_Skill) continue;
+                const auto* skill = GW::SkillbarMgr::GetSkillConstantData(st.skills[k]);
+                if (!skill || !skill->IsElite()) continue;
+                auto* enc = Resources::GetSkillName(st.skills[k]);
+                if (enc && !enc->string().empty())
+                    std::snprintf(build.name, BUFFER_SIZE, "%s", enc->string().c_str());
+                break;
+            }
+        }
+
+        char winname[256];
+        snprintf(winname, sizeof(winname), "%s###detached_%u", tbuild.name, tbuild.ui_id);
+        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(winname, &tbuild.edit_open)) {
+            for (size_t j = 0; j < tbuild.builds.size(); j++) {
+                const auto& build = tbuild.builds[j];
+                if (!build.code[0] && build.hero_id == HeroID::NoHero) continue;
+                std::string disp_name;
+                HeroBuildName(tbuild, j, &disp_name);
+                if (!disp_name.empty())
+                    ImGui::TextUnformatted(disp_name.c_str());
+                if (build.code[0])
+                    GuiUtils::DrawSkillbar(build.code, false);
+                ImGui::Spacing();
+            }
+            ImGui::Separator();
+            if (ImGui::Button("Load All")) {
+                Load(tbuild);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Load all builds onto your heroes");
+            ImGui::SameLine();
+            if (ImGui::Button("Add to My Builds")) {
+                TeamHeroBuild copy = tbuild;
+                copy.edit_open = false;
+                teambuilds.push_back(std::move(copy));
+                builds_changed = true;
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Save this teambuild to your Hero Builds list");
+            ImGui::SameLine();
+            if (ImGui::Button("Close"))
+                tbuild.edit_open = false;
         }
         ImGui::End();
     }
@@ -794,6 +1171,16 @@ void HeroBuildsWindow::Update(float)
         send_queue.pop();
         send_timer = TIMER_INIT();
     }
+    if (!pending_whisper_to.empty() && !pending_whisper_msg.empty() && TIMER_DIFF(send_timer) > 600) {
+        GW::Chat::SendChat(pending_whisper_to.c_str(), pending_whisper_msg.c_str());
+        pending_whisper_to.clear();
+        pending_whisper_msg.clear();
+        send_timer = TIMER_INIT();
+    }
+    // GC detached pool: remove closed entries with no external owners
+    std::erase_if(detached_pool, [](const auto& ptr) {
+        return !ptr->edit_open && ptr.use_count() == 1;
+    });
     if (kickall_timer) {
         if (TIMER_DIFF(kickall_timer) > 500 || instance_type != GW::Constants::InstanceType::Outpost || !GetPlayerHeroCount()) {
             kickall_timer = 0;

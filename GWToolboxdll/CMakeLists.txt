@@ -95,6 +95,7 @@ target_link_libraries(GWToolboxdll PRIVATE
 
     # libs:
     Dbghelp.lib # for MiniDump
+    bcrypt.lib  # for SHA256 (Resources.cpp)
 	delayimp # for delay loading gwca
     )
 
