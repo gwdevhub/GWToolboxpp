@@ -9,12 +9,10 @@ namespace {
 
     std::atomic<int> g_InitializeCount;
 
-    std::wstring Utf8ToWide(const char* s, size_t count = static_cast<size_t>(-1))
+    std::wstring Utf8ToWide(const char* s, const size_t count = static_cast<size_t>(-1))
     {
         if (!s) return {};
-        const int len_in = (count == static_cast<size_t>(-1))
-                               ? -1
-                               : static_cast<int>(count);
+        const int len_in = std::cmp_equal(count, -1) ? -1 : static_cast<int>(count);
         const int wlen = MultiByteToWideChar(CP_UTF8, 0, s, len_in, nullptr, 0);
         if (wlen <= 0) return {};
         std::wstring out;
@@ -23,7 +21,7 @@ namespace {
         return out;
     }
 
-    std::string WideToUtf8(const wchar_t* s, size_t count)
+    std::string WideToUtf8(const wchar_t* s, const size_t count)
     {
         if (!s || count == 0) return {};
         const int len_in = static_cast<int>(count);
