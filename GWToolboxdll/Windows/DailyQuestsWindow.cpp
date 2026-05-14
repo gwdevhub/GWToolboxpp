@@ -691,6 +691,82 @@ namespace {
     bool show_weekly_bonus_pve_in_window = true;
     bool show_weekly_bonus_pvp_in_window = true;
     bool show_other_searing_dailies = false;
+    bool notify_zaishen_mission_outpost = true;
+
+    // Maps a Zaishen-Mission cycle map_id to the corresponding QuestID, used to look up
+    // the coin reward when alerting the player. Kept here rather than on ZaishenQuestData
+    // so the cycle initializers stay short and tabular.
+    const std::unordered_map<MapID, QuestID> zaishen_mission_quest_ids = {
+        {MapID::The_Great_Northern_Wall, QuestID::ZaishenMission_The_Great_Northern_Wall},
+        {MapID::Fort_Ranik, QuestID::ZaishenMission_Fort_Ranik},
+        {MapID::Ruins_of_Surmia, QuestID::ZaishenMission_Ruins_of_Surmia},
+        {MapID::Nolani_Academy, QuestID::ZaishenMission_Nolani_Academy},
+        {MapID::Borlis_Pass, QuestID::ZaishenMission_Borlis_Pass},
+        {MapID::The_Frost_Gate, QuestID::ZaishenMission_The_Frost_Gate},
+        {MapID::Gates_of_Kryta, QuestID::ZaishenMission_Gates_of_Kryta},
+        {MapID::DAlessio_Seaboard, QuestID::ZaishenMission_DAlessio_Seaboard},
+        {MapID::Divinity_Coast, QuestID::ZaishenMission_Divinity_Coast},
+        {MapID::The_Wilds, QuestID::ZaishenMission_The_Wilds},
+        {MapID::Bloodstone_Fen, QuestID::ZaishenMission_Bloodstone_Fen},
+        {MapID::Aurora_Glade, QuestID::ZaishenMission_Aurora_Glade},
+        {MapID::Riverside_Province, QuestID::ZaishenMission_Riverside_Province},
+        {MapID::Sanctum_Cay, QuestID::ZaishenMission_Sanctum_Cay},
+        {MapID::Dunes_of_Despair, QuestID::ZaishenMission_Dunes_of_Despair},
+        {MapID::Thirsty_River, QuestID::ZaishenMission_Thirsty_River},
+        {MapID::Elona_Reach, QuestID::ZaishenMission_Elona_Reach},
+        {MapID::Augury_Rock_mission, QuestID::ZaishenMission_Augury_Rock},
+        {MapID::The_Dragons_Lair, QuestID::ZaishenMission_The_Dragons_Lair},
+        {MapID::Ice_Caves_of_Sorrow, QuestID::ZaishenMission_Ice_Caves_of_Sorrow},
+        {MapID::Iron_Mines_of_Moladune, QuestID::ZaishenMission_Iron_Mines_of_Moladune},
+        {MapID::Thunderhead_Keep, QuestID::ZaishenMission_Thunderhead_Keep},
+        {MapID::Ring_of_Fire, QuestID::ZaishenMission_Ring_of_Fire},
+        {MapID::Abaddons_Mouth, QuestID::ZaishenMission_Abaddons_Mouth},
+        {MapID::Hells_Precipice, QuestID::ZaishenMission_Hells_Precipice},
+        {MapID::Zen_Daijun_outpost_mission, QuestID::ZaishenMission_Zen_Daijun},
+        {MapID::Vizunah_Square_mission, QuestID::ZaishenMission_Vizunah_Square},
+        {MapID::Nahpui_Quarter_outpost_mission, QuestID::ZaishenMission_Nahpui_Quarter},
+        {MapID::Tahnnakai_Temple_outpost_mission, QuestID::ZaishenMission_Tahnnakai_Temple},
+        {MapID::Arborstone_outpost_mission, QuestID::ZaishenMission_Arborstone},
+        {MapID::Boreas_Seabed_outpost_mission, QuestID::ZaishenMission_Boreas_Seabed},
+        {MapID::Sunjiang_District_outpost_mission, QuestID::ZaishenMission_Sunjiang_District},
+        {MapID::The_Eternal_Grove_outpost_mission, QuestID::ZaishenMission_The_Eternal_Grove},
+        {MapID::Unwaking_Waters_mission, QuestID::ZaishenMission_Unwaking_Waters},
+        {MapID::Gyala_Hatchery_outpost_mission, QuestID::ZaishenMission_Gyala_Hatchery},
+        {MapID::Raisu_Palace_outpost_mission, QuestID::ZaishenMission_Raisu_Palace},
+        {MapID::Imperial_Sanctum_outpost_mission, QuestID::ZaishenMission_Imperial_Sanctum},
+        {MapID::Chahbek_Village, QuestID::ZaishenMission_Chahbek_Village},
+        {MapID::Jokanur_Diggings, QuestID::ZaishenMission_Jokanur_Diggings},
+        {MapID::Blacktide_Den, QuestID::ZaishenMission_Blacktide_Den},
+        {MapID::Consulate_Docks, QuestID::ZaishenMission_Consulate_Docks},
+        {MapID::Venta_Cemetery, QuestID::ZaishenMission_Venta_Cemetery},
+        {MapID::Kodonur_Crossroads, QuestID::ZaishenMission_Kodonur_Crossroads},
+        {MapID::Pogahn_Passage, QuestID::ZaishenMission_Pogahn_Passage},
+        {MapID::Rilohn_Refuge, QuestID::ZaishenMission_Rilohn_Refuge},
+        {MapID::Moddok_Crevice, QuestID::ZaishenMission_Moddok_Crevice},
+        {MapID::Tihark_Orchard, QuestID::ZaishenMission_Tihark_Orchard},
+        {MapID::Dasha_Vestibule, QuestID::ZaishenMission_Dasha_Vestibule},
+        {MapID::Dzagonur_Bastion, QuestID::ZaishenMission_Dzagonur_Bastion},
+        {MapID::Grand_Court_of_Sebelkeh, QuestID::ZaishenMission_Grand_Court_of_Sebelkeh},
+        {MapID::Jennurs_Horde, QuestID::ZaishenMission_Jennurs_Horde},
+        {MapID::Nundu_Bay, QuestID::ZaishenMission_Nundu_Bay},
+        {MapID::Gate_of_Desolation, QuestID::ZaishenMission_Gate_of_Desolation},
+        {MapID::Ruins_of_Morah, QuestID::ZaishenMission_Ruins_of_Morah},
+        {MapID::Gate_of_Pain, QuestID::ZaishenMission_Gate_of_Pain},
+        {MapID::Gate_of_Madness, QuestID::ZaishenMission_Gate_of_Madness},
+        {MapID::Abaddons_Gate, QuestID::ZaishenMission_Abaddons_Gate},
+        {MapID::Minister_Chos_Estate_outpost_mission, QuestID::ZaishenMission_Minister_Chos_Estate},
+        {MapID::Finding_the_Bloodstone_mission, QuestID::ZaishenMission_Finding_the_Bloodstone},
+        {MapID::The_Elusive_Golemancer_mission, QuestID::ZaishenMission_The_Elusive_Golemancer},
+        {MapID::Genius_Operated_Living_Enchanted_Manifestation_mission, QuestID::ZaishenMission_G_O_L_E_M},
+        {MapID::Against_the_Charr_mission, QuestID::ZaishenMission_Against_the_Charr},
+        {MapID::Warband_of_brothers_mission, QuestID::ZaishenMission_Warband_of_Brothers},
+        {MapID::Assault_on_the_Stronghold_mission, QuestID::ZaishenMission_Assault_on_the_Stronghold},
+        {MapID::Curse_of_the_Nornbear_mission, QuestID::ZaishenMission_Curse_of_the_Nornbear},
+        {MapID::Blood_Washes_Blood_mission, QuestID::ZaishenMission_Blood_Washes_Blood},
+        {MapID::A_Gate_Too_Far_mission, QuestID::ZaishenMission_A_Gate_Too_Far},
+        {MapID::Destructions_Depths_mission, QuestID::ZaishenMission_Destructions_Depths},
+        {MapID::A_Time_for_Heroes_mission, QuestID::ZaishenMission_A_Time_for_Heroes},
+    };
 
     int nicholas_withdraw_gott_count = 5;
 
@@ -965,12 +1041,74 @@ namespace {
 
     GW::HookEntry OnUIMessage_HookEntry;
 
+    bool IsZaishenMissionBonusActive(time_t unix)
+    {
+        const auto pve_idx = GetWeeklyPvEBonusIdx(&unix);
+        return pve_weekly_bonus_cycles[pve_idx].enc_name == GW::EncStrings::ZaishenMissionBonus;
+    }
+
+    bool IsZaishenMissionOutpost(GW::Constants::MapID current_map, GW::Constants::MapID zaishen_map)
+    {
+        if (current_map == zaishen_map) return true;
+        // Factions joint missions don't have a single entry outpost. Hardcode the entry outposts
+        // for each one. (AreaInfo has a mission_maps_to field that could in principle replace
+        // this, but it's not used anywhere else in the codebase and is untested.)
+        switch (zaishen_map) {
+            case MapID::Vizunah_Square_mission:
+                return current_map == MapID::Vizunah_Square_Local_Quarter_outpost
+                       || current_map == MapID::Vizunah_Square_Foreign_Quarter_outpost;
+            case MapID::Unwaking_Waters_mission:
+                return current_map == MapID::Cavalon_outpost
+                       || current_map == MapID::House_zu_Heltzer_outpost;
+            default:
+                return false;
+        }
+    }
+
+    void OnMapLoaded_CheckZaishenMission()
+    {
+        if (!notify_zaishen_mission_outpost) return;
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+        if (GW::Map::IsPreSearing()) return;
+
+        const time_t now = time(nullptr);
+        const auto zm_result = DailyQuests::GetZaishenMission(now);
+        if (!zm_result.quest) return;
+        const auto current_map = GW::Map::GetMapID();
+        if (!IsZaishenMissionOutpost(current_map, zm_result.quest->map_id)) return;
+
+        const bool has_quest = HasDailyQuest(zm_result.quest->GetQuestName());
+        const bool bonus_active = IsZaishenMissionBonusActive(now);
+        const uint32_t bonus_mult = bonus_active ? 2 : 1;
+
+        const DailyQuests::ZaishenCoinReward* reward = nullptr;
+        if (const auto it = zaishen_mission_quest_ids.find(zm_result.quest->map_id); it != zaishen_mission_quest_ids.end()) {
+            reward = DailyQuests::GetZaishenCoinReward(it->second);
+        }
+
+        Log::Flash("This is today's Zaishen Mission: %s", zm_result.quest->GetQuestName());
+        if (reward) {
+            const auto bonus_suffix = bonus_active ? " (Zaishen Mission Bonus week: 2x)" : "";
+            Log::Info("Zaishen Coin reward: %u (NM) / %u (HM)%s", reward->nm * bonus_mult, reward->hm * bonus_mult, bonus_suffix);
+        }
+        if (!has_quest) {
+            Log::Info("You don't have this quest yet — use \"/zm take\" to travel to Embark Beach and pick it up.");
+        }
+    }
+
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kPreferenceValueChanged:
+            case GW::UI::UIMessage::kPreferenceValueChanged: {
                 const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wparam;
                 if (packet->preference_id == GW::UI::NumberPreference::Language) OnLanguageChanged((GW::Constants::Language)packet->new_value);
+                break;
+            }
+            case GW::UI::UIMessage::kMapLoaded:
+                OnMapLoaded_CheckZaishenMission();
+                break;
+            default:
+                break;
         }
     }
 
@@ -1504,6 +1642,8 @@ void DailyQuests::DrawSettingsInternal()
 
     ImGui::Unindent();
 
+    ImGui::Checkbox("Alert when entering today's Zaishen Mission outpost", &notify_zaishen_mission_outpost);
+    ImGui::ShowHelp("Shows a flash message in chat with the mission name and coin reward when you enter the outpost that matches today's Zaishen Mission.");
 }
 
 void DailyQuests::LoadSettings(ToolboxIni* ini)
@@ -1520,6 +1660,7 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_weekly_bonus_pve_in_window);
     LOAD_BOOL(show_weekly_bonus_pvp_in_window);
     LOAD_BOOL(show_other_searing_dailies);
+    LOAD_BOOL(notify_zaishen_mission_outpost);
 
     const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
     const std::bitset<ZAISHEN_MISSION_COUNT> zmb(zms);
@@ -1590,6 +1731,7 @@ void DailyQuests::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_weekly_bonus_pve_in_window);
     SAVE_BOOL(show_weekly_bonus_pvp_in_window);
     SAVE_BOOL(show_other_searing_dailies);
+    SAVE_BOOL(notify_zaishen_mission_outpost);
     std::bitset<ZAISHEN_MISSION_COUNT> zmb;
     for (auto i = 0u; i < zmb.size(); i++) {
         zmb[i] = subscribed_zaishen_missions[i] ? 1 : 0;
@@ -1753,6 +1895,7 @@ void DailyQuests::Initialize()
     }
 
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
+    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kMapLoaded, OnUIMessage, 0x8000);
 }
 
 void DailyQuests::Terminate()
