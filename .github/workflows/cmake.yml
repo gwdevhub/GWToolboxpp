@@ -29,21 +29,17 @@ jobs:
     permissions:
       contents: write
 
-    steps:
-    - name: Setup Windows 10 SDK Action
-      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
-      with:
-        sdk-version: 22621
+#    steps:
+#    - name: Setup Windows 10 SDK Action
+#      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
+#      with:
+#        sdk-version: 22621
 
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Checkout submodules
-      shell: bash
-      run: git submodule update --init --recursive
-      
     - name: Cache vcpkg toolchain
       id: cache-vcpkg-tool
       uses: actions/cache@v4
