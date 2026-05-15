@@ -15,6 +15,7 @@
 #include <Utils/GuiUtils.h>
 
 #include <Constants/EncStrings.h>
+#include <Constants/ZaishenMissionMaps.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/Resources.h>
 #include <Timer.h>
@@ -691,6 +692,8 @@ namespace {
     bool show_weekly_bonus_pve_in_window = true;
     bool show_weekly_bonus_pvp_in_window = true;
     bool show_other_searing_dailies = false;
+    bool notify_zaishen_mission_outpost = true;
+    bool pending_zaishen_mission_check = false;
 
     int nicholas_withdraw_gott_count = 5;
 
@@ -965,12 +968,74 @@ namespace {
 
     GW::HookEntry OnUIMessage_HookEntry;
 
+    bool IsZaishenMissionBonusActive(time_t unix)
+    {
+        const auto pve_idx = GetWeeklyPvEBonusIdx(&unix);
+        return pve_weekly_bonus_cycles[pve_idx].enc_name == GW::EncStrings::ZaishenMissionBonus;
+    }
+
+    bool IsZaishenMissionOutpost(GW::Constants::MapID current_map, GW::Constants::MapID zaishen_map)
+    {
+        if (current_map == zaishen_map) return true;
+        // Factions joint missions don't have a single entry outpost. Hardcode the entry outposts
+        // for each one. (AreaInfo has a mission_maps_to field that could in principle replace
+        // this, but it's not used anywhere else in the codebase and is untested.)
+        switch (zaishen_map) {
+            case MapID::Vizunah_Square_mission:
+                return current_map == MapID::Vizunah_Square_Local_Quarter_outpost
+                       || current_map == MapID::Vizunah_Square_Foreign_Quarter_outpost;
+            case MapID::Unwaking_Waters_mission:
+                return current_map == MapID::Cavalon_outpost
+                       || current_map == MapID::House_zu_Heltzer_outpost;
+            default:
+                return false;
+        }
+    }
+
+    void OnMapLoaded_CheckZaishenMission()
+    {
+        if (!notify_zaishen_mission_outpost) return;
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+        if (GW::Map::IsPreSearing()) return;
+
+        const time_t now = time(nullptr);
+        const auto zm_result = DailyQuests::GetZaishenMission(now);
+        if (!zm_result.quest) return;
+        const auto current_map = GW::Map::GetMapID();
+        if (!IsZaishenMissionOutpost(current_map, zm_result.quest->map_id)) return;
+
+        const bool has_quest = HasDailyQuest(zm_result.quest->GetQuestName());
+        const bool bonus_active = IsZaishenMissionBonusActive(now);
+        const uint32_t bonus_mult = bonus_active ? 2 : 1;
+
+        const DailyQuests::ZaishenCoinReward* reward = nullptr;
+        if (const auto* quest_id = ZaishenMissionMaps::GetQuestID(zm_result.quest->map_id)) {
+            reward = DailyQuests::GetZaishenCoinReward(*quest_id);
+        }
+
+        Log::Flash("This is today's Zaishen Mission: %s", zm_result.quest->GetQuestName());
+        if (reward) {
+            const auto bonus_suffix = bonus_active ? " (Zaishen Mission Bonus week: 2x)" : "";
+            Log::Info("Zaishen Coin reward: %u (NM) / %u (HM)%s", reward->nm * bonus_mult, reward->hm * bonus_mult, bonus_suffix);
+        }
+        if (!has_quest) {
+            Log::Info("You don't have this quest yet — use \"/zm take\" to travel to Embark Beach and pick it up.");
+        }
+    }
+
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
-            case GW::UI::UIMessage::kPreferenceValueChanged:
+            case GW::UI::UIMessage::kPreferenceValueChanged: {
                 const auto packet = (GW::UI::UIPacket::kPreferenceValueChanged*)wparam;
                 if (packet->preference_id == GW::UI::NumberPreference::Language) OnLanguageChanged((GW::Constants::Language)packet->new_value);
+                break;
+            }
+            case GW::UI::UIMessage::kMapLoaded:
+                pending_zaishen_mission_check = true;
+                break;
+            default:
+                break;
         }
     }
 
@@ -1504,6 +1569,8 @@ void DailyQuests::DrawSettingsInternal()
 
     ImGui::Unindent();
 
+    ImGui::Checkbox("Alert when entering today's Zaishen Mission outpost", &notify_zaishen_mission_outpost);
+    ImGui::ShowHelp("Shows a flash message in chat with the mission name and coin reward when you enter the outpost that matches today's Zaishen Mission.");
 }
 
 void DailyQuests::LoadSettings(ToolboxIni* ini)
@@ -1520,6 +1587,7 @@ void DailyQuests::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_weekly_bonus_pve_in_window);
     LOAD_BOOL(show_weekly_bonus_pvp_in_window);
     LOAD_BOOL(show_other_searing_dailies);
+    LOAD_BOOL(notify_zaishen_mission_outpost);
 
     const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
     const std::bitset<ZAISHEN_MISSION_COUNT> zmb(zms);
@@ -1590,6 +1658,7 @@ void DailyQuests::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_weekly_bonus_pve_in_window);
     SAVE_BOOL(show_weekly_bonus_pvp_in_window);
     SAVE_BOOL(show_other_searing_dailies);
+    SAVE_BOOL(notify_zaishen_mission_outpost);
     std::bitset<ZAISHEN_MISSION_COUNT> zmb;
     for (auto i = 0u; i < zmb.size(); i++) {
         zmb[i] = subscribed_zaishen_missions[i] ? 1 : 0;
@@ -1753,6 +1822,7 @@ void DailyQuests::Initialize()
     }
 
     GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
+    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kMapLoaded, OnUIMessage, 0x8000);
 }
 
 void DailyQuests::Terminate()
@@ -1800,6 +1870,10 @@ void DailyQuests::Terminate()
 
 void DailyQuests::Update(const float)
 {
+    if (pending_zaishen_mission_check && !GW::UI::IsLoadingScreenShown()) {
+        pending_zaishen_mission_check = false;
+        OnMapLoaded_CheckZaishenMission();
+    }
     if (pending_quest_take && GetQuestLogInfo() && *pending_quest_take->GetQuestName()) {
         const auto has_quest = GetQuestByName(pending_quest_take->GetQuestName());
         if (!has_quest) {

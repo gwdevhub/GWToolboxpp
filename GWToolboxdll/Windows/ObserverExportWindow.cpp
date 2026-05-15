@@ -10,7 +10,7 @@
 #include <Windows/ObserverExportWindow.h>
 #include <Utils/TextUtils.h>
 
-#include <curl/curl.h>
+#include <RestClient.h>
 
 void ObserverExportWindow::Initialize()
 {
@@ -642,73 +642,50 @@ void ObserverExportWindow::ExportToGWRank()
     json["verson"] = "1.0";
     std::string json_str = json.dump(4);
     
-    // Initialize curl
-    CURL* curl = curl_easy_init();
-    if (!curl) {
-        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, L"<c=#FF0000>Failed to initialize CURL for upload.</c>");
-        return;
-    }
-    
-    // Create multipart form
-    curl_mime* form = curl_mime_init(curl);
-    curl_mimepart* field = curl_mime_addpart(form);
-    curl_mime_name(field, "json_file");
-    curl_mime_data(field, json_str.c_str(), CURL_ZERO_TERMINATED);
-    curl_mime_filename(field, "match.json");
-    curl_mime_type(field, "application/json");
-    
-    // Prepare headers
-    struct curl_slist* headers = nullptr;
-    std::string auth_header = "Authorization: Bearer " + Instance().gwrank_api_key;
-    headers = curl_slist_append(headers, auth_header.c_str());
-    
-    // Configure curl
-    curl_easy_setopt(curl, CURLOPT_URL, Instance().gwrank_endpoint.c_str());
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
-    
-    // SSL configuration - disable verification for compatibility
-    // Note: This makes the connection less secure but avoids CA certificate issues
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    
-    // Response buffer
-    std::string response_data;
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char* ptr, size_t size, size_t nmemb, void* userdata) -> size_t {
-        size_t total = size * nmemb;
-        static_cast<std::string*>(userdata)->append(ptr, total);
-        return total;
-    });
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
-    
-    // Perform request
+    // Build a multipart/form-data body containing a single "json_file" part.
+    const std::string boundary = "----GWToolboxBoundary7d8e6f4c2a1b";
+    std::string body;
+    body.append("--");
+    body.append(boundary);
+    body.append("\r\n");
+    body.append("Content-Disposition: form-data; name=\"json_file\"; filename=\"match.json\"\r\n");
+    body.append("Content-Type: application/json\r\n\r\n");
+    body.append(json_str);
+    body.append("\r\n--");
+    body.append(boundary);
+    body.append("--\r\n");
+
+    RestClient client;
+    client.SetUrl(Instance().gwrank_endpoint.c_str());
+    client.SetMethod(HttpMethod::Post);
+    const std::string content_type = "multipart/form-data; boundary=" + boundary;
+    client.SetHeader("Content-Type", content_type.c_str());
+    const std::string auth_header_value = "Bearer " + Instance().gwrank_api_key;
+    client.SetHeader("Authorization", auth_header_value.c_str());
+    client.SetPostContent(body, ContentFlag::ByRef);
+    client.SetTimeoutSec(30);
+    client.SetVerifyPeer(false);
+    client.SetVerifyHost(false);
+
     GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, L"<c=#00FF00>Uploading match data to GWRank.com...</c>");
-    CURLcode res = curl_easy_perform(curl);
-    
-    // Check result
-    if (res != CURLE_OK) {
+    client.Execute();
+
+    const int status_code = client.GetStatusCode();
+    if (client.GetStatus() != ResponseStatus::Completed) {
         wchar_t error_msg[512];
-        swprintf(error_msg, 512, L"<c=#FF0000>Failed to upload: %S</c>", curl_easy_strerror(res));
+        swprintf(error_msg, 512, L"<c=#FF0000>Failed to upload: %S</c>", client.GetStatusStr());
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, error_msg);
-    } else {
-        long response_code = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-        
-        if (response_code >= 200 && response_code < 300) {
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, L"<c=#00FF00>Successfully uploaded match to GWRank.com!</c>");
-        } else {
-            wchar_t error_msg[256];
-            swprintf(error_msg, 256, L"<c=#FF0000>Upload failed with HTTP status %ld. Response: %S</c>", 
-                     response_code, response_data.substr(0, 100).c_str());
-            GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, error_msg);
-        }
     }
-    
-    // Cleanup
-    curl_slist_free_all(headers);
-    curl_mime_free(form);
-    curl_easy_cleanup(curl);
+    else if (status_code >= 200 && status_code < 300) {
+        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, L"<c=#00FF00>Successfully uploaded match to GWRank.com!</c>");
+    }
+    else {
+        const std::string& response_data = client.GetContent();
+        wchar_t error_msg[256];
+        swprintf(error_msg, 256, L"<c=#FF0000>Upload failed with HTTP status %d. Response: %S</c>",
+                 status_code, response_data.substr(0, 100).c_str());
+        GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, error_msg);
+    }
 }
 
 

@@ -12,7 +12,8 @@ the latest version, go to the [Home Page](./) instead.
 * [New] Added `/tb save [profile]` and `/tb load [profile]` chat commands to save/load Toolbox settings to disk with optional profile names
 * [New] Vanquish map overlay now detects and visualises unreachable areas (blocked gates, impassable terrain) using BFS pathfinding — distinct colours distinguish blocked vs reachable areas
 * [New] Daily Quests window: added toggle to show pre-searing dailies while in post-searing (and vice versa, including Vanguard Quest and Nicholas Sandford)
-* [New] Travel window: added option to show/hide the built-in destination buttons (ToA, DoA, Kamadan, Zaishen daily buttons, etc.)
+* [New] Travel window: added option to show/hide the Zaishen daily quest buttons
+* [New] Travel window: custom destination buttons — add, remove and reorder your own travel destinations directly from the Travel window settings
 * [New] Travel window: improved nearest outpost algorithm using the full map adjacency graph via BFS for smarter outpost selection
 * [New] Hero Builds window: added checkbox to filter builds to only show those matching your primary profession
 * [New] Minimap: per-agent-type size controls for hostile, neutral, ally, ally NPC, ally NPC with quest marker, and ally spirit agents
@@ -22,12 +23,26 @@ the latest version, go to the [Home Page](./) instead.
 * [New] Added `/resignlog pending` (or `/resignlog notresigned`) to filter the resign log to players who haven't resigned yet
 * [New] Added settings cog button to Toolbox window title bars for quick access to that window's settings (can be disabled in Toolbox Settings)
 * [New] Armory window: added many new weapon and offhand item model IDs (axes, bows, daggers, hammers, shields, scythes, focus items)
+* [New] Added Bounty Kill Tracker widget — overlays a kill counter on active bounty effect icons, similar to the vanquish counter on the Hard Mode effect icon
+* [New] Pcons window: optional enabled/disabled status indicator (green tick or red cross) shown in the collapsed window title bar
+* [New] Hotkeys — Use Item: new "Use by Slot" mode to trigger the item in a specific bag/slot position, regardless of what item it is
+* [New] `/transmo` NPC list is now fully user-configurable in settings — add your current target as a named entry, edit or remove existing entries, and reset to built-in defaults; also added `/transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [SCALE]` subcommand for direct model specification
+* [New] Inventory Sorting: new `/sortinventory` and `/sortstorage` chat commands to sort character or storage inventory from chat; sorting now automatically deprioritises Nicholas The Traveller collectibles until the week they are needed
+* [New] Notifications: added Team Chat as an option for toast notifications and window flash; new "Change window title on notification" option — the GW window title changes to show pending unread notifications when the game is minimised or running in the background
+* [New] Effects Monitor widget: new option to track nearby spirit effect timers (Bloodsong, Vampirism, etc.) and display their remaining duration alongside your own effects
+* [New] Item Drops: new "Always hide items for player" and "Always hide items for party" lists — items on these lists are always hidden from the drop overlay regardless of rarity or other filter settings
+* [New] Added `/disableheroskill <hero_number> <slot_number> [0|1]` chat command to enable or disable a specific hero's skill slot from chat
+* [New] Added `/custommarker <x> <y>` chat command to place a custom quest marker at exact world coordinates; `/custommarker clear` removes it
+* [New] Account Inventory window: Ctrl+Click on an item to move it to your current inventory
 * [Fix] Corrected model file IDs for dervish avatar forms in the Armory window
 * [Fix] Fixed title tracker using a deprecated API for bounty title detection
 * [Fix] Fixed auto-assigned quests overriding the player's manually chosen active quest
 * [Fix] Improved reliability of character auto-selection on the character select screen
+* [Fix] Trade window: messages from players on your ignore list are now filtered from trade chat
+* [Fix] Chat Filter: "Target is immune to Spells" (Vow of Silence) is now correctly blocked when the "Invalid target" filter is enabled
 * [Minor] Completion window now hides empty categories when "hide completed" filters are active
 * [Minor] Custom quest markers are now correctly preserved across map loads
+* [Minor] Added a hint that warns you when a hero is set to "Avoid Combat" while you are in Junundu (Desert Wurm) form
 
 ## Verion 8.17
 

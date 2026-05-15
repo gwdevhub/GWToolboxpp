@@ -15,8 +15,8 @@ if(MSVC_TOOLSET_VERSION LESS 143)
     message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
 endif()
 
-# Increase constexpr depth for CTRE compile-time regex library
-add_compile_options(/constexpr:depth2048 /constexpr:steps10000000)
+# Increase constexpr/template depth for CTRE compile-time regex library
+add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /bigobj /templateDepth:2048)
 
 if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 4))
     message(FATAL_ERROR "You are configuring a non 32-bit build, this is not supported. Run cmake with `-A Win32`")
@@ -27,7 +27,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 add_compile_definitions(
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
-	"WOLFSSL_NO_OPTIONS_H"
 
     "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""
     "GWTOOLBOXEXE_MODULE_VERSION=${GWTOOLBOXEXE_MODULE_VERSION}"
@@ -61,7 +60,6 @@ find_library(GAME_SDK discord_game_sdk)
 find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
 find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
-find_package(wolfssl CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)

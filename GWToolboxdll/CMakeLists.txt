@@ -89,13 +89,13 @@ target_link_libraries(GWToolboxdll PRIVATE
     IconFontCppHeaders
     nativefiledialog
     wintoast
-    wolfssl::wolfssl
 	minhook::minhook
 	ctre::ctre
     unofficial::uwebsockets::uwebsockets
 
     # libs:
     Dbghelp.lib # for MiniDump
+    bcrypt.lib  # for SHA256 (Resources.cpp)
 	delayimp # for delay loading gwca
     )
 

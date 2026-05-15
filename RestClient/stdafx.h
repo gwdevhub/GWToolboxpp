@@ -9,6 +9,3 @@
 #include <mutex>
 #include <string>
 #include <utility>
-
-#define CURL_STATICLIB
-#include <curl/curl.h>
