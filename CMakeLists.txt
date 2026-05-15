@@ -16,7 +16,11 @@ if(MSVC_TOOLSET_VERSION LESS 143)
 endif()
 
 # Increase constexpr depth for CTRE compile-time regex library
-add_compile_options(/constexpr:depth2048 /constexpr:steps10000000)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(-Xclang -fconstexpr-depth=2048 -Xclang -fconstexpr-steps=10000000)
+else()
+    add_compile_options(/constexpr:depth2048 /constexpr:steps10000000)
+endif()
 
 if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 4))
     message(FATAL_ERROR "You are configuring a non 32-bit build, this is not supported. Run cmake with `-A Win32`")
@@ -36,7 +40,10 @@ add_compile_definitions(
     "GWTOOLBOX_MODULE_VERSION=${GWTOOLBOX_MODULE_VERSION}"
     )
 	
-add_compile_options(/MP /permissive-)
+add_compile_options(/permissive-)
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(/MP)
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -41,9 +41,14 @@ target_compile_definitions(GWToolboxdll PRIVATE
     "GWCA_IMPORT"
     )
       
-target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy /utf-8)
-target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+target_compile_options(GWToolboxdll PRIVATE /W4 /Gy /utf-8)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:RelWithDebInfo>:/Zi>)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/Z7 /Od>)
+else()
+    target_compile_options(GWToolboxdll PRIVATE /WX)
+    target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+endif()
 
 set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_RunCodeAnalysis false
