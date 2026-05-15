@@ -12,6 +12,13 @@
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg-overlays/triplets",
         "VCPKG_TARGET_TRIPLET": "x86-windows-mixed"
       }
+    },
+    {
+      "name": "clang",
+      "inherits": "vcpkg",
+      "displayName": "clang-cl (experimental)",
+      "toolset": "ClangCL",
+      "binaryDir": "${sourceDir}/build-clang"
     }
   ]
 }
