@@ -709,7 +709,14 @@ bool Resources::Post(const std::string& url, const std::string& payload, std::st
     r.SetMethod(HttpMethod::Post);
     r.SetPostContent(payload.c_str(), payload.size(), ContentFlag::ByRef);
 
-    std::string content_type = nlohmann::json::accept(payload) ? "application/json" : "application/x-www-form-urlencoded";
+    // No direct equivalent of an "accept" / probe-only parse in glaze; do a parse-and-discard.
+    std::string content_type = "application/x-www-form-urlencoded";
+    {
+        glz::json_t tmp;
+        if (!glz::read_json(tmp, payload)) {
+            content_type = "application/json";
+        }
+    }
     r.SetHeader("Content-Type", content_type.c_str());
     r.SetUrl(url.c_str());
     r.Execute();

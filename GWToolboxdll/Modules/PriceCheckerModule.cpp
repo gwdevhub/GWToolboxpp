@@ -19,7 +19,7 @@
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
-using nlohmann::json;
+using json = glz::json_t;
 
 namespace {
 
@@ -297,18 +297,17 @@ namespace {
 
     bool ParsePriceJson(const std::string& prices_json_str)
     {
-        const json& prices_json = json::parse(prices_json_str, nullptr, false);
-        if (prices_json == json::value_t::discarded) return false;
+        json prices_json;
+        if (auto ec = glz::read_json(prices_json, prices_json_str); ec) return false;
 
         prices_by_identifier.clear();
-        const auto& it_buy = prices_json.find("sell");
-        if (it_buy == prices_json.end() || !it_buy->is_object()) return false;
+        if (!prices_json.contains("sell") || !prices_json.at("sell").is_object()) return false;
 
-        for (auto it = it_buy.value().begin(); it != it_buy.value().end(); ++it) {
-            if (!it->is_object()) continue;
-            const auto& price_value = it->find("p");
-            if (price_value == it->end() || !price_value->is_number_unsigned()) continue;
-            prices_by_identifier[it.key()] = price_value->get<uint32_t>();
+        const auto& sell_obj = prices_json.at("sell").get_object();
+        for (const auto& [key, value] : sell_obj) {
+            if (!value.is_object()) continue;
+            if (!value.contains("p") || !value.at("p").is_number()) continue;
+            prices_by_identifier[std::string{key}] = static_cast<uint32_t>(value.at("p").get<double>());
         }
         return !prices_by_identifier.empty();
     }

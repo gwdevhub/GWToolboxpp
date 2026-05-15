@@ -110,15 +110,16 @@ void ServerInfoWidget::Update(float)
                 return;
             }
             if (!response.empty()) {
-                using Json = nlohmann::json;
-                Json json = Json::parse(response.c_str());
-                if (current_server_info->city.empty() && json["city"].is_string()) {
-                    current_server_info->city = json["city"];
+                glz::json_t json;
+                if (auto ec = glz::read_json(json, response); !ec) {
+                    if (current_server_info->city.empty() && json.contains("city") && json.at("city").is_string()) {
+                        current_server_info->city = json.at("city").get<std::string>();
+                    }
+                    if (current_server_info->country.empty() && json.contains("country_name") && json.at("country_name").is_string()) {
+                        current_server_info->country = json.at("country_name").get<std::string>();
+                    }
+                    server_string_dirty = true;
                 }
-                if (current_server_info->country.empty() && json["country_name"].is_string()) {
-                    current_server_info->country = json["country_name"];
-                }
-                server_string_dirty = true;
             }
         });
     }

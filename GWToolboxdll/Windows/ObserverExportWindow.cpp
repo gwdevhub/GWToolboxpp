@@ -18,14 +18,14 @@ void ObserverExportWindow::Initialize()
 }
 
 // Convert to JSON (Version 0.1)
-nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
+glz::json_t ObserverExportWindow::ToJSON_V_0_1()
 {
-    nlohmann::json json;
+    glz::json_t json;
     ObserverModule& observer_module = ObserverModule::Instance();
     const std::vector<uint32_t>& party_ids = observer_module.GetObservablePartyIds();
 
     auto shared_stats_to_json = [](const ObserverModule::SharedStats& stats) {
-        nlohmann::json shared_json;
+        glz::json_t shared_json;
         shared_json["total_crits_received"] = stats.total_crits_received;
         shared_json["total_crits_dealt"] = stats.total_crits_dealt;
         shared_json["total_party_crits_received"] = stats.total_party_crits_received;
@@ -42,56 +42,60 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
         return shared_json;
     };
 
+    json["parties"] = glz::json_t::array_t{};
+    json["skills"] = glz::json_t::array_t{};
+
     for (const uint32_t party_id : party_ids) {
         // parties
         const ObserverModule::ObservableParty* party = observer_module.GetObservablePartyById(party_id);
         if (!party) {
-            json["parties"].push_back(nlohmann::json::value_t::null);
+            json["parties"].get_array().push_back(glz::json_t{nullptr});
             continue;
         }
-        json["parties"].push_back([&] {
+        json["parties"].get_array().push_back([&] {
             // parties -> party
-            nlohmann::json json_party;
+            glz::json_t json_party;
             json_party["party_id"] = party->party_id;
             json_party["stats"] = shared_stats_to_json(party->stats);
             
             // Party aggregate health snapshots (recorded every 15 seconds)
-            json_party["health_snapshots"] = nlohmann::json::array();
+            json_party["health_snapshots"] = glz::json_t::array_t{};
             for (const auto& snapshot : party->health_snapshots) {
-                nlohmann::json snapshot_json;
+                glz::json_t snapshot_json;
                 snapshot_json["timestamp_ms"] = snapshot.timestamp_ms;
                 snapshot_json["hp_percentage"] = snapshot.hp_percentage;
                 snapshot_json["hp_value"] = snapshot.hp_value;
                 snapshot_json["max_hp"] = snapshot.max_hp;
-                json_party["health_snapshots"].push_back(snapshot_json);
+                json_party["health_snapshots"].get_array().push_back(snapshot_json);
             }
-            
+
             // Shrine captures (captured shrines by this party)
-            json_party["shrine_captures"] = nlohmann::json::array();
+            json_party["shrine_captures"] = glz::json_t::array_t{};
             for (const auto& shrine_capture : party->shrine_captures) {
-                nlohmann::json shrine_json;
+                glz::json_t shrine_json;
                 shrine_json["timestamp_ms"] = shrine_capture.timestamp_ms;
-                json_party["shrine_captures"].push_back(shrine_json);
+                json_party["shrine_captures"].get_array().push_back(shrine_json);
             }
-            
+
             // Tower captures (captured towers/flags by this party)
-            json_party["tower_captures"] = nlohmann::json::array();
+            json_party["tower_captures"] = glz::json_t::array_t{};
             for (const auto& tower_capture : party->tower_captures) {
-                nlohmann::json tower_json;
+                glz::json_t tower_json;
                 tower_json["timestamp_ms"] = tower_capture.timestamp_ms;
-                json_party["tower_captures"].push_back(tower_json);
+                json_party["tower_captures"].get_array().push_back(tower_json);
             }
-            
+
+            json_party["members"] = glz::json_t::array_t{};
             for (const uint32_t agent_id : party->agent_ids) {
                 // parties -> party -> agents
                 ObserverModule::ObservableAgent* agent = observer_module.GetObservableAgentById(agent_id);
                 if (!agent) {
-                    json_party["members"].push_back(nlohmann::json::value_t::null);
+                    json_party["members"].get_array().push_back(glz::json_t{nullptr});
                     continue;
                 }
-                json_party["members"].push_back([&] {
+                json_party["members"].get_array().push_back([&] {
                     // parties -> party -> agents -> agent
-                    nlohmann::json json_agent;
+                    glz::json_t json_agent;
                     json_agent["display_name"] = agent->DisplayName();
                     json_agent["raw_name"] = agent->RawName();
                     json_agent["debug_name"] = agent->DebugName();
@@ -104,25 +108,25 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
                     json_agent["stats"] = shared_stats_to_json(agent->stats);
 
                     // Death events (all deaths for this agent)
-                    json_agent["death_events"] = nlohmann::json::array();
+                    json_agent["death_events"] = glz::json_t::array_t{};
                     for (const auto& death : agent->death_events) {
-                        nlohmann::json death_json;
+                        glz::json_t death_json;
                         death_json["timestamp_ms"] = death.timestamp_ms;
                         death_json["position_x"] = death.position_x;
                         death_json["position_y"] = death.position_y;
                         death_json["killer_agent_id"] = death.killer_agent_id;
                         death_json["killing_skill_id"] = death.killing_skill_id;
                         death_json["is_npc"] = death.is_npc;
-                        json_agent["death_events"].push_back(death_json);
+                        json_agent["death_events"].get_array().push_back(death_json);
                     }
-                    
+
                     // Resurrection events (all resurrections for this agent)
-                    json_agent["resurrection_events"] = nlohmann::json::array();
+                    json_agent["resurrection_events"] = glz::json_t::array_t{};
                     for (const auto& rez : agent->resurrection_events) {
-                        nlohmann::json rez_json;
+                        glz::json_t rez_json;
                         rez_json["timestamp_ms"] = rez.timestamp_ms;
                         rez_json["resurrector_agent_id"] = rez.resurrector_agent_id;
-                        
+
                         // Add resurrection type
                         const char* res_type_str = "unknown";
                         switch (rez.resurrection_type) {
@@ -131,20 +135,20 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
                             default: res_type_str = "unknown"; break;
                         }
                         rez_json["resurrection_type"] = res_type_str;
-                        
-                        json_agent["resurrection_events"].push_back(rez_json);
+
+                        json_agent["resurrection_events"].get_array().push_back(rez_json);
                     }
-                    
+
                     for (const auto skill_id : agent->stats.skill_ids_used) {
                         // parties -> party -> agents -> agent -> skills
                         ObserverModule::ObservableSkill* skill = ObserverModule::Instance().GetObservableSkillById(skill_id);
                         if (!skill) {
-                            json["skills"].push_back(nlohmann::json::value_t::null);
+                            json["skills"].get_array().push_back(glz::json_t{nullptr});
                             continue;
                         }
-                        json["skills"].push_back([&] {
+                        json["skills"].get_array().push_back([&] {
                             // parties -> party -> agents -> agent -> skills -> skill
-                            nlohmann::json json_skill;
+                            glz::json_t json_skill;
                             json_skill["name"] = skill->Name();
                             return json_skill;
                         }());
@@ -161,9 +165,9 @@ nlohmann::json ObserverExportWindow::ToJSON_V_0_1()
 }
 
 // Convert to JSON (Version 1.0)
-nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
+glz::json_t ObserverExportWindow::ToJSON_V_1_0()
 {
-    nlohmann::json json;
+    glz::json_t json;
     ObserverModule& om = ObserverModule::Instance();
 
     // name is built by iterating over the parties
@@ -183,7 +187,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
     // Use the map from when the match started (if available), otherwise fall back to current map
     ObserverModule::ObservableMap* map = om.match_start_map ? om.match_start_map : om.GetMap();
     
-    json["map"] = nlohmann::json::value_t::null;
+    json["map"] = glz::json_t{nullptr};
     if (map) {
         json["map"] = {};
         json["map"]["map_id"] = static_cast<uint32_t>(map->map_id);
@@ -201,7 +205,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
     }
 
     auto action_to_json = [](const ObserverModule::ObservedAction& action) {
-        nlohmann::json action_json;
+        glz::json_t action_json;
         action_json["started"] = action.started;
         action_json["stopped"] = action.stopped;
         action_json["interrupted"] = action.interrupted;
@@ -211,7 +215,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
     };
 
     auto shared_stats_to_json = [&action_to_json](const ObserverModule::SharedStats& stats) {
-        nlohmann::json stats_json;
+        glz::json_t stats_json;
         stats_json["total_crits_received"] = stats.total_crits_received;
         stats_json["total_crits_dealt"] = stats.total_crits_dealt;
         stats_json["total_party_crits_received"] = stats.total_party_crits_received;
@@ -262,7 +266,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         std::string guild_id_s = std::to_string(guild_id);
         ObserverModule::ObservableGuild* guild = om.GetObservableGuildById(guild_id);
         if (!guild) {
-            json["guilds"]["by_id"][guild_id_s] = nlohmann::json::value_t::null;
+            json["guilds"]["by_id"][guild_id_s] = glz::json_t{nullptr};
             continue;
         }
         json["guilds"]["by_id"][guild_id_s]["guild_id"] = guild->guild_id;
@@ -285,7 +289,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         std::string skill_id_s = std::to_string(std::to_underlying(skill_id));
         ObserverModule::ObservableSkill* skill = om.GetObservableSkillById(skill_id);
         if (!skill) {
-            json["skills"]["by_id"][skill_id_s] = nlohmann::json::value_t::null;
+            json["skills"]["by_id"][skill_id_s] = glz::json_t{nullptr};
             continue;
         }
         json["skills"]["by_id"][skill_id_s]["skill_id"] = skill->gw_skill.skill_id;
@@ -336,7 +340,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         std::string party_id_s = std::to_string(party_id);
         ObserverModule::ObservableParty* party = om.GetObservablePartyById(party_id);
         if (!party) {
-            json["parties"]["by_id"][party_id_s] = nlohmann::json::value_t::null;
+            json["parties"]["by_id"][party_id_s] = glz::json_t{nullptr};
             continue;
         }
         if (name_prepend_vs) {
@@ -357,38 +361,38 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         json["parties"]["by_id"][party_id_s]["stats"] = shared_stats_to_json(party->stats);
         
         // Morale boost events (with timestamps)
-        json["parties"]["by_id"][party_id_s]["morale_boosts"] = nlohmann::json::array();
+        json["parties"]["by_id"][party_id_s]["morale_boosts"] = glz::json_t::array_t{};
         for (const auto& morale_boost : party->morale_boosts) {
-            nlohmann::json morale_json;
+            glz::json_t morale_json;
             morale_json["timestamp_ms"] = morale_boost.timestamp_ms;
-            json["parties"]["by_id"][party_id_s]["morale_boosts"].push_back(morale_json);
+            json["parties"]["by_id"][party_id_s]["morale_boosts"].get_array().push_back(morale_json);
         }
         
         // Shrine capture events (with timestamps)
-        json["parties"]["by_id"][party_id_s]["shrine_captures"] = nlohmann::json::array();
+        json["parties"]["by_id"][party_id_s]["shrine_captures"] = glz::json_t::array_t{};
         for (const auto& shrine_capture : party->shrine_captures) {
-            nlohmann::json shrine_json;
+            glz::json_t shrine_json;
             shrine_json["timestamp_ms"] = shrine_capture.timestamp_ms;
-            json["parties"]["by_id"][party_id_s]["shrine_captures"].push_back(shrine_json);
+            json["parties"]["by_id"][party_id_s]["shrine_captures"].get_array().push_back(shrine_json);
         }
         
         // Tower capture events (with timestamps)
-        json["parties"]["by_id"][party_id_s]["tower_captures"] = nlohmann::json::array();
+        json["parties"]["by_id"][party_id_s]["tower_captures"] = glz::json_t::array_t{};
         for (const auto& tower_capture : party->tower_captures) {
-            nlohmann::json tower_json;
+            glz::json_t tower_json;
             tower_json["timestamp_ms"] = tower_capture.timestamp_ms;
-            json["parties"]["by_id"][party_id_s]["tower_captures"].push_back(tower_json);
+            json["parties"]["by_id"][party_id_s]["tower_captures"].get_array().push_back(tower_json);
         }
         
         // Party aggregate health snapshots (recorded every 15 seconds)
-        json["parties"]["by_id"][party_id_s]["health_snapshots"] = nlohmann::json::array();
+        json["parties"]["by_id"][party_id_s]["health_snapshots"] = glz::json_t::array_t{};
         for (const auto& snapshot : party->health_snapshots) {
-            nlohmann::json snapshot_json;
+            glz::json_t snapshot_json;
             snapshot_json["timestamp_ms"] = snapshot.timestamp_ms;
             snapshot_json["hp_percentage"] = snapshot.hp_percentage;
             snapshot_json["hp_value"] = snapshot.hp_value;
             snapshot_json["max_hp"] = snapshot.max_hp;
-            json["parties"]["by_id"][party_id_s]["health_snapshots"].push_back(snapshot_json);
+            json["parties"]["by_id"][party_id_s]["health_snapshots"].get_array().push_back(snapshot_json);
         }
     }
 
@@ -399,7 +403,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         std::string agent_id_s = std::to_string(agent_id);
         ObserverModule::ObservableAgent* agent = om.GetObservableAgentById(agent_id);
         if (!agent) {
-            json["agents"]["by_id"][agent_id_s] = nlohmann::json::value_t::null;
+            json["agents"]["by_id"][agent_id_s] = glz::json_t{nullptr};
             continue;
         }
         json["agents"]["by_id"][agent_id_s]["agent_id"] = agent->agent_id;
@@ -421,7 +425,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         for (auto& [target_id, action] : agent->stats.attacks_dealt_to_agents) {
             std::string target_id_s = std::to_string(target_id);
             if (!action) {
-                json["agents"]["by_id"][agent_id_s]["stats"]["attacks_dealt_to_agents"][target_id_s] = nlohmann::json::value_t::null;
+                json["agents"]["by_id"][agent_id_s]["stats"]["attacks_dealt_to_agents"][target_id_s] = glz::json_t{nullptr};
                 continue;
             }
             json["agents"]["by_id"][agent_id_s]["stats"]["attacks_dealt_to_agents"][target_id_s] = action_to_json(*action);
@@ -431,7 +435,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         for (auto& [caster_id, action] : agent->stats.attacks_received_from_agents) {
             std::string caster_id_s = std::to_string(caster_id);
             if (!action) {
-                json["agents"]["by_id"][agent_id_s]["stats"]["attacks_received_from_agents"][caster_id_s] = nlohmann::json::value_t::null;
+                json["agents"]["by_id"][agent_id_s]["stats"]["attacks_received_from_agents"][caster_id_s] = glz::json_t{nullptr};
                 continue;
             }
             json["agents"]["by_id"][agent_id_s]["stats"]["attacks_received_from_agents"][caster_id_s] = action_to_json(*action);
@@ -445,7 +449,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
             std::string skill_id_s = std::to_string(std::to_underlying(skill_id));
             const auto it_skill = agent->stats.skills_used.find(skill_id);
             if (it_skill == agent->stats.skills_used.end()) {
-                json["agents"]["by_id"][agent_id_s]["stats"]["skills_used"][skill_id_s] = nlohmann::json::value_t::null;
+                json["agents"]["by_id"][agent_id_s]["stats"]["skills_used"][skill_id_s] = glz::json_t{nullptr};
                 continue;
             }
             json["agents"]["by_id"][agent_id_s]["stats"]["skills_used"][skill_id_s] = action_to_json(*it_skill->second);
@@ -458,7 +462,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
             std::string skill_id_s = std::to_string(std::to_underlying(skill_id));
             const auto it_skill = agent->stats.skills_received.find(skill_id);
             if (it_skill == agent->stats.skills_received.end()) {
-                json["agents"]["by_id"][agent_id_s]["stats"]["skills_received"][skill_id_s] = nlohmann::json::value_t::null;
+                json["agents"]["by_id"][agent_id_s]["stats"]["skills_received"][skill_id_s] = glz::json_t{nullptr};
                 continue;
             }
             json["agents"]["by_id"][agent_id_s]["stats"]["skills_received"][skill_id_s] = action_to_json(*it_skill->second);
@@ -470,14 +474,14 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
             std::string target_id_s = std::to_string(target_id);
             auto it_target = agent->stats.skills_used_on_agents.find(target_id);
             if (it_target == agent->stats.skills_used_on_agents.end()) {
-                json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s] = nlohmann::json::value_t::null;
+                json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s] = glz::json_t{nullptr};
                 continue;
             }
             for (auto skill_id : agent_skill_ids) {
                 std::string skill_id_s = std::to_string(std::to_underlying(skill_id));
                 auto it_skill = it_target->second.find(skill_id);
                 if (it_skill == it_target->second.end()) {
-                    json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s][skill_id_s] = nlohmann::json::value_t::null;
+                    json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s][skill_id_s] = glz::json_t{nullptr};
                     continue;
                 }
                 json["agents"]["by_id"][agent_id_s]["stats"]["skills_used_on_agents"][target_id_s][skill_id_s] = action_to_json(*it_skill->second);
@@ -489,14 +493,14 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
             std::string caster_id_s = std::to_string(caster_id);
             auto it_target = agent->stats.skills_received_from_agents.find(caster_id);
             if (it_target == agent->stats.skills_received_from_agents.end()) {
-                json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s] = nlohmann::json::value_t::null;
+                json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s] = glz::json_t{nullptr};
                 continue;
             }
             for (auto skill_id : agent_skill_ids) {
                 std::string skill_id_s = std::to_string(std::to_underlying(skill_id));
                 auto it_skill = it_target->second.find(skill_id);
                 if (it_skill == it_target->second.end()) {
-                    json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s][skill_id_s] = nlohmann::json::value_t::null;
+                    json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s][skill_id_s] = glz::json_t{nullptr};
                     continue;
                 }
                 json["agents"]["by_id"][agent_id_s]["stats"]["skills_received_from_agents"][caster_id_s][skill_id_s] = action_to_json(*it_skill->second);
@@ -576,22 +580,22 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
         }
 
         // Death events (all deaths for this agent)
-        json["agents"]["by_id"][agent_id_s]["death_events"] = nlohmann::json::array();
+        json["agents"]["by_id"][agent_id_s]["death_events"] = glz::json_t::array_t{};
         for (const auto& death : agent->death_events) {
-            nlohmann::json death_json;
+            glz::json_t death_json;
             death_json["timestamp_ms"] = death.timestamp_ms;
             death_json["position_x"] = death.position_x;
             death_json["position_y"] = death.position_y;
             death_json["killer_agent_id"] = death.killer_agent_id;
             death_json["killing_skill_id"] = death.killing_skill_id;
             death_json["is_npc"] = death.is_npc;
-            json["agents"]["by_id"][agent_id_s]["death_events"].push_back(death_json);
+            json["agents"]["by_id"][agent_id_s]["death_events"].get_array().push_back(death_json);
         }
         
         // Resurrection events (all resurrections for this agent)
-        json["agents"]["by_id"][agent_id_s]["resurrection_events"] = nlohmann::json::array();
+        json["agents"]["by_id"][agent_id_s]["resurrection_events"] = glz::json_t::array_t{};
         for (const auto& rez : agent->resurrection_events) {
-            nlohmann::json rez_json;
+            glz::json_t rez_json;
             rez_json["timestamp_ms"] = rez.timestamp_ms;
             rez_json["resurrector_agent_id"] = rez.resurrector_agent_id;
             
@@ -604,7 +608,7 @@ nlohmann::json ObserverExportWindow::ToJSON_V_1_0()
             }
             rez_json["resurrection_type"] = res_type_str;
             
-            json["agents"]["by_id"][agent_id_s]["resurrection_events"].push_back(rez_json);
+            json["agents"]["by_id"][agent_id_s]["resurrection_events"].get_array().push_back(rez_json);
         }
     }
 
@@ -638,9 +642,9 @@ void ObserverExportWindow::ExportToGWRank()
     }
     
     // Generate JSON v1.0
-    nlohmann::json json = ToJSON_V_1_0();
+    glz::json_t json = ToJSON_V_1_0();
     json["verson"] = "1.0";
-    std::string json_str = json.dump(4);
+    std::string json_str = glz::write<glz::opts{.prettify = true}>(json).value_or(std::string{});
     
     // Initialize curl
     CURL* curl = curl_easy_init();
@@ -715,7 +719,7 @@ void ObserverExportWindow::ExportToGWRank()
 // Export as JSON
 void ObserverExportWindow::ExportToJSON(Version version)
 {
-    nlohmann::json json;
+    glz::json_t json;
     std::string filename;
     SYSTEMTIME time;
     GetLocalTime(&time);
@@ -734,7 +738,7 @@ void ObserverExportWindow::ExportToJSON(Version version)
             json = ToJSON_V_1_0();
             json["verson"] = "1.0";
             json["exported_at_local"] = export_time;
-            std::string name = json["name"].dump();
+            std::string name = glz::write_json(json["name"]).value_or(std::string{});
             // remove quotation marks (come in from json.dump())
             std::erase(name, '"');
             // replace spaces with _
@@ -757,7 +761,7 @@ void ObserverExportWindow::ExportToJSON(Version version)
     }
 
     std::ofstream out(file_location);
-    out << json.dump();
+    out << glz::write_json(json).value_or(std::string{});
     out.close();
     wchar_t file_location_wc[512];
     size_t msg_len = 0;

@@ -55,14 +55,17 @@ namespace {
                 return Log::Warning(response.c_str()), fetch_oauth_token = false;
             }
 
-            const auto json = nlohmann::json::parse(response);
+            glz::json_t json;
+            if (auto ec = glz::read_json(json, response); ec) {
+                return Log::Warning("Failed to parse Twitch auth response"), fetch_oauth_token = false;
+            }
             if (!json.contains("verification_uri") || !json.contains("device_code") || !json.contains("interval")) {
                 return Log::Warning("Invalid or missing response fields for Twitch auth"), fetch_oauth_token = false;
             }
 
-            auto verification_uri = json["verification_uri"].get<std::string>();
-            auto device_code = json["device_code"].get<std::string>();
-            auto interval = json["interval"].get<int>();
+            auto verification_uri = json.at("verification_uri").get<std::string>();
+            auto device_code = json.at("device_code").get<std::string>();
+            auto interval = static_cast<int>(json.at("interval").get<double>());
 
             ShellExecuteA(nullptr, "open", verification_uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 
@@ -89,13 +92,16 @@ namespace {
                     continue;
                 }
 
-                auto token_json = nlohmann::json::parse(token_response);
+                glz::json_t token_json;
+                if (auto ec = glz::read_json(token_json, token_response); ec) {
+                    continue;
+                }
                 if (token_json.contains("access_token")) {
-                    access_token = token_json["access_token"].get<std::string>();
+                    access_token = token_json.at("access_token").get<std::string>();
                     break;
                 }
                 if (token_json.contains("error")) {
-                    std::string error = token_json["error"].get<std::string>();
+                    std::string error = token_json.at("error").get<std::string>();
                     if (error == "authorization_pending") {
                         continue;
                     }

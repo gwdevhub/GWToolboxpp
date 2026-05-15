@@ -73,63 +73,56 @@ struct Release {
 
 static bool ParseRelease(const std::string& json_text, Release* release)
 {
-    nlohmann::json json;
-    try {
-        json = nlohmann::json::parse(json_text.c_str());
-    } catch (nlohmann::json::exception&) {
+    glz::json_t json;
+    if (auto ec = glz::read_json(json, json_text); ec) {
         fprintf(stderr, "Json::parse failed\n");
         return false;
     }
 
-    const auto it_tag_name = json.find("tag_name");
-    if (it_tag_name == json.end() || !it_tag_name->is_string()) {
+    if (!json.contains("tag_name") || !json.at("tag_name").is_string()) {
         fprintf(stderr, "Key 'tag_name' not found or not a string in '%s'\n", json_text.c_str());
         return false;
     }
 
-    const auto it_body = json.find("body");
-    if (it_body == json.end() || !it_body->is_string()) {
+    if (!json.contains("body") || !json.at("body").is_string()) {
         fprintf(stderr, "Key 'body' not found or not a string in '%s'\n", json_text.c_str());
         return false;
     }
 
-    const auto it_assets = json.find("assets");
-    if (it_assets == json.end() || !it_assets->is_array()) {
+    if (!json.contains("assets") || !json.at("assets").is_array()) {
         fprintf(stderr, "Key 'assets' not found or not an array in '%s'\n", json_text.c_str());
         return false;
     }
 
-    release->tag_name = it_tag_name->get<std::string>();
-    release->body = it_body->get<std::string>();
+    release->tag_name = json.at("tag_name").get<std::string>();
+    release->body = json.at("body").get<std::string>();
 
-    for (size_t i = 0; i < it_assets->size(); i++) {
-        nlohmann::json& entry = it_assets->at(i);
+    const auto& assets = json.at("assets").get_array();
+    for (size_t i = 0; i < assets.size(); i++) {
+        const auto& entry = assets[i];
 
-        auto it_name = entry.find("name");
-        if (it_name == entry.end() || !it_name->is_string()) {
+        if (!entry.contains("name") || !entry.at("name").is_string()) {
             fprintf(stderr, "Key 'name' not found or not a string in (assert:%zu) '%s'\n",
                     i, json_text.c_str());
             return false;
         }
 
-        auto it_size = entry.find("size");
-        if (it_size == entry.end() || !it_size->is_number()) {
+        if (!entry.contains("size") || !entry.at("size").is_number()) {
             fprintf(stderr, "Key 'size' not found or not a number in (assert:%zu) '%s'\n",
                     i, json_text.c_str());
             return false;
         }
 
-        auto it_browser_download_url = entry.find("browser_download_url");
-        if (it_browser_download_url == entry.end() || !it_browser_download_url->is_string()) {
+        if (!entry.contains("browser_download_url") || !entry.at("browser_download_url").is_string()) {
             fprintf(stderr, "Key 'browser_download_url' not found or not a string in (assert:%zu) '%s'\n",
                     i, json_text.c_str());
             return false;
         }
 
         Asset asset;
-        asset.name = it_name->get<std::string>();
-        asset.size = it_size->get<size_t>();
-        asset.browser_download_url = it_browser_download_url->get<std::string>();
+        asset.name = entry.at("name").get<std::string>();
+        asset.size = static_cast<size_t>(entry.at("size").get<double>());
+        asset.browser_download_url = entry.at("browser_download_url").get<std::string>();
 
         release->assets.emplace_back(std::move(asset));
     }

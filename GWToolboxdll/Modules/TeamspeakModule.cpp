@@ -351,35 +351,34 @@ namespace {
         return true;
     }
 
-    bool GetValue(const nlohmann::json& content, const char* key, std::string* out)
+    bool GetValue(const glz::json_t& content, const char* key, std::string* out)
     {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_string())) {
+        if (!content.contains(key) || !content.at(key).is_string()) {
             return false;
         }
-        *out = *found;
+        *out = content.at(key).get<std::string>();
         return true;
     }
 
     void GetServerInviteLink(TS3Server* server, std::string channel_id, std::function<void(const std::string&)> callback)
     {
-        using nlohmann::json;
+        using json = glz::json_t;
         json packet;
         packet["address"] = std::format("{}:{}", server->host, server->port);
         packet["name"] = server->name;
-        packet["password"] = NULL;
+        packet["password"] = nullptr;
         packet["channel_id"] = channel_id;
         packet["channel_name"] = channel_id;
-        packet["expires_in_days"] = 1;
+        packet["expires_in_days"] = 1.0;
 
-        Resources::Post("https://invites.teamspeak.com/servers/create", packet.dump(), [callback](const bool success, const std::string& response, void*) {
+        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
                 Log::Error("Failed to get teamspeak invite link (1)");
                 Log::Log("%s", response.c_str());
                 return;
             }
-            const json& res = json::parse(response.c_str(), nullptr, false);
-            if (res == json::value_t::discarded) {
+            json res;
+            if (auto ec = glz::read_json(res, response); ec) {
                 Log::Error("Failed to get teamspeak invite link (2)");
                 return;
             }

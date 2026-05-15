@@ -28,7 +28,7 @@
 #include <Utils/TextUtils.h>
 
 using easywsclient::WebSocket;
-using nlohmann::json;
+using json = glz::json_t;
 using json_vec = std::vector<json>;
 
 namespace {
@@ -76,51 +76,49 @@ namespace {
 
     bool GetValue(const json& content, const char* key, uint32_t* out)
     {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_number_unsigned())) {
+        if (!content.is_object() || !content.contains(key) || !content.at(key).is_number()) {
             return false;
         }
-        *out = *found;
+        *out = static_cast<uint32_t>(content.at(key).get<double>());
         return true;
     }
 
     bool GetValue(const json& content, const char* key, std::string* out)
     {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_string())) {
+        if (!content.is_object() || !content.contains(key) || !content.at(key).is_string()) {
             return false;
         }
-        *out = *found;
+        *out = content.at(key).get<std::string>();
         return true;
     }
 
     bool GetValue(const json& content, const char* key, bool* out)
     {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_boolean())) {
+        if (!content.is_object() || !content.contains(key) || !content.at(key).is_boolean()) {
             return false;
         }
-        *out = *found;
+        *out = content.at(key).get<bool>();
         return true;
     }
 
     bool GetValue(const json& content, const char* key, json* out)
     {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_object())) {
+        if (!content.is_object() || !content.contains(key) || !content.at(key).is_object()) {
             return false;
         }
-        *out = *found;
+        *out = content.at(key);
         return true;
     }
 
     bool GetValue(const json& content, const char* key, json_vec* out)
     {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_array())) {
+        if (!content.is_object() || !content.contains(key) || !content.at(key).is_array()) {
             return false;
         }
-        *out = found->get<json_vec>();
+        const auto& arr = content.at(key).get_array();
+        out->clear();
+        out->reserve(arr.size());
+        for (const auto& item : arr) out->push_back(item);
         return true;
     }
 
@@ -170,19 +168,19 @@ namespace {
         json packet;
         packet["address"] = std::format("{}:{}", server->host, server->port);
         packet["name"] = server->name;
-        packet["password"] = NULL;
+        packet["password"] = nullptr;
         packet["channel_id"] = channel_id;
         packet["channel_name"] = channel_id;
-        packet["expires_in_days"] = 1;
+        packet["expires_in_days"] = 1.0;
 
-        Resources::Post("https://invites.teamspeak.com/servers/create", packet.dump(), [callback](const bool success, const std::string& response, void*) {
+        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
                 Log::Error("Failed to get teamspeak invite link (1)");
                 Log::Log("%s", response.c_str());
                 return;
             }
-            const json& res = json::parse(response.c_str(), nullptr, false);
-            if (res == json::value_t::discarded) {
+            json res;
+            if (auto ec = glz::read_json(res, response); ec) {
                 Log::Error("Failed to get teamspeak invite link (2)");
                 return;
             }
@@ -239,7 +237,7 @@ namespace {
         payload["content"] = content;
         packet["payload"] = payload;
 
-        websocket->send(packet.dump());
+        websocket->send(glz::write_json(packet).value_or(std::string{}));
     }
 
     bool Connect(bool user_invoked = false)
@@ -439,8 +437,8 @@ namespace {
     bool OnWebsocketMessage(const std::string& data)
     {
         //Log::Log("%s\n", data.c_str());
-        const json& res = json::parse(data.c_str(), nullptr, false);
-        if (res == json::value_t::discarded) {
+        json res;
+        if (auto ec = glz::read_json(res, data); ec) {
             Log::Log("ERROR: Failed to parse res JSON from response in websocket->dispatch\n");
             return false;
         }

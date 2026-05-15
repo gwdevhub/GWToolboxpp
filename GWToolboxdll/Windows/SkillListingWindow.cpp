@@ -88,12 +88,12 @@ const wchar_t* SkillListingWindow::Skill::GWWConcise()
 
 void SkillListingWindow::ExportToJSON() const
 {
-    nlohmann::json json;
+    glz::json_t json;
     for (size_t i = 0; i < skills.size(); i++) {
         if (!skills[i]) {
             continue;
         }
-        json[std::to_underlying(skills[i]->skill->skill_id)] = skills[i]->ToJson();
+        json[std::to_string(std::to_underlying(skills[i]->skill->skill_id))] = skills[i]->ToJson();
     }
     const auto file_location = Resources::GetPath(L"skills.json");
     if (exists(file_location)) {
@@ -101,7 +101,7 @@ void SkillListingWindow::ExportToJSON() const
     }
 
     std::ofstream out(file_location);
-    out << json.dump();
+    out << glz::write_json(json).value_or(std::string{});
     out.close();
     wchar_t file_location_wc[512];
     size_t msg_len = 0;
@@ -248,45 +248,45 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-nlohmann::json SkillListingWindow::Skill::ToJson()
+glz::json_t SkillListingWindow::Skill::ToJson()
 {
-    nlohmann::json json;
+    glz::json_t json;
     json["n"] = TextUtils::WStringToString(Name());
     json["d"] = TextUtils::WStringToString(GWWDescription());
     json["cd"] = TextUtils::WStringToString(GWWConcise());
-    json["t"] = skill->type;
-    json["p"] = skill->profession;
-    json["a"] = IsPvE() ? 255 - skill->title : (int)skill->attribute;
+    json["t"] = static_cast<double>(skill->type);
+    json["p"] = static_cast<double>(skill->profession);
+    json["a"] = static_cast<double>(IsPvE() ? 255 - skill->title : (int)skill->attribute);
     if (IsElite()) {
-        json["e"] = 1;
+        json["e"] = 1.0;
     }
-    json["c"] = skill->campaign;
-    nlohmann::json z_json;
+    json["c"] = static_cast<double>(skill->campaign);
+    glz::json_t z_json;
     if (HasExhaustion()) {
-        z_json["x"] = skill->overcast;
+        z_json["x"] = static_cast<double>(skill->overcast);
     }
     if (skill->recharge) {
-        z_json["r"] = skill->recharge;
+        z_json["r"] = static_cast<double>(skill->recharge);
     }
     if (skill->activation) {
-        z_json["c"] = skill->activation;
+        z_json["c"] = static_cast<double>(skill->activation);
     }
     if (IsMaintained()) {
-        z_json["d"] = 1;
+        z_json["d"] = 1.0;
     }
     if (skill->adrenaline) {
-        z_json["a"] = skill->adrenaline;
+        z_json["a"] = static_cast<double>(skill->adrenaline);
     }
     if (skill->energy_cost) {
-        z_json["e"] = skill->GetEnergyCost();
+        z_json["e"] = static_cast<double>(skill->GetEnergyCost());
     }
     if (skill->health_cost) {
-        z_json["s"] = skill->health_cost;
+        z_json["s"] = static_cast<double>(skill->health_cost);
     }
-    z_json["sp"] = skill->special;
-    z_json["co"] = skill->combo;
-    z_json["q"] = skill->weapon_req;
-    if (z_json.size()) {
+    z_json["sp"] = static_cast<double>(skill->special);
+    z_json["co"] = static_cast<double>(skill->combo);
+    z_json["q"] = static_cast<double>(skill->weapon_req);
+    if (z_json.is_object() && !z_json.get_object().empty()) {
         json["z"] = z_json;
     }
     return json;

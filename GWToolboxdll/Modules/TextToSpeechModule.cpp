@@ -1022,11 +1022,11 @@ Gender GetGenderByFileId(const uint32_t file_id)
         return total_size;
     }
 
-    std::string PostJson(RestClient& client, const std::string& url, const nlohmann::json& request_body, const std::string& service_name = "API")
+    std::string PostJson(RestClient& client, const std::string& url, const glz::json_t& request_body, const std::string& service_name = "API")
     {
         client.SetUrl(url.c_str());
         client.SetHeader("Content-Type", "application/json");
-        client.SetPostContent(request_body.dump(), ContentFlag::Copy);
+        client.SetPostContent(glz::write_json(request_body).value_or(std::string{}), ContentFlag::Copy);
         client.SetFollowLocation(true);
         client.SetVerifyHost(false);
         client.SetVerifyPeer(false);
@@ -1047,7 +1047,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         const auto api_config = GetCurrentAPIConfig();
         if (!(api_config && *api_config->api_key)) return VoiceLog("No API Key"), "";
 
-        nlohmann::json request_body;
+        glz::json_t request_body;
         request_body["model"] = "gpt-4o-mini-tts";
         request_body["input"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["voice"] = (audio->profile->voice_id == voice_id_human_female) ? "nova" : "onyx";
@@ -1068,13 +1068,13 @@ Gender GetGenderByFileId(const uint32_t file_id)
         const auto api_config = GetCurrentAPIConfig();
         if (!(api_config && *api_config->api_key)) return VoiceLog("No API Key"), "";
 
-        nlohmann::json voice_settings;
+        glz::json_t voice_settings;
         voice_settings["stability"] = audio->profile->stability;
         voice_settings["similarity_boost"] = audio->profile->similarity;
         voice_settings["style"] = audio->profile->style;
         voice_settings["use_speaker_boost"] = true;
 
-        nlohmann::json request_body;
+        glz::json_t request_body;
         request_body["text"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["model_id"] = "eleven_flash_v2_5";
         request_body["voice_settings"] = voice_settings;
@@ -1090,26 +1090,26 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     std::string GenerateVoiceGWDevHub(PendingNPCAudio* audio)
     {
-        nlohmann::json encoded_array = nlohmann::json::array();
+        glz::json_t::array_t encoded_array;
         for (const auto& c : audio->encoded_message)
-            encoded_array.push_back(static_cast<uint32_t>(c));
+            encoded_array.push_back(glz::json_t{static_cast<double>(static_cast<uint32_t>(c))});
 
-        nlohmann::json decoded_array = nlohmann::json::array();
+        glz::json_t::array_t decoded_array;
         for (const auto& c : audio->decoded_message)
-            decoded_array.push_back(static_cast<uint32_t>(c));
+            decoded_array.push_back(glz::json_t{static_cast<double>(static_cast<uint32_t>(c))});
 
-        nlohmann::json request_body = nlohmann::json::object();
-        request_body["encoded"] = encoded_array;
-        request_body["decoded"] = decoded_array;
+        glz::json_t request_body = glz::json_t::object_t{};
+        request_body["encoded"] = std::move(encoded_array);
+        request_body["decoded"] = std::move(decoded_array);
 
         if (!audio->encoded_npc_name.empty()) {
-            nlohmann::json encoded_npc_name_arr = nlohmann::json::array();
+            glz::json_t::array_t encoded_npc_name_arr;
             for (const auto& c : audio->encoded_npc_name)
-                encoded_npc_name_arr.push_back(static_cast<uint32_t>(c));
-            request_body["npc_name"] = encoded_npc_name_arr;
+                encoded_npc_name_arr.push_back(glz::json_t{static_cast<double>(static_cast<uint32_t>(c))});
+            request_body["npc_name"] = std::move(encoded_npc_name_arr);
         }
 
-        request_body["language"] = static_cast<uint32_t>(audio->language);
+        request_body["language"] = static_cast<double>(static_cast<uint32_t>(audio->language));
         request_body["speaker_gender"] = audio->gender == Gender::Male ? "m" : "f";
         request_body["speaker_race"] = GetRaceName(GetRaceByFileId(audio->model_file_id));
         request_body["player_gender"] = GetPlayerGender() == Gender::Male ? "m" : "f";
@@ -1155,7 +1155,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
                 break;
         }
 
-        nlohmann::json request_body;
+        glz::json_t request_body;
         request_body["model"] = "kokoro";
         request_body["input"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["voice"] = (audio->gender == Gender::Female) ? "af_bella" : "am_adam";
@@ -1177,7 +1177,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
         const std::string voice_name = (audio->profile->voice_id == voice_id_human_female) ? "en-US-Studio-O" : "en-US-Studio-Q";
 
-        nlohmann::json request_body = nlohmann::json::object();
+        glz::json_t request_body = glz::json_t::object_t{};
         request_body["input"]["text"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["voice"]["name"] = voice_name;
         request_body["voice"]["languageCode"] = "en-US";
@@ -1189,13 +1189,13 @@ Gender GetGenderByFileId(const uint32_t file_id)
         const auto response_str = PostJson(client, "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + std::string(api_config->api_key), request_body, api_config->name);
         if (response_str.empty()) return response_str;
 
-        const auto json_response = nlohmann::json::parse(response_str, nullptr, false);
-        if (!(!json_response.is_discarded() && json_response.contains("audioContent") && json_response["audioContent"].is_string())) {
+        glz::json_t json_response;
+        if (auto ec = glz::read_json(json_response, response_str); ec || !json_response.contains("audioContent") || !json_response.at("audioContent").is_string()) {
             VoiceLog("Failed to parse Google TTS response JSON");
             return "";
         }
 
-        std::string base64_audio = json_response["audioContent"].get<std::string>();
+        std::string base64_audio = json_response.at("audioContent").get<std::string>();
         if (base64_audio.empty()) {
             VoiceLog("Google TTS returned empty audio content");
             return "";
@@ -1216,7 +1216,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         const std::string voice_id = (GetAgentGender(audio->agent_id) == Gender::Female) ? playht_voice_female_default : playht_voice_male_default;
         const std::string lang_code = LanguageToAbbreviation(audio->language);
 
-        nlohmann::json request_body = nlohmann::json::object();
+        glz::json_t request_body = glz::json_t::object_t{};
         request_body["text"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["output_format"] = "mp3";
         request_body["quality"] = "medium";

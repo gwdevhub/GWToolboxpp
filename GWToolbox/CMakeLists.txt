@@ -23,7 +23,7 @@ target_link_libraries(GWToolbox PRIVATE
     Core
     RestClient
     directxtex
-    nlohmann_json::nlohmann_json
+    glaze::glaze
 
     version.lib # for GetFileVersionInfo
     )

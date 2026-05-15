@@ -38,7 +38,7 @@ add_compile_definitions(
 	
 add_compile_options(/MP /permissive-)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
@@ -63,7 +63,7 @@ find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
 find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
 find_package(wolfssl CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
+find_package(glaze CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)
 find_package(directxtex CONFIG REQUIRED)
 

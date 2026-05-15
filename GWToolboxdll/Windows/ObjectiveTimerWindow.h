@@ -127,8 +127,8 @@ private:
         Objective* SetStarted();
         Objective* SetDone();
         Objective* AddChild(Objective* child);
-        static Objective* FromJson(const nlohmann::json& json);
-        nlohmann::json ToJson();
+        static Objective* FromJson(const glz::json_t& json);
+        glz::json_t ToJson();
 
         [[nodiscard]] bool IsStarted() const;
         [[nodiscard]] bool IsDone() const;
@@ -193,8 +193,8 @@ private:
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
         void StopObjectives();
-        static ObjectiveSet* FromJson(const nlohmann::json& json);
-        nlohmann::json ToJson();
+        static ObjectiveSet* FromJson(const glz::json_t& json);
+        glz::json_t ToJson();
         void Update() const;
         void GetStartTime(tm* timeinfo) const;
 

@@ -87,11 +87,16 @@ namespace TextUtils {
     bool StringToGuid(const std::string& str, GUID* guid);
     GUID ConvertWStringToGuid(const std::wstring& str);
 
-    std::string parseStringFromJson(const nlohmann::json& j, const char* key, const std::string& default_val);
-    int parseIntFromJson(const nlohmann::json& j, const char* key, const int& default_val);
-    bool parseBoolFromJson(const nlohmann::json& j, const char* key, const bool& default_val);
-    uint64_t parseUint64FromJson(const nlohmann::json& j, const char* key, const uint64_t& default_val);
-    float parseFloatFromJson(const nlohmann::json& j, const char* key, const float& default_val);
+    std::string parseStringFromJson(const glz::json_t& j, const char* key, const std::string& default_val);
+    int parseIntFromJson(const glz::json_t& j, const char* key, const int& default_val);
+    bool parseBoolFromJson(const glz::json_t& j, const char* key, const bool& default_val);
+    uint64_t parseUint64FromJson(const glz::json_t& j, const char* key, const uint64_t& default_val);
+    float parseFloatFromJson(const glz::json_t& j, const char* key, const float& default_val);
+
+    // Parse JSON; on failure returns a default-constructed (null) json_t and sets *ok to false.
+    glz::json_t ParseJson(std::string_view s, bool* ok = nullptr);
+    // Serialize json_t to string; on failure returns empty.
+    std::string DumpJson(const glz::json_t& j, bool prettify = false);
 
 
     std::string VStrPrintf(const char* format, va_list argv);

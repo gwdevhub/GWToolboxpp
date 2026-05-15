@@ -84,7 +84,7 @@ target_link_libraries(GWToolboxdll PRIVATE
     steamworks_sdk
     easywsclient
     ${CPP_GAME_SDK}
-    nlohmann_json::nlohmann_json
+    glaze::glaze
     imgui::fonts
     IconFontCppHeaders
     nativefiledialog

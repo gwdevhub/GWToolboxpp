@@ -926,27 +926,28 @@ namespace GWArmory {
                 }
 
                 // Build JSON output
-                nlohmann::json output_json = nlohmann::json::array();
+                glz::json_t::array_t output_arr;
                 for (auto& it : pending_decodes) {
                     const auto item = pending_items[it.first];
                     const std::string& item_name_decoded = it.second->string();
 
-                    nlohmann::json item_json = {
-                        {"name", item_name_decoded},
-                        {"model_file_id", item->model_file_id},
-                        {"type", static_cast<uint8_t>(item->type)},
-                        {"interaction", item->interaction},
-                        {"dye_tint", item->dye.dye_tint}
-                    };
+                    glz::json_t item_json;
+                    item_json["name"] = item_name_decoded;
+                    item_json["model_file_id"] = static_cast<double>(item->model_file_id);
+                    item_json["type"] = static_cast<double>(static_cast<uint8_t>(item->type));
+                    item_json["interaction"] = static_cast<double>(item->interaction);
+                    item_json["dye_tint"] = static_cast<double>(item->dye.dye_tint);
 
-                    output_json.push_back(item_json);
+                    output_arr.push_back(item_json);
                 }
+
+                glz::json_t output_json{std::move(output_arr)};
 
                 // Write to file
                 const auto filename = Resources::GetPath("weapon_snapshot.json");
                 std::ofstream file(filename);
                 if (file.is_open()) {
-                    file << output_json.dump(2); // Pretty print with 2 space indent
+                    file << glz::write<glz::opts{.prettify = true}>(output_json).value_or(std::string{}); // Pretty print
                     file.close();
                     Log::Info("Weapon snapshot saved to %s", filename.string().c_str());
                 }

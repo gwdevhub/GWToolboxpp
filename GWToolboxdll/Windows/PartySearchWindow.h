@@ -117,7 +117,7 @@ private:
     void DrawAlertsWindowContent(bool ownwindow);
     void AsyncWindowConnect(bool force = false);
     void fetch();
-    static bool parse_json_message(const nlohmann::json& js, Message* msg);
+    static bool parse_json_message(const glz::json_t& js, Message* msg);
     static void ParseBuffer(const char* text, std::vector<std::string>& words);
     static void DeleteWebSocket(easywsclient::WebSocket* ws);
     bool IsLfpAlert(std::string& message) const;

@@ -20,7 +20,7 @@
 #include <Utils/RateLimiter.h>
 
 #include <Utils/ThreadedWebSocket.h>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 
 
 #include <Modules/GwDatTextureModule.h>
@@ -44,7 +44,7 @@
 #define GWMARKET_SELLING_ENABLED 0
 
 namespace {
-    using json = nlohmann::json;
+    using json = glz::json_t;
 
     const char* market_host = "gwmarket.net";
     const char* market_name = "GWMarket.net";
@@ -214,10 +214,10 @@ namespace {
         {
             json j;
             if (!valid()) return j;
-            j["type"] = static_cast<int>(type);
-            j["quantity"] = quantity;
-            j["unit"] = quantity;
-            j["price"] = price;
+            j["type"] = static_cast<double>(static_cast<int>(type));
+            j["quantity"] = static_cast<double>(quantity);
+            j["unit"] = static_cast<double>(quantity);
+            j["price"] = static_cast<double>(price);
             return j;
         }
         bool valid() const { return quantity && price; }
@@ -259,7 +259,7 @@ namespace {
             if (!valid()) return {};
             json j;
             j["attribute"] = *GetAttributeName(attribute);
-            j["requirement"] = requirement;
+            j["requirement"] = static_cast<double>(requirement);
             j["inscription"] = inscribable;
             return j;
         }
@@ -282,7 +282,7 @@ namespace {
         static MarketItem FromJson(const json& j)
         {
             MarketItem item;
-            if (j.is_discarded()) return item;
+            if (!j.is_object()) return item;
 
             item.name = TextUtils::parseStringFromJson(j, "name", "");
             item.player = TextUtils::parseStringFromJson(j, "player", "");
@@ -290,15 +290,15 @@ namespace {
             item.orderType = static_cast<OrderType>(TextUtils::parseIntFromJson(j, "orderType", 0));
             item.quantity = TextUtils::parseIntFromJson(j, "quantity", 0);
 
-            if (j.contains("weaponDetails") && j["weaponDetails"].is_object()) {
-                item.weaponDetails = WeaponDetails::FromJson(j["weaponDetails"]);
+            if (j.contains("weaponDetails") && j.at("weaponDetails").is_object()) {
+                item.weaponDetails = WeaponDetails::FromJson(j.at("weaponDetails"));
             }
 
             uint64_t lastRefresh_ms = TextUtils::parseUint64FromJson(j, "lastRefresh", 0ULL);
             item.lastRefresh = lastRefresh_ms ? lastRefresh_ms / 1000 : 0;
 
-            if (j.contains("prices") && j["prices"].is_array()) {
-                for (const auto& price_json : j["prices"]) {
+            if (j.contains("prices") && j.at("prices").is_array()) {
+                for (const auto& price_json : j.at("prices").get_array()) {
                     auto p = Price::FromJson(price_json);
                     if (p.valid()) item.prices.push_back(p);
                 }
@@ -313,18 +313,19 @@ namespace {
             j["name"] = name;
             j["player"] = player;
             j["description"] = description;
-            j["orderType"] = static_cast<int>(orderType);
-            j["quantity"] = quantity;
-            j["lastRefresh"] = static_cast<uint64_t>(lastRefresh) * 1000; // Convert to milliseconds
+            j["orderType"] = static_cast<double>(static_cast<int>(orderType));
+            j["quantity"] = static_cast<double>(quantity);
+            j["lastRefresh"] = static_cast<double>(static_cast<uint64_t>(lastRefresh) * 1000); // Convert to milliseconds
 
             if (has_weapon_details()) {
                 j["weaponDetails"] = weaponDetails.ToJson();
             }
 
-            j["prices"] = json::array();
+            glz::json_t::array_t prices_arr;
             for (const auto& price : prices) {
-                j["prices"].push_back(price.ToJson());
+                prices_arr.push_back(price.ToJson());
             }
+            j["prices"] = std::move(prices_arr);
 
             return j;
         }
@@ -356,8 +357,8 @@ namespace {
         static ShopItem FromJson(const json& j)
         {
             ShopItem item = MarketItem::FromJson(j);
-            if (j.contains("orderDetails") && j["orderDetails"].is_object()) {
-                const auto& od = j["orderDetails"];
+            if (j.contains("orderDetails") && j.at("orderDetails").is_object()) {
+                const auto& od = j.at("orderDetails");
                 item.dedicated = TextUtils::parseBoolFromJson(od, "dedicated", false);
                 item.pre = TextUtils::parseBoolFromJson(od, "pre", false);
             }
@@ -377,7 +378,7 @@ namespace {
         static MarketShop FromJson(const json& j)
         {
             MarketShop shop;
-            if (j.is_discarded()) return shop;
+            if (!j.is_object()) return shop;
 
             shop.player = TextUtils::parseStringFromJson(j, "player", "");
             shop.uuid = TextUtils::parseStringFromJson(j, "uuid", "");
@@ -385,16 +386,16 @@ namespace {
             uint64_t lastRefresh_ms = TextUtils::parseUint64FromJson(j, "lastRefresh", 0ULL);
             shop.lastRefresh = lastRefresh_ms ? lastRefresh_ms / 1000 : 0;
 
-            if (j.contains("items") && j["items"].is_array()) {
-                for (const auto& item_json : j["items"]) {
+            if (j.contains("items") && j.at("items").is_array()) {
+                for (const auto& item_json : j.at("items").get_array()) {
                     auto item = ShopItem::FromJson(item_json);
                     if (item.valid()) {
                         shop.items.push_back(item);
                     }
                 }
             }
-            if (j.contains("certified") && j["certified"].is_array()) {
-                for (const auto& player_name : j["certified"]) {
+            if (j.contains("certified") && j.at("certified").is_array()) {
+                for (const auto& player_name : j.at("certified").get_array()) {
                     if (player_name.is_string()) shop.certified.push_back(player_name.get<std::string>());
                 }
             }
@@ -408,19 +409,19 @@ namespace {
             if (!valid()) return j;
             j["player"] = player;
             j["uuid"] = uuid;
-            j["lastRefresh"] = (uint64_t)(lastRefresh * 1000);
+            j["lastRefresh"] = static_cast<double>(static_cast<uint64_t>(lastRefresh * 1000));
             j["authCertified"] = certified.size() > 0;
-            std::vector<json> certified_json;
+            glz::json_t::array_t certified_arr;
             for (auto& player_name : certified) {
-                certified_json.push_back(player_name);
+                certified_arr.push_back(json{player_name});
             }
-            j["certified"] = certified_json;
+            j["certified"] = std::move(certified_arr);
             j["daybreakOnline"] = true;
-            std::vector<json> items_json;
+            glz::json_t::array_t items_arr;
             for (auto& item : items) {
-                items_json.push_back(item.ToJson());
+                items_arr.push_back(item.ToJson());
             }
-            j["items"] = items_json;
+            j["items"] = std::move(items_arr);
             return j;
         }
         bool valid() const { return !uuid.empty(); }
@@ -563,32 +564,36 @@ namespace {
 
     std::string EncodeSocketIOMessage(const std::string& event, const std::string& data = "")
     {
-        json msg = json::array();
-        msg.push_back(event);
+        glz::json_t::array_t msg_arr;
+        msg_arr.push_back(json{event});
         if (!data.empty()) {
-            msg.push_back(data);
+            msg_arr.push_back(json{data});
         }
-        return "42" + msg.dump();
+        json msg{std::move(msg_arr)};
+        return "42" + glz::write_json(msg).value_or(std::string{});
     }
 
     std::string EncodeSocketIOMessage(const std::string& event, const json& data)
     {
-        json msg = json::array();
-        msg.push_back(event);
-        msg.push_back(data);
-        return "42" + msg.dump();
+        glz::json_t::array_t msg_arr;
+        msg_arr.push_back(json{event});
+        msg_arr.push_back(data);
+        json msg{std::move(msg_arr)};
+        return "42" + glz::write_json(msg).value_or(std::string{});
     }
 
     bool ParseSocketIOMessage(const std::string& message, std::string& event, json& data)
     {
         if (message.length() < 2 || message.substr(0, 2) != "42") return false;
 
-        json parsed = json::parse(message.substr(2), nullptr, false);
-        if (!parsed.is_discarded() && parsed.is_array() && parsed.size() >= 1) {
-            if (!parsed[0].is_string()) return false;
-            event = parsed[0].get<std::string>();
-            if (parsed.size() >= 2) {
-                data = parsed[1];
+        json parsed;
+        if (auto ec = glz::read_json(parsed, message.substr(2)); ec) return true;
+        if (parsed.is_array() && parsed.get_array().size() >= 1) {
+            const auto& arr = parsed.get_array();
+            if (!arr[0].is_string()) return false;
+            event = arr[0].get<std::string>();
+            if (arr.size() >= 2) {
+                data = arr[1];
                 return true;
             }
         }
@@ -598,14 +603,15 @@ namespace {
     void OnGetAvailableOrders(const json& orders)
     {
         available_items.clear();
-        available_items.reserve(orders.size());
+        if (!orders.is_object()) return;
+        const auto& obj = orders.get_object();
+        available_items.reserve(obj.size());
         for (auto& i : favorite_items) {
             i.second = {};
         }
-        for (auto it = orders.begin(); it != orders.end(); ++it) {
+        for (const auto& [key, j] : obj) {
             AvailableItem item;
-            const auto& j = it.value();
-            item.name = InternString(it.key());
+            item.name = InternString(std::string{key});
             item.sellOrders = TextUtils::parseIntFromJson(j, "sellWeek", 0);
             item.buyOrders = TextUtils::parseIntFromJson(j, "buyWeek", 0);
             available_items.push_back(item);
@@ -621,8 +627,9 @@ namespace {
     {
         last_items.clear();
         if (items.is_array()) {
-            last_items.reserve(items.size());
-            for (const auto& item_json : items) {
+            const auto& arr = items.get_array();
+            last_items.reserve(arr.size());
+            for (const auto& item_json : arr) {
                 last_items.push_back(MarketItem::FromJson(item_json));
             }
         }
@@ -633,8 +640,9 @@ namespace {
     {
         std::vector<MarketItem> _orders;
         if (orders.is_array()) {
-            _orders.reserve(orders.size());
-            for (const auto& order_json : orders) {
+            const auto& arr = orders.get_array();
+            _orders.reserve(arr.size());
+            for (const auto& order_json : arr) {
                 _orders.push_back(MarketItem::FromJson(order_json));
             }
         }
@@ -696,12 +704,13 @@ namespace {
     {
         if (message[0] != '0') return;
 
-        json handshake = json::parse(message.substr(1));
+        json handshake;
+        if (auto ec = glz::read_json(handshake, message.substr(1)); ec) return;
         if (handshake.contains("pingInterval")) {
-            ping_interval = handshake["pingInterval"].get<int>();
+            ping_interval = static_cast<int>(handshake.at("pingInterval").get<double>());
         }
         if (handshake.contains("pingTimeout")) {
-            ping_timeout = handshake["pingTimeout"].get<int>();
+            ping_timeout = static_cast<int>(handshake.at("pingTimeout").get<double>());
         }
 
         Log::Log("Handshake: ping %dms, timeout %dms", ping_interval, ping_timeout);

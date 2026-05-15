@@ -71,42 +71,58 @@ namespace {
 }
 
 namespace TextUtils {
-    std::string parseStringFromJson(const nlohmann::json& j, const char* key, const std::string& default_val)
+    std::string parseStringFromJson(const glz::json_t& j, const char* key, const std::string& default_val)
     {
-        if (!j.is_discarded() && j.contains(key) && j[key].is_string()) {
-            return j[key].get<std::string>();
+        if (j.contains(key) && j.at(key).is_string()) {
+            return j.at(key).get<std::string>();
         }
         return default_val;
     };
-    int parseIntFromJson(const nlohmann::json& j, const char* key, const int& default_val)
+    int parseIntFromJson(const glz::json_t& j, const char* key, const int& default_val)
     {
-        if (!j.is_discarded() && j.contains(key) && j[key].is_number_integer()) {
-            return j[key].get<int>();
+        if (j.contains(key) && j.at(key).is_number()) {
+            return static_cast<int>(j.at(key).get<double>());
         }
         return default_val;
     };
-    bool parseBoolFromJson(const nlohmann::json& j, const char* key, const bool& default_val)
+    bool parseBoolFromJson(const glz::json_t& j, const char* key, const bool& default_val)
     {
-        if (!j.is_discarded() && j.contains(key) && j[key].is_boolean()) {
-            return j[key].get<bool>();
+        if (j.contains(key) && j.at(key).is_boolean()) {
+            return j.at(key).get<bool>();
         }
         return default_val;
     };
-    uint64_t parseUint64FromJson(const nlohmann::json& j, const char* key, const uint64_t& default_val)
+    uint64_t parseUint64FromJson(const glz::json_t& j, const char* key, const uint64_t& default_val)
     {
-        if (!j.is_discarded() && j.contains(key) && j[key].is_number_unsigned()) {
-            return j[key].get<uint64_t>();
+        if (j.contains(key) && j.at(key).is_number()) {
+            return static_cast<uint64_t>(j.at(key).get<double>());
         }
         return default_val;
     };
-    float parseFloatFromJson(const nlohmann::json& j, const char* key, const float& default_val)
+    float parseFloatFromJson(const glz::json_t& j, const char* key, const float& default_val)
     {
-        if (!j.is_discarded() && j.contains(key)) {
-            if (j[key].is_number_float()) return j[key].get<float>();
-            if (j[key].is_number_integer()) return (float)j[key].get<int>();
+        if (j.contains(key) && j.at(key).is_number()) {
+            return static_cast<float>(j.at(key).get<double>());
         }
         return default_val;
     };
+
+    glz::json_t ParseJson(std::string_view s, bool* ok)
+    {
+        glz::json_t j;
+        const auto ec = glz::read_json(j, s);
+        if (ok) *ok = !ec;
+        if (ec) j = nullptr;
+        return j;
+    }
+
+    std::string DumpJson(const glz::json_t& j, bool prettify)
+    {
+        if (prettify) {
+            return glz::write<glz::opts{.prettify = true}>(j).value_or(std::string{});
+        }
+        return glz::write_json(j).value_or(std::string{});
+    }
 
     std::string VStrPrintf(const char* format, va_list argv)
     {

@@ -59,48 +59,54 @@ namespace {
             Log::Log("Failed to download %s\n%s", url, response.c_str());
             return nullptr;
         }
-        using Json = nlohmann::json;
-        Json json = Json::parse(response.c_str(), nullptr, false);
-        if (json == Json::value_t::discarded || json.empty() || !json.is_array()) {
+        using Json = glz::json_t;
+        Json json;
+        if (auto ec = glz::read_json(json, response); ec) {
             return nullptr;
         }
-        for (const auto& js : json) {
-            if (!(js.contains("tag_name") && js["tag_name"].is_string())) {
+        if (!json.is_array() || json.get_array().empty()) {
+            return nullptr;
+        }
+        for (const auto& js : json.get_array()) {
+            if (!(js.contains("tag_name") && js.at("tag_name").is_string())) {
                 continue;
             }
-            const auto is_prerelease = js["prerelease"].get<bool>();
+            const auto is_prerelease = js.contains("prerelease") && js.at("prerelease").is_boolean()
+                ? js.at("prerelease").get<bool>()
+                : false;
             if (is_prerelease && release_type == ReleaseType::Stable) {
                 continue;
             }
-            auto tag_name = js["tag_name"].get<std::string>();
+            auto tag_name = js.at("tag_name").get<std::string>();
             const auto version_number_len = tag_name.find(tag_name.contains("_Release") ? "_Release" : "_Beta", 0);
             if (version_number_len == std::string::npos) {
                 continue;
             }
-            if (!(js.contains("assets") && js["assets"].is_array() && js["assets"].size() > 0)) {
+            if (!(js.contains("assets") && js.at("assets").is_array() && !js.at("assets").get_array().empty())) {
                 continue;
             }
-            if (!(js.contains("body") && js["body"].is_string())) {
+            if (!(js.contains("body") && js.at("body").is_string())) {
                 continue;
             }
-            for (unsigned int j = 0; j < js["assets"].size(); j++) {
-                const Json& asset = js["assets"][j];
-                if (!(asset.contains("name") && asset["name"].is_string())
-                    || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string())) {
+            const auto& assets = js.at("assets").get_array();
+            for (size_t j = 0; j < assets.size(); j++) {
+                const Json& asset = assets[j];
+                if (!(asset.contains("name") && asset.at("name").is_string())
+                    || !(asset.contains("browser_download_url") && asset.at("browser_download_url").is_string())) {
                     continue;
                 }
-                auto asset_name = asset["name"].get<std::string>();
+                auto asset_name = asset.at("name").get<std::string>();
                 if (asset_name != "GWToolbox.dll" && asset_name != "GWToolboxdll.dll") {
                     continue; // This release doesn't have a dll download.
                 }
-                release->download_url = asset["browser_download_url"].get<std::string>();
+                release->download_url = asset.at("browser_download_url").get<std::string>();
                 release->version = tag_name.substr(0, version_number_len);
                 if (is_prerelease) {
                     release->version += tag_name.substr(version_number_len + 1);
                 }
                 std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
-                release->body = js["body"].get<std::string>();
-                auto size_bytes = asset["size"].get<uintmax_t>(); // Slight rounding, GitHub isn't always correct down to the byte.
+                release->body = js.at("body").get<std::string>();
+                auto size_bytes = static_cast<uintmax_t>(asset.at("size").get<double>()); // Slight rounding, GitHub isn't always correct down to the byte.
                 release->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
                 return release;
             }

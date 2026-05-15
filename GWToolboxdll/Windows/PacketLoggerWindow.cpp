@@ -38,20 +38,20 @@ namespace {
         std::wstring description;
         GW::AreaInfo* map_info{};
 
-        nlohmann::json ToJson() const
+        glz::json_t ToJson() const
         {
-            nlohmann::json json;
+            glz::json_t json;
             if (!name.empty()) {
                 json["name"] = TextUtils::WStringToString(name);
             }
             if (!description.empty()) {
                 json["description"] = TextUtils::WStringToString(description);
             }
-            json["campaign"] = map_info->campaign;
-            json["type"] = map_info->type;
-            json["region"] = map_info->region;
-            json["flags"] = map_info->flags;
-            json["continent"] = map_info->continent;
+            json["campaign"] = static_cast<double>(map_info->campaign);
+            json["type"] = static_cast<double>(map_info->type);
+            json["region"] = static_cast<double>(map_info->region);
+            json["flags"] = static_cast<double>(map_info->flags);
+            json["continent"] = static_cast<double>(map_info->continent);
             return json;
         };
     };
@@ -81,9 +81,9 @@ namespace {
 
     void ExportMapInfo()
     {
-        nlohmann::json json;
+        glz::json_t json;
         for (const auto& it : maps) {
-            json[it.first] = it.second->ToJson();
+            json[std::to_string(it.first)] = it.second->ToJson();
             delete it.second;
         }
         maps.clear();
@@ -93,7 +93,7 @@ namespace {
         }
 
         std::ofstream out(file_location);
-        out << json.dump();
+        out << glz::write_json(json).value_or(std::string{});
         out.close();
         Log::Info("Maps exported to %ls", file_location.c_str());
     }

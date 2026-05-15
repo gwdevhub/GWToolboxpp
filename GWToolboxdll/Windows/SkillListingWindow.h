@@ -34,7 +34,7 @@ public:
         Skill(GW::Skill* _gw_skill)
             : skill(_gw_skill) { }
 
-        nlohmann::json ToJson();
+        glz::json_t ToJson();
         const wchar_t* Name();
         const wchar_t* GWWDescription();
         const wchar_t* GWWConcise();

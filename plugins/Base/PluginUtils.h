@@ -2,7 +2,7 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <ToolboxIni.h>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 
 namespace PluginUtils {
     template <typename T>
@@ -71,8 +71,7 @@ namespace PluginUtils {
     template <map_type T>
     void MapToIni(ToolboxIni* ini, const char* section, const char* name, const T& map)
     {
-        const auto map_json = nlohmann::json(map);
-        const auto map_str = map_json.dump();
+        const auto map_str = glz::write_json(map).value_or(std::string{});
         ini->SetValue(section, name, map_str.c_str());
     }
 
@@ -80,12 +79,11 @@ namespace PluginUtils {
     T IniToMap(ToolboxIni* ini, const char* section, const char* name)
     {
         std::string map_str = ini->GetValue(section, name, "");
-        try {
-            const auto map_json = nlohmann::json::parse(map_str);
-            return map_json.get<T>();
-        } catch (nlohmann::json::exception e) {
+        T out{};
+        if (glz::read_json(out, map_str)) {
             return {};
         }
+        return out;
     }
 
     template <map_type T>

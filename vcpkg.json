@@ -10,8 +10,8 @@
     "directxtex",
     "discord-game-sdk",
     "earcut-hpp",
+    "glaze",
     "minhook",
-    "nlohmann-json",
     "simpleini",
     "uwebsockets",
     "wolfssl"

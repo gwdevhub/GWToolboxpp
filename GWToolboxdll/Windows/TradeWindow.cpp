@@ -34,7 +34,7 @@ namespace {
     constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
     static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     using easywsclient::WebSocket;
-    using nlohmann::json;
+    using json = glz::json_t;
     using json_vec = std::vector<json>;
 
     constexpr char ws_host_kmd[] = "wss://kamadan.gwtoolbox.com";
@@ -111,27 +111,27 @@ namespace {
 
     bool parse_json_message(const json& js, Message* msg)
     {
-        if (js == json::value_t::discarded) {
+        if (!js.is_object()) {
             return false;
         }
-        if (!(js.contains("s") && js["s"].is_string())) {
+        if (!(js.contains("s") && js.at("s").is_string())) {
             return false;
         }
-        msg->name = js["s"].get<std::string>();
-        if (!(js.contains("m") && js["m"].is_string())) {
+        msg->name = js.at("s").get<std::string>();
+        if (!(js.contains("m") && js.at("m").is_string())) {
             return false;
         }
-        msg->message = js["m"].get<std::string>();
+        msg->message = js.at("m").get<std::string>();
         if (!js.contains("t")) {
             return false;
         }
         unsigned long long timestamp_ull = 0ull;
-        if (js["t"].is_string()) {
-            const auto str = js["t"].get<std::string>();
+        if (js.at("t").is_string()) {
+            const auto str = js.at("t").get<std::string>();
             timestamp_ull = strtoull(str.c_str(), nullptr, 10);
         }
-        else if (js["t"].is_number_unsigned()) {
-            timestamp_ull = js["t"].get<uint64_t>();
+        else if (js.at("t").is_number()) {
+            timestamp_ull = static_cast<uint64_t>(js.at("t").get<double>());
         }
         if (timestamp_ull == 0ull) {
             return false;
@@ -353,38 +353,38 @@ void TradeWindow::fetch()
         json request;
         request["query"] = pending_query_string;
         pending_query_sent = clock();
-        ws_window->send(request.dump());
+        ws_window->send(glz::write_json(request).value_or(std::string{}));
     }
 
     ws_window->dispatch([this](const std::string& data) {
-        const json& res = json::parse(data.c_str(), nullptr, false);
-        if (res == json::value_t::discarded) {
+        json res;
+        if (auto ec = glz::read_json(res, data); ec) {
             Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
             return;
         }
-        if (res.find("query") != res.end() && res["query"].is_string()) {
-            auto query_string = res["query"].get<std::string>();
+        if (res.contains("query") && res.at("query").is_string()) {
+            auto query_string = res.at("query").get<std::string>();
             if (query_string != pending_query_string) {
                 return; // Different query has been made since this search.
             }
             pending_query_string.clear();
-            if (!(res.contains("num_results") && res["num_results"].is_number_unsigned())) {
+            if (!(res.contains("num_results") && res.at("num_results").is_number())) {
                 Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
                 print_search_results = false;
                 return;
             }
-            size_t num_results = res["num_results"].get<size_t>();
+            size_t num_results = static_cast<size_t>(res.at("num_results").get<double>());
             if (print_search_results && !num_results) {
                 Log::Warning("No results found for %s", query_string.c_str());
                 print_search_results = false;
                 return;
             }
-            if (!(res.contains("results") && res["results"].is_array())) {
+            if (!(res.contains("results") && res.at("results").is_array())) {
                 Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
                 print_search_results = false;
                 return;
             }
-            auto results = res["results"].get<json_vec>();
+            auto& results = res.at("results").get_array();
             messages.clear();
             if (print_search_results && !results.size()) {
                 Log::Warning("No results found for %s", query_string.c_str());

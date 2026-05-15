@@ -18,7 +18,7 @@
 #include <Utils/TextUtils.h>
 
 #include <Utils/ThreadedWebSocket.h>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -26,7 +26,7 @@
 #include <Utils/ToolboxUtils.h>
 #include "ToolboxSettings.h"
 
-using json = nlohmann::json;
+using json = glz::json_t;
 
 namespace {
     clock_t last_update_timestamp = 0;
@@ -67,27 +67,29 @@ namespace {
 
     bool send_payload(const std::string& payload);
 
-    void to_json(nlohmann::json& j, const PartySearchAdvertisement& p)
+    glz::json_t ToJson(const PartySearchAdvertisement& p)
     {
-        j = nlohmann::json{{"i", p.party_id}};
+        glz::json_t j;
+        j["i"] = static_cast<double>(p.party_id);
         if (!p.party_size) {
             // Aka "remove"
-            j["r"] = 1;
-            return;
+            j["r"] = 1.0;
+            return j;
         }
-        j["t"] = p.search_type;
-        j["p"] = p.primary;
+        j["t"] = static_cast<double>(p.search_type);
+        j["p"] = static_cast<double>(p.primary);
         j["s"] = p.sender;
 
         // The following fields can be assumed to be reasonable defaults by the server, so only need to send if they're not standard.
-        if (p.party_size > 1) j["ps"] = p.party_size;
-        if (p.hero_count) j["hc"] = p.hero_count;
-        if (p.hardmode) j["hm"] = p.hardmode;
-        if (p.language) j["dl"] = p.language;
-        if (p.secondary) j["sc"] = p.secondary;
-        if (p.district_number) j["dn"] = p.district_number;
+        if (p.party_size > 1) j["ps"] = static_cast<double>(p.party_size);
+        if (p.hero_count) j["hc"] = static_cast<double>(p.hero_count);
+        if (p.hardmode) j["hm"] = static_cast<double>(p.hardmode);
+        if (p.language) j["dl"] = static_cast<double>(p.language);
+        if (p.secondary) j["sc"] = static_cast<double>(p.secondary);
+        if (p.district_number) j["dn"] = static_cast<double>(p.district_number);
         if (!p.message.empty()) j["ms"] = p.message;
-        if (p.level != 20) j["l"] = p.level;
+        if (p.level != 20) j["l"] = static_cast<double>(p.level);
+        return j;
     }
 
     bool get_api_key(std::string& out)
@@ -218,11 +220,14 @@ namespace {
 
         json j;
         j["type"] = "client_parties";
-        j["map_id"] = (uint32_t)GW::Map::GetMapID();
-        j["district_region"] = (int)GW::Map::GetRegion();
-        j["parties"] = parties;
+        j["map_id"] = static_cast<double>(static_cast<uint32_t>(GW::Map::GetMapID()));
+        j["district_region"] = static_cast<double>(static_cast<int>(GW::Map::GetRegion()));
+        glz::json_t::array_t parties_arr;
+        parties_arr.reserve(parties.size());
+        for (const auto& p : parties) parties_arr.push_back(ToJson(p));
+        j["parties"] = std::move(parties_arr);
 
-        const auto payload = j.dump();
+        const auto payload = glz::write_json(j).value_or(std::string{});
         if (!send_payload(payload)) return false;
         last_sent_district_info = GetDistrictInfo();
 
@@ -278,11 +283,14 @@ namespace {
         if (to_send.empty()) return true; // No change
         json j;
         j["type"] = "updated_parties";
-        j["map_id"] = (uint32_t)GW::Map::GetMapID();
-        j["district_region"] = (int)GW::Map::GetRegion();
-        j["parties"] = to_send;
+        j["map_id"] = static_cast<double>(static_cast<uint32_t>(GW::Map::GetMapID()));
+        j["district_region"] = static_cast<double>(static_cast<int>(GW::Map::GetRegion()));
+        glz::json_t::array_t parties_arr;
+        parties_arr.reserve(to_send.size());
+        for (const auto& p : to_send) parties_arr.push_back(ToJson(p));
+        j["parties"] = std::move(parties_arr);
 
-        const auto payload = j.dump();
+        const auto payload = glz::write_json(j).value_or(std::string{});
         if (!send_payload(payload)) return false;
         last_sent_district_info = GetDistrictInfo();
         for (auto& party : to_send) {
