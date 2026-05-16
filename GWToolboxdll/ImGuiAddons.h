@@ -1,5 +1,6 @@
 #pragma once
 
+namespace ABI::Windows::UI { struct Color; }
 using Color = ImU32;
 
 constexpr uint32_t ImGuiButtonFlags_AlignTextLeft = 1 << 20;

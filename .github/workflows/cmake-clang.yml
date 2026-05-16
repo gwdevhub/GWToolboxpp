@@ -1,0 +1,68 @@
+name: CMake (clang-cl)
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+    - name: Setup Windows 10 SDK Action
+      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
+      with:
+        sdk-version: 22621
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Checkout submodules
+      shell: bash
+      run: git submodule update --init --recursive
+
+    - name: Install LLVM (clang-cl)
+      run: choco install llvm --no-progress -y
+
+    - name: Source vcvars32 (x86)
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x86
+        toolset: "14.50"
+
+    - name: Install vcpkg
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git
+        .\vcpkg\bootstrap-vcpkg.bat
+
+    - name: Set VCPKG_ROOT
+      run: |
+        echo "VCPKG_ROOT=$(Get-Location)\vcpkg" >> $env:GITHUB_ENV
+      shell: powershell
+
+    - name: Export GitHub Actions cache environment variables
+      uses: actions/github-script@v7
+      with:
+        script: |
+          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+    - name: Configure CMake
+      shell: cmd
+      run: cmake --preset clang -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      env:
+        VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+    - name: Build
+      shell: cmd
+      run: cmake --build build-clang
+
+    - name: Save output
+      uses: actions/upload-artifact@v4
+      with:
+        name: GWToolbox-clang-RelWithDebInfo
+        path: ${{runner.workspace}}/GWToolboxpp/bin/

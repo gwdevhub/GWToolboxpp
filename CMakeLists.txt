@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.29)
 
-set(CMAKE_GENERATOR_PLATFORM win32)
+if(NOT CMAKE_GENERATOR MATCHES "Ninja|Makefile")
+    set(CMAKE_GENERATOR_PLATFORM win32)
+endif()
 
 project(gwtoolbox)
 
@@ -15,8 +17,13 @@ if(MSVC_TOOLSET_VERSION LESS 143)
     message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
 endif()
 
-# Increase constexpr/template depth for CTRE compile-time regex library
-add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /bigobj /templateDepth:2048)
+# Increase constexpr and template instantiation depth for CTRE compile-time regex library
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # SHELL: prefix prevents CMake from deduplicating the repeated -Xclang flags.
+    add_compile_options("SHELL:-Xclang -fconstexpr-depth=2048" "SHELL:-Xclang -fconstexpr-steps=10000000" /bigobj)
+else()
+    add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /bigobj /templateDepth:2048)
+endif()
 
 if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 4))
     message(FATAL_ERROR "You are configuring a non 32-bit build, this is not supported. Run cmake with `-A Win32`")
@@ -35,9 +42,48 @@ add_compile_definitions(
     "GWTOOLBOX_MODULE_VERSION=${GWTOOLBOX_MODULE_VERSION}"
     )
 	
-add_compile_options(/MP /permissive-)
+add_compile_options(/permissive-)
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(/MP)
+endif()
 
-set(CMAKE_CXX_STANDARD 23)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # LTO disabled: the VS-bundled lld-link is 32-bit and hits the 4 GB
+    # virtual-address ceiling on this codebase. Re-enable -flto=full or
+    # -flto=thin once a 64-bit lld-link is available on PATH.
+    #
+    # Silence clang-cl warnings that are either stylistic, MSVC-isms we
+    # rely on, or already-known issues the MSVC build tolerated.
+    add_compile_options(
+        -Wno-switch
+        -Wno-microsoft-cast
+        -Wno-reorder-ctor
+        -Wno-ignored-qualifiers
+        -Wno-unused-variable
+        -Wno-unused-function
+        -Wno-unused-const-variable
+        -Wno-unused-but-set-variable
+        -Wno-missing-field-initializers
+        -Wno-deprecated-declarations
+        -Wno-inconsistent-missing-override
+        -Wno-logical-op-parentheses
+        -Wno-bitwise-op-parentheses
+        -Wno-missing-declarations
+        -Wno-pragma-once-outside-header
+        -Wno-unknown-argument
+        -Wno-microsoft-include
+    )
+else()
+    # MSVC: whole-program optimization + link-time codegen in non-Debug
+    add_compile_options($<$<NOT:$<CONFIG:Debug>>:/GL>)
+    add_link_options($<$<NOT:$<CONFIG:Debug>>:/LTCG>)
+endif()
+
+set(CMAKE_CXX_STANDARD 26)
+# CMake 4.2 doesn't yet know MSVC 14.50 supports C++26 — fall back to 23 for MSVC.
+if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_STANDARD 23)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 

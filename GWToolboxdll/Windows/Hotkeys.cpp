@@ -345,10 +345,10 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
 
         // Draw buttons from right to left
 
-        auto current_pos = ImVec2({
+        auto current_pos = ImVec2(
             ImGui::GetContentRegionAvail().x + ImGui::GetIndent(),
             0.f
-        });
+        );
         ImGui::SameLine();
         current_pos.y = ImGui::GetCursorPosY();
 
