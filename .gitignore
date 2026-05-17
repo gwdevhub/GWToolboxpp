@@ -8,7 +8,9 @@ RelWithDebInfo/
 ipch/
 Archive/
 vcpkg_installed/
-./bin/
+/bin/
+build/
+build-clang/
 
 # Cmake generated
 _deps/
@@ -68,7 +70,6 @@ GWToolbox.aps
 *.sublime-project*
 *.sublime-workspace*
 .vs/
-build/
 
 # VSCode stuff
 .vscode/

@@ -1276,14 +1276,14 @@ namespace ToolboxUtils {
 
                 static constexpr ctll::fixed_string stacking_pattern = L"\x2.\x10A\xA84\x10A(.{1,2})\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1";
                 if (const auto stacking_match = ctre::match<stacking_pattern>(item_str)) {
-                    auto capture = stacking_match.get<1>().to_view();
+                    auto capture = stacking_match.template get<1>().to_view();
                     swprintf(buffer, _countof(buffer), L"\x2\xAA8\x10A\xA84\x10A%ls\x1\x101\x101\x1", capture.data());
                     original += buffer;
                 }
 
                 static constexpr ctll::fixed_string armor_pattern = L"\xA3B\x10A\xA86\x10A\xA44\x1\x101(.)\x1\x2";
                 if (auto armor_match = ctre::match<armor_pattern>(item_str)) {
-                    auto capture = armor_match.get<1>().to_view();
+                    auto capture = armor_match.template get<1>().to_view();
                     swprintf(buffer, _countof(buffer), L"\x2\x102\x2\xA86\x10A\xA44\x1\x101%ls", capture.data());
                     original += buffer;
                 }
@@ -1299,49 +1299,49 @@ namespace ToolboxUtils {
 
         // Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\x0AA8\x10A\xAA9\x10A.\x1\x101.\x1\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107, q%d \x1\x2%c", found.at(9) - 0x100, found.at(6));
             return buffer;
         });
 
         // Replace "Requires 9 Scythe Mastery" > "q9 Scythe Mastery"
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\xAA8\x10A\xAA9\x10A\x8101.\x1\x101.\x1\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107, q%d \x1\x2\x8101%c", found.at(10) - 0x100, found.at(7));
             return buffer;
         });
 
         // "vs. Earth damage" > "Earth"
         original = TextUtils::ctre_regex_replace_with_formatter<L"[\xAAC\xAAF]\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c", found.at(2));
             return buffer;
         });
 
         // Replace "Lengthens ??? duration on foes by 33%" > "??? duration +33%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA4\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107 +33%%\x1", found.at(2));
             return buffer;
         });
 
         // Replace "Reduces ??? duration on you by 20%" > "??? duration -20%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA7\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107 -20%%\x1", found.at(2));
             return buffer;
         });
 
         // Change " (while Health is above n)" to "^n";
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA8\x10A\xABC\x10A\xA52\x1\x101.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107^%d\x1", found.at(7) - 0x100);
             return buffer;
         });
 
         // Change "Enchantments last 20% longer" to "Ench +20%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA2\x101.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1353,14 +1353,14 @@ namespace ToolboxUtils {
 
         // "(Chance: 18%)" > "(18%)"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA87\x10A\xA48\x1\x101.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107%d%%\x1", found.at(5) - 0x100);
             return buffer;
         });
 
         // Change "Halves skill recharge of <attribute> spells" > "HSR <attribute>"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA81\x10A\xA58\x1\x10B.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1372,14 +1372,14 @@ namespace ToolboxUtils {
 
         // Change "Inscription: "Blah Blah"" to just "Blah Blah"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\x8101\x5DC5\x10A..\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c%c", found.at(3), found.at(4));
             return buffer;
         });
 
         // Change "Halves casting time of <attribute> spells" > "HCT <attribute>"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA81\x10A\xA47\x1\x10B.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1391,7 +1391,7 @@ namespace ToolboxUtils {
 
         // Change "Piercing Dmg: 11-22" > "Piercing: 11-22"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA89\x10A\xA4E\x1\x10B.\x1\x101.\x102.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107: %d-%d\x1", found.at(5), found.at(8) - 0x100, found.at(10) - 0x100);
             return buffer;
         });
@@ -1437,7 +1437,7 @@ namespace ToolboxUtils {
 
         // Replace (while affected by a(n) to just (n)
         original = TextUtils::ctre_regex_replace_with_formatter<L"\x8101\x4D9C\x10A.\x1">(original, [](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             return std::wstring(1, found.at(3));
         });
 
@@ -1469,7 +1469,7 @@ namespace ToolboxUtils {
 
         // Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             if (found[4] != found[16]) {
                 return std::wstring(found); // Different attributes, return unchanged
             }

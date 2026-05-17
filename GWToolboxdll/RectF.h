@@ -8,8 +8,8 @@ struct RectF {
     ImVec2 bottom_right;
 
     constexpr RectF(const RECT& rect)
-        : top_left({static_cast<float>(rect.left), static_cast<float>(rect.top)}),
-          bottom_right({static_cast<float>(rect.right), static_cast<float>(rect.bottom)}) {}
+        : top_left(static_cast<float>(rect.left), static_cast<float>(rect.top)),
+          bottom_right(static_cast<float>(rect.right), static_cast<float>(rect.bottom)) {}
 
     constexpr RectF(const ImVec2& _top_left, const ImVec2& _bottom_right)
         : top_left(_top_left), bottom_right(_bottom_right) {}

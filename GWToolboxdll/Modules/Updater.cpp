@@ -288,7 +288,7 @@ void Updater::CheckForUpdate(const bool forced)
 
         // we have a new version!
         Mode iMode = forced ? Mode::CheckAndAsk : mode;
-        if constexpr (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
+        if constexpr (!std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             iMode = Mode::CheckAndAsk;
         }
         switch (iMode) {
