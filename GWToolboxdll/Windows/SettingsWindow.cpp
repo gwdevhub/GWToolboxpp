@@ -67,7 +67,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         if (ImGui::IsItemClicked()) {
             ShellExecute(nullptr, "open", GWTOOLBOX_WEBSITE, nullptr, nullptr, SW_SHOWNORMAL);
         }
-        if constexpr (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
+        if constexpr (!std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             ImGui::SameLine();
             ImGui::Text("- %s", GWTOOLBOXDLL_VERSION_BETA);
         }

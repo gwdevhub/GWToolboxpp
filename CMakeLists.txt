@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.29)
 
-set(CMAKE_GENERATOR_PLATFORM win32)
+if(NOT CMAKE_GENERATOR MATCHES "Ninja|Makefile")
+    set(CMAKE_GENERATOR_PLATFORM win32)
+endif()
 
 project(gwtoolbox)
 
@@ -15,8 +17,13 @@ if(MSVC_TOOLSET_VERSION LESS 143)
     message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
 endif()
 
-# Increase constexpr/template depth for CTRE compile-time regex library
-add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /bigobj /templateDepth:2048)
+# Increase constexpr and template instantiation depth for CTRE compile-time regex library
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # SHELL: prefix prevents CMake from deduplicating the repeated -Xclang flags.
+    add_compile_options("SHELL:-Xclang -fconstexpr-depth=2048" "SHELL:-Xclang -fconstexpr-steps=10000000" /bigobj)
+else()
+    add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /bigobj /templateDepth:2048)
+endif()
 
 if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 4))
     message(FATAL_ERROR "You are configuring a non 32-bit build, this is not supported. Run cmake with `-A Win32`")
@@ -35,9 +42,84 @@ add_compile_definitions(
     "GWTOOLBOX_MODULE_VERSION=${GWTOOLBOX_MODULE_VERSION}"
     )
 	
-add_compile_options(/MP /permissive-)
+add_compile_options(/permissive-)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Warning suppressions for clang-cl. Stored in a variable so they can also be
+    # re-applied at target level AFTER any /Wn flag (which expands to -Wall/-Wextra
+    # and re-enables warnings disabled by earlier -Wno-* flags on the same line).
+    set(CLANG_WARNING_DISABLES
+        # Microsoft-specific extensions accepted by MSVC that clang-cl flags
+        -Wno-microsoft-cast
+        -Wno-microsoft-include
+        -Wno-nonportable-include-path
+        -Wno-pragma-once-outside-header
+        -Wno-backslash-newline-escape
+        -Wno-unknown-attributes
+        -Wno-ignored-attributes
 
-set(CMAKE_CXX_STANDARD 23)
+        # Pointer / cast conversions
+        -Wno-pointer-bool-conversion
+        -Wno-int-to-void-pointer-cast
+        -Wno-cast-function-type-mismatch
+
+        # Unused code (kept on purpose in this codebase)
+        -Wno-unused-variable
+        -Wno-unused-function
+        -Wno-unused-private-field
+        -Wno-unused-lambda-capture
+        -Wno-unused-const-variable
+        -Wno-unused-value
+        -Wno-unused-but-set-variable
+        -Wno-unused-parameter
+        -Wno-unused-local-typedef
+        -Wno-unused-but-set-parameter
+        -Wno-missing-declarations
+
+        # Cosmetic / stylistic
+        -Wno-ignored-qualifiers
+        -Wno-missing-field-initializers
+        -Wno-missing-designated-field-initializers
+        -Wno-missing-braces
+        -Wno-braced-scalar-init
+        -Wno-reorder-ctor
+        -Wno-inconsistent-missing-override
+        -Wno-parentheses
+        -Wno-logical-op-parentheses
+        -Wno-bitwise-op-parentheses
+        -Wno-misleading-indentation
+
+        # Switch / enum coverage (deliberate fall-through in this codebase)
+        -Wno-switch
+
+        # Format strings (ImGui::Text(buf) style calls — buf never contains user-controlled %)
+        -Wno-format-security
+        -Wno-format
+        -Wno-format-extra-args
+
+        # Char/sign comparison (codebase only uses ASCII subscripts)
+        -Wno-char-subscripts
+        -Wno-sign-compare
+        -Wno-tautological-constant-out-of-range-compare
+        -Wno-multichar
+        -Wno-sizeof-array-argument
+
+        # Defaulted/deleted special members + non-virtual dtor through base
+        -Wno-defaulted-function-deleted
+        -Wno-delete-non-abstract-non-virtual-dtor
+    )
+    add_compile_options(${CLANG_WARNING_DISABLES})
+else()
+    # MSVC: whole-program optimization + link-time codegen in non-Debug
+    add_compile_options(/MP)
+    add_compile_options($<$<NOT:$<CONFIG:Debug>>:/GL>)
+    add_link_options($<$<NOT:$<CONFIG:Debug>>:/LTCG>)
+endif()
+
+set(CMAKE_CXX_STANDARD 26)
+# CMake 4.2 doesn't yet know MSVC 14.50 supports C++26 — fall back to 23 for MSVC.
+if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_STANDARD 23)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
