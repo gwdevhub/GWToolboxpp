@@ -44,37 +44,8 @@ add_compile_definitions(
 	
 add_compile_options(/permissive-)
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(/MP)
-endif()
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # LTO disabled: the VS-bundled lld-link is 32-bit and hits the 4 GB
-    # virtual-address ceiling on this codebase. Re-enable -flto=full or
-    # -flto=thin once a 64-bit lld-link is available on PATH.
-    #
-    # Silence clang-cl warnings that are either stylistic, MSVC-isms we
-    # rely on, or already-known issues the MSVC build tolerated.
-    add_compile_options(
-        -Wno-switch
-        -Wno-microsoft-cast
-        -Wno-reorder-ctor
-        -Wno-ignored-qualifiers
-        -Wno-unused-variable
-        -Wno-unused-function
-        -Wno-unused-const-variable
-        -Wno-unused-but-set-variable
-        -Wno-missing-field-initializers
-        -Wno-deprecated-declarations
-        -Wno-inconsistent-missing-override
-        -Wno-logical-op-parentheses
-        -Wno-bitwise-op-parentheses
-        -Wno-missing-declarations
-        -Wno-pragma-once-outside-header
-        -Wno-unknown-argument
-        -Wno-microsoft-include
-    )
-else()
     # MSVC: whole-program optimization + link-time codegen in non-Debug
+    add_compile_options(/MP)
     add_compile_options($<$<NOT:$<CONFIG:Debug>>:/GL>)
     add_link_options($<$<NOT:$<CONFIG:Debug>>:/LTCG>)
 endif()
