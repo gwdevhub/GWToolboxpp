@@ -43,7 +43,72 @@ add_compile_definitions(
     )
 	
 add_compile_options(/permissive-)
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Warning suppressions for clang-cl. Stored in a variable so they can also be
+    # re-applied at target level AFTER any /Wn flag (which expands to -Wall/-Wextra
+    # and re-enables warnings disabled by earlier -Wno-* flags on the same line).
+    set(CLANG_WARNING_DISABLES
+        # Microsoft-specific extensions accepted by MSVC that clang-cl flags
+        -Wno-microsoft-cast
+        -Wno-microsoft-include
+        -Wno-nonportable-include-path
+        -Wno-pragma-once-outside-header
+        -Wno-backslash-newline-escape
+        -Wno-unknown-attributes
+        -Wno-ignored-attributes
+
+        # Pointer / cast conversions
+        -Wno-pointer-bool-conversion
+        -Wno-int-to-void-pointer-cast
+        -Wno-cast-function-type-mismatch
+
+        # Unused code (kept on purpose in this codebase)
+        -Wno-unused-variable
+        -Wno-unused-function
+        -Wno-unused-private-field
+        -Wno-unused-lambda-capture
+        -Wno-unused-const-variable
+        -Wno-unused-value
+        -Wno-unused-but-set-variable
+        -Wno-unused-parameter
+        -Wno-unused-local-typedef
+        -Wno-unused-but-set-parameter
+        -Wno-missing-declarations
+
+        # Cosmetic / stylistic
+        -Wno-ignored-qualifiers
+        -Wno-missing-field-initializers
+        -Wno-missing-designated-field-initializers
+        -Wno-missing-braces
+        -Wno-braced-scalar-init
+        -Wno-reorder-ctor
+        -Wno-inconsistent-missing-override
+        -Wno-parentheses
+        -Wno-logical-op-parentheses
+        -Wno-bitwise-op-parentheses
+        -Wno-misleading-indentation
+
+        # Switch / enum coverage (deliberate fall-through in this codebase)
+        -Wno-switch
+
+        # Format strings (ImGui::Text(buf) style calls — buf never contains user-controlled %)
+        -Wno-format-security
+        -Wno-format
+        -Wno-format-extra-args
+
+        # Char/sign comparison (codebase only uses ASCII subscripts)
+        -Wno-char-subscripts
+        -Wno-sign-compare
+        -Wno-tautological-constant-out-of-range-compare
+        -Wno-multichar
+        -Wno-sizeof-array-argument
+
+        # Defaulted/deleted special members + non-virtual dtor through base
+        -Wno-defaulted-function-deleted
+        -Wno-delete-non-abstract-non-virtual-dtor
+    )
+    add_compile_options(${CLANG_WARNING_DISABLES})
+else()
     # MSVC: whole-program optimization + link-time codegen in non-Debug
     add_compile_options(/MP)
     add_compile_options($<$<NOT:$<CONFIG:Debug>>:/GL>)
