@@ -250,7 +250,6 @@ namespace {
         if (!std::filesystem::exists(dll_path_str)) return false;
 
         // Check file size if we have a resource module to compare against
-        (resource_dll);
 #ifndef _DEBUG
         if (!resource_dll.data())
             return false;
@@ -339,10 +338,10 @@ namespace {
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
             std::wstring err;
             Resources::ResourceToFile(IDR_GWCA_DLL, gwca_dll_path,err);
-        }
-        if (!IsValidGWCADll(gwca_dll_path, resource)) {
-            Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
-            return nullptr;
+            if (!IsValidGWCADll(gwca_dll_path, resource)) {
+                Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
+                return nullptr;
+            }
         }
 
         gwcamodule = LoadLibraryW(gwca_dll_path.wstring().c_str());
