@@ -516,7 +516,7 @@ namespace GW {
             kTravel,                        // 0x10000183
             kOpenWikiUrl,                   // 0x10000184, wparam = char* url
             kMessage_0x10000181,            // 0x10000185
-            kMessage_0x10000182,            // 0x10000186
+            kOpenUrlNoPrompt,               // 0x10000186, wparam = char* url
             kSetPreGameContext_Value0,      // 0x10000187, wparam = uint32_t value
             kMessage_0x10000184,            // 0x10000188
             kGetPreGameContext_Value0,      // 0x10000189, lparam = *uint32_t value_out
@@ -583,8 +583,8 @@ namespace GW {
             kMissionStatusRelated,          // 0x100001c6
             kUnused_1c2,                    // 0x100001c7
             kCollapseExpandSkillListSection,  // 0x100001c8
-            kTemplateRelated_1,             // 0x100001c9
-            kTemplateRelated_2,             // 0x100001ca
+            kPromptLoadTemplate,            // 0x100001c9
+            kOpenTemplateManager,           // 0x100001ca
             kPromptSaveTemplate,            // 0x100001cb
             kOpenTemplate,                  // 0x100001cc, wparam = GW::UI::ChatTemplate*
             kTemplateRelated_3,             // 0x100001cd
@@ -615,12 +615,26 @@ namespace GW {
             kSendWorldAction = 0x30000000 | 0x20,  // 0x30000020, wparam = UIPacket::kSendWorldAction*
             kSetRendererValue = 0x30000000 | 0x21,  // 0x30000021, wparam = UIPacket::kSetRendererValue
             kIdentifyItem = 0x30000000 | 0x22,  // 0x30000022, wparam = UIPacket::kUseKitOnItem
-            kSalvageItem = 0x30000000 | 0x23  // 0x30000023, wparam = UIPacket::kUseKitOnItem
+            kSalvageItem = 0x30000000 | 0x23,  // 0x30000023, wparam = UIPacket::kUseKitOnItem
+            kAddCustomChatLink = 0x30000000 | 0x24,  // 0x30000024, wparam = UIPacket::kAddCustomChatLink. Triggered when GWCA parses a [label;url] link in chat that GW didn't handle
+            kChatLinkClicked = 0x30000000 | 0x25  // 0x30000025, wparam = UIPacket::kChatLinkClicked. Triggered when the player clicks an <a> link in chat, e.g. build code
         };
 
         //static_assert(GW::UI::UIMessage::kOpenTemplate == (GW::UI::UIMessage)0x100001c4);
 
         namespace UIPacket {
+            struct kAddCustomChatLink {
+                GW::Chat::Channel channel;      // GW::Chat::Channel
+                wchar_t link_prefix[32];
+                wchar_t sender[32];    // whoever sent the chat message
+                wchar_t label[256];
+                wchar_t url[256];
+            };
+            struct kChatLinkClicked {
+                const wchar_t* sender;
+                const wchar_t* label;
+                const wchar_t* url;
+            };
             struct kAgentOverheadNumber {
                 uint32_t agent_id;
                 uint32_t h0004;

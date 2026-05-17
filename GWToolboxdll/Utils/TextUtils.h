@@ -120,6 +120,7 @@ namespace TextUtils {
     bool ParseUInt(const wchar_t* str, unsigned int* val, int base = 10);
     bool ParseFloat(const char* str, float* val);
     bool ParseFloat(const wchar_t* str, float* val);
+    bool IsUrl(const wchar_t* str);
 
     // e.g. 8 Days ago
     enum class RelativeTimeFormat { Narrow, Full };

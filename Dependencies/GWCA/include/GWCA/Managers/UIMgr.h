@@ -110,12 +110,12 @@ namespace GW {
             float screen_right;
             float screen_top;
 
-            GWCA_API [[nodiscard]] GW::Vec2f GetTopLeftOnScreen(const Frame* frame = nullptr) const;
-            GWCA_API [[nodiscard]] GW::Vec2f GetBottomRightOnScreen(const Frame* frame = nullptr) const;
-            GWCA_API [[nodiscard]] GW::Vec2f GetContentTopLeft(const Frame* frame = nullptr) const;
-            GWCA_API [[nodiscard]] GW::Vec2f GetContentBottomRight(const Frame* frame = nullptr) const;
-            GWCA_API [[nodiscard]] GW::Vec2f GetSizeOnScreen(const Frame* frame = nullptr) const;
-            GWCA_API [[nodiscard]] GW::Vec2f GetViewportScale(const Frame* frame = nullptr) const;
+            [[nodiscard]] GWCA_API GW::Vec2f GetTopLeftOnScreen(const Frame* frame = nullptr) const;
+            [[nodiscard]] GWCA_API GW::Vec2f GetBottomRightOnScreen(const Frame* frame = nullptr) const;
+            [[nodiscard]] GWCA_API GW::Vec2f GetContentTopLeft(const Frame* frame = nullptr) const;
+            [[nodiscard]] GWCA_API GW::Vec2f GetContentBottomRight(const Frame* frame = nullptr) const;
+            [[nodiscard]] GWCA_API GW::Vec2f GetSizeOnScreen(const Frame* frame = nullptr) const;
+            [[nodiscard]] GWCA_API GW::Vec2f GetViewportScale(const Frame* frame = nullptr) const;
         };
 
         struct FrameInteractionCallback {

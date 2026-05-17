@@ -729,7 +729,7 @@ void QuestModule::Initialize()
     uintptr_t address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", 0, -0x7);
     if (address) {
         bypass_custom_quest_assertion_patch.SetPatch(address, "\xeb", 1);
-        //bypass_custom_quest_assertion_patch.TogglePatch(true);
+        bypass_custom_quest_assertion_patch.TogglePatch(true);
     }
 
     constexpr GW::UI::UIMessage ui_messages[] = {

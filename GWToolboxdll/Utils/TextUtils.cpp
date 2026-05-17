@@ -678,6 +678,11 @@ namespace TextUtils {
         return str != end && errno != ERANGE;
     }
 
+    bool IsUrl(const wchar_t* str)
+    {
+        if (!(str && *str)) return false;
+        return wcsncmp(str, L"http://", 7) == 0 || wcsncmp(str, L"https://", 8) == 0;
+    }
 
     std::string RelativeTime(time_t utc_timestamp, RelativeTimeFormat fmt)
     {

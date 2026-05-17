@@ -359,15 +359,14 @@ namespace {
             return false;
         GW::GameThread::Enqueue([build] {
             GW::UI::ChatTemplate t = { 0 };
-            t.code.m_buffer = new wchar_t[128];
-            MultiByteToWideChar(CP_UTF8, 0, build->code.c_str(), -1, t.code.m_buffer, 128);
-            t.code.m_size = t.code.m_capacity = wcslen(t.code.m_buffer);
-            t.name = new wchar_t[128];
-            MultiByteToWideChar(CP_UTF8, 0, build->name.c_str(), -1, t.name, 128);
 
+            auto code_ws = TextUtils::StringToWString(build->code);
+            t.code.m_buffer = code_ws.data();
+            t.code.m_size = t.code.m_capacity = code_ws.size() + 1;
+
+            auto name_ws = TextUtils::StringToWString(build->name);
+            t.name = name_ws.data();
             SendUIMessage(GW::UI::UIMessage::kOpenTemplate, &t);
-            delete[] t.code.m_buffer;
-            delete[] t.name;
             });
         return true;
     }

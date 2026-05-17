@@ -2649,33 +2649,12 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
         return;
     }
     status->blocked = true;
-    std::wstring file_path;
-    std::wstring new_message;
-    file_path.reserve(256);
-    new_message.reserve(256);
-    new_message.append(L"\x846\x107<a=1>\x200C");
-    for (size_t i = 2; msg->message[i] && msg->message[i] != 0x1; i++) {
-        const wchar_t ch = msg->message[i];
-        if (ch == L'\r' || ch == L'\n') {
-            new_message.push_back(L' ');
-            continue;
-        }
-        if (ch == L' ') {
-            new_message.push_back(L'\x00A0'); // NBSP keeps the link intact while looking like a space
-        }
-        else {
-            new_message.push_back(ch);
-        }
-        if (ch == '\\' && msg->message[i - 1] == '\\') {
-            continue; // Skip double escaped directory separators when getting the actual file name
-        }
-        file_path.push_back(ch);
-    }
-    new_message.append(L"</a>\x1");
+    std::wstring file_path(&msg->message[2],wcsstr(&msg->message[2],L"\x1"));
+    std::wstring new_message = std::format(L"\x846\x107<quote>[{};file://{}]\x1",file_path,file_path);
     is_redirecting = true;
     WriteChatEnc(static_cast<GW::Chat::Channel>(msg->channel), new_message.c_str());
+    
     // Copy file to clipboard
-
     const auto size = sizeof(DROPFILES) + (file_path.size() + 2) * sizeof(wchar_t);
     const HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
     ASSERT(hGlobal != nullptr);

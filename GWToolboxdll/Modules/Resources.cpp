@@ -454,6 +454,7 @@ void Resources::Cleanup()
     damagetype_icons.clear();
     map_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
     skill_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
+    hero_names.clear();
     encoded_string_ids.clear();
 }
 

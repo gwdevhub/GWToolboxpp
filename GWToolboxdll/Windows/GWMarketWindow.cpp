@@ -1149,7 +1149,7 @@ namespace {
                     std::wstring item_ws = TextUtils::StringToWString(cpy->name);
 
                     GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)name_ws.c_str());
-                    const auto frame = (GW::EditableTextFrame*)GW::UI::GetFrameByLabel(L"EditMessage");
+                    
                     std::wstring message;
                     if (cpy->orderType == OrderType::Buy) {
                         message = std::format(L"Hi, are you still looking for {}?", item_ws.c_str());
@@ -1157,7 +1157,7 @@ namespace {
                     else {
                         message = std::format(L"Hi, do you still have {} for sale?", item_ws.c_str());
                     }
-                    frame && frame->SetValue(message.c_str());
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kAppendMessageToChat, (void*)message.c_str());
                     delete cpy;
                 });
             }
