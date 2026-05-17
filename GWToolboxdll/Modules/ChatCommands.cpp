@@ -5,7 +5,6 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
@@ -23,9 +22,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
@@ -42,7 +39,6 @@
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
-#include <Keys.h>
 #include <Logger.h>
 
 #include <Constants/EncStrings.h>
@@ -52,7 +48,6 @@
 #include <Modules/InventoryManager.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/BuildsWindow.h>
-#include <Windows/Hotkeys.h>
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
 #include <Widgets/TimerWidget.h>
@@ -60,7 +55,6 @@
 #include <Modules/DialogModule.h>
 #include <Modules/Resources.h>
 #include <Utils/TextUtils.h>
-#include <Constants/EncStrings.h>
 
 #include "QuestModule.h"
 #include <Utils/ToolboxUtils.h>

@@ -21,7 +21,7 @@ target_link_libraries(GWToolbox PRIVATE
     # cmake dependencies:
     Core
     RestClient
-    nlohmann_json::nlohmann_json
+    glaze::glaze
 
     version.lib # for GetFileVersionInfo
     )

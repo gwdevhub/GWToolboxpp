@@ -14,7 +14,6 @@
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Utils/ToolboxUtils.h>
-#include <GWCA/Context/WorldContext.h>
 #include <D3DContainers.h>
 
 namespace {

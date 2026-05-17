@@ -12,8 +12,10 @@
 
 #include <GWCA/Utilities/Hooker.h>
 
+#include <Color.h>
 #include <Defines.h>
 #include <ImGuiAddons.h>
+#include <Utils/FontLoader.h>
 #include "SkillbarWidget.h"
 #include <Modules/ChatCommands.h>
 

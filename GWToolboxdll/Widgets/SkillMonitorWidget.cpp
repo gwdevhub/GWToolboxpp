@@ -7,11 +7,14 @@
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 
 #include <GWCA/Packets/StoC.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Utilities/Hook.h>
 
+#include <Color.h>
 #include <Defines.h>
+#include <Timer.h>
 #include <Modules/Resources.h>
 #include <Widgets/SkillMonitorWidget.h>
 

@@ -87,11 +87,13 @@ namespace TextUtils {
     bool StringToGuid(const std::string& str, GUID* guid);
     GUID ConvertWStringToGuid(const std::wstring& str);
 
-    std::string parseStringFromJson(const nlohmann::json& j, const char* key, const std::string& default_val);
-    int parseIntFromJson(const nlohmann::json& j, const char* key, const int& default_val);
-    bool parseBoolFromJson(const nlohmann::json& j, const char* key, const bool& default_val);
-    uint64_t parseUint64FromJson(const nlohmann::json& j, const char* key, const uint64_t& default_val);
-    float parseFloatFromJson(const nlohmann::json& j, const char* key, const float& default_val);
+    // Dynamic field accessors for code that still operates on glz::generic
+    // (currently just GWMarketWindow's Socket.IO event dispatcher).
+    std::string parseStringFromJson(const glz::generic& j, const char* key, const std::string& default_val);
+    int parseIntFromJson(const glz::generic& j, const char* key, const int& default_val);
+    bool parseBoolFromJson(const glz::generic& j, const char* key, const bool& default_val);
+    uint64_t parseUint64FromJson(const glz::generic& j, const char* key, const uint64_t& default_val);
+    float parseFloatFromJson(const glz::generic& j, const char* key, const float& default_val);
 
 
     std::string VStrPrintf(const char* format, va_list argv);

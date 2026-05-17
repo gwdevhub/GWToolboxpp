@@ -1,10 +1,8 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Debug.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 
 #include "FpsFix.h"
 

@@ -2,8 +2,6 @@
 
 #include "Registry.h"
 
-#include <uWebsockets/HttpErrors.h>
-
 namespace {
     const auto lpSubKey = L"Software\\GWToolbox";
 }

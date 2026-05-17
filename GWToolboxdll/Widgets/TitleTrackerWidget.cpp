@@ -5,20 +5,16 @@
 #include <GWCA/GameEntities/Title.h>
 #include <GWCA/GameEntities/Frame.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Widgets/TitleTrackerWidget.h>
 
-#include "Utils/FontLoader.h"
 #include "Utils/GuiUtils.h"
 #include <Color.h>
 #include <Defines.h>
 #include <Utils/ToolboxUtils.h>
-#include <Utils/TextUtils.h>
 #include <Constants/EncStrings.h>
 
 namespace {

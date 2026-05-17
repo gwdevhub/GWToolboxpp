@@ -1,8 +1,5 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-
-#include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 
 class FactionLeaderboardWindow : public ToolboxWindow {

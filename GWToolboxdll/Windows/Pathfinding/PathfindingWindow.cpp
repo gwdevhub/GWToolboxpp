@@ -8,7 +8,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 
 #include <Timer.h>
 #include <ImGuiAddons.h>
@@ -132,15 +131,14 @@ namespace {
                         delete from_context;
                         return;
                     }
-                    Resources::EnqueueWorkerTask([from_dat, from_context]() {
+                    Resources::EnqueueWorkerTask([from_dat, from_context] {
+                        constexpr glz::opts pretty{.prettify = true};
                         auto write_to = std::format(L"pathing_map_data_from_file_{:#}.json", from_dat->map_file_id);
-                        nlohmann::json json = *from_dat;
-                        auto str = json.dump(2);
+                        auto str = glz::write<pretty>(Pathing::ToJson(*from_dat)).value_or(std::string{});
                         Resources::WriteFile(Resources::GetPath(write_to), str);
 
                         write_to = std::format(L"pathing_map_data_from_context_{:#}.json", from_context->map_file_id);
-                        json = *from_dat;
-                        str = json.dump(2);
+                        str = glz::write<pretty>(Pathing::ToJson(*from_dat)).value_or(std::string{});
                         Resources::WriteFile(Resources::GetPath(write_to), str);
                         delete from_dat;
                         delete from_context;

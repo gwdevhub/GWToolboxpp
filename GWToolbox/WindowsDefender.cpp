@@ -4,7 +4,6 @@
 #include "WindowsDefender.h"
 
 #include "Settings.h"
-#include "Registry.h"
 
 namespace fs = std::filesystem;
 

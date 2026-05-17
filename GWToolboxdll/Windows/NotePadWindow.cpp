@@ -4,8 +4,6 @@
 #include <Windows/NotePadWindow.h>
 #include <Utils/FontLoader.h>
 
-#include <ImGuiAddons.h>
-
 namespace {
     constexpr size_t text_buffer_length = 2024 * 16;
     constexpr size_t tab_name_length = 64;

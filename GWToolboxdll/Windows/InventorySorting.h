@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ToolboxWindow.h>
-#include <vector>
 #include <cstdint>
 
 namespace GW {

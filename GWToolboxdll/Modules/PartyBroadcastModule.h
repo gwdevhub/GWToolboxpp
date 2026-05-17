@@ -1,10 +1,6 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-
 #include <ToolboxModule.h>
-#include <minwindef.h>
-#include <ToolboxIni.h>
 
 class PartyBroadcast : public ToolboxModule {
     PartyBroadcast() = default;

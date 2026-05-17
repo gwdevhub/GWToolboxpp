@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GWCA/Constants/Skills.h>
-#include <GWCA/Utilities/Hook.h>
 #include <GWCA/Packets/StoC.h>
 #include <chrono>
 

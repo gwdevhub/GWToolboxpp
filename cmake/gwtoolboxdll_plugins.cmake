@@ -17,7 +17,7 @@ target_include_directories(plugin_base INTERFACE
     )
 target_link_libraries(plugin_base INTERFACE
     imgui
-    nlohmann_json::nlohmann_json
+    glaze::glaze
     gwca
     IconFontCppHeaders
     GWToolboxdll # for GetFont

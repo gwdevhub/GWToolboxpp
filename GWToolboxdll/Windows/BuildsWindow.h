@@ -1,14 +1,6 @@
 #pragma once
 
-#include <GWCA/Constants/Skills.h>
-
-#include <GWCA/Managers/SkillbarMgr.h>
-
-#include <Utils/GuiUtils.h>
-#include <Timer.h>
 #include <ToolboxWindow.h>
-
-#include <Defines.h>
 
 namespace GW::UI {
     enum class UIMessage : uint32_t;

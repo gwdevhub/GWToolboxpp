@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Modules/Resources.h>
 #include <Modules/GameSettings.h>
@@ -21,6 +19,7 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
@@ -1133,18 +1132,22 @@ void ObjectiveTimerWindow::LoadRuns()
                 std::wstring fn = Resources::GetPath(L"runs", *it);
                 file.open(fn);
                 if (file.is_open()) {
-                    nlohmann::json os_json_arr;
-                    file >> os_json_arr;
-                    for (auto json_it = os_json_arr.begin(); json_it != os_json_arr.end(); ++json_it) {
-                        ObjectiveSet* os = ObjectiveSet::FromJson(json_it.value());
-                        if (instance.objective_sets.contains(os->system_time)) {
-                            delete os;
-                            continue; // Don't load in a run that already exists
+                    std::stringstream ss;
+                    ss << file.rdbuf();
+                    std::vector<ObjectiveSet::Serialized> os_arr;
+                    constexpr glz::opts opts{.error_on_unknown_keys = false};
+                    if (auto ec = glz::read<opts>(os_arr, ss.str()); !ec) {
+                        for (const auto& elem : os_arr) {
+                            ObjectiveSet* os = ObjectiveSet::FromJson(elem);
+                            if (instance.objective_sets.contains(os->system_time)) {
+                                delete os;
+                                continue; // Don't load in a run that already exists
+                            }
+                            os->StopObjectives();
+                            os->need_to_collapse = true;
+                            os->from_disk = true;
+                            instance.objective_sets.emplace(os->system_time, os);
                         }
-                        os->StopObjectives();
-                        os->need_to_collapse = true;
-                        os->from_disk = true;
-                        instance.objective_sets.emplace(os->system_time, os);
                     }
                     file.close();
                 }
@@ -1187,11 +1190,12 @@ void ObjectiveTimerWindow::SaveRuns()
                 std::ofstream file;
                 file.open(Resources::GetPath(L"runs", it.first));
                 if (file.is_open()) {
-                    nlohmann::json os_json_arr;
+                    std::vector<ObjectiveSet::Serialized> os_arr;
+                    os_arr.reserve(it.second.size());
                     for (const auto os : it.second) {
-                        os_json_arr.push_back(os->ToJson());
+                        os_arr.push_back(os->ToJson());
                     }
-                    file << os_json_arr << std::endl;
+                    file << glz::write_json(os_arr).value_or(std::string{}) << std::endl;
                     file.close();
                 }
             } catch (const std::exception&) {
@@ -1563,65 +1567,56 @@ ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()
     objectives.clear();
 }
 
-ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(const nlohmann::json& json)
+ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(const Serialized& json)
 {
     const auto os = new ObjectiveSet;
     os->active = false;
-    os->system_time = json.at("utc_start").get<DWORD>();
-    os->name = json.at("name").get<std::string>();
-    os->run_start_time_point = json.at("instance_start").get<DWORD>();
-    if (json.contains("duration")) {
-        os->duration = json.at("duration").get<DWORD>();
-    }
-    nlohmann::json json_objs = json.at("objectives");
-    for (auto it = json_objs.begin(); it != json_objs.end(); ++it) {
-        const nlohmann::json& o = it.value();
+    os->system_time = static_cast<DWORD>(json.utc_start);
+    os->name = json.name;
+    os->run_start_time_point = static_cast<DWORD>(json.instance_start);
+    if (json.duration) os->duration = static_cast<DWORD>(*json.duration);
+    for (const auto& o : json.objectives) {
         os->objectives.emplace_back(Objective::FromJson(o));
     }
     os->StopObjectives();
     return os;
 }
 
-nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson()
+ObjectiveTimerWindow::ObjectiveSet::Serialized ObjectiveTimerWindow::ObjectiveSet::ToJson()
 {
-    nlohmann::json json;
-    json["name"] = name;
-    json["instance_start"] = run_start_time_point;
-    json["utc_start"] = system_time;
-    nlohmann::json json_objectives;
+    Serialized out{
+        .name = name,
+        .instance_start = run_start_time_point,
+        .utc_start = system_time,
+        .duration = GetDuration(),
+    };
+    out.objectives.reserve(objectives.size());
     for (auto* obj : objectives) {
-        json_objectives.push_back(obj->ToJson());
+        out.objectives.push_back(obj->ToJson());
     }
-    json["objectives"] = json_objectives;
-    json["duration"] = GetDuration();
-    return json;
+    return out;
 }
 
-nlohmann::json ObjectiveTimerWindow::Objective::ToJson()
+ObjectiveTimerWindow::Objective::Serialized ObjectiveTimerWindow::Objective::ToJson()
 {
-    nlohmann::json json;
-    json["name"] = name;
-    json["status"] = status;
-    json["start"] = start;
-    json["done"] = done;
-    json["indent"] = indent;
-    json["duration"] = GetDuration();
-    return json;
+    return {
+        .name = name,
+        .status = static_cast<uint32_t>(std::to_underlying(status)),
+        .start = start,
+        .done = done,
+        .indent = static_cast<uint32_t>(indent),
+        .duration = GetDuration(),
+    };
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const nlohmann::json& json)
+ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const Serialized& json)
 {
-    const auto name = json.at("name").get<std::string>();
-    const auto obj = new Objective(name.c_str());
-    obj->status = json.at("status").get<Status>();
-    obj->start = json.at("start").get<DWORD>();
-    obj->done = json.at("done").get<DWORD>();
-    if (json.contains("indent")) {
-        obj->indent = json.at("indent").get<DWORD>();
-    }
-    if (json.contains("duration")) {
-        obj->duration = json.at("duration").get<DWORD>();
-    }
+    const auto obj = new Objective(json.name.c_str());
+    obj->status = static_cast<Status>(static_cast<int>(json.status));
+    obj->start = static_cast<DWORD>(json.start);
+    obj->done = static_cast<DWORD>(json.done);
+    if (json.indent) obj->indent = static_cast<DWORD>(*json.indent);
+    if (json.duration) obj->duration = static_cast<DWORD>(*json.duration);
     return obj;
 }
 

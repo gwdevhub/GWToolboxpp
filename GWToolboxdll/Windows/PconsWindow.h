@@ -1,9 +1,5 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameContainers/GamePos.h>
-
-#include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
 
 #include <ToolboxWindow.h>

@@ -11,7 +11,6 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/MapMgr.h>
 
 #include <Modules/GwDatTextureModule.h>
 
@@ -24,10 +23,18 @@
 #include <Utils/GuiUtils.h>
 
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 #include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
 
+namespace armory_snapshot {
+    struct WeaponEntry {
+        std::string name;
+        uint32_t model_file_id = 0;
+        uint8_t type = 0;
+        uint32_t interaction = 0;
+        uint8_t dye_tint = 0;
+    };
+}
 
 namespace GWArmory {
 
@@ -895,27 +902,24 @@ namespace GWArmory {
                 }
 
                 // Build JSON output
-                nlohmann::json output_json = nlohmann::json::array();
+                std::vector<armory_snapshot::WeaponEntry> output;
+                output.reserve(pending_decodes.size());
                 for (auto& it : pending_decodes) {
                     const auto item = pending_items[it.first];
-                    const std::string& item_name_decoded = it.second->string();
-
-                    nlohmann::json item_json = {
-                        {"name", item_name_decoded},
-                        {"model_file_id", item->model_file_id},
-                        {"type", static_cast<uint8_t>(item->type)},
-                        {"interaction", item->interaction},
-                        {"dye_tint", item->dye.dye_tint}
-                    };
-
-                    output_json.push_back(item_json);
+                    output.push_back({
+                        .name = it.second->string(),
+                        .model_file_id = item->model_file_id,
+                        .type = static_cast<uint8_t>(item->type),
+                        .interaction = item->interaction,
+                        .dye_tint = item->dye.dye_tint,
+                    });
                 }
 
                 // Write to file
                 const auto filename = Resources::GetPath("weapon_snapshot.json");
                 std::ofstream file(filename);
                 if (file.is_open()) {
-                    file << output_json.dump(2); // Pretty print with 2 space indent
+                    file << glz::write<glz::opts{.prettify = true}>(output).value_or(std::string{}); // Pretty print
                     file.close();
                     Log::Info("Weapon snapshot saved to %s", filename.string().c_str());
                 }

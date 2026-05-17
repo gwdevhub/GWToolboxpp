@@ -27,7 +27,6 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>

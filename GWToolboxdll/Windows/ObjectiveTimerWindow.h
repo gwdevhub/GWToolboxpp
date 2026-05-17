@@ -2,10 +2,9 @@
 
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <ToolboxWindow.h>
-#include <thread>
+#include <optional>
 #include <vector>
 
 #include <uWebsockets/App.h>
@@ -127,8 +126,16 @@ private:
         Objective* SetStarted();
         Objective* SetDone();
         Objective* AddChild(Objective* child);
-        static Objective* FromJson(const nlohmann::json& json);
-        nlohmann::json ToJson();
+        struct Serialized {
+            std::string name;
+            uint32_t status = 0;
+            uint32_t start = 0;
+            uint32_t done = 0;
+            std::optional<uint32_t> indent;
+            std::optional<uint32_t> duration;
+        };
+        static Objective* FromJson(const Serialized& json);
+        Serialized ToJson();
 
         [[nodiscard]] bool IsStarted() const;
         [[nodiscard]] bool IsDone() const;
@@ -193,8 +200,15 @@ private:
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
         void StopObjectives();
-        static ObjectiveSet* FromJson(const nlohmann::json& json);
-        nlohmann::json ToJson();
+        struct Serialized {
+            std::string name;
+            uint32_t instance_start = 0;
+            uint32_t utc_start = 0;
+            std::vector<Objective::Serialized> objectives;
+            std::optional<uint32_t> duration;
+        };
+        static ObjectiveSet* FromJson(const Serialized& json);
+        Serialized ToJson();
         void Update() const;
         void GetStartTime(tm* timeinfo) const;
 

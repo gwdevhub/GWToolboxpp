@@ -2,6 +2,35 @@
 
 #include <GWCA/GameEntities/Skill.h>
 #include <ToolboxWindow.h>
+#include <optional>
+
+namespace skilllist_export {
+    struct SkillExtras {
+        std::optional<uint32_t> x; // overcast
+        std::optional<uint32_t> r; // recharge
+        std::optional<double> c;   // activation (seconds)
+        std::optional<uint32_t> d; // maintained marker
+        std::optional<uint32_t> a; // adrenaline
+        std::optional<uint32_t> e; // energy cost
+        std::optional<uint32_t> s; // health/sacrifice cost
+        uint32_t sp = 0; // special
+        uint32_t co = 0; // combo
+        uint32_t q = 0;  // weapon req
+    };
+
+    struct SkillJson {
+        std::string n;  // name
+        std::string d;  // description
+        std::string cd; // concise description
+        uint32_t t = 0; // type
+        uint32_t p = 0; // profession
+        uint32_t a = 0; // attribute (or pve title encoding)
+        std::optional<uint32_t> e; // elite marker
+        uint32_t c = 0; // campaign
+        std::optional<SkillExtras> z;
+    };
+}
+
 
 /*namespace {
     enum SkillTypesEncoded {
@@ -34,7 +63,7 @@ public:
         Skill(GW::Skill* _gw_skill)
             : skill(_gw_skill) { }
 
-        nlohmann::json ToJson();
+        skilllist_export::SkillJson ToJson();
         const wchar_t* Name();
         const wchar_t* GWWDescription();
         const wchar_t* GWWConcise();

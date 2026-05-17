@@ -1,8 +1,6 @@
 #pragma once
 
 #include "ToolboxWindow.h"
-#include <GWCA/GameEntities/Friendslist.h>
-#include <GWCA/GameEntities/Guild.h>
 
 namespace GW::Constants {
     enum class MapID : uint32_t;

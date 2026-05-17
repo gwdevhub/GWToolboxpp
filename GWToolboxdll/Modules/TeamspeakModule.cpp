@@ -27,7 +27,24 @@
 
 #include <GWCA/Utilities/Hook.h>
 
+namespace teamspeak_invite_api {
+    struct CreateRequest {
+        std::string address;
+        std::string name;
+        std::string password; // empty when no password
+        std::string channel_id;
+        std::string channel_name;
+        double expires_in_days = 1.0;
+    };
+
+    struct CreateResponse {
+        std::string id;
+    };
+}
+
 namespace {
+
+    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
     GW::HookEntry ChatCmd_HookEntry;
     const char* teamspeak3_host = "127.0.0.1";
     char teamspeak3_api_key[128] = {0};
@@ -351,44 +368,31 @@ namespace {
         return true;
     }
 
-    bool GetValue(const nlohmann::json& content, const char* key, std::string* out)
-    {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_string())) {
-            return false;
-        }
-        *out = *found;
-        return true;
-    }
-
     void GetServerInviteLink(TS3Server* server, std::string channel_id, std::function<void(const std::string&)> callback)
     {
-        using nlohmann::json;
-        json packet;
-        packet["address"] = std::format("{}:{}", server->host, server->port);
-        packet["name"] = server->name;
-        packet["password"] = NULL;
-        packet["channel_id"] = channel_id;
-        packet["channel_name"] = channel_id;
-        packet["expires_in_days"] = 1;
+        teamspeak_invite_api::CreateRequest packet{
+            .address = std::format("{}:{}", server->host, server->port),
+            .name = server->name,
+            .channel_id = channel_id,
+            .channel_name = channel_id,
+        };
 
-        Resources::Post("https://invites.teamspeak.com/servers/create", packet.dump(), [callback](const bool success, const std::string& response, void*) {
+        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
                 Log::Error("Failed to get teamspeak invite link (1)");
                 Log::Log("%s", response.c_str());
                 return;
             }
-            const json& res = json::parse(response.c_str(), nullptr, false);
-            if (res == json::value_t::discarded) {
+            teamspeak_invite_api::CreateResponse res{};
+            if (auto ec = glz::read<json_opts>(res, response); ec) {
                 Log::Error("Failed to get teamspeak invite link (2)");
                 return;
             }
-            std::string invite_id;
-            if (!GetValue(res, "id", &invite_id)) {
+            if (res.id.empty()) {
                 Log::Error("Failed to get teamspeak invite link (3)");
                 return;
             }
-            const std::string url = std::format("https://tmspk.gg/{}", invite_id);
+            const std::string url = std::format("https://tmspk.gg/{}", res.id);
             callback(url);
         });
     }

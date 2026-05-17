@@ -1,11 +1,7 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-#include <Utils/ToolboxUtils.h>
+#include <GWCA/Constants/Constants.h>
 #include <ToolboxWindow.h>
-#include <mutex>
-#include <memory>
-#include <Timer.h>
 
 class AccountInventoryWindow : public ToolboxWindow {
 

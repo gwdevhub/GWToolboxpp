@@ -10,7 +10,6 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/GameEntities/Frame.h>
 
 #include <Modules/GameSettings.h>

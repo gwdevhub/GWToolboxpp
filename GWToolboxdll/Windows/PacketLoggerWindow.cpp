@@ -24,6 +24,19 @@
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
+
+namespace packetlogger_export {
+    struct MapInfoJson {
+        std::string name;
+        std::string description;
+        uint32_t campaign = 0;
+        uint32_t type = 0;
+        uint32_t region = 0;
+        uint32_t flags = 0;
+        uint32_t continent = 0;
+    };
+}
+
 namespace {
     wchar_t* GetMessageCore()
     {
@@ -38,21 +51,17 @@ namespace {
         std::wstring description;
         GW::AreaInfo* map_info{};
 
-        nlohmann::json ToJson() const
+        packetlogger_export::MapInfoJson ToJson() const
         {
-            nlohmann::json json;
-            if (!name.empty()) {
-                json["name"] = TextUtils::WStringToString(name);
-            }
-            if (!description.empty()) {
-                json["description"] = TextUtils::WStringToString(description);
-            }
-            json["campaign"] = map_info->campaign;
-            json["type"] = map_info->type;
-            json["region"] = map_info->region;
-            json["flags"] = map_info->flags;
-            json["continent"] = map_info->continent;
-            return json;
+            return {
+                .name = TextUtils::WStringToString(name),
+                .description = TextUtils::WStringToString(description),
+                .campaign = static_cast<uint32_t>(map_info->campaign),
+                .type = static_cast<uint32_t>(map_info->type),
+                .region = static_cast<uint32_t>(map_info->region),
+                .flags = static_cast<uint32_t>(map_info->flags),
+                .continent = static_cast<uint32_t>(map_info->continent),
+            };
         };
     };
 
@@ -81,9 +90,9 @@ namespace {
 
     void ExportMapInfo()
     {
-        nlohmann::json json;
+        std::map<std::string, packetlogger_export::MapInfoJson> output;
         for (const auto& it : maps) {
-            json[it.first] = it.second->ToJson();
+            output.emplace(std::to_string(it.first), it.second->ToJson());
             delete it.second;
         }
         maps.clear();
@@ -93,7 +102,7 @@ namespace {
         }
 
         std::ofstream out(file_location);
-        out << json.dump();
+        out << glz::write_json(output).value_or(std::string{});
         out.close();
         Log::Info("Maps exported to %ls", file_location.c_str());
     }

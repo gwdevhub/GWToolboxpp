@@ -1,9 +1,6 @@
 #pragma once
 
-#include <Color.h>
 #include <ToolboxWidget.h>
-
-#include "Utils/FontLoader.h"
 
 namespace FontLoader {
     enum class FontSize;

@@ -8,24 +8,20 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Guild.h>
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Friendslist.h>
 
 #include <GWCA/Context/PartyContext.h>
 #include <GWCA/Context/CharContext.h>
-#include <GWCA/Context/PreGameContext.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GuildMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-
-#include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Utilities/Hooker.h>
 
 #include <Modules/Resources.h>
 #include <Windows/RerollWindow.h>

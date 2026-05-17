@@ -11,7 +11,6 @@
 #include <ImGuiAddons.h>
 #include "MouseFix.h"
 
-#include <hidusage.h>
 #include <GWCA/Managers/UIMgr.h>
 
 namespace {

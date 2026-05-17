@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include <GWCA/Constants/Maps.h>
-#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Scanner.h>

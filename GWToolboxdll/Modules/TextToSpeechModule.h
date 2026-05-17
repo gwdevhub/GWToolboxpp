@@ -1,22 +1,6 @@
 #pragma once
 
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Utilities/Hook.h>
 #include <ToolboxModule.h>
-#include <ToolboxUIElement.h>
-
-#include <chrono>
-#include <future>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <tuple>
-#include <unordered_map>
-#include <vector>
 
 class TextToSpeechModule : public ToolboxModule {
 public:

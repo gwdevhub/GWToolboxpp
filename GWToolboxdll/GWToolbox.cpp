@@ -1,8 +1,11 @@
 #include "stdafx.h"
 
+#include <Utf8.h>
+
 #include <GWCA/GWCA.h>
 #include <GWCA/GWCAVersion.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
@@ -12,7 +15,6 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Managers/EventMgr.h>
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
@@ -38,10 +40,8 @@
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
-#include <hidusage.h>
 
 #include "Utils/FontLoader.h"
-#include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
 
 #include <EmbeddedResource.h>
@@ -285,13 +285,22 @@ namespace {
         typedef void(__cdecl* GWFnVoid)();
         const auto disable_hooks = (GWFnVoid)GetProcAddress(existing_gwca, "?DisableHooks@GW@@YAXXZ");
         const auto terminate = (GWFnVoid)GetProcAddress(existing_gwca, "?Terminate@GW@@YAXXZ");
+        // The old gwca.dll's hooks may point into a previously-unloaded toolbox dll;
+        // calling DisableHooks/Terminate can therefore crash. Swallow it via SEH
+        // and continue to FreeLibrary.
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
-            disable_hooks();
+            __try { disable_hooks(); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                Log::Log("[LoadGWCADll] DisableHooks on old gwca.dll crashed; continuing");
+            }
         }
         if (terminate) {
             Log::Log("[LoadGWCADll] Calling Terminate on old gwca.dll");
-            terminate();
+            __try { terminate(); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                Log::Log("[LoadGWCADll] Terminate on old gwca.dll crashed; continuing");
+            }
         }
         Sleep(160);
         // Unload: may need multiple calls if ref count > 1
