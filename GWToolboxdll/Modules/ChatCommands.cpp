@@ -1738,7 +1738,7 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         std::ranges::replace(cmd, '\x2', '\n');
         static constexpr ctll::fixed_string index_regex = "(\\d+):(.+)";
         if (auto match = ctre::match<index_regex>(alias)) {
-            alias = match.get<2>().to_string();
+            alias = match.template get<2>().to_string();
         }
         const auto alias_wstr = TextUtils::StringToWString(alias);
         const auto command_wstr = TextUtils::StringToWString(cmd);

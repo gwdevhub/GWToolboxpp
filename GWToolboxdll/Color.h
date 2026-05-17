@@ -4,6 +4,14 @@
 #undef RGB
 #endif
 
+// clang-cl: forward-declare ABI::Windows::UI::Color so that the
+// `typedef struct Color Color;` inside ABI::Windows::UI (Windows.UI.h,
+// brought in transitively by WinRT/wintoast headers) resolves to its
+// own namespace-scoped struct rather than colliding with the global
+// type alias below during elaborated-type-specifier lookup. MSVC is
+// more permissive here.
+namespace ABI::Windows::UI { struct Color; }
+
 using Color = ImU32;
 
 namespace Colors {
