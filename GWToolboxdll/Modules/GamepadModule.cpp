@@ -2,7 +2,6 @@
 #include <Xinput.h>
 #include "GamepadModule.h"
 
-#include <GWCA/GWCA.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <Timer.h>

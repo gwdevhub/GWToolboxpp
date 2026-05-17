@@ -1,6 +1,6 @@
 #pragma once
-#include <GWCA/Constants/Constants.h>
 #include <ToolboxWindow.h>
+#include <Utils/GuiUtils.h> // GuiUtils::EncString
 namespace GW::Constants {
     enum class QuestID : uint32_t;
 }

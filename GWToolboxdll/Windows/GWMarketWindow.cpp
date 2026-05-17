@@ -11,16 +11,14 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
-#include <Utils/RateLimiter.h>
 
 #include <Utils/ThreadedWebSocket.h>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 
 
 #include <Modules/GwDatTextureModule.h>
@@ -31,10 +29,8 @@
 #include <GWCA/GameEntities/Frame.h>
 #include <Timer.h>
 #include <Utils/TextUtils.h>
-#include <Utils/ToolboxUtils.h>
 #include <algorithm>
 #include <chrono>
-#include <iomanip>
 #include <sstream>
 #include <unordered_set>
 
@@ -44,7 +40,7 @@
 #define GWMARKET_SELLING_ENABLED 0
 
 namespace {
-    using json = nlohmann::json;
+    using json = glz::generic;
 
     const char* market_host = "gwmarket.net";
     const char* market_name = "GWMarket.net";
@@ -282,7 +278,7 @@ namespace {
         static MarketItem FromJson(const json& j)
         {
             MarketItem item;
-            if (j.is_discarded()) return item;
+            if (!j.is_object()) return item;
 
             item.name = TextUtils::parseStringFromJson(j, "name", "");
             item.player = TextUtils::parseStringFromJson(j, "player", "");
@@ -298,7 +294,7 @@ namespace {
             item.lastRefresh = lastRefresh_ms ? lastRefresh_ms / 1000 : 0;
 
             if (j.contains("prices") && j["prices"].is_array()) {
-                for (const auto& price_json : j["prices"]) {
+                for (const auto& price_json : j["prices"].get_array()) {
                     auto p = Price::FromJson(price_json);
                     if (p.valid()) item.prices.push_back(p);
                 }
@@ -321,9 +317,9 @@ namespace {
                 j["weaponDetails"] = weaponDetails.ToJson();
             }
 
-            j["prices"] = json::array();
+            j["prices"] = json::array_t{};
             for (const auto& price : prices) {
-                j["prices"].push_back(price.ToJson());
+                j["prices"].get_array().push_back(price.ToJson());
             }
 
             return j;
@@ -377,7 +373,7 @@ namespace {
         static MarketShop FromJson(const json& j)
         {
             MarketShop shop;
-            if (j.is_discarded()) return shop;
+            if (!j.is_object()) return shop;
 
             shop.player = TextUtils::parseStringFromJson(j, "player", "");
             shop.uuid = TextUtils::parseStringFromJson(j, "uuid", "");
@@ -386,7 +382,7 @@ namespace {
             shop.lastRefresh = lastRefresh_ms ? lastRefresh_ms / 1000 : 0;
 
             if (j.contains("items") && j["items"].is_array()) {
-                for (const auto& item_json : j["items"]) {
+                for (const auto& item_json : j["items"].get_array()) {
                     auto item = ShopItem::FromJson(item_json);
                     if (item.valid()) {
                         shop.items.push_back(item);
@@ -394,7 +390,7 @@ namespace {
                 }
             }
             if (j.contains("certified") && j["certified"].is_array()) {
-                for (const auto& player_name : j["certified"]) {
+                for (const auto& player_name : j["certified"].get_array()) {
                     if (player_name.is_string()) shop.certified.push_back(player_name.get<std::string>());
                 }
             }
@@ -410,13 +406,13 @@ namespace {
             j["uuid"] = uuid;
             j["lastRefresh"] = (uint64_t)(lastRefresh * 1000);
             j["authCertified"] = certified.size() > 0;
-            std::vector<json> certified_json;
+            json::array_t certified_json;
             for (auto& player_name : certified) {
                 certified_json.push_back(player_name);
             }
             j["certified"] = certified_json;
             j["daybreakOnline"] = true;
-            std::vector<json> items_json;
+            json::array_t items_json;
             for (auto& item : items) {
                 items_json.push_back(item.ToJson());
             }
@@ -563,28 +559,29 @@ namespace {
 
     std::string EncodeSocketIOMessage(const std::string& event, const std::string& data = "")
     {
-        json msg = json::array();
-        msg.push_back(event);
+        json msg = json::array_t{};
+        msg.get_array().push_back(event);
         if (!data.empty()) {
-            msg.push_back(data);
+            msg.get_array().push_back(data);
         }
-        return "42" + msg.dump();
+        return "42" + glz::write_json(msg).value_or(std::string{});
     }
 
     std::string EncodeSocketIOMessage(const std::string& event, const json& data)
     {
-        json msg = json::array();
-        msg.push_back(event);
-        msg.push_back(data);
-        return "42" + msg.dump();
+        json msg = json::array_t{};
+        msg.get_array().push_back(event);
+        msg.get_array().push_back(data);
+        return "42" + glz::write_json(msg).value_or(std::string{});
     }
 
     bool ParseSocketIOMessage(const std::string& message, std::string& event, json& data)
     {
         if (message.length() < 2 || message.substr(0, 2) != "42") return false;
 
-        json parsed = json::parse(message.substr(2), nullptr, false);
-        if (!parsed.is_discarded() && parsed.is_array() && parsed.size() >= 1) {
+        json parsed;
+        if (auto ec = glz::read_json(parsed, message.substr(2)); ec) return false;
+        if (parsed.is_array() && parsed.size() >= 1) {
             if (!parsed[0].is_string()) return false;
             event = parsed[0].get<std::string>();
             if (parsed.size() >= 2) {
@@ -598,14 +595,18 @@ namespace {
     void OnGetAvailableOrders(const json& orders)
     {
         available_items.clear();
+        if (!orders.is_object()) {
+            available_items_needs_sort = true;
+            Log::Log("Received 0 available items");
+            return;
+        }
         available_items.reserve(orders.size());
         for (auto& i : favorite_items) {
             i.second = {};
         }
-        for (auto it = orders.begin(); it != orders.end(); ++it) {
+        for (const auto& [key, j] : orders.get_object()) {
             AvailableItem item;
-            const auto& j = it.value();
-            item.name = InternString(it.key());
+            item.name = InternString(key);
             item.sellOrders = TextUtils::parseIntFromJson(j, "sellWeek", 0);
             item.buyOrders = TextUtils::parseIntFromJson(j, "buyWeek", 0);
             available_items.push_back(item);
@@ -622,7 +623,7 @@ namespace {
         last_items.clear();
         if (items.is_array()) {
             last_items.reserve(items.size());
-            for (const auto& item_json : items) {
+            for (const auto& item_json : items.get_array()) {
                 last_items.push_back(MarketItem::FromJson(item_json));
             }
         }
@@ -634,7 +635,7 @@ namespace {
         std::vector<MarketItem> _orders;
         if (orders.is_array()) {
             _orders.reserve(orders.size());
-            for (const auto& order_json : orders) {
+            for (const auto& order_json : orders.get_array()) {
                 _orders.push_back(MarketItem::FromJson(order_json));
             }
         }
@@ -696,12 +697,13 @@ namespace {
     {
         if (message[0] != '0') return;
 
-        json handshake = json::parse(message.substr(1));
-        if (handshake.contains("pingInterval")) {
-            ping_interval = handshake["pingInterval"].get<int>();
+        json handshake;
+        if (auto ec = glz::read_json(handshake, message.substr(1)); ec) return;
+        if (handshake.contains("pingInterval") && handshake["pingInterval"].is_number()) {
+            ping_interval = static_cast<int>(handshake["pingInterval"].get<double>());
         }
-        if (handshake.contains("pingTimeout")) {
-            ping_timeout = handshake["pingTimeout"].get<int>();
+        if (handshake.contains("pingTimeout") && handshake["pingTimeout"].is_number()) {
+            ping_timeout = static_cast<int>(handshake["pingTimeout"].get<double>());
         }
 
         Log::Log("Handshake: ping %dms, timeout %dms", ping_interval, ping_timeout);

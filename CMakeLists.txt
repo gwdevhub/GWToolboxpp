@@ -116,7 +116,7 @@ else()
 endif()
 
 set(CMAKE_CXX_STANDARD 26)
-# CMake 4.2 doesn't yet know MSVC 14.50 supports C++26 — fall back to 23 for MSVC.
+# CMake 4.3 doesn't yet know MSVC 14.50 supports C++26 — fall back to 23 for MSVC.
 if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_STANDARD 23)
 endif()
@@ -143,7 +143,7 @@ find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
 find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
 find_package(minhook CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
+find_package(glaze CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)
 find_package(directxtex CONFIG REQUIRED)
 

@@ -71,7 +71,7 @@
 #include <discord-game-sdk/discord_game_sdk.h>
 #include <ToolboxIni.h>
 
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 #include <easywsclient.hpp>
 #include <mp3.h>
 #include <IconsFontAwesome5.h>

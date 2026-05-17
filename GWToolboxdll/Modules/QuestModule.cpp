@@ -4,7 +4,6 @@
 
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
@@ -25,7 +24,6 @@
 #include <Utils/GuiUtils.h>
 #include <GWCA/Context/WorldContext.h>
 #include <Widgets/WorldMapWidget.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <Utils/ToolboxUtils.h>
 #include "AudioSettings.h"

@@ -8,7 +8,6 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Constants/Constants.h>
@@ -19,10 +18,8 @@
 #include <Modules/ItemDescriptionHandler.h>
 #include <Modules/ItemTooltipModule.h>
 #include <Modules/PriceCheckerModule.h>
-#include <Modules/Resources.h>
 #include <Windows/DailyQuestsWindow.h>
 
-#include <Constants/EncStrings.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 

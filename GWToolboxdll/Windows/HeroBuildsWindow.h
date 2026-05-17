@@ -8,7 +8,6 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Hero.h>
 #include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Utilities/Hook.h>
 
 #include <Timer.h>
 #include <ToolboxWindow.h>

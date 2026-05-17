@@ -1,12 +1,5 @@
 #pragma once
-#include <GWCA/GameEntities/Agent.h>
 
-#include <GWCA/Constants/Skills.h>
-
-#include <GWCA/Managers/UIMgr.h>
-
-#include <Color.h>
-#include <Timer.h>
 #include <Widgets/SnapsToPartyWindow.h>
 
 class SkillMonitorWidget : public SnapsToPartyWindow {

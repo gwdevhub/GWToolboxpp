@@ -1,7 +1,6 @@
 #include "ArenaNetFileParser.h"
 #include <algorithm>
 #include <cstring>
-#include <fstream>
 #include <vector>
 #include <Modules/GwDatTextureModule.h>
 

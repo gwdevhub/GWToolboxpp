@@ -29,6 +29,7 @@
 #include <Utils/GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
+#include <Modules/ItemDescriptionHandler.h>
 
 #include <Windows/MaterialsWindow.h>
 #include <Windows/DailyQuestsWindow.h>

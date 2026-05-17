@@ -4,8 +4,6 @@
 
 #include <GWCA/Utilities/Hook.h>
 
-#include <Modules/ItemDescriptionHandler.h>
-
 #include <Color.h>
 #include <ToolboxModule.h>
 

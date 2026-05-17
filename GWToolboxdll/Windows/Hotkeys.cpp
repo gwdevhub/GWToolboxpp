@@ -27,7 +27,6 @@
 
 #include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
-#include <Windows/BuildsWindow.h>
 #include <Windows/HeroBuildsWindow.h>
 #include <Windows/Hotkeys.h>
 #include <Windows/PconsWindow.h>

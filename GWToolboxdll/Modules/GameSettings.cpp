@@ -56,7 +56,6 @@
 #include <Windows/CompletionWindow.h>
 
 #include <Color.h>
-#include <hidusage.h>
 #include <Logger.h>
 #include <Timer.h>
 #include <Defines.h>

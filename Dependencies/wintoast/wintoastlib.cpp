@@ -18,7 +18,17 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+// ShObjIdl.h must come before <windows.ui.notifications.h> (included by
+// wintoastlib.h) to avoid an IUserNotification redefinition under MSVC.
+#include <ShObjIdl.h>
+#include <ShlObj.h>
+#include <Psapi.h>
+#include <propvarutil.h>
+#include <functiondiscoverykeys.h>
+#include <wrl/implements.h>
+
 #include "wintoastlib.h"
+
 #include <memory>
 #include <assert.h>
 #include <unordered_map>

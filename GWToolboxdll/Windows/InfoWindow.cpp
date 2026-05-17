@@ -59,7 +59,6 @@
 #include <Modules/DialogModule.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/HallOfMonumentsModule.h>
-#include <Modules/AudioSettings.h>
 #include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/ArenaNetFileParser.h>

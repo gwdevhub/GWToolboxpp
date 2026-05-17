@@ -5,9 +5,7 @@
 #include <ToolboxWidget.h>
 
 #include "Defines.h"
-#include "gwtoolboxdll_export.h"
 
-#include <Utils/GuiUtils.h>
 #include <MinimapPlugin.h>
 
 #include <Widgets/Minimap/AgentRenderer.h>

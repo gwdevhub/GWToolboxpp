@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ToolboxModule.h>
-#include <Utf8.h>
 
 namespace GuiUtils {
     class EncString;

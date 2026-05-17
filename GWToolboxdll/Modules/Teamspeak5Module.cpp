@@ -28,10 +28,93 @@
 #include <Utils/TextUtils.h>
 
 using easywsclient::WebSocket;
-using nlohmann::json;
-using json_vec = std::vector<json>;
+
+namespace ts5_api {
+    struct InviteCreateRequest {
+        std::string address;
+        std::string name;
+        std::string password;
+        std::string channel_id;
+        std::string channel_name;
+        double expires_in_days = 1.0;
+    };
+
+    struct InviteCreateResponse {
+        std::string id;
+    };
+
+    struct HandshakeContent {
+        std::string apiKey;
+    };
+
+    struct HandshakePayload {
+        std::string identifier;
+        std::string version;
+        std::string name;
+        std::string description;
+        HandshakeContent content;
+    };
+
+    struct HandshakeEnvelope {
+        std::string type;
+        HandshakePayload payload;
+    };
+
+    // Incoming websocket envelope: peek at `type`, re-parse `payload` as the concrete struct.
+    struct IncomingEnvelope {
+        std::string type;
+        glz::raw_json payload;
+        glz::raw_json status;
+    };
+
+    struct ServerProperties {
+        std::string ip;
+        std::string name;
+        uint32_t port = 0;
+        uint32_t clientsOnline = 0;
+    };
+
+    struct ClientInfo {
+        uint32_t id = 0;
+        std::string channelId;
+    };
+
+    struct ConnectionEntry {
+        ServerProperties properties;
+        uint32_t clientId = 0;
+        std::vector<ClientInfo> clientInfos;
+    };
+
+    struct AuthPayload {
+        std::vector<ConnectionEntry> connections;
+        uint32_t currentConnectionId = 0xffffffff;
+        std::string apiKey;
+    };
+
+    struct ServerPropertiesUpdatedPayload {
+        uint32_t connectionId = 0;
+        ServerProperties properties;
+        std::string apiKey;
+    };
+
+    struct ConnectStatusChangedPayload {
+        uint32_t connectionId = 0;
+        uint32_t status = 0;
+        uint32_t clientId = 0;
+        std::string apiKey;
+    };
+
+    struct ClientMovedPayload {
+        uint32_t connectionId = 0;
+        uint32_t clientId = 0;
+        std::string newChannelId;
+        std::string apiKey;
+    };
+}
 
 namespace {
+
+    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
 
     GW::HookEntry ChatCmd_HookEntry;
 
@@ -73,57 +156,6 @@ namespace {
     std::map<uint32_t, TS3Server*> connected_servers;
 
     uint32_t current_server = 0xffffffff;
-
-    bool GetValue(const json& content, const char* key, uint32_t* out)
-    {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_number_unsigned())) {
-            return false;
-        }
-        *out = *found;
-        return true;
-    }
-
-    bool GetValue(const json& content, const char* key, std::string* out)
-    {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_string())) {
-            return false;
-        }
-        *out = *found;
-        return true;
-    }
-
-    bool GetValue(const json& content, const char* key, bool* out)
-    {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_boolean())) {
-            return false;
-        }
-        *out = *found;
-        return true;
-    }
-
-    bool GetValue(const json& content, const char* key, json* out)
-    {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_object())) {
-            return false;
-        }
-        *out = *found;
-        return true;
-    }
-
-    bool GetValue(const json& content, const char* key, json_vec* out)
-    {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_array())) {
-            return false;
-        }
-        *out = found->get<json_vec>();
-        return true;
-    }
-
 
     void DeleteWebSocket()
     {
@@ -167,31 +199,29 @@ namespace {
 
     void GetServerInviteLink(TS3Server* server, std::string channel_id, std::function<void(const std::string&)> callback)
     {
-        json packet;
-        packet["address"] = std::format("{}:{}", server->host, server->port);
-        packet["name"] = server->name;
-        packet["password"] = NULL;
-        packet["channel_id"] = channel_id;
-        packet["channel_name"] = channel_id;
-        packet["expires_in_days"] = 1;
+        ts5_api::InviteCreateRequest packet{
+            .address = std::format("{}:{}", server->host, server->port),
+            .name = server->name,
+            .channel_id = channel_id,
+            .channel_name = channel_id,
+        };
 
-        Resources::Post("https://invites.teamspeak.com/servers/create", packet.dump(), [callback](const bool success, const std::string& response, void*) {
+        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
                 Log::Error("Failed to get teamspeak invite link (1)");
                 Log::Log("%s", response.c_str());
                 return;
             }
-            const json& res = json::parse(response.c_str(), nullptr, false);
-            if (res == json::value_t::discarded) {
+            ts5_api::InviteCreateResponse res{};
+            if (auto ec = glz::read<json_opts>(res, response); ec) {
                 Log::Error("Failed to get teamspeak invite link (2)");
                 return;
             }
-            std::string invite_id;
-            if (!GetValue(res, "id", &invite_id)) {
+            if (res.id.empty()) {
                 Log::Error("Failed to get teamspeak invite link (3)");
                 return;
             }
-            const std::string url = std::format("https://tmspk.gg/{}", invite_id);
+            const std::string url = std::format("https://tmspk.gg/{}", res.id);
             callback(url);
         });
     }
@@ -227,19 +257,17 @@ namespace {
 
     void SendTeamspeakHandshake()
     {
-        json packet;
-        packet["type"] = "auth";
-        json payload;
-        payload["identifier"] = gwtoolbox_teamspeak5_identifier;
-        payload["version"] = gwtoolbox_teamspeak5_version;
-        payload["name"] = gwtoolbox_teamspeak5_name;
-        payload["description"] = gwtoolbox_teamspeak5_description;
-        json content;
-        content["apiKey"] = gwtoolbox_teamspeak5_api_key;
-        payload["content"] = content;
-        packet["payload"] = payload;
-
-        websocket->send(packet.dump());
+        const ts5_api::HandshakeEnvelope packet{
+            .type = "auth",
+            .payload = {
+                .identifier = gwtoolbox_teamspeak5_identifier,
+                .version = gwtoolbox_teamspeak5_version,
+                .name = gwtoolbox_teamspeak5_name,
+                .description = gwtoolbox_teamspeak5_description,
+                .content = {.apiKey = gwtoolbox_teamspeak5_api_key},
+            },
+        };
+        websocket->send(glz::write_json(packet).value_or(std::string{}));
     }
 
     bool Connect(bool user_invoked = false)
@@ -287,20 +315,17 @@ namespace {
     }
 
 
-    TS3Server* UpsertServer(const json& props_json, const uint32_t connection_id)
+    TS3Server* UpsertServer(const ts5_api::ServerProperties& props, const uint32_t connection_id)
     {
-        if (!props_json.is_object()) {
-            return nullptr;
-        }
         TS3Server* teamspeak_server = GetServer(connection_id);
         if (!teamspeak_server) {
             teamspeak_server = new TS3Server();
             connected_servers[connection_id] = teamspeak_server;
         }
-        GetValue(props_json, "ip", &teamspeak_server->host);
-        GetValue(props_json, "name", &teamspeak_server->name);
-        GetValue(props_json, "port", &teamspeak_server->port);
-        GetValue(props_json, "clientsOnline", &teamspeak_server->user_count);
+        teamspeak_server->host = props.ip;
+        teamspeak_server->name = props.name;
+        teamspeak_server->port = props.port;
+        teamspeak_server->user_count = props.clientsOnline;
         return teamspeak_server;
     }
 
@@ -317,158 +342,113 @@ namespace {
         }
     }
 
-    bool OnTeamspeakAuth(const json& payload)
+    template <typename Payload>
+    bool ParsePayload(const glz::raw_json& raw, Payload& out)
     {
-        current_server = 0xffffffff;
-        json_vec connections;
-        json properties;
-        if (!GetValue(payload, "connections", &connections)) {
+        return !glz::read<json_opts>(out, raw.str);
+    }
+
+    bool OnTeamspeakAuth(const glz::raw_json& raw_payload)
+    {
+        ts5_api::AuthPayload payload{};
+        if (!ParsePayload(raw_payload, payload)) {
             return false;
         }
-        for (size_t connection_id = 0; connection_id < connections.size(); connection_id++) {
-            const auto& connection = connections[connection_id];
-            if (!connection.is_object()) {
-                continue;
-            }
-            if (!GetValue(connection, "properties", &properties)) {
-                continue;
-            }
-            const auto teamspeak_server = UpsertServer(properties, connection_id);
-            if (!teamspeak_server) {
-                Log::Log("Failed to parse teamspeak server info");
-                continue;
-            }
+        if (!payload.apiKey.empty()) gwtoolbox_teamspeak5_api_key = payload.apiKey;
+        current_server = 0xffffffff;
+        for (size_t connection_id = 0; connection_id < payload.connections.size(); ++connection_id) {
+            const auto& connection = payload.connections[connection_id];
+            const auto teamspeak_server = UpsertServer(connection.properties, static_cast<uint32_t>(connection_id));
+            teamspeak_server->my_client_id = connection.clientId;
             // Cycle and find our channel
-            if (GetValue(connection, "clientId", &teamspeak_server->my_client_id)) {
-                json_vec clientInfos;
-                if (GetValue(connection, "clientInfos", &clientInfos)) {
-                    uint32_t identifier;
-                    for (const auto& client : clientInfos) {
-                        if (GetValue(client, "id", &identifier) && identifier == teamspeak_server->my_client_id) {
-                            GetValue(client, "channelId", &teamspeak_server->my_channel_id);
-                            break;
-                        }
-                    }
+            for (const auto& client : connection.clientInfos) {
+                if (client.id == teamspeak_server->my_client_id) {
+                    teamspeak_server->my_channel_id = client.channelId;
+                    break;
                 }
             }
             Log::Log("Teamspeak server info updated:\n%s (%s:%d), %d users", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->user_count);
         }
-        GetValue(payload, "currentConnectionId", &current_server);
+        current_server = payload.currentConnectionId;
         return true;
     }
 
-    bool OnTeamspeakServerPropertiesUpdated(const json& payload)
+    bool OnTeamspeakServerPropertiesUpdated(const glz::raw_json& raw_payload)
     {
-        uint32_t connection_id;
-        if (!GetValue(payload, "connectionId", &connection_id)) {
+        ts5_api::ServerPropertiesUpdatedPayload payload{};
+        if (!ParsePayload(raw_payload, payload)) {
             return false;
         }
-        json properties;
-        if (!GetValue(payload, "properties", &properties)) {
-            return false;
-        }
-        const auto teamspeak_server = UpsertServer(properties, connection_id);
-        if (!teamspeak_server) {
-            Log::Log("Failed to parse teamspeak server info");
-            return false;
-        }
+        if (!payload.apiKey.empty()) gwtoolbox_teamspeak5_api_key = payload.apiKey;
+        const auto teamspeak_server = UpsertServer(payload.properties, payload.connectionId);
         Log::Log("Teamspeak server info updated:\n%s (%s:%d), %d users", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->user_count);
         return true;
     }
 
-    bool OnTeamspeakConnectStatusChanged(const json& payload)
+    bool OnTeamspeakConnectStatusChanged(const glz::raw_json& raw_payload)
     {
-        uint32_t connection_id, status;
-        if (!GetValue(payload, "connectionId", &connection_id)) {
+        ts5_api::ConnectStatusChangedPayload payload{};
+        if (!ParsePayload(raw_payload, payload)) {
             return false;
         }
-        if (!GetValue(payload, "status", &status)) {
-            return false;
-        }
-        const auto server = GetServer(connection_id);
+        if (!payload.apiKey.empty()) gwtoolbox_teamspeak5_api_key = payload.apiKey;
+        const auto server = GetServer(payload.connectionId);
         if (server) {
-            GetValue(payload, "clientId", &server->my_client_id);
+            server->my_client_id = payload.clientId;
         }
 
-        switch (status) {
+        switch (payload.status) {
             case 0: // Disconnected
-                RemoveServer(connection_id);
+                RemoveServer(payload.connectionId);
                 break;
             case 1: // Connected (current server)
-                current_server = connection_id;
+                current_server = payload.connectionId;
                 break;
         }
-        Log::Log("OnTeamspeakConnectStatusChanged, status %d, connectionId %d", status, connection_id);
+        Log::Log("OnTeamspeakConnectStatusChanged, status %d, connectionId %d", payload.status, payload.connectionId);
         return true;
     }
 
-    bool OnTeamspeakClientSelfPropertyUpdated(const json& payload)
+    bool OnTeamspeakClientMoved(const glz::raw_json& raw_payload)
     {
-        bool newValue = false;
-        if (!(GetValue(payload, "newValue", &newValue) && newValue == true)) {
+        ts5_api::ClientMovedPayload payload{};
+        if (!ParsePayload(raw_payload, payload)) {
             return false;
         }
-        std::string flag;
-        if (!(GetValue(payload, "flag", &flag) && flag == "inputHardware")) {
+        if (!payload.apiKey.empty()) gwtoolbox_teamspeak5_api_key = payload.apiKey;
+        const auto server = GetServer(payload.connectionId);
+        if (!server || payload.clientId != server->my_client_id) {
             return false;
         }
-
-        return GetValue(payload, "connectionId", &current_server);
-    }
-
-    bool OnTeamspeakClientMoved(const json& payload)
-    {
-        uint32_t connection_id = 0, client_id = 0;
-        if (!GetValue(payload, "connectionId", &connection_id)) {
-            return false;
-        }
-        const auto server = GetServer(connection_id);
-        if (!server) {
-            return false;
-        }
-        if (!GetValue(payload, "clientId", &client_id)) {
-            return false;
-        }
-        if (client_id != server->my_client_id) {
-            return false;
-        }
-
-        return GetValue(payload, "newChannelId", &server->my_channel_id);
+        server->my_channel_id = payload.newChannelId;
+        return true;
     }
 
     bool OnWebsocketMessage(const std::string& data)
     {
         //Log::Log("%s\n", data.c_str());
-        const json& res = json::parse(data.c_str(), nullptr, false);
-        if (res == json::value_t::discarded) {
+        ts5_api::IncomingEnvelope envelope{};
+        if (auto ec = glz::read<json_opts>(envelope, data); ec) {
             Log::Log("ERROR: Failed to parse res JSON from response in websocket->dispatch\n");
             return false;
         }
-        json payload;
-        if (!GetValue(res, "payload", &payload)) {
-            return false;
-        }
-        GetValue(payload, "apiKey", &gwtoolbox_teamspeak5_api_key);
 
-        std::string type;
-        if (!GetValue(res, "type", &type)) {
-            return false;
+        if (envelope.type == "auth") {
+            OnTeamspeakAuth(envelope.payload);
         }
-        if (type == "auth") {
-            OnTeamspeakAuth(payload);
+        else if (envelope.type == "serverPropertiesUpdated") {
+            OnTeamspeakServerPropertiesUpdated(envelope.payload);
         }
-        else if (type == "serverPropertiesUpdated") {
-            OnTeamspeakServerPropertiesUpdated(payload);
+        else if (envelope.type == "connectStatusChanged") {
+            OnTeamspeakConnectStatusChanged(envelope.payload);
         }
-        else if (type == "connectStatusChanged") {
-            OnTeamspeakConnectStatusChanged(payload);
-        }
-        else if (type == "clientMoved") {
-            OnTeamspeakClientMoved(payload);
+        else if (envelope.type == "clientMoved") {
+            OnTeamspeakClientMoved(envelope.payload);
         }
         else {
-            Log::Log("Unhandled TS5 websocket type %s", type.c_str());
+            Log::Log("Unhandled TS5 websocket type %s", envelope.type.c_str());
         }
+
         const auto teamspeak_server = GetCurrentServer();
         if (teamspeak_server) {
             Log::Log("Current server:\n%s (%s:%d), channel id %s, client_id %d, %d users", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->my_channel_id.c_str(), teamspeak_server->my_client_id,

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <vector>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 
 // =============================================================================
 // PathingMapData
@@ -101,63 +101,113 @@ namespace Pathing {
     //   - Web-based map viewers
     // =========================================================================
 
-    inline void to_json(nlohmann::json& j, const Vec2f& v)
+    inline glz::generic ToJson(const Vec2f& v)
     {
-        j = nlohmann::json::array({v.x, v.y});
+        glz::generic::array_t arr;
+        arr.emplace_back(v.x);
+        arr.emplace_back(v.y);
+        return arr;
     }
 
-    inline void to_json(nlohmann::json& j, const Trapezoid& t)
+    inline glz::generic IndexOrNull(uint32_t idx)
     {
-        j = nlohmann::json{
-            {"geometry", nlohmann::json::array({
-                             t.XTL, // Top left
-                             t.XTR, // Top right
-                             t.YT,  // Top Y
-                             t.XBL, // Bottom left
-                             t.XBR, // Bottom right,
-                             t.YB   // Bottom y
-                         })},
-             {"neighbors", nlohmann::json::array({
-                               t.neighbors[0] == INVALID_INDEX ? nullptr : nlohmann::json(t.neighbors[0]), // top left
-                               t.neighbors[1] == INVALID_INDEX ? nullptr : nlohmann::json(t.neighbors[1]), // top right
-                               t.neighbors[2] == INVALID_INDEX ? nullptr : nlohmann::json(t.neighbors[2]), // bottom left
-                               t.neighbors[3] == INVALID_INDEX ? nullptr : nlohmann::json(t.neighbors[3])  // bottom right
-                           })},
-                     {"portals", nlohmann::json::array({t.portal_left == INVALID_INDEX16 ? nullptr : nlohmann::json(t.portal_left), t.portal_right == INVALID_INDEX16 ? nullptr : nlohmann::json(t.portal_right)})}
-        };
+        return idx == INVALID_INDEX ? glz::generic{nullptr} : glz::generic{static_cast<double>(idx)};
     }
 
-    inline void to_json(nlohmann::json& j, const Portal& p)
+    inline glz::generic Index16OrNull(uint16_t idx)
     {
-        j = nlohmann::json{
-            {"trap_index_start", p.trapezoid_index_start},
-            {"trap_count", p.trapezoid_count},
-            {"neighbor_plane", p.neighbor_plane == INVALID_INDEX16 ? nullptr : nlohmann::json(p.neighbor_plane)},
-            {"shared_id", p.shared_id == INVALID_INDEX16 ? nullptr : nlohmann::json(p.shared_id)},
-            {"flags", p.flags},
-            {"blocked", (p.flags & 0x04) != 0}
-        };
+        return idx == INVALID_INDEX16 ? glz::generic{nullptr} : glz::generic{static_cast<double>(idx)};
     }
 
-    inline void to_json(nlohmann::json& j, const NavPlane& plane)
+    inline glz::generic ToJson(const Trapezoid& t)
     {
+        glz::generic::array_t geometry;
+        geometry.emplace_back(t.XTL);
+        geometry.emplace_back(t.XTR);
+        geometry.emplace_back(t.YT);
+        geometry.emplace_back(t.XBL);
+        geometry.emplace_back(t.XBR);
+        geometry.emplace_back(t.YB);
 
-        j = nlohmann::json{
-            {"zplane", plane.zplane == UINT32_MAX ? "ground" : nlohmann::json(plane.zplane)},
-            {"trapezoids", plane.trapezoids},
-            {"portals", plane.portals},
-            {"portal_trapezoid_indices", plane.portal_trapezoid_indices},
-            {"stats", {{"trapezoid_count", plane.trapezoids.size()}, {"portal_count", plane.portals.size()}}}
-        };
+        glz::generic::array_t neighbors;
+        neighbors.emplace_back(IndexOrNull(t.neighbors[0]));
+        neighbors.emplace_back(IndexOrNull(t.neighbors[1]));
+        neighbors.emplace_back(IndexOrNull(t.neighbors[2]));
+        neighbors.emplace_back(IndexOrNull(t.neighbors[3]));
+
+        glz::generic::array_t portals;
+        portals.emplace_back(Index16OrNull(t.portal_left));
+        portals.emplace_back(Index16OrNull(t.portal_right));
+
+        glz::generic j;
+        j["geometry"] = std::move(geometry);
+        j["neighbors"] = std::move(neighbors);
+        j["portals"] = std::move(portals);
+        return j;
     }
 
-    inline void to_json(nlohmann::json& j, const PathingMapData& data)
+    inline glz::generic ToJson(const Portal& p)
     {
-        j = nlohmann::json{
-            {"map_file_id", data.map_file_id},
-            {"bounds", {{"min", data.bounds_min}, {"max", data.bounds_max}}},
-            {"planes", data.planes},
-            {"stats", {{"plane_count", data.planes.size()}, {"total_trapezoids", data.GetTotalTrapezoidCount()}, {"is_valid", data.IsValid()}}}
-        };
+        glz::generic j;
+        j["trap_index_start"] = static_cast<double>(p.trapezoid_index_start);
+        j["trap_count"] = static_cast<double>(p.trapezoid_count);
+        j["neighbor_plane"] = Index16OrNull(p.neighbor_plane);
+        j["shared_id"] = Index16OrNull(p.shared_id);
+        j["flags"] = static_cast<double>(p.flags);
+        j["blocked"] = (p.flags & 0x04) != 0;
+        return j;
+    }
+
+    inline glz::generic ToJson(const NavPlane& plane)
+    {
+        glz::generic::array_t trapezoids;
+        trapezoids.reserve(plane.trapezoids.size());
+        for (const auto& t : plane.trapezoids) trapezoids.emplace_back(ToJson(t));
+
+        glz::generic::array_t portals;
+        portals.reserve(plane.portals.size());
+        for (const auto& p : plane.portals) portals.emplace_back(ToJson(p));
+
+        glz::generic::array_t portal_trapezoid_indices;
+        portal_trapezoid_indices.reserve(plane.portal_trapezoid_indices.size());
+        for (auto idx : plane.portal_trapezoid_indices)
+            portal_trapezoid_indices.emplace_back(static_cast<double>(idx));
+
+        glz::generic stats;
+        stats["trapezoid_count"] = static_cast<double>(plane.trapezoids.size());
+        stats["portal_count"] = static_cast<double>(plane.portals.size());
+
+        glz::generic j;
+        j["zplane"] = plane.zplane == UINT32_MAX
+            ? glz::generic{std::string{"ground"}}
+            : glz::generic{static_cast<double>(plane.zplane)};
+        j["trapezoids"] = std::move(trapezoids);
+        j["portals"] = std::move(portals);
+        j["portal_trapezoid_indices"] = std::move(portal_trapezoid_indices);
+        j["stats"] = std::move(stats);
+        return j;
+    }
+
+    inline glz::generic ToJson(const PathingMapData& data)
+    {
+        glz::generic::array_t planes;
+        planes.reserve(data.planes.size());
+        for (const auto& p : data.planes) planes.emplace_back(ToJson(p));
+
+        glz::generic bounds;
+        bounds["min"] = ToJson(data.bounds_min);
+        bounds["max"] = ToJson(data.bounds_max);
+
+        glz::generic stats;
+        stats["plane_count"] = static_cast<double>(data.planes.size());
+        stats["total_trapezoids"] = static_cast<double>(data.GetTotalTrapezoidCount());
+        stats["is_valid"] = data.IsValid();
+
+        glz::generic j;
+        j["map_file_id"] = static_cast<double>(data.map_file_id);
+        j["bounds"] = std::move(bounds);
+        j["planes"] = std::move(planes);
+        j["stats"] = std::move(stats);
+        return j;
     }
 } // namespace Pathing

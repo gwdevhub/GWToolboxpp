@@ -12,7 +12,6 @@
 #include <Color.h>
 #include <D3DContainers.h>
 #include <Defines.h>
-#include <ImGuiAddons.h>
 #include <Timer.h>
 #include <Modules/QuestModule.h>
 #include <Utils/ToolboxUtils.h>

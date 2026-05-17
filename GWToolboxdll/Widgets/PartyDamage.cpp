@@ -8,7 +8,6 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
