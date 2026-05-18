@@ -43,6 +43,7 @@ struct Build {
     void View() const;
     void Send() const;
     void Load() const;
+    void Copy() const;
 
     // Called every frame from GWToolbox::Update(); processes pending loads and the send queue.
     static void Update();
@@ -102,6 +103,7 @@ struct TeamBuild {
 
     void Send(bool one_by_one = false) const;
     void Load() const;
+    void Copy() const;
 
 private:
     int editing_build_idx_ = -1; // which build row is expanded (player-builds layout)
