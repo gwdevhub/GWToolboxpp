@@ -7,7 +7,6 @@
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
-#include <Windows/HeroBuildsWindow.h>
 #include "TextUtils.h"
 #include <Modules/Resources.h>
 #include <Utils/GuiUtils.h>
@@ -366,21 +365,21 @@ namespace TeamBuildEncoder {
         if (br.read(4) != kEncodedMagic) return false;
 
         const uint32_t count = br.read(4);
-        out.builds = {};
+        out.builds.clear();
 
         for (uint32_t h = 0; h < count; h++) {
             GW::SkillbarMgr::SkillTemplate tmpl{};
             GW::Constants::HeroID hero_id{};
             if (!ReadHero(br, tmpl, hero_id)) return false;
 
-            HeroBuild build{};
+            Build build{};
             build.hero_id = hero_id;
             char code_buf[64]{};
             if (!GW::SkillbarMgr::EncodeSkillTemplate(tmpl, code_buf, _countof(code_buf))) return false;
             build.code = code_buf;
-            out.builds[h] = build;
+            out.builds.push_back(std::move(build));
         }
-        if (br.ok) out.ui_id = TextUtils ::WStringToString(encoded);
+        if (br.ok) out.ui_id = TextUtils::WStringToString(encoded);
         return br.ok;
     }
 
@@ -458,7 +457,7 @@ namespace TeamBuildEncoder {
         if (br.read(4) != 1u) return false;  // type = party loadout
 
         const uint32_t count = br.read(4);
-        out.builds = {};
+        out.builds.clear();
 
         for (uint32_t h = 0; h < count; h++) {
             GW::SkillbarMgr::SkillTemplate tmpl{};
@@ -485,12 +484,12 @@ namespace TeamBuildEncoder {
 
             if (!br.ok) return false;
 
-            HeroBuild build{};
+            Build build{};
             build.hero_id = static_cast<GW::Constants::HeroID>(hero_id);
             char code_buf[64]{};
             if (!GW::SkillbarMgr::EncodeSkillTemplate(tmpl, code_buf, _countof(code_buf))) return false;
             build.code = code_buf;
-            out.builds[h] = build;
+            out.builds.push_back(std::move(build));
         }
         return br.ok;
     }
@@ -527,17 +526,3 @@ namespace TeamBuildEncoder {
     }
 
 } // namespace TeamBuildEncoder
-
-std::string HeroBuild::GetFallbackBuildName() const
-{
-    if (code.empty()) return {};
-    GW::SkillbarMgr::SkillTemplate st{};
-    if (!GW::SkillbarMgr::DecodeSkillTemplate(st, code.c_str())) return {};
-    for (int k = 0; k < _countof(st.skills); k++) {
-        if (st.skills[k] == GW::Constants::SkillID::No_Skill) continue;
-        const auto* skill = GW::SkillbarMgr::GetSkillConstantData(st.skills[k]);
-        if (!skill || !skill->IsElite()) continue;
-        return Resources::GetSkillName(st.skills[k])->string();
-    }
-    return {};
-}

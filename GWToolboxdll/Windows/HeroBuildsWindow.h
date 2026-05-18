@@ -16,7 +16,6 @@
 
 class HeroBuildsWindow : public ToolboxWindow {
 
-
     HeroBuildsWindow();
 
     ~HeroBuildsWindow();
@@ -49,9 +48,9 @@ public:
     void LoadFromFile();
     void SaveToFile() const;
 
-    void Load(unsigned int idx);
-    [[nodiscard]] const char* BuildName(unsigned int idx) const;
-    [[nodiscard]] unsigned int BuildCount() const { return teambuilds.size(); }
+    void Load(size_t idx);
+    [[nodiscard]] const char* BuildName(size_t idx) const;
+    [[nodiscard]] unsigned int BuildCount() const { return static_cast<unsigned int>(teambuilds.size()); }
 
     static void CHAT_CMD_FUNC(CmdHeroTeamBuild);
 
@@ -66,23 +65,20 @@ private:
     bool filter_by_profession = false;
 
     // Load a teambuild
-    void Load(const TeamHeroBuild& tbuild);
+    void Load(const TeamBuild& tbuild);
     // Load a specific build from a teambuild
-    void Load(const TeamHeroBuild& tbuild, unsigned int idx);
-    void Send(const TeamHeroBuild& tbuild, size_t idx);
-    void Send(const TeamHeroBuild& tbuild);
-    static void View(const TeamHeroBuild& tbuild, unsigned int idx);
-    static void HeroBuildName(const TeamHeroBuild& tbuild, unsigned int idx, std::string* out);
-    TeamHeroBuild* GetTeambuildByName(const std::string& argBuildname);
+    void Load(const TeamBuild& tbuild, size_t idx);
+    void Send(const TeamBuild& tbuild, size_t idx);
+    void Send(const TeamBuild& tbuild);
+    static void View(const TeamBuild& tbuild, size_t idx);
+    static void HeroBuildName(const TeamBuild& tbuild, size_t idx, std::string* out);
+    TeamBuild* GetTeambuildByName(const std::string& argBuildname);
 
     // Encode a teambuild into a Daybreak party loadout base64 string (header=15, type=1, version=1).
-    static std::string EncodeTeambuildToDaybreak(const TeamHeroBuild& tbuild);
+    static std::string EncodeTeambuildToDaybreak(const TeamBuild& tbuild);
     // Decode a Daybreak party loadout base64 string into a teambuild.
-    static bool DecodeTeambuildFromDaybreak(const std::string& code, TeamHeroBuild& out);
+    static bool DecodeTeambuildFromDaybreak(const std::string& code, TeamBuild& out);
 
     bool builds_changed = false;
-    std::vector<TeamHeroBuild> teambuilds{};
-
-
-
+    std::vector<TeamBuild> teambuilds{};
 };
