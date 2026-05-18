@@ -888,7 +888,8 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
             Load(tb, j);
         };
         auto on_send = [](TeamBuild& tb, size_t j) {
-            Send(tb, j);
+            if (j >= SIZE_MAX - 1) Send(tb);
+            else Send(tb, j);
         };
         auto on_view = [](TeamBuild& tb, size_t j) {
             if (j < tb.builds.size()) View(tb.builds[j]);

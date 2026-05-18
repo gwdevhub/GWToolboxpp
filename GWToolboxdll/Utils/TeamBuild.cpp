@@ -628,15 +628,26 @@ bool TeamBuild::DrawEditWindow(
             edit_open = false;
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");
+    }
 
-        // "Send to chat" is a teambuild-level action that requires encoding.
-        // Call on_send with SIZE_MAX as a sentinel to indicate the whole teambuild.
-        if (on_send) {
-            ImGui::Spacing();
-            ImGui::Separator();
-            if (ImGui::Button("Send to chat")) {
-                on_send(*this, SIZE_MAX);
-            }
+    if (on_send) {
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        if (ImGui::Button("Send Teambuild code to chat")) {
+            on_send(*this, SIZE_MAX);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Send the encoded teambuild link to team chat");
+        }
+        ImGui::SameLine();
+        if (ImGui::ConfirmButton("Send all builds in chat", &send_all_confirming_,
+                "Send All Builds to Chat\n\nThis will send each build as a separate message in team chat.\nAre you sure?")) {
+            on_send(*this, SIZE_MAX - 1);
+            send_all_confirming_ = false;
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Send all builds as individual skill template links in team chat");
         }
     }
 
