@@ -42,8 +42,6 @@ namespace {
     bool hide_when_entering_explorable = false;
     bool one_teambuild_at_a_time = false;
 
-    clock_t send_timer = 0;
-    std::queue<std::string> queue{};
 
     ToolboxIni* inifile = nullptr;
 
@@ -197,9 +195,8 @@ namespace {
             cnt = 1;
             pconsStr += pcon->abbrev;
         }
-        if (cnt) {
-            queue.push(pconsStr);
-        }
+        if (cnt)
+            Build::EnqueueSend(pconsStr);
     }
 
     BuildRef Find(const char* tbuild_name = nullptr, const char* build_name = nullptr) {
@@ -252,19 +249,17 @@ namespace {
         std::string buf;
         if (!BuildSkillTemplateString(tbuild, idx, &buf))
             return false;
-        queue.push(buf);
+        Build::EnqueueSend(buf);
         if (auto_send_pcons)
             SendPcons(tbuild, idx);
         return true;
     }
 
     void Send(const TeamBuild& tbuild) {
-        if (!tbuild.name.empty()) {
-            queue.push(tbuild.name);
-        }
-        for (size_t j = 0; j < tbuild.builds.size(); j++) {
+        if (!tbuild.name.empty())
+            Build::EnqueueSend(tbuild.name);
+        for (size_t j = 0; j < tbuild.builds.size(); j++)
             Send(tbuild, j);
-        }
     }
 
     bool View(const Build& build)
@@ -283,52 +278,11 @@ namespace {
         return true;
     }
 
-    bool LoadPcons(const Build& build) {
-        std::vector<Pcon*> pcons_loaded;
-        std::vector<Pcon*> pcons_not_visible;
-        const PconsWindow* pcw = &PconsWindow::Instance();
-        for (auto pcon : pcw->pcons) {
-            const bool enable = build.pcons.contains(pcon->ini);
-            if (enable) {
-                if (!pcon->IsVisible()) {
-                    pcons_not_visible.push_back(pcon);
-                    continue;
-                }
-                pcon->SetEnabled(false);
-                pcons_loaded.push_back(pcon);
-            }
-            pcon->SetEnabled(enable);
-        }
-        if (pcons_loaded.size()) {
-            std::string pcons_str;
-            size_t i = 0;
-            for (const auto pcon : pcons_loaded) {
-                if (i) pcons_str += ", ";
-                i = 1;
-                pcons_str += pcon->abbrev;
-            }
-            Log::Flash("Pcons loaded: %s", pcons_str.c_str());
-        }
-        if (pcons_not_visible.size()) {
-            std::string pcons_str;
-            size_t i = 0;
-            for (const auto pcon : pcons_not_visible) {
-                if (i) pcons_str += ", ";
-                i = 1;
-                pcons_str += pcon->abbrev;
-            }
-            Log::Warning("Pcons not loaded: %s.\nOnly pcons visible in the Pcons window will be auto enabled.", pcons_str.c_str());
-        }
-        return true;
-    }
-
     bool Load(const TeamBuild& tbuild, size_t idx) {
         if (idx >= tbuild.builds.size()) return false;
         const Build& build = tbuild.builds[idx];
-        if (!GW::SkillbarMgr::LoadSkillTemplate(build.code.c_str()))
-            return false;
-        if (auto_load_pcons)
-            LoadPcons(build);
+        if (build.code.empty() && build.hero_id == GW::Constants::HeroID::NoHero) return false;
+        build.Load();
         if (!tbuild.edit_open) {
             std::string build_string;
             if (BuildSkillTemplateString(tbuild, idx, &build_string))
@@ -890,15 +844,6 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
 
 void BuildsWindow::Update(const float)
 {
-    if (!queue.empty() && TIMER_DIFF(send_timer) > 600) {
-        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-            && GW::Agents::GetControlledCharacter()) {
-            send_timer = TIMER_INIT();
-            if (!GW::Chat::SendChat('#', queue.front().c_str()))
-                Log::Warning("Failed to send build message");
-            queue.pop();
-        }
-    }
     if (order_by_changed) {
         LoadFromFile();
         order_by_changed = false;
@@ -954,7 +899,6 @@ void BuildsWindow::SaveSettings(ToolboxIni* ini)
 void BuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    send_timer = TIMER_INIT();
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"loadbuild", CmdLoad);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pingbuild", CmdPing);

@@ -3,13 +3,24 @@
 #include <Utils/TeamBuild.h>
 
 #include <GWCA/Constants/Skills.h>
+#include <GWCA/Context/GameContext.h>
+#include <GWCA/Context/WorldContext.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Color.h>
+#include <Logger.h>
 #include <Modules/Resources.h>
+#include <Timer.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 #include <Windows/PconsWindow.h>
@@ -24,6 +35,141 @@ namespace {
     const Color build_edit_pcon_enabled_color = Colors::ARGB(102, 0, 255, 0);
 
     using GW::Constants::HeroID;
+
+    // ----------------------------------------------------------------
+    // Async build-load infrastructure
+    // ----------------------------------------------------------------
+
+    struct PendingBuildLoad {
+        Build build;
+        enum Stage : uint8_t { AddHero, WaitForHero, Finished } stage = AddHero;
+        size_t party_hero_index = 0xFFFFFFFF;
+        clock_t started = 0;
+
+        bool Process();
+    };
+
+    std::vector<PendingBuildLoad> pending_build_loads;
+    std::queue<std::wstring>      send_queue;
+    clock_t send_timer   = 0;
+    clock_t kickall_timer = 0;
+
+    size_t GetPlayerHeroCount()
+    {
+        size_t ret = 0;
+        const GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
+        if (!party_info) return ret;
+        const GW::HeroPartyMemberArray& heroes = party_info->heroes;
+        if (!heroes.valid()) return ret;
+        const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
+        if (!me) return ret;
+        const uint32_t my_id = me->login_number;
+        for (size_t i = 0; i < heroes.size(); i++) {
+            if (heroes[i].owner_player_id == my_id) ret++;
+        }
+        return ret;
+    }
+
+    const GW::HeroFlag* GetHeroFlagInfo(const uint32_t hero_id)
+    {
+        const GW::GameContext* g = GW::GetGameContext();
+        if (!g || !g->world) return nullptr;
+        for (const GW::HeroFlag& flag : g->world->hero_flags) {
+            if (flag.hero_id == hero_id) return &flag;
+        }
+        return nullptr;
+    }
+
+    GW::HeroPartyMember* GetPartyHeroByID(const HeroID hero_id, size_t* out_hero_index)
+    {
+        GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
+        if (!party_info) return nullptr;
+        GW::HeroPartyMemberArray& heroes = party_info->heroes;
+        if (!heroes.valid()) return nullptr;
+        const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
+        if (!me) return nullptr;
+        const uint32_t my_id = me->login_number;
+        for (size_t i = 0; i < heroes.size(); i++) {
+            if (heroes[i].owner_player_id == my_id && heroes[i].hero_id == hero_id) {
+                if (out_hero_index) *out_hero_index = i + 1;
+                return &heroes[i];
+            }
+        }
+        return nullptr;
+    }
+
+    void LoadPcons(const Build& build)
+    {
+        if (build.pcons.empty()) return;
+        PconsWindow* pcw = &PconsWindow::Instance();
+        std::vector<Pcon*> loaded, not_visible;
+        for (auto* pcon : pcw->pcons) {
+            const bool enable = build.pcons.contains(pcon->ini);
+            if (enable) {
+                if (!pcon->IsVisible()) { not_visible.push_back(pcon); continue; }
+                pcon->SetEnabled(false);
+                loaded.push_back(pcon);
+            }
+            pcon->SetEnabled(enable);
+        }
+        if (!loaded.empty()) {
+            std::string s;
+            size_t i = 0;
+            for (const auto* p : loaded) { if (i++) s += ", "; s += p->abbrev; }
+            Log::Flash("Pcons loaded: %s", s.c_str());
+        }
+        if (!not_visible.empty()) {
+            std::string s;
+            size_t i = 0;
+            for (const auto* p : not_visible) { if (i++) s += ", "; s += p->abbrev; }
+            Log::Warning("Pcons not loaded (not visible in Pcons window): %s", s.c_str());
+        }
+    }
+
+    bool PendingBuildLoad::Process()
+    {
+        if (build.IsPlayerBuild()) {
+            if (!build.code.empty())
+                GW::SkillbarMgr::LoadSkillTemplate(build.code.c_str());
+            LoadPcons(build);
+            return true;
+        }
+
+        // Hero build: async — add hero then wait for it to appear in party.
+        if (!started) started = TIMER_INIT();
+        if (TIMER_DIFF(started) > 1000) return true; // timeout
+
+        switch (stage) {
+            case AddHero:
+                GW::PartyMgr::AddHero(build.hero_id);
+                stage = WaitForHero;
+                [[fallthrough]];
+            case WaitForHero: {
+                const GW::HeroPartyMember* hero = GetPartyHeroByID(build.hero_id, &party_hero_index);
+                if (!hero) break;
+                const GW::HeroFlag* flag = GetHeroFlagInfo(build.hero_id);
+                if (!flag) break;
+                if (!build.code.empty())
+                    GW::SkillbarMgr::LoadSkillTemplate(hero->agent_id, build.code.c_str());
+                for (uint32_t k = 0; k < 8; k++)
+                    GW::PartyMgr::SetHeroSkillDisabled(hero->agent_id, k, ((build.disabled_skills >> k) & 1) != 0);
+                GW::UI::SendUIMessage(build.show_panel
+                    ? GW::UI::UIMessage::kShowHeroPanel
+                    : GW::UI::UIMessage::kHideHeroPanel,
+                    reinterpret_cast<void*>(static_cast<uintptr_t>(build.hero_id)));
+                const auto behavior = static_cast<GW::HeroBehavior>(build.behavior);
+                if (behavior <= GW::HeroBehavior::AvoidCombat && flag->hero_behavior != behavior)
+                    GW::PartyMgr::SetHeroBehavior(hero->agent_id, behavior);
+                stage = Finished;
+                [[fallthrough]];
+            }
+            case Finished:
+                return true;
+        }
+        return false;
+    }
+
+    // ----------------------------------------------------------------
 
     // Hero IDs in the same order as the GW client hero panel.
     // Razah appears after mesmers because most players without mercenaries have it set as mesmer.
@@ -166,7 +312,7 @@ void Build::ResetDecodeCache()
 }
 
 void Build::View() const {
-    GW::GameThread::Enqueue([&] {
+    GW::GameThread::Enqueue([code = code, name = name] {
         GW::UI::ChatTemplate t = {0};
 
         auto code_ws = TextUtils::StringToWString(code);
@@ -175,27 +321,73 @@ void Build::View() const {
 
         auto name_ws = TextUtils::StringToWString(name);
         t.name = name_ws.data();
-        SendUIMessage(GW::UI::UIMessage::kOpenTemplate, &t);
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenTemplate, &t);
     });
 }
-void Build::Send() const {
+void Build::Send() const
+{
     if (code.empty() && name.empty()) return;
-    GW::GameThread::Enqueue([&] {
-        auto gen_name = name;
-        if (hero_id != GW::Constants::HeroID::NoHero) {
-            if (gen_name.empty())
-                gen_name = Resources::GetHeroName(hero_id)->string();
-            else
-                gen_name = std::format("{} ({})", name, Resources::GetHeroName(hero_id)->string());
-        }
-        const auto msg = code.empty() ? name : std::format("[{};{}]", gen_name, code);
-        GW::Chat::SendChat('#', msg.c_str());
-    });
+    auto gen_name = name;
+    if (hero_id != GW::Constants::HeroID::NoHero) {
+        if (gen_name.empty())
+            gen_name = Resources::GetHeroName(hero_id)->string();
+        else
+            gen_name = std::format("{} ({})", name, Resources::GetHeroName(hero_id)->string());
+    }
+    const auto msg = code.empty() ? name : std::format("[{};{}]", gen_name, code);
+    EnqueueSend(msg);
 }
+
+void Build::EnqueueSend(std::string msg)
+{
+    send_queue.push(TextUtils::StringToWString(msg));
+}
+
 void Build::Load() const
 {
     if (code.empty() && hero_id == GW::Constants::HeroID::NoHero) return;
-    // TODO: copy this build into the load queue for Build::Update() to pick it up
+    pending_build_loads.push_back({*this});
+}
+
+void Build::Update()
+{
+    const auto instance_type = GW::Map::GetInstanceType();
+
+    if (instance_type == GW::Constants::InstanceType::Loading) {
+        pending_build_loads.clear();
+        while (!send_queue.empty()) send_queue.pop();
+        kickall_timer = 0;
+        return;
+    }
+
+    if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
+        if (GW::Agents::GetControlledCharacter()) {
+            GW::Chat::SendChat('#', send_queue.front().c_str());
+            send_queue.pop();
+            send_timer = TIMER_INIT();
+        }
+    }
+
+    if (kickall_timer) {
+        if (TIMER_DIFF(kickall_timer) > 500
+            || instance_type != GW::Constants::InstanceType::Outpost
+            || !GetPlayerHeroCount()) {
+            kickall_timer = 0;
+        }
+        return;
+    }
+
+    for (size_t i = 0; i < pending_build_loads.size(); i++) {
+        if (!pending_build_loads[i].build.IsPlayerBuild()
+            && instance_type != GW::Constants::InstanceType::Outpost) {
+            pending_build_loads.clear();
+            break;
+        }
+        if (pending_build_loads[i].Process()) {
+            pending_build_loads.erase(pending_build_loads.begin() + static_cast<ptrdiff_t>(i));
+        }
+        break; // one per frame
+    }
 }
 
 // ============================================================
@@ -217,37 +409,30 @@ void TeamBuild::SetSkillToggleSprite(IDirect3DTexture9** sprite)
 
 void TeamBuild::Send(bool one_by_one) const
 {
-    if (!name.empty()) {
-        GW::GameThread::Enqueue([cpy = name]() {
-            GW::Chat::SendChat('#', cpy.c_str());
-        });
-    }
+    if (!name.empty())
+        Build::EnqueueSend(name);
     if (one_by_one) {
-        for (auto& build : builds) {
+        for (const auto& build : builds)
             build.Send();
-        }
     }
     else {
         const auto encoded = TeamBuildEncoder::TeamBuildToEncoded(*this);
-        if (!encoded.empty()) {
-            GW::GameThread::Enqueue([cpy = encoded]() {
-                const auto msg = std::format(L"[;{}]", cpy);
-                GW::Chat::SendChat('#', msg.c_str());
-            });
-        }
+        if (!encoded.empty())
+            send_queue.push(std::format(L"[;{}]", encoded));
     }
-
 }
+
 void TeamBuild::Load() const
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return;
     }
     GW::PartyMgr::KickAllHeroes();
+    kickall_timer = TIMER_INIT();
     if (mode > 0) {
         GW::PartyMgr::SetHardMode(mode == 2);
     }
-    for (auto& build : builds) {
+    for (const auto& build : builds) {
         build.Load();
     }
 }
