@@ -40,6 +40,10 @@ struct Build {
     // Invalidate the cached decode result (call when code changes).
     void ResetDecodeCache();
 
+    void View() const;
+    void Send() const;
+    void Load() const;
+
 private:
     GW::SkillbarMgr::SkillTemplate skill_template_{};
 };
@@ -84,27 +88,21 @@ struct TeamBuild {
     bool DrawEditWindow(
         size_t index,
         std::vector<TeamBuild>& all_builds,
-        bool& builds_changed,
-        const BuildAction& on_load = {},
-        const BuildAction& on_send = {},
-        const BuildAction& on_view = {}
+        bool& builds_changed
     );
 
     // Provide the 2×2 sprite sheet used to render the disabled-skill overlay.
     // Call once from HeroBuildsWindow::Initialize().
     static void SetSkillToggleSprite(IDirect3DTexture9** sprite);
 
+    void Send(bool one_by_one = false) const;
+    void Load() const;
+
 private:
     int editing_build_idx_ = -1; // which build row is expanded (player-builds layout)
     bool send_all_confirming_ = false;
 
-    void DrawPlayerBuildsContent(bool& builds_changed,
-                                 const BuildAction& on_load,
-                                 const BuildAction& on_send,
-                                 const BuildAction& on_view);
+    void DrawPlayerBuildsContent(bool& builds_changed);
 
-    void DrawHeroBuildsContent(bool& builds_changed,
-                               const BuildAction& on_load,
-                               const BuildAction& on_send,
-                               const BuildAction& on_view);
+    void DrawHeroBuildsContent(bool& builds_changed);
 };

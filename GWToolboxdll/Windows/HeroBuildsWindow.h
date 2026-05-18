@@ -64,13 +64,6 @@ private:
     bool one_teambuild_at_a_time = false;
     bool filter_by_profession = false;
 
-    // Load a teambuild
-    void Load(const TeamBuild& tbuild);
-    // Load a specific build from a teambuild
-    void Load(const TeamBuild& tbuild, size_t idx);
-    void Send(const TeamBuild& tbuild, size_t idx);
-    void Send(const TeamBuild& tbuild);
-    static void View(const TeamBuild& tbuild, size_t idx);
     static void HeroBuildName(const TeamBuild& tbuild, size_t idx, std::string* out);
     TeamBuild* GetTeambuildByName(const std::string& argBuildname);
 

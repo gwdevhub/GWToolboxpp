@@ -390,10 +390,10 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 ImGui::SameLine(0, item_spacing);
                 if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "Load", ImVec2(btn_width, 0))) {
                     if (ImGui::GetIO().KeyCtrl) {
-                        Send(tbuild);
+                        tbuild.Send();
                     }
                     else {
-                        Load(tbuild);
+                        tbuild.Load();
                     }
                 }
                 if (ImGui::IsItemHovered()) {
@@ -470,32 +470,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
     // Draw edit windows for each open teambuild using unified DrawEditWindow
     for (size_t i = 0; i < teambuilds.size(); i++) {
         if (!teambuilds[i].edit_open) continue;
-        TeamBuild& tbuild = teambuilds[i];
-
-        auto on_load = [this](TeamBuild& tb, size_t j) {
-            if (j < tb.builds.size()) Load(tb, j);
-        };
-        auto on_send = [this](TeamBuild& tb, size_t j) {
-            if (j == SIZE_MAX) {
-                const auto chat_msg = TeamBuildEncoder::ToChatMessage(tb);
-                if (!chat_msg.empty()) {
-                    GW::GameThread::Enqueue([cpy = chat_msg]() {
-                        GW::UI::SendUIMessage(GW::UI::UIMessage::kAppendMessageToChat, (void*)cpy.c_str());
-                    });
-                }
-            }
-            else if (j == SIZE_MAX - 1) {
-                Send(tb);
-            }
-            else {
-                Send(tb, j);
-            }
-        };
-        auto on_view = [](TeamBuild& tb, size_t j) {
-            View(tb, j);
-        };
-
-        if (!tbuild.DrawEditWindow(i, teambuilds, builds_changed, on_load, on_send, on_view)) {
+        if (!teambuilds[i].DrawEditWindow(i, teambuilds, builds_changed)) {
             break; // teambuild was deleted; teambuilds vector modified
         }
     }
@@ -526,7 +501,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             }
             ImGui::Separator();
             if (ImGui::Button("Load All")) {
-                Load(tbuild);
+                tbuild.Load();
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load all builds onto your heroes");
             ImGui::SameLine();
@@ -553,60 +528,6 @@ HeroBuildsWindow::~HeroBuildsWindow() {
     delete inifile;
 }
 
-void HeroBuildsWindow::View(const TeamBuild& tbuild, const size_t idx)
-{
-    if (idx >= tbuild.builds.size()) {
-        return;
-    }
-    std::string build_name;
-    HeroBuildName(tbuild, idx, &build_name);
-    if (build_name.empty()) {
-        return; // No name = no build.
-    }
-    GW::GameThread::Enqueue([build = &tbuild.builds[idx], name = build_name] {
-        GW::UI::ChatTemplate t = {0};
-
-        auto code_ws = TextUtils::StringToWString(build->code);
-        t.code.m_buffer = code_ws.data();
-        t.code.m_size = t.code.m_capacity = code_ws.size() + 1;
-
-        auto name_ws = TextUtils::StringToWString(name);
-        t.name = name_ws.data();
-        SendUIMessage(GW::UI::UIMessage::kOpenTemplate, &t);
-    });
-}
-
-void HeroBuildsWindow::Send(const TeamBuild& tbuild)
-{
-    if (!std::string(tbuild.name).empty()) {
-        send_queue.push(tbuild.name);
-    }
-    for (size_t i = 0; i < tbuild.builds.size(); i++) {
-        if (i == 0) {
-            const Build& build = tbuild.builds[i];
-            if (build.code.empty() && build.name.empty()) {
-                continue; // Player build is empty.
-            }
-        }
-        Send(tbuild, i);
-    }
-}
-
-void HeroBuildsWindow::Send(const TeamBuild& tbuild, const size_t idx)
-{
-    if (idx >= tbuild.builds.size()) {
-        return;
-    }
-    const Build& build = tbuild.builds[idx];
-    std::string build_name;
-    HeroBuildName(tbuild, idx, &build_name);
-    if (build_name.empty()) {
-        return; // No name = no build.
-    }
-    const auto msg = build.code.empty() ? build_name : std::format("[{};{}]", build_name, build.code);
-    if (!msg.empty()) send_queue.push(msg);
-}
-
 void HeroBuildsWindow::HeroBuildName(const TeamBuild& tbuild, const size_t idx, std::string* out)
 {
     if (idx >= tbuild.builds.size()) {
@@ -629,53 +550,6 @@ const char* HeroBuildsWindow::BuildName(const size_t idx) const
         return teambuilds[idx].name.c_str();
     }
     return nullptr;
-}
-
-void HeroBuildsWindow::Load(const size_t idx)
-{
-    if (idx < teambuilds.size()) {
-        Load(teambuilds[idx]);
-    }
-}
-
-void HeroBuildsWindow::Load(const TeamBuild& tbuild)
-{
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-        return;
-    }
-
-    GW::PartyMgr::KickAllHeroes();
-    kickall_timer = TIMER_INIT();
-    pending_hero_loads.clear();
-    if (tbuild.mode > 0) {
-        GW::PartyMgr::SetHardMode(tbuild.mode == 2);
-    }
-    for (size_t i = 0; i < tbuild.builds.size(); i++) {
-        Load(tbuild, i);
-    }
-    send_timer = TIMER_INIT(); // give GW time to update the hero structs after adding them.
-}
-
-void HeroBuildsWindow::Load(const TeamBuild& tbuild, const size_t idx)
-{
-    if (idx >= tbuild.builds.size()) {
-        return;
-    }
-    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
-        return;
-    }
-    const Build& build = tbuild.builds[idx];
-    const std::string code(build.code);
-
-    if (idx == 0) {
-        // Player
-        if (!code.empty()) {
-            GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(), build.code.c_str());
-        }
-    }
-    else if (build.hero_id != HeroID::NoHero) {
-        pending_hero_loads.push_back({code.c_str(), build.hero_id, build.show_panel ? 1 : 0, build.behavior, build.disabled_skills});
-    }
 }
 
 void HeroBuildsWindow::Update(float)
@@ -768,7 +642,7 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
         return;
     }
     const TeamBuild& tbuild = *found;
-    Instance().Load(tbuild);
+    tbuild.Load();
 }
 
 void HeroBuildsWindow::LoadSettings(ToolboxIni* ini)

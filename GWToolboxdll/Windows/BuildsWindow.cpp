@@ -882,20 +882,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
     // Draw edit windows using the unified DrawEditWindow
     for (size_t i = 0; i < teambuilds.size(); i++) {
         if (!teambuilds[i].edit_open) continue;
-        TeamBuild& tbuild = teambuilds[i];
-
-        auto on_load = [](TeamBuild& tb, size_t j) {
-            Load(tb, j);
-        };
-        auto on_send = [](TeamBuild& tb, size_t j) {
-            if (j >= SIZE_MAX - 1) Send(tb);
-            else Send(tb, j);
-        };
-        auto on_view = [](TeamBuild& tb, size_t j) {
-            if (j < tb.builds.size()) View(tb.builds[j]);
-        };
-
-        if (!tbuild.DrawEditWindow(i, teambuilds, builds_changed, on_load, on_send, on_view)) {
+        if (!teambuilds[i].DrawEditWindow(i, teambuilds, builds_changed)) {
             break; // teambuild deleted; vector modified
         }
     }

@@ -13,6 +13,9 @@
 #include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 #include <Windows/PconsWindow.h>
+#include "TeamBuildEncoder.h"
+#include <GWCA/Managers/PartyMgr.h>
+#include "ToolboxUtils.h"
 
 namespace {
 
@@ -162,6 +165,39 @@ void Build::ResetDecodeCache()
     skill_template_.primary = skill_template_.secondary = GW::Constants::Profession::None;
 }
 
+void Build::View() const {
+    GW::GameThread::Enqueue([&] {
+        GW::UI::ChatTemplate t = {0};
+
+        auto code_ws = TextUtils::StringToWString(code);
+        t.code.m_buffer = code_ws.data();
+        t.code.m_size = t.code.m_capacity = code_ws.size() + 1;
+
+        auto name_ws = TextUtils::StringToWString(name);
+        t.name = name_ws.data();
+        SendUIMessage(GW::UI::UIMessage::kOpenTemplate, &t);
+    });
+}
+void Build::Send() const {
+    if (code.empty() && name.empty()) return;
+    GW::GameThread::Enqueue([&] {
+        auto gen_name = name;
+        if (hero_id != GW::Constants::HeroID::NoHero) {
+            if (gen_name.empty())
+                gen_name = Resources::GetHeroName(hero_id)->string();
+            else
+                gen_name = std::format("{} ({})", name, Resources::GetHeroName(hero_id)->string());
+        }
+        const auto msg = code.empty() ? name : std::format("[{};{}]", gen_name, code);
+        GW::Chat::SendChat('#', msg.c_str());
+    });
+}
+void Build::Load() const
+{
+    if (code.empty() && hero_id == GW::Constants::HeroID::NoHero) return;
+    // TODO: copy this build into the load queue for Build::Update() to pick it up
+}
+
 // ============================================================
 // TeamBuild
 // ============================================================
@@ -179,15 +215,49 @@ void TeamBuild::SetSkillToggleSprite(IDirect3DTexture9** sprite)
     skill_toggle_sprite = sprite;
 }
 
+void TeamBuild::Send(bool one_by_one) const
+{
+    if (!name.empty()) {
+        GW::GameThread::Enqueue([cpy = name]() {
+            GW::Chat::SendChat('#', cpy.c_str());
+        });
+    }
+    if (one_by_one) {
+        for (auto& build : builds) {
+            build.Send();
+        }
+    }
+    else {
+        const auto encoded = TeamBuildEncoder::TeamBuildToEncoded(*this);
+        if (!encoded.empty()) {
+            GW::GameThread::Enqueue([cpy = encoded]() {
+                const auto msg = std::format(L"[;{}]", cpy);
+                GW::Chat::SendChat('#', msg.c_str());
+            });
+        }
+    }
+
+}
+void TeamBuild::Load() const
+{
+    if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
+        return;
+    }
+    GW::PartyMgr::KickAllHeroes();
+    if (mode > 0) {
+        GW::PartyMgr::SetHardMode(mode == 2);
+    }
+    for (auto& build : builds) {
+        build.Load();
+    }
+}
+
 // ------------------------------------------------------------
 // Player-builds layout (BuildsWindow style)
 // ------------------------------------------------------------
 
 void TeamBuild::DrawPlayerBuildsContent(
-    bool& builds_changed,
-    const BuildAction& on_load,
-    const BuildAction& on_send,
-    const BuildAction& on_view)
+    bool& builds_changed)
 {
     const float font_scale = ImGui::FontScale();
     const float btn_width  = 50.0f * font_scale;
@@ -221,11 +291,10 @@ void TeamBuild::DrawPlayerBuildsContent(
         ImGui::SameLine(btn_offset);
         if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
             if (ImGui::GetIO().KeyCtrl) {
-                if (on_send) on_send(*this, j);
+                build.Send();
             }
             else {
-                if (on_view) on_view(*this, j);
-                else         DefaultView(build);
+                build.View();
             }
         }
         if (ImGui::IsItemHovered()) {
@@ -236,7 +305,7 @@ void TeamBuild::DrawPlayerBuildsContent(
 
         ImGui::SameLine(0, spacing);
         if (ImGui::Button("Load", ImVec2(btn_width, 0))) {
-            if (on_load) on_load(*this, j);
+            build.Load();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip(!build.pcons.empty()
@@ -348,10 +417,7 @@ void TeamBuild::DrawPlayerBuildsContent(
 // ------------------------------------------------------------
 
 void TeamBuild::DrawHeroBuildsContent(
-    bool& builds_changed,
-    const BuildAction& on_load,
-    const BuildAction& on_send,
-    const BuildAction& on_view)
+    bool& builds_changed)
 {
     const float btn_width      = 50.0f * ImGui::FontScale();
     const float icon_btn_width = btn_width / 1.75f;
@@ -519,11 +585,10 @@ void TeamBuild::DrawHeroBuildsContent(
         // View / Load buttons (both player and hero rows)
         if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "View", ImVec2(btn_width, 0))) {
             if (ImGui::GetIO().KeyCtrl) {
-                if (on_send) on_send(*this, j);
+                build.Send();
             }
             else {
-                if (on_view) on_view(*this, j);
-                else         DefaultView(build);
+                build.View();
             }
         }
         if (ImGui::IsItemHovered()) {
@@ -534,7 +599,7 @@ void TeamBuild::DrawHeroBuildsContent(
 
         ImGui::SameLine(offset += btn_width + item_spacing);
         if (ImGui::Button("Load", ImVec2(btn_width, 0))) {
-            if (on_load) on_load(*this, j);
+            build.Load();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip(j == 0 ? "Load Build on Player" : "Load Build on Hero");
@@ -553,10 +618,7 @@ void TeamBuild::DrawHeroBuildsContent(
 bool TeamBuild::DrawEditWindow(
     size_t index,
     std::vector<TeamBuild>& all_builds,
-    bool& builds_changed,
-    const BuildAction& on_load,
-    const BuildAction& on_send,
-    const BuildAction& on_view)
+    bool& builds_changed)
 {
     const auto winname = std::format("{}###teambuild_{}", name, ui_id);
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
@@ -578,13 +640,13 @@ bool TeamBuild::DrawEditWindow(
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Assign to a group. Builds sharing a group name are shown together under a collapsible header.");
         }
-        DrawHeroBuildsContent(builds_changed, on_load, on_send, on_view);
+        DrawHeroBuildsContent(builds_changed);
     }
     else {
         ImGui::PushItemWidth(-120.f);
         builds_changed |= ImGui::InputText("Build Name", name);
         ImGui::PopItemWidth();
-        DrawPlayerBuildsContent(builds_changed, on_load, on_send, on_view);
+        DrawPlayerBuildsContent(builds_changed);
     }
 
     ImGui::Spacing();
@@ -630,25 +692,23 @@ bool TeamBuild::DrawEditWindow(
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Close this window");
     }
 
-    if (on_send) {
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
-        if (ImGui::Button("Send Teambuild code to chat")) {
-            on_send(*this, SIZE_MAX);
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Send the encoded teambuild link to team chat");
-        }
-        ImGui::SameLine();
-        if (ImGui::ConfirmButton("Send all builds in chat", &send_all_confirming_,
-                "Send All Builds to Chat\n\nThis will send each build as a separate message in team chat.\nAre you sure?")) {
-            on_send(*this, SIZE_MAX - 1);
-            send_all_confirming_ = false;
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Send all builds as individual skill template links in team chat");
-        }
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    if (ImGui::Button("Send Teambuild code in chat")) {
+        this->Send();
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Send the encoded teambuild link to team chat.\nOther toolbox users can click the chat link without getting spammed.");
+    }
+    ImGui::SameLine();
+    if (ImGui::ConfirmButton("Send all builds in chat", &send_all_confirming_,
+            "Send All Builds to Chat\n\nThis will send each build as a separate message in team chat.\nAre you sure?")) {
+        this->Send(true);
+        send_all_confirming_ = false;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Send all builds as individual skill template links in team chat.\nNon-toolbox users will be able to click builds one by one.");
     }
 
     ImGui::End();
