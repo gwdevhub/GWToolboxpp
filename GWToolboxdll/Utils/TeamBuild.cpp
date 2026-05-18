@@ -141,6 +141,8 @@ namespace {
 
         switch (stage) {
             case AddHero:
+                if (!ToolboxUtils::IsHeroUnlocked(build.hero_id)) 
+                    return true;
                 GW::PartyMgr::AddHero(build.hero_id);
                 stage = WaitForHero;
                 [[fallthrough]];
@@ -378,15 +380,16 @@ void Build::Update()
     }
 
     for (size_t i = 0; i < pending_build_loads.size(); i++) {
-        if (!pending_build_loads[i].build.IsPlayerBuild()
+        auto& pending = pending_build_loads[i];
+        if (!pending.build.IsPlayerBuild()
             && instance_type != GW::Constants::InstanceType::Outpost) {
             pending_build_loads.clear();
             break;
         }
-        if (pending_build_loads[i].Process()) {
-            pending_build_loads.erase(pending_build_loads.begin() + static_cast<ptrdiff_t>(i));
+        if (pending.Process()) {
+            pending_build_loads.erase(pending_build_loads.begin() + i);
+            break;
         }
-        break; // one per frame
     }
 }
 
@@ -418,7 +421,7 @@ void TeamBuild::Send(bool one_by_one) const
     else {
         const auto encoded = TeamBuildEncoder::TeamBuildToEncoded(*this);
         if (!encoded.empty())
-            send_queue.push(std::format(L"[;{}]", encoded));
+            send_queue.push(std::format(L"[TB;{}]", encoded));
     }
 }
 

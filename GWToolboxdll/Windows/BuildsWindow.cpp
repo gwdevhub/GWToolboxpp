@@ -285,8 +285,9 @@ namespace {
         build.Load();
         if (!tbuild.edit_open) {
             std::string build_string;
-            if (BuildSkillTemplateString(tbuild, idx, &build_string))
-                Log::Flash("Build loaded: %s", build_string.c_str());
+            if (BuildSkillTemplateString(tbuild, idx, &build_string)) {
+                Log::Flash("<quote>Build loaded: %s", build_string.c_str());
+            }
         }
         return true;
     }
