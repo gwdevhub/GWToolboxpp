@@ -96,6 +96,7 @@ struct TeamBuild {
 
 private:
     int editing_build_idx_ = -1; // which build row is expanded (player-builds layout)
+    bool send_all_confirming_ = false;
 
     void DrawPlayerBuildsContent(bool& builds_changed,
                                  const BuildAction& on_load,

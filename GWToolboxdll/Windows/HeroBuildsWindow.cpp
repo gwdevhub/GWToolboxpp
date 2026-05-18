@@ -484,6 +484,9 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     });
                 }
             }
+            else if (j == SIZE_MAX - 1) {
+                Send(tb);
+            }
             else {
                 Send(tb, j);
             }
