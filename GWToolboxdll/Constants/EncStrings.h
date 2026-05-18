@@ -165,7 +165,7 @@ namespace GW {
         static const wchar_t* CelestialEssences = L"\x570A\x9453\x84A6\x64D4";
         static const wchar_t* PhantomResidue = L"\x2937";
         static const wchar_t* DrakeKabob = L"\x8101\x42D1\xFB15\xD39E\x5A26";
-        static const wchar_t* ChunkOfDrakeFlesh = L"\x108\x107" L"Chunk of Drake Flesh\x1"; // TODO: find the real enc name in-game
+        static const wchar_t* ChunkOfDrakeFlesh = L"\x8101\x583B\xDE0B\xE373\x1070";
         static const wchar_t* AmberChunks = L"\x55D0\xF8B7\xB108\x6018";
         static const wchar_t* GlowingHearts = L"\x2914";
         static const wchar_t* SaurianBones = L"\x8102\x26D8\xB5B9\x9AF6\x42D6";
