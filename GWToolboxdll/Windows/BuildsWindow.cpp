@@ -727,6 +727,13 @@ namespace {
 }
 
 
+void BuildsWindow::AddTeambuild(TeamBuild tbuild)
+{
+    tbuild.edit_open = false;
+    teambuilds.push_back(std::move(tbuild));
+    builds_changed = true;
+}
+
 void BuildsWindow::Terminate()
 {
     ToolboxWindow::Terminate();

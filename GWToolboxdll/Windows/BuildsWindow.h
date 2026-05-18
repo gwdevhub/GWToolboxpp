@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ToolboxWindow.h>
+#include <Utils/TeamBuild.h>
 
 namespace GW::UI {
     enum class UIMessage : uint32_t;
@@ -31,6 +32,9 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
+
+    // Add a player-layout teambuild to this window's list (e.g. from a received chat link).
+    void AddTeambuild(TeamBuild tbuild);
 
 private:
     /*
