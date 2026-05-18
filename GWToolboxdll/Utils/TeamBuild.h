@@ -44,6 +44,11 @@ struct Build {
     void Send() const;
     void Load() const;
 
+    // Called every frame from GWToolbox::Update(); processes pending loads and the send queue.
+    static void Update();
+    // Push a pre-formatted chat string onto the rate-limited send queue.
+    static void EnqueueSend(std::string msg);
+
 private:
     GW::SkillbarMgr::SkillTemplate skill_template_{};
 };

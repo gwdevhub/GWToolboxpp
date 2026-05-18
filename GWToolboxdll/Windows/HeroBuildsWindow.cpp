@@ -38,89 +38,9 @@ namespace {
     GW::HookEntry OnRecvWhisper_Entry;
     GW::HookEntry OnOpenTemplate_Entry;
 
-    clock_t send_timer = 0;
-    clock_t kickall_timer = 0;
-
-    struct CodeOnHero {
-        enum Stage : uint8_t { Add, Load, Finished } stage = Add;
-
-        char code[128]{};
-        size_t party_hero_index = 0xFFFFFFFF;
-        GW::Constants::HeroID heroid = GW::Constants::HeroID::NoHero;
-        int show_panel = 0;
-        GW::HeroBehavior behavior = GW::HeroBehavior::Guard;
-        uint8_t disabled_skills = 0;
-        clock_t started = 0;
-
-        CodeOnHero(const char* c = "", const GW::Constants::HeroID i = GW::Constants::HeroID::NoHero, const int _show_panel = 0, uint32_t _behavior = 1, uint8_t _disabled_skills = 0)
-            : heroid(i), show_panel(_show_panel), behavior(static_cast<GW::HeroBehavior>(_behavior)), disabled_skills(_disabled_skills)
-        {
-            snprintf(code, _countof(code) - 1, "%s", c);
-            if (behavior > GW::HeroBehavior::AvoidCombat) {
-                behavior = GW::HeroBehavior::Guard;
-            }
-        }
-
-        // True when processing is done
-        bool Process()
-        {
-            if (!started) {
-                started = TIMER_INIT();
-            }
-            if (TIMER_DIFF(started) > 1000) {
-                return true; // Consume, timeout.
-            }
-            switch (stage) {
-                case Add: // Need to add hero to party
-                    GW::PartyMgr::AddHero(heroid);
-                    stage = Load;
-                case Load: // Waiting for hero to be added to party
-                {
-                    const GW::HeroPartyMember* hero = HeroBuildsWindow::GetPartyHeroByID(heroid, &party_hero_index);
-                    if (!hero) {
-                        break;
-                    }
-                    const GW::HeroFlag* flag = HeroBuildsWindow::GetHeroFlagInfo(heroid);
-                    if (!flag) {
-                        break;
-                    }
-                    if (code[0]) // Build optional
-                    {
-                        GW::SkillbarMgr::LoadSkillTemplate(hero->agent_id, code);
-                    }
-                    for (uint32_t k = 0; k < 8; k++) {
-                        GW::PartyMgr::SetHeroSkillDisabled(hero->agent_id, k, ((disabled_skills >> k) & 1) != false);
-                    }
-                    if (show_panel) {
-                        SendUIMessage(GW::UI::UIMessage::kShowHeroPanel, (void*)heroid);
-                    }
-                    else {
-                        SendUIMessage(GW::UI::UIMessage::kHideHeroPanel, (void*)heroid);
-                    }
-                    if (flag->hero_behavior != behavior) {
-                        GW::PartyMgr::SetHeroBehavior(hero->agent_id, behavior);
-                    }
-                }
-                    stage = Finished;
-                case Finished: // Success, hero added and build loaded.
-                    return true;
-            }
-            return false;
-        }
-    };
-
-    std::vector<CodeOnHero> pending_hero_loads{};
-    std::queue<std::string> send_queue{};
-
-    // Whisper send state: set from Draw(), consumed in Update()
-    std::wstring pending_whisper_to{};
-    std::wstring pending_whisper_msg{};
-
     // Pool of received/detached teambuilds shown as standalone windows (not in the main list).
     // Entries are removed when their window is closed and no other owner holds the shared_ptr.
     std::vector<std::shared_ptr<TeamBuild>> detached_pool{};
-
-    char whisper_target[128]{};
 
     ToolboxIni* inifile = nullptr;
 
@@ -175,30 +95,6 @@ namespace {
         HeroID::Devona,
         HeroID::GhostOfAlthea
     };
-
-    const size_t GetPlayerHeroCount()
-    {
-        size_t ret = 0;
-        const GW::PartyInfo* party_info = GW::PartyMgr::GetPartyInfo();
-        if (!party_info) {
-            return ret;
-        }
-        const GW::HeroPartyMemberArray& party_heros = party_info->heroes;
-        if (!party_heros.valid()) {
-            return ret;
-        }
-        const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
-        if (!me) {
-            return ret;
-        }
-        const uint32_t my_player_id = me->login_number;
-        for (size_t i = 0; i < party_heros.size(); i++) {
-            if (party_heros[i].owner_player_id == my_player_id) {
-                ret++;
-            }
-        }
-        return ret;
-    }
 
     void OnCreateChatLink(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
     {
@@ -298,7 +194,6 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const GW::Constants::Her
 void HeroBuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    send_timer = TIMER_INIT();
     skill_toggle_sprite = GwDatTextureModule::LoadTextureFromFileId(0x268f6);
     TeamBuild::SetSkillToggleSprite(skill_toggle_sprite);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
@@ -552,76 +447,38 @@ const char* HeroBuildsWindow::BuildName(const size_t idx) const
     return nullptr;
 }
 
+void HeroBuildsWindow::Load(const size_t idx)
+{
+    if (idx < teambuilds.size())
+        teambuilds[idx].Load();
+}
+
 void HeroBuildsWindow::Update(float)
 {
-    const GW::Constants::InstanceType& instance_type = GW::Map::GetInstanceType();
+    const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (instance_type != last_instance_type) {
-        // Run tasks on map change without an StoC hook
         if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
-            for (auto& hb : teambuilds) {
-                hb.edit_open = false;
-            }
+            for (auto& hb : teambuilds) hb.edit_open = false;
             visible = false;
-        }
-        if (instance_type == GW::Constants::InstanceType::Loading) {
-            while (send_queue.size()) {
-                send_queue.pop();
-            }
-            kickall_timer = 0;
-            pending_hero_loads.clear();
         }
         last_instance_type = instance_type;
     }
 
-    if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
-        GW::Chat::SendChat('#', send_queue.front().c_str());
-        send_queue.pop();
-        send_timer = TIMER_INIT();
-    }
-    if (!pending_whisper_to.empty() && !pending_whisper_msg.empty() && TIMER_DIFF(send_timer) > 600) {
-        GW::Chat::SendChat(pending_whisper_to.c_str(), pending_whisper_msg.c_str());
-        pending_whisper_to.clear();
-        pending_whisper_msg.clear();
-        send_timer = TIMER_INIT();
-    }
     // GC detached pool: remove closed entries with no external owners
     std::erase_if(detached_pool, [](const auto& ptr) {
         return !ptr->edit_open && ptr.use_count() == 1;
     });
-    if (kickall_timer) {
-        if (TIMER_DIFF(kickall_timer) > 500 || instance_type != GW::Constants::InstanceType::Outpost || !GetPlayerHeroCount()) {
-            kickall_timer = 0;
-        }
-    }
-    for (size_t i = 0; !kickall_timer && i < pending_hero_loads.size(); i++) {
-        if (instance_type != GW::Constants::InstanceType::Outpost) {
-            pending_hero_loads.clear();
-            break;
-        }
-        if (pending_hero_loads[i].Process()) {
-            pending_hero_loads.erase(pending_hero_loads.begin() + static_cast<int>(i));
-            break; // Continue loop on next frame
-        }
-    }
 
     // if we open the window, load from file. If we close the window, save to file.
     static bool old_visible = false;
-    bool cur_visible = false;
-    cur_visible |= visible;
-    for (const TeamBuild& tbuild : teambuilds) {
-        cur_visible |= tbuild.edit_open;
-    }
+    bool cur_visible = visible;
+    for (const TeamBuild& tbuild : teambuilds) cur_visible |= tbuild.edit_open;
 
     if (cur_visible != old_visible) {
         old_visible = cur_visible;
-        if (cur_visible) {
-            LoadFromFile();
-        }
-        else {
-            SaveToFile();
-        }
+        if (cur_visible) LoadFromFile();
+        else             SaveToFile();
     }
-    last_instance_type = instance_type;
 }
 
 void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)

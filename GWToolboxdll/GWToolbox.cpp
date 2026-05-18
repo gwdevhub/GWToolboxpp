@@ -18,6 +18,7 @@
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
+#include <Utils/TeamBuild.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 
@@ -991,6 +992,8 @@ void GWToolbox::Update(GW::HookStatus*)
     }
 
     UpdateModulesTerminating(delta_f);
+
+    Build::Update();
 
     // Update loop
     for (const auto m : modules_enabled) {
