@@ -2086,6 +2086,22 @@ DailyQuests::QuestData* DailyQuests::GetNicholasSandfordItemInfo(const wchar_t* 
     return nullptr;
 }
 
+DailyQuests::NicholasCycleData* DailyQuests::GetNicholasIngredientInfo(const wchar_t* ingredient_enc)
+{
+    // Crafting ingredients whose end product Nicholas The Traveller collects.
+    // If an item's enc name isn't known yet, it will be a placeholder that won't match - find it in-game and update EncStrings.h.
+    static const struct { const wchar_t* ingredient; const wchar_t* nicholas_item; } ingredients[] = {
+        {GW::EncStrings::SkaleFins, GW::EncStrings::BowlofSkalefinSoup},
+        {GW::EncStrings::ChunkOfDrakeFlesh, GW::EncStrings::DrakeKabob}, // TODO: update ChunkOfDrakeFlesh enc name in EncStrings.h
+    };
+    if (!ingredient_enc) return nullptr;
+    for (const auto& entry : ingredients) {
+        if (wcscmp(ingredient_enc, entry.ingredient) == 0)
+            return GetNicholasItemInfo(entry.nicholas_item);
+    }
+    return nullptr;
+}
+
 time_t DailyQuests::GetTimestampFromNicholasSandford(QuestData* data)
 {
     constexpr time_t NICHOLAS_PRE_START_DATE = 1239260400;

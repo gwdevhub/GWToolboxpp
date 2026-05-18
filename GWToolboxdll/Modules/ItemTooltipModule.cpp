@@ -195,13 +195,21 @@ namespace {
         }
         else {
             const auto nicholas_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
-            if (!nicholas_info) return;
-            const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(nicholas_info);
-            if (collection_time <= current_time) {
-                text = std::format(L"Nicholas The Traveler collects {} of these right now!", nicholas_info->quantity);
+            const auto ingredient_info = nicholas_info ? nullptr : DailyQuests::GetNicholasIngredientInfo(item->name_enc);
+            if (!nicholas_info && !ingredient_info) return;
+            const auto active_info = nicholas_info ? nicholas_info : ingredient_info;
+            const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(active_info);
+            if (nicholas_info) {
+                if (collection_time <= current_time)
+                    text = std::format(L"Nicholas The Traveler collects {} of these right now!", nicholas_info->quantity);
+                else
+                    text = std::format(L"Nicholas The Traveler collects {} of these {}!", nicholas_info->quantity, TextUtils::RelativeTimeW(collection_time));
             }
             else {
-                text = std::format(L"Nicholas The Traveler collects {} of these {}!", nicholas_info->quantity, TextUtils::RelativeTimeW(collection_time));
+                if (collection_time <= current_time)
+                    text = L"Used to craft an item Nicholas The Traveler collects right now!";
+                else
+                    text = std::format(L"Used to craft an item Nicholas The Traveler collects {}!", TextUtils::RelativeTimeW(collection_time));
             }
         }
 
