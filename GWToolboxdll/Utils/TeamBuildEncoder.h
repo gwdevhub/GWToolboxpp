@@ -8,34 +8,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
-// Forward declarations
-struct HeroBuild {
-    HeroBuild() = default;
-    HeroBuild(std::string_view n, std::string_view c, GW::Constants::HeroID _hero_id = GW::Constants::HeroID::NoHero, int panel = 0, uint32_t _behavior = 1, uint8_t _disabled_skills = 0)
-        : name(n), code(c), hero_id(_hero_id), behavior(_behavior), show_panel(panel), disabled_skills(_disabled_skills)
-    {
-        if (name.empty()) name = GetFallbackBuildName();
-    }
-    std::string name{};
-    std::string code{};
-    GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
-    uint32_t behavior = 1;
-    bool show_panel = false;
-    uint8_t disabled_skills = 0;
-    std::string GetFallbackBuildName() const;
-};
-
-struct TeamHeroBuild {
-    static unsigned int cur_ui_id;
-    TeamHeroBuild(std::string_view n, std::string_view _ui_id = {}) : name(n), ui_id(_ui_id.empty() ? std::to_string(++cur_ui_id) : std::string(_ui_id)) {}
-    bool edit_open = false;
-    bool focus_next_frame = false;
-    int mode = 0;
-    std::string name{};
-    std::string group{};
-    std::string ui_id{};
-    std::array<HeroBuild, 8> builds{};
-};
+#include <Utils/TeamBuild.h>
 
 namespace TeamBuildEncoder {
 
@@ -63,7 +36,7 @@ namespace TeamBuildEncoder {
     //                      An 8-hero build fits in at most ~117 wchars.
     // ---------------------------------------------------------------------------
 
-    using TeamHeroBuild     = TeamHeroBuild;
+    using TeamHeroBuild     = ::TeamBuild;
     using DaybreakTeamBuild = std::string;
     using EncodedTeamBuild  = std::wstring;
 
