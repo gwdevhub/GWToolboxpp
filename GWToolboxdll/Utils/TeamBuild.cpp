@@ -454,8 +454,10 @@ void TeamBuild::Load() const
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return;
     }
-    GW::PartyMgr::KickAllHeroes();
-    kickall_timer = TIMER_INIT();
+    if (has_hero_slots) {
+        GW::PartyMgr::KickAllHeroes();
+        kickall_timer = TIMER_INIT();
+    }
     if (mode > 0) {
         GW::PartyMgr::SetHardMode(mode == 2);
     }

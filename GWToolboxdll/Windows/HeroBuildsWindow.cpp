@@ -30,6 +30,7 @@
 #include <Utils/TeamBuildEncoder.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
+#include <Windows/BuildsWindow.h>
 
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
@@ -104,8 +105,10 @@ namespace {
             return;
 
         TeamBuild tbuild("", TextUtils::WStringToString(packet->url).c_str());
-        tbuild.has_hero_slots = true;
         if (!TeamBuildEncoder::EncodedToTeamBuild(packet->url, tbuild)) return;
+        tbuild.has_hero_slots = std::ranges::any_of(tbuild.builds, [](const Build& b) {
+            return b.hero_id != GW::Constants::HeroID::NoHero;
+        });
 
         status->blocked = true;
 
@@ -133,8 +136,10 @@ namespace {
         }
 
         auto tbuild = std::make_shared<TeamBuild>(TextUtils::WStringToString(packet->label), ui_id);
-        tbuild->has_hero_slots = true;
         if (!TeamBuildEncoder::EncodedToTeamBuild(packet->url, *tbuild)) return;
+        tbuild->has_hero_slots = std::ranges::any_of(tbuild->builds, [](const Build& b) {
+            return b.hero_id != GW::Constants::HeroID::NoHero;
+        });
         status->blocked = true;
         tbuild->edit_open = tbuild->focus_next_frame = true;
         detached_pool.push_back(std::move(tbuild));
@@ -389,24 +394,39 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 const auto& build = tbuild.builds[j];
                 if (build.code.empty() && build.hero_id == HeroID::NoHero) continue;
                 std::string disp_name;
-                HeroBuildName(tbuild, j, &disp_name);
+                if (tbuild.has_hero_slots) {
+                    HeroBuildName(tbuild, j, &disp_name);
+                } else {
+                    const auto& bname = !build.name.empty() ? build.name : build.GetFallbackBuildName();
+                    disp_name = std::format("#{} {}", j + 1, bname);
+                }
                 if (!disp_name.empty()) ImGui::TextUnformatted(disp_name.c_str());
                 if (!build.code.empty()) GuiUtils::DrawSkillbar(build.code.c_str(), false);
                 ImGui::Spacing();
             }
             ImGui::Separator();
-            if (ImGui::Button("Load All")) {
-                tbuild.Load();
+            if (tbuild.has_hero_slots) {
+                if (ImGui::Button("Load All")) {
+                    tbuild.Load();
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load all builds onto your heroes");
+                ImGui::SameLine();
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load all builds onto your heroes");
-            ImGui::SameLine();
             if (ImGui::Button("Add to My Builds")) {
                 TeamBuild copy = tbuild;
                 copy.edit_open = false;
-                teambuilds.push_back(std::move(copy));
-                builds_changed = true;
+                if (copy.has_hero_slots) {
+                    teambuilds.push_back(std::move(copy));
+                    builds_changed = true;
+                } else {
+                    BuildsWindow::Instance().AddTeambuild(std::move(copy));
+                }
             }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Save this teambuild to your Hero Builds list");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip(tbuild.has_hero_slots
+                    ? "Save this teambuild to your Hero Builds list"
+                    : "Save this teambuild to your Builds list");
+            }
             ImGui::SameLine();
             if (ImGui::Button("Close")) tbuild.edit_open = false;
         }
