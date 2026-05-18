@@ -340,6 +340,21 @@ void Build::Send() const
     EnqueueSend(msg);
 }
 
+void Build::Copy() const
+{
+    if (code.empty() && name.empty()) return;
+    auto gen_name = name;
+    if (hero_id != GW::Constants::HeroID::NoHero) {
+        if (gen_name.empty())
+            gen_name = Resources::GetHeroName(hero_id)->string();
+        else
+            gen_name = std::format("{} ({})", name, Resources::GetHeroName(hero_id)->string());
+    }
+    const auto msg = code.empty() ? name : std::format("[{};{}]", gen_name, code);
+    ImGui::SetClipboardText(msg.c_str());
+    Log::Flash("Build code copied to clipboard");
+}
+
 void Build::EnqueueSend(std::string msg)
 {
     send_queue.push(TextUtils::StringToWString(msg));
@@ -425,6 +440,15 @@ void TeamBuild::Send(bool one_by_one) const
     }
 }
 
+void TeamBuild::Copy() const
+{
+    const auto encoded = TeamBuildEncoder::TeamBuildToEncoded(*this);
+    if (encoded.empty()) return;
+    const auto msg = TextUtils::WStringToString(std::format(L"[TB;{}]", encoded));
+    ImGui::SetClipboardText(msg.c_str());
+    Log::Flash("Teambuild code copied to clipboard");
+}
+
 void TeamBuild::Load() const
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
@@ -460,7 +484,7 @@ void TeamBuild::DrawPlayerBuildsContent(
         ImGui::PushID(static_cast<int>(j));
 
         const bool editing   = editing_build_idx_ == static_cast<int>(j);
-        const float btn_offset = ImGui::GetContentRegionAvail().x - del_width - btn_width * 3 - spacing * 3;
+        const float btn_offset = ImGui::GetContentRegionAvail().x - del_width * 2 - btn_width * 3 - spacing * 4;
 
         ImGui::Text("#%zu", j + 1);
         ImGui::PushItemWidth(btn_offset - btn_width - spacing * 2);
@@ -513,6 +537,14 @@ void TeamBuild::DrawPlayerBuildsContent(
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Click to edit this build");
+        }
+
+        ImGui::SameLine(0, spacing);
+        if (ImGui::Button(ICON_FA_COPY "###copy", ImVec2(del_width, 0))) {
+            build.Copy();
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Copy build code to clipboard");
         }
 
         ImGui::SameLine(0, spacing);
@@ -613,7 +645,7 @@ void TeamBuild::DrawHeroBuildsContent(
     const float item_spacing   = ImGui::GetStyle().ItemInnerSpacing.x;
     const float text_item_width =
         (ImGui::GetContentRegionAvail().x - btn_width - btn_width - btn_width
-         - panel_width - icon_btn_width - item_spacing * 4) / 3.f;
+         - panel_width - icon_btn_width * 2 - item_spacing * 5) / 3.f;
 
     float offset = btn_width;
     ImGui::SetCursorPosX(offset);
@@ -793,6 +825,14 @@ void TeamBuild::DrawHeroBuildsContent(
             ImGui::SetTooltip(j == 0 ? "Load Build on Player" : "Load Build on Hero");
         }
 
+        ImGui::SameLine(offset += btn_width + item_spacing);
+        if (ImGui::Button(ICON_FA_COPY "###copy", ImVec2(icon_btn_width, 0))) {
+            build.Copy();
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Copy build code to clipboard");
+        }
+
         ImGui::PopID();
     }
 
@@ -888,6 +928,13 @@ bool TeamBuild::DrawEditWindow(
     }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Send the encoded teambuild link to team chat.\nOther toolbox users can click the chat link without getting spammed.");
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Copy Teambuild code")) {
+        this->Copy();
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Copy the encoded teambuild link to clipboard.\nPaste it anywhere to share your teambuild.");
     }
     ImGui::SameLine();
     if (ImGui::ConfirmButton("Send all builds in chat", &send_all_confirming_,
