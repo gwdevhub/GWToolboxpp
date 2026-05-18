@@ -2093,6 +2093,7 @@ DailyQuests::NicholasCycleData* DailyQuests::GetNicholasIngredientInfo(const wch
     static const struct { const wchar_t* ingredient; const wchar_t* nicholas_item; } ingredients[] = {
         {GW::EncStrings::SkaleFins, GW::EncStrings::BowlofSkalefinSoup},
         {GW::EncStrings::ChunkOfDrakeFlesh, GW::EncStrings::DrakeKabob}, // TODO: update ChunkOfDrakeFlesh enc name in EncStrings.h
+        {GW::EncStrings::IbogaPetals, GW::EncStrings::PahnaiSalad},     // TODO: update IbogaPetals enc name in EncStrings.h
     };
     if (!ingredient_enc) return nullptr;
     for (const auto& entry : ingredients) {
