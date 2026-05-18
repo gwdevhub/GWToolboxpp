@@ -252,13 +252,13 @@ namespace {
         std::wstring msg_str(msg);
         bool changed = false;
         std::wstring new_msg = TextUtils::ctre_regex_replace_with_formatter<link_regex>(msg_str, [&](auto& match) -> std::wstring {
-            const auto name = match.get<1>().to_view();
-            const auto code = match.get<2>().to_view();
+            const auto name = match.template get<1>().to_view();
+            const auto code = match.template get<2>().to_view();
             if (TextUtils::IsUrl(name.data()) && !TextUtils::IsUrl(code.data())) {
                 changed = true;
                 return std::format(L"[{};{}]", name, name);
             }
-            return std::wstring(match.get<0>());
+            return std::wstring(match.template get<0>());
         });
 
         if (!changed) return;
