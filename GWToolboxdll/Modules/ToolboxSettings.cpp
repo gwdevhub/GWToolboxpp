@@ -397,7 +397,7 @@ void ToolboxSettings::DrawSettingsCogButtons()
 
         const ImGuiWindow* window = ImGui::FindWindowByName(elem->Name());
         if (!window || (window->Flags & ImGuiWindowFlags_NoTitleBar)) continue;
-        if (!window->Viewport) continue;
+        if (!(window->Viewport && window->DrawList && window->DrawList->CmdBuffer.Size)) continue;
 
         const ImRect tb = window->TitleBarRect();
         const float btn_h = tb.GetHeight();

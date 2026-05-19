@@ -569,6 +569,30 @@ struct MergeStack;
 
     void OnItemTooltip(const MergeStack* ms)
     {
+        auto char_key = [](const AccountInventoryItem* i, const std::string& arc) {
+            return arc + "\x1f" + i->character;
+        };
+        auto loc_key = [](const AccountInventoryItem* i, const std::string& arc) {
+            return arc + "\x1f" + i->character + "\x1f" + i->location;
+        };
+        // Only one tooltip is visible at a time; cache aggregates and recompute only when the hovered item changes.
+        static const MergeStack* last_ms = nullptr;
+        static std::unordered_map<std::string, uint32_t> char_totals;
+        static std::unordered_map<std::string, uint32_t> loc_totals;
+        if (ms != last_ms) {
+            last_ms = ms;
+            char_totals.clear();
+            loc_totals.clear();
+            for (auto it = ms->i.begin(); it != ms->i.end(); it++) {
+                std::string arc;
+                CharacterFreeSlots free_slot{(*it)->account, (*it)->character};
+                if (auto fs_it = free_slots.find(&free_slot); fs_it != free_slots.end()) {
+                    arc = (*fs_it)->account_representing_character;
+                }
+                char_totals[char_key(*it, arc)] += (*it)->quantity;
+                loc_totals[loc_key(*it, arc)] += (*it)->quantity;
+            }
+        }
 
         std::string prev_character{};
         std::string prev_account_representing_character{};
@@ -591,11 +615,11 @@ struct MergeStack;
                 if (!is_this_account && (*it)->character == "(Chest)" && !account_representing_character.empty()) {
                     suffix = " [" + account_representing_character + "]";
                 }
-                ImGui::Text("%s%s", (*it)->character.c_str(), suffix.c_str());
+                ImGui::Text("%s%s: %u", (*it)->character.c_str(), suffix.c_str(), char_totals[char_key(*it, account_representing_character)]);
             }
             reprint |= (*it)->location != prev_location;
             if (reprint) {
-                ImGui::Text("- %s", (*it)->location.c_str());
+                ImGui::Text("- %s: %u", (*it)->location.c_str(), loc_totals[loc_key(*it, account_representing_character)]);
             }
             ImGui::PopStyleColor(style_count);
             prev_account_representing_character = account_representing_character;

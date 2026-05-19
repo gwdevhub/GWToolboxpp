@@ -279,7 +279,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                             if (build.code.empty() && build.name.empty()) continue;
                             ImGui::Spacing();
                             std::string name;
-                            HeroBuildName(tbuild, ti, &name);
+                            HeroBuildName(build, &name);
                             ImGui::TextUnformatted(name.empty() ? build.name.c_str() : name.c_str());
                             GuiUtils::DrawSkillbar(build.code.c_str(), false);
                             ImGui::Spacing();
@@ -288,16 +288,25 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
                 ImGui::SameLine(0, item_spacing);
-                if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "Load", ImVec2(btn_width, 0))) {
-                    if (ImGui::GetIO().KeyCtrl) {
+                const bool ctrl_held = ImGui::GetIO().KeyCtrl;
+                const bool send_disabled = ctrl_held && tbuild.ChatCodeTooLong();
+                if (send_disabled) ImGui::BeginDisabled();
+                if (ImGui::Button(ctrl_held ? "Send" : "Load", ImVec2(btn_width, 0))) {
+                    if (ctrl_held) {
                         tbuild.Send();
                     }
                     else {
                         tbuild.Load();
                     }
                 }
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(ImGui::GetIO().KeyCtrl ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
+                if (send_disabled) ImGui::EndDisabled();
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                    if (send_disabled) {
+                        ImGui::SetTooltip("Teambuild code is too long to send in chat.\n[TB;<code>] would exceed 120 characters.");
+                    }
+                    else {
+                        ImGui::SetTooltip(ctrl_held ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
+                    }
                 }
                 ImGui::PopID();
             };
@@ -395,7 +404,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 if (build.code.empty() && build.hero_id == HeroID::NoHero) continue;
                 std::string disp_name;
                 if (tbuild.has_hero_slots) {
-                    HeroBuildName(tbuild, j, &disp_name);
+                    HeroBuildName(build, &disp_name);
                 } else {
                     const auto& bname = !build.name.empty() ? build.name : build.GetFallbackBuildName();
                     disp_name = std::format("#{} {}", j + 1, bname);
@@ -443,15 +452,11 @@ HeroBuildsWindow::~HeroBuildsWindow() {
     delete inifile;
 }
 
-void HeroBuildsWindow::HeroBuildName(const TeamBuild& tbuild, const size_t idx, std::string* out)
+void HeroBuildsWindow::HeroBuildName(const Build& build, std::string* out)
 {
-    if (idx >= tbuild.builds.size()) {
-        return;
-    }
-    const Build& build = tbuild.builds[idx];
     const auto& code = build.code;
-    const auto id = idx > 0 ? build.hero_id : HeroID::NoHero;
-    const auto hero_name = idx == 0 ? "Player" : Resources::GetHeroName(id)->string();
+    const auto id = build.hero_id;
+    const auto hero_name = build.hero_id == GW::Constants::HeroID::NoHero ? "Player" : Resources::GetHeroName(id)->string();
     const auto name = !build.name.empty() ? build.name : build.GetFallbackBuildName();
     if (name.empty() && code.empty() && id == HeroID::NoHero) {
         return;

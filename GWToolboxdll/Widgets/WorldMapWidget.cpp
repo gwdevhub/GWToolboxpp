@@ -32,6 +32,7 @@
 #include <Widgets/WorldMapWidget_Constants.h>
 
 #include <Windows/CompletionWindow.h>
+#include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
 
 #include <Utils/GuiUtils.h>
@@ -126,6 +127,8 @@ namespace {
 
     bool showing_all_outposts = false;
     bool apply_quest_colors = false;
+    bool color_zaishen_quests = false;
+    ImU32 zaishen_quest_color = IM_COL32(255, 215, 0, 255);
     bool show_any_elite_capture_locations = false;
     bool show_elite_capture_locations[11];
     bool hide_captured_elites = false;
@@ -762,6 +765,9 @@ namespace {
         if (apply_quest_colors) {
             color = QuestModule::GetQuestColor(quest->quest_id);
         }
+        if (color_zaishen_quests && DailyQuests::GetZaishenCoinReward(quest->quest_id)) {
+            color = zaishen_quest_color;
+        }
 
         // draw_quest_marker
         const auto draw_quest_marker = [&](const GW::Vec2f& quest_marker_pos) {
@@ -972,6 +978,8 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_lines_on_world_map);
     LOAD_BOOL(showing_all_quests);
     LOAD_BOOL(apply_quest_colors);
+    LOAD_BOOL(color_zaishen_quests);
+    LOAD_UINT(zaishen_quest_color);
     LOAD_BOOL(hide_captured_elites);
     LOAD_BOOL(show_any_elite_capture_locations);
     LOAD_BOOL(hide_captured_elites);
@@ -1028,6 +1036,8 @@ void WorldMapWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_lines_on_world_map);
     SAVE_BOOL(showing_all_quests);
     SAVE_BOOL(apply_quest_colors);
+    SAVE_BOOL(color_zaishen_quests);
+    SAVE_UINT(zaishen_quest_color);
     SAVE_BOOL(show_any_elite_capture_locations);
     SAVE_BOOL(hide_captured_elites);
     uint32_t show_elite_capture_locations_val = 0;
@@ -1102,6 +1112,15 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Color overlay for the active quest.");
                 }
+            }
+            ImGui::Unindent();
+        }
+        ImGui::Checkbox("Color zaishen quest markers differently", &color_zaishen_quests);
+        if (color_zaishen_quests) {
+            ImGui::Indent();
+            ImGui::ColorButtonPicker("Zaishen Quest Color", &zaishen_quest_color, ImGuiColorEditFlags_NoLabel);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Color overlay applied to Zaishen quest markers (Mission, Bounty, Vanquish, Combat).");
             }
             ImGui::Unindent();
         }
@@ -1183,7 +1202,13 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
             static GuiUtils::EncString quest_name;
             if (!quest_name.IsDecoding()) quest_name.reset(hovered_quest->name);
-            ImGui::SetTooltip("%s", quest_name.string().c_str());
+            const auto coin_reward = DailyQuests::GetZaishenCoinReward(hovered_quest_id);
+            if (coin_reward) {
+                ImGui::SetTooltip("%s\nZaishen Coins: %u NM / %u HM", quest_name.string().c_str(), coin_reward->nm, coin_reward->hm);
+            }
+            else {
+                ImGui::SetTooltip("%s", quest_name.string().c_str());
+            }
         }
     }
     if (hovered_boss) {
