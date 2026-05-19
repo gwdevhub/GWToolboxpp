@@ -315,7 +315,6 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
     if (!world_ctx) return;
     auto* draw_list = ImGui::GetBackgroundDrawList();
     draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y});
-    // Affiliation/color tints matching GW's rendering: gray=0,blue,red,yellow,teal,purple,green,gray
     static constexpr ImU32 kAffiliationColors[] = {
         IM_COL32(0xA0, 0xA0, 0xA0, 0xFF), // 0: gray
         IM_COL32(0x20, 0x20, 0xFF, 0xFF), // 1: blue
@@ -326,6 +325,16 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
         IM_COL32(0x20, 0xFF, 0x20, 0xFF), // 6: green
         IM_COL32(0xA0, 0xA0, 0xA0, 0xFF), // 7: gray (same as 0)
     };
+    // GW fills icons with a solid affiliation colour; the texture supplies only the
+    // alpha mask.  Switch to SELECTARG2 so the vertex colour is used directly rather
+    // than being multiplied against the texture RGB (which distorts the colour balance).
+    draw_list->AddCallback(
+        [](const ImDrawList*, const ImDrawCmd* cmd) {
+            auto* dev = static_cast<IDirect3DDevice9*>(cmd->UserCallbackData);
+            dev->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG2);
+            dev->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+        },
+        dx_device);
     for (const auto& icon : world_ctx->mission_map_icons) {
         auto** tex = GwDatTextureModule::LoadTextureFromFileId(icon.model_id);
         if (!tex || !*tex) continue;
@@ -336,6 +345,7 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
         const ImU32 tint = icon.option < std::size(kAffiliationColors) ? kAffiliationColors[icon.option] : IM_COL32_WHITE;
         draw_list->AddImage(*tex, {pos.x - sz.x / 2, pos.y - sz.y / 2}, {pos.x + sz.x / 2, pos.y + sz.y / 2}, {0, 0}, {1, 1}, tint);
     }
+    draw_list->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
     draw_list->PopClipRect();
 }
 
