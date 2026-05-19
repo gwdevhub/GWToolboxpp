@@ -428,6 +428,18 @@ void TeamBuild::SetSkillToggleSprite(IDirect3DTexture9** sprite)
     skill_toggle_sprite = sprite;
 }
 
+const std::wstring& TeamBuild::GetEncoded() const
+{
+    if (!encoded_cache_.has_value())
+        encoded_cache_ = TeamBuildEncoder::TeamBuildToEncoded(*this);
+    return *encoded_cache_;
+}
+
+void TeamBuild::ResetEncodedCache() const
+{
+    encoded_cache_.reset();
+}
+
 void TeamBuild::Send(bool one_by_one) const
 {
     if (!name.empty())
@@ -437,7 +449,7 @@ void TeamBuild::Send(bool one_by_one) const
             build.Send();
     }
     else {
-        const auto encoded = TeamBuildEncoder::TeamBuildToEncoded(*this);
+        const auto& encoded = GetEncoded();
         if (!encoded.empty())
             send_queue.push(std::format(L"[TB;{}]", encoded));
     }
@@ -445,7 +457,7 @@ void TeamBuild::Send(bool one_by_one) const
 
 void TeamBuild::Copy() const
 {
-    const auto encoded = TeamBuildEncoder::TeamBuildToEncoded(*this);
+    const auto& encoded = GetEncoded();
     if (encoded.empty()) return;
     const auto msg = TextUtils::WStringToString(std::format(L"[TB;{}]", encoded));
     ImGui::SetClipboardText(msg.c_str());
@@ -454,7 +466,7 @@ void TeamBuild::Copy() const
 
 bool TeamBuild::ChatCodeTooLong() const
 {
-    const auto encoded = TeamBuildEncoder::TeamBuildToEncoded(*this);
+    const auto& encoded = GetEncoded();
     // [TB;<encoded>] = 4 + encoded.size() + 1 = encoded.size() + 5; must be < 120
     return !encoded.empty() && encoded.size() + 5 >= 120;
 }
@@ -566,6 +578,7 @@ void TeamBuild::DrawPlayerBuildsContent(
             if (editing_build_idx_ == static_cast<int>(j))       editing_build_idx_ = -1;
             else if (editing_build_idx_ > static_cast<int>(j))   editing_build_idx_--;
             builds.erase(builds.begin() + static_cast<ptrdiff_t>(j));
+            ResetEncodedCache();
             builds_changed = true;
             ImGui::PopID();
             break;
@@ -582,6 +595,7 @@ void TeamBuild::DrawPlayerBuildsContent(
             ImGui::SameLine();
             if (ImGui::InputText("###code", build.code)) {
                 build.ResetDecodeCache();
+                ResetEncodedCache();
                 builds_changed = true;
             }
             if (ImGui::IsItemHovered()) {
@@ -636,6 +650,7 @@ void TeamBuild::DrawPlayerBuildsContent(
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - add_btn_width);
     if (ImGui::Button("Add Build", ImVec2(add_btn_width, 0))) {
         builds.emplace_back("", "");
+        ResetEncodedCache();
         editing_build_idx_ = static_cast<int>(builds.size()) - 1;
         builds_changed = true;
     }
@@ -694,6 +709,7 @@ void TeamBuild::DrawHeroBuildsContent(
         ImGui::SameLine(offset += text_item_width + item_spacing);
         if (ImGui::InputText("###code", build.code)) {
             build.ResetDecodeCache();
+            ResetEncodedCache();
             builds_changed = true;
         }
         if (ImGui::IsItemHovered()) {
@@ -728,6 +744,7 @@ void TeamBuild::DrawHeroBuildsContent(
                         nullptr, static_cast<int>(sorted_heroes.size()))) {
                     build.hero_id = (combo_idx >= 0 && combo_idx < static_cast<int>(sorted_heroes.size()))
                         ? sorted_heroes[combo_idx] : HeroID::NoHero;
+                    ResetEncodedCache();
                     builds_changed = true;
                 }
             }

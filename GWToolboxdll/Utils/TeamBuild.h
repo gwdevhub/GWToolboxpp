@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -108,9 +109,16 @@ struct TeamBuild {
     // Returns true if [TB;<encoded>] would be >= 120 chars (GW chat limit).
     bool ChatCodeTooLong() const;
 
+    // Invalidate the encoded teambuild cache (call when build codes or hero IDs change).
+    void ResetEncodedCache() const;
+
 private:
     int editing_build_idx_ = -1; // which build row is expanded (player-builds layout)
     bool send_all_confirming_ = false;
+    mutable std::optional<std::wstring> encoded_cache_{};
+
+    // Returns the encoded wstring, computing and caching it on first call.
+    const std::wstring& GetEncoded() const;
 
     void DrawPlayerBuildsContent(bool& builds_changed);
 
