@@ -969,7 +969,7 @@ bool TeamBuild::DrawEditWindow(
     if (chat_code_too_long) ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         if (chat_code_too_long) {
-            ImGui::SetTooltip("Teambuild code is too long to send in chat.\n[TB;<code>] would exceed 120 characters.");
+            ImGui::SetTooltip("Teambuild code is too long to send in chat");
         }
         else {
             ImGui::SetTooltip("Send the encoded teambuild link to team chat.\nOther toolbox users can click the chat link without getting spammed.");
