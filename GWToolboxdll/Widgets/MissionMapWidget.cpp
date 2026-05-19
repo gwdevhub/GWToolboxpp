@@ -314,6 +314,17 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
     if (!world_ctx) return;
     auto* draw_list = ImGui::GetBackgroundDrawList();
     draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y});
+    // Affiliation/color tints matching GW's rendering: gray=0,blue,red,yellow,teal,purple,green,gray
+    static constexpr ImU32 kAffiliationColors[] = {
+        IM_COL32(0xA0, 0xA0, 0xA0, 0xFF), // 0: gray
+        IM_COL32(0x20, 0x20, 0xFF, 0xFF), // 1: blue
+        IM_COL32(0xFF, 0x20, 0x20, 0xFF), // 2: red
+        IM_COL32(0xFF, 0xFF, 0x20, 0xFF), // 3: yellow
+        IM_COL32(0x20, 0xFF, 0xFF, 0xFF), // 4: teal
+        IM_COL32(0x80, 0x20, 0xFF, 0xFF), // 5: purple
+        IM_COL32(0x20, 0xFF, 0x20, 0xFF), // 6: green
+        IM_COL32(0xA0, 0xA0, 0xA0, 0xFF), // 7: gray (same as 0)
+    };
     for (const auto& icon : world_ctx->mission_map_icons) {
         auto** tex = GwDatTextureModule::LoadTextureFromFileId(icon.model_id);
         if (!tex || !*tex) continue;
@@ -321,7 +332,8 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
         WorldMapCoordsToMissionMapScreenPos({icon.X, icon.Y}, pos);
         ImVec2 sz;
         if (!Resources::GetTextureSize(*tex, &sz)) continue;
-        draw_list->AddImage(*tex, {pos.x - sz.x / 2, pos.y - sz.y / 2}, {pos.x + sz.x / 2, pos.y + sz.y / 2});
+        const ImU32 tint = icon.option < std::size(kAffiliationColors) ? kAffiliationColors[icon.option] : IM_COL32_WHITE;
+        draw_list->AddImage(*tex, {pos.x - sz.x / 2, pos.y - sz.y / 2}, {pos.x + sz.x / 2, pos.y + sz.y / 2}, {0, 0}, {1, 1}, tint);
     }
     draw_list->PopClipRect();
 }
