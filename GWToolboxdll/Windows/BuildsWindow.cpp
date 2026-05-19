@@ -519,14 +519,17 @@ namespace {
                 }
             }
         }
-
+        remove_stale_builds:
         if (std::filesystem::is_directory(tb_builds_folder)) {
             for (const auto& entry : std::filesystem::recursive_directory_iterator(tb_builds_folder)) {
-                if (!expected_paths.contains(entry.path())) {
-                    std::error_code ec;
-                    std::filesystem::remove(entry.path(), ec);
-                    if (ec) Log::Warning("Failed to remove stale build file: %s", ec.message().c_str());
+                if (expected_paths.contains(entry.path())) continue;
+                std::error_code ec;
+                std::filesystem::remove_all(entry.path(), ec);
+                if (ec) {
+                    Log::Warning("Failed to remove stale build file: %s", ec.message().c_str());
+                    break;
                 }
+                goto remove_stale_builds;
             }
         }
 
