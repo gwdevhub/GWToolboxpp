@@ -3,6 +3,7 @@
 #include <GWCA/Context/GameplayContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -318,7 +319,7 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
         auto** tex = GwDatTextureModule::LoadTextureFromFileId(icon.model_id);
         if (!tex || !*tex) continue;
         GW::Vec2f pos;
-        WorldMapCoordsToMissionMapScreenPos({icon.X, icon.Y}, pos);
+        GamePosToMissionMapScreenPos({icon.X, icon.Y}, pos);
         ImVec2 sz;
         if (!Resources::GetTextureSize(*tex, &sz)) continue;
         draw_list->AddImage(*tex, {pos.x - sz.x / 2, pos.y - sz.y / 2}, {pos.x + sz.x / 2, pos.y + sz.y / 2});
