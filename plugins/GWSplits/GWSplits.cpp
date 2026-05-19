@@ -1,5 +1,6 @@
 #include <GWSplits.h>
 
+#include <numeric>
 #include <ConditionIO.h>
 #include <InstanceInfo.h>
 #include <QuestInfo.h>

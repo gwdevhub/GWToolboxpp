@@ -67,7 +67,7 @@ target_include_directories(scripting INTERFACE
     )
 target_link_libraries(scripting INTERFACE
     imgui
-    glaze:glaze
+    glaze::glaze
     gwca
     IconFontCppHeaders
     GWToolboxdll # for GetFont
