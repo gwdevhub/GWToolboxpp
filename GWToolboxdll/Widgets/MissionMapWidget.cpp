@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <GWCA/Context/GameplayContext.h>
+#include <GWCA/Context/WorldContext.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -9,7 +10,9 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <ImGuiAddons.h>
+#include <Modules/GwDatTextureModule.h>
 #include <Modules/QuestModule.h>
+#include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
@@ -306,6 +309,21 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
 
     SubmitVertexBuffers(dx_device);
     HookMissionMapFrame();
+
+    const auto* world_ctx = GW::GetWorldContext();
+    if (!world_ctx) return;
+    auto* draw_list = ImGui::GetBackgroundDrawList();
+    draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y});
+    for (const auto& icon : world_ctx->mission_map_icons) {
+        auto** tex = GwDatTextureModule::LoadTextureFromFileId(icon.model_id);
+        if (!tex || !*tex) continue;
+        GW::Vec2f pos;
+        WorldMapCoordsToMissionMapScreenPos({icon.X, icon.Y}, pos);
+        ImVec2 sz;
+        if (!Resources::GetTextureSize(*tex, &sz)) continue;
+        draw_list->AddImage(*tex, {pos.x - sz.x / 2, pos.y - sz.y / 2}, {pos.x + sz.x / 2, pos.y + sz.y / 2});
+    }
+    draw_list->PopClipRect();
 }
 
 void MissionMapWidget::Update(float)
