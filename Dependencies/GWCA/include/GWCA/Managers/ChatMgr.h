@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GWCA/Utilities/Export.h>
+#include <GWCA/Utilities/Hook.h>
 
 namespace GW {
 	struct Module;
@@ -68,6 +69,8 @@ namespace GW {
 			CHANNEL_COMMAND,
 			CHANNEL_UNKNOW = -1
 		};
+
+		typedef HookCallback<const wchar_t*, const wchar_t*> ChatLinkCallback;
 
 		GWCA_API Chat::ChatBuffer* GetChatLog();
 		GWCA_API bool AddToChatLog(wchar_t* message, uint32_t channel);

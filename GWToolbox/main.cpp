@@ -10,7 +10,6 @@
 #include "Install.h"
 #include "Process.h"
 #include "Settings.h"
-#include "WindowsDefender.h"
 
 static void ShowError(const wchar_t* message)
 {

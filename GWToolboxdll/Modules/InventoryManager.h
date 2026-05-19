@@ -1,9 +1,5 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-
-#include <Utils/GuiUtils.h>
-
 #include <ToolboxWidget.h>
 
 #include <Modules/InventoryItem.h>

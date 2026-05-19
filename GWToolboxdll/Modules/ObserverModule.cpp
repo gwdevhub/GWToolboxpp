@@ -28,7 +28,6 @@
 #include <Utils/GuiUtils.h>
 
 #include <Modules/ObserverModule.h>
-#include <Modules/Resources.h>
 
 #include <Logger.h>
 #include <Utils/TextUtils.h>

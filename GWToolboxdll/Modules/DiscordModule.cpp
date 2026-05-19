@@ -16,7 +16,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
-#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>

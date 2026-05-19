@@ -21,21 +21,11 @@
 #ifndef WINTOASTLIB_H
 #define WINTOASTLIB_H
 #include <Windows.h>
-#include <sdkddkver.h>
-#include <WinUser.h>
-#include <ShObjIdl.h>
-#include <wrl/implements.h>
 #include <wrl/event.h>
 #include <windows.ui.notifications.h>
 #include <strsafe.h>
-#include <Psapi.h>
-#include <ShlObj.h>
 #include <roapi.h>
-#include <propvarutil.h>
-#include <functiondiscoverykeys.h>
 #include <iostream>
-#include <winstring.h>
-#include <string.h>
 #include <vector>
 #include <map>
 using namespace Microsoft::WRL;

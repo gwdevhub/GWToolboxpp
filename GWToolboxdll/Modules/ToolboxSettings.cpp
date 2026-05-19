@@ -4,6 +4,7 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>

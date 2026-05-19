@@ -5,8 +5,6 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Context/WorldContext.h>
 
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <GWCA/GameEntities/Attribute.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
@@ -18,8 +16,6 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 
 #include <Color.h>
 #include <Defines.h>

@@ -389,6 +389,7 @@ namespace {
         auto FindMatchingMapVec = [](const char* compare, std::vector<SearchableArea*>& maps) -> GW::Constants::MapID {
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
+            bool bestMatchIsOutpost = false;
 
             const auto searchStringLength = compare ? strlen(compare) : 0;
             if (!searchStringLength) {
@@ -408,9 +409,12 @@ namespace {
                 if (thisMapLength == searchStringLength) {
                     return map.map_id; // Exact match, break.
                 }
-                if (!bestMatchMapName || strcmp(map.Name(), bestMatchMapName) < 0) {
+                const bool thisIsOutpost = IsValidOutpost(map.map_id);
+                if (!bestMatchMapName || (thisIsOutpost && !bestMatchIsOutpost) ||
+                    (thisIsOutpost == bestMatchIsOutpost && strcmp(map.Name(), bestMatchMapName) < 0)) {
                     bestMatchMapID = map.map_id;
                     bestMatchMapName = map.Name();
+                    bestMatchIsOutpost = thisIsOutpost;
                 }
             }
             return bestMatchMapID;

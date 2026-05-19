@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ToolboxModule.h>
-#include <GWCA/Constants/Constants.h>
 
 namespace GW {
     struct Item;

@@ -10,7 +10,6 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/GameEntities/Frame.h>
 
 #include <Modules/GameSettings.h>
@@ -21,6 +20,7 @@
 #include <Utils/TextUtils.h>
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
 
 namespace {
     // Settings
@@ -35,6 +35,8 @@ namespace {
     bool openlinks = true;
     bool auto_url = true;
     bool clear_chat_message_when_hiding_chat = false;
+
+    GW::MemoryPatcher bypass_chat_codepage_limitation;
 
     Color timestamps_color = Colors::RGB(0xc0, 0xc0, 0xbf);
 
@@ -231,9 +233,8 @@ namespace {
         auto msg = &packet->message[1];
         switch (channel) {
             case GW::Chat::Channel::CHANNEL_WHISPER: {
-                // msg == "Whisper Target Name,msg"
                 const auto sep = wcschr(msg, ',');
-                if (!sep) return; // Invalid format for message; no separator between recipient and message
+                if (!sep) return;
                 msg = &sep[1];
             } break;
             case GW::Chat::Channel::CHANNEL_GUILD:
@@ -242,39 +243,66 @@ namespace {
             case GW::Chat::Channel::CHANNEL_GROUP:
                 break;
             default:
-                return; // Channel doesn't support templates
+                return;
         }
 
-        // Match http(s):// URLs that are NOT already in skill templates [url;code]
-        // Negative lookbehind (?<!\[) ensures URL doesn't start with '['
-        // Negative lookahead (?!;[^\]]+\]) ensures URL doesn't have ';code]' pattern following it
-        // Match http(s):// URLs that are NOT already in skill templates [url;code]
-        static constexpr ctll::fixed_string url_regex = LR"((^|[^\[])(https?://[^\s\[\]]+)(?![;\]]))";
-
+        // If the message is [name;code] where name is a URL and code is not a URL,
+        // GWCA has already handled it — just normalise so both name and code are the URL.
+        static constexpr ctll::fixed_string link_regex = LR"(\[([^\];]+);([^\]]*)\])";
         std::wstring msg_str(msg);
-        // Use regex_replace to wrap all matching URLs
-        std::wstring new_msg = TextUtils::ctre_regex_replace<url_regex, L"$1[$2;xx]">(msg_str);
+        bool changed = false;
+        std::wstring new_msg = TextUtils::ctre_regex_replace_with_formatter<link_regex>(msg_str, [&](auto& match) -> std::wstring {
+            const auto name = match.template get<1>().to_view();
+            const auto code = match.template get<2>().to_view();
+            if (TextUtils::IsUrl(name.data()) && !TextUtils::IsUrl(code.data())) {
+                changed = true;
+                return std::format(L"[{};{}]", name, name);
+            }
+            return std::wstring(match.template get<0>());
+        });
 
-        if (new_msg == msg_str) {
-            return; // No changes made
-        }
+        if (!changed) return;
 
-        // Build full message with channel prefix
         std::wstring full_msg;
         full_msg.append(packet->message, msg - packet->message);
         full_msg.append(new_msg);
-
-        if (full_msg.length() > 121) {
-            return; // Message too long
-        }
+        if (full_msg.length() > 121) return;
 
         GW::UI::UIPacket::kSendChatMessage new_packet = *packet;
         new_packet.message = full_msg.data();
-
         status->blocked = true;
         converting_message_into_url = true;
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendChatMessage, &new_packet);
         converting_message_into_url = false;
+    }
+
+    void OnChatLinkClicked(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
+    {
+        const auto packet = (GW::UI::UIPacket::kChatLinkClicked*)wparam;
+        const auto url = packet->url;
+        // @Cleanup: this is dangerous - anyone could send you crap and you could click on it thinking its all ok.
+        if (!(url && *url)) return;
+        if (wcsncmp(url, L"wiki:", 5) == 0) {
+            GuiUtils::SearchWiki(&url[5]);
+            status->blocked = true;
+            return;
+        }
+        if (wcsncmp(url, L"travel:", 7) == 0) {
+            GW::Chat::SendChat('/',std::format(L"travel {}",&url[7]).c_str());
+            status->blocked = true;
+            return;
+        }
+        if (TextUtils::IsUrl(url)) {
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)TextUtils::WStringToString(url).c_str());
+            status->blocked = true;
+            return;
+        }
+        if (!wcsncmp(url, L"file://", 7)) {
+            const std::filesystem::path p(&url[7]);
+            ShellExecuteW(nullptr, L"open", p.parent_path().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+            status->blocked = true;
+            return;
+        }
     }
 
     // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite
@@ -284,25 +312,8 @@ namespace {
         if (!(name && *name)) {
             return;
         }
-        switch (name[0]) {
-            case 0x200B: {
-                // Zero-Width Space - wiki link
-                GuiUtils::SearchWiki(&name[1]);
-                status->blocked = true;
-                return;
-            }
-            case 0x200C: {
-                // Zero Width Non-Joiner - location on disk
-                std::wstring path = &name[1];
-                path = TextUtils::str_replace_all(path, L"\x00A0", L" ");
-                const std::filesystem::path p(path);
-                ShellExecuteW(nullptr, L"open", p.parent_path().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-                status->blocked = true;
-                return;
-            }
-        }
-        if (openlinks && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
-            ShellExecuteW(nullptr, L"open", name, nullptr, nullptr, SW_SHOWNORMAL);
+        if (TextUtils::IsUrl(name)) {
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)name);
             status->blocked = true;
             return;
         }
@@ -328,6 +339,13 @@ namespace {
         if (status->blocked)
             return;
         switch (message_id) {
+            case GW::UI::UIMessage::kAddCustomChatLink: {
+                const auto packet = (GW::UI::UIPacket::kAddCustomChatLink*)wParam;
+                if (TextUtils::IsUrl(packet->url))
+                    wcscpy(packet->link_prefix, L"URL: ");
+                else if (!wcsncmp(packet->url, L"file://", 7))
+                    wcscpy(packet->link_prefix, L"File: ");
+            } break;
             case GW::UI::UIMessage::kDialogueMessage: {
                 const auto packet = (GW::UI::UIPacket::kDialogueMessage*)wParam;
                 if (!redirect_npc_messages_to_emote_chat) {
@@ -404,6 +422,9 @@ namespace {
             case GW::UI::UIMessage::kStartWhisper: {
                 OnStartWhisper(status, message_id, wParam, lParam);
             } break;
+            case GW::UI::UIMessage::kChatLinkClicked: {
+                OnChatLinkClicked(status, message_id, wParam, lParam);
+            } break;
             case GW::UI::UIMessage::kSendChatMessage: {
                 OnSendChat(status, message_id, wParam, lParam);
             } break;
@@ -426,7 +447,7 @@ void ChatSettings::Initialize()
 
     constexpr GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kAgentSpeechBubble, GW::UI::UIMessage::kDialogueMessage, GW::UI::UIMessage::kPreferenceFlagChanged,    GW::UI::UIMessage::kPreferenceValueChanged,
                                                  GW::UI::UIMessage::kPlayerChatMessage, GW::UI::UIMessage::kWriteToChatLog,  GW::UI::UIMessage::kWriteToChatLogWithSender, GW::UI::UIMessage::kRecvWhisper,
-                                                 GW::UI::UIMessage::kStartWhisper,      GW::UI::UIMessage::kSendChatMessage, GW::UI::UIMessage::kAgentSpeechBubble};
+                                                 GW::UI::UIMessage::kStartWhisper,      GW::UI::UIMessage::kSendChatMessage, GW::UI::UIMessage::kAgentSpeechBubble,        GW::UI::UIMessage::kChatLinkClicked, GW::UI::UIMessage::kAddCustomChatLink};
     for (const auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
     }
@@ -442,6 +463,14 @@ void ChatSettings::Initialize()
         GW::Hook::CreateHook((void**)&ChatLogLine_UICallback_Func, OnChatLogLine_UICallback, (void**)&ChatLogLine_UICallback_Ret);
         GW::Hook::EnableHooks(ChatLogLine_UICallback_Func);
     }
+
+
+    uintptr_t address = GW::Scanner::Find("\x74?\xc7??\xff\xff\xff\xff\xc7??\xff\xff\xff\xff", "x?x??xxxxx??xxxx", 1);
+    if (address) {
+        bypass_chat_codepage_limitation.SetPatch(address, "\x0", 1);
+        //bypass_chat_codepage_limitation.TogglePatch(true);
+    }
+    ASSERT(bypass_chat_codepage_limitation.IsValid());
 }
 void ChatSettings::Terminate()
 {

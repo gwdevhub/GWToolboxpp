@@ -719,18 +719,16 @@ namespace {
 
     // rollover: the timestamp when this quest will be replaced by the next one.
     // Pass 0 to indicate the current quest (no date shown).
-    void PrintDaily(const wchar_t* quest_type_enc, const wchar_t* quest_name_enc, const time_t rollover, const bool as_wiki_link = true)
+    void PrintDaily(const wchar_t* quest_type_enc, const wchar_t* quest_name_enc, const time_t rollover)
     {
         std::wstring to_send;
-        std::wstring quest_name_as_link = quest_name_enc;
-        if (as_wiki_link) {
-            quest_name_as_link = std::format(L"\x108\x107<a=1>\x200B\x1\x2{}\x2\x108\x107</a>\x1", quest_name_enc);
-        }
+        std::wstring quest_name_as_link = std::format(L"\x108\x107[\x1\x2{}\x2\x108\x107;wiki:\x1\x2{}\x2\x108\x107]\x1", quest_name_enc, quest_name_enc);
+        std::wstring quest_type_as_link = std::format(L"\x108\x107[\x1\x2{}\x2\x108\x107;wiki:\x1\x2{}\x2\x108\x107]\x1", quest_type_enc, quest_type_enc);
         if (rollover) {
-            to_send = std::format(L"{}\x2\x108\x107, {} @ {}: \x1\x2{}", quest_type_enc, TextUtils::RelativeTimeW(rollover), TextUtils::StringToWString(TextUtils::TimeToString(rollover)), quest_name_as_link);
+            to_send += std::format(L"\x108\x107<quote>\x1\x2{}\x2\x108\x107, {} @ {}: \x1\x2{}", quest_type_as_link, TextUtils::RelativeTimeW(rollover), TextUtils::StringToWString(TextUtils::TimeToString(rollover)), quest_name_as_link);
         }
         else {
-            to_send = std::format(L"{}\x2\x108\x107: \x1\x2{}", quest_type_enc, quest_name_as_link);
+            to_send += std::format(L"\x108\x107<quote>\x1\x2{}\x2\x108\x107: \x1\x2{}", quest_type_as_link, quest_name_as_link);
         }
         WriteChatEnc(GW::Chat::Channel::CHANNEL_GLOBAL, to_send.c_str(), nullptr, true);
     }
@@ -793,12 +791,12 @@ namespace {
         if (GW::Map::IsPreSearing()) {
             const auto [quest, rollover] = DailyQuests::GetNicholasSandford(query_time);
             buf = std::format(L"\x108\x107{} \x1\x2{}", 5, quest->GetQuestNameEnc());
-            PrintDaily(L"\x108\x107Nicholas Sandford\x1", buf.c_str(), is_tomorrow ? rollover : 0, false);
+            PrintDaily(L"\x108\x107Nicholas Sandford\x1", buf.c_str(), is_tomorrow ? rollover : 0);
         }
         else {
             const auto [nick, rollover] = DailyQuests::GetNicholasTheTraveller(query_time);
             buf = std::format(L"{}\x2\x108\x107 (\x1\x2{}\x2\x108\x107)\x1", nick->GetQuestNameEnc(), Resources::GetMapName(nick->map_id)->encoded());
-            PrintDaily(GW::EncStrings::NicholasTheTraveller, buf.c_str(), is_tomorrow ? rollover : 0, false);
+            PrintDaily(GW::EncStrings::NicholasTheTraveller, buf.c_str(), is_tomorrow ? rollover : 0);
         }
     }
 
@@ -2084,6 +2082,23 @@ DailyQuests::QuestData* DailyQuests::GetNicholasSandfordItemInfo(const wchar_t* 
         if (sandford_item.enc_name == item_name_encoded) {
             return &sandford_item;
         }
+    }
+    return nullptr;
+}
+
+DailyQuests::NicholasCycleData* DailyQuests::GetNicholasIngredientInfo(const wchar_t* ingredient_enc)
+{
+    // Crafting ingredients whose end product Nicholas The Traveller collects.
+    // If an item's enc name isn't known yet, it will be a placeholder that won't match - find it in-game and update EncStrings.h.
+    static const struct { const wchar_t* ingredient; const wchar_t* nicholas_item; } ingredients[] = {
+        {GW::EncStrings::SkaleFins, GW::EncStrings::BowlofSkalefinSoup},
+        {GW::EncStrings::ChunkOfDrakeFlesh, GW::EncStrings::DrakeKabob}, // TODO: update ChunkOfDrakeFlesh enc name in EncStrings.h
+        {GW::EncStrings::IbogaPetals, GW::EncStrings::PahnaiSalad},     // TODO: update IbogaPetals enc name in EncStrings.h
+    };
+    if (!ingredient_enc) return nullptr;
+    for (const auto& entry : ingredients) {
+        if (wcscmp(ingredient_enc, entry.ingredient) == 0)
+            return GetNicholasItemInfo(entry.nicholas_item);
     }
     return nullptr;
 }

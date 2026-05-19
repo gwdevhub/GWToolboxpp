@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GWCA/Managers/GameThreadMgr.h>
-
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GWCA/Utilities/Debug.h>
+#include <GWCA/Managers/MemoryMgr.h>
 
 namespace GW {
 
@@ -53,6 +54,17 @@ namespace GW {
 
         uint32_t size()     const { return m_size; }
         uint32_t capacity() const { return m_capacity; }
+        // Resize using GW's heap - safe to use with GW-managed arrays
+        bool resize(uint32_t new_size) {
+            if (new_size > m_capacity) {
+                auto* new_buf = static_cast<T*>(GW::MemoryMgr::MemRealloc(m_buffer, new_size * sizeof(T)));
+                if (!new_buf) return false;
+                m_buffer = new_buf;
+                m_capacity = new_size;
+            }
+            m_size = new_size;
+            return true;
+        }
 
     public:
         T* m_buffer;    // +h0000

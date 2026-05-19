@@ -19,10 +19,7 @@
 #include <Utils/GuiUtils.h>
 
 #include <algorithm>
-#include <chrono>
 #include <ctime>
-#include <sstream>
-#include <thread>
 #include <Utils/ToolboxUtils.h>
 
 

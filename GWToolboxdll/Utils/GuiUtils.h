@@ -2,12 +2,13 @@
 
 // ReSharper disable once CppUnusedIncludeDirective
 #include <ImGuiAddons.h>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 #include <ToolboxIni.h>
 #include <RectF.h>
 
 // ReSharper disable once CppUnusedIncludeDirective
 #include <Utils/EncString.h>
+#include <Utils/TextUtils.h>
 
 
 namespace GuiUtils {
@@ -19,6 +20,9 @@ namespace GuiUtils {
         std::same_as<
             T,
             std::unordered_map<typename T::key_type, typename T::mapped_type, typename T::hasher, typename T::key_equal, typename T::allocator_type>>;
+
+    template <map_type T>
+    constexpr bool map_has_wstring_key = std::same_as<typename T::key_type, std::wstring>;
 
     std::string WikiUrl(const std::wstring& term);
     std::string WikiUrl(const std::string& term);
@@ -36,20 +40,42 @@ namespace GuiUtils {
     template <map_type T>
     void MapToIni(ToolboxIni* ini, const char* section, const char* name, const T& map)
     {
-        const auto map_json = nlohmann::json(map);
-        const auto map_str = map_json.dump();
-        ini->SetValue(section, name, map_str.c_str());
+        // Glaze has no wchar_t serializer; stage wstring keys through UTF-8.
+        if constexpr (map_has_wstring_key<T>) {
+            std::map<std::string, typename T::mapped_type> staged;
+            for (const auto& [k, v] : map) {
+                staged.emplace(TextUtils::WStringToString(k), v);
+            }
+            const auto map_str = glz::write_json(staged).value_or(std::string{});
+            ini->SetValue(section, name, map_str.c_str());
+        }
+        else {
+            const auto map_str = glz::write_json(map).value_or(std::string{});
+            ini->SetValue(section, name, map_str.c_str());
+        }
     }
 
     template <map_type T>
     T IniToMap(ToolboxIni* ini, const char* section, const char* name)
     {
         std::string map_str = ini->GetValue(section, name, "");
-        try {
-            const auto map_json = nlohmann::json::parse(map_str);
-            return map_json.get<T>();
-        } catch (nlohmann::json::exception e) {
-            return {};
+        if constexpr (map_has_wstring_key<T>) {
+            std::map<std::string, typename T::mapped_type> staged;
+            if (glz::read_json(staged, map_str)) {
+                return {};
+            }
+            T out{};
+            for (auto& [k, v] : staged) {
+                out.emplace(TextUtils::StringToWString(k), std::move(v));
+            }
+            return out;
+        }
+        else {
+            T out{};
+            if (glz::read_json(out, map_str)) {
+                return {};
+            }
+            return out;
         }
     }
 

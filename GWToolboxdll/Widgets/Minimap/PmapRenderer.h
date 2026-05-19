@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Color.h>
 #include <D3DContainers.h>
 
 struct MinimapRenderContext;

@@ -2,7 +2,6 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/Array.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <GWCA/GameEntities/Item.h>
 
@@ -15,7 +14,6 @@
 
 #include <Constants/EncStrings.h>
 
-#include <Modules/Resources.h>
 #include <Windows/MaterialsWindow.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Timer.h>

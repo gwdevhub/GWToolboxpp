@@ -16,7 +16,6 @@
 
 #include <Modules/Resources.h>
 #include <Modules/ChatFilter.h>
-#include <Utils/ToolboxUtils.h>
 #include <Windows/FriendListWindow.h>
 
 #include <GWToolbox.h>

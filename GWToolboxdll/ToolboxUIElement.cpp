@@ -182,7 +182,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     const auto window = ImGui::FindWindowByName(Name());
     if (window) {
         pos = window->Pos;
-        size = window->Size;
+        size = window->SizeFull;
     }
     if (is_movable || is_resizable) {
         char buf[128];
