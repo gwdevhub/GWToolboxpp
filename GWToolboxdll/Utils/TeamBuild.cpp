@@ -336,6 +336,9 @@ void Build::Send() const
         else
             gen_name = std::format("{} ({})", name, Resources::GetHeroName(hero_id)->string());
     }
+    if (gen_name.empty()) {
+        gen_name = GetFallbackBuildName();
+    }
     const auto msg = code.empty() ? name : std::format("[{};{}]", gen_name, code);
     EnqueueSend(msg);
 }
@@ -655,13 +658,22 @@ void TeamBuild::DrawHeroBuildsContent(
     ImGui::SameLine(offset += text_item_width + item_spacing);
     ImGui::Text("Template");
 
+    uint32_t hero_count = 1;
+    Build* player = 0;
+
     for (size_t j = 0; j < builds.size(); ++j) {
         offset = btn_width;
         Build& build = builds[j];
         ImGui::PushID(static_cast<int>(j));
 
-        if (j == 0) ImGui::Text("P");
-        else        ImGui::Text("H#%zu", j);
+        bool is_player = build.hero_id == GW::Constants::HeroID::NoHero && !player;
+
+        if (is_player) player = &build;
+
+        if (is_player)
+            ImGui::Text("P");
+        else
+            ImGui::Text("H#%zu", hero_count++);
 
         ImGui::SameLine(offset);
         ImGui::PushItemWidth(text_item_width);
@@ -685,7 +697,7 @@ void TeamBuild::DrawHeroBuildsContent(
 
         ImGui::SameLine(offset += text_item_width + item_spacing);
 
-        if (j == 0) {
+        if (is_player) {
             // Player slot: no hero controls, no pcons in this layout
             ImGui::TextDisabled("Player");
             ImGui::SameLine(offset += text_item_width + item_spacing + btn_width + 10.0f + icon_btn_width + item_spacing * 2);
