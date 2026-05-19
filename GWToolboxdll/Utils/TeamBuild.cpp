@@ -452,6 +452,13 @@ void TeamBuild::Copy() const
     Log::Flash("Teambuild code copied to clipboard");
 }
 
+bool TeamBuild::ChatCodeTooLong() const
+{
+    const auto encoded = TeamBuildEncoder::TeamBuildToEncoded(*this);
+    // [TB;<encoded>] = 4 + encoded.size() + 1 = encoded.size() + 5; must be < 120
+    return !encoded.empty() && encoded.size() + 5 >= 120;
+}
+
 void TeamBuild::Load() const
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
@@ -937,11 +944,19 @@ bool TeamBuild::DrawEditWindow(
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
+    const bool chat_code_too_long = ChatCodeTooLong();
+    if (chat_code_too_long) ImGui::BeginDisabled();
     if (ImGui::Button("Send Teambuild code in chat")) {
         this->Send();
     }
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Send the encoded teambuild link to team chat.\nOther toolbox users can click the chat link without getting spammed.");
+    if (chat_code_too_long) ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        if (chat_code_too_long) {
+            ImGui::SetTooltip("Teambuild code is too long to send in chat.\n[TB;<code>] would exceed 120 characters.");
+        }
+        else {
+            ImGui::SetTooltip("Send the encoded teambuild link to team chat.\nOther toolbox users can click the chat link without getting spammed.");
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Copy Teambuild code")) {

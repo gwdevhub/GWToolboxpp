@@ -105,6 +105,9 @@ struct TeamBuild {
     void Load() const;
     void Copy() const;
 
+    // Returns true if [TB;<encoded>] would be >= 120 chars (GW chat limit).
+    bool ChatCodeTooLong() const;
+
 private:
     int editing_build_idx_ = -1; // which build row is expanded (player-builds layout)
     bool send_all_confirming_ = false;

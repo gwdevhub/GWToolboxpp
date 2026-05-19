@@ -288,16 +288,25 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
                 ImGui::SameLine(0, item_spacing);
-                if (ImGui::Button(ImGui::GetIO().KeyCtrl ? "Send" : "Load", ImVec2(btn_width, 0))) {
-                    if (ImGui::GetIO().KeyCtrl) {
+                const bool ctrl_held = ImGui::GetIO().KeyCtrl;
+                const bool send_disabled = ctrl_held && tbuild.ChatCodeTooLong();
+                if (send_disabled) ImGui::BeginDisabled();
+                if (ImGui::Button(ctrl_held ? "Send" : "Load", ImVec2(btn_width, 0))) {
+                    if (ctrl_held) {
                         tbuild.Send();
                     }
                     else {
                         tbuild.Load();
                     }
                 }
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(ImGui::GetIO().KeyCtrl ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
+                if (send_disabled) ImGui::EndDisabled();
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                    if (send_disabled) {
+                        ImGui::SetTooltip("Teambuild code is too long to send in chat.\n[TB;<code>] would exceed 120 characters.");
+                    }
+                    else {
+                        ImGui::SetTooltip(ctrl_held ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
+                    }
                 }
                 ImGui::PopID();
             };
