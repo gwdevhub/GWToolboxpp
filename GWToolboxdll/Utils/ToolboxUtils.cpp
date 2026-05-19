@@ -1082,7 +1082,7 @@ namespace ToolboxUtils {
                 case GW::Constants::HeroID::Merc6:
                 case GW::Constants::HeroID::Merc7:
                 case GW::Constants::HeroID::Merc8:
-                    if (!(a.name && !a.name)) return false; // Unlocked, but not assigned.
+                    if (!a.name[0]) return false; // Unlocked, but not assigned.
             }
             return true;
         }
