@@ -203,6 +203,7 @@ void HeroBuildsWindow::Initialize()
     TeamBuild::SetSkillToggleSprite(skill_toggle_sprite);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
+    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"loadteambuild", &CmdLoadTeamBuild);
     GW::UI::RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kChatLinkClicked, OnChatLinkClicked);
     GW::UI::RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kAddCustomChatLink, OnCreateChatLink);
 }
@@ -525,6 +526,48 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
     }
     const TeamBuild& tbuild = *found;
     tbuild.Load();
+}
+
+void CHAT_CMD_FUNC(HeroBuildsWindow::CmdLoadTeamBuild)
+{
+    if (argc < 2) {
+        Log::ErrorW(L"Syntax: /%s [hero_build_name|build_code]", argv[0]);
+        return;
+    }
+    std::wstring arg = argv[1];
+    for (auto i = 2; i < argc; i++) {
+        arg.append(L" ");
+        arg.append(argv[i]);
+    }
+    const std::string arg_s = TextUtils::WStringToString(arg);
+    if (TeamBuildEncoder::IsDaybreakTeamBuild(arg_s)) {
+        TeamBuild tbuild;
+        if (!TeamBuildEncoder::DaybreakToTeamBuild(arg_s, tbuild)) {
+            Log::ErrorW(L"Failed to decode team build code");
+            return;
+        }
+        tbuild.has_hero_slots = true;
+        tbuild.Load();
+        return;
+    }
+    const TeamBuild* found = Instance().GetTeambuildByName(arg_s);
+    if (!found) {
+        Log::ErrorW(L"No hero build found for '%s'", arg.c_str());
+        return;
+    }
+    found->Load();
+}
+
+void HeroBuildsWindow::DrawHelp()
+{
+    if (!ImGui::TreeNodeEx("Hero Team Build Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        return;
+    }
+    ImGui::Bullet();
+    ImGui::Text("'/loadteambuild <name|code>' loads a hero team build by partial name or Daybreak build code.");
+    ImGui::Bullet();
+    ImGui::Text("'/heroteam <name>' or '/herobuild <name>' load a hero team build by partial name.");
+    ImGui::TreePop();
 }
 
 void HeroBuildsWindow::LoadSettings(ToolboxIni* ini)
