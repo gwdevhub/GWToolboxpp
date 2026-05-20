@@ -130,8 +130,22 @@ TBHotkey* TBHotkey::HotkeyFactory(ToolboxIni* ini, const char* section)
     if (type == HotkeyDialog::IniSection()) {
         return new HotkeyDialog(ini, section);
     }
-    if (type == HotkeyHeroTeamBuild::IniSection()) {
-        return new HotkeyHeroTeamBuild(ini, section);
+    if (type == "HeroTeamBuild") {
+        // Migrate legacy index-based hero team build hotkeys to SendChat hotkeys
+        const size_t build_index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
+        auto& hbw = HeroBuildsWindow::Instance();
+        if (hbw.BuildCount() == 0) {
+            hbw.LoadFromFile();
+        }
+        const char* build_name = hbw.BuildName(build_index);
+        char msg[139] = "heroteam";
+        if (build_name && *build_name) {
+            snprintf(msg, sizeof(msg), "heroteam %s", build_name);
+        }
+        ini->SetValue(section, "msg", msg);
+        ini->SetValue(section, "channel", "/");
+        hotkeys_changed = true;
+        return new HotkeySendChat(ini, section);
     }
     if (type == HotkeyEquipItem::IniSection()) {
         return new HotkeyEquipItem(ini, section);
@@ -1892,56 +1906,6 @@ void HotkeyDialog::Execute()
     }
 }
 
-const char* HotkeyHeroTeamBuild::GetText(void*, const int idx)
-{
-    if (idx >= static_cast<int>(HeroBuildsWindow::Instance().BuildCount())) {
-        return nullptr;
-    }
-    return HeroBuildsWindow::Instance().BuildName(static_cast<size_t>(idx));
-}
-
-HotkeyHeroTeamBuild::HotkeyHeroTeamBuild(const ToolboxIni* ini, const char* section)
-    : TBHotkey(ini, section)
-{
-    index = static_cast<size_t>(ini->GetLongValue(section, "BuildIndex", 0));
-}
-
-void HotkeyHeroTeamBuild::Save(ToolboxIni* ini, const char* section) const
-{
-    TBHotkey::Save(ini, section);
-    ini->SetLongValue(section, "BuildIndex", index);
-}
-
-int HotkeyHeroTeamBuild::Description(char* buf, const size_t bufsz)
-{
-    const char* buildname = HeroBuildsWindow::Instance().BuildName(index);
-    if (buildname == nullptr) {
-        buildname = "<not found>";
-    }
-    return snprintf(buf, bufsz, "Load Hero Team Build '%s'", buildname);
-}
-
-bool HotkeyHeroTeamBuild::Draw()
-{
-    bool hotkey_changed = false;
-    const int icount = static_cast<int>(HeroBuildsWindow::Instance().BuildCount());
-    int iindex = static_cast<int>(index);
-    if (ImGui::Combo("Build", &iindex, GetText, nullptr, icount)) {
-        if (0 <= iindex) {
-            index = static_cast<size_t>(iindex);
-        }
-        hotkey_changed = true;
-    }
-    return hotkey_changed;
-}
-
-void HotkeyHeroTeamBuild::Execute()
-{
-    if (!CanUse()) {
-        return;
-    }
-    HeroBuildsWindow::Instance().Load(index);
-}
 
 HotkeyFlagHero::HotkeyFlagHero(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)

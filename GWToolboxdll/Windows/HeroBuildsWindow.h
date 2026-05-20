@@ -52,6 +52,8 @@ public:
     [[nodiscard]] const char* BuildName(size_t idx) const;
     [[nodiscard]] unsigned int BuildCount() const { return static_cast<unsigned int>(teambuilds.size()); }
 
+    void DrawHelp() override;
+
     static void CHAT_CMD_FUNC(CmdHeroTeamBuild);
 
     static const GW::HeroFlag* GetHeroFlagInfo(const uint32_t hero_id);
