@@ -124,11 +124,10 @@ namespace {
     IDirect3DTexture9** quest_icon_texture = nullptr;
     IDirect3DTexture9** player_icon_texture = nullptr;
     IDirect3DTexture9** portal_icon_texture = nullptr;
+    IDirect3DTexture9** zaishen_coin_texture = nullptr;
 
     bool showing_all_outposts = false;
     bool apply_quest_colors = false;
-    bool color_zaishen_quests = false;
-    ImU32 zaishen_quest_color = IM_COL32(255, 215, 0, 255);
     bool show_any_elite_capture_locations = false;
     bool show_elite_capture_locations[11];
     bool hide_captured_elites = false;
@@ -765,9 +764,6 @@ namespace {
         if (apply_quest_colors) {
             color = QuestModule::GetQuestColor(quest->quest_id);
         }
-        if (color_zaishen_quests && DailyQuests::GetZaishenCoinReward(quest->quest_id)) {
-            color = zaishen_quest_color;
-        }
 
         // draw_quest_marker
         const auto draw_quest_marker = [&](const GW::Vec2f& quest_marker_pos) {
@@ -782,6 +778,13 @@ namespace {
             CalculateUVCoords(0.0f, 0.5f, uv_points); // Left-hand side of the sprite map
 
             draw_list->AddImageQuad(*quest_icon_texture, rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3], uv_points[0], uv_points[1], uv_points[2], uv_points[3], color & IM_COL32_A_MASK ? color : IM_COL32_WHITE);
+
+            if (zaishen_coin_texture && *zaishen_coin_texture && DailyQuests::GetZaishenCoinReward(quest->quest_id)) {
+                const float coin_half = quest_icon_size * 0.3f;
+                draw_list->AddImage(*zaishen_coin_texture,
+                    {viewport_quest_pos.x - coin_half, viewport_quest_pos.y - coin_half},
+                    {viewport_quest_pos.x + coin_half, viewport_quest_pos.y + coin_half});
+            }
 
             return icon_rect.Contains(ImGui::GetMousePos());
         };
@@ -886,6 +889,7 @@ void WorldMapWidget::Initialize()
     quest_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
     player_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x5d3b);
     portal_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x246c); // IDirect3DTexture9**
+    zaishen_coin_texture = GwDatTextureModule::LoadTextureFromFileId(0x55778);
 
     uintptr_t address = GW::Scanner::Find("\x8b\x45\xfc\xf7\x40\x10\x00\x00\x01\x00", "xxxxxxxxxx", 0xa);
     if (address) {
@@ -978,8 +982,6 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_lines_on_world_map);
     LOAD_BOOL(showing_all_quests);
     LOAD_BOOL(apply_quest_colors);
-    LOAD_BOOL(color_zaishen_quests);
-    LOAD_UINT(zaishen_quest_color);
     LOAD_BOOL(hide_captured_elites);
     LOAD_BOOL(show_any_elite_capture_locations);
     LOAD_BOOL(hide_captured_elites);
@@ -1036,8 +1038,6 @@ void WorldMapWidget::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_lines_on_world_map);
     SAVE_BOOL(showing_all_quests);
     SAVE_BOOL(apply_quest_colors);
-    SAVE_BOOL(color_zaishen_quests);
-    SAVE_UINT(zaishen_quest_color);
     SAVE_BOOL(show_any_elite_capture_locations);
     SAVE_BOOL(hide_captured_elites);
     uint32_t show_elite_capture_locations_val = 0;
@@ -1112,15 +1112,6 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Color overlay for the active quest.");
                 }
-            }
-            ImGui::Unindent();
-        }
-        ImGui::Checkbox("Color zaishen quest markers differently", &color_zaishen_quests);
-        if (color_zaishen_quests) {
-            ImGui::Indent();
-            ImGui::ColorButtonPicker("Zaishen Quest Color", &zaishen_quest_color, ImGuiColorEditFlags_NoLabel);
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Color overlay applied to Zaishen quest markers (Mission, Bounty, Vanquish, Combat).");
             }
             ImGui::Unindent();
         }
