@@ -55,7 +55,6 @@ public:
     void DrawHelp() override;
 
     static void CHAT_CMD_FUNC(CmdHeroTeamBuild);
-    static void CHAT_CMD_FUNC(CmdLoadTeamBuild);
 
     static const GW::HeroFlag* GetHeroFlagInfo(const uint32_t hero_id);
     // Returns ptr to party member of this hero, optionally fills out out_hero_index to be the index of this hero for the player.

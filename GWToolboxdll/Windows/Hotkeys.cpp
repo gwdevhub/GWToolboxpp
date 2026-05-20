@@ -138,9 +138,9 @@ TBHotkey* TBHotkey::HotkeyFactory(ToolboxIni* ini, const char* section)
             hbw.LoadFromFile();
         }
         const char* build_name = hbw.BuildName(build_index);
-        char msg[139] = "loadteambuild";
+        char msg[139] = "heroteam";
         if (build_name && *build_name) {
-            snprintf(msg, sizeof(msg), "loadteambuild %s", build_name);
+            snprintf(msg, sizeof(msg), "heroteam %s", build_name);
         }
         ini->SetValue(section, "msg", msg);
         ini->SetValue(section, "channel", "/");

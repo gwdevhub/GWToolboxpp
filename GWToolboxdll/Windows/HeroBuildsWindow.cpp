@@ -203,7 +203,6 @@ void HeroBuildsWindow::Initialize()
     TeamBuild::SetSkillToggleSprite(skill_toggle_sprite);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
-    GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"loadteambuild", &CmdLoadTeamBuild);
     GW::UI::RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kChatLinkClicked, OnChatLinkClicked);
     GW::UI::RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kAddCustomChatLink, OnCreateChatLink);
 }
@@ -510,27 +509,6 @@ void HeroBuildsWindow::Update(float)
 void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
 {
     if (argc < 2) {
-        Log::ErrorW(L"Syntax: /%s [hero_build_name]", argv[0]);
-        return;
-    }
-    std::wstring argBuildname = argv[1];
-    for (auto i = 2; i < argc; i++) {
-        argBuildname.append(L" ");
-        argBuildname.append(argv[i]);
-    }
-    const std::string argBuildName_s = TextUtils::WStringToString(argBuildname);
-    const TeamBuild* found = Instance().GetTeambuildByName(argBuildName_s);
-    if (!found) {
-        Log::ErrorW(L"No hero build found for %s", argBuildname.c_str());
-        return;
-    }
-    const TeamBuild& tbuild = *found;
-    tbuild.Load();
-}
-
-void CHAT_CMD_FUNC(HeroBuildsWindow::CmdLoadTeamBuild)
-{
-    if (argc < 2) {
         Log::ErrorW(L"Syntax: /%s [hero_build_name|build_code]", argv[0]);
         return;
     }
@@ -539,6 +517,18 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdLoadTeamBuild)
         arg.append(L" ");
         arg.append(argv[i]);
     }
+
+    if (TeamBuildEncoder::IsEncodedTeamBuild(arg)) {
+        TeamBuild tbuild;
+        if (!TeamBuildEncoder::EncodedToTeamBuild(arg, tbuild)) {
+            Log::ErrorW(L"Failed to decode team build code");
+            return;
+        }
+        tbuild.has_hero_slots = true;
+        tbuild.Load();
+        return;
+    }
+
     const std::string arg_s = TextUtils::WStringToString(arg);
     if (TeamBuildEncoder::IsDaybreakTeamBuild(arg_s)) {
         TeamBuild tbuild;
@@ -550,6 +540,7 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdLoadTeamBuild)
         tbuild.Load();
         return;
     }
+
     const TeamBuild* found = Instance().GetTeambuildByName(arg_s);
     if (!found) {
         Log::ErrorW(L"No hero build found for '%s'", arg.c_str());
@@ -564,9 +555,7 @@ void HeroBuildsWindow::DrawHelp()
         return;
     }
     ImGui::Bullet();
-    ImGui::Text("'/loadteambuild <name|code>' loads a hero team build by partial name or Daybreak build code.");
-    ImGui::Bullet();
-    ImGui::Text("'/heroteam <name>' or '/herobuild <name>' load a hero team build by partial name.");
+    ImGui::Text("'/heroteam <name|code>' or '/herobuild <name|code>' load a hero team build by partial name, Daybreak build code, or encoded wstring.");
     ImGui::TreePop();
 }
 
