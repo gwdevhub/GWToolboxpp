@@ -99,6 +99,7 @@ namespace {
         if (skillbar_frame)
             return skillbar_frame;
         skillbar_frame = GW::UI::GetFrameByLabel(L"Skillbar");
+        if (!skillbar_frame) skillbar_frame = GW::UI::GetFrameByLabel(L"MobileActionCluster");
         if (skillbar_frame) {
             ASSERT(skillbar_frame->frame_callbacks.size());
             if (!OnSkillbar_UICallback_Func) {
