@@ -193,15 +193,66 @@ namespace {
         uint32_t m_file_id = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
+        ~GwImg()
+        {
+            if (m_tex) {
+                m_tex->Release();
+                m_tex = nullptr;
+            }
+        }
     };
 
     std::map<uint32_t,GwImg*> textures_by_file_id;
+
+    std::map<uint32_t, GwImg*> greyscale_textures_by_file_id;
+
+    IDirect3DTexture9* CreateGreyscaleTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims)
+    {
+        if (!device || !file_id) return nullptr;
+        gw_image_bits bits = nullptr;
+        int levels;
+        GR_FORMAT format;
+        if (!OpenImage(file_id, &bits, dims, levels, format) || !bits || !dims.x || !dims.y) {
+            if (bits) GW::MemoryMgr::MemFree(bits);
+            return nullptr;
+        }
+        IDirect3DTexture9* tex = nullptr;
+        if (device->CreateTexture(dims.x, dims.y, levels, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, 0) != D3D_OK) return nullptr;
+        D3DLOCKED_RECT rect;
+        if (tex->LockRect(0, &rect, 0, D3DLOCK_DISCARD) != D3D_OK) return nullptr;
+        auto* srcdata = reinterpret_cast<uint32_t*>(bits);
+        for (int y = 0; y < dims.y; y++) {
+            auto* dst = reinterpret_cast<uint32_t*>((uint8_t*)rect.pBits + y * rect.Pitch);
+            for (int x = 0; x < dims.x; x++) {
+                const uint32_t c = *srcdata++;
+                const uint8_t r = (c >> 16) & 0xFF;
+                const uint8_t g = (c >> 8) & 0xFF;
+                const uint8_t b = c & 0xFF;
+                const uint8_t a = (c >> 24) & 0xFF;
+                const uint8_t grey = static_cast<uint8_t>(r * 0.299f + g * 0.587f + b * 0.114f);
+                *dst++ = (a << 24) | (grey << 16) | (grey << 8) | grey;
+            }
+        }
+        GW::MemoryMgr::MemFree(bits);
+        tex->UnlockRect(0);
+        return tex;
+    }
 } // namespace
 
 bool GwDatTextureModule::CloseHandle(GW::RecObject* handle) {
     return handle && CloseRecObj_func ? CloseRecObj_func(handle), true : false;
 }
-
+IDirect3DTexture9** GwDatTextureModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
+{
+    auto found = greyscale_textures_by_file_id.find(file_id);
+    if (found != greyscale_textures_by_file_id.end()) return &found->second->m_tex;
+    auto gwimg_ptr = new GwImg(file_id);
+    greyscale_textures_by_file_id[file_id] = gwimg_ptr;
+    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
+        gwimg_ptr->m_tex = CreateGreyscaleTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
+    });
+    return &gwimg_ptr->m_tex;
+}
 bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out, uint32_t stream_id)
 {
     if (!(file_name && *file_name && CloseRecObj_func && FileHashToRecObj_func && FreeFileBuffer_Func)) 
@@ -295,6 +346,9 @@ IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
 void GwDatTextureModule::Terminate()
 {
     for (auto gwimg_ptr : textures_by_file_id) {
+        delete gwimg_ptr.second;
+    }
+    for (auto gwimg_ptr : greyscale_textures_by_file_id) {
         delete gwimg_ptr.second;
     }
     textures_by_file_id.clear();

@@ -509,22 +509,54 @@ void HeroBuildsWindow::Update(float)
 void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
 {
     if (argc < 2) {
-        Log::ErrorW(L"Syntax: /%s [hero_build_name]", argv[0]);
+        Log::ErrorW(L"Syntax: /%s [hero_build_name|build_code]", argv[0]);
         return;
     }
-    std::wstring argBuildname = argv[1];
+    std::wstring arg = argv[1];
     for (auto i = 2; i < argc; i++) {
-        argBuildname.append(L" ");
-        argBuildname.append(argv[i]);
+        arg.append(L" ");
+        arg.append(argv[i]);
     }
-    const std::string argBuildName_s = TextUtils::WStringToString(argBuildname);
-    const TeamBuild* found = Instance().GetTeambuildByName(argBuildName_s);
-    if (!found) {
-        Log::ErrorW(L"No hero build found for %s", argBuildname.c_str());
+
+    if (TeamBuildEncoder::IsEncodedTeamBuild(arg)) {
+        TeamBuild tbuild;
+        if (!TeamBuildEncoder::EncodedToTeamBuild(arg, tbuild)) {
+            Log::ErrorW(L"Failed to decode team build code");
+            return;
+        }
+        tbuild.has_hero_slots = true;
+        tbuild.Load();
         return;
     }
-    const TeamBuild& tbuild = *found;
-    tbuild.Load();
+
+    const std::string arg_s = TextUtils::WStringToString(arg);
+    if (TeamBuildEncoder::IsDaybreakTeamBuild(arg_s)) {
+        TeamBuild tbuild;
+        if (!TeamBuildEncoder::DaybreakToTeamBuild(arg_s, tbuild)) {
+            Log::ErrorW(L"Failed to decode team build code");
+            return;
+        }
+        tbuild.has_hero_slots = true;
+        tbuild.Load();
+        return;
+    }
+
+    const TeamBuild* found = Instance().GetTeambuildByName(arg_s);
+    if (!found) {
+        Log::ErrorW(L"No hero build found for '%s'", arg.c_str());
+        return;
+    }
+    found->Load();
+}
+
+void HeroBuildsWindow::DrawHelp()
+{
+    if (!ImGui::TreeNodeEx("Hero Team Build Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        return;
+    }
+    ImGui::Bullet();
+    ImGui::Text("'/heroteam <name|code>' or '/herobuild <name|code>' load a hero team build by partial name, Daybreak build code, or encoded wstring.");
+    ImGui::TreePop();
 }
 
 void HeroBuildsWindow::LoadSettings(ToolboxIni* ini)

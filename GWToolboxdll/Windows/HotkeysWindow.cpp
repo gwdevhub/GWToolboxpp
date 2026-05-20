@@ -434,13 +434,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Send a Dialog");
             }
-            if (ImGui::Selectable("Load Hero Team Build")) {
-                new_hotkey = new HotkeyHeroTeamBuild(nullptr, nullptr);
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Load a team hero build from the Hero Build Panel");
-            }
-            if (ImGui::Selectable("Equip Item")) {
+if (ImGui::Selectable("Equip Item")) {
                 new_hotkey = new HotkeyEquipItem(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
@@ -762,14 +756,18 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini)
     // then load again
     ToolboxIni::TNamesDepend entries;
     ini->GetAllSections(entries);
+    bool had_migration = false;
     for (const ToolboxIni::Entry& entry : entries) {
+        if (strstr(entry.pItem, ":HeroTeamBuild")) {
+            had_migration = true;
+        }
         TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
         if (hk) {
             hotkeys.push_back(hk);
         }
     }
     CheckSetValidHotkeys();
-    TBHotkey::hotkeys_changed = false;
+    TBHotkey::hotkeys_changed = had_migration;
 }
 
 void HotkeysWindow::SaveSettings(ToolboxIni* ini)
