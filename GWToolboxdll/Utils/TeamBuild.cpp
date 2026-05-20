@@ -382,7 +382,7 @@ void Build::Update()
 
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {
         if (GW::Agents::GetControlledCharacter()) {
-            GW::Chat::SendChat('#', send_queue.front().c_str());
+            GW::Chat::SendChat(send_queue.front().c_str());
             send_queue.pop();
             send_timer = TIMER_INIT();
         }

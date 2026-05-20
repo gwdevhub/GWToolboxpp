@@ -76,6 +76,8 @@ namespace GW {
 		GWCA_API bool AddToChatLog(wchar_t* message, uint32_t channel);
 		GWCA_API bool GetIsTyping();
 
+		GWCA_API bool SendChat(const char* msg);
+		GWCA_API bool SendChat(const wchar_t* msg);
 		GWCA_API bool SendChat(char channel, const char* msg);
 		GWCA_API bool SendChat(char channel, const wchar_t* msg);
 		GWCA_API bool SendChat(const wchar_t* to, const wchar_t* msg);
@@ -99,6 +101,7 @@ namespace GW {
 
 		GWCA_API Channel GetChannel(wchar_t opcode);
 		GWCA_API Channel GetChannel(char opcode);
+		GWCA_API Channel GetCurrentChatChannel();
 	};
 }
 
