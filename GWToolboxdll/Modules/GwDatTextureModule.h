@@ -26,6 +26,7 @@ public:
     void Terminate() override;
 
     static bool CloseHandle(GW::RecObject* handle);
+    static IDirect3DTexture9** LoadGreyscaleTextureFromFileId(uint32_t file_id);
     static bool ReadDatFile(const wchar_t* fileHash, std::vector<uint8_t>* bytes_out, uint32_t stream_id = 0);
 
     static IDirect3DTexture9** LoadTextureFromFileId(uint32_t file_id);
