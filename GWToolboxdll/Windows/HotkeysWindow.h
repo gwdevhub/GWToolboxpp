@@ -27,6 +27,18 @@ public:
 
     static void ChooseKeyCombo(TBHotkey* hotkey);
 
+    // Returns all top-level HotkeyGroup objects in display order.
+    static void GetGroups(std::vector<HotkeyGroup*>& out);
+
+    // Returns the HotkeyGroup that owns `hotkey`, or nullptr if top-level.
+    static HotkeyGroup* FindParentGroup(const TBHotkey* hotkey);
+
+    // Deferred: move `hotkey` into `target` (nullptr = top level). Safe to call during Draw.
+    static void RequestMoveToGroup(TBHotkey* hotkey, HotkeyGroup* target);
+
+    // Deferred: create a new group, insert it where `hotkey` currently is, and move `hotkey` into it.
+    static void RequestNewGroup(TBHotkey* hotkey);
+
     static const TBHotkey* CurrentHotkey();
 
     // Update. Will always be called every frame.
