@@ -108,6 +108,10 @@ namespace ImGui {
                                        ImU32 outlineColor = IM_COL32(0, 0, 0, 255),
                                        float thickness = 1.0f);
 
+    // Render text rotated clockwise by angle_degrees (default 90°) around its center.
+    // Advances the cursor by the axis-aligned bounding box of the rotated text.
+    IMGUI_API void TextRotated(const char* text, float angle_degrees = 90.f);
+
     // Vertical tab bar: tabs on the left with rotated labels, content on the right.
     // labels/labels_count: tab label strings.
     // active_tab: in/out 0-indexed selection.
