@@ -24,6 +24,9 @@ public:
 
     void SaveSettings(ToolboxIni* ini) override;
 
+    // Called when the game switches between mobile and normal mode
+    void OnMobileModeChanged(bool is_mobile);
+
     [[nodiscard]] virtual ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0) const;
 
     // returns true if clicked
@@ -50,11 +53,24 @@ public:
     bool show_breakout_button = false;
     bool lock_breakout_button = false;
 
+    // Mobile-mode layout settings (separate from normal-mode settings above)
+    bool mobile_lock_move = false;
+    bool mobile_lock_size = false;
+    bool mobile_auto_size = false;
+
+    // Returns lock_move/lock_size/auto_size for the current game mode
+    [[nodiscard]] bool IsMoveLocked() const;
+    [[nodiscard]] bool IsSizeLocked() const;
+    [[nodiscard]] bool IsAutoSized() const;
+
     bool* GetVisiblePtr();
 
     bool has_titlebar = false;
     bool show_titlebar = true;
     bool show_closebutton = true;
+
+    // Settings panel tab: 0 = Normal, 1 = Mobile, -1 = auto (tracks current mode)
+    int settings_active_tab = -1;
 
 protected:
     bool can_show_in_main_window = true;
@@ -63,6 +79,15 @@ protected:
     bool is_movable = true;
 
     std::string snapped_frame_label;
+    std::string mobile_snapped_frame_label;
+
+    // Stored positions for each mode (used when switching modes)
+    bool has_normal_layout = false;
+    float normal_pos[2] = {};
+    float normal_size[2] = {};
+    bool has_mobile_layout = false;
+    float mobile_pos[2] = {};
+    float mobile_size[2] = {};
 
     float min_size[2] = { 250.f,90.f };
     float max_size[2] = { FLT_MAX, FLT_MAX };
