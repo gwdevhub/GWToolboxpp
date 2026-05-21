@@ -5,6 +5,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -383,6 +384,16 @@ void ToolboxSettings::Draw(IDirect3DDevice9*)
 {
     ImGui::GetStyle().WindowBorderSize = move_all ? 1.0f : 0.0f;
     is_in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
+
+    static bool mobile_mode_initialized = false;
+    const bool new_mobile = GW::UI::IsInMobileMode();
+    if (!mobile_mode_initialized || new_mobile != is_in_mobile_mode) {
+        mobile_mode_initialized = true;
+        is_in_mobile_mode = new_mobile;
+        for (auto* elem : GWToolbox::GetUIElements()) {
+            elem->OnMobileModeChanged(is_in_mobile_mode);
+        }
+    }
 }
 
 void ToolboxSettings::DrawSettingsCogButtons()

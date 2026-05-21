@@ -69,6 +69,8 @@ struct TeamBuild {
 
     TeamBuild() = default;
     explicit TeamBuild(std::string_view name, std::string_view ui_id = {});
+    TeamBuild(const TeamBuild& other);
+    TeamBuild& operator=(const TeamBuild& other);
 
     bool edit_open = false;
     bool focus_next_frame = false;

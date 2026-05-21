@@ -423,6 +423,35 @@ TeamBuild::TeamBuild(std::string_view n, std::string_view id)
 {
 }
 
+TeamBuild::TeamBuild(const TeamBuild& other)
+    : edit_open(other.edit_open)
+    , focus_next_frame(other.focus_next_frame)
+    , mode(other.mode)
+    , show_numbers(other.show_numbers)
+    , has_hero_slots(other.has_hero_slots)
+    , name(other.name)
+    , group(other.group)
+    , ui_id(std::to_string(++s_cur_ui_id))
+    , builds(other.builds)
+{
+}
+
+TeamBuild& TeamBuild::operator=(const TeamBuild& other)
+{
+    if (this != &other) {
+        edit_open = other.edit_open;
+        focus_next_frame = other.focus_next_frame;
+        mode = other.mode;
+        show_numbers = other.show_numbers;
+        has_hero_slots = other.has_hero_slots;
+        name = other.name;
+        group = other.group;
+        ui_id = std::to_string(++s_cur_ui_id);
+        builds = other.builds;
+    }
+    return *this;
+}
+
 void TeamBuild::SetSkillToggleSprite(IDirect3DTexture9** sprite)
 {
     skill_toggle_sprite = sprite;
