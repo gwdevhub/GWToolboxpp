@@ -6,21 +6,23 @@
 #include <Keys.h>
 
 namespace {
-    // Renders text rotated 90° CCW around `center` (gives top-to-bottom reading on a left-side tab strip).
-    void RenderTextRotated90CCW(ImDrawList* dl, ImVec2 center, ImU32 col, const char* text)
+    // Renders text rotated clockwise by angle_rad around center on draw list dl.
+    void RenderTextRotated(ImDrawList* dl, ImVec2 center, ImU32 col, const char* text, float angle_rad)
     {
         if (!text || !*text)
             return;
         const ImVec2 sz = ImGui::CalcTextSize(text);
+        const float cos_a = cosf(angle_rad);
+        const float sin_a = sinf(angle_rad);
         const int vtx0 = dl->VtxBuffer.Size;
         dl->AddText({center.x - sz.x * 0.5f, center.y - sz.y * 0.5f}, col, text);
-        // CCW rotation: (dx, dy) -> (-dy, dx)
+        // CW rotation: (dx, dy) -> (dx*cos + dy*sin, -dx*sin + dy*cos)
         for (int i = vtx0; i < dl->VtxBuffer.Size; i++) {
             ImDrawVert& v = dl->VtxBuffer[i];
             const float dx = v.pos.x - center.x;
             const float dy = v.pos.y - center.y;
-            v.pos.x = center.x - dy;
-            v.pos.y = center.y + dx;
+            v.pos.x = center.x + dx * cos_a + dy * sin_a;
+            v.pos.y = center.y - dx * sin_a + dy * cos_a;
         }
     }
 
@@ -810,6 +812,25 @@ namespace ImGui {
         SetCursorPosY(GetCursorPosY() + textSize.y);
     }
 
+    void TextRotated(const char* text, float angle_degrees)
+    {
+        if (!text || !*text) {
+            Dummy({0.f, 0.f});
+            return;
+        }
+        ImDrawList* dl = GetWindowDrawList();
+        const ImVec2 sz = CalcTextSize(text);
+        const float angle_rad = angle_degrees * IM_PI / 180.f;
+        const float abs_cos = fabsf(cosf(angle_rad));
+        const float abs_sin = fabsf(sinf(angle_rad));
+        const float rotated_w = sz.x * abs_cos + sz.y * abs_sin;
+        const float rotated_h = sz.x * abs_sin + sz.y * abs_cos;
+        const ImVec2 pos = GetCursorScreenPos();
+        const ImVec2 center = {pos.x + rotated_w * 0.5f, pos.y + rotated_h * 0.5f};
+        RenderTextRotated(dl, center, GetColorU32(ImGuiCol_Text), text, angle_rad);
+        Dummy({rotated_w, rotated_h});
+    }
+
     bool BeginVerticalTabBar(const char* str_id, const char* const* labels, const int labels_count,
                               int* active_tab, const int highlighted_tab, const float tab_width_hint)
     {
@@ -846,8 +867,8 @@ namespace ImGui {
 
             PopStyleColor(2);
 
-            RenderTextRotated90CCW(dl, {tl.x + tab_w * 0.5f, tl.y + btn_h * 0.5f},
-                GetColorU32(selected ? ImGuiCol_Text : ImGuiCol_TextDisabled), label);
+            RenderTextRotated(dl, {tl.x + tab_w * 0.5f, tl.y + btn_h * 0.5f},
+                GetColorU32(selected ? ImGuiCol_Text : ImGuiCol_TextDisabled), label, IM_PI * 0.5f);
 
             // Small dot on the right edge marks the currently-active mode tab
             if (i == highlighted_tab) {
