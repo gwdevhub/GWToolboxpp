@@ -452,9 +452,55 @@ bool TBHotkey::Draw(Op* op, bool first, bool last)
         // === Hotkey section ===
         const float indent_offset = ImGui::GetCurrentWindow()->DC.Indent.x;
         const float offset_sameline = indent_offset + ImGui::GetContentRegionAvail().x / 2;
-        hotkey_changed |= ImGui::InputTextEx("Hotkey Group##hotkey_group", "No Hotkey Group", group, sizeof(group), ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue, nullptr, nullptr);
-        if (ImGui::IsItemDeactivatedAfterEdit()) {
-            hotkey_changed = true;
+        {
+            std::vector<HotkeyGroup*> groups;
+            HotkeysWindow::GetGroups(groups);
+            const HotkeyGroup* current_parent = HotkeysWindow::FindParentGroup(this);
+
+            int current_idx = 0; // 0 = no group
+            for (int i = 0; i < static_cast<int>(groups.size()); i++) {
+                if (groups[i] == current_parent) {
+                    current_idx = i + 1;
+                    break;
+                }
+            }
+
+            const char* preview = current_idx == 0
+                ? "(No Group)"
+                : (*groups[current_idx - 1]->label ? groups[current_idx - 1]->label : "(unnamed)");
+
+            const float start_x = ImGui::GetCursorPosX();
+            const float item_w = ImGui::CalcItemWidth();
+            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+            const float btn_w = 90.f * scale;
+
+            ImGui::SetNextItemWidth(std::max(1.f, item_w - btn_w - spacing));
+            if (ImGui::BeginCombo("##hotkey_group_combo", preview)) {
+                if (ImGui::Selectable("(No Group)", current_idx == 0) && current_idx != 0) {
+                    HotkeysWindow::RequestMoveToGroup(this, nullptr);
+                    hotkey_changed = true;
+                }
+                for (int i = 0; i < static_cast<int>(groups.size()); i++) {
+                    ImGui::PushID(i);
+                    const char* gname = *groups[i]->label ? groups[i]->label : "(unnamed)";
+                    const bool is_selected = current_idx == i + 1;
+                    if (ImGui::Selectable(gname, is_selected) && !is_selected) {
+                        HotkeysWindow::RequestMoveToGroup(this, groups[i]);
+                        hotkey_changed = true;
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine(0, spacing);
+            if (ImGui::Button("New Group##grp_create", ImVec2(btn_w, 0))) {
+                HotkeysWindow::RequestNewGroup(this);
+                hotkey_changed = true;
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Create a new hotkey group containing this hotkey");
+            ImGui::SameLine(start_x + item_w + spacing);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted("Hotkey Group");
         }
         hotkey_changed |= ImGui::InputTextEx("Label##hotkey_label", "Use description as label", label, sizeof(label), ImVec2(0, 0), ImGuiInputTextFlags_EnterReturnsTrue, nullptr, nullptr);
         if (ImGui::IsItemDeactivatedAfterEdit()) {
