@@ -3,6 +3,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
@@ -11,6 +12,7 @@
 #include <Logger.h>
 
 #include <Windows/Hotkeys/HotkeyEquipItem.h>
+#include <Timer.h>
 
 namespace {
     // @Cleanup: when toolbox closes, this array isn't freed properly

@@ -7,6 +7,7 @@
 #include <Logger.h>
 
 #include <Windows/Hotkeys/HotkeyTarget.h>
+#include <Defines.h>
 
 HotkeyTarget::HotkeyTarget(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)

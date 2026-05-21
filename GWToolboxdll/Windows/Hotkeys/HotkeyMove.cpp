@@ -3,6 +3,7 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <ImGuiAddons.h>
 #include <Logger.h>

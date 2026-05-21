@@ -15,6 +15,7 @@
 #include <Windows/Hotkeys/HotkeyTarget.h>
 #include <Windows/Hotkeys/HotkeyToggle.h>
 #include <Windows/Hotkeys/HotkeyUseItem.h>
+#include <Defines.h>
 
 HotkeyGroup::HotkeyGroup(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
