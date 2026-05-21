@@ -142,16 +142,20 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
 
 void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
 {
-    // Sync current mode's stored positions from the live window
-    if (const auto window = ImGui::FindWindowByName(Name())) {
-        if (ToolboxSettings::is_in_mobile_mode) {
-            mobile_pos[0] = window->Pos.x; mobile_pos[1] = window->Pos.y;
-            mobile_size[0] = window->SizeFull.x; mobile_size[1] = window->SizeFull.y;
-            has_mobile_layout = true;
-        } else {
-            normal_pos[0] = window->Pos.x; normal_pos[1] = window->Pos.y;
-            normal_size[0] = window->SizeFull.x; normal_size[1] = window->SizeFull.y;
-            has_normal_layout = true;
+    // Sync current mode's stored positions from the live window.
+    // Guard with context check: SaveSettings is called a second time after ImGui is destroyed
+    // (from UpdateTerminating -> ToggleModule), at which point FindWindowByName would crash.
+    if (ImGui::GetCurrentContext()) {
+        if (const auto window = ImGui::FindWindowByName(Name())) {
+            if (ToolboxSettings::is_in_mobile_mode) {
+                mobile_pos[0] = window->Pos.x; mobile_pos[1] = window->Pos.y;
+                mobile_size[0] = window->SizeFull.x; mobile_size[1] = window->SizeFull.y;
+                has_mobile_layout = true;
+            } else {
+                normal_pos[0] = window->Pos.x; normal_pos[1] = window->Pos.y;
+                normal_size[0] = window->SizeFull.x; normal_size[1] = window->SizeFull.y;
+                has_normal_layout = true;
+            }
         }
     }
     ToolboxModule::SaveSettings(ini);
