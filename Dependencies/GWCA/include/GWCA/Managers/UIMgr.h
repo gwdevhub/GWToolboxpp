@@ -705,6 +705,15 @@ namespace GW {
             ControlAction_ToggleGamepadCursorMode = 0x13d, // right dpad
 
         };
+
+        enum UiProfileSetting {
+            CameraFollowsPlayer = 0,
+            GamepadAutoTargetSwitch = 1,
+            MobileHUD = 2,
+            AdSupported = 3,
+            ForceAprilFools = 4,
+        };
+
         struct FloatingWindow {
             void* unk1; // Some kind of function call
             wchar_t* name;
@@ -841,6 +850,15 @@ namespace GW {
 
         // When the player is actively using a game controller
         GWCA_API bool IsInControllerMode();
+
+        // When the GW interface is in mobile layout
+        GWCA_API bool IsInMobileMode();
+
+        // Get some UI level feature(s)
+        GWCA_API bool SetUIFeature(GW::UI::UiProfileSetting, bool);
+
+        // Set some UI level feature(s)
+        GWCA_API bool GetUIFeature(GW::UI::UiProfileSetting setting);
 
         // When the player is using a game controller and is in cursor mode
         GWCA_API bool IsInControllerCursorMode();
