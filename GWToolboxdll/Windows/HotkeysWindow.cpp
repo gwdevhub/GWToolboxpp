@@ -218,6 +218,55 @@ namespace {
         }
     }
 
+    TBHotkey* pending_group_move_hotkey = nullptr;
+    HotkeyGroup* pending_group_move_target = nullptr;
+    bool pending_group_move_create_new = false;
+
+    // Remove `hotkey` from wherever it currently lives (top-level or inside a group).
+    // Returns true if found and removed.
+    bool RemoveHotkeyFromCurrentLocation(TBHotkey* hotkey) {
+        const auto erased_top = std::erase(hotkeys, hotkey);
+        if (erased_top) return true;
+        for (auto* hk : hotkeys) {
+            if (auto* grp = dynamic_cast<HotkeyGroup*>(hk)) {
+                if (std::erase(grp->hotkeys, hotkey)) return true;
+            }
+        }
+        return false;
+    }
+
+    void DoMoveToGroup(TBHotkey* hotkey, HotkeyGroup* target) {
+        RemoveHotkeyFromCurrentLocation(hotkey);
+        if (target)
+            target->hotkeys.push_back(hotkey);
+        else
+            hotkeys.push_back(hotkey);
+        TBHotkey::hotkeys_changed = true;
+        CheckSetValidHotkeys();
+    }
+
+    void DoCreateGroupForHotkey(TBHotkey* hotkey) {
+        auto* new_grp = new HotkeyGroup(nullptr, nullptr);
+
+        // If the hotkey is at the top level, replace it in-place with the new group.
+        for (size_t i = 0; i < hotkeys.size(); i++) {
+            if (hotkeys[i] == hotkey) {
+                hotkeys[i] = new_grp;
+                new_grp->hotkeys.push_back(hotkey);
+                TBHotkey::hotkeys_changed = true;
+                CheckSetValidHotkeys();
+                return;
+            }
+        }
+
+        // If inside a group, remove from that group and append the new group at top level.
+        RemoveHotkeyFromCurrentLocation(hotkey);
+        new_grp->hotkeys.push_back(hotkey);
+        hotkeys.push_back(new_grp);
+        TBHotkey::hotkeys_changed = true;
+        CheckSetValidHotkeys();
+    }
+
     TBHotkey* pending_being_assigned = nullptr;
     TBHotkey* keys_being_assigned = nullptr;
     KeysHeldBitset keys_selected;
@@ -315,9 +364,56 @@ void HotkeysWindow::ChooseKeyCombo(TBHotkey* hotkey)
     pending_being_assigned = hotkey;
 }
 
+void HotkeysWindow::GetGroups(std::vector<HotkeyGroup*>& out)
+{
+    out.clear();
+    for (auto* hk : hotkeys) {
+        if (auto* grp = dynamic_cast<HotkeyGroup*>(hk))
+            out.push_back(grp);
+    }
+}
+
+HotkeyGroup* HotkeysWindow::FindParentGroup(const TBHotkey* hotkey)
+{
+    for (auto* hk : hotkeys) {
+        if (auto* grp = dynamic_cast<HotkeyGroup*>(hk)) {
+            for (auto* child : grp->hotkeys) {
+                if (child == hotkey) return grp;
+            }
+        }
+    }
+    return nullptr;
+}
+
+void HotkeysWindow::RequestMoveToGroup(TBHotkey* hotkey, HotkeyGroup* target)
+{
+    pending_group_move_hotkey = hotkey;
+    pending_group_move_target = target;
+    pending_group_move_create_new = false;
+}
+
+void HotkeysWindow::RequestNewGroup(TBHotkey* hotkey)
+{
+    pending_group_move_hotkey = hotkey;
+    pending_group_move_create_new = true;
+}
+
 void HotkeysWindow::Draw(IDirect3DDevice9*)
 {
     DrawSelectHotkeyPopup();
+
+    // Process deferred group-move requests (queued during last frame's draw to avoid
+    // mutating the hotkeys list while iterating over it).
+    if (pending_group_move_hotkey) {
+        if (pending_group_move_create_new)
+            DoCreateGroupForHotkey(pending_group_move_hotkey);
+        else
+            DoMoveToGroup(pending_group_move_hotkey, pending_group_move_target);
+        pending_group_move_hotkey = nullptr;
+        pending_group_move_target = nullptr;
+        pending_group_move_create_new = false;
+    }
+
     if (!visible) {
         return;
     }
