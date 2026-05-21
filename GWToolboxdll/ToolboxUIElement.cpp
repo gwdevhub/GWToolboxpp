@@ -279,10 +279,8 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // --- Vertical tab layout (two-column table) ---
-    const float tab_h = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().FramePadding.y * 2.f;
-    const float tab_w = std::max(ImGui::CalcTextSize("Normal").x, ImGui::CalcTextSize("Mobile").x)
-                        + ImGui::GetStyle().FramePadding.x * 4.f;
+    static const char* layout_tabs[] = {"Normal", "Mobile"};
+    const int highlighted_tab = is_mobile ? 1 : 0;
 
     const bool tab_is_mobile = (settings_active_tab == 1);
     const bool tab_is_current_mode = (tab_is_mobile == is_mobile);
@@ -297,29 +295,8 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     char need_show_buf[128];
     snprintf(need_show_buf, sizeof(need_show_buf), "You need to show the %s for this control to work", TypeName());
 
-    if (ImGui::BeginTable("##layout_table", 2, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("tabs", ImGuiTableColumnFlags_WidthFixed, tab_w);
-        ImGui::TableSetupColumn("content", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableNextRow();
-
-        // Left column: Normal / Mobile tab buttons
-        ImGui::TableSetColumnIndex(0);
-        for (int i = 0; i < 2; i++) {
-            const char* label = i == 0 ? "Normal" : "Mobile";
-            const bool selected = settings_active_tab == i;
-            if (selected) {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
-            }
-            if (ImGui::Button(label, {tab_w, tab_h})) {
-                settings_active_tab = i;
-            }
-            if (selected) {
-                ImGui::PopStyleColor();
-            }
-        }
-
+    if (ImGui::BeginVerticalTabBar("##layout_tabs", layout_tabs, 2, &settings_active_tab, highlighted_tab)) {
         // Right column: per-mode settings
-        ImGui::TableSetColumnIndex(1);
 
         if (!tab_is_current_mode) {
             ImGui::TextDisabled("(Changes apply when %s mode is active)", tab_is_mobile ? "mobile" : "normal");
@@ -442,7 +419,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             ImGui::SetTooltip("This %s cannot be resized", TypeName());
         }
 
-        ImGui::EndTable();
+        ImGui::EndVerticalTabBar();
     }
 
     // Shared settings (not per-mode) drawn below the two-column layout

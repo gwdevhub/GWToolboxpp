@@ -107,4 +107,14 @@ namespace ImGui {
                                        ImU32 textColor = IM_COL32(255, 255, 255, 255),
                                        ImU32 outlineColor = IM_COL32(0, 0, 0, 255),
                                        float thickness = 1.0f);
+
+    // Vertical tab bar: tabs on the left with rotated labels, content on the right.
+    // labels/labels_count: tab label strings.
+    // active_tab: in/out 0-indexed selection.
+    // highlighted_tab: index shown with a small dot indicator (-1 = none); use to mark the currently-active mode.
+    // tab_width: override tab strip width (0 = auto-sized from font height).
+    // Returns true when rendered; always call EndVerticalTabBar() iff this returns true.
+    IMGUI_API bool BeginVerticalTabBar(const char* str_id, const char* const* labels, int labels_count,
+                                       int* active_tab, int highlighted_tab = -1, float tab_width = 0.f);
+    IMGUI_API void EndVerticalTabBar();
 }

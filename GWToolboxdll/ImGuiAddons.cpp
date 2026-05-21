@@ -6,6 +6,24 @@
 #include <Keys.h>
 
 namespace {
+    // Renders text rotated 90° CCW around `center` (gives top-to-bottom reading on a left-side tab strip).
+    void RenderTextRotated90CCW(ImDrawList* dl, ImVec2 center, ImU32 col, const char* text)
+    {
+        if (!text || !*text)
+            return;
+        const ImVec2 sz = ImGui::CalcTextSize(text);
+        const int vtx0 = dl->VtxBuffer.Size;
+        dl->AddText({center.x - sz.x * 0.5f, center.y - sz.y * 0.5f}, col, text);
+        // CCW rotation: (dx, dy) -> (-dy, dx)
+        for (int i = vtx0; i < dl->VtxBuffer.Size; i++) {
+            ImDrawVert& v = dl->VtxBuffer[i];
+            const float dx = v.pos.x - center.x;
+            const float dy = v.pos.y - center.y;
+            v.pos.x = center.x - dy;
+            v.pos.y = center.y + dx;
+        }
+    }
+
     ImGui::ImGuiContextMenuCallback imguiaddons_context_menu_callback = nullptr;
     void* imguiaddons_context_menu_wparam = nullptr;
     const char* imguiaddons_context_menu_id = "###imguiaddons_context_menu";
@@ -790,6 +808,70 @@ namespace ImGui {
         DrawTextWithOutline(GetWindowDrawList(), text, GetCursorScreenPos(), textColor, outlineColor, thickness);
         ImVec2 textSize = CalcTextSize(text);
         SetCursorPosY(GetCursorPosY() + textSize.y);
+    }
+
+    bool BeginVerticalTabBar(const char* str_id, const char* const* labels, const int labels_count,
+                              int* active_tab, const int highlighted_tab, const float tab_width_hint)
+    {
+        const ImGuiStyle& style = GetStyle();
+        const float font_sz = GetFontSize();
+        const float tab_w   = tab_width_hint > 0.f ? tab_width_hint : font_sz + style.FramePadding.x * 4.f;
+
+        if (!BeginTable(str_id, 2, ImGuiTableFlags_BordersInnerV))
+            return false;
+
+        TableSetupColumn("##vtabs",    ImGuiTableColumnFlags_WidthFixed,   tab_w);
+        TableSetupColumn("##vcontent", ImGuiTableColumnFlags_WidthStretch);
+        TableNextRow();
+        TableSetColumnIndex(0);
+
+        ImDrawList* const dl = GetWindowDrawList();
+        PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
+
+        for (int i = 0; i < labels_count; i++) {
+            const char* label    = labels[i];
+            const bool  selected = (*active_tab == i);
+            const float text_w   = CalcTextSize(label).x;
+            const float btn_h    = text_w + style.FramePadding.y * 4.f;
+
+            PushID(i);
+            PushStyleColor(ImGuiCol_Button,
+                selected ? style.Colors[ImGuiCol_ButtonActive] : ImVec4(0.f, 0.f, 0.f, 0.f));
+            PushStyleColor(ImGuiCol_ButtonHovered,
+                selected ? style.Colors[ImGuiCol_ButtonActive] : style.Colors[ImGuiCol_ButtonHovered]);
+
+            const ImVec2 tl = GetCursorScreenPos();
+            if (ButtonEx("##vtab", {tab_w, btn_h}, ImGuiButtonFlags_None))
+                *active_tab = i;
+
+            PopStyleColor(2);
+
+            RenderTextRotated90CCW(dl, {tl.x + tab_w * 0.5f, tl.y + btn_h * 0.5f},
+                GetColorU32(selected ? ImGuiCol_Text : ImGuiCol_TextDisabled), label);
+
+            // Small dot on the right edge marks the currently-active mode tab
+            if (i == highlighted_tab) {
+                constexpr float r = 3.f;
+                dl->AddCircleFilled(
+                    {tl.x + tab_w - style.FramePadding.x - r, tl.y + btn_h * 0.5f},
+                    r, GetColorU32(ImGuiCol_CheckMark));
+            }
+
+            if (IsItemHovered())
+                SetTooltip("%s", label);
+
+            PopID();
+        }
+
+        PopStyleVar(); // ItemSpacing
+
+        TableSetColumnIndex(1);
+        return true;
+    }
+
+    void EndVerticalTabBar()
+    {
+        EndTable();
     }
 
 }
