@@ -2256,7 +2256,15 @@ void CHAT_CMD_FUNC(ChatCommands::CmdChest)
     if (!IsMapReady()) {
         return;
     }
-    GW::Items::OpenXunlaiWindow();
+    GW::GameThread::Enqueue([]() {
+        const auto frame = GW::UI::GetFrameByLabel(L"InvAccount");
+        if (frame) {
+            GW::UI::DestroyUIComponent(frame);
+        }
+        else {
+            GW::Items::OpenXunlaiWindow();
+        }
+    });
 }
 
 
