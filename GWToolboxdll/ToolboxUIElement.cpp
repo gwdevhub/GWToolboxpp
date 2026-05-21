@@ -279,170 +279,137 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // --- Vertical tab layout (two-column table) ---
-    const float tab_h = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().FramePadding.y * 2.f;
-    const float tab_w = std::max(ImGui::CalcTextSize("Normal").x, ImGui::CalcTextSize("Mobile").x)
-                        + ImGui::GetStyle().FramePadding.x * 4.f;
-
-    const bool tab_is_mobile = (settings_active_tab == 1);
-    const bool tab_is_current_mode = (tab_is_mobile == is_mobile);
-
-    bool& lm          = tab_is_mobile ? mobile_lock_move          : lock_move;
-    bool& ls          = tab_is_mobile ? mobile_lock_size           : lock_size;
-    bool& as_         = tab_is_mobile ? mobile_auto_size            : auto_size;
-    std::string& snap = tab_is_mobile ? mobile_snapped_frame_label : snapped_frame_label;
-    float* cur_pos    = tab_is_mobile ? mobile_pos                 : normal_pos;
-    float* cur_size   = tab_is_mobile ? mobile_size                : normal_size;
+    bool& lm = is_mobile ? mobile_lock_move : lock_move;
+    bool& ls          = is_mobile ? mobile_lock_size           : lock_size;
+    bool& as_ = is_mobile ? mobile_auto_size : auto_size;
+    std::string& snap = is_mobile ? mobile_snapped_frame_label : snapped_frame_label;
+    float* cur_pos = is_mobile ? mobile_pos : normal_pos;
+    float* cur_size = is_mobile ? mobile_size : normal_size;
 
     char need_show_buf[128];
     snprintf(need_show_buf, sizeof(need_show_buf), "You need to show the %s for this control to work", TypeName());
 
-    if (ImGui::BeginTable("##layout_table", 2, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("tabs", ImGuiTableColumnFlags_WidthFixed, tab_w);
-        ImGui::TableSetupColumn("content", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableNextRow();
+{
+        static const char* frame_label_options[_countof(available_frame_labels) + 1];
+        for (size_t i = 0; i < _countof(available_frame_labels); i++) {
+            frame_label_options[i] = available_frame_labels[i].label;
+        }
+        frame_label_options[_countof(available_frame_labels)] = nullptr;
 
-        // Left column: Normal / Mobile tab buttons
-        ImGui::TableSetColumnIndex(0);
-        for (int i = 0; i < 2; i++) {
-            const char* label = i == 0 ? "Normal" : "Mobile";
-            const bool selected = settings_active_tab == i;
-            if (selected) {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
-            }
-            if (ImGui::Button(label, {tab_w, tab_h})) {
-                settings_active_tab = i;
-            }
-            if (selected) {
-                ImGui::PopStyleColor();
+        int current_idx = -1;
+        for (size_t i = 0; i < _countof(available_frame_labels); i++) {
+            if (available_frame_labels[i].label == snap) {
+                current_idx = static_cast<int>(i);
+                break;
             }
         }
+        const char* preview = current_idx >= 0 ? frame_label_options[current_idx] : "None";
 
-        // Right column: per-mode settings
-        ImGui::TableSetColumnIndex(1);
-
-        if (!tab_is_current_mode) {
-            ImGui::TextDisabled("(Changes apply when %s mode is active)", tab_is_mobile ? "mobile" : "normal");
-        }
-
-        // Snap to Frame
-        {
-            static const char* frame_label_options[_countof(available_frame_labels) + 1];
+        const bool snap_disabled = !is_movable || lm;
+        ImGui::BeginDisabled(snap_disabled);
+        if (ImGui::BeginCombo("Snap to Frame", preview)) {
+            if (ImGui::Selectable("None", current_idx < 0)) {
+                snap.clear();
+            }
             for (size_t i = 0; i < _countof(available_frame_labels); i++) {
-                frame_label_options[i] = available_frame_labels[i].label;
-            }
-            frame_label_options[_countof(available_frame_labels)] = nullptr;
-
-            int current_idx = -1;
-            for (size_t i = 0; i < _countof(available_frame_labels); i++) {
-                if (available_frame_labels[i].label == snap) {
-                    current_idx = static_cast<int>(i);
-                    break;
+                const bool selected = (static_cast<int>(i) == current_idx);
+                if (ImGui::Selectable(frame_label_options[i], selected)) {
+                    snap = available_frame_labels[i].label;
+                }
+                if (selected) {
+                    ImGui::SetItemDefaultFocus();
                 }
             }
-            const char* preview = current_idx >= 0 ? frame_label_options[current_idx] : "None";
-
-            const bool snap_disabled = !is_movable || lm;
-            ImGui::BeginDisabled(snap_disabled);
-            if (ImGui::BeginCombo("Snap to Frame", preview)) {
-                if (ImGui::Selectable("None", current_idx < 0)) {
-                    snap.clear();
-                }
-                for (size_t i = 0; i < _countof(available_frame_labels); i++) {
-                    const bool selected = (static_cast<int>(i) == current_idx);
-                    if (ImGui::Selectable(frame_label_options[i], selected)) {
-                        snap = available_frame_labels[i].label;
-                    }
-                    if (selected) {
-                        ImGui::SetItemDefaultFocus();
-                    }
-                }
-                ImGui::EndCombo();
-            }
-            ImGui::EndDisabled();
-            if (snap_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-                if (!is_movable) {
-                    ImGui::SetTooltip("This %s cannot be moved", TypeName());
-                } else {
-                    ImGui::SetTooltip("Uncheck 'Lock Position' to enable snap-to-frame");
-                }
-            } else {
-                ImGui::ShowHelp(need_show_buf);
-            }
+            ImGui::EndCombo();
         }
-
-        // Position
-        {
-            const bool pos_disabled = !is_movable || lm;
-            ImGui::BeginDisabled(pos_disabled);
-            if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
-                if (tab_is_current_mode && window) {
-                    ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
-                }
-            }
-            ImGui::EndDisabled();
-            if (pos_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-                if (!is_movable) {
-                    ImGui::SetTooltip("This %s cannot be moved", TypeName());
-                } else {
-                    ImGui::SetTooltip("Uncheck 'Lock Position' to adjust position");
-                }
-            } else {
-                ImGui::ShowHelp(need_show_buf);
-            }
-        }
-
-        // Size
-        {
-            const bool size_disabled = !is_resizable || ls || as_;
-            ImGui::BeginDisabled(size_disabled);
-            if (ImGui::DragFloat2("Size", cur_size, 1.0f, 0.0f, 0.0f, "%.0f")) {
-                if (tab_is_current_mode && window) {
-                    ImGui::SetWindowSize(window, {cur_size[0], cur_size[1]});
-                }
-            }
-            ImGui::EndDisabled();
-            if (size_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-                if (!is_resizable) {
-                    ImGui::SetTooltip("This %s cannot be resized", TypeName());
-                } else if (as_) {
-                    ImGui::SetTooltip("Uncheck 'Auto Size' to adjust size");
-                } else {
-                    ImGui::SetTooltip("Uncheck 'Lock Size' to adjust size");
-                }
-            } else {
-                ImGui::ShowHelp(need_show_buf);
-            }
-        }
-
-        // Lock / auto checkboxes
-        ImGui::StartSpacedElements(180.f);
-
-        ImGui::NextSpacedElement();
-        ImGui::BeginDisabled(!is_movable);
-        ImGui::Checkbox("Lock Position", &lm);
         ImGui::EndDisabled();
-        if (!is_movable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-            ImGui::SetTooltip("This %s cannot be moved", TypeName());
+        if (snap_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            if (!is_movable) {
+                ImGui::SetTooltip("This %s cannot be moved", TypeName());
+            }
+            else {
+                ImGui::SetTooltip("Uncheck 'Lock Position' to enable snap-to-frame");
+            }
         }
+        else {
+            ImGui::ShowHelp(need_show_buf);
+        }
+    }
 
-        ImGui::NextSpacedElement();
-        ImGui::BeginDisabled(!is_resizable);
-        ImGui::Checkbox("Lock Size", &ls);
+    // Position
+    {
+        const bool pos_disabled = !is_movable || lm;
+        ImGui::BeginDisabled(pos_disabled);
+        if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
+            if (window) {
+                ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
+            }
+        }
         ImGui::EndDisabled();
-        if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-            ImGui::SetTooltip("This %s cannot be resized", TypeName());
+        if (pos_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            if (!is_movable) {
+                ImGui::SetTooltip("This %s cannot be moved", TypeName());
+            }
+            else {
+                ImGui::SetTooltip("Uncheck 'Lock Position' to adjust position");
+            }
         }
+        else {
+            ImGui::ShowHelp(need_show_buf);
+        }
+    }
 
-        ImGui::NextSpacedElement();
-        ImGui::BeginDisabled(!is_resizable);
-        ImGui::Checkbox("Auto Size", &as_);
+    // Size
+    {
+        const bool size_disabled = !is_resizable || ls || as_;
+        ImGui::BeginDisabled(size_disabled);
+        if (ImGui::DragFloat2("Size", cur_size, 1.0f, 0.0f, 0.0f, "%.0f")) {
+            if (window) {
+                ImGui::SetWindowSize(window, {cur_size[0], cur_size[1]});
+            }
+        }
         ImGui::EndDisabled();
-        if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-            ImGui::SetTooltip("This %s cannot be resized", TypeName());
+        if (size_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            if (!is_resizable) {
+                ImGui::SetTooltip("This %s cannot be resized", TypeName());
+            }
+            else if (as_) {
+                ImGui::SetTooltip("Uncheck 'Auto Size' to adjust size");
+            }
+            else {
+                ImGui::SetTooltip("Uncheck 'Lock Size' to adjust size");
+            }
         }
+        else {
+            ImGui::ShowHelp(need_show_buf);
+        }
+    }
 
-        ImGui::EndTable();
+    // Lock / auto checkboxes
+    ImGui::StartSpacedElements(180.f);
+
+    ImGui::NextSpacedElement();
+    ImGui::BeginDisabled(!is_movable);
+    ImGui::Checkbox("Lock Position", &lm);
+    ImGui::EndDisabled();
+    if (!is_movable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s cannot be moved", TypeName());
+    }
+
+    ImGui::NextSpacedElement();
+    ImGui::BeginDisabled(!is_resizable);
+    ImGui::Checkbox("Lock Size", &ls);
+    ImGui::EndDisabled();
+    if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s cannot be resized", TypeName());
+    }
+
+    ImGui::NextSpacedElement();
+    ImGui::BeginDisabled(!is_resizable);
+    ImGui::Checkbox("Auto Size", &as_);
+    ImGui::EndDisabled();
+    if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s cannot be resized", TypeName());
     }
 
     // Shared settings (not per-mode) drawn below the two-column layout
