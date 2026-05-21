@@ -66,15 +66,7 @@ void HotkeyAction::Execute()
     }
     switch (action) {
         case OpenXunlaiChest:
-            GW::GameThread::Enqueue([] {
-                const auto frame = GW::UI::GetFrameByLabel(L"InvAccount");
-                if (frame) {
-                    GW::UI::DestroyUIComponent(frame);
-                }
-                else {
-                    GW::Items::OpenXunlaiWindow();
-                }
-                });
+            GW::Chat::SendChat('/', L"chest");
             break;
         case DropGoldCoin:
             if (isExplorable()) {
