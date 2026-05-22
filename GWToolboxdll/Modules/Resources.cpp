@@ -7,11 +7,13 @@
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Hero.h>
 
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
@@ -31,7 +33,8 @@
 #include <nfd_win.cpp>
 #pragma warning(pop)
 #include <dxgiformat.h>
-#include <wolfssl/wolfcrypt/asn.h>
+#include <bcrypt.h>
+#pragma comment(lib, "bcrypt.lib")
 
 #include <Modules/GwDatTextureModule.h>
 #include <Constants/EncStrings.h>
@@ -132,7 +135,8 @@ namespace {
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::unordered_map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
-    std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, GuiUtils::EncString*>> encoded_string_ids;
+    std::unordered_map<GW::Constants::HeroID, GuiUtils::EncString*> hero_names;
+    std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
     constexpr size_t MAX_WORKERS = 20;
     const wchar_t* GUILD_WARS_WIKI_FILES_PATH = L"img\\gww_files";
@@ -232,12 +236,16 @@ namespace {
 
     const std::string HashStr(const std::string& str)
     {
-        const auto bytes_to_hash = std::vector<byte>(str.begin(), str.end());
-        auto hash = std::vector<byte>(WC_SHA256_DIGEST_SIZE);
-        wc_Sha256Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
+        constexpr DWORD kSha256Size = 32;
+        BYTE hash[kSha256Size] = {};
+        BCryptHash(BCRYPT_SHA256_ALG_HANDLE,
+                   nullptr, 0,
+                   reinterpret_cast<PUCHAR>(const_cast<char*>(str.data())),
+                   static_cast<ULONG>(str.size()),
+                   hash, kSha256Size);
         std::stringstream hexstream;
         hexstream << std::hex << std::setfill('0');
-        for (auto b : hash) {
+        for (BYTE b : hash) {
             hexstream << std::setw(2) << static_cast<unsigned>(b);
         }
         return hexstream.str();
@@ -442,19 +450,12 @@ void Resources::Cleanup()
         delete tex;
     }
     item_images.clear();
-    for (const auto& img : guild_wars_wiki_images | std::views::values) {
-        if (img && *img) (*img)->Release();
-        delete img;
-    }
-    guild_wars_wiki_images.clear();
-    for (const auto& enc_strings : encoded_string_ids | std::views::values) {
-        for (const auto& enc_string : enc_strings | std::views::values) {
-            enc_string->Release();
-        }
-    }
-    encoded_string_ids.clear();
+    profession_icons.clear();
+    damagetype_icons.clear();
     map_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
     skill_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
+    hero_names.clear();
+    encoded_string_ids.clear();
 }
 
 void Resources::Terminate()
@@ -709,7 +710,8 @@ bool Resources::Post(const std::string& url, const std::string& payload, std::st
     r.SetMethod(HttpMethod::Post);
     r.SetPostContent(payload.c_str(), payload.size(), ContentFlag::ByRef);
 
-    std::string content_type = nlohmann::json::accept(payload) ? "application/json" : "application/x-www-form-urlencoded";
+    // Probe whether the payload is valid JSON so we can set the right Content-Type.
+    const std::string content_type = glz::validate_json(payload) ? "application/x-www-form-urlencoded" : "application/json";
     r.SetHeader("Content-Type", content_type.c_str());
     r.SetUrl(url.c_str());
     r.Execute();
@@ -1186,6 +1188,17 @@ GuiUtils::EncString* Resources::GetSkillName(const GW::Constants::SkillID skill_
     return DecodeStringId(GW::SkillbarMgr::GetSkillConstantData(skill_id)->name);
 }
 
+GuiUtils::EncString* Resources::GetHeroName(const GW::Constants::HeroID hero_id)
+{
+    const auto found = hero_names.find(hero_id);
+    if (found != hero_names.end()) {
+        return found->second;
+    }
+    const auto hero_data = GW::PartyMgr::GetHeroConstData(hero_id);
+    hero_names[hero_id] = DecodeStringId(hero_data ? hero_data->name_id : 0x3);
+    return hero_names[hero_id];
+}
+
 GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
 {
     const auto found = map_names.find(map_id);
@@ -1273,11 +1286,12 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
     if (by_language != encoded_string_ids.end()) {
         const auto found = by_language->second.find(enc_str_id);
         if (found != by_language->second.end())
-            return found->second;
+            return found->second.get();
     }
-    const auto enc_string = new GuiUtils::EncString(enc_str_id, false);
-    encoded_string_ids[language][enc_str_id] = enc_string;
-    return enc_string;
+    auto enc_string = std::make_unique<GuiUtils::EncString>(enc_str_id, false);
+    const auto raw = enc_string.get();
+    encoded_string_ids[language][enc_str_id] = std::move(enc_string);
+    return raw;
 }
 
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)

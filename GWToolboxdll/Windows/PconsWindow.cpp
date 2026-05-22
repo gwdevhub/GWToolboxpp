@@ -48,6 +48,7 @@ namespace {
 
     bool show_auto_refill_pcons_tickbox = true;
     bool show_auto_disable_pcons_tickbox = false;
+    bool show_enabled_status_in_title = true;
 
     GW::Agent* player = nullptr;
 
@@ -587,7 +588,28 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
         return;
     }
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+    char title[256];
+    snprintf(title, sizeof(title), "%s###%s", Name(), Name());
+    const bool expanded = ImGui::Begin(title, GetVisiblePtr(), GetWinFlags());
+    if (!expanded) {
+        if (show_enabled_status_in_title) {
+            const ImGuiWindow* win = ImGui::GetCurrentWindow();
+            if (win && win->Viewport) {
+                const ImRect tb = win->TitleBarRect();
+                const float bar_h = tb.GetHeight();
+                const float close_offset = GetVisiblePtr() ? bar_h : 0.f;
+                const char* icon = enabled ? ICON_FA_CHECK : ICON_FA_TIMES;
+                const ImVec2 text_size = ImGui::CalcTextSize(icon);
+                const ImVec2 icon_pos = {
+                    tb.Max.x - (close_offset * 2) - bar_h * 0.5f - text_size.x * 0.5f,
+                    tb.GetCenter().y - text_size.y * 0.5f
+                };
+                auto* dl = ImGui::GetWindowDrawList();
+                dl->PushClipRect(tb.Min, tb.Max, false);
+                dl->AddText(icon_pos, enabled ? IM_COL32(0, 200, 0, 230) : IM_COL32(200, 0, 0, 230), icon);
+                dl->PopClipRect();
+            }
+        }
         return ImGui::End();
     }
     if (show_enable_button) {
@@ -615,16 +637,13 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
 
     if (instance_type == InstanceType::Explorable && show_auto_disable_pcons_tickbox) {
         if (!current_objectives_to_check.empty()) {
-            ImGui::Checkbox("Off @ end", &disable_cons_on_objective_completion);
-            ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
+            ImGui::CheckboxWithHelp("Off @ end", &disable_cons_on_objective_completion, disable_cons_on_objective_completion_hint);
         }
         if (!(current_final_room_location == GW::Vec2f(0, 0))) {
-            ImGui::Checkbox("Off @ boss", &disable_cons_in_final_room);
-            ImGui::ShowHelp(disable_cons_in_final_room_hint);
+            ImGui::CheckboxWithHelp("Off @ boss", &disable_cons_in_final_room, disable_cons_in_final_room_hint);
         }
         if (in_vanquishable_area) {
-            ImGui::Checkbox("Off @ end", &disable_cons_on_vanquish_completion);
-            ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
+            ImGui::CheckboxWithHelp("Off @ end", &disable_cons_on_vanquish_completion, disable_cons_on_vanquish_completion_hint);
         }
     }
     ImGui::End();
@@ -750,19 +769,17 @@ void PconsWindow::DrawLunarsAndAlcoholSettings()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Suppress lunar and drunk post-processing effects", &Pcon::suppress_drunk_effect);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Suppress lunar and drunk text", &Pcon::suppress_drunk_text);
-    ImGui::ShowHelp("Will hide drunk and lunars messages on top of your and other characters");
+    ImGui::CheckboxWithHelp("Suppress lunar and drunk text", &Pcon::suppress_drunk_text, "Will hide drunk and lunars messages on top of your and other characters");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Suppress air of superiority text", &Pcon::suppress_air_of_superiority_text);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Suppress drunk emotes", &Pcon::suppress_drunk_emotes);
-    ImGui::ShowHelp("Important:\n"
+    ImGui::CheckboxWithHelp("Suppress drunk emotes", &Pcon::suppress_drunk_emotes,
+        "Important:\n"
         "This feature is experimental and might crash your game.\n"
         "Using level 1 alcohol instead of this is recommended for preventing drunk emotes.\n"
         "This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills);
-    ImGui::ShowHelp("Will hide the skills in your effect monitor");
+    ImGui::CheckboxWithHelp("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills, "Will hide the skills in your effect monitor");
     ImGui::Unindent();
 }
 
@@ -811,6 +828,7 @@ void PconsWindow::LoadSettings(ToolboxIni* ini)
     Pcon::refill_if_below_threshold = ini->GetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
     LOAD_BOOL(show_auto_refill_pcons_tickbox);
     LOAD_BOOL(show_auto_disable_pcons_tickbox);
+    LOAD_BOOL(show_enabled_status_in_title);
 
     LOAD_BOOL(show_storage_quantity);
     LOAD_BOOL(shift_click_toggles_category);
@@ -870,6 +888,7 @@ void PconsWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), VAR_NAME(refill_if_below_threshold), Pcon::refill_if_below_threshold);
     SAVE_BOOL(show_auto_refill_pcons_tickbox);
     SAVE_BOOL(show_auto_disable_pcons_tickbox);
+    SAVE_BOOL(show_enabled_status_in_title);
     SAVE_BOOL(shift_click_toggles_category);
     SAVE_BOOL(show_storage_quantity);
 
@@ -894,30 +913,27 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::Text("Functionality:");
     ImGui::StartSpacedElements(275.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Toggle Pcons per character", &Pcon::pcons_by_character);
-    ImGui::ShowHelp("Tick to remember pcon enable/disable per character.\nUntick to enable/disable regardless of current character.");
+    ImGui::CheckboxWithHelp("Toggle Pcons per character", &Pcon::pcons_by_character, "Tick to remember pcon enable/disable per character.\nUntick to enable/disable regardless of current character.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Tick with pcons", &tick_with_pcons);
-    ImGui::ShowHelp("Enabling or disabling pcons will also Tick or Untick in party list");
+    ImGui::CheckboxWithHelp("Tick with pcons", &tick_with_pcons, "Enabling or disabling pcons will also Tick or Untick in party list");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Disable when not found", &Pcon::disable_when_not_found);
-    ImGui::ShowHelp("Toolbox will disable a pcon if it is not found in the inventory");
+    ImGui::CheckboxWithHelp("Disable when not found", &Pcon::disable_when_not_found, "Toolbox will disable a pcon if it is not found in the inventory");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Refill from storage", &Pcon::refill_if_below_threshold);
-    ImGui::ShowHelp("Toolbox will refill pcons from storage if below the threshold");
+    ImGui::CheckboxWithHelp("Refill from storage", &Pcon::refill_if_below_threshold, "Toolbox will refill pcons from storage if below the threshold");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show storage quantity in outpost", &show_storage_quantity);
-    ImGui::ShowHelp("Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
+    ImGui::CheckboxWithHelp("Show storage quantity in outpost", &show_storage_quantity,
+        "Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
         "This only displays when in an outpost.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Shift + Click toggles category", &shift_click_toggles_category);
-    ImGui::ShowHelp("If this is ticked, clicking on a pcon while holding shift will enable/disable all of the same category\n"
+    ImGui::CheckboxWithHelp("Shift + Click toggles category", &shift_click_toggles_category,
+        "If this is ticked, clicking on a pcon while holding shift will enable/disable all of the same category\n"
         "Categories: Conset, Rock Candies, Kabob+Soup+Salad");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show Enable/Disable button", &show_enable_button);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox);
-    ImGui::ShowHelp("Will show a tickbox in the pcons window when in an elite area");
+    ImGui::CheckboxWithHelp("Show tick/cross icon on collapsed title bar", &show_enabled_status_in_title, "Overlay a green tick or red cross icon on the title bar when the window is collapsed");
+    ImGui::NextSpacedElement();
+    ImGui::CheckboxWithHelp("Show auto disable pcons checkboxes", &show_auto_disable_pcons_tickbox, "Will show a tickbox in the pcons window when in an elite area");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
 
@@ -1007,19 +1023,15 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::Text("Auto-Disabling Pcons");
     ImGui::StartSpacedElements(380.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion);
-    ImGui::ShowHelp(disable_cons_on_vanquish_completion_hint);
+    ImGui::CheckboxWithHelp("Auto Disable on Vanquish completion", &disable_cons_on_vanquish_completion, disable_cons_on_vanquish_completion_hint);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Auto Disable on Dungeon completion", &disable_cons_on_dungeon_completion);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Auto Disable on Mission completion", &disable_cons_on_mission_completion);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room);
-    ImGui::ShowHelp(disable_cons_in_final_room_hint);
+    ImGui::CheckboxWithHelp("Auto Disable in final room of Urgoz/Deep", &disable_cons_in_final_room, disable_cons_in_final_room_hint);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Auto Disable on final objective completion", &disable_cons_on_objective_completion);
-    ImGui::ShowHelp(disable_cons_on_objective_completion_hint);
+    ImGui::CheckboxWithHelp("Auto Disable on final objective completion", &disable_cons_on_objective_completion, disable_cons_on_objective_completion_hint);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Disable on map change", &disable_pcons_on_map_change);
-    ImGui::ShowHelp("Toolbox will disable pcons when leaving an explorable area");
+    ImGui::CheckboxWithHelp("Disable on map change", &disable_pcons_on_map_change, "Toolbox will disable pcons when leaving an explorable area");
 }

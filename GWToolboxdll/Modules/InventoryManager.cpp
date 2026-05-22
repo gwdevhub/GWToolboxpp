@@ -29,6 +29,7 @@
 #include <Utils/GuiUtils.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/GameSettings.h>
+#include <Modules/ItemDescriptionHandler.h>
 
 #include <Windows/MaterialsWindow.h>
 #include <Windows/DailyQuestsWindow.h>
@@ -120,35 +121,28 @@ namespace {
         uint32_t uses = 0;
         uint32_t quantity = 0;
         bool set(const InventoryManager::Item* item = nullptr);
-        GuiUtils::EncString* name = nullptr;
-        GuiUtils::EncString* desc = nullptr;
-        GuiUtils::EncString* wiki_name = nullptr;
-        GuiUtils::EncString* single_item_name = nullptr;
+        std::unique_ptr<GuiUtils::EncString> name;
+        std::unique_ptr<GuiUtils::EncString> desc;
+        std::unique_ptr<GuiUtils::EncString> wiki_name;
+        std::unique_ptr<GuiUtils::EncString> single_item_name;
 
-        class PluralEncString : public GuiUtils::EncString {
-        protected:
-            void sanitise() override;
-        };
-
-        PluralEncString* plural_item_name = nullptr;
+        std::unique_ptr<GuiUtils::EncString> plural_item_name;
 
         InventoryManager::Item* item() const;
         PendingItem()
         {
-            single_item_name = new GuiUtils::EncString{};
-            plural_item_name = new PluralEncString{};
-            name = new GuiUtils::EncString{};
-            desc = new GuiUtils::EncString{};
-            wiki_name = new GuiUtils::EncString{};
+            single_item_name = std::make_unique<GuiUtils::EncString>();
+            plural_item_name = std::make_unique<GuiUtils::EncString>();
+            plural_item_name->SetSanitiseCallback([](std::wstring s) {
+                s = TextUtils::StripTags(TextUtils::Replace(s, L"<brx>", L"\n"));
+                if (s.size() > 2) s = s.substr(2);
+                return s;
+            });
+            name = std::make_unique<GuiUtils::EncString>();
+            desc = std::make_unique<GuiUtils::EncString>();
+            wiki_name = std::make_unique<GuiUtils::EncString>();
         }
-        ~PendingItem()
-        {
-            single_item_name->Release();
-            plural_item_name->Release();
-            name->Release();
-            desc->Release();
-            wiki_name->Release();
-        }
+        ~PendingItem() = default;
     };
     struct PotentialItem : PendingItem {
         bool proceed = true;
@@ -185,10 +179,6 @@ namespace {
     PendingItem pending_salvage_item;
     PendingItem pending_salvage_kit;
     PendingTransaction pending_transaction;
-
-    bool wcseq(const wchar_t* a, const wchar_t* b) {
-        return a && b && wcscmp(a, b) == 0;
-    }
 
     bool GetIsProfessionUnlocked(GW::Constants::ProfessionByte prof)
     {
@@ -1958,6 +1948,61 @@ uint16_t InventoryManager::StoreItems(uint16_t quantity, const std::vector<unsig
     return moved;
 }
 
+uint16_t InventoryManager::WithdrawItemsByModelID(const uint32_t model_id, const uint32_t amount, const bool check_already_withdrawn)
+{
+    const auto is_same_item = [model_id](const Item* cmp) {
+        return cmp && cmp->model_id == model_id;
+    };
+    uint32_t to_move = amount;
+    if (check_already_withdrawn) {
+        const auto in_inventory = count_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Equipment_Pack, is_same_item);
+        if (in_inventory >= to_move) {
+            return 0;
+        }
+        to_move -= in_inventory;
+    }
+    uint16_t moved = 0;
+    const auto storage_items = filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, is_same_item);
+    for (const auto item : storage_items) {
+        const auto this_move = move_item_to_inventory(item, static_cast<uint16_t>(to_move));
+        moved += this_move;
+        to_move -= this_move;
+        if (to_move < 1) {
+            break;
+        }
+    }
+    return moved;
+}
+
+uint16_t InventoryManager::WithdrawItemsByName(const wchar_t* name_enc, const uint32_t amount, const bool check_already_withdrawn)
+{
+    if (!name_enc) {
+        return 0;
+    }
+    const auto is_same_item = [name_enc](const Item* cmp) {
+        return cmp && cmp->name_enc && wcscmp(cmp->name_enc, name_enc) == 0;
+    };
+    uint32_t to_move = amount;
+    if (check_already_withdrawn) {
+        const auto in_inventory = count_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Equipment_Pack, is_same_item);
+        if (in_inventory >= to_move) {
+            return 0;
+        }
+        to_move -= in_inventory;
+    }
+    uint16_t moved = 0;
+    const auto storage_items = filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, is_same_item);
+    for (const auto item : storage_items) {
+        const auto this_move = move_item_to_inventory(item, static_cast<uint16_t>(to_move));
+        moved += this_move;
+        to_move -= this_move;
+        if (to_move < 1) {
+            break;
+        }
+    }
+    return moved;
+}
+
 GW::Item* InventoryManager::GetAvailableInventoryStack(GW::Item* like_item, const bool entire_stack)
 {
     if (!like_item || like_item->GetIsStackable()) {
@@ -2004,8 +2049,7 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Checkbox("Hide unsellable items from merchant window", &hide_unsellable_items);
     ImGui::Checkbox("Hide weapon sets and customized items from merchant window", &hide_weapon_sets_and_customized_items);
     ImGui::Checkbox("Hide gold items from merchant window", &hide_golds_from_merchant);
-    ImGui::Checkbox("Move whole stacks by default", &trade_whole_stacks);
-    ImGui::ShowHelp("Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
+    ImGui::CheckboxWithHelp("Move whole stacks by default", &trade_whole_stacks, "Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
     ImGui::TextUnformatted("Move items to trade on:");
     ImGui::ShowHelp("When trading with another player, you normally have to drag an item from inventory to the trade window. Enable an option below to make it easier.");
     ImGui::Indent();
@@ -2025,11 +2069,9 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Text("Salvage All options:");
     ImGui::SameLine();
     ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
-    ImGui::Checkbox("Salvage Rare Materials", &salvage_rare_mats);
-    ImGui::ShowHelp("Untick to skip salvagable rare materials when checking for salvagable items");
+    ImGui::CheckboxWithHelp("Salvage Rare Materials", &salvage_rare_mats, "Untick to skip salvagable rare materials when checking for salvagable items");
     ImGui::SameLine();
-    ImGui::Checkbox("Salvage Nicholas Items", &salvage_nicholas_items);
-    ImGui::ShowHelp("Untick to skip items that Nicholas the Traveller collects when checking for salvagable items");
+    ImGui::CheckboxWithHelp("Salvage Nicholas Items", &salvage_nicholas_items, "Untick to skip items that Nicholas the Traveller collects when checking for salvagable items");
     ImGui::Text("Salvage from:");
     ImGui::ShowHelp("Only ticked bags will be checked for salvagable items");
     ImGui::Checkbox("Backpack", &bags_to_salvage_from[GW::Constants::Bag::Backpack]);
@@ -2039,16 +2081,11 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::Checkbox("Bag 1", &bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
     ImGui::SameLine();
     ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-    ImGui::Checkbox("Salvage All with Control+Click", &salvage_all_on_ctrl_click);
-    ImGui::ShowHelp("Control+Click a salvage kit to open the Salvage All window");
-    ImGui::Checkbox("Identify green items", &identify_greens);
-    ImGui::ShowHelp("Untick to skip green items when doing Identify All");
-    ImGui::Checkbox("Identify All with Control+Click", &identify_all_on_ctrl_click);
-    ImGui::ShowHelp("Control+Click an identification kit to identify all items with it");
-    ImGui::Checkbox("Auto re-use salvage kit", &auto_reuse_salvage_kit);
-    ImGui::ShowHelp("When a salvage kit is used up immediately by salvaging without a popup,\ncheck this box to 're-use' the kit ready for the next item.");
-    ImGui::Checkbox("Auto re-use identification kit", &auto_reuse_id_kit);
-    ImGui::ShowHelp("When a identification kit is used up immediately by identifying an item,\ncheck this box to 're-use' the kit ready for the next item.");
+    ImGui::CheckboxWithHelp("Salvage All with Control+Click", &salvage_all_on_ctrl_click, "Control+Click a salvage kit to open the Salvage All window");
+    ImGui::CheckboxWithHelp("Identify green items", &identify_greens, "Untick to skip green items when doing Identify All");
+    ImGui::CheckboxWithHelp("Identify All with Control+Click", &identify_all_on_ctrl_click, "Control+Click an identification kit to identify all items with it");
+    ImGui::CheckboxWithHelp("Auto re-use salvage kit", &auto_reuse_salvage_kit, "When a salvage kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been salvaged.");
+    ImGui::CheckboxWithHelp("Auto re-use identification kit", &auto_reuse_id_kit, "When an identification kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been identified.");
     DrawMerchantHiddenItemsSettings();
 }
 
@@ -2688,12 +2725,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
 #pragma warning(pop)
 }
 
-bool InventoryManager::Item::IsOfferedInTrade() const
-{
-    return GW::Trade::IsItemOffered(item_id) != nullptr;
-}
-
-bool InventoryManager::Item::CanOfferToTrade() const
+bool InventoryItem::CanOfferToTrade() const
 {
     auto* player_items = GetPlayerTradeItems();
     if (!player_items) {
@@ -2702,43 +2734,7 @@ bool InventoryManager::Item::CanOfferToTrade() const
     return IsTradable() && IsTradeWindowOpen() && !IsOfferedInTrade() && player_items->size() < 7;
 }
 
-bool InventoryManager::Item::CanBeIdentified() const
-{
-    if (GetIsIdentified()) return false;
-    if (IsSalvagable(false)) return true;
-    switch (type) {
-        case GW::Constants::ItemType::Bundle:
-        case GW::Constants::ItemType::Usable:
-        case GW::Constants::ItemType::Quest_Item:
-        case GW::Constants::ItemType::Storybook:
-            return false;
-    }
-    if (IsWeapon() || IsArmor()) return true;
-    if (IsGreen()) return false;
-    switch (model_file_id) {
-        case 0x44CAC:
-            return false;
-    }
-    return true;
-}
-
-bool InventoryManager::Item::IsOldSchool() const
-{
-    // Not OS if inscribable (Nightfall/EotN) or not salvagable
-    if (GetIsInscribable() || !IsSalvagable(false)) return false;
-
-    // OS off-hands (wand/focus/shield) have 2 inherent mods, no upgrade slots
-    switch (type) {
-        case GW::Constants::ItemType::Wand:
-        case GW::Constants::ItemType::Offhand:
-            return !IsUpgradable();
-    }
-
-    // Other OS weapons have 1 inherent + 1 suffix slot (so they ARE upgradable)
-    return IsWeapon() && !IsPrefixUpgradable();
-}
-
-bool InventoryManager::Item::IsSalvagable(bool check_bag, bool check_blocked_from_being_salvaged) const
+bool InventoryItem::IsSalvagable(bool check_bag, bool check_blocked_from_being_salvaged) const
 {
     if (item_formula == 0x5da) {
         return false;
@@ -2775,41 +2771,7 @@ bool InventoryManager::Item::IsSalvagable(bool check_bag, bool check_blocked_fro
     return false;
 }
 
-bool InventoryManager::Item::IsWeapon() const
-{
-    switch (static_cast<GW::Constants::ItemType>(type)) {
-        case GW::Constants::ItemType::Axe:
-        case GW::Constants::ItemType::Sword:
-        case GW::Constants::ItemType::Shield:
-        case GW::Constants::ItemType::Scythe:
-        case GW::Constants::ItemType::Bow:
-        case GW::Constants::ItemType::Wand:
-        case GW::Constants::ItemType::Staff:
-        case GW::Constants::ItemType::Offhand:
-        case GW::Constants::ItemType::Daggers:
-        case GW::Constants::ItemType::Hammer:
-        case GW::Constants::ItemType::Spear:
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool InventoryManager::Item::IsArmor() const
-{
-    switch (static_cast<GW::Constants::ItemType>(type)) {
-        case GW::Constants::ItemType::Headpiece:
-        case GW::Constants::ItemType::Chestpiece:
-        case GW::Constants::ItemType::Leggings:
-        case GW::Constants::ItemType::Boots:
-        case GW::Constants::ItemType::Gloves:
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool InventoryManager::Item::IsHiddenFromMerchants() const
+bool InventoryItem::IsHiddenFromMerchants() const
 {
     if (hide_unsellable_items && !value) {
         return true;
@@ -2824,80 +2786,6 @@ bool InventoryManager::Item::IsHiddenFromMerchants() const
         return true;
     }
     return false;
-}
-
-GW::ItemModifier* InventoryManager::Item::GetModifier(const uint32_t identifier) const
-{
-    for (size_t i = 0; i < mod_struct_size; i++) {
-        GW::ItemModifier* mod = &mod_struct[i];
-        if (mod->identifier() == identifier) {
-            return mod;
-        }
-    }
-    return nullptr;
-}
-
-// InventoryManager::Item definitions
-
-uint32_t InventoryManager::Item::GetUses() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x2458);
-    return (mod ? mod->arg2() : 1) * quantity;
-}
-
-bool InventoryManager::Item::IsSalvageKit() const
-{
-    return IsLesserKit() || IsExpertSalvageKit(); // || IsPerfectSalvageKit();
-}
-
-bool InventoryManager::Item::IsTome() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x2788);
-    const uint32_t use_id = mod ? mod->arg() : 0;
-    return use_id > 15 && use_id < 36;
-}
-
-bool InventoryManager::Item::IsIdentificationKit() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x25E8);
-    return mod && mod->arg1() == 1;
-}
-
-bool InventoryManager::Item::IsLesserKit() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x25E8);
-    return mod && mod->arg1() == 3;
-}
-
-bool InventoryManager::Item::IsExpertSalvageKit() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x25E8);
-    return mod && mod->arg1() == 2;
-}
-
-bool InventoryManager::Item::IsPerfectSalvageKit() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x25E8);
-    return mod && mod->arg1() == 6;
-}
-
-bool InventoryManager::Item::IsRareMaterial() const
-{
-    const GW::ItemModifier* mod = GetModifier(0x2508);
-    return mod && mod->arg1() > 11;
-}
-bool InventoryManager::Item::IsInventoryItem() const
-{
-    return bag && (bag->IsInventoryBag() || bag->bag_type == GW::Constants::BagType::Equipped);
-}
-bool InventoryManager::Item::IsStorageItem() const
-{
-    return bag && (bag->IsStorageBag() || bag->IsMaterialStorage());
-}
-
-GW::Constants::Rarity InventoryManager::Item::GetRarity() const
-{
-    return GW::Items::GetRarity(this);
 }
 
 bool PendingItem::set(const InventoryManager::Item* item)
@@ -2948,13 +2836,3 @@ bool PendingTransaction::selling()
     return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
 }
 
-void PendingItem::PluralEncString::sanitise()
-{
-    if (sanitised) {
-        return;
-    }
-    EncString::sanitise();
-    if (sanitised) {
-        decoded_ws = decoded_ws.substr(2);
-    }
-}

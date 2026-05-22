@@ -10,8 +10,7 @@
 
 //https://github.com/tendulkar/constvector
 //begin changes done:
-#ifdef WIN32
-    #include <intrin.h>
+#if defined(_MSC_VER) && !defined(__clang__)
     static uint32_t __inline __builtin_clz(uint32_t x) {
         unsigned long r = 0;
         _BitScanReverse(&r, x);

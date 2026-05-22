@@ -98,6 +98,13 @@ public:
 
     void Render(IDirect3DDevice9* device) override;
 
+    void Terminate() override
+    {
+        D3DVertexBuffer::Terminate();
+        ping_circle.Terminate();
+        marker.Terminate();
+    }
+
     void Invalidate() override
     {
         D3DVertexBuffer::Invalidate();

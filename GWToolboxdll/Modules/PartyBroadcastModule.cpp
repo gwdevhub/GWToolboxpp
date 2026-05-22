@@ -18,7 +18,8 @@
 #include <Utils/TextUtils.h>
 
 #include <Utils/ThreadedWebSocket.h>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <optional>
 
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
@@ -26,7 +27,31 @@
 #include <Utils/ToolboxUtils.h>
 #include "ToolboxSettings.h"
 
-using json = nlohmann::json;
+namespace party_broadcast_api {
+    // Compact field names + std::optional omission match the existing wire format.
+    struct PartyEntry {
+        uint32_t i = 0;             // party id
+        std::optional<uint32_t> r;  // remove flag (when party_size == 0)
+        std::optional<uint32_t> t;  // search type
+        std::optional<uint32_t> p;  // primary
+        std::optional<std::string> s; // sender
+        std::optional<uint32_t> ps; // party size (>1)
+        std::optional<uint32_t> hc; // hero count
+        std::optional<uint32_t> hm; // hardmode
+        std::optional<uint32_t> dl; // district language
+        std::optional<uint32_t> sc; // secondary
+        std::optional<uint32_t> dn; // district number
+        std::optional<std::string> ms; // message
+        std::optional<uint32_t> l;  // level (when != 20)
+    };
+
+    struct PartiesPayload {
+        std::string type;
+        uint32_t map_id = 0;
+        int32_t district_region = 0;
+        std::vector<PartyEntry> parties;
+    };
+}
 
 namespace {
     clock_t last_update_timestamp = 0;
@@ -67,27 +92,25 @@ namespace {
 
     bool send_payload(const std::string& payload);
 
-    void to_json(nlohmann::json& j, const PartySearchAdvertisement& p)
+    party_broadcast_api::PartyEntry ToJson(const PartySearchAdvertisement& p)
     {
-        j = nlohmann::json{{"i", p.party_id}};
+        party_broadcast_api::PartyEntry j{.i = p.party_id};
         if (!p.party_size) {
-            // Aka "remove"
-            j["r"] = 1;
-            return;
+            j.r = 1u; // "remove"
+            return j;
         }
-        j["t"] = p.search_type;
-        j["p"] = p.primary;
-        j["s"] = p.sender;
-
-        // The following fields can be assumed to be reasonable defaults by the server, so only need to send if they're not standard.
-        if (p.party_size > 1) j["ps"] = p.party_size;
-        if (p.hero_count) j["hc"] = p.hero_count;
-        if (p.hardmode) j["hm"] = p.hardmode;
-        if (p.language) j["dl"] = p.language;
-        if (p.secondary) j["sc"] = p.secondary;
-        if (p.district_number) j["dn"] = p.district_number;
-        if (!p.message.empty()) j["ms"] = p.message;
-        if (p.level != 20) j["l"] = p.level;
+        j.t = p.search_type;
+        j.p = p.primary;
+        j.s = p.sender;
+        if (p.party_size > 1) j.ps = p.party_size;
+        if (p.hero_count) j.hc = p.hero_count;
+        if (p.hardmode) j.hm = p.hardmode;
+        if (p.language) j.dl = p.language;
+        if (p.secondary) j.sc = p.secondary;
+        if (p.district_number) j.dn = p.district_number;
+        if (!p.message.empty()) j.ms = p.message;
+        if (p.level != 20) j.l = p.level;
+        return j;
     }
 
     bool get_api_key(std::string& out)
@@ -98,14 +121,6 @@ namespace {
             return false;
         }
         out = std::format("gwtoolbox-{}-{}", current_release.version, current_release.size);
-        return true;
-    }
-
-    bool get_uuid(std::string& out)
-    {
-        const auto account_uuid = GW::AccountMgr::GetPortalAccountUuid();
-        if (!account_uuid) return false;
-        out = TextUtils::GuidToString(account_uuid);
         return true;
     }
 
@@ -127,9 +142,10 @@ namespace {
         party_ws.SetReconnectCost(30'000, 60'000);
 
         party_ws.SetHeadersFactory([] {
-            std::string api_key, uuid;
+            std::string api_key;
             get_api_key(api_key);
-            get_uuid(uuid);
+            const auto acct_uuid = GW::AccountMgr::GetAccountUuid();
+            const auto uuid = TextUtils::GuidToString(&acct_uuid);
             easywsclient::HeaderKeyValuePair headers = {{"User-Agent", "GWToolboxpp"}, {"X-Api-Key", api_key}, {"X-Account-Uuid", uuid}, {"X-Bot-Version", "101"}};
             Log::Log("Connecting to wss://party.gwtoolbox.com (X-Api-Key: %s, X-Account-Uuid: %s)", api_key.c_str(), uuid.c_str());
             return headers;
@@ -216,13 +232,15 @@ namespace {
             return true;
         }
 
-        json j;
-        j["type"] = "client_parties";
-        j["map_id"] = (uint32_t)GW::Map::GetMapID();
-        j["district_region"] = (int)GW::Map::GetRegion();
-        j["parties"] = parties;
+        party_broadcast_api::PartiesPayload j{
+            .type = "client_parties",
+            .map_id = static_cast<uint32_t>(GW::Map::GetMapID()),
+            .district_region = static_cast<int32_t>(GW::Map::GetRegion()),
+        };
+        j.parties.reserve(parties.size());
+        for (const auto& p : parties) j.parties.push_back(ToJson(p));
 
-        const auto payload = j.dump();
+        const auto payload = glz::write_json(j).value_or(std::string{});
         if (!send_payload(payload)) return false;
         last_sent_district_info = GetDistrictInfo();
 
@@ -276,13 +294,15 @@ namespace {
         }
 
         if (to_send.empty()) return true; // No change
-        json j;
-        j["type"] = "updated_parties";
-        j["map_id"] = (uint32_t)GW::Map::GetMapID();
-        j["district_region"] = (int)GW::Map::GetRegion();
-        j["parties"] = to_send;
+        party_broadcast_api::PartiesPayload j{
+            .type = "updated_parties",
+            .map_id = static_cast<uint32_t>(GW::Map::GetMapID()),
+            .district_region = static_cast<int32_t>(GW::Map::GetRegion()),
+        };
+        j.parties.reserve(to_send.size());
+        for (const auto& p : to_send) j.parties.push_back(ToJson(p));
 
-        const auto payload = j.dump();
+        const auto payload = glz::write_json(j).value_or(std::string{});
         if (!send_payload(payload)) return false;
         last_sent_district_info = GetDistrictInfo();
         for (auto& party : to_send) {

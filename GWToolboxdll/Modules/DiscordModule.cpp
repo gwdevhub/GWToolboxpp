@@ -16,7 +16,6 @@ NOTE: Disconnecting/reconnecting will mess this up so repeat process.
 
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/CharContext.h>
-#include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Map.h>
@@ -145,19 +144,6 @@ namespace {
         "The Rise of The White Mantle",
         "Swat",
         "Dev Region"
-    };
-    const char* profession_names[] = {
-        "No Profession",
-        "Warrior",
-        "Ranger",
-        "Monk",
-        "Necromancer",
-        "Mesmer",
-        "Elementalist",
-        "Assassin",
-        "Ritualist",
-        "Paragon",
-        "Dervish"
     };
 
     const char* map_languages[] = {
@@ -627,7 +613,7 @@ namespace {
 
             if (show_character_info) {
                 sprintf(activity.assets.small_image, "profession_%d_512px", a->primary);
-                sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, profession_names[std::to_underlying(a->primary)]);
+                sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(a->primary))->string().c_str());
             }
 
             if (show_location_info) {
@@ -765,8 +751,7 @@ void DiscordModule::Initialize()
 void DiscordModule::DrawSettingsInternal()
 {
     bool edited = false;
-    edited |= ImGui::Checkbox("Enable Discord integration", &discord_enabled);
-    ImGui::ShowHelp("Allows GWToolbox to send in-game information to Discord");
+    edited |= ImGui::CheckboxWithHelp("Enable Discord integration", &discord_enabled, "Allows GWToolbox to send in-game information to Discord");
     if (discord_enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, discord_connected ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
@@ -784,17 +769,13 @@ void DiscordModule::DrawSettingsInternal()
         }
 
         ImGui::Indent();
-        edited |= ImGui::Checkbox("Hide in-game info when appearing offline", &hide_activity_when_offline);
-        ImGui::ShowHelp("Setting your status to offline in friend list hides your info from Discord");
+        edited |= ImGui::CheckboxWithHelp("Hide in-game info when appearing offline", &hide_activity_when_offline, "Setting your status to offline in friend list hides your info from Discord");
 
-        edited |= ImGui::Checkbox("Display in-game location info", &show_location_info);
-        ImGui::ShowHelp("e.g. 'Sifhalla, America English 1'");
+        edited |= ImGui::CheckboxWithHelp("Display in-game location info", &show_location_info, "e.g. 'Sifhalla, America English 1'");
 
-        edited |= ImGui::Checkbox("Display character info", &show_character_info);
-        ImGui::ShowHelp("i.e. Profession icon and character name");
+        edited |= ImGui::CheckboxWithHelp("Display character info", &show_character_info, "i.e. Profession icon and character name");
 
-        edited |= ImGui::Checkbox("Display party info", &show_party_info);
-        ImGui::ShowHelp("Allows other players to join you when in an outpost,\nalso shows current party status e.g. (3 of 8)");
+        edited |= ImGui::CheckboxWithHelp("Display party info", &show_party_info, "Allows other players to join you when in an outpost,\nalso shows current party status e.g. (3 of 8)");
         ImGui::Unindent();
     }
     if (edited) // Picked up in the Update() loop

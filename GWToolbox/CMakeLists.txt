@@ -19,11 +19,9 @@ set_target_properties(GWToolbox PROPERTIES
 
 target_link_libraries(GWToolbox PRIVATE
     # cmake dependencies:
-    GWToolboxdll
     Core
     RestClient
-    directxtex
-    nlohmann_json::nlohmann_json
+    glaze::glaze
 
     version.lib # for GetFileVersionInfo
     )

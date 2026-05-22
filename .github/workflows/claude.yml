@@ -1,0 +1,147 @@
+name: Claude
+
+# Triggers Claude Code on @claude mentions in issues and pull requests.
+# Restricted to repository members so randoms can't burn API spend by
+# pinging Claude in a public issue.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  label-ai-pr:
+    # Claude doesn't open PRs itself — it commits to a claude/* branch and
+    # comments a pre-filled link that a human clicks. So the PR author is
+    # the human, but the branch name identifies it as a Claude PR.
+    if: github.event_name == 'pull_request_target' && startsWith(github.event.pull_request.head.ref, 'claude/')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Find linked issues
+        id: linked
+        uses: ./.github/actions/find-linked-issues
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+
+      - name: Label PR and linked issues with "AI"
+        uses: actions/github-script@v7
+        env:
+          LINKED_ISSUES: ${{ steps.linked.outputs.issues }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const number = context.payload.pull_request.number;
+            const issues = JSON.parse(process.env.LINKED_ISSUES);
+
+            try {
+              await github.rest.issues.createLabel({
+                owner, repo,
+                name: 'AI',
+                color: '8a2be2',
+                description: 'Created by AI',
+              });
+            } catch (e) {
+              if (e.status !== 422) throw e; // 422 = already exists
+            }
+
+            await github.rest.issues.addLabels({
+              owner, repo,
+              issue_number: number,
+              labels: ['AI'],
+            });
+
+            for (const issue_number of issues) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner, repo, issue_number,
+                  labels: ['AI'],
+                });
+              } catch (e) {
+                core.warning(`Failed to label #${issue_number}: ${e.message}`);
+              }
+            }
+
+  claude:
+    if: |
+      (
+        (github.event_name == 'issue_comment'              && contains(github.event.comment.body, '@claude') && (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')) ||
+        (github.event_name == 'pull_request_review'         && contains(github.event.review.body,  '@claude') && (github.event.review.author_association  == 'OWNER' || github.event.review.author_association  == 'MEMBER' || github.event.review.author_association  == 'COLLABORATOR')) ||
+        (github.event_name == 'issues'                       && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) && (github.event.issue.author_association == 'OWNER' || github.event.issue.author_association == 'MEMBER' || github.event.issue.author_association == 'COLLABORATOR'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Write MCP config
+        # Streamable-HTTP MCP server backed by a headless Ghidra against
+        # the latest Gw.exe. See:
+        #   https://github.com/gwdevhub/gwdevhub-core/blob/master/docs/ghidra-mcp.md
+        env:
+          GHIDRA_MCP_TOKEN: ${{ secrets.GHIDRA_MCP_TOKEN }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/claude"
+          cat > "$RUNNER_TEMP/claude/mcp.json" <<EOF
+          {
+            "mcpServers": {
+              "ghidra": {
+                "type": "http",
+                "url": "https://ghidra-mcp.gwtoolbox.com/mcp",
+                "headers": {
+                  "Authorization": "Bearer ${GHIDRA_MCP_TOKEN}"
+                }
+              }
+            }
+          }
+          EOF
+
+      - name: Run Claude Code
+        # Pinned to a commit before claude-code 2.1.131, which broke the
+        # native installer (binary missing at /home/runner/.local/bin/claude).
+        # Bump back to @v1 once upstream is fixed.
+        uses: anthropics/claude-code-action@2cc1ac1331eac7a6a96d716dd204dd2888d0fcd2 # v1 @ 2.1.128
+        with:
+          # Authenticate against your Claude Code subscription so usage
+          # comes out of the existing Max plan rather than API credits.
+          # Generate the token locally with `claude setup-token` and store
+          # it as a repository secret named CLAUDE_CODE_OAUTH_TOKEN.
+          # Fall back to ANTHROPIC_API_KEY if the OAuth token is missing.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Branch off and target dev for any PRs Claude opens, since
+          # master is reserved for releases and dev is the integration branch.
+          base_branch: dev
+          # Wire in the Ghidra MCP server (see "Write MCP config" step).
+          # Tool restrictions: deny anything that would mutate the loaded
+          # program (rename_*, set_*_comment, *_save, delete_*, etc.) — the
+          # program is loaded in memory only, not in a Ghidra project, so
+          # those calls would either fail or silently lose work on reload.
+          # Instructions live in .github/claude/ghidra-mcp.md.
+          claude_args: |
+            --mcp-config ${{ runner.temp }}/claude/mcp.json
+            --append-system-prompt "$(cat .github/claude/ghidra-mcp.md)"
+            --disallowed-tools "mcp__ghidra__rename_*,mcp__ghidra__set_*_comment,mcp__ghidra__set_global,mcp__ghidra__set_disassembly_comment,mcp__ghidra__set_decompiler_comment,mcp__ghidra__set_plate_comment,mcp__ghidra__delete_*,mcp__ghidra__save_*,mcp__ghidra__commit_*,mcp__ghidra__create_*,mcp__ghidra__add_*,mcp__ghidra__modify_*,mcp__ghidra__remove_*,mcp__ghidra__apply_*,mcp__ghidra__import_*,mcp__ghidra__batch_set_*,mcp__ghidra__batch_create_*,mcp__ghidra__batch_delete_*,mcp__ghidra__batch_remove_*,mcp__ghidra__batch_add_*,mcp__ghidra__clear_*,mcp__ghidra__close_*,mcp__ghidra__archive_ingest_*,mcp__ghidra__merge_*,mcp__ghidra__move_*,mcp__ghidra__clone_*,mcp__ghidra__suggest_*,mcp__ghidra__can_rename_at_address,mcp__ghidra__run_analysis,mcp__ghidra__unload_tool_group"

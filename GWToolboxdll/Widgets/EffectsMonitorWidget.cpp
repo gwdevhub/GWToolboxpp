@@ -1,18 +1,25 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/WorldContext.h>
 
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/MemoryMgr.h>
+
+#include <GWCA/GameContainers/GamePos.h>
 
 #include <Utils/GuiUtils.h>
+#include <Utils/ToolboxUtils.h>
 #include <Color.h>
 #include <Defines.h>
 #include "EffectsMonitorWidget.h"
@@ -30,11 +37,96 @@ namespace {
     int only_under_seconds = 3600; // hide effect durations over n seconds
     bool round_up = true;          // round up or down?
     bool show_vanquish_counter = true;
+    bool track_spirit_effects = false;
 
     GW::UI::Frame* effects_frame = nullptr;
 
     ImGuiViewport* viewport = nullptr;
     ImDrawList* draw_list = nullptr;
+
+    // Maps an agent's encoded name to the skill_id of the spirit it represents.
+    // TODO: @3vcloud - populate with actual encoded names for all desired tracked spirits.
+    const std::unordered_map<std::wstring, GW::Constants::SkillID> spirit_enc_name_to_skill_id = {
+        {L"\x416F\xD141\x9F0B\x5276", GW::Constants::SkillID::Disenchantment},
+        {L"\x4164\x825C\xA2F2\x1235", GW::Constants::SkillID::Pain},
+        {L"\x4171\xCD7A\xD7A6\x386D", GW::Constants::SkillID::Bloodsong},
+        {L"\x8102\x5F66\xBE02\xB9AB\x1073", GW::Constants::SkillID::Signet_of_Spirits}
+    };
+
+    // Deterministic effect ID per spirit skill: high byte 0x0f avoids collision with real effects.
+    constexpr uint32_t SpiritEffectId(const GW::Constants::SkillID skill_id)
+    {
+        return 0x0f000000 | static_cast<uint32_t>(skill_id);
+    }
+
+    // Maps agent_id -> skill_id for currently tracked spirit agents.
+    std::unordered_map<uint32_t, GW::Constants::SkillID> tracked_spirits;
+
+    // Set when the player completes a spirit-summoning cast; cleared once the spirit is detected.
+    struct PendingSpiritSpawn {
+        GW::Constants::SkillID skill_id = GW::Constants::SkillID::No_Skill;
+        uint32_t timestamp_ms = 0;
+    } pending_spirit_spawn;
+
+    GW::HookEntry spirit_ui_hook;
+
+    float GetSpiritDuration(const GW::Constants::SkillID skill_id, const uint32_t npc_level)
+    {
+        const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+        if (!skill || skill->duration0 == 0) return 60.f;
+        const float d0 = static_cast<float>(skill->duration0);
+        const float d15 = static_cast<float>(skill->duration15);
+        const float level = std::min(static_cast<float>(npc_level), 20.f);
+        return d0 + (d15 - d0) * level / 15.f;
+    }
+
+    void RemoveTrackedSpirit(const uint32_t agent_id)
+    {
+        const auto it = tracked_spirits.find(agent_id);
+        if (it == tracked_spirits.end()) return;
+        GW::Effects::RemoveCustomEffect(SpiritEffectId(it->second));
+        tracked_spirits.erase(it);
+    }
+
+    void OnSpiritUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+    {
+        switch (message_id) {
+        case GW::UI::UIMessage::kAgentSkillActivated: {
+            if (!track_spirit_effects) break;
+            const auto* packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wparam);
+            if (packet->agent_id != GW::Agents::GetControlledCharacterId()) break;
+            const bool is_spirit = std::any_of(
+                spirit_enc_name_to_skill_id.begin(), spirit_enc_name_to_skill_id.end(),
+                [&](const auto& kv) { return kv.second == packet->skill_id; });
+            if (!is_spirit) break;
+            pending_spirit_spawn = {packet->skill_id, GW::MemoryMgr::GetSkillTimer()};
+        } break;
+        case GW::UI::UIMessage::kAgentUpdate: {
+            if (!track_spirit_effects || pending_spirit_spawn.skill_id == GW::Constants::SkillID::No_Skill) break;
+            const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+            if (GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
+                pending_spirit_spawn = {};
+                break;
+            }
+            if (tracked_spirits.contains(agent_id)) break;
+            const auto* agent = GW::Agents::GetAgentByID(agent_id);
+            const auto* living = agent ? agent->GetAsAgentLiving() : nullptr;
+            if (!living || living->allegiance != GW::Constants::Allegiance::Spirit_Pet) break;
+            const auto* enc_name = GW::Agents::GetAgentEncName(agent);
+            if (!enc_name) break;
+            const auto name_it = spirit_enc_name_to_skill_id.find(enc_name);
+            if (name_it == spirit_enc_name_to_skill_id.end() || name_it->second != pending_spirit_spawn.skill_id) break;
+            const float duration = GetSpiritDuration(name_it->second, living->level);
+            GW::Effects::AddCustomEffect(name_it->second, duration);
+            tracked_spirits[agent_id] = name_it->second;
+            pending_spirit_spawn = {};
+        } break;
+        case GW::UI::UIMessage::kAgentDestroy: {
+            const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+            RemoveTrackedSpirit(agent_id);
+        } break;
+        }
+    }
 
     int UptimeToString(char arr[8], int cd)
     {
@@ -160,28 +252,43 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 void EffectsMonitorWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    GW::UI::UIMessage message_ids[] = {
-        GW::UI::UIMessage::kEffectAdd
+    GW::UI::RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPreUIMessage, -0x6000);
+
+    GW::UI::UIMessage spirit_messages[] = {
+        GW::UI::UIMessage::kAgentSkillActivated,
+        GW::UI::UIMessage::kAgentUpdate,
+        GW::UI::UIMessage::kAgentDestroy
     };
-    for (auto message_id : message_ids) {
-        GW::UI::RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, message_id, OnPreUIMessage, -0x6000);
+    for (auto msg : spirit_messages) {
+        GW::UI::RegisterUIMessageCallback(&spirit_ui_hook, msg, OnSpiritUIMessage, 0x100);
     }
 }
 void EffectsMonitorWidget::Terminate()
 {
     ToolboxWidget::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnPreUIMessage_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&spirit_ui_hook);
+    for (const auto& [agent_id, skill_id] : tracked_spirits) {
+        GW::Effects::RemoveCustomEffect(SpiritEffectId(skill_id));
+    }
+    tracked_spirits.clear();
+    pending_spirit_spawn = {};
 }
-void EffectsMonitorWidget::Update(float)
+void EffectsMonitorWidget::Update(float delta)
 {
+    static float update_timer = 0.f;
+    update_timer += delta;
+    if (update_timer < 1.f / 30.f) return;
+    update_timer = 0.f;
+
     for (auto [skill_id, timestamp] : effect_timestamps) {
         auto effect = GW::Effects::GetPlayerEffectBySkillId((GW::Constants::SkillID)skill_id);
         if (!effect) {
             effect_timestamps.erase(skill_id);
             break;
         }
-        const auto elapsed = effect->GetTimeElapsed();
-        if (!effect->duration || (elapsed / 1000.f) > effect->duration) {
+        const auto time_elapsed = effect->GetTimeElapsed();
+        if (!effect->duration || (time_elapsed / 1000.f) > effect->duration) {
             const auto now = GW::MemoryMgr::GetSkillTimer();
             const clock_t diff = (now - timestamp) / 1000;
 
@@ -189,15 +296,29 @@ void EffectsMonitorWidget::Update(float)
             // a 30s timer starts 100s after you enter the aspect
             // a 30s timer starts 200s after you enter the aspect
             long duration = 30 - diff % 30;
-            if (diff > 100) {
-                duration = std::min(duration, 30 - (diff - 100) % 30);
-            }
-            if (diff > 200) {
-                duration = std::min(duration, 30 - (diff - 200) % 30);
-            }
+            if (diff > 100) duration = std::min(duration, 30 - (diff - 100) % 30);
+            if (diff > 200) duration = std::min(duration, 30 - (diff - 200) % 30);
             effect->timestamp = now;
             effect->duration = (float)duration;
         }
+    }
+
+    // Expire a pending spirit spawn that never produced a matching agent.
+    if (pending_spirit_spawn.skill_id != GW::Constants::SkillID::No_Skill && GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
+        pending_spirit_spawn = {};
+    }
+
+    // Validate that tracked spirits still exist and are alive.
+    if (!tracked_spirits.empty()) {
+        std::vector<uint32_t> to_remove;
+        for (const auto& [agent_id, skill_id] : tracked_spirits) {
+            const auto* agent = GW::Agents::GetAgentByID(agent_id);
+            const auto* living = agent ? agent->GetAsAgentLiving() : nullptr;
+            if (!living || living->hp <= 0.f || living->allegiance != GW::Constants::Allegiance::Spirit_Pet) {
+                to_remove.push_back(agent_id);
+            }
+        }
+        for (const auto id : to_remove) RemoveTrackedSpirit(id);
     }
 }
 
@@ -209,6 +330,7 @@ void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
     LOAD_UINT(only_under_seconds);
     LOAD_BOOL(round_up);
     LOAD_BOOL(show_vanquish_counter);
+    LOAD_BOOL(track_spirit_effects);
     LOAD_FLOAT(font_effects);
     LOAD_COLOR(color_text_effects);
     LOAD_COLOR(color_text_shadow);
@@ -225,6 +347,7 @@ void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
     SAVE_UINT(only_under_seconds);
     SAVE_BOOL(round_up);
     SAVE_BOOL(show_vanquish_counter);
+    SAVE_BOOL(track_spirit_effects);
     SAVE_FLOAT(font_effects);
     SAVE_COLOR(color_text_effects);
     SAVE_COLOR(color_text_shadow);
@@ -258,5 +381,6 @@ void EffectsMonitorWidget::DrawSettingsInternal()
     ImGui::Checkbox("Round up integers", &round_up);
     ImGui::SameLine();
     ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &show_vanquish_counter);
+    ImGui::Checkbox("Track nearby spirit timers (Bloodsong, Vampirism, etc.)", &track_spirit_effects);
     ImGui::PopID();
 }

@@ -18,10 +18,8 @@
 #include <Modules/ItemDescriptionHandler.h>
 #include <Modules/ItemTooltipModule.h>
 #include <Modules/PriceCheckerModule.h>
-#include <Modules/Resources.h>
 #include <Windows/DailyQuestsWindow.h>
 
-#include <Constants/EncStrings.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 
@@ -179,19 +177,42 @@ namespace {
     void AppendNicholasInfo(const uint32_t item_id, std::wstring& description)
     {
         const auto item = GW::Items::GetItemById(item_id);
-        const auto nicholas_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
-        if (!nicholas_info) return;
-
-        const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(nicholas_info);
-        const auto current_time = time(nullptr);
+        if (!item) return;
 
         std::wstring text;
-        if (collection_time <= current_time) {
-            text = std::format(L"Nicholas The Traveler collects {} of these right now!", nicholas_info->quantity);
+        const auto current_time = time(nullptr);
+        if (GW::Map::IsPreSearing()) {
+            const auto sandford_info = DailyQuests::GetNicholasSandfordItemInfo(item->name_enc);
+            if (!sandford_info) return;
+            constexpr uint32_t sandford_quantity = 5; // Nicholas Sandford always asks for 5
+            const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(sandford_info);
+            if (collection_time <= current_time) {
+                text = std::format(L"Nicholas Sandford collects {} of these right now!", sandford_quantity);
+            }
+            else {
+                text = std::format(L"Nicholas Sandford collects {} of these {}!", sandford_quantity, TextUtils::RelativeTimeW(collection_time));
+            }
         }
         else {
-            text = std::format(L"Nicholas The Traveler collects {} of these {}!", nicholas_info->quantity, TextUtils::RelativeTimeW(collection_time));
+            const auto nicholas_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
+            const auto ingredient_info = nicholas_info ? nullptr : DailyQuests::GetNicholasIngredientInfo(item->name_enc);
+            if (!nicholas_info && !ingredient_info) return;
+            const auto active_info = nicholas_info ? nicholas_info : ingredient_info;
+            const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(active_info);
+            if (nicholas_info) {
+                if (collection_time <= current_time)
+                    text = std::format(L"Nicholas The Traveler collects {} of these right now!", nicholas_info->quantity);
+                else
+                    text = std::format(L"Nicholas The Traveler collects {} of these {}!", nicholas_info->quantity, TextUtils::RelativeTimeW(collection_time));
+            }
+            else {
+                if (collection_time <= current_time)
+                    text = L"Used to craft an item Nicholas The Traveler collects right now!";
+                else
+                    text = std::format(L"Used to craft an item Nicholas The Traveler collects {}!", TextUtils::RelativeTimeW(collection_time));
+            }
         }
+
         if (!description.empty())
             description += L"\x2";
         description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(text), nicholas_color);
@@ -468,8 +489,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
 
     // --- Salvage info --------------------------------------------------------
-    ImGui::Checkbox("Show salvage materials in item tooltip", &show_salvage_info);
-    ImGui::ShowHelp("When hovering over a salvageable item, display which common and rare materials can be salvaged from it");
+    ImGui::CheckboxWithHelp("Show salvage materials in item tooltip", &show_salvage_info, "When hovering over a salvageable item, display which common and rare materials can be salvaged from it");
     if (show_salvage_info) {
         ImGui::Indent();
 
@@ -486,8 +506,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
 
     // --- Nicholas info -------------------------------------------------------
-    ImGui::Checkbox("Show Nicholas the Traveler info in item tooltip", &show_nicholas_info);
-    ImGui::ShowHelp("When hovering over an item that Nicholas collects, display when he will collect it and how many he wants");
+    ImGui::CheckboxWithHelp("Show Nicholas the Traveler info in item tooltip", &show_nicholas_info, "When hovering over an item that Nicholas collects, display when he will collect it and how many he wants");
     if (show_nicholas_info) {
         ImGui::Indent();
 
@@ -502,8 +521,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
 
     // --- Trader prices -------------------------------------------------------
-    ImGui::Checkbox("Show trader prices in item tooltip", &show_trader_prices);
-    ImGui::ShowHelp("Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com");
+    ImGui::CheckboxWithHelp("Show trader prices in item tooltip", &show_trader_prices, "Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com");
     if (show_trader_prices) {
         ImGui::Indent();
 

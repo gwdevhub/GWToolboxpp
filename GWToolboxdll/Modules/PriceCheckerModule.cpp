@@ -2,11 +2,11 @@
 
 #include <Defines.h>
 #include <Logger.h>
+#include <ImGuiAddons.h>
 
 #include <GWCA/GameEntities/Item.h>
 
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 
 #include <GWCA/Constants/Constants.h>
 
@@ -16,12 +16,21 @@
 
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <Timer.h>
-#include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
-using nlohmann::json;
+namespace pricechecker_api {
+    struct SellEntry {
+        double p = 0.0; // price in gold
+    };
+
+    struct PricesResponse {
+        std::unordered_map<std::string, SellEntry> sell;
+    };
+}
 
 namespace {
+
+    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
 
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
@@ -297,18 +306,12 @@ namespace {
 
     bool ParsePriceJson(const std::string& prices_json_str)
     {
-        const json& prices_json = json::parse(prices_json_str, nullptr, false);
-        if (prices_json == json::value_t::discarded) return false;
+        pricechecker_api::PricesResponse prices{};
+        if (auto ec = glz::read<json_opts>(prices, prices_json_str); ec) return false;
 
         prices_by_identifier.clear();
-        const auto& it_buy = prices_json.find("sell");
-        if (it_buy == prices_json.end() || !it_buy->is_object()) return false;
-
-        for (auto it = it_buy.value().begin(); it != it_buy.value().end(); ++it) {
-            if (!it->is_object()) continue;
-            const auto& price_value = it->find("p");
-            if (price_value == it->end() || !price_value->is_number_unsigned()) continue;
-            prices_by_identifier[it.key()] = price_value->get<uint32_t>();
+        for (const auto& [key, entry] : prices.sell) {
+            prices_by_identifier[key] = static_cast<uint32_t>(entry.p);
         }
         return !prices_by_identifier.empty();
     }
@@ -349,8 +352,7 @@ void PriceCheckerModule::LoadSettings(ToolboxIni* ini)
 
 void PriceCheckerModule::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Show merchant price for Melandru's Accord instead of trader price", &show_merchant_price_for_melandrus_accord_instead);
-    ImGui::ShowHelp("In Melandru's Accord, show fixed merchant prices for materials instead of live trader prices");
+    ImGui::CheckboxWithHelp("Show merchant price for Melandru's Accord instead of trader price", &show_merchant_price_for_melandrus_accord_instead, "In Melandru's Accord, show fixed merchant prices for materials instead of live trader prices");
 }
 
 const std::unordered_map<std::string, uint32_t>& PriceCheckerModule::FetchPrices()

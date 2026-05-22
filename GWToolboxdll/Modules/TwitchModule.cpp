@@ -15,7 +15,22 @@
 #include <Modules/Resources.h>
 #include <Timer.h>
 
+namespace twitch_api {
+    struct DeviceAuthResponse {
+        std::string verification_uri;
+        std::string device_code;
+        int interval = 0;
+    };
+
+    struct TokenResponse {
+        std::string access_token;
+        std::string error;
+    };
+}
+
 namespace {
+    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+
     // IRC details
     std::string irc_server = "irc.chat.twitch.tv";
     int irc_port = 443; // Not 6667, just in case router blocks it.
@@ -55,22 +70,22 @@ namespace {
                 return Log::Warning(response.c_str()), fetch_oauth_token = false;
             }
 
-            const auto json = nlohmann::json::parse(response);
-            if (!json.contains("verification_uri") || !json.contains("device_code") || !json.contains("interval")) {
+            twitch_api::DeviceAuthResponse auth{};
+            if (auto ec = glz::read<json_opts>(auth, response); ec) {
+                return Log::Warning("Failed to parse Twitch auth response"), fetch_oauth_token = false;
+            }
+            if (auth.verification_uri.empty() || auth.device_code.empty() || auth.interval <= 0) {
                 return Log::Warning("Invalid or missing response fields for Twitch auth"), fetch_oauth_token = false;
             }
 
-            auto verification_uri = json["verification_uri"].get<std::string>();
-            auto device_code = json["device_code"].get<std::string>();
-            auto interval = json["interval"].get<int>();
-
-            ShellExecuteA(nullptr, "open", verification_uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+            ShellExecuteA(nullptr, "open", auth.verification_uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 
             std::string access_token;
 
             // Poll Twitch for token
             const auto token_url = "https://id.twitch.tv/oauth2/token";
             auto start_time = TIMER_INIT();
+            int interval = auth.interval;
 
             while (access_token.empty() && !cancel_fetch_oauth_token) {
                 if (TIMER_DIFF(start_time) > 30000) {
@@ -80,33 +95,33 @@ namespace {
 
                 // Manually format as form-urlencoded data
                 std::string request_data = std::format("client_id={}&scopes={}&device_code={}&grant_type=urn:ietf:params:oauth:grant-type:device_code",
-                        TextUtils::UrlEncode(client_id), 
+                        TextUtils::UrlEncode(client_id),
                         TextUtils::UrlEncode(scopes),
-                        TextUtils::UrlEncode(device_code));
+                        TextUtils::UrlEncode(auth.device_code));
                 std::string token_response;
 
                 if (!Resources::Post(token_url, request_data, token_response)) {
                     continue;
                 }
 
-                auto token_json = nlohmann::json::parse(token_response);
-                if (token_json.contains("access_token")) {
-                    access_token = token_json["access_token"].get<std::string>();
+                twitch_api::TokenResponse token{};
+                if (auto ec = glz::read<json_opts>(token, token_response); ec) {
+                    continue;
+                }
+                if (!token.access_token.empty()) {
+                    access_token = std::move(token.access_token);
                     break;
                 }
-                if (token_json.contains("error")) {
-                    std::string error = token_json["error"].get<std::string>();
-                    if (error == "authorization_pending") {
+                if (!token.error.empty()) {
+                    if (token.error == "authorization_pending") {
                         continue;
                     }
-                    if (error == "slow_down") {
+                    if (token.error == "slow_down") {
                         interval += 5; // Increase wait time
                         continue;
                     }
-                    else {
-                        Log::Warning(error.c_str());
-                        break;
-                    }
+                    Log::Warning(token.error.c_str());
+                    break;
                 }
             }
             if (!access_token.empty()) {
@@ -435,10 +450,8 @@ void TwitchModule::DrawSettingsInternal()
         if (Colors::DrawSettingHueWheel("Twitch Color:", &irc_chat_color, flags)) {
             SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, irc_chat_color);
         }
-        ImGui::Checkbox("Notify on user leave", &notify_on_user_leave);
-        ImGui::ShowHelp("Receive a message in the chat window when a viewer leaves the Twitch Channel");
-        ImGui::Checkbox("Notify on user join", &notify_on_user_join);
-        ImGui::ShowHelp("Receive a message in the chat window when a viewer joins the Twitch Channel");
+        ImGui::CheckboxWithHelp("Notify on user leave", &notify_on_user_leave, "Receive a message in the chat window when a viewer leaves the Twitch Channel");
+        ImGui::CheckboxWithHelp("Notify on user join", &notify_on_user_join, "Receive a message in the chat window when a viewer joins the Twitch Channel");
 
         const float width = ImGui::GetContentRegionAvail().x / 2;
         ImGui::PushItemWidth(width);

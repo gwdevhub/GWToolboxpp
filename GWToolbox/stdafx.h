@@ -52,7 +52,7 @@
 #include <ranges>
 #include <regex>
 
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 
 #include "resource.h"
 #pragma warning(pop)

@@ -754,7 +754,7 @@ bool HeroHasSkillCondition::drawSettings()
     
     ImGui::Text("If");
     ImGui::SameLine();
-    drawEnumButton(heroId, {.first = GW::Constants::HeroID::Norgu, .last = GW::Constants::HeroID::ZeiRi, .width = 130.f});
+    drawEnumButton(heroId, {.first = GW::Constants::HeroID::Norgu, .last = GW::Constants::HeroID::Devona, .width = 130.f});
     ImGui::SameLine();
     ImGui::Text("has skill");
     ImGui::SameLine();

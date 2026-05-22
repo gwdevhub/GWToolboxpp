@@ -45,7 +45,7 @@ namespace {
                 break;
         }
         auto to_send = new std::wstring();
-        to_send->assign(std::format(L"<a=1>{}</a><c=#{:X}>: {}</c>", GWTOOLBOX_SENDER, color, message));
+        to_send->assign(std::format(L"<a=1>{}</a><c=#{:X}>: {}", GWTOOLBOX_SENDER, color, message));
 
         GW::GameThread::Enqueue([to_send, add_to_log = log_transient] {
             WriteChat(GWTOOLBOX_CHAN, to_send->c_str(), nullptr, add_to_log);
@@ -93,9 +93,7 @@ namespace {
     void OnLogWithArguments(uint32_t severity, const wchar_t* format, va_list argList)
     {
         GW::Hook::EnterHook();
-        _vchatlogW((LogType)severity, format, argList);
-        //Log::Info(format, argList);
-        // your hook logic here
+        vfwprintf(logfile, format, argList);
         LogWithArguments_Ret(severity, format, argList);
         GW::Hook::LeaveHook();
     }

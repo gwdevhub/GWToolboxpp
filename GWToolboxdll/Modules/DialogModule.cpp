@@ -16,14 +16,13 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Utils/TextUtils.h>
-#include <Utils/ToolboxUtils.h>
 
 namespace {
     GW::UI::UIInteractionCallback NPCDialogUICallback_Func = nullptr;
     GW::UI::UIInteractionCallback NPCDialogUICallback_Ret = nullptr;
 
     std::vector<GW::UI::DialogButtonInfo*> dialog_buttons;
-    std::vector<GuiUtils::EncString*> dialog_button_messages;
+    std::vector<std::unique_ptr<GuiUtils::EncString>> dialog_button_messages;
 
     GW::UI::DialogBodyInfo dialog_info;
     uint32_t last_agent_id = 0;
@@ -40,10 +39,10 @@ namespace {
         const auto button_info = new GW::UI::DialogButtonInfo();
         memcpy(button_info, wparam, sizeof(*button_info));
 
-        const auto button_message = new GuiUtils::EncString(button_info->message);
+        auto button_message = std::make_unique<GuiUtils::EncString>(button_info->message);
         button_info->message = const_cast<wchar_t*>(button_message->encoded().data());
 
-        dialog_button_messages.push_back(button_message);
+        dialog_button_messages.push_back(std::move(button_message));
         dialog_buttons.push_back(button_info);
     }
 
@@ -78,9 +77,6 @@ namespace {
             delete d;
         }
         dialog_buttons.clear();
-        for (const auto d : dialog_button_messages) {
-            delete d;
-        }
         dialog_button_messages.clear();
 
         dialog_body.reset(nullptr);
@@ -338,7 +334,7 @@ const wchar_t* DialogModule::GetDialogBody()
     return dialog_body.encoded().c_str();
 }
 
-const std::vector<GuiUtils::EncString*>& DialogModule::GetDialogButtonMessages()
+const std::vector<std::unique_ptr<GuiUtils::EncString>>& DialogModule::GetDialogButtonMessages()
 {
     return dialog_button_messages;
 }

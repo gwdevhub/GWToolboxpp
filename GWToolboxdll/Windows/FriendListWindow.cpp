@@ -26,6 +26,7 @@
 #include <Windows/FriendListWindow.h>
 
 #include <Utils/ToolboxUtils.h>
+#include <Windows/TravelWindow.h>
 
 
 /* Out of scope namespecey lookups */
@@ -45,10 +46,6 @@ namespace {
                                     0xFF4444BB, 0xFF00AA55, 0xFF8800AA,
                                     0xFFBB3333, 0xFFAA0088, 0xFF00AAAA,
                                     0xFF996600, 0xFF7777CC};
-    const wchar_t* ProfNames[11] = {
-        L"Unknown", L"Warrior", L"Ranger", L"Monk",
-        L"Necromancer", L"Mesmer", L"Elementalist", L"Assassin",
-        L"Ritualist", L"Paragon", L"Dervish"};
     const ImColor StatusColors[5] = {
         IM_COL32(0x99, 0x99, 0x99, 255), // offline
         IM_COL32(0x0, 0xc8, 0x0, 255),   // online
@@ -72,27 +69,6 @@ namespace {
         }
         return "Unknown";
     }
-
-    GUID StringToGuid(const std::string& str)
-    {
-        GUID guid{};
-        sscanf(str.c_str(),
-               "%8lx-%4hx-%4hx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
-               &guid.Data1, &guid.Data2, &guid.Data3, &guid.Data4[0],
-               &guid.Data4[1], &guid.Data4[2], &guid.Data4[3], &guid.Data4[4],
-               &guid.Data4[5], &guid.Data4[6], &guid.Data4[7]);
-
-        return guid;
-    }
-
-    std::string GuidToString(const GUID& guid)
-    {
-        return std::format("{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-                           guid.Data1, guid.Data2, guid.Data3, guid.Data4[0],
-                           guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4],
-                           guid.Data4[5], guid.Data4[6], guid.Data4[7]);
-    }
-
 
     ToolboxIni inifile{};
     const wchar_t* ini_filename = L"friends.ini";
@@ -548,7 +524,7 @@ namespace {
             // UUID is different. This could be because GW has assigned a UUID to this friend.
             friends.erase(lf->uuid);
             lf->uuid_bytes = *(UUID*)uuid;
-            lf->uuid = GuidToString(lf->uuid_bytes);
+            lf->uuid = TextUtils::GuidToString(&lf->uuid_bytes);
             friends.emplace(lf->uuid, lf);
         }
         if (alias && alias_changed) {
@@ -559,6 +535,7 @@ namespace {
         }
         if (lf->current_map_id != map_id) {
             // Map changed
+            lf->current_map_id = map_id;
             lf->current_map_name = Resources::GetMapName(static_cast<GW::Constants::MapID>(map_id));
         }
 
@@ -786,9 +763,12 @@ std::string FriendListWindow::Friend::GetCharactersHover(const bool include_char
             cached_charnames_hover_ws += L"\n  ";
             cached_charnames_hover_ws += it2->first;
             if (it2->second.profession) {
-                cached_charnames_hover_ws += L" (";
-                cached_charnames_hover_ws += ProfNames[it2->second.profession];
-                cached_charnames_hover_ws += L")";
+                const auto prof_name = ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(it2->second.profession));
+                if (prof_name && !prof_name->wstring().empty()) {
+                    cached_charnames_hover_ws += L" (";
+                    cached_charnames_hover_ws += prof_name->wstring();
+                    cached_charnames_hover_ws += L")";
+                }
             }
         }
         cached_charnames_hover_str =
@@ -827,7 +807,7 @@ FriendListWindow::Friend* FriendListWindow::GetFriend(const GW::Friend* f)
 
 FriendListWindow::Friend* FriendListWindow::GetFriend(const uint8_t* uuid)
 {
-    return GetFriendByUUID(GuidToString(*(UUID*)uuid));
+    return GetFriendByUUID(TextUtils::GuidToString((GUID*)uuid));
 }
 
 // Find existing record for friend by uuid
@@ -1150,8 +1130,9 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         ImGui::Button("", ImVec2(ImGui::GetContentRegionAvail().x, height));
         const bool left_clicked = ImGui::IsItemClicked(0);
         const bool right_clicked = ImGui::IsItemClicked(1);
-        // TODO: Rename, Remove, Ignore.
-        //ImGui::BeginPopupContextItem();
+        if (right_clicked && lfp->current_map_id != 0) {
+            ImGui::OpenPopup("##friend_ctx");
+        }
 
         bool hovered = ImGui::IsItemHovered();
         ImGui::PopStyleVar(4);
@@ -1159,6 +1140,16 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         ImGui::PushStyleColor(ImGuiCol_Text, StatusColors[static_cast<size_t>(lfp->status)].Value);
         ImGui::Bullet();
         ImGui::PopStyleColor(4);
+        if (ImGui::BeginPopup("##friend_ctx")) {
+            if (lfp->current_map_id != 0) {
+                const auto& map_name = Resources::GetMapName(static_cast<GW::Constants::MapID>(lfp->current_map_id))->string();
+                const auto label = std::format("Travel to {}", map_name);
+                if (ImGui::MenuItem(label.c_str())) {
+                    TravelWindow::Instance().TravelNearest(static_cast<GW::Constants::MapID>(lfp->current_map_id));
+                }
+            }
+            ImGui::EndPopup();
+        }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip(GetStatusText(lfp->status));
         }
@@ -1220,7 +1211,6 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         if (left_clicked && !lfp->IsOffline()) {
             lfp->StartWhisper();
         }
-        if (right_clicked) { }
     }
     if (!is_widget) {
         ImGui::EndChild();
@@ -1250,17 +1240,14 @@ void FriendListWindow::DrawSettingsInternal()
     ImGui::SameLine();
     ImGui::Text("in explorable");
 
-    ImGui::Checkbox("Temporarily add offline players you whisper as friends", &add_offline_players_to_friends);
-    ImGui::ShowHelp("When you whisper someone and they are offline, toolbox will attempt to add these players to your friendlist"
+    ImGui::CheckboxWithHelp("Temporarily add offline players you whisper as friends", &add_offline_players_to_friends, "When you whisper someone and they are offline, toolbox will attempt to add these players to your friendlist"
         " to figure out if they are online on another character.\nIf they are, toolbox will redirect your whisper to that character instead.\n"
         "Afterwards, the player will be removed from your friendlist.");
 
     Colors::DrawSettingHueWheel("Widget background hover color", &hover_background_color);
-    ImGui::Checkbox("Show my status", &show_my_status);
-    ImGui::ShowHelp("e.g. 'You are: Online'");
+    ImGui::CheckboxWithHelp("Show my status", &show_my_status, "e.g. 'You are: Online'");
 
-    ImGui::Checkbox("Custom name tag color for friends", &friend_name_tag_enabled);
-    ImGui::ShowHelp("When targeting friends in an outpost");
+    ImGui::CheckboxWithHelp("Custom name tag color for friends", &friend_name_tag_enabled, "When targeting friends in an outpost");
     if (friend_name_tag_enabled) {
         Colors::DrawSettingHueWheel("Friend name tag color", &friend_name_tag_color);
     }
@@ -1374,7 +1361,7 @@ void FriendListWindow::LoadFromFile()
         for (const ToolboxIni::Entry& entry : entries) {
             auto lf = new Friend(this);
             lf->uuid = entry.pItem;
-            lf->uuid_bytes = StringToGuid(lf->uuid);
+            TextUtils::StringToGuid(lf->uuid, &lf->uuid_bytes);
             lf->setAlias(TextUtils::StringToWString(inifile.GetValue(entry.pItem, "alias", "")));
             lf->type = static_cast<GW::FriendType>(inifile.GetLongValue(entry.pItem, "type", static_cast<long>(lf->type)));
             if (lf->uuid.empty() || lf->GetAliasW().empty()) {

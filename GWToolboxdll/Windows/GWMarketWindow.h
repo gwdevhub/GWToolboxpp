@@ -2,8 +2,6 @@
 
 #include <ToolboxWindow.h>
 #include <string>
-#include <vector>
-#include <map>
 
 namespace GW {
     struct Item;

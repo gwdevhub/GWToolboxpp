@@ -11,7 +11,6 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/MapMgr.h>
 
 #include <Modules/GwDatTextureModule.h>
 
@@ -24,9 +23,18 @@
 #include <Utils/GuiUtils.h>
 
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 #include <Modules/Resources.h>
+#include <Utils/ToolboxUtils.h>
 
+namespace armory_snapshot {
+    struct WeaponEntry {
+        std::string name;
+        uint32_t model_file_id = 0;
+        uint8_t type = 0;
+        uint32_t interaction = 0;
+        uint8_t dye_tint = 0;
+    };
+}
 
 namespace GWArmory {
 
@@ -321,35 +329,6 @@ namespace GWArmory {
         }
     }
 
-    const char* GetProfessionName(const GW::Constants::Profession prof)
-    {
-        switch (prof) {
-            case GW::Constants::Profession::None:
-                return "None";
-            case GW::Constants::Profession::Warrior:
-                return "Warrior";
-            case GW::Constants::Profession::Ranger:
-                return "Ranger";
-            case GW::Constants::Profession::Monk:
-                return "Monk";
-            case GW::Constants::Profession::Necromancer:
-                return "Necromancer";
-            case GW::Constants::Profession::Mesmer:
-                return "Mesmer";
-            case GW::Constants::Profession::Elementalist:
-                return "Elementalist";
-            case GW::Constants::Profession::Assassin:
-                return "Assassin";
-            case GW::Constants::Profession::Ritualist:
-                return "Ritualist";
-            case GW::Constants::Profession::Paragon:
-                return "Paragon";
-            case GW::Constants::Profession::Dervish:
-                return "Dervish";
-            default:
-                return "Unknown Profession";
-        }
-    }
 
     GW::Constants::Profession GetAgentProfession(GW::AgentLiving* agent)
     {
@@ -892,7 +871,7 @@ namespace GWArmory {
 
     enum SnapshotState { Idle, Pending, WaitingForDecode };
     SnapshotState state = SnapshotState::Idle;
-    std::map<uint32_t, GuiUtils::EncString*> pending_decodes;
+    std::map<uint32_t, std::unique_ptr<GuiUtils::EncString>> pending_decodes;
     std::map<uint32_t, GW::Item*> pending_items;
 
     void SnapshotToFile()
@@ -901,9 +880,6 @@ namespace GWArmory {
             case SnapshotState::Idle:
                 return;
             case SnapshotState::Pending: {
-                for (auto& it : pending_decodes) {
-                    delete it.second;
-                }
                 pending_decodes.clear();
                 pending_items.clear();
                 for (uint8_t i = (uint8_t)GW::Constants::Bag::Backpack; i < (uint8_t)GW::Constants::Bag::Max; i++) {
@@ -912,7 +888,7 @@ namespace GWArmory {
                     for (auto item : bag->items) {
                         if (!(item && IsWeapon(item->type))) continue;
                         if (pending_items.contains(item->model_file_id)) continue;
-                        pending_decodes[item->model_file_id] = new GuiUtils::EncString(item->name_enc);
+                        pending_decodes[item->model_file_id] = std::make_unique<GuiUtils::EncString>(item->name_enc);
                         pending_decodes[item->model_file_id]->string(); // Trigger decode
                         pending_items[item->model_file_id] = item;
                     }
@@ -926,27 +902,24 @@ namespace GWArmory {
                 }
 
                 // Build JSON output
-                nlohmann::json output_json = nlohmann::json::array();
+                std::vector<armory_snapshot::WeaponEntry> output;
+                output.reserve(pending_decodes.size());
                 for (auto& it : pending_decodes) {
                     const auto item = pending_items[it.first];
-                    const std::string& item_name_decoded = it.second->string();
-
-                    nlohmann::json item_json = {
-                        {"name", item_name_decoded},
-                        {"model_file_id", item->model_file_id},
-                        {"type", static_cast<uint8_t>(item->type)},
-                        {"interaction", item->interaction},
-                        {"dye_tint", item->dye.dye_tint}
-                    };
-
-                    output_json.push_back(item_json);
+                    output.push_back({
+                        .name = it.second->string(),
+                        .model_file_id = item->model_file_id,
+                        .type = static_cast<uint8_t>(item->type),
+                        .interaction = item->interaction,
+                        .dye_tint = item->dye.dye_tint,
+                    });
                 }
 
                 // Write to file
                 const auto filename = Resources::GetPath("weapon_snapshot.json");
                 std::ofstream file(filename);
                 if (file.is_open()) {
-                    file << output_json.dump(2); // Pretty print with 2 space indent
+                    file << glz::write<glz::opts{.prettify = true}>(output).value_or(std::string{}); // Pretty print
                     file.close();
                     Log::Info("Weapon snapshot saved to %s", filename.string().c_str());
                 }
@@ -955,9 +928,6 @@ namespace GWArmory {
                 }
 
                 // Cleanup
-                for (auto& it : pending_decodes) {
-                    delete it.second;
-                }
                 pending_decodes.clear();
                 pending_items.clear();
                 state = SnapshotState::Idle;
@@ -1248,11 +1218,10 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        ImGui::Text("Profession: %s", GetProfessionName(current_profession));
+        ImGui::Text("Profession: %s", ToolboxUtils::GetProfessionName(current_profession)->string().c_str());
 
         ImGui::SameLine();
-        ImGui::Checkbox("Use same colour for all pieces", &use_global_color);
-        ImGui::ShowHelp("When this is selected, all armour pieces will be coloured this way.");
+        ImGui::CheckboxWithHelp("Use same colour for all pieces", &use_global_color, "When this is selected, all armour pieces will be coloured this way.");
 
         if (use_global_color) {
             ImGui::SameLine();

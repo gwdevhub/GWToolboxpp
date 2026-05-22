@@ -4,6 +4,8 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
@@ -78,6 +80,7 @@
 #include <Windows/GWMarketWindow.h>
 #include <Windows/InventorySorting.h>
 #include <Windows/PerformanceWindow.h>
+#include <Windows/SettingsWindow.h>
 
 #include <Widgets/TimerWidget.h>
 #include <Widgets/HealthWidget.h>
@@ -99,10 +102,11 @@
 #include <Widgets/InventoryOverlayWidget.h>
 #include <Widgets/TitleTrackerWidget.h>
 #include <Widgets/FavorTracker.h>
+#include <Widgets/BountyKillTrackerWidget.h>
 #include "ToolboxSettings.h"
+#include <Utils/ToolboxUtils.h>
 
-
-#define USE_OBFUSCATOR _DEBUG
+#define USE_OBFUSCATOR 1
 #if USE_OBFUSCATOR
 #include <Modules/Obfuscator.h>
 #endif
@@ -195,6 +199,7 @@ namespace {
 #endif
         ActiveQuestWidget::Instance(),
         TitleTrackerWidget::Instance(),
+        BountyKillTrackerWidget::Instance(),
         PconsWindow::Instance(),
         HotkeysWindow::Instance(),
         BuildsWindow::Instance(),
@@ -270,8 +275,7 @@ void ToolboxSettings::DrawSettingsInternal()
     Updater::Instance().DrawSettingsInternal();
     ImGui::Separator();
 
-    ImGui::Checkbox("Save Location Data", &save_location_data);
-    ImGui::ShowHelp("Toolbox will save your location every second in a file in Settings Folder.");
+    ImGui::CheckboxWithHelp("Save Location Data", &save_location_data, "Toolbox will save your location every second in a file in Settings Folder.");
     const auto cols = static_cast<size_t>(floor(ImGui::GetWindowWidth() / (170.0f * ImGui::FontScale())));
 
     ImGui::Separator();
@@ -314,12 +318,22 @@ void ToolboxSettings::DrawFreezeSetting()
 {
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Unlock Move All", &move_all);
-    ImGui::ShowHelp("Will allow movement and resize of all widgets and windows");
+    ImGui::CheckboxWithHelp("Unlock Move All", &move_all, "Will allow movement and resize of all widgets and windows");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Hide toolbox on loading screens", &hide_on_loading_screen);
+    ImGui::Text("Show close button in:");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost##close", &show_close_in_outpost);
+    ImGui::Checkbox("Explorable##close", &show_close_in_explorable);
+    ImGui::Unindent();
+    ImGui::Text("Show cog in:");
+    ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost", &show_cog_in_outpost);
+    ImGui::Checkbox("Explorable", &show_cog_in_explorable);
+    ImGui::Unindent();
 }
 
 void ToolboxSettings::LoadSettings(ToolboxIni* ini)
@@ -331,6 +345,15 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(clamp_windows_to_screen);
     LOAD_BOOL(hide_on_loading_screen);
     LOAD_BOOL(send_anonymous_gameplay_info);
+    LOAD_BOOL(show_cog_in_outpost);
+    LOAD_BOOL(show_cog_in_explorable);
+    // Migrate from old hide_close_in_explorable: if it was true, default both show vars to false
+    if (ini->GetBoolValue(Name(), "hide_close_in_explorable", false)) {
+        show_close_in_outpost = false;
+        show_close_in_explorable = false;
+    }
+    LOAD_BOOL(show_close_in_outpost);
+    LOAD_BOOL(show_close_in_explorable);
 
     for (auto& m : optional_modules) {
         m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -347,6 +370,10 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(clamp_windows_to_screen);
     SAVE_BOOL(hide_on_loading_screen);
     SAVE_BOOL(send_anonymous_gameplay_info);
+    SAVE_BOOL(show_cog_in_outpost);
+    SAVE_BOOL(show_cog_in_explorable);
+    SAVE_BOOL(show_close_in_outpost);
+    SAVE_BOOL(show_close_in_explorable);
 
     for (const auto& m : optional_modules) {
         ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
@@ -356,6 +383,73 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
 void ToolboxSettings::Draw(IDirect3DDevice9*)
 {
     ImGui::GetStyle().WindowBorderSize = move_all ? 1.0f : 0.0f;
+    is_in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
+
+    static bool mobile_mode_initialized = false;
+    const bool new_mobile = GW::UI::IsInMobileMode();
+    if (!mobile_mode_initialized || new_mobile != is_in_mobile_mode) {
+        mobile_mode_initialized = true;
+        is_in_mobile_mode = new_mobile;
+        for (auto* elem : GWToolbox::GetUIElements()) {
+            elem->OnMobileModeChanged(is_in_mobile_mode);
+        }
+    }
+}
+
+void ToolboxSettings::DrawSettingsCogButtons()
+{
+    if (is_in_explorable ? !show_cog_in_explorable : !show_cog_in_outpost) return;
+
+    const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
+    ToolboxUIElement* hovered_elem = nullptr;
+
+    for (auto* elem : GWToolbox::GetUIElements()) {
+        if (!elem->visible || !elem->show_titlebar) continue;
+
+        const ImGuiWindow* window = ImGui::FindWindowByName(elem->Name());
+        if (!window || (window->Flags & ImGuiWindowFlags_NoTitleBar)) continue;
+        if (!(window->Viewport && window->DrawList && window->DrawList->CmdBuffer.Size)) continue;
+
+        const ImRect tb = window->TitleBarRect();
+        const float btn_h = tb.GetHeight();
+
+        // Leave room for the ImGui close button if one is shown
+        const bool close_btn_shown = elem->IsWindow() && elem->GetVisiblePtr() != nullptr;
+        const float close_offset = close_btn_shown ? btn_h : 0.f;
+
+        const ImVec2 btn_min = {tb.Max.x - close_offset - btn_h, tb.Min.y};
+        const ImVec2 btn_max = {btn_min.x + btn_h, tb.Max.y};
+
+        const bool hovered = mouse_pos.x >= btn_min.x && mouse_pos.x < btn_max.x
+                          && mouse_pos.y >= btn_min.y && mouse_pos.y < btn_max.y;
+
+        ImDrawList* dl = window->DrawList;
+        dl->PushClipRect(tb.Min, tb.Max, false);
+
+        if (hovered) {
+            hovered_elem = const_cast<ToolboxUIElement*>(elem);
+            dl->AddRectFilled(btn_min, btn_max, IM_COL32(255, 255, 255, 30));
+
+            const ImVec2 drag = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && drag.x == 0.f && drag.y == 0.f) {
+                SettingsWindow::Instance().NavigateToSection(elem->SettingsName());
+            }
+        }
+
+        const ImVec2 text_size = ImGui::CalcTextSize(ICON_FA_COG);
+        const ImVec2 icon_pos = {
+            btn_min.x + (btn_h - text_size.x) * 0.5f,
+            tb.Min.y  + (btn_h - text_size.y) * 0.5f
+        };
+        ImVec4 col = ImGui::GetStyle().Colors[ImGuiCol_Text];
+        if (!hovered) col.w *= 0.5f;
+        dl->AddText(icon_pos, ImGui::ColorConvertFloat4ToU32(col), ICON_FA_COG);
+        dl->PopClipRect();
+    }
+
+    if (hovered_elem) {
+        ImGui::SetTooltip("Open %s settings", hovered_elem->SettingsName());
+    }
 }
 
 void ToolboxSettings::Update(float)
@@ -397,11 +491,11 @@ void ToolboxSettings::Update(float)
         std::wstring prof_string;
         if (me) {
             prof_string += L" - ";
-            prof_string += GetWProfessionAcronym(
-                static_cast<GW::Constants::Profession>(me->primary));
+            prof_string += ToolboxUtils::GetProfessionAcronym(
+                static_cast<GW::Constants::Profession>(me->primary))->wstring();
             prof_string += L"-";
-            prof_string += GetWProfessionAcronym(
-                static_cast<GW::Constants::Profession>(me->secondary));
+            prof_string += ToolboxUtils::GetProfessionAcronym(
+                static_cast<GW::Constants::Profession>(me->secondary))->wstring();
         }
 
         SYSTEMTIME localtime;

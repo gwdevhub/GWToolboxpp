@@ -9,7 +9,9 @@ target_sources(plugin_base INTERFACE
     "plugins/Base/PluginUtils.h"
     "plugins/Base/PluginUtils.cpp"
     "plugins/Base/ToolboxUIPlugin.h"
-    "plugins/Base/ToolboxUIPlugin.cpp")
+    "plugins/Base/ToolboxUIPlugin.cpp"
+    "GWToolboxdll/RectF.h"
+    "GWToolboxdll/MinimapPlugin.h")
 target_include_directories(plugin_base INTERFACE
     "plugins/Base"
     "GWToolboxdll" # careful here, we only get access to exported and header functions!
@@ -17,7 +19,7 @@ target_include_directories(plugin_base INTERFACE
     )
 target_link_libraries(plugin_base INTERFACE
     imgui
-    nlohmann_json::nlohmann_json
+    glaze::glaze
     gwca
     IconFontCppHeaders
     GWToolboxdll # for GetFont
@@ -65,7 +67,7 @@ target_include_directories(scripting INTERFACE
     )
 target_link_libraries(scripting INTERFACE
     imgui
-    nlohmann_json::nlohmann_json
+    glaze::glaze
     gwca
     IconFontCppHeaders
     GWToolboxdll # for GetFont
@@ -83,11 +85,19 @@ macro(add_tb_plugin PLUGIN)
     target_link_libraries(${PLUGIN} PRIVATE plugin_base)
     target_link_libraries(${PLUGIN} PRIVATE scripting)
     target_compile_options(${PLUGIN} PRIVATE /wd4201 /wd4505)
-    target_compile_options(${PLUGIN} PRIVATE /W4 /WX /Gy)
-    target_compile_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
-    target_compile_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
-    target_link_options(${PLUGIN} PRIVATE /WX /OPT:REF /OPT:ICF /SAFESEH:NO)
-    target_link_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>)
+    target_compile_options(${PLUGIN} PRIVATE /Gy)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        # See note in GWToolboxdll/CMakeLists.txt — /W4 (=-Wall -Wextra)
+        target_compile_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/Z7 /Od>)
+        target_link_options(${PLUGIN} PRIVATE /OPT:REF /OPT:ICF /SAFESEH:NO)
+        target_link_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/INCREMENTAL:NO>)
+    else()
+        target_compile_options(${PLUGIN} PRIVATE /W4 /WX)
+        target_compile_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
+        target_compile_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+        target_link_options(${PLUGIN} PRIVATE /WX /OPT:REF /OPT:ICF /SAFESEH:NO)
+        target_link_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>)
+    endif()
     target_link_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>)
     target_link_options(${PLUGIN} PRIVATE $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>)
     set_target_properties(${PLUGIN} PROPERTIES FOLDER "plugins/")
@@ -116,3 +126,4 @@ target_sources(ShadowstepPredictor PRIVATE
 
 add_tb_plugin(Slowload)
 add_tb_plugin(SpeedrunScriptingTools)
+add_tb_plugin(SkinChanger)

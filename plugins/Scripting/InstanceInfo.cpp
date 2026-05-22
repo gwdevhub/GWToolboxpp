@@ -22,7 +22,6 @@
 namespace {
     GW::HookEntry InstanceLoadFile_Entry;
     GW::HookEntry UseItem_Entry;
-    GW::HookEntry FinishSkill_Entry;
     GW::HookEntry ManipulateMapObject_Entry;
     GW::HookEntry DungeonReward_Entry;
     GW::HookEntry CountdownStart_Entry;
@@ -120,8 +119,10 @@ void InstanceInfo::initialize()
 void InstanceInfo::terminate() 
 {
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry);
-    GW::StoC::RemovePostCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry);
-    GW::StoC::RemovePostCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry);
+    // Fixed: was RemovePostCallback — wrong table for callbacks registered with RegisterPacketCallback; callbacks were never removed.
+    GW::StoC::RemoveCallback<GW::Packet::StoC::DungeonReward>(&DungeonReward_Entry);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::ManipulateMapObject>(&ManipulateMapObject_Entry);
+    GW::StoC::RemoveCallbacks(&CountdownStart_Entry); // Fixed: CountdownStart_Entry was registered but had no matching remove call; dangling callback after plugin unload.
     RemoveUIMessageCallback(&UseItem_Entry, GW::UI::UIMessage::kSendUseItem);
 }
 
@@ -133,14 +134,17 @@ std::string InstanceInfo::getDecodedAgentName(GW::AgentID id)
         const wchar_t* encodedName = nullptr;
 
         // Check in agent infos
-        const auto& agentInfos = GW::GetWorldContext()->agent_infos;
+        // Fixed: GetWorldContext() was called twice with no null check and its result used directly; crashes during map transitions.
+        const auto* worldContext = GW::GetWorldContext();
+        if (!worldContext) return "";
+        const auto& agentInfos = worldContext->agent_infos;
         if (id >= agentInfos.size()) return "";
         encodedName = agentInfos[id].name_enc;
 
         // Check players
         if (!encodedName)
         {
-            for (const auto& player : GW::GetWorldContext()->players)
+            for (const auto& player : worldContext->players)
             {
                 if (player.agent_id == id) {
                     encodedName = player.name_enc;
@@ -155,6 +159,7 @@ std::string InstanceInfo::getDecodedAgentName(GW::AgentID id)
             const auto agent = GW::Agents::GetAgentByID(id);
             if (!agent || !agent->GetIsLivingType()) return "";
             const auto npc = GW::Agents::GetNPCByID(agent->GetAsAgentLiving()->player_number);
+            if (!npc) return ""; // Fixed: GetNPCByID() can return null; was dereferenced unconditionally.
             encodedName = npc->name_enc;
         }
 

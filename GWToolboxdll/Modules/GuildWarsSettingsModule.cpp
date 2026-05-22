@@ -1,20 +1,14 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/QuestIDs.h>
 #include <GWCA/Context/CharContext.h>
 
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 
-#include <GWCA/GameContainers/List.h>
-
 #include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Utilities/Hooker.h>
-#include <GWCA/Utilities/MemoryPatcher.h>
 
 #include <d3d9on12.h>
 #include <Defines.h>
@@ -23,6 +17,7 @@
 #include "GuildWarsSettingsModule.h"
 
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 namespace {
     uint32_t* key_mappings_array = nullptr;
@@ -377,7 +372,8 @@ namespace {
 
     std::filesystem::path GetDefaultFilename()
     {
-        return std::format(L"{}_GuildWarsSettings.ini", GW::GetCharContext()->player_email);
+        const auto uuid = GW::AccountMgr::GetAccountUuid();
+        return std::filesystem::path(TextUtils::StringToWString(TextUtils::GuidToString(&uuid)) + L"_GuildWarsSettings.ini");
     }
 
     void OnPreferencesSaveFileChosen(const char* result)

@@ -13,9 +13,9 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/NPC.h>
 
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
@@ -72,84 +72,59 @@ namespace GW {
             return true;
         }
 
-        std::vector<GW::Constants::TitleID> GetBountyTitlesForMap(GW::Constants::MapID map_id)
+        std::vector<GW::Constants::TitleID> GetTitlesForMap(GW::Constants::MapID map_id)
         {
             using namespace GW::Constants;
 
             switch (map_id) {
-                // Maps that award BOTH Sunspear and Lightbringer
-                case MapID::Arkjok_Ward:
-                case MapID::Bahdok_Caverns:
-                case MapID::Barbarous_Shore:
-                case MapID::Dejarin_Estate:
-                case MapID::The_Floodplain_of_Mahnkelon:
-                case MapID::Turais_Procession:
-                case MapID::Forum_Highlands:
-                case MapID::Garden_of_Seborhin:
-                case MapID::Resplendent_Makuun:
-                case MapID::The_Mirror_of_Lyss:
-                case MapID::Vehtendi_Valley:
-                case MapID::Wilderness_of_Bahdza:
-                case MapID::Yatendi_Canyons:
-                    return {TitleID::Sunspear, TitleID::Lightbringer};
-
-                // Sunspear only
-                case MapID::Gandara_the_Moon_Fortress:
-                case MapID::Jahai_Bluffs:
-                case MapID::Marga_Coast:
-                case MapID::Sunward_Marches:
-                case MapID::Holdings_of_Chokhin:
-                case MapID::The_Hidden_City_of_Ahdashim:
-                case MapID::Vehjin_Mines:
-                case MapID::Crystal_Overlook:
-                case MapID::Jokos_Domain:
-                case MapID::Poisoned_Outcrops:
-                case MapID::The_Alkali_Pan:
-                case MapID::The_Ruptured_Heart:
-                case MapID::The_Shattered_Ravines:
-                case MapID::The_Sulfurous_Wastes:
-                    return {TitleID::Sunspear};
-
-                // Lightbringer only (Realm of Torment)
-                case MapID::Domain_of_Anguish:
-                case MapID::Nightfallen_Garden:
-                case MapID::Domain_of_Fear:
-                case MapID::Domain_of_Pain:
-                case MapID::Domain_of_Secrets:
-                case MapID::Nightfallen_Coast:
-                case MapID::Nightfallen_Jahai:
-                case MapID::The_Shadow_Nexus:
-                    return {TitleID::Lightbringer};
                 case MapID::The_Deep:
                     return {TitleID::Luxon};
                 case MapID::Urgozs_Warren:
                     return {TitleID::Kurzick};
+                // Deldrimor: DepthsOfTyria missions/dungeons
+                case MapID::A_Time_for_Heroes:
+                case MapID::Central_Transfer_Chamber_outpost:
+                case MapID::Destructions_Depths_Level_1:
+                case MapID::Destructions_Depths_Level_2:
+                case MapID::Destructions_Depths_Level_3:
+                case MapID::Ravens_Point_Level_1:
+                case MapID::Ravens_Point_Level_2:
+                case MapID::Ravens_Point_Level_3:
+                case MapID::Glints_Challenge_mission: // CrystalDesert
+                    return {TitleID::Deldrimor};
+                // Vanguard: DepthsOfTyria dungeons in Charr territory
+                case MapID::Cathedral_of_Flames_Level_1:
+                case MapID::Cathedral_of_Flames_Level_2:
+                case MapID::Cathedral_of_Flames_Level_3:
+                case MapID::Rragars_Menagerie_Level_1:
+                case MapID::Rragars_Menagerie_Level_2:
+                case MapID::Rragars_Menagerie_Level_3:
+                    return {TitleID::Vanguard};
+                    // @todo: Bear Club for Women/Men (Norn)
             }
 
-            // Fallback to region-based logic
             const auto map_info = GW::Map::GetMapInfo(map_id);
             if (!map_info) return {};
 
             switch (map_info->region) {
-                case GW::Region::Region_Vaabi:
-                case GW::Region::Region_Istan:
-                    return {TitleID::Sunspear};
-                case GW::Region::Region_Desolation:
-                    return {TitleID::Lightbringer};
-                case GW::Region::Region_CharrHomelands:
-                    return {TitleID::Vanguard};
                 case GW::Region::Region_TarnishedCoast:
                     return {TitleID::Asuran};
                 case GW::Region::Region_FarShiverpeaks:
                     return {TitleID::Norn};
-                case GW::Region::Region_DepthsOfTyria:
-                    return {TitleID::Deldrimor};
+                case GW::Region::Region_Ascalon:
+                case GW::Region::Region_CharrHomelands:
+                    return {TitleID::Vanguard};
+                case GW::Region::Region_DomainOfAnguish:
+                case GW::Region::Region_Desolation:
+                    return {TitleID::Lightbringer};
                 case GW::Region::Region_Kurzick:
                 case GW::Region::Region_Luxon:
                     return {TitleID::Kurzick, TitleID::Luxon};
             }
 
             switch (map_info->continent) {
+                case GW::Continent::Elona:
+                    return {TitleID::Sunspear};
                 case GW::Continent::RealmOfTorment:
                     return {TitleID::Lightbringer};
             }
@@ -159,137 +134,8 @@ namespace GW {
 
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id)
         {
-            switch (map_id) {
-                case GW::Constants::MapID::Alcazia_Tangle:
-                case GW::Constants::MapID::Arbor_Bay:
-                case GW::Constants::MapID::Gadds_Encampment_outpost:
-                case GW::Constants::MapID::Magus_Stones:
-                case GW::Constants::MapID::Rata_Sum_outpost:
-                case GW::Constants::MapID::Riven_Earth:
-                case GW::Constants::MapID::Sparkfly_Swamp:
-                case GW::Constants::MapID::Tarnished_Haven_outpost:
-                case GW::Constants::MapID::Umbral_Grotto_outpost:
-                case GW::Constants::MapID::Verdant_Cascades:
-                case GW::Constants::MapID::Vloxs_Falls:
-                case GW::Constants::MapID::Finding_the_Bloodstone_Level_1:
-                case GW::Constants::MapID::Finding_the_Bloodstone_Level_2:
-                case GW::Constants::MapID::Finding_the_Bloodstone_Level_3:
-                case GW::Constants::MapID::The_Elusive_Golemancer_Level_1:
-                case GW::Constants::MapID::The_Elusive_Golemancer_Level_2:
-                case GW::Constants::MapID::The_Elusive_Golemancer_Level_3:
-                    return GW::Constants::TitleID::Asuran;
-                case GW::Constants::MapID::A_Gate_Too_Far_Level_1:
-                case GW::Constants::MapID::A_Gate_Too_Far_Level_2:
-                case GW::Constants::MapID::A_Gate_Too_Far_Level_3:
-                case GW::Constants::MapID::A_Time_for_Heroes:
-                case GW::Constants::MapID::Central_Transfer_Chamber_outpost:
-                case GW::Constants::MapID::Destructions_Depths_Level_1:
-                case GW::Constants::MapID::Destructions_Depths_Level_2:
-                case GW::Constants::MapID::Destructions_Depths_Level_3:
-                case GW::Constants::MapID::Genius_Operated_Living_Enchanted_Manifestation:
-                case GW::Constants::MapID::Glints_Challenge_mission:
-                case GW::Constants::MapID::Ravens_Point_Level_1:
-                case GW::Constants::MapID::Ravens_Point_Level_2:
-                case GW::Constants::MapID::Ravens_Point_Level_3:
-                    return GW::Constants::TitleID::Deldrimor;
-                case GW::Constants::MapID::Attack_of_the_Nornbear:
-                case GW::Constants::MapID::Bjora_Marches:
-                case GW::Constants::MapID::Blood_Washes_Blood:
-                case GW::Constants::MapID::Boreal_Station_outpost:
-                case GW::Constants::MapID::Cold_as_Ice:
-                case GW::Constants::MapID::Curse_of_the_Nornbear:
-                case GW::Constants::MapID::Drakkar_Lake:
-                case GW::Constants::MapID::Eye_of_the_North_outpost:
-                case GW::Constants::MapID::Gunnars_Hold_outpost:
-                case GW::Constants::MapID::Ice_Cliff_Chasms:
-                case GW::Constants::MapID::Jaga_Moraine:
-                case GW::Constants::MapID::Mano_a_Norn_o:
-                case GW::Constants::MapID::Norrhart_Domains:
-                case GW::Constants::MapID::Olafstead_outpost:
-                case GW::Constants::MapID::Service_In_Defense_of_the_Eye:
-                case GW::Constants::MapID::Sifhalla_outpost:
-                case GW::Constants::MapID::The_Norn_Fighting_Tournament:
-                case GW::Constants::MapID::Varajar_Fells:
-                    // @todo: case MapID for Bear Club for Women/Men
-                    return GW::Constants::TitleID::Norn;
-                case GW::Constants::MapID::Against_the_Charr:
-                case GW::Constants::MapID::Ascalon_City_outpost:
-                case GW::Constants::MapID::Assault_on_the_Stronghold:
-                case GW::Constants::MapID::Cathedral_of_Flames_Level_1:
-                case GW::Constants::MapID::Cathedral_of_Flames_Level_2:
-                case GW::Constants::MapID::Cathedral_of_Flames_Level_3:
-                case GW::Constants::MapID::Dalada_Uplands:
-                case GW::Constants::MapID::Diessa_Lowlands:
-                case GW::Constants::MapID::Doomlore_Shrine_outpost:
-                case GW::Constants::MapID::Dragons_Gullet:
-                case GW::Constants::MapID::Eastern_Frontier:
-                case GW::Constants::MapID::Flame_Temple_Corridor:
-                case GW::Constants::MapID::Fort_Ranik:
-                case GW::Constants::MapID::Frontier_Gate_outpost:
-                case GW::Constants::MapID::Grendich_Courthouse_outpost:
-                case GW::Constants::MapID::Grothmar_Wardowns:
-                case GW::Constants::MapID::Longeyes_Ledge_outpost:
-                case GW::Constants::MapID::Nolani_Academy:
-                case GW::Constants::MapID::Old_Ascalon:
-                case GW::Constants::MapID::Piken_Square_outpost:
-                case GW::Constants::MapID::Regent_Valley:
-                case GW::Constants::MapID::Rragars_Menagerie_Level_1:
-                case GW::Constants::MapID::Rragars_Menagerie_Level_2:
-                case GW::Constants::MapID::Rragars_Menagerie_Level_3:
-                case GW::Constants::MapID::Ruins_of_Surmia:
-                case GW::Constants::MapID::Sacnoth_Valley:
-                case GW::Constants::MapID::Sardelac_Sanitarium_outpost:
-                case GW::Constants::MapID::The_Breach:
-                case GW::Constants::MapID::The_Great_Northern_Wall:
-                case GW::Constants::MapID::Warband_Training:
-                case GW::Constants::MapID::Warband_of_Brothers_Level_1:
-                case GW::Constants::MapID::Warband_of_Brothers_Level_2:
-                case GW::Constants::MapID::Warband_of_Brothers_Level_3:
-                    return GW::Constants::TitleID::Vanguard;
-                case GW::Constants::MapID::Abaddons_Gate:
-                case GW::Constants::MapID::Basalt_Grotto_outpost:
-                case GW::Constants::MapID::Bone_Palace_outpost:
-                case GW::Constants::MapID::Crystal_Overlook:
-                case GW::Constants::MapID::Depths_of_Madness:
-                case GW::Constants::MapID::Domain_of_Anguish:
-                case GW::Constants::MapID::Domain_of_Fear:
-                case GW::Constants::MapID::Domain_of_Pain:
-                case GW::Constants::MapID::Domain_of_Secrets:
-                case GW::Constants::MapID::The_Ebony_Citadel_of_Mallyx_mission:
-                case GW::Constants::MapID::Dzagonur_Bastion:
-                case GW::Constants::MapID::Forum_Highlands:
-                case GW::Constants::MapID::Gate_of_Desolation:
-                case GW::Constants::MapID::Gate_of_Fear_outpost:
-                case GW::Constants::MapID::Gate_of_Madness:
-                case GW::Constants::MapID::Gate_of_Pain:
-                case GW::Constants::MapID::Gate_of_Secrets_outpost:
-                case GW::Constants::MapID::Gate_of_Torment_outpost:
-                case GW::Constants::MapID::Gate_of_the_Nightfallen_Lands_outpost:
-                case GW::Constants::MapID::Grand_Court_of_Sebelkeh:
-                case GW::Constants::MapID::Heart_of_Abaddon:
-                case GW::Constants::MapID::Jennurs_Horde:
-                case GW::Constants::MapID::Jokos_Domain:
-                case GW::Constants::MapID::Lair_of_the_Forgotten_outpost:
-                case GW::Constants::MapID::Nightfallen_Coast:
-                case GW::Constants::MapID::Nightfallen_Garden:
-                case GW::Constants::MapID::Nightfallen_Jahai:
-                case GW::Constants::MapID::Nundu_Bay:
-                case GW::Constants::MapID::Poisoned_Outcrops:
-                case GW::Constants::MapID::Remains_of_Sahlahja:
-                case GW::Constants::MapID::Ruins_of_Morah:
-                case GW::Constants::MapID::The_Alkali_Pan:
-                case GW::Constants::MapID::The_Mirror_of_Lyss:
-                case GW::Constants::MapID::The_Mouth_of_Torment_outpost:
-                case GW::Constants::MapID::The_Ruptured_Heart:
-                case GW::Constants::MapID::The_Shadow_Nexus:
-                case GW::Constants::MapID::The_Shattered_Ravines:
-                case GW::Constants::MapID::The_Sulfurous_Wastes:
-                case GW::Constants::MapID::Throne_of_Secrets:
-                case GW::Constants::MapID::Vehtendi_Valley:
-                case GW::Constants::MapID::Yatendi_Canyons:
-                    return GW::Constants::TitleID::Lightbringer;
-            }
-            return GW::Constants::TitleID::None;
+            const auto titles = GetTitlesForMap(map_id);
+            return titles.empty() ? GW::Constants::TitleID::None : titles[0];
         }
 
         void PingCompass(const GW::GamePos& position)
@@ -357,6 +203,7 @@ namespace GW {
 
         const bool SelectCharacterToPlay(const wchar_t* name, bool play)
         {
+            if (!IsCharSelectReady()) return false;
             struct CharSelectorChar {
                 uint32_t h0000;
                 uint32_t h0004;
@@ -538,6 +385,14 @@ namespace GW {
             return account_uuid;
         }
 
+        GUID GetAccountUuid()
+        {
+            const auto uuid = GetPortalAccountUuid();
+            if (uuid) return *uuid;
+            const auto email = GetAccountEmail();
+            return email && *email ? TextUtils::ConvertWStringToGuid(email) : GUID{};
+        }
+
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name)
         {
             const auto characters = name ? GetAvailableChars() : nullptr;
@@ -550,6 +405,31 @@ namespace GW {
     } // namespace AccountMgr
 
     namespace MemoryMgr {
+        // Appends an element to a GW-managed array, growing the buffer via MemRealloc if at capacity.
+        // Returns a pointer to the newly appended element.
+        template <typename T>
+        T* AddToGuildWarsArray(GW::BaseArray<T>& arr, const T& element)
+        {
+            if (arr.m_size >= arr.m_capacity) {
+                auto* new_buf = static_cast<T*>(MemRealloc(arr.m_buffer, (arr.m_size + 1) * sizeof(T)));
+                GWCA_ASSERT(new_buf);
+                arr.m_buffer = new_buf;
+                arr.m_capacity++;
+            }
+            arr.m_buffer[arr.m_size] = element;
+            return &arr.m_buffer[arr.m_size++];
+        }
+
+        // Removes the element at index from a GW-managed array by shifting remaining elements left.
+        // Capacity is unchanged so future AddToGuildWarsArray calls reuse the slack without reallocating.
+        template <typename T>
+        void RemoveFromGwArray(GW::BaseArray<T>& arr, uint32_t index)
+        {
+            GWCA_ASSERT(index < arr.m_size);
+            const auto remaining = arr.m_size - index - 1;
+            if (remaining > 0) memmove(&arr.m_buffer[index], &arr.m_buffer[index + 1], remaining * sizeof(T));
+            arr.m_size--;
+        }
         bool GetPersonalDir(std::wstring& out)
         {
             out.resize(512, 0);
@@ -688,7 +568,7 @@ namespace GW {
                 case ItemType::Chestpiece:
                     return "Chestpiece";
                 case ItemType::Rune_Mod:
-                    return "Rune";
+                    return "Rune/Upgrade";
                 case ItemType::Usable:
                     return "Usable Item";
                 case ItemType::Dye:
@@ -899,6 +779,64 @@ namespace GW {
         }
 
     } // namespace Items
+
+    namespace Effects {
+
+        // Effect IDs for custom (synthetic) effects use the high byte 0x0f to avoid collisions.
+        // The full ID is 0x0f000000 | skill_id, making it deterministic and recyclable per skill.
+        static constexpr uint32_t custom_effect_id_base = 0x0f000000;
+
+        uint32_t AddCustomEffect(const GW::Constants::SkillID skill_id, const float duration_seconds)
+        {
+            const auto player_effects = GW::Effects::GetPlayerEffectsArray();
+            if (!player_effects) return 0;
+            auto& arr = player_effects->effects;
+
+            const uint32_t target_id = custom_effect_id_base | static_cast<uint32_t>(skill_id);
+
+            // Update if this skill's custom effect already exists.
+            for (uint32_t i = 0; i < arr.m_size; i++) {
+                auto& e = arr.m_buffer[i];
+                if (e.effect_id == target_id) {
+                    e.duration = duration_seconds;
+                    e.timestamp = GW::MemoryMgr::GetSkillTimer();
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRenew, &e);
+                    return e.effect_id;
+                }
+            }
+
+            GW::Effect new_effect{};
+            new_effect.skill_id = skill_id;
+            new_effect.effect_id = target_id;
+            new_effect.duration = duration_seconds;
+            new_effect.timestamp = GW::MemoryMgr::GetSkillTimer();
+            new_effect.attribute_level = 0;
+            new_effect.agent_id = 0;
+
+            GW::UI::UIPacket::kEffectAdd packet{};
+            packet.agent_id = GW::Agents::GetControlledCharacterId();
+            packet.effect = GW::MemoryMgr::AddToGuildWarsArray(arr, new_effect);
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectAdd, &packet);
+            return target_id;
+        }
+
+        bool RemoveCustomEffect(const uint32_t effect_id)
+        {
+            if ((effect_id & 0xff000000) != custom_effect_id_base) return false;
+            const auto player_effects = GW::Effects::GetPlayerEffectsArray();
+            if (!player_effects) return false;
+            auto& arr = player_effects->effects;
+            for (uint32_t i = 0; i < arr.m_size; i++) {
+                if (arr.m_buffer[i].effect_id != effect_id) continue;
+                GW::MemoryMgr::RemoveFromGwArray(arr, i);
+                GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRemove, reinterpret_cast<void*>(static_cast<uintptr_t>(effect_id)));
+                return true;
+            }
+            return false;
+        }
+
+    } // namespace Effects
+
 } // namespace GW
 
 namespace ToolboxUtils {
@@ -1126,6 +1064,31 @@ namespace ToolboxUtils {
         return false;
     }
 
+    bool IsHeroUnlocked(GW::Constants::HeroID hero_id)
+    {
+        const auto w = GW::GetWorldContext();
+        if (!(w && w->hero_info.size())) {
+            return false;
+        }
+        for (auto& a : w->hero_info) {
+            if (a.hero_id != hero_id)
+                continue;
+            switch (hero_id) {
+                case GW::Constants::HeroID::Merc1:
+                case GW::Constants::HeroID::Merc2:
+                case GW::Constants::HeroID::Merc3:
+                case GW::Constants::HeroID::Merc4:
+                case GW::Constants::HeroID::Merc5:
+                case GW::Constants::HeroID::Merc6:
+                case GW::Constants::HeroID::Merc7:
+                case GW::Constants::HeroID::Merc8:
+                    if (!a.name[0]) return false; // Unlocked, but not assigned.
+            }
+            return true;
+        }
+        return false;
+    }
+
 
     GW::Array<GW::PartyInfo*>* GetParties()
     {
@@ -1312,14 +1275,14 @@ namespace ToolboxUtils {
 
                 static constexpr ctll::fixed_string stacking_pattern = L"\x2.\x10A\xA84\x10A(.{1,2})\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1";
                 if (const auto stacking_match = ctre::match<stacking_pattern>(item_str)) {
-                    auto capture = stacking_match.get<1>().to_view();
+                    auto capture = stacking_match.template get<1>().to_view();
                     swprintf(buffer, _countof(buffer), L"\x2\xAA8\x10A\xA84\x10A%ls\x1\x101\x101\x1", capture.data());
                     original += buffer;
                 }
 
                 static constexpr ctll::fixed_string armor_pattern = L"\xA3B\x10A\xA86\x10A\xA44\x1\x101(.)\x1\x2";
                 if (auto armor_match = ctre::match<armor_pattern>(item_str)) {
-                    auto capture = armor_match.get<1>().to_view();
+                    auto capture = armor_match.template get<1>().to_view();
                     swprintf(buffer, _countof(buffer), L"\x2\x102\x2\xA86\x10A\xA44\x1\x101%ls", capture.data());
                     original += buffer;
                 }
@@ -1335,49 +1298,49 @@ namespace ToolboxUtils {
 
         // Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\x0AA8\x10A\xAA9\x10A.\x1\x101.\x1\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107, q%d \x1\x2%c", found.at(9) - 0x100, found.at(6));
             return buffer;
         });
 
         // Replace "Requires 9 Scythe Mastery" > "q9 Scythe Mastery"
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\xAA8\x10A\xAA9\x10A\x8101.\x1\x101.\x1\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107, q%d \x1\x2\x8101%c", found.at(10) - 0x100, found.at(7));
             return buffer;
         });
 
         // "vs. Earth damage" > "Earth"
         original = TextUtils::ctre_regex_replace_with_formatter<L"[\xAAC\xAAF]\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c", found.at(2));
             return buffer;
         });
 
         // Replace "Lengthens ??? duration on foes by 33%" > "??? duration +33%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA4\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107 +33%%\x1", found.at(2));
             return buffer;
         });
 
         // Replace "Reduces ??? duration on you by 20%" > "??? duration -20%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA7\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107 -20%%\x1", found.at(2));
             return buffer;
         });
 
         // Change " (while Health is above n)" to "^n";
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA8\x10A\xABC\x10A\xA52\x1\x101.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107^%d\x1", found.at(7) - 0x100);
             return buffer;
         });
 
         // Change "Enchantments last 20% longer" to "Ench +20%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA2\x101.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1389,14 +1352,14 @@ namespace ToolboxUtils {
 
         // "(Chance: 18%)" > "(18%)"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA87\x10A\xA48\x1\x101.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107%d%%\x1", found.at(5) - 0x100);
             return buffer;
         });
 
         // Change "Halves skill recharge of <attribute> spells" > "HSR <attribute>"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA81\x10A\xA58\x1\x10B.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1408,14 +1371,14 @@ namespace ToolboxUtils {
 
         // Change "Inscription: "Blah Blah"" to just "Blah Blah"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\x8101\x5DC5\x10A..\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c%c", found.at(3), found.at(4));
             return buffer;
         });
 
         // Change "Halves casting time of <attribute> spells" > "HCT <attribute>"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA81\x10A\xA47\x1\x10B.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1427,7 +1390,7 @@ namespace ToolboxUtils {
 
         // Change "Piercing Dmg: 11-22" > "Piercing: 11-22"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA89\x10A\xA4E\x1\x10B.\x1\x101.\x102.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107: %d-%d\x1", found.at(5), found.at(8) - 0x100, found.at(10) - 0x100);
             return buffer;
         });
@@ -1473,7 +1436,7 @@ namespace ToolboxUtils {
 
         // Replace (while affected by a(n) to just (n)
         original = TextUtils::ctre_regex_replace_with_formatter<L"\x8101\x4D9C\x10A.\x1">(original, [](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             return std::wstring(1, found.at(3));
         });
 
@@ -1505,7 +1468,7 @@ namespace ToolboxUtils {
 
         // Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             if (found[4] != found[16]) {
                 return std::wstring(found); // Different attributes, return unchanged
             }
@@ -1544,5 +1507,19 @@ namespace ToolboxUtils {
         }
 
         return original;
+    }
+
+    GuiUtils::EncString* GetProfessionName(const GW::Constants::Profession profession)
+    {
+        const auto idx = static_cast<size_t>(profession);
+        const auto str_id = idx < std::size(GW::EncStrings::Profession) ? GW::EncStrings::Profession[idx] : 1u;
+        return Resources::DecodeStringId(str_id);
+    }
+
+    GuiUtils::EncString* GetProfessionAcronym(const GW::Constants::Profession profession)
+    {
+        const auto idx = static_cast<size_t>(profession);
+        const auto str_id = idx < std::size(GW::EncStrings::ProfessionAcronym) ? GW::EncStrings::ProfessionAcronym[idx] : 1u;
+        return Resources::DecodeStringId(str_id);
     }
 } // namespace ToolboxUtils

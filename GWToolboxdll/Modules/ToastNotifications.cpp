@@ -8,6 +8,7 @@
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
@@ -37,6 +38,7 @@ namespace {
     bool show_notifications_on_whisper = true;
     bool show_notifications_on_guild_chat = false;
     bool show_notifications_on_ally_chat = false;
+    bool show_notifications_on_team_chat = false;
     bool show_notifications_on_last_to_ready = false;
     bool show_notifications_on_invite = false;
     bool show_notifications_on_everyone_ready = false;
@@ -45,10 +47,15 @@ namespace {
     bool flash_window_on_whisper = true;
     bool flash_window_on_guild_chat = false;
     bool flash_window_on_ally_chat = false;
+    bool flash_window_on_team_chat = false;
     bool flash_window_on_last_to_ready = false;
     bool flash_window_on_invite = false;
     bool flash_window_on_everyone_ready = false;
     bool flash_window_on_self_resurrected = false;
+
+    bool change_title_on_notification = false;
+    std::wstring original_window_title;
+    std::vector<std::wstring> pending_title_notifications;
 
     const wchar_t* party_ready_toast_title = L"Party Ready";
 
@@ -94,6 +101,59 @@ namespace {
         }
     }
 
+    bool CanChangeTitle()
+    {
+        if (!change_title_on_notification) {
+            return false;
+        }
+        const auto whnd = GW::MemoryMgr::GetGWWindowHandle();
+        if (!whnd) {
+            return false;
+        }
+        if (IsIconic(whnd)) {
+            return ShouldNotifyInstanceType(show_notifications_when_minimised);
+        }
+        return GetActiveWindow() != whnd && ShouldNotifyInstanceType(show_notifications_when_in_background);
+    }
+
+    void UpdateWindowTitle()
+    {
+        const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
+        if (!hwnd) {
+            return;
+        }
+        if (!pending_title_notifications.empty()) {
+            if (original_window_title.empty()) {
+                wchar_t buf[256] = {};
+                GetWindowTextW(hwnd, buf, 256);
+                original_window_title = buf;
+            }
+            const auto n = pending_title_notifications.size();
+            const auto label = n == 1 ? pending_title_notifications.front() : std::to_wstring(n);
+            SetWindowTextW(hwnd, (L"(" + label + L") " + original_window_title).c_str());
+            return;
+        }
+        if (!original_window_title.empty()) {
+            SetWindowTextW(hwnd, original_window_title.c_str());
+            original_window_title.clear();
+        }
+    }
+
+    void AddWindowTitleNotification(const wchar_t* descriptor)
+    {
+        if (!CanChangeTitle()) {
+            return;
+        }
+        pending_title_notifications.emplace_back(descriptor);
+        UpdateWindowTitle();
+    }
+
+    void ClearWindowTitleNotifications()
+    {
+        pending_title_notifications.clear();
+        UpdateWindowTitle();
+    }
+
     uint32_t GetPartyId()
     {
         const auto p = GW::PartyMgr::GetPartyInfo();
@@ -119,7 +179,10 @@ namespace {
         GuiUtils::FocusWindow();
     }
 
+    void SendEncodedToastMessage(const wchar_t* title, wchar_t* encoded_message);
+
     GW::HookEntry OnWhisper_Entry;
+    GW::HookEntry OnTeamChat_Entry;
 
     void OnRecvWhisper(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
@@ -131,6 +194,35 @@ namespace {
         if (flash_window_on_whisper) {
             FlashWindow();
         }
+        AddWindowTitleNotification(L"PM");
+    }
+
+    void OnTeamChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
+    {
+        if (status->blocked) {
+            return;
+        }
+        const auto packet = static_cast<GW::UI::UIPacket::kPlayerChatMessage*>(wparam);
+        if (packet->channel != GW::Chat::Channel::CHANNEL_GROUP) {
+            return;
+        }
+        if (packet->player_number == GW::PlayerMgr::GetPlayerNumber()) {
+            return; // Don't notify on own messages
+        }
+        if (flash_window_on_team_chat) {
+            FlashWindow();
+        }
+        AddWindowTitleNotification(L"Team");
+        if (!show_notifications_on_team_chat) {
+            return;
+        }
+        const auto sender = GW::PlayerMgr::GetPlayerByID(packet->player_number);
+        const wchar_t* sender_name = sender && sender->name ? sender->name : L"Unknown";
+        const size_t msg_len = wcslen(sender_name) + wcslen(packet->message) + 10;
+        const auto msg_with_sender = new wchar_t[msg_len];
+        swprintf(msg_with_sender, msg_len, L"\x108\x107%s: \x1\x2%s", sender_name, packet->message);
+        SendEncodedToastMessage(L"Team Chat", msg_with_sender);
+        delete[] msg_with_sender;
     }
 
     void TriggerToastCallback(const ToastNotifications::Toast* toast, const bool result)
@@ -177,6 +269,7 @@ namespace {
                 if (flash_window_on_guild_chat) {
                     FlashWindow();
                 }
+                AddWindowTitleNotification(L"Guild");
                 break;
             case GW::Chat::Channel::CHANNEL_ALLIANCE:
                 if (show_notifications_on_ally_chat) {
@@ -185,6 +278,7 @@ namespace {
                 if (flash_window_on_ally_chat) {
                     FlashWindow();
                 }
+                AddWindowTitleNotification(L"Zone");
                 break;
         }
         if (!title) {
@@ -230,6 +324,7 @@ namespace {
             if (flash_window_on_last_to_ready) {
                 FlashWindow();
             }
+            AddWindowTitleNotification(L"Ticked");
         }
         else {
             // Everyone including me is ticked
@@ -239,6 +334,7 @@ namespace {
             if (flash_window_on_everyone_ready) {
                 FlashWindow();
             }
+            AddWindowTitleNotification(L"Ready");
         }
     }
 
@@ -278,6 +374,7 @@ namespace {
                 if (flash_window_on_self_resurrected) {
                     FlashWindow();
                 }
+                AddWindowTitleNotification(L"Rez");
             }
         }
     }
@@ -297,6 +394,7 @@ namespace {
         if (flash_window_on_invite) {
             FlashWindow();
         }
+        AddWindowTitleNotification(L"Inv");
     }
 
     struct StoC_Callback {
@@ -423,6 +521,7 @@ void ToastNotifications::Initialize()
 
     is_platform_compatible = WinToastLib::WinToast::isCompatible();
     GW::UI::RegisterUIMessageCallback(&OnWhisper_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
+    GW::UI::RegisterUIMessageCallback(&OnTeamChat_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnTeamChatMessage);
     for (auto& callback : stoc_callbacks) {
         GW::StoC::RegisterPacketCallback(&callback.hook_entry, callback.header, callback.cb, 0x8000);
     }
@@ -440,11 +539,21 @@ void ToastNotifications::Terminate()
         GW::StoC::RemoveCallback(callback.header, &callback.hook_entry);
     }
     GW::UI::RemoveUIMessageCallback(&OnWhisper_Entry);
+    GW::UI::RemoveUIMessageCallback(&OnTeamChat_Entry);
     for (const auto& toast : toasts | std::views::values) {
         TriggerToastCallback(toast, false);
         delete toast;
     }
     toasts.clear();
+    ClearWindowTitleNotifications();
+}
+
+bool ToastNotifications::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
+{
+    if (Message == WM_ACTIVATE && LOWORD(wParam) != WA_INACTIVE) {
+        ClearWindowTitleNotifications();
+    }
+    return false;
 }
 
 void ToastNotifications::DrawSettingsInternal()
@@ -453,25 +562,23 @@ void ToastNotifications::DrawSettingsInternal()
     ImGui::TextDisabled("GWToolbox++ can send notifications and flash the taskbar on certain in-game triggers.");
 
     constexpr float checkbox_w = 150.f;
+    const auto NextCheckbox = [](const char* label, bool* v) {
+        ImGui::NextSpacedElement();
+        ImGui::Checkbox(label, v);
+    };
 
     ImGui::PushID("desktop_notifications");
     ImGui::Text("Send a desktop notification on:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Whisper", &show_notifications_on_whisper);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Guild Chat", &show_notifications_on_guild_chat);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Alliance Chat", &show_notifications_on_ally_chat);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Party Invite", &show_notifications_on_invite);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Last to Tick", &show_notifications_on_last_to_ready);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Everyone Ticked", &show_notifications_on_everyone_ready);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Resurrection", &show_notifications_on_self_resurrected);
+    NextCheckbox("Whisper", &show_notifications_on_whisper);
+    NextCheckbox("Guild Chat", &show_notifications_on_guild_chat);
+    NextCheckbox("Alliance Chat", &show_notifications_on_ally_chat);
+    NextCheckbox("Team Chat", &show_notifications_on_team_chat);
+    NextCheckbox("Party Invite", &show_notifications_on_invite);
+    NextCheckbox("Last to Tick", &show_notifications_on_last_to_ready);
+    NextCheckbox("Everyone Ticked", &show_notifications_on_everyone_ready);
+    NextCheckbox("Resurrection", &show_notifications_on_self_resurrected);
     ImGui::Unindent();
     ImGui::PopID();
 
@@ -479,37 +586,32 @@ void ToastNotifications::DrawSettingsInternal()
     ImGui::Text("Flash taskbar on:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Whisper", &flash_window_on_whisper);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Guild Chat", &flash_window_on_guild_chat);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Alliance Chat", &flash_window_on_ally_chat);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Party Invite", &flash_window_on_invite);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Last to Tick", &flash_window_on_last_to_ready);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Everyone Ticked", &flash_window_on_everyone_ready);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Resurrection", &flash_window_on_self_resurrected);
+    NextCheckbox("Whisper", &flash_window_on_whisper);
+    NextCheckbox("Guild Chat", &flash_window_on_guild_chat);
+    NextCheckbox("Alliance Chat", &flash_window_on_ally_chat);
+    NextCheckbox("Team Chat", &flash_window_on_team_chat);
+    NextCheckbox("Party Invite", &flash_window_on_invite);
+    NextCheckbox("Last to Tick", &flash_window_on_last_to_ready);
+    NextCheckbox("Everyone Ticked", &flash_window_on_everyone_ready);
+    NextCheckbox("Resurrection", &flash_window_on_self_resurrected);
     ImGui::Unindent();
     ImGui::PopID();
 
     ImGui::Text("Allow these notifications when Guild Wars is:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Minimised", &show_notifications_when_minimised);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("In Background", &show_notifications_when_in_background);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("In Focus", &show_notifications_when_focussed);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("In Outpost", &show_notifications_when_in_outpost);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("In Explorable", &show_notifications_when_in_explorable);
+    NextCheckbox("Minimised", &show_notifications_when_minimised);
+    NextCheckbox("In Background", &show_notifications_when_in_background);
+    NextCheckbox("In Focus", &show_notifications_when_focussed);
+    NextCheckbox("In Outpost", &show_notifications_when_in_outpost);
+    NextCheckbox("In Explorable", &show_notifications_when_in_explorable);
     ImGui::Unindent();
+
+    ImGui::Separator();
+    ImGui::Checkbox("Change window title on notification", &change_title_on_notification);
+    if (change_title_on_notification) {
+        ImGui::TextDisabled("Window title shows a short descriptor e.g. \"(PM) Guild Wars\" when unfocused.\nFocusing the window restores the original title.");
+    }
 
     if (ImGui::Button("Show Test Notification")) {
         SendToast(L"Test toast", L"This is a test toast sent from GWToolbox");
@@ -529,6 +631,7 @@ void ToastNotifications::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_notifications_on_whisper);
     LOAD_BOOL(show_notifications_on_guild_chat);
     LOAD_BOOL(show_notifications_on_ally_chat);
+    LOAD_BOOL(show_notifications_on_team_chat);
     LOAD_BOOL(show_notifications_on_invite);
     LOAD_BOOL(show_notifications_on_last_to_ready);
     LOAD_BOOL(show_notifications_on_everyone_ready);
@@ -537,10 +640,12 @@ void ToastNotifications::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(flash_window_on_whisper);
     LOAD_BOOL(flash_window_on_guild_chat);
     LOAD_BOOL(flash_window_on_ally_chat);
+    LOAD_BOOL(flash_window_on_team_chat);
     LOAD_BOOL(flash_window_on_invite);
     LOAD_BOOL(flash_window_on_last_to_ready);
     LOAD_BOOL(flash_window_on_everyone_ready);
     LOAD_BOOL(flash_window_on_self_resurrected);
+    LOAD_BOOL(change_title_on_notification);
 }
 
 void ToastNotifications::SaveSettings(ToolboxIni* ini)
@@ -556,6 +661,7 @@ void ToastNotifications::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_notifications_on_whisper);
     SAVE_BOOL(show_notifications_on_guild_chat);
     SAVE_BOOL(show_notifications_on_ally_chat);
+    SAVE_BOOL(show_notifications_on_team_chat);
     SAVE_BOOL(show_notifications_on_invite);
     SAVE_BOOL(show_notifications_on_last_to_ready);
     SAVE_BOOL(show_notifications_on_everyone_ready);
@@ -564,8 +670,10 @@ void ToastNotifications::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(flash_window_on_whisper);
     SAVE_BOOL(flash_window_on_guild_chat);
     SAVE_BOOL(flash_window_on_ally_chat);
+    SAVE_BOOL(flash_window_on_team_chat);
     SAVE_BOOL(flash_window_on_invite);
     SAVE_BOOL(flash_window_on_last_to_ready);
     SAVE_BOOL(flash_window_on_everyone_ready);
     SAVE_BOOL(flash_window_on_self_resurrected);
+    SAVE_BOOL(change_title_on_notification);
 }

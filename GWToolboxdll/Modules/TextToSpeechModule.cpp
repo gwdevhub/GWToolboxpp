@@ -1,14 +1,14 @@
 #include "TextToSpeechModule.h"
 #include "stdafx.h"
 
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/MapMgr.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Party.h>
 #include <GWCA/Utilities/Scanner.h>
 
 #include <Logger.h>
@@ -25,9 +25,7 @@
 #include <Utils/ArenaNetFileParser.h>
 #include <Utils/ToolboxUtils.h>
 #include <algorithm>
-#include <sstream>
 #include <thread>
-#include "GwDatTextureModule.h"
 
 #include <Functiondiscoverykeys_devpkey.h>
 #include <GWCA/Managers/MemoryMgr.h>
@@ -1022,15 +1020,15 @@ Gender GetGenderByFileId(const uint32_t file_id)
         return total_size;
     }
 
-    std::string PostJson(RestClient& client, const std::string& url, const nlohmann::json& request_body, const std::string& service_name = "API")
+    std::string PostJson(RestClient& client, const std::string& url, const glz::generic& request_body, const std::string& service_name = "API", int timeout_sec = 2)
     {
         client.SetUrl(url.c_str());
         client.SetHeader("Content-Type", "application/json");
-        client.SetPostContent(request_body.dump(), ContentFlag::Copy);
+        client.SetPostContent(glz::write_json(request_body).value_or(std::string{}), ContentFlag::Copy);
         client.SetFollowLocation(true);
         client.SetVerifyHost(false);
         client.SetVerifyPeer(false);
-        client.SetTimeoutSec(2);
+        client.SetTimeoutSec(timeout_sec);
         client.Execute();
         if (!client.IsSuccessful()) {
             VoiceLog("%s returned error code: %ld", service_name.c_str(), client.GetStatusCode());
@@ -1047,7 +1045,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         const auto api_config = GetCurrentAPIConfig();
         if (!(api_config && *api_config->api_key)) return VoiceLog("No API Key"), "";
 
-        nlohmann::json request_body;
+        glz::generic request_body;
         request_body["model"] = "gpt-4o-mini-tts";
         request_body["input"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["voice"] = (audio->profile->voice_id == voice_id_human_female) ? "nova" : "onyx";
@@ -1068,13 +1066,13 @@ Gender GetGenderByFileId(const uint32_t file_id)
         const auto api_config = GetCurrentAPIConfig();
         if (!(api_config && *api_config->api_key)) return VoiceLog("No API Key"), "";
 
-        nlohmann::json voice_settings;
+        glz::generic voice_settings;
         voice_settings["stability"] = audio->profile->stability;
         voice_settings["similarity_boost"] = audio->profile->similarity;
         voice_settings["style"] = audio->profile->style;
         voice_settings["use_speaker_boost"] = true;
 
-        nlohmann::json request_body;
+        glz::generic request_body;
         request_body["text"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["model_id"] = "eleven_flash_v2_5";
         request_body["voice_settings"] = voice_settings;
@@ -1090,20 +1088,23 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     std::string GenerateVoiceGWDevHub(PendingNPCAudio* audio)
     {
-        nlohmann::json encoded_array = nlohmann::json::array();
+        std::vector<uint32_t> encoded_array;
+        encoded_array.reserve(audio->encoded_message.size());
         for (const auto& c : audio->encoded_message)
             encoded_array.push_back(static_cast<uint32_t>(c));
 
-        nlohmann::json decoded_array = nlohmann::json::array();
+        std::vector<uint32_t> decoded_array;
+        decoded_array.reserve(audio->decoded_message.size());
         for (const auto& c : audio->decoded_message)
             decoded_array.push_back(static_cast<uint32_t>(c));
 
-        nlohmann::json request_body = nlohmann::json::object();
+        glz::generic request_body = glz::generic::object_t{};
         request_body["encoded"] = encoded_array;
         request_body["decoded"] = decoded_array;
 
         if (!audio->encoded_npc_name.empty()) {
-            nlohmann::json encoded_npc_name_arr = nlohmann::json::array();
+            std::vector<uint32_t> encoded_npc_name_arr;
+            encoded_npc_name_arr.reserve(audio->encoded_npc_name.size());
             for (const auto& c : audio->encoded_npc_name)
                 encoded_npc_name_arr.push_back(static_cast<uint32_t>(c));
             request_body["npc_name"] = encoded_npc_name_arr;
@@ -1155,7 +1156,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
                 break;
         }
 
-        nlohmann::json request_body;
+        glz::generic request_body;
         request_body["model"] = "kokoro";
         request_body["input"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["voice"] = (audio->gender == Gender::Female) ? "af_bella" : "am_adam";
@@ -1164,7 +1165,8 @@ Gender GetGenderByFileId(const uint32_t file_id)
         request_body["lang_code"] = lang_code;
 
         RestClient client;
-        const auto audio_data = PostJson(client, base_url + "/v1/audio/speech", request_body, api_config->name);
+        // Kokoro streams audio as it generates; long texts can take 60+ seconds on CPU hardware
+        const auto audio_data = PostJson(client, base_url + "/v1/audio/speech", request_body, api_config->name, 120);
         if (!audio_data.empty()) VoiceLog("Kokoro voice generation successful, received %zu bytes", audio_data.size());
         return audio_data;
     }
@@ -1177,7 +1179,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
         const std::string voice_name = (audio->profile->voice_id == voice_id_human_female) ? "en-US-Studio-O" : "en-US-Studio-Q";
 
-        nlohmann::json request_body = nlohmann::json::object();
+        glz::generic request_body = glz::generic::object_t{};
         request_body["input"]["text"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["voice"]["name"] = voice_name;
         request_body["voice"]["languageCode"] = "en-US";
@@ -1189,13 +1191,13 @@ Gender GetGenderByFileId(const uint32_t file_id)
         const auto response_str = PostJson(client, "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + std::string(api_config->api_key), request_body, api_config->name);
         if (response_str.empty()) return response_str;
 
-        const auto json_response = nlohmann::json::parse(response_str, nullptr, false);
-        if (!(!json_response.is_discarded() && json_response.contains("audioContent") && json_response["audioContent"].is_string())) {
+        glz::generic json_response;
+        if (auto ec = glz::read_json(json_response, response_str); ec || !json_response.contains("audioContent") || !json_response.at("audioContent").is_string()) {
             VoiceLog("Failed to parse Google TTS response JSON");
             return "";
         }
 
-        std::string base64_audio = json_response["audioContent"].get<std::string>();
+        std::string base64_audio = json_response.at("audioContent").get<std::string>();
         if (base64_audio.empty()) {
             VoiceLog("Google TTS returned empty audio content");
             return "";
@@ -1216,7 +1218,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         const std::string voice_id = (GetAgentGender(audio->agent_id) == Gender::Female) ? playht_voice_female_default : playht_voice_male_default;
         const std::string lang_code = LanguageToAbbreviation(audio->language);
 
-        nlohmann::json request_body = nlohmann::json::object();
+        glz::generic request_body = glz::generic::object_t{};
         request_body["text"] = TextUtils::WStringToString(audio->decoded_message);
         request_body["output_format"] = "mp3";
         request_body["quality"] = "medium";
@@ -1886,24 +1888,20 @@ void TextToSpeechModule::DrawSettingsInternal()
 
     if (!is_api_locked_down) {
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Only process the first sentence of a dialog", &only_use_first_sentence);
-        ImGui::ShowHelp("If enabled, only the first sentence of an NPC dialog will be processed.");
+        ImGui::CheckboxWithHelp("Only process the first sentence of a dialog", &only_use_first_sentence, "If enabled, only the first sentence of an NPC dialog will be processed.");
         show_warning |= !only_use_first_sentence;
     }
     else {
         ImGui::TextDisabled("Note: With the chosen TTS API, only the first sentence of an NPC's dialog will be processed.");
     }
 
-    ImGui::Checkbox("Only process the first dialog of an NPC", &only_use_first_dialog);
-    ImGui::ShowHelp("If enabled, only the first dialog of an NPC conversation will be processed.");
+    ImGui::CheckboxWithHelp("Only process the first dialog of an NPC", &only_use_first_dialog, "If enabled, only the first dialog of an NPC conversation will be processed.");
     show_warning |= !only_use_first_dialog;
 
-    ImGui::Checkbox("Play goodbye message when closing NPC dialog", &play_goodbye_messages);
-    ImGui::ShowHelp("If enabled, NPCs will say a random goodbye when you close their dialog.\n\nNote: Only english language is currently supported.");
+    ImGui::CheckboxWithHelp("Play goodbye message when closing NPC dialog", &play_goodbye_messages, "If enabled, NPCs will say a random goodbye when you close their dialog.\n\nNote: Only english language is currently supported.");
     show_warning |= play_goodbye_messages;
 
-    ImGui::Checkbox("Play greetings from merchants and traders", &play_speech_from_vendors);
-    ImGui::ShowHelp("Note: For some types of traders, Only english language is currently supported.");
+    ImGui::CheckboxWithHelp("Play greetings from merchants and traders", &play_speech_from_vendors, "Note: For some types of traders, Only english language is currently supported.");
 
     ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
 
@@ -1920,15 +1918,12 @@ void TextToSpeechModule::DrawSettingsInternal()
     ImGui::Indent();
     ImGui::StartSpacedElements(264.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("When in an outpost", &play_speech_bubbles_in_outpost);
-    ImGui::ShowHelp("If enabled, speech bubbles above an NPC when in an outpost will be processed");
+    ImGui::CheckboxWithHelp("When in an outpost", &play_speech_bubbles_in_outpost, "If enabled, speech bubbles above an NPC when in an outpost will be processed");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("When in an explorable area", &play_speech_bubbles_in_explorable);
-    ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
+    ImGui::CheckboxWithHelp("When in an explorable area", &play_speech_bubbles_in_explorable, "If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
     show_warning |= play_speech_bubbles_in_explorable;
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("From other party members", &play_speech_bubbles_from_party_members);
-    ImGui::ShowHelp("If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
+    ImGui::CheckboxWithHelp("From other party members", &play_speech_bubbles_from_party_members, "If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
     show_warning |= play_speech_bubbles_from_party_members;
     ImGui::NextSpacedElement();
     ImGui::Checkbox("From non-friendly NPCs", &play_speech_from_non_friendly_npcs);

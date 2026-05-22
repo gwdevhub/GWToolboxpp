@@ -1,5 +1,6 @@
 #pragma once
 
+namespace ABI::Windows::UI { struct Color; }
 using Color = ImU32;
 
 constexpr uint32_t ImGuiButtonFlags_AlignTextLeft = 1 << 20;
@@ -45,6 +46,7 @@ namespace ImGui {
 
     // Shows '(?)' and the helptext when hovered
     IMGUI_API void ShowHelp(const char* help);
+    IMGUI_API bool CheckboxWithHelp(const char* label, bool* v, const char* help_text);
     // Shows current text with a drop shadow
     IMGUI_API void TextShadowed(const char* label, ImVec2 offset = {1, 1}, const ImVec4& shadow_color = {0, 0, 0, 1});
 
@@ -105,4 +107,18 @@ namespace ImGui {
                                        ImU32 textColor = IM_COL32(255, 255, 255, 255),
                                        ImU32 outlineColor = IM_COL32(0, 0, 0, 255),
                                        float thickness = 1.0f);
+
+    // Render text rotated clockwise by angle_degrees (default 90°) around its center.
+    // Advances the cursor by the axis-aligned bounding box of the rotated text.
+    IMGUI_API void TextRotated(const char* text, float angle_degrees = 90.f);
+
+    // Vertical tab bar: tabs on the left with rotated labels, content on the right.
+    // labels/labels_count: tab label strings.
+    // active_tab: in/out 0-indexed selection.
+    // highlighted_tab: index shown with a small dot indicator (-1 = none); use to mark the currently-active mode.
+    // tab_width: override tab strip width (0 = auto-sized from font height).
+    // Returns true when rendered; always call EndVerticalTabBar() iff this returns true.
+    IMGUI_API bool BeginVerticalTabBar(const char* str_id, const char* const* labels, int labels_count,
+                                       int* active_tab, int highlighted_tab = -1, float tab_width = 0.f);
+    IMGUI_API void EndVerticalTabBar();
 }

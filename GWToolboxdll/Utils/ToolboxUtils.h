@@ -46,6 +46,7 @@ namespace GW {
     enum class FriendStatus : uint32_t;
 
     namespace Constants {
+        enum HeroID : uint32_t;
         enum class Profession : uint32_t;
         enum class Campaign : uint32_t;
         enum class MapID : uint32_t;
@@ -132,7 +133,7 @@ namespace GW {
     namespace Map {
         GW::Array<GW::MapProp*>* GetMapProps();
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
-        std::vector<GW::Constants::TitleID> GetBountyTitlesForMap(GW::Constants::MapID map_id);
+        std::vector<GW::Constants::TitleID> GetTitlesForMap(GW::Constants::MapID map_id);
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id);
 
         bool IsFestivalOutpost(const GW::Constants::MapID map_id);
@@ -162,10 +163,15 @@ namespace GW {
         // Try not to be a dick with this info
         const wchar_t* GetAccountEmail();
         const UUID* GetPortalAccountUuid();
+        GUID GetAccountUuid();
 
         AvailableCharacterInfo* GetAvailableCharacter(const wchar_t* name);
     }
     namespace MemoryMgr {
+        template <typename T>
+        T* AddToGuildWarsArray(GW::BaseArray<T>& arr, const T& element);
+        template <typename T>
+        void RemoveFromGwArray(GW::BaseArray<T>& arr, uint32_t index);
         bool GetPersonalDir(std::wstring& out);
         std::filesystem::path GetBuildsDir();
     }
@@ -206,6 +212,22 @@ namespace GW {
         uint32_t GetAlcoholPointsPerUse(const GW::Item* item);
         bool IsAlcohol(const GW::Item* item);
     }
+    namespace Effects {
+        // Adds a synthetic effect to the local player's effects array and notifies the in-game UI.
+        // Effect ID is deterministic: 0x0f000000 | skill_id, so the same skill always reuses the same slot.
+        // If an existing custom effect for the same skill already exists it is updated instead.
+        // Returns the effect_id on success, 0 on failure (e.g. no capacity in the effects array).
+        uint32_t AddCustomEffect(GW::Constants::SkillID skill_id, float duration_seconds);
+
+        // Removes a previously added custom effect from the local player's effects array and
+        // notifies the in-game UI.  Only removes effects whose effect_id has high byte 0x0f.
+        // Returns true if the effect was found and removed.
+        bool RemoveCustomEffect(uint32_t effect_id);
+    }
+}
+
+namespace GuiUtils {
+    class EncString;
 }
 
 namespace ToolboxUtils {
@@ -259,6 +281,8 @@ namespace ToolboxUtils {
     bool IsHenchman(uint32_t agent_id);
     bool IsHero(uint32_t agent_id, GW::HeroInfo** info_out = nullptr);
 
+    bool IsHeroUnlocked(GW::Constants::HeroID hero_id);
+
     // Party related
 
     // Find HenchmanPartyMember by agent_id, pass GW::PartyInfo** to also grab the party this henchman belongs to
@@ -281,4 +305,7 @@ namespace ToolboxUtils {
     GW::Friend* GetFriend(const wchar_t* account, const wchar_t* playing, GW::FriendType type, GW::FriendStatus status);
 
     std::wstring ShorthandItemDescription(GW::Item* item);
+
+    GuiUtils::EncString* GetProfessionName(GW::Constants::Profession profession);
+    GuiUtils::EncString* GetProfessionAcronym(GW::Constants::Profession profession);
 };

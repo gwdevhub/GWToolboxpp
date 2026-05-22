@@ -8,7 +8,6 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
@@ -17,6 +16,7 @@
 #include <Modules/ToolboxSettings.h>
 #include <Widgets/PartyDamage.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
 constexpr const char* IniSection = "health";
@@ -235,8 +235,8 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     if (has_damage && has_healing) {
         swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)",
                    rank,
-                   GetWProfessionAcronym(damage[index].primary),
-                   GetWProfessionAcronym(damage[index].secondary),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
                    damage[index].name.c_str(),
                    GetPercentageOfTotal(damage[index].damage),
                    damage[index].damage,
@@ -246,8 +246,8 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     else if (has_damage) {
         swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Dmg: %3.2f%% (%d)",
                    rank,
-                   GetWProfessionAcronym(damage[index].primary),
-                   GetWProfessionAcronym(damage[index].secondary),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
                    damage[index].name.c_str(),
                    GetPercentageOfTotal(damage[index].damage),
                    damage[index].damage);
@@ -255,8 +255,8 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     else if (has_healing) {
         swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Heal: %3.2f%% (%d)",
                    rank,
-                   GetWProfessionAcronym(damage[index].primary),
-                   GetWProfessionAcronym(damage[index].secondary),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
+                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
                    damage[index].name.c_str(),
                    GetPercentageOfTotalHealing(damage[index].healing),
                    damage[index].healing);
@@ -493,9 +493,6 @@ void PartyDamage::Terminate()
     GW::StoC::RemoveCallbacks(&MapLoaded_Entry);
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
-    for (auto str : party_names_by_index) {
-        str->Release();
-    }
     party_names_by_index.clear();
 
     if (inifile) {
@@ -840,8 +837,7 @@ void PartyDamage::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Print Player Damage by Ctrl + Click", &print_by_click);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Bars towards the left", &bars_left);
-    ImGui::ShowHelp("If unchecked, they will expand to the right");
+    ImGui::CheckboxWithHelp("Bars towards the left", &bars_left, "If unchecked, they will expand to the right");
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show damage", &show_damage);
     ImGui::NextSpacedElement();
@@ -849,8 +845,7 @@ void PartyDamage::DrawSettingsInternal()
 
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show on top of health bars", &overlay_party_window);
-    ImGui::ShowHelp("Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("Show on top of health bars", &overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
     ImGui::DragInt("Party window offset", &user_offset);

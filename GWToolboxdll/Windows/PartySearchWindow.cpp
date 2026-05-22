@@ -30,6 +30,7 @@
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
 // Every connection cost 30 seconds.
 // You have 2 tries.
@@ -37,8 +38,16 @@
 static constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
 static constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
 using easywsclient::WebSocket;
-using nlohmann::json;
-using json_vec = std::vector<json>;
+
+constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+
+namespace lfg_api {
+    struct RawMessage {
+        std::string s; // sender
+        std::string m; // message
+        double t = 0.0; // timestamp ms
+    };
+}
 
 static constexpr char ws_host[] = "wss://lfg.gwtoolbox.com";
 static constexpr char https_host[] = "https://lfg.gwtoolbox.com";
@@ -512,20 +521,18 @@ void PartySearchWindow::Update(const float)
     }
 }
 
-bool PartySearchWindow::parse_json_message(const json& js, Message* msg)
+bool PartySearchWindow::parse_json_message(const std::string& data, Message* msg)
 {
-    if (js == json::value_t::discarded) {
+    lfg_api::RawMessage raw{};
+    if (auto ec = glz::read<json_opts>(raw, data); ec) {
         return false;
     }
-    if (!(js.contains("s") && js["s"].is_string())
-        || !(js.contains("m") && js["m"].is_string())
-        || !(js.contains("t") && js["t"].is_number_unsigned())) {
+    if (raw.s.empty() || raw.m.empty() || raw.t <= 0.0) {
         return false;
     }
-    msg->name = js["s"].get<std::string>();
-    msg->message = js["m"].get<std::string>();
-    msg->name = js["s"].get<std::string>();
-    msg->timestamp = static_cast<uint32_t>(js["t"].get<uint64_t>() / 1000); // Messy?
+    msg->name = std::move(raw.s);
+    msg->message = std::move(raw.m);
+    msg->timestamp = static_cast<uint32_t>(raw.t / 1000.0); // Messy?
     return true;
 }
 
@@ -536,14 +543,9 @@ void PartySearchWindow::fetch()
     }
 
     ws_window->dispatch([this](const std::string& data) {
-        const json& res = json::parse(data.c_str(), nullptr, false);
-        if (res == json::value_t::discarded) {
-            Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
-            return;
-        }
         // Add to message feed
         Message msg;
-        if (!parse_json_message(res, &msg)) {
+        if (!parse_json_message(data, &msg)) {
             return; // Not valid message object
         }
         messages.add(msg);
@@ -696,13 +698,13 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
             char label[64];
             if (party->secondary) {
                 snprintf(label, 64, "%s/%s %s",
-                         GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)),
-                         GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->secondary)),
+                         ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary))->string().c_str(),
+                         ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->secondary))->string().c_str(),
                          party->player_name.c_str());
             }
             else {
                 snprintf(label, 64, "%s %s",
-                         GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary)),
+                         ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(party->primary))->string().c_str(),
                          party->player_name.c_str());
             }
 
@@ -750,8 +752,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
 void PartySearchWindow::DrawAlertsWindowContent(bool)
 {
     ImGui::Text("Alerts");
-    ImGui::Checkbox("Send party advertisements to your trade chat", &print_game_chat);
-    ImGui::ShowHelp("Only when trade chat channel is visible in-game");
+    ImGui::CheckboxWithHelp("Send party advertisements to your trade chat", &print_game_chat, "Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Only show messages containing:", &filter_alerts);
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,

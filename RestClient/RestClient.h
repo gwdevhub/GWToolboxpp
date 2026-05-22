@@ -2,7 +2,7 @@
 
 #include <Event.h>
 
-#include "CurlWrapper.h"
+#include "HttpClient.h"
 
 void InitAsyncRest();
 void ShutdownAsyncRest();
@@ -20,7 +20,7 @@ public:
     }
 };
 
-class RestClient : public CurlEasy {
+class RestClient : public HttpRequest {
 public:
     RestClient();
     RestClient(const RestClient&) = delete;
@@ -45,22 +45,22 @@ public:
 
     ~AsyncRestClient() override;
 
-    // Clears the data from the request which effectively set the request to "incomplete".
-    // So "IsCompleted" will return false.
+    // Clears the response data. Effectively sets the request to "incomplete"
+    // so "IsCompleted" will return false.
     void Clear();
 
-    // @Remark:
-    // The functions from RestClient (Recursively from CurlEasy) are not
-    // thread-safe, but the api "Wait", "IsPending" and "Abort" are thread-safe.
-    // Typically, the setters from CurlEasy are not thread-safe.
+    // The setters from HttpRequest are not thread-safe and must not be
+    // touched while a request is in flight. "Wait", "IsPending" and "Abort"
+    // are thread-safe.
     //
     // You need to guarantee that between a call to "ExecuteAsync" until
     // "IsPending" returns false (or "Wait" returns true) or until "Abort"
-    //  is called the options are not changed.
+    // is called the options are not changed.
     void Wait() const;
     bool Wait(uint32_t TimeoutMs) const;
 
-    // "IsPending" returns true as long as the request is potentially used in an other thread.
+    // "IsPending" returns true as long as the request is potentially used in
+    // another thread.
     bool IsPending();
 
     // "IsCompleted" returns true if the asynchronous operation is finished.
@@ -70,8 +70,10 @@ public:
     void ExecuteAsync();
     void Abort();
 
-    void OnCompletion(int Status);
-
 private:
+    static unsigned long __stdcall ThreadProc(void* param);
+    void JoinThread();
+
+    void* m_ThreadHandle;
     Event m_Event;
 };

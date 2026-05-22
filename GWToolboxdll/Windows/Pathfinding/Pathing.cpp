@@ -1273,7 +1273,9 @@ namespace Pathing {
             }
         }
 
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma optimize("gty", on) // Enable optimizations
+#endif
         void GenerateVisGraph()
         {
             Timing time(__FUNCTION__);
@@ -1393,7 +1395,9 @@ namespace Pathing {
             Log::Info("m_visGraph total elements = %d", total);
 #endif
         }
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma optimize("", on) // Restore global optimizations to project default
+#endif
 
 #define mImpl ((Impl*)opaque)
     }; // Impl
@@ -1662,7 +1666,7 @@ namespace Pathing {
             for (auto& vis : mp->m_visGraph[current]) {
                 if ((vis.blocked_planes & current_blocked_planes).any()) continue;
                 float new_cost = cost_so_far[current] + vis.distance;
-                if (cost_so_far[vis.point_id] == -INFINITY || new_cost < cost_so_far[vis.point_id]) {
+                if (vis.point_id < cost_so_far.size() && (cost_so_far[vis.point_id] == -INFINITY || new_cost < cost_so_far[vis.point_id])) {
                     cost_so_far[vis.point_id] = new_cost;
                     came_from[vis.point_id] = current;
 

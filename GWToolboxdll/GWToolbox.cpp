@@ -1,8 +1,11 @@
 #include "stdafx.h"
 
+#include <Utf8.h>
+
 #include <GWCA/GWCA.h>
 #include <GWCA/GWCAVersion.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
@@ -12,16 +15,17 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Managers/EventMgr.h>
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
+#include <Utils/TeamBuild.h>
 #include <GWToolbox.h>
 #include <Logger.h>
 
 #include <Modules/Resources.h>
 #include <Modules/CameraUnlockModule.h>
 #include <Modules/ChatCommands.h>
+#include <Modules/TransmoModule.h>
 #include <Modules/ToolboxTheme.h>
 #include <Modules/ToolboxSettings.h>
 #include <Modules/CrashHandler.h>
@@ -37,10 +41,8 @@
 
 #include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
-#include <hidusage.h>
 
 #include "Utils/FontLoader.h"
-#include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
 
 #include <EmbeddedResource.h>
@@ -249,7 +251,6 @@ namespace {
         if (!std::filesystem::exists(dll_path_str)) return false;
 
         // Check file size if we have a resource module to compare against
-        (resource_dll);
 #ifndef _DEBUG
         if (!resource_dll.data())
             return false;
@@ -279,6 +280,38 @@ namespace {
                 && file_version_patch == GWCA::VersionPatch);
     }
 
+    void TerminateExistingGWCADll(HMODULE existing_gwca)
+    {
+        typedef void(__cdecl* GWFnVoid)();
+        const auto disable_hooks = (GWFnVoid)GetProcAddress(existing_gwca, "?DisableHooks@GW@@YAXXZ");
+        const auto terminate = (GWFnVoid)GetProcAddress(existing_gwca, "?Terminate@GW@@YAXXZ");
+        // The old gwca.dll's hooks may point into a previously-unloaded toolbox dll;
+        // calling DisableHooks/Terminate can therefore crash. Swallow it via SEH
+        // and continue to FreeLibrary.
+        if (disable_hooks) {
+            Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
+            __try { disable_hooks(); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                Log::Log("[LoadGWCADll] DisableHooks on old gwca.dll crashed; continuing");
+            }
+        }
+        if (terminate) {
+            Log::Log("[LoadGWCADll] Calling Terminate on old gwca.dll");
+            __try { terminate(); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {
+                Log::Log("[LoadGWCADll] Terminate on old gwca.dll crashed; continuing");
+            }
+        }
+        Sleep(160);
+        // Unload: may need multiple calls if ref count > 1
+        while (GetModuleHandleW(L"gwca.dll") == existing_gwca) {
+            if (!FreeLibrary(existing_gwca)) {
+                Log::Log("[LoadGWCADll] FreeLibrary failed for old gwca.dll: %d", GetLastError());
+                break;
+            }
+        }
+    }
+
     HMODULE LoadGWCADll(HMODULE resource_module)
     {
         if (gwcamodule)
@@ -292,13 +325,24 @@ namespace {
             return nullptr;
         }
 
+        // If a gwca.dll is already loaded that isn't our expected version, terminate and unload it first
+        const HMODULE existing_gwca = GetModuleHandleW(L"gwca.dll");
+        if (existing_gwca) {
+            wchar_t existing_path[MAX_PATH] = {};
+            GetModuleFileNameW(existing_gwca, existing_path, MAX_PATH);
+            if (_wcsicmp(existing_path, dll_path_str.c_str()) != 0 || !IsValidGWCADll(gwca_dll_path, resource)) {
+                Log::Log("[LoadGWCADll] Found existing gwca.dll at %ls; terminating before loading correct version", existing_path);
+                TerminateExistingGWCADll(existing_gwca);
+            }
+        }
+
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
             std::wstring err;
             Resources::ResourceToFile(IDR_GWCA_DLL, gwca_dll_path,err);
-        }
-        if (!IsValidGWCADll(gwca_dll_path, resource)) {
-            Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
-            return nullptr;
+            if (!IsValidGWCADll(gwca_dll_path, resource)) {
+                Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
+                return nullptr;
+            }
         }
 
         gwcamodule = LoadLibraryW(gwca_dll_path.wstring().c_str());
@@ -949,6 +993,8 @@ void GWToolbox::Update(GW::HookStatus*)
 
     UpdateModulesTerminating(delta_f);
 
+    Build::Update();
+
     // Update loop
     for (const auto m : modules_enabled) {
         if (profiling_enabled) {
@@ -1055,6 +1101,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
                 continue;
             }
             uielement->UpdateLocationAgainstSnappedFrame();
+            uielement->DrawBreakoutButton(device);
             if (profiling_enabled) {
                 LARGE_INTEGER t0, t1;
                 QueryPerformanceCounter(&t0);
@@ -1071,6 +1118,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         //ImGui::ShowDemoWindow();
         //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
+        ToolboxSettings::DrawSettingsCogButtons();
         ImGui::DrawContextMenu();
         ImGui::DrawConfirmDialog();
         if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
@@ -1136,6 +1184,7 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(GwDatTextureModule::Instance());
     ToggleModule(Updater::Instance());
     ToggleModule(ChatCommands::Instance());
+    ToggleModule(TransmoModule::Instance());
     ToggleModule(GameSettings::Instance());
     ToggleModule(ChatSettings::Instance());
     ToggleModule(InventoryManager::Instance());

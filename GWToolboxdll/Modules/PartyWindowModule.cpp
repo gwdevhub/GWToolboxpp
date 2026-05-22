@@ -20,6 +20,10 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/FriendListMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+
+#include <GWCA/GameEntities/Friendslist.h>
 
 #include <ImGuiAddons.h>
 #include <Logger.h>
@@ -110,6 +114,9 @@ namespace {
     std::map<GW::Constants::MapID, std::wstring> map_names_by_id;
 
     bool is_explorable = false;
+
+    clock_t offline_party_search_reminder_last_sent = 0;
+    bool check_party_search_offline_reminder = false;
 
     bool IsPvE()
     {
@@ -478,7 +485,7 @@ namespace {
 
     const std::string GetProfessionName(uint8_t prof)
     {
-        return GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof));
+        return ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string();
     }
 
     bool OverridePartySortOrder(bool _override = true)
@@ -517,6 +524,12 @@ namespace {
     {
         if (status->blocked) return;
         switch (message_id) {
+            case GW::UI::UIMessage::kPartySearchCreated:
+            case GW::UI::UIMessage::kPartySearchUpdated: {
+                const auto party_search = *(GW::PartySearch**)wparam;
+                if (party_search && wcseq(GW::PlayerMgr::GetPlayerName(), party_search->party_leader)) 
+                   check_party_search_offline_reminder = true;
+            } break;
             case GW::UI::UIMessage::kSetAgentProfession: {
                 const auto agent_id = *(uint32_t*)wparam;
                 if (GW::PartyMgr::IsAgentInParty(agent_id)) RefreshPartySortHandler();
@@ -725,9 +738,9 @@ namespace {
 
             // Primary profession combo
             ImGui::SetNextItemWidth(120.0f * fontScale);
-            if (ImGui::BeginCombo("##primary", GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary)))) {
+            if (ImGui::BeginCombo("##primary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
-                    if (ImGui::Selectable(GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof)), primary == prof)) {
+                    if (ImGui::Selectable(ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string().c_str(), primary == prof)) {
                         primary = prof;
                         edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
                     }
@@ -741,9 +754,9 @@ namespace {
 
             // Secondary profession combo
             ImGui::SetNextItemWidth(120.0f * fontScale);
-            if (ImGui::BeginCombo("##secondary", GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary)))) {
+            if (ImGui::BeginCombo("##secondary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
-                    if (ImGui::Selectable(GW::Constants::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof)), secondary == prof)) {
+                    if (ImGui::Selectable(ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string().c_str(), secondary == prof)) {
                         secondary = prof;
                         edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
                     }
@@ -825,6 +838,13 @@ namespace {
 
 void PartyWindowModule::Update(float delta) {
     ToolboxModule::Update(delta);
+    if (check_party_search_offline_reminder) {
+        check_party_search_offline_reminder = false;
+        if (TIMER_DIFF(offline_party_search_reminder_last_sent) > 10000 && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Offline) {
+            offline_party_search_reminder_last_sent = TIMER_INIT();
+            Log::Flash("You're currently offline, and won't receive party search responses.\nType '/online' in chat to set your status to Online.");
+        }
+    }
     while (!summons_pending.empty()) {
         const SummonPending summon = summons_pending.front();
 
@@ -958,10 +978,12 @@ void PartyWindowModule::Initialize()
     );
 
     const GW::UI::UIMessage ui_messages[] = {
-        GW::UI::UIMessage::kSetAgentProfession, 
-        GW::UI::UIMessage::kPartyRemovePlayer, 
+        GW::UI::UIMessage::kSetAgentProfession,
+        GW::UI::UIMessage::kPartyRemovePlayer,
         GW::UI::UIMessage::kPartyAddPlayer,
-        GW::UI::UIMessage::kMapLoaded
+        GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kPartySearchCreated,
+        GW::UI::UIMessage::kPartySearchUpdated
     };
     for (auto ui_message : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x8000);
@@ -1023,10 +1045,8 @@ void PartyWindowModule::LoadDefaults()
 
 void PartyWindowModule::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Add player numbers to party window", &add_player_numbers_to_party_window);
-    ImGui::ShowHelp("Will update on next map");
-    ImGui::Checkbox("Rename Tengu and Imperial Guard Ally summons to their respective elite skill", &add_elite_skill_to_summons);
-    ImGui::ShowHelp("Only works on newly spawned summons.");
+    ImGui::CheckboxWithHelp("Add player numbers to party window", &add_player_numbers_to_party_window, "Will update on next map");
+    ImGui::CheckboxWithHelp("Rename Tengu and Imperial Guard Ally summons to their respective elite skill", &add_elite_skill_to_summons, "Only works on newly spawned summons.");
     ImGui::Checkbox(
         "Remove dead imperial guard allies", &remove_dead_imperials);
     if (ImGui::Checkbox("Add special NPCs to party window", &add_npcs_to_party_window)) {

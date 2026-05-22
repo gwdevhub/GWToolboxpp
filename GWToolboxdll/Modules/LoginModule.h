@@ -18,5 +18,6 @@ public:
     [[nodiscard]] bool HasSettings() override { return false; }
 
     void Initialize() override;
+    void Update(float) override;
     void Terminate() override;
 };

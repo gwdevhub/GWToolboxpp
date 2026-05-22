@@ -6,6 +6,10 @@
 
 #include <Timer.h>
 
+namespace GW {
+    struct AgentLiving;
+}
+
 class Pcon {
 public:
     static int pcons_delay;

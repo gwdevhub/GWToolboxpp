@@ -1,7 +1,9 @@
 #include "stdafx.h"
 
 #include <GWCA/Context/GameplayContext.h>
+#include <GWCA/Context/WorldContext.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -9,15 +11,17 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <ImGuiAddons.h>
+#include <Modules/GwDatTextureModule.h>
 #include <Modules/QuestModule.h>
+#include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Utils/ToolboxUtils.h>
-#include <GWCA/Context/WorldContext.h>
 #include <D3DContainers.h>
 
 namespace {
+    IDirect3DPixelShader9* icon_tint_shader = nullptr;
     bool draw_all_terrain_lines = false;
     bool draw_all_minimap_lines = true;
 
@@ -107,12 +111,25 @@ namespace {
 
         const auto* mm_ctx = GW::Map::GetMissionMapContext();
         if (!mm_ctx || !mm_ctx->h003c) return;
-
         const GW::Vec2f mm_pos = mm_ctx->h003c->player_mission_map_pos;
-        GW::GamePos anchor_pos;
-        if (!WorldMapWidget::WorldMapToGamePos(mm_pos, anchor_pos)) return;
-        const float px = anchor_pos.x;
-        const float py = anchor_pos.y;
+
+        // Use the controlled character's position when not spectating (works on
+        // underground maps where WorldMapToGamePos returns wrong coordinates).
+        // When spectating, mm_pos tracks the observed character so we must convert
+        // it back to game coords to stay consistent with the origin calculation.
+        float px, py;
+        const auto* player = GW::Agents::GetControlledCharacter();
+        const bool spectating = player && GW::Agents::GetObservingId() != player->agent_id;
+        if (spectating) {
+            GW::GamePos anchor_pos;
+            if (!WorldMapWidget::WorldMapToGamePos(mm_pos, anchor_pos)) return;
+            px = anchor_pos.x;
+            py = anchor_pos.y;
+        } else {
+            if (!player) return;
+            px = player->pos.x;
+            py = player->pos.y;
+        }
 
         if (mission_map_zoom != cached_basis_zoom || !valid) {
             cached_basis_zoom = mission_map_zoom;
@@ -131,11 +148,11 @@ namespace {
 
         const GW::Vec2f mm_offset = mm_pos - current_pan_offset;
         const GW::Vec2f mm_scaled = {mm_offset.x * mission_map_scale.x, mm_offset.y * mission_map_scale.y};
-        const GW::Vec2f anchor_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
+        const GW::Vec2f player_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
                                          mm_scaled.y * mission_map_zoom + mission_map_screen_pos.y};
 
-        ox = roundf(anchor_screen.x - px * ax - py * bx);
-        oy = roundf(anchor_screen.y - px * ay - py * by);
+        ox = player_screen.x - px * ax - py * bx;
+        oy = player_screen.y - px * ay - py * by;
         valid = true;
     }
 
@@ -164,7 +181,7 @@ namespace {
         GW::Hook::EnableHooks(OnMissionMap_UICallback_Func);
         return true;
     }
-
+    bool mission_map_ready = false;
     bool InitializeMissionMapParameters()
     {
         const auto gameplay_context = GW::GetGameplayContext();
@@ -173,6 +190,8 @@ namespace {
 
         const auto root = GW::UI::GetRootFrame();
         mission_map_top_left = mission_map_frame->position.GetContentTopLeft(root);
+        if (!std::isfinite(mission_map_top_left.x)) 
+            return false;
         mission_map_bottom_right = mission_map_frame->position.GetContentBottomRight(root);
         mission_map_scale = mission_map_frame->position.GetViewportScale(root);
         mission_map_zoom = gameplay_context->mission_map_zoom;
@@ -271,6 +290,7 @@ namespace {
                 minimap_lines.push_back(D3DLine(line->p1, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
             }
         }
+        
     }
 } // namespace
 
@@ -290,16 +310,44 @@ void MissionMapWidget::SaveSettings(ToolboxIni* ini)
 
 void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
 {
-    if (!visible || !GW::Map::GetIsMapLoaded() || !mission_map_frame || !mission_map_frame->IsVisible()) return;
+    if (!visible || !mission_map_ready) return;
 
     SubmitVertexBuffers(dx_device);
-    HookMissionMapFrame();
+
+    // POC: mission map icons, desaturated. Res shrine icon (maybe others) are wrong colour by default so we desaturate, but this impacts other icons!
+    #if 0
+    const auto* world_ctx = GW::GetWorldContext();
+    if (!world_ctx) return;
+    auto* draw_list = ImGui::GetBackgroundDrawList();
+    draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y});
+    static constexpr ImU32 kAffiliationColors[] = {
+        IM_COL32_WHITE,                   // 0: gray
+        IM_COL32(0x20, 0x20, 0xFF, 0xFF), // 1: blue
+        IM_COL32(0xFF, 0x20, 0x20, 0xFF), // 2: red
+        IM_COL32(0xFF, 0xFF, 0x20, 0xFF), // 3: yellow
+        IM_COL32(0x20, 0xFF, 0xFF, 0xFF), // 4: teal
+        IM_COL32(0x80, 0x20, 0xFF, 0xFF), // 5: purple
+        IM_COL32(0x20, 0xFF, 0x20, 0xFF), // 6: green
+        IM_COL32_WHITE,                   // 7: gray (same as 0)
+    };
+    for (const auto& icon : world_ctx->mission_map_icons) {
+        auto** tex = GwDatTextureModule::LoadGreyscaleTextureFromFileId(icon.model_id);
+        if (!tex || !*tex) continue;
+        GW::Vec2f pos;
+        GamePosToMissionMapScreenPos({icon.X, icon.Y}, pos);
+        ImVec2 sz = {42.f, 42.f};
+        const ImU32 tint = icon.option < std::size(kAffiliationColors) ? kAffiliationColors[icon.option] : IM_COL32_WHITE;
+        draw_list->AddImage(*tex, {pos.x - sz.x / 2, pos.y - sz.y / 2}, {pos.x + sz.x / 2, pos.y + sz.y / 2}, {0, 0}, {1, 1}, tint);
+    }
+    draw_list->PopClipRect();
+    #endif
 }
 
 void MissionMapWidget::Update(float)
 {
     if (!HookMissionMapFrame()) return;
-    if (!InitializeMissionMapParameters()) return;
+    mission_map_ready = InitializeMissionMapParameters();
+    if (!mission_map_ready) return;
 
     g2s.Rebuild();
     if (!g2s.valid) { render_ready = false; return; }
@@ -342,6 +390,11 @@ void MissionMapWidget::Terminate()
     ToolboxWidget::Terminate();
     if (OnMissionMap_UICallback_Func) GW::Hook::RemoveHook(OnMissionMap_UICallback_Func);
     OnMissionMap_UICallback_Func = nullptr;
+
+    if (icon_tint_shader) {
+        icon_tint_shader->Release();
+        icon_tint_shader = nullptr;
+    }
 
     minimap_lines.Terminate();
     render_ready = false;

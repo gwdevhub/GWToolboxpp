@@ -5,7 +5,6 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Map.h>
-#include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
@@ -23,9 +22,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
@@ -42,7 +39,6 @@
 
 #include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
-#include <Keys.h>
 #include <Logger.h>
 
 #include <Constants/EncStrings.h>
@@ -52,7 +48,6 @@
 #include <Modules/InventoryManager.h>
 #include <Widgets/PartyDamage.h>
 #include <Windows/BuildsWindow.h>
-#include <Windows/Hotkeys.h>
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
 #include <Widgets/TimerWidget.h>
@@ -60,7 +55,6 @@
 #include <Modules/DialogModule.h>
 #include <Modules/Resources.h>
 #include <Utils/TextUtils.h>
-#include <Constants/EncStrings.h>
 
 #include "QuestModule.h"
 #include <Utils/ToolboxUtils.h>
@@ -74,7 +68,7 @@ namespace {
 
     struct SearchAgent {
         clock_t started = 0;
-        std::vector<std::pair<uint32_t, GuiUtils::EncString*>> npc_names;
+        std::vector<std::pair<uint32_t, std::unique_ptr<GuiUtils::EncString>>> npc_names;
         std::wstring search;
         void Init(const wchar_t* _search, const GW::AgentTargetFlags type);
         void Update();
@@ -83,9 +77,6 @@ namespace {
         {
             started = 0;
             search.clear();
-            for (const auto& name : npc_names | std::views::values) {
-                name->Release();
-            }
             npc_names.clear();
         }
     } npc_to_find;
@@ -219,7 +210,7 @@ namespace {
         constexpr auto max_distance = GW::Constants::SqrRange::Spellcast;
         float distance = 0.0f;
 
-        GW::Agent* closest = nullptr;
+        const GW::Agent* closest = nullptr;
         for (const auto agent : *agents) {
             if (!agent || agent == me) continue;
             auto living = agent->GetAsAgentLiving();
@@ -281,8 +272,6 @@ namespace {
         }
     }
 
-    std::map<std::string, ChatCommands::PendingTransmo> npc_transmos;
-
     struct DecodedTitleName {
         DecodedTitleName(const GW::Constants::TitleID in)
             : title(in)
@@ -321,7 +310,9 @@ namespace {
     constexpr auto fps_syntax = "'/fps [limit (15-400)]' sets a hard frame limit for Guild Wars. Pass '0' to remove the limit.\n'/fps' shows current frame limit";
     constexpr auto pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
 
-    constexpr auto tb_syntax = "'/tb [name>]' toggles the window or widget titled <name>.\n"
+    constexpr auto tb_syntax = "'/tb <name>' toggles the window or widget titled <name>.\n"
+                               "'/tb save [profile]' saves current Toolbox settings to disk; if [profile] is given, write to that profile, otherwise write to the default config.\n"
+                               "'/tb load [profile]' loads Toolbox settings from disk; if [profile] is given, read from that profile, otherwise read from the default config.\n"
                                "'/tb reset' moves Toolbox and Settings window to the top-left corner.\n"
                                "'/tb quit' or '/tb exit' completely closes toolbox and all its windows.";
 
@@ -338,6 +329,9 @@ namespace {
                                           "If hero_index is not provided, all heroes behaviours will be adjusted.\n"
                                           "Add 'silent' to suppress chat message from the hero.";
 
+    constexpr auto disableheroskill_syntax = "'/disableheroskill <hero_index (1-7)> <slot (1-8)> [1|0]' to disable, enable, or toggle a hero's skill slot.\n"
+                                             "Omit the last argument to toggle the current state.";
+
     constexpr auto target_syntax = "'/target closest' to target the closest agent to you.\n"
                             "'/target ee' to target best ebon escape agent.\n"
                             "'/target hos' to target best vipers/hos agent.\n"
@@ -353,6 +347,9 @@ namespace {
                                 "Use the skill number instead of [slot] (e.g. '/useskill 5').\n"
                                 "Use '/useskill [slot]' to stop the skill.\n"
                                 "Use '/useskill [0|stop|off]' to stop all skills.";
+
+    constexpr auto custommarker_syntax = "'/custommarker <x> <y>' to place a custom marker at world map coordinates (x, y).\n"
+                                         "'/custommarker clear' to remove the custom marker.";
 
     void CHAT_CMD_FUNC(CmdChatTab)
     {
@@ -594,69 +591,76 @@ namespace {
         Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
     }
 
-    class PrefLabel : public GuiUtils::EncString {
-    public:
-        PrefLabel(const wchar_t* _enc_string = nullptr)
-            : EncString(_enc_string, false) {};
-
-        PrefLabel(const uint32_t _enc_string)
-            : EncString(_enc_string, false) {};
-
-    protected:
-        static void OnPrefLabelDecoded(void* param, const wchar_t* decoded);
-
-        void decode() override
-        {
-            language(GW::Constants::Language::English);
-            if (!decoded && !decoding && !encoded_ws.empty()) {
-                decoding = true;
-                GW::GameThread::Enqueue([&] {
-                    GW::UI::AsyncDecodeStr(encoded_ws.c_str(), OnPrefLabelDecoded, this, language_id);
-                });
-            }
-        }
-    };
-
-    void PrefLabel::OnPrefLabelDecoded(void* param, const wchar_t* decoded)
+    void CmdUiProfilePref(const wchar_t*, int argc, const LPWSTR* argv, uint32_t pref_id)
     {
-        GuiUtils::EncString::OnStringDecoded(param, decoded);
-        const auto context = static_cast<PrefLabel*>(param);
-        context->decoded_ws = TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(context->decoded_ws)));
+        const auto pref = static_cast<GW::UI::UiProfileSetting>(pref_id);
+
+        if (argc > 2) {
+            // Setting value
+            if (wcscmp(argv[2], L"toggle") == 0) {
+                GW::UI::SetUIFeature(pref, !GW::UI::GetUIFeature(pref));
+                return;
+            }
+            uint32_t value = 0xff;
+            if (TextUtils::ParseUInt(argv[2], &value)) {
+                GW::UI::SetUIFeature(pref, value == 1 ? 1 : 0);
+            }
+            return;
+        }
+        // Print current value
+        Log::InfoW(L"Current preference value for %s is %d", argv[1], GW::UI::GetUIFeature(pref));
+    }
+
+    std::unique_ptr<GuiUtils::EncString> MakePrefLabel(uint32_t enc_string_id)
+    {
+        auto label = std::make_unique<GuiUtils::EncString>(enc_string_id, false);
+        label->language(GW::Constants::Language::English);
+        label->SetSanitiseCallback([](std::wstring s) {
+            return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
+        });
+        return label;
+    }
+
+    std::unique_ptr<GuiUtils::EncString> MakePrefLabel(const wchar_t* enc_string)
+    {
+        auto label = std::make_unique<GuiUtils::EncString>(enc_string, false);
+        label->language(GW::Constants::Language::English);
+        label->SetSanitiseCallback([](std::wstring s) {
+            return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
+        });
+        return label;
     }
 
     struct PrefMapCommand {
 
         PrefMapCommand(GW::UI::EnumPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p))
-        {
-            preference_callback = CmdEnumPref;
-            label = new PrefLabel(enc_string_id);
-        }
+            : preference_id(std::to_underlying(p)),
+              preference_callback(CmdEnumPref),
+              label(MakePrefLabel(enc_string_id)) {}
 
         PrefMapCommand(GW::UI::NumberPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p))
-        {
-            preference_callback = CmdValuePref;
-            label = new PrefLabel(enc_string_id);
-        }
+            : preference_id(std::to_underlying(p)),
+              preference_callback(CmdValuePref),
+              label(MakePrefLabel(enc_string_id)) {}
 
         PrefMapCommand(GW::UI::FlagPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p))
-        {
-            preference_callback = CmdFlagPref;
-            label = new PrefLabel(enc_string_id);
-        }
+            : preference_id(std::to_underlying(p)),
+              preference_callback(CmdFlagPref),
+              label(MakePrefLabel(enc_string_id)) {}
 
         PrefMapCommand(GW::UI::FlagPreference p, const wchar_t* enc_string_id)
-            : preference_id(std::to_underlying(p))
-        {
-            preference_callback = CmdFlagPref;
-            label = new PrefLabel(enc_string_id);
-        }
+            : preference_id(std::to_underlying(p)),
+              preference_callback(CmdFlagPref),
+              label(MakePrefLabel(enc_string_id)) {}
+
+        PrefMapCommand(GW::UI::UiProfileSetting p, const wchar_t* enc_string_id) : 
+            preference_id(std::to_underlying(p)), 
+            preference_callback(CmdUiProfilePref), 
+            label(MakePrefLabel(enc_string_id)) {}
 
         uint32_t preference_id;
         CmdPrefCB preference_callback;
-        PrefLabel* label = nullptr;
+        std::unique_ptr<GuiUtils::EncString> label;
     };
 
     using PrefMap = std::vector<PrefMapCommand>;
@@ -665,31 +669,46 @@ namespace {
     const PrefMap& getPrefCommandOptions()
     {
         if (pref_map.empty()) {
-            pref_map = {
-                {GW::UI::FlagPreference::WaitForVSync, GW::EncStrings::VerticalSync},
-                {GW::UI::NumberPreference::FullscreenGamma, GW::EncStrings::FullScreenGamma},
-                {GW::UI::EnumPreference::AntiAliasing, GW::EncStrings::AntiAliasing},
-                {GW::UI::EnumPreference::ShaderQuality, GW::EncStrings::ShaderQuality},
-                {GW::UI::EnumPreference::TerrainQuality, GW::EncStrings::TerrainQuality},
-                {GW::UI::EnumPreference::Reflections, GW::EncStrings::Reflections},
-                {GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality},
-                {GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize},
-                {GW::UI::NumberPreference::TextureLod, GW::EncStrings::TextureQuality},
-                {GW::UI::NumberPreference::Language, GW::EncStrings::TextLanguage},
-                {GW::UI::NumberPreference::LanguageAudio, GW::EncStrings::AudioLanguage},
-                {GW::UI::NumberPreference::ClockMode, GW::EncStrings::InGameClock},
-                {GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance},
-                {GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild},
-                {GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam},
-                {GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes},
-                {GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade},
-                {GW::UI::NumberPreference::VolMaster, GW::EncStrings::MasterVolume},
-                {GW::UI::NumberPreference::VolMusic, GW::EncStrings::MusicVolume},
-                {GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking},
-                {GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1"},
-                {GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1"},
-                {GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1"},
-            };
+            pref_map.emplace_back(GW::UI::FlagPreference::WaitForVSync, GW::EncStrings::VerticalSync);
+            pref_map.emplace_back(GW::UI::NumberPreference::FullscreenGamma, GW::EncStrings::FullScreenGamma);
+            pref_map.emplace_back(GW::UI::EnumPreference::AntiAliasing, GW::EncStrings::AntiAliasing);
+            pref_map.emplace_back(GW::UI::EnumPreference::ShaderQuality, GW::EncStrings::ShaderQuality);
+            pref_map.emplace_back(GW::UI::EnumPreference::TerrainQuality, GW::EncStrings::TerrainQuality);
+            pref_map.emplace_back(GW::UI::EnumPreference::Reflections, GW::EncStrings::Reflections);
+            pref_map.emplace_back(GW::UI::EnumPreference::ShadowQuality, GW::EncStrings::ShadowQuality);
+            pref_map.emplace_back(GW::UI::EnumPreference::InterfaceSize, GW::EncStrings::InterfaceSize);
+            pref_map.emplace_back(GW::UI::NumberPreference::TextureLod, GW::EncStrings::TextureQuality);
+            pref_map.emplace_back(GW::UI::NumberPreference::Language, GW::EncStrings::TextLanguage);
+            pref_map.emplace_back(GW::UI::NumberPreference::LanguageAudio, GW::EncStrings::AudioLanguage);
+            pref_map.emplace_back(GW::UI::NumberPreference::ClockMode, GW::EncStrings::InGameClock);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelAlliance, GW::EncStrings::ChannelAlliance);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelGuild, GW::EncStrings::ChannelGuild);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelGroup, GW::EncStrings::ChannelTeam);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelEmotes, GW::EncStrings::ChannelEmotes);
+            pref_map.emplace_back(GW::UI::FlagPreference::ChannelTrade, GW::EncStrings::ChannelTrade);
+            pref_map.emplace_back(GW::UI::NumberPreference::VolMaster, GW::EncStrings::MasterVolume);
+            pref_map.emplace_back(GW::UI::NumberPreference::VolMusic, GW::EncStrings::MusicVolume);
+            pref_map.emplace_back(GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking);
+            pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1");
+            pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1");
+            pref_map.emplace_back(GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1");
+            pref_map.emplace_back(GW::UI::UiProfileSetting::AdSupported, L"\x108\x107" "AdSupported\x1");
+            pref_map.emplace_back(
+                GW::UI::UiProfileSetting::CameraFollowsPlayer, L"\x108\x107"
+                                                       "CameraFollowsPlayer\x1"
+            );
+            pref_map.emplace_back(
+                GW::UI::UiProfileSetting::ForceAprilFools, L"\x108\x107"
+                                                       "ForceAprilFools\x1"
+            );
+            pref_map.emplace_back(
+                GW::UI::UiProfileSetting::GamepadAutoTargetSwitch, L"\x108\x107"
+                                                       "GamepadAutoTargetSwitch\x1"
+            );
+            pref_map.emplace_back(
+                GW::UI::UiProfileSetting::MobileHUD, L"\x108\x107"
+                                                       "MobileHUD\x1"
+            );
             for (const auto& it : pref_map) {
                 it.label->wstring();
             }
@@ -1070,8 +1089,30 @@ namespace {
         });
     }
 
+    void CHAT_CMD_FUNC(CmdDisableHeroSkill)
+    {
+        uint32_t hero_index = 0, slot_index = 0;
+        if (argc < 3
+            || !TextUtils::ParseUInt(argv[1], &hero_index) || hero_index < 1 || hero_index > 7
+            || !TextUtils::ParseUInt(argv[2], &slot_index) || slot_index < 1 || slot_index > 8)
+            return Log::Warning(disableheroskill_syntax);
+        const auto agent_id = GW::Agents::GetHeroAgentID(hero_index);
+        if (!agent_id)
+            return Log::Warning(disableheroskill_syntax);
+        bool disabled;
+        if (argc >= 4) {
+            uint32_t flag = 0;
+            if (!TextUtils::ParseUInt(argv[3], &flag) || flag > 1)
+                return Log::Warning(disableheroskill_syntax);
+            disabled = flag != 0;
+        }
+        else {
+            const auto skillbar = GW::SkillbarMgr::GetSkillbar(agent_id);
+            disabled = skillbar ? !((skillbar->disabled >> (slot_index - 1)) & 1) : true;
+        }
+        GW::PartyMgr::SetHeroSkillDisabled(agent_id, slot_index - 1, disabled);
+    }
 
-    
 const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::AgentTargetFlags::Accept_Player;
 
     static const std::unordered_map<std::wstring, GW::AgentTargetFlags> target_filters = {
@@ -1092,7 +1133,7 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
 
         const bool is_nearest = IsNearestStr(arg1.c_str());
         const int name_arg = is_nearest ? 3 : 2;
-        const auto name_w = [&]() {
+        const auto name_w = [&] {
             return argc > name_arg ? GetRemainingArgsWstr(message, name_arg) : zero_w;
         };
         const std::wstring arg2 = is_nearest && argc > 2 ? TextUtils::ToLower(argv[2]) : L"npc";
@@ -1455,6 +1496,8 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
                     "\t'toggle' alternate between given value and configuration on disk.\n"
                     "\t'load' reset key to its disk configuration.");
         ImGui::Bullet();
+        ImGui::Text(custommarker_syntax);
+        ImGui::Bullet();
         ImGui::Text("'/damage' or '/dmg' to print party damage to chat.\n"
             "'/damage me' sends your own damage only.\n"
             "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
@@ -1486,6 +1529,8 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
 
         ImGui::Bullet();
         ImGui::Text(CmdHeroBehaviour_syntax);
+        ImGui::Bullet();
+        ImGui::Text(disableheroskill_syntax);
         const auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
         ImGui::Bullet();
         ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
@@ -1533,22 +1578,6 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         ImGui::Text(target_syntax);
         ImGui::Bullet();
         ImGui::Text(tb_syntax);
-        const auto transmo_hint = "<npc_name> options: eye, zhu, kuunavang, beetle, polar, celepig, \n"
-            "  destroyer, koss, bonedragon, smite, kanaxai, skeletonic, moa";
-        ImGui::Bullet();
-        ImGui::Text("'/transmo <npc_name> [size (6-255)]' to change your appearance into an NPC.\n"
-            "'/transmo' to change your appearance into target NPC.\n"
-            "'/transmo reset' to reset your appearance.");
-        ImGui::ShowHelp(transmo_hint);
-        ImGui::Bullet();
-        ImGui::Text("'/transmoparty <npc_name> [size (6-255)]' to change your party's appearance into an NPC.\n"
-            "'/transmoparty' to change your party's appearance into target NPC.\n"
-            "'/transmoparty reset' to reset your party's appearance.");
-        ImGui::ShowHelp(transmo_hint);
-        ImGui::Bullet();
-        ImGui::Text("'/transmotarget <npc_name> [size (6-255)]' to change your target's appearance into an NPC.\n"
-            "'/transmotarget reset' to reset your target's appearance.");
-        ImGui::ShowHelp(transmo_hint);
         ImGui::Bullet();
         ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' travel to outpost best matching <town> name. \n"
             "[dis] can be any of: ae, ae1, ee, eg, int, etc");
@@ -1647,110 +1676,6 @@ void ChatCommands::RemoveSettingChatCommand(const wchar_t* setting_name)
         delete found->second;
         settings_via_chat_commands.erase(found);
     }
-}
-
-void ChatCommands::TransmoAgent(DWORD agent_id, PendingTransmo& transmo)
-{
-    if (!transmo.npc_id || !agent_id) {
-        return;
-    }
-    const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-    if (!a || !a->GetIsLivingType()) {
-        return;
-    }
-    DWORD& npc_id = transmo.npc_id;
-    DWORD& scale = transmo.scale;
-    const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
-    if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max() - 1)) {
-        // Scale only
-        npc_id = a->player_number;
-        if (a->transmog_npc_id & 0x20000000) {
-            npc_id = a->transmog_npc_id ^ 0x20000000;
-        }
-    }
-    else if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max())) {
-        // Reset
-        npc_id = 0;
-        scale = 0x64000000;
-    }
-    else if (npc_id >= npcs.size() || !npcs[npc_id].model_file_id) {
-        const DWORD& npc_model_file_id = transmo.npc_model_file_id;
-        const DWORD& npc_model_file_data = transmo.npc_model_file_data;
-        const DWORD& flags = transmo.flags;
-        if (!npc_model_file_id) {
-            return;
-        }
-        // Need to create the NPC.
-        // Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
-        // We have to find the data that are in the NPC structure and feed them to those 2 packets.
-        GW::NPC npc = {0};
-        npc.model_file_id = npc_model_file_id;
-        npc.npc_flags = flags;
-        npc.primary = (GW::Constants::Profession)1;
-        npc.visual_adjustment = *(GW::CharAdjustment*)(&scale);
-        npc.default_level = 0;
-        GW::GameThread::Enqueue([npc_id, npc] {
-            GW::Packet::StoC::NpcGeneralStats packet{};
-            packet.npc_id = npc_id;
-            packet.file_id = npc.model_file_id;
-            packet.data1 = 0;
-            packet.scale = *(uint32_t*)(&npc.visual_adjustment);
-            packet.data2 = 0;
-            packet.flags = npc.npc_flags;
-            packet.profession = (uint32_t)npc.primary;
-            packet.level = npc.default_level;
-            packet.name[0] = 0;
-            GW::StoC::EmulatePacket(&packet);
-        });
-        if (npc_model_file_data) {
-            GW::GameThread::Enqueue([npc_id, npc_model_file_data] {
-                GW::Packet::StoC::NPCModelFile packet;
-                packet.npc_id = npc_id;
-                packet.count = 1;
-                packet.data[0] = npc_model_file_data;
-
-                GW::StoC::EmulatePacket(&packet);
-            });
-        }
-    }
-    GW::GameThread::Enqueue([npc_id, agent_id, scale] {
-        if (npc_id) {
-            const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
-            const GW::NPC npc = npcs[npc_id];
-            if (!npc.model_file_id) {
-                return;
-            }
-        }
-        GW::Packet::StoC::AgentScale packet1;
-        packet1.header = GW::Packet::StoC::AgentScale::STATIC_HEADER;
-        packet1.agent_id = agent_id;
-        packet1.scale = scale;
-        GW::StoC::EmulatePacket(&packet1);
-
-        GW::Packet::StoC::AgentModel packet2;
-        packet2.header = GW::Packet::StoC::AgentModel::STATIC_HEADER;
-        packet2.agent_id = agent_id;
-        packet2.model_id = npc_id;
-        GW::StoC::EmulatePacket(&packet2);
-    });
-}
-
-bool ChatCommands::GetNPCInfoByName(const std::string& name, PendingTransmo& transmo)
-{
-    for (const auto& npc_transmo : npc_transmos) {
-        const size_t found_len = npc_transmo.first.find(name);
-        if (found_len == std::string::npos) {
-            continue;
-        }
-        transmo = npc_transmo.second;
-        return true;
-    }
-    return false;
-}
-
-bool ChatCommands::GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo)
-{
-    return GetNPCInfoByName(TextUtils::WStringToString(name), transmo);
 }
 
 void ChatCommands::DrawHelp()
@@ -1874,7 +1799,7 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         std::ranges::replace(cmd, '\x2', '\n');
         static constexpr ctll::fixed_string index_regex = "(\\d+):(.+)";
         if (auto match = ctre::match<index_regex>(alias)) {
-            alias = match.get<2>().to_string();
+            alias = match.template get<2>().to_string();
         }
         const auto alias_wstr = TextUtils::StringToWString(alias);
         const auto command_wstr = TextUtils::StringToWString(cmd);
@@ -1886,6 +1811,7 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         CreateAlias(L"armor", L"/pingitem armor");
     }
     sort_cmd_aliases();
+
 }
 
 void ChatCommands::SaveSettings(ToolboxIni* ini)
@@ -1914,35 +1840,22 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingQuest)
     Instance().quest_ping.Init();
 }
 
+void CHAT_CMD_FUNC(ChatCommands::CmdCustomMarker)
+{
+    if (argc == 2 && wcscmp(argv[1], L"clear") == 0) {
+        QuestModule::ClearCustomQuestMarker();
+        return;
+    }
+    float x, y;
+    if (argc < 3 || !TextUtils::ParseFloat(argv[1], &x) || !TextUtils::ParseFloat(argv[2], &y)) {
+        return Log::Error(custommarker_syntax);
+    }
+    QuestModule::SetCustomQuestMarker({x, y});
+}
+
 void ChatCommands::Initialize()
 {
     ToolboxModule::Initialize();
-
-    constexpr DWORD def_scale = 0x64000000;
-    // Available Transmo NPCs
-    // @Enhancement: Ability to target an NPC in-game and add it to this list via a GUI
-    npc_transmos = {
-        {"charr", {163, def_scale, 0x0004c409, 0, 98820}},
-        {"reindeer", {5, def_scale, 277573, 277576, 32780}},
-        {"gwenpre", {244, def_scale, 116377, 116759, 98820}},
-        {"gwenchan", {245, def_scale, 116377, 283392, 98820}},
-        {"eye", {0x1f4, def_scale, 0x9d07, 0, 0}},
-        {"zhu", {298, def_scale, 170283, 170481, 98820}},
-        {"kuunavang", {309, def_scale, 157438, 157527, 98820}},
-        {"beetle", {329, def_scale, 207331, 279211, 98820}},
-        {"polar", {313, def_scale, 277551, 277556, 98820}},
-        {"celepig", {331, def_scale, 279205, 0, 0}},
-        {"mallyx", {315, def_scale, 243812, 0, 98820}},
-        {"bonedragon", {231, def_scale, 16768, 0, 0}},
-        {"destroyer", {312, def_scale, 285891, 285900, 98820}},
-        {"destroyer2", {146, def_scale, 285886, 285890, 32780}},
-        {"koss", {250, def_scale, 243282, 245053, 98820}},
-        {"smite", {346, def_scale, 129664, 0, 98820}},
-        {"dorian", {8299, def_scale, 86510, 0, 98820}},
-        {"kanaxai", {317, def_scale, 184176, 185319, 98820}},
-        {"skeletonic", {359, def_scale, 52356, 0, 98820}},
-        {"moa", {504, def_scale, 16689, 0, 98820}}
-    };
 
     //TODO: Move all of these callbacks into pvt namespace
     chat_commands = {
@@ -1968,10 +1881,6 @@ void ChatCommands::Initialize()
         {L"load", CmdLoad},
         {L"pingbuild", CmdPingBuild},
         {L"quest", CmdPingQuest},
-        {L"transmo", CmdTransmo},
-        {L"transmotarget", CmdTransmoTarget},
-        {L"transmoparty", CmdTransmoParty},
-        {L"transmoagent", CmdTransmoAgent},
         {L"resize", CmdResize},
         {L"settitle", CmdReapplyTitle},
         {L"title", CmdReapplyTitle},
@@ -1980,6 +1889,7 @@ void ChatCommands::Initialize()
         {L"pingitem", CmdPingEquipment},
         {L"tick", CmdTick},
         {L"hero", CmdHeroBehaviour},
+        {L"disableheroskill", CmdDisableHeroSkill},
         {L"morale", CmdMorale},
         {L"volume", CmdVolume},
         {L"nm", CmdSetNormalMode},
@@ -1996,6 +1906,7 @@ void ChatCommands::Initialize()
         {L"addhenchman", CmdAddHenchman},
         {L"addhero", CmdAddHero},
         {L"leave", CmdLeave},
+        {L"custommarker", CmdCustomMarker},
     };
 
 
@@ -2145,7 +2056,7 @@ void SearchAgent::Init(const wchar_t* _search, const GW::AgentTargetFlags type)
 
         const wchar_t* enc_name = GW::Agents::GetAgentEncName(agent);
         if (enc_name && enc_name[0]) {
-            npc_names.push_back({agent->agent_id, new GuiUtils::EncString(enc_name)});
+            npc_names.push_back({agent->agent_id, std::make_unique<GuiUtils::EncString>(enc_name)});
         }
     }
 }
@@ -2383,7 +2294,15 @@ void CHAT_CMD_FUNC(ChatCommands::CmdChest)
     if (!IsMapReady()) {
         return;
     }
-    GW::Items::OpenXunlaiWindow();
+    GW::GameThread::Enqueue([]() {
+        const auto frame = GW::UI::GetFrameByLabel(L"InvAccount");
+        if (frame) {
+            GW::UI::DestroyUIComponent(frame);
+        }
+        else {
+            GW::Items::OpenXunlaiWindow();
+        }
+    });
 }
 
 
@@ -2815,74 +2734,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingEquipment)
     }
 }
 
-bool ChatCommands::ParseTransmoArgs(int argc, const LPWSTR* argv, int name_arg_index, PendingTransmo& transmo)
-{
-    const wchar_t* name_arg = argv[name_arg_index];
-    int iscale;
-    if (wcsncmp(name_arg, L"reset", 5) == 0) {
-        transmo.npc_id = std::numeric_limits<int>::max();
-    }
-    else if (TextUtils::ParseInt(name_arg, &iscale)) {
-        if (!ParseScale(iscale, transmo)) return false;
-    }
-    else if (!GetNPCInfoByName(name_arg, transmo)) {
-        Log::Error("Unknown transmo '%ls'", name_arg);
-        return false;
-    }
-    const int scale_arg_index = name_arg_index + 1;
-    if (argc > scale_arg_index && TextUtils::ParseInt(argv[scale_arg_index], &iscale)) {
-        if (!ParseScale(iscale, transmo)) return false;
-    }
-    return true;
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdTransmoParty)
-{
-    GW::PartyInfo* pInfo = GW::PartyMgr::GetPartyInfo();
-    if (!pInfo) return;
-
-    PendingTransmo transmo;
-    if (argc > 1) {
-        if (!ParseTransmoArgs(argc, argv, 1, transmo)) return;
-    }
-    else {
-        if (!GetTargetTransmoInfo(transmo)) return;
-    }
-
-    for (const GW::HeroPartyMember& p : pInfo->heroes)
-        TransmoAgent(p.agent_id, transmo);
-    for (const GW::HenchmanPartyMember& p : pInfo->henchmen)
-        TransmoAgent(p.agent_id, transmo);
-    for (const GW::PlayerPartyMember& p : pInfo->players) {
-        const auto player = GW::PlayerMgr::GetPlayerByID(p.login_number);
-        if (player) TransmoAgent(player->agent_id, transmo);
-    }
-}
-
-bool ChatCommands::ParseScale(const int scale, PendingTransmo& transmo)
-{
-    if (scale < 6 || scale > 255) {
-        Log::Error("scale must be between [6, 255]");
-        return false;
-    }
-    transmo.scale = static_cast<DWORD>(scale) << 24;
-    if (!transmo.npc_id) {
-        transmo.npc_id = std::numeric_limits<int>::max() - 1;
-    }
-    return true;
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdTransmoTarget)
-{
-    if (argc < 2) return Log::Error("Missing /transmotarget argument");
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) return Log::Error("Invalid /transmotarget target");
-    PendingTransmo transmo;
-    if (!ParseTransmoArgs(argc, argv, 1, transmo)) return;
-    TransmoAgent(target->agent_id, transmo);
-}
-
-
 void GetAchievements(const std::wstring& player_name)
 {
     if (!(!player_name.empty() && player_name.size() < 20)) {
@@ -2924,66 +2775,6 @@ void CHAT_CMD_FUNC(ChatCommands::CmdWithdraw)
 void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
 {
     CmdGoldItemCommand(argc, argv, deposit_syntax, GW::Items::DepositGold, InventoryManager::StoreItems);
-}
-void CHAT_CMD_FUNC(ChatCommands::CmdTransmo)
-{
-    PendingTransmo transmo;
-    if (argc > 1) {
-        if (wcsncmp(argv[1], L"model", 5) == 0) {
-            if (argc < 6) {
-                Log::Info("HELP for /transmo model");
-                Log::Info("Usage: /transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [SCALE]");
-                Log::Info("Example, transmo as Gehraz: /transmo model 4581 204020 245127 540 [15]");
-                Log::Info("The numbers required by the command can be obtained from the GWToolbox 'Info' window, in the 'Advanced' section under the 'Target' menu. Note: the numbers must be converted from hexadecimal to decimal.");
-                return;
-            }
-            int npc_id = transmo.npc_id, model_file_id = transmo.npc_model_file_id, model_file_data = transmo.npc_model_file_data, flags = transmo.flags;
-            unsigned int scale = transmo.scale;
-            if (!TextUtils::ParseInt(argv[2], &npc_id)) return Log::Error("Transmo model: invalid NPC ID '%ls', expected an integer. Example: 4581", argv[2]);
-            if (!TextUtils::ParseInt(argv[3], &model_file_id)) return Log::Error("Transmo model: invalid NPC ModelFileID '%ls', expected an integer. Example: 204020", argv[3]);
-            if (!TextUtils::ParseInt(argv[4], &model_file_data)) return Log::Error("Transmo model: invalid NPC ModelFile '%ls', expected an integer. Example: 245127", argv[4]);
-            if (!TextUtils::ParseInt(argv[5], &flags)) return Log::Error("Transmo model: invalid NPC Flags '%ls', expected an integer. Example: 540", argv[5]);
-            if (argc > 6 && !TextUtils::ParseUInt(argv[6], &scale)) return Log::Error("Transmo model: invalid scale '%ls', expected an integer between 6 and 255", argv[6]);
-            transmo.npc_id = npc_id;
-            transmo.npc_model_file_id = model_file_id;
-            transmo.npc_model_file_data = model_file_data;
-            transmo.flags = flags;
-            transmo.scale = argc > 6 ? scale << 24 : scale;
-        }
-        else if (!ParseTransmoArgs(argc, argv, 1, transmo)) {
-            return;
-        }
-    }
-    else {
-        if (!GetTargetTransmoInfo(transmo)) return;
-    }
-    TransmoAgent(GW::Agents::GetControlledCharacterId(), transmo);
-}
-
-bool ChatCommands::GetTargetTransmoInfo(PendingTransmo& transmo)
-{
-    const auto target = GW::Agents::GetTargetAsAgentLiving();
-    if (!target) {
-        return false;
-    }
-    transmo.npc_id = target->player_number;
-    if (target->transmog_npc_id & 0x20000000) {
-        transmo.npc_id = target->transmog_npc_id ^ 0x20000000;
-    }
-    else if (target->IsPlayer()) {
-        return false;
-    }
-    return true;
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdTransmoAgent)
-{
-    if (argc < 3) return Log::Error("Missing /transmoagent argument");
-    uint32_t agent_id;
-    if (!TextUtils::ParseUInt(argv[1], &agent_id)) return Log::Error("Invalid /transmoagent agent_id");
-    PendingTransmo transmo;
-    if (!ParseTransmoArgs(argc, argv, 2, transmo)) return;
-    TransmoAgent(agent_id, transmo);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdResize)

@@ -1,11 +1,7 @@
 #pragma once
 
-#include <GWCA/Utilities/Hook.h>
-#include <Utils/ToolboxUtils.h>
+#include <GWCA/Constants/Constants.h>
 #include <ToolboxWindow.h>
-#include <mutex>
-#include <memory>
-#include <Timer.h>
 
 class AccountInventoryWindow : public ToolboxWindow {
 
@@ -43,11 +39,6 @@ public:
     // handle inventory generation during map load
     void PreMapLoad();
     void PostMapLoad();
-    // moving items only works after a delay beyond PostMapLoad
-    void OnMapLoadedDelayed();
-    // state machine for rerolling to items, callbacks.
-    // further parts are handled by *MapLoad*
-    void OnRerollPromptReply();
     void OnPartyAddHero(GW::Constants::HeroID hero_id);
     // maintain hero_id <-> Equipped_Items bag tracking
     GW::Bag* OnPartyRemoveHero(GW::Constants::HeroID hero_id);

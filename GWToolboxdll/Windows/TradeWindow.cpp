@@ -19,11 +19,38 @@
 
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
+#include <Utils/RateLimiter.h>
+#include <CircurlarBuffer.h>
 
 #include <Modules/Resources.h>
+#include <Windows/FriendListWindow.h>
 #include <Windows/TradeWindow.h>
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+
+namespace tradechat_api {
+    struct SearchRequest {
+        std::string query;
+    };
+
+    // `t` (timestamp) is sometimes string, sometimes number — parse via raw_json downstream.
+    struct RawMessage {
+        std::string s; // sender
+        std::string m; // message
+        glz::raw_json t; // timestamp (string or number)
+    };
+
+    struct WebsocketEnvelope {
+        std::string query;
+        uint32_t num_results = 0;
+        std::vector<RawMessage> results;
+
+        // Fields below are only populated for raw-message envelopes.
+        std::string s;
+        std::string m;
+        glz::raw_json t;
+    };
+}
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -34,8 +61,7 @@ namespace {
     constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
     static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     using easywsclient::WebSocket;
-    using nlohmann::json;
-    using json_vec = std::vector<json>;
+    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
 
     constexpr char ws_host_kmd[] = "wss://kamadan.gwtoolbox.com";
     constexpr char https_host_kmd[] = "https://kamadan.gwtoolbox.com";
@@ -109,33 +135,28 @@ namespace {
         pending_query_sent = 0;
     }
 
-    bool parse_json_message(const json& js, Message* msg)
+    // The server may send `t` as either a JSON number or a JSON-quoted string.
+    // Both shapes resolve to the same underlying millisecond timestamp.
+    uint64_t parse_timestamp_raw(std::string_view raw)
     {
-        if (js == json::value_t::discarded) {
-            return false;
+        if (raw.empty()) return 0ull;
+        if (raw.front() == '"') {
+            std::string parsed;
+            if (glz::read_json(parsed, raw)) return 0ull;
+            return strtoull(parsed.c_str(), nullptr, 10);
         }
-        if (!(js.contains("s") && js["s"].is_string())) {
-            return false;
-        }
-        msg->name = js["s"].get<std::string>();
-        if (!(js.contains("m") && js["m"].is_string())) {
-            return false;
-        }
-        msg->message = js["m"].get<std::string>();
-        if (!js.contains("t")) {
-            return false;
-        }
-        unsigned long long timestamp_ull = 0ull;
-        if (js["t"].is_string()) {
-            const auto str = js["t"].get<std::string>();
-            timestamp_ull = strtoull(str.c_str(), nullptr, 10);
-        }
-        else if (js["t"].is_number_unsigned()) {
-            timestamp_ull = js["t"].get<uint64_t>();
-        }
-        if (timestamp_ull == 0ull) {
-            return false;
-        }
+        double n = 0.0;
+        if (glz::read_json(n, raw)) return 0ull;
+        return static_cast<uint64_t>(n);
+    }
+
+    bool fill_message(const tradechat_api::RawMessage& raw, Message* msg)
+    {
+        if (raw.s.empty() || raw.m.empty()) return false;
+        const auto timestamp_ull = parse_timestamp_raw(raw.t.str);
+        if (timestamp_ull == 0ull) return false;
+        msg->name = raw.s;
+        msg->message = raw.m;
         msg->timestamp = static_cast<uint32_t>(timestamp_ull / 1000); // Messy?
         return true;
     }
@@ -350,51 +371,32 @@ void TradeWindow::fetch()
         ParseBuffer(search_buffer, searched_words);
 
         // Send request
-        json request;
-        request["query"] = pending_query_string;
+        const tradechat_api::SearchRequest request{.query = pending_query_string};
         pending_query_sent = clock();
-        ws_window->send(request.dump());
+        ws_window->send(glz::write_json(request).value_or(std::string{}));
     }
 
     ws_window->dispatch([this](const std::string& data) {
-        const json& res = json::parse(data.c_str(), nullptr, false);
-        if (res == json::value_t::discarded) {
+        tradechat_api::WebsocketEnvelope res{};
+        if (auto ec = glz::read<json_opts>(res, data); ec) {
             Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
             return;
         }
-        if (res.find("query") != res.end() && res["query"].is_string()) {
-            auto query_string = res["query"].get<std::string>();
-            if (query_string != pending_query_string) {
+        if (!res.query.empty()) {
+            if (res.query != pending_query_string) {
                 return; // Different query has been made since this search.
             }
             pending_query_string.clear();
-            if (!(res.contains("num_results") && res["num_results"].is_number_unsigned())) {
-                Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
-                print_search_results = false;
-                return;
-            }
-            size_t num_results = res["num_results"].get<size_t>();
-            if (print_search_results && !num_results) {
-                Log::Warning("No results found for %s", query_string.c_str());
-                print_search_results = false;
-                return;
-            }
-            if (!(res.contains("results") && res["results"].is_array())) {
-                Log::Log("ERROR: Failed to parse search results in TradeWindow::fetch\n");
-                print_search_results = false;
-                return;
-            }
-            auto results = res["results"].get<json_vec>();
             messages.clear();
-            if (print_search_results && !results.size()) {
-                Log::Warning("No results found for %s", query_string.c_str());
+            if (print_search_results && res.results.empty()) {
+                Log::Warning("No results found for %s", res.query.c_str());
                 print_search_results = false;
                 return;
             }
-            size_t results_size = results.size();
+            const size_t results_size = res.results.size();
             for (size_t i = results_size - 1; i < results_size; i--) {
                 Message msg;
-                if (!parse_json_message(results[i], &msg)) {
+                if (!fill_message(res.results[i], &msg)) {
                     continue;
                 }
                 messages.add(msg);
@@ -415,7 +417,8 @@ void TradeWindow::fetch()
         }
         // Add to message feed
         Message msg;
-        if (!parse_json_message(res, &msg)) {
+        const tradechat_api::RawMessage raw{.s = res.s, .m = res.m, .t = res.t};
+        if (!fill_message(raw, &msg)) {
             return; // Not valid message object
         }
         bool add_to_window = searched_words.empty();
@@ -445,6 +448,9 @@ void TradeWindow::fetch()
 
         if (print_message) {
             std::wstring name_ws = TextUtils::StringToWString(msg.name);
+            if (FriendListWindow::GetIsPlayerIgnored(name_ws)) {
+                return; // Skip messages from ignored players
+            }
             std::wstring msg_ws = std::format(L"<c=#f96677><quote>{}",TextUtils::StringToWString(msg.message));
             external_trade_message = true;
             WriteChat(GW::Chat::Channel::CHANNEL_TRADE, msg_ws.c_str(),name_ws.c_str());
@@ -676,10 +682,8 @@ void TradeWindow::RegisterSettingsContent()
 void TradeWindow::DrawAlertsWindowContent(bool)
 {
     ImGui::Text("Alerts");
-    ImGui::Checkbox("Send Kamadan AE1 trade chat to your trade chat", &print_game_chat);
-    ImGui::ShowHelp("Only when trade chat channel is visible in-game");
-    ImGui::Checkbox("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &print_game_chat_asc);
-    ImGui::ShowHelp("Only when trade chat channel is visible in-game");
+    ImGui::CheckboxWithHelp("Send Kamadan AE1 trade chat to your trade chat", &print_game_chat, "Only when trade chat channel is visible in-game");
+    ImGui::CheckboxWithHelp("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &print_game_chat_asc, "Only when trade chat channel is visible in-game");
     ImGui::Checkbox("Only show messages containing:", &filter_alerts);
     ImGui::Indent();
     ImGui::ShowHelp("Only shows messages from the currently active trade channel (Kamadan OR Ascalon)");
@@ -695,8 +699,7 @@ void TradeWindow::DrawAlertsWindowContent(bool)
 
 void TradeWindow::DrawChatSettings(const bool ownwindow)
 {
-    ImGui::Checkbox("Apply trade filters to local trade messages", &filter_local_trade);
-    ImGui::ShowHelp("If enabled, only trade messages matching your alerts will be shown in chat");
+    ImGui::CheckboxWithHelp("Apply trade filters to local trade messages", &filter_local_trade, "If enabled, only trade messages matching your alerts will be shown in chat");
     if (!ownwindow) {
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 120.f * ImGui::FontScale(), 0);
         if (ImGui::Button("Show Trade Alerts")) {

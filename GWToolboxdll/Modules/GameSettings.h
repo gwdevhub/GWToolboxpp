@@ -4,8 +4,6 @@
 
 #include <GWCA/Utilities/Hook.h>
 
-#include <Modules/ItemDescriptionHandler.h>
-
 #include <Color.h>
 #include <ToolboxModule.h>
 
@@ -68,7 +66,6 @@ public:
     static void OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
     static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);
     static void OnAgentEffect(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
-    static void OnPartyDefeated(const GW::HookStatus*, GW::Packet::StoC::PartyDefeated*);
     static void OnDungeonReward(GW::HookStatus*, GW::Packet::StoC::DungeonReward*);
     static void OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*);
     static void OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::CinematicPlay*);
@@ -93,7 +90,6 @@ private:
     void MessageOnPartyChange();
 
     std::vector<std::wstring> previous_party_names{};
-    std::vector<uint32_t> available_dialog_ids{};
 
     GW::HookEntry VanquishComplete_Entry;
     GW::HookEntry ItemClickCallback_Entry;
@@ -123,4 +119,5 @@ private:
     GW::HookEntry OnEnterMission_Entry;
     GW::HookEntry OnPreSendDialog_Entry;
     GW::HookEntry OnPostSendDialog_Entry;
+    GW::HookEntry OnAgentModel_Entry;
 };

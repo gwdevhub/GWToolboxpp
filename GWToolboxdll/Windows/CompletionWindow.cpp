@@ -17,7 +17,6 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
@@ -79,10 +78,12 @@ namespace {
         }
     }
 
-    const wchar_t* GetAccountEmail()
+    std::wstring GetCurrentAccountId()
     {
-        const auto c = GW::GetCharContext();
-        return c && *c->player_email ? c->player_email : nullptr;
+        const auto uuid = GW::AccountMgr::GetAccountUuid();
+        const GUID empty{};
+        if (memcmp(&uuid, &empty, sizeof(uuid)) == 0) return {};
+        return TextUtils::StringToWString(TextUtils::GuidToString(&uuid));
     }
 
     const wchar_t* GetPlayerName()
@@ -577,11 +578,11 @@ namespace {
         pending_refresh_account_characters = true;
     }
 
-    // Check login screen; assign missing characters to email account
+    // Check login screen; assign missing characters to account guid
     bool UpdateRefreshAccountCharacters()
     {
-        const auto email = GetAccountEmail();
-        if (!email) return false;
+        const auto account_id = GetCurrentAccountId();
+        if (account_id.empty()) return false;
         const auto loading = std::ranges::find_if(character_completion, [](const std::pair<std::wstring, CharacterCompletion*>& t) {
             return t.second->hom_achievements.isLoading();
         });
@@ -591,7 +592,7 @@ namespace {
         if (chars && chars->size()) {
             for (const auto& character : *chars) {
                 const auto cc = CompletionWindow::GetCharacterCompletion(character.player_name, true);
-                cc->account = email;
+                cc->account = account_id;
                 cc->profession = static_cast<Profession>(character.primary());
                 cc->is_pvp = character.is_pvp();
                 cc->is_pre_searing = GW::Map::IsPreSearing(character.map_id());
@@ -599,7 +600,7 @@ namespace {
             // Remove any account chars that no longer exist
             auto it = character_completion.begin();
             while (it != character_completion.end()) {
-                if (it->second->account == email) {
+                if (it->second->account == account_id) {
                     const auto exists = std::ranges::find_if(*chars, [char_name = it->first](const GW::AvailableCharacterInfo& character) {
                         return character.player_name == char_name;
                     });
@@ -616,7 +617,7 @@ namespace {
         if (const auto pn = GetPlayerName()) {
             const auto cc = CompletionWindow::GetCharacterCompletion(pn);
             if (cc) {
-                cc->account = email;
+                cc->account = account_id;
                 cc->is_pre_searing = GW::Map::IsPreSearing();
             }
         }
@@ -1058,7 +1059,7 @@ void HeroUnlock::CheckProgress(const std::wstring& player_name)
 
 const char* HeroUnlock::Name()
 {
-    return hero_names[std::to_underlying(skill_id)];
+    return Resources::GetHeroName(static_cast<GW::Constants::HeroID>(std::to_underlying(skill_id)))->string().c_str();
 }
 
 size_t HeroUnlock::GetLoadedIcons(IDirect3DTexture9* icons_out[4])
@@ -2172,7 +2173,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     ImGui::PushItemWidth(200.f * gscale);
     if (ImGui::BeginCombo("##completion_character_select", chosen_player_name_s.c_str())) // The second parameter is the label previewed before opening the combo.
     {
-        const auto email = GetAccountEmail();
+        const auto account_id = GetCurrentAccountId();
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {2.f, 8.f});
         bool is_selected = false;
         for (auto& it : character_completion) {
@@ -2181,7 +2182,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 is_selected = true;
                 sel = &it.first;
             }
-            if (!is_selected && only_show_account_chars && it.second->account != email) {
+            if (!is_selected && only_show_account_chars && !account_id.empty() && it.second->account != account_id) {
                 continue; // Different account
             }
             if (it.second->is_pvp || it.second->is_pre_searing)
@@ -2303,6 +2304,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
             filtered.push_back(outpost);
         }
+        if (hide_completed_missions && filtered.empty()) {
+            continue;
+        }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###campaign_outposts_%d",
                  CampaignName(campaign), completed, unlockable_outposts.size(), static_cast<float>(completed) / static_cast<float>(unlockable_outposts.size()) * 100.f, campaign);
@@ -2327,6 +2331,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 }
             }
             filtered.push_back(camp_missions[i]);
+        }
+        if (hide_completed_missions && filtered.empty()) {
+            continue;
         }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
@@ -2354,6 +2361,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 }
             }
             filtered.push_back(camp_missions[i]);
+        }
+        if (hide_completed_vanquishes && filtered.empty()) {
+            continue;
         }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f,
@@ -2395,6 +2405,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
             filtered.push_back(camp_missions[i]);
         }
+        if (hide_unlocked_skills && filtered.empty()) {
+            continue;
+        }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
@@ -2414,6 +2427,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 }
             }
             filtered.push_back(camp_missions[i]);
+        }
+        if (hide_unlocked_skills && filtered.empty()) {
+            continue;
         }
         char label[128];
         snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
@@ -3063,11 +3079,11 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComp
     if (map_id == MapID::None)
         return out;
     const auto info = GW::Map::GetMapInfo(map_id);
-    const auto email = GW::AccountMgr::GetAccountEmail();
+    const auto account_id = GetCurrentAccountId();
     for (auto& it : character_completion) {
         if (it.second->is_pvp || it.second->is_pre_searing)
             continue;
-        if (only_show_account_chars && it.second->account != email)
+        if (only_show_account_chars && !account_id.empty() && it.second->account != account_id)
             continue;
         if (!::IsAreaComplete(it.first.c_str(), map_id, check, info))
             out.push_back(it.second);
@@ -3081,11 +3097,11 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaComp
 std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlocked(MapID map_id)
 {
     std::vector<CharacterCompletion*> out;
-    const auto email = GW::AccountMgr::GetAccountEmail();
+    const auto account_id = GetCurrentAccountId();
     for (auto& it : character_completion) {
         if (it.second->is_pvp || it.second->is_pre_searing)
             continue;
-        if (only_show_account_chars && it.second->account != email)
+        if (only_show_account_chars && !account_id.empty() && it.second->account != account_id)
             continue;
         if (!IsAreaUnlocked(it.first.c_str(), map_id))
             out.push_back(it.second);
@@ -3099,11 +3115,11 @@ std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutAreaUnlo
 std::vector<CharacterCompletion*> CompletionWindow::GetCharactersWithoutSkillUnlocked(SkillID skill_id)
 {
     std::vector<CharacterCompletion*> out;
-    const auto email = GW::AccountMgr::GetAccountEmail();
+    const auto account_id = GetCurrentAccountId();
     for (auto& it : character_completion) {
         if (it.second->is_pvp || it.second->is_pre_searing)
             continue;
-        if (only_show_account_chars && it.second->account != email)
+        if (only_show_account_chars && !account_id.empty() && it.second->account != account_id)
             continue;
         if (!IsSkillUnlocked(it.first.c_str(), skill_id))
             out.push_back(it.second);

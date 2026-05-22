@@ -47,6 +47,7 @@ std::optional<QuestInfo::Quest> QuestInfo::getQuest(std::string_view name) const
 
     for (const auto& quest : *questLog) 
     {
+        if (!quest.name) continue; // Fixed: passing null to decodedStrings.find implicitly constructs a wstring via wcslen, crashing if null.
         const auto decodedIt = decodedStrings.find(quest.name);
         if (decodedIt == decodedStrings.end()) continue;
 
@@ -68,6 +69,7 @@ std::vector<QuestInfo::Objective> QuestInfo::listObjectives(GW::Constants::Quest
     const auto quest = std::ranges::find_if(*questLog, [&](const auto& quest) { return quest.quest_id == id; });
     if (quest == questLog->end()) return {};
 
+    if (!quest->objectives) return {}; // Fixed: passing null to decodedStrings.find crashed for quests not yet populated.
     const auto decodedIt = decodedStrings.find(quest->objectives);
     if (decodedIt == decodedStrings.end()) return {};
     const auto& decoded = WStringToString(decodedIt->second);
@@ -85,7 +87,9 @@ std::vector<QuestInfo::Objective> QuestInfo::listObjectives(GW::Constants::Quest
 
 std::vector<QuestInfo::Objective> QuestInfo::listMissionObjectives() const 
 {
-    const auto& objectives = GW::GetWorldContext()->mission_objectives;
+    const auto* worldContext = GW::GetWorldContext();
+    if (!worldContext) return {}; // Fixed: was dereferenced directly; crashed during map transitions.
+    const auto& objectives = worldContext->mission_objectives;
     std::vector<QuestInfo::Objective> result;
     result.reserve(objectives.size());
 
@@ -107,7 +111,8 @@ void QuestInfo::decodeStrings()
     {
         for (auto& quest : *questLog) 
         {
-            if (!decodedStrings.contains(quest.name)) 
+            if (quest.name && !decodedStrings.contains(quest.name)) { // Fixed: null check prevents wstring-from-null; slot pre-inserted so the pointer is stable before AsyncDecodeStr is called.
+                auto& slot = decodedStrings[quest.name];
                 GW::UI::AsyncDecodeStr(
                     quest.name,
                     [](void* param, const wchar_t* s) {
@@ -115,11 +120,13 @@ void QuestInfo::decodeStrings()
                         std::wstring* str = (std::wstring*)param;
                         *str = s;
                     },
-                    &decodedStrings[quest.name]
+                    &slot
                 );
+            }
             if (!quest.objectives)
                 objectivesToDecode.push(&quest);
-            else if (!decodedStrings.contains(quest.objectives)) 
+            else if (!decodedStrings.contains(quest.objectives)) { // Fixed: slot pre-inserted so pointer is stable before AsyncDecodeStr is called.
+                auto& slot = decodedStrings[quest.objectives];
                 GW::UI::AsyncDecodeStr(
                     quest.objectives,
                     [](void* param, const wchar_t* s) {
@@ -127,23 +134,29 @@ void QuestInfo::decodeStrings()
                         std::wstring* str = (std::wstring*)param;
                         *str = s;
                     },
-                    &decodedStrings[quest.objectives]
+                    &slot
                 );
+            }
         }
     }
 
-    for (const auto& objective : GW::GetWorldContext()->mission_objectives) 
-    {
-        if (!decodedStrings.contains(objective.enc_str))
-            GW::UI::AsyncDecodeStr(
-                getObjectiveContent(objective.enc_str).c_str(),
-                [](void* param, const wchar_t* s) {
-                    GWCA_ASSERT(param && s);
-                    std::wstring* str = (std::wstring*)param;
-                    *str = s;
-                },
-                &decodedStrings[objective.enc_str]
-            );
+    const auto* worldContext = GW::GetWorldContext();
+    if (worldContext) { // Fixed: was dereferenced directly; called from every StoC callback so crashed on any packet during a load screen.
+        for (const auto& objective : worldContext->mission_objectives) 
+        {
+            if (!decodedStrings.contains(objective.enc_str)) {
+                auto& slot = decodedStrings[objective.enc_str];
+                GW::UI::AsyncDecodeStr(
+                    getObjectiveContent(objective.enc_str).c_str(),
+                    [](void* param, const wchar_t* s) {
+                        GWCA_ASSERT(param && s);
+                        std::wstring* str = (std::wstring*)param;
+                        *str = s;
+                    },
+                    &slot
+                );
+            }
+        }
     }
 }
 
@@ -153,6 +166,7 @@ void QuestInfo::initialize()
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const auto*)
     {
+        objectivesToDecode = {}; // Fixed: without this, stale GW::Quest* pointers from the previous map's quest log remained in the queue and were dereferenced in update().
         decodeStrings();
         missionObjectiveStatus.clear();
     });
@@ -183,8 +197,9 @@ void QuestInfo::initialize()
 
 void QuestInfo::terminate()
 {
-    GW::StoC::RemovePostCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry);
-    GW::StoC::RemovePostCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry);
+    // Fixed: was RemovePostCallback — wrong table for callbacks registered with RegisterPacketCallback; callbacks were never removed.
+    GW::StoC::RemoveCallback<GW::Packet::StoC::ObjectiveUpdateName>(&ObjectiveUpdateName_Entry);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::ObjectiveDone>(&ObjectiveDone_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::InstanceLoadFile>(&InstanceLoadFile_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::QuestAdd>(&QuestAdd_Entry);
     GW::StoC::RemovePostCallback<GW::Packet::StoC::DisplayDialogue>(&DisplayDialogue_Entry);
@@ -203,7 +218,8 @@ void QuestInfo::update()
     }
 
     GW::QuestMgr::RequestQuestInfo(quest);
-    if (quest->objectives)
+    if (quest->objectives) { // Fixed: slot pre-inserted so pointer is stable before AsyncDecodeStr is called.
+        auto& slot = decodedStrings[quest->objectives];
         GW::UI::AsyncDecodeStr(
             quest->objectives,
             [](void* param, const wchar_t* s) {
@@ -211,7 +227,8 @@ void QuestInfo::update()
                 std::wstring* str = (std::wstring*)param;
                 *str = s;
             },
-            &decodedStrings[quest->objectives]
+            &slot
         );
+    }
     objectivesToDecode.pop();
 }

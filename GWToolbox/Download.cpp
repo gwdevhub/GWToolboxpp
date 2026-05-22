@@ -73,67 +73,15 @@ struct Release {
 
 static bool ParseRelease(const std::string& json_text, Release* release)
 {
-    nlohmann::json json;
-    try {
-        json = nlohmann::json::parse(json_text.c_str());
-    } catch (nlohmann::json::exception&) {
+    constexpr glz::opts opts{.error_on_unknown_keys = false};
+    if (auto ec = glz::read<opts>(*release, json_text); ec) {
         fprintf(stderr, "Json::parse failed\n");
         return false;
     }
-
-    const auto it_tag_name = json.find("tag_name");
-    if (it_tag_name == json.end() || !it_tag_name->is_string()) {
-        fprintf(stderr, "Key 'tag_name' not found or not a string in '%s'\n", json_text.c_str());
+    if (release->tag_name.empty() || release->assets.empty()) {
+        fprintf(stderr, "Required fields missing in '%s'\n", json_text.c_str());
         return false;
     }
-
-    const auto it_body = json.find("body");
-    if (it_body == json.end() || !it_body->is_string()) {
-        fprintf(stderr, "Key 'body' not found or not a string in '%s'\n", json_text.c_str());
-        return false;
-    }
-
-    const auto it_assets = json.find("assets");
-    if (it_assets == json.end() || !it_assets->is_array()) {
-        fprintf(stderr, "Key 'assets' not found or not an array in '%s'\n", json_text.c_str());
-        return false;
-    }
-
-    release->tag_name = it_tag_name->get<std::string>();
-    release->body = it_body->get<std::string>();
-
-    for (size_t i = 0; i < it_assets->size(); i++) {
-        nlohmann::json& entry = it_assets->at(i);
-
-        auto it_name = entry.find("name");
-        if (it_name == entry.end() || !it_name->is_string()) {
-            fprintf(stderr, "Key 'name' not found or not a string in (assert:%zu) '%s'\n",
-                    i, json_text.c_str());
-            return false;
-        }
-
-        auto it_size = entry.find("size");
-        if (it_size == entry.end() || !it_size->is_number()) {
-            fprintf(stderr, "Key 'size' not found or not a number in (assert:%zu) '%s'\n",
-                    i, json_text.c_str());
-            return false;
-        }
-
-        auto it_browser_download_url = entry.find("browser_download_url");
-        if (it_browser_download_url == entry.end() || !it_browser_download_url->is_string()) {
-            fprintf(stderr, "Key 'browser_download_url' not found or not a string in (assert:%zu) '%s'\n",
-                    i, json_text.c_str());
-            return false;
-        }
-
-        Asset asset;
-        asset.name = it_name->get<std::string>();
-        asset.size = it_size->get<size_t>();
-        asset.browser_download_url = it_browser_download_url->get<std::string>();
-
-        release->assets.emplace_back(std::move(asset));
-    }
-
     return true;
 }
 
@@ -233,15 +181,16 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
     AsyncFileDownloader downloader;
     AsyncDownload(url.c_str(), &downloader);
 
+    bool download_complete = false;
     while (!window.ShouldClose()) {
         window.PollMessages(16);
 
-        if (!downloader.IsCompleted()) {
+        if (!download_complete && !downloader.IsCompleted()) {
             size_t BytesDownloaded = downloader.GetDownloadCount();
             const auto progress = BytesDownloaded * 100 / file_size;
             SendMessageW(window.m_hProgressBar, PBM_SETPOS, progress, 0);
         }
-        else {
+        else if (!download_complete) {
             if (!downloader.IsSuccessful()) {
                 // Convert error message to wstring
                 std::wstring url_w(url.begin(), url.end());
@@ -260,7 +209,9 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
 
             downloader.Clear();
             SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
-            SendMessageW(window.m_hWnd, WM_CLOSE, 0, 0);
+            SetWindowTextW(window.m_hStatusLabel, L"Download complete! Review the release notes above, then click 'Continue' to proceed.");
+            SetWindowTextW(window.m_hCloseButton, L"Continue");
+            download_complete = true;
         }
     }
 
@@ -373,10 +324,24 @@ void DownloadWindow::OnCreate(HWND hWnd, UINT, WPARAM, LPARAM)
         5,
         5,
         475,
-        175,
+        170,
         hWnd,
         nullptr,
         m_hInstance,
         nullptr);
     SendMessageW(m_hChangelog, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
+
+    m_hStatusLabel = CreateWindowW(
+        WC_STATICW,
+        L"Downloading...",
+        WS_VISIBLE | WS_CHILD | SS_LEFT,
+        5,
+        180,
+        475,
+        30,
+        hWnd,
+        nullptr,
+        m_hInstance,
+        nullptr);
+    SendMessageW(m_hStatusLabel, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 }

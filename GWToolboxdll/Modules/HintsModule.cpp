@@ -15,7 +15,10 @@
 #include <GWCA/GameContainers/GamePos.h>
 
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Hero.h>
 #include <GWCA/GameEntities/Skill.h>
+
+#include <GWCA/Context/WorldContext.h>
 
 #include <ImGuiAddons.h>
 #include <Utils/GuiUtils.h>
@@ -151,9 +154,32 @@ namespace {
     constexpr TBHint CHARM_ANIMAL = {0x20000007, L"Charm Animal is only needed for charming a pet. Consider bringing Comfort Animal instead."};
     constexpr TBHint HEROS_HANDBOOK = {0x2000008, L"Talk to Gedrel of Ascalon in Eye of the North to get a Hero's Handbook and Master Dungeon Guide."};
     constexpr TBHint BLACK_WIDOW_CHARM = {0x2000009, L"If you're planning to charm a Black Widow, remember to flag your heroes away so they don't kill it."};
+    constexpr TBHint JUNUNDU_HERO_AVOID_COMBAT = {0x200000A, L"One or more of your heroes is set to 'Avoid Combat'. Heroes in this mode won't fight while you're in Junundu form."};
 
     bool only_show_hints_once = false;
     GW::HookEntry hints_entry;
+
+    void OnEffectAdd_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
+    {
+        const auto packet = static_cast<GW::UI::UIPacket::kEffectAdd*>(wparam);
+        if (!packet || !packet->effect || packet->effect->skill_id != GW::Constants::SkillID::Desert_Wurm_disguise) {
+            return;
+        }
+        const auto me = GW::Agents::GetControlledCharacter();
+        if (!me || packet->agent_id != me->agent_id) {
+            return;
+        }
+        const auto world = GW::GetWorldContext();
+        if (!world) {
+            return;
+        }
+        for (const auto& flag : world->hero_flags) {
+            if (flag.hero_behavior == GW::HeroBehavior::AvoidCombat) {
+                HintUIMessage(JUNUNDU_HERO_AVOID_COMBAT).Show();
+                return;
+            }
+        }
+    }
 
     void OnObjectiveComplete_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
     {
@@ -273,6 +299,7 @@ namespace {
 void HintsModule::Initialize()
 {
     ToolboxModule::Initialize();
+    RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kEffectAdd, OnEffectAdd_UIMessage);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kObjectiveComplete, OnObjectiveComplete_UIMessage);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kMapChange, OnStartMapLoad_UIMessage);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kShowHint, OnShowHint_UIMessage);
@@ -303,8 +330,7 @@ void HintsModule::Update(float)
 
 void HintsModule::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Only show hints once", &only_show_hints_once);
-    ImGui::ShowHelp("GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
+    ImGui::CheckboxWithHelp("Only show hints once", &only_show_hints_once, "GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
     if (only_show_hints_once) {
         ImGui::TextDisabled("%d hint(s) have already been shown in-game and won't be shown again", hints_shown.size());
         if (ImGui::Button("Clear cached hints")) {

@@ -20,9 +20,10 @@ struct DistrictAlias {
     uint8_t district_number = 0;
 };
 
-// List of shorthand outpost names. This is checked for an exact match first.
-const std::map<const std::string, const OutpostAlias> shorthand_outpost_names = {
+// Default outpost aliases shipped with toolbox. Used for initialization and reset.
+const std::map<const std::string, const OutpostAlias> default_outpost_aliases = {
     {"bestarea", {GW::Constants::MapID::The_Deep}},
+    {"kathandrax", {GW::Constants::MapID::Catacombs_of_Kathandrax_Level_1}},
     {"toa", {GW::Constants::MapID::Temple_of_the_Ages}},
     {"doa", {GW::Constants::MapID::Domain_of_Anguish}},
     {"goa", {GW::Constants::MapID::Domain_of_Anguish}},
@@ -38,7 +39,6 @@ const std::map<const std::string, const OutpostAlias> shorthand_outpost_names = 
     {"topk", {GW::Constants::MapID::Tomb_of_the_Primeval_Kings}},
     {"ra", {GW::Constants::MapID::Random_Arenas_outpost}},
     {"ha", {GW::Constants::MapID::Heroes_Ascent_outpost}},
-    {"ra", {GW::Constants::MapID::Random_Arenas_outpost}},
     {"fa", {GW::Constants::MapID::Fort_Aspenwood_Kurzick_outpost}},
     {"jq", {GW::Constants::MapID::The_Jade_Quarry_Kurzick_outpost}}
 };
@@ -62,53 +62,6 @@ const std::map<const std::string, const DistrictAlias> shorthand_district_names 
     {"jp", {GW::Constants::District::AsiaJapanese}},
 };
 
-constexpr std::array presearing_map_ids = {
-    GW::Constants::MapID::Ashford_Abbey_outpost,
-    GW::Constants::MapID::Ascalon_City_pre_searing,
-    GW::Constants::MapID::Foibles_Fair_outpost,
-    GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost,
-    GW::Constants::MapID::The_Barradin_Estate_outpost, 
-    GW::Constants::MapID::Piken_Square_pre_Searing_outpost
-};
-
-constexpr std::array presearing_map_names = {
-    "ashford abbey",
-    "ascalon city",
-    "foibles fair",
-    "fort ranik",
-    "barradin estate", 
-    "piken square"
-};
-
-constexpr std::array dungeon_map_ids{
-    GW::Constants::MapID::Doomlore_Shrine_outpost,
-    GW::Constants::MapID::Doomlore_Shrine_outpost,
-    GW::Constants::MapID::Doomlore_Shrine_outpost,
-    GW::Constants::MapID::Doomlore_Shrine_outpost,
-    GW::Constants::MapID::Longeyes_Ledge_outpost,
-    GW::Constants::MapID::Longeyes_Ledge_outpost,
-    GW::Constants::MapID::Sifhalla_outpost,
-    GW::Constants::MapID::Sifhalla_outpost,
-    GW::Constants::MapID::Olafstead_outpost,
-    GW::Constants::MapID::Umbral_Grotto_outpost,
-    GW::Constants::MapID::Gadds_Encampment_outpost,
-    GW::Constants::MapID::Deldrimor_War_Camp_outpost
-};
-
-constexpr std::array searchable_dungeon_names{
-    "catacombs of kathandrax",
-    "kathandrax",
-    "rragars menagerie",
-    "cathedral of flames",
-    "ooze pit",
-    "darkrime delves",
-    "frostmaws burrows",
-    "sepulchre of dragrimmar",
-    "ravens point",
-    "vloxen excavations",
-    "bogroot growths",
-    "sorrows furnace"
-};
 
 constexpr std::array district_words = {
     "Current District",
@@ -131,6 +84,39 @@ constexpr std::array district_ids = {
     GW::Constants::District::Current,
     GW::Constants::District::International,
     GW::Constants::District::American,
+    GW::Constants::District::American,
+    GW::Constants::District::EuropeEnglish,
+    GW::Constants::District::EuropeFrench,
+    GW::Constants::District::EuropeGerman,
+    GW::Constants::District::EuropeItalian,
+    GW::Constants::District::EuropeSpanish,
+    GW::Constants::District::EuropePolish,
+    GW::Constants::District::EuropeRussian,
+    GW::Constants::District::AsiaKorean,
+    GW::Constants::District::AsiaChinese,
+    GW::Constants::District::AsiaJapanese,
+};
+
+// Simplified district list for alias editing UI (no "American District 1" special case)
+constexpr std::array alias_district_names = {
+    "Current",
+    "International",
+    "American",
+    "Europe English",
+    "Europe French",
+    "Europe German",
+    "Europe Italian",
+    "Europe Spanish",
+    "Europe Polish",
+    "Europe Russian",
+    "Asia Korean",
+    "Asia Chinese",
+    "Asia Japanese",
+};
+
+constexpr std::array alias_district_ids = {
+    GW::Constants::District::Current,
+    GW::Constants::District::International,
     GW::Constants::District::American,
     GW::Constants::District::EuropeEnglish,
     GW::Constants::District::EuropeFrench,

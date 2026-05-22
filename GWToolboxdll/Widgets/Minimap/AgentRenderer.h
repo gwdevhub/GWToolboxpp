@@ -20,6 +20,7 @@ namespace GW {
 using Color = uint32_t;
 
 class AgentRenderer : public D3DVertexBuffer {
+    friend class Minimap;
     static constexpr int num_triangles = 32;
 
 public:
@@ -194,6 +195,12 @@ private:
     float size_boss = 125.f;
     float size_minion = 50.f;
     float size_marked_target = 75.f;
+    float size_hostile = 75.f;
+    float size_neutral = 75.f;
+    float size_ally = 75.f;
+    float size_ally_npc = 75.f;
+    float size_ally_npc_quest = 75.f;
+    float size_ally_spirit = 75.f;
     bool marked_target_inherit_custom_agents = false;
     Shape_e default_shape = Tear;
     Shape_e shape_player = Tear;

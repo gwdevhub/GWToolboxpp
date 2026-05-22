@@ -15,13 +15,15 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     "Widgets/*.cpp"
     "Widgets/Minimap/*.h"
     "Widgets/Minimap/*.cpp"
-    "Windows/*.h" 
+    "Windows/*.h"
     "Windows/*.cpp"
+    "Windows/Hotkeys/*.h"
+    "Windows/Hotkeys/*.cpp"
     "Windows/Pathfinding/*.h"
     "Windows/Pathfinding/*.hpp"
     "Windows/Pathfinding/*.cpp"
     )
-     
+    
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 
@@ -41,9 +43,15 @@ target_compile_definitions(GWToolboxdll PRIVATE
     "GWCA_IMPORT"
     )
       
-target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy /utf-8)
-target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+target_compile_options(GWToolboxdll PRIVATE /Gy /utf-8)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:RelWithDebInfo>:/Zi>)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Skip /W4 for clang-cl: it expands to -Wall -Wextra
+    target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/Z7 /Od>)
+else()
+    target_compile_options(GWToolboxdll PRIVATE /W4 /WX)
+    target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+endif()
 
 set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_RunCodeAnalysis false
@@ -84,18 +92,18 @@ target_link_libraries(GWToolboxdll PRIVATE
     steamworks_sdk
     easywsclient
     ${CPP_GAME_SDK}
-    nlohmann_json::nlohmann_json
+    glaze::glaze
     imgui::fonts
     IconFontCppHeaders
     nativefiledialog
     wintoast
-    wolfssl::wolfssl
 	minhook::minhook
 	ctre::ctre
     unofficial::uwebsockets::uwebsockets
 
     # libs:
     Dbghelp.lib # for MiniDump
+    bcrypt.lib  # for SHA256 (Resources.cpp)
 	delayimp # for delay loading gwca
     )
 

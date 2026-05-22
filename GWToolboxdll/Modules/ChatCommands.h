@@ -23,20 +23,6 @@ public:
         return instance;
     }
 
-    struct PendingTransmo {
-        PendingTransmo(const DWORD _npcid = 0, const DWORD _scale = 0x64000000, const DWORD _npcmfid = 0, const DWORD _npcmfd = 0, const DWORD _flags = 0)
-            : npc_id(_npcid)
-            , scale(_scale)
-            , npc_model_file_id(_npcmfid)
-            , npc_model_file_data(_npcmfd)
-            , flags(_flags) { };
-        DWORD npc_id = 0;
-        DWORD scale = 0x64000000;
-        DWORD npc_model_file_id = 0;
-        DWORD npc_model_file_data = 0;
-        DWORD flags = 0;
-    };
-
     [[nodiscard]] const char* Name() const override { return "Chat Commands"; }
     [[nodiscard]] const char* SettingsName() const override { return "Chat Settings"; }
 
@@ -54,6 +40,7 @@ public:
     void Update(float delta) override;
 
     static void CHAT_CMD_FUNC(CmdReapplyTitle);
+    static void CHAT_CMD_FUNC(CmdCustomMarker);
 
     // Add a /setting <setting_name> [1|0|toggle] command to easily change a static setting in memory. NB: static_setting_ptr MUST be a pointer to a STATIC location in memory!
     static void RegisterSettingChatCommand(const wchar_t* setting_name, const bool* static_setting_ptr, const wchar_t* description = nullptr);
@@ -62,8 +49,6 @@ public:
 
 private:
     static bool ReadTemplateFile(const std::wstring& path, char* buff, size_t buffSize);
-
-    static bool ParseTransmoArgs(int argc, const LPWSTR* argv, int name_arg_index, PendingTransmo& transmo);
 
     static bool IsLuxon();
 
@@ -81,12 +66,8 @@ private:
     static void CHAT_CMD_FUNC(CmdSCWiki);
     static void CHAT_CMD_FUNC(CmdLoad);
     static void CHAT_CMD_FUNC(CmdPingBuild);
-    static void CHAT_CMD_FUNC(CmdTransmo);
     static void CHAT_CMD_FUNC(CmdResize);
     static void CHAT_CMD_FUNC(CmdPingEquipment);
-    static void CHAT_CMD_FUNC(CmdTransmoTarget);
-    static void CHAT_CMD_FUNC(CmdTransmoParty);
-    static void CHAT_CMD_FUNC(CmdTransmoAgent);
     static void CHAT_CMD_FUNC(CmdPingQuest);
     static void CHAT_CMD_FUNC(CmdMorale);
     static void CHAT_CMD_FUNC(CmdVolume);
@@ -98,11 +79,6 @@ private:
     static void CHAT_CMD_FUNC(CmdWithdraw);
     static void CHAT_CMD_FUNC(CmdDeposit);
 
-    static void TransmoAgent(DWORD agent_id, PendingTransmo& transmo);
-    static bool GetNPCInfoByName(const std::string& name, PendingTransmo& transmo);
-    static bool GetNPCInfoByName(const std::wstring& name, PendingTransmo& transmo);
-    static bool ParseScale(int scale, PendingTransmo& transmo);
-    static bool GetTargetTransmoInfo(PendingTransmo& transmo);
     static void TargetNearest(const wchar_t* model_id_or_name, GW::AgentTargetFlags type);
 
     static std::vector<ToolboxUIElement*> CHAT_CMD_FUNC(MatchingWindows);

@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include <GWCA/Constants/Maps.h>
-#include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Utilities/MemoryPatcher.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -33,6 +32,7 @@
 #include <Widgets/WorldMapWidget_Constants.h>
 
 #include <Windows/CompletionWindow.h>
+#include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
 
 #include <Utils/GuiUtils.h>
@@ -124,6 +124,7 @@ namespace {
     IDirect3DTexture9** quest_icon_texture = nullptr;
     IDirect3DTexture9** player_icon_texture = nullptr;
     IDirect3DTexture9** portal_icon_texture = nullptr;
+    IDirect3DTexture9** zaishen_coin_texture = nullptr;
 
     bool showing_all_outposts = false;
     bool apply_quest_colors = false;
@@ -778,6 +779,13 @@ namespace {
 
             draw_list->AddImageQuad(*quest_icon_texture, rotated_points[0], rotated_points[1], rotated_points[2], rotated_points[3], uv_points[0], uv_points[1], uv_points[2], uv_points[3], color & IM_COL32_A_MASK ? color : IM_COL32_WHITE);
 
+            if (zaishen_coin_texture && *zaishen_coin_texture && DailyQuests::GetZaishenCoinReward(quest->quest_id)) {
+                const float coin_half = quest_icon_size * 0.3f;
+                draw_list->AddImage(*zaishen_coin_texture,
+                    {viewport_quest_pos.x - coin_half, viewport_quest_pos.y - coin_half},
+                    {viewport_quest_pos.x + coin_half, viewport_quest_pos.y + coin_half});
+            }
+
             return icon_rect.Contains(ImGui::GetMousePos());
         };
 
@@ -881,6 +889,7 @@ void WorldMapWidget::Initialize()
     quest_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
     player_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x5d3b);
     portal_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x246c); // IDirect3DTexture9**
+    zaishen_coin_texture = GwDatTextureModule::LoadTextureFromFileId(0x55778);
 
     uintptr_t address = GW::Scanner::Find("\x8b\x45\xfc\xf7\x40\x10\x00\x00\x01\x00", "xxxxxxxxxx", 0xa);
     if (address) {
@@ -911,7 +920,7 @@ bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GameP
     const auto current_map_context = GW::GetMapContext();
     if (!current_map_context) return false;
 
-    const auto game_map_rect = ImRect({current_map_context->start_pos.x, current_map_context->start_pos.y, current_map_context->end_pos.x, current_map_context->end_pos.y});
+    const auto game_map_rect = ImRect(current_map_context->start_pos.x, current_map_context->start_pos.y, current_map_context->end_pos.x, current_map_context->end_pos.y);
 
     constexpr auto gwinches_per_unit = 96.f;
 
@@ -936,7 +945,7 @@ bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2
     const auto current_map_context = GW::GetMapContext();
     if (!current_map_context) return false;
 
-    const auto game_map_rect = ImRect({current_map_context->start_pos.x, current_map_context->start_pos.y, current_map_context->end_pos.x, current_map_context->end_pos.y});
+    const auto game_map_rect = ImRect(current_map_context->start_pos.x, current_map_context->start_pos.y, current_map_context->end_pos.x, current_map_context->end_pos.y);
 
     // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
     constexpr auto gwinches_per_unit = 96.f;
@@ -1184,7 +1193,13 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         if (const auto hovered_quest = GW::QuestMgr::GetQuest(hovered_quest_id)) {
             static GuiUtils::EncString quest_name;
             if (!quest_name.IsDecoding()) quest_name.reset(hovered_quest->name);
-            ImGui::SetTooltip("%s", quest_name.string().c_str());
+            const auto coin_reward = DailyQuests::GetZaishenCoinReward(hovered_quest_id);
+            if (coin_reward) {
+                ImGui::SetTooltip("%s\nZaishen Coins: %u NM / %u HM", quest_name.string().c_str(), coin_reward->nm, coin_reward->hm);
+            }
+            else {
+                ImGui::SetTooltip("%s", quest_name.string().c_str());
+            }
         }
     }
     if (hovered_boss) {

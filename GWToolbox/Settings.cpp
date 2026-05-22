@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "Settings.h"
-#include "Registry.h"
 
 Settings settings;
 

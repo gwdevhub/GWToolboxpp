@@ -11,11 +11,14 @@
 #include "LoginModule.h"
 #include <Utils/ToolboxUtils.h>
 #include <Defines.h>
+#include <Timer.h>
 
 namespace {
     using GetStringParameter_pt = wchar_t*(__cdecl*)(uint32_t param_id);
     GetStringParameter_pt GetStringParameter_Func = nullptr;
     GetStringParameter_pt GetStringParameter_Ret = nullptr;
+
+    clock_t pending_char_select = 0;
 
     // Always ensure character name has been pre-filled; this isn't actually used in practice as the security character feature is deprecated.
     // Prefilling it ensures that auto login can work without -charname argument being given.
@@ -42,13 +45,19 @@ namespace {
         // only honour the -character launch arg on the first visit to char select, otherwise we screw our own rerolls
         if (did_initial_charname_select) return;
         did_initial_charname_select = true;
-        GW::GameThread::Enqueue([]() {
-            original_charname_parameter && *original_charname_parameter&& GW::LoginMgr::SelectCharacterToPlay(original_charname_parameter, false);
-        },true);
+        if (original_charname_parameter && *original_charname_parameter) {
+            pending_char_select = TIMER_INIT();
+        }
 
     }
+} // namespace
+void LoginModule::Update(float)
+{
+    if (pending_char_select && TIMER_DIFF(pending_char_select) > 1000) pending_char_select = 0;
+    if (pending_char_select && GW::LoginMgr::SelectCharacterToPlay(original_charname_parameter, false)) {
+        pending_char_select = 0;
+    }
 }
-
 void LoginModule::Initialize()
 {
     ToolboxModule::Initialize();

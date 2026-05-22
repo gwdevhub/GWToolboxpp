@@ -2,10 +2,12 @@
 
 #include <Modules/Resources.h>
 #include <Windows/InventorySorting.h>
+#include <Windows/DailyQuestsWindow.h>
 #include <Modules/InventoryManager.h>
 
 #include <GWCA/Constants/Constants.h>
 
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -17,9 +19,7 @@
 #include <Utils/GuiUtils.h>
 
 #include <algorithm>
-#include <chrono>
-#include <sstream>
-#include <thread>
+#include <ctime>
 #include <Utils/ToolboxUtils.h>
 
 
@@ -59,29 +59,45 @@ namespace {
     bool pending_cancel = false;
     size_t items_sorted_count = 0;
 
+    // Chat command hook entries
+    GW::HookEntry sort_inventory_cmd_entry;
+    GW::HookEntry sort_storage_cmd_entry;
+
+    // Flags set by chat commands to trigger confirm dialogs on the next Draw
+    bool pending_sortinventory_confirm = false;
+    bool pending_sortstorage_confirm = false;
+
     // Sort order configuration
     std::vector<GW::Constants::ItemType> sort_order;
+    bool sort_equipment_pack = false;
 
-    /**
-     * Gets the sort priority for an item (lower = higher priority).
-     */
+    // Primary key: item type (from sort_order). Secondary key: for Nicholas collectibles,
+    // weeks until Nick requests them (0 = this week); for all other items, model_file_id.
     uint32_t GetItemSortPriority(GW::Item* item)
     {
-        if (!item) return 0xFFFFFFFF; // Max value for items that don't exist
-
-        // TODO: Check if item is cons, return OrderType::Cons sort order
-        // TODO: Check if item is alcohol, return OrderType::Alcohol sort order
-
-        // TODO: Add custom sorting my model id
+        if (!item) return 0xFFFFFFFF;
 
         size_t priority_by_type = 0;
-        for (priority_by_type; priority_by_type < sort_order.size(); priority_by_type++) {
+        for (; priority_by_type < sort_order.size(); priority_by_type++) {
             if (std::to_underlying(sort_order[priority_by_type]) == std::to_underlying(item->type))
                 break;
         }
 
-        // Fisrt 8 bits are priority, then next 8 bits is item type, then 16 bits are model_id
-        return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | (item->model_file_id & 0xffFFFF);
+        uint32_t secondary;
+        const auto* nick_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
+        if (nick_info) {
+            const time_t now = time(nullptr);
+            const time_t next_active = DailyQuests::GetTimestampFromNicholasTheTraveller(
+                const_cast<DailyQuests::NicholasCycleData*>(nick_info));
+            secondary = next_active > now
+                ? static_cast<uint32_t>((next_active - now) / 604800)
+                : 0u;
+        }
+        else {
+            secondary = item->model_file_id & 0xFFFFFF;
+        }
+
+        return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | secondary;
     }
 
     /**
@@ -96,6 +112,16 @@ namespace {
         const uint32_t priority_b = GetItemSortPriority(item_b);
 
         return priority_a < priority_b;
+    }
+
+    void CHAT_CMD_FUNC(CmdSortInventory)
+    {
+        pending_sortinventory_confirm = true;
+    }
+
+    void CHAT_CMD_FUNC(CmdSortStorage)
+    {
+        pending_sortstorage_confirm = true;
     }
 
     /**
@@ -242,8 +268,17 @@ void InventorySorting::Initialize()
 {
     ToolboxUIElement::Initialize();
 
-    // Initialize default sort order
     ResetSortOrder();
+
+    GW::Chat::CreateCommand(&sort_inventory_cmd_entry, L"sortinventory", CmdSortInventory);
+    GW::Chat::CreateCommand(&sort_storage_cmd_entry, L"sortstorage", CmdSortStorage);
+}
+
+void InventorySorting::Terminate()
+{
+    ToolboxUIElement::Terminate();
+    GW::Chat::DeleteCommand(&sort_inventory_cmd_entry);
+    GW::Chat::DeleteCommand(&sort_storage_cmd_entry);
 }
 
 void InventorySorting::LoadSettings(ToolboxIni* ini)
@@ -270,6 +305,8 @@ void InventorySorting::LoadSettings(ToolboxIni* ini)
     if (sort_order.empty()) {
         ResetSortOrder();
     }
+
+    LOAD_BOOL(sort_equipment_pack);
 }
 
 void InventorySorting::SaveSettings(ToolboxIni* ini)
@@ -284,16 +321,77 @@ void InventorySorting::SaveSettings(ToolboxIni* ini)
         snprintf(key, sizeof(key), "sort_order_%zu", i);
         ini->SetLongValue(Name(), key, static_cast<long>(std::to_underlying(sort_order[i])));
     }
+
+    SAVE_BOOL(sort_equipment_pack);
 }
 
 void InventorySorting::Draw(IDirect3DDevice9*)
 {
     DrawSortInventoryPopup();
+
+    if (pending_sortinventory_confirm) {
+        pending_sortinventory_confirm = false;
+        ImGui::OpenPopup("##sortinventory_confirm");
+    }
+    if (ImGui::BeginPopupModal("##sortinventory_confirm", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("Are you sure you want to sort character inventory?");
+        if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyReleased(ImGuiKey_Enter)) {
+            const auto end_bag = sort_equipment_pack ? GW::Constants::Bag::Equipment_Pack : GW::Constants::Bag::Bag_2;
+            Resources::EnqueueWorkerTask([end_bag]() {
+                SortInventory(GW::Constants::Bag::Backpack, end_bag);
+            });
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (pending_sortstorage_confirm) {
+        pending_sortstorage_confirm = false;
+        ImGui::OpenPopup("##sortstorage_confirm");
+    }
+    if (ImGui::BeginPopupModal("##sortstorage_confirm", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextUnformatted("Are you sure you want to sort storage inventory?");
+        if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyReleased(ImGuiKey_Enter)) {
+            Resources::EnqueueWorkerTask([]() {
+                SortInventory(GW::Constants::Bag::Storage_1, GW::Constants::Bag::Storage_14);
+            });
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
 }
 
 void InventorySorting::DrawSettingsInternal()
 {
     ImGui::PushID("inventory_sorting_settings");
+
+    // Character inventory sorting
+    {
+        bool sort_char_inv = false;
+        if (ImGui::ConfirmButton("Sort Character Inventory!", &sort_char_inv)) {
+            const auto end_bag = sort_equipment_pack
+                ? GW::Constants::Bag::Equipment_Pack
+                : GW::Constants::Bag::Bag_2;
+            Resources::EnqueueWorkerTask([end_bag]() {
+                SortInventory(GW::Constants::Bag::Backpack, end_bag);
+            });
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Include Equipment Pack", &sort_equipment_pack);
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
     bool open = ImGui::CollapsingHeader("Change Storage Inventory Sorting Order", ImGuiTreeNodeFlags_SpanLabelWidth);
     ImGui::SameLine(0.f, 20.f);
     bool sort_inv = false;

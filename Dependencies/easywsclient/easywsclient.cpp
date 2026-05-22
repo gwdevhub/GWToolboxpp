@@ -1,653 +1,457 @@
-#pragma warning(disable : 4100)
-#pragma warning(disable : 4244)
-#pragma warning(disable : 4365)
-#pragma warning(disable : 4456)
-#pragma warning(disable : 4548)
-#pragma warning(disable : 4701)
-#pragma warning(disable : 5039)
+// easywsclient — WinHTTP/Schannel backend
+//
+// The public API (see easywsclient.hpp) is preserved so callers don't change.
+// Internally we use the WinHTTP WebSocket API (Win8+) which provides TLS via
+// Schannel and a fully-fledged client framing implementation.
 
-#ifdef _WIN32
-#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
-#define _CRT_SECURE_NO_WARNINGS // _CRT_SECURE_NO_WARNINGS for sscanf errors in MSVC2013 Express
-#endif
+#pragma warning(disable : 4100)
+#pragma warning(disable : 4127)
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#include <fcntl.h>
-#pragma comment(lib, "ws2_32")
-#include <io.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-// #ifndef _SSIZE_T_DEFINED
-//     typedef int ssize_t;
-//     #define _SSIZE_T_DEFINED
-// #endif
-#ifndef _SOCKET_T_DEFINED
-typedef SOCKET socket_t;
-#define _SOCKET_T_DEFINED
-#endif
-#ifndef snprintf
-#define snprintf _snprintf_s
-#endif
-#if _MSC_VER >= 1600
-// vs2010 or later
-#include <stdint.h>
-#else
-typedef __int8 int8_t;
-typedef unsigned __int8 uint8_t;
-typedef __int32 int32_t;
-typedef unsigned __int32 uint32_t;
-typedef __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-#endif
-#define socketerrno WSAGetLastError()
-#define SOCKET_EAGAIN_EINPROGRESS WSAEINPROGRESS
-#define SOCKET_EWOULDBLOCK WSAEWOULDBLOCK
-#else
-#include <fcntl.h>
-#include <netdb.h>
-#include <netinet/tcp.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
-#ifndef _SOCKET_T_DEFINED
-typedef int socket_t;
-#define _SOCKET_T_DEFINED
-#endif
-#ifndef INVALID_SOCKET
-#define INVALID_SOCKET (-1)
-#endif
-#ifndef SOCKET_ERROR
-#define SOCKET_ERROR (-1)
-#endif
-#define closesocket(s) ::close(s)
-#include <errno.h>
-#define socketerrno errno
-#define SOCKET_EAGAIN_EINPROGRESS EAGAIN
-#define SOCKET_EWOULDBLOCK EWOULDBLOCK
-#endif
 
+#include <windows.h>
+#include <winhttp.h>
+
+#include <atomic>
+#include <chrono>
+#include <cstdarg>
+#include <cstdio>
+#include <mutex>
+#include <queue>
 #include <string>
+#include <thread>
 #include <vector>
-#include <wolfssl/openssl/err.h>
-#include <wolfssl/openssl/rand.h>
-#include <wolfssl/openssl/ssl.h>
 
 #include "easywsclient.hpp"
 
 namespace { // private module-only namespace
 
-    struct ConnectionContext {
-        socket_t sockfd;
-        SSL* sslHandle;
-        SSL_CTX* sslContext;
-    };
-
     int log_error(const char* format, ...)
     {
         va_list vl;
         va_start(vl, format);
-        int written = vfprintf(stderr, format, vl);
+        const int written = vfprintf(stderr, format, vl);
         va_end(vl);
         return written;
     }
-    int print_error_callback(const char* err, size_t len, void* userdata)
+
+    std::wstring Utf8ToWide(const std::string& s)
     {
-        return log_error("ssl error: %s", err);
+        if (s.empty()) return {};
+        const int wlen = MultiByteToWideChar(CP_UTF8, 0, s.c_str(),
+                                             static_cast<int>(s.size()),
+                                             nullptr, 0);
+        if (wlen <= 0) return {};
+        std::wstring out;
+        out.resize(static_cast<size_t>(wlen));
+        MultiByteToWideChar(CP_UTF8, 0, s.c_str(),
+                            static_cast<int>(s.size()),
+                            out.data(), wlen);
+        return out;
     }
 
-    socket_t hostname_connect(const std::string& hostname, int port)
+    bool ParseUrl(const std::string& url, bool& is_ssl, std::string& host,
+                  int& port, std::string& path)
     {
-        struct addrinfo hints;
-        struct addrinfo* result;
-        struct addrinfo* p;
-        int ret;
-        socket_t sockfd = INVALID_SOCKET;
-        char sport[16];
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        snprintf(sport, 16, "%d", port);
-        if ((ret = getaddrinfo(hostname.c_str(), sport, &hints, &result)) != 0) {
-            log_error("%d\n", ret);
-            log_error("getaddrinfo: %s\n", gai_strerror(ret));
-            return 1;
+        // Accepts ws://host[:port][/path] and wss://host[:port][/path]
+        if (url.size() < 6) return false;
+        size_t i = 0;
+        if (url.compare(0, 6, "wss://") == 0) {
+            is_ssl = true;
+            i = 6;
         }
-        for (p = result; p != NULL; p = p->ai_next) {
-            sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-            if (sockfd == INVALID_SOCKET) {
-                continue;
-            }
-            if (connect(sockfd, p->ai_addr, p->ai_addrlen) != SOCKET_ERROR) {
-                break;
-            }
-            closesocket(sockfd);
-            sockfd = INVALID_SOCKET;
-        }
-        freeaddrinfo(result);
-        return sockfd;
-    }
-
-
-    int kWrite(ConnectionContext* ptConnCtx, const char* buf, int len, int flags)
-    {
-        if (ptConnCtx->sslHandle == NULL) {
-            return ::send(ptConnCtx->sockfd, buf, len, flags);
+        else if (url.compare(0, 5, "ws://") == 0) {
+            is_ssl = false;
+            i = 5;
         }
         else {
-            return SSL_write(ptConnCtx->sslHandle, buf, len);
+            return false;
         }
-    }
 
-    int kRead(ConnectionContext* ptConnCtx, char* buf, int len, int flags)
-    {
-        if (ptConnCtx->sslHandle == NULL) {
-            return ::recv(ptConnCtx->sockfd, buf, len, flags);
+        const size_t host_start = i;
+        while (i < url.size() && url[i] != ':' && url[i] != '/') ++i;
+        host.assign(url, host_start, i - host_start);
+        if (host.empty()) return false;
+
+        port = is_ssl ? 443 : 80;
+        if (i < url.size() && url[i] == ':') {
+            ++i;
+            const size_t port_start = i;
+            while (i < url.size() && url[i] != '/') ++i;
+            if (i == port_start) return false;
+            port = std::atoi(url.substr(port_start, i - port_start).c_str());
+            if (port <= 0 || port > 65535) return false;
+        }
+        if (i < url.size() && url[i] == '/') {
+            path.assign(url, i, std::string::npos);
         }
         else {
-            return SSL_read(ptConnCtx->sslHandle, buf, len);
+            path = "/";
         }
-    }
-
-    void klose(ConnectionContext* ptConnCtx)
-    {
-        if (ptConnCtx->sockfd) {
-            closesocket(ptConnCtx->sockfd);
-        }
-        if (ptConnCtx->sslHandle) {
-            SSL_shutdown(ptConnCtx->sslHandle);
-            SSL_free(ptConnCtx->sslHandle);
-        }
-        if (ptConnCtx->sslContext) {
-            SSL_CTX_free(ptConnCtx->sslContext);
-        }
-        free(ptConnCtx);
+        return true;
     }
 
     class _DummyWebSocket : public easywsclient::WebSocket {
     public:
-        void poll(int timeout) {}
-        void send(const std::string& message) {}
-        void sendPing() {}
-        void close() {}
-        void _dispatch(Callback& callable) {}
-        readyStateValues getReadyState() const { return CLOSED; }
+        void poll(int /*timeout*/) override {}
+        void send(const std::string& /*message*/) override {}
+        void sendPing() override {}
+        void close() override {}
+        void _dispatch(Callback& /*callable*/) override {}
+        readyStateValues getReadyState() const override { return CLOSED; }
     };
-
-
 
     class _RealWebSocket : public easywsclient::WebSocket {
     public:
-        // http://tools.ietf.org/html/rfc6455#section-5.2  Base Framing Protocol
-        //
-        //  0                   1                   2                   3
-        //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-        // +-+-+-+-+-------+-+-------------+-------------------------------+
-        // |F|R|R|R| opcode|M| Payload len |    Extended payload length    |
-        // |I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
-        // |N|V|V|V|       |S|             |   (if payload len==126/127)   |
-        // | |1|2|3|       |K|             |                               |
-        // +-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
-        // |     Extended payload length continued, if payload len == 127  |
-        // + - - - - - - - - - - - - - - - +-------------------------------+
-        // |                               |Masking-key, if MASK set to 1  |
-        // +-------------------------------+-------------------------------+
-        // | Masking-key (continued)       |          Payload Data         |
-        // +-------------------------------- - - - - - - - - - - - - - - - +
-        // :                     Payload Data continued ...                :
-        // + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
-        // |                     Payload Data continued ...                |
-        // +---------------------------------------------------------------+
-        struct wsheader_type {
-            unsigned header_size;
-            bool fin;
-            bool mask;
-            enum opcode_type {
-                CONTINUATION = 0x0,
-                TEXT_FRAME = 0x1,
-                BINARY_FRAME = 0x2,
-                CLOSE = 8,
-                PING = 9,
-                PONG = 0xa,
-            } opcode;
-            int N0;
-            uint64_t N;
-            uint8_t masking_key[4];
-        };
+        _RealWebSocket(HINTERNET hSession, HINTERNET hConnect,
+                       HINTERNET hRequest, HINTERNET hWebSocket)
+            : m_hSession(hSession)
+            , m_hConnect(hConnect)
+            , m_hRequest(hRequest)
+            , m_hWebSocket(hWebSocket)
+            , m_State(OPEN)
+            , m_ReaderRunning(true)
+            , m_Reader(&_RealWebSocket::ReaderEntry, this)
+        {}
 
-        std::vector<uint8_t> rxbuf;
-        std::vector<uint8_t> txbuf;
+        ~_RealWebSocket() override
+        {
+            m_ReaderRunning = false;
 
-        std::vector<uint8_t> receivedData;
+            // Close the WebSocket handle to unblock any pending receive in the
+            // reader thread (forces a hard teardown).
+            {
+                std::lock_guard lk(m_HandleMutex);
+                if (m_hWebSocket) {
+                    WinHttpCloseHandle(m_hWebSocket);
+                    m_hWebSocket = nullptr;
+                }
+            }
+            if (m_Reader.joinable()) {
+                m_Reader.join();
+            }
 
-        ConnectionContext* ptConnCtx;
-        readyStateValues readyState;
-        bool useMask;
+            std::lock_guard lk(m_HandleMutex);
+            if (m_hRequest) { WinHttpCloseHandle(m_hRequest); m_hRequest = nullptr; }
+            if (m_hConnect) { WinHttpCloseHandle(m_hConnect); m_hConnect = nullptr; }
+            if (m_hSession) { WinHttpCloseHandle(m_hSession); m_hSession = nullptr; }
+        }
 
-        _RealWebSocket(ConnectionContext* connContext, bool useMask) : ptConnCtx(connContext), readyState(OPEN), useMask(useMask) {}
+        readyStateValues getReadyState() const override
+        {
+            return m_State.load(std::memory_order_acquire);
+        }
 
-        readyStateValues getReadyState() const { return readyState; }
-
-        void poll(int timeout)
-        { // timeout in milliseconds
-            if (readyState == CLOSED) {
+        void poll(int timeout) override
+        {
+            // I/O is driven by the reader thread; poll() simply gives callers a
+            // chance to yield. We still honour the timeout for CLOSED so callers
+            // that spin on getReadyState() don't busy-loop.
+            if (m_State.load() == CLOSED) {
                 if (timeout > 0) {
-                    timeval tv = {timeout / 1000, (timeout % 1000) * 1000};
-                    select(0, NULL, NULL, NULL, &tv);
+                    Sleep(static_cast<DWORD>(timeout));
                 }
                 return;
             }
             if (timeout > 0) {
-                fd_set rfds;
-                fd_set wfds;
-                timeval tv = {timeout / 1000, (timeout % 1000) * 1000};
-                FD_ZERO(&rfds);
-                FD_ZERO(&wfds);
-                FD_SET(ptConnCtx->sockfd, &rfds);
-                if (!txbuf.empty()) {
-                    FD_SET(ptConnCtx->sockfd, &wfds);
-                }
-                select(ptConnCtx->sockfd + 1, &rfds, &wfds, NULL, &tv);
-            }
-            while (true) {
-                // FD_ISSET(0, &rfds) will be true
-                int N = rxbuf.size();
-                ssize_t ret;
-                rxbuf.resize(N + 1500);
-                ret = kRead(ptConnCtx, (char*)rxbuf.data() + N, 1500, 0);
-                if (false) {}
-                else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
-                    rxbuf.resize(N);
-                    break;
-                }
-                else if (ret <= 0) {
-                    rxbuf.resize(N);
-                    klose(ptConnCtx);
-                    readyState = CLOSED;
-                    log_error(ret < 0 ? "Connection error!\n" : "Connection closed!\n");
-                    break;
-                }
-                else {
-                    rxbuf.resize(N + ret);
-                }
-            }
-            while (!txbuf.empty()) {
-                if (readyState == CLOSED) {
-                    txbuf.clear();
-                    break;
-                }
-                int ret = kWrite(ptConnCtx, (char*)txbuf.data(), txbuf.size(), 0);
-                if (false) {}
-                else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
-                    break;
-                }
-                else if (ret <= 0) {
-                    klose(ptConnCtx);
-                    readyState = CLOSED;
-                    log_error(ret < 0 ? "Connection error!\n" : "Connection closed!\n");
-                    break;
-                }
-                else {
-                    txbuf.erase(txbuf.begin(), txbuf.begin() + ret);
-                }
-            }
-            if (txbuf.empty() && readyState == CLOSING) {
-                klose(ptConnCtx);
-                readyState = CLOSED;
+                // Wait up to `timeout` ms for an incoming message to become
+                // available, so callers that drain in dispatch() get prompt
+                // wakeups.
+                const auto deadline = std::chrono::steady_clock::now()
+                                      + std::chrono::milliseconds(timeout);
+                std::unique_lock lk(m_QueueMutex);
+                m_QueueCv.wait_until(lk, deadline, [this] {
+                    return !m_IncomingQueue.empty()
+                        || m_State.load() == CLOSED;
+                });
             }
         }
 
-        // Callable must have signature: void(const std::string & message).
-        // Should work with C functions, C++ functors, and C++11 std::function and
-        // lambda:
-        // template<class Callable>
-        // void dispatch(Callable callable)
-        virtual void _dispatch(WebSocket::Callback& callable)
+        void sendPing() override
         {
-            // TODO: consider acquiring a lock on rxbuf...
-            while (true) {
-                wsheader_type ws;
-                if (rxbuf.size() < 2) {
-                    return; /* Need at least 2 */
-                }
-                const uint8_t* data = (uint8_t*)rxbuf.data(); // peek, but don't consume
-                ws.fin = (data[0] & 0x80) == 0x80;
-                ws.opcode = (wsheader_type::opcode_type)(data[0] & 0x0f);
-                ws.mask = (data[1] & 0x80) == 0x80;
-                ws.N0 = (data[1] & 0x7f);
-                ws.header_size = 2 + (ws.N0 == 126 ? 2 : 0) + (ws.N0 == 127 ? 8 : 0) + (ws.mask ? 4 : 0);
-                if (rxbuf.size() < ws.header_size) {
-                    return; /* Need: ws.header_size - rxbuf.size() */
-                }
-                int i;
-                if (ws.N0 < 126) {
-                    ws.N = ws.N0;
-                    i = 2;
-                }
-                else if (ws.N0 == 126) {
-                    ws.N = 0;
-                    ws.N |= ((uint64_t)data[2]) << 8;
-                    ws.N |= ((uint64_t)data[3]) << 0;
-                    i = 4;
-                }
-                else if (ws.N0 == 127) {
-                    ws.N = 0;
-                    ws.N |= ((uint64_t)data[2]) << 56;
-                    ws.N |= ((uint64_t)data[3]) << 48;
-                    ws.N |= ((uint64_t)data[4]) << 40;
-                    ws.N |= ((uint64_t)data[5]) << 32;
-                    ws.N |= ((uint64_t)data[6]) << 24;
-                    ws.N |= ((uint64_t)data[7]) << 16;
-                    ws.N |= ((uint64_t)data[8]) << 8;
-                    ws.N |= ((uint64_t)data[9]) << 0;
-                    i = 10;
-                }
-                if (ws.mask) {
-                    ws.masking_key[0] = ((uint8_t)data[i + 0]) << 0;
-                    ws.masking_key[1] = ((uint8_t)data[i + 1]) << 0;
-                    ws.masking_key[2] = ((uint8_t)data[i + 2]) << 0;
-                    ws.masking_key[3] = ((uint8_t)data[i + 3]) << 0;
-                }
-                else {
-                    ws.masking_key[0] = 0;
-                    ws.masking_key[1] = 0;
-                    ws.masking_key[2] = 0;
-                    ws.masking_key[3] = 0;
-                }
-                if (rxbuf.size() < ws.header_size + ws.N) {
-                    return; /* Need: ws.header_size+ws.N - rxbuf.size() */
-                }
+            // WinHTTP's WebSocket implementation handles PING/PONG frames
+            // transparently. Nothing to do.
+        }
 
-                // We got a whole message, now do something with it:
-                if (false) {}
-                else if (ws.opcode == wsheader_type::TEXT_FRAME || ws.opcode == wsheader_type::BINARY_FRAME || ws.opcode == wsheader_type::CONTINUATION) {
-                    if (ws.mask) {
-                        for (size_t i = 0; i != ws.N; ++i) {
-                            rxbuf[i + ws.header_size] ^= ws.masking_key[i & 0x3];
-                        }
-                    }
-                    receivedData.insert(receivedData.end(), rxbuf.begin() + ws.header_size, rxbuf.begin() + ws.header_size + (size_t)ws.N); // just feed
-                    if (ws.fin) {
-                        std::string data(receivedData.begin(), receivedData.end());
-                        callable((const std::string)data);
-                        receivedData.erase(receivedData.begin(), receivedData.end());
-                        std::vector<uint8_t>().swap(receivedData); // free memory
-                    }
-                }
-                else if (ws.opcode == wsheader_type::PING) {
-                    if (ws.mask) {
-                        for (size_t i = 0; i != ws.N; ++i) {
-                            rxbuf[i + ws.header_size] ^= ws.masking_key[i & 0x3];
-                        }
-                    }
-                    std::string data(rxbuf.begin() + ws.header_size, rxbuf.begin() + ws.header_size + (size_t)ws.N);
-                    sendData(wsheader_type::PONG, data);
-                }
-                else if (ws.opcode == wsheader_type::PONG) {}
-                else if (ws.opcode == wsheader_type::CLOSE) {
-                    close();
-                }
-                else {
-                    log_error("ERROR: Got unexpected WebSocket message. opcode=%d\n", ws.opcode);
-                    close();
-                }
-
-                rxbuf.erase(rxbuf.begin(), rxbuf.begin() + ws.header_size + (size_t)ws.N);
+        void send(const std::string& message) override
+        {
+            HINTERNET h = nullptr;
+            {
+                std::lock_guard lk(m_HandleMutex);
+                h = m_hWebSocket;
+            }
+            if (!h) return;
+            if (m_State.load() != OPEN) return;
+            std::lock_guard sl(m_SendMutex);
+            const DWORD result = WinHttpWebSocketSend(
+                h,
+                WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE,
+                message.empty() ? nullptr
+                                : const_cast<char*>(message.data()),
+                static_cast<DWORD>(message.size()));
+            if (result != NO_ERROR) {
+                log_error("WinHttpWebSocketSend failed: %lu\n", result);
+                m_State.store(CLOSED);
+                m_QueueCv.notify_all();
             }
         }
 
-        void sendPing() { sendData(wsheader_type::PING, std::string()); }
-
-        void send(const std::string& message) { sendData(wsheader_type::TEXT_FRAME, message); }
-
-        void sendData(wsheader_type::opcode_type type, const std::string& message)
+        void close() override
         {
-            // TODO:
-            // Masking key should (must) be derived from a high quality random
-            // number generator, to mitigate attacks on non-WebSocket friendly
-            // middleware:
-            const uint8_t masking_key[4] = {0x12, 0x34, 0x56, 0x78};
-            // TODO: consider acquiring a lock on txbuf...
-            if (readyState == CLOSING || readyState == CLOSED) {
+            readyStateValues expected = OPEN;
+            if (!m_State.compare_exchange_strong(expected, CLOSING)) {
                 return;
             }
-            std::vector<uint8_t> header;
-            uint64_t message_size = message.size();
-            header.assign(2 + (message_size >= 126 ? 2 : 0) + (message_size >= 65536 ? 6 : 0) + (useMask ? 4 : 0), 0);
-            header[0] = 0x80 | type;
-            if (false) {}
-            else if (message_size < 126) {
-                header[1] = (message_size & 0xff) | (useMask ? 0x80 : 0);
-                if (useMask) {
-                    header[2] = masking_key[0];
-                    header[3] = masking_key[1];
-                    header[4] = masking_key[2];
-                    header[5] = masking_key[3];
-                }
+            HINTERNET h = nullptr;
+            {
+                std::lock_guard lk(m_HandleMutex);
+                h = m_hWebSocket;
             }
-            else if (message_size < 65536) {
-                header[1] = 126 | (useMask ? 0x80 : 0);
-                header[2] = (message_size >> 8) & 0xff;
-                header[3] = (message_size >> 0) & 0xff;
-                if (useMask) {
-                    header[4] = masking_key[0];
-                    header[5] = masking_key[1];
-                    header[6] = masking_key[2];
-                    header[7] = masking_key[3];
-                }
+            if (h) {
+                std::lock_guard sl(m_SendMutex);
+                // Shutdown sends a close frame without blocking on the peer's
+                // response. The reader thread will see the peer's close and
+                // exit, which flips m_State to CLOSED.
+                WinHttpWebSocketShutdown(
+                    h, WINHTTP_WEB_SOCKET_SUCCESS_CLOSE_STATUS,
+                    nullptr, 0);
             }
-            else { // TODO: run coverage testing here
-                header[1] = 127 | (useMask ? 0x80 : 0);
-                header[2] = (message_size >> 56) & 0xff;
-                header[3] = (message_size >> 48) & 0xff;
-                header[4] = (message_size >> 40) & 0xff;
-                header[5] = (message_size >> 32) & 0xff;
-                header[6] = (message_size >> 24) & 0xff;
-                header[7] = (message_size >> 16) & 0xff;
-                header[8] = (message_size >> 8) & 0xff;
-                header[9] = (message_size >> 0) & 0xff;
-                if (useMask) {
-                    header[10] = masking_key[0];
-                    header[11] = masking_key[1];
-                    header[12] = masking_key[2];
-                    header[13] = masking_key[3];
-                }
+        }
+
+        void _dispatch(Callback& callable) override
+        {
+            std::queue<std::string> drain;
+            {
+                std::lock_guard lk(m_QueueMutex);
+                drain.swap(m_IncomingQueue);
             }
-            // N.B. - txbuf will keep growing until it can be transmitted over the socket:
-            txbuf.insert(txbuf.end(), header.begin(), header.end());
-            txbuf.insert(txbuf.end(), message.begin(), message.end());
-            if (useMask) {
-                for (size_t i = 0; i != message.size(); ++i) {
-                    *(txbuf.end() - message.size() + i) ^= masking_key[i & 0x3];
+            while (!drain.empty()) {
+                callable(drain.front());
+                drain.pop();
+            }
+        }
+
+    private:
+        void ReaderEntry()
+        {
+            ReaderLoop();
+            m_State.store(CLOSED);
+            m_QueueCv.notify_all();
+        }
+
+        void ReaderLoop()
+        {
+            std::vector<BYTE> message;
+            BYTE buffer[4096];
+            while (m_ReaderRunning.load()) {
+                HINTERNET h = nullptr;
+                {
+                    std::lock_guard lk(m_HandleMutex);
+                    h = m_hWebSocket;
+                }
+                if (!h) return;
+
+                DWORD bytes_read = 0;
+                WINHTTP_WEB_SOCKET_BUFFER_TYPE buf_type = {};
+                const DWORD result = WinHttpWebSocketReceive(
+                    h, buffer, sizeof(buffer), &bytes_read, &buf_type);
+                if (result != NO_ERROR) {
+                    return;
+                }
+                if (bytes_read > 0) {
+                    message.insert(message.end(), buffer, buffer + bytes_read);
+                }
+
+                switch (buf_type) {
+                    case WINHTTP_WEB_SOCKET_UTF8_FRAGMENT_BUFFER_TYPE:
+                    case WINHTTP_WEB_SOCKET_BINARY_FRAGMENT_BUFFER_TYPE:
+                        // Wait for the rest of the message.
+                        break;
+                    case WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE:
+                    case WINHTTP_WEB_SOCKET_BINARY_MESSAGE_BUFFER_TYPE: {
+                        std::string msg(reinterpret_cast<const char*>(message.data()),
+                                        message.size());
+                        message.clear();
+                        {
+                            std::lock_guard lk(m_QueueMutex);
+                            m_IncomingQueue.emplace(std::move(msg));
+                        }
+                        m_QueueCv.notify_all();
+                        break;
+                    }
+                    case WINHTTP_WEB_SOCKET_CLOSE_BUFFER_TYPE:
+                        // Reply to the peer's close frame, then exit.
+                        WinHttpWebSocketClose(
+                            h, WINHTTP_WEB_SOCKET_SUCCESS_CLOSE_STATUS,
+                            nullptr, 0);
+                        return;
+                    default:
+                        break;
                 }
             }
         }
 
-        void close()
-        {
-            if (readyState == CLOSING || readyState == CLOSED) {
-                return;
-            }
-            readyState = CLOSING;
-            uint8_t closeFrame[6] = {0x88, 0x80, 0x00, 0x00, 0x00, 0x00}; // last 4 bytes are a masking key
-            std::vector<uint8_t> header(closeFrame, closeFrame + 6);
-            txbuf.insert(txbuf.end(), header.begin(), header.end());
-        }
+        HINTERNET m_hSession;
+        HINTERNET m_hConnect;
+        HINTERNET m_hRequest;
+        HINTERNET m_hWebSocket;
+        std::mutex m_HandleMutex;
+
+        std::atomic<readyStateValues> m_State;
+        std::atomic<bool> m_ReaderRunning;
+        std::thread m_Reader;
+
+        std::mutex m_SendMutex;
+
+        std::queue<std::string> m_IncomingQueue;
+        std::mutex m_QueueMutex;
+        std::condition_variable m_QueueCv;
     };
 
-    int verify_callback(int res, void*)
+    easywsclient::WebSocket::pointer from_url(
+        const std::string& url,
+        bool /*useMask*/,
+        easywsclient::HeaderKeyValuePair additional_headers,
+        const std::string& origin)
     {
-        // Override ssl errors (!!)
-        return SSL_SUCCESS;
-    }
-
-    easywsclient::WebSocket::pointer from_url(const std::string& url, bool useMask, easywsclient::HeaderKeyValuePair additional_headers, const std::string& origin)
-    {
-        char sc[128];
-        char host[128];
-        int port;
-        char path[128];
         bool is_ssl = false;
-        if (url.size() >= 128) {
-            log_error("ERROR: url size limit exceeded: %s\n", url.c_str());
-            return NULL;
-        }
-        if (origin.size() >= 200) {
-            log_error("ERROR: origin size limit exceeded: %s\n", origin.c_str());
-            return NULL;
-        }
-        if (false) {}
-        else if (sscanf(url.c_str(), "w%[s]://%[^:/]:%d/%s", sc, host, &port, path) == 4) {}
-        else if (sscanf(url.c_str(), "w%[s]://%[^:/]/%s", sc, host, path) == 3) {
-            port = sc[1] == 's' ? 443 : 80;
-        }
-        else if (sscanf(url.c_str(), "w%[s]://%[^:/]:%d", sc, host, &port) == 3) {
-            path[0] = '\0';
-        }
-        else if (sscanf(url.c_str(), "w%[s]://%[^:/]", sc, host) == 2) {
-            port = sc[1] == 's' ? 443 : 80;
-            path[0] = '\0';
-        }
-        else {
+        std::string host;
+        int port = 0;
+        std::string path;
+        if (!ParseUrl(url, is_ssl, host, port, path)) {
             log_error("ERROR: Could not parse WebSocket url: %s\n", url.c_str());
-            return NULL;
+            return nullptr;
         }
-        if (sc[1] != '\0' && sc[2] != '\0') {
-            log_error("ERROR: Could not parse WebSocket url: %s\n", url.c_str());
-            return NULL;
-        }
-        is_ssl = sc[1] == 's';
-        log_error("easywsclient: connecting: ssl=%s, host=%s port=%d path=/%s\n", is_ssl ? "true" : "false", host, port, path);
+        log_error("easywsclient: connecting: ssl=%s host=%s port=%d path=%s\n",
+                  is_ssl ? "true" : "false", host.c_str(), port, path.c_str());
 
-        ConnectionContext* ptConnCtx;
-        ptConnCtx = (ConnectionContext*)malloc(sizeof(ConnectionContext));
-        ptConnCtx->sslContext = nullptr;
-        ptConnCtx->sslHandle = nullptr;
-        ptConnCtx->sockfd = hostname_connect(host, port);
-        if (ptConnCtx->sockfd == INVALID_SOCKET) {
-            log_error("ERROR: Unable to connect to %s:%d\n", host, port);
-            free(ptConnCtx);
-            return NULL;
-        }
-        // After line 514, before SSL handshake
-#ifdef _WIN32
-        DWORD timeout = 5000; // 5 seconds
-        setsockopt(ptConnCtx->sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
-#else
-        struct timeval timeout;
-        timeout.tv_sec = 5;
-        timeout.tv_usec = 0;
-        setsockopt(ptConnCtx->sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-#endif
+        const std::wstring whost = Utf8ToWide(host);
+        const std::wstring wpath = Utf8ToWide(path);
 
+        HINTERNET hSession = WinHttpOpen(
+            L"easywsclient",
+            WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+            WINHTTP_NO_PROXY_NAME,
+            WINHTTP_NO_PROXY_BYPASS,
+            0);
+        if (!hSession) {
+            log_error("WinHttpOpen failed: %lu\n", GetLastError());
+            return nullptr;
+        }
+
+        WinHttpSetTimeouts(hSession, 10000, 10000, 30000, 30000);
+
+        HINTERNET hConnect = WinHttpConnect(hSession, whost.c_str(),
+                                             static_cast<INTERNET_PORT>(port), 0);
+        if (!hConnect) {
+            log_error("WinHttpConnect failed: %lu\n", GetLastError());
+            WinHttpCloseHandle(hSession);
+            return nullptr;
+        }
+
+        DWORD flags = is_ssl ? WINHTTP_FLAG_SECURE : 0;
+        HINTERNET hRequest = WinHttpOpenRequest(
+            hConnect, L"GET", wpath.c_str(), nullptr,
+            WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+        if (!hRequest) {
+            log_error("WinHttpOpenRequest failed: %lu\n", GetLastError());
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return nullptr;
+        }
+
+        // Preserve the previous behaviour of ignoring TLS errors on the WS
+        // upgrade path (the old code routed all verify callbacks to success).
         if (is_ssl) {
-            auto err_out = [ptConnCtx] {
-                ERR_print_errors_cb(print_error_callback, 0);
-                char err_str[255];
-                wolfSSL_ERR_error_string(SSL_get_error(ptConnCtx->sslHandle, 0), err_str);
-                log_error("SSL error: %s", err_str);
-                return nullptr;
-            };
-            // ssl handshake
-            // Register the error strings for libcrypto & libssl
-            SSL_load_error_strings();
-            // Register the available ciphers and digests
-            SSL_library_init();
-
-            // New context saying we are a client using TLS 1.2
-            ptConnCtx->sslContext = SSL_CTX_new(TLSv1_2_client_method());
-            if (ptConnCtx->sslContext == NULL) return err_out();
-
-            // Create an SSL struct for the connection
-            SSL_CTX_set_verify(ptConnCtx->sslContext, SSL_VERIFY_PEER, (VerifyCallback)verify_callback);
-
-            ptConnCtx->sslHandle = SSL_new(ptConnCtx->sslContext);
-            if (ptConnCtx->sslHandle == NULL) return err_out();
-
-            // SSL_set_verify(ptConnCtx->sslHandle, SSL_VERIFY_NONE, (VerifyCallback)verify_callback);
-
-            if (SSL_CTX_set_session_cache_mode(ptConnCtx->sslContext, SSL_SESS_CACHE_OFF) != SSL_SUCCESS) return err_out();
-
-            // Connect the SSL struct to our connection
-            if (SSL_set_fd(ptConnCtx->sslHandle, ptConnCtx->sockfd) != SSL_SUCCESS) return err_out();
-
-            if (SSL_set_tlsext_host_name(ptConnCtx->sslHandle, host) != SSL_SUCCESS) return err_out();
-
-            // Initiate SSL handshake
-            if (SSL_connect(ptConnCtx->sslHandle) != SSL_SUCCESS) return err_out();
+            DWORD sec_flags = SECURITY_FLAG_IGNORE_UNKNOWN_CA
+                            | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID
+                            | SECURITY_FLAG_IGNORE_CERT_CN_INVALID
+                            | SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE;
+            WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS,
+                              &sec_flags, sizeof(sec_flags));
         }
-        {
-            // XXX: this should be done non-blocking,
-            char line[256];
-            int status;
-            int i;
-            snprintf(line, 256, "GET /%s HTTP/1.1\r\n", path);
-            kWrite(ptConnCtx, line, strlen(line), 0);
-            char host_and_port[_countof(host) + 12];
-            snprintf(host_and_port, _countof(host_and_port), "%s:%d", host, port);
-            additional_headers["Host"] = host_and_port;
-            additional_headers["Upgrade"] = "websocket";
-            additional_headers["Connection"] = "keep-alive, Upgrade";
-            additional_headers["Sec-WebSocket-Key"] = "hLuO7MKwvHBxsv/ureQI9w==";
-            additional_headers["Sec-WebSocket-Version"] = "13";
-            if (!origin.empty()) {
-                additional_headers["Origin"] = origin;
-            }
 
-            for (const auto& it : additional_headers) {
-                snprintf(line, 256, "%s: %s\r\n", it.first.c_str(), it.second.c_str());
-                kWrite(ptConnCtx, line, strlen(line), 0);
-            }
-            snprintf(line, 256, "\r\n");
-            kWrite(ptConnCtx, line, strlen(line), 0);
-            for (i = 0; i < 2 || (i < 255 && line[i - 2] != '\r' && line[i - 1] != '\n'); ++i) {
-                if (kRead(ptConnCtx, line + i, 1, 0) == 0) {
-                    return NULL;
-                }
-            }
-            line[i] = 0;
-            if (i == 255) {
-                log_error("ERROR: Got invalid status line connecting to: %s\n", url.c_str());
-                return NULL;
-            }
-            if (sscanf(line, "HTTP/1.1 %d", &status) != 1 || status != 101) {
-                log_error("ERROR: Got bad status connecting to %s: %s", url.c_str(), line);
-                return NULL;
-            }
-            while (true) {
-                for (i = 0; i < 2 || (i < 255 && line[i - 2] != '\r' && line[i - 1] != '\n'); ++i) {
-                    if (kRead(ptConnCtx, line + i, 1, 0) == 0) {
-                        return NULL;
-                    }
-                }
-                if (line[0] == '\r' && line[1] == '\n') {
-                    break;
-                }
-            }
+        // Request a WebSocket upgrade on this request.
+        if (!WinHttpSetOption(hRequest, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET,
+                               nullptr, 0)) {
+            log_error("WinHttpSetOption(UPGRADE_TO_WEB_SOCKET) failed: %lu\n",
+                      GetLastError());
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return nullptr;
         }
-        int flag = 1;
-        setsockopt(ptConnCtx->sockfd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag)); // Disable Nagle's algorithm
-#ifdef _WIN32
-        u_long on = 1;
-        ioctlsocket(ptConnCtx->sockfd, FIONBIO, &on);
-#else
-        fcntl(ptConnCtx->sockfd, F_SETFL, O_NONBLOCK);
-#endif
+
+        // Build extra headers (Origin + caller-supplied).
+        std::wstring extra_headers;
+        if (!origin.empty()) {
+            extra_headers.append(L"Origin: ");
+            extra_headers.append(Utf8ToWide(origin));
+            extra_headers.append(L"\r\n");
+        }
+        for (const auto& kv : additional_headers) {
+            extra_headers.append(Utf8ToWide(kv.first));
+            extra_headers.append(L": ");
+            extra_headers.append(Utf8ToWide(kv.second));
+            extra_headers.append(L"\r\n");
+        }
+
+        const wchar_t* headers = extra_headers.empty()
+                                     ? WINHTTP_NO_ADDITIONAL_HEADERS
+                                     : extra_headers.c_str();
+        const DWORD headers_len = extra_headers.empty()
+                                      ? 0
+                                      : static_cast<DWORD>(extra_headers.size());
+
+        if (!WinHttpSendRequest(hRequest, headers, headers_len,
+                                 WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
+            log_error("WinHttpSendRequest failed: %lu\n", GetLastError());
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return nullptr;
+        }
+
+        if (!WinHttpReceiveResponse(hRequest, nullptr)) {
+            log_error("WinHttpReceiveResponse failed: %lu\n", GetLastError());
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return nullptr;
+        }
+
+        DWORD status_code = 0;
+        DWORD size = sizeof(status_code);
+        WinHttpQueryHeaders(hRequest,
+                             WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                             WINHTTP_HEADER_NAME_BY_INDEX,
+                             &status_code, &size, WINHTTP_NO_HEADER_INDEX);
+        if (status_code != HTTP_STATUS_SWITCH_PROTOCOLS) {
+            log_error("ERROR: Got bad status connecting to %s: %lu\n",
+                      url.c_str(), status_code);
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return nullptr;
+        }
+
+        HINTERNET hWebSocket = WinHttpWebSocketCompleteUpgrade(hRequest, 0);
+        if (!hWebSocket) {
+            log_error("WinHttpWebSocketCompleteUpgrade failed: %lu\n",
+                      GetLastError());
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return nullptr;
+        }
+
         log_error("Connected to: %s\n", url.c_str());
-        return easywsclient::WebSocket::pointer(new _RealWebSocket(ptConnCtx, useMask));
+        return new _RealWebSocket(hSession, hConnect, hRequest, hWebSocket);
     }
 
 } // namespace
-
 
 
 namespace easywsclient {
@@ -658,16 +462,20 @@ namespace easywsclient {
         return dummy;
     }
 
-
-    WebSocket::pointer WebSocket::from_url(const std::string& url, HeaderKeyValuePair additional_headers, const std::string& origin)
+    WebSocket::pointer WebSocket::from_url(const std::string& url,
+                                            const HeaderKeyValuePair& additional_headers,
+                                            const std::string& origin)
     {
         return ::from_url(url, true, additional_headers, origin);
     }
 
-    WebSocket::pointer WebSocket::from_url_no_mask(const std::string& url, HeaderKeyValuePair additional_headers, const std::string& origin)
+    WebSocket::pointer WebSocket::from_url_no_mask(const std::string& url,
+                                                    const HeaderKeyValuePair& additional_headers,
+                                                    const std::string& origin)
     {
+        // Mask handling is internal to the WinHTTP WebSocket implementation;
+        // we accept the parameter for API compatibility.
         return ::from_url(url, false, additional_headers, origin);
     }
-
 
 } // namespace easywsclient

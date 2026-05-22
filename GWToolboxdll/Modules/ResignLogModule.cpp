@@ -169,8 +169,17 @@ namespace {
         const auto players = GW::PartyMgr::GetPartyPlayers();
         if (!players)
             return;
+        bool pending_only = false;
+        if (argc > 1) {
+            const std::wstring arg1 = TextUtils::ToLower(argv[1]);
+            if (arg1 == L"pending" || arg1 == L"notresigned") {
+                pending_only = true;
+            }
+        }
         std::wstring buffer;
         for (auto& p : *players) {
+            if (pending_only && GetResignStatus(p.login_number) == Status::Resigned)
+                continue;
             if (ResignLogModule::PrintResignStatus(p.login_number, buffer))
                 send_queue.push(buffer);
         }
