@@ -506,11 +506,14 @@ void TeamBuild::Load() const
         return;
     }
     if (has_hero_slots) {
-        GW::PartyMgr::KickAllHeroes();
+        if (!GW::PartyMgr::KickAllHeroes()) {
+            Log::Warning("Failed to kick all heroes");
+            return;
+        }
         kickall_timer = TIMER_INIT();
     }
     if (mode > 0) {
-        GW::PartyMgr::SetHardMode(mode == 2);
+        GW::PartyMgr::SetHardMode(mode == 2) || (Log::Warning("Failed to set hard mode"),true);
     }
     for (const auto& build : builds) {
         build.Load();

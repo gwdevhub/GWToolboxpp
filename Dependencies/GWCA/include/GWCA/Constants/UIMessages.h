@@ -33,6 +33,7 @@ namespace GW {
         enum class NumberPreference : uint32_t;
         enum class StringPreference : uint32_t;
         enum class EnumPreference : uint32_t;
+        enum class UiProfileSetting : uint32_t;
         struct CompassPoint;
 
         enum class UIMessage : uint32_t {
@@ -260,7 +261,7 @@ namespace GW {
             kMessage_0x10000083,            // 0x10000083
             kFloatingWindowMoved,           // 0x10000084, wparam = frame_id
             kMessage_0x10000085,            // 0x10000085
-            kMessage_0x10000086,            // 0x10000086
+            kUIFeatureChanged,              // 0x10000086, wparam = UIPacket::kUIFeatureChanged*
             kMessage_0x10000087,            // 0x10000087
             kMessage_0x10000088,            // 0x10000088
             kMessage_0x10000089,            // 0x10000089
@@ -566,9 +567,9 @@ namespace GW {
             kMessage_0x100001a8,            // 0x100001b5
             kMessage_0x100001a9,            // 0x100001b6
             kMessage_0x100001aa,            // 0x100001b7
-            kMessage_0x100001ab,            // 0x100001b8
+            kPartySearchWindowDestroyed,    // 0x100001b8
             kMessage_0x100001ac,            // 0x100001b9
-            kMessage_0x100001ad,            // 0x100001ba
+            kPartySearchWindowCreated,      // 0x100001ba
             kMessage_0x100001ae,            // 0x100001bb
             kMessage_0x100001af,            // 0x100001bc
             kMessage_0x100001b0,            // 0x100001bd
@@ -623,6 +624,10 @@ namespace GW {
         //static_assert(GW::UI::UIMessage::kOpenTemplate == (GW::UI::UIMessage)0x100001c4);
 
         namespace UIPacket {
+            struct kUIFeatureChanged {
+                GW::UI::UiProfileSetting setting;
+                bool flag;
+            };
             struct kAddCustomChatLink {
                 GW::Chat::Channel channel;      // GW::Chat::Channel
                 wchar_t link_prefix[32];
