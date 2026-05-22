@@ -50,13 +50,7 @@ TBHotkey* TBHotkey::HotkeyFactory(ToolboxIni* ini, const char* section)
     if (second_sep == std::string::npos) {
         return nullptr;
     }
-    std::string id = str.substr(first_sep + 1, second_sep - first_sep - 1);
     const std::string type = str.substr(second_sep + 1);
-
-    // Skip child sections (e.g. "hotkey-000-001:SendChat") – loaded by HotkeyGroup
-    if (id.find('-') != std::string::npos) {
-        return nullptr;
-    }
 
     hotkeys_changed = true;
 

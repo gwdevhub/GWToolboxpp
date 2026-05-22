@@ -599,102 +599,152 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
 
-
     TBHotkey::show_active_in_header = ini->GetBoolValue(Name(), "show_active_in_header", false);
     TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
     HotkeyToggle::clicker_delay_ms = ini->GetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
 
-    // clear hotkeys from toolbox
-    for (const TBHotkey* hotkey : hotkeys) {
-        delete hotkey;
-    }
+    for (const TBHotkey* hk : hotkeys) delete hk;
     hotkeys.clear();
 
-    // Load all sections; HotkeyFactory skips child sections (handled below)
     ToolboxIni::TNamesDepend entries;
     ini->GetAllSections(entries);
     bool had_migration = false;
 
-    // Two-pass: first collect group objects keyed by their numeric ID so we can
-    // attach child sections to them in the second pass.
-    std::map<std::string, HotkeyGroup*> groups_by_id;
+    // Each section is parsed into a RawEntry before any tree is built.
+    struct RawEntry {
+        TBHotkey* hotkey;
+        int sort_order;
+        std::string group_name;    // from 'group' field (new format / pre-8.18)
+        std::string num_id;        // "NNN" or "NNN-MMM" between "hotkey-" and ":"
+        std::string parent_num_id; // non-empty = 8.18 child ("hotkey-NNN-MMM:Type")
+        HotkeyGroup* parent_grp = nullptr; // resolved in second pass
+    };
 
-    for (const ToolboxIni::Entry& entry : entries) {
-        if (strstr(entry.pItem, ":HeroTeamBuild")) {
+    std::vector<RawEntry> raw;
+    int load_counter = 0;
+
+    for (const auto& entry : entries) {
+        const char* sec = entry.pItem;
+        if (strncmp(sec, "hotkey-", 7) != 0) continue;
+        if (strstr(sec, ":HeroTeamBuild")) had_migration = true;
+
+        const char* after_prefix = sec + 7;
+        const char* colon = strchr(after_prefix, ':');
+        if (!colon) continue;
+
+        const std::string id_part(after_prefix, colon - after_prefix);
+        const size_t dash_pos = id_part.find('-');
+        std::string num_id = id_part;
+        std::string parent_num_id;
+        if (dash_pos != std::string::npos) {
+            // 8.18 child format: "hotkey-NNN-MMM:Type"
+            parent_num_id = id_part.substr(0, dash_pos);
             had_migration = true;
         }
-        // Detect section format: "hotkey-NNN:Type" vs "hotkey-NNN-MMM:Type"
-        const std::string sec(entry.pItem);
-        if (sec.compare(0, 7, "hotkey-") != 0) continue;
-        const size_t colon = sec.find(':');
-        if (colon == std::string::npos) continue;
-        const std::string id_part = sec.substr(7, colon - 7);
-        const size_t dash = id_part.find('-');
-        if (dash != std::string::npos) {
-            // Child section – attach to its parent group
-            const std::string parent_id = id_part.substr(0, dash);
-            auto it = groups_by_id.find(parent_id);
-            if (it == groups_by_id.end()) continue;
-            const std::string type = sec.substr(colon + 1);
-            TBHotkey* child = nullptr;
-            if (type == HotkeySendChat::IniSection())       child = new HotkeySendChat(ini, entry.pItem);
-            else if (type == HotkeyUseItem::IniSection())   child = new HotkeyUseItem(ini, entry.pItem);
-            else if (type == HotkeyDropUseBuff::IniSection()) child = new HotkeyDropUseBuff(ini, entry.pItem);
-            else if (type == HotkeyToggle::IniSection() && HotkeyToggle::IsValid(ini, entry.pItem)) child = new HotkeyToggle(ini, entry.pItem);
-            else if (type == HotkeyAction::IniSection())    child = new HotkeyAction(ini, entry.pItem);
-            else if (type == HotkeyTarget::IniSection())    child = new HotkeyTarget(ini, entry.pItem);
-            else if (type == HotkeyMove::IniSection())      child = new HotkeyMove(ini, entry.pItem);
-            else if (type == HotkeyDialog::IniSection())    child = new HotkeyDialog(ini, entry.pItem);
-            else if (type == HotkeyEquipItem::IniSection()) child = new HotkeyEquipItem(ini, entry.pItem);
-            else if (type == HotkeyFlagHero::IniSection())  child = new HotkeyFlagHero(ini, entry.pItem);
-            else if (type == HotkeyGWKey::IniSection())     child = new HotkeyGWKey(ini, entry.pItem);
-            else if (type == HotkeyCommandPet::IniSection()) child = new HotkeyCommandPet(ini, entry.pItem);
-            if (child) {
-                child->group[0] = '\0'; // groups are now structural, not a field
-                it->second->hotkeys.push_back(child);
-            }
+
+        TBHotkey* hk = TBHotkey::HotkeyFactory(ini, sec);
+        if (!hk) continue;
+
+        int sort_order = static_cast<int>(ini->GetLongValue(sec, "sort_order", -1));
+        if (sort_order < 0) {
+            sort_order = load_counter;
+            had_migration = true;
+        }
+        load_counter++;
+
+        // Read group membership from the 'group' field (new format and pre-8.18 format).
+        std::string group_name(hk->group);
+        hk->group[0] = '\0'; // clear; group assignment is structural, not stored in the hotkey object
+
+        raw.push_back({hk, sort_order, std::move(group_name), std::move(num_id), std::move(parent_num_id), nullptr});
+    }
+
+    // Build group lookup maps.
+    // groups_by_num_id: "NNN" -> group (for 8.18 parent resolution and general lookup)
+    // groups_by_name: label -> group (for upsert by name)
+    std::map<std::string, HotkeyGroup*> groups_by_num_id;
+    std::map<std::string, HotkeyGroup*> groups_by_name;
+
+    for (auto& e : raw) {
+        auto* grp = dynamic_cast<HotkeyGroup*>(e.hotkey);
+        if (!grp) continue;
+        const std::string lbl(grp->label);
+        if (!lbl.empty() && groups_by_name.count(lbl)) {
+            // Duplicate group with same name: merge into the existing one, discard this copy.
+            groups_by_num_id[e.num_id] = groups_by_name[lbl];
+            delete grp;
+            e.hotkey = nullptr;
         } else {
-            // Top-level hotkey or group
-            TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
-            if (!hk) continue;
-            if (auto* grp = dynamic_cast<HotkeyGroup*>(hk)) {
-                groups_by_id[id_part] = grp;
-            }
-            hotkeys.push_back(hk);
+            groups_by_num_id[e.num_id] = grp;
+            if (!lbl.empty())
+                groups_by_name[lbl] = grp;
         }
     }
 
-    // Migrate old format: hotkeys that still have a non-empty 'group' field get
-    // moved into HotkeyGroup objects, preserving the order groups were first encountered.
-    {
-        std::map<std::string, HotkeyGroup*> migrated_groups;
-        std::vector<TBHotkey*> new_hotkeys;
-        bool any_migrated = false;
-        for (auto* hk : hotkeys) {
-            if (dynamic_cast<HotkeyGroup*>(hk)) {
-                new_hotkeys.push_back(hk);
-                continue;
-            }
-            if (*hk->group) {
-                any_migrated = true;
-                const std::string gname(hk->group);
-                if (!migrated_groups.count(gname)) {
-                    auto* grp = new HotkeyGroup(nullptr, nullptr);
-                    snprintf(grp->label, sizeof(grp->label), "%s", gname.c_str());
-                    migrated_groups[gname] = grp;
-                    new_hotkeys.push_back(grp); // place group where first member was
-                }
-                hk->group[0] = '\0';
-                migrated_groups[gname]->hotkeys.push_back(hk);
-            } else {
-                new_hotkeys.push_back(hk);
-            }
-        }
-        if (any_migrated) {
+    // Resolve parent groups and ensure every referenced group_name has a group object.
+    // Collect new implicit groups separately to avoid iterator invalidation.
+    std::vector<RawEntry> implicit_groups;
+    for (auto& e : raw) {
+        if (!e.hotkey || dynamic_cast<HotkeyGroup*>(e.hotkey)) continue;
+
+        if (!e.parent_num_id.empty() && e.group_name.empty()) {
+            // 8.18 child: resolve parent by numeric ID
+            auto it = groups_by_num_id.find(e.parent_num_id);
+            if (it != groups_by_num_id.end())
+                e.parent_grp = it->second;
+        } else if (!e.group_name.empty() && !groups_by_name.count(e.group_name)) {
+            // group_name references a group that wasn't in the file: create it
+            auto* new_grp = new HotkeyGroup(nullptr, nullptr);
+            snprintf(new_grp->label, sizeof(new_grp->label), "%s", e.group_name.c_str());
+            groups_by_name[e.group_name] = new_grp;
+            const std::string auto_id = "__auto__" + e.group_name;
+            groups_by_num_id[auto_id] = new_grp;
+            implicit_groups.push_back({new_grp, load_counter++, "", auto_id, "", nullptr});
             had_migration = true;
-            hotkeys = std::move(new_hotkeys);
         }
     }
+    for (auto& ig : implicit_groups)
+        raw.push_back(std::move(ig));
+
+    // Distribute hotkeys into per-group child lists and the top-level list.
+    struct SortEntry { TBHotkey* hk; int sort_order; };
+    std::map<HotkeyGroup*, std::vector<SortEntry>> children_map;
+    std::vector<SortEntry> top_level;
+
+    for (auto& e : raw) {
+        if (!e.hotkey) continue; // duplicate group, already deleted
+
+        // Determine parent: prefer explicit pointer (8.18), then name lookup
+        HotkeyGroup* parent = e.parent_grp;
+        if (!parent && !e.group_name.empty()) {
+            auto it = groups_by_name.find(e.group_name);
+            if (it != groups_by_name.end()) parent = it->second;
+        }
+
+        if (dynamic_cast<HotkeyGroup*>(e.hotkey)) {
+            top_level.push_back({e.hotkey, e.sort_order});
+        } else if (parent) {
+            children_map[parent].push_back({e.hotkey, e.sort_order});
+        } else {
+            top_level.push_back({e.hotkey, e.sort_order});
+        }
+    }
+
+    // Sort children within each group and attach them.
+    for (auto& [grp, children] : children_map) {
+        std::sort(children.begin(), children.end(), [](const SortEntry& a, const SortEntry& b) {
+            return a.sort_order < b.sort_order;
+        });
+        for (auto& c : children)
+            grp->hotkeys.push_back(c.hk);
+    }
+
+    // Sort top-level items (groups + ungrouped hotkeys) and build the final list.
+    std::sort(top_level.begin(), top_level.end(), [](const SortEntry& a, const SortEntry& b) {
+        return a.sort_order < b.sort_order;
+    });
+    for (auto& e : top_level)
+        hotkeys.push_back(e.hk);
 
     CheckSetValidHotkeys();
     TBHotkey::hotkeys_changed = had_migration;
@@ -707,28 +757,34 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
     ini->SetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
 
-    if (TBHotkey::hotkeys_changed || GWToolbox::SettingsFolderChanged()) {
-        // clear hotkeys from ini
-        ToolboxIni::TNamesDepend entries;
-        ini->GetAllSections(entries);
-        for (const ToolboxIni::Entry& entry : entries) {
-            if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
-                ini->Delete(entry.pItem, nullptr);
-            }
-        }
+    if (!TBHotkey::hotkeys_changed && !GWToolbox::SettingsFolderChanged()) return;
 
-        // then save again
-        for (unsigned int i = 0; i < hotkeys.size(); ++i) {
-            char buf[256];
-            snprintf(buf, sizeof(buf), "hotkey-%03d:%s", i, hotkeys[i]->Name());
-            hotkeys[i]->Save(ini, buf);
-            // If this is a group, save its children as hotkey-NNN-MMM:Type
-            if (const auto* grp = dynamic_cast<HotkeyGroup*>(hotkeys[i])) {
-                for (unsigned int j = 0; j < grp->hotkeys.size(); ++j) {
-                    char child_buf[256];
-                    snprintf(child_buf, sizeof(child_buf), "hotkey-%03d-%03d:%s", i, j, grp->hotkeys[j]->Name());
-                    grp->hotkeys[j]->Save(ini, child_buf);
-                }
+    // Delete all existing hotkey sections before re-saving.
+    ToolboxIni::TNamesDepend sections;
+    ini->GetAllSections(sections);
+    for (const auto& s : sections) {
+        if (strncmp(s.pItem, "hotkey-", 7) == 0)
+            ini->Delete(s.pItem, nullptr);
+    }
+
+    // Save all hotkeys as flat sections. Every section gets a sort_order field
+    // that determines display order on load. Children also get a group field
+    // containing their parent group's label.
+    int sec_idx = 0;
+    for (int i = 0; i < static_cast<int>(hotkeys.size()); i++) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "hotkey-%04d:%s", sec_idx++, hotkeys[i]->Name());
+        ini->SetLongValue(buf, "sort_order", i);
+        hotkeys[i]->Save(ini, buf);
+
+        if (const auto* grp = dynamic_cast<HotkeyGroup*>(hotkeys[i])) {
+            for (int j = 0; j < static_cast<int>(grp->hotkeys.size()); j++) {
+                char child_buf[256];
+                snprintf(child_buf, sizeof(child_buf), "hotkey-%04d:%s", sec_idx++, grp->hotkeys[j]->Name());
+                ini->SetLongValue(child_buf, "sort_order", j);
+                if (*grp->label)
+                    ini->SetValue(child_buf, "group", grp->label);
+                grp->hotkeys[j]->Save(ini, child_buf);
             }
         }
     }
