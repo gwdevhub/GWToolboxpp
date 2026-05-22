@@ -615,52 +615,62 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini)
     ini->GetAllSections(entries);
     bool had_migration = false;
 
-    // Two-pass: first collect group objects keyed by their numeric ID so we can
-    // attach child sections to them in the second pass.
+    // CSimpleIni returns sections alphabetically. Child sections like "hotkey-000-001:SendChat"
+    // sort before their parent "hotkey-000:HotkeyGroup" because '-' (45) < ':' (58) in ASCII.
+    // A genuine two-pass load is required: pass 1 loads all top-level hotkeys/groups,
+    // pass 2 attaches child sections to their already-populated parent groups.
     std::map<std::string, HotkeyGroup*> groups_by_id;
 
+    // Pass 1: top-level hotkeys and groups
     for (const ToolboxIni::Entry& entry : entries) {
         if (strstr(entry.pItem, ":HeroTeamBuild")) {
             had_migration = true;
         }
-        // Detect section format: "hotkey-NNN:Type" vs "hotkey-NNN-MMM:Type"
+        const std::string sec(entry.pItem);
+        if (sec.compare(0, 7, "hotkey-") != 0) continue;
+        const size_t colon = sec.find(':');
+        if (colon == std::string::npos) continue;
+        const std::string id_part = sec.substr(7, colon - 7);
+        if (id_part.find('-') != std::string::npos) continue; // child section – defer to pass 2
+
+        TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
+        if (!hk) continue;
+        if (auto* grp = dynamic_cast<HotkeyGroup*>(hk)) {
+            groups_by_id[id_part] = grp;
+        }
+        hotkeys.push_back(hk);
+    }
+
+    // Pass 2: child sections – all parent groups are now in groups_by_id
+    for (const ToolboxIni::Entry& entry : entries) {
         const std::string sec(entry.pItem);
         if (sec.compare(0, 7, "hotkey-") != 0) continue;
         const size_t colon = sec.find(':');
         if (colon == std::string::npos) continue;
         const std::string id_part = sec.substr(7, colon - 7);
         const size_t dash = id_part.find('-');
-        if (dash != std::string::npos) {
-            // Child section – attach to its parent group
-            const std::string parent_id = id_part.substr(0, dash);
-            auto it = groups_by_id.find(parent_id);
-            if (it == groups_by_id.end()) continue;
-            const std::string type = sec.substr(colon + 1);
-            TBHotkey* child = nullptr;
-            if (type == HotkeySendChat::IniSection())       child = new HotkeySendChat(ini, entry.pItem);
-            else if (type == HotkeyUseItem::IniSection())   child = new HotkeyUseItem(ini, entry.pItem);
-            else if (type == HotkeyDropUseBuff::IniSection()) child = new HotkeyDropUseBuff(ini, entry.pItem);
-            else if (type == HotkeyToggle::IniSection() && HotkeyToggle::IsValid(ini, entry.pItem)) child = new HotkeyToggle(ini, entry.pItem);
-            else if (type == HotkeyAction::IniSection())    child = new HotkeyAction(ini, entry.pItem);
-            else if (type == HotkeyTarget::IniSection())    child = new HotkeyTarget(ini, entry.pItem);
-            else if (type == HotkeyMove::IniSection())      child = new HotkeyMove(ini, entry.pItem);
-            else if (type == HotkeyDialog::IniSection())    child = new HotkeyDialog(ini, entry.pItem);
-            else if (type == HotkeyEquipItem::IniSection()) child = new HotkeyEquipItem(ini, entry.pItem);
-            else if (type == HotkeyFlagHero::IniSection())  child = new HotkeyFlagHero(ini, entry.pItem);
-            else if (type == HotkeyGWKey::IniSection())     child = new HotkeyGWKey(ini, entry.pItem);
-            else if (type == HotkeyCommandPet::IniSection()) child = new HotkeyCommandPet(ini, entry.pItem);
-            if (child) {
-                child->group[0] = '\0'; // groups are now structural, not a field
-                it->second->hotkeys.push_back(child);
-            }
-        } else {
-            // Top-level hotkey or group
-            TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
-            if (!hk) continue;
-            if (auto* grp = dynamic_cast<HotkeyGroup*>(hk)) {
-                groups_by_id[id_part] = grp;
-            }
-            hotkeys.push_back(hk);
+        if (dash == std::string::npos) continue; // top-level – already handled in pass 1
+
+        const std::string parent_id = id_part.substr(0, dash);
+        auto it = groups_by_id.find(parent_id);
+        if (it == groups_by_id.end()) continue;
+        const std::string type = sec.substr(colon + 1);
+        TBHotkey* child = nullptr;
+        if (type == HotkeySendChat::IniSection())       child = new HotkeySendChat(ini, entry.pItem);
+        else if (type == HotkeyUseItem::IniSection())   child = new HotkeyUseItem(ini, entry.pItem);
+        else if (type == HotkeyDropUseBuff::IniSection()) child = new HotkeyDropUseBuff(ini, entry.pItem);
+        else if (type == HotkeyToggle::IniSection() && HotkeyToggle::IsValid(ini, entry.pItem)) child = new HotkeyToggle(ini, entry.pItem);
+        else if (type == HotkeyAction::IniSection())    child = new HotkeyAction(ini, entry.pItem);
+        else if (type == HotkeyTarget::IniSection())    child = new HotkeyTarget(ini, entry.pItem);
+        else if (type == HotkeyMove::IniSection())      child = new HotkeyMove(ini, entry.pItem);
+        else if (type == HotkeyDialog::IniSection())    child = new HotkeyDialog(ini, entry.pItem);
+        else if (type == HotkeyEquipItem::IniSection()) child = new HotkeyEquipItem(ini, entry.pItem);
+        else if (type == HotkeyFlagHero::IniSection())  child = new HotkeyFlagHero(ini, entry.pItem);
+        else if (type == HotkeyGWKey::IniSection())     child = new HotkeyGWKey(ini, entry.pItem);
+        else if (type == HotkeyCommandPet::IniSection()) child = new HotkeyCommandPet(ini, entry.pItem);
+        if (child) {
+            child->group[0] = '\0'; // groups are now structural, not a field
+            it->second->hotkeys.push_back(child);
         }
     }
 
