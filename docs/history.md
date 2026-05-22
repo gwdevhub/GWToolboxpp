@@ -44,6 +44,12 @@ the latest version, go to the [Home Page](./) instead.
 * [Minor] Custom quest markers are now correctly preserved across map loads
 * [Minor] Added a hint that warns you when a hero is set to "Avoid Combat" while you are in Junundu (Desert Wurm) form
 
+We've tackled over 80 issues for this release, so I've probably missed loads more. Let us know on discord or with a github issue if you have bugs.
+
+And there will be bugs - sorry about that.
+
+"Progress just means bad things happen faster." -- Terry
+
 ## Verion 8.17
 
 * [Fix] Fixed disconnect on reroll when gw was started with -character arg
