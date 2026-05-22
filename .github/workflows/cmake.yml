@@ -93,11 +93,11 @@ jobs:
         MERGE_FROM: ${{ needs.check.outputs.run == 'dev' && needs.check.outputs.dev_commit || format('refs/tags/{0}', needs.check.outputs.tag) }}
       run: |
         git checkout $BRANCH
-        git merge "${MERGE_FROM}" --no-edit
         if [ "$BRANCH" = "master" ]; then
           echo "New release on master, merging in origin/dev"
           git merge origin/dev --no-edit
         fi
+        git merge "${MERGE_FROM}" --no-edit
 
 #    - name: Setup Windows 10 SDK Action
 #      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
