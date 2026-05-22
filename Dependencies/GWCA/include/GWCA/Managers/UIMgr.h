@@ -706,7 +706,7 @@ namespace GW {
 
         };
 
-        enum UiProfileSetting {
+        enum class UiProfileSetting : uint32_t {
             CameraFollowsPlayer = 0,
             GamepadAutoTargetSwitch = 1,
             MobileHUD = 2,
