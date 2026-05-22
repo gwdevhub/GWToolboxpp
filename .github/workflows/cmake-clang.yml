@@ -1,26 +1,27 @@
 name: CMake (clang-cl)
 
 on:
-  push:
-    paths:
-      # C/C++ source and headers
-      - '**/*.cpp'
-      - '**/*.c'
-      - '**/*.h'
-      # Win32 resources
-      - '**/*.rc'
-      - '**/*.ico'
-      - '**/*.manifest'
-      # Build system
-      - 'CMakeLists.txt'
-      - 'cmake/*.cmake'
-      - 'CMakePresets.json'
-      - 'CMakeSettings.json'
-      - 'vcpkg.json'
-      - 'vcpkg-configuration.json'
-      - 'vcpkg-overlays/**'
-      # The workflow itself
-      - '.github/workflows/cmake-clang.yml'
+  workflow_dispatch
+#   push:
+#     paths:
+#       # C/C++ source and headers
+#       - '**/*.cpp'
+#       - '**/*.c'
+#       - '**/*.h'
+#       # Win32 resources
+#       - '**/*.rc'
+#       - '**/*.ico'
+#       - '**/*.manifest'
+#       # Build system
+#       - 'CMakeLists.txt'
+#       - 'cmake/*.cmake'
+#       - 'CMakePresets.json'
+#       - 'CMakeSettings.json'
+#       - 'vcpkg.json'
+#       - 'vcpkg-configuration.json'
+#       - 'vcpkg-overlays/**'
+#       # The workflow itself
+#       - '.github/workflows/cmake-clang.yml'
 
 jobs:
   build:
