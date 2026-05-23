@@ -43,9 +43,10 @@ int HotkeyUseItem::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Use %s", name);
 }
 
-bool HotkeyUseItem::Draw()
+bool HotkeyUseItem::DrawSettings()
 {
     bool hotkey_changed = false;
+
     constexpr const char* bags[6] = {"None", "Backpack", "Belt Pouch", "Bag 1", "Bag 2", "Equipment Pack"};
     ImGui::TextUnformatted("Use By: ");
     ImGui::SameLine();
@@ -63,6 +64,7 @@ bool HotkeyUseItem::Draw()
         hotkey_changed |= ImGui::InputText("Item Name", name, _countof(name));
     }
     hotkey_changed |= ImGui::Checkbox("Display error message on failure", &show_error_on_failure);
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

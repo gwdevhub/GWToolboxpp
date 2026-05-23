@@ -29,7 +29,7 @@ public:
     static inline bool processing = false;
     static inline int clicker_delay_ms = 20;
 
-    bool Draw() override;
+    bool DrawSettings() override;
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;
     void Toggle() override;

@@ -22,7 +22,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # SHELL: prefix prevents CMake from deduplicating the repeated -Xclang flags.
     add_compile_options("SHELL:-Xclang -fconstexpr-depth=2048" "SHELL:-Xclang -fconstexpr-steps=10000000" /bigobj)
 else()
-    add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /bigobj /templateDepth:2048)
+    add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /bigobj)
 endif()
 
 if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 4))

@@ -42,13 +42,16 @@ int HotkeyAction::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "%s", name ? name : "Unknown");
 }
 
-bool HotkeyAction::Draw()
+bool HotkeyAction::DrawSettings()
 {
+    bool hotkey_changed = false;
+
     if (ImGui::BeginCombo("Actions###actionscombo", GetText(nullptr, action))) {
         for (const auto hk_action : { OpenXunlaiChest, DropGoldCoin, ReapplyTitle, EnterChallenge }) {
             const bool selected = action == hk_action;
             if (ImGui::Selectable(GetText(nullptr, hk_action), selected)) {
                 action = hk_action;
+                hotkey_changed |= true;
             }
             if (selected) {
                 ImGui::SetItemDefaultFocus();
@@ -56,7 +59,8 @@ bool HotkeyAction::Draw()
         }
         ImGui::EndCombo();
     }
-    return true;
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
+    return hotkey_changed;
 }
 
 void HotkeyAction::Execute()

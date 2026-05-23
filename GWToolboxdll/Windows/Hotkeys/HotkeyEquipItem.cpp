@@ -136,7 +136,7 @@ int HotkeyEquipItem::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Equip %s", item_attributes.name().c_str());
 }
 
-bool HotkeyEquipItem::Draw()
+bool HotkeyEquipItem::DrawSettings()
 {
     bool hotkey_changed = false;
     constexpr const char* bags[6] = {"None", "Backpack", "Belt Pouch", "Bag 1", "Bag 2", "Equipment Pack"};
@@ -203,7 +203,6 @@ bool HotkeyEquipItem::Draw()
                 ImGui::TextUnformatted(bags[(uint32_t)it.first]);
                 ImGui::Indent();
                 for (auto& ai : it.second) {
-                    ImGui::PushID(&ai);
                     if (ImGui::Button(ai->name().c_str())) {
                         item_attributes.set(*ai);
                         hotkey_changed = true;
@@ -214,7 +213,6 @@ bool HotkeyEquipItem::Draw()
                         ImGui::TextUnformatted(ai->desc().c_str());
                         ImGui::EndTooltip();
                     }
-                    ImGui::PopID();
                 }
                 ImGui::Unindent();
             }
@@ -227,6 +225,7 @@ bool HotkeyEquipItem::Draw()
         }
     }
     hotkey_changed |= ImGui::Checkbox("Display error message on failure", &show_error_on_failure);
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

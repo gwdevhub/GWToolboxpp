@@ -533,7 +533,7 @@ void ChatSettings::DrawSettingsInternal()
         ImGui::TextDisabled("Some text throughout the game are highlighted depending on their rarity or other properties.");
         for (auto& [token,color] : chat_token_colors) {
             const auto token_s = TextUtils::WStringToString(token)+":";
-            ImGui::PushID(&token);
+            ImGui::PushID(token_s.c_str());
             constexpr ImGuiColorEditFlags chat_token_color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
             ImGui::TextUnformatted(token_s.c_str());
             ImGui::SameLine(chat_colors_grid_x[1] * scale);

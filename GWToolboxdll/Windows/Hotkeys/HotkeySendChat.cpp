@@ -30,9 +30,10 @@ int HotkeySendChat::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Send chat '%c%s'", channel, message);
 }
 
-bool HotkeySendChat::Draw()
+bool HotkeySendChat::DrawSettings()
 {
     bool hotkey_changed = false;
+
     int index = 0;
     switch (channel) {
         case '/':
@@ -93,6 +94,7 @@ bool HotkeySendChat::Draw()
     }
     hotkey_changed |= ImGui::InputText("Message", message, _countof(message));
     hotkey_changed |= channel == '/' && ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

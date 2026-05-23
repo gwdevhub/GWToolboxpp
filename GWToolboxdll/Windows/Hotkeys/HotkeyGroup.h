@@ -15,15 +15,12 @@ public:
 
     // section may be null when creating a new group interactively
     HotkeyGroup(const ToolboxIni* ini, const char* section);
+    HotkeyGroup(const char* label);
     ~HotkeyGroup() override;
 
-    void Save(ToolboxIni* ini, const char* section) const override;
-
     // Overrides the outer draw to render the group header + its children
-    bool Draw(Op* op, bool first = false, bool last = false) override;
+    bool DrawSettings() override;
 
-    // Inner draw (expanded group settings – rename, etc.)
-    bool Draw() override;
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 };
