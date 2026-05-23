@@ -6,7 +6,6 @@
     "earcut-hpp",
     "glaze",
     "minhook",
-    "simpleini",
     "uwebsockets"
   ],
   "overrides": [

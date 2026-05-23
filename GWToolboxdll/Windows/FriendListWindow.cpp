@@ -122,7 +122,7 @@ namespace {
 
     void LoadCharnames(const char* section, std::unordered_map<std::wstring, uint8_t>* out)
     {
-        CSimpleIni::TNamesDepend values{};
+        TNamesDepend values{};
         inifile.GetAllValues(section, "charname", values);
         for (auto i = values.cbegin(); i != values.cend(); ++i) {
             std::wstring char_wstr = TextUtils::StringToWString(i->pItem);
@@ -1356,9 +1356,9 @@ void FriendListWindow::LoadFromFile()
         inifile.SetMultiKey(true);
         inifile.LoadFile(Resources::GetSettingFile(ini_filename).c_str());
 
-        ToolboxIni::TNamesDepend entries;
+        TNamesDepend entries;
         inifile.GetAllSections(entries);
-        for (const ToolboxIni::Entry& entry : entries) {
+        for (const auto& entry : entries) {
             auto lf = new Friend(this);
             lf->uuid = entry.pItem;
             TextUtils::StringToGuid(lf->uuid, &lf->uuid_bytes);
@@ -1413,8 +1413,8 @@ void FriendListWindow::SaveToFile()
             // do something
             Friend& lf = *it->second;
             const char* uuid = lf.uuid.c_str();
-            inifile.SetLongValue(uuid, "type", static_cast<long>(lf.type), nullptr, false, true);
-            inifile.SetValue(uuid, "alias", lf.GetAliasA().c_str(), nullptr, true);
+            inifile.SetLongValue(uuid, "type", static_cast<long>(lf.type));
+            inifile.SetValue(uuid, "alias", lf.GetAliasA().c_str());
             // Append to existing charnames, but don't duplicate. This allows multiple accounts to contribute to the friend list.
             std::unordered_map<std::wstring, uint8_t> charnames;
             LoadCharnames(uuid, &charnames);
@@ -1425,7 +1425,7 @@ void FriendListWindow::SaveToFile()
                     charnames.emplace(char_it.first, char_it.second.profession);
                 }
             }
-            inifile.DeleteValue(uuid, "charname", nullptr);
+            inifile.Delete(uuid, "charname");
             for (const auto& char_it : charnames) {
                 char charname[128] = {0};
                 snprintf(charname, 128, "%s,%d",
@@ -1434,6 +1434,6 @@ void FriendListWindow::SaveToFile()
                 inifile.SetValue(uuid, "charname", charname);
             }
         }
-        ASSERT(inifile.SaveFile(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
+        ASSERT(inifile.SaveFile(Resources::GetSettingFile(ini_filename)) == SI_OK);
     });
 }

@@ -278,7 +278,7 @@ void AudioSettings::SignalTerminate()
 }
 void AudioSettings::LoadSettings(ToolboxIni* ini)
 {
-    CSimpleIni::TNamesDepend keys{};
+    TNamesDepend keys{};
     blocked_sounds.clear();
     if (ini->GetAllKeys(Name(), keys)) {
         for (const auto& key : keys) {
@@ -293,7 +293,7 @@ void AudioSettings::LoadSettings(ToolboxIni* ini)
 }
 void AudioSettings::SaveSettings(ToolboxIni* ini)
 {
-    CSimpleIni::TNamesDepend values{};
+    TNamesDepend values{};
     ini->Delete(Name(), "blocked_sounds");
     std::string buf;
     size_t i = 0;

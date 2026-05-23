@@ -1119,7 +1119,7 @@ void PartyWindowModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
     // get all keys in a section
-    CSimpleIni::TNamesDepend keys;
+    TNamesDepend keys;
     ini->GetAllKeys(Name(), keys);
     if (keys.empty()) {
         return LoadDefaults();

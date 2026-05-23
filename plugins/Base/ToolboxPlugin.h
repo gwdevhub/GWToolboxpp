@@ -1,7 +1,7 @@
 #pragma once
 
 #include "stl.h"
-#include <SimpleIni.h>
+#include <ToolboxIni.h>
 
 #ifndef DLLAPI
 #ifdef BUILD_DLL
@@ -91,7 +91,7 @@ public:
         if (!HasSettings()) {
             return;
         }
-        ini.LoadFile(GetSettingFile(folder).c_str());
+        ini.LoadFile(GetSettingFile(folder));
     }
 
     // Save settings from folder
@@ -100,7 +100,7 @@ public:
         if (!HasSettings()) {
             return;
         }
-        PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+        PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder)) == SI_OK);
     }
 
     // Will be drawn in the Settings/Plugins menu. Must use ImGui.
@@ -111,5 +111,5 @@ public:
 
 protected:
     HMODULE toolbox_handle = nullptr;
-    CSimpleIniA ini{};
+    ToolboxIni ini{};
 };

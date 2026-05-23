@@ -82,9 +82,9 @@ void CustomRenderer::LoadMarkers()
     ASSERT(inifile.LoadIfExists(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
 
     // then load new
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     inifile.GetAllSections(entries);
-    for (const ToolboxIni::Entry& entry : entries) {
+    for (const auto& entry : entries) {
         const char* section = entry.pItem;
         if (!section) {
             continue;
@@ -157,9 +157,9 @@ void CustomRenderer::SaveMarkers()
     // clear markers from ini
     // then load new
     if (marker_file_dirty || GWToolbox::SettingsFolderChanged()) {
-        ToolboxIni::TNamesDepend entries;
+        TNamesDepend entries;
         inifile.GetAllSections(entries);
-        for (const ToolboxIni::Entry& entry : entries) {
+        for (const auto& entry : entries) {
             const char* section = entry.pItem;
             if (strncmp(section, "customline", "customline"s.length()) == 0) {
                 inifile.Delete(section, nullptr);

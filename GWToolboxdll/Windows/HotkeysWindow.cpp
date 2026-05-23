@@ -445,7 +445,7 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini)
     while (TBHotkey::all_hotkeys.size())
         delete TBHotkey::all_hotkeys[0];
 
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     ini->GetAllSections(entries);
 
     for (const auto& entry : entries) {
@@ -465,7 +465,7 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
     ini->SetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
 
     // Delete all existing hotkey sections before re-saving.
-    ToolboxIni::TNamesDepend sections;
+    TNamesDepend sections;
     ini->GetAllSections(sections);
     for (const auto& s : sections) {
         if (strncmp(s.pItem, "hotkey-", 7) == 0)

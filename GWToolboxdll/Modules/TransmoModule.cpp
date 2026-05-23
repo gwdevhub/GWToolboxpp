@@ -570,7 +570,7 @@ void TransmoModule::LoadSettings(ToolboxIni* ini)
             delete e;
         }
         npc_transmo_list.clear();
-        ToolboxIni::TNamesDepend transmo_keys;
+        TNamesDepend transmo_keys;
         ini->GetAllKeys(transmo_section, transmo_keys);
         for (const auto& key : transmo_keys) {
             if (!key.pItem[0] || strcmp(key.pItem, "_saved") == 0) {

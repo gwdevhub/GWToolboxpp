@@ -876,9 +876,8 @@ int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const T
 {
     auto tmp_file = std::filesystem::path(absolute_path);
     tmp_file += ".tmp";
-    const SI_Error res = ini->SaveFile(tmp_file.c_str());
-    if (res < 0) {
-        return res;
+    if (ini->SaveFile(tmp_file.c_str()) != SI_OK) {
+        return -1;
     }
     std::error_code ec;
     std::filesystem::rename(tmp_file, absolute_path, ec);
