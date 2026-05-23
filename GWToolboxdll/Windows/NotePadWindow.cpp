@@ -49,6 +49,12 @@ namespace {
             id = next_tab_id++;
         }
         else {
+            // Deduplicate: skip if a tab with this id already exists
+            for (const auto& existing : tabs) {
+                if (existing->id == id) {
+                    return existing.get();
+                }
+            }
             next_tab_id = std::max(next_tab_id, id + 1);
         }
         std::string default_name;
@@ -136,6 +142,7 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
 
             int delete_tab = -1;
             for (int i = 0; i < static_cast<int>(tabs.size()); i++) {
+                ImGui::PushID(i);
                 auto& tab = *tabs[i];
                 const ImGuiTabItemFlags flags = tab.dirty ? ImGuiTabItemFlags_UnsavedDocument : ImGuiTabItemFlags_None;
                 bool tab_open = true;
@@ -186,6 +193,7 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                     ImGui::PopFont();
                     ImGui::EndTabItem();
                 }
+                ImGui::PopID();
             }
 
             if (delete_tab >= 0) {
@@ -206,7 +214,7 @@ void NotePadWindow::LoadSettings(ToolboxIni* ini)
 
     const long tab_count = ini->GetLongValue(Name(), "tab_count", -1);
     if (tab_count < 0) {
-        // Old single-tab config: try to load legacy Notepad.txt
+        // Legacy single-tab config
         auto* tab = AddTab("Note 1");
         std::ifstream file(Resources::GetPath(L"Notepad.txt"));
         if (file) {
@@ -220,9 +228,12 @@ void NotePadWindow::LoadSettings(ToolboxIni* ini)
             snprintf(id_key, sizeof(id_key), "tab_%ld_id", i);
             snprintf(name_key, sizeof(name_key), "tab_%ld_name", i);
             const int id = static_cast<int>(ini->GetLongValue(Name(), id_key, i));
-            const char* name = ini->GetValue(Name(), name_key, "Note");
-            AddTab(name, id);
-            LoadTabContent(tabs.size() - 1);
+            const size_t prev_size = tabs.size();
+            AddTab(ini->GetValue(Name(), name_key, "Note"), id);
+            if (tabs.size() > prev_size) {
+                // Only load content for genuinely new tabs
+                LoadTabContent(tabs.size() - 1);
+            }
         }
         if (tabs.empty()) {
             AddTab("Note 1");
