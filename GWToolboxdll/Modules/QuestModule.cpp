@@ -621,6 +621,8 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
     const wchar_t* next_objective_enc = nullptr;
     const wchar_t* current_objective_enc = quest->objectives;
     if (!quest->objectives) {
+        if (quest_id == custom_quest_id)
+            return out;
         BlockQuestSound();
         GW::QuestMgr::RequestQuestInfo(quest);
     }
@@ -770,6 +772,8 @@ bool QuestModule::SetActiveQuestId(GW::Constants::QuestID quest_id, bool notify_
         return false;
     }
     BlockQuestSound();
+    if (quest_id == custom_quest_id)
+        notify_server = false;
     
     if (notify_server) {
         GW::QuestMgr::SetActiveQuestId(quest_id);
