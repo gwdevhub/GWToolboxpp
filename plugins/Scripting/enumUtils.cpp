@@ -202,7 +202,7 @@ std::string_view toString(HasSkillRequirement req)
     return "";
 }
 
-std::string_view toString(PlayerConnectednessRequirement req) 
+std::string_view toString(PlayerConnectednessRequirement req)
 {
     switch (req) {
         case PlayerConnectednessRequirement::All:
@@ -331,7 +331,7 @@ std::string_view toString(Trigger type)
     return "";
 }
 
-std::string_view toString(GW::Constants::InstanceType type) 
+std::string_view toString(GW::Constants::InstanceType type)
 {
     switch (type) {
         case GW::Constants::InstanceType::Explorable:
@@ -374,7 +374,7 @@ std::string_view toString(WeaponType type)
 
 std::string_view toString(ComparisonOperator comp)
 {
-    switch (comp) 
+    switch (comp)
     {
         case ComparisonOperator::Equals:
             return "==";
@@ -394,7 +394,7 @@ std::string_view toString(ComparisonOperator comp)
 
 std::string_view toString(IsIsNot comp)
 {
-    switch (comp) 
+    switch (comp)
     {
         case IsIsNot::Is:
             return "is";
@@ -406,7 +406,7 @@ std::string_view toString(IsIsNot comp)
 
 std::string_view toString(DoorStatus status)
 {
-    switch (status) 
+    switch (status)
     {
         case DoorStatus::Closed:
             return "Closed";
@@ -418,7 +418,7 @@ std::string_view toString(DoorStatus status)
 
 std::string_view toString(DoaZone status)
 {
-    switch (status) 
+    switch (status)
     {
         case DoaZone::Foundry:
             return "Foundry";
@@ -506,9 +506,9 @@ std::string_view toString(SkillType type)
     return "";
 }
 
-std::string_view toString(Bag bag) 
+std::string_view toString(Bag bag)
 {
-    switch (bag) 
+    switch (bag)
     {
         case Bag::Backpack:
             return "Backpack";
@@ -526,10 +526,10 @@ std::string_view toString(Bag bag)
 
 std::string_view toString(DoorID id, Area area)
 {
-    switch (area) 
+    switch (area)
     {
         case Area::Urgoz:
-            switch (id) 
+            switch (id)
             {
                 case DoorID::Urgoz_zone_2:
                     return "Zone 2 entrace (Life Drain)";
@@ -636,7 +636,7 @@ std::string_view toString(DoorID id, Area area)
     return "";
 }
 
-std::string_view toString(GW::Constants::HeroID hero) 
+std::string_view toString(GW::Constants::HeroID hero)
 {
     switch (hero)
     {
@@ -721,9 +721,9 @@ std::string_view toString(GW::Constants::HeroID hero)
             return "Devona";
     }
     return "";
-} 
+}
 
-std::string_view toString(GW::UI::ControlAction action) 
+std::string_view toString(GW::UI::ControlAction action)
 {
     constexpr auto names = std::array{
         "Action: Attack/Interact (Do It)",
@@ -1663,7 +1663,7 @@ bool checkWeaponType(WeaponType targetType, uint16_t gameType)
         case WeaponType::Wand:
             return gameType == 10;
         case WeaponType::Staff:
-            return gameType == 9 || gameType == 12 || gameType == 14;
+            return gameType == 8 || gameType == 9 || gameType == 12 || gameType == 14;
     }
     return false;
 }
@@ -1736,7 +1736,7 @@ bool drawHotkeySelector(Hotkey& hotkey, std::string& description, float selector
 
 void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unused]] float width)
 {
-    if (trigger == Trigger::None) 
+    if (trigger == Trigger::None)
     {
         #ifdef LiveSplitMode
         drawEnumButton(trigger, {.first = Trigger::DisplayDialog, .last = Trigger::DoaZoneComplete, .buttonTextOverWrite = "Add trigger"});
@@ -1744,7 +1744,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unu
         drawEnumButton(trigger, {.first = Trigger::InstanceLoad, .last = Trigger::DoaZoneComplete, .buttonTextOverWrite = "Add trigger"});
         #endif
     }
-    else if (trigger == Trigger::Hotkey) 
+    else if (trigger == Trigger::Hotkey)
     {
         auto description = triggerData.hotkey.keyData ? makeHotkeyDescription(triggerData.hotkey) : "Click to change key";
         drawHotkeySelector(triggerData.hotkey, description, width - 20.f);
@@ -1757,7 +1757,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unu
             triggerData.hotkey.modifier = 0;
         }
     }
-    else if (trigger == Trigger::ChatMessage) 
+    else if (trigger == Trigger::ChatMessage)
     {
         ImGui::PushItemWidth(200);
         ImGui::InputText("Trigger chat message", &triggerData.message);
@@ -1768,7 +1768,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unu
             triggerData.message = "";
         }
     }
-    else if (trigger == Trigger::BeginSkillCast) 
+    else if (trigger == Trigger::BeginSkillCast)
     {
         ImGui::Text("Trigger on begin skill");
         ImGui::SameLine();
@@ -1784,7 +1784,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unu
             triggerData.hsr = AnyNoYes::Any;
         }
     }
-    else if (trigger == Trigger::SkillCastInterrupt) 
+    else if (trigger == Trigger::SkillCastInterrupt)
     {
         ImGui::Text("Trigger on interrupt of");
         ImGui::SameLine();
@@ -1795,7 +1795,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unu
             triggerData.skillId = GW::Constants::SkillID::No_Skill;
         }
     }
-    else if (trigger == Trigger::BeginCooldown) 
+    else if (trigger == Trigger::BeginCooldown)
     {
         ImGui::Text("Trigger on end skill");
         ImGui::SameLine();
@@ -1806,7 +1806,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unu
             triggerData.skillId = GW::Constants::SkillID::No_Skill;
         }
     }
-    else if (trigger == Trigger::DisplayDialog) 
+    else if (trigger == Trigger::DisplayDialog)
     {
         ImGui::PushItemWidth(200);
         ImGui::InputText("Trigger display dialog", &triggerData.message);
@@ -1817,7 +1817,7 @@ void drawTriggerSelector(Trigger& trigger, TriggerData& triggerData, [[maybe_unu
             triggerData.message = "";
         }
     }
-    else if (trigger == Trigger::DoaZoneComplete) 
+    else if (trigger == Trigger::DoaZoneComplete)
     {
         ImGui::Text("Trigger DoA zone complete");
         ImGui::SameLine();
@@ -1919,7 +1919,7 @@ void drawModelIDSelector(uint16_t& id, std::optional<std::string_view> label)
 
 void drawDoorSelector(DoorID& id, Area& area)
 {
-    const auto drawSubMenu = [&](std::string_view title, const auto& candidates, Area candidateArea) 
+    const auto drawSubMenu = [&](std::string_view title, const auto& candidates, Area candidateArea)
     {
         if (ImGui::BeginMenu(title.data())) {
             for (const auto& candidate : candidates) {
@@ -1931,7 +1931,7 @@ void drawDoorSelector(DoorID& id, Area& area)
             ImGui::EndMenu();
         }
     };
-    
+
     constexpr auto foundry = std::array{DoorID::DoA_foundry_entrance_r1, DoorID::DoA_foundry_r1_r2, DoorID::DoA_foundry_r2_r3, DoorID::DoA_foundry_r3_r4, DoorID::DoA_foundry_r4_r5, DoorID::DoA_foundry_r5_bb, DoorID::DoA_foundry_behind_bb};
     constexpr auto city = std::array{DoorID::DoA_city_entrance, DoorID::DoA_city_wall};
     constexpr auto veil = std::array{DoorID::DoA_city_jadoth,       DoorID::DoA_veil_360_left,   DoorID::DoA_veil_360_middle, DoorID::DoA_veil_360_right,   DoorID::DoA_veil_derv, DoorID::DoA_veil_ranger,
