@@ -872,23 +872,24 @@ bool GWToolbox::SettingsFolderChanged()
     return settings_folder_changed;
 }
 
-ToolboxIni* GWToolbox::OpenSettingsFile()
+ToolboxIni* GWToolbox::OpenSettingsFile(bool fresh)
 {
     static ToolboxIni* inifile = nullptr;
     const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
-    if (!SettingsFolderChanged() && inifile) {
+    if (!SettingsFolderChanged() && inifile && !fresh) {
         return inifile;
     }
     auto tmp = new ToolboxIni(false, false, false);
     ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
     tmp->location_on_disk = full_path;
+    if (inifile) delete inifile;
     inifile = tmp;
     return inifile;
 }
 
 std::filesystem::path GWToolbox::SaveSettings()
 {
-    const auto ini = OpenSettingsFile();
+    const auto ini = OpenSettingsFile(true);
     for (const auto m : modules_enabled) {
         m->SaveSettings(ini);
     }
