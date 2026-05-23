@@ -787,11 +787,10 @@ namespace {
 Color Mission::is_daily_bg_color = Colors::ARGB(102, 0, 255, 0);
 Color Mission::has_quest_bg_color = Colors::ARGB(102, 0, 150, 0);
 ImVec2 Mission::icon_size = {48.0f, 48.0f};
+size_t Mission::ui_id_cnt = 0;
 
 Mission::Mission(const MapID _outpost,
-                 const QuestID _zm_quest)
-    : outpost(_outpost),
-      zm_quest(_zm_quest)
+                 const QuestID _zm_quest) : outpost(_outpost), zm_quest(_zm_quest), ui_id(ui_id_cnt++)
 {
     map_to = outpost;
     const GW::AreaInfo* map_info = GW::Map::GetMapInfo(outpost);
@@ -835,7 +834,7 @@ bool Mission::Draw(IDirect3DDevice9*)
     const ImVec2 cursor_pos = ImGui::GetCursorPos();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-    ImGui::PushID(this);
+    ImGui::PushID(ui_id);
 
     bool clicked = false;
     bool hovered = false;

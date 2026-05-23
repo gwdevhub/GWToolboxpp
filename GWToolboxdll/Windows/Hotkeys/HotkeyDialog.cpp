@@ -30,12 +30,15 @@ int HotkeyDialog::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Dialog %s", name);
 }
 
-bool HotkeyDialog::Draw()
+bool HotkeyDialog::DrawSettings()
 {
-    bool hotkey_changed = ImGui::InputInt("Dialog ID", reinterpret_cast<int*>(&id));
+    bool hotkey_changed = false;
+
+    hotkey_changed |= ImGui::InputInt("Dialog ID", reinterpret_cast<int*>(&id));
     ImGui::ShowHelp("If dialog is 0, accepts the first available quest dialog (either reward or accept quest).");
     hotkey_changed |= ImGui::InputText("Dialog Name", name, _countof(name));
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

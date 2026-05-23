@@ -11,6 +11,7 @@
 #include <Utils/GuiUtils.h>
 
 class ToolboxIni;
+class HotkeyGroup;
 
 namespace GW {
     enum class HeroBehavior : uint32_t;
@@ -38,7 +39,6 @@ public:
 
     static TBHotkey* HotkeyFactory(ToolboxIni* ini, const char* section);
 
-    char group[128] = "";
     char label[128] = {};       // Optional display name; shown in header instead of description when non-empty
     int8_t open_state_override = -1; // -1 = no override, 0 = force close, 1 = force open (applied once)
     bool trigger_on_key_up = false;            // Should the key be triggered on key down, or key up
@@ -56,6 +56,8 @@ public:
     bool can_trigger_on_map_change = true;     // Some hotkeys cant trigger on map change e.g. Guild Wars Key
     bool block_other_hotkeys_on_trigger = false; // If this hotkey is triggered, block any further hotkeys from being processed
 
+    size_t sort_order = 0xffff;
+
     bool trigger_in_desktop_mode = true;       // Trigger this hotkey in desktop mode
     bool trigger_in_controller_mode = true; // Trigger this hotkey in controller mode
 
@@ -71,7 +73,7 @@ public:
 
     // Create hotkey, load from file if 'ini' is not null
     TBHotkey(const ToolboxIni* ini, const char* section);
-    virtual ~TBHotkey() = default;
+    virtual ~TBHotkey();
 
     virtual bool CanUse();
 
@@ -83,13 +85,32 @@ public:
 
     virtual void Save(ToolboxIni* ini, const char* section) const;
 
-    virtual bool Draw(Op* op, bool first = false, bool last = false);
+    virtual bool Draw();
+    virtual bool DrawSettings();
 
     [[nodiscard]] virtual const char* Name() const = 0;
-    virtual bool Draw() = 0;
     virtual int Description(char* buf, size_t bufsz) = 0;
     virtual void Execute() = 0;
     virtual void Toggle() { return Execute(); }
+
+    TBHotkey* Duplicate();
+
+    static std::vector<TBHotkey*> all_hotkeys;
+    static std::vector<TBHotkey*> top_level_hotkeys;
+
+
+    HotkeyGroup* group = 0;
+
+    // Call this when you add or remove a hotkey.
+    static void SortHotkeys();
+    // Try to move this hotkey up. True if moved
+    bool MoveUp();
+    // Try to move this hotkey down. True if moved
+    bool MoveDown();
+
+    bool SetGroup(HotkeyGroup* group);
+
+    bool IsGroup();
 
 protected:
     static bool isLoading() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading; }
@@ -97,7 +118,14 @@ protected:
     static bool isOutpost() { return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost; }
     bool IsInRangeOfNPC() const;
 
+
+
     const unsigned int ui_id = 0; // an internal id to ensure interface consistency
+
+    static std::unordered_map<std::string, HotkeyGroup*> hotkey_groups;
+
+
+    void Release();
 
 private:
     static unsigned int cur_ui_id;

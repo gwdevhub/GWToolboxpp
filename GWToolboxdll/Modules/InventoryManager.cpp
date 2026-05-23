@@ -1343,7 +1343,7 @@ namespace {
 
             const float wrap_width2 = ImGui::GetContentRegionAvail().x;
             for (const auto& it : block_from_being_salvaged) {
-                ImGui::PushID(&it);
+                ImGui::PushID(it.second.c_str());
 
                 const auto button_label = std::format("{} | X", it.second);
 

@@ -1737,12 +1737,13 @@ void ChatCommands::DrawSettingsInternal()
     };
 
     const auto avail_w = ImGui::GetContentRegionAvail().x - 128.f;
-    for (auto it = cmd_aliases.begin(); it != cmd_aliases.end(); ++it) {
-        ImGui::PushID(it._Ptr);
+    for (size_t i = 0, cnt = cmd_aliases.size(); i < cnt;i++) {
+        const auto alias = cmd_aliases[i];
+        ImGui::PushID(i);
 
         ImGui::PushItemWidth(avail_w * .3f);
-        if (ImGui::InputText("###cmd_alias", (*it)->alias_cstr, _countof(CmdAlias::alias_cstr))) {
-            swprintf((*it)->alias_wstr, _countof(CmdAlias::alias_wstr), L"%S", (*it)->alias_cstr);
+        if (ImGui::InputText("###cmd_alias", alias->alias_cstr, _countof(CmdAlias::alias_cstr))) {
+            swprintf(alias->alias_wstr, _countof(CmdAlias::alias_wstr), L"%S", alias->alias_cstr);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Alias for this command");
@@ -1750,17 +1751,17 @@ void ChatCommands::DrawSettingsInternal()
         ImGui::PopItemWidth();
         ImGui::SameLine();
         const auto text_height = ImGui::GetTextLineHeightWithSpacing();
-        const auto num_newlines = 1 + std::count((*it)->command_cstr, (*it)->command_cstr + _countof(CmdAlias::command_cstr), '\n');
-        if (ImGui::InputTextMultiline("##cmd_command", (*it)->command_cstr,
+        const auto num_newlines = 1 + std::count(alias->command_cstr, alias->command_cstr + _countof(CmdAlias::command_cstr), '\n');
+        if (ImGui::InputTextMultiline("##cmd_command", alias->command_cstr,
                                       _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, text_height + num_newlines * ImGui::GetTextLineHeight()))) {
-            swprintf((*it)->command_wstr, _countof(CmdAlias::command_wstr), L"%S", (*it)->command_cstr);
+            swprintf(alias->command_wstr, _countof(CmdAlias::command_wstr), L"%S", alias->command_cstr);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Chat command to trigger");
         }
         ImGui::SameLine(avail_w);
         static bool confirm_delete = false;
-        ImGui::SmallConfirmButton("Delete", "Are you sure you want to delete this entry?", OnConfirmDeleteAlias, *it);
+        ImGui::SmallConfirmButton("Delete", "Are you sure you want to delete this entry?", OnConfirmDeleteAlias, alias);
         ImGui::PopID();
     }
     if (ImGui::Button("Add New Alias")) {

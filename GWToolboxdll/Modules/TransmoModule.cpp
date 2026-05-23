@@ -503,8 +503,9 @@ void TransmoModule::DrawSettingsInternal()
         ImGui::TableSetupColumn("##del",         ImGuiTableColumnFlags_WidthFixed, 30.f);
         ImGui::TableHeadersRow();
 
+        size_t i = 0;
         for (auto* entry : npc_transmo_list) {
-            ImGui::PushID(entry);
+            ImGui::PushID(i++);
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::SetNextItemWidth(-1);

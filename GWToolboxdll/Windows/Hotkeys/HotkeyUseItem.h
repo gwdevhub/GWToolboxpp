@@ -26,7 +26,7 @@ public:
 
     bool CanUse() override { return TBHotkey::CanUse() && (use_by == SLOT || item_id != 0); }
 
-    bool Draw() override;
+    bool DrawSettings() override;
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 };

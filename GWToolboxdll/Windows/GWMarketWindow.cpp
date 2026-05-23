@@ -1105,7 +1105,7 @@ namespace {
             const auto& price = order.prices[0];
             if (order_view_currency != Currency::All && order_view_currency != price.type) return;
 
-            ImGui::PushID(&order);
+            ImGui::PushID(order.description.c_str());
             const auto top = ImGui::GetCursorPosY();
             ImGui::TextUnformatted(order.player.c_str());
             const auto timetext = TextUtils::RelativeTime(order.lastRefresh);
@@ -1218,7 +1218,7 @@ namespace {
 
             const auto& price = order.prices[0];
 
-            ImGui::PushID(&order);
+            ImGui::PushID(order.description.c_str());
             // const auto top = ImGui::GetCursorPosY();
 
             // Player name and time

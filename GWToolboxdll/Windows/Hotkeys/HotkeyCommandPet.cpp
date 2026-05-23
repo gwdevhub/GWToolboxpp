@@ -44,13 +44,16 @@ int HotkeyCommandPet::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Command Pet: %s", GetBehaviorDesc(behavior));
 }
 
-bool HotkeyCommandPet::Draw()
+bool HotkeyCommandPet::DrawSettings()
 {
-    const bool changed = ImGui::Combo("Behavior###combo", reinterpret_cast<int*>(&behavior), behaviors.data(), behaviors.size(), behaviors.size());
-    if (changed && !GetBehaviorDesc(behavior)) {
+    bool hotkey_changed = false;
+
+    hotkey_changed |= ImGui::Combo("Behavior###combo", reinterpret_cast<int*>(&behavior), behaviors.data(), behaviors.size(), behaviors.size());
+    if (hotkey_changed && !GetBehaviorDesc(behavior)) {
         behavior = GW::HeroBehavior::Fight;
     }
-    return changed;
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
+    return hotkey_changed;
 }
 
 void HotkeyCommandPet::Execute()

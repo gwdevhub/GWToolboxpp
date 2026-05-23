@@ -24,7 +24,7 @@ public:
 
     void Save(ToolboxIni* ini, const char* section) const override;
 
-    bool Draw() override;
+    bool DrawSettings() override;
     int Description(char* buf, size_t bufsz) override;
     void Execute() override;
 };

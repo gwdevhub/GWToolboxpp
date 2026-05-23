@@ -47,9 +47,10 @@ int HotkeyMove::Description(char* buf, const size_t bufsz)
     }
 }
 
-bool HotkeyMove::Draw()
+bool HotkeyMove::DrawSettings()
 {
     bool hotkey_changed = false;
+
     ImGui::TextUnformatted("Type: ");
     ImGui::SameLine();
     if (ImGui::RadioButton("Target", type == MoveType::Target) && type != MoveType::Target) {
@@ -73,6 +74,7 @@ bool HotkeyMove::Draw()
         "Calculate and move to a point this many gwinches away from the location.\nUse 0 to go to that exact location.");
     hotkey_changed |= ImGui::InputText("Name", name, 140);
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

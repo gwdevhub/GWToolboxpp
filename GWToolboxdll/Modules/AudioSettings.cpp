@@ -197,8 +197,8 @@ bool AudioSettings::StopSound(void* handle)
 {
     // This doesn't work :(
     if (!(StopSound_Func && CloseHandle_Func && handle)) return false;
-    GW::GameThread::Enqueue([handle]() {
-        StopSound_Func((GW::RecObject*)handle,0);
+    GW::GameThread::Enqueue([handle] {
+        StopSound_Func((GW::RecObject*)handle, 0);
         CloseHandle_Func((GW::RecObject*)handle);
     });
     return true;
@@ -250,9 +250,9 @@ void AudioSettings::Initialize()
 
 }
 void AudioSettings::Update(float) {
-    for (auto& it : blocked_sounds_until) {
-        if (it.second < TIMER_INIT()) {
-            blocked_sounds_until.erase(it.first);
+    for (auto& [sound, timer] : blocked_sounds_until) {
+        if (timer < TIMER_INIT()) {
+            blocked_sounds_until.erase(sound);
             break;
         }
     }

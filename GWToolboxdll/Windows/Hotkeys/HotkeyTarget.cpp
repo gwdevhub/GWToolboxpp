@@ -49,11 +49,13 @@ int HotkeyTarget::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Target %s", name);
 }
 
-bool HotkeyTarget::Draw()
+bool HotkeyTarget::DrawSettings()
 {
+    bool hotkey_changed = false;
+
     const float w = ImGui::GetContentRegionAvail().x / 1.5f;
     ImGui::PushItemWidth(w);
-    bool hotkey_changed = ImGui::Combo("Target Type", (int*)&type, type_labels, 3);
+    hotkey_changed |= ImGui::Combo("Target Type", (int*)&type, type_labels, 3);
     hotkey_changed |= ImGui::InputText(identifier_labels[type], id, _countof(id));
     ImGui::PopItemWidth();
     ImGui::ShowHelp("See Settings > Help > Chat Commands for /target options");
@@ -63,6 +65,7 @@ bool HotkeyTarget::Draw()
     ImGui::SameLine(0, 0);
     ImGui::TextDisabled(" (optional)");
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

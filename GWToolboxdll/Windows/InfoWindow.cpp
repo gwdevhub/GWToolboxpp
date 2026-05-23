@@ -883,7 +883,7 @@ namespace {
             ImGui::SameLine();
             ImGui::TextUnformatted("Value 2");
             for (const auto& feature : features) {
-                ImGui::PushID(&feature);
+                ImGui::PushID(feature.id);
                 ImGui::Text("0x%x",feature.id);
                 ImGui::SameLine();
                 ImGui::Text("%d",feature.unk1);
@@ -901,14 +901,12 @@ namespace {
         
         if (ImGui::CollapsingHeader("UI Message Log")) {
             record_ui_messages = true;
-            ImGui::PushID(&ui_message_packets_recorded);
+            ImGui::PushID("ui_message_packets_recorded");
             if (ImGui::SmallButton("Reset")) {
                 ui_message_packets_recorded.clear();
             }
             for (const auto packet : ui_message_packets_recorded) {
-                ImGui::PushID(&packet);
                 ImGui::Text("0x%08x 0x%08x 0x%08x", packet.msgid, packet.wParam, packet.lParam);
-                ImGui::PopID();
             }
             ImGui::PopID();
             if (ImGui::IsKeyDown(ImGuiMod_Alt)) {
@@ -917,16 +915,12 @@ namespace {
         }
         if (ImGui::CollapsingHeader("Event Message Log")) {
             record_event_messages = true;
-            ImGui::PushID(&event_message_packets_recorded);
             if (ImGui::SmallButton("Reset")) {
                 event_message_packets_recorded.clear();
             }
             for (const auto packet : event_message_packets_recorded) {
-                ImGui::PushID(&packet);
                 ImGui::Text("0x%08x 0x%08x", packet.event_id, packet.packet);
-                ImGui::PopID();
             }
-            ImGui::PopID();
             if (ImGui::IsKeyDown(ImGuiMod_Alt)) {
                 ImGui::SetScrollHereY();
             }
@@ -936,17 +930,17 @@ namespace {
 
         if (ImGui::CollapsingHeader("Async Str Log")) {
             record_enc_strings = true;
-            ImGui::PushID(&enc_strings_recorded);
             if (ImGui::SmallButton("Reset")) {
                 while (enc_strings_recorded.begin() != enc_strings_recorded.end()) {
                     delete enc_strings_recorded.begin()->second;
                     enc_strings_recorded.erase(enc_strings_recorded.begin());
                 }
             }
-            for (const auto packet : enc_strings_recorded) {
-                ImGui::PushID(packet.second);
-                EncInfoField("Encoded", packet.second->s.c_str());
-                InfoField("Decoded", "%s", packet.second->decoded_str.c_str());
+            size_t i = 0;
+            for (const auto& [key, value] : enc_strings_recorded) {
+                ImGui::PushID(i++);
+                EncInfoField("Encoded", value->s.c_str());
+                InfoField("Decoded", "%s", value->decoded_str.c_str());
                 ImGui::PopID();
             }
             ImGui::PopID();
@@ -963,11 +957,12 @@ namespace {
                 ImGui::SameLine(256.f);
                 ImGui::TextUnformatted("Location");
                 ImGui::Separator();
-                for (const auto prop : *props) {
+                for (size_t i = 0, cnt = props->size(); i < cnt; i++) {
+                    const auto& prop = (*props)[i];
                     float distance = GW::GetDistance(target->pos, GW::GamePos({ prop->position.x,prop->position.y,0 }));
                     if (distance > range)
                         continue;
-                    ImGui::PushID(prop);
+                    ImGui::PushID(i);
                     ImGui::Text("%08X", GetMapPropModelFileId(prop));
                     ImGui::SameLine(128.f);
                     ImGui::Text("%.2f", distance);
@@ -983,7 +978,6 @@ namespace {
         }
         if (ImGui::CollapsingHeader("Loaded Textures by GW File")) {
             record_textures = true;
-            ImGui::PushID(&textures_created);
             constexpr ImVec2 scaled_size = { 64.f, 64.f };
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
@@ -1001,8 +995,9 @@ namespace {
 
             ImGui::StartSpacedElements(scaled_size.x);
 
+            size_t i = 0;
             for (const auto texture : textures_created) {
-                ImGui::PushID(texture);
+                ImGui::PushID(i++);
                 if (!texture || !*texture) {
                     ImGui::PopID();
                     continue;
@@ -1042,7 +1037,6 @@ namespace {
             ImGui::PopStyleColor();
             ImGui::PopStyleVar();
             ImGui::PopStyleVar();
-            ImGui::PopID();
         }
         static bool game_master_mode = false;
         if (ImGui::Checkbox("Game Master Mode", &game_master_mode)) {
@@ -1281,7 +1275,6 @@ void InfoWindow::Draw(IDirect3DDevice9*)
         }
         if (ImGui::CollapsingHeader("Loaded DirectX9 Textures")) {
             record_dx9_textures = true;
-            ImGui::PushID(&dx9_textures_created_by_hash);
             constexpr ImVec2 scaled_size = {64.f, 64.f};
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
@@ -1297,11 +1290,12 @@ void InfoWindow::Draw(IDirect3DDevice9*)
 
             ImGui::StartSpacedElements(scaled_size.x);
 
+            size_t i = 0;
             for (const auto& it : dx9_textures_created_by_hash) {
                 const auto texture = it.second;
                 const auto hash = it.first;
                 if (!texture) continue;
-                ImGui::PushID(texture);
+                ImGui::PushID(i++);
 
                 const auto uv1 = ImGui::CalculateUvCrop(texture, scaled_size);
                 ImGui::NextSpacedElement();
@@ -1340,7 +1334,6 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::PopStyleColor();
             ImGui::PopStyleVar();
             ImGui::PopStyleVar();
-            ImGui::PopID();
         }
         if (show_quest && ImGui::CollapsingHeader("Quest")) {
             const GW::Quest* q = GW::QuestMgr::GetActiveQuest();
