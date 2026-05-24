@@ -26,6 +26,10 @@ namespace Missions {
         bool icons_loaded = false;
         ImVec2 icon_uv_offset[2] = { { .0f,.0f },{0.f,0.f} };
 
+        static size_t ui_id_cnt;
+
+        size_t ui_id;
+
     public:
         virtual ~Mission() = default;
         Mission(GW::Constants::MapID, GW::Constants::QuestID = static_cast<GW::Constants::QuestID>(0));

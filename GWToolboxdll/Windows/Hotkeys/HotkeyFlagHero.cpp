@@ -42,12 +42,12 @@ int HotkeyFlagHero::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Flag Hero %d", hero);
 }
 
-bool HotkeyFlagHero::Draw()
+bool HotkeyFlagHero::DrawSettings()
 {
     bool hotkey_changed = false;
     hotkey_changed |= ImGui::DragFloat("Degree", &degree, 0.0f, -360.0f, 360.f);
     hotkey_changed |= ImGui::DragFloat("Distance", &distance, 0.0f, 0.0f, 10'000.f);
-    if (hotkeys_changed && distance < 0.f) {
+    if (hotkey_changed && distance < 0.f) {
         distance = 0.f;
     }
     hotkey_changed |= ImGui::InputInt("Hero", &hero, 1);
@@ -60,6 +60,7 @@ bool HotkeyFlagHero::Draw()
     ImGui::ShowHelp("The hero number that should be flagged (1-11).\nUse 0 to flag all");
     ImGui::Text("For a minimap flagging hotkey, please create a chat hotkey with:");
     ImGui::TextColored({1.f, 1.f, 0.f, 1.f}, "/flag %d toggle", hero);
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

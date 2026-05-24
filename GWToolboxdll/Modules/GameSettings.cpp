@@ -672,7 +672,10 @@ namespace {
             }
             break;
             case GW::UI::UIMessage::kCalledTargetChange: {
-                if (automatically_flag_pet_to_fight_called_target && party_target_info->source == GW::PlayerMgr::GetPlayerNumber()) {
+                if (automatically_flag_pet_to_fight_called_target
+                    && party_target_info->source == GW::PlayerMgr::GetPlayerNumber()
+                    && party_target_info->identifier != 0
+                    && GW::Agents::GetAgentByID(party_target_info->identifier)) {
                     if (const auto w = GW::GetWorldContext()) {
                         for (auto& pet : w->pets) {
                             GW::PartyMgr::SetPetBehavior(pet.owner_agent_id, GW::HeroBehavior::Fight);

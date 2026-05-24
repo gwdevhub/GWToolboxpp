@@ -36,7 +36,7 @@ public:
     static void Disable();
     static bool CanTerminate();
 
-    static ToolboxIni* OpenSettingsFile();
+    static ToolboxIni* OpenSettingsFile(bool fresh = false);
     static std::filesystem::path SaveSettings();
     static void ForceTerminate(bool detach_wndproc_handler = true);
     static std::filesystem::path LoadSettings();

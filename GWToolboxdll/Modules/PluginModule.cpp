@@ -132,8 +132,9 @@ void PluginModule::DrawSettingsInternal()
 {
     ImGui::PushID("Plugins");
 
+    size_t i = 0;
     for (const auto plugin : plugins_available) {
-        ImGui::PushID(plugin);
+        ImGui::PushID(i++);
         auto& style = ImGui::GetStyle();
         const auto origin_header_col = style.Colors[ImGuiCol_Header];
         style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};

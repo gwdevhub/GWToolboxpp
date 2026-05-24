@@ -45,8 +45,9 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
             ImGui::SameLine(offset += short_text_width);
             ImGui::Text(Resources::GetMapName(e.map_id)->string().c_str());
             ImGui::SameLine(offset += long_text_width);
-            ImGui::Text("%s [%s]", TextUtils::WStringToString(e.name).c_str(), TextUtils::WStringToString(e.tag).c_str());
-            ImGui::PushID(&e);
+            const auto name_s = TextUtils::WStringToString(e.name).c_str();
+            ImGui::Text("%s [%s]", name_s, TextUtils::WStringToString(e.tag).c_str());
+            ImGui::PushID(name_s);
             ImGui::SameLine(offset = avail_width - tiny_text_width);
             if (ImGui::Button("Wiki", ImVec2(tiny_text_width, 0))) {
                 GuiUtils::OpenWiki(std::format(L"Guild:{}", e.name));

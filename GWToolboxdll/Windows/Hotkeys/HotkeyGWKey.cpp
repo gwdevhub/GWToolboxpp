@@ -73,10 +73,11 @@ int HotkeyGWKey::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Guild Wars Key: %s", control_labels[action_idx].second->string().c_str());
 }
 
-bool HotkeyGWKey::Draw()
+bool HotkeyGWKey::DrawSettings()
 {
+    bool hotkey_changed = false;
     if (!BuildHotkeyGWKeyLabels()) {
-        ImGui::Text("Waiting on endoded strings");
+        ImGui::Text("Waiting on encoded strings");
         return false;
     }
     action_idx = GetHotkeyActionIdx(action);
@@ -85,7 +86,8 @@ bool HotkeyGWKey::Draw()
         action = control_labels[action_idx].first;
         return true;
     }
-    return false;
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
+    return hotkey_changed;
 }
 
 void HotkeyGWKey::Execute()

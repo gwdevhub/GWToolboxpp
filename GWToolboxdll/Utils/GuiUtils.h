@@ -58,25 +58,37 @@ namespace GuiUtils {
     template <map_type T>
     T IniToMap(ToolboxIni* ini, const char* section, const char* name)
     {
-        std::string map_str = ini->GetValue(section, name, "");
-        if constexpr (map_has_wstring_key<T>) {
-            std::map<std::string, typename T::mapped_type> staged;
-            if (glz::read_json(staged, map_str)) {
+        const std::string map_str = ini->GetValue(section, name, "");
+        if (map_str.empty()) {
+            return {};
+        }
+
+        using key_type = typename T::key_type;
+        using staged_key = std::conditional_t<std::is_same_v<key_type, std::wstring>, std::string, key_type>;
+        using staged_map = std::map<staged_key, typename T::mapped_type>;
+
+        staged_map staged;
+        if (glz::read_json(staged, map_str)) {
+            staged.clear();
+            // TODO: delete this branch once pre-glaze configs are gone.
+            std::vector<std::tuple<staged_key, typename T::mapped_type>> legacy;
+            if (glz::read_json(legacy, map_str)) {
                 return {};
             }
-            T out{};
-            for (auto& [k, v] : staged) {
+            for (auto& [k, v] : legacy) {
+                staged.emplace(std::move(k), std::move(v));
+            }
+        }
+
+        T out;
+        for (auto& [k, v] : staged) {
+            if constexpr (std::is_same_v<key_type, std::wstring>) {
                 out.emplace(TextUtils::StringToWString(k), std::move(v));
+            } else {
+                out.emplace(std::move(k), std::move(v));
             }
-            return out;
         }
-        else {
-            T out{};
-            if (glz::read_json(out, map_str)) {
-                return {};
-            }
-            return out;
-        }
+        return out;
     }
 
     template <map_type T>

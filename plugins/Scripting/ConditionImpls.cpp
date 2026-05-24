@@ -60,13 +60,13 @@ namespace {
         GW::Item* item = nullptr;
         for (size_t i = static_cast<size_t>(GW::Constants::Bag::Backpack); i < bags_size && !item; i++)
             item = FindMatchingItem(static_cast<GW::Constants::Bag>(i), model_id);
-        if (!item) 
+        if (!item)
             item = FindMatchingItem(GW::Constants::Bag::Equipped_Items, model_id);
         return item;
     }
 
     // Returns angle in degrees (0-180) between player forwards direction and agent
-    float angleToAgent(const GW::AgentLiving* player, const GW::AgentLiving* agent) 
+    float angleToAgent(const GW::AgentLiving* player, const GW::AgentLiving* agent)
     {
         if (GW::GetSquareDistance(player->pos,agent->pos) < eps)
             return 0.f;
@@ -80,9 +80,9 @@ namespace {
     }
 
     enum class WeaponRequirement : uint32_t { Axe = 1, Bow = 2, Dagger = 8, Hammer = 16, Scythe = 32, Spear = 64, Ranged = 70, Sword = 128 };
-    enum class EquippedWeaponType : uint16_t { Bow = 1, Axe = 2, Hammer = 3, Daggers = 4, Scythe = 5, Spear = 6, Sword = 7, Wand = 10, StaffA = 12, StaffB = 14 };
+    enum class EquippedWeaponType : uint16_t { Bow = 1, Axe = 2, Hammer = 3, Daggers = 4, Scythe = 5, Spear = 6, Sword = 7, StaffC = 8, Wand = 10, StaffA = 12, StaffB = 14 };
 
-    bool weaponFulfillsRequirement(EquippedWeaponType weapon, WeaponRequirement req, GW::Constants::SkillType type) 
+    bool weaponFulfillsRequirement(EquippedWeaponType weapon, WeaponRequirement req, GW::Constants::SkillType type)
     {
         const auto isRanged = [](EquippedWeaponType type) {
             switch (type) {
@@ -91,6 +91,7 @@ namespace {
                 case EquippedWeaponType::Wand:
                 case EquippedWeaponType::StaffA:
                 case EquippedWeaponType::StaffB:
+                case EquippedWeaponType::StaffC:
                     return true;
                 case EquippedWeaponType::Axe:
                 case EquippedWeaponType::Hammer:
@@ -103,8 +104,8 @@ namespace {
         };
 
         if (type != GW::Constants::SkillType::Attack) return true;
-        
-        switch (req) 
+
+        switch (req)
         {
             case WeaponRequirement::Axe:
                 return weapon == EquippedWeaponType::Axe;
@@ -130,12 +131,12 @@ namespace {
     uint32_t getEnergyCost(const GW::Skill& skill)
     {
         double cost = skill.GetEnergyCost();
-        if (GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Quickening_Zephyr)) 
+        if (GW::Effects::GetPlayerEffectBySkillId(GW::Constants::SkillID::Quickening_Zephyr))
         {
             cost *= 2;
         }
 
-        const auto reduceCostBasedOnAttribute = [&](GW::Constants::Attribute attribute) 
+        const auto reduceCostBasedOnAttribute = [&](GW::Constants::Attribute attribute)
         {
             const auto player = GW::Agents::GetControlledCharacter();
             if (!player) return;
@@ -145,7 +146,7 @@ namespace {
             cost *= (1. - attributeLevel * 0.04);
         };
 
-        if (skill.profession == GW::Constants::ProfessionByte::Ranger || skill.type == GW::Constants::SkillType::Ritual) 
+        if (skill.profession == GW::Constants::ProfessionByte::Ranger || skill.type == GW::Constants::SkillType::Ritual)
         {
             reduceCostBasedOnAttribute(GW::Constants::Attribute::Expertise);
         }
@@ -208,13 +209,13 @@ bool NegatedCondition::drawSettings()
 
     return updatedKeyToDisable;
 }
-std::vector<Hotkey> NegatedCondition::disabledKeys() const 
+std::vector<Hotkey> NegatedCondition::disabledKeys() const
 {
     return cond ? cond->disabledKeys() : std::vector<Hotkey>{};
 }
 
 /// ------------- DisjunctionCondition -------------
-DisjunctionCondition::DisjunctionCondition(InputStream& stream) 
+DisjunctionCondition::DisjunctionCondition(InputStream& stream)
 {
     int count;
     std::string token;
@@ -223,15 +224,15 @@ DisjunctionCondition::DisjunctionCondition(InputStream& stream)
     for (int i = 0; i < count; ++i)
     {
         if (stream.isAtSeparator() || !(stream >> token)) continue;
-        
-        if (token == missingContentToken) 
+
+        if (token == missingContentToken)
             conditions.push_back(nullptr);
-        else if (token == "C") 
+        else if (token == "C")
         {
-            if (auto read = readCondition(stream)) 
+            if (auto read = readCondition(stream))
                 conditions.push_back(std::move(read));
         }
-        else 
+        else
         {
             return;
         }
@@ -239,13 +240,13 @@ DisjunctionCondition::DisjunctionCondition(InputStream& stream)
         stream.proceedPastSeparator(2);
     }
 }
-void DisjunctionCondition::serialize(OutputStream& stream) const 
+void DisjunctionCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
     stream << conditions.size();
 
-    for (const auto& condition : conditions) 
+    for (const auto& condition : conditions)
     {
         if (condition)
             condition->serialize(stream);
@@ -305,7 +306,7 @@ std::vector<Hotkey> DisjunctionCondition::disabledKeys() const
 
     for (const auto& cond : conditions) {
         if (!cond) continue;
-        for (const auto& disabled : cond->disabledKeys()) 
+        for (const auto& disabled : cond->disabledKeys())
         {
             result.push_back(disabled);
         }
@@ -321,15 +322,15 @@ ConjunctionCondition::ConjunctionCondition(InputStream& stream)
     std::string token;
     stream >> count;
 
-    for (int i = 0; i < count; ++i) 
+    for (int i = 0; i < count; ++i)
     {
         if (stream.isAtSeparator() || !(stream >> token)) continue;
 
         if (token == missingContentToken)
             conditions.push_back(nullptr);
-        else if (token == "C") 
+        else if (token == "C")
         {
-            if (auto read = readCondition(stream)) 
+            if (auto read = readCondition(stream))
                 conditions.push_back(std::move(read));
         }
         else {
@@ -345,7 +346,7 @@ void ConjunctionCondition::serialize(OutputStream& stream) const
 
     stream << conditions.size();
 
-    for (const auto& condition : conditions) 
+    for (const auto& condition : conditions)
     {
         if (condition)
             condition->serialize(stream);
@@ -515,7 +516,7 @@ bool PartyHasLoadedInCondition::drawSettings()
     }
     ImGui::SameLine();
     ImGui::Text("has finished loading");
-    
+
     ImGui::PopID();
 
     return false;
@@ -532,7 +533,7 @@ void InstanceProgressCondition::serialize(OutputStream& stream) const
 
     stream << requiredProgress << comp;
 }
-bool InstanceProgressCondition::check() const 
+bool InstanceProgressCondition::check() const
 {
     return compare(GW::GetGameContext()->character->progress_bar->progress * 100.f, comp, requiredProgress);
 }
@@ -542,7 +543,7 @@ bool InstanceProgressCondition::drawSettings()
     ImGui::Text("If the instance progress");
     ImGui::SameLine();
     drawEnumButton(comp, {.last = ComparisonOperator::NotEquals, .width = 30.f});
-    
+
     ImGui::SameLine();
     ImGui::PushItemWidth(90.f);
     ImGui::InputFloat("%", &requiredProgress, 0);
@@ -557,7 +558,7 @@ bool OnlyTriggerOnceCondition::check() const
 {
     const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
     if (triggeredLastInInstanceId == currentInstanceId) return false;
-    
+
     triggeredLastInInstanceId = currentInstanceId;
     return true;
 }
@@ -608,19 +609,19 @@ bool PlayerHasBuffCondition::drawSettings()
     {
         ImGui::InputInt("min", &minimumDuration, 0);
         ImGui::SameLine();
-        if (ImGui::Button("X###0")) 
+        if (ImGui::Button("X###0"))
         {
             hasMinimumDuration = false;
             minimumDuration = 0;
         }
     }
-    else 
+    else
     {
         if (ImGui::Button("Add min")) hasMinimumDuration = true;
     }
 
     ImGui::SameLine();
-    if (hasMaximumDuration) 
+    if (hasMaximumDuration)
     {
         ImGui::InputInt("max", &maximumDuration, 0);
         ImGui::SameLine();
@@ -629,7 +630,7 @@ bool PlayerHasBuffCondition::drawSettings()
             maximumDuration = 0;
         }
     }
-    else 
+    else
     {
         if (ImGui::Button("Add max")) hasMaximumDuration = true;
     }
@@ -679,7 +680,7 @@ bool PlayerHasSkillCondition::check() const
 bool PlayerHasSkillCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    
+
     ImGui::Text("If the player has skill");
     ImGui::SameLine();
     drawSkillIDSelector(id);
@@ -706,33 +707,33 @@ void HeroHasSkillCondition::serialize(OutputStream& stream) const
 }
 bool HeroHasSkillCondition::check() const
 {
-    
+
 
     const auto skillBarArray = GW::SkillbarMgr::GetSkillbarArray();
     const auto partyInfo = GW::PartyMgr::GetPartyInfo();
     const auto player = GW::Agents::GetControlledCharacter();
     if (!partyInfo || ! partyInfo->heroes.valid() || !player || !skillBarArray) return false;
 
-    const auto heroHasSkill = [&](GW::AgentID agentId) 
+    const auto heroHasSkill = [&](GW::AgentID agentId)
     {
         const auto agentSkillBar = std::ranges::find_if(*skillBarArray, [&](const auto& skillbar) {return skillbar.agent_id == agentId;});
-        if (agentSkillBar == skillBarArray->end()) 
+        if (agentSkillBar == skillBarArray->end())
             return false;
-        const auto skillBarSkill = agentSkillBar->GetSkillById(skillId); 
-        if (!skillBarSkill) 
+        const auto skillBarSkill = agentSkillBar->GetSkillById(skillId);
+        if (!skillBarSkill)
             return false;
         switch (requirement) {
             case HasSkillRequirement::OnBar:
                 return true;
             case HasSkillRequirement::OffCooldown:
                 return skillBarSkill->GetRecharge() == 0;
-            case HasSkillRequirement::ReadyToUse: 
+            case HasSkillRequirement::ReadyToUse:
             {
                 if (skillBarSkill->GetRecharge() > 0) return false;
                 const auto& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skillBarSkill->skill_id);
                 if (skillBarSkill->adrenaline_a < skilldata.adrenaline) return false;
                 if (getEnergyCost(skilldata) > player->energy * player->max_energy) return false;
-                
+
                 const auto hero = GW::Agents::GetAgentByID(agentId);
                 if (!hero || !hero->GetIsLivingType()) return true; // Hero is out of range, assume it's fine
                 if (hero->GetAsAgentLiving()->skill) return false;
@@ -743,7 +744,7 @@ bool HeroHasSkillCondition::check() const
         }
     };
 
-    return std::ranges::any_of(partyInfo->heroes, [&](const GW::HeroPartyMember& hero) 
+    return std::ranges::any_of(partyInfo->heroes, [&](const GW::HeroPartyMember& hero)
     {
         return hero.owner_player_id == player->login_number && hero.hero_id == heroId && heroHasSkill(hero.agent_id);
     });
@@ -751,7 +752,7 @@ bool HeroHasSkillCondition::check() const
 bool HeroHasSkillCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    
+
     ImGui::Text("If");
     ImGui::SameLine();
     drawEnumButton(heroId, {.first = GW::Constants::HeroID::Norgu, .last = GW::Constants::HeroID::Devona, .width = 130.f});
@@ -787,10 +788,10 @@ bool PlayerHasSkillBySlotCondition::check() const
     if (!player || !bar || !bar->IsValid() || slot < 1 || slot > 7) return false;
 
     const auto skill = bar->skills[slot - 1];
-    if (skill.skill_id == GW::Constants::SkillID::No_Skill || (uint32_t)skill.skill_id >= (uint32_t)GW::Constants::SkillID::Count) 
+    if (skill.skill_id == GW::Constants::SkillID::No_Skill || (uint32_t)skill.skill_id >= (uint32_t)GW::Constants::SkillID::Count)
         return false;
 
-    switch (requirement) 
+    switch (requirement)
     {
     case HasSkillRequirement::OnBar:
         return true;
@@ -803,7 +804,7 @@ bool PlayerHasSkillBySlotCondition::check() const
         if (skill.adrenaline_a < skilldata.adrenaline) return false;
         if (getEnergyCost(skilldata) > player->energy * player->max_energy) return false;
         return weaponFulfillsRequirement((EquippedWeaponType)player->weapon_type, (WeaponRequirement)skilldata.weapon_req, skilldata.type);
-    }   
+    }
     return false;
 }
 bool PlayerHasSkillBySlotCondition::drawSettings()
@@ -885,7 +886,7 @@ bool HasPartyWindowAllyOfNameCondition::check() const
         if (instanceInfo.getDecodedAgentName(candidate) == name) { return true; }
     }
 
-    return std::ranges::any_of(info->others, [&](const auto& allyId) 
+    return std::ranges::any_of(info->others, [&](const auto& allyId)
     {
         return instanceInfo.getDecodedAgentName(allyId) == name;
     });
@@ -1186,14 +1187,14 @@ bool RemainingCooldownCondition::check() const
     const auto bar = GW::SkillbarMgr::GetPlayerSkillbar();
     if (!bar || !bar->IsValid()) return false;
 
-    for (int i = 0; i < 8; ++i) 
+    for (int i = 0; i < 8; ++i)
     {
-        if (bar->skills[i].skill_id == id) 
+        if (bar->skills[i].skill_id == id)
         {
             const auto cooldown = (int)bar->skills[i].GetRecharge();
             return (!hasMinimumCooldown || cooldown >= minimumCooldown) && (!hasMaximumCooldown || cooldown <= maximumCooldown);
         }
-            
+
     }
     return false;
 }
@@ -1207,9 +1208,9 @@ bool RemainingCooldownCondition::drawSettings()
     ImGui::SameLine();
     ImGui::Text("has remaining cooldown (in ms)");
     ImGui::SameLine();
-    
+
     ImGui::PushItemWidth(100.f);
-    if (hasMinimumCooldown) 
+    if (hasMinimumCooldown)
     {
         ImGui::InputInt("min", &minimumCooldown, 0);
         ImGui::SameLine();
@@ -1218,13 +1219,13 @@ bool RemainingCooldownCondition::drawSettings()
             minimumCooldown = 0;
         }
     }
-    else 
+    else
     {
         if (ImGui::Button("Add min")) hasMinimumCooldown = true;
     }
 
     ImGui::SameLine();
-    if (hasMaximumCooldown) 
+    if (hasMaximumCooldown)
     {
         ImGui::InputInt("max", &maximumCooldown, 0);
         ImGui::SameLine();
@@ -1373,11 +1374,11 @@ bool OnceCondition::drawSettings()
     ImGui::PushID(drawId());
     ImGui::Text("ONCE (");
     ImGui::SameLine();
-    if (cond) 
+    if (cond)
     {
         keyChanged |= cond->drawSettings();
     }
-    else 
+    else
     {
         cond = drawConditionSelector(100.f);
     }
@@ -1417,12 +1418,12 @@ void UntilCondition::serialize(OutputStream& stream) const
 bool UntilCondition::check() const
 {
     const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
-    if (conditionLastTrueInInstanceId != currentInstanceId) 
+    if (conditionLastTrueInInstanceId != currentInstanceId)
     {
         currentState = true;
         conditionLastTrueInInstanceId = currentInstanceId;
     }
-    if (currentState && cond && cond->check()) 
+    if (currentState && cond && cond->check())
     {
         currentState = false;
     }
@@ -1482,7 +1483,7 @@ bool AfterCondition::check() const
         currentState = false;
         conditionLastTrueInInstanceId = currentInstanceId;
     }
-    if (!currentState && cond && cond->check()) 
+    if (!currentState && cond && cond->check())
     {
         currentState = true;
     }
@@ -1525,7 +1526,7 @@ ToggleCondition::ToggleCondition(InputStream& stream)
     stream >> read;
     if (read == missingContentToken)
         toggleOnCond = nullptr;
-    else if (read == "C") 
+    else if (read == "C")
     {
         toggleOnCond = readCondition(stream);
         stream.proceedPastSeparator(2);
@@ -1536,7 +1537,7 @@ ToggleCondition::ToggleCondition(InputStream& stream)
     stream >> read;
     if (read == missingContentToken)
         toggleOffCond = nullptr;
-    else if (read == "C") 
+    else if (read == "C")
     {
         toggleOffCond = readCondition(stream);
         stream.proceedPastSeparator(2);
@@ -1545,10 +1546,10 @@ ToggleCondition::ToggleCondition(InputStream& stream)
 void ToggleCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
-    
+
     stream << defaultState;
 
-    if (toggleOnCond) 
+    if (toggleOnCond)
     {
         toggleOnCond->serialize(stream);
         stream.writeSeparator(2);
@@ -1556,7 +1557,7 @@ void ToggleCondition::serialize(OutputStream& stream) const
     else
         stream << missingContentToken;
 
-    if (toggleOffCond) 
+    if (toggleOffCond)
     {
         toggleOffCond->serialize(stream);
         stream.writeSeparator(2);
@@ -1567,7 +1568,7 @@ void ToggleCondition::serialize(OutputStream& stream) const
 bool ToggleCondition::check() const
 {
     const auto currentInstanceId = InstanceInfo::getInstance().getInstanceId();
-    if (lastResetInInstanceId != currentInstanceId) 
+    if (lastResetInInstanceId != currentInstanceId)
     {
         currentState = defaultState == TrueFalse::True;
         lastResetInInstanceId = currentInstanceId;
@@ -1576,7 +1577,7 @@ bool ToggleCondition::check() const
     {
         currentState = true;
     }
-    if (currentState && toggleOffCond && toggleOffCond->check()) 
+    if (currentState && toggleOffCond && toggleOffCond->check())
     {
         currentState = false;
     }
@@ -1589,14 +1590,14 @@ bool ToggleCondition::drawSettings()
     const auto drawToggle = [&](auto& cond, const auto text, const auto id)
     {
         ImGui::PushID(id);
-        
+
         bool deleteCondition = false;
-        
+
         ImGui::Bullet();
         ImGui::Text(text);
-        
+
         ImGui::SameLine();
-        if (cond) 
+        if (cond)
         {
             if (ImGui::Button("X")) deleteCondition = true;
             ImGui::SameLine();
@@ -1605,13 +1606,13 @@ bool ToggleCondition::drawSettings()
         else
             cond = drawConditionSelector(100.f);
 
-        if (deleteCondition) 
+        if (deleteCondition)
             cond = nullptr;
 
         ImGui::PopID();
     };
     ImGui::PushID(drawId());
-    
+
     ImGui::Bullet();
     ImGui::Text("Initially:");
     ImGui::SameLine();
@@ -1629,16 +1630,16 @@ bool ToggleCondition::drawSettings()
 std::vector<Hotkey> ToggleCondition::disabledKeys() const
 {
     std::vector<Hotkey> result;
-    if (toggleOnCond) 
+    if (toggleOnCond)
     {
-        for (const auto& disabled : toggleOnCond->disabledKeys()) 
+        for (const auto& disabled : toggleOnCond->disabledKeys())
         {
             result.push_back(disabled);
         }
     }
-    if (toggleOffCond) 
+    if (toggleOffCond)
     {
-        for (const auto& disabled : toggleOffCond->disabledKeys()) 
+        for (const auto& disabled : toggleOffCond->disabledKeys())
         {
             result.push_back(disabled);
         }
@@ -1660,9 +1661,9 @@ void ThrottleCondition::serialize(OutputStream& stream) const
 bool ThrottleCondition::check() const
 {
     const auto now = std::chrono::steady_clock::now();
-    
+
     const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTimeReturnedTrue).count();
-    
+
     if (elapsedTime < delayInMs) return false;
     lastTimeReturnedTrue = now;
     return true;
@@ -1723,13 +1724,13 @@ bool PlayerHasCharacteristicsCondition::drawSettings()
 }
 
 /// ------------- TargetHasCharacteristicsCondition -------------
-TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition(CharacteristicType type) 
+TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition(CharacteristicType type)
 {
     characteristic = makeCharacteristic(type);
 }
 TargetHasCharacteristicsCondition::TargetHasCharacteristicsCondition(InputStream& stream)
 {
-    if (stream && stream.peek() == 'X') 
+    if (stream && stream.peek() == 'X')
     {
         stream.get();
         characteristic = readCharacteristic(stream);
@@ -1740,7 +1741,7 @@ void TargetHasCharacteristicsCondition::serialize(OutputStream& stream) const
 {
     Condition::serialize(stream);
 
-    if (characteristic) 
+    if (characteristic)
         characteristic->serialize(stream);
     stream.writeSeparator(3);
 }
@@ -1756,7 +1757,7 @@ bool TargetHasCharacteristicsCondition::drawSettings()
 
     ImGui::Text("If the target");
     ImGui::SameLine();
-    if (characteristic) 
+    if (characteristic)
         characteristic->drawSettings();
 
     ImGui::PopID();
@@ -1774,11 +1775,11 @@ AgentWithCharacteristicsCountCondition::AgentWithCharacteristicsCountCondition(I
 {
     stream >> comp >> count;
 
-    while (stream) 
+    while (stream)
     {
         std::string token;
         stream >> token;
-        if (token == "X") 
+        if (token == "X")
         {
             if (auto characteristic = readCharacteristic(stream))
                 characteristics.push_back(std::move(characteristic));
@@ -1786,12 +1787,12 @@ AgentWithCharacteristicsCountCondition::AgentWithCharacteristicsCountCondition(I
                 break;
             stream.proceedPastSeparator(3);
         }
-        else if (token == missingContentToken) 
+        else if (token == missingContentToken)
         {
             characteristics.push_back(nullptr);
             stream.proceedPastSeparator(3);
         }
-        else 
+        else
         {
             break;
         }
@@ -1809,7 +1810,7 @@ void AgentWithCharacteristicsCountCondition::serialize(OutputStream& stream) con
         else stream << missingContentToken;
 
         stream.writeSeparator(3);
-    }    
+    }
 }
 bool AgentWithCharacteristicsCountCondition::check() const
 {
@@ -1818,7 +1819,7 @@ bool AgentWithCharacteristicsCountCondition::check() const
 
     const auto actualCount = std::ranges::count_if(*agents, [&](GW::Agent* agent)
     {
-        if (!agent || !agent->GetIsLivingType()) 
+        if (!agent || !agent->GetIsLivingType())
             return false;
         return std::ranges::all_of(characteristics, [living = agent->GetAsAgentLiving()](const auto& c){ return !c || c->check(*living);} );
     });
@@ -1890,7 +1891,7 @@ bool ScriptVariableValueCondition::check() const
 bool ScriptVariableValueCondition::drawSettings()
 {
     ImGui::PushID(drawId());
-    
+
     ImGui::PushItemWidth(200.f);
     ImGui::Text("If variable");
     ImGui::SameLine();
@@ -2032,7 +2033,7 @@ bool QuestHasStateCondition::check() const
 {
     const auto quest = QuestInfo::getInstance().getQuest(name);
 
-    switch (status) 
+    switch (status)
     {
         case QuestStatus::NotStarted:
             return !quest.has_value();
@@ -2080,10 +2081,10 @@ void ObjectiveHasStateCondition::serialize(OutputStream& stream) const
 bool ObjectiveHasStateCondition::check() const
 {
     const auto& questInfo = QuestInfo::getInstance();
-    if (objectiveType == ObjectiveType::Quest) 
+    if (objectiveType == ObjectiveType::Quest)
     {
         const auto quest = questInfo.getQuest(questName);
-        if (!quest) 
+        if (!quest)
         {
             return status == QuestStatus::NotStarted;
         }
@@ -2091,7 +2092,7 @@ bool ObjectiveHasStateCondition::check() const
         const auto& objectives = questInfo.listObjectives(quest->id);
         const auto objective = std::ranges::find_if(objectives, [&](const QuestInfo::Objective& o){ return o.name.contains(objectiveName); });
 
-        switch (status) 
+        switch (status)
         {
             case QuestStatus::NotStarted:
                 return objective == objectives.end();
@@ -2103,11 +2104,11 @@ bool ObjectiveHasStateCondition::check() const
                 return false;
         }
     }
-    else 
+    else
     {
         const auto objectives = questInfo.listMissionObjectives();
         const auto objective = std::ranges::find_if(objectives, [&](const QuestInfo::Objective& o){ return o.name.contains(objectiveName); });
-        switch (status) 
+        switch (status)
         {
             case QuestStatus::NotStarted:
                 return objective == objectives.end();
@@ -2128,14 +2129,14 @@ bool ObjectiveHasStateCondition::drawSettings()
     ImGui::Text("If the");
     ImGui::SameLine();
     drawEnumButton(objectiveType, {.last = ObjectiveType::Mission, .width = 120.f});
-    if (objectiveType == ObjectiveType::Quest) 
+    if (objectiveType == ObjectiveType::Quest)
     {
         ImGui::SameLine();
         ImGui::PushID(1);
         ImGui::InputText("", &questName);
         ImGui::PopID();
     }
-    else 
+    else
     {
         questName.clear();
     }

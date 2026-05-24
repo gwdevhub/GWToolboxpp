@@ -65,9 +65,10 @@ int HotkeyToggle::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Toggle %s", name);
 }
 
-bool HotkeyToggle::Draw()
+bool HotkeyToggle::DrawSettings()
 {
     bool hotkey_changed = false;
+
     if (ImGui::Combo("Toggle###combo", (int*)&target, GetText, nullptr, Count)) {
         if (target == Clicker) {
             togglekey = VK_LBUTTON;
@@ -75,6 +76,7 @@ bool HotkeyToggle::Draw()
         hotkey_changed = true;
     }
     hotkey_changed |= ImGui::Checkbox("Display message when triggered", &show_message_in_emote_channel);
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

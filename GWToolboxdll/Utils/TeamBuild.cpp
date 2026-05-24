@@ -642,8 +642,9 @@ void TeamBuild::DrawPlayerBuildsContent(
             const auto& pcons = PconsWindow::Instance().pcons;
             const float skill_h = ImGui::CalcTextSize(" ").y * 2.f;
             ImGui::StartSpacedElements(skill_h + ImGui::GetStyle().ItemSpacing.x);
+            size_t i = 0;
             for (const auto pcon : pcons) {
-                ImGui::PushID(pcon);
+                ImGui::PushID(i++);
                 const bool active = build.pcons.contains(pcon->ini);
                 ImGui::NextSpacedElement();
                 if (active) ImGui::PushStyleColor(ImGuiCol_Button, build_edit_pcon_enabled_color);

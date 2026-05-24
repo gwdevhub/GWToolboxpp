@@ -64,7 +64,7 @@ int HotkeyDropUseBuff::Description(char* buf, const size_t bufsz)
     return snprintf(buf, bufsz, "Drop/Use %s", skillname);
 }
 
-bool HotkeyDropUseBuff::Draw()
+bool HotkeyDropUseBuff::DrawSettings()
 {
     bool hotkey_changed = false;
     SkillIndex index = GetIndex();
@@ -93,6 +93,7 @@ bool HotkeyDropUseBuff::Draw()
             hotkey_changed = true;
         }
     }
+    hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
     return hotkey_changed;
 }
 

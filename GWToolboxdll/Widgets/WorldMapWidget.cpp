@@ -277,7 +277,7 @@ namespace {
 
         if (set_active) {
             GW::GameThread::Enqueue([quest_id] {
-                GW::QuestMgr::SetActiveQuestId(quest_id);
+                QuestModule::SetActiveQuestId(quest_id);
             });
             return false;
         }

@@ -822,7 +822,7 @@ namespace GWArmory {
 #else
         for (const auto& piece : state->pieces) {
 #endif
-            ImGui::PushID(piece);
+            ImGui::PushID(piece->label);
 
             if (0 <= state->current_piece_index && static_cast<size_t>(state->current_piece_index) < state->pieces.size()) {
                 state->current_piece = state->pieces[state->current_piece_index];

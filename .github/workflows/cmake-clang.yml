@@ -46,7 +46,6 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: x86
-        toolset: "14.50"
 
     - name: Cache vcpkg toolchain
       id: cache-vcpkg-tool

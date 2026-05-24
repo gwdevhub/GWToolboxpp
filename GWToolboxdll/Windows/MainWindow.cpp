@@ -112,10 +112,11 @@ void MainWindow::Draw(IDirect3DDevice9*)
             }
             ImGui::PopID();
         }
+        size_t i = 0;
         for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
             return p && p->GetVisiblePtr() && p->ShowInMainMenu();
         })) {
-            ImGui::PushID(plugin);
+            ImGui::PushID(i++);
             if (drawn) {
                 ImGui::Separator();
             }
