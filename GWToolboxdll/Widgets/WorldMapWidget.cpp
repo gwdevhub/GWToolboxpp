@@ -968,6 +968,11 @@ void WorldMapWidget::SignalTerminate()
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
+bool& WorldMapWidget::ShowLinesOnWorldMap()
+{
+    return show_lines_on_world_map;
+}
+
 void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
 {
     if (view_all_outposts_patch.IsValid()) view_all_outposts_patch.TogglePatch(show);
