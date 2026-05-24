@@ -40,11 +40,13 @@ namespace {
 
     TBHotkey* current_hotkey = nullptr;
 
-    std::queue<TBHotkey*> pending_hotkeys;
+    std::deque<TBHotkey*> pending_hotkeys;
     std::recursive_mutex pending_mutex;
     void PushPendingHotkey(TBHotkey* hk) {
         pending_mutex.lock();
-        pending_hotkeys.push(hk);
+        if (std::ranges::find(pending_hotkeys, hk) == pending_hotkeys.end()) {
+            pending_hotkeys.push_back(hk);
+        }
         pending_mutex.unlock();
     }
     TBHotkey* PopPendingHotkey() {
@@ -52,7 +54,7 @@ namespace {
         pending_mutex.lock();
         if (pending_hotkeys.size()) {
             hk = pending_hotkeys.front();
-            pending_hotkeys.pop();
+            pending_hotkeys.pop_front();
         }
         pending_mutex.unlock();
         return hk;
@@ -111,7 +113,7 @@ namespace {
                 AddHotkeyIfValid(child, player_name,instance_type,primary,map_id,is_pvp,valid);
             }
         }
-        if (hotkey && hotkey->IsValid(player_name, instance_type, primary, map_id, is_pvp)) {
+        else if (hotkey && hotkey->IsValid(player_name, instance_type, primary, map_id, is_pvp)) {
             valid.push_back(hotkey);
         }
     }
