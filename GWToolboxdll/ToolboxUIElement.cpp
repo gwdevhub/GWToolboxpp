@@ -119,6 +119,9 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(lock_move);
     LOAD_BOOL(lock_size);
     LOAD_BOOL(auto_size);
+    LOAD_BOOL(auto_resize_on_collapse);
+    LOAD_FLOAT(collapsed_size[0]); LOAD_FLOAT(collapsed_size[1]);
+    LOAD_FLOAT(expanded_size[0]); LOAD_FLOAT(expanded_size[1]);
     LOAD_BOOL(show_titlebar);
     LOAD_BOOL(show_closebutton);
     LOAD_BOOL(show_breakout_button);
@@ -164,6 +167,9 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(lock_move);
     SAVE_BOOL(lock_size);
     SAVE_BOOL(auto_size);
+    SAVE_BOOL(auto_resize_on_collapse);
+    SAVE_FLOAT(collapsed_size[0]); SAVE_FLOAT(collapsed_size[1]);
+    SAVE_FLOAT(expanded_size[0]); SAVE_FLOAT(expanded_size[1]);
     SAVE_BOOL(show_titlebar);
     SAVE_BOOL(show_closebutton);
     SAVE_BOOL(show_breakout_button);
@@ -207,6 +213,19 @@ ImGuiWindowFlags ToolboxUIElement::GetWinFlags(ImGuiWindowFlags flags) const
         if (IsSizeLocked()) flags |= ImGuiWindowFlags_NoResize;
         if (IsAutoSized()) flags |= ImGuiWindowFlags_AlwaysAutoResize;
         if (!show_titlebar) flags |= ImGuiWindowFlags_NoTitleBar;
+    }
+    if (auto_resize_on_collapse && has_titlebar && show_titlebar) {
+        if (const auto* window = ImGui::FindWindowByName(Name())) {
+            const bool is_collapsed = window->Collapsed;
+            if (!collapse_size_initialized || is_collapsed != prev_was_collapsed) {
+                collapse_size_initialized = true;
+                prev_was_collapsed = is_collapsed;
+                const float* sz = is_collapsed ? collapsed_size : expanded_size;
+                const float w = sz[0] > 0.f ? sz[0] : window->SizeFull.x;
+                const float h = sz[1] > 0.f ? sz[1] : window->SizeFull.y;
+                ImGui::SetNextWindowSize({w, h});
+            }
+        }
     }
     return flags;
 }
@@ -415,6 +434,30 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         ImGui::SetTooltip("This %s cannot be resized", TypeName());
     }
+
+    // Auto-resize on collapse/expand (only relevant when the window has a title bar)
+    ImGui::BeginDisabled(!has_titlebar);
+    if (ImGui::Checkbox("Auto-resize on collapse/expand", &auto_resize_on_collapse)) {
+        collapse_size_initialized = false;
+    }
+    ImGui::EndDisabled();
+    if (!has_titlebar && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s has no titlebar", TypeName());
+    } else {
+        ImGui::ShowHelp("Automatically resize this window when it is collapsed or expanded");
+    }
+    ImGui::Indent();
+    ImGui::BeginDisabled(!auto_resize_on_collapse || !has_titlebar);
+    if (ImGui::DragFloat2("Collapsed size", collapsed_size, 1.f, 0.f, 0.f, "%.0f")) {
+        collapse_size_initialized = false;
+    }
+    ImGui::ShowHelp("Width and height when the title bar is collapsed; 0 = keep current");
+    if (ImGui::DragFloat2("Expanded size", expanded_size, 1.f, 0.f, 0.f, "%.0f")) {
+        collapse_size_initialized = false;
+    }
+    ImGui::ShowHelp("Width and height when the window is expanded; 0 = keep current");
+    ImGui::EndDisabled();
+    ImGui::Unindent();
 
     // Shared settings (not per-mode) drawn below the two-column layout
     ImGui::StartSpacedElements(180.f);
