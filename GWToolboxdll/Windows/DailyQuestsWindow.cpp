@@ -2090,10 +2090,14 @@ DailyQuests::NicholasCycleData* DailyQuests::GetNicholasIngredientInfo(const wch
 {
     // Crafting ingredients whose end product Nicholas The Traveller collects.
     // If an item's enc name isn't known yet, it will be a placeholder that won't match - find it in-game and update EncStrings.h.
-    static const struct { const wchar_t* ingredient; const wchar_t* nicholas_item; } ingredients[] = {
+    static const struct {
+        const wchar_t* ingredient;
+        const wchar_t* nicholas_item;
+    } ingredients[] = {
         {GW::EncStrings::SkaleFins, GW::EncStrings::BowlofSkalefinSoup},
         {GW::EncStrings::ChunkOfDrakeFlesh, GW::EncStrings::DrakeKabob}, // TODO: update ChunkOfDrakeFlesh enc name in EncStrings.h
-        {GW::EncStrings::IbogaPetals, GW::EncStrings::PahnaiSalad},     // TODO: update IbogaPetals enc name in EncStrings.h
+        {GW::EncStrings::IbogaPetals, GW::EncStrings::PahnaiSalad},      // TODO: update IbogaPetals enc name in EncStrings.h
+        {GW::EncStrings::MandragorRoot, GW::EncStrings::MandragorRootCake}
     };
     if (!ingredient_enc) return nullptr;
     for (const auto& entry : ingredients) {

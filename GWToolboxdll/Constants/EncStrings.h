@@ -124,6 +124,7 @@ namespace GW {
         static const wchar_t* QuetzalCrests = L"\x8102\x26DC\xADF9\x8D4B\x6575";
         static const wchar_t* PlagueIdols = L"\x56D3\xA490\xE607\x11B6";
         static const wchar_t* AzureRemains = L"\x294D";
+        static const wchar_t* MandragorRoot = L"\x8101\x5842\xB18D\xE040\x1169";
         static const wchar_t* MandragorRootCake = L"\x8101\x52E9\xA18F\x8FE1\x3EE9";
         static const wchar_t* MahgoClaw = L"\x2960";
         static const wchar_t* MantidPincers = L"\x56EF\xD1D8\xC773\x2C26";
@@ -166,7 +167,7 @@ namespace GW {
         static const wchar_t* PhantomResidue = L"\x2937";
         static const wchar_t* DrakeKabob = L"\x8101\x42D1\xFB15\xD39E\x5A26";
         static const wchar_t* ChunkOfDrakeFlesh = L"\x8101\x583B\xDE0B\xE373\x1070";
-        static const wchar_t* IbogaPetals = L"\x108\x107Iboga Petals\x1"; // TODO: find real enc name in-game
+        static const wchar_t* IbogaPetals = L"\x8101\x4C7C\xE7C2\xCDDF\x4BF3";
         static const wchar_t* AmberChunks = L"\x55D0\xF8B7\xB108\x6018";
         static const wchar_t* GlowingHearts = L"\x2914";
         static const wchar_t* SaurianBones = L"\x8102\x26D8\xB5B9\x9AF6\x42D6";
