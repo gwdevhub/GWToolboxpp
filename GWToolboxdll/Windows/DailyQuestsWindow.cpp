@@ -91,17 +91,17 @@ namespace {
 
     DailyQuests::QuestData nicholas_sandford_cycles[] = {
         {MapID::None, GW::EncStrings::GrawlNecklaces},      {MapID::None, GW::EncStrings::BakedHusks},     {MapID::None, GW::EncStrings::SkeletalLimbs},       {MapID::None, GW::EncStrings::UnnaturalSeeds},
-        {MapID::None, GW::EncStrings::EnchantedLodestones}, {MapID::None, GW::EncStrings::SkaleFins},      {MapID::None, GW::EncStrings::IcyLodestones},       {MapID::None, GW::EncStrings::GargoyleSkulls},
+        {MapID::None, GW::EncStrings::EnchantedLodestones}, {MapID::None, GW::EncStrings::SkaleFinPreSearing},      {MapID::None, GW::EncStrings::IcyLodestones},       {MapID::None, GW::EncStrings::GargoyleSkulls},
         {MapID::None, GW::EncStrings::DullCarapaces},       {MapID::None, GW::EncStrings::BakedHusks},     {MapID::None, GW::EncStrings::RedIrisFlowers},      {MapID::None, GW::EncStrings::SpiderLegs},
         {MapID::None, GW::EncStrings::SkeletalLimbs},       {MapID::None, GW::EncStrings::CharrCarvings},  {MapID::None, GW::EncStrings::EnchantedLodestones}, {MapID::None, GW::EncStrings::GrawlNecklaces},
         {MapID::None, GW::EncStrings::IcyLodestones},       {MapID::None, GW::EncStrings::WornBelts},      {MapID::None, GW::EncStrings::GargoyleSkulls},      {MapID::None, GW::EncStrings::UnnaturalSeeds},
-        {MapID::None, GW::EncStrings::SkaleFins},           {MapID::None, GW::EncStrings::RedIrisFlowers}, {MapID::None, GW::EncStrings::EnchantedLodestones}, {MapID::None, GW::EncStrings::SkeletalLimbs},
+        {MapID::None, GW::EncStrings::SkaleFinPreSearing},  {MapID::None, GW::EncStrings::RedIrisFlowers},     {MapID::None, GW::EncStrings::EnchantedLodestones}, {MapID::None, GW::EncStrings::SkeletalLimbs},
         {MapID::None, GW::EncStrings::CharrCarvings},       {MapID::None, GW::EncStrings::SpiderLegs},     {MapID::None, GW::EncStrings::BakedHusks},          {MapID::None, GW::EncStrings::GargoyleSkulls},
         {MapID::None, GW::EncStrings::UnnaturalSeeds},      {MapID::None, GW::EncStrings::IcyLodestones},  {MapID::None, GW::EncStrings::GrawlNecklaces},      {MapID::None, GW::EncStrings::EnchantedLodestones},
         {MapID::None, GW::EncStrings::WornBelts},           {MapID::None, GW::EncStrings::DullCarapaces},  {MapID::None, GW::EncStrings::SpiderLegs},          {MapID::None, GW::EncStrings::GargoyleSkulls},
         {MapID::None, GW::EncStrings::IcyLodestones},       {MapID::None, GW::EncStrings::UnnaturalSeeds}, {MapID::None, GW::EncStrings::WornBelts},           {MapID::None, GW::EncStrings::GrawlNecklaces},
         {MapID::None, GW::EncStrings::BakedHusks},          {MapID::None, GW::EncStrings::SkeletalLimbs},  {MapID::None, GW::EncStrings::RedIrisFlowers},      {MapID::None, GW::EncStrings::CharrCarvings},
-        {MapID::None, GW::EncStrings::SkaleFins},           {MapID::None, GW::EncStrings::DullCarapaces},  {MapID::None, GW::EncStrings::EnchantedLodestones}, {MapID::None, GW::EncStrings::CharrCarvings},
+        {MapID::None, GW::EncStrings::SkaleFinPreSearing},  {MapID::None, GW::EncStrings::DullCarapaces},      {MapID::None, GW::EncStrings::EnchantedLodestones}, {MapID::None, GW::EncStrings::CharrCarvings},
         {MapID::None, GW::EncStrings::SpiderLegs},          {MapID::None, GW::EncStrings::RedIrisFlowers}, {MapID::None, GW::EncStrings::WornBelts},           {MapID::None, GW::EncStrings::DullCarapaces}
     };
     static_assert(_countof(nicholas_sandford_cycles) == NICHOLAS_PRE_COUNT);

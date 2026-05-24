@@ -189,6 +189,7 @@ namespace GW {
         static const wchar_t* DragonRoot = L"\x56E5\x922D\xCF17\x7258";
         static const wchar_t* BerserkerHorns = L"\x8102\x26E3\xB76F\xE56C\x1A2";
         static const wchar_t* BehemothJaw = L"\x292E";
+        static const wchar_t* SkaleFins = L"\x8101\x4C7D\xAD41\xFB45\x79A8";
         static const wchar_t* BowlofSkalefinSoup = L"\x8101\x42D2\xE08B\xB81A\x604";
         static const wchar_t* ForestMinotaurHorns = L"\x2915";
         static const wchar_t* PutridCysts = L"\x56ED\xE607\x9B27\x7299";
@@ -262,7 +263,7 @@ namespace GW {
         static const wchar_t* SkeletalLimbs = L"\x2907";
         static const wchar_t* UnnaturalSeeds = L"\x2903";
         static const wchar_t* EnchantedLodestones = L"\x2908";
-        static const wchar_t* SkaleFins = L"\x2906";
+        static const wchar_t* SkaleFinPreSearing = L"\x2906";
         static const wchar_t* GargoyleSkulls = L"\x28F8";
         static const wchar_t* DullCarapaces = L"\x28F0";
         static const wchar_t* WornBelts = L"\x28FE";
