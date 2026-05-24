@@ -2853,9 +2853,9 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
         ParseCompletionBuffer(type, name_ws.data(), completion_buf.data(), completion_buf.size());
     };
 
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     completion_ini.GetAllSections(entries);
-    for (const ToolboxIni::Entry& entry : entries) {
+    for (const auto& entry : entries) {
         const char* ini_section = entry.pItem;
         const auto name_ws = TextUtils::StringToWString(ini_section);
 

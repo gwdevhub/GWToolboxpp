@@ -1,15 +1,11 @@
 #pragma once
 
-#include <SimpleIni.h>
+#include <Utils/FastIni.h>
 
-class ToolboxIni : public CSimpleIni {
+class ToolboxIni : public FastIni {
 public:
-    ToolboxIni(
-        const bool a_bIsUtf8 = false,
-        const bool a_bMultiKey = false,
-        const bool a_bMultiLine = false
-    )
-        : CSimpleIni(a_bIsUtf8, a_bMultiKey, a_bMultiLine) { }
+    ToolboxIni(const bool a_bIsUtf8 = false, const bool a_bMultiKey = false, const bool a_bMultiLine = false) : FastIni(a_bIsUtf8, a_bMultiKey, a_bMultiLine) {}
+    
 
     // Returns SI_OK if file doesn't exist or was read successfully.
     SI_Error LoadIfExists(const std::filesystem::path& a_pwszFile);

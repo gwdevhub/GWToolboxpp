@@ -1786,7 +1786,7 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
     cmd_aliases.clear();
     const auto section_name = "Chat Command Aliases";
 
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     ini->GetAllKeys(section_name, entries);
     for (const auto& entry : entries) {
         if (!entry.pItem[0]) {

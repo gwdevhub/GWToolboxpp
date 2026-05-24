@@ -599,12 +599,12 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
     *def = inifile->GetBoolValue(section, buf_active, *def);
     visible = inifile->GetBoolValue(section, buf_visible, visible);
 
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     inifile->GetAllSections(entries);
     std::string sectionsub(section);
     sectionsub += ':';
     const size_t section_len = sectionsub.size();
-    for (const ToolboxIni::Entry& entry : entries) {
+    for (const auto& entry : entries) {
         if (strncmp(entry.pItem, sectionsub.c_str(), section_len) != 0) {
             continue;
         }

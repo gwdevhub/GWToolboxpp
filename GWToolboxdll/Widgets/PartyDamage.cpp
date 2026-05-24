@@ -786,9 +786,9 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
         inifile = new ToolboxIni(false, false, false);
     }
     inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
-    ToolboxIni::TNamesDepend keys;
+    TNamesDepend keys;
     inifile->GetAllKeys(IniSection, keys);
-    for (const ToolboxIni::Entry& key : keys) {
+    for (const auto& key : keys) {
         int lkey;
         if (TextUtils::ParseInt(key.pItem, &lkey)) {
             if (lkey <= 0) {
@@ -825,7 +825,7 @@ void PartyDamage::SaveSettings(ToolboxIni* ini)
         std::string key = std::to_string(player_number);
         inifile->SetLongValue(IniSection, key.c_str(), hp, nullptr, false, true);
     }
-    ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
+    ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME)) == SI_OK);
 }
 
 void PartyDamage::DrawSettingsInternal()
