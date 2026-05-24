@@ -176,7 +176,8 @@ void FastIniSection::GetAllKeys(TNamesDepend& out) const {
 
 bool FastIni::LoadFile(const std::filesystem::path& path) {
 #ifdef _WIN32
-    std::FILE* f = _wfopen(path.c_str(), L"rb");
+    std::FILE* f;
+    _wfopen_s(&f, path.c_str(), L"rb");
 #else
     std::FILE* f = std::fopen(path.c_str(), "rb");
 #endif
@@ -245,7 +246,8 @@ SI_Error FastIni::SaveFile(const std::filesystem::path& path, bool addUtf8BOM) c
     }
 
 #ifdef _WIN32
-    std::FILE* f = _wfopen(path.c_str(), L"wb");
+    std::FILE* f;
+    _wfopen_s(&f, path.c_str(), L"wb");
 #else
     std::FILE* f = std::fopen(path.c_str(), "wb");
 #endif
