@@ -186,143 +186,143 @@ namespace {
     std::unordered_map<DailyQuests::NicholasCycleData*, uint16_t> nicholas_item_collected_count;
 
     DailyQuests::NicholasCycleData nicholas_cycles[] = {
-        {GW::EncStrings::RedIrisFlowers, 3, MapID::Regent_Valley},                  // Red Iris Flowers
-        {GW::EncStrings::FeatheredAvicaraScalps, 3, MapID::Mineral_Springs},        // Feathered Avicara Scalps
-        {GW::EncStrings::MargoniteMasks, 2, MapID::Poisoned_Outcrops},              // Margonite Masks
-        {GW::EncStrings::QuetzalCrests, 2, MapID::Alcazia_Tangle},                  // Quetzal Crests
-        {GW::EncStrings::PlagueIdols, 3, MapID::Wajjun_Bazaar},                     // Plague Idols
-        {GW::EncStrings::AzureRemains, 2, MapID::Dreadnoughts_Drift},               // Azure Remains
-        {GW::EncStrings::MandragorRootCake, 1, MapID::Arkjok_Ward},                 // Mandragor Root Cake
-        {GW::EncStrings::MahgoClaw, 1, MapID::Perdition_Rock},                      // Mahgo Claw
-        {L"\x56EF\xD1D8\xC773\x2C26", 5, MapID::Saoshang_Trail},                    // Mantid Pincers
-        {L"\x8101\x43DE\xD124\xA4D9\x7D4A", 3, MapID::Fahranur_The_First_City},     // Sentient Seeds
-        {L"\x8102\x26EA\x8A6F\xD31C\x31DD", 2, MapID::Sacnoth_Valley},              // Stone Grawl Necklaces
-        {L"\x8102\x26D1", 1, MapID::Twin_Serpent_Lakes},                            // Herring
-        {L"\x5702\xA954\x959D\x51B8", 3, MapID::Mount_Qinkai},                      // Naga Skins
-        {L"\x296A", 1, MapID::The_Falls},                                           // Gloom Seed
-        {L"\x2882", 1, MapID::The_Breach},                                          // Charr Hide
-        {L"\x8101\x43F3\xF5F8\xC245\x41F2", 1, MapID::The_Alkali_Pan},              // Ruby Djinn Essence
-        {L"\x2930", 2, MapID::Majestys_Rest},                                       // Thorny Carapaces
-        {L"\x56DD\xC82C\xB7E0\x3EB9", 3, MapID::Rheas_Crater},                      // Bone Charms
-        {L"\x8102\x26E0\xA884\xE2D3\x7E01", 3, MapID::Varajar_Fells},               // Modniir Manes
-        {L"\x8102\x26E9\x96D3\x8E81\x64D1", 3, MapID::Dalada_Uplands},              // Superb Charr Carvings
-        {L"\x22EE\xF65A\x86E6\x1C6C", 5, MapID::Zen_Daijun_explorable},             // Rolls of Parchment
-        {L"\x8101\x5208\xA22C\xC074\x2373", 2, MapID::Garden_of_Seborhin},          // Roaring Ether Claws
-        {L"\x8101\x5721", 3, MapID::Bukdek_Byway},                                  // Branches of Juni Berries
-        {L"\x2945", 3, MapID::Deldrimor_Bowl},                                      // Shiverpeak Manes
-        {L"\x293C", 3, MapID::Eastern_Frontier},                                    // Fetid Carapaces
-        {L"\x6CCD\xC6FD\xA37B\x3529", 2, MapID::Gyala_Hatchery},                    // Moon Shells
-        {L"\x2921", 1, MapID::The_Arid_Sea},                                        // Massive Jawbone
-        {L"\x8102\x26FA\x8E00\xEA86\x3A1D", 1, MapID::Ice_Cliff_Chasms},            // Chromatic Scale
-        {L"\x292B", 3, MapID::Ice_Floe},                                            // Mursaat Tokens
-        {L"\x8101\x43FA\xA429\xC255\x23C4", 1, MapID::Bahdok_Caverns},              // Sentient Lodestone
-        {L"\x2934", 3, MapID::Tangle_Root},                                         // Jungle Troll Tusks
-        {L"\x8101\x57DD\xF97D\xB5AD\x21FF", 1, MapID::Resplendent_Makuun},          // Sapphire Djinn Essence
-        {L"\x56E6\xB928\x9FA2\x43E1", 1, MapID::Arborstone_explorable},             // Stone Carving
-        {L"\x2919", 3, MapID::North_Kryta_Province},                                // Feathered Caromi Scalps
-        {L"\x8101\x52EE\xBF76\xE319\x2B39", 1, MapID::Holdings_of_Chokhin},         // Pillaged Goods
-        {L"\x56D5\x8B0F\xAB5B\x8A6", 1, MapID::Haiju_Lagoon},                       // Gold Crimson Skull Coin
-        {L"\x56D7\xDD87\x8A67\x167D", 3, MapID::Tahnnakai_Temple_explorable},       // Jade Bracelets
-        {L"\x2924", 2, MapID::Prophets_Path},                                       // Minotaur Horns
-        {L"\x294A", 2, MapID::Snake_Dance},                                         // Frosted Griffon Wings
-        {L"\x8101\x43E6\xBE4C\xE956\x780", 2, MapID::Mehtani_Keys},                 // Silver Bullion Coins
-        {L"\x56DF\xFEE4\xCA2D\x27A", 1, MapID::Morostav_Trail},                     // Truffle
-        {L"\x8102\x26DD\x85C5\xD98F\x5CCB", 3, MapID::Verdant_Cascades},            // Skelk Claws
-        {L"\x2923", 2, MapID::The_Scar},                                            // Dessicated Hydra Claws
-        {L"\x294B", 3, MapID::Spearhead_Peak},                                      // Frigid Hearts
-        {L"\x570A\x9453\x84A6\x64D4", 3, MapID::Nahpui_Quarter_explorable},         // Celestial Essences
-        {L"\x2937", 1, MapID::Lornars_Pass},                                        // Phantom Residue
-        {L"\x8101\x42D1\xFB15\xD39E\x5A26", 1, MapID::Issnur_Isles},                // Drake Kabob
-        {L"\x55D0\xF8B7\xB108\x6018", 3, MapID::Ferndale},                          // Amber Chunks
-        {L"\x2914", 2, MapID::Stingray_Strand},                                     // Glowing Hearts
-        {L"\x8102\x26D8\xB5B9\x9AF6\x42D6", 5, MapID::Riven_Earth},                 // Saurian Bones
-        {L"\x8101\x5207\xEBD7\xB733\x2E27", 2, MapID::Wilderness_of_Bahdza},        // Behemoth Hides
-        {L"\x8101\x4E35\xD63F\xCAB4\xDD1", 1, MapID::Crystal_Overlook},             // Luminous Stone
-        {L"\x2950", 3, MapID::Witmans_Folly},                                       // Intricate Grawl Necklaces
-        {L"\x55D1\xD189\x845A\x7164", 3, MapID::Shadows_Passage},                   // Jadeite Shards
-        {L"\x8101\x43E5\xA891\xA83A\x426D", 1, MapID::Barbarous_Shore},             // Gold Doubloon
-        {L"\x291B", 2, MapID::Skyward_Reach},                                       // Shriveled Eyes
-        {L"\x28EF", 2, MapID::Icedome},                                             // Icy Lodestones
-        {L"\x5701\xD258\xC958\x506F", 1, MapID::Silent_Surf},                       // Keen Oni Talon
-        {L"\x2910", 2, MapID::Nebo_Terrace},                                        // Hardened Humps
-        {L"\x8102\x26E7\xC330\xC111\x4058", 2, MapID::Drakkar_Lake},                // Piles of Elemental Dust
-        {L"\x56F2\x876E\xEACB\x730", 3, MapID::Panjiang_Peninsula},                 // Naga Hides
-        {L"\x22F3\xA11C\xC924\x5E15", 3, MapID::Griffons_Mouth},                    // Spiritwood Planks
-        {L"\x293A", 1, MapID::Pockmark_Flats},                                      // Stormy Eye
-        {L"\x8101\x43F0\xFF3B\x8E3E\x20B1", 3, MapID::Forum_Highlands},             // Skree Wings
-        {L"\x5706\xC61F\xF23D\x3C4", 3, MapID::Raisu_Palace},                       // Soul Stones
-        {L"\x290F", 1, MapID::Tears_of_the_Fallen},                                 // Spiked Crest
-        {L"\x56E5\x922D\xCF17\x7258", 1, MapID::Drazach_Thicket},                   // Dragon Root
-        {L"\x8102\x26E3\xB76F\xE56C\x1A2", 3, MapID::Jaga_Moraine},                 // Berserker Horns
-        {L"\x292E", 1, MapID::Mamnoon_Lagoon},                                      // Behemoth Jaw
-        {L"\x8101\x42D2\xE08B\xB81A\x604", 1, MapID::Zehlon_Reach},                 // Bowl of Skalefin Soup
-        {L"\x2915", 2, MapID::Kessex_Peak},                                         // Forest Minotaur Horns
-        {L"\x56ED\xE607\x9B27\x7299", 3, MapID::Sunjiang_District_explorable},      // Putrid Cysts
-        {L"\x2926", 2, MapID::Salt_Flats},                                          // Jade Mandibles
-        {L"\x292F", 2, MapID::Silverwood},                                          // Maguuma Manes
-        {L"\x56E0\xFBEB\xA429\x7B5", 1, MapID::The_Eternal_Grove},                  // Skull Juju
-        {L"\x8101\x5840\xB4F5\xB2A7\x5E0F", 3, MapID::Lahtenda_Bog},                // Mandragor Swamproots
-        {L"\x8101\x52EA", 1, MapID::Vehtendi_Valley},                               // Bottle of Vabbian Wine
-        {L"\x8102\x26DA\x950E\x82F1\xA3D", 2, MapID::Magus_Stones},                 // Weaver Legs
-        {L"\x291F", 1, MapID::Diviners_Ascent},                                     // Topaz Crest
-        {L"\x56FC\xD503\x9D77\x730C", 2, MapID::Pongmei_Valley},                    // Rot Wallow Tusks
-        {L"\x2946", 2, MapID::Anvil_Rock},                                          // Frostfire Fangs
-        {L"\x8101\x43E7\xD854\xC981\x54DD", 1, MapID::The_Ruptured_Heart},          // Demonic Relic
-        {L"\x2917", 2, MapID::Talmark_Wilderness},                                  // Abnormal Seeds
-        {L"\x8101\x43EA\xE72E\xAA23\x3C54", 1, MapID::The_Hidden_City_of_Ahdashim}, // Diamond Djinn Essence
-        {L"\x2928", 2, MapID::Vulture_Drifts},                                      // Forgotten Seals
-        {L"\x56D4\x8663\xA244\x50F5", 5, MapID::Kinya_Province},                    // Copper Crimson Skull Coins
-        {L"\x2932", 3, MapID::Ettins_Back},                                         // Mossy Mandibles
-        {L"\x2954", 2, MapID::Grenths_Footprint},                                   // Enslavement Stones
-        {L"\x22E6\xE8F4\xA898\x75CB", 5, MapID::Jahai_Bluffs},                      // Elonian Leather Squares
-        {L"\x8101\x43EC\x8335\xBAA8\x153C", 2, MapID::Vehjin_Mines},                // Cobalt Talons
-        {L"\x288C", 1, MapID::Reed_Bog},                                            // Maguuma Spider Web
-        {L"\x56EB\xB8B7\xF734\x2985", 5, MapID::Minister_Chos_Estate_explorable},   // Forgotten Trinket Boxes
-        {L"\x2947", 3, MapID::Iron_Horse_Mine},                                     // Icy Humps
-        {L"\x8101\x43D2\x8CB3\xFC99\x602F", 1, MapID::The_Shattered_Ravines},       // Sandblasted Lodestone
-        {L"\x56FB\xA16B\x9DAD\x62B6", 3, MapID::Archipelagos},                      // Black Pearls
-        {L"\x8101\x43F7\xFD85\x9D52\x6DFA", 3, MapID::Marga_Coast},                 // Insect Carapaces
-        {L"\x2911", 3, MapID::Watchtower_Coast},                                    // Mergoyle Skulls
-        {L"\x2957", 3, MapID::Cursed_Lands},                                        // Decayed Orr Emblems
-        {L"\x22E2\xCE9B\x8771\x7DC7", 5, MapID::Mourning_Veil_Falls},               // Tempered Glass Vials
-        {L"\x2943", 3, MapID::Old_Ascalon},                                         // Scorched Lodestones
-        {L"\x8101\x583C\xD7B3\xDD92\x598F", 1, MapID::Turais_Procession},           // Water Djinn Essence
-        {L"\x5703\xE1CC\xFE29\x4525", 1, MapID::Maishang_Hills},                    // Guardian Moss
-        {L"\x22C1", 6, MapID::The_Floodplain_of_Mahnkelon},                         // Dwarven Ales
-        {L"\x8102\x26D9\xABE9\x9082\x4999", 2, MapID::Sparkfly_Swamp},              // Amphibian Tongues
-        {L"\x294E", 2, MapID::Frozen_Forest},                                       // Alpine Seeds
-        {L"\x2931", 2, MapID::Dry_Top},                                             // Tangled Seeds
-        {L"\x56FA\xE3AB\xA19E\x5D6A", 3, MapID::Jaya_Bluffs},                       // Stolen Supplies
-        {L"\x8101\x42D3\xD9E7\xD4E3\x259E", 1, MapID::Plains_of_Jarin},             // Pahnai Salad
-        {L"\x5707\xF70E\xCAA2\x5CC5", 3, MapID::Xaquang_Skyway},                    // Vermin Hides
-        {L"\x8101\x52ED\x86E9\xCEF3\x69D3", 1, MapID::The_Mirror_of_Lyss},          // Roaring Ether Heart
-        {L"\x2941", 3, MapID::Ascalon_Foothills},                                   // Leathery Claws
-        {L"\x56FE\xF2B0\x8B62\x116A", 1, MapID::Unwaking_Waters},                   // Azure Crest
-        {L"\x8102\x26E2\xC8E7\x8B1F\x716A", 1, MapID::Bjora_Marches},               // Jotun Pelt
-        {L"\x8101\x583E\xE3F5\x87A2\x194F", 2, MapID::Dejarin_Estate},              // Heket Tongues
-        {L"\x2951", 5, MapID::Talus_Chute},                                         // Mountain Troll Tusks
-        {L"\x22E7\xC1DA\xF2C1\x452A", 3, MapID::Shenzun_Tunnels},                   // Vials of Ink
-        {L"\x8101\x43E9\xDBD0\xA0C6\x4AF1", 3, MapID::Gandara_the_Moon_Fortress},   // Kournan Pendants
-        {L"\x293D", 3, MapID::Diessa_Lowlands},                                     // Singed Gargoyle Skulls
-        {L"\x56E4\xDF8C\xAD76\x3958", 3, MapID::Melandrus_Hope},                    // Dredge Incisors
-        {L"\x2955", 3, MapID::Tascas_Demise},                                       // Stone Summit Badges
-        {L"\x8102\x26F4\xE764\xC908\x52E2", 3, MapID::Arbor_Bay},                   // Krait Skins
-        {L"\x8101\x43D0\x843D\x98D1\x775C", 2, MapID::Jokos_Domain},                // Inscribed Shards
-        {L"\x56F6\xB464\x9A9E\x11EF", 3, MapID::Sunqua_Vale},                       // Feathered Scalps
-        {L"\x8101\x43EB\xF92D\xD469\x73A8", 3, MapID::The_Sulfurous_Wastes},        // Mummy Wrappings
-        {L"\x2916", 2, MapID::The_Black_Curtain},                                   // Shadowy Remnants
-        {L"\x570B\xFE7B\xBD8A\x7CF4", 3, MapID::The_Undercity},                     // Ancient Kappa Shells
-        {L"\x8101\x5206\x8286\xFEFA\x191C", 1, MapID::Yatendi_Canyons},             // Geode
-        {L"\x8102\x26E8\xC0DB\xD26E\x4711", 2, MapID::Grothmar_Wardowns},           // Fibrous Mandragor Roots
-        {L"\x293F", 3, MapID::Dragons_Gullet},                                      // Gruesome Ribcages
-        {L"\x56FD\xC65F\xF6F1\x26B4", 2, MapID::Boreas_Seabed_explorable},          // Kraken Eyes
-        {L"\x2918", 3, MapID::Scoundrels_Rise},                                     // Bog Skale Fins
-        {L"\x8101\x583D\xB904\xF476\x59A7", 2, MapID::Sunward_Marches},             // Sentient Spores
-        {L"\x292D", 2, MapID::Sage_Lands},                                          // Ancient Eyes
-        {L"\x8101\x43E4\x8D6E\x83E5\x4C07", 3, MapID::Cliffs_of_Dohjok},            // Copper Shillings
-        {L"\x8102\x26DF\xF8E8\x8ACB\x58B4", 3, MapID::Norrhart_Domains},            // Frigid Mandragor Husks
-        {L"\x22D5\x8371\x8ED5\x56B4", 3, MapID::Travelers_Vale},                    // Bolts of Linen
-        {L"\x28EE", 3, MapID::Flame_Temple_Corridor},                               // Charr Carvings
+        {GW::EncStrings::RedIrisFlowers, 3, MapID::Regent_Valley},
+        {GW::EncStrings::FeatheredAvicaraScalps, 3, MapID::Mineral_Springs},
+        {GW::EncStrings::MargoniteMasks, 2, MapID::Poisoned_Outcrops},
+        {GW::EncStrings::QuetzalCrests, 2, MapID::Alcazia_Tangle},
+        {GW::EncStrings::PlagueIdols, 3, MapID::Wajjun_Bazaar},
+        {GW::EncStrings::AzureRemains, 2, MapID::Dreadnoughts_Drift},
+        {GW::EncStrings::MandragorRootCake, 1, MapID::Arkjok_Ward},
+        {GW::EncStrings::MahgoClaw, 1, MapID::Perdition_Rock},
+        {GW::EncStrings::MantidPincers, 5, MapID::Saoshang_Trail},
+        {GW::EncStrings::SentientSeeds, 3, MapID::Fahranur_The_First_City},
+        {GW::EncStrings::StoneGrawlNecklaces, 2, MapID::Sacnoth_Valley},
+        {GW::EncStrings::Herring, 1, MapID::Twin_Serpent_Lakes},
+        {GW::EncStrings::NagaSkins, 3, MapID::Mount_Qinkai},
+        {GW::EncStrings::GloomSeed, 1, MapID::The_Falls},
+        {GW::EncStrings::CharrHide, 1, MapID::The_Breach},
+        {GW::EncStrings::RubyDjinnEssence, 1, MapID::The_Alkali_Pan},
+        {GW::EncStrings::ThornyCarapaces, 2, MapID::Majestys_Rest},
+        {GW::EncStrings::BoneCharms, 3, MapID::Rheas_Crater},
+        {GW::EncStrings::ModniirManes, 3, MapID::Varajar_Fells},
+        {GW::EncStrings::SuperbCharrCarvings, 3, MapID::Dalada_Uplands},
+        {GW::EncStrings::RollsofParchment, 5, MapID::Zen_Daijun_explorable},
+        {GW::EncStrings::RoaringEtherClaws, 2, MapID::Garden_of_Seborhin},
+        {GW::EncStrings::BranchesofJuniBerries, 3, MapID::Bukdek_Byway},
+        {GW::EncStrings::ShiverpeakManes, 3, MapID::Deldrimor_Bowl},
+        {GW::EncStrings::FetidCarapaces, 3, MapID::Eastern_Frontier},
+        {GW::EncStrings::MoonShells, 2, MapID::Gyala_Hatchery},
+        {GW::EncStrings::MassiveJawbone, 1, MapID::The_Arid_Sea},
+        {GW::EncStrings::ChromaticScale, 1, MapID::Ice_Cliff_Chasms},
+        {GW::EncStrings::MursaatTokens, 3, MapID::Ice_Floe},
+        {GW::EncStrings::SentientLodestone, 1, MapID::Bahdok_Caverns},
+        {GW::EncStrings::JungleTrollTusks, 3, MapID::Tangle_Root},
+        {GW::EncStrings::SapphireDjinnEssence, 1, MapID::Resplendent_Makuun},
+        {GW::EncStrings::StoneCarving, 1, MapID::Arborstone_explorable},
+        {GW::EncStrings::FeatheredCaromiScalps, 3, MapID::North_Kryta_Province},
+        {GW::EncStrings::PillagedGoods, 1, MapID::Holdings_of_Chokhin},
+        {GW::EncStrings::GoldCrimsonSkullCoin, 1, MapID::Haiju_Lagoon},
+        {GW::EncStrings::JadeBracelets, 3, MapID::Tahnnakai_Temple_explorable},
+        {GW::EncStrings::MinotaurHorns, 2, MapID::Prophets_Path},
+        {GW::EncStrings::FrostedGriffonWings, 2, MapID::Snake_Dance},
+        {GW::EncStrings::SilverBullionCoins, 2, MapID::Mehtani_Keys},
+        {GW::EncStrings::Truffle, 1, MapID::Morostav_Trail},
+        {GW::EncStrings::SkelkClaws, 3, MapID::Verdant_Cascades},
+        {GW::EncStrings::DessicatedHydraClaws, 2, MapID::The_Scar},
+        {GW::EncStrings::FrigidHearts, 3, MapID::Spearhead_Peak},
+        {GW::EncStrings::CelestialEssences, 3, MapID::Nahpui_Quarter_explorable},
+        {GW::EncStrings::PhantomResidue, 1, MapID::Lornars_Pass},
+        {GW::EncStrings::DrakeKabob, 1, MapID::Issnur_Isles},
+        {GW::EncStrings::AmberChunks, 3, MapID::Ferndale},
+        {GW::EncStrings::GlowingHearts, 2, MapID::Stingray_Strand},
+        {GW::EncStrings::SaurianBones, 5, MapID::Riven_Earth},
+        {GW::EncStrings::BehemothHides, 2, MapID::Wilderness_of_Bahdza},
+        {GW::EncStrings::LuminousStone, 1, MapID::Crystal_Overlook},
+        {GW::EncStrings::IntricateGrawlNecklaces, 3, MapID::Witmans_Folly},
+        {GW::EncStrings::JadeiteShards, 3, MapID::Shadows_Passage},
+        {GW::EncStrings::GoldDoubloon, 1, MapID::Barbarous_Shore},
+        {GW::EncStrings::ShriveledEyes, 2, MapID::Skyward_Reach},
+        {GW::EncStrings::IcyLodestones, 2, MapID::Icedome},
+        {GW::EncStrings::KeenOniTalon, 1, MapID::Silent_Surf},
+        {GW::EncStrings::HardenedHumps, 2, MapID::Nebo_Terrace},
+        {GW::EncStrings::PilesofElementalDust, 2, MapID::Drakkar_Lake},
+        {GW::EncStrings::NagaHides, 3, MapID::Panjiang_Peninsula},
+        {GW::EncStrings::SpiritwoodPlanks, 3, MapID::Griffons_Mouth},
+        {GW::EncStrings::StormyEye, 1, MapID::Pockmark_Flats},
+        {GW::EncStrings::SkreeWings, 3, MapID::Forum_Highlands},
+        {GW::EncStrings::SoulStones, 3, MapID::Raisu_Palace},
+        {GW::EncStrings::SpikedCrest, 1, MapID::Tears_of_the_Fallen},
+        {GW::EncStrings::DragonRoot, 1, MapID::Drazach_Thicket},
+        {GW::EncStrings::BerserkerHorns, 3, MapID::Jaga_Moraine},
+        {GW::EncStrings::BehemothJaw, 1, MapID::Mamnoon_Lagoon},
+        {GW::EncStrings::BowlofSkalefinSoup, 1, MapID::Zehlon_Reach},
+        {GW::EncStrings::ForestMinotaurHorns, 2, MapID::Kessex_Peak},
+        {GW::EncStrings::PutridCysts, 3, MapID::Sunjiang_District_explorable},
+        {GW::EncStrings::JadeMandibles, 2, MapID::Salt_Flats},
+        {GW::EncStrings::MaguumaManes, 2, MapID::Silverwood},
+        {GW::EncStrings::SkullJuju, 1, MapID::The_Eternal_Grove},
+        {GW::EncStrings::MandragorSwamproots, 3, MapID::Lahtenda_Bog},
+        {GW::EncStrings::BottleofVabbianWine, 1, MapID::Vehtendi_Valley},
+        {GW::EncStrings::WeaverLegs, 2, MapID::Magus_Stones},
+        {GW::EncStrings::TopazCrest, 1, MapID::Diviners_Ascent},
+        {GW::EncStrings::RotWallowTusks, 2, MapID::Pongmei_Valley},
+        {GW::EncStrings::FrostfireFangs, 2, MapID::Anvil_Rock},
+        {GW::EncStrings::DemonicRelic, 1, MapID::The_Ruptured_Heart},
+        {GW::EncStrings::AbnormalSeeds, 2, MapID::Talmark_Wilderness},
+        {GW::EncStrings::DiamondDjinnEssence, 1, MapID::The_Hidden_City_of_Ahdashim},
+        {GW::EncStrings::ForgottenSeals, 2, MapID::Vulture_Drifts},
+        {GW::EncStrings::CopperCrimsonSkullCoins, 5, MapID::Kinya_Province},
+        {GW::EncStrings::MossyMandibles, 3, MapID::Ettins_Back},
+        {GW::EncStrings::EnslavementStones, 2, MapID::Grenths_Footprint},
+        {GW::EncStrings::ElonianLeatherSquares, 5, MapID::Jahai_Bluffs},
+        {GW::EncStrings::CobaltTalons, 2, MapID::Vehjin_Mines},
+        {GW::EncStrings::MaguumaSpiderWeb, 1, MapID::Reed_Bog},
+        {GW::EncStrings::ForgottenTrinketBoxes, 5, MapID::Minister_Chos_Estate_explorable},
+        {GW::EncStrings::IcyHumps, 3, MapID::Iron_Horse_Mine},
+        {GW::EncStrings::SandblastedLodestone, 1, MapID::The_Shattered_Ravines},
+        {GW::EncStrings::BlackPearls, 3, MapID::Archipelagos},
+        {GW::EncStrings::InsectCarapaces, 3, MapID::Marga_Coast},
+        {GW::EncStrings::MergoyleSkulls, 3, MapID::Watchtower_Coast},
+        {GW::EncStrings::DecayedOrrEmblems, 3, MapID::Cursed_Lands},
+        {GW::EncStrings::TemperedGlassVials, 5, MapID::Mourning_Veil_Falls},
+        {GW::EncStrings::ScorchedLodestones, 3, MapID::Old_Ascalon},
+        {GW::EncStrings::WaterDjinnEssence, 1, MapID::Turais_Procession},
+        {GW::EncStrings::GuardianMoss, 1, MapID::Maishang_Hills},
+        {GW::EncStrings::DwarvenAles, 6, MapID::The_Floodplain_of_Mahnkelon},
+        {GW::EncStrings::AmphibianTongues, 2, MapID::Sparkfly_Swamp},
+        {GW::EncStrings::AlpineSeeds, 2, MapID::Frozen_Forest},
+        {GW::EncStrings::TangledSeeds, 2, MapID::Dry_Top},
+        {GW::EncStrings::StolenSupplies, 3, MapID::Jaya_Bluffs},
+        {GW::EncStrings::PahnaiSalad, 1, MapID::Plains_of_Jarin},
+        {GW::EncStrings::VerminHides, 3, MapID::Xaquang_Skyway},
+        {GW::EncStrings::RoaringEtherHeart, 1, MapID::The_Mirror_of_Lyss},
+        {GW::EncStrings::LeatheryClaws, 3, MapID::Ascalon_Foothills},
+        {GW::EncStrings::AzureCrest, 1, MapID::Unwaking_Waters},
+        {GW::EncStrings::JotunPelt, 1, MapID::Bjora_Marches},
+        {GW::EncStrings::HeketTongues, 2, MapID::Dejarin_Estate},
+        {GW::EncStrings::MountainTrollTusks, 5, MapID::Talus_Chute},
+        {GW::EncStrings::VialsofInk, 3, MapID::Shenzun_Tunnels},
+        {GW::EncStrings::KournanPendants, 3, MapID::Gandara_the_Moon_Fortress},
+        {GW::EncStrings::SingedGargoyleSkulls, 3, MapID::Diessa_Lowlands},
+        {GW::EncStrings::DredgeIncisors, 3, MapID::Melandrus_Hope},
+        {GW::EncStrings::StoneSummitBadges, 3, MapID::Tascas_Demise},
+        {GW::EncStrings::KraitSkins, 3, MapID::Arbor_Bay},
+        {GW::EncStrings::InscribedShards, 2, MapID::Jokos_Domain},
+        {GW::EncStrings::FeatheredScalps, 3, MapID::Sunqua_Vale},
+        {GW::EncStrings::MummyWrappings, 3, MapID::The_Sulfurous_Wastes},
+        {GW::EncStrings::ShadowyRemnants, 2, MapID::The_Black_Curtain},
+        {GW::EncStrings::AncientKappaShells, 3, MapID::The_Undercity},
+        {GW::EncStrings::Geode, 1, MapID::Yatendi_Canyons},
+        {GW::EncStrings::FibrousMandragorRoots, 2, MapID::Grothmar_Wardowns},
+        {GW::EncStrings::GruesomeRibcages, 3, MapID::Dragons_Gullet},
+        {GW::EncStrings::KrakenEyes, 2, MapID::Boreas_Seabed_explorable},
+        {GW::EncStrings::BogSkaleFins, 3, MapID::Scoundrels_Rise},
+        {GW::EncStrings::SentientSpores, 2, MapID::Sunward_Marches},
+        {GW::EncStrings::AncientEyes, 2, MapID::Sage_Lands},
+        {GW::EncStrings::CopperShillings, 3, MapID::Cliffs_of_Dohjok},
+        {GW::EncStrings::FrigidMandragorHusks, 3, MapID::Norrhart_Domains},
+        {GW::EncStrings::BoltsofLinen, 3, MapID::Travelers_Vale},
+        {GW::EncStrings::CharrCarvings, 3, MapID::Flame_Temple_Corridor},
     };
     static_assert(_countof(nicholas_cycles) == NICHOLAS_POST_COUNT);
 
