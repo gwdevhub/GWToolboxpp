@@ -436,24 +436,28 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     }
 
     // Auto-resize on collapse/expand (only relevant when the window has a title bar)
-    if (has_titlebar) {
-        if (ImGui::Checkbox("Auto-resize on collapse/expand", &auto_resize_on_collapse)) {
-            collapse_size_initialized = false;
-        }
-        ImGui::ShowHelp("Automatically resize this window when it is collapsed or expanded");
-        if (auto_resize_on_collapse) {
-            ImGui::Indent();
-            if (ImGui::DragFloat2("Collapsed size", collapsed_size, 1.f, 0.f, 0.f, "%.0f")) {
-                collapse_size_initialized = false;
-            }
-            ImGui::ShowHelp("Width and height when the title bar is collapsed; 0 = keep current");
-            if (ImGui::DragFloat2("Expanded size", expanded_size, 1.f, 0.f, 0.f, "%.0f")) {
-                collapse_size_initialized = false;
-            }
-            ImGui::ShowHelp("Width and height when the window is expanded; 0 = keep current");
-            ImGui::Unindent();
-        }
+    ImGui::BeginDisabled(!has_titlebar);
+    if (ImGui::Checkbox("Auto-resize on collapse/expand", &auto_resize_on_collapse)) {
+        collapse_size_initialized = false;
     }
+    ImGui::EndDisabled();
+    if (!has_titlebar && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+        ImGui::SetTooltip("This %s has no titlebar", TypeName());
+    } else {
+        ImGui::ShowHelp("Automatically resize this window when it is collapsed or expanded");
+    }
+    ImGui::Indent();
+    ImGui::BeginDisabled(!auto_resize_on_collapse || !has_titlebar);
+    if (ImGui::DragFloat2("Collapsed size", collapsed_size, 1.f, 0.f, 0.f, "%.0f")) {
+        collapse_size_initialized = false;
+    }
+    ImGui::ShowHelp("Width and height when the title bar is collapsed; 0 = keep current");
+    if (ImGui::DragFloat2("Expanded size", expanded_size, 1.f, 0.f, 0.f, "%.0f")) {
+        collapse_size_initialized = false;
+    }
+    ImGui::ShowHelp("Width and height when the window is expanded; 0 = keep current");
+    ImGui::EndDisabled();
+    ImGui::Unindent();
 
     // Shared settings (not per-mode) drawn below the two-column layout
     ImGui::StartSpacedElements(180.f);
