@@ -70,13 +70,14 @@ namespace ImGui {
         if (push_texture) draw_list->PopTexture();
     }
 
-    bool InputText(const char* label, std::string& buf, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+    bool InputText(const char* label, std::string& buf, size_t max_length, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
     {
-        if (InputText(label, buf.data(), (int)buf.capacity(), flags, callback, user_data)) {
-            buf.resize(strlen(buf.data()));
-            return true;
-        }
-        return false;
+        // Resize to max_length so ImGui can write up to max_length chars into a fully-initialised
+        // buffer. This avoids UB from writing past buf.size() and ensures capacity >= max_length+1.
+        buf.resize(max_length, '\0');
+        const bool changed = InputText(label, buf.data(), max_length + 1, flags, callback, user_data);
+        buf.resize(strnlen(buf.data(), max_length));
+        return changed;
     }
 
     void SetTooltip(std::function<void()> tooltip_callback)

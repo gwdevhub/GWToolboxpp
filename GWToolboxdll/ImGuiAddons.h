@@ -30,8 +30,8 @@ namespace ImGui {
     // ImDrawList::AddImage, but allows you to scale the added image down to fit.
     IMGUI_API void AddImageScaled(ImDrawList* draw_list, ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& size, float max_width, float max_height, const ImVec2& uv_min = ImVec2(0, 0), const ImVec2& uv_max = ImVec2(1, 1), ImU32 col = IM_COL32_WHITE);
 
-    // InputText using a std::string - make sure you set the capacity for the string first, otherwise it won't be able to be filled.
-    IMGUI_API bool InputText(const char* label, std::string& buf, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
+    // InputText using a std::string. max_length is the maximum number of characters the user can type.
+    IMGUI_API bool InputText(const char* label, std::string& buf, size_t max_length, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
 
     IMGUI_API void SetTooltip(std::function<void()> tooltip_callback);
 
