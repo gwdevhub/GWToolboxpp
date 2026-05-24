@@ -545,7 +545,7 @@ void TeamBuild::DrawPlayerBuildsContent(
         ImGui::Text("#%zu", j + 1);
         ImGui::PushItemWidth(btn_offset - btn_width - spacing * 2);
         ImGui::SameLine(btn_width, 0);
-        if (ImGui::InputText("###name", build.name)) {
+        if (ImGui::InputText("###name", build.name, 128)) {
             builds_changed = true;
         }
         if (ImGui::IsItemHovered() && !build.name.empty()) {
@@ -625,7 +625,7 @@ void TeamBuild::DrawPlayerBuildsContent(
 
             ImGui::TextUnformatted("Build Code:");
             ImGui::SameLine();
-            if (ImGui::InputText("###code", build.code)) {
+            if (ImGui::InputText("###code", build.code, 128)) {
                 build.ResetDecodeCache();
                 ResetEncodedCache();
                 builds_changed = true;
@@ -732,7 +732,7 @@ void TeamBuild::DrawHeroBuildsContent(
 
         ImGui::SameLine(offset);
         ImGui::PushItemWidth(text_item_width);
-        if (ImGui::InputText("###name", build.name)) {
+        if (ImGui::InputText("###name", build.name, 128)) {
             builds_changed = true;
         }
         if (ImGui::IsItemHovered() && !build.name.empty()) {
@@ -740,7 +740,7 @@ void TeamBuild::DrawHeroBuildsContent(
         }
 
         ImGui::SameLine(offset += text_item_width + item_spacing);
-        if (ImGui::InputText("###code", build.code)) {
+        if (ImGui::InputText("###code", build.code, 128)) {
             build.ResetDecodeCache();
             ResetEncodedCache();
             builds_changed = true;
@@ -934,8 +934,8 @@ bool TeamBuild::DrawEditWindow(
     }
 
     if (has_hero_slots) {
-        builds_changed |= ImGui::InputText("Hero Build Name", name);
-        builds_changed |= ImGui::InputText("Group", group);
+        builds_changed |= ImGui::InputText("Hero Build Name", name, 128);
+        builds_changed |= ImGui::InputText("Group", group, 128);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Assign to a group. Builds sharing a group name are shown together under a collapsible header.");
         }
@@ -943,7 +943,7 @@ bool TeamBuild::DrawEditWindow(
     }
     else {
         ImGui::PushItemWidth(-120.f);
-        builds_changed |= ImGui::InputText("Build Name", name);
+        builds_changed |= ImGui::InputText("Build Name", name, 128);
         ImGui::PopItemWidth();
         DrawPlayerBuildsContent(builds_changed);
     }
