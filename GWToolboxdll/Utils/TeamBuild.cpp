@@ -143,7 +143,10 @@ namespace {
             case AddHero:
                 if (!ToolboxUtils::IsHeroUnlocked(build.hero_id)) 
                     return true;
-                GW::PartyMgr::AddHero(build.hero_id);
+                if (!GW::PartyMgr::AddHero(build.hero_id)) {
+                    Log::Warning("Failed to add hero %d", build.hero_id);
+                    return true;
+                }
                 stage = WaitForHero;
                 [[fallthrough]];
             case WaitForHero: {
