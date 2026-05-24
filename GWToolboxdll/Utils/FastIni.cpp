@@ -212,6 +212,7 @@ void FastIni::LoadBuffer(std::string_view buf) {
         auto& sec = m_sections[sp.name];
         parseSection(sec, sp.text);
     }
+    // Reset() already dirtied the cache; no need to dirty again here.
 }
 
 SI_Error FastIni::SaveFile(const std::filesystem::path& path, bool addUtf8BOM) const {
@@ -256,6 +257,20 @@ SI_Error FastIni::SaveFile(const std::filesystem::path& path, bool addUtf8BOM) c
 
 void FastIni::Reset() {
     m_sections.clear();
+    m_sectionNameCache.clear();
+    m_sectionCacheDirty = true;
+}
+
+// ===========================================================================
+// FastIni – section name cache
+// ===========================================================================
+
+void FastIni::rebuildSectionCache() const {
+    m_sectionNameCache.clear();
+    m_sectionNameCache.reserve(m_sections.size());
+    for (const auto& [name, _] : m_sections)
+        m_sectionNameCache.push_back(name.c_str());
+    m_sectionCacheDirty = false;
 }
 
 // ===========================================================================
@@ -350,7 +365,9 @@ const FastIniSection* FastIni::GetSection(std::string_view name) const {
 }
 
 FastIniSection& FastIni::GetOrCreateSection(std::string_view name) {
-    return m_sections[std::string(name)];
+    auto [it, inserted] = m_sections.emplace(std::string(name), FastIniSection{});
+    if (inserted) m_sectionCacheDirty = true;
+    return it->second;
 }
 
 // ===========================================================================
@@ -373,24 +390,28 @@ bool FastIni::GetBoolValue(const char* section, const char* key, bool def) const
 SI_Error FastIni::SetValue(const char* section, const char* key, const char* value,
                             const char*, bool) {
     auto [sec, secInserted] = m_sections.try_emplace(std::string(section));
+    if (secInserted) m_sectionCacheDirty = true;
     SI_Error r = sec->second.SetValue(key, value);
     return secInserted ? SI_INSERTED : r;
 }
 SI_Error FastIni::SetLongValue(const char* section, const char* key, long value,
                                 const char*, bool, bool) {
     auto [sec, secInserted] = m_sections.try_emplace(std::string(section));
+    if (secInserted) m_sectionCacheDirty = true;
     SI_Error r = sec->second.SetLong(key, value);
     return secInserted ? SI_INSERTED : r;
 }
 SI_Error FastIni::SetDoubleValue(const char* section, const char* key, double value,
                                   const char*, bool) {
     auto [sec, secInserted] = m_sections.try_emplace(std::string(section));
+    if (secInserted) m_sectionCacheDirty = true;
     SI_Error r = sec->second.SetDouble(key, value);
     return secInserted ? SI_INSERTED : r;
 }
 SI_Error FastIni::SetBoolValue(const char* section, const char* key, bool value,
                                 const char*, bool) {
     auto [sec, secInserted] = m_sections.try_emplace(std::string(section));
+    if (secInserted) m_sectionCacheDirty = true;
     SI_Error r = sec->second.SetBool(key, value);
     return secInserted ? SI_INSERTED : r;
 }
@@ -412,13 +433,18 @@ bool FastIni::SectionExists(const char* section) const {
 bool FastIni::Delete(const char* section, const char* key, bool) {
     auto it = m_sections.find(section);
     if (it == m_sections.end()) return false;
-    if (key == nullptr) { m_sections.erase(it); return true; }
+    if (key == nullptr) {
+        m_sections.erase(it);
+        m_sectionCacheDirty = true;
+        return true;
+    }
     return it->second.Delete(key);
 }
 
 void FastIni::GetAllSections(TNamesDepend& out) const {
-    for (auto& [name, _] : m_sections)
-        out.push_back(SI_Entry(name.c_str()));
+    if (m_sectionCacheDirty) rebuildSectionCache();
+    for (const char* p : m_sectionNameCache)
+        out.push_back(SI_Entry(p));
 }
 
 bool FastIni::GetAllKeys(const char* section, TNamesDepend& out) const {

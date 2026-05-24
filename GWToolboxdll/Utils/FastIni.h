@@ -28,6 +28,8 @@
 //  - Multi-key is supported: each key maps to a vector of entries. In the
 //    single-value case (overwhelmingly common) that vector has one element
 //    and the typed getters address [0] directly.
+//  - GetAllSections is O(n) on first call after a structural change, then
+//    O(n) copy-only on repeated calls (no map traversal).
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -175,6 +177,15 @@ public:
 private:
     std::unordered_map<std::string, FastIniSection> m_sections;
     bool                                            m_multiKey = false;
+
+    // Cache for GetAllSections – rebuilt lazily after any structural change.
+    // Stores const char* into m_sections key strings, which are stable for
+    // the lifetime of each node (unordered_map does not move keys on
+    // insert/erase of other entries).
+    mutable std::vector<const char*> m_sectionNameCache;
+    mutable bool                     m_sectionCacheDirty = true;
+
+    void rebuildSectionCache() const;
 
     struct SectionSpan { std::string name; std::string_view text; };
     static std::vector<SectionSpan> splitSections(std::string_view buf);
