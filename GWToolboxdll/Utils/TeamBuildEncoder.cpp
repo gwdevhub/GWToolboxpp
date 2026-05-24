@@ -607,6 +607,7 @@ namespace TeamBuildEncoder {
             if (!GW::SkillbarMgr::EncodeSkillTemplate(tmpl, code_buf, _countof(code_buf))) 
                 return false;
             build.code = code_buf;
+            build.name = build.GetFallbackBuildName();
             out.builds.push_back(std::move(build));
         }
         if (br.ok) out.ui_id = TextUtils::WStringToString(encoded);
