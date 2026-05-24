@@ -591,9 +591,9 @@ void HeroBuildsWindow::LoadFromFile()
     inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
 
     // then load
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     inifile->GetAllSections(entries);
-    for (const ToolboxIni::Entry& entry : entries) {
+    for (const auto& entry : entries) {
         const char* section = entry.pItem;
 
         TeamBuild tb(inifile->GetValue(section, "buildname", ""));

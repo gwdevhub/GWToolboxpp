@@ -675,7 +675,6 @@ bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const b
 void RerollWindow::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWindow::LoadSettings(ini);
-    ToolboxIni::TNamesDepend keys;
     LOAD_BOOL(travel_to_same_location_after_rerolling);
     LOAD_BOOL(rejoin_party_after_rerolling);
     LOAD_BOOL(return_on_fail);

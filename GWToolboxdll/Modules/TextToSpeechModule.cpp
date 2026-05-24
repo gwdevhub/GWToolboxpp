@@ -1783,7 +1783,7 @@ void TextToSpeechModule::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(play_tts_in_outposts);
     LOAD_FLOAT(npc_speech_bubble_range);
 
-    CSimpleIniA::TNamesDepend keys;
+    TNamesDepend keys;
     ini->GetAllKeys(Name(), keys);
     for (const auto& key : keys) {
         std::string key_name = key.pItem;
@@ -1828,7 +1828,7 @@ void TextToSpeechModule::SaveSettings(ToolboxIni* ini)
     SAVE_FLOAT(npc_speech_bubble_range);
 
     // Remove stale custom voice entries
-    CSimpleIniA::TNamesDepend keys;
+    TNamesDepend keys;
     ini->GetAllKeys(Name(), keys);
     for (const auto& key : keys) {
         if (std::string(key.pItem).find("npc_voice_") == 0) ini->Delete(Name(), key.pItem);

@@ -421,15 +421,15 @@ namespace {
         }
         inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
 
-        ToolboxIni::TNamesDepend entries;
+        TNamesDepend entries;
         inifile->GetAllKeys("preferred_skill_orders", entries);
-        for (const ToolboxIni::Entry& entry : entries) {
+        for (const auto& entry : entries) {
             AddPreferredBuild(entry.pItem);
         }
 
         entries.clear();
         inifile->GetAllSections(entries);
-        for (const ToolboxIni::Entry& entry : entries) {
+        for (const auto& entry : entries) {
             if (memcmp(entry.pItem, "builds", 6) != 0) {
                 continue;
             }
@@ -661,9 +661,9 @@ namespace {
         }
 
         bool found_old_build = false;
-        ToolboxIni::TNamesDepend oldentries;
+        TNamesDepend oldentries;
         ini->GetAllSections(oldentries);
-        for (const ToolboxIni::Entry& oldentry : oldentries) {
+        for (const auto& oldentry : oldentries) {
             const char* section = oldentry.pItem;
             if (strncmp(section, "builds", 6) != 0)
                 continue;

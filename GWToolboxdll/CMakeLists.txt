@@ -73,7 +73,6 @@ target_include_directories(GWToolboxdll PRIVATE
     "${PROJECT_SOURCE_DIR}/Dependencies"
     "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/include"
     "${CMAKE_CURRENT_SOURCE_DIR}"
-	"${SIMPLEINI_INCLUDE_DIRS}"
     ) 
 
 include(imgui_fonts)
@@ -140,3 +139,12 @@ endforeach()
 add_custom_target(compile_shaders DEPENDS ${SHADER_OUTPUTS})
 
 add_dependencies(GWToolboxdll compile_shaders) 
+
+add_custom_command(TARGET GWToolboxdll POST_BUILD
+    COMMAND powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/compress.ps1"
+            "$<TARGET_PDB_FILE:GWToolboxdll>"
+            "$<CONFIG>"
+    COMMENT "Compressing PDB for distribution (RelWithDebInfo only)"
+    VERBATIM
+)

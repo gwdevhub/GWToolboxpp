@@ -187,7 +187,7 @@ void ToolboxTheme::LoadUILayout()
 
     // Second, pre-populate settings for windows that don't exist yet
     // This uses ImGui's internal settings system
-    CSimpleIniA::TNamesDepend keys;
+    TNamesDepend keys;
     ini->GetAllKeys(window_ini_section, keys);
 
     for (const auto& key : keys) {

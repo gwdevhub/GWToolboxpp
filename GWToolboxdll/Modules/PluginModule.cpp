@@ -242,7 +242,7 @@ void PluginModule::Draw(IDirect3DDevice9* device)
 
 void PluginModule::LoadSettings(ToolboxIni* ini)
 {
-    std::list<CSimpleIniA::Entry> dlls_to_load;
+    TNamesDepend dlls_to_load;
     std::vector<Plugin*> plugins_loaded_from_ini;
     if (ini->GetAllKeys(plugins_enabled_section, dlls_to_load)) {
         for (const auto& entry : dlls_to_load) {

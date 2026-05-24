@@ -267,10 +267,10 @@ void AgentRenderer::LoadCustomAgents()
     }
     custom_agents.clear();
     
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     agentcolorinifile->GetAllSections(entries);
 
-    for (const ToolboxIni::Entry& entry : entries) {
+    for (const auto& entry : entries) {
         // we know that all sections are agent colors, don't even check the section names
         auto* custom_agent = new CustomAgent(agentcolorinifile, entry.pItem);
         custom_agent->index = custom_agents.size();

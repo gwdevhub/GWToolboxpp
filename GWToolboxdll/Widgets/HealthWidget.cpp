@@ -48,10 +48,10 @@ void HealthWidget::LoadSettings(ToolboxIni* ini)
 
     ASSERT(inifile.LoadIfExists(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
 
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     inifile.GetAllSections(entries);
 
-    for (const ToolboxIni::Entry& entry : entries) {
+    for (const auto& entry : entries) {
         auto threshold = new Threshold(&inifile, entry.pItem);
         threshold->index = thresholds.size();
         thresholds.push_back(threshold);

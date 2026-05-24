@@ -19,12 +19,12 @@ SI_Error ToolboxIni::LoadIfExists(const std::filesystem::path& a_pwszFile)
 
 SI_Error ToolboxIni::LoadFile(const std::filesystem::path& a_pwszFile)
 {
-    int res = -1;
+    SI_Error res = SI_FAIL;
 
     Reset();
     // 3 tries to load from disk
     for (auto i = 0; i < 3 && res != SI_OK; i++) {
-        res = CSimpleIni::LoadFile(a_pwszFile.wstring().c_str());
+        res = FastIni::LoadFile(a_pwszFile.wstring().c_str()) ? SI_OK : SI_FAIL;
     }
     if (res == SI_OK) {
         Log::LogW(L"[ToolboxIni] LoadFile successful for %s", a_pwszFile.wstring().c_str());

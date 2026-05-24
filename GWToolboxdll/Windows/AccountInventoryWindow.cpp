@@ -756,7 +756,7 @@ struct MergeStack;
 
     void LoadFromFiles(bool only_foreign)
     {
-        ToolboxIni::TNamesDepend entries{};
+        TNamesDepend entries{};
 
 
         Resources::EnsureFolderExists(Resources::GetPath(L"inventories"));
@@ -793,7 +793,7 @@ struct MergeStack;
                 if (ini->LoadFile(path.wstring()) < 0) continue;
             }
             ini->GetAllSections(entries);
-            for (const ToolboxIni::Entry& entry : entries) {
+            for (const auto& entry : entries) {
                 const char* section = entry.pItem;
 
                 // account and character values must exist in both freeslot and item sections

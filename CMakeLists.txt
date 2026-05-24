@@ -8,9 +8,9 @@ project(gwtoolbox)
 
 set(GWTOOLBOXEXE_VERSION "4.6")
 set(GWTOOLBOXEXE_MODULE_VERSION "4,6,0,0") # used for exe module info. See GWToolbox/GWToolbox.rc
-set(GWTOOLBOXDLL_VERSION "8.18")
+set(GWTOOLBOXDLL_VERSION "8.19")
 set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
-set(GWTOOLBOX_MODULE_VERSION "8,18,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+set(GWTOOLBOX_MODULE_VERSION "8,19,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 
 if(MSVC_TOOLSET_VERSION LESS 143)
@@ -141,7 +141,6 @@ include(steamworks_sdk)
 find_library(GAME_SDK discord_game_sdk)
 find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
-find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
 find_package(minhook CONFIG REQUIRED)
 find_package(glaze CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)

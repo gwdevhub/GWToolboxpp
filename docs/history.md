@@ -7,6 +7,11 @@ layout: default
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.19
+* [Fix] Fixed hotkey groups not being saved/loaded correctly to ini.
+* [Minor] Entire hotkey groups can now be triggered the same way normal hotkeys can, so you can activate more than one hotkey at a time.
+* [Fix] Fixed hero panels popping up on map travel due to gw's async settings saving mechanism
+
 ## Version 8.18
 
 * [New] Added `/tb save [profile]` and `/tb load [profile]` chat commands to save/load Toolbox settings to disk with optional profile names
