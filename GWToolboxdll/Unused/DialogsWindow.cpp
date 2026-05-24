@@ -203,7 +203,7 @@ void DialogsWindow::DrawSettingInternal() {
     ImGui::Checkbox("Custom", &show_custom);
 }
 
-void DialogsWindow::LoadSettings(CSimpleIni* ini) {
+void DialogsWindow::LoadSettings(ToolboxIni* ini) {
     ToolboxWindow::LoadSettings(ini);
 
     fav_count = ini->GetLongValue(Name(), VAR_NAME(fav_count), 3);
@@ -220,7 +220,7 @@ void DialogsWindow::LoadSettings(CSimpleIni* ini) {
     LOAD_BOOL(show_custom);
 }
 
-void DialogsWindow::SaveSettings(CSimpleIni* ini) {
+void DialogsWindow::SaveSettings(ToolboxIni* ini) {
     ToolboxWindow::SaveSettings(ini);
     ini->SetLongValue(Name(), "fav_count", fav_count);
     size_t count = static_cast<size_t>(fav_count);
