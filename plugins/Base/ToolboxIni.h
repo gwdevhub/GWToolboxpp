@@ -11,5 +11,6 @@ public:
     SI_Error LoadIfExists(const std::filesystem::path& a_pwszFile);
     // Returns SI_OK if file exists and was read successfully
     SI_Error LoadFile(const std::filesystem::path& a_pwszFile);
+    SI_Error LoadFile(const wchar_t* a_pwszFile);
     std::filesystem::path location_on_disk;
 };
