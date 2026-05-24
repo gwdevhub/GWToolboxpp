@@ -167,7 +167,7 @@ bool FastIniSection::Delete(std::string_view key) {
 void FastIniSection::GetAllKeys(TNamesDepend& out) const {
     for (auto& [k, vec] : keys)
         if (!vec.empty())
-            out.push_back(SI_Entry(vec[0].raw.c_str()));
+            out.push_back(SI_Entry(k.c_str()));
 }
 
 // ===========================================================================
