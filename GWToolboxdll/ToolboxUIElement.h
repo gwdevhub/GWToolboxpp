@@ -69,6 +69,11 @@ public:
     bool show_titlebar = true;
     bool show_closebutton = true;
 
+    // Auto-resize width/height when window collapses or expands
+    bool auto_resize_on_collapse = false;
+    float collapsed_size[2] = {0.f, 0.f};
+    float expanded_size[2] = {0.f, 0.f};
+
     // Settings panel tab: 0 = Normal, 1 = Mobile, -1 = auto (tracks current mode)
     int settings_active_tab = -1;
 
@@ -95,4 +100,8 @@ protected:
     virtual void ShowVisibleRadio();
 
     ImVec2 last_frame_pos;
+
+    // Collapse-state tracking for auto_resize_on_collapse (mutable: used in const GetWinFlags)
+    mutable bool prev_was_collapsed = false;
+    mutable bool collapse_size_initialized = false;
 };
