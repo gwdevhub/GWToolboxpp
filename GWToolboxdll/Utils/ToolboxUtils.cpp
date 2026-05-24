@@ -91,7 +91,19 @@ namespace GW {
                 case MapID::Ravens_Point_Level_2:
                 case MapID::Ravens_Point_Level_3:
                 case MapID::Glints_Challenge_mission: // CrystalDesert
+                // Deldrimor: EotN missions with Destroyers (would otherwise show Norn/Asuran by region)
+                case MapID::A_Gate_Too_Far_Level_1:
+                case MapID::A_Gate_Too_Far_Level_2:
+                case MapID::A_Gate_Too_Far_Level_3:
+                case MapID::A_Gate_Too_Far_mission:
+                case MapID::The_Elusive_Golemancer_Level_1:
+                case MapID::The_Elusive_Golemancer_Level_2:
+                case MapID::The_Elusive_Golemancer_Level_3:
+                case MapID::The_Elusive_Golemancer_mission:
                     return {TitleID::Deldrimor};
+                // Lightbringer: Grand Court of Sebelkeh mission has Margonites (would otherwise show Sunspear by continent)
+                case MapID::Grand_Court_of_Sebelkeh:
+                    return {TitleID::Lightbringer};
                 // Vanguard: DepthsOfTyria dungeons in Charr territory
                 case MapID::Cathedral_of_Flames_Level_1:
                 case MapID::Cathedral_of_Flames_Level_2:
