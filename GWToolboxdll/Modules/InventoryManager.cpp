@@ -587,7 +587,7 @@ namespace {
     }
     void store_all_nicholas_items() {
         store_items(filter_inventory([](const InventoryManager::Item* item) {
-            return item && DailyQuests::GetNicholasItemInfo(item->name_enc);
+            return DailyQuests::IsNicholasItem(item);
         }));
     }
 
@@ -1828,7 +1828,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit,
             if (item->IsBlue() && !item->GetIsIdentified() && (kit && kit->IsLesserKit())) {
                 continue; // Note: lesser kits cant salvage blue unids - Guild Wars bug/feature
             }
-            if (DailyQuests::GetNicholasItemInfo(item->name_enc) && !salvage_nicholas_items) {
+            if (!salvage_nicholas_items && DailyQuests::IsNicholasItem(item)) {
                 continue; // Don't salvage nicholas items
             }
             const GW::Constants::Rarity rarity = item->GetRarity();
@@ -2420,7 +2420,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
                     goto end_popup;
                 }
             }
-            if (DailyQuests::GetNicholasItemInfo(context_item_actual->name_enc)) {
+            if (DailyQuests::IsNicholasItem(context_item_actual)) {
                 if (ImGui::Button("Store All Nicholas Items", size)) {
                     ImGui::CloseCurrentPopup();
                     store_all_nicholas_items();
