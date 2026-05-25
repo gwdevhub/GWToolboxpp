@@ -82,8 +82,12 @@ public:
     static NicholasCycleData* GetNicholasItemInfo(const wchar_t* item_name_encoded);
     // Returns info about the Nicholas Sandford (pre-searing) item if the given item name matches
     static QuestData* GetNicholasSandfordItemInfo(const wchar_t* item_name_encoded);
+    struct NicholasIngredientInfo {
+        NicholasCycleData* nicholas_item = nullptr;
+        uint32_t ingredient_quantity = 1; // TODO: find actual counts of ingredients needed to craft a full set
+    };
     // Returns info about the Nicholas item crafted from the given ingredient enc name, if a match is found
-    static NicholasCycleData* GetNicholasIngredientInfo(const wchar_t* ingredient_enc);
+    static NicholasIngredientInfo GetNicholasIngredientInfo(const wchar_t* ingredient_enc);
 
     struct ZaishenCoinReward {
         uint32_t nm;

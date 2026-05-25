@@ -2086,25 +2086,27 @@ DailyQuests::QuestData* DailyQuests::GetNicholasSandfordItemInfo(const wchar_t* 
     return nullptr;
 }
 
-DailyQuests::NicholasCycleData* DailyQuests::GetNicholasIngredientInfo(const wchar_t* ingredient_enc)
+DailyQuests::NicholasIngredientInfo DailyQuests::GetNicholasIngredientInfo(const wchar_t* ingredient_enc)
 {
     // Crafting ingredients whose end product Nicholas The Traveller collects.
     // If an item's enc name isn't known yet, it will be a placeholder that won't match - find it in-game and update EncStrings.h.
+    // TODO: update ingredient_quantity values to reflect actual counts needed to craft a full set of nick items
     static const struct {
         const wchar_t* ingredient;
         const wchar_t* nicholas_item;
+        uint32_t ingredient_quantity;
     } ingredients[] = {
-        {GW::EncStrings::SkaleFins, GW::EncStrings::BowlofSkalefinSoup},
-        {GW::EncStrings::ChunkOfDrakeFlesh, GW::EncStrings::DrakeKabob}, // TODO: update ChunkOfDrakeFlesh enc name in EncStrings.h
-        {GW::EncStrings::IbogaPetals, GW::EncStrings::PahnaiSalad},      // TODO: update IbogaPetals enc name in EncStrings.h
-        {GW::EncStrings::MandragorRoot, GW::EncStrings::MandragorRootCake}
+        {GW::EncStrings::SkaleFins, GW::EncStrings::BowlofSkalefinSoup, 1},
+        {GW::EncStrings::ChunkOfDrakeFlesh, GW::EncStrings::DrakeKabob, 1}, // TODO: update ChunkOfDrakeFlesh enc name in EncStrings.h
+        {GW::EncStrings::IbogaPetals, GW::EncStrings::PahnaiSalad, 1},      // TODO: update IbogaPetals enc name in EncStrings.h
+        {GW::EncStrings::MandragorRoot, GW::EncStrings::MandragorRootCake, 1}
     };
-    if (!ingredient_enc) return nullptr;
+    if (!ingredient_enc) return {};
     for (const auto& entry : ingredients) {
         if (wcscmp(ingredient_enc, entry.ingredient) == 0)
-            return GetNicholasItemInfo(entry.nicholas_item);
+            return {GetNicholasItemInfo(entry.nicholas_item), entry.ingredient_quantity};
     }
-    return nullptr;
+    return {};
 }
 
 time_t DailyQuests::GetTimestampFromNicholasSandford(QuestData* data)
