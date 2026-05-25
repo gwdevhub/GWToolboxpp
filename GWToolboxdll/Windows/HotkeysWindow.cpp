@@ -43,6 +43,12 @@ namespace {
     std::deque<TBHotkey*> pending_hotkeys;
     std::recursive_mutex pending_mutex;
     void PushPendingHotkey(TBHotkey* hk) {
+        if (auto grp = dynamic_cast<HotkeyGroup*>(hk)) {
+            for (auto c : grp->hotkeys) {
+                if (c->active) PushPendingHotkey(c);
+            }
+            return;
+        }
         pending_mutex.lock();
         if (std::ranges::find(pending_hotkeys, hk) == pending_hotkeys.end()) {
             pending_hotkeys.push_back(hk);
@@ -113,7 +119,7 @@ namespace {
                 AddHotkeyIfValid(child, player_name,instance_type,primary,map_id,is_pvp,valid);
             }
         }
-        else if (hotkey && hotkey->IsValid(player_name, instance_type, primary, map_id, is_pvp)) {
+        if (hotkey && hotkey->IsValid(player_name, instance_type, primary, map_id, is_pvp)) {
             valid.push_back(hotkey);
         }
     }

@@ -1,6 +1,7 @@
 #pragma once
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/GameEntities/Attribute.h>
 
 class StoCCallback {
     GW::HookEntry* hook_entry = nullptr;
@@ -142,6 +143,11 @@ namespace GW {
 
         bool IsPreSearing(const GW::Constants::MapID map_id = (GW::Constants::MapID)0);
     } // namespace Map
+
+    namespace SkillbarMgr {
+        GW::Attribute* GetPlayerAttribute(GW::Constants::Attribute);
+
+    }
     namespace LoginMgr {
         const bool IsCharSelectReady();
         const bool SelectCharacterToPlay(const wchar_t* name, bool play = true);
