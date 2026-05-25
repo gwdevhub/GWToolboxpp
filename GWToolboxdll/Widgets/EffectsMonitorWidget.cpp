@@ -346,9 +346,7 @@ void EffectsMonitorWidget::Update(float delta)
     if (!tracked_spirits.empty()) {
         std::vector<uint32_t> to_remove;
         for (const auto& [agent_id, skill_id] : tracked_spirits) {
-            const auto* agent = GW::Agents::GetAgentByID(agent_id);
-            const auto* living = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (!living || living->hp <= 0.f || living->allegiance != GW::Constants::Allegiance::Spirit_Pet) {
+            if (!GW::Agents::GetAgentMatchesFlags(GW::Agents::GetAgentByID(agent_id), GW::AgentTargetFlags::Include_SpiritPet | GW::AgentTargetFlags::Exclude_DeadSpiritPet)) {
                 to_remove.push_back(agent_id);
             }
         }
