@@ -1796,7 +1796,7 @@ void ChatCommands::SaveSettings(ToolboxIni* ini)
 
     const auto section_name = "Chat Command Aliases";
 
-    ini->Delete("Chat Command Aliases", nullptr);
+    ini->Delete(section_name, nullptr);
     sort_cmd_aliases();
 
     for (const auto [index, alias] : cmd_aliases | std::views::enumerate) {

@@ -5,6 +5,8 @@
 
 namespace GW {
     typedef uint32_t AgentID;
+    enum class DyeColor : uint8_t;
+
     namespace Constants {
         enum HeroID : uint32_t;
         enum class Profession : uint32_t;
@@ -45,18 +47,23 @@ namespace GW {
         /* +h003C */ uint32_t h003C;
         /* +h0040 */ uint32_t h0040;
         /* +h0044 */ uint32_t h0044;
-        /* +h0048 */ uint32_t h0048;
-        /* +h004C */ uint32_t h004C;
-        /* +h0050 */ wchar_t  name[20];
-        /* +h0078 */ uint32_t h0078;
-        /* +h007C */ uint32_t h007C;
-        /* +h0080 */ uint32_t h0080;
-        /* +h0084 */ uint32_t h0084;
-        /* +h0088 */ uint32_t h0088;
-        /* +h008C */ uint32_t h008C;
-        /* +h0090 */ uint32_t h0090;
-        /* +h0094 */ uint32_t h0094;
-        /* +h0098 */ uint32_t h0098;
+        /* +h0048 */ uint32_t appearance_bitmap; // If hero is mercenary, this is the same type as GW::Player->appearance_bitmap. If hero isn't merc, this is empty.
+        /* +h004C */ uint16_t chestpiece_dye_tint;
+        /* +h004E */ uint16_t chestpiece_model_file_id;
+        /* +h0050 */ uint16_t leggings_dye_tint;
+        /* +h0052 */ uint16_t leggings_model_file_id;
+        /* +h0054 */ uint16_t headpiece_dye_tint;
+        /* +h0056 */ uint16_t headpiece_model_file_id;
+        /* +h0058 */ uint16_t boots_dye_tint;
+        /* +h005A */ uint16_t boots_model_file_id;
+        /* +h005C */ uint16_t gloves_dye_tint;
+        /* +h005E */ uint16_t gloves_model_file_id;
+        /* +h0060 */ DyeColor chestpiece_dye[4];
+        /* +h0064 */ DyeColor leggings_dye[4];
+        /* +h0068 */ DyeColor headpiece_dye[4];
+        /* +h006C */ DyeColor boots_dye[4];
+        /* +h0070 */ DyeColor gloves_dye[4];
+        /* +h0074 */ wchar_t name[20];
     };
     static_assert(sizeof(HeroInfo) == 0x9C, "struct HeroInfo has incorrect size");
 
