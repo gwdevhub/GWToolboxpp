@@ -22,5 +22,7 @@ public:
     bool DrawSettings() override;
 
     int Description(char* buf, size_t bufsz) override;
-    void Execute() override;
+
+    // Groups don't execute; child hotkeys are found and enqueued in HotkeysWindow
+    void Execute() override {};
 };

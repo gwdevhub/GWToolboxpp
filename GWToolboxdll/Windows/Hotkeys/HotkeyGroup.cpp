@@ -20,7 +20,6 @@
 HotkeyGroup::HotkeyGroup(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
-    key_combo.reset(); // groups don't have a key combo
     auto found = hotkey_groups.find(label);
     if (found != hotkey_groups.end()) {
         hotkeys = found->second->hotkeys;
@@ -59,14 +58,6 @@ HotkeyGroup::~HotkeyGroup()
 int HotkeyGroup::Description(char* buf, size_t bufsz)
 {
     return snprintf(buf, bufsz, "Group: %s", *label ? label : "(unnamed)");
-}
-
-void HotkeyGroup::Execute()
-{
-    for (auto hk : hotkeys) {
-        if (hk->active)
-            hk->Execute();
-    }
 }
 
 bool HotkeyGroup::DrawSettings()
