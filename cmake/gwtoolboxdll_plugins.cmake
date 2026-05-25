@@ -2,6 +2,8 @@ add_library(plugin_base INTERFACE)
 target_sources(plugin_base INTERFACE
     "plugins/Base/dllmain.cpp"
     "plugins/Base/stl.h"
+    "plugins/Base/ToolboxIni.h"
+    "plugins/Base/ToolboxIni.cpp"
     "plugins/Base/ToolboxPlugin.h"
     "plugins/Base/ToolboxPlugin.cpp"
     "plugins/Base/PluginUtils.h"

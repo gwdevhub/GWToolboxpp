@@ -11,6 +11,8 @@
 #include <variant>
 #include <vector>
 
+#include "gwtoolboxdll_export.h"
+
 // ---------------------------------------------------------------------------
 // FastIni – a fast INI parser designed for GWToolbox++.
 //
@@ -125,7 +127,7 @@ private:
 // ---------------------------------------------------------------------------
 class FastIni {
 public:
-    explicit FastIni(bool a_bIsUtf8 = false, bool a_bMultiKey = false, bool a_bMultiLine = false)
+    GWTOOLBOXDLL_EXPORT explicit FastIni(bool a_bIsUtf8 = false, bool a_bMultiKey = false, bool a_bMultiLine = false)
         : m_multiKey(a_bMultiKey)
     {
         assert(!a_bIsUtf8   && "FastIni: UTF-8 mode is not supported");
@@ -135,44 +137,44 @@ public:
 
     // load / save – filesystem::path is the real implementation; all other
     // overloads construct a path and forward so wide strings work on Windows.
-    bool LoadFile  (const std::filesystem::path& path);
-    void LoadBuffer(std::string_view buf);
+    GWTOOLBOXDLL_EXPORT bool LoadFile(const std::filesystem::path& path);
+    GWTOOLBOXDLL_EXPORT void LoadBuffer(std::string_view buf);
 
-    SI_Error SaveFile(const std::filesystem::path& path, bool addUtf8BOM = false) const;
+    GWTOOLBOXDLL_EXPORT SI_Error SaveFile(const std::filesystem::path& path, bool addUtf8BOM = false) const;
 
-    void Reset();
+    GWTOOLBOXDLL_EXPORT void Reset();
 
     // CSimpleIni-compatible surface
-    const char* GetValue      (const char* section, const char* key, const char* def = "") const;
-    SI_Error    SetValue      (const char* section, const char* key, const char* value,
+    GWTOOLBOXDLL_EXPORT const char* GetValue(const char* section, const char* key, const char* def = "") const;
+    GWTOOLBOXDLL_EXPORT SI_Error SetValue(const char* section, const char* key, const char* value,
                                const char* = nullptr, bool = false);
-    long        GetLongValue  (const char* section, const char* key, long   def = 0)   const;
-    SI_Error    SetLongValue  (const char* section, const char* key, long   value,
+    GWTOOLBOXDLL_EXPORT long GetLongValue(const char* section, const char* key, long def = 0) const;
+    GWTOOLBOXDLL_EXPORT SI_Error SetLongValue(const char* section, const char* key, long value,
                                const char* = nullptr, bool = false, bool = false);
-    double      GetDoubleValue(const char* section, const char* key, double def = 0.0) const;
-    SI_Error    SetDoubleValue(const char* section, const char* key, double value,
+    GWTOOLBOXDLL_EXPORT double GetDoubleValue(const char* section, const char* key, double def = 0.0) const;
+    GWTOOLBOXDLL_EXPORT SI_Error SetDoubleValue(const char* section, const char* key, double value,
                                const char* = nullptr, bool = false);
-    bool        GetBoolValue  (const char* section, const char* key, bool   def = false) const;
-    SI_Error    SetBoolValue  (const char* section, const char* key, bool   value,
+    GWTOOLBOXDLL_EXPORT bool GetBoolValue(const char* section, const char* key, bool def = false) const;
+    GWTOOLBOXDLL_EXPORT SI_Error SetBoolValue(const char* section, const char* key, bool value,
                                const char* = nullptr, bool = false);
 
-    bool GetAllValues  (const char* section, const char* key, TNamesDepend& out) const;
+    bool GetAllValues(const char* section, const char* key, TNamesDepend& out) const;
 
-    bool IsEmpty      () const { return m_sections.empty(); }
-    void SetMultiKey  (bool a_bAllowMultiKey) { m_multiKey = a_bAllowMultiKey; }
+    GWTOOLBOXDLL_EXPORT bool IsEmpty() const { return m_sections.empty(); }
+    void SetMultiKey(bool a_bAllowMultiKey) { m_multiKey = a_bAllowMultiKey; }
 
     // key == nullptr → delete whole section
-    bool Delete       (const char* section, const char* key, bool = false);
-    bool KeyExists    (const char* section, const char* key) const;
-    bool SectionExists(const char* section) const;
+    GWTOOLBOXDLL_EXPORT bool Delete(const char* section, const char* key, bool = false);
+    GWTOOLBOXDLL_EXPORT bool KeyExists(const char* section, const char* key) const;
+    GWTOOLBOXDLL_EXPORT bool SectionExists(const char* section) const;
 
     void GetAllSections(TNamesDepend& out) const;
-    bool GetAllKeys    (const char* section, TNamesDepend& out) const;
+    bool GetAllKeys(const char* section, TNamesDepend& out) const;
 
     // Direct section access
-    FastIniSection*       GetSection        (std::string_view name);
-    const FastIniSection* GetSection        (std::string_view name) const;
-    FastIniSection&       GetOrCreateSection(std::string_view name);
+    GWTOOLBOXDLL_EXPORT FastIniSection* GetSection(std::string_view name);
+    GWTOOLBOXDLL_EXPORT const FastIniSection* GetSection(std::string_view name) const;
+    GWTOOLBOXDLL_EXPORT FastIniSection& GetOrCreateSection(std::string_view name);
 
 private:
     std::unordered_map<std::string, FastIniSection> m_sections;

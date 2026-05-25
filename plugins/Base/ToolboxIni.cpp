@@ -20,14 +20,14 @@ SI_Error ToolboxIni::LoadIfExists(const std::filesystem::path& a_pwszFile)
 
 SI_Error ToolboxIni::LoadFile(const std::filesystem::path& a_pwszFile)
 {
-    int res = -1;
+    bool res = false;
 
     Reset();
     // 3 tries to load from disk
-    for (auto i = 0; i < 3 && res != SI_OK; i++) {
-        res = CSimpleIni::LoadFile(a_pwszFile.wstring().c_str());
+    for (auto i = 0; i < 3 && !res; i++) {
+        res = FastIni::LoadFile(a_pwszFile);
     }
-    if (res == SI_OK) {
+    if (res) {
         //Log::LogW(L"[ToolboxIni] LoadFile successful for %s", a_pwszFile.wstring().c_str());
         // Store location on disk on successful load
         location_on_disk = a_pwszFile;
@@ -35,5 +35,5 @@ SI_Error ToolboxIni::LoadFile(const std::filesystem::path& a_pwszFile)
     else {
         //Log::LogW(L"[ToolboxIni] LoadFile failed for %s", a_pwszFile.wstring().c_str());
     }
-    return res;
+    return res ? SI_OK : SI_FAIL;
 }
