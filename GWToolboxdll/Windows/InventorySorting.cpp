@@ -84,8 +84,10 @@ namespace {
         }
 
         uint32_t secondary;
-        const auto* nick_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
-        if (nick_info) {
+        const auto is_nicholas_item = DailyQuests::IsNicholasItem(item);
+        if (is_nicholas_item) {
+            auto nick_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
+            if (!nick_info) nick_info = DailyQuests::GetNicholasItemInfo(DailyQuests::GetNicholasIngredientInfo(item->name_enc)->nicholas_item);
             const time_t now = time(nullptr);
             const time_t next_active = DailyQuests::GetTimestampFromNicholasTheTraveller(
                 const_cast<DailyQuests::NicholasCycleData*>(nick_info));

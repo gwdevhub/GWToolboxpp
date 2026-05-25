@@ -173,50 +173,63 @@ namespace {
     // -------------------------------------------------------------------------
     // Nicholas the Traveler section
     // -------------------------------------------------------------------------
-
     void AppendNicholasInfo(const uint32_t item_id, std::wstring& description)
     {
         const auto item = GW::Items::GetItemById(item_id);
-        if (!item) return;
+        if (!(item && item->name_enc)) return;
 
-        std::wstring text;
+        static std::wstring last_item_name;
+        static std::wstring last_nicholas_text;
+
+        auto append = [&](std::wstring text) {
+            if (!description.empty()) description += L"\x2";
+            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(text), nicholas_color);
+        };
+
+        if (item->name_enc == last_item_name) {
+            append(last_nicholas_text);
+            return;
+        }
+        last_nicholas_text.clear();
+        last_item_name = item->name_enc;
+
         const auto current_time = time(nullptr);
+
         if (GW::Map::IsPreSearing()) {
-            const auto sandford_info = DailyQuests::GetNicholasSandfordItemInfo(item->name_enc);
-            if (!sandford_info) return;
-            constexpr uint32_t sandford_quantity = 5; // Nicholas Sandford always asks for 5
-            const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(sandford_info);
-            if (collection_time <= current_time) {
-                text = std::format(L"Nicholas Sandford collects {} of these right now!", sandford_quantity);
-            }
-            else {
-                text = std::format(L"Nicholas Sandford collects {} of these {}!", sandford_quantity, TextUtils::RelativeTimeW(collection_time));
-            }
-        }
-        else {
-            const auto nicholas_info = DailyQuests::GetNicholasItemInfo(item->name_enc);
-            const auto ingredient_result = nicholas_info ? DailyQuests::NicholasIngredientInfo{} : DailyQuests::GetNicholasIngredientInfo(item->name_enc);
-            const auto ingredient_info = ingredient_result.nicholas_item;
-            if (!nicholas_info && !ingredient_info) return;
-            const auto active_info = nicholas_info ? nicholas_info : ingredient_info;
-            const auto collection_time = DailyQuests::GetTimestampFromNicholasTheTraveller(active_info);
-            if (nicholas_info) {
-                if (collection_time <= current_time)
-                    text = std::format(L"Nicholas The Traveler collects {} of these right now!", nicholas_info->quantity);
-                else
-                    text = std::format(L"Nicholas The Traveler collects {} of these {}!", nicholas_info->quantity, TextUtils::RelativeTimeW(collection_time));
-            }
-            else {
-                if (collection_time <= current_time)
-                    text = std::format(L"Craft {} of these into an item Nicholas The Traveler collects right now!", ingredient_result.ingredient_quantity);
-                else
-                    text = std::format(L"Craft {} of these into an item Nicholas The Traveler collects {}!", ingredient_result.ingredient_quantity, TextUtils::RelativeTimeW(collection_time));
-            }
+            const auto info = DailyQuests::GetNicholasSandfordItemInfo(item->name_enc);
+            if (!info) return;
+            const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(info);
+            if (collection_time <= current_time)
+                append(std::format(L"Nicholas Sandford collects {} of these right now!", 5));
+            else
+                append(std::format(L"Nicholas Sandford collects {} of these {}!", 5, TextUtils::RelativeTimeW(collection_time)));
+            return;
         }
 
-        if (!description.empty())
-            description += L"\x2";
-        description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(text), nicholas_color);
+        const auto info = DailyQuests::GetNicholasItemInfo(item->name_enc);
+        const auto ingredient = DailyQuests::GetNicholasIngredientInfo(item->name_enc);
+        if (!info && !ingredient) return;
+
+        const auto ingredient_nick_info = ingredient ? DailyQuests::GetNicholasItemInfo(ingredient->nicholas_item) : nullptr;
+
+        const auto info_time = info ? DailyQuests::GetTimestampFromNicholasTheTraveller(info) : std::numeric_limits<time_t>::max();
+        const auto ingredient_time = ingredient_nick_info ? DailyQuests::GetTimestampFromNicholasTheTraveller(ingredient_nick_info) : std::numeric_limits<time_t>::max();
+
+        if (info && info_time <= ingredient_time) {
+            const auto quantity_for_total_gifts = info->quantity * 5;
+            if (info_time <= current_time)
+                append(std::format(L"Nicholas The Traveler collects {} of these right now!", quantity_for_total_gifts));
+            else
+                append(std::format(L"Nicholas The Traveler collects {} of these {}!", quantity_for_total_gifts, TextUtils::RelativeTimeW(info_time)));
+        }
+        else if (ingredient_nick_info) {
+            const auto quantity_for_total_gifts = ingredient_nick_info->quantity * 5;
+            const auto total_qty = ingredient->ingredient_quantity * quantity_for_total_gifts;
+            if (ingredient_time <= current_time)
+                append(std::format(L"Collect {} of these to craft {} Nicholas The Traveler items right now!", total_qty, quantity_for_total_gifts));
+            else
+                append(std::format(L"Collect {} of these to craft {} Nicholas The Traveler items {}!", total_qty, quantity_for_total_gifts, TextUtils::RelativeTimeW(ingredient_time)));
+        }
     }
 
     // -------------------------------------------------------------------------
