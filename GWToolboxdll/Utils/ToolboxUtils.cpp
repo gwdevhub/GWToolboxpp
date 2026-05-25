@@ -204,6 +204,17 @@ namespace GW {
         }
 
     } // namespace Map
+    namespace SkillbarMgr {
+        GW::Attribute* GetPlayerAttribute(GW::Constants::Attribute attribute_id) {
+            const auto my_id = GW::Agents::GetControlledCharacterId();
+            PartyAttributeArray& party_attributes = GW::GetWorldContext()->attributes;
+            for (PartyAttribute& agent_attributes : party_attributes) {
+                if (agent_attributes.agent_id != my_id) continue;
+                return &agent_attributes.attribute[(uint32_t)attribute_id];
+            }
+            return 0;
+        }
+    }
     namespace LoginMgr {
         const bool IsCharSelectReady()
         {
