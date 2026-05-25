@@ -806,16 +806,7 @@ namespace GW {
 
             const uint32_t target_id = custom_effect_id_base | static_cast<uint32_t>(skill_id);
 
-            // Update if this skill's custom effect already exists.
-            for (uint32_t i = 0; i < arr.m_size; i++) {
-                auto& e = arr.m_buffer[i];
-                if (e.effect_id == target_id) {
-                    e.duration = duration_seconds;
-                    e.timestamp = GW::MemoryMgr::GetSkillTimer();
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRenew, &e);
-                    return e.effect_id;
-                }
-            }
+            RemoveCustomEffect(target_id);
 
             GW::Effect new_effect{};
             new_effect.skill_id = skill_id;
