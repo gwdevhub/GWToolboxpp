@@ -744,8 +744,8 @@ void TeamBuild::DrawHeroBuildsContent(
     const float panel_width    = btn_width + 12.0f;
     const float item_spacing   = ImGui::GetStyle().ItemInnerSpacing.x;
     const float text_item_width =
-        (ImGui::GetContentRegionAvail().x - btn_width - btn_width - btn_width
-         - panel_width - icon_btn_width * 2 - item_spacing * 5) / 3.f;
+        std::max(40.0f, (ImGui::GetContentRegionAvail().x - btn_width - btn_width - btn_width - btn_width
+         - panel_width - icon_btn_width * 2 - item_spacing * 6) / 3.f);
 
     float offset = btn_width;
     ImGui::SetCursorPosX(offset);
@@ -754,16 +754,24 @@ void TeamBuild::DrawHeroBuildsContent(
     ImGui::Text("Template");
 
     uint32_t hero_count = 1;
-    Build* player = 0;
+    size_t player_idx = builds.size();
+    for (size_t j = 0; j < builds.size(); ++j) {
+        if (builds[j].hero_id == GW::Constants::HeroID::NoHero) {
+            player_idx = j;
+            break;
+        }
+    }
 
     for (size_t j = 0; j < builds.size(); ++j) {
         offset = btn_width;
         Build& build = builds[j];
         ImGui::PushID(static_cast<int>(j));
 
-        bool is_player = build.hero_id == GW::Constants::HeroID::NoHero && !player;
-
-        if (is_player) player = &build;
+        const bool is_player = j == player_idx;
+        const bool previous_row_is_player = j > 0 && j - 1 == player_idx;
+        const bool next_row_is_player = j + 1 < builds.size() && j + 1 == player_idx;
+        const bool can_move_up = !is_player && j > 0 && !previous_row_is_player;
+        const bool can_move_down = !is_player && j + 1 < builds.size() && !next_row_is_player;
 
         if (is_player)
             ImGui::Text("P");
@@ -942,6 +950,40 @@ void TeamBuild::DrawHeroBuildsContent(
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Copy build code to clipboard");
+        }
+
+        ImGui::SameLine(offset += icon_btn_width + item_spacing);
+        if (can_move_up) {
+            if (ImGui::Button(ICON_FA_ARROW_UP, ImVec2(icon_btn_width, 0))) {
+                std::swap(builds[j - 1], builds[j]);
+                ResetEncodedCache();
+                builds_changed = true;
+                ImGui::PopID();
+                break;
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Move hero up");
+            }
+        }
+        else {
+            ImGui::Dummy(ImVec2(icon_btn_width, ImGui::GetFrameHeight()));
+        }
+
+        ImGui::SameLine(offset += icon_btn_width + item_spacing);
+        if (can_move_down) {
+            if (ImGui::Button(ICON_FA_ARROW_DOWN, ImVec2(icon_btn_width, 0))) {
+                std::swap(builds[j], builds[j + 1]);
+                ResetEncodedCache();
+                builds_changed = true;
+                ImGui::PopID();
+                break;
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Move hero down");
+            }
+        }
+        else {
+            ImGui::Dummy(ImVec2(icon_btn_width, ImGui::GetFrameHeight()));
         }
 
         ImGui::PopID();
