@@ -1096,7 +1096,7 @@ namespace ToolboxUtils {
                 case GW::Constants::HeroID::Merc6:
                 case GW::Constants::HeroID::Merc7:
                 case GW::Constants::HeroID::Merc8:
-                    if (!a.name[0]) return false; // Unlocked, but not assigned.
+                    return (a.appearance_bitmap && !wcseq(GW::AccountMgr::GetCurrentPlayerName(), a.name)); // Unlocked, but not assigned.
             }
             return true;
         }
