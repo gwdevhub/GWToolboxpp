@@ -1,0 +1,17 @@
+{
+  "title": "GWToolbox++",
+  "tagline": "Tools for Guild Wars",
+  "githubUrl": "https://github.com/gwdevhub/GWToolboxpp",
+  "discordUrl": "https://discord.gg/pGS5pFn",
+  "toolboxVersion": "8.19",
+  "fallbackDownloadUrl": "https://github.com/gwdevhub/GWToolboxpp/releases/latest/download/gwtoolbox.exe",
+  "maintainers": [
+    { "name": "HasKha", "url": "https://github.com/HasKha" },
+    { "name": "GregLando113", "url": "https://github.com/GregLando113" },
+    { "name": "reduf", "url": "https://github.com/reduf" },
+    { "name": "3vcloud", "url": "https://github.com/3vcloud" },
+    { "name": "DubbleClick", "url": "https://github.com/DubbleClick" },
+    { "name": "Hour-of-the-Owl", "url": "https://github.com/Hour-of-the-Owl" },
+    { "name": "DarkManic", "url": "https://github.com/DarkManic" }
+  ]
+}

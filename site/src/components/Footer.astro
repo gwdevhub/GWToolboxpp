@@ -1,0 +1,35 @@
+---
+import siteConfig from '../../site.config.json';
+---
+
+<footer class="mt-16 border-t border-(--color-border-glass) bg-(--color-bg)">
+  <div
+    class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 text-sm text-(--color-fg-meta) sm:px-6 md:flex-row md:items-center md:justify-between"
+  >
+    <div>
+      <p class="text-(--color-fg-sub)">{siteConfig.title} — {siteConfig.tagline}</p>
+      <p class="mt-1">
+        Maintained by {
+          siteConfig.maintainers.map((m, i) => (
+            <>
+              <a
+                href={m.url}
+                target="_blank"
+                rel="noopener"
+                class="text-(--color-fg-dim) hover:text-(--color-accent)"
+              >
+                {m.name}
+              </a>
+              {i < siteConfig.maintainers.length - 1 ? ', ' : ''}
+            </>
+          ))
+        }
+      </p>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href={siteConfig.githubUrl} target="_blank" rel="noopener" class="hover:text-(--color-accent)">GitHub</a>
+      <a href={siteConfig.discordUrl} target="_blank" rel="noopener" class="hover:text-(--color-accent)">Discord</a>
+      <a href="/docs/faq/" class="hover:text-(--color-accent)">FAQ</a>
+    </div>
+  </div>
+</footer>

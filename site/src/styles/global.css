@@ -1,0 +1,134 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@theme {
+  /* Surface palette — near-black backgrounds, neutral cards, glass overlays */
+  --color-bg: #0a0a0a;
+  --color-bg-elevated: #111111;
+  --color-card: #171717;
+  --color-card-hover: #1f1f1f;
+  --color-muted: #262626;
+
+  /* Foreground tokens at varying emphasis */
+  --color-fg: #fafafa;
+  --color-fg-high: rgba(255, 255, 255, 0.95);
+  --color-fg-muted: rgba(255, 255, 255, 0.9);
+  --color-fg-body: rgba(255, 255, 255, 0.8);
+  --color-fg-sub: rgba(255, 255, 255, 0.7);
+  --color-fg-dim: rgba(255, 255, 255, 0.6);
+  --color-fg-meta: rgba(255, 255, 255, 0.5);
+  --color-fg-faint: rgba(255, 255, 255, 0.4);
+
+  /* Glass overlays */
+  --color-glass: rgba(255, 255, 255, 0.05);
+  --color-glass-hover: rgba(255, 255, 255, 0.1);
+  --color-border-glass: rgba(255, 255, 255, 0.1);
+  --color-border-glass-subtle: rgba(255, 255, 255, 0.05);
+
+  /* GW-themed accents (gold/amber matching the in-game UI) */
+  --color-accent: #fcbb00;
+  --color-accent-soft: #f99c00;
+  --color-accent-deep: #b87800;
+
+  /* Typography */
+  --font-display: 'Cinzel', ui-serif, Georgia, serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace;
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg-body);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle parchment-like background grain */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(252, 187, 0, 0.04), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(252, 187, 0, 0.03), transparent 50%);
+  z-index: -1;
+}
+
+/* Typography defaults inside .prose blocks (markdown content) */
+.prose {
+  --tw-prose-body: var(--color-fg-body);
+  --tw-prose-headings: var(--color-fg);
+  --tw-prose-lead: var(--color-fg-muted);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-fg);
+  --tw-prose-counters: var(--color-fg-meta);
+  --tw-prose-bullets: var(--color-fg-faint);
+  --tw-prose-hr: var(--color-border-glass);
+  --tw-prose-quotes: var(--color-fg-muted);
+  --tw-prose-quote-borders: var(--color-accent-deep);
+  --tw-prose-captions: var(--color-fg-meta);
+  --tw-prose-code: var(--color-accent);
+  --tw-prose-pre-code: var(--color-fg-body);
+  --tw-prose-pre-bg: var(--color-card);
+  --tw-prose-th-borders: var(--color-border-glass);
+  --tw-prose-td-borders: var(--color-border-glass-subtle);
+}
+
+.prose a {
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+  transition: border-color 120ms ease;
+}
+.prose a:hover {
+  border-bottom-color: var(--color-accent);
+}
+
+.prose figure {
+  margin: 1.5rem 0;
+}
+.prose figure img {
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border-glass);
+}
+.prose figcaption {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-fg-meta);
+  margin-top: 0.5rem;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.prose th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-fg);
+  border-bottom: 1px solid var(--color-border-glass);
+  padding: 0.5rem 0.75rem;
+}
+.prose td {
+  border-bottom: 1px solid var(--color-border-glass-subtle);
+  padding: 0.5rem 0.75rem;
+}
+
+/* Pagefind UI dark-theme overrides */
+:root {
+  --pagefind-ui-scale: 0.9;
+  --pagefind-ui-primary: var(--color-accent);
+  --pagefind-ui-text: var(--color-fg);
+  --pagefind-ui-background: var(--color-card);
+  --pagefind-ui-border: var(--color-border-glass);
+  --pagefind-ui-tag: var(--color-muted);
+  --pagefind-ui-border-radius: 0.5rem;
+  --pagefind-ui-border-width: 1px;
+  --pagefind-ui-image-border-radius: 8px;
+  --pagefind-ui-image-box-ratio: 3 / 2;
+  --pagefind-ui-font: var(--font-sans);
+}

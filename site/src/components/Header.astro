@@ -1,0 +1,96 @@
+---
+import siteConfig from '../../site.config.json';
+
+interface Props {
+  /** Latest release info; if omitted, we show a "Download" label without version. */
+  release?: { version: string; url: string };
+  /** Path to the current page so we can highlight the active nav link. */
+  pathname?: string;
+}
+
+const { release, pathname = '' } = Astro.props;
+
+const navItems = [
+  { href: '/', label: 'Home' },
+  { href: '/docs/windows/', label: 'Windows' },
+  { href: '/docs/widgets/', label: 'Widgets' },
+  { href: '/docs/plugins/', label: 'Plugins' },
+  { href: '/docs/faq/', label: 'FAQ' },
+  { href: '/docs/history/', label: 'Changelog' },
+];
+
+const isActive = (href: string) =>
+  href === '/' ? pathname === '/' : pathname.startsWith(href);
+---
+
+<header
+  class="sticky top-0 z-40 border-b border-(--color-border-glass) bg-(--color-bg)/80 backdrop-blur-xl"
+>
+  <div class="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:px-6">
+    <a
+      href="/"
+      class="flex items-center gap-2 font-display text-base font-semibold tracking-wide text-(--color-fg) hover:text-(--color-accent)"
+    >
+      <svg
+        viewBox="0 0 32 32"
+        class="h-6 w-6 fill-(--color-accent)"
+        aria-hidden="true"
+      >
+        <path d="M16 2 4 8v10c0 7 5.6 11.4 12 12 6.4-.6 12-5 12-12V8L16 2zm0 4.6 8 4v7.4c0 5.4-4.1 8.7-8 9.4-3.9-.7-8-4-8-9.4v-7.4l8-4z"/>
+        <path d="M16 11 12 21h2.4l.7-2h1.8l.7 2H20l-4-10zm-.4 6 .4-1.4.4 1.4h-.8z"/>
+      </svg>
+      <span>{siteConfig.title}</span>
+    </a>
+
+    <nav class="ml-6 hidden items-center gap-1 md:flex">
+      {
+        navItems.map((item) => (
+          <a
+            href={item.href}
+            class:list={[
+              'rounded px-2.5 py-1.5 text-sm font-medium transition-colors',
+              isActive(item.href)
+                ? 'text-(--color-accent) bg-(--color-glass)'
+                : 'text-(--color-fg-sub) hover:text-(--color-fg) hover:bg-(--color-glass)',
+            ]}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="ml-auto flex items-center gap-2">
+      <a
+        href={siteConfig.discordUrl}
+        target="_blank"
+        rel="noopener"
+        class="hidden rounded px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg) sm:inline-flex"
+      >
+        Discord
+      </a>
+      <a
+        href={siteConfig.githubUrl}
+        target="_blank"
+        rel="noopener"
+        class="hidden rounded px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg) sm:inline-flex"
+      >
+        GitHub
+      </a>
+      {
+        release ? (
+          <a
+            href={release.url}
+            class="inline-flex items-center gap-1.5 rounded bg-(--color-accent) px-3 py-1.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
+          >
+            <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 fill-current" aria-hidden="true">
+              <path d="M8 1.5a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.25A.75.75 0 0 1 8 1.5zM3.25 13.5a.75.75 0 0 0 0 1.5h9.5a.75.75 0 0 0 0-1.5h-9.5z" />
+            </svg>
+            <span class="hidden sm:inline">{release.version}</span>
+            <span class="sm:hidden">Download</span>
+          </a>
+        ) : null
+      }
+    </div>
+  </div>
+</header>
