@@ -470,6 +470,7 @@ const std::wstring& TeamBuild::GetEncoded() const
 void TeamBuild::ResetEncodedCache() const
 {
     encoded_cache_.reset();
+    tooltip_cache_.reset();
 }
 
 void TeamBuild::Send(bool one_by_one) const
@@ -494,6 +495,50 @@ void TeamBuild::Copy() const
     const auto msg = TextUtils::WStringToString(std::format(L"[TB;{}]", encoded));
     ImGui::SetClipboardText(msg.c_str());
     Log::Flash("Teambuild code copied to clipboard");
+}
+
+void TeamBuild::DrawTooltip() const
+{
+    if (!tooltip_cache_.has_value()) {
+        auto& entries = tooltip_cache_.emplace();
+        for (const auto& build : builds) {
+            const bool has_hero = build.hero_id != GW::Constants::HeroID::NoHero;
+            const bool has_name = !build.name.empty();
+            const bool has_code = !build.code.empty();
+
+            if (has_hero_slots) {
+                if (!has_hero && !has_name && !has_code) continue;
+            } else {
+                if (!has_name && !has_code) continue;
+            }
+
+            TooltipEntry& entry = entries.emplace_back();
+            if (has_hero_slots) {
+                const auto& hero_name = has_hero
+                    ? Resources::GetHeroName(build.hero_id)->string()
+                    : std::string("Player");
+                const auto& display_name = has_name ? build.name : build.GetFallbackBuildName();
+                entry.label = std::format("{} ({})", display_name, hero_name);
+            } else {
+                entry.label = build.name;
+            }
+
+            GW::SkillbarMgr::SkillTemplate st{};
+            if (has_code && GW::SkillbarMgr::DecodeSkillTemplate(st, build.code.c_str()))
+                entry.code = build.code;
+        }
+    }
+
+    for (const auto& entry : *tooltip_cache_) {
+        ImGui::Spacing();
+        ImGui::TextUnformatted(entry.label.c_str());
+        if (!entry.code.empty()) {
+            GuiUtils::DrawSkillbar(entry.code.c_str(), false);
+        } else {
+            ImGui::TextColored({1.f, 0.3f, 0.3f, 1.f}, "No Build Defined");
+        }
+        ImGui::Spacing();
+    }
 }
 
 bool TeamBuild::ChatCodeTooLong() const
@@ -549,6 +594,7 @@ void TeamBuild::DrawPlayerBuildsContent(
         ImGui::PushItemWidth(btn_offset - btn_width - spacing * 2);
         ImGui::SameLine(btn_width, 0);
         if (ImGui::InputText("###name", build.name, 128)) {
+            tooltip_cache_.reset();
             builds_changed = true;
         }
         if (ImGui::IsItemHovered() && !build.name.empty()) {
@@ -736,6 +782,7 @@ void TeamBuild::DrawHeroBuildsContent(
         ImGui::SameLine(offset);
         ImGui::PushItemWidth(text_item_width);
         if (ImGui::InputText("###name", build.name, 128)) {
+            tooltip_cache_.reset();
             builds_changed = true;
         }
         if (ImGui::IsItemHovered() && !build.name.empty()) {

@@ -773,13 +773,7 @@ void BuildsWindow::DrawSettingsInternal()
 
 void SetTooltipFromTeambuild(const TeamBuild* tbuild) {
     ImGui::SetTooltip([tbuild]() {
-        for (const auto& build : tbuild->builds) {
-            if (build.name.empty() && build.code.empty()) continue;
-            ImGui::Spacing();
-            ImGui::TextUnformatted(build.name.c_str());
-            GuiUtils::DrawSkillbar(build.code.c_str(), false);
-            ImGui::Spacing();
-        }
+        tbuild->DrawTooltip();
     });
 }
 
