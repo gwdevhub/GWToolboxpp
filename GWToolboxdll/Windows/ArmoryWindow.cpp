@@ -813,7 +813,7 @@ namespace GWArmory {
 
         ImGui::StartSpacedElements(icon_size.x);
 
-#ifdef _DEBUG
+#if 0
         static Armor debug_piece("Debug Piece", 0, Profession::None, ItemType::Unknown, Campaign::Core, 0, 0);
         if (ImGui::CollapsingHeader("Debug Item")) {
             constexpr static std::array profession_names = {

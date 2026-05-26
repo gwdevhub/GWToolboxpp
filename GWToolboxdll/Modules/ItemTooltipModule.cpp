@@ -184,6 +184,7 @@ namespace {
         auto append = [&](std::wstring text) {
             if (!description.empty()) description += L"\x2";
             description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(text), nicholas_color);
+            last_nicholas_text = text;
         };
 
         if (item->name_enc == last_item_name) {
