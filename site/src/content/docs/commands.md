@@ -3,76 +3,187 @@ title: "Chat Commands"
 section: features
 ---
 
-GWToolbox++ supports a variety of chat commands that enhance your gameplay experience. You can use them by typing in chat, similar to in-game commands such as `/age`.
+GWToolbox++ adds a wide variety of chat commands that you trigger by typing them in the in-game chat box, the same way you'd use a built-in command like `/age`. Most commands also work as a [Hotkey](/docs/hotkeys/) action so you can fire them from the keyboard.
 
 ## Notation
-- `(a|b)` denotes a mandatory argument, where you must choose either 'a' or 'b'.
-- `[a|b]` denotes an optional argument, where you can choose nothing, 'a', or 'b'.
 
-## General Commands
+- `<a>` denotes a **mandatory** argument.
+- `[a]` denotes an **optional** argument.
+- `(a|b)` denotes a choice between alternatives — pick one.
+- Strings containing spaces must be wrapped in double quotes, e.g. `/button "BtnBuy"`.
 
-- `/afk [message]`: Set your status to Away and optionally set an AFK message.
-- `/age2`: Display the instance time in chat.
-- `/borderless [on|off]`: Toggle borderless window mode.
-- `/chest` or `/xunlai`: Open Xunlai Chest in a city or outpost.
-- `/dialog [id]`: Send a dialog (use hex number for `[id]`, e.g., `/dialog 0x99`).
-- `/pcons [on|off]`: Turn [pcons](/docs/pcons/) on/off. Using `/pcons` alone will toggle.
-- `/tb close`, `/tb quit`, or `/tb exit`: Completely close Toolbox and all its windows.
-- `/tb reset`: Move [Settings](/docs/settings/) and the main Toolbox window to the top-left corner of the screen.
+## Toolbox windows and widgets
+
 - `/tb`: Hide or show the main Toolbox window.
-- `/hide [name]` or `/show [name]`: Hide or show a window or widget.
-- `/tb [name]`: Toggle visibility of a window or widget.
-- `/resize [x] [y]`: Set the size of the Guild Wars window (only works in windowed mode).
+- `/tb <name>`: Toggle the window or widget titled `<name>`.
+- `/tb save [profile]`: Save the current Toolbox settings to disk. With `[profile]`, write to that profile name; otherwise write to the default config.
+- `/tb load [profile]`: Load Toolbox settings from disk (optionally from a named profile).
+- `/tb reset`: Move the Settings and main Toolbox windows back to the top-left of the screen.
+- `/tb close`, `/tb quit`, or `/tb exit`: Close Toolbox entirely.
+- `/show [name]`: Show a window or widget by name.
+- `/hide [name]`: Hide a window or widget by name.
+- `/toggle [name]`: Toggle visibility of a window or widget by name.
+- `/resize <width> <height>`: Resize the Guild Wars window (windowed mode only).
+- `/config (set|get|toggle|load) <section> <key> [value]...`: Read or modify any Toolbox `.ini` setting from chat. `set` overwrites, `get` prints, `toggle` flips between the current value and the value on disk, `load` re-reads from disk. Multiple section/key/value tuples can be chained.
 
-## Camera and View Commands
+## General
 
-- `/cam [args]` or `/camera [args]`: Control various aspects of the camera:
-  - `/cam (unlock|lock)`: Lock/unlock camera.
-  - `/cam speed [value]`: Set the unlocked camera speed.
-  - `/cam fog (on|off)`: Enable/disable fog.
-  - `/cam fov [amount]`: Change the Field-of-View, or `/cam fov` to reset to default.
-- `/zoom [value]`: Change the maximum zoom to the specified value. Use `/zoom` alone to reset to the default value of 750.
+- `/age2`: Print the current instance time to chat.
+- `/afk [message]`: Set your status to **Away**. Optionally pass an AFK auto-reply message.
+- `/chest` or `/xunlai`: Open the Xunlai Chest in any outpost.
+- `/dialog <id>`: Send a dialog ID to the NPC you're currently talking to (e.g. `/dialog 0x184`). Use `/dialog take` to take the first available quest/reward from the current NPC.
+- `/fps [limit]`: Set a hard frame-rate cap between 15 and 400 fps. Pass `0` to remove the cap. `/fps` with no argument prints the current limit.
+- `/pref <preference> <value>`: Set an in-game preference (value 0–4). Use `/pref list` to see the available preference names.
+- `/saveprefs` / `/loadprefs`: Save or restore your Guild Wars in-game preferences to/from disk.
+- `/spawnblockeditems`: Re-spawn any item drops that Toolbox previously suppressed by your drop filter, so you can pick them up.
+- `/resignlog [pending]`: Print the resign status of every player in your party. With `pending` (or `notresigned`), only list players who haven't resigned yet.
+- `/scwiki [search terms]`: Open the Speed Clear Wiki in your browser. Optional search terms run a wiki search instead of opening the home page.
+- `/hom [player_name|me]`: Open a player's Hall of Monuments page in your browser. With no argument it uses your current target; `/hom me` uses yourself.
+- `/observer:reset`: Reset all data collected by the [Observer Mode](/docs/info/) module in the current instance.
 
-## Targeting and Flagging Commands
+## Pcons and consumables
 
-- `/target` or `/tgt`: Interact with your target:
-  - `/target closest` or `/target nearest`: Target the closest agent to the player.
+- `/pcons [on|off]`: Turn [Pcons](/docs/pcons/) on or off. `/pcons` with no argument toggles.
+- `/dropbuff <skill_id>`: Drop the first instance of an upkept skill or buff by skill ID.
+
+## Targeting and minimap
+
+- `/target` / `/tgt`: Targeting utilities.
+  - `/target closest` (or `nearest`): Target the closest agent.
+  - `/target closest <filter> [name|model_id]`: Restrict the closest-target search to a type — `npc`, `player`, `gadget`, `ally`, `enemy`, etc.
+  - `/target <name|model_id> [index]`: Target the nearest NPC matching the name or model ID; `[index]` picks the N-th match.
+  - `/target player <name|player_number>`: Target the nearest player by name or player number.
+  - `/target gadget <name|gadget_id>`: Target the nearest interactive gadget.
+  - `/target priority [party_member]`: Target the priority target of the given party member (defaults to yourself).
+  - `/target ee`: Target the furthest ally within spell range in front of you (for Ebon Escape).
+  - `/target hos` (or `vipers`): Target the furthest enemy/ally behind you within spell range (for Viper's Defense / Heart of Shadow).
   - `/target getid`: Print the target's model ID (PlayerNumber).
-  - `/target getpos`: Print the coordinates (x, y) of the target.
-  - `/target ee`: Target the furthest ally within spellcast range in the direction you're facing (for Ebon Escape).
-  - `/target hos`: Target the closest enemy or ally within spellcast range in the direction you're facing away from (for Viper's Defense or Heart of Shadow).
-- `/flag`: Used to flag heroes on the GWToolbox minimap. See [Minimap](/docs/minimap/#chat-commands) for all options.
+  - `/target getpos`: Print the target's (x, y) coordinates.
+- `/call`: Call the current target the same way the in-game **Ctrl+Space** does.
+- `/marktarget`: Highlight the current target on the Toolbox [Minimap](/docs/minimap/).
+- `/marktarget clear`: Stop highlighting the current target.
+- `/marktarget clearall`: Clear every highlighted target on the minimap.
+- `/flag`: Hero flagging commands — see [Minimap → Chat commands](/docs/minimap/#chat-commands).
+- `/custommarker <x> <y>`: Place a custom marker on the minimap at world-map coordinates `(x, y)`. `/custommarker clear` removes it.
 
-## Damage and Skill Commands
+## Travel and party
 
-- `/dmg [arg]` or `/damage [arg]`: Control the party damage monitor. See [Damage Monitor](/docs/damage_monitor/#chat-commands) for all options.
-- `/useskill [slot]`: Use the selected skill on recharge. For example, `/useskill 1` will use your first skill. Use `/useskill`, `/useskill 0`, or `/useskill stop` to stop.
+- `/to`, `/tp`, or `/travel <destination>`: Map-travel to an outpost. See [Travel → Chat commands](/docs/travel/#chat-commands) for the full destination list.
+- `/enter (fow|uw)`: From Temple of the Ages, Zin Ku Corridor, Chantry of Secrets or Embark Beach, use a passage scroll to enter the Fissure of Woe or Underworld. Anywhere else with an enter button, `/enter` toggles the mission entry just like the in-game button.
+- `/leave`: Leave the current party (no effect if you're already solo).
+- `/reinvite`: Re-invite the player whose name is currently in the party invite field.
+- `/addhero <name|profession>`: Add a hero to your party by name or by profession.
+- `/addhenchman <name|profession>`: Add a henchman to your party by name or by profession.
+- `/hero (avoid|guard|attack|target) [hero_index] [silent]`: Set hero behaviour or order them to attack your target. Without `[hero_index]`, applies to every hero. Append `silent` to suppress the hero's voice line.
+- `/disableheroskill <hero_index (1-7)> <slot (1-8)> [1|0]`: Disable, enable, or toggle a hero's skill slot. Omit the trailing argument to toggle the current state.
+- `/morale`: If you have a morale boost or death penalty, call it; otherwise post "I have no Morale Boost or Death Penalty!" in team chat.
+- `/hm` or `/hardmode`: Switch the party to Hard Mode (if unlocked).
+- `/nm` or `/normalmode`: Switch the party back to Normal Mode.
+- `/tick`: Toggle your own party-ready ("ticked") state.
 
-## Travel and Navigation Commands
+## Skills and builds
 
-- `/to [dest]`, `/tp [dest]`, or `/travel [dest]`: Map travel to the specified outpost. See [Travel](/docs/travel/#chat-commands) for all options.
+- `/useskill <slot>`: Repeatedly cast the skill in the given slot whenever it recharges. Use `/useskill`, `/useskill 0`, `/useskill off`, or `/useskill stop` to stop.
+- `/load <template_name> [hero_index]`: Load a skill template onto your character. With `[hero_index]` (1–8), load it onto that hero instead. Pass either the name of a saved template under `Templates/Skills/` or a raw template code.
+- `/loadbuild`: Load a [Builds](/docs/builds/) entry by name onto yourself. See [Builds → Chat commands](/docs/builds/#chat-commands).
+- `/pingbuild <template_name> [template_name...]`: Ping one or more saved skill templates to team chat as clickable build links.
+- `/herobuild` or `/heroteam <name>`: Load a saved [Hero Build](/docs/herobuilds/) onto the active hero team.
+- `/skillstats [reset|<player_number>]`: From the [Party Statistics](/docs/party_window/) module, print skill-usage statistics for yourself, for a specific party member (by number), or `reset` to clear collected stats.
+- `/bonds (add|remove) <party_index|all> (<skill_id>|all)`: Add or remove maintained-bond highlights on the [Bonds Monitor](/docs/widgets/#bonds) widget.
+- `/dmg` or `/damage`: Control the [Damage Monitor](/docs/damage_monitor/#chat-commands). See that page for the full sub-command list.
 
-## Appearance Commands
+## Items, inventory, and trade
 
-- `/transmo`: Change your character model to that of the target NPC (only visible to you).
-  - `/transmo [size (6-255)]`: Set the size of your model.
-  - `/transmo <npc_name> [size (6-255)]`: Change your appearance into a specific NPC.
-  - `/transmo model <npc_id> <npc_model_file_id> <npc_model_file> <flags>`: Change your appearance into a specific NPC model.
-  - `/transmo reset`: Reset your appearance.
-- `/transmotarget <npc_name> [size (6-255)]`: Change your target's appearance into an NPC (only visible to you).
-  - `/transmotarget reset`: Reset your target's appearance.
-- `/transmoparty <npc_name> [size (6-255)]`: Change your party's appearance into an NPC (only visible to you).
-  - `/transmoparty reset`: Reset your party's appearance.
+- `/pingitem <slot>`: Ping a piece of equipped gear to chat.
+  - `<slot>` options: `armor`, `head`, `chest`, `legs`, `boots` (or `feet`), `gloves` (or `hands`), `offhand` (or `shield`), `weapon`, `weapons`, `costume`.
+- `/withdraw <quantity> [model_id1 model_id2 ...]`: Top up your inventory from storage. With model IDs, refills each up to `<quantity>`. With no model IDs, withdraws `<quantity>k` gold (use `all` to pull every coin you can hold).
+- `/deposit <quantity> [model_id1 model_id2 ...]`: Inverse of `/withdraw` — store items by model ID, or `<quantity>k` gold if no model IDs are given. `all` deposits everything.
+- `/sortinventory`: Sort your bags using the rules configured in the [Inventory Sorting](/docs/items/) module.
+- `/sortstorage`: Same, but for Xunlai storage.
+- `/pc <item>`: Run a [Trade](/docs/trade/) price-check for the named item.
+- `/armory <armor_item_name> [dye1 dye2 dye3 dye4]`: Equip an armour piece (and optionally apply up to four dye colour IDs) via the [Armory window](/docs/armory_window/). `/armory reset` restores your original armour.
 
-## Build and Item Commands
+## Daily quests
 
-- `/load` and `/loadbuild`: Load builds onto your player or heroes. See [Builds](/docs/builds/#chat-commands) for all options.
-- `/pingitem <equipped_item>`: Ping your equipment in chat.
-  - `<equipped_item>` options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume
+All daily commands accept an optional `tomorrow` argument (e.g. `/zm tomorrow`) to look ahead one day.
 
-## Chat Commands
+- `/zm`: Today's Zaishen Mission.
+- `/zb`: Today's Zaishen Bounty.
+- `/zc`: Today's Zaishen Combat.
+- `/zv`: Today's Zaishen Vanquish.
+- `/wanted`: Today's Wanted by the Shining Blade target.
+- `/nicholas`: Today's Nicholas the Traveler item.
+- `/vanguard`: Today's Pre-Searing Vanguard quest.
+- `/weekly`: This week's weekly bonus.
+- `/today` or `/daily` / `/dailies`: Print all of the above in one go (uses pre-searing equivalents when applicable).
+- `/tomorrow`: Same as `/today` but for tomorrow's rotation.
 
-- `/chat [all|guild|team|trade|alliance|whisper]`: Open or switch to the specified chat channel.
+## Friends list
 
-For more detailed information on specific features, please refer to their respective documentation pages.
+- `/t`, `/tell`, `/w`, `/whisper <player_name> <message>`: Whisper a player. Toolbox routes the message to the player's currently-logged-in character automatically.
+- `/addfriend <player_name>`: Add a player to your friends list.
+- `/removefriend` (or `/deletefriend`) `<player_name>`: Remove a friend.
+- `/invite <player_name>`: Invite a friend to your party using their *current* character name even if you only know the account.
+- `/away`, `/dnd` (or `/busy`), `/offline`, `/online`: Set your visible friend-list status.
+
+## Chat channels
+
+- `/chat (all|guild|team|trade|alliance|whisper)`: Open chat input on the chosen channel.
+
+## Titles and prefs
+
+- `/title [title_id]` or `/settitle [title_id]`: Re-apply your active title after a death/zone, or activate a specific title by ID.
+- `/volume [channel] <amount (0-100)>`: Set an audio channel's volume. `[channel]` is one of `master`, `music`, `background`, `effects`, `dialog`, `ui`. Defaults to `master` if omitted.
+
+## Camera and view
+
+- `/cam` or `/camera <subcommand>`: Camera control:
+  - `/cam (unlock|lock)`: Toggle the free camera.
+  - `/cam speed <value>`: Set the unlocked-camera move speed.
+  - `/cam fog (on|off)`: Enable or disable fog.
+  - `/cam fov [amount]`: Set the field-of-view (no argument resets).
+- `/zoom [value]`: Set the maximum zoom distance. `/zoom` with no argument resets to the default 750.
+
+## Appearance (transmog)
+
+- `/transmo`: Transmog your character into the model of the currently targeted NPC (visible only to you).
+  - `/transmo <size (6-255)>`: Resize without changing model.
+  - `/transmo <npc_name> [size]`: Transmog into a specific NPC by name.
+  - `/transmo model <npc_id> <model_file_id> <model_file> <flags>`: Manual transmog by raw model IDs.
+  - `/transmo reset`: Restore your original appearance.
+- `/transmotarget <npc_name> [size]`: Transmog the *target's* appearance. `/transmotarget reset` restores it.
+- `/transmoparty <npc_name> [size]`: Transmog every party member. `/transmoparty reset` restores them.
+- `/transmoagent <agent_id> <npc_name> [size]`: Transmog a specific agent ID — useful for scripted NPCs that don't survive a normal target click.
+
+## Privacy
+
+- `/obfuscate` or `/hideme`: Toggle the [Obfuscator](/docs/settings/) — hides your character name, account name and guild info in screenshots, the friends list panel, and the in-game UI.
+
+## Teamspeak
+
+- `/ts`, `/ts3`, `/ts5`: Ping the current Teamspeak server and your channel's join link into team chat. `/ts3` always targets the Teamspeak 3 module; `/ts5` always targets Teamspeak 5; `/ts` uses whichever client is connected.
+
+## Reroll
+
+- `/reroll <profession|character_name>`: Log out and log straight back in on a different character. Accepts a profession name or any substring of a character name. Skips any characters you've marked as excluded in the [Reroll](/docs/reroll/) window.
+- `/rr`: Short alias for `/reroll`.
+
+## UI buttons
+
+- `/button <label> [label...]`: Click one or more UI buttons by their internal label, e.g. `/button "BtnBuy" "BtnAccept" "BtnOk"`. Handy for scripting NPC vendor interactions.
+
+## Timer
+
+- `/resettimer` or `/timerreset`: Reset the [Instance Timer](/docs/widgets/#timer) widget back to zero.
+
+## Aliases
+
+You can define personal aliases for any command by editing the **Chat Command Aliases** section of `GWToolbox.ini`, or via the alias panel in the [Chat](/docs/chat/) settings. Toolbox ships with three defaults:
+
+| Alias    | Expands to       |
+| -------- | ---------------- |
+| `/ff`    | `/resign`        |
+| `/gh`    | `/tp gh`         |
+| `/armor` | `/pingitem armor`|
+
 [back](./)
