@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 #include <Windows/NotePadWindow.h>
 #include <Utils/FontLoader.h>
@@ -143,7 +144,16 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
             }
 
             active_tab_idx = std::clamp(active_tab_idx, 0, static_cast<int>(tabs.size()) - 1);
-            int delete_tab = -1;
+            const auto confirm_close_tab = [](bool result, void* wparam) {
+                if (!result) return;
+                const int tab_id = static_cast<int>(reinterpret_cast<intptr_t>(wparam));
+                for (int i = 0; i < static_cast<int>(tabs.size()); i++) {
+                    if (tabs[i]->id == tab_id) {
+                        DeleteTab(i);
+                        return;
+                    }
+                }
+            };
             for (int i = 0; i < static_cast<int>(tabs.size()); i++) {
                 ImGui::PushID(i);
                 auto& tab = *tabs[i];
@@ -160,13 +170,13 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                         rename_needs_focus = true;
                     }
                     if (tabs.size() > 1 && ImGui::MenuItem("Close")) {
-                        delete_tab = i;
+                        ImGui::ConfirmDialog("Are you sure you want to close this tab?", confirm_close_tab, reinterpret_cast<void*>(static_cast<intptr_t>(tab.id)));
                     }
                     ImGui::EndPopup();
                 }
 
                 if (!tab_open) {
-                    delete_tab = i;
+                    ImGui::ConfirmDialog("Are you sure you want to close this tab?", confirm_close_tab, reinterpret_cast<void*>(static_cast<intptr_t>(tab.id)));
                 }
 
                 if (tab_visible) {
@@ -200,10 +210,6 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                     ImGui::EndTabItem();
                 }
                 ImGui::PopID();
-            }
-
-            if (delete_tab >= 0) {
-                DeleteTab(delete_tab);
             }
 
             ImGui::EndTabBar();
