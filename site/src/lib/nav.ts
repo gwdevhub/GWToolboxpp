@@ -13,6 +13,7 @@ export const navGroups: NavGroup[] = [
     label: 'Getting Started',
     items: [
       { slug: 'faq', label: 'FAQ' },
+      { slug: 'linux', label: 'Linux Install Guide' },
       { slug: 'history', label: 'Version History' },
       { slug: 'credits', label: 'Credits' },
     ],
@@ -31,7 +32,7 @@ export const navGroups: NavGroup[] = [
       { slug: 'settings', label: 'Settings' },
       { slug: 'travel', label: 'Travel' },
       { slug: 'trade', label: 'Trade' },
-      { slug: 'hallofmonuments', label: 'Hall of Monuments' },
+      { slug: 'market_browser', label: 'Market Browser' },
       { slug: 'completion', label: 'Completion' },
       { slug: 'armory_window', label: 'Armory' },
       { slug: 'duping_window', label: 'Duping' },

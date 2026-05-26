@@ -31,14 +31,14 @@ const isActive = (href: string) =>
       href="/"
       class="flex items-center gap-2 font-display text-base font-semibold tracking-wide text-(--color-fg) hover:text-(--color-accent)"
     >
-      <svg
-        viewBox="0 0 32 32"
-        class="h-6 w-6 fill-(--color-accent)"
+      <img
+        src="/favicon.ico"
+        alt=""
+        width="22"
+        height="28"
+        class="h-7 w-auto shrink-0"
         aria-hidden="true"
-      >
-        <path d="M16 2 4 8v10c0 7 5.6 11.4 12 12 6.4-.6 12-5 12-12V8L16 2zm0 4.6 8 4v7.4c0 5.4-4.1 8.7-8 9.4-3.9-.7-8-4-8-9.4v-7.4l8-4z"/>
-        <path d="M16 11 12 21h2.4l.7-2h1.8l.7 2H20l-4-10zm-.4 6 .4-1.4.4 1.4h-.8z"/>
-      </svg>
+      />
       <span>{siteConfig.title}</span>
     </a>
 
