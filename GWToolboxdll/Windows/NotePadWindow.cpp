@@ -35,6 +35,7 @@ namespace {
     std::vector<std::unique_ptr<NotepadTab>> tabs;
     int next_tab_id = 0;
     int renaming_tab = -1;
+    int active_tab_idx = 0;
     bool rename_needs_focus = false;
     char rename_buf[tab_name_length]{};
 
@@ -124,6 +125,7 @@ void NotePadWindow::Terminate()
     tabs.clear();
     next_tab_id = 0;
     renaming_tab = -1;
+    active_tab_idx = 0;
 }
 
 void NotePadWindow::Draw(IDirect3DDevice9*)
@@ -140,13 +142,16 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                 AddTab();
             }
 
+            active_tab_idx = std::clamp(active_tab_idx, 0, static_cast<int>(tabs.size()) - 1);
             int delete_tab = -1;
             for (int i = 0; i < static_cast<int>(tabs.size()); i++) {
                 ImGui::PushID(i);
                 auto& tab = *tabs[i];
                 const ImGuiTabItemFlags flags = tab.dirty ? ImGuiTabItemFlags_UnsavedDocument : ImGuiTabItemFlags_None;
                 bool tab_open = true;
-                const bool tab_visible = ImGui::BeginTabItem(tab.name, tabs.size() > 1 ? &tab_open : nullptr, flags);
+                // Only show the close button (X) on the currently active tab to prevent accidental closure
+                bool* const p_open = (tabs.size() > 1 && i == active_tab_idx) ? &tab_open : nullptr;
+                const bool tab_visible = ImGui::BeginTabItem(tab.name, p_open, flags);
 
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::MenuItem("Rename")) {
@@ -165,6 +170,7 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                 }
 
                 if (tab_visible) {
+                    active_tab_idx = i;
                     if (renaming_tab == i) {
                         ImGui::SetNextItemWidth(-1.0f);
                         if (rename_needs_focus) {
