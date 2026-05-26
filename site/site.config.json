@@ -5,6 +5,10 @@
   "discordUrl": "https://discord.gg/pGS5pFn",
   "toolboxVersion": "8.19",
   "fallbackDownloadUrl": "https://github.com/gwdevhub/GWToolboxpp/releases/latest/download/gwtoolbox.exe",
+  "issueUrls": {
+    "bug": "https://github.com/gwdevhub/GWToolboxpp/issues/new?labels=bug&title=%5BBug%5D+",
+    "idea": "https://github.com/gwdevhub/GWToolboxpp/issues/new?labels=enhancement&title=%5BIdea%5D+"
+  },
   "maintainers": [
     { "name": "HasKha", "url": "https://github.com/HasKha" },
     { "name": "GregLando113", "url": "https://github.com/GregLando113" },

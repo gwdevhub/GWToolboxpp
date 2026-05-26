@@ -32,4 +32,21 @@ import siteConfig from '../../site.config.json';
       <a href="/docs/faq/" class="hover:text-(--color-accent)">FAQ</a>
     </div>
   </div>
+  <div
+    class="mx-auto max-w-7xl border-t border-(--color-border-glass-subtle) px-4 py-3 text-xs text-(--color-fg-faint) sm:px-6"
+  >
+    <p>
+      This site is built and maintained with the assistance of AI tools — please
+      {' '}
+      <a
+        href={siteConfig.issueUrls.bug}
+        target="_blank"
+        rel="noopener"
+        class="text-(--color-fg-meta) underline decoration-(--color-border-glass) underline-offset-2 hover:text-(--color-accent) hover:decoration-(--color-accent)"
+      >
+        flag any inaccuracies
+      </a>{' '}
+      on the issue tracker.
+    </p>
+  </div>
 </footer>
