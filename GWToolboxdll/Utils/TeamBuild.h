@@ -119,15 +119,9 @@ struct TeamBuild {
     void ResetEncodedCache() const;
 
 private:
-    struct TooltipEntry {
-        std::string label;
-        std::string code; // empty when code is absent or fails to decode
-    };
-
     int editing_build_idx_ = -1; // which build row is expanded (player-builds layout)
     bool send_all_confirming_ = false;
     mutable std::optional<std::wstring> encoded_cache_{};
-    mutable std::optional<std::vector<TooltipEntry>> tooltip_cache_{};
 
     // Returns the encoded wstring, computing and caching it on first call.
     const std::wstring& GetEncoded() const;
