@@ -108,6 +108,10 @@ struct TeamBuild {
     void Load() const;
     void Copy() const;
 
+    // Draw tooltip content showing each build's skill bar, or a red "No Build Defined"
+    // placeholder when the build code is absent or invalid.
+    void DrawTooltip() const;
+
     // Returns true if [TB;<encoded>] would be >= 120 chars (GW chat limit).
     bool ChatCodeTooLong() const;
 

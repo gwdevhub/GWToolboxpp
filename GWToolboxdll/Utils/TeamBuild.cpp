@@ -496,6 +496,43 @@ void TeamBuild::Copy() const
     Log::Flash("Teambuild code copied to clipboard");
 }
 
+void TeamBuild::DrawTooltip() const
+{
+    for (const auto& build : builds) {
+        const bool has_hero = build.hero_id != GW::Constants::HeroID::NoHero;
+        const bool has_name = !build.name.empty();
+        const bool has_code = !build.code.empty();
+
+        if (has_hero_slots) {
+            if (!has_hero && !has_name && !has_code) continue;
+        } else {
+            if (!has_name && !has_code) continue;
+        }
+
+        ImGui::Spacing();
+
+        if (has_hero_slots) {
+            const auto hero_name = has_hero
+                ? Resources::GetHeroName(build.hero_id)->string()
+                : std::string("Player");
+            const auto display_name = has_name ? build.name : build.GetFallbackBuildName();
+            const auto full_name = std::format("{} ({})", display_name, hero_name);
+            ImGui::TextUnformatted(full_name.c_str());
+        } else {
+            ImGui::TextUnformatted(build.name.c_str());
+        }
+
+        GW::SkillbarMgr::SkillTemplate st{};
+        if (has_code && GW::SkillbarMgr::DecodeSkillTemplate(st, build.code.c_str())) {
+            GuiUtils::DrawSkillbar(build.code.c_str(), false);
+        } else {
+            ImGui::TextColored({1.f, 0.3f, 0.3f, 1.f}, "No Build Defined");
+        }
+
+        ImGui::Spacing();
+    }
+}
+
 bool TeamBuild::ChatCodeTooLong() const
 {
     const auto& encoded = GetEncoded();

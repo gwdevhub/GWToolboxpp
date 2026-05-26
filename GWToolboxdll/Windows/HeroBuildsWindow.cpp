@@ -273,17 +273,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     tbuild.edit_open = !tbuild.edit_open;
                 }
                 if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip([&tbuild, this]() {
-                        for (size_t ti = 0; ti < tbuild.builds.size(); ti++) {
-                            const auto& build = tbuild.builds[ti];
-                            if (build.code.empty() && build.name.empty()) continue;
-                            ImGui::Spacing();
-                            std::string name;
-                            HeroBuildName(build, &name);
-                            ImGui::TextUnformatted(name.empty() ? build.name.c_str() : name.c_str());
-                            GuiUtils::DrawSkillbar(build.code.c_str(), false);
-                            ImGui::Spacing();
-                        }
+                    ImGui::SetTooltip([&tbuild]() {
+                        tbuild.DrawTooltip();
                     });
                 }
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
