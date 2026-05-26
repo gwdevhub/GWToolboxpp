@@ -27,13 +27,11 @@ const release = await getLatestRelease();
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
+      rel="preload"
+      href="/fonts/Fremont.woff"
+      as="font"
+      type="font/woff"
       crossorigin="anonymous"
-    />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap"
     />
   </head>
   <body class="min-h-screen flex flex-col">

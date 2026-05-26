@@ -1,6 +1,15 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
+/* Self-hosted display face — sourced from tolkano.com's font kit. */
+@font-face {
+  font-family: 'Fremont';
+  src: url('/fonts/Fremont.woff') format('woff');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* Surface palette — near-black backgrounds, neutral cards, glass overlays */
   --color-bg: #0a0a0a;
@@ -31,7 +40,7 @@
   --color-accent-deep: #b87800;
 
   /* Typography */
-  --font-display: 'Cinzel', ui-serif, Georgia, serif;
+  --font-display: 'Fremont', ui-serif, Georgia, serif;
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono:
