@@ -426,6 +426,24 @@ namespace GWArmory {
         return "Unknown";
     }
 
+    const char* GetWeaponTypeName(ItemType type)
+    {
+        switch (type) {
+        case ItemType::Axe:     return "Axes";
+        case ItemType::Bow:     return "Bows";
+        case ItemType::Daggers: return "Daggers";
+        case ItemType::Hammer:  return "Hammers";
+        case ItemType::Offhand: return "Off-hand";
+        case ItemType::Scythe:  return "Scythes";
+        case ItemType::Shield:  return "Shields";
+        case ItemType::Spear:   return "Spears";
+        case ItemType::Staff:   return "Staves";
+        case ItemType::Sword:   return "Swords";
+        case ItemType::Wand:    return "Wands";
+        default:                return "Weapons";
+        }
+    }
+
     bool armor_pieces_array_getter(void* data, const int idx, const char** out_text)
     {
         const auto armors = static_cast<Armor**>(data);
@@ -869,6 +887,126 @@ namespace GWArmory {
         return value_changed;
     }
 
+    bool DrawWeaponsByType(ItemType type)
+    {
+        const ItemSlot slot = GetSlotFromItemType(type);
+        const auto state = &combo_list_states[slot];
+        const auto player_piece = &imgui_armor_pieces[slot];
+        bool value_changed = false;
+
+        std::vector<Armor*> type_pieces;
+        for (auto* piece : state->pieces) {
+            if (piece->type == type)
+                type_pieces.push_back(piece);
+        }
+        if (type_pieces.empty())
+            return false;
+
+        ImGui::PushID(static_cast<int>(type));
+
+        const float scale = ImGui::FontScale();
+
+        ImGui::Separator();
+        ImGui::TextUnformatted(GetWeaponTypeName(type));
+
+        ImGui::PushID(slot);
+
+        auto tmpDyeColor = player_piece->dye.dye1;
+        ImGui::SameLine(128.f * scale);
+        if (DyePicker("color1", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[0]) {
+            value_changed = true;
+            player_piece->dye.dye1 = use_global_color ? global_dyes[0] : tmpDyeColor;
+        }
+
+        tmpDyeColor = player_piece->dye.dye2;
+        ImGui::SameLine();
+        if (DyePicker("color2", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[1]) {
+            value_changed = true;
+            player_piece->dye.dye2 = use_global_color ? global_dyes[1] : tmpDyeColor;
+        }
+
+        tmpDyeColor = player_piece->dye.dye3;
+        ImGui::SameLine();
+        if (DyePicker("color3", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[2]) {
+            value_changed = true;
+            player_piece->dye.dye3 = use_global_color ? global_dyes[2] : tmpDyeColor;
+        }
+
+        tmpDyeColor = player_piece->dye.dye4;
+        ImGui::SameLine();
+        if (DyePicker("color4", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[3]) {
+            value_changed = true;
+            player_piece->dye.dye4 = use_global_color ? global_dyes[3] : tmpDyeColor;
+        }
+
+        ImGui::SameLine(280.f * scale);
+        if (ImGui::SmallButton("None")) {
+            player_piece->model_file_id = 0;
+            value_changed = true;
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip([slot]() {
+                ImGui::TextUnformatted("Empty Slot");
+                ImGui::TextDisabled("/armory %s", empty_slot_names.at(slot).data());
+            });
+        }
+
+        ImGui::PopID();
+
+        constexpr ImVec4 tint(1, 1, 1, 1);
+        constexpr auto uv0 = ImVec2(0, 0);
+        const ImVec2 icon_size = { 48.f, 48.f };
+        ImVec2 scaled_size(icon_size.x * scale, icon_size.y * scale);
+
+        const auto equipped_color = ImColor(IM_COL32(0, 0x99, 0, 192));
+        const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
+
+        ImGui::StartSpacedElements(icon_size.x);
+
+        for (const auto& piece : type_pieces) {
+            ImGui::PushID(piece->label);
+
+            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction);
+            if (!texture || !*texture) {
+                ImGui::PopID();
+                continue;
+            }
+
+            const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+            const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
+            ImGui::NextSpacedElement();
+            if (ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint)) {
+                player_piece->model_file_id = piece->model_file_id;
+                player_piece->interaction = piece->interaction;
+                player_piece->type = piece->type;
+                player_piece->dye.dye_tint = piece->dye_tint;
+                value_changed = true;
+            }
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip([piece, player_piece]() {
+                    ImGui::TextUnformatted(piece->label);
+                    ImGui::TextDisabled(GetChatCommand(piece, player_piece).c_str());
+                });
+            }
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+                context_menu_piece = *player_piece;
+                ImGui::SetContextMenu(ArmorItemContextMenu, piece);
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleVar();
+        ImGui::PopID();
+        return value_changed;
+    }
+
     enum SnapshotState { Idle, Pending, WaitingForDecode };
     SnapshotState state = SnapshotState::Idle;
     std::map<uint32_t, std::unique_ptr<GuiUtils::EncString>> pending_decodes;
@@ -1242,12 +1380,22 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
         if (ImGui::MyCombo("##filter", "All", reinterpret_cast<int*>(&current_campaign), armor_filter_array_getter, nullptr, 6)) {
             UpdateArmorsFilter();
         }
-        const auto order = {Headpiece, Chestpiece, Gloves, Leggings, Boots, CostumeHead, CostumeBody, LeftHand, RightHand};
-        for (const auto slot : order) {
+        const auto armor_order = {Headpiece, Chestpiece, Gloves, Leggings, Boots, CostumeHead, CostumeBody};
+        for (const auto slot : armor_order) {
             if (!IsEquipmentSlotSupportedByArmory(slot))
                 continue;
             if (DrawArmorPieceNew(slot)) {
                 SetArmorItem(&imgui_armor_pieces[slot]);
+            }
+        }
+        constexpr ItemType weapon_order[] = {
+            ItemType::Axe, ItemType::Bow, ItemType::Daggers, ItemType::Hammer,
+            ItemType::Scythe, ItemType::Spear, ItemType::Staff, ItemType::Sword,
+            ItemType::Wand, ItemType::Offhand, ItemType::Shield
+        };
+        for (const auto weapon_type : weapon_order) {
+            if (DrawWeaponsByType(weapon_type)) {
+                SetArmorItem(&imgui_armor_pieces[GetSlotFromItemType(weapon_type)]);
             }
         }
         #ifdef _DEBUG
