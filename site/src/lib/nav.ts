@@ -50,6 +50,8 @@ export const navGroups: NavGroup[] = [
       { slug: 'enemy_window', label: 'Enemy' },
       { slug: 'items', label: 'Items' },
       { slug: 'quest', label: 'Quest' },
+      { slug: 'world_map', label: 'World Map' },
+      { slug: 'vanquish_overlay', label: 'Vanquish Overlay' },
     ],
   },
   {

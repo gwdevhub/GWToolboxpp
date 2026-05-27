@@ -69,7 +69,13 @@ The clock simply shows your local time of day. You can choose 12 or 24-hour cloc
 ## Vanquish
 The vanquish monitor shows how many enemies are in a zone, and how many have already been killed. This updates whenever you spawn additional enemies e.g. from quests or pop-ups.
 
-This widget will not appear unless you are in an vanquishable area and in Hard Mode. 
+This widget will not appear unless you are in an vanquishable area and in Hard Mode.
+
+## Vanquish Overlay
+The [vanquish overlay](/docs/vanquish_overlay/) paints fog of war, enemy markers, and a compass-range circle on top of the in-game mission map to help you finish Hard Mode vanquishes.
+
+## World Map
+The [world map widget](/docs/world_map/) overlays quest markers, elite capture locations, and toolbox minimap lines on the in-game world map, and adds right-click shortcuts for travel and the wiki.
 
 ## Alcohol
 When in an explorable area, the alcohol monitor displays a timer of how long before the drunkenness effect wears off.
