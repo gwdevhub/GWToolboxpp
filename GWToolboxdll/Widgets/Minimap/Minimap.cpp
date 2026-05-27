@@ -294,6 +294,7 @@ namespace {
         const auto compass = GetCompassFrame();
         if (!compass) return false;
         const auto context = static_cast<CompassContext*>(GW::UI::GetFrameContext(compass));
+        if (!context) return false;
         if (!context->compass_canvas) {
             SetWindowVisibleTmp(GW::UI::WindowID_Compass, true);
             pending_compass_hide = true;
