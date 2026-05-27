@@ -73,19 +73,19 @@ const isActive = (href: string) =>
         href={siteConfig.githubUrl}
         target="_blank"
         rel="noopener"
-        class="hidden rounded px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg) sm:inline-flex"
+        class="hidden rounded px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg) lg:inline-flex"
       >
         GitHub
       </a>
       <details class="feedback group relative">
         <summary
-          class="inline-flex cursor-pointer items-center gap-1.5 rounded border border-(--color-border-glass) bg-(--color-glass) px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors marker:hidden hover:bg-(--color-glass-hover) hover:text-(--color-fg) [&::-webkit-details-marker]:hidden"
+          class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded border border-(--color-border-glass) bg-(--color-glass) px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors marker:hidden hover:bg-(--color-glass-hover) hover:text-(--color-fg) [&::-webkit-details-marker]:hidden"
           aria-label="Submit feedback"
         >
           <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 fill-current" aria-hidden="true">
             <path d="M8 1.5C4.41 1.5 1.5 4.07 1.5 7.25c0 1.42.58 2.72 1.55 3.73L2.3 13.7c-.1.35.25.66.59.52l2.78-1.13c.74.27 1.55.41 2.33.41 3.59 0 6.5-2.57 6.5-5.75S11.59 1.5 8 1.5zm-2.5 6.5a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5zm2.5 0a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5zm2.5 0a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5z" />
           </svg>
-          <span class="hidden sm:inline">Feedback</span>
+          <span class="hidden lg:inline">Feedback</span>
         </summary>
         <div
           class="absolute top-[calc(100%+0.25rem)] right-0 z-50 w-56 overflow-hidden rounded-lg border border-(--color-border-glass) bg-(--color-card) shadow-xl shadow-black/40"
@@ -124,7 +124,7 @@ const isActive = (href: string) =>
         release ? (
           <a
             href={release.url}
-            class="inline-flex items-center gap-1.5 rounded bg-(--color-accent) px-3 py-1.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
+            class="hidden h-8 lg:inline-flex items-center gap-1.5 rounded bg-(--color-accent) px-3 py-1.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
           >
             <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 fill-current" aria-hidden="true">
               <path d="M8 1.5a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.25A.75.75 0 0 1 8 1.5zM3.25 13.5a.75.75 0 0 0 0 1.5h9.5a.75.75 0 0 0 0-1.5h-9.5z" />
