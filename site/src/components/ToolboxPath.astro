@@ -13,9 +13,9 @@
  *                steps={['Hotkeys', 'Add', 'Pcons: Toggle active set']} />
  *   <ToolboxPath kind="command" steps={['/dmg report']} />
  *
- * Styling is deliberately minimal — no border or background by default.
- * It should read as a quiet "here's where this lives" footnote next to
- * the prose, not a callout that hijacks the page.
+ * Rendered as a small bordered chip so the eye picks it out as "this is
+ * a UI path, not part of the surrounding sentence". Small enough not to
+ * dominate the line, but obviously its own thing.
  */
 
 type Kind = 'settings' | 'window' | 'widget' | 'hotkey' | 'command';
@@ -58,19 +58,32 @@ const labels: Record<Kind, string> = {
 <style>
   .tb-path {
     display: inline-flex;
-    align-items: baseline;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 0.15rem 0.3rem;
-    font-size: 0.85em;
-    line-height: 1.4;
-    color: var(--color-fg-meta);
+    gap: 0.2rem 0.35rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: var(--color-fg-sub);
+    background: var(--color-glass);
+    border: 1px solid var(--color-border-glass);
+    border-radius: 0.375rem;
+    /* Sit a touch above text baseline so the chip doesn't push the
+       surrounding line height around when used inline. */
+    vertical-align: middle;
   }
   .tb-path-icon {
-    color: var(--color-accent-deep);
-    font-size: 0.85em;
+    color: var(--color-accent);
+    font-size: 0.9em;
+    line-height: 1;
+  }
+  .tb-path[data-kind='command'] {
+    /* Command paths read most naturally as code-shaped chips. */
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: -0.01em;
   }
   .tb-path[data-kind='command'] .tb-path-icon {
-    font-family: var(--font-mono);
     letter-spacing: -0.05em;
   }
   .tb-path-step {
@@ -81,11 +94,12 @@ const labels: Record<Kind, string> = {
   }
   .tb-path-leaf {
     color: var(--color-accent);
-    font-weight: 500;
+    font-weight: 600;
   }
-  /* When the prose stylesheet wraps us in <li>, keep our left-edge
-     aligned with the bullet text. */
-  :global(.prose li) > .tb-path {
-    margin-top: 0.2rem;
+  /* When the prose stylesheet wraps us in <li>, give a little vertical
+     breathing room from the bullet text above. */
+  :global(.prose li) > .tb-path,
+  :global(.prose p) > .tb-path {
+    margin-top: 0.15rem;
   }
 </style>
