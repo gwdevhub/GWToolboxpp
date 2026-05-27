@@ -3,10 +3,14 @@ title: "Info"
 section: windows
 ---
 
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
 <figure>
 <img src="https://user-images.githubusercontent.com/11432831/28233535-5b479466-68ac-11e7-910a-a58a3d755578.PNG"/>
 <figcaption>Info Window</figcaption>
 </figure>
+
+Open from <ToolboxPath kind="window" steps={["Toolbox", "Info"]} /> or <ToolboxPath kind="command" steps={["/show info"]} />. Per-window options live under <ToolboxPath steps={["Settings", "Info"]} />.
 
 The Info window is the hub for information, which can be be highlighted, and copied with Ctrl+C. Most of this is displayed in drop-down menus.
 

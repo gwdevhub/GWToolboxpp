@@ -3,11 +3,15 @@ title: "Target Widgets"
 section: widgets
 ---
 
-GWToolbox++ provides several widgets that display information about your current target, enhancing your gameplay experience and decision-making.
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+GWToolbox++ provides several widgets that display information about your current target, enhancing your gameplay experience and decision-making. Each one has its own section in the settings panel — see the headings below for the exact path.
 
 ## Distance Widget
 
 The Distance Widget shows the distance between you and your current target.
+
+<ToolboxPath steps={['Settings', 'Distance']} />
 
 ### Features:
 - Displays the distance as a percentage of compass range and/or absolute value
@@ -22,6 +26,8 @@ The Distance Widget shows the distance between you and your current target.
 
 The Health Widget displays the health of your current target.
 
+<ToolboxPath steps={['Settings', 'Health']} />
+
 ### Features:
 - Shows target's health as a percentage and/or absolute value
 - Color-coded based on customizable health thresholds
@@ -35,6 +41,8 @@ The Health Widget displays the health of your current target.
 ## Target Info Window
 
 The Target Info Window provides detailed information about your current target, sourced from the Guild Wars Wiki.
+
+Open from <ToolboxPath kind="window" steps={['Toolbox', 'Target Info']} /> or with <ToolboxPath kind="command" steps={['/show targetinfo']} />. Settings live under <ToolboxPath steps={['Settings', 'Target Info']} />.
 
 ### Features:
 - Displays the target's name and image (if available)
@@ -55,7 +63,5 @@ All these widgets can be customized in the GWToolbox++ settings:
 - Adjust positions and sizes
 - Customize colors and transparency
 - Set up custom thresholds and display options
-
-To access these settings, open the GWToolbox++ menu and navigate to the respective sections for Distance Widget, Health Widget, and Target Info Window.
 
 Remember, while these features can greatly enhance your gameplay, they are not official parts of Guild Wars. Use them responsibly and in accordance with the game's terms of service.

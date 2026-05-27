@@ -3,7 +3,9 @@ title: "Quest Functionality"
 section: widgets
 ---
 
-GWToolbox++ includes enhanced functionality for quests, providing users with improved navigation and information display.
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+GWToolbox++ includes enhanced functionality for quests, providing users with improved navigation and information display. Configure all quest-related widgets and modules under <ToolboxPath steps={['Settings', 'Active Quest Info']} /> and <ToolboxPath steps={['Settings', 'Quest Module']} />.
 
 ## Features
 
@@ -17,6 +19,8 @@ The Active Quest Widget displays information about the currently active quest, i
 
 This widget provides a clear and concise view of your current quest progress, helping you stay focused on your goals.
 
+<ToolboxPath steps={['Settings', 'Active Quest Info']} />
+
 ### Quest Pathing
 
 GWToolbox++ includes an advanced quest pathing feature that calculates the optimal route to your quest objective. This feature:
@@ -25,6 +29,8 @@ GWToolbox++ includes an advanced quest pathing feature that calculates the optim
 - Updates the path in real-time as you move
 - Displays the path on the minimap
 - Redirects the in-game quest marker to guide you along the calculated path
+
+<ToolboxPath steps={['Settings', 'Quest Module']} />
 
 ## How It Works
 

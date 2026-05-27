@@ -4,6 +4,10 @@ section: windows
 description: "Browse live Guild Wars trade listings from gwmarket.net inside the game client."
 ---
 
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+Open from <ToolboxPath kind="window" steps={["Toolbox", "Market Browser"]} /> or <ToolboxPath kind="command" steps={["/show marketbrowser"]} />. Per-window options live under <ToolboxPath steps={["Settings", "Market Browser"]} />.
+
 The **Market Browser** is a docked window that streams live buy/sell listings from [gwmarket.net](https://gwmarket.net) over a websocket connection, so you can search for items, compare prices across currencies, and whisper sellers without alt-tabbing out of Guild Wars.
 
 It's a read-only view of the gwmarket.net order book today — posting your own orders happens on the website (the in-game "My Shop" panel exists in source but is gated behind a build flag).

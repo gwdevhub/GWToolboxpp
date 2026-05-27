@@ -3,6 +3,10 @@ title: "Damage Monitor"
 section: widgets
 ---
 
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this widget live under <ToolboxPath steps={["Settings", "Damage"]} />.
+
 The damage monitor records how much damage has been dealt by each party member and displays it as a number, as a percentage of the party's total, and as a thick horizontal bar.
 
 As well as the thick bar showing each party member's damage, there is a thinner bar showing recent damage. This resets after dealing no damage for a short time, which can be customized in [Settings](/docs/settings/).
@@ -44,9 +48,10 @@ In case you want to check the actual code, you can see it here: https://github.c
 ## Chat Commands
 
 `/dmg [arg]` or `/damage [arg]` controls the party damage monitor:
-* `/dmg` or `/dmg report` to print the full results in party chat.
-* `/dmg me` to print your own damage in party chat.
-* `/dmg [number]` to print a particular party member's damage in party chat.
-* `/dmg reset` to reset the monitor.
+
+* Full party report in party chat: <ToolboxPath kind="command" steps={['/dmg']} /> or <ToolboxPath kind="command" steps={['/dmg report']} />
+* Your own damage only: <ToolboxPath kind="command" steps={['/dmg me']} />
+* A specific party member's damage: <ToolboxPath kind="command" steps={['/dmg 3']} />
+* Reset the monitor: <ToolboxPath kind="command" steps={['/dmg reset']} />
 
 [back](./)

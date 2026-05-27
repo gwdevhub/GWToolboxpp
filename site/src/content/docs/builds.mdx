@@ -3,10 +3,14 @@ title: "Builds"
 section: windows
 ---
 
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
 <figure>
 <img src="https://i.imgur.com/Z6kP0V1.png"/>
 <figcaption>Edit Teambuild Window</figcaption>
 </figure>
+
+Open from <ToolboxPath kind="window" steps={["Toolbox", "Builds"]} /> or <ToolboxPath kind="command" steps={["/show builds"]} />. Per-window options live under <ToolboxPath steps={["Settings", "Builds"]} />.
 
 The Builds window allows you to create and edit teambuilds, which can then be sent directly to party chat or loaded onto your character. Clicking "Send" on one of your teambuilds will send the name, followed by each build in a loadable template to the party chat. Clicking "Load" will load the build onto your character.
 
