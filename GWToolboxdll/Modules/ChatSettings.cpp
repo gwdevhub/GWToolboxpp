@@ -246,20 +246,29 @@ namespace {
                 return;
         }
 
-        // If the message is [name;code] where name is a URL and code is not a URL,
-        // GWCA has already handled it — just normalise so both name and code are the URL.
-        static constexpr ctll::fixed_string link_regex = LR"(\[([^\];]+);([^\]]*)\])";
         std::wstring msg_str(msg);
         bool changed = false;
-        std::wstring new_msg = TextUtils::ctre_regex_replace_with_formatter<link_regex>(msg_str, [&](auto& match) -> std::wstring {
-            const auto name = match.template get<1>().to_view();
-            const auto code = match.template get<2>().to_view();
-            if (TextUtils::IsUrl(name.data()) && !TextUtils::IsUrl(code.data())) {
-                changed = true;
-                return std::format(L"[{};{}]", name, name);
-            }
-            return std::wstring(match.template get<0>());
-        });
+        std::wstring new_msg;
+
+        // If the message is a bare URL (no spaces), wrap it as [url;url] so it becomes a clickable link.
+        if (TextUtils::IsUrl(msg) && wcschr(msg, L' ') == nullptr) {
+            new_msg = std::format(L"[{};{}]", msg_str, msg_str);
+            changed = true;
+        }
+        else {
+            // If the message is [name;code] where name is a URL and code is not a URL,
+            // GWCA has already handled it — just normalise so both name and code are the URL.
+            static constexpr ctll::fixed_string link_regex = LR"(\[([^\];]+);([^\]]*)\])";
+            new_msg = TextUtils::ctre_regex_replace_with_formatter<link_regex>(msg_str, [&](auto& match) -> std::wstring {
+                const auto name = match.template get<1>().to_view();
+                const auto code = match.template get<2>().to_view();
+                if (TextUtils::IsUrl(name.data()) && !TextUtils::IsUrl(code.data())) {
+                    changed = true;
+                    return std::format(L"[{};{}]", name, name);
+                }
+                return std::wstring(match.template get<0>());
+            });
+        }
 
         if (!changed) return;
 
