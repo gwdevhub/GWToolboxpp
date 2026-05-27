@@ -44,60 +44,45 @@ const featureCards = [
 
 <Base>
   <section class="border-b border-(--color-border-glass)">
-    <div class="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-[1.3fr_1fr] md:py-24">
-      <div>
-        <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-(--color-accent)">
-          For Guild Wars
-        </p>
-        <h1 class="font-display text-4xl leading-tight text-(--color-fg) sm:text-5xl md:text-6xl">
-          The all-in-one toolkit for Guild Wars.
-        </h1>
-        <p class="mt-6 max-w-2xl text-lg text-(--color-fg-sub)">
-          GWToolbox++ adds builds, hotkeys, automation, widgets, plugins and quality-of-life
-          fixes — a single drop-in client modification trusted by veteran players and run leaders.
-        </p>
-        <div class="mt-8 flex flex-wrap items-center gap-3">
-          <a
-            href={release.url}
-            class="inline-flex items-center gap-2 rounded bg-(--color-accent) px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
-          >
-            <svg viewBox="0 0 16 16" class="h-4 w-4 fill-current" aria-hidden="true">
-              <path d="M8 1.5a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.25A.75.75 0 0 1 8 1.5zM3.25 13.5a.75.75 0 0 0 0 1.5h9.5a.75.75 0 0 0 0-1.5h-9.5z" />
-            </svg>
-            Download {release.version}
-          </a>
-          <a
-            href="/docs/faq/"
-            class="inline-flex items-center gap-2 rounded border border-(--color-border-glass) bg-(--color-glass) px-5 py-2.5 text-sm font-semibold text-(--color-fg) transition-colors hover:bg-(--color-glass-hover)"
-          >
-            Read the FAQ
-          </a>
-          <a
-            href={siteConfig.githubUrl}
-            target="_blank"
-            rel="noopener"
-            class="inline-flex items-center gap-2 rounded px-3 py-2.5 text-sm font-medium text-(--color-fg-sub) transition-colors hover:text-(--color-fg)"
-          >
-            View source →
-          </a>
-        </div>
-        <p class="mt-4 text-xs text-(--color-fg-meta)">
-          Free, open source, MIT licensed. Windows only.
-        </p>
-      </div>
-
-      <div class="relative">
-        <div
-          class="rounded-xl border border-(--color-border-glass) bg-(--color-card) p-1 shadow-2xl shadow-black/40"
+    <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+      <p class="mb-3 text-sm font-semibold uppercase tracking-widest text-(--color-accent)">
+        For Guild Wars
+      </p>
+      <h1 class="font-display text-4xl leading-tight text-(--color-fg) sm:text-5xl md:text-6xl">
+        The all-in-one toolkit for Guild Wars.
+      </h1>
+      <p class="mt-6 max-w-2xl text-lg text-(--color-fg-sub)">
+        GWToolbox++ adds builds, hotkeys, automation, widgets, plugins and quality-of-life
+        fixes — a single drop-in client modification trusted by veteran players and run leaders.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a
+          href={release.url}
+          class="inline-flex items-center gap-2 rounded bg-(--color-accent) px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
         >
-          <img
-            src="https://user-images.githubusercontent.com/11432831/28233445-c7762ff4-68ab-11e7-9388-9437c8987a61.PNG"
-            alt="GWToolbox++ in-game UI"
-            class="w-full rounded-lg"
-            loading="eager"
-          />
-        </div>
+          <svg viewBox="0 0 16 16" class="h-4 w-4 fill-current" aria-hidden="true">
+            <path d="M8 1.5a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.25A.75.75 0 0 1 8 1.5zM3.25 13.5a.75.75 0 0 0 0 1.5h9.5a.75.75 0 0 0 0-1.5h-9.5z" />
+          </svg>
+          Download {release.version}
+        </a>
+        <a
+          href="/docs/faq/"
+          class="inline-flex items-center gap-2 rounded border border-(--color-border-glass) bg-(--color-glass) px-5 py-2.5 text-sm font-semibold text-(--color-fg) transition-colors hover:bg-(--color-glass-hover)"
+        >
+          Read the FAQ
+        </a>
+        <a
+          href={siteConfig.githubUrl}
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-2 rounded px-3 py-2.5 text-sm font-medium text-(--color-fg-sub) transition-colors hover:text-(--color-fg)"
+        >
+          View source →
+        </a>
       </div>
+      <p class="mt-4 text-xs text-(--color-fg-meta)">
+        Free, open source, MIT licensed. Windows only.
+      </p>
     </div>
   </section>
 
