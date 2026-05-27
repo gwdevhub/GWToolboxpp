@@ -450,7 +450,7 @@ namespace {
 
         const auto folder = Resources::GetPath(L"Screens");
         Resources::EnsureFolderExists(folder);
-        const std::string fname = std::string("gwtoolbox_") + slug + "_" + stamp + ".png";
+        const std::string fname = std::string("gwtoolbox_") + slug + "_" + stamp + ".jpg";
         return folder / fname;
     }
 }
