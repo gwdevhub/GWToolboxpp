@@ -7,35 +7,38 @@ import ToolboxPath from '../../components/ToolboxPath.astro';
 
 All settings for this feature live under <ToolboxPath steps={["Settings", "Chat Settings"]} />.
 
-The Chat Settings module provides various options to customize and enhance the in-game chat experience.
+## Timestamps
 
-## Features
+- **Show chat messages timestamp** <ToolboxPath steps={["Settings", "Chat Settings", "Show chat messages timestamp"]} /> — Show timestamps in the message history.
+  - **Use 24h** <ToolboxPath steps={["Settings", "Chat Settings", "Use 24h"]} /> — Display timestamps in 24-hour format.
+  - **Show seconds** <ToolboxPath steps={["Settings", "Chat Settings", "Show seconds"]} /> — Include seconds in the timestamp.
+  - **Color** <ToolboxPath steps={["Settings", "Chat Settings", "Color:"]} /> — Customize the timestamp color.
 
-### Timestamps
-- Show timestamps in chat messages
-- Customize timestamp format (24h or 12h)
-- Show seconds in timestamps
-- Customize timestamp color
+## Chat Bubbles
 
-### Chat Bubbles
-- Hide player chat speech bubbles
-- Show NPC speech bubbles in emote channel
+- **Hide player chat speech bubbles** <ToolboxPath steps={["Settings", "Chat Settings", "Hide player chat speech bubbles"]} /> — Don't show in-game speech bubbles over player characters that send a message in chat.
+- **Hide all friendly speech bubbles** <ToolboxPath steps={["Settings", "Chat Settings", "Hide all friendly speech bubbles"]} /> — Don't show any in-game speech bubbles from friendly entities.
+- **Show NPC speech bubbles in emote channel** <ToolboxPath steps={["Settings", "Chat Settings", "Show NPC speech bubbles in emote channel"]} /> — Speech bubbles from NPCs and heroes appear as emote messages in chat.
 
-### Message Redirection
-- Redirect NPC dialog to emote channel
-- Redirect outgoing whispers to whisper channel
+## Message Redirection
 
-### Link Handling
-- Open web links from templates
-- Automatically convert URLs into build templates
+- **Redirect NPC dialog to emote channel** <ToolboxPath steps={["Settings", "Chat Settings", "Redirect NPC dialog to emote channel"]} /> — Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel.
+- **Redirect outgoing whispers to whisper channel** <ToolboxPath steps={["Settings", "Chat Settings", "Redirect outgoing whispers to whisper channel"]} /> — Whispers you send appear blue like an incoming message, with `->` before the name.
 
-### Other Features
-- Block messages from inactive chat channels
-- Customize chat aliases
+## Link Handling
 
-## Usage
+- **Open web links from templates** <ToolboxPath steps={["Settings", "Chat Settings", "Open web links from templates"]} /> — Clicking a template with a URL as its name opens that URL in your browser.
+- **Automatically change urls into build templates** <ToolboxPath steps={["Settings", "Chat Settings", "Automatically change urls into build templates."]} /> — URLs (starting with `https://` or `http://`) anywhere in your messages are automatically converted to template format.
 
-To access Chat Settings, go to the Settings window in GWToolbox++ and navigate to the "Chat Settings" section.
+## Appearance
+
+- **Chat window font size** <ToolboxPath steps={["Settings", "Chat Settings", "Chat window font size"]} /> — Choose from Default, Large, Larger, or Largest.
+- **Chat Colors** <ToolboxPath steps={["Settings", "Chat Settings", "Chat Colors"]} /> — Customize the sender and message color for each chat channel: Local, Guild, Team, Trade, Alliance, Whispers, Emotes, and Other.
+- **Chat Token Colors** <ToolboxPath steps={["Settings", "Chat Settings", "Chat Token Colors"]} /> — Customize the highlight color of text tokens such as item rarities (Common, Uncommon, Rare, etc.) and other labeled text throughout the game.
+
+## Other
+
+- **Clear chat message when hiding the in-game chat window** <ToolboxPath steps={["Settings", "Chat Settings", "Clear chat message when hiding the in-game chat window"]} /> — Clears any typed text when you hide the chat window.
 
 ## Chat Commands
 
