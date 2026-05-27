@@ -34,7 +34,7 @@ const navInfo = findInNav(slug);
         </nav>
         <Search client:load />
       </div>
-      <article class="prose prose-invert max-w-none" data-pagefind-body>
+      <article class="prose prose-invert max-w-full overflow-x-hidden lg:max-w-none" data-pagefind-body>
         <h1 class="font-display text-3xl text-(--color-fg)">{title}</h1>
         <slot />
       </article>
