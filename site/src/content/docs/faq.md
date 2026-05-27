@@ -9,30 +9,12 @@ section: meta
 GWToolbox++ is a tool for the **original Guild Wars** released in 2005 — the campaigns Prophecies, Factions, Nightfall, and the Eye of the North expansion — which some of the community also refer to as *Guild Wars Reforged*. It hooks the original `Gw.exe` client and does **not** work with Guild Wars 2 in any way. We have no plans to port it: GW2 is a completely separate engine and game, and there are already dedicated tools and overlays for it elsewhere. If you ended up here looking for a GW2 utility, this isn't it.
 
 ### Does Toolbox work with the Guild Wars Reforged mobile app?
-No, and there are no plans to make it work. *Guild Wars Reforged* was recently released as a mobile app on iOS and Android, and although it's the same game, the mobile build is **compiled separately** from the Windows client. The function addresses, memory layouts, and game structures that Toolbox attaches to on the desktop client simply do not exist in the mobile binary — the existing Toolbox DLL has nothing to hook into.
-
-Building a mobile equivalent would mean three big jobs running in parallel:
-
-* **Maintaining a second Toolbox.** Every desktop feature would have to be re-implemented against the mobile binary, and every Guild Wars patch on either platform would risk breaking both versions. The desktop project alone already absorbs most of the volunteer time available.
-* **Working around mobile sandboxing.** iOS and Android explicitly prevent one app from injecting code into another the way Toolbox does on Windows. The in-process hook Toolbox relies on isn't possible on a non-jailbroken phone or tablet, and shipping anything that worked around that would not survive contact with the app stores.
-* **Designing a touch-first UI.** Toolbox's windows, hotkeys, and overlays assume a mouse, keyboard, and a desktop-sized viewport. None of that translates cleanly to a phone or tablet screen — every widget would need a new layout, every hotkey would need a touch equivalent.
-
-Each of those alone is a serious undertaking; together they're well beyond what the volunteer team has the bandwidth or appetite for. **No iOS or Android version of GWToolbox++ is planned.**
+No, and there are no plans to make it work. The mobile build is **compiled separately** from the Windows client — the function addresses, memory layouts, and game structures that Toolbox attaches to on the desktop client simply do not exist in the mobile binary. **No iOS or Android version of GWToolbox++ is planned.**
 
 ### Will I get banned for using GWToolbox++?
-GWToolbox++ is a third party tool that can automate aspects of gameplay for a range of uses including auto-responding to incoming whispers using the `/afk` command, automatically maintaining pcons in an explorable area, loading hero team builds and salvaging/purchasing items in bulk.
+**GWToolbox++ is allowed.** ArenaNet has confirmed that using GWToolbox++ will not result in a ban.
 
-Although many of these automations can be seen as quality-of-life improvements to the game, this software goes against part of the [ArenaNet Code of Conduct](https://www.arena.net/en/legal/code-of-conduct):
-
-"You may not use any third-party program (such as a "bot") to automate gameplay functions, including playing, chatting, interacting, or gathering items within our Games"
-
-"You will not attempt to interfere with, hack into, or decipher any transmissions to or from the servers or other facilities running the Services."
-
-...and is also mentioned in the [ArenaNet User Agreement](https://www.arena.net/en/legal/user-agreement):
-
-"We do not permit the use of any third-party software, tools, or programs that interact with the Services that give one player an unintended, unnatural, or unfair advantage over another player. Such prohibited third-party software, tools, or programs include those that alter Game-balance in favor of one player over another, automate actions within the Services, promote unattended gameplay, or have an adverse effect on other users of the Services. Prohibited third-party programs will be determined at our sole discretion."
-
-If you are found to be using GWToolbox++ in-game, you could get banned, so use this software at your own risk. With this in mind, it would not be a good idea to use any third party tools when streaming gameplay (recorded or otherwise) as it could be used in a case against your account.
+GWToolbox++ is a community-maintained quality-of-life tool that can automate aspects of gameplay for a range of uses including auto-responding to incoming whispers using the `/afk` command, automatically maintaining pcons in an explorable area, loading hero team builds and salvaging/purchasing items in bulk.
 
 ### My antivirus detects toolbox as a virus! Are you hacking me?
 The detection is a false positive, and it is caused by some techniques that GWToolbox needs to use. Most notably, toolbox has to run into another program and manipulate its memory at runtime (note: no modification is permanent). Toolbox is open source, so if you don't trust me you can read through the source code and compile directly from the source yourself.
@@ -41,22 +23,19 @@ The detection is a false positive, and it is caused by some techniques that GWTo
 TexMod, uMod, screen recording software (in game capture mode) and Toolbox all use similar techniques to capture and display information on the screen. Because of this, they may interfere with each other. Also note that when you use more than one of the above programs Guild Wars may crash when you close any of them.
 
 * Running Toolbox with multiple Guild Wars clients open is not a problem, Toolbox will ask which one to use.
-* GWMultiLaunch is not supported and may have issues. [GW Launcher](https://github.com/GregLando113/gwlauncher/releases) is recommended instead.
-* TexMod or uMod *should* work. You probably want to run them first, and Toolbox++ later. uMod with dll-drop method is recommended.
+* GWMultiLaunch is not supported and may have issues. [GW Launcher](https://github.com/GregLando113/gwlauncher/releases) and the Daybreak launcher are supported.
+* TexMod or uMod may have issues. Use gMod instead.
 * Screen recording software *should* work. You probably want to launch them last, after Toolbox. We recommend using "window capture" and not "game capture".
 
 ### I have a feature request or non-bug issue with GWToolbox++. Where can I voice it?
 We are always open to comments and criticism about Toolbox++. If you have features or opinions of features you would like to voice to the developers, please leave your input on the [repository issue tracker](https://github.com/gwdevhub/GWToolboxpp/issues).
 
 ### Why does GWToolbox++ require Admin privileges?
-GWToolbox++ needs admin privileges if Guild Wars has admin privileges. Guild Wars can be indirectly started with those privileges if it was started by a program that was run as admin. TexMod, uMod, GWML or GW Launcher typically require admin privileges so we decided for Toolbox to require admin privileges by default, to avoid issues.
+GWToolbox++ needs admin privileges if Guild Wars has admin privileges. Guild Wars can be indirectly started with those privileges if it was started by a program that was run as admin. TexMod, uMod, GWML, GW Launcher, or Daybreak typically require admin privileges so we decided for Toolbox to require admin privileges by default, to avoid issues.
 
 You can find a version of the launcher that doesn't require admin privileges [here](https://github.com/gwdevhub/GWToolboxpp/releases/tag/2.14_Release).
 
 ## Issues launching GWToolbox
-
-### I am getting an error message saying "d3dx9_43.dll (or some other d3d9 dll) is missing", what's wrong?
-Please install the DirectX Redistributable found [here](http://www.microsoft.com/en-us/download/details.aspx?id=8109). You will want to extract the package in a folder in your computer and then run DXSETUP.exe.
 
 ### I run the launcher and then nothing happens / Guild Wars closes / crashes
 There may be different reasons for this. Try the following, in no particular order:
@@ -71,7 +50,25 @@ This error typically means that some security feature is preventing Toolbox to a
 
 * Data Execution Prevention. It is disabled by default but if enabled you need to add gw.exe to its whitelist.
 * Security programs such as Windows Defender or any particularly zealous antivirus software. You typically need to add both GWToolbox.exe and gw.exe to its whitelist.
-* Missing DirectX 2010 redistributable. Download from [here](http://www.microsoft.com/en-us/download/details.aspx?id=8109), extract and install.
+
+### Toolbox isn't working. What should I try before reporting a bug?
+
+Please follow each of the steps below before asking for help. If something is still not working, do not hesitate to ask for help — but please provide accurate problem descriptions, how you can reproduce them, and post full error messages.
+
+1. Re-download the exe from [https://gwtoolbox.com/](https://gwtoolbox.com/) and run it to make sure you have the latest version.
+2. **Do not use any Toolbox plugins or other mods** — disable them and test again.
+3. Try launching the game without GW Launcher/Daybreak.
+4. Make sure you are running the latest version. Older Toolbox versions are **not supported**.
+5. Toolbox only works in PvE areas. The Guild Hall is a PvP area and Toolbox will not load there.
+6. Try running GWToolbox as administrator.
+7. Make sure your antivirus is not interfering with GWToolbox. Add an exception for the GWToolboxpp folder to allow it to run without issues.
+   - Windows Defender may block GWToolbox. To fix: Open **Windows Security** → **Virus & threat protection** → **Manage settings** → scroll to **Exclusions** → **Add or remove exclusions** → add the GWToolbox folder.
+8. Go to your GWToolbox folder by navigating to `%USERPROFILE%\Documents\GWToolboxpp` in a File Explorer window.
+   - Is there a `GWToolboxdll.dll`? Is there a folder named after your computer?
+   - If there is no `GWToolboxdll.dll`, download the latest dll from [the releases page](https://github.com/gwdevhub/GWToolboxpp/releases), put it in the GWToolbox folder, and retry launching.
+9. If you are getting a font can't be loaded error, download [Font.ttf](https://github.com/gwdevhub/GWToolboxpp/blob/master/resources/Font.ttf) and put it in the `GWToolboxpp\<Computername>` folder.
+
+If you have a crash dump file, zip it up and attach it to your issue or send it to a developer on Discord.
 
 ### GWToolbox++ just crashed and set my grandma's hair on fire! Help!
 Oops. Please start a bug issue at the [repository issue tracker](https://github.com/gwdevhub/GWToolboxpp/issues). If the error was not critical, a message box should have displayed with the title "GWToolbox++ Crash!". If the message box states that the dump file generated successfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.
