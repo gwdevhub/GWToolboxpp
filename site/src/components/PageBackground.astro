@@ -1,0 +1,53 @@
+---
+const continents = [
+  '/backgrounds/continent1_z3.webp',
+  '/backgrounds/continent2_z3.webp',
+  '/backgrounds/continent3_z3.webp',
+];
+---
+
+<div class="page-bg" aria-hidden="true">
+  <div id="page-bg-image" class="page-bg-image"></div>
+  <div class="page-bg-overlay"></div>
+</div>
+
+<script is:inline define:vars={{ continents }}>
+  /* Randomize the continent on each page load. No animation, no random
+     offset — just one of three maps, centered. */
+  (() => {
+    const img = continents[Math.floor(Math.random() * continents.length)];
+    const el = document.getElementById('page-bg-image');
+    if (!el) return;
+    el.style.backgroundImage = `url('${img}')`;
+    el.classList.add('is-ready');
+  })();
+</script>
+
+<style>
+  .page-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .page-bg-image {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 400ms ease-out;
+  }
+  .page-bg-image.is-ready {
+    opacity: 0.32;
+  }
+  .page-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at center, rgba(10, 10, 10, 0.2) 0%, rgba(10, 10, 10, 0.65) 95%),
+      linear-gradient(180deg, rgba(10, 10, 10, 0.55) 0%, rgba(10, 10, 10, 0.2) 35%, rgba(10, 10, 10, 0.65) 100%);
+  }
+</style>
