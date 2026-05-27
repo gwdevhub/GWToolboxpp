@@ -7,6 +7,8 @@ The World Map widget extends the in-game world map (`M` by default) with extra
 markers, filters, and shortcuts. It only appears while the world map is open
 and is hidden everywhere else.
 
+<img src="/docs-images/world_map.webp" alt="World map of Cantha with the toolbox controls panel in the top-left and quest/elite-capture markers overlaid" />
+
 ## Features Overview
 * **Show all areas** — reveals every outpost on the current continent, even
   ones you have not unlocked. Useful for picking a travel destination without
