@@ -1,0 +1,72 @@
+---
+const layers = [
+  '/backgrounds/continent1_z3.webp',
+  '/backgrounds/continent2_z3.webp',
+  '/backgrounds/continent3_z3.webp',
+];
+---
+
+<div class="home-bg" aria-hidden="true">
+  {layers.map((src, i) => (
+    <div class={`home-bg-layer layer-${i + 1}`} style={`background-image: url('${src}');`} />
+  ))}
+  <div class="home-bg-overlay"></div>
+</div>
+
+<style>
+  .home-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    overflow: hidden;
+    background-color: var(--color-bg);
+  }
+  .home-bg-layer {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transform: scale(1.08);
+    will-change: opacity, transform;
+    /* 30s per layer * 3 layers = 90s full loop; 2s crossfade at each boundary. */
+    animation:
+      hb-fade 90s linear infinite,
+      hb-pan 90s linear infinite;
+  }
+  /* Each layer's visible window inside the keyframes is virtual 30-58s; delays
+     shift each layer so its window lands on real seconds 0-28 / 30-58 / 60-88. */
+  .layer-1 { animation-delay: -30s, -30s; }
+  .layer-2 { animation-delay: 0s, 0s; }
+  .layer-3 { animation-delay: -60s, -60s; }
+
+  @keyframes hb-fade {
+    0%      { opacity: 0; }
+    31.11%  { opacity: 0; }     /* still hidden through real t=28s */
+    33.33%  { opacity: 0.22; }  /* faded in by real t=30s */
+    64.44%  { opacity: 0.22; }  /* still visible at real t=58s */
+    66.67%  { opacity: 0; }     /* faded out by real t=60s */
+    100%    { opacity: 0; }
+  }
+  @keyframes hb-pan {
+    0%   { transform: scale(1.1) translate3d(-2.5%, -1.5%, 0); }
+    100% { transform: scale(1.1) translate3d(2.5%, 1.5%, 0); }
+  }
+
+  .home-bg-overlay {
+    position: absolute;
+    inset: 0;
+    /* Darken edges so the hero text and feature cards stay readable. */
+    background:
+      radial-gradient(ellipse at center, rgba(10, 10, 10, 0.35) 0%, rgba(10, 10, 10, 0.7) 90%),
+      linear-gradient(180deg, rgba(10, 10, 10, 0.55) 0%, rgba(10, 10, 10, 0.2) 35%, rgba(10, 10, 10, 0.65) 100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-bg-layer {
+      animation: hb-fade 90s steps(1) infinite;
+      transform: none;
+    }
+  }
+</style>

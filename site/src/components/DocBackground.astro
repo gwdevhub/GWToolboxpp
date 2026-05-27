@@ -1,0 +1,57 @@
+---
+const continents = [
+  '/backgrounds/continent1_z3.webp',
+  '/backgrounds/continent2_z3.webp',
+  '/backgrounds/continent3_z3.webp',
+];
+---
+
+<div class="doc-bg" aria-hidden="true">
+  <div id="doc-bg-image" class="doc-bg-image"></div>
+  <div class="doc-bg-overlay"></div>
+</div>
+
+<script is:inline define:vars={{ continents }}>
+  /* Randomize on each page load so doc pages feel a bit alive without the
+     full slideshow animation of the homepage. */
+  (() => {
+    const img = continents[Math.floor(Math.random() * continents.length)];
+    const x = Math.floor(Math.random() * 100);
+    const y = Math.floor(Math.random() * 100);
+    const el = document.getElementById('doc-bg-image');
+    if (!el) return;
+    el.style.backgroundImage = `url('${img}')`;
+    el.style.backgroundPosition = `${x}% ${y}%`;
+    el.classList.add('is-ready');
+  })();
+</script>
+
+<style>
+  .doc-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    overflow: hidden;
+    background-color: var(--color-bg);
+  }
+  .doc-bg-image {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 500ms ease-out;
+  }
+  .doc-bg-image.is-ready {
+    opacity: 0.18;
+  }
+  .doc-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at center, rgba(10, 10, 10, 0.25) 0%, rgba(10, 10, 10, 0.7) 95%),
+      linear-gradient(180deg, rgba(10, 10, 10, 0.6) 0%, rgba(10, 10, 10, 0.25) 35%, rgba(10, 10, 10, 0.7) 100%);
+  }
+</style>
