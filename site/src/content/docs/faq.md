@@ -4,6 +4,9 @@ section: meta
 ---
 
 ## General
+**Is this for Guild Wars or Guild Wars 2?** \\
+GWToolbox++ is a tool for the **original Guild Wars** released in 2005 — the campaigns Prophecies, Factions, Nightfall, and the Eye of the North expansion — which some of the community also refer to as *Guild Wars Reforged*. It hooks the original `Gw.exe` client and does **not** work with Guild Wars 2 in any way. We have no plans to port it: GW2 is a completely separate engine and game, and there are already dedicated tools and overlays for it elsewhere. If you ended up here looking for a GW2 utility, this isn't it.
+
 **Will I get banned for using GWToolbox++?** \\
 GWToolbox++ is a third party tool that can automate aspects of gameplay for a range of uses including auto-responding to incoming whipsers using the `/afk` command, automatically maintaining pcons in an explorable area, loading hero team builds and salvaging/purchasing items in bulk. 
 
