@@ -12,9 +12,9 @@ GWToolbox++ is a tool for the **original Guild Wars** released in 2005 — the c
 No, and there are no plans to make it work. The mobile build is **compiled separately** from the Windows client — the function addresses, memory layouts, and game structures that Toolbox attaches to on the desktop client simply do not exist in the mobile binary. **No iOS or Android version of GWToolbox++ is planned.**
 
 ### Will I get banned for using GWToolbox++?
-**GWToolbox++ is allowed.** ArenaNet has confirmed that using GWToolbox++ will not result in a ban.
+GWToolbox++ is a third party tool that can automate aspects of gameplay for a range of uses including auto-responding to incoming whispers using the `/afk` command, automatically maintaining pcons in an explorable area, loading hero team builds and salvaging/purchasing items in bulk.
 
-Although many of these automations can be seen as quality-of-life improvements to the game, this software goes against part of the [ArenaNet Code of Conduct](https://www.arena.net/en/legal/code-of-conduct):
+Although many of these automations can be seen as quality-of-life improvements to the game, **this software goes against part of the [ArenaNet Code of Conduct](https://www.arena.net/en/legal/code-of-conduct)**:
 
 "You may not use any third-party program (such as a "bot") to automate gameplay functions, including playing, chatting, interacting, or gathering items within our Games"
 
@@ -24,9 +24,9 @@ Although many of these automations can be seen as quality-of-life improvements t
 
 "We do not permit the use of any third-party software, tools, or programs that interact with the Services that give one player an unintended, unnatural, or unfair advantage over another player. Such prohibited third-party software, tools, or programs include those that alter Game-balance in favor of one player over another, automate actions within the Services, promote unattended gameplay, or have an adverse effect on other users of the Services. Prohibited third-party programs will be determined at our sole discretion."
 
-However, ArenaNet has indicated that GWToolbox++ from the official source is acceptable to use in PvE areas, by itself (without other mods). See the [May 2024 game update notes](https://wiki.guildwars.com/wiki/Feedback:Game_updates/20240514) on the Guild Wars Wiki for details.
+However, ArenaNet has indicated that GWToolbox++ from the official source is **acceptable to use in PvE areas, by itself (without other mods)**. See the [May 2024 game update notes](https://wiki.guildwars.com/wiki/Feedback:Game_updates/20240514) on the Guild Wars Wiki for details.
 
-Use this software at your own risk. It would not be a good idea to use any third party tools when streaming gameplay (recorded or otherwise) as it could be used in a case against your account.
+**Use this software at your own risk.**
 
 ### My antivirus detects toolbox as a virus! Are you hacking me?
 The detection is a false positive, and it is caused by some techniques that GWToolbox needs to use. Most notably, toolbox has to run into another program and manipulate its memory at runtime (note: no modification is permanent). Toolbox is open source, so if you don't trust me you can read through the source code and compile directly from the source yourself.
