@@ -1,0 +1,40 @@
+---
+title: "Item Management Features"
+section: widgets
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+GWToolbox++ provides several advanced item management features to enhance your gameplay experience. These features are designed to streamline inventory management, improve item filtering, and provide convenient shortcuts for common item-related tasks.
+
+## Inventory Manager
+
+The Inventory Manager module offers the following functionality:
+
+- **Ctrl+Click to move between inventory and storage**: hold Ctrl and click an item to send it to storage (or back to your inventory if the storage pane is open).
+  <ToolboxPath steps={['Settings', 'Inventory Settings', 'Move items from/to storage with Control+Click']} />
+- **Move to the currently open storage pane**: when the option above is on, Toolbox can prefer the pane you have open instead of any free slot.
+  <ToolboxPath steps={['Settings', 'Inventory Settings', 'Move items to current open storage pane on click']} />
+- **Materials to the open storage pane**: same idea, scoped specifically to materials so you can still consolidate ectos / shards into the materials pane.
+  <ToolboxPath steps={['Settings', 'Inventory Settings', 'Move materials to current open storage pane on click']} />
+- **Auto-Salvage**: Ctrl+Click a salvage kit to open the Salvage All window for every salvageable item of a chosen rarity.
+  <ToolboxPath steps={['Settings', 'Inventory Settings', 'Salvage All with Control+Click']} />
+- **Auto-Identify**: Ctrl+Click an identification kit to identify everything in the selected bags.
+  <ToolboxPath steps={['Settings', 'Inventory Settings', 'Identify All with Control+Click']} />
+- **Pick which bags to salvage from**: tick only the bags you want the bulk operations to consider.
+  <ToolboxPath steps={['Settings', 'Inventory Settings', 'Salvage from: Backpack / Belt Pouch / Bag 1 / Bag 2']} />
+- **Right-click context menu**: extra options on items in inventory or storage (move stack, identify, salvage, send to merchant).
+- **Trade improvements**: when offering an item in a trade window, Toolbox can automatically offer the full stack instead of one unit.
+
+## Item Filter
+
+The Item Filter module controls which item drops appear in the game world. Configure it in <ToolboxPath kind="window" steps={['Settings', 'Item Filter']} />.
+
+- **Rarity-based filtering** — hide or show drops by rarity (white, blue, purple, gold, green) independently for items you can pick up and items reserved for party members.
+- **Custom exceptions** — name items that should always be shown regardless of rarity, so a rare drop you're farming for never gets hidden by a broad rule.
+
+## Merchant window
+
+You can also hide specific items from the merchant's *Sell* window so you don't accidentally vendor them. <ToolboxPath steps={['Settings', 'Inventory Settings', 'Merchant hidden items…']} />
+
+These features combine to provide a powerful suite of tools for managing your items more efficiently in Guild Wars.

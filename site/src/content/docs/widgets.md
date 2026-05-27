@@ -12,7 +12,7 @@ All widgets have options in [Settings](/docs/settings/) to specify the exact co-
 * Click and drag anywhere to move a widget.
 
 <figure>
-<img src="https://user-images.githubusercontent.com/11432831/28233476-fa86197c-68ab-11e7-85ac-f9c21f4e30db.PNG"/>
+<img src="/docs-images/28233476-fa86197c-68ab-11e7-85ac-f9c21f4e30db.webp"/>
 <figcaption>Timer Widget</figcaption>
 </figure>
   
@@ -24,7 +24,7 @@ There are several ways to open and close widgets:
 * Chat command `/tb (name of widdget)` to toggle show/hide.
 
 <figure>
-<img src="https://user-images.githubusercontent.com/11432831/28233454-decaf91e-68ab-11e7-8547-e584bd499628.PNG"/>
+<img src="/docs-images/28233454-decaf91e-68ab-11e7-8547-e584bd499628.webp"/>
 <figcaption>Health Widget</figcaption>
 </figure>
 
@@ -37,7 +37,7 @@ The health monitor shows your target's current health, maximum health, and healt
 Until you directly affect the health of an agent (see a pop-up number over it), you will only be able to see the percentage. If its maximum health changes (e.g. a player using a cupcake or getting a morale boost), the health monitor won't show this until you affect its health again.
 
 <figure>
-<img src="https://user-images.githubusercontent.com/11432831/28233453-dcab43f0-68ab-11e7-9788-c5e39799d0ee.PNG"/>
+<img src="/docs-images/28233453-dcab43f0-68ab-11e7-9788-c5e39799d0ee.webp"/>
 <figcaption>Distance Widget</figcaption>
 </figure>
 

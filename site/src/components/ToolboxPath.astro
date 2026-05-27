@@ -1,0 +1,105 @@
+---
+/**
+ * Inline annotation that tells a reader where in the live Toolbox UI to
+ * find the control or feature being described. Render with a list of
+ * breadcrumb steps from the top-level entry point down to the leaf
+ * control. The last step is emphasised because it's the actual button,
+ * checkbox, or hotkey label the user is looking for.
+ *
+ * Examples:
+ *   <ToolboxPath steps={['Settings', 'Inventory Settings',
+ *                        'Move items from/to storage with Control+Click']} />
+ *   <ToolboxPath kind="hotkey"
+ *                steps={['Hotkeys', 'Add', 'Pcons: Toggle active set']} />
+ *   <ToolboxPath kind="command" steps={['/dmg report']} />
+ *
+ * Rendered as a small bordered chip so the eye picks it out as "this is
+ * a UI path, not part of the surrounding sentence". Small enough not to
+ * dominate the line, but obviously its own thing.
+ */
+
+type Kind = 'settings' | 'window' | 'widget' | 'hotkey' | 'command';
+
+interface Props {
+  /** Ordered breadcrumb steps; the last is the actual control label. */
+  steps: string[];
+  /** What kind of UI path this is. Picks the leading glyph. */
+  kind?: Kind;
+}
+
+const { steps, kind = 'settings' } = Astro.props;
+
+const glyphs: Record<Kind, string> = {
+  settings: '⚙',
+  window:   '▢',
+  widget:   '▣',
+  hotkey:   '⌨',
+  command:  '›_',
+};
+const labels: Record<Kind, string> = {
+  settings: 'Find in Toolbox settings',
+  window:   'Find in Toolbox window',
+  widget:   'Find in Toolbox widget',
+  hotkey:   'Bind in Toolbox hotkeys',
+  command:  'Chat command',
+};
+---
+
+<span class="tb-path" data-kind={kind} role="note" aria-label={labels[kind]}>
+  <span class="tb-path-icon" aria-hidden="true">{glyphs[kind]}</span>
+  {steps.map((step, i) => (
+    <>
+      {i > 0 && <span class="tb-path-sep" aria-hidden="true">›</span>}
+      <span class={i === steps.length - 1 ? 'tb-path-leaf' : 'tb-path-step'}>{step}</span>
+    </>
+  ))}
+</span>
+
+<style>
+  .tb-path {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.35rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: var(--color-fg-sub);
+    background: var(--color-glass);
+    border: 1px solid var(--color-border-glass);
+    border-radius: 0.375rem;
+    /* Sit a touch above text baseline so the chip doesn't push the
+       surrounding line height around when used inline. */
+    vertical-align: middle;
+  }
+  .tb-path-icon {
+    color: var(--color-accent);
+    font-size: 0.9em;
+    line-height: 1;
+  }
+  .tb-path[data-kind='command'] {
+    /* Command paths read most naturally as code-shaped chips. */
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: -0.01em;
+  }
+  .tb-path[data-kind='command'] .tb-path-icon {
+    letter-spacing: -0.05em;
+  }
+  .tb-path-step {
+    color: var(--color-fg-sub);
+  }
+  .tb-path-sep {
+    color: var(--color-fg-faint);
+  }
+  .tb-path-leaf {
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+  /* When the prose stylesheet wraps us in <li>, give a little vertical
+     breathing room from the bullet text above. */
+  :global(.prose li) > .tb-path,
+  :global(.prose p) > .tb-path {
+    margin-top: 0.15rem;
+  }
+</style>
