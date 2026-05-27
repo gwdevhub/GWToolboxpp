@@ -36,6 +36,7 @@ export const navGroups: NavGroup[] = [
       { slug: 'completion', label: 'Completion' },
       { slug: 'armory_window', label: 'Armory' },
       { slug: 'duping_window', label: 'Duping' },
+      { slug: 'account_inventory', label: 'Account Inventory' },
     ],
   },
   {
