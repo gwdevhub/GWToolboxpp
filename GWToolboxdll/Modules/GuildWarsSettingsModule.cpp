@@ -190,7 +190,13 @@ namespace {
         "FlagPref_0x68",
         "FlagPref_0x69",
         "FlagPref_0x6A",
-        "FlagPref_0x6B"
+        "FlagPref_0x6B",
+        "FlagPref_0x6c",
+        "FlagPref_0x6d",
+        "FlagPref_0x6e",
+        "FlagPref_0x6f",
+        "FlagPref_0x70",
+        "FlagPref_0x71"
     };
     static_assert(_countof(flag_pref_names) == std::to_underlying(GW::UI::FlagPreference::Count));
 

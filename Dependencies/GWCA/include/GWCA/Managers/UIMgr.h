@@ -467,10 +467,15 @@ namespace GW {
             FlagPref_0x69,
             FlagPref_0x6a,
             FlagPref_0x6b,
-            
+            FlagPref_0x6c,
+            FlagPref_0x6d,
+            FlagPref_0x6e,
+            LegacyStartMissionButton,
+            FlagPref_0x70,
+            EnableMobileHUD,
             Count
         };
-        static_assert(FlagPreference::Count == (FlagPreference)0x6c);
+        static_assert(FlagPreference::Count == (FlagPreference)0x72);
         // Used with GetWindowPosition
         enum WindowID : uint32_t {
             WindowID_Dialogue1 = 0x0,
@@ -853,12 +858,6 @@ namespace GW {
 
         // When the GW interface is in mobile layout
         GWCA_API bool IsInMobileMode();
-
-        // Get some UI level feature(s)
-        GWCA_API bool SetUIFeature(GW::UI::UiProfileSetting, bool);
-
-        // Set some UI level feature(s)
-        GWCA_API bool GetUIFeature(GW::UI::UiProfileSetting setting);
 
         // When the player is using a game controller and is in cursor mode
         GWCA_API bool IsInControllerCursorMode();

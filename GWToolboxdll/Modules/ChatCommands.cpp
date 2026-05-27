@@ -588,26 +588,6 @@ namespace {
         Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
     }
 
-    void CmdUiProfilePref(const wchar_t*, int argc, const LPWSTR* argv, uint32_t pref_id)
-    {
-        const auto pref = static_cast<GW::UI::UiProfileSetting>(pref_id);
-
-        if (argc > 2) {
-            // Setting value
-            if (wcscmp(argv[2], L"toggle") == 0) {
-                GW::UI::SetUIFeature(pref, !GW::UI::GetUIFeature(pref));
-                return;
-            }
-            uint32_t value = 0xff;
-            if (TextUtils::ParseUInt(argv[2], &value)) {
-                GW::UI::SetUIFeature(pref, value == 1 ? 1 : 0);
-            }
-            return;
-        }
-        // Print current value
-        Log::InfoW(L"Current preference value for %s is %d", argv[1], GW::UI::GetUIFeature(pref));
-    }
-
     std::unique_ptr<GuiUtils::EncString> MakePrefLabel(uint32_t enc_string_id)
     {
         auto label = std::make_unique<GuiUtils::EncString>(enc_string_id, false);
@@ -650,11 +630,6 @@ namespace {
               preference_callback(CmdFlagPref),
               label(MakePrefLabel(enc_string_id)) {}
 
-        PrefMapCommand(GW::UI::UiProfileSetting p, const wchar_t* enc_string_id) : 
-            preference_id(std::to_underlying(p)), 
-            preference_callback(CmdUiProfilePref), 
-            label(MakePrefLabel(enc_string_id)) {}
-
         uint32_t preference_id;
         CmdPrefCB preference_callback;
         std::unique_ptr<GuiUtils::EncString> label;
@@ -689,23 +664,8 @@ namespace {
             pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1");
             pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1");
             pref_map.emplace_back(GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1");
-            pref_map.emplace_back(GW::UI::UiProfileSetting::AdSupported, L"\x108\x107" "AdSupported\x1");
-            pref_map.emplace_back(
-                GW::UI::UiProfileSetting::CameraFollowsPlayer, L"\x108\x107"
-                                                       "CameraFollowsPlayer\x1"
-            );
-            pref_map.emplace_back(
-                GW::UI::UiProfileSetting::ForceAprilFools, L"\x108\x107"
-                                                       "ForceAprilFools\x1"
-            );
-            pref_map.emplace_back(
-                GW::UI::UiProfileSetting::GamepadAutoTargetSwitch, L"\x108\x107"
-                                                       "GamepadAutoTargetSwitch\x1"
-            );
-            pref_map.emplace_back(
-                GW::UI::UiProfileSetting::MobileHUD, L"\x108\x107"
-                                                       "MobileHUD\x1"
-            );
+            pref_map.emplace_back(GW::UI::FlagPreference::LegacyStartMissionButton, GW::EncStrings::LegacyStartMissionButton);
+            pref_map.emplace_back(GW::UI::FlagPreference::EnableMobileHUD, GW::EncStrings::EnableMobileHUD);
             for (const auto& it : pref_map) {
                 it.label->wstring();
             }

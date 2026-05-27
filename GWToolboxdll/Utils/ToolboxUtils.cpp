@@ -241,7 +241,7 @@ namespace GW {
             const auto frame = GetSelectorFrame();
             if (!(ui_state == 2 && frame && frame->IsVisible())) return false;
             const auto ctx = (CharSelectorContext*)GW::UI::GetFrameContext(frame);
-            return ctx && ((uintptr_t)ctx & 0x3) == 0 && ctx->frame_id == frame->frame_id;
+            return ((uintptr_t)ctx > 0xFFFF) && ctx->frame_id == frame->frame_id;
         }
 
         const bool SelectCharacterToPlay(const wchar_t* name, bool play)
