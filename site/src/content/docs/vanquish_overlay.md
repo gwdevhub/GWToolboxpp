@@ -3,6 +3,8 @@ title: "Vanquish Overlay"
 section: widgets
 ---
 
+<img src="/docs-images/vanquish_overlay.webp" alt="Mission map of Witman's Folly with the Vanquish Overlay enabled, showing fog of unexplored area, frontier edge, compass range circle and blue/orange enemy markers" />
+
 The Vanquish Overlay draws extra information on top of the in-game mission
 map (`U` by default) to help you plan and finish vanquishes in Hard Mode.
 It complements the small numeric [Vanquish](/docs/widgets/#vanquish) widget
