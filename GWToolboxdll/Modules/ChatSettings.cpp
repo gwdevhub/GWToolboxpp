@@ -246,14 +246,16 @@ namespace {
                 return;
         }
 
-        // If the message is [name;code] where name is a URL and code is not a URL,
-        // GWCA has already handled it — just normalise so both name and code are the URL.
-        static constexpr ctll::fixed_string link_regex = LR"(\[([^\];]+);([^\]]*)\])";
         std::wstring msg_str(msg);
         bool changed = false;
-        std::wstring new_msg = TextUtils::ctre_regex_replace_with_formatter<link_regex>(msg_str, [&](auto& match) -> std::wstring {
-            const auto name = match.template get<1>().to_view();
-            const auto code = match.template get<2>().to_view();
+        static constexpr ctll::fixed_string link_regex = LR"((https?://[^\s\]]+)|\[([^\];]+);([^\]]*)\])";
+        const auto new_msg = TextUtils::ctre_regex_replace_with_formatter<link_regex>(msg_str, [&](auto& match) -> std::wstring {
+            if (const auto bare_url = match.template get<1>().to_view(); !bare_url.empty()) {
+                changed = true;
+                return std::format(L"[{};{}]", bare_url, bare_url);
+            }
+            const auto name = match.template get<2>().to_view();
+            const auto code = match.template get<3>().to_view();
             if (TextUtils::IsUrl(name.data()) && !TextUtils::IsUrl(code.data())) {
                 changed = true;
                 return std::format(L"[{};{}]", name, name);
