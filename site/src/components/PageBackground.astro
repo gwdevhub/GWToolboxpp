@@ -46,8 +46,14 @@ const continents = [
   .page-bg-overlay {
     position: absolute;
     inset: 0;
+    /* Dark in the centre column where content sits, fading toward the
+       viewport edges so the map shows through in the gutters. */
     background:
-      radial-gradient(ellipse at center, rgba(10, 10, 10, 0.2) 0%, rgba(10, 10, 10, 0.65) 95%),
-      linear-gradient(180deg, rgba(10, 10, 10, 0.55) 0%, rgba(10, 10, 10, 0.2) 35%, rgba(10, 10, 10, 0.65) 100%);
+      radial-gradient(
+        ellipse 55% 75% at center,
+        rgba(10, 10, 10, 0.72) 0%,
+        rgba(10, 10, 10, 0.6) 45%,
+        rgba(10, 10, 10, 0.05) 100%
+      );
   }
 </style>
