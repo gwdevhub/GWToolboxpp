@@ -1,0 +1,39 @@
+---
+title: "Camera"
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+Toolbox includes several features that interact with the game's camera, letting you view the world from perspectives the vanilla client doesn't allow. All camera functions are driven by [chat commands](/docs/commands/) — there's no setting panel, so the annotations below show the exact command to type.
+
+## Camera Unlock
+
+Free the camera from your character so you can fly it around the map.
+
+<ToolboxPath kind="command" steps={['/cam unlock']} /> &nbsp; or &nbsp; <ToolboxPath kind="command" steps={['/camera unlock']} />
+
+To re-attach the camera to your character:
+
+<ToolboxPath kind="command" steps={['/cam lock']} /> &nbsp; or &nbsp; <ToolboxPath kind="command" steps={['/camera lock']} />
+
+## Movement
+
+While the camera is unlocked:
+
+- **Horizontal axis** — `W` (forward), `E` / `D` (strafe right), `S` (backward), `Q` / `A` (strafe left).
+- **Vertical axis** — `Z` (up), `X` (down).
+- Hold the **right mouse button** to pan and tilt with the mouse.
+- Press `R` for auto-forward; press `W` or `S` to cancel.
+
+## Other features
+
+Toggle fog rendering:
+
+<ToolboxPath kind="command" steps={['/cam fog on']} /> &nbsp; / &nbsp; <ToolboxPath kind="command" steps={['/cam fog off']} />
+
+Adjust how fast the unlocked camera moves (default 100):
+
+<ToolboxPath kind="command" steps={['/cam speed 200']} />
+
+[back](./)

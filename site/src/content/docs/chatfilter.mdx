@@ -1,0 +1,79 @@
+---
+title: "Chat Filter"
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+The Chat Filter module in GWToolbox++ controls which messages appear in your chat window. You can suppress different message categories to reduce clutter and focus on what matters.
+
+All filters live under <ToolboxPath steps={['Settings', 'Chat Settings']} />, grouped into the sub-sections below. Each bullet is the literal checkbox label you'll find in the panel.
+
+## Features
+
+### Drops
+
+- A rare item drops for you / an ally
+- A common item drops for you / an ally
+- An ally picks up a rare / common item
+- You pick up a rare / common item
+
+<ToolboxPath steps={['Settings', 'Chat Settings', 'Drops', 'A rare item drops for you']} />
+
+> "Rare" stands for a gold-name item, Ecto, Obsidian Shard, or Lockpick. "Common" is everything else.
+
+### Announcements
+
+- Guild Announcement
+- Hall of Heroes winners
+- Favor of the Gods announcements
+- 'You have been playing for…'
+- 'Player x has achieved title…'
+- 'You gain x faction'
+
+<ToolboxPath steps={['Settings', 'Chat Settings', 'Announcements', 'Hall of Heroes winners']} />
+
+### Warnings
+
+Suppress the most common spam messages: "Unable to use item", "Invalid target", "Inventory is full", "Item already identified", "Not enough Adrenaline/Energy", "Opening chests".
+
+<ToolboxPath steps={['Settings', 'Chat Settings', 'Warnings', "'Inventory is full'"]} />
+
+### Others
+
+Skill points, PvP balance messages, 9 Rings, Lunar fortunes, challenge mission scores, "No one hears you", away replies, salvaging spam, ashes-dropped, targetting messages.
+
+### Custom filters
+
+Hide any message that contains specific words or phrases.
+
+- Enter words or phrases, one per line.
+- Matching is case-insensitive substring by default, or full regex if "Use regular expressions" is enabled.
+- Optionally scope the filter to specific chat channels (Local, Guild, Team, Trade, Alliance, Emotes).
+
+<ToolboxPath steps={['Settings', 'Chat Settings', 'Hide any messages containing:']} />
+
+### Hide messages by author
+
+Block specific players' messages outright.
+
+<ToolboxPath steps={['Settings', 'Chat Settings', 'Hide any messages from:']} />
+
+### Channel logging
+
+Stop the game from logging messages from chat channels you've turned off (chat history isn't unlimited).
+
+<ToolboxPath steps={['Settings', 'Chat Settings', 'Block messages from inactive chat channels']} />
+
+## Advanced filtering
+
+For more complex needs, tick **Use regular expressions** and treat each line of the custom-filter list as a regex pattern.
+
+Examples:
+
+- `^Player.*joined the game\.` — every "Player has joined the game" message.
+- `\b(rare|unique|gold)\b` — any message containing the words *rare*, *unique*, or *gold*.
+
+Test your patterns first — a too-broad regex will quietly eat messages you wanted to see.
+
+[back](./)
