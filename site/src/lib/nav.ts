@@ -25,7 +25,6 @@ export const navGroups: NavGroup[] = [
       { slug: 'windows', label: 'Overview' },
       { slug: 'builds', label: 'Builds' },
       { slug: 'herobuilds', label: 'Hero Builds' },
-      { slug: 'dialogs', label: 'Dialogs' },
       { slug: 'hotkeys', label: 'Hotkeys' },
       { slug: 'info', label: 'Info' },
       { slug: 'materials', label: 'Materials' },
