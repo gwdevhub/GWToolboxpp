@@ -12,32 +12,14 @@ const continents = [
 </div>
 
 <script is:inline define:vars={{ continents }}>
-  /* Pick one of the three continent maps at random on the very first
-     page in a session, then cache it in sessionStorage so every later
-     navigation within the same session re-uses the same map. That
-     means the image is already in the browser cache when the next
-     page lands — no flicker as the browser's cross-document view
-     transition crossfades, because the bg is in place before the
-     new-page snapshot is taken. */
+  /* Randomize the continent on each page load. No animation, no random
+     offset — just one of three maps, centered. */
   (() => {
+    const img = continents[Math.floor(Math.random() * continents.length)];
     const el = document.getElementById('page-bg-image');
     if (!el) return;
-
-    let img = sessionStorage.getItem('gw-bg-img');
-    const firstLoad = !img;
-    if (firstLoad) {
-      img = continents[Math.floor(Math.random() * continents.length)];
-      sessionStorage.setItem('gw-bg-img', img);
-    }
     el.style.backgroundImage = `url('${img}')`;
-    if (firstLoad) {
-      el.classList.add('is-ready');
-    } else {
-      // Subsequent navigations: skip the 500ms fade-in so the bg is
-      // visible the instant the new page snapshot is taken.
-      el.style.transition = 'none';
-      el.style.opacity = '0.32';
-    }
+    el.classList.add('is-ready');
   })();
 </script>
 
