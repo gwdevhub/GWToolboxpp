@@ -45,7 +45,7 @@ const featureCards = [
 
 <Base>
   <section class="border-b border-(--color-border-glass) flex justify-center">
-    <div class="mx-auto lg:max-w-7xl max-w-full px-4 py-16 sm:px-6 md:py-24">
+    <div class="mx-auto 2xl:max-w-7xl max-w-full px-4 py-16 sm:px-6 md:py-24">
       <h1 class="flex flex-col items-center text-center font-display text-3xl leading-tight text-(--color-fg) sm:text-5xl md:text-6xl">
         The all-in-one toolkit for
         <img
@@ -89,7 +89,7 @@ const featureCards = [
         Free, open source, MIT licensed. Windows only.
       </p>
 
-      <div class="mt-10 lg:max-w-2xl max-w-full">
+      <div class="mt-10 max-w-full">
         <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-(--color-fg-meta)">
           Looking for something specific?
         </p>
@@ -105,7 +105,7 @@ const featureCards = [
     </div>
   </section>
 
-  <section class="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+  <section class="mx-auto max-w-full 2xl:max-w-7xl px-4 py-16 sm:px-6">
     <div class="mb-10 flex items-end justify-between gap-4">
       <div>
         <h2 class="font-display text-2xl text-(--color-fg) sm:text-3xl">
@@ -137,14 +137,14 @@ const featureCards = [
     </div>
   </section>
 
-  <section class="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
+  <section class="mx-auto max-w-full 2xl:max-w-7xl px-4 pb-20 sm:px-6">
     <div class="mb-6">
       <h2 class="font-display text-2xl text-(--color-fg) sm:text-3xl">All features</h2>
       <p class="mt-2 text-(--color-fg-sub)">
         Full table of contents — same coverage as the legacy site.
       </p>
     </div>
-    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-x-1 gap-y-6 lg:gap-x-6 grid-cols-2 lg:grid-cols-4">
       {
         navGroups.map((group) => (
           <div>
