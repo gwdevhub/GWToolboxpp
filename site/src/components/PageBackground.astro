@@ -6,24 +6,20 @@ const continents = [
 ];
 ---
 
-<div class="page-bg" aria-hidden="true" transition:persist="page-bg">
+<div class="page-bg" aria-hidden="true">
   <div id="page-bg-image" class="page-bg-image"></div>
   <div class="page-bg-overlay"></div>
 </div>
 
 <script is:inline define:vars={{ continents }}>
-  /* Pick one of the three continent maps at random on the first page
-     load. Once picked, stay on that map for the rest of the session:
-     the bg element is persisted across view-transition navigations
-     (transition:persist) so re-randomising on every doc click would
-     cause a hard cut underneath an otherwise smooth nav transition. */
+  /* Randomize the continent on each page load. No animation, no random
+     offset — just one of three maps, centered. */
   (() => {
-    const el = document.getElementById('page-bg-image');
-    if (!el || el.dataset.bgSet === '1') return;
     const img = continents[Math.floor(Math.random() * continents.length)];
+    const el = document.getElementById('page-bg-image');
+    if (!el) return;
     el.style.backgroundImage = `url('${img}')`;
     el.classList.add('is-ready');
-    el.dataset.bgSet = '1';
   })();
 </script>
 

@@ -1,6 +1,5 @@
 ---
 import '../styles/global.css';
-import { ClientRouter } from 'astro:transitions';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import PageBackground from '../components/PageBackground.astro';
@@ -35,12 +34,11 @@ const release = await getLatestRelease();
       type="font/woff"
       crossorigin="anonymous"
     />
-    <ClientRouter />
   </head>
   <body class="min-h-screen flex flex-col">
     <PageBackground />
     <Header release={release} pathname={Astro.url.pathname} />
-    <main class="flex-1" transition:animate="fade">
+    <main class="flex-1">
       <slot />
     </main>
     <Footer />

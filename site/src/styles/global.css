@@ -1,6 +1,15 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
+/* Opt into the browser's native cross-document view transitions for
+   same-origin navigations. Supporting browsers (Chrome/Edge 126+,
+   Safari 18+) apply a default crossfade between the outgoing and
+   incoming page; everything else just navigates normally. No JS, no
+   framework involvement. */
+@view-transition {
+  navigation: auto;
+}
+
 /* Self-hosted display face — sourced from tolkano.com's font kit. */
 @font-face {
   font-family: 'Fremont';
