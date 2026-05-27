@@ -34,7 +34,7 @@ Although many of these automations can be seen as quality-of-life improvements t
 
 However, ArenaNet has indicated that GWToolbox++ from the official source is acceptable to use in PvE areas, by itself (without other mods). See the [May 2024 game update notes](https://wiki.guildwars.com/wiki/Feedback:Game_updates/20240514) on the Guild Wars Wiki for details.
 
-Use this software at your own risk. It would not be a good idea to use any third party tools when streaming gameplay (recorded or otherwise) as it could be used in a case against your account.
+Use this software at your own risk.
 
 ### My antivirus detects toolbox as a virus! Are you hacking me?
 The detection is a false positive, and it is caused by some techniques that GWToolbox needs to use. Most notably, toolbox has to run into another program and manipulate its memory at runtime (note: no modification is permanent). Toolbox is open source, so if you don't trust me you can read through the source code and compile directly from the source yourself.
