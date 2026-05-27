@@ -100,32 +100,34 @@ export default function Search({ variant = 'button', placeholder = 'Search…' }
         </button>
       )}
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 pt-[10vh] backdrop-blur-md"
-          onClick={(e) => e.target === e.currentTarget && setOpen(false)}
-          ref={dialogRef}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Search documentation"
-        >
-          <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-(--color-border-glass) bg-(--color-card) shadow-2xl shadow-black/60">
-            <div className="max-h-[70vh] overflow-y-auto p-4">
-              <div ref={mountRef} />
-            </div>
-            <div className="flex items-center justify-between gap-2 border-t border-(--color-border-glass-subtle) bg-(--color-bg-elevated) px-4 py-2 text-[0.7rem] text-(--color-fg-meta)">
-              <span>
-                <kbd className="rounded border border-(--color-border-glass) bg-(--color-glass) px-1.5 py-0.5 font-mono">↵</kbd>
-                {' to open'}
-              </span>
-              <span>
-                <kbd className="rounded border border-(--color-border-glass) bg-(--color-glass) px-1.5 py-0.5 font-mono">esc</kbd>
-                {' to close'}
-              </span>
-            </div>
+      {/* Dialog stays mounted across opens so Pagefind's DOM survives a close.
+          Unmounting it would orphan the PagefindUI instance and leave the next
+          open with an empty container. */}
+      <div
+        className={`fixed inset-0 z-50 ${open ? 'flex' : 'hidden'} items-start justify-center bg-black/70 p-4 pt-[10vh] backdrop-blur-md`}
+        onClick={(e) => e.target === e.currentTarget && setOpen(false)}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search documentation"
+        aria-hidden={!open}
+      >
+        <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-(--color-border-glass) bg-(--color-card) shadow-2xl shadow-black/60">
+          <div className="max-h-[70vh] overflow-y-auto p-4">
+            <div ref={mountRef} />
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t border-(--color-border-glass-subtle) bg-(--color-bg-elevated) px-4 py-2 text-[0.7rem] text-(--color-fg-meta)">
+            <span>
+              <kbd className="rounded border border-(--color-border-glass) bg-(--color-glass) px-1.5 py-0.5 font-mono">↵</kbd>
+              {' to open'}
+            </span>
+            <span>
+              <kbd className="rounded border border-(--color-border-glass) bg-(--color-glass) px-1.5 py-0.5 font-mono">esc</kbd>
+              {' to close'}
+            </span>
           </div>
         </div>
-      ) : null}
+      </div>
     </>
   );
 }
