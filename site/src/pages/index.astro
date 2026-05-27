@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Search from '../components/Search.tsx';
 import { getLatestRelease } from '../lib/release';
 import { navGroups } from '../lib/nav';
 import siteConfig from '../../site.config.json';
@@ -83,6 +84,20 @@ const featureCards = [
       <p class="mt-4 text-xs text-(--color-fg-meta)">
         Free, open source, MIT licensed. Windows only.
       </p>
+
+      <div class="mt-10 max-w-2xl">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-(--color-fg-meta)">
+          Looking for something specific?
+        </p>
+        <Search
+          variant="hero"
+          placeholder="Search the docs — windows, widgets, hotkeys, commands…"
+          client:load
+        />
+        <p class="mt-2 text-xs text-(--color-fg-faint)">
+          Toolbox has hundreds of settings; if you know what you want, search beats browsing. Press <kbd class="rounded border border-(--color-border-glass) bg-(--color-glass) px-1.5 py-0.5 font-mono text-[0.65rem]">/</kbd> on any page to open.
+        </p>
+      </div>
     </div>
   </section>
 

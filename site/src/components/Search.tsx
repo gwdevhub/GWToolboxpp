@@ -4,8 +4,18 @@ import { useEffect, useRef, useState } from 'react';
  * Thin React wrapper around Pagefind's vanilla JS UI. We initialise on mount,
  * inside a dialog that opens with `/` or `⌘K`. Search itself is fully static —
  * Pagefind index lives under /pagefind/ and is built by `pagefind --site dist`.
+ *
+ * Two trigger styles:
+ *   - `variant="button"` (default) — compact pill, used in the doc header.
+ *   - `variant="hero"` — full-width fake input, used prominently on the home
+ *     page where finding the right doc is the primary user task.
  */
-export default function Search() {
+type Props = {
+  variant?: 'button' | 'hero';
+  placeholder?: string;
+};
+
+export default function Search({ variant = 'button', placeholder = 'Search…' }: Props) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -54,22 +64,41 @@ export default function Search() {
     })();
   }, [open]);
 
+  const searchIcon = (
+    <svg viewBox="0 0 16 16" className="fill-current" aria-hidden="true">
+      <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+    </svg>
+  );
+
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded border border-(--color-border-glass) bg-(--color-glass) px-3 py-1.5 text-sm text-(--color-fg-meta) transition-colors hover:bg-(--color-glass-hover) hover:text-(--color-fg-sub)"
-        aria-label="Search documentation"
-      >
-        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current" aria-hidden="true">
-          <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
-        </svg>
-        <span className="hidden sm:inline">Search…</span>
-        <kbd className="hidden rounded border border-(--color-border-glass) bg-(--color-bg) px-1.5 py-0.5 font-mono text-[0.65rem] sm:inline">
-          /
-        </kbd>
-      </button>
+      {variant === 'hero' ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Search documentation"
+          className="group flex w-full max-w-2xl items-center gap-3 rounded-lg border border-(--color-border-glass) bg-(--color-bg-elevated)/80 px-4 py-3 text-left text-base text-(--color-fg-meta) shadow-lg shadow-black/30 backdrop-blur-sm transition-colors hover:border-(--color-accent-deep) hover:bg-(--color-bg-elevated) hover:text-(--color-fg-sub)"
+        >
+          <span className="h-4 w-4 shrink-0 text-(--color-fg-meta) group-hover:text-(--color-accent)">{searchIcon}</span>
+          <span className="flex-1 truncate">{placeholder}</span>
+          <kbd className="hidden shrink-0 rounded border border-(--color-border-glass) bg-(--color-glass) px-2 py-0.5 font-mono text-xs text-(--color-fg-faint) sm:inline">
+            /
+          </kbd>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-2 rounded border border-(--color-border-glass) bg-(--color-glass) px-3 py-1.5 text-sm text-(--color-fg-meta) transition-colors hover:bg-(--color-glass-hover) hover:text-(--color-fg-sub)"
+          aria-label="Search documentation"
+        >
+          <span className="h-3.5 w-3.5">{searchIcon}</span>
+          <span className="hidden sm:inline">Search…</span>
+          <kbd className="hidden rounded border border-(--color-border-glass) bg-(--color-bg) px-1.5 py-0.5 font-mono text-[0.65rem] sm:inline">
+            /
+          </kbd>
+        </button>
+      )}
 
       {open ? (
         <div
