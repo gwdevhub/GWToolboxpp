@@ -334,6 +334,12 @@ void ToolboxSettings::DrawFreezeSetting()
     ImGui::Checkbox("Outpost", &show_cog_in_outpost);
     ImGui::Checkbox("Explorable", &show_cog_in_explorable);
     ImGui::Unindent();
+    ImGui::Text("Show screenshot button in:");
+    ImGui::ShowHelp("Show a " ICON_FA_CAMERA " button in the title bar of each window.\nClick it to save a PNG of just that window to the Toolbox Screens folder.\nIntended for capturing screenshots for documentation or bug reports.");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost##scrn", &show_screenshot_button_in_outpost);
+    ImGui::Checkbox("Explorable##scrn", &show_screenshot_button_in_explorable);
+    ImGui::Unindent();
 }
 
 void ToolboxSettings::LoadSettings(ToolboxIni* ini)
@@ -347,6 +353,8 @@ void ToolboxSettings::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(send_anonymous_gameplay_info);
     LOAD_BOOL(show_cog_in_outpost);
     LOAD_BOOL(show_cog_in_explorable);
+    LOAD_BOOL(show_screenshot_button_in_outpost);
+    LOAD_BOOL(show_screenshot_button_in_explorable);
     // Migrate from old hide_close_in_explorable: if it was true, default both show vars to false
     if (ini->GetBoolValue(Name(), "hide_close_in_explorable", false)) {
         show_close_in_outpost = false;
@@ -372,6 +380,8 @@ void ToolboxSettings::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(send_anonymous_gameplay_info);
     SAVE_BOOL(show_cog_in_outpost);
     SAVE_BOOL(show_cog_in_explorable);
+    SAVE_BOOL(show_screenshot_button_in_outpost);
+    SAVE_BOOL(show_screenshot_button_in_explorable);
     SAVE_BOOL(show_close_in_outpost);
     SAVE_BOOL(show_close_in_explorable);
 
@@ -396,12 +406,68 @@ void ToolboxSettings::Draw(IDirect3DDevice9*)
     }
 }
 
+namespace {
+    // Deferred screenshot request — populated when the user clicks the
+    // camera button on a window's title bar, consumed at end-of-frame by
+    // ToolboxSettings::FlushPendingScreenshot. capture_at_frame defers
+    // by one frame so the click frame itself isn't drawn into the
+    // capture (and we can suppress the cog/camera overlays on the
+    // captured frame to avoid them appearing in the screenshot).
+    struct PendingScreenshot {
+        bool                  active = false;
+        ImRect                rect;
+        std::filesystem::path path;
+        int                   capture_at_frame = 0;
+    };
+    PendingScreenshot pending_screenshot;
+
+    bool IsScreenshotInFlight()
+    {
+        return pending_screenshot.active && ImGui::GetFrameCount() <= pending_screenshot.capture_at_frame;
+    }
+
+    std::filesystem::path BuildScreenshotPath(const char* window_name)
+    {
+        // Slug the window name so it makes a sensible filename: strip
+        // anything that isn't alnum/underscore.
+        std::string slug;
+        slug.reserve(strlen(window_name));
+        for (const char* p = window_name; *p; ++p) {
+            const unsigned char c = static_cast<unsigned char>(*p);
+            if (isalnum(c)) slug.push_back(static_cast<char>(tolower(c)));
+            else if (slug.empty() || slug.back() != '_') slug.push_back('_');
+        }
+        while (!slug.empty() && slug.back() == '_') slug.pop_back();
+        if (slug.empty()) slug = "window";
+
+        // Local-time timestamp; precision down to the second is enough
+        // to disambiguate consecutive captures.
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        char stamp[32];
+        snprintf(stamp, sizeof(stamp), "%04d%02d%02d-%02d%02d%02d",
+                 st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+
+        const auto folder = Resources::GetPath(L"Screens");
+        Resources::EnsureFolderExists(folder);
+        const std::string fname = std::string("gwtoolbox_") + slug + "_" + stamp + ".png";
+        return folder / fname;
+    }
+}
+
 void ToolboxSettings::DrawSettingsCogButtons()
 {
-    if (is_in_explorable ? !show_cog_in_explorable : !show_cog_in_outpost) return;
+    const bool show_cog        = is_in_explorable ? show_cog_in_explorable        : show_cog_in_outpost;
+    const bool show_screenshot = is_in_explorable ? show_screenshot_button_in_explorable : show_screenshot_button_in_outpost;
+    if (!show_cog && !show_screenshot) return;
+
+    // Suppress the entire overlay on the frame we're actually capturing
+    // — we don't want our own icons to appear in the saved PNG.
+    if (IsScreenshotInFlight()) return;
 
     const ImVec2 mouse_pos = ImGui::GetIO().MousePos;
-    ToolboxUIElement* hovered_elem = nullptr;
+    ToolboxUIElement* hovered_cog = nullptr;
+    ToolboxUIElement* hovered_cam = nullptr;
 
     for (auto* elem : GWToolbox::GetUIElements()) {
         if (!elem->visible || !elem->show_titlebar) continue;
@@ -417,39 +483,82 @@ void ToolboxSettings::DrawSettingsCogButtons()
         const bool close_btn_shown = elem->IsWindow() && elem->GetVisiblePtr() != nullptr;
         const float close_offset = close_btn_shown ? btn_h : 0.f;
 
-        const ImVec2 btn_min = {tb.Max.x - close_offset - btn_h, tb.Min.y};
-        const ImVec2 btn_max = {btn_min.x + btn_h, tb.Max.y};
-
-        const bool hovered = mouse_pos.x >= btn_min.x && mouse_pos.x < btn_max.x
-                          && mouse_pos.y >= btn_min.y && mouse_pos.y < btn_max.y;
-
         ImDrawList* dl = window->DrawList;
         dl->PushClipRect(tb.Min, tb.Max, false);
 
-        if (hovered) {
-            hovered_elem = const_cast<ToolboxUIElement*>(elem);
-            dl->AddRectFilled(btn_min, btn_max, IM_COL32(255, 255, 255, 30));
+        // Slot 0 (rightmost, just left of the close-button gap) is the cog.
+        // Slot 1 (one slot further left) is the camera. Only the buttons
+        // enabled in settings get drawn.
+        float right_edge = tb.Max.x - close_offset;
+
+        const auto draw_button = [&](const char* glyph, ToolboxUIElement** hovered_out) -> bool {
+            const ImVec2 btn_min = {right_edge - btn_h, tb.Min.y};
+            const ImVec2 btn_max = {right_edge,         tb.Max.y};
+            right_edge -= btn_h;
+
+            const bool hovered = mouse_pos.x >= btn_min.x && mouse_pos.x < btn_max.x
+                              && mouse_pos.y >= btn_min.y && mouse_pos.y < btn_max.y;
+            if (hovered) {
+                *hovered_out = const_cast<ToolboxUIElement*>(elem);
+                dl->AddRectFilled(btn_min, btn_max, IM_COL32(255, 255, 255, 30));
+            }
+
+            const ImVec2 text_size = ImGui::CalcTextSize(glyph);
+            const ImVec2 icon_pos = {
+                btn_min.x + (btn_h - text_size.x) * 0.5f,
+                tb.Min.y  + (btn_h - text_size.y) * 0.5f
+            };
+            ImVec4 col = ImGui::GetStyle().Colors[ImGuiCol_Text];
+            if (!hovered) col.w *= 0.5f;
+            dl->AddText(icon_pos, ImGui::ColorConvertFloat4ToU32(col), glyph);
 
             const ImVec2 drag = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && drag.x == 0.f && drag.y == 0.f) {
-                SettingsWindow::Instance().NavigateToSection(elem->SettingsName());
-            }
+            return hovered
+                && ImGui::IsMouseReleased(ImGuiMouseButton_Left)
+                && drag.x == 0.f && drag.y == 0.f;
+        };
+
+        if (show_cog && draw_button(ICON_FA_COG, &hovered_cog)) {
+            SettingsWindow::Instance().NavigateToSection(elem->SettingsName());
         }
 
-        const ImVec2 text_size = ImGui::CalcTextSize(ICON_FA_COG);
-        const ImVec2 icon_pos = {
-            btn_min.x + (btn_h - text_size.x) * 0.5f,
-            tb.Min.y  + (btn_h - text_size.y) * 0.5f
-        };
-        ImVec4 col = ImGui::GetStyle().Colors[ImGuiCol_Text];
-        if (!hovered) col.w *= 0.5f;
-        dl->AddText(icon_pos, ImGui::ColorConvertFloat4ToU32(col), ICON_FA_COG);
+        if (show_screenshot && draw_button(ICON_FA_CAMERA, &hovered_cam)) {
+            // Capture the window's current pixel rect. The clamp into the
+            // back buffer happens later, inside SaveBackbufferRectToFile.
+            pending_screenshot.active = true;
+            pending_screenshot.rect = window->Rect();
+            pending_screenshot.path = BuildScreenshotPath(elem->Name());
+            // Defer by one frame so the next frame can re-render the
+            // window without these overlay icons (see early-return above)
+            // before we read back the swap chain.
+            pending_screenshot.capture_at_frame = ImGui::GetFrameCount() + 1;
+        }
+
         dl->PopClipRect();
     }
 
-    if (hovered_elem) {
-        ImGui::SetTooltip("Open %s settings", hovered_elem->SettingsName());
+    if (hovered_cog) {
+        ImGui::SetTooltip("Open %s settings", hovered_cog->SettingsName());
     }
+    else if (hovered_cam) {
+        ImGui::SetTooltip("Save a PNG screenshot of '%s'", hovered_cam->Name());
+    }
+}
+
+void ToolboxSettings::FlushPendingScreenshot(IDirect3DDevice9* device)
+{
+    if (!pending_screenshot.active) return;
+    if (ImGui::GetFrameCount() < pending_screenshot.capture_at_frame) return;
+
+    RECT r{
+        static_cast<LONG>(pending_screenshot.rect.Min.x),
+        static_cast<LONG>(pending_screenshot.rect.Min.y),
+        static_cast<LONG>(pending_screenshot.rect.Max.x),
+        static_cast<LONG>(pending_screenshot.rect.Max.y),
+    };
+    Resources::SaveBackbufferRectToFile(device, &r, pending_screenshot.path);
+
+    pending_screenshot = {};
 }
 
 void ToolboxSettings::Update(float)

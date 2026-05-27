@@ -107,6 +107,10 @@ public:
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
     static bool SaveTextureToFile(IDirect3DTexture9* texture, const std::filesystem::path& file_path);
+    // Captures a sub-rect of the current D3D9 back buffer to disk as PNG/JPG/BMP
+    // (extension is taken from file_path). Pass nullptr for region to capture
+    // the whole back buffer.
+    static bool SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* region, const std::filesystem::path& file_path);
     // Fetches File page from GWW, parses out the image for the file given
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded

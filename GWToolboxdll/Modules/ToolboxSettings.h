@@ -36,6 +36,10 @@ public:
     void DrawSizeAndPositionSettings() override { }
 
     static void DrawSettingsCogButtons();
+    // Run at end-of-frame, after ImGui has finished rendering, to actually
+    // write the queued window screenshot to disk. No-op when no capture is
+    // pending.
+    static void FlushPendingScreenshot(IDirect3DDevice9* device);
 
     static inline bool move_all = false;
     static inline bool clamp_windows_to_screen = false;
@@ -45,6 +49,10 @@ public:
     static inline bool show_cog_in_explorable = false;
     static inline bool show_close_in_outpost = true;
     static inline bool show_close_in_explorable = true;
+    // Off by default — this is a docs-authoring affordance, not a player
+    // feature.
+    static inline bool show_screenshot_button_in_outpost = false;
+    static inline bool show_screenshot_button_in_explorable = false;
     static inline bool is_in_explorable = false;
     static inline bool is_in_mobile_mode = false;
 private:
