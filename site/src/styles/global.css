@@ -47,9 +47,12 @@
     ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace;
 }
 
-html,
-body {
+/* Background colour goes on <html> only — a body bg would sit above
+   the fixed z-index:-2 background layers and hide them. */
+html {
   background-color: var(--color-bg);
+}
+body {
   color: var(--color-fg-body);
   font-family: var(--font-sans);
   font-feature-settings: 'cv11', 'ss01';
