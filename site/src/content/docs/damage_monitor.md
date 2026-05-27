@@ -39,7 +39,7 @@ In summary, the Toolbox damage monitor has the following limitations:
 * Only register player-inflicted damage (e.g.: will not measure EoE damage as inflicted by the caster).
 * But, it *will* count a summoning stone's damage as inflicted by the player who summoned it.
  
-In case you want to check the actual code, you can see it here: https://github.com/HasKha/GWToolboxpp/blob/master/GWToolbox/GWToolbox/Widgets/PartyDamage.cpp#L110
+In case you want to check the actual code, you can see it here: https://github.com/gwdevhub/GWToolboxpp/blob/master/GWToolboxdll/Widgets/PartyDamage.cpp
 
 ## Chat Commands
 

@@ -51,7 +51,7 @@ We are always open to comments and criticism about Toolbox++. If you have featur
 ### Why does GWToolbox++ require Admin privileges?
 GWToolbox++ needs admin privileges if Guild Wars has admin privileges. Guild Wars can be indirectly started with those privileges if it was started by a program that was run as admin. TexMod, uMod, GWML or GW Launcher typically require admin privileges so we decided for Toolbox to require admin privileges by default, to avoid issues.
 
-You can find a version of the launcher that doesn't require admin privileges [here](https://github.com/HasKha/GWToolboxpp/releases/tag/2.14_Release).
+You can find a version of the launcher that doesn't require admin privileges [here](https://github.com/gwdevhub/GWToolboxpp/releases/tag/2.14_Release).
 
 ## Issues launching GWToolbox
 
@@ -84,13 +84,13 @@ You sure can! Just create a second hotkey for the second action and assign the s
 You can also bind multiple keys to the same action, again by creating extra hotkeys, this time with the same action and different key binds.
 
 ### The icons on the [Pcons](/docs/pcons/), [Materials](/docs/materials/), and Toolbox window aren't showing up. How do I get them back?
-This is a bug that causes the Toolbox launcher to not download the icons. Delete your `GWToolbox.exe` and replace it with [this one](https://github.com/HasKha/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe).
+This is a bug that causes the Toolbox launcher to not download the icons. Delete your `GWToolbox.exe` and replace it with [this one](https://github.com/gwdevhub/GWToolboxpp/releases/download/2.0-launcher/GWToolbox.exe).
 
 ### Toolbox cannot load font upon launch. How do I get it to load the font?
-`Font.ttf` can be found in the GitHub repository in the resource folder. Download [this file](https://github.com/HasKha/GWToolboxpp/blob/master/resources/Font.ttf) and navigate to `C:\Users\[Username]\AppData\Local\GWToolboxpp` and copy it to that folder.
+`Font.ttf` can be found in the GitHub repository in the resource folder. Download [this file](https://github.com/gwdevhub/GWToolboxpp/blob/master/resources/Font.ttf) and navigate to `C:\Users\[Username]\AppData\Local\GWToolboxpp` and copy it to that folder.
 
 ### I am missing icons in my Completion window. Help?
-Missing icons are most likely not downloaded into your `C:\Users\%USERNAME%\Documents\GWToolboxpp\%COMPUTERNAME%\img` folder. All of the icons can be found in the [resources folder](https://github.com/HasKha/GWToolboxpp/tree/master/resources) in the GitHub repository where you can download them. By navigating to a single file, you will in most cases find a download button to download the individual file. If you are missing a lot of icons, you can download the repository from the [main page](https://github.com/HasKha/GWToolboxpp). Click *Code* and Download *Zip*. From the .zip-file, navigate to `GWToolboxpp-master.zip\GWToolboxpp-master\resources\` and drop the needed icon folder into `C:\Users\[Username]\AppData\Local\GWToolboxpp\img`.
+Missing icons are most likely not downloaded into your `C:\Users\%USERNAME%\Documents\GWToolboxpp\%COMPUTERNAME%\img` folder. All of the icons can be found in the [resources folder](https://github.com/gwdevhub/GWToolboxpp/tree/master/resources) in the GitHub repository where you can download them. By navigating to a single file, you will in most cases find a download button to download the individual file. If you are missing a lot of icons, you can download the repository from the [main page](https://github.com/gwdevhub/GWToolboxpp). Click *Code* and Download *Zip*. From the .zip-file, navigate to `GWToolboxpp-master.zip\GWToolboxpp-master\resources\` and drop the needed icon folder into `C:\Users\[Username]\AppData\Local\GWToolboxpp\img`.
 
 ### Why isn't Toolbox remembering my settings when I restart! Help?
 Toolbox settings are saved to the files in the [settings folder](/docs/settings/#storage) when you close Toolbox or click "Save Now" at the bottom of the [Settings window](/docs/settings/). Settings are loaded from those files when you launch Toolbox or click "Load Now".
