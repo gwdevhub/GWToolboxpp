@@ -388,7 +388,8 @@ void CustomRenderer::DrawLineSettings()
         markers_changed = true;
     }
     ImGui::SameLine();
-    if (ImGui::Button("Sort A-Z##lines")) {
+    bool sort_lines = false;
+    if (ImGui::ConfirmButton("Sort A-Z##lines", &sort_lines, "Sort all lines alphabetically by name?\nThis cannot be undone.")) {
         std::sort(lines.begin(), lines.end(), [](const CustomLine* a, const CustomLine* b) {
             return strcmp(a->name, b->name) < 0;
         });
@@ -526,7 +527,8 @@ void CustomRenderer::DrawMarkerSettings()
         markers_changed = true;
     }
     ImGui::SameLine();
-    if (ImGui::Button("Sort A-Z##markers")) {
+    bool sort_markers = false;
+    if (ImGui::ConfirmButton("Sort A-Z##markers", &sort_markers, "Sort all markers alphabetically by name?\nThis cannot be undone.")) {
         std::sort(markers.begin(), markers.end(), [](const CustomMarker& a, const CustomMarker& b) {
             return strcmp(a.name, b.name) < 0;
         });
@@ -704,7 +706,8 @@ void CustomRenderer::DrawPolygonSettings()
         markers_changed = true;
     }
     ImGui::SameLine();
-    if (ImGui::Button("Sort A-Z##polygons")) {
+    bool sort_polygons = false;
+    if (ImGui::ConfirmButton("Sort A-Z##polygons", &sort_polygons, "Sort all polygons alphabetically by name?\nThis cannot be undone.")) {
         std::sort(polygons.begin(), polygons.end(), [](const CustomPolygon& a, const CustomPolygon& b) {
             return strcmp(a.name, b.name) < 0;
         });
