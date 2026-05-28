@@ -4,8 +4,6 @@ target_sources(plugin_base INTERFACE
     "plugins/Base/BackupManager.cpp"
     "plugins/Base/dllmain.cpp"
     "plugins/Base/stl.h"
-    "plugins/Base/ToolboxIni.h"
-    "plugins/Base/ToolboxIni.cpp"
     "plugins/Base/ToolboxPlugin.h"
     "plugins/Base/ToolboxPlugin.cpp"
     "plugins/Base/PluginUtils.h"
@@ -14,8 +12,8 @@ target_sources(plugin_base INTERFACE
     "plugins/Base/ToolboxUIPlugin.cpp"
     "GWToolboxdll/RectF.h"
     "GWToolboxdll/MinimapPlugin.h"
-    "GWToolboxdll/Utils/FastIni.h"
-    "GWToolboxdll/Utils/FastIni.cpp")
+    "GWToolboxdll/ToolboxIni.h"
+    "GWToolboxdll/ToolboxIni.cpp")
 target_include_directories(plugin_base INTERFACE
     "plugins/Base"
     "GWToolboxdll" # careful here, we only get access to exported and header functions!
@@ -23,6 +21,7 @@ target_include_directories(plugin_base INTERFACE
 target_link_libraries(plugin_base INTERFACE
     imgui
     glaze::glaze
+    easywsclient
     gwca
     IconFontCppHeaders
     GWToolboxdll # for GetFont
@@ -71,6 +70,7 @@ target_include_directories(scripting INTERFACE
 target_link_libraries(scripting INTERFACE
     imgui
     glaze::glaze
+    easywsclient
     gwca
     IconFontCppHeaders
     GWToolboxdll # for GetFont

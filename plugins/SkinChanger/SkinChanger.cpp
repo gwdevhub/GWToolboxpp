@@ -664,13 +664,16 @@ void SkinChanger::LoadSettings(const wchar_t* folder)
     ToolboxPlugin::LoadSettings(folder);
     BackupManager::getInstance().initialize(folder);
 
-    loadFromIniFile(GetSettingFile(folder).c_str());
+    const auto ini = LoadIni(folder);
+    loadFromIniFile(ini);
 }
 
 void SkinChanger::SaveSettings(const wchar_t* folder)
 {
     ToolboxPlugin::SaveSettings(folder);
     
+    auto ini = LoadIni(folder);
+
     std::string itemsToSave;
     itemsToSave.reserve(4096);
     for (const auto& itemChange : itemChanges) 
@@ -707,7 +710,7 @@ void SkinChanger::SaveSettings(const wchar_t* folder)
     }
     ini.SetValue(Name(), VAR_NAME(minipetTransmogs), transmogsToSave.c_str());
 
-    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
 
     if (itemChanges.size() || minipetTransmogs.size()) BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
 }
@@ -800,9 +803,8 @@ void SkinChanger::DrawSettings()
     ImGui::Text("Version 2.0.0");
 }
 
-void SkinChanger::loadFromIniFile(const wchar_t* filePath)
+void SkinChanger::loadFromIniFile(const ToolboxIni& ini)
 {
-    ini.LoadFile(filePath);
     itemChanges.clear();
     minipetTransmogs.clear();
 
@@ -982,7 +984,10 @@ void SkinChanger::Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMO
             }
         }
         if (!iniToLoad.empty()) {
-            instance->loadFromIniFile(iniToLoad.c_str());
+            ToolboxIni ini;
+            PLUGIN_ASSERT(ini.LoadIfExists(iniToLoad) == SI_OK);
+            ini.location_on_disk = iniToLoad;
+            instance->loadFromIniFile(ini);
         }
     });
 

@@ -315,7 +315,8 @@ void AgentPopTimer::LoadSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::LoadSettings(folder);
 
-    ini.LoadFile(GetSettingFile(folder).c_str());
+    const auto ini = LoadIni(folder);
+
     radius = (float)ini.GetDoubleValue(Name(), VAR_NAME(radius), radius);
     color.x = (float)ini.GetDoubleValue(Name(), "BorderColorR", color.x);
     color.y = (float)ini.GetDoubleValue(Name(), "BorderColorG", color.y);
@@ -334,6 +335,8 @@ void AgentPopTimer::SaveSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::SaveSettings(folder);
 
+    auto ini = LoadIni(folder);
+
     ini.SetDoubleValue(Name(), VAR_NAME(radius), radius);
     ini.SetDoubleValue(Name(), "BorderColorR", color.x);
     ini.SetDoubleValue(Name(), "BorderColorG", color.y);
@@ -347,7 +350,7 @@ void AgentPopTimer::SaveSettings(const wchar_t* folder)
     ini.SetLongValue(Name(), VAR_NAME(fontSizeIndex), fontSizeIndex);
     ini.SetLongValue(Name(), VAR_NAME(imageSizeIndex), imageSizeIndex);
 
-    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
 }
 
 void AgentPopTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll)

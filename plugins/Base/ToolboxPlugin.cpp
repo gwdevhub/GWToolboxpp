@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ToolboxPlugin.h"
 #include "PluginUtils.h"
@@ -8,6 +8,14 @@ std::filesystem::path ToolboxPlugin::GetSettingFile(const wchar_t* folder) const
     const auto wname = PluginUtils::StringToWString(Name());
     const auto ininame = wname + L".ini";
     return std::filesystem::path(folder) / ininame;
+}
+
+ToolboxIni ToolboxPlugin::LoadIni(const wchar_t* folder) {
+    ToolboxIni ini;
+    const auto ini_path = GetSettingFile(folder);
+    PLUGIN_ASSERT(ini.LoadIfExists(ini_path) == SI_OK);
+    ini.location_on_disk = ini_path;
+    return ini;
 }
 
 void ToolboxPlugin::Initialize(ImGuiContext* ctx, const ImGuiAllocFns allocator_fns, const HMODULE toolbox_dll)

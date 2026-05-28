@@ -213,7 +213,8 @@ void Slowload::LoadSettings(const wchar_t* folder)
 {
     ToolboxPlugin::LoadSettings(folder);
 
-    ini.LoadFile(GetSettingFile(folder).c_str());
+    const auto ini = LoadIni(folder);
+
     shortcutKey = ini.GetLongValue(Name(), VAR_NAME(shortcutKey), shortcutKey);
     shortcutMod = ini.GetLongValue(Name(), VAR_NAME(shortcutMod), shortcutMod);
 
@@ -223,10 +224,13 @@ void Slowload::LoadSettings(const wchar_t* folder)
 void Slowload::SaveSettings(const wchar_t* folder)
 {
     ToolboxPlugin::SaveSettings(folder);
+
+    auto ini = LoadIni(folder);
+
     ini.SetLongValue(Name(), VAR_NAME(shortcutKey), shortcutKey);
     ini.SetLongValue(Name(), VAR_NAME(shortcutMod), shortcutMod);
 
-    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
 }
 
 void Slowload::DrawSettings()

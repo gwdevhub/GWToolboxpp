@@ -124,7 +124,10 @@ namespace {
             }
         }
         if (!iniToLoad.empty()) {
-            instance->loadFromIniFile(iniToLoad.c_str());
+            ToolboxIni ini;
+            PLUGIN_ASSERT(ini.LoadIfExists(iniToLoad) == SI_OK);
+            ini.location_on_disk = iniToLoad;
+            instance->loadFromIniFile(ini);
         }
     }
 
@@ -834,9 +837,8 @@ void SpeedrunScriptingTools::DrawSettings()
     if (groupDisabledKeysChanged || scriptDisabledKeysChanged) refreshDisabledKeys();
 }
 
-void SpeedrunScriptingTools::loadFromIniFile(const wchar_t* file)
+void SpeedrunScriptingTools::loadFromIniFile(const ToolboxIni& ini)
 {
-    ini.LoadFile(file);
     m_scripts.clear();
     m_groups.clear();
 
@@ -879,7 +881,8 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 {
     ToolboxPlugin::LoadSettings(folder);
     BackupManager::getInstance().initialize(folder);
-    loadFromIniFile(GetSettingFile(folder).c_str());
+    const auto ini = LoadIni(folder);
+    loadFromIniFile(ini);
     if (m_scripts.empty() && m_groups.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) {
         logMessage("No scripts loaded, but automatic backups found. Type \"/restore SST help\" to see options for restoring backups", Name());
     }
@@ -888,6 +891,8 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
 {
     ToolboxPlugin::SaveSettings(folder);
+    auto ini = LoadIni(folder);
+
     ini.SetLongValue(Name(), "version", currentVersion);
     ini.SetBoolValue(Name(), "runInOutpost", runInOutposts);
     ini.SetBoolValue(Name(), "alwaysBlockHotkeyKeys", alwaysBlockHotkeyKeys);
@@ -915,7 +920,7 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
             ini.SetValue(Name(), "groups", encoded->c_str());
         }
     }
-    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
     if (!m_scripts.empty() || !m_groups.empty()) {
         BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
     }

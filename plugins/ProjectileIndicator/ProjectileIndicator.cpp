@@ -196,6 +196,8 @@ void ProjectileIndicator::LoadSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::LoadSettings(folder);
 
+    const auto ini = LoadIni(folder);
+
     const auto loadColor = [&](ImVec4& color, std::string varName) {
         color.x = (float)ini.GetDoubleValue(Name(), (varName + "x").c_str(), color.x);
         color.y = (float)ini.GetDoubleValue(Name(), (varName + "y").c_str(), color.y);
@@ -227,6 +229,8 @@ void ProjectileIndicator::SaveSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::SaveSettings(folder);
 
+    auto ini = LoadIni(folder);
+
     const auto saveColor = [&](const ImVec4& color, std::string varName) {
         ini.SetDoubleValue(Name(), (varName + "x").c_str(), color.x);
         ini.SetDoubleValue(Name(), (varName + "y").c_str(), color.y);
@@ -256,5 +260,5 @@ void ProjectileIndicator::SaveSettings(const wchar_t* folder)
     }
     ini.SetValue(Name(), "suppressed", suppressed.c_str());
 
-    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
 }

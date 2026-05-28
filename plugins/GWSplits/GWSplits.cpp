@@ -955,9 +955,8 @@ void GWSplits::DrawSettings()
     ImGui::Text("Version 2.0.0");
 }
 
-void GWSplits::loadFromIniFile(const wchar_t* filePath)
+void GWSplits::loadFromIniFile(const ToolboxIni& ini)
 {
-    ini.LoadFile(filePath);
     runs.clear();
     [[maybe_unused]] const long savedVersion = ini.GetLongValue(Name(), "version", 11);
     totalSplits = ini.GetLongValue(Name(), "totalSplits", 0);
@@ -997,7 +996,8 @@ void GWSplits::LoadSettings(const wchar_t* folder)
     BackupManager::getInstance().initialize(folder);
     settingsFolder = folder;
 
-    loadFromIniFile(GetSettingFile(folder).c_str());
+    const auto ini = LoadIni(folder);
+    loadFromIniFile(ini);
 
     if (runs.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) 
     {
@@ -1079,6 +1079,9 @@ bool GWSplits::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
 void GWSplits::SaveSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::SaveSettings(folder);
+
+    auto ini = LoadIni(folder);
+
     ini.SetLongValue(Name(), "version", currentVersion);
     ini.SetLongValue(Name(), "totalSplits", totalSplits);
     ini.SetLongValue(Name(), "upcomingSplits", upcomingSplits);
@@ -1099,7 +1102,7 @@ void GWSplits::SaveSettings(const wchar_t* folder)
         ini.SetValue(Name(), "runs", encoded->c_str());
     }
     
-    PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
+    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
     if (runs.size())
         BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
 }
@@ -1222,7 +1225,10 @@ void GWSplits::Initialize(ImGuiContext* ctx, ImGuiAllocFns fns, HMODULE toolbox_
         }
         if (!iniToLoad.empty()) 
         {
-            instance->loadFromIniFile(iniToLoad.c_str());
+            ToolboxIni ini;
+            PLUGIN_ASSERT(ini.LoadIfExists(iniToLoad) == SI_OK);
+            ini.location_on_disk = iniToLoad;
+            instance->loadFromIniFile(ini);
         }
     });*/
 

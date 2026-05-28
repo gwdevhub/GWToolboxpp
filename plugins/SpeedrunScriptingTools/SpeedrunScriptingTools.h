@@ -64,7 +64,7 @@ public:
     void SignalTerminate() override;
 
     bool triggerScripts(Trigger triggerType, std::function<bool(const Script&)> extraConditions = [](const Script&) { return true; }, bool checkConditions = true);
-    void loadFromIniFile(const wchar_t*);
+    void loadFromIniFile(const ToolboxIni& ini);
 
 private:
     void clear();

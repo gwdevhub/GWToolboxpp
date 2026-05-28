@@ -194,6 +194,8 @@ void ShadowstepPredictor::Draw(IDirect3DDevice9*)
 void ShadowstepPredictor::LoadSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::LoadSettings(folder);
+    
+    const auto ini = LoadIni(folder);
 
     const auto loadColor = [&](ImVec4& color, std::string varName) 
     {
@@ -216,6 +218,8 @@ void ShadowstepPredictor::LoadSettings(const wchar_t* folder)
 void ShadowstepPredictor::SaveSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::SaveSettings(folder);
+
+    auto ini = LoadIni(folder);
     
     const auto saveColor = [&](const ImVec4& color, std::string varName) 
     {
@@ -233,6 +237,8 @@ void ShadowstepPredictor::SaveSettings(const wchar_t* folder)
     ini.SetBoolValue(Name(), VAR_NAME(showShadowWalk),       showShadowWalk);
     ini.SetBoolValue(Name(), VAR_NAME(showAllyShadowSteps),  showAllyShadowSteps);
     ini.SetBoolValue(Name(), VAR_NAME(showEnemyShadowSteps), showEnemyShadowSteps);
+
+    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
 }
 
 void ShadowstepPredictor::DrawSettings()

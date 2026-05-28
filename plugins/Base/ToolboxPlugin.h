@@ -62,6 +62,7 @@ public:
     [[nodiscard]] virtual bool ShowOnWorldMap() const { return false; }
 
     [[nodiscard]] virtual std::filesystem::path GetSettingFile(const wchar_t* folder) const;
+    [[nodiscard]] ToolboxIni LoadIni(const wchar_t* folder);
 
     // Initialize module
     virtual void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll);

@@ -67,7 +67,7 @@ public:
 
     void Update(float) override;
 
-    void loadFromIniFile(const wchar_t* filePath);
+    void loadFromIniFile(const ToolboxIni& ini);
 
     std::vector<ItemChange> itemChanges;
     std::vector<MinipetTransmog> minipetTransmogs;
