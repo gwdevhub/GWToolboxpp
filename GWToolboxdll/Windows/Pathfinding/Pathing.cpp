@@ -665,8 +665,12 @@ namespace Pathing {
 
             portals.emplace_back(id + 1, id, p_id + 1, p_id, pt2, pt2_layer, (Edge)(((uint32_t)edge + 2u) % 4u));
 
-            pt_portal_map[pt1->id].push_back(id);
-            pt_portal_map[pt2->id].push_back(id + 1);
+            if (pt1->id < pt_portal_map.size()) {
+                pt_portal_map[pt1->id].push_back(id);
+            }
+            if (pt2->id < pt_portal_map.size()) {
+                pt_portal_map[pt2->id].push_back(id + 1);
+            }
             tmp_portal_pt_map[id] = pt1;
             tmp_portal_pt_map[id + 1] = pt2;
         }
@@ -1179,13 +1183,19 @@ namespace Pathing {
 
             portals.emplace_back(id, id, point_id, point_id, pt, static_cast<uint8_t>(gp.zplane), Edge::top);
 
-            portal_pt_map[id] = pt;
-
-            for (const auto& pid : pt_portal_map[pt->id]) {
-                portal_portal_map[id].push_back(pid);
-                portal_portal_map[pid].push_back(id);
+            if (id < portal_pt_map.size()) {
+                portal_pt_map[id] = pt;
             }
-            pt_portal_map[pt->id].push_back(id);
+
+            if (pt && pt->id < pt_portal_map.size()) {
+                for (const auto& pid : pt_portal_map[pt->id]) {
+                    if (id < portal_portal_map.size() && pid < portal_portal_map.size()) {
+                        portal_portal_map[id].push_back(pid);
+                        portal_portal_map[pid].push_back(id);
+                    }
+                }
+                pt_portal_map[pt->id].push_back(id);
+            }
 
             return points[point_id];
         }
@@ -1579,28 +1589,40 @@ namespace Pathing {
         auto* mp = (Impl*)m_path.m_mp->GetImpl();
 
         auto cleanup = [&](const Point& point) {
-            auto& elements = mp->m_visGraph[point.m_id];
-            for (auto& elem : elements) {
-                std::erase_if(mp->m_visGraph[elem.point_id], [&point](auto& elem) {
-                    return elem.point_id == point.m_id;
-                });
+            if (point.m_id < mp->m_visGraph.size()) {
+                auto& elements = mp->m_visGraph[point.m_id];
+                for (auto& elem : elements) {
+                    if (elem.point_id < mp->m_visGraph.size()) {
+                        std::erase_if(mp->m_visGraph[elem.point_id], [&point](auto& elem) {
+                            return elem.point_id == point.m_id;
+                        });
+                    }
+                }
+                elements.clear();
             }
-            elements.clear();
 
             mp->points.pop_back();
 
-            auto& adjacent = mp->portal_portal_map[point.m_portals[0]];
-            for (auto& a : adjacent) {
-                std::erase_if(mp->portal_portal_map[a], [&point](auto& portal) {
-                    return portal == point.m_portals[0];
-                });
+            if (point.m_portals[0] < mp->portal_portal_map.size()) {
+                auto& adjacent = mp->portal_portal_map[point.m_portals[0]];
+                for (auto& a : adjacent) {
+                    if (a < mp->portal_portal_map.size()) {
+                        std::erase_if(mp->portal_portal_map[a], [&point](auto& portal) {
+                            return portal == point.m_portals[0];
+                        });
+                    }
+                }
+                adjacent.clear();
             }
-            adjacent.clear();
 
-            auto pt = std::exchange(mp->portal_pt_map[point.m_portals[0]], nullptr);
-            std::erase_if(mp->pt_portal_map[pt->id], [&point](auto& portal) {
-                return portal == point.m_portals[0];
-            });
+            if (point.m_portals[0] < mp->portal_pt_map.size()) {
+                auto pt = std::exchange(mp->portal_pt_map[point.m_portals[0]], nullptr);
+                if (pt && pt->id < mp->pt_portal_map.size()) {
+                    std::erase_if(mp->pt_portal_map[pt->id], [&point](auto& portal) {
+                        return portal == point.m_portals[0];
+                    });
+                }
+            }
 
             mp->portals.pop_back();
         };
