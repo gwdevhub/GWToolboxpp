@@ -14,6 +14,7 @@
 
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
+#include <Widgets/HealthLogCache.h>
 #include <Widgets/PartyDamage.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
@@ -782,24 +783,10 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_healing);
 
 
-    if (inifile == nullptr) {
-        inifile = new ToolboxIni(false, false, false);
-    }
-    inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
-    TNamesDepend keys;
-    inifile->GetAllKeys(IniSection, keys);
-    for (const auto& key : keys) {
-        int lkey;
-        if (TextUtils::ParseInt(key.pItem, &lkey)) {
-            if (lkey <= 0) {
-                continue;
-            }
-            const long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
-            if (lval <= 0) {
-                continue;
-            }
-            hp_map[static_cast<size_t>(lkey)] = static_cast<uint32_t>(lval);
-        }
+    HealthLogCache::Load();
+    const auto& cache = HealthLogCache::GetMap();
+    for (const auto& [player_number, hp] : cache) {
+        hp_map[static_cast<size_t>(player_number)] = hp;
     }
 }
 
