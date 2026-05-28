@@ -1059,7 +1059,7 @@ void PartyWindowModule::DrawSettingsInternal()
         ImGui::Unindent();
     }
     ImGui::Separator();
-    #if 0
+
     if (ImGui::Checkbox("Add custom sorting to party window", &custom_sort_party_window)) {
         RefreshPartySortHandler();
     }
@@ -1069,7 +1069,6 @@ void PartyWindowModule::DrawSettingsInternal()
         DrawCustomPartySortingSettings();
         ImGui::Unindent();
     }
-    #endif
 }
 void PartyWindowModule::SaveSettings(ToolboxIni* ini)
 {
@@ -1130,9 +1129,7 @@ void PartyWindowModule::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(add_player_numbers_to_party_window);
     LOAD_BOOL(add_elite_skill_to_summons);
     LOAD_BOOL(remove_dead_imperials);
-#if 0 
     LOAD_BOOL(custom_sort_party_window);
-#endif
 
     ClearSpecialNPCs();
     for (const auto& key : keys) {

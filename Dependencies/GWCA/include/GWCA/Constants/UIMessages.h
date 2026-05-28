@@ -121,12 +121,14 @@ namespace GW {
             kFrameMessage_0x51,             // 0x61, Multiple uses depending on frame
             kFrameMessage_0x52,             // 0x62, Multiple uses depending on frame
             kFrameMessage_0x53,             // 0x63, Multiple uses depending on frame
-            kFrameMessage_0x54,             // 0x64, Multiple uses depending on frame
-            kFrameMessage_0x55,             // 0x65, Multiple uses depending on frame
-            kFrameMessage_0x55_a,           // 0x66, Multiple uses depending on frame, added 2026-05-27
-            kFrameMessage_0x55_b,           // 0x67, Multiple uses depending on frame, added 2026-05-27
+            kFrameMessage_0x53_a,           // 0x64, Added 2026-05-28
+            kFrameMessage_0x53_b,           // 0x65, Added 2026-05-28
+            kFrameMessage_0x54,             // 0x66, Multiple uses depending on frame
+            kFrameMessage_0x55,             // 0x67, Multiple uses depending on frame
             kFrameMessage_0x56,             // 0x68, Multiple uses depending on frame
             kFrameMessage_0x57,             // 0x69, Multiple uses depending on frame
+            kFrameMessage_0x58,             // 0x6a, Multiple uses depending on frame
+            kFrameMessage_0x59,             // 0x6b, Multiple uses depending on frame
 
             // High bit messages start at 0x10000000
             kMessage_0x10000000 = 0x10000000,  // 0x10000000

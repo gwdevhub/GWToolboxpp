@@ -81,12 +81,13 @@ namespace GW {
             uint32_t field67_0x124;
             uint32_t field68_0x128;
             uint32_t frame_hash_id;
+            TList<FrameRelation> children;
             TList<FrameRelation> siblings;
             GWCA_API Frame* GetFrame();
             GWCA_API Frame* GetParent() const;
         };
 
-        static_assert(sizeof(FrameRelation) == 0x1c);
+        static_assert(sizeof(FrameRelation) == 0x28);
 
         struct FramePosition {
             uint32_t flags;
@@ -178,9 +179,6 @@ namespace GW {
             uint32_t field64_0x120;
             uint32_t field65_0x124;
             FrameRelation relation;
-            uint32_t field73_0x144;
-            uint32_t field74_0x148;
-            uint32_t field75_0x14c;
             uint32_t field76_0x150;
             uint32_t field77_0x154;
             uint32_t field78_0x158;
