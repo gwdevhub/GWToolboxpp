@@ -2607,12 +2607,16 @@ uint16_t InventoryManager::MoveItem(const Item* item, const uint16_t quantity)
         return 0;
     }
     const bool is_inventory_item = item->IsInventoryItem();
+    const bool is_unclaimed_item = item->bag && item->bag->bag_id() == GW::Constants::Bag::Unclaimed_Items;
     uint16_t remaining = std::min<uint16_t>(item->quantity, quantity);
     if (is_inventory_item) {
         remaining -= move_item_to_storage(item, remaining);
     }
     else {
         remaining -= move_item_to_inventory(item, remaining);
+        if (remaining && is_unclaimed_item) {
+            remaining -= move_item_to_storage(item, remaining);
+        }
     }
     pending_moves.clear();
     return remaining;
