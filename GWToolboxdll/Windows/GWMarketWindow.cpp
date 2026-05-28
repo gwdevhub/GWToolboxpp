@@ -940,7 +940,7 @@ namespace {
                 if (name_lower.find(search_lower) == std::string::npos) continue;
             }
 
-            ImGui::PushID(item.name);
+            ImGui::PushID(item.name->c_str());
 
             bool selected = (current_viewing_item == *item.name);
             if (ImGui::Selectable(item.name->c_str(), selected)) {
