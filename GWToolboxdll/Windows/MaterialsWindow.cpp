@@ -402,12 +402,8 @@ void MaterialsWindow::Update(const float)
         trans->state = Transaction::State::Transacting;
     } break;
     case Transaction::State::Transacting: {
-        if (trans_complete) {
+        if (trans_complete && CountItemByMaterialSlot(trans->material) != trans->initial_item_count) {
             trans_complete = false;
-            Dequeue();
-            return;
-        }
-        if (CountItemByMaterialSlot(trans->material) != trans->initial_item_count) {
             Dequeue();
             return;
         }
