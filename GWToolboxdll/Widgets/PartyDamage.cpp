@@ -14,7 +14,7 @@
 
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
-#include <Widgets/HealthLogCache.h>
+#include <Utils/HealthLogCache.h>
 #include <Widgets/PartyDamage.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>

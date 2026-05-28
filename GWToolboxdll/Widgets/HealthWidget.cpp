@@ -15,7 +15,7 @@
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
-#include <Widgets/HealthLogCache.h>
+#include <Utils/HealthLogCache.h>
 #include <Widgets/HealthWidget.h>
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>

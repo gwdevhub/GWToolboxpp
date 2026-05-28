@@ -3,7 +3,7 @@
 #include <ToolboxIni.h>
 #include <Modules/Resources.h>
 #include <Utils/TextUtils.h>
-#include <Widgets/HealthLogCache.h>
+#include <Utils/HealthLogCache.h>
 
 namespace {
     constexpr const wchar_t* HEALTHLOG_INI_FILENAME = L"healthlog.ini";
