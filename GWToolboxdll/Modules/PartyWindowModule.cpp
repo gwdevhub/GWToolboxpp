@@ -549,8 +549,8 @@ namespace {
 
     void DrawCustomNPCSettings() {
         ImGui::TextDisabled("Only works in an explorable area. Only works on NPCs; not enemies, minions or spirits.");
-        const float fontScale = ImGui::FontScale();
-        const float cols[3] = {256.0f * fontScale, 352.0f * fontScale, 448.0f * fontScale};
+        const float font_scale = ImGui::FontScale();
+        const float cols[3] = {256.0f * font_scale, 352.0f * font_scale, 448.0f * font_scale};
 
         ImGui::Text("Name");
         ImGui::SameLine(cols[0]);
@@ -572,7 +572,7 @@ namespace {
             ImGui::Text("%d", npc->model_id);
             ImGui::SameLine(cols[1]);
             ImGui::TextUnformatted(npc->GetMapName());
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - 48.0f * fontScale);
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - 48.0f * font_scale);
             const bool clicked = ImGui::Button(" X ");
             ImGui::PopID();
             if (clicked) {
@@ -1096,21 +1096,21 @@ void PartyWindowModule::SaveSettings(ToolboxIni* ini)
     // Save party sorting configurations
     ini->SetLongValue(Name(), "party_sorting_count", static_cast<long>(party_sortings.size()));
     for (size_t i = 0; i < party_sortings.size(); i++) {
-        const auto& sorting = party_sortings[i];
+        const auto& [map_id, party_size, by_profession] = party_sortings[i];
 
         std::string prefix = "party_sorting_" + std::to_string(i) + "_";
 
         // Save map ID and party size
-        ini->SetLongValue(Name(), (prefix + "map_id").c_str(), static_cast<long>(sorting.map_id));
-        ini->SetLongValue(Name(), (prefix + "party_size").c_str(), static_cast<long>(sorting.party_size));
+        ini->SetLongValue(Name(), (prefix + "map_id").c_str(), static_cast<long>(map_id));
+        ini->SetLongValue(Name(), (prefix + "party_size").c_str(), static_cast<long>(party_size));
 
         // Save profession order count
-        ini->SetLongValue(Name(), (prefix + "profession_count").c_str(), static_cast<long>(sorting.sorting_by_profession.size()));
+        ini->SetLongValue(Name(), (prefix + "profession_count").c_str(), static_cast<long>(by_profession.size()));
 
         // Save each profession entry
-        for (size_t j = 0; j < sorting.sorting_by_profession.size(); j++) {
+        for (size_t j = 0; j < by_profession.size(); j++) {
             std::string prof_key = prefix + "profession_" + std::to_string(j);
-            ini->SetLongValue(Name(), prof_key.c_str(), static_cast<long>(sorting.sorting_by_profession[j]));
+            ini->SetLongValue(Name(), prof_key.c_str(), static_cast<long>(by_profession[j]));
         }
     }
 }

@@ -55,6 +55,24 @@ namespace {
     {
         return GW::UI::GetFrameByLabel(L"Selector");
     }
+    struct CharSelectorChar {
+        uint32_t h0000;
+        uint32_t h0004;
+        uint32_t h0008;
+        uint32_t h000C;
+        uint32_t h0010;
+        uint32_t h0014;
+        uint32_t h0018;
+        uint32_t h001C;
+        wchar_t name[0x14];
+        // ...
+    };
+    struct CharSelectorContext {
+        uint32_t vtable;
+        uint32_t frame_id;
+        GW::Array<CharSelectorChar*> chars;
+        // ...
+    };
 
 } // namespace
 
@@ -221,33 +239,17 @@ namespace GW {
             uint32_t ui_state = 10;
             SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
             const auto frame = GetSelectorFrame();
-            return ui_state == 2 && frame && frame->IsVisible() && GW::UI::GetFrameContext(frame);
+            if (!(ui_state == 2 && frame && frame->IsVisible())) return false;
+            const auto ctx = (CharSelectorContext*)GW::UI::GetFrameContext(frame);
+            return ((uintptr_t)ctx > 0xFFFF) && ctx->frame_id == frame->frame_id;
         }
 
         const bool SelectCharacterToPlay(const wchar_t* name, bool play)
         {
-            if (!IsCharSelectReady()) return false;
-            struct CharSelectorChar {
-                uint32_t h0000;
-                uint32_t h0004;
-                uint32_t h0008;
-                uint32_t h000C;
-                uint32_t h0010;
-                uint32_t h0014;
-                uint32_t h0018;
-                uint32_t h001C;
-                wchar_t name[0x14];
-                // ...
-            };
-            struct CharSelectorContext {
-                uint32_t vtable;
-                uint32_t frame_id;
-                GW::Array<CharSelectorChar*> chars;
-                // ...
-            };
+            if (!(name && *name && IsCharSelectReady())) return false;
+
             const auto selector = GetSelectorFrame();
             const auto ctx = (CharSelectorContext*)GW::UI::GetFrameContext(selector);
-            if (!(name && ctx)) return false;
 
             const auto panes = GW::UI::GetChildFrame(selector, 0);
 
@@ -1096,7 +1098,7 @@ namespace ToolboxUtils {
                 case GW::Constants::HeroID::Merc6:
                 case GW::Constants::HeroID::Merc7:
                 case GW::Constants::HeroID::Merc8:
-                    if (!a.name[0]) return false; // Unlocked, but not assigned.
+                    return (a.appearance_bitmap && !wcseq(GW::AccountMgr::GetCurrentPlayerName(), a.name)); // Unlocked, but not assigned.
             }
             return true;
         }

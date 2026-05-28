@@ -1129,6 +1129,11 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 
+    // The Toolbox windows are now drawn into the back buffer; if the user
+    // clicked a title-bar camera button last frame, this is where we
+    // actually read the pixels out and save them to disk.
+    ToolboxSettings::FlushPendingScreenshot(device);
+
     // Update and Render additional Platform Windows
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();

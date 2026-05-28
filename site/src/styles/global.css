@@ -1,0 +1,252 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+/* Self-hosted display face — sourced from tolkano.com's font kit. */
+@font-face {
+  font-family: 'Fremont';
+  src: url('/fonts/Fremont.woff') format('woff');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* Surface palette — near-black backgrounds, neutral cards, glass overlays */
+  --color-bg: #0a0a0a;
+  --color-bg-elevated: #111111;
+  --color-card: #171717;
+  --color-card-hover: #1f1f1f;
+  --color-muted: #262626;
+
+  /* Foreground tokens at varying emphasis */
+  --color-fg: #fafafa;
+  --color-fg-high: rgba(255, 255, 255, 0.95);
+  --color-fg-muted: rgba(255, 255, 255, 0.9);
+  --color-fg-body: rgba(255, 255, 255, 0.8);
+  --color-fg-sub: rgba(255, 255, 255, 0.7);
+  --color-fg-dim: rgba(255, 255, 255, 0.6);
+  --color-fg-meta: rgba(255, 255, 255, 0.5);
+  --color-fg-faint: rgba(255, 255, 255, 0.4);
+
+  /* Glass overlays */
+  --color-glass: rgba(255, 255, 255, 0.05);
+  --color-glass-hover: rgba(255, 255, 255, 0.1);
+  --color-border-glass: rgba(255, 255, 255, 0.1);
+  --color-border-glass-subtle: rgba(255, 255, 255, 0.05);
+
+  /* GW-themed accents (gold/amber matching the in-game UI) */
+  --color-accent: #fcbb00;
+  --color-accent-soft: #f99c00;
+  --color-accent-deep: #b87800;
+
+  /* Typography */
+  --font-display: 'Fremont', ui-serif, Georgia, serif;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace;
+}
+
+/* Background colour goes on <html> only — a body bg would sit above
+   the fixed z-index:-2 background layers and hide them. */
+html {
+  background-color: var(--color-bg);
+}
+body {
+  color: var(--color-fg-body);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle parchment-like background grain */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(252, 187, 0, 0.04), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(252, 187, 0, 0.03), transparent 50%);
+  z-index: -1;
+}
+
+/* Typography defaults inside .prose blocks (markdown content) */
+.prose {
+  --tw-prose-body: var(--color-fg-body);
+  --tw-prose-headings: var(--color-fg);
+  --tw-prose-lead: var(--color-fg-muted);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-fg);
+  --tw-prose-counters: var(--color-fg-meta);
+  --tw-prose-bullets: var(--color-fg-faint);
+  --tw-prose-hr: var(--color-border-glass);
+  --tw-prose-quotes: var(--color-fg-muted);
+  --tw-prose-quote-borders: var(--color-accent-deep);
+  --tw-prose-captions: var(--color-fg-meta);
+  --tw-prose-code: var(--color-accent);
+  --tw-prose-pre-code: var(--color-fg-body);
+  --tw-prose-pre-bg: var(--color-card);
+  --tw-prose-th-borders: var(--color-border-glass);
+  --tw-prose-td-borders: var(--color-border-glass-subtle);
+}
+
+.prose a {
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+  transition: border-color 120ms ease;
+}
+.prose a:hover {
+  border-bottom-color: var(--color-accent);
+}
+
+.prose figure {
+  margin: 1.5rem 0;
+}
+.prose figure img {
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border-glass);
+}
+.prose figcaption {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-fg-meta);
+  margin-top: 0.5rem;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.prose th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-fg);
+  border-bottom: 1px solid var(--color-border-glass);
+  padding: 0.5rem 0.75rem;
+}
+.prose td {
+  border-bottom: 1px solid var(--color-border-glass-subtle);
+  padding: 0.5rem 0.75rem;
+}
+
+/* Pagefind UI dark-theme overrides — see https://pagefind.app/docs/ui-usage/ */
+:root {
+  --pagefind-ui-scale: 0.875;
+  --pagefind-ui-primary: var(--color-accent);
+  --pagefind-ui-text: var(--color-fg);
+  --pagefind-ui-background: transparent;
+  --pagefind-ui-border: transparent;
+  --pagefind-ui-tag: var(--color-muted);
+  --pagefind-ui-border-radius: 0.5rem;
+  --pagefind-ui-border-width: 0;
+  --pagefind-ui-image-border-radius: 6px;
+  --pagefind-ui-image-box-ratio: 3 / 2;
+  --pagefind-ui-font: var(--font-sans);
+}
+
+/* The Pagefind CSS variables only get us so far — these rules pull the rest
+ * of the layout in line with the rest of the site. Selectors are stable
+ * BEM-ish class names from pagefind-ui.css. */
+.pagefind-ui {
+  padding: 0;
+}
+.pagefind-ui__form {
+  position: relative;
+}
+.pagefind-ui__search-input {
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-fg) !important;
+  border: 1px solid var(--color-border-glass) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem 2.75rem !important;
+  font-size: 0.95rem !important;
+  box-shadow: none !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ffffff66'><path d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: 0.875rem center !important;
+  background-size: 16px 16px !important;
+}
+.pagefind-ui__search-input:focus {
+  outline: none !important;
+  border-color: var(--color-accent-deep) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent) !important;
+}
+.pagefind-ui__search-input::placeholder {
+  color: var(--color-fg-faint) !important;
+}
+.pagefind-ui__search-clear {
+  background: transparent !important;
+  color: var(--color-fg-meta) !important;
+  border-radius: 6px !important;
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.8rem !important;
+}
+.pagefind-ui__search-clear:hover {
+  background: var(--color-glass) !important;
+  color: var(--color-fg) !important;
+}
+.pagefind-ui__message {
+  color: var(--color-fg-meta) !important;
+  padding: 0.75rem 0.25rem !important;
+  font-size: 0.85rem !important;
+}
+.pagefind-ui__results {
+  margin-top: 0.5rem;
+}
+.pagefind-ui__result {
+  border-top: 1px solid var(--color-border-glass-subtle) !important;
+  padding: 0.875rem 0.25rem !important;
+}
+.pagefind-ui__result:first-child {
+  border-top: none !important;
+}
+.pagefind-ui__result-thumb {
+  display: none !important;
+}
+.pagefind-ui__result-inner {
+  margin: 0 !important;
+}
+.pagefind-ui__result-title {
+  font-size: 0.95rem !important;
+  margin: 0 0 0.25rem !important;
+}
+.pagefind-ui__result-link {
+  color: var(--color-fg) !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+}
+.pagefind-ui__result-link:hover {
+  color: var(--color-accent) !important;
+}
+.pagefind-ui__result-excerpt {
+  color: var(--color-fg-sub) !important;
+  font-size: 0.8rem !important;
+  line-height: 1.45 !important;
+  margin: 0 !important;
+}
+.pagefind-ui__result-excerpt mark {
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent) !important;
+  color: var(--color-fg) !important;
+  padding: 0 2px !important;
+  border-radius: 3px !important;
+}
+.pagefind-ui__result-nested {
+  padding-left: 1rem !important;
+  border-left: 1px solid var(--color-border-glass-subtle) !important;
+  margin-top: 0.5rem !important;
+}
+.pagefind-ui__button {
+  background: var(--color-glass) !important;
+  color: var(--color-fg-sub) !important;
+  border: 1px solid var(--color-border-glass) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.5rem 0.75rem !important;
+  margin-top: 0.5rem !important;
+  font-size: 0.85rem !important;
+  cursor: pointer;
+}
+.pagefind-ui__button:hover {
+  background: var(--color-glass-hover) !important;
+  color: var(--color-fg) !important;
+}

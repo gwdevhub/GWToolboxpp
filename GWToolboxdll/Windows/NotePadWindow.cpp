@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 #include <Windows/NotePadWindow.h>
 #include <Utils/FontLoader.h>
@@ -35,6 +36,7 @@ namespace {
     std::vector<std::unique_ptr<NotepadTab>> tabs;
     int next_tab_id = 0;
     int renaming_tab = -1;
+    int active_tab_idx = 0;
     bool rename_needs_focus = false;
     char rename_buf[tab_name_length]{};
 
@@ -124,6 +126,7 @@ void NotePadWindow::Terminate()
     tabs.clear();
     next_tab_id = 0;
     renaming_tab = -1;
+    active_tab_idx = 0;
 }
 
 void NotePadWindow::Draw(IDirect3DDevice9*)
@@ -140,13 +143,25 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                 AddTab();
             }
 
-            int delete_tab = -1;
+            active_tab_idx = std::clamp(active_tab_idx, 0, static_cast<int>(tabs.size()) - 1);
+            const auto confirm_close_tab = [](bool result, void* wparam) {
+                if (!result) return;
+                const int tab_id = static_cast<int>(reinterpret_cast<intptr_t>(wparam));
+                for (int i = 0; i < static_cast<int>(tabs.size()); i++) {
+                    if (tabs[i]->id == tab_id) {
+                        DeleteTab(i);
+                        return;
+                    }
+                }
+            };
             for (int i = 0; i < static_cast<int>(tabs.size()); i++) {
                 ImGui::PushID(i);
                 auto& tab = *tabs[i];
                 const ImGuiTabItemFlags flags = tab.dirty ? ImGuiTabItemFlags_UnsavedDocument : ImGuiTabItemFlags_None;
                 bool tab_open = true;
-                const bool tab_visible = ImGui::BeginTabItem(tab.name, tabs.size() > 1 ? &tab_open : nullptr, flags);
+                // Only show the close button (X) on the currently active tab to prevent accidental closure
+                bool* const p_open = (tabs.size() > 1 && i == active_tab_idx) ? &tab_open : nullptr;
+                const bool tab_visible = ImGui::BeginTabItem(tab.name, p_open, flags);
 
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::MenuItem("Rename")) {
@@ -155,16 +170,17 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                         rename_needs_focus = true;
                     }
                     if (tabs.size() > 1 && ImGui::MenuItem("Close")) {
-                        delete_tab = i;
+                        ImGui::ConfirmDialog("Are you sure you want to close this tab?", confirm_close_tab, reinterpret_cast<void*>(static_cast<intptr_t>(tab.id)));
                     }
                     ImGui::EndPopup();
                 }
 
                 if (!tab_open) {
-                    delete_tab = i;
+                    ImGui::ConfirmDialog("Are you sure you want to close this tab?", confirm_close_tab, reinterpret_cast<void*>(static_cast<intptr_t>(tab.id)));
                 }
 
                 if (tab_visible) {
+                    active_tab_idx = i;
                     if (renaming_tab == i) {
                         ImGui::SetNextItemWidth(-1.0f);
                         if (rename_needs_focus) {
@@ -194,10 +210,6 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                     ImGui::EndTabItem();
                 }
                 ImGui::PopID();
-            }
-
-            if (delete_tab >= 0) {
-                DeleteTab(delete_tab);
             }
 
             ImGui::EndTabBar();

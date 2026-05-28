@@ -21,8 +21,6 @@
 
 namespace {
 
-    constexpr DWORD MIN_TIME_BETWEEN_RETRY = 160; // 10 frames
-
     IDirect3DTexture9** tex_essence = nullptr;
     IDirect3DTexture9** tex_grail = nullptr;
     IDirect3DTexture9** tex_armor = nullptr;
@@ -39,6 +37,7 @@ namespace {
 
     bool quote_pending = false;
     bool trans_pending = false;
+    bool trans_complete = false;
     DWORD quote_pending_time = 0;
     DWORD trans_pending_time = 0;
 
@@ -227,7 +226,11 @@ namespace {
             if ((uint32_t)mat < _countof(price)) {
                 price[(uint32_t)mat] = packet->price;
             }
-
+        } break;
+        case GW::UI::UIMessage::kVendorTransComplete: {
+            const auto current_transaction = GetCurrentTransaction();
+            if (current_transaction && current_transaction->state == Transaction::State::Transacting)
+                trans_complete = true;
         } break;
         }
     }
@@ -399,12 +402,13 @@ void MaterialsWindow::Update(const float)
         trans->state = Transaction::State::Transacting;
     } break;
     case Transaction::State::Transacting: {
-        if (CountItemByMaterialSlot(trans->material) == trans->initial_item_count) {
-            if (TIMER_DIFF(last_transaction) > 3000)
-                Cancel("Timeout waiting for transaction");
+        if (trans_complete && CountItemByMaterialSlot(trans->material) != trans->initial_item_count) {
+            trans_complete = false;
+            Dequeue();
             return;
         }
-        Dequeue();
+        if (TIMER_DIFF(last_transaction) > 3000)
+            Cancel("Timeout waiting for transaction");
         return;
     } break;
     }
@@ -443,7 +447,8 @@ void MaterialsWindow::Initialize()
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kVendorQuote,
         GW::UI::UIMessage::kVendorItems,
-        GW::UI::UIMessage::kVendorWindow
+        GW::UI::UIMessage::kVendorWindow,
+        GW::UI::UIMessage::kVendorTransComplete,
     };
     for (auto message_id : ui_messages) {
         GW::UI::RegisterUIMessageCallback(&PostUIMessage_Entry, message_id, OnPostUIMessage, 0x4000);

@@ -1275,8 +1275,7 @@ void InventoryScanner::Update()
 
             auto available_characters = GW::AccountMgr::GetAvailableChars();
             for (const auto& available_char : *available_characters) {
-                const auto reroll_to_player_current_map = available_char.map_id();
-                if (GWToolbox::ShouldDisableToolbox(reroll_to_player_current_map)) 
+                if (GWToolbox::ShouldDisableToolbox(available_char.map_id()) || available_char.is_pvp()) 
                     continue;
                 if (original_player == available_char.player_name)
                     continue;

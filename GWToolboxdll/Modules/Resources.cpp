@@ -1504,6 +1504,110 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
     return true;
 }
 
+bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* region, const std::filesystem::path& file_path)
+{
+    if (!device) {
+        Log::Warning("SaveBackbufferRectToFile: device is null");
+        return false;
+    }
+
+    // Pick the WIC codec from the extension up front so we fail fast on
+    // unsupported output formats before we copy any pixels.
+    auto ext = file_path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    GUID codec_guid;
+    if (ext == ".png")  codec_guid = GUID_ContainerFormatPng;
+    else if (ext == ".jpg" || ext == ".jpeg") codec_guid = GUID_ContainerFormatJpeg;
+    else if (ext == ".bmp") codec_guid = GUID_ContainerFormatBmp;
+    else {
+        Log::Warning("SaveBackbufferRectToFile: unsupported file format: %s", ext.c_str());
+        return false;
+    }
+
+    IDirect3DSurface9* backbuffer = nullptr;
+    HRESULT hr = device->GetRenderTarget(0, &backbuffer);
+    if (FAILED(hr) || !backbuffer) {
+        Log::Warning("SaveBackbufferRectToFile: GetRenderTarget failed: 0x%X", hr);
+        return false;
+    }
+
+    D3DSURFACE_DESC desc;
+    backbuffer->GetDesc(&desc);
+
+    // GetRenderTargetData requires a SYSTEMMEM destination of identical
+    // dimensions & format. We copy the whole back buffer, then construct a
+    // DirectX::Image that points at just the sub-rect.
+    IDirect3DSurface9* sysmem = nullptr;
+    hr = device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_SYSTEMMEM, &sysmem, nullptr);
+    if (FAILED(hr) || !sysmem) {
+        backbuffer->Release();
+        Log::Warning("SaveBackbufferRectToFile: CreateOffscreenPlainSurface failed: 0x%X", hr);
+        return false;
+    }
+
+    hr = device->GetRenderTargetData(backbuffer, sysmem);
+    backbuffer->Release();
+    if (FAILED(hr)) {
+        sysmem->Release();
+        Log::Warning("SaveBackbufferRectToFile: GetRenderTargetData failed: 0x%X", hr);
+        return false;
+    }
+
+    const DXGI_FORMAT dxgi = ConvertD3D9FormatToDXGI(desc.Format);
+    if (dxgi == DXGI_FORMAT_UNKNOWN) {
+        sysmem->Release();
+        Log::Warning("SaveBackbufferRectToFile: unsupported back buffer format: 0x%X", desc.Format);
+        return false;
+    }
+
+    // Clamp the requested rect to the back buffer; degenerate rects fail out.
+    LONG x = 0, y = 0;
+    LONG w = static_cast<LONG>(desc.Width);
+    LONG h = static_cast<LONG>(desc.Height);
+    if (region) {
+        x = std::max<LONG>(0, region->left);
+        y = std::max<LONG>(0, region->top);
+        w = std::min<LONG>(static_cast<LONG>(desc.Width)  - x, region->right  - region->left);
+        h = std::min<LONG>(static_cast<LONG>(desc.Height) - y, region->bottom - region->top);
+    }
+    if (w <= 0 || h <= 0) {
+        sysmem->Release();
+        Log::Warning("SaveBackbufferRectToFile: degenerate region after clamp (%dx%d)", w, h);
+        return false;
+    }
+
+    D3DLOCKED_RECT locked;
+    hr = sysmem->LockRect(&locked, nullptr, D3DLOCK_READONLY);
+    if (FAILED(hr)) {
+        sysmem->Release();
+        Log::Warning("SaveBackbufferRectToFile: LockRect failed: 0x%X", hr);
+        return false;
+    }
+
+    const size_t bpp = DirectX::BitsPerPixel(dxgi) / 8;
+    uint8_t* base = static_cast<uint8_t*>(locked.pBits) + static_cast<size_t>(y) * locked.Pitch + static_cast<size_t>(x) * bpp;
+
+    DirectX::Image img = {};
+    img.width  = static_cast<size_t>(w);
+    img.height = static_cast<size_t>(h);
+    img.format = dxgi;
+    img.rowPitch   = static_cast<size_t>(locked.Pitch);
+    img.slicePitch = static_cast<size_t>(locked.Pitch) * static_cast<size_t>(h);
+    img.pixels = base;
+
+    const HRESULT save_hr = DirectX::SaveToWICFile(img, DirectX::WIC_FLAGS_NONE, codec_guid, file_path.c_str());
+    sysmem->UnlockRect();
+    sysmem->Release();
+
+    if (FAILED(save_hr)) {
+        Log::Warning("SaveBackbufferRectToFile: SaveToWICFile failed: 0x%X", save_hr);
+        return false;
+    }
+
+    Log::Info("Saved screenshot to %s (%dx%d)", file_path.string().c_str(), (int)w, (int)h);
+    return true;
+}
+
 uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
 {
     if (!cubeTexture) {

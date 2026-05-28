@@ -55,6 +55,24 @@ HotkeyGroup::~HotkeyGroup()
     auto found = hotkey_groups.find(label);
     if (found != hotkey_groups.end() && found->second == this) hotkey_groups.erase(label);
 }
+void HotkeyGroup::Toggle()
+{
+    if (ongoing) {
+        for (auto hk : hotkeys) {
+            if (hk->ongoing) 
+                hk->Toggle();
+        }
+        ongoing = false;
+    }
+    else {
+        for (auto hk : hotkeys) {
+            if (hk->active) 
+                hk->Toggle();
+            ongoing |= hk->ongoing;
+        }
+    }
+
+}
 int HotkeyGroup::Description(char* buf, size_t bufsz)
 {
     return snprintf(buf, bufsz, "Group: %s", *label ? label : "(unnamed)");

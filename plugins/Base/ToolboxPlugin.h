@@ -85,23 +85,11 @@ public:
     // Optional. Prefer using ImGui::GetIO() during update or render, if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
-    // Load settings from folder
-    virtual void LoadSettings(const wchar_t* folder)
-    {
-        if (!HasSettings()) {
-            return;
-        }
-        ini.LoadFile(GetSettingFile(folder));
-    }
+    // This is called by GWToolbox when you need to (re)load any settings. Suitable folder location for settings is given.
+    virtual void LoadSettings(const wchar_t*) {};
 
-    // Save settings from folder
-    virtual void SaveSettings(const wchar_t* folder)
-    {
-        if (!HasSettings()) {
-            return;
-        }
-        PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder)) == SI_OK);
-    }
+    // This is called by GWToolbox when you need to (re)save any settings. Suitable folder location for settings is given.
+    virtual void SaveSettings(const wchar_t*) {};
 
     // Will be drawn in the Settings/Plugins menu. Must use ImGui.
     virtual void DrawSettings() {}
@@ -111,5 +99,4 @@ public:
 
 protected:
     HMODULE toolbox_handle = nullptr;
-    ToolboxIni ini{};
 };

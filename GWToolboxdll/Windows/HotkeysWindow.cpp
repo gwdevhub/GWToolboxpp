@@ -13,6 +13,7 @@
 #include <GWCA/Managers/PlayerMgr.h>
 
 #include <Utils/GuiUtils.h>
+#include <Defines.h>
 #include <Keys.h>
 
 #include <Windows/HotkeysWindow.h>
@@ -23,6 +24,9 @@
 #include <Modules/Resources.h>
 
 namespace {
+    constexpr char hotkey_section_prefix[] = "hotkey-";
+    constexpr auto HotkeysIniFilename = L"Hotkeys.ini";
+
     typedef std::bitset<256> KeysHeldBitset;
 
     std::vector<TBHotkey*> valid_hotkeys;
@@ -42,13 +46,51 @@ namespace {
 
     std::deque<TBHotkey*> pending_hotkeys;
     std::recursive_mutex pending_mutex;
-    void PushPendingHotkey(TBHotkey* hk) {
-        if (auto grp = dynamic_cast<HotkeyGroup*>(hk)) {
-            for (auto c : grp->hotkeys) {
-                if (c->active) PushPendingHotkey(c);
+
+    bool IsHotkeySection(const char* section)
+    {
+        return strncmp(section, hotkey_section_prefix, sizeof(hotkey_section_prefix) - 1) == 0;
+    }
+
+    void DeleteHotkeySections(ToolboxIni* ini)
+    {
+        TNamesDepend sections;
+        ini->GetAllSections(sections);
+        for (const auto& section : sections) {
+            if (IsHotkeySection(section.pItem)) {
+                ini->Delete(section.pItem, nullptr);
             }
-            return;
         }
+    }
+
+    bool MigrateLegacyHotkeys(const ToolboxIni* src, ToolboxIni* dst)
+    {
+        TNamesDepend dst_sections;
+        dst->GetAllSections(dst_sections);
+        for (const auto& s : dst_sections) {
+            if (IsHotkeySection(s.pItem)) return false;
+        }
+        TNamesDepend src_sections;
+        src->GetAllSections(src_sections);
+        bool copied = false;
+        for (const auto& section : src_sections) {
+            if (!IsHotkeySection(section.pItem)) continue;
+            TNamesDepend keys;
+            src->GetAllKeys(section.pItem, keys);
+            for (const auto& key : keys) {
+                TNamesDepend values;
+                src->GetAllValues(section.pItem, key.pItem, values);
+                for (const auto& value : values) {
+                    dst->SetValue(section.pItem, key.pItem, value.pItem);
+                }
+            }
+            copied = true;
+        }
+        if (copied) Log::LogW(L"Migrated hotkeys to %s", dst->location_on_disk.wstring().c_str());
+        return copied;
+    }
+
+    void PushPendingHotkey(TBHotkey* hk) {
         pending_mutex.lock();
         if (std::ranges::find(pending_hotkeys, hk) == pending_hotkeys.end()) {
             pending_hotkeys.push_back(hk);
@@ -453,12 +495,23 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini)
     while (TBHotkey::all_hotkeys.size())
         delete TBHotkey::all_hotkeys[0];
 
+    ToolboxIni hotkeys_ini;
+    const auto hotkeys_ini_path = Resources::GetSettingFile(HotkeysIniFilename);
+    ASSERT(hotkeys_ini.LoadIfExists(hotkeys_ini_path) == SI_OK);
+    hotkeys_ini.location_on_disk = hotkeys_ini_path;
+
+    if (MigrateLegacyHotkeys(ini, &hotkeys_ini)) {
+        ASSERT(Resources::SaveIniToFile(hotkeys_ini.location_on_disk, &hotkeys_ini) == 0);
+        DeleteHotkeySections(ini);
+        ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
+    }
+
     TNamesDepend entries;
-    ini->GetAllSections(entries);
+    hotkeys_ini.GetAllSections(entries);
 
     for (const auto& entry : entries) {
         const char* sec = entry.pItem;
-        TBHotkey::HotkeyFactory(ini, sec);
+        TBHotkey::HotkeyFactory(&hotkeys_ini, sec);
     }
 
     TBHotkey::SortHotkeys();
@@ -472,13 +525,8 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
     ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
     ini->SetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
 
-    // Delete all existing hotkey sections before re-saving.
-    TNamesDepend sections;
-    ini->GetAllSections(sections);
-    for (const auto& s : sections) {
-        if (strncmp(s.pItem, "hotkey-", 7) == 0)
-            ini->Delete(s.pItem, nullptr);
-    }
+    ToolboxIni hotkeys_ini;
+    hotkeys_ini.location_on_disk = Resources::GetSettingFile(HotkeysIniFilename);
 
     // Save all hotkeys as flat sections. Every section gets a sort_order field
     // that determines display order on load. Children also get a group field
@@ -487,8 +535,9 @@ void HotkeysWindow::SaveSettings(ToolboxIni* ini)
     char buf[256];
     for (auto hotkey : TBHotkey::all_hotkeys) {
         snprintf(buf, sizeof(buf), "hotkey-%04d:%s", sec_idx++, hotkey->Name());
-        hotkey->Save(ini, buf);
+        hotkey->Save(&hotkeys_ini, buf);
     }
+    ASSERT(Resources::SaveIniToFile(hotkeys_ini.location_on_disk, &hotkeys_ini) == 0);
 }
 
 bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)

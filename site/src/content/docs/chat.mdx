@@ -1,0 +1,49 @@
+---
+title: "Chat Settings"
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this feature live under <ToolboxPath steps={["Settings", "Chat Settings"]} />.
+
+## Timestamps
+
+- **Show chat messages timestamp** <ToolboxPath steps={["Settings", "Chat Settings", "Show chat messages timestamp"]} /> — Show timestamps in the message history.
+  - **Use 24h** <ToolboxPath steps={["Settings", "Chat Settings", "Use 24h"]} /> — Display timestamps in 24-hour format.
+  - **Show seconds** <ToolboxPath steps={["Settings", "Chat Settings", "Show seconds"]} /> — Include seconds in the timestamp.
+  - **Color** <ToolboxPath steps={["Settings", "Chat Settings", "Color:"]} /> — Customize the timestamp color.
+
+## Chat Bubbles
+
+- **Hide player chat speech bubbles** <ToolboxPath steps={["Settings", "Chat Settings", "Hide player chat speech bubbles"]} /> — Don't show in-game speech bubbles over player characters that send a message in chat.
+- **Hide all friendly speech bubbles** <ToolboxPath steps={["Settings", "Chat Settings", "Hide all friendly speech bubbles"]} /> — Don't show any in-game speech bubbles from friendly entities.
+- **Show NPC speech bubbles in emote channel** <ToolboxPath steps={["Settings", "Chat Settings", "Show NPC speech bubbles in emote channel"]} /> — Speech bubbles from NPCs and heroes appear as emote messages in chat.
+
+## Message Redirection
+
+- **Redirect NPC dialog to emote channel** <ToolboxPath steps={["Settings", "Chat Settings", "Redirect NPC dialog to emote channel"]} /> — Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel.
+- **Redirect outgoing whispers to whisper channel** <ToolboxPath steps={["Settings", "Chat Settings", "Redirect outgoing whispers to whisper channel"]} /> — Whispers you send appear blue like an incoming message, with `->` before the name.
+
+## Link Handling
+
+- **Open web links from templates** <ToolboxPath steps={["Settings", "Chat Settings", "Open web links from templates"]} /> — Clicking a template with a URL as its name opens that URL in your browser.
+- **Automatically change urls into build templates** <ToolboxPath steps={["Settings", "Chat Settings", "Automatically change urls into build templates."]} /> — URLs (starting with `https://` or `http://`) anywhere in your messages are automatically converted to template format.
+
+## Appearance
+
+- **Chat window font size** <ToolboxPath steps={["Settings", "Chat Settings", "Chat window font size"]} /> — Choose from Default, Large, Larger, or Largest.
+- **Chat Colors** <ToolboxPath steps={["Settings", "Chat Settings", "Chat Colors"]} /> — Customize the sender and message color for each chat channel: Local, Guild, Team, Trade, Alliance, Whispers, Emotes, and Other.
+- **Chat Token Colors** <ToolboxPath steps={["Settings", "Chat Settings", "Chat Token Colors"]} /> — Customize the highlight color of text tokens such as item rarities (Common, Uncommon, Rare, etc.) and other labeled text throughout the game.
+
+## Other
+
+- **Clear chat message when hiding the in-game chat window** <ToolboxPath steps={["Settings", "Chat Settings", "Clear chat message when hiding the in-game chat window"]} /> — Clears any typed text when you hide the chat window.
+
+## Chat Commands
+
+- `/afk [message]`: Set your status to Away and optionally set an AFK message
+- `/age2`: Display instance time in chat
+- `/chat [all|guild|team|trade|alliance|whisper]`: Open or switch to the specified chat channel
+
+For a full list of chat commands, see the [Chat Commands](/docs/commands/) page.

@@ -129,33 +129,6 @@ void ToolboxUIPlugin::DrawSettings()
     }
 }
 
-void ToolboxUIPlugin::LoadSettings(const wchar_t* folder)
-{
-    if (!HasSettings()) {
-        return;
-    }
-    ToolboxPlugin::LoadSettings(folder);
-    plugin_visible = ini.GetBoolValue(Name(), VAR_NAME(plugin_visible), plugin_visible);
-    lock_move = ini.GetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
-    lock_size = ini.GetBoolValue(Name(), VAR_NAME(lock_size), lock_size);
-    show_menubutton = ini.GetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
-    show_closebutton = ini.GetBoolValue(Name(), VAR_NAME(show_closebutton), show_closebutton);
-    show_title = ini.GetBoolValue(Name(), VAR_NAME(show_title), show_title);
-}
-
-void ToolboxUIPlugin::SaveSettings(const wchar_t* folder)
-{
-    if (!HasSettings()) {
-        return;
-    }
-    ini.SetBoolValue(Name(), VAR_NAME(plugin_visible), plugin_visible);
-    ini.SetBoolValue(Name(), VAR_NAME(lock_move), lock_move);
-    ini.SetBoolValue(Name(), VAR_NAME(lock_size), lock_size);
-    ini.SetBoolValue(Name(), VAR_NAME(show_menubutton), show_menubutton);
-    ini.SetBoolValue(Name(), VAR_NAME(show_closebutton), show_closebutton);
-    ini.SetBoolValue(Name(), VAR_NAME(show_title), show_title);
-    ToolboxPlugin::SaveSettings(folder);
-}
 
 int ToolboxUIPlugin::GetWinFlags(ImGuiWindowFlags flags) const
 {

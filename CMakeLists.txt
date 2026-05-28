@@ -48,6 +48,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # re-applied at target level AFTER any /Wn flag (which expands to -Wall/-Wextra
     # and re-enables warnings disabled by earlier -Wno-* flags on the same line).
     set(CLANG_WARNING_DISABLES
+        # glaze's exported INTERFACE_COMPILE_OPTIONS include MSVC-only switches
+        # (/Zc:preprocessor, /Zc:lambda, etc.)
+        -Wno-unused-command-line-argument
+
         # Microsoft-specific extensions accepted by MSVC that clang-cl flags
         -Wno-microsoft-cast
         -Wno-microsoft-include

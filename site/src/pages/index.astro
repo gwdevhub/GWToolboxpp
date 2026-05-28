@@ -1,0 +1,171 @@
+---
+import Base from '../layouts/Base.astro';
+import Search from '../components/Search.tsx';
+import { getLatestRelease } from '../lib/release';
+import { navGroups } from '../lib/nav';
+import siteConfig from '../../site.config.json';
+
+const release = await getLatestRelease();
+
+// Feature highlights surfaced on the landing page — short headlines, mostly
+// the same picks the legacy Jekyll index emphasised.
+const featureCards = [
+  {
+    title: 'Windows',
+    href: '/docs/windows/',
+    desc: 'Builds, hotkeys, materials, travel, and more — the docked tool windows that power most workflows.',
+  },
+  {
+    title: 'Widgets',
+    href: '/docs/widgets/',
+    desc: 'Always-on overlays: damage monitor, minimap, instance timers, party and target panels.',
+  },
+  {
+    title: 'Hotkeys',
+    href: '/docs/hotkeys/',
+    desc: 'Bind hundreds of actions to keys or mouse buttons, scoped per profession or per map.',
+  },
+  {
+    title: 'Chat Commands',
+    href: '/docs/commands/',
+    desc: '/show, /hide, /tb, /cam, /pcons and dozens more — drive Toolbox from the chat box.',
+  },
+  {
+    title: 'Pcons',
+    href: '/docs/pcons/',
+    desc: 'Auto-use consumables with smart per-area rules and refill prompts.',
+  },
+  {
+    title: 'Plugins',
+    href: '/docs/plugins/',
+    desc: 'Third-party DLLs that extend Toolbox without rebuilding from source.',
+  },
+];
+---
+
+<Base>
+  <section class="border-b border-(--color-border-glass) flex justify-center">
+    <div class="mx-auto 2xl:max-w-7xl max-w-full px-4 py-16 sm:px-6 md:py-24">
+      <h1 class="flex flex-col items-center text-center font-display text-3xl leading-tight text-(--color-fg) sm:text-5xl md:text-6xl">
+        The all-in-one toolkit for
+        <img
+          src="/brand/guildwars-logo.webp"
+          alt="Guild Wars"
+          width="617"
+          height="155"
+          class="mt-2 block h-auto w-full max-w-[600px]"
+        />
+      </h1>
+      <p class="mt-6 lg:max-w-2xl max-w-full text-lg text-(--color-fg-sub)">
+        GWToolbox++ adds builds, hotkeys, automation, widgets, plugins and quality-of-life
+        fixes — a single drop-in client modification for both veteran and casual players.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a
+          href={release.url}
+          class="inline-flex items-center gap-2 rounded bg-(--color-accent) px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
+        >
+          <svg viewBox="0 0 16 16" class="h-4 w-4 fill-current" aria-hidden="true">
+            <path d="M8 1.5a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.25A.75.75 0 0 1 8 1.5zM3.25 13.5a.75.75 0 0 0 0 1.5h9.5a.75.75 0 0 0 0-1.5h-9.5z" />
+          </svg>
+          Download {release.version}
+        </a>
+        <a
+          href="/docs/faq/"
+          class="inline-flex items-center gap-2 rounded border border-(--color-border-glass) bg-(--color-glass) px-5 py-2.5 text-sm font-semibold text-(--color-fg) transition-colors hover:bg-(--color-glass-hover)"
+        >
+          Read the FAQ
+        </a>
+        <a
+          href={siteConfig.githubUrl}
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-2 rounded px-3 py-2.5 text-sm font-medium text-(--color-fg-sub) transition-colors hover:text-(--color-fg)"
+        >
+          View source →
+        </a>
+      </div>
+      <p class="mt-4 text-xs text-(--color-fg-meta)">
+        Free, open source, MIT licensed. Windows only.
+      </p>
+
+      <div class="mt-10 max-w-full">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-(--color-fg-meta)">
+          Looking for something specific?
+        </p>
+        <Search
+          variant="hero"
+          placeholder="Search the docs — windows, widgets, hotkeys, commands…"
+          client:load
+        />
+        <p class="mt-2 text-xs text-(--color-fg-faint)">
+          Toolbox has hundreds of settings; if you know what you want, search beats browsing. Press <kbd class="rounded border border-(--color-border-glass) bg-(--color-glass) px-1.5 py-0.5 font-mono text-[0.65rem]">/</kbd> on any page to open.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-full 2xl:max-w-7xl px-4 py-16 sm:px-6">
+    <div class="mb-10 flex items-end justify-between gap-4">
+      <div>
+        <h2 class="font-display text-2xl text-(--color-fg) sm:text-3xl">
+          What's inside
+        </h2>
+        <p class="mt-2 text-(--color-fg-sub)">A handful of the most-used features.</p>
+      </div>
+      <a
+        href="/docs/windows/"
+        class="hidden text-sm text-(--color-accent) hover:underline sm:inline"
+      >
+        Browse all docs →
+      </a>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        featureCards.map((card) => (
+          <a
+            href={card.href}
+            class="group rounded-lg border border-(--color-border-glass) bg-(--color-card) p-5 transition-colors hover:border-(--color-accent-deep) hover:bg-(--color-card-hover)"
+          >
+            <h3 class="mb-2 font-display text-lg text-(--color-fg) group-hover:text-(--color-accent)">
+              {card.title}
+            </h3>
+            <p class="text-sm text-(--color-fg-sub) leading-relaxed">{card.desc}</p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-full 2xl:max-w-7xl px-4 pb-20 sm:px-6">
+    <div class="mb-6">
+      <h2 class="font-display text-2xl text-(--color-fg) sm:text-3xl">All features</h2>
+      <p class="mt-2 text-(--color-fg-sub)">
+        Full table of contents — same coverage as the legacy site.
+      </p>
+    </div>
+    <div class="grid gap-x-1 gap-y-6 lg:gap-x-6 grid-cols-2 lg:grid-cols-4">
+      {
+        navGroups.map((group) => (
+          <div>
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-(--color-fg-meta)">
+              {group.label}
+            </h3>
+            <ul class="space-y-1.5 text-sm">
+              {group.items.map((item) => (
+                <li>
+                  <a
+                    href={`/docs/${item.slug}/`}
+                    class="text-(--color-fg-sub) transition-colors hover:text-(--color-accent)"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+</Base>

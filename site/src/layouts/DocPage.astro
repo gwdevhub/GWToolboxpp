@@ -1,0 +1,43 @@
+---
+import Base from './Base.astro';
+import Sidebar from '../components/Sidebar.astro';
+import Search from '../components/Search.tsx';
+import { findInNav } from '../lib/nav';
+
+interface Props {
+  title: string;
+  description?: string;
+  slug: string;
+}
+
+const { title, description, slug } = Astro.props;
+const navInfo = findInNav(slug);
+---
+
+<Base title={title} description={description}>
+  <div class="mx-auto flex max-w-7xl gap-6 px-4 sm:px-6">
+    <Sidebar slug={slug} />
+    <div class="min-w-0 flex-1 py-8">
+      <div class="mb-6 flex items-center justify-between gap-4">
+        <nav class="text-sm text-(--color-fg-meta)" aria-label="Breadcrumb">
+          <a href="/" class="hover:text-(--color-accent)">Home</a>
+          <span class="mx-1.5">/</span>
+          {
+            navInfo ? (
+              <>
+                <span>{navInfo.group}</span>
+                <span class="mx-1.5">/</span>
+              </>
+            ) : null
+          }
+          <span class="text-(--color-fg-sub)">{title}</span>
+        </nav>
+        <Search client:load />
+      </div>
+      <article class="prose prose-invert max-w-full overflow-x-hidden lg:max-w-none" data-pagefind-body>
+        <h1 class="font-display text-3xl text-(--color-fg)">{title}</h1>
+        <slot />
+      </article>
+    </div>
+  </div>
+</Base>

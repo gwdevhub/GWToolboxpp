@@ -1,0 +1,150 @@
+---
+import siteConfig from '../../site.config.json';
+
+interface Props {
+  /** Latest release info; if omitted, we show a "Download" label without version. */
+  release?: { version: string; url: string };
+  /** Path to the current page so we can highlight the active nav link. */
+  pathname?: string;
+}
+
+const { release, pathname = '' } = Astro.props;
+
+const navItems = [
+  { href: '/', label: 'Home' },
+  { href: '/docs/windows/', label: 'Windows' },
+  { href: '/docs/widgets/', label: 'Widgets' },
+  { href: '/docs/plugins/', label: 'Plugins' },
+  { href: '/docs/faq/', label: 'FAQ' },
+  { href: '/docs/history/', label: 'Changelog' },
+];
+
+const isActive = (href: string) =>
+  href === '/' ? pathname === '/' : pathname.startsWith(href);
+---
+
+<header
+  class="sticky top-0 z-40 border-b border-(--color-border-glass) bg-(--color-bg)/80 backdrop-blur-xl"
+>
+  <div class="mx-auto flex h-14 max-w-7xl items-center gap-2 px-4 sm:px-6">
+    <a
+      href="/"
+      class="flex items-center gap-2 font-display text-base font-semibold tracking-wide text-(--color-fg) hover:text-(--color-accent)"
+    >
+      <img
+        src="/favicon.ico"
+        alt=""
+        width="22"
+        height="28"
+        class="h-7 w-auto shrink-0"
+        aria-hidden="true"
+      />
+      <span>{siteConfig.title}</span>
+    </a>
+
+    <nav class="ml-6 hidden items-center gap-1 md:flex">
+      {
+        navItems.map((item) => (
+          <a
+            href={item.href}
+            class:list={[
+              'rounded px-2.5 py-1.5 text-sm font-medium transition-colors',
+              isActive(item.href)
+                ? 'text-(--color-accent) bg-(--color-glass)'
+                : 'text-(--color-fg-sub) hover:text-(--color-fg) hover:bg-(--color-glass)',
+            ]}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="ml-auto flex items-center gap-2">
+      <a
+        href={siteConfig.discordUrl}
+        target="_blank"
+        rel="noopener"
+        class="hidden rounded px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg) sm:inline-flex"
+      >
+        Discord
+      </a>
+      <a
+        href={siteConfig.githubUrl}
+        target="_blank"
+        rel="noopener"
+        class="hidden rounded px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg) lg:inline-flex"
+      >
+        GitHub
+      </a>
+      <details class="feedback group relative">
+        <summary
+          class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded border border-(--color-border-glass) bg-(--color-glass) px-2.5 py-1.5 text-sm text-(--color-fg-sub) transition-colors marker:hidden hover:bg-(--color-glass-hover) hover:text-(--color-fg) [&::-webkit-details-marker]:hidden"
+          aria-label="Submit feedback"
+        >
+          <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 fill-current" aria-hidden="true">
+            <path d="M8 1.5C4.41 1.5 1.5 4.07 1.5 7.25c0 1.42.58 2.72 1.55 3.73L2.3 13.7c-.1.35.25.66.59.52l2.78-1.13c.74.27 1.55.41 2.33.41 3.59 0 6.5-2.57 6.5-5.75S11.59 1.5 8 1.5zm-2.5 6.5a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5zm2.5 0a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5zm2.5 0a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5z" />
+          </svg>
+          <span class="hidden lg:inline">Feedback</span>
+        </summary>
+        <div
+          class="absolute top-[calc(100%+0.25rem)] right-0 z-50 w-56 overflow-hidden rounded-lg border border-(--color-border-glass) bg-(--color-card) shadow-xl shadow-black/40"
+        >
+          <a
+            href={siteConfig.issueUrls.bug}
+            target="_blank"
+            rel="noopener"
+            class="flex items-start gap-3 px-3 py-2.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg)"
+          >
+            <svg viewBox="0 0 16 16" class="mt-0.5 h-4 w-4 shrink-0 fill-current text-(--color-accent)" aria-hidden="true">
+              <path d="M4.72 1.97a.75.75 0 0 1 1.06 0L7 3.19a4 4 0 0 1 2 0l1.22-1.22a.75.75 0 1 1 1.06 1.06l-1.13 1.13A4 4 0 0 1 12 7.5h2.25a.75.75 0 0 1 0 1.5H12v.5c0 .55-.11 1.06-.31 1.52l1.84 1.84a.75.75 0 1 1-1.06 1.06l-1.62-1.62A4 4 0 0 1 8 13.5a4 4 0 0 1-2.85-1.2l-1.62 1.62a.75.75 0 1 1-1.06-1.06l1.84-1.84A4 4 0 0 1 4 9.5V9H1.75a.75.75 0 0 1 0-1.5H4A4 4 0 0 1 4.85 4.16L3.72 3.03a.75.75 0 0 1 0-1.06z" />
+            </svg>
+            <span>
+              <span class="block font-medium text-(--color-fg)">Report a bug</span>
+              <span class="block text-xs text-(--color-fg-meta)">Something isn't working</span>
+            </span>
+          </a>
+          <a
+            href={siteConfig.issueUrls.idea}
+            target="_blank"
+            rel="noopener"
+            class="flex items-start gap-3 border-t border-(--color-border-glass-subtle) px-3 py-2.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg)"
+          >
+            <svg viewBox="0 0 16 16" class="mt-0.5 h-4 w-4 shrink-0 fill-current text-(--color-accent)" aria-hidden="true">
+              <path d="M8 0a5 5 0 0 0-3 9c.4.3.7.8.7 1.4v.6h4.6v-.6c0-.6.3-1.1.7-1.4A5 5 0 0 0 8 0zM6.25 12.5a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5zM7 15a.75.75 0 0 1 0-1.5h2a.75.75 0 0 1 0 1.5H7z" />
+            </svg>
+            <span>
+              <span class="block font-medium text-(--color-fg)">Suggest an idea</span>
+              <span class="block text-xs text-(--color-fg-meta)">Request a feature</span>
+            </span>
+          </a>
+        </div>
+      </details>
+      {
+        release ? (
+          <a
+            href={release.url}
+            class="hidden h-8 lg:inline-flex items-center gap-1.5 rounded bg-(--color-accent) px-3 py-1.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
+          >
+            <svg viewBox="0 0 16 16" class="h-3.5 w-3.5 fill-current" aria-hidden="true">
+              <path d="M8 1.5a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.25A.75.75 0 0 1 8 1.5zM3.25 13.5a.75.75 0 0 0 0 1.5h9.5a.75.75 0 0 0 0-1.5h-9.5z" />
+            </svg>
+            <span class="hidden sm:inline">{release.version}</span>
+            <span class="sm:hidden">Download</span>
+          </a>
+        ) : null
+      }
+    </div>
+  </div>
+</header>
+
+<script>
+  // Close the Feedback <details> dropdown when clicking outside it.
+  // Plain DOM listener — no React needed for a tiny menu.
+  document.addEventListener('click', (event) => {
+    const target = event.target as Element | null;
+    document.querySelectorAll<HTMLDetailsElement>('details.feedback[open]').forEach((d) => {
+      if (target && !d.contains(target)) d.removeAttribute('open');
+    });
+  });
+</script>

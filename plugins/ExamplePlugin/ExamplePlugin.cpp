@@ -18,18 +18,6 @@ DLLAPI ToolboxPlugin* ToolboxPluginInstance()
     return &instance;
 }
 
-void ExamplePlugin::LoadSettings(const wchar_t* folder)
-{
-    ToolboxPlugin::LoadSettings(folder);
-    PLUGIN_LOAD_BOOL(redirect_slash_ee_to_eee);
-}
-
-void ExamplePlugin::SaveSettings(const wchar_t* folder)
-{
-    PLUGIN_SAVE_BOOL(redirect_slash_ee_to_eee);
-    ToolboxPlugin::SaveSettings(folder);
-}
-
 void ExamplePlugin::DrawSettings()
 {
     if (!toolbox_handle) {
