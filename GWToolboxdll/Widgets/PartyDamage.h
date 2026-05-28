@@ -7,6 +7,7 @@
 #include <Widgets/SnapsToPartyWindow.h>
 
 namespace GW {
+    struct AgentLiving;
     namespace Packet {
         namespace StoC {
             struct MapLoaded;
@@ -52,6 +53,8 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
 
     void Update(float delta) override;
+
+    static bool TryGetMaxHp(const GW::AgentLiving* target, uint32_t& max_hp_out);
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;

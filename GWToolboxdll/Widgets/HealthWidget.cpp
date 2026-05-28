@@ -15,7 +15,7 @@
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
-#include <Utils/HealthLogCache.h>
+#include <Widgets/PartyDamage.h>
 #include <Widgets/HealthWidget.h>
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
@@ -247,7 +247,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
                 uint32_t saved_max_hp = 0;
-                if (!HealthLogCache::TryGetMaxHp(target->player_number, saved_max_hp)) {
+                if (!PartyDamage::TryGetMaxHp(target, saved_max_hp)) {
                     saved_max_hp = 0;
                 }
                 const uint32_t display_max_hp = target->max_hp > 0 ? target->max_hp : saved_max_hp;
@@ -262,13 +262,12 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsWindowHovered()) {
                     if (target) {
                         uint32_t saved_max_hp = 0;
-                        HealthLogCache::TryGetMaxHp(target->player_number, saved_max_hp);
-                        const uint32_t display_max_hp = target->max_hp > 0 ? target->max_hp : saved_max_hp;
+                        PartyDamage::TryGetMaxHp(target, saved_max_hp);
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
-                        if (!agent_name_ping.empty() && display_max_hp > 0) {
+                        if (!agent_name_ping.empty()) {
                             const std::string agent_name_str = TextUtils::WStringToString(agent_name_ping);
-                            const auto current_hp = static_cast<int>(target->hp * display_max_hp);
-                            const auto message = std::format("{}'s health is {} of {} ({:.0f}%).", agent_name_str.c_str(), current_hp, display_max_hp, target->hp * 100.f);
+                            const auto current_hp = static_cast<int>(target->hp * target->max_hp);
+                            const auto message = std::format("{}'s health is {} of {} ({:.0f}%).", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', message.c_str());
                         }
                     }
