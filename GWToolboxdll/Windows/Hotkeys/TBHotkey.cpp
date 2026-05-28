@@ -165,7 +165,16 @@ TBHotkey::TBHotkey(const ToolboxIni* ini, const char* section) : ui_id(++cur_ui_
         auto group_label = ini->GetValue(section, VAR_NAME(group), "");
         if (*group_label) {
             if (!hotkey_groups.contains(group_label)) {
-                new HotkeyGroup(group_label);
+                auto* new_group = new HotkeyGroup(group_label);
+                // No HotkeyGroup section in the INI (legacy format). Infer sort order
+                // from the section file index (e.g. "hotkey-0007:SendChat" -> 7) so that
+                // groups are ordered by when their first child appears in the file.
+                const char* num_start = section + 7; // skip "hotkey-"
+                char* num_end = nullptr;
+                const auto sec_idx = strtoul(num_start, &num_end, 10);
+                if (num_end && *num_end == ':') {
+                    new_group->sort_order = static_cast<size_t>(sec_idx);
+                }
             }
             ASSERT(hotkey_groups.contains(group_label));
             SetGroup(hotkey_groups[group_label]);
