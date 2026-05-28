@@ -225,11 +225,21 @@ void ToolboxIni::LoadBuffer(std::string_view buf) {
 }
 
 SI_Error ToolboxIni::SaveFile(const std::filesystem::path& path, bool addUtf8BOM) const {
+    // Collect sections sorted alphabetically for deterministic output.
+    // This mirrors the old CSimpleIni behaviour (which used std::multimap).
+    using SecRef = std::pair<const char*, const FastIniSection*>;
+    std::vector<SecRef> secOrder;
+    secOrder.reserve(m_sections.size());
+    for (const auto& [name, sec] : m_sections)
+        secOrder.push_back({name.c_str(), &sec});
+    std::sort(secOrder.begin(), secOrder.end(),
+              [](const SecRef& a, const SecRef& b) { return std::strcmp(a.first, b.first) < 0; });
+
     // Pre-calculate total size to avoid reallocations.
     size_t total = addUtf8BOM ? 3 : 0;
-    for (auto& [secName, sec] : m_sections) {
-        total += 1 + secName.size() + 2; // '[' + name + "]\n"
-        for (auto& [k, vec] : sec.keys)
+    for (const auto& [sn, sec] : secOrder) {
+        total += 1 + std::strlen(sn) + 2; // '[' + name + "]\n"
+        for (auto& [k, vec] : sec->keys)
             for (auto& e : vec)
                 total += k.size() + 1 + e.raw.size() + 1; // key=value\n
         total += 1; // blank line between sections
@@ -244,9 +254,9 @@ SI_Error ToolboxIni::SaveFile(const std::filesystem::path& path, bool addUtf8BOM
         buf += '\xbf';
     }
 
-    for (auto& [secName, sec] : m_sections) {
-        buf += '['; buf += secName; buf += "]\n";
-        for (auto& [k, vec] : sec.keys)
+    for (const auto& [sn, sec] : secOrder) {
+        buf += '['; buf += sn; buf += "]\n";
+        for (auto& [k, vec] : sec->keys)
             for (auto& e : vec) {
                 buf += k; buf += '='; buf += e.raw; buf += '\n';
             }
@@ -279,6 +289,8 @@ void ToolboxIni::rebuildSectionCache() const {
     m_sectionNameCache.reserve(m_sections.size());
     for (const auto& [name, _] : m_sections)
         m_sectionNameCache.push_back(name.c_str());
+    std::sort(m_sectionNameCache.begin(), m_sectionNameCache.end(),
+              [](const char* a, const char* b) { return std::strcmp(a, b) < 0; });
     m_sectionCacheDirty = false;
 }
 
