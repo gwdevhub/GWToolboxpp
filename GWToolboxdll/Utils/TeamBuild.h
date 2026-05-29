@@ -107,6 +107,7 @@ struct TeamBuild {
     void Send(bool one_by_one = false) const;
     void Load() const;
     void Copy() const;
+    TeamBuild Duplicate();
 
     // Draw tooltip content showing each build's skill bar, or a red "No Build Defined"
     // placeholder when the build code is absent or invalid.

@@ -45,6 +45,48 @@ namespace {
 
     ToolboxIni* inifile = nullptr;
 
+    // ----------------------------------------------------------------
+    // Hero build group ordering
+    // ----------------------------------------------------------------
+
+    struct HerobuildGroup {
+        std::string name{};
+        size_t sort_order = SIZE_MAX;
+    };
+
+    std::unordered_map<std::string, HerobuildGroup> hero_build_groups;
+
+    size_t GetGroupSortOrder(const std::string& name)
+    {
+        if (name.empty()) return SIZE_MAX;
+        const auto it = hero_build_groups.find(name);
+        return it != hero_build_groups.end() ? it->second.sort_order : SIZE_MAX;
+    }
+
+    // Creates the group if it doesn't exist, assigning a provisional sort_order
+    // equal to the current group count (so first-seen order is preserved).
+    // Returns the group (existing or newly created).
+    HerobuildGroup& UpsertGroup(const std::string& name)
+    {
+        if (!hero_build_groups.contains(name)) {
+            HerobuildGroup& grp = hero_build_groups[name];
+            grp.name = name;
+            grp.sort_order = hero_build_groups.size() - 1;
+            return grp;
+        }
+        return hero_build_groups[name];
+    }
+
+    void SortTeambuilds(std::vector<TeamBuild>& teambuilds)
+    {
+        std::stable_sort(teambuilds.begin(), teambuilds.end(),
+            [](const TeamBuild& a, const TeamBuild& b) {
+                return GetGroupSortOrder(a.group) < GetGroupSortOrder(b.group);
+            });
+    }
+
+    // ----------------------------------------------------------------
+
     // GW file 0x268f6: 2x2 sprite sheet (tick/cross overlays)
     // Bottom-left sprite (col 0, row 1) = semi-transparent cross = "disabled" overlay
     IDirect3DTexture9** skill_toggle_sprite = nullptr;
@@ -137,12 +179,35 @@ namespace {
 
         auto tbuild = std::make_shared<TeamBuild>(TextUtils::WStringToString(packet->label), ui_id);
         if (!TeamBuildEncoder::EncodedToTeamBuild(packet->url, *tbuild)) return;
-        tbuild->has_hero_slots = std::ranges::any_of(tbuild->builds, [](const Build& b) {
-            return b.hero_id != GW::Constants::HeroID::NoHero;
-        });
+
         status->blocked = true;
         tbuild->edit_open = tbuild->focus_next_frame = true;
         detached_pool.push_back(std::move(tbuild));
+    }
+
+    TeamBuild FromCurrentTeam() {
+        TeamBuild tb(std::format("%s's Teambuild, {}", TextUtils::WStringToString(GW::AccountMgr::GetCurrentPlayerName()),TextUtils::GetFormattedDateTime()));
+        tb.has_hero_slots = true;
+        tb.edit_open = true;
+        GW::SkillbarMgr::SkillTemplate skill_template;
+        for (auto i = 0u; i < 8; i++) {
+            Build build;
+            if (GW::SkillbarMgr::GetSkillTemplate(GW::PartyMgr::GetPartyMemberAgentId(i), skill_template)) {
+                char buf[64]{};
+                if (GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, _countof(buf))) {
+                    const auto party_info = GW::PartyMgr::GetPartyInfo();
+                    const auto cur_hero_id = i > 0 && party_info && party_info->heroes.size() >= i ? party_info->heroes[i - 1].hero_id : HeroID::NoHero;
+                    const GW::HeroFlag* flag = cur_hero_id != HeroID::NoHero ? HeroBuildsWindow::GetHeroFlagInfo(cur_hero_id) : nullptr;
+                    build = Build("", buf, cur_hero_id, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
+                    build.name = build.GetFallbackBuildName();
+                }
+            }
+            tb.builds.push_back(std::move(build));
+        }
+        tb.has_hero_slots = std::ranges::any_of(tb.builds, [](const Build& b) {
+            return b.hero_id != GW::Constants::HeroID::NoHero;
+        });
+        return tb;
     }
 
 } // namespace
@@ -211,6 +276,7 @@ void HeroBuildsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     teambuilds.clear();
+    hero_build_groups.clear();
     detached_pool.clear();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnOpenTemplate_Entry);
@@ -249,21 +315,47 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 filtered.push_back(&tbuild);
             }
 
-            // Build ordered group list
-            std::vector<std::string> group_order;
+            bool vector_invalidated = false;
+
+            // Group builds by name
             std::unordered_map<std::string, std::vector<TeamBuild*>> by_group;
             for (TeamBuild* tbuild : filtered) {
-                const std::string g(tbuild->group);
-                if (!by_group.contains(g)) {
-                    by_group[g] = {};
-                    group_order.push_back(g);
+                by_group[std::string(tbuild->group)].push_back(tbuild);
+            }
+
+            // Auto-register groups that were typed into the "Group" field but have
+            // not yet been written to file (and so have no herobuildgroup entry).
+            for (const auto& [gname, _] : by_group) {
+                if (!gname.empty() && !hero_build_groups.contains(gname)) {
+                    UpsertGroup(gname);
                 }
-                by_group[g].push_back(tbuild);
+            }
+
+
+
+            // Order named groups by sort_order; ungrouped builds appear last.
+            std::vector<std::string> group_order;
+            {
+                std::vector<const HerobuildGroup*> sorted_grps;
+                for (const auto& [name, grp] : hero_build_groups) {
+                    if (by_group.contains(name)) {
+                        sorted_grps.push_back(&grp);
+                    }
+                }
+                std::ranges::sort(sorted_grps, [](const HerobuildGroup* a, const HerobuildGroup* b) {
+                    return a->sort_order < b->sort_order;
+                });
+                for (const auto* grp : sorted_grps) {
+                    group_order.push_back(grp->name);
+                }
+            }
+            if (by_group.contains("")) {
+                group_order.push_back("");
             }
 
             auto draw_teambuild_row = [&](TeamBuild& tbuild) {
                 ImGui::PushID(tbuild.ui_id.c_str());
-                ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
                 if (ImGui::Button(tbuild.name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width, 0))) {
                     if (one_teambuild_at_a_time && !tbuild.edit_open) {
                         for (auto& tb : teambuilds) {
@@ -277,7 +369,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                         tbuild.DrawTooltip();
                     });
                 }
-                ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
                 ImGui::SameLine(0, item_spacing);
                 const bool ctrl_held = ImGui::GetIO().KeyCtrl;
                 const bool send_disabled = ctrl_held && tbuild.ChatCodeTooLong();
@@ -299,10 +391,15 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                         ImGui::SetTooltip(ctrl_held ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
                     }
                 }
+
+
+                ImGui::PopStyleVar(2);
                 ImGui::PopID();
+                return vector_invalidated;
             };
 
-            for (const auto& group_name : group_order) {
+            for (size_t gi = 0; gi < group_order.size() && !vector_invalidated; gi++) {
+                const auto& group_name = group_order[gi];
                 auto& group_builds = by_group[group_name];
                 if (group_name.empty()) {
                     for (TeamBuild* tbuild : group_builds) {
@@ -311,7 +408,48 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
                 else {
                     ImGui::PushID(group_name.c_str());
-                    const bool open = ImGui::CollapsingHeader(group_name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+
+                    // A named group is "last" when no further named group follows it.
+                    const bool is_first = (gi == 0);
+                    const bool is_last = (gi + 1 >= group_order.size() || group_order[gi + 1].empty());
+
+                    constexpr auto header_flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap;
+                    const float btn_y = ImGui::GetCursorPosY();
+                    const bool open = ImGui::CollapsingHeader(group_name.c_str(), header_flags);
+
+                    // Overlay ↑/↓ buttons on the right side of the header row.
+                    {
+                        const float btn_sz = ImGui::GetFrameHeight();
+                        const float spacing = ImGui::GetStyle().ItemSpacing.x;
+                        
+                        float btn_x = ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX();
+                        
+
+                        if (!is_last) {
+                            btn_x -= btn_sz;
+                            ImGui::SetCursorPos({btn_x, btn_y});
+                            if (ImGui::Button(ICON_FA_ARROW_DOWN "##gd", ImVec2(btn_sz, btn_sz))) {
+                                std::swap(hero_build_groups[group_name].sort_order,
+                                          hero_build_groups[group_order[gi + 1]].sort_order);
+                                SortTeambuilds(teambuilds);
+                                builds_changed = true;
+                            }
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move group down");
+                            btn_x -= spacing;
+                        }
+                        if (!is_first) {
+                            btn_x -= btn_sz;
+                            ImGui::SetCursorPos({btn_x, btn_y});
+                            if (ImGui::Button(ICON_FA_ARROW_UP "##gu", ImVec2(btn_sz, btn_sz))) {
+                                std::swap(hero_build_groups[group_name].sort_order,
+                                          hero_build_groups[group_order[gi - 1]].sort_order);
+                                SortTeambuilds(teambuilds);
+                                builds_changed = true;
+                            }
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move group up");
+                        }
+                    }
+
                     if (open) {
                         ImGui::Indent();
                         for (TeamBuild* tbuild : group_builds) {
@@ -323,46 +461,12 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
             }
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                TeamBuild tb(std::format("My New Hero Teambuild, {}", TextUtils::GetFormattedDateTime()));
-                tb.has_hero_slots = true;
-                tb.edit_open = true;
-                GW::SkillbarMgr::SkillTemplate skill_template;
-                for (auto i = 0u; i < 8; i++) {
-                    Build build;
-                    if (GW::SkillbarMgr::GetSkillTemplate(GW::PartyMgr::GetPartyMemberAgentId(i), skill_template)) {
-                        char buf[64]{};
-                        if (GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, _countof(buf))) {
-                            const auto party_info = GW::PartyMgr::GetPartyInfo();
-                            const auto cur_hero_id = i > 0 && party_info && party_info->heroes.size() >= i ? party_info->heroes[i - 1].hero_id : HeroID::NoHero;
-                            const GW::HeroFlag* flag = cur_hero_id != HeroID::NoHero ? GetHeroFlagInfo(cur_hero_id) : nullptr;
-                            build = Build("", buf, cur_hero_id, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
-                        }
-                    }
-                    tb.builds.push_back(std::move(build));
-                }
-
+                TeamBuild tb = FromCurrentTeam();
+                tb.has_hero_slots = tb.edit_open = true;
                 builds_changed = true;
                 teambuilds.push_back(std::move(tb));
             }
-            /* Code for copying a teambuild */
-            std::vector<const char*> names(teambuilds.size(), "\0");
-            std::ranges::transform(teambuilds, names.begin(), [](const TeamBuild& tb) {
-                return tb.name.c_str();
-            });
-            if (const auto num_elements = names.size()) {
-                static int selected_teambuild = 0;
-                selected_teambuild = std::clamp(selected_teambuild, 0, static_cast<int>(names.size()) - 1);
-                ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-                ImGui::Combo("###teamBuildCombo", &selected_teambuild, names.data(), num_elements);
-                ImGui::PopItemWidth();
-                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                if (ImGui::Button("Copy##1", ImVec2(60.0f, 0))) {
-                    TeamBuild new_tb = teambuilds[selected_teambuild];
-                    new_tb.name += " (Copy)";
-                    builds_changed = true;
-                    teambuilds.push_back(std::move(new_tb));
-                }
-            }
+
         }
         ImGui::End();
     }
@@ -576,21 +680,39 @@ void HeroBuildsWindow::SaveSettings(ToolboxIni* ini)
 
 void HeroBuildsWindow::LoadFromFile()
 {
-    // clear builds from toolbox
     teambuilds.clear();
+    hero_build_groups.clear();
 
     inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
 
-    // then load
     TNamesDepend entries;
     inifile->GetAllSections(entries);
     for (const auto& entry : entries) {
         const char* section = entry.pItem;
 
+        // herobuildgroup sections carry sort_order metadata for named groups.
+        // They may appear before or after the builds that reference them.
+        if (strncmp(section, "herobuildgroup", 14) == 0) {
+            const char* name = inifile->GetValue(section, "name", "");
+            if (!*name) continue;
+            auto& grp = hero_build_groups[name];
+            grp.name = name;
+            grp.sort_order = static_cast<size_t>(inifile->GetLongValue(section, "sort_order", static_cast<long>(grp.sort_order)));
+            continue;
+        }
+
+        if (strncmp(section, "builds", 6) != 0) continue;
+
         TeamBuild tb(inifile->GetValue(section, "buildname", ""));
         tb.has_hero_slots = true;
         tb.mode = inifile->GetLongValue(section, "mode", false);
         tb.group = inifile->GetValue(section, "group", "");
+
+        // Create the group with a provisional sort_order if it hasn't been seen yet.
+        // An explicit herobuildgroup section (processed above or below) will overwrite it.
+        if (!tb.group.empty()) {
+            UpsertGroup(tb.group);
+        }
 
         for (auto i = 0; i < 8; i++) {
             constexpr size_t buffer_size = 16;
@@ -630,6 +752,10 @@ void HeroBuildsWindow::LoadFromFile()
 
         teambuilds.push_back(std::move(tb));
     }
+
+    // Sort so that builds belonging to the same group are contiguous and groups
+    // appear in ascending sort_order. Relative order within each group is preserved.
+    SortTeambuilds(teambuilds);
 
     builds_changed = false;
 }
@@ -672,6 +798,29 @@ void HeroBuildsWindow::SaveToFile() const
                 inifile->SetLongValue(section, behaviorkey, build.behavior);
                 inifile->SetLongValue(section, dskillskey, build.disabled_skills);
             }
+        }
+
+        // Collect groups that are still referenced by at least one build.
+        std::unordered_set<std::string> used_groups;
+        for (const auto& tb : teambuilds) {
+            if (!tb.group.empty()) used_groups.insert(tb.group);
+        }
+
+        // Build a sorted list of used groups; write with normalized 0-based sort_order.
+        std::vector<std::pair<std::string, size_t>> sorted_groups;
+        for (const auto& [name, grp] : hero_build_groups) {
+            if (used_groups.contains(name)) {
+                sorted_groups.push_back({name, grp.sort_order});
+            }
+        }
+        std::ranges::sort(sorted_groups, [](const auto& a, const auto& b) {
+            return a.second < b.second;
+        });
+        for (size_t gi = 0; gi < sorted_groups.size(); gi++) {
+            char grp_section[32];
+            snprintf(grp_section, sizeof(grp_section), "herobuildgroup%03zu", gi);
+            inifile->SetValue(grp_section, "name", sorted_groups[gi].first.c_str());
+            inifile->SetLongValue(grp_section, "sort_order", static_cast<long>(gi));
         }
 
         ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);

@@ -611,6 +611,9 @@ namespace TeamBuildEncoder {
             out.builds.push_back(std::move(build));
         }
         if (br.ok) out.ui_id = TextUtils::WStringToString(encoded);
+        out.has_hero_slots = std::ranges::any_of(out.builds, [](const Build& b) {
+            return b.hero_id != GW::Constants::HeroID::NoHero;
+        });
         return br.ok;
     }
 
