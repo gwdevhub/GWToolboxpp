@@ -7,7 +7,6 @@
 #include <Widgets/SnapsToPartyWindow.h>
 
 namespace GW {
-    struct AgentLiving;
     namespace Packet {
         namespace StoC {
             struct MapLoaded;
