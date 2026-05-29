@@ -86,6 +86,13 @@ protected:
     std::string snapped_frame_label;
     std::string mobile_snapped_frame_label;
 
+    // Relative offset to the snapped GW frame's top-left corner (screen coords = frame_pos + snap_offset)
+    float snap_offset[2] = {0.f, 0.f};
+    float mobile_snap_offset[2] = {0.f, 0.f};
+    // Set true when snap label changes; cleared once frame position is known and snap_offset is initialized
+    bool snap_offset_needs_init = false;
+    bool mobile_snap_offset_needs_init = false;
+
     // Stored positions for each mode (used when switching modes)
     bool has_normal_layout = false;
     float normal_pos[2] = {};

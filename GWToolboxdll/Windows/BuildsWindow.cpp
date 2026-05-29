@@ -435,7 +435,8 @@ namespace {
             }
             const char* section = entry.pItem;
             const int count = inifile->GetLongValue(section, "count", 12);
-            TeamBuild tbuild(inifile->GetValue(section, "buildname", ""));
+            const char* saved_ui_id = inifile->GetValue(section, "uiid", "");
+            TeamBuild tbuild(inifile->GetValue(section, "buildname", ""), saved_ui_id);
             tbuild.has_hero_slots = false;
             tbuild.show_numbers = inifile->GetBoolValue(section, "showNumbers", true);
             char key[16];
@@ -467,6 +468,12 @@ namespace {
             std::ranges::sort(teambuilds, [](const TeamBuild& a, const TeamBuild& b) {
                 return _stricmp(a.name.c_str(), b.name.c_str()) < 0;
             });
+        }
+        // Advance the shared counter past all restored IDs so new builds don't collide.
+        for (const auto& tb : teambuilds) {
+            uint32_t numeric_id = 0;
+            if (std::from_chars(tb.ui_id.data(), tb.ui_id.data() + tb.ui_id.size(), numeric_id).ec == std::errc{})
+                TeamBuild::s_cur_ui_id = std::max(TeamBuild::s_cur_ui_id, numeric_id);
         }
         builds_changed = false;
         LoadFromBuildsFolder();
@@ -625,6 +632,7 @@ namespace {
             char section[16];
             snprintf(section, 16, "builds%03d", i);
             inifile->SetValue(section, "buildname", tbuild.name.c_str());
+            inifile->SetValue(section, "uiid", tbuild.ui_id.c_str());
             inifile->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
             inifile->SetLongValue(section, "count", tbuild.builds.size());
             for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
