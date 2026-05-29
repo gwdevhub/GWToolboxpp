@@ -20,90 +20,6 @@
 #include <Utils/ToolboxUtils.h>
 
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
-constexpr const char* IniSection = "health";
-constexpr const char* HealthLogHardPrefix = "hard_";
-constexpr const char* HealthLogNormalPrefix = "normal_";
-
-static uint64_t MakeHealthLogKey(uint32_t player_number, bool hard_mode)
-{
-    return (static_cast<uint64_t>(player_number) << 1) | static_cast<uint64_t>(hard_mode ? 1 : 0);
-}
-
-static bool ParseHealthLogKey(const char* key, uint32_t& player_number, bool& hard_mode, bool& legacy)
-{
-    if (!key || *key == '\0') {
-        return false;
-    }
-    legacy = false;
-    const size_t hard_len = strlen(HealthLogHardPrefix);
-    const size_t normal_len = strlen(HealthLogNormalPrefix);
-    if (strncmp(key, HealthLogHardPrefix, hard_len) == 0) {
-        hard_mode = true;
-        return TextUtils::ParseUInt(key + hard_len, &player_number) && player_number > 0;
-    }
-    if (strncmp(key, HealthLogNormalPrefix, normal_len) == 0) {
-        hard_mode = false;
-        return TextUtils::ParseUInt(key + normal_len, &player_number) && player_number > 0;
-    }
-    legacy = true;
-    hard_mode = false;
-    return TextUtils::ParseUInt(key, &player_number) && player_number > 0;
-}
-
-static std::string MakeHealthLogKeyName(uint32_t player_number, bool hard_mode)
-{
-    std::string result = hard_mode ? HealthLogHardPrefix : HealthLogNormalPrefix;
-    result += std::to_string(player_number);
-    return result;
-}
-
-static bool IsCurrentHardMode()
-{
-    return GW::PartyMgr::GetIsPartyInHardMode();
-}
-
-static std::unordered_map<uint64_t, uint32_t> healthlog_max_hp;
-static std::unordered_map<uint32_t, uint32_t> healthlog_max_hp_legacy;
-bool healthlog_loaded = false;
-
-void LoadHealthLogCache()
-{
-    if (healthlog_loaded) {
-        return;
-    }
-    healthlog_loaded = true;
-
-    const auto path = Resources::GetSettingFile(INI_FILENAME);
-    if (path.empty()) {
-        return;
-    }
-
-    ToolboxIni healthlog_ini(false, false, false);
-    healthlog_ini.LoadIfExists(path);
-
-    healthlog_max_hp.clear();
-    healthlog_max_hp_legacy.clear();
-    TNamesDepend keys;
-    healthlog_ini.GetAllKeys(IniSection, keys);
-
-    for (const auto& key : keys) {
-        uint32_t player_number = 0;
-        bool hard_mode = false;
-        bool legacy = false;
-        if (!ParseHealthLogKey(key.pItem, player_number, hard_mode, legacy) || player_number == 0) {
-            continue;
-        }
-        const long hp = healthlog_ini.GetLongValue(IniSection, key.pItem, 0);
-        if (hp <= 0) {
-            continue;
-        }
-        if (legacy) {
-            healthlog_max_hp_legacy[player_number] = static_cast<uint32_t>(hp);
-        } else {
-            healthlog_max_hp[MakeHealthLogKey(player_number, hard_mode)] = static_cast<uint32_t>(hp);
-        }
-    }
-}
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -114,8 +30,12 @@ namespace {
     uint32_t total = 0;
     uint32_t total_healing = 0;
 
-    std::map<uint64_t, uint32_t> hp_map{};
-
+    std::map<DWORD, DWORD> hp_map_nm{};
+    std::map<DWORD, DWORD> hp_map_hm{};
+    const std::pair<const char*, std::map<DWORD, DWORD>*> section_maps[] = {
+        {"health_nm", &hp_map_nm},
+        {"health_hm", &hp_map_hm}
+    };
 
     // main routine variables
     bool in_explorable = false;
@@ -452,14 +372,13 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
     }
 
     long lvalue;
-    const bool hard_mode = IsCurrentHardMode();
-    const uint64_t health_key = MakeHealthLogKey(target->player_number, hard_mode);
+    auto& hp_map = GW::PartyMgr::GetIsPartyInHardMode() ? hp_map_hm : hp_map_nm;
     if (target->max_hp > 0 && target->max_hp < 100000) {
         lvalue = std::lround(std::abs(packet->value) * target->max_hp);
-        hp_map[health_key] = target->max_hp;
+        hp_map[target->player_number] = target->max_hp;
     }
     else {
-        const auto it = hp_map.find(health_key);
+        const auto it = hp_map.find(target->player_number);
         if (it == hp_map.end()) {
             // max hp not found, approximate with hp/lvl formula
             lvalue = std::lround(std::abs(packet->value) * (target->level * 20 + 100));
@@ -580,6 +499,12 @@ void PartyDamage::Terminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     party_names_by_index.clear();
+
+    if (inifile) {
+        inifile->Reset();
+        delete inifile;
+        inifile = nullptr;
+    }
 }
 
 void PartyDamage::Update(const float)
@@ -862,15 +787,19 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_healing);
 
 
-    LoadHealthLogCache();
-    hp_map.clear();
-    for (const auto& [combined, hp] : healthlog_max_hp) {
-        hp_map[combined] = hp;
+    if (inifile == nullptr) {
+        inifile = new ToolboxIni(false, false, false);
     }
-    for (const auto& [player_number, hp] : healthlog_max_hp_legacy) {
-        const uint64_t legacy_key = MakeHealthLogKey(player_number, false);
-        if (hp_map.find(legacy_key) == hp_map.end()) {
-            hp_map[legacy_key] = hp;
+    inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
+    for (const auto& [section, map] : section_maps) {
+        TNamesDepend keys;
+        inifile->GetAllKeys(section, keys);
+        for (const auto& key : keys) {
+            uint32_t player_number = 0;
+            TextUtils::ParseUInt(key.pItem, &player_number);
+            const long hp = inifile->GetLongValue(section, key.pItem, 0);
+            if (hp > 0)
+                (*map)[player_number] = static_cast<DWORD>(hp);
         }
     }
 }
@@ -893,62 +822,21 @@ void PartyDamage::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_damage);
     SAVE_BOOL(show_healing);
 
-    const auto path = Resources::GetSettingFile(INI_FILENAME);
-    ToolboxIni healthlog_ini(false, false, false);
-    healthlog_ini.LoadIfExists(path);
 
-    const bool hard_mode = IsCurrentHardMode();
-    TNamesDepend keys;
-    healthlog_ini.GetAllKeys(IniSection, keys);
-    for (const auto& key : keys) {
-        uint32_t player_number = 0;
-        bool key_hard_mode = false;
-        bool legacy = false;
-        if (!ParseHealthLogKey(key.pItem, player_number, key_hard_mode, legacy) || player_number == 0) {
-            continue;
-        }
-        if ((!legacy && key_hard_mode == hard_mode) || (legacy && !hard_mode)) {
-            healthlog_ini.Delete(IniSection, key.pItem, false);
+    for (const auto& [section, map] : section_maps) {
+        for (const auto& [player_number, hp] : *map) {
+            const std::string key = std::to_string(player_number);
+            inifile->SetLongValue(section, key.c_str(), hp, nullptr, false, true);
         }
     }
-
-    for (const auto& [combined, hp] : hp_map) {
-        const bool key_hard = static_cast<bool>(combined & 1);
-        const uint32_t player_number = static_cast<uint32_t>(combined >> 1);
-        const auto key_name = MakeHealthLogKeyName(player_number, key_hard);
-        healthlog_ini.SetLongValue(IniSection, key_name.c_str(), hp, nullptr, false, true);
-    }
-    ASSERT(healthlog_ini.SaveFile(path) == SI_OK);
+    ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME)) == SI_OK);
 }
 
-bool PartyDamage::TryGetMaxHp(const GW::AgentLiving* target, uint32_t& max_hp_out)
+DWORD PartyDamage::GetMaxHp(DWORD player_number)
 {
-    if (!target || target->GetIsSpawned()) {
-        return false;
-    }
-
-    LoadHealthLogCache();
-    const bool hard_mode = IsCurrentHardMode();
-    const uint64_t health_key = MakeHealthLogKey(target->player_number, hard_mode);
-    const auto it = hp_map.find(health_key);
-    if (it != hp_map.end()) {
-        max_hp_out = it->second;
-        return true;
-    }
-
-    const auto mode_it = healthlog_max_hp.find(health_key);
-    if (mode_it != healthlog_max_hp.end()) {
-        max_hp_out = mode_it->second;
-        return true;
-    }
-    if (!hard_mode) {
-        const auto legacy_it = healthlog_max_hp_legacy.find(target->player_number);
-        if (legacy_it != healthlog_max_hp_legacy.end()) {
-            max_hp_out = legacy_it->second;
-            return true;
-        }
-    }
-    return false;
+    const auto& map = GW::PartyMgr::GetIsPartyInHardMode() ? hp_map_hm : hp_map_nm;
+    const auto it = map.find(player_number);
+    return it != map.end() ? it->second : 0;
 }
 
 void PartyDamage::DrawSettingsInternal()

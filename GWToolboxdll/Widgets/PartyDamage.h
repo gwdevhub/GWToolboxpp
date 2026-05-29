@@ -54,7 +54,7 @@ public:
 
     void Update(float delta) override;
 
-    static bool TryGetMaxHp(const GW::AgentLiving* target, uint32_t& max_hp_out);
+    static DWORD GetMaxHp(DWORD player_number);
 
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
