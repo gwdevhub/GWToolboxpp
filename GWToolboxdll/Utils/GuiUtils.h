@@ -37,14 +37,24 @@ namespace GuiUtils {
     // Reposition a rect within its container to make sure it isn't overflowing it.
     ImVec4& ClampRect(ImVec4& rect, const ImVec4& viewport);
 
+    // Takes a wstring and translates into a string of hex values, separated by spaces.
+    // Lossless: handles all wchar_t values including lone Unicode surrogates present in GW encoded strings.
+    bool ArrayToIni(const std::wstring& in, std::string* out);
+    bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
+    size_t IniToArray(const std::string& in, std::wstring& out);
+
     template <map_type T>
     void MapToIni(ToolboxIni* ini, const char* section, const char* name, const T& map)
     {
-        // Glaze has no wchar_t serializer; stage wstring keys through UTF-8.
+        // Glaze has no wchar_t serializer; stage wstring keys through hex encoding.
+        // WStringToString is not safe here: GW encoded strings (e.g. item name_enc) can contain
+        // lone Unicode surrogates that WideCharToMultiByte rejects on Vista+, causing a crash.
         if constexpr (map_has_wstring_key<T>) {
             std::map<std::string, typename T::mapped_type> staged;
             for (const auto& [k, v] : map) {
-                staged.emplace(TextUtils::WStringToString(k), v);
+                std::string hex_key;
+                ArrayToIni(k, &hex_key);
+                staged.emplace(std::move(hex_key), v);
             }
             const auto map_str = glz::write_json(staged).value_or(std::string{});
             ini->SetValue(section, name, map_str.c_str());
@@ -83,7 +93,12 @@ namespace GuiUtils {
         T out;
         for (auto& [k, v] : staged) {
             if constexpr (std::is_same_v<key_type, std::wstring>) {
-                out.emplace(TextUtils::StringToWString(k), std::move(v));
+                std::wstring wkey;
+                if (IniToArray(k, wkey) == 0) {
+                    // Backward compat: key was written in old UTF-8 format before hex encoding was introduced
+                    wkey = TextUtils::StringToWString(k);
+                }
+                out.emplace(std::move(wkey), std::move(v));
             } else {
                 out.emplace(std::move(k), std::move(v));
             }
@@ -99,11 +114,6 @@ namespace GuiUtils {
         }
         return IniToMap<T>(ini, section, name);
     }
-
-    // Takes a wstring and translates into a string of hex values, separated by spaces
-    bool ArrayToIni(const std::wstring& in, std::string* out);
-    bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
-    size_t IniToArray(const std::string& in, std::wstring& out);
     void BitsetToIni(const std::bitset<256>& key_combo, std::string& out_str);
     void IniToBitset(const std::string& str, std::bitset<256>& key_combo);
     // Convert token separated cstring into array of strings

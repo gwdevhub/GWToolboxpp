@@ -394,11 +394,11 @@ namespace TextUtils {
     // Convert a wide Unicode string to an UTF8 string
     std::string WStringToString(const std::wstring_view str)
     {
-        // @Cleanup: ASSERT used incorrectly here; value passed could be from anywhere!
         if (str.empty()) {
             return "";
         }
         // NB: GW uses code page 0 (CP_ACP)
+        // First pass: strict conversion (reject lone surrogates and other invalid codepoints).
         constexpr int try_code_pages[] = {CP_UTF8, CP_ACP};
         for (const auto code_page : try_code_pages) {
             const auto size_needed = WideCharToMultiByte(code_page, WC_ERR_INVALID_CHARS, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
@@ -408,7 +408,16 @@ namespace TextUtils {
             ASSERT(WideCharToMultiByte(code_page, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed, nullptr, nullptr));
             return dest;
         }
-        ASSERT("Failed to convert" && false);
+        // Second pass: lossy fallback — substitute unmappable characters rather than crashing.
+        // This can happen with GW encoded strings that contain lone Unicode surrogates.
+        for (const auto code_page : try_code_pages) {
+            const auto size_needed = WideCharToMultiByte(code_page, 0, str.data(), static_cast<int>(str.size()), nullptr, 0, nullptr, nullptr);
+            if (!size_needed)
+                continue;
+            std::string dest(size_needed, 0);
+            if (WideCharToMultiByte(code_page, 0, str.data(), static_cast<int>(str.size()), dest.data(), size_needed, nullptr, nullptr))
+                return dest;
+        }
         return {};
     }
 
