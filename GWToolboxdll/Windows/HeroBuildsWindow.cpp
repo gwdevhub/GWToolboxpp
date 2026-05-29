@@ -703,7 +703,8 @@ void HeroBuildsWindow::LoadFromFile()
 
         if (strncmp(section, "builds", 6) != 0) continue;
 
-        TeamBuild tb(inifile->GetValue(section, "buildname", ""));
+        const char* saved_ui_id = inifile->GetValue(section, "uiid", "");
+        TeamBuild tb(inifile->GetValue(section, "buildname", ""), saved_ui_id);
         tb.has_hero_slots = true;
         tb.mode = inifile->GetLongValue(section, "mode", false);
         tb.group = inifile->GetValue(section, "group", "");
@@ -757,6 +758,14 @@ void HeroBuildsWindow::LoadFromFile()
     // appear in ascending sort_order. Relative order within each group is preserved.
     SortTeambuilds(teambuilds);
 
+    // Advance the shared counter past all restored IDs so newly created builds
+    // don't collide with the persisted ones.
+    for (const auto& tb : teambuilds) {
+        uint32_t numeric_id = 0;
+        if (std::from_chars(tb.ui_id.data(), tb.ui_id.data() + tb.ui_id.size(), numeric_id).ec == std::errc{})
+            TeamBuild::s_cur_ui_id = std::max(TeamBuild::s_cur_ui_id, numeric_id);
+    }
+
     builds_changed = false;
 }
 
@@ -773,6 +782,7 @@ void HeroBuildsWindow::SaveToFile() const
             char section[buffer_size];
             snprintf(section, buffer_size, "builds%03d", i);
             inifile->SetValue(section, "buildname", tbuild.name.c_str());
+            inifile->SetValue(section, "uiid", tbuild.ui_id.c_str());
             inifile->SetLongValue(section, "mode", tbuild.mode);
             if (!tbuild.group.empty())
                 inifile->SetValue(section, "group", tbuild.group.c_str());
