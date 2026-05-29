@@ -21,9 +21,9 @@
   /* Foreground tokens at varying emphasis */
   --color-fg: #fafafa;
   --color-fg-high: rgba(255, 255, 255, 0.95);
-  --color-fg-muted: rgba(255, 255, 255, 0.9);
+  --color-fg-muted: #e0e0e0;
   --color-fg-body: var(--color-fg-muted);
-  --color-fg-sub: var(--color-fg-muted);
+  --color-fg-sub: var(--color-fg-body);
   --color-fg-dim: rgba(255, 255, 255, 0.6);
   --color-fg-meta: rgba(255, 255, 255, 0.5);
   --color-fg-faint: rgba(255, 255, 255, 0.4);
