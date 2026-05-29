@@ -315,6 +315,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 filtered.push_back(&tbuild);
             }
 
+            bool vector_invalidated = false;
+
             // Group builds by name
             std::unordered_map<std::string, std::vector<TeamBuild*>> by_group;
             for (TeamBuild* tbuild : filtered) {
@@ -328,6 +330,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     UpsertGroup(gname);
                 }
             }
+
+
 
             // Order named groups by sort_order; ungrouped builds appear last.
             std::vector<std::string> group_order;
@@ -394,6 +398,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     cpy.has_hero_slots = true;
                     cpy.edit_open = false;
                     teambuilds.push_back(std::move(cpy));
+                    vector_invalidated = true;
                     builds_changed = true;
                 }
                 if (ImGui::IsItemHovered()) {
@@ -401,9 +406,10 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
                 ImGui::PopStyleVar(2);
                 ImGui::PopID();
+                return vector_invalidated;
             };
 
-            for (size_t gi = 0; gi < group_order.size(); gi++) {
+            for (size_t gi = 0; gi < group_order.size() && !vector_invalidated; gi++) {
                 const auto& group_name = group_order[gi];
                 auto& group_builds = by_group[group_name];
                 if (group_name.empty()) {
