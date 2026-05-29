@@ -179,12 +179,35 @@ namespace {
 
         auto tbuild = std::make_shared<TeamBuild>(TextUtils::WStringToString(packet->label), ui_id);
         if (!TeamBuildEncoder::EncodedToTeamBuild(packet->url, *tbuild)) return;
-        tbuild->has_hero_slots = std::ranges::any_of(tbuild->builds, [](const Build& b) {
-            return b.hero_id != GW::Constants::HeroID::NoHero;
-        });
+
         status->blocked = true;
         tbuild->edit_open = tbuild->focus_next_frame = true;
         detached_pool.push_back(std::move(tbuild));
+    }
+
+    TeamBuild FromCurrentTeam() {
+        TeamBuild tb(std::format("%s's Teambuild, {}", TextUtils::WStringToString(GW::AccountMgr::GetCurrentPlayerName()),TextUtils::GetFormattedDateTime()));
+        tb.has_hero_slots = true;
+        tb.edit_open = true;
+        GW::SkillbarMgr::SkillTemplate skill_template;
+        for (auto i = 0u; i < 8; i++) {
+            Build build;
+            if (GW::SkillbarMgr::GetSkillTemplate(GW::PartyMgr::GetPartyMemberAgentId(i), skill_template)) {
+                char buf[64]{};
+                if (GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, _countof(buf))) {
+                    const auto party_info = GW::PartyMgr::GetPartyInfo();
+                    const auto cur_hero_id = i > 0 && party_info && party_info->heroes.size() >= i ? party_info->heroes[i - 1].hero_id : HeroID::NoHero;
+                    const GW::HeroFlag* flag = cur_hero_id != HeroID::NoHero ? HeroBuildsWindow::GetHeroFlagInfo(cur_hero_id) : nullptr;
+                    build = Build("", buf, cur_hero_id, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
+                    build.name = build.GetFallbackBuildName();
+                }
+            }
+            tb.builds.push_back(std::move(build));
+        }
+        tb.has_hero_slots = std::ranges::any_of(tb.builds, [](const Build& b) {
+            return b.hero_id != GW::Constants::HeroID::NoHero;
+        });
+        return tb;
     }
 
 } // namespace
@@ -328,8 +351,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 
             auto draw_teambuild_row = [&](TeamBuild& tbuild) {
                 ImGui::PushID(tbuild.ui_id.c_str());
-                ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
-                if (ImGui::Button(tbuild.name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width, 0))) {
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+                if (ImGui::Button(tbuild.name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width - item_spacing - btn_width, 0))) {
                     if (one_teambuild_at_a_time && !tbuild.edit_open) {
                         for (auto& tb : teambuilds) {
                             tb.edit_open = false;
@@ -342,7 +365,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                         tbuild.DrawTooltip();
                     });
                 }
-                ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
+                ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
                 ImGui::SameLine(0, item_spacing);
                 const bool ctrl_held = ImGui::GetIO().KeyCtrl;
                 const bool send_disabled = ctrl_held && tbuild.ChatCodeTooLong();
@@ -364,6 +387,19 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                         ImGui::SetTooltip(ctrl_held ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
                     }
                 }
+
+                ImGui::SameLine(0, item_spacing);
+                if (ImGui::Button(ICON_FA_COPY, ImVec2(btn_width, 0))) {
+                    auto cpy = tbuild.Duplicate();
+                    cpy.has_hero_slots = true;
+                    cpy.edit_open = false;
+                    teambuilds.push_back(std::move(cpy));
+                    builds_changed = true;
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Duplicate Teambuild");
+                }
+                ImGui::PopStyleVar(2);
                 ImGui::PopID();
             };
 
@@ -383,15 +419,16 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     const bool is_last = (gi + 1 >= group_order.size() || group_order[gi + 1].empty());
 
                     constexpr auto header_flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap;
+                    const float btn_y = ImGui::GetCursorPosY();
                     const bool open = ImGui::CollapsingHeader(group_name.c_str(), header_flags);
 
                     // Overlay ↑/↓ buttons on the right side of the header row.
                     {
                         const float btn_sz = ImGui::GetFrameHeight();
                         const float spacing = ImGui::GetStyle().ItemSpacing.x;
-                        ImGui::SameLine();
+                        
                         float btn_x = ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX();
-                        const float btn_y = ImGui::GetCursorPosY();
+                        
 
                         if (!is_last) {
                             btn_x -= btn_sz;
@@ -429,46 +466,12 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 }
             }
             if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                TeamBuild tb(std::format("My New Hero Teambuild, {}", TextUtils::GetFormattedDateTime()));
-                tb.has_hero_slots = true;
-                tb.edit_open = true;
-                GW::SkillbarMgr::SkillTemplate skill_template;
-                for (auto i = 0u; i < 8; i++) {
-                    Build build;
-                    if (GW::SkillbarMgr::GetSkillTemplate(GW::PartyMgr::GetPartyMemberAgentId(i), skill_template)) {
-                        char buf[64]{};
-                        if (GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, _countof(buf))) {
-                            const auto party_info = GW::PartyMgr::GetPartyInfo();
-                            const auto cur_hero_id = i > 0 && party_info && party_info->heroes.size() >= i ? party_info->heroes[i - 1].hero_id : HeroID::NoHero;
-                            const GW::HeroFlag* flag = cur_hero_id != HeroID::NoHero ? GetHeroFlagInfo(cur_hero_id) : nullptr;
-                            build = Build("", buf, cur_hero_id, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
-                        }
-                    }
-                    tb.builds.push_back(std::move(build));
-                }
-
+                TeamBuild tb = FromCurrentTeam();
+                tb.has_hero_slots = tb.edit_open = true;
                 builds_changed = true;
                 teambuilds.push_back(std::move(tb));
             }
-            /* Code for copying a teambuild */
-            std::vector<const char*> names(teambuilds.size(), "\0");
-            std::ranges::transform(teambuilds, names.begin(), [](const TeamBuild& tb) {
-                return tb.name.c_str();
-            });
-            if (const auto num_elements = names.size()) {
-                static int selected_teambuild = 0;
-                selected_teambuild = std::clamp(selected_teambuild, 0, static_cast<int>(names.size()) - 1);
-                ImGui::PushItemWidth(-60.0f - ImGui::GetStyle().ItemInnerSpacing.x);
-                ImGui::Combo("###teamBuildCombo", &selected_teambuild, names.data(), num_elements);
-                ImGui::PopItemWidth();
-                ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                if (ImGui::Button("Copy##1", ImVec2(60.0f, 0))) {
-                    TeamBuild new_tb = teambuilds[selected_teambuild];
-                    new_tb.name += " (Copy)";
-                    builds_changed = true;
-                    teambuilds.push_back(std::move(new_tb));
-                }
-            }
+
         }
         ImGui::End();
     }

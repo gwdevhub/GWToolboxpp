@@ -495,6 +495,12 @@ void TeamBuild::Copy() const
     ImGui::SetClipboardText(msg.c_str());
     Log::Flash("Teambuild code copied to clipboard");
 }
+TeamBuild TeamBuild::Duplicate()
+{
+    TeamBuild copy = *this;
+    copy.name += " (Copy)";
+    return std::move(copy);
+}
 
 void TeamBuild::DrawTooltip() const
 {

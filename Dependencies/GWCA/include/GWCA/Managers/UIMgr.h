@@ -78,8 +78,8 @@ namespace GW {
 
         struct FrameRelation {
             FrameRelation* parent;
-            uint32_t field67_0x124;
-            uint32_t field68_0x128;
+            uint32_t child_offset_id;
+            FrameRelation* parent_dupe;
             uint32_t frame_hash_id;
             TList<FrameRelation> children;
             TList<FrameRelation> siblings;
@@ -122,7 +122,7 @@ namespace GW {
         struct FrameInteractionCallback {
             UIInteractionCallback callback;
             void* uictl_context;
-            uint32_t h0008;
+            uint32_t callback_state;
         };
 
         struct Frame {
