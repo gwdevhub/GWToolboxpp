@@ -356,7 +356,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             auto draw_teambuild_row = [&](TeamBuild& tbuild) {
                 ImGui::PushID(tbuild.ui_id.c_str());
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
-                if (ImGui::Button(tbuild.name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width - item_spacing - btn_width, 0))) {
+                if (ImGui::Button(tbuild.name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width, 0))) {
                     if (one_teambuild_at_a_time && !tbuild.edit_open) {
                         for (auto& tb : teambuilds) {
                             tb.edit_open = false;
@@ -392,18 +392,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     }
                 }
 
-                ImGui::SameLine(0, item_spacing);
-                if (ImGui::Button(ICON_FA_COPY, ImVec2(btn_width, 0))) {
-                    auto cpy = tbuild.Duplicate();
-                    cpy.has_hero_slots = true;
-                    cpy.edit_open = false;
-                    teambuilds.push_back(std::move(cpy));
-                    vector_invalidated = true;
-                    builds_changed = true;
-                }
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("Duplicate Teambuild");
-                }
+
                 ImGui::PopStyleVar(2);
                 ImGui::PopID();
                 return vector_invalidated;

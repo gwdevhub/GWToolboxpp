@@ -1053,6 +1053,19 @@ bool TeamBuild::DrawEditWindow(
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move the teambuild down in the list");
 
     ImGui::SameLine();
+    if (ImGui::Button("Duplicate")) {
+        auto cpy = Duplicate();
+        cpy.has_hero_slots = has_hero_slots;
+        cpy.edit_open = true;
+        edit_open = false;
+        all_builds.push_back(std::move(cpy));
+        builds_changed = true;
+        ImGui::End();
+        return false;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Duplicate Teambuild");
+    }
     bool deleted = false;
     if (ImGui::ConfirmButton("Delete", &deleted,
             "Delete Teambuild?\n\nAre you sure?\nThis operation cannot be undone.\n\n")) {
