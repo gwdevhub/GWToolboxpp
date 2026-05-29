@@ -22,6 +22,7 @@ class CustomRenderer : public D3DVertexBuffer {
     struct CustomMarker final {
         CustomMarker(float x, float y, float s, Shape sh, GW::Constants::MapID m, const char* _name);
         explicit CustomMarker(const char* name);
+        ~CustomMarker() { Terminate(); }
 
         GW::GamePos pos;
         float size = 1.f;
@@ -48,6 +49,7 @@ class CustomRenderer : public D3DVertexBuffer {
 struct CustomPolygon final : D3DVertexBuffer {
         CustomPolygon(GW::Constants::MapID m, const char* n);
         explicit CustomPolygon(const char* name);
+        ~CustomPolygon() { Terminate(); }
         std::vector<GW::GamePos> points{};
         GW::Constants::MapID map;
         bool visible = true;

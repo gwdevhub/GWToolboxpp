@@ -387,6 +387,14 @@ void CustomRenderer::DrawLineSettings()
         lines.push_back(new CustomLine(buf));
         markers_changed = true;
     }
+    ImGui::SameLine();
+    bool sort_lines = false;
+    if (ImGui::ConfirmButton("Sort A-Z##lines", &sort_lines, "Sort all lines alphabetically by name?\nThis cannot be undone.")) {
+        std::sort(lines.begin(), lines.end(), [](const CustomLine* a, const CustomLine* b) {
+            return strcmp(a->name, b->name) < 0;
+        });
+        markers_changed = true;
+    }
 }
 
 void CustomRenderer::DrawMarkerSettings()
@@ -513,6 +521,17 @@ void CustomRenderer::DrawMarkerSettings()
         snprintf(buf, 32, "marker%zu", markers.size());
         markers.push_back(CustomMarker(buf));
         // invalidate in crease vector size increased and reallocated array
+        for (auto& mark : markers) {
+            mark.Invalidate();
+        }
+        markers_changed = true;
+    }
+    ImGui::SameLine();
+    bool sort_markers = false;
+    if (ImGui::ConfirmButton("Sort A-Z##markers", &sort_markers, "Sort all markers alphabetically by name?\nThis cannot be undone.")) {
+        std::sort(markers.begin(), markers.end(), [](const CustomMarker& a, const CustomMarker& b) {
+            return strcmp(a.name, b.name) < 0;
+        });
         for (auto& mark : markers) {
             mark.Invalidate();
         }
@@ -681,6 +700,17 @@ void CustomRenderer::DrawPolygonSettings()
         snprintf(buf, 32, "polygon%zu", polygons.size());
         polygons.emplace_back(buf);
         // invalidate in crease vector size increased and reallocated array
+        for (auto& poly : polygons) {
+            poly.Invalidate();
+        }
+        markers_changed = true;
+    }
+    ImGui::SameLine();
+    bool sort_polygons = false;
+    if (ImGui::ConfirmButton("Sort A-Z##polygons", &sort_polygons, "Sort all polygons alphabetically by name?\nThis cannot be undone.")) {
+        std::sort(polygons.begin(), polygons.end(), [](const CustomPolygon& a, const CustomPolygon& b) {
+            return strcmp(a.name, b.name) < 0;
+        });
         for (auto& poly : polygons) {
             poly.Invalidate();
         }

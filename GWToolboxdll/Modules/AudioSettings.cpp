@@ -311,9 +311,9 @@ void AudioSettings::DrawSettingsInternal() {
     using PlaySoundInt_pt = bool(__cdecl*)(const wchar_t*, uint32_t, uint32_t, uint32_t);
 
     auto log_sound = [](const std::wstring& filename, PlaySoundInt_pt PlaySound_pt, uint32_t arg1, uint32_t arg2, uint32_t arg3) {
-        ImGui::PushID(&filename);
         std::string buf;
         GuiUtils::ArrayToIni(filename, &buf);
+        ImGui::PushID(buf.c_str());
         ImGui::TextUnformatted(buf.c_str());
         ImGui::SameLine(200.f * ImGui::FontScale());
         if (ImGui::Button("Play")) {

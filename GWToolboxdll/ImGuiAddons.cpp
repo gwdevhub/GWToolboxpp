@@ -299,8 +299,6 @@ namespace ImGui {
 
     bool SmallConfirmButton(const char* label, const char* confirm_content, ImGui::ImGuiConfirmDialogCallback callback, void* wparam)
     {
-        static char id_buf[128];
-        snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, label);
         if (SmallButton(label)) {
             ConfirmDialog(confirm_content, callback, wparam);
             return true;
@@ -349,7 +347,8 @@ namespace ImGui {
     bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
     {
         static char id_buf[128];
-        snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
+        const ImGuiID h = ImHashStr(confirm_content, 0, ImHashStr(label));
+        snprintf(id_buf, sizeof(id_buf), "%s###confirm_popup_%u", label, h);
         if (Button(label)) {
             OpenPopup(id_buf);
         }
