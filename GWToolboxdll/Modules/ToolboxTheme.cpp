@@ -142,9 +142,6 @@ void ToolboxTheme::SaveUILayout()
     const auto ini = GetLayoutIni(false);
     const auto window_ini_section = "Windows";
 
-    // Clear the section before writing so deleted/renamed windows don't accumulate.
-    ini->Delete(window_ini_section, nullptr);
-
     // Flags that mark windows not worth persisting (child widgets, popups, tooltips, etc.)
     constexpr ImGuiWindowFlags skip_flags =
         ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup |
