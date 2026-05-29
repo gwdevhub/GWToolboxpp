@@ -66,20 +66,43 @@ void ToolboxUIElement::UpdateCachedFrameStates()
 }
 void ToolboxUIElement::UpdateLocationAgainstSnappedFrame()
 {
-    const std::string& active_snap = ToolboxSettings::is_in_mobile_mode ? mobile_snapped_frame_label : snapped_frame_label;
+    const bool is_mobile = ToolboxSettings::is_in_mobile_mode;
+    const std::string& active_snap = is_mobile ? mobile_snapped_frame_label : snapped_frame_label;
     if (active_snap.empty()) return;
+
     const auto snapped_frame_state = GetCachedFrameState(active_snap.c_str());
     if (!snapped_frame_state) return;
+
     const auto& frame_pos = snapped_frame_state->position;
-    if (!ImVec2Eq(last_frame_pos, empty_imvec2) && !ImVec2Eq(last_frame_pos,frame_pos)) {
-        const auto window = ImGui::FindWindowByName(Name());
+    if (ImVec2Eq(frame_pos, empty_imvec2)) return; // position not yet populated
+
+    float* snap_off = is_mobile ? mobile_snap_offset : snap_offset;
+    bool& needs_init = is_mobile ? mobile_snap_offset_needs_init : snap_offset_needs_init;
+
+    const auto window = ImGui::FindWindowByName(Name());
+
+    // On first valid frame position after snap is set: derive offset from current window position
+    if (needs_init) {
+        needs_init = false;
         if (window) {
-            // Window deviates from where we put it — moved externally, update offset
-            const auto diff_x = last_frame_pos.x - frame_pos.x;
-            const auto diff_y = last_frame_pos.y - frame_pos.y;
-            ImGui::SetWindowPos(window, {window->Pos.x - diff_x, window->Pos.y - diff_y});
+            snap_off[0] = window->Pos.x - frame_pos.x;
+            snap_off[1] = window->Pos.y - frame_pos.y;
         }
     }
+
+    const float target_x = frame_pos.x + snap_off[0];
+    const float target_y = frame_pos.y + snap_off[1];
+
+    // Keep fallback screen coords up-to-date so we have a valid position if the frame disappears
+    float* cur_pos = is_mobile ? mobile_pos : normal_pos;
+    cur_pos[0] = target_x;
+    cur_pos[1] = target_y;
+    if (is_mobile) has_mobile_layout = true; else has_normal_layout = true;
+
+    if (window) {
+        ImGui::SetWindowPos(window, {target_x, target_y});
+    }
+
     last_frame_pos = frame_pos;
 }
 
@@ -127,10 +150,18 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_breakout_button);
     LOAD_BOOL(lock_breakout_button);
     LOAD_STRING(snapped_frame_label);
+    LOAD_FLOAT(snap_offset[0]); LOAD_FLOAT(snap_offset[1]);
+    if (!snapped_frame_label.empty() && !ini->KeyExists(Name(), "snap_offset[0]")) {
+        snap_offset_needs_init = true;
+    }
     LOAD_BOOL(mobile_lock_move);
     LOAD_BOOL(mobile_lock_size);
     LOAD_BOOL(mobile_auto_size);
     LOAD_STRING(mobile_snapped_frame_label);
+    LOAD_FLOAT(mobile_snap_offset[0]); LOAD_FLOAT(mobile_snap_offset[1]);
+    if (!mobile_snapped_frame_label.empty() && !ini->KeyExists(Name(), "mobile_snap_offset[0]")) {
+        mobile_snap_offset_needs_init = true;
+    }
     has_normal_layout = ini->GetBoolValue(Name(), "has_normal_layout", false);
     if (has_normal_layout) {
         LOAD_FLOAT(normal_pos[0]); LOAD_FLOAT(normal_pos[1]);
@@ -175,10 +206,12 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_breakout_button);
     SAVE_BOOL(lock_breakout_button);
     SAVE_STRING(snapped_frame_label);
+    SAVE_FLOAT(snap_offset[0]); SAVE_FLOAT(snap_offset[1]);
     SAVE_BOOL(mobile_lock_move);
     SAVE_BOOL(mobile_lock_size);
     SAVE_BOOL(mobile_auto_size);
     SAVE_STRING(mobile_snapped_frame_label);
+    SAVE_FLOAT(mobile_snap_offset[0]); SAVE_FLOAT(mobile_snap_offset[1]);
     ini->SetBoolValue(Name(), "has_normal_layout", has_normal_layout);
     if (has_normal_layout) {
         SAVE_FLOAT(normal_pos[0]); SAVE_FLOAT(normal_pos[1]);
@@ -308,6 +341,8 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     std::string& snap = is_mobile ? mobile_snapped_frame_label : snapped_frame_label;
     float* cur_pos = is_mobile ? mobile_pos : normal_pos;
     float* cur_size = is_mobile ? mobile_size : normal_size;
+    float* snap_off = is_mobile ? mobile_snap_offset : snap_offset;
+    bool& needs_init_ref = is_mobile ? mobile_snap_offset_needs_init : snap_offset_needs_init;
 
     char need_show_buf[128];
     snprintf(need_show_buf, sizeof(need_show_buf), "You need to show the %s for this control to work", TypeName());
@@ -330,6 +365,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
 
         const bool snap_disabled = !is_movable || lm;
         ImGui::BeginDisabled(snap_disabled);
+        const std::string prev_snap = snap;
         if (ImGui::BeginCombo("Snap to Frame", preview)) {
             if (ImGui::Selectable("None", current_idx < 0)) {
                 snap.clear();
@@ -346,6 +382,12 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             ImGui::EndCombo();
         }
         ImGui::EndDisabled();
+        // When snap target changes to a new frame, schedule snap_offset initialization from current window position
+        if (snap != prev_snap && !snap.empty()) {
+            needs_init_ref = true;
+            snap_off[0] = 0.f;
+            snap_off[1] = 0.f;
+        }
         if (snap_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
             if (!is_movable) {
                 ImGui::SetTooltip("This %s cannot be moved", TypeName());
@@ -359,13 +401,21 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // Position
+    // Position / Snap Offset — mutually exclusive
     {
         const bool pos_disabled = !is_movable || lm;
         ImGui::BeginDisabled(pos_disabled);
-        if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
-            if (window) {
-                ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
+        if (!snap.empty()) {
+            // Show relative offset to the snapped GW frame
+            if (ImGui::DragFloat2("Snap Offset", snap_off, 1.0f, 0.0f, 0.0f, "%.0f")) {
+                needs_init_ref = false; // user explicitly set offset; cancel pending init
+            }
+        } else {
+            // Show absolute screen coordinates
+            if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
+                if (window) {
+                    ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
+                }
             }
         }
         ImGui::EndDisabled();
@@ -376,6 +426,9 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             else {
                 ImGui::SetTooltip("Uncheck 'Lock Position' to adjust position");
             }
+        }
+        else if (!snap.empty()) {
+            ImGui::ShowHelp("Pixel offset from the snapped GW frame's top-left corner");
         }
         else {
             ImGui::ShowHelp(need_show_buf);
