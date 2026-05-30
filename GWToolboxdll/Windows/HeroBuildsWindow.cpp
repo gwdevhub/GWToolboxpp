@@ -31,6 +31,7 @@
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Windows/BuildsWindow.h>
+#include <Windows/RerollWindow.h>
 
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
@@ -42,6 +43,9 @@ namespace {
     // Pool of received/detached teambuilds shown as standalone windows (not in the main list).
     // Entries are removed when their window is closed and no other owner holds the shared_ptr.
     std::vector<std::shared_ptr<TeamBuild>> detached_pool{};
+
+    // Build code queued to be loaded once an in-progress reroll completes.
+    std::string pending_reroll_build_code{};
 
     ToolboxIni* inifile = nullptr;
 
@@ -513,22 +517,46 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 if (!build.code.empty()) {
                     ImGui::PushID(static_cast<int>(j));
                     bool can_load = false;
+                    bool can_reroll = false;
                     const char* load_tooltip = nullptr;
+                    GW::Constants::Profession build_profession = GW::Constants::Profession::None;
+
                     if (build.IsPlayerBuild()) {
                         GW::SkillbarMgr::SkillTemplate st{};
                         if (GW::SkillbarMgr::DecodeSkillTemplate(st, build.code.c_str())) {
+                            build_profession = st.primary;
                             can_load = player_profession != GW::Constants::Profession::None && st.primary == player_profession;
-                            load_tooltip = can_load ? "Load this build on your player" : "Your profession doesn't match this build";
+                            if (!can_load && build_profession != GW::Constants::Profession::None) {
+                                // Check if there's an available character we could reroll to.
+                                can_reroll = RerollWindow::FindAvailableCharForProfession(build_profession) != nullptr;
+                            }
+                            if (can_load) {
+                                load_tooltip = "Load this build on your player";
+                            } else if (can_reroll) {
+                                load_tooltip = "Reroll to a matching character and load this build";
+                            } else {
+                                load_tooltip = "Your profession doesn't match this build and no available character has the right profession";
+                            }
                         }
                     } else {
                         can_load = ToolboxUtils::IsHeroUnlocked(build.hero_id);
                         load_tooltip = can_load ? "Load this build on the hero" : "Hero not unlocked";
                     }
-                    if (!can_load) ImGui::BeginDisabled();
-                    if (ImGui::Button("Load")) {
-                        build.Load();
+
+                    if (can_reroll && !can_load) {
+                        // Show "Reroll" button instead of a disabled "Load".
+                        if (ImGui::Button("Reroll")) {
+                            if (RerollWindow::Instance().RerollToProfession(build_profession, /*same_map=*/true, /*same_party=*/true)) {
+                                pending_reroll_build_code = build.code;
+                            }
+                        }
+                    } else {
+                        if (!can_load) ImGui::BeginDisabled();
+                        if (ImGui::Button("Load")) {
+                            build.Load();
+                        }
+                        if (!can_load) ImGui::EndDisabled();
                     }
-                    if (!can_load) ImGui::EndDisabled();
                     if (load_tooltip && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
                         ImGui::SetTooltip(load_tooltip);
                     }
@@ -611,6 +639,13 @@ void HeroBuildsWindow::Update(float)
             visible = false;
         }
         last_instance_type = instance_type;
+    }
+
+    // Once a reroll-triggered load is pending and the reroll has finished, load the build.
+    if (!pending_reroll_build_code.empty() && !RerollWindow::Instance().IsRerolling()) {
+        const Build pending_build("", pending_reroll_build_code);
+        pending_reroll_build_code.clear();
+        pending_build.Load();
     }
 
     // GC detached pool: remove closed entries with no external owners
