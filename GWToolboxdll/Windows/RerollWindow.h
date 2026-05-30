@@ -35,9 +35,11 @@ public:
     bool Reroll(const wchar_t* character_name, bool same_map = true, bool same_party = true, const bool ignore_current_character = false, const bool do_not_prompt = false);
     bool Reroll(const wchar_t* character_name, GW::Constants::MapID _map_id);
 
+    void DrawSettingsInternal() override;
+
     // Find the best available character for the given profession (checks preferred
     // characters first, then falls back to the first unlisted match) and initiate a reroll.
-    bool RerollToProfession(GW::Constants::Profession profession, bool same_map = true, bool same_party = true);
+    static bool RerollToProfession(GW::Constants::Profession profession, bool same_map = true, bool same_party = true);
 
     // Returns the name of the available character that would be used by RerollToProfession,
     // or nullptr if no character with the given profession exists.
@@ -45,5 +47,5 @@ public:
 
     // Returns true while a reroll is in progress (i.e. between the Reroll() call and
     // the character being fully loaded into the target map).
-    [[nodiscard]] bool IsRerolling() const;
+    [[nodiscard]] static bool IsRerolling();
 };

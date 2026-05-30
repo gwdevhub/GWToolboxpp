@@ -177,9 +177,22 @@ namespace {
     std::vector<std::wstring> exclude_charnames_from_reroll_cmd;
     char excluded_char_add_buf[20] = {0};
 
-    // Maps profession (1-10) → preferred character name for RerollToProfession().
-    // An empty string means "no preference" – fall through to first available match.
-    std::unordered_map<uint32_t, std::wstring> preferred_chars_by_profession;
+    // Maps account_uuid_str → (profession_id → preferred character name).
+    // An empty profession entry means "no preference" for that profession.
+    std::unordered_map<std::string, std::unordered_map<uint32_t, std::wstring>> preferred_chars_per_account;
+
+    std::string GetCurrentAccountUuidStr()
+    {
+        const auto uuid = GW::AccountMgr::GetAccountUuid();
+        const GUID empty{};
+        if (memcmp(&uuid, &empty, sizeof(uuid)) == 0) return {};
+        return TextUtils::GuidToString(&uuid);
+    }
+
+    std::unordered_map<uint32_t, std::wstring>& GetCurrentAccountPrefs()
+    {
+        return preferred_chars_per_account[GetCurrentAccountUuidStr()];
+    }
 
     GW::HookEntry OnGoToCharSelect_Entry;
 
@@ -231,10 +244,11 @@ namespace {
 
         const auto available_chars_ptr = GW::AccountMgr::GetAvailableChars();
 
+        auto& account_prefs = GetCurrentAccountPrefs();
         for (size_t i = 0; i < profession_names.size(); i++) {
             const auto prof = static_cast<GW::Constants::Profession>(i + 1);
             const auto prof_key = static_cast<uint32_t>(prof);
-            auto& pref = preferred_chars_by_profession[prof_key];
+            auto& pref = account_prefs[prof_key];
 
             ImGui::PushID(static_cast<int>(i));
 
@@ -378,11 +392,14 @@ namespace {
         }
 
         // Check the configured preferred character first.
-        const auto pref_it = preferred_chars_by_profession.find(static_cast<uint32_t>(profession));
-        if (pref_it != preferred_chars_by_profession.end() && !pref_it->second.empty()) {
-            const auto pref_char = GW::AccountMgr::GetAvailableCharacter(pref_it->second.c_str());
-            if (pref_char && pref_char->primary() == profession) {
-                return Reroll(pref_it->second.c_str(), _same_map, _same_party);
+        const auto account_it = preferred_chars_per_account.find(GetCurrentAccountUuidStr());
+        if (account_it != preferred_chars_per_account.end()) {
+            const auto pref_it = account_it->second.find(static_cast<uint32_t>(profession));
+            if (pref_it != account_it->second.end() && !pref_it->second.empty()) {
+                const auto pref_char = GW::AccountMgr::GetAvailableCharacter(pref_it->second.c_str());
+                if (pref_char && pref_char->primary() == profession) {
+                    return Reroll(pref_it->second.c_str(), _same_map, _same_party);
+                }
             }
         }
 
@@ -405,11 +422,14 @@ namespace {
         if (!available_characters || !available_characters->valid()) {
             return nullptr;
         }
-        const auto pref_it = preferred_chars_by_profession.find(static_cast<uint32_t>(profession));
-        if (pref_it != preferred_chars_by_profession.end() && !pref_it->second.empty()) {
-            const auto pref_char = GW::AccountMgr::GetAvailableCharacter(pref_it->second.c_str());
-            if (pref_char && pref_char->primary() == profession) {
-                return pref_char->player_name;
+        const auto account_it = preferred_chars_per_account.find(GetCurrentAccountUuidStr());
+        if (account_it != preferred_chars_per_account.end()) {
+            const auto pref_it = account_it->second.find(static_cast<uint32_t>(profession));
+            if (pref_it != account_it->second.end() && !pref_it->second.empty()) {
+                const auto pref_char = GW::AccountMgr::GetAvailableCharacter(pref_it->second.c_str());
+                if (pref_char && pref_char->primary() == profession) {
+                    return pref_char->player_name;
+                }
             }
         }
         for (const auto& available_char : *available_characters) {
@@ -581,9 +601,14 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         ImGui::PopStyleVar();
     }
     DrawExcludedCharacters();
-    DrawPreferredCharacters();
 
     ImGui::End();
+}
+
+void RerollWindow::DrawSettingsInternal()
+{
+    ToolboxWindow::DrawSettingsInternal();
+    DrawPreferredCharacters();
 }
 
 void RerollWindow::Initialize()
@@ -796,7 +821,7 @@ const wchar_t* RerollWindow::FindAvailableCharForProfession(const GW::Constants:
     return ::FindAvailableCharForProfession(profession);
 }
 
-bool RerollWindow::IsRerolling() const
+bool RerollWindow::IsRerolling()
 {
     return reroll_stage != RerollStage::None;
 }
@@ -817,14 +842,23 @@ void RerollWindow::LoadSettings(ToolboxIni* ini)
         }
     }
 
-    // Load preferred characters per profession (stored as "preferred_prof_N" keys).
-    preferred_chars_by_profession.clear();
-    for (uint32_t p = 1; p <= 10; p++) {
-        char key[32];
-        snprintf(key, sizeof(key), "preferred_prof_%u", p);
-        const char* val = ini->GetValue(Name(), key, "");
-        if (val && *val) {
-            preferred_chars_by_profession[p] = TextUtils::StringToWString(val);
+    // Load per-account preferred characters. Keys are "pref_{uuid}_{n}" (n = 1-10).
+    preferred_chars_per_account.clear();
+    {
+        TNamesDepend keys;
+        ini->GetAllKeys(Name(), keys);
+        for (const auto& entry : keys) {
+            const std::string_view k = entry.pItem;
+            if (!k.starts_with("pref_") || k.size() < 43) continue;
+            const auto uuid_str = std::string(k.substr(5, 36));
+            if (k.size() <= 42 || k[41] != '_') continue;
+            const auto n_str = k.substr(42);
+            const auto n = static_cast<uint32_t>(std::strtoul(n_str.data(), nullptr, 10));
+            if (n < 1 || n > 10) continue;
+            const char* val = ini->GetValue(Name(), k.data(), "");
+            if (val && *val) {
+                preferred_chars_per_account[uuid_str][n] = TextUtils::StringToWString(val);
+            }
         }
     }
 }
@@ -845,16 +879,25 @@ void RerollWindow::SaveSettings(ToolboxIni* ini)
     }
     ini->SetValue(Name(), "exclude_charnames_from_reroll_cmd", excluded_charnames_ini.c_str());
 
-    // Save preferred characters per profession.
+    // Remove legacy preferred_prof_N keys.
     for (uint32_t p = 1; p <= 10; p++) {
         char key[32];
         snprintf(key, sizeof(key), "preferred_prof_%u", p);
-        const auto it = preferred_chars_by_profession.find(p);
-        if (it != preferred_chars_by_profession.end() && !it->second.empty()) {
-            ini->SetValue(Name(), key, TextUtils::WStringToString(it->second).c_str());
-        }
-        else {
-            ini->Delete(Name(), key);
+        ini->Delete(Name(), key);
+    }
+
+    // Save per-account preferred characters as "pref_{uuid}_{n}" keys.
+    for (const auto& [uuid_str, prof_map] : preferred_chars_per_account) {
+        for (uint32_t p = 1; p <= 10; p++) {
+            char key[64];
+            snprintf(key, sizeof(key), "pref_%s_%u", uuid_str.c_str(), p);
+            const auto it = prof_map.find(p);
+            if (it != prof_map.end() && !it->second.empty()) {
+                ini->SetValue(Name(), key, TextUtils::WStringToString(it->second).c_str());
+            }
+            else {
+                ini->Delete(Name(), key);
+            }
         }
     }
 }

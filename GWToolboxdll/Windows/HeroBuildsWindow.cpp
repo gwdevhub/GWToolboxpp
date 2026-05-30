@@ -546,7 +546,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     if (can_reroll && !can_load) {
                         // Show "Reroll" button instead of a disabled "Load".
                         if (ImGui::Button("Reroll")) {
-                            if (RerollWindow::Instance().RerollToProfession(build_profession, /*same_map=*/true, /*same_party=*/true)) {
+                            if (RerollWindow::RerollToProfession(build_profession, /*same_map=*/true, /*same_party=*/true)) {
                                 pending_reroll_build_code = build.code;
                             }
                         }
@@ -642,7 +642,7 @@ void HeroBuildsWindow::Update(float)
     }
 
     // Once a reroll-triggered load is pending and the reroll has finished, load the build.
-    if (!pending_reroll_build_code.empty() && !RerollWindow::Instance().IsRerolling()) {
+    if (!pending_reroll_build_code.empty() && !RerollWindow::IsRerolling()) {
         const Build pending_build("", pending_reroll_build_code);
         pending_reroll_build_code.clear();
         pending_build.Load();
