@@ -78,7 +78,7 @@ void ToolboxModule::RegisterUIMessageCallback(
                 QueryPerformanceCounter(&t0);
                 callback(status, msg, wparam, lparam);
                 QueryPerformanceCounter(&t1);
-                last_ui_message_time_us_ += QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
+                last_ui_message_times_us_[static_cast<uint32_t>(msg)] += QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
             }
             else {
                 callback(status, msg, wparam, lparam);

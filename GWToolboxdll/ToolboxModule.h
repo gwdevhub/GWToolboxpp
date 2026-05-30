@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include <GWCA/Managers/UIMgr.h>
 
 using SectionDrawCallback = std::function<void(const std::string& section, bool is_showing)>;
@@ -89,9 +91,9 @@ public:
 
     uint64_t last_update_time_us_ = 0;
     uint64_t last_draw_time_us_ = 0;
-    mutable uint64_t last_ui_message_time_us_ = 0;
+    mutable std::unordered_map<uint32_t, uint64_t> last_ui_message_times_us_;
 
-    // Instrumented wrapper: times each invocation and accumulates into last_ui_message_time_us_
+    // Instrumented wrapper: times each invocation and records per-message-ID into last_ui_message_times_us_
     void RegisterUIMessageCallback(GW::HookEntry* entry, GW::UI::UIMessage message_id,
                                    const GW::UI::UIMessageCallback& callback, int altitude = -0x8000);
 

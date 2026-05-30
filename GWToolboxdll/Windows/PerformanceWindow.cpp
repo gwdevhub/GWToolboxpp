@@ -87,7 +87,8 @@ namespace {
     constexpr int WINDOW_SECONDS = 5;
 
     struct ModuleStats {
-        Stats update, draw, ui_msg;
+        Stats update, draw;
+        std::map<uint32_t, Stats> ui_msgs;
     };
 
     // Ring buffer of 1-second snapshots
@@ -129,7 +130,9 @@ namespace {
                 auto& dm = displayed_modules[name];
                 dm.update.Merge(ms.update);
                 dm.draw.Merge(ms.draw);
-                dm.ui_msg.Merge(ms.ui_msg);
+                for (const auto& [msg_id, s] : ms.ui_msgs) {
+                    dm.ui_msgs[msg_id].Merge(s);
+                }
             }
         }
 
@@ -189,15 +192,16 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
     uint64_t total_update_us = 0, total_draw_us = 0;
 
     for (const auto* m : GWToolbox::GetAllModules()) {
-        const bool has_data = m->last_update_time_us_ || m->last_draw_time_us_ || m->last_ui_message_time_us_;
+        const bool has_data = m->last_update_time_us_ || m->last_draw_time_us_ || !m->last_ui_message_times_us_.empty();
         if (!has_data) continue;
         auto& ms = acc_modules[m->Name()];
         ms.update.Record(m->last_update_time_us_);
         ms.draw.Record(m->last_draw_time_us_);
-        if (m->last_ui_message_time_us_ > 0) {
-            ms.ui_msg.Record(m->last_ui_message_time_us_);
-            m->last_ui_message_time_us_ = 0;
+        for (auto& [msg_id, time_us] : m->last_ui_message_times_us_) {
+            if (time_us > 0)
+                ms.ui_msgs[msg_id].Record(time_us);
         }
+        m->last_ui_message_times_us_.clear();
         total_update_us += m->last_update_time_us_;
         total_draw_us += m->last_draw_time_us_;
     }
@@ -337,29 +341,38 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
             ImGui::EndTabItem();
         }
 
-        // ── Tab 2: UI Messages (per-module UI message callback timing) ─────────
+        // ── Tab 2: UI Messages (per-module, per-message-ID callback timing) ──────
         if (ImGui::BeginTabItem("UI Messages")) {
-            ImGui::TextUnformatted("Per-module time spent in UI message callbacks (us, over last 5s).");
+            ImGui::TextUnformatted("Per-module, per-message-ID callback time (us, over last 5s).");
             ImGui::Separator();
 
-            enum SortColUI : int { UCIN, UCMin, UCAvg, UCMax, UCCount };
+            struct UIMessageEntry {
+                const char* module_name;
+                uint32_t msg_id;
+                Stats stats;
+            };
 
-            static std::vector<DisplayEntry> ui_entries;
+            enum SortColUI : int { UCMOD, UCMSG, UCMin, UCAvg, UCMax, UCCount };
+
+            static std::vector<UIMessageEntry> ui_entries;
             ui_entries.clear();
-            for (const auto& e : entries) {
-                if (e.stats.ui_msg.count > 0)
-                    ui_entries.push_back(e);
+            for (const auto& [name, ms] : displayed_modules) {
+                for (const auto& [msg_id, s] : ms.ui_msgs) {
+                    if (s.count > 0)
+                        ui_entries.push_back({name.c_str(), msg_id, s});
+                }
             }
 
             if (ui_entries.empty()) {
                 ImGui::TextDisabled("No UI message callback data yet. Data appears once messages fire.");
             }
             else {
-                if (ImGui::BeginTable("##ui_msg_timing", 5,
+                if (ImGui::BeginTable("##ui_msg_timing", 6,
                         ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp
                         | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable | ImGuiTableFlags_SortTristate,
                         ImGui::GetContentRegionAvail())) {
-                    ImGui::TableSetupColumn("Module",  ImGuiTableColumnFlags_DefaultSort, 0.f, UCIN);
+                    ImGui::TableSetupColumn("Module",  ImGuiTableColumnFlags_DefaultSort, 0.f, UCMOD);
+                    ImGui::TableSetupColumn("Msg ID",  0,                                 0.f, UCMSG);
                     ImGui::TableSetupColumn("min",     ImGuiTableColumnFlags_NoSort,      0.f, UCMin);
                     ImGui::TableSetupColumn("avg",     0,                                 0.f, UCAvg);
                     ImGui::TableSetupColumn("max",     0,                                 0.f, UCMax);
@@ -373,10 +386,11 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
                         std::ranges::sort(ui_entries, [&](const auto& a, const auto& b) {
                             uint64_t va = 0, vb = 0;
                             switch (static_cast<SortColUI>(spec.ColumnUserID)) {
-                                case UCIN:    return asc ? strcmp(a.name, b.name) < 0 : strcmp(a.name, b.name) > 0;
-                                case UCAvg:   va = a.stats.ui_msg.Avg(); vb = b.stats.ui_msg.Avg(); break;
-                                case UCMax:   va = a.stats.ui_msg.max_us; vb = b.stats.ui_msg.max_us; break;
-                                case UCCount: va = a.stats.ui_msg.count; vb = b.stats.ui_msg.count; break;
+                                case UCMOD:   return asc ? strcmp(a.module_name, b.module_name) < 0 : strcmp(a.module_name, b.module_name) > 0;
+                                case UCMSG:   va = a.msg_id; vb = b.msg_id; break;
+                                case UCAvg:   va = a.stats.Avg(); vb = b.stats.Avg(); break;
+                                case UCMax:   va = a.stats.max_us; vb = b.stats.max_us; break;
+                                case UCCount: va = a.stats.count; vb = b.stats.count; break;
                                 default: return false;
                             }
                             return asc ? va < vb : va > vb;
@@ -386,13 +400,15 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
                     for (const auto& e : ui_entries) {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
-                        if (e.stats.ui_msg.Avg() >= static_cast<uint64_t>(slow_threshold_us))
-                            ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.name);
+                        if (e.stats.Avg() >= static_cast<uint64_t>(slow_threshold_us))
+                            ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.module_name);
                         else
-                            ImGui::TextUnformatted(e.name);
-                        DrawStatsColumns(e.stats.ui_msg);
+                            ImGui::TextUnformatted(e.module_name);
                         ImGui::TableNextColumn();
-                        ImGui::Text("%u", e.stats.ui_msg.count);
+                        ImGui::Text("0x%04X", e.msg_id);
+                        DrawStatsColumns(e.stats);
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%u", e.stats.count);
                     }
                     ImGui::EndTable();
                 }
