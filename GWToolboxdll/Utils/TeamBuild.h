@@ -80,7 +80,6 @@ struct TeamBuild {
     std::string name{};
     std::string group{};
     std::string ui_id{};
-    std::string pending_reroll_build_code{}; // set while waiting for a reroll to complete before loading
     std::vector<Build> builds{};
 
     // Callback signature: (teambuild, build_index)

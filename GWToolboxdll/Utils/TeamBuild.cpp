@@ -53,6 +53,7 @@ namespace {
 
     std::vector<PendingBuildLoad> pending_build_loads;
     std::queue<std::wstring>      send_queue;
+    std::string                   pending_reroll_build_code;
     clock_t send_timer   = 0;
     clock_t kickall_timer = 0;
 
@@ -377,6 +378,12 @@ void Build::Load() const
 void Build::Update()
 {
     const auto instance_type = GW::Map::GetInstanceType();
+
+    if (!pending_reroll_build_code.empty() && !RerollWindow::IsRerolling()) {
+        const Build pending("", pending_reroll_build_code);
+        pending_reroll_build_code.clear();
+        pending.Load();
+    }
 
     if (instance_type == GW::Constants::InstanceType::Loading) {
         pending_build_loads.clear();

@@ -30,8 +30,6 @@
 #include <Utils/TeamBuildEncoder.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
-#include <Windows/RerollWindow.h>
-
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
 namespace {
@@ -529,18 +527,6 @@ void HeroBuildsWindow::Update(float)
             visible = false;
         }
         last_instance_type = instance_type;
-    }
-
-    // Once a reroll-triggered load is pending and the reroll has finished, load the build.
-    if (!RerollWindow::IsRerolling()) {
-        for (auto& tbuild_ptr : detached_pool) {
-            if (!tbuild_ptr->pending_reroll_build_code.empty()) {
-                const Build pending_build("", tbuild_ptr->pending_reroll_build_code);
-                tbuild_ptr->pending_reroll_build_code.clear();
-                pending_build.Load();
-                break; // only one reroll can be in flight at a time
-            }
-        }
     }
 
     // GC detached pool: remove closed entries with no external owners
