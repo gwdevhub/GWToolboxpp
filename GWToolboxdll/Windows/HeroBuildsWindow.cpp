@@ -494,6 +494,9 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             tbuild.focus_next_frame = false;
         }
         if (ImGui::Begin(winname.c_str(), &tbuild.edit_open)) {
+            const auto* me = GW::Agents::GetControlledCharacter();
+            const auto player_profession = me ? static_cast<GW::Constants::Profession>(me->primary) : GW::Constants::Profession::None;
+
             for (size_t j = 0; j < tbuild.builds.size(); j++) {
                 const auto& build = tbuild.builds[j];
                 if (build.code.empty() && build.hero_id == HeroID::NoHero) continue;
@@ -505,7 +508,33 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     disp_name = std::format("#{} {}", j + 1, bname);
                 }
                 if (!disp_name.empty()) ImGui::TextUnformatted(disp_name.c_str());
-                if (!build.code.empty()) GuiUtils::DrawSkillbar(build.code.c_str(), false);
+                if (!build.code.empty()) GuiUtils::DrawSkillbar(build.code.c_str(), true);
+
+                if (!build.code.empty()) {
+                    ImGui::PushID(static_cast<int>(j));
+                    bool can_load = false;
+                    const char* load_tooltip = nullptr;
+                    if (build.IsPlayerBuild()) {
+                        GW::SkillbarMgr::SkillTemplate st{};
+                        if (GW::SkillbarMgr::DecodeSkillTemplate(st, build.code.c_str())) {
+                            can_load = player_profession != GW::Constants::Profession::None && st.primary == player_profession;
+                            load_tooltip = can_load ? "Load this build on your player" : "Your profession doesn't match this build";
+                        }
+                    } else {
+                        can_load = ToolboxUtils::IsHeroUnlocked(build.hero_id);
+                        load_tooltip = can_load ? "Load this build on the hero" : "Hero not unlocked";
+                    }
+                    if (!can_load) ImGui::BeginDisabled();
+                    if (ImGui::Button("Load")) {
+                        build.Load();
+                    }
+                    if (!can_load) ImGui::EndDisabled();
+                    if (load_tooltip && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                        ImGui::SetTooltip(load_tooltip);
+                    }
+                    ImGui::PopID();
+                }
+
                 ImGui::Spacing();
             }
             ImGui::Separator();
