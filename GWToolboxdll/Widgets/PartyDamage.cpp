@@ -8,6 +8,7 @@
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
@@ -19,7 +20,6 @@
 #include <Utils/ToolboxUtils.h>
 
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
-constexpr const char* IniSection = "health";
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -30,8 +30,12 @@ namespace {
     uint32_t total = 0;
     uint32_t total_healing = 0;
 
-    std::map<DWORD, uint32_t> hp_map{};
-
+    std::map<DWORD, DWORD> hp_map_nm{};
+    std::map<DWORD, DWORD> hp_map_hm{};
+    const std::pair<const char*, std::map<DWORD, DWORD>*> section_maps[] = {
+        {"health_nm", &hp_map_nm},
+        {"health_hm", &hp_map_hm}
+    };
 
     // main routine variables
     bool in_explorable = false;
@@ -368,6 +372,7 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
     }
 
     long lvalue;
+    auto& hp_map = GW::PartyMgr::GetIsPartyInHardMode() ? hp_map_hm : hp_map_nm;
     if (target->max_hp > 0 && target->max_hp < 100000) {
         lvalue = std::lround(std::abs(packet->value) * target->max_hp);
         hp_map[target->player_number] = target->max_hp;
@@ -786,19 +791,15 @@ void PartyDamage::LoadSettings(ToolboxIni* ini)
         inifile = new ToolboxIni(false, false, false);
     }
     inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
-    TNamesDepend keys;
-    inifile->GetAllKeys(IniSection, keys);
-    for (const auto& key : keys) {
-        int lkey;
-        if (TextUtils::ParseInt(key.pItem, &lkey)) {
-            if (lkey <= 0) {
-                continue;
-            }
-            const long lval = inifile->GetLongValue(IniSection, key.pItem, 0);
-            if (lval <= 0) {
-                continue;
-            }
-            hp_map[static_cast<size_t>(lkey)] = static_cast<uint32_t>(lval);
+    for (const auto& [section, map] : section_maps) {
+        TNamesDepend keys;
+        inifile->GetAllKeys(section, keys);
+        for (const auto& key : keys) {
+            uint32_t player_number = 0;
+            TextUtils::ParseUInt(key.pItem, &player_number);
+            const long hp = inifile->GetLongValue(section, key.pItem, 0);
+            if (hp > 0)
+                (*map)[player_number] = static_cast<DWORD>(hp);
         }
     }
 }
@@ -821,11 +822,21 @@ void PartyDamage::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_damage);
     SAVE_BOOL(show_healing);
 
-    for (const auto& [player_number, hp] : hp_map) {
-        std::string key = std::to_string(player_number);
-        inifile->SetLongValue(IniSection, key.c_str(), hp, nullptr, false, true);
+
+    for (const auto& [section, map] : section_maps) {
+        for (const auto& [player_number, hp] : *map) {
+            const std::string key = std::to_string(player_number);
+            inifile->SetLongValue(section, key.c_str(), hp, nullptr, false, true);
+        }
     }
     ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME)) == SI_OK);
+}
+
+DWORD PartyDamage::GetMaxHp(DWORD player_number)
+{
+    const auto& map = GW::PartyMgr::GetIsPartyInHardMode() ? hp_map_hm : hp_map_nm;
+    const auto it = map.find(player_number);
+    return it != map.end() ? it->second : 0;
 }
 
 void PartyDamage::DrawSettingsInternal()

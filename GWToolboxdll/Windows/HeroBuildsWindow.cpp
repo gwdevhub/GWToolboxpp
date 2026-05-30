@@ -30,8 +30,6 @@
 #include <Utils/TeamBuildEncoder.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
-#include <Windows/BuildsWindow.h>
-
 constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
 
 namespace {
@@ -268,8 +266,8 @@ void HeroBuildsWindow::Initialize()
     TeamBuild::SetSkillToggleSprite(skill_toggle_sprite);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);
-    GW::UI::RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kChatLinkClicked, OnChatLinkClicked);
-    GW::UI::RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kAddCustomChatLink, OnCreateChatLink);
+    RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kChatLinkClicked, OnChatLinkClicked);
+    RegisterUIMessageCallback(&OnOpenTemplate_Entry, GW::UI::UIMessage::kAddCustomChatLink, OnCreateChatLink);
 }
 
 void HeroBuildsWindow::Terminate()
@@ -480,61 +478,8 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
     }
 
     // Draw detached teambuild windows (received builds not in the main list).
-    // Build names are lazily populated with the elite skill from each slot.
     for (auto& tbuild_ptr : detached_pool) {
-        TeamBuild& tbuild = *tbuild_ptr;
-        if (!tbuild.edit_open) continue;
-
-        const auto winname = std::format("{}###detached_{}", tbuild.name, tbuild.ui_id);
-        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_FirstUseEver);
-        if (tbuild.focus_next_frame) {
-            ImGui::SetNextWindowCollapsed(false);
-            ImGui::SetNextWindowFocus();
-            tbuild.focus_next_frame = false;
-        }
-        if (ImGui::Begin(winname.c_str(), &tbuild.edit_open)) {
-            for (size_t j = 0; j < tbuild.builds.size(); j++) {
-                const auto& build = tbuild.builds[j];
-                if (build.code.empty() && build.hero_id == HeroID::NoHero) continue;
-                std::string disp_name;
-                if (tbuild.has_hero_slots) {
-                    HeroBuildName(build, &disp_name);
-                } else {
-                    const auto& bname = !build.name.empty() ? build.name : build.GetFallbackBuildName();
-                    disp_name = std::format("#{} {}", j + 1, bname);
-                }
-                if (!disp_name.empty()) ImGui::TextUnformatted(disp_name.c_str());
-                if (!build.code.empty()) GuiUtils::DrawSkillbar(build.code.c_str(), false);
-                ImGui::Spacing();
-            }
-            ImGui::Separator();
-            if (tbuild.has_hero_slots) {
-                if (ImGui::Button("Load All")) {
-                    tbuild.Load();
-                }
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load all builds onto your heroes");
-                ImGui::SameLine();
-            }
-            if (ImGui::Button("Add to My Builds")) {
-                TeamBuild copy = tbuild;
-                copy.edit_open = false;
-                if (copy.has_hero_slots) {
-                    teambuilds.push_back(std::move(copy));
-                    builds_changed = true;
-                } else {
-                    BuildsWindow::Instance().AddTeambuild(std::move(copy));
-                }
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip(tbuild.has_hero_slots
-                    ? "Save this teambuild to your Hero Builds list"
-                    : "Save this teambuild to your Builds list");
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Close")) tbuild.edit_open = false;
-        }
-        ImGui::End();
+        tbuild_ptr->DrawDetachedWindow(teambuilds, builds_changed);
     }
 }
 

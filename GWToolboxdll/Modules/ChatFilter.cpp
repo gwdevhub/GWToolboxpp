@@ -854,7 +854,7 @@ void ChatFilter::Initialize()
         GW::UI::UIMessage::kPlayerChatMessage
     };
     for (auto message_id : message_ids) {
-        GW::UI::RegisterUIMessageCallback(&BlockIfApplicable_Entry, message_id, OnUIMessage, -0x8001);
+        RegisterUIMessageCallback(&BlockIfApplicable_Entry, message_id, OnUIMessage, -0x8001);
     }
 }
 

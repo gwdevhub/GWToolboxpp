@@ -1664,7 +1664,7 @@ void GWMarketWindow::Initialize()
 
     const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kMapLoaded};
     for (auto ui_message : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x4000);
+        RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x4000);
     }
     OnPostUIMessage(0, GW::UI::UIMessage::kMapLoaded, 0, 0);
 }

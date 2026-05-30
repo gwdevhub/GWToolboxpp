@@ -627,8 +627,8 @@ void SkillbarWidget::DrawSettingsInternal()
 void SkillbarWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kUIPositionChanged, OnUIMessage, 0x8000);
-    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
+    RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kUIPositionChanged, OnUIMessage, 0x8000);
+    RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
 
     ChatCommands::RegisterSettingChatCommand(L"skillbar_effects_overlay", &display_effect_monitor, L"Toggles the effect monitor overlay on the skillbar widget");
     ChatCommands::RegisterSettingChatCommand(L"skillbar_skills_overlay", &display_skill_overlay, L"Toggles the skill monitor overlay on the skillbar widget");

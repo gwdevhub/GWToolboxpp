@@ -163,7 +163,7 @@ void SnapsToPartyWindow::Initialize()
 {
     ToolboxWidget::Initialize();
     is_movable = is_resizable = false;
-    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
+    RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kPreferenceValueChanged, OnUIMessage, 0x8000);
 }
 
 void SnapsToPartyWindow::Terminate()

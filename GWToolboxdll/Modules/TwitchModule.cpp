@@ -266,7 +266,7 @@ namespace {
         }
         hooked = true;
         // When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
-        GW::UI::RegisterUIMessageCallback(&StartWhisperCallback_Entry, GW::UI::UIMessage::kStartWhisper, [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+        RegisterUIMessageCallback(&StartWhisperCallback_Entry, GW::UI::UIMessage::kStartWhisper, [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             wchar_t* name = *(wchar_t**)wparam;
             if (!(name && *name)) {
                 return;
@@ -278,7 +278,7 @@ namespace {
                 wcscpy(name, w_alias.c_str());
             }
         });
-        GW::UI::RegisterUIMessageCallback(&SendChatCallback_Entry, GW::UI::UIMessage::kSendChatMessage, [](GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
+        RegisterUIMessageCallback(&SendChatCallback_Entry, GW::UI::UIMessage::kSendChatMessage, [](GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*) {
             const auto msg = *static_cast<const wchar_t**>(wparam);
             const auto chan = GW::Chat::GetChannel(*msg);
             if (chan != GW::Chat::Channel::CHANNEL_WHISPER || !connected) {

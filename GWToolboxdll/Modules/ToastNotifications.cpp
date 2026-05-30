@@ -520,8 +520,8 @@ void ToastNotifications::Initialize()
     ToolboxModule::Initialize();
 
     is_platform_compatible = WinToastLib::WinToast::isCompatible();
-    GW::UI::RegisterUIMessageCallback(&OnWhisper_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
-    GW::UI::RegisterUIMessageCallback(&OnTeamChat_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnTeamChatMessage);
+    RegisterUIMessageCallback(&OnWhisper_Entry, GW::UI::UIMessage::kRecvWhisper, OnRecvWhisper);
+    RegisterUIMessageCallback(&OnTeamChat_Entry, GW::UI::UIMessage::kPlayerChatMessage, OnTeamChatMessage);
     for (auto& callback : stoc_callbacks) {
         GW::StoC::RegisterPacketCallback(&callback.hook_entry, callback.header, callback.cb, 0x8000);
     }

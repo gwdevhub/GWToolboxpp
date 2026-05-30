@@ -90,8 +90,6 @@ struct TeamBuild {
     //   index        – position of this TeamBuild in all_builds.
     //   all_builds   – the owning vector; may be modified (reorder / delete).
     //   builds_changed – set true when any data is modified.
-    //   on_load / on_send / on_view – module-supplied callbacks invoked when
-    //     the corresponding button is pressed; receive (teambuild, build_index).
     //
     // Returns false when this teambuild was deleted (erased from all_builds).
     bool DrawEditWindow(
@@ -99,6 +97,11 @@ struct TeamBuild {
         std::vector<TeamBuild>& all_builds,
         bool& builds_changed
     );
+
+    // Draw a read-only detached window for a teambuild received via chat link.
+    // hero_builds / builds_changed are the HeroBuildsWindow-owned list used by
+    // the "Add to My Builds" button.
+    void DrawDetachedWindow(std::vector<TeamBuild>& hero_builds, bool& builds_changed);
 
     // Provide the 2×2 sprite sheet used to render the disabled-skill overlay.
     // Call once from HeroBuildsWindow::Initialize().

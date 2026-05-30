@@ -172,7 +172,7 @@ void FavorTracker::Initialize()
         GW::UI::UIMessage::kWriteToChatLog
     };
     for (const auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnPreUIMessage, -0x4500);
+        RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnPreUIMessage, -0x4500);
     }
 }
 
