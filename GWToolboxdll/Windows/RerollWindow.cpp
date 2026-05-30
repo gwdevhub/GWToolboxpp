@@ -811,9 +811,9 @@ bool RerollWindow::Reroll(const wchar_t* character_name, bool _same_map, const b
     return ::Reroll(character_name, _same_map, _same_party, _ignore_current_character, _do_not_prompt);
 }
 
-bool RerollWindow::RerollToProfession(const GW::Constants::Profession profession, const bool same_map, const bool same_party)
+bool RerollWindow::RerollToProfession(const GW::Constants::Profession profession, const bool _same_map, const bool _same_party)
 {
-    return ::RerollToProfession(profession, same_map, same_party);
+    return ::RerollToProfession(profession, _same_map, _same_party);
 }
 
 const wchar_t* RerollWindow::FindAvailableCharForProfession(const GW::Constants::Profession profession)
