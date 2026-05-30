@@ -214,6 +214,119 @@ namespace {
         return tb;
     }
 
+    void DrawDetachedTeambuild(Teambuild* tbuild_pt) {
+        
+        if (!(tbuild_pt && tbuild_pt->edit_open)) return;
+        TeamBuild& tbuild = *tbuild_ptr;
+        const auto winname = std::format("{}###detached_{}", tbuild.name, tbuild.ui_id);
+        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_FirstUseEver);
+        if (tbuild.focus_next_frame) {
+            ImGui::SetNextWindowCollapsed(false);
+            ImGui::SetNextWindowFocus();
+            tbuild.focus_next_frame = false;
+        }
+        if (ImGui::Begin(winname.c_str(), &tbuild.edit_open)) {
+            const auto* me = GW::Agents::GetControlledCharacter();
+            const auto player_profession = me ? static_cast<GW::Constants::Profession>(me->primary) : GW::Constants::Profession::None;
+
+            for (size_t j = 0; j < tbuild.builds.size(); j++) {
+                const auto& build = tbuild.builds[j];
+                if (build.code.empty() && build.hero_id == HeroID::NoHero) continue;
+                std::string disp_name;
+                if (tbuild.has_hero_slots) {
+                    HeroBuildName(build, &disp_name);
+                }
+                else {
+                    const auto& bname = !build.name.empty() ? build.name : build.GetFallbackBuildName();
+                    disp_name = std::format("#{} {}", j + 1, bname);
+                }
+                if (!disp_name.empty()) ImGui::TextUnformatted(disp_name.c_str());
+                if (!build.code.empty()) GuiUtils::DrawSkillbar(build.code.c_str(), true);
+
+                if (!build.code.empty()) {
+                    ImGui::PushID(static_cast<int>(j));
+                    bool can_load = false;
+                    bool can_reroll = false;
+                    const char* load_tooltip = nullptr;
+                    GW::Constants::Profession build_profession = GW::Constants::Profession::None;
+
+                    if (build.IsPlayerBuild()) {
+                        GW::SkillbarMgr::SkillTemplate st{};
+                        if (GW::SkillbarMgr::DecodeSkillTemplate(st, build.code.c_str())) {
+                            build_profession = st.primary;
+                            can_load = player_profession != GW::Constants::Profession::None && st.primary == player_profession;
+                            if (!can_load && build_profession != GW::Constants::Profession::None) {
+                                // Check if there's an available character we could reroll to.
+                                can_reroll = RerollWindow::FindAvailableCharForProfession(build_profession) != nullptr;
+                            }
+                            if (can_load) {
+                                load_tooltip = "Load this build on your player";
+                            }
+                            else if (can_reroll) {
+                                load_tooltip = "Reroll to a matching character and load this build";
+                            }
+                            else {
+                                load_tooltip = "Your profession doesn't match this build and no available character has the right profession";
+                            }
+                        }
+                    }
+                    else {
+                        can_load = ToolboxUtils::IsHeroUnlocked(build.hero_id);
+                        load_tooltip = can_load ? "Load this build on the hero" : "Hero not unlocked";
+                    }
+
+                    if (can_reroll && !can_load) {
+                        // Show "Reroll" button instead of a disabled "Load".
+                        if (ImGui::Button("Reroll")) {
+                            if (RerollWindow::RerollToProfession(build_profession, /*same_map=*/true, /*same_party=*/true)) {
+                                pending_reroll_build_code = build.code;
+                            }
+                        }
+                    }
+                    else {
+                        if (!can_load) ImGui::BeginDisabled();
+                        if (ImGui::Button("Load")) {
+                            build.Load();
+                        }
+                        if (!can_load) ImGui::EndDisabled();
+                    }
+                    if (load_tooltip && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+                        ImGui::SetTooltip(load_tooltip);
+                    }
+                    ImGui::PopID();
+                }
+
+                ImGui::Spacing();
+            }
+            ImGui::Separator();
+            if (tbuild.has_hero_slots) {
+                if (ImGui::Button("Load All")) {
+                    tbuild.Load();
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load all builds onto your heroes");
+                ImGui::SameLine();
+            }
+            if (ImGui::Button("Add to My Builds")) {
+                TeamBuild copy = tbuild;
+                copy.edit_open = false;
+                if (copy.has_hero_slots) {
+                    teambuilds.push_back(std::move(copy));
+                    builds_changed = true;
+                }
+                else {
+                    BuildsWindow::Instance().AddTeambuild(std::move(copy));
+                }
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip(tbuild.has_hero_slots ? "Save this teambuild to your Hero Builds list" : "Save this teambuild to your Builds list");
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Close")) tbuild.edit_open = false;
+        }
+        ImGui::End();
+    }
+
 } // namespace
 
 std::string HeroBuildsWindow::EncodeTeambuildToDaybreak(const TeamBuild& tbuild)
@@ -486,112 +599,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
     // Draw detached teambuild windows (received builds not in the main list).
     // Build names are lazily populated with the elite skill from each slot.
     for (auto& tbuild_ptr : detached_pool) {
-        TeamBuild& tbuild = *tbuild_ptr;
-        if (!tbuild.edit_open) continue;
-
-        const auto winname = std::format("{}###detached_{}", tbuild.name, tbuild.ui_id);
-        ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_FirstUseEver);
-        if (tbuild.focus_next_frame) {
-            ImGui::SetNextWindowCollapsed(false);
-            ImGui::SetNextWindowFocus();
-            tbuild.focus_next_frame = false;
-        }
-        if (ImGui::Begin(winname.c_str(), &tbuild.edit_open)) {
-            const auto* me = GW::Agents::GetControlledCharacter();
-            const auto player_profession = me ? static_cast<GW::Constants::Profession>(me->primary) : GW::Constants::Profession::None;
-
-            for (size_t j = 0; j < tbuild.builds.size(); j++) {
-                const auto& build = tbuild.builds[j];
-                if (build.code.empty() && build.hero_id == HeroID::NoHero) continue;
-                std::string disp_name;
-                if (tbuild.has_hero_slots) {
-                    HeroBuildName(build, &disp_name);
-                } else {
-                    const auto& bname = !build.name.empty() ? build.name : build.GetFallbackBuildName();
-                    disp_name = std::format("#{} {}", j + 1, bname);
-                }
-                if (!disp_name.empty()) ImGui::TextUnformatted(disp_name.c_str());
-                if (!build.code.empty()) GuiUtils::DrawSkillbar(build.code.c_str(), true);
-
-                if (!build.code.empty()) {
-                    ImGui::PushID(static_cast<int>(j));
-                    bool can_load = false;
-                    bool can_reroll = false;
-                    const char* load_tooltip = nullptr;
-                    GW::Constants::Profession build_profession = GW::Constants::Profession::None;
-
-                    if (build.IsPlayerBuild()) {
-                        GW::SkillbarMgr::SkillTemplate st{};
-                        if (GW::SkillbarMgr::DecodeSkillTemplate(st, build.code.c_str())) {
-                            build_profession = st.primary;
-                            can_load = player_profession != GW::Constants::Profession::None && st.primary == player_profession;
-                            if (!can_load && build_profession != GW::Constants::Profession::None) {
-                                // Check if there's an available character we could reroll to.
-                                can_reroll = RerollWindow::FindAvailableCharForProfession(build_profession) != nullptr;
-                            }
-                            if (can_load) {
-                                load_tooltip = "Load this build on your player";
-                            } else if (can_reroll) {
-                                load_tooltip = "Reroll to a matching character and load this build";
-                            } else {
-                                load_tooltip = "Your profession doesn't match this build and no available character has the right profession";
-                            }
-                        }
-                    } else {
-                        can_load = ToolboxUtils::IsHeroUnlocked(build.hero_id);
-                        load_tooltip = can_load ? "Load this build on the hero" : "Hero not unlocked";
-                    }
-
-                    if (can_reroll && !can_load) {
-                        // Show "Reroll" button instead of a disabled "Load".
-                        if (ImGui::Button("Reroll")) {
-                            if (RerollWindow::RerollToProfession(build_profession, /*same_map=*/true, /*same_party=*/true)) {
-                                pending_reroll_build_code = build.code;
-                            }
-                        }
-                    } else {
-                        if (!can_load) ImGui::BeginDisabled();
-                        if (ImGui::Button("Load")) {
-                            build.Load();
-                        }
-                        if (!can_load) ImGui::EndDisabled();
-                    }
-                    if (load_tooltip && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-                        ImGui::SetTooltip(load_tooltip);
-                    }
-                    ImGui::PopID();
-                }
-
-                ImGui::Spacing();
-            }
-            ImGui::Separator();
-            if (tbuild.has_hero_slots) {
-                if (ImGui::Button("Load All")) {
-                    tbuild.Load();
-                }
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load all builds onto your heroes");
-                ImGui::SameLine();
-            }
-            if (ImGui::Button("Add to My Builds")) {
-                TeamBuild copy = tbuild;
-                copy.edit_open = false;
-                if (copy.has_hero_slots) {
-                    teambuilds.push_back(std::move(copy));
-                    builds_changed = true;
-                } else {
-                    BuildsWindow::Instance().AddTeambuild(std::move(copy));
-                }
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip(tbuild.has_hero_slots
-                    ? "Save this teambuild to your Hero Builds list"
-                    : "Save this teambuild to your Builds list");
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Close")) tbuild.edit_open = false;
-        }
-        ImGui::End();
+        DrawDetachedTeambuild(tbuild_ptr);
     }
 }
 
