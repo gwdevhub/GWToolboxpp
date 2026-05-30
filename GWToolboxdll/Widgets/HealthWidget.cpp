@@ -15,6 +15,7 @@
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
+#include <Widgets/PartyDamage.h>
 #include <Widgets/HealthWidget.h>
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
@@ -245,7 +246,8 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 ImGui::PushFont(FontLoader::GetFont(), font_size_abs_value);
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-                const auto health_abs = target->max_hp > 0 ? std::format("{:.0f} / {}", target->hp * target->max_hp, target->max_hp) : "-";
+                const uint32_t display_max_hp = PartyDamage::GetMaxHp(target->player_number);
+                const auto health_abs = display_max_hp > 0 ? std::format("{:.0f} / {}", target->hp * display_max_hp, display_max_hp) : std::string("-");
                 ImGui::TextColored(background, health_abs.c_str());
                 ImGui::SetCursorPos(cur);
                 ImGui::Text(health_abs.c_str());

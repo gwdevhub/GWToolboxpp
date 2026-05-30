@@ -53,6 +53,8 @@ public:
 
     void Update(float delta) override;
 
+    static DWORD GetMaxHp(DWORD player_number);
+
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
