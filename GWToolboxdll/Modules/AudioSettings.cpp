@@ -246,7 +246,7 @@ void AudioSettings::Initialize()
     ASSERT(StopSound_Func);
     ASSERT(PlayMusicFromSoundScript_Func);
     #endif
-    GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kMapChange, OnPostUIMessage, 0x8000);
+    RegisterUIMessageCallback(&OnUIMessage_HookEntry, GW::UI::UIMessage::kMapChange, OnPostUIMessage, 0x8000);
 
 }
 void AudioSettings::Update(float) {

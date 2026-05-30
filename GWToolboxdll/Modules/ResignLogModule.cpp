@@ -226,7 +226,7 @@ void ResignLogModule::Initialize() {
     };
 
     for (auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&ResignLog_HookEntry, message_id, OnUIMessage, 0x8000);
+        RegisterUIMessageCallback(&ResignLog_HookEntry, message_id, OnUIMessage, 0x8000);
     }
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"resignlog", CmdResignLog);

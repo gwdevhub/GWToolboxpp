@@ -305,7 +305,7 @@ void BountyKillTrackerWidget::Initialize()
         GW::UI::UIMessage::kMapChange,
     };
     for (const auto msg : messages) {
-        GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, msg, OnUIMessage, -0x6000);
+        RegisterUIMessageCallback(&UIMessage_HookEntry, msg, OnUIMessage, -0x6000);
     }
 }
 

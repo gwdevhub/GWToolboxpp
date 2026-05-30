@@ -288,7 +288,7 @@ void TradeWindow::Initialize()
         GW::UI::UIMessage::kPlayerChatMessage
     };
     for (const auto ui_message : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, ui_message, OnUIMessage);
+        RegisterUIMessageCallback(&OnUIMessage_Entry, ui_message, OnUIMessage);
     }
 
 }

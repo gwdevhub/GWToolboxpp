@@ -1846,7 +1846,7 @@ void ChatCommands::Initialize()
     };
 
 
-    GW::UI::RegisterUIMessageCallback(&OnSentChat_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
+    RegisterUIMessageCallback(&OnSentChat_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
 
 #if _DEBUG

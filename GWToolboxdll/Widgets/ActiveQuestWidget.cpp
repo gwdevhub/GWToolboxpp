@@ -71,7 +71,7 @@ void ActiveQuestWidget::Initialize() {
         GW::UI::UIMessage::kObjectiveUpdated
     });
     for (const auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&hook_entry, message_id, SetForceUpdate);
+        RegisterUIMessageCallback(&hook_entry, message_id, SetForceUpdate);
     }
 }
 

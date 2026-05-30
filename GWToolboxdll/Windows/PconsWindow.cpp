@@ -433,7 +433,7 @@ void PconsWindow::Initialize()
         GW::UI::UIMessage::kInventorySlotUpdated
     };
     for (auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
+        RegisterUIMessageCallback(&OnUIMessage_HookEntry, message_id, OnUIMessage);
     }
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, &OnGenericValue);

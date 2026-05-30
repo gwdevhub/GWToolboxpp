@@ -906,7 +906,7 @@ void WorldMapWidget::Initialize()
     const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kQuestAdded,      GW::UI::UIMessage::kSendSetActiveQuest, GW::UI::UIMessage::kMapLoaded,
                                              GW::UI::UIMessage::kOnScreenMessage, GW::UI::UIMessage::kSendAbandonQuest,   GW::UI::UIMessage::kLoadMapContext};
     for (auto ui_message : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, ui_message, OnUIMessage, 0x8000);
+        RegisterUIMessageCallback(&OnUIMessage_HookEntry, ui_message, OnUIMessage, 0x8000);
     }
 
     AppendMapFileInfo();

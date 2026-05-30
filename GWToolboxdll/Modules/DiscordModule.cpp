@@ -725,7 +725,7 @@ void DiscordModule::Initialize()
 
 
     for (auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&PostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x4000);
+        RegisterUIMessageCallback(&PostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x4000);
     }
 
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {

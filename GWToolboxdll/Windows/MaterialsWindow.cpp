@@ -451,7 +451,7 @@ void MaterialsWindow::Initialize()
         GW::UI::UIMessage::kVendorTransComplete,
     };
     for (auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&PostUIMessage_Entry, message_id, OnPostUIMessage, 0x4000);
+        RegisterUIMessageCallback(&PostUIMessage_Entry, message_id, OnPostUIMessage, 0x4000);
     }
 
 }

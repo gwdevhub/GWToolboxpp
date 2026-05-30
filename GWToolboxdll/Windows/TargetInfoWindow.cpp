@@ -335,7 +335,7 @@ void TargetInfoWindow::Initialize()
         GW::UI::UIMessage::kMapChange
     };
     for (const auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&ui_message_entry, message_id, OnUIMessage, 0x100);
+        RegisterUIMessageCallback(&ui_message_entry, message_id, OnUIMessage, 0x100);
     }
 }
 

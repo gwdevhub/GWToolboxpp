@@ -900,8 +900,8 @@ void Obfuscator::Initialize()
         RegisterUIMessageCallback(&stoc_hook, header, OnUIMessage, post_gw_altitude);
     }
 
-    GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kWriteToChatLog, OnPrintChat);
-    GW::UI::RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
+    RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kWriteToChatLog, OnPrintChat);
+    RegisterUIMessageCallback(&ctos_hook, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"obfuscate", CmdObfuscate);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"hideme", CmdObfuscate);

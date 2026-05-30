@@ -396,7 +396,7 @@ void ItemTooltipModule::Initialize()
     // Priority 200 keeps us after PriceCheckerModule (100), ensuring prices
     // are already fetched before we try to display them.
     ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 200);
-    GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, GW::UI::UIMessage::kSetAgentNameTagAttribs, ::OnUIMessage);
+    RegisterUIMessageCallback(&UIMessage_HookEntry, GW::UI::UIMessage::kSetAgentNameTagAttribs, ::OnUIMessage);
 }
 
 void ItemTooltipModule::Terminate()
