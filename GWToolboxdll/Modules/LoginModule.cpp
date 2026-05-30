@@ -61,7 +61,7 @@ void LoginModule::Update(float)
 void LoginModule::Initialize()
 {
     ToolboxModule::Initialize();
-    GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry,GW::UI::UIMessage::kSetPreGameContext_Value1, OnPostUIMessage, 0x8000);
+    RegisterUIMessageCallback(&UIMessage_HookEntry,GW::UI::UIMessage::kSetPreGameContext_Value1, OnPostUIMessage, 0x8000);
     GetStringParameter_Func = (GetStringParameter_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("Param.cpp", "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))", 0, 0));
     DEBUG_ASSERT(GetStringParameter_Func);
     if (GetStringParameter_Func) {

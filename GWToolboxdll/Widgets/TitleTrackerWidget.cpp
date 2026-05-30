@@ -338,7 +338,7 @@ void TitleTrackerWidget::Initialize()
     });
     static constexpr GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kTitleProgressUpdated, GW::UI::UIMessage::kExperienceGained, GW::UI::UIMessage::kUIPositionChanged};
     for (const auto& msg : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, msg, OnPostUIMessage, 0x8000);
+        RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, msg, OnPostUIMessage, 0x8000);
     }
     for (size_t i = 0; i != (size_t)GW::Constants::TitleID::Codex; i++) {
         title_progress_by_id.push_back(new TitleProgress(static_cast<GW::Constants::TitleID>(i)));

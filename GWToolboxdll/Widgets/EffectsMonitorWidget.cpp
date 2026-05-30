@@ -293,7 +293,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 void EffectsMonitorWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    GW::UI::RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPreUIMessage, -0x6000);
+    RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPreUIMessage, -0x6000);
 
     GW::UI::UIMessage spirit_messages[] = {
         GW::UI::UIMessage::kAgentSkillActivated,
@@ -301,7 +301,7 @@ void EffectsMonitorWidget::Initialize()
         GW::UI::UIMessage::kAgentDestroy
     };
     for (auto msg : spirit_messages) {
-        GW::UI::RegisterUIMessageCallback(&spirit_ui_hook, msg, OnSpiritUIMessage, 0x100);
+        RegisterUIMessageCallback(&spirit_ui_hook, msg, OnSpiritUIMessage, 0x100);
     }
 }
 void EffectsMonitorWidget::Terminate()

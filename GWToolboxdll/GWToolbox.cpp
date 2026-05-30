@@ -723,6 +723,11 @@ void GWToolbox::SetProfilingEnabled(bool enabled)
     profiling_enabled = enabled;
 }
 
+bool GWToolbox::IsProfilingEnabled()
+{
+    return profiling_enabled;
+}
+
 bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
 {
     const auto m = GW::Map::GetMapInfo(map_id);

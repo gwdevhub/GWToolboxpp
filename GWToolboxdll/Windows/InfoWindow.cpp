@@ -1145,7 +1145,7 @@ void InfoWindow::Initialize()
                                                                         [this](GW::HookStatus*, const GW::Packet::StoC::QuotedItemPrice* packet) -> void {
                                                                             quoted_item_id = packet->itemid;
                                                                         });
-    GW::UI::RegisterUIMessageCallback(&InstanceLoadFile_Entry, GW::UI::UIMessage::kLoadMapContext, OnPostUIMessage, 0x8000);
+    RegisterUIMessageCallback(&InstanceLoadFile_Entry, GW::UI::UIMessage::kLoadMapContext, OnPostUIMessage, 0x8000);
 }
 
 void InfoWindow::Draw(IDirect3DDevice9*)

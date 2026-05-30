@@ -454,7 +454,7 @@ void MouseFix::Initialize()
     };
 
     for (const auto ui_message : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, ui_message, OnUIMessage);
+        RegisterUIMessageCallback(&UIMessage_HookEntry, ui_message, OnUIMessage);
     }
 }
 

@@ -348,5 +348,5 @@ void PathfindingWindow::Initialize()
 {
     ToolboxWindow::Initialize();
 
-    GW::UI::RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
+    RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
 }

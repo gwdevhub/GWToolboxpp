@@ -986,7 +986,7 @@ void PartyWindowModule::Initialize()
         GW::UI::UIMessage::kPartySearchUpdated
     };
     for (auto ui_message : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x8000);
+        RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x8000);
     }
 }
 

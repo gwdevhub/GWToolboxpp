@@ -376,7 +376,7 @@ void PartyBroadcast::Initialize()
         GW::UI::UIMessage::kPartySearchIdChanged // Party search Remove
     };
     for (const auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_Hook, message_id, OnUIMessage, 0x8000);
+        RegisterUIMessageCallback(&OnUIMessage_Hook, message_id, OnUIMessage, 0x8000);
     }
 }
 

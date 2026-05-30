@@ -451,7 +451,7 @@ void ChatSettings::Initialize()
                                                  GW::UI::UIMessage::kPlayerChatMessage, GW::UI::UIMessage::kWriteToChatLog,  GW::UI::UIMessage::kWriteToChatLogWithSender, GW::UI::UIMessage::kRecvWhisper,
                                                  GW::UI::UIMessage::kStartWhisper,      GW::UI::UIMessage::kSendChatMessage, GW::UI::UIMessage::kAgentSpeechBubble,        GW::UI::UIMessage::kChatLinkClicked, GW::UI::UIMessage::kAddCustomChatLink};
     for (const auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
+        RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
     }
     ColorHexOrLabelToColor_Func = (ColorHexOrLabelToColor_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CtlTextMl.cpp", "value", 0, 0));
     if (ColorHexOrLabelToColor_Func) {

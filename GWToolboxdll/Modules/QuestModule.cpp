@@ -746,8 +746,8 @@ void QuestModule::Initialize()
     };
     for (const auto ui_message : ui_messages) {
         // Post callbacks, non blocking
-        GW::UI::RegisterUIMessageCallback(&pre_ui_message_entry, ui_message, OnPreUIMessage, -0x4000);
-        GW::UI::RegisterUIMessageCallback(&post_ui_message_entry, ui_message, OnPostUIMessage, 0x4000);
+        RegisterUIMessageCallback(&pre_ui_message_entry, ui_message, OnPreUIMessage, -0x4000);
+        RegisterUIMessageCallback(&post_ui_message_entry, ui_message, OnPostUIMessage, 0x4000);
     }
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 

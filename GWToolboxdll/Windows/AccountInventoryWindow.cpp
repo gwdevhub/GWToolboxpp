@@ -1167,7 +1167,7 @@ void AccountInventoryWindow::Initialize()
         GW::UI::UIMessage::kLogout
     };
     for (auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_HookEntry, (GW::UI::UIMessage)message_id,
+        RegisterUIMessageCallback(&OnUIMessage_HookEntry, (GW::UI::UIMessage)message_id,
             [this] (GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
                 switch (message_id) {
                     case GW::UI::UIMessage::kItemUpdated: {
