@@ -146,6 +146,8 @@ namespace GW {
     namespace Map {
         GW::Array<GW::MapProp*>* GetMapProps();
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
+        bool HasMapDisplayInfo(const GW::AreaInfo* map_info);
+        bool IsExcludedMapInfo(const GW::AreaInfo* map_info);
         std::vector<GW::Constants::TitleID> GetTitlesForMap(GW::Constants::MapID map_id);
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id);
 
