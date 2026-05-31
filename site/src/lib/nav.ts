@@ -63,6 +63,7 @@ export const navGroups: NavGroup[] = [
       { slug: 'chatfilter', label: 'Chat Filter' },
       { slug: 'chatlog', label: 'Chat Log' },
       { slug: 'commands', label: 'Commands' },
+      { slug: 'audio_settings', label: 'Audio Settings' },
       { slug: 'text-to-speech', label: 'Text-to-Speech' },
       { slug: 'theme', label: 'Theme' },
       { slug: 'reroll', label: 'Reroll' },

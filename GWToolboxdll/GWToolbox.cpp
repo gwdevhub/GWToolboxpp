@@ -826,6 +826,9 @@ void GWToolbox::Initialize(LPVOID module)
 std::filesystem::path GWToolbox::LoadSettings()
 {
     const auto ini = OpenSettingsFile();
+    // Reset the flag so nested OpenSettingsFile() calls (via ToggleTBModule) don't
+    // free and reallocate the ini we just loaded, causing a use-after-free.
+    settings_folder_changed = false;
     ToolboxSettings::Instance().LoadSettings(ini);
     ToolboxSettings::LoadModules(ini);
     if (!ini->location_on_disk.empty()) {

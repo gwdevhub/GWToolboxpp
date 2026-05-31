@@ -845,7 +845,7 @@ namespace {
                wcseq(quest.location, GW::EncStrings::WantedByTheShiningBlade);
     }
 
-    GW::Quest* GetQuestByName(const char* quest_name_english)
+    GW::Quest* GetQuestByName(const char* quest_name_english, const wchar_t* location_enc = nullptr)
     {
         const auto w = GW::GetWorldContext();
         if (!w) return nullptr;
@@ -853,14 +853,15 @@ namespace {
         if (!decoded_quest_names) return nullptr;
         for (auto& entry : w->quest_log) {
             if (!IsDailyQuest(entry)) continue;
+            if (location_enc && !wcseq(entry.location, location_enc)) continue;
             if (entry.name && decoded_quest_names->at(entry.quest_id)->string() == quest_name_english) return &entry;
         }
         return nullptr;
     }
 
-    const bool HasDailyQuest(const char* quest_name_english)
+    const bool HasDailyQuest(const char* quest_name_english, const wchar_t* location_enc = nullptr)
     {
-        return GetQuestByName(quest_name_english) != nullptr;
+        return GetQuestByName(quest_name_english, location_enc) != nullptr;
     }
 
     const char* you_have_this_quest = "You have this quest in your log";
@@ -900,7 +901,7 @@ namespace {
     bool OnDailyQuestContextMenu(void* wparam)
     {
         const auto info = (DailyQuests::QuestData*)wparam;
-        const auto has_quest = HasDailyQuest(info->GetQuestName());
+        const auto has_quest = HasDailyQuest(info->GetQuestName(), info->quest_location_enc);
         const auto quest_available = IsQuestAvailable(info);
         ImGui::TextUnformatted(info->GetQuestName());
 
@@ -1002,7 +1003,7 @@ namespace {
         const auto current_map = GW::Map::GetMapID();
         if (!IsZaishenMissionOutpost(current_map, zm_result.quest->map_id)) return;
 
-        const bool has_quest = HasDailyQuest(zm_result.quest->GetQuestName());
+        const bool has_quest = HasDailyQuest(zm_result.quest->GetQuestName(), GW::EncStrings::ZaishenMission);
         const bool bonus_active = IsZaishenMissionBonusActive(now);
         const uint32_t bonus_mult = bonus_active ? 2 : 1;
 
@@ -1337,7 +1338,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         auto lmb_clicked = ImGui::IsItemClicked();
         auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
         const auto hovered = ImGui::IsItemHovered();
-        if (HasDailyQuest(info->GetQuestName())) {
+        if (HasDailyQuest(info->GetQuestName(), info->quest_location_enc)) {
             ImGui::SameLine();
             ImGui::TextColored(incomplete_color, ICON_FA_EXCLAMATION);
             if (ImGui::IsItemHovered()) {
@@ -1740,6 +1741,7 @@ void DailyQuests::Initialize()
     // Trigger string decodes
     for (auto& it : wanted_by_shining_blade_cycles) {
         it.GetQuestName();
+        it.quest_location_enc = GW::EncStrings::WantedByTheShiningBlade;
     }
     for (auto& it : vanguard_cycles) {
         it.GetQuestName();
@@ -1753,15 +1755,19 @@ void DailyQuests::Initialize()
     }
     for (auto& it : zaishen_bounty_cycles) {
         it.GetQuestName();
+        it.quest_location_enc = GW::EncStrings::ZaishenBounty;
     }
     for (auto& it : zaishen_combat_cycles) {
         it.GetQuestName();
+        it.quest_location_enc = GW::EncStrings::ZaishenCombat;
     }
     for (auto& it : zaishen_vanquish_cycles) {
         it.GetQuestName();
+        it.quest_location_enc = GW::EncStrings::ZaishenVanquish;
     }
     for (auto& it : zaishen_mission_cycles) {
         it.GetQuestName();
+        it.quest_location_enc = GW::EncStrings::ZaishenMission;
     }
     for (auto& it : pvp_weekly_bonus_cycles) {
         it.GetQuestName();
@@ -1873,7 +1879,7 @@ void DailyQuests::Update(const float)
         OnMapLoaded_CheckZaishenMission();
     }
     if (pending_quest_take && GetQuestLogInfo() && *pending_quest_take->GetQuestName()) {
-        const auto has_quest = GetQuestByName(pending_quest_take->GetQuestName());
+        const auto has_quest = GetQuestByName(pending_quest_take->GetQuestName(), pending_quest_take->quest_location_enc);
         if (!has_quest) {
             TravelWindow::Instance().Travel(pending_quest_take->GetQuestGiverOutpost());
         }

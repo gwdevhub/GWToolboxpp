@@ -23,6 +23,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
+#include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
 #include <Windows/RerollWindow.h>
 #include <Timer.h>
@@ -37,6 +38,9 @@
 namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
+
+    // GW file 0x5e700: 256x64 sprite sheet with 4x64px icons: none, reforged, dhuum's covenant, melandru's accord
+    IDirect3DTexture9** covenant_sprite = nullptr;
 
     bool travel_to_same_location_after_rerolling = true;
     bool rejoin_party_after_rerolling = true;
@@ -598,6 +602,17 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                 ImGui::PopItemFlag();
                 ImGui::PopStyleColor();
             }
+            if (covenant_sprite && *covenant_sprite && character.is_melandrus_accord()) {
+                const ImVec2 item_min = ImGui::GetItemRectMin();
+                const ImVec2 item_max = ImGui::GetItemRectMax();
+                const float icon_h = ImGui::GetTextLineHeight();
+                const float icon_y = item_min.y + (item_max.y - item_min.y - icon_h) * 0.5f;
+                ImGui::GetWindowDrawList()->AddImage(
+                    reinterpret_cast<ImTextureID>(*covenant_sprite),
+                    {item_max.x - icon_h, icon_y}, {item_max.x, icon_y + icon_h},
+                    {0.75f, 0.f}, {1.f, 1.f}
+                );
+            }
         }
         ImGui::PopStyleVar();
     }
@@ -617,6 +632,8 @@ void RerollWindow::Initialize()
     ToolboxWindow::Initialize();
 
     reroll_stage = RerollStage::None;
+
+    covenant_sprite = GwDatTextureModule::LoadTextureFromFileId(0x5e700);
 
     // Add an entry to check available characters at login screen
     RegisterUIMessageCallback(&OnGoToCharSelect_Entry, GW::UI::UIMessage::kCheckUIState, OnUIMessage, 0x4000);
