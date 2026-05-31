@@ -240,6 +240,36 @@ namespace {
         user_defined_npcs.clear();
     }
 
+    void LoadDefaults() {
+        ClearSpecialNPCs();
+
+        AddSpecialNPC({"Vale friendly spirit 1", GW::Constants::ModelID::UW::TorturedSpirit1, GW::Constants::MapID::The_Underworld});
+        AddSpecialNPC({"Vale friendly spirit 2", GW::Constants::ModelID::UW::TorturedSpirit1 + 1, GW::Constants::MapID::The_Underworld});
+        AddSpecialNPC({"Pits friendly spirit 1", GW::Constants::ModelID::UW::PitsSoul1, GW::Constants::MapID::The_Underworld});
+        AddSpecialNPC({"Pits friendly spirit 2", GW::Constants::ModelID::UW::PitsSoul2, GW::Constants::MapID::The_Underworld});
+        AddSpecialNPC({"Pits friendly spirit 3", GW::Constants::ModelID::UW::PitsSoul3, GW::Constants::MapID::The_Underworld});
+        AddSpecialNPC({"Pits friendly spirit 4", GW::Constants::ModelID::UW::PitsSoul4, GW::Constants::MapID::The_Underworld});
+
+        AddSpecialNPC({"FoW Griffs", GW::Constants::ModelID::FoW::Griffons, GW::Constants::MapID::The_Fissure_of_Woe});
+        AddSpecialNPC({"FoW Forgemaster", GW::Constants::ModelID::FoW::Forgemaster, GW::Constants::MapID::The_Fissure_of_Woe});
+
+        AddSpecialNPC({"Mursaat Elementalist (Polymock)", GW::Constants::ModelID::PolymockSummon::MursaatElementalist, GW::Constants::MapID::None});
+        AddSpecialNPC({"Flame Djinn (Polymock)", GW::Constants::ModelID::PolymockSummon::FlameDjinn, GW::Constants::MapID::None});
+        AddSpecialNPC({"Ice Imp (Polymock)", GW::Constants::ModelID::PolymockSummon::IceImp, GW::Constants::MapID::None});
+        AddSpecialNPC({"Naga Shaman (Polymock)", GW::Constants::ModelID::PolymockSummon::NagaShaman, GW::Constants::MapID::None});
+
+        AddSpecialNPC({"Ebon Vanguard Assassin", GW::Constants::ModelID::EbonVanguardAssassin, GW::Constants::MapID::None});
+
+        AddSpecialNPC({"Ben Wolfson Pre-Searing", 1512, GW::Constants::MapID::None});
+
+        // Important NPCs for missions
+        AddSpecialNPC({"Gyala Hatchery siege turtle", 3582, GW::Constants::MapID::Gyala_Hatchery_outpost_mission});
+        AddSpecialNPC({"Rornak Stonesledge (Bonus NPC)", 1559, GW::Constants::MapID::The_Frost_Gate});
+        AddSpecialNPC({"Oink (Bonus NPC)", 1710, GW::Constants::MapID::Gates_of_Kryta});
+        AddSpecialNPC({"Restless Spirit (Bonus NPC)", 1965, GW::Constants::MapID::Sanctum_Cay});
+        AddSpecialNPC({"Captain Besuz (Bonus NPC)", 5271, GW::Constants::MapID::Blacktide_Den});
+    }
+
     void ClearAddedAllies()
     {
         for (const auto ally_id : allies_added_to_party) {
@@ -607,6 +637,9 @@ namespace {
             Log::Flash("Added special NPC %s (%d)", alias_str.c_str(), new_npc_model_id);
             CheckMap();
         }
+        bool reset = false;
+        if (ImGui::ConfirmButton("Reset", &reset, "This will reset your npc list to the default examples.\nAre you sure you want to continue?")) 
+            LoadDefaults();
     }
 
     void DrawCustomPartySortingSettings() {
@@ -1014,33 +1047,7 @@ bool PartyWindowModule::CanTerminate()
 
 void PartyWindowModule::LoadDefaults()
 {
-    ClearSpecialNPCs();
-
-    AddSpecialNPC({"Vale friendly spirit 1", GW::Constants::ModelID::UW::TorturedSpirit1, GW::Constants::MapID::The_Underworld});
-    AddSpecialNPC({"Vale friendly spirit 2", GW::Constants::ModelID::UW::TorturedSpirit1 + 1, GW::Constants::MapID::The_Underworld});
-    AddSpecialNPC({"Pits friendly spirit 1", GW::Constants::ModelID::UW::PitsSoul1, GW::Constants::MapID::The_Underworld});
-    AddSpecialNPC({"Pits friendly spirit 2", GW::Constants::ModelID::UW::PitsSoul2, GW::Constants::MapID::The_Underworld});
-    AddSpecialNPC({"Pits friendly spirit 3", GW::Constants::ModelID::UW::PitsSoul3, GW::Constants::MapID::The_Underworld});
-    AddSpecialNPC({"Pits friendly spirit 4", GW::Constants::ModelID::UW::PitsSoul4, GW::Constants::MapID::The_Underworld});
-
-    AddSpecialNPC({"FoW Griffs", GW::Constants::ModelID::FoW::Griffons, GW::Constants::MapID::The_Fissure_of_Woe});
-    AddSpecialNPC({"FoW Forgemaster", GW::Constants::ModelID::FoW::Forgemaster, GW::Constants::MapID::The_Fissure_of_Woe});
-
-    AddSpecialNPC({"Mursaat Elementalist (Polymock)", GW::Constants::ModelID::PolymockSummon::MursaatElementalist, GW::Constants::MapID::None});
-    AddSpecialNPC({"Flame Djinn (Polymock)", GW::Constants::ModelID::PolymockSummon::FlameDjinn, GW::Constants::MapID::None});
-    AddSpecialNPC({"Ice Imp (Polymock)", GW::Constants::ModelID::PolymockSummon::IceImp, GW::Constants::MapID::None});
-    AddSpecialNPC({"Naga Shaman (Polymock)", GW::Constants::ModelID::PolymockSummon::NagaShaman, GW::Constants::MapID::None});
-
-    AddSpecialNPC({"Ebon Vanguard Assassin", GW::Constants::ModelID::EbonVanguardAssassin, GW::Constants::MapID::None});
-
-    AddSpecialNPC({"Ben Wolfson Pre-Searing", 1512, GW::Constants::MapID::None});
-
-    // Important NPCs for missions
-    AddSpecialNPC({"Gyala Hatchery siege turtle", 3582, GW::Constants::MapID::Gyala_Hatchery_outpost_mission});
-    AddSpecialNPC({"Rornak Stonesledge (Bonus NPC)", 1559, GW::Constants::MapID::The_Frost_Gate});
-    AddSpecialNPC({"Oink (Bonus NPC)", 1710, GW::Constants::MapID::Gates_of_Kryta});
-    AddSpecialNPC({"Restless Spirit (Bonus NPC)", 1965, GW::Constants::MapID::Sanctum_Cay});
-    AddSpecialNPC({"Captain Besuz (Bonus NPC)", 5271, GW::Constants::MapID::Blacktide_Den});
+    ::LoadDefaults();
 }
 
 void PartyWindowModule::DrawSettingsInternal()
