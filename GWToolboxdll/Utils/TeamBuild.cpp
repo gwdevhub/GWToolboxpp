@@ -583,9 +583,8 @@ void TeamBuild::Load() const
 void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
 {
     const float font_scale = ImGui::FontScale();
-    const float del_width = 24.0f * font_scale;
     const auto row_height = ImGui::CalcTextSize(" ").y * 2.f;
-    const auto icon_btn_size = ImVec2(del_width, 0);
+    const auto icon_btn_size = ImVec2(row_height, row_height);
     const float spacing = 4.f * font_scale;
     // 4 visible icon buttons when editable: chat, load/reroll, edit, dropdown
     // 3 when read-only: chat, load/reroll, dropdown (no edit toggle)
@@ -605,7 +604,7 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
 
         // ---- Row: number + name (editable in edit mode) + icon buttons ----
         ImGui::Text("#%zu", j + 1);
-        ImGui::SameLine(del_width);
+        ImGui::SameLine(0);
         ImGui::Indent();
 
         const auto btns_start = ImGui::GetContentRegionAvail().x + ImGui::GetIndent() - (icon_btns * (icon_btn_size.x + spacing));
@@ -698,7 +697,7 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
         ImGui::SameLine(0, spacing);
         if (editable) {
             if (editing) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            if (GuiUtils::IconButton("##edit", GuiUtils::GwButtonIcon::SaveToTemplate, icon_btn_size)) editing_build_idx_ = editing ? -1 : static_cast<int>(j);
+            if (ImGui::Button(ICON_FA_EDIT "##edit", icon_btn_size)) editing_build_idx_ = editing ? -1 : static_cast<int>(j);
             if (editing) ImGui::PopStyleColor();
             if (ImGui::IsItemHovered()) ImGui::SetTooltip(editing ? "Stop editing" : "Edit build");
         }
@@ -785,9 +784,8 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
 void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
 {
     const float font_scale = ImGui::FontScale();
-    const float del_width = 24.0f * font_scale;
     const auto row_height = ImGui::CalcTextSize(" ").y * 2.f;
-    const auto icon_btn_size = ImVec2(del_width, 0);
+    const auto icon_btn_size = ImVec2(row_height, row_height);
     const float spacing = 4.f * font_scale;
     // 4 visible icon buttons when editable: send, load, edit, dropdown
     // 3 when read-only: send, load, dropdown (no edit toggle)
@@ -822,7 +820,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
         else
             ImGui::Text("#%u", hero_count++);
 
-        ImGui::SameLine(del_width);
+        ImGui::SameLine(0);
         ImGui::Indent();
 
         const auto btns_start = ImGui::GetContentRegionAvail().x + ImGui::GetIndent() - (icon_btns * (icon_btn_size.x + spacing));
@@ -852,8 +850,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
             }
         }
         else {
-            const auto& disp = std::format("{} ({})", !build.name.empty() ? build.name : build.GetFallbackBuildName(), is_player ? "Player" : Resources::GetHeroName(build.hero_id)->string());
-            ImGui::TextUnformatted(disp.c_str());
+            ImGui::TextUnformatted(build.DisplayName().c_str());
             if (ImGui::IsItemHovered() && !build.code.empty()) {
                 ImGui::SetTooltip([&build]() {
                     GuiUtils::DrawSkillbar(build.Decode(), false);
@@ -905,7 +902,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
             else {
                 can_load = ToolboxUtils::IsHeroUnlocked(build.hero_id);
                 if (can_load) {
-                    if (GuiUtils::IconButton("##load", GuiUtils::GwButtonIcon::LoadFromTemplate, icon_btn_size)) build.Load();
+                    if (GuiUtils::IconButton("Load##load", GuiUtils::GwButtonIcon::LoadFromTemplate, icon_btn_size)) build.Load();
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load build on hero");
                 }
                 else {
@@ -918,7 +915,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
         ImGui::SameLine(0, spacing);
         if (editable) {
             if (editing) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            if (GuiUtils::IconButton("##edit", GuiUtils::GwButtonIcon::SaveToTemplate, icon_btn_size)) editing_build_idx_ = editing ? -1 : static_cast<int>(j);
+            if (ImGui::Button(ICON_FA_EDIT "##edit", icon_btn_size)) editing_build_idx_ = editing ? -1 : static_cast<int>(j);
             if (editing) ImGui::PopStyleColor();
             if (ImGui::IsItemHovered()) ImGui::SetTooltip(editing ? "Stop editing" : "Edit build");
         }
@@ -931,8 +928,8 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
         if (ImGui::BeginPopup("##build_menu")) {
             if (ImGui::MenuItem(ICON_FA_EYE "  View build")) build.View();
             if (ImGui::MenuItem(ICON_FA_COPY "  Copy build code")) build.Copy();
-
             if (editable) {
+
                 if (!is_player) {
                     const bool prev_is_player = j > 0 && j - 1 == player_idx;
                     const bool next_is_player = j + 1 < builds.size() && j + 1 == player_idx;
@@ -1031,7 +1028,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
                 }
                 if (ImGui::Button(behavior_icon, icon_btn_size)) {
                     if (++build.behavior > 2) build.behavior = 0;
-                    builds_changed = true;
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(behavior_tooltip);
 
@@ -1046,13 +1042,12 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle which skills are disabled when loading");
 
                 if (ImGui::BeginPopup("SkillsPopup")) {
-                    GW::SkillbarMgr::SkillTemplate st{};
-                    const bool decoded = !build.code.empty() && GW::SkillbarMgr::DecodeSkillTemplate(st, build.code.c_str());
+                    const auto decoded = build.Decode();
                     constexpr float skill_px = 48.0f;
                     for (int k = 0; k < 8; k++) {
                         if (k > 0) ImGui::SameLine(0, 0);
                         const bool is_disabled = (build.disabled_skills >> k) & 1;
-                        const auto skill_id = decoded ? st.skills[k] : GW::Constants::SkillID::No_Skill;
+                        const auto skill_id = decoded ? decoded->skills[k] : GW::Constants::SkillID::No_Skill;
                         auto* skill_tex = *Resources::GetSkillImage(skill_id);
                         ImGui::PushID(k);
                         const ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -1061,7 +1056,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
                                 build.disabled_skills &= static_cast<uint8_t>(~(1u << k));
                             else
                                 build.disabled_skills |= static_cast<uint8_t>(1u << k);
-                            builds_changed = true;
                         }
                         const ImVec2 p_max(pos.x + skill_px, pos.y + skill_px);
                         auto* dl = ImGui::GetWindowDrawList();
@@ -1098,7 +1092,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
                             build.pcons.emplace(pcon->ini);
                         else
                             build.pcons.erase(pcon->ini);
-                        builds_changed = true;
                     }
                     if (active) ImGui::PopStyleColor();
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip(pcon->chat.c_str());
@@ -1108,6 +1101,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
         }
 
         ImGui::Unindent();
+        if (editing) ImGui::Spacing();
         ImGui::PopID();
         if (builds_changed) break;
     }
@@ -1132,7 +1126,7 @@ bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds,
         focus_next_frame = false;
     }
 
-    if (!ImGui::Begin(winname.c_str(), &edit_open)) {
+    if (!ImGui::Begin(winname.c_str(), &edit_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
         return true;
     }
@@ -1258,7 +1252,7 @@ void TeamBuild::DrawDetachedWindow(std::vector<TeamBuild>& hero_builds, bool& bu
         ImGui::SetNextWindowFocus();
         focus_next_frame = false;
     }
-    if (!ImGui::Begin(winname.c_str(), &edit_open)) {
+    if (!ImGui::Begin(winname.c_str(), &edit_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
         return;
     }
