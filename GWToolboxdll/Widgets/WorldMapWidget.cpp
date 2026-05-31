@@ -374,9 +374,7 @@ namespace {
     bool IsValidOutpost(GW::Constants::MapID map_id)
     {
         const auto map_info = GW::Map::GetMapInfo(map_id);
-        if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y)) return false;
-        if ((map_info->flags & 0x5000000) == 0x5000000) return false;   // e.g. "wrong" augury rock is map 119, no NPCs
-        if ((map_info->flags & 0x80000000) == 0x80000000) return false; // e.g. Debug map
+        if (!GW::Map::HasMapDisplayInfo(map_info) || GW::Map::IsExcludedMapInfo(map_info)) return false;
         switch (map_info->type) {
             case GW::RegionType::City:
             case GW::RegionType::CompetitiveMission:
@@ -394,12 +392,12 @@ namespace {
     bool IsHighlightableLockedArea(GW::Constants::MapID map_id, const GW::AreaInfo* map_info)
     {
         if (!(map_info && map_info->GetIsOnWorldMap())) return false;
-        if (GW::Map::IsPreSearing(map_id) || GW::Map::IsFestivalOutpost(map_id)) return false;
-        if ((map_info->flags & 0x5000000) == 0x5000000) return false;   // e.g. "wrong" augury rock is map 119, no NPCs
-        if ((map_info->flags & 0x80000000) == 0x80000000) return false; // e.g. Debug map
+        if (GW::Map::IsPreSearing(map_id) != GW::Map::IsPreSearing() || GW::Map::IsFestivalOutpost(map_id)) return false;
+        if (GW::Map::IsExcludedMapInfo(map_info)) return false;
         switch (map_info->type) {
             case GW::RegionType::City:
             case GW::RegionType::CooperativeMission:
+            case GW::RegionType::EliteMission:
             case GW::RegionType::MissionOutpost:
             case GW::RegionType::Outpost:
                 return map_id != GW::Constants::MapID::Gate_of_Anguish_elite_mission;
@@ -412,9 +410,7 @@ namespace {
     {
         for (size_t i = 0; i < (size_t)GW::Constants::MapID::Count; i++) {
             const auto map_info = GW::Map::GetMapInfo((GW::Constants::MapID)i);
-            if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y)) continue;
-            if ((map_info->flags & 0x5000000) == 0x5000000) continue;   // e.g. "wrong" augury rock is map 119, no NPCs
-            if ((map_info->flags & 0x80000000) == 0x80000000) continue; // e.g. Debug map
+            if (!GW::Map::HasMapDisplayInfo(map_info) || GW::Map::IsExcludedMapInfo(map_info)) continue;
             if (!map_info->GetIsOnWorldMap()) continue;
             (world_map_point);
             // TODO: distance from point to rect

@@ -143,12 +143,8 @@ namespace {
         if (map_id == GW::Constants::MapID::Gate_of_Anguish_elite_mission)
             return false;
         const auto map_info = GW::Map::GetMapInfo(map_id);
-        if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y))
+        if (!GW::Map::HasMapDisplayInfo(map_info) || GW::Map::IsExcludedMapInfo(map_info))
             return false;
-        if ((map_info->flags & 0x5000000) == 0x5000000)
-            return false; // e.g. "wrong" augury rock is map 119, no NPCs
-        if ((map_info->flags & 0x80000000) == 0x80000000)
-            return false; // e.g. Debug map)
         switch (map_info->type) {
             case GW::RegionType::City:
             case GW::RegionType::Challenge:

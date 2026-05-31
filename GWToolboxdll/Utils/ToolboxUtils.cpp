@@ -46,6 +46,9 @@ namespace {
 
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
+    constexpr uint32_t bogus_area_info_flags = 0x5000000; // e.g. "wrong" Augury Rock is map 119, no NPCs.
+    constexpr uint32_t debug_area_info_flag = 0x80000000;
+
     bool IsInfused(const GW::Item* item)
     {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
@@ -79,6 +82,18 @@ namespace {
 namespace GW {
 
     namespace Map {
+        bool HasMapDisplayInfo(const GW::AreaInfo* map_info)
+        {
+            return map_info && map_info->thumbnail_id && map_info->name_id && (map_info->x || map_info->y);
+        }
+
+        bool IsExcludedMapInfo(const GW::AreaInfo* map_info)
+        {
+            return map_info
+                && ((map_info->flags & bogus_area_info_flags) == bogus_area_info_flags
+                    || (map_info->flags & debug_area_info_flag) != 0);
+        }
+
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out)
         {
             if (!map) return false;
