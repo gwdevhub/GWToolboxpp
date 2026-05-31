@@ -65,7 +65,11 @@ namespace ImGui {
     IMGUI_API bool SmallConfirmButton(const char* label, const char* confirm_content, ImGui::ImGuiConfirmDialogCallback callback, void* wparam = nullptr);
     IMGUI_API bool ChooseKey(const char* label, char* buf, size_t buf_len, long* key_code);
 
+    // Returns true to draw the content of the confirm
+    IMGUI_API bool BeginConfirmTrigger(const char* confirm_id, bool triggered);
+    IMGUI_API void EndConfirmTrigger(bool* confirm_bool);
     IMGUI_API bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
+    
 
     // Button with single icon texture
     IMGUI_API bool IconButton(const char* label, ImTextureID icon, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = {0.f, 0.f});

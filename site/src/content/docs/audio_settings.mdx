@@ -1,0 +1,42 @@
+---
+title: "Audio Settings"
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this feature live under <ToolboxPath steps={["Settings", "Audio Settings"]} />.
+
+The Audio Settings module lets you block specific in-game sound effects. This is useful for silencing repetitive or distracting sounds — for example, the error chime that plays when a chest is already being opened, when a hero can't cast on a given target, or when Panic prevents you from casting.
+
+## Blocking a Sound
+
+1. Open <ToolboxPath steps={["Settings", "Audio Settings"]} /> and expand **In-Game Sound Log**.
+2. Trigger the sound in-game (e.g. try to cast on an invalid target).
+3. The filename of the sound will appear in the log.
+4. Click **Block** next to it. The sound is now silenced and saved for future sessions.
+
+You can click **Play** on any logged entry to preview it before deciding whether to block it.
+
+## Blocked In-Game Sounds
+
+Expand this section to see everything you've already blocked. Each entry has:
+
+- **Play** — previews the sound effect.
+- **Unblock** — removes the block and restores the sound.
+
+## In-Game Sound Log
+
+Opening this section activates sound logging. Every sound effect triggered while the log is open is recorded here. Closing the section clears the log.
+
+- **Clear Logged Sounds** — empties the log without closing it.
+
+## In-Game Music Log
+
+Works the same as the Sound Log but captures background music tracks rather than sound effects.
+
+- **Clear Logged Music** — empties the music log.
+
+## Storage
+
+Blocked sounds are saved in <ToolboxPath steps={["Settings", "Open settings folder"]} /> inside `GWToolbox.ini` under the `[Audio Settings]` section.

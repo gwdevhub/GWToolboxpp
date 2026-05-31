@@ -344,25 +344,39 @@ namespace ImGui {
         return pressedKeys;
     }
 
+    bool BeginConfirmTrigger(const char* confirm_id, bool triggered)
+    {
+        if (triggered) {
+            OpenPopup(confirm_id);
+        }
+        if (BeginPopupModal(confirm_id, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            return true;
+        }
+        return false;
+    }
+
+    void EndConfirmTrigger(bool* confirm_bool)
+    {
+        if (Button("OK", ImVec2(120, 0)) || IsKeyReleased(ImGuiKey_Enter)) {
+            *confirm_bool = true;
+            CloseCurrentPopup();
+        }
+        SameLine();
+        if (Button("Cancel", ImVec2(120, 0))) {
+            CloseCurrentPopup();
+        }
+        EndPopup();
+    }
     bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
     {
         static char id_buf[128];
         const ImGuiID h = ImHashStr(confirm_content, 0, ImHashStr(label));
         snprintf(id_buf, sizeof(id_buf), "%s###confirm_popup_%u", label, h);
-        if (Button(label)) {
-            OpenPopup(id_buf);
-        }
-        if (BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+
+        const bool triggered = Button(label);
+        if (BeginConfirmTrigger(id_buf, triggered)) {
             Text(confirm_content);
-            if (Button("OK", ImVec2(120, 0)) || ImGui::IsKeyReleased(ImGuiKey_Enter)) {
-                *confirm_bool = true;
-                CloseCurrentPopup();
-            }
-            SameLine();
-            if (Button("Cancel", ImVec2(120, 0))) {
-                CloseCurrentPopup();
-            }
-            EndPopup();
+            EndConfirmTrigger(confirm_bool);
         }
         return *confirm_bool;
     }
@@ -376,10 +390,9 @@ namespace ImGui {
     bool CompositeIconButton(const char* label, ImTextureID* icons, size_t icons_len, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size, const ImVec2& uv0, ImVec2 uv1)
     {
         const ImVec2 pos = GetCursorScreenPos();
-        const bool has_label = label && *label;
+        const bool has_label = label && *label && strncmp(label,"##",2);
         const ImVec2 textsize = has_label ? CalcTextSize(label) : ImVec2(0.f, 0.f);
 
-        // build button id - skip sprintf, just use the label directly as the id suffix
         char button_id[128];
         snprintf(button_id, sizeof(button_id), "###icon_button_%s", label ? label : "");
         const bool clicked = ButtonEx(button_id, size, flags);
@@ -387,31 +400,43 @@ namespace ImGui {
         ImGuiContext& g = *GImGui;
         const auto clip_rect = g.LastItemData.Rect.ToVec4();
         const ImVec2 button_size = GetItemRectSize();
-
-        const float img_h = icon_size.y > 0.f ? icon_size.y : button_size.y - 2.f;
-        const float img_w = icon_size.x > 0.f ? icon_size.x : img_h;
-
         const ImGuiStyle& style = GetStyle();
-        const float content_width = img_w + textsize.x + style.FramePadding.x * 2.f;
-        float content_x = pos.x + style.FramePadding.x;
-        if (content_width < button_size.x) content_x += (button_size.x - content_width) * style.ButtonTextAlign.x;
 
-        const float img_x = content_x;
+        const float available_h = button_size.y - style.FramePadding.y;
+        const float available_w = button_size.x - style.FramePadding.x;
+
+        float img_h = icon_size.y > 0.f ? icon_size.y : available_h;
+        float img_w = icon_size.x > 0.f ? icon_size.x : img_h;
+
+        // Scale down if icon is larger than the button interior, preserving aspect ratio
+        if (img_h > available_h || img_w > available_w) {
+            const float scale = std::min(available_w / img_w, available_h / img_h);
+            img_w *= scale;
+            img_h *= scale;
+        }
+
+        float img_x;
+        if (has_label) {
+            const float content_width = img_w + style.ItemSpacing.x + textsize.x;
+            float content_x = pos.x + style.FramePadding.x;
+            if (content_width < button_size.x - style.FramePadding.x * 2.f) content_x += (button_size.x - style.FramePadding.x * 2.f - content_width) * style.ButtonTextAlign.x;
+            img_x = content_x;
+        }
+        else {
+            img_x = pos.x + (button_size.x - img_w) / 2.f;
+        }
         const float img_y = pos.y + (button_size.y - img_h) / 2.f;
-        const float text_x = img_x + img_w + 3.f;
-        const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
-        const ImVec2 top_left = ImVec2(img_x, img_y);
-        const ImVec2 bottom_right = ImVec2(img_x + img_w, img_y + img_h);
 
-        // hoist draw list and uv check outside the loop
+        const float text_x = img_x + img_w + style.ItemSpacing.x;
+        const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
+
         ImDrawList* draw_list = GetWindowDrawList();
         const bool use_custom_uv = uv0.x != uv1.x || uv0.y != uv1.y;
         for (size_t i = 0; i < icons_len; i++) {
             ImTextureID tex = icons[i];
             if (!tex) continue;
-            draw_list->AddImage(tex, top_left, bottom_right, uv0, use_custom_uv ? uv1 : CalculateUvCrop(tex, ImVec2(img_w, img_h)));
+            draw_list->AddImage(tex, ImVec2(img_x, img_y), ImVec2(img_x + img_w, img_y + img_h), uv0, use_custom_uv ? uv1 : CalculateUvCrop(tex, ImVec2(img_w, img_h)));
         }
-
         if (has_label) draw_list->AddText(nullptr, 0.f, ImVec2(text_x, text_y), ImColor(style.Colors[ImGuiCol_Text]), label, nullptr, 0.f, &clip_rect);
 
         return clicked;

@@ -23,6 +23,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
+#include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
 #include <Windows/RerollWindow.h>
 #include <Timer.h>
@@ -37,6 +38,9 @@
 namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
+
+    // GW file 0x5e700: 256x64 sprite sheet with 4x64px icons: none, reforged, dhuum's covenant, melandru's accord
+    IDirect3DTexture9** covenant_sprite = nullptr;
 
     bool travel_to_same_location_after_rerolling = true;
     bool rejoin_party_after_rerolling = true;
@@ -231,22 +235,23 @@ namespace {
     void DrawPreferredCharacters()
     {
         ImGui::Spacing();
-        if (!ImGui::TreeNodeEx("Preferred Characters per Profession", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            return;
-        }
-        ImGui::TextDisabled("Choose which character to reroll to for each profession.");
-        ImGui::TextDisabled("Leave blank to use the first available character.");
-
-        constexpr std::array<const char*, 10> profession_names = {
-            "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer",
-            "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"
-        };
+        ImGui::TextUnformatted("Preferred Characters per Profession");
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Indent();
+        ImGui::TextDisabled("Choose which character to reroll to for each profession. Leave blank to use the first available character.");
 
         const auto available_chars_ptr = GW::AccountMgr::GetAvailableChars();
 
         auto& account_prefs = GetCurrentAccountPrefs();
-        for (size_t i = 0; i < profession_names.size(); i++) {
-            const auto prof = static_cast<GW::Constants::Profession>(i + 1);
+        const auto img_w = ImGui::CalcTextSize(" ").y;
+        const ImVec2 img_s = {img_w, img_w};
+        const auto dropdown_w = 200.f * ImGui::FontScale();
+
+        size_t i = 1;
+        for (i = 1; i <= (size_t)GW::Constants::Profession::Dervish; i++) {
+            if ((i % 2) == 0) ImGui::SameLine(0, img_w);
+            const auto prof = static_cast<GW::Constants::Profession>(i);
             const auto prof_key = static_cast<uint32_t>(prof);
             auto& pref = account_prefs[prof_key];
 
@@ -262,14 +267,13 @@ namespace {
                 }
             }
 
-            const float label_w = 100.f * ImGui::FontScale();
-            ImGui::Text("%-13s", profession_names[i]);
-            ImGui::SameLine(label_w);
+            ImGui::ImageFit(*Resources::GetProfessionIcon(prof), img_s);
+            ImGui::SameLine();
 
             const auto current_str = TextUtils::WStringToString(pref);
             const auto preview = pref.empty() ? "(any)" : current_str.c_str();
 
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2);
+            ImGui::SetNextItemWidth(dropdown_w);
             if (ImGui::BeginCombo("##pref", preview)) {
                 // "(any)" option
                 if (ImGui::Selectable("(any)", pref.empty())) {
@@ -286,7 +290,8 @@ namespace {
             }
             ImGui::PopID();
         }
-        ImGui::TreePop();
+        ImGui::Unindent();
+        ImGui::Spacing();
     }
 
     bool IsInMap(const bool include_district = true)
@@ -562,7 +567,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         ImGui::Checkbox("Travel to same location after rerolling", &travel_to_same_location_after_rerolling);
         ImGui::Checkbox("Re-join your party after rerolling", &rejoin_party_after_rerolling);
         ImGui::Checkbox("Return to original character on fail", &return_on_fail);
-        const float btnw = ImGui::GetContentRegionAvail().x / 2.f;
+        const float btnw = ImGui::GetContentRegionAvail().x / 2.f - ImGui::GetStyle().ItemSpacing.x;
         const ImVec2 btn_dim = {btnw, 0.f};
         std::string buf;
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
@@ -597,6 +602,26 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                 ImGui::PopItemFlag();
                 ImGui::PopStyleColor();
             }
+            if (covenant_sprite && *covenant_sprite) {
+                float uv_x0 = -1.f;
+                if (character.is_melandrus_accord())
+                    uv_x0 = 0.75f;
+                else if (character.is_dhuums_covenant())
+                    uv_x0 = 0.50f;
+                else if (character.is_reforged())         
+                    uv_x0 = 0.25f;
+                if (uv_x0 >= 0.f) {
+                    const ImVec2 item_min = ImGui::GetItemRectMin();
+                    const ImVec2 item_max = ImGui::GetItemRectMax();
+                    const float icon_h = ImGui::GetTextLineHeight();
+                    const float icon_y = item_min.y + (item_max.y - item_min.y - icon_h) * 0.5f;
+                    ImGui::GetWindowDrawList()->AddImage(
+                        reinterpret_cast<ImTextureID>(*covenant_sprite),
+                        {item_max.x - icon_h, icon_y}, {item_max.x, icon_y + icon_h},
+                        {uv_x0, 0.f}, {uv_x0 + 0.25f, 1.f}
+                    );
+                }
+            }
         }
         ImGui::PopStyleVar();
     }
@@ -616,6 +641,8 @@ void RerollWindow::Initialize()
     ToolboxWindow::Initialize();
 
     reroll_stage = RerollStage::None;
+
+    covenant_sprite = GwDatTextureModule::LoadTextureFromFileId(0x5e700);
 
     // Add an entry to check available characters at login screen
     RegisterUIMessageCallback(&OnGoToCharSelect_Entry, GW::UI::UIMessage::kCheckUIState, OnUIMessage, 0x4000);

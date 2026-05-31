@@ -492,18 +492,6 @@ HeroBuildsWindow::~HeroBuildsWindow() {
     delete inifile;
 }
 
-void HeroBuildsWindow::HeroBuildName(const Build& build, std::string* out)
-{
-    const auto& code = build.code;
-    const auto id = build.hero_id;
-    const auto hero_name = build.hero_id == GW::Constants::HeroID::NoHero ? "Player" : Resources::GetHeroName(id)->string();
-    const auto name = !build.name.empty() ? build.name : build.GetFallbackBuildName();
-    if (name.empty() && code.empty() && id == HeroID::NoHero) {
-        return;
-    }
-    *out = std::format("{} ({})", name, hero_name);
-}
-
 const char* HeroBuildsWindow::BuildName(const size_t idx) const
 {
     if (idx < teambuilds.size()) {

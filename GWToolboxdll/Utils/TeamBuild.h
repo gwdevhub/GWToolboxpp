@@ -27,11 +27,12 @@ struct Build {
     bool show_panel = false;
     uint8_t disabled_skills = 0;
     std::set<std::string> pcons{};
+    bool decode_attempted_ = false;
 
     bool IsPlayerBuild() const { return hero_id == GW::Constants::HeroID::NoHero; }
 
     // Returns the elite skill name from the build code as a fallback display name.
-    std::string GetFallbackBuildName() const;
+    std::string GetFallbackBuildName();
 
     // Decode skill template from code. Returns nullptr if code is invalid.
     const GW::SkillbarMgr::SkillTemplate* Decode();
@@ -42,8 +43,10 @@ struct Build {
     void ResetDecodeCache();
 
     void View() const;
-    void Send() const;
+    std::string DisplayName();
+    void Send();
     void Load() const;
+    void RerollAndLoad(const wchar_t* character_name) const;
     void Copy() const;
 
     // Called every frame from GWToolbox::Update(); processes pending loads and the send queue.
@@ -107,14 +110,14 @@ struct TeamBuild {
     // Call once from HeroBuildsWindow::Initialize().
     static void SetSkillToggleSprite(IDirect3DTexture9** sprite);
 
-    void Send(bool one_by_one = false) const;
+    void Send(bool one_by_one = false);
     void Load() const;
     void Copy() const;
     TeamBuild Duplicate();
 
     // Draw tooltip content showing each build's skill bar, or a red "No Build Defined"
     // placeholder when the build code is absent or invalid.
-    void DrawTooltip() const;
+    void DrawTooltip();
 
     // Returns true if [TB;<encoded>] would be >= 120 chars (GW chat limit).
     bool ChatCodeTooLong() const;
@@ -130,7 +133,7 @@ private:
     // Returns the encoded wstring, computing and caching it on first call.
     const std::wstring& GetEncoded() const;
 
-    void DrawPlayerBuildsContent(bool& builds_changed);
+    void DrawPlayerBuildsContent(bool& builds_changed, bool editable = true);
 
-    void DrawHeroBuildsContent(bool& builds_changed);
+    void DrawHeroBuildsContent(bool& builds_changed, bool editable = true);
 };
