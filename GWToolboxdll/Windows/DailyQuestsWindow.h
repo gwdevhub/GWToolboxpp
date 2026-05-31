@@ -34,6 +34,7 @@ public:
     public:
         const GW::Constants::MapID map_id;
         std::wstring enc_name;
+        const wchar_t* quest_location_enc = nullptr; // Expected location field in the quest log for this quest type
         QuestData(GW::Constants::MapID map_id = (GW::Constants::MapID)0, const wchar_t* enc_name = nullptr);
         QuestData(QuestData&&) noexcept = default;
         QuestData& operator=(QuestData&&) noexcept = default;
