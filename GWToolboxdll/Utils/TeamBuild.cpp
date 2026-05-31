@@ -382,8 +382,16 @@ void Build::EnqueueSend(std::string msg)
 
 void Build::RerollAndLoad(const wchar_t* character_name) const
 {
-    // TODO: Implement.
-    (character_name);
+    if (!character_name || code.empty()) return;
+    // Reroll to the matching-profession character, returning to the same map and rejoining the same
+    // party so the player ends up back with their team after switching characters. Only queue the
+    // template to load once the reroll has actually started, so the build is applied to the new
+    // character rather than the current one (see Build::Update).
+    constexpr bool same_map = true;
+    constexpr bool same_party = true;
+    if (RerollWindow::Instance().Reroll(character_name, same_map, same_party)) {
+        pending_reroll_build_code = code;
+    }
 }
 
 
@@ -398,9 +406,19 @@ void Build::Update()
     const auto instance_type = GW::Map::GetInstanceType();
 
     if (!pending_reroll_build_code.empty() && !RerollWindow::IsRerolling()) {
-        const Build pending("", pending_reroll_build_code);
-        pending_reroll_build_code.clear();
-        pending.Load();
+        // The reroll has ended (completed, declined, or failed). Only apply the queued build if we
+        // actually landed on a character whose profession can use it; otherwise discard it, so a
+        // cancelled reroll doesn't load the template onto the wrong character.
+        if (const GW::AgentLiving* me = GW::Agents::GetControlledCharacter()) {
+            GW::SkillbarMgr::SkillTemplate st{};
+            const auto player_profession = static_cast<GW::Constants::Profession>(me->primary);
+            if (GW::SkillbarMgr::DecodeSkillTemplate(st, pending_reroll_build_code.c_str())
+                && st.primary == player_profession) {
+                const Build pending("", pending_reroll_build_code);
+                pending.Load();
+            }
+            pending_reroll_build_code.clear();
+        }
     }
 
     if (instance_type == GW::Constants::InstanceType::Loading) {
