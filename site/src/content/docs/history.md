@@ -6,6 +6,9 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.21
+* [Fix] Fixed a crash when trying to custom sort party members
+
 ## Version 8.20
 * [Fix] Fixes for gw 38618
 
