@@ -184,7 +184,7 @@ namespace {
     }
 
     TeamBuild FromCurrentTeam() {
-        TeamBuild tb(std::format("%s's Teambuild, {}", TextUtils::WStringToString(GW::AccountMgr::GetCurrentPlayerName()),TextUtils::GetFormattedDateTime()));
+        TeamBuild tb(std::format("{}'s Teambuild, {}", TextUtils::WStringToString(GW::AccountMgr::GetCurrentPlayerName()),TextUtils::GetFormattedDateTime()));
         tb.has_hero_slots = true;
         tb.edit_open = true;
         GW::SkillbarMgr::SkillTemplate skill_template;
