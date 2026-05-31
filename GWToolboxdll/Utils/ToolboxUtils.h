@@ -129,9 +129,14 @@ namespace GW {
 
         // Returns true if character is on the Melandru's Accord server.
         // Mirrors the reforged_or_dhuums_flags & 0x2 check used for in-game players.
-        bool is_melandrus_accord() const
-        {
-            return (props[0] & 0x2) != 0;
+        bool is_melandrus_accord() const { 
+            return ((props[7] >> 17) & 0x1) == 0x1; 
+        }
+        bool is_reforged() const {
+            return ((props[7] >> 16) & 0x1) == 0x1; 
+        }
+        bool is_dhuums_covenant() const { 
+            return ((props[7] >> 18) & 0x1) == 0x1; 
         }
     };
     static_assert(sizeof(AvailableCharacterInfo) == 0x84);
