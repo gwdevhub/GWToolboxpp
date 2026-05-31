@@ -231,22 +231,23 @@ namespace {
     void DrawPreferredCharacters()
     {
         ImGui::Spacing();
-        if (!ImGui::TreeNodeEx("Preferred Characters per Profession", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            return;
-        }
-        ImGui::TextDisabled("Choose which character to reroll to for each profession.");
-        ImGui::TextDisabled("Leave blank to use the first available character.");
-
-        constexpr std::array<const char*, 10> profession_names = {
-            "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer",
-            "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"
-        };
+        ImGui::TextUnformatted("Preferred Characters per Profession");
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Indent();
+        ImGui::TextDisabled("Choose which character to reroll to for each profession. Leave blank to use the first available character.");
 
         const auto available_chars_ptr = GW::AccountMgr::GetAvailableChars();
 
         auto& account_prefs = GetCurrentAccountPrefs();
-        for (size_t i = 0; i < profession_names.size(); i++) {
-            const auto prof = static_cast<GW::Constants::Profession>(i + 1);
+        const auto img_w = ImGui::CalcTextSize(" ").y;
+        const ImVec2 img_s = {img_w, img_w};
+        const auto dropdown_w = 200.f * ImGui::FontScale();
+
+        size_t i = 1;
+        for (i = 1; i <= (size_t)GW::Constants::Profession::Dervish; i++) {
+            if ((i % 2) == 0) ImGui::SameLine(0, img_w);
+            const auto prof = static_cast<GW::Constants::Profession>(i);
             const auto prof_key = static_cast<uint32_t>(prof);
             auto& pref = account_prefs[prof_key];
 
@@ -262,14 +263,13 @@ namespace {
                 }
             }
 
-            const float label_w = 100.f * ImGui::FontScale();
-            ImGui::Text("%-13s", profession_names[i]);
-            ImGui::SameLine(label_w);
+            ImGui::ImageFit(*Resources::GetProfessionIcon(prof), img_s);
+            ImGui::SameLine();
 
             const auto current_str = TextUtils::WStringToString(pref);
             const auto preview = pref.empty() ? "(any)" : current_str.c_str();
 
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2);
+            ImGui::SetNextItemWidth(dropdown_w);
             if (ImGui::BeginCombo("##pref", preview)) {
                 // "(any)" option
                 if (ImGui::Selectable("(any)", pref.empty())) {
@@ -286,7 +286,8 @@ namespace {
             }
             ImGui::PopID();
         }
-        ImGui::TreePop();
+        ImGui::Unindent();
+        ImGui::Spacing();
     }
 
     bool IsInMap(const bool include_district = true)
