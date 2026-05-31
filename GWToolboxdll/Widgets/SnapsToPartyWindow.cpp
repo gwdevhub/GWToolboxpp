@@ -194,24 +194,8 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
     ImVec2 top_left;
     ImVec2 bottom_right;
     const auto party = GW::PartyMgr::GetPartyInfo();
-    // @Cleanup: Fetch party frame once, only update when it has been destroyed
-    const auto party_frame = party ? GW::UI::GetFrameByLabel(L"Party") : nullptr;
-    if (!(party_frame && party_frame->IsVisible()))
-        return false;
-
-    // Traverse to health bars
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        auto sub_frame = GW::UI::GetChildFrame(party_frame, 1);
-        sub_frame = GW::UI::GetChildFrame(sub_frame, 8);
-        sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
-        sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
-        party_window_health_bars = GW::UI::GetChildFrame(sub_frame, 0);
-    }
-    else {
-        auto sub_frame = GW::UI::GetChildFrame(party_frame, 0);
-        sub_frame = GW::UI::GetChildFrame(sub_frame, 0);
-        party_window_health_bars = GW::UI::GetChildFrame(sub_frame, 0);
-    }
+    GW::UI::Frame* party_frame = 0;
+    party_window_health_bars = GetPartyWindowHealthBars(&party_frame);
 
     if (!party_window_health_bars)
         return false;

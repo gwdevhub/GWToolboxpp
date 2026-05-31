@@ -6,6 +6,9 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.20
+* [Fix] Fixes for gw 38618
+
 ## Version 8.19
 * [Fix] Fixed hotkey groups not being saved/loaded correctly to ini.
 * [Minor] Entire hotkey groups can now be triggered the same way normal hotkeys can, so you can activate more than one hotkey at a time.
