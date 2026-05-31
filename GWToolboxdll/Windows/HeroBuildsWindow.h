@@ -66,7 +66,6 @@ private:
     bool one_teambuild_at_a_time = false;
     bool filter_by_profession = false;
 
-    static void HeroBuildName(const Build& build, std::string* out);
     TeamBuild* GetTeambuildByName(const std::string& argBuildname);
 
     // Encode a teambuild into a Daybreak party loadout base64 string (header=15, type=1, version=1).

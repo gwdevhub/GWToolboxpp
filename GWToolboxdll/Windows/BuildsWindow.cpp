@@ -779,7 +779,7 @@ void BuildsWindow::DrawSettingsInternal()
     }
 }
 
-void SetTooltipFromTeambuild(const TeamBuild* tbuild) {
+void SetTooltipFromTeambuild(TeamBuild* tbuild) {
     ImGui::SetTooltip([tbuild]() {
         tbuild->DrawTooltip();
     });

@@ -10,6 +10,11 @@
 #include <Utils/EncString.h>
 #include <Utils/TextUtils.h>
 
+namespace GW {
+    namespace SkillbarMgr {
+        struct SkillTemplate;
+    }
+}
 
 namespace GuiUtils {
     template <typename T>
@@ -130,13 +135,14 @@ namespace GuiUtils {
     void FlashWindow(bool force = false);
     void FocusWindow();
 
-    // Same as std::format, but use printf formatting
-    std::string format(const char* msg, ...);
-    // Same as std::format, but use printf formatting
-    std::wstring format(const wchar_t* msg, ...);
-
     // Create an ImGui representation of the skill bar
     void DrawSkillbar(const char* build_code, bool show_attributes = true);
 
+    void DrawSkillbar(const GW::SkillbarMgr::SkillTemplate* skill_template_pt, bool show_attributes = true);
+
     int DecimalPlaces(float value, int max_places = 4);
+
+    enum class GwButtonIcon { Save, LoadFromTemplate, SaveToTemplate, ManageTemplates, TemplateCode, ChatIcon };
+    bool IconButton(const char* label, GwButtonIcon icon, const ImVec2& size = ImVec2(0, 0), const ImGuiButtonFlags flags = ImGuiButtonFlags_None);
+    bool IconButtonConfirm(const char* label, GwButtonIcon icon, const ImVec2& size = ImVec2(0, 0), const ImGuiButtonFlags flags = ImGuiButtonFlags_None);
 };

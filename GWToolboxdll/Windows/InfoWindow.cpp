@@ -943,7 +943,6 @@ namespace {
                 InfoField("Decoded", "%s", value->decoded_str.c_str());
                 ImGui::PopID();
             }
-            ImGui::PopID();
         }
         const auto target = GW::Agents::GetTarget();
         if (target && ImGui::CollapsingHeader("Props within range of target")) {
