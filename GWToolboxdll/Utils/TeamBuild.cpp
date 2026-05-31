@@ -53,7 +53,9 @@ namespace {
 
     std::vector<PendingBuildLoad> pending_build_loads;
     std::queue<std::wstring> send_queue;
-    std::string pending_reroll_build_code;
+    Build* pending_reroll_build = 0;
+    std::wstring pending_reroll_character;
+    clock_t pending_reroll_timer = 0;
     clock_t send_timer = 0;
     clock_t kickall_timer = 0;
 
@@ -141,8 +143,11 @@ namespace {
     bool PendingBuildLoad::Process()
     {
         if (build.IsPlayerBuild()) {
-            if (!build.code.empty()) GW::SkillbarMgr::LoadSkillTemplate(build.code.c_str());
-            LoadPcons(build);
+            const auto decoded = build.Decode();
+            if (decoded && GW::SkillbarMgr::LoadSkillTemplate(*decoded)) {
+                LoadPcons(build);
+                Log::Flash("<quote>Build loaded: %s", build.GetChatBuildCode().c_str());
+            }
             return true;
         }
 
@@ -274,6 +279,11 @@ Build::Build(std::string_view n, std::string_view c, GW::Constants::HeroID hero_
     : name(n), code(c), hero_id(hero_id_), behavior(behavior_), show_panel(show_panel_ != 0), disabled_skills(disabled_skills_)
 {}
 
+Build::~Build() {
+    if (pending_reroll_build == this) 
+        pending_reroll_build = 0;
+}
+
 std::string Build::GetFallbackBuildName()
 {
     if (code.empty()) return {};
@@ -288,7 +298,7 @@ std::string Build::GetFallbackBuildName()
     return {};
 }
 
-const GW::SkillbarMgr::SkillTemplate* Build::Decode()
+GW::SkillbarMgr::SkillTemplate* Build::Decode()
 {
     if (!decode_attempted_) {
         decode_attempted_ = true;
@@ -341,8 +351,7 @@ std::string Build::DisplayName()
     return gen_name;
 }
 
-void Build::Send()
-{
+std::string Build::GetChatBuildCode() {
     constexpr size_t kMaxLen = 120;
     const auto gen = DisplayName();
 
@@ -356,21 +365,18 @@ void Build::Send()
         const size_t nameMax = kMaxLen > code.size() + kOverhead ? kMaxLen - code.size() - kOverhead : 0;
         msg = std::format("[{};{}]", gen.substr(0, nameMax), code);
     }
-
-    EnqueueSend(msg);
+    return msg;
 }
 
-void Build::Copy() const
+void Build::Send()
 {
-    if (code.empty() && name.empty()) return;
-    auto gen_name = name;
-    if (hero_id != GW::Constants::HeroID::NoHero) {
-        if (gen_name.empty())
-            gen_name = Resources::GetHeroName(hero_id)->string();
-        else
-            gen_name = std::format("{} ({})", name, Resources::GetHeroName(hero_id)->string());
-    }
-    const auto msg = code.empty() ? name : std::format("[{};{}]", gen_name, code);
+    EnqueueSend(GetChatBuildCode());
+}
+
+void Build::Copy()
+{
+    const auto msg = GetChatBuildCode();
+    if (msg.empty()) return;
     ImGui::SetClipboardText(msg.c_str());
     Log::Flash("Build code copied to clipboard");
 }
@@ -380,17 +386,13 @@ void Build::EnqueueSend(std::string msg)
     send_queue.push(TextUtils::StringToWString(msg));
 }
 
-void Build::RerollAndLoad(const wchar_t* character_name) const
+void Build::RerollAndLoad(const wchar_t* character_name)
 {
     if (!character_name || code.empty()) return;
-    // Reroll to the matching-profession character, returning to the same map and rejoining the same
-    // party so the player ends up back with their team after switching characters. Only queue the
-    // template to load once the reroll has actually started, so the build is applied to the new
-    // character rather than the current one (see Build::Update).
-    constexpr bool same_map = true;
-    constexpr bool same_party = true;
-    if (RerollWindow::Instance().Reroll(character_name, same_map, same_party)) {
-        pending_reroll_build_code = code;
+    if (RerollWindow::Instance().Reroll(character_name, true, true)) {
+        pending_reroll_character = character_name;
+        pending_reroll_timer = TIMER_INIT();
+        pending_reroll_build = this;
     }
 }
 
@@ -404,29 +406,24 @@ void Build::Load() const
 void Build::Update()
 {
     const auto instance_type = GW::Map::GetInstanceType();
-
-    if (!pending_reroll_build_code.empty() && !RerollWindow::IsRerolling()) {
-        // The reroll has ended (completed, declined, or failed). Only apply the queued build if we
-        // actually landed on a character whose profession can use it; otherwise discard it, so a
-        // cancelled reroll doesn't load the template onto the wrong character.
-        if (const GW::AgentLiving* me = GW::Agents::GetControlledCharacter()) {
-            GW::SkillbarMgr::SkillTemplate st{};
-            const auto player_profession = static_cast<GW::Constants::Profession>(me->primary);
-            if (GW::SkillbarMgr::DecodeSkillTemplate(st, pending_reroll_build_code.c_str())
-                && st.primary == player_profession) {
-                const Build pending("", pending_reroll_build_code);
-                pending.Load();
-            }
-            pending_reroll_build_code.clear();
-        }
-    }
-
     if (instance_type == GW::Constants::InstanceType::Loading) {
         pending_build_loads.clear();
         while (!send_queue.empty())
             send_queue.pop();
         kickall_timer = 0;
         return;
+    }
+
+    if (pending_reroll_build && TIMER_DIFF(pending_reroll_timer) > 10000) 
+        pending_reroll_build = 0;
+
+    if (pending_reroll_build && !RerollWindow::IsRerolling()) {
+        if (pending_reroll_character != GW::AccountMgr::GetCurrentPlayerName()) {
+            pending_reroll_build = 0;
+            return;
+        }
+        pending_reroll_build->Load();
+        pending_reroll_build = 0;
     }
 
     if (!send_queue.empty() && TIMER_DIFF(send_timer) > 600) {

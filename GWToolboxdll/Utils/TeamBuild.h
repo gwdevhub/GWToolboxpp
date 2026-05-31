@@ -20,6 +20,8 @@ struct Build {
           GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero,
           int show_panel = 0, uint32_t behavior = 1, uint8_t disabled_skills = 0);
 
+    ~Build();
+
     std::string name{};
     std::string code{};
     GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
@@ -35,7 +37,7 @@ struct Build {
     std::string GetFallbackBuildName();
 
     // Decode skill template from code. Returns nullptr if code is invalid.
-    const GW::SkillbarMgr::SkillTemplate* Decode();
+    GW::SkillbarMgr::SkillTemplate* Decode();
     bool IsDecoded() const;
     const GW::Constants::SkillID* Skills();
 
@@ -45,9 +47,10 @@ struct Build {
     void View() const;
     std::string DisplayName();
     void Send();
+    std::string GetChatBuildCode();
     void Load() const;
-    void RerollAndLoad(const wchar_t* character_name) const;
-    void Copy() const;
+    void RerollAndLoad(const wchar_t* character_name);
+    void Copy();
 
     // Called every frame from GWToolbox::Update(); processes pending loads and the send queue.
     static void Update();

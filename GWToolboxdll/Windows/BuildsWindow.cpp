@@ -283,12 +283,6 @@ namespace {
         const Build& build = tbuild.builds[idx];
         if (build.code.empty() && build.hero_id == GW::Constants::HeroID::NoHero) return false;
         build.Load();
-        if (!tbuild.edit_open) {
-            std::string build_string;
-            if (BuildSkillTemplateString(tbuild, idx, &build_string)) {
-                Log::Flash("<quote>Build loaded: %s", build_string.c_str());
-            }
-        }
         return true;
     }
 
@@ -822,7 +816,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
                 if (ImGui::Button("Send", ImVec2(60.0f * ImGui::FontScale(), 0))) {
-                    Send(tbuild);
+                    tbuild.Send(true);
                 }
                 ImGui::PopID();
             }
