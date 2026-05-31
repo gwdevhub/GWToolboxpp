@@ -16,7 +16,8 @@ The Inventory Manager module offers the following functionality:
 - **Auto-Salvage**: Automatically salvage all salvageable items of a specific rarity.
 - **Bulk Item Movement**: Easily move all items of a certain type (e.g., all materials, all tomes) between inventory and storage.
 - **Stack Splitting**: Quickly split stacks of items when moving them.
-- **Trade Improvements**: Automatically offer full stacks of items when trading.
+- **Move Whole Stacks by Default**: Automatically accept the maximum quantity when offering a stackable item in a trade window, skipping the quantity prompt. Hold Shift while dragging to prompt for a specific amount instead. Found under Settings → Inventory Settings.
+- **Move Items to Trade**: With a trade window open, double-clicking or Alt+Clicking an inventory item moves it into your trade offer automatically. Configurable under Settings → Inventory Settings.
 
 ## Item Filter
 
