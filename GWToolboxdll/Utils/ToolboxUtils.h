@@ -136,7 +136,7 @@ namespace GW {
             return ((props[7] >> 16) & 0x1) == 0x1; 
         }
         bool is_dhuums_covenant() const { 
-            return ((props[7] >> 18) & 0x1) == 0x1; 
+            return ((props[7] >> 15) & 0x1) == 0x1; 
         }
     };
     static_assert(sizeof(AvailableCharacterInfo) == 0x84);

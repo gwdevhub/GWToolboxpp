@@ -567,7 +567,7 @@ void RerollWindow::Draw(IDirect3DDevice9*)
         ImGui::Checkbox("Travel to same location after rerolling", &travel_to_same_location_after_rerolling);
         ImGui::Checkbox("Re-join your party after rerolling", &rejoin_party_after_rerolling);
         ImGui::Checkbox("Return to original character on fail", &return_on_fail);
-        const float btnw = ImGui::GetContentRegionAvail().x / 2.f;
+        const float btnw = ImGui::GetContentRegionAvail().x / 2.f - ImGui::GetStyle().ItemSpacing.x;
         const ImVec2 btn_dim = {btnw, 0.f};
         std::string buf;
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
@@ -604,9 +604,12 @@ void RerollWindow::Draw(IDirect3DDevice9*)
             }
             if (covenant_sprite && *covenant_sprite) {
                 float uv_x0 = -1.f;
-                if (character.is_reforged())         uv_x0 = 0.25f;
-                else if (character.is_dhuums_covenant()) uv_x0 = 0.50f;
-                else if (character.is_melandrus_accord()) uv_x0 = 0.75f;
+                if (character.is_melandrus_accord())
+                    uv_x0 = 0.75f;
+                else if (character.is_dhuums_covenant())
+                    uv_x0 = 0.50f;
+                else if (character.is_reforged())         
+                    uv_x0 = 0.25f;
                 if (uv_x0 >= 0.f) {
                     const ImVec2 item_min = ImGui::GetItemRectMin();
                     const ImVec2 item_max = ImGui::GetItemRectMax();
