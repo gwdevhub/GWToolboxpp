@@ -182,7 +182,7 @@ namespace {
         TitleProgress p1(title_id_1), p2(title_id_2);
         return CompareTitleProgress(&p1, &p2) ? 1 : 0;
     }
-    GW::ScrollableFrame::SortHandler_pt OriginalSortHandler = 0;
+    GW::SortHandler_pt OriginalSortHandler = 0;
     bool OverrideTitleSortOrder(bool _override = true)
     {
         const auto frame = (GW::ScrollableFrame*)GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Attributes"), 5, 2, 0);

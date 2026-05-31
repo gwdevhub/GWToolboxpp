@@ -490,10 +490,8 @@ namespace {
 
     bool OverridePartySortOrder(bool _override = true)
     {
-        const auto player_list = (GW::ScrollableFrame*)GW::UI::GetChildFrame(SnapsToPartyWindow::GetPartyWindowHealthBars(), 0);
+        const auto player_list = (GW::ItemListFrame*)GW::UI::GetChildFrame(SnapsToPartyWindow::GetPartyWindowHealthBars(), 0);
         if (!player_list) return false;
-        uint32_t count = 0;
-        player_list->GetCount(&count);
         return player_list->SetSortHandler(0) && player_list->SetSortHandler(_override ? PartySortHandler : 0);
     }
     void RefreshPartySortHandler()
@@ -740,7 +738,8 @@ namespace {
             ImGui::SetNextItemWidth(120.0f * fontScale);
             if (ImGui::BeginCombo("##primary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(primary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
-                    if (ImGui::Selectable(ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string().c_str(), primary == prof)) {
+                    auto id = std::format("{}##prof_{}", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string(), prof);
+                    if (ImGui::Selectable(id.c_str(), primary == prof)) {
                         primary = prof;
                         edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
                     }
@@ -756,7 +755,8 @@ namespace {
             ImGui::SetNextItemWidth(120.0f * fontScale);
             if (ImGui::BeginCombo("##secondary", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(secondary))->string().c_str())) {
                 for (uint8_t prof = 0; prof <= 10; prof++) {
-                    if (ImGui::Selectable(ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string().c_str(), secondary == prof)) {
+                    auto id = std::format("{}##prof_{}", ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(prof))->string(), prof);
+                    if (ImGui::Selectable(id.c_str(), secondary == prof)) {
                         secondary = prof;
                         edit_profession_order[i] = (static_cast<uint16_t>(primary) << 8) | secondary;
                     }
