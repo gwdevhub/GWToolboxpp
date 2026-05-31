@@ -602,16 +602,22 @@ void RerollWindow::Draw(IDirect3DDevice9*)
                 ImGui::PopItemFlag();
                 ImGui::PopStyleColor();
             }
-            if (covenant_sprite && *covenant_sprite && character.is_melandrus_accord()) {
-                const ImVec2 item_min = ImGui::GetItemRectMin();
-                const ImVec2 item_max = ImGui::GetItemRectMax();
-                const float icon_h = ImGui::GetTextLineHeight();
-                const float icon_y = item_min.y + (item_max.y - item_min.y - icon_h) * 0.5f;
-                ImGui::GetWindowDrawList()->AddImage(
-                    reinterpret_cast<ImTextureID>(*covenant_sprite),
-                    {item_max.x - icon_h, icon_y}, {item_max.x, icon_y + icon_h},
-                    {0.75f, 0.f}, {1.f, 1.f}
-                );
+            if (covenant_sprite && *covenant_sprite) {
+                float uv_x0 = -1.f;
+                if (character.is_reforged())         uv_x0 = 0.25f;
+                else if (character.is_dhuums_covenant()) uv_x0 = 0.50f;
+                else if (character.is_melandrus_accord()) uv_x0 = 0.75f;
+                if (uv_x0 >= 0.f) {
+                    const ImVec2 item_min = ImGui::GetItemRectMin();
+                    const ImVec2 item_max = ImGui::GetItemRectMax();
+                    const float icon_h = ImGui::GetTextLineHeight();
+                    const float icon_y = item_min.y + (item_max.y - item_min.y - icon_h) * 0.5f;
+                    ImGui::GetWindowDrawList()->AddImage(
+                        reinterpret_cast<ImTextureID>(*covenant_sprite),
+                        {item_max.x - icon_h, icon_y}, {item_max.x, icon_y + icon_h},
+                        {uv_x0, 0.f}, {uv_x0 + 0.25f, 1.f}
+                    );
+                }
             }
         }
         ImGui::PopStyleVar();
