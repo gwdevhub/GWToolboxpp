@@ -586,6 +586,7 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
     const auto row_height = ImGui::CalcTextSize(" ").y * 2.f;
     const auto icon_btn_size = ImVec2(row_height, row_height);
     const float spacing = 4.f * font_scale;
+    const auto min_row_width = row_height * 15.f;
     // 4 visible icon buttons when editable: chat, load/reroll, edit, dropdown
     // 3 when read-only: chat, load/reroll, dropdown (no edit toggle)
     const size_t icon_btns = editable ? 4 : 3;
@@ -607,7 +608,7 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
         ImGui::SameLine(0);
         ImGui::Indent();
 
-        const auto btns_start = ImGui::GetContentRegionAvail().x + ImGui::GetIndent() - (icon_btns * (icon_btn_size.x + spacing));
+        const auto btns_start = min_row_width + ImGui::GetIndent() - (icon_btns * (icon_btn_size.x + spacing));
         const float name_width = btns_start - spacing - ImGui::GetIndent();
 
         if (editing) {
@@ -787,6 +788,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
     const auto row_height = ImGui::CalcTextSize(" ").y * 2.f;
     const auto icon_btn_size = ImVec2(row_height, row_height);
     const float spacing = 4.f * font_scale;
+    const auto min_row_width = row_height * 15.f;
     // 4 visible icon buttons when editable: send, load, edit, dropdown
     // 3 when read-only: send, load, dropdown (no edit toggle)
     const size_t icon_btns = editable ? 4 : 3;
@@ -823,7 +825,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
         ImGui::SameLine(0);
         ImGui::Indent();
 
-        const auto btns_start = ImGui::GetContentRegionAvail().x + ImGui::GetIndent() - (icon_btns * (icon_btn_size.x + spacing));
+        const auto btns_start = min_row_width + ImGui::GetIndent() - (icon_btns * (icon_btn_size.x + spacing));
         const float name_width = btns_start - spacing - ImGui::GetIndent();
 
         // ---- Name + code (editable in edit mode) ----
