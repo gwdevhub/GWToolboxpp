@@ -40,13 +40,14 @@
 
 #include "Defines.h"
 
+#include <Color.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <ImGuiAddons.h>
 #include <Modules/QuestModule.h>
 #include <Utils/ArenaNetFileParser.h>
 #include <Utils/TextUtils.h>
-#include <corecrt_math_defines.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
+#include <corecrt_math_defines.h>
 
 
 
@@ -127,6 +128,7 @@ namespace {
     IDirect3DTexture9** zaishen_coin_texture = nullptr;
 
     bool showing_all_outposts = false;
+    bool highlight_locked_areas = false;
     bool apply_quest_colors = false;
     bool show_any_elite_capture_locations = false;
     bool show_elite_capture_locations[11];
@@ -134,6 +136,7 @@ namespace {
     bool drawn = false;
     bool show_lines_on_world_map = false;
     bool showing_all_quests = true;
+    Color locked_area_highlight_color = IM_COL32(255, 160, 0, 96);
 
     GW::MemoryPatcher view_all_outposts_patch;
     GW::MemoryPatcher view_all_carto_areas_patch;
@@ -371,9 +374,7 @@ namespace {
     bool IsValidOutpost(GW::Constants::MapID map_id)
     {
         const auto map_info = GW::Map::GetMapInfo(map_id);
-        if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y)) return false;
-        if ((map_info->flags & 0x5000000) == 0x5000000) return false;   // e.g. "wrong" augury rock is map 119, no NPCs
-        if ((map_info->flags & 0x80000000) == 0x80000000) return false; // e.g. Debug map
+        if (!GW::Map::HasMapDisplayInfo(map_info) || GW::Map::IsExcludedMapInfo(map_info)) return false;
         switch (map_info->type) {
             case GW::RegionType::City:
             case GW::RegionType::CompetitiveMission:
@@ -388,13 +389,28 @@ namespace {
         return true;
     }
 
+    bool IsHighlightableLockedArea(GW::Constants::MapID map_id, const GW::AreaInfo* map_info)
+    {
+        if (!(map_info && map_info->GetIsOnWorldMap())) return false;
+        if (GW::Map::IsPreSearing(map_id) != GW::Map::IsPreSearing() || GW::Map::IsFestivalOutpost(map_id)) return false;
+        if (GW::Map::IsExcludedMapInfo(map_info)) return false;
+        switch (map_info->type) {
+            case GW::RegionType::City:
+            case GW::RegionType::CooperativeMission:
+            case GW::RegionType::EliteMission:
+            case GW::RegionType::MissionOutpost:
+            case GW::RegionType::Outpost:
+                return map_id != GW::Constants::MapID::Gate_of_Anguish_elite_mission;
+            default:
+                return false;
+        }
+    }
+
     GW::Constants::MapID GetClosestMapToPoint(const GW::Vec2f& world_map_point)
     {
         for (size_t i = 0; i < (size_t)GW::Constants::MapID::Count; i++) {
             const auto map_info = GW::Map::GetMapInfo((GW::Constants::MapID)i);
-            if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y)) continue;
-            if ((map_info->flags & 0x5000000) == 0x5000000) continue;   // e.g. "wrong" augury rock is map 119, no NPCs
-            if ((map_info->flags & 0x80000000) == 0x80000000) continue; // e.g. Debug map
+            if (!GW::Map::HasMapDisplayInfo(map_info) || GW::Map::IsExcludedMapInfo(map_info)) continue;
             if (!map_info->GetIsOnWorldMap()) continue;
             (world_map_point);
             // TODO: distance from point to rect
@@ -849,6 +865,31 @@ namespace {
         }
     }
 
+    void DrawLockedAreaHighlights()
+    {
+        if (!(showing_all_outposts && highlight_locked_areas && world_map_context)) return;
+        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return; // Map is animating
+        if (!Colors::IsVisible(locked_area_highlight_color)) return;
+
+        std::unordered_set<uint32_t> highlighted_names;
+        for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
+            const auto map_id = static_cast<GW::Constants::MapID>(i);
+            const auto map_info = GW::Map::GetMapInfo(map_id);
+            if (!(IsHighlightableLockedArea(map_id, map_info) && map_info->continent == world_map_context->continent)) continue;
+            if (map_info->name_id && highlighted_names.contains(map_info->name_id)) continue;
+            if (GW::Map::GetIsMapUnlocked(map_id)) continue;
+
+            if (map_info->name_id) {
+                highlighted_names.insert(map_info->name_id);
+            }
+
+            const auto marker_pos = CalculateViewportPos(GetMapMarkerPoint(map_info), world_map_context->top_left);
+            const auto radius = 8.f * ui_scale.x;
+            draw_list->AddCircleFilled(marker_pos, radius, locked_area_highlight_color);
+            draw_list->AddCircle(marker_pos, radius, Colors::FullAlpha(locked_area_highlight_color));
+        }
+    }
+
     bool DrawPortalOnWorldMap(const MapPortal& portal)
     {
         if (!world_map_context) return false;
@@ -984,9 +1025,11 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
 {
     ToolboxWidget::LoadSettings(ini);
     LOAD_BOOL(showing_all_outposts);
+    LOAD_BOOL(highlight_locked_areas);
     LOAD_BOOL(show_lines_on_world_map);
     LOAD_BOOL(showing_all_quests);
     LOAD_BOOL(apply_quest_colors);
+    LOAD_COLOR(locked_area_highlight_color);
     LOAD_BOOL(hide_captured_elites);
     LOAD_BOOL(show_any_elite_capture_locations);
     LOAD_BOOL(hide_captured_elites);
@@ -1040,9 +1083,11 @@ void WorldMapWidget::SaveSettings(ToolboxIni* ini)
 {
     ToolboxWidget::SaveSettings(ini);
     SAVE_BOOL(showing_all_outposts);
+    SAVE_BOOL(highlight_locked_areas);
     SAVE_BOOL(show_lines_on_world_map);
     SAVE_BOOL(showing_all_quests);
     SAVE_BOOL(apply_quest_colors);
+    SAVE_COLOR(locked_area_highlight_color);
     SAVE_BOOL(show_any_elite_capture_locations);
     SAVE_BOOL(hide_captured_elites);
     uint32_t show_elite_capture_locations_val = 0;
@@ -1089,6 +1134,18 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             GW::GameThread::Enqueue([] {
                 ShowAllOutposts(showing_all_outposts);
             });
+        }
+        if (showing_all_outposts) {
+            ImGui::Indent();
+            ImGui::Checkbox("Highlight locked areas", &highlight_locked_areas);
+            if (highlight_locked_areas) {
+                ImGui::SameLine();
+                ImGui::ColorButtonPicker("Locked Areas", &locked_area_highlight_color, ImGuiColorEditFlags_NoLabel);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Color overlay for areas that aren't unlocked on this character.");
+                }
+            }
+            ImGui::Unindent();
         }
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
             bool is_hard_mode = GW::PartyMgr::GetIsPartyInHardMode();
@@ -1169,6 +1226,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         }
     }
     #endif
+    DrawLockedAreaHighlights();
 
 
     hovered_boss = nullptr;
