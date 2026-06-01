@@ -65,19 +65,8 @@ during the port.
 
 ## Pages configuration
 
-Once this branch ships, switch the repo's **Settings → Pages** source from
-"Deploy from a branch (`master:/docs`)" to "GitHub Actions". The workflow
-will then publish on every push to `master` that touches `site/`. The
-legacy `/docs` Jekyll site can be removed after the cutover; the new
-build serves the same CNAME (`www.gwtoolbox.com`) via `public/CNAME`.
-
-## Re-porting from legacy docs
-
-If you ever need to re-run the one-shot port:
-
-```bash
-node site/scripts/port-docs.mjs
-```
-
-It's idempotent — overwrites `site/src/content/docs/*.md` from `docs/*.md`.
-Delete the script once the legacy `docs/` folder is removed.
+The repo's **Settings → Pages** source is set to "GitHub Actions". The
+workflow publishes on every push to `master` that touches `site/`, serving
+the CNAME (`www.gwtoolbox.com`) via `public/CNAME`. The legacy `/docs`
+Jekyll site has been removed; this Astro site is the sole source of truth
+for the documentation.
