@@ -620,16 +620,15 @@ bool TBHotkey::DrawSettings()
             ImGui::PopID();
         }
 
-        static char map_id_input_buf[4];
-        bool add_map_id = ImGui::InputTextWithHint("###add_map_id", "Add Map ID", map_id_input_buf, _countof(map_id_input_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue);
+        char map_id_input_buf[4] = {};
+        bool add_map_id = ImGui::InputTextWithHint("##add_map_id", "Add Map ID", map_id_input_buf, _countof(map_id_input_buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_EnterReturnsTrue);
         if (add_map_id) {
             uint32_t map_id_out;
             if (*map_id_input_buf && TextUtils::ParseUInt(map_id_input_buf, &map_id_out)) {
-                if (!std::ranges::contains(map_ids, reinterpret_cast<uint32_t>(map_id_input_buf))) {
+                if (!std::ranges::contains(map_ids, map_id_out)) {
                     map_ids.push_back(map_id_out);
                     hotkey_changed = true;
                 }
-                memset(map_id_input_buf, 0, sizeof(map_id_input_buf));
             }
         }
         ImGui::Unindent();
@@ -667,15 +666,14 @@ bool TBHotkey::DrawSettings()
             }
             ImGui::PopID();
         }
-        static char player_name_input_buf[20];
-        bool add_player_name = ImGui::InputTextWithHint("###player_name_input_buf", "Add Player Name", player_name_input_buf, _countof(player_name_input_buf), ImGuiInputTextFlags_EnterReturnsTrue);
+        char player_name_input_buf[20] = {};
+        bool add_player_name = ImGui::InputTextWithHint("##player_name_input_buf", "Add Player Name", player_name_input_buf, _countof(player_name_input_buf), ImGuiInputTextFlags_EnterReturnsTrue);
         if (add_player_name && *player_name_input_buf) {
             const auto sanitised = TextUtils::UcWords(player_name_input_buf);
             if (!std::ranges::contains(player_names, sanitised)) {
                 player_names.push_back(sanitised);
                 hotkey_changed = true;
             }
-            memset(player_name_input_buf, 0, sizeof(player_name_input_buf));
         }
         ImGui::Unindent();
     }
