@@ -89,9 +89,7 @@ namespace GW {
 
         bool IsExcludedMapInfo(const GW::AreaInfo* map_info)
         {
-            return map_info
-                && ((map_info->flags & bogus_area_info_flags) == bogus_area_info_flags
-                    || (map_info->flags & debug_area_info_flag) != 0);
+            return map_info && ((map_info->flags & bogus_area_info_flags) == bogus_area_info_flags || (map_info->flags & debug_area_info_flag) != 0);
         }
 
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out)
@@ -133,6 +131,7 @@ namespace GW {
                 case MapID::The_Elusive_Golemancer_Level_2:
                 case MapID::The_Elusive_Golemancer_Level_3:
                 case MapID::The_Elusive_Golemancer_mission:
+                case MapID::Genius_Operated_Living_Enchanted_Manifestation_mission:
                     return {TitleID::Deldrimor};
                 // Lightbringer: Grand Court of Sebelkeh mission has Margonites (would otherwise show Sunspear by continent)
                 case MapID::Grand_Court_of_Sebelkeh:
@@ -211,7 +210,7 @@ namespace GW {
             const auto p = m ? m->props : nullptr;
             return p ? &p->propArray : nullptr;
         }
-        
+
         bool IsFestivalOutpost(const GW::Constants::MapID map_id)
         {
             using namespace GW::Constants;
@@ -238,7 +237,8 @@ namespace GW {
 
     } // namespace Map
     namespace SkillbarMgr {
-        GW::Attribute* GetPlayerAttribute(GW::Constants::Attribute attribute_id) {
+        GW::Attribute* GetPlayerAttribute(GW::Constants::Attribute attribute_id)
+        {
             const auto my_id = GW::Agents::GetControlledCharacterId();
             PartyAttributeArray& party_attributes = GW::GetWorldContext()->attributes;
             for (PartyAttribute& agent_attributes : party_attributes) {
@@ -247,7 +247,7 @@ namespace GW {
             }
             return 0;
         }
-    }
+    } // namespace SkillbarMgr
     namespace LoginMgr {
         const bool IsCharSelectReady()
         {
@@ -477,14 +477,12 @@ namespace GW {
             out.resize(wcslen(out.data()));
             return !out.empty();
         }
-        std::filesystem::path GetBuildsDir() {
+        std::filesystem::path GetBuildsDir()
+        {
             std::wstring builds_folder;
             GetPersonalDir(builds_folder);
             if (builds_folder.empty()) return L"";
-            return std::filesystem::path(builds_folder) /
-                   L"Guild Wars" / 
-                   L"Templates" /
-                   L"Skills";
+            return std::filesystem::path(builds_folder) / L"Guild Wars" / L"Templates" / L"Skills";
         }
     } // namespace MemoryMgr
 
@@ -540,7 +538,8 @@ namespace GW {
             const auto c = GW::PlayerMgr::GetPlayerByID();
             return (c->reforged_or_dhuums_flags & 0x2) != 0;
         }
-        GW::GamePos* GetPlayerPosition() {
+        GW::GamePos* GetPlayerPosition()
+        {
             const auto player = GW::Agents::GetControlledCharacter();
             return player ? &player->pos : nullptr;
         }
@@ -1102,8 +1101,7 @@ namespace ToolboxUtils {
             return false;
         }
         for (auto& a : w->hero_info) {
-            if (a.hero_id != hero_id)
-                continue;
+            if (a.hero_id != hero_id) continue;
             switch (hero_id) {
                 case GW::Constants::HeroID::Merc1:
                 case GW::Constants::HeroID::Merc2:
