@@ -790,17 +790,17 @@ void GWSplits::Draw(IDirect3DDevice9* pDevice)
                 else if (isCurrentRunTracked && currentSplitIt != currentSplits.end() && &split == &*currentSplitIt) { // Fixed: same end() dereference UB.
                     const auto currentTime = getRunTime();
                     const auto timeDiff = currentTime - split.trackedTime;
-                    if (timeDiff > -earlyResultTimeMs) {
-                        // There is a bug in the time returned by MapMgr, returning the time of the previous instance for the first few frames. 
-                        // For old instances, this would always color the runtime as red for very behind without this check.
-                        if (timeDiff < earlyResultTimeMs) 
-                        {
-                            lastSegmentColor = getTimerColor(timeDiff, false);
-                        }
-                        ImGui::PushStyleColor(ImGuiCol_Text, getTimerColor(timeDiff, split.isPB));
-                        ImGui::TextUnformatted(timeToString(timeDiff, ToStringStyle::SecondsCentiseconds).c_str());
-                        ImGui::PopStyleColor();
+                    // if (timeDiff > -earlyResultTimeMs) {
+                    // There is a bug in the time returned by MapMgr, returning the time of the previous instance for the first few frames. 
+                    // For old instances, this would always color the runtime as red for very behind without this check.
+                    if (timeDiff < earlyResultTimeMs) 
+                    {
+                        lastSegmentColor = getTimerColor(timeDiff, false);
                     }
+                    ImGui::PushStyleColor(ImGuiCol_Text, getTimerColor(timeDiff, split.isPB));
+                    ImGui::TextUnformatted(timeToString(timeDiff, ToStringStyle::SecondsCentiseconds).c_str());
+                    ImGui::PopStyleColor();
+                    // }
                 }
 
                 ImGui::TableNextColumn();
