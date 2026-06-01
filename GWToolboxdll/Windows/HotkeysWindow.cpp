@@ -207,11 +207,18 @@ namespace {
             return false;
         }
         bool is_in_controller_mode = GW::UI::IsInControllerMode();
+        // Check if the hotkey or any ancestor group has the trigger flag set.
+        auto inherited_trigger = [&mt](const TBHotkey* hk) -> bool {
+            for (const TBHotkey* cur = hk; cur; cur = cur->group) {
+                if (cur->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable) return true;
+                if (cur->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost) return true;
+            }
+            return false;
+        };
         // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
         for (TBHotkey* hk : valid_hotkeys) {
-            if (((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
-                    || (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
-                && !hk->pressed 
+            if (inherited_trigger(hk)
+                && !hk->pressed
                 &&
                 ((is_in_controller_mode && hk->trigger_in_controller_mode) || (!is_in_controller_mode && hk->trigger_in_desktop_mode))) {
                 hk->pressed = true;
