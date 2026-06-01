@@ -184,7 +184,7 @@ namespace {
         const auto primary = static_cast<GW::Constants::Profession>(me->primary);
         const bool is_pvp = me->IsPvP();
         valid_hotkeys.clear();
-        for (auto* hotkey : TBHotkey::all_hotkeys) {
+        for (auto* hotkey : TBHotkey::top_level_hotkeys) {
             AddHotkeyIfValid(hotkey, player_name.c_str(), instance_type, primary, map_id, is_pvp, valid_hotkeys);
         }
 
