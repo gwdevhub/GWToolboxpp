@@ -22,8 +22,10 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     "Windows/Pathfinding/*.h"
     "Windows/Pathfinding/*.hpp"
     "Windows/Pathfinding/*.cpp"
+    "Windows/Splits/*.h"
+    "Windows/Splits/*.cpp"
     )
-    
+     
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 
