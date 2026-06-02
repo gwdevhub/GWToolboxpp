@@ -474,9 +474,21 @@ namespace GW {
     namespace UI {
         void AsyncDecodeStrS(const wchar_t* enc_str, std::string* out, GW::Constants::Language language_id)
         {
+            if (!enc_str || !out) {
+                return;
+            }
+            if (language_id == (GW::Constants::Language)0xff) {
+                wchar_t decoded[2048] = {};
+                GW::UI::AsyncDecodeStr(enc_str, decoded, _countof(decoded));
+                *out = TextUtils::WStringToString(decoded);
+                return;
+            }
             AsyncDecodeStr(
                 enc_str,
                 [](void* param, const wchar_t* s) {
+                    if (!s) {
+                        return;
+                    }
                     *(std::string*)param = TextUtils::WStringToString(s);
                 },
                 out, language_id
@@ -484,9 +496,21 @@ namespace GW {
         }
         void AsyncDecodeStr(const wchar_t* enc_str, std::wstring* out, GW::Constants::Language language_id)
         {
+            if (!enc_str || !out) {
+                return;
+            }
+            if (language_id == (GW::Constants::Language)0xff) {
+                wchar_t decoded[2048] = {};
+                GW::UI::AsyncDecodeStr(enc_str, decoded, _countof(decoded));
+                *out = decoded;
+                return;
+            }
             AsyncDecodeStr(
                 enc_str,
                 [](void* param, const wchar_t* s) {
+                    if (!s) {
+                        return;
+                    }
                     *(std::wstring*)param = s;
                 },
                 out, language_id
