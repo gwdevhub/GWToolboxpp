@@ -149,6 +149,10 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(show_closebutton);
     LOAD_BOOL(show_breakout_button);
     LOAD_BOOL(lock_breakout_button);
+    if (ini->KeyExists(Name(), "breakout_pos[0]")) {
+        LOAD_FLOAT(breakout_pos[0]); LOAD_FLOAT(breakout_pos[1]);
+        pending_breakout_pos = true;
+    }
     LOAD_STRING(snapped_frame_label);
     LOAD_FLOAT(snap_offset[0]); LOAD_FLOAT(snap_offset[1]);
     if (!snapped_frame_label.empty() && !ini->KeyExists(Name(), "snap_offset[0]")) {
@@ -192,6 +196,14 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
             }
         }
     }
+    if (ImGui::GetCurrentContext() && show_breakout_button) {
+        char breakout_window_id[256];
+        snprintf(breakout_window_id, sizeof(breakout_window_id), "%s##breakout_btn", Name());
+        if (const auto bw = ImGui::FindWindowByName(breakout_window_id)) {
+            breakout_pos[0] = bw->Pos.x;
+            breakout_pos[1] = bw->Pos.y;
+        }
+    }
     ToolboxModule::SaveSettings(ini);
     SAVE_BOOL(visible);
     SAVE_BOOL(show_menubutton);
@@ -205,6 +217,7 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(show_closebutton);
     SAVE_BOOL(show_breakout_button);
     SAVE_BOOL(lock_breakout_button);
+    SAVE_FLOAT(breakout_pos[0]); SAVE_FLOAT(breakout_pos[1]);
     SAVE_STRING(snapped_frame_label);
     SAVE_FLOAT(snap_offset[0]); SAVE_FLOAT(snap_offset[1]);
     SAVE_BOOL(mobile_lock_move);
@@ -599,6 +612,11 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
 
     if (!ToolboxSettings::move_all && lock_breakout_button) {
         flags |= ImGuiWindowFlags_NoMove;
+    }
+
+    if (pending_breakout_pos) {
+        ImGui::SetNextWindowPos({breakout_pos[0], breakout_pos[1]}, ImGuiCond_Always);
+        pending_breakout_pos = false;
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {6.f, 6.f});
