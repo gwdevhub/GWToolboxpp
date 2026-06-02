@@ -200,7 +200,8 @@ void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
     LOAD_COLOR(color_ally_spirit);
     LOAD_COLOR(color_ally_minion);
     LOAD_COLOR(color_ally_dead);
-    LOAD_BOOL(boss_colors);
+    LOAD_BOOL(enemies_colors_by_profession);
+    LOAD_BOOL(only_color_bosses);
     {
         constexpr const char* keys[] = {
             nullptr, // None
@@ -330,7 +331,8 @@ void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
     SAVE_BOOL(show_props_on_minimap);
 
     SAVE_BOOL(show_hidden_npcs);
-    SAVE_BOOL(boss_colors);
+    SAVE_BOOL(enemies_colors_by_profession);
+    SAVE_BOOL(only_color_bosses);
     {
         constexpr const char* keys[] = {
             nullptr, // None
@@ -411,7 +413,8 @@ void AgentRenderer::LoadDefaultColors()
     color_ally_spirit = 0xFF608000;
     color_ally_minion = 0xFF008060;
     color_ally_dead = 0x64006400;
-    boss_colors = true;
+    enemies_colors_by_profession = true;
+    only_color_bosses = true;
 }
 
 void AgentRenderer::DrawSettings()
@@ -1091,10 +1094,12 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
             return color_hostile_dead;
         }
         const Color* c = &color_hostile;
-        if (boss_colors && living->GetHasBossGlow()) {
-            const auto prof = GetAgentProfession(living);
-            if (prof) {
-                c = &profession_colors[prof];
+        if (enemies_colors_by_profession) {
+            if ((only_color_bosses && living->GetHasBossGlow()) || !only_color_bosses) {
+                const auto prof = GetAgentProfession(living);
+                if (prof) {
+                    c = &profession_colors[prof];
+                }
             }
         }
         const auto& polygons = Minimap::Instance().custom_renderer.polygons;
