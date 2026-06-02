@@ -20,13 +20,15 @@
 HotkeyGroup::HotkeyGroup(const ToolboxIni* ini, const char* section)
     : TBHotkey(ini, section)
 {
-    auto found = hotkey_groups.find(label);
-    if (found != hotkey_groups.end()) {
-        hotkeys = found->second->hotkeys;
-        found->second->hotkeys.clear();
-        delete found->second;
+    if (*label) {
+        auto found = hotkey_groups.find(label);
+        if (found != hotkey_groups.end()) {
+            hotkeys = found->second->hotkeys;
+            found->second->hotkeys.clear();
+            delete found->second;
+        }
+        hotkey_groups[label] = this;
     }
-    hotkey_groups[label] = this;
     for (auto hotkey : hotkeys) {
         hotkey->group = this;
     }
@@ -34,13 +36,15 @@ HotkeyGroup::HotkeyGroup(const ToolboxIni* ini, const char* section)
 HotkeyGroup::HotkeyGroup(const char* _label) : TBHotkey(0, 0)
 {
     strncpy(label, _label, _countof(label));
-    auto found = hotkey_groups.find(label);
-    if (found != hotkey_groups.end()) {
-        hotkeys = found->second->hotkeys;
-        found->second->hotkeys.clear();
-        delete found->second;
+    if (*label) {
+        auto found = hotkey_groups.find(label);
+        if (found != hotkey_groups.end()) {
+            hotkeys = found->second->hotkeys;
+            found->second->hotkeys.clear();
+            delete found->second;
+        }
+        hotkey_groups[label] = this;
     }
-    hotkey_groups[label] = this;
     for (auto hotkey : hotkeys) {
         hotkey->group = this;
     }
@@ -104,6 +108,16 @@ bool HotkeyGroup::DrawSettings()
     ImGui::Spacing();
     ImGui::TextDisabled("Group settings:");
     ImGui::Separator();
+    char old_label[sizeof(label)];
+    memcpy(old_label, label, sizeof(label));
     hotkey_changed = hotkey_changed || TBHotkey::DrawSettings();
+    if (strcmp(old_label, label) != 0) {
+        // Keep hotkey_groups in sync when label changes
+        auto it = hotkey_groups.find(old_label);
+        if (it != hotkey_groups.end() && it->second == this)
+            hotkey_groups.erase(it);
+        if (*label)
+            hotkey_groups[label] = this;
+    }
     return hotkey_changed;
 }
