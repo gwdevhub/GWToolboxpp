@@ -1109,10 +1109,16 @@ void Minimap::DrawSettingsInternal()
     }
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
-    if (agent_renderer.boss_colors) {
+    ImGui::Checkbox("Color enemies by profession", &agent_renderer.enemies_colors_by_profession);
+    if (agent_renderer.enemies_colors_by_profession) {
         ImGui::Indent();
-        if (ImGui::TreeNodeEx("Boss profession colors", ImGuiTreeNodeFlags_FramePadding)) {
+        if (ImGui::RadioButton("Color only bosses", agent_renderer.only_color_bosses == true)) {
+            agent_renderer.only_color_bosses = true;
+        }
+        if (ImGui::RadioButton("Color all enemies", agent_renderer.only_color_bosses == false)) {
+            agent_renderer.only_color_bosses = false;
+        }
+        if (ImGui::TreeNodeEx("Profession colors", ImGuiTreeNodeFlags_FramePadding)) {
             constexpr uint32_t color_flags = ImGuiColorEditFlags_NoInputs;
             static const char* prof_names[] = {
                 nullptr,        // 0 = None, hidden
