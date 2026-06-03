@@ -44,10 +44,11 @@ namespace {
         return nullptr;
     }
 
-    bool ImVec2Eq(const ImVec2& a, const ImVec2& b) {
+    bool ImVec2Eq(const ImVec2& a, const ImVec2& b)
+    {
         return a.x == b.x && a.y == b.y;
     }
-}
+} // namespace
 
 void ToolboxUIElement::UpdateCachedFrameStates()
 {
@@ -97,7 +98,10 @@ void ToolboxUIElement::UpdateLocationAgainstSnappedFrame()
     float* cur_pos = is_mobile ? mobile_pos : normal_pos;
     cur_pos[0] = target_x;
     cur_pos[1] = target_y;
-    if (is_mobile) has_mobile_layout = true; else has_normal_layout = true;
+    if (is_mobile)
+        has_mobile_layout = true;
+    else
+        has_normal_layout = true;
 
     if (window) {
         ImGui::SetWindowPos(window, {target_x, target_y});
@@ -143,18 +147,22 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(lock_size);
     LOAD_BOOL(auto_size);
     LOAD_BOOL(auto_resize_on_collapse);
-    LOAD_FLOAT(collapsed_size[0]); LOAD_FLOAT(collapsed_size[1]);
-    LOAD_FLOAT(expanded_size[0]); LOAD_FLOAT(expanded_size[1]);
+    LOAD_FLOAT(collapsed_size[0]);
+    LOAD_FLOAT(collapsed_size[1]);
+    LOAD_FLOAT(expanded_size[0]);
+    LOAD_FLOAT(expanded_size[1]);
     LOAD_BOOL(show_titlebar);
     LOAD_BOOL(show_closebutton);
     LOAD_BOOL(show_breakout_button);
     LOAD_BOOL(lock_breakout_button);
     if (ini->KeyExists(Name(), "breakout_pos[0]")) {
-        LOAD_FLOAT(breakout_pos[0]); LOAD_FLOAT(breakout_pos[1]);
+        LOAD_FLOAT(breakout_pos[0]);
+        LOAD_FLOAT(breakout_pos[1]);
         pending_breakout_pos = true;
     }
     LOAD_STRING(snapped_frame_label);
-    LOAD_FLOAT(snap_offset[0]); LOAD_FLOAT(snap_offset[1]);
+    LOAD_FLOAT(snap_offset[0]);
+    LOAD_FLOAT(snap_offset[1]);
     if (!snapped_frame_label.empty() && !ini->KeyExists(Name(), "snap_offset[0]")) {
         snap_offset_needs_init = true;
     }
@@ -162,19 +170,24 @@ void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
     LOAD_BOOL(mobile_lock_size);
     LOAD_BOOL(mobile_auto_size);
     LOAD_STRING(mobile_snapped_frame_label);
-    LOAD_FLOAT(mobile_snap_offset[0]); LOAD_FLOAT(mobile_snap_offset[1]);
+    LOAD_FLOAT(mobile_snap_offset[0]);
+    LOAD_FLOAT(mobile_snap_offset[1]);
     if (!mobile_snapped_frame_label.empty() && !ini->KeyExists(Name(), "mobile_snap_offset[0]")) {
         mobile_snap_offset_needs_init = true;
     }
     has_normal_layout = ini->GetBoolValue(Name(), "has_normal_layout", false);
     if (has_normal_layout) {
-        LOAD_FLOAT(normal_pos[0]); LOAD_FLOAT(normal_pos[1]);
-        LOAD_FLOAT(normal_size[0]); LOAD_FLOAT(normal_size[1]);
+        LOAD_FLOAT(normal_pos[0]);
+        LOAD_FLOAT(normal_pos[1]);
+        LOAD_FLOAT(normal_size[0]);
+        LOAD_FLOAT(normal_size[1]);
     }
     has_mobile_layout = ini->GetBoolValue(Name(), "has_mobile_layout", false);
     if (has_mobile_layout) {
-        LOAD_FLOAT(mobile_pos[0]); LOAD_FLOAT(mobile_pos[1]);
-        LOAD_FLOAT(mobile_size[0]); LOAD_FLOAT(mobile_size[1]);
+        LOAD_FLOAT(mobile_pos[0]);
+        LOAD_FLOAT(mobile_pos[1]);
+        LOAD_FLOAT(mobile_size[0]);
+        LOAD_FLOAT(mobile_size[1]);
     }
 }
 
@@ -186,12 +199,17 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     if (ImGui::GetCurrentContext()) {
         if (const auto window = ImGui::FindWindowByName(Name())) {
             if (ToolboxSettings::is_in_mobile_mode) {
-                mobile_pos[0] = window->Pos.x; mobile_pos[1] = window->Pos.y;
-                mobile_size[0] = window->SizeFull.x; mobile_size[1] = window->SizeFull.y;
+                mobile_pos[0] = window->Pos.x;
+                mobile_pos[1] = window->Pos.y;
+                mobile_size[0] = window->SizeFull.x;
+                mobile_size[1] = window->SizeFull.y;
                 has_mobile_layout = true;
-            } else {
-                normal_pos[0] = window->Pos.x; normal_pos[1] = window->Pos.y;
-                normal_size[0] = window->SizeFull.x; normal_size[1] = window->SizeFull.y;
+            }
+            else {
+                normal_pos[0] = window->Pos.x;
+                normal_pos[1] = window->Pos.y;
+                normal_size[0] = window->SizeFull.x;
+                normal_size[1] = window->SizeFull.y;
                 has_normal_layout = true;
             }
         }
@@ -211,29 +229,38 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
     SAVE_BOOL(lock_size);
     SAVE_BOOL(auto_size);
     SAVE_BOOL(auto_resize_on_collapse);
-    SAVE_FLOAT(collapsed_size[0]); SAVE_FLOAT(collapsed_size[1]);
-    SAVE_FLOAT(expanded_size[0]); SAVE_FLOAT(expanded_size[1]);
+    SAVE_FLOAT(collapsed_size[0]);
+    SAVE_FLOAT(collapsed_size[1]);
+    SAVE_FLOAT(expanded_size[0]);
+    SAVE_FLOAT(expanded_size[1]);
     SAVE_BOOL(show_titlebar);
     SAVE_BOOL(show_closebutton);
     SAVE_BOOL(show_breakout_button);
     SAVE_BOOL(lock_breakout_button);
-    SAVE_FLOAT(breakout_pos[0]); SAVE_FLOAT(breakout_pos[1]);
+    SAVE_FLOAT(breakout_pos[0]);
+    SAVE_FLOAT(breakout_pos[1]);
     SAVE_STRING(snapped_frame_label);
-    SAVE_FLOAT(snap_offset[0]); SAVE_FLOAT(snap_offset[1]);
+    SAVE_FLOAT(snap_offset[0]);
+    SAVE_FLOAT(snap_offset[1]);
     SAVE_BOOL(mobile_lock_move);
     SAVE_BOOL(mobile_lock_size);
     SAVE_BOOL(mobile_auto_size);
     SAVE_STRING(mobile_snapped_frame_label);
-    SAVE_FLOAT(mobile_snap_offset[0]); SAVE_FLOAT(mobile_snap_offset[1]);
+    SAVE_FLOAT(mobile_snap_offset[0]);
+    SAVE_FLOAT(mobile_snap_offset[1]);
     ini->SetBoolValue(Name(), "has_normal_layout", has_normal_layout);
     if (has_normal_layout) {
-        SAVE_FLOAT(normal_pos[0]); SAVE_FLOAT(normal_pos[1]);
-        SAVE_FLOAT(normal_size[0]); SAVE_FLOAT(normal_size[1]);
+        SAVE_FLOAT(normal_pos[0]);
+        SAVE_FLOAT(normal_pos[1]);
+        SAVE_FLOAT(normal_size[0]);
+        SAVE_FLOAT(normal_size[1]);
     }
     ini->SetBoolValue(Name(), "has_mobile_layout", has_mobile_layout);
     if (has_mobile_layout) {
-        SAVE_FLOAT(mobile_pos[0]); SAVE_FLOAT(mobile_pos[1]);
-        SAVE_FLOAT(mobile_size[0]); SAVE_FLOAT(mobile_size[1]);
+        SAVE_FLOAT(mobile_pos[0]);
+        SAVE_FLOAT(mobile_pos[1]);
+        SAVE_FLOAT(mobile_size[0]);
+        SAVE_FLOAT(mobile_size[1]);
     }
 }
 
@@ -279,8 +306,7 @@ ImGuiWindowFlags ToolboxUIElement::GetWinFlags(ImGuiWindowFlags flags) const
 void ToolboxUIElement::RegisterSettingsContent()
 {
     ToolboxModule::RegisterSettingsContent(
-        SettingsName(),
-        Icon(),
+        SettingsName(), Icon(),
         [this](const std::string&, const bool is_showing) {
             ShowVisibleRadio();
             if (!is_showing) {
@@ -289,7 +315,8 @@ void ToolboxUIElement::RegisterSettingsContent()
             DrawSizeAndPositionSettings();
             DrawSettingsInternal();
         },
-        SettingsWeighting());
+        SettingsWeighting()
+    );
 }
 
 void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
@@ -298,8 +325,10 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
     if (is_mobile) {
         // Save current (normal) position before switching
         if (window) {
-            normal_pos[0] = window->Pos.x; normal_pos[1] = window->Pos.y;
-            normal_size[0] = window->SizeFull.x; normal_size[1] = window->SizeFull.y;
+            normal_pos[0] = window->Pos.x;
+            normal_pos[1] = window->Pos.y;
+            normal_size[0] = window->SizeFull.x;
+            normal_size[1] = window->SizeFull.y;
             has_normal_layout = true;
         }
         // Apply stored mobile position if available
@@ -307,11 +336,14 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
             ImGui::SetWindowPos(window, {mobile_pos[0], mobile_pos[1]});
             ImGui::SetWindowSize(window, {mobile_size[0], mobile_size[1]});
         }
-    } else {
+    }
+    else {
         // Save current (mobile) position before switching
         if (window) {
-            mobile_pos[0] = window->Pos.x; mobile_pos[1] = window->Pos.y;
-            mobile_size[0] = window->SizeFull.x; mobile_size[1] = window->SizeFull.y;
+            mobile_pos[0] = window->Pos.x;
+            mobile_pos[1] = window->Pos.y;
+            mobile_size[0] = window->SizeFull.x;
+            mobile_size[1] = window->SizeFull.y;
             has_mobile_layout = true;
         }
         // Restore stored normal position if available
@@ -338,18 +370,23 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     // Sync the current mode's stored positions from the live window
     if (window) {
         if (is_mobile) {
-            mobile_pos[0] = window->Pos.x; mobile_pos[1] = window->Pos.y;
-            mobile_size[0] = window->SizeFull.x; mobile_size[1] = window->SizeFull.y;
+            mobile_pos[0] = window->Pos.x;
+            mobile_pos[1] = window->Pos.y;
+            mobile_size[0] = window->SizeFull.x;
+            mobile_size[1] = window->SizeFull.y;
             has_mobile_layout = true;
-        } else {
-            normal_pos[0] = window->Pos.x; normal_pos[1] = window->Pos.y;
-            normal_size[0] = window->SizeFull.x; normal_size[1] = window->SizeFull.y;
+        }
+        else {
+            normal_pos[0] = window->Pos.x;
+            normal_pos[1] = window->Pos.y;
+            normal_size[0] = window->SizeFull.x;
+            normal_size[1] = window->SizeFull.y;
             has_normal_layout = true;
         }
     }
 
     bool& lm = is_mobile ? mobile_lock_move : lock_move;
-    bool& ls          = is_mobile ? mobile_lock_size           : lock_size;
+    bool& ls = is_mobile ? mobile_lock_size : lock_size;
     bool& as_ = is_mobile ? mobile_auto_size : auto_size;
     std::string& snap = is_mobile ? mobile_snapped_frame_label : snapped_frame_label;
     float* cur_pos = is_mobile ? mobile_pos : normal_pos;
@@ -360,7 +397,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     char need_show_buf[128];
     snprintf(need_show_buf, sizeof(need_show_buf), "You need to show the %s for this control to work", TypeName());
 
-{
+    {
         static const char* frame_label_options[_countof(available_frame_labels) + 1];
         for (size_t i = 0; i < _countof(available_frame_labels); i++) {
             frame_label_options[i] = available_frame_labels[i].label;
@@ -423,7 +460,8 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             if (ImGui::DragFloat2("Snap Offset", snap_off, 1.0f, 0.0f, 0.0f, "%.0f")) {
                 needs_init_ref = false; // user explicitly set offset; cancel pending init
             }
-        } else {
+        }
+        else {
             // Show absolute screen coordinates
             if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
                 if (window) {
@@ -509,7 +547,8 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     ImGui::EndDisabled();
     if (!has_titlebar && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         ImGui::SetTooltip("This %s has no titlebar", TypeName());
-    } else {
+    }
+    else {
         ImGui::ShowHelp("Automatically resize this window when it is collapsed or expanded");
     }
     ImGui::Indent();
@@ -556,8 +595,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         ImGui::SetTooltip("This %s cannot be shown in the main window", TypeName());
     }
 
-    ImGui::CheckboxWithHelp("Show breakout button", &show_breakout_button,
-        "Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
+    ImGui::CheckboxWithHelp("Show breakout button", &show_breakout_button, "Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
     if (show_breakout_button) {
         ImGui::Indent();
         ImGui::Checkbox("Lock breakout button position", &lock_breakout_button);
@@ -565,12 +603,12 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             char breakout_window_id[256];
             snprintf(breakout_window_id, sizeof(breakout_window_id), "%s##breakout_btn", Name());
             const auto breakout_window = ImGui::FindWindowByName(breakout_window_id);
-            ImVec2 breakout_pos(0, 0);
+            ImVec2 _breakout_pos(0, 0);
             if (breakout_window) {
-                breakout_pos = breakout_window->Pos;
+                _breakout_pos = breakout_window->Pos;
             }
-            if (ImGui::DragFloat2("Breakout position", reinterpret_cast<float*>(&breakout_pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
-                ImGui::SetWindowPos(breakout_window_id, breakout_pos);
+            if (ImGui::DragFloat2("Breakout position", reinterpret_cast<float*>(&_breakout_pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
+                ImGui::SetWindowPos(breakout_window_id, _breakout_pos);
             }
             ImGui::ShowHelp("You need to show the breakout button for this control to work");
         }
@@ -587,7 +625,7 @@ void ToolboxUIElement::ShowVisibleRadio()
     ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f));
     const auto color = visible ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : ImVec4(0.1f, 0.1f, 0.1f, 1.f);
     ImGui::PushStyleColor(ImGuiCol_Text, color);
-    if (ImGui::Button(visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH, { btn_width ,0})) {
+    if (ImGui::Button(visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH, {btn_width, 0})) {
         visible = !visible;
     }
     ImGui::PopStyleColor();
@@ -602,13 +640,7 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     char window_id[256];
     snprintf(window_id, sizeof(window_id), "%s##breakout_btn", Name());
 
-    ImGuiWindowFlags flags =
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoScrollWithMouse |
-        ImGuiWindowFlags_AlwaysAutoResize |
-        ImGuiWindowFlags_NoFocusOnAppearing |
-        ImGuiWindowFlags_NoNav;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 
     if (!ToolboxSettings::move_all && lock_breakout_button) {
         flags |= ImGuiWindowFlags_NoMove;
@@ -634,7 +666,8 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         bool clicked;
         if (icon && *icon) {
             clicked = ImGui::Button(icon, {btn_size, btn_size});
-        } else {
+        }
+        else {
             char label[4] = {};
             const auto* name = Name();
             for (size_t i = 0; i < 2 && name[i]; i++) {
@@ -690,13 +723,11 @@ bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text,
     const bool clicked = ImGui::Button("", ImVec2(width, ImGui::GetTextLineHeightWithSpacing()));
     if (show_icon) {
         if (Icon()) {
-            ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
-                                                ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Icon());
+            ImGui::GetWindowDrawList()->AddText(ImVec2(pos.x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Icon());
         }
     }
     if (show_text) {
-        ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2),
-                                            ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Name());
+        ImGui::GetWindowDrawList()->AddText(ImVec2(text_x, pos.y + ImGui::GetStyle().ItemSpacing.y / 2), ImColor(ImGui::GetStyle().Colors[ImGuiCol_Text]), Name());
     }
 
     if (clicked) {
