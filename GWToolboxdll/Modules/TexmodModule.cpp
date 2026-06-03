@@ -9,44 +9,20 @@
 #include <vector>
 
 #include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Utilities/Hooker.h>
 
-#include <GWCA/Utilities/Scanner.h>
 #include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 
 namespace {
 
-    HMODULE FindLoadedModuleByName(const char* name)
-    {
-        HMODULE hModules[1024];
-        HANDLE hProcess;
-        DWORD cbNeeded;
-        unsigned int i;
-
-        hProcess = GetCurrentProcess();
-        if (!EnumProcessModules(hProcess, hModules, sizeof(hModules), &cbNeeded)) return nullptr;
-        for (i = 0; i < (cbNeeded / sizeof(HMODULE)); i++) {
-            TCHAR szModuleName[MAX_PATH];
-            ASSERT(GetModuleFileName(hModules[i], szModuleName, _countof(szModuleName)) > 0);
-            const auto basename = strrchr(szModuleName, '\\');
-            if (basename && _stricmp(basename + 1, name) == 0) return hModules[i];
-        }
-        return nullptr;
-    }
-
     // =========================================================================
-    // Types
+    // gMod exports (resolved from gMod.dll)
     // =========================================================================
 
-    using tDirect3DCreate9 = IDirect3D9*(APIENTRY*)(UINT);
     using tGModAddFile = int (*)(const wchar_t*);
     using tGModRemoveFile = int (*)(const wchar_t*);
     using tGModSetDevice = int (*)(IDirect3DDevice9*);
     using tGModGetFiles = int (*)(wchar_t* buf, int bufLen);
-    using tCreateTexture = HRESULT(__stdcall*)(IDirect3DDevice9*, UINT, UINT, UINT, DWORD, D3DFORMAT, D3DPOOL, IDirect3DTexture9**, HANDLE*);
-    using tCreateVolumeTexture = HRESULT(__stdcall*)(IDirect3DDevice9*, UINT, UINT, UINT, UINT, DWORD, D3DFORMAT, D3DPOOL, IDirect3DVolumeTexture9**, HANDLE*);
-    using tCreateCubeTexture = HRESULT(__stdcall*)(IDirect3DDevice9*, UINT, UINT, DWORD, D3DFORMAT, D3DPOOL, IDirect3DCubeTexture9**, HANDLE*);
 
     tGModAddFile pfnAddFile = nullptr;
     tGModRemoveFile pfnRemoveFile = nullptr;
@@ -62,55 +38,14 @@ namespace {
         bool external = false;
     };
 
-    struct uMod_TextureClient {
-        uint32_t OriginalTextures[4];       // std::vector<uMod_IDirect3DTexture9*> - 16 bytes debug
-        uint32_t OriginalVolumeTextures[4]; // std::vector<uMod_IDirect3DVolumeTexture9*>
-        uint32_t OriginalCubeTextures[4];   // std::vector<uMod_IDirect3DCubeTexture9*>
-        IDirect3DDevice9* D3D9Device;
-        uint32_t isDirectXExDevice;
-        uint32_t should_update;
-        HANDLE hMutex;
-        // Don't care about the rest
-    };
-    static_assert(sizeof(uMod_TextureClient) == 0x40);
-
-    struct uMod_IDirect3D9 {
-        void** vtable;
-        IDirect3D9* m_pIDirect3D9;
-    };
-
-    struct uMod_IDirect3DTexture9 {
-        void** vtable;
-        IDirect3DTexture9* m_D3Dtex;
-        uMod_IDirect3DTexture9* CrossRef_D3Dtex;
-        IDirect3DDevice9* m_D3Ddev;
-    };
-    static_assert(sizeof(uMod_IDirect3DTexture9) == 0x10);
-
-    struct uMod_IDirect3DDevice9 {
-        void** vtable;
-        IDirect3DDevice9* m_pIDirect3DDevice9;
-        int BackBufferCount;
-        uint32_t NormalRendering;
-        int uMod_Reference;
-        uMod_IDirect3DTexture9* LastCreatedTexture;
-        void* LastCreatedVolumeTexture;
-        void* LastCreatedCubeTexture;
-        uMod_TextureClient* uMod_Client;
-    };
-    static_assert(sizeof(uMod_IDirect3DDevice9) == 0x24);
-
     // =========================================================================
     // Module state
     // =========================================================================
 
     HMODULE gmodDll = nullptr;
 
-    bool gmodPreloaded = false;
-
     std::vector<TexturePackEntry> packs;
 
-    char pathInputBuf[MAX_PATH] = {};
     bool gmodReady = false;
     std::string statusMessage;
     bool gmodLoadAttempted = false;
@@ -206,9 +141,7 @@ namespace {
         // 1. Check whether gMod is already loaded in this process.
         gmodDll = GetModuleHandleW(L"gMod.dll");
         if (gmodDll) {
-            gmodPreloaded = true;
             if (!ResolveTextureClientFunctions()) {
-                gmodPreloaded = false;
                 gmodDll = nullptr;
                 statusMessage = "Error: gMod was already active (pre-loaded), but AddFile/RemoveFile were not found - old version?";
                 return false;

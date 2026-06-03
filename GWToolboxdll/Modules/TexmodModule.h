@@ -4,8 +4,9 @@
 
 // ---------------------------------------------------------------------------
 // TexmodModule
-// GWToolbox module that loads gMod.dll at runtime and splices it into the
-// already-created D3D9 device via a vtable swap + fake IDirect3D9 shim.
+// GWToolbox module that loads gMod.dll at runtime and hands it the game's
+// already-created D3D9 device via gMod's exported SetDevice(), then loads
+// texture replacement packs (TPF/ZIP/DDS) through AddFile/RemoveFile.
 // ---------------------------------------------------------------------------
 class TexmodModule final : public ToolboxModule {
 public:
