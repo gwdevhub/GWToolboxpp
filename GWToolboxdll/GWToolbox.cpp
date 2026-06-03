@@ -909,6 +909,12 @@ std::filesystem::path GWToolbox::SaveSettings()
     }
     ToolboxSettings::LoadModules(ini);
     ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
+    if (ImGui::GetCurrentContext()) {
+        auto& io = ImGui::GetIO();
+        if (io.IniFilename) {
+            ImGui::SaveIniSettingsToDisk(io.IniFilename);
+        }
+    }
     const auto dir = ini->location_on_disk.parent_path();
     const auto dirstr = dir.wstring();
     const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");

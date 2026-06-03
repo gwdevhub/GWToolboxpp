@@ -52,6 +52,8 @@ public:
     bool auto_size = false;
     bool show_breakout_button = false;
     bool lock_breakout_button = false;
+    float breakout_pos[2] = {60.f, 60.f};
+    bool pending_breakout_pos = false;
 
     // Mobile-mode layout settings (separate from normal-mode settings above)
     bool mobile_lock_move = false;
