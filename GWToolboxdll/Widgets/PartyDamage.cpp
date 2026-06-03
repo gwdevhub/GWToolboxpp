@@ -373,18 +373,19 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
 
     long lvalue;
     auto& hp_map = GW::PartyMgr::GetIsPartyInHardMode() ? hp_map_hm : hp_map_nm;
+    const float magnitude = std::min(is_heal ? 1.0f - target->hp : target->hp, std::fabs(packet->value));
     if (target->max_hp > 0 && target->max_hp < 100000) {
-        lvalue = std::lround(std::abs(packet->value) * target->max_hp);
+        lvalue = std::lround(magnitude * target->max_hp);
         hp_map[target->player_number] = target->max_hp;
     }
     else {
         const auto it = hp_map.find(target->player_number);
         if (it == hp_map.end()) {
             // max hp not found, approximate with hp/lvl formula
-            lvalue = std::lround(std::abs(packet->value) * (target->level * 20 + 100));
+            lvalue = std::lround(magnitude * (target->level * 20 + 100));
         }
         else {
-            lvalue = std::lround(std::abs(packet->value) * it->second);
+            lvalue = std::lround(magnitude * it->second);
         }
     }
 
