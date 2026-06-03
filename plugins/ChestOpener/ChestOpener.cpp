@@ -5,6 +5,7 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -38,15 +39,20 @@ namespace {
             if (!target || !target->GetIsGadgetType()) return;
             if (!player || player->GetIsDead()) return;
             if (!GW::Items::GetItemByModelId(GW::Constants::ItemID::Lockpick)) return;
-            if (!OpenLockedChest_Func) return;
+            if (!OpenLockedChest_Func || !SendPacket_Func || !game_srv_object_addr) return;
 
-            // GoSignpost
-            uint32_t go_signpost_buf[3] = {0x51, target->agent_id, 0};
-            SendPacket_Func(*game_srv_object_addr, 0xC, go_signpost_buf);
+            auto id = target->agent_id;
+            GW::GameThread::Enqueue([id]() {
+                // GoSignpost
+                uint32_t go_signpost_buf[3] = {0x51, id, 0};
+                SendPacket_Func(*game_srv_object_addr, 0xC, go_signpost_buf);
 
-            //OpenLockedChest_Func(0x2);
-            uint32_t open_chest_buf[2] = {0x53, 0x2};
-            SendPacket_Func(*game_srv_object_addr, 0x8, open_chest_buf);
+                Sleep(250);
+
+                //OpenLockedChest_Func(0x2);
+                uint32_t open_chest_buf[2] = {0x53, 0x2};
+                SendPacket_Func(*game_srv_object_addr, 0x8, open_chest_buf);
+            });
         }
     }
 }
@@ -63,12 +69,16 @@ void ChestOpener::Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMO
 
     GW::UI::RegisterUIMessageCallback(&OnSentChat_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
+    GW::Scanner::Initialize();
+
     auto address = GW::Scanner::Find("\x83\xc9\x01\x89\x4b\x24", "xxxxxx", 0x28);
     OpenLockedChest_Func = (DoAction_pt)GW::Scanner::FunctionFromNearCall(address);
 
-    // SendPacket_Func = (SendPacket_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(R"(p:\code\net\msg\msgconn.cpp)","bytes >= sizeof(dword)", 0, 0));
-    // uintptr_t address = GW::Scanner::FindAssertion(R"(p:\code\gw\net\cli\gcgamecmd.cpp)","No valid case for switch variable 'code'", 0, -0x32);
-    // game_srv_object_addr = *(uintptr_t **)address;
+    address = GW::Scanner::FindAssertion(R"(P:\Code\Net\Msg\MsgConn.cpp)", "bytes >= sizeof(dword)", 0, 0);
+    SendPacket_Func = (SendPacket_pt)GW::Scanner::ToFunctionStart(address);
+
+    address = GW::Scanner::FindAssertion(R"(P:\Code\Gw\Net\Cli\GcGameCmd.cpp)", "No valid case for switch variable 'code'", 0, -0x32);
+    game_srv_object_addr = *(uintptr_t **)address;
 }
 
 void ChestOpener::SignalTerminate()
