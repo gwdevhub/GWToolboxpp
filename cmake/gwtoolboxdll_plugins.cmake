@@ -112,6 +112,7 @@ target_link_libraries(AgentPopTimer PRIVATE directxtexloader)
 add_tb_plugin(DeathPenaltyTimer)
 target_link_libraries(DeathPenaltyTimer PRIVATE directxtexloader)
 
+add_tb_plugin(ChestOpener)
 add_tb_plugin(DhuumCalculator)
 add_tb_plugin(ExamplePlugin)
 add_tb_plugin(Follow)

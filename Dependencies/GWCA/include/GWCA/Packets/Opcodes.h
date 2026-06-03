@@ -218,3 +218,5 @@
 #define GAME_SMSG_PARTY_SEARCH_REMOVE               (0x01DF) // 479
 #define GAME_SMSG_PARTY_SEARCH_SIZE                 (0x01E0) // 480
 #define GAME_SMSG_PARTY_SEARCH_TYPE                 (0x01E1) // 481
+
+#define GAME_CMSG_SEND_SIGNPOST_DIALOG              (0x0053) // 83
