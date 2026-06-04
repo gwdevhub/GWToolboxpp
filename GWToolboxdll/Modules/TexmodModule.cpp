@@ -2,10 +2,10 @@
 #include "stdafx.h"
 
 #include <ToolboxIni.h>
-#include <d3d9.h>
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <d3d9.h>
 #include <filesystem>
 #include <fstream>
 #include <imgui.h>
@@ -15,6 +15,7 @@
 
 #include <GWCA/Managers/RenderMgr.h>
 
+#include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 
@@ -110,25 +111,11 @@ namespace {
         }
     }
 
-    // =========================================================================
-    // gMod lifecycle
-    // =========================================================================
-
-    // =========================================================================
-    // PE export sniffing
-    //
-    // Determine whether a candidate DLL exports the gMod entry points by reading
-    // its export table straight off disk - no LoadLibrary, no DllMain, no import
-    // resolution. This lets us scan for a compatible gMod / d3d9-proxy DLL and
-    // only ever load the one that is actually usable.
-    // =========================================================================
-
     // Translate an image RVA to a raw file offset via the section table (0 = not found).
     uint32_t RvaToFileOffset(const IMAGE_SECTION_HEADER* sec, unsigned n, uint32_t rva)
     {
         for (unsigned i = 0; i < n; ++i) {
-            if (rva >= sec[i].VirtualAddress && rva < sec[i].VirtualAddress + sec[i].SizeOfRawData)
-                return sec[i].PointerToRawData + (rva - sec[i].VirtualAddress);
+            if (rva >= sec[i].VirtualAddress && rva < sec[i].VirtualAddress + sec[i].SizeOfRawData) return sec[i].PointerToRawData + (rva - sec[i].VirtualAddress);
         }
         return 0;
     }
@@ -149,7 +136,9 @@ namespace {
         }
 
         // Every read below is bounds-checked: the file is untrusted.
-        const auto ok = [&](size_t off, size_t len) { return off <= img.size() && len <= img.size() - off; };
+        const auto ok = [&](size_t off, size_t len) {
+            return off <= img.size() && len <= img.size() - off;
+        };
 
         const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(img.data());
         if (dos->e_magic != IMAGE_DOS_SIGNATURE) return names;
@@ -192,15 +181,6 @@ namespace {
         return names;
     }
 
-    bool DllExportsAll(const std::filesystem::path& path, std::span<const char* const> required)
-    {
-        const auto names = ReadDllExportNames(path);
-        if (names.empty()) return false;
-        return std::ranges::all_of(required, [&](const char* req) {
-            return std::ranges::find(names, req) != names.end();
-        });
-    }
-
     // Mandatory gMod exports. GetFiles is intentionally absent: older gMod builds
     // lack it and ResolveTextureClientFunctions already treats it as optional.
     constexpr const char* kRequiredExports[] = {"AddFile", "RemoveFile", "SetDevice"};
@@ -222,8 +202,10 @@ namespace {
         const auto add_dir = [&](std::filesystem::path d) {
             if (!d.empty() && std::ranges::find(dirs, d) == dirs.end()) dirs.push_back(std::move(d));
         };
-        add_dir(DirOfModule(nullptr));                          // running exe
-        add_dir(DirOfModule(GetModuleHandleW(L"GWToolbox.dll"))); // toolbox dll
+        add_dir(DirOfModule(nullptr));                   // running exe
+        add_dir(DirOfModule(GWToolbox::GetDLLModule())); // toolbox dll
+
+        std::filesystem::path found;
 
         // Prefer a dedicated gMod.dll over a d3d9.dll proxy; sniff exports off
         // disk so an incompatible file (e.g. the system d3d9.dll) is never loaded.
@@ -232,10 +214,16 @@ namespace {
                 std::error_code ec;
                 auto candidate = dir / name;
                 if (!std::filesystem::exists(candidate, ec)) continue;
-                if (DllExportsAll(candidate, kRequiredExports)) return candidate;
+                const auto names = ReadDllExportNames(candidate);
+                if (std::ranges::all_of(kRequiredExports, [&](const char* req) {
+                        return std::ranges::find(names, req) != names.end();
+                    })) {
+                    found = candidate;
+                    break;
+                }
             }
         }
-        return {};
+        return found;
     }
 
     bool InitGMod()
