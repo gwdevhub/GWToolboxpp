@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include <atomic>
 #include <bit>
+#include <mutex>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/Context/CharContext.h>
@@ -373,7 +374,6 @@ struct MergeStack;
     public:
         std::filesystem::file_time_type last_change_time{};
         bool is_loaded = false;
-        bool is_loading = false;
         GUID account{};
         std::string ini_ID{}; // character name for character/hero inventories, email for xunlai chests
         InventoryIni(std::filesystem::path _location_on_disk) { location_on_disk = _location_on_disk; }
@@ -435,7 +435,6 @@ struct MergeStack;
     bool initializing = false;
     bool needs_sorting = true;
     bool needs_filter = true;
-    std::atomic<int> async_loads_pending{0};
     bool show_delete_note = false;
     size_t filtered_item_count = 0;
     std::string last_character{};
@@ -766,6 +765,142 @@ struct MergeStack;
         return ini_by_character[ini_ID];
     }
 
+    struct LoadResult {
+        std::filesystem::path path;
+        std::vector<RawIniEntry> entries;
+        bool success = false;
+    };
+
+    struct BatchLoadState {
+        std::mutex mutex;
+        std::vector<LoadResult> results;
+        std::atomic<int> tasks_remaining{0};
+    };
+
+    RawIniEntry ParseFreeSlotSection(const ToolboxIni& ini, const char* section, const GUID& account, const std::string& character)
+    {
+        RawIniEntry e;
+        e.is_freeslot = true;
+        e.account = account;
+        e.character = character;
+        e.account_representing_character = ini.GetValue(section, "account_character", "");
+        e.max_equipment       = (uint32_t)ini.GetLongValue(section, "maxequipment",      0);
+        e.max_inventory       = (uint32_t)ini.GetLongValue(section, "maxinventory",      0);
+        e.occupied_equipment  = (uint32_t)ini.GetLongValue(section, "occupiedequipment", 0);
+        e.occupied_inventory  = (uint32_t)ini.GetLongValue(section, "occupiedinventory", 0);
+        e.anniversary_pane_active = ini.GetBoolValue(section, "anniversary_pane_active", false);
+        return e;
+    }
+
+    RawIniEntry ParseItemSection(const ToolboxIni& ini, const char* section, const GUID& account, const std::string& character)
+    {
+        RawIniEntry e;
+        e.account = account;
+        e.character = character;
+        e.bag_id        = (GW::Constants::Bag)    ini.GetLongValue(section, "bagid",      1);
+        e.hero_id       = (GW::Constants::HeroID) ini.GetLongValue(section, "heroid",     0);
+        e.slot          = (uint32_t)ini.GetLongValue(section, "slot",        0);
+        e.model_id      = (uint32_t)ini.GetLongValue(section, "modelid",     0);
+        e.model_file_id = (uint32_t)ini.GetLongValue(section, "modelfileid", 0);
+        e.interaction   = (uint32_t)ini.GetLongValue(section, "interaction", 0);
+        e.quantity      = (uint16_t)ini.GetLongValue(section, "quantity",    0);
+        e.equipped      = (uint8_t) ini.GetLongValue(section, "equipped",    0);
+        GuiUtils::IniToArray(ini.GetValue(section, "description", ""), e.description);
+        return e;
+    }
+
+    LoadResult LoadIniFile(const std::filesystem::path& path, bool only_foreign, const GUID& account)
+    {
+        LoadResult r;
+        r.path = path;
+        ToolboxIni temp_ini;
+        r.success = temp_ini.LoadFile(path) == SI_OK;
+        if (!r.success) return r;
+
+        TNamesDepend sections;
+        temp_ini.GetAllSections(sections);
+        r.entries.reserve(sections.size());
+
+        for (const auto& sec : sections) {
+            const char* section = sec.pItem;
+            GUID entry_account;
+            if (!TextUtils::StringToGuid(temp_ini.GetValue(section, "account", ""), &entry_account)) continue;
+            const std::string character = temp_ini.GetValue(section, "character", "");
+            if (only_foreign && entry_account == account) continue;
+
+            if (std::string_view(section) == "freeslots")
+                r.entries.push_back(ParseFreeSlotSection(temp_ini, section, entry_account, character));
+            else
+                r.entries.push_back(ParseItemSection(temp_ini, section, entry_account, character));
+        }
+        return r;
+    }
+
+    void ApplyFreeSlotEntry(const RawIniEntry& e)
+    {
+        CharacterFreeSlots fs;
+        fs.account = e.account;
+        fs.character = e.character;
+        fs.account_representing_character = e.account_representing_character;
+        fs.max_equipment      = e.max_equipment;
+        fs.max_inventory      = e.max_inventory;
+        fs.occupied_equipment = e.occupied_equipment;
+        fs.occupied_inventory = e.occupied_inventory;
+        fs.anniversary_pane_active = e.anniversary_pane_active;
+        free_slots.insert(std::make_unique<CharacterFreeSlots>(std::move(fs)));
+    }
+
+    void ApplyItemEntry(const RawIniEntry& e)
+    {
+        auto item = std::make_unique<AccountInventoryItem>();
+        item->account       = e.account;
+        item->character     = e.character;
+        item->bag_id        = e.bag_id;
+        item->hero_id       = e.hero_id;
+        item->slot          = e.slot;
+        item->model_id      = e.model_id;
+        item->model_file_id = e.model_file_id;
+        item->interaction   = e.interaction;
+        item->quantity      = e.quantity;
+        item->equipped      = e.equipped;
+        item->description   = e.description;
+        GW::Item gw_item;
+        gw_item.model_file_id = item->model_file_id;
+        gw_item.interaction   = item->interaction;
+        item->texture  = Resources::GetItemImage(&gw_item);
+        item->location = item->hero_id == GW::Constants::HeroID::NoHero
+            ? "(Player)" : Resources::GetHeroName(item->hero_id)->string();
+        if (IsChestBag(item->bag_id))
+            item->location = BAG_NAME[(int)item->bag_id];
+        if (const auto found = inventory.find(item); found != inventory.end())
+            inventory.erase(found);
+        inventory.insert(std::move(item));
+    }
+
+    void ApplyLoadResult(const LoadResult& r)
+    {
+        const auto it = ini_by_path.find(r.path);
+        auto* ini = it != ini_by_path.end() ? it->second.get() : nullptr;
+        if (!ini || !r.success) return;
+
+        for (const auto& e : r.entries) {
+            const auto entry_ini_id = GetIniID(e.account, e.character);
+            if (ini->ini_ID.empty()) {
+                ini->ini_ID = entry_ini_id;
+                ini->account = e.account;
+                ini_by_character[ini->ini_ID] = ini;
+            }
+            else if (ini->ini_ID != entry_ini_id) {
+                continue;
+            }
+            if (e.is_freeslot)
+                ApplyFreeSlotEntry(e);
+            else
+                ApplyItemEntry(e);
+        }
+        ini->is_loaded = true;
+    }
+
     void LoadFromFiles(bool only_foreign)
     {
         Resources::EnsureFolderExists(Resources::GetPath(L"inventories"));
@@ -776,12 +911,10 @@ struct MergeStack;
                 if (ini->account != current_account)
                     ini->is_loaded = false;
             }
-            for (auto it = inventory.begin(); it != inventory.end();) {
+            for (auto it = inventory.begin(); it != inventory.end();)
                 it = (*it)->account != current_account ? inventory.erase(it) : ++it;
-            }
-            for (auto it = free_slots.begin(); it != free_slots.end();) {
+            for (auto it = free_slots.begin(); it != free_slots.end();)
                 it = (*it)->account != current_account ? free_slots.erase(it) : ++it;
-            }
         }
         else {
             inventory_lookup.clear();
@@ -795,11 +928,9 @@ struct MergeStack;
                 ini_by_path[path] = std::make_unique<InventoryIni>(path);
             auto* ini = ini_by_path[path].get();
             if (only_foreign && ini->account == current_account) continue;
-            if (ini->is_loading) continue;
             const bool dirty = CheckIniDirty(ini, file.last_write_time());
             if (!dirty && ini->is_loaded) continue;
             if (dirty) ini->Reset();
-            ini->is_loading = true;
             to_load.push_back(path);
         }
 
@@ -815,136 +946,34 @@ struct MergeStack;
             return;
         }
 
-        // Batch dirty files into at most 4 worker tasks.
-        // Workers load into temporary ToolboxIni instances (no shared state) to avoid
-        // data races with InventoryIni objects on the main thread.
-        struct LoadResult {
-            std::filesystem::path path;
-            std::vector<RawIniEntry> entries;
-            bool success = false;
-        };
-
         const size_t batch_count = std::min<size_t>(4, to_load.size());
-        async_loads_pending += static_cast<int>(batch_count);
+        auto state = std::make_shared<BatchLoadState>();
+        state->tasks_remaining = static_cast<int>(batch_count);
+        const GUID captured_account = current_account;
 
         for (size_t b = 0; b < batch_count; b++) {
             std::vector<std::filesystem::path> batch;
             for (size_t i = b; i < to_load.size(); i += batch_count)
                 batch.push_back(to_load[i]);
 
-            const GUID captured_account = current_account;
-
-            Resources::EnqueueWorkerTask([batch, only_foreign, captured_account] {
-                std::vector<LoadResult> results;
-                results.reserve(batch.size());
-
+            Resources::EnqueueWorkerTask([batch, only_foreign, captured_account, state] {
                 for (const auto& path : batch) {
-                    LoadResult r;
-                    r.path = path;
-                    ToolboxIni temp_ini;
-                    r.success = temp_ini.LoadFile(path) == SI_OK;
-                    if (r.success) {
-                        TNamesDepend sections;
-                        temp_ini.GetAllSections(sections);
-                        r.entries.reserve(sections.size());
-
-                        for (const auto& sec : sections) {
-                            const char* section = sec.pItem;
-                            RawIniEntry e;
-                            if (!TextUtils::StringToGuid(temp_ini.GetValue(section, "account", ""), &e.account)) continue;
-                            e.character = temp_ini.GetValue(section, "character", "");
-                            if (only_foreign && e.account == captured_account) continue;
-
-                            if (std::string_view(section) == "freeslots") {
-                                e.is_freeslot = true;
-                                e.account_representing_character = temp_ini.GetValue(section, "account_character", "");
-                                e.max_equipment      = (uint32_t)temp_ini.GetLongValue(section, "maxequipment",      0);
-                                e.max_inventory      = (uint32_t)temp_ini.GetLongValue(section, "maxinventory",      0);
-                                e.occupied_equipment = (uint32_t)temp_ini.GetLongValue(section, "occupiedequipment", 0);
-                                e.occupied_inventory = (uint32_t)temp_ini.GetLongValue(section, "occupiedinventory", 0);
-                                e.anniversary_pane_active = temp_ini.GetBoolValue(section, "anniversary_pane_active", false);
-                            }
-                            else {
-                                e.bag_id        = (GW::Constants::Bag)    temp_ini.GetLongValue(section, "bagid",       1);
-                                e.hero_id       = (GW::Constants::HeroID) temp_ini.GetLongValue(section, "heroid",      0);
-                                e.slot          = (uint32_t)temp_ini.GetLongValue(section, "slot",         0);
-                                e.model_id      = (uint32_t)temp_ini.GetLongValue(section, "modelid",      0);
-                                e.model_file_id = (uint32_t)temp_ini.GetLongValue(section, "modelfileid",  0);
-                                e.interaction   = (uint32_t)temp_ini.GetLongValue(section, "interaction",  0);
-                                e.quantity      = (uint16_t)temp_ini.GetLongValue(section, "quantity",     0);
-                                e.equipped      = (uint8_t) temp_ini.GetLongValue(section, "equipped",     0);
-                                GuiUtils::IniToArray(temp_ini.GetValue(section, "description", ""), e.description);
-                            }
-                            r.entries.push_back(std::move(e));
-                        }
-                    }
-                    results.push_back(std::move(r));
+                    auto r = LoadIniFile(path, only_foreign, captured_account);
+                    std::lock_guard lock(state->mutex);
+                    state->results.push_back(std::move(r));
                 }
-
-                Resources::EnqueueMainTask([results = std::move(results)] {
-                    for (const auto& r : results) {
-                        // The ini may have been removed from ini_by_path (e.g. Delete All Inventories).
-                        const auto it = ini_by_path.find(r.path);
-                        auto* ini = it != ini_by_path.end() ? it->second.get() : nullptr;
-                        if (ini) ini->is_loading = false;
-                        if (!ini || !r.success) continue;
-
-                        for (const auto& e : r.entries) {
-                            const auto entry_ini_id = GetIniID(e.account, e.character);
-                            if (ini->ini_ID.empty()) {
-                                ini->ini_ID = entry_ini_id;
-                                ini->account = e.account;
-                                ini_by_character[ini->ini_ID] = ini;
-                            }
-                            else if (ini->ini_ID != entry_ini_id) {
-                                continue;
-                            }
-
-                            if (e.is_freeslot) {
-                                CharacterFreeSlots fs;
-                                fs.account = e.account;
-                                fs.character = e.character;
-                                fs.account_representing_character = e.account_representing_character;
-                                fs.max_equipment      = e.max_equipment;
-                                fs.max_inventory      = e.max_inventory;
-                                fs.occupied_equipment = e.occupied_equipment;
-                                fs.occupied_inventory = e.occupied_inventory;
-                                fs.anniversary_pane_active = e.anniversary_pane_active;
-                                free_slots.insert(std::make_unique<CharacterFreeSlots>(fs));
-                            }
-                            else {
-                                auto item = std::make_unique<AccountInventoryItem>();
-                                item->account       = e.account;
-                                item->character     = e.character;
-                                item->bag_id        = e.bag_id;
-                                item->hero_id       = e.hero_id;
-                                item->slot          = e.slot;
-                                item->model_id      = e.model_id;
-                                item->model_file_id = e.model_file_id;
-                                item->interaction   = e.interaction;
-                                item->quantity      = e.quantity;
-                                item->equipped      = e.equipped;
-                                item->description   = e.description;
-                                GW::Item gw_item;
-                                gw_item.model_file_id = item->model_file_id;
-                                gw_item.interaction   = item->interaction;
-                                item->texture  = Resources::GetItemImage(&gw_item);
-                                item->location = item->hero_id == GW::Constants::HeroID::NoHero
-                                    ? "(Player)" : Resources::GetHeroName(item->hero_id)->string();
-                                if (IsChestBag(item->bag_id))
-                                    item->location = BAG_NAME[(int)item->bag_id];
-                                if (const auto found = inventory.find(item); found != inventory.end())
-                                    inventory.erase(found);
-                                inventory.insert(std::move(item));
-                            }
-                        }
-                        ini->is_loaded = true;
-                    }
-                    if (--async_loads_pending == 0)
-                        needs_sorting = true;
-                });
+                --state->tasks_remaining;
             });
         }
+
+        const clock_t load_start = TIMER_INIT();
+        while (state->tasks_remaining > 0 && TIMER_DIFF(load_start) < 15000)
+            Sleep(10);
+
+        for (const auto& r : state->results)
+            ApplyLoadResult(r);
+
+        needs_sorting = true;
     }
 
     void SaveToFiles(bool include_foreign)
