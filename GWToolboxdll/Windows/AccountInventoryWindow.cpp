@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #include <bit>
-#include <fileapi.h>
-
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/Context/CharContext.h>
@@ -372,7 +370,8 @@ struct MergeStack;
 
     class InventoryIni : public ToolboxIni {
     public:
-        FILETIME last_change_time{};
+        std::filesystem::file_time_type last_change_time{};
+        bool is_loaded = false;
         GUID account{};
         std::string ini_ID{}; // character name for character/hero inventories, email for xunlai chests
         InventoryIni(std::filesystem::path _location_on_disk) { location_on_disk = _location_on_disk; }
@@ -380,7 +379,7 @@ struct MergeStack;
 
     void OnItemTooltip(const MergeStack* ms);
     void OnAccountInventoryItemClicked(AccountInventoryItem* i, bool move);
-    static bool CheckIniDirty(InventoryIni* ini);
+    static bool CheckIniDirty(InventoryIni* ini, std::filesystem::file_time_type write_time);
     InventoryIni* GetIni(const std::string& ini_ID, const GUID& account);
     std::string ItemToSectionName(AccountInventoryItem* i);
     void LoadFromFiles(bool only_foreign);
@@ -721,16 +720,11 @@ struct MergeStack;
         return out;
     }
 
-    bool CheckIniDirty(InventoryIni* ini)
+    bool CheckIniDirty(InventoryIni* ini, std::filesystem::file_time_type write_time)
     {
-        FILETIME change_time;
-        HANDLE f = CreateFileW(ini->location_on_disk.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (f == INVALID_HANDLE_VALUE) return false;
-        bool res = GetFileTime(f, NULL, NULL, &change_time);
-        CloseHandle(f);
-        if (!res) return false;
-        if (CompareFileTime(&change_time, &ini->last_change_time) != 0) {
-            ini->last_change_time = change_time;
+        if (write_time != ini->last_change_time) {
+            ini->last_change_time = write_time;
+            ini->is_loaded = false;
             return true;
         }
         return false;
@@ -758,10 +752,15 @@ struct MergeStack;
     {
         TNamesDepend entries{};
 
-
         Resources::EnsureFolderExists(Resources::GetPath(L"inventories"));
         std::unordered_set<std::filesystem::path> visited;
         if (only_foreign) {
+            // All foreign ini files need to be reloaded since we're clearing their items
+            for (auto& [path, ini] : ini_by_path) {
+                if (ini->account != current_account) {
+                    ini->is_loaded = false;
+                }
+            }
             for (auto it = inventory.begin(); it != inventory.end();) {
                 if ((*it)->account != current_account) {
                     it = inventory.erase(it);
@@ -788,10 +787,15 @@ struct MergeStack;
             }
             auto ini = ini_by_path[path].get();
             if (only_foreign && ini->account == current_account) continue;
-            if (CheckIniDirty(ini)) {
+            if (CheckIniDirty(ini, file.last_write_time())) {
                 ini->Reset();
                 if (ini->LoadFile(path.wstring()) < 0) continue;
             }
+            else if (ini->is_loaded) {
+                // File unchanged and items already in inventory - skip re-processing
+                continue;
+            }
+            entries.clear();
             ini->GetAllSections(entries);
             for (const auto& entry : entries) {
                 const char* section = entry.pItem;
@@ -852,9 +856,13 @@ struct MergeStack;
                 }
                 inventory.insert(std::move(i));
             }
+            ini->is_loaded = true;
         }
         for (auto it = ini_by_path.begin(); it != ini_by_path.end(); ++it) {
-            if (!visited.contains(it->first)) it->second->Reset();
+            if (!visited.contains(it->first)) {
+                it->second->Reset();
+                it->second->is_loaded = false;
+            }
         }
         needs_sorting = true;
     }
