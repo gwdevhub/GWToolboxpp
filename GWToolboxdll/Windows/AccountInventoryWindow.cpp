@@ -33,8 +33,46 @@
 
 #define memeq(a, b) (memcmp((a), (b), sizeof(*(a))) == 0)
 
+// JSON persistence DTOs (one file per account). These live in a NAMED namespace
+// because glaze's reflection cannot derive names for internal-linkage (anonymous
+// namespace) types. Bags/heroes are keyed by their integer enum value; slots by integer.
+namespace account_inventory_json {
+    struct ItemJson {
+        uint32_t model_id{};
+        uint32_t model_file_id{};
+        uint32_t interaction{};
+        uint16_t quantity{};
+        uint8_t equipped{};
+        std::string description; // decoded item description, UTF-8
+    };
+    using BagJson = std::map<uint32_t /*slot*/, ItemJson>;
+    struct FreeSlotsJson {
+        uint32_t max_inventory{};
+        uint32_t max_equipment{};
+        uint32_t occupied_inventory{};
+        uint32_t occupied_equipment{};
+    };
+    struct CharacterJson {
+        std::optional<FreeSlotsJson> free_slots; // absent => not known
+        std::map<uint32_t /*bag_id*/, BagJson> bags;
+        std::map<uint32_t /*hero_id*/, BagJson> heroes;
+    };
+    struct ChestJson {
+        bool anniversary_pane_active{};
+        std::optional<FreeSlotsJson> free_slots; // inventory only; absent => not known
+        std::map<uint32_t /*bag_id*/, BagJson> bags;
+    };
+    struct AccountJson {
+        std::string account;                 // GUID string
+        std::string representing_character;
+        ChestJson chest;
+        std::map<std::string /*character*/, CharacterJson> characters;
+    };
+}
+
 
 namespace {
+    using namespace account_inventory_json;
 
     // Based on boost::hash_combine
     template <typename... Args>
@@ -380,40 +418,6 @@ struct MergeStack;
             if (delta == 0) delta = memcmp(&l->account,&r->account,sizeof(r->account));
             return delta * sort_direction < 0;
         }
-    };
-
-    // ===== JSON persistence DTOs (one file per account; glaze auto-reflects aggregates) =====
-    // Bags/heroes are keyed by their integer enum value; slots by integer.
-    struct ItemJson {
-        uint32_t model_id{};
-        uint32_t model_file_id{};
-        uint32_t interaction{};
-        uint16_t quantity{};
-        uint8_t equipped{};
-        std::string description; // decoded item description, UTF-8
-    };
-    using BagJson = std::map<uint32_t /*slot*/, ItemJson>;
-    struct FreeSlotsJson {
-        uint32_t max_inventory{};
-        uint32_t max_equipment{};
-        uint32_t occupied_inventory{};
-        uint32_t occupied_equipment{};
-    };
-    struct CharacterJson {
-        std::optional<FreeSlotsJson> free_slots; // absent => not known
-        std::map<uint32_t /*bag_id*/, BagJson> bags;
-        std::map<uint32_t /*hero_id*/, BagJson> heroes;
-    };
-    struct ChestJson {
-        bool anniversary_pane_active{};
-        std::optional<FreeSlotsJson> free_slots; // inventory only; absent => not known
-        std::map<uint32_t /*bag_id*/, BagJson> bags;
-    };
-    struct AccountJson {
-        std::string account;                 // GUID string
-        std::string representing_character;
-        ChestJson chest;
-        std::map<std::string /*character*/, CharacterJson> characters;
     };
 
     // Tracks one on-disk account file. Replaces the old SimpleIni-backed wrapper;
