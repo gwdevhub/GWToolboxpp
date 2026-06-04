@@ -1,7 +1,10 @@
 #include "stdafx.h"
 #include <atomic>
 #include <bit>
+#include <deque>
+#include <iterator>
 #include <mutex>
+#include <optional>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
 #include <GWCA/Context/CharContext.h>
@@ -169,34 +172,82 @@ namespace {
 
     
 
-    struct AccountInventoryItem {
-        // identifying attributes
-        GUID account{};
-        std::string character{};
-        GW::Constants::HeroID hero_id = (GW::Constants::HeroID)0;
-        GW::Constants::Bag bag_id = (GW::Constants::Bag)0;
-        uint32_t slot{};
-
+    // Intrinsic item data only. Its account/character/hero/bag/slot are implied by
+    // where it sits in the hierarchy (Account -> chest/characters -> bags -> items).
+    struct Item {
         uint32_t model_id{};
         uint32_t model_file_id{};
         uint32_t interaction{};
         uint16_t quantity{};
         uint8_t equipped{};
         std::wstring description{}; // output of AsyncDecodeStr(ShorthandItemDescription)
+        uint32_t item_id{};         // live-session only; 0 for items loaded from disk
+        IDirect3DTexture9** texture = nullptr; // cache (GetItemImage), not serialized
+    };
 
-        uint32_t item_id{};
-        // caches, do not serialize
-        IDirect3DTexture9** texture; // output of GetItemImage
-        std::string location{};     // (Player) <Storage Pane> or <Hero Name>
+    // Free-slot occupancy, folded out of the old CharacterFreeSlots into the nodes.
+    struct FreeSlotInfo {
+        bool known = false;         // true once we have free-slot data for this node
+        uint32_t max_inventory{};
+        uint32_t max_equipment{};
+        uint32_t occupied_inventory{};
+        uint32_t occupied_equipment{};
+    };
 
-        void CopyKeyTo(AccountInventoryItem* i)
-        {
-            i->account = account;
-            i->character = character;
-            i->hero_id = hero_id;
-            i->bag_id = bag_id;
-            i->slot = slot;
-        }
+    struct Bag {
+        GW::Constants::Bag bag_id{};
+        std::unordered_map<uint32_t /*slot*/, Item> items; // node-stable: raw Item* stay valid
+    };
+    struct Hero {
+        GW::Constants::HeroID hero_id{};
+        Bag bag; // single Equipped_Items bag
+    };
+    struct Character {
+        std::string name;
+        std::unordered_map<GW::Constants::Bag, Bag> bags;
+        std::unordered_map<GW::Constants::HeroID, Hero> heroes;
+        FreeSlotInfo free_slots;
+    };
+    struct Account {
+        GUID uuid{};
+        std::unordered_map<GW::Constants::Bag, Bag> chest;        // 15 chest panels
+        std::unordered_map<std::string, Character> characters;
+        std::string account_representing_character;               // tooltip helper
+        bool anniversary_pane_active = false;
+        FreeSlotInfo chest_free_slots;                            // equipment unused for chest
+    };
+
+    // Ephemeral flattened view of one item, rebuilt by traversing the hierarchy.
+    // Carries the denormalized fields the display/sort/tooltip need.
+    struct ItemRef {
+        Account* account = nullptr;   // never null
+        Character* character = nullptr; // null for chest items
+        Hero* hero = nullptr;         // null unless on a hero
+        GW::Constants::Bag bag_id{};
+        GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
+        uint32_t slot{};
+        Item* item = nullptr;
+        std::string character_name;   // "(Chest)" | Character::name
+        std::string location;         // "(Player)" | hero name | BAG_NAME[bag]
+    };
+
+    // A storage path: enough to locate (or re-locate) an item in the hierarchy.
+    struct ItemPath {
+        GUID account{};
+        std::string character;        // "(Chest)" or player name
+        GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
+        GW::Constants::Bag bag_id{};
+        uint32_t slot{};
+    };
+
+    // Resolved live item: where it lives + the owning bag (so it can be erased).
+    struct ItemLoc {
+        Account* account = nullptr;
+        Character* character = nullptr; // null for chest items
+        GW::Constants::Bag bag_id{};
+        uint32_t slot{};
+        Bag* bag = nullptr;
+        Item* item = nullptr;
     };
 
 struct MergeStack;
@@ -205,13 +256,13 @@ struct MergeStack;
         ImGuiTableSortSpecs* sort_specs{};
         UUID current_account{};
         bool operator()(const MergeStack& lms, const MergeStack& rms) const;
-        bool operator()(AccountInventoryItem* l, AccountInventoryItem* r) const;
+        bool operator()(ItemRef* l, ItemRef* r) const;
     };
 
     struct MergeStack {
         uint16_t quantity;
         std::string description;
-        std::set<AccountInventoryItem*, ItemCompare> i;
+        std::set<ItemRef*, ItemCompare> i;
         MergeStack(const UUID& account, const std::wstring& _description);
         std::string GetDescription() {
             std::string build_desc = description;
@@ -235,13 +286,13 @@ struct MergeStack;
                 delta = 0;
                 switch (sort_spec->ColumnUserID) {
                     case ItemColumnID_Character:
-                        delta = l->character.compare(r->character);
+                        delta = l->character_name.compare(r->character_name);
                         break;
                     case ItemColumnID_Location:
                         delta = l->location.compare(r->location);
                         break;
                     case ItemColumnID_ModelID:
-                        delta = l->model_id - r->model_id;
+                        delta = l->item->model_id - r->item->model_id;
                         break;
                     case ItemColumnID_Description:
                         delta = lms.description.compare(rms.description);
@@ -251,25 +302,25 @@ struct MergeStack;
             }
         }
         // fallback
-        if (delta == 0) delta = l->character.compare(r->character);
+        if (delta == 0) delta = l->character_name.compare(r->character_name);
         if (delta == 0) delta = l->location.compare(r->location);
         if (delta == 0) delta = (int)l->bag_id - (int)r->bag_id;
         if (delta == 0) delta = l->slot - r->slot;
-        if (delta == 0) delta = memcmp(&l->account, &r->account, sizeof(l->account));
+        if (delta == 0) delta = memcmp(&l->account->uuid, &r->account->uuid, sizeof(l->account->uuid));
         return delta * sort_direction < 0;
     }
-    bool ItemCompare::operator()(AccountInventoryItem* l, AccountInventoryItem* r) const
+    bool ItemCompare::operator()(ItemRef* l, ItemRef* r) const
     {
-        if (l->account != r->account) {
+        if (l->account->uuid != r->account->uuid) {
             // lowest item is the one that can be interacted with. Make sure it is one on this account if there is one
-            if (memeq(&l->account, &current_account)) return true;
-            if (memeq(&r->account, &current_account)) return false;
+            if (memeq(&l->account->uuid, &current_account)) return true;
+            if (memeq(&r->account->uuid, &current_account)) return false;
         }
-        auto lms = MergeStack(l->account, L"");
-        lms.quantity = l->quantity;
+        auto lms = MergeStack(l->account->uuid, L"");
+        lms.quantity = l->item->quantity;
         lms.i.insert(l);
-        auto rms = MergeStack(r->account, L"");
-        rms.quantity = r->quantity;
+        auto rms = MergeStack(r->account->uuid, L"");
+        rms.quantity = r->item->quantity;
         rms.i.insert(r);
         return this->operator()(lms, rms);
     }
@@ -277,40 +328,20 @@ struct MergeStack;
         description = TextUtils::WStringToString(_description);
     }
 
-    struct ItemHash {
-        using is_transparent = void;
-        std::size_t operator()(const std::unique_ptr<AccountInventoryItem>& i) const noexcept { return operator()(std::to_address(i)); }
-        std::size_t operator()(const AccountInventoryItem* const* const i) const noexcept { return operator()(*i); }
-        std::size_t operator()(const AccountInventoryItem* const i) const noexcept
-        {
-            return hash_combine(i->account.Data1, i->account.Data2, i->account.Data3,
-                std::bit_cast<uint64_t>(i->account.Data4),
-                i->character, i->hero_id, static_cast<uint32_t>(i->bag_id), i->slot);
-        }
-    };
-
-    struct ItemEqual {
-        using is_transparent = void;
-        bool operator()(const std::unique_ptr<AccountInventoryItem>& l, const std::unique_ptr<AccountInventoryItem>& r) const { return operator()(std::to_address(l), std::to_address(r)); }
-        bool operator()(const AccountInventoryItem* const l, const std::unique_ptr<AccountInventoryItem>& r) const { return operator()(l, std::to_address(r)); }
-        bool operator()(const AccountInventoryItem* const* const l, const std::unique_ptr<AccountInventoryItem>& r) const { return operator()(*l, std::to_address(r)); }
-        bool operator()(const AccountInventoryItem* const l, const AccountInventoryItem* const r) const { return l->hero_id == r->hero_id && l->bag_id == r->bag_id && l->slot == r->slot && l->account == r->account && l->character == r->character; }
-    };
-
-    struct CharacterFreeSlots {
-        UUID account;
+    // One row in the Free Slots table, built from a Character (or an Account's chest).
+    struct SlotRow {
+        UUID account{};
         std::string character{};
-        std::string account_representing_character{}; // character name to tell which account a chest inventory belongs to without showing an email address
+        std::string account_representing_character{};
         uint32_t max_inventory{};
         uint32_t max_equipment{};
         uint32_t occupied_inventory{};
         uint32_t occupied_equipment{};
-        bool anniversary_pane_active;
     };
 
     struct SlotCompare {
         ImGuiTableSortSpecs* sort_specs{};
-        bool operator()(const CharacterFreeSlots* const l, const CharacterFreeSlots* const r) const
+        bool operator()(const SlotRow* const l, const SlotRow* const r) const
         {
             int sort_direction = 1;
             int delta = 0;
@@ -350,25 +381,6 @@ struct MergeStack;
         }
     };
 
-    struct SlotHash {
-        using is_transparent = void;
-        std::size_t operator()(const std::unique_ptr<CharacterFreeSlots>& i) const noexcept { return operator()(std::to_address(i)); }
-        std::size_t operator()(const CharacterFreeSlots* const* const i) const noexcept { return operator()(*i); }
-        std::size_t operator()(const CharacterFreeSlots* const i) const noexcept
-        {
-            return hash_combine(i->account.Data1, i->account.Data2, i->account.Data3,
-                std::bit_cast<uint64_t>(i->account.Data4), i->character);
-        }
-    };
-
-    struct SlotEqual {
-        using is_transparent = void;
-        bool operator()(const std::unique_ptr<CharacterFreeSlots>& l, const std::unique_ptr<CharacterFreeSlots>& r) const { return operator()(std::to_address(l), std::to_address(r)); }
-        bool operator()(const CharacterFreeSlots* const l, const std::unique_ptr<CharacterFreeSlots>& r) const { return operator()(l, std::to_address(r)); }
-        bool operator()(const CharacterFreeSlots* const* const l, const std::unique_ptr<CharacterFreeSlots>& r) const { return operator()(*l, std::to_address(r)); }
-        bool operator()(const CharacterFreeSlots* const l, const CharacterFreeSlots* const r) const { return l->account == r->account && l->character == r->character; }
-    };
-
     class InventoryIni : public ToolboxIni {
     public:
         std::filesystem::file_time_type last_change_time{};
@@ -394,35 +406,33 @@ struct MergeStack;
     };
 
     void OnItemTooltip(const MergeStack* ms);
-    void OnAccountInventoryItemClicked(AccountInventoryItem* i, bool move);
+    void OnAccountInventoryItemClicked(const ItemPath& path, bool move);
     static bool CheckIniDirty(InventoryIni* ini, std::filesystem::file_time_type write_time);
     InventoryIni* GetIni(const std::string& ini_ID, const GUID& account);
-    std::string ItemToSectionName(AccountInventoryItem* i);
     void LoadFromFiles(bool only_foreign);
     void SaveToFiles(bool include_foreign);
     void SortSlots(ImGuiTableSortSpecs* sort_specs);
-    void DescriptionDecode(AccountInventoryItem* i, GW::Item* item);
+    void DescriptionDecode(const ItemPath& path, GW::Item* item);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot);
 
     // collective callback hook
     GW::HookEntry OnUIMessage_HookEntry{};
-    // main item storage
-    std::unordered_set<std::unique_ptr<AccountInventoryItem>, ItemHash, ItemEqual> inventory{};
-    // On*SlotCleared send an item_id, but the information which bag and slot it was in
-    // is already removed. In order to remove items from inventory without iterating,
-    // we keep track of the item_id->AccountInventoryItem mapping
-    std::unordered_map<uint32_t, AccountInventoryItem*> inventory_lookup{};
-    // sorted/filtered view for display
+    // main item storage: the account hierarchy, keyed by canonical GUID string.
+    std::unordered_map<std::string, Account> accounts{};
+    // On*SlotCleared send only an item_id, so we keep item_id -> resolved location
+    // for live items to remove them without traversing the hierarchy.
+    std::unordered_map<uint32_t, ItemLoc> inventory_lookup{};
+    // sorted/filtered view for display + its backing ItemRef store (stable addresses)
+    std::deque<ItemRef> item_refs{};
     std::vector<MergeStack> inventory_sorted{};
     // ini files, 1 per character/chest
     std::unordered_map<std::filesystem::path, std::unique_ptr<InventoryIni>> ini_by_path{};
     std::unordered_map<std::string, InventoryIni*> ini_by_character{};
     // change tracker to reduce writes
     std::unordered_set<std::string> inventory_dirty{};
-    // tracking of free inventory slot numbers
-    std::unordered_set<std::unique_ptr<CharacterFreeSlots>, SlotHash, SlotEqual> free_slots{};
-    // sorted/filtered view for display
-    std::set<CharacterFreeSlots*, SlotCompare> free_slots_sorted{};
+    // sorted/filtered view for the Free Slots table + its backing rows
+    std::vector<SlotRow> slot_rows{};
+    std::set<SlotRow*, SlotCompare> free_slots_sorted{};
     // tracking for hero_id <-> Equipped_Items bag
     // we rely on hero items being created in the order of heroes in the party
     std::queue<GW::Bag*> hero_bag_generation_order{};
@@ -483,11 +493,11 @@ struct MergeStack;
             stage_set_at = TIMER_INIT();
             current_stage = _stage;
         }
-        void Begin(AccountInventoryItem* i, bool _move = false)
+        void Begin(const ItemPath& _path, bool _move = false)
         {
             if (current_stage != Stage::None) return;
             move = _move;
-            item = *i;
+            item = _path;
             Set(Stage::Start);
         }
         void Update();
@@ -502,7 +512,7 @@ struct MergeStack;
     private:
         Stage current_stage = Stage::None;
         clock_t stage_set_at = 0;
-        AccountInventoryItem item;
+        ItemPath item;
         bool move = false;
     };
     ItemReroller item_reroll;
@@ -516,7 +526,6 @@ struct MergeStack;
     clock_t map_loaded_delayed_timer{};
     clock_t save_dirty_inventories_timer{};
     bool map_loaded_delayed_trigger = false;
-    std::optional<AccountInventoryItem> item_to_move;
 
     // config options
     bool detailed_view = false;
@@ -577,18 +586,18 @@ struct MergeStack;
 
     // jump to location of clicked item, i.e. open chest/add hero/change character
     // with Ctrl: move item to/from chest after jump
-    void OnAccountInventoryItemClicked(AccountInventoryItem* i, bool move)
+    void OnAccountInventoryItemClicked(const ItemPath& path, bool move)
     {
-        item_reroll.Begin(i, move);
+        item_reroll.Begin(path, move);
     }
 
     void OnItemTooltip(const MergeStack* ms)
     {
-        auto char_key = [](const AccountInventoryItem* i, const std::string& arc) {
-            return arc + "\x1f" + i->character;
+        auto char_key = [](const ItemRef* i, const std::string& arc) {
+            return arc + "\x1f" + i->character_name;
         };
-        auto loc_key = [](const AccountInventoryItem* i, const std::string& arc) {
-            return arc + "\x1f" + i->character + "\x1f" + i->location;
+        auto loc_key = [](const ItemRef* i, const std::string& arc) {
+            return arc + "\x1f" + i->character_name + "\x1f" + i->location;
         };
         // Only one tooltip is visible at a time; cache aggregates and recompute only when the hovered item changes.
         static const MergeStack* last_ms = nullptr;
@@ -599,13 +608,9 @@ struct MergeStack;
             char_totals.clear();
             loc_totals.clear();
             for (auto it = ms->i.begin(); it != ms->i.end(); it++) {
-                std::string arc;
-                CharacterFreeSlots free_slot{(*it)->account, (*it)->character};
-                if (auto fs_it = free_slots.find(&free_slot); fs_it != free_slots.end()) {
-                    arc = (*fs_it)->account_representing_character;
-                }
-                char_totals[char_key(*it, arc)] += (*it)->quantity;
-                loc_totals[loc_key(*it, arc)] += (*it)->quantity;
+                const std::string& arc = (*it)->account->account_representing_character;
+                char_totals[char_key(*it, arc)] += (*it)->item->quantity;
+                loc_totals[loc_key(*it, arc)] += (*it)->item->quantity;
             }
         }
 
@@ -614,23 +619,19 @@ struct MergeStack;
         std::string prev_location{};
         for (auto it = ms->i.begin(); it != ms->i.end(); it++) {
             int style_count = 0;
-            bool is_this_account = memeq(&(*it)->account, &current_account);
+            bool is_this_account = memeq(&(*it)->account->uuid, &current_account);
             if (is_this_account) {
                 style_count = 1;
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
             }
-            std::string account_representing_character;
-            CharacterFreeSlots free_slot = CharacterFreeSlots{(*it)->account, (*it)->character};
-            if (auto fs_it = free_slots.find(&free_slot); fs_it != free_slots.end()) {
-                account_representing_character = (*fs_it)->account_representing_character;
-            }
-            bool reprint = (*it)->character != prev_character || account_representing_character != prev_account_representing_character;
+            const std::string& account_representing_character = (*it)->account->account_representing_character;
+            bool reprint = (*it)->character_name != prev_character || account_representing_character != prev_account_representing_character;
             if (reprint) {
                 std::string suffix = "";
-                if (!is_this_account && (*it)->character == "(Chest)" && !account_representing_character.empty()) {
+                if (!is_this_account && (*it)->character_name == "(Chest)" && !account_representing_character.empty()) {
                     suffix = " [" + account_representing_character + "]";
                 }
-                ImGui::Text("%s%s: %u", (*it)->character.c_str(), suffix.c_str(), char_totals[char_key(*it, account_representing_character)]);
+                ImGui::Text("%s%s: %u", (*it)->character_name.c_str(), suffix.c_str(), char_totals[char_key(*it, account_representing_character)]);
             }
             reprint |= (*it)->location != prev_location;
             if (reprint) {
@@ -638,7 +639,7 @@ struct MergeStack;
             }
             ImGui::PopStyleColor(style_count);
             prev_account_representing_character = account_representing_character;
-            prev_character = (*it)->character;
+            prev_character = (*it)->character_name;
             prev_location = (*it)->location;
         }
         ImGui::Separator();
@@ -647,15 +648,197 @@ struct MergeStack;
         ImGui::PopTextWrapPos();
     }
 
+    // ===== hierarchy routing / lookup helpers =====
+
+    std::string AccountKey(const GUID& account) { return TextUtils::GuidToString(&account); }
+
+    Account& GetOrCreateAccount(const GUID& account)
+    {
+        Account& acc = accounts[AccountKey(account)];
+        acc.uuid = account;
+        return acc;
+    }
+    Account* FindAccount(const GUID& account)
+    {
+        const auto it = accounts.find(AccountKey(account));
+        return it == accounts.end() ? nullptr : &it->second;
+    }
+
+    // Resolve (creating Account/Character/Hero/Bag as needed) the bag a storage path
+    // lives in. Encapsulates the IsChestBag / IsOnHero routing.
+    Bag& GetOrCreateBag(const GUID& account, const std::string& character,
+                        GW::Constants::HeroID hero_id, GW::Constants::Bag bag_id)
+    {
+        Account& acc = GetOrCreateAccount(account);
+        if (IsChestBag(bag_id)) {
+            Bag& bag = acc.chest[bag_id];
+            bag.bag_id = bag_id;
+            return bag;
+        }
+        Character& ch = acc.characters[character];
+        ch.name = character;
+        if (IsOnHero(hero_id)) {
+            Hero& hero = ch.heroes[hero_id];
+            hero.hero_id = hero_id;
+            hero.bag.bag_id = bag_id;
+            return hero.bag;
+        }
+        Bag& bag = ch.bags[bag_id];
+        bag.bag_id = bag_id;
+        return bag;
+    }
+
+    Item& GetOrCreateItem(const GUID& account, const std::string& character,
+                          GW::Constants::HeroID hero_id, GW::Constants::Bag bag_id, uint32_t slot)
+    {
+        return GetOrCreateBag(account, character, hero_id, bag_id).items[slot];
+    }
+
+    // Find-only resolution: returns where an item lives, or nullopt if any level is missing.
+    std::optional<ItemLoc> FindItemLoc(const GUID& account, const std::string& character,
+                                       GW::Constants::HeroID hero_id, GW::Constants::Bag bag_id, uint32_t slot)
+    {
+        Account* acc = FindAccount(account);
+        if (!acc) return std::nullopt;
+        ItemLoc loc;
+        loc.account = acc;
+        loc.bag_id = bag_id;
+        loc.slot = slot;
+        if (IsChestBag(bag_id)) {
+            const auto bit = acc->chest.find(bag_id);
+            if (bit == acc->chest.end()) return std::nullopt;
+            loc.bag = &bit->second;
+        }
+        else {
+            const auto cit = acc->characters.find(character);
+            if (cit == acc->characters.end()) return std::nullopt;
+            loc.character = &cit->second;
+            if (IsOnHero(hero_id)) {
+                const auto hit = cit->second.heroes.find(hero_id);
+                if (hit == cit->second.heroes.end()) return std::nullopt;
+                loc.bag = &hit->second.bag;
+            }
+            else {
+                const auto bit = cit->second.bags.find(bag_id);
+                if (bit == cit->second.bags.end()) return std::nullopt;
+                loc.bag = &bit->second;
+            }
+        }
+        const auto iit = loc.bag->items.find(slot);
+        if (iit == loc.bag->items.end()) return std::nullopt;
+        loc.item = &iit->second;
+        return loc;
+    }
+
+    // Free-slot record for an (account, character) pair. "(Chest)" -> the account's
+    // chest record. Returns nullptr unless the record is known.
+    FreeSlotInfo* FindFreeSlots(const GUID& account, const std::string& character)
+    {
+        Account* acc = FindAccount(account);
+        if (!acc) return nullptr;
+        if (character == "(Chest)")
+            return acc->chest_free_slots.known ? &acc->chest_free_slots : nullptr;
+        const auto it = acc->characters.find(character);
+        if (it == acc->characters.end() || !it->second.free_slots.known) return nullptr;
+        return &it->second.free_slots;
+    }
+    FreeSlotInfo& GetOrCreateFreeSlots(const GUID& account, const std::string& character)
+    {
+        Account& acc = GetOrCreateAccount(account);
+        if (character == "(Chest)") {
+            acc.chest_free_slots.known = true;
+            return acc.chest_free_slots;
+        }
+        Character& ch = acc.characters[character];
+        ch.name = character;
+        ch.free_slots.known = true;
+        return ch.free_slots;
+    }
+
+    // Rebuild the flattened ItemRef view from the whole hierarchy (all accounts).
+    void RebuildItemRefs()
+    {
+        item_refs.clear();
+        for (auto& [key, acc] : accounts) {
+            for (auto& [bag_id, bag] : acc.chest) {
+                for (auto& [slot, item] : bag.items) {
+                    ItemRef r;
+                    r.account = &acc;
+                    r.bag_id = bag_id;
+                    r.slot = slot;
+                    r.item = &item;
+                    r.character_name = "(Chest)";
+                    r.location = BAG_NAME[(int)bag_id];
+                    item_refs.push_back(std::move(r));
+                }
+            }
+            for (auto& [name, ch] : acc.characters) {
+                for (auto& [bag_id, bag] : ch.bags) {
+                    for (auto& [slot, item] : bag.items) {
+                        ItemRef r;
+                        r.account = &acc;
+                        r.character = &ch;
+                        r.bag_id = bag_id;
+                        r.slot = slot;
+                        r.item = &item;
+                        r.character_name = ch.name;
+                        r.location = "(Player)";
+                        item_refs.push_back(std::move(r));
+                    }
+                }
+                for (auto& [hero_id, hero] : ch.heroes) {
+                    for (auto& [slot, item] : hero.bag.items) {
+                        ItemRef r;
+                        r.account = &acc;
+                        r.character = &ch;
+                        r.hero = &hero;
+                        r.bag_id = hero.bag.bag_id;
+                        r.hero_id = hero_id;
+                        r.slot = slot;
+                        r.item = &item;
+                        r.character_name = ch.name;
+                        r.location = Resources::GetHeroName(hero_id)->string();
+                        item_refs.push_back(std::move(r));
+                    }
+                }
+            }
+        }
+    }
+
     void SortSlots(ImGuiTableSortSpecs* sort_specs)
     {
-
-        free_slots_sorted = std::set<CharacterFreeSlots*, SlotCompare>(SlotCompare{sort_specs});
-        for (auto& free_slot : free_slots) {
-            if (hide_other_accounts && !memeq(&free_slot->account,&current_account)) {
+        // Build one row per character (with known free-slot data) and one per account
+        // chest, into a stable backing vector, then sort pointers into it.
+        slot_rows.clear();
+        for (auto& [key, acc] : accounts) {
+            if (acc.chest_free_slots.known) {
+                SlotRow row;
+                row.account = acc.uuid;
+                row.character = "(Chest)";
+                row.account_representing_character = acc.account_representing_character;
+                row.max_inventory = acc.chest_free_slots.max_inventory;
+                row.occupied_inventory = acc.chest_free_slots.occupied_inventory;
+                slot_rows.push_back(std::move(row));
+            }
+            for (auto& [name, ch] : acc.characters) {
+                if (!ch.free_slots.known) continue;
+                SlotRow row;
+                row.account = acc.uuid;
+                row.character = ch.name;
+                row.account_representing_character = acc.account_representing_character;
+                row.max_inventory = ch.free_slots.max_inventory;
+                row.max_equipment = ch.free_slots.max_equipment;
+                row.occupied_inventory = ch.free_slots.occupied_inventory;
+                row.occupied_equipment = ch.free_slots.occupied_equipment;
+                slot_rows.push_back(std::move(row));
+            }
+        }
+        free_slots_sorted = std::set<SlotRow*, SlotCompare>(SlotCompare{sort_specs});
+        for (auto& row : slot_rows) {
+            if (hide_other_accounts && !memeq(&row.account, &current_account)) {
                 continue;
             }
-            free_slots_sorted.insert(free_slot.get());
+            free_slots_sorted.insert(&row);
         }
         if (sort_specs) sort_specs->SpecsDirty = false;
     }
@@ -682,37 +865,37 @@ struct MergeStack;
         const auto item_filter_w = TextUtils::StringToWString(item_filter);
 
 
+        RebuildItemRefs();
         std::unordered_map<std::wstring, size_t> merged_stacks{};
-        for (auto it = inventory.begin(); it != inventory.end(); ++it) {
-            auto i = it->get();
-            if (hide_other_accounts && i->account != current_account) continue;
-            if (hide_equipment && (i->bag_id == GW::Constants::Bag::Equipped_Items || i->equipped)) continue;
-            if (hide_equipment_pack && i->bag_id == GW::Constants::Bag::Equipment_Pack) continue;
-            if (hide_hero_armor && IsHeroArmor(i->hero_id, i->slot)) continue;
-            if (hide_unclaimed_items && i->bag_id == GW::Constants::Bag::Unclaimed_Items) continue;
+        for (auto& r : item_refs) {
+            if (hide_other_accounts && r.account->uuid != current_account) continue;
+            if (hide_equipment && (r.bag_id == GW::Constants::Bag::Equipped_Items || r.item->equipped)) continue;
+            if (hide_equipment_pack && r.bag_id == GW::Constants::Bag::Equipment_Pack) continue;
+            if (hide_hero_armor && IsHeroArmor(r.hero_id, r.slot)) continue;
+            if (hide_unclaimed_items && r.bag_id == GW::Constants::Bag::Unclaimed_Items) continue;
 
             if (!name_filter.empty()) {
-                const auto character_check = name_is_lower ? TextUtils::ToLower(i->character) : i->character;
+                const auto character_check = name_is_lower ? TextUtils::ToLower(r.character_name) : r.character_name;
                 if (!character_check.contains(name_filter)) continue;
             }
             if (!location_filter.empty()) {
-                const auto location_check = location_is_lower ? TextUtils::ToLower(i->location) : i->location;
+                const auto location_check = location_is_lower ? TextUtils::ToLower(r.location) : r.location;
                 if (!location_check.contains(location_filter)) continue;
             }
-            if (!model_ID_filter.empty() && model_ID_filter != std::to_string(i->model_id)) continue;
+            if (!model_ID_filter.empty() && model_ID_filter != std::to_string(r.item->model_id)) continue;
             if (!item_filter_w.empty()) {
-                const auto description_check = item_is_lower ? TextUtils::ToLower(i->description) : i->description;
+                const auto description_check = item_is_lower ? TextUtils::ToLower(r.item->description) : r.item->description;
                 if (!description_check.contains(item_filter_w)) continue;
             }
 
-            auto merge_id = std::to_wstring(i->model_id) + i->description;
+            auto merge_id = std::to_wstring(r.item->model_id) + r.item->description;
             if (!merge_stacks || !merged_stacks.contains(merge_id)) {
                 merged_stacks[merge_id] = inventory_sorted.size();
-                inventory_sorted.push_back(MergeStack(current_account, i->description));
+                inventory_sorted.push_back(MergeStack(current_account, r.item->description));
             }
             MergeStack* ms = &inventory_sorted[merged_stacks[merge_id]];
-            ms->quantity += i->quantity;
-            ms->i.insert(i);
+            ms->quantity += r.item->quantity;
+            ms->i.insert(&r);
         }
         filtered_item_count = inventory_sorted.size();
 
@@ -725,16 +908,16 @@ struct MergeStack;
     // unique section name for item in ini file. The account's characters/heroes/
     // chest now share one ini, so the character is part of the key to keep two
     // characters' identical hero/bag/slot from colliding onto the same section.
-    std::string ItemToSectionName(AccountInventoryItem* i)
+    std::string ItemToSectionName(const std::string& character, GW::Constants::HeroID hero_id, GW::Constants::Bag bag_id, uint32_t slot)
     {
         char buf[9];
-        std::string out = i->character;
+        std::string out = character;
         out.push_back('.');
-        snprintf(buf, sizeof(buf), "%08x", i->hero_id);
+        snprintf(buf, sizeof(buf), "%08x", hero_id);
         out.append(buf);
-        snprintf(buf, sizeof(buf), "%08x", i->bag_id);
+        snprintf(buf, sizeof(buf), "%08x", bag_id);
         out.append(buf);
-        snprintf(buf, sizeof(buf), "%08x", i->slot);
+        snprintf(buf, sizeof(buf), "%08x", slot);
         out.append(buf);
         return out;
     }
@@ -870,43 +1053,40 @@ struct MergeStack;
 
     void ApplyFreeSlotEntry(const RawIniEntry& e)
     {
-        CharacterFreeSlots fs;
-        fs.account = e.account;
-        fs.character = e.character;
-        fs.account_representing_character = e.account_representing_character;
-        fs.max_equipment      = e.max_equipment;
-        fs.max_inventory      = e.max_inventory;
-        fs.occupied_equipment = e.occupied_equipment;
-        fs.occupied_inventory = e.occupied_inventory;
-        fs.anniversary_pane_active = e.anniversary_pane_active;
-        free_slots.insert(std::make_unique<CharacterFreeSlots>(std::move(fs)));
+        Account& acc = GetOrCreateAccount(e.account);
+        if (!e.account_representing_character.empty())
+            acc.account_representing_character = e.account_representing_character;
+        FreeSlotInfo* fs;
+        if (e.character == "(Chest)") {
+            acc.chest_free_slots.known = true;
+            acc.anniversary_pane_active = e.anniversary_pane_active;
+            fs = &acc.chest_free_slots;
+        }
+        else {
+            Character& ch = acc.characters[e.character];
+            ch.name = e.character;
+            ch.free_slots.known = true;
+            fs = &ch.free_slots;
+        }
+        fs->max_equipment      = e.max_equipment;
+        fs->max_inventory      = e.max_inventory;
+        fs->occupied_equipment = e.occupied_equipment;
+        fs->occupied_inventory = e.occupied_inventory;
     }
 
     void ApplyItemEntry(const RawIniEntry& e)
     {
-        auto item = std::make_unique<AccountInventoryItem>();
-        item->account       = e.account;
-        item->character     = e.character;
-        item->bag_id        = e.bag_id;
-        item->hero_id       = e.hero_id;
-        item->slot          = e.slot;
-        item->model_id      = e.model_id;
-        item->model_file_id = e.model_file_id;
-        item->interaction   = e.interaction;
-        item->quantity      = e.quantity;
-        item->equipped      = e.equipped;
-        item->description   = e.description;
+        Item& item = GetOrCreateItem(e.account, e.character, e.hero_id, e.bag_id, e.slot);
+        item.model_id      = e.model_id;
+        item.model_file_id = e.model_file_id;
+        item.interaction   = e.interaction;
+        item.quantity      = e.quantity;
+        item.equipped      = e.equipped;
+        item.description   = e.description;
         GW::Item gw_item;
-        gw_item.model_file_id = item->model_file_id;
-        gw_item.interaction   = item->interaction;
-        item->texture  = Resources::GetItemImage(&gw_item);
-        item->location = item->hero_id == GW::Constants::HeroID::NoHero
-            ? "(Player)" : Resources::GetHeroName(item->hero_id)->string();
-        if (IsChestBag(item->bag_id))
-            item->location = BAG_NAME[(int)item->bag_id];
-        if (const auto found = inventory.find(item); found != inventory.end())
-            inventory.erase(found);
-        inventory.insert(std::move(item));
+        gw_item.model_file_id = item.model_file_id;
+        gw_item.interaction   = item.interaction;
+        item.texture = Resources::GetItemImage(&gw_item);
     }
 
     void ApplyLoadResult(const LoadResult& r)
@@ -943,10 +1123,9 @@ struct MergeStack;
                 if (ini->account != current_account)
                     ini->is_loaded = false;
             }
-            for (auto it = inventory.begin(); it != inventory.end();)
-                it = (*it)->account != current_account ? inventory.erase(it) : ++it;
-            for (auto it = free_slots.begin(); it != free_slots.end();)
-                it = (*it)->account != current_account ? free_slots.erase(it) : ++it;
+            // drop all foreign accounts (items + free slots); they get reloaded below
+            for (auto it = accounts.begin(); it != accounts.end();)
+                it = it->second.uuid != current_account ? accounts.erase(it) : std::next(it);
         }
         else {
             inventory_lookup.clear();
@@ -1014,61 +1193,79 @@ struct MergeStack;
 
         std::unordered_set<std::string> visited;
 
-        for (auto& free_slot : free_slots) {
-            auto ini_ID = GetIniID(free_slot->account, free_slot->character);
-            if (!inventory_dirty.contains(ini_ID)) continue;
-            if (free_slot->account != current_account) continue; // skip foreign items, only update what belongs to us
-            auto ini = GetIni(ini_ID, free_slot->account);
-            if (!ini) return;
-            if (!visited.contains(ini_ID)) {
-                ini->Reset();
-                visited.insert(ini_ID);
-            }
-            // Per-character section so each character's free slots survive in the
-            // shared per-account ini. Kept suffixed with "freeslots" so the loader
-            // can still tell free-slot sections from item sections by name.
-            const std::string section_name = free_slot->character + ".freeslots";
-            const char* section = section_name.c_str();
-            ini->SetValue(section, "account", TextUtils::GuidToString(&free_slot->account).c_str());
-            if (!free_slot->character.empty()) {
-                ini->SetValue(section, "character", free_slot->character.c_str());
-            }
-            if (!free_slot->account_representing_character.empty()) {
-                ini->SetValue(section, "account_character", free_slot->account_representing_character.c_str());
-            }
-            ini->SetLongValue(section, "maxequipment", free_slot->max_equipment);
-            ini->SetLongValue(section, "maxinventory", free_slot->max_inventory);
-            ini->SetLongValue(section, "occupiedequipment", free_slot->occupied_equipment);
-            ini->SetLongValue(section, "occupiedinventory", free_slot->occupied_inventory);
-            if (free_slot->anniversary_pane_active) {
-                ini->SetBoolValue(section, "anniversary_pane_active", free_slot->anniversary_pane_active);
-            }
-        }
+        // Only the current account is ever written; foreign accounts are read-only.
+        Account* acc = FindAccount(current_account);
+        const std::string ini_ID = GetIniID(current_account, "");
+        if (acc && inventory_dirty.contains(ini_ID)) {
+            InventoryIni* ini = nullptr;
+            const auto ensure = [&]() -> InventoryIni* {
+                if (!ini) {
+                    ini = GetIni(ini_ID, current_account);
+                    ini->Reset();
+                    visited.insert(ini_ID);
+                }
+                return ini;
+            };
+            const auto account_str = TextUtils::GuidToString(&current_account);
 
-        for (auto& i : inventory) {
-            auto ini_ID = GetIniID(i->account, i->character);
-            if (!inventory_dirty.contains(ini_ID)) continue;
-            if (i->account != current_account) continue; // skip foreign items, only update what belongs to us
-            auto ini = GetIni(ini_ID, i->account);
-            if (!ini) return;
-            if (!visited.contains(ini_ID)) {
-                ini->Reset();
-                visited.insert(ini_ID);
+            // --- free slots: one section per character, plus one for the chest ---
+            const auto write_free_slots = [&](const std::string& character, const FreeSlotInfo& fs, bool anniversary) {
+                InventoryIni* f = ensure();
+                // Per-character section, suffixed with "freeslots" so the loader can
+                // tell free-slot sections from item sections by name.
+                const std::string section_name = character + ".freeslots";
+                const char* section = section_name.c_str();
+                f->SetValue(section, "account", account_str.c_str());
+                if (!character.empty()) {
+                    f->SetValue(section, "character", character.c_str());
+                }
+                if (!acc->account_representing_character.empty()) {
+                    f->SetValue(section, "account_character", acc->account_representing_character.c_str());
+                }
+                f->SetLongValue(section, "maxequipment", fs.max_equipment);
+                f->SetLongValue(section, "maxinventory", fs.max_inventory);
+                f->SetLongValue(section, "occupiedequipment", fs.occupied_equipment);
+                f->SetLongValue(section, "occupiedinventory", fs.occupied_inventory);
+                if (anniversary) {
+                    f->SetBoolValue(section, "anniversary_pane_active", true);
+                }
+            };
+            if (acc->chest_free_slots.known)
+                write_free_slots("(Chest)", acc->chest_free_slots, acc->anniversary_pane_active);
+            for (auto& [name, ch] : acc->characters)
+                if (ch.free_slots.known)
+                    write_free_slots(ch.name, ch.free_slots, false);
+
+            // --- items ---
+            const auto write_item = [&](const std::string& character, GW::Constants::HeroID hero_id,
+                                        GW::Constants::Bag bag_id, uint32_t slot, const Item& item) {
+                InventoryIni* f = ensure();
+                auto section = ItemToSectionName(character, hero_id, bag_id, slot);
+                f->SetValue(section.c_str(), "account", account_str.c_str());
+                f->SetValue(section.c_str(), "character", character.c_str());
+                f->SetLongValue(section.c_str(), "heroid", (long)hero_id);
+                f->SetLongValue(section.c_str(), "bagid", (long)bag_id);
+                f->SetLongValue(section.c_str(), "slot", (long)slot);
+                f->SetLongValue(section.c_str(), "modelid", (long)item.model_id);
+                f->SetLongValue(section.c_str(), "modelfileid", (long)item.model_file_id);
+                f->SetLongValue(section.c_str(), "interaction", (long)item.interaction);
+                f->SetLongValue(section.c_str(), "quantity", (long)item.quantity);
+                f->SetLongValue(section.c_str(), "equipped", (long)item.equipped);
+                std::string ini_desc;
+                GuiUtils::ArrayToIni(item.description, &ini_desc);
+                f->SetValue(section.c_str(), "description", ini_desc.c_str());
+            };
+            for (auto& [bag_id, bag] : acc->chest)
+                for (auto& [slot, item] : bag.items)
+                    write_item("(Chest)", GW::Constants::HeroID::NoHero, bag_id, slot, item);
+            for (auto& [name, ch] : acc->characters) {
+                for (auto& [bag_id, bag] : ch.bags)
+                    for (auto& [slot, item] : bag.items)
+                        write_item(ch.name, GW::Constants::HeroID::NoHero, bag_id, slot, item);
+                for (auto& [hero_id, hero] : ch.heroes)
+                    for (auto& [slot, item] : hero.bag.items)
+                        write_item(ch.name, hero_id, hero.bag.bag_id, slot, item);
             }
-            auto section = ItemToSectionName(i.get());
-            ini->SetValue(section.c_str(), "account", TextUtils::GuidToString(&i->account).c_str());
-            ini->SetValue(section.c_str(), "character", i->character.c_str());
-            ini->SetLongValue(section.c_str(), "heroid", (long)i->hero_id);
-            ini->SetLongValue(section.c_str(), "bagid", (long)i->bag_id);
-            ini->SetLongValue(section.c_str(), "slot", (long)i->slot);
-            ini->SetLongValue(section.c_str(), "modelid", (long)i->model_id);
-            ini->SetLongValue(section.c_str(), "modelfileid", (long)i->model_file_id);
-            ini->SetLongValue(section.c_str(), "interaction", (long)i->interaction);
-            ini->SetLongValue(section.c_str(), "quantity", (long)i->quantity);
-            ini->SetLongValue(section.c_str(), "equipped", (long)i->equipped);
-            std::string ini_desc;
-            GuiUtils::ArrayToIni(i->description, &ini_desc);
-            ini->SetValue(section.c_str(), "description", ini_desc.c_str());
         }
         for (auto it = ini_by_character.begin(); it != ini_by_character.end(); ++it) {
             auto ini_ID = it->first;
@@ -1096,14 +1293,14 @@ struct MergeStack;
         inventory_dirty.clear();
     }
 
-    void DescriptionDecode(AccountInventoryItem* i, GW::Item* item)
+    void DescriptionDecode(const ItemPath& path, GW::Item* item)
     {
         struct SyncDecode {
-            AccountInventoryItem i;
+            ItemPath path;
             std::wstring enc;
         };
         struct SyncDecode* sync = new SyncDecode();
-        i->CopyKeyTo(&sync->i);
+        sync->path = path;
         switch (item->type) {
             case GW::Constants::ItemType::Headpiece:
             case GW::Constants::ItemType::Boots:
@@ -1141,9 +1338,12 @@ struct MergeStack;
                 sync->enc.c_str(),
                 [](void* param, const wchar_t* s) {
                     auto sync = (struct SyncDecode*)param;
-                    if (auto it = inventory.find(&sync->i); it != inventory.end()) {
-                        (*it)->description = TextUtils::StripTags(s);
-                        inventory_dirty.insert(GetIniID((*it)->account, (*it)->character));
+                    const auto& p = sync->path;
+                    // Re-resolve: a map load between enqueue and callback may have
+                    // replaced or removed the item, so never capture a raw Item*.
+                    if (auto loc = FindItemLoc(p.account, p.character, p.hero_id, p.bag_id, p.slot)) {
+                        loc->item->description = TextUtils::StripTags(s);
+                        inventory_dirty.insert(GetIniID(p.account, p.character));
                         save_dirty_inventories_timer = TIMER_INIT();
                         needs_sorting = true;
                     }
@@ -1162,25 +1362,25 @@ struct MergeStack;
         // gather information for this items storage location, i.e.:
         // account, player character, hero, bag, slot within bag
 
-        auto i = std::make_unique<AccountInventoryItem>();
-        i->account = current_account;
-        i->bag_id = item->bag->bag_id();
-        if (IsChestBag(i->bag_id)) {
-            i->character = "(Chest)";
+        ItemPath path;
+        path.account = current_account;
+        path.bag_id = item->bag->bag_id();
+        if (IsChestBag(path.bag_id)) {
+            path.character = "(Chest)";
         }
         else {
-            i->character = GetCurrentPlayerNameS();
-            if (i->character.empty()) {
-                i->character = "Unavailable";
+            path.character = GetCurrentPlayerNameS();
+            if (path.character.empty()) {
+                path.character = "Unavailable";
             }
         }
-        i->slot = item->slot;
+        path.slot = item->slot;
 
         // This is a workaround because I could not find a way to get a hero_id from an item currently equipped on a hero.
         // item->bag->bag_array is a separate array for each hero with only the Equipped_Items bag set, but seemingly no reference back to the hero.
         // The workaround uses the fact that items are added by GW in the order of the respective heroes in the party.
-        i->hero_id = GW::Constants::HeroID::NoHero;
-        if (i->bag_id == GW::Constants::Bag::Equipped_Items && (GW::Inventory*)item->bag->inventory != GW::Items::GetInventory()) {
+        path.hero_id = GW::Constants::HeroID::NoHero;
+        if (path.bag_id == GW::Constants::Bag::Equipped_Items && (GW::Inventory*)item->bag->inventory != GW::Items::GetInventory()) {
             // If we are loaded on a map when this module gets initialized, we will visit items in an arbitrary order
             // and therefore we are unable to guess which hero an item belongs to.
             // In this case we can add items on heroes only once we load into a new map or if the heroes are
@@ -1197,100 +1397,98 @@ struct MergeStack;
                 return;
             }
             else {
-                i->hero_id = bag_ptr_to_hero_id[item->bag];
+                path.hero_id = bag_ptr_to_hero_id[item->bag];
             }
         }
         // END hero_id workaround
 
-        i->model_id = item->model_id;
-        i->model_file_id = item->model_file_id;
-        i->interaction = item->interaction;
-        i->quantity = item->quantity;
-        i->equipped = item->equipped;
-        i->item_id = item->item_id;
-        i->texture = Resources::GetItemImage(item);
-        i->location = i->hero_id == GW::Constants::HeroID::NoHero ? "(Player)" : Resources::GetHeroName(i->hero_id)->string();
-        if (IsChestBag(i->bag_id)) {
-            i->location = BAG_NAME[(int)(i->bag_id)];
-        }
-
-        CharacterFreeSlots free_slot = CharacterFreeSlots{current_account, i->character};
-        auto fs_it = free_slots.find(&free_slot);
-        if (fs_it != free_slots.end()) {
-            if (i->bag_id == GW::Constants::Bag::Equipment_Pack) {
-                (*fs_it)->occupied_equipment++;
+        FreeSlotInfo* fs = FindFreeSlots(current_account, path.character);
+        if (fs) {
+            if (path.bag_id == GW::Constants::Bag::Equipment_Pack) {
+                fs->occupied_equipment++;
             }
-            else if (BagCanHoldAnything(i->bag_id)) {
-                (*fs_it)->occupied_inventory++;
+            else if (BagCanHoldAnything(path.bag_id)) {
+                fs->occupied_inventory++;
             }
         }
-        if (auto it = inventory.find(i); it != inventory.end()) {
-            // found
-            auto o_item_id = (*it)->item_id;
+        if (auto existing = FindItemLoc(path.account, path.character, path.hero_id, path.bag_id, path.slot)) {
+            const auto o_item_id = existing->item->item_id;
             // make sure the lookup entry has not already been overwritten by another item being loaded during map load.
-            if (inventory_lookup.contains(o_item_id) && inventory_lookup[o_item_id] == it->get()) {
-                inventory_lookup.erase(o_item_id);
+            if (const auto found = inventory_lookup.find(o_item_id);
+                found != inventory_lookup.end() && found->second.item == existing->item) {
+                inventory_lookup.erase(found);
                 // when stacks are split or merged, the source and target stack will be readded by gw without being deleted first.
                 // if we already know the item in the source/target slot, the number of occupied spaces did not actually change.
-                if (fs_it != free_slots.end()) {
-                    if (i->bag_id == GW::Constants::Bag::Equipment_Pack) {
-                        (*fs_it)->occupied_equipment--;
+                if (fs) {
+                    if (path.bag_id == GW::Constants::Bag::Equipment_Pack) {
+                        fs->occupied_equipment--;
                     }
-                    else if (BagCanHoldAnything(i->bag_id)) {
-                        (*fs_it)->occupied_inventory--;
+                    else if (BagCanHoldAnything(path.bag_id)) {
+                        fs->occupied_inventory--;
                     }
                 }
             }
-            inventory.erase(it);
         }
-        auto i_raw = i.get();
-        inventory_lookup[item->item_id] = i_raw;
-        inventory.insert(std::move(i));
-        DescriptionDecode(i_raw, item);
-        inventory_dirty.insert(GetIniID(i_raw->account, i_raw->character));
+
+        Account& acc = GetOrCreateAccount(path.account);
+        Bag& bag = GetOrCreateBag(path.account, path.character, path.hero_id, path.bag_id);
+        Item& it = bag.items[path.slot];
+        it.model_id = item->model_id;
+        it.model_file_id = item->model_file_id;
+        it.interaction = item->interaction;
+        it.quantity = item->quantity;
+        it.equipped = item->equipped;
+        it.item_id = item->item_id;
+        it.texture = Resources::GetItemImage(item);
+
+        ItemLoc loc;
+        loc.account = &acc;
+        loc.character = IsChestBag(path.bag_id) ? nullptr : &acc.characters[path.character];
+        loc.bag_id = path.bag_id;
+        loc.slot = path.slot;
+        loc.bag = &bag;
+        loc.item = &it;
+        inventory_lookup[item->item_id] = loc;
+
+        DescriptionDecode(path, item);
+        inventory_dirty.insert(GetIniID(path.account, path.character));
         save_dirty_inventories_timer = TIMER_INIT();
         needs_sorting = true;
     }
     bool RemoveItem(uint32_t item_id);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot)
     {
-        AccountInventoryItem i;
-        i.account = *account;
-        i.bag_id = bag_id;
-        i.character = character;
-        i.slot = slot;
-        i.hero_id = hero_id;
-        if (auto it = inventory.find(&i); it != inventory.end()) {
-            // found
-            inventory_dirty.insert(GetIniID((*it)->account, (*it)->character));
-            save_dirty_inventories_timer = TIMER_INIT();
-            RemoveItem((*it)->item_id);
-            // Most likely the missing item was still in our inifile but removed ingame.
-            // In this case we won't know an item_id, but still want to remove it from inventory
-            inventory.erase(it);
+        auto loc = FindItemLoc(*account, character, hero_id, bag_id, slot);
+        if (!loc) return;
+        inventory_dirty.insert(GetIniID(*account, character));
+        save_dirty_inventories_timer = TIMER_INIT();
+        // Live items go through RemoveItem (drops the lookup + occupancy). Items only
+        // present in the ini (item_id 0) aren't in the lookup, so erase them directly.
+        const auto item_id = loc->item->item_id;
+        if (!(item_id != 0 && RemoveItem(item_id))) {
+            loc->bag->items.erase(slot);
         }
+        needs_sorting = true;
     }
 
     bool RemoveItem(uint32_t item_id)
     {
-        if (!inventory_lookup.contains(item_id)) return false;
+        const auto found = inventory_lookup.find(item_id);
+        if (found == inventory_lookup.end()) return false;
 
-
-        auto i = inventory_lookup[item_id];
-        CharacterFreeSlots free_slot = CharacterFreeSlots{current_account, i->character};
-        if (auto it = free_slots.find(&free_slot); it != free_slots.end()) {
-            if (i->bag_id == GW::Constants::Bag::Equipment_Pack) {
-                (*it)->occupied_equipment--;
+        const ItemLoc loc = found->second;
+        const std::string character = loc.character ? loc.character->name : "(Chest)";
+        if (FreeSlotInfo* fs = FindFreeSlots(loc.account->uuid, character)) {
+            if (loc.bag_id == GW::Constants::Bag::Equipment_Pack) {
+                fs->occupied_equipment--;
             }
-            else if (BagCanHoldAnything(i->bag_id)) {
-                (*it)->occupied_inventory--;
+            else if (BagCanHoldAnything(loc.bag_id)) {
+                fs->occupied_inventory--;
             }
         }
-        auto ini_id = GetIniID(i->account, i->character);
-        if (auto it = inventory.find(i); it != inventory.end()) {
-            inventory.erase(it);
-        }
-        inventory_lookup.erase(item_id);
+        auto ini_id = GetIniID(loc.account->uuid, character);
+        loc.bag->items.erase(loc.slot);
+        inventory_lookup.erase(found);
         needs_sorting = true;
         inventory_dirty.insert(std::move(ini_id));
         save_dirty_inventories_timer = TIMER_INIT();
@@ -1391,15 +1589,16 @@ void AccountInventoryWindow::Initialize()
 void AccountInventoryWindow::Terminate()
 {
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
-    inventory.clear();
+    accounts.clear();
     inventory_lookup.clear();
+    item_refs.clear();
     inventory_sorted.clear();
     while (!hero_bag_generation_order.empty()) hero_bag_generation_order.pop();
     bag_ptr_to_hero_id.clear();
     ini_by_character.clear();
     ini_by_path.clear();
     inventory_dirty.clear();
-    free_slots.clear();
+    slot_rows.clear();
     free_slots_sorted.clear();
     last_character = "";
     last_available_chars.clear();
@@ -1586,17 +1785,15 @@ void ItemReroller::Update() {
                 GW::Items::OpenXunlaiWindow();
             }
             if (move) {
-                auto it = inventory.find(&item);
-                if (it == inventory.end()) break;
-
-                const auto found = it->get();
+                auto loc = FindItemLoc(item.account, item.character, item.hero_id, item.bag_id, item.slot);
+                if (!loc) break;
 
                 // can only move from current player or from chest
-                if (found->character != GetCurrentPlayerNameS() && !IsChestBag(found->bag_id)) {
+                if (item.character != GetCurrentPlayerNameS() && !IsChestBag(item.bag_id)) {
                     Cancel();
                     break;
                 }
-                InventoryManager::MoveItem((InventoryManager::Item*)GW::Items::GetItemById(found->item_id));
+                InventoryManager::MoveItem((InventoryManager::Item*)GW::Items::GetItemById(loc->item->item_id));
             }
             Cancel();
             // Done.            
@@ -1624,28 +1821,27 @@ void AccountInventoryWindow::PreMapLoad()
     inventory_lookup.clear(); // discard now outdated id caches
     while (!hero_bag_generation_order.empty()) hero_bag_generation_order.pop();
     bag_ptr_to_hero_id.clear();
+
+    Account& acc = GetOrCreateAccount(current_account);
+    if (acc.account_representing_character.empty()) {
+        auto available_characters = GW::AccountMgr::GetAvailableChars();
+        if (available_characters->size() > 0) {
+            // alphabetically first character name, to be shown in tooltip to distinguish chests from multiple accounts without showing email addresses
+            const wchar_t *min = nullptr;
+            for (const auto& available_char : *available_characters) {
+                if (!min || wcscmp(available_char.player_name, min) < 0) min = available_char.player_name;
+            }
+            acc.account_representing_character = TextUtils::WStringToString(min ? min : L"");
+        }
+    }
     std::string characters[] = {"(Chest)", current_character};
     for (auto & character: characters) {
         if (character.empty()) continue;
-        CharacterFreeSlots free_slot = CharacterFreeSlots{current_account, character};
-        free_slots.insert(std::make_unique<CharacterFreeSlots>(free_slot));
-        auto it = free_slots.find(&free_slot);
-        CharacterFreeSlots* free_slot_p = it->get();
-        if (free_slot_p->account_representing_character.empty()) {
-            auto available_characters = GW::AccountMgr::GetAvailableChars();
-            if (available_characters->size() > 0) {
-                // alphabetically first character name, to be shown in tooltip to distinguish chests from multiple accounts without showing email addresses
-                const wchar_t *min = nullptr;
-                for (const auto& available_char : *available_characters) {
-                    if (!min || wcscmp(available_char.player_name, min) < 0) min = available_char.player_name;
-                }
-                free_slot_p->account_representing_character = TextUtils::WStringToString(min ? min : L"");
-            }
-        }
+        FreeSlotInfo& fs = GetOrCreateFreeSlots(current_account, character);
         if (character == current_character) {
-            free_slot_p->occupied_equipment = 0;
+            fs.occupied_equipment = 0;
         }
-        free_slot_p->occupied_inventory = 0;
+        fs.occupied_inventory = 0;
     }
 }
 
@@ -1723,23 +1919,21 @@ void AccountInventoryWindow::PostMapLoad()
                 }
             }
         }
-        std::string characters[] = {"(Chest)", current_character};
-        for (auto & character: characters) {
-            CharacterFreeSlots free_slot = CharacterFreeSlots{current_account, character};
-            if (auto it = free_slots.find(&free_slot); it != free_slots.end()) {
-                if (character == current_character) {
-                    (*it)->max_equipment = max_equipment;
-                    (*it)->max_inventory = max_inventory;
+        if (Account* acc = FindAccount(current_account)) {
+            if (const auto it = acc->characters.find(current_character);
+                it != acc->characters.end() && it->second.free_slots.known) {
+                it->second.free_slots.max_equipment = max_equipment;
+                it->second.free_slots.max_inventory = max_inventory;
+            }
+            if (acc->chest_free_slots.known) {
+                // Since we do not know whether the anniversary storage pane is actually available,
+                // assume it is not, unless there has been at least one item in it at some point.
+                if (acc->anniversary_pane_active || last_chest_pane_contains_any_item) {
+                    acc->anniversary_pane_active = true;
                 } else {
-                    // Since we do not know whether the anniversary storage pane is actually available,
-                    // assume it is not, unless there has been at least one item in it at some point.
-                    if ((*it)->anniversary_pane_active || last_chest_pane_contains_any_item) {
-                        (*it)->anniversary_pane_active = true;
-                    } else {
-                        max_chest -= 25;
-                    }
-                    (*it)->max_inventory = max_chest;
+                    max_chest -= 25;
                 }
+                acc->chest_free_slots.max_inventory = max_chest;
             }
         }
     }
@@ -1752,21 +1946,20 @@ void AccountInventoryWindow::PostMapLoad()
             availableChars.insert(TextUtils::WStringToString(availableCharacter.player_name));
         }
         if (availableChars != last_available_chars) {
-            for (auto it = inventory.begin(); it != inventory.end();) {
-                if (!IsChestBag((*it)->bag_id) && (*it)->account == current_account) {
-                    if (auto avail = availableChars.find((*it)->character); avail == availableChars.end()) {
-                        // not found
-                        inventory_dirty.insert(GetIniID((*it)->account, (*it)->character));
-                        CharacterFreeSlots free_slot = CharacterFreeSlots{current_account, (*it)->character};
-                        if (auto fs_it = free_slots.find(&free_slot); fs_it != free_slots.end()) {
-                            free_slots.erase(fs_it);
-                        }
-                        inventory_lookup.erase((*it)->item_id);
-                        it = inventory.erase(it);
+            if (Account* acc = FindAccount(current_account)) {
+                for (auto it = acc->characters.begin(); it != acc->characters.end();) {
+                    if (availableChars.find(it->first) != availableChars.end()) {
+                        ++it;
                         continue;
                     }
+                    // character was deleted in-game: drop the whole node (its bags,
+                    // heroes and free slots) and any live lookup entries pointing into it.
+                    inventory_dirty.insert(GetIniID(current_account, it->first));
+                    Character* ch = &it->second;
+                    for (auto lit = inventory_lookup.begin(); lit != inventory_lookup.end();)
+                        lit = lit->second.character == ch ? inventory_lookup.erase(lit) : std::next(lit);
+                    it = acc->characters.erase(it);
                 }
-                ++it;
             }
         }
         last_available_chars = availableChars;
@@ -1936,11 +2129,11 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
             ImGui::TableNextColumn();
             if (is_current_account) {
                 if (ImGui::Button(free_slot->character.c_str())) {
-                    AccountInventoryItem i;
-                    i.account = free_slot->account;
-                    i.character = free_slot->character;
-                    i.bag_id = is_chest ? GW::Constants::Bag::Storage_1 : GW::Constants::Bag::None;
-                    OnAccountInventoryItemClicked(&i, false);
+                    ItemPath p;
+                    p.account = free_slot->account;
+                    p.character = free_slot->character;
+                    p.bag_id = is_chest ? GW::Constants::Bag::Storage_1 : GW::Constants::Bag::None;
+                    OnAccountInventoryItemClicked(p, false);
                 }
             }
             else {
@@ -2002,7 +2195,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextItemWidth(300.f * font_scale);
     if (ImGui::InputText("###item_filter", item_filter_buf, _countof(item_filter_buf))) needs_sorting = true;
     ImGui::SameLine();
-    ImGui::Text("Filter   %d/%d Items", filtered_item_count, inventory.size());
+    ImGui::Text("Filter   %d/%d Items", filtered_item_count, item_refs.size());
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
 
@@ -2020,7 +2213,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
 
         ImGui::PushID(idx);
         int style_count = 0;
-        const bool is_foreign = !memeq(&i_front->account, &current_account);
+        const bool is_foreign = !memeq(&i_front->account->uuid, &current_account);
         if (is_foreign) {
             style_count += 1;
             ImGui::PushStyleColor(ImGuiCol_Text, color_disabled);
@@ -2043,11 +2236,11 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
 
         if (detailed_view) {
             const std::string suffix = (ims.i.size() > 1) ? " +" : "";
-            ImGui::Text("%s%s", i_front->character.c_str(), suffix.c_str());
+            ImGui::Text("%s%s", i_front->character_name.c_str(), suffix.c_str());
             ImGui::TableNextColumn();
             ImGui::Text("%s%s", i_front->location.c_str(), suffix.c_str());
             ImGui::TableNextColumn();
-            ImGui::Text("%d", i_front->model_id);
+            ImGui::Text("%d", i_front->item->model_id);
             ImGui::TableNextColumn();
             style.ButtonTextAlign = ImVec2(0.f, 0.5f);
             const auto description_one_line = ims.GetDescription();
@@ -2061,8 +2254,8 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         }
         else {
             const auto pos = ImGui::GetCursorPos();
-            if (i_front->texture && *(i_front->texture))
-                clicked = ImGui::IconButton(nullptr, *i_front->texture, button_size, ImGuiButtonFlags_None, button_size);
+            if (i_front->item->texture && *(i_front->item->texture))
+                clicked = ImGui::IconButton(nullptr, *i_front->item->texture, button_size, ImGuiButtonFlags_None, button_size);
             else
                 clicked = ImGui::Button("???", button_size);
 
@@ -2082,7 +2275,15 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         ImGui::PopStyleColor(style_count);
         ImGui::PopID();
 
-        if (clicked) OnAccountInventoryItemClicked(i_front, ImGui::IsKeyDown(ImGuiMod_Ctrl));
+        if (clicked) {
+            ItemPath p;
+            p.account = i_front->account->uuid;
+            p.character = i_front->character_name;
+            p.hero_id = i_front->hero_id;
+            p.bag_id = i_front->bag_id;
+            p.slot = i_front->slot;
+            OnAccountInventoryItemClicked(p, ImGui::IsKeyDown(ImGuiMod_Ctrl));
+        }
     };
 
     if (detailed_view) {
@@ -2143,10 +2344,11 @@ void AccountInventoryWindow::DrawSettingsInternal()
     ImGui::SameLine();
     if (ImGui::Button("Delete Account Inventory")) {
         show_delete_note = true;
-        inventory.clear();
+        accounts.clear();
         inventory_lookup.clear();
+        item_refs.clear();
         inventory_sorted.clear();
-        free_slots.clear();
+        slot_rows.clear();
         free_slots_sorted.clear();
         for (auto it = ini_by_character.begin(); it != ini_by_character.end(); ++it) {
             inventory_dirty.insert(it->first);
@@ -2157,10 +2359,11 @@ void AccountInventoryWindow::DrawSettingsInternal()
     if (ImGui::Button("Delete All Inventories")) {
         show_delete_note = true;
         LoadFromFiles(false); // reload everything first, so we are aware of all inventory inis currently on disk
-        inventory.clear();
+        accounts.clear();
         inventory_lookup.clear();
+        item_refs.clear();
         inventory_sorted.clear();
-        free_slots.clear();
+        slot_rows.clear();
         free_slots_sorted.clear();
         for (auto it = ini_by_path.begin(); it != ini_by_path.end(); ++it) {
             it->second->Reset();
