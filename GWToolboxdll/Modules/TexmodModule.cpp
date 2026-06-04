@@ -3,8 +3,13 @@
 
 #include <ToolboxIni.h>
 #include <d3d9.h>
+#include <algorithm>
+#include <cstdint>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <imgui.h>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -109,21 +114,126 @@ namespace {
     // gMod lifecycle
     // =========================================================================
 
+    // =========================================================================
+    // PE export sniffing
+    //
+    // Determine whether a candidate DLL exports the gMod entry points by reading
+    // its export table straight off disk - no LoadLibrary, no DllMain, no import
+    // resolution. This lets us scan for a compatible gMod / d3d9-proxy DLL and
+    // only ever load the one that is actually usable.
+    // =========================================================================
+
+    // Translate an image RVA to a raw file offset via the section table (0 = not found).
+    uint32_t RvaToFileOffset(const IMAGE_SECTION_HEADER* sec, unsigned n, uint32_t rva)
+    {
+        for (unsigned i = 0; i < n; ++i) {
+            if (rva >= sec[i].VirtualAddress && rva < sec[i].VirtualAddress + sec[i].SizeOfRawData)
+                return sec[i].PointerToRawData + (rva - sec[i].VirtualAddress);
+        }
+        return 0;
+    }
+
+    // Read the exported function names from a PE file on disk. Empty on any error
+    // or if the file is not a 32-bit PE (gMod and Guild Wars are always x86).
+    std::vector<std::string> ReadDllExportNames(const std::filesystem::path& path)
+    {
+        std::vector<std::string> names;
+        std::error_code ec;
+        const auto size = std::filesystem::file_size(path, ec);
+        if (ec || size < sizeof(IMAGE_DOS_HEADER)) return names;
+
+        std::vector<uint8_t> img(static_cast<size_t>(size));
+        {
+            std::ifstream f(path, std::ios::binary);
+            if (!f.read(reinterpret_cast<char*>(img.data()), static_cast<std::streamsize>(img.size()))) return names;
+        }
+
+        // Every read below is bounds-checked: the file is untrusted.
+        const auto ok = [&](size_t off, size_t len) { return off <= img.size() && len <= img.size() - off; };
+
+        const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(img.data());
+        if (dos->e_magic != IMAGE_DOS_SIGNATURE) return names;
+        const size_t nt = static_cast<size_t>(dos->e_lfanew);
+        if (!ok(nt, sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER))) return names;
+        if (*reinterpret_cast<const DWORD*>(img.data() + nt) != IMAGE_NT_SIGNATURE) return names;
+
+        const auto* fh = reinterpret_cast<const IMAGE_FILE_HEADER*>(img.data() + nt + sizeof(DWORD));
+        const size_t opt = nt + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER);
+        if (!ok(opt, sizeof(WORD))) return names;
+        if (*reinterpret_cast<const WORD*>(img.data() + opt) != IMAGE_NT_OPTIONAL_HDR32_MAGIC) return names;
+        if (!ok(opt, sizeof(IMAGE_OPTIONAL_HEADER32))) return names;
+
+        const auto* oh = reinterpret_cast<const IMAGE_OPTIONAL_HEADER32*>(img.data() + opt);
+        if (oh->NumberOfRvaAndSizes <= static_cast<DWORD>(IMAGE_DIRECTORY_ENTRY_EXPORT)) return names;
+        const DWORD expRva = oh->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+        if (!expRva) return names; // no export directory
+
+        const size_t secOff = opt + fh->SizeOfOptionalHeader;
+        const unsigned nSec = fh->NumberOfSections;
+        if (!ok(secOff, static_cast<size_t>(nSec) * sizeof(IMAGE_SECTION_HEADER))) return names;
+        const auto* sec = reinterpret_cast<const IMAGE_SECTION_HEADER*>(img.data() + secOff);
+
+        const uint32_t expOff = RvaToFileOffset(sec, nSec, expRva);
+        if (!ok(expOff, sizeof(IMAGE_EXPORT_DIRECTORY))) return names;
+        const auto* exp = reinterpret_cast<const IMAGE_EXPORT_DIRECTORY*>(img.data() + expOff);
+
+        const uint32_t namesOff = RvaToFileOffset(sec, nSec, exp->AddressOfNames);
+        if (!ok(namesOff, static_cast<size_t>(exp->NumberOfNames) * sizeof(DWORD))) return names;
+        const auto* nameRvas = reinterpret_cast<const DWORD*>(img.data() + namesOff);
+
+        names.reserve(exp->NumberOfNames);
+        for (DWORD i = 0; i < exp->NumberOfNames; ++i) {
+            const uint32_t so = RvaToFileOffset(sec, nSec, nameRvas[i]);
+            if (!so || so >= img.size()) continue;
+            const char* s = reinterpret_cast<const char*>(img.data() + so);
+            const size_t len = strnlen(s, img.size() - so);
+            if (len < img.size() - so) names.emplace_back(s, len); // skip unterminated
+        }
+        return names;
+    }
+
+    bool DllExportsAll(const std::filesystem::path& path, std::span<const char* const> required)
+    {
+        const auto names = ReadDllExportNames(path);
+        if (names.empty()) return false;
+        return std::ranges::all_of(required, [&](const char* req) {
+            return std::ranges::find(names, req) != names.end();
+        });
+    }
+
+    // Mandatory gMod exports. GetFiles is intentionally absent: older gMod builds
+    // lack it and ResolveTextureClientFunctions already treats it as optional.
+    constexpr const char* kRequiredExports[] = {"AddFile", "RemoveFile", "SetDevice"};
+
+    std::filesystem::path DirOfModule(HMODULE h)
+    {
+        wchar_t buf[MAX_PATH] = {};
+        if (!GetModuleFileNameW(h, buf, MAX_PATH)) return {};
+        return std::filesystem::path(buf).parent_path();
+    }
+
     std::filesystem::path FindGmodDll()
     {
+        // Explicit user override (Browse...) wins if it still exists.
         if (!gmodDllLocation.empty() && std::filesystem::exists(gmodDllLocation)) return gmodDllLocation;
 
-        wchar_t buf[MAX_PATH] = {};
-        GetModuleFileNameW(GetModuleHandleW(L"GWToolbox.dll"), buf, MAX_PATH);
-        std::filesystem::path candidate(buf);
-        candidate.replace_filename(L"gMod.dll");
-        if (exists(candidate)) return candidate;
+        // Search next to the running exe (Gw.exe) and next to GWToolbox.dll.
+        std::vector<std::filesystem::path> dirs;
+        const auto add_dir = [&](std::filesystem::path d) {
+            if (!d.empty() && std::ranges::find(dirs, d) == dirs.end()) dirs.push_back(std::move(d));
+        };
+        add_dir(DirOfModule(nullptr));                          // running exe
+        add_dir(DirOfModule(GetModuleHandleW(L"GWToolbox.dll"))); // toolbox dll
 
-        HMODULE h = GetModuleHandleW(L"gMod.dll");
-        if (h) {
-            wchar_t pathBuf[MAX_PATH] = {};
-            GetModuleFileNameW(h, pathBuf, MAX_PATH);
-            return std::filesystem::path(pathBuf);
+        // Prefer a dedicated gMod.dll over a d3d9.dll proxy; sniff exports off
+        // disk so an incompatible file (e.g. the system d3d9.dll) is never loaded.
+        for (const auto& dir : dirs) {
+            for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
+                std::error_code ec;
+                auto candidate = dir / name;
+                if (!std::filesystem::exists(candidate, ec)) continue;
+                if (DllExportsAll(candidate, kRequiredExports)) return candidate;
+            }
         }
         return {};
     }
@@ -138,13 +248,17 @@ namespace {
             return false;
         }
 
-        // 1. Check whether gMod is already loaded in this process.
-        gmodDll = GetModuleHandleW(L"gMod.dll");
-        if (gmodDll) {
+        // 1. Check whether a compatible module is already loaded in this process
+        //    (a dedicated gMod.dll, or a d3d9.dll proxy). GetProcAddress here loads
+        //    nothing new. A loaded module that lacks the exports (e.g. the system
+        //    d3d9.dll) is simply skipped rather than treated as an error.
+        for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
+            HMODULE h = GetModuleHandleW(name);
+            if (!h) continue;
+            gmodDll = h;
             if (!ResolveTextureClientFunctions()) {
                 gmodDll = nullptr;
-                statusMessage = "Error: gMod was already active (pre-loaded), but AddFile/RemoveFile were not found - old version?";
-                return false;
+                continue;
             }
             pfnSetDevice(GuildWars_IDirect3DDevice9_Instance);
             gmodReady = true;
