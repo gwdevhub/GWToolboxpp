@@ -117,14 +117,13 @@ namespace {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Map::GetIsMapLoaded() && GW::Agents::GetControlledCharacter();
     }
 
-    std::string GetIniID(const GUID& account, const std::string& character)
+    // Identity of an inventory ini. There is one ini file per account; every
+    // character/hero/chest of that account is stored together in it (disambiguated
+    // by per-item sections), so the id is just the account GUID. The character
+    // arg is kept for call-site convenience but no longer affects the id.
+    std::string GetIniID(const GUID& account, const std::string& /*character*/)
     {
-        if (character == "(Chest)") {
-            return TextUtils::GuidToString(&account);
-        }
-        else {
-            return character;
-        }
+        return TextUtils::GuidToString(&account);
     }
 
     void RightAlignText(const char* text)
@@ -723,11 +722,14 @@ struct MergeStack;
         needs_sorting = false;
     }
 
-    // unique section name for item in ini file
+    // unique section name for item in ini file. The account's characters/heroes/
+    // chest now share one ini, so the character is part of the key to keep two
+    // characters' identical hero/bag/slot from colliding onto the same section.
     std::string ItemToSectionName(AccountInventoryItem* i)
     {
         char buf[9];
-        std::string out;
+        std::string out = i->character;
+        out.push_back('.');
         snprintf(buf, sizeof(buf), "%08x", i->hero_id);
         out.append(buf);
         snprintf(buf, sizeof(buf), "%08x", i->bag_id);
@@ -748,21 +750,36 @@ struct MergeStack;
     }
 
 
+    // Deterministic on-disk location for an account's inventory ini. One file per
+    // account, named by the account GUID - e.g. "inventories/tmp<account-uuid>.tmp".
+    std::filesystem::path AccountIniPath(const GUID& account)
+    {
+        const auto name = L"tmp" + TextUtils::StringToWString(TextUtils::GuidToString(&account)) + L".tmp";
+        return Resources::GetPath(L"inventories", name);
+    }
+
     InventoryIni* GetIni(const std::string& ini_ID, const GUID& account)
     {
-        if (!ini_by_character.contains(ini_ID)) {
-            wchar_t path[MAX_PATH];
-            if (0 == GetTempFileNameW(Resources::GetPath(L"inventories").wstring().c_str(), L"inv", 0, path)) {
-                Log::Error("Account Inventory: Failed to create inventory ini. Inventory tracking data will be lost.");
-                return nullptr;
-            }
-            auto ini = std::make_unique<InventoryIni>(path);
-            ini->ini_ID = ini_ID;
-            ini->account = account;
-            ini_by_character[ini_ID] = ini.get();
-            ini_by_path[path] = std::move(ini);
+        if (const auto found = ini_by_character.find(ini_ID); found != ini_by_character.end()) {
+            return found->second;
         }
-        return ini_by_character[ini_ID];
+        // First time we touch this account this session: bind to its canonical file,
+        // reusing the InventoryIni already created for that path if one exists.
+        const auto path = AccountIniPath(account);
+        InventoryIni* ini;
+        if (const auto existing = ini_by_path.find(path); existing != ini_by_path.end()) {
+            ini = existing->second.get();
+        }
+        else {
+            Resources::EnsureFolderExists(Resources::GetPath(L"inventories"));
+            auto owned = std::make_unique<InventoryIni>(path);
+            ini = owned.get();
+            ini_by_path[path] = std::move(owned);
+        }
+        ini->ini_ID = ini_ID;
+        ini->account = account;
+        ini_by_character[ini_ID] = ini;
+        return ini;
     }
 
     struct LoadResult {
@@ -828,7 +845,9 @@ struct MergeStack;
             const std::string character = temp_ini.GetValue(section, "character", "");
             if (only_foreign && entry_account == account) continue;
 
-            if (std::string_view(section) == "freeslots")
+            // Free-slot sections are named "<character>.freeslots" (or just
+            // "freeslots" in older files); item sections always end in hex digits.
+            if (std::string_view(section).ends_with("freeslots"))
                 r.entries.push_back(ParseFreeSlotSection(temp_ini, section, entry_account, character));
             else
                 r.entries.push_back(ParseItemSection(temp_ini, section, entry_account, character));
@@ -991,7 +1010,11 @@ struct MergeStack;
                 ini->Reset();
                 visited.insert(ini_ID);
             }
-            auto section = "freeslots";
+            // Per-character section so each character's free slots survive in the
+            // shared per-account ini. Kept suffixed with "freeslots" so the loader
+            // can still tell free-slot sections from item sections by name.
+            const std::string section_name = free_slot->character + ".freeslots";
+            const char* section = section_name.c_str();
             ini->SetValue(section, "account", TextUtils::GuidToString(&free_slot->account).c_str());
             if (!free_slot->character.empty()) {
                 ini->SetValue(section, "character", free_slot->character.c_str());
