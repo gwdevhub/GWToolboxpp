@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include <atomic>
 #include <bit>
+#include <charconv>
 #include <deque>
 #include <iterator>
 #include <map>
@@ -39,13 +40,21 @@
 // because glaze's reflection cannot derive names for internal-linkage (anonymous
 // namespace) types. Bags/heroes are keyed by their integer enum value; slots by integer.
 namespace account_inventory_json {
+    // Member names stay readable; the glz::meta blocks map them to terse JSON keys
+    // (they repeat on every item/section) to keep the files small.
     struct ItemJson {
         uint32_t model_id{};
         uint32_t model_file_id{};
         uint32_t interaction{};
         uint16_t quantity{};
         std::optional<uint8_t> equipped; // omitted when not equipped (default 0)
-        std::string description;         // encoded game string as a GuiUtils::ArrayToIni list
+        std::string description;         // encoded game string as concatenated 4-hex code units
+        struct glaze {
+            using T = ItemJson;
+            static constexpr auto value = glz::object(
+                "m", &T::model_id, "f", &T::model_file_id, "i", &T::interaction,
+                "q", &T::quantity, "e", &T::equipped, "d", &T::description);
+        };
     };
     using BagJson = std::map<uint32_t /*slot*/, ItemJson>;
     struct FreeSlotsJson {
@@ -53,22 +62,41 @@ namespace account_inventory_json {
         uint32_t max_equipment{};
         uint32_t occupied_inventory{};
         uint32_t occupied_equipment{};
+        struct glaze {
+            using T = FreeSlotsJson;
+            static constexpr auto value = glz::object(
+                "mi", &T::max_inventory, "me", &T::max_equipment,
+                "oi", &T::occupied_inventory, "oe", &T::occupied_equipment);
+        };
     };
     struct CharacterJson {
         std::optional<FreeSlotsJson> free_slots; // absent => not known
         std::map<uint32_t /*bag_id*/, BagJson> bags;
         std::map<uint32_t /*hero_id*/, BagJson> heroes;
+        struct glaze {
+            using T = CharacterJson;
+            static constexpr auto value = glz::object("fs", &T::free_slots, "b", &T::bags, "h", &T::heroes);
+        };
     };
     struct ChestJson {
         bool anniversary_pane_active{};
         std::optional<FreeSlotsJson> free_slots; // inventory only; absent => not known
         std::map<uint32_t /*bag_id*/, BagJson> bags;
+        struct glaze {
+            using T = ChestJson;
+            static constexpr auto value = glz::object("a", &T::anniversary_pane_active, "fs", &T::free_slots, "b", &T::bags);
+        };
     };
     struct AccountJson {
         std::string account;                 // GUID string
         std::string representing_character;
         ChestJson chest;
         std::map<std::string /*character*/, CharacterJson> characters;
+        struct glaze {
+            using T = AccountJson;
+            static constexpr auto value = glz::object(
+                "id", &T::account, "rc", &T::representing_character, "c", &T::chest, "ch", &T::characters);
+        };
     };
 }
 
@@ -1008,6 +1036,31 @@ struct MergeStack;
         std::atomic<int> tasks_remaining{0};
     };
 
+    // Encode the wide game string as fixed-width 4-hex code units with no separators
+    // (lossless, and ~20% smaller than GuiUtils::ArrayToIni's space-separated form).
+    std::string EncodeDescription(const std::wstring& w)
+    {
+        std::string s;
+        s.reserve(w.size() * 4);
+        char buf[5];
+        for (const wchar_t c : w) {
+            snprintf(buf, sizeof(buf), "%04x", (unsigned)(uint16_t)c);
+            s += buf;
+        }
+        return s;
+    }
+    std::wstring DecodeDescription(const std::string& s)
+    {
+        std::wstring w;
+        w.reserve(s.size() / 4);
+        for (size_t i = 0; i + 4 <= s.size(); i += 4) {
+            unsigned v = 0;
+            if (std::from_chars(s.data() + i, s.data() + i + 4, v, 16).ec != std::errc{}) break;
+            w.push_back(static_cast<wchar_t>(v));
+        }
+        return w;
+    }
+
     ItemJson ToJson(const Item& item)
     {
         ItemJson j;
@@ -1016,7 +1069,7 @@ struct MergeStack;
         j.interaction   = item.interaction;
         j.quantity      = item.quantity;
         if (item.equipped) j.equipped = item.equipped; // omit the common default
-        GuiUtils::ArrayToIni(item.description.encoded(), &j.description);
+        j.description   = EncodeDescription(item.description.encoded());
         return j;
     }
     FreeSlotsJson ToJson(const FreeSlotInfo& fs)
@@ -1061,8 +1114,7 @@ struct MergeStack;
         item.interaction   = j.interaction;
         item.quantity      = j.quantity;
         item.equipped      = j.equipped.value_or(0);
-        std::wstring enc;
-        GuiUtils::IniToArray(j.description, enc);
+        const std::wstring enc = DecodeDescription(j.description);
         item.description.reset(enc.c_str()); // EncString decodes lazily for display
         GW::Item gw_item;
         gw_item.model_file_id = item.model_file_id;
