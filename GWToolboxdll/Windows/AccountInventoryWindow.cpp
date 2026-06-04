@@ -1268,14 +1268,14 @@ struct MergeStack;
             }
         }
         for (auto it = ini_by_character.begin(); it != ini_by_character.end(); ++it) {
-            auto ini_ID = it->first;
+            const auto& cur_ini_ID = it->first;
             if (!include_foreign && it->second->account != current_account) continue;
-            if (include_foreign || visited.contains(ini_ID)) {
+            if (include_foreign || visited.contains(cur_ini_ID)) {
                 if (it->second->SaveFile(it->second->location_on_disk.wstring().c_str()) != SI_OK) {
                     Log::Error("Account Inventory: Failed to save inventory ini. Inventory tracking data will be lost.");
                 }
             }
-            else if (inventory_dirty.contains(ini_ID)) {
+            else if (inventory_dirty.contains(cur_ini_ID)) {
                 // dirty but not visited means there are no more items in this inventory. clean up its ini
                 it->second->Reset();
             }
@@ -1900,10 +1900,13 @@ void AccountInventoryWindow::PostMapLoad()
                     }
                     // item->equipped is never set when an item triggers InventorySlotUpdated on map load.
                     // manually check and reapply after every map load.
-                    auto i = inventory_lookup[item->item_id];
-                    if (i->equipped != item->equipped) {
-                        i->equipped = item->equipped;
-                        inventory_dirty.insert(GetIniID(i->account, i->character));
+                    if (const auto found = inventory_lookup.find(item->item_id); found != inventory_lookup.end()) {
+                        ItemLoc& loc = found->second;
+                        if (loc.item->equipped != item->equipped) {
+                            loc.item->equipped = item->equipped;
+                            const std::string ch_name = loc.character ? loc.character->name : "(Chest)";
+                            inventory_dirty.insert(GetIniID(loc.account->uuid, ch_name));
+                        }
                     }
                 } else {
                     ClearMissingItem(&current_account, character, GW::Constants::HeroID::NoHero, bag_id, slot);
