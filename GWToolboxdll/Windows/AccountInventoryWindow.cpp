@@ -758,6 +758,19 @@ struct MergeStack;
         return Resources::GetPath(L"inventories", name);
     }
 
+    // True only for a canonical inventory filename, tmp<account-uuid>.tmp. The GUID
+    // is parsed and the name rebuilt to reject anything else (stray files, the old
+    // "inv####.tmp" temp names, trailing junk, wrong-case hex).
+    bool IsInventoryIniFilename(const std::filesystem::path& path)
+    {
+        if (path.extension() != L".tmp") return false;
+        const std::string stem = path.stem().string();
+        if (!stem.starts_with("tmp")) return false;
+        GUID guid{};
+        if (!TextUtils::StringToGuid(stem.substr(3), &guid)) return false;
+        return AccountIniPath(guid).filename() == path.filename();
+    }
+
     InventoryIni* GetIni(const std::string& ini_ID, const GUID& account)
     {
         if (const auto found = ini_by_character.find(ini_ID); found != ini_by_character.end()) {
@@ -942,6 +955,7 @@ struct MergeStack;
         std::vector<std::filesystem::path> to_load;
         for (const auto& file : std::filesystem::directory_iterator{Resources::GetPath(L"inventories")}) {
             const auto path = file.path();
+            if (!IsInventoryIniFilename(path)) continue; // ignore legacy/unrelated files
             visited.insert(path);
             if (!ini_by_path.contains(path))
                 ini_by_path[path] = std::make_unique<InventoryIni>(path);
