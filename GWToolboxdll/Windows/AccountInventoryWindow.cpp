@@ -3,6 +3,7 @@
 #include <bit>
 #include <deque>
 #include <iterator>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <GWCA/GameEntities/Agent.h>
@@ -381,34 +382,55 @@ struct MergeStack;
         }
     };
 
-    class InventoryIni : public ToolboxIni {
-    public:
+    // ===== JSON persistence DTOs (one file per account; glaze auto-reflects aggregates) =====
+    // Bags/heroes are keyed by their integer enum value; slots by integer.
+    struct ItemJson {
+        uint32_t model_id{};
+        uint32_t model_file_id{};
+        uint32_t interaction{};
+        uint16_t quantity{};
+        uint8_t equipped{};
+        std::string description; // decoded item description, UTF-8
+    };
+    using BagJson = std::map<uint32_t /*slot*/, ItemJson>;
+    struct FreeSlotsJson {
+        uint32_t max_inventory{};
+        uint32_t max_equipment{};
+        uint32_t occupied_inventory{};
+        uint32_t occupied_equipment{};
+    };
+    struct CharacterJson {
+        std::optional<FreeSlotsJson> free_slots; // absent => not known
+        std::map<uint32_t /*bag_id*/, BagJson> bags;
+        std::map<uint32_t /*hero_id*/, BagJson> heroes;
+    };
+    struct ChestJson {
+        bool anniversary_pane_active{};
+        std::optional<FreeSlotsJson> free_slots; // inventory only; absent => not known
+        std::map<uint32_t /*bag_id*/, BagJson> bags;
+    };
+    struct AccountJson {
+        std::string account;                 // GUID string
+        std::string representing_character;
+        ChestJson chest;
+        std::map<std::string /*character*/, CharacterJson> characters;
+    };
+
+    // Tracks one on-disk account file. Replaces the old SimpleIni-backed wrapper;
+    // the file contents are now JSON, so this only carries identity + dirty state.
+    struct InventoryFile {
+        std::filesystem::path location_on_disk;
         std::filesystem::file_time_type last_change_time{};
         bool is_loaded = false;
         GUID account{};
-        std::string ini_ID{}; // character name for character/hero inventories, email for xunlai chests
-        InventoryIni(std::filesystem::path _location_on_disk) { location_on_disk = _location_on_disk; }
-    };
-
-    struct RawIniEntry {
-        bool is_freeslot = false;
-        GUID account{};
-        std::string character;
-        GW::Constants::HeroID hero_id{};
-        GW::Constants::Bag bag_id{};
-        uint32_t slot = 0, model_id = 0, model_file_id = 0, interaction = 0;
-        uint16_t quantity = 0;
-        uint8_t equipped = 0;
-        std::wstring description;
-        std::string account_representing_character;
-        uint32_t max_equipment = 0, max_inventory = 0, occupied_equipment = 0, occupied_inventory = 0;
-        bool anniversary_pane_active = false;
+        std::string ini_ID{}; // = GuidToString(account)
+        explicit InventoryFile(std::filesystem::path _location) : location_on_disk(std::move(_location)) {}
     };
 
     void OnItemTooltip(const MergeStack* ms);
     void OnAccountInventoryItemClicked(const ItemPath& path, bool move);
-    static bool CheckIniDirty(InventoryIni* ini, std::filesystem::file_time_type write_time);
-    InventoryIni* GetIni(const std::string& ini_ID, const GUID& account);
+    static bool CheckIniDirty(InventoryFile* ini, std::filesystem::file_time_type write_time);
+    InventoryFile* GetIni(const std::string& ini_ID, const GUID& account);
     void LoadFromFiles(bool only_foreign);
     void SaveToFiles(bool include_foreign);
     void SortSlots(ImGuiTableSortSpecs* sort_specs);
@@ -426,8 +448,8 @@ struct MergeStack;
     std::deque<ItemRef> item_refs{};
     std::vector<MergeStack> inventory_sorted{};
     // ini files, 1 per character/chest
-    std::unordered_map<std::filesystem::path, std::unique_ptr<InventoryIni>> ini_by_path{};
-    std::unordered_map<std::string, InventoryIni*> ini_by_character{};
+    std::unordered_map<std::filesystem::path, std::unique_ptr<InventoryFile>> ini_by_path{};
+    std::unordered_map<std::string, InventoryFile*> ini_by_character{};
     // change tracker to reduce writes
     std::unordered_set<std::string> inventory_dirty{};
     // sorted/filtered view for the Free Slots table + its backing rows
@@ -905,24 +927,7 @@ struct MergeStack;
         needs_sorting = false;
     }
 
-    // unique section name for item in ini file. The account's characters/heroes/
-    // chest now share one ini, so the character is part of the key to keep two
-    // characters' identical hero/bag/slot from colliding onto the same section.
-    std::string ItemToSectionName(const std::string& character, GW::Constants::HeroID hero_id, GW::Constants::Bag bag_id, uint32_t slot)
-    {
-        char buf[9];
-        std::string out = character;
-        out.push_back('.');
-        snprintf(buf, sizeof(buf), "%08x", hero_id);
-        out.append(buf);
-        snprintf(buf, sizeof(buf), "%08x", bag_id);
-        out.append(buf);
-        snprintf(buf, sizeof(buf), "%08x", slot);
-        out.append(buf);
-        return out;
-    }
-
-    bool CheckIniDirty(InventoryIni* ini, std::filesystem::file_time_type write_time)
+    bool CheckIniDirty(InventoryFile* ini, std::filesystem::file_time_type write_time)
     {
         if (write_time != ini->last_change_time) {
             ini->last_change_time = write_time;
@@ -933,20 +938,20 @@ struct MergeStack;
     }
 
 
-    // Deterministic on-disk location for an account's inventory ini. One file per
-    // account, named by the account GUID - e.g. "inventories/tmp<account-uuid>.tmp".
+    // Deterministic on-disk location for an account's inventory file. One JSON file
+    // per account, named by the account GUID - e.g. "inventories/tmp<account-uuid>.json".
     std::filesystem::path AccountIniPath(const GUID& account)
     {
-        const auto name = L"tmp" + TextUtils::StringToWString(TextUtils::GuidToString(&account)) + L".tmp";
+        const auto name = L"tmp" + TextUtils::StringToWString(TextUtils::GuidToString(&account)) + L".json";
         return Resources::GetPath(L"inventories", name);
     }
 
-    // True only for a canonical inventory filename, tmp<account-uuid>.tmp. The GUID
+    // True only for a canonical inventory filename, tmp<account-uuid>.json. The GUID
     // is parsed and the name rebuilt to reject anything else (stray files, the old
-    // "inv####.tmp" temp names, trailing junk, wrong-case hex).
+    // flat "tmp<uuid>.tmp" / "inv####.tmp" files, trailing junk, wrong-case hex).
     bool IsInventoryIniFilename(const std::filesystem::path& path)
     {
-        if (path.extension() != L".tmp") return false;
+        if (path.extension() != L".json") return false;
         const std::string stem = path.stem().string();
         if (!stem.starts_with("tmp")) return false;
         GUID guid{};
@@ -954,21 +959,21 @@ struct MergeStack;
         return AccountIniPath(guid).filename() == path.filename();
     }
 
-    InventoryIni* GetIni(const std::string& ini_ID, const GUID& account)
+    InventoryFile* GetIni(const std::string& ini_ID, const GUID& account)
     {
         if (const auto found = ini_by_character.find(ini_ID); found != ini_by_character.end()) {
             return found->second;
         }
         // First time we touch this account this session: bind to its canonical file,
-        // reusing the InventoryIni already created for that path if one exists.
+        // reusing the InventoryFile already created for that path if one exists.
         const auto path = AccountIniPath(account);
-        InventoryIni* ini;
+        InventoryFile* ini;
         if (const auto existing = ini_by_path.find(path); existing != ini_by_path.end()) {
             ini = existing->second.get();
         }
         else {
             Resources::EnsureFolderExists(Resources::GetPath(L"inventories"));
-            auto owned = std::make_unique<InventoryIni>(path);
+            auto owned = std::make_unique<InventoryFile>(path);
             ini = owned.get();
             ini_by_path[path] = std::move(owned);
         }
@@ -980,7 +985,8 @@ struct MergeStack;
 
     struct LoadResult {
         std::filesystem::path path;
-        std::vector<RawIniEntry> entries;
+        GUID account{};
+        AccountJson account_json;
         bool success = false;
     };
 
@@ -990,103 +996,127 @@ struct MergeStack;
         std::atomic<int> tasks_remaining{0};
     };
 
-    RawIniEntry ParseFreeSlotSection(const ToolboxIni& ini, const char* section, const GUID& account, const std::string& character)
+    // Narrow a wide string to UTF-8 without TextUtils::WStringToString's assert-on-failure
+    // (decoded descriptions are normally clean, but never crash on a pathological one).
+    std::string SafeNarrow(const std::wstring& w)
     {
-        RawIniEntry e;
-        e.is_freeslot = true;
-        e.account = account;
-        e.character = character;
-        e.account_representing_character = ini.GetValue(section, "account_character", "");
-        e.max_equipment       = (uint32_t)ini.GetLongValue(section, "maxequipment",      0);
-        e.max_inventory       = (uint32_t)ini.GetLongValue(section, "maxinventory",      0);
-        e.occupied_equipment  = (uint32_t)ini.GetLongValue(section, "occupiedequipment", 0);
-        e.occupied_inventory  = (uint32_t)ini.GetLongValue(section, "occupiedinventory", 0);
-        e.anniversary_pane_active = ini.GetBoolValue(section, "anniversary_pane_active", false);
-        return e;
+        if (w.empty()) return "";
+        const int n = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, w.data(), (int)w.size(), nullptr, 0, nullptr, nullptr);
+        if (n <= 0) return ""; // not valid UTF-8 (e.g. lone surrogate) -> drop the text rather than crash
+        std::string s(n, 0);
+        WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), s.data(), n, nullptr, nullptr);
+        return s;
     }
 
-    RawIniEntry ParseItemSection(const ToolboxIni& ini, const char* section, const GUID& account, const std::string& character)
+    ItemJson ToJson(const Item& item)
     {
-        RawIniEntry e;
-        e.account = account;
-        e.character = character;
-        e.bag_id        = (GW::Constants::Bag)    ini.GetLongValue(section, "bagid",      1);
-        e.hero_id       = (GW::Constants::HeroID) ini.GetLongValue(section, "heroid",     0);
-        e.slot          = (uint32_t)ini.GetLongValue(section, "slot",        0);
-        e.model_id      = (uint32_t)ini.GetLongValue(section, "modelid",     0);
-        e.model_file_id = (uint32_t)ini.GetLongValue(section, "modelfileid", 0);
-        e.interaction   = (uint32_t)ini.GetLongValue(section, "interaction", 0);
-        e.quantity      = (uint16_t)ini.GetLongValue(section, "quantity",    0);
-        e.equipped      = (uint8_t) ini.GetLongValue(section, "equipped",    0);
-        GuiUtils::IniToArray(ini.GetValue(section, "description", ""), e.description);
-        return e;
+        return ItemJson{item.model_id, item.model_file_id, item.interaction, item.quantity, item.equipped, SafeNarrow(item.description)};
+    }
+    FreeSlotsJson ToJson(const FreeSlotInfo& fs)
+    {
+        return FreeSlotsJson{fs.max_inventory, fs.max_equipment, fs.occupied_inventory, fs.occupied_equipment};
     }
 
-    LoadResult LoadIniFile(const std::filesystem::path& path, bool only_foreign, const GUID& account)
+    // Build the serializable view of an account from the hierarchy. Empty characters
+    // (no items and no known free slots) are omitted.
+    AccountJson BuildAccountJson(const Account& acc)
     {
-        LoadResult r;
-        r.path = path;
-        ToolboxIni temp_ini;
-        r.success = temp_ini.LoadFile(path) == SI_OK;
-        if (!r.success) return r;
-
-        TNamesDepend sections;
-        temp_ini.GetAllSections(sections);
-        r.entries.reserve(sections.size());
-
-        for (const auto& sec : sections) {
-            const char* section = sec.pItem;
-            GUID entry_account;
-            if (!TextUtils::StringToGuid(temp_ini.GetValue(section, "account", ""), &entry_account)) continue;
-            const std::string character = temp_ini.GetValue(section, "character", "");
-            if (only_foreign && entry_account == account) continue;
-
-            // Free-slot sections are named "<character>.freeslots" (or just
-            // "freeslots" in older files); item sections always end in hex digits.
-            if (std::string_view(section).ends_with("freeslots"))
-                r.entries.push_back(ParseFreeSlotSection(temp_ini, section, entry_account, character));
-            else
-                r.entries.push_back(ParseItemSection(temp_ini, section, entry_account, character));
+        AccountJson aj;
+        aj.account = TextUtils::GuidToString(&acc.uuid);
+        aj.representing_character = acc.account_representing_character;
+        aj.chest.anniversary_pane_active = acc.anniversary_pane_active;
+        if (acc.chest_free_slots.known) aj.chest.free_slots = ToJson(acc.chest_free_slots);
+        for (auto& [bag_id, bag] : acc.chest)
+            for (auto& [slot, item] : bag.items)
+                aj.chest.bags[(uint32_t)bag_id][slot] = ToJson(item);
+        for (auto& [name, ch] : acc.characters) {
+            CharacterJson cj;
+            bool any = false;
+            if (ch.free_slots.known) { cj.free_slots = ToJson(ch.free_slots); any = true; }
+            for (auto& [bag_id, bag] : ch.bags)
+                for (auto& [slot, item] : bag.items) { cj.bags[(uint32_t)bag_id][slot] = ToJson(item); any = true; }
+            for (auto& [hero_id, hero] : ch.heroes)
+                for (auto& [slot, item] : hero.bag.items) { cj.heroes[(uint32_t)hero_id][slot] = ToJson(item); any = true; }
+            if (any) aj.characters[name] = std::move(cj);
         }
-        return r;
+        return aj;
     }
 
-    void ApplyFreeSlotEntry(const RawIniEntry& e)
+    bool AccountJsonHasData(const AccountJson& aj)
     {
-        Account& acc = GetOrCreateAccount(e.account);
-        if (!e.account_representing_character.empty())
-            acc.account_representing_character = e.account_representing_character;
-        FreeSlotInfo* fs;
-        if (e.character == "(Chest)") {
-            acc.chest_free_slots.known = true;
-            acc.anniversary_pane_active = e.anniversary_pane_active;
-            fs = &acc.chest_free_slots;
-        }
-        else {
-            Character& ch = acc.characters[e.character];
-            ch.name = e.character;
-            ch.free_slots.known = true;
-            fs = &ch.free_slots;
-        }
-        fs->max_equipment      = e.max_equipment;
-        fs->max_inventory      = e.max_inventory;
-        fs->occupied_equipment = e.occupied_equipment;
-        fs->occupied_inventory = e.occupied_inventory;
+        return !aj.characters.empty() || !aj.chest.bags.empty() || aj.chest.free_slots.has_value();
     }
 
-    void ApplyItemEntry(const RawIniEntry& e)
+    void ApplyItemJson(Item& item, const ItemJson& j)
     {
-        Item& item = GetOrCreateItem(e.account, e.character, e.hero_id, e.bag_id, e.slot);
-        item.model_id      = e.model_id;
-        item.model_file_id = e.model_file_id;
-        item.interaction   = e.interaction;
-        item.quantity      = e.quantity;
-        item.equipped      = e.equipped;
-        item.description   = e.description;
+        item.model_id      = j.model_id;
+        item.model_file_id = j.model_file_id;
+        item.interaction   = j.interaction;
+        item.quantity      = j.quantity;
+        item.equipped      = j.equipped;
+        item.description    = TextUtils::StringToWString(j.description);
         GW::Item gw_item;
         gw_item.model_file_id = item.model_file_id;
         gw_item.interaction   = item.interaction;
         item.texture = Resources::GetItemImage(&gw_item);
+    }
+
+    void ApplyFreeSlots(FreeSlotInfo& fs, const FreeSlotsJson& j)
+    {
+        fs.known = true;
+        fs.max_inventory      = j.max_inventory;
+        fs.max_equipment      = j.max_equipment;
+        fs.occupied_inventory = j.occupied_inventory;
+        fs.occupied_equipment = j.occupied_equipment;
+    }
+
+    // Populate the hierarchy from a parsed account file (main thread).
+    void ApplyAccountJson(const GUID& account, const AccountJson& aj)
+    {
+        Account& acc = GetOrCreateAccount(account);
+        if (!aj.representing_character.empty())
+            acc.account_representing_character = aj.representing_character;
+        acc.anniversary_pane_active = aj.chest.anniversary_pane_active;
+        if (aj.chest.free_slots) ApplyFreeSlots(acc.chest_free_slots, *aj.chest.free_slots);
+        for (const auto& [bag_id, bag] : aj.chest.bags)
+            for (const auto& [slot, item] : bag)
+                ApplyItemJson(GetOrCreateItem(account, "(Chest)", GW::Constants::HeroID::NoHero, (GW::Constants::Bag)bag_id, slot), item);
+        for (const auto& [name, cj] : aj.characters) {
+            Character& ch = acc.characters[name];
+            ch.name = name;
+            if (cj.free_slots) ApplyFreeSlots(ch.free_slots, *cj.free_slots);
+            for (const auto& [bag_id, bag] : cj.bags)
+                for (const auto& [slot, item] : bag)
+                    ApplyItemJson(GetOrCreateItem(account, name, GW::Constants::HeroID::NoHero, (GW::Constants::Bag)bag_id, slot), item);
+            for (const auto& [hero_id, bag] : cj.heroes)
+                for (const auto& [slot, item] : bag)
+                    ApplyItemJson(GetOrCreateItem(account, name, (GW::Constants::HeroID)hero_id, GW::Constants::Bag::Equipped_Items, slot), item);
+        }
+    }
+
+    bool ReadFileToString(const std::filesystem::path& path, std::string& out)
+    {
+        std::ifstream f(path, std::ios::binary);
+        if (!f) return false;
+        out.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+        return true;
+    }
+
+    // Worker-thread: read + parse one account file into a LoadResult (no hierarchy access).
+    LoadResult LoadIniFile(const std::filesystem::path& path, bool only_foreign, const GUID& account)
+    {
+        LoadResult r;
+        r.path = path;
+        std::string contents;
+        if (!ReadFileToString(path, contents)) return r;
+        constexpr glz::opts opts{.error_on_unknown_keys = false};
+        if (glz::read<opts>(r.account_json, contents)) return r; // parse error
+        GUID file_account{};
+        if (!TextUtils::StringToGuid(r.account_json.account, &file_account)) return r;
+        if (only_foreign && file_account == account) return r; // skip our own account on a foreign-only refresh
+        r.account = file_account;
+        r.success = true;
+        return r;
     }
 
     void ApplyLoadResult(const LoadResult& r)
@@ -1094,22 +1124,10 @@ struct MergeStack;
         const auto it = ini_by_path.find(r.path);
         auto* ini = it != ini_by_path.end() ? it->second.get() : nullptr;
         if (!ini || !r.success) return;
-
-        for (const auto& e : r.entries) {
-            const auto entry_ini_id = GetIniID(e.account, e.character);
-            if (ini->ini_ID.empty()) {
-                ini->ini_ID = entry_ini_id;
-                ini->account = e.account;
-                ini_by_character[ini->ini_ID] = ini;
-            }
-            else if (ini->ini_ID != entry_ini_id) {
-                continue;
-            }
-            if (e.is_freeslot)
-                ApplyFreeSlotEntry(e);
-            else
-                ApplyItemEntry(e);
-        }
+        ini->ini_ID = GetIniID(r.account, "");
+        ini->account = r.account;
+        ini_by_character[ini->ini_ID] = ini;
+        ApplyAccountJson(r.account, r.account_json);
         ini->is_loaded = true;
     }
 
@@ -1137,18 +1155,16 @@ struct MergeStack;
             if (!IsInventoryIniFilename(path)) continue; // ignore legacy/unrelated files
             visited.insert(path);
             if (!ini_by_path.contains(path))
-                ini_by_path[path] = std::make_unique<InventoryIni>(path);
+                ini_by_path[path] = std::make_unique<InventoryFile>(path);
             auto* ini = ini_by_path[path].get();
             if (only_foreign && ini->account == current_account) continue;
             const bool dirty = CheckIniDirty(ini, file.last_write_time());
             if (!dirty && ini->is_loaded) continue;
-            if (dirty) ini->Reset();
             to_load.push_back(path);
         }
 
         for (auto& [path, ini] : ini_by_path) {
             if (!visited.contains(path)) {
-                ini->Reset();
                 ini->is_loaded = false;
             }
         }
@@ -1188,107 +1204,54 @@ struct MergeStack;
         needs_sorting = true;
     }
 
+    // Write (or delete) the JSON file for one account.
+    void SyncAccountFile(const std::string& ini_ID, const GUID& account)
+    {
+        if (ini_ID.empty()) return;
+        InventoryFile* ini = GetIni(ini_ID, account);
+        Account* acc = FindAccount(account);
+        AccountJson aj;
+        if (acc) aj = BuildAccountJson(*acc);
+        if (!acc || !AccountJsonHasData(aj)) {
+            // nothing to store -> remove the file and forget it
+            DeleteFileW(ini->location_on_disk.wstring().c_str());
+            const auto path = ini->location_on_disk;
+            ini_by_character.erase(ini_ID);
+            ini_by_path.erase(path);
+            return;
+        }
+        const auto compact = glz::write_json(aj).value_or(std::string{});
+        if (compact.empty()) {
+            Log::Error("Account Inventory: Failed to serialise inventory. Inventory tracking data will be lost.");
+            return;
+        }
+        const std::string json = glz::prettify_json(compact);
+        std::ofstream f(ini->location_on_disk, std::ios::binary | std::ios::trunc);
+        if (!f) {
+            Log::Error("Account Inventory: Failed to save inventory file. Inventory tracking data will be lost.");
+            return;
+        }
+        f.write(json.data(), static_cast<std::streamsize>(json.size()));
+        f.close();
+        // remember our own write so the next scan doesn't treat it as an external change
+        std::error_code ec;
+        ini->last_change_time = std::filesystem::last_write_time(ini->location_on_disk, ec);
+    }
+
     void SaveToFiles(bool include_foreign)
     {
-
-        std::unordered_set<std::string> visited;
-
-        // Only the current account is ever written; foreign accounts are read-only.
-        Account* acc = FindAccount(current_account);
-        const std::string ini_ID = GetIniID(current_account, "");
-        if (acc && inventory_dirty.contains(ini_ID)) {
-            InventoryIni* ini = nullptr;
-            const auto ensure = [&]() -> InventoryIni* {
-                if (!ini) {
-                    ini = GetIni(ini_ID, current_account);
-                    ini->Reset();
-                    visited.insert(ini_ID);
-                }
-                return ini;
-            };
-            const auto account_str = TextUtils::GuidToString(&current_account);
-
-            // --- free slots: one section per character, plus one for the chest ---
-            const auto write_free_slots = [&](const std::string& character, const FreeSlotInfo& fs, bool anniversary) {
-                InventoryIni* f = ensure();
-                // Per-character section, suffixed with "freeslots" so the loader can
-                // tell free-slot sections from item sections by name.
-                const std::string section_name = character + ".freeslots";
-                const char* section = section_name.c_str();
-                f->SetValue(section, "account", account_str.c_str());
-                if (!character.empty()) {
-                    f->SetValue(section, "character", character.c_str());
-                }
-                if (!acc->account_representing_character.empty()) {
-                    f->SetValue(section, "account_character", acc->account_representing_character.c_str());
-                }
-                f->SetLongValue(section, "maxequipment", fs.max_equipment);
-                f->SetLongValue(section, "maxinventory", fs.max_inventory);
-                f->SetLongValue(section, "occupiedequipment", fs.occupied_equipment);
-                f->SetLongValue(section, "occupiedinventory", fs.occupied_inventory);
-                if (anniversary) {
-                    f->SetBoolValue(section, "anniversary_pane_active", true);
-                }
-            };
-            if (acc->chest_free_slots.known)
-                write_free_slots("(Chest)", acc->chest_free_slots, acc->anniversary_pane_active);
-            for (auto& [name, ch] : acc->characters)
-                if (ch.free_slots.known)
-                    write_free_slots(ch.name, ch.free_slots, false);
-
-            // --- items ---
-            const auto write_item = [&](const std::string& character, GW::Constants::HeroID hero_id,
-                                        GW::Constants::Bag bag_id, uint32_t slot, const Item& item) {
-                InventoryIni* f = ensure();
-                auto section = ItemToSectionName(character, hero_id, bag_id, slot);
-                f->SetValue(section.c_str(), "account", account_str.c_str());
-                f->SetValue(section.c_str(), "character", character.c_str());
-                f->SetLongValue(section.c_str(), "heroid", (long)hero_id);
-                f->SetLongValue(section.c_str(), "bagid", (long)bag_id);
-                f->SetLongValue(section.c_str(), "slot", (long)slot);
-                f->SetLongValue(section.c_str(), "modelid", (long)item.model_id);
-                f->SetLongValue(section.c_str(), "modelfileid", (long)item.model_file_id);
-                f->SetLongValue(section.c_str(), "interaction", (long)item.interaction);
-                f->SetLongValue(section.c_str(), "quantity", (long)item.quantity);
-                f->SetLongValue(section.c_str(), "equipped", (long)item.equipped);
-                std::string ini_desc;
-                GuiUtils::ArrayToIni(item.description, &ini_desc);
-                f->SetValue(section.c_str(), "description", ini_desc.c_str());
-            };
-            for (auto& [bag_id, bag] : acc->chest)
-                for (auto& [slot, item] : bag.items)
-                    write_item("(Chest)", GW::Constants::HeroID::NoHero, bag_id, slot, item);
-            for (auto& [name, ch] : acc->characters) {
-                for (auto& [bag_id, bag] : ch.bags)
-                    for (auto& [slot, item] : bag.items)
-                        write_item(ch.name, GW::Constants::HeroID::NoHero, bag_id, slot, item);
-                for (auto& [hero_id, hero] : ch.heroes)
-                    for (auto& [slot, item] : hero.bag.items)
-                        write_item(ch.name, hero_id, hero.bag.bag_id, slot, item);
-            }
+        if (include_foreign) {
+            // sync every account we know a file for (used by "Delete All": accounts is
+            // empty by then, so all files are removed). Snapshot first - SyncAccountFile
+            // mutates ini_by_path/ini_by_character.
+            std::vector<std::pair<std::string, GUID>> targets;
+            for (auto& [path, file] : ini_by_path) targets.emplace_back(file->ini_ID, file->account);
+            for (const auto& [ini_ID, account] : targets) SyncAccountFile(ini_ID, account);
         }
-        for (auto it = ini_by_character.begin(); it != ini_by_character.end(); ++it) {
-            const auto& cur_ini_ID = it->first;
-            if (!include_foreign && it->second->account != current_account) continue;
-            if (include_foreign || visited.contains(cur_ini_ID)) {
-                if (it->second->SaveFile(it->second->location_on_disk.wstring().c_str()) != SI_OK) {
-                    Log::Error("Account Inventory: Failed to save inventory ini. Inventory tracking data will be lost.");
-                }
-            }
-            else if (inventory_dirty.contains(cur_ini_ID)) {
-                // dirty but not visited means there are no more items in this inventory. clean up its ini
-                it->second->Reset();
-            }
-        }
-        // separate loop because deleting from ini_by_character in the above loop gets really unreadable
-        for (auto it = ini_by_path.begin(); it != ini_by_path.end();) {
-            if (it->second->IsEmpty()) {
-                DeleteFileW(it->first.wstring().c_str());
-                ini_by_character.erase(it->second->ini_ID);
-                it = ini_by_path.erase(it);
-            }
-            else
-                ++it;
+        else {
+            // only the current account is ever modified; foreign accounts are read-only.
+            const std::string ini_ID = GetIniID(current_account, "");
+            if (inventory_dirty.contains(ini_ID)) SyncAccountFile(ini_ID, current_account);
         }
         inventory_dirty.clear();
     }
@@ -2361,17 +2324,14 @@ void AccountInventoryWindow::DrawSettingsInternal()
     ImGui::SameLine();
     if (ImGui::Button("Delete All Inventories")) {
         show_delete_note = true;
-        LoadFromFiles(false); // reload everything first, so we are aware of all inventory inis currently on disk
+        LoadFromFiles(false); // reload everything first, so we are aware of all inventory files currently on disk
         accounts.clear();
         inventory_lookup.clear();
         item_refs.clear();
         inventory_sorted.clear();
         slot_rows.clear();
         free_slots_sorted.clear();
-        for (auto it = ini_by_path.begin(); it != ini_by_path.end(); ++it) {
-            it->second->Reset();
-        }
-        SaveToFiles(true);
+        SaveToFiles(true); // accounts is empty -> deletes every known inventory file
     }
     ImGui::Checkbox("###account_inventory_detailed_view", &detailed_view);
     ImGui::SameLine();
