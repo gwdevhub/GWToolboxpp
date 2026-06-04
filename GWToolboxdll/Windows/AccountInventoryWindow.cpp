@@ -20,6 +20,8 @@
 #include <Logger.h>
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Utils/GuiUtils.h>
+#include <Utils/EncString.h>
 
 #include <Modules/Resources.h>
 #include <Modules/InventoryManager.h>
@@ -42,8 +44,8 @@ namespace account_inventory_json {
         uint32_t model_file_id{};
         uint32_t interaction{};
         uint16_t quantity{};
-        uint8_t equipped{};
-        std::string description; // decoded item description, UTF-8
+        std::optional<uint8_t> equipped; // omitted when not equipped (default 0)
+        std::string description;         // encoded game string as a GuiUtils::ArrayToIni list
     };
     using BagJson = std::map<uint32_t /*slot*/, ItemJson>;
     struct FreeSlotsJson {
@@ -219,7 +221,9 @@ namespace {
         uint32_t interaction{};
         uint16_t quantity{};
         uint8_t equipped{};
-        std::wstring description{}; // output of AsyncDecodeStr(ShorthandItemDescription)
+        // Encoded game string is the source of truth; EncString decodes it lazily for
+        // display (no decoded text is persisted). .encoded() is what we save.
+        GuiUtils::EncString description{};
         uint32_t item_id{};         // live-session only; 0 for items loaded from disk
         IDirect3DTexture9** texture = nullptr; // cache (GetItemImage), not serialized
     };
@@ -302,7 +306,7 @@ struct MergeStack;
         uint16_t quantity;
         std::string description;
         std::set<ItemRef*, ItemCompare> i;
-        MergeStack(const UUID& account, const std::wstring& _description);
+        MergeStack(const UUID& account, const std::string& _description);
         std::string GetDescription() {
             std::string build_desc = description;
             if (quantity > 1) build_desc = std::to_string(quantity) + " " + build_desc;
@@ -355,16 +359,16 @@ struct MergeStack;
             if (memeq(&l->account->uuid, &current_account)) return true;
             if (memeq(&r->account->uuid, &current_account)) return false;
         }
-        auto lms = MergeStack(l->account->uuid, L"");
+        auto lms = MergeStack(l->account->uuid, "");
         lms.quantity = l->item->quantity;
         lms.i.insert(l);
-        auto rms = MergeStack(r->account->uuid, L"");
+        auto rms = MergeStack(r->account->uuid, "");
         rms.quantity = r->item->quantity;
         rms.i.insert(r);
         return this->operator()(lms, rms);
     }
-    MergeStack::MergeStack(const UUID& account, const std::wstring& _description) : quantity{}, i(ItemCompare{nullptr, account}) {
-        description = TextUtils::WStringToString(_description);
+    MergeStack::MergeStack(const UUID& account, const std::string& _description) : quantity{}, i(ItemCompare{nullptr, account}) {
+        description = _description;
     }
 
     // One row in the Free Slots table, built from a Character (or an Account's chest).
@@ -438,7 +442,7 @@ struct MergeStack;
     void LoadFromFiles(bool only_foreign);
     void SaveToFiles(bool include_foreign);
     void SortSlots(ImGuiTableSortSpecs* sort_specs);
-    void DescriptionDecode(const ItemPath& path, GW::Item* item);
+    std::wstring GetItemEncDescription(GW::Item* item);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot);
 
     // collective callback hook
@@ -892,6 +896,7 @@ struct MergeStack;
 
 
         RebuildItemRefs();
+        bool any_decoding = false; // keep re-sorting until every visible description has decoded
         std::unordered_map<std::wstring, size_t> merged_stacks{};
         for (auto& r : item_refs) {
             if (hide_other_accounts && r.account->uuid != current_account) continue;
@@ -909,15 +914,18 @@ struct MergeStack;
                 if (!location_check.contains(location_filter)) continue;
             }
             if (!model_ID_filter.empty() && model_ID_filter != std::to_string(r.item->model_id)) continue;
+            // Accessing the EncString lazily kicks off decoding for visible items.
+            const std::wstring& desc = r.item->description.wstring();
             if (!item_filter_w.empty()) {
-                const auto description_check = item_is_lower ? TextUtils::ToLower(r.item->description) : r.item->description;
+                const auto description_check = item_is_lower ? TextUtils::ToLower(desc) : desc;
                 if (!description_check.contains(item_filter_w)) continue;
             }
+            if (r.item->description.IsDecoding()) any_decoding = true;
 
-            auto merge_id = std::to_wstring(r.item->model_id) + r.item->description;
+            auto merge_id = std::to_wstring(r.item->model_id) + desc;
             if (!merge_stacks || !merged_stacks.contains(merge_id)) {
                 merged_stacks[merge_id] = inventory_sorted.size();
-                inventory_sorted.push_back(MergeStack(current_account, r.item->description));
+                inventory_sorted.push_back(MergeStack(current_account, r.item->description.string()));
             }
             MergeStack* ms = &inventory_sorted[merged_stacks[merge_id]];
             ms->quantity += r.item->quantity;
@@ -928,7 +936,7 @@ struct MergeStack;
         if (inventory_sorted.size() > 1) std::sort(inventory_sorted.begin(), inventory_sorted.end(), ItemCompare{sort_specs, current_account});
 
         if (sort_specs) sort_specs->SpecsDirty = false;
-        needs_sorting = false;
+        needs_sorting = any_decoding;
     }
 
     bool CheckIniDirty(InventoryFile* ini, std::filesystem::file_time_type write_time)
@@ -1000,21 +1008,16 @@ struct MergeStack;
         std::atomic<int> tasks_remaining{0};
     };
 
-    // Narrow a wide string to UTF-8 without TextUtils::WStringToString's assert-on-failure
-    // (decoded descriptions are normally clean, but never crash on a pathological one).
-    std::string SafeNarrow(const std::wstring& w)
-    {
-        if (w.empty()) return "";
-        const int n = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, w.data(), (int)w.size(), nullptr, 0, nullptr, nullptr);
-        if (n <= 0) return ""; // not valid UTF-8 (e.g. lone surrogate) -> drop the text rather than crash
-        std::string s(n, 0);
-        WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), s.data(), n, nullptr, nullptr);
-        return s;
-    }
-
     ItemJson ToJson(const Item& item)
     {
-        return ItemJson{item.model_id, item.model_file_id, item.interaction, item.quantity, item.equipped, SafeNarrow(item.description)};
+        ItemJson j;
+        j.model_id      = item.model_id;
+        j.model_file_id = item.model_file_id;
+        j.interaction   = item.interaction;
+        j.quantity      = item.quantity;
+        if (item.equipped) j.equipped = item.equipped; // omit the common default
+        GuiUtils::ArrayToIni(item.description.encoded(), &j.description);
+        return j;
     }
     FreeSlotsJson ToJson(const FreeSlotInfo& fs)
     {
@@ -1057,8 +1060,10 @@ struct MergeStack;
         item.model_file_id = j.model_file_id;
         item.interaction   = j.interaction;
         item.quantity      = j.quantity;
-        item.equipped      = j.equipped;
-        item.description    = TextUtils::StringToWString(j.description);
+        item.equipped      = j.equipped.value_or(0);
+        std::wstring enc;
+        GuiUtils::IniToArray(j.description, enc);
+        item.description.reset(enc.c_str()); // EncString decodes lazily for display
         GW::Item gw_item;
         gw_item.model_file_id = item.model_file_id;
         gw_item.interaction   = item.interaction;
@@ -1260,14 +1265,11 @@ struct MergeStack;
         inventory_dirty.clear();
     }
 
-    void DescriptionDecode(const ItemPath& path, GW::Item* item)
+    // Build the encoded description string for a live item (name + shorthand stats).
+    // This is the canonical form we persist; the readable text is decoded from it.
+    std::wstring GetItemEncDescription(GW::Item* item)
     {
-        struct SyncDecode {
-            ItemPath path;
-            std::wstring enc;
-        };
-        struct SyncDecode* sync = new SyncDecode();
-        sync->path = path;
+        std::wstring enc;
         switch (item->type) {
             case GW::Constants::ItemType::Headpiece:
             case GW::Constants::ItemType::Boots:
@@ -1279,13 +1281,13 @@ struct MergeStack;
             default:
                 // Default to single_item_name so merge_stacks can combine stacks of single and multiple items.
                 if (item->single_item_name) {
-                    sync->enc += item->single_item_name;
+                    enc += item->single_item_name;
                 }
                 else if (item->complete_name_enc) {
-                    sync->enc += item->complete_name_enc;
+                    enc += item->complete_name_enc;
                 }
                 else if (item->name_enc) {
-                    sync->enc += item->name_enc;
+                    enc += item->name_enc;
                 }
         }
         if (item->info_string) {
@@ -1294,31 +1296,13 @@ struct MergeStack;
             // Since "Value:" is typically at the end of the description, there is nothing left that we care about anyway.
             // Add description only if it does not start with "Value:".
             if (shorthand_description.find(L"\xA3E\x10A\xA8A\x10A\xA59\x1\x10B") != 0) {
-                if (!sync->enc.empty()) {
-                    sync->enc += L"\x2\x102\x2";
+                if (!enc.empty()) {
+                    enc += L"\x2\x102\x2";
                 }
-                sync->enc += shorthand_description;
+                enc += shorthand_description;
             }
         }
-        GW::GameThread::Enqueue([sync] {
-            GW::UI::AsyncDecodeStr(
-                sync->enc.c_str(),
-                [](void* param, const wchar_t* s) {
-                    auto sync = (struct SyncDecode*)param;
-                    const auto& p = sync->path;
-                    // Re-resolve: a map load between enqueue and callback may have
-                    // replaced or removed the item, so never capture a raw Item*.
-                    if (auto loc = FindItemLoc(p.account, p.character, p.hero_id, p.bag_id, p.slot)) {
-                        loc->item->description = TextUtils::StripTags(s);
-                        inventory_dirty.insert(GetIniID(p.account, p.character));
-                        save_dirty_inventories_timer = TIMER_INIT();
-                        needs_sorting = true;
-                    }
-                    delete sync;
-                },
-                sync
-            );
-        });
+        return enc;
     }
 
     void AddItem(uint32_t item_id)
@@ -1407,6 +1391,7 @@ struct MergeStack;
         it.equipped = item->equipped;
         it.item_id = item->item_id;
         it.texture = Resources::GetItemImage(item);
+        it.description.reset(GetItemEncDescription(item).c_str()); // EncString decodes for display
 
         ItemLoc loc;
         loc.account = &acc;
@@ -1417,7 +1402,6 @@ struct MergeStack;
         loc.item = &it;
         inventory_lookup[item->item_id] = loc;
 
-        DescriptionDecode(path, item);
         inventory_dirty.insert(GetIniID(path.account, path.character));
         save_dirty_inventories_timer = TIMER_INIT();
         needs_sorting = true;
