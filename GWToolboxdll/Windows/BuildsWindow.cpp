@@ -609,8 +609,6 @@ namespace {
 
     void SaveToFile()
     {
-        if (!(builds_changed || GWToolbox::SettingsFolderChanged()))
-            return;
         if (inifile == nullptr) {
             inifile = new ToolboxIni();
         }
