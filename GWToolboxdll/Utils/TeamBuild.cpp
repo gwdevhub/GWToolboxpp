@@ -779,7 +779,7 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_modified, bool editable)
     ImGui::Spacing();
 
     if (editable) {
-        if (ImGui::Checkbox("Show numbers", &show_numbers)) builds_modified = true;
+        ImGui::Checkbox("Show numbers", &show_numbers);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Prefix build names with their index when sending to chat");
 
         ImGui::SameLine();
@@ -1016,7 +1016,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                     )) {
                     build.hero_id = (combo_idx >= 0 && combo_idx < static_cast<int>(sorted_heroes.size())) ? sorted_heroes[combo_idx] : HeroID::NoHero;
                     ResetEncodedCache();
-                    builds_modified = true;
                 }
                 ImGui::PopItemWidth();
 
@@ -1025,7 +1024,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 const auto* panel_icon = reinterpret_cast<const char*>(build.show_panel ? ICON_FA_EYE : ICON_FA_EYE_SLASH);
                 if (ImGui::Button(panel_icon, icon_btn_size)) {
                     build.show_panel = !build.show_panel;
-                    builds_modified = true;
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(build.show_panel ? "Hero panel: Show" : "Hero panel: Hide");
 
@@ -1170,8 +1168,8 @@ bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds,
     }
 
     if (has_hero_slots) {
-        builds_modified |= ImGui::InputText("Hero Build Name", name, 128);
-        builds_modified |= ImGui::InputText("Group", group, 128);
+        ImGui::InputText("Hero Build Name", name, 128);
+        ImGui::InputText("Group", group, 128);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Assign to a group. Builds sharing a group name are shown together under a collapsible header.");
         }
@@ -1179,7 +1177,7 @@ bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds,
     }
     else {
         ImGui::PushItemWidth(-120.f);
-        builds_modified |= ImGui::InputText("Build Name", name, 128);
+        ImGui::InputText("Build Name", name, 128);
         ImGui::PopItemWidth();
         DrawPlayerBuildsContent(builds_modified);
     }
@@ -1227,9 +1225,7 @@ bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds,
         ImGui::SameLine();
         ImGui::PushItemWidth(110.f);
         constexpr const char* modes[] = {"Don't change", "Normal Mode", "Hard Mode"};
-        if (ImGui::Combo("Mode", &mode, modes, 3)) {
-            builds_modified = true;
-        }
+        ImGui::Combo("Mode", &mode, modes, 3);
         ImGui::PopItemWidth();
 
         ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - 40);
