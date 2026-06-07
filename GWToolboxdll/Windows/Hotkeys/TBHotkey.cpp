@@ -382,9 +382,25 @@ bool TBHotkey::Draw()
         if (show_active_in_header) {
             current_pos.x -= btn_size;
             ImGui::SetCursorPos(current_pos);
-            hotkey_changed |= ImGui::Checkbox("##active", &active);
+            const bool checkbox_changed = ImGui::Checkbox("##active", &active);
+            hotkey_changed |= checkbox_changed;
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("The hotkey can trigger only when selected");
+                if (dynamic_cast<HotkeyGroup*>(this))
+                    ImGui::SetTooltip("The hotkey can trigger only when selected\nShift+Click to enable/disable all hotkeys in this group");
+                else
+                    ImGui::SetTooltip("The hotkey can trigger only when selected");
+            }
+            if (checkbox_changed && ImGui::GetIO().KeyShift) {
+                if (auto* grp = dynamic_cast<HotkeyGroup*>(this)) {
+                    auto set_active = [](auto& self, HotkeyGroup* g, bool val) -> void {
+                        for (auto* hk : g->hotkeys) {
+                            hk->active = val;
+                            if (auto* child = dynamic_cast<HotkeyGroup*>(hk))
+                                self(self, child, val);
+                        }
+                    };
+                    set_active(set_active, grp, active);
+                }
             }
             current_pos.x -= spacing;
         }
@@ -680,9 +696,25 @@ bool TBHotkey::DrawSettings()
 
     ImGui::Separator();
     if (!show_active_in_header) {
-        hotkey_changed |= ImGui::Checkbox("###active", &active);
+        const bool checkbox_changed = ImGui::Checkbox("###active", &active);
+        hotkey_changed |= checkbox_changed;
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("The hotkey can trigger only when selected");
+            if (dynamic_cast<HotkeyGroup*>(this))
+                ImGui::SetTooltip("The hotkey can trigger only when selected\nShift+Click to enable/disable all hotkeys in this group");
+            else
+                ImGui::SetTooltip("The hotkey can trigger only when selected");
+        }
+        if (checkbox_changed && ImGui::GetIO().KeyShift) {
+            if (auto* grp = dynamic_cast<HotkeyGroup*>(this)) {
+                auto set_active = [](auto& self, HotkeyGroup* g, bool val) -> void {
+                    for (auto* hk : g->hotkeys) {
+                        hk->active = val;
+                        if (auto* child = dynamic_cast<HotkeyGroup*>(hk))
+                            self(self, child, val);
+                    }
+                };
+                set_active(set_active, grp, active);
+            }
         }
         ImGui::SameLine();
     }
