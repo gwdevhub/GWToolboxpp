@@ -59,6 +59,7 @@ namespace {
     constexpr const char* INI_SECTION = "TexmodModule";
     constexpr const char* INI_PACK_COUNT = "PackCount";
     constexpr const char* INI_PACK_PATH = "Pack";
+    constexpr const char* INI_PACK_ENABLED = "PackEnabled";
 
     // =========================================================================
     // gMod TextureClient helpers
@@ -77,7 +78,13 @@ namespace {
         return true;
     }
 
-    void SyncExternalPacks()
+    // Reconcile our pack list with what gMod actually has loaded (via GetFiles):
+    // mark known packs loaded and adopt any gMod loaded on its own (e.g. from
+    // modlist.txt) as external entries. When clear_missing is true, packs gMod
+    // is not currently serving are marked unloaded - the right behaviour after an
+    // operation. Pass false on startup, before the restored enabled state has
+    // been pushed to gMod, so it is not wiped by gMod's still-empty set.
+    void SyncExternalPacks(bool clear_missing = true)
     {
         if (!pfnGetFiles) return;
 
@@ -105,10 +112,16 @@ namespace {
             }
             packs.push_back({p, p.stem().string(), /*loaded=*/true, /*external=*/true});
         }
-        for (auto& pack : packs) {
-            if (std::ranges::find(packs_loaded, pack.path) == packs_loaded.end()) pack.loaded = false;
+        if (clear_missing) {
+            for (auto& pack : packs) {
+                if (std::ranges::find(packs_loaded, pack.path) == packs_loaded.end()) pack.loaded = false;
+            }
         }
     }
+
+    // Push the saved enabled state to gMod once it becomes ready. Defined below,
+    // after ApplyLoadOrder; forward-declared here for InitGMod.
+    void RestoreLoadedPacks();
 
     // Translate an image RVA to a raw file offset via the section table (0 = not found).
     uint32_t RvaToFileOffset(const IMAGE_SECTION_HEADER* sec, unsigned n, uint32_t rva)
@@ -249,7 +262,7 @@ namespace {
             }
             pfnSetDevice(GuildWars_IDirect3DDevice9_Instance);
             gmodReady = true;
-            SyncExternalPacks();
+            RestoreLoadedPacks();
             statusMessage = "gMod was already active (pre-loaded). Texture pack loading enabled.";
             return true;
         }
@@ -280,7 +293,7 @@ namespace {
         }
         pfnSetDevice(GuildWars_IDirect3DDevice9_Instance);
         gmodReady = true;
-        SyncExternalPacks();
+        RestoreLoadedPacks();
         return true;
     }
     TexturePackEntry* FindPack(const std::filesystem::path& path, bool create_if_not_found = false);
@@ -339,6 +352,15 @@ namespace {
         std::swap(packs[index], packs[other]);
         if (gmodReady) ApplyLoadOrder();
         return true;
+    }
+
+    // Called once gMod is ready: adopt anything it already loaded (modlist.txt
+    // etc.) without disturbing the enabled flags restored from settings, then
+    // push the combined set so the packs the user had enabled are loaded again.
+    void RestoreLoadedPacks()
+    {
+        SyncExternalPacks(/*clear_missing=*/false);
+        ApplyLoadOrder();
     }
 
     void ShutdownGMod()
@@ -579,8 +601,12 @@ void TexmodModule::LoadSettings(ToolboxIni* ini)
         const char* val = ini->GetValue(INI_SECTION, key.c_str(), nullptr);
         if (!val || !*val) continue;
         std::filesystem::path p = val;
-        packs.push_back({p, p.stem().string(), false});
+        const std::string enabled_key = std::string(INI_PACK_ENABLED) + std::to_string(i);
+        const bool enabled = ini->GetBoolValue(INI_SECTION, enabled_key.c_str(), false);
+        packs.push_back({p, p.stem().string(), /*loaded=*/enabled});
     }
+    // gMod is not ready yet (no device); the restored enabled flags are pushed to
+    // it later by RestoreLoadedPacks(). This call is a no-op until then.
     SyncExternalPacks();
 }
 
@@ -592,5 +618,7 @@ void TexmodModule::SaveSettings(ToolboxIni* ini)
     for (size_t i = 0; i < packs.size(); i++) {
         const std::string key = std::string(INI_PACK_PATH) + std::to_string(i);
         ini->SetValue(INI_SECTION, key.c_str(), packs[i].path.string().c_str());
+        const std::string enabled_key = std::string(INI_PACK_ENABLED) + std::to_string(i);
+        ini->SetBoolValue(INI_SECTION, enabled_key.c_str(), packs[i].loaded);
     }
 }
