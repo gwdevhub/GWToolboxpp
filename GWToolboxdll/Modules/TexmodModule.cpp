@@ -80,20 +80,20 @@ namespace {
         pfnRemoveFile = reinterpret_cast<tGModRemoveFile>(GetProcAddress(gmodDll, "RemoveFile"));
         pfnGetFiles = reinterpret_cast<tGModGetFiles>(GetProcAddress(gmodDll, "GetFiles"));
         pfnSetDevice = reinterpret_cast<tGModSetDevice>(GetProcAddress(gmodDll, "SetDevice"));
-        // GetFiles is optional: older gMod builds lack it, and we only use it to
-        // discover packs gMod loaded on its own (SyncExternalPacks no-ops without it).
-        if (!pfnAddFile || !pfnRemoveFile || !pfnSetDevice) {
-            statusMessage = "Error: gMod.dll is missing AddFile/RemoveFile/SetDevice exports. "
+        // GetFiles is required: we reconcile against the load order it reports, so
+        // a build whose GetFiles is missing (or doesn't report load order) can't be
+        // driven correctly.
+        if (!pfnAddFile || !pfnRemoveFile || !pfnGetFiles || !pfnSetDevice) {
+            statusMessage = "Error: gMod.dll is missing AddFile/RemoveFile/GetFiles/SetDevice exports. "
                             "Please use a gMod build that includes these functions.";
             return false;
         }
         return true;
     }
 
-    // Read gMod's currently-loaded files (best-effort; empty if GetFiles is absent
-    // or errors). Note: stock gMod keeps loaded_files in a std::map keyed by path,
-    // so these come back sorted by path - not in load order - and the result is
-    // only reliable as a set, not as a priority order.
+    // Read gMod's currently-loaded files, in load order (== priority): gMod hands
+    // them back in the order it loaded them, so this is what we diff against to
+    // reconcile. Best-effort - empty if GetFiles is absent or errors.
     std::vector<std::filesystem::path> QueryGmodFiles()
     {
         std::vector<std::filesystem::path> result;
@@ -227,9 +227,9 @@ namespace {
         return names;
     }
 
-    // Mandatory gMod exports. GetFiles is intentionally absent: older gMod builds
-    // lack it and ResolveTextureClientFunctions already treats it as optional.
-    constexpr const char* kRequiredExports[] = {"AddFile", "RemoveFile", "SetDevice"};
+    // Mandatory gMod exports. GetFiles is required because reconciliation reads the
+    // current load order from it.
+    constexpr const char* kRequiredExports[] = {"AddFile", "RemoveFile", "GetFiles", "SetDevice"};
 
     std::filesystem::path DirOfModule(HMODULE h)
     {
@@ -343,11 +343,6 @@ namespace {
     std::mutex apply_mutex;
     std::atomic<uint64_t> apply_generation = 0;
 
-    // What we have told gMod to load, in add order (== priority). Stock gMod can't
-    // report its own load order (GetFiles is a path-sorted std::map), so we track
-    // it ourselves to compute a minimal add/remove diff. Only touched under apply_mutex.
-    std::vector<std::filesystem::path> applied_order;
-
     // Build the desired load order: every pack flagged loaded, in list order.
     std::vector<std::filesystem::path> BuildDesiredList()
     {
@@ -358,21 +353,23 @@ namespace {
         return desired;
     }
 
-    // Reconcile gMod's loaded set to `desired` with AddFile/RemoveFile. gMod gives
-    // the first-loaded pack priority on a texture conflict, so to honour the
-    // requested order we keep the longest matching prefix, remove everything after
-    // it, and re-add the desired tail in order. Returns the last gMod error (or 0).
-    // Caller must hold apply_mutex.
+    // Reconcile gMod's loaded set to `desired` with AddFile/RemoveFile. We read
+    // gMod's current load order straight from GetFiles (it reports files in load
+    // order). gMod gives the first-loaded pack priority on a texture conflict, so
+    // to honour the requested order we keep the longest matching prefix, remove
+    // everything after it, and re-add the desired tail in order. Returns the last
+    // gMod error (or 0). Caller must hold apply_mutex.
     int ReconcileLocked(const std::vector<std::filesystem::path>& desired)
     {
+        const auto current = QueryGmodFiles();
         size_t prefix = 0;
-        while (prefix < applied_order.size() && prefix < desired.size()
-               && applied_order[prefix] == desired[prefix]) {
+        while (prefix < current.size() && prefix < desired.size()
+               && current[prefix] == desired[prefix]) {
             ++prefix;
         }
         // Remove the diverging tail, deepest first, leaving the kept prefix intact.
-        for (size_t i = applied_order.size(); i-- > prefix;) {
-            if (pfnRemoveFile) pfnRemoveFile(applied_order[i].wstring().c_str());
+        for (size_t i = current.size(); i-- > prefix;) {
+            if (pfnRemoveFile) pfnRemoveFile(current[i].wstring().c_str());
         }
         // Re-add the desired tail in order; earlier adds win conflicts.
         int error = GMOD_RETURN_OK;
@@ -380,7 +377,6 @@ namespace {
             const int ret = pfnAddFile ? pfnAddFile(desired[i].wstring().c_str()) : GMOD_RETURN_OK;
             if (ret < 0 && ret != GMOD_RETURN_EXISTS) error = ret;
         }
-        applied_order = desired;
         return error;
     }
 
@@ -439,16 +435,11 @@ namespace {
     }
 
     // Called once gMod is ready: adopt anything it already loaded (modlist.txt
-    // etc.) without disturbing the enabled flags restored from settings, seed
-    // applied_order with gMod's current set so the first reconcile is minimal,
-    // then push the combined set so the packs the user had enabled are loaded.
+    // etc.) without disturbing the enabled flags restored from settings, then push
+    // the combined set so the packs the user had enabled are loaded again.
     void RestoreLoadedPacks()
     {
         SyncExternalPacks(/*clear_missing=*/false);
-        {
-            std::lock_guard lk(apply_mutex);
-            applied_order = QueryGmodFiles();
-        }
         ApplyLoadOrder();
     }
 
@@ -465,9 +456,8 @@ namespace {
             ++apply_generation;
             for (auto& pack : packs) pack.loaded = false;
             if (pfnRemoveFile) {
-                for (const auto& path : applied_order) pfnRemoveFile(path.wstring().c_str());
+                for (const auto& path : QueryGmodFiles()) pfnRemoveFile(path.wstring().c_str());
             }
-            applied_order.clear();
         }
 
         gmodReady = false;
