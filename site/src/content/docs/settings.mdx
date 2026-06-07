@@ -34,7 +34,8 @@ These are several quality-of-life features that can be toggled on or off:
 
 ### Gameplay
 * **Tick is a toggle** makes the "Ready" check on the party window immediately tick/untick when you click on it, instead of offering a drop-down menu.
-* **Disable camera smoothing** removes the delay when rotating the camera.
+* **Disable camera smoothing with mouse** removes the delay when rotating the camera with the mouse.
+* **Disable camera smoothing with controller** removes the same delay when rotating the camera with a controller.
 * **Automatically skip cinematics** skips in-game cutscenes without user input.
 * **Automatically return to outpost on defeat** returns the party to the outpost when wiped (only works if you're the party leader).
 * **Disable gold/green items confirmation** removes the confirmation prompt when selling gold and green items to merchants.
@@ -47,6 +48,10 @@ These are several quality-of-life features that can be toggled on or off:
 * **Auto use available keys when interacting with locked chest** automatically uses keys when interacting with locked chests.
 * **Auto use lockpick when interacting with locked chest** automatically uses lockpicks when interacting with locked chests.
 * **Keep current quest when accepting a new one** maintains the current active quest when a new quest is added.
+* **Prompt if entering a mission you've already completed** shows an "Are you sure?" confirmation when you start a mission your character has already finished in the selected difficulty, to avoid accidentally replaying it in the wrong mode.
+* **Hide known skills when using a tome, capturing a skill or talking to a skill trainer** removes skills your current character already has from the skill selection window.
+* **Hide all non-elite skills when capturing a skill** shows only elite skills in the skill capture window.
+* **Stop screen shake from skills or effects** disables the camera shake caused by skills such as Aftershock, Earth Shaker or Avalanche.
 
 ### Item Management
 * **Ctrl+Click to move items** allows you to move items between inventory and storage with Ctrl+Click.
@@ -54,6 +59,7 @@ These are several quality-of-life features that can be toggled on or off:
 * **Move materials to current storage pane** moves materials to the currently open storage pane when using Ctrl+Click (overrides default behavior of moving to material storage).
 * **Hide item descriptions in explorable areas/outposts** only shows the item name in tooltips when hovering over items in inventory or weapon sets.
 * **Hide skill descriptions in explorable areas/outposts** only shows the skill name and attributes in tooltips when hovering over skills.
+* **Show 'You have N Lockpicks' on Locked Chest name tags** displays how many lockpicks you're carrying on the name tag of locked chests.
 * **Show price check information on item hover** displays the current market price of the item when hovering over it.
 * **Show salvage information on item hover** displays potential salvage materials for the item when hovering over it.
 
@@ -83,6 +89,7 @@ These are several quality-of-life features that can be toggled on or off:
 * **Automatically set "Away" after ___ minutes of inactivity** sets your status to Away after the specified minutes of no input to Guild Wars. This will only happen if you were set to Online.
 * **Automatically set "Online" after an input to Guild Wars** immediately sets your status to Online after any input to Guild Wars. This will only happen if you were set to Away.
 * **Set Guild Wars window title as current logged-in character** changes the game window title to show your character's name.
+* **Remember my online status when returning to character select screen** keeps your friend-list status when you return to character select, instead of resetting it to Online when you next pick a character.
 
 Note that you will not see status changes on your own friend list, but your status will have changed, and other players will see this.
 
@@ -109,6 +116,8 @@ Note that you will not see status changes on your own friend list, but your stat
 * **Block sparkle effect on dropped items**
 * **Limit signet of capture to 10 in skills window**
 * **Block full screen message when entering a new area**
+* **Block full screen popup that shows when completing a vanquish**
+* **Block full screen popup that shows when opening a dungeon chest**
 * **In-game name tag colors** sets the colour the floating name tag above each agent is drawn in, by category. Click a colour wheel to change a category's colour. These are global overrides — to recolour a single specific agent instead of a whole category, use [Minimap → Custom Agents](/docs/windows/minimap#custom-agents)' **Text color** field:
     * **NPC** — non-player characters such as allies, vendors and signposts.
     * **Myself** — your own character.
@@ -117,6 +126,16 @@ Note that you will not see status changes on your own friend list, but your stat
     * **Gadget** — interactive objects such as chests, levers and traps.
     * **Enemy** — hostile creatures.
     * **Item** — dropped items on the ground.
+* **Hide in-game store message on character select screen** removes the in-game store advertisement shown on the character selection screen.
+* **Show message in chat when you're the last player to resign** posts a chat message once everyone else in your party has resigned. See also the [Resign Log](/docs/info/#resign-log).
+* **Show experience progress instead of current level on your experience bar** displays your XP as progress toward the next level rather than your current level number.
+* **Prevent weapon spell skin showing on player weapons** keeps weapons looking like their base item while a weapon spell (such as Conjure or a flame/frost/lightning effect) is active.
+* **Prevent dervish avatar elites from changing your character's appearance** keeps your character's normal appearance while a Dervish avatar form is active.
+* **Automatic /age on vanquish** sends <ToolboxPath kind="command" steps={["/age"]} /> as soon as a vanquish completes, to fetch the server-side completion time.
+* **Automatic /age2 on /age** also shows the instance time (<ToolboxPath kind="command" steps={["/age2"]} />) whenever /age is shown in chat.
+* **Automatic screenshot on:** takes a screenshot automatically when the selected event occurs — **Vanquish**, **Boss kill**, **Mission complete**, **Dungeon complete**, or **Title maxed**.
+
+The **Lunars and Alcohol** options at the bottom of this section (suppressing lunar/drunk effects, text and emotes) are documented under [Pcons → Settings](/docs/pcons/#settings).
 
 <figure>
 <img src="/docs-images/28233555-719397f6-68ac-11e7-82e5-8a18f4c7c44e.webp"/>
