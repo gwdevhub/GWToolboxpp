@@ -628,7 +628,7 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
 
         if (editing) {
             ImGui::PushItemWidth(name_width);
-            ImGui::InputText("###name", build.name, 128);
+            if (ImGui::InputText("###name", build.name, 128)) builds_changed = true;
             ImGui::PopItemWidth();
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Build name/label");
@@ -638,6 +638,7 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
             if (ImGui::InputText("###code", build.code, 128)) {
                 build.ResetDecodeCache();
                 ResetEncodedCache();
+                builds_changed = true;
             }
             ImGui::PopItemWidth();
             if (ImGui::IsItemHovered()) {
@@ -763,6 +764,7 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_changed, bool editable)
                         build.pcons.emplace(pcon->ini);
                     else
                         build.pcons.erase(pcon->ini);
+                    builds_changed = true;
                 }
                 if (active) ImGui::PopStyleColor();
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(pcon->chat.c_str());
@@ -846,7 +848,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
         // ---- Name + code (editable in edit mode) ----
         if (editing) {
             ImGui::PushItemWidth(name_width);
-            ImGui::InputText("###name", build.name, 128);
+            if (ImGui::InputText("###name", build.name, 128)) builds_changed = true;
             ImGui::PopItemWidth();
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Build name/label");
 
@@ -854,6 +856,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
             if (ImGui::InputText("###code", build.code, 128)) {
                 build.ResetDecodeCache();
                 ResetEncodedCache();
+                builds_changed = true;
             }
             ImGui::PopItemWidth();
             if (ImGui::IsItemHovered()) {
@@ -1045,6 +1048,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
                 }
                 if (ImGui::Button(behavior_icon, icon_btn_size)) {
                     if (++build.behavior > 2) build.behavior = 0;
+                    builds_changed = true;
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(behavior_tooltip);
 
@@ -1073,6 +1077,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
                                 build.disabled_skills &= static_cast<uint8_t>(~(1u << k));
                             else
                                 build.disabled_skills |= static_cast<uint8_t>(1u << k);
+                            builds_changed = true;
                         }
                         const ImVec2 p_max(pos.x + skill_px, pos.y + skill_px);
                         auto* dl = ImGui::GetWindowDrawList();
@@ -1109,6 +1114,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
                             build.pcons.emplace(pcon->ini);
                         else
                             build.pcons.erase(pcon->ini);
+                        builds_changed = true;
                     }
                     if (active) ImGui::PopStyleColor();
                     if (ImGui::IsItemHovered()) ImGui::SetTooltip(pcon->chat.c_str());
@@ -1126,6 +1132,27 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_changed, bool editable)
     builds_changed |= tmp;
 
     ImGui::Spacing();
+
+    if (editable) {
+        const bool has_player_slot = player_idx < builds.size();
+        if (!has_player_slot && builds.size() < 8) {
+            if (ImGui::Button("Add Player Slot")) {
+                builds.insert(builds.begin(), Build("", "", HeroID::NoHero, 0, 1));
+                ResetEncodedCache();
+                builds_changed = true;
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add a player build slot");
+            ImGui::SameLine();
+        }
+        if (builds.size() < 8) {
+            if (ImGui::Button("Add Hero Slot")) {
+                builds.push_back(Build("", "", HeroID::NoHero, 0, 1));
+                ResetEncodedCache();
+                builds_changed = true;
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Add a hero build slot");
+        }
+    }
 }
 
 // ------------------------------------------------------------
