@@ -95,19 +95,19 @@ struct TeamBuild {
     //
     //   index        – position of this TeamBuild in all_builds.
     //   all_builds   – the owning vector; may be modified (reorder / delete).
-    //   builds_changed – set true when any data is modified.
+    //   builds_modified – set true when the vector is structurally modified (invalidates iterators).
     //
     // Returns false when this teambuild was deleted (erased from all_builds).
     bool DrawEditWindow(
         size_t index,
         std::vector<TeamBuild>& all_builds,
-        bool& builds_changed
+        bool& builds_modified
     );
 
     // Draw a read-only detached window for a teambuild received via chat link.
-    // hero_builds / builds_changed are the HeroBuildsWindow-owned list used by
+    // hero_builds / builds_modified are the HeroBuildsWindow-owned list used by
     // the "Add to My Builds" button.
-    void DrawDetachedWindow(std::vector<TeamBuild>& hero_builds, bool& builds_changed);
+    void DrawDetachedWindow(std::vector<TeamBuild>& hero_builds, bool& builds_modified);
 
     // Provide the 2×2 sprite sheet used to render the disabled-skill overlay.
     // Call once from HeroBuildsWindow::Initialize().
@@ -136,7 +136,7 @@ private:
     // Returns the encoded wstring, computing and caching it on first call.
     const std::wstring& GetEncoded() const;
 
-    void DrawPlayerBuildsContent(bool& builds_changed, bool editable = true);
+    void DrawPlayerBuildsContent(bool& builds_modified, bool editable = true);
 
-    void DrawHeroBuildsContent(bool& builds_changed, bool editable = true);
+    void DrawHeroBuildsContent(bool& builds_modified, bool editable = true);
 };
