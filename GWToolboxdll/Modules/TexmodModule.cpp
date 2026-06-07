@@ -28,15 +28,21 @@ namespace {
     // gMod exports (resolved from gMod.dll)
     // =========================================================================
 
+    using tGModAddFile = int (*)(const wchar_t*);
+    using tGModRemoveFile = int (*)(const wchar_t*);
     using tGModSetDevice = int (*)(IDirect3DDevice9*);
     using tGModGetFiles = int (*)(wchar_t* buf, int bufLen);
-    // Inverse of GetFiles: hand gMod the full ordered set of mods it should have
-    // loaded, null-separated and double-null terminated, in priority order.
-    using tGModSetFiles = int (*)(const wchar_t* buf, int bufLen);
 
+    tGModAddFile pfnAddFile = nullptr;
+    tGModRemoveFile pfnRemoveFile = nullptr;
     tGModGetFiles pfnGetFiles = nullptr;
-    tGModSetFiles pfnSetFiles = nullptr;
     tGModSetDevice pfnSetDevice = nullptr;
+
+    // gMod return codes we care about (see gMod's Error.h). AddFile returns
+    // EXISTS - a negative value - when the pack is already loaded, which for our
+    // purposes is success, not an error.
+    constexpr int GMOD_RETURN_OK = 0;
+    constexpr int GMOD_RETURN_EXISTS = -70;
 
     std::filesystem::path gmodDllLocation;
 
@@ -70,15 +76,40 @@ namespace {
 
     bool ResolveTextureClientFunctions()
     {
+        pfnAddFile = reinterpret_cast<tGModAddFile>(GetProcAddress(gmodDll, "AddFile"));
+        pfnRemoveFile = reinterpret_cast<tGModRemoveFile>(GetProcAddress(gmodDll, "RemoveFile"));
         pfnGetFiles = reinterpret_cast<tGModGetFiles>(GetProcAddress(gmodDll, "GetFiles"));
-        pfnSetFiles = reinterpret_cast<tGModSetFiles>(GetProcAddress(gmodDll, "SetFiles"));
         pfnSetDevice = reinterpret_cast<tGModSetDevice>(GetProcAddress(gmodDll, "SetDevice"));
-        if (!pfnGetFiles || !pfnSetFiles || !pfnSetDevice) {
-            statusMessage = "Error: gMod.dll is missing GetFiles/SetFiles/SetDevice exports. "
+        // GetFiles is optional: older gMod builds lack it, and we only use it to
+        // discover packs gMod loaded on its own (SyncExternalPacks no-ops without it).
+        if (!pfnAddFile || !pfnRemoveFile || !pfnSetDevice) {
+            statusMessage = "Error: gMod.dll is missing AddFile/RemoveFile/SetDevice exports. "
                             "Please use a gMod build that includes these functions.";
             return false;
         }
         return true;
+    }
+
+    // Read gMod's currently-loaded files (best-effort; empty if GetFiles is absent
+    // or errors). Note: stock gMod keeps loaded_files in a std::map keyed by path,
+    // so these come back sorted by path - not in load order - and the result is
+    // only reliable as a set, not as a priority order.
+    std::vector<std::filesystem::path> QueryGmodFiles()
+    {
+        std::vector<std::filesystem::path> result;
+        if (!pfnGetFiles) return result;
+        const int count = pfnGetFiles(nullptr, 0);
+        if (count <= 0) return result;
+        const int bufLen = count * MAX_PATH;
+        std::vector<wchar_t> buf(bufLen, L'\0');
+        const int written = pfnGetFiles(buf.data(), bufLen);
+        const wchar_t* ptr = buf.data();
+        const wchar_t* const end = buf.data() + written;
+        while (ptr < end && *ptr) {
+            result.emplace_back(ptr);
+            ptr += wcslen(ptr) + 1;
+        }
+        return result;
     }
 
     // Reconcile our pack list with what gMod actually has loaded (via GetFiles):
@@ -196,9 +227,9 @@ namespace {
         return names;
     }
 
-    // Mandatory gMod exports. The module now drives gMod purely through the
-    // set-based API (SetFiles/GetFiles), so a build lacking either is unusable.
-    constexpr const char* kRequiredExports[] = {"GetFiles", "SetFiles", "SetDevice"};
+    // Mandatory gMod exports. GetFiles is intentionally absent: older gMod builds
+    // lack it and ResolveTextureClientFunctions already treats it as optional.
+    constexpr const char* kRequiredExports[] = {"AddFile", "RemoveFile", "SetDevice"};
 
     std::filesystem::path DirOfModule(HMODULE h)
     {
@@ -301,57 +332,80 @@ namespace {
     }
     TexturePackEntry* FindPack(const std::filesystem::path& path, bool create_if_not_found = false);
 
-    // gMod's SetFiles decodes and DDS-compresses textures, which is slow enough
-    // to hitch the game if run on the render/main thread. So serialise the desired
-    // set here (reading packs on the calling thread, where it is valid) and hand
-    // just the heavy call to a worker thread; reconcile back on the main thread.
+    // gMod's AddFile decodes and DDS-compresses textures, which is slow enough to
+    // hitch the game if run on the render/main thread. So snapshot the desired set
+    // here (reading packs on the calling thread, where it is valid) and hand the
+    // heavy add/remove work to a worker thread; reconcile back on the main thread.
     //
-    // apply_mutex serialises the worker-side calls, and apply_generation - bumped
-    // per request - lets a stale request (superseded while queued) skip its work,
-    // so rapid toggles can't apply out of order with 20 worker threads in play.
+    // apply_mutex serialises the worker-side reconciles, and apply_generation -
+    // bumped per request - lets a stale request (superseded while queued) skip its
+    // work, so rapid toggles can't apply out of order with 20 worker threads.
     std::mutex apply_mutex;
     std::atomic<uint64_t> apply_generation = 0;
 
-    // Build the SetFiles buffer (null-separated, double-null-terminated, matching
-    // the GetFiles format) from the packs flagged loaded, in list order.
-    std::vector<wchar_t> BuildLoadOrderBuffer()
+    // What we have told gMod to load, in add order (== priority). Stock gMod can't
+    // report its own load order (GetFiles is a path-sorted std::map), so we track
+    // it ourselves to compute a minimal add/remove diff. Only touched under apply_mutex.
+    std::vector<std::filesystem::path> applied_order;
+
+    // Build the desired load order: every pack flagged loaded, in list order.
+    std::vector<std::filesystem::path> BuildDesiredList()
     {
-        std::vector<wchar_t> buf;
+        std::vector<std::filesystem::path> desired;
         for (const auto& pack : packs) {
-            if (!pack.loaded) continue;
-            const auto w = pack.path.wstring();
-            buf.insert(buf.end(), w.begin(), w.end());
-            buf.push_back(L'\0');
+            if (pack.loaded) desired.push_back(pack.path);
         }
-        buf.push_back(L'\0'); // final terminator (also the empty "unload all" case)
-        return buf;
+        return desired;
     }
 
-    // Push the desired state - every pack flagged loaded, in list order - to gMod
-    // in one SetFiles call. This is the single point that changes what gMod has
-    // loaded; load, unload and reorder all funnel through here. gMod diffs the
-    // request against what it already has and does the minimal work; earlier
-    // packs in the list win when two packs replace the same texture.
+    // Reconcile gMod's loaded set to `desired` with AddFile/RemoveFile. gMod gives
+    // the first-loaded pack priority on a texture conflict, so to honour the
+    // requested order we keep the longest matching prefix, remove everything after
+    // it, and re-add the desired tail in order. Returns the last gMod error (or 0).
+    // Caller must hold apply_mutex.
+    int ReconcileLocked(const std::vector<std::filesystem::path>& desired)
+    {
+        size_t prefix = 0;
+        while (prefix < applied_order.size() && prefix < desired.size()
+               && applied_order[prefix] == desired[prefix]) {
+            ++prefix;
+        }
+        // Remove the diverging tail, deepest first, leaving the kept prefix intact.
+        for (size_t i = applied_order.size(); i-- > prefix;) {
+            if (pfnRemoveFile) pfnRemoveFile(applied_order[i].wstring().c_str());
+        }
+        // Re-add the desired tail in order; earlier adds win conflicts.
+        int error = GMOD_RETURN_OK;
+        for (size_t i = prefix; i < desired.size(); ++i) {
+            const int ret = pfnAddFile ? pfnAddFile(desired[i].wstring().c_str()) : GMOD_RETURN_OK;
+            if (ret < 0 && ret != GMOD_RETURN_EXISTS) error = ret;
+        }
+        applied_order = desired;
+        return error;
+    }
+
+    // The single point that changes what gMod has loaded; load, unload and reorder
+    // all funnel through here.
     void ApplyLoadOrder()
     {
-        if (!gmodReady || !pfnSetFiles) {
+        if (!gmodReady || !pfnAddFile || !pfnRemoveFile) {
             statusMessage = "gMod is not initialised.";
             return;
         }
-        auto buf = std::make_shared<std::vector<wchar_t>>(BuildLoadOrderBuffer());
+        auto desired = std::make_shared<std::vector<std::filesystem::path>>(BuildDesiredList());
         const uint64_t my_generation = ++apply_generation;
 
-        Resources::EnqueueWorkerTask([buf, my_generation] {
-            // Hold apply_mutex across the check + call so SetFiles invocations are
-            // serialised and only the newest request actually runs.
+        Resources::EnqueueWorkerTask([desired, my_generation] {
+            // Hold apply_mutex across the whole reconcile so add/remove sequences
+            // are serialised and only the newest request actually runs.
             std::lock_guard lk(apply_mutex);
             if (my_generation != apply_generation.load()) return; // superseded while queued
-            if (!gmodReady || !pfnSetFiles) return;
-            const int ret = pfnSetFiles(buf->data(), static_cast<int>(buf->size()));
-            Resources::EnqueueMainTask([ret, my_generation] {
+            if (!gmodReady) return;
+            const int error = ReconcileLocked(*desired);
+            Resources::EnqueueMainTask([error, my_generation] {
                 if (my_generation != apply_generation.load()) return; // a newer apply is in flight
-                if (ret < 0)
-                    statusMessage = "gMod SetFiles failed (error " + std::to_string(ret) + ").";
+                if (error < 0)
+                    statusMessage = "gMod failed to load a pack (error " + std::to_string(error) + ").";
                 SyncExternalPacks();
             });
         });
@@ -385,11 +439,16 @@ namespace {
     }
 
     // Called once gMod is ready: adopt anything it already loaded (modlist.txt
-    // etc.) without disturbing the enabled flags restored from settings, then
-    // push the combined set so the packs the user had enabled are loaded again.
+    // etc.) without disturbing the enabled flags restored from settings, seed
+    // applied_order with gMod's current set so the first reconcile is minimal,
+    // then push the combined set so the packs the user had enabled are loaded.
     void RestoreLoadedPacks()
     {
         SyncExternalPacks(/*clear_missing=*/false);
+        {
+            std::lock_guard lk(apply_mutex);
+            applied_order = QueryGmodFiles();
+        }
         ApplyLoadOrder();
     }
 
@@ -399,16 +458,16 @@ namespace {
 
         // Unload synchronously: on teardown the worker threads are stopping, so a
         // queued ApplyLoadOrder might never run. Holding apply_mutex waits out any
-        // in-flight worker SetFiles; bumping the generation makes queued/running
-        // ones skip; then we clear gMod's set here, last, so nothing reloads after.
+        // in-flight worker reconcile; bumping the generation makes queued/running
+        // ones skip; then we remove everything here, last, so nothing reloads after.
         {
             std::lock_guard lk(apply_mutex);
             ++apply_generation;
             for (auto& pack : packs) pack.loaded = false;
-            if (pfnSetFiles) {
-                const wchar_t empty[] = {L'\0'};
-                pfnSetFiles(empty, 1);
+            if (pfnRemoveFile) {
+                for (const auto& path : applied_order) pfnRemoveFile(path.wstring().c_str());
             }
+            applied_order.clear();
         }
 
         gmodReady = false;
