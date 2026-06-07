@@ -705,69 +705,65 @@ void HeroBuildsWindow::LoadFromFile()
 void HeroBuildsWindow::SaveToFile() const
 {
     constexpr size_t buffer_size = 16;
-    if (builds_changed || GWToolbox::SettingsFolderChanged()) {
-        // clear builds from ini
-        inifile->Reset();
+    inifile->Reset();
 
-        // then save
-        for (size_t i = 0; i < teambuilds.size(); i++) {
-            const TeamBuild& tbuild = teambuilds[i];
-            char section[buffer_size];
-            snprintf(section, buffer_size, "builds%03d", i);
-            inifile->SetValue(section, "buildname", tbuild.name.c_str());
-            inifile->SetValue(section, "uiid", tbuild.ui_id.c_str());
-            inifile->SetLongValue(section, "mode", tbuild.mode);
-            if (!tbuild.group.empty())
-                inifile->SetValue(section, "group", tbuild.group.c_str());
-            for (size_t j = 0; j < tbuild.builds.size(); ++j) {
-                const Build& build = tbuild.builds[j];
+    for (size_t i = 0; i < teambuilds.size(); i++) {
+        const TeamBuild& tbuild = teambuilds[i];
+        char section[buffer_size];
+        snprintf(section, buffer_size, "builds%03d", i);
+        inifile->SetValue(section, "buildname", tbuild.name.c_str());
+        inifile->SetValue(section, "uiid", tbuild.ui_id.c_str());
+        inifile->SetLongValue(section, "mode", tbuild.mode);
+        if (!tbuild.group.empty())
+            inifile->SetValue(section, "group", tbuild.group.c_str());
+        for (size_t j = 0; j < tbuild.builds.size(); ++j) {
+            const Build& build = tbuild.builds[j];
 
-                char namekey[buffer_size];
-                char templatekey[buffer_size];
-                char heroidkey[buffer_size];
-                char showpanelkey[buffer_size];
-                char behaviorkey[buffer_size];
-                char dskillskey[buffer_size];
-                snprintf(namekey, buffer_size, "name%d", j);
-                snprintf(templatekey, buffer_size, "template%d", j);
-                snprintf(heroidkey, buffer_size, "heroid%d", j);
-                snprintf(showpanelkey, buffer_size, "panel%d", j);
-                snprintf(behaviorkey, buffer_size, "behavior%d", j);
-                snprintf(dskillskey, buffer_size, "dskills%d", j);
-                inifile->SetValue(section, namekey, build.name.c_str());
-                inifile->SetValue(section, templatekey, build.code.c_str());
-                inifile->SetLongValue(section, heroidkey, static_cast<long>(build.hero_id));
-                inifile->SetLongValue(section, showpanelkey, build.show_panel ? 1 : 0);
-                inifile->SetLongValue(section, behaviorkey, build.behavior);
-                inifile->SetLongValue(section, dskillskey, build.disabled_skills);
-            }
+            char namekey[buffer_size];
+            char templatekey[buffer_size];
+            char heroidkey[buffer_size];
+            char showpanelkey[buffer_size];
+            char behaviorkey[buffer_size];
+            char dskillskey[buffer_size];
+            snprintf(namekey, buffer_size, "name%d", j);
+            snprintf(templatekey, buffer_size, "template%d", j);
+            snprintf(heroidkey, buffer_size, "heroid%d", j);
+            snprintf(showpanelkey, buffer_size, "panel%d", j);
+            snprintf(behaviorkey, buffer_size, "behavior%d", j);
+            snprintf(dskillskey, buffer_size, "dskills%d", j);
+            inifile->SetValue(section, namekey, build.name.c_str());
+            inifile->SetValue(section, templatekey, build.code.c_str());
+            inifile->SetLongValue(section, heroidkey, static_cast<long>(build.hero_id));
+            inifile->SetLongValue(section, showpanelkey, build.show_panel ? 1 : 0);
+            inifile->SetLongValue(section, behaviorkey, build.behavior);
+            inifile->SetLongValue(section, dskillskey, build.disabled_skills);
         }
-
-        // Collect groups that are still referenced by at least one build.
-        std::unordered_set<std::string> used_groups;
-        for (const auto& tb : teambuilds) {
-            if (!tb.group.empty()) used_groups.insert(tb.group);
-        }
-
-        // Build a sorted list of used groups; write with normalized 0-based sort_order.
-        std::vector<std::pair<std::string, size_t>> sorted_groups;
-        for (const auto& [name, grp] : hero_build_groups) {
-            if (used_groups.contains(name)) {
-                sorted_groups.push_back({name, grp.sort_order});
-            }
-        }
-        std::ranges::sort(sorted_groups, [](const auto& a, const auto& b) {
-            return a.second < b.second;
-        });
-        for (size_t gi = 0; gi < sorted_groups.size(); gi++) {
-            char grp_section[32];
-            snprintf(grp_section, sizeof(grp_section), "herobuildgroup%03zu", gi);
-            inifile->SetValue(grp_section, "name", sorted_groups[gi].first.c_str());
-            inifile->SetLongValue(grp_section, "sort_order", static_cast<long>(gi));
-        }
-
-        ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
     }
+
+    // Collect groups that are still referenced by at least one build.
+    std::unordered_set<std::string> used_groups;
+    for (const auto& tb : teambuilds) {
+        if (!tb.group.empty()) used_groups.insert(tb.group);
+    }
+
+    // Build a sorted list of used groups; write with normalized 0-based sort_order.
+    std::vector<std::pair<std::string, size_t>> sorted_groups;
+    for (const auto& [name, grp] : hero_build_groups) {
+        if (used_groups.contains(name)) {
+            sorted_groups.push_back({name, grp.sort_order});
+        }
+    }
+    std::ranges::sort(sorted_groups, [](const auto& a, const auto& b) {
+        return a.second < b.second;
+    });
+    for (size_t gi = 0; gi < sorted_groups.size(); gi++) {
+        char grp_section[32];
+        snprintf(grp_section, sizeof(grp_section), "herobuildgroup%03zu", gi);
+        inifile->SetValue(grp_section, "name", sorted_groups[gi].first.c_str());
+        inifile->SetLongValue(grp_section, "sort_order", static_cast<long>(gi));
+    }
+
+    ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
 }
 
 TeamBuild* HeroBuildsWindow::GetTeambuildByName(const std::string& build_name_search)
