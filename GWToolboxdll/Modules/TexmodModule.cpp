@@ -25,14 +25,14 @@ namespace {
     // gMod exports (resolved from gMod.dll)
     // =========================================================================
 
-    using tGModAddFile = int (*)(const wchar_t*);
-    using tGModRemoveFile = int (*)(const wchar_t*);
     using tGModSetDevice = int (*)(IDirect3DDevice9*);
     using tGModGetFiles = int (*)(wchar_t* buf, int bufLen);
+    // Inverse of GetFiles: hand gMod the full ordered set of mods it should have
+    // loaded, null-separated and double-null terminated, in priority order.
+    using tGModSetFiles = int (*)(const wchar_t* buf, int bufLen);
 
-    tGModAddFile pfnAddFile = nullptr;
-    tGModRemoveFile pfnRemoveFile = nullptr;
     tGModGetFiles pfnGetFiles = nullptr;
+    tGModSetFiles pfnSetFiles = nullptr;
     tGModSetDevice pfnSetDevice = nullptr;
 
     std::filesystem::path gmodDllLocation;
@@ -66,12 +66,11 @@ namespace {
 
     bool ResolveTextureClientFunctions()
     {
-        pfnAddFile = reinterpret_cast<tGModAddFile>(GetProcAddress(gmodDll, "AddFile"));
-        pfnRemoveFile = reinterpret_cast<tGModRemoveFile>(GetProcAddress(gmodDll, "RemoveFile"));
         pfnGetFiles = reinterpret_cast<tGModGetFiles>(GetProcAddress(gmodDll, "GetFiles"));
+        pfnSetFiles = reinterpret_cast<tGModSetFiles>(GetProcAddress(gmodDll, "SetFiles"));
         pfnSetDevice = reinterpret_cast<tGModSetDevice>(GetProcAddress(gmodDll, "SetDevice"));
-        if (!pfnAddFile || !pfnRemoveFile || !pfnSetDevice) {
-            statusMessage = "Error: gMod.dll is missing AddFile/RemoveFile/SetDevice exports. "
+        if (!pfnGetFiles || !pfnSetFiles || !pfnSetDevice) {
+            statusMessage = "Error: gMod.dll is missing GetFiles/SetFiles/SetDevice exports. "
                             "Please use a gMod build that includes these functions.";
             return false;
         }
@@ -181,9 +180,9 @@ namespace {
         return names;
     }
 
-    // Mandatory gMod exports. GetFiles is intentionally absent: older gMod builds
-    // lack it and ResolveTextureClientFunctions already treats it as optional.
-    constexpr const char* kRequiredExports[] = {"AddFile", "RemoveFile", "SetDevice"};
+    // Mandatory gMod exports. The module now drives gMod purely through the
+    // set-based API (SetFiles/GetFiles), so a build lacking either is unusable.
+    constexpr const char* kRequiredExports[] = {"GetFiles", "SetFiles", "SetDevice"};
 
     std::filesystem::path DirOfModule(HMODULE h)
     {
@@ -285,30 +284,61 @@ namespace {
         return true;
     }
     TexturePackEntry* FindPack(const std::filesystem::path& path, bool create_if_not_found = false);
-    bool UnloadTexturePack(const std::filesystem::path& path, bool sync = true)
+
+    // Push the desired state - every pack flagged loaded, in list order - to gMod
+    // in one SetFiles call. This is the single point that changes what gMod has
+    // loaded; load, unload and reorder all funnel through here. gMod diffs the
+    // request against what it already has and does the minimal work; earlier
+    // packs in the list win when two packs replace the same texture.
+    bool ApplyLoadOrder(bool sync = true)
     {
-        if (!gmodReady) {
+        if (!gmodReady || !pfnSetFiles) {
             statusMessage = "gMod is not initialised.";
             return false;
         }
-        if (!std::filesystem::exists(path)) {
-            statusMessage = "File not found: " + path.string();
-            return false;
+        // Null-separated, double-null-terminated, matching the GetFiles format.
+        std::vector<wchar_t> buf;
+        for (const auto& pack : packs) {
+            if (!pack.loaded) continue;
+            const auto w = pack.path.wstring();
+            buf.insert(buf.end(), w.begin(), w.end());
+            buf.push_back(L'\0');
         }
-        auto pack = FindPack(path, true);
-        if (!(pfnRemoveFile && (pfnRemoveFile(pack->path.wstring().c_str()), true))) {
-            statusMessage = "gMod failed to unload: " + pack->path.filename().string();
+        buf.push_back(L'\0'); // final terminator (also the empty "unload all" case)
+
+        const int ret = pfnSetFiles(buf.data(), static_cast<int>(buf.size()));
+        if (ret < 0) {
+            statusMessage = "gMod SetFiles failed (error " + std::to_string(ret) + ").";
             return false;
         }
         if (sync) SyncExternalPacks();
-        return std::ranges::find(packs, pack->path, &TexturePackEntry::path) != packs.end();
+        return true;
+    }
+
+    bool UnloadTexturePack(const std::filesystem::path& path)
+    {
+        auto pack = FindPack(path, false);
+        if (!pack) return false;
+        pack->loaded = false;
+        return ApplyLoadOrder();
     }
 
     void UnloadAllTexturePacks()
     {
-        for (auto& pack : packs)
-            UnloadTexturePack(pack.path, false);
-        SyncExternalPacks();
+        for (auto& pack : packs) pack.loaded = false;
+        ApplyLoadOrder();
+    }
+
+    // Move the pack at `index` one slot up (direction -1) or down (+1) in the
+    // list, changing its priority, then re-apply the order to gMod.
+    bool MovePack(int index, int direction)
+    {
+        const int other = index + direction;
+        if (index < 0 || index >= static_cast<int>(packs.size())) return false;
+        if (other < 0 || other >= static_cast<int>(packs.size())) return false;
+        std::swap(packs[index], packs[other]);
+        if (gmodReady) ApplyLoadOrder();
+        return true;
     }
 
     void ShutdownGMod()
@@ -339,7 +369,7 @@ namespace {
         return &(*it);
     }
 
-    bool LoadTexturePack(const std::filesystem::path& path, bool sync = true)
+    bool LoadTexturePack(const std::filesystem::path& path)
     {
         if (!gmodReady) {
             statusMessage = "gMod is not initialised.";
@@ -350,12 +380,13 @@ namespace {
             return false;
         }
         auto pack = FindPack(path, true);
-        if (!(pfnAddFile && pfnAddFile(pack->path.wstring().c_str()) == 0)) {
-            statusMessage = "gMod failed to load: " + path.filename().string();
+        const auto filename = pack->path.filename().string();
+        pack->loaded = true;
+        if (!ApplyLoadOrder()) {
+            statusMessage = "gMod failed to load: " + filename;
             return false;
         }
-        statusMessage = "Loaded: " + pack->path.filename().string();
-        if (sync) SyncExternalPacks();
+        statusMessage = "Loaded: " + filename;
         return true;
     }
 
@@ -424,10 +455,17 @@ namespace {
         if (!ImGui::BeginTable("##packs", 4, tableFlags)) return;
 
         const auto font_size = ImGui::CalcTextSize(" ");
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const auto btn_width = [&](const char* label) {
+            return ImGui::CalcTextSize(label).x + style.FramePadding.x * 2.f;
+        };
+        // Actions column holds the move-up / move-down / delete buttons.
+        const float actions_width = btn_width(ICON_FA_ARROW_UP) + btn_width(ICON_FA_ARROW_DOWN)
+            + btn_width(ICON_FA_TRASH) + style.ItemSpacing.x * 2.f;
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, font_size.y * 2.f);
         ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, font_size.y * 2.f);
+        ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, actions_width);
         ImGui::TableHeadersRow();
 
         for (int i = 0; i < static_cast<int>(packs.size()); i++) {
@@ -462,7 +500,33 @@ namespace {
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", pathStr.c_str());
 
             ImGui::TableSetColumnIndex(3);
-            ImGui::PushID(i * 100 + 1);
+            ImGui::PushID(i);
+
+            const bool is_first = (i == 0);
+            const bool is_last = (i == static_cast<int>(packs.size()) - 1);
+
+            ImGui::BeginDisabled(is_first);
+            const bool move_up = ImGui::Button(ICON_FA_ARROW_UP);
+            ImGui::EndDisabled();
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move up (higher priority on texture conflicts)");
+            if (move_up) {
+                MovePack(i, -1);
+                ImGui::PopID();
+                break;
+            }
+
+            ImGui::SameLine();
+            ImGui::BeginDisabled(is_last);
+            const bool move_down = ImGui::Button(ICON_FA_ARROW_DOWN);
+            ImGui::EndDisabled();
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move down (lower priority on texture conflicts)");
+            if (move_down) {
+                MovePack(i, 1);
+                ImGui::PopID();
+                break;
+            }
+
+            ImGui::SameLine();
             bool del_bool = false;
             if (ImGui::ConfirmButton(ICON_FA_TRASH, &del_bool)) {
                 if (pack.loaded) UnloadTexturePack(pack.path);
