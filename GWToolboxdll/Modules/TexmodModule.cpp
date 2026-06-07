@@ -3,12 +3,15 @@
 
 #include <ToolboxIni.h>
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <d3d9.h>
 #include <filesystem>
 #include <fstream>
 #include <imgui.h>
+#include <memory>
+#include <mutex>
 #include <span>
 #include <string>
 #include <vector>
@@ -298,18 +301,21 @@ namespace {
     }
     TexturePackEntry* FindPack(const std::filesystem::path& path, bool create_if_not_found = false);
 
-    // Push the desired state - every pack flagged loaded, in list order - to gMod
-    // in one SetFiles call. This is the single point that changes what gMod has
-    // loaded; load, unload and reorder all funnel through here. gMod diffs the
-    // request against what it already has and does the minimal work; earlier
-    // packs in the list win when two packs replace the same texture.
-    bool ApplyLoadOrder(bool sync = true)
+    // gMod's SetFiles decodes and DDS-compresses textures, which is slow enough
+    // to hitch the game if run on the render/main thread. So serialise the desired
+    // set here (reading packs on the calling thread, where it is valid) and hand
+    // just the heavy call to a worker thread; reconcile back on the main thread.
+    //
+    // apply_mutex serialises the worker-side calls, and apply_generation - bumped
+    // per request - lets a stale request (superseded while queued) skip its work,
+    // so rapid toggles can't apply out of order with 20 worker threads in play.
+    std::mutex apply_mutex;
+    std::atomic<uint64_t> apply_generation = 0;
+
+    // Build the SetFiles buffer (null-separated, double-null-terminated, matching
+    // the GetFiles format) from the packs flagged loaded, in list order.
+    std::vector<wchar_t> BuildLoadOrderBuffer()
     {
-        if (!gmodReady || !pfnSetFiles) {
-            statusMessage = "gMod is not initialised.";
-            return false;
-        }
-        // Null-separated, double-null-terminated, matching the GetFiles format.
         std::vector<wchar_t> buf;
         for (const auto& pack : packs) {
             if (!pack.loaded) continue;
@@ -318,14 +324,37 @@ namespace {
             buf.push_back(L'\0');
         }
         buf.push_back(L'\0'); // final terminator (also the empty "unload all" case)
+        return buf;
+    }
 
-        const int ret = pfnSetFiles(buf.data(), static_cast<int>(buf.size()));
-        if (ret < 0) {
-            statusMessage = "gMod SetFiles failed (error " + std::to_string(ret) + ").";
-            return false;
+    // Push the desired state - every pack flagged loaded, in list order - to gMod
+    // in one SetFiles call. This is the single point that changes what gMod has
+    // loaded; load, unload and reorder all funnel through here. gMod diffs the
+    // request against what it already has and does the minimal work; earlier
+    // packs in the list win when two packs replace the same texture.
+    void ApplyLoadOrder()
+    {
+        if (!gmodReady || !pfnSetFiles) {
+            statusMessage = "gMod is not initialised.";
+            return;
         }
-        if (sync) SyncExternalPacks();
-        return true;
+        auto buf = std::make_shared<std::vector<wchar_t>>(BuildLoadOrderBuffer());
+        const uint64_t my_generation = ++apply_generation;
+
+        Resources::EnqueueWorkerTask([buf, my_generation] {
+            // Hold apply_mutex across the check + call so SetFiles invocations are
+            // serialised and only the newest request actually runs.
+            std::lock_guard lk(apply_mutex);
+            if (my_generation != apply_generation.load()) return; // superseded while queued
+            if (!gmodReady || !pfnSetFiles) return;
+            const int ret = pfnSetFiles(buf->data(), static_cast<int>(buf->size()));
+            Resources::EnqueueMainTask([ret, my_generation] {
+                if (my_generation != apply_generation.load()) return; // a newer apply is in flight
+                if (ret < 0)
+                    statusMessage = "gMod SetFiles failed (error " + std::to_string(ret) + ").";
+                SyncExternalPacks();
+            });
+        });
     }
 
     bool UnloadTexturePack(const std::filesystem::path& path)
@@ -333,7 +362,8 @@ namespace {
         auto pack = FindPack(path, false);
         if (!pack) return false;
         pack->loaded = false;
-        return ApplyLoadOrder();
+        ApplyLoadOrder();
+        return true;
     }
 
     void UnloadAllTexturePacks()
@@ -367,7 +397,19 @@ namespace {
     {
         if (!gmodReady) return;
 
-        UnloadAllTexturePacks();
+        // Unload synchronously: on teardown the worker threads are stopping, so a
+        // queued ApplyLoadOrder might never run. Holding apply_mutex waits out any
+        // in-flight worker SetFiles; bumping the generation makes queued/running
+        // ones skip; then we clear gMod's set here, last, so nothing reloads after.
+        {
+            std::lock_guard lk(apply_mutex);
+            ++apply_generation;
+            for (auto& pack : packs) pack.loaded = false;
+            if (pfnSetFiles) {
+                const wchar_t empty[] = {L'\0'};
+                pfnSetFiles(empty, 1);
+            }
+        }
 
         gmodReady = false;
     }
@@ -404,11 +446,10 @@ namespace {
         auto pack = FindPack(path, true);
         const auto filename = pack->path.filename().string();
         pack->loaded = true;
-        if (!ApplyLoadOrder()) {
-            statusMessage = "gMod failed to load: " + filename;
-            return false;
-        }
-        statusMessage = "Loaded: " + filename;
+        // The actual load runs on a worker thread; the result (and any failure)
+        // is reported when it reconciles. Show an optimistic status meanwhile.
+        statusMessage = "Loading: " + filename;
+        ApplyLoadOrder();
         return true;
     }
 
@@ -575,8 +616,7 @@ void TexmodModule::Update(float)
 
 void TexmodModule::Terminate()
 {
-    UnloadAllTexturePacks();
-    ShutdownGMod();
+    ShutdownGMod(); // synchronously unloads every pack from gMod
     ToolboxModule::Terminate();
 }
 
