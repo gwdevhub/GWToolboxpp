@@ -24,6 +24,8 @@
 #include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Modules/Resources.h>
+#include <Utils/FontLoader.h>
+#include <Windows/SettingsWindow.h>
 
 namespace {
 
@@ -663,12 +665,17 @@ namespace {
     //
     // Hook the game's D3D9 device CreateTexture so we can build a gallery of every
     // texture the game creates, keyed by gMod/uMod/Texmod hash, and export each one
-    // as DDS (for use as a texmod replacement) or PNG. The hook is only active while
-    // the gallery section is on screen (record_dx9_textures).
+    // as DDS (for use as a texmod replacement) or PNG.
+    //
+    // Capturing is opt-in (`recording`) because the CreateTexture hook runs - and
+    // hashes a texture - for every texture the game makes, which is expensive enough
+    // to cost framerate. The cheap Release hook, once installed, is left in place so
+    // the captured map never holds a freed (dangling) texture pointer and stays safe
+    // to browse/export after recording is stopped.
     // =========================================================================
 
     std::map<uint32_t, IDirect3DTexture9*> dx9_textures_created_by_hash;
-    bool record_dx9_textures = false;
+    bool recording = false;
 
     typedef HRESULT(WINAPI* CreateDx9Texture_pt)(IDirect3DDevice9*, UINT, UINT, UINT, DWORD, D3DFORMAT, D3DPOOL, IDirect3DTexture9**, HANDLE*);
     CreateDx9Texture_pt CreateDx9Texture_Func = 0, CreateDx9Texture_Ret = 0;
@@ -730,9 +737,12 @@ namespace {
         return result;
     }
 
-    void HookOnCreateDx9Texture(bool enable = true)
+    // Toggle the expensive CreateTexture capture hook to match `record`. The Release
+    // hook is installed alongside it the first time we start, then left in place even
+    // after stopping so already-captured textures can't dangle (see section comment).
+    void SetTextureCapture(bool record)
     {
-        if (enable) {
+        if (record) {
             if (!CreateDx9Texture_Func) {
                 IDirect3DDevice9* device = GW::Render::GetDevice();
                 if (!device) return;
@@ -763,34 +773,105 @@ namespace {
             }
             return;
         }
-        else {
-            if (CreateDx9Texture_Func) {
-                GW::Hook::DisableHooks(CreateDx9Texture_Func);
-                GW::Hook::RemoveHook(CreateDx9Texture_Func);
-                CreateDx9Texture_Func = nullptr;
-            }
-            if (TextureRelease_Func) {
-                GW::Hook::DisableHooks(TextureRelease_Func);
-                GW::Hook::RemoveHook(TextureRelease_Func);
-                TextureRelease_Func = nullptr;
-            }
-            dx9_textures_created_by_hash.clear();
-            LastCreatedTexture = nullptr;
+        // Stop capturing new textures, but keep the Release hook (and the captured
+        // map) so the gallery stays valid and browsable after recording is stopped.
+        if (CreateDx9Texture_Func) {
+            GW::Hook::DisableHooks(CreateDx9Texture_Func);
+            GW::Hook::RemoveHook(CreateDx9Texture_Func);
+            CreateDx9Texture_Func = nullptr;
         }
+        LastCreatedTexture = nullptr;
+    }
+
+    // Full teardown for module shutdown: remove both hooks and forget every capture.
+    void TeardownTextureCapture()
+    {
+        recording = false;
+        if (CreateDx9Texture_Func) {
+            GW::Hook::DisableHooks(CreateDx9Texture_Func);
+            GW::Hook::RemoveHook(CreateDx9Texture_Func);
+            CreateDx9Texture_Func = nullptr;
+        }
+        if (TextureRelease_Func) {
+            GW::Hook::DisableHooks(TextureRelease_Func);
+            GW::Hook::RemoveHook(TextureRelease_Func);
+            TextureRelease_Func = nullptr;
+        }
+        dx9_textures_created_by_hash.clear();
+        LastCreatedTexture = nullptr;
+    }
+
+    // While recording, paint a hard-to-miss reminder over the game (top-centre): the
+    // capture is expensive, so make sure the user knows it is running and give them a
+    // one-click way to the setting that stops it.
+    void DrawRecordingOverlay()
+    {
+        if (!recording) return;
+
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        const float center_x = viewport->Pos.x + viewport->Size.x * 0.5f;
+        const float top_y = viewport->Pos.y + viewport->Size.y * 0.04f;
+
+        // Big title on the background draw list so it sits over the game world but
+        // behind toolbox windows.
+        ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+        ImFont* font = FontLoader::GetFont();
+        const char* title = ICON_FA_CIRCLE " Recording textures";
+        constexpr float title_size = static_cast<float>(FontLoader::FontSize::widget_small);
+        const ImVec2 title_dim = font->CalcTextSizeA(title_size, FLT_MAX, 0.f, title);
+        const ImVec2 title_pos(center_x - title_dim.x * 0.5f, top_y);
+        ImGui::PushFont(font, draw_list, title_size);
+        draw_list->AddText({title_pos.x + 2.f, title_pos.y + 2.f}, IM_COL32(0, 0, 0, 200), title);
+        draw_list->AddText(title_pos, IM_COL32(255, 80, 80, 255), title);
+        ImGui::PopFont(draw_list);
+
+        // Explanatory line + a button to the off switch, in a transparent borderless
+        // window beneath the title (a button needs a real window to be clickable).
+        const float below_y = title_pos.y + title_dim.y + ImGui::GetStyle().ItemSpacing.y;
+        ImGui::SetNextWindowPos({center_x, below_y}, ImGuiCond_Always, {0.5f, 0.f});
+        ImGui::SetNextWindowBgAlpha(0.f);
+        constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
+            | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize
+            | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+        if (ImGui::Begin("##texmod_recording_overlay", nullptr, flags)) {
+            ImGui::TextUnformatted("Capturing every texture as you play is expensive and lowers your framerate.");
+            const char* btn = "Open " ICON_FA_IMAGE " gMod/uMod/Texmod settings to stop";
+            const float btn_w = ImGui::CalcTextSize(btn).x + ImGui::GetStyle().FramePadding.x * 2.f;
+            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - btn_w) * 0.5f);
+            if (ImGui::Button(btn)) {
+                SettingsWindow::Instance().NavigateToSection(TexmodModule::Instance().SettingsName());
+            }
+        }
+        ImGui::End();
     }
 
     void DrawTextureGallery()
     {
         if (!ImGui::CollapsingHeader("Loaded DirectX9 Textures")) return;
-        record_dx9_textures = true;
         constexpr ImVec2 scaled_size = {64.f, 64.f};
         constexpr ImVec4 tint(1, 1, 1, 1);
         const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
         constexpr auto uv0 = ImVec2(0, 0);
 
+        if (recording) {
+            if (ImGui::Button(ICON_FA_STOP " Stop recording")) recording = false;
+        }
+        else {
+            static bool confirm_record = false;
+            if (ImGui::ConfirmButton(ICON_FA_CIRCLE " Record textures", &confirm_record,
+                                     "Recording captures every texture the game creates as you play.\n"
+                                     "Doing this continuously is expensive and will lower your framerate\n"
+                                     "while it is active.\n\nStart recording textures?")) {
+                recording = true;
+                confirm_record = false;
+            }
+        }
+        ImGui::SameLine();
         if (ImGui::SmallButton("Reset")) {
             dx9_textures_created_by_hash.clear();
         }
+        ImGui::SameLine();
+        ImGui::TextDisabled("%d captured", static_cast<int>(dx9_textures_created_by_hash.size()));
 
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -847,21 +928,30 @@ namespace {
 
 void TexmodModule::Update(float)
 {
-    // Keep the D3D9 CreateTexture capture hook matched to whether the gallery is on
-    // screen: DrawSettingsInternal sets record_dx9_textures each frame it draws the
-    // gallery, and we apply (and clear) it here so the hook is removed once it goes.
-    HookOnCreateDx9Texture(record_dx9_textures);
-    record_dx9_textures = false;
+    // Keep the D3D9 CreateTexture capture hook matched to the recording toggle.
+    SetTextureCapture(recording);
 
     if (gmodReady) return;
     InitGMod();
 }
 
+void TexmodModule::Draw(IDirect3DDevice9*)
+{
+    DrawRecordingOverlay();
+}
+
 void TexmodModule::Terminate()
 {
-    HookOnCreateDx9Texture(false);
+    TeardownTextureCapture();
     ShutdownGMod(); // synchronously unloads every pack from gMod
-    ToolboxModule::Terminate();
+    ToolboxWidget::Terminate();
+}
+
+void TexmodModule::RegisterSettingsContent()
+{
+    // Bypass ToolboxUIElement's version (which adds visibility/size/position UI);
+    // texmod has no on-screen window of its own, only the recording overlay.
+    ToolboxModule::RegisterSettingsContent();
 }
 
 void TexmodModule::DrawSettingsInternal()
