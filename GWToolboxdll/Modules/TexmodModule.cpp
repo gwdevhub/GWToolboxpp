@@ -8,8 +8,10 @@
 #include <cstring>
 #include <d3d9.h>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <imgui.h>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -17,6 +19,7 @@
 #include <vector>
 
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Utilities/Hooker.h>
 
 #include <GWToolbox.h>
 #include <ImGuiAddons.h>
@@ -655,16 +658,208 @@ namespace {
         }
     }
 
+    // =========================================================================
+    // DirectX9 texture capture
+    //
+    // Hook the game's D3D9 device CreateTexture so we can build a gallery of every
+    // texture the game creates, keyed by gMod/uMod/Texmod hash, and export each one
+    // as DDS (for use as a texmod replacement) or PNG. The hook is only active while
+    // the gallery section is on screen (record_dx9_textures).
+    // =========================================================================
+
+    std::map<uint32_t, IDirect3DTexture9*> dx9_textures_created_by_hash;
+    bool record_dx9_textures = false;
+
+    typedef HRESULT(WINAPI* CreateDx9Texture_pt)(IDirect3DDevice9*, UINT, UINT, UINT, DWORD, D3DFORMAT, D3DPOOL, IDirect3DTexture9**, HANDLE*);
+    CreateDx9Texture_pt CreateDx9Texture_Func = 0, CreateDx9Texture_Ret = 0;
+
+    using TextureRelease_pt = ULONG(WINAPI*)(IDirect3DTexture9*);
+    TextureRelease_pt TextureRelease_Func = nullptr;
+    TextureRelease_pt TextureRelease_Ret = nullptr;
+
+    IDirect3DTexture9* LastCreatedTexture = nullptr;
+
+    // Hook Release to clean up tracking
+    ULONG WINAPI OnD3D9TextureRelease(IDirect3DTexture9* texture)
+    {
+        GW::Hook::EnterHook();
+        ULONG ref = TextureRelease_Ret(texture);
+        if (ref == 0) {
+            if (texture == LastCreatedTexture) LastCreatedTexture = 0;
+            // Remove from hash map if present
+            for (auto it = dx9_textures_created_by_hash.begin(); it != dx9_textures_created_by_hash.end();) {
+                if (it->second == texture) {
+                    it = dx9_textures_created_by_hash.erase(it);
+                }
+                else {
+                    ++it;
+                }
+            }
+        }
+        GW::Hook::LeaveHook();
+
+        return ref;
+    }
+
+    HRESULT WINAPI OnD3D9CreateTexture(IDirect3DDevice9* device, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, IDirect3DTexture9** ppTexture, HANDLE* pSharedHandle)
+    {
+        GW::Hook::EnterHook();
+        HRESULT result = CreateDx9Texture_Ret(device, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
+
+        if (LastCreatedTexture != nullptr) {
+            const auto hash = Resources::GetTexmodHash(LastCreatedTexture);
+            if (!dx9_textures_created_by_hash.contains(hash)) {
+                dx9_textures_created_by_hash[hash] = LastCreatedTexture;
+            }
+            LastCreatedTexture = 0;
+        }
+
+        if (SUCCEEDED(result) && *ppTexture) {
+            // Hook Release on first texture creation
+            if (!TextureRelease_Func) {
+                uintptr_t* texture_vtable = *reinterpret_cast<uintptr_t**>(*ppTexture);
+                constexpr int RELEASE_INDEX = 2;
+                TextureRelease_Func = (TextureRelease_pt)texture_vtable[RELEASE_INDEX];
+                GW::Hook::CreateHook((void**)&TextureRelease_Func, OnD3D9TextureRelease, (void**)&TextureRelease_Ret);
+                GW::Hook::EnableHooks(TextureRelease_Func);
+            }
+            LastCreatedTexture = *ppTexture;
+        }
+
+        GW::Hook::LeaveHook();
+        return result;
+    }
+
+    void HookOnCreateDx9Texture(bool enable = true)
+    {
+        if (enable) {
+            if (!CreateDx9Texture_Func) {
+                IDirect3DDevice9* device = GW::Render::GetDevice();
+                if (!device) return;
+                // Get vtable pointer
+                uintptr_t* vtable = *reinterpret_cast<uintptr_t**>(device);
+                // CreateTexture is at index 23 in IDirect3DDevice9 vtable
+                constexpr int CREATE_TEXTURE_INDEX = 23;
+                CreateDx9Texture_Func = (CreateDx9Texture_pt)vtable[CREATE_TEXTURE_INDEX];
+                GW::Hook::CreateHook((void**)&CreateDx9Texture_Func, OnD3D9CreateTexture, (void**)&CreateDx9Texture_Ret);
+                GW::Hook::EnableHooks(CreateDx9Texture_Func);
+            }
+
+            // Hook texture Release to track when textures are destroyed
+            if (!TextureRelease_Func) {
+                // We need any texture to get its vtable
+                // Create a temporary dummy texture to get the vtable
+                IDirect3DTexture9* temp_texture = nullptr;
+                IDirect3DDevice9* device = GW::Render::GetDevice();
+                if (device && SUCCEEDED(device->CreateTexture(1, 1, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &temp_texture, nullptr))) {
+                    uintptr_t* texture_vtable = *reinterpret_cast<uintptr_t**>(temp_texture);
+                    // Release is at index 2 in IUnknown (inherited by IDirect3DTexture9)
+                    constexpr int RELEASE_INDEX = 2;
+                    TextureRelease_Func = (TextureRelease_pt)texture_vtable[RELEASE_INDEX];
+                    GW::Hook::CreateHook((void**)&TextureRelease_Func, OnD3D9TextureRelease, (void**)&TextureRelease_Ret);
+                    GW::Hook::EnableHooks(TextureRelease_Func);
+                    temp_texture->Release(); // Clean up temp texture
+                }
+            }
+            return;
+        }
+        else {
+            if (CreateDx9Texture_Func) {
+                GW::Hook::DisableHooks(CreateDx9Texture_Func);
+                GW::Hook::RemoveHook(CreateDx9Texture_Func);
+                CreateDx9Texture_Func = nullptr;
+            }
+            if (TextureRelease_Func) {
+                GW::Hook::DisableHooks(TextureRelease_Func);
+                GW::Hook::RemoveHook(TextureRelease_Func);
+                TextureRelease_Func = nullptr;
+            }
+            dx9_textures_created_by_hash.clear();
+            LastCreatedTexture = nullptr;
+        }
+    }
+
+    void DrawTextureGallery()
+    {
+        if (!ImGui::CollapsingHeader("Loaded DirectX9 Textures")) return;
+        record_dx9_textures = true;
+        constexpr ImVec2 scaled_size = {64.f, 64.f};
+        constexpr ImVec4 tint(1, 1, 1, 1);
+        const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
+        constexpr auto uv0 = ImVec2(0, 0);
+
+        if (ImGui::SmallButton("Reset")) {
+            dx9_textures_created_by_hash.clear();
+        }
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
+
+        ImGui::StartSpacedElements(scaled_size.x);
+
+        size_t i = 0;
+        for (const auto& it : dx9_textures_created_by_hash) {
+            const auto texture = it.second;
+            const auto hash = it.first;
+            if (!texture) continue;
+            ImGui::PushID(i++);
+
+            const auto uv1 = ImGui::CalculateUvCrop(texture, scaled_size);
+            ImGui::NextSpacedElement();
+            const auto clicked = ImGui::ImageButton(texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("gMod/uMod/Texmod Hash: 0x%08x (Click to download)", hash);
+            }
+            if (clicked) {
+                ImGui::SetContextMenu([hash](void*) {
+                    ImGui::Text("gMod/uMod/Texmod Hash: 0x%08x", hash);
+                    ImGui::Separator();
+                    const char* ext = 0;
+                    if (ImGui::Button("Download as DDS (for gMod/uMod/Texmod)")) {
+                        ext = "dds";
+                    }
+                    if (ImGui::Button("Download as PNG")) {
+                        ext = "png";
+                    }
+                    if (ext) {
+                        const auto filename = std::format("GW.EXE_0x{:08X}.{}", hash, ext);
+                        const auto write_to = Resources::GetPath("extracted_textures", filename);
+                        Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
+                        const auto found = dx9_textures_created_by_hash.find(hash);
+                        if (found != dx9_textures_created_by_hash.end()) {
+                            Resources::SaveTextureToFile(found->second, write_to);
+                        }
+                        return false;
+                    }
+                    return true;
+                });
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleVar();
+    }
+
 } // namespace
 
 void TexmodModule::Update(float)
 {
+    // Keep the D3D9 CreateTexture capture hook matched to whether the gallery is on
+    // screen: DrawSettingsInternal sets record_dx9_textures each frame it draws the
+    // gallery, and we apply (and clear) it here so the hook is removed once it goes.
+    HookOnCreateDx9Texture(record_dx9_textures);
+    record_dx9_textures = false;
+
     if (gmodReady) return;
     InitGMod();
 }
 
 void TexmodModule::Terminate()
 {
+    HookOnCreateDx9Texture(false);
     ShutdownGMod(); // synchronously unloads every pack from gMod
     ToolboxModule::Terminate();
 }
@@ -677,6 +872,8 @@ void TexmodModule::DrawSettingsInternal()
     ImGui::Separator();
     if (ImGui::Button("Add texture pack")) Resources::OpenFileDialog(OnTexmodFileChosen, "tpf,zip,dds", Resources::GetSettingsFolderPath().string().c_str());
     ImGui::TextDisabled("Supported: .tpf, .zip (texmod format), .dds");
+    ImGui::Separator();
+    DrawTextureGallery();
 }
 
 void TexmodModule::LoadSettings(ToolboxIni* ini)
