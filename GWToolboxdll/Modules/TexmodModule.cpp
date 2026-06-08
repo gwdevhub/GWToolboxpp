@@ -725,7 +725,12 @@ namespace {
             tex->Release(); // drop our deferred-hash reference
         }
 
-        if (SUCCEEDED(result) && *ppTexture) {
+        // Only track content textures texmod can actually replace: managed/system-mem
+        // textures, which are lockable and survive a device reset. Skip D3DPOOL_DEFAULT
+        // (render targets, dynamic surfaces) - it is unsafe to lock, is freed and
+        // recreated on a device reset, and holding a reference on it would block that
+        // reset.
+        if (SUCCEEDED(result) && *ppTexture && Pool != D3DPOOL_DEFAULT) {
             // Hook Release on first texture creation
             if (!TextureRelease_Func) {
                 uintptr_t* texture_vtable = *reinterpret_cast<uintptr_t**>(*ppTexture);

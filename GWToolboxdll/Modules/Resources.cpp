@@ -1669,62 +1669,87 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
 
     return hash;
 }
+// Bytes per 4x4 block for the block-compressed formats, or 0 if the format is not
+// block compressed. DXT2/DXT4 (premultiplied-alpha variants) share DXT3/DXT5's
+// 16-byte blocks - handling them here keeps them out of the uncompressed path,
+// where they would be read as 4x too many rows and overrun the locked buffer.
+static UINT DxtBlockBytes(D3DFORMAT fmt)
+{
+    switch (fmt) {
+        case D3DFMT_DXT1:
+            return 8;
+        case D3DFMT_DXT2:
+        case D3DFMT_DXT3:
+        case D3DFMT_DXT4:
+        case D3DFMT_DXT5:
+            return 16;
+        default:
+            return 0;
+    }
+}
+
+// Raw row copy, kept separate (and free of any object that needs unwinding) so it
+// can be wrapped in SEH. LockRect can hand back a pointer whose backing store is no
+// longer valid - a surface lost to a device reset, or memory the game reused after a
+// map change - and reading it would otherwise crash the whole game. On a fault we
+// bail and the caller treats the texture as un-hashable. Callers must still ensure
+// row_bytes <= pitch so a valid lock is never read out of bounds.
+static bool SafeCopyRows(uint8_t* dst, const uint8_t* src, size_t rows, size_t row_bytes, size_t pitch)
+{
+    __try {
+        for (size_t y = 0; y < rows; ++y) {
+            memcpy(dst + y * row_bytes, src + y * pitch, row_bytes);
+        }
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
 {
     if (!texture) return 0;
 
     D3DSURFACE_DESC desc;
-    HRESULT hr = texture->GetLevelDesc(0, &desc);
-    if (FAILED(hr)) return 0;
+    if (FAILED(texture->GetLevelDesc(0, &desc))) return 0;
 
     D3DLOCKED_RECT d3dlr;
-    hr = texture->LockRect(0, &d3dlr, nullptr, D3DLOCK_READONLY);
-    if (FAILED(hr) || !d3dlr.pBits) {
+    if (FAILED(texture->LockRect(0, &d3dlr, nullptr, D3DLOCK_READONLY)) || !d3dlr.pBits || d3dlr.Pitch <= 0) {
         return 0;
     }
+    const auto* bits = static_cast<const uint8_t*>(d3dlr.pBits);
+    const size_t pitch = static_cast<size_t>(d3dlr.Pitch);
 
     uint32_t hash = 0;
 
-    // For compressed formats (DXT1/3/5), calculate the actual compressed data size
-    if (desc.Format == D3DFMT_DXT1) {
-        // DXT1: 8 bytes per 4x4 block
-        const UINT block_size = 8;
-        const UINT num_blocks_wide = (desc.Width + 3) / 4;
-        const UINT num_blocks_high = (desc.Height + 3) / 4;
-        const UINT total_size = num_blocks_wide * num_blocks_high * block_size;
-
-        hash = GetTexmodHash(static_cast<const char*>(d3dlr.pBits), total_size);
-    }
-    else if (desc.Format == D3DFMT_DXT3 || desc.Format == D3DFMT_DXT5) {
-        // DXT3/5: 16 bytes per 4x4 block
-        const UINT block_size = 16;
-        const UINT num_blocks_wide = (desc.Width + 3) / 4;
-        const UINT num_blocks_high = (desc.Height + 3) / 4;
-        const UINT total_size = num_blocks_wide * num_blocks_high * block_size;
-
-        hash = GetTexmodHash(static_cast<const char*>(d3dlr.pBits), total_size);
+    if (const UINT block = DxtBlockBytes(desc.Format)) {
+        // Block-compressed: hash the blocks contiguously (as it always has been).
+        const size_t blocks_wide = (desc.Width + 3) / 4;
+        const size_t blocks_high = (desc.Height + 3) / 4;
+        const size_t total_size = blocks_wide * blocks_high * block;
+        // The lock guarantees `pitch` bytes per block-row, so total_size stays within
+        // the locked region; the check just rejects an implausibly small pitch.
+        if (total_size && total_size <= pitch * blocks_high) {
+            std::vector<uint8_t> compact(total_size);
+            if (SafeCopyRows(compact.data(), bits, 1, total_size, total_size)) {
+                hash = GetTexmodHash(reinterpret_cast<const char*>(compact.data()), compact.size());
+            }
+        }
     }
     else {
-        // Uncompressed formats - use your existing row-by-row code
+        // Uncompressed: repack row-by-row, stripping the pitch padding.
         const int bits_per_pixel = GetBitsPerPixel(desc.Format);
-        if (bits_per_pixel == 0) {
-            texture->UnlockRect(0);
-            return 0;
+        const size_t row_size = bits_per_pixel ? static_cast<size_t>(desc.Width) * (bits_per_pixel / 8) : 0;
+        // Only read if a row fits inside the pitch the lock actually gave us. A wrong
+        // or unknown format (GetBitsPerPixel defaults to 32bpp) can make row_size
+        // larger than the real row, which would read past the buffer and crash.
+        if (row_size && desc.Height && row_size <= pitch) {
+            std::vector<uint8_t> compact(static_cast<size_t>(desc.Height) * row_size);
+            if (SafeCopyRows(compact.data(), bits, desc.Height, row_size, pitch)) {
+                hash = GetTexmodHash(reinterpret_cast<const char*>(compact.data()), compact.size());
+            }
         }
-
-        const int bytes_per_pixel = bits_per_pixel / 8;
-        const int row_size = desc.Width * bytes_per_pixel;
-
-        std::vector<uint8_t> compact_data(desc.Height * row_size);
-        size_t offset = 0;
-
-        for (UINT y = 0; y < desc.Height; ++y) {
-            const uint8_t* row = static_cast<const uint8_t*>(d3dlr.pBits) + y * d3dlr.Pitch;
-            memcpy(compact_data.data() + offset, row, row_size);
-            offset += row_size;
-        }
-
-        hash = GetTexmodHash(reinterpret_cast<const char*>(compact_data.data()), compact_data.size());
     }
 
     texture->UnlockRect(0);
