@@ -712,12 +712,17 @@ namespace {
         GW::Hook::EnterHook();
         HRESULT result = CreateDx9Texture_Ret(device, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
 
-        if (LastCreatedTexture != nullptr) {
-            const auto hash = Resources::GetTexmodHash(LastCreatedTexture);
-            if (!dx9_textures_created_by_hash.contains(hash)) {
-                dx9_textures_created_by_hash[hash] = LastCreatedTexture;
+        // Hash the texture created on the *previous* call (deferred so the game has
+        // had a chance to fill it with pixel data). We hold our own reference on it
+        // (see below), so it is guaranteed alive here even if the game released it in
+        // the meantime - hashing a freed texture reads freed memory and crashes.
+        if (auto tex = LastCreatedTexture) {
+            LastCreatedTexture = nullptr; // clear before Release so the re-entrant release hook is a no-op
+            const auto hash = Resources::GetTexmodHash(tex);
+            if (hash && !dx9_textures_created_by_hash.contains(hash)) {
+                dx9_textures_created_by_hash[hash] = tex;
             }
-            LastCreatedTexture = 0;
+            tex->Release(); // drop our deferred-hash reference
         }
 
         if (SUCCEEDED(result) && *ppTexture) {
@@ -730,6 +735,9 @@ namespace {
                 GW::Hook::EnableHooks(TextureRelease_Func);
             }
             LastCreatedTexture = *ppTexture;
+            // Keep it alive until we hash it next call; the game may free it (e.g. on
+            // a map change) before we get there otherwise.
+            LastCreatedTexture->AddRef();
         }
 
         GW::Hook::LeaveHook();
@@ -779,7 +787,10 @@ namespace {
             GW::Hook::RemoveHook(CreateDx9Texture_Func);
             CreateDx9Texture_Func = nullptr;
         }
-        LastCreatedTexture = nullptr;
+        if (auto tex = LastCreatedTexture) {
+            LastCreatedTexture = nullptr;
+            tex->Release(); // drop the deferred-hash reference we were holding
+        }
     }
 
     // Full teardown for module shutdown: remove both hooks and forget every capture.
@@ -797,7 +808,10 @@ namespace {
             TextureRelease_Func = nullptr;
         }
         dx9_textures_created_by_hash.clear();
-        LastCreatedTexture = nullptr;
+        if (LastCreatedTexture) {
+            LastCreatedTexture->Release(); // drop the deferred-hash reference we were holding
+            LastCreatedTexture = nullptr;
+        }
     }
 
     // While recording, paint a hard-to-miss reminder over the game (top-centre): the
