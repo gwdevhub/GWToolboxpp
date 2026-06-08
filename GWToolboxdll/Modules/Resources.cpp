@@ -1669,10 +1669,7 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
 
     return hash;
 }
-// Bytes per 4x4 block for the block-compressed formats, or 0 if the format is not
-// block compressed. DXT2/DXT4 (premultiplied-alpha variants) share DXT3/DXT5's
-// 16-byte blocks - handling them here keeps them out of the uncompressed path,
-// where they would be read as 4x too many rows and overrun the locked buffer.
+// Bytes per 4x4 block for block-compressed formats, or 0 if not block compressed.
 static UINT DxtBlockBytes(D3DFORMAT fmt)
 {
     switch (fmt) {
@@ -1688,12 +1685,9 @@ static UINT DxtBlockBytes(D3DFORMAT fmt)
     }
 }
 
-// Raw row copy, kept separate (and free of any object that needs unwinding) so it
-// can be wrapped in SEH. LockRect can hand back a pointer whose backing store is no
-// longer valid - a surface lost to a device reset, or memory the game reused after a
-// map change - and reading it would otherwise crash the whole game. On a fault we
-// bail and the caller treats the texture as un-hashable. Callers must still ensure
-// row_bytes <= pitch so a valid lock is never read out of bounds.
+// SEH-guarded row copy (no unwinding objects, so __try is allowed). LockRect can
+// return a pointer whose backing store is gone (lost surface, reused memory); on a
+// fault we bail instead of crashing. Callers must keep row_bytes <= pitch.
 static bool SafeCopyRows(uint8_t* dst, const uint8_t* src, size_t rows, size_t row_bytes, size_t pitch)
 {
     __try {
@@ -1724,13 +1718,11 @@ uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
     uint32_t hash = 0;
 
     if (const UINT block = DxtBlockBytes(desc.Format)) {
-        // Block-compressed: hash the blocks contiguously (as it always has been).
+        // Block-compressed: hash the blocks contiguously.
         const size_t blocks_wide = (desc.Width + 3) / 4;
         const size_t blocks_high = (desc.Height + 3) / 4;
         const size_t total_size = blocks_wide * blocks_high * block;
-        // The lock guarantees `pitch` bytes per block-row, so total_size stays within
-        // the locked region; the check just rejects an implausibly small pitch.
-        if (total_size && total_size <= pitch * blocks_high) {
+        if (total_size && total_size <= pitch * blocks_high) { // reject an implausibly small pitch
             std::vector<uint8_t> compact(total_size);
             if (SafeCopyRows(compact.data(), bits, 1, total_size, total_size)) {
                 hash = GetTexmodHash(reinterpret_cast<const char*>(compact.data()), compact.size());
@@ -1741,9 +1733,7 @@ uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
         // Uncompressed: repack row-by-row, stripping the pitch padding.
         const int bits_per_pixel = GetBitsPerPixel(desc.Format);
         const size_t row_size = bits_per_pixel ? static_cast<size_t>(desc.Width) * (bits_per_pixel / 8) : 0;
-        // Only read if a row fits inside the pitch the lock actually gave us. A wrong
-        // or unknown format (GetBitsPerPixel defaults to 32bpp) can make row_size
-        // larger than the real row, which would read past the buffer and crash.
+        // row_size > pitch means a wrong/unknown format; skip rather than overrun.
         if (row_size && desc.Height && row_size <= pitch) {
             std::vector<uint8_t> compact(static_cast<size_t>(desc.Height) * row_size);
             if (SafeCopyRows(compact.data(), bits, desc.Height, row_size, pitch)) {

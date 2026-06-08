@@ -662,15 +662,10 @@ namespace {
     // =========================================================================
     // DirectX9 texture capture
     //
-    // Hook the game's D3D9 device CreateTexture so we can build a gallery of every
-    // texture the game creates, keyed by gMod/uMod/Texmod hash, and export each one
-    // as DDS (for use as a texmod replacement) or PNG.
-    //
-    // Capturing is opt-in (`recording`) because the CreateTexture hook runs - and
-    // hashes a texture - for every texture the game makes, which is expensive enough
-    // to cost framerate. The cheap Release hook, once installed, is left in place so
-    // the captured map never holds a freed (dangling) texture pointer and stays safe
-    // to browse/export after recording is stopped.
+    // Hook D3D9 CreateTexture to gather every texture the game makes, keyed by
+    // gMod/uMod/Texmod hash, for export as DDS/PNG. Capturing is opt-in (`recording`)
+    // because hashing every created texture costs framerate. The cheap Release hook,
+    // once installed, stays in place so the map never keeps a freed texture pointer.
     // =========================================================================
 
     std::map<uint32_t, IDirect3DTexture9*> dx9_textures_created_by_hash;
@@ -712,10 +707,9 @@ namespace {
         GW::Hook::EnterHook();
         HRESULT result = CreateDx9Texture_Ret(device, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
 
-        // Hash the texture created on the *previous* call (deferred so the game has
-        // had a chance to fill it with pixel data). We hold our own reference on it
-        // (see below), so it is guaranteed alive here even if the game released it in
-        // the meantime - hashing a freed texture reads freed memory and crashes.
+        // Hash the texture from the *previous* call (deferred so the game has had a
+        // chance to fill it). Our reference (taken below) keeps it alive across the
+        // gap, so it can't be freed before we hash it.
         if (auto tex = LastCreatedTexture) {
             LastCreatedTexture = nullptr; // clear before Release so the re-entrant release hook is a no-op
             const auto hash = Resources::GetTexmodHash(tex);
@@ -725,11 +719,9 @@ namespace {
             tex->Release(); // drop our deferred-hash reference
         }
 
-        // Only track content textures texmod can actually replace: managed/system-mem
-        // textures, which are lockable and survive a device reset. Skip D3DPOOL_DEFAULT
-        // (render targets, dynamic surfaces) - it is unsafe to lock, is freed and
-        // recreated on a device reset, and holding a reference on it would block that
-        // reset.
+        // Only track managed/system-mem content textures (lockable, survive a device
+        // reset). Skip D3DPOOL_DEFAULT (render targets/dynamic): unsafe to lock,
+        // recreated on reset, and a held reference would block that reset.
         if (SUCCEEDED(result) && *ppTexture && Pool != D3DPOOL_DEFAULT) {
             // Hook Release on first texture creation
             if (!TextureRelease_Func) {
@@ -740,18 +732,15 @@ namespace {
                 GW::Hook::EnableHooks(TextureRelease_Func);
             }
             LastCreatedTexture = *ppTexture;
-            // Keep it alive until we hash it next call; the game may free it (e.g. on
-            // a map change) before we get there otherwise.
-            LastCreatedTexture->AddRef();
+            LastCreatedTexture->AddRef(); // keep alive until we hash it next call
         }
 
         GW::Hook::LeaveHook();
         return result;
     }
 
-    // Toggle the expensive CreateTexture capture hook to match `record`. The Release
-    // hook is installed alongside it the first time we start, then left in place even
-    // after stopping so already-captured textures can't dangle (see section comment).
+    // Toggle the CreateTexture capture hook to match `record`. The Release hook is
+    // installed alongside it on first start and left in place after stopping.
     void SetTextureCapture(bool record)
     {
         if (record) {
@@ -785,8 +774,7 @@ namespace {
             }
             return;
         }
-        // Stop capturing new textures, but keep the Release hook (and the captured
-        // map) so the gallery stays valid and browsable after recording is stopped.
+        // Stop capturing, but keep the Release hook and map so the gallery stays valid.
         if (CreateDx9Texture_Func) {
             GW::Hook::DisableHooks(CreateDx9Texture_Func);
             GW::Hook::RemoveHook(CreateDx9Texture_Func);
@@ -794,7 +782,7 @@ namespace {
         }
         if (auto tex = LastCreatedTexture) {
             LastCreatedTexture = nullptr;
-            tex->Release(); // drop the deferred-hash reference we were holding
+            tex->Release(); // drop our deferred-hash reference
         }
     }
 
@@ -814,14 +802,12 @@ namespace {
         }
         dx9_textures_created_by_hash.clear();
         if (LastCreatedTexture) {
-            LastCreatedTexture->Release(); // drop the deferred-hash reference we were holding
+            LastCreatedTexture->Release(); // drop our deferred-hash reference
             LastCreatedTexture = nullptr;
         }
     }
 
-    // While recording, paint a hard-to-miss reminder over the game (top-centre): the
-    // capture is expensive, so make sure the user knows it is running and give them a
-    // one-click way to the setting that stops it.
+    // While recording, show an on-screen reminder (top-centre) with a button to stop.
     void DrawRecordingOverlay()
     {
         if (!recording) return;
@@ -830,8 +816,7 @@ namespace {
         const float center_x = viewport->Pos.x + viewport->Size.x * 0.5f;
         const float top_y = viewport->Pos.y + viewport->Size.y * 0.04f;
 
-        // Big title on the background draw list so it sits over the game world but
-        // behind toolbox windows.
+        // Big title on the background draw list (over the game, behind toolbox windows).
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
         ImFont* font = FontLoader::GetFont();
         const char* title = ICON_FA_CIRCLE " Recording textures";
@@ -843,8 +828,7 @@ namespace {
         draw_list->AddText(title_pos, IM_COL32(255, 80, 80, 255), title);
         ImGui::PopFont(draw_list);
 
-        // Explanatory line + a button to stop, in a transparent borderless window
-        // beneath the title (a button needs a real window to be clickable).
+        // Stop button in a transparent window below (a button needs a real window).
         const float below_y = title_pos.y + title_dim.y + ImGui::GetStyle().ItemSpacing.y;
         ImGui::SetNextWindowPos({center_x, below_y}, ImGuiCond_Always, {0.5f, 0.f});
         ImGui::SetNextWindowBgAlpha(0.f);
@@ -967,8 +951,7 @@ void TexmodModule::Terminate()
 
 void TexmodModule::RegisterSettingsContent()
 {
-    // Bypass ToolboxUIElement's version (which adds visibility/size/position UI);
-    // texmod has no on-screen window of its own, only the recording overlay.
+    // Plain-module settings: skip ToolboxUIElement's visibility/size/position UI.
     ToolboxModule::RegisterSettingsContent();
 }
 

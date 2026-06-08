@@ -10,9 +10,8 @@
 // priority: when two packs replace the same texture, the one higher in the list
 // wins, so reordering re-adds packs in the desired order.
 //
-// It is a widget (rather than a plain module) only so it gets a per-frame Draw():
-// while texture recording is active it paints an on-screen overlay. Its settings
-// are still registered like a plain module (no visibility/position controls).
+// A widget (not a plain module) only so it gets a per-frame Draw() for the texture-
+// recording overlay; its settings are still registered like a plain module.
 // ---------------------------------------------------------------------------
 class TexmodModule final : public ToolboxWidget {
 public:
@@ -36,8 +35,7 @@ public:
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
 
-    // Register settings like a plain module: just DrawSettingsInternal(), without
-    // the visibility radio and size/position controls a widget normally adds.
+    // Register settings like a plain module (no widget visibility/position controls).
     void RegisterSettingsContent() override;
 
 private:
