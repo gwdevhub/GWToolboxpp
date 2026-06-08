@@ -946,13 +946,7 @@ void TexmodModule::Terminate()
 {
     TeardownTextureCapture();
     ShutdownGMod(); // synchronously unloads every pack from gMod
-    ToolboxWidget::Terminate();
-}
-
-void TexmodModule::RegisterSettingsContent()
-{
-    // Plain-module settings: skip ToolboxUIElement's visibility/size/position UI.
-    ToolboxModule::RegisterSettingsContent();
+    ToolboxModule::Terminate();
 }
 
 void TexmodModule::DrawSettingsInternal()

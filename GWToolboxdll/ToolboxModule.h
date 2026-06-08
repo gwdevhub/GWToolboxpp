@@ -7,6 +7,7 @@
 using SectionDrawCallback = std::function<void(const std::string& section, bool is_showing)>;
 class ToolboxModule;
 class ToolboxIni;
+struct IDirect3DDevice9;
 
 struct SectionDrawCallbackInfo {
     float weighting{};
@@ -71,6 +72,12 @@ public:
 
     // Update. Will always be called once every frame. Delta in seconds
     virtual void Update(float) { }
+
+    // Called once per render frame, inside the ImGui frame, for every enabled module.
+    // UI elements override this to draw their window; a plain module can use it to
+    // paint an overlay (e.g. on the background draw list), which it otherwise can't
+    // do from Update() (that runs on the game thread, outside the ImGui frame).
+    virtual void Draw(IDirect3DDevice9*) { }
 
     // This is provided (and called), but use ImGui::GetIO() during update/render if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }

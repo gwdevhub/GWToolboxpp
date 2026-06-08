@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ToolboxWidget.h>
+#include <ToolboxModule.h>
 
 // ---------------------------------------------------------------------------
 // TexmodModule
@@ -10,10 +10,10 @@
 // priority: when two packs replace the same texture, the one higher in the list
 // wins, so reordering re-adds packs in the desired order.
 //
-// A widget (not a plain module) only so it gets a per-frame Draw() for the texture-
-// recording overlay; its settings are still registered like a plain module.
+// Draw() (a plain-module render hook) is used only to paint the texture-recording
+// overlay; the module has no window of its own.
 // ---------------------------------------------------------------------------
-class TexmodModule final : public ToolboxWidget {
+class TexmodModule final : public ToolboxModule {
 public:
     static TexmodModule& Instance()
     {
@@ -34,9 +34,6 @@ public:
     void DrawSettingsInternal() override;
     void LoadSettings(ToolboxIni* ini) override;
     void SaveSettings(ToolboxIni* ini) override;
-
-    // Register settings like a plain module (no widget visibility/position controls).
-    void RegisterSettingsContent() override;
 
 private:
     TexmodModule() = default;
