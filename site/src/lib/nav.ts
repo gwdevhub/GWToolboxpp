@@ -66,6 +66,7 @@ export const navGroups: NavGroup[] = [
       { slug: 'audio_settings', label: 'Audio Settings' },
       { slug: 'text-to-speech', label: 'Text-to-Speech' },
       { slug: 'theme', label: 'Theme' },
+      { slug: 'texmod', label: 'Texture Mods (gMod)' },
       { slug: 'reroll', label: 'Reroll' },
       { slug: 'integrations', label: 'Integrations' },
       { slug: 'input_modules', label: 'Input' },
