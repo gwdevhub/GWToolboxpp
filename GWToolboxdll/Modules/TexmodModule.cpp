@@ -48,7 +48,27 @@ namespace {
     constexpr int GMOD_RETURN_OK = 0;
     constexpr int GMOD_RETURN_EXISTS = -70;
 
-    std::filesystem::path gmodDllLocation;
+    // gMod version check / download (mirrors Updater's GitHub-release logic). gMod is
+    // managed automatically: on startup we fetch the latest release and, if it is
+    // newer than the copy kept in the GWToolbox folder (or none is present), download
+    // it there and load it.
+    struct GModReleaseAsset {
+        std::string name;
+        std::string browser_download_url;
+    };
+    struct GModRelease {
+        std::string tag_name;
+        std::vector<GModReleaseAsset> assets;
+    };
+    constexpr glz::opts gmod_json_opts{.error_on_unknown_keys = false};
+
+    enum class GmodUpdateStep { Idle, Checking, Downloading };
+    GmodUpdateStep gmodUpdateStep = GmodUpdateStep::Idle;
+
+    std::string gmodLatestVersion;        // latest release tag, 'v' stripped (e.g. "1.8.0.2")
+    std::string gmodLocalVersion;         // file version of the managed gMod.dll
+    bool gmodLocalVersionChecked = false; // recompute gmodLocalVersion when false
+    std::string gmodUpdateStatus;         // one-line status for the version row
 
     struct TexturePackEntry {
         std::filesystem::path path;
@@ -161,6 +181,10 @@ namespace {
     // after ApplyLoadOrder; forward-declared here for InitGMod.
     void RestoreLoadedPacks();
 
+    // Check GitHub and download a newer gMod if needed. Forward-declared so adding a
+    // pack can trigger the download when gMod isn't loaded yet. Defined further down.
+    void CheckAndUpdateGmod();
+
     // Translate an image RVA to a raw file offset via the section table (0 = not found).
     uint32_t RvaToFileOffset(const IMAGE_SECTION_HEADER* sec, unsigned n, uint32_t rva)
     {
@@ -244,14 +268,13 @@ namespace {
 
     std::filesystem::path FindGmodDll()
     {
-        // Explicit user override (Browse...) wins if it still exists.
-        if (!gmodDllLocation.empty() && std::filesystem::exists(gmodDllLocation)) return gmodDllLocation;
-
-        // Search next to the running exe (Gw.exe) and next to GWToolbox.dll.
+        // Prefer the toolbox-managed copy (auto-downloaded into the GWToolbox folder),
+        // then fall back to one sitting next to the running exe or GWToolbox.dll.
         std::vector<std::filesystem::path> dirs;
         const auto add_dir = [&](std::filesystem::path d) {
             if (!d.empty() && std::ranges::find(dirs, d) == dirs.end()) dirs.push_back(std::move(d));
         };
+        add_dir(Resources::GetPath("gmod"));             // toolbox-managed copy
         add_dir(DirOfModule(nullptr));                   // running exe
         add_dir(DirOfModule(GWToolbox::GetDLLModule())); // toolbox dll
 
@@ -313,7 +336,7 @@ namespace {
         // 2. Find and load gMod.dll.
         const auto found = FindGmodDll();
         if (found.empty()) {
-            statusMessage = "Error: Could not find gMod.dll. Place it next to GWToolbox.dll or use Browse.";
+            statusMessage = "gMod.dll not found yet - it is downloaded automatically. Check your internet connection.";
             return false;
         }
 
@@ -443,6 +466,7 @@ namespace {
     // the combined set so the packs the user had enabled are loaded again.
     void RestoreLoadedPacks()
     {
+        gmodLocalVersionChecked = false; // gMod is now loaded; refresh the displayed version
         SyncExternalPacks(/*clear_missing=*/false);
         ApplyLoadOrder();
     }
@@ -488,10 +512,6 @@ namespace {
 
     bool LoadTexturePack(const std::filesystem::path& path)
     {
-        if (!gmodReady) {
-            statusMessage = "gMod is not initialised.";
-            return false;
-        }
         if (!std::filesystem::exists(path)) {
             statusMessage = "File not found: " + path.string();
             return false;
@@ -499,6 +519,13 @@ namespace {
         auto pack = FindPack(path, true);
         const auto filename = pack->path.filename().string();
         pack->loaded = true;
+        if (!gmodReady) {
+            // First pack configured but gMod isn't loaded yet: fetch/download it now.
+            // The pack stays flagged loaded and is applied once gMod becomes ready.
+            statusMessage = "Preparing gMod for: " + filename;
+            CheckAndUpdateGmod();
+            return true;
+        }
         // The actual load runs on a worker thread; the result (and any failure)
         // is reported when it reconciles. Show an optimistic status meanwhile.
         statusMessage = "Loading: " + filename;
@@ -507,6 +534,162 @@ namespace {
     }
 
 
+
+    // =========================================================================
+    // gMod version check / download
+    // =========================================================================
+
+    // Read a DLL's file-version resource as "major.minor.patch.build". Empty if the
+    // file has no version info; gMod.dll's matches its GitHub release tag.
+    std::string GetDllFileVersion(const std::filesystem::path& path)
+    {
+        if (path.empty()) return {};
+        const auto wp = path.wstring();
+        DWORD handle = 0;
+        const DWORD size = GetFileVersionInfoSizeW(wp.c_str(), &handle);
+        if (!size) return {};
+        std::vector<BYTE> data(size);
+        if (!GetFileVersionInfoW(wp.c_str(), handle, size, data.data())) return {};
+        VS_FIXEDFILEINFO* fi = nullptr;
+        UINT len = 0;
+        if (!VerQueryValueW(data.data(), L"\\", reinterpret_cast<LPVOID*>(&fi), &len) || !fi) return {};
+        return std::format("{}.{}.{}.{}", HIWORD(fi->dwFileVersionMS), LOWORD(fi->dwFileVersionMS),
+                           HIWORD(fi->dwFileVersionLS), LOWORD(fi->dwFileVersionLS));
+    }
+
+    // Full path of the gMod.dll currently in use: the loaded module if gMod is
+    // active, otherwise wherever FindGmodDll would load it from.
+    std::filesystem::path CurrentGmodDllPath()
+    {
+        if (gmodReady && gmodDll) {
+            wchar_t buf[MAX_PATH] = {};
+            if (GetModuleFileNameW(gmodDll, buf, MAX_PATH)) return buf;
+        }
+        return FindGmodDll();
+    }
+
+    void RefreshLocalGmodVersion()
+    {
+        gmodLocalVersion = GetDllFileVersion(CurrentGmodDllPath());
+        gmodLocalVersionChecked = true;
+    }
+
+    // Where the toolbox keeps its managed gMod.dll.
+    std::filesystem::path ManagedGmodDllPath()
+    {
+        return Resources::GetPath("gmod") / "gMod.dll";
+    }
+
+    // Compare dotted version strings ("1.8.0.2"): >0 if a is newer, <0 if older, 0 if
+    // equal. Missing trailing components count as 0, so "1.8" == "1.8.0.0".
+    int CompareVersions(const std::string& a, const std::string& b)
+    {
+        const auto parse = [](const std::string& v) {
+            std::vector<int> out;
+            for (size_t i = 0; i < v.size();) {
+                if (v[i] < '0' || v[i] > '9') { ++i; continue; }
+                int n = 0;
+                while (i < v.size() && v[i] >= '0' && v[i] <= '9') n = n * 10 + (v[i++] - '0');
+                out.push_back(n);
+            }
+            return out;
+        };
+        const auto va = parse(a), vb = parse(b);
+        for (size_t i = 0; i < std::max(va.size(), vb.size()); ++i) {
+            const int x = i < va.size() ? va[i] : 0;
+            const int y = i < vb.size() ? vb[i] : 0;
+            if (x != y) return x < y ? -1 : 1;
+        }
+        return 0;
+    }
+
+    // Re-initialise after the managed gMod.dll changes. gMod loads as a process-wide
+    // d3d9 proxy and can't be hot-swapped once active, so if it is already loaded we
+    // just ask the user to restart.
+    void ReloadGmod()
+    {
+        gmodLocalVersionChecked = false;
+        if (gmodReady) {
+            statusMessage = "gMod updated. Restart Guild Wars to load the new version.";
+            return;
+        }
+        gmodLoadAttempted = false;
+        InitGMod();
+    }
+
+    // Fetch the latest gMod release and, if it is newer than the managed copy (or none
+    // exists), download it into the GWToolbox folder and load it. All network/disk work
+    // runs on a worker thread; state changes are posted back to the main thread.
+    void CheckAndUpdateGmod()
+    {
+        if (gmodUpdateStep != GmodUpdateStep::Idle) return;
+        gmodUpdateStep = GmodUpdateStep::Checking;
+        gmodUpdateStatus.clear();
+        Resources::EnqueueWorkerTask([] {
+            std::string response;
+            unsigned int tries = 0;
+            const auto url = "https://api.github.com/repos/gwdevhub/gMod/releases/latest";
+            bool success = false;
+            do {
+                success = Resources::Download(url, response);
+                tries++;
+            } while (!success && tries < 5);
+
+            GModRelease release;
+            const bool parsed = success && !glz::read<gmod_json_opts>(release, response);
+
+            std::string version, dll_url;
+            if (parsed) {
+                version = release.tag_name;
+                if (!version.empty() && (version[0] == 'v' || version[0] == 'V')) version.erase(0, 1);
+                for (const auto& asset : release.assets) {
+                    if (asset.name == "gMod.dll") dll_url = asset.browser_download_url;
+                }
+            }
+
+            if (!parsed || dll_url.empty()) {
+                Resources::EnqueueMainTask([] {
+                    gmodUpdateStep = GmodUpdateStep::Idle;
+                    gmodUpdateStatus = "Could not check for gMod updates.";
+                });
+                return;
+            }
+
+            const auto managed = ManagedGmodDllPath();
+            const std::string local = GetDllFileVersion(managed);
+            if (!local.empty() && CompareVersions(version, local) <= 0) {
+                // Already have the latest (or newer).
+                Resources::EnqueueMainTask([version, local] {
+                    gmodUpdateStep = GmodUpdateStep::Idle;
+                    gmodLatestVersion = version;
+                    gmodLocalVersion = local;
+                    gmodUpdateStatus = "gMod is up to date (" + version + ").";
+                });
+                return;
+            }
+
+            Resources::EnqueueMainTask([version] {
+                gmodUpdateStep = GmodUpdateStep::Downloading;
+                gmodLatestVersion = version;
+                gmodUpdateStatus = "Downloading gMod " + version + "...";
+            });
+
+            Resources::EnsureFolderExists(managed.parent_path());
+            std::wstring error;
+            const bool ok = Resources::Download(managed, dll_url, error);
+
+            Resources::EnqueueMainTask([ok, version, error] {
+                gmodUpdateStep = GmodUpdateStep::Idle;
+                if (!ok) {
+                    gmodUpdateStatus = "gMod download failed: " + std::string(error.begin(), error.end());
+                    return;
+                }
+                gmodLocalVersion = version;
+                gmodUpdateStatus = "Updated gMod to " + version + ".";
+                ReloadGmod();
+            });
+        });
+    }
 
     // =========================================================================
     // UI helpers
@@ -518,17 +701,6 @@ namespace {
         std::filesystem::path p = path;
         if (!std::filesystem::exists(p)) return;
         LoadTexturePack(p);
-    }
-
-    void OnGmodDllFileChosen(const char* path)
-    {
-        if (!path) return;
-        std::filesystem::path p = path;
-        if (!std::filesystem::exists(p)) return;
-        gmodDllLocation = p;
-        statusMessage = "gMod DLL set to: " + gmodDllLocation.string();
-        gmodLoadAttempted = false;
-        InitGMod();
     }
 
     void DrawStatusBar()
@@ -543,13 +715,44 @@ namespace {
                 gmodLoadAttempted = false;
                 InitGMod();
             }
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Browse")) Resources::OpenFileDialog(OnGmodDllFileChosen, "dll", Resources::GetSettingsFolderPath().string().c_str());
         }
         if (!statusMessage.empty()) {
             ImGui::SameLine();
             ImGui::TextDisabled("  %s", statusMessage.c_str());
         }
+    }
+
+    // gMod.dll status: gMod is downloaded and kept up to date automatically; show the
+    // installed version against the latest release and offer a manual re-check.
+    void DrawGmodSource()
+    {
+        if (!gmodLocalVersionChecked) RefreshLocalGmodVersion();
+
+        if (!gmodLocalVersion.empty())
+            ImGui::Text("Installed gMod version: %s", gmodLocalVersion.c_str());
+        else
+            ImGui::TextDisabled("No gMod.dll installed yet.");
+
+        if (!gmodLatestVersion.empty()) {
+            ImGui::SameLine();
+            if (!gmodLocalVersion.empty() && CompareVersions(gmodLatestVersion, gmodLocalVersion) <= 0)
+                ImGui::TextColored({0.4f, 1.0f, 0.4f, 1.0f}, ICON_FA_CHECK " up to date");
+            else
+                ImGui::TextColored({1.0f, 0.85f, 0.4f, 1.0f}, "(latest: %s)", gmodLatestVersion.c_str());
+        }
+
+        const bool busy = gmodUpdateStep != GmodUpdateStep::Idle;
+        ImGui::BeginDisabled(busy);
+        const char* label = gmodUpdateStep == GmodUpdateStep::Downloading ? "Downloading..."
+            : gmodUpdateStep == GmodUpdateStep::Checking                  ? "Checking..."
+                                                                         : "Check for gMod updates";
+        if (ImGui::Button(label)) CheckAndUpdateGmod();
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("gMod is downloaded automatically and kept in your GWToolbox folder.\nClick to check for a newer version now.");
+
+        if (!gmodUpdateStatus.empty())
+            ImGui::TextDisabled("%s", gmodUpdateStatus.c_str());
     }
 
     void DrawPackList()
@@ -953,6 +1156,8 @@ void TexmodModule::DrawSettingsInternal()
 {
     DrawStatusBar();
     ImGui::Separator();
+    DrawGmodSource();
+    ImGui::Separator();
     DrawPackList();
     ImGui::Separator();
     if (ImGui::Button("Add texture pack")) Resources::OpenFileDialog(OnTexmodFileChosen, "tpf,zip,dds", Resources::GetSettingsFolderPath().string().c_str());
@@ -964,7 +1169,6 @@ void TexmodModule::DrawSettingsInternal()
 void TexmodModule::LoadSettings(ToolboxIni* ini)
 {
     ToolboxModule::LoadSettings(ini);
-    gmodDllLocation = ini->GetValue(INI_SECTION, "gmod_dll_location", "");
     const int count = ini->GetLongValue(INI_SECTION, INI_PACK_COUNT, 0);
     packs.clear();
     for (int i = 0; i < count; i++) {
@@ -979,12 +1183,17 @@ void TexmodModule::LoadSettings(ToolboxIni* ini)
     // gMod is not ready yet (no device); the restored enabled flags are pushed to
     // it later by RestoreLoadedPacks(). This call is a no-op until then.
     SyncExternalPacks();
+
+    // Only fetch gMod for users who actually use texture packs: if any are configured,
+    // check GitHub and download a newer gMod automatically. Loading (Update ->
+    // InitGMod) then picks up whatever copy is in the GWToolbox folder. Users with no
+    // packs get the download lazily the moment they add their first one.
+    if (!packs.empty()) CheckAndUpdateGmod();
 }
 
 void TexmodModule::SaveSettings(ToolboxIni* ini)
 {
     ToolboxModule::SaveSettings(ini);
-    ini->SetValue(INI_SECTION, "gmod_dll_location", gmodDllLocation.string().c_str());
     ini->SetLongValue(INI_SECTION, INI_PACK_COUNT, static_cast<long>(packs.size()));
     for (size_t i = 0; i < packs.size(); i++) {
         const std::string key = std::string(INI_PACK_PATH) + std::to_string(i);
