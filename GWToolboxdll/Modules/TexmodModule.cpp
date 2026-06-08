@@ -88,12 +88,19 @@ namespace {
     // =========================================================================
 
     HMODULE gmodDll = nullptr;
+    // True only when this module called LoadLibrary on gmodDll, i.e. we own the
+    // reference and must FreeLibrary it on teardown. False when gMod was already
+    // present (e.g. injected as the d3d9.dll proxy) - that copy belongs to the game.
+    bool gmodLoadedByUs = false;
 
     std::vector<TexturePackEntry> packs;
 
     bool gmodReady = false;
     std::string statusMessage;
     bool gmodLoadAttempted = false;
+    // Set when gMod is no longer needed (last pack removed); the unload is performed
+    // from Update() rather than the draw pass.
+    bool gmodUnloadRequested = false;
 
     constexpr const char* INI_SECTION = "TexmodModule";
     constexpr const char* INI_PACK_COUNT = "PackCount";
@@ -323,6 +330,7 @@ namespace {
             HMODULE h = GetModuleHandleW(name);
             if (!h) continue;
             gmodDll = h;
+            gmodLoadedByUs = false; // already in the process; we don't own this reference
             if (!ResolveTextureClientFunctions()) {
                 gmodDll = nullptr;
                 continue;
@@ -333,6 +341,12 @@ namespace {
             statusMessage = "gMod was already active (pre-loaded). Texture pack loading enabled.";
             return true;
         }
+
+        // Only load our own copy of gMod when there is a pack to serve. With no packs
+        // there is nothing to mod, so we leave gMod unloaded rather than have it hook
+        // the device for nothing. (A gMod already injected as the d3d9 proxy was
+        // adopted above regardless of this.)
+        if (packs.empty()) return false;
 
         if (gmodLoadAttempted) {
             // statusMessage = "Error: gMod initialization already attempted and failed. Please fix the issue and click Retry.";
@@ -351,11 +365,13 @@ namespace {
             statusMessage = "Error: Could not load gMod.dll. Make sure it is next to GWToolbox.dll.";
             return false;
         }
+        gmodLoadedByUs = true; // we own this reference and must FreeLibrary it on teardown
 
         // 3. Resolve TextureClient shim exports.
         if (!ResolveTextureClientFunctions()) {
             FreeLibrary(gmodDll);
             gmodDll = nullptr;
+            gmodLoadedByUs = false;
             return false;
         }
         pfnSetDevice(GuildWars_IDirect3DDevice9_Instance);
@@ -479,13 +495,11 @@ namespace {
 
     void ShutdownGMod()
     {
-        if (!gmodReady) return;
-
-        // Unload synchronously: on teardown the worker threads are stopping, so a
-        // queued ApplyLoadOrder might never run. Holding apply_mutex waits out any
-        // in-flight worker reconcile; bumping the generation makes queued/running
-        // ones skip; then we remove everything here, last, so nothing reloads after.
-        {
+        if (gmodReady) {
+            // Unload synchronously: on teardown the worker threads are stopping, so a
+            // queued ApplyLoadOrder might never run. Holding apply_mutex waits out any
+            // in-flight worker reconcile; bumping the generation makes queued/running
+            // ones skip; then we remove everything here, last, so nothing reloads after.
             std::lock_guard lk(apply_mutex);
             ++apply_generation;
             for (auto& pack : packs) pack.loaded = false;
@@ -495,6 +509,21 @@ namespace {
         }
 
         gmodReady = false;
+        pfnAddFile = nullptr;
+        pfnRemoveFile = nullptr;
+        pfnGetFiles = nullptr;
+        pfnSetDevice = nullptr;
+
+        // Free the dll only if we loaded it. gMod's DllMain(DLL_PROCESS_DETACH) reverts
+        // all its D3D9 vtable hooks (RemoveAllD3D9Hooks), so this is its clean shutdown
+        // path. A gMod injected as the d3d9 proxy is owned by the game - never free it.
+        if (gmodLoadedByUs && gmodDll) {
+            FreeLibrary(gmodDll);
+        }
+        gmodDll = nullptr;
+        gmodLoadedByUs = false;
+        gmodLoadAttempted = false; // allow a fresh load later (e.g. when a pack is added)
+        gmodLocalVersionChecked = false;
     }
 
     // =========================================================================
@@ -856,6 +885,8 @@ namespace {
             if (ImGui::ConfirmButton(ICON_FA_TRASH, &del_bool)) {
                 if (pack.loaded) UnloadTexturePack(pack.path);
                 packs.erase(packs.begin() + i);
+                // No packs left to serve: drop gMod so it stops hooking the device.
+                if (packs.empty()) gmodUnloadRequested = true;
                 ImGui::PopID();
                 break;
             }
@@ -1142,6 +1173,14 @@ void TexmodModule::Update(float)
     // Keep the D3D9 CreateTexture capture hook matched to the recording toggle.
     SetTextureCapture(recording);
 
+    // Unload gMod once nothing needs it (requested when the last pack was removed).
+    if (gmodUnloadRequested) {
+        gmodUnloadRequested = false;
+        // Only unload what we own; an injected proxy is left to the game. ShutdownGMod
+        // already no-ops the FreeLibrary in that case, but skip the pack teardown too.
+        if (gmodLoadedByUs) ShutdownGMod();
+    }
+
     if (gmodReady) return;
     InitGMod();
 }
@@ -1154,7 +1193,7 @@ void TexmodModule::Draw(IDirect3DDevice9*)
 void TexmodModule::Terminate()
 {
     TeardownTextureCapture();
-    ShutdownGMod(); // synchronously unloads every pack from gMod
+    ShutdownGMod(); // unloads every pack and frees gMod.dll if we loaded it
     ToolboxModule::Terminate();
 }
 
