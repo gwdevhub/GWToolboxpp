@@ -619,13 +619,10 @@ namespace {
 
     std::vector<GW::Constants::HeroID> GetPartyHeroIDs()
     {
-        const auto party_info = GW::PartyMgr::GetPartyInfo();
-        const auto me = party_info ? GW::Agents::GetControlledCharacter() : 0;
-        if (!me) return {};
+        const auto& flags = GW::GetWorldContext()->hero_flags;
         std::vector<GW::Constants::HeroID> hero_ids;
-        for (const auto& hero : party_info->heroes) {
-            if (hero.owner_player_id != me->login_number) continue;
-            hero_ids.push_back(hero.hero_id);
+        for (auto& flag : flags) {
+            hero_ids.push_back(flag.hero_id);
         }
         return hero_ids;
     }
@@ -1680,7 +1677,7 @@ void InventoryScanner::Update()
             Set(InventoryScanner::Stage::WaitForHeroLoad);
         } break;
         case InventoryScanner::Stage::WaitForHeroLoad: {
-            auto waiting = GetPartyHeroIDs() != heroes_pending_load;
+            auto waiting = GetPartyHeroIDs().size() != heroes_pending_load.size();
             for (auto hero_id : heroes_pending_load) {
                 if (!GW::Items::GetHeroInventory(hero_id)) {
                     waiting = true;
@@ -1693,7 +1690,7 @@ void InventoryScanner::Update()
             Set(InventoryScanner::Stage::WaitForEmptyParty);
         } break;
         case InventoryScanner::Stage::DoRestoreHeroes: {
-            if (GetPartyHeroIDs() == original_heroes) Set(InventoryScanner::Stage::NextCharacter);
+            if (GetPartyHeroIDs().size() == original_heroes.size()) Set(InventoryScanner::Stage::NextCharacter);
         } break;
     }
 }
@@ -1958,7 +1955,7 @@ void AccountInventoryWindow::HandleHeroBag(GW::Constants::HeroID hero_id)
     if (initializing) return;
     const auto inventory = GW::Items::GetHeroInventory(hero_id);
     if (!inventory) return;
-    for (auto bag_ptr = &inventory->backpack; bag_ptr <= &inventory->unused_bag; ++bag_ptr) {
+    for (auto bag_ptr = &inventory->backpack; bag_ptr <= &inventory->equipped_items; ++bag_ptr) {
         const auto bag = *bag_ptr;
         if (!bag) continue;
         if (bag->bag_id() != GW::Constants::Bag::Equipped_Items) {
