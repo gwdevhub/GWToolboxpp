@@ -9,7 +9,7 @@ public:
     [[nodiscard]] bool IsUIElement() const override { return true; }
 
     // Draw user interface. Will be called every frame if the element is visible
-    virtual void Draw(IDirect3DDevice9*) { }
+    void Draw(IDirect3DDevice9*) override { }
 
     void UpdateLocationAgainstSnappedFrame();
     static void UpdateCachedFrameStates();

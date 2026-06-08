@@ -1128,6 +1128,12 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
             }
         }
 
+        // Non-UI modules have no window of their own but may still paint an overlay
+        // this frame (e.g. Texmod's recording banner).
+        for (size_t i = 0; i < other_modules_enabled.size(); i++) {
+            other_modules_enabled[i]->Draw(device);
+        }
+
 #ifdef _DEBUG
         // Feel free to uncomment to play with ImGui's features
         //ImGui::ShowDemoWindow();
