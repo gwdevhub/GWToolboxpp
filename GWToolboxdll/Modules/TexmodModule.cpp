@@ -9,7 +9,6 @@
 #include <d3d9.h>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <imgui.h>
 #include <map>
 #include <memory>
@@ -21,7 +20,6 @@
 #include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Utilities/Hooker.h>
 
-#include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 #include <Utils/FontLoader.h>
@@ -89,10 +87,6 @@ namespace {
     // =========================================================================
 
     HMODULE gmodDll = nullptr;
-    // True only when this module called LoadLibrary on gmodDll, i.e. we own the
-    // reference and must FreeLibrary it on teardown. False when gMod was already
-    // present (e.g. injected as the d3d9.dll proxy) - that copy belongs to the game.
-    bool gmodLoadedByUs = false;
 
     std::vector<TexturePackEntry> packs;
 
@@ -208,183 +202,47 @@ namespace {
     // pack can trigger the download when gMod isn't loaded yet. Defined further down.
     void CheckAndUpdateGmod();
 
-    // Translate an image RVA to a raw file offset via the section table (0 = not found).
-    uint32_t RvaToFileOffset(const IMAGE_SECTION_HEADER* sec, unsigned n, uint32_t rva)
+    // Where the toolbox keeps its managed gMod.dll (auto-downloaded).
+    std::filesystem::path ManagedGmodDllPath()
     {
-        for (unsigned i = 0; i < n; ++i) {
-            if (rva >= sec[i].VirtualAddress && rva < sec[i].VirtualAddress + sec[i].SizeOfRawData) return sec[i].PointerToRawData + (rva - sec[i].VirtualAddress);
-        }
-        return 0;
+        return Resources::GetPath("gmod") / "gMod.dll";
     }
 
-    // Read the exported function names from a PE file on disk. Empty on any error
-    // or if the file is not a 32-bit PE (gMod and Guild Wars are always x86).
-    std::vector<std::string> ReadDllExportNames(const std::filesystem::path& path)
-    {
-        std::vector<std::string> names;
-        std::error_code ec;
-        const auto size = std::filesystem::file_size(path, ec);
-        if (ec || size < sizeof(IMAGE_DOS_HEADER)) return names;
-
-        std::vector<uint8_t> img(static_cast<size_t>(size));
-        {
-            std::ifstream f(path, std::ios::binary);
-            if (!f.read(reinterpret_cast<char*>(img.data()), static_cast<std::streamsize>(img.size()))) return names;
-        }
-
-        // Every read below is bounds-checked: the file is untrusted.
-        const auto ok = [&](size_t off, size_t len) {
-            return off <= img.size() && len <= img.size() - off;
-        };
-
-        const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(img.data());
-        if (dos->e_magic != IMAGE_DOS_SIGNATURE) return names;
-        const size_t nt = static_cast<size_t>(dos->e_lfanew);
-        if (!ok(nt, sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER))) return names;
-        if (*reinterpret_cast<const DWORD*>(img.data() + nt) != IMAGE_NT_SIGNATURE) return names;
-
-        const auto* fh = reinterpret_cast<const IMAGE_FILE_HEADER*>(img.data() + nt + sizeof(DWORD));
-        const size_t opt = nt + sizeof(DWORD) + sizeof(IMAGE_FILE_HEADER);
-        if (!ok(opt, sizeof(WORD))) return names;
-        if (*reinterpret_cast<const WORD*>(img.data() + opt) != IMAGE_NT_OPTIONAL_HDR32_MAGIC) return names;
-        if (!ok(opt, sizeof(IMAGE_OPTIONAL_HEADER32))) return names;
-
-        const auto* oh = reinterpret_cast<const IMAGE_OPTIONAL_HEADER32*>(img.data() + opt);
-        if (oh->NumberOfRvaAndSizes <= static_cast<DWORD>(IMAGE_DIRECTORY_ENTRY_EXPORT)) return names;
-        const DWORD expRva = oh->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-        if (!expRva) return names; // no export directory
-
-        const size_t secOff = opt + fh->SizeOfOptionalHeader;
-        const unsigned nSec = fh->NumberOfSections;
-        if (!ok(secOff, static_cast<size_t>(nSec) * sizeof(IMAGE_SECTION_HEADER))) return names;
-        const auto* sec = reinterpret_cast<const IMAGE_SECTION_HEADER*>(img.data() + secOff);
-
-        const uint32_t expOff = RvaToFileOffset(sec, nSec, expRva);
-        if (!ok(expOff, sizeof(IMAGE_EXPORT_DIRECTORY))) return names;
-        const auto* exp = reinterpret_cast<const IMAGE_EXPORT_DIRECTORY*>(img.data() + expOff);
-
-        const uint32_t namesOff = RvaToFileOffset(sec, nSec, exp->AddressOfNames);
-        if (!ok(namesOff, static_cast<size_t>(exp->NumberOfNames) * sizeof(DWORD))) return names;
-        const auto* nameRvas = reinterpret_cast<const DWORD*>(img.data() + namesOff);
-
-        names.reserve(exp->NumberOfNames);
-        for (DWORD i = 0; i < exp->NumberOfNames; ++i) {
-            const uint32_t so = RvaToFileOffset(sec, nSec, nameRvas[i]);
-            if (!so || so >= img.size()) continue;
-            const char* s = reinterpret_cast<const char*>(img.data() + so);
-            const size_t len = strnlen(s, img.size() - so);
-            if (len < img.size() - so) names.emplace_back(s, len); // skip unterminated
-        }
-        return names;
-    }
-
-    // Mandatory gMod exports. GetFiles is required because reconciliation reads the
-    // current load order from it.
-    constexpr const char* kRequiredExports[] = {"AddFile", "RemoveFile", "GetFiles", "SetDevice"};
-
-    std::filesystem::path DirOfModule(HMODULE h)
-    {
-        wchar_t buf[MAX_PATH] = {};
-        if (!GetModuleFileNameW(h, buf, MAX_PATH)) return {};
-        return std::filesystem::path(buf).parent_path();
-    }
-
-    std::filesystem::path FindGmodDll()
-    {
-        // Prefer the toolbox-managed copy (auto-downloaded into the GWToolbox folder),
-        // then fall back to one sitting next to the running exe or GWToolbox.dll.
-        std::vector<std::filesystem::path> dirs;
-        const auto add_dir = [&](std::filesystem::path d) {
-            if (!d.empty() && std::ranges::find(dirs, d) == dirs.end()) dirs.push_back(std::move(d));
-        };
-        add_dir(Resources::GetPath("gmod"));             // toolbox-managed copy
-        add_dir(DirOfModule(nullptr));                   // running exe
-        add_dir(DirOfModule(GWToolbox::GetDLLModule())); // toolbox dll
-
-        std::filesystem::path found;
-
-        // Prefer a dedicated gMod.dll over a d3d9.dll proxy; sniff exports off
-        // disk so an incompatible file (e.g. the system d3d9.dll) is never loaded.
-        for (const auto& dir : dirs) {
-            for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
-                std::error_code ec;
-                auto candidate = dir / name;
-                if (!std::filesystem::exists(candidate, ec)) continue;
-                const auto names = ReadDllExportNames(candidate);
-                if (std::ranges::all_of(kRequiredExports, [&](const char* req) {
-                        return std::ranges::find(names, req) != names.end();
-                    })) {
-                    found = candidate;
-                    break;
-                }
-            }
-        }
-        return found;
-    }
-
+    // Load our own managed copy of gMod.dll and hand it the game's device. We never
+    // adopt a pre-existing gMod in the process; the toolbox always owns the copy it loads.
     bool InitGMod()
     {
         if (gmodReady) return true;
 
-        auto GuildWars_IDirect3DDevice9_Instance = GW::Render::GetDevice();
-        if (!GuildWars_IDirect3DDevice9_Instance) {
+        auto device = GW::Render::GetDevice();
+        if (!device) {
             statusMessage = "Error: Could not get IDirect3DDevice9 from GW::Render::GetDevice().";
             return false;
         }
 
-        // 1. Check whether a compatible module is already loaded in this process
-        //    (a dedicated gMod.dll, or a d3d9.dll proxy). GetProcAddress here loads
-        //    nothing new. A loaded module that lacks the exports (e.g. the system
-        //    d3d9.dll) is simply skipped rather than treated as an error.
-        for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
-            HMODULE h = GetModuleHandleW(name);
-            if (!h) continue;
-            gmodDll = h;
-            gmodLoadedByUs = false; // already in the process; we don't own this reference
-            if (!ResolveTextureClientFunctions()) {
-                gmodDll = nullptr;
-                continue;
-            }
-            pfnSetDevice(GuildWars_IDirect3DDevice9_Instance);
-            gmodReady = true;
-            RestoreLoadedPacks();
-            statusMessage = "gMod was already active (pre-loaded). Texture pack loading enabled.";
-            return true;
-        }
-
-        // Only load our own copy of gMod when there is a pack to serve. With no packs
-        // there is nothing to mod, so we leave gMod unloaded rather than have it hook
-        // the device for nothing. (A gMod already injected as the d3d9 proxy was
-        // adopted above regardless of this.)
+        // Nothing to mod with no packs: leave gMod unloaded rather than hook the device for nothing.
         if (packs.empty()) return false;
-
-        if (gmodLoadAttempted) {
-            // statusMessage = "Error: gMod initialization already attempted and failed. Please fix the issue and click Retry.";
-            return false;
-        }
+        if (gmodLoadAttempted) return false;
         gmodLoadAttempted = true;
-        // 2. Find and load gMod.dll.
-        const auto found = FindGmodDll();
-        if (found.empty()) {
+
+        const auto path = ManagedGmodDllPath();
+        std::error_code ec;
+        if (!std::filesystem::exists(path, ec)) {
             statusMessage = "gMod.dll not found yet - it is downloaded automatically. Check your internet connection.";
             return false;
         }
 
-        gmodDll = LoadLibraryW(found.wstring().c_str());
+        gmodDll = LoadLibraryW(path.wstring().c_str());
         if (!gmodDll) {
-            statusMessage = "Error: Could not load gMod.dll. Make sure it is next to GWToolbox.dll.";
+            statusMessage = "Error: Could not load gMod.dll.";
             return false;
         }
-        gmodLoadedByUs = true; // we own this reference and must FreeLibrary it on teardown
-
-        // 3. Resolve TextureClient shim exports.
         if (!ResolveTextureClientFunctions()) {
             FreeLibrary(gmodDll);
             gmodDll = nullptr;
-            gmodLoadedByUs = false;
             return false;
         }
-        pfnSetDevice(GuildWars_IDirect3DDevice9_Instance);
+        pfnSetDevice(device);
         gmodReady = true;
         RestoreLoadedPacks();
         return true;
@@ -525,14 +383,10 @@ namespace {
         pfnGetFiles = nullptr;
         pfnSetDevice = nullptr;
 
-        // Free the dll only if we loaded it. gMod's DllMain(DLL_PROCESS_DETACH) reverts
-        // all its D3D9 vtable hooks (RemoveAllD3D9Hooks), so this is its clean shutdown
-        // path. A gMod injected as the d3d9 proxy is owned by the game - never free it.
-        if (gmodLoadedByUs && gmodDll) {
-            FreeLibrary(gmodDll);
-        }
+        // Free our dll. gMod's DllMain(DLL_PROCESS_DETACH) reverts all its D3D9 vtable
+        // hooks (RemoveAllD3D9Hooks), so this is its clean shutdown path.
+        if (gmodDll) FreeLibrary(gmodDll);
         gmodDll = nullptr;
-        gmodLoadedByUs = false;
         gmodLoadAttempted = false; // allow a fresh load later (e.g. when a pack is added)
         gmodLocalVersionChecked = false;
     }
@@ -602,27 +456,10 @@ namespace {
         return std::format("{}.{}.{}.{}", HIWORD(fi->dwFileVersionMS), LOWORD(fi->dwFileVersionMS), HIWORD(fi->dwFileVersionLS), LOWORD(fi->dwFileVersionLS));
     }
 
-    // Full path of the gMod.dll currently in use: the loaded module if gMod is
-    // active, otherwise wherever FindGmodDll would load it from.
-    std::filesystem::path CurrentGmodDllPath()
-    {
-        if (gmodReady && gmodDll) {
-            wchar_t buf[MAX_PATH] = {};
-            if (GetModuleFileNameW(gmodDll, buf, MAX_PATH)) return buf;
-        }
-        return FindGmodDll();
-    }
-
     void RefreshLocalGmodVersion()
     {
-        gmodLocalVersion = GetDllFileVersion(CurrentGmodDllPath());
+        gmodLocalVersion = GetDllFileVersion(ManagedGmodDllPath());
         gmodLocalVersionChecked = true;
-    }
-
-    // Where the toolbox keeps its managed gMod.dll.
-    std::filesystem::path ManagedGmodDllPath()
-    {
-        return Resources::GetPath("gmod") / "gMod.dll";
     }
 
     // Compare dotted version strings ("1.8.0.2"): >0 if a is newer, <0 if older, 0 if
@@ -652,16 +489,11 @@ namespace {
         return 0;
     }
 
-    // Re-initialise after the managed gMod.dll changes. gMod loads as a process-wide
-    // d3d9 proxy and can't be hot-swapped once active, so if it is already loaded we
-    // just ask the user to restart.
+    // Load the managed gMod.dll after it has changed on disk. The caller unloads any
+    // active copy first, so we just clear the load-attempt latch and init afresh.
     void ReloadGmod()
     {
         gmodLocalVersionChecked = false;
-        if (gmodReady) {
-            statusMessage = "gMod updated. Restart Guild Wars to load the new version.";
-            return;
-        }
         gmodLoadAttempted = false;
         InitGMod();
     }
@@ -723,15 +555,36 @@ namespace {
                 gmodUpdateStatus = "Downloading gMod " + version + "...";
             });
 
+            // Download to a temp file: our gMod.dll may still be loaded (and thus locked),
+            // so we can't write the real file yet. We swap it in on the main thread below.
+            const auto tmp = managed.parent_path() / "gMod.tmp.dll";
             Resources::EnsureFolderExists(managed.parent_path());
             std::wstring error;
-            const bool ok = Resources::Download(managed, dll_url, error);
+            const bool ok = Resources::Download(tmp, dll_url, error);
 
-            Resources::EnqueueMainTask([ok, version, error] {
+            Resources::EnqueueMainTask([ok, version, error, managed, tmp] {
                 gmodUpdateStep = GmodUpdateStep::Idle;
                 if (!ok) {
                     gmodUpdateStatus = "gMod download failed: " + TextUtils::WStringToString(error);
                     return;
+                }
+                // Unload our copy so the file is no longer locked, then rename the temp
+                // download over the original and load the new version. ShutdownGMod clears
+                // the loaded flags, so remember the enabled packs to restore them after.
+                std::vector<std::filesystem::path> enabled;
+                for (const auto& pack : packs) {
+                    if (pack.loaded) enabled.push_back(pack.path);
+                }
+                ShutdownGMod();
+                std::error_code ec;
+                std::filesystem::rename(tmp, managed, ec);
+                if (ec) {
+                    std::filesystem::remove(tmp, ec);
+                    gmodUpdateStatus = "gMod update failed: could not replace gMod.dll.";
+                    return;
+                }
+                for (auto& pack : packs) {
+                    pack.loaded = std::ranges::find(enabled, pack.path) != enabled.end();
                 }
                 gmodLocalVersion = version;
                 gmodUpdateStatus = "Updated gMod to " + version + ".";
@@ -1189,9 +1042,7 @@ void TexmodModule::Update(float)
     // Unload gMod once nothing needs it (requested when the last pack was removed).
     if (gmodUnloadRequested) {
         gmodUnloadRequested = false;
-        // Only unload what we own; an injected proxy is left to the game. ShutdownGMod
-        // already no-ops the FreeLibrary in that case, but skip the pack teardown too.
-        if (gmodLoadedByUs) ShutdownGMod();
+        ShutdownGMod();
     }
 
     if (gmodReady) return;
@@ -1206,7 +1057,7 @@ void TexmodModule::Draw(IDirect3DDevice9*)
 void TexmodModule::Terminate()
 {
     TeardownTextureCapture();
-    ShutdownGMod(); // unloads every pack and frees gMod.dll if we loaded it
+    ShutdownGMod(); // unloads every pack and frees gMod.dll
     ToolboxModule::Terminate();
 }
 
