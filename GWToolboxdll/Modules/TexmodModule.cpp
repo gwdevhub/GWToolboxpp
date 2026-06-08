@@ -25,6 +25,7 @@
 #include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 #include <Utils/FontLoader.h>
+#include <Utils/TextUtils.h>
 
 // gMod GitHub release shape, parsed from the releases API. Kept at namespace scope
 // (external linkage) because glaze reflection can't bind types from an anonymous
@@ -107,6 +108,15 @@ namespace {
     constexpr const char* INI_PACK_PATH = "Pack";
     constexpr const char* INI_PACK_ENABLED = "PackEnabled";
 
+    // path::string() would narrow to the ANSI codepage and lose non-ASCII characters
+    // (e.g. a "µ" in a pack name). Encode as UTF-8 instead, which round-trips through
+    // the INI and renders correctly in ImGui. Pair with TextUtils::StringToWString to
+    // decode back to a path.
+    std::string PathToUtf8(const std::filesystem::path& p)
+    {
+        return TextUtils::WStringToString(p.wstring());
+    }
+
     // =========================================================================
     // gMod TextureClient helpers
     // =========================================================================
@@ -181,7 +191,7 @@ namespace {
                 it->loaded = true;
                 continue;
             }
-            packs.push_back({p, p.stem().string(), /*loaded=*/true, /*external=*/true});
+            packs.push_back({p, PathToUtf8(p.stem()), /*loaded=*/true, /*external=*/true});
         }
         if (clear_missing) {
             for (auto& pack : packs) {
@@ -537,7 +547,7 @@ namespace {
         });
         if (it == packs.end()) {
             if (create_if_not_found) {
-                packs.push_back({path, path.stem().string(), false, false});
+                packs.push_back({path, PathToUtf8(path.stem()), false, false});
                 return &packs.back();
             }
             return nullptr;
@@ -548,11 +558,11 @@ namespace {
     bool LoadTexturePack(const std::filesystem::path& path)
     {
         if (!std::filesystem::exists(path)) {
-            statusMessage = "File not found: " + path.string();
+            statusMessage = "File not found: " + PathToUtf8(path);
             return false;
         }
         auto pack = FindPack(path, true);
-        const auto filename = pack->path.filename().string();
+        const auto filename = PathToUtf8(pack->path.filename());
         pack->loaded = true;
         if (!gmodReady) {
             // First pack configured but gMod isn't loaded yet: fetch/download it now.
@@ -733,7 +743,11 @@ namespace {
     void OnTexmodFileChosen(const char* path)
     {
         if (!path) return;
-        std::filesystem::path p = path;
+        // The file dialog hands back the path as UTF-8. Building a filesystem::path
+        // straight from a char* would decode it in the ANSI codepage instead, mangling
+        // non-ASCII names (e.g. a "µ" in the filename) into a path that doesn't exist.
+        // Decode the UTF-8 to a wide string first so the full Unicode path survives.
+        const std::filesystem::path p = TextUtils::StringToWString(path);
         if (!std::filesystem::exists(p)) return;
         LoadTexturePack(p);
     }
@@ -849,7 +863,7 @@ namespace {
                 ImGui::TextDisabled("%s", pack.label.c_str());
 
             ImGui::TableSetColumnIndex(2);
-            const std::string pathStr = pack.path.string();
+            const std::string pathStr = PathToUtf8(pack.path);
             ImGui::TextDisabled("%s", pathStr.c_str());
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", pathStr.c_str());
 
@@ -1205,7 +1219,7 @@ void TexmodModule::DrawSettingsInternal()
     ImGui::Separator();
     DrawPackList();
     ImGui::Separator();
-    if (ImGui::Button("Add texture pack")) Resources::OpenFileDialog(OnTexmodFileChosen, "tpf,zip,dds", Resources::GetSettingsFolderPath().string().c_str());
+    if (ImGui::Button("Add texture pack")) Resources::OpenFileDialog(OnTexmodFileChosen, "tpf,zip,dds", PathToUtf8(Resources::GetSettingsFolderPath()).c_str());
     ImGui::TextDisabled("Supported: .tpf, .zip (texmod format), .dds");
     ImGui::Separator();
     DrawTextureGallery();
@@ -1220,10 +1234,12 @@ void TexmodModule::LoadSettings(ToolboxIni* ini)
         const std::string key = std::string(INI_PACK_PATH) + std::to_string(i);
         const char* val = ini->GetValue(INI_SECTION, key.c_str(), nullptr);
         if (!val || !*val) continue;
-        std::filesystem::path p = val;
+        // Stored as UTF-8 (see SaveSettings); decode to a wide path so non-ASCII names
+        // survive. Falls back to the ANSI codepage for any pre-existing legacy value.
+        std::filesystem::path p = TextUtils::StringToWString(val);
         const std::string enabled_key = std::string(INI_PACK_ENABLED) + std::to_string(i);
         const bool enabled = ini->GetBoolValue(INI_SECTION, enabled_key.c_str(), false);
-        packs.push_back({p, p.stem().string(), /*loaded=*/enabled});
+        packs.push_back({p, PathToUtf8(p.stem()), /*loaded=*/enabled});
     }
     // gMod is not ready yet (no device); the restored enabled flags are pushed to
     // it later by RestoreLoadedPacks(). This call is a no-op until then.
@@ -1242,7 +1258,7 @@ void TexmodModule::SaveSettings(ToolboxIni* ini)
     ini->SetLongValue(INI_SECTION, INI_PACK_COUNT, static_cast<long>(packs.size()));
     for (size_t i = 0; i < packs.size(); i++) {
         const std::string key = std::string(INI_PACK_PATH) + std::to_string(i);
-        ini->SetValue(INI_SECTION, key.c_str(), packs[i].path.string().c_str());
+        ini->SetValue(INI_SECTION, key.c_str(), PathToUtf8(packs[i].path).c_str());
         const std::string enabled_key = std::string(INI_PACK_ENABLED) + std::to_string(i);
         ini->SetBoolValue(INI_SECTION, enabled_key.c_str(), packs[i].loaded);
     }
