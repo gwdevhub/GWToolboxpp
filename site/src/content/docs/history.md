@@ -6,6 +6,10 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.23
+* [Fix] Various bug fixes
+* [New] Added texmod module to load texmods without needing to pre-launch umod/texmod/gmod
+
 ## Version 8.22
 * [Fix] Fixed a crash when trying to bulk sell items
 
