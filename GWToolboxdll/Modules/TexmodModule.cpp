@@ -25,7 +25,6 @@
 #include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 #include <Utils/FontLoader.h>
-#include <Windows/SettingsWindow.h>
 
 namespace {
 
@@ -825,8 +824,8 @@ namespace {
         draw_list->AddText(title_pos, IM_COL32(255, 80, 80, 255), title);
         ImGui::PopFont(draw_list);
 
-        // Explanatory line + a button to the off switch, in a transparent borderless
-        // window beneath the title (a button needs a real window to be clickable).
+        // Explanatory line + a button to stop, in a transparent borderless window
+        // beneath the title (a button needs a real window to be clickable).
         const float below_y = title_pos.y + title_dim.y + ImGui::GetStyle().ItemSpacing.y;
         ImGui::SetNextWindowPos({center_x, below_y}, ImGuiCond_Always, {0.5f, 0.f});
         ImGui::SetNextWindowBgAlpha(0.f);
@@ -835,11 +834,11 @@ namespace {
             | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
         if (ImGui::Begin("##texmod_recording_overlay", nullptr, flags)) {
             ImGui::TextUnformatted("Capturing every texture as you play is expensive and lowers your framerate.");
-            const char* btn = "Open " ICON_FA_IMAGE " gMod/uMod/Texmod settings to stop";
+            const char* btn = ICON_FA_STOP " Stop recording textures";
             const float btn_w = ImGui::CalcTextSize(btn).x + ImGui::GetStyle().FramePadding.x * 2.f;
             ImGui::SetCursorPosX((ImGui::GetWindowWidth() - btn_w) * 0.5f);
             if (ImGui::Button(btn)) {
-                SettingsWindow::Instance().NavigateToSection(TexmodModule::Instance().SettingsName());
+                recording = false;
             }
         }
         ImGui::End();
