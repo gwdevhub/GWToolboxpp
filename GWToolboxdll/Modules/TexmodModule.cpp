@@ -25,6 +25,7 @@
 #include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 #include <Utils/FontLoader.h>
+#include <Utils/TextUtils.h>
 
 namespace {
 
@@ -390,8 +391,7 @@ namespace {
     {
         const auto current = QueryGmodFiles();
         size_t prefix = 0;
-        while (prefix < current.size() && prefix < desired.size()
-               && current[prefix] == desired[prefix]) {
+        while (prefix < current.size() && prefix < desired.size() && current[prefix] == desired[prefix]) {
             ++prefix;
         }
         // Remove the diverging tail, deepest first, leaving the kept prefix intact.
@@ -427,8 +427,7 @@ namespace {
             const int error = ReconcileLocked(*desired);
             Resources::EnqueueMainTask([error, my_generation] {
                 if (my_generation != apply_generation.load()) return; // a newer apply is in flight
-                if (error < 0)
-                    statusMessage = "gMod failed to load a pack (error " + std::to_string(error) + ").";
+                if (error < 0) statusMessage = "gMod failed to load a pack (error " + std::to_string(error) + ").";
                 SyncExternalPacks();
             });
         });
@@ -445,7 +444,8 @@ namespace {
 
     void UnloadAllTexturePacks()
     {
-        for (auto& pack : packs) pack.loaded = false;
+        for (auto& pack : packs)
+            pack.loaded = false;
         ApplyLoadOrder();
     }
 
@@ -482,9 +482,11 @@ namespace {
         {
             std::lock_guard lk(apply_mutex);
             ++apply_generation;
-            for (auto& pack : packs) pack.loaded = false;
+            for (auto& pack : packs)
+                pack.loaded = false;
             if (pfnRemoveFile) {
-                for (const auto& path : QueryGmodFiles()) pfnRemoveFile(path.wstring().c_str());
+                for (const auto& path : QueryGmodFiles())
+                    pfnRemoveFile(path.wstring().c_str());
             }
         }
 
@@ -553,8 +555,7 @@ namespace {
         VS_FIXEDFILEINFO* fi = nullptr;
         UINT len = 0;
         if (!VerQueryValueW(data.data(), L"\\", reinterpret_cast<LPVOID*>(&fi), &len) || !fi) return {};
-        return std::format("{}.{}.{}.{}", HIWORD(fi->dwFileVersionMS), LOWORD(fi->dwFileVersionMS),
-                           HIWORD(fi->dwFileVersionLS), LOWORD(fi->dwFileVersionLS));
+        return std::format("{}.{}.{}.{}", HIWORD(fi->dwFileVersionMS), LOWORD(fi->dwFileVersionMS), HIWORD(fi->dwFileVersionLS), LOWORD(fi->dwFileVersionLS));
     }
 
     // Full path of the gMod.dll currently in use: the loaded module if gMod is
@@ -587,9 +588,13 @@ namespace {
         const auto parse = [](const std::string& v) {
             std::vector<int> out;
             for (size_t i = 0; i < v.size();) {
-                if (v[i] < '0' || v[i] > '9') { ++i; continue; }
+                if (v[i] < '0' || v[i] > '9') {
+                    ++i;
+                    continue;
+                }
                 int n = 0;
-                while (i < v.size() && v[i] >= '0' && v[i] <= '9') n = n * 10 + (v[i++] - '0');
+                while (i < v.size() && v[i] >= '0' && v[i] <= '9')
+                    n = n * 10 + (v[i++] - '0');
                 out.push_back(n);
             }
             return out;
@@ -681,7 +686,7 @@ namespace {
             Resources::EnqueueMainTask([ok, version, error] {
                 gmodUpdateStep = GmodUpdateStep::Idle;
                 if (!ok) {
-                    gmodUpdateStatus = "gMod download failed: " + std::string(error.begin(), error.end());
+                    gmodUpdateStatus = "gMod download failed: " + TextUtils::WStringToString(error);
                     return;
                 }
                 gmodLocalVersion = version;
@@ -743,16 +748,12 @@ namespace {
 
         const bool busy = gmodUpdateStep != GmodUpdateStep::Idle;
         ImGui::BeginDisabled(busy);
-        const char* label = gmodUpdateStep == GmodUpdateStep::Downloading ? "Downloading..."
-            : gmodUpdateStep == GmodUpdateStep::Checking                  ? "Checking..."
-                                                                         : "Check for gMod updates";
+        const char* label = gmodUpdateStep == GmodUpdateStep::Downloading ? "Downloading..." : gmodUpdateStep == GmodUpdateStep::Checking ? "Checking..." : "Check for gMod updates";
         if (ImGui::Button(label)) CheckAndUpdateGmod();
         ImGui::EndDisabled();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("gMod is downloaded automatically and kept in your GWToolbox folder.\nClick to check for a newer version now.");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("gMod is downloaded automatically and kept in your GWToolbox folder.\nClick to check for a newer version now.");
 
-        if (!gmodUpdateStatus.empty())
-            ImGui::TextDisabled("%s", gmodUpdateStatus.c_str());
+        if (!gmodUpdateStatus.empty()) ImGui::TextDisabled("%s", gmodUpdateStatus.c_str());
     }
 
     void DrawPackList()
@@ -779,8 +780,7 @@ namespace {
             return ImGui::CalcTextSize(label).x + style.FramePadding.x * 2.f;
         };
         // Actions column holds the move-up / move-down / delete buttons.
-        const float actions_width = btn_width(ICON_FA_ARROW_UP) + btn_width(ICON_FA_ARROW_DOWN)
-            + btn_width(ICON_FA_TRASH) + style.ItemSpacing.x * 2.f;
+        const float actions_width = btn_width(ICON_FA_ARROW_UP) + btn_width(ICON_FA_ARROW_DOWN) + btn_width(ICON_FA_TRASH) + style.ItemSpacing.x * 2.f;
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, font_size.y * 2.f);
         ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
@@ -1035,9 +1035,7 @@ namespace {
         const float below_y = title_pos.y + title_dim.y + ImGui::GetStyle().ItemSpacing.y;
         ImGui::SetNextWindowPos({center_x, below_y}, ImGuiCond_Always, {0.5f, 0.f});
         ImGui::SetNextWindowBgAlpha(0.f);
-        constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
-            | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize
-            | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+        constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
         if (ImGui::Begin("##texmod_recording_overlay", nullptr, flags)) {
             ImGui::TextUnformatted("Capturing every texture as you play is expensive and lowers your framerate.");
             const char* btn = ICON_FA_STOP " Stop recording textures";
@@ -1063,10 +1061,12 @@ namespace {
         }
         else {
             static bool confirm_record = false;
-            if (ImGui::ConfirmButton(ICON_FA_CIRCLE " Record textures", &confirm_record,
-                                     "Recording captures every texture the game creates as you play.\n"
-                                     "Doing this continuously is expensive and will lower your framerate\n"
-                                     "while it is active.\n\nStart recording textures?")) {
+            if (ImGui::ConfirmButton(
+                    ICON_FA_CIRCLE " Record textures", &confirm_record,
+                    "Recording captures every texture the game creates as you play.\n"
+                    "Doing this continuously is expensive and will lower your framerate\n"
+                    "while it is active.\n\nStart recording textures?"
+                )) {
                 recording = true;
                 confirm_record = false;
             }
