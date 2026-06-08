@@ -26,6 +26,20 @@
 #include <Modules/Resources.h>
 #include <Utils/FontLoader.h>
 
+// gMod GitHub release shape, parsed from the releases API. Kept at namespace scope
+// (external linkage) because glaze reflection can't bind types from an anonymous
+// namespace - mirrors Updater's github_api structs.
+namespace gmod_github {
+    struct ReleaseAsset {
+        std::string name;
+        std::string browser_download_url;
+    };
+    struct Release {
+        std::string tag_name;
+        std::vector<ReleaseAsset> assets;
+    };
+}
+
 namespace {
 
     // =========================================================================
@@ -52,14 +66,6 @@ namespace {
     // managed automatically: on startup we fetch the latest release and, if it is
     // newer than the copy kept in the GWToolbox folder (or none is present), download
     // it there and load it.
-    struct GModReleaseAsset {
-        std::string name;
-        std::string browser_download_url;
-    };
-    struct GModRelease {
-        std::string tag_name;
-        std::vector<GModReleaseAsset> assets;
-    };
     constexpr glz::opts gmod_json_opts{.error_on_unknown_keys = false};
 
     enum class GmodUpdateStep { Idle, Checking, Downloading };
@@ -635,7 +641,7 @@ namespace {
                 tries++;
             } while (!success && tries < 5);
 
-            GModRelease release;
+            gmod_github::Release release;
             const bool parsed = success && !glz::read<gmod_json_opts>(release, response);
 
             std::string version, dll_url;
