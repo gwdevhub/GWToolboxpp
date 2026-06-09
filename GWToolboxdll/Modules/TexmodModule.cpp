@@ -96,6 +96,10 @@ namespace {
     // Set when gMod is no longer needed (last pack removed); the unload is performed
     // from Update() rather than the draw pass.
     bool gmodUnloadRequested = false;
+    // True only when toolbox loaded gMod itself (LoadLibrary on our managed copy). When
+    // gMod was already injected by something else (gwlauncher, daybreak, or a d3d9.dll
+    // proxy) this stays false: we drive it but never update, replace or unload it.
+    bool gmodLoadedByToolbox = false;
 
     constexpr const char* INI_SECTION = "TexmodModule";
     constexpr const char* INI_PACK_COUNT = "PackCount";
@@ -208,8 +212,8 @@ namespace {
         return Resources::GetPath("gmod") / "gMod.dll";
     }
 
-    // Load our own managed copy of gMod.dll and hand it the game's device. We never
-    // adopt a pre-existing gMod in the process; the toolbox always owns the copy it loads.
+    // Bring gMod up: adopt one already injected into the process if present, otherwise
+    // load our own managed copy and hand it the game's device.
     bool InitGMod()
     {
         if (gmodReady) return true;
@@ -220,7 +224,26 @@ namespace {
             return false;
         }
 
-        // Nothing to mod with no packs: leave gMod unloaded rather than hook the device for nothing.
+        // 1. Adopt a gMod already loaded into this process by something else (gwlauncher,
+        //    daybreak, or a d3d9.dll proxy). GetProcAddress loads nothing new. Probe the
+        //    exports first so the system d3d9.dll (always present, lacks them) is skipped
+        //    without ResolveTextureClientFunctions clobbering statusMessage with an error.
+        //    We don't own an adopted gMod, so we never update, replace or unload it.
+        for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
+            HMODULE h = GetModuleHandleW(name);
+            if (!h || !GetProcAddress(h, "AddFile") || !GetProcAddress(h, "RemoveFile") || !GetProcAddress(h, "GetFiles") || !GetProcAddress(h, "SetDevice")) continue;
+            gmodDll = h;
+            ResolveTextureClientFunctions(); // exports confirmed above, so this succeeds
+            gmodLoadedByToolbox = false;
+            pfnSetDevice(device);
+            gmodReady = true;
+            statusMessage = "gMod was already active (pre-loaded). Texture pack loading enabled.";
+            RestoreLoadedPacks();
+            return true;
+        }
+
+        // 2. Otherwise load our own managed copy. Nothing to mod with no packs: leave
+        //    gMod unloaded rather than hook the device for nothing.
         if (packs.empty()) return false;
         if (gmodLoadAttempted) return false;
         gmodLoadAttempted = true;
@@ -242,6 +265,7 @@ namespace {
             gmodDll = nullptr;
             return false;
         }
+        gmodLoadedByToolbox = true; // we loaded it, so we own its lifetime
         pfnSetDevice(device);
         gmodReady = true;
         RestoreLoadedPacks();
@@ -362,7 +386,10 @@ namespace {
 
     void ShutdownGMod()
     {
-        if (gmodReady) {
+        // Only tear down a gMod we loaded ourselves. One pre-loaded by gwlauncher /
+        // daybreak (or a d3d9 proxy) is left running with its packs intact - whoever
+        // injected it owns its shutdown; we just drop our references to it below.
+        if (gmodReady && gmodLoadedByToolbox) {
             // Unload synchronously: on teardown the worker threads are stopping, so a
             // queued ApplyLoadOrder might never run. Holding apply_mutex waits out any
             // in-flight worker reconcile; bumping the generation makes queued/running
@@ -377,16 +404,20 @@ namespace {
             }
         }
 
+        const bool owned = gmodLoadedByToolbox;
+
         gmodReady = false;
         pfnAddFile = nullptr;
         pfnRemoveFile = nullptr;
         pfnGetFiles = nullptr;
         pfnSetDevice = nullptr;
 
-        // Free our dll. gMod's DllMain(DLL_PROCESS_DETACH) reverts all its D3D9 vtable
-        // hooks (RemoveAllD3D9Hooks), so this is its clean shutdown path.
-        if (gmodDll) FreeLibrary(gmodDll);
+        // Free only our own dll. gMod's DllMain(DLL_PROCESS_DETACH) reverts all its D3D9
+        // vtable hooks (RemoveAllD3D9Hooks), so this is its clean shutdown path - but a
+        // pre-loaded gMod must keep running, so we never free a handle we didn't load.
+        if (owned && gmodDll) FreeLibrary(gmodDll);
         gmodDll = nullptr;
+        gmodLoadedByToolbox = false;
         gmodLoadAttempted = false; // allow a fresh load later (e.g. when a pack is added)
         gmodLocalVersionChecked = false;
     }
@@ -456,9 +487,20 @@ namespace {
         return std::format("{}.{}.{}.{}", HIWORD(fi->dwFileVersionMS), LOWORD(fi->dwFileVersionMS), HIWORD(fi->dwFileVersionLS), LOWORD(fi->dwFileVersionLS));
     }
 
+    // Full path of the gMod.dll currently in use: the live module if gMod is active
+    // (which may be a pre-loaded one), otherwise the managed copy we would load.
+    std::filesystem::path CurrentGmodDllPath()
+    {
+        if (gmodReady && gmodDll) {
+            wchar_t buf[MAX_PATH] = {};
+            if (GetModuleFileNameW(gmodDll, buf, MAX_PATH)) return buf;
+        }
+        return ManagedGmodDllPath();
+    }
+
     void RefreshLocalGmodVersion()
     {
-        gmodLocalVersion = GetDllFileVersion(ManagedGmodDllPath());
+        gmodLocalVersion = GetDllFileVersion(CurrentGmodDllPath());
         gmodLocalVersionChecked = true;
     }
 
@@ -498,15 +540,35 @@ namespace {
         InitGMod();
     }
 
-    // Fetch the latest gMod release and, if it is newer than the managed copy (or none
-    // exists), download it into the GWToolbox folder and load it. All network/disk work
-    // runs on a worker thread; state changes are posted back to the main thread.
+    // Is a usable gMod already present in the process that we did not load (gwlauncher,
+    // daybreak, or a d3d9 proxy)? Distinguished from the system d3d9.dll by its exports.
+    bool ForeignGmodLoaded()
+    {
+        if (gmodReady) return !gmodLoadedByToolbox;
+        for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
+            HMODULE h = GetModuleHandleW(name);
+            if (h && h != gmodDll && GetProcAddress(h, "AddFile") && GetProcAddress(h, "RemoveFile") && GetProcAddress(h, "GetFiles") && GetProcAddress(h, "SetDevice")) return true;
+        }
+        return false;
+    }
+
+    // Fetch the latest gMod release and, if it is newer than the copy in use (or none
+    // exists), download it into the GWToolbox folder and load it. A gMod we don't own
+    // (pre-loaded by a launcher) is only checked and reported on, never replaced. All
+    // network/disk work runs on a worker thread; state changes post back to the main one.
     void CheckAndUpdateGmod()
     {
         if (gmodUpdateStep != GmodUpdateStep::Idle) return;
         gmodUpdateStep = GmodUpdateStep::Checking;
         gmodUpdateStatus.clear();
-        Resources::EnqueueWorkerTask([] {
+
+        // We may replace gMod only when toolbox manages the copy. A pre-loaded gMod -
+        // whether already active or merely injected into the process - is checked, not
+        // touched, so users on gwlauncher/daybreak never get a redundant download.
+        const bool auto_managed = !ForeignGmodLoaded();
+        const auto in_use_path = CurrentGmodDllPath();
+
+        Resources::EnqueueWorkerTask([auto_managed, in_use_path] {
             std::string response;
             unsigned int tries = 0;
             const auto url = "https://api.github.com/repos/gwdevhub/gMod/releases/latest";
@@ -537,7 +599,7 @@ namespace {
             }
 
             const auto managed = ManagedGmodDllPath();
-            const std::string local = GetDllFileVersion(managed);
+            const std::string local = GetDllFileVersion(in_use_path);
             if (!local.empty() && CompareVersions(version, local) <= 0) {
                 // Already have the latest (or newer).
                 Resources::EnqueueMainTask([version, local] {
@@ -545,6 +607,19 @@ namespace {
                     gmodLatestVersion = version;
                     gmodLocalVersion = local;
                     gmodUpdateStatus = "gMod is up to date (" + version + ").";
+                });
+                return;
+            }
+
+            if (!auto_managed) {
+                // A newer gMod exists, but the active one was injected by a launcher and
+                // is not ours to replace. Surface the version (the row shows it as out of
+                // date) and leave updating to whoever loaded it.
+                Resources::EnqueueMainTask([version, local] {
+                    gmodUpdateStep = GmodUpdateStep::Idle;
+                    gmodLatestVersion = version;
+                    if (!local.empty()) gmodLocalVersion = local;
+                    gmodUpdateStatus = "A newer gMod (" + version + ") is available; it was loaded by your launcher, so update it there.";
                 });
                 return;
             }
