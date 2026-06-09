@@ -2243,7 +2243,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                     potential_salvage_all_items[i]->proceed = check_all_items;
                 }
             }
-            for (int i = 0; i < static_cast<int>(potential_salvage_all_items.size()); i++) {
+            for (size_t i = 0; i < potential_salvage_all_items.size(); i++) {
                 PotentialItem* pi = potential_salvage_all_items[i];
                 if (!pi) {
                     continue;
