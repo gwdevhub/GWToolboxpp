@@ -65,6 +65,7 @@ namespace Missions {
 
     public:
         GW::Constants::ProfessionByte profession = (GW::Constants::ProfessionByte)0;
+        bool is_account_unlocked = false;
         PvESkill(GW::Constants::SkillID _skill_id);
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }

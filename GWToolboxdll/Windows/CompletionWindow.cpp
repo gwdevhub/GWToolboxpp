@@ -262,6 +262,7 @@ namespace {
 
     bool hide_unlocked_achievements = false;
     bool hide_unlocked_skills = false;
+    bool hide_account_unlocked_skills = false;
     bool hide_completed_vanquishes = false;
     bool hide_completed_missions = false;
     bool hide_collected_hats = false;
@@ -1219,6 +1220,7 @@ bool PvESkill::Draw(IDirect3DDevice9* device)
 void PvESkill::CheckProgress(const std::wstring& player_name)
 {
     is_completed = false;
+    is_account_unlocked = GW::SkillbarMgr::GetIsSkillUnlocked(skill_id);
     const auto& skills = character_completion;
     if (!skills.contains(player_name)) {
         return;
@@ -2386,7 +2388,9 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         ImGui::SameLine(checkbox_offset);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
-        ImGui::Checkbox("Hide learned skills", &hide_unlocked_skills);
+        ImGui::Checkbox("Hide learnt skills", &hide_unlocked_skills);
+        ImGui::SameLine();
+        ImGui::Checkbox("Hide unlocked skills", &hide_account_unlocked_skills);
         ImGui::PopStyleVar();
         ImGui::PopID();
     };
@@ -2402,9 +2406,12 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                     continue;
                 }
             }
+            if (hide_account_unlocked_skills && camp_missions[i]->is_account_unlocked) {
+                continue;
+            }
             filtered.push_back(camp_missions[i]);
         }
-        if (hide_unlocked_skills && filtered.empty()) {
+        if ((hide_unlocked_skills || hide_account_unlocked_skills) && filtered.empty()) {
             continue;
         }
         char label[128];
@@ -2425,9 +2432,12 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                     continue;
                 }
             }
+            if (hide_account_unlocked_skills && camp_missions[i]->is_account_unlocked) {
+                continue;
+            }
             filtered.push_back(camp_missions[i]);
         }
-        if (hide_unlocked_skills && filtered.empty()) {
+        if ((hide_unlocked_skills || hide_account_unlocked_skills) && filtered.empty()) {
             continue;
         }
         char label[128];
@@ -2830,6 +2840,7 @@ void CompletionWindow::LoadSettings(ToolboxIni* ini)
 
     LOAD_BOOL(show_as_list);
     LOAD_BOOL(hide_unlocked_skills);
+    LOAD_BOOL(hide_account_unlocked_skills);
     LOAD_BOOL(hide_completed_vanquishes);
     LOAD_BOOL(hide_completed_missions);
     LOAD_BOOL(hide_unlocked_achievements);
@@ -2961,6 +2972,7 @@ void CompletionWindow::SaveSettings(ToolboxIni* ini)
 
     SAVE_BOOL(show_as_list);
     SAVE_BOOL(hide_unlocked_skills);
+    SAVE_BOOL(hide_account_unlocked_skills);
     SAVE_BOOL(hide_completed_vanquishes);
     SAVE_BOOL(hide_completed_missions);
     SAVE_BOOL(hide_unlocked_achievements);
