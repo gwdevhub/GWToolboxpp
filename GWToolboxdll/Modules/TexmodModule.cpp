@@ -265,12 +265,15 @@ namespace {
         while (prefix < current.size() && prefix < desired.size() && current[prefix] == desired[prefix]) {
             ++prefix;
         }
-        // Remove the diverging tail, deepest first, leaving the kept prefix intact.
+        int error = GMOD_RETURN_OK;
+        // Remove the diverging tail, deepest first, leaving the kept prefix intact. A
+        // failure here (e.g. an old pre-loaded gMod that can't match the path) is
+        // reported rather than swallowed, so the pack isn't silently left loaded.
         for (size_t i = current.size(); i-- > prefix;) {
-            if (pfnRemoveFile) pfnRemoveFile(current[i].wstring().c_str());
+            const int ret = pfnRemoveFile ? pfnRemoveFile(current[i].wstring().c_str()) : GMOD_RETURN_OK;
+            if (ret < 0 && ret != GMOD_RETURN_EXISTS) error = ret;
         }
         // Re-add the desired tail in order; earlier adds win conflicts.
-        int error = GMOD_RETURN_OK;
         for (size_t i = prefix; i < desired.size(); ++i) {
             const int ret = pfnAddFile ? pfnAddFile(desired[i].wstring().c_str()) : GMOD_RETURN_OK;
             if (ret < 0 && ret != GMOD_RETURN_EXISTS) error = ret;
@@ -296,7 +299,7 @@ namespace {
             const int error = ReconcileLocked(*desired);
             Resources::EnqueueMainTask([error, my_generation] {
                 if (my_generation != apply_generation.load()) return; // a newer apply is in flight
-                if (error < 0) statusMessage = "gMod failed to load a pack (error " + std::to_string(error) + ").";
+                if (error < 0) statusMessage = "gMod failed to apply a pack change (error " + std::to_string(error) + ").";
                 SyncExternalPacks();
             });
         });
@@ -1029,10 +1032,12 @@ void TexmodModule::Update(float)
     // Keep the D3D9 CreateTexture capture hook matched to the recording toggle.
     SetTextureCapture(recording);
 
-    // Unload gMod once nothing needs it (requested when the last pack was removed).
+    // Unload gMod once nothing needs it (requested when the last pack was removed). Only
+    // for a gMod we loaded; tearing down a pre-loaded one would cancel the in-flight
+    // unload and then re-adopt it next frame, resurrecting its packs.
     if (gmodUnloadRequested) {
         gmodUnloadRequested = false;
-        ShutdownGMod();
+        if (gmodLoadedByToolbox) ShutdownGMod();
     }
 
     if (gmodReady) return;
