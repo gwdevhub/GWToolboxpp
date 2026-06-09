@@ -4,6 +4,7 @@
 #include <ToolboxIni.h>
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <d3d9.h>
@@ -90,6 +91,15 @@ namespace {
     bool gmodUnloadRequested = false;
     // True only when toolbox loaded gMod itself; false for one injected by a launcher.
     bool gmodLoadedByToolbox = false;
+
+    // A launcher pre-loaded a gMod lacking our exports; we won't load our own on top (two swappers corrupt our originals). Cleared only by a restart.
+    bool gmodIncompatible = false;
+    std::filesystem::path gmodIncompatiblePath;
+
+    // Cached pre-loaded-gMod probe (a launcher injects before toolbox starts, so the state is fixed; probe once to avoid per-frame work).
+    bool preloadProbed = false;
+    HMODULE preloadGmod = nullptr;      // a gMod injected by something other than us, if any
+    bool preloadGmodCompatible = false; // ...and it exposes the API we can drive
 
     constexpr const char* INI_SECTION = "TexmodModule";
     constexpr const char* INI_PACK_COUNT = "PackCount";
@@ -188,10 +198,74 @@ namespace {
         return Resources::GetPath("gmod") / "gMod.dll";
     }
 
+    // True if the module exports the gMod texture API we drive.
+    bool ModuleHasGmodExports(HMODULE h)
+    {
+        return h && GetProcAddress(h, "AddFile") && GetProcAddress(h, "RemoveFile") && GetProcAddress(h, "GetFiles") && GetProcAddress(h, "SetDevice");
+    }
+
+    // Read a named string from a file's version resource (e.g. "ProductName"); empty if absent.
+    std::string GetDllVersionString(const std::filesystem::path& path, const wchar_t* name)
+    {
+        if (path.empty()) return {};
+        const auto wp = path.wstring();
+        DWORD handle = 0;
+        const DWORD size = GetFileVersionInfoSizeW(wp.c_str(), &handle);
+        if (!size) return {};
+        std::vector<BYTE> data(size);
+        if (!GetFileVersionInfoW(wp.c_str(), handle, size, data.data())) return {};
+        struct LangCodepage {
+            WORD language, codepage;
+        }* tr = nullptr;
+        UINT trLen = 0;
+        if (!VerQueryValueW(data.data(), L"\\VarFileInfo\\Translation", reinterpret_cast<LPVOID*>(&tr), &trLen) || !tr || trLen < sizeof(LangCodepage)) return {};
+        wchar_t query[64];
+        swprintf_s(query, L"\\StringFileInfo\\%04x%04x\\%s", tr->language, tr->codepage, name);
+        wchar_t* val = nullptr;
+        UINT valLen = 0;
+        if (!VerQueryValueW(data.data(), query, reinterpret_cast<LPVOID*>(&val), &valLen) || !val) return {};
+        return TextUtils::WStringToString(val);
+    }
+
+    // Does this module look like gMod (any version)? Named gMod.dll, or its version resource says so - catches an older gMod (or renamed d3d9 proxy) that lacks our exports.
+    bool ModuleIsGmod(HMODULE h)
+    {
+        if (!h) return false;
+        wchar_t buf[MAX_PATH] = {};
+        if (!GetModuleFileNameW(h, buf, MAX_PATH)) return false;
+        const std::filesystem::path p = buf;
+        if (_wcsicmp(p.filename().c_str(), L"gMod.dll") == 0) return true;
+        for (const wchar_t* key : {L"ProductName", L"InternalName", L"OriginalFilename"}) {
+            std::string s = GetDllVersionString(p, key);
+            std::ranges::transform(s, s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (s.contains("gmod")) return true;
+        }
+        return false;
+    }
+
+    // Probe once for a launcher-injected gMod: prefer one we can drive, else note an incompatible one; skips our own copy and the system d3d9.dll.
+    void ProbePreloadedGmodOnce()
+    {
+        if (preloadProbed) return;
+        if (!GW::Render::GetDevice()) return; // wait until the process is up so an injected gMod is present
+        preloadProbed = true;
+        for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
+            HMODULE h = GetModuleHandleW(name);
+            if (!h || h == gmodDll) continue;
+            if (ModuleHasGmodExports(h)) {
+                preloadGmod = h;
+                preloadGmodCompatible = true;
+                return;
+            }
+            if (!preloadGmod && ModuleIsGmod(h)) preloadGmod = h; // gMod we can't drive
+        }
+    }
+
     // Bring gMod up: adopt one already in the process if present, else load our copy.
     bool InitGMod()
     {
         if (gmodReady) return true;
+        if (gmodIncompatible) return false; // a restart is the only way out
 
         auto device = GW::Render::GetDevice();
         if (!device) {
@@ -199,18 +273,27 @@ namespace {
             return false;
         }
 
-        // 1. Adopt a gMod injected by a launcher (probe exports to skip the system d3d9.dll); we never own it.
-        for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
-            HMODULE h = GetModuleHandleW(name);
-            if (!h || !GetProcAddress(h, "AddFile") || !GetProcAddress(h, "RemoveFile") || !GetProcAddress(h, "GetFiles") || !GetProcAddress(h, "SetDevice")) continue;
-            gmodDll = h;
-            ResolveTextureClientFunctions(); // exports confirmed above, so this succeeds
+        ProbePreloadedGmodOnce();
+
+        // 1a. A pre-loaded gMod we can drive: adopt it; we never own it.
+        if (preloadGmod && preloadGmodCompatible) {
+            gmodDll = preloadGmod;
+            ResolveTextureClientFunctions(); // exports confirmed by the probe
             gmodLoadedByToolbox = false;
             pfnSetDevice(device);
             gmodReady = true;
             statusMessage = "gMod was already active (pre-loaded). Texture pack loading enabled.";
             RestoreLoadedPacks();
             return true;
+        }
+
+        // 1b. A pre-loaded gMod we can't drive: loading ours on top would double-swap and corrupt our originals, so refuse and ask the user to update/remove it (needs a restart).
+        if (preloadGmod) {
+            gmodIncompatible = true;
+            wchar_t buf[MAX_PATH] = {};
+            if (GetModuleFileNameW(preloadGmod, buf, MAX_PATH)) gmodIncompatiblePath = buf;
+            statusMessage = "An older, incompatible gMod is already loaded by your launcher. Update it (or remove it so GWToolbox can manage gMod), then restart Guild Wars.";
+            return false;
         }
 
         // 2. Otherwise load our managed copy; with no packs, leave gMod unloaded.
@@ -266,9 +349,7 @@ namespace {
             ++prefix;
         }
         int error = GMOD_RETURN_OK;
-        // Remove the diverging tail, deepest first, leaving the kept prefix intact. A
-        // failure here (e.g. an old pre-loaded gMod that can't match the path) is
-        // reported rather than swallowed, so the pack isn't silently left loaded.
+        // Remove the diverging tail, deepest first; a failure (e.g. an old gMod that can't match the path) is reported, not swallowed, so the pack isn't silently left loaded.
         for (size_t i = current.size(); i-- > prefix;) {
             const int ret = pfnRemoveFile ? pfnRemoveFile(current[i].wstring().c_str()) : GMOD_RETURN_OK;
             if (ret < 0 && ret != GMOD_RETURN_EXISTS) error = ret;
@@ -483,15 +564,12 @@ namespace {
         InitGMod();
     }
 
-    // Is a usable gMod we did not load already in the process? (exports tell it from system d3d9.dll)
+    // Is a gMod we did not load already in the process (compatible or not)? If so we never download/replace it.
     bool ForeignGmodLoaded()
     {
         if (gmodReady) return !gmodLoadedByToolbox;
-        for (const wchar_t* name : {L"gMod.dll", L"d3d9.dll"}) {
-            HMODULE h = GetModuleHandleW(name);
-            if (h && h != gmodDll && GetProcAddress(h, "AddFile") && GetProcAddress(h, "RemoveFile") && GetProcAddress(h, "GetFiles") && GetProcAddress(h, "SetDevice")) return true;
-        }
-        return false;
+        ProbePreloadedGmodOnce();
+        return preloadGmod != nullptr;
     }
 
     // Fetch the latest release; download+load it if newer, but only for a gMod we own.
@@ -618,6 +696,9 @@ namespace {
         if (gmodReady) {
             ImGui::TextColored({0.4f, 1.0f, 0.4f, 1.0f}, ICON_FA_CHECK " gMod active");
         }
+        else if (gmodIncompatible) {
+            ImGui::TextColored({1.0f, 0.4f, 0.4f, 1.0f}, ICON_FA_TIMES " gMod blocked (incompatible version pre-loaded)");
+        }
         else {
             ImGui::TextColored({1.0f, 0.4f, 0.4f, 1.0f}, ICON_FA_TIMES " gMod not initialised");
             ImGui::SameLine();
@@ -635,6 +716,16 @@ namespace {
     // gMod.dll status: show the installed version against the latest release and offer a manual re-check.
     void DrawGmodSource()
     {
+        // A launcher pre-loaded a gMod we can't drive: warn and stop (the version row below would be misleading).
+        if (gmodIncompatible) {
+            const std::string old_version = GetDllFileVersion(gmodIncompatiblePath);
+            ImGui::TextColored({1.0f, 0.85f, 0.4f, 1.0f}, "An incompatible gMod%s is already loaded by your launcher.",
+                               old_version.empty() ? "" : (" (" + old_version + ")").c_str());
+            ImGui::TextDisabled("Update it to a current gMod%s, or remove it so GWToolbox manages gMod itself, then restart Guild Wars.",
+                                gmodLatestVersion.empty() ? "" : (" (latest: " + gmodLatestVersion + ")").c_str());
+            return;
+        }
+
         if (!gmodLocalVersionChecked) RefreshLocalGmodVersion();
 
         if (!gmodLocalVersion.empty())
@@ -1032,9 +1123,7 @@ void TexmodModule::Update(float)
     // Keep the D3D9 CreateTexture capture hook matched to the recording toggle.
     SetTextureCapture(recording);
 
-    // Unload gMod once nothing needs it (requested when the last pack was removed). Only
-    // for a gMod we loaded; tearing down a pre-loaded one would cancel the in-flight
-    // unload and then re-adopt it next frame, resurrecting its packs.
+    // Unload gMod once nothing needs it, but only one we loaded: tearing down a pre-loaded one would cancel the in-flight unload and re-adopt it next frame, resurrecting its packs.
     if (gmodUnloadRequested) {
         gmodUnloadRequested = false;
         if (gmodLoadedByToolbox) ShutdownGMod();
