@@ -52,6 +52,7 @@ namespace {
 
 
     clock_t last_transaction = 0;
+    clock_t last_dequeue_time = 0;
 
     const std::unordered_map<GW::Constants::MaterialSlot, const wchar_t*> material_enc_strings = {
         {GW::Constants::MaterialSlot::BoltofCloth, GW::EncStrings::BoltofCloth},
@@ -166,6 +167,7 @@ namespace {
     {
         trans_done++;
         transactions.pop_front();
+        last_dequeue_time = TIMER_INIT();
     }
 
     void Enqueue(Transaction::Type type, GW::Constants::MaterialSlot mat)
@@ -334,6 +336,8 @@ void MaterialsWindow::Update(const float)
     }
     switch (trans->state) {
     case Transaction::State::Idle: {
+        if (TIMER_DIFF(last_dequeue_time) < 100)
+            return;
         const auto item_id = trans->type == Transaction::Sell ? RequestSellQuote(trans->material) : RequestPurchaseQuote(trans->material);
         if (!item_id) {
             Cancel("Failed to quote for item");
