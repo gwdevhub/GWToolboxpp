@@ -406,14 +406,13 @@ namespace {
         windows_enabled.clear();
         other_modules_enabled.clear();
         for (auto module : modules_enabled) {
-            if (module->IsUIElement())
-                ui_elements_enabled.push_back(static_cast<ToolboxUIElement*>(module));
-            else
-                other_modules_enabled.push_back(module);
+            if (module->IsUIElement()) ui_elements_enabled.push_back(static_cast<ToolboxUIElement*>(module));
             if (module->IsWidget())
                 widgets_enabled.push_back(static_cast<ToolboxWidget*>(module));
             else if (module->IsWindow())
                 windows_enabled.push_back(static_cast<ToolboxWindow*>(module));
+            else
+                other_modules_enabled.push_back(module);
         }
         minimap_enabled = GWToolbox::IsModuleEnabled(&Minimap::Instance());
     }

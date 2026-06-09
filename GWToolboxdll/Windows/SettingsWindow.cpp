@@ -2,8 +2,8 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Defines.h>
-#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
+#include <Utils/GuiUtils.h>
 
 #include <Modules/ChatCommands.h>
 #include <Modules/Resources.h>
@@ -95,17 +95,10 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         if (ImGui::Button("Open GWToolbox++ Website", ImVec2(w, 0))) {
             ShellExecuteA(nullptr, "open", GWTOOLBOX_WEBSITE, nullptr, nullptr, SW_SHOWNORMAL);
         }
-
-        ToolboxSettings::DrawFreezeSetting();
-        ImGui::NextSpacedElement();
-        ImGui::CheckboxWithHelp("Send anonymous gameplay stats", &ToolboxSettings::send_anonymous_gameplay_info,
-            "Some features of toolbox allow you to contribute to the community\nby sending in-game data to remote websites.\
+        ImGui::Checkbox("Hide Settings when entering explorable area", &hide_when_entering_explorable);
+        ImGui::CheckboxWithHelp("Send anonymous gameplay stats", &ToolboxSettings::send_anonymous_gameplay_info, "Some features of toolbox allow you to contribute to the community\nby sending in-game data to remote websites.\
         \n\nFeatures that use this info:\
         \n\t- Sending outpost party information to https://party.gwtoolbox.com");
-        ImGui::NextSpacedElement();
-        ImGui::Checkbox("Hide Settings when entering explorable area", &hide_when_entering_explorable);
-
-
         ImGui::Text("General:");
 
         if (ImGui::CollapsingHeader("Help")) {
@@ -135,7 +128,8 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
                     "- CTRL+X,CTRL+C,CTRL+V clipboard\n"
                     "- CTRL+Z,CTRL+Y undo/redo\n"
                     "- ESCAPE to revert\n"
-                    "- You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract.\n");
+                    "- You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract.\n"
+                );
                 ImGui::TreePop();
             }
             if (ImGui::TreeNodeEx("Opening and closing windows", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -185,14 +179,14 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
                 }
             }
             sections_to_draw.push_back(m->SettingsName());
-            };
+        };
         const auto sort_and_draw_settings = [&] {
             std::ranges::sort(sections_to_draw);
             for (auto& s : sections_to_draw) {
                 DrawSettingsSection(s.c_str());
             }
             sections_to_draw.clear();
-            };
+        };
 
 
         auto modules = GWToolbox::GetModules();
@@ -275,10 +269,11 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     const bool should_navigate = !pending_navigate_to.empty() && pending_navigate_to == section;
     if (should_navigate) {
         ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-    } else if (!pending_navigate_to.empty()) {
+    }
+    else if (!pending_navigate_to.empty()) {
         ImGui::SetNextItemOpen(false, ImGuiCond_Always);
     }
-    const bool is_showing = ImGui::CollapsingHeader(std::format("##{}",section).c_str(), ImGuiTreeNodeFlags_AllowOverlap);
+    const bool is_showing = ImGui::CollapsingHeader(std::format("##{}", section).c_str(), ImGuiTreeNodeFlags_AllowOverlap);
     ImGui::SameLine(header_text_offset_x);
     if (icon) {
         ImGui::TextUnformatted(icon);
@@ -293,7 +288,7 @@ bool SettingsWindow::DrawSettingsSection(const char* section)
     size_t i = 0;
     if (is_showing) ImGui::Indent();
     for (const auto& setting_callback : settings_section->second) {
-        //if (i && is_showing) ImGui::Separator();
+        // if (i && is_showing) ImGui::Separator();
         ImGui::PushID(i);
         setting_callback.callback(settings_section->first, is_showing);
         i++;

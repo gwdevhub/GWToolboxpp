@@ -269,7 +269,34 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
 
 void ToolboxSettings::DrawSettingsInternal()
 {
-    DrawFreezeSetting();
+    ImGui::StartSpacedElements(300.f);
+    ImGui::NextSpacedElement();
+    ImGui::CheckboxWithHelp("Unlock Move All", &move_all, "Will allow movement and resize of all widgets and windows");
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Hide toolbox on loading screens", &hide_on_loading_screen);
+    ImGui::Spacing();
+    ImGui::Text("Show close button in:");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost##close", &show_close_in_outpost);
+    ImGui::SameLine();
+    ImGui::Checkbox("Explorable##close", &show_close_in_explorable);
+    ImGui::Unindent();
+    ImGui::Text("Show cog in:");
+    ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost", &show_cog_in_outpost);
+    ImGui::SameLine();
+    ImGui::Checkbox("Explorable", &show_cog_in_explorable);
+    ImGui::Unindent();
+    ImGui::Text("Show screenshot button in:");
+    ImGui::ShowHelp("Show a " ICON_FA_CAMERA " button in the title bar of each window.\nClick it to save a PNG of just that window to the Toolbox Screens folder.\nIntended for capturing screenshots for documentation or bug reports.");
+    ImGui::Indent();
+    ImGui::Checkbox("Outpost##scrn", &show_screenshot_button_in_outpost);
+    ImGui::SameLine();
+    ImGui::Checkbox("Explorable##scrn", &show_screenshot_button_in_explorable);
+    ImGui::Unindent();
     ImGui::Separator();
 
     Updater::Instance().DrawSettingsInternal();
@@ -313,33 +340,7 @@ void ToolboxSettings::DrawSettingsInternal()
     ImGui::Spacing();
 }
 
-void ToolboxSettings::DrawFreezeSetting()
-{
-    ImGui::StartSpacedElements(300.f);
-    ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Unlock Move All", &move_all, "Will allow movement and resize of all widgets and windows");
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
-    ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide toolbox on loading screens", &hide_on_loading_screen);
-    ImGui::Text("Show close button in:");
-    ImGui::Indent();
-    ImGui::Checkbox("Outpost##close", &show_close_in_outpost);
-    ImGui::Checkbox("Explorable##close", &show_close_in_explorable);
-    ImGui::Unindent();
-    ImGui::Text("Show cog in:");
-    ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
-    ImGui::Indent();
-    ImGui::Checkbox("Outpost", &show_cog_in_outpost);
-    ImGui::Checkbox("Explorable", &show_cog_in_explorable);
-    ImGui::Unindent();
-    ImGui::Text("Show screenshot button in:");
-    ImGui::ShowHelp("Show a " ICON_FA_CAMERA " button in the title bar of each window.\nClick it to save a PNG of just that window to the Toolbox Screens folder.\nIntended for capturing screenshots for documentation or bug reports.");
-    ImGui::Indent();
-    ImGui::Checkbox("Outpost##scrn", &show_screenshot_button_in_outpost);
-    ImGui::Checkbox("Explorable##scrn", &show_screenshot_button_in_explorable);
-    ImGui::Unindent();
-}
+void ToolboxSettings::DrawFreezeSetting() {}
 
 void ToolboxSettings::LoadSettings(ToolboxIni* ini)
 {
