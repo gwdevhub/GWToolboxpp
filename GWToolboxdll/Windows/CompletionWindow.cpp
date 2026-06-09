@@ -2374,19 +2374,20 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
     }
 
-    auto skills_title = [&, checkbox_offset](const char* title) {
+    auto skills_title = [&](const char* title) {
         ImGui::PushID(title);
         ImGui::Text(title);
         ImGui::ShowHelp("Guild Wars only shows skills learned for the current primary/secondary profession.\n\n"
             "GWToolbox remembers skills learned for other professions,\nbut is only able to update this info when you switch to that profession.");
-        ImGui::SameLine(checkbox_offset - 100.f);
+        const float skills_checkbox_offset = ImGui::GetContentRegionAvail().x - 280.f * ImGui::FontScale();
+        ImGui::SameLine(skills_checkbox_offset - 100.f * ImGui::FontScale());
         if (ImGui::Button("Check Now")) {
             GW::GameThread::Enqueue(CheckAllSkills);
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Will cycle through your available secondary professions to detect all unlocked skills");
         }
-        ImGui::SameLine(checkbox_offset);
+        ImGui::SameLine(skills_checkbox_offset);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
         ImGui::Checkbox("Hide learnt skills", &hide_unlocked_skills);
         ImGui::SameLine();
