@@ -6,6 +6,9 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.25
+* [Minor] The texmod module now works with pre-loaded instances of gMod
+
 ## Version 8.24
 * [Fix] Fixed an imgui bug causing some elements to be duplicated
 
