@@ -4,62 +4,62 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Party.h>
-#include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/GameEntities/Quest.h>
-#include <GWCA/GameEntities/Title.h>
 #include <GWCA/GameEntities/Friendslist.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Player.h>
+#include <GWCA/GameEntities/Quest.h>
+#include <GWCA/GameEntities/Skill.h>
+#include <GWCA/GameEntities/Title.h>
 
 #include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
 #include <GWCA/Context/PartyContext.h>
+#include <GWCA/Context/WorldContext.h>
 
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/MemoryMgr.h>
-#include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Managers/EffectMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
-#include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Hook.h>
+#include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/Scanner.h>
 
-#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <Logger.h>
+#include <Utils/GuiUtils.h>
 
 #include <Constants/EncStrings.h>
 #include <Modules/ChatCommands.h>
-#include <Modules/GameSettings.h>
 #include <Modules/ChatSettings.h>
+#include <Modules/DialogModule.h>
+#include <Modules/GameSettings.h>
+#include <Modules/HallOfMonumentsModule.h>
 #include <Modules/InventoryManager.h>
+#include <Modules/Resources.h>
+#include <Utils/TextUtils.h>
 #include <Widgets/PartyDamage.h>
+#include <Widgets/TimerWidget.h>
 #include <Windows/BuildsWindow.h>
 #include <Windows/MainWindow.h>
 #include <Windows/SettingsWindow.h>
-#include <Widgets/TimerWidget.h>
-#include <Modules/HallOfMonumentsModule.h>
-#include <Modules/DialogModule.h>
-#include <Modules/Resources.h>
-#include <Utils/TextUtils.h>
 
-#include "QuestModule.h"
 #include <Utils/ToolboxUtils.h>
-#include "ChatFilter.h"
 #include "CameraUnlockModule.h"
+#include "ChatFilter.h"
+#include "QuestModule.h"
 
 constexpr auto CMDTITLE_KEEP_CURRENT = 0xfffe;
 constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
@@ -102,9 +102,9 @@ namespace {
         return out ? out : L"";
     };
 
-    uint32_t GetAgentModelId(const GW::Agent* agent) {
-        if(!agent)
-            return 0;
+    uint32_t GetAgentModelId(const GW::Agent* agent)
+    {
+        if (!agent) return 0;
         if (const auto ag = agent->GetAsAgentLiving()) {
             return ag->player_number;
         }
@@ -235,7 +235,7 @@ namespace {
     {
         return wcscmp(str, L"nearest") == 0 || wcscmp(str, L"closest") == 0;
     }
- 
+
 
     typedef std::unordered_map<uint32_t, std::wstring> FlaggableHeroNames;
     void GetFlaggableHeroNames(std::function<void(FlaggableHeroNames*)> cb)
@@ -271,12 +271,10 @@ namespace {
     }
 
     struct DecodedTitleName {
-        DecodedTitleName(const GW::Constants::TitleID in)
-            : title(in)
+        DecodedTitleName(const GW::Constants::TitleID in) : title(in)
         {
             const auto title_info = GW::PlayerMgr::GetTitleData(title);
-            if (title_info)
-                name.reset(title_info->name_id);
+            if (title_info) name.reset(title_info->name_id);
         };
         GW::Constants::TitleID title;
         GuiUtils::EncString name;
@@ -324,26 +322,26 @@ namespace {
                                     "If quantity is 'all' and you do not pass model_ids, deposits all gold [platinum] from your inventory to your storage.";
 
     constexpr auto CmdHeroBehaviour_syntax = "'/hero [avoid|guard|attack|target] [hero_index] [silent]' to set your hero behavior or target in an explorable area.\n"
-                                          "If hero_index is not provided, all heroes behaviours will be adjusted.\n"
-                                          "Add 'silent' to suppress chat message from the hero.";
+                                             "If hero_index is not provided, all heroes behaviours will be adjusted.\n"
+                                             "Add 'silent' to suppress chat message from the hero.";
 
     constexpr auto disableheroskill_syntax = "'/disableheroskill <hero_index (1-7)> <slot (1-8)> [1|0]' to disable, enable, or toggle a hero's skill slot.\n"
                                              "Omit the last argument to toggle the current state.";
 
     constexpr auto target_syntax = "'/target closest' to target the closest agent to you.\n"
-                            "'/target ee' to target best ebon escape agent.\n"
-                            "'/target hos' to target best vipers/hos agent.\n"
-                            "'/target [name|model_id] [index]' target nearest NPC by name or model_id.\n   If index is specified, it will target index-th by ID.\n"
-                            "'/target player [name|player_number]' target nearest player by name or player number.\n"
-                            "'/target gadget [name|gadget_id]' target nearest interactive object by name or gadget_id.\n"
-                            "'/target priority [partymember]' to target priority target of party member.";
+                                   "'/target ee' to target best ebon escape agent.\n"
+                                   "'/target hos' to target best vipers/hos agent.\n"
+                                   "'/target [name|model_id] [index]' target nearest NPC by name or model_id.\n   If index is specified, it will target index-th by ID.\n"
+                                   "'/target player [name|player_number]' target nearest player by name or player number.\n"
+                                   "'/target gadget [name|gadget_id]' target nearest interactive object by name or gadget_id.\n"
+                                   "'/target priority [partymember]' to target priority target of party member.";
 
     constexpr auto button_syntax = "'/button [button_label] [button_label...]' e.g. /button \"BtnBuy\" \"BtnAccept\" \"BtnOk\"\n"
-                            "Allows you to interact with UI buttons on-screen if you know the labels";
+                                   "Allows you to interact with UI buttons on-screen if you know the labels";
 
     constexpr auto useskill_syntax = "'/useskill [slot]' starts using the skill on recharge.\n"
-                                "Use the skill number instead of [slot] (e.g. '/useskill 5').\n"
-                                "Use '/useskill [stop|off|slot|0]' to stop the skill.";
+                                     "Use the skill number instead of [slot] (e.g. '/useskill 5').\n"
+                                     "Use '/useskill [stop|off|slot|0]' to stop the skill.";
 
     constexpr auto custommarker_syntax = "'/custommarker <x> <y>' to place a custom marker at world map coordinates (x, y).\n"
                                          "'/custommarker clear' to remove the custom marker.";
@@ -390,18 +388,20 @@ namespace {
         }
         else {
             const auto objectives = QuestModule::ParseQuestObjectives(GW::Constants::QuestID::The_Last_Hierophant);
-            const wchar_t* objective_names[] = {
-                L"Thommis", L"Rand", L"Selvetarm", L"Forgewight", L"Duncan"
-            };
+            const wchar_t* objective_names[] = {L"Thommis", L"Rand", L"Selvetarm", L"Forgewight", L"Duncan"};
             for (size_t i = 0; i < _countof(objective_names); i++) {
                 const wchar_t completed_mark = i < objectives.size() && objectives[i].is_completed ? L'\x2705' : ' ';
                 const wchar_t* append_mark = i > 0 ? L", " : L"";
                 out_message += std::format(L"\x2\x108\x107{}{} [{}]\x1", append_mark, objective_names[i], completed_mark);
             }
         }
-        GW::UI::AsyncDecodeStr(out_message.c_str(), [](void*, const wchar_t* s) {
-            GW::Chat::SendChat('#', s);
-        }, nullptr, GW::Constants::Language::English);
+        GW::UI::AsyncDecodeStr(
+            out_message.c_str(),
+            [](void*, const wchar_t* s) {
+                GW::Chat::SendChat('#', s);
+            },
+            nullptr, GW::Constants::Language::English
+        );
     }
 
     using FocusChatTab_pt = void(__fastcall*)(void* chat_frame, void* edx, uint32_t tab);
@@ -590,7 +590,7 @@ namespace {
 
     std::unique_ptr<GuiUtils::EncString> MakePrefLabel(uint32_t enc_string_id)
     {
-        auto label = std::make_unique<GuiUtils::EncString>(enc_string_id, false);
+        auto label = std::make_unique<GuiUtils::EncString>(enc_string_id, true);
         label->language(GW::Constants::Language::English);
         label->SetSanitiseCallback([](std::wstring s) {
             return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
@@ -600,7 +600,7 @@ namespace {
 
     std::unique_ptr<GuiUtils::EncString> MakePrefLabel(const wchar_t* enc_string)
     {
-        auto label = std::make_unique<GuiUtils::EncString>(enc_string, false);
+        auto label = std::make_unique<GuiUtils::EncString>(enc_string, true);
         label->language(GW::Constants::Language::English);
         label->SetSanitiseCallback([](std::wstring s) {
             return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
@@ -609,26 +609,13 @@ namespace {
     }
 
     struct PrefMapCommand {
+        PrefMapCommand(GW::UI::EnumPreference p, uint32_t enc_string_id) : preference_id(std::to_underlying(p)), preference_callback(CmdEnumPref), label(MakePrefLabel(enc_string_id)) {}
 
-        PrefMapCommand(GW::UI::EnumPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p)),
-              preference_callback(CmdEnumPref),
-              label(MakePrefLabel(enc_string_id)) {}
+        PrefMapCommand(GW::UI::NumberPreference p, uint32_t enc_string_id) : preference_id(std::to_underlying(p)), preference_callback(CmdValuePref), label(MakePrefLabel(enc_string_id)) {}
 
-        PrefMapCommand(GW::UI::NumberPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p)),
-              preference_callback(CmdValuePref),
-              label(MakePrefLabel(enc_string_id)) {}
+        PrefMapCommand(GW::UI::FlagPreference p, uint32_t enc_string_id) : preference_id(std::to_underlying(p)), preference_callback(CmdFlagPref), label(MakePrefLabel(enc_string_id)) {}
 
-        PrefMapCommand(GW::UI::FlagPreference p, uint32_t enc_string_id)
-            : preference_id(std::to_underlying(p)),
-              preference_callback(CmdFlagPref),
-              label(MakePrefLabel(enc_string_id)) {}
-
-        PrefMapCommand(GW::UI::FlagPreference p, const wchar_t* enc_string_id)
-            : preference_id(std::to_underlying(p)),
-              preference_callback(CmdFlagPref),
-              label(MakePrefLabel(enc_string_id)) {}
+        PrefMapCommand(GW::UI::FlagPreference p, const wchar_t* enc_string_id) : preference_id(std::to_underlying(p)), preference_callback(CmdFlagPref), label(MakePrefLabel(enc_string_id)) {}
 
         uint32_t preference_id;
         CmdPrefCB preference_callback;
@@ -663,7 +650,10 @@ namespace {
             pref_map.emplace_back(GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking);
             pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1");
             pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1");
-            pref_map.emplace_back(GW::UI::FlagPreference::EnableGamepad, L"\x108\x107" "Enable Gamepad\x1");
+            pref_map.emplace_back(
+                GW::UI::FlagPreference::EnableGamepad, L"\x108\x107"
+                                                       "Enable Gamepad\x1"
+            );
             pref_map.emplace_back(GW::UI::FlagPreference::LegacyStartMissionButton, GW::EncStrings::LegacyStartMissionButton);
             pref_map.emplace_back(GW::UI::FlagPreference::EnableMobileHUD, GW::EncStrings::EnableMobileHUD);
             for (const auto& it : pref_map) {
@@ -681,8 +671,7 @@ namespace {
             std::wstring buffer;
 
             for (auto& option : options) {
-                if (!buffer.empty())
-                    buffer += L", ";
+                if (!buffer.empty()) buffer += L", ";
                 buffer += option.label->wstring();
             }
             Log::InfoW(L"/pref options:\n%s", buffer.c_str());
@@ -735,8 +724,7 @@ namespace {
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendChatMessage);
         const auto message = static_cast<GW::UI::UIPacket::kSendChatMessage*>(wparam)->message;
-        if (!(message && *message))
-            return;
+        if (!(message && *message)) return;
         const auto channel = GW::Chat::GetChannel(*message);
         if (channel != GW::Chat::CHANNEL_COMMAND || status->blocked) {
             return;
@@ -750,8 +738,7 @@ namespace {
                 std::vector<std::wstring> parts;
                 std::wstringstream wss(alias->command_wstr);
                 while (std::getline(wss, tmp, L'\n')) {
-                    if (tmp.length() < 2)
-                        continue;
+                    if (tmp.length() < 2) continue;
                     GW::Chat::SendChat((char)tmp[0], &tmp[1]);
                 }
                 alias->processing = false;
@@ -759,7 +746,7 @@ namespace {
         }
     }
 
-    
+
     void TargetNearest(const wchar_t* model_id_or_name, const GW::AgentTargetFlags type)
     {
         uint32_t model_id = 0;
@@ -824,12 +811,8 @@ namespace {
     void CHAT_CMD_FUNC(CmdCallTarget)
     {
         const auto* target = GW::Agents::GetTarget();
-        if (!target)
-            return;
-        auto call_packet = GW::UI::UIPacket::kSendCallTarget{
-            .call_type = GW::CallTargetType::AttackingOrTargetting,
-            .agent_id = target->agent_id
-        };
+        if (!target) return;
+        auto call_packet = GW::UI::UIPacket::kSendCallTarget{.call_type = GW::CallTargetType::AttackingOrTargetting, .agent_id = target->agent_id};
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &call_packet);
     }
 
@@ -1034,18 +1017,13 @@ namespace {
     void CHAT_CMD_FUNC(CmdDisableHeroSkill)
     {
         uint32_t hero_index = 0, slot_index = 0;
-        if (argc < 3
-            || !TextUtils::ParseUInt(argv[1], &hero_index) || hero_index < 1 || hero_index > 7
-            || !TextUtils::ParseUInt(argv[2], &slot_index) || slot_index < 1 || slot_index > 8)
-            return Log::Warning(disableheroskill_syntax);
+        if (argc < 3 || !TextUtils::ParseUInt(argv[1], &hero_index) || hero_index < 1 || hero_index > 7 || !TextUtils::ParseUInt(argv[2], &slot_index) || slot_index < 1 || slot_index > 8) return Log::Warning(disableheroskill_syntax);
         const auto agent_id = GW::Agents::GetHeroAgentID(hero_index);
-        if (!agent_id)
-            return Log::Warning(disableheroskill_syntax);
+        if (!agent_id) return Log::Warning(disableheroskill_syntax);
         bool disabled;
         if (argc >= 4) {
             uint32_t flag = 0;
-            if (!TextUtils::ParseUInt(argv[3], &flag) || flag > 1)
-                return Log::Warning(disableheroskill_syntax);
+            if (!TextUtils::ParseUInt(argv[3], &flag) || flag > 1) return Log::Warning(disableheroskill_syntax);
             disabled = flag != 0;
         }
         else {
@@ -1055,7 +1033,7 @@ namespace {
         GW::PartyMgr::SetHeroSkillDisabled(agent_id, slot_index - 1, disabled);
     }
 
-const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::AgentTargetFlags::Accept_Player;
+    const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::AgentTargetFlags::Accept_Player;
 
     static const std::unordered_map<std::wstring, GW::AgentTargetFlags> target_filters = {
         {L"item", GW::TargetFilter::Items}, {L"npc", AnyLivingNpc}, {L"gadget", GW::TargetFilter::Gadgets}, {L"player", GW::AgentTargetFlags::Accept_Player}, {L"ally", GW::TargetFilter::Allies}, {L"enemy", GW::TargetFilter::Enemies},
@@ -1157,14 +1135,7 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
     const wchar_t* settings_via_chat_commands_cmd = L"tb_setting";
 
     struct ToolboxChatCommandSetting {
-        enum class SettingType : uint32_t {
-            Bool,
-            String,
-            Color,
-            Float,
-            Uint,
-            Int
-        } setting_type;
+        enum class SettingType : uint32_t { Bool, String, Color, Float, Uint, Int } setting_type;
 
         void* setting_ptr;
         const wchar_t* setting_name;
@@ -1174,8 +1145,7 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         {
             switch (setting_type) {
                 case SettingType::Bool:
-                    if (description)
-                        return std::format(L"'/{} {} [on|off|toggle]' {}", settings_via_chat_commands_cmd, setting_name, description);
+                    if (description) return std::format(L"'/{} {} [on|off|toggle]' {}", settings_via_chat_commands_cmd, setting_name, description);
                     return std::format(L"'/{} {} [on|off|toggle]'", settings_via_chat_commands_cmd, setting_name);
             }
             return std::format(L"Failed to get ChatCommandSyntax for SettingType {} ({})", (uint32_t)setting_type, setting_name);
@@ -1185,27 +1155,20 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         {
             switch (setting_type) {
                 case SettingType::Bool:
-                    if (argc < 2)
-                        return Log::WarningW(L"Invalid syntax for %s\n%s", setting_name, ChatCommandSyntax().c_str());
+                    if (argc < 2) return Log::WarningW(L"Invalid syntax for %s\n%s", setting_name, ChatCommandSyntax().c_str());
                     auto current_val = (bool*)setting_ptr;
                     bool new_val = !*current_val;
-                    if (wcscmp(argv[1], L"on") == 0 || wcscmp(argv[1], L"1") == 0)
-                        new_val = true;
-                    if (wcscmp(argv[1], L"off") == 0 || wcscmp(argv[1], L"0") == 0)
-                        new_val = false;
-                    if (*current_val == new_val)
-                        return;
+                    if (wcscmp(argv[1], L"on") == 0 || wcscmp(argv[1], L"1") == 0) new_val = true;
+                    if (wcscmp(argv[1], L"off") == 0 || wcscmp(argv[1], L"0") == 0) new_val = false;
+                    if (*current_val == new_val) return;
                     *current_val = new_val;
-                // TODO: Maybe OnChanged callback?
+                    // TODO: Maybe OnChanged callback?
                     return;
             }
             Log::WarningW(L"Failed to process ToolboxChatCommandSetting %s", setting_name);
         }
 
-        ToolboxChatCommandSetting(const wchar_t* setting_name, const bool* bool_setting_ptr, const wchar_t* description = nullptr)
-            : setting_name(setting_name),
-              setting_ptr((void*)bool_setting_ptr),
-              description(description)
+        ToolboxChatCommandSetting(const wchar_t* setting_name, const bool* bool_setting_ptr, const wchar_t* description = nullptr) : setting_name(setting_name), setting_ptr((void*)bool_setting_ptr), description(description)
         {
             setting_type = SettingType::Bool;
         }
@@ -1224,7 +1187,8 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         found->second->ChatCommandCallback(status, message, argc, argv);
     }
 
-    bool CanAddToParty() {
+    bool CanAddToParty()
+    {
         return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && GW::PartyMgr::GetIsLeader() && GW::PartyMgr::GetPartySize() < GW::Map::GetMapInfo()->max_party_size;
     }
 
@@ -1264,10 +1228,9 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
                 }
 
                 if (best_id) {
-                    GW::GameThread::Enqueue([add_fn,best_id]() {
+                    GW::GameThread::Enqueue([add_fn, best_id]() {
                         add_fn(best_id);
-                        });
-                    
+                    });
                 }
             }
             else {
@@ -1350,11 +1313,11 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
             GW::PartyMgr::AddHero((GW::Constants::HeroID)found);
         });
     }
-    void CHAT_CMD_FUNC(CmdLeave) {
+    void CHAT_CMD_FUNC(CmdLeave)
+    {
         if (GW::PartyMgr::GetPartySize() > 1) {
             GW::GameThread::Enqueue(GW::PartyMgr::LeaveParty);
         }
-        
     }
     struct SkillToUse {
         uint32_t slot = 0; // 1-8 range
@@ -1381,12 +1344,13 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         if (!TextUtils::ParseUInt(argv[1], &num) || num > 8) {
             Log::Warning(useskill_syntax);
             return;
-        } 
+        }
         skill_to_use.slot = (skill_to_use.slot == num) ? 0 : num;
         skill_to_use.skill_usage_delay = .0f;
     }
 
-    void HookOnChatInteraction() {
+    void HookOnChatInteraction()
+    {
         if (OnChatInteraction_Callback_Func) return;
         const auto frame = GW::UI::GetFrameByLabel(L"Chat");
         if (!(frame && frame->frame_callbacks.size())) return;
@@ -1402,9 +1366,11 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         }
 
         ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
-        ImGui::TextDisabled("Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
+        ImGui::TextDisabled(
+            "Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
             "(a|b) denotes a mandatory argument, in this case 'a' or 'b'.\n"
-            "[a|b] denotes an optional argument, in this case nothing, 'a' or 'b'.");
+            "[a|b] denotes an optional argument, in this case nothing, 'a' or 'b'."
+        );
 
         ImGui::Bullet();
         ImGui::Text("'/age2' prints the instance time to chat.");
@@ -1425,18 +1391,22 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         ImGui::Bullet();
         ImGui::Text("'/chest' opens xunlai in outposts.");
         ImGui::Bullet();
-        ImGui::Text("'/config set|get|toggle|load [section key [value]]...' edit configuration values from GWToolbox.ini.\n"
-                    "\t'set' apply a setting to the running configuration.\n"
-                    "\t'get' show value of given key.\n"
-                    "\t'toggle' alternate between given value and configuration on disk.\n"
-                    "\t'load' reset key to its disk configuration.");
+        ImGui::Text(
+            "'/config set|get|toggle|load [section key [value]]...' edit configuration values from GWToolbox.ini.\n"
+            "\t'set' apply a setting to the running configuration.\n"
+            "\t'get' show value of given key.\n"
+            "\t'toggle' alternate between given value and configuration on disk.\n"
+            "\t'load' reset key to its disk configuration."
+        );
         ImGui::Bullet();
         ImGui::Text(custommarker_syntax);
         ImGui::Bullet();
-        ImGui::Text("'/damage' or '/dmg' to print party damage to chat.\n"
+        ImGui::Text(
+            "'/damage' or '/dmg' to print party damage to chat.\n"
             "'/damage me' sends your own damage only.\n"
             "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
-            "'/damage reset' resets the damage in party window.");
+            "'/damage reset' resets the damage in party window."
+        );
         ImGui::Bullet();
         ImGui::Text(deposit_syntax);
         ImGui::Bullet();
@@ -1444,9 +1414,11 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         ImGui::Bullet();
         ImGui::Text(dropbuff_syntax);
         ImGui::Bullet();
-        ImGui::Text("'/enter [fow|uw]' to enter the mission for your outpost.\n"
+        ImGui::Text(
+            "'/enter [fow|uw]' to enter the mission for your outpost.\n"
             "If in embark, toa, urgoz or deep, it will use a scroll.\n"
-            "If in an outpost with an available mission, it will begin the mission countdown.");
+            "If in an outpost with an available mission, it will begin the mission countdown."
+        );
         ImGui::Bullet();
         ImGui::Text("'/ff' alias for '/resign'");
         ImGui::Bullet();
@@ -1477,21 +1449,27 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         ImGui::Bullet();
         ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/loadprefs' to load GW settings from '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
-            "'/loadprefs <filename>' to load GW settings from '<GWToolbox Dir>/<filename>.ini'");
+        ImGui::TextUnformatted(
+            "'/loadprefs' to load GW settings from '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
+            "'/loadprefs <filename>' to load GW settings from '<GWToolbox Dir>/<filename>.ini'"
+        );
         ImGui::Bullet();
         ImGui::TextUnformatted("'/nm' or '/normalmode' to set normal mode difficulty in an outpost.");
         ImGui::Bullet();
         ImGui::TextUnformatted("'/morale' to send your current morale/death penalty info to team chat.");
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/marktarget' to highlight the current target on the gwtoolbox minimap.\n"
+        ImGui::TextUnformatted(
+            "'/marktarget' to highlight the current target on the gwtoolbox minimap.\n"
             "'/marktarget clear' to unhighlight the current target on the gwtoolbox minimap.\n"
-            "'/marktarget clearall' to clear all highlighted targets on the gwtoolbox minimap.");
+            "'/marktarget clearall' to clear all highlighted targets on the gwtoolbox minimap."
+        );
         ImGui::Bullet();
         ImGui::TextUnformatted("'/observer:reset' resets observer mode data.");
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/pingitem <equipped_item>' to ping your equipment in chat.\n"
-            "<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume");
+        ImGui::TextUnformatted(
+            "'/pingitem <equipped_item>' to ping your equipment in chat.\n"
+            "<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume"
+        );
         ImGui::Bullet();
         ImGui::TextUnformatted("'/pcons [on|off]' toggles, enables or disables pcons.");
         ImGui::Bullet();
@@ -1499,8 +1477,10 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         ImGui::Bullet();
         ImGui::TextUnformatted("'/resize <width> <height>' resize the GW window");
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/saveprefs' to save GW settings to '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
-            "'/saveprefs <filename>' to save GW settings to '<GWToolbox Dir>/<filename>.ini'");
+        ImGui::TextUnformatted(
+            "'/saveprefs' to save GW settings to '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
+            "'/saveprefs <filename>' to save GW settings to '<GWToolbox Dir>/<filename>.ini'"
+        );
         ImGui::Bullet();
         ImGui::TextUnformatted("'/scwiki [<search_term>]' search https://wiki.fbgmguild.com.");
         ImGui::Bullet();
@@ -1514,8 +1494,10 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
         ImGui::Bullet();
         ImGui::Text(tb_syntax);
         ImGui::Bullet();
-        ImGui::Text("'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' travel to outpost best matching <town> name. \n"
-            "[dis] can be any of: ae, ae1, ee, eg, int, etc");
+        ImGui::Text(
+            "'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' travel to outpost best matching <town> name. \n"
+            "[dis] can be any of: ae, ae1, ee, eg, int, etc"
+        );
         ImGui::Bullet();
         ImGui::Text("'/travel outpost' travel to nearest unlocked outpost to your current position.");
         ImGui::Bullet();
@@ -1575,10 +1557,8 @@ const GW::AgentTargetFlags AnyLivingNpc = GW::TargetFilter::AnyLiving & ~GW::Age
 
 void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message)
 {
-    if (alias && *alias == L'/')
-        alias++;
-    if (!(alias && *alias && message && *message))
-        return;
+    if (alias && *alias == L'/') alias++;
+    if (!(alias && *alias && message && *message)) return;
     const auto found = std::ranges::find_if(cmd_aliases, [alias, message](const CmdAlias* cmp) {
         return wcscmp(alias, cmp->alias_wstr) == 0 && wcscmp(message, cmp->command_wstr) == 0;
     });
@@ -1630,7 +1610,9 @@ void ChatCommands::DrawSettingsInternal()
             preview = "Remove title";
             break;
         default:
-            const auto selected = std::ranges::find_if(title_names, [&](auto* it) { return std::to_underlying(it->title) == default_title_id; });
+            const auto selected = std::ranges::find_if(title_names, [&](auto* it) {
+                return std::to_underlying(it->title) == default_title_id;
+            });
 
             if (selected != title_names.end()) {
                 preview = (*selected)->name.string();
@@ -1661,8 +1643,7 @@ void ChatCommands::DrawSettingsInternal()
     ImGui::TextDisabled("First matching command alias found will be triggered");
 
     static auto OnConfirmDeleteAlias = [](bool result, void* wparam) {
-        if (!result)
-            return;
+        if (!result) return;
         auto alias = (CmdAlias*)wparam;
         const auto found = std::ranges::find(cmd_aliases, alias);
         if (found != cmd_aliases.end()) {
@@ -1672,7 +1653,7 @@ void ChatCommands::DrawSettingsInternal()
     };
 
     const auto avail_w = ImGui::GetContentRegionAvail().x - 128.f;
-    for (size_t i = 0, cnt = cmd_aliases.size(); i < cnt;i++) {
+    for (size_t i = 0, cnt = cmd_aliases.size(); i < cnt; i++) {
         const auto alias = cmd_aliases[i];
         ImGui::PushID(i);
 
@@ -1687,8 +1668,7 @@ void ChatCommands::DrawSettingsInternal()
         ImGui::SameLine();
         const auto text_height = ImGui::GetTextLineHeightWithSpacing();
         const auto num_newlines = 1 + std::count(alias->command_cstr, alias->command_cstr + _countof(CmdAlias::command_cstr), '\n');
-        if (ImGui::InputTextMultiline("##cmd_command", alias->command_cstr,
-                                      _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, text_height + num_newlines * ImGui::GetTextLineHeight()))) {
+        if (ImGui::InputTextMultiline("##cmd_command", alias->command_cstr, _countof(CmdAlias::command_cstr), ImVec2(avail_w * .6f, text_height + num_newlines * ImGui::GetTextLineHeight()))) {
             swprintf(alias->command_wstr, _countof(CmdAlias::command_wstr), L"%S", alias->command_cstr);
         }
         if (ImGui::IsItemHovered()) {
@@ -1712,7 +1692,6 @@ void ChatCommands::DrawSettingsInternal()
 
 void ChatCommands::LoadSettings(ToolboxIni* ini)
 {
-
     LOAD_UINT(default_title_id);
 
     for (const auto* it : cmd_aliases) {
@@ -1747,7 +1726,6 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
         CreateAlias(L"armor", L"/pingitem armor");
     }
     sort_cmd_aliases();
-
 }
 
 void ChatCommands::SaveSettings(ToolboxIni* ini)
@@ -1793,7 +1771,7 @@ void ChatCommands::Initialize()
 {
     ToolboxModule::Initialize();
 
-    //TODO: Move all of these callbacks into pvt namespace
+    // TODO: Move all of these callbacks into pvt namespace
     chat_commands = {
         {L"addhenchman", CmdAddHenchman},
         {L"button", CmdButtonPress},
@@ -1838,7 +1816,7 @@ void ChatCommands::Initialize()
         {L"call", CmdCallTarget},
         {L"config", CmdConfig},
         {settings_via_chat_commands_cmd, CmdSettingViaChatCommand},
-        {L"dropbuff",CmdDropBuff},
+        {L"dropbuff", CmdDropBuff},
         {L"addhenchman", CmdAddHenchman},
         {L"addhero", CmdAddHero},
         {L"leave", CmdLeave},
@@ -1938,7 +1916,6 @@ void ChatCommands::Update(const float delta)
     skill_to_use.Update();
     npc_to_find.Update();
     quest_ping.Update();
-
 }
 
 void ChatCommands::QuestPing::Init()
@@ -1988,7 +1965,7 @@ void SearchAgent::Init(const wchar_t* _search, const GW::AgentTargetFlags type)
     if (!agents) return;
 
     for (const auto agent : *agents) {
-        if (!GW::Agents::GetAgentMatchesFlags(agent,type)) continue;
+        if (!GW::Agents::GetAgentMatchesFlags(agent, type)) continue;
 
         const wchar_t* enc_name = GW::Agents::GetAgentEncName(agent);
         if (enc_name && enc_name[0]) {
@@ -2059,17 +2036,14 @@ void SkillToUse::Update()
     }
     const auto lslot = slot - 1;
     const GW::SkillbarSkill& skill = skillbar->skills[lslot];
-    if (skill.skill_id == GW::Constants::SkillID::No_Skill
-        || skill.skill_id == GW::Constants::SkillID::Mystic_Healing
-        || skill.skill_id == GW::Constants::SkillID::Cautery_Signet) {
+    if (skill.skill_id == GW::Constants::SkillID::No_Skill || skill.skill_id == GW::Constants::SkillID::Mystic_Healing || skill.skill_id == GW::Constants::SkillID::Cautery_Signet) {
         slot = 0;
         return;
     }
     const GW::Skill& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
     if ((skilldata.adrenaline == 0 && skill.GetRecharge() == 0) || (skilldata.adrenaline > 0 && skill.adrenaline_a == skilldata.adrenaline)) {
         const auto wait_for_queue = !(skilldata.type == GW::Constants::SkillType::Shout || skilldata.type == GW::Constants::SkillType::Stance || skilldata.type == GW::Constants::SkillType::PetAttack);
-        if (wait_for_queue && skillbar->cast_array.size()) 
-            return; // Don't use skill if we've got something queued
+        if (wait_for_queue && skillbar->cast_array.size()) return; // Don't use skill if we've got something queued
         GW::SkillbarMgr::UseSkill(lslot, GW::Agents::GetTargetId());
         skill_usage_delay = std::max(skilldata.activation + skilldata.aftercast, 0.25f); // a small flat delay of .3s for ping and to avoid spamming in case of bad target
         skill_timer = clock();
@@ -2137,8 +2111,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdEnterMission)
             if (!GW::Items::UseItemByModelId(item_id, 1, 4) && !GW::Items::UseItemByModelId(item_id, 8, 16)) {
                 return Log::Error(error_no_scrolls);
             }
-        }
-        break;
+        } break;
         default:
             const auto map_info = GW::Map::GetCurrentMapInfo();
             if (!map_info || !map_info->GetHasEnterButton()) {
@@ -2163,10 +2136,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdMorale)
         GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
     }
     else {
-        auto packet = GW::UI::UIPacket::kSendCallTarget{
-            .call_type = GW::CallTargetType::Morale,
-            .agent_id = GW::Agents::GetControlledCharacterId()
-        };
+        auto packet = GW::UI::UIPacket::kSendCallTarget{.call_type = GW::CallTargetType::Morale, .agent_id = GW::Agents::GetControlledCharacterId()};
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &packet);
     }
 }
@@ -2204,8 +2174,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
     if (!DialogModule::GetDialogAgent()) {
         const auto* target = GW::Agents::GetTargetAsAgentLiving();
         const auto* me = GW::Agents::GetControlledCharacter();
-        if (target && target->allegiance == GW::Constants::Allegiance::Npc_Minipet
-            && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
+        if (target && target->allegiance == GW::Constants::Allegiance::Npc_Minipet && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
             GW::Agents::InteractAgent(target);
         }
     }
@@ -2368,11 +2337,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
 GW::UI::WindowID CHAT_CMD_FUNC(ChatCommands::MatchingGWWindow)
 {
     const std::map<GW::UI::WindowID, const wchar_t*> gw_windows = {
-        {GW::UI::WindowID_Compass, L"compass"},
-        {GW::UI::WindowID_HealthBar, L"healthbar"},
-        {GW::UI::WindowID_EnergyBar, L"energybar"},
-        {GW::UI::WindowID_ExperienceBar, L"experiencebar"},
-        {GW::UI::WindowID_Chat, L"chat"}
+        {GW::UI::WindowID_Compass, L"compass"}, {GW::UI::WindowID_HealthBar, L"healthbar"}, {GW::UI::WindowID_EnergyBar, L"energybar"}, {GW::UI::WindowID_ExperienceBar, L"experiencebar"}, {GW::UI::WindowID_Chat, L"chat"}
     };
     if (argc < 2) {
         return GW::UI::WindowID_Count;
@@ -2437,11 +2402,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
     }
     const std::wstring last_arg = TextUtils::ToLower(argv[argc - 1]);
     bool ignore_last_arg = false;
-    enum ActionType : uint8_t {
-        Toggle,
-        On,
-        Off
-    } action = Toggle;
+    enum ActionType : uint8_t { Toggle, On, Off } action = Toggle;
     if (last_arg == L"on" || last_arg == L"1" || last_arg == L"show") {
         action = On;
         ignore_last_arg = true;
@@ -2549,17 +2510,14 @@ void CHAT_CMD_FUNC(ChatCommands::CmdSCWiki)
 
 void CHAT_CMD_FUNC(ChatCommands::CmdLoad)
 {
-    if (argc == 1)
-        return;
+    if (argc == 1) return;
 
     std::wstring dir;
-    if (!GW::MemoryMgr::GetPersonalDir(dir))
-        return;
+    if (!GW::MemoryMgr::GetPersonalDir(dir)) return;
 
     const std::filesystem::path build_file = std::format(L"{}/GUILD WARS/Templates/Skills/{}.txt", dir, argv[1]);
     std::string content;
-    if (!Resources::ReadFile(build_file, content))
-        content = TextUtils::WStringToString(argv[1]);
+    if (!Resources::ReadFile(build_file, content)) content = TextUtils::WStringToString(argv[1]);
     if (argc == 2) {
         GW::SkillbarMgr::LoadSkillTemplate(GW::Agents::GetControlledCharacterId(), content.c_str());
     }
@@ -2582,16 +2540,14 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingBuild)
     }
 
     std::wstring dir;
-    if (!GW::MemoryMgr::GetPersonalDir(dir))
-        return;
+    if (!GW::MemoryMgr::GetPersonalDir(dir)) return;
 
     for (auto arg_idx = 1; arg_idx < argc; arg_idx++) {
         const LPWSTR arg = argv[arg_idx];
 
         const std::filesystem::path build_file = std::format(L"{}/GUILD WARS/Templates/Skills/{}.txt", dir, arg);
         std::string content;
-        if (!Resources::ReadFile(build_file, content))
-            return;
+        if (!Resources::ReadFile(build_file, content)) return;
 
         // If template file does not exist, skip
         GW::SkillbarMgr::SkillTemplate skill_template{};
@@ -2613,8 +2569,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingEquipment)
         return;
     }
     const auto equipped_items_bag = GW::Items::GetBag(GW::Constants::Bag::Equipped_Items);
-    if (!equipped_items_bag)
-        return;
+    if (!equipped_items_bag) return;
     const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     if (arg1 == L"weapon") {
         GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 1), 3);
@@ -2663,8 +2618,7 @@ void GetAchievements(const std::wstring& player_name)
         return Log::Error("Invalid player name for hall of monuments command");
     }
     hom_achievements = HallOfMonumentsAchievements{};
-    HallOfMonumentsModule::AsyncGetAccountAchievements(
-        player_name, &hom_achievements, OnAchievementsLoaded);
+    HallOfMonumentsModule::AsyncGetAccountAchievements(player_name, &hom_achievements, OnAchievementsLoaded);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdHom)
@@ -2735,7 +2689,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
     if (title_for_map != std::to_underlying(GW::Constants::TitleID::None)) {
         title_id = title_for_map;
     }
-    apply :
+apply:
     GW::Constants::TitleID current_title = GW::PlayerMgr::GetActiveTitleId();
     if (title_id == CMDTITLE_KEEP_CURRENT && current_title != GW::Constants::TitleID::None) {
         title_id = std::to_underlying(current_title);
@@ -2811,7 +2765,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdSetHardMode)
 {
     if (!GW::GetWorldContext()->is_hard_mode_unlocked) {
         return;
-    } 
+    }
     GW::PartyMgr::SetHardMode(true);
 }
 
