@@ -406,11 +406,14 @@ namespace {
         windows_enabled.clear();
         other_modules_enabled.clear();
         for (auto module : modules_enabled) {
-            if (module->IsUIElement()) ui_elements_enabled.push_back(static_cast<ToolboxUIElement*>(module));
-            if (module->IsWidget())
+            if (module->IsWidget()) {
                 widgets_enabled.push_back(static_cast<ToolboxWidget*>(module));
-            else if (module->IsWindow())
+                ui_elements_enabled.push_back(static_cast<ToolboxUIElement*>(module));
+            }
+            else if (module->IsWindow()) {
                 windows_enabled.push_back(static_cast<ToolboxWindow*>(module));
+                ui_elements_enabled.push_back(static_cast<ToolboxUIElement*>(module));
+            }
             else
                 other_modules_enabled.push_back(module);
         }
