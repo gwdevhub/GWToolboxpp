@@ -499,8 +499,8 @@ void HotkeysWindow::LoadSettings(ToolboxIni* ini)
     TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
     HotkeyToggle::clicker_delay_ms = ini->GetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
 
-    while (TBHotkey::all_hotkeys.size())
-        delete TBHotkey::all_hotkeys[0];
+    while (!TBHotkey::all_hotkeys.empty())
+        delete TBHotkey::all_hotkeys[0]; // removes the first element in the destructor
 
     ToolboxIni hotkeys_ini;
     const auto hotkeys_ini_path = Resources::GetSettingFile(HotkeysIniFilename);
