@@ -44,8 +44,6 @@ Run without ever checking for updates (e.g. to stay on a specific release):
 GWToolbox.exe /noupdate
 ```
 
-> **Note:** `/noupdate` only stops the *launcher* from updating the DLL at startup. The Toolbox DLL has its own update setting (Toolbox **Settings → Updater → Update mode**) which may be set to check for and apply updates on its own. To stay on a specific release, also set that to **Do not check for updates**.
-
 Inject into a specific Guild Wars process:
 
 ```text
