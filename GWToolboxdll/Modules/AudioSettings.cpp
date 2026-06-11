@@ -280,13 +280,11 @@ void AudioSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
     blocked_sounds.clear();
-    std::vector<std::string> blocked_sounds_hex;
-    if (doc.Get(Name(), "blocked_sounds", blocked_sounds_hex)) {
-        for (const auto& hex : blocked_sounds_hex) {
-            std::wstring out;
-            GuiUtils::IniToArray(hex, out);
-            if (!out.empty())
-                blocked_sounds.push_back(std::move(out));
+    std::vector<SettingWString> stored;
+    if (doc.Get(Name(), "blocked_sounds", stored)) {
+        for (auto& s : stored) {
+            if (!s.value.empty())
+                blocked_sounds.push_back(std::move(s.value));
         }
     }
     else if (legacy) {
@@ -306,15 +304,12 @@ void AudioSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 void AudioSettings::SaveSettings(SettingsDoc& doc)
 {
     ToolboxModule::SaveSettings(doc);
-    // Hex-encoded: GW encoded filenames can contain lone surrogates that utf8 conversion rejects
-    std::vector<std::string> blocked_sounds_hex;
-    std::string buf;
+    std::vector<SettingWString> stored;
     for (const auto& filename : blocked_sounds) {
-        GuiUtils::ArrayToIni(filename, &buf);
-        if (!buf.empty())
-            blocked_sounds_hex.push_back(buf);
+        if (!filename.empty())
+            stored.emplace_back(filename);
     }
-    doc.Set(Name(), "blocked_sounds", blocked_sounds_hex);
+    doc.Set(Name(), "blocked_sounds", stored);
 }
 void AudioSettings::DrawSettingsInternal() {
 

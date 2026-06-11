@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <map>
 #include <string>
@@ -99,4 +101,44 @@ private:
     Section& GetOrCreateSection(std::string_view section);
 
     std::map<std::string, Section, std::less<>> sections;
+};
+
+// GW-encoded wstrings can hold lone surrogates that don't survive utf8 conversion; persisted as
+// space-separated hex code units (same codec as GuiUtils::ArrayToIni, so legacy INI values match).
+struct SettingWString {
+    std::wstring value;
+
+    SettingWString() = default;
+    SettingWString(std::wstring v) : value(std::move(v)) {}
+
+    operator std::wstring&() { return value; }
+    operator const std::wstring&() const { return value; }
+};
+
+template <>
+struct glz::meta<SettingWString> {
+    static constexpr auto read_wstr = [](SettingWString& s, const std::string& input) {
+        s.value.clear();
+        s.value.reserve((input.size() + 1) / 5);
+        const char* p = input.c_str();
+        while (*p) {
+            char* end = nullptr;
+            const auto parsed = strtoul(p, &end, 16);
+            if (end == p || parsed > 0xFFFF) break;
+            s.value.push_back(static_cast<wchar_t>(parsed));
+            if (*end != ' ') break;
+            p = end + 1;
+        }
+    };
+    static constexpr auto write_wstr = [](const SettingWString& s) -> std::string {
+        std::string out;
+        out.reserve(s.value.size() * 5);
+        char buf[8];
+        for (size_t i = 0; i < s.value.size(); i++) {
+            snprintf(buf, sizeof(buf), i ? " %04x" : "%04x", static_cast<unsigned>(s.value[i]) & 0xFFFFu);
+            out += buf;
+        }
+        return out;
+    };
+    static constexpr auto value = glz::custom<read_wstr, write_wstr>;
 };
