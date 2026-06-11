@@ -12,6 +12,7 @@
 
 #include <Modules/ChatFilter.h>
 #include <Modules/DiscordModule.h>
+#include <Modules/HeroPanelPositionModule.h>
 #include <Modules/HintsModule.h>
 #include <Modules/ItemDrops.h>
 #include <Modules/KeyboardLanguageFix.h>
@@ -153,6 +154,7 @@ namespace {
         ChatFilter::Instance(),
         ItemDrops::Instance(),
         PartyWindowModule::Instance(),
+        HeroPanelPositionModule::Instance(),
         ToastNotifications::Instance(),
         DiscordModule::Instance(),
         TwitchModule::Instance(),
