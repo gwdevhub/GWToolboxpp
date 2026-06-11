@@ -1379,14 +1379,6 @@ namespace {
                     GW::UI::DestroyUIComponent(GW::UI::GetFrameByLabel(L"Inventory"));
                 }
             } break;
-            case GW::UI::UIMessage::kAgentOverheadFloat:
-            case GW::UI::UIMessage::kAgentOverheadNumber: {
-                const auto packet = (GW::UI::UIPacket::kAgentOverheadNumber*)wParam;
-                const auto game_frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6);
-                if (const auto existing_frame = (GW::TextLabelFrame*)GW::UI::GetChildFrame(game_frame, 0x1000000 + packet->agent_id)) {
-                    Log::Info("Found");
-                }
-            } break;
             case GW::UI::UIMessage::kVendorTransComplete: {
                 SkipCharacterNameEntryForFactionDonation(false);
             } break;
