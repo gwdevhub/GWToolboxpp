@@ -289,11 +289,6 @@ namespace {
         return w ? &w->titles : nullptr;
     }
 
-    using SetMuted_pt = void(__cdecl*)(bool mute);
-    SetMuted_pt SetMuted_Func;
-    using PostMute_pt = void(__cdecl*)(int param);
-    PostMute_pt PostMuted_Func;
-
     GW::HookEntry createuicomponent_hook;
 
     GW::UI::UIInteractionCallback OnChatInteraction_Callback_Func = nullptr;
@@ -656,6 +651,7 @@ namespace {
             );
             pref_map.emplace_back(GW::UI::FlagPreference::LegacyStartMissionButton, GW::EncStrings::LegacyStartMissionButton);
             pref_map.emplace_back(GW::UI::FlagPreference::EnableMobileHUD, GW::EncStrings::EnableMobileHUD);
+            pref_map.emplace_back(GW::UI::NumberPreference::ScreenBorderless, GW::EncStrings::Resolution);
             for (const auto& it : pref_map) {
                 it.label->wstring();
             }
@@ -1039,13 +1035,18 @@ namespace {
     const char* SettingValueSyntax(const SettingsRegistry::Type type)
     {
         switch (type) {
-            case SettingsRegistry::Type::Bool: return "[on|off|toggle]";
+            case SettingsRegistry::Type::Bool:
+                return "[on|off|toggle]";
             case SettingsRegistry::Type::Int:
             case SettingsRegistry::Type::Uint:
-            case SettingsRegistry::Type::Float: return "<number>";
-            case SettingsRegistry::Type::Color: return "<0xAARRGGBB>";
-            case SettingsRegistry::Type::Float2: return "<x> <y>";
-            default: return "<text>";
+            case SettingsRegistry::Type::Float:
+                return "<number>";
+            case SettingsRegistry::Type::Color:
+                return "<0xAARRGGBB>";
+            case SettingsRegistry::Type::Float2:
+                return "<x> <y>";
+            default:
+                return "<text>";
         }
     }
 
@@ -1755,7 +1756,9 @@ void ChatCommands::DrawSettingsInternal()
             preview = "Remove title";
             break;
         default:
-            const auto selected = std::ranges::find_if(title_names, [&](auto* it) { return std::to_underlying(it->title) == settings.default_title_id; });
+            const auto selected = std::ranges::find_if(title_names, [&](auto* it) {
+                return std::to_underlying(it->title) == settings.default_title_id;
+            });
 
             if (selected != title_names.end()) {
                 preview = (*selected)->name.string();
@@ -1976,27 +1979,7 @@ void ChatCommands::Initialize()
 
     RegisterUIMessageCallback(&OnSentChat_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChat);
 
-
-#if _DEBUG
-    // Experimental chat commands
-    uintptr_t address = 0;
-    address = GW::Scanner::Find("\x83\xc4\x04\xc7\x45\x08\x00\x00\x00\x00", "xxxxxxxxxx", -5);
-    if (address) {
-        SetMuted_Func = (SetMuted_pt)GW::Scanner::FunctionFromNearCall(address);
-        PostMuted_Func = (PostMute_pt)GW::Scanner::FunctionFromNearCall(address + 0x10);
-        is_muted = *(bool**)((uintptr_t)SetMuted_Func + 0x6);
-    }
-    chat_commands.push_back({L"mute", CmdMute}); // Doesn't unmute!
-
-#endif
-
     HookOnChatInteraction();
-
-#ifdef _DEBUG
-    ASSERT(SetMuted_Func);
-    ASSERT(PostMuted_Func);
-    ASSERT(is_muted);
-#endif
 
     for (auto& it : chat_commands) {
         GW::Chat::CreateCommand(&ChatCmd_HookEntry, it.first, it.second);
@@ -2467,10 +2450,8 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         // A config exists if it has split per-module files, a legacy single-doc json, or a legacy ini
         std::error_code ec;
         const auto modules_folder = Resources::GetSettingFile(GWTOOLBOX_MODULES_FOLDERNAME);
-        const bool has_settings = (std::filesystem::exists(modules_folder, ec) && !std::filesystem::is_empty(modules_folder, ec))
-                                  || std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME), ec)
-                                  || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME), ec)
-                                  || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME), ec);
+        const bool has_settings = (std::filesystem::exists(modules_folder, ec) && !std::filesystem::is_empty(modules_folder, ec)) || std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME), ec) ||
+                                  std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME), ec) || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME), ec);
         if (!has_settings) {
             Log::ErrorW(L"Settings folder '%s' does not exist", arg2.c_str());
             GWToolbox::SetSettingsFolder(old_settings_folder);
@@ -2926,12 +2907,4 @@ void CHAT_CMD_FUNC(ChatCommands::CmdSetHardMode)
 void CHAT_CMD_FUNC(ChatCommands::CmdSetNormalMode)
 {
     GW::PartyMgr::SetHardMode(false);
-}
-
-void CHAT_CMD_FUNC(ChatCommands::CmdMute)
-{
-    if (SetMuted_Func) {
-        SetMuted_Func(!*is_muted);
-        PostMuted_Func(0);
-    }
 }
