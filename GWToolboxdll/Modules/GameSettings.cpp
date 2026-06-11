@@ -1786,9 +1786,7 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kVendorTransComplete,
         GW::UI::UIMessage::kExperienceGained,
         GW::UI::UIMessage::kTitleProgressUpdated,
-        GW::UI::UIMessage::kGetPreGameContext_Value0,
-        GW::UI::UIMessage::kAgentOverheadNumber,
-        GW::UI::UIMessage::kAgentOverheadFloat
+        GW::UI::UIMessage::kGetPreGameContext_Value0
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
