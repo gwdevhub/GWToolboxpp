@@ -136,6 +136,7 @@ namespace {
     bool block_dealing_damage = false;
     bool block_giving_heals = false;
     bool block_receiving_heals = false;
+    bool combine_overhead_numbers = false;
 
     bool lazy_chest_looting = false;
     bool show_amount_of_lockpicks_under_locked_chest_nametag = false;
@@ -1164,6 +1165,14 @@ namespace {
                         }
                     } break;
                 }
+                if (combine_overhead_numbers && !status->blocked) {
+                    // If a damage floater is already created, add together the amounts and destroy the old one, instead of creating a new floater for each hit
+                    if (const auto existing = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 0x1000000 + packet->agent_id)) {
+                        const auto context = (int*)GW::UI::GetFrameContext(existing);
+                        packet->amount += context[0x10];
+                        GW::UI::DestroyUIComponent(existing);
+                    }
+                }
             } break;
             case GW::UI::UIMessage::kMapLoaded: {
                 mission_prompted = false;
@@ -1367,6 +1376,14 @@ namespace {
                 }
                 if (need_to_hide_inventory_window_after_trade) {
                     GW::UI::DestroyUIComponent(GW::UI::GetFrameByLabel(L"Inventory"));
+                }
+            } break;
+            case GW::UI::UIMessage::kAgentOverheadFloat:
+            case GW::UI::UIMessage::kAgentOverheadNumber: {
+                const auto packet = (GW::UI::UIPacket::kAgentOverheadNumber*)wParam;
+                const auto game_frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6);
+                if (const auto existing_frame = (GW::TextLabelFrame*)GW::UI::GetChildFrame(game_frame, 0x1000000 + packet->agent_id)) {
+                    Log::Info("Found");
                 }
             } break;
             case GW::UI::UIMessage::kVendorTransComplete: {
@@ -1776,7 +1793,9 @@ void GameSettings::Initialize()
         GW::UI::UIMessage::kVendorTransComplete,
         GW::UI::UIMessage::kExperienceGained,
         GW::UI::UIMessage::kTitleProgressUpdated,
-        GW::UI::UIMessage::kGetPreGameContext_Value0
+        GW::UI::UIMessage::kGetPreGameContext_Value0,
+        GW::UI::UIMessage::kAgentOverheadNumber,
+        GW::UI::UIMessage::kAgentOverheadFloat
     };
     for (const auto message_id : post_ui_messages) {
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, message_id, OnPostUIMessage, 0x8000);
