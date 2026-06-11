@@ -375,6 +375,7 @@ namespace {
         {"block_dealing_damage", &block_dealing_damage, false},
         {"block_giving_heals", &block_giving_heals, false},
         {"block_receiving_heals", &block_receiving_heals, false},
+        {"combine_overhead_numbers", &combine_overhead_numbers, false},
         {"disable_skill_descriptions_in_outpost", &disable_skill_descriptions_in_outpost, false},
         {"disable_skill_descriptions_in_explorable", &disable_skill_descriptions_in_explorable, false},
         {"prevent_weapon_spell_animation_on_player", &prevent_weapon_spell_animation_on_player, false},
@@ -2165,6 +2166,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Healing given", &block_giving_heals);
     ImGui::Unindent();
+    ImGui::CheckboxWithHelp("Combine floating numbers above character", &combine_overhead_numbers, "Merges damage/heal numbers stacking on an agent into a single floater to reduce UI noise");
     if (ImGui::Checkbox("Show experience progress instead of current level on your experience bar", &useful_level_progress_label)) {
         GW::GameThread::Enqueue(SetXpBarLabel);
     }
