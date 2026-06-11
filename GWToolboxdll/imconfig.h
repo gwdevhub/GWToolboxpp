@@ -115,3 +115,6 @@ namespace ImGui
 */
 
 #define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD 1 // no gamepad
+
+//---- Item locate hooks for the settings search (see Dependencies/imgui_test_engine_hooks). No struct layouts change under this define in 1.92.7.
+#define IMGUI_ENABLE_TEST_ENGINE

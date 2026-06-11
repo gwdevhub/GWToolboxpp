@@ -136,7 +136,7 @@ namespace {
     // -------------------------------------------------------------------------
     Color& cardinal_color = reinterpret_cast<Color&>(default_minimap_context.cardinal_color);
     float cardinal_offset = 0.0f;     // game-unit offset from compass edge; +ve = outward
-    float cardinal_font_size = 20.0f; // screen-space font size in pixels
+    float cardinal_font_size = 13.0f; // screen-space font size in pixels
 
     // Projects a game-world position to an ImGui screen pixel, using the same
     // transform chain that Minimap::Render / RenderSetupProjection applies.
@@ -807,6 +807,45 @@ void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
 
+    // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
+    const auto register_color = [this](const char* key, Color* color) {
+        SettingsRegistry::RegisterField(this, key, reinterpret_cast<Colors::SettingColor*>(color));
+    };
+    SettingsRegistry::RegisterField(this, "scale", &scale);
+    SettingsRegistry::RegisterField(this, "hero_flag_controls_show", &hero_flag_controls_show);
+    SettingsRegistry::RegisterField(this, "hero_flag_window_attach", &hero_flag_window_attach);
+    register_color("hero_flag_controls_background", &hero_flag_controls_background);
+    SettingsRegistry::RegisterField(this, "mouse_clickthrough_in_outpost", &mouse_clickthrough_in_outpost);
+    SettingsRegistry::RegisterField(this, "mouse_clickthrough_in_explorable", &mouse_clickthrough_in_explorable);
+    SettingsRegistry::RegisterField(this, "target_gadgets_on_ctrl_click", &target_gadgets_on_ctrl_click);
+    SettingsRegistry::RegisterField(this, "minimap_draw_key", &MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]);
+    SettingsRegistry::RegisterField(this, "minimap_target_key", &MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]);
+    SettingsRegistry::RegisterField(this, "minimap_drag_key", &MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag]);
+    SettingsRegistry::RegisterField(this, "minimap_moveto_key", &MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo]);
+    SettingsRegistry::RegisterField(this, "rotate_minimap", &rotate_minimap);
+    SettingsRegistry::RegisterField(this, "flip_on_reverse", &flip_on_reverse);
+    SettingsRegistry::RegisterField(this, "smooth_rotation", &smooth_rotation);
+    SettingsRegistry::RegisterField(this, "circular_map", &circular_map);
+    SettingsRegistry::RegisterField(this, "snap_to_compass", &snap_to_compass);
+    SettingsRegistry::RegisterField(this, "hide_compass_agents", &hide_compass_agents);
+    SettingsRegistry::RegisterField(this, "render_all_quests", &render_all_quests);
+    SettingsRegistry::RegisterField(this, "hide_compass_quest_marker", &hide_compass_quest_marker);
+    SettingsRegistry::RegisterField(this, "hide_compass_drawings", &hide_compass_drawings);
+    SettingsRegistry::RegisterField(this, "hide_flagging_controls", &hide_flagging_controls);
+    SettingsRegistry::RegisterField(this, "hide_compass_when_minimap_draws", &hide_compass_when_minimap_draws);
+    register_color("color_map", &color_map);
+    register_color("color_mapshadow", &color_mapshadow);
+    register_color("color_mapbackground", &color_mapbackground);
+    register_color("cardinal_color", &cardinal_color);
+    SettingsRegistry::RegisterField(this, "cardinal_offset", &cardinal_offset);
+    SettingsRegistry::RegisterField(this, "cardinal_font_size", &cardinal_font_size);
+    range_renderer.RegisterSettings(this);
+    agent_renderer.RegisterSettings(this);
+    pingslines_renderer.RegisterSettings(this);
+    symbols_renderer.RegisterSettings(this);
+    custom_renderer.RegisterSettings(this);
+    GameWorldRenderer::RegisterSettings(this);
+
     uintptr_t address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
     if (address) {
         hide_flagging_controls_patch.SetPatch(address, "\xeb", 1);
@@ -1199,107 +1238,44 @@ void Minimap::DrawSettingsInternal()
     ImGui::CheckboxWithHelp("Circular", &circular_map, "Whether the map should be circular like the compass (default) or a square.");
 }
 
-void Minimap::LoadSettings(ToolboxIni* ini)
+void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-    Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Markers.ini", [](const bool success, const std::wstring& error) {
-        if (success) {
-            Instance().custom_renderer.LoadMarkers();
-        }
-        else {
-            Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
-        }
-    });
-    scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
-    LOAD_BOOL(hero_flag_controls_show);
-    LOAD_BOOL(hero_flag_window_attach);
-    LOAD_COLOR(hero_flag_controls_background);
-    LOAD_BOOL(mouse_clickthrough_in_outpost);
-    LOAD_BOOL(mouse_clickthrough_in_explorable);
-    LOAD_BOOL(target_gadgets_on_ctrl_click);
-    LOAD_BOOL(rotate_minimap);
-    LOAD_BOOL(flip_on_reverse);
-    LOAD_BOOL(smooth_rotation);
-    LOAD_BOOL(circular_map);
-    LOAD_BOOL(snap_to_compass);
-    LOAD_BOOL(hide_compass_agents);
-    LOAD_BOOL(render_all_quests);
-    LOAD_BOOL(hide_compass_quest_marker);
-    LOAD_BOOL(hide_compass_drawings);
-    LOAD_BOOL(hide_flagging_controls);
-    LOAD_BOOL(hide_compass_when_minimap_draws);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    std::error_code ec;
+    if (!std::filesystem::exists(Resources::GetSettingFile(L"Markers.json"), ec)) {
+        // No Markers.json yet; fetch the legacy ini if needed and parse it via the ini fallback. TODO: download Markers.json once it exists on master.
+        Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Markers.ini", [](const bool success, const std::wstring& error) {
+            if (success) {
+                Instance().custom_renderer.LoadMarkers();
+            }
+            else {
+                Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
+            }
+        });
+    }
 
     hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
 
-    MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw] = ini->GetLongValue(Name(), VAR_NAME(minimap_draw_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]);
-    MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target] = ini->GetLongValue(Name(), VAR_NAME(minimap_target_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]);
-    MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag] = ini->GetLongValue(Name(), VAR_NAME(minimap_drag_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag]);
-    MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo] = ini->GetLongValue(Name(), VAR_NAME(minimap_moveto_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo]);
-
-    LOAD_COLOR(color_map);
-    LOAD_COLOR(color_mapshadow);
-    LOAD_COLOR(color_mapbackground);
-
-    cardinal_color = Colors::Load(ini, Name(), "cardinal_color", 0xFFFFFFFF);
-    cardinal_offset = static_cast<float>(ini->GetDoubleValue(Name(), "cardinal_offset", 0.0));
-    cardinal_font_size = static_cast<float>(ini->GetDoubleValue(Name(), "cardinal_font_size", 13.0));
-
-    range_renderer.LoadSettings(ini, Name());
-    agent_renderer.LoadSettings(ini, Name());
-    pingslines_renderer.LoadSettings(ini, Name());
-    symbols_renderer.LoadSettings(ini, Name());
-    custom_renderer.LoadSettings(ini, Name());
-    effect_renderer.LoadSettings(ini, Name());
-    GameWorldRenderer::LoadSettings(ini, Name());
-
-    range_renderer.Invalidate();
+    range_renderer.LoadSettings(doc, legacy, Name());
+    agent_renderer.LoadCustomAgents();
+    agent_renderer.Invalidate();
+    pingslines_renderer.Invalidate();
+    symbols_renderer.Invalidate();
+    custom_renderer.Invalidate();
+    custom_renderer.LoadMarkers();
+    effect_renderer.LoadSettings(doc, legacy, Name());
+    GameWorldRenderer::OnSettingsLoaded();
 
     pending_refresh_quest_marker = true;
 }
 
-void Minimap::SaveSettings(ToolboxIni* ini)
+void Minimap::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-    ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);
-    SAVE_BOOL(hero_flag_controls_show);
-    SAVE_BOOL(hero_flag_window_attach);
-    SAVE_COLOR(hero_flag_controls_background);
-    SAVE_BOOL(mouse_clickthrough_in_outpost);
-    SAVE_BOOL(mouse_clickthrough_in_explorable);
-    SAVE_BOOL(target_gadgets_on_ctrl_click);
-
-    ini->SetLongValue(Name(), VAR_NAME(minimap_draw_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]);
-    ini->SetLongValue(Name(), VAR_NAME(minimap_target_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]);
-    ini->SetLongValue(Name(), VAR_NAME(minimap_drag_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag]);
-    ini->SetLongValue(Name(), VAR_NAME(minimap_moveto_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo]);
-
-    SAVE_BOOL(rotate_minimap);
-    SAVE_BOOL(flip_on_reverse);
-    SAVE_BOOL(smooth_rotation);
-    SAVE_BOOL(circular_map);
-    SAVE_BOOL(snap_to_compass);
-    SAVE_BOOL(hide_compass_agents);
-    SAVE_BOOL(hide_compass_quest_marker);
-    SAVE_BOOL(hide_compass_drawings);
-    SAVE_BOOL(render_all_quests);
-    SAVE_BOOL(hide_flagging_controls);
-    SAVE_BOOL(hide_compass_when_minimap_draws);
-
-    SAVE_COLOR(color_map);
-    SAVE_COLOR(color_mapshadow);
-    SAVE_COLOR(color_mapbackground);
-
-    Colors::Save(ini, Name(), "cardinal_color", cardinal_color);
-    ini->SetDoubleValue(Name(), "cardinal_offset", static_cast<double>(cardinal_offset));
-    ini->SetDoubleValue(Name(), "cardinal_font_size", static_cast<double>(cardinal_font_size));
-
-    range_renderer.SaveSettings(ini, Name());
-    agent_renderer.SaveSettings(ini, Name());
-    pingslines_renderer.SaveSettings(ini, Name());
-    symbols_renderer.SaveSettings(ini, Name());
-    custom_renderer.SaveSettings(ini, Name());
-    EffectRenderer::SaveSettings(ini, Name());
-    GameWorldRenderer::SaveSettings(ini, Name());
+    ToolboxWidget::SaveSettings(doc);
+    range_renderer.SaveSettings(doc, Name());
+    EffectRenderer::SaveSettings(doc, Name());
+    agent_renderer.SaveCustomAgents();
+    custom_renderer.SaveMarkers();
 }
 
 size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags)

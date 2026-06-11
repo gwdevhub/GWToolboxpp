@@ -25,20 +25,11 @@ namespace github_api {
 namespace {
 
     constexpr glz::opts json_opts{.error_on_unknown_keys = false};
-    // 0=none, 1=check and warn, 2=check and ask, 3=check and do
-    enum class ReleaseType : int {
-        Stable,
-        Beta
-    };
-    enum class Mode : int {
-        DontCheckForUpdates,
-        CheckAndWarn,
-        CheckAndAsk,
-        CheckAndAutoUpdate
-    };
 
-    ReleaseType release_type = ReleaseType::Stable;
-    Mode mode = Mode::CheckAndAsk;
+    using ReleaseType = Updater::ReleaseType;
+    using Mode = Updater::Mode;
+
+    Updater::Settings settings;
 
     // 0=checking, 1=asking, 2=downloading, 3=done
     enum Step {
@@ -84,7 +75,7 @@ namespace {
             if (js.tag_name.empty() || js.assets.empty()) {
                 continue;
             }
-            if (js.prerelease && release_type == ReleaseType::Stable) {
+            if (js.prerelease && settings.update_release_type == ReleaseType::Stable) {
                 continue;
             }
             const auto version_number_len = js.tag_name.find(js.tag_name.contains("_Release") ? "_Release" : "_Beta", 0);
@@ -209,32 +200,37 @@ const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
     return out;
 }
 
-void Updater::LoadSettings(ToolboxIni* ini)
+void Updater::Initialize()
 {
-    ToolboxModule::LoadSettings(ini);
+    ToolboxUIElement::Initialize();
+#ifndef _DEBUG
+    // Debug builds never load/save update settings (forced values below), so don't register them
+    SettingsRegistry::Register(this, settings);
+#endif
+}
+
+void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxUIElement::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 #ifdef _DEBUG
-    mode = Mode::DontCheckForUpdates;
-    release_type = ReleaseType::Beta;
-#else
-    mode = static_cast<Mode>(ini->GetLongValue(Name(), "update_mode", static_cast<int>(mode)));
-    release_type = static_cast<ReleaseType>(ini->GetLongValue(Name(), "update_release_type", static_cast<int>(release_type)));
+    settings.update_mode = Mode::DontCheckForUpdates;
+    settings.update_release_type = ReleaseType::Beta;
 #endif
     CheckForUpdate();
 }
 
-void Updater::SaveSettings(ToolboxIni* ini)
+void Updater::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-#ifdef _DEBUG
-#else
-    ini->SetLongValue(Name(), "update_mode", static_cast<int>(mode));
-    ini->SetLongValue(Name(), "update_release_type", static_cast<int>(release_type));
-    ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
+    ToolboxUIElement::SaveSettings(doc);
+#ifndef _DEBUG
+    doc.SetStruct(Name(), settings);
+    doc.Set(Name(), "dllversion", std::string(GWTOOLBOXDLL_VERSION));
 
     const HMODULE module = GWToolbox::GetDLLModule();
     CHAR dllfile[MAX_PATH];
     const DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
-    ini->SetValue(Name(), "dllpath", size > 0 ? dllfile : "error");
+    doc.Set(Name(), "dllpath", std::string(size > 0 ? dllfile : "error"));
 #endif
 }
 
@@ -246,13 +242,13 @@ void Updater::DrawSettingsInternal()
     if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates", ImVec2(btnWidth, 0)) && step != Checking) {
         CheckForUpdate(true);
     }
-    ImGui::RadioButton("Stable", (int*)&release_type, static_cast<int>(ReleaseType::Stable));
-    ImGui::RadioButton("Beta", (int*)&release_type, static_cast<int>(ReleaseType::Beta));
+    ImGui::RadioButton("Stable", (int*)&settings.update_release_type, static_cast<int>(ReleaseType::Stable));
+    ImGui::RadioButton("Beta", (int*)&settings.update_release_type, static_cast<int>(ReleaseType::Beta));
     ImGui::Text("Update mode:");
-    ImGui::RadioButton("Do not check for updates", (int*)&mode, static_cast<int>(Mode::DontCheckForUpdates));
-    ImGui::RadioButton("Check and display a message", (int*)&mode, static_cast<int>(Mode::CheckAndWarn));
-    ImGui::RadioButton("Check and ask before updating", (int*)&mode, static_cast<int>(Mode::CheckAndAsk));
-    ImGui::RadioButton("Check and automatically update", (int*)&mode, static_cast<int>(Mode::CheckAndAutoUpdate));
+    ImGui::RadioButton("Do not check for updates", (int*)&settings.update_mode, static_cast<int>(Mode::DontCheckForUpdates));
+    ImGui::RadioButton("Check and display a message", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndWarn));
+    ImGui::RadioButton("Check and ask before updating", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndAsk));
+    ImGui::RadioButton("Check and automatically update", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndAutoUpdate));
 }
 
 void Updater::CheckForUpdate(const bool forced)
@@ -283,13 +279,13 @@ void Updater::CheckForUpdate(const bool forced)
             return;
         }
         is_latest_version = false;
-        if (!forced && mode == Mode::DontCheckForUpdates) {
+        if (!forced && settings.update_mode == Mode::DontCheckForUpdates) {
             step = Done;
             return; // Do not check for updates
         }
 
         // we have a new version!
-        Mode iMode = forced ? Mode::CheckAndAsk : mode;
+        Mode iMode = forced ? Mode::CheckAndAsk : settings.update_mode;
         if constexpr (!std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             iMode = Mode::CheckAndAsk;
         }

@@ -21,10 +21,7 @@ namespace {
 
     GW::HookEntry ContextCallback_Entry;
     GW::HookEntry Ping_Entry;
-    int red_threshold = 250;
-    bool show_avg_ping = false;
-    int font_size = 0;
-    float text_size = 40.f;
+    LatencyWidget::Settings settings;
 
     GW::HookEntry ChatCommand_Hook;
 
@@ -113,11 +110,11 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !ctrl_pressed))) {
         const ImVec2 cur = ImGui::GetCursorPos();
-        ImGui::PushFont(FontLoader::GetFont(), text_size);
+        ImGui::PushFont(FontLoader::GetFont(), settings.text_size);
         ImGui::SetCursorPos(cur);
         uint32_t ping = GetPing();
         ImGui::TextColored(GetColorForPing(ping), "%ums", ping);
-        if (show_avg_ping) {
+        if (settings.show_avg_ping) {
             ping = GetAveragePing();
             ImGui::TextColored(GetColorForPing(ping), "%ums", ping);
         }
@@ -136,33 +133,34 @@ void LatencyWidget::Draw(IDirect3DDevice9*)
     ImGui::PopStyleColor();
 }
 
-void LatencyWidget::LoadSettings(ToolboxIni* ini)
+void LatencyWidget::Initialize()
 {
-    ToolboxWidget::LoadSettings(ini);
-
-    LOAD_UINT(red_threshold);
-    LOAD_BOOL(show_avg_ping);
-    LOAD_FLOAT(text_size);
+    ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
 }
 
-void LatencyWidget::SaveSettings(ToolboxIni* ini)
+void LatencyWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_UINT(red_threshold);
-    SAVE_BOOL(show_avg_ping);
-    SAVE_FLOAT(text_size);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void LatencyWidget::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void LatencyWidget::DrawSettingsInternal()
 {
-    ImGui::SliderInt("Red ping threshold", &red_threshold, 0, 1000);
-    ImGui::Checkbox("Show average ping", &show_avg_ping);
-    ImGui::DragFloat("Text size", &text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
+    ImGui::SliderInt("Red ping threshold", &settings.red_threshold, 0, 1000);
+    ImGui::Checkbox("Show average ping", &settings.show_avg_ping);
+    ImGui::DragFloat("Text size", &settings.text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
 }
 
 ImColor LatencyWidget::GetColorForPing(const uint32_t ping)
 {
-    const float x = ping / static_cast<float>(red_threshold);
+    const float x = ping / static_cast<float>(settings.red_threshold);
     const auto myColor = ImColor(2.0f * x, 2.0f * (1 - x), 0.0f);
     return myColor;
 }

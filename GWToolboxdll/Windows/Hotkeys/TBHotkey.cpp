@@ -34,8 +34,6 @@
 #include <Windows/Hotkeys/HotkeyToggle.h>
 #include <Windows/Hotkeys/HotkeyUseItem.h>
 
-bool TBHotkey::show_active_in_header = true;
-bool TBHotkey::show_run_in_header = true;
 unsigned int TBHotkey::cur_ui_id = 0;
 // add these:
 std::vector<TBHotkey*> TBHotkey::all_hotkeys;
@@ -315,6 +313,7 @@ bool TBHotkey::Draw()
 {
     bool hotkey_changed = false;
 
+    const auto& settings = HotkeysWindow::Instance().settings;
     const float scale = ImGui::FontScale();
 
     const auto& range = group ? group->hotkeys : all_hotkeys;
@@ -325,7 +324,7 @@ bool TBHotkey::Draw()
         // If no buttons will be drawn, avoid calling SameLine() — doing so without
         // drawing anything after leaves ImGui's cursor at the header's Y, causing
         // subsequent items (next header or expanded content) to render at the wrong position.
-        if (!show_run_in_header && first && last && !show_active_in_header) {
+        if (!settings.show_run_in_header && first && last && !settings.show_active_in_header) {
             return;
         }
 
@@ -345,7 +344,7 @@ bool TBHotkey::Draw()
         ImGui::SameLine();
         current_pos.y = ImGui::GetCursorPosY();
 
-        if (show_run_in_header) {
+        if (settings.show_run_in_header) {
             current_pos.x -= run_btn_width;
             ImGui::SetCursorPos(current_pos);
             if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(run_btn_width, 0.0f))) {
@@ -379,7 +378,7 @@ bool TBHotkey::Draw()
         }
         current_pos.x -= spacing;
 
-        if (show_active_in_header) {
+        if (settings.show_active_in_header) {
             current_pos.x -= btn_size;
             ImGui::SetCursorPos(current_pos);
             const bool checkbox_changed = ImGui::Checkbox("##active", &active);
@@ -493,6 +492,7 @@ bool TBHotkey::DrawSettings()
 {
     bool hotkey_changed = false;
 
+    const auto& settings = HotkeysWindow::Instance().settings;
     const auto keybuf_s = ModKeyName(key_combo);
     const float scale = ImGui::FontScale();
 
@@ -695,7 +695,7 @@ bool TBHotkey::DrawSettings()
     }
 
     ImGui::Separator();
-    if (!show_active_in_header) {
+    if (!settings.show_active_in_header) {
         const bool checkbox_changed = ImGui::Checkbox("###active", &active);
         hotkey_changed |= checkbox_changed;
         if (ImGui::IsItemHovered()) {
@@ -742,7 +742,7 @@ e.g. A hotkey with Ctrl + H will NOT trigger if you've got the W key held aswell
         ImGui::SetTooltip("Hotkeys usually trigger as soon as the key combination is pressed.\nYou can change this to instead only trigger when the key is released");
     }
     ImGui::SameLine();
-    if (!show_run_in_header) {
+    if (!settings.show_run_in_header) {
         if (ImGui::Button(ongoing ? "Stop" : "Run", ImVec2(control_width, 0.0f))) {
             Toggle();
         }

@@ -342,6 +342,7 @@ namespace {
 void HotkeysWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     clickerTimer = TIMER_INIT();
     dropCoinsTimer = TIMER_INIT();
 }
@@ -486,65 +487,80 @@ if (ImGui::Selectable("Equip Item")) {
 void HotkeysWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::Checkbox("Show 'Active' checkbox in header", &TBHotkey::show_active_in_header);
-    ImGui::Checkbox("Show 'Run' button in header", &TBHotkey::show_run_in_header);
-    ImGui::SliderInt("Autoclicker delay (ms)", &HotkeyToggle::clicker_delay_ms, 1, 1'000);
+    ImGui::Checkbox("Show 'Active' checkbox in header", &settings.show_active_in_header);
+    ImGui::Checkbox("Show 'Run' button in header", &settings.show_run_in_header);
+    ImGui::SliderInt("Autoclicker delay (ms)", &settings.clicker_delay_ms, 1, 1'000);
 }
 
-void HotkeysWindow::LoadSettings(ToolboxIni* ini)
+void HotkeysWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-
-    TBHotkey::show_active_in_header = ini->GetBoolValue(Name(), "show_active_in_header", false);
-    TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
-    HotkeyToggle::clicker_delay_ms = ini->GetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
     while (!TBHotkey::all_hotkeys.empty())
         delete TBHotkey::all_hotkeys[0]; // removes the first element in the destructor
 
-    ToolboxIni hotkeys_ini;
-    const auto hotkeys_ini_path = Resources::GetSettingFile(HotkeysIniFilename);
-    ASSERT(hotkeys_ini.LoadIfExists(hotkeys_ini_path) == SI_OK);
-    hotkeys_ini.location_on_disk = hotkeys_ini_path;
-
-    if (MigrateLegacyHotkeys(ini, &hotkeys_ini)) {
-        ASSERT(Resources::SaveIniToFile(hotkeys_ini.location_on_disk, &hotkeys_ini) == 0);
-        DeleteHotkeySections(ini);
-        ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
+    std::vector<HotkeyEntry> entries;
+    if (doc.Get(Name(), "hotkeys", entries)) {
+        ToolboxIni tmp_ini;
+        char buf[256];
+        int sec_idx = 0;
+        for (const auto& [type, fields] : entries) {
+            snprintf(buf, sizeof(buf), "hotkey-%04d:%s", sec_idx++, type.c_str());
+            for (const auto& [key, value] : fields) {
+                tmp_ini.SetValue(buf, key.c_str(), value.c_str());
+            }
+            TBHotkey::HotkeyFactory(&tmp_ini, buf);
+        }
     }
+    else {
+        ToolboxIni hotkeys_ini;
+        const auto hotkeys_ini_path = Resources::GetLegacySettingFile(HotkeysIniFilename);
+        ASSERT(hotkeys_ini.LoadIfExists(hotkeys_ini_path) == SI_OK);
+        hotkeys_ini.location_on_disk = hotkeys_ini_path;
 
-    TNamesDepend entries;
-    hotkeys_ini.GetAllSections(entries);
+        // Migrated hotkeys only live in memory until the JSON save; never write any .ini back to disk
+        if (legacy && MigrateLegacyHotkeys(legacy, &hotkeys_ini)) {
+            DeleteHotkeySections(legacy);
+        }
 
-    for (const auto& entry : entries) {
-        const char* sec = entry.pItem;
-        TBHotkey::HotkeyFactory(&hotkeys_ini, sec);
+        TNamesDepend ini_sections;
+        hotkeys_ini.GetAllSections(ini_sections);
+
+        for (const auto& section : ini_sections) {
+            TBHotkey::HotkeyFactory(&hotkeys_ini, section.pItem);
+        }
     }
 
     TBHotkey::SortHotkeys();
     CheckSetValidHotkeys();
 }
 
-void HotkeysWindow::SaveSettings(ToolboxIni* ini)
+void HotkeysWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), "show_active_in_header", TBHotkey::show_active_in_header);
-    ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
-    ini->SetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    ToolboxIni hotkeys_ini;
-    hotkeys_ini.location_on_disk = Resources::GetSettingFile(HotkeysIniFilename);
-
-    // Save all hotkeys as flat sections. Every section gets a sort_order field
+    // Save all hotkeys as flat tagged entries. Every entry gets a sort_order field
     // that determines display order on load. Children also get a group field
     // containing their parent group's label.
+    std::vector<HotkeyEntry> entries;
+    entries.reserve(TBHotkey::all_hotkeys.size());
+    ToolboxIni tmp_ini;
     int sec_idx = 0;
     char buf[256];
-    for (auto hotkey : TBHotkey::all_hotkeys) {
+    for (const auto hotkey : TBHotkey::all_hotkeys) {
         snprintf(buf, sizeof(buf), "hotkey-%04d:%s", sec_idx++, hotkey->Name());
-        hotkey->Save(&hotkeys_ini, buf);
+        hotkey->Save(&tmp_ini, buf);
+        auto& entry = entries.emplace_back();
+        entry.type = hotkey->Name();
+        TNamesDepend keys;
+        tmp_ini.GetAllKeys(buf, keys);
+        for (const auto& key : keys) {
+            entry.fields[key.pItem] = tmp_ini.GetValue(buf, key.pItem, "");
+        }
     }
-    ASSERT(Resources::SaveIniToFile(hotkeys_ini.location_on_disk, &hotkeys_ini) == 0);
+    doc.Set(Name(), "hotkeys", entries);
 }
 
 bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)

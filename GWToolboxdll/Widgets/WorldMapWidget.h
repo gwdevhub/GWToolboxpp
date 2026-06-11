@@ -31,8 +31,21 @@ public:
     [[nodiscard]] const char* Name() const override { return "World Map"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
-    void LoadSettings(ToolboxIni*) override;
-    void SaveSettings(ToolboxIni*) override;
+    struct Settings {
+        bool showing_all_outposts = false;
+        bool highlight_locked_areas = false;
+        bool show_lines_on_world_map = false;
+        bool showing_all_quests = true;
+        bool apply_quest_colors = false;
+        Colors::SettingColor locked_area_highlight_color = IM_COL32(255, 160, 0, 96);
+        bool hide_captured_elites = false;
+        bool show_any_elite_capture_locations = false;
+        // Bitmask backing the per-profession show_elite_capture_locations runtime array
+        unsigned int show_elite_capture_locations_val = 0xffffffff;
+    };
+
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
     bool WndProc(UINT, WPARAM, LPARAM) override;

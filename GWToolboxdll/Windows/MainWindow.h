@@ -22,11 +22,18 @@ public:
 
     [[nodiscard]] const char* SettingsName() const override { return "Toolbox Settings"; }
 
+    struct Settings {
+        bool one_panel_at_time_only = false;
+        bool show_icons = true;
+        bool center_align_text = false;
+    };
+
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     void RegisterSettingsContent() override;
 
@@ -35,10 +42,6 @@ public:
     bool pending_refresh_buttons = true;
 
 private:
-    bool one_panel_at_time_only = false;
-    bool show_icons = true;
-    bool center_align_text = false;
-
     float GetModuleWeighting(const ToolboxUIElement* m) const
     {
         const auto found = module_weightings.find(m->Name());

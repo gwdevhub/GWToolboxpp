@@ -704,6 +704,8 @@ namespace {
 
     std::vector<CmdAlias*> cmd_aliases;
 
+    ChatCommands::Settings settings;
+
     void sort_cmd_aliases()
     {
         std::ranges::stable_sort(cmd_aliases, [](const auto* a, const auto* b) {
@@ -814,118 +816,6 @@ namespace {
         if (!target) return;
         auto call_packet = GW::UI::UIPacket::kSendCallTarget{.call_type = GW::CallTargetType::AttackingOrTargetting, .agent_id = target->agent_id};
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendCallTarget, &call_packet);
-    }
-
-    void CHAT_CMD_FUNC(CmdConfig)
-    {
-        const char* syntax = "/config set|get|toggle|load [section key [value]]...";
-        if (argc < 4) {
-            Log::Error(syntax);
-            return;
-        }
-        auto modules = GWToolbox::GetAllModules();
-        ToolboxIni empty_ini;
-        auto ini_disk = GWToolbox::OpenSettingsFile();
-        enum ActionType : uint8_t { Set, Get, Toggle, Load } action = Set;
-
-        const auto arg1 = TextUtils::ToLower(argv[1]);
-        if (arg1 == L"set") {
-            action = Set;
-        }
-        else if (arg1 == L"get") {
-            action = Get;
-        }
-        else if (arg1 == L"toggle") {
-            action = Toggle;
-        }
-        else if (arg1 == L"load") {
-            action = Load;
-        }
-        else {
-            Log::Error(syntax);
-            return;
-        }
-        // make sure the loop will not run out of arguments mid tuple
-        switch (action) {
-            case Set:
-            case Toggle:
-                if (argc % 3 != 2) {
-                    Log::Error(syntax);
-                    return;
-                }
-                break;
-            case Get:
-            case Load:
-                if (argc % 2 != 0) {
-                    Log::Error(syntax);
-                    return;
-                }
-                break;
-        }
-
-        // merge supplied settings with currently applied ini sections
-        for (int i = 2; i < argc;) {
-            const auto section = TextUtils::UcWords(TextUtils::WStringToString(argv[i]));
-            i++;
-
-            ASSERT(i < argc);
-            const auto key = TextUtils::ToLower(TextUtils::WStringToString(argv[i]));
-            i++;
-
-            std::string value;
-            if (action == Set || action == Toggle) {
-                ASSERT(i < argc);
-                value = TextUtils::WStringToString(argv[i]);
-                i++;
-            }
-            // add sections only for modules referred to in this command
-            if (!empty_ini.SectionExists(section.c_str())) {
-                for (const auto m : modules) {
-                    if (section == m->Name()) {
-                        m->SaveSettings(&empty_ini);
-                        break;
-                    }
-                }
-            }
-            if (!empty_ini.SectionExists(section.c_str())) {
-                Log::Warning("ignoring unknown section '%s'", section.c_str());
-                continue;
-            }
-            if (!empty_ini.KeyExists(section.c_str(), key.c_str())) {
-                Log::Warning("ignoring unknown key '%s'", key.c_str());
-                continue;
-            }
-            switch (action) {
-                case Set:
-                    empty_ini.SetValue(section.c_str(), key.c_str(), value.c_str());
-                    break;
-                case Get:
-                    Log::Info("[%s] %s = %s", section.c_str(), key.c_str(), empty_ini.GetValue(section.c_str(), key.c_str()));
-                    break;
-                case Toggle:
-                    // Wouldn't this feature behave differently once you save the settings???
-                    // e.g. "/config toggle Pcons show_enable_button false" suddenly wouldn't work if it was saved as "false" when you closed toolbox...
-                    if (0 == strcmp(empty_ini.GetValue(section.c_str(), key.c_str()), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()))) {
-                        empty_ini.SetValue(section.c_str(), key.c_str(), value.c_str());
-                    }
-                    else {
-                        empty_ini.SetValue(section.c_str(), key.c_str(), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()));
-                    }
-                    break;
-                case Load:
-                    empty_ini.SetValue(section.c_str(), key.c_str(), ini_disk->GetValue(section.c_str(), key.c_str(), value.c_str()));
-            }
-        }
-
-        if (action == Get) {
-            return;
-        }
-        // apply sections which were affected by this command
-        for (const auto m : modules) {
-            if (empty_ini.SectionExists(m->Name())) {
-                m->LoadSettings(&empty_ini);
-            }
-        }
     }
 
     void CHAT_CMD_FUNC(CmdHeroBehaviour)
@@ -1134,57 +1024,286 @@ namespace {
 
     const wchar_t* settings_via_chat_commands_cmd = L"tb_setting";
 
-    struct ToolboxChatCommandSetting {
-        enum class SettingType : uint32_t { Bool, String, Color, Float, Uint, Int } setting_type;
+    std::string SlugifySection(const std::string_view section)
+    {
+        auto slug = TextUtils::ToLower(std::string(section));
+        std::ranges::replace(slug, ' ', '_');
+        return slug;
+    }
 
-        void* setting_ptr;
-        const wchar_t* setting_name;
-        const wchar_t* description;
+    std::string SettingSlug(const SettingsRegistry::Entry& entry)
+    {
+        return SlugifySection(entry.section) + "." + TextUtils::ToLower(entry.key);
+    }
 
-        std::wstring ChatCommandSyntax()
-        {
-            switch (setting_type) {
-                case SettingType::Bool:
-                    if (description) return std::format(L"'/{} {} [on|off|toggle]' {}", settings_via_chat_commands_cmd, setting_name, description);
-                    return std::format(L"'/{} {} [on|off|toggle]'", settings_via_chat_commands_cmd, setting_name);
+    const char* SettingValueSyntax(const SettingsRegistry::Type type)
+    {
+        switch (type) {
+            case SettingsRegistry::Type::Bool: return "[on|off|toggle]";
+            case SettingsRegistry::Type::Int:
+            case SettingsRegistry::Type::Uint:
+            case SettingsRegistry::Type::Float: return "<number>";
+            case SettingsRegistry::Type::Color: return "<0xAARRGGBB>";
+            case SettingsRegistry::Type::Float2: return "<x> <y>";
+            default: return "<text>";
+        }
+    }
+
+    std::string SettingValueToString(const SettingsRegistry::Entry& entry)
+    {
+        switch (entry.type) {
+            case SettingsRegistry::Type::Bool:
+                return *static_cast<bool*>(entry.ptr) ? "on" : "off";
+            case SettingsRegistry::Type::Int:
+                return std::to_string(*static_cast<int*>(entry.ptr));
+            case SettingsRegistry::Type::Uint:
+                return std::to_string(*static_cast<unsigned int*>(entry.ptr));
+            case SettingsRegistry::Type::Float:
+                return std::format("{}", *static_cast<float*>(entry.ptr));
+            case SettingsRegistry::Type::Color:
+                return std::format("0x{:X}", *static_cast<Color*>(entry.ptr));
+            case SettingsRegistry::Type::Float2: {
+                const auto& arr = *static_cast<std::array<float, 2>*>(entry.ptr);
+                return std::format("{} {}", arr[0], arr[1]);
             }
-            return std::format(L"Failed to get ChatCommandSyntax for SettingType {} ({})", (uint32_t)setting_type, setting_name);
+            case SettingsRegistry::Type::String:
+                return *static_cast<std::string*>(entry.ptr);
         }
+        return "";
+    }
 
-        void ChatCommandCallback(GW::HookStatus*, const wchar_t*, int argc, const LPWSTR* argv)
-        {
-            switch (setting_type) {
-                case SettingType::Bool:
-                    if (argc < 2) return Log::WarningW(L"Invalid syntax for %s\n%s", setting_name, ChatCommandSyntax().c_str());
-                    auto current_val = (bool*)setting_ptr;
-                    bool new_val = !*current_val;
-                    if (wcscmp(argv[1], L"on") == 0 || wcscmp(argv[1], L"1") == 0) new_val = true;
-                    if (wcscmp(argv[1], L"off") == 0 || wcscmp(argv[1], L"0") == 0) new_val = false;
-                    if (*current_val == new_val) return;
-                    *current_val = new_val;
-                    // TODO: Maybe OnChanged callback?
-                    return;
+    const SettingsRegistry::Entry* ResolveSettingEntry(const std::string& arg_lower)
+    {
+        const auto& entries = SettingsRegistry::GetEntries();
+        const SettingsRegistry::Entry* key_match = nullptr;
+        size_t key_match_count = 0;
+        std::vector<const SettingsRegistry::Entry*> partial_matches;
+        for (const auto& entry : entries) {
+            const auto slug = SettingSlug(entry);
+            if (slug == arg_lower) {
+                return &entry;
             }
-            Log::WarningW(L"Failed to process ToolboxChatCommandSetting %s", setting_name);
+            if (TextUtils::ToLower(entry.key) == arg_lower) {
+                key_match = &entry;
+                key_match_count++;
+            }
+            if (slug.find(arg_lower) != std::string::npos) {
+                partial_matches.push_back(&entry);
+            }
         }
-
-        ToolboxChatCommandSetting(const wchar_t* setting_name, const bool* bool_setting_ptr, const wchar_t* description = nullptr) : setting_name(setting_name), setting_ptr((void*)bool_setting_ptr), description(description)
-        {
-            setting_type = SettingType::Bool;
+        if (key_match_count == 1) {
+            return key_match;
         }
-    };
+        if (partial_matches.size() == 1) {
+            return partial_matches.front();
+        }
+        if (partial_matches.empty()) {
+            Log::Warning("No setting found matching '%s'", arg_lower.c_str());
+            return nullptr;
+        }
+        Log::Warning("'%s' matches %d settings:", arg_lower.c_str(), static_cast<int>(partial_matches.size()));
+        for (size_t i = 0; i < partial_matches.size() && i < 10; i++) {
+            Log::Warning("  %s", SettingSlug(*partial_matches[i]).c_str());
+        }
+        return nullptr;
+    }
 
-    std::map<std::wstring, ToolboxChatCommandSetting*> settings_via_chat_commands;
+    // Parses a single chat-command token into the entry's live value.
+    bool SettingValueFromString(const SettingsRegistry::Entry& entry, const std::wstring& value)
+    {
+        switch (entry.type) {
+            case SettingsRegistry::Type::Bool: {
+                auto& val = *static_cast<bool*>(entry.ptr);
+                const auto lower = TextUtils::ToLower(value);
+                if (lower == L"on" || lower == L"1" || lower == L"true") {
+                    val = true;
+                }
+                else if (lower == L"off" || lower == L"0" || lower == L"false") {
+                    val = false;
+                }
+                else if (lower == L"toggle") {
+                    val = !val;
+                }
+                else {
+                    return false;
+                }
+                return true;
+            }
+            case SettingsRegistry::Type::Int: {
+                int parsed;
+                if (!TextUtils::ParseInt(value.c_str(), &parsed)) {
+                    return false;
+                }
+                *static_cast<int*>(entry.ptr) = parsed;
+                return true;
+            }
+            case SettingsRegistry::Type::Uint: {
+                unsigned int parsed;
+                if (!TextUtils::ParseUInt(value.c_str(), &parsed)) {
+                    return false;
+                }
+                *static_cast<unsigned int*>(entry.ptr) = parsed;
+                return true;
+            }
+            case SettingsRegistry::Type::Float: {
+                float parsed;
+                if (!TextUtils::ParseFloat(value.c_str(), &parsed)) {
+                    return false;
+                }
+                *static_cast<float*>(entry.ptr) = parsed;
+                return true;
+            }
+            case SettingsRegistry::Type::Color: {
+                unsigned int parsed;
+                if (!TextUtils::ParseUInt(value.c_str(), &parsed, 16)) {
+                    return false;
+                }
+                *static_cast<Color*>(entry.ptr) = parsed;
+                return true;
+            }
+            case SettingsRegistry::Type::String:
+                *static_cast<std::string*>(entry.ptr) = TextUtils::WStringToString(value);
+                return true;
+            default:
+                return false; // Float2 isn't expressible as a single token
+        }
+    }
 
     void CHAT_CMD_FUNC(CmdSettingViaChatCommand)
     {
-        const auto found = argc > 1 ? settings_via_chat_commands.find(argv[1]) : settings_via_chat_commands.end();
-
-        if (found == settings_via_chat_commands.end()) {
-            Log::WarningW(L"Failed to find setting");
+        if (argc < 2) {
+            Log::Warning("Syntax: '/tb_setting <name> [value]'");
             return;
         }
-        found->second->ChatCommandCallback(status, message, argc, argv);
+        const auto entry = ResolveSettingEntry(TextUtils::ToLower(TextUtils::WStringToString(argv[1])));
+        if (!entry) {
+            return;
+        }
+        const auto slug = SettingSlug(*entry);
+        if (argc < 3 && entry->type == SettingsRegistry::Type::Bool) {
+            auto& val = *static_cast<bool*>(entry->ptr);
+            val = !val;
+        }
+        else if (argc > 2) {
+            bool ok;
+            if (entry->type == SettingsRegistry::Type::Float2) {
+                float x = 0.f, y = 0.f;
+                ok = argc > 3 && TextUtils::ParseFloat(argv[2], &x) && TextUtils::ParseFloat(argv[3], &y);
+                if (ok) {
+                    *static_cast<std::array<float, 2>*>(entry->ptr) = {x, y};
+                }
+            }
+            else {
+                // String values may span multiple args; every other type is a single token.
+                ok = SettingValueFromString(*entry, entry->type == SettingsRegistry::Type::String ? GetRemainingArgsWstr(message, 2) : argv[2]);
+            }
+            if (!ok) {
+                Log::Warning("Syntax: '/tb_setting %s %s'", slug.c_str(), SettingValueSyntax(entry->type));
+                return;
+            }
+        }
+        Log::Info("%s = %s", slug.c_str(), SettingValueToString(*entry).c_str());
+    }
+
+    const SettingsRegistry::Entry* FindSettingEntry(const std::string& section_slug, const std::string& key_lower)
+    {
+        for (const auto& entry : SettingsRegistry::GetEntries()) {
+            if (TextUtils::ToLower(entry.key) == key_lower && SlugifySection(entry.section) == section_slug) {
+                return &entry;
+            }
+        }
+        return nullptr;
+    }
+
+    void CHAT_CMD_FUNC(CmdConfig)
+    {
+        const char* syntax = "/config set|get|toggle|load [section key [value]]...";
+        if (argc < 4) {
+            Log::Error(syntax);
+            return;
+        }
+        enum ActionType : uint8_t { Set, Get, Toggle, Load } action = Set;
+
+        const auto arg1 = TextUtils::ToLower(argv[1]);
+        if (arg1 == L"set") {
+            action = Set;
+        }
+        else if (arg1 == L"get") {
+            action = Get;
+        }
+        else if (arg1 == L"toggle") {
+            action = Toggle;
+        }
+        else if (arg1 == L"load") {
+            action = Load;
+        }
+        else {
+            Log::Error(syntax);
+            return;
+        }
+        // make sure the loop will not run out of arguments mid tuple
+        switch (action) {
+            case Set:
+            case Toggle:
+                if (argc % 3 != 2) {
+                    Log::Error(syntax);
+                    return;
+                }
+                break;
+            case Get:
+            case Load:
+                if (argc % 2 != 0) {
+                    Log::Error(syntax);
+                    return;
+                }
+                break;
+        }
+
+        const auto doc = GWToolbox::GetSettingsDoc();
+        for (int i = 2; i < argc;) {
+            const auto section = SlugifySection(TextUtils::WStringToString(argv[i]));
+            i++;
+
+            ASSERT(i < argc);
+            const auto key = TextUtils::ToLower(TextUtils::WStringToString(argv[i]));
+            i++;
+
+            std::wstring value;
+            if (action == Set || action == Toggle) {
+                ASSERT(i < argc);
+                value = argv[i];
+                i++;
+            }
+            const auto entry = FindSettingEntry(section, key);
+            if (!entry) {
+                Log::Warning("ignoring unknown setting '%s %s'", section.c_str(), key.c_str());
+                continue;
+            }
+            switch (action) {
+                case Set:
+                    if (!SettingValueFromString(*entry, value)) {
+                        Log::Warning("invalid value for '%s', expected %s", SettingSlug(*entry).c_str(), SettingValueSyntax(entry->type));
+                        continue;
+                    }
+                    break;
+                case Get:
+                    break;
+                case Toggle: {
+                    // Toggle between the supplied value and the value last saved to disk
+                    const auto before = SettingValueToString(*entry);
+                    SettingsRegistry::LoadEntryFromDoc(*entry, *doc);
+                    if (SettingValueToString(*entry) == before && !SettingValueFromString(*entry, value)) {
+                        Log::Warning("invalid value for '%s', expected %s", SettingSlug(*entry).c_str(), SettingValueSyntax(entry->type));
+                        continue;
+                    }
+                    break;
+                }
+                case Load:
+                    SettingsRegistry::LoadEntryFromDoc(*entry, *doc);
+                    break;
+            }
+            Log::Info("[%s] %s = %s", entry->section.c_str(), entry->key.c_str(), SettingValueToString(*entry).c_str());
+        }
     }
 
     bool CanAddToParty()
@@ -1518,13 +1637,53 @@ namespace {
 
     void DrawToolboxSettingChatCommandsHelp()
     {
-        if (settings_via_chat_commands.empty() || !ImGui::TreeNodeEx("Chat Commands for Toolbox Settings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        const auto& entries = SettingsRegistry::GetEntries();
+        if (entries.empty() || !ImGui::TreeNodeEx("Chat Commands for Toolbox Settings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             return;
         }
         ImGui::TextUnformatted("These commands allow you to directly toggle or change values inside toolbox as you play.");
-        for (auto& it : settings_via_chat_commands) {
+        static char filter_buf[128] = "";
+        ImGui::InputTextWithHint("##tb_setting_filter", "Filter settings...", filter_buf, sizeof(filter_buf));
+        const auto draw_entry_syntax = [](const SettingsRegistry::Entry& entry) {
             ImGui::Bullet();
-            ImGui::TextUnformatted(TextUtils::WStringToString(it.second->ChatCommandSyntax()).c_str());
+            auto syntax = std::format("'/{} {} {}'", "tb_setting", SettingSlug(entry), SettingValueSyntax(entry.type));
+            if (!entry.description.empty()) {
+                syntax += " " + entry.description;
+            }
+            ImGui::TextUnformatted(syntax.c_str());
+        };
+        if (filter_buf[0]) {
+            const auto filter_lower = TextUtils::ToLower(filter_buf);
+            constexpr size_t max_shown = 100;
+            size_t shown = 0;
+            for (const auto& entry : entries) {
+                if (SettingSlug(entry).find(filter_lower) == std::string::npos && TextUtils::ToLower(entry.label).find(filter_lower) == std::string::npos) {
+                    continue;
+                }
+                draw_entry_syntax(entry);
+                if (++shown >= max_shown) {
+                    ImGui::TextDisabled("... more results hidden, refine the filter");
+                    break;
+                }
+            }
+            if (!shown) {
+                ImGui::TextDisabled("No settings match the filter");
+            }
+        }
+        else {
+            std::map<std::string_view, std::vector<const SettingsRegistry::Entry*>> by_section;
+            for (const auto& entry : entries) {
+                by_section[entry.section].push_back(&entry);
+            }
+            for (const auto& [section, section_entries] : by_section) {
+                if (!ImGui::TreeNodeEx(section.data(), ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                    continue;
+                }
+                for (const auto* entry : section_entries) {
+                    draw_entry_syntax(*entry);
+                }
+                ImGui::TreePop();
+            }
         }
         ImGui::TreePop();
     }
@@ -1579,20 +1738,6 @@ void ChatCommands::CreateAlias(const wchar_t* alias, const wchar_t* message)
     wcscpy(alias_obj->command_wstr, message);
 }
 
-void ChatCommands::RegisterSettingChatCommand(const wchar_t* setting_name, const bool* static_setting_ptr, const wchar_t* description)
-{
-    settings_via_chat_commands[setting_name] = new ToolboxChatCommandSetting(setting_name, static_setting_ptr, description);
-}
-
-void ChatCommands::RemoveSettingChatCommand(const wchar_t* setting_name)
-{
-    const auto found = settings_via_chat_commands.find(setting_name);
-    if (found != settings_via_chat_commands.end()) {
-        delete found->second;
-        settings_via_chat_commands.erase(found);
-    }
-}
-
 void ChatCommands::DrawHelp()
 {
     DrawChatCommandsHelp();
@@ -1602,7 +1747,7 @@ void ChatCommands::DrawHelp()
 void ChatCommands::DrawSettingsInternal()
 {
     std::string preview = "Select...";
-    switch (default_title_id) {
+    switch (settings.default_title_id) {
         case CMDTITLE_KEEP_CURRENT:
             preview = "Keep current title";
             break;
@@ -1610,9 +1755,7 @@ void ChatCommands::DrawSettingsInternal()
             preview = "Remove title";
             break;
         default:
-            const auto selected = std::ranges::find_if(title_names, [&](auto* it) {
-                return std::to_underlying(it->title) == default_title_id;
-            });
+            const auto selected = std::ranges::find_if(title_names, [&](auto* it) { return std::to_underlying(it->title) == settings.default_title_id; });
 
             if (selected != title_names.end()) {
                 preview = (*selected)->name.string();
@@ -1624,15 +1767,15 @@ void ChatCommands::DrawSettingsInternal()
     ImGui::ShowHelp("Toolbox will reapply this title if there isn't an approriate title for the area you're in.\nIf your current character doesn't have the selected title, nothing will happen.");
     ImGui::Indent();
     if (ImGui::BeginCombo("###title_command_fallback", preview.c_str())) {
-        if (ImGui::Selectable("Keep current title", CMDTITLE_KEEP_CURRENT == default_title_id)) {
-            default_title_id = CMDTITLE_KEEP_CURRENT;
+        if (ImGui::Selectable("Keep current title", CMDTITLE_KEEP_CURRENT == settings.default_title_id)) {
+            settings.default_title_id = CMDTITLE_KEEP_CURRENT;
         }
-        if (ImGui::Selectable("Remove title", CMDTITLE_REMOVE_CURRENT == default_title_id)) {
-            default_title_id = CMDTITLE_REMOVE_CURRENT;
+        if (ImGui::Selectable("Remove title", CMDTITLE_REMOVE_CURRENT == settings.default_title_id)) {
+            settings.default_title_id = CMDTITLE_REMOVE_CURRENT;
         }
         for (auto* it : title_names) {
-            if (ImGui::Selectable(it->name.string().c_str(), std::to_underlying(it->title) == default_title_id)) {
-                default_title_id = std::to_underlying(it->title);
+            if (ImGui::Selectable(it->name.string().c_str(), std::to_underlying(it->title) == settings.default_title_id)) {
+                settings.default_title_id = std::to_underlying(it->title);
             }
         }
         ImGui::EndCombo();
@@ -1690,35 +1833,47 @@ void ChatCommands::DrawSettingsInternal()
     }
 }
 
-void ChatCommands::LoadSettings(ToolboxIni* ini)
+void ChatCommands::LoadSettings(SettingsDoc& doc, ToolboxIni* ini)
 {
-    LOAD_UINT(default_title_id);
+    ToolboxModule::LoadSettings(doc, ini);
+    doc.GetStruct(Name(), settings);
 
     for (const auto* it : cmd_aliases) {
         delete it;
     }
     cmd_aliases.clear();
-    const auto section_name = "Chat Command Aliases";
 
-    TNamesDepend entries;
-    ini->GetAllKeys(section_name, entries);
-    for (const auto& entry : entries) {
-        if (!entry.pItem[0]) {
-            continue;
+    std::vector<CmdAliasSetting> aliases;
+    if (doc.Get(Name(), "cmd_aliases", aliases)) {
+        for (const auto& it : aliases) {
+            const auto alias_wstr = TextUtils::StringToWString(it.alias);
+            const auto command_wstr = TextUtils::StringToWString(it.command);
+            CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
         }
-        auto alias = std::string(entry.pItem);
-        std::string cmd = ini->GetValue(section_name, entry.pItem, "");
-        if (cmd.empty()) {
-            continue;
+    }
+    else {
+        const auto section_name = "Chat Command Aliases";
+
+        TNamesDepend entries;
+        ini->GetAllKeys(section_name, entries);
+        for (const auto& entry : entries) {
+            if (!entry.pItem[0]) {
+                continue;
+            }
+            auto alias = std::string(entry.pItem);
+            std::string cmd = ini->GetValue(section_name, entry.pItem, "");
+            if (cmd.empty()) {
+                continue;
+            }
+            std::ranges::replace(cmd, '\x2', '\n');
+            static constexpr ctll::fixed_string index_regex = "(\\d+):(.+)";
+            if (auto match = ctre::match<index_regex>(alias)) {
+                alias = match.template get<2>().to_string();
+            }
+            const auto alias_wstr = TextUtils::StringToWString(alias);
+            const auto command_wstr = TextUtils::StringToWString(cmd);
+            CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
         }
-        std::ranges::replace(cmd, '\x2', '\n');
-        static constexpr ctll::fixed_string index_regex = "(\\d+):(.+)";
-        if (auto match = ctre::match<index_regex>(alias)) {
-            alias = match.template get<2>().to_string();
-        }
-        const auto alias_wstr = TextUtils::StringToWString(alias);
-        const auto command_wstr = TextUtils::StringToWString(cmd);
-        CreateAlias(alias_wstr.c_str(), command_wstr.c_str());
     }
     if (cmd_aliases.empty()) {
         CreateAlias(L"ff", L"/resign");
@@ -1728,25 +1883,19 @@ void ChatCommands::LoadSettings(ToolboxIni* ini)
     sort_cmd_aliases();
 }
 
-void ChatCommands::SaveSettings(ToolboxIni* ini)
+void ChatCommands::SaveSettings(SettingsDoc& doc)
 {
-    SAVE_UINT(default_title_id);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    const auto section_name = "Chat Command Aliases";
-
-    ini->Delete(section_name, nullptr);
     sort_cmd_aliases();
 
-    for (const auto [index, alias] : cmd_aliases | std::views::enumerate) {
-        if (!alias->alias_cstr && alias->alias_cstr[0]) {
-            continue;
-        }
-
-        std::string cmd_copy = alias->command_cstr;
-        std::ranges::replace(cmd_copy, '\n', '\x2');
-
-        ini->SetValue(section_name, std::format("{}:{}", index, alias->alias_cstr).c_str(), cmd_copy.c_str());
+    std::vector<CmdAliasSetting> aliases;
+    aliases.reserve(cmd_aliases.size());
+    for (const auto alias : cmd_aliases) {
+        aliases.emplace_back(alias->alias_cstr, alias->command_cstr);
     }
+    doc.Set(Name(), "cmd_aliases", aliases);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdPingQuest)
@@ -1770,6 +1919,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdCustomMarker)
 void ChatCommands::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     // TODO: Move all of these callbacks into pvt namespace
     chat_commands = {
@@ -1856,10 +2006,7 @@ void ChatCommands::Initialize()
 
 void ChatCommands::Terminate()
 {
-    for (auto& it : settings_via_chat_commands) {
-        delete it.second;
-    }
-    settings_via_chat_commands.clear();
+    ToolboxModule::Terminate();
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     chat_commands.clear();
     if (FocusChatTab_Func) {
@@ -2317,7 +2464,14 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const auto sanitised_foldername = TextUtils::SanitiseFilename(arg2);
         const auto old_settings_folder = Resources::GetSettingsFolderName();
         GWToolbox::SetSettingsFolder(sanitised_foldername);
-        if (!std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME))) {
+        // A config exists if it has split per-module files, a legacy single-doc json, or a legacy ini
+        std::error_code ec;
+        const auto modules_folder = Resources::GetSettingFile(GWTOOLBOX_MODULES_FOLDERNAME);
+        const bool has_settings = (std::filesystem::exists(modules_folder, ec) && !std::filesystem::is_empty(modules_folder, ec))
+                                  || std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME), ec)
+                                  || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME), ec)
+                                  || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME), ec);
+        if (!has_settings) {
             Log::ErrorW(L"Settings folder '%s' does not exist", arg2.c_str());
             GWToolbox::SetSettingsFolder(old_settings_folder);
             return;
@@ -2673,7 +2827,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdResize)
 
 void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
 {
-    auto title_id = Instance().default_title_id;
+    auto title_id = settings.default_title_id;
     const auto title_for_map = std::to_underlying(GW::Map::GetTitleForMap(GW::Map::GetMapID()));
     if (argc > 1) {
         if (!TextUtils::ParseUInt(argv[1], &title_id)) {

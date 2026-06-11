@@ -20,6 +20,7 @@
 #include <Utils/ToolboxUtils.h>
 
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
+constexpr const wchar_t* JSON_FILENAME = L"healthlog.json";
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -42,24 +43,7 @@ namespace {
     clock_t send_timer = 0;
     std::queue<std::wstring> send_queue{};
 
-    // ini
-    ToolboxIni* inifile = nullptr;
-    Color color_background = Colors::ARGB(76, 0, 0, 0);
-    Color color_damage = Colors::ARGB(76, 0, 0, 0);
-    Color color_recent = Colors::ARGB(205, 102, 153, 230);
-    Color color_healing = Colors::ARGB(205, 102, 230, 102);
-    float width = 100.0f;
-    bool bars_left = true;
-    int recent_max_time = 7000;
-    bool hide_in_outpost = false;
-    bool print_by_click = false;
-    bool overlay_party_window = false;
-
-    bool show_damage = true;
-    bool show_healing = false;
-
-    // Distance away from the party window on the x axis; used with snap to party window
-    int user_offset = 0;
+    PartyDamage::Settings settings;
 
     GW::HookEntry GenericModifier_Entry;
     GW::HookEntry MapLoaded_Entry;
@@ -234,7 +218,7 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     wchar_t buffer[buffer_size];
 
     const bool has_damage = damage[index].damage > 0;
-    const bool has_healing = show_healing && damage[index].healing > 0;
+    const bool has_healing = settings.show_healing && damage[index].healing > 0;
 
     if (has_damage && has_healing) {
         swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)",
@@ -480,6 +464,7 @@ PartyDamage::PlayerDamage* PartyDamage::GetDamageByAgentId(uint32_t agent_id, ui
 void PartyDamage::Initialize()
 {
     SnapsToPartyWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     total = 0;
     send_timer = TIMER_INIT();
@@ -500,12 +485,6 @@ void PartyDamage::Terminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     party_names_by_index.clear();
-
-    if (inifile) {
-        inifile->Reset();
-        delete inifile;
-        inifile = nullptr;
-    }
 }
 
 void PartyDamage::Update(const float)
@@ -521,10 +500,10 @@ void PartyDamage::Update(const float)
 
     // reset recent if needed
     for (auto& entry : damage) {
-        if (TIMER_DIFF(entry.last_damage) > recent_max_time) {
+        if (TIMER_DIFF(entry.last_damage) > settings.recent_max_time) {
             entry.recent_damage = 0;
         }
-        if (TIMER_DIFF(entry.last_healing) > recent_max_time) {
+        if (TIMER_DIFF(entry.last_healing) > settings.recent_max_time) {
             entry.recent_healing = 0;
         }
     }
@@ -573,7 +552,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+    if (settings.hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
     }
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
@@ -607,24 +586,25 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         }
     }
 
-    const Color damage_col_from = Colors::Add(color_damage, Colors::ARGB(0, 20, 20, 20));
-    const Color damage_col_to = Colors::Sub(color_damage, Colors::ARGB(0, 20, 20, 20));
-    const Color damage_recent_from = Colors::Add(color_recent, Colors::ARGB(0, 20, 20, 20));
-    const Color damage_recent_to = Colors::Sub(color_recent, Colors::ARGB(0, 20, 20, 20));
-    const Color healing_from = Colors::Add(color_healing, Colors::ARGB(0, 20, 20, 20));
-    const Color healing_to = Colors::Sub(color_healing, Colors::ARGB(0, 20, 20, 20));
+    const Color damage_col_from = Colors::Add(settings.color_damage, Colors::ARGB(0, 20, 20, 20));
+    const Color damage_col_to = Colors::Sub(settings.color_damage, Colors::ARGB(0, 20, 20, 20));
+    const Color damage_recent_from = Colors::Add(settings.color_recent, Colors::ARGB(0, 20, 20, 20));
+    const Color damage_recent_to = Colors::Sub(settings.color_recent, Colors::ARGB(0, 20, 20, 20));
+    const Color healing_from = Colors::Add(settings.color_healing, Colors::ARGB(0, 20, 20, 20));
+    const Color healing_to = Colors::Sub(settings.color_healing, Colors::ARGB(0, 20, 20, 20));
 
-    const auto user_offset_x = abs(static_cast<float>(user_offset));
+    const auto width = settings.width;
+    const auto user_offset_x = abs(static_cast<float>(settings.user_offset));
     float window_x = .0f;
-    if (overlay_party_window) {
+    if (settings.overlay_party_window) {
         window_x = party_health_bars_position.top_left.x + user_offset_x;
-        if (user_offset < 0) {
+        if (settings.user_offset < 0) {
             window_x = party_health_bars_position.bottom_right.x - user_offset_x - width;
         }
     }
     else {
         window_x = party_health_bars_position.top_left.x - user_offset_x - width;
-        if (window_x < 0 || user_offset < 0) {
+        if (window_x < 0 || settings.user_offset < 0) {
             // Right placement
             window_x = party_health_bars_position.bottom_right.x + user_offset_x;
         }
@@ -654,7 +634,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
 
             const ImVec2 damage_top_left = {window_x, health_bar_pos->top_left.y};
             const ImVec2 damage_bottom_right = {damage_top_left.x + width, health_bar_pos->bottom_right.y};
-            draw_list->AddRectFilled(damage_top_left, damage_bottom_right, color_background);
+            draw_list->AddRectFilled(damage_top_left, damage_bottom_right, settings.color_background);
 
             const auto x = damage_top_left.x;
 
@@ -662,8 +642,8 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             // Total damage as percent of total team's total damage
             if (damage_float >= 0.f) {
                 const float part_of_max = max > 0 ? damage_float / max : 0;
-                const float bar_start_x = bars_left ? x + width * (1.0f - part_of_max) : x;
-                const float bar_end_x = bars_left ? x + width : x + width * part_of_max;
+                const float bar_start_x = settings.bars_left ? x + width * (1.0f - part_of_max) : x;
+                const float bar_end_x = settings.bars_left ? x + width : x + width * part_of_max;
                 const auto bar_top_left = ImVec2(bar_start_x, damage_top_left.y);
                 const auto bar_bottom_right = ImVec2(bar_end_x, damage_bottom_right.y);
                 draw_list->AddRectFilledMultiColor(
@@ -673,10 +653,10 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             }
 
             // Recent damage as percent of total team's recent damage (bottom bar)
-            if (show_damage && entry->recent_damage) {
+            if (settings.show_damage && entry->recent_damage) {
                 const float part_of_recent = max_recent > 0 ? static_cast<float>(entry->recent_damage) / max_recent : 0;
-                const float recent_left = bars_left ? x + width * (1.0f - part_of_recent) : x;
-                const float recent_right = bars_left ? x + width : x + width * part_of_recent;
+                const float recent_left = settings.bars_left ? x + width * (1.0f - part_of_recent) : x;
+                const float recent_right = settings.bars_left ? x + width : x + width * part_of_recent;
                 const auto recent_top_left = ImVec2(recent_left, damage_bottom_right.y - 6);
                 const auto recent_top_right = ImVec2(recent_right, damage_bottom_right.y);
                 draw_list->AddRectFilledMultiColor(
@@ -687,10 +667,10 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             }
 
             // Recent healing as percent of total team's recent healing (top bar)
-            if (show_healing && entry->recent_healing) {
+            if (settings.show_healing && entry->recent_healing) {
                 const float part_of_recent_heal = max_recent_healing > 0 ? static_cast<float>(entry->recent_healing) / max_recent_healing : 0;
-                const float heal_left = bars_left ? x + width * (1.0f - part_of_recent_heal) : x;
-                const float heal_right = bars_left ? x + width : x + width * part_of_recent_heal;
+                const float heal_left = settings.bars_left ? x + width * (1.0f - part_of_recent_heal) : x;
+                const float heal_right = settings.bars_left ? x + width : x + width * part_of_recent_heal;
                 const auto heal_top_left = ImVec2(heal_left, damage_top_left.y);
                 const auto heal_bottom_right = ImVec2(heal_right, damage_top_left.y + 6);
                 draw_list->AddRectFilledMultiColor(
@@ -704,7 +684,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             const auto text_height = ImGui::GetTextLineHeight();
             const auto text_y = damage_top_left.y + (row_height - text_height) / 2;
 
-            if (show_damage) {
+            if (settings.show_damage) {
                 // Damage text
                 if (damage_float < 1000.f) {
                     snprintf(buffer, buffer_size, "%.0f", damage_float);
@@ -722,14 +702,14 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 draw_list->AddText(ImVec2(x + ImGui::GetStyle().ItemSpacing.x, text_y), IM_COL32(255, 255, 255, 255), buffer);
 
                 // Damage percentage
-                if (!show_healing) {
+                if (!settings.show_healing) {
                     const float perc_of_total = GetPercentageOfTotal(entry->damage);
                     snprintf(buffer, buffer_size, "%.1f %%", perc_of_total);
                     draw_list->AddText(ImVec2(x + width / 2, text_y), IM_COL32(255, 255, 255, 255), buffer);
                 }
             }
 
-            if (show_healing) {
+            if (settings.show_healing) {
                 // Healing text
                 const float healing_float = static_cast<float>(entry->healing);
                 if (healing_float < 1000.f) {
@@ -745,19 +725,19 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                     snprintf(buffer, buffer_size, "%.2f m", healing_float / (1000.f * 1000.f));
                 }
 
-                const float heal_text_x = show_damage ? x + width / 2 : x + ImGui::GetStyle().ItemSpacing.x;
-                draw_list->AddText(ImVec2(heal_text_x, text_y), color_healing, buffer);
+                const float heal_text_x = settings.show_damage ? x + width / 2 : x + ImGui::GetStyle().ItemSpacing.x;
+                draw_list->AddText(ImVec2(heal_text_x, text_y), settings.color_healing, buffer);
 
                 // Healing percentage
-                if (!show_damage) {
+                if (!settings.show_damage) {
                     const float perc_of_total_heal = GetPercentageOfTotalHealing(entry->healing);
                     snprintf(buffer, buffer_size, "%.1f %%", perc_of_total_heal);
-                    draw_list->AddText(ImVec2(x + width / 2, text_y), color_healing, buffer);
+                    draw_list->AddText(ImVec2(x + width / 2, text_y), settings.color_healing, buffer);
                 }
             }
 
 
-            if (print_by_click
+            if (settings.print_by_click
                 && ImGui::IsMouseClicked(ImGuiMouseButton_Left)
                 && ImGui::IsMouseInRect(damage_top_left, damage_bottom_right)
                 && ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
@@ -770,67 +750,67 @@ void PartyDamage::Draw(IDirect3DDevice9*)
     ImGui::PopStyleVar(3);
 }
 
-void PartyDamage::LoadSettings(ToolboxIni* ini)
+void PartyDamage::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-    width = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(width), width));
-    LOAD_BOOL(bars_left);
-    recent_max_time = ini->GetLongValue(Name(), VAR_NAME(recent_max_time), recent_max_time);
-    LOAD_COLOR(color_background);
-    LOAD_COLOR(color_damage);
-    LOAD_COLOR(color_recent);
-    LOAD_COLOR(color_healing);
-    LOAD_BOOL(hide_in_outpost);
-    LOAD_BOOL(print_by_click);
-    LOAD_UINT(user_offset);
-    LOAD_BOOL(overlay_party_window);
-    LOAD_BOOL(show_damage);
-    LOAD_BOOL(show_healing);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-
-    if (inifile == nullptr) {
-        inifile = new ToolboxIni(false, false, false);
+    const auto json_path = Resources::GetSettingFile(JSON_FILENAME);
+    std::error_code ec;
+    if (std::filesystem::exists(json_path, ec)) {
+        std::ifstream file(json_path, std::ios::binary);
+        const std::string buffer{std::istreambuf_iterator(file), {}};
+        std::map<std::string, std::map<DWORD, DWORD>> loaded;
+        if (file && !glz::read<glz::opts{.error_on_unknown_keys = false}>(loaded, buffer)) {
+            for (const auto& [section, map] : section_maps) {
+                const auto found = loaded.find(section);
+                if (found != loaded.end()) {
+                    *map = std::move(found->second);
+                }
+            }
+        }
+        // An empty json may be the result of a buggy first migration; fall through to the ini to recover
+        if (!hp_map_nm.empty() || !hp_map_hm.empty())
+            return;
     }
-    inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
-    for (const auto& [section, map] : section_maps) {
+    ToolboxIni inifile(false, false, false);
+    inifile.LoadFile(Resources::GetLegacySettingFile(INI_FILENAME).c_str());
+    const auto read_section = [&inifile](const char* section, std::map<DWORD, DWORD>& map, const bool keep_existing) {
         TNamesDepend keys;
-        inifile->GetAllKeys(section, keys);
+        inifile.GetAllKeys(section, keys);
         for (const auto& key : keys) {
             uint32_t player_number = 0;
             TextUtils::ParseUInt(key.pItem, &player_number);
-            const long hp = inifile->GetLongValue(section, key.pItem, 0);
-            if (hp > 0)
-                (*map)[player_number] = static_cast<DWORD>(hp);
+            const long hp = inifile.GetLongValue(section, key.pItem, 0);
+            if (hp <= 0)
+                continue;
+            if (keep_existing && map.contains(player_number))
+                continue;
+            map[player_number] = static_cast<DWORD>(hp);
         }
+    };
+    for (const auto& [section, map] : section_maps) {
+        read_section(section, *map, false);
     }
+    // Legacy [health] section pre-dates the nm/hm split; treat as normal mode, newer keys win
+    read_section("health", hp_map_nm, true);
 }
 
-void PartyDamage::SaveSettings(ToolboxIni* ini)
+void PartyDamage::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    ini->SetDoubleValue(Name(), VAR_NAME(width), width);
-    SAVE_BOOL(bars_left);
-    SAVE_UINT(recent_max_time);
-    SAVE_COLOR(color_background);
-    SAVE_COLOR(color_damage);
-    SAVE_COLOR(color_recent);
-    SAVE_COLOR(color_healing);
-    SAVE_BOOL(hide_in_outpost);
-    SAVE_BOOL(print_by_click);
-    SAVE_UINT(user_offset);
-    SAVE_BOOL(overlay_party_window);
-    SAVE_BOOL(show_damage);
-    SAVE_BOOL(show_healing);
-
-
+    std::map<std::string, std::map<DWORD, DWORD>> out;
     for (const auto& [section, map] : section_maps) {
-        for (const auto& [player_number, hp] : *map) {
-            const std::string key = std::to_string(player_number);
-            inifile->SetLongValue(section, key.c_str(), hp, nullptr, false, true);
-        }
+        out[section] = *map;
     }
-    ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME)) == SI_OK);
+    std::string buffer;
+    if (glz::write<glz::opts{.prettify = true}>(out, buffer)) {
+        return;
+    }
+    std::ofstream file(Resources::GetSettingFile(JSON_FILENAME), std::ios::binary | std::ios::trunc);
+    ASSERT(file && file.write(buffer.data(), static_cast<std::streamsize>(buffer.size())).good());
 }
 
 DWORD PartyDamage::GetMaxHp(DWORD player_number)
@@ -845,36 +825,36 @@ void PartyDamage::DrawSettingsInternal()
     ToolboxWidget::DrawSettingsInternal();
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Print Player Damage by Ctrl + Click", &print_by_click);
+    ImGui::Checkbox("Print Player Damage by Ctrl + Click", &settings.print_by_click);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Bars towards the left", &bars_left, "If unchecked, they will expand to the right");
+    ImGui::CheckboxWithHelp("Bars towards the left", &settings.bars_left, "If unchecked, they will expand to the right");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show damage", &show_damage);
+    ImGui::Checkbox("Show damage", &settings.show_damage);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show healing", &show_healing);
+    ImGui::Checkbox("Show healing", &settings.show_healing);
 
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show on top of health bars", &overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("Show on top of health bars", &settings.overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
-    ImGui::DragInt("Party window offset", &user_offset);
+    ImGui::DragInt("Party window offset", &settings.user_offset);
     ImGui::PopItemWidth();
     ImGui::ShowHelp("Distance away from the party window");
 
-    ImGui::DragFloat("Width", &width, 1.0f, 50.0f, 0.0f, "%.0f");
-    if (width <= 0) {
-        width = 1.0f;
+    ImGui::DragFloat("Width", &settings.width, 1.0f, 50.0f, 0.0f, "%.0f");
+    if (settings.width <= 0) {
+        settings.width = 1.0f;
     }
-    ImGui::DragInt("Timeout", &recent_max_time, 10.0f, 1000, 10 * 1000, "%d milliseconds");
-    if (recent_max_time < 0) {
-        recent_max_time = 0;
+    ImGui::DragInt("Timeout", &settings.recent_max_time, 10.0f, 1000, 10 * 1000, "%d milliseconds");
+    if (settings.recent_max_time < 0) {
+        settings.recent_max_time = 0;
     }
     ImGui::ShowHelp("After this amount of time, each player's recent damage/healing bars will be reset");
-    Colors::DrawSettingHueWheel("Background", &color_background);
-    Colors::DrawSettingHueWheel("Damage", &color_damage);
-    Colors::DrawSettingHueWheel("Recent Damage", &color_recent);
-    Colors::DrawSettingHueWheel("Healing", &color_healing);
+    Colors::DrawSettingHueWheel("Background", &settings.color_background.value);
+    Colors::DrawSettingHueWheel("Damage", &settings.color_damage.value);
+    Colors::DrawSettingHueWheel("Recent Damage", &settings.color_recent.value);
+    Colors::DrawSettingHueWheel("Healing", &settings.color_healing.value);
 }

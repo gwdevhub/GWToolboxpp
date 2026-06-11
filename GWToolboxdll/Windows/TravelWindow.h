@@ -31,6 +31,29 @@ public:
     [[nodiscard]] const char* Name() const override { return "Travel"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE_EUROPE; }
 
+    struct Settings {
+        bool close_on_travel = false;
+        bool collapse_on_travel = false;
+        bool retry_map_travel = false;
+        bool search_in_english = true;
+        bool show_zaishen_buttons = true;
+    };
+
+    // User-defined travel destination (shown as 2-column buttons in main window)
+    struct UserDestEntry {
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::District district = GW::Constants::District::Current;
+        uint8_t district_number = 0;
+    };
+
+    // Custom shorthand alias for the /tp command
+    struct AliasEntry {
+        std::string alias;
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;
+        GW::Constants::District district = GW::Constants::District::Current;
+        uint8_t district_number = 0;
+    };
+
     void Initialize() override;
 
     void Terminate() override;
@@ -55,8 +78,8 @@ public:
 
     void Update(float delta) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     static GW::Constants::MapID GetNearestOutpostToLocation(const GW::AreaInfo* origin, const GW::Vec2f& world_map_pos);
     static GW::Constants::MapID GetNearestOutpostToPlayer();

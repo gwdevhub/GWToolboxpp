@@ -37,24 +37,17 @@ namespace {
     }
 }
 
-void SymbolsRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+void SymbolsRenderer::RegisterSettings(ToolboxModule* module)
 {
-    color_quest = Colors::Load(ini, section, "color_quest", 0xFF22EF22);
-    color_quest_line = Colors::Load(ini, section, "color_quest_line", 0xFF22EF22);
-    color_other_quests = Colors::Load(ini, section, "color_other_quests", 0x00006400);
-    color_north = Colors::Load(ini, section, "color_north", 0xFFFF8000);
-    color_modifier = Colors::Load(ini, section, "color_symbols_modifier", 0x001E1E1E);
-
-    Invalidate();
-}
-
-void SymbolsRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
-{
-    Colors::Save(ini, section, "color_quest", color_quest);
-    Colors::Save(ini, section, "color_quest_line", color_quest_line);
-    Colors::Save(ini, section, "color_other_quests", color_other_quests);
-    Colors::Save(ini, section, "color_north", color_north);
-    Colors::Save(ini, section, "color_symbols_modifier", color_modifier);
+    // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
+    const auto register_color = [module](const char* key, Color* color) {
+        SettingsRegistry::RegisterField(module, key, reinterpret_cast<Colors::SettingColor*>(color));
+    };
+    register_color("color_quest", &color_quest);
+    register_color("color_quest_line", &color_quest_line);
+    register_color("color_other_quests", &color_other_quests);
+    register_color("color_north", &color_north);
+    register_color("color_symbols_modifier", &color_modifier);
 }
 
 void SymbolsRenderer::DrawSettings()

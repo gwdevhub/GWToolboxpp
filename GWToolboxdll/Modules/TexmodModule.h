@@ -28,12 +28,18 @@ public:
         return "Load texture replacement packs (TPF/ZIP) via gMod at runtime.";
     }
 
+    // Persisted shape of one texture pack entry (path stored as UTF-8)
+    struct PackSetting {
+        std::string path;
+        bool loaded = false;
+    };
+
     void Update(float dt) override;
     void Terminate() override;
     void Draw(IDirect3DDevice9* device) override;
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 
 private:
     TexmodModule() = default;

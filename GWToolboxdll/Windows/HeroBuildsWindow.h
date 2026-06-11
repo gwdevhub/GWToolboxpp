@@ -32,6 +32,37 @@ public:
     [[nodiscard]] const char* Name() const override { return "Hero Builds"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
+    struct Settings {
+        bool hide_when_entering_explorable = false;
+        bool one_teambuild_at_a_time = false;
+        bool filter_by_profession = false;
+    };
+
+    // On-disk schema of herobuilds.json
+    struct BuildEntry {
+        std::string name{};
+        std::string code{};
+        GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
+        bool show_panel = false;
+        uint32_t behavior = 1;
+        uint8_t disabled_skills = 0;
+    };
+    struct TeamBuildEntry {
+        std::string name{};
+        std::string ui_id{};
+        int mode = 0;
+        std::string group{};
+        std::vector<BuildEntry> builds{};
+    };
+    struct GroupEntry {
+        std::string name{};
+        size_t sort_order = 0;
+    };
+    struct HeroBuildsFile {
+        std::vector<TeamBuildEntry> teambuilds{};
+        std::vector<GroupEntry> groups{};
+    };
+
     void Initialize() override;
     void Terminate() override;
 
@@ -41,8 +72,8 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
 
     void LoadFromFile();
@@ -62,10 +93,6 @@ public:
     static GW::HeroPartyMember* GetPartyHeroByID(const GW::Constants::HeroID hero_id, size_t* out_hero_index);
 
 private:
-    bool hide_when_entering_explorable = false;
-    bool one_teambuild_at_a_time = false;
-    bool filter_by_profession = false;
-
     TeamBuild* GetTeambuildByName(const std::string& argBuildname);
 
     // Encode a teambuild into a Daybreak party loadout base64 string (header=15, type=1, version=1).

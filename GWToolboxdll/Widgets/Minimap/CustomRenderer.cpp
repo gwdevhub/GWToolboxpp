@@ -27,10 +27,7 @@
 using namespace std::string_literals;
 
 constexpr auto ini_filename = L"Markers.ini";
-
-namespace {
-    ToolboxIni inifile{};
-}
+constexpr auto json_filename = L"Markers.json";
 
 CustomRenderer::CustomLine::CustomLine(const float x1, const float y1, const float x2, const float y2, const GW::Constants::MapID m, const char* _name, bool draw_everywhere)
     : p1(x1, y1, 0),
@@ -65,11 +62,10 @@ CustomRenderer::CustomPolygon::CustomPolygon(const GW::Constants::MapID m, const
     std::snprintf(name, sizeof(name), "%s", _name ? _name : "polygon");
 };
 
-void CustomRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+void CustomRenderer::RegisterSettings(ToolboxModule* module)
 {
-    color = Colors::Load(ini, section, "color_custom_markers", 0xFFFFFFFF);
-    Invalidate();
-    LoadMarkers();
+    // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
+    SettingsRegistry::RegisterField(module, "color_custom_markers", reinterpret_cast<Colors::SettingColor*>(&color));
 }
 
 void CustomRenderer::LoadMarkers()
@@ -79,151 +75,169 @@ void CustomRenderer::LoadMarkers()
     markers.clear();
     polygons.clear();
 
-    ASSERT(inifile.LoadIfExists(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
-
-    // then load new
-    TNamesDepend entries;
-    inifile.GetAllSections(entries);
-    for (const auto& entry : entries) {
-        const char* section = entry.pItem;
-        if (!section) {
-            continue;
+    const auto json_path = Resources::GetSettingFile(json_filename);
+    std::error_code ec;
+    if (std::filesystem::exists(json_path, ec)) {
+        std::ifstream file(json_path, std::ios::binary);
+        const std::string json_buf{std::istreambuf_iterator(file), {}};
+        MarkersFile data;
+        if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(data, json_buf)) {
+            // leave markers_loaded unset so a save can't overwrite the unreadable file
+            Log::Error("Failed to parse Markers.json");
+            markers_changed = true;
+            return;
         }
-        if (strncmp(section, "customline", "customline"s.length()) == 0) {
-            auto line = new CustomLine(inifile.GetValue(section, "name", "line"));
-            line->p1.x = static_cast<float>(inifile.GetDoubleValue(section, "x1", 0.0));
-            line->p1.y = static_cast<float>(inifile.GetDoubleValue(section, "y1", 0.0));
-            line->p2.x = static_cast<float>(inifile.GetDoubleValue(section, "x2", 0.0));
-            line->p2.y = static_cast<float>(inifile.GetDoubleValue(section, "y2", 0.0));
-            line->map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
-            line->color = Colors::Load(&inifile, section, "color", line->color);
-            line->visible = inifile.GetBoolValue(section, "visible", true);
-            line->draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
+        for (const auto& entry : data.lines) {
+            const auto line = new CustomLine(entry.name.c_str());
+            line->p1 = {entry.x1, entry.y1, 0};
+            line->p2 = {entry.x2, entry.y2, 0};
+            line->map = static_cast<GW::Constants::MapID>(entry.map);
+            line->color = entry.color;
+            line->visible = entry.visible;
+            line->draw_on_terrain = entry.draw_on_terrain;
             lines.push_back(line);
-            inifile.Delete(section, nullptr);
         }
-        else if (strncmp(section, "custommarker", "custommarker"s.length()) == 0) {
-            auto marker = CustomMarker(inifile.GetValue(section, "name", "marker"));
-            marker.pos.x = static_cast<float>(inifile.GetDoubleValue(section, "x", 0.0));
-            marker.pos.y = static_cast<float>(inifile.GetDoubleValue(section, "y", 0.0));
-            marker.size = static_cast<float>(inifile.GetDoubleValue(section, "size", 0.0));
-            marker.shape = static_cast<Shape>(inifile.GetLongValue(section, "shape", 0));
-            marker.map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
-            marker.color = Colors::Load(&inifile, section, "color", marker.color);
-            marker.color_sub = Colors::Load(&inifile, section, "color_sub", marker.color_sub);
-            marker.visible = inifile.GetBoolValue(section, "visible", true);
-            marker.draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
-            markers.push_back(marker);
-            inifile.Delete(section, nullptr);
+        for (const auto& entry : data.markers) {
+            auto& marker = markers.emplace_back(entry.x, entry.y, entry.size, static_cast<Shape>(entry.shape), static_cast<GW::Constants::MapID>(entry.map), entry.name.c_str());
+            marker.color = entry.color;
+            marker.color_sub = entry.color_sub;
+            marker.visible = entry.visible;
+            marker.draw_on_terrain = entry.draw_on_terrain;
         }
-        else if (strncmp(section, "custompolygon", "custompolygon"s.length()) == 0) {
-            auto polygon = CustomPolygon(inifile.GetValue(section, "name", "polygon"));
-            for (auto i = 0; i < CustomPolygon::max_points; i++) {
-                GW::Vec2f vec;
-                vec.x = static_cast<float>(
-                    inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].x").c_str(), std::numeric_limits<float>::max()));
-                vec.y = static_cast<float>(
-                    inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].y").c_str(), std::numeric_limits<float>::max()));
-                if (vec.x != std::numeric_limits<float>::max() && vec.y != std::numeric_limits<float>::max()) {
-                    polygon.points.emplace_back(vec);
-                }
-                else {
+        for (const auto& entry : data.polygons) {
+            auto& polygon = polygons.emplace_back(static_cast<GW::Constants::MapID>(entry.map), entry.name.c_str());
+            for (const auto& point : entry.points) {
+                if (polygon.points.size() >= CustomPolygon::max_points) {
                     break;
                 }
+                polygon.points.emplace_back(point.x, point.y, 0);
             }
-            polygon.filled = inifile.GetBoolValue(section, "filled", polygon.filled);
-            polygon.color = Colors::Load(&inifile, section, "color", polygon.color);
-            polygon.color_sub = Colors::Load(&inifile, section, "color_sub", polygon.color_sub);
-            polygon.map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
-            polygon.visible = inifile.GetBoolValue(section, "visible", true);
-            polygon.draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
-            polygons.push_back(polygon);
-            inifile.Delete(section, nullptr);
+            polygon.filled = entry.filled;
+            polygon.color = entry.color;
+            polygon.color_sub = entry.color_sub;
+            polygon.visible = entry.visible;
+            polygon.draw_on_terrain = entry.draw_on_terrain;
+        }
+    }
+    else {
+        // legacy fallback; Markers.ini is only ever read from here on, the next save writes json
+        ToolboxIni inifile;
+        ASSERT(inifile.LoadIfExists(Resources::GetLegacySettingFile(ini_filename).c_str()) == SI_OK);
+
+        TNamesDepend entries;
+        inifile.GetAllSections(entries);
+        for (const auto& entry : entries) {
+            const char* section = entry.pItem;
+            if (!section) {
+                continue;
+            }
+            if (strncmp(section, "customline", "customline"s.length()) == 0) {
+                auto line = new CustomLine(inifile.GetValue(section, "name", "line"));
+                line->p1.x = static_cast<float>(inifile.GetDoubleValue(section, "x1", 0.0));
+                line->p1.y = static_cast<float>(inifile.GetDoubleValue(section, "y1", 0.0));
+                line->p2.x = static_cast<float>(inifile.GetDoubleValue(section, "x2", 0.0));
+                line->p2.y = static_cast<float>(inifile.GetDoubleValue(section, "y2", 0.0));
+                line->map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
+                line->color = Colors::Load(&inifile, section, "color", line->color);
+                line->visible = inifile.GetBoolValue(section, "visible", true);
+                line->draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
+                lines.push_back(line);
+            }
+            else if (strncmp(section, "custommarker", "custommarker"s.length()) == 0) {
+                auto marker = CustomMarker(inifile.GetValue(section, "name", "marker"));
+                marker.pos.x = static_cast<float>(inifile.GetDoubleValue(section, "x", 0.0));
+                marker.pos.y = static_cast<float>(inifile.GetDoubleValue(section, "y", 0.0));
+                marker.size = static_cast<float>(inifile.GetDoubleValue(section, "size", 0.0));
+                marker.shape = static_cast<Shape>(inifile.GetLongValue(section, "shape", 0));
+                marker.map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
+                marker.color = Colors::Load(&inifile, section, "color", marker.color);
+                marker.color_sub = Colors::Load(&inifile, section, "color_sub", marker.color_sub);
+                marker.visible = inifile.GetBoolValue(section, "visible", true);
+                marker.draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
+                markers.push_back(marker);
+            }
+            else if (strncmp(section, "custompolygon", "custompolygon"s.length()) == 0) {
+                auto polygon = CustomPolygon(inifile.GetValue(section, "name", "polygon"));
+                for (auto i = 0; i < CustomPolygon::max_points; i++) {
+                    GW::Vec2f vec;
+                    vec.x = static_cast<float>(
+                        inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].x").c_str(), std::numeric_limits<float>::max()));
+                    vec.y = static_cast<float>(
+                        inifile.GetDoubleValue(section, ("point["s + std::to_string(i) + "].y").c_str(), std::numeric_limits<float>::max()));
+                    if (vec.x != std::numeric_limits<float>::max() && vec.y != std::numeric_limits<float>::max()) {
+                        polygon.points.emplace_back(vec);
+                    }
+                    else {
+                        break;
+                    }
+                }
+                polygon.filled = inifile.GetBoolValue(section, "filled", polygon.filled);
+                polygon.color = Colors::Load(&inifile, section, "color", polygon.color);
+                polygon.color_sub = Colors::Load(&inifile, section, "color_sub", polygon.color_sub);
+                polygon.map = static_cast<GW::Constants::MapID>(inifile.GetLongValue(section, "map", 0));
+                polygon.visible = inifile.GetBoolValue(section, "visible", true);
+                polygon.draw_on_terrain = inifile.GetBoolValue(section, "draw_on_terrain", false);
+                polygons.push_back(polygon);
+            }
         }
     }
 
     marker_file_dirty = false;
     markers_changed = true;
-}
-
-void CustomRenderer::SaveSettings(ToolboxIni* ini, const char* section)
-{
-    Colors::Save(ini, section, "color_custom_markers", color);
-    SaveMarkers();
+    markers_loaded = true;
 }
 
 void CustomRenderer::SaveMarkers()
 {
-    // clear markers from ini
-    // then load new
-    if (marker_file_dirty || GWToolbox::SettingsFolderChanged()) {
-        TNamesDepend entries;
-        inifile.GetAllSections(entries);
-        for (const auto& entry : entries) {
-            const char* section = entry.pItem;
-            if (strncmp(section, "customline", "customline"s.length()) == 0) {
-                inifile.Delete(section, nullptr);
-            }
-            if (strncmp(section, "custommarker", "custommarker"s.length()) == 0) {
-                inifile.Delete(section, nullptr);
-            }
-            if (strncmp(section, "custompolygon", "custompolygon"s.length()) == 0) {
-                inifile.Delete(section, nullptr);
-            }
-        }
-
-        // then save
-        for (auto i = 0u; i < lines.size(); i++) {
-            const CustomLine& line = *lines[i];
-            if (line.created_by_toolbox)
+    if ((marker_file_dirty || GWToolbox::SettingsFolderChanged()) && markers_loaded) {
+        MarkersFile data;
+        for (const auto line : lines) {
+            if (line->created_by_toolbox) {
                 continue;
-            char section[32];
-            snprintf(section, 32, "customline%03d", i);
-            inifile.SetValue(section, "name", line.name);
-            inifile.SetDoubleValue(section, "x1", line.p1.x);
-            inifile.SetDoubleValue(section, "y1", line.p1.y);
-            inifile.SetDoubleValue(section, "x2", line.p2.x);
-            inifile.SetDoubleValue(section, "y2", line.p2.y);
-            Colors::Save(&inifile, section, "color", line.color);
-            inifile.SetLongValue(section, "map", static_cast<long>(line.map));
-            inifile.SetBoolValue(section, "visible", line.visible);
-            inifile.SetBoolValue(section, "draw_on_terrain", line.draw_on_terrain);
-        }
-        for (auto i = 0u; i < markers.size(); i++) {
-            const CustomMarker& marker = markers[i];
-            char section[32];
-            snprintf(section, 32, "custommarker%03d", i);
-            inifile.SetValue(section, "name", marker.name);
-            inifile.SetDoubleValue(section, "x", marker.pos.x);
-            inifile.SetDoubleValue(section, "y", marker.pos.y);
-            inifile.SetDoubleValue(section, "size", marker.size);
-            inifile.SetLongValue(section, "shape", static_cast<long>(marker.shape));
-            inifile.SetLongValue(section, "map", static_cast<long>(marker.map));
-            inifile.SetBoolValue(section, "visible", marker.visible);
-            inifile.SetBoolValue(section, "draw_on_terrain", marker.draw_on_terrain);
-            Colors::Save(&inifile, section, "color", marker.color);
-            Colors::Save(&inifile, section, "color_sub", marker.color_sub);
-        }
-        for (auto i = 0u; i < polygons.size(); i++) {
-            const CustomPolygon& polygon = polygons[i];
-            char section[32];
-            snprintf(section, 32, "custompolygon%03d", i);
-            for (auto j = 0u; j < polygon.points.size(); j++) {
-                inifile.SetDoubleValue(
-                    section, ("point["s + std::to_string(j) + "].x").c_str(), polygon.points.at(j).x);
-                inifile.SetDoubleValue(
-                    section, ("point["s + std::to_string(j) + "].y").c_str(), polygon.points.at(j).y);
             }
-            Colors::Save(&inifile, section, "color", polygon.color);
-            Colors::Save(&inifile, section, "color_sub", polygon.color_sub);
-            inifile.SetValue(section, "name", polygon.name);
-            inifile.SetLongValue(section, "map", static_cast<long>(polygon.map));
-            inifile.SetBoolValue(section, "visible", polygon.visible);
-            inifile.SetBoolValue(section, "draw_on_terrain", polygon.draw_on_terrain);
-            inifile.SetBoolValue(section, "filled", polygon.filled);
+            auto& entry = data.lines.emplace_back();
+            entry.name = line->name;
+            entry.x1 = line->p1.x;
+            entry.y1 = line->p1.y;
+            entry.x2 = line->p2.x;
+            entry.y2 = line->p2.y;
+            entry.color = line->color;
+            entry.map = static_cast<uint32_t>(line->map);
+            entry.visible = line->visible;
+            entry.draw_on_terrain = line->draw_on_terrain;
+        }
+        for (const auto& marker : markers) {
+            auto& entry = data.markers.emplace_back();
+            entry.name = marker.name;
+            entry.x = marker.pos.x;
+            entry.y = marker.pos.y;
+            entry.size = marker.size;
+            entry.shape = static_cast<int>(marker.shape);
+            entry.map = static_cast<uint32_t>(marker.map);
+            entry.visible = marker.visible;
+            entry.draw_on_terrain = marker.draw_on_terrain;
+            entry.color = marker.color;
+            entry.color_sub = marker.color_sub;
+        }
+        for (const auto& polygon : polygons) {
+            auto& entry = data.polygons.emplace_back();
+            entry.name = polygon.name;
+            for (const auto& point : polygon.points) {
+                entry.points.push_back({point.x, point.y});
+            }
+            entry.color = polygon.color;
+            entry.color_sub = polygon.color_sub;
+            entry.map = static_cast<uint32_t>(polygon.map);
+            entry.visible = polygon.visible;
+            entry.draw_on_terrain = polygon.draw_on_terrain;
+            entry.filled = polygon.filled;
         }
 
-        ASSERT(inifile.SaveFile(Resources::GetSettingFile(ini_filename).c_str()) == SI_OK);
+        std::string json_buf;
+        ASSERT(!glz::write<glz::opts{.prettify = true}>(data, json_buf));
+        std::ofstream file(Resources::GetSettingFile(json_filename), std::ios::binary | std::ios::trunc);
+        file.write(json_buf.data(), static_cast<std::streamsize>(json_buf.size()));
+        ASSERT(file.good());
         marker_file_dirty = false;
     }
 }
@@ -757,7 +771,7 @@ void CustomRenderer::DrawPolygonSettings()
 void CustomRenderer::DrawSettings()
 {
     const auto draw_note = [] {
-        ImGui::Text("Note: custom markers are stored in 'Markers.ini' in settings folder. You can share the file with other players or paste other people's markers into it.");
+        ImGui::Text("Note: custom markers are stored in 'Markers.json' in settings folder. You can share the file with other players or paste other people's markers into it.");
     };
     if (ImGui::TreeNodeEx("Custom Lines", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::BeginChild("##custom_lines", {0.f, std::min(ImGui::GetWindowSize().y * 0.7f, 75.f + lines.size() * 25.f)});

@@ -1,9 +1,20 @@
-#include "stdafx.h"
+// No stdafx: this file is also compiled into plugin DLLs (see cmake/gwtoolboxdll_plugins.cmake).
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
 
 #include <ToolboxIni.h>
 
 #include <algorithm>
 #include <cstdio>
+
+// Plugins (BUILD_DLL) have no host Logger; logging is host-only.
+#ifdef BUILD_DLL
+#define INI_LOGW(...) ((void)0)
+#else
+#include <Logger.h>
+#define INI_LOGW(...) Log::LogW(__VA_ARGS__)
+#endif
 
 namespace {
 
@@ -185,7 +196,7 @@ void FastIniSection::GetAllKeys(TNamesDepend& out) const {
 SI_Error ToolboxIni::LoadIfExists(const std::filesystem::path& a_pwszFile)
 {
     if (!exists(a_pwszFile)) {
-        Log::LogW(L"[ToolboxIni] %s doesn't exist", a_pwszFile.wstring().c_str());
+        INI_LOGW(L"[ToolboxIni] %s doesn't exist", a_pwszFile.wstring().c_str());
         return SI_OK;
     }
     return LoadFile(a_pwszFile);
@@ -206,11 +217,11 @@ SI_Error ToolboxIni::LoadFile(const std::filesystem::path& a_pwszFile)
         res = LoadFileRaw(a_pwszFile) ? SI_OK : SI_FAIL;
     }
     if (res == SI_OK) {
-        Log::LogW(L"[ToolboxIni] LoadFile successful for %s", a_pwszFile.wstring().c_str());
+        INI_LOGW(L"[ToolboxIni] LoadFile successful for %s", a_pwszFile.wstring().c_str());
         location_on_disk = a_pwszFile;
     }
     else {
-        Log::LogW(L"[ToolboxIni] LoadFile failed for %s", a_pwszFile.wstring().c_str());
+        INI_LOGW(L"[ToolboxIni] LoadFile failed for %s", a_pwszFile.wstring().c_str());
     }
     return res;
 }

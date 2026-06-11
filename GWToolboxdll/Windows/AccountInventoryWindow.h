@@ -16,6 +16,16 @@ public:
     [[nodiscard]] const char* Name() const override { return "Account Inventory"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
+    struct Settings {
+        bool detailed_view = false;
+        bool merge_stacks = false;
+        bool hide_other_accounts = false;
+        bool hide_equipment = false;
+        bool hide_equipment_pack = false;
+        bool hide_hero_armor = false;
+        bool hide_unclaimed_items = false;
+    };
+
     // callbacks
 
     void Initialize() override;
@@ -25,8 +35,8 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 
     void HandleHeroBag(GW::Constants::HeroID hero_id);
     void GatherAllInventories();

@@ -16,12 +16,17 @@ public:
     [[nodiscard]] const char* Name() const override { return "Materials"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_FEATHER_ALT; }
 
+    struct Settings {
+        bool manage_gold = false;
+        bool use_stock = false;
+    };
+
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Terminate() override;
 
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
 
     bool GetIsInProgress() const;
 

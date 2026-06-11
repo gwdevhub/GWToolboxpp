@@ -20,18 +20,10 @@
 #include <Widgets/WorldMapWidget.h>
 
 namespace {
-    // VQ overlay colours
-    Color vq_color_inaccessible = IM_COL32(0, 0, 0, 190);
+    VanquishMapOverlayWidget::Settings settings;
+    // VQ overlay colours not exposed as settings
     Color vq_color_blocked = IM_COL32(60, 20, 20, 170);
     Color vq_color_blocked_border = IM_COL32(180, 100, 100, 140);
-    Color vq_color_fog_unexplored = IM_COL32(0, 0, 0, 140);
-    Color vq_color_border = IM_COL32(200, 220, 255, 160);
-    Color vq_color_frontier = IM_COL32(255, 200, 50, 200);
-    Color vq_color_compass = IM_COL32(180, 220, 255, 100);
-    Color vq_color_enemy_alive = IM_COL32(70, 130, 255, 255);
-    Color vq_color_enemy_stale = IM_COL32(255, 180, 50, 180);
-    Color vq_color_enemy_outline = IM_COL32(0, 0, 0, 200);
-    float vq_enemy_marker_size = 9.0f;
 
     // Enemy tracking
     enum class EnemyState { NotApplicable, Alive, Stale };
@@ -234,7 +226,7 @@ namespace {
                 if (!cached_walkable_grid[idx] && !(cached_blocked_grid && cached_blocked_grid[idx])) continue;
                 const float x0 = grid_origin_x + lx * EXPLORE_CELL_SIZE;
                 const float y0 = grid_origin_y + ly * EXPLORE_CELL_SIZE;
-                fog_buffer.push_back(D3DQuad({x0, y0}, {x0 + EXPLORE_CELL_SIZE, y0 + EXPLORE_CELL_SIZE}, vq_color_fog_unexplored));
+                fog_buffer.push_back(D3DQuad({x0, y0}, {x0 + EXPLORE_CELL_SIZE, y0 + EXPLORE_CELL_SIZE}, settings.vq_color_fog_unexplored));
             }
         }
     }
@@ -261,7 +253,7 @@ namespace {
 
         const auto edge = [&](bool cond, int neighbour_idx, float ax, float ay, float bx, float by) {
             if (cond && IsFrontierEdge(neighbour_idx)) {
-                D3DLine line({ax, ay}, {bx, by}, FRONTIER_HALF_THICKNESS, vq_color_frontier);
+                D3DLine line({ax, ay}, {bx, by}, FRONTIER_HALF_THICKNESS, settings.vq_color_frontier);
                 for (const auto& tri : line.t)
                     out.insert(out.end(), tri.v, tri.v + 3);
             }
@@ -452,10 +444,10 @@ namespace {
 
         inaccessible_area_and_borders.clear();
 
-        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy0 - ext}, {gx1 + ext, gy0}, vq_color_inaccessible));
-        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy1}, {gx1 + ext, gy1 + ext}, vq_color_inaccessible));
-        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy0}, {gx0, gy1}, vq_color_inaccessible));
-        inaccessible_area_and_borders.push_back(D3DQuad({gx1, gy0}, {gx1 + ext, gy1}, vq_color_inaccessible));
+        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy0 - ext}, {gx1 + ext, gy0}, settings.vq_color_inaccessible));
+        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy1}, {gx1 + ext, gy1 + ext}, settings.vq_color_inaccessible));
+        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy0}, {gx0, gy1}, settings.vq_color_inaccessible));
+        inaccessible_area_and_borders.push_back(D3DQuad({gx1, gy0}, {gx1 + ext, gy1}, settings.vq_color_inaccessible));
 
         std::vector<BorderSegment> blocked_border_segments;
         for (int gy = cached_grid_y0; gy < cached_grid_y0 + cached_grid_h; gy++) {
@@ -471,26 +463,26 @@ namespace {
                         run_start = gx;
                         run_blocked = is_blocked;
                     } else if (is_blocked != run_blocked) {
-                        inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {gx * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : vq_color_inaccessible));
+                        inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {gx * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
                         run_start = gx;
                         run_blocked = is_blocked;
                     }
                 }
                 else {
                     if (run_start != -1) {
-                        inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {gx * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : vq_color_inaccessible));
+                        inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {gx * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
                         run_start = -1;
                     }
                 }
             }
             if (run_start != -1) {
-                inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {(cached_grid_x0 + cached_grid_w) * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : vq_color_inaccessible));
+                inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {(cached_grid_x0 + cached_grid_w) * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
             }
         }
 
         // Borders around walkable area
         for (const auto& seg : cached_border_segments)
-            inaccessible_area_and_borders.push_back(D3DLine(seg.p1, seg.p2, border_thickness_game, vq_color_border));
+            inaccessible_area_and_borders.push_back(D3DLine(seg.p1, seg.p2, border_thickness_game, settings.vq_color_border));
 
         // Borders around blocked (unreachable) areas
         if (cached_blocked_grid) {
@@ -812,16 +804,16 @@ namespace {
         if (nav_active) NavigateToClosestEnemy();
         enemy_vertex_buffer.clear();
 
-        const float radius = vq_enemy_marker_size * cached_px_to_game;
+        const float radius = settings.vq_enemy_marker_size * cached_px_to_game;
         const float radius_outer = radius + cached_px_to_game;
         teardrop_fill.SetRadius(radius);
         teardrop_outline.SetRadius(radius_outer);
-        teardrop_outline.SetColor(vq_color_enemy_outline);
+        teardrop_outline.SetColor(settings.vq_color_enemy_outline);
 
         for (size_t i = 0, len = std::min(tracked_enemies_by_agent_id.size(), highest_trackable_agent_id + 1); i < len; i++) {
             auto& enemy = tracked_enemies_by_agent_id[i];
             if (enemy.state == EnemyState::NotApplicable) continue;
-            const DWORD color = enemy.state == EnemyState::Stale ? vq_color_enemy_stale : vq_color_enemy_alive;
+            const DWORD color = enemy.state == EnemyState::Stale ? settings.vq_color_enemy_stale : settings.vq_color_enemy_alive;
             teardrop_fill.SetColor(color);
             teardrop_fill.SetCenterColor(color);
             teardrop_fill.SetPosition(enemy.pos);
@@ -835,7 +827,7 @@ namespace {
 
     void RebuildCompassCircle()
     {
-        compass_circle = D3DCircle({0.f, 0.f}, COMPASS_RANGE, COMPASS_CIRCLE_THICKNESS_PX * cached_px_to_game, (DWORD)vq_color_compass, COMPASS_CIRCLE_SEGMENTS);
+        compass_circle = D3DCircle({0.f, 0.f}, COMPASS_RANGE, COMPASS_CIRCLE_THICKNESS_PX * cached_px_to_game, (DWORD)settings.vq_color_compass, COMPASS_CIRCLE_SEGMENTS);
     }
 
     void DrawEnemyCountLabel()
@@ -922,9 +914,22 @@ namespace {
 void VanquishMapOverlayWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
     MissionMapWidget::AddDrawCallback(&OnMissionMapDraw);
     MissionMapWidget::AddContextMenuCallback(&VanquishMapOverlayWidget::ContextMenuItems);
     QuestModule::AddCustomMarkerChangedCallback(&OnCustomMarkerChanged);
+}
+
+void VanquishMapOverlayWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void VanquishMapOverlayWidget::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void VanquishMapOverlayWidget::Draw(IDirect3DDevice9*)
@@ -1050,51 +1055,21 @@ void VanquishMapOverlayWidget::Terminate()
     }
 }
 
-void VanquishMapOverlayWidget::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::LoadSettings(ini);
-
-    LOAD_COLOR(vq_color_inaccessible);
-    LOAD_COLOR(vq_color_fog_unexplored);
-    LOAD_COLOR(vq_color_border);
-    LOAD_COLOR(vq_color_frontier);
-    LOAD_COLOR(vq_color_compass);
-    LOAD_COLOR(vq_color_enemy_alive);
-    LOAD_COLOR(vq_color_enemy_stale);
-    LOAD_COLOR(vq_color_enemy_outline);
-    LOAD_FLOAT(vq_enemy_marker_size);
-}
-
-void VanquishMapOverlayWidget::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::SaveSettings(ini);
-
-    SAVE_COLOR(vq_color_inaccessible);
-    SAVE_COLOR(vq_color_fog_unexplored);
-    SAVE_COLOR(vq_color_border);
-    SAVE_COLOR(vq_color_frontier);
-    SAVE_COLOR(vq_color_compass);
-    SAVE_COLOR(vq_color_enemy_alive);
-    SAVE_COLOR(vq_color_enemy_stale);
-    SAVE_COLOR(vq_color_enemy_outline);
-    SAVE_FLOAT(vq_enemy_marker_size);
-}
-
 void VanquishMapOverlayWidget::DrawSettingsInternal()
 {
     ImGui::TextDisabled("Tracks enemy positions as they enter compass range.\nBlue = alive, Orange = last known (moved away).\nArrows on orange markers show last movement direction.\nAlso highlights areas you've explored during this session on the mission map.");
     bool static_changed = false;
     bool fog_changed = false;
 
-    static_changed |= Colors::DrawSettingHueWheel("Inaccessible area", &vq_color_inaccessible);
-    static_changed |= Colors::DrawSettingHueWheel("Map border", &vq_color_border);
-    fog_changed |= Colors::DrawSettingHueWheel("Unexplored fog", &vq_color_fog_unexplored);
-    fog_changed |= Colors::DrawSettingHueWheel("Frontier edge", &vq_color_frontier);
-    bool rebuild_compass = Colors::DrawSettingHueWheel("Compass range", &vq_color_compass);
-    Colors::DrawSettingHueWheel("Enemy (alive)", &vq_color_enemy_alive);
-    Colors::DrawSettingHueWheel("Enemy (last known position)", &vq_color_enemy_stale);
-    Colors::DrawSettingHueWheel("Enemy outline", &vq_color_enemy_outline);
-    ImGui::SliderFloat("Enemy marker size", &vq_enemy_marker_size, 3.0f, 20.0f, "%.0f");
+    static_changed |= Colors::DrawSettingHueWheel("Inaccessible area", &settings.vq_color_inaccessible.value);
+    static_changed |= Colors::DrawSettingHueWheel("Map border", &settings.vq_color_border.value);
+    fog_changed |= Colors::DrawSettingHueWheel("Unexplored fog", &settings.vq_color_fog_unexplored.value);
+    fog_changed |= Colors::DrawSettingHueWheel("Frontier edge", &settings.vq_color_frontier.value);
+    bool rebuild_compass = Colors::DrawSettingHueWheel("Compass range", &settings.vq_color_compass.value);
+    Colors::DrawSettingHueWheel("Enemy (alive)", &settings.vq_color_enemy_alive.value);
+    Colors::DrawSettingHueWheel("Enemy (last known position)", &settings.vq_color_enemy_stale.value);
+    Colors::DrawSettingHueWheel("Enemy outline", &settings.vq_color_enemy_outline.value);
+    ImGui::SliderFloat("Enemy marker size", &settings.vq_enemy_marker_size, 3.0f, 20.0f, "%.0f");
     ImGui::Unindent();
 
     if (static_changed) BuildStaticMapGeometry();

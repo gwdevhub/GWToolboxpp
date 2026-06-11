@@ -46,8 +46,10 @@ namespace {
 
     constexpr glz::opts json_opts{.error_on_unknown_keys = false};
     GW::HookEntry ChatCmd_HookEntry;
+
+    TeamspeakModule::Settings settings;
+
     const char* teamspeak3_host = "127.0.0.1";
-    char teamspeak3_api_key[128] = {0};
     u_short teamspeak3_port = 25639;
 
     clock_t check_interval = 0;
@@ -60,7 +62,6 @@ namespace {
 
     ConnectionStep step = Idle;
 
-    bool enabled = false;
     bool pending_connect = false;
     bool pending_disconnect = false;
     WSAData wsaData = {0};
@@ -282,7 +283,7 @@ namespace {
             return true;
         }
         step = Connecting;
-        if (!enabled) {
+        if (!settings.enabled) {
             return failed(nullptr);
         }
         //BOOL is_x64 = false;
@@ -291,7 +292,7 @@ namespace {
         //    return failed("Error finding running teamspeak executable (%04X)",GetLastError());
         //if (running_teamspeak_exe.empty())
         //    return failed("Failed to find running teamspeak executable; is Teamspeak 3 running?");
-        if (!teamspeak3_api_key[0]) {
+        if (settings.teamspeak3_api_key.empty()) {
             return failed("No API Key provided; find this in Teamspeak > Tools > Options > Addons > ClientQuery > Settings");
         }
         int res;
@@ -337,7 +338,7 @@ namespace {
         Log::Log("Teamspeak 3 welcome message:\n%s", response->content.c_str());
 
         // Send auth message
-        const std::string to_send = std::format("auth apikey={}\r\n", teamspeak3_api_key);
+        const std::string to_send = std::format("auth apikey={}\r\n", settings.teamspeak3_api_key);
         response = PollSocket(to_send);
         if (!response) {
             return failed("Couldn't connect to teamspeak 3; auth failure or empty response");
@@ -438,13 +439,14 @@ namespace {
 void TeamspeakModule::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"ts", OnTeamspeakCommand);
     GetServerInfo();
 }
 
 void TeamspeakModule::Terminate()
 {
-    enabled = false;
+    settings.enabled = false;
     DeleteSocket();
     if (wsaData.wVersion) {
         WSACleanup();
@@ -453,20 +455,17 @@ void TeamspeakModule::Terminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
-void TeamspeakModule::LoadSettings(ToolboxIni* ini)
+void TeamspeakModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(enabled);
-    const char* tmp = ini->GetValue(Name(), VAR_NAME(teamspeak3_api_key), teamspeak3_api_key);
-    strncpy(teamspeak3_api_key, tmp, sizeof(teamspeak3_api_key) - 1);
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     pending_connect = true;
 }
 
-void TeamspeakModule::SaveSettings(ToolboxIni* ini)
+void TeamspeakModule::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(enabled);
-    ini->SetValue(Name(), VAR_NAME(teamspeak3_api_key), teamspeak3_api_key);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void TeamspeakModule::Update(float)
@@ -475,7 +474,7 @@ void TeamspeakModule::Update(float)
         Connect();
         pending_connect = false;
     }
-    if (!enabled && IsConnected()) {
+    if (!settings.enabled && IsConnected()) {
         pending_disconnect = true;
     }
     if (pending_disconnect) {
@@ -493,8 +492,8 @@ void TeamspeakModule::DrawSettingsInternal()
 {
     check_interval = 5000;
     ImGui::PushID("TeamspeakModule");
-    if (ImGui::Checkbox("Enable Teamspeak 3 integration", &enabled)) {
-        if (enabled) {
+    if (ImGui::Checkbox("Enable Teamspeak 3 integration", &settings.enabled)) {
+        if (settings.enabled) {
             Connect(true);
         }
         else {
@@ -502,7 +501,7 @@ void TeamspeakModule::DrawSettingsInternal()
         }
     }
     ImGui::ShowHelp("Allows GWToolbox retrieve info from Teamspeak 3");
-    if (enabled) {
+    if (settings.enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, IsConnected() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
         auto status_str = [] {
@@ -545,7 +544,7 @@ void TeamspeakModule::DrawSettingsInternal()
             }
             ImGui::Unindent();
         }
-        ImGui::InputText("Teamspeak 3 ClientQuery API Key", teamspeak3_api_key, sizeof(teamspeak3_api_key) - 1);
+        ImGui::InputText("Teamspeak 3 ClientQuery API Key", settings.teamspeak3_api_key, 127);
         ImGui::ShowHelp("Find this in Teamspeak > Tools > Options > Addons > ClientQuery > Settings");
         ImGui::TextDisabled("Use the /ts3 command to send your current server info in chat");
     }

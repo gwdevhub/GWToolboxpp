@@ -578,16 +578,21 @@ public:
     }
 
     const bool IsActive() const;
-    bool is_enabled = false;
 
     [[nodiscard]] const char* Name() const override { return "Observer Module"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
 
+    struct Settings {
+        bool is_enabled = false;
+        bool trim_hench_names = false;
+        bool enable_in_explorable_areas = false;
+    };
+
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Terminate() override;
     void Update(float delta) override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
 
     bool InitializeObserverSession(GW::Constants::MapID map_id = static_cast<GW::Constants::MapID>(0));
@@ -644,11 +649,6 @@ private:
 
     clock_t party_sync_timer = 0;
     clock_t health_snapshot_timer = 0;
-
-    // agent name settings
-    bool trim_hench_names = false;
-    bool trim_player_indexes = false;
-    bool enable_in_explorable_areas = false;
 
     // can be force enabled in non-explorable explorable areas
 

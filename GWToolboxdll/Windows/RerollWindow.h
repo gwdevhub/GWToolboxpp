@@ -22,6 +22,12 @@ public:
     [[nodiscard]] const char* Name() const override { return "Reroll"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
+    struct Settings {
+        bool travel_to_same_location_after_rerolling = true;
+        bool rejoin_party_after_rerolling = true;
+        bool return_on_fail = false;
+    };
+
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
@@ -29,8 +35,8 @@ public:
     void Terminate() override;
     void Update(float) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 
     bool Reroll(const wchar_t* character_name, bool same_map = true, bool same_party = true, const bool ignore_current_character = false, const bool do_not_prompt = false);
     bool Reroll(const wchar_t* character_name, GW::Constants::MapID _map_id);

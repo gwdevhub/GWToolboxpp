@@ -38,40 +38,19 @@ namespace {
     std::unordered_map<GW::AgentID, std::vector<SkillActivation>> history{};
     std::unordered_map<GW::AgentID, float> casttime_map{};
 
-    bool hide_in_outpost = false;
-    bool show_non_party_members = false;
-    Color background = Colors::ARGB(76, 0, 0, 0);
-
-    int user_offset = -1;
-
-    bool history_flip_direction = false;
-
-    int cast_indicator_threshold = 1000;
-    int cast_indicator_height = 3;
-    Color cast_indicator_color = Colors::ARGB(255, 55, 153, 30);
-
-    int status_border_thickness = 2;
-    Color status_color_completed = Colors::ARGB(255, 219, 157, 14);
-    Color status_color_casting = Colors::ARGB(255, 55, 153, 30);
-    Color status_color_cancelled = Colors::ARGB(255, 71, 24, 102);
-    Color status_color_interrupted = Colors::ARGB(255, 71, 24, 102);
-
-    bool overlay_party_window = false;
-
-    int history_length = 5;
-    int history_timeout = 5000;
+    SkillMonitorWidget::Settings settings;
 
     Color GetColor(const SkillActivationStatus status)
     {
         switch (status) {
         case CASTING:
-            return status_color_casting;
+            return settings.status_color_casting;
         case COMPLETED:
-            return status_color_completed;
+            return settings.status_color_completed;
         case CANCELLED:
-            return status_color_cancelled;
+            return settings.status_color_cancelled;
         case INTERRUPTED:
-            return status_color_interrupted;
+            return settings.status_color_interrupted;
         }
         return Colors::Empty();
     }
@@ -189,10 +168,23 @@ namespace {
 void SkillMonitorWidget::Initialize()
 {
     SnapsToPartyWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kAgentSkillActivated, GW::UI::UIMessage::kAgentSkillActivatedInstantly, GW::UI::UIMessage::kAgentSkillCancelled, GW::UI::UIMessage::kAgentSkillStartedCast};
     for (auto message_id : ui_messages) {
         RegisterUIMessageCallback(&PostUIMessage_Entry, message_id, OnPostUIMessage, 0x4000);
     }
+}
+
+void SkillMonitorWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    SnapsToPartyWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void SkillMonitorWidget::SaveSettings(SettingsDoc& doc)
+{
+    SnapsToPartyWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void SkillMonitorWidget::Terminate()
@@ -206,7 +198,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+    if (settings.hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
     }
     // @Cleanup: Only call when the party window has been moved or updated
@@ -220,20 +212,20 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
 
     const auto& first_agent_health_bar = agent_health_bar_positions.begin()->second;
     const auto img_size = first_agent_health_bar.bottom_right.y - first_agent_health_bar.top_left.y;
-    const auto width = img_size * history_length;
+    const auto width = img_size * settings.history_length;
 
-    const auto user_offset_x = abs(static_cast<float>(user_offset));
+    const auto user_offset_x = abs(static_cast<float>(settings.user_offset));
     float window_x = .0f;
-    if (overlay_party_window) {
+    if (settings.overlay_party_window) {
         window_x = party_health_bars_position.top_left.x + user_offset_x;
-        if (user_offset < 0) {
+        if (settings.user_offset < 0) {
             window_x = party_health_bars_position.bottom_right.x - user_offset_x - width;
         }
 
     }
     else {
         window_x = party_health_bars_position.top_left.x - user_offset_x - width;
-        if (window_x < 0 || user_offset < 0) {
+        if (window_x < 0 || settings.user_offset < 0) {
             // Right placement
             window_x = party_health_bars_position.bottom_right.x + user_offset_x;
         }
@@ -254,18 +246,18 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
 
             if (party_slot >= pets_start_idx && party_slot < allies_start_idx)
                 continue; // Don't draw pets
-            if (!show_non_party_members && party_slot >= allies_start_idx)
+            if (!settings.show_non_party_members && party_slot >= allies_start_idx)
                 continue; // Don't draw allies
 
             const auto health_bar_pos = GetAgentHealthBarPosition(agent_id);
             if (!health_bar_pos)
                 continue;
-            draw_list->AddRectFilled({ window_x , health_bar_pos->top_left.y }, { window_x + width, health_bar_pos->bottom_right.y }, background);
+            draw_list->AddRectFilled({ window_x , health_bar_pos->top_left.y }, { window_x + width, health_bar_pos->bottom_right.y }, settings.background);
 
             auto& skill_history = history[agent_id];
             for (size_t i = 0; i < skill_history.size(); i++) {
                 const auto& skill_activation = skill_history.at(i);
-                const ImVec2 top_left = {history_flip_direction ? window_x + (i * img_size) : window_x + width - (i * img_size) - img_size, health_bar_pos->top_left.y};
+                const ImVec2 top_left = {settings.history_flip_direction ? window_x + (i * img_size) : window_x + width - (i * img_size) - img_size, health_bar_pos->top_left.y};
                 const ImVec2 bottom_right = {top_left.x + img_size, top_left.y + img_size};
 
                 const auto texture = *Resources::GetSkillImage(skill_activation.id);
@@ -273,23 +265,23 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
                     draw_list->AddImage(texture, top_left, bottom_right);
                 }
 
-                if (status_border_thickness != 0) {
+                if (settings.status_border_thickness != 0) {
                     draw_list->AddRect(top_left, bottom_right, GetColor(skill_activation.status), 0.f,
-                        ImDrawFlags_RoundCornersNone, static_cast<float>(status_border_thickness));
+                        ImDrawFlags_RoundCornersNone, static_cast<float>(settings.status_border_thickness));
 
                 }
 
-                if (skill_activation.status == CASTING 
-                    && skill_activation.cast_time * 1000 >= cast_indicator_threshold
-                    && ImGui::ColorConvertU32ToFloat4(cast_indicator_color).w != 0) {
+                if (skill_activation.status == CASTING
+                    && skill_activation.cast_time * 1000 >= settings.cast_indicator_threshold
+                    && ImGui::ColorConvertU32ToFloat4(settings.cast_indicator_color).w != 0) {
                     const auto remaining_cast = TIMER_DIFF(skill_activation.cast_start);
                     const auto percentage_cast = std::min(remaining_cast / (skill_activation.cast_time * 1000), 1.0f);
 
                     const auto health_bar_width = health_bar_pos->bottom_right.x - health_bar_pos->top_left.x;
                     ImGui::GetBackgroundDrawList()->AddRectFilled(
-                        ImVec2(health_bar_pos->top_left.x, health_bar_pos->bottom_right.y - cast_indicator_height),
+                        ImVec2(health_bar_pos->top_left.x, health_bar_pos->bottom_right.y - settings.cast_indicator_height),
                         ImVec2(health_bar_pos->top_left.x + (health_bar_width * percentage_cast), health_bar_pos->bottom_right.y),
-                        cast_indicator_color);
+                        settings.cast_indicator_color);
                 }
             }
         }
@@ -303,126 +295,72 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
 void SkillMonitorWidget::Update(const float)
 {
     for (auto& skill_history : history | std::views::values) {
-        if (skill_history.size() > static_cast<size_t>(history_length)) {
-            skill_history.erase(skill_history.begin(), skill_history.begin() + (skill_history.size() - history_length));
+        if (skill_history.size() > static_cast<size_t>(settings.history_length)) {
+            skill_history.erase(skill_history.begin(), skill_history.begin() + (skill_history.size() - settings.history_length));
         }
 
-        if (history_timeout != 0) {
+        if (settings.history_timeout != 0) {
             std::erase_if(
                 skill_history,
                 [&](const SkillActivation& skill_activation) -> bool {
-                    return TIMER_DIFF(skill_activation.last_update) > history_timeout;
+                    return TIMER_DIFF(skill_activation.last_update) > settings.history_timeout;
                 });
         }
     }
-}
-
-void SkillMonitorWidget::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_BOOL(hide_in_outpost);
-    LOAD_BOOL(show_non_party_members);
-
-    LOAD_UINT(user_offset);
-    LOAD_BOOL(history_flip_direction);
-
-    LOAD_UINT(cast_indicator_threshold);
-    LOAD_UINT(cast_indicator_height);
-    LOAD_COLOR(cast_indicator_color);
-
-    LOAD_UINT(status_border_thickness);
-    LOAD_COLOR(status_color_completed);
-    LOAD_COLOR(status_color_casting);
-    LOAD_COLOR(status_color_cancelled);
-    LOAD_COLOR(status_color_interrupted);
-
-    LOAD_UINT(history_length);
-    LOAD_UINT(history_timeout);
-
-    LOAD_BOOL(overlay_party_window);
-
-    LOAD_COLOR(background);
-}
-
-void SkillMonitorWidget::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_BOOL(hide_in_outpost);
-    SAVE_BOOL(show_non_party_members);
-
-    SAVE_UINT(user_offset);
-    SAVE_BOOL(history_flip_direction);
-
-    SAVE_UINT(cast_indicator_threshold);
-    SAVE_UINT(cast_indicator_height);
-    SAVE_COLOR(cast_indicator_color);
-
-    SAVE_UINT(status_border_thickness);
-    SAVE_COLOR(status_color_completed);
-    SAVE_COLOR(status_color_casting);
-    SAVE_COLOR(status_color_cancelled);
-    SAVE_COLOR(status_color_interrupted);
-
-    SAVE_UINT(history_length);
-    SAVE_UINT(history_timeout);
-
-    SAVE_BOOL(overlay_party_window);
-
-    SAVE_COLOR(background);
 }
 
 void SkillMonitorWidget::DrawSettingsInternal()
 {
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show non party-members (allies)", &show_non_party_members);
+    ImGui::Checkbox("Show non party-members (allies)", &settings.show_non_party_members);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Flip history direction (left/right)", &history_flip_direction);
+    ImGui::Checkbox("Flip history direction (left/right)", &settings.history_flip_direction);
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show on top of health bars", &overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("Show on top of health bars", &settings.overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
-    ImGui::DragInt("Party window offset", &user_offset);
+    ImGui::DragInt("Party window offset", &settings.user_offset);
     ImGui::PopItemWidth();
     ImGui::ShowHelp("Distance away from the party window");
 
     ImGui::Text("Cast Indicator");
-    ImGui::DragInt("Threshold", &cast_indicator_threshold, 1.0f, 0, 0, "%d milliseconds");
+    ImGui::DragInt("Threshold", &settings.cast_indicator_threshold, 1.0f, 0, 0, "%d milliseconds");
     ImGui::ShowHelp(
         "Minimum cast time a skill has to have to display the indicator. Note that instantly casted skill will never be displayed.");
-    ImGui::InputInt("Height", &cast_indicator_height);
-    Colors::DrawSettingHueWheel("Color", &cast_indicator_color);
+    ImGui::InputInt("Height", &settings.cast_indicator_height);
+    Colors::DrawSettingHueWheel("Color", &settings.cast_indicator_color.value);
 
-    Colors::DrawSettingHueWheel("Background", &background, 0);
+    Colors::DrawSettingHueWheel("Background", &settings.background.value, 0);
 
     ImGui::Text("Status Border");
-    ImGui::InputInt("Border Thickness", &status_border_thickness);
+    ImGui::InputInt("Border Thickness", &settings.status_border_thickness);
     ImGui::ShowHelp("Set to 0 to disable.");
-    if (status_border_thickness < 0) {
-        status_border_thickness = 0;
+    if (settings.status_border_thickness < 0) {
+        settings.status_border_thickness = 0;
     }
-    if (status_border_thickness != 0) {
+    if (settings.status_border_thickness != 0) {
         if (ImGui::TreeNodeEx("Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            Colors::DrawSettingHueWheel("Completed", &status_color_completed);
-            Colors::DrawSettingHueWheel("Casting", &status_color_casting);
-            Colors::DrawSettingHueWheel("Cancelled", &status_color_cancelled);
-            Colors::DrawSettingHueWheel("Interrupted", &status_color_interrupted);
+            Colors::DrawSettingHueWheel("Completed", &settings.status_color_completed.value);
+            Colors::DrawSettingHueWheel("Casting", &settings.status_color_casting.value);
+            Colors::DrawSettingHueWheel("Cancelled", &settings.status_color_cancelled.value);
+            Colors::DrawSettingHueWheel("Interrupted", &settings.status_color_interrupted.value);
             ImGui::TreePop();
         }
     }
 
     ImGui::Text("History");
-    ImGui::InputInt("Length", &history_length, 0, 25);
-    if (history_length < 0) {
-        history_length = 0;
+    ImGui::InputInt("Length", &settings.history_length, 0, 25);
+    if (settings.history_length < 0) {
+        settings.history_length = 0;
     }
-    ImGui::DragInt("Timeout", &history_timeout, 1.0f, 0, 0, "%d milliseconds");
+    ImGui::DragInt("Timeout", &settings.history_timeout, 1.0f, 0, 0, "%d milliseconds");
     ImGui::ShowHelp("Amount of time after which a skill gets removed from the skill history. Set to 0 to disable.");
-    if (history_timeout < 0) {
-        history_timeout = 0;
+    if (settings.history_timeout < 0) {
+        settings.history_timeout = 0;
     }
 }
 

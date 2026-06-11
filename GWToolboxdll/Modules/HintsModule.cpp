@@ -156,7 +156,7 @@ namespace {
     constexpr TBHint BLACK_WIDOW_CHARM = {0x2000009, L"If you're planning to charm a Black Widow, remember to flag your heroes away so they don't kill it."};
     constexpr TBHint JUNUNDU_HERO_AVOID_COMBAT = {0x200000A, L"One or more of your heroes is set to 'Avoid Combat'. Heroes in this mode won't fight while you're in Junundu form."};
 
-    bool only_show_hints_once = false;
+    HintsModule::Settings settings;
     GW::HookEntry hints_entry;
 
     void OnEffectAdd_UIMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
@@ -203,7 +203,7 @@ namespace {
     {
         const auto msg = static_cast<HintUIMessage*>(wparam);
         if (std::ranges::contains(hints_shown, msg->message_id)) {
-            if (only_show_hints_once) {
+            if (settings.only_show_hints_once) {
                 status->blocked = true;
             }
         }
@@ -299,6 +299,7 @@ namespace {
 void HintsModule::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kEffectAdd, OnEffectAdd_UIMessage);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kObjectiveComplete, OnObjectiveComplete_UIMessage);
     RegisterUIMessageCallback(&hints_entry, GW::UI::UIMessage::kMapChange, OnStartMapLoad_UIMessage);
@@ -330,8 +331,8 @@ void HintsModule::Update(float)
 
 void HintsModule::DrawSettingsInternal()
 {
-    ImGui::CheckboxWithHelp("Only show hints once", &only_show_hints_once, "GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
-    if (only_show_hints_once) {
+    ImGui::CheckboxWithHelp("Only show hints once", &settings.only_show_hints_once, "GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
+    if (settings.only_show_hints_once) {
         ImGui::TextDisabled("%d hint(s) have already been shown in-game and won't be shown again", hints_shown.size());
         if (ImGui::Button("Clear cached hints")) {
             hints_shown.clear();
@@ -339,22 +340,22 @@ void HintsModule::DrawSettingsInternal()
     }
 }
 
-void HintsModule::SaveSettings(ToolboxIni* ini)
+void HintsModule::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    std::string ini_str;
-    SAVE_BOOL(only_show_hints_once);
-    ASSERT(GuiUtils::ArrayToIni(hints_shown.data(), hints_shown.size(), &ini_str));
-    ini->SetValue(Name(), VAR_NAME(hints_shown), ini_str.c_str());
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+    doc.Set(Name(), VAR_NAME(hints_shown), hints_shown);
 }
 
-void HintsModule::LoadSettings(ToolboxIni* ini)
+void HintsModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::SaveSettings(ini);
-    LOAD_BOOL(only_show_hints_once);
-    const std::string ini_str = ini->GetValue(Name(), VAR_NAME(hints_shown), "");
-    if (!ini_str.empty()) {
-        hints_shown.resize((ini_str.size() + 1) / 9);
-        ASSERT(GuiUtils::IniToArray(ini_str, hints_shown.data(), hints_shown.size()));
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    if (!doc.Get(Name(), VAR_NAME(hints_shown), hints_shown) && legacy) {
+        const std::string ini_str = legacy->GetValue(Name(), VAR_NAME(hints_shown), "");
+        if (!ini_str.empty()) {
+            hints_shown.resize((ini_str.size() + 1) / 9);
+            ASSERT(GuiUtils::IniToArray(ini_str, hints_shown.data(), hints_shown.size()));
+        }
     }
 }

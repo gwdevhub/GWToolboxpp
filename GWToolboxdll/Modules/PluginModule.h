@@ -33,8 +33,8 @@ public:
 
     void Draw(IDirect3DDevice9*) override;
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni*) override;
-    void SaveSettings(ToolboxIni*) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Update(float) override;
     void Initialize() override;
     void SignalTerminate() override;

@@ -683,19 +683,8 @@ namespace {
     bool subscribed_vanguard[VANGUARD_COUNT] = {false};
     bool subscribed_nicholas_sandford[NICHOLAS_PRE_COUNT] = {false};
 
-    bool show_zaishen_bounty_in_window = true;
-    bool show_zaishen_combat_in_window = true;
-    bool show_zaishen_missions_in_window = true;
-    bool show_zaishen_vanquishes_in_window = true;
-    bool show_wanted_quests_in_window = true;
-    bool show_nicholas_in_window = true;
-    bool show_weekly_bonus_pve_in_window = true;
-    bool show_weekly_bonus_pvp_in_window = true;
-    bool show_other_searing_dailies = false;
-    bool notify_zaishen_mission_outpost = true;
+    DailyQuests::Settings settings;
     bool pending_zaishen_mission_check = false;
-
-    int nicholas_withdraw_gott_count = 5;
 
     uint32_t subscriptions_lookahead_days = 7;
 
@@ -877,9 +866,9 @@ namespace {
         ImGui::Separator();
         bool travel = ImGui::Button("Travel to nearest outpost", size);
         bool wiki = ImGui::Button("Guild Wars Wiki", size);
-        const auto withdraw_amount = static_cast<uint32_t>(info->quantity * nicholas_withdraw_gott_count);
+        const auto withdraw_amount = static_cast<uint32_t>(info->quantity * settings.nicholas_withdraw_gott_count);
         char withdraw_label[64];
-        snprintf(withdraw_label, sizeof(withdraw_label), "Withdraw for %d GOTTs (%d items)", nicholas_withdraw_gott_count, withdraw_amount);
+        snprintf(withdraw_label, sizeof(withdraw_label), "Withdraw for %d GOTTs (%d items)", settings.nicholas_withdraw_gott_count, withdraw_amount);
         bool withdraw = ImGui::Button(withdraw_label, size);
 
         ImGui::PopStyleColor();
@@ -993,7 +982,7 @@ namespace {
 
     void OnMapLoaded_CheckZaishenMission()
     {
-        if (!notify_zaishen_mission_outpost) return;
+        if (!settings.notify_zaishen_mission_outpost) return;
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
         if (GW::Map::IsPreSearing()) return;
 
@@ -1328,7 +1317,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     const char* other_label = is_pre ? "Show post searing dailies" : "Show pre searing dailies";
     const float checkbox_w = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(other_label).x;
     ImGui::SetCursorPosX(ImGui::GetWindowWidth() - checkbox_w - ImGui::GetStyle().WindowPadding.x);
-    ImGui::Checkbox(other_label, &show_other_searing_dailies);
+    ImGui::Checkbox(other_label, &settings.show_other_searing_dailies);
 
     auto write_daily_info = [](bool* subscribed, QuestData* info, bool check_completion) {
         auto col = &normal_color;
@@ -1395,27 +1384,27 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     };
 
     auto add_post_cols = [&]() {
-        if (show_zaishen_missions_in_window)
+        if (settings.show_zaishen_missions_in_window)
             columns.push_back({"Zaishen Mission", zm_width, [&](time_t t) {
                 write_daily_info(&subscribed_zaishen_missions[GetZaishenMissionIdx(&t)], GetZaishenMission(t).quest, true);
             }});
-        if (show_zaishen_bounty_in_window)
+        if (settings.show_zaishen_bounty_in_window)
             columns.push_back({"Zaishen Bounty", zb_width, [&](time_t t) {
                 write_daily_info(&subscribed_zaishen_bounties[GetZaishenBountyIdx(&t)], GetZaishenBounty(t).quest, true);
             }});
-        if (show_zaishen_combat_in_window)
+        if (settings.show_zaishen_combat_in_window)
             columns.push_back({"Zaishen Combat", zc_width, [&](time_t t) {
                 write_daily_info(&subscribed_zaishen_combats[GetZaishenCombatIdx(&t)], GetZaishenCombat(t).quest, false);
             }});
-        if (show_zaishen_vanquishes_in_window)
+        if (settings.show_zaishen_vanquishes_in_window)
             columns.push_back({"Zaishen Vanquish", zv_width, [&](time_t t) {
                 write_daily_info(&subscribed_zaishen_vanquishes[GetZaishenVanquishIdx(&t)], GetZaishenVanquish(t).quest, true);
             }});
-        if (show_wanted_quests_in_window)
+        if (settings.show_wanted_quests_in_window)
             columns.push_back({"Wanted", ws_width, [&](time_t t) {
                 write_daily_info(&subscribed_wanted_quests[GetWantedByShiningBladeIdx(&t)], GetWantedByShiningBlade(t).quest, false);
             }});
-        if (show_nicholas_in_window)
+        if (settings.show_nicholas_in_window)
             columns.push_back({"Nicholas the Traveler", nicholas_width, [&](time_t t) {
                 const auto nick = static_cast<NicholasCycleData*>(GetNicholasTheTraveller(t).quest);
                 ImGui::TextUnformatted(nick->GetQuestName());
@@ -1431,12 +1420,12 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                 if (rmb_clicked) ImGui::SetContextMenu(OnNicholasContextMenu, nick);
                 if (hovered) ImGui::SetTooltip("%s in %s", nick->GetQuestName(), nick->GetMapName());
             }});
-        if (show_weekly_bonus_pve_in_window)
+        if (settings.show_weekly_bonus_pve_in_window)
             columns.push_back({"Weekly Bonus PvE", wbe_width, [&](time_t t) {
                 const auto i = GetWeeklyBonusPvEIdx(&t);
                 write_daily_info(&subscribed_weekly_bonus_pve[i], &pve_weekly_bonus_cycles[i], false);
             }});
-        if (show_weekly_bonus_pvp_in_window)
+        if (settings.show_weekly_bonus_pvp_in_window)
             columns.push_back({"Weekly Bonus PvP", long_text_width, [&](time_t t) {
                 const auto i = GetWeeklyBonusPvPIdx(&t);
                 write_daily_info(&subscribed_weekly_bonus_pvp[i], &pvp_weekly_bonus_cycles[i], false);
@@ -1445,11 +1434,11 @@ void DailyQuests::Draw(IDirect3DDevice9*)
 
     if (is_pre) {
         add_pre_cols();
-        if (show_other_searing_dailies) add_post_cols();
+        if (settings.show_other_searing_dailies) add_post_cols();
     }
     else {
         add_post_cols();
-        if (show_other_searing_dailies) add_pre_cols();
+        if (settings.show_other_searing_dailies) add_pre_cols();
     }
 
     // Header row
@@ -1544,178 +1533,96 @@ void DailyQuests::DrawSettingsInternal()
     ToolboxWindow::DrawSettingsInternal();
     ImGui::PushItemWidth(200.f * ImGui::FontScale());
     ImGui::InputInt("Show daily quests for the next N days", &daily_quest_window_count);
-    ImGui::InputInt("Number of GOTTs to withdraw items for (Nicholas)", &nicholas_withdraw_gott_count);
+    ImGui::InputInt("Number of GOTTs to withdraw items for (Nicholas)", &settings.nicholas_withdraw_gott_count);
     ImGui::PopItemWidth();
     ImGui::Text("Quests to show in Daily Quests window:");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Zaishen Bounty", &show_zaishen_bounty_in_window);
+    ImGui::Checkbox("Zaishen Bounty", &settings.show_zaishen_bounty_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Zaishen Combat", &show_zaishen_combat_in_window);
+    ImGui::Checkbox("Zaishen Combat", &settings.show_zaishen_combat_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Zaishen Mission", &show_zaishen_missions_in_window);
+    ImGui::Checkbox("Zaishen Mission", &settings.show_zaishen_missions_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Zaishen Vanquish", &show_zaishen_vanquishes_in_window);
+    ImGui::Checkbox("Zaishen Vanquish", &settings.show_zaishen_vanquishes_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Wanted by Shining Blade", &show_wanted_quests_in_window);
+    ImGui::Checkbox("Wanted by Shining Blade", &settings.show_wanted_quests_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Nicholas The Traveler", &show_nicholas_in_window);
+    ImGui::Checkbox("Nicholas The Traveler", &settings.show_nicholas_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Weekly Bonus (PvE)", &show_weekly_bonus_pve_in_window);
+    ImGui::Checkbox("Weekly Bonus (PvE)", &settings.show_weekly_bonus_pve_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Weekly Bonus (PvP)", &show_weekly_bonus_pvp_in_window);
+    ImGui::Checkbox("Weekly Bonus (PvP)", &settings.show_weekly_bonus_pvp_in_window);
 
     ImGui::Unindent();
 
-    ImGui::Checkbox("Alert when entering today's Zaishen Mission outpost", &notify_zaishen_mission_outpost);
+    ImGui::Checkbox("Alert when entering today's Zaishen Mission outpost", &settings.notify_zaishen_mission_outpost);
     ImGui::ShowHelp("Shows a flash message in chat with the mission name and coin reward when you enter the outpost that matches today's Zaishen Mission.");
 }
 
-void DailyQuests::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-
-    nicholas_withdraw_gott_count = static_cast<int>(ini->GetLongValue(Name(), "nicholas_withdraw_gott_count", nicholas_withdraw_gott_count));
-    LOAD_BOOL(show_zaishen_bounty_in_window);
-    LOAD_BOOL(show_zaishen_combat_in_window);
-    LOAD_BOOL(show_zaishen_missions_in_window);
-    LOAD_BOOL(show_zaishen_vanquishes_in_window);
-    LOAD_BOOL(show_wanted_quests_in_window);
-    LOAD_BOOL(show_nicholas_in_window);
-    LOAD_BOOL(show_weekly_bonus_pve_in_window);
-    LOAD_BOOL(show_weekly_bonus_pvp_in_window);
-    LOAD_BOOL(show_other_searing_dailies);
-    LOAD_BOOL(notify_zaishen_mission_outpost);
-
-    const char* zms = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_missions), "0");
-    const std::bitset<ZAISHEN_MISSION_COUNT> zmb(zms);
-    for (auto i = 0u; i < zmb.size(); i++) {
-        subscribed_zaishen_missions[i] = zmb[i] == 1;
+namespace {
+    // Subscriptions keep their legacy bitset-string encoding in JSON ("0101..."), same as the INI.
+    template <size_t N>
+    void LoadSubscriptions(const SettingsDoc& doc, const ToolboxIni* legacy, const char* section, const char* key, bool (&out)[N])
+    {
+        std::string value;
+        if (!doc.Get(section, key, value)) {
+            value = legacy->GetValue(section, key, "0");
+        }
+        const std::bitset<N> bits(value);
+        for (auto i = 0u; i < bits.size(); i++) {
+            out[i] = bits[i] == 1;
+        }
     }
 
-    const char* zbs = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_bounties), "0");
-    const std::bitset<ZAISHEN_BOUNTY_COUNT> zbb(zbs);
-    for (auto i = 0u; i < zbb.size(); i++) {
-        subscribed_zaishen_bounties[i] = zbb[i] == 1;
-    }
-
-    const char* zcs = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_combats), "0");
-    const std::bitset<ZAISHEN_COMBAT_COUNT> zcb(zcs);
-    for (auto i = 0u; i < zcb.size(); i++) {
-        subscribed_zaishen_combats[i] = zcb[i] == 1;
-    }
-
-    const char* zvs = ini->GetValue(Name(), VAR_NAME(subscribed_zaishen_vanquishes), "0");
-    const std::bitset<ZAISHEN_VANQUISH_COUNT> zvb(zvs);
-    for (auto i = 0u; i < zvb.size(); i++) {
-        subscribed_zaishen_vanquishes[i] = zvb[i] == 1;
-    }
-
-    const char* wss = ini->GetValue(Name(), VAR_NAME(subscribed_wanted_quests), "0");
-    const std::bitset<WANTED_COUNT> wsb(wss);
-    for (auto i = 0u; i < wsb.size(); i++) {
-        subscribed_wanted_quests[i] = wsb[i] == 1;
-    }
-
-    const char* wbes = ini->GetValue(Name(), VAR_NAME(subscribed_weekly_bonus_pve), "0");
-    const std::bitset<WEEKLY_BONUS_PVE_COUNT> wbeb(wbes);
-    for (auto i = 0u; i < wbeb.size(); i++) {
-        subscribed_weekly_bonus_pve[i] = wbeb[i] == 1;
-    }
-
-    const char* wbps = ini->GetValue(Name(), VAR_NAME(subscribed_weekly_bonus_pvp), "0");
-    const std::bitset<WEEKLY_BONUS_PVP_COUNT> wbpb(wbps);
-    for (auto i = 0u; i < wbpb.size(); i++) {
-        subscribed_weekly_bonus_pvp[i] = wbpb[i] == 1;
-    }
-
-    const char* vgs = ini->GetValue(Name(), VAR_NAME(subscribed_vanguard), "0");
-    const std::bitset<VANGUARD_COUNT> vgb(vgs);
-    for (auto i = 0u; i < vgb.size(); i++) {
-        subscribed_vanguard[i] = vgb[i] == 1;
-    }
-
-    const char* nss = ini->GetValue(Name(), VAR_NAME(subscribed_nicholas_sandford), "0");
-    const std::bitset<NICHOLAS_PRE_COUNT> nsb(nss);
-    for (auto i = 0u; i < nsb.size(); i++) {
-        subscribed_nicholas_sandford[i] = nsb[i] == 1;
+    template <size_t N>
+    void SaveSubscriptions(SettingsDoc& doc, const char* section, const char* key, const bool (&in)[N])
+    {
+        std::bitset<N> bits;
+        for (auto i = 0u; i < bits.size(); i++) {
+            bits[i] = in[i] ? 1 : 0;
+        }
+        doc.Set(section, key, bits.to_string());
     }
 }
 
-void DailyQuests::SaveSettings(ToolboxIni* ini)
+void DailyQuests::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::SaveSettings(ini);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    ini->SetLongValue(Name(), "nicholas_withdraw_gott_count", static_cast<long>(nicholas_withdraw_gott_count));
-    SAVE_BOOL(show_zaishen_bounty_in_window);
-    SAVE_BOOL(show_zaishen_combat_in_window);
-    SAVE_BOOL(show_zaishen_missions_in_window);
-    SAVE_BOOL(show_zaishen_vanquishes_in_window);
-    SAVE_BOOL(show_wanted_quests_in_window);
-    SAVE_BOOL(show_nicholas_in_window);
-    SAVE_BOOL(show_weekly_bonus_pve_in_window);
-    SAVE_BOOL(show_weekly_bonus_pvp_in_window);
-    SAVE_BOOL(show_other_searing_dailies);
-    SAVE_BOOL(notify_zaishen_mission_outpost);
-    std::bitset<ZAISHEN_MISSION_COUNT> zmb;
-    for (auto i = 0u; i < zmb.size(); i++) {
-        zmb[i] = subscribed_zaishen_missions[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_zaishen_missions), zmb.to_string().c_str());
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_zaishen_missions), subscribed_zaishen_missions);
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_zaishen_bounties), subscribed_zaishen_bounties);
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_zaishen_combats), subscribed_zaishen_combats);
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_zaishen_vanquishes), subscribed_zaishen_vanquishes);
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_wanted_quests), subscribed_wanted_quests);
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_weekly_bonus_pve), subscribed_weekly_bonus_pve);
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_weekly_bonus_pvp), subscribed_weekly_bonus_pvp);
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_vanguard), subscribed_vanguard);
+    LoadSubscriptions(doc, legacy, Name(), VAR_NAME(subscribed_nicholas_sandford), subscribed_nicholas_sandford);
+}
 
-    std::bitset<ZAISHEN_BOUNTY_COUNT> zbb;
-    for (auto i = 0u; i < zbb.size(); i++) {
-        zbb[i] = subscribed_zaishen_bounties[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_zaishen_bounties), zbb.to_string().c_str());
+void DailyQuests::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    std::bitset<ZAISHEN_COMBAT_COUNT> zcb;
-    for (auto i = 0u; i < zcb.size(); i++) {
-        zcb[i] = subscribed_zaishen_combats[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_zaishen_combats), zcb.to_string().c_str());
-
-    std::bitset<ZAISHEN_VANQUISH_COUNT> zvb;
-    for (auto i = 0u; i < zvb.size(); i++) {
-        zvb[i] = subscribed_zaishen_vanquishes[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_zaishen_vanquishes), zvb.to_string().c_str());
-
-    std::bitset<WANTED_COUNT> wsb;
-    for (auto i = 0u; i < wsb.size(); i++) {
-        wsb[i] = subscribed_wanted_quests[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_wanted_quests), wsb.to_string().c_str());
-
-    std::bitset<WEEKLY_BONUS_PVE_COUNT> wbeb;
-    for (auto i = 0u; i < wbeb.size(); i++) {
-        wbeb[i] = subscribed_weekly_bonus_pve[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_weekly_bonus_pve), wbeb.to_string().c_str());
-
-    std::bitset<WEEKLY_BONUS_PVP_COUNT> wbpb;
-    for (auto i = 0u; i < wbpb.size(); i++) {
-        wbpb[i] = subscribed_weekly_bonus_pvp[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_weekly_bonus_pvp), wbpb.to_string().c_str());
-
-    std::bitset<VANGUARD_COUNT> vgb;
-    for (auto i = 0u; i < vgb.size(); i++) {
-        vgb[i] = subscribed_vanguard[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_vanguard), vgb.to_string().c_str());
-
-    std::bitset<NICHOLAS_PRE_COUNT> nsb;
-    for (auto i = 0u; i < nsb.size(); i++) {
-        nsb[i] = subscribed_nicholas_sandford[i] ? 1 : 0;
-    }
-    ini->SetValue(Name(), VAR_NAME(subscribed_nicholas_sandford), nsb.to_string().c_str());
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_zaishen_missions), subscribed_zaishen_missions);
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_zaishen_bounties), subscribed_zaishen_bounties);
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_zaishen_combats), subscribed_zaishen_combats);
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_zaishen_vanquishes), subscribed_zaishen_vanquishes);
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_wanted_quests), subscribed_wanted_quests);
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_weekly_bonus_pve), subscribed_weekly_bonus_pve);
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_weekly_bonus_pvp), subscribed_weekly_bonus_pvp);
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_vanguard), subscribed_vanguard);
+    SaveSubscriptions(doc, Name(), VAR_NAME(subscribed_nicholas_sandford), subscribed_nicholas_sandford);
 }
 
 void DailyQuests::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     for (auto& cycle : zaishen_bounty_cycles) {
         if (cycle.enc_name[0] != L'\x108') cycle.enc_name = std::format(L"\x108\x107{}\x1", cycle.enc_name);

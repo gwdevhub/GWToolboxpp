@@ -12,9 +12,14 @@
 
 #include <RestClient.h>
 
+namespace {
+    ObserverExportWindow::Settings settings;
+}
+
 void ObserverExportWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 }
 
 // Convert to JSON (Version 0.1)
@@ -180,9 +185,9 @@ glz::generic ObserverExportWindow::ToJSON_V_1_0()
     json["match_duration_ms"] = om.match_duration_ms.count();
     json["match_duration_secs"] = om.match_duration_secs.count();
     json["match_duration_mins"] = om.match_duration_mins.count();
-    json["match_type"] = Instance().match_type;
-    json["match_date"] = Instance().match_date;
-    json["mat_round"] = Instance().mat_round;
+    json["match_type"] = settings.match_type;
+    json["match_date"] = settings.match_date;
+    json["mat_round"] = settings.mat_round;
 
     // Use the map from when the match started (if available), otherwise fall back to current map
     ObserverModule::ObservableMap* map = om.match_start_map ? om.match_start_map : om.GetMap();
@@ -636,7 +641,7 @@ void ObserverExportWindow::ExportToGWRank()
     }
     
     // Check if API key is configured
-    if (Instance().gwrank_api_key.empty()) {
+    if (settings.gwrank_api_key.empty()) {
         GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, L"<c=#FF0000>API key not configured. Please set it in the Observer Export settings.</c>");
         return;
     }
@@ -660,11 +665,11 @@ void ObserverExportWindow::ExportToGWRank()
     body.append("--\r\n");
 
     RestClient client;
-    client.SetUrl(Instance().gwrank_endpoint.c_str());
+    client.SetUrl(settings.gwrank_endpoint.c_str());
     client.SetMethod(HttpMethod::Post);
     const std::string content_type = "multipart/form-data; boundary=" + boundary;
     client.SetHeader("Content-Type", content_type.c_str());
-    const std::string auth_header_value = "Bearer " + Instance().gwrank_api_key;
+    const std::string auth_header_value = "Bearer " + settings.gwrank_api_key;
     client.SetHeader("Authorization", auth_header_value.c_str());
     client.SetPostContent(body, ContentFlag::ByRef);
     client.SetTimeoutSec(30);
@@ -787,9 +792,9 @@ void ObserverExportWindow::Draw(IDirect3DDevice9*)
     static int current_match_type = -1;
     
     // Find current selection index based on stored match_type
-    if (current_match_type == -1 && !Instance().match_type.empty()) {
+    if (current_match_type == -1 && !settings.match_type.empty()) {
         for (int i = 0; i < 6; i++) {
-            if (Instance().match_type == match_types[i]) {
+            if (settings.match_type == match_types[i]) {
                 current_match_type = i;
                 break;
             }
@@ -801,7 +806,7 @@ void ObserverExportWindow::Draw(IDirect3DDevice9*)
             const bool is_selected = (current_match_type == i);
             if (ImGui::Selectable(match_types[i], is_selected)) {
                 current_match_type = i;
-                Instance().match_type = match_types[i];
+                settings.match_type = match_types[i];
             }
             if (is_selected) {
                 ImGui::SetItemDefaultFocus();
@@ -816,9 +821,9 @@ void ObserverExportWindow::Draw(IDirect3DDevice9*)
         static int current_mat_round = -1;
         
         // Find current selection index based on stored mat_round
-        if (current_mat_round == -1 && !Instance().mat_round.empty()) {
+        if (current_mat_round == -1 && !settings.mat_round.empty()) {
             for (int i = 0; i < 5; i++) {
-                if (Instance().mat_round == mat_rounds[i]) {
+                if (settings.mat_round == mat_rounds[i]) {
                     current_mat_round = i;
                     break;
                 }
@@ -830,7 +835,7 @@ void ObserverExportWindow::Draw(IDirect3DDevice9*)
                 const bool is_selected = (current_mat_round == i);
                 if (ImGui::Selectable(mat_rounds[i], is_selected)) {
                     current_mat_round = i;
-                    Instance().mat_round = mat_rounds[i];
+                    settings.mat_round = mat_rounds[i];
                 }
                 if (is_selected) {
                     ImGui::SetItemDefaultFocus();
@@ -842,9 +847,9 @@ void ObserverExportWindow::Draw(IDirect3DDevice9*)
     
     // Match Date input
     char date_buf[64];
-    strncpy_s(date_buf, Instance().match_date.c_str(), 63);
+    strncpy_s(date_buf, settings.match_date.c_str(), 63);
     if (ImGui::InputText("Match Date", date_buf, 64)) {
-        Instance().match_date = date_buf;
+        settings.match_date = date_buf;
     }
     ImGui::ShowHelp("Format: YYYY-MM-DD (e.g., 2026-02-22)");
     
@@ -869,11 +874,11 @@ void ObserverExportWindow::Draw(IDirect3DDevice9*)
     ImGui::Text("Upload to GWRank.com");
     
     ObserverModule& observer_module = ObserverModule::Instance();
-    bool can_export = observer_module.match_finished && !Instance().gwrank_api_key.empty();
+    bool can_export = observer_module.match_finished && !settings.gwrank_api_key.empty();
     
     if (!observer_module.match_finished) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Match not finished");
-    } else if (Instance().gwrank_api_key.empty()) {
+    } else if (settings.gwrank_api_key.empty()) {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "API key not configured");
     }
     
@@ -893,39 +898,27 @@ void ObserverExportWindow::Draw(IDirect3DDevice9*)
 }
 
 // Load settings
-void ObserverExportWindow::LoadSettings(ToolboxIni* ini)
+void ObserverExportWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    
-    LOAD_STRING(gwrank_api_key);
-    LOAD_STRING(gwrank_endpoint);
-    LOAD_STRING(match_type);
-    LOAD_STRING(match_date);
-    LOAD_STRING(mat_round);
-    
-    if (gwrank_endpoint.empty()) {
-        gwrank_endpoint = "https://gwrank.com/api/v1/matches";
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+
+    if (settings.gwrank_endpoint.empty()) {
+        settings.gwrank_endpoint = "https://gwrank.com/api/v1/matches";
     }
-    
+
     // Prefill match_date with current date if empty
-    if (match_date.empty()) {
+    if (settings.match_date.empty()) {
         SYSTEMTIME time;
         GetLocalTime(&time);
-        match_date = std::format("{:04}-{:02}-{:02}", time.wYear, time.wMonth, time.wDay);
+        settings.match_date = std::format("{:04}-{:02}-{:02}", time.wYear, time.wMonth, time.wDay);
     }
 }
 
-
-// Save settings
-void ObserverExportWindow::SaveSettings(ToolboxIni* ini)
+void ObserverExportWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-
-    SAVE_STRING(gwrank_api_key);
-    SAVE_STRING(gwrank_endpoint);
-    SAVE_STRING(match_type);
-    SAVE_STRING(match_date);
-    SAVE_STRING(mat_round);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 // Draw settings
@@ -937,16 +930,16 @@ void ObserverExportWindow::DrawSettingsInternal()
     
     char api_key_buf[256];
     char endpoint_buf[256];
-    strncpy_s(api_key_buf, Instance().gwrank_api_key.c_str(), 255);
-    strncpy_s(endpoint_buf, Instance().gwrank_endpoint.c_str(), 255);
+    strncpy_s(api_key_buf, settings.gwrank_api_key.c_str(), 255);
+    strncpy_s(endpoint_buf, settings.gwrank_endpoint.c_str(), 255);
     
     if (ImGui::InputText("API Key", api_key_buf, 256, ImGuiInputTextFlags_Password)) {
-        Instance().gwrank_api_key = api_key_buf;
+        settings.gwrank_api_key = api_key_buf;
     }
     ImGui::ShowHelp("Enter your GWRank.com API key for authentication");
     
     if (ImGui::InputText("API Endpoint", endpoint_buf, 256)) {
-        Instance().gwrank_endpoint = endpoint_buf;
+        settings.gwrank_endpoint = endpoint_buf;
     }
     ImGui::ShowHelp("URL for the GWRank.com API endpoint (default: https://gwrank.com/api/v1/matches)");
 }

@@ -53,6 +53,8 @@ static constexpr char ws_host[] = "wss://lfg.gwtoolbox.com";
 static constexpr char https_host[] = "https://lfg.gwtoolbox.com";
 
 namespace {
+    PartySearchWindow::Settings settings;
+
     wchar_t* GetMessageCore()
     {
         GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
@@ -256,6 +258,7 @@ bool PartySearchWindow::TBParty::FromLocalParty(GW::PartyInfo* party)
 void PartySearchWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     party_advertisements.reserve(100);
     messages = CircularBuffer<Message>(100);
@@ -552,7 +555,7 @@ void PartySearchWindow::fetch()
 
         // Check alerts
         // do not display trade chat while in kamadan AE district 1
-        const bool print_message = print_game_chat && IsLfpAlert(msg.message);
+        const bool print_message = settings.print_game_chat && IsLfpAlert(msg.message);
 
         if (print_message) {
             wchar_t buffer[512];
@@ -566,7 +569,7 @@ void PartySearchWindow::fetch()
 
 bool PartySearchWindow::IsLfpAlert(std::string& message) const
 {
-    if (!filter_alerts) {
+    if (!settings.filter_alerts) {
         return true;
     }
     std::regex word_regex;
@@ -752,8 +755,8 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
 void PartySearchWindow::DrawAlertsWindowContent(bool)
 {
     ImGui::Text("Alerts");
-    ImGui::CheckboxWithHelp("Send party advertisements to your trade chat", &print_game_chat, "Only when trade chat channel is visible in-game");
-    ImGui::Checkbox("Only show messages containing:", &filter_alerts);
+    ImGui::CheckboxWithHelp("Send party advertisements to your trade chat", &settings.print_game_chat, "Only when trade chat channel is visible in-game");
+    ImGui::Checkbox("Only show messages containing:", &settings.filter_alerts);
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
                                   ImVec2(-1.0f, 0.0f))) {
@@ -767,14 +770,13 @@ void PartySearchWindow::DrawSettingsInternal()
     DrawAlertsWindowContent(false);
 }
 
-void PartySearchWindow::LoadSettings(ToolboxIni* ini)
+void PartySearchWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(print_game_chat);
-    LOAD_BOOL(filter_alerts);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
     std::ifstream alert_file;
-    alert_file.open(Resources::GetSettingFile(L"AlertKeywords.txt"));
+    alert_file.open(Resources::GetSettingFileOrLegacy(L"AlertKeywords.txt"));
     if (alert_file.is_open()) {
         alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
         alert_file.close();
@@ -783,12 +785,10 @@ void PartySearchWindow::LoadSettings(ToolboxIni* ini)
     alert_file.close();
 }
 
-void PartySearchWindow::SaveSettings(ToolboxIni* ini)
+void PartySearchWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-
-    SAVE_BOOL(print_game_chat);
-    SAVE_BOOL(filter_alerts);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
     if (alertfile_dirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream bycontent_file;

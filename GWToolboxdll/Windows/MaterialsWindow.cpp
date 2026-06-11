@@ -45,8 +45,7 @@ namespace {
     size_t trans_queued = 0;
     size_t trans_done = 0;
 
-    bool manage_gold = false;
-    bool use_stock = false;
+    MaterialsWindow::Settings settings;
 
     GW::HookEntry PostUIMessage_Entry;
 
@@ -362,7 +361,7 @@ void MaterialsWindow::Update(const float)
         } break;
         case Transaction::Type::Buy: {
             if (gold_on_character < trans->price) {
-                if (!(manage_gold && gold_on_character + gold_in_storage >= trans->price && GW::Items::WithdrawGold())) {
+                if (!(settings.manage_gold && gold_on_character + gold_in_storage >= trans->price && GW::Items::WithdrawGold())) {
                     Cancel("Not enough gold");
                     return; // Don't cancel, we're out of gold
                 }
@@ -370,7 +369,7 @@ void MaterialsWindow::Update(const float)
         } break;
         case Transaction::Type::Sell: {
             if (gold_on_character + trans->price > 99999) {
-                if (!(manage_gold && gold_in_storage < 999999 - trans->price && GW::Items::DepositGold())) {
+                if (!(settings.manage_gold && gold_in_storage < 999999 - trans->price && GW::Items::DepositGold())) {
                     Cancel("Too much gold");
                     return; // Don't cancel, we're out of gold
                 }
@@ -426,6 +425,7 @@ bool MaterialsWindow::GetIsInProgress() const
 void MaterialsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     if (material_names.empty()) {
         material_names.reserve(material_enc_strings.size());
@@ -460,25 +460,23 @@ void MaterialsWindow::Initialize()
 
 }
 
+void MaterialsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void MaterialsWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+}
+
 void MaterialsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     Cancel();
     GW::UI::RemoveUIMessageCallback(&PostUIMessage_Entry);
-}
-
-void MaterialsWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(manage_gold);
-    LOAD_BOOL(use_stock);
-}
-
-void MaterialsWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(manage_gold);
-    SAVE_BOOL(use_stock);
 }
 
 void MaterialsWindow::Draw(IDirect3DDevice9*)
@@ -529,10 +527,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
             const int qty = 5 * qty_essence;
             for (int i = 0; i < qty; i++) {
-                if (!use_stock || i < qty - feather_stock / 10) {
+                if (!settings.use_stock || i < qty - feather_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::Feather);
                 }
-                if (!use_stock || i < qty - dust_stock / 10) {
+                if (!settings.use_stock || i < qty - dust_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::PileofGlitteringDust);
                 }
             }
@@ -581,10 +579,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
             const int qty = 5 * qty_grail;
             for (int i = 0; i < qty; i++) {
-                if (!use_stock || i < qty - iron_stock / 10) {
+                if (!settings.use_stock || i < qty - iron_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::IronIngot);
                 }
-                if (!use_stock || i < qty - dust_stock / 10) {
+                if (!settings.use_stock || i < qty - dust_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::PileofGlitteringDust);
                 }
             }
@@ -624,10 +622,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
             const int qty = 5 * qty_armor;
             for (int i = 0; i < qty; i++) {
-                if (!use_stock || i < qty - iron_stock / 10) {
+                if (!settings.use_stock || i < qty - iron_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::IronIngot);
                 }
-                if (!use_stock || i < qty - bone_stock / 10) {
+                if (!settings.use_stock || i < qty - bone_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::Bone);
                 }
             }
@@ -666,10 +664,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
             const int qty = 10 * qty_pstone;
             for (int i = 0; i < qty; i++) {
-                if (!use_stock || i < qty - granite_stock / 10) {
+                if (!settings.use_stock || i < qty - granite_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::GraniteSlab);
                 }
-                if (!use_stock || i < qty - dust_stock / 10) {
+                if (!settings.use_stock || i < qty - dust_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::PileofGlitteringDust);
                 }
             }
@@ -708,10 +706,10 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 
             const int qty = static_cast<int>(std::ceil(2.5f * static_cast<float>(qty_resscroll)));
             for (int i = 0; i < qty; i++) {
-                if (!use_stock || i < qty - fiber_stock / 10) {
+                if (!settings.use_stock || i < qty - fiber_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::PlantFiber);
                 }
-                if (!use_stock || i < qty - bone_stock / 10) {
+                if (!settings.use_stock || i < qty - bone_stock / 10) {
                     EnqueuePurchase(GW::Constants::MaterialSlot::Bone);
                 }
             }
@@ -745,7 +743,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         if (ImGui::Button("Buy##common", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
             const auto mat = common_materials[common_idx];
             const int material_stock = CountItemByMaterialSlot(mat, stock_start, stock_end);
-            const int to_buy = common_qty - (use_stock ? material_stock / 10 : 0);
+            const int to_buy = common_qty - (settings.use_stock ? material_stock / 10 : 0);
             for (int i = 0; i < to_buy; i++) {
                 EnqueuePurchase(mat);
             }
@@ -779,7 +777,7 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
         if (ImGui::Button("Buy##rare", ImVec2(50.0f - ImGui::GetStyle().ItemSpacing.x / 2, 0))) {
             const auto mat = rare_materials[rare_idx];
             const int material_stock = CountItemByMaterialSlot(mat, stock_start, stock_end);
-            const int to_buy = rare_qty - (use_stock ? material_stock : 0);
+            const int to_buy = rare_qty - (settings.use_stock ? material_stock : 0);
             for (int i = 0; i < to_buy; i++) {
                 EnqueuePurchase(mat);
             }
@@ -825,6 +823,6 @@ void MaterialsWindow::Draw(IDirect3DDevice9*)
 void MaterialsWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::CheckboxWithHelp("Automatically manage gold", &manage_gold, "It will automatically withdraw and deposit gold while buying materials");
-    ImGui::CheckboxWithHelp("Use stock", &use_stock, "Will take materials in inventory and storage into account when buying materials");
+    ImGui::CheckboxWithHelp("Automatically manage gold", &settings.manage_gold, "It will automatically withdraw and deposit gold while buying materials");
+    ImGui::CheckboxWithHelp("Use stock", &settings.use_stock, "Will take materials in inventory and storage into account when buying materials");
 }

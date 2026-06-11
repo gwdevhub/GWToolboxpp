@@ -76,6 +76,28 @@ void ToolboxUIPlugin::Terminate()
     ToolboxPlugin::Terminate();
 }
 
+void ToolboxUIPlugin::LoadSettings(const wchar_t* folder)
+{
+    ToolboxPlugin::LoadSettings(folder);
+    LoadSetting("visible", plugin_visible);
+    LoadSetting("lock_move", lock_move);
+    LoadSetting("lock_size", lock_size);
+    LoadSetting("show_closebutton", show_closebutton);
+    LoadSetting("show_menubutton", show_menubutton);
+    LoadSetting("show_title", show_title);
+}
+
+void ToolboxUIPlugin::SaveSettings(const wchar_t* folder)
+{
+    SaveSetting("visible", plugin_visible);
+    SaveSetting("lock_move", lock_move);
+    SaveSetting("lock_size", lock_size);
+    SaveSetting("show_closebutton", show_closebutton);
+    SaveSetting("show_menubutton", show_menubutton);
+    SaveSetting("show_title", show_title);
+    ToolboxPlugin::SaveSettings(folder);
+}
+
 void ToolboxUIPlugin::DrawSettings()
 {
     ToolboxPlugin::DrawSettings();

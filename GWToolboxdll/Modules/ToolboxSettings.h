@@ -22,10 +22,14 @@ public:
 
     static void LoadModules(ToolboxIni* ini);
 
+    // The "Enable the following features" checkboxes as {name, description}, for settings search
+    static const std::vector<std::pair<const char*, const char*>>& GetOptionalModuleToggles();
+
     void Update(float delta) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     void Draw(IDirect3DDevice9*) override;
 

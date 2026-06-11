@@ -276,35 +276,45 @@ void AudioSettings::SignalTerminate()
     logged_music.clear();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
-void AudioSettings::LoadSettings(ToolboxIni* ini)
+void AudioSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    TNamesDepend keys{};
+    ToolboxModule::LoadSettings(doc, legacy);
     blocked_sounds.clear();
-    if (ini->GetAllKeys(Name(), keys)) {
-        for (const auto& key : keys) {
-            if (strncmp(key.pItem, "blocked_sounds", 14) != 0)
-                continue;
+    std::vector<std::string> blocked_sounds_hex;
+    if (doc.Get(Name(), "blocked_sounds", blocked_sounds_hex)) {
+        for (const auto& hex : blocked_sounds_hex) {
             std::wstring out;
-            GuiUtils::IniToArray(ini->GetValue(Name(),key.pItem,""),out);
+            GuiUtils::IniToArray(hex, out);
             if (!out.empty())
                 blocked_sounds.push_back(std::move(out));
         }
     }
+    else if (legacy) {
+        TNamesDepend keys{};
+        if (legacy->GetAllKeys(Name(), keys)) {
+            for (const auto& key : keys) {
+                if (strncmp(key.pItem, "blocked_sounds", 14) != 0)
+                    continue;
+                std::wstring out;
+                GuiUtils::IniToArray(legacy->GetValue(Name(), key.pItem, ""), out);
+                if (!out.empty())
+                    blocked_sounds.push_back(std::move(out));
+            }
+        }
+    }
 }
-void AudioSettings::SaveSettings(ToolboxIni* ini)
+void AudioSettings::SaveSettings(SettingsDoc& doc)
 {
-    TNamesDepend values{};
-    ini->Delete(Name(), "blocked_sounds");
+    ToolboxModule::SaveSettings(doc);
+    // Hex-encoded: GW encoded filenames can contain lone surrogates that utf8 conversion rejects
+    std::vector<std::string> blocked_sounds_hex;
     std::string buf;
-    size_t i = 0;
-    ini->Delete(Name(),NULL);
     for (const auto& filename : blocked_sounds) {
         GuiUtils::ArrayToIni(filename, &buf);
-        if (!buf.empty()) {
-            auto key = std::format("blocked_sounds{}", i++);
-            ini->SetValue(Name(), key.c_str(), buf.c_str());
-        } 
+        if (!buf.empty())
+            blocked_sounds_hex.push_back(buf);
     }
+    doc.Set(Name(), "blocked_sounds", blocked_sounds_hex);
 }
 void AudioSettings::DrawSettingsInternal() {
 

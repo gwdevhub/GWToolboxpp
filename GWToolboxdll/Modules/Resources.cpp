@@ -511,11 +511,19 @@ std::filesystem::path Resources::GetComputerFolderPath()
 
 std::filesystem::path Resources::GetSettingsFolderName()
 {
-    return current_settings_folder;
+    // Bare config name (no configs\ prefix) so it can be passed back to SetSettingsFolder
+    return current_settings_folder.empty() ? std::filesystem::path() : current_settings_folder.filename();
 }
 
 std::filesystem::path Resources::GetSettingsFolderPath()
 {
+    const auto computer_path = GetComputerFolderPath();
+    return current_settings_folder.empty() ? computer_path / L"configs" / L"default" : computer_path / current_settings_folder;
+}
+
+std::filesystem::path Resources::GetLegacySettingsFolderPath()
+{
+    // Pre-configs/default layout: the default config lived at the computer root
     const auto computer_path = GetComputerFolderPath();
     return current_settings_folder.empty() ? computer_path : computer_path / current_settings_folder;
 }
@@ -534,6 +542,18 @@ bool Resources::SetSettingsFolder(const std::filesystem::path& foldername)
 std::filesystem::path Resources::GetSettingFile(const std::filesystem::path& file)
 {
     return GetSettingsFolderPath() / file;
+}
+
+std::filesystem::path Resources::GetLegacySettingFile(const std::filesystem::path& file)
+{
+    return GetLegacySettingsFolderPath() / file;
+}
+
+std::filesystem::path Resources::GetSettingFileOrLegacy(const std::filesystem::path& file)
+{
+    const auto path = GetSettingFile(file);
+    std::error_code ec;
+    return std::filesystem::exists(path, ec) ? path : GetLegacySettingFile(file);
 }
 
 std::filesystem::path Resources::GetPath(const std::filesystem::path& file)
@@ -864,30 +884,6 @@ bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_
         return false;
     }
     return WriteFile(path_to_file, std::string(static_cast<char*>(resource.data()), resource.size()));
-}
-
-// Load from absolute file path on disk with 3 retries
-int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile)
-{
-    return inifile->LoadFile(absolute_path);
-}
-
-int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* ini)
-{
-    auto tmp_file = std::filesystem::path(absolute_path);
-    tmp_file += ".tmp";
-    if (ini->SaveFile(tmp_file.c_str()) != SI_OK) {
-        return -1;
-    }
-    std::error_code ec;
-    std::filesystem::rename(tmp_file, absolute_path, ec);
-    if (ec.value() != 0) {
-        return ec.value();
-    }
-    if (!(!exists(tmp_file) && exists(absolute_path))) {
-        return -1; // rename failed
-    }
-    return 0;
 }
 
 void Resources::DxUpdate(IDirect3DDevice9* device)

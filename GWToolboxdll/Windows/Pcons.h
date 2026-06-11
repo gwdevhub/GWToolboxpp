@@ -19,7 +19,14 @@ public:
     static bool disable_when_not_found;
     static bool refill_if_below_threshold;
     static bool pcons_by_character;
-    static Color enabled_bg_color;
+    static Colors::SettingColor enabled_bg_color;
+
+    // Persisted per-pcon state, stored under the pcon's ini name; "default" entry in active is the fallback character toggle
+    struct Settings {
+        std::map<std::string, bool> active{};
+        int threshold = 0;
+        bool visible = true;
+    };
 
     static DWORD alcohol_level;
     static bool suppress_drunk_effect;
@@ -87,8 +94,9 @@ public:
     void Toggle() { SetEnabled(!IsEnabled()); }
     // Resets pcon counters so it needs to recalc number and refill.
     void ResetCounts();
-    void LoadSettings(const ToolboxIni* ini, const char* section);
-    void SaveSettings(ToolboxIni* ini, const char* section) const;
+    void LoadSettings(const SettingsDoc& doc, const char* section, const ToolboxIni* legacy);
+    void SaveSettings(SettingsDoc& doc, const char* section) const;
+    void LoadSettings(const ToolboxIni* ini, const char* section); // legacy ini fallback
 
     bool* enabled{}; // This is a ptr to the current char's status if applicable.
     bool pcon_quantity_checked = false;
