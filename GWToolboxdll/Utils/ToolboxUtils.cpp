@@ -517,6 +517,13 @@ namespace GW {
             }
             return false;
         }
+        GW::UI::Frame* GetNthParentFrame(GW::UI::Frame* frame, uint32_t n)
+        {
+            for (uint32_t i = 0; i < n && frame; i++) {
+                frame = GetParentFrame(frame);
+            }
+            return frame;
+        }
         void Screenshot()
         {
             GW::GameThread::Enqueue([] {
