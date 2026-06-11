@@ -33,7 +33,7 @@ namespace {
     }
 
     // Shared lifecycle for a frame-type cache: created/destroyed frames are tracked by their
-    // encoded label, and relabel_message reassigns the cache key (wparam = new encoded string).
+    // encoded label, and relabel_message re-reads the frame's label to reassign the cache key.
     template <typename FrameT>
     void UpdateCache(std::unordered_map<std::wstring, FrameT*>& cache, GW::UI::UIInteractionCallback original,
                      GW::UI::UIMessage relabel_message, GW::UI::InteractionMessage* message, void* wparam, void* lparam)
@@ -46,20 +46,14 @@ namespace {
             }
         }
         original(message, wparam, lparam);
-        if (message->message_id == GW::UI::UIMessage::kInitFrame) {
-            const auto frame = static_cast<FrameT*>(GW::UI::GetFrameById(message->frame_id));
-            const auto label = ReadEncodedLabel(frame);
-            if (label && label[0]) {
-                cache[label] = frame;
-            }
-        }
-        else if (message->message_id == relabel_message) {
+        // Frame created or relabelled; re-key it under its current encoded label.
+        if (message->message_id == GW::UI::UIMessage::kInitFrame || message->message_id == relabel_message) {
             const auto frame = static_cast<FrameT*>(GW::UI::GetFrameById(message->frame_id));
             if (frame) {
                 ForgetFrame(cache, frame);
-                const auto new_label = static_cast<const wchar_t*>(wparam);
-                if (new_label && new_label[0]) {
-                    cache[new_label] = frame;
+                const auto label = ReadEncodedLabel(frame);
+                if (label && label[0]) {
+                    cache[label] = frame;
                 }
             }
         }
