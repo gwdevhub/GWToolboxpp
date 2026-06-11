@@ -20,7 +20,7 @@ namespace {
     constexpr float BTN_WIDTH = 20.0f;
 }
 
-void RangeRenderer::LoadDefaults()
+void RangeRenderer::LoadDefaultCircles()
 {
     circles_ = {
         {"Compass",         GW::Constants::Range::Compass,        1.f, 0xFF666611, true,  false},
@@ -29,6 +29,11 @@ void RangeRenderer::LoadDefaults()
         {"Cast",            GW::Constants::Range::Spellcast,      1.f, 0xFF117777, true,  false},
         {"Aggro",           GW::Constants::Range::Earshot,        1.f, 0xFF994444, true,  false},
     };
+}
+
+void RangeRenderer::LoadDefaults()
+{
+    LoadDefaultCircles();
     color_range_hos = 0xFF881188;
     color_range_chain_aggro = 0x00994444;
     color_range_res_aggro = 0x64D6D6D6;
@@ -36,77 +41,63 @@ void RangeRenderer::LoadDefaults()
     Invalidate();
 }
 
-void RangeRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+void RangeRenderer::RegisterSettings(ToolboxModule* module)
 {
-    LoadDefaults();
+    SettingsRegistry::RegisterField(module, "color_range_hos", reinterpret_cast<Colors::SettingColor*>(&color_range_hos));
+    SettingsRegistry::RegisterField(module, "color_range_chain_aggro", reinterpret_cast<Colors::SettingColor*>(&color_range_chain_aggro));
+    SettingsRegistry::RegisterField(module, "color_range_res_aggro", reinterpret_cast<Colors::SettingColor*>(&color_range_res_aggro));
+    SettingsRegistry::RegisterField(module, "color_range_shadowstep_aggro", reinterpret_cast<Colors::SettingColor*>(&color_range_shadowstep_aggro));
+}
 
-    const bool has_new_format = ini->GetValue(section, "range_circle_count", nullptr) != nullptr;
-    if (has_new_format) {
-        const auto range_circle_count = ini->GetLongValue(section, "range_circle_count", 0);
-        circles_.clear();
-        for (long i = 0; i < range_circle_count; i++) {
-            char key[64];
-            RangeCircle c;
-            snprintf(key, sizeof(key), "range_circle_%ld_label", i);
-            snprintf(c.label, sizeof(c.label), "%s", ini->GetValue(section, key, ""));
-            snprintf(key, sizeof(key), "range_circle_%ld_radius", i);
-            c.radius = static_cast<float>(ini->GetDoubleValue(section, key, c.radius));
-            snprintf(key, sizeof(key), "range_circle_%ld_thickness", i);
-            c.line_thickness = static_cast<float>(ini->GetDoubleValue(section, key, c.line_thickness));
-            snprintf(key, sizeof(key), "range_circle_%ld_color", i);
-            c.color = Colors::Load(ini, section, key, c.color);
-            snprintf(key, sizeof(key), "range_circle_%ld_visible", i);
-            c.visible = ini->GetBoolValue(section, key, c.visible);
-            snprintf(key, sizeof(key), "range_circle_%ld_on_target", i);
-            c.on_target = ini->GetBoolValue(section, key, c.on_target);
-            circles_.push_back(c);
+void RangeRenderer::LoadSettings(const SettingsDoc& doc, const ToolboxIni* ini, const char* section)
+{
+    LoadDefaultCircles();
+
+    if (!doc.Get(section, "range_circles", circles_) && ini) {
+        const bool has_new_format = ini->GetValue(section, "range_circle_count", nullptr) != nullptr;
+        if (has_new_format) {
+            const auto range_circle_count = ini->GetLongValue(section, "range_circle_count", 0);
+            circles_.clear();
+            for (long i = 0; i < range_circle_count; i++) {
+                char key[64];
+                RangeCircle c;
+                snprintf(key, sizeof(key), "range_circle_%ld_label", i);
+                c.label = ini->GetValue(section, key, "");
+                snprintf(key, sizeof(key), "range_circle_%ld_radius", i);
+                c.radius = static_cast<float>(ini->GetDoubleValue(section, key, c.radius));
+                snprintf(key, sizeof(key), "range_circle_%ld_thickness", i);
+                c.line_thickness = static_cast<float>(ini->GetDoubleValue(section, key, c.line_thickness));
+                snprintf(key, sizeof(key), "range_circle_%ld_color", i);
+                c.color = Colors::Load(ini, section, key, c.color);
+                snprintf(key, sizeof(key), "range_circle_%ld_visible", i);
+                c.visible = ini->GetBoolValue(section, key, c.visible);
+                snprintf(key, sizeof(key), "range_circle_%ld_on_target", i);
+                c.on_target = ini->GetBoolValue(section, key, c.on_target);
+                circles_.push_back(c);
+            }
         }
-    }
-    else {
-        // Migrate colors from the old per-name format
-        if (circles_.size() >= 5) {
-            circles_[0].color = Colors::Load(ini, section, "color_range_compass", circles_[0].color);
-            circles_[1].color = Colors::Load(ini, section, "color_range_spirit_extended", circles_[1].color);
-            circles_[2].color = Colors::Load(ini, section, "color_range_spirit", circles_[2].color);
-            circles_[3].color = Colors::Load(ini, section, "color_range_cast", circles_[3].color);
-            circles_[4].color = Colors::Load(ini, section, "color_range_aggro", circles_[4].color);
-            const auto old_thickness = static_cast<float>(ini->GetDoubleValue(section, "range_line_thickness", 1.0));
-            for (auto& c : circles_) {
-                c.line_thickness = old_thickness;
+        else {
+            // Migrate colors from the old per-name format
+            if (circles_.size() >= 5) {
+                circles_[0].color = Colors::Load(ini, section, "color_range_compass", circles_[0].color);
+                circles_[1].color = Colors::Load(ini, section, "color_range_spirit_extended", circles_[1].color);
+                circles_[2].color = Colors::Load(ini, section, "color_range_spirit", circles_[2].color);
+                circles_[3].color = Colors::Load(ini, section, "color_range_cast", circles_[3].color);
+                circles_[4].color = Colors::Load(ini, section, "color_range_aggro", circles_[4].color);
+                const auto old_thickness = static_cast<float>(ini->GetDoubleValue(section, "range_line_thickness", 1.0));
+                for (auto& c : circles_) {
+                    c.line_thickness = old_thickness;
+                }
             }
         }
     }
 
-    color_range_hos = Colors::Load(ini, section, "color_range_hos", color_range_hos);
-    color_range_chain_aggro = Colors::Load(ini, section, "color_range_chain_aggro", color_range_chain_aggro);
-    color_range_res_aggro = Colors::Load(ini, section, "color_range_res_aggro", color_range_res_aggro);
-    color_range_shadowstep_aggro = Colors::Load(ini, section, "color_range_shadowstep_aggro", color_range_shadowstep_aggro);
     Invalidate();
 }
 
-void RangeRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
+void RangeRenderer::SaveSettings(SettingsDoc& doc, const char* section) const
 {
-    ini->SetLongValue(section, "range_circle_count", static_cast<long>(circles_.size()));
-    for (size_t i = 0; i < circles_.size(); i++) {
-        char key[64];
-        const auto& c = circles_[i];
-        snprintf(key, sizeof(key), "range_circle_%zu_label", i);
-        ini->SetValue(section, key, c.label);
-        snprintf(key, sizeof(key), "range_circle_%zu_radius", i);
-        ini->SetDoubleValue(section, key, c.radius);
-        snprintf(key, sizeof(key), "range_circle_%zu_thickness", i);
-        ini->SetDoubleValue(section, key, c.line_thickness);
-        snprintf(key, sizeof(key), "range_circle_%zu_color", i);
-        Colors::Save(ini, section, key, c.color);
-        snprintf(key, sizeof(key), "range_circle_%zu_visible", i);
-        ini->SetBoolValue(section, key, c.visible);
-        snprintf(key, sizeof(key), "range_circle_%zu_on_target", i);
-        ini->SetBoolValue(section, key, c.on_target);
-    }
-    Colors::Save(ini, section, "color_range_hos", color_range_hos);
-    Colors::Save(ini, section, "color_range_chain_aggro", color_range_chain_aggro);
-    Colors::Save(ini, section, "color_range_res_aggro", color_range_res_aggro);
-    Colors::Save(ini, section, "color_range_shadowstep_aggro", color_range_shadowstep_aggro);
+    doc.Set(section, "range_circles", circles_);
 }
 
 void RangeRenderer::DrawSettings()
@@ -137,7 +128,7 @@ void RangeRenderer::DrawSettings()
         ImGui::SameLine(0.f, spacing);
 
         ImGui::PushItemWidth(120.f);
-        row_changed |= ImGui::InputText("##label", c.label, sizeof(c.label));
+        row_changed |= ImGui::InputText("##label", c.label, 127);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Label");
@@ -173,7 +164,7 @@ void RangeRenderer::DrawSettings()
         }
         ImGui::SameLine(0.f, spacing);
 
-        row_changed |= ImGui::ColorButtonPicker("##color", &c.color);
+        row_changed |= ImGui::ColorButtonPicker("##color", &c.color.value);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Circle color");
         }
@@ -228,7 +219,7 @@ void RangeRenderer::DrawSettings()
 
     if (ImGui::Button("Add Circle")) {
         RangeCircle c;
-        snprintf(c.label, sizeof(c.label), "Custom %zu", circles_.size() + 1);
+        c.label = std::format("Custom {}", circles_.size() + 1);
         c.radius = GW::Constants::Range::Earshot;
         circles_.push_back(c);
         changed = true;

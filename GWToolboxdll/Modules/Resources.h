@@ -51,18 +51,20 @@ public:
     static void OpenFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
     static void SaveFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
 
-    static int LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile);
-    static int SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* inifile);
-
     static std::filesystem::path GetComputerFolderPath();
     static std::filesystem::path GetSettingsFolderName();
     static std::filesystem::path GetSettingsFolderPath();
+    // Old-layout settings folder (computer root for the default config); legacy files are only read from here
+    static std::filesystem::path GetLegacySettingsFolderPath();
 
 private:
     static bool SetSettingsFolder(const std::filesystem::path& foldername);
 
 public:
     static std::filesystem::path GetSettingFile(const std::filesystem::path& file);
+    static std::filesystem::path GetLegacySettingFile(const std::filesystem::path& file);
+    // New location if the file exists there, else the legacy one; for data files read at startup but written new
+    static std::filesystem::path GetSettingFileOrLegacy(const std::filesystem::path& file);
     static std::filesystem::path GetPath(const std::filesystem::path& file);
     static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);
     static HRESULT ResolveShortcut(const std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path);

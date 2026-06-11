@@ -16,9 +16,14 @@ public:
     [[nodiscard]] const char* Name() const override { return "Performance"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_TACHOMETER_ALT; }
 
+    struct Settings {
+        int slow_threshold_us = 1000;
+    };
+
     void Draw(IDirect3DDevice9* pDevice) override;
+    void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Terminate() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
 };

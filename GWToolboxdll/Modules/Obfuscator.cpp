@@ -36,11 +36,9 @@ namespace {
     /*IWbemServices* pSvc = 0;
     IWbemLocator* pLoc = 0;
     HRESULT CoInitializeEx_result = -1;*/
-    bool rename_other_players = false;
+    Obfuscator::Settings settings;
     char own_player_name[20]{};
     std::wstring own_player_name_w{};
-    bool rename_friends_to_alias = true;
-    bool rename_self = false;
     MSG msg;
     std::default_random_engine dre = std::default_random_engine(static_cast<uint32_t>(time(nullptr)));
     GW::HookEntry stoc_hook;
@@ -297,10 +295,10 @@ namespace {
 
     std::wstring GetObfuscatedName(const std::wstring_view original_name, const bool in_char_select)
     {
-        if (!own_player_name_w.empty() && rename_self && (original_name == GetPlayerName() || in_char_select && !GW::Map::GetIsMapLoaded())) {
+        if (!own_player_name_w.empty() && settings.rename_self && (original_name == GetPlayerName() || in_char_select && !GW::Map::GetIsMapLoaded())) {
             return own_player_name_w;
         }
-        if (rename_friends_to_alias && (!in_char_select || GW::Map::GetIsMapLoaded())) {
+        if (settings.rename_friends_to_alias && (!in_char_select || GW::Map::GetIsMapLoaded())) {
             static std::map<std::wstring, std::wstring> friends_aliases;
             if (const auto frnd = FriendListWindow::GetFriend(original_name.data())) {
                 if (friends_aliases.contains(std::wstring{original_name})) {
@@ -312,10 +310,10 @@ namespace {
                 }
             }
         }
-        if (!rename_self && (original_name == GetPlayerName() || original_name == GetPlayerInvitedName() || in_char_select && GW::Map::GetIsMapLoaded())) {
+        if (!settings.rename_self && (original_name == GetPlayerName() || original_name == GetPlayerInvitedName() || in_char_select && GW::Map::GetIsMapLoaded())) {
             return {};
         }
-        if (!rename_other_players && !in_char_select) {
+        if (!settings.rename_other_players && !in_char_select) {
             return {};
         }
         if (pool_index >= obfuscated_name_pool.size()) {
@@ -846,6 +844,7 @@ void Obfuscator::Obfuscate(const bool obfuscate)
 void Obfuscator::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
     Reset();
 
     const auto GetCharacterSummary_Assertion = GW::Scanner::FindAssertion(R"(p:\code\gw\ui\char\uichinfo.cpp)", "!StrCmp(m_characterName, characterInfo.characterName)",0,0);
@@ -951,30 +950,25 @@ void Obfuscator::Update(float)
     }
 }
 
-void Obfuscator::LoadSettings(ToolboxIni* ini)
+void Obfuscator::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(rename_other_players);
-    LOAD_BOOL(rename_friends_to_alias);
-    LOAD_BOOL(rename_self);
-    const auto own_name = ini->GetValue(Name(), VAR_NAME(own_player_name), own_player_name);
-    if (own_name && own_name[0] != '\0') {
-        strncpy_s(own_player_name, own_name, strnlen_s(own_name, _countof(own_player_name)));
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    if (!settings.own_player_name.empty()) {
+        strncpy_s(own_player_name, settings.own_player_name.c_str(), _TRUNCATE);
         own_player_name_w = TextUtils::StringToWString(own_player_name);
     }
-    if (ini->GetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled)) {
+    if (settings.obfuscate) {
         Obfuscate(true);
     }
 }
 
-void Obfuscator::SaveSettings(ToolboxIni* ini)
+void Obfuscator::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    ini->SetBoolValue(Name(), VAR_NAME(obfuscate), pending_state == ObfuscatorState::Enabled);
-    SAVE_BOOL(rename_other_players);
-    SAVE_BOOL(rename_friends_to_alias);
-    SAVE_BOOL(rename_self);
-    ini->SetValue(Name(), VAR_NAME(own_player_name), own_player_name);
+    settings.obfuscate = pending_state == ObfuscatorState::Enabled;
+    settings.own_player_name = own_player_name;
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void Obfuscator::DrawSettingsInternal()
@@ -987,17 +981,17 @@ void Obfuscator::DrawSettingsInternal()
     ImGui::ShowHelp("Hides and overrides player names at character selection and in-game.\nThis change is applied on next map change.");
     ImGui::TextDisabled("You can also use the /hideme or /obfuscate command to toggle this at any time");
 
-    if (ImGui::Checkbox("Rename friends to their alias", &rename_friends_to_alias)) {
+    if (ImGui::Checkbox("Rename friends to their alias", &settings.rename_friends_to_alias)) {
         Obfuscate(enabled);
         pending_guild_obfuscate = true;
     }
     ImGui::ShowHelp("May require a GW restart to take effect.");
-    if (ImGui::Checkbox("Rename other players", &rename_other_players)) {
+    if (ImGui::Checkbox("Rename other players", &settings.rename_other_players)) {
         Obfuscate(enabled);
         pending_guild_obfuscate = true;
     }
     ImGui::ShowHelp("May lead to bugs. May require a GW restart to take effect.");
-    if (ImGui::Checkbox("Rename self", &rename_self)) {
+    if (ImGui::Checkbox("Rename self", &settings.rename_self)) {
         Obfuscate(enabled);
         pending_guild_obfuscate = true;
     }

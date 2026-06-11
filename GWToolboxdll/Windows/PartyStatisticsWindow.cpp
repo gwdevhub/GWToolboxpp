@@ -101,9 +101,7 @@ namespace {
     GW::HookEntry GenericValueTarget_Entry;
 
     /* Window settings */
-    bool show_abs_values = true;
-    bool show_perc_values = true;
-    bool print_by_click = true;
+    PartyStatisticsWindow::Settings settings;
 
 
     const GW::Skillbar* GetAgentSkillbar(const uint32_t agent_id)
@@ -245,17 +243,17 @@ namespace {
                             ImGui::SetTooltip(skill.name->string().c_str());
                         }
                     }
-                    if (show_abs_values) {
+                    if (settings.show_abs_values) {
                         ImGui::Text("%u", skill.count);
                     }
-                    if (show_perc_values) {
+                    if (settings.show_perc_values) {
                         ImGui::Text("%.2f%%", percentage);
                     }
                 }
                 ImGui::EndTable();
             }
             ImGui::PopStyleVar();
-            if (print_by_click) {
+            if (settings.print_by_click) {
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0F);
                 char button_name[32];
                 snprintf(button_name, _countof(button_name), "###WriteStatistics%d", party_member.party_idx);
@@ -548,6 +546,7 @@ namespace {
 void PartyStatisticsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     send_timer = TIMER_INIT();
 
@@ -580,6 +579,18 @@ void PartyStatisticsWindow::Initialize()
 
     UnsetPartyStatistics();
     pending_party_members = true;
+}
+
+void PartyStatisticsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void PartyStatisticsWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void PartyStatisticsWindow::Update(const float)
@@ -624,29 +635,13 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-void PartyStatisticsWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(show_abs_values);
-    LOAD_BOOL(show_perc_values);
-    LOAD_BOOL(print_by_click);
-}
-
-void PartyStatisticsWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(show_abs_values);
-    SAVE_BOOL(show_perc_values);
-    SAVE_BOOL(print_by_click);
-}
-
 void PartyStatisticsWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Show the absolute skill count", &show_abs_values);
+    ImGui::Checkbox("Show the absolute skill count", &settings.show_abs_values);
     ImGui::SameLine();
-    ImGui::Checkbox("Show the percentage skill count", &show_perc_values);
+    ImGui::Checkbox("Show the percentage skill count", &settings.show_perc_values);
     ImGui::SameLine();
-    ImGui::Checkbox("Print skill statistics by Ctrl+LeftClick", &print_by_click);
+    ImGui::Checkbox("Print skill statistics by Ctrl+LeftClick", &settings.print_by_click);
 }
 
 void PartyStatisticsWindow::Terminate()

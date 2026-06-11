@@ -8,6 +8,7 @@
 class ToolboxWidget;
 class ToolboxWindow;
 class ToolboxModule;
+class SettingsDoc;
 
 namespace GW {
     namespace Constants {
@@ -37,6 +38,7 @@ public:
     static bool CanTerminate();
 
     static ToolboxIni* OpenSettingsFile(bool fresh = false);
+    static SettingsDoc* GetSettingsDoc(bool fresh = false);
     static std::filesystem::path SaveSettings();
     static void ForceTerminate(bool detach_wndproc_handler = true);
     static std::filesystem::path LoadSettings();

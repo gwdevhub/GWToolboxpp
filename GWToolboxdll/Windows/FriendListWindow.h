@@ -3,6 +3,7 @@
 #include <GWCA/Packets/StoC.h>
 #include <GWCA/GameEntities/Friendslist.h>
 
+#include <Color.h>
 #include <Utils/GuiUtils.h>
 #include <ToolboxWindow.h>
 #include <Utils/TextUtils.h>
@@ -124,6 +125,33 @@ public:
         }
     };
 
+    enum class FriendAliasType {
+        NONE,
+        APPEND,
+        REPLACE
+    };
+
+    // On-disk record for friends.json (keyed by uuid); nested in the class so glaze can reflect it on MSVC.
+    struct FriendRecord {
+        int type = 0; // GW::FriendType::Unknow
+        std::string alias;
+        std::map<std::string, uint8_t> charnames; // utf8 character name -> primary profession
+    };
+
+    struct Settings {
+        bool lock_move_as_widget = false;
+        bool lock_size_as_widget = true;
+        FriendAliasType show_alias_on_whisper = FriendAliasType::NONE;
+        int outpost_show_as = 1;
+        int loading_show_as = 1;
+        int explorable_show_as = 1;
+        bool show_my_status = true;
+        bool add_offline_players_to_friends = true;
+        Colors::SettingColor hover_background_color = 0x33999999;
+        bool friend_name_tag_enabled = false;
+        Colors::SettingColor friend_name_tag_color = 0xff6060ff;
+    };
+
     static Friend* GetFriend(const wchar_t*);
     static Friend* GetFriend(const GW::Friend*);
     static Friend* GetFriendByUUID(const std::string&);
@@ -158,8 +186,8 @@ public:
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     void DrawChatSettings();
 

@@ -35,6 +35,8 @@
 
 namespace {
 
+    ObserverModule::Settings settings;
+
     GW::HookEntry ChatCmd_HookEntry;
 
     void CHAT_CMD_FUNC(CmdObserverReset)
@@ -48,10 +50,6 @@ namespace {
     }
 
 } // namespace
-
-constexpr auto INI_FILENAME = L"observerlog.ini";
-constexpr auto IniSection = "observer";
-
 
 namespace ObserverLabel {
     const char* Profession = "Prf";
@@ -81,6 +79,7 @@ namespace ObserverLabel {
 void ObserverModule::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     is_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     is_observer = GW::Map::GetIsObserving();
@@ -229,6 +228,18 @@ void ObserverModule::Initialize()
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"observer:reset", CmdObserverReset);
 }
 
+void ObserverModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void ObserverModule::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+}
+
 void ObserverModule::Terminate()
 {
     ToolboxModule::Terminate();
@@ -243,7 +254,7 @@ void ObserverModule::Terminate()
 const bool ObserverModule::IsActive() const
 {
     // an observer match is considered an explorable area
-    return is_enabled && is_explorable && (enable_in_explorable_areas || is_observer);
+    return settings.is_enabled && is_explorable && (settings.enable_in_explorable_areas || is_observer);
 }
 
 
@@ -1556,34 +1567,14 @@ bool ObserverModule::SynchroniseParties()
 }
 
 
-// Load settings
-void ObserverModule::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(is_enabled);
-    LOAD_BOOL(trim_hench_names);
-    LOAD_BOOL(enable_in_explorable_areas);
-}
-
-
-// Save settings
-void ObserverModule::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(is_enabled);
-    SAVE_BOOL(trim_hench_names);
-    SAVE_BOOL(enable_in_explorable_areas);
-}
-
-
 // Draw internal settings
 void ObserverModule::DrawSettingsInternal()
 {
     ImGui::Text("Enable data collection in Observer Mode.");
     ImGui::Text("Disable if not using this feature to avoid using extra CPU and memory in Observer Mode.");
-    ImGui::Checkbox("Enabled", &is_enabled);
-    ImGui::Checkbox("Trim henchman names", &trim_hench_names);
-    ImGui::Checkbox("Enable in all Explorable Areas (experimental and unsupported)", &enable_in_explorable_areas);
+    ImGui::Checkbox("Enabled", &settings.is_enabled);
+    ImGui::Checkbox("Trim henchman names", &settings.trim_hench_names);
+    ImGui::Checkbox("Enable in all Explorable Areas (experimental and unsupported)", &settings.enable_in_explorable_areas);
 }
 
 
@@ -2659,7 +2650,7 @@ std::string ObserverModule::ObservableAgent::DisplayName()
 {
     const bool is_initialised = _display_name.length() > 0;
     // additional name modification settings can go here...
-    const bool cache_busted = parent.trim_hench_names != trim_hench_name;
+    const bool cache_busted = settings.trim_hench_names != trim_hench_name;
     if (is_initialised && !cache_busted) {
         return _display_name;
     }
@@ -2668,7 +2659,7 @@ std::string ObserverModule::ObservableAgent::DisplayName()
     std::string next_display_name = RawName();
 
     // remove hench name
-    if (parent.trim_hench_names) {
+    if (settings.trim_hench_names) {
         const size_t begin = next_display_name.find("[");
         const size_t end = next_display_name.find_first_of("]");
         if (std::string::npos != begin && std::string::npos != end && begin <= end) {
@@ -2683,7 +2674,7 @@ std::string ObserverModule::ObservableAgent::DisplayName()
         next_display_name = next_display_name.substr(w_first, w_last + 1);
     }
 
-    trim_hench_name = parent.trim_hench_names;
+    trim_hench_name = settings.trim_hench_names;
     _display_name = next_display_name;
     return _display_name;
 }

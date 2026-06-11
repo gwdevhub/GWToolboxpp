@@ -27,8 +27,14 @@ public:
     [[nodiscard]] const char* Name() const override { return "Mission Map"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
-    void LoadSettings(ToolboxIni*) override;
-    void SaveSettings(ToolboxIni*) override;
+    struct Settings {
+        bool draw_all_terrain_lines = false;
+        bool draw_all_minimap_lines = true;
+    };
+
+    void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void Update(float) override;
     void DrawSettingsInternal() override;

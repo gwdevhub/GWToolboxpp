@@ -463,21 +463,18 @@ bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
     return true;
 }
 
-void GameWorldRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+void GameWorldRenderer::RegisterSettings(ToolboxModule* module)
 {
-    // load the rendering settings from disk
-    render_max_distance = std::max(static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance)), 10.0f);
-    lerp_steps_per_line = ini->GetLongValue(section, VAR_NAME(lerp_steps_per_line), lerp_steps_per_line);
-    fog_factor = std::clamp(static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(fog_factor), fog_factor)), 0.0f, 1.0f);
-    need_sync_markers = true;
+    SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
+    SettingsRegistry::RegisterField(module, "lerp_steps_per_line", &lerp_steps_per_line);
+    SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
 }
 
-void GameWorldRenderer::SaveSettings(ToolboxIni* ini, const char* section)
+void GameWorldRenderer::OnSettingsLoaded()
 {
-    // save the rendering settings to disk
-    ini->SetDoubleValue(section, VAR_NAME(render_max_distance), render_max_distance);
-    ini->SetLongValue(section, VAR_NAME(lerp_steps_per_line), lerp_steps_per_line);
-    ini->SetDoubleValue(section, VAR_NAME(fog_factor), fog_factor);
+    render_max_distance = std::max(render_max_distance, 10.0f);
+    fog_factor = std::clamp(fog_factor, 0.0f, 1.0f);
+    need_sync_markers = true;
 }
 
 void GameWorldRenderer::DrawSettings()

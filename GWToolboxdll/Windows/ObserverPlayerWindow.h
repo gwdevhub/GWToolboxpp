@@ -31,10 +31,24 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
+
+    struct Settings {
+        bool show_tracking = true;
+        bool show_comparison = true;
+        bool show_skills_used_on_self = true;
+
+        bool show_attempts = false;
+        bool show_cancels = true;
+        bool show_interrupts = true;
+        bool show_finishes = true;
+        bool show_integrity = false;
+        bool show_damage = true;
+        bool show_damage_details = true;
+    };
 
 protected:
     float text_long = 0;
@@ -44,15 +58,6 @@ protected:
     uint32_t previously_tracked_agent_id = NO_AGENT;
     uint32_t previously_compared_agent_id = NO_AGENT;
 
-    bool show_tracking = true;
-    bool show_comparison = true;
-    bool show_skills_used_on_self = true;
-
-    bool show_attempts = false;
-    bool show_cancels = true;
-    bool show_interrupts = true;
-    bool show_finishes = true;
-    bool show_integrity = false;
-    bool show_damage = true;
-    bool show_damage_details = true;
+    // per-instance copy: ObserverTargetWindow persists the same fields under its own Name() section
+    Settings settings;
 };

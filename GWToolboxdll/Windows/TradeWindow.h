@@ -17,6 +17,15 @@ public:
     [[nodiscard]] const char* Name() const override { return "Trade"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BALANCE_SCALE; }
 
+    struct Settings {
+        bool print_game_chat = false;
+        bool print_game_chat_asc = false;
+        bool filter_alerts = false;
+        bool filter_local_trade = false;
+        bool is_kamadan_chat = true;
+        std::string player_party_search_text;
+    };
+
     void Initialize() override;
 
     void Update(float delta) override;
@@ -24,8 +33,8 @@ public:
     void Terminate() override;
     void RegisterSettingsContent() override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     void DrawChatSettings(bool ownwindow = false);
 

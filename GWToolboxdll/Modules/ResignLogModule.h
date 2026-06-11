@@ -18,11 +18,15 @@ public:
     [[nodiscard]] const char* Description() const override { return "Tracks player resign state in an explorable area, adds /resignlog command"; }
     bool HasSettings() override { return false; }
 
+    struct Settings {
+        bool show_last_to_resign_message = false;
+    };
+
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void SignalTerminate() override;
     void Update(float) override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
 
     void RegisterSettingsContent() override;
 

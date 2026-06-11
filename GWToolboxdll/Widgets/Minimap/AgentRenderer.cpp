@@ -28,6 +28,7 @@
 #include <Utils/ToolboxUtils.h>
 
 constexpr auto AGENTCOLOR_INIFILENAME = L"AgentColors.ini";
+constexpr auto AGENTCOLOR_JSONFILENAME = L"AgentColors.json";
 
 namespace {
 
@@ -173,201 +174,131 @@ AgentRenderer* AgentRenderer::instance = nullptr;
 
 unsigned int AgentRenderer::CustomAgent::cur_ui_id = 0;
 
-void AgentRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+void AgentRenderer::RegisterSettings(ToolboxModule* module)
 {
-    const auto Name = [section] {
-        return section;
+    const std::pair<const char*, Color*> colors[] = {
+        {"color_agent_modifier", &color_agent_modifier},
+        {"color_agent_damaged_modifier", &color_agent_damaged_modifier},
+        {"color_eoe", &color_eoe},
+        {"color_qz", &color_qz},
+        {"color_winnowing", &color_winnowing},
+        {"color_frozen_soil", &color_frozen_soil},
+        {"color_target", &color_target},
+        {"color_player", &color_player},
+        {"color_player_dead", &color_player_dead},
+        {"color_signpost", &color_signpost},
+        {"color_item", &color_item},
+        {"color_hostile", &color_hostile},
+        {"color_hostile_dead", &color_hostile_dead},
+        {"color_neutral", &color_neutral},
+        {"color_ally", &color_ally},
+        {"color_ally_npc", &color_ally_npc},
+        {"color_ally_npc_quest", &color_ally_npc_quest},
+        {"color_ally_spirit", &color_ally_spirit},
+        {"color_ally_minion", &color_ally_minion},
+        {"color_ally_dead", &color_ally_dead},
+        {"color_marked_target", &color_marked_target},
+        {"color_profession_warrior", &profession_colors[1]},
+        {"color_profession_ranger", &profession_colors[2]},
+        {"color_profession_monk", &profession_colors[3]},
+        {"color_profession_necromancer", &profession_colors[4]},
+        {"color_profession_mesmer", &profession_colors[5]},
+        {"color_profession_elementalist", &profession_colors[6]},
+        {"color_profession_assassin", &profession_colors[7]},
+        {"color_profession_ritualist", &profession_colors[8]},
+        {"color_profession_paragon", &profession_colors[9]},
+        {"color_profession_dervish", &profession_colors[10]},
     };
-    LoadDefaultColors();
-    LOAD_COLOR(color_marked_target);
-    LOAD_COLOR(color_agent_modifier);
-    LOAD_COLOR(color_agent_damaged_modifier);
-    LOAD_COLOR(color_eoe);
-    LOAD_COLOR(color_qz);
-    LOAD_COLOR(color_winnowing);
-    LOAD_COLOR(color_frozen_soil);
-    LOAD_COLOR(color_target);
-    LOAD_COLOR(color_player);
-    LOAD_COLOR(color_player_dead);
-    LOAD_COLOR(color_signpost);
-    LOAD_COLOR(color_item);
-    LOAD_COLOR(color_hostile);
-    LOAD_COLOR(color_hostile_dead);
-    LOAD_COLOR(color_neutral);
-    LOAD_COLOR(color_ally);
-    LOAD_COLOR(color_ally_npc);
-    LOAD_COLOR(color_ally_npc_quest);
-    LOAD_COLOR(color_ally_spirit);
-    LOAD_COLOR(color_ally_minion);
-    LOAD_COLOR(color_ally_dead);
-    LOAD_BOOL(enemies_colors_by_profession);
-    LOAD_BOOL(only_color_bosses);
-    {
-        constexpr const char* keys[] = {
-            nullptr, // None
-            "color_profession_warrior",
-            "color_profession_ranger",
-            "color_profession_monk",
-            "color_profession_necromancer",
-            "color_profession_mesmer",
-            "color_profession_elementalist",
-            "color_profession_assassin",
-            "color_profession_ritualist",
-            "color_profession_paragon",
-            "color_profession_dervish",
-        };
-        for (size_t i = 1; i < _countof(keys); ++i) {
-            profession_colors[i] = Colors::Load(ini, Name(), keys[i], profession_colors[i]);
-        }
+    for (const auto& [key, color] : colors) {
+        // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
+        SettingsRegistry::RegisterField(module, key, reinterpret_cast<Colors::SettingColor*>(color));
     }
-    LOAD_BOOL(show_quest_npcs_on_minimap);
-
+    SettingsRegistry::RegisterField(module, "enemies_colors_by_profession", &enemies_colors_by_profession);
+    SettingsRegistry::RegisterField(module, "only_color_bosses", &only_color_bosses);
+    SettingsRegistry::RegisterField(module, "show_quest_npcs_on_minimap", &show_quest_npcs_on_minimap);
+    SettingsRegistry::RegisterField(module, "show_hidden_npcs", &show_hidden_npcs);
+    SettingsRegistry::RegisterField(module, "marked_target_inherit_custom_agents", &marked_target_inherit_custom_agents);
 #ifdef _DEBUG
-    LOAD_BOOL(show_props_on_minimap);
+    SettingsRegistry::RegisterField(module, "show_props_on_minimap", &show_props_on_minimap);
 #endif
-
-    LoadDefaultSizes();
-    
-    LOAD_FLOAT(size_marked_target);
-    LOAD_BOOL(marked_target_inherit_custom_agents);
-    LOAD_FLOAT(size_default);
-    LOAD_FLOAT(size_player);
-    LOAD_FLOAT(size_signpost);
-    LOAD_FLOAT(size_item);
-    LOAD_FLOAT(size_boss);
-    LOAD_FLOAT(size_minion);
-    LOAD_FLOAT(size_hostile);
-    LOAD_FLOAT(size_neutral);
-    LOAD_FLOAT(size_ally);
-    LOAD_FLOAT(size_ally_npc);
-    LOAD_FLOAT(size_ally_npc_quest);
-    LOAD_FLOAT(size_ally_spirit);
-    LOAD_FLOAT(agent_border_thickness);
-    LOAD_FLOAT(target_border_thickness);
-    default_shape = static_cast<Shape_e>(ini->GetLongValue(section, VAR_NAME(default_shape), default_shape));
-    shape_player = static_cast<Shape_e>(ini->GetDoubleValue(section, VAR_NAME(shape_player), shape_player));
-    shape_players = static_cast<Shape_e>(ini->GetDoubleValue(section, VAR_NAME(shape_players), shape_players));
-    
-    LOAD_BOOL(show_hidden_npcs);
-
-    LoadCustomAgents();
-
-    Invalidate();
+    SettingsRegistry::RegisterField(module, "size_default", &size_default);
+    SettingsRegistry::RegisterField(module, "size_player", &size_player);
+    SettingsRegistry::RegisterField(module, "size_signpost", &size_signpost);
+    SettingsRegistry::RegisterField(module, "size_item", &size_item);
+    SettingsRegistry::RegisterField(module, "size_boss", &size_boss);
+    SettingsRegistry::RegisterField(module, "size_minion", &size_minion);
+    SettingsRegistry::RegisterField(module, "size_marked_target", &size_marked_target);
+    SettingsRegistry::RegisterField(module, "size_hostile", &size_hostile);
+    SettingsRegistry::RegisterField(module, "size_neutral", &size_neutral);
+    SettingsRegistry::RegisterField(module, "size_ally", &size_ally);
+    SettingsRegistry::RegisterField(module, "size_ally_npc", &size_ally_npc);
+    SettingsRegistry::RegisterField(module, "size_ally_npc_quest", &size_ally_npc_quest);
+    SettingsRegistry::RegisterField(module, "size_ally_spirit", &size_ally_spirit);
+    SettingsRegistry::RegisterField(module, "agent_border_thickness", &agent_border_thickness);
+    SettingsRegistry::RegisterField(module, "target_border_thickness", &target_border_thickness);
+    SettingsRegistry::RegisterField(module, "default_shape", reinterpret_cast<int*>(&default_shape));
+    SettingsRegistry::RegisterField(module, "shape_player", reinterpret_cast<int*>(&shape_player));
+    SettingsRegistry::RegisterField(module, "shape_players", reinterpret_cast<int*>(&shape_players));
 }
 
 void AgentRenderer::LoadCustomAgents()
 {
-    if (!agentcolorinifile) {
-        agentcolorinifile = new ToolboxIni();
-    }
-    ASSERT(agentcolorinifile->LoadIfExists(Resources::GetSettingFile(AGENTCOLOR_INIFILENAME)) == SI_OK);
-
     custom_agents_map.clear();
     for (const CustomAgent* ca : custom_agents) {
         delete ca;
     }
     custom_agents.clear();
-    
-    TNamesDepend entries;
-    agentcolorinifile->GetAllSections(entries);
 
-    for (const auto& entry : entries) {
-        // we know that all sections are agent colors, don't even check the section names
-        auto* custom_agent = new CustomAgent(agentcolorinifile, entry.pItem);
-        custom_agent->index = custom_agents.size();
-        custom_agents.push_back(custom_agent);
+    const auto json_path = Resources::GetSettingFile(AGENTCOLOR_JSONFILENAME);
+    std::error_code ec;
+    if (std::filesystem::exists(json_path, ec)) {
+        std::ifstream file(json_path, std::ios::binary);
+        const std::string json_buf{std::istreambuf_iterator(file), {}};
+        std::vector<CustomAgent::Settings> entries;
+        if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(entries, json_buf)) {
+            // leave custom_agents_loaded unset so a save can't overwrite the unreadable file
+            Log::Error("Failed to parse AgentColors.json");
+            return;
+        }
+        for (const auto& entry : entries) {
+            const auto custom_agent = new CustomAgent(entry);
+            custom_agent->index = custom_agents.size();
+            custom_agents.push_back(custom_agent);
+        }
+    }
+    else {
+        // legacy fallback; AgentColors.ini is only ever read from here on, the next save writes json
+        ToolboxIni inifile;
+        ASSERT(inifile.LoadIfExists(Resources::GetLegacySettingFile(AGENTCOLOR_INIFILENAME)) == SI_OK);
+
+        TNamesDepend entries;
+        inifile.GetAllSections(entries);
+
+        for (const auto& entry : entries) {
+            // we know that all sections are agent colors, don't even check the section names
+            auto* custom_agent = new CustomAgent(&inifile, entry.pItem);
+            custom_agent->index = custom_agents.size();
+            custom_agents.push_back(custom_agent);
+        }
     }
     BuildCustomAgentsMap();
     agentcolors_changed = false;
-}
-
-void AgentRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
-{
-    auto Name = [section] {
-        return section;
-    };
-
-    SAVE_COLOR(color_agent_modifier);
-    SAVE_COLOR(color_agent_damaged_modifier);
-    SAVE_COLOR(color_eoe);
-    SAVE_COLOR(color_qz);
-    SAVE_COLOR(color_winnowing);
-    SAVE_COLOR(color_frozen_soil);
-    SAVE_COLOR(color_target);
-    SAVE_COLOR(color_player);
-    SAVE_COLOR(color_player_dead);
-    SAVE_COLOR(color_signpost);
-    SAVE_COLOR(color_item);
-    SAVE_COLOR(color_hostile);
-    SAVE_COLOR(color_hostile_dead);
-    SAVE_COLOR(color_neutral);
-    SAVE_COLOR(color_ally);
-    SAVE_COLOR(color_ally_npc);
-    SAVE_COLOR(color_ally_npc_quest);
-    SAVE_COLOR(color_ally_spirit);
-    SAVE_COLOR(color_ally_minion);
-    SAVE_COLOR(color_ally_dead);
-    SAVE_COLOR(color_marked_target);
-
-    SAVE_FLOAT(size_default);
-    SAVE_FLOAT(size_player);
-    SAVE_FLOAT(size_signpost);
-    SAVE_FLOAT(size_item);
-    SAVE_FLOAT(size_boss);
-    SAVE_FLOAT(size_minion);
-    SAVE_FLOAT(size_hostile);
-    SAVE_FLOAT(size_neutral);
-    SAVE_FLOAT(size_ally);
-    SAVE_FLOAT(size_ally_npc);
-    SAVE_FLOAT(size_ally_npc_quest);
-    SAVE_FLOAT(size_ally_spirit);
-    SAVE_FLOAT(size_marked_target);
-    SAVE_BOOL(marked_target_inherit_custom_agents);
-    SAVE_UINT(default_shape);
-    SAVE_UINT(shape_player);
-    SAVE_UINT(shape_players);
-    SAVE_FLOAT(target_border_thickness);
-    SAVE_FLOAT(agent_border_thickness);
-    SAVE_BOOL(show_props_on_minimap);
-
-    SAVE_BOOL(show_hidden_npcs);
-    SAVE_BOOL(enemies_colors_by_profession);
-    SAVE_BOOL(only_color_bosses);
-    {
-        constexpr const char* keys[] = {
-            nullptr, // None
-            "color_profession_warrior",
-            "color_profession_ranger",
-            "color_profession_monk",
-            "color_profession_necromancer",
-            "color_profession_mesmer",
-            "color_profession_elementalist",
-            "color_profession_assassin",
-            "color_profession_ritualist",
-            "color_profession_paragon",
-            "color_profession_dervish",
-        };
-        for (size_t i = 1; i < _countof(keys); ++i) {
-            Colors::Save(ini, Name(), keys[i], profession_colors[i]);
-        }
-    }
-    SAVE_BOOL(show_quest_npcs_on_minimap);
-    SaveCustomAgents();
+    custom_agents_loaded = true;
 }
 
 void AgentRenderer::SaveCustomAgents() const
 {
-    if ((agentcolors_changed || GWToolbox::SettingsFolderChanged()) && agentcolorinifile != nullptr) {
-        // clear colors from ini
-        agentcolorinifile->Reset();
-
-        // then save again
-        for (unsigned int i = 0; i < custom_agents.size(); ++i) {
-            char buf[256];
-            snprintf(buf, 256, "customagent%03d", i);
-            custom_agents[i]->SaveSettings(agentcolorinifile, buf);
+    if ((agentcolors_changed || GWToolbox::SettingsFolderChanged()) && custom_agents_loaded) {
+        std::vector<CustomAgent::Settings> entries;
+        entries.reserve(custom_agents.size());
+        for (const CustomAgent* ca : custom_agents) {
+            entries.push_back(ca->ToSettings());
         }
-        ASSERT(agentcolorinifile->SaveFile(Resources::GetSettingFile(AGENTCOLOR_INIFILENAME).c_str()) == SI_OK);
+        std::string json_buf;
+        ASSERT(!glz::write<glz::opts{.prettify = true}>(entries, json_buf));
+        std::ofstream file(Resources::GetSettingFile(AGENTCOLOR_JSONFILENAME), std::ios::binary | std::ios::trunc);
+        file.write(json_buf.data(), static_cast<std::streamsize>(json_buf.size()));
+        ASSERT(file.good());
     }
 }
 
@@ -1465,6 +1396,29 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
     size_active = ini->GetBoolValue(section, VAR_NAME(size_active), size_active);
 }
 
+AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
+    : ui_id(++cur_ui_id)
+{
+    active = settings.active;
+    std::snprintf(name, sizeof(name), "%s", settings.name.c_str());
+    modelId = settings.modelId;
+    mapId = settings.mapId;
+    combat_state = static_cast<CombatState>(settings.combat_state);
+    weapon_state = static_cast<WeaponState>(settings.weapon_state);
+
+    color = settings.color;
+    color_text = settings.color_text;
+    if (settings.shape >= Tear && settings.shape <= BigCircle) {
+        shape = static_cast<Shape_e>(settings.shape);
+    }
+    size = settings.size;
+
+    color_active = settings.color_active;
+    color_text_active = settings.color_text_active;
+    shape_active = settings.shape_active;
+    size_active = settings.size_active;
+}
+
 AgentRenderer::CustomAgent::CustomAgent(const DWORD model_id, const Color _color, const char* _name)
     : ui_id(++cur_ui_id)
 {
@@ -1474,24 +1428,26 @@ AgentRenderer::CustomAgent::CustomAgent(const DWORD model_id, const Color _color
     active = true;
 }
 
-void AgentRenderer::CustomAgent::SaveSettings(ToolboxIni* ini, const char* section) const
+AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() const
 {
-    ini->SetBoolValue(section, VAR_NAME(active), active);
-    ini->SetValue(section, VAR_NAME(name), name);
-    ini->SetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId));
-    ini->SetLongValue(section, VAR_NAME(mapId), static_cast<long>(mapId));
-    ini->SetLongValue(section, VAR_NAME(combat_state), static_cast<long>(combat_state));
-    ini->SetLongValue(section, VAR_NAME(weapon_state), static_cast<long>(weapon_state));
+    Settings settings;
+    settings.active = active;
+    settings.name = name;
+    settings.modelId = modelId;
+    settings.mapId = mapId;
+    settings.combat_state = combat_state;
+    settings.weapon_state = weapon_state;
 
-    Colors::Save(ini, section, VAR_NAME(color), color);
-    Colors::Save(ini, section, VAR_NAME(color_text), color_text);
-    ini->SetLongValue(section, VAR_NAME(shape), shape + 1);
-    ini->SetDoubleValue(section, VAR_NAME(size), size);
+    settings.color = color;
+    settings.color_text = color_text;
+    settings.shape = shape;
+    settings.size = size;
 
-    ini->SetBoolValue(section, VAR_NAME(color_active), color_active);
-    ini->SetBoolValue(section, VAR_NAME(color_text_active), color_text_active);
-    ini->SetBoolValue(section, VAR_NAME(shape_active), shape_active);
-    ini->SetBoolValue(section, VAR_NAME(size_active), size_active);
+    settings.color_active = color_active;
+    settings.color_text_active = color_text_active;
+    settings.shape_active = shape_active;
+    settings.size_active = size_active;
+    return settings;
 }
 
 bool AgentRenderer::CustomAgent::DrawHeader()

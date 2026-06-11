@@ -23,17 +23,12 @@ namespace {
 
     constexpr uint32_t MAX_ACHIEVEMENTS_NEEDED_FOR_FAVOR = 20;
 
-    float text_size = 24.f;
-    Color text_color = IM_COL32_WHITE;
-    bool hide_if_no_favor = false;
+    FavorTracker::Settings settings;
 
     uint32_t last_favor_minutes = 0;
     uint32_t last_favor_achievements_needed = 0;
     std::string favor_str;
 
-    bool enabled = true;
-    bool play_sound_on_favor = false;
-    uint32_t favor_sound_file_id = 0;
     uint32_t default_favor_sound_file_id = 111073;
 
     ArenaNetFileParser::GameAssetFile favor_sound_file;
@@ -78,8 +73,8 @@ namespace {
         favor_minutes_remaining = minutes;
         achievements_needed_for_favor = minutes == 0 ? achievements_needed : 0;
 
-        if (is_active && !was_active && play_sound_on_favor && favor_sound_file_id && TIMER_DIFF(initialised_at) > 3000) {
-            AudioSettings::PlaySoundFileId(favor_sound_file_id);
+        if (is_active && !was_active && settings.play_sound_on_favor && settings.favor_sound_file_id && TIMER_DIFF(initialised_at) > 3000) {
+            AudioSettings::PlaySoundFileId(settings.favor_sound_file_id);
         }
         favor_enc_str.language(GW::UI::GetTextLanguage());
         if (favor_minutes_remaining > 0) {
@@ -163,8 +158,9 @@ namespace {
 void FavorTracker::Initialize()
 {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
 
-    favor_sound_file_id = default_favor_sound_file_id;
+    settings.favor_sound_file_id = default_favor_sound_file_id;
 
     constexpr GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kPrintChatMessage,
@@ -174,6 +170,18 @@ void FavorTracker::Initialize()
     for (const auto message_id : ui_messages) {
         RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnPreUIMessage, -0x4500);
     }
+}
+
+void FavorTracker::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void FavorTracker::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void FavorTracker::SignalTerminate()
@@ -188,7 +196,7 @@ void FavorTracker::Draw(IDirect3DDevice9*)
 {
     if (!visible) return;
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
-    if (hide_if_no_favor && !GetFavorMinutes()) return;
+    if (settings.hide_if_no_favor && !GetFavorMinutes()) return;
 
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
@@ -196,13 +204,13 @@ void FavorTracker::Draw(IDirect3DDevice9*)
 
     if (ImGui::Begin(Name(), nullptr, GetWinFlags())) {
         const auto start_pos = ImGui::GetCursorPosY();
-        ImGui::PushStyleColor(ImGuiCol_Text, text_color);
-        const auto label_fs = text_size * 0.55f;
+        ImGui::PushStyleColor(ImGuiCol_Text, settings.text_color);
+        const auto label_fs = settings.text_size * 0.55f;
         ImGui::PushFont(FontLoader::GetFont(), label_fs);
         ImGui::TextShadowed(Resources::GetSkillName(GW::Constants::SkillID::Favor_of_the_Gods)->string().c_str());
         ImGui::PopFont();
-        ImGui::SetCursorPosY(start_pos + text_size * 0.45f);
-        ImGui::PushFont(FontLoader::GetFont(), text_size);
+        ImGui::SetCursorPosY(start_pos + settings.text_size * 0.45f);
+        ImGui::PushFont(FontLoader::GetFont(), settings.text_size);
         ImGui::TextShadowed(favor_str.c_str());
         ImGui::PopFont();
         ImGui::PopStyleColor();
@@ -218,7 +226,7 @@ void FavorTracker::Draw(IDirect3DDevice9*)
 
 void FavorTracker::Update(float)
 {
-    if (enabled) {
+    if (settings.enabled) {
         if (!GW::Map::GetIsMapLoaded()) return;
         if (!initialised_at) initialised_at = TIMER_INIT();
         if (TIMER_DIFF(last_poll_time) >= poll_interval_ms) {
@@ -241,44 +249,22 @@ void FavorTracker::Update(float)
     }
 }
 
-void FavorTracker::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_FLOAT(text_size);
-    LOAD_COLOR(text_color);
-    LOAD_BOOL(hide_if_no_favor);
-    LOAD_BOOL(enabled);
-    LOAD_BOOL(play_sound_on_favor);
-    LOAD_UINT(favor_sound_file_id);
-}
-
-void FavorTracker::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_FLOAT(text_size);
-    SAVE_COLOR(text_color);
-    SAVE_BOOL(hide_if_no_favor);
-    SAVE_BOOL(enabled);
-    SAVE_BOOL(play_sound_on_favor);
-    SAVE_UINT(favor_sound_file_id);
-}
-
 void FavorTracker::DrawSettingsInternal()
 {
-    ImGui::DragFloat("Text size", &text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
-    Colors::DrawSettingHueWheel("Text color", &text_color);
-    ImGui::Checkbox("Hide when the world has no favor", &hide_if_no_favor);
+    ImGui::DragFloat("Text size", &settings.text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
+    Colors::DrawSettingHueWheel("Text color", &settings.text_color.value);
+    ImGui::Checkbox("Hide when the world has no favor", &settings.hide_if_no_favor);
 
     ImGui::Separator();
 
-    ImGui::CheckboxWithHelp("Enable Favor Tracking", &enabled, "Periodically runs /favor to check Favor of the Gods status. Automated queries are hidden from chat.");
+    ImGui::CheckboxWithHelp("Enable Favor Tracking", &settings.enabled, "Periodically runs /favor to check Favor of the Gods status. Automated queries are hidden from chat.");
 
-    ImGui::Checkbox("Play sound on favor activation", &play_sound_on_favor);
-    if (play_sound_on_favor) {
-        ImGui::InputInt("Sound File ID", (int*)&favor_sound_file_id);
-        if (favor_sound_file.file_id != favor_sound_file_id) {
-            favor_sound_file.readFromDat(favor_sound_file_id);
-            ASSERT(favor_sound_file.file_id == favor_sound_file_id);
+    ImGui::Checkbox("Play sound on favor activation", &settings.play_sound_on_favor);
+    if (settings.play_sound_on_favor) {
+        ImGui::InputInt("Sound File ID", (int*)&settings.favor_sound_file_id);
+        if (favor_sound_file.file_id != settings.favor_sound_file_id) {
+            favor_sound_file.readFromDat(settings.favor_sound_file_id);
+            ASSERT(favor_sound_file.file_id == settings.favor_sound_file_id);
         }
         if (favor_sound_file.file_id) {
             ImGui::Indent();
@@ -292,12 +278,12 @@ void FavorTracker::DrawSettingsInternal()
         }
     }
     ImGui::SameLine();
-    if (favor_sound_file_id && ImGui::Button("Play")) {
-        AudioSettings::PlaySoundFileId(favor_sound_file_id);
+    if (settings.favor_sound_file_id && ImGui::Button("Play")) {
+        AudioSettings::PlaySoundFileId(settings.favor_sound_file_id);
     }
     bool reset = false;
-    if (default_favor_sound_file_id != favor_sound_file_id && (ImGui::SameLine(), ImGui::ConfirmButton("Reset", &reset))) {
-        favor_sound_file_id = default_favor_sound_file_id;
+    if (default_favor_sound_file_id != settings.favor_sound_file_id && (ImGui::SameLine(), ImGui::ConfirmButton("Reset", &reset))) {
+        settings.favor_sound_file_id = default_favor_sound_file_id;
     }
     ImGui::Separator();
     ImGui::TextUnformatted(GetFavorMessage());

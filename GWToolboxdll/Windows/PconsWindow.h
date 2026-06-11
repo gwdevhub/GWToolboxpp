@@ -20,13 +20,30 @@ public:
     [[nodiscard]] const char* Name() const override { return "Pcons"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BIRTHDAY_CAKE; }
 
+    struct Settings {
+        bool tick_with_pcons = false;
+        int items_per_row = 3;
+        bool show_enable_button = true;
+        bool show_auto_refill_pcons_tickbox = true;
+        bool show_auto_disable_pcons_tickbox = false;
+        bool show_enabled_status_in_title = true;
+        bool show_storage_quantity = false;
+        bool shift_click_toggles_category = false;
+        bool disable_pcons_on_map_change = false;
+        bool disable_cons_on_vanquish_completion = true;
+        bool disable_cons_on_dungeon_completion = true;
+        bool disable_cons_on_mission_completion = true;
+        bool disable_cons_in_final_room = false;
+        bool disable_cons_on_objective_completion = false;
+        std::string order;
+    };
+    Settings settings;
+
     void Initialize() override;
     void Terminate() override;
 
     bool SetEnabled(bool b);
     bool GetEnabled() const;
-    bool show_storage_quantity = false;
-    bool shift_click_toggles_category = false;
 
     void ToggleEnable();
 
@@ -37,8 +54,8 @@ public:
     bool DrawTabButton(bool show_icon, bool show_text, bool center_align_text) override;
     void Draw(IDirect3DDevice9* pDevice) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     void RegisterSettingsContent() override;
     static void DrawLunarsAndAlcoholSettings();

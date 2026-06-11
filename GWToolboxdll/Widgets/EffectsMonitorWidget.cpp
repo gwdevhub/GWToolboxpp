@@ -27,17 +27,7 @@
 #include <Utils/FontLoader.h>
 
 namespace {
-    auto font_effects = 18.f;
-    Color color_text_effects = Colors::White();
-    Color color_background = Colors::ARGB(128, 0, 0, 0);
-    Color color_text_shadow = Colors::Black();
-
-    // duration -> string settings
-    int decimal_threshold = 600;   // when to start displaying decimals
-    int only_under_seconds = 3600; // hide effect durations over n seconds
-    bool round_up = true;          // round up or down?
-    bool show_vanquish_counter = true;
-    bool track_spirit_effects = false;
+    EffectsMonitorWidget::Settings settings;
 
     GW::UI::Frame* effects_frame = nullptr;
 
@@ -119,7 +109,7 @@ namespace {
     {
         switch (message_id) {
         case GW::UI::UIMessage::kAgentSkillActivated: {
-            if (!track_spirit_effects) break;
+            if (!settings.track_spirit_effects) break;
             const auto* packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wparam);
             if (packet->agent_id != GW::Agents::GetControlledCharacterId()) break;
             const bool is_spirit = std::any_of(
@@ -138,7 +128,7 @@ namespace {
             }
         } break;
         case GW::UI::UIMessage::kAgentUpdate: {
-            if (!track_spirit_effects) break;
+            if (!settings.track_spirit_effects) break;
             const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
             if (tracked_spirits.contains(agent_id)) break;
             const auto* agent = GW::Agents::GetAgentByID(agent_id);
@@ -172,11 +162,11 @@ namespace {
     int UptimeToString(char arr[8], int cd)
     {
         cd = std::abs(cd);
-        if (cd > only_under_seconds * 1000) {
+        if (cd > settings.only_under_seconds * 1000) {
             return 0;
         }
-        if (cd >= decimal_threshold) {
-            if (round_up) {
+        if (cd >= settings.decimal_threshold) {
+            if (settings.round_up) {
                 cd += 1000;
             }
             return snprintf(arr, 8, "%d", cd / 1000);
@@ -199,20 +189,20 @@ namespace {
         if (label_size.x > skill_frame_size.x) {
             // If the label is wider than the frame, scale text size.
             const auto scale_factor = skill_frame_size.x / label_size.x;
-            const auto scaled_size = scale_factor * font_effects;
+            const auto scaled_size = scale_factor * settings.font_effects;
             overridden_font = FontLoader::GetFont();
             ImGui::PushFont(overridden_font, draw_list, scaled_size);
             label_size *= scale_factor;
         }
 
         const ImVec2 label_pos(skill_bottom_right.x - label_size.x, skill_bottom_right.y - label_size.y);
-        if ((color_background & IM_COL32_A_MASK) != 0) {
-            draw_list->AddRectFilled(label_pos, skill_bottom_right, color_background);
+        if ((settings.color_background.value & IM_COL32_A_MASK) != 0) {
+            draw_list->AddRectFilled(label_pos, skill_bottom_right, settings.color_background);
         }
-        if ((color_text_shadow & IM_COL32_A_MASK) != 0) {
-            draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_shadow, text);
+        if ((settings.color_text_shadow.value & IM_COL32_A_MASK) != 0) {
+            draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, settings.color_text_shadow, text);
         }
-        draw_list->AddText(label_pos, color_text_effects, text);
+        draw_list->AddText(label_pos, settings.color_text_effects, text);
         if (overridden_font) {
             ImGui::PopFont(draw_list);
         }
@@ -251,13 +241,13 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     viewport = ImGui::GetMainViewport();
     draw_list = ImGui::GetBackgroundDrawList(viewport);
     const auto font = FontLoader::GetFont();
-    ImGui::PushFont(font, draw_list, font_effects);
+    ImGui::PushFont(font, draw_list, settings.font_effects);
 
     const auto hard_mode_frame = GW::UI::GetChildFrame(effects_frame, 1);
     // const auto minion_count_frame = GW::UI::GetChildFrame(effects_frame, 2);
     // const auto morale_frame = GW::UI::GetChildFrame(effects_frame, 3);
 
-    if (hard_mode_frame && show_vanquish_counter) {
+    if (hard_mode_frame && settings.show_vanquish_counter) {
         if (const auto foes_left = GW::Map::GetFoesToKill()) {
             const auto foes_killed = GW::Map::GetFoesKilled();
             std::array<char, 16> remaining_str;
@@ -293,6 +283,7 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 void EffectsMonitorWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
     RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPreUIMessage, -0x6000);
 
     GW::UI::UIMessage spirit_messages[] = {
@@ -366,36 +357,17 @@ void EffectsMonitorWidget::Update(float delta)
     }
 }
 
-void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
+void EffectsMonitorWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-
-    LOAD_UINT(decimal_threshold);
-    LOAD_UINT(only_under_seconds);
-    LOAD_BOOL(round_up);
-    LOAD_BOOL(show_vanquish_counter);
-    LOAD_BOOL(track_spirit_effects);
-    LOAD_FLOAT(font_effects);
-    LOAD_COLOR(color_text_effects);
-    LOAD_COLOR(color_text_shadow);
-    LOAD_COLOR(color_background);
-
-    font_effects = std::clamp(font_effects, 16.f, 48.f);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    settings.font_effects = std::clamp(settings.font_effects, 16.f, 48.f);
 }
 
-void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
+void EffectsMonitorWidget::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-
-    SAVE_UINT(decimal_threshold);
-    SAVE_UINT(only_under_seconds);
-    SAVE_BOOL(round_up);
-    SAVE_BOOL(show_vanquish_counter);
-    SAVE_BOOL(track_spirit_effects);
-    SAVE_FLOAT(font_effects);
-    SAVE_COLOR(color_text_effects);
-    SAVE_COLOR(color_text_shadow);
-    SAVE_COLOR(color_background);
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void EffectsMonitorWidget::DrawSettingsInternal()
@@ -404,27 +376,27 @@ void EffectsMonitorWidget::DrawSettingsInternal()
 
     ImGui::PushID("effects_monitor_overlay_settings");
 
-    ImGui::DragFloat("Text size", &font_effects, 1.f, 16.f, 48.f, "%.f");
-    Colors::DrawSettingHueWheel("Text color", &color_text_effects);
-    Colors::DrawSettingHueWheel("Text shadow", &color_text_shadow);
-    Colors::DrawSettingHueWheel("Effect duration background", &color_background);
+    ImGui::DragFloat("Text size", &settings.font_effects, 1.f, 16.f, 48.f, "%.f");
+    Colors::DrawSettingHueWheel("Text color", &settings.color_text_effects.value);
+    Colors::DrawSettingHueWheel("Text shadow", &settings.color_text_shadow.value);
+    Colors::DrawSettingHueWheel("Effect duration background", &settings.color_background.value);
     ImGui::Text("Don't show effect durations longer than");
     ImGui::SameLine();
     ImGui::PushItemWidth(64.f * ImGui::FontScale());
-    ImGui::InputInt("###only_under_seconds", &only_under_seconds, 0);
+    ImGui::InputInt("###only_under_seconds", &settings.only_under_seconds, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("seconds");
     ImGui::Text("Show decimal places when duration is less than");
     ImGui::SameLine();
     ImGui::PushItemWidth(64.f * ImGui::FontScale());
-    ImGui::InputInt("###decimal_threshold", &decimal_threshold, 0);
+    ImGui::InputInt("###decimal_threshold", &settings.decimal_threshold, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("milliseconds");
-    ImGui::Checkbox("Round up integers", &round_up);
+    ImGui::Checkbox("Round up integers", &settings.round_up);
     ImGui::SameLine();
-    ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &show_vanquish_counter);
-    ImGui::Checkbox("Track nearby spirit timers (Bloodsong, Vampirism, etc.)", &track_spirit_effects);
+    ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &settings.show_vanquish_counter);
+    ImGui::Checkbox("Track nearby spirit timers (Bloodsong, Vampirism, etc.)", &settings.track_spirit_effects);
     ImGui::PopID();
 }

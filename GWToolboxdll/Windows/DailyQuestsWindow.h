@@ -18,9 +18,23 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CALENDAR_ALT; }
     void Initialize() override;
     void Terminate() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
+
+    struct Settings {
+        bool show_zaishen_bounty_in_window = true;
+        bool show_zaishen_combat_in_window = true;
+        bool show_zaishen_missions_in_window = true;
+        bool show_zaishen_vanquishes_in_window = true;
+        bool show_wanted_quests_in_window = true;
+        bool show_nicholas_in_window = true;
+        bool show_weekly_bonus_pve_in_window = true;
+        bool show_weekly_bonus_pvp_in_window = true;
+        bool show_other_searing_dailies = false;
+        bool notify_zaishen_mission_outpost = true;
+        int nicholas_withdraw_gott_count = 5;
+    };
     void DrawHelp() override;
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;

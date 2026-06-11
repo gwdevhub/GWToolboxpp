@@ -34,26 +34,14 @@
 
 namespace {
 
+    TextToSpeechModule::Settings settings;
+
     const char* voice_id_human_male = "2EiwWnXFnvU5JabPnv8n";
     const char* voice_id_human_female = "EXAVITQu4vr4xnSDxMaL";
     const char* voice_id_dwarven_male = "N2lVS1w4EtoT3dr4eOWO";
 
     const char* gwtts_hostname = "https://tts.gwtoolbox.com";
     // const char* gwtts_hostname = "http://localhost:8081";
-
-    // Cost optimization settings
-    bool stop_speech_when_dialog_closed = false;
-    bool play_goodbye_messages = true;
-    bool only_use_first_dialog = false;
-    bool only_use_first_sentence = true;
-    bool play_speech_from_non_friendly_npcs = true;
-    bool play_speech_bubbles_in_explorable = false;
-    bool play_speech_bubbles_in_outpost = true;
-    bool play_speech_bubbles_from_party_members = false;
-    float npc_speech_bubble_range = GW::Constants::Range::Earshot;
-    bool play_speech_from_vendors = true;
-    bool play_tts_in_explorable_areas = true;
-    bool play_tts_in_outposts = true;
 
     struct PendingNPCAudio;
     typedef std::string (*GenerateVoiceCallback)(PendingNPCAudio* audio);
@@ -125,11 +113,9 @@ namespace {
         {GenerateVoiceKokoro, "Kokoro (Self-Hosted)", "https://github.com/remsky/Kokoro-FastAPI", "Enter your Kokoro-FastAPI server URL in the API Key field (default: http://localhost:8880)"},
     };
 
-    std::string current_tts_provider = api_configs[0].name;
-
     APIConfig* GetCurrentAPIConfig()
     {
-        const auto found = std::ranges::find(api_configs, current_tts_provider, &APIConfig::name);
+        const auto found = std::ranges::find(api_configs, settings.current_tts_provider, &APIConfig::name);
         return found != std::end(api_configs) ? &(*found) : nullptr;
     }
 
@@ -729,7 +715,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         processed = TextUtils::ctre_regex_replace<L"<a=[^<]+[^>]+>", L"">(processed);
         processed = TextUtils::ctre_regex_replace<L"<br>|<brx>|<p>", L". ">(processed);
         processed = TextUtils::StripTags(processed);
-        if (only_use_first_sentence) processed = ExtractFirstSentence(processed);
+        if (settings.only_use_first_sentence) processed = ExtractFirstSentence(processed);
         if (processed.empty()) return L"";
         processed = TextUtils::ctre_regex_replace<L"[.]{2,}", L".">(processed);
         processed = TextUtils::ctre_regex_replace<L"[!]{2,}", L"!">(processed);
@@ -758,7 +744,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         if (!agent) return nullptr;
         const wchar_t* name = GW::Agents::GetAgentEncName(agent);
         if (!(name && *name && agent->GetIsLivingType() && agent->IsNPC())) return nullptr;
-        if (!play_speech_from_non_friendly_npcs && agent->allegiance == GW::Constants::Allegiance::Enemy) return nullptr;
+        if (!settings.play_speech_from_non_friendly_npcs && agent->allegiance == GW::Constants::Allegiance::Enemy) return nullptr;
 
         auto special_it = special_npc_voices.find(agent->player_number);
         if (special_it != special_npc_voices.end()) return &special_it->second;
@@ -843,9 +829,9 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     void OnNPCDialogClosed()
     {
-        if (stop_speech_when_dialog_closed) CancelDialogSpeech(last_dialog_agent_id);
+        if (settings.stop_speech_when_dialog_closed) CancelDialogSpeech(last_dialog_agent_id);
 
-        if (play_goodbye_messages && !was_dialog_already_open && GetDistanceFromAgentId(last_dialog_agent_id) < GW::Constants::Range::Adjacent) {
+        if (settings.play_goodbye_messages && !was_dialog_already_open && GetDistanceFromAgentId(last_dialog_agent_id) < GW::Constants::Range::Adjacent) {
             if (GetAudioLanguage() != GW::Constants::Language::English) return;
             const auto num_goodbye_messages = sizeof(generic_goodbye_messages) / sizeof(generic_goodbye_messages[0]);
             const wchar_t* goodbye_msg = generic_goodbye_messages[rand() % num_goodbye_messages];
@@ -916,7 +902,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
                 was_dialog_already_open = GW::UI::GetFrameByLabel(L"NPCInteract") && packet->agent_id == last_dialog_agent_id;
                 last_dialog_agent_id = packet->agent_id;
                 CancelDialogSpeech(last_dialog_agent_id);
-                if (only_use_first_dialog && was_dialog_already_open) return;
+                if (settings.only_use_first_dialog && was_dialog_already_open) return;
                 GenerateVoiceFromEncodedString(PendingNPCAudio::Create(packet->agent_id, packet->message_enc, true));
             } break;
         }
@@ -974,7 +960,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
                     case GW::Merchant::TransactionType::WeaponsmithCustomize:
                     case GW::Merchant::TransactionType::TraderBuy: {
                         if (GetAudioLanguage() != GW::Constants::Language::English) return;
-                        if (!play_speech_from_vendors) return;
+                        if (!settings.play_speech_from_vendors) return;
                         auto audio = PendingNPCAudio::Create(packet->unk, L"", true);
                         // Keep audio alive across the async name lookup via shared_ptr on heap.
                         auto* ctx = new std::shared_ptr<PendingNPCAudio>(audio);
@@ -1273,11 +1259,11 @@ Gender GetGenderByFileId(const uint32_t file_id)
             VoiceLog("Blocked race %s", GetRaceName(audio->race));
             return bail();
         }
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !play_tts_in_outposts) {
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !settings.play_tts_in_outposts) {
             VoiceLog("Blocked TTS in outposts");
             return bail();
         }
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && !play_tts_in_explorable_areas) {
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && !settings.play_tts_in_explorable_areas) {
             VoiceLog("Blocked TTS in explorable areas");
             return bail();
         }
@@ -1411,10 +1397,10 @@ Gender GetGenderByFileId(const uint32_t file_id)
                 const auto agent = GW::Agents::GetAgentByID(agent_id);
                 if (!agent) break;
 
-                if (!play_speech_bubbles_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) break;
-                if (!play_speech_bubbles_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) break;
-                if (!play_speech_bubbles_from_party_members && GW::PartyMgr::IsAgentInParty(agent_id)) break;
-                if (GW::GetDistance(agent->pos, GetPlayerPosition()) > npc_speech_bubble_range) break;
+                if (!settings.play_speech_bubbles_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) break;
+                if (!settings.play_speech_bubbles_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) break;
+                if (!settings.play_speech_bubbles_from_party_members && GW::PartyMgr::IsAgentInParty(agent_id)) break;
+                if (GW::GetDistance(agent->pos, GetPlayerPosition()) > settings.npc_speech_bubble_range) break;
 
                 Log::Log("GenerateVoiceFromEncodedString for %d (Speech Bubble)", agent_id);
                 GenerateVoiceFromEncodedString(PendingNPCAudio::Create(agent_id, msg_enc));
@@ -1451,6 +1437,7 @@ void TextToSpeechModule::Update(float delta)
 void TextToSpeechModule::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     if (play_speech_from_race.empty()) {
         for (size_t i = 0; i < (size_t)GWRace::Count; i++)
@@ -1756,90 +1743,73 @@ void TextToSpeechModule::Terminate()
     }
 }
 
-void TextToSpeechModule::LoadSettings(ToolboxIni* ini)
+void TextToSpeechModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    LOAD_STRING(current_tts_provider);
-    if (!GetCurrentAPIConfig()) current_tts_provider = api_configs[0].name;
+    if (!GetCurrentAPIConfig()) settings.current_tts_provider = api_configs[0].name;
 
     for (auto& config : api_configs) {
+        std::string value;
         auto key_name = std::string(config.name) + "_api_key";
-        strncpy(config.api_key, ini->GetValue(Name(), key_name.c_str(), ""), _countof(config.api_key));
+        if (!doc.Get(Name(), key_name, value) && legacy) value = legacy->GetValue(Name(), key_name.c_str(), "");
+        strncpy(config.api_key, value.c_str(), _countof(config.api_key) - 1);
+        value.clear();
         key_name = std::string(config.name) + "_user_id";
-        strncpy(config.user_id, ini->GetValue(Name(), key_name.c_str(), ""), _countof(config.user_id));
+        if (!doc.Get(Name(), key_name, value) && legacy) value = legacy->GetValue(Name(), key_name.c_str(), "");
+        strncpy(config.user_id, value.c_str(), _countof(config.user_id) - 1);
     }
 
-    LOAD_BOOL(stop_speech_when_dialog_closed);
-    LOAD_BOOL(play_goodbye_messages);
-    LOAD_BOOL(only_use_first_dialog);
-    LOAD_BOOL(only_use_first_sentence);
-    LOAD_BOOL(play_speech_from_non_friendly_npcs);
-    LOAD_BOOL(play_speech_bubbles_in_explorable);
-    LOAD_BOOL(play_speech_bubbles_in_outpost);
-    LOAD_BOOL(play_speech_bubbles_from_party_members);
-    LOAD_BOOL(play_speech_from_vendors);
-    LOAD_BOOL(play_tts_in_explorable_areas);
-    LOAD_BOOL(play_tts_in_outposts);
-    LOAD_FLOAT(npc_speech_bubble_range);
-
-    TNamesDepend keys;
-    ini->GetAllKeys(Name(), keys);
-    for (const auto& key : keys) {
-        std::string key_name = key.pItem;
-        if (key_name.find("npc_voice_") == 0) {
-            uint32_t npc_id = std::stoul(key_name.substr(10));
-            std::string voice_id = ini->GetValue(Name(), key.pItem, voice_id_human_male);
+    std::map<uint32_t, std::string> npc_voices;
+    if (doc.Get(Name(), "npc_voices", npc_voices)) {
+        for (const auto& [npc_id, voice_id] : npc_voices) {
             special_npc_voices[npc_id] = VoiceProfile(voice_id, 0.5f, 0.5f, 0.5f, 1.0f, "");
+        }
+    }
+    else if (legacy) {
+        TNamesDepend keys;
+        legacy->GetAllKeys(Name(), keys);
+        for (const auto& key : keys) {
+            std::string key_name = key.pItem;
+            if (key_name.find("npc_voice_") == 0) {
+                uint32_t npc_id = std::stoul(key_name.substr(10));
+                std::string voice_id = legacy->GetValue(Name(), key.pItem, voice_id_human_male);
+                special_npc_voices[npc_id] = VoiceProfile(voice_id, 0.5f, 0.5f, 0.5f, 1.0f, "");
+            }
         }
     }
 
     for (uint32_t i = 0; i < static_cast<uint32_t>(GWRace::Count); i++) {
         GWRace race = static_cast<GWRace>(i);
         std::string key = std::format("play_speech_from_race_{}", GetRaceName(race));
-        play_speech_from_race[race] = ini->GetBoolValue(Name(), key.c_str(), true);
+        bool enabled = true;
+        if (!doc.Get(Name(), key, enabled) && legacy) enabled = legacy->GetBoolValue(Name(), key.c_str(), true);
+        play_speech_from_race[race] = enabled;
     }
 }
 
-void TextToSpeechModule::SaveSettings(ToolboxIni* ini)
+void TextToSpeechModule::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-
-    SAVE_STRING(current_tts_provider);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
     for (auto& config : api_configs) {
         auto key_name = std::string(config.name) + "_api_key";
-        ini->SetValue(Name(), key_name.c_str(), config.api_key);
+        doc.Set(Name(), key_name, std::string(config.api_key));
         key_name = std::string(config.name) + "_user_id";
-        ini->SetValue(Name(), key_name.c_str(), config.user_id);
+        doc.Set(Name(), key_name, std::string(config.user_id));
     }
 
-    SAVE_BOOL(stop_speech_when_dialog_closed);
-    SAVE_BOOL(play_goodbye_messages);
-    SAVE_BOOL(only_use_first_dialog);
-    SAVE_BOOL(only_use_first_sentence);
-    SAVE_BOOL(play_speech_from_non_friendly_npcs);
-    SAVE_BOOL(play_speech_bubbles_in_explorable);
-    SAVE_BOOL(play_speech_bubbles_in_outpost);
-    SAVE_BOOL(play_speech_bubbles_from_party_members);
-    SAVE_BOOL(play_speech_from_vendors);
-    SAVE_BOOL(play_tts_in_explorable_areas);
-    SAVE_BOOL(play_tts_in_outposts);
-    SAVE_FLOAT(npc_speech_bubble_range);
-
-    // Remove stale custom voice entries
-    TNamesDepend keys;
-    ini->GetAllKeys(Name(), keys);
-    for (const auto& key : keys) {
-        if (std::string(key.pItem).find("npc_voice_") == 0) ini->Delete(Name(), key.pItem);
-    }
+    std::map<uint32_t, std::string> npc_voices;
     for (const auto& [npc_id, voice_profile] : special_npc_voices) {
-        std::string key = std::format("npc_voice_{}", npc_id);
-        ini->SetValue(Name(), key.c_str(), voice_profile.voice_id.c_str());
+        npc_voices[npc_id] = voice_profile.voice_id;
     }
+    doc.Set(Name(), "npc_voices", npc_voices);
+
     for (const auto& [race, enabled] : play_speech_from_race) {
         std::string key = std::format("play_speech_from_race_{}", GetRaceName(race));
-        ini->SetBoolValue(Name(), key.c_str(), enabled);
+        doc.Set(Name(), key, enabled);
     }
 }
 
@@ -1853,9 +1823,9 @@ void TextToSpeechModule::DrawSettingsInternal()
     int current_provider = 0;
     for (size_t i = 0; i < _countof(api_configs); i++) {
         provider_names.push_back(api_configs[i].name);
-        if (api_configs[i].name == current_tts_provider) current_provider = (int)i;
+        if (api_configs[i].name == settings.current_tts_provider) current_provider = (int)i;
     }
-    if (ImGui::Combo("TTS Service", &current_provider, provider_names.data(), (int)provider_names.size())) current_tts_provider = api_configs[current_provider].name;
+    if (ImGui::Combo("TTS Service", &current_provider, provider_names.data(), (int)provider_names.size())) settings.current_tts_provider = api_configs[current_provider].name;
 
     ImGui::Separator();
     ImGui::Text("API Configuration:");
@@ -1888,53 +1858,53 @@ void TextToSpeechModule::DrawSettingsInternal()
 
     if (!is_api_locked_down) {
         ImGui::NextSpacedElement();
-        ImGui::CheckboxWithHelp("Only process the first sentence of a dialog", &only_use_first_sentence, "If enabled, only the first sentence of an NPC dialog will be processed.");
-        show_warning |= !only_use_first_sentence;
+        ImGui::CheckboxWithHelp("Only process the first sentence of a dialog", &settings.only_use_first_sentence, "If enabled, only the first sentence of an NPC dialog will be processed.");
+        show_warning |= !settings.only_use_first_sentence;
     }
     else {
         ImGui::TextDisabled("Note: With the chosen TTS API, only the first sentence of an NPC's dialog will be processed.");
     }
 
-    ImGui::CheckboxWithHelp("Only process the first dialog of an NPC", &only_use_first_dialog, "If enabled, only the first dialog of an NPC conversation will be processed.");
-    show_warning |= !only_use_first_dialog;
+    ImGui::CheckboxWithHelp("Only process the first dialog of an NPC", &settings.only_use_first_dialog, "If enabled, only the first dialog of an NPC conversation will be processed.");
+    show_warning |= !settings.only_use_first_dialog;
 
-    ImGui::CheckboxWithHelp("Play goodbye message when closing NPC dialog", &play_goodbye_messages, "If enabled, NPCs will say a random goodbye when you close their dialog.\n\nNote: Only english language is currently supported.");
-    show_warning |= play_goodbye_messages;
+    ImGui::CheckboxWithHelp("Play goodbye message when closing NPC dialog", &settings.play_goodbye_messages, "If enabled, NPCs will say a random goodbye when you close their dialog.\n\nNote: Only english language is currently supported.");
+    show_warning |= settings.play_goodbye_messages;
 
-    ImGui::CheckboxWithHelp("Play greetings from merchants and traders", &play_speech_from_vendors, "Note: For some types of traders, Only english language is currently supported.");
+    ImGui::CheckboxWithHelp("Play greetings from merchants and traders", &settings.play_speech_from_vendors, "Note: For some types of traders, Only english language is currently supported.");
 
-    ImGui::Checkbox("Stop speech when dialog window is closed", &stop_speech_when_dialog_closed);
+    ImGui::Checkbox("Stop speech when dialog window is closed", &settings.stop_speech_when_dialog_closed);
 
     ImGui::TextUnformatted("Play speech in:");
     ImGui::Indent();
     ImGui::StartSpacedElements(264.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Explorable Areas", &play_tts_in_explorable_areas);
+    ImGui::Checkbox("Explorable Areas", &settings.play_tts_in_explorable_areas);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Outposts", &play_tts_in_outposts);
+    ImGui::Checkbox("Outposts", &settings.play_tts_in_outposts);
     ImGui::Unindent();
 
     ImGui::TextUnformatted("Play speech bubbles:");
     ImGui::Indent();
     ImGui::StartSpacedElements(264.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("When in an outpost", &play_speech_bubbles_in_outpost, "If enabled, speech bubbles above an NPC when in an outpost will be processed");
+    ImGui::CheckboxWithHelp("When in an outpost", &settings.play_speech_bubbles_in_outpost, "If enabled, speech bubbles above an NPC when in an outpost will be processed");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("When in an explorable area", &play_speech_bubbles_in_explorable, "If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
-    show_warning |= play_speech_bubbles_in_explorable;
+    ImGui::CheckboxWithHelp("When in an explorable area", &settings.play_speech_bubbles_in_explorable, "If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
+    show_warning |= settings.play_speech_bubbles_in_explorable;
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("From other party members", &play_speech_bubbles_from_party_members, "If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
-    show_warning |= play_speech_bubbles_from_party_members;
+    ImGui::CheckboxWithHelp("From other party members", &settings.play_speech_bubbles_from_party_members, "If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
+    show_warning |= settings.play_speech_bubbles_from_party_members;
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("From non-friendly NPCs", &play_speech_from_non_friendly_npcs);
-    show_warning |= play_speech_from_non_friendly_npcs;
+    ImGui::Checkbox("From non-friendly NPCs", &settings.play_speech_from_non_friendly_npcs);
+    show_warning |= settings.play_speech_from_non_friendly_npcs;
     ImGui::Unindent();
 
-    if (ImGui::InputFloat("NPC speech bubble range", &npc_speech_bubble_range, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent)) {
-        npc_speech_bubble_range = std::clamp(npc_speech_bubble_range, 0.f, 2500.f);
+    if (ImGui::InputFloat("NPC speech bubble range", &settings.npc_speech_bubble_range, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent)) {
+        settings.npc_speech_bubble_range = std::clamp(settings.npc_speech_bubble_range, 0.f, 2500.f);
     }
     ImGui::ShowHelp("The range at which NPC speech bubbles will be processed. Set to 0 to disable.");
-    show_warning |= (npc_speech_bubble_range > 166.f);
+    show_warning |= (settings.npc_speech_bubble_range > 166.f);
 
     if (show_warning && !is_api_locked_down) ImGui::TextColored(ImColor(IM_COL32(245, 245, 0, 255)), "Warning: Processing more lines of dialog will use up more API credits!");
 

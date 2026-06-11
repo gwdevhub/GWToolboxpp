@@ -185,13 +185,3 @@ void ServerInfoWidget::DrawSettingsInternal()
 {
     ImGui::Text("Displays current server IP Address and location if available");
 }
-
-void ServerInfoWidget::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::SaveSettings(ini);
-}
-
-void ServerInfoWidget::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::LoadSettings(ini);
-}

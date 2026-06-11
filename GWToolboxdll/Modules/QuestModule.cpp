@@ -30,11 +30,7 @@
 #include <GWCA/Managers/MemoryMgr.h>
 
 namespace {
-    bool draw_quest_path_on_terrain = false;
-    bool draw_quest_path_on_minimap = true;
-    bool draw_quest_path_on_mission_map = true;
-    bool show_paths_to_all_quests = false;
-    bool keep_current_quest_when_new_quest_added = false;
+    QuestModule::Settings settings;
 
     bool fetch_missing_quest_info_queued = false;
 
@@ -45,8 +41,6 @@ namespace {
     bool initialised = false;
 
     clock_t last_fetched_missing_quest_info = 0;
-
-    bool double_click_to_travel_to_quest = true;
 
     GW::Constants::QuestID custom_quest_id = static_cast<GW::Constants::QuestID>(0x0000fdd);
     GW::Quest custom_quest_marker;
@@ -65,7 +59,7 @@ namespace {
     {
         GW::Hook::EnterHook();
         QuestLogRow_UICallback_Ret(message, wParam, lParam);
-        if (!(double_click_to_travel_to_quest
+        if (!(settings.double_click_to_travel_to_quest
             && message->message_id == GW::UI::UIMessage::kMouseClick2
             && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
             && GW::UI::BelongsToFrame(GW::UI::GetFrameByLabel(L"Quest"), GW::UI::GetFrameById(message->frame_id))) )
@@ -95,7 +89,7 @@ namespace {
             return false;
         if (quest_id == active_quest->quest_id)
             return true;
-        if (!show_paths_to_all_quests)
+        if (!settings.show_paths_to_all_quests)
             return false;
         // De-duplicate other quests that are pointing to the same place!
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
@@ -148,7 +142,7 @@ namespace {
         void DrawMinimapLines()
         {
             ClearMinimapLines();
-            if (!(draw_quest_path_on_terrain || draw_quest_path_on_minimap || draw_quest_path_on_mission_map))
+            if (!(settings.draw_quest_path_on_terrain || settings.draw_quest_path_on_minimap || settings.draw_quest_path_on_mission_map))
                 return;
             if (waypoints.empty())
                 return;
@@ -159,9 +153,9 @@ namespace {
                     std::format("{} - {}", static_cast<uint32_t>(quest_id), i).c_str(), true
                 );
                 l->from_player_pos = i == start_idx;
-                l->draw_on_terrain = draw_quest_path_on_terrain;
-                l->draw_on_minimap = draw_quest_path_on_minimap;
-                l->draw_on_mission_map = draw_quest_path_on_mission_map;
+                l->draw_on_terrain = settings.draw_quest_path_on_terrain;
+                l->draw_on_minimap = settings.draw_quest_path_on_minimap;
+                l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
                 l->color = QuestModule::GetQuestLineColor(quest_id);
                 minimap_lines.push_back(l);
@@ -464,7 +458,7 @@ namespace {
             case GW::UI::UIMessage::kQuestAdded:
             case GW::UI::UIMessage::kClientActiveQuestChanged: {
                 const auto quest = GW::QuestMgr::GetQuest(*(GW::Constants::QuestID*)packet);
-                if (quest && keep_current_quest_when_new_quest_added && quest->quest_id != player_chosen_quest_id && GW::QuestMgr::GetQuest(player_chosen_quest_id)) {
+                if (quest && settings.keep_current_quest_when_new_quest_added && quest->quest_id != player_chosen_quest_id && GW::QuestMgr::GetQuest(player_chosen_quest_id)) {
                     // Quest assigned without user interaction
                     QuestModule::SetActiveQuestId(player_chosen_quest_id, true);
                 }
@@ -666,57 +660,39 @@ ImU32& QuestModule::GetQuestLineColor(GW::Constants::QuestID quest_id)
 
 void QuestModule::DrawSettingsInternal()
 {
-    ImGui::CheckboxWithHelp("Keep current quest when accepting a new one", &keep_current_quest_when_new_quest_added,
+    ImGui::CheckboxWithHelp("Keep current quest when accepting a new one", &settings.keep_current_quest_when_new_quest_added,
         "By default, Guild Wars changes your currently selected quest to the one you've just taken from an NPC.\nThis can be annoying if you don't realise your quest marker is now taking you somewhere different!\nTick this to make sure your current quest isn't changed when a new quest is added to your log."
     );
-    ImGui::Checkbox("Double click a quest in the quest log window to travel to nearest outpost", &double_click_to_travel_to_quest);
+    ImGui::Checkbox("Double click a quest in the quest log window to travel to nearest outpost", &settings.double_click_to_travel_to_quest);
     ImGui::Text("Draw path to quest marker on:");
     bool recalc_quest_paths = false;
-    recalc_quest_paths |= ImGui::Checkbox("Terrain##terrianquestpath", &draw_quest_path_on_terrain);
-    recalc_quest_paths |= ImGui::Checkbox("Minimap##minimapquestpath", &draw_quest_path_on_minimap);
-    recalc_quest_paths |= ImGui::Checkbox("Mission Map##missionmapquestpath", &draw_quest_path_on_mission_map);
+    recalc_quest_paths |= ImGui::Checkbox("Terrain##terrianquestpath", &settings.draw_quest_path_on_terrain);
+    recalc_quest_paths |= ImGui::Checkbox("Minimap##minimapquestpath", &settings.draw_quest_path_on_minimap);
+    recalc_quest_paths |= ImGui::Checkbox("Mission Map##missionmapquestpath", &settings.draw_quest_path_on_mission_map);
     ImGui::Checkbox("World Map##worldmapquestpath", &WorldMapWidget::ShowLinesOnWorldMap());
 #ifdef _DEBUG
-    recalc_quest_paths |= ImGui::Checkbox("Show paths to all quests##drawallquestpaths", &show_paths_to_all_quests);
+    recalc_quest_paths |= ImGui::Checkbox("Show paths to all quests##drawallquestpaths", &settings.show_paths_to_all_quests);
 #endif
     if(recalc_quest_paths)
         RefreshAllQuestPaths();
 }
 
-void QuestModule::LoadSettings(ToolboxIni* ini)
+void QuestModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(draw_quest_path_on_minimap);
-    LOAD_BOOL(draw_quest_path_on_mission_map);
-    LOAD_BOOL(draw_quest_path_on_terrain);
-    LOAD_BOOL(show_paths_to_all_quests);
-    using namespace Pathing;
-    float custom_quest_marker_world_pos_x = .0f;
-    float custom_quest_marker_world_pos_y = .0f;
-    LOAD_FLOAT(custom_quest_marker_world_pos_x);
-    LOAD_FLOAT(custom_quest_marker_world_pos_y);
-    LOAD_BOOL(double_click_to_travel_to_quest);
-    custom_quest_marker_world_pos = {custom_quest_marker_world_pos_x, custom_quest_marker_world_pos_y};
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    custom_quest_marker_world_pos = {settings.custom_quest_marker_world_pos_x, settings.custom_quest_marker_world_pos_y};
     GW::GameThread::Enqueue([] {
         SetCustomQuestMarker(custom_quest_marker_world_pos);
     });
-    LOAD_BOOL(keep_current_quest_when_new_quest_added);
 }
 
-void QuestModule::SaveSettings(ToolboxIni* ini)
+void QuestModule::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(draw_quest_path_on_minimap);
-    SAVE_BOOL(draw_quest_path_on_mission_map);
-    SAVE_BOOL(draw_quest_path_on_terrain);
-    SAVE_BOOL(show_paths_to_all_quests);
-    using namespace Pathing;
-    float custom_quest_marker_world_pos_x = custom_quest_marker_world_pos.x;
-    float custom_quest_marker_world_pos_y = custom_quest_marker_world_pos.y;
-    SAVE_FLOAT(custom_quest_marker_world_pos_x);
-    SAVE_FLOAT(custom_quest_marker_world_pos_y);
-    SAVE_BOOL(double_click_to_travel_to_quest);
-    SAVE_BOOL(keep_current_quest_when_new_quest_added);
+    settings.custom_quest_marker_world_pos_x = custom_quest_marker_world_pos.x;
+    settings.custom_quest_marker_world_pos_y = custom_quest_marker_world_pos.y;
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void QuestModule::Initialize()
@@ -725,6 +701,7 @@ void QuestModule::Initialize()
         return;
     initialised = true;
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
     uintptr_t address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", 0, -0x7);

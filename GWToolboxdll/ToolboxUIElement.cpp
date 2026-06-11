@@ -77,7 +77,7 @@ void ToolboxUIElement::UpdateLocationAgainstSnappedFrame()
     const auto& frame_pos = snapped_frame_state->position;
     if (ImVec2Eq(frame_pos, empty_imvec2)) return; // position not yet populated
 
-    float* snap_off = is_mobile ? mobile_snap_offset : snap_offset;
+    float* snap_off = (is_mobile ? mobile_snap_offset : snap_offset).data();
     bool& needs_init = is_mobile ? mobile_snap_offset_needs_init : snap_offset_needs_init;
 
     const auto window = ImGui::FindWindowByName(Name());
@@ -95,7 +95,7 @@ void ToolboxUIElement::UpdateLocationAgainstSnappedFrame()
     const float target_y = frame_pos.y + snap_off[1];
 
     // Keep fallback screen coords up-to-date so we have a valid position if the frame disappears
-    float* cur_pos = is_mobile ? mobile_pos : normal_pos;
+    float* cur_pos = (is_mobile ? mobile_pos : normal_pos).data();
     cur_pos[0] = target_x;
     cur_pos[1] = target_y;
     if (is_mobile)
@@ -131,6 +131,32 @@ const char* ToolboxUIElement::UIName() const
 void ToolboxUIElement::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::RegisterField(this, "visible", &visible);
+    SettingsRegistry::RegisterField(this, "show_menubutton", &show_menubutton);
+    SettingsRegistry::RegisterField(this, "lock_move", &lock_move);
+    SettingsRegistry::RegisterField(this, "lock_size", &lock_size);
+    SettingsRegistry::RegisterField(this, "auto_size", &auto_size);
+    SettingsRegistry::RegisterField(this, "auto_resize_on_collapse", &auto_resize_on_collapse);
+    SettingsRegistry::RegisterField(this, "collapsed_size", &collapsed_size);
+    SettingsRegistry::RegisterField(this, "expanded_size", &expanded_size);
+    SettingsRegistry::RegisterField(this, "show_titlebar", &show_titlebar);
+    SettingsRegistry::RegisterField(this, "show_closebutton", &show_closebutton);
+    SettingsRegistry::RegisterField(this, "show_breakout_button", &show_breakout_button);
+    SettingsRegistry::RegisterField(this, "lock_breakout_button", &lock_breakout_button);
+    SettingsRegistry::RegisterField(this, "breakout_pos", &breakout_pos);
+    SettingsRegistry::RegisterField(this, "snapped_frame_label", &snapped_frame_label);
+    SettingsRegistry::RegisterField(this, "snap_offset", &snap_offset);
+    SettingsRegistry::RegisterField(this, "mobile_lock_move", &mobile_lock_move);
+    SettingsRegistry::RegisterField(this, "mobile_lock_size", &mobile_lock_size);
+    SettingsRegistry::RegisterField(this, "mobile_auto_size", &mobile_auto_size);
+    SettingsRegistry::RegisterField(this, "mobile_snapped_frame_label", &mobile_snapped_frame_label);
+    SettingsRegistry::RegisterField(this, "mobile_snap_offset", &mobile_snap_offset);
+    SettingsRegistry::RegisterField(this, "has_normal_layout", &has_normal_layout);
+    SettingsRegistry::RegisterField(this, "normal_pos", &normal_pos);
+    SettingsRegistry::RegisterField(this, "normal_size", &normal_size);
+    SettingsRegistry::RegisterField(this, "has_mobile_layout", &has_mobile_layout);
+    SettingsRegistry::RegisterField(this, "mobile_pos", &mobile_pos);
+    SettingsRegistry::RegisterField(this, "mobile_size", &mobile_size);
 }
 
 void ToolboxUIElement::Terminate()
@@ -138,60 +164,29 @@ void ToolboxUIElement::Terminate()
     ToolboxModule::Terminate();
 }
 
-void ToolboxUIElement::LoadSettings(ToolboxIni* ini)
+void ToolboxUIElement::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(visible);
-    LOAD_BOOL(show_menubutton);
-    LOAD_BOOL(lock_move);
-    LOAD_BOOL(lock_size);
-    LOAD_BOOL(auto_size);
-    LOAD_BOOL(auto_resize_on_collapse);
-    LOAD_FLOAT(collapsed_size[0]);
-    LOAD_FLOAT(collapsed_size[1]);
-    LOAD_FLOAT(expanded_size[0]);
-    LOAD_FLOAT(expanded_size[1]);
-    LOAD_BOOL(show_titlebar);
-    LOAD_BOOL(show_closebutton);
-    LOAD_BOOL(show_breakout_button);
-    LOAD_BOOL(lock_breakout_button);
-    if (ini->KeyExists(Name(), "breakout_pos[0]")) {
-        LOAD_FLOAT(breakout_pos[0]);
-        LOAD_FLOAT(breakout_pos[1]);
+    ToolboxModule::LoadSettings(doc, legacy);
+    if (doc.Has(Name(), "breakout_pos") || (legacy && legacy->KeyExists(Name(), "breakout_pos[0]"))) {
         pending_breakout_pos = true;
     }
-    LOAD_STRING(snapped_frame_label);
-    LOAD_FLOAT(snap_offset[0]);
-    LOAD_FLOAT(snap_offset[1]);
-    if (!snapped_frame_label.empty() && !ini->KeyExists(Name(), "snap_offset[0]")) {
+    if (!snapped_frame_label.empty() && !doc.Has(Name(), "snap_offset") && !(legacy && legacy->KeyExists(Name(), "snap_offset[0]"))) {
         snap_offset_needs_init = true;
     }
-    LOAD_BOOL(mobile_lock_move);
-    LOAD_BOOL(mobile_lock_size);
-    LOAD_BOOL(mobile_auto_size);
-    LOAD_STRING(mobile_snapped_frame_label);
-    LOAD_FLOAT(mobile_snap_offset[0]);
-    LOAD_FLOAT(mobile_snap_offset[1]);
-    if (!mobile_snapped_frame_label.empty() && !ini->KeyExists(Name(), "mobile_snap_offset[0]")) {
+    if (!mobile_snapped_frame_label.empty() && !doc.Has(Name(), "mobile_snap_offset") && !(legacy && legacy->KeyExists(Name(), "mobile_snap_offset[0]"))) {
         mobile_snap_offset_needs_init = true;
     }
-    has_normal_layout = ini->GetBoolValue(Name(), "has_normal_layout", false);
-    if (has_normal_layout) {
-        LOAD_FLOAT(normal_pos[0]);
-        LOAD_FLOAT(normal_pos[1]);
-        LOAD_FLOAT(normal_size[0]);
-        LOAD_FLOAT(normal_size[1]);
+    if (!has_normal_layout) {
+        normal_pos = {};
+        normal_size = {};
     }
-    has_mobile_layout = ini->GetBoolValue(Name(), "has_mobile_layout", false);
-    if (has_mobile_layout) {
-        LOAD_FLOAT(mobile_pos[0]);
-        LOAD_FLOAT(mobile_pos[1]);
-        LOAD_FLOAT(mobile_size[0]);
-        LOAD_FLOAT(mobile_size[1]);
+    if (!has_mobile_layout) {
+        mobile_pos = {};
+        mobile_size = {};
     }
 }
 
-void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
+void ToolboxUIElement::SaveSettings(SettingsDoc& doc)
 {
     // Sync current mode's stored positions from the live window.
     // Guard with context check: SaveSettings is called a second time after ImGui is destroyed
@@ -222,45 +217,14 @@ void ToolboxUIElement::SaveSettings(ToolboxIni* ini)
             breakout_pos[1] = bw->Pos.y;
         }
     }
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(visible);
-    SAVE_BOOL(show_menubutton);
-    SAVE_BOOL(lock_move);
-    SAVE_BOOL(lock_size);
-    SAVE_BOOL(auto_size);
-    SAVE_BOOL(auto_resize_on_collapse);
-    SAVE_FLOAT(collapsed_size[0]);
-    SAVE_FLOAT(collapsed_size[1]);
-    SAVE_FLOAT(expanded_size[0]);
-    SAVE_FLOAT(expanded_size[1]);
-    SAVE_BOOL(show_titlebar);
-    SAVE_BOOL(show_closebutton);
-    SAVE_BOOL(show_breakout_button);
-    SAVE_BOOL(lock_breakout_button);
-    SAVE_FLOAT(breakout_pos[0]);
-    SAVE_FLOAT(breakout_pos[1]);
-    SAVE_STRING(snapped_frame_label);
-    SAVE_FLOAT(snap_offset[0]);
-    SAVE_FLOAT(snap_offset[1]);
-    SAVE_BOOL(mobile_lock_move);
-    SAVE_BOOL(mobile_lock_size);
-    SAVE_BOOL(mobile_auto_size);
-    SAVE_STRING(mobile_snapped_frame_label);
-    SAVE_FLOAT(mobile_snap_offset[0]);
-    SAVE_FLOAT(mobile_snap_offset[1]);
-    ini->SetBoolValue(Name(), "has_normal_layout", has_normal_layout);
-    if (has_normal_layout) {
-        SAVE_FLOAT(normal_pos[0]);
-        SAVE_FLOAT(normal_pos[1]);
-        SAVE_FLOAT(normal_size[0]);
-        SAVE_FLOAT(normal_size[1]);
+    ToolboxModule::SaveSettings(doc);
+    if (!has_normal_layout) {
+        doc.EraseKey(Name(), "normal_pos");
+        doc.EraseKey(Name(), "normal_size");
     }
-    ini->SetBoolValue(Name(), "has_mobile_layout", has_mobile_layout);
-    if (has_mobile_layout) {
-        SAVE_FLOAT(mobile_pos[0]);
-        SAVE_FLOAT(mobile_pos[1]);
-        SAVE_FLOAT(mobile_size[0]);
-        SAVE_FLOAT(mobile_size[1]);
+    if (!has_mobile_layout) {
+        doc.EraseKey(Name(), "mobile_pos");
+        doc.EraseKey(Name(), "mobile_size");
     }
 }
 
@@ -293,7 +257,7 @@ ImGuiWindowFlags ToolboxUIElement::GetWinFlags(ImGuiWindowFlags flags) const
             if (!collapse_size_initialized || is_collapsed != prev_was_collapsed) {
                 collapse_size_initialized = true;
                 prev_was_collapsed = is_collapsed;
-                const float* sz = is_collapsed ? collapsed_size : expanded_size;
+                const float* sz = (is_collapsed ? collapsed_size : expanded_size).data();
                 const float w = sz[0] > 0.f ? sz[0] : window->SizeFull.x;
                 const float h = sz[1] > 0.f ? sz[1] : window->SizeFull.y;
                 ImGui::SetNextWindowSize({w, h});
@@ -389,9 +353,9 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     bool& ls = is_mobile ? mobile_lock_size : lock_size;
     bool& as_ = is_mobile ? mobile_auto_size : auto_size;
     std::string& snap = is_mobile ? mobile_snapped_frame_label : snapped_frame_label;
-    float* cur_pos = is_mobile ? mobile_pos : normal_pos;
-    float* cur_size = is_mobile ? mobile_size : normal_size;
-    float* snap_off = is_mobile ? mobile_snap_offset : snap_offset;
+    float* cur_pos = (is_mobile ? mobile_pos : normal_pos).data();
+    float* cur_size = (is_mobile ? mobile_size : normal_size).data();
+    float* snap_off = (is_mobile ? mobile_snap_offset : snap_offset).data();
     bool& needs_init_ref = is_mobile ? mobile_snap_offset_needs_init : snap_offset_needs_init;
 
     char need_show_buf[128];
@@ -553,11 +517,11 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     }
     ImGui::Indent();
     ImGui::BeginDisabled(!auto_resize_on_collapse || !has_titlebar);
-    if (ImGui::DragFloat2("Collapsed size", collapsed_size, 1.f, 0.f, 0.f, "%.0f")) {
+    if (ImGui::DragFloat2("Collapsed size", collapsed_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
         collapse_size_initialized = false;
     }
     ImGui::ShowHelp("Width and height when the title bar is collapsed; 0 = keep current");
-    if (ImGui::DragFloat2("Expanded size", expanded_size, 1.f, 0.f, 0.f, "%.0f")) {
+    if (ImGui::DragFloat2("Expanded size", expanded_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
         collapse_size_initialized = false;
     }
     ImGui::ShowHelp("Width and height when the window is expanded; 0 = keep current");

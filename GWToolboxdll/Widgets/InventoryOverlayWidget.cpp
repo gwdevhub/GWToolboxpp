@@ -13,8 +13,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Managers/ItemMgr.h>
 namespace {
-    bool show_in_outpost = true;
-    bool show_in_explorable = true;
+    InventoryOverlayWidget::Settings settings;
 
     std::vector<GW::UI::Frame*> inventory_slot_frames;
 
@@ -64,6 +63,7 @@ namespace {
 }
 void InventoryOverlayWidget::Initialize() {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
     InventorySlot_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("InvSlot.cpp","!m_dragOverlayTexture",0,0),0xfff);
     if (InventorySlot_UICallback_Func) {
         GW::Hook::CreateHook((void**)&InventorySlot_UICallback_Func, OnInventorySlot_UICallback, (void**)&InventorySlot_UICallback_Ret);
@@ -73,6 +73,14 @@ void InventoryOverlayWidget::Initialize() {
     ASSERT(InventorySlot_UICallback_Func);
 #endif
 }
+void InventoryOverlayWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) {
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+void InventoryOverlayWidget::SaveSettings(SettingsDoc& doc) {
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+}
 void InventoryOverlayWidget::SignalTerminate() {
     ToolboxWidget::SignalTerminate();
     if (InventorySlot_UICallback_Func) {
@@ -81,25 +89,13 @@ void InventoryOverlayWidget::SignalTerminate() {
     }
 }
 
-void InventoryOverlayWidget::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::LoadSettings(ini);
-    // @TODO
-}
-
-void InventoryOverlayWidget::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::SaveSettings(ini);
-    // @TODO
-}
-
 void InventoryOverlayWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
     ImGui::SameLine();
-    ImGui::Checkbox("Show overlay in outpost", &show_in_outpost);
+    ImGui::Checkbox("Show overlay in outpost", &settings.show_in_outpost);
     ImGui::SameLine();
-    ImGui::Checkbox("Show overlay explorable", &show_in_explorable);
+    ImGui::Checkbox("Show overlay explorable", &settings.show_in_explorable);
 
     // @TODO: Adding item colours by name (usability would be to add this to a context menu to manually add)
     // @TODO: Adding item colours by type
@@ -114,10 +110,10 @@ void InventoryOverlayWidget::Draw(IDirect3DDevice9*)
     const auto instance_type = GW::Map::GetInstanceType();
     switch (instance_type) {
     case GW::Constants::InstanceType::Outpost:
-        if (!show_in_outpost) return;
+        if (!settings.show_in_outpost) return;
         break;
     case GW::Constants::InstanceType::Explorable:
-        if (!show_in_explorable) return;
+        if (!settings.show_in_explorable) return;
         break;
     default:
         return;

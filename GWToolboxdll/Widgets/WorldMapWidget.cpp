@@ -127,16 +127,10 @@ namespace {
     IDirect3DTexture9** portal_icon_texture = nullptr;
     IDirect3DTexture9** zaishen_coin_texture = nullptr;
 
-    bool showing_all_outposts = false;
-    bool highlight_locked_areas = false;
-    bool apply_quest_colors = false;
-    bool show_any_elite_capture_locations = false;
+    WorldMapWidget::Settings settings;
+
     bool show_elite_capture_locations[11];
-    bool hide_captured_elites = false;
     bool drawn = false;
-    bool show_lines_on_world_map = false;
-    bool showing_all_quests = true;
-    Color locked_area_highlight_color = IM_COL32(255, 160, 0, 96);
 
     GW::MemoryPatcher view_all_outposts_patch;
     GW::MemoryPatcher view_all_carto_areas_patch;
@@ -620,7 +614,7 @@ namespace {
 
     bool DrawBossLocationOnWorldMap(const EliteBossLocation& boss)
     {
-        if (!show_any_elite_capture_locations) return false;
+        if (!settings.show_any_elite_capture_locations) return false;
         if (!(world_map_context)) return false;
         if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return false; // Map is animating
 
@@ -630,7 +624,7 @@ namespace {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(boss.skill_id);
         if (!skill) return false;
         if (!show_elite_capture_locations[(uint32_t)skill->profession]) return false;
-        if (hide_captured_elites) {
+        if (settings.hide_captured_elites) {
             const auto me = GW::Agents::GetControlledCharacter();
             if (me->primary == skill->profession || me->secondary == skill->profession) {
                 if (GW::SkillbarMgr::GetIsSkillLearnt(boss.skill_id)) return false;
@@ -777,7 +771,7 @@ namespace {
 
         bool is_hovered = false;
         auto color = GW::QuestMgr::GetActiveQuestId() == quest->quest_id ? 0 : 0x80FFFFFF;
-        if (apply_quest_colors) {
+        if (settings.apply_quest_colors) {
             color = QuestModule::GetQuestColor(quest->quest_id);
         }
 
@@ -867,9 +861,9 @@ namespace {
 
     void DrawLockedAreaHighlights()
     {
-        if (!(showing_all_outposts && highlight_locked_areas && world_map_context)) return;
+        if (!(settings.showing_all_outposts && settings.highlight_locked_areas && world_map_context)) return;
         if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return; // Map is animating
-        if (!Colors::IsVisible(locked_area_highlight_color)) return;
+        if (!Colors::IsVisible(settings.locked_area_highlight_color)) return;
 
         std::unordered_set<uint32_t> highlighted_names;
         for (size_t i = 1; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
@@ -885,8 +879,8 @@ namespace {
 
             const auto marker_pos = CalculateViewportPos(GetMapMarkerPoint(map_info), world_map_context->top_left);
             const auto radius = 8.f * ui_scale.x;
-            draw_list->AddCircleFilled(marker_pos, radius, locked_area_highlight_color);
-            draw_list->AddCircle(marker_pos, radius, Colors::FullAlpha(locked_area_highlight_color));
+            draw_list->AddCircleFilled(marker_pos, radius, settings.locked_area_highlight_color);
+            draw_list->AddCircle(marker_pos, radius, Colors::FullAlpha(settings.locked_area_highlight_color));
         }
     }
 
@@ -925,6 +919,7 @@ GW::Constants::MapID WorldMapWidget::GetMapIdForLocation(const GW::Vec2f& world_
 void WorldMapWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     memset(show_elite_capture_locations, true, sizeof(show_elite_capture_locations));
     quest_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
@@ -1011,34 +1006,24 @@ void WorldMapWidget::SignalTerminate()
 
 bool& WorldMapWidget::ShowLinesOnWorldMap()
 {
-    return show_lines_on_world_map;
+    return settings.show_lines_on_world_map;
 }
 
-void WorldMapWidget::ShowAllOutposts(const bool show = showing_all_outposts)
+void WorldMapWidget::ShowAllOutposts(const bool show = settings.showing_all_outposts)
 {
     if (view_all_outposts_patch.IsValid()) view_all_outposts_patch.TogglePatch(show);
     if (view_all_carto_areas_patch.IsValid()) view_all_carto_areas_patch.TogglePatch(show);
     TriggerWorldMapRedraw();
 }
 
-void WorldMapWidget::LoadSettings(ToolboxIni* ini)
+void WorldMapWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_BOOL(showing_all_outposts);
-    LOAD_BOOL(highlight_locked_areas);
-    LOAD_BOOL(show_lines_on_world_map);
-    LOAD_BOOL(showing_all_quests);
-    LOAD_BOOL(apply_quest_colors);
-    LOAD_COLOR(locked_area_highlight_color);
-    LOAD_BOOL(hide_captured_elites);
-    LOAD_BOOL(show_any_elite_capture_locations);
-    LOAD_BOOL(hide_captured_elites);
-    uint32_t show_elite_capture_locations_val = 0xffffffff;
-    LOAD_UINT(show_elite_capture_locations_val);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     for (size_t i = 0; i < _countof(show_elite_capture_locations); i++) {
-        show_elite_capture_locations[i] = ((show_elite_capture_locations_val >> i) & 0x1) != 0;
+        show_elite_capture_locations[i] = ((settings.show_elite_capture_locations_val >> i) & 0x1) != 0;
     }
-    ShowAllOutposts(showing_all_outposts);
+    ShowAllOutposts(settings.showing_all_outposts);
 
 
     const std::filesystem::path map_info_by_file_id_file = Resources::GetPath(L"MapInfoByFileId.txt");
@@ -1079,24 +1064,16 @@ void WorldMapWidget::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void WorldMapWidget::SaveSettings(ToolboxIni* ini)
+void WorldMapWidget::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_BOOL(showing_all_outposts);
-    SAVE_BOOL(highlight_locked_areas);
-    SAVE_BOOL(show_lines_on_world_map);
-    SAVE_BOOL(showing_all_quests);
-    SAVE_BOOL(apply_quest_colors);
-    SAVE_COLOR(locked_area_highlight_color);
-    SAVE_BOOL(show_any_elite_capture_locations);
-    SAVE_BOOL(hide_captured_elites);
-    uint32_t show_elite_capture_locations_val = 0;
+    settings.show_elite_capture_locations_val = 0;
     for (size_t i = 0; i < _countof(show_elite_capture_locations); i++) {
         if (show_elite_capture_locations[i]) {
-            show_elite_capture_locations_val |= (1u << i);
+            settings.show_elite_capture_locations_val |= (1u << i);
         }
     }
-    SAVE_UINT(show_elite_capture_locations_val);
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
     const std::filesystem::path map_info_by_file_id_file = Resources::GetPath(L"MapInfoByFileId.txt");
     // File format (plain text, one map block per entry):
@@ -1130,17 +1107,17 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     mouse_offset.y *= -1;
     if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
         window = ImGui::GetCurrentWindowRead();
-        if (ImGui::Checkbox("Show all areas", &showing_all_outposts)) {
+        if (ImGui::Checkbox("Show all areas", &settings.showing_all_outposts)) {
             GW::GameThread::Enqueue([] {
-                ShowAllOutposts(showing_all_outposts);
+                ShowAllOutposts(settings.showing_all_outposts);
             });
         }
-        if (showing_all_outposts) {
+        if (settings.showing_all_outposts) {
             ImGui::Indent();
-            ImGui::Checkbox("Highlight locked areas", &highlight_locked_areas);
-            if (highlight_locked_areas) {
+            ImGui::Checkbox("Highlight locked areas", &settings.highlight_locked_areas);
+            if (settings.highlight_locked_areas) {
                 ImGui::SameLine();
-                ImGui::ColorButtonPicker("Locked Areas", &locked_area_highlight_color, ImGuiColorEditFlags_NoLabel);
+                ImGui::ColorButtonPicker("Locked Areas", &settings.locked_area_highlight_color.value, ImGuiColorEditFlags_NoLabel);
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Color overlay for areas that aren't unlocked on this character.");
                 }
@@ -1155,12 +1132,12 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
                 });
             }
         }
-        ImGui::Checkbox("Show toolbox minimap lines", &show_lines_on_world_map);
-        if (ImGui::Checkbox("Show quest markers for all quests", &showing_all_quests)) {
+        ImGui::Checkbox("Show toolbox minimap lines", &settings.show_lines_on_world_map);
+        if (ImGui::Checkbox("Show quest markers for all quests", &settings.showing_all_quests)) {
             QuestModule::FetchMissingQuestInfo();
         }
-        ImGui::Checkbox("Apply quest marker color overlays", &apply_quest_colors);
-        if (apply_quest_colors) {
+        ImGui::Checkbox("Apply quest marker color overlays", &settings.apply_quest_colors);
+        if (settings.apply_quest_colors) {
             ImGui::Indent();
             auto color = &QuestModule::GetQuestColor((GW::Constants::QuestID)0xfff);
             ImGui::ColorButtonPicker("Other Quests", color, ImGuiColorEditFlags_NoLabel);
@@ -1178,8 +1155,8 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             ImGui::Unindent();
         }
     }
-    ImGui::Checkbox("Show elite capture locations", &show_any_elite_capture_locations);
-    if (show_any_elite_capture_locations) {
+    ImGui::Checkbox("Show elite capture locations", &settings.show_any_elite_capture_locations);
+    if (settings.show_any_elite_capture_locations) {
         ImGui::Indent();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0.f, 0.f});
         for (size_t i = 1; i < _countof(show_elite_capture_locations); i++) {
@@ -1195,8 +1172,8 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             ImGui::PopID();
         }
         ImGui::PopStyleVar();
-        ImGui::Checkbox("Hide elites already captured", &hide_captured_elites);
-        if (hide_captured_elites) {
+        ImGui::Checkbox("Hide elites already captured", &settings.hide_captured_elites);
+        if (settings.hide_captured_elites) {
             const auto& completion = CompletionWindow::Instance().GetCharacterCompletion(GW::PlayerMgr::GetPlayerName(), false);
             if (!completion) ImGui::TextDisabled("Limited to your primary/secondary profession if Completion Window is disabled");
         }
@@ -1239,7 +1216,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
 
     hovered_quest_id = GW::Constants::QuestID::None;
     // Draw all quest markers on world map if applicable
-    if (showing_all_quests) {
+    if (settings.showing_all_quests) {
         if (const auto quest_log = GW::QuestMgr::GetQuestLog()) {
             for (auto& quest : *quest_log) {
                 if (DrawQuestMarkerOnWorldMap(&quest)) {
@@ -1294,7 +1271,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             ImGui::SetTooltip("Portal");
         }
     }*/
-    if (show_lines_on_world_map) {
+    if (settings.show_lines_on_world_map) {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();
         const auto map_id = GW::Map::GetMapID();
         GW::Vec2f line_start;
@@ -1314,7 +1291,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             draw_list->AddLine(line_start, line_end, line->color);
         }
     }
-    if (show_any_elite_capture_locations) {
+    if (settings.show_any_elite_capture_locations) {
         const auto rect = draw_list->GetClipRectMax();
         const auto text = "Elite capture locations extracted from MappingOut v4.0.0 by Aylee Sedai";
         draw_list->AddText({16.f, rect.y - 28.f}, ImGui::GetColorU32(ImGuiCol_TextDisabled), text);

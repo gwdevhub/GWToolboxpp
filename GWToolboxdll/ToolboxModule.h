@@ -7,6 +7,7 @@
 using SectionDrawCallback = std::function<void(const std::string& section, bool is_showing)>;
 class ToolboxModule;
 class ToolboxIni;
+class SettingsDoc;
 struct IDirect3DDevice9;
 
 struct SectionDrawCallbackInfo {
@@ -82,11 +83,11 @@ public:
     // This is provided (and called), but use ImGui::GetIO() during update/render if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
-    // Load what is needed from ini
-    virtual void LoadSettings(ToolboxIni*) { }
+    // Load registered settings from the JSON doc, falling back to the legacy ini for missing keys
+    virtual void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy);
 
-    // Save what is needed to ini
-    virtual void SaveSettings(ToolboxIni*) { }
+    // Save registered settings to the JSON doc
+    virtual void SaveSettings(SettingsDoc& doc);
 
     // Draw settings interface. Will be called if the setting panel is visible, calls DrawSettingsInternal()
     //virtual void DrawSettings();

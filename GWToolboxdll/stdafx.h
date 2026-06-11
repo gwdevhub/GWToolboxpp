@@ -86,6 +86,8 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx9.h"
 
+#include <Utils/SettingsRegistry.h>
+
 #pragma warning(pop)
 
 #pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union

@@ -4,6 +4,7 @@
 #include <chrono>
 
 #include <ToolboxWidget.h>
+#include <Utils/FontLoader.h>
 
 class TimerWidget : public ToolboxWidget {
     ~TimerWidget() override = default;
@@ -18,10 +19,30 @@ public:
     [[nodiscard]] const char* Name() const override { return "Timer"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
+    struct Settings {
+        bool hide_in_outpost = false;
+        bool show_deep_timer = true;
+        bool show_urgoz_timer = true;
+        bool show_doa_timer = true;
+        bool show_dhuum_timer = true;
+        bool show_dungeon_traps_timer = true;
+        bool show_spirit_timers = true;
+        float font_size = static_cast<float>(FontLoader::FontSize::widget_large);
+        float font_size_extra_timers = static_cast<float>(FontLoader::FontSize::widget_label);
+        bool use_instance_timer = false;
+        bool never_reset = false;
+        bool stop_at_objective_completion = true;
+        bool also_show_instance_timer = false;
+        int show_decimals = 1;
+        bool click_to_print_time = false;
+        bool print_time_zoning = false;
+        bool print_time_objective = true;
+    };
+
     void Initialize() override;
     void Terminate() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     [[nodiscard]] ImGuiWindowFlags GetWinFlags(ImGuiWindowFlags flags = 0, bool noinput_if_frozen = true) const override;
 

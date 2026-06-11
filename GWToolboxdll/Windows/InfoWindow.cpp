@@ -79,16 +79,7 @@ namespace {
     uint32_t quoted_item_id = 0;
     GW::Constants::SkillID last_hovered_skill_id = static_cast<GW::Constants::SkillID>(0);
 
-    bool show_widgets = true;
-    bool show_open_chest = true;
-    bool show_player = true;
-    bool show_target = true;
-    bool show_map = true;
-    bool show_dialog = true;
-    bool show_item = true;
-    bool show_mobcount = true;
-    bool show_quest = true;
-    bool show_resignlog = true;
+    InfoWindow::Settings settings;
 
     GW::HookEntry MessageCore_Entry;
     GW::HookEntry InstanceLoadFile_Entry;
@@ -1022,6 +1013,7 @@ void InfoWindow::SignalTerminate() {
 void InfoWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     ui_message_packets_recorded = CircularBuffer<UIMessagePacket>(512);
     event_message_packets_recorded = CircularBuffer<EventPacket>(512);
@@ -1031,6 +1023,18 @@ void InfoWindow::Initialize()
                                                                             quoted_item_id = packet->itemid;
                                                                         });
     RegisterUIMessageCallback(&InstanceLoadFile_Entry, GW::UI::UIMessage::kLoadMapContext, OnPostUIMessage, 0x8000);
+}
+
+void InfoWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void InfoWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void InfoWindow::Draw(IDirect3DDevice9*)
@@ -1046,7 +1050,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
 
-        if (show_widgets) {
+        if (settings.show_widgets) {
             const auto& widgets = GWToolbox::GetWidgets();
 
             const unsigned cols = static_cast<unsigned>(ceil(ImGui::GetWindowSize().x / 200.f));
@@ -1065,7 +1069,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::PopID();
         }
 
-        if (show_open_chest) {
+        if (settings.show_open_chest) {
             if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
                 GW::GameThread::Enqueue([] {
                     GW::Items::OpenXunlaiWindow();
@@ -1081,28 +1085,28 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                 InfoField("Yaw/Pitch##cam_angle", "%.2f, %.2f", cam->GetCurrentYaw(), cam->pitch);
             }
         }
-        if (show_player && ImGui::CollapsingHeader("Player")) {
+        if (settings.show_player && ImGui::CollapsingHeader("Player")) {
             ImGui::PushID("player_info");
             InfoField("Is Typing?", "%s", GW::Chat::GetIsTyping() ? "Yes" : "No");
             DrawAgentInfo(GW::Agents::GetObservingAgent());
             ImGui::PopID();
         }
-        if (show_target && ImGui::CollapsingHeader("Target")) {
+        if (settings.show_target && ImGui::CollapsingHeader("Target")) {
             ImGui::PushID("target_info");
             DrawAgentInfo(GW::Agents::GetTarget());
             ImGui::PopID();
         }
-        if (show_map && ImGui::CollapsingHeader("Map")) {
+        if (settings.show_map && ImGui::CollapsingHeader("Map")) {
             DrawMapInfo(GW::Map::GetMapID());
         }
-        if (show_map && ImGui::CollapsingHeader("Lookup Map")) {
+        if (settings.show_map && ImGui::CollapsingHeader("Lookup Map")) {
             static int map_id = 0;
             ImGui::InputInt("Map ID", &map_id, 1, 1);
             const auto current = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
             if(current)
                 DrawMapInfo(static_cast<GW::Constants::MapID>(map_id));
         }
-        if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
+        if (settings.show_dialog && ImGui::CollapsingHeader("Dialog")) {
             EncInfoField("Dialog Body", DialogModule::GetDialogBody());
             InfoField("Last Dialog", "0x%X", DialogModule::LastDialogId());
             ImGui::Text("Available NPC Dialogs:");
@@ -1142,7 +1146,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             if(current)
                 DrawSkillInfo(current, &skill_name, true);
         }
-        if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
+        if (settings.show_item && ImGui::CollapsingHeader("Hovered Item")) {
             static GuiUtils::EncString item_name;
             ImGui::PushID("hovered_item");
             const GW::Item* current = GW::Items::GetHoveredItem();
@@ -1152,12 +1156,12 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             DrawItemInfo(GW::Items::GetItemById(last_hovered_item_id), &item_name, true);
             ImGui::PopID();
         }
-        if (show_item && ImGui::CollapsingHeader("Item")) {
+        if (settings.show_item && ImGui::CollapsingHeader("Item")) {
             ImGui::Text("First item in inventory");
             static GuiUtils::EncString item_name;
             DrawItemInfo(GW::Items::GetItemBySlot(GW::Items::GetBag(GW::Constants::Bag::Backpack), 1), &item_name);
         }
-        if (show_quest && ImGui::CollapsingHeader("Quest")) {
+        if (settings.show_quest && ImGui::CollapsingHeader("Quest")) {
             const GW::Quest* q = GW::QuestMgr::GetActiveQuest();
             if (q) {
                 ImGui::Text("ID: 0x%X", q->quest_id);
@@ -1189,7 +1193,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             }
 #endif
         }
-        if (show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
+        if (settings.show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
             constexpr float sqr_soul_range = 1400.0f * 1400.0f;
             int soul_count = 0;
             int cast_count = 0;
@@ -1234,7 +1238,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::Text("%d foes in spirit range", spirit_count);
             ImGui::Text("%d foes in compass range", compass_count);
         }
-        if (show_resignlog 
+        if (settings.show_resignlog 
             && ImGui::CollapsingHeader("Resign Log") 
             && GWToolbox::IsModuleEnabled("Resign Log")) {
             DrawResignlog();
@@ -1252,54 +1256,25 @@ void InfoWindow::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::StartSpacedElements(250.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show widget toggles", &show_widgets);
+    ImGui::Checkbox("Show widget toggles", &settings.show_widgets);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show 'Open Xunlai Chest' button", &show_open_chest);
+    ImGui::Checkbox("Show 'Open Xunlai Chest' button", &settings.show_open_chest);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Player", &show_player);
+    ImGui::Checkbox("Show Player", &settings.show_player);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Target", &show_target);
+    ImGui::Checkbox("Show Target", &settings.show_target);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Map", &show_map);
+    ImGui::Checkbox("Show Map", &settings.show_map);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Dialog", &show_dialog);
+    ImGui::Checkbox("Show Dialog", &settings.show_dialog);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Item", &show_item);
+    ImGui::Checkbox("Show Item", &settings.show_item);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Quest", &show_quest);
+    ImGui::Checkbox("Show Quest", &settings.show_quest);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Enemy Count", &show_mobcount);
+    ImGui::Checkbox("Show Enemy Count", &settings.show_mobcount);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Resign Log", &show_resignlog);
+    ImGui::Checkbox("Show Resign Log", &settings.show_resignlog);
 }
 
-void InfoWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(show_widgets);
-    LOAD_BOOL(show_open_chest);
-    LOAD_BOOL(show_player);
-    LOAD_BOOL(show_target);
-    LOAD_BOOL(show_map);
-    LOAD_BOOL(show_dialog);
-    LOAD_BOOL(show_item);
-    LOAD_BOOL(show_quest);
-    LOAD_BOOL(show_mobcount);
-    LOAD_BOOL(show_resignlog);
-}
-
-void InfoWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(show_widgets);
-    SAVE_BOOL(show_open_chest);
-    SAVE_BOOL(show_player);
-    SAVE_BOOL(show_target);
-    SAVE_BOOL(show_map);
-    SAVE_BOOL(show_dialog);
-    SAVE_BOOL(show_item);
-    SAVE_BOOL(show_quest);
-    SAVE_BOOL(show_mobcount);
-    SAVE_BOOL(show_resignlog);
-}
 

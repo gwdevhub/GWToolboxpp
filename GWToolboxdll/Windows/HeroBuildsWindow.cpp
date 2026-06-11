@@ -30,7 +30,8 @@
 #include <Utils/TeamBuildEncoder.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
-constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini";
+constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini"; // legacy, read-only fallback
+constexpr const wchar_t* JSON_FILENAME = L"herobuilds.json";
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
@@ -41,7 +42,7 @@ namespace {
     // Entries are removed when their window is closed and no other owner holds the shared_ptr.
     std::vector<std::shared_ptr<TeamBuild>> detached_pool{};
 
-    ToolboxIni* inifile = nullptr;
+    HeroBuildsWindow::Settings settings;
 
     // ----------------------------------------------------------------
     // Hero build group ordering
@@ -262,6 +263,7 @@ GW::HeroPartyMember* HeroBuildsWindow::GetPartyHeroByID(const GW::Constants::Her
 void HeroBuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     skill_toggle_sprite = GwDatTextureModule::LoadTextureFromFileId(0x268f6);
     TeamBuild::SetSkillToggleSprite(skill_toggle_sprite);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
@@ -291,7 +293,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             if (player_profession != GW::Constants::Profession::None) {
                 char filter_label[64];
                 snprintf(filter_label, sizeof(filter_label), "Filter by %s", ToolboxUtils::GetProfessionName(player_profession)->string().c_str());
-                ImGui::Checkbox(filter_label, &filter_by_profession);
+                ImGui::Checkbox(filter_label, &settings.filter_by_profession);
             }
             const float btn_width = 60.0f * ImGui::FontScale();
             const float& item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
@@ -299,7 +301,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             // Collect filtered builds, preserving order
             std::vector<TeamBuild*> filtered;
             for (TeamBuild& tbuild : teambuilds) {
-                if (filter_by_profession && player_profession != GW::Constants::Profession::None) {
+                if (settings.filter_by_profession && player_profession != GW::Constants::Profession::None) {
                     if (!tbuild.builds.empty()) {
                         const auto& player_code = tbuild.builds[0].code;
                         if (!player_code.empty()) {
@@ -355,7 +357,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 ImGui::PushID(tbuild.ui_id.c_str());
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
                 if (ImGui::Button(tbuild.name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - item_spacing - btn_width, 0))) {
-                    if (one_teambuild_at_a_time && !tbuild.edit_open) {
+                    if (settings.one_teambuild_at_a_time && !tbuild.edit_open) {
                         for (auto& tb : teambuilds) {
                             tb.edit_open = false;
                         }
@@ -485,12 +487,9 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 
 HeroBuildsWindow::HeroBuildsWindow()
 {
-    inifile = new ToolboxIni(false, false, false);
     show_menubutton = can_show_in_main_window;
 }
-HeroBuildsWindow::~HeroBuildsWindow() {
-    delete inifile;
-}
+HeroBuildsWindow::~HeroBuildsWindow() = default;
 
 const char* HeroBuildsWindow::BuildName(const size_t idx) const
 {
@@ -510,7 +509,7 @@ void HeroBuildsWindow::Update(float)
 {
     const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
     if (instance_type != last_instance_type) {
-        if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
+        if (settings.hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
             for (auto& hb : teambuilds) hb.edit_open = false;
             visible = false;
         }
@@ -587,27 +586,23 @@ void HeroBuildsWindow::DrawHelp()
     ImGui::TreePop();
 }
 
-void HeroBuildsWindow::LoadSettings(ToolboxIni* ini)
+void HeroBuildsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(hide_when_entering_explorable);
-    LOAD_BOOL(one_teambuild_at_a_time);
-    LOAD_BOOL(filter_by_profession);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     LoadFromFile();
 }
 
 void HeroBuildsWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Hide Hero Build windows when entering explorable area", &hide_when_entering_explorable);
-    ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
+    ImGui::Checkbox("Hide Hero Build windows when entering explorable area", &settings.hide_when_entering_explorable);
+    ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &settings.one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
 }
 
-void HeroBuildsWindow::SaveSettings(ToolboxIni* ini)
+void HeroBuildsWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(hide_when_entering_explorable);
-    SAVE_BOOL(one_teambuild_at_a_time);
-    SAVE_BOOL(filter_by_profession);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
     SaveToFile();
 }
 
@@ -616,75 +611,113 @@ void HeroBuildsWindow::LoadFromFile()
     teambuilds.clear();
     hero_build_groups.clear();
 
-    inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
-
-    TNamesDepend entries;
-    inifile->GetAllSections(entries);
-    for (const auto& entry : entries) {
-        const char* section = entry.pItem;
-
-        // herobuildgroup sections carry sort_order metadata for named groups.
-        // They may appear before or after the builds that reference them.
-        if (strncmp(section, "herobuildgroup", 14) == 0) {
-            const char* name = inifile->GetValue(section, "name", "");
-            if (!*name) continue;
-            auto& grp = hero_build_groups[name];
-            grp.name = name;
-            grp.sort_order = static_cast<size_t>(inifile->GetLongValue(section, "sort_order", static_cast<long>(grp.sort_order)));
-            continue;
+    const auto json_path = Resources::GetSettingFile(JSON_FILENAME);
+    if (std::filesystem::exists(json_path)) {
+        std::string buffer;
+        HeroBuildsFile file;
+        if (!Resources::ReadFile(json_path, buffer) || glz::read<glz::opts{.error_on_unknown_keys = false}>(file, buffer)) {
+            Log::Warning("Failed to read %ls", json_path.filename().c_str());
         }
-
-        if (strncmp(section, "builds", 6) != 0) continue;
-
-        const char* saved_ui_id = inifile->GetValue(section, "uiid", "");
-        TeamBuild tb(inifile->GetValue(section, "buildname", ""), saved_ui_id);
-        tb.has_hero_slots = true;
-        tb.mode = inifile->GetLongValue(section, "mode", false);
-        tb.group = inifile->GetValue(section, "group", "");
-
-        // Create the group with a provisional sort_order if it hasn't been seen yet.
-        // An explicit herobuildgroup section (processed above or below) will overwrite it.
-        if (!tb.group.empty()) {
-            UpsertGroup(tb.group);
-        }
-
-        for (auto i = 0; i < 8; i++) {
-            constexpr size_t buffer_size = 16;
-            char namekey[buffer_size];
-            char templatekey[buffer_size];
-            char heroidkey[buffer_size];
-            char heroindexkey[buffer_size];
-            char showpanelkey[buffer_size];
-            char behaviorkey[buffer_size];
-            char dskillskey[buffer_size];
-            snprintf(namekey, buffer_size, "name%d", i);
-            snprintf(templatekey, buffer_size, "template%d", i);
-            snprintf(heroidkey, buffer_size, "heroid%d", i);
-            snprintf(heroindexkey, buffer_size, "heroindex%d", i);
-            snprintf(showpanelkey, buffer_size, "panel%d", i);
-            snprintf(behaviorkey, buffer_size, "behavior%d", i);
-            snprintf(dskillskey, buffer_size, "dskills%d", i);
-            const char* nameval = inifile->GetValue(section, namekey, "");
-            const char* templateval = inifile->GetValue(section, templatekey, "");
-            // Try new heroid key first; fall back to old heroindex key for backward compat
-            HeroID hero_id = HeroID::NoHero;
-            const long saved_hero_id = inifile->GetLongValue(section, heroidkey, -1);
-            if (saved_hero_id >= 0) {
-                hero_id = static_cast<HeroID>(saved_hero_id);
+        else {
+            for (const auto& group : file.groups) {
+                if (group.name.empty()) continue;
+                auto& grp = hero_build_groups[group.name];
+                grp.name = group.name;
+                grp.sort_order = group.sort_order;
             }
-            else {
-                const long hero_index = inifile->GetLongValue(section, heroindexkey, -1);
-                if (hero_index > 0 && hero_index < static_cast<long>(HeroIndexToID.size())) {
-                    hero_id = HeroIndexToID.at(hero_index);
+            for (const auto& entry : file.teambuilds) {
+                TeamBuild tb(entry.name, entry.ui_id);
+                tb.has_hero_slots = true;
+                tb.mode = entry.mode;
+                tb.group = entry.group;
+                // Groups only referenced by a build get a provisional first-seen sort_order.
+                if (!tb.group.empty()) {
+                    UpsertGroup(tb.group);
                 }
+                for (const auto& build : entry.builds) {
+                    tb.builds.push_back(Build(build.name, build.code, build.hero_id, build.show_panel ? 1 : 0, build.behavior, build.disabled_skills));
+                }
+                // The legacy loader always produced 8 slots (player + 7 heroes).
+                while (tb.builds.size() < 8) {
+                    tb.builds.emplace_back();
+                }
+                teambuilds.push_back(std::move(tb));
             }
-            const auto show_panel = inifile->GetLongValue(section, showpanelkey, 0);
-            const uint32_t behavior = static_cast<uint32_t>(inifile->GetLongValue(section, behaviorkey, 1));
-            const uint8_t disabled_skills = static_cast<uint8_t>(inifile->GetLongValue(section, dskillskey, 0));
-            tb.builds.push_back(Build(nameval, templateval, hero_id, show_panel == 1 ? 1 : 0, behavior, disabled_skills));
         }
+    }
+    else {
+        // Legacy herobuilds.ini parser; only used when herobuilds.json doesn't exist yet.
+        ToolboxIni inifile(false, false, false);
+        inifile.LoadFile(Resources::GetLegacySettingFile(INI_FILENAME).c_str());
 
-        teambuilds.push_back(std::move(tb));
+        TNamesDepend entries;
+        inifile.GetAllSections(entries);
+        for (const auto& entry : entries) {
+            const char* section = entry.pItem;
+
+            // herobuildgroup sections carry sort_order metadata for named groups.
+            // They may appear before or after the builds that reference them.
+            if (strncmp(section, "herobuildgroup", 14) == 0) {
+                const char* name = inifile.GetValue(section, "name", "");
+                if (!*name) continue;
+                auto& grp = hero_build_groups[name];
+                grp.name = name;
+                grp.sort_order = static_cast<size_t>(inifile.GetLongValue(section, "sort_order", static_cast<long>(grp.sort_order)));
+                continue;
+            }
+
+            if (strncmp(section, "builds", 6) != 0) continue;
+
+            const char* saved_ui_id = inifile.GetValue(section, "uiid", "");
+            TeamBuild tb(inifile.GetValue(section, "buildname", ""), saved_ui_id);
+            tb.has_hero_slots = true;
+            tb.mode = inifile.GetLongValue(section, "mode", false);
+            tb.group = inifile.GetValue(section, "group", "");
+
+            // Create the group with a provisional sort_order if it hasn't been seen yet.
+            // An explicit herobuildgroup section (processed above or below) will overwrite it.
+            if (!tb.group.empty()) {
+                UpsertGroup(tb.group);
+            }
+
+            for (auto i = 0; i < 8; i++) {
+                constexpr size_t buffer_size = 16;
+                char namekey[buffer_size];
+                char templatekey[buffer_size];
+                char heroidkey[buffer_size];
+                char heroindexkey[buffer_size];
+                char showpanelkey[buffer_size];
+                char behaviorkey[buffer_size];
+                char dskillskey[buffer_size];
+                snprintf(namekey, buffer_size, "name%d", i);
+                snprintf(templatekey, buffer_size, "template%d", i);
+                snprintf(heroidkey, buffer_size, "heroid%d", i);
+                snprintf(heroindexkey, buffer_size, "heroindex%d", i);
+                snprintf(showpanelkey, buffer_size, "panel%d", i);
+                snprintf(behaviorkey, buffer_size, "behavior%d", i);
+                snprintf(dskillskey, buffer_size, "dskills%d", i);
+                const char* nameval = inifile.GetValue(section, namekey, "");
+                const char* templateval = inifile.GetValue(section, templatekey, "");
+                // Try new heroid key first; fall back to old heroindex key for backward compat
+                HeroID hero_id = HeroID::NoHero;
+                const long saved_hero_id = inifile.GetLongValue(section, heroidkey, -1);
+                if (saved_hero_id >= 0) {
+                    hero_id = static_cast<HeroID>(saved_hero_id);
+                }
+                else {
+                    const long hero_index = inifile.GetLongValue(section, heroindexkey, -1);
+                    if (hero_index > 0 && hero_index < static_cast<long>(HeroIndexToID.size())) {
+                        hero_id = HeroIndexToID.at(hero_index);
+                    }
+                }
+                const auto show_panel = inifile.GetLongValue(section, showpanelkey, 0);
+                const uint32_t behavior = static_cast<uint32_t>(inifile.GetLongValue(section, behaviorkey, 1));
+                const uint8_t disabled_skills = static_cast<uint8_t>(inifile.GetLongValue(section, dskillskey, 0));
+                tb.builds.push_back(Build(nameval, templateval, hero_id, show_panel == 1 ? 1 : 0, behavior, disabled_skills));
+            }
+
+            teambuilds.push_back(std::move(tb));
+        }
     }
 
     // Sort so that builds belonging to the same group are contiguous and groups
@@ -704,39 +737,22 @@ void HeroBuildsWindow::LoadFromFile()
 
 void HeroBuildsWindow::SaveToFile() const
 {
-    constexpr size_t buffer_size = 16;
-    inifile->Reset();
+    HeroBuildsFile file;
 
-    for (size_t i = 0; i < teambuilds.size(); i++) {
-        const TeamBuild& tbuild = teambuilds[i];
-        char section[buffer_size];
-        snprintf(section, buffer_size, "builds%03d", i);
-        inifile->SetValue(section, "buildname", tbuild.name.c_str());
-        inifile->SetValue(section, "uiid", tbuild.ui_id.c_str());
-        inifile->SetLongValue(section, "mode", tbuild.mode);
-        if (!tbuild.group.empty())
-            inifile->SetValue(section, "group", tbuild.group.c_str());
-        for (size_t j = 0; j < tbuild.builds.size(); ++j) {
-            const Build& build = tbuild.builds[j];
-
-            char namekey[buffer_size];
-            char templatekey[buffer_size];
-            char heroidkey[buffer_size];
-            char showpanelkey[buffer_size];
-            char behaviorkey[buffer_size];
-            char dskillskey[buffer_size];
-            snprintf(namekey, buffer_size, "name%d", j);
-            snprintf(templatekey, buffer_size, "template%d", j);
-            snprintf(heroidkey, buffer_size, "heroid%d", j);
-            snprintf(showpanelkey, buffer_size, "panel%d", j);
-            snprintf(behaviorkey, buffer_size, "behavior%d", j);
-            snprintf(dskillskey, buffer_size, "dskills%d", j);
-            inifile->SetValue(section, namekey, build.name.c_str());
-            inifile->SetValue(section, templatekey, build.code.c_str());
-            inifile->SetLongValue(section, heroidkey, static_cast<long>(build.hero_id));
-            inifile->SetLongValue(section, showpanelkey, build.show_panel ? 1 : 0);
-            inifile->SetLongValue(section, behaviorkey, build.behavior);
-            inifile->SetLongValue(section, dskillskey, build.disabled_skills);
+    for (const TeamBuild& tbuild : teambuilds) {
+        auto& entry = file.teambuilds.emplace_back();
+        entry.name = tbuild.name;
+        entry.ui_id = tbuild.ui_id;
+        entry.mode = tbuild.mode;
+        entry.group = tbuild.group;
+        for (const Build& build : tbuild.builds) {
+            auto& build_entry = entry.builds.emplace_back();
+            build_entry.name = build.name;
+            build_entry.code = build.code;
+            build_entry.hero_id = build.hero_id;
+            build_entry.show_panel = build.show_panel;
+            build_entry.behavior = build.behavior;
+            build_entry.disabled_skills = build.disabled_skills;
         }
     }
 
@@ -757,13 +773,12 @@ void HeroBuildsWindow::SaveToFile() const
         return a.second < b.second;
     });
     for (size_t gi = 0; gi < sorted_groups.size(); gi++) {
-        char grp_section[32];
-        snprintf(grp_section, sizeof(grp_section), "herobuildgroup%03zu", gi);
-        inifile->SetValue(grp_section, "name", sorted_groups[gi].first.c_str());
-        inifile->SetLongValue(grp_section, "sort_order", static_cast<long>(gi));
+        file.groups.push_back({sorted_groups[gi].first, gi});
     }
 
-    ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
+    std::string buffer;
+    ASSERT(!glz::write<glz::opts{.prettify = true}>(file, buffer));
+    ASSERT(Resources::WriteFile(Resources::GetSettingFile(JSON_FILENAME), buffer));
 }
 
 TeamBuild* HeroBuildsWindow::GetTeambuildByName(const std::string& build_name_search)

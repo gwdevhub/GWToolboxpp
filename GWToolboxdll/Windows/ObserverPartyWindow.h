@@ -17,6 +17,8 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 
     void DrawBlankPartyMember(float& offset) const;
     void DrawPartyMember(float& offset, ObserverModule::ObservableAgent& agent, const ObserverModule::ObservableGuild* guild,
@@ -24,42 +26,37 @@ public:
     void DrawParty(float& offset, const ObserverModule::ObservableParty& party) const;
     void DrawHeaders(size_t party_count) const;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
+
+    struct Settings {
+        bool show_player_number = true;
+        bool show_profession = true;
+        bool show_player_guild_tag = true;
+        bool show_player_guild_rating = false;
+        bool show_player_guild_rank = false;
+        bool show_kills = true;
+        bool show_deaths = true;
+        bool show_kdr = true;
+        bool show_cancels = true;
+        bool show_interrupts = true;
+        bool show_knockdowns = true;
+        bool show_received_party_attacks = true;
+        bool show_dealt_party_attacks = true;
+        bool show_received_party_crits = true;
+        bool show_dealt_party_crits = true;
+        bool show_received_party_skills = true;
+        bool show_dealt_party_skills = true;
+        bool show_skills_used = true;
+        bool show_damage_dealt = true;
+        bool show_damage_received = true;
+        bool show_healing_dealt = true;
+        bool show_healing_received = true;
+        bool show_max_hp = false;
+    };
 
 protected:
     float text_long = 0;
     float text_medium = 0;
     float text_short = 0;
     float text_tiny = 0;
-
-
-    bool show_player_number = true;
-    bool show_profession = true;
-    bool show_player_guild_tag = true;
-    bool show_player_guild_rating = false;
-    bool show_player_guild_rank = false;
-    bool show_kills = true;
-    bool show_deaths = true;
-    bool show_kdr = true;
-    bool show_cancels = true;
-    bool show_interrupts = true;
-    bool show_knockdowns = true;
-    bool show_received_party_attacks = true;
-    bool show_dealt_party_attacks = true;
-    bool show_received_party_crits = true;
-    bool show_dealt_party_crits = true;
-    bool show_received_party_skills = true;
-    bool show_dealt_party_skills = true;
-    bool show_skills_used = true;
-    bool show_damage_dealt = true;
-    bool show_damage_received = true;
-    bool show_healing_dealt = true;
-    bool show_healing_received = true;
-    bool show_max_hp = false;
-
-private:
-    // ini
-    ToolboxIni* inifile = nullptr;
 };

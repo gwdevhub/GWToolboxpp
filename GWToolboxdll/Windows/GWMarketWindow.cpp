@@ -430,8 +430,7 @@ namespace {
     };
 
     // Settings
-    bool auto_refresh = true;
-    int refresh_interval = 60;
+    GWMarketWindow::Settings settings;
 
     // WebSocket
     ThreadedWebSocket market_ws;
@@ -1660,6 +1659,7 @@ namespace {
 void GWMarketWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     InitWebSocket();
 
     const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kMapLoaded};
@@ -1698,9 +1698,9 @@ void GWMarketWindow::Update(float delta)
     }
 
     refresh_timer += delta;
-    if (refresh_timer >= refresh_interval) {
+    if (refresh_timer >= settings.refresh_interval) {
         refresh_timer = 0.0f;
-        if (auto_refresh) Refresh();
+        if (settings.auto_refresh) Refresh();
     }
 }
 
@@ -1733,15 +1733,23 @@ void GWMarketWindow::SearchItem(const std::string& item_name)
     }
 }
 
-void GWMarketWindow::LoadSettings(ToolboxIni* ini)
+void GWMarketWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(auto_refresh);
-    refresh_interval = static_cast<int>(ini->GetLongValue(Name(), "refresh_interval", 60));
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    // Load favorite items
     favorite_items.clear();
-    const char* favorites_str = ini->GetValue(Name(), "favorite_items", "");
+    std::vector<std::string> favorites_list;
+    if (doc.Get(Name(), "favorite_items", favorites_list)) {
+        for (const auto& item : favorites_list) {
+            if (!item.empty()) {
+                ToggleFavourite(item, true);
+            }
+        }
+        return;
+    }
+    // Legacy INI fallback: pipe-separated string
+    const char* favorites_str = legacy->GetValue(Name(), "favorite_items", "");
     if (favorites_str && strlen(favorites_str) > 0) {
         std::string favorites(favorites_str);
         size_t start = 0;
@@ -1763,28 +1771,24 @@ void GWMarketWindow::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void GWMarketWindow::SaveSettings(ToolboxIni* ini)
+void GWMarketWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(auto_refresh);
-    ini->SetLongValue(Name(), "refresh_interval", refresh_interval);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    // Save favorite items as pipe-separated string
-    std::string favorites_str;
+    std::vector<std::string> favorites_list;
+    favorites_list.reserve(favorite_items.size());
     for (const auto& item : favorite_items) {
-        if (!favorites_str.empty()) {
-            favorites_str += "|";
-        }
-        favorites_str += item.first;
+        favorites_list.push_back(item.first);
     }
-    ini->SetValue(Name(), "favorite_items", favorites_str.c_str());
+    doc.Set(Name(), "favorite_items", favorites_list);
 }
 
 void GWMarketWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Auto-refresh", &auto_refresh);
-    if (auto_refresh) {
-        ImGui::SliderInt("Interval (sec)", &refresh_interval, 30, 300);
+    ImGui::Checkbox("Auto-refresh", &settings.auto_refresh);
+    if (settings.auto_refresh) {
+        ImGui::SliderInt("Interval (sec)", &settings.refresh_interval, 30, 300);
     }
 
     ImGui::Separator();

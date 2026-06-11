@@ -68,6 +68,21 @@ namespace {
 
     bool profiling_enabled = false;
 
+    utf8::string GetImguiIniPath()
+    {
+        const auto path = Resources::GetSettingFile(L"interface.ini");
+        std::error_code ec;
+        if (!std::filesystem::exists(path, ec)) {
+            // Carry the window layout over from the pre-configs/default location
+            const auto legacy = Resources::GetLegacySettingFile(L"interface.ini");
+            if (std::filesystem::exists(legacy, ec)) {
+                Resources::EnsureFolderExists(path.parent_path());
+                std::filesystem::copy_file(legacy, path, ec);
+            }
+        }
+        return Unicode16ToUtf8(path.c_str());
+    }
+
     uint64_t QpcToMicroseconds(LONGLONG ticks)
     {
         static LARGE_INTEGER freq = [] {
@@ -364,7 +379,7 @@ namespace {
             if (enable) {
                 return true;
             }
-            m.SaveSettings(GWToolbox::OpenSettingsFile());
+            m.SaveSettings(*GWToolbox::GetSettingsDoc());
             modules_terminating.push_back(&m);
             m.SignalTerminate();
             vec.erase(found);
@@ -381,7 +396,7 @@ namespace {
         vec.push_back(&m);
         Log::Log("ToggleTBModule: Initializing %s...", m.Name());
         m.Initialize();
-        m.LoadSettings(GWToolbox::OpenSettingsFile());
+        m.LoadSettings(*GWToolbox::GetSettingsDoc(), GWToolbox::OpenSettingsFile());
         Log::Log("ToggleTBModule: Initialised %s !!", m.Name());
         ReorderModules(vec);
         return true; // Added successfully
@@ -807,23 +822,24 @@ void GWToolbox::Initialize(LPVOID module)
 std::filesystem::path GWToolbox::LoadSettings()
 {
     const auto ini = OpenSettingsFile();
+    const auto doc = GetSettingsDoc();
     // Reset the flag so nested OpenSettingsFile() calls (via ToggleTBModule) don't
     // free and reallocate the ini we just loaded, causing a use-after-free.
     settings_folder_changed = false;
-    ToolboxSettings::Instance().LoadSettings(ini);
+    ToolboxSettings::Instance().LoadSettings(*doc, ini);
     ToolboxSettings::LoadModules(ini);
     if (!ini->location_on_disk.empty()) {
         for (const auto m : modules_enabled) {
-            m->LoadSettings(ini);
+            m->LoadSettings(*doc, ini);
         }
         for (const auto m : widgets_enabled) {
-            m->LoadSettings(ini);
+            m->LoadSettings(*doc, ini);
         }
         for (const auto m : windows_enabled) {
-            m->LoadSettings(ini);
+            m->LoadSettings(*doc, ini);
         }
     }
-    return ini->location_on_disk;
+    return doc->location_on_disk;
 }
 
 bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
@@ -831,7 +847,7 @@ bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
     static auto last_path = std::filesystem::path{};
     if (last_path != path) {
         if (Resources::SetSettingsFolder(path)) {
-            imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
+            imgui_inifile = GetImguiIniPath();
             settings_folder_changed = true;
             imgui_inifile_changed = true;
             last_path = path;
@@ -864,7 +880,7 @@ bool GWToolbox::SettingsFolderChanged()
 ToolboxIni* GWToolbox::OpenSettingsFile(bool fresh)
 {
     static ToolboxIni* inifile = nullptr;
-    const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
+    const auto full_path = Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME);
     if (!SettingsFolderChanged() && inifile && !fresh) {
         return inifile;
     }
@@ -876,32 +892,59 @@ ToolboxIni* GWToolbox::OpenSettingsFile(bool fresh)
     return inifile;
 }
 
+SettingsDoc* GWToolbox::GetSettingsDoc(bool fresh)
+{
+    static SettingsDoc* doc = nullptr;
+    const auto modules_path = Resources::GetSettingFile(GWTOOLBOX_MODULES_FOLDERNAME);
+    if (!SettingsFolderChanged() && doc && !fresh) {
+        return doc;
+    }
+    auto tmp = new SettingsDoc();
+    tmp->LoadFolder(modules_path);
+    if (tmp->Empty()) {
+        // One-time seed: pre-split installs kept all sections in a single GWToolbox.json
+        auto seed_path = Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME);
+        std::error_code ec;
+        if (!std::filesystem::exists(seed_path, ec)) {
+            seed_path = Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME);
+        }
+        if (std::filesystem::exists(seed_path, ec)) {
+            tmp->LoadFile(seed_path);
+            tmp->location_on_disk = modules_path;
+        }
+    }
+    if (doc) delete doc;
+    doc = tmp;
+    return doc;
+}
+
 std::filesystem::path GWToolbox::SaveSettings()
 {
-    const auto ini = OpenSettingsFile(true);
+    const auto ini = OpenSettingsFile();
+    const auto doc = GetSettingsDoc(true);
     for (const auto m : modules_enabled) {
-        m->SaveSettings(ini);
+        m->SaveSettings(*doc);
     }
     for (const auto m : widgets_enabled) {
-        m->SaveSettings(ini);
+        m->SaveSettings(*doc);
     }
     for (const auto m : windows_enabled) {
-        m->SaveSettings(ini);
+        m->SaveSettings(*doc);
     }
     ToolboxSettings::LoadModules(ini);
-    ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
+    ASSERT(doc->SaveFolder());
     if (ImGui::GetCurrentContext()) {
         auto& io = ImGui::GetIO();
         if (io.IniFilename) {
             ImGui::SaveIniSettingsToDisk(io.IniFilename);
         }
     }
-    const auto dir = ini->location_on_disk.parent_path();
+    const auto dir = doc->location_on_disk.parent_path();
     const auto dirstr = dir.wstring();
     const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
     Log::LogW(L"Toolbox settings saved to %s", printable.c_str());
     settings_folder_changed = false;
-    return ini->location_on_disk;
+    return doc->location_on_disk;
 }
 
 void GWToolbox::ForceTerminate(bool detach_wndproc_handler)
@@ -1136,7 +1179,7 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device)
 {
     ASSERT(gwtoolbox_state == GWToolboxState::DrawInitialising);
 
-    if (!imgui_inifile.bytes) imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
+    if (!imgui_inifile.bytes) imgui_inifile = GetImguiIniPath();
 
     // Attach WndProc in the render loop to make sure the window is loaded and ready
     ASSERT(AttachWndProcHandler());
@@ -1161,7 +1204,7 @@ void GWToolbox::UpdateInitialising(float)
     Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
     Resources::EnsureFolderExists(Resources::GetPath(L"img"));
     Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
-    Resources::EnsureFolderExists(Resources::GetPath(L"configs"));
+    Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
 
     // if the file does not exist we'll load module settings once downloaded, but we need the file open
     // in order to read defaults

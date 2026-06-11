@@ -35,15 +35,8 @@ namespace {
 
     bool builds_changed = false;
 
-    bool order_by_name = false;
-    bool order_by_index = !order_by_name;
-    bool auto_load_pcons = true;
-    bool auto_send_pcons = true;
-    bool hide_when_entering_explorable = false;
-    bool one_teambuild_at_a_time = false;
-
-
-    ToolboxIni* inifile = nullptr;
+    BuildsWindow::Settings settings;
+    bool order_by_index = !settings.order_by_name;
 
     // Preferred skill orders
     bool preferred_skill_orders_visible = false;
@@ -53,7 +46,8 @@ namespace {
 
     bool order_by_changed = false;
 
-    constexpr auto INI_FILENAME = L"builds.ini";
+    constexpr auto INI_FILENAME = L"builds.ini"; // legacy, read-only fallback
+    constexpr auto JSON_FILENAME = L"builds.json";
     GW::HookEntry ChatCmd_HookEntry;
     GW::HookEntry OnUIMessage_HookEntry;
 
@@ -250,7 +244,7 @@ namespace {
         if (!BuildSkillTemplateString(tbuild, idx, &buf))
             return false;
         Build::EnqueueSend(buf);
-        if (auto_send_pcons)
+        if (settings.auto_send_pcons)
             SendPcons(tbuild, idx);
         return true;
     }
@@ -406,41 +400,62 @@ namespace {
     // Save toolbox builds to Guild Wars Templates directory
     bool SaveToBuildsFolder();
 
-    void LoadFromFile()
+    void LoadFromJson(const std::filesystem::path& path)
     {
-        ClearAllBuilds();
-
-        if (inifile == nullptr) {
-            inifile = new ToolboxIni(false, false, false);
+        std::string buffer;
+        BuildsWindow::BuildsFile file;
+        if (!Resources::ReadFile(path, buffer) || glz::read<glz::opts{.error_on_unknown_keys = false}>(file, buffer)) {
+            Log::Warning("Failed to read %ls", path.filename().c_str());
+            return;
         }
-        inifile->LoadFile(Resources::GetSettingFile(INI_FILENAME).c_str());
+        for (const auto& code : file.preferred_skill_orders) {
+            AddPreferredBuild(code.c_str());
+        }
+        for (const auto& entry : file.teambuilds) {
+            TeamBuild tbuild(entry.name, entry.ui_id);
+            tbuild.has_hero_slots = false;
+            tbuild.show_numbers = entry.show_numbers;
+            for (const auto& build_entry : entry.builds) {
+                Build build(build_entry.name, build_entry.code);
+                build.pcons.insert(build_entry.pcons.begin(), build_entry.pcons.end());
+                tbuild.builds.push_back(std::move(build));
+            }
+            teambuilds.push_back(std::move(tbuild));
+        }
+    }
+
+    // Legacy builds.ini parser; only used when builds.json doesn't exist yet.
+    void LoadFromIni()
+    {
+        ToolboxIni inifile(false, false, false);
+        inifile.LoadFile(Resources::GetLegacySettingFile(INI_FILENAME).c_str());
 
         TNamesDepend entries;
-        inifile->GetAllKeys("preferred_skill_orders", entries);
+        inifile.GetAllKeys("preferred_skill_orders", entries);
         for (const auto& entry : entries) {
             AddPreferredBuild(entry.pItem);
         }
 
         entries.clear();
-        inifile->GetAllSections(entries);
+        inifile.GetAllSections(entries);
         for (const auto& entry : entries) {
             if (memcmp(entry.pItem, "builds", 6) != 0) {
                 continue;
             }
             const char* section = entry.pItem;
-            const int count = inifile->GetLongValue(section, "count", 12);
-            const char* saved_ui_id = inifile->GetValue(section, "uiid", "");
-            TeamBuild tbuild(inifile->GetValue(section, "buildname", ""), saved_ui_id);
+            const int count = inifile.GetLongValue(section, "count", 12);
+            const char* saved_ui_id = inifile.GetValue(section, "uiid", "");
+            TeamBuild tbuild(inifile.GetValue(section, "buildname", ""), saved_ui_id);
             tbuild.has_hero_slots = false;
-            tbuild.show_numbers = inifile->GetBoolValue(section, "showNumbers", true);
+            tbuild.show_numbers = inifile.GetBoolValue(section, "showNumbers", true);
             char key[16];
             for (int i = 0; i < count; ++i) {
                 snprintf(key, _countof(key), "name%d", i);
-                const char* nameval = inifile->GetValue(section, key, "");
+                const char* nameval = inifile.GetValue(section, key, "");
                 snprintf(key, _countof(key), "template%d", i);
-                const char* templateval = inifile->GetValue(section, key, "");
+                const char* templateval = inifile.GetValue(section, key, "");
                 snprintf(key, _countof(key), "pcons%d", i);
-                std::string pconsval = inifile->GetValue(section, key, "");
+                std::string pconsval = inifile.GetValue(section, key, "");
 
                 Build build(nameval, templateval);
 
@@ -458,7 +473,20 @@ namespace {
             }
             teambuilds.push_back(std::move(tbuild));
         }
-        if (order_by_name) {
+    }
+
+    void LoadFromFile()
+    {
+        ClearAllBuilds();
+
+        const auto json_path = Resources::GetSettingFile(JSON_FILENAME);
+        if (std::filesystem::exists(json_path)) {
+            LoadFromJson(json_path);
+        }
+        else {
+            LoadFromIni();
+        }
+        if (settings.order_by_name) {
             std::ranges::sort(teambuilds, [](const TeamBuild& a, const TeamBuild& b) {
                 return _stricmp(a.name.c_str(), b.name.c_str()) < 0;
             });
@@ -609,48 +637,28 @@ namespace {
 
     void SaveToFile()
     {
-        if (inifile == nullptr) {
-            inifile = new ToolboxIni();
-        }
-
-        inifile->Reset();
+        BuildsWindow::BuildsFile file;
 
         for (const auto& build : preferred_skill_order_builds) {
-            inifile->SetValue("preferred_skill_orders", build.code.c_str(), build.code.c_str());
+            file.preferred_skill_orders.push_back(build.code);
         }
 
-        for (unsigned int i = 0; i < teambuilds.size(); ++i) {
-            const auto& tbuild = teambuilds[i];
-            char section[16];
-            snprintf(section, 16, "builds%03d", i);
-            inifile->SetValue(section, "buildname", tbuild.name.c_str());
-            inifile->SetValue(section, "uiid", tbuild.ui_id.c_str());
-            inifile->SetBoolValue(section, "showNumbers", tbuild.show_numbers);
-            inifile->SetLongValue(section, "count", tbuild.builds.size());
-            for (unsigned int j = 0; j < tbuild.builds.size(); ++j) {
-                const auto& build = tbuild.builds[j];
-                char namekey[16];
-                char templatekey[16];
-                snprintf(namekey, 16, "name%d", j);
-                snprintf(templatekey, 16, "template%d", j);
-                inifile->SetValue(section, namekey, build.name.c_str());
-                inifile->SetValue(section, templatekey, build.code.c_str());
-
-                if (!build.pcons.empty()) {
-                    char pconskey[16];
-                    std::string pconsval;
-                    snprintf(pconskey, 16, "pcons%d", j);
-                    size_t k = 0;
-                    for (auto& pconstr : build.pcons) {
-                        if (k) pconsval += ",";
-                        k = 1;
-                        pconsval += pconstr;
-                    }
-                    inifile->SetValue(section, pconskey, pconsval.c_str());
-                }
+        for (const auto& tbuild : teambuilds) {
+            auto& entry = file.teambuilds.emplace_back();
+            entry.name = tbuild.name;
+            entry.ui_id = tbuild.ui_id;
+            entry.show_numbers = tbuild.show_numbers;
+            for (const auto& build : tbuild.builds) {
+                auto& build_entry = entry.builds.emplace_back();
+                build_entry.name = build.name;
+                build_entry.code = build.code;
+                build_entry.pcons.assign(build.pcons.begin(), build.pcons.end());
             }
-            ASSERT(inifile->SaveFile(Resources::GetSettingFile(INI_FILENAME).c_str()) == SI_OK);
         }
+
+        std::string buffer;
+        ASSERT(!glz::write<glz::opts{.prettify = true}>(file, buffer));
+        ASSERT(Resources::WriteFile(Resources::GetSettingFile(JSON_FILENAME), buffer));
         SaveToBuildsFolder();
     }
 
@@ -741,30 +749,26 @@ void BuildsWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     ClearAllBuilds();
-    if (inifile) {
-        delete inifile;
-        inifile = nullptr;
-    }
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
 
 void BuildsWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Hide Build windows when entering explorable area", &hide_when_entering_explorable);
-    ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
-    ImGui::CheckboxWithHelp("Auto load pcons", &auto_load_pcons, "Automatically load pcons for a build when loaded onto a character");
-    ImGui::CheckboxWithHelp("Send pcons when pinging a build", &auto_send_pcons, "Automatically send a second message after the build template in team chat,\nshowing the pcons that the build uses.");
+    ImGui::Checkbox("Hide Build windows when entering explorable area", &settings.hide_when_entering_explorable);
+    ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &settings.one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
+    ImGui::CheckboxWithHelp("Auto load pcons", &settings.auto_load_pcons, "Automatically load pcons for a build when loaded onto a character");
+    ImGui::CheckboxWithHelp("Send pcons when pinging a build", &settings.auto_send_pcons, "Automatically send a second message after the build template in team chat,\nshowing the pcons that the build uses.");
     ImGui::Text("Order team builds by: ");
     ImGui::SameLine(0, -1);
     if (ImGui::Checkbox("Index", &order_by_index)) {
         order_by_changed = true;
-        order_by_name = !order_by_index;
+        settings.order_by_name = !order_by_index;
     }
     ImGui::SameLine(0, -1);
-    if (ImGui::Checkbox("Name", &order_by_name)) {
+    if (ImGui::Checkbox("Name", &settings.order_by_name)) {
         order_by_changed = true;
-        order_by_index = !order_by_name;
+        order_by_index = !settings.order_by_name;
     }
     if (ImGui::Button(ICON_FA_USER_COG " View Preferred Skill Orders")) {
         preferred_skill_orders_visible = !preferred_skill_orders_visible;
@@ -784,7 +788,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
     const GW::Constants::InstanceType instance_type = GW::Map::GetInstanceType();
 
     if (instance_type != last_instance_type) {
-        if (hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
+        if (settings.hide_when_entering_explorable && instance_type == GW::Constants::InstanceType::Explorable) {
             for (auto& hb : teambuilds) {
                 hb.edit_open = false;
             }
@@ -801,7 +805,7 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                 ImGui::PushID(tbuild.ui_id.c_str());
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.0f, 0.5f);
                 if (ImGui::Button(tbuild.name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemInnerSpacing.x - 60.0f * ImGui::FontScale(), 0))) {
-                    if (one_teambuild_at_a_time && !tbuild.edit_open) {
+                    if (settings.one_teambuild_at_a_time && !tbuild.edit_open) {
                         for (auto& tb : teambuilds) {
                             tb.edit_open = false;
                         }
@@ -871,18 +875,14 @@ void BuildsWindow::Update(const float)
     }
 }
 
-void BuildsWindow::LoadSettings(ToolboxIni* ini)
+void BuildsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(order_by_name);
-    LOAD_BOOL(auto_load_pcons);
-    LOAD_BOOL(auto_send_pcons);
-    LOAD_BOOL(hide_when_entering_explorable);
-    LOAD_BOOL(one_teambuild_at_a_time);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    order_by_index = !order_by_name;
+    order_by_index = !settings.order_by_name;
 
-    if (MoveOldBuilds(ini)) {
+    if (legacy && MoveOldBuilds(legacy)) {
         // loaded
     }
     else {
@@ -890,20 +890,17 @@ void BuildsWindow::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void BuildsWindow::SaveSettings(ToolboxIni* ini)
+void BuildsWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(order_by_name);
-    SAVE_BOOL(auto_load_pcons);
-    SAVE_BOOL(auto_send_pcons);
-    SAVE_BOOL(hide_when_entering_explorable);
-    SAVE_BOOL(one_teambuild_at_a_time);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
     SaveToFile();
 }
 
 void BuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"loadbuild", CmdLoad);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pingbuild", CmdPing);

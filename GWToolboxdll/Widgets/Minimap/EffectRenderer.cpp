@@ -150,23 +150,29 @@ void EffectRenderer::Invalidate()
     }
 }
 
-void EffectRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+void EffectRenderer::LoadSettings(const SettingsDoc& doc, const ToolboxIni* legacy, const char* section)
 {
     Invalidate();
     LoadDefaults();
     for (const auto& settings : aoe_effect_settings) {
         char color_buf[64];
         sprintf(color_buf, "color_aoe_effect_%d", settings.first);
-        settings.second->color = Colors::Load(ini, section, color_buf, settings.second->color);
+        Colors::SettingColor staged(settings.second->color);
+        if (doc.Get(section, color_buf, staged)) {
+            settings.second->color = staged.value;
+        }
+        else if (legacy) {
+            settings.second->color = Colors::Load(legacy, section, color_buf, settings.second->color);
+        }
     }
 }
 
-void EffectRenderer::SaveSettings(ToolboxIni* ini, const char* section)
+void EffectRenderer::SaveSettings(SettingsDoc& doc, const char* section)
 {
     for (const auto& settings : aoe_effect_settings) {
         char color_buf[64];
         sprintf(color_buf, "color_aoe_effect_%d", settings.first);
-        Colors::Save(ini, section, color_buf, settings.second->color);
+        doc.Set(section, color_buf, Colors::SettingColor(settings.second->color));
     }
 }
 

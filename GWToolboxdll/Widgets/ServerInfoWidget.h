@@ -44,8 +44,6 @@ public:
 
     void Initialize() override;
     void Update(float delta) override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
 
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;

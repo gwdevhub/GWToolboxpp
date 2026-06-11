@@ -24,6 +24,23 @@ public:
     // DrawSettingInternal() called via ToolboxSettings; don't draw it again
     bool HasSettings() override { return false; }
 
+    enum class ReleaseType : int {
+        Stable,
+        Beta
+    };
+    // 0=none, 1=check and warn, 2=check and ask, 3=check and do
+    enum class Mode : int {
+        DontCheckForUpdates,
+        CheckAndWarn,
+        CheckAndAsk,
+        CheckAndAutoUpdate
+    };
+
+    struct Settings {
+        Mode update_mode = Mode::CheckAndAsk;
+        ReleaseType update_release_type = ReleaseType::Stable;
+    };
+
     void RegisterSettingsContent() override
     {
         ToolboxModule::RegisterSettingsContent();
@@ -34,10 +51,11 @@ public:
 
     static const GWToolboxRelease* GetCurrentVersionInfo(GWToolboxRelease* out);
 
+    void Initialize() override;
     void Draw(IDirect3DDevice9* device) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
 
     static const std::string& GetServerVersion();

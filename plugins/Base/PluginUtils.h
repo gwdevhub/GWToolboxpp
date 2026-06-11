@@ -2,6 +2,7 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <ToolboxIni.h>
+#include <Utils/SettingsDoc.h>
 #include <glaze/glaze.hpp>
 
 namespace PluginUtils {
@@ -72,7 +73,7 @@ namespace PluginUtils {
     constexpr bool map_has_wstring_key = std::same_as<typename T::key_type, std::wstring>;
 
     template <map_type T>
-    void MapToIni(ToolboxIni* ini, const char* section, const char* name, const T& map)
+    void MapToSettings(SettingsDoc& settings, const char* section, const char* key, const T& map)
     {
         // Glaze has no wchar_t serializer; stage wstring keys through UTF-8.
         if constexpr (map_has_wstring_key<T>) {
@@ -80,23 +81,27 @@ namespace PluginUtils {
             for (const auto& [k, v] : map) {
                 staged.emplace(WStringToString(k), v);
             }
-            const auto map_str = glz::write_json(staged).value_or(std::string{});
-            ini->SetValue(section, name, map_str.c_str());
+            settings.Set(section, key, staged);
         }
         else {
-            const auto map_str = glz::write_json(map).value_or(std::string{});
-            ini->SetValue(section, name, map_str.c_str());
+            settings.Set(section, key, map);
         }
     }
 
+    // Reads a map from the JSON doc; falls back to the legacy ini value MapToIni used to write (a JSON string).
     template <map_type T>
-    T IniToMap(ToolboxIni* ini, const char* section, const char* name)
+    T SettingsToMap(const SettingsDoc& settings, const ToolboxIni* legacy_ini, const char* section, const char* key, T default_map = {})
     {
-        std::string map_str = ini->GetValue(section, name, "");
         if constexpr (map_has_wstring_key<T>) {
             std::map<std::string, typename T::mapped_type> staged;
-            if (glz::read_json(staged, map_str)) {
-                return {};
+            if (!settings.Get(section, key, staged)) {
+                if (!legacy_ini || !legacy_ini->KeyExists(section, key)) {
+                    return default_map;
+                }
+                const std::string map_str = legacy_ini->GetValue(section, key, "");
+                if (glz::read_json(staged, map_str)) {
+                    return default_map;
+                }
             }
             T out{};
             for (auto& [k, v] : staged) {
@@ -106,20 +111,18 @@ namespace PluginUtils {
         }
         else {
             T out{};
+            if (settings.Get(section, key, out)) {
+                return out;
+            }
+            if (!legacy_ini || !legacy_ini->KeyExists(section, key)) {
+                return default_map;
+            }
+            const std::string map_str = legacy_ini->GetValue(section, key, "");
             if (glz::read_json(out, map_str)) {
-                return {};
+                return default_map;
             }
             return out;
         }
-    }
-
-    template <map_type T>
-    T IniToMap(ToolboxIni* ini, const char* section, const char* name, T default_map)
-    {
-        if (!ini->KeyExists(section, name)) {
-            return std::move(default_map);
-        }
-        return IniToMap<T>(ini, section, name);
     }
 
     // Takes a wstring and translates into a string of hex values, separated by spaces

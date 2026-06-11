@@ -267,6 +267,19 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     }
 }
 
+const std::vector<std::pair<const char*, const char*>>& ToolboxSettings::GetOptionalModuleToggles()
+{
+    static std::vector<std::pair<const char*, const char*>> toggles;
+    if (toggles.empty()) {
+        toggles.reserve(optional_modules.size());
+        for (const auto& m : optional_modules) {
+            const auto desc = m.toolbox_module->Description();
+            toggles.emplace_back(m.name, desc ? desc : "");
+        }
+    }
+    return toggles;
+}
+
 void ToolboxSettings::DrawSettingsInternal()
 {
     ImGui::StartSpacedElements(300.f);
@@ -342,52 +355,58 @@ void ToolboxSettings::DrawSettingsInternal()
 
 void ToolboxSettings::DrawFreezeSetting() {}
 
-void ToolboxSettings::LoadSettings(ToolboxIni* ini)
+void ToolboxSettings::Initialize()
 {
-    ToolboxModule::LoadSettings(ini);
-    inifile = ini; // Keep this to load module info
+    // Skips ToolboxUIElement::Initialize on purpose: common UI-element fields were never persisted for this module.
+    ToolboxModule::Initialize();
+    SettingsRegistry::RegisterField(this, "clamp_windows_to_screen", &clamp_windows_to_screen);
+    SettingsRegistry::RegisterField(this, "hide_on_loading_screen", &hide_on_loading_screen);
+    SettingsRegistry::RegisterField(this, "send_anonymous_gameplay_info", &send_anonymous_gameplay_info);
+    SettingsRegistry::RegisterField(this, "show_cog_in_outpost", &show_cog_in_outpost);
+    SettingsRegistry::RegisterField(this, "show_cog_in_explorable", &show_cog_in_explorable);
+    SettingsRegistry::RegisterField(this, "show_screenshot_button_in_outpost", &show_screenshot_button_in_outpost);
+    SettingsRegistry::RegisterField(this, "show_screenshot_button_in_explorable", &show_screenshot_button_in_explorable);
+    SettingsRegistry::RegisterField(this, "show_close_in_outpost", &show_close_in_outpost);
+    SettingsRegistry::RegisterField(this, "show_close_in_explorable", &show_close_in_explorable);
+}
+
+void ToolboxSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    inifile = legacy; // Keep this to load module info
 
     move_all = false;
-    LOAD_BOOL(clamp_windows_to_screen);
-    LOAD_BOOL(hide_on_loading_screen);
-    LOAD_BOOL(send_anonymous_gameplay_info);
-    LOAD_BOOL(show_cog_in_outpost);
-    LOAD_BOOL(show_cog_in_explorable);
-    LOAD_BOOL(show_screenshot_button_in_outpost);
-    LOAD_BOOL(show_screenshot_button_in_explorable);
     // Migrate from old hide_close_in_explorable: if it was true, default both show vars to false
-    if (ini->GetBoolValue(Name(), "hide_close_in_explorable", false)) {
+    if (legacy && !doc.Has(Name(), "show_close_in_explorable") && legacy->GetBoolValue(Name(), "hide_close_in_explorable", false)) {
         show_close_in_outpost = false;
         show_close_in_explorable = false;
     }
-    LOAD_BOOL(show_close_in_outpost);
-    LOAD_BOOL(show_close_in_explorable);
+    ToolboxModule::LoadSettings(doc, legacy);
 
+    std::map<std::string, bool> enabled_modules;
+    doc.GetStruct(modules_ini_section, enabled_modules);
     for (auto& m : optional_modules) {
-        m.enabled = ini->GetBoolValue(modules_ini_section, m.name, m.enabled);
+        const auto found = enabled_modules.find(m.name);
+        if (found != enabled_modules.end()) {
+            m.enabled = found->second;
+        }
+        else if (legacy) {
+            m.enabled = legacy->GetBoolValue(modules_ini_section, m.name, m.enabled);
+        }
     }
 }
 
-void ToolboxSettings::SaveSettings(ToolboxIni* ini)
+void ToolboxSettings::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
     if (location_file.is_open()) {
         location_file.close();
     }
+    ToolboxModule::SaveSettings(doc);
 
-    SAVE_BOOL(clamp_windows_to_screen);
-    SAVE_BOOL(hide_on_loading_screen);
-    SAVE_BOOL(send_anonymous_gameplay_info);
-    SAVE_BOOL(show_cog_in_outpost);
-    SAVE_BOOL(show_cog_in_explorable);
-    SAVE_BOOL(show_screenshot_button_in_outpost);
-    SAVE_BOOL(show_screenshot_button_in_explorable);
-    SAVE_BOOL(show_close_in_outpost);
-    SAVE_BOOL(show_close_in_explorable);
-
+    std::map<std::string, bool> enabled_modules;
     for (const auto& m : optional_modules) {
-        ini->SetBoolValue(modules_ini_section, m.name, m.enabled);
+        enabled_modules[m.name] = m.enabled;
     }
+    doc.SetStruct(modules_ini_section, enabled_modules);
 }
 
 void ToolboxSettings::Draw(IDirect3DDevice9*)

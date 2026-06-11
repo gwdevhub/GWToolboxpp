@@ -19,8 +19,7 @@ namespace {
 
     GroupMode current_group_mode = GroupMode::None;
     const char* group_mode_names[] = {"None", "Item Name", "Map", "Rarity", "Type", "Weapon"};
-    float icon_size = 48;
-    float run_count = 0;
+    DropTrackerWindow::Settings settings;
     
     bool IsWeapon(const ItemDrops::PendingDrop* drop)
     {
@@ -57,8 +56,8 @@ namespace {
 
     void DrawItemIcon(const ItemDrops::PendingDrop* drop)
     {
-        if (icon_size > 0) {
-            ImGui::Image((ImTextureID)(intptr_t)*drop->icon, ImVec2(icon_size, icon_size));
+        if (settings.icon_size > 0) {
+            ImGui::Image((ImTextureID)(intptr_t)*drop->icon, ImVec2(settings.icon_size, settings.icon_size));
         }
     }
 
@@ -367,19 +366,23 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
 }
 
 void DropTrackerWindow::DrawSettingsInternal() {
-    ImGui::DragFloat("Item Icon Size", &icon_size, 16, 0, 64);
+    ImGui::DragFloat("Item Icon Size", &settings.icon_size, 16, 0, 64);
 }
 
-void DropTrackerWindow::LoadSettings(ToolboxIni* ini)
+void DropTrackerWindow::Initialize()
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_FLOAT(icon_size);
-    LOAD_FLOAT(run_count);
+    ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 }
 
-void DropTrackerWindow::SaveSettings(ToolboxIni* ini)
+void DropTrackerWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_FLOAT(icon_size);
-    SAVE_FLOAT(run_count);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void DropTrackerWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }

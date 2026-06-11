@@ -21,9 +21,9 @@
 #include <D3DContainers.h>
 
 namespace {
+    MissionMapWidget::Settings settings;
+
     IDirect3DPixelShader9* icon_tint_shader = nullptr;
-    bool draw_all_terrain_lines = false;
-    bool draw_all_minimap_lines = true;
 
     std::vector<MissionMapWidget::DrawCallback> draw_callbacks;
     std::vector<MissionMapWidget::ContextMenuCallback> context_menu_callbacks;
@@ -281,7 +281,7 @@ namespace {
         const float LINE_HALF_THICKNESS = 1.f * cached_px_to_game;
         for (const auto& line : lines) {
             if (!line->visible) continue;
-            if (!line->draw_on_mission_map && !(draw_all_minimap_lines && line->draw_on_minimap) && !(draw_all_terrain_lines && line->draw_on_terrain)) continue;
+            if (!line->draw_on_mission_map && !(settings.draw_all_minimap_lines && line->draw_on_minimap) && !(settings.draw_all_terrain_lines && line->draw_on_terrain)) continue;
             if (line->map != map_id) continue;
             if (line->from_player_pos && player_pos) {
                 minimap_lines.push_back(D3DLine(*player_pos, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
@@ -294,18 +294,22 @@ namespace {
     }
 } // namespace
 
-void MissionMapWidget::LoadSettings(ToolboxIni* ini)
+void MissionMapWidget::Initialize()
 {
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_BOOL(draw_all_terrain_lines);
-    LOAD_BOOL(draw_all_minimap_lines);
+    ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
 }
 
-void MissionMapWidget::SaveSettings(ToolboxIni* ini)
+void MissionMapWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_BOOL(draw_all_terrain_lines);
-    SAVE_BOOL(draw_all_minimap_lines);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void MissionMapWidget::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
@@ -365,8 +369,8 @@ void MissionMapWidget::Update(float)
 
 void MissionMapWidget::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Draw all terrain lines", &draw_all_terrain_lines);
-    ImGui::Checkbox("Draw all minimap lines", &draw_all_minimap_lines);
+    ImGui::Checkbox("Draw all terrain lines", &settings.draw_all_terrain_lines);
+    ImGui::Checkbox("Draw all minimap lines", &settings.draw_all_minimap_lines);
 }
 
 bool MissionMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)

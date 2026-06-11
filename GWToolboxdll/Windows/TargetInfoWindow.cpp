@@ -17,7 +17,7 @@
 #include <Utils/FontLoader.h>
 
 namespace {
-    bool auto_hide = true;
+    TargetInfoWindow::Settings settings;
     std::map<GW::Constants::SkillID, std::unique_ptr<GuiUtils::EncString>> skill_names_by_id;
     std::unordered_map<std::string, GW::Constants::SkillID> skill_ids_by_name;
 
@@ -329,6 +329,7 @@ namespace {
 void TargetInfoWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     constexpr std::array ui_messages = {
         GW::UI::UIMessage::kChangeTarget,
         GW::UI::UIMessage::kMapLoaded,
@@ -339,23 +340,23 @@ void TargetInfoWindow::Initialize()
     }
 }
 
+void TargetInfoWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void TargetInfoWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+}
+
 void TargetInfoWindow::Terminate()
 {
     ToolboxWindow::Terminate();
     ClearAgentInfo();
     GW::UI::RemoveUIMessageCallback(&ui_message_entry);
-}
-
-void TargetInfoWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(auto_hide);
-}
-
-void TargetInfoWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(auto_hide);
 }
 
 void TargetInfoWindow::Draw(IDirect3DDevice9*)
@@ -368,7 +369,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
     const auto window_name = std::format("Target Info - {}###TargetInfo", is_valid_target && current_agent_info ? current_agent_info->name.string() : "(No target)");
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
-    if (auto_hide) {
+    if (settings.auto_hide) {
         if (const auto window = ImGui::FindWindowByName(window_name.c_str())) {
             const bool should_collapse = !is_valid_target;
             if (window->Collapsed != should_collapse) {
@@ -517,7 +518,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
 void TargetInfoWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::Checkbox("Automatically hide when not targeting anything", &auto_hide);
+    ImGui::Checkbox("Automatically hide when not targeting anything", &settings.auto_hide);
 }
 
 void TargetInfoWindow::Update(const float x)

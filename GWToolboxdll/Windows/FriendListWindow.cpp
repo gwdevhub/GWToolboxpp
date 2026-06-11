@@ -71,7 +71,8 @@ namespace {
     }
 
     ToolboxIni inifile{};
-    const wchar_t* ini_filename = L"friends.ini";
+    const wchar_t* ini_filename = L"friends.ini"; // legacy, read-only fallback
+    const wchar_t* json_filename = L"friends.json";
     bool loading = false;     // Loading from disk?
     bool polling = false;     // Polling in progress?
     bool poll_queued = false; // Used to avoid overloading the thread queue.
@@ -79,32 +80,13 @@ namespace {
     bool friend_list_ready = false; // Allow processing when this is true.
     bool need_to_reorder_friends = true;
 
-    enum class FriendAliasType {
-        NONE,
-        APPEND,
-        REPLACE
-    };
-
     constexpr const char* alias_types[] = {
         "None",
         "Append",
         "Replace"
     };
-    FriendAliasType show_alias_on_whisper = FriendAliasType::NONE;
-    bool show_my_status = true;
 
-
-    int explorable_show_as = 1;
-    int outpost_show_as = 1;
-    int loading_show_as = 1;
-
-    bool lock_move_as_widget = false;
-    bool lock_size_as_widget = true;
-
-    Color hover_background_color = 0x33999999;
-    bool friend_name_tag_enabled = false;
-    Color friend_name_tag_color = 0xff6060ff;
-    bool add_offline_players_to_friends = true;
+    FriendListWindow::Settings settings;
 
     clock_t friends_list_checked = 0;
 
@@ -144,6 +126,40 @@ namespace {
         }
     }
 
+    using FriendRecords = std::map<std::string, FriendListWindow::FriendRecord>;
+
+    // Read the on-disk friend records; friends.json wins, otherwise parse the legacy friends.ini.
+    FriendRecords LoadRecords()
+    {
+        FriendRecords records;
+        const auto json_path = Resources::GetSettingFile(json_filename);
+        std::error_code ec;
+        if (std::filesystem::exists(json_path, ec)) {
+            std::ifstream file(json_path, std::ios::binary);
+            const std::string buffer{std::istreambuf_iterator(file), {}};
+            constexpr glz::opts lenient_opts{.error_on_unknown_keys = false};
+            if (glz::read<lenient_opts>(records, buffer)) {
+                records.clear();
+            }
+            return records;
+        }
+        inifile.Reset();
+        inifile.SetMultiKey(true);
+        inifile.LoadFile(Resources::GetLegacySettingFile(ini_filename).c_str());
+        TNamesDepend entries;
+        inifile.GetAllSections(entries);
+        for (const auto& entry : entries) {
+            auto& record = records[entry.pItem];
+            record.alias = inifile.GetValue(entry.pItem, "alias", "");
+            record.type = static_cast<int>(inifile.GetLongValue(entry.pItem, "type", record.type));
+            std::unordered_map<std::wstring, uint8_t> charnames;
+            LoadCharnames(entry.pItem, &charnames);
+            for (const auto& [name, profession] : charnames) {
+                record.charnames.emplace(TextUtils::WStringToString(name), profession);
+            }
+        }
+        return records;
+    }
 
     FriendListWindow::Friend* SetFriend(const uint8_t*, GW::FriendType, GW::FriendStatus, uint32_t, const wchar_t*, const wchar_t*);
     FriendListWindow::Friend* SetFriend(const GW::Friend*);
@@ -279,7 +295,7 @@ namespace {
             }
             return;
         }
-        if (!add_offline_players_to_friends) {
+        if (!settings.add_offline_players_to_friends) {
             return;
         }
         if (pending_whisper.pending_add && player_name == pending_whisper.charname) {
@@ -397,14 +413,14 @@ namespace {
             break;
         case GW::UI::UIMessage::kSetAgentNameTagAttribs:
         case GW::UI::UIMessage::kShowAgentNameTag: {
-            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !friend_name_tag_enabled) {
+            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost || !settings.friend_name_tag_enabled) {
                 break;
             }
             const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wparam);
             const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
             const auto friend_ = FriendListWindow::GetFriend(player_name.c_str());
             if (friend_ && friend_->type == GW::FriendType::Friend) {
-                tag->text_color = friend_name_tag_color;
+                tag->text_color = settings.friend_name_tag_color;
             }
         }break;
         // When starting a new whisper message, automatically check and redirect the recipient
@@ -835,6 +851,7 @@ bool FriendListWindow::RemoveFriend(const Friend* f)
 void FriendListWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     GW::FriendListMgr::RegisterFriendStatusCallback(&FriendStatusUpdate_Entry, OnFriendUpdated);
 
@@ -905,7 +922,7 @@ void FriendListWindow::Terminate()
 // Optionally add friend alias to incoming/outgoing messages
 void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr)
 {
-    if (show_alias_on_whisper == FriendAliasType::NONE) {
+    if (settings.show_alias_on_whisper == FriendAliasType::NONE) {
         return;
     }
     wchar_t* message = *message_ptr;
@@ -919,10 +936,10 @@ void FriendListWindow::AddFriendAliasToMessage(wchar_t** message_ptr)
         return;
     }
     static std::wstring new_message;
-    if (show_alias_on_whisper == FriendAliasType::APPEND) {
+    if (settings.show_alias_on_whisper == FriendAliasType::APPEND) {
         new_message = std::format(L"{} ({}){}", std::wstring(message, name_end - message), friend_->GetAliasW(), name_end);
     }
-    else if (show_alias_on_whisper == FriendAliasType::REPLACE) {
+    else if (settings.show_alias_on_whisper == FriendAliasType::REPLACE) {
         const auto player_name_pos = std::wstring(message).find(player_name);
         if (player_name_pos != std::wstring::npos) {
             new_message = std::wstring(message).replace(player_name_pos, player_name.length(), friend_->GetAliasW());
@@ -1013,11 +1030,11 @@ ImGuiWindowFlags FriendListWindow::GetWinFlags(ImGuiWindowFlags flags) const
     if (IsWidget()) {
         flags |= ImGuiWindowFlags_NoTitleBar;
         flags |= ImGuiWindowFlags_NoScrollbar;
-        if (lock_size_as_widget) {
+        if (settings.lock_size_as_widget) {
             flags |= ImGuiWindowFlags_NoResize;
             flags |= ImGuiWindowFlags_AlwaysAutoResize;
         }
-        if (lock_move_as_widget) {
+        if (settings.lock_move_as_widget) {
             flags |= ImGuiWindowFlags_NoMove;
         }
         return flags;
@@ -1027,16 +1044,16 @@ ImGuiWindowFlags FriendListWindow::GetWinFlags(ImGuiWindowFlags flags) const
 
 bool FriendListWindow::IsWidget() const
 {
-    return (explorable_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
-           || (outpost_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
-           || (loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
+    return (settings.explorable_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+           || (settings.outpost_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+           || (settings.loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
 }
 
 bool FriendListWindow::IsWindow() const
 {
-    return (explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
-           || (outpost_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
-           || (loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
+    return (settings.explorable_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)
+           || (settings.outpost_show_as == 0 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)
+           || (settings.loading_show_as == 1 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading);
 }
 
 void FriendListWindow::Draw(IDirect3DDevice9*)
@@ -1081,7 +1098,7 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
         ImGui::BeginChild("friend_list_scroll");
     }
     const float height = ImGui::GetTextLineHeightWithSpacing();
-    if (show_my_status) {
+    if (settings.show_my_status) {
         auto status = std::to_underlying(GW::FriendListMgr::GetMyStatus());
         ImGui::Text("You are:");
         ImGui::SameLine();
@@ -1120,8 +1137,8 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
     for (Friend* lfp : friends_online) {
         colIdx = 0;
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover_background_color);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, hover_background_color);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, settings.hover_background_color.value);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, settings.hover_background_color.value);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
@@ -1220,14 +1237,14 @@ void FriendListWindow::Draw(IDirect3DDevice9*)
 
 void FriendListWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Lock size as widget", &lock_size_as_widget);
+    ImGui::Checkbox("Lock size as widget", &settings.lock_size_as_widget);
     ImGui::SameLine();
-    ImGui::Checkbox("Lock move as widget", &lock_move_as_widget);
+    ImGui::Checkbox("Lock move as widget", &settings.lock_move_as_widget);
     const float dropdown_width = 160.0f * ImGui::FontScale();
     ImGui::Text("Show as");
     ImGui::SameLine();
     ImGui::PushItemWidth(dropdown_width);
-    ImGui::Combo("###show_as_outpost", &outpost_show_as, "Window\0Widget\0Hidden");
+    ImGui::Combo("###show_as_outpost", &settings.outpost_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("in outpost");
@@ -1235,21 +1252,21 @@ void FriendListWindow::DrawSettingsInternal()
     ImGui::Text("Show as");
     ImGui::SameLine();
     ImGui::PushItemWidth(dropdown_width);
-    ImGui::Combo("###show_as_explorable", &explorable_show_as, "Window\0Widget\0Hidden");
+    ImGui::Combo("###show_as_explorable", &settings.explorable_show_as, "Window\0Widget\0Hidden");
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("in explorable");
 
-    ImGui::CheckboxWithHelp("Temporarily add offline players you whisper as friends", &add_offline_players_to_friends, "When you whisper someone and they are offline, toolbox will attempt to add these players to your friendlist"
+    ImGui::CheckboxWithHelp("Temporarily add offline players you whisper as friends", &settings.add_offline_players_to_friends, "When you whisper someone and they are offline, toolbox will attempt to add these players to your friendlist"
         " to figure out if they are online on another character.\nIf they are, toolbox will redirect your whisper to that character instead.\n"
         "Afterwards, the player will be removed from your friendlist.");
 
-    Colors::DrawSettingHueWheel("Widget background hover color", &hover_background_color);
-    ImGui::CheckboxWithHelp("Show my status", &show_my_status, "e.g. 'You are: Online'");
+    Colors::DrawSettingHueWheel("Widget background hover color", &settings.hover_background_color.value);
+    ImGui::CheckboxWithHelp("Show my status", &settings.show_my_status, "e.g. 'You are: Online'");
 
-    ImGui::CheckboxWithHelp("Custom name tag color for friends", &friend_name_tag_enabled, "When targeting friends in an outpost");
-    if (friend_name_tag_enabled) {
-        Colors::DrawSettingHueWheel("Friend name tag color", &friend_name_tag_color);
+    ImGui::CheckboxWithHelp("Custom name tag color for friends", &settings.friend_name_tag_enabled, "When targeting friends in an outpost");
+    if (settings.friend_name_tag_enabled) {
+        Colors::DrawSettingHueWheel("Friend name tag color", &settings.friend_name_tag_color.value);
     }
     DrawChatSettings();
 }
@@ -1271,7 +1288,7 @@ void FriendListWindow::DrawChatSettings()
 {
     ImGui::Text("Show friend aliases when sending/receiving whispers:");
     ImGui::ShowHelp("Only if your friends alias is different to their character name");
-    ImGui::Combo("###show_alias_on_whisper", reinterpret_cast<int*>(&show_alias_on_whisper), alias_types, _countof(alias_types));
+    ImGui::Combo("###show_alias_on_whisper", reinterpret_cast<int*>(&settings.show_alias_on_whisper), alias_types, _countof(alias_types));
 }
 
 void FriendListWindow::DrawHelp()
@@ -1294,43 +1311,17 @@ void FriendListWindow::DrawHelp()
     ImGui::TreePop();
 }
 
-void FriendListWindow::LoadSettings(ToolboxIni* ini)
+void FriendListWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(lock_move_as_widget);
-    LOAD_BOOL(lock_size_as_widget);
-    show_alias_on_whisper = static_cast<FriendAliasType>(ini->GetLongValue(Name(), VAR_NAME(show_alias_on_whisper), static_cast<long>(show_alias_on_whisper)));
-
-    LOAD_UINT(outpost_show_as);
-    LOAD_UINT(loading_show_as);
-    LOAD_UINT(explorable_show_as);
-    LOAD_BOOL(show_my_status);
-    LOAD_BOOL(add_offline_players_to_friends);
-
-    LOAD_COLOR(hover_background_color);
-    LOAD_BOOL(friend_name_tag_enabled);
-    LOAD_COLOR(friend_name_tag_color);
-
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     LoadFromFile();
 }
 
-void FriendListWindow::SaveSettings(ToolboxIni* ini)
+void FriendListWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(lock_move_as_widget);
-    SAVE_BOOL(lock_size_as_widget);
-    ini->SetLongValue(Name(), VAR_NAME(show_alias_on_whisper), static_cast<long>(show_alias_on_whisper));
-
-    SAVE_UINT(outpost_show_as);
-    SAVE_UINT(loading_show_as);
-    SAVE_UINT(explorable_show_as);
-    SAVE_BOOL(show_my_status);
-    SAVE_BOOL(add_offline_players_to_friends);
-
-    SAVE_COLOR(hover_background_color);
-    SAVE_BOOL(friend_name_tag_enabled);
-    SAVE_COLOR(friend_name_tag_color);
-
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
     SaveToFile();
 }
 
@@ -1340,7 +1331,7 @@ void FriendListWindow::LoadFromFile()
         return;
     }
     loading = true;
-    Log::Log("%s: Loading friends from ini\n", Name());
+    Log::Log("%s: Loading friends from disk\n", Name());
     if (settings_thread.joinable()) {
         settings_thread.join();
     }
@@ -1352,28 +1343,21 @@ void FriendListWindow::LoadFromFile()
         }
         friends.clear();
 
-        inifile.Reset();
-        inifile.SetMultiKey(true);
-        inifile.LoadFile(Resources::GetSettingFile(ini_filename).c_str());
-
-        TNamesDepend entries;
-        inifile.GetAllSections(entries);
-        for (const auto& entry : entries) {
+        const auto records = LoadRecords();
+        for (const auto& [uuid, record] : records) {
             auto lf = new Friend(this);
-            lf->uuid = entry.pItem;
+            lf->uuid = uuid;
             TextUtils::StringToGuid(lf->uuid, &lf->uuid_bytes);
-            lf->setAlias(TextUtils::StringToWString(inifile.GetValue(entry.pItem, "alias", "")));
-            lf->type = static_cast<GW::FriendType>(inifile.GetLongValue(entry.pItem, "type", static_cast<long>(lf->type)));
+            lf->setAlias(TextUtils::StringToWString(record.alias));
+            lf->type = static_cast<GW::FriendType>(record.type);
             if (lf->uuid.empty() || lf->GetAliasW().empty()) {
                 delete lf;
                 continue; // Error, alias or uuid empty.
             }
 
             // Grab char names
-            std::unordered_map<std::wstring, uint8_t> charnames;
-            LoadCharnames(entry.pItem, &charnames);
-            for (const auto& it : charnames) {
-                lf->SetCharacter(it.first.c_str(), it.second);
+            for (const auto& [name, profession] : record.charnames) {
+                lf->SetCharacter(TextUtils::StringToWString(name).c_str(), profession);
             }
             if (lf->characters.empty()) {
                 delete lf;
@@ -1385,7 +1369,7 @@ void FriendListWindow::LoadFromFile()
             }
             uuid_by_name[lf->GetAliasW()] = lf;
         }
-        Log::Log("%s: Loaded friends from ini\n", Name());
+        Log::Log("%s: Loaded friends from disk\n", Name());
         friends_list_checked = false;
         loading = false;
     });
@@ -1399,41 +1383,33 @@ void FriendListWindow::SaveToFile()
     if (settings_thread.joinable()) {
         settings_thread.join();
     }
-    settings_thread = std::thread([this] {
+    settings_thread = std::thread([] {
         friends_changed = false;
-        inifile.Reset();
-        // Load the existing file in, and amend the info
-        inifile.LoadFile(Resources::GetSettingFile(ini_filename).c_str());
-        inifile.SetMultiKey(true);
         if (friends.empty()) {
             return; // Error, should have at least 1 friend
         }
-        //std::lock_guard<std::recursive_mutex> lock(friends_mutex);
+        // Load the existing records in, and amend the info
+        auto records = LoadRecords();
         for (auto it = friends.begin(); it != friends.end(); ++it) {
-            // do something
             Friend& lf = *it->second;
-            const char* uuid = lf.uuid.c_str();
-            inifile.SetLongValue(uuid, "type", static_cast<long>(lf.type));
-            inifile.SetValue(uuid, "alias", lf.GetAliasA().c_str());
+            auto& record = records[lf.uuid];
+            record.type = static_cast<int>(lf.type);
+            record.alias = lf.GetAliasA();
             // Append to existing charnames, but don't duplicate. This allows multiple accounts to contribute to the friend list.
-            std::unordered_map<std::wstring, uint8_t> charnames;
-            LoadCharnames(uuid, &charnames);
             for (const auto& char_it : lf.characters) {
-                const auto& found = charnames.find(char_it.first);
+                const auto charname = TextUtils::WStringToString(char_it.first);
+                const auto found = record.charnames.find(charname);
                 // Note: Don't overwrite the profession
-                if (found == charnames.end() || char_it.second.profession != 0) {
-                    charnames.emplace(char_it.first, char_it.second.profession);
+                if (found == record.charnames.end() || char_it.second.profession != 0) {
+                    record.charnames.emplace(charname, char_it.second.profession);
                 }
             }
-            inifile.Delete(uuid, "charname");
-            for (const auto& char_it : charnames) {
-                char charname[128] = {0};
-                snprintf(charname, 128, "%s,%d",
-                         TextUtils::WStringToString(char_it.first).c_str(),
-                         char_it.second);
-                inifile.SetValue(uuid, "charname", charname);
-            }
         }
-        ASSERT(inifile.SaveFile(Resources::GetSettingFile(ini_filename)) == SI_OK);
+        std::string buffer;
+        if (glz::write<glz::opts{.prettify = true}>(records, buffer)) {
+            return;
+        }
+        std::ofstream file(Resources::GetSettingFile(json_filename), std::ios::binary | std::ios::trunc);
+        ASSERT(file && file.write(buffer.data(), static_cast<std::streamsize>(buffer.size())).good());
     });
 }

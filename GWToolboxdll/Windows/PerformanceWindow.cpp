@@ -7,7 +7,7 @@
 #include <Windows/PerformanceWindow.h>
 
 namespace {
-    int slow_threshold_us = 1000;
+    PerformanceWindow::Settings settings;
 
     // QPC helper
     uint64_t QpcToMicroseconds(LONGLONG ticks)
@@ -328,7 +328,7 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
                     const uint64_t total_avg = e.stats.update.Avg() + e.stats.draw.Avg();
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    if (total_avg >= static_cast<uint64_t>(slow_threshold_us))
+                    if (total_avg >= static_cast<uint64_t>(settings.slow_threshold_us))
                         ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.name);
                     else
                         ImGui::TextUnformatted(e.name);
@@ -400,7 +400,7 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
                     for (const auto& e : ui_entries) {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
-                        if (e.stats.Avg() >= static_cast<uint64_t>(slow_threshold_us))
+                        if (e.stats.Avg() >= static_cast<uint64_t>(settings.slow_threshold_us))
                             ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.module_name);
                         else
                             ImGui::TextUnformatted(e.module_name);
@@ -423,26 +423,32 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
     ImGui::End();
 }
 
+void PerformanceWindow::Initialize()
+{
+    ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
+}
+
+void PerformanceWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void PerformanceWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+}
+
 void PerformanceWindow::Terminate()
 {
     UnhookPresent();
     ToolboxWindow::Terminate();
 }
 
-void PerformanceWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_UINT(slow_threshold_us);
-}
-
-void PerformanceWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_UINT(slow_threshold_us);
-}
-
 void PerformanceWindow::DrawSettingsInternal()
 {
-    ImGui::InputInt("Slow module threshold (us)", &slow_threshold_us, 100, 1000);
-    if (slow_threshold_us < 0) slow_threshold_us = 0;
+    ImGui::InputInt("Slow module threshold (us)", &settings.slow_threshold_us, 100, 1000);
+    if (settings.slow_threshold_us < 0) settings.slow_threshold_us = 0;
 }

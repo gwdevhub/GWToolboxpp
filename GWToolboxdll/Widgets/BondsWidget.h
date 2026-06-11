@@ -22,14 +22,27 @@ public:
     [[nodiscard]] const char* Name() const override { return "Bonds"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BARS; }
 
+    struct Settings {
+        Colors::SettingColor background = Colors::ARGB(76, 0, 0, 0);
+        Colors::SettingColor low_attribute_overlay = Colors::ARGB(76, 0, 0, 0);
+        bool click_to_cast = true;
+        bool click_to_drop = true;
+        bool show_allies = true;
+        bool flip_bonds = false;
+        bool hide_in_outpost = false;
+        // Distance away from the party window on the x axis; used with snap to party window
+        int user_offset = 64;
+        bool overlay_party_window = false;
+    };
+
     void Initialize() override;
     void Terminate() override;
 
     // Draw user interface. Will be called every frame if the element is visible
     void Draw(IDirect3DDevice9* device) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
 
     static bool IsBondLikeSkill(GW::Constants::SkillID skill_id);
