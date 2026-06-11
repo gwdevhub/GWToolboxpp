@@ -200,6 +200,8 @@ namespace GW {
         void AsyncDecodeStrS(const wchar_t* enc_str, std::string* out, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
         void AsyncDecodeStr(const wchar_t* enc_str, std::wstring* out, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
         bool BelongsToFrame(GW::UI::Frame* parent, GW::UI::Frame* child);
+        // Walk up the frame hierarchy n levels. Returns null if a parent is missing along the way.
+        GW::UI::Frame* GetNthParentFrame(GW::UI::Frame* frame, uint32_t n);
 
         void Screenshot();
         bool IsLoadingScreenShown();

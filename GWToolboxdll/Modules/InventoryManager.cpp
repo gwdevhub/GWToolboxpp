@@ -39,6 +39,7 @@
 #include <GWCA/GameEntities/Frame.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
+#include <Utils/UIFrameLookup.h>
 
 namespace {
     InventoryManager& Instance()
@@ -1498,7 +1499,8 @@ namespace {
                 pending_salvage_at = TIMER_INIT();
             }
             // Auto accept "you can only salvage materials with a lesser salvage kit"
-            GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 0x6, 0x6f, 0x6));
+            const auto salvage_prompt = GW::UI::GetMultilineTextFrameByEncodedString(L"\x7c82\x10a", true);
+            GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetNthParentFrame(salvage_prompt, 3), 6));
             return;
         }
         is_salvaging = false;
