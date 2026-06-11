@@ -18,6 +18,7 @@ public:
 
     struct Settings {
         int slow_threshold_us = 1000;
+        bool stream_to_csv = false;
     };
 
     void Draw(IDirect3DDevice9* pDevice) override;
