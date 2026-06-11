@@ -110,6 +110,7 @@ namespace {
     bool compass_fix_pending = false;
     bool mouse_clickthrough_in_explorable = false;
     bool mouse_clickthrough_in_outpost = false;
+    bool target_gadgets_on_ctrl_click = false;
     bool flip_on_reverse = false;
     bool rotate_minimap = true;
     bool smooth_rotation = true;
@@ -1173,6 +1174,7 @@ void Minimap::DrawSettingsInternal()
     ImGui::ShowHelp("Click to target agents.");
     ImGui::SameLine(140.f);
     ImGui::Combo("##Target", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]), available_modifiers_combo, _countof(available_modifiers_combo));
+    ImGui::CheckboxWithHelp("Target gadgets", &target_gadgets_on_ctrl_click, "Allow clicking the minimap to target gadgets (e.g. chests, signposts) as well as living agents.");
     ImGui::TextUnformatted("Drag: ");
     ImGui::ShowHelp("Drag the minimap outside of compass range.");
     ImGui::SameLine(140.f);
@@ -1214,6 +1216,7 @@ void Minimap::LoadSettings(ToolboxIni* ini)
     LOAD_COLOR(hero_flag_controls_background);
     LOAD_BOOL(mouse_clickthrough_in_outpost);
     LOAD_BOOL(mouse_clickthrough_in_explorable);
+    LOAD_BOOL(target_gadgets_on_ctrl_click);
     LOAD_BOOL(rotate_minimap);
     LOAD_BOOL(flip_on_reverse);
     LOAD_BOOL(smooth_rotation);
@@ -1263,6 +1266,7 @@ void Minimap::SaveSettings(ToolboxIni* ini)
     SAVE_COLOR(hero_flag_controls_background);
     SAVE_BOOL(mouse_clickthrough_in_outpost);
     SAVE_BOOL(mouse_clickthrough_in_explorable);
+    SAVE_BOOL(target_gadgets_on_ctrl_click);
 
     ini->SetLongValue(Name(), VAR_NAME(minimap_draw_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]);
     ini->SetLongValue(Name(), VAR_NAME(minimap_target_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]);
@@ -1705,9 +1709,10 @@ void Minimap::SelectTarget(const GW::Vec2f pos)
     auto distance = 600.0f * 600.0f;
     const GW::Agent* closest = nullptr;
 
+    const auto target_filter = target_gadgets_on_ctrl_click ? (GW::TargetFilter::AnyLiving | GW::TargetFilter::Gadgets) : GW::TargetFilter::AnyLiving;
     for (const auto* agent : *agents) {
         const auto agent_is_locked_chest = agent && agent->GetIsGadgetType() && wcseq(GW::Agents::GetAgentEncName(agent->agent_id), GW::EncStrings::LockedChest);
-        if (!agent_is_locked_chest && !GW::Agents::GetAgentMatchesFlags(agent,GW::TargetFilter::AnyLiving)) continue;
+        if (!agent_is_locked_chest && !GW::Agents::GetAgentMatchesFlags(agent, target_filter)) continue;
         const float new_distance = GetSquareDistance(pos, agent->pos);
         if (distance > new_distance) {
             distance = new_distance;
