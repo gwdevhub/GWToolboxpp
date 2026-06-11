@@ -4,6 +4,8 @@
 
 #include <GWToolbox.h>
 #include <Defines.h>
+#include <ImGuiAddons.h>
+#include <Modules/Resources.h>
 #include <Windows/PerformanceWindow.h>
 
 namespace {
@@ -105,8 +107,51 @@ namespace {
     std::map<std::string, ModuleStats> acc_modules;
     DWORD window_start_tick = 0;
 
-    void FlushWindow()
+    // Raw 1s accumulator values, so true averages can be recomputed offline
+    void AppendCsvRow(std::string& out, DWORD tick, const char* category, const char* name, const char* metric, const Stats& s)
     {
+        if (s.count == 0) return;
+        char line[192];
+        snprintf(line, sizeof(line), "%lu,%s,%s,%s,%u,%llu,%llu,%llu\n",
+                 tick, category, name, metric, s.count,
+                 static_cast<unsigned long long>(s.sum_us),
+                 static_cast<unsigned long long>(s.min_us),
+                 static_cast<unsigned long long>(s.max_us));
+        out += line;
+    }
+
+    // Runs on a worker thread so the draw loop never touches the disk
+    void WriteCsvRows(const std::string& rows)
+    {
+        static std::mutex csv_mutex;
+        std::scoped_lock lock(csv_mutex);
+        std::ofstream file(Resources::GetPath(L"performance_log.csv"), std::ios::app);
+        if (!file.is_open()) return;
+        // Header only for a fresh file; appending preserves earlier runs
+        if (file.tellp() == 0)
+            file << "tick_ms,category,name,metric,count,sum_us,min_us,max_us\n";
+        file << rows;
+    }
+
+    void StreamSnapshotToCsv(DWORD tick)
+    {
+        std::string rows;
+        AppendCsvRow(rows, tick, "frame", "frame", "period", acc_frame);
+        AppendCsvRow(rows, tick, "toolbox", "tb_update", "update", acc_tb_update);
+        AppendCsvRow(rows, tick, "toolbox", "tb_draw", "draw", acc_tb_draw);
+        AppendCsvRow(rows, tick, "toolbox", "present", "present", acc_present);
+        for (const auto& [name, ms] : acc_modules) {
+            AppendCsvRow(rows, tick, "module", name.c_str(), "update", ms.update);
+            AppendCsvRow(rows, tick, "module", name.c_str(), "draw", ms.draw);
+        }
+        if (!rows.empty())
+            Resources::EnqueueWorkerTask([rows = std::move(rows)] { WriteCsvRows(rows); });
+    }
+
+    void FlushWindow(DWORD tick)
+    {
+        if (settings.stream_to_csv) StreamSnapshotToCsv(tick);
+
         // Store current 1s snapshot into ring buffer
         hist_frame[hist_index] = acc_frame;
         hist_tb_update[hist_index] = acc_tb_update;
@@ -213,7 +258,7 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
     const DWORD now = GetTickCount();
     if (window_start_tick == 0) window_start_tick = now;
     if (now - window_start_tick >= 1000) {
-        FlushWindow();
+        FlushWindow(now);
         window_start_tick = now;
     }
 
@@ -451,4 +496,8 @@ void PerformanceWindow::DrawSettingsInternal()
 {
     ImGui::InputInt("Slow module threshold (us)", &settings.slow_threshold_us, 100, 1000);
     if (settings.slow_threshold_us < 0) settings.slow_threshold_us = 0;
+
+    ImGui::Checkbox("Stream timings to CSV", &settings.stream_to_csv);
+    ImGui::ShowHelp("Appends per-second timings to performance_log.csv in the settings folder "
+                    "while the Performance window is open. Useful for comparing builds offline.");
 }
