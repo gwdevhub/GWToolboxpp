@@ -7,34 +7,49 @@
 #include <Logger.h>
 
 namespace {
-    // Per spec for TextMultiline_UICallback: message id 9 = frame created, 8 = frame destroyed.
-    constexpr uint32_t MessageFrameCreated = 0x9;
-    constexpr uint32_t MessageFrameDestroyed = 0x8;
-
     // encoded label -> live multiline text frame, kept current by the callback below.
     std::unordered_map<std::wstring, GW::MultiLineTextLabelFrame*> multiline_frames;
 
     GW::UI::UIInteractionCallback TextMultiline_UICallback_Func = nullptr;
     GW::UI::UIInteractionCallback TextMultiline_UICallback_Ret = nullptr;
 
+    void ForgetFrame(const GW::UI::Frame* frame)
+    {
+        std::erase_if(multiline_frames, [frame](const auto& entry) { return entry.second == frame; });
+    }
+
     void OnTextMultilineUICallback(GW::UI::InteractionMessage* message, void* wparam, void* lparam)
     {
         GW::Hook::EnterHook();
         // Drop the entry before the original handler tears the frame down.
-        if (static_cast<uint32_t>(message->message_id) == MessageFrameDestroyed) {
-            const auto frame = GW::UI::GetFrameById(message->frame_id);
-            if (frame) {
-                std::erase_if(multiline_frames, [frame](const auto& entry) { return entry.second == frame; });
+        if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
+            if (const auto frame = GW::UI::GetFrameById(message->frame_id)) {
+                ForgetFrame(frame);
             }
         }
         TextMultiline_UICallback_Ret(message, wparam, lparam);
-        // Read the label after creation, once the frame is initialised.
-        if (static_cast<uint32_t>(message->message_id) == MessageFrameCreated) {
-            const auto frame = static_cast<GW::MultiLineTextLabelFrame*>(GW::UI::GetFrameById(message->frame_id));
-            const auto label = frame ? frame->GetEncodedLabel() : nullptr;
-            if (label && label[0]) {
-                multiline_frames[label] = frame;
-            }
+        switch (message->message_id) {
+            // Frame created; cache its initial encoded label.
+            case GW::UI::UIMessage::kInitFrame: {
+                const auto frame = static_cast<GW::MultiLineTextLabelFrame*>(GW::UI::GetFrameById(message->frame_id));
+                const auto label = frame ? frame->GetEncodedLabel() : nullptr;
+                if (label && label[0]) {
+                    multiline_frames[label] = frame;
+                }
+            } break;
+            // Encoded label is being reassigned; wparam is the new encoded string.
+            case GW::UI::UIMessage::kFrameMessage_0x52: {
+                const auto frame = static_cast<GW::MultiLineTextLabelFrame*>(GW::UI::GetFrameById(message->frame_id));
+                if (frame) {
+                    ForgetFrame(frame);
+                    const auto new_label = static_cast<const wchar_t*>(wparam);
+                    if (new_label && new_label[0]) {
+                        multiline_frames[new_label] = frame;
+                    }
+                }
+            } break;
+            default:
+                break;
         }
         GW::Hook::LeaveHook();
     }
