@@ -11,6 +11,7 @@
 
 #include <GWCA/Utilities/Hook.h>
 
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <Modules/HeroPanelPositionModule.h>
 #include <Utils/SettingsDoc.h>
 #include <Utils/ToolboxUtils.h>
@@ -61,17 +62,26 @@ namespace {
     // Hero panel (re)shown - e.g. after a party edit or character swap - so put it back.
     void OnPanelShown(GW::Constants::HeroID hero_id)
     {
-        const auto found = saved_positions.find(static_cast<uint32_t>(hero_id));
-        if (found == saved_positions.end()) return;
-        for (uint32_t i = 0; i < hero_panel_count; i++) {
-            if (GetHeroIdForCommanderIndex(i) != hero_id) continue;
-            const auto frame = GetCommanderFrame(i);
-            if (frame) {
-                frame->position = found->second;
-                GW::UI::TriggerFrameRedraw(frame);
-            }
-            return;
-        }
+        // Run on next frame so the commander panel gets created
+        GW::GameThread::Enqueue(
+            [hero_id]() {
+                const auto found = saved_positions.find(static_cast<uint32_t>(hero_id));
+                for (uint32_t i = 0; i < hero_panel_count; i++) {
+                    if (GetHeroIdForCommanderIndex(i) != hero_id) continue;
+                    const auto frame = GetCommanderFrame(i);
+                    if (!frame) continue;
+                    if (found == saved_positions.end()) {
+                        saved_positions[static_cast<uint32_t>(hero_id)] = frame->position;
+                    }
+                    else {
+                        frame->position = found->second;
+                        GW::UI::TriggerFrameRedraw(frame);
+                    }
+                    return;
+                }
+            },
+            true
+        );
     }
 
     void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
@@ -87,7 +97,7 @@ namespace {
                 break;
         }
     }
-}
+} // namespace
 
 void HeroPanelPositionModule::Initialize()
 {
