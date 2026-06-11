@@ -829,6 +829,7 @@ std::filesystem::path GWToolbox::LoadSettings()
     ToolboxSettings::Instance().LoadSettings(*doc, ini);
     ToolboxSettings::LoadModules(ini);
     if (!ini->location_on_disk.empty()) {
+        // Loaded sequentially on purpose, not threaded: a fixed load order keeps config loading deterministic, so a shared settings folder always reproduces the same behaviour and bugs aren't order-dependent. The ~100ms cost is negligible; revisit only if it ever causes noticeable lag.
         for (const auto m : modules_enabled) {
             m->LoadSettings(*doc, ini);
         }
