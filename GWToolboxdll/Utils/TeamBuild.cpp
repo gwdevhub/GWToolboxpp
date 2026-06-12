@@ -8,6 +8,7 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Managers/AgentMgr.h>
