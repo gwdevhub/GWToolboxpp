@@ -2126,9 +2126,13 @@ void SearchAgent::Update()
     if (!me) {
         return;
     }
+    const auto search_terms = TextUtils::Split(search, L"|");
     for (const auto& enc_name : npc_names) {
-        const size_t found = TextUtils::ToLower(enc_name.second->wstring()).find(search.c_str());
-        if (found == std::wstring::npos) {
+        const auto name = TextUtils::ToLower(enc_name.second->wstring());
+        const auto found = std::ranges::any_of(search_terms, [&name](const std::wstring& term) {
+            return name.find(term) != std::wstring::npos;
+        });
+        if (!found) {
             continue;
         }
         const auto agent = GW::Agents::GetAgentByID(enc_name.first);
