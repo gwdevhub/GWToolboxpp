@@ -14,6 +14,7 @@
 #include <Defines.h>
 #include <Timer.h>
 #include <Modules/QuestModule.h>
+#include <Modules/Resources.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/VanquishMapOverlayWidget.h>
@@ -51,16 +52,10 @@ namespace {
         static constexpr size_t VERTS_PER_CELL = sizeof(D3DQuad) / sizeof(D3DVertex);
         std::vector<int> walkable_cell_index;
 
-        void Build(int grid_w, int grid_h, const bool* walkable)
+        void Adopt(std::vector<int>&& cell_index, std::vector<D3DVertex>&& verts)
         {
-            clear();
-            walkable_cell_index.assign(grid_w * grid_h, -1);
-            int walkable_count = 0;
-            for (int i = 0; i < grid_w * grid_h; i++) {
-                if (!walkable[i]) continue;
-                walkable_cell_index[i] = walkable_count++;
-            }
-            vertices.reserve(walkable_count * VERTS_PER_CELL);
+            walkable_cell_index = std::move(cell_index);
+            vertices = std::move(verts);
             dirty = true;
         }
 
@@ -89,9 +84,19 @@ namespace {
         }
     };
 
+    // Thin wrapper to adopt vertex data built on a worker thread.
+    class AdoptableBuffer : public D3DTriangleBuffer {
+    public:
+        void Adopt(std::vector<D3DVertex>&& verts)
+        {
+            vertices = std::move(verts);
+            dirty = true;
+        }
+    };
+
     D3DFogBuffer fog_buffer;
     FrontierBuffer frontier_border;
-    D3DTriangleBuffer inaccessible_area_and_borders;
+    AdoptableBuffer inaccessible_area_and_borders;
     D3DTriangleBuffer enemy_vertex_buffer;
     D3DCircle compass_circle;
     D3DVertexBuffer* vertex_buffers[] = {&fog_buffer, &frontier_border, &inaccessible_area_and_borders, &enemy_vertex_buffer, &compass_circle};
@@ -105,15 +110,43 @@ namespace {
     struct BorderSegment {
         GW::Vec2f p1, p2;
     };
-    std::vector<BorderSegment> cached_border_segments;
 
     constexpr int COMPASS_CIRCLE_SEGMENTS = 64;
     constexpr float COMPASS_CIRCLE_THICKNESS_PX = 0.5f;
 
-    bool* cached_walkable_grid = nullptr;
-    bool* cached_blocked_grid = nullptr; // cells with unreachable trapezoids
-    int cached_walkable_grid_size = 0;
-    int cached_grid_x0 = 0, cached_grid_y0 = 0, cached_grid_w = 0, cached_grid_h = 0;
+    template <size_t N>
+    void AppendShape(std::vector<D3DVertex>& out, const D3DShape<N>& shape)
+    {
+        for (const auto& tri : shape.t)
+            out.insert(out.end(), tri.v, tri.v + 3);
+    }
+
+    // Grid + vertex data for one map; computed on a worker thread for async
+    // rebuilds, then swapped into the global map_grid on the game thread.
+    struct MapGridData {
+        std::unique_ptr<bool[]> walkable;
+        std::unique_ptr<bool[]> blocked; // cells with unreachable trapezoids
+        int x0 = 0, y0 = 0, w = 0, h = 0, size = 0;
+        std::vector<BorderSegment> border_segments;
+        std::vector<D3DVertex> static_vertices; // inaccessible area + borders
+        std::vector<int> fog_cell_index;
+        std::vector<D3DVertex> fog_vertices;
+
+        int CellIndex(int gx, int gy) const
+        {
+            const int lx = gx - x0;
+            const int ly = gy - y0;
+            if (lx < 0 || lx >= w || ly < 0 || ly >= h) return -1;
+            return ly * w + lx;
+        }
+        bool IsWalkable(int gx, int gy) const
+        {
+            const int idx = CellIndex(gx, gy);
+            return idx >= 0 && walkable[idx];
+        }
+        bool IsMapCell(int idx) const { return walkable[idx] || (blocked && blocked[idx]); }
+    };
+    MapGridData map_grid;
     GW::Constants::MapID border_map_id = static_cast<GW::Constants::MapID>(0);
     float border_cached_zoom = 0.0f;
 
@@ -147,14 +180,6 @@ namespace {
         return explored_cells[idx];
     }
 
-    int GetCellIndex(int gx, int gy)
-    {
-        const int lx = gx - cached_grid_x0;
-        const int ly = gy - cached_grid_y0;
-        if (lx < 0 || lx >= cached_grid_w || ly < 0 || ly >= cached_grid_h) return -1;
-        return ly * cached_grid_w + lx;
-    }
-
     std::vector<int> newly_explored_cells;
 
     bool UpdateExploration(const GW::GamePos* player_pos)
@@ -174,7 +199,7 @@ namespace {
             explored_instance_type = instance_type;
         }
 
-        if (!explored_cells && cached_walkable_grid_size > 0) explored_cells = new bool[cached_walkable_grid_size]();
+        if (!explored_cells && map_grid.size > 0) explored_cells = new bool[map_grid.size]();
         if (!explored_cells) return false;
 
         newly_explored_cells.clear();
@@ -192,9 +217,8 @@ namespace {
                 const float ddx = cell_center_x - player_pos->x;
                 const float ddy = cell_center_y - player_pos->y;
                 if (ddx * ddx + ddy * ddy > range_sq) continue;
-                const int idx = GetCellIndex(gx, gy);
-                if (idx >= 0 && !explored_cells[idx]
-                    && (cached_walkable_grid[idx] || (cached_blocked_grid && cached_blocked_grid[idx]))) {
+                const int idx = map_grid.CellIndex(gx, gy);
+                if (idx >= 0 && !explored_cells[idx] && map_grid.IsMapCell(idx)) {
                     explored_cells[idx] = true;
                     fog_buffer.SetCellColor(idx, 0x00000000);
                     newly_explored_cells.push_back(idx);
@@ -204,31 +228,129 @@ namespace {
         return !newly_explored_cells.empty();
     }
 
-    void InitFogBuffer()
+    // Pure function, safe on a worker thread: build the fog cell index + quads.
+    // Includes both walkable and blocked cells in the fog buffer so blocked
+    // areas can also be "explored" (fog clears, revealing the blocked color).
+    void BuildFogVertices(const MapGridData& data, std::vector<int>& out_cell_index, std::vector<D3DVertex>& out_verts)
     {
-        fog_buffer.clear();
-        if (!cached_walkable_grid || cached_walkable_grid_size <= 0) return;
+        out_cell_index.assign(data.size, -1);
+        out_verts.clear();
+        if (!data.walkable || data.size <= 0) return;
 
-        const float grid_origin_x = cached_grid_x0 * EXPLORE_CELL_SIZE;
-        const float grid_origin_y = cached_grid_y0 * EXPLORE_CELL_SIZE;
+        int cell_count = 0;
+        for (int i = 0; i < data.size; i++)
+            if (data.IsMapCell(i)) cell_count++;
+        out_verts.reserve(cell_count * D3DFogBuffer::VERTS_PER_CELL);
 
-        // Include both walkable and blocked cells in the fog buffer so blocked
-        // areas can also be "explored" (fog clears, revealing the blocked color).
-        bool* fog_cells = new bool[cached_walkable_grid_size]();
-        for (int i = 0; i < cached_walkable_grid_size; i++)
-            fog_cells[i] = cached_walkable_grid[i] || (cached_blocked_grid && cached_blocked_grid[i]);
-        fog_buffer.Build(cached_grid_w, cached_grid_h, fog_cells);
-        delete[] fog_cells;
-
-        for (int ly = 0; ly < cached_grid_h; ly++) {
-            for (int lx = 0; lx < cached_grid_w; lx++) {
-                const int idx = ly * cached_grid_w + lx;
-                if (!cached_walkable_grid[idx] && !(cached_blocked_grid && cached_blocked_grid[idx])) continue;
+        const float grid_origin_x = data.x0 * EXPLORE_CELL_SIZE;
+        const float grid_origin_y = data.y0 * EXPLORE_CELL_SIZE;
+        int walkable_count = 0;
+        for (int ly = 0; ly < data.h; ly++) {
+            for (int lx = 0; lx < data.w; lx++) {
+                const int idx = ly * data.w + lx;
+                if (!data.IsMapCell(idx)) continue;
+                out_cell_index[idx] = walkable_count++;
                 const float x0 = grid_origin_x + lx * EXPLORE_CELL_SIZE;
                 const float y0 = grid_origin_y + ly * EXPLORE_CELL_SIZE;
-                fog_buffer.push_back(D3DQuad({x0, y0}, {x0 + EXPLORE_CELL_SIZE, y0 + EXPLORE_CELL_SIZE}, settings.vq_color_fog_unexplored));
+                AppendShape(out_verts, D3DQuad({x0, y0}, {x0 + EXPLORE_CELL_SIZE, y0 + EXPLORE_CELL_SIZE}, settings.vq_color_fog_unexplored));
             }
         }
+    }
+
+    // Game thread: rebuild fog for the current grid, keeping explored cells clear.
+    void InitFogBuffer()
+    {
+        std::vector<int> cell_index;
+        std::vector<D3DVertex> verts;
+        BuildFogVertices(map_grid, cell_index, verts);
+        fog_buffer.Adopt(std::move(cell_index), std::move(verts));
+        if (!explored_cells) return;
+        for (int i = 0; i < map_grid.size; i++) {
+            if (explored_cells[i]) fog_buffer.SetCellColor(i, 0x00000000);
+        }
+    }
+
+    // Pure function, safe on a worker thread: build the inaccessible area,
+    // blocked area and border vertices for a grid.
+    void BuildStaticGeometryVertices(const MapGridData& data, float px_to_game, std::vector<D3DVertex>& out)
+    {
+        out.clear();
+        if (!data.walkable) return;
+
+        const float border_thickness_game = px_to_game;
+        const float gx0 = data.x0 * EXPLORE_CELL_SIZE;
+        const float gy0 = data.y0 * EXPLORE_CELL_SIZE;
+        const float gx1 = (data.x0 + data.w) * EXPLORE_CELL_SIZE;
+        const float gy1 = (data.y0 + data.h) * EXPLORE_CELL_SIZE;
+        const float ext = std::max(gx1 - gx0, gy1 - gy0) * 5.0f;
+
+        AppendShape(out, D3DQuad({gx0 - ext, gy0 - ext}, {gx1 + ext, gy0}, settings.vq_color_inaccessible));
+        AppendShape(out, D3DQuad({gx0 - ext, gy1}, {gx1 + ext, gy1 + ext}, settings.vq_color_inaccessible));
+        AppendShape(out, D3DQuad({gx0 - ext, gy0}, {gx0, gy1}, settings.vq_color_inaccessible));
+        AppendShape(out, D3DQuad({gx1, gy0}, {gx1 + ext, gy1}, settings.vq_color_inaccessible));
+
+        for (int gy = data.y0; gy < data.y0 + data.h; gy++) {
+            const float y0 = gy * EXPLORE_CELL_SIZE;
+            const float y1 = y0 + EXPLORE_CELL_SIZE;
+            int run_start = -1;
+            bool run_blocked = false;
+            for (int gx = data.x0; gx < data.x0 + data.w; gx++) {
+                if (!data.IsWalkable(gx, gy)) {
+                    const int idx = data.CellIndex(gx, gy);
+                    const bool is_blocked = idx >= 0 && data.blocked && data.blocked[idx];
+                    if (run_start == -1) {
+                        run_start = gx;
+                        run_blocked = is_blocked;
+                    } else if (is_blocked != run_blocked) {
+                        AppendShape(out, D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {gx * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
+                        run_start = gx;
+                        run_blocked = is_blocked;
+                    }
+                }
+                else {
+                    if (run_start != -1) {
+                        AppendShape(out, D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {gx * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
+                        run_start = -1;
+                    }
+                }
+            }
+            if (run_start != -1) {
+                AppendShape(out, D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {(data.x0 + data.w) * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
+            }
+        }
+
+        // Borders around walkable area
+        for (const auto& seg : data.border_segments)
+            AppendShape(out, D3DLine(seg.p1, seg.p2, border_thickness_game, settings.vq_color_border));
+
+        // Borders around blocked (unreachable) areas
+        if (data.blocked) {
+            for (int cy = 0; cy < data.h; cy++) {
+                for (int cx = 0; cx < data.w; cx++) {
+                    const int idx = cy * data.w + cx;
+                    if (!data.blocked[idx] || data.walkable[idx]) continue;
+                    const int gx = data.x0 + cx, gy = data.y0 + cy;
+                    const float x0 = gx * EXPLORE_CELL_SIZE, y0 = gy * EXPLORE_CELL_SIZE;
+                    const float x1 = x0 + EXPLORE_CELL_SIZE, y1 = y0 + EXPLORE_CELL_SIZE;
+                    auto is_blocked = [&](int nx, int ny) {
+                        const int ni = data.CellIndex(nx, ny);
+                        return ni >= 0 && data.blocked[ni] && !data.walkable[ni];
+                    };
+                    if (!is_blocked(gx, gy - 1)) AppendShape(out, D3DLine({x0, y0}, {x1, y0}, border_thickness_game, vq_color_blocked_border));
+                    if (!is_blocked(gx, gy + 1)) AppendShape(out, D3DLine({x0, y1}, {x1, y1}, border_thickness_game, vq_color_blocked_border));
+                    if (!is_blocked(gx - 1, gy)) AppendShape(out, D3DLine({x0, y0}, {x0, y1}, border_thickness_game, vq_color_blocked_border));
+                    if (!is_blocked(gx + 1, gy)) AppendShape(out, D3DLine({x1, y0}, {x1, y1}, border_thickness_game, vq_color_blocked_border));
+                }
+            }
+        }
+    }
+
+    // Game thread: rebuild static geometry for the current grid.
+    void BuildStaticMapGeometry()
+    {
+        std::vector<D3DVertex> verts;
+        BuildStaticGeometryVertices(map_grid, cached_px_to_game, verts);
+        inaccessible_area_and_borders.Adopt(std::move(verts));
     }
 
     // Per-cell frontier edge storage for incremental updates.
@@ -238,14 +360,13 @@ namespace {
     void ComputeCellFrontierEdges(int idx, std::vector<D3DVertex>& out)
     {
         out.clear();
-        const bool is_map_cell = cached_walkable_grid[idx] || (cached_blocked_grid && cached_blocked_grid[idx]);
-        if (!is_map_cell || explored_cells[idx]) return;
+        if (!map_grid.IsMapCell(idx) || explored_cells[idx]) return;
 
-        const int ly = idx / cached_grid_w;
-        const int lx = idx % cached_grid_w;
+        const int ly = idx / map_grid.w;
+        const int lx = idx % map_grid.w;
         const float FRONTIER_HALF_THICKNESS = cached_px_to_game;
-        const float grid_origin_x = cached_grid_x0 * EXPLORE_CELL_SIZE;
-        const float grid_origin_y = cached_grid_y0 * EXPLORE_CELL_SIZE;
+        const float grid_origin_x = map_grid.x0 * EXPLORE_CELL_SIZE;
+        const float grid_origin_y = map_grid.y0 * EXPLORE_CELL_SIZE;
         const float wx0 = grid_origin_x + lx * EXPLORE_CELL_SIZE;
         const float wx1 = wx0 + EXPLORE_CELL_SIZE;
         const float wy0 = grid_origin_y + ly * EXPLORE_CELL_SIZE;
@@ -258,20 +379,20 @@ namespace {
                     out.insert(out.end(), tri.v, tri.v + 3);
             }
         };
-        edge(ly > 0, idx - cached_grid_w, wx0, wy0, wx1, wy0);
-        edge(ly < cached_grid_h - 1, idx + cached_grid_w, wx0, wy1, wx1, wy1);
+        edge(ly > 0, idx - map_grid.w, wx0, wy0, wx1, wy0);
+        edge(ly < map_grid.h - 1, idx + map_grid.w, wx0, wy1, wx1, wy1);
         edge(lx > 0, idx - 1, wx0, wy0, wx0, wy1);
-        edge(lx < cached_grid_w - 1, idx + 1, wx1, wy0, wx1, wy1);
+        edge(lx < map_grid.w - 1, idx + 1, wx1, wy0, wx1, wy1);
     }
 
     void RebuildFrontierBorder()
     {
         frontier_cell_edges.clear();
         frontier_border.clear();
-        if (!explored_cells || !cached_walkable_grid) return;
+        if (!explored_cells || !map_grid.walkable) return;
 
         std::vector<D3DVertex> cell_verts;
-        for (int idx = 0; idx < cached_grid_w * cached_grid_h; idx++) {
+        for (int idx = 0; idx < map_grid.size; idx++) {
             ComputeCellFrontierEdges(idx, cell_verts);
             if (!cell_verts.empty())
                 frontier_cell_edges[idx] = cell_verts;
@@ -281,19 +402,19 @@ namespace {
 
     void UpdateFrontierIncremental()
     {
-        if (!explored_cells || !cached_walkable_grid) return;
+        if (!explored_cells || !map_grid.walkable) return;
 
         // Collect cells that need re-evaluation: each newly explored cell
         // plus its 4 neighbors.
         std::unordered_set<int> dirty_cells;
         for (const int idx : newly_explored_cells) {
-            const int ly = idx / cached_grid_w;
-            const int lx = idx % cached_grid_w;
+            const int ly = idx / map_grid.w;
+            const int lx = idx % map_grid.w;
             dirty_cells.insert(idx);
-            if (ly > 0) dirty_cells.insert(idx - cached_grid_w);
-            if (ly < cached_grid_h - 1) dirty_cells.insert(idx + cached_grid_w);
+            if (ly > 0) dirty_cells.insert(idx - map_grid.w);
+            if (ly < map_grid.h - 1) dirty_cells.insert(idx + map_grid.w);
             if (lx > 0) dirty_cells.insert(idx - 1);
-            if (lx < cached_grid_w - 1) dirty_cells.insert(idx + 1);
+            if (lx < map_grid.w - 1) dirty_cells.insert(idx + 1);
         }
 
         std::vector<D3DVertex> cell_verts;
@@ -307,13 +428,14 @@ namespace {
         frontier_border.FlushFrom(frontier_cell_edges);
     }
 
-    bool IsGridCellWalkable(int gx, int gy)
-    {
-        const int idx = GetCellIndex(gx, gy);
-        return idx >= 0 && cached_walkable_grid[idx];
-    }
+    // Plain copy of a trapezoid so the grid rebuild can run on a worker thread
+    // without touching game memory.
+    struct TrapezoidSnapshot {
+        float XTL, XTR, XBL, XBR, YB, YT;
+        bool reachable;
+    };
 
-    bool IsCellWalkableInTrapezoid(int gx, int gy, const GW::PathingTrapezoid& trap)
+    bool IsCellWalkableInTrapezoid(int gx, int gy, const TrapezoidSnapshot& trap)
     {
         const float cx0 = gx * EXPLORE_CELL_SIZE;
         const float cy0 = gy * EXPLORE_CELL_SIZE;
@@ -433,198 +555,109 @@ namespace {
         return reachable;
     }
 
-    void BuildStaticMapGeometry()
+    // Game thread only: BFS + copy out trapezoid coords for the worker thread.
+    std::vector<TrapezoidSnapshot> SnapshotPathingMap()
     {
-        const float border_thickness_game = cached_px_to_game;
-        const float gx0 = cached_grid_x0 * EXPLORE_CELL_SIZE;
-        const float gy0 = cached_grid_y0 * EXPLORE_CELL_SIZE;
-        const float gx1 = (cached_grid_x0 + cached_grid_w) * EXPLORE_CELL_SIZE;
-        const float gy1 = (cached_grid_y0 + cached_grid_h) * EXPLORE_CELL_SIZE;
-        const float ext = std::max(gx1 - gx0, gy1 - gy0) * 5.0f;
-
-        inaccessible_area_and_borders.clear();
-
-        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy0 - ext}, {gx1 + ext, gy0}, settings.vq_color_inaccessible));
-        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy1}, {gx1 + ext, gy1 + ext}, settings.vq_color_inaccessible));
-        inaccessible_area_and_borders.push_back(D3DQuad({gx0 - ext, gy0}, {gx0, gy1}, settings.vq_color_inaccessible));
-        inaccessible_area_and_borders.push_back(D3DQuad({gx1, gy0}, {gx1 + ext, gy1}, settings.vq_color_inaccessible));
-
-        std::vector<BorderSegment> blocked_border_segments;
-        for (int gy = cached_grid_y0; gy < cached_grid_y0 + cached_grid_h; gy++) {
-            const float y0 = gy * EXPLORE_CELL_SIZE;
-            const float y1 = y0 + EXPLORE_CELL_SIZE;
-            int run_start = -1;
-            bool run_blocked = false;
-            for (int gx = cached_grid_x0; gx < cached_grid_x0 + cached_grid_w; gx++) {
-                if (!IsGridCellWalkable(gx, gy)) {
-                    const int idx = GetCellIndex(gx, gy);
-                    const bool is_blocked = idx >= 0 && cached_blocked_grid && cached_blocked_grid[idx];
-                    if (run_start == -1) {
-                        run_start = gx;
-                        run_blocked = is_blocked;
-                    } else if (is_blocked != run_blocked) {
-                        inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {gx * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
-                        run_start = gx;
-                        run_blocked = is_blocked;
-                    }
-                }
-                else {
-                    if (run_start != -1) {
-                        inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {gx * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
-                        run_start = -1;
-                    }
-                }
-            }
-            if (run_start != -1) {
-                inaccessible_area_and_borders.push_back(D3DQuad({run_start * EXPLORE_CELL_SIZE, y0}, {(cached_grid_x0 + cached_grid_w) * EXPLORE_CELL_SIZE, y1}, run_blocked ? vq_color_blocked : settings.vq_color_inaccessible.value));
+        std::vector<TrapezoidSnapshot> out;
+        const auto pathing_map = GW::Map::GetPathingMap();
+        if (!pathing_map) return out;
+        const auto reachable = FindReachableTrapezoids(pathing_map);
+        for (size_t p = 0; p < pathing_map->size(); p++) {
+            const auto& plane = pathing_map->at(p);
+            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
+                const auto& trap = plane.trapezoids[t];
+                out.push_back({trap.XTL, trap.XTR, trap.XBL, trap.XBR, trap.YB, trap.YT, reachable.empty() || reachable.contains(&trap)});
             }
         }
-
-        // Borders around walkable area
-        for (const auto& seg : cached_border_segments)
-            inaccessible_area_and_borders.push_back(D3DLine(seg.p1, seg.p2, border_thickness_game, settings.vq_color_border));
-
-        // Borders around blocked (unreachable) areas
-        if (cached_blocked_grid) {
-            for (int cy = 0; cy < cached_grid_h; cy++) {
-                for (int cx = 0; cx < cached_grid_w; cx++) {
-                    const int idx = cy * cached_grid_w + cx;
-                    if (!cached_blocked_grid[idx] || cached_walkable_grid[idx]) continue;
-                    const int gx = cached_grid_x0 + cx, gy = cached_grid_y0 + cy;
-                    const float x0 = gx * EXPLORE_CELL_SIZE, y0 = gy * EXPLORE_CELL_SIZE;
-                    const float x1 = x0 + EXPLORE_CELL_SIZE, y1 = y0 + EXPLORE_CELL_SIZE;
-                    auto is_blocked = [&](int nx, int ny) {
-                        const int ni = GetCellIndex(nx, ny);
-                        return ni >= 0 && cached_blocked_grid[ni] && !cached_walkable_grid[ni];
-                    };
-                    if (!is_blocked(gx, gy - 1)) inaccessible_area_and_borders.push_back(D3DLine({x0, y0}, {x1, y0}, border_thickness_game, vq_color_blocked_border));
-                    if (!is_blocked(gx, gy + 1)) inaccessible_area_and_borders.push_back(D3DLine({x0, y1}, {x1, y1}, border_thickness_game, vq_color_blocked_border));
-                    if (!is_blocked(gx - 1, gy)) inaccessible_area_and_borders.push_back(D3DLine({x0, y0}, {x0, y1}, border_thickness_game, vq_color_blocked_border));
-                    if (!is_blocked(gx + 1, gy)) inaccessible_area_and_borders.push_back(D3DLine({x1, y0}, {x1, y1}, border_thickness_game, vq_color_blocked_border));
-                }
-            }
-        }
+        return out;
     }
 
-    void RebuildMapBorder()
+    // Pure function, safe on a worker thread: rasterize the snapshot into
+    // walkable/blocked grids and build border segments + vertex data.
+    MapGridData ComputeMapGrid(const std::vector<TrapezoidSnapshot>& traps, float px_to_game)
     {
-        // Save old exploration state so we can restore it after rebuilding the grid
-        bool* old_explored = explored_cells;
-        const int old_x0 = cached_grid_x0, old_y0 = cached_grid_y0;
-        const int old_w = cached_grid_w, old_h = cached_grid_h;
-        explored_cells = nullptr;
+        MapGridData data;
+        if (traps.empty()) return data;
 
-        cached_border_segments.clear();
-        frontier_cell_edges.clear();
-        frontier_border.clear();
-        delete[] cached_walkable_grid;
-        cached_walkable_grid = nullptr;
-        delete[] cached_blocked_grid;
-        cached_blocked_grid = nullptr;
-        cached_walkable_grid_size = 0;
-
-        const auto pathing_map = GW::Map::GetPathingMap();
-        if (!pathing_map) return;
-
-        const auto reachable = FindReachableTrapezoids(pathing_map);
-
-        // Compute grid bounds from ALL trapezoids so the inaccessible overlay
-        // covers the full map, but only rasterize reachable ones as walkable.
-        std::vector<const GW::PathingTrapezoid*> traps;
+        // Grid bounds come from ALL trapezoids so the inaccessible overlay
+        // covers the full map, but only reachable ones rasterize as walkable.
         float min_x = FLT_MAX, min_y = FLT_MAX, max_x = -FLT_MAX, max_y = -FLT_MAX;
-        for (size_t p = 0; p < pathing_map->size(); p++) {
-            const auto& plane = pathing_map->at(p);
-            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
-                const auto& trap = plane.trapezoids[t];
-                min_x = std::min({min_x, trap.XTL, trap.XTR, trap.XBL, trap.XBR});
-                max_x = std::max({max_x, trap.XTL, trap.XTR, trap.XBL, trap.XBR});
-                min_y = std::min(min_y, trap.YB);
-                max_y = std::max(max_y, trap.YT);
-                if (!reachable.empty() && !reachable.contains(&trap)) continue;
-                traps.push_back(&trap);
-            }
-        }
-        if (min_x == FLT_MAX) return;
-
-        cached_grid_x0 = static_cast<int>(floorf(min_x / EXPLORE_CELL_SIZE)) - 1;
-        cached_grid_y0 = static_cast<int>(floorf(min_y / EXPLORE_CELL_SIZE)) - 1;
-        cached_grid_w = static_cast<int>(ceilf(max_x / EXPLORE_CELL_SIZE)) + 1 - cached_grid_x0;
-        cached_grid_h = static_cast<int>(ceilf(max_y / EXPLORE_CELL_SIZE)) + 1 - cached_grid_y0;
-
-        cached_walkable_grid_size = cached_grid_w * cached_grid_h;
-        cached_walkable_grid = new bool[cached_walkable_grid_size]();
-        cached_blocked_grid = new bool[cached_walkable_grid_size]();
-
-        // Rasterize unreachable trapezoids into blocked grid
-        for (size_t p = 0; p < pathing_map->size(); p++) {
-            const auto& plane = pathing_map->at(p);
-            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
-                const auto& trap = plane.trapezoids[t];
-                if (reachable.empty() || reachable.contains(&trap)) continue;
-                const int ty0 = std::max(0, static_cast<int>(floorf(trap.YB / EXPLORE_CELL_SIZE)) - cached_grid_y0);
-                const int ty1 = std::min(cached_grid_h - 1, static_cast<int>(ceilf(trap.YT / EXPLORE_CELL_SIZE)) - cached_grid_y0);
-                const int tx0 = std::max(0, static_cast<int>(floorf(std::min({trap.XTL, trap.XBL}) / EXPLORE_CELL_SIZE)) - cached_grid_x0);
-                const int tx1 = std::min(cached_grid_w - 1, static_cast<int>(ceilf(std::max({trap.XTR, trap.XBR}) / EXPLORE_CELL_SIZE)) - cached_grid_x0);
-                for (int cy = ty0; cy <= ty1; cy++) {
-                    for (int cx = tx0; cx <= tx1; cx++) {
-                        const int idx = GetCellIndex(cached_grid_x0 + cx, cached_grid_y0 + cy);
-                        if (idx >= 0 && IsCellWalkableInTrapezoid(cached_grid_x0 + cx, cached_grid_y0 + cy, trap))
-                            cached_blocked_grid[idx] = true;
-                    }
-                }
-            }
+        for (const auto& trap : traps) {
+            min_x = std::min({min_x, trap.XTL, trap.XTR, trap.XBL, trap.XBR});
+            max_x = std::max({max_x, trap.XTL, trap.XTR, trap.XBL, trap.XBR});
+            min_y = std::min(min_y, trap.YB);
+            max_y = std::max(max_y, trap.YT);
         }
 
-        // Rasterize reachable trapezoids into walkable grid
-        for (const auto* trap : traps) {
-            const int ty0 = std::max(0, static_cast<int>(floorf(trap->YB / EXPLORE_CELL_SIZE)) - cached_grid_y0);
-            const int ty1 = std::min(cached_grid_h - 1, static_cast<int>(ceilf(trap->YT / EXPLORE_CELL_SIZE)) - cached_grid_y0);
-            const int tx0 = std::max(0, static_cast<int>(floorf(std::min({trap->XTL, trap->XBL}) / EXPLORE_CELL_SIZE)) - cached_grid_x0);
-            const int tx1 = std::min(cached_grid_w - 1, static_cast<int>(ceilf(std::max({trap->XTR, trap->XBR}) / EXPLORE_CELL_SIZE)) - cached_grid_x0);
+        data.x0 = static_cast<int>(floorf(min_x / EXPLORE_CELL_SIZE)) - 1;
+        data.y0 = static_cast<int>(floorf(min_y / EXPLORE_CELL_SIZE)) - 1;
+        data.w = static_cast<int>(ceilf(max_x / EXPLORE_CELL_SIZE)) + 1 - data.x0;
+        data.h = static_cast<int>(ceilf(max_y / EXPLORE_CELL_SIZE)) + 1 - data.y0;
+        data.size = data.w * data.h;
+        data.walkable = std::make_unique<bool[]>(data.size);
+        data.blocked = std::make_unique<bool[]>(data.size);
+
+        for (const auto& trap : traps) {
+            bool* grid = trap.reachable ? data.walkable.get() : data.blocked.get();
+            const int ty0 = std::max(0, static_cast<int>(floorf(trap.YB / EXPLORE_CELL_SIZE)) - data.y0);
+            const int ty1 = std::min(data.h - 1, static_cast<int>(ceilf(trap.YT / EXPLORE_CELL_SIZE)) - data.y0);
+            const int tx0 = std::max(0, static_cast<int>(floorf(std::min(trap.XTL, trap.XBL) / EXPLORE_CELL_SIZE)) - data.x0);
+            const int tx1 = std::min(data.w - 1, static_cast<int>(ceilf(std::max(trap.XTR, trap.XBR) / EXPLORE_CELL_SIZE)) - data.x0);
             for (int cy = ty0; cy <= ty1; cy++) {
                 for (int cx = tx0; cx <= tx1; cx++) {
-                    const int abs_gx = cached_grid_x0 + cx;
-                    const int abs_gy = cached_grid_y0 + cy;
-                    const int idx = GetCellIndex(abs_gx, abs_gy);
-                    if (idx < 0 || cached_walkable_grid[idx]) continue;
-                    if (IsCellWalkableInTrapezoid(abs_gx, abs_gy, *trap))
-                        cached_walkable_grid[idx] = true;
+                    const int idx = cy * data.w + cx;
+                    if (grid[idx]) continue;
+                    if (IsCellWalkableInTrapezoid(data.x0 + cx, data.y0 + cy, trap))
+                        grid[idx] = true;
                 }
             }
         }
 
-        for (int cy = 0; cy < cached_grid_h; cy++) {
-            for (int cx = 0; cx < cached_grid_w; cx++) {
-                const int idx = GetCellIndex(cached_grid_x0 + cx, cached_grid_y0 + cy);
-                if (idx < 0 || !cached_walkable_grid[idx]) continue;
-
-                const float x0 = (cached_grid_x0 + cx) * EXPLORE_CELL_SIZE;
-                const float y0 = (cached_grid_y0 + cy) * EXPLORE_CELL_SIZE;
+        for (int cy = 0; cy < data.h; cy++) {
+            for (int cx = 0; cx < data.w; cx++) {
+                if (!data.walkable[cy * data.w + cx]) continue;
+                const int gx = data.x0 + cx, gy = data.y0 + cy;
+                const float x0 = gx * EXPLORE_CELL_SIZE;
+                const float y0 = gy * EXPLORE_CELL_SIZE;
                 const float x1 = x0 + EXPLORE_CELL_SIZE;
                 const float y1 = y0 + EXPLORE_CELL_SIZE;
-
-                if (!IsGridCellWalkable(cached_grid_x0 + cx, cached_grid_y0 + cy - 1)) cached_border_segments.push_back({{x0, y0}, {x1, y0}});
-                if (!IsGridCellWalkable(cached_grid_x0 + cx, cached_grid_y0 + cy + 1)) cached_border_segments.push_back({{x0, y1}, {x1, y1}});
-                if (!IsGridCellWalkable(cached_grid_x0 + cx - 1, cached_grid_y0 + cy)) cached_border_segments.push_back({{x0, y0}, {x0, y1}});
-                if (!IsGridCellWalkable(cached_grid_x0 + cx + 1, cached_grid_y0 + cy)) cached_border_segments.push_back({{x1, y0}, {x1, y1}});
+                if (!data.IsWalkable(gx, gy - 1)) data.border_segments.push_back({{x0, y0}, {x1, y0}});
+                if (!data.IsWalkable(gx, gy + 1)) data.border_segments.push_back({{x0, y1}, {x1, y1}});
+                if (!data.IsWalkable(gx - 1, gy)) data.border_segments.push_back({{x0, y0}, {x0, y1}});
+                if (!data.IsWalkable(gx + 1, gy)) data.border_segments.push_back({{x1, y0}, {x1, y1}});
             }
         }
-        BuildStaticMapGeometry();
-        InitFogBuffer();
+
+        BuildStaticGeometryVertices(data, px_to_game, data.static_vertices);
+        BuildFogVertices(data, data.fog_cell_index, data.fog_vertices);
+        return data;
+    }
+
+    // Game thread only: swap in a computed grid and adopt its vertex data.
+    void ApplyMapGrid(MapGridData& data)
+    {
+        // Save old exploration state so we can restore it after swapping grids
+        bool* old_explored = explored_cells;
+        const int old_x0 = map_grid.x0, old_y0 = map_grid.y0;
+        const int old_w = map_grid.w, old_h = map_grid.h;
+        explored_cells = nullptr;
+
+        frontier_cell_edges.clear();
+        frontier_border.clear();
+        inaccessible_area_and_borders.Adopt(std::move(data.static_vertices));
+        fog_buffer.Adopt(std::move(data.fog_cell_index), std::move(data.fog_vertices));
+        map_grid = std::move(data);
 
         // Restore exploration state from the old grid
-        if (old_explored && cached_walkable_grid_size > 0) {
-            if (!explored_cells) explored_cells = new bool[cached_walkable_grid_size]();
+        if (old_explored && map_grid.size > 0) {
+            if (!explored_cells) explored_cells = new bool[map_grid.size]();
             explored_map_id = GW::Map::GetMapID();
             explored_instance_type = GW::Map::GetInstanceType();
             for (int old_ly = 0; old_ly < old_h; old_ly++) {
                 for (int old_lx = 0; old_lx < old_w; old_lx++) {
                     if (!old_explored[old_ly * old_w + old_lx]) continue;
-                    const int abs_gx = old_x0 + old_lx;
-                    const int abs_gy = old_y0 + old_ly;
-                    const int new_idx = GetCellIndex(abs_gx, abs_gy);
-                    if (new_idx >= 0 && (cached_walkable_grid[new_idx]
-                        || (cached_blocked_grid && cached_blocked_grid[new_idx]))) {
+                    const int new_idx = map_grid.CellIndex(old_x0 + old_lx, old_y0 + old_ly);
+                    if (new_idx >= 0 && map_grid.IsMapCell(new_idx)) {
                         explored_cells[new_idx] = true;
                         fog_buffer.SetCellColor(new_idx, 0x00000000);
                     }
@@ -634,6 +667,36 @@ namespace {
         }
         delete[] old_explored;
         force_exploration_update = true;
+    }
+
+    void RebuildMapBorder()
+    {
+        auto data = ComputeMapGrid(SnapshotPathingMap(), cached_px_to_game);
+        ApplyMapGrid(data);
+    }
+
+    bool grid_rebuild_pending = false;
+
+    // Async rebuild for mid-instance changes (gates, teleports): the heavy
+    // rasterization and vertex building run on the worker thread; only the
+    // BFS snapshot and the final swap touch the game thread.
+    void QueueRebuildMapBorder()
+    {
+        if (grid_rebuild_pending) return;
+        grid_rebuild_pending = true;
+        const auto snapshot = std::make_shared<std::vector<TrapezoidSnapshot>>(SnapshotPathingMap());
+        const float px_to_game = cached_px_to_game;
+        const auto map_id = GW::Map::GetMapID();
+        const auto instance_type = GW::Map::GetInstanceType();
+        Resources::EnqueueWorkerTask([snapshot, px_to_game, map_id, instance_type] {
+            const auto data = std::make_shared<MapGridData>(ComputeMapGrid(*snapshot, px_to_game));
+            Resources::EnqueueMainTask([data, map_id, instance_type] {
+                grid_rebuild_pending = false;
+                // Discard stale results if the instance changed mid-compute
+                if (map_id == GW::Map::GetMapID() && instance_type == GW::Map::GetInstanceType())
+                    ApplyMapGrid(*data);
+            });
+        });
     }
 
     bool nav_active = false;
@@ -986,26 +1049,25 @@ void VanquishMapOverlayWidget::Update(float)
                 border_map_id = map_id;
                 border_instance_type = instance_type;
                 cached_blocked_planes.clear();
-                RebuildMapBorder(); // calls BuildStaticMapGeometry + InitFogBuffer
+                RebuildMapBorder(); // sync: loading screen hides the hitch
             }
             else {
                 BuildStaticMapGeometry(); // zoom changed, rebuild with new thickness
                 RebuildFrontierBorder();
             }
         }
-        else if (HaveBlockedPlanesChanged()) {
-            RebuildMapBorder();
+        else if (!grid_rebuild_pending && HaveBlockedPlanesChanged()) {
+            QueueRebuildMapBorder();
         }
-        else if (cached_walkable_grid && cached_walkable_grid_size > 0) {
+        else if (map_grid.walkable && map_grid.size > 0) {
             // Detect teleport: if the player is standing on a cell that isn't
             // walkable, the reachability set is stale (e.g. UW teleports).
             const auto* player = GW::Agents::GetControlledCharacter();
             if (player) {
                 const int px = static_cast<int>(floorf(player->pos.x / EXPLORE_CELL_SIZE));
                 const int py = static_cast<int>(floorf(player->pos.y / EXPLORE_CELL_SIZE));
-                const int idx = GetCellIndex(px, py);
-                if (idx < 0 || !cached_walkable_grid[idx]) {
-                    RebuildMapBorder();
+                if (!map_grid.IsWalkable(px, py)) {
+                    QueueRebuildMapBorder();
                 }
             }
         }
@@ -1045,8 +1107,7 @@ void VanquishMapOverlayWidget::Terminate()
     MissionMapWidget::RemoveContextMenuCallback(&VanquishMapOverlayWidget::ContextMenuItems);
     QuestModule::RemoveCustomMarkerChangedCallback(&OnCustomMarkerChanged);
 
-    delete[] cached_walkable_grid;
-    cached_walkable_grid = nullptr;
+    map_grid = {};
     delete[] explored_cells;
     explored_cells = nullptr;
 
