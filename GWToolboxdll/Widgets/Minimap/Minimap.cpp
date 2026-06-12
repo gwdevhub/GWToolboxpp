@@ -1623,7 +1623,8 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
 
     instance.pmap_renderer.Render(device, context);
-    instance.custom_renderer.Render(device);
+    const float gwinches_per_pixel = context.base_scale / 5000.0f / 2.f * context.zoom_scale;
+    instance.custom_renderer.Render(device, gwinches_per_pixel);
 
 
 
@@ -1631,7 +1632,6 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     if (context.draw_ranges) {
         translate_char = DirectX::XMMatrixTranslation(me->pos.x, me->pos.y, 0);
         device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate_char));
-        const float gwinches_per_pixel = context.base_scale / 5000.0f / 2.f * context.zoom_scale;
         instance.range_renderer.Render(device, gwinches_per_pixel);
         device->SetTransform(D3DTS_WORLD, &reset_world);
     }

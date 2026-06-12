@@ -66,6 +66,8 @@ void CustomRenderer::RegisterSettings(ToolboxModule* module)
 {
     // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
     SettingsRegistry::RegisterField(module, "color_custom_markers", reinterpret_cast<Colors::SettingColor*>(&color));
+    SettingsRegistry::RegisterField(module, "color_hero_flag_circles", reinterpret_cast<Colors::SettingColor*>(&color_hero_flags_));
+    SettingsRegistry::RegisterField(module, "hero_flag_circle_thickness", &hero_flag_line_thickness_);
 }
 
 void CustomRenderer::LoadMarkers()
@@ -245,7 +247,7 @@ void CustomRenderer::SaveMarkers()
 void CustomRenderer::Invalidate()
 {
     D3DVertexBuffer::Invalidate();
-    linecircle.Invalidate();
+    hero_circles_.Invalidate();
     for (auto& m : markers) {
         m.Invalidate();
     }
@@ -770,6 +772,25 @@ void CustomRenderer::DrawPolygonSettings()
 
 void CustomRenderer::DrawSettings()
 {
+    if (ImGui::TreeNodeEx("Hero Flag Circles", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        bool changed = false;
+        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+        ImGui::PushItemWidth(60.f);
+        changed |= ImGui::DragFloat("##hero_flag_thickness", &hero_flag_line_thickness_, 0.1f, 0.1f, 20.f, "%.1fpx");
+        ImGui::PopItemWidth();
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Line thickness (pixels)");
+        }
+        ImGui::SameLine(0.f, spacing);
+        changed |= ImGui::ColorButtonPicker("##hero_flag_color", &color_hero_flags_);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Hero flag circle color");
+        }
+        if (changed) {
+            hero_circles_.Invalidate();
+        }
+        ImGui::TreePop();
+    }
     const auto draw_note = [] {
         ImGui::Text("Note: custom markers are stored in 'Markers.json' in settings folder. You can share the file with other players or paste other people's markers into it.");
     };
@@ -805,7 +826,7 @@ void CustomRenderer::Initialize(IDirect3DDevice9* device)
 void CustomRenderer::Terminate()
 {
     D3DVertexBuffer::Terminate();
-    linecircle.Terminate();
+    hero_circles_.Terminate();
     for (const auto l : lines) {
         delete l;
     }
@@ -819,6 +840,53 @@ void CustomRenderer::Terminate()
     }
     markers.clear();
 }
+void CustomRenderer::HeroCircles::Initialize(IDirect3DDevice9* device)
+{
+    type = D3DPT_TRIANGLESTRIP;
+    vertices.clear();
+    const auto BuildCircle = [&](const float radius) {
+        const float diff = thickness / std::max(gwinches_per_pixel, 1e-4f);
+        for (auto i = 0; i <= static_cast<int>(circle_triangles); i += 2) {
+            const float angle = i / static_cast<float>(circle_triangles) * DirectX::XM_2PI;
+            vertices.push_back({radius * cosf(angle), radius * sinf(angle), 0.f, color});
+            vertices.push_back({(radius + diff) * cosf(angle), (radius + diff) * sinf(angle), 0.f, color});
+        }
+    };
+    BuildCircle(200.f);
+    BuildCircle(300.f);
+    D3DVertexBuffer::Initialize(device);
+}
+
+void CustomRenderer::HeroCircles::Update(const DWORD c, const float t, const float gpp)
+{
+    if (color == c && thickness == t && gwinches_per_pixel == gpp) return;
+    color = c;
+    thickness = t;
+    gwinches_per_pixel = gpp;
+    Invalidate();
+}
+
+void CustomRenderer::HeroCircles::RenderAt(IDirect3DDevice9* device, const float x, const float y, const bool is_allflag)
+{
+    if (!initialized) {
+        initialized = true;
+        Initialize(device);
+    }
+    if (!buffer) return;
+    device->SetFVF(D3DFVF_CUSTOMVERTEX);
+    device->SetStreamSource(0, buffer, 0, sizeof(D3DVertex));
+    const auto translate = DirectX::XMMatrixTranslation(x, y, 0.0f);
+    device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate));
+    const auto offset = static_cast<UINT>(is_allflag ? circle_points : 0);
+    device->DrawPrimitive(D3DPT_TRIANGLESTRIP, offset, static_cast<UINT>(circle_triangles));
+}
+
+void CustomRenderer::Render(IDirect3DDevice9* device, const float gwinches_per_pixel)
+{
+    gwinches_per_pixel_ = gwinches_per_pixel;
+    Render(device);
+}
+
 void CustomRenderer::CustomPolygon::Initialize(IDirect3DDevice9* device)
 {
     vertices.clear();
@@ -930,22 +998,15 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
     }
 
     // Hero flag circles
+    hero_circles_.Update(color_hero_flags_, hero_flag_line_thickness_, gwinches_per_pixel_);
     if (GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags; flags.valid()) {
         for (const auto& flag : flags) {
             if (!std::isfinite(flag.flag.x)) continue;
-            const auto translate = DirectX::XMMatrixTranslation(flag.flag.x, flag.flag.y, 0.0f);
-            const auto scale = DirectX::XMMatrixScaling(200.0f, 200.0f, 1.0f);
-            const auto world = scale * translate;
-            device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-            linecircle.Render(device);
+            hero_circles_.RenderAt(device, flag.flag.x, flag.flag.y, false);
         }
     }
     if (const GW::Vec3f allflag = GW::GetGameContext()->world->all_flag; std::isfinite(allflag.x)) {
-        const auto translate = DirectX::XMMatrixTranslation(allflag.x, allflag.y, 0.0f);
-        const auto scale = DirectX::XMMatrixScaling(300.0f, 300.0f, 1.0f);
-        const auto world = scale * translate;
-        device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&world));
-        linecircle.Render(device);
+        hero_circles_.RenderAt(device, allflag.x, allflag.y, true);
     }
     const auto xmi = DirectX::XMMatrixIdentity();
     device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&xmi));
