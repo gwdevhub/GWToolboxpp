@@ -155,6 +155,8 @@ public:
     [[nodiscard]] const std::vector<CustomPolygon>& GetPolys() const { return polygons; }
     [[nodiscard]] const std::vector<CustomMarker>& GetMarkers() const { return markers; }
 
+    void Render(IDirect3DDevice9* device, float gwinches_per_pixel);
+
 private:
     void Initialize(IDirect3DDevice9* device) override;
 
@@ -168,8 +170,23 @@ private:
         char tooltip_str[128]{};
     } map_id_tooltip;
 
-    D3DLineCircle linecircle{1.f, 0xFF666677};
-    
+    // Triangle-strip circle buffer for hero flag indicators
+    struct HeroCircles : D3DVertexBuffer {
+        static constexpr size_t circle_points = 192;
+        static constexpr size_t circle_triangles = circle_points - 2;
+        DWORD color = 0xFF666677;
+        float thickness = 1.f;
+        float gwinches_per_pixel = 1.f;
+        void Update(DWORD c, float t, float gpp);
+        void RenderAt(IDirect3DDevice9* device, float x, float y, bool is_allflag);
+    private:
+        void Initialize(IDirect3DDevice9* device) override;
+    };
+    HeroCircles hero_circles_{};
+    Color color_hero_flags_{0xFF666677};
+    float hero_flag_line_thickness_ = 1.f;
+    float gwinches_per_pixel_ = 1.f;
+
     inline static Color color{0xFFFFFFFF};
 
     int show_polygon_details = -1;
