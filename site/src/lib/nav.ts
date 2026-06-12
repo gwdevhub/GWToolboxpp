@@ -13,6 +13,7 @@ export const navGroups: NavGroup[] = [
     label: 'Getting Started',
     items: [
       { slug: 'faq', label: 'FAQ' },
+      { slug: 'launch_options', label: 'Launcher Arguments' },
       { slug: 'linux', label: 'Linux Install Guide' },
       { slug: 'history', label: 'Version History' },
       { slug: 'credits', label: 'Credits' },
@@ -70,6 +71,7 @@ export const navGroups: NavGroup[] = [
       { slug: 'reroll', label: 'Reroll' },
       { slug: 'integrations', label: 'Integrations' },
       { slug: 'input_modules', label: 'Input' },
+      { slug: 'qol_fixes', label: 'Quality of Life Fixes' },
       { slug: 'plugins', label: 'Plugins' },
     ],
   },
