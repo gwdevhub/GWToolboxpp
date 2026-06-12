@@ -26,6 +26,7 @@ public:
 
     void Initialize() override;
     void SignalTerminate() override;
+    void Update(float delta) override;
 
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
     void SaveSettings(SettingsDoc& doc) override;
