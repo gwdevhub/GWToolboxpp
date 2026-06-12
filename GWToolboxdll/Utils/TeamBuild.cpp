@@ -8,6 +8,7 @@
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -919,8 +920,15 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
             else {
                 can_load = ToolboxUtils::IsHeroUnlocked(build.hero_id);
                 if (can_load) {
+                    const auto* map_info = GW::Map::GetMapInfo();
+                    const bool party_full = map_info && GW::PartyMgr::GetPartySize() >= map_info->max_party_size;
+                    const bool hero_in_party = GetHeroFlagInfo(static_cast<uint32_t>(build.hero_id)) != nullptr;
+                    const bool no_space = party_full && !hero_in_party;
+                    if (no_space) ImGui::BeginDisabled();
                     if (GuiUtils::IconButton("Load##load", GuiUtils::GwButtonIcon::LoadFromTemplate, icon_btn_size)) build.Load();
-                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Load build on hero");
+                    if (no_space) ImGui::EndDisabled();
+                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                        ImGui::SetTooltip(no_space ? "No space in the party to load the hero" : "Load build on hero");
                 }
                 else {
                     ImGui::Dummy(icon_btn_size);
