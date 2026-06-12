@@ -18,15 +18,11 @@ public:
     }
 
     [[nodiscard]] const char* Name() const override { return "Hero Panel Positions"; }
-    [[nodiscard]] const char* Description() const override
-    {
-        return "Remembers the on-screen position of each hero's command panel and restores it when the panel reappears.";
-    }
+    [[nodiscard]] const char* Description() const override { return "Remembers the on-screen position of each hero's command panel and restores it when the panel reappears."; }
     [[nodiscard]] bool HasSettings() override { return false; }
 
     void Initialize() override;
     void SignalTerminate() override;
-    void Update(float delta) override;
 
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
     void SaveSettings(SettingsDoc& doc) override;
