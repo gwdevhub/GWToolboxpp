@@ -67,16 +67,20 @@ constexpr auto CMDTITLE_REMOVE_CURRENT = 0xffff;
 namespace {
 
     struct SearchAgent {
+        struct Query {
+            std::wstring search;
+            GW::AgentTargetFlags type;
+        };
         clock_t started = 0;
         std::vector<std::pair<uint32_t, std::unique_ptr<GuiUtils::EncString>>> npc_names;
-        std::wstring search;
-        void Init(const wchar_t* _search, const GW::AgentTargetFlags type);
+        std::vector<Query> queries;
+        void Add(const wchar_t* _search, const GW::AgentTargetFlags type);
         void Update();
         void Terminate() { Reset(); }
         void Reset()
         {
             started = 0;
-            search.clear();
+            queries.clear();
             npc_names.clear();
         }
     } npc_to_find;
@@ -759,7 +763,7 @@ namespace {
         }
         else {
             if (!IsNearestStr(model_id_or_name)) {
-                npc_to_find.Init(model_id_or_name, type);
+                npc_to_find.Add(model_id_or_name, type);
                 return;
             }
         }
@@ -2083,20 +2087,30 @@ void ChatCommands::QuestPing::Update()
     }
 }
 
-void SearchAgent::Init(const wchar_t* _search, const GW::AgentTargetFlags type)
+void SearchAgent::Add(const wchar_t* _search, const GW::AgentTargetFlags type)
 {
-    Reset();
     if (!_search || !_search[0]) return;
 
-    search = TextUtils::ToLower(_search);
-    started = TIMER_INIT();
+    // Each term (split on '|') is matched independently, giving OR semantics.
+    const auto terms = TextUtils::Split(TextUtils::ToLower(_search), L"|");
+    if (terms.empty()) return;
+    for (const auto& term : terms) {
+        queries.push_back({term, type});
+    }
+
+    // Anchor the timeout to the first pending query so a burst of hotkeys can't keep pushing it back.
+    if (!started) {
+        started = TIMER_INIT();
+    }
 
     GW::AgentArray* agents = GW::Agents::GetAgentArray();
     if (!agents) return;
 
     for (const auto agent : *agents) {
         if (!GW::Agents::GetAgentMatchesFlags(agent, type)) continue;
-
+        if (std::ranges::any_of(npc_names, [agent](const auto& n) { return n.first == agent->agent_id; })) {
+            continue; // already queued for decoding by an earlier query
+        }
         const wchar_t* enc_name = GW::Agents::GetAgentEncName(agent);
         if (enc_name && enc_name[0]) {
             npc_names.push_back({agent->agent_id, std::make_unique<GuiUtils::EncString>(enc_name)});
@@ -2126,22 +2140,22 @@ void SearchAgent::Update()
     if (!me) {
         return;
     }
-    const auto search_terms = TextUtils::Split(search, L"|");
-    for (const auto& enc_name : npc_names) {
-        const auto name = TextUtils::ToLower(enc_name.second->wstring());
-        const auto found = std::ranges::any_of(search_terms, [&name](const std::wstring& term) {
-            return name.find(term) != std::wstring::npos;
-        });
-        if (!found) {
+    for (const auto& [agent_id, enc] : npc_names) {
+        const auto agent = GW::Agents::GetAgentByID(agent_id);
+        if (!agent) {
             continue;
         }
-        const auto agent = GW::Agents::GetAgentByID(enc_name.first);
-        if (!agent) {
+        const auto name = TextUtils::ToLower(enc->wstring());
+        // Match a term only against agents of the type it was queued with, so each /target type stays scoped.
+        const auto matches = std::ranges::any_of(queries, [&](const Query& q) {
+            return name.find(q.search) != std::wstring::npos && GW::Agents::GetAgentMatchesFlags(agent, q.type);
+        });
+        if (!matches) {
             continue;
         }
         const auto dist = GW::GetSquareDistance(me->pos, agent->pos);
         if (dist < distance) {
-            closest = agent->agent_id;
+            closest = agent_id;
             distance = dist;
         }
     }
