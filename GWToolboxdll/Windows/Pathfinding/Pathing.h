@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Pathing.h>
 #include "MapSpecificData.h"
+#include "PathingMapData.h"
 
 namespace Pathing {
     #define PATHING_MAX_PLANE_COUNT 192 // Be sure to ASSERT if this is ever higher!
@@ -18,7 +20,8 @@ namespace Pathing {
         FailedToFinializePath,
         InvalidMapContext,
         BuildPathLengthExceeded,
-        FailedToGetPathingMapBlock
+        FailedToGetPathingMapBlock,
+        MilePathBuildOOM // worker thread aborted with std::bad_alloc; visgraph is unsafe to use
     };
 
 	typedef uint16_t PointId;
@@ -26,12 +29,14 @@ namespace Pathing {
     class MilePath {
         volatile bool m_processing = false;
         volatile bool m_done = false;
+        volatile bool m_build_failed = false; // worker thread caught std::bad_alloc during visgraph build
         volatile int m_progress = 0;
 
         std::thread* worker_thread = nullptr;
 
-    public:	
+    public:
         MilePath(GW::MapContext*);
+        MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids = {});
         ~MilePath();
 
         // Signals terminate to worker thread. Usually followed late by shutdown() to grab the thread again.
@@ -44,8 +49,8 @@ namespace Pathing {
             while (isProcessing())
                 Sleep(10);
             if (worker_thread) {
-                ASSERT(worker_thread->joinable());
-                worker_thread->join();
+                if (worker_thread->joinable())
+                    worker_thread->join();
                 delete worker_thread;
                 worker_thread = nullptr;
             }
@@ -56,16 +61,31 @@ namespace Pathing {
             return m_progress;
         }
 
+        // Read-only access to the underlying pathing map data (owned by MilePath).
+        // Used by sibling pathfinders (e.g. OpenTyria trapezoid AStar) so we don't
+        // re-load the same DAT data twice. Pointer remains valid for the MilePath's
+        // lifetime.
+        const Pathing::PathingMapData* GetMapData() const;
+
         bool ready()
         {
             return m_progress >= 100;
         }
 
+        // True if the worker thread aborted with std::bad_alloc. The MilePath is unusable —
+        // search will return early. The caller is expected to surface an error / not retry.
+        bool build_failed() const { return m_build_failed; }
+
         void* GetImpl() { return opaque; };
+
+        // Export vis graph data: per-point position + edge count + edge targets
+        // Returns JSON string
+        std::string ExportVisGraph() const;
+
     private:
         void LoadMapSpecificData();
 
-        int opaque[336 / sizeof(int)];
+        int opaque[512 / sizeof(int)];
     };
 
     class AStar {
