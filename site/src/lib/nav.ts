@@ -53,6 +53,7 @@ export const navGroups: NavGroup[] = [
       { slug: 'items', label: 'Items' },
       { slug: 'quest', label: 'Quest' },
       { slug: 'world_map', label: 'World Map' },
+      { slug: 'mission_map', label: 'Mission Map' },
       { slug: 'vanquish_overlay', label: 'Vanquish Overlay' },
     ],
   },

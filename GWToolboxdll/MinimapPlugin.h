@@ -5,6 +5,8 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <RectF.h>
 
+class D3DVertexBuffer;
+
 #ifndef GWTOOLBOXDLL_MINIMAP_EXPORT
 #  ifdef GWToolboxdll_EXPORTS
 #    define GWTOOLBOXDLL_MINIMAP_EXPORT __declspec(dllexport)
@@ -34,6 +36,26 @@ struct MinimapRenderContext : RectF {
     D3DCOLOR cardinal_color = 0;
 
     bool draw_ranges = false;
+
+    // Transform overrides — when non-null, bypass the player-centric view / ortho projection
+    // (e.g. drive the pipeline from the mission map's game->screen basis)
+    const D3DMATRIX* view_override = nullptr; // game coords -> screen px
+    const D3DMATRIX* projection_override = nullptr; // screen px -> clip
+    float gwinches_per_pixel_override = 0.f; // 0: derive from base_scale/zoom
+
+    // External line buffer drawn at the custom-lines layer, kept separate from the minimap's
+    // CustomRenderer (e.g. the mission map's own draw_on_mission_map lines). Null = none.
+    D3DVertexBuffer* lines = nullptr;
+
+    // Per-layer toggles; all default on to preserve the standard minimap output
+    bool draw_background = true;
+    bool draw_pmap = true;
+    bool draw_custom = true;
+    bool draw_symbols = true;
+    bool draw_agents = true;
+    bool draw_effects = true;
+    bool draw_pings = true;
+    bool draw_cardinals = true;
 
     RECT rect() const
     {

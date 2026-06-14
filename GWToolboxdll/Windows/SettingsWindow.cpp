@@ -300,6 +300,8 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         ImGui::SetNextWindowCollapsed(false, ImGuiCond_Always);
         pending_uncollapse = false;
     }
+    // Frame-start value: a navigate set mid-draw (by a button drawn after its target) must survive to next frame.
+    const bool had_pending_navigate = !pending_navigate_to.empty();
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(768, 768), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -499,7 +501,8 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
     }
     ImGui::End();
     UpdateLocate();
-    pending_navigate_to.clear(); // consumed inside DrawSettingsSection, or cleared if section wasn't found
+    // Clear only targets present at frame start (consumed or stale); keep a mid-draw set for next frame.
+    if (had_pending_navigate) pending_navigate_to.clear();
 }
 
 bool SettingsWindow::DrawSettingsSection(const char* section)

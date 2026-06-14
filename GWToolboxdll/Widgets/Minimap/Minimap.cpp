@@ -1587,23 +1587,25 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
 
     // Use context.circular_map instead of global
-    if (context.circular_map) {
-        device->SetRenderState(D3DRS_STENCILENABLE, true);
-        device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
-        device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
+    if (context.draw_background) {
+        if (context.circular_map) {
+            device->SetRenderState(D3DRS_STENCILENABLE, true);
+            device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
+            device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
 
-        device->Clear(0, nullptr, D3DCLEAR_STENCIL | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
+            device->Clear(0, nullptr, D3DCLEAR_STENCIL | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
 
-        device->SetRenderState(D3DRS_STENCILREF, 1);
-        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-        FillCircle(0, 0, 5000.f, context.background_color);
-        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
-        device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
-        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-    }
-    else {
-        FillRect(context.background_color, -5000.0f, -5000.0f, 10000.f, 10000.f);
+            device->SetRenderState(D3DRS_STENCILREF, 1);
+            device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+            device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+            FillCircle(0, 0, 5000.f, context.background_color);
+            device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
+            device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
+            device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+        }
+        else {
+            FillRect(context.background_color, -5000.0f, -5000.0f, 10000.f, 10000.f);
+        }
     }
 
 
@@ -1620,11 +1622,18 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     const auto translationM = DirectX::XMMatrixTranslation(context.translation.x, context.translation.y, 0);
 
     const auto view = translate_char * rotate_char * scaleM * translationM;
-    device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
+    if (context.view_override)
+        device->SetTransform(D3DTS_VIEW, context.view_override);
+    else
+        device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
 
-    instance.pmap_renderer.Render(device, context);
-    const float gwinches_per_pixel = context.base_scale / 5000.0f / 2.f * context.zoom_scale;
-    instance.custom_renderer.Render(device, gwinches_per_pixel);
+    [[maybe_unused]] const float gwinches_per_pixel = context.gwinches_per_pixel_override > 0.f
+        ? context.gwinches_per_pixel_override
+        : context.base_scale / 5000.0f / 2.f * context.zoom_scale;
+
+    if (context.draw_pmap) instance.pmap_renderer.Render(device, context);
+    if (context.draw_custom) instance.custom_renderer.Render(device, gwinches_per_pixel);
+    if (context.lines) context.lines->Render(device);
 
 
 
@@ -1647,15 +1656,15 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
     }
 
-    instance.symbols_renderer.Render(device, context.zoom_scale);
+    if (context.draw_symbols) instance.symbols_renderer.Render(device, context.zoom_scale);
     device->SetTransform(D3DTS_WORLD, &reset_world);
-    instance.agent_renderer.Render(device);
-    instance.effect_renderer.Render(device);
-    instance.pingslines_renderer.Render(device);
+    if (context.draw_agents) instance.agent_renderer.Render(device);
+    if (context.draw_effects) instance.effect_renderer.Render(device);
+    if (context.draw_pings) instance.pingslines_renderer.Render(device);
     for (auto renderer : instance.registered_renderers)
         renderer->RenderMinimap(device, context);
-    
-    DrawNSEW(context);
+
+    if (context.draw_cardinals) DrawNSEW(context);
 
     if (context.circular_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);
@@ -1674,6 +1683,11 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     // Restore the DX9 state
     d3d9_state_block->Apply();
     d3d9_state_block->Release();
+}
+
+const MinimapRenderContext& Minimap::GetRenderContext()
+{
+    return default_minimap_context;
 }
 
 void Minimap::SelectTarget(const GW::Vec2f pos)
@@ -1942,6 +1956,11 @@ bool Minimap::IsActive()
 
 void Minimap::RenderSetupProjection(IDirect3DDevice9* device, const MinimapRenderContext& context)
 {
+    if (context.projection_override) {
+        device->SetTransform(D3DTS_PROJECTION, context.projection_override);
+        return;
+    }
+
     D3DVIEWPORT9 viewport;
     device->GetViewport(&viewport);
 
