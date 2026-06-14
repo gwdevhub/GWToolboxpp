@@ -17,11 +17,13 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     "Widgets/Minimap/*.cpp"
     "Windows/*.h" 
     "Windows/*.cpp"
+    "Windows/Hotkeys/*.h"
+    "Windows/Hotkeys/*.cpp"
+    "Windows/Splits/*.h"
+    "Windows/Splits/*.cpp"
     "Windows/Pathfinding/*.h"
     "Windows/Pathfinding/*.hpp"
     "Windows/Pathfinding/*.cpp"
-    "Windows/Splits/*.h"
-    "Windows/Splits/*.cpp"
     )
      
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})

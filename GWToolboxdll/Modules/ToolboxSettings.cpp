@@ -55,6 +55,7 @@
 #include <Windows/PartyStatisticsWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/ObjectiveTimerWindow.h>
+#include <Windows/SplitsWindow.h>
 #include <Windows/FactionLeaderboardWindow.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/FriendListWindow.h>
