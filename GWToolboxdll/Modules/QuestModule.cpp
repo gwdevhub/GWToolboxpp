@@ -48,6 +48,12 @@ namespace {
     GW::Constants::QuestID player_chosen_quest_id = GW::Constants::QuestID::None;
     bool setting_custom_quest_marker = false;
 
+    // Cross-map world-map route preview. Deferred to Update() because computing it
+    // (FindPath -> FindMapRoute -> trapezoid search) crashes if run before the
+    // current map's pathing data is ready (e.g. restoring a marker at inject time).
+    bool pending_world_map_route = false;
+    GW::Vec2f pending_world_map_route_goal{};
+
     
 
     clock_t last_quest_clicked = 0;
@@ -571,6 +577,8 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
     RemoveQuest(custom_quest_id);
 
     if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0) {
+        pending_world_map_route = false;
+        PathfindingWindow::ClearWorldMapRoute();
         for (const auto& cb : custom_marker_callbacks)
             cb();
         return;
@@ -591,6 +599,23 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
     ASSERT(quest);
     if (set_active) {
         QuestModule::SetActiveQuestId(quest->quest_id, false);
+    }
+
+    // When the marker is on a different physical map than the current one, draw the
+    // full cross-map portal route on the world map. On the same map, the regular
+    // single-map quest path (below) handles it, so clear any stale route. The actual
+    // FindPath is deferred to Update() (see pending_world_map_route) so it only runs
+    // once the current map's pathing data is ready.
+    const auto cur_map_id = GW::Map::GetMapID();
+    const auto fh_cur = PathfindingWindow::GetMapFileId(cur_map_id);
+    const auto fh_dst = map_to == GW::Constants::MapID::Count ? 0u : PathfindingWindow::GetMapFileId(map_to);
+    if (fh_cur && fh_dst && fh_cur != fh_dst) {
+        pending_world_map_route = true;
+        pending_world_map_route_goal = custom_quest_marker_world_pos;
+    }
+    else {
+        pending_world_map_route = false;
+        PathfindingWindow::ClearWorldMapRoute();
     }
 
     setting_custom_quest_marker = false;
@@ -788,10 +813,17 @@ void QuestModule::Update(float)
         return;
     }
     if (was_loading) {
-        if (GW::UI::IsLoadingScreenShown()) 
+        if (GW::UI::IsLoadingScreenShown())
             return;
         OnMapLoaded();
         was_loading = false;
+    }
+    // Draw the deferred cross-map world-map route once pathing is ready. Retried each
+    // frame until ReadyForPathing(), so it survives an inject/marker-restore before the
+    // map's pathing data is built.
+    if (pending_world_map_route && !GW::UI::IsLoadingScreenShown() && PathfindingWindow::ReadyForPathing()) {
+        pending_world_map_route = false;
+        PathfindingWindow::ShowRouteToWorldMap(*pos, pending_world_map_route_goal);
     }
     if (fetch_missing_quest_info_queued) {
         // NB: We only do this once the loading splash screen is gone

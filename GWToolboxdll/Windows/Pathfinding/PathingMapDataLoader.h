@@ -18,15 +18,18 @@ namespace GW {
 namespace Pathing {
 
     // =========================================================================
-    // LoadFromPathContext
+    // LoadFromMapContext
     //
-    // Extracts navigation data from live game memory (GW::PathContext).
-    // Use this when the game is running and map is loaded.
+    // Extracts navigation data from live game memory (GW::MapContext).
+    // Uses single continuous buffer per plane with pointer fixup.
     // =========================================================================
 
     bool LoadFromMapContext(const GW::MapContext* path_ctx, uint32_t map_file_id, PathingMapData* out);
 
     bool LoadPathingMapDataFromDAT(uint32_t map_file_id, PathingMapData* out);
+
+    // Lightweight: load only portal props from DAT (no pathfinding data)
+    bool LoadPortalPropsFromDAT(uint32_t map_file_id, std::vector<PortalProp>& out);
 
 } // namespace Pathing
 
@@ -77,47 +80,65 @@ namespace Pathing {
         }
 
         // -------------------------------------------------------------------------
-        // Find pathfinding chunk (0x20000008) in FFNA file
+        // Intermediate parsed plane data (used by DAT loader)
         // -------------------------------------------------------------------------
 
-        inline bool find_pathing_chunk(
-            const uint8_t* data, 
-            size_t length, 
-            size_t& payload_offset, 
-            uint32_t& payload_size)
-        {
-            constexpr size_t FFNA_HEADER = 5;  // 4-byte sig + 1-byte type
-            constexpr uint32_t CHUNK_HDR = 8;   // chunk_id(4) + chunk_size(4)
-            constexpr uint32_t TARGET = 0x20000008;
+        struct ParsedTrapezoid {
+            float XTL, XTR, YT, XBL, XBR, YB;
+            uint32_t neighbors[4];      // indices into same plane's trapezoid array
+            uint16_t portal_left;
+            uint16_t portal_right;
+        };
 
-            size_t off = FFNA_HEADER;
-            while (off + CHUNK_HDR <= length) {
-                uint32_t id, sz;
-                if (!read_u32(data, off, length, id)) return false;
-                if (!read_u32(data, off + 4, length, sz)) return false;
+        struct ParsedPortal {
+            uint16_t trapezoid_count;
+            uint16_t trapezoid_index_start;
+            uint16_t neighbor_plane;
+            uint16_t shared_id;
+            uint8_t flags;
+        };
 
-                if (id == TARGET) {
-                    payload_offset = off + CHUNK_HDR;
-                    payload_size = sz;
-                    return (payload_offset + sz) <= length;
-                }
+        struct ParsedXNode {
+            uint32_t left_idx;      // unified child index
+            uint32_t right_idx;
+            uint32_t pos_vec_idx;   // index into vectors array
+            uint32_t dir_vec_idx;
+        };
 
-                size_t next = off + CHUNK_HDR + sz;
-                if (next <= off) return false;  // Overflow guard
-                off = next;
-            }
-            return false;
-        }
+        struct ParsedYNode {
+            uint32_t above_idx;     // unified child index
+            uint32_t below_idx;
+            uint32_t pos_vec_idx;
+        };
+
+        struct ParsedSinkNode {
+            uint32_t trapezoid_idx;
+        };
+
+        struct ParsedPlane {
+            std::vector<ParsedTrapezoid> trapezoids;
+            std::vector<ParsedPortal> portals;
+            std::vector<uint32_t> portal_trapezoid_indices;
+
+            // BSP tree data
+            std::vector<GW::Vec2f> vectors;         // Tag 1: edge vectors
+            uint8_t root_node_type = 0;             // Tag 3: 0=XNode, 1=YNode, 2=SinkNode
+            std::vector<ParsedXNode> x_nodes;       // Tag 4
+            std::vector<ParsedYNode> y_nodes;       // Tag 5
+            std::vector<ParsedSinkNode> sink_nodes; // Tag 6
+
+            uint32_t zplane = 0;
+        };
 
         // -------------------------------------------------------------------------
         // Parse a single plane from the tag stream
         // -------------------------------------------------------------------------
 
         inline bool parse_plane(
-            const uint8_t* data, 
-            size_t& off, 
-            size_t end, 
-            NavPlane& plane)
+            const uint8_t* data,
+            size_t& off,
+            size_t end,
+            ParsedPlane& plane)
         {
             auto consume_tag = [&](uint8_t expected_tag, uint32_t& tag_size) -> bool {
                 uint8_t tag;
@@ -131,7 +152,7 @@ namespace Pathing {
 
             uint32_t tag_size;
 
-            // --- Tag 0: Header (32 bytes = 8 × uint32) ---
+            // --- Tag 0: Header (32 bytes = 8 x uint32) ---
             if (!consume_tag(0, tag_size)) return false;
             if (tag_size < 32) return false;
 
@@ -152,16 +173,20 @@ namespace Pathing {
 
             // --- Tag 11: Poly boundary data (skip - not needed) ---
             if (!consume_tag(11, tag_size)) return false;
-            off += poly_count * 8;  // Game reads poly_count × 8 bytes
+            off += poly_count * 8;  // Game reads poly_count x 8 bytes
 
-            // --- Tag 1: Edge vectors ---
+            // --- Tag 1: Edge vectors (8 bytes each: float x, float y) ---
             if (!consume_tag(1, tag_size)) return false;
+            plane.vectors.resize(vectors_count);
+            base = off;
+            for (uint32_t i = 0; i < vectors_count; ++i) {
+                if (!read_f32(data, base + i * 8 + 0, end, plane.vectors[i].x)) return false;
+                if (!read_f32(data, base + i * 8 + 4, end, plane.vectors[i].y)) return false;
+            }
             off += tag_size;
 
             // --- Tag 2: Trapezoids (44 bytes each) ---
-            // File layout (different from our struct):
-            //   4×u32 neighbors, 2×u16 portals, then 6×f32 coords
-            // Our struct stores coords first for cache locality during queries
+            // File layout: 4xu32 neighbors, 2xu16 portals, then 6xf32 coords
             if (!consume_tag(2, tag_size)) return false;
             plane.trapezoids.resize(trapezoids_count);
             base = off;
@@ -191,18 +216,43 @@ namespace Pathing {
 
             // --- Tag 3: Root node type (1 byte) ---
             if (!consume_tag(3, tag_size)) return false;
+            if (!read_u8(data, off, end, plane.root_node_type)) return false;
             off += tag_size;
 
-            // --- Tag 4: XNodes (16 bytes each) ---
+            // --- Tag 4: XNodes (16 bytes each: pos_vec_idx, dir_vec_idx, left_child, right_child) ---
             if (!consume_tag(4, tag_size)) return false;
+            plane.x_nodes.resize(xnodes_count);
+            base = off;
+            for (uint32_t i = 0; i < xnodes_count; ++i) {
+                size_t n = base + i * 16;
+                auto& xn = plane.x_nodes[i];
+                if (!read_u32(data, n + 0, end, xn.pos_vec_idx)) return false;
+                if (!read_u32(data, n + 4, end, xn.dir_vec_idx)) return false;
+                if (!read_u32(data, n + 8, end, xn.left_idx)) return false;
+                if (!read_u32(data, n + 12, end, xn.right_idx)) return false;
+            }
             off += tag_size;
 
-            // --- Tag 5: YNodes (12 bytes each) ---
+            // --- Tag 5: YNodes (12 bytes each: pos_vec_idx, above_child, below_child) ---
             if (!consume_tag(5, tag_size)) return false;
+            plane.y_nodes.resize(ynodes_count);
+            base = off;
+            for (uint32_t i = 0; i < ynodes_count; ++i) {
+                size_t n = base + i * 12;
+                auto& yn = plane.y_nodes[i];
+                if (!read_u32(data, n + 0, end, yn.pos_vec_idx)) return false;
+                if (!read_u32(data, n + 4, end, yn.above_idx)) return false;
+                if (!read_u32(data, n + 8, end, yn.below_idx)) return false;
+            }
             off += tag_size;
 
             // --- Tag 6: SinkNodes (4 bytes each) ---
             if (!consume_tag(6, tag_size)) return false;
+            plane.sink_nodes.resize(sinknodes_count);
+            base = off;
+            for (uint32_t i = 0; i < sinknodes_count; ++i) {
+                if (!read_u32(data, base + i * 4, end, plane.sink_nodes[i].trapezoid_idx)) return false;
+            }
             off += tag_size;
 
             // --- Tag 10: Portal trapezoid indices (uint32 each) ---
@@ -213,7 +263,6 @@ namespace Pathing {
                 if (!read_u32(data, base + i * 4, end, plane.portal_trapezoid_indices[i])) return false;
             }
             off += tag_size;
-
 
             // --- Tag 9: Portals (9 bytes each) ---
             if (!consume_tag(9, tag_size)) return false;
