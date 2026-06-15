@@ -44,14 +44,32 @@ public:
     static void SetToWorldMap(const GW::Vec2f& world_map_pos);
     static void FindPath();
 
-    // Compute and draw the full cross-map route from `from` (in the current map) to
-    // goal_world_pos (world-map coords). Drawn in the caller-supplied style (QuestModule
-    // passes the quest line colour + quest-path surface toggles) with no endpoint
-    // markers. The current-map leg tracks the player and is re-walked as they move.
-    static void ShowRouteToWorldMap(const GW::GamePos& from, const GW::Vec2f& goal_world_pos,
-        unsigned int color = 0xFFFFFF00, bool on_terrain = false, bool on_minimap = true, bool on_mission_map = true);
+    // Compute and draw the full cross-map route from `from` (in the current map)
+    // to goal_world_pos (world-map coords) as lines on the world map + minimap.
+    // Convenience wrapper around SetFrom + SetToWorldMap + FindPath.
+    static void ShowRouteToWorldMap(const GW::GamePos& from, const GW::Vec2f& goal_world_pos);
     // Remove any route previously drawn by ShowRouteToWorldMap / FindPath.
     static void ClearWorldMapRoute();
+
+    // ---- Compute-only route API (no drawing). Used by QuestModule, which owns the
+    // resulting points and renders them as the quest path. ----
+
+    // Blocking. Compute the full cross-map route between two world-map positions and
+    // fill `out` with the points in current-map coords (a PATH_BREAK sentinel — see
+    // IsRouteBreak — separates maps). Caches the current-map exit portal + downstream
+    // tail so RecalculateRouteLeg can cheaply refresh the player's leg. Returns false
+    // if no route. Blocks on pathing builds — call from a worker thread.
+    static bool CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::GamePos>* out);
+    // Blocking. Re-walk only from_player -> the cached current-map exit portal and fill
+    // `out` with that leg + the cached downstream tail. False if there is no cached
+    // route for the current map (caller should fall back to CalculateRoute).
+    static bool RecalculateRouteLeg(const GW::GamePos& from_player, std::vector<GW::GamePos>* out);
+    // True if a cached route exists for the current map (RecalculateRouteLeg will work).
+    static bool HasRouteForCurrentMap();
+    // Forget the cached route.
+    static void ClearRoute();
+    // True if `p` is the inter-map break sentinel in CalculateRoute output.
+    static bool IsRouteBreak(const GW::GamePos& p);
 
     // Robust file_hash lookup — falls through GW::AreaInfo, the runtime
     // packet-populated table, and constant_maps_info. GW::Map::GetMapInfo()
