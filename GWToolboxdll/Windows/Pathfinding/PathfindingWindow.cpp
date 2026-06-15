@@ -865,10 +865,9 @@ namespace {
 
             // Pick first valid entry for this file_hash
             for (const auto& entry : entries) {
-                if (entry.is_pvp) continue;
                 auto map_id = static_cast<GW::Constants::MapID>(entry.map_id);
                 const auto area = GW::Map::GetMapInfo(map_id);
-                if (!area || !area->GetIsOnWorldMap()) continue;
+                if (!area || area->GetIsPvP() || !area->GetIsOnWorldMap()) continue;
                 ImRect bounds;
                 if (!GW::Map::GetMapWorldMapBounds(area, &bounds)) continue;
                 if (bounds.GetWidth() < 1.f || bounds.GetHeight() < 1.f) continue;
@@ -2375,8 +2374,8 @@ namespace {
         for (const auto& [fh, entries] : constant_maps_info) {
             for (const auto& e : entries) {
                 if (e.map_id == 381) {
-                    PATH_LOG_INFO("  constant_maps_info: map=381 file_hash=0x%X outer_key=0x%X pvp=%d",
-                        e.file_hash, fh, e.is_pvp);
+                    PATH_LOG_INFO("  constant_maps_info: map=381 file_hash=0x%X outer_key=0x%X",
+                        e.file_hash, fh);
                     found_381++;
                 }
             }
