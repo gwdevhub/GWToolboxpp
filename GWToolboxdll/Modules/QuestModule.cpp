@@ -79,7 +79,7 @@ namespace {
     void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args);
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
     struct CalculatedQuestPath;
-    CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true);
+    CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found);
 
     bool IsActiveQuestPath(const GW::Constants::QuestID quest_id)
     {
