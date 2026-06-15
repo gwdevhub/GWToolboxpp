@@ -1,9 +1,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include <GWCA/Constants/Maps.h>
+
 struct MapConstantInfo
 {
-    int map_id;
+    GW::Constants::MapID map_id;
     int file_hash;
 };
 

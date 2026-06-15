@@ -146,7 +146,7 @@ namespace {
         for (const auto& [file_hash, entries] : constant_maps_info) {
             if ((uint32_t)file_hash != fh) continue;
             for (const auto& entry : entries) {
-                auto mid = static_cast<GW::Constants::MapID>(entry.map_id);
+                auto mid = entry.map_id;
                 if (mid == source_info.map_id) continue;
                 if (IsOutpostMap(mid)) continue; // see comment above
                 // Check if this MapID already has an entry
@@ -433,7 +433,7 @@ namespace {
         for (const auto& [file_hash, entries] : constant_maps_info) {
             if ((uint32_t)file_hash != fid) continue;
             for (const auto& entry : entries)
-                all_ids.push_back(static_cast<GW::Constants::MapID>(entry.map_id));
+                all_ids.push_back(entry.map_id);
         }
 
         auto* m = new Pathing::MilePath(std::move(dat_data), map_id, all_ids);
@@ -865,7 +865,7 @@ namespace {
 
             // Pick first valid entry for this file_hash
             for (const auto& entry : entries) {
-                auto map_id = static_cast<GW::Constants::MapID>(entry.map_id);
+                auto map_id = entry.map_id;
                 const auto area = GW::Map::GetMapInfo(map_id);
                 if (!area || area->GetIsPvP() || !area->GetIsOnWorldMap()) continue;
                 ImRect bounds;
@@ -2357,8 +2357,8 @@ namespace {
     {
         for (const auto& [file_hash, entries] : constant_maps_info) {
             for (const auto& entry : entries) {
-                if (entry.file_hash && !map_id_to_file_hash.contains((uint32_t)entry.map_id))
-                    map_id_to_file_hash[(uint32_t)entry.map_id] = (uint32_t)entry.file_hash;
+                if (entry.file_hash && !map_id_to_file_hash.contains(static_cast<uint32_t>(entry.map_id)))
+                    map_id_to_file_hash[static_cast<uint32_t>(entry.map_id)] = (uint32_t)entry.file_hash;
             }
         }
         PATH_LOG_INFO("Built map file hash lookup: %d entries", (int)map_id_to_file_hash.size());
@@ -2373,7 +2373,7 @@ namespace {
         int found_381 = 0;
         for (const auto& [fh, entries] : constant_maps_info) {
             for (const auto& e : entries) {
-                if (e.map_id == 381) {
+                if (static_cast<uint32_t>(e.map_id) == 381) {
                     PATH_LOG_INFO("  constant_maps_info: map=381 file_hash=0x%X outer_key=0x%X",
                         e.file_hash, fh);
                     found_381++;
