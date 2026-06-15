@@ -9,6 +9,9 @@
 
 #include <Utils/ArenaNetFileParser.h>
 
+#include <mutex>
+#include <unordered_map>
+
 namespace Pathing {
 
     // =============================================================================
@@ -612,6 +615,31 @@ namespace Pathing {
         out->total_props_parsed = 0; // not tracked in shared helper
         out->total_prop_filenames = 0;
 
+        return true;
+    }
+
+    bool GetMapGameBoundsFromDAT(uint32_t map_file_id, Vec2f& bounds_min, Vec2f& bounds_max)
+    {
+        if (!map_file_id) return false;
+
+        static std::mutex mtx;
+        static std::unordered_map<uint32_t, std::pair<Vec2f, Vec2f>> cache;
+        {
+            std::lock_guard lock(mtx);
+            if (const auto it = cache.find(map_file_id); it != cache.end()) {
+                bounds_min = it->second.first;
+                bounds_max = it->second.second;
+                return true;
+            }
+        }
+
+        PathingMapData data;
+        if (!LoadPathingMapDataFromDAT(map_file_id, &data)) return false;
+
+        std::lock_guard lock(mtx);
+        cache[map_file_id] = {data.bounds_min, data.bounds_max};
+        bounds_min = data.bounds_min;
+        bounds_max = data.bounds_max;
         return true;
     }
 

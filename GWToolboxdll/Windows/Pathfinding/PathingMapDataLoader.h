@@ -28,6 +28,11 @@ namespace Pathing {
 
     bool LoadPathingMapDataFromDAT(uint32_t map_file_id, PathingMapData* out);
 
+    // Game-coordinate bounds for a map's DAT file. Cached internally so repeat
+    // lookups (e.g. coordinate conversion) don't re-parse from disk. Returns false
+    // if the file can't be loaded.
+    bool GetMapGameBoundsFromDAT(uint32_t map_file_id, Vec2f& bounds_min, Vec2f& bounds_max);
+
     // Lightweight: load only portal props from DAT (no pathfinding data)
     bool LoadPortalPropsFromDAT(uint32_t map_file_id, std::vector<PortalProp>& out);
 

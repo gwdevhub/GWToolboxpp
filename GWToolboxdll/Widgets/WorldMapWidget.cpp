@@ -46,6 +46,7 @@
 #include <Modules/QuestModule.h>
 #include <Utils/ArenaNetFileParser.h>
 #include <Utils/TextUtils.h>
+#include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
 #include <corecrt_math_defines.h>
 
@@ -948,50 +949,60 @@ void WorldMapWidget::Initialize()
     AppendMapFileInfo();
 }
 
-bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos)
+namespace {
+    // World-map mid point for `map_id`, the single anchor both conversions share.
+    // Game bounds: the live map context for the current map, else the cached DAT bounds.
+    // NB: World map is 96 gwinches per unit, hard-coded in the GW source.
+    constexpr float gwinches_per_unit = 96.f;
+
+    bool GetMapWorldAnchor(GW::Constants::MapID map_id, GW::Vec2f& mid_out)
+    {
+        if ((uint32_t)map_id == 0) map_id = GW::Map::GetMapID();
+
+        const auto area_info = GW::Map::GetMapInfo(map_id);
+        ImRect map_bounds;
+        if (!area_info || !GW::Map::GetMapWorldMapBounds(area_info, &map_bounds)) return false;
+
+        GW::Vec2f game_min, game_max;
+        if (map_id == GW::Map::GetMapID()) {
+            const auto map_context = GW::GetMapContext();
+            if (!map_context) return false;
+            game_min = {map_context->start_pos.x, map_context->start_pos.y};
+            game_max = {map_context->end_pos.x, map_context->end_pos.y};
+        }
+        else {
+            Pathing::Vec2f bmin, bmax;
+            if (!Pathing::GetMapGameBoundsFromDAT(PathfindingWindow::GetMapFileId(map_id), bmin, bmax)) return false;
+            game_min = {bmin.x, bmin.y};
+            game_max = {bmax.x, bmax.y};
+        }
+
+        mid_out = {
+            map_bounds.Min.x + (abs(game_min.x) / gwinches_per_unit),
+            map_bounds.Min.y + (abs(game_max.y) / gwinches_per_unit),
+        };
+        return true;
+    }
+}
+
+bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos, GW::Constants::MapID map_id)
 {
-    ImRect map_bounds;
-    if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds)) return false;
+    GW::Vec2f mid;
+    if (!GetMapWorldAnchor(map_id, mid)) return false;
 
-    const auto current_map_context = GW::GetMapContext();
-    if (!current_map_context) return false;
-
-    const auto game_map_rect = ImRect(current_map_context->start_pos.x, current_map_context->start_pos.y, current_map_context->end_pos.x, current_map_context->end_pos.y);
-
-    constexpr auto gwinches_per_unit = 96.f;
-
-    // Calculate the mid-point of the map in world coordinates
-    GW::Vec2f map_mid_world_point = {
-        map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
-        map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
-    };
-
-    // Convert from world map position to game map position
-    game_map_pos.x = (world_map_pos.x - map_mid_world_point.x) * gwinches_per_unit;
-    game_map_pos.y = (world_map_pos.y - map_mid_world_point.y) * gwinches_per_unit * -1.f; // Invert Y axis
-
+    game_map_pos.x = (world_map_pos.x - mid.x) * gwinches_per_unit;
+    game_map_pos.y = (world_map_pos.y - mid.y) * gwinches_per_unit * -1.f; // Invert Y axis
     return true;
 }
 
-bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos)
+bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos, GW::Constants::MapID map_id)
 {
     if (game_map_pos.x == INFINITY || game_map_pos.y == INFINITY) return false;
-    ImRect map_bounds;
-    if (!GW::Map::GetMapWorldMapBounds(GW::Map::GetMapInfo(), &map_bounds)) return false;
-    const auto current_map_context = GW::GetMapContext();
-    if (!current_map_context) return false;
+    GW::Vec2f mid;
+    if (!GetMapWorldAnchor(map_id, mid)) return false;
 
-    const auto game_map_rect = ImRect(current_map_context->start_pos.x, current_map_context->start_pos.y, current_map_context->end_pos.x, current_map_context->end_pos.y);
-
-    // NB: World map is 96 gwinches per unit, this is hard coded in the GW source
-    constexpr auto gwinches_per_unit = 96.f;
-    GW::Vec2f map_mid_world_point = {
-        map_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
-        map_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
-    };
-
-    world_map_pos.x = (game_map_pos.x / gwinches_per_unit) + map_mid_world_point.x;
-    world_map_pos.y = ((game_map_pos.y * -1.f) / gwinches_per_unit) + map_mid_world_point.y; // Inverted Y Axis
+    world_map_pos.x = (game_map_pos.x / gwinches_per_unit) + mid.x;
+    world_map_pos.y = ((game_map_pos.y * -1.f) / gwinches_per_unit) + mid.y; // Inverted Y axis
     return true;
 }
 
