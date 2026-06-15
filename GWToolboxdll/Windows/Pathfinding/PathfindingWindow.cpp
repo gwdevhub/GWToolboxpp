@@ -826,6 +826,22 @@ namespace {
         GW::Constants::MapID map_id;
     };
 
+    // Active cross-map route, kept so the current-map leg (player -> exit portal) can
+    // be cheaply re-walked as the player moves, instead of recomputing the whole
+    // multi-map route. `tail`/`hidden` are the already-drawn segments for the maps
+    // after the current one (current-map coords, tail begins with a PATH_BREAK).
+    struct ActiveRoute {
+        bool active = false;
+        GW::Constants::MapID start_map = GW::Constants::MapID::None;
+        GW::GamePos exit_portal{};                  // current-map exit toward the next map
+        std::vector<GW::GamePos> tail;              // drawn points after the leg
+        std::vector<HiddenPathSegment> hidden;
+        GW::GamePos last_from{};                    // player pos when the leg was last walked
+    };
+    ActiveRoute active_route;
+    volatile bool route_leg_recomputing = false;
+    constexpr float ROUTE_LEG_RECALC_DIST_SQ = 200.f * 200.f; // recalc the leg past this move
+
     // True if any manual connection between map_a and map_b (in either direction,
     // with explorable→outpost file_hash spread) has no_draw=true.
     bool HasNoDrawConnection(GW::Constants::MapID map_a, GW::Constants::MapID map_b)
@@ -874,12 +890,16 @@ namespace {
         return converted;
     }
 
-    void DrawPathAsLines(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map)
+    // anchor_first_to_player: mark the first drawn line as from_player_pos so the
+    // current-map leg's start tracks the player between recalcs (route paths start
+    // at the player). Only valid when points[0] is the player's current-map position.
+    void DrawPathAsLines(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map, bool anchor_first_to_player = false)
     {
         ClearPathLines();
         auto cur_map = GW::Map::GetMapID();
         const auto& draw_points = (src_map != cur_map) ? ConvertPathToCurrentMap(points, src_map) : points;
 
+        bool first_line = true;
         for (size_t i = 0; i + 1 < draw_points.size(); i++) {
             // Skip lines that touch a path-break sentinel — used to hide segments
             // through underground maps in multi-map paths.
@@ -890,6 +910,8 @@ namespace {
             line->draw_on_mission_map = true;
             line->draw_on_minimap = true;
             line->created_by_toolbox = true;
+            if (anchor_first_to_player && first_line) line->from_player_pos = true;
+            first_line = false;
             path_lines.push_back(line);
         }
     }
@@ -912,6 +934,26 @@ namespace {
                 path_lines.push_back(line);
             }
         }
+    }
+
+    // Store the drawn cross-map route so its current-map leg can be re-walked cheaply
+    // as the player moves. `full_path` is in current-map coords with PATH_BREAK
+    // sentinels between maps; the leg is everything before the first break.
+    void CaptureActiveRoute(const std::vector<GW::GamePos>& full_path,
+                            const std::vector<HiddenPathSegment>& hidden,
+                            const GW::GamePos& start)
+    {
+        active_route = ActiveRoute{};
+        size_t fb = 0;
+        while (fb < full_path.size() && !IsPathBreak(full_path[fb])) fb++;
+        // Need a real leg (start + exit portal) and a tail for leg-only recalc to apply.
+        if (fb < 2 || fb >= full_path.size()) return;
+        active_route.active = true;
+        active_route.start_map = GW::Map::GetMapID();
+        active_route.exit_portal = full_path[fb - 1]; // last leg point = current-map exit portal
+        active_route.tail.assign(full_path.begin() + fb, full_path.end()); // begins with PATH_BREAK
+        active_route.hidden = hidden;
+        active_route.last_from = start;
     }
 
 
@@ -2225,9 +2267,10 @@ namespace {
 
             PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)",
                 (int)full_path.size(), (int)route_copy.size(), (int)hidden_segments.size());
-            Resources::EnqueueMainTask([full_path, hidden_segments, cur_map] {
-                DrawPathAsLines(full_path, cur_map);
+            Resources::EnqueueMainTask([full_path, hidden_segments, cur_map, start_copy] {
+                DrawPathAsLines(full_path, cur_map, true);
                 AddHiddenUndergroundSegmentLines(hidden_segments);
+                CaptureActiveRoute(full_path, hidden_segments, start_copy);
             });
         });
     }
@@ -2383,9 +2426,10 @@ namespace {
                 if (!failed) {
                     PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)",
                         (int)full_path.size(), (int)route.size(), (int)hidden_segments.size());
-                    Resources::EnqueueMainTask([full_path, hidden_segments, cur_map] {
-                        DrawPathAsLines(full_path, cur_map);
+                    Resources::EnqueueMainTask([full_path, hidden_segments, cur_map, start] {
+                        DrawPathAsLines(full_path, cur_map, true);
                         AddHiddenUndergroundSegmentLines(hidden_segments);
+                        CaptureActiveRoute(full_path, hidden_segments, start);
                     });
                     blacklisted_edges.clear();
                     return;
@@ -2453,6 +2497,39 @@ namespace {
             const auto points = astar->m_path.points(); // copy
             Resources::EnqueueMainTask([points, map_id] {
                 DrawPathAsLines(points, map_id);
+            });
+        });
+    }
+
+    // Per-frame (main thread): when an active cross-map route exists and the player
+    // has moved far enough, re-walk only the current-map leg (player -> exit portal)
+    // and redraw it ahead of the cached tail. Far cheaper than recomputing the route.
+    void MaybeRecalcRouteLeg()
+    {
+        if (!active_route.active || route_leg_recomputing) return;
+        const auto player = GW::Agents::GetControlledCharacter();
+        if (!player) return;
+        // Left the route's start map — the route is stale; let the quest flow rebuild it.
+        if (GW::Map::GetMapID() != active_route.start_map) { active_route.active = false; return; }
+        if (GW::GetSquareDistance(player->pos, active_route.last_from) < ROUTE_LEG_RECALC_DIST_SQ) return;
+
+        active_route.last_from = player->pos;
+        route_leg_recomputing = true;
+        const auto from = player->pos;
+        const auto exit_portal = active_route.exit_portal;
+        const auto start_map = active_route.start_map;
+        Resources::EnqueueWorkerTask([from, exit_portal, start_map] {
+            RouteJobScope job_scope;
+            std::vector<GW::GamePos> leg;
+            const bool ok = RunAStarOnMap(start_map, from, exit_portal, leg);
+            Resources::EnqueueMainTask([ok, leg] {
+                route_leg_recomputing = false;
+                if (!ok || leg.empty() || !active_route.active) return;
+                if (GW::Map::GetMapID() != active_route.start_map) return;
+                std::vector<GW::GamePos> full = leg;
+                full.insert(full.end(), active_route.tail.begin(), active_route.tail.end());
+                DrawPathAsLines(full, active_route.start_map, true);
+                AddHiddenUndergroundSegmentLines(active_route.hidden);
             });
         });
     }
@@ -2570,6 +2647,7 @@ namespace {
                 }
 
                 // Clear all lines on map change to avoid stale renders
+                active_route.active = false; // route was for the old map
                 ClearBoundsLines();
                 ClearGraphEdgeLines();
                 ClearPortalMarkerLines();
@@ -2610,6 +2688,7 @@ void LoadAndShowMapsAtWorldPos(const GW::Vec2f& wm_pos); // forward decl
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
     ProcessDeferredRemovals();
+    MaybeRecalcRouteLeg();
 }
 
 bool PathfindingWindow::WndProc(UINT, WPARAM, LPARAM) { return false; }
@@ -2972,7 +3051,14 @@ void PathfindingWindow::FindPath()
                     std::vector<GW::GamePos> direct_path;
                     if (RunAStarOnMap(path_from_map, path_from, to_on_from_map, direct_path) && !direct_path.empty()) {
                         PATH_LOG_INFO("Direct path on map %d: %d points", (int)path_from_map, (int)direct_path.size());
-                        DrawPathAsLines(direct_path, path_from_map);
+                        DrawPathAsLines(direct_path, path_from_map, true);
+                        // Single-map route: the leg is the whole path. Track + recalc
+                        // player -> goal as the player moves (no tail).
+                        active_route = ActiveRoute{};
+                        active_route.active = true;
+                        active_route.start_map = path_from_map;
+                        active_route.exit_portal = direct_path.back();
+                        active_route.last_from = path_from;
                         return;
                     }
                     PATH_LOG_INFO("Direct path failed, falling back to multi-map");
@@ -3002,6 +3088,7 @@ void PathfindingWindow::ShowRouteToWorldMap(const GW::GamePos& from, const GW::V
 
 void PathfindingWindow::ClearWorldMapRoute()
 {
+    active_route.active = false;
     ClearPathLines();
     ClearPortalPairLines();
 }
