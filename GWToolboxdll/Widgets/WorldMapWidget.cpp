@@ -963,19 +963,8 @@ namespace {
         ImRect map_bounds;
         if (!area_info || !GW::Map::GetMapWorldMapBounds(area_info, &map_bounds)) return false;
 
-        GW::Vec2f game_min, game_max;
-        if (map_id == GW::Map::GetMapID()) {
-            const auto map_context = GW::GetMapContext();
-            if (!map_context) return false;
-            game_min = {map_context->start_pos.x, map_context->start_pos.y};
-            game_max = {map_context->end_pos.x, map_context->end_pos.y};
-        }
-        else {
-            Pathing::Vec2f bmin, bmax;
-            if (!Pathing::GetMapGameBoundsFromDAT(PathfindingWindow::GetMapFileId(map_id), bmin, bmax)) return false;
-            game_min = {bmin.x, bmin.y};
-            game_max = {bmax.x, bmax.y};
-        }
+        Pathing::Vec2f game_min, game_max;
+        if (!Pathing::GetMapGameBoundsFromDAT(PathfindingWindow::GetMapFileId(map_id), game_min, game_max)) return false;
 
         mid_out = {
             map_bounds.Min.x + (abs(game_min.x) / gwinches_per_unit),
