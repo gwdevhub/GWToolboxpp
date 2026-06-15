@@ -1014,6 +1014,10 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
 
 void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
 {
+    // Rebuild at 30fps, not every frame: a rebuild marks the buffer dirty and forces a Lock/memcpy re-upload.
+    static clock_t last_check = 0;
+    if (!ToolboxUtils::FrameRateCheck(last_check, 30)) return;
+
     const auto doa_outpost = GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable && GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish;
     const auto my_pos = GW::PlayerMgr::GetPlayerPosition();
     vertices.clear();
