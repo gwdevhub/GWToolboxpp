@@ -58,18 +58,17 @@ public:
     // fill `out` with the points in WORLD-map coords (a PATH_BREAK sentinel — see
     // IsRouteBreak — separates maps). Output is world coords so it never has to project
     // foreign-map positions into the current map's game space (which overflows);
-    // consumers convert back to game coords as needed. Caches the current-map exit
-    // portal + downstream tail so RecalculateRouteLeg can cheaply refresh the player's
-    // leg. Returns false if no route. Blocks on pathing builds — call from a worker.
+    // consumers convert back to game coords as needed. Returns false if no route. Blocks
+    // on pathing builds — call from a worker.
     static bool CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>* out);
-    // Blocking. Re-walk only from_player -> the cached current-map exit portal and fill
-    // `out` (world coords) with that leg + the cached downstream tail. False if there is
-    // no cached route for the current map (caller should fall back to CalculateRoute).
-    static bool RecalculateRouteLeg(const GW::GamePos& from_player, std::vector<GW::Vec2f>* out);
-    // True if a cached route exists for the current map (RecalculateRouteLeg will work).
-    static bool HasRouteForCurrentMap();
-    // Forget the cached route.
-    static void ClearRoute();
+    // Blocking. A* across the current map from `from` to `to` (both current-map game
+    // coords) and fill `out` with that leg in WORLD-map coords. Holds no shared route
+    // state, so the caller can refresh just its current-map leg and splice the untouched
+    // remainder of its route onto the result. False if no path. Call from a worker.
+    static bool RecalculateSegment(const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out);
+    // True if `world_pos` falls within `map_id`'s game bounds, i.e. that point belongs to
+    // the map. `map_id` defaults to the current map.
+    static bool IsWorldPosOnMap(const GW::Vec2f& world_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);
     // True if `p` is the inter-map break sentinel in CalculateRoute output.
     static bool IsRouteBreak(const GW::Vec2f& p);
 

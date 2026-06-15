@@ -79,19 +79,6 @@ namespace {
     // Cache of portal props per file_hash (lightweight, loaded on demand).
     std::unordered_map<uint32_t, std::vector<Pathing::PortalProp>> portal_props_cache;
 
-    // Cache of the last computed cross-map route so the current-map leg can be re-walked
-    // cheaply (player -> exit portal) without recomputing the whole route. Owned by the
-    // compute API (CalculateRoute / RecalculateRouteLeg); the points live in QuestModule.
-    struct RouteCache {
-        bool active = false;
-        GW::Constants::MapID start_map = GW::Constants::MapID::None;
-        GW::GamePos exit_portal{};        // current-map exit toward next map (game coords, for AStar)
-        std::vector<GW::Vec2f> tail;      // downstream points in world coords (begins with a PATH_BREAK)
-        GW::Vec2f goal_world{};
-    };
-    RouteCache route_cache;
-    std::mutex route_cache_mutex; // route_cache is touched from worker + main threads
-
     // ===== LRU eviction for the per-map caches =====
     // Resident foreign-map cap (current map pinned on top). Memory/recompute trade-off.
     constexpr size_t MAX_CACHED_MAPS = 12;
@@ -2573,7 +2560,6 @@ namespace {
                 }
 
                 // Clear all lines on map change to avoid stale renders
-                { std::lock_guard lock(route_cache_mutex); route_cache = {}; } // route was for the old map
                 ClearBoundsLines();
                 ClearGraphEdgeLines();
                 ClearPortalMarkerLines();
@@ -2826,8 +2812,7 @@ bool PathfindingWindow::GetNextPortalToward(
 
 namespace {
     // Blocking. Compute the full cross-map route between two world-map positions into
-    // `out` (current-map coords, PATH_BREAK between maps) and cache the current-map
-    // exit portal + downstream tail for cheap leg recomputes. Returns false on failure.
+    // `out` (world-map coords, PATH_BREAK between maps). Returns false on failure.
     bool ComputeRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>& out)
     {
         out.clear();
@@ -2843,48 +2828,21 @@ namespace {
         if (!WorldMapWidget::WorldMapToGamePos(to_world, goal, to_map)) return false;
 
         std::vector<HiddenPathSegment> hidden;
-        if (!BuildCrossMapRoute(from_map, to_map, start, goal, from_world, out, hidden)) return false;
-
-        // Cache the current-map exit portal (in game coords, for cheap leg re-walks)
-        // and the downstream tail (world coords).
-        RouteCache cache{};
-        size_t fb = 0;
-        while (fb < out.size() && !IsPathBreak(out[fb])) fb++;
-        GW::GamePos exit_game{};
-        if (fb >= 2 && fb < out.size() && WorldMapWidget::WorldMapToGamePos(out[fb - 1], exit_game, from_map)) {
-            cache.active = true;
-            cache.start_map = from_map;
-            cache.exit_portal = exit_game;
-            cache.tail.assign(out.begin() + fb, out.end());
-            cache.goal_world = to_world;
-        }
-        std::lock_guard lock(route_cache_mutex);
-        route_cache = std::move(cache);
-        return true;
+        return BuildCrossMapRoute(from_map, to_map, start, goal, from_world, out, hidden);
     }
 
-    // Blocking. Re-walk only from_player -> cached current-map exit portal and stitch
-    // the cached downstream tail onto it (all world coords out). False if there's no
-    // usable cache for the current map (caller should fall back to ComputeRoute).
-    bool ComputeRouteLeg(const GW::GamePos& from_player, std::vector<GW::Vec2f>& out)
+    // Blocking. A* across the current map from `from` to `to` (both current-map game
+    // coords) and return the leg in world-map coords. Touches no shared route state, so a
+    // caller can refresh only its current-map leg and keep the rest of its route. False
+    // if no path.
+    bool ComputeSegment(const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>& out)
     {
         out.clear();
-        // Snapshot the cache under lock; release before the (blocking) AStar walk.
-        GW::Constants::MapID start_map;
-        GW::GamePos exit_portal;
-        std::vector<GW::Vec2f> tail;
-        {
-            std::lock_guard lock(route_cache_mutex);
-            if (!route_cache.active || route_cache.start_map != GW::Map::GetMapID()) return false;
-            start_map = route_cache.start_map;
-            exit_portal = route_cache.exit_portal;
-            tail = route_cache.tail;
-        }
+        const auto map_id = GW::Map::GetMapID();
+        if (map_id == GW::Constants::MapID::None) return false;
         std::vector<GW::GamePos> leg;
-        if (!RunAStarOnMap(start_map, from_player, exit_portal, leg) || leg.empty())
-            return false;
-        SegmentToWorld(leg, start_map, out); // current-map leg game -> world
-        out.insert(out.end(), tail.begin(), tail.end());
+        if (!RunAStarOnMap(map_id, from, to, leg) || leg.empty()) return false;
+        SegmentToWorld(leg, map_id, out); // current-map leg game -> world
         return true;
     }
 }
@@ -3059,23 +3017,22 @@ bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Ve
     return ComputeRoute(from_world, to_world, *out);
 }
 
-bool PathfindingWindow::RecalculateRouteLeg(const GW::GamePos& from_player, std::vector<GW::Vec2f>* out)
+bool PathfindingWindow::RecalculateSegment(const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out)
 {
     if (!out) return false;
-    RouteJobScope job_scope;
-    return ComputeRouteLeg(from_player, *out);
+    RouteJobScope job_scope; // defer eviction while we hold MilePath*
+    return ComputeSegment(from, to, *out);
 }
 
-bool PathfindingWindow::HasRouteForCurrentMap()
+bool PathfindingWindow::IsWorldPosOnMap(const GW::Vec2f& world_pos, GW::Constants::MapID map_id)
 {
-    std::lock_guard lock(route_cache_mutex);
-    return route_cache.active && route_cache.start_map == GW::Map::GetMapID();
-}
-
-void PathfindingWindow::ClearRoute()
-{
-    std::lock_guard lock(route_cache_mutex);
-    route_cache = {};
+    if ((uint32_t)map_id == 0) map_id = GW::Map::GetMapID();
+    if (map_id == GW::Constants::MapID::None) return false;
+    GW::GamePos g;
+    if (!WorldMapWidget::WorldMapToGamePos(world_pos, g, map_id)) return false;
+    Pathing::Vec2f bmin, bmax;
+    if (!Pathing::GetMapGameBoundsFromDAT(GetMapFileId(map_id), bmin, bmax)) return false;
+    return g.x >= bmin.x && g.x <= bmax.x && g.y >= bmin.y && g.y <= bmax.y;
 }
 
 bool PathfindingWindow::IsRouteBreak(const GW::Vec2f& p)

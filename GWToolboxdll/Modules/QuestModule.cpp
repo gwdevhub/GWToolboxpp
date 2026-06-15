@@ -249,22 +249,63 @@ namespace {
             // leg (player -> exit portal) and reuse the rest.
             if (is_cross_map) {
                 if (!PathfindingWindow::ReadyForPathing()) { calculating = 0; calculated_at = 0; return; }
+                const auto qid = quest_id;
+
+                // Refresh only the current-map leg when we already have a full route:
+                // walk route_world from the start, keeping the points still on the current
+                // map, and recompute player -> the last of them. Everything past that
+                // (other maps) is reused verbatim, so the recalc never discards the parts
+                // of the route we can't recompute from here.
+                if (has_full_route && !route_world.empty()) {
+                    size_t split = 0;
+                    while (split < route_world.size() &&
+                           !PathfindingWindow::IsRouteBreak(route_world[split]) &&
+                           PathfindingWindow::IsWorldPosOnMap(route_world[split])) {
+                        split++;
+                    }
+                    GW::GamePos seg_end{};
+                    if (split >= 1 && split < route_world.size() &&
+                        PathfindingWindow::IsRouteBreak(route_world[split]) &&
+                        WorldMapWidget::WorldMapToGamePos(route_world[split - 1], seg_end)) {
+                        // Preserve the tail (the PATH_BREAK + every later map) by value.
+                        auto tail = std::make_shared<std::vector<GW::Vec2f>>(
+                            route_world.begin() + split, route_world.end());
+                        Resources::EnqueueWorkerTask([qid, from, seg_end, tail] {
+                            auto pts = new std::vector<GW::Vec2f>(); // world-map coords
+                            const bool ok = PathfindingWindow::RecalculateSegment(from, seg_end, pts);
+                            if (ok) pts->insert(pts->end(), tail->begin(), tail->end());
+                            Resources::EnqueueMainTask([qid, pts, ok] {
+                                const auto cqp = GetCalculatedQuestPath(qid, false);
+                                if (cqp && ok) {
+                                    cqp->route_world = std::move(*pts);
+                                    cqp->current_waypoint = 0;
+                                    cqp->calculated_at = TIMER_INIT();
+                                    cqp->calculating = 0;
+                                    cqp->UpdateUI();
+                                }
+                                else if (cqp) { cqp->calculating = 0; cqp->calculated_at = 0; }
+                                delete pts;
+                            });
+                        });
+                        calculated_from = from;
+                        return;
+                    }
+                    // Couldn't isolate a current-map leg (e.g. we changed maps) → full route.
+                }
+
+                // No usable route yet (or it no longer starts on this map): plot it all.
                 GW::Vec2f from_world{};
                 WorldMapWidget::GamePosToWorldMap(from, from_world);
-                const auto qid = quest_id;
                 const auto gw = goal_world;
-                const bool leg_only = has_full_route && PathfindingWindow::HasRouteForCurrentMap();
-                Resources::EnqueueWorkerTask([qid, from, from_world, gw, leg_only] {
+                Resources::EnqueueWorkerTask([qid, from_world, gw] {
                     auto pts = new std::vector<GW::Vec2f>(); // world-map coords
-                    bool ok = leg_only && PathfindingWindow::RecalculateRouteLeg(from, pts);
-                    bool was_full = false;
-                    if (!ok) { ok = PathfindingWindow::CalculateRoute(from_world, gw, pts); was_full = ok; }
-                    Resources::EnqueueMainTask([qid, pts, ok, was_full] {
+                    const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
+                    Resources::EnqueueMainTask([qid, pts, ok] {
                         const auto cqp = GetCalculatedQuestPath(qid, false);
                         if (cqp && ok) {
                             cqp->route_world = std::move(*pts);
                             cqp->current_waypoint = 0;
-                            if (was_full) cqp->has_full_route = true;
+                            cqp->has_full_route = true;
                             cqp->calculated_at = TIMER_INIT();
                             cqp->calculating = 0;
                             cqp->UpdateUI();
@@ -666,7 +707,6 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
     RemoveQuest(custom_quest_id);
 
     if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0) {
-        PathfindingWindow::ClearRoute();
         for (const auto& cb : custom_marker_callbacks)
             cb();
         return;
@@ -702,7 +742,6 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
         cqp->goal_world = custom_quest_marker_world_pos;
         cqp->has_full_route = false; // new marker → plot the whole route first
     }
-    if (!cross_map) PathfindingWindow::ClearRoute();
 
     setting_custom_quest_marker = false;
     RefreshQuestPath(custom_quest_id);
