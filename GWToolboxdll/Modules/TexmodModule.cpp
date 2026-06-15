@@ -267,7 +267,7 @@ namespace {
         if (gmodReady) return true;
         if (gmodIncompatible) return false; // a restart is the only way out
 
-        auto device = GW::Render::GetDevice();
+        const auto device = GW::Render::GetDevice();
         if (!device) {
             statusMessage = "Error: Could not get IDirect3DDevice9 from GW::Render::GetDevice().";
             return false;
@@ -698,6 +698,9 @@ namespace {
         }
         else if (gmodIncompatible) {
             ImGui::TextColored({1.0f, 0.4f, 0.4f, 1.0f}, ICON_FA_TIMES " gMod blocked (incompatible version pre-loaded)");
+        }
+        else if (packs.empty()) {
+            ImGui::TextDisabled(ICON_FA_INFO_CIRCLE " gMod inactive - add a texture pack to enable");
         }
         else {
             ImGui::TextColored({1.0f, 0.4f, 0.4f, 1.0f}, ICON_FA_TIMES " gMod not initialised");
