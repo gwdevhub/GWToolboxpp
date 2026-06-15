@@ -506,38 +506,54 @@ namespace {
         return m;
     }
 
-    // Returns milepath pointer for the current map, nullptr if we're not in a valid state
-    Pathing::MilePath* GetMilepathForCurrentMap()
+    // Fallback for the current map when no file_id is known: build the same
+    // PathingMapData from the live map context and hand it to the standard MilePath
+    // ctor (eager full build — it's the map the player is standing in).
+    Pathing::MilePath* LoadMapFromContext(GW::Constants::MapID map_id)
     {
-        //todo: maybe use bool GetIsMapReady() from other modules?
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
         const auto mc = GW::GetMapContext();
         if (!(mc && mc->path && mc->path->staticData)) return nullptr;
 
-        auto hash = static_cast<uint64_t>(mc->path->staticData->map_id);
-        hash |= static_cast<uint64_t>(mc->path->pathNodes.size()) << 32;
+        auto map_data = Pathing::PathingMapData();
+        if (!Pathing::LoadFromMapContext(mc, 0, &map_data)) return nullptr;
+
+        auto hash = static_cast<uint64_t>(map_id);
+        hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
 
         if (mile_paths_by_coords.contains(hash)) {
             TouchLru(hash);
             return mile_paths_by_coords[hash];
         }
 
-        const auto m = new Pathing::MilePath(mc);
-        mile_paths_by_coords[hash] = m;
-        TouchLru(hash);
-
-        // Cache map info for drawing bounds + portal props
         CachedMapInfo info;
-        info.map_id = GW::Map::GetMapID();
-        info.bounds_min = {mc->start_pos.x, mc->start_pos.y};
-        info.bounds_max = {mc->end_pos.x, mc->end_pos.y};
-        uint32_t cur_fid = GetMapFileId(info.map_id);
-        if (cur_fid) Pathing::LoadPortalPropsFromDAT(cur_fid, info.portal_props);
+        info.map_id = map_id;
+        info.bounds_min = map_data.bounds_min;
+        info.bounds_max = map_data.bounds_max;
         cached_map_info[hash] = info;
         CacheSharedFileHashMaps(info);
-        UpdateBoundsLines();
 
+        auto* m = new Pathing::MilePath(std::move(map_data), map_id, {map_id}, true);
+        mile_paths_by_coords[hash] = m;
+        TouchLru(hash);
+        Resources::EnqueueMainTask([] {
+            UpdateBoundsLines();
+            if (draw_portals) UpdatePortalMarkers();
+        });
         return m;
+    }
+
+    // Returns milepath pointer for the current map, nullptr if we're not in a valid state
+    Pathing::MilePath* GetMilepathForCurrentMap()
+    {
+        //todo: maybe use bool GetIsMapReady() from other modules?
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
+        const auto map_id = GW::Map::GetMapID();
+        if (map_id == GW::Constants::MapID::None) return nullptr;
+        // Prefer DAT, like every other map, so the MilePath and coordinate bounds share
+        // one source. Fall back to the live map context only when we have no file_id.
+        if (GetMapFileId(map_id))
+            return LoadMapFromDAT(map_id);
+        return LoadMapFromContext(map_id);
     }
 
     std::vector<CustomRenderer::CustomLine*> bounds_lines;

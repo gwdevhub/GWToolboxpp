@@ -17,13 +17,9 @@ namespace GW {
 
 namespace Pathing {
 
-    // =========================================================================
-    // LoadFromMapContext
-    //
-    // Extracts navigation data from live game memory (GW::MapContext).
-    // Uses single continuous buffer per plane with pointer fixup.
-    // =========================================================================
-
+    // Extracts navigation data from live game memory (GW::MapContext) into the same
+    // PathingMapData layout the DAT loader produces. Fallback for the current map when
+    // we have no map_id -> file_id mapping to load it from the DAT.
     bool LoadFromMapContext(const GW::MapContext* path_ctx, uint32_t map_file_id, PathingMapData* out);
 
     bool LoadPathingMapDataFromDAT(uint32_t map_file_id, PathingMapData* out);
