@@ -166,10 +166,15 @@ namespace {
                     std::format("{} - {}", static_cast<uint32_t>(quest_id), i).c_str(), true
                 );
                 l->from_player_pos = first_line; // anchor the leg's start to the player
-                // Only the current-map leg sits at real positions — terrain-draw only it.
-                l->draw_on_terrain = settings.draw_quest_path_on_terrain && !past_break;
-                l->draw_on_minimap = settings.draw_quest_path_on_minimap;
-                l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
+                // Only the current-map leg sits at real positions. The tail is other maps
+                // projected into current-map coords — meaningful on the world map (which
+                // projects game->world), but garbage on the minimap/mission map/terrain.
+                // So draw the tail on the world map only (it ignores these flags, drawing
+                // any visible current-map line) and keep it off the in-game surfaces.
+                const bool leg = !past_break;
+                l->draw_on_terrain = leg && settings.draw_quest_path_on_terrain;
+                l->draw_on_minimap = leg && settings.draw_quest_path_on_minimap;
+                l->draw_on_mission_map = leg && settings.draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
                 l->color = QuestModule::GetQuestLineColor(quest_id);
                 minimap_lines.push_back(l);
