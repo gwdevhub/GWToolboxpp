@@ -2362,18 +2362,18 @@ namespace {
             }
         }
         PATH_LOG_INFO("Built map file hash lookup: %d entries", (int)map_id_to_file_hash.size());
-        auto it837 = map_id_to_file_hash.find(static_cast<GW::Constants::MapID>(837));
+        auto it837 = map_id_to_file_hash.find(GW::Constants::MapID::War_in_Kryta_Talmark_Wilderness);
         PATH_LOG_INFO("  map 837: %s (0x%X)", it837 != map_id_to_file_hash.end() ? "found" : "NOT FOUND",
             it837 != map_id_to_file_hash.end() ? it837->second : 0);
         // Debug: check specific map
-        auto it381 = map_id_to_file_hash.find(static_cast<GW::Constants::MapID>(381));
+        auto it381 = map_id_to_file_hash.find(GW::Constants::MapID::Yohlon_Haven_outpost);
         PATH_LOG_INFO("  map 381: %s (0x%X)", it381 != map_id_to_file_hash.end() ? "found" : "NOT FOUND",
             it381 != map_id_to_file_hash.end() ? it381->second : 0);
         // Check if constant_maps_info has the entry
         int found_381 = 0;
         for (const auto& [fh, entries] : constant_maps_info) {
             for (const auto& e : entries) {
-                if (e.map_id == static_cast<GW::Constants::MapID>(381)) {
+                if (e.map_id == GW::Constants::MapID::Yohlon_Haven_outpost) {
                     PATH_LOG_INFO("  constant_maps_info: map=381 file_hash=0x%X outer_key=0x%X",
                         e.file_hash, fh);
                     found_381++;
@@ -2411,18 +2411,18 @@ namespace {
         // Cross-check: warn once per map about file_id discrepancies. Skip map 0
         // (MapID::None) — it has no file_id by definition and is looked up routinely.
         if ((uint32_t)map_id != 0 && !file_id_mismatch_warned.contains((uint32_t)map_id)) {
-            if (map_id == static_cast<GW::Constants::MapID>(242)) {
+            if (map_id == GW::Constants::MapID::Shing_Jea_Monastery_outpost) {
                 // Brute force search to verify
                 int found_count = 0;
                 uint32_t found_fh = 0;
                 for (const auto& [fh, entries] : constant_maps_info) {
                     for (const auto& e : entries) {
-                        if (e.map_id == static_cast<GW::Constants::MapID>(242)) { found_count++; found_fh = (uint32_t)fh; }
+                        if (e.map_id == GW::Constants::MapID::Shing_Jea_Monastery_outpost) { found_count++; found_fh = (uint32_t)fh; }
                     }
                 }
                 PATH_LOG_INFO("[FileId] map 242 debug: runtime=0x%X constant=0x%X lookup=%s brute=%d(0x%X) total_groups=%d",
                     runtime_fid, constant_fid,
-                    map_id_to_file_hash.contains(static_cast<GW::Constants::MapID>(242)) ? "in table" : "NOT in table",
+                    map_id_to_file_hash.contains(GW::Constants::MapID::Shing_Jea_Monastery_outpost) ? "in table" : "NOT in table",
                     found_count, found_fh, (int)constant_maps_info.size());
             }
             if (runtime_fid && constant_fid && runtime_fid != constant_fid) {
