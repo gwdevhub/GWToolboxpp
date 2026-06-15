@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <list>
 #include <mutex>
 #include <queue>
 #include <set>
@@ -67,19 +68,65 @@ namespace {
         std::vector<Pathing::PortalProp> portal_props;
     };
 
-    // FIXME: unbounded growth. These per-map caches (keyed by file_hash) are
-    // populated as foreign maps get DAT-loaded for cross-map routing and are never
-    // evicted until Terminate. A MilePath holds a full visgraph, so a long session
-    // that routes across many maps will accumulate large amounts of memory and can
-    // eventually overflow. Should be bounded with an LRU eviction policy (drop the
-    // least-recently-used map's MilePath/TrapezoidPathfinder once a cap is hit;
-    // keep the current map pinned).
+    // Per-map caches (keyed by file_hash in the low 32 bits) populated as foreign
+    // maps get DAT-loaded for cross-map routing. Bounded by an LRU policy — see
+    // MAX_CACHED_MAPS / TouchLru / EnforceCacheLimitIfIdle below — so a long session
+    // that routes across many maps can't grow without limit. The current map is
+    // pinned (never evicted). Foreign maps are loaded lightweight (raw map data
+    // only) and only build the heavy visibility graph on first actual walk, so each
+    // cached entry is also much smaller than it used to be.
     std::unordered_map<uint64_t, Pathing::MilePath*> mile_paths_by_coords;
     std::unordered_map<uint64_t, CachedMapInfo> cached_map_info;
 
     // Trapezoid pathfinders share the same file_hash key as mile_paths_by_coords.
     // Lazy: populated on first call to ClosestPortalTrapezoidDistanceInMap for a map.
     std::unordered_map<uint64_t, OpenTyria::TrapezoidPathfinder*> trapezoid_pf_by_coords;
+
+    // Cache of portal props per file_hash (lightweight, loaded on demand).
+    std::unordered_map<uint32_t, std::vector<Pathing::PortalProp>> portal_props_cache;
+
+    // ===== LRU eviction for the per-map caches =====
+    // Cap on the number of distinct foreign maps kept resident. The current map is
+    // always pinned on top of this. Tune for the memory/recompute trade-off.
+    constexpr size_t MAX_CACHED_MAPS = 12;
+
+    // Recency order of mile_paths_by_coords keys (front = most recently used).
+    std::list<uint64_t> lru_order;
+    std::unordered_map<uint64_t, std::list<uint64_t>::iterator> lru_pos;
+
+    // Guards the LRU structures and the route-job counter. Eviction frees MilePaths,
+    // so it must never run while a route worker still holds raw MilePath* pointers —
+    // route_jobs_active gates that (eviction only happens at 0), and the lock makes
+    // the gate + eviction atomic against a job starting.
+    std::mutex lru_mutex;
+    int route_jobs_active = 0;
+
+    void TouchLru(uint64_t key)
+    {
+        std::lock_guard lock(lru_mutex);
+        auto it = lru_pos.find(key);
+        if (it != lru_pos.end()) lru_order.erase(it->second);
+        lru_order.push_front(key);
+        lru_pos[key] = lru_order.begin();
+    }
+
+    void EnforceCacheLimitIfIdle(); // defined after GetMapFileId fwd decl is in scope
+
+    // RAII: marks a cross-map route computation in-flight. While any are active,
+    // eviction is deferred (workers hold raw MilePath*). On the last one finishing,
+    // the cache is trimmed back down to the cap.
+    struct RouteJobScope {
+        RouteJobScope() { std::lock_guard lock(lru_mutex); ++route_jobs_active; }
+        ~RouteJobScope() {
+            { std::lock_guard lock(lru_mutex); --route_jobs_active; }
+            // Run eviction on the main thread: it frees MilePaths and erases
+            // cached_map_info, which the renderer reads on the main thread. The
+            // idle-gate inside still re-checks route_jobs_active before freeing.
+            Resources::EnqueueMainTask([] { EnforceCacheLimitIfIdle(); });
+        }
+        RouteJobScope(const RouteJobScope&) = delete;
+        RouteJobScope& operator=(const RouteJobScope&) = delete;
+    };
 
     bool draw_map_bounds = true;
     bool draw_graph_edges = false;
@@ -121,6 +168,7 @@ namespace {
         GW::Vec2f& world_map_pos); // forward decl (early)
     void ClearEditorHighlightLines(); // forward decl (early)
     void UpdatePortalMarkers(); // forward decl (early)
+    void UpdateBoundsLines(); // forward decl (early)
     void EnsureLightweightMapInfo(GW::Constants::MapID map_id, const char* caller = "?"); // forward decl (early)
     const CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id); // forward decl (early)
     uint32_t GetMapFileId(GW::Constants::MapID map_id); // forward decl (early)
@@ -167,6 +215,76 @@ namespace {
                         (int)mid, (int)source_info.map_id, fh);
                 }
             }
+        }
+    }
+
+    // Free every cached allocation for one map (identified by file_hash) and drop
+    // it from the LRU. Caller must hold lru_mutex. `mile_key` is the entry's key in
+    // mile_paths_by_coords; fh is mile_key's low 32 bits.
+    void EvictMapByKey(uint64_t mile_key)
+    {
+        const uint32_t fh = (uint32_t)(mile_key & 0xFFFFFFFF);
+
+        // Free the trapezoid pathfinder first — it holds a raw pointer into the
+        // MilePath's owned map data, so it must die before the MilePath does.
+        if (auto it = trapezoid_pf_by_coords.find(fh); it != trapezoid_pf_by_coords.end()) {
+            delete it->second;
+            trapezoid_pf_by_coords.erase(it);
+        }
+        if (auto it = mile_paths_by_coords.find(mile_key); it != mile_paths_by_coords.end()) {
+            delete it->second; // dtor joins the (finished) worker, frees visgraph etc.
+            mile_paths_by_coords.erase(it);
+        }
+        // cached_map_info may hold several entries for this file_hash (sibling-map
+        // spread); drop them all. Bounds rectangles for those maps disappear until
+        // they're loaded again — acceptable for a non-current map.
+        std::erase_if(cached_map_info, [fh](const auto& kv) {
+            return (uint32_t)(kv.first & 0xFFFFFFFF) == fh;
+        });
+        portal_props_cache.erase(fh);
+
+        if (auto it = lru_pos.find(mile_key); it != lru_pos.end()) {
+            lru_order.erase(it->second);
+            lru_pos.erase(it);
+        }
+    }
+
+    // Trim the cache back to MAX_CACHED_MAPS, but only while no route computation is
+    // in flight (workers hold raw MilePath* that must not be freed under them). The
+    // current map is pinned. Evicts least-recently-used first.
+    void EnforceCacheLimitIfIdle()
+    {
+        std::vector<uint64_t> evicted;
+        {
+            std::lock_guard lock(lru_mutex);
+            if (route_jobs_active > 0) return; // a worker may still hold these pointers
+            // The current map must never be evicted. Its mile_paths_by_coords key is
+            // low32 = MapID (see GetMilepathForCurrentMap), whereas DAT-loaded foreign
+            // maps key low32 = file_hash — so pin against both forms.
+            const uint32_t cur_fh = GetMapFileId(GW::Map::GetMapID());
+            const uint32_t cur_mid = (uint32_t)GW::Map::GetMapID();
+            auto is_current = [&](uint64_t key) {
+                const uint32_t low = (uint32_t)(key & 0xFFFFFFFF);
+                return (cur_fh && low == cur_fh) || low == cur_mid;
+            };
+            // Collect least-recently-used keys (skipping the pinned current map)
+            // until evicting them would bring us within the cap, then free them.
+            size_t over = lru_order.size() > MAX_CACHED_MAPS ? lru_order.size() - MAX_CACHED_MAPS : 0;
+            for (auto it = lru_order.rbegin(); over > 0 && it != lru_order.rend(); ++it) {
+                const uint64_t key = *it;
+                if (is_current(key)) continue; // pin current map
+                evicted.push_back(key);
+                --over;
+            }
+            for (uint64_t key : evicted) EvictMapByKey(key);
+        }
+        if (!evicted.empty()) {
+            // Bounds/portal marker lines reference evicted maps — refresh on the main
+            // thread (CustomRenderer line pool is main-thread only).
+            Resources::EnqueueMainTask([] {
+                UpdateBoundsLines();
+                if (draw_portals) UpdatePortalMarkers();
+            });
         }
     }
 
@@ -412,8 +530,10 @@ namespace {
         auto hash = static_cast<uint64_t>(fid);
         hash |= static_cast<uint64_t>(dat_data.pathNodeSize) << 32;
 
-        if (mile_paths_by_coords.contains(hash))
+        if (mile_paths_by_coords.contains(hash)) {
+            TouchLru(hash);
             return mile_paths_by_coords[hash];
+        }
 
         // Cache map info for bounds drawing
         CachedMapInfo info;
@@ -436,8 +556,15 @@ namespace {
                 all_ids.push_back(entry.map_id);
         }
 
-        auto* m = new Pathing::MilePath(std::move(dat_data), map_id, all_ids);
+        // Lightweight: keep only raw map data (all the trapezoid pathfinder used by
+        // route-cost queries needs). The visibility graph is built lazily on first
+        // AStar walk (EnsureFullBuild), so maps Dijkstra merely probes never pay for
+        // a visgraph they don't use.
+        auto* m = new Pathing::MilePath(std::move(dat_data), map_id, all_ids, false);
         mile_paths_by_coords[hash] = m;
+        TouchLru(hash);
+        // Actual eviction is deferred to the main thread when the route job finishes
+        // (RouteJobScope) — never mid-load, while this map's pointer is in use.
         // UpdateBoundsLines / UpdatePortalMarkers mutate the CustomRenderer's
         // line pool. LoadMapFromDAT runs on worker threads (and now in parallel
         // for FindMapRoute pre-warm), so deferring these UI mutations to the
@@ -460,11 +587,14 @@ namespace {
         auto hash = static_cast<uint64_t>(mc->path->staticData->map_id);
         hash |= static_cast<uint64_t>(mc->path->pathNodes.size()) << 32;
 
-        if (mile_paths_by_coords.contains(hash))
+        if (mile_paths_by_coords.contains(hash)) {
+            TouchLru(hash);
             return mile_paths_by_coords[hash];
+        }
 
         const auto m = new Pathing::MilePath(mc);
         mile_paths_by_coords[hash] = m;
+        TouchLru(hash);
 
         // Cache map info for drawing bounds + portal props
         CachedMapInfo info;
@@ -828,7 +958,10 @@ namespace {
         uint32_t fh = GetMapFileId(map_id);
         if (!fh) return nullptr;
         for (const auto& [hash, mp] : mile_paths_by_coords) {
-            if ((uint32_t)(hash & 0xFFFFFFFF) == fh) return mp;
+            if ((uint32_t)(hash & 0xFFFFFFFF) == fh) {
+                TouchLru(hash);
+                return mp;
+            }
         }
         return nullptr;
     }
@@ -985,9 +1118,6 @@ namespace {
 
         return result;
     }
-
-    // Cache of portal props per file_hash (lightweight, loaded on demand)
-    std::unordered_map<uint32_t, std::vector<Pathing::PortalProp>> portal_props_cache;
 
     const std::vector<Pathing::PortalProp>& GetPortalPropsForMap(GW::Constants::MapID map_id)
     {
@@ -2021,6 +2151,7 @@ namespace {
         struct PortalPairDraw { GW::GamePos a, b; GW::Constants::MapID map_a, map_b; };
 
         Resources::EnqueueWorkerTask([route_copy, start_copy, goal_copy, start_wm, goal_wm, cur_map] {
+            RouteJobScope job_scope; // defer cache eviction while this job holds MilePath*
             std::vector<GW::GamePos> full_path;
             std::vector<HiddenPathSegment> hidden_segments;
             std::vector<PortalPairDraw> portal_draws;
@@ -2139,6 +2270,7 @@ namespace {
         auto cur_map = GW::Map::GetMapID();
 
         Resources::EnqueueWorkerTask([from_map, to_map, start, goal, start_wm, cur_map] {
+            RouteJobScope job_scope; // defer cache eviction while this job holds MilePath*
             constexpr int max_retries = 3;
             for (int attempt = 0; attempt <= max_retries; attempt++) {
                 auto route = FindMapRoute(from_map, to_map, &start, &goal);
@@ -2306,6 +2438,7 @@ namespace {
             target_map = path_from_map;
         const auto map_id = target_map;
         Resources::EnqueueWorkerTask([from, to, map_id] {
+            RouteJobScope job_scope; // defer cache eviction while this job holds MilePath*
             Pathing::MilePath* milepath = nullptr;
             if (map_id == GW::Map::GetMapID()) {
                 milepath = GetMilepathForCurrentMap();
@@ -2549,6 +2682,7 @@ clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::Game
     pending_worker_task = true;
 
     Resources::EnqueueWorkerTask([from, to, callback, args] {
+        RouteJobScope job_scope; // defer cache eviction while this job holds MilePath*
         // Always fire the callback exactly once. Prior versions silent-failed on milepath-not-ready
         // and on Search errors, leaving the caller's "calculating" flag stuck for 5 s and the cached
         // waypoints stale on retry — quest path appeared frozen while the player walked past it.
@@ -2627,6 +2761,12 @@ void PathfindingWindow::Terminate()
         for (auto& t : deletes) t.join();
     }
     mile_paths_by_coords.clear();
+    {
+        std::lock_guard lock(lru_mutex);
+        lru_order.clear();
+        lru_pos.clear();
+        route_jobs_active = 0;
+    }
     // Trapezoid pathfinders only own scratch buffers — no worker threads — so
     // serial frees are fine.
     for (const auto& [hash, pf] : trapezoid_pf_by_coords) delete pf;
@@ -2752,6 +2892,8 @@ static GW::Constants::MapID ResolveMapForClick(
 // Load all maps whose world map bounds contain this position
 void LoadAllMapsAtPosition(const GW::Vec2f& world_map_pos)
 {
+    // Defer eviction until all of this batch's maps are loaded, then trim to cap.
+    RouteJobScope job_scope;
     BuildMapGraph();
     const auto cur_area = GW::Map::GetMapInfo();
     const auto cur_continent = cur_area ? cur_area->continent : GW::Continent::Kryta;

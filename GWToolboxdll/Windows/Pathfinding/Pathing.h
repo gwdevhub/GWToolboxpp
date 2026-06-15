@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Pathing.h>
@@ -32,12 +33,28 @@ namespace Pathing {
         volatile bool m_build_failed = false; // worker thread caught std::bad_alloc during visgraph build
         volatile int m_progress = 0;
 
+        // Lazy full-build state. A "lightweight" MilePath (DAT-loaded foreign map,
+        // full_build = false) keeps only the raw map data — enough for the OpenTyria
+        // trapezoid pathfinder, which is all route-cost queries need. The heavy
+        // visibility graph is built on demand by EnsureFullBuild() the first time an
+        // actual AStar walk runs on the map. m_constructed_full marks maps built
+        // eagerly on the worker (the live current map); those just wait on ready().
+        volatile bool m_full_built = false;
+        bool m_constructed_full = false;
+        std::mutex m_build_mutex;
+
         std::thread* worker_thread = nullptr;
 
     public:
         MilePath(GW::MapContext*);
-        MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids = {});
+        MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids = {}, bool full_build = true);
         ~MilePath();
+
+        // Build the full pathing graph (trapezoid neighbours, portals, teleport
+        // graph, visibility graph) if not already present. Idempotent and
+        // thread-safe. Cheap no-op once built. Called by AStar::Search so every
+        // walk consumer transparently upgrades a lightweight map on first use.
+        void EnsureFullBuild();
 
         // Signals terminate to worker thread. Usually followed late by shutdown() to grab the thread again.
         void stopProcessing();

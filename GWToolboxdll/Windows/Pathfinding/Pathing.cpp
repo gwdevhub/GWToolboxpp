@@ -781,6 +781,10 @@ namespace Pathing {
         std::vector<GW::MapProp*> travel_portals;
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
         std::vector<DefferedTeleport> m_defferedPortalLinks;
+        // MapIDs sharing this map's file_hash — needed to collect static teleport
+        // data during a (possibly deferred) full build. Stored so a lightweight
+        // map can be upgraded later without the caller re-supplying them.
+        std::vector<GW::Constants::MapID> m_all_map_ids;
         volatile bool m_terminateThread = false;
 
         // Runtime/tmp vars that would otherwise have been static for cca - maybe add mutex?
@@ -1869,6 +1873,36 @@ namespace Pathing {
         }
 #pragma optimize("", on) // Restore global optimizations to project default
 
+        // Free build-only scratch once the graph is built. None of these are read
+        // by AStar::Search / BuildPath, so a cached map need not carry them for its
+        // whole lifetime. swap-with-empty actually releases capacity (clear() alone
+        // would keep the backing storage).
+        void ReleaseBuildScratch()
+        {
+            decltype(ptneighbours){}.swap(ptneighbours);
+            decltype(tmp_portal_pt_map){}.swap(tmp_portal_pt_map);
+            std::vector<DefferedTeleport>{}.swap(m_defferedPortalLinks);
+            decltype(GetTrapezoidNeighbours_visited){}.swap(GetTrapezoidNeighbours_visited);
+            std::vector<Explore>{}.swap(GetTrapezoidNeighbours_to_explore);
+            std::vector<Neighbour>{}.swap(isNeighbourOf_neighbours);
+        }
+
+        // Full pathing-graph build (teleports + neighbours + portals + visgraph).
+        // Shared by the eager worker build and the lazy EnsureFullBuild() upgrade.
+        void BuildFullGraph()
+        {
+            MapSpecific::MapSpecificData msd;
+            for (auto id : m_all_map_ids) msd.AddTeleportsForMap(id);
+            m_teleports = msd.m_teleports;
+            travel_portals.clear();
+
+            GenerateTrapezoidNeighbours();
+            GeneratePortals();
+            GenerateTeleportGraph();
+            GenerateVisGraph();
+            ReleaseBuildScratch();
+        }
+
 #define mImpl ((Impl*)opaque)
     }; // Impl
 } // namespace Pathing
@@ -1899,6 +1933,7 @@ namespace Pathing {
         new (opaque) Impl();
 
         m_processing = true;
+        m_constructed_full = true; // live current map: always built eagerly + fully
         const clock_t start = clock();
 
         // Load map data from game into Impl's PathingMapData
@@ -1915,8 +1950,10 @@ namespace Pathing {
                 mImpl->GeneratePortals();
                 mImpl->GenerateTeleportGraph();
                 mImpl->GenerateVisGraph();
+                mImpl->ReleaseBuildScratch();
                 const clock_t stop = clock();
                 PATH_LOG_INFO("Processing %s in %d ms", mImpl->m_terminateThread ? "terminated" : "done", stop - start);
+                m_full_built = true;
                 m_progress = 100;
             }
             catch (const std::bad_alloc&) {
@@ -1931,32 +1968,33 @@ namespace Pathing {
         worker_thread->detach();
     }
 
-    MilePath::MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids)
+    MilePath::MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids, bool full_build)
     {
         static_assert(sizeof(opaque) >= sizeof(Impl));
         new (opaque) Impl();
 
-        m_processing = true;
         const clock_t start = clock();
 
         mImpl->m_mapData = std::move(map_data);
+        mImpl->m_all_map_ids = all_map_ids.empty() ? std::vector{map_id} : all_map_ids;
+        m_constructed_full = full_build;
 
+        // Lightweight load: keep only the raw map data (enough for the OpenTyria
+        // trapezoid pathfinder used by route-cost queries). The visibility graph is
+        // built on demand by EnsureFullBuild() the first time an AStar walk runs.
+        if (!full_build) {
+            m_progress = 100; // map data is immediately usable; no worker needed
+            return;
+        }
+
+        m_processing = true;
         ASSERT(!worker_thread);
-        auto ids_copy = all_map_ids.empty() ? std::vector{map_id} : all_map_ids;
-        worker_thread = new std::thread([this, ids_copy, start] {
+        worker_thread = new std::thread([this, start] {
             try {
-                // Static teleport data — collect from all MapIDs sharing the same file_hash
-                MapSpecific::MapSpecificData msd;
-                for (auto id : ids_copy) msd.AddTeleportsForMap(id);
-                mImpl->m_teleports = msd.m_teleports;
-                mImpl->travel_portals.clear();
-
-                mImpl->GenerateTrapezoidNeighbours();
-                mImpl->GeneratePortals();
-                mImpl->GenerateTeleportGraph();
-                mImpl->GenerateVisGraph();
+                mImpl->BuildFullGraph();
                 const clock_t stop = clock();
                 PATH_LOG_INFO("DAT processing %s in %d ms", mImpl->m_terminateThread ? "terminated" : "done", stop - start);
+                m_full_built = true;
                 m_progress = 100;
             }
             catch (const std::bad_alloc&) {
@@ -2015,6 +2053,27 @@ namespace Pathing {
     const Pathing::PathingMapData* MilePath::GetMapData() const
     {
         return &mImpl->m_mapData;
+    }
+
+    void MilePath::EnsureFullBuild()
+    {
+        if (m_full_built || m_build_failed) return;
+        if (m_constructed_full) {
+            // Built eagerly on the worker thread — just wait for it to finish.
+            while (!m_full_built && !m_build_failed && !mImpl->m_terminateThread) Sleep(10);
+            return;
+        }
+        // Lightweight map: build the graph now, on the calling (worker) thread.
+        std::lock_guard lock(m_build_mutex);
+        if (m_full_built || m_build_failed) return; // another thread already built it
+        try {
+            mImpl->BuildFullGraph();
+            m_full_built = true;
+        }
+        catch (const std::bad_alloc&) {
+            Log::Error("[pathing] MilePath lazy full build OOM; marking build_failed");
+            m_build_failed = true;
+        }
     }
 
 
@@ -2115,6 +2174,11 @@ namespace Pathing {
             PATH_LOG_INFO("[AStar:%s] trap=%lldus insert=%lldus search=%lldus cleanup=%lldus total=%lldus",
                 tag, us(t_begin, t_trap), us(t_trap, t_insert), us(t_insert, t_search), us(t_search, t_end), us(t_begin, t_end));
         };
+
+        // A walk needs the full visibility graph. Lightweight (route-cost-only) maps
+        // are upgraded here, transparently, on first walk. Done before taking
+        // pathing_mutex so a slow first-time build doesn't stall other maps' searches.
+        m_path.m_mp->EnsureFullBuild();
 
         std::lock_guard lock(pathing_mutex);
 
