@@ -285,6 +285,10 @@ namespace {
                 Recalculate(from);
                 return false;
             }
+            // Cross-map routes span projected maps, so the nearest-waypoint progression
+            // below (which assumes one coord space) is invalid — it would skip the leg.
+            // The whole route is drawn from the start; the leg-recalc above keeps it fresh.
+            if (is_cross_map) return false;
             const uint32_t original_waypoint = current_waypoint;
 
             const auto waypoint_len = waypoints.size();
@@ -387,8 +391,10 @@ namespace {
         cqp->current_waypoint = 0;
         cqp->waypoints = std::move(waypoints); // Move
 
+        // Cross-map routes mix projected coord spaces (and start at the player), so the
+        // flip + nearest-waypoint heuristic doesn't apply — draw from waypoint 0.
         const auto waypoint_len = cqp->waypoints.size();
-        if (waypoint_len) {
+        if (waypoint_len && !cqp->is_cross_map) {
             if (GetSquareDistance(cqp->waypoints.back(), cqp->calculated_from) < GetSquareDistance(cqp->waypoints.front(), cqp->calculated_from)) {
                 // Waypoint array is in descending distance, flip it
                 std::ranges::reverse(cqp->waypoints);
