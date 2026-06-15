@@ -33,7 +33,6 @@
 #include <Timer.h>
 #include <Utils/TextUtils.h>
 #include <algorithm>
-#include <chrono>
 #include <sstream>
 #include <unordered_set>
 
@@ -351,7 +350,7 @@ namespace {
         bool IsActive() const
         {
             return !player_name.empty() && timestamp &&
-                   (clock() - timestamp) < (60 * CLOCKS_PER_SEC);
+                   TIMER_DIFF(timestamp) < (60 * CLOCKS_PER_SEC);
         }
 
         void Clear() { player_name.clear(); timestamp = 0; }
@@ -1167,7 +1166,7 @@ namespace {
                     pending_purchase_analytic.item_name = order.name;
                     pending_purchase_analytic.order_type = order.orderType;
                     pending_purchase_analytic.price = order.prices[0];
-                    pending_purchase_analytic.timestamp = clock();
+                    pending_purchase_analytic.timestamp = TIMER_INIT();
                 }
                 auto cpy = new MarketItem();
                 *cpy = order;
