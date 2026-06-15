@@ -39,6 +39,9 @@ namespace Pathing {
         volatile bool m_full_built = false;
         bool m_constructed_full = false;
         std::mutex m_build_mutex;
+        // MapIDs sharing this file_hash — for teleport collection in a (possibly
+        // deferred) full build. Kept here (not in opaque Impl) to keep Impl small.
+        std::vector<GW::Constants::MapID> m_all_map_ids;
 
         std::thread* worker_thread = nullptr;
 

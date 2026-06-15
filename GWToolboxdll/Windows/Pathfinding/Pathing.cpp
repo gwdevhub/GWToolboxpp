@@ -781,9 +781,6 @@ namespace Pathing {
         std::vector<GW::MapProp*> travel_portals;
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
         std::vector<DefferedTeleport> m_defferedPortalLinks;
-        // MapIDs sharing this file_hash — for teleport collection on a (possibly
-        // deferred) full build, stored so a lightweight map can upgrade itself later.
-        std::vector<GW::Constants::MapID> m_all_map_ids;
         volatile bool m_terminateThread = false;
 
         // Runtime/tmp vars that would otherwise have been static for cca - maybe add mutex?
@@ -1885,10 +1882,10 @@ namespace Pathing {
         }
 
         // Full graph build, shared by the eager worker and lazy EnsureFullBuild().
-        void BuildFullGraph()
+        void BuildFullGraph(const std::vector<GW::Constants::MapID>& all_map_ids)
         {
             MapSpecific::MapSpecificData msd;
-            for (auto id : m_all_map_ids) msd.AddTeleportsForMap(id);
+            for (auto id : all_map_ids) msd.AddTeleportsForMap(id);
             m_teleports = msd.m_teleports;
             travel_portals.clear();
 
@@ -1972,7 +1969,7 @@ namespace Pathing {
         const clock_t start = clock();
 
         mImpl->m_mapData = std::move(map_data);
-        mImpl->m_all_map_ids = all_map_ids.empty() ? std::vector{map_id} : all_map_ids;
+        m_all_map_ids = all_map_ids.empty() ? std::vector{map_id} : all_map_ids;
         m_constructed_full = full_build;
 
         // Lightweight: raw map data only; visgraph built later by EnsureFullBuild().
@@ -1985,7 +1982,7 @@ namespace Pathing {
         ASSERT(!worker_thread);
         worker_thread = new std::thread([this, start] {
             try {
-                mImpl->BuildFullGraph();
+                mImpl->BuildFullGraph(m_all_map_ids);
                 const clock_t stop = clock();
                 PATH_LOG_INFO("DAT processing %s in %d ms", mImpl->m_terminateThread ? "terminated" : "done", stop - start);
                 m_full_built = true;
@@ -2061,7 +2058,7 @@ namespace Pathing {
         std::lock_guard lock(m_build_mutex);
         if (m_full_built || m_build_failed) return; // lost the race
         try {
-            mImpl->BuildFullGraph();
+            mImpl->BuildFullGraph(m_all_map_ids);
             m_full_built = true;
         }
         catch (const std::bad_alloc&) {
