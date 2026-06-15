@@ -61,11 +61,13 @@ public:
     // consumers convert back to game coords as needed. Returns false if no route. Blocks
     // on pathing builds — call from a worker.
     static bool CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>* out);
-    // Blocking. A* across the current map from `from` to `to` (both current-map game
-    // coords) and fill `out` with that leg in WORLD-map coords. Holds no shared route
-    // state, so the caller can refresh just its current-map leg and splice the untouched
-    // remainder of its route onto the result. False if no path. Call from a worker.
-    static bool RecalculateSegment(const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out);
+    // Blocking. A* across `map_id` (0 = current map) from `from` to `to` (both that map's
+    // game coords) and fill `out` with that leg in WORLD-map coords. Pass the map the leg
+    // belongs to explicitly so a deferred recompute isn't tied to wherever the player has
+    // since wandered. Holds no shared route state, so the caller can refresh just one leg
+    // and splice the untouched remainder of its route onto the result. False if no path.
+    // Call from a worker.
+    static bool RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out);
     // True if `world_pos` falls within `map_id`'s game bounds, i.e. that point belongs to
     // the map. `map_id` defaults to the current map.
     static bool IsWorldPosOnMap(const GW::Vec2f& world_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);

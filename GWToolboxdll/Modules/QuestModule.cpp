@@ -257,22 +257,23 @@ namespace {
                 // (other maps) is reused verbatim, so the recalc never discards the parts
                 // of the route we can't recompute from here.
                 if (has_full_route && !route_world.empty()) {
+                    const auto leg_map = GW::Map::GetMapID();
                     size_t split = 0;
                     while (split < route_world.size() &&
                            !PathfindingWindow::IsRouteBreak(route_world[split]) &&
-                           PathfindingWindow::IsWorldPosOnMap(route_world[split])) {
+                           PathfindingWindow::IsWorldPosOnMap(route_world[split], leg_map)) {
                         split++;
                     }
                     GW::GamePos seg_end{};
                     if (split >= 1 && split < route_world.size() &&
                         PathfindingWindow::IsRouteBreak(route_world[split]) &&
-                        WorldMapWidget::WorldMapToGamePos(route_world[split - 1], seg_end)) {
+                        WorldMapWidget::WorldMapToGamePos(route_world[split - 1], seg_end, leg_map)) {
                         // Preserve the tail (the PATH_BREAK + every later map) by value.
                         auto tail = std::make_shared<std::vector<GW::Vec2f>>(
                             route_world.begin() + split, route_world.end());
-                        Resources::EnqueueWorkerTask([qid, from, seg_end, tail] {
+                        Resources::EnqueueWorkerTask([qid, leg_map, from, seg_end, tail] {
                             auto pts = new std::vector<GW::Vec2f>(); // world-map coords
-                            const bool ok = PathfindingWindow::RecalculateSegment(from, seg_end, pts);
+                            const bool ok = PathfindingWindow::RecalculateSegment(leg_map, from, seg_end, pts);
                             if (ok) pts->insert(pts->end(), tail->begin(), tail->end());
                             Resources::EnqueueMainTask([qid, pts, ok] {
                                 const auto cqp = GetCalculatedQuestPath(qid, false);

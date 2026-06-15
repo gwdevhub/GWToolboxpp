@@ -2831,18 +2831,17 @@ namespace {
         return BuildCrossMapRoute(from_map, to_map, start, goal, from_world, out, hidden);
     }
 
-    // Blocking. A* across the current map from `from` to `to` (both current-map game
-    // coords) and return the leg in world-map coords. Touches no shared route state, so a
-    // caller can refresh only its current-map leg and keep the rest of its route. False
-    // if no path.
-    bool ComputeSegment(const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>& out)
+    // Blocking. A* across `map_id` from `from` to `to` (both that map's game coords) and
+    // return the leg in world-map coords. Touches no shared route state, so a caller can
+    // refresh only one map's leg and keep the rest of its route. False if no path.
+    bool ComputeSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>& out)
     {
         out.clear();
-        const auto map_id = GW::Map::GetMapID();
+        if ((uint32_t)map_id == 0) map_id = GW::Map::GetMapID();
         if (map_id == GW::Constants::MapID::None) return false;
         std::vector<GW::GamePos> leg;
         if (!RunAStarOnMap(map_id, from, to, leg) || leg.empty()) return false;
-        SegmentToWorld(leg, map_id, out); // current-map leg game -> world
+        SegmentToWorld(leg, map_id, out); // leg game -> world
         return true;
     }
 }
@@ -3017,11 +3016,11 @@ bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Ve
     return ComputeRoute(from_world, to_world, *out);
 }
 
-bool PathfindingWindow::RecalculateSegment(const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out)
+bool PathfindingWindow::RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out)
 {
     if (!out) return false;
     RouteJobScope job_scope; // defer eviction while we hold MilePath*
-    return ComputeSegment(from, to, *out);
+    return ComputeSegment(map_id, from, to, *out);
 }
 
 bool PathfindingWindow::IsWorldPosOnMap(const GW::Vec2f& world_pos, GW::Constants::MapID map_id)
