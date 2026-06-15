@@ -950,11 +950,11 @@ void WorldMapWidget::Initialize()
 }
 
 namespace {
-    // World-map mid point for `map_id`, the single anchor both conversions share.
-    // Game bounds: the live map context for the current map, else the cached DAT bounds.
-    // NB: World map is 96 gwinches per unit, hard-coded in the GW source.
+    // World map is 96 gwinches per unit, hard-coded in the GW source.
     constexpr float gwinches_per_unit = 96.f;
 
+    // World-map mid point for `map_id` (game bounds from the cached DAT) — the single
+    // anchor both conversions share.
     bool GetMapWorldAnchor(GW::Constants::MapID map_id, GW::Vec2f& mid_out)
     {
         if ((uint32_t)map_id == 0) map_id = GW::Map::GetMapID();

@@ -493,9 +493,8 @@ namespace {
         return m;
     }
 
-    // Fallback for the current map when no file_id is known: build the same
-    // PathingMapData from the live map context and hand it to the standard MilePath
-    // ctor (eager full build — it's the map the player is standing in).
+    // Fallback when no file_id is known: build PathingMapData from the live map context
+    // and hand it to the standard MilePath ctor (eager build — it's the player's map).
     Pathing::MilePath* LoadMapFromContext(GW::Constants::MapID map_id)
     {
         const auto mc = GW::GetMapContext();
@@ -536,8 +535,7 @@ namespace {
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
         const auto map_id = GW::Map::GetMapID();
         if (map_id == GW::Constants::MapID::None) return nullptr;
-        // Prefer DAT, like every other map, so the MilePath and coordinate bounds share
-        // one source. Fall back to the live map context only when we have no file_id.
+        // Prefer DAT (shared with coordinate bounds); fall back to map context only with no file_id.
         if (GetMapFileId(map_id))
             return LoadMapFromDAT(map_id);
         return LoadMapFromContext(map_id);
@@ -801,10 +799,8 @@ namespace {
         return false;
     }
 
-    // Convert a segment's game positions (in src_map) to world-map positions. Unlike
-    // ConvertPathToCurrentMap this never projects into another map's game space, so it
-    // can't overflow — world coords are the common space across maps. Break sentinels
-    // pass through. Returns false if src_map's bounds aren't known.
+    // src_map game positions -> world coords (the common cross-map space, no overflow);
+    // break sentinels pass through.
     bool SegmentToWorld(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map,
                         std::vector<GW::Vec2f>& out)
     {
@@ -2811,8 +2807,8 @@ bool PathfindingWindow::GetNextPortalToward(
 }
 
 namespace {
-    // Blocking. Compute the full cross-map route between two world-map positions into
-    // `out` (world-map coords, PATH_BREAK between maps). Returns false on failure.
+    // Blocking. Full cross-map route between two world-map positions into `out` (world
+    // coords, PATH_BREAK between maps). False on failure.
     bool ComputeRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>& out)
     {
         out.clear();
@@ -2831,9 +2827,8 @@ namespace {
         return BuildCrossMapRoute(from_map, to_map, start, goal, from_world, out, hidden);
     }
 
-    // Blocking. A* across `map_id` from `from` to `to` (both that map's game coords) and
-    // return the leg in world-map coords. Touches no shared route state, so a caller can
-    // refresh only one map's leg and keep the rest of its route. False if no path.
+    // Blocking. A* across `map_id` from `from` to `to` (that map's game coords), leg out
+    // in world coords. No shared state, so callers keep the rest of their route. False if no path.
     bool ComputeSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>& out)
     {
         out.clear();

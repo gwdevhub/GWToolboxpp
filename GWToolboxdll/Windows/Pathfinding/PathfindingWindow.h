@@ -51,33 +51,24 @@ public:
     // Remove any route previously drawn by ShowRouteToWorldMap / FindPath.
     static void ClearWorldMapRoute();
 
-    // ---- Compute-only route API (no drawing). Used by QuestModule, which owns the
-    // resulting points and renders them as the quest path. ----
+    // ---- Compute-only route API (no drawing). QuestModule owns + renders the points. ----
 
-    // Blocking. Compute the full cross-map route between two world-map positions and
-    // fill `out` with the points in WORLD-map coords (a PATH_BREAK sentinel — see
-    // IsRouteBreak — separates maps). Output is world coords so it never has to project
-    // foreign-map positions into the current map's game space (which overflows);
-    // consumers convert back to game coords as needed. Returns false if no route. Blocks
-    // on pathing builds — call from a worker.
+    // Blocking (worker). Full cross-map route between two world-map positions into `out`,
+    // in WORLD coords (IsRouteBreak sentinel between maps) to avoid foreign-map projection
+    // overflow. False if no route.
     static bool CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>* out);
-    // Blocking. A* across `map_id` (0 = current map) from `from` to `to` (both that map's
-    // game coords) and fill `out` with that leg in WORLD-map coords. Pass the map the leg
-    // belongs to explicitly so a deferred recompute isn't tied to wherever the player has
-    // since wandered. Holds no shared route state, so the caller can refresh just one leg
-    // and splice the untouched remainder of its route onto the result. False if no path.
-    // Call from a worker.
+    // Blocking (worker). A* across `map_id` (0 = current) from `from` to `to` (that map's
+    // game coords) into `out` as WORLD coords. Pass the leg's map explicitly so a deferred
+    // recompute isn't tied to where the player has since wandered. Holds no shared state —
+    // the caller splices the untouched remainder of its route on. False if no path.
     static bool RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out);
-    // True if `world_pos` falls within `map_id`'s game bounds, i.e. that point belongs to
-    // the map. `map_id` defaults to the current map.
+    // True if `world_pos` falls within `map_id`'s game bounds (0 = current map).
     static bool IsWorldPosOnMap(const GW::Vec2f& world_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);
     // True if `p` is the inter-map break sentinel in CalculateRoute output.
     static bool IsRouteBreak(const GW::Vec2f& p);
 
-    // Robust file_hash lookup — falls through GW::AreaInfo, the runtime
-    // packet-populated table, and constant_maps_info. GW::Map::GetMapInfo()
-    // alone returns 0 for outposts and many maps; use this everywhere a
-    // file_hash is needed (e.g. matching outpost+explorable variants).
+    // Robust file_hash lookup (GW::AreaInfo -> runtime table -> constant_maps_info);
+    // GW::Map::GetMapInfo() alone returns 0 for outposts and many maps.
     static uint32_t GetMapFileId(GW::Constants::MapID map_id);
 
     // Resolve the next portal in `from_map` along the multi-map route to a
