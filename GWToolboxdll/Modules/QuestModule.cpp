@@ -133,6 +133,7 @@ namespace {
         bool is_cross_map = false;
         GW::Vec2f goal_world{};
         bool has_full_route = false;
+        std::vector<GW::Vec2f> route_world{}; // cross-map route, world-map coords (PATH_BREAK between maps)
         bool IsCalculating() {
             return calculating && TIMER_DIFF(calculating) < 5000;
         }
@@ -150,33 +151,66 @@ namespace {
             ClearMinimapLines();
             if (!(settings.draw_quest_path_on_terrain || settings.draw_quest_path_on_minimap || settings.draw_quest_path_on_mission_map))
                 return;
+            if (is_cross_map) { DrawCrossMapLines(); return; }
             if (waypoints.empty())
                 return;
             const size_t start_idx = current_waypoint > 0 ? current_waypoint - 1 : 0;
-            bool first_line = true;
-            bool past_break = false; // points before the first break are the current-map leg
             for (size_t i = start_idx; i < waypoints.size() - 1; i++) {
-                // Cross-map routes separate maps with a break sentinel; don't draw across it.
-                if (PathfindingWindow::IsRouteBreak(waypoints[i]) || PathfindingWindow::IsRouteBreak(waypoints[i + 1])) {
-                    past_break = true;
-                    continue;
-                }
                 const auto l = Minimap::Instance().custom_renderer.AddCustomLine(
                     waypoints[i], waypoints[i + 1],
                     std::format("{} - {}", static_cast<uint32_t>(quest_id), i).c_str(), true
                 );
-                l->from_player_pos = first_line; // anchor the leg's start to the player
-                // Only the current-map leg sits at real positions. The tail is other maps
-                // projected into current-map coords — meaningful on the world map (which
-                // projects game->world), but garbage on the minimap/mission map/terrain.
-                // So draw the tail on the world map only (it ignores these flags, drawing
-                // any visible current-map line) and keep it off the in-game surfaces.
-                const bool leg = !past_break;
-                l->draw_on_terrain = leg && settings.draw_quest_path_on_terrain;
-                l->draw_on_minimap = leg && settings.draw_quest_path_on_minimap;
-                l->draw_on_mission_map = leg && settings.draw_quest_path_on_mission_map;
+                l->from_player_pos = i == start_idx;
+                l->draw_on_terrain = settings.draw_quest_path_on_terrain;
+                l->draw_on_minimap = settings.draw_quest_path_on_minimap;
+                l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
                 l->color = QuestModule::GetQuestLineColor(quest_id);
+                minimap_lines.push_back(l);
+            }
+            GameWorldRenderer::TriggerSyncAllMarkers();
+        }
+
+        // Cross-map route (world-map coords). The current-map leg (before the first
+        // PATH_BREAK) is converted back to game coords so it draws normally on the
+        // minimap/mission map/terrain. The tail is other maps — kept in world coords
+        // and drawn on the world map only (world_coords lines), since converting it to
+        // the current map's game space would overflow.
+        void DrawCrossMapLines()
+        {
+            if (route_world.empty()) return;
+            const auto color = QuestModule::GetQuestLineColor(quest_id);
+            bool first_line = true;
+            bool past_break = false;
+            for (size_t i = 0; i + 1 < route_world.size(); i++) {
+                if (PathfindingWindow::IsRouteBreak(route_world[i]) || PathfindingWindow::IsRouteBreak(route_world[i + 1])) {
+                    past_break = true;
+                    continue;
+                }
+                const auto label = std::format("{} - {}", static_cast<uint32_t>(quest_id), i);
+                CustomRenderer::CustomLine* l = nullptr;
+                if (!past_break) {
+                    // Current-map leg: world -> game, draw on the in-game surfaces.
+                    GW::GamePos a{}, b{};
+                    if (!WorldMapWidget::WorldMapToGamePos(route_world[i], a)) continue;
+                    if (!WorldMapWidget::WorldMapToGamePos(route_world[i + 1], b)) continue;
+                    l = Minimap::Instance().custom_renderer.AddCustomLine(a, b, label.c_str(), true);
+                    l->from_player_pos = first_line;
+                    l->draw_on_terrain = settings.draw_quest_path_on_terrain;
+                    l->draw_on_minimap = settings.draw_quest_path_on_minimap;
+                    l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
+                }
+                else {
+                    // Tail: world coords, world map only.
+                    l = Minimap::Instance().custom_renderer.AddCustomLine(
+                        {route_world[i].x, route_world[i].y, 0}, {route_world[i + 1].x, route_world[i + 1].y, 0}, label.c_str(), true);
+                    l->world_coords = true;
+                    l->draw_on_terrain = false;
+                    l->draw_on_minimap = false;
+                    l->draw_on_mission_map = false;
+                }
+                l->created_by_toolbox = true;
+                l->color = color;
                 minimap_lines.push_back(l);
                 first_line = false;
             }
@@ -221,15 +255,19 @@ namespace {
                 const auto gw = goal_world;
                 const bool leg_only = has_full_route && PathfindingWindow::HasRouteForCurrentMap();
                 Resources::EnqueueWorkerTask([qid, from, from_world, gw, leg_only] {
-                    auto pts = new std::vector<GW::GamePos>();
+                    auto pts = new std::vector<GW::Vec2f>(); // world-map coords
                     bool ok = leg_only && PathfindingWindow::RecalculateRouteLeg(from, pts);
                     bool was_full = false;
                     if (!ok) { ok = PathfindingWindow::CalculateRoute(from_world, gw, pts); was_full = ok; }
                     Resources::EnqueueMainTask([qid, pts, ok, was_full] {
                         const auto cqp = GetCalculatedQuestPath(qid, false);
                         if (cqp && ok) {
+                            cqp->route_world = std::move(*pts);
+                            cqp->current_waypoint = 0;
                             if (was_full) cqp->has_full_route = true;
-                            OnQuestPathRecalculated(*pts, (void*)qid);
+                            cqp->calculated_at = TIMER_INIT();
+                            cqp->calculating = 0;
+                            cqp->UpdateUI();
                         }
                         else if (cqp) { cqp->calculating = 0; cqp->calculated_at = 0; }
                         delete pts;
