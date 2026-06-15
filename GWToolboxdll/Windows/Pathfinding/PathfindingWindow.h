@@ -44,10 +44,12 @@ public:
     static void SetToWorldMap(const GW::Vec2f& world_map_pos);
     static void FindPath();
 
-    // Compute and draw the full cross-map route from `from` (in the current map)
-    // to goal_world_pos (world-map coords) as lines on the world map + minimap.
-    // Convenience wrapper around SetFrom + SetToWorldMap + FindPath.
-    static void ShowRouteToWorldMap(const GW::GamePos& from, const GW::Vec2f& goal_world_pos);
+    // Compute and draw the full cross-map route from `from` (in the current map) to
+    // goal_world_pos (world-map coords). Drawn in the caller-supplied style (QuestModule
+    // passes the quest line colour + quest-path surface toggles) with no endpoint
+    // markers. The current-map leg tracks the player and is re-walked as they move.
+    static void ShowRouteToWorldMap(const GW::GamePos& from, const GW::Vec2f& goal_world_pos,
+        unsigned int color = 0xFFFFFF00, bool on_terrain = false, bool on_minimap = true, bool on_mission_map = true);
     // Remove any route previously drawn by ShowRouteToWorldMap / FindPath.
     static void ClearWorldMapRoute();
 

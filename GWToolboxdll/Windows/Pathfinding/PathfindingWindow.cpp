@@ -826,6 +826,19 @@ namespace {
         GW::Constants::MapID map_id;
     };
 
+    // Look of a drawn route, supplied by the caller (QuestModule passes the quest
+    // line colour + the quest-path draw-surface toggles so the route matches the
+    // ordinary quest path). on_terrain applies only to the current-map leg —
+    // projected other-map segments aren't real positions here, so they stay off the
+    // 3D terrain and only show on the minimap / mission map.
+    struct RouteStyle {
+        unsigned int color = 0xFFFFFF00; // default yellow (non-quest / editor use)
+        bool on_terrain = false;
+        bool on_minimap = true;
+        bool on_mission_map = true;
+    };
+    RouteStyle g_route_style; // style for the next route draw; set by ShowRouteToWorldMap
+
     // Active cross-map route, kept so the current-map leg (player -> exit portal) can
     // be cheaply re-walked as the player moves, instead of recomputing the whole
     // multi-map route. `tail`/`hidden` are the already-drawn segments for the maps
@@ -837,6 +850,7 @@ namespace {
         std::vector<GW::GamePos> tail;              // drawn points after the leg
         std::vector<HiddenPathSegment> hidden;
         GW::GamePos last_from{};                    // player pos when the leg was last walked
+        RouteStyle style;                           // look to reuse on leg redraws
     };
     ActiveRoute active_route;
     volatile bool route_leg_recomputing = false;
@@ -893,22 +907,26 @@ namespace {
     // anchor_first_to_player: mark the first drawn line as from_player_pos so the
     // current-map leg's start tracks the player between recalcs (route paths start
     // at the player). Only valid when points[0] is the player's current-map position.
-    void DrawPathAsLines(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map, bool anchor_first_to_player = false)
+    void DrawPathAsLines(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map,
+                         bool anchor_first_to_player = false, const RouteStyle& style = {})
     {
         ClearPathLines();
         auto cur_map = GW::Map::GetMapID();
         const auto& draw_points = (src_map != cur_map) ? ConvertPathToCurrentMap(points, src_map) : points;
 
         bool first_line = true;
+        bool past_first_break = false; // everything before the first break is the current-map leg
         for (size_t i = 0; i + 1 < draw_points.size(); i++) {
             // Skip lines that touch a path-break sentinel — used to hide segments
             // through underground maps in multi-map paths.
-            if (IsPathBreak(draw_points[i]) || IsPathBreak(draw_points[i + 1])) continue;
+            if (IsPathBreak(draw_points[i]) || IsPathBreak(draw_points[i + 1])) { past_first_break = true; continue; }
             auto* line = Minimap::Instance().custom_renderer.AddCustomLine(draw_points[i], draw_points[i + 1]);
             line->map = cur_map;
-            line->color = 0xFFFFFF00; // yellow
-            line->draw_on_mission_map = true;
-            line->draw_on_minimap = true;
+            line->color = style.color;
+            line->draw_on_minimap = style.on_minimap;
+            line->draw_on_mission_map = style.on_mission_map;
+            // Only the current-map leg sits at real positions, so terrain-draw only it.
+            line->draw_on_terrain = style.on_terrain && !past_first_break;
             line->created_by_toolbox = true;
             if (anchor_first_to_player && first_line) line->from_player_pos = true;
             first_line = false;
@@ -927,9 +945,9 @@ namespace {
             for (size_t i = 0; i + 1 < seg.points.size(); i++) {
                 auto* line = Minimap::Instance().custom_renderer.AddCustomLine(seg.points[i], seg.points[i + 1]);
                 line->map = seg.map_id; // native underground map, NOT cur_map
-                line->color = 0xFFFFFF00; // yellow
-                line->draw_on_mission_map = true;
-                line->draw_on_minimap = true;
+                line->color = g_route_style.color;
+                line->draw_on_mission_map = g_route_style.on_mission_map;
+                line->draw_on_minimap = g_route_style.on_minimap;
                 line->created_by_toolbox = true;
                 path_lines.push_back(line);
             }
@@ -954,6 +972,7 @@ namespace {
         active_route.tail.assign(full_path.begin() + fb, full_path.end()); // begins with PATH_BREAK
         active_route.hidden = hidden;
         active_route.last_from = start;
+        active_route.style = g_route_style;
     }
 
 
@@ -2268,7 +2287,7 @@ namespace {
             PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)",
                 (int)full_path.size(), (int)route_copy.size(), (int)hidden_segments.size());
             Resources::EnqueueMainTask([full_path, hidden_segments, cur_map, start_copy] {
-                DrawPathAsLines(full_path, cur_map, true);
+                DrawPathAsLines(full_path, cur_map, true, g_route_style);
                 AddHiddenUndergroundSegmentLines(hidden_segments);
                 CaptureActiveRoute(full_path, hidden_segments, start_copy);
             });
@@ -2427,7 +2446,7 @@ namespace {
                     PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)",
                         (int)full_path.size(), (int)route.size(), (int)hidden_segments.size());
                     Resources::EnqueueMainTask([full_path, hidden_segments, cur_map, start] {
-                        DrawPathAsLines(full_path, cur_map, true);
+                        DrawPathAsLines(full_path, cur_map, true, g_route_style);
                         AddHiddenUndergroundSegmentLines(hidden_segments);
                         CaptureActiveRoute(full_path, hidden_segments, start);
                     });
@@ -2528,7 +2547,8 @@ namespace {
                 if (GW::Map::GetMapID() != active_route.start_map) return;
                 std::vector<GW::GamePos> full = leg;
                 full.insert(full.end(), active_route.tail.begin(), active_route.tail.end());
-                DrawPathAsLines(full, active_route.start_map, true);
+                g_route_style = active_route.style; // AddHiddenUndergroundSegmentLines reads it
+                DrawPathAsLines(full, active_route.start_map, true, active_route.style);
                 AddHiddenUndergroundSegmentLines(active_route.hidden);
             });
         });
@@ -3051,7 +3071,7 @@ void PathfindingWindow::FindPath()
                     std::vector<GW::GamePos> direct_path;
                     if (RunAStarOnMap(path_from_map, path_from, to_on_from_map, direct_path) && !direct_path.empty()) {
                         PATH_LOG_INFO("Direct path on map %d: %d points", (int)path_from_map, (int)direct_path.size());
-                        DrawPathAsLines(direct_path, path_from_map, true);
+                        DrawPathAsLines(direct_path, path_from_map, true, g_route_style);
                         // Single-map route: the leg is the whole path. Track + recalc
                         // player -> goal as the player moves (no tail).
                         active_route = ActiveRoute{};
@@ -3059,6 +3079,7 @@ void PathfindingWindow::FindPath()
                         active_route.start_map = path_from_map;
                         active_route.exit_portal = direct_path.back();
                         active_route.last_from = path_from;
+                        active_route.style = g_route_style;
                         return;
                     }
                     PATH_LOG_INFO("Direct path failed, falling back to multi-map");
@@ -3079,11 +3100,15 @@ void PathfindingWindow::FindPath()
     }
 }
 
-void PathfindingWindow::ShowRouteToWorldMap(const GW::GamePos& from, const GW::Vec2f& goal_world_pos)
+void PathfindingWindow::ShowRouteToWorldMap(const GW::GamePos& from, const GW::Vec2f& goal_world_pos,
+    unsigned int color, bool on_terrain, bool on_minimap, bool on_mission_map)
 {
+    g_route_style = {color, on_terrain, on_minimap, on_mission_map};
     SetFrom(from);
     SetToWorldMap(goal_world_pos);
     FindPath();
+    // The quest path draws no endpoint markers; SetFrom/SetToWorldMap add them, so drop them.
+    ClearMarkerLines();
 }
 
 void PathfindingWindow::ClearWorldMapRoute()

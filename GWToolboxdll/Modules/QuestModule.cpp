@@ -823,7 +823,13 @@ void QuestModule::Update(float)
     // map's pathing data is built.
     if (pending_world_map_route && !GW::UI::IsLoadingScreenShown() && PathfindingWindow::ReadyForPathing()) {
         pending_world_map_route = false;
-        PathfindingWindow::ShowRouteToWorldMap(*pos, pending_world_map_route_goal);
+        // Draw the route as the quest path: quest line colour + the quest-path draw
+        // toggles, no endpoint markers.
+        PathfindingWindow::ShowRouteToWorldMap(*pos, pending_world_map_route_goal,
+            GetQuestLineColor(GW::QuestMgr::GetActiveQuestId()),
+            settings.draw_quest_path_on_terrain,
+            settings.draw_quest_path_on_minimap,
+            settings.draw_quest_path_on_mission_map);
     }
     if (fetch_missing_quest_info_queued) {
         // NB: We only do this once the loading splash screen is gone
