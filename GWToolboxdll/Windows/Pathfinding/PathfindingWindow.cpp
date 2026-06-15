@@ -79,6 +79,19 @@ namespace {
     // Cache of portal props per file_hash (lightweight, loaded on demand).
     std::unordered_map<uint32_t, std::vector<Pathing::PortalProp>> portal_props_cache;
 
+    // Cache of the last computed cross-map route so the current-map leg can be re-walked
+    // cheaply (player -> exit portal) without recomputing the whole route. Owned by the
+    // compute API (CalculateRoute / RecalculateRouteLeg); the points live in QuestModule.
+    struct RouteCache {
+        bool active = false;
+        GW::Constants::MapID start_map = GW::Constants::MapID::None;
+        GW::GamePos exit_portal{};        // current-map exit toward the next map
+        std::vector<GW::GamePos> tail;    // downstream points (begins with a PATH_BREAK)
+        GW::Vec2f goal_world{};
+    };
+    RouteCache route_cache;
+    std::mutex route_cache_mutex; // route_cache is touched from worker + main threads
+
     // ===== LRU eviction for the per-map caches =====
     // Resident foreign-map cap (current map pinned on top). Memory/recompute trade-off.
     constexpr size_t MAX_CACHED_MAPS = 12;
@@ -2232,6 +2245,173 @@ namespace {
         });
     }
 
+    // Blocking. Build the cross-map route's drawn points (current-map coords, with a
+    // PATH_BREAK sentinel between maps) and the hidden underground segments. No
+    // threading and no drawing — the caller owns the worker thread + RouteJobScope.
+    // Retries with edge-blacklisting on per-map AStar failure. Returns false if no
+    // route. This is the pure-computation core shared by the drawing path and the
+    // QuestModule-owned CalculateRoute API.
+    bool BuildCrossMapRoute(
+        GW::Constants::MapID from_map, GW::Constants::MapID to_map,
+        const GW::GamePos& start, const GW::GamePos& goal, const GW::Vec2f& start_wm,
+        std::vector<GW::GamePos>& out_points, std::vector<HiddenPathSegment>& out_hidden)
+    {
+        const auto cur_map = GW::Map::GetMapID();
+        constexpr int max_retries = 3;
+        for (int attempt = 0; attempt <= max_retries; attempt++) {
+            auto route = FindMapRoute(from_map, to_map, &start, &goal);
+            if (route.empty()) {
+                Log::Error("No map route found from map %d to map %d", (int)from_map, (int)to_map);
+                blacklisted_edges.clear();
+                return false;
+            }
+            std::string route_str;
+            for (auto m : route) { route_str += std::to_string((int)m) + " "; }
+            PATH_LOG_INFO("Map route (attempt %d): %s (%d maps)", attempt, route_str.c_str(), (int)route.size());
+
+            for (auto m : route) {
+                if (m != cur_map) LoadMapFromDAT(m);
+            }
+
+            // Execute route segments
+            std::vector<GW::GamePos> full_path;
+            std::vector<HiddenPathSegment> hidden_segments;
+            GW::Vec2f last_portal_wm = start_wm;
+            GW::GamePos last_seg_end = start;
+            bool failed = false;
+
+            for (size_t seg = 0; seg < route.size(); seg++) {
+                auto map_id = route[seg];
+                GW::GamePos seg_from, seg_to;
+
+                if (seg == 0) {
+                    seg_from = start;
+                } else {
+                    GW::GamePos prev_exit, this_entry;
+                    const GW::GamePos* gg = (seg == route.size() - 1) ? &goal : nullptr;
+                    if (!FindBestPortalPair(route[seg - 1], map_id, last_portal_wm, prev_exit, this_entry, &last_seg_end, gg)) {
+                        Log::Error("No portal pair between map %d and %d", (int)route[seg - 1], (int)map_id);
+                        blacklisted_edges.clear();
+                        return false;
+                    }
+                    seg_from = this_entry;
+                    const auto* entry_info = GetCachedMapInfo(map_id);
+                    if (entry_info)
+                        GamePosToWorldMapForMap({this_entry.x, this_entry.y}, map_id, entry_info->bounds_min, entry_info->bounds_max, last_portal_wm);
+                }
+
+                if (seg == route.size() - 1) {
+                    seg_to = goal;
+                } else {
+                    GW::GamePos this_exit, next_entry;
+                    const GW::GamePos* gg = (seg == route.size() - 2) ? &goal : nullptr;
+                    if (!FindBestPortalPair(map_id, route[seg + 1], last_portal_wm, this_exit, next_entry, &seg_from, gg)) {
+                        Log::Error("No portal pair between map %d and %d", (int)map_id, (int)route[seg + 1]);
+                        blacklisted_edges.clear();
+                        return false;
+                    }
+                    seg_to = this_exit;
+                    const auto* exit_info = GetCachedMapInfo(map_id);
+                    if (exit_info)
+                        GamePosToWorldMapForMap({this_exit.x, this_exit.y}, map_id, exit_info->bounds_min, exit_info->bounds_max, last_portal_wm);
+                }
+
+                PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)",
+                    (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
+
+                std::vector<GW::GamePos> seg_path;
+                if (!RunAStarOnMap(map_id, seg_from, seg_to, seg_path)) {
+                    // Check if this map has manual connections to its neighbors
+                    // (transit map without DAT data, e.g. underground/instance).
+                    // If both entry and exit connections exist, treat the walk
+                    // through this map as a direct straight-line transition.
+                    bool has_entry = seg == 0 || GetConnectionCost(route[seg - 1], map_id) < 1e9f;
+                    bool has_exit  = seg + 1 >= route.size() || GetConnectionCost(map_id, route[seg + 1]) < 1e9f;
+                    if (has_entry && has_exit) {
+                        PATH_LOG_INFO("AStar unavailable on map %d, using direct transition", (int)map_id);
+                        seg_path = {seg_from, seg_to};
+                    } else {
+                        // Blacklist the edges entering/exiting this map and retry.
+                        // Resolve to graph representatives — Dijkstra works on graph nodes,
+                        // not original MapIDs (route[0]/route.back() are originals).
+                        auto resolve_graph = [](GW::Constants::MapID m) -> GW::Constants::MapID {
+                            for (const auto& n : map_graph_nodes) {
+                                if (n.map_id == m) return m;
+                            }
+                            uint32_t fh = GetMapFileId(m);
+                            if (fh) {
+                                for (const auto& n : map_graph_nodes) {
+                                    if (n.file_hash == fh) return n.map_id;
+                                }
+                            }
+                            return m;
+                        };
+                        auto map_g = resolve_graph(map_id);
+                        if (seg > 0) {
+                            auto prev_g = resolve_graph(route[seg - 1]);
+                            Log::Warning("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)",
+                                (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
+                            blacklisted_edges.insert(EdgeKey(prev_g, map_g));
+                            blacklisted_edges.insert(EdgeKey(map_g, prev_g));
+                        }
+                        if (seg + 1 < route.size()) {
+                            auto next_g = resolve_graph(route[seg + 1]);
+                            blacklisted_edges.insert(EdgeKey(map_g, next_g));
+                            blacklisted_edges.insert(EdgeKey(next_g, map_g));
+                        }
+                        failed = true;
+                        break;
+                    }
+                }
+
+                last_seg_end = seg_to;
+
+                // Hide intermediate segments where BOTH the entry and exit
+                // transitions are no_draw connections (e.g. underground maps).
+                // Exception: never hide the segment for the player's current map.
+                bool is_first_seg = (seg == 0);
+                bool is_last_seg = (seg + 1 == route.size());
+                bool segment_hidden = !is_first_seg && !is_last_seg
+                    && map_id != cur_map
+                    && HasNoDrawConnection(route[seg - 1], map_id)
+                    && HasNoDrawConnection(map_id, route[seg + 1]);
+
+                if (segment_hidden) {
+                    // Record native-coord segment for underground-terrain / mission-map rendering.
+                    hidden_segments.push_back({seg_path, map_id});
+                    if (!full_path.empty() && !IsPathBreak(full_path.back())) {
+                        full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE, 0});
+                    }
+                    continue;
+                }
+
+                // Insert path-break between segments — portal hop between maps
+                // isn't walkable in any single coord space.
+                if (!full_path.empty() && !IsPathBreak(full_path.back())) {
+                    full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE, 0});
+                }
+
+                auto converted = ConvertPathToCurrentMap(seg_path, map_id);
+                full_path.insert(full_path.end(), converted.begin(), converted.end());
+            }
+
+            if (!failed) {
+                PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)",
+                    (int)full_path.size(), (int)route.size(), (int)hidden_segments.size());
+                out_points = std::move(full_path);
+                out_hidden = std::move(hidden_segments);
+                blacklisted_edges.clear();
+                return true;
+            }
+
+            if (attempt == max_retries) {
+                Log::Error("All %d route attempts failed from map %d to map %d", max_retries + 1, (int)from_map, (int)to_map);
+            }
+        }
+        blacklisted_edges.clear();
+        return false;
+    }
+
     void RecalculateMultiMapPath_WithRetry(
         GW::Constants::MapID from_map, GW::Constants::MapID to_map,
         const GW::GamePos& start, const GW::GamePos& goal, const GW::Vec2f& start_wm)
@@ -2245,157 +2425,14 @@ namespace {
 
         Resources::EnqueueWorkerTask([from_map, to_map, start, goal, start_wm, cur_map] {
             RouteJobScope job_scope; // defer eviction while we hold MilePath*
-            constexpr int max_retries = 3;
-            for (int attempt = 0; attempt <= max_retries; attempt++) {
-                auto route = FindMapRoute(from_map, to_map, &start, &goal);
-                if (route.empty()) {
-                    Log::Error("No map route found from map %d to map %d", (int)from_map, (int)to_map);
-                    return;
-                }
-                std::string route_str;
-                for (auto m : route) { route_str += std::to_string((int)m) + " "; }
-                PATH_LOG_INFO("Map route (attempt %d): %s (%d maps)", attempt, route_str.c_str(), (int)route.size());
-
-                for (auto m : route) {
-                    if (m != cur_map) LoadMapFromDAT(m);
-                }
-
-                // Execute route segments
-                std::vector<GW::GamePos> full_path;
-                std::vector<HiddenPathSegment> hidden_segments;
-                GW::Vec2f last_portal_wm = start_wm;
-                GW::GamePos last_seg_end = start;
-                bool failed = false;
-
-                for (size_t seg = 0; seg < route.size(); seg++) {
-                    auto map_id = route[seg];
-                    GW::GamePos seg_from, seg_to;
-
-                    if (seg == 0) {
-                        seg_from = start;
-                    } else {
-                        GW::GamePos prev_exit, this_entry;
-                        const GW::GamePos* gg = (seg == route.size() - 1) ? &goal : nullptr;
-                        if (!FindBestPortalPair(route[seg - 1], map_id, last_portal_wm, prev_exit, this_entry, &last_seg_end, gg)) {
-                            Log::Error("No portal pair between map %d and %d", (int)route[seg - 1], (int)map_id);
-                            return;
-                        }
-                        seg_from = this_entry;
-                        const auto* entry_info = GetCachedMapInfo(map_id);
-                        if (entry_info)
-                            GamePosToWorldMapForMap({this_entry.x, this_entry.y}, map_id, entry_info->bounds_min, entry_info->bounds_max, last_portal_wm);
-                    }
-
-                    if (seg == route.size() - 1) {
-                        seg_to = goal;
-                    } else {
-                        GW::GamePos this_exit, next_entry;
-                        const GW::GamePos* gg = (seg == route.size() - 2) ? &goal : nullptr;
-                        if (!FindBestPortalPair(map_id, route[seg + 1], last_portal_wm, this_exit, next_entry, &seg_from, gg)) {
-                            Log::Error("No portal pair between map %d and %d", (int)map_id, (int)route[seg + 1]);
-                            return;
-                        }
-                        seg_to = this_exit;
-                        const auto* exit_info = GetCachedMapInfo(map_id);
-                        if (exit_info)
-                            GamePosToWorldMapForMap({this_exit.x, this_exit.y}, map_id, exit_info->bounds_min, exit_info->bounds_max, last_portal_wm);
-                    }
-
-                    PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)",
-                        (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
-
-                    std::vector<GW::GamePos> seg_path;
-                    if (!RunAStarOnMap(map_id, seg_from, seg_to, seg_path)) {
-                        // Check if this map has manual connections to its neighbors
-                        // (transit map without DAT data, e.g. underground/instance).
-                        // If both entry and exit connections exist, treat the walk
-                        // through this map as a direct straight-line transition.
-                        bool has_entry = seg == 0 || GetConnectionCost(route[seg - 1], map_id) < 1e9f;
-                        bool has_exit  = seg + 1 >= route.size() || GetConnectionCost(map_id, route[seg + 1]) < 1e9f;
-                        if (has_entry && has_exit) {
-                            PATH_LOG_INFO("AStar unavailable on map %d, using direct transition", (int)map_id);
-                            seg_path = {seg_from, seg_to};
-                        } else {
-                            // Blacklist the edges entering/exiting this map and retry.
-                            // Resolve to graph representatives — Dijkstra works on graph nodes,
-                            // not original MapIDs (route[0]/route.back() are originals).
-                            auto resolve_graph = [](GW::Constants::MapID m) -> GW::Constants::MapID {
-                                for (const auto& n : map_graph_nodes) {
-                                    if (n.map_id == m) return m;
-                                }
-                                uint32_t fh = GetMapFileId(m);
-                                if (fh) {
-                                    for (const auto& n : map_graph_nodes) {
-                                        if (n.file_hash == fh) return n.map_id;
-                                    }
-                                }
-                                return m;
-                            };
-                            auto map_g = resolve_graph(map_id);
-                            if (seg > 0) {
-                                auto prev_g = resolve_graph(route[seg - 1]);
-                                Log::Warning("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)",
-                                    (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
-                                blacklisted_edges.insert(EdgeKey(prev_g, map_g));
-                                blacklisted_edges.insert(EdgeKey(map_g, prev_g));
-                            }
-                            if (seg + 1 < route.size()) {
-                                auto next_g = resolve_graph(route[seg + 1]);
-                                blacklisted_edges.insert(EdgeKey(map_g, next_g));
-                                blacklisted_edges.insert(EdgeKey(next_g, map_g));
-                            }
-                            failed = true;
-                            break;
-                        }
-                    }
-
-                    last_seg_end = seg_to;
-
-                    // Hide intermediate segments where BOTH the entry and exit
-                    // transitions are no_draw connections (e.g. underground maps).
-                    // Exception: never hide the segment for the player's current map.
-                    bool is_first_seg = (seg == 0);
-                    bool is_last_seg = (seg + 1 == route.size());
-                    bool segment_hidden = !is_first_seg && !is_last_seg
-                        && map_id != cur_map
-                        && HasNoDrawConnection(route[seg - 1], map_id)
-                        && HasNoDrawConnection(map_id, route[seg + 1]);
-
-                    if (segment_hidden) {
-                        // Record native-coord segment for underground-terrain / mission-map rendering.
-                        hidden_segments.push_back({seg_path, map_id});
-                        if (!full_path.empty() && !IsPathBreak(full_path.back())) {
-                            full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE, 0});
-                        }
-                        continue;
-                    }
-
-                    // Insert path-break between segments — portal hop between maps
-                    // isn't walkable in any single coord space.
-                    if (!full_path.empty() && !IsPathBreak(full_path.back())) {
-                        full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE, 0});
-                    }
-
-                    auto converted = ConvertPathToCurrentMap(seg_path, map_id);
-                    full_path.insert(full_path.end(), converted.begin(), converted.end());
-                }
-
-                if (!failed) {
-                    PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)",
-                        (int)full_path.size(), (int)route.size(), (int)hidden_segments.size());
-                    Resources::EnqueueMainTask([full_path, hidden_segments, cur_map] {
-                        DrawPathAsLines(full_path, cur_map);
-                        AddHiddenUndergroundSegmentLines(hidden_segments);
-                    });
-                    blacklisted_edges.clear();
-                    return;
-                }
-
-                if (attempt == max_retries) {
-                    Log::Error("All %d route attempts failed from map %d to map %d", max_retries + 1, (int)from_map, (int)to_map);
-                }
-            }
-            blacklisted_edges.clear();
+            std::vector<GW::GamePos> full_path;
+            std::vector<HiddenPathSegment> hidden_segments;
+            if (!BuildCrossMapRoute(from_map, to_map, start, goal, start_wm, full_path, hidden_segments))
+                return;
+            Resources::EnqueueMainTask([full_path, hidden_segments, cur_map] {
+                DrawPathAsLines(full_path, cur_map);
+                AddHiddenUndergroundSegmentLines(hidden_segments);
+            });
         });
     }
 
@@ -2570,6 +2607,7 @@ namespace {
                 }
 
                 // Clear all lines on map change to avoid stale renders
+                { std::lock_guard lock(route_cache_mutex); route_cache = {}; } // route was for the old map
                 ClearBoundsLines();
                 ClearGraphEdgeLines();
                 ClearPortalMarkerLines();
@@ -2842,6 +2880,68 @@ static bool ConvertWorldMapPos(const GW::Vec2f& world_map_pos, GW::Constants::Ma
     return WorldMapWidget::WorldMapToGamePos(world_map_pos, game_pos);
 }
 
+namespace {
+    // Blocking. Compute the full cross-map route between two world-map positions into
+    // `out` (current-map coords, PATH_BREAK between maps) and cache the current-map
+    // exit portal + downstream tail for cheap leg recomputes. Returns false on failure.
+    bool ComputeRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::GamePos>& out)
+    {
+        out.clear();
+        const auto from_map = GW::Map::GetMapID();
+        const auto to_map = WorldMapWidget::GetMapIdForLocation(to_world);
+        if (from_map == GW::Constants::MapID::None || to_map == GW::Constants::MapID::None) return false;
+
+        GW::GamePos start;
+        if (!ConvertWorldMapPos(from_world, from_map, start)) return false;
+
+        if (!GetCachedMapInfo(to_map)) LoadMapFromDAT(to_map);
+        GW::GamePos goal;
+        if (!ConvertWorldMapPos(to_world, to_map, goal)) return false;
+
+        std::vector<HiddenPathSegment> hidden;
+        if (!BuildCrossMapRoute(from_map, to_map, start, goal, from_world, out, hidden)) return false;
+
+        RouteCache cache{};
+        size_t fb = 0;
+        while (fb < out.size() && !IsPathBreak(out[fb])) fb++;
+        if (fb >= 2 && fb < out.size()) {
+            cache.active = true;
+            cache.start_map = from_map;
+            cache.exit_portal = out[fb - 1];
+            cache.tail.assign(out.begin() + fb, out.end());
+            cache.goal_world = to_world;
+        }
+        std::lock_guard lock(route_cache_mutex);
+        route_cache = std::move(cache);
+        return true;
+    }
+
+    // Blocking. Re-walk only from_player -> cached current-map exit portal and stitch
+    // the cached downstream tail onto it. False if there's no usable cache for the
+    // current map (caller should fall back to ComputeRoute).
+    bool ComputeRouteLeg(const GW::GamePos& from_player, std::vector<GW::GamePos>& out)
+    {
+        out.clear();
+        // Snapshot the cache under lock; release before the (blocking) AStar walk.
+        GW::Constants::MapID start_map;
+        GW::GamePos exit_portal;
+        std::vector<GW::GamePos> tail;
+        {
+            std::lock_guard lock(route_cache_mutex);
+            if (!route_cache.active || route_cache.start_map != GW::Map::GetMapID()) return false;
+            start_map = route_cache.start_map;
+            exit_portal = route_cache.exit_portal;
+            tail = route_cache.tail;
+        }
+        std::vector<GW::GamePos> leg;
+        if (!RunAStarOnMap(start_map, from_player, exit_portal, leg) || leg.empty())
+            return false;
+        out = std::move(leg);
+        out.insert(out.end(), tail.begin(), tail.end());
+        return true;
+    }
+}
+
 // Detect if click is near previous position (within ~5 world map units)
 static bool IsNearby(const GW::Vec2f& a, const GW::Vec2f& b) {
     float dx = a.x - b.x, dy = a.y - b.y;
@@ -3004,6 +3104,37 @@ void PathfindingWindow::ClearWorldMapRoute()
 {
     ClearPathLines();
     ClearPortalPairLines();
+}
+
+bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::GamePos>* out)
+{
+    if (!out) return false;
+    RouteJobScope job_scope; // defer eviction while we hold MilePath*
+    return ComputeRoute(from_world, to_world, *out);
+}
+
+bool PathfindingWindow::RecalculateRouteLeg(const GW::GamePos& from_player, std::vector<GW::GamePos>* out)
+{
+    if (!out) return false;
+    RouteJobScope job_scope;
+    return ComputeRouteLeg(from_player, *out);
+}
+
+bool PathfindingWindow::HasRouteForCurrentMap()
+{
+    std::lock_guard lock(route_cache_mutex);
+    return route_cache.active && route_cache.start_map == GW::Map::GetMapID();
+}
+
+void PathfindingWindow::ClearRoute()
+{
+    std::lock_guard lock(route_cache_mutex);
+    route_cache = {};
+}
+
+bool PathfindingWindow::IsRouteBreak(const GW::GamePos& p)
+{
+    return IsPathBreak(p);
 }
 
 void PathfindingWindow::Initialize()

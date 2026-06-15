@@ -51,6 +51,26 @@ public:
     // Remove any route previously drawn by ShowRouteToWorldMap / FindPath.
     static void ClearWorldMapRoute();
 
+    // ---- Compute-only route API (no drawing). Used by QuestModule, which owns the
+    // resulting points and renders them as the quest path. ----
+
+    // Blocking. Compute the full cross-map route between two world-map positions and
+    // fill `out` with the points in current-map coords (a PATH_BREAK sentinel — see
+    // IsRouteBreak — separates maps). Caches the current-map exit portal + downstream
+    // tail so RecalculateRouteLeg can cheaply refresh the player's leg. Returns false
+    // if no route. Blocks on pathing builds — call from a worker thread.
+    static bool CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::GamePos>* out);
+    // Blocking. Re-walk only from_player -> the cached current-map exit portal and fill
+    // `out` with that leg + the cached downstream tail. False if there is no cached
+    // route for the current map (caller should fall back to CalculateRoute).
+    static bool RecalculateRouteLeg(const GW::GamePos& from_player, std::vector<GW::GamePos>* out);
+    // True if a cached route exists for the current map (RecalculateRouteLeg will work).
+    static bool HasRouteForCurrentMap();
+    // Forget the cached route.
+    static void ClearRoute();
+    // True if `p` is the inter-map break sentinel in CalculateRoute output.
+    static bool IsRouteBreak(const GW::GamePos& p);
+
     // Robust file_hash lookup — falls through GW::AreaInfo, the runtime
     // packet-populated table, and constant_maps_info. GW::Map::GetMapInfo()
     // alone returns 0 for outposts and many maps; use this everywhere a

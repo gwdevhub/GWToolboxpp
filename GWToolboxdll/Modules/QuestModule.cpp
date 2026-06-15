@@ -48,14 +48,6 @@ namespace {
     GW::Constants::QuestID player_chosen_quest_id = GW::Constants::QuestID::None;
     bool setting_custom_quest_marker = false;
 
-    // Cross-map world-map route preview. Deferred to Update() because computing it
-    // (FindPath -> FindMapRoute -> trapezoid search) crashes if run before the
-    // current map's pathing data is ready (e.g. restoring a marker at inject time).
-    bool pending_world_map_route = false;
-    GW::Vec2f pending_world_map_route_goal{};
-
-    
-
     clock_t last_quest_clicked = 0;
 
     GW::UI::UIInteractionCallback QuestLogRow_UICallback_Func = nullptr, QuestLogRow_UICallback_Ret = nullptr;
@@ -86,6 +78,8 @@ namespace {
 
     void OnQuestPathRecalculated(std::vector<GW::GamePos>& waypoints, void* args);
     void ClearCalculatedPath(GW::Constants::QuestID quest_id);
+    struct CalculatedQuestPath;
+    CalculatedQuestPath* GetCalculatedQuestPath(GW::Constants::QuestID quest_id, bool create_if_not_found = true);
 
     bool IsActiveQuestPath(const GW::Constants::QuestID quest_id)
     {
@@ -133,7 +127,13 @@ namespace {
         uint32_t current_waypoint = 0;
         GW::Constants::QuestID quest_id{};
         clock_t calculating = 0;
-        bool IsCalculating() { 
+        // Cross-map routing: marker is on another physical map, routed via portals.
+        // goal_world is the world-map goal; has_full_route is set once a whole route
+        // has been plotted, after which moves only re-walk the current-map leg.
+        bool is_cross_map = false;
+        GW::Vec2f goal_world{};
+        bool has_full_route = false;
+        bool IsCalculating() {
             return calculating && TIMER_DIFF(calculating) < 5000;
         }
 
@@ -153,18 +153,27 @@ namespace {
             if (waypoints.empty())
                 return;
             const size_t start_idx = current_waypoint > 0 ? current_waypoint - 1 : 0;
+            bool first_line = true;
+            bool past_break = false; // points before the first break are the current-map leg
             for (size_t i = start_idx; i < waypoints.size() - 1; i++) {
+                // Cross-map routes separate maps with a break sentinel; don't draw across it.
+                if (PathfindingWindow::IsRouteBreak(waypoints[i]) || PathfindingWindow::IsRouteBreak(waypoints[i + 1])) {
+                    past_break = true;
+                    continue;
+                }
                 const auto l = Minimap::Instance().custom_renderer.AddCustomLine(
                     waypoints[i], waypoints[i + 1],
                     std::format("{} - {}", static_cast<uint32_t>(quest_id), i).c_str(), true
                 );
-                l->from_player_pos = i == start_idx;
-                l->draw_on_terrain = settings.draw_quest_path_on_terrain;
+                l->from_player_pos = first_line; // anchor the leg's start to the player
+                // Only the current-map leg sits at real positions — terrain-draw only it.
+                l->draw_on_terrain = settings.draw_quest_path_on_terrain && !past_break;
                 l->draw_on_minimap = settings.draw_quest_path_on_minimap;
                 l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
                 l->color = QuestModule::GetQuestLineColor(quest_id);
                 minimap_lines.push_back(l);
+                first_line = false;
             }
             GameWorldRenderer::TriggerSyncAllMarkers();
         }
@@ -194,6 +203,37 @@ namespace {
         {
             if (IsCalculating()) return;
             calculating = TIMER_INIT();
+
+            // Cross-map marker: the route runs through portals on other maps. Compute it
+            // via the pathfinding route API on a worker, then own the points here as the
+            // quest path. Once a full route is plotted, moves only re-walk the current-map
+            // leg (player -> exit portal) and reuse the rest.
+            if (is_cross_map) {
+                if (!PathfindingWindow::ReadyForPathing()) { calculating = 0; calculated_at = 0; return; }
+                GW::Vec2f from_world{};
+                WorldMapWidget::GamePosToWorldMap(from, from_world);
+                const auto qid = quest_id;
+                const auto gw = goal_world;
+                const bool leg_only = has_full_route && PathfindingWindow::HasRouteForCurrentMap();
+                Resources::EnqueueWorkerTask([qid, from, from_world, gw, leg_only] {
+                    auto pts = new std::vector<GW::GamePos>();
+                    bool ok = leg_only && PathfindingWindow::RecalculateRouteLeg(from, pts);
+                    bool was_full = false;
+                    if (!ok) { ok = PathfindingWindow::CalculateRoute(from_world, gw, pts); was_full = ok; }
+                    Resources::EnqueueMainTask([qid, pts, ok, was_full] {
+                        const auto cqp = GetCalculatedQuestPath(qid, false);
+                        if (cqp && ok) {
+                            if (was_full) cqp->has_full_route = true;
+                            OnQuestPathRecalculated(*pts, (void*)qid);
+                        }
+                        else if (cqp) { cqp->calculating = 0; cqp->calculated_at = 0; }
+                        delete pts;
+                    });
+                });
+                calculated_from = from;
+                return;
+            }
+
             // If we're not calculating, and the starting point hasn't changed, and the destination hasn't changed, then we've already got our path
             if (calculated_at &&
                 from == calculated_from && calculated_to == original_quest_marker) {
@@ -577,8 +617,7 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
     RemoveQuest(custom_quest_id);
 
     if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0) {
-        pending_world_map_route = false;
-        PathfindingWindow::ClearWorldMapRoute();
+        PathfindingWindow::ClearRoute();
         for (const auto& cb : custom_marker_callbacks)
             cb();
         return;
@@ -601,22 +640,20 @@ void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_acti
         QuestModule::SetActiveQuestId(quest->quest_id, false);
     }
 
-    // When the marker is on a different physical map than the current one, draw the
-    // full cross-map portal route on the world map. On the same map, the regular
-    // single-map quest path (below) handles it, so clear any stale route. The actual
-    // FindPath is deferred to Update() (see pending_world_map_route) so it only runs
-    // once the current map's pathing data is ready.
+    // When the marker is on a different physical map, the quest path is a cross-map
+    // route via portals (computed + recalculated through the route API, owned by the
+    // CalculatedQuestPath). On the same map it's an ordinary in-map quest path. Either
+    // way QuestModule owns and draws it; tag the path so Recalculate picks the route.
     const auto cur_map_id = GW::Map::GetMapID();
     const auto fh_cur = PathfindingWindow::GetMapFileId(cur_map_id);
     const auto fh_dst = map_to == GW::Constants::MapID::Count ? 0u : PathfindingWindow::GetMapFileId(map_to);
-    if (fh_cur && fh_dst && fh_cur != fh_dst) {
-        pending_world_map_route = true;
-        pending_world_map_route_goal = custom_quest_marker_world_pos;
+    const bool cross_map = fh_cur && fh_dst && fh_cur != fh_dst;
+    if (auto* cqp = GetCalculatedQuestPath(custom_quest_id)) {
+        cqp->is_cross_map = cross_map;
+        cqp->goal_world = custom_quest_marker_world_pos;
+        cqp->has_full_route = false; // new marker → plot the whole route first
     }
-    else {
-        pending_world_map_route = false;
-        PathfindingWindow::ClearWorldMapRoute();
-    }
+    if (!cross_map) PathfindingWindow::ClearRoute();
 
     setting_custom_quest_marker = false;
     RefreshQuestPath(custom_quest_id);
@@ -817,13 +854,6 @@ void QuestModule::Update(float)
             return;
         OnMapLoaded();
         was_loading = false;
-    }
-    // Draw the deferred cross-map world-map route once pathing is ready. Retried each
-    // frame until ReadyForPathing(), so it survives an inject/marker-restore before the
-    // map's pathing data is built.
-    if (pending_world_map_route && !GW::UI::IsLoadingScreenShown() && PathfindingWindow::ReadyForPathing()) {
-        pending_world_map_route = false;
-        PathfindingWindow::ShowRouteToWorldMap(*pos, pending_world_map_route_goal);
     }
     if (fetch_missing_quest_info_queued) {
         // NB: We only do this once the loading splash screen is gone
