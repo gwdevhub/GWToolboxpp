@@ -1280,8 +1280,15 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
                               return line->visible;
                           })) {
             if (line->map != map_id) continue;
-            if (!GamePosToWorldMap(line->p1, line_start)) continue;
-            if (!GamePosToWorldMap(line->p2, line_end)) continue;
+            if (line->world_coords) {
+                // Already in world-map coords (e.g. a cross-map route tail) — use directly.
+                line_start = {line->p1.x, line->p1.y};
+                line_end = {line->p2.x, line->p2.y};
+            }
+            else {
+                if (!GamePosToWorldMap(line->p1, line_start)) continue;
+                if (!GamePosToWorldMap(line->p2, line_end)) continue;
+            }
 
             line_start.x = (line_start.x - world_map_context->top_left.x) * ui_scale.x + viewport_offset.x;
             line_start.y = (line_start.y - world_map_context->top_left.y) * ui_scale.y + viewport_offset.y;
