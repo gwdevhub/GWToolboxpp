@@ -781,9 +781,8 @@ namespace Pathing {
         std::vector<GW::MapProp*> travel_portals;
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
         std::vector<DefferedTeleport> m_defferedPortalLinks;
-        // MapIDs sharing this map's file_hash — needed to collect static teleport
-        // data during a (possibly deferred) full build. Stored so a lightweight
-        // map can be upgraded later without the caller re-supplying them.
+        // MapIDs sharing this file_hash — for teleport collection on a (possibly
+        // deferred) full build, stored so a lightweight map can upgrade itself later.
         std::vector<GW::Constants::MapID> m_all_map_ids;
         volatile bool m_terminateThread = false;
 
@@ -1873,10 +1872,8 @@ namespace Pathing {
         }
 #pragma optimize("", on) // Restore global optimizations to project default
 
-        // Free build-only scratch once the graph is built. None of these are read
-        // by AStar::Search / BuildPath, so a cached map need not carry them for its
-        // whole lifetime. swap-with-empty actually releases capacity (clear() alone
-        // would keep the backing storage).
+        // Free build-only scratch once built (none are read at query time).
+        // swap-with-empty releases capacity; clear() would keep the storage.
         void ReleaseBuildScratch()
         {
             decltype(ptneighbours){}.swap(ptneighbours);
@@ -1887,8 +1884,7 @@ namespace Pathing {
             std::vector<Neighbour>{}.swap(isNeighbourOf_neighbours);
         }
 
-        // Full pathing-graph build (teleports + neighbours + portals + visgraph).
-        // Shared by the eager worker build and the lazy EnsureFullBuild() upgrade.
+        // Full graph build, shared by the eager worker and lazy EnsureFullBuild().
         void BuildFullGraph()
         {
             MapSpecific::MapSpecificData msd;
@@ -1933,7 +1929,7 @@ namespace Pathing {
         new (opaque) Impl();
 
         m_processing = true;
-        m_constructed_full = true; // live current map: always built eagerly + fully
+        m_constructed_full = true; // live current map: eager full build
         const clock_t start = clock();
 
         // Load map data from game into Impl's PathingMapData
@@ -1979,9 +1975,7 @@ namespace Pathing {
         mImpl->m_all_map_ids = all_map_ids.empty() ? std::vector{map_id} : all_map_ids;
         m_constructed_full = full_build;
 
-        // Lightweight load: keep only the raw map data (enough for the OpenTyria
-        // trapezoid pathfinder used by route-cost queries). The visibility graph is
-        // built on demand by EnsureFullBuild() the first time an AStar walk runs.
+        // Lightweight: raw map data only; visgraph built later by EnsureFullBuild().
         if (!full_build) {
             m_progress = 100; // map data is immediately usable; no worker needed
             return;
@@ -2059,13 +2053,13 @@ namespace Pathing {
     {
         if (m_full_built || m_build_failed) return;
         if (m_constructed_full) {
-            // Built eagerly on the worker thread — just wait for it to finish.
+            // Built eagerly on the worker — just wait for it.
             while (!m_full_built && !m_build_failed && !mImpl->m_terminateThread) Sleep(10);
             return;
         }
-        // Lightweight map: build the graph now, on the calling (worker) thread.
+        // Lightweight map: build now, on the calling (worker) thread.
         std::lock_guard lock(m_build_mutex);
-        if (m_full_built || m_build_failed) return; // another thread already built it
+        if (m_full_built || m_build_failed) return; // lost the race
         try {
             mImpl->BuildFullGraph();
             m_full_built = true;
@@ -2175,9 +2169,8 @@ namespace Pathing {
                 tag, us(t_begin, t_trap), us(t_trap, t_insert), us(t_insert, t_search), us(t_search, t_end), us(t_begin, t_end));
         };
 
-        // A walk needs the full visibility graph. Lightweight (route-cost-only) maps
-        // are upgraded here, transparently, on first walk. Done before taking
-        // pathing_mutex so a slow first-time build doesn't stall other maps' searches.
+        // A walk needs the visgraph — upgrade a lightweight map here. Before
+        // pathing_mutex so a slow first build doesn't stall other maps' searches.
         m_path.m_mp->EnsureFullBuild();
 
         std::lock_guard lock(pathing_mutex);
