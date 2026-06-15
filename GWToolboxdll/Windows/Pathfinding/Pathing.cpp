@@ -1903,64 +1903,6 @@ namespace Pathing {
 namespace Pathing {
     // using namespace MathUtil;
 
-    // Traverse map props and copy an array of valid in-game portals; later used for travel calcs
-    void MilePath::LoadMapSpecificData()
-    {
-        MapSpecific::MapSpecificData map_data(GW::Map::GetMapID());
-        mImpl->m_teleports = map_data.m_teleports;
-        mImpl->travel_portals.clear();
-        const auto props = GetMapProps();
-        if (!props) return;
-        for (const auto prop : *props) {
-            if (IsTravelPortal(prop)) {
-                // NB: May need to guess height and width for these - 1100.f ?
-                mImpl->travel_portals.push_back(prop);
-            }
-        }
-    }
-
-    MilePath::MilePath([[maybe_unused]] GW::MapContext* map_context)
-    {
-        //constexpr size_t sz = sizeof(Impl);
-        static_assert(sizeof(opaque) >= sizeof(Impl));
-        new (opaque) Impl();
-
-        m_processing = true;
-        m_constructed_full = true; // live current map: eager full build
-        const clock_t start = clock();
-
-        // Load map data from game into Impl's PathingMapData
-        auto* mapContext = GW::GetMapContext();
-        if (mapContext && mapContext->path) {
-            Pathing::LoadFromMapContext(mapContext, 0, &mImpl->m_mapData);
-        }
-
-        ASSERT(!worker_thread);
-        worker_thread = new std::thread([&, start] {
-            try {
-                LoadMapSpecificData();
-                mImpl->GenerateTrapezoidNeighbours();
-                mImpl->GeneratePortals();
-                mImpl->GenerateTeleportGraph();
-                mImpl->GenerateVisGraph();
-                mImpl->ReleaseBuildScratch();
-                const clock_t stop = clock();
-                PATH_LOG_INFO("Processing %s in %d ms", mImpl->m_terminateThread ? "terminated" : "done", stop - start);
-                m_full_built = true;
-                m_progress = 100;
-            }
-            catch (const std::bad_alloc&) {
-                // Worker-thread OOM during visgraph build. Mark failed and bail without crashing —
-                // a thrown exception escaping a std::thread body would call std::terminate().
-                Log::Error("[pathing] MilePath worker OOM (game-context build); marking build_failed");
-                m_build_failed = true;
-            }
-            m_processing = false;
-            m_done = true;
-        });
-        worker_thread->detach();
-    }
-
     MilePath::MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids, bool full_build)
     {
         static_assert(sizeof(opaque) >= sizeof(Impl));

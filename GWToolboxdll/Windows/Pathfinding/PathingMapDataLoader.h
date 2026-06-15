@@ -17,16 +17,17 @@ namespace GW {
 
 namespace Pathing {
 
-    // =========================================================================
-    // LoadFromMapContext
-    //
-    // Extracts navigation data from live game memory (GW::MapContext).
-    // Uses single continuous buffer per plane with pointer fixup.
-    // =========================================================================
-
+    // Extracts navigation data from live game memory (GW::MapContext) into the same
+    // PathingMapData layout the DAT loader produces. Fallback for the current map when
+    // we have no map_id -> file_id mapping to load it from the DAT.
     bool LoadFromMapContext(const GW::MapContext* path_ctx, uint32_t map_file_id, PathingMapData* out);
 
     bool LoadPathingMapDataFromDAT(uint32_t map_file_id, PathingMapData* out);
+
+    // Game-coordinate bounds for a map's DAT file. Cached internally so repeat
+    // lookups (e.g. coordinate conversion) don't re-parse from disk. Returns false
+    // if the file can't be loaded.
+    bool GetMapGameBoundsFromDAT(uint32_t map_file_id, Vec2f& bounds_min, Vec2f& bounds_max);
 
     // Lightweight: load only portal props from DAT (no pathfinding data)
     bool LoadPortalPropsFromDAT(uint32_t map_file_id, std::vector<PortalProp>& out);

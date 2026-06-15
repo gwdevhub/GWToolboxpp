@@ -46,7 +46,6 @@ namespace Pathing {
         std::thread* worker_thread = nullptr;
 
     public:
-        MilePath(GW::MapContext*);
         MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids = {}, bool full_build = true);
         ~MilePath();
 
@@ -98,8 +97,6 @@ namespace Pathing {
         std::string ExportVisGraph() const;
 
     private:
-        void LoadMapSpecificData();
-
         int opaque[512 / sizeof(int)];
     };
 

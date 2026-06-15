@@ -52,7 +52,10 @@ public:
 
     static void ShowAllOutposts(bool show);
     static GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos, GW::Constants::MapID exclude_map_id = (GW::Constants::MapID)0);
-    static bool WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos);
-    static bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos);
+    // Convert between game coords and world-map coords for the map given by `map_id`
+    // (default 0 = the current map). Game bounds come from the live map context for the
+    // current map, otherwise from the cached DAT (Pathing::GetMapGameBoundsFromDAT).
+    static bool WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);
+    static bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);
     static bool& ShowLinesOnWorldMap();
 };

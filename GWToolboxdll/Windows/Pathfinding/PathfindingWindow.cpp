@@ -164,9 +164,6 @@ namespace {
         }
     };
     std::unordered_map<PortalWalkKey, float, PortalWalkKeyHash> portal_walk_cache;
-    bool GamePosToWorldMapForMap(const GW::Vec2f& game_pos, GW::Constants::MapID map_id,
-        const Pathing::Vec2f& game_bounds_min, const Pathing::Vec2f& game_bounds_max,
-        GW::Vec2f& world_map_pos); // forward decl (early)
     void ClearEditorHighlightLines(); // forward decl (early)
     void UpdatePortalMarkers(); // forward decl (early)
     void UpdateBoundsLines(); // forward decl (early)
@@ -444,60 +441,6 @@ namespace {
     uint32_t GetMapFileId(GW::Constants::MapID map_id); // forward decl
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map); // forward decl
 
-    // Convert game pos to world map coords for any map (not just current)
-    bool GamePosToWorldMapForMap(
-        const GW::Vec2f& game_pos,
-        GW::Constants::MapID map_id,
-        const Pathing::Vec2f& game_bounds_min,
-        const Pathing::Vec2f& game_bounds_max,
-        GW::Vec2f& world_map_pos)
-    {
-        const auto area_info = GW::Map::GetMapInfo(map_id);
-        if (!area_info) return false;
-        ImRect wm_bounds;
-        if (!GW::Map::GetMapWorldMapBounds(area_info, &wm_bounds)) return false;
-
-        const auto game_map_rect = ImRect(game_bounds_min.x, game_bounds_min.y,
-                                          game_bounds_max.x, game_bounds_max.y);
-
-        constexpr auto gwinches_per_unit = 96.f;
-        GW::Vec2f map_mid_world_point = {
-            wm_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
-            wm_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
-        };
-
-        world_map_pos.x = (game_pos.x / gwinches_per_unit) + map_mid_world_point.x;
-        world_map_pos.y = ((game_pos.y * -1.f) / gwinches_per_unit) + map_mid_world_point.y;
-        return true;
-    }
-
-    // Convert world map coords to game pos for any map (needs map's game bounds)
-    bool WorldMapToGamePosForMap(
-        const GW::Vec2f& world_map_pos,
-        GW::Constants::MapID map_id,
-        const Pathing::Vec2f& game_bounds_min,
-        const Pathing::Vec2f& game_bounds_max,
-        GW::GamePos& game_pos)
-    {
-        const auto area_info = GW::Map::GetMapInfo(map_id);
-        if (!area_info) return false;
-        ImRect wm_bounds;
-        if (!GW::Map::GetMapWorldMapBounds(area_info, &wm_bounds)) return false;
-
-        const auto game_map_rect = ImRect(game_bounds_min.x, game_bounds_min.y,
-                                          game_bounds_max.x, game_bounds_max.y);
-
-        constexpr auto gwinches_per_unit = 96.f;
-        GW::Vec2f map_mid_world_point = {
-            wm_bounds.Min.x + (abs(game_map_rect.Min.x) / gwinches_per_unit),
-            wm_bounds.Min.y + (abs(game_map_rect.Max.y) / gwinches_per_unit),
-        };
-
-        game_pos.x = (world_map_pos.x - map_mid_world_point.x) * gwinches_per_unit;
-        game_pos.y = (world_map_pos.y - map_mid_world_point.y) * gwinches_per_unit * -1.f;
-        return true;
-    }
-
     // Load a map from DAT and create a MilePath for it. Returns the MilePath (may still be processing).
     Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id)
     {
@@ -563,38 +506,54 @@ namespace {
         return m;
     }
 
-    // Returns milepath pointer for the current map, nullptr if we're not in a valid state
-    Pathing::MilePath* GetMilepathForCurrentMap()
+    // Fallback for the current map when no file_id is known: build the same
+    // PathingMapData from the live map context and hand it to the standard MilePath
+    // ctor (eager full build — it's the map the player is standing in).
+    Pathing::MilePath* LoadMapFromContext(GW::Constants::MapID map_id)
     {
-        //todo: maybe use bool GetIsMapReady() from other modules?
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
         const auto mc = GW::GetMapContext();
         if (!(mc && mc->path && mc->path->staticData)) return nullptr;
 
-        auto hash = static_cast<uint64_t>(mc->path->staticData->map_id);
-        hash |= static_cast<uint64_t>(mc->path->pathNodes.size()) << 32;
+        auto map_data = Pathing::PathingMapData();
+        if (!Pathing::LoadFromMapContext(mc, 0, &map_data)) return nullptr;
+
+        auto hash = static_cast<uint64_t>(map_id);
+        hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
 
         if (mile_paths_by_coords.contains(hash)) {
             TouchLru(hash);
             return mile_paths_by_coords[hash];
         }
 
-        const auto m = new Pathing::MilePath(mc);
-        mile_paths_by_coords[hash] = m;
-        TouchLru(hash);
-
-        // Cache map info for drawing bounds + portal props
         CachedMapInfo info;
-        info.map_id = GW::Map::GetMapID();
-        info.bounds_min = {mc->start_pos.x, mc->start_pos.y};
-        info.bounds_max = {mc->end_pos.x, mc->end_pos.y};
-        uint32_t cur_fid = GetMapFileId(info.map_id);
-        if (cur_fid) Pathing::LoadPortalPropsFromDAT(cur_fid, info.portal_props);
+        info.map_id = map_id;
+        info.bounds_min = map_data.bounds_min;
+        info.bounds_max = map_data.bounds_max;
         cached_map_info[hash] = info;
         CacheSharedFileHashMaps(info);
-        UpdateBoundsLines();
 
+        auto* m = new Pathing::MilePath(std::move(map_data), map_id, {map_id}, true);
+        mile_paths_by_coords[hash] = m;
+        TouchLru(hash);
+        Resources::EnqueueMainTask([] {
+            UpdateBoundsLines();
+            if (draw_portals) UpdatePortalMarkers();
+        });
         return m;
+    }
+
+    // Returns milepath pointer for the current map, nullptr if we're not in a valid state
+    Pathing::MilePath* GetMilepathForCurrentMap()
+    {
+        //todo: maybe use bool GetIsMapReady() from other modules?
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
+        const auto map_id = GW::Map::GetMapID();
+        if (map_id == GW::Constants::MapID::None) return nullptr;
+        // Prefer DAT, like every other map, so the MilePath and coordinate bounds share
+        // one source. Fall back to the live map context only when we have no file_id.
+        if (GetMapFileId(map_id))
+            return LoadMapFromDAT(map_id);
+        return LoadMapFromContext(map_id);
     }
 
     std::vector<CustomRenderer::CustomLine*> bounds_lines;
@@ -793,17 +752,12 @@ namespace {
     {
         if (src_map == GW::Map::GetMapID() || src_map == GW::Constants::MapID::None)
             return pos;
-        // Find source map bounds
-        for (const auto& [hash, info] : cached_map_info) {
-            if (info.map_id != src_map) continue;
-            GW::Vec2f world_pos;
-            GW::GamePos cur_pos;
-            if (GamePosToWorldMapForMap({pos.x, pos.y}, src_map, info.bounds_min, info.bounds_max, world_pos) &&
-                WorldMapWidget::WorldMapToGamePos(world_pos, cur_pos)) {
-                cur_pos.zplane = pos.zplane;
-                return cur_pos;
-            }
-            break;
+        GW::Vec2f world_pos;
+        GW::GamePos cur_pos;
+        if (WorldMapWidget::GamePosToWorldMap(pos, world_pos, src_map) &&
+            WorldMapWidget::WorldMapToGamePos(world_pos, cur_pos)) {
+            cur_pos.zplane = pos.zplane;
+            return cur_pos;
         }
         return pos;
     }
@@ -867,22 +821,11 @@ namespace {
     bool SegmentToWorld(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map,
                         std::vector<GW::Vec2f>& out)
     {
-        const bool is_cur = (src_map == GW::Map::GetMapID());
-        const CachedMapInfo* src_info = nullptr;
-        if (!is_cur) {
-            for (const auto& [hash, info] : cached_map_info) {
-                if (info.map_id == src_map) { src_info = &info; break; }
-            }
-            if (!src_info) return false;
-        }
         out.reserve(out.size() + points.size());
         for (const auto& p : points) {
             if (IsPathBreak(p)) { out.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE}); continue; }
             GW::Vec2f w;
-            const bool ok = is_cur
-                ? WorldMapWidget::GamePosToWorldMap(p, w)
-                : GamePosToWorldMapForMap({p.x, p.y}, src_map, src_info->bounds_min, src_info->bounds_max, w);
-            if (ok) out.push_back(w);
+            if (WorldMapWidget::GamePosToWorldMap(p, w, src_map)) out.push_back(w);
         }
         return true;
     }
@@ -893,20 +836,13 @@ namespace {
     {
         if (src_map == GW::Map::GetMapID()) return points;
 
-        // Find source map bounds
-        const CachedMapInfo* src_info = nullptr;
-        for (const auto& [hash, info] : cached_map_info) {
-            if (info.map_id == src_map) { src_info = &info; break; }
-        }
-        if (!src_info) return points;
-
         std::vector<GW::GamePos> converted;
         converted.reserve(points.size());
         for (const auto& p : points) {
             if (IsPathBreak(p)) { converted.push_back(p); continue; }
             GW::Vec2f world_pos;
             GW::GamePos cur_pos;
-            if (GamePosToWorldMapForMap({p.x, p.y}, src_map, src_info->bounds_min, src_info->bounds_max, world_pos) &&
+            if (WorldMapWidget::GamePosToWorldMap(p, world_pos, src_map) &&
                 WorldMapWidget::WorldMapToGamePos(world_pos, cur_pos)) {
                 cur_pos.zplane = p.zplane;
                 converted.push_back(cur_pos);
@@ -1583,7 +1519,7 @@ namespace {
 
         for (const auto& pa : info_a->portal_props) {
             GW::Vec2f wm_pa;
-            if (!GamePosToWorldMapForMap({pa.pos.x, pa.pos.y}, map_a, info_a->bounds_min, info_a->bounds_max, wm_pa)) continue;
+            if (!WorldMapWidget::GamePosToWorldMap({pa.pos.x, pa.pos.y, 0}, wm_pa, map_a)) continue;
             // Only consider portals near the overlap region
             if (!overlap.Contains({wm_pa.x, wm_pa.y})) continue;
             // Outpost filter: portal must be near the outpost icon if map_a is an outpost
@@ -1591,7 +1527,7 @@ namespace {
 
             for (const auto& pb : info_b->portal_props) {
                 GW::Vec2f wm_pb;
-                if (!GamePosToWorldMapForMap({pb.pos.x, pb.pos.y}, map_b, info_b->bounds_min, info_b->bounds_max, wm_pb)) continue;
+                if (!WorldMapWidget::GamePosToWorldMap({pb.pos.x, pb.pos.y, 0}, wm_pb, map_b)) continue;
                 if (!overlap.Contains({wm_pb.x, wm_pb.y})) continue;
                 if (IsPortalTooFarFromOutpost(map_b, wm_pb)) continue;
 
@@ -2035,8 +1971,6 @@ namespace {
         }
 
         // 3) Fallback: use center of world map bounds overlap as transition point
-        const auto* info_a = GetCachedMapInfo(map_a);
-        const auto* info_b = GetCachedMapInfo(map_b);
         auto* area_a = GW::Map::GetMapInfo(map_a);
         auto* area_b = GW::Map::GetMapInfo(map_b);
         if (!area_a || !area_b) return false;
@@ -2051,12 +1985,11 @@ namespace {
             std::min(wm_a.Max.x, wm_b.Max.x), std::min(wm_a.Max.y, wm_b.Max.y));
         GW::Vec2f wm_center = {overlap.GetCenter().x, overlap.GetCenter().y};
 
-        // Convert to each map's game coords
-        if (info_a) WorldMapToGamePosForMap(wm_center, map_a, info_a->bounds_min, info_a->bounds_max, portal_a_out);
-        else WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out);
-
-        if (info_b) WorldMapToGamePosForMap(wm_center, map_b, info_b->bounds_min, info_b->bounds_max, portal_b_out);
-        else WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out);
+        // Convert to each map's game coords (fall back to the current map if unknown)
+        if (!WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out, map_a))
+            WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out);
+        if (!WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out, map_b))
+            WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out);
 
         PATH_LOG_INFO("Boundary fallback: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) wm=(%.0f,%.0f)",
             (int)map_a, portal_a_out.x, portal_a_out.y,
@@ -2193,9 +2126,7 @@ namespace {
                     seg_from = this_entry;
                     portal_draws.push_back({prev_exit, this_entry, route_copy[seg - 1], map_id});
                     // Update last_portal_wm to the entry portal's world map position
-                    const auto* entry_info = GetCachedMapInfo(map_id);
-                    if (entry_info)
-                        GamePosToWorldMapForMap({this_entry.x, this_entry.y}, map_id, entry_info->bounds_min, entry_info->bounds_max, last_portal_wm);
+                    WorldMapWidget::GamePosToWorldMap(this_entry, last_portal_wm, map_id);
                 }
 
                 // Determine segment end
@@ -2212,9 +2143,7 @@ namespace {
                     }
                     seg_to = this_exit;
                     // Update chain hint to exit portal position
-                    const auto* exit_info = GetCachedMapInfo(map_id);
-                    if (exit_info)
-                        GamePosToWorldMapForMap({this_exit.x, this_exit.y}, map_id, exit_info->bounds_min, exit_info->bounds_max, last_portal_wm);
+                    WorldMapWidget::GamePosToWorldMap(this_exit, last_portal_wm, map_id);
                 }
 
                 PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)",
@@ -2324,9 +2253,7 @@ namespace {
                         return false;
                     }
                     seg_from = this_entry;
-                    const auto* entry_info = GetCachedMapInfo(map_id);
-                    if (entry_info)
-                        GamePosToWorldMapForMap({this_entry.x, this_entry.y}, map_id, entry_info->bounds_min, entry_info->bounds_max, last_portal_wm);
+                    WorldMapWidget::GamePosToWorldMap(this_entry, last_portal_wm, map_id);
                 }
 
                 if (seg == route.size() - 1) {
@@ -2340,9 +2267,7 @@ namespace {
                         return false;
                     }
                     seg_to = this_exit;
-                    const auto* exit_info = GetCachedMapInfo(map_id);
-                    if (exit_info)
-                        GamePosToWorldMapForMap({this_exit.x, this_exit.y}, map_id, exit_info->bounds_min, exit_info->bounds_max, last_portal_wm);
+                    WorldMapWidget::GamePosToWorldMap(this_exit, last_portal_wm, map_id);
                 }
 
                 PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)",
@@ -2880,11 +2805,7 @@ bool PathfindingWindow::GetNextPortalToward(
     if (!GetCachedMapInfo(to_map))
         LoadMapFromDAT(to_map);
     GW::GamePos goal_game{};
-    bool have_goal = false;
-    if (const auto* dst_info = GetCachedMapInfo(to_map)) {
-        if (WorldMapToGamePosForMap(goal_world_pos, to_map, dst_info->bounds_min, dst_info->bounds_max, goal_game))
-            have_goal = true;
-    }
+    const bool have_goal = WorldMapWidget::WorldMapToGamePos(goal_world_pos, goal_game, to_map);
 
     auto route = FindMapRoute(from_map, to_map, &from_pos, have_goal ? &goal_game : nullptr);
     if (route.size() < 2)
@@ -2893,8 +2814,7 @@ bool PathfindingWindow::GetNextPortalToward(
     const auto next = route[1];
 
     GW::Vec2f hint_wm{};
-    if (const auto* src_info = GetCachedMapInfo(from_map))
-        GamePosToWorldMapForMap({from_pos.x, from_pos.y}, from_map, src_info->bounds_min, src_info->bounds_max, hint_wm);
+    WorldMapWidget::GamePosToWorldMap(from_pos, hint_wm, from_map);
 
     GW::GamePos exit_portal{}, next_entry{};
     const GW::GamePos* gg = (route.size() == 2 && have_goal) ? &goal_game : nullptr;
@@ -2902,23 +2822,6 @@ bool PathfindingWindow::GetNextPortalToward(
         return false;
     out_portal_pos = exit_portal;
     return true;
-}
-
-// Convert world map pos to game pos, using the correct map's bounds
-static bool ConvertWorldMapPos(const GW::Vec2f& world_map_pos, GW::Constants::MapID map_id, GW::GamePos& game_pos)
-{
-    // If it's the current map, use live conversion
-    if (map_id == GW::Map::GetMapID()) {
-        return WorldMapWidget::WorldMapToGamePos(world_map_pos, game_pos);
-    }
-    // Otherwise use cached bounds from DAT-loaded map
-    for (const auto& [hash, info] : cached_map_info) {
-        if (info.map_id == map_id) {
-            return WorldMapToGamePosForMap(world_map_pos, map_id, info.bounds_min, info.bounds_max, game_pos);
-        }
-    }
-    // Fallback to current map conversion
-    return WorldMapWidget::WorldMapToGamePos(world_map_pos, game_pos);
 }
 
 namespace {
@@ -2933,11 +2836,11 @@ namespace {
         if (from_map == GW::Constants::MapID::None || to_map == GW::Constants::MapID::None) return false;
 
         GW::GamePos start;
-        if (!ConvertWorldMapPos(from_world, from_map, start)) return false;
+        if (!WorldMapWidget::WorldMapToGamePos(from_world, start, from_map)) return false;
 
         if (!GetCachedMapInfo(to_map)) LoadMapFromDAT(to_map);
         GW::GamePos goal;
-        if (!ConvertWorldMapPos(to_world, to_map, goal)) return false;
+        if (!WorldMapWidget::WorldMapToGamePos(to_world, goal, to_map)) return false;
 
         std::vector<HiddenPathSegment> hidden;
         if (!BuildCrossMapRoute(from_map, to_map, start, goal, from_world, out, hidden)) return false;
@@ -2948,7 +2851,7 @@ namespace {
         size_t fb = 0;
         while (fb < out.size() && !IsPathBreak(out[fb])) fb++;
         GW::GamePos exit_game{};
-        if (fb >= 2 && fb < out.size() && ConvertWorldMapPos(out[fb - 1], from_map, exit_game)) {
+        if (fb >= 2 && fb < out.size() && WorldMapWidget::WorldMapToGamePos(out[fb - 1], exit_game, from_map)) {
             cache.active = true;
             cache.start_map = from_map;
             cache.exit_portal = exit_game;
@@ -3059,7 +2962,7 @@ void PathfindingWindow::SetFromWorldMap(const GW::Vec2f& world_map_pos)
     LoadAllMapsAtPosition(world_map_pos);
 
     GW::GamePos game_pos;
-    if (!ConvertWorldMapPos(world_map_pos, path_from_map, game_pos)) return;
+    if (!WorldMapWidget::WorldMapToGamePos(world_map_pos, game_pos, path_from_map)) return;
     path_from = game_pos;
 
     uint32_t fh = GetMapFileId(path_from_map);
@@ -3079,7 +2982,7 @@ void PathfindingWindow::SetToWorldMap(const GW::Vec2f& world_map_pos)
     LoadAllMapsAtPosition(world_map_pos);
 
     GW::GamePos game_pos;
-    if (!ConvertWorldMapPos(world_map_pos, path_to_map, game_pos)) return;
+    if (!WorldMapWidget::WorldMapToGamePos(world_map_pos, game_pos, path_to_map)) return;
     path_to = game_pos;
 
     uint32_t fh = GetMapFileId(path_to_map);
@@ -3103,8 +3006,7 @@ void PathfindingWindow::FindPath()
         const auto* from_info = GetCachedMapInfo(path_from_map);
         if (from_info && path_to_world.x != 0.f) {
             GW::GamePos to_on_from_map;
-            if (WorldMapToGamePosForMap(path_to_world, path_from_map,
-                from_info->bounds_min, from_info->bounds_max, to_on_from_map)) {
+            if (WorldMapWidget::WorldMapToGamePos(path_to_world, to_on_from_map, path_from_map)) {
                 // Verify the converted position is within the map's actual game bounds
                 bool in_game_bounds =
                     to_on_from_map.x >= from_info->bounds_min.x && to_on_from_map.x <= from_info->bounds_max.x &&
