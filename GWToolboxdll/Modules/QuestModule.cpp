@@ -469,6 +469,9 @@ namespace {
                 }
                 RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
             } break;
+            case GW::UI::UIMessage::kServerActiveQuestChanged:
+                RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
+                break;
             case GW::UI::UIMessage::kMapLoaded:
                 BlockQuestSound();
                 break;
