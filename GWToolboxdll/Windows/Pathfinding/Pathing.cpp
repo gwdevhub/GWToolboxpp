@@ -1412,7 +1412,13 @@ namespace Pathing {
             uint16_t bp_idx = bp_pool.alloc_empty();
             if (portal.m_pt_layer) bp_pool.data[bp_idx].set(portal.m_pt_layer, true);
 
-            for (auto pid : portal_portal_map[portal.m_id]) {
+            const Point* const P = points.data();
+            const Portal* const PT = portals.data();
+            const auto& neighbours = portal_portal_map.data()[portal.m_id];
+            const Portal::id* npd = neighbours.data();
+            const size_t nn = neighbours.size();
+            for (size_t k = 0; k < nn; ++k) {
+                const auto pid = npd[k];
                 if (pid == portal.m_id || pid == other_portal_id) continue;
 
                 if (sp >= OPEN_CAPACITY) return; // safety guard
@@ -1422,17 +1428,18 @@ namespace Pathing {
                 n.visited_checkpoint = static_cast<uint32_t>(checkpoint);
                 n.blocked_idx = bp_idx;
 
-                n.funnel[0] = points[portals[pid].m_point[0]].m_pos;
-                n.funnel[1] = points[portals[pid].m_point[1]].m_pos;
+                n.funnel[0] = P[PT[pid].m_point[0]].m_pos;
+                n.funnel[1] = P[PT[pid].m_point[1]].m_pos;
             }
         }
 
         inline void process_point(node* open, size_t& sp, VisitedState& visited, BlockedPlanesPool& bp_pool, const Point& point)
         {
-            process_portal(open, sp, visited, bp_pool, portals[point.m_portals[0]], point.m_portals[1]);
+            const Portal* const PT = portals.data();
+            process_portal(open, sp, visited, bp_pool, PT[point.m_portals[0]], point.m_portals[1]);
 
             if (point.m_portals[0] != point.m_portals[1]) {
-                process_portal(open, sp, visited, bp_pool, portals[point.m_portals[1]], point.m_portals[0]);
+                process_portal(open, sp, visited, bp_pool, PT[point.m_portals[1]], point.m_portals[0]);
             }
         }
 
@@ -1482,6 +1489,12 @@ namespace Pathing {
             visited.stamp++;
             bp_pool.reset();
 
+            // Raw pointers — skip MSVC debug bounds checks in this per-search DFS.
+            const Point* const P = points.data();
+            const Portal* const PT = portals.data();
+            const auto* const PtPM = pt_portal_map.data();
+            const auto* const PortalPtM = portal_pt_map.data();
+
             // Same-trapezoid shortcut: extra_pos is directly visible (no portal traversal needed).
             if (extra_pos && extra_trap == from_trap) {
                 const uint16_t bp_idx = bp_pool.alloc_empty();
@@ -1490,14 +1503,20 @@ namespace Pathing {
 
             // Seed DFS from each portal adjacent to from_trap (replaces the single-point-portal trick).
             const uint16_t initial_bp = bp_pool.alloc_empty();
-            for (auto pid : pt_portal_map[from_trap->id]) {
-                if (sp >= OPEN_CAPACITY) break;
-                node& n = open[sp++];
-                n.next = pid;
-                n.visited_checkpoint = 0;
-                n.blocked_idx = initial_bp;
-                n.funnel[0] = points[portals[pid].m_point[0]].m_pos;
-                n.funnel[1] = points[portals[pid].m_point[1]].m_pos;
+            {
+                const auto& seed = PtPM[from_trap->id];
+                const Portal::id* sd = seed.data();
+                const size_t sn = seed.size();
+                for (size_t k = 0; k < sn; ++k) {
+                    const auto pid = sd[k];
+                    if (sp >= OPEN_CAPACITY) break;
+                    node& n = open[sp++];
+                    n.next = pid;
+                    n.visited_checkpoint = 0;
+                    n.blocked_idx = initial_bp;
+                    n.funnel[0] = P[PT[pid].m_point[0]].m_pos;
+                    n.funnel[1] = P[PT[pid].m_point[1]].m_pos;
+                }
             }
 
             int cnt = 20000;
@@ -1505,7 +1524,7 @@ namespace Pathing {
                 node cur = open[--sp];
                 visited.rollback(cur.visited_checkpoint);
 
-                const auto& portal = portals[cur.next];
+                const auto& portal = PT[cur.next];
                 if (visited.is_visited(portal.m_id)) continue;
                 visited.visit(portal.m_id);
 
@@ -1514,8 +1533,8 @@ namespace Pathing {
                     bp_idx = bp_pool.alloc_with_bit(cur.blocked_idx, portal.m_pt_layer);
                 }
 
-                const auto& p0 = points[portal.m_point[0]];
-                const auto& p1 = points[portal.m_point[1]];
+                const auto& p0 = P[portal.m_point[0]];
+                const auto& p1 = P[portal.m_point[1]];
 
                 auto& f0 = cur.funnel[0];
                 auto& f1 = cur.funnel[1];
@@ -1550,7 +1569,7 @@ namespace Pathing {
 
                 // Extra-point visibility: if this portal opens into extra_trap, test extra_pos against
                 // the (narrowed) funnel. Emits at most one entry per portal chain into extra_trap.
-                if (extra_pos && portal_pt_map[portal.m_other_id] == extra_trap) {
+                if (extra_pos && PortalPtM[portal.m_other_id] == extra_trap) {
                     const auto ng = *extra_pos - from_pos;
                     const float fl_ng = Cross(f0 - from_pos, ng);
                     const float fr_ng = Cross(f1 - from_pos, ng);
@@ -1562,7 +1581,11 @@ namespace Pathing {
                 const size_t cp = visited.checkpoint();
                 visited.visit(portal.m_other_id);
 
-                for (auto pid : portal_portal_map[portal.m_other_id]) {
+                const auto& neighbours = portal_portal_map.data()[portal.m_other_id];
+                const Portal::id* npd = neighbours.data();
+                const size_t nn = neighbours.size();
+                for (size_t k = 0; k < nn; ++k) {
+                    const auto pid = npd[k];
                     if (visited.is_visited(pid)) continue;
                     if (sp >= OPEN_CAPACITY) break;
                     node& child = open[sp++];
@@ -1682,9 +1705,18 @@ namespace Pathing {
             vis_points.init(points.size());
             bp_pool.init(20004);
 
+            // Raw pointers into the (stable, read-only during the worker pass) containers —
+            // skips MSVC debug's per-access bounds checks in this O(n^2) hot loop. m_visGraph's
+            // outer storage is sized once before threads start and each thread writes only its
+            // own source rows, so VG[p.m_id] is stable too.
+            const Point* P = points.data();
+            const Portal* PT = portals.data();
+            auto* const VG = m_visGraph.data();
+            const auto* const PPM = portal_portal_map.data();
+
             for (int i = begin; i < end; ++i) {
                 if (m_terminateThread) break;
-                const auto& point = points[i];
+                const auto& point = P[i];
                 if (!point.is_viable) continue;
 
 #ifdef DEBUG_PATHING
@@ -1707,7 +1739,7 @@ namespace Pathing {
 
                     visited.rollback(cur.visited_checkpoint); // rollback to this node's state
 
-                    const auto& portal = portals[cur.next];
+                    const auto& portal = PT[cur.next];
                     if (visited.is_visited(portal.m_id)) continue;
 
                     visited.visit(portal.m_id);
@@ -1722,8 +1754,8 @@ namespace Pathing {
                         bp_idx = bp_pool.alloc_with_bit(cur.blocked_idx, portal.m_pt_layer);
                     }
 
-                    const auto& p0 = points[portal.m_point[0]];
-                    const auto& p1 = points[portal.m_point[1]];
+                    const auto& p0 = P[portal.m_point[0]];
+                    const auto& p1 = P[portal.m_point[1]];
 
                     auto& f0 = cur.funnel[0];
                     auto& f1 = cur.funnel[1];
@@ -1744,7 +1776,7 @@ namespace Pathing {
                     if (Cross(fl, nl) <= tolerance) {
                         if (p0.is_viable && vis_points.test_and_set(p0.m_id)) {
                             float dist = GW::GetDistance(p.m_pos, p0.m_pos);
-                            m_visGraph[p.m_id].emplace_back(dist, bp_pool.data[bp_idx], p0.m_id);
+                            VG[p.m_id].emplace_back(dist, bp_pool.data[bp_idx], p0.m_id);
 #ifdef DEBUG_PATHING
                             stats.edges_found++;
 #endif
@@ -1755,7 +1787,7 @@ namespace Pathing {
                     if (Cross(fr, nr) >= -tolerance) {
                         if (p1.is_viable && vis_points.test_and_set(p1.m_id)) {
                             float dist = GW::GetDistance(p.m_pos, p1.m_pos);
-                            m_visGraph[p.m_id].emplace_back(dist, bp_pool.data[bp_idx], p1.m_id);
+                            VG[p.m_id].emplace_back(dist, bp_pool.data[bp_idx], p1.m_id);
 #ifdef DEBUG_PATHING
                             stats.edges_found++;
 #endif
@@ -1766,7 +1798,11 @@ namespace Pathing {
                     uint32_t checkpoint = static_cast<uint32_t>(visited.checkpoint());
                     visited.visit(portal.m_other_id);
 
-                    for (auto pid : portal_portal_map[portal.m_other_id]) {
+                    const auto& neighbours = PPM[portal.m_other_id];
+                    const Portal::id* npd = neighbours.data();
+                    const size_t nn = neighbours.size();
+                    for (size_t k = 0; k < nn; ++k) {
+                        const auto pid = npd[k];
                         if (visited.is_visited(pid)) continue;
 
                         if (sp >= OPEN_CAPACITY) break;
@@ -2198,6 +2234,9 @@ namespace Pathing {
 
         const bool teleports = !mp->m_teleports.empty();
         const bool has_blocked = current_blocked_planes.any(); // skip 2M+ bitset ANDs when no planes blocked
+        // Raw pointers — skip MSVC debug bounds checks on every node expansion / edge.
+        auto* const VG = mp->m_visGraph.data();
+        const Point* const PTS = mp->points.data();
         PointId current = 0;
 #ifdef DEBUG_PATHING
         int dbg_nodes_expanded = 0;
@@ -2224,8 +2263,11 @@ namespace Pathing {
             const float cost_current = cost_so_far[current];
 
             // Primary edges: start uses local start_edges, every other node uses m_visGraph.
-            const auto& primary_edges = (current == START_ID) ? sb.start_edges : mp->m_visGraph[current];
-            for (const auto& vis : primary_edges) {
+            const auto& primary_edges = (current == START_ID) ? sb.start_edges : VG[current];
+            const PointVisElement* edges = primary_edges.data();
+            const size_t edge_count = primary_edges.size();
+            for (size_t ei = 0; ei < edge_count; ++ei) {
+                const auto& vis = edges[ei];
 #ifdef DEBUG_PATHING
                 dbg_edges_examined++;
 #endif
@@ -2247,7 +2289,7 @@ namespace Pathing {
                     h = 0.0f;
                 }
                 else {
-                    const auto& p = mp->points[vis.point_id];
+                    const auto& p = PTS[vis.point_id];
                     h = GetDistance(p.m_pos, goal_pos);
                     if (teleports) {
                         const float tp_cost = TeleporterHeuristic(mp->m_teleports, mp->m_teleportGraph, p.m_pos, goal_pos);
