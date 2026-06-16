@@ -587,6 +587,13 @@ const GW::Quest* QuestModule::GetCustomQuestMarker()
 {
     return GW::QuestMgr::GetQuest(custom_quest_id);
 }
+bool QuestModule::GetCustomQuestMarkerWorldPos(GW::Constants::QuestID quest_id, GW::Vec2f& out)
+{
+    if (quest_id != custom_quest_id) return false;
+    if (custom_quest_marker_world_pos.x == 0 && custom_quest_marker_world_pos.y == 0) return false;
+    out = custom_quest_marker_world_pos;
+    return true;
+}
 void QuestModule::SetCustomQuestMarker(const GW::Vec2f& world_pos, bool set_active)
 {
     BlockQuestSound();
