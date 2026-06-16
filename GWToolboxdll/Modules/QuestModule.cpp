@@ -360,17 +360,25 @@ namespace {
             if (!cqp)
                 return;
 
-            // Resolve the world-map goal. The custom marker owns its world pos directly
-            // (its game marker is unreliable across maps); regular quests derive it from
-            // the current-map marker. A changed goal forces a fresh whole-route plot.
+            // Resolve the world-map goal. The custom marker owns its world pos directly.
+            // Regular quests use their current-map marker, but fall back to the
+            // destination map's world-map marker point when the objective is on another
+            // map and the in-map marker is invalid or far off (>5000 gwinches) — i.e. it's
+            // really pointing at another map. A changed goal forces a whole-route re-plot.
             GW::Vec2f goal{};
             bool have_goal = false;
             if (quest_id == custom_quest_id) {
                 goal = custom_quest_marker_world_pos;
                 have_goal = goal.x != 0 || goal.y != 0;
             }
-            else if (quest->marker.x != INFINITY) {
-                have_goal = WorldMapWidget::GamePosToWorldMap(quest->marker, goal);
+            else {
+                const bool marker_valid = quest->marker.x != INFINITY;
+                const bool cross_map = quest->map_to != GW::Map::GetMapID() && quest->map_to != GW::Constants::MapID::None;
+                const bool marker_far = marker_valid && GetSquareDistance(*pos, quest->marker) > 5000.f * 5000.f;
+                if (cross_map && (!marker_valid || marker_far))
+                    have_goal = WorldMapWidget::GetMapMarkerWorldPos(quest->map_to, goal);
+                else if (marker_valid)
+                    have_goal = WorldMapWidget::GamePosToWorldMap(quest->marker, goal);
             }
             if (!have_goal) {
                 cqp->route_world.clear();

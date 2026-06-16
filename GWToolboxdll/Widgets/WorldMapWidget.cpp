@@ -995,6 +995,14 @@ bool WorldMapWidget::GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2
     return true;
 }
 
+bool WorldMapWidget::GetMapMarkerWorldPos(GW::Constants::MapID map_id, GW::Vec2f& out)
+{
+    const auto map_info = GW::Map::GetMapInfo(map_id);
+    if (!map_info) return false;
+    out = GetMapMarkerPoint(map_info);
+    return out.x != 0 || out.y != 0;
+}
+
 void WorldMapWidget::SignalTerminate()
 {
     ToolboxWidget::Terminate();
