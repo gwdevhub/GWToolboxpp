@@ -2214,7 +2214,8 @@ namespace {
         for (int attempt = 0; attempt <= max_retries; attempt++) {
             auto route = FindMapRoute(from_map, to_map, &start, &goal);
             if (route.empty()) {
-                Log::Error("No map route found from map %d to map %d", (int)from_map, (int)to_map);
+                // Expected for unreachable markers — keep it out of chat (the caller backs off).
+                PATH_LOG_INFO("No map route found from map %d to map %d", (int)from_map, (int)to_map);
                 blacklisted_edges.clear();
                 return false;
             }
