@@ -62,6 +62,14 @@
 #pragma warning(disable : 4189 4100)
 #endif
 
+// Pathing errors are expected for unreachable markers etc. — only surface them in chat
+// in debug; in release they still go to the log file.
+#ifdef _DEBUG
+#define PATH_LOG_ERROR(...) Log::Error(__VA_ARGS__)
+#else
+#define PATH_LOG_ERROR(...) Log::Log(__VA_ARGS__)
+#endif
+
 namespace {
     struct CachedMapInfo {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
@@ -475,7 +483,7 @@ namespace {
         }
         const uint32_t fid = GetMapFileId(map_id);
         if (!fid) {
-            Log::Error("LoadMapFromDAT: no file_id for map %d (visit the map once to cache it)", (int)map_id);
+            PATH_LOG_ERROR("LoadMapFromDAT: no file_id for map %d (visit the map once to cache it)", (int)map_id);
             return nullptr;
         }
 
@@ -483,7 +491,7 @@ namespace {
 
         auto dat_data = Pathing::PathingMapData();
         if (!Pathing::LoadPathingMapDataFromDAT(fid, &dat_data)) {
-            Log::Error("LoadMapFromDAT: DAT parse failed for map %d file_id=%u", (int)map_id, fid);
+            PATH_LOG_ERROR("LoadMapFromDAT: DAT parse failed for map %d file_id=%u", (int)map_id, fid);
             return nullptr;
         }
 
@@ -2007,7 +2015,7 @@ namespace {
             mp = GetMilepathForMap(map_id);
         }
         if (!mp) {
-            Log::Error("[AStar] map %d FAILED: GetMilepath returned null", (int)map_id);
+            PATH_LOG_ERROR("[AStar] map %d FAILED: GetMilepath returned null", (int)map_id);
             return false;
         }
 
@@ -2019,7 +2027,7 @@ namespace {
             return false;
         }
         if (mp->build_failed()) {
-            Log::Error("[AStar] map %d FAILED: MilePath build OOM'd", (int)map_id);
+            PATH_LOG_ERROR("[AStar] map %d FAILED: MilePath build OOM'd", (int)map_id);
             return false;
         }
 
@@ -2071,7 +2079,7 @@ namespace {
             return true;
         }
 
-        Log::Error("[AStar] map %d FAILED (direct + %d offset attempts)", (int)map_id, offset_attempts);
+        PATH_LOG_ERROR("[AStar] map %d FAILED (direct + %d offset attempts)", (int)map_id, offset_attempts);
         return false;
     }
 
@@ -2119,7 +2127,7 @@ namespace {
                     GW::GamePos prev_exit, this_entry;
                     const GW::GamePos* gg = (seg == route_copy.size() - 1) ? &goal_copy : nullptr;
                     if (!FindBestPortalPair(route_copy[seg - 1], map_id, last_portal_wm, prev_exit, this_entry, &last_seg_end, gg)) {
-                        Log::Error("No portal pair between map %d and %d", (int)route_copy[seg - 1], (int)map_id);
+                        PATH_LOG_ERROR("No portal pair between map %d and %d", (int)route_copy[seg - 1], (int)map_id);
                         return;
                     }
                     seg_from = this_entry;
@@ -2138,7 +2146,7 @@ namespace {
                     GW::Vec2f hint = last_portal_wm;
                     const GW::GamePos* gg = (seg == route_copy.size() - 2) ? &goal_copy : nullptr;
                     if (!FindBestPortalPair(map_id, route_copy[seg + 1], hint, this_exit, next_entry, &seg_from, gg)) {
-                        Log::Error("No portal pair between map %d and %d", (int)map_id, (int)route_copy[seg + 1]);
+                        PATH_LOG_ERROR("No portal pair between map %d and %d", (int)map_id, (int)route_copy[seg + 1]);
                         return;
                     }
                     seg_to = this_exit;
@@ -2150,7 +2158,7 @@ namespace {
 
                 std::vector<GW::GamePos> seg_path;
                 if (!RunAStarOnMap(map_id, seg_from, seg_to, seg_path)) {
-                    Log::Error("AStar failed on segment %d (map %d)", (int)seg, (int)map_id);
+                    PATH_LOG_ERROR("AStar failed on segment %d (map %d)", (int)seg, (int)map_id);
                     return;
                 }
 
@@ -2244,7 +2252,7 @@ namespace {
                     GW::GamePos prev_exit, this_entry;
                     const GW::GamePos* gg = (seg == route.size() - 1) ? &goal : nullptr;
                     if (!FindBestPortalPair(route[seg - 1], map_id, last_portal_wm, prev_exit, this_entry, &last_seg_end, gg)) {
-                        Log::Error("No portal pair between map %d and %d", (int)route[seg - 1], (int)map_id);
+                        PATH_LOG_ERROR("No portal pair between map %d and %d", (int)route[seg - 1], (int)map_id);
                         blacklisted_edges.clear();
                         return false;
                     }
@@ -2259,7 +2267,7 @@ namespace {
                     GW::GamePos this_exit, next_entry;
                     const GW::GamePos* gg = (seg == route.size() - 2) ? &goal : nullptr;
                     if (!FindBestPortalPair(map_id, route[seg + 1], last_portal_wm, this_exit, next_entry, &seg_from, gg)) {
-                        Log::Error("No portal pair between map %d and %d", (int)map_id, (int)route[seg + 1]);
+                        PATH_LOG_ERROR("No portal pair between map %d and %d", (int)map_id, (int)route[seg + 1]);
                         blacklisted_edges.clear();
                         return false;
                     }
@@ -2350,7 +2358,7 @@ namespace {
             }
 
             if (attempt == max_retries) {
-                Log::Error("All %d route attempts failed from map %d to map %d", max_retries + 1, (int)from_map, (int)to_map);
+                PATH_LOG_ERROR("All %d route attempts failed from map %d to map %d", max_retries + 1, (int)from_map, (int)to_map);
             }
         }
         blacklisted_edges.clear();
@@ -2410,7 +2418,7 @@ namespace {
                 milepath = GetMilepathForMap(map_id);
             }
             if (!milepath) {
-                Log::Error("No milepath for map %d", (int)map_id);
+                PATH_LOG_ERROR("No milepath for map %d", (int)map_id);
                 return;
             }
             // Wait for vis graph to finish building
@@ -2429,12 +2437,12 @@ namespace {
                 return;
             }
             if (res != Pathing::Error::OK) {
-                Log::Error("Pathing failed; Pathing::Error code %d", res);
+                PATH_LOG_ERROR("Pathing failed; Pathing::Error code %d", res);
                 delete tmpAstar;
                 return;
             }
             if (!tmpAstar->m_path.ready()) {
-                Log::Error("Pathing failed; tmpAstar->m_path not ready");
+                PATH_LOG_ERROR("Pathing failed; tmpAstar->m_path not ready");
                 delete tmpAstar;
                 return;
             }
@@ -2734,7 +2742,7 @@ clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::Game
         const auto milepath = GetMilepathForCurrentMap();
         if (!milepath || !milepath->ready()) {
             if (milepath && milepath->build_failed()) {
-                Log::Error("Pathing failed; MilePath build OOM'd, visgraph unavailable");
+                PATH_LOG_ERROR("Pathing failed; MilePath build OOM'd, visgraph unavailable");
             }
             fire_empty();
             pending_worker_task = false;
@@ -2750,7 +2758,7 @@ clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::Game
             return;
         }
         if (res != Pathing::Error::OK) {
-            Log::Error("Pathing failed; Pathing::Error code %d", res);
+            PATH_LOG_ERROR("Pathing failed; Pathing::Error code %d", res);
             fire_empty();
             pending_worker_task = false;
             return;

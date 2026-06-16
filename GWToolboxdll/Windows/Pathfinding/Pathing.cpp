@@ -21,6 +21,13 @@
 #pragma warning(disable: 4189 4100)
 #endif
 
+// Pathing errors only reach chat in debug; in release they go to the log file.
+#ifdef _DEBUG
+#define PATH_LOG_ERROR(...) Log::Error(__VA_ARGS__)
+#else
+#define PATH_LOG_ERROR(...) Log::Log(__VA_ARGS__)
+#endif
+
 namespace {
     __forceinline float Cross(const GW::Vec2f& lhs, const GW::Vec2f& rhs)
     {
@@ -1257,7 +1264,7 @@ namespace Pathing {
                 createPortalPair(pt1, pt1_layer, pt2, pt2_layer, a, point1_viability, b, point2_viability, edge);
             }
             else {
-                Log::Error("linkTrapezoids(): edge == Edge::none");
+                PATH_LOG_ERROR("linkTrapezoids(): edge == Edge::none");
             }
         }
 
@@ -1894,7 +1901,7 @@ namespace Pathing {
             // could not link portals earlier because vis graph is cleared at the beginning of this function.
             for (const auto& dp : m_defferedPortalLinks) {
                 if (dp.m_enter >= points.size() || dp.m_exit >= points.size()) {
-                    Log::Error("[VisGraph] deferred portal link out of bounds: enter=%d exit=%d points=%d",
+                    PATH_LOG_ERROR("[VisGraph] deferred portal link out of bounds: enter=%d exit=%d points=%d",
                         (int)dp.m_enter, (int)dp.m_exit, (int)points.size());
                     continue;
                 }
@@ -1971,7 +1978,7 @@ namespace Pathing {
                 m_progress = 100;
             }
             catch (const std::bad_alloc&) {
-                Log::Error("[pathing] MilePath worker OOM (DAT build); marking build_failed");
+                PATH_LOG_ERROR("[pathing] MilePath worker OOM (DAT build); marking build_failed");
                 m_build_failed = true;
             }
             m_processing = false;
@@ -2044,7 +2051,7 @@ namespace Pathing {
             m_full_built = true;
         }
         catch (const std::bad_alloc&) {
-            Log::Error("[pathing] MilePath lazy full build OOM; marking build_failed");
+            PATH_LOG_ERROR("[pathing] MilePath lazy full build OOM; marking build_failed");
             m_build_failed = true;
         }
     }
@@ -2077,7 +2084,7 @@ namespace Pathing {
         int count = 0;
         while (curr != start_id) {
             if (count++ > 256) {
-                Log::Error("build path failed\n");
+                PATH_LOG_ERROR("build path failed\n");
                 return Error::BuildPathLengthExceeded;
             }
             const auto& p = mp->points[curr];
