@@ -119,6 +119,7 @@ namespace {
         std::vector<CustomRenderer::CustomLine*> minimap_lines{};
         GW::GamePos calculated_from{};
         clock_t calculated_at = 0;
+        clock_t route_failed_at = 0; // last failed compute; backs off retries of an unroutable marker
         GW::Constants::QuestID quest_id{};
         clock_t calculating = 0;
         GW::Vec2f goal_world{};        // world-map goal
@@ -226,10 +227,11 @@ namespace {
                             if (cqp && ok) {
                                 cqp->route_world = std::move(*pts);
                                 cqp->calculated_at = TIMER_INIT();
+                                cqp->route_failed_at = 0;
                                 cqp->calculating = 0;
                                 cqp->UpdateUI();
                             }
-                            else if (cqp) { cqp->calculating = 0; cqp->calculated_at = 0; }
+                            else if (cqp) { cqp->calculating = 0; cqp->calculated_at = TIMER_INIT(); cqp->route_failed_at = TIMER_INIT(); }
                             delete pts;
                         });
                     });
@@ -252,10 +254,11 @@ namespace {
                         cqp->route_world = std::move(*pts);
                         cqp->has_full_route = true;
                         cqp->calculated_at = TIMER_INIT();
+                        cqp->route_failed_at = 0;
                         cqp->calculating = 0;
                         cqp->UpdateUI();
                     }
-                    else if (cqp) { cqp->calculating = 0; cqp->calculated_at = 0; }
+                    else if (cqp) { cqp->calculating = 0; cqp->calculated_at = TIMER_INIT(); cqp->route_failed_at = TIMER_INIT(); }
                     delete pts;
                 });
             });
@@ -278,6 +281,11 @@ namespace {
                 Recalculate(from);
                 return false;
             }
+            // Marker couldn't be routed to — back off instead of recomputing (and
+            // re-logging) every tick. A goal/map change re-plots via RefreshQuestPath.
+            constexpr clock_t failed_route_backoff = 10000;
+            if (route_failed_at && TIMER_DIFF(route_failed_at) < failed_route_backoff)
+                return false;
             constexpr float recalculate_when_moved_further_than = 100.f * 100.f;
             if (GetSquareDistance(from, calculated_from) > recalculate_when_moved_further_than)
                 Recalculate(from);
@@ -384,11 +392,14 @@ namespace {
                 cqp->route_world.clear();
                 cqp->has_full_route = false;
                 cqp->calculated_at = 0;
+                cqp->route_failed_at = 0;
                 cqp->UpdateUI();
                 return;
             }
-            if (GetSquareDistance(goal, cqp->goal_world) > 10.f * 10.f)
-                cqp->has_full_route = false; // goal moved → re-plot the whole route
+            if (GetSquareDistance(goal, cqp->goal_world) > 10.f * 10.f) {
+                cqp->has_full_route = false;  // goal moved → re-plot the whole route
+                cqp->route_failed_at = 0;     // and give the new goal a clean retry
+            }
             cqp->goal_world = goal;
             cqp->Recalculate(*pos);
         });
