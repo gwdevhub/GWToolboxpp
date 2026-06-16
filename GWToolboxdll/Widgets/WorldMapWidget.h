@@ -52,6 +52,9 @@ public:
 
     static void ShowAllOutposts(bool show);
     static GW::Constants::MapID GetMapIdForLocation(const GW::Vec2f& world_map_pos, GW::Constants::MapID exclude_map_id = (GW::Constants::MapID)0);
+    // World-map position where `map_id`'s marker/label is shown (used to point a quest at
+    // its destination map when the objective is on another map). False if it has none.
+    static bool GetMapMarkerWorldPos(GW::Constants::MapID map_id, GW::Vec2f& out);
     // Convert between game and world-map coords for `map_id` (0 = current); game bounds
     // come from the cached DAT.
     static bool WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);
