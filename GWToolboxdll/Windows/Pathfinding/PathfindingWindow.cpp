@@ -2813,7 +2813,10 @@ namespace {
     {
         out.clear();
         const auto from_map = GW::Map::GetMapID();
-        const auto to_map = WorldMapWidget::GetMapIdForLocation(to_world);
+        // Prefer a direct same-map route when the goal lies within the current map's
+        // bounds — GetMapIdForLocation can otherwise resolve to an overlapping map.
+        const auto to_map = PathfindingWindow::IsWorldPosOnMap(to_world, from_map)
+            ? from_map : WorldMapWidget::GetMapIdForLocation(to_world);
         if (from_map == GW::Constants::MapID::None || to_map == GW::Constants::MapID::None) return false;
 
         GW::GamePos start;
