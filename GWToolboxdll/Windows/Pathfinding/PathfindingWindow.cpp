@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <atomic>
 #include <list>
 #include <mutex>
 #include <queue>
@@ -136,6 +137,7 @@ namespace {
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map); // forward decl (early)
     Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id); // forward decl (early)
     void BuildMapGraph(); // forward decl (early)
+    uint32_t CanonicalFileHash(uint32_t file_hash); // forward decl (early)
 
     // Cache of (owner_map, pos, other_map) -> AStar walk cost from pos to closest
     // portal in owner_map connecting to other_map. Cleared at the start of every
@@ -185,7 +187,7 @@ namespace {
         uint32_t fh = GetMapFileId(source_info.map_id);
         if (!fh) return;
         for (const auto& [file_hash, entries] : constant_maps_info) {
-            if ((uint32_t)file_hash != fh) continue;
+            if (CanonicalFileHash((uint32_t)file_hash) != fh) continue;
             for (const auto& entry : entries) {
                 auto mid = entry.map_id;
                 if (mid == source_info.map_id) continue;
@@ -477,10 +479,11 @@ namespace {
             (int)map_id, (int)dat_data.portal_props.size(),
             info.bounds_min.x, info.bounds_min.y, info.bounds_max.x, info.bounds_max.y);
 
-        // Collect all MapIDs sharing this file_hash so teleporters from any are included
+        // Collect all MapIDs sharing this (canonical) file_hash so teleporters from any
+        // — including same-place duplicates folded onto this representative — are included
         std::vector<GW::Constants::MapID> all_ids;
         for (const auto& [file_hash, entries] : constant_maps_info) {
-            if ((uint32_t)file_hash != fid) continue;
+            if (CanonicalFileHash((uint32_t)file_hash) != fid) continue;
             for (const auto& entry : entries)
                 all_ids.push_back(entry.map_id);
         }
@@ -932,11 +935,13 @@ namespace {
         map_graph_built = true;
         map_graph_nodes.clear();
 
-        // Collect maps, deduplicated by file_hash (same file = same physical map)
+        // Collect maps, deduplicated by canonical file_hash (same file — or a same-place
+        // duplicate, see CanonicalFileHash — = same physical map)
         std::set<uint32_t> seen_file_hashes;
         for (const auto& [file_hash, entries] : constant_maps_info) {
             if (!file_hash) continue;
-            if (seen_file_hashes.contains((uint32_t)file_hash)) continue;
+            const uint32_t fh = CanonicalFileHash((uint32_t)file_hash);
+            if (seen_file_hashes.contains(fh)) continue;
 
             // Pick first valid entry for this file_hash
             for (const auto& entry : entries) {
@@ -946,12 +951,12 @@ namespace {
                 ImRect bounds;
                 if (!GW::Map::GetMapWorldMapBounds(area, &bounds)) continue;
                 if (bounds.GetWidth() < 1.f || bounds.GetHeight() < 1.f) continue;
-                map_graph_nodes.push_back({map_id, (uint32_t)file_hash, bounds, area->continent});
+                map_graph_nodes.push_back({map_id, fh, bounds, area->continent});
                 if (IsInterestingMapForCacheTrace(map_id)) {
                     PATH_LOG_INFO("[CacheTrace] BuildMapGraph added mid=%d fh=0x%X bounds=(%.0f,%.0f)-(%.0f,%.0f) (path=constant_maps_info first)",
-                        (int)map_id, (uint32_t)file_hash, bounds.Min.x, bounds.Min.y, bounds.Max.x, bounds.Max.y);
+                        (int)map_id, fh, bounds.Min.x, bounds.Min.y, bounds.Max.x, bounds.Max.y);
                 }
-                seen_file_hashes.insert((uint32_t)file_hash);
+                seen_file_hashes.insert(fh);
                 break;
             }
         }
@@ -2486,7 +2491,66 @@ namespace {
 
     std::set<uint32_t> file_id_mismatch_warned; // maps already warned about
 
-    uint32_t GetMapFileId(GW::Constants::MapID map_id)
+    // Some areas ship as more than one map file at the same world-map spot (the same
+    // physical place in different states). On one continent, identical world bounds mean
+    // an interchangeable map, so we fold those file hashes onto a single representative —
+    // letting every file_hash-keyed cache, the route graph, and same-map checks treat them
+    // as one and avoid loading near-duplicates. Built once from the static map table.
+    std::unordered_map<uint32_t, uint32_t> canonical_file_hash;
+    std::atomic<bool> canonical_file_hash_built{false};
+    std::mutex canonical_file_hash_mutex;
+
+    void BuildCanonicalFileHashes()
+    {
+        // Built once under the lock, then read-only — so post-build finds need no lock.
+        std::lock_guard lock(canonical_file_hash_mutex);
+        if (canonical_file_hash_built.load(std::memory_order_acquire)) return;
+        canonical_file_hash.clear();
+
+        struct Group { GW::Continent continent; ImRect bounds; uint32_t rep; };
+        std::vector<Group> groups;
+        std::set<uint32_t> seen;
+        for (const auto& [file_hash, entries] : constant_maps_info) {
+            const uint32_t fh = (uint32_t)file_hash;
+            if (!fh || seen.contains(fh)) continue;
+            seen.insert(fh);
+            for (const auto& e : entries) {
+                const auto area = GW::Map::GetMapInfo(e.map_id);
+                ImRect b;
+                if (!area || !area->GetIsOnWorldMap() || !GW::Map::GetMapWorldMapBounds(area, &b)) continue;
+                if (b.GetWidth() < 1.f || b.GetHeight() < 1.f) continue;
+                constexpr float tol = 4.f; // world map units; identical placement only
+                uint32_t rep = fh;
+                for (const auto& g : groups) {
+                    if (g.continent != area->continent) continue;
+                    if (fabsf(g.bounds.Min.x - b.Min.x) <= tol && fabsf(g.bounds.Min.y - b.Min.y) <= tol &&
+                        fabsf(g.bounds.Max.x - b.Max.x) <= tol && fabsf(g.bounds.Max.y - b.Max.y) <= tol) {
+                        rep = g.rep;
+                        break;
+                    }
+                }
+                if (rep == fh) groups.push_back({area->continent, b, fh});
+                else PATH_LOG_INFO("[Canonical] file 0x%X -> 0x%X (same continent+bounds)", fh, rep);
+                canonical_file_hash[fh] = rep;
+                break;
+            }
+        }
+        canonical_file_hash_built.store(true, std::memory_order_release);
+    }
+
+    // Representative file_hash for `file_hash` (see BuildCanonicalFileHashes). Returns the
+    // input unchanged if it has no known world-map placement.
+    uint32_t CanonicalFileHash(uint32_t file_hash)
+    {
+        if (!file_hash) return 0;
+        if (!canonical_file_hash_built.load(std::memory_order_acquire))
+            BuildCanonicalFileHashes();
+        const auto it = canonical_file_hash.find(file_hash);
+        return it != canonical_file_hash.end() ? it->second : file_hash;
+    }
+
+    // Raw map_id -> file_hash. Prefer GetMapFileId, which folds same-place duplicates.
+    uint32_t GetRawMapFileId(GW::Constants::MapID map_id)
     {
         // Check runtime lookup table (populated from constant_maps_info + StoC packets)
         auto it = map_id_to_file_hash.find(map_id);
@@ -2544,6 +2608,11 @@ namespace {
         uint32_t result = runtime_fid ? runtime_fid : constant_fid;
         if (result) map_id_to_file_hash[map_id] = result;
         return result;
+    }
+
+    uint32_t GetMapFileId(GW::Constants::MapID map_id)
+    {
+        return CanonicalFileHash(GetRawMapFileId(map_id));
     }
 
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
