@@ -76,6 +76,14 @@ namespace {
     // Lazy: populated on first call to ClosestPortalTrapezoidDistanceInMap for a map.
     std::unordered_map<uint64_t, OpenTyria::TrapezoidPathfinder*> trapezoid_pf_by_coords;
 
+    // Serializes whole route computations. The route caches above (+ portal_walk_cache,
+    // blacklisted_edges) are global and assume one build at a time; since every quest path
+    // now drives its own worker, concurrent builds would read half-inserted MilePaths
+    // (allocated-but-zeroed trapezoids → crash). Held for the duration of a build; the
+    // game thread's readiness check try-locks so it never blocks. Recursive: the build's
+    // helpers re-enter via the same thread.
+    std::recursive_mutex route_mutex;
+
     // Cache of portal props per file_hash (lightweight, loaded on demand).
     std::unordered_map<uint32_t, std::vector<Pathing::PortalProp>> portal_props_cache;
 
@@ -2578,8 +2586,13 @@ namespace {
 
 bool PathfindingWindow::ReadyForPathing()
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) 
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         return false;
+    // GetMilepathForCurrentMap can create/insert into the route caches; don't touch them
+    // while a build holds route_mutex. Report not-ready instead of blocking the game thread
+    // (the caller retries next tick).
+    std::unique_lock route_lock(route_mutex, std::try_to_lock);
+    if (!route_lock.owns_lock()) return false;
     const auto m = GetMilepathForCurrentMap();
     return m && m->ready();
 }
@@ -3010,6 +3023,7 @@ void PathfindingWindow::ClearWorldMapRoute()
 bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>* out)
 {
     if (!out) return false;
+    std::lock_guard route_lock(route_mutex); // one build at a time; see route_mutex
     RouteJobScope job_scope; // defer eviction while we hold MilePath*
     return ComputeRoute(from_world, to_world, *out);
 }
@@ -3017,6 +3031,7 @@ bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Ve
 bool PathfindingWindow::RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out)
 {
     if (!out) return false;
+    std::lock_guard route_lock(route_mutex); // one build at a time; see route_mutex
     RouteJobScope job_scope; // defer eviction while we hold MilePath*
     return ComputeSegment(map_id, from, to, *out);
 }
