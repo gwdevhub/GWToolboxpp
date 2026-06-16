@@ -131,6 +131,7 @@ namespace {
     WorldMapWidget::Settings settings;
 
     bool show_elite_capture_locations[11];
+    bool show_elite_capture_locations_campaign[4]; // Core=0, Prophecies=1, Factions=2, Nightfall=3
     bool drawn = false;
 
     GW::MemoryPatcher view_all_outposts_patch;
@@ -624,6 +625,8 @@ namespace {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(boss.skill_id);
         if (!skill) return false;
         if (!show_elite_capture_locations[(uint32_t)skill->profession]) return false;
+        const auto campaign_idx = (uint32_t)map_info->campaign;
+        if (campaign_idx < _countof(show_elite_capture_locations_campaign) && !show_elite_capture_locations_campaign[campaign_idx]) return false;
         if (settings.hide_captured_elites) {
             const auto me = GW::Agents::GetControlledCharacter();
             if (me->primary == skill->profession || me->secondary == skill->profession) {
@@ -1032,6 +1035,9 @@ void WorldMapWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     for (size_t i = 0; i < _countof(show_elite_capture_locations); i++) {
         show_elite_capture_locations[i] = ((settings.show_elite_capture_locations_val >> i) & 0x1) != 0;
     }
+    for (size_t i = 0; i < _countof(show_elite_capture_locations_campaign); i++) {
+        show_elite_capture_locations_campaign[i] = ((settings.show_elite_capture_locations_campaign_val >> i) & 0x1) != 0;
+    }
     ShowAllOutposts(settings.showing_all_outposts);
 
 
@@ -1079,6 +1085,12 @@ void WorldMapWidget::SaveSettings(SettingsDoc& doc)
     for (size_t i = 0; i < _countof(show_elite_capture_locations); i++) {
         if (show_elite_capture_locations[i]) {
             settings.show_elite_capture_locations_val |= (1u << i);
+        }
+    }
+    settings.show_elite_capture_locations_campaign_val = 0;
+    for (size_t i = 0; i < _countof(show_elite_capture_locations_campaign); i++) {
+        if (show_elite_capture_locations_campaign[i]) {
+            settings.show_elite_capture_locations_campaign_val |= (1u << i);
         }
     }
     ToolboxWidget::SaveSettings(doc);
@@ -1168,6 +1180,19 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     ImGui::Checkbox("Show elite capture locations", &settings.show_any_elite_capture_locations);
     if (settings.show_any_elite_capture_locations) {
         ImGui::Indent();
+        constexpr const char* campaign_labels[] = {"Core", "Proph", "Fac", "NF"};
+        constexpr const char* campaign_tooltips[] = {"Core", "Prophecies", "Factions", "Nightfall"};
+        for (size_t i = 0; i < _countof(show_elite_capture_locations_campaign); i++) {
+            if (i != 0) ImGui::SameLine();
+            ImGui::PushID(100 + (int)i);
+            ImGui::PushStyleColor(ImGuiCol_Button, show_elite_capture_locations_campaign[i] ? completed_bg.Value : ImGui::GetStyleColorVec4(ImGuiCol_Button));
+            if (ImGui::SmallButton(campaign_labels[i])) {
+                show_elite_capture_locations_campaign[i] = !show_elite_capture_locations_campaign[i];
+            }
+            ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", campaign_tooltips[i]);
+            ImGui::PopID();
+        }
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0.f, 0.f});
         for (size_t i = 1; i < _countof(show_elite_capture_locations); i++) {
             const auto icon = Resources::GetProfessionIcon((GW::Constants::Profession)i);
