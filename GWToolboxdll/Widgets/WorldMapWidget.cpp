@@ -825,6 +825,12 @@ namespace {
         // The quest doesn't end in this map; the marker icon needs to be an arrow, and the actual marker needs to be positioned onto the label of the destination map
         const auto map_info = GW::Map::GetMapInfo(quest->map_to);
         if (!(map_info && map_info->continent == world_map_context->continent)) return false;
+        // Custom marker: we know its exact world-map position — plot it there directly
+        // rather than falling back to the destination map's label.
+        GW::Vec2f custom_wp;
+        if (QuestModule::GetCustomQuestMarkerWorldPos(quest->quest_id, custom_wp)) {
+            return draw_quest_marker(custom_wp);
+        }
         GW::Vec2f pos;
         if (WorldMapWidget::GamePosToWorldMap(quest->marker, pos)) {
             if (quest->map_to != GW::Map::GetMapID()) {
