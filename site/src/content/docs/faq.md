@@ -82,8 +82,17 @@ Please follow each of the steps below before asking for help. If something is st
 
 If you have a crash dump file, zip it up and attach it to your issue or send it to a developer on Discord.
 
-### GWToolbox++ just crashed and set my grandma's hair on fire! Help!
-Oops. Please start a bug issue at the [repository issue tracker](https://github.com/gwdevhub/GWToolboxpp/issues). If the error was not critical, a message box should have displayed with the title "GWToolbox++ Crash!". If the message box states that the dump file generated successfully, please go to your start menu search bar and type %LOCALAPPDATA%. Press enter, and your appdata folder should open. Navigate to the GWToolboxpp folder and find the most recent .dmp file created. If you are able to find the file, attach this file on your issue as it can help greatly with fixing the issue. Be sure to also include what you were doing in game at the time of the crash, and any other information that might help. If it is an issue we can solve we will get to fixing it when we can.
+### GWToolbox++ just crashed. How do I send a crash dump to the team?
+When Toolbox crashes it writes a **crash dump** — a `.dmp` file — that the developers can use to pinpoint the problem. To send it:
+
+1. Open a File Explorer window, paste `%USERPROFILE%\Documents\GWToolboxpp` into the address bar, and press enter.
+2. Open the folder named after your computer, then open the **`crashes`** folder.
+3. Find the most recent `.dmp` file (sorted by date), **zip it up**, and attach it either to a [new issue on the bug tracker](https://github.com/gwdevhub/GWToolboxpp/issues) or to a developer on Discord.
+4. Please also describe what you were doing in game when it crashed, and confirm which Toolbox version you were running.
+
+**Note:** the `GWToolbox.error.log` file that sits next to `GWToolbox.exe` is **not** the crash dump — it is the launcher's log and is usually 0 KB, which is normal. The file the team needs is the `.dmp` in the `crashes` folder above.
+
+If there is no recent `.dmp` file, Toolbox skipped creating one on purpose. In a crash, Toolbox will **not** write a dump if you are running an outdated version or have plugins loaded — update to the latest version from [gwtoolbox.com](https://gwtoolbox.com/) and disable plugins, then reproduce the crash to get a usable dump.
 
 ## In-game issues and how-to
 
