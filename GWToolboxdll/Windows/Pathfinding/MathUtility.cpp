@@ -47,7 +47,7 @@ namespace MathUtil {
 
     // Given three collinear points p, q, r, the function checks if
     // point q lies on line segment 'pr'
-    inline bool onSegment(const GW::Vec2f& p, const GW::Vec2f& q, const GW::Vec2f& r)
+    bool onSegment(const GW::Vec2f& p, const GW::Vec2f& q, const GW::Vec2f& r)
     {
         if (q.x <= (std::max)(p.x, r.x) && q.x >= (std::min)(p.x, r.x) &&
             q.y <= (std::max)(p.y, r.y) && q.y >= (std::min)(p.y, r.y))

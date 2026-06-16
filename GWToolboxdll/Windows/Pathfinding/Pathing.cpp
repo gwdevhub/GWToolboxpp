@@ -1683,7 +1683,9 @@ namespace Pathing {
             }
         }
 
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma optimize("gty", on) // Enable optimizations
+#endif
 
         struct VisGraphThreadStats {
             int viable_count = 0;
@@ -1903,7 +1905,9 @@ namespace Pathing {
                 if (dp.m_directionality == MapSpecific::Teleport::direction::both_ways) m_visGraph[dp.m_exit].emplace_back(dist * 0.01f, bp, dp.m_enter);
             }
         }
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma optimize("", on) // Restore global optimizations to project default
+#endif
 
         // Free build-only scratch once built (none are read at query time).
         // swap-with-empty releases capacity; clear() would keep the storage.

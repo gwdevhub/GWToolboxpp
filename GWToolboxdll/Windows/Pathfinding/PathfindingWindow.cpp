@@ -457,7 +457,12 @@ namespace {
     void UpdateBoundsLines();                                                                               // forward decl
     void UpdatePortalMarkers();                                                                             // forward decl
     void UpdateGraphEdgeLines();                                                                            // forward decl
-    std::vector<struct PortalPair> FindPortalPairs(GW::Constants::MapID map_a, GW::Constants::MapID map_b); // forward decl
+    struct PortalPair {
+        GW::GamePos pos_a, pos_b; // game coords in each map
+        GW::Vec2f wm_mid;         // world map midpoint
+        float pair_dist;          // world map distance between the two portals
+    };
+    std::vector<PortalPair> FindPortalPairs(GW::Constants::MapID map_a, GW::Constants::MapID map_b); // forward decl
     const struct CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                              // forward decl
     uint32_t GetMapFileId(GW::Constants::MapID map_id);                                                     // forward decl
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map);                   // forward decl
@@ -1505,12 +1510,6 @@ namespace {
 
 
     // A matched portal pair between two adjacent maps
-    struct PortalPair {
-        GW::GamePos pos_a, pos_b; // game coords in each map
-        GW::Vec2f wm_mid;         // world map midpoint
-        float pair_dist;          // world map distance between the two portals
-    };
-
     // Find all portal pairs between two adjacent maps, constrained to the overlap region
     std::vector<PortalPair> FindPortalPairs(GW::Constants::MapID map_a, GW::Constants::MapID map_b)
     {
