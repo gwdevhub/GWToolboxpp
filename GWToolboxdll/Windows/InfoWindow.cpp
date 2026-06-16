@@ -1,50 +1,50 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/Scanner.h>
 
-#include <GWCA/Context/MapContext.h>
-#include <GWCA/Context/GameplayContext.h>
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/GameplayContext.h>
+#include <GWCA/Context/MapContext.h>
 
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Camera.h>
+#include <GWCA/GameEntities/Frame.h>
+#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Pathing.h>
+#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Title.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Pathing.h>
-#include <GWCA/GameEntities/Frame.h>
 
 
+#include <GWCA/Context/AccountContext.h>
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
-#include <GWCA/Context/AccountContext.h>
 
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/EffectMgr.h>
-#include <GWCA/Managers/GuildMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
-#include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/EventMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/GuildMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -52,19 +52,19 @@
 #include <Windows/InfoWindow.h>
 #include <Windows/NotepadWindow.h>
 
-#include <Modules/ItemDescriptionHandler.h>
-#include <Modules/ResignLogModule.h>
-#include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/HallOfMonumentsModule.h>
+#include <Modules/ItemDescriptionHandler.h>
+#include <Modules/ResignLogModule.h>
 #include <Modules/Resources.h>
-#include <Utils/ToolboxUtils.h>
+#include <Modules/ToolboxSettings.h>
 #include <Utils/ArenaNetFileParser.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
-#include <Logger.h>
 #include <GWToolbox.h>
+#include <Logger.h>
 
 #include <CircurlarBuffer.h>
 #include <Widgets/WorldMapWidget.h>
@@ -95,6 +95,10 @@ namespace {
     bool record_event_messages = false;
     bool record_enc_strings = false;
 
+
+
+
+
     bool EncInfoField(const char* label, const wchar_t* enc_string)
     {
         std::string info_string;
@@ -117,6 +121,19 @@ namespace {
         va_end(vl);
         return ImGui::InputTextEx(label, nullptr, info_string, _countof(info_string), ImVec2(-160.f * ImGui::FontScale(), 0), ImGuiInputTextFlags_ReadOnly);
     }
+    bool FileIdField(const char* label, const uint32_t file_id)
+    {
+        wchar_t enc_string[8] = {0};
+        GW::UI::UInt32ToEncStr(file_id, enc_string, 8);
+        EncInfoField(label, enc_string);
+        std::string label2 = std::format("{} (File ID)", label);
+        InfoField(label2.c_str(), "0x%X", file_id);
+        return false;
+    }
+    bool FileIdField(const char* label, const wchar_t* enc_str)
+    {
+        return FileIdField(label, GW::UI::EncStrToUInt32(enc_str));
+    }
 
     void GetIdsFromFileId(const uint32_t param_1, short* param_2)
     {
@@ -124,46 +141,46 @@ namespace {
         *param_2 = static_cast<short>((param_1 - 1) % 0xff00) + 0x100;
     }
 
-    void DrawMapInfo(GW::Constants::MapID map_id) {
+    void DrawMapInfo(GW::Constants::MapID map_id)
+    {
         static char info_id[16];
         snprintf(info_id, _countof(info_id), "map_info_%d", map_id);
         ImGui::PushID(info_id);
         auto type = "";
         switch (GW::Map::GetInstanceType()) {
-        case GW::Constants::InstanceType::Outpost:
-            type = "Outpost\0\0\0";
-            break;
-        case GW::Constants::InstanceType::Explorable:
-            type = "Explorable";
-            break;
-        case GW::Constants::InstanceType::Loading:
-            type = "Loading\0\0\0";
-            break;
+            case GW::Constants::InstanceType::Outpost:
+                type = "Outpost\0\0\0";
+                break;
+            case GW::Constants::InstanceType::Explorable:
+                type = "Explorable";
+                break;
+            case GW::Constants::InstanceType::Loading:
+                type = "Loading\0\0\0";
+                break;
         }
         InfoField("Map ID", "%d", map_id);
         ImGui::ShowHelp("Map ID is unique for each area");
         InfoField("Map Region", "%d", GW::Map::GetRegion());
         InfoField("Map District", "%d", GW::Map::GetDistrict());
         InfoField("Map Type", type);
-        EncInfoField("Map File ID", mapfile);
+        FileIdField("Map File ID", mapfile);
         ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
         const GW::AreaInfo* map_info = GW::Map::GetMapInfo(map_id);
         if (map_info) {
             static wchar_t name_enc[8];
             if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8)) {
-                EncInfoField("Name Enc", name_enc);
+                FileIdField("Name Enc", name_enc);
                 InfoField("Name", "%s", Resources::DecodeStringId(map_info->name_id)->string().c_str());
             }
 
             static wchar_t desc_enc[8];
             if (GW::UI::UInt32ToEncStr(map_info->description_id, desc_enc, 8)) {
-                EncInfoField("Desc Enc", desc_enc);
+                FileIdField("Desc Enc", desc_enc);
                 InfoField("Desc", "%s", Resources::DecodeStringId(map_info->description_id)->string().c_str());
             }
         }
 
         if (ImGui::TreeNodeEx("Advanced##map_advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            
             if (map_info) {
                 InfoField("Campaign", "%d", map_info->campaign);
                 InfoField("Continent", "%d", map_info->continent);
@@ -280,7 +297,7 @@ namespace {
         InfoField("Bag/Slot", "%s", slot);
         InfoField("ModelID", "%d", item->model_id);
         InfoField("Name", "%s", name->string().c_str());
-        ImGui::Image(*Resources::GetItemImage(item), { 48,48 });
+        ImGui::Image(*Resources::GetItemImage(item), {48, 48});
         auto draw_advanced = [&, item] {
             InfoField("Addr", "%p", item);
             InfoField("Id", "%d", item->item_id);
@@ -348,10 +365,12 @@ namespace {
         InfoField("Speed (Relative)", "%.2f (%.2f) ", speed, speed > 0.f ? speed / 288.0f : 0.f);
         if (living) {
             InfoField(living->IsPlayer() ? "Player ID" : "Model ID", "%d", living->player_number);
-            ImGui::ShowHelp("Model ID is unique for each kind of agent.\n"
+            ImGui::ShowHelp(
+                "Model ID is unique for each kind of agent.\n"
                 "It is static and shared by the same agents.\n"
                 "When targeting players, this is Player ID instead, unique for each player in the instance.\n"
-                "For the purpose of targeting hotkeys and commands, use this value");
+                "For the purpose of targeting hotkeys and commands, use this value"
+            );
         }
         if (item && item_actual) {
             if (ImGui::TreeNodeEx("Item Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -471,8 +490,7 @@ namespace {
         }
         std::wstring buf;
         for (auto& partymember : *players) {
-            if (!ResignLogModule::PrintResignStatus(partymember.login_number, buf, true))
-                continue;
+            if (!ResignLogModule::PrintResignStatus(partymember.login_number, buf, true)) continue;
             ImGui::PushID(static_cast<int>(partymember.login_number));
             if (ImGui::Button("Send")) {
                 GW::Chat::SendChat('#', buf.c_str());
@@ -529,31 +547,31 @@ namespace {
 
 
     struct RecordedAsyncDecode {
-        std::wstring s; 
+        std::wstring s;
         void* cb;
         void* wParam;
         std::wstring decoded;
         std::string decoded_str;
     };
-    std::unordered_map<std::wstring,RecordedAsyncDecode*> enc_strings_recorded;
+    std::unordered_map<std::wstring, RecordedAsyncDecode*> enc_strings_recorded;
 
-    void OnRecordedAsyncDecode_Decoded(void* param, const wchar_t* decoded) {
+    void OnRecordedAsyncDecode_Decoded(void* param, const wchar_t* decoded)
+    {
         auto e = (RecordedAsyncDecode*)param;
         e->decoded = decoded;
         e->decoded_str = TextUtils::WStringToString(e->decoded);
     }
 
-    void __cdecl OnValidateAsyncDecodeStr(const wchar_t* s, void* cb, void* wParam) {
+    void __cdecl OnValidateAsyncDecodeStr(const wchar_t* s, void* cb, void* wParam)
+    {
         GW::Hook::EnterHook();
-        if (s && wcsncmp(s, L"\x8103\xBB3", 2) != 0 && wcsncmp(s, L"\x55b\x101", 2) != 0 
-            && enc_strings_recorded.find(s) == enc_strings_recorded.end()) {
+        if (s && wcsncmp(s, L"\x8103\xBB3", 2) != 0 && wcsncmp(s, L"\x55b\x101", 2) != 0 && enc_strings_recorded.find(s) == enc_strings_recorded.end()) {
             auto e = new RecordedAsyncDecode();
             e->s = s;
             e->cb = cb;
             e->wParam = wParam;
             enc_strings_recorded[s] = e;
             ValidateAsyncDecodeStr_Ret(e->s.c_str(), OnRecordedAsyncDecode_Decoded, e);
-                
         }
 
 
@@ -566,7 +584,8 @@ namespace {
     std::unordered_map<IDirect3DTexture9**, uint32_t> texture_file_ids;
     std::vector<IDirect3DTexture9**> textures_created;
 
-    bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
+    bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks)
+    {
         GW::Hook::EnterHook();
         auto res = GWCA_SendUIMessage_Ret(msgid, wParam, lParam, skip_hooks);
         if (record_ui_messages) ui_message_packets_recorded.add({msgid, wParam, lParam, skip_hooks});
@@ -574,22 +593,22 @@ namespace {
         return res;
     }
 
-    void OnEventMessage(GW::HookStatus*, GW::EventMgr::EventID event_id, void* packet, uint32_t packet_size) {
-        if (record_event_messages) 
-            event_message_packets_recorded.add({event_id, packet, packet_size});
+    void OnEventMessage(GW::HookStatus*, GW::EventMgr::EventID event_id, void* packet, uint32_t packet_size)
+    {
+        if (record_event_messages) event_message_packets_recorded.add({event_id, packet, packet_size});
     }
 
-    uint32_t FileHashToFileId(wchar_t* param_1) {
-        if (!param_1)
-            return 0;
-        if (((0xff < *param_1) && (0xff < param_1[1])) &&
-            ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
+    uint32_t FileHashToFileId(wchar_t* param_1)
+    {
+        if (!param_1) return 0;
+        if (((0xff < *param_1) && (0xff < param_1[1])) && ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
             return (*param_1 - 0xff00ff) + (uint32_t)param_1[1] * 0xff00;
         }
         return 0;
     }
 
-    uint32_t* OnCreateTexture(wchar_t* file_name, uint32_t flags) {
+    uint32_t* OnCreateTexture(wchar_t* file_name, uint32_t flags)
+    {
         GW::Hook::EnterHook();
         const auto out = CreateTexture_Ret(file_name, flags);
         uint32_t file_id = FileHashToFileId(file_name);
@@ -603,16 +622,15 @@ namespace {
         return out;
     }
 
-    void HookOnValidateAsyncDecodeStr(bool hook) {
-        if (hook && ValidateAsyncDecodeStr_Func)
-            return;
+    void HookOnValidateAsyncDecodeStr(bool hook)
+    {
+        if (hook && ValidateAsyncDecodeStr_Func) return;
         if (hook) {
             ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE"));
             if (ValidateAsyncDecodeStr_Func) {
                 GW::Hook::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
                 GW::Hook::EnableHooks(ValidateAsyncDecodeStr_Func);
             }
-
         }
         else if (ValidateAsyncDecodeStr_Func) {
             GW::Hook::RemoveHook(ValidateAsyncDecodeStr_Func);
@@ -623,18 +641,17 @@ namespace {
             ValidateAsyncDecodeStr_Func = 0;
         }
     }
-    void HookOnCreateTexture(bool hook) {
-        if (hook && CreateTexture_Func)
-            return;
+    void HookOnCreateTexture(bool hook)
+    {
+        if (hook && CreateTexture_Func) return;
         if (hook) {
-            CreateTexture_Func = (CreateTexture_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GrTex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", 0,0));
+            CreateTexture_Func = (CreateTexture_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GrTex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", 0, 0));
             if (CreateTexture_Func) {
                 GW::Hook::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
                 GW::Hook::EnableHooks(CreateTexture_Func);
             }
-
         }
-        else if(CreateTexture_Func) {
+        else if (CreateTexture_Func) {
             GW::Hook::RemoveHook(CreateTexture_Func);
             CreateTexture_Func = 0;
             textures_created_by_file_id.clear();
@@ -642,9 +659,9 @@ namespace {
             texture_file_ids.clear();
         }
     }
-    void HookOnGWCASendUIMessage(bool hook) {
-        if (hook && GWCA_SendUIMessage_Func)
-            return;
+    void HookOnGWCASendUIMessage(bool hook)
+    {
+        if (hook && GWCA_SendUIMessage_Func) return;
         if (hook) {
             GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
             if (GWCA_SendUIMessage_Func) {
@@ -677,13 +694,14 @@ namespace {
         }
     }
 
-    void HighlightFrame(GW::UI::Frame* frame) {
+    void HighlightFrame(GW::UI::Frame* frame)
+    {
         if (!frame) return;
         const auto root = GW::UI::GetRootFrame();
         const auto top_left = frame->position.GetTopLeftOnScreen(root);
         const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
         const auto draw_list = ImGui::GetBackgroundDrawList();
-        draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, IM_COL32_WHITE);
+        draw_list->AddRect({top_left.x, top_left.y}, {bottom_right.x, bottom_right.y}, IM_COL32_WHITE);
     }
 
     typedef void(__cdecl* SetFpsLimits_pt)(uint32_t target_fps);
@@ -713,10 +731,8 @@ namespace {
             wchar_t** language_files = &file_ids[language_id * 99];
             for (size_t file_idx = 0; file_idx < 99; file_idx++) {
                 const auto file_name = language_files[file_idx];
-                if (!(file_name && *file_name)) 
-                    continue;
-                if (!asset.readFromDat(file_name)) 
-                    return false;
+                if (!(file_name && *file_name)) continue;
+                if (!asset.readFromDat(file_name)) return false;
                 const auto filename = std::format("language_file_{}_{}.txt", language_id, file_idx);
                 const auto write_to = Resources::GetPath("language_files", filename);
 
@@ -729,7 +745,8 @@ namespace {
         return true;
     }
 
-    void PostDraw() {
+    void PostDraw()
+    {
         HookOnCreateTexture(record_textures);
         HookOnValidateAsyncDecodeStr(record_enc_strings);
         HookOnGWCASendUIMessage(record_ui_messages);
@@ -737,12 +754,12 @@ namespace {
     }
     const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
-        if (!(prop && prop->h0034[4]))
-            return 0;
+        if (!(prop && prop->h0034[4])) return 0;
         uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
         return ArenaNetFileParser::FileHashToFileId((wchar_t*)sub_deets[1]);
     };
-    void DrawDebugInfo() {
+    void DrawDebugInfo()
+    {
         if (!SetFpsLimits_Func) {
             SetFpsLimits_Func = (SetFpsLimits_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x68\x40\x42\x0f\x00\xe8", "xxxxxx"));
             if (SetFpsLimits_Func) {
@@ -761,11 +778,11 @@ namespace {
             ImGui::TextUnformatted("Value 2");
             for (const auto& feature : features) {
                 ImGui::PushID(feature.id);
-                ImGui::Text("0x%x",feature.id);
+                ImGui::Text("0x%x", feature.id);
                 ImGui::SameLine();
-                ImGui::Text("%d",feature.unk1);
+                ImGui::Text("%d", feature.unk1);
                 ImGui::SameLine();
-                ImGui::Text("%d",feature.unk2);
+                ImGui::Text("%d", feature.unk2);
                 ImGui::PopID();
             }
         }
@@ -775,7 +792,7 @@ namespace {
             DrawItemInfo(GW::Items::GetItemById(quoted_item_id), &quoted_name);
         }
 
-        
+
         if (ImGui::CollapsingHeader("UI Message Log")) {
             record_ui_messages = true;
             ImGui::PushID("ui_message_packets_recorded");
@@ -803,7 +820,7 @@ namespace {
             }
         }
 
-        
+
 
         if (ImGui::CollapsingHeader("Async Str Log")) {
             record_enc_strings = true;
@@ -835,9 +852,8 @@ namespace {
                 ImGui::Separator();
                 for (size_t i = 0, cnt = props->size(); i < cnt; i++) {
                     const auto& prop = (*props)[i];
-                    float distance = GW::GetDistance(target->pos, GW::GamePos({ prop->position.x,prop->position.y,0 }));
-                    if (distance > range)
-                        continue;
+                    float distance = GW::GetDistance(target->pos, GW::GamePos({prop->position.x, prop->position.y, 0}));
+                    if (distance > range) continue;
                     ImGui::PushID(i);
                     ImGui::Text("%08X", GetMapPropModelFileId(prop));
                     ImGui::SameLine(128.f);
@@ -845,7 +861,7 @@ namespace {
                     ImGui::SameLine(256.f);
                     const auto label = std::format("{}, {}", prop->position.x, prop->position.y);
                     if (ImGui::Button(label.c_str())) {
-                        GW::Map::PingCompass(GW::GamePos({ prop->position.x, prop->position.y ,0 }));
+                        GW::Map::PingCompass(GW::GamePos({prop->position.x, prop->position.y, 0}));
                     }
                     ImGui::PopID();
                 }
@@ -854,7 +870,7 @@ namespace {
         }
         if (ImGui::CollapsingHeader("Loaded Textures by GW File")) {
             record_textures = true;
-            constexpr ImVec2 scaled_size = { 64.f, 64.f };
+            constexpr ImVec2 scaled_size = {64.f, 64.f};
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
             constexpr auto uv0 = ImVec2(0, 0);
@@ -905,7 +921,7 @@ namespace {
                             return false;
                         }
                         return true;
-                        });
+                    });
                 }
                 ImGui::PopID();
             }
@@ -931,14 +947,14 @@ namespace {
                 packet.state_flags = 0x6; // Ctrl and shift
                 GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6), GW::UI::UIMessage::kKeyDown, &packet);
                 GW::GetCharContext()->player_flags ^= 0x8;
-                });
+            });
         }
         if (ImGui::Button("Open GM Start Menu?")) {
             GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::SendUIMessage((GW::UI::UIMessage)0x1000008a, 0, 0);
-                //GW::GetCharContext()->player_flags ^= 0x8;
-                });
+                // GW::GetCharContext()->player_flags ^= 0x8;
+            });
         }
         // DownloadStringFiles
         if (ImGui::Button("DownloadStringFiles")) {
@@ -966,25 +982,26 @@ namespace {
         [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
         [[maybe_unused]] const auto ac = me_player ? GW::AccountMgr::GetAvailableCharacter(me_player->name) : nullptr;
         [[maybe_unused]] const auto gpc = GW::GetGameplayContext();
-        
+
 
         [[maybe_unused]] const auto mission_map_context = GW::Map::GetMissionMapContext();
         [[maybe_unused]] const auto mission_map_frame = mission_map_context ? GW::UI::GetFrameById(mission_map_context->frame_id) : nullptr;
         [[maybe_unused]] const auto world_map_context = GW::Map::GetWorldMapContext();
 
-        [[maybe_unused]]  const auto campaign = ac ? ac->campaign() : (GW::Constants::Campaign)0;
-        [[maybe_unused]]  const auto level = ac ? ac->level() : 0;
+        [[maybe_unused]] const auto campaign = ac ? ac->campaign() : (GW::Constants::Campaign)0;
+        [[maybe_unused]] const auto level = ac ? ac->level() : 0;
         [[maybe_unused]] const auto primary = ac ? ac->primary() : (GW::Constants::Profession)0;
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : (GW::Constants::Profession)0;
         [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
-        auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0,0,2);
-        HighlightFrame(frame); 
+        auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
+        HighlightFrame(frame);
 
 #endif
     }
 
-    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*)
+    {
         switch (message_id) {
             case GW::UI::UIMessage::kLoadMapContext: {
                 const auto packet = (GW::UI::UIPacket::kLoadMapContext*)wParam;
@@ -993,7 +1010,7 @@ namespace {
         }
     }
 
-}
+} // namespace
 
 void InfoWindow::Terminate()
 {
@@ -1006,7 +1023,8 @@ void InfoWindow::Terminate()
     HookOnCreateTexture(false);
     HookOnGWCASendUIMessage(false);
 }
-void InfoWindow::SignalTerminate() {
+void InfoWindow::SignalTerminate()
+{
     visible = false;
 }
 
@@ -1018,10 +1036,9 @@ void InfoWindow::Initialize()
     ui_message_packets_recorded = CircularBuffer<UIMessagePacket>(512);
     event_message_packets_recorded = CircularBuffer<EventPacket>(512);
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
-                                                                        [this](GW::HookStatus*, const GW::Packet::StoC::QuotedItemPrice* packet) -> void {
-                                                                            quoted_item_id = packet->itemid;
-                                                                        });
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::QuotedItemPrice* packet) -> void {
+        quoted_item_id = packet->itemid;
+    });
     RegisterUIMessageCallback(&InstanceLoadFile_Entry, GW::UI::UIMessage::kLoadMapContext, OnPostUIMessage, 0x8000);
 }
 
@@ -1049,7 +1066,6 @@ void InfoWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-
         if (settings.show_widgets) {
             const auto& widgets = GWToolbox::GetWidgets();
 
@@ -1103,8 +1119,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             static int map_id = 0;
             ImGui::InputInt("Map ID", &map_id, 1, 1);
             const auto current = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
-            if(current)
-                DrawMapInfo(static_cast<GW::Constants::MapID>(map_id));
+            if (current) DrawMapInfo(static_cast<GW::Constants::MapID>(map_id));
         }
         if (settings.show_dialog && ImGui::CollapsingHeader("Dialog")) {
             EncInfoField("Dialog Body", DialogModule::GetDialogBody());
@@ -1143,8 +1158,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             static int skill_id = 0;
             ImGui::InputInt("Skill ID", &skill_id, 1, 1);
             const auto current = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
-            if(current)
-                DrawSkillInfo(current, &skill_name, true);
+            if (current) DrawSkillInfo(current, &skill_name, true);
         }
         if (settings.show_item && ImGui::CollapsingHeader("Hovered Item")) {
             static GuiUtils::EncString item_name;
@@ -1201,9 +1215,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             int compass_count = 0;
             GW::AgentArray* agents = GW::Agents::GetAgentArray();
             const GW::Agent* player = GW::Agents::GetObservingAgent();
-            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-                && agents
-                && player != nullptr) {
+            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && agents && player != nullptr) {
                 for (auto* a : *agents) {
                     const GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
                     if (!(agent && agent->allegiance == GW::Constants::Allegiance::Enemy)) {
@@ -1213,10 +1225,8 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                         continue; // ignore dead
                     }
                     const float sqrd = GetSquareDistance(player->pos, agent->pos);
-                    if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
-                        || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
-                        if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
-                            && sqrd < sqr_soul_range) {
+                    if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
+                        if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && sqrd < sqr_soul_range) {
                             ++soul_count;
                         }
                     }
@@ -1238,9 +1248,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::Text("%d foes in spirit range", spirit_count);
             ImGui::Text("%d foes in compass range", compass_count);
         }
-        if (settings.show_resignlog 
-            && ImGui::CollapsingHeader("Resign Log") 
-            && GWToolbox::IsModuleEnabled("Resign Log")) {
+        if (settings.show_resignlog && ImGui::CollapsingHeader("Resign Log") && GWToolbox::IsModuleEnabled("Resign Log")) {
             DrawResignlog();
         }
     }
@@ -1276,5 +1284,3 @@ void InfoWindow::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show Resign Log", &settings.show_resignlog);
 }
-
-

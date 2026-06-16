@@ -13,11 +13,11 @@
 #include <GWCA/GameEntities/NPC.h>
 
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
-#include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Timer.h>
 #include <filesystem>
@@ -29,24 +29,24 @@
 #include <Utils/EncString.h>
 #include <Utils/TextUtils.h>
 
-#include <Windows/Pathfinding/PathfindingWindow.h>
-#include <Windows/Pathfinding/Pathing.h>
-#include <Widgets/Minimap/Minimap.h>
-#include <Modules/Resources.h>
 #include <GWCA/Context/GameplayContext.h>
 #include <GWCA/Context/MapContext.h>
+#include <Modules/Resources.h>
 #include <Utils/ArenaNetFileParser.h>
+#include <Widgets/Minimap/Minimap.h>
+#include <Windows/Pathfinding/PathfindingWindow.h>
+#include <Windows/Pathfinding/Pathing.h>
 
+#include "OpenTyriaPathfinder.h"
 #include "PathingMapData.h"
 #include "PathingMapDataLoader.h"
 #include "PortalConnections.h"
 #include "maps_constant_data.h"
-#include "OpenTyriaPathfinder.h"
 
-#include <Utils/ToolboxUtils.h>
-#include <Widgets/WorldMapWidget.h>
-#include <Widgets/MissionMapWidget.h>
 #include <GWCA/Context/WorldContext.h>
+#include <Utils/ToolboxUtils.h>
+#include <Widgets/MissionMapWidget.h>
+#include <Widgets/WorldMapWidget.h>
 
 // Define PATHING_VERBOSE to re-enable pathfinding's per-frame Log::Info chatter
 // ([GetAdj]/[Dijkstra]/[CacheTrace]/[AStar:los|ok]/etc.). Errors and warnings
@@ -59,7 +59,7 @@
 // Locals/params like `auto* nm = Resources::GetMapName(...)` and the
 // `caller` arg of EnsureLightweightMapInfo exist only to be formatted into
 // PATH_LOG_INFO; with logging compiled out they're unused.
-#pragma warning(disable: 4189 4100)
+#pragma warning(disable : 4189 4100)
 #endif
 
 namespace {
@@ -116,16 +116,26 @@ namespace {
     // then trims the cache once done (on the main thread — eviction erases cached_map_info
     // which the renderer reads there).
     struct RouteJobScope {
-        RouteJobScope() { std::lock_guard lock(lru_mutex); ++route_jobs_active; }
-        ~RouteJobScope() {
-            { std::lock_guard lock(lru_mutex); --route_jobs_active; }
-            Resources::EnqueueMainTask([] { EnforceCacheLimitIfIdle(); });
+        RouteJobScope()
+        {
+            std::lock_guard lock(lru_mutex);
+            ++route_jobs_active;
+        }
+        ~RouteJobScope()
+        {
+            {
+                std::lock_guard lock(lru_mutex);
+                --route_jobs_active;
+            }
+            Resources::EnqueueMainTask([] {
+                EnforceCacheLimitIfIdle();
+            });
         }
         RouteJobScope(const RouteJobScope&) = delete;
         RouteJobScope& operator=(const RouteJobScope&) = delete;
     };
 
-    bool draw_map_bounds = true;
+    bool draw_map_bounds = false;
     bool draw_graph_edges = false;
     bool draw_portals = false;
     // Distance metric used by the multi-map route picker for portal-portal hops.
@@ -135,9 +145,9 @@ namespace {
     enum class PortalDistanceMode { Euclidean = 0, Trapezoid = 1, Walk = 2 };
     PortalDistanceMode portal_distance_mode = PortalDistanceMode::Trapezoid;
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map); // forward decl (early)
-    Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id); // forward decl (early)
-    void BuildMapGraph(); // forward decl (early)
-    uint32_t CanonicalFileHash(uint32_t file_hash); // forward decl (early)
+    Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id);                       // forward decl (early)
+    void BuildMapGraph();                                                                 // forward decl (early)
+    uint32_t CanonicalFileHash(uint32_t file_hash);                                       // forward decl (early)
 
     // Cache of (owner_map, pos, other_map) -> AStar walk cost from pos to closest
     // portal in owner_map connecting to other_map. Cleared at the start of every
@@ -151,7 +161,8 @@ namespace {
         bool operator==(const PortalWalkKey& o) const = default;
     };
     struct PortalWalkKeyHash {
-        size_t operator()(const PortalWalkKey& k) const {
+        size_t operator()(const PortalWalkKey& k) const
+        {
             size_t h = std::hash<uint32_t>{}(k.mode);
             h = h * 31 + std::hash<uint32_t>{}(k.owner);
             h = h * 31 + std::hash<uint32_t>{}(k.other);
@@ -161,18 +172,19 @@ namespace {
         }
     };
     std::unordered_map<PortalWalkKey, float, PortalWalkKeyHash> portal_walk_cache;
-    void ClearEditorHighlightLines(); // forward decl (early)
-    void UpdatePortalMarkers(); // forward decl (early)
-    void UpdateBoundsLines(); // forward decl (early)
+    void ClearEditorHighlightLines();                                                     // forward decl (early)
+    void UpdatePortalMarkers();                                                           // forward decl (early)
+    void UpdateBoundsLines();                                                             // forward decl (early)
     void EnsureLightweightMapInfo(GW::Constants::MapID map_id, const char* caller = "?"); // forward decl (early)
-    const CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id); // forward decl (early)
-    uint32_t GetMapFileId(GW::Constants::MapID map_id); // forward decl (early)
+    const CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                   // forward decl (early)
+    uint32_t GetMapFileId(GW::Constants::MapID map_id);                                   // forward decl (early)
 
     bool IsOutpostMap(GW::Constants::MapID map_id); // forward decl
 
     // Diagnostic: log only when interesting MapIDs are touched. Bump this set if
     // you're chasing a different unintended-load case. Empty means log everything.
-    inline bool IsInterestingMapForCacheTrace(GW::Constants::MapID mid) {
+    inline bool IsInterestingMapForCacheTrace(GW::Constants::MapID mid)
+    {
         return mid == (GW::Constants::MapID)114 || mid == (GW::Constants::MapID)153;
     }
 
@@ -195,7 +207,10 @@ namespace {
                 // Check if this MapID already has an entry
                 bool exists = false;
                 for (const auto& [h, inf] : cached_map_info) {
-                    if (inf.map_id == mid) { exists = true; break; }
+                    if (inf.map_id == mid) {
+                        exists = true;
+                        break;
+                    }
                 }
                 if (exists) continue;
                 uint64_t new_hash = static_cast<uint64_t>(fh) | (static_cast<uint64_t>((uint32_t)mid) << 32);
@@ -206,8 +221,7 @@ namespace {
                 shared.portal_props = source_info.portal_props;
                 cached_map_info[new_hash] = shared;
                 if (IsInterestingMapForCacheTrace(mid)) {
-                    PATH_LOG_INFO("[CacheTrace] CacheSharedFileHashMaps spread mid=%d source=%d fh=0x%X",
-                        (int)mid, (int)source_info.map_id, fh);
+                    PATH_LOG_INFO("[CacheTrace] CacheSharedFileHashMaps spread mid=%d source=%d fh=0x%X", (int)mid, (int)source_info.map_id, fh);
                 }
             }
         }
@@ -262,7 +276,8 @@ namespace {
                 evicted.push_back(*it);
                 --over;
             }
-            for (uint64_t key : evicted) EvictMapByKey(key);
+            for (uint64_t key : evicted)
+                EvictMapByKey(key);
         }
         if (!evicted.empty()) {
             // Evicted maps' bounds/portal lines need a refresh (main-thread line pool).
@@ -307,7 +322,7 @@ namespace {
     // =========================================================================
     struct EndpointEditorState {
         EditorEndpoint endpoint;
-        int type = 0;               // ConnectionType combo index
+        int type = 0; // ConnectionType combo index
         EditorNpcFields npc;
         char search_buf[128] = {};
         MapSearchState search_state;
@@ -325,8 +340,8 @@ namespace {
     ConnectionEditorState editor;
 
     // Backward-compat references so existing code doesn't need mass-rename.
-    auto& editor_from       = editor.from.endpoint;
-    auto& editor_to         = editor.to.endpoint;
+    auto& editor_from = editor.from.endpoint;
+    auto& editor_to = editor.to.endpoint;
 
     bool pending_connection_lines_update = false;
 
@@ -338,12 +353,14 @@ namespace {
     // (the authoritative live-list) and never dereferences the queue itself.
     std::vector<CustomRenderer::CustomLine*> pending_line_removals;
 
-    void DeferRemoveLines(std::vector<CustomRenderer::CustomLine*>& lines) {
+    void DeferRemoveLines(std::vector<CustomRenderer::CustomLine*>& lines)
+    {
         pending_line_removals.insert(pending_line_removals.end(), lines.begin(), lines.end());
         lines.clear();
     }
 
-    void ProcessDeferredRemovals() {
+    void ProcessDeferredRemovals()
+    {
         if (pending_line_removals.empty()) return;
         auto& cr = Minimap::Instance().custom_renderer;
         for (auto* line : pending_line_removals) {
@@ -379,8 +396,7 @@ namespace {
             if (conn.campaign && conn.campaign != cur_continent_cl) continue;
 
             // Skip entries with missing world map coords
-            if ((conn.from_wm_pos.x == 0.f && conn.from_wm_pos.y == 0.f) ||
-                (conn.to_wm_pos.x == 0.f && conn.to_wm_pos.y == 0.f)) continue;
+            if ((conn.from_wm_pos.x == 0.f && conn.from_wm_pos.y == 0.f) || (conn.to_wm_pos.x == 0.f && conn.to_wm_pos.y == 0.f)) continue;
 
             GW::GamePos p1{}, p2{};
             if (!WorldMapWidget::WorldMapToGamePos(conn.from_wm_pos, p1)) continue;
@@ -390,10 +406,18 @@ namespace {
             // Color by the "most notable" endpoint type
             auto notable_type = (conn.from_type > conn.to_type) ? conn.from_type : conn.to_type;
             switch (notable_type) {
-                case Pathing::ConnectionType::Disabled: line->color = 0xFFFF0000; break;
-                case Pathing::ConnectionType::NPC:      line->color = 0xFF4488FF; break;
-                case Pathing::ConnectionType::Dummy:    line->color = 0xFFFFAA00; break;
-                default:                                line->color = 0xFF00FF00; break;
+                case Pathing::ConnectionType::Disabled:
+                    line->color = 0xFFFF0000;
+                    break;
+                case Pathing::ConnectionType::NPC:
+                    line->color = 0xFF4488FF;
+                    break;
+                case Pathing::ConnectionType::Dummy:
+                    line->color = 0xFFFFAA00;
+                    break;
+                default:
+                    line->color = 0xFF00FF00;
+                    break;
             }
             line->draw_on_mission_map = true;
             line->draw_on_minimap = false;
@@ -430,13 +454,13 @@ namespace {
 
 
 
-    void UpdateBoundsLines(); // forward decl
-    void UpdatePortalMarkers(); // forward decl
-    void UpdateGraphEdgeLines(); // forward decl
+    void UpdateBoundsLines();                                                                               // forward decl
+    void UpdatePortalMarkers();                                                                             // forward decl
+    void UpdateGraphEdgeLines();                                                                            // forward decl
     std::vector<struct PortalPair> FindPortalPairs(GW::Constants::MapID map_a, GW::Constants::MapID map_b); // forward decl
-    const struct CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id); // forward decl
-    uint32_t GetMapFileId(GW::Constants::MapID map_id); // forward decl
-    GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map); // forward decl
+    const struct CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                              // forward decl
+    uint32_t GetMapFileId(GW::Constants::MapID map_id);                                                     // forward decl
+    GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map);                   // forward decl
 
     // Load a map from DAT and create a MilePath for it. Returns the MilePath (may still be processing).
     Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id)
@@ -475,9 +499,7 @@ namespace {
         cached_map_info[hash] = info;
         CacheSharedFileHashMaps(info);
 
-        PATH_LOG_INFO("Loaded DAT for map %d: %d portal props, bounds=(%.0f,%.0f)-(%.0f,%.0f)",
-            (int)map_id, (int)dat_data.portal_props.size(),
-            info.bounds_min.x, info.bounds_min.y, info.bounds_max.x, info.bounds_max.y);
+        PATH_LOG_INFO("Loaded DAT for map %d: %d portal props, bounds=(%.0f,%.0f)-(%.0f,%.0f)", (int)map_id, (int)dat_data.portal_props.size(), info.bounds_min.x, info.bounds_min.y, info.bounds_max.x, info.bounds_max.y);
 
         // Collect all MapIDs sharing this (canonical) file_hash so teleporters from any
         // — including same-place duplicates folded onto this representative — are included
@@ -542,13 +564,12 @@ namespace {
     // Returns milepath pointer for the current map, nullptr if we're not in a valid state
     Pathing::MilePath* GetMilepathForCurrentMap()
     {
-        //todo: maybe use bool GetIsMapReady() from other modules?
+        // todo: maybe use bool GetIsMapReady() from other modules?
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
         const auto map_id = GW::Map::GetMapID();
         if (map_id == GW::Constants::MapID::None) return nullptr;
         // Prefer DAT (shared with coordinate bounds); fall back to map context only with no file_id.
-        if (GetMapFileId(map_id))
-            return LoadMapFromDAT(map_id);
+        if (GetMapFileId(map_id)) return LoadMapFromDAT(map_id);
         return LoadMapFromContext(map_id);
     }
 
@@ -620,8 +641,7 @@ namespace {
 
             for (const auto& pp : info.portal_props) {
                 bool connected = IsPortalConnected(info.map_id, {pp.pos.x, pp.pos.y});
-                bool selected = matches_editor(info.map_id, {pp.pos.x, pp.pos.y}, editor_from) ||
-                                matches_editor(info.map_id, {pp.pos.x, pp.pos.y}, editor_to);
+                bool selected = matches_editor(info.map_id, {pp.pos.x, pp.pos.y}, editor_from) || matches_editor(info.map_id, {pp.pos.x, pp.pos.y}, editor_to);
                 DWORD color = connected ? 0xFF00FF00 : 0xFFFF8000;
                 float sz = connected ? sz_connected : sz_default;
                 if (selected) sz += sz_selected_bump;
@@ -746,12 +766,10 @@ namespace {
     // Convert a game pos from a source map to current map coords via world map
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map)
     {
-        if (src_map == GW::Map::GetMapID() || src_map == GW::Constants::MapID::None)
-            return pos;
+        if (src_map == GW::Map::GetMapID() || src_map == GW::Constants::MapID::None) return pos;
         GW::Vec2f world_pos;
         GW::GamePos cur_pos;
-        if (WorldMapWidget::GamePosToWorldMap(pos, world_pos, src_map) &&
-            WorldMapWidget::WorldMapToGamePos(world_pos, cur_pos)) {
+        if (WorldMapWidget::GamePosToWorldMap(pos, world_pos, src_map) && WorldMapWidget::WorldMapToGamePos(world_pos, cur_pos)) {
             cur_pos.zplane = pos.zplane;
             return cur_pos;
         }
@@ -768,7 +786,7 @@ namespace {
         }
         if (to.x != 0.f || to.y != 0.f) {
             auto display_to = ToCurrentMapCoords(to, path_to_map);
-            AddMarkerCross(display_to, 0xFFFF0000, cur_map);   // red
+            AddMarkerCross(display_to, 0xFFFF0000, cur_map); // red
         }
     }
 
@@ -779,8 +797,14 @@ namespace {
     // here". Inserted between segments when an intermediate map is "underground"
     // (its entry and exit transitions are both no_draw connections).
     constexpr float PATH_BREAK_VALUE = FLT_MAX;
-    inline bool IsPathBreak(const GW::GamePos& p) { return p.x == PATH_BREAK_VALUE; }
-    inline bool IsPathBreak(const GW::Vec2f& p) { return p.x == PATH_BREAK_VALUE; }
+    inline bool IsPathBreak(const GW::GamePos& p)
+    {
+        return p.x == PATH_BREAK_VALUE;
+    }
+    inline bool IsPathBreak(const GW::Vec2f& p)
+    {
+        return p.x == PATH_BREAK_VALUE;
+    }
 
     // A path segment hidden from the world map (because its map is underground)
     // but kept in native coords + native map tag so the in-game terrain, minimap,
@@ -812,32 +836,34 @@ namespace {
 
     // src_map game positions -> world coords (the common cross-map space, no overflow);
     // break sentinels pass through.
-    bool SegmentToWorld(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map,
-                        std::vector<GW::Vec2f>& out)
+    bool SegmentToWorld(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map, std::vector<GW::Vec2f>& out)
     {
         out.reserve(out.size() + points.size());
         for (const auto& p : points) {
-            if (IsPathBreak(p)) { out.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE}); continue; }
+            if (IsPathBreak(p)) {
+                out.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE});
+                continue;
+            }
             GW::Vec2f w;
             if (WorldMapWidget::GamePosToWorldMap(p, w, src_map)) out.push_back(w);
         }
         return true;
     }
 
-    std::vector<GW::GamePos> ConvertPathToCurrentMap(
-        const std::vector<GW::GamePos>& points,
-        GW::Constants::MapID src_map)
+    std::vector<GW::GamePos> ConvertPathToCurrentMap(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map)
     {
         if (src_map == GW::Map::GetMapID()) return points;
 
         std::vector<GW::GamePos> converted;
         converted.reserve(points.size());
         for (const auto& p : points) {
-            if (IsPathBreak(p)) { converted.push_back(p); continue; }
+            if (IsPathBreak(p)) {
+                converted.push_back(p);
+                continue;
+            }
             GW::Vec2f world_pos;
             GW::GamePos cur_pos;
-            if (WorldMapWidget::GamePosToWorldMap(p, world_pos, src_map) &&
-                WorldMapWidget::WorldMapToGamePos(world_pos, cur_pos)) {
+            if (WorldMapWidget::GamePosToWorldMap(p, world_pos, src_map) && WorldMapWidget::WorldMapToGamePos(world_pos, cur_pos)) {
                 cur_pos.zplane = p.zplane;
                 converted.push_back(cur_pos);
             }
@@ -875,7 +901,7 @@ namespace {
         for (const auto& seg : segs) {
             for (size_t i = 0; i + 1 < seg.points.size(); i++) {
                 auto* line = Minimap::Instance().custom_renderer.AddCustomLine(seg.points[i], seg.points[i + 1]);
-                line->map = seg.map_id; // native underground map, NOT cur_map
+                line->map = seg.map_id;   // native underground map, NOT cur_map
                 line->color = 0xFFFFFF00; // yellow
                 line->draw_on_mission_map = true;
                 line->draw_on_minimap = true;
@@ -889,10 +915,8 @@ namespace {
     // Returns false if our last AStar calculation matches what we're asking for.
     bool NeedsRecalculating(const GW::GamePos& from, const GW::GamePos& to)
     {
-        if (!(astar && astar->m_path.ready() && astar->m_path.points().size()))
-            return true;
-        return from != astar->m_path.points().at(0)
-               || to != astar->m_path.points().at(astar->m_path.points().size() - 1);
+        if (!(astar && astar->m_path.ready() && astar->m_path.points().size())) return true;
+        return from != astar->m_path.points().at(0) || to != astar->m_path.points().at(astar->m_path.points().size() - 1);
     }
 
     // Find a cached MilePath for a given MapID
@@ -953,8 +977,7 @@ namespace {
                 if (bounds.GetWidth() < 1.f || bounds.GetHeight() < 1.f) continue;
                 map_graph_nodes.push_back({map_id, fh, bounds, area->continent});
                 if (IsInterestingMapForCacheTrace(map_id)) {
-                    PATH_LOG_INFO("[CacheTrace] BuildMapGraph added mid=%d fh=0x%X bounds=(%.0f,%.0f)-(%.0f,%.0f) (path=constant_maps_info first)",
-                        (int)map_id, fh, bounds.Min.x, bounds.Min.y, bounds.Max.x, bounds.Max.y);
+                    PATH_LOG_INFO("[CacheTrace] BuildMapGraph added mid=%d fh=0x%X bounds=(%.0f,%.0f)-(%.0f,%.0f) (path=constant_maps_info first)", (int)map_id, fh, bounds.Min.x, bounds.Min.y, bounds.Max.x, bounds.Max.y);
                 }
                 seen_file_hashes.insert(fh);
                 break;
@@ -970,7 +993,10 @@ namespace {
                 if (mid == GW::Constants::MapID::None) continue;
                 bool exists = false;
                 for (const auto& n : map_graph_nodes) {
-                    if (n.map_id == mid) { exists = true; break; }
+                    if (n.map_id == mid) {
+                        exists = true;
+                        break;
+                    }
                 }
                 if (exists) continue;
                 uint32_t fh = GetMapFileId(mid);
@@ -978,8 +1004,7 @@ namespace {
                 auto continent = area ? area->continent : GW::Continent::Kryta;
                 map_graph_nodes.push_back({mid, fh, ImRect(), continent});
                 if (IsInterestingMapForCacheTrace(mid)) {
-                    PATH_LOG_INFO("[CacheTrace] BuildMapGraph added mid=%d fh=0x%X (path=portal_connections, conn from=%d to=%d)",
-                        (int)mid, fh, (int)conn.from_map, (int)conn.to_map);
+                    PATH_LOG_INFO("[CacheTrace] BuildMapGraph added mid=%d fh=0x%X (path=portal_connections, conn from=%d to=%d)", (int)mid, fh, (int)conn.from_map, (int)conn.to_map);
                 }
             }
         }
@@ -994,7 +1019,10 @@ namespace {
         BuildMapGraph();
         const MapGraphNode* src = nullptr;
         for (const auto& node : map_graph_nodes) {
-            if (node.map_id == map_id) { src = &node; break; }
+            if (node.map_id == map_id) {
+                src = &node;
+                break;
+            }
         }
         if (!src) return {};
 
@@ -1025,7 +1053,8 @@ namespace {
         // siblings). A connection stored against an OUTPOST is local to that
         // exact outpost (prevents 348/244/218 cross-pollination).
         auto contains = [&](GW::Constants::MapID mid) {
-            for (auto m : result) if (m == mid) return true;
+            for (auto m : result)
+                if (m == mid) return true;
             return false;
         };
         const uint32_t fh_cur = src->file_hash;
@@ -1043,15 +1072,11 @@ namespace {
         };
         PATH_LOG_INFO("[GetAdj] map=%d fh=0x%X is_outpost=%d", (int)map_id, fh_cur, IsOutpostMap(map_id) ? 1 : 0);
         for (const auto& conn : portal_connections.GetAll()) {
-            if (conn.from_type == Pathing::ConnectionType::Disabled ||
-                conn.to_type == Pathing::ConnectionType::Disabled) continue;
+            if (conn.from_type == Pathing::ConnectionType::Disabled || conn.to_type == Pathing::ConnectionType::Disabled) continue;
             bool fwd_match = matches_current(conn.from_map);
             bool rev_match = !conn.IsOneWay() && matches_current(conn.to_map);
             if (fwd_match || rev_match) {
-                PATH_LOG_INFO("[GetAdj]   conn from=%d to=%d ftype=%d ttype=%d oneway=%d fwd=%d rev=%d",
-                    (int)conn.from_map, (int)conn.to_map,
-                    (int)conn.from_type, (int)conn.to_type,
-                    conn.IsOneWay() ? 1 : 0, fwd_match ? 1 : 0, rev_match ? 1 : 0);
+                PATH_LOG_INFO("[GetAdj]   conn from=%d to=%d ftype=%d ttype=%d oneway=%d fwd=%d rev=%d", (int)conn.from_map, (int)conn.to_map, (int)conn.from_type, (int)conn.to_type, conn.IsOneWay() ? 1 : 0, fwd_match ? 1 : 0, rev_match ? 1 : 0);
             }
             // Forward: conn.from matches current → conn.to is neighbor
             if (fwd_match && conn.to_map != map_id && !contains(conn.to_map)) {
@@ -1102,8 +1127,7 @@ namespace {
     void EnsureLightweightMapInfo(GW::Constants::MapID map_id, const char* caller)
     {
         if (IsInterestingMapForCacheTrace(map_id)) {
-            PATH_LOG_INFO("[CacheTrace] EnsureLightweightMapInfo(%d) caller=%s already_cached=%d",
-                (int)map_id, caller, GetCachedMapInfo(map_id) ? 1 : 0);
+            PATH_LOG_INFO("[CacheTrace] EnsureLightweightMapInfo(%d) caller=%s already_cached=%d", (int)map_id, caller, GetCachedMapInfo(map_id) ? 1 : 0);
         }
         if (map_id == GW::Map::GetMapID()) return;
         if (GetCachedMapInfo(map_id)) return; // already have info
@@ -1158,15 +1182,14 @@ namespace {
         };
         float best = std::numeric_limits<float>::max();
         for (const auto& conn : portal_connections.GetAll()) {
-            if (conn.from_type == Pathing::ConnectionType::Disabled ||
-                conn.to_type == Pathing::ConnectionType::Disabled) continue;
+            if (conn.from_type == Pathing::ConnectionType::Disabled || conn.to_type == Pathing::ConnectionType::Disabled) continue;
             bool fwd = (maps_match(conn.from_map, map_a, fh_a) && maps_match(conn.to_map, map_b, fh_b));
             bool rev = !conn.IsOneWay() && (maps_match(conn.from_map, map_b, fh_b) && maps_match(conn.to_map, map_a, fh_a));
             if (!fwd && !rev) continue;
             // Use the cheaper of the two endpoint types so P-G / G-P connections
             // benefit from the NPC/Gadget teleport multiplier in either direction.
             float mult_from = Pathing::PortalConnections::GetCostMultiplier(conn.from_type);
-            float mult_to   = Pathing::PortalConnections::GetCostMultiplier(conn.to_type);
+            float mult_to = Pathing::PortalConnections::GetCostMultiplier(conn.to_type);
             float mult = std::min(mult_from, mult_to);
             float cost = 500.f * mult;
             best = std::min(best, cost);
@@ -1233,23 +1256,16 @@ namespace {
     constexpr float GAME_TO_WM = 1.f;
 
     // Forward decl: full definition is below FindPortalPairs (which needs PortalPair).
-    float ClosestPortalDistanceInMap(const GW::GamePos& pos,
-                                     GW::Constants::MapID owner_map,
-                                     GW::Constants::MapID other_map);
-    float ClosestPortalWalkDistanceInMap(const GW::GamePos& pos,
-                                         GW::Constants::MapID owner_map,
-                                         GW::Constants::MapID other_map);
-    float ClosestPortalTrapezoidDistanceInMap(const GW::GamePos& pos,
-                                              GW::Constants::MapID owner_map,
-                                              GW::Constants::MapID other_map);
-    bool FindAnyPortalPosInMap(GW::Constants::MapID owner_map,
-                               GW::Constants::MapID other_map,
-                               GW::Vec2f& out);
+    float ClosestPortalDistanceInMap(const GW::GamePos& pos, GW::Constants::MapID owner_map, GW::Constants::MapID other_map);
+    float ClosestPortalWalkDistanceInMap(const GW::GamePos& pos, GW::Constants::MapID owner_map, GW::Constants::MapID other_map);
+    float ClosestPortalTrapezoidDistanceInMap(const GW::GamePos& pos, GW::Constants::MapID owner_map, GW::Constants::MapID other_map);
+    bool FindAnyPortalPosInMap(GW::Constants::MapID owner_map, GW::Constants::MapID other_map, GW::Vec2f& out);
 
     // Blacklisted edges for retry (cleared on each FindPath call)
     std::set<uint64_t> blacklisted_edges;
 
-    uint64_t EdgeKey(GW::Constants::MapID a, GW::Constants::MapID b) {
+    uint64_t EdgeKey(GW::Constants::MapID a, GW::Constants::MapID b)
+    {
         return (uint64_t)(uint32_t)a | ((uint64_t)(uint32_t)b << 32);
     }
 
@@ -1259,9 +1275,7 @@ namespace {
     // from start (or to goal) to the actual portal used by that edge — this lets
     // the route picker prefer portals that are close to the start/goal instead of
     // routes that are topologically cheap but require long walks at the endpoints.
-    std::vector<GW::Constants::MapID> FindMapRoute(
-        GW::Constants::MapID src, GW::Constants::MapID dst,
-        const GW::GamePos* start_pos = nullptr, const GW::GamePos* goal_pos = nullptr)
+    std::vector<GW::Constants::MapID> FindMapRoute(GW::Constants::MapID src, GW::Constants::MapID dst, const GW::GamePos* start_pos = nullptr, const GW::GamePos* goal_pos = nullptr)
     {
         BuildMapGraph();
         // Per-call cost cache. Cleared so each FindMapRoute invocation has a
@@ -1287,8 +1301,13 @@ namespace {
         auto graph_dst = resolve(dst);
         if (graph_src == graph_dst) return {src, dst};
 
-        struct DijkNode { float cost; GW::Constants::MapID map_id; };
-        auto cmp = [](const DijkNode& a, const DijkNode& b) { return a.cost > b.cost; };
+        struct DijkNode {
+            float cost;
+            GW::Constants::MapID map_id;
+        };
+        auto cmp = [](const DijkNode& a, const DijkNode& b) {
+            return a.cost > b.cost;
+        };
         std::priority_queue<DijkNode, std::vector<DijkNode>, decltype(cmp)> pq(cmp);
 
         std::unordered_map<uint32_t, float> best_cost;
@@ -1327,9 +1346,13 @@ namespace {
 
                 auto portal_dist = [](const GW::GamePos& from, GW::Constants::MapID a, GW::Constants::MapID b) {
                     switch (portal_distance_mode) {
-                    case PortalDistanceMode::Trapezoid: return ClosestPortalTrapezoidDistanceInMap(from, a, b);
-                    case PortalDistanceMode::Walk:      return ClosestPortalWalkDistanceInMap(from, a, b);
-                    case PortalDistanceMode::Euclidean: default: return ClosestPortalDistanceInMap(from, a, b);
+                        case PortalDistanceMode::Trapezoid:
+                            return ClosestPortalTrapezoidDistanceInMap(from, a, b);
+                        case PortalDistanceMode::Walk:
+                            return ClosestPortalWalkDistanceInMap(from, a, b);
+                        case PortalDistanceMode::Euclidean:
+                        default:
+                            return ClosestPortalDistanceInMap(from, a, b);
                     }
                 };
                 // F-P: when leaving the source map, add the distance from start
@@ -1483,9 +1506,9 @@ namespace {
 
     // A matched portal pair between two adjacent maps
     struct PortalPair {
-        GW::GamePos pos_a, pos_b;   // game coords in each map
-        GW::Vec2f wm_mid;           // world map midpoint
-        float pair_dist;            // world map distance between the two portals
+        GW::GamePos pos_a, pos_b; // game coords in each map
+        GW::Vec2f wm_mid;         // world map midpoint
+        float pair_dist;          // world map distance between the two portals
     };
 
     // Find all portal pairs between two adjacent maps, constrained to the overlap region
@@ -1505,11 +1528,7 @@ namespace {
         if (!GW::Map::GetMapWorldMapBounds(area_b, &wm_b)) return pairs;
 
         constexpr float overlap_margin = 50.f; // expand overlap region slightly
-        ImRect overlap(
-            std::max(wm_a.Min.x, wm_b.Min.x) - overlap_margin,
-            std::max(wm_a.Min.y, wm_b.Min.y) - overlap_margin,
-            std::min(wm_a.Max.x, wm_b.Max.x) + overlap_margin,
-            std::min(wm_a.Max.y, wm_b.Max.y) + overlap_margin);
+        ImRect overlap(std::max(wm_a.Min.x, wm_b.Min.x) - overlap_margin, std::max(wm_a.Min.y, wm_b.Min.y) - overlap_margin, std::min(wm_a.Max.x, wm_b.Max.x) + overlap_margin, std::min(wm_a.Max.y, wm_b.Max.y) + overlap_margin);
 
         constexpr float max_pair_dist = 100.f; // world map units
 
@@ -1530,12 +1549,7 @@ namespace {
                 float dx = wm_pa.x - wm_pb.x, dy = wm_pa.y - wm_pb.y;
                 float dist = sqrtf(dx * dx + dy * dy);
                 if (dist < max_pair_dist) {
-                    pairs.push_back({
-                        {pa.pos.x, pa.pos.y, 0},
-                        {pb.pos.x, pb.pos.y, 0},
-                        {(wm_pa.x + wm_pb.x) * 0.5f, (wm_pa.y + wm_pb.y) * 0.5f},
-                        dist
-                    });
+                    pairs.push_back({{pa.pos.x, pa.pos.y, 0}, {pb.pos.x, pb.pos.y, 0}, {(wm_pa.x + wm_pb.x) * 0.5f, (wm_pa.y + wm_pb.y) * 0.5f}, dist});
                 }
             }
         }
@@ -1546,9 +1560,7 @@ namespace {
     // portal in `owner_map` that participates in a connection between `owner_map`
     // and `other_map`. Considers manual connections (with explorable→outpost
     // file_hash spread) and auto-detected portal pairs. Returns infinity if none.
-    float ClosestPortalDistanceInMap(const GW::GamePos& pos,
-                                     GW::Constants::MapID owner_map,
-                                     GW::Constants::MapID other_map)
+    float ClosestPortalDistanceInMap(const GW::GamePos& pos, GW::Constants::MapID owner_map, GW::Constants::MapID other_map)
     {
         uint32_t fh_owner = GetMapFileId(owner_map);
         uint32_t fh_other = GetMapFileId(other_map);
@@ -1567,12 +1579,17 @@ namespace {
 
         bool any_manual = false;
         for (const auto& conn : portal_connections.GetAll()) {
-            if (conn.from_type == Pathing::ConnectionType::Disabled ||
-                conn.to_type == Pathing::ConnectionType::Disabled) continue;
+            if (conn.from_type == Pathing::ConnectionType::Disabled || conn.to_type == Pathing::ConnectionType::Disabled) continue;
             bool fwd = maps_match(conn.from_map, owner_map, fh_owner) && maps_match(conn.to_map, other_map, fh_other);
             bool rev = !conn.IsOneWay() && maps_match(conn.to_map, owner_map, fh_owner) && maps_match(conn.from_map, other_map, fh_other);
-            if (fwd) { try_pos(conn.from_pos.x, conn.from_pos.y); any_manual = true; }
-            if (rev) { try_pos(conn.to_pos.x, conn.to_pos.y); any_manual = true; }
+            if (fwd) {
+                try_pos(conn.from_pos.x, conn.from_pos.y);
+                any_manual = true;
+            }
+            if (rev) {
+                try_pos(conn.to_pos.x, conn.to_pos.y);
+                any_manual = true;
+            }
         }
 
         // Auto-detected portal pairs — only if no manual connection exists.
@@ -1594,9 +1611,7 @@ namespace {
     // from `pos` to the closest portal in `owner_map` connecting to `other_map`.
     // Falls back to straight-line Euclidean if MilePath isn't available or if all
     // AStars fail (e.g. disconnected zones). Cached per FindMapRoute call.
-    float ClosestPortalWalkDistanceInMap(const GW::GamePos& pos,
-                                         GW::Constants::MapID owner_map,
-                                         GW::Constants::MapID other_map)
+    float ClosestPortalWalkDistanceInMap(const GW::GamePos& pos, GW::Constants::MapID owner_map, GW::Constants::MapID other_map)
     {
         PortalWalkKey key{(uint32_t)PortalDistanceMode::Walk, (uint32_t)owner_map, (uint32_t)other_map, pos.x, pos.y};
         auto cit = portal_walk_cache.find(key);
@@ -1613,8 +1628,7 @@ namespace {
             return target_fh && GetMapFileId(mid) == target_fh;
         };
         for (const auto& conn : portal_connections.GetAll()) {
-            if (conn.from_type == Pathing::ConnectionType::Disabled ||
-                conn.to_type == Pathing::ConnectionType::Disabled) continue;
+            if (conn.from_type == Pathing::ConnectionType::Disabled || conn.to_type == Pathing::ConnectionType::Disabled) continue;
             bool fwd = maps_match(conn.from_map, owner_map, fh_owner) && maps_match(conn.to_map, other_map, fh_other);
             bool rev = !conn.IsOneWay() && maps_match(conn.to_map, owner_map, fh_owner) && maps_match(conn.from_map, other_map, fh_other);
             if (fwd) candidates.push_back({conn.from_pos.x, conn.from_pos.y});
@@ -1647,7 +1661,8 @@ namespace {
         Pathing::MilePath* mp = nullptr;
         if (owner_map == GW::Map::GetMapID()) {
             mp = GetMilepathForCurrentMap();
-        } else {
+        }
+        else {
             mp = GetMilepathForMap(owner_map);
             if (!mp) {
                 LoadMapFromDAT(owner_map);
@@ -1659,7 +1674,8 @@ namespace {
             portal_walk_cache[key] = fb;
             return fb;
         }
-        while (!mp->ready() && !pending_terminate) Sleep(50);
+        while (!mp->ready() && !pending_terminate)
+            Sleep(50);
         if (pending_terminate || mp->build_failed()) {
             float fb = euclidean_min();
             portal_walk_cache[key] = fb;
@@ -1684,9 +1700,7 @@ namespace {
     // Doesn't require a visgraph — just the trapezoid + BSP data which is loaded
     // alongside MilePath. Faster than the visgraph variant on first-time map
     // loads but the funnel can pick suboptimal paths through tight spaces.
-    float ClosestPortalTrapezoidDistanceInMap(const GW::GamePos& pos,
-                                              GW::Constants::MapID owner_map,
-                                              GW::Constants::MapID other_map)
+    float ClosestPortalTrapezoidDistanceInMap(const GW::GamePos& pos, GW::Constants::MapID owner_map, GW::Constants::MapID other_map)
     {
         PortalWalkKey key{(uint32_t)PortalDistanceMode::Trapezoid, (uint32_t)owner_map, (uint32_t)other_map, pos.x, pos.y};
         auto cit = portal_walk_cache.find(key);
@@ -1702,8 +1716,7 @@ namespace {
             return target_fh && GetMapFileId(mid) == target_fh;
         };
         for (const auto& conn : portal_connections.GetAll()) {
-            if (conn.from_type == Pathing::ConnectionType::Disabled ||
-                conn.to_type == Pathing::ConnectionType::Disabled) continue;
+            if (conn.from_type == Pathing::ConnectionType::Disabled || conn.to_type == Pathing::ConnectionType::Disabled) continue;
             bool fwd = maps_match(conn.from_map, owner_map, fh_owner) && maps_match(conn.to_map, other_map, fh_other);
             bool rev = !conn.IsOneWay() && maps_match(conn.to_map, owner_map, fh_owner) && maps_match(conn.from_map, other_map, fh_other);
             if (fwd) candidates.push_back({conn.from_pos.x, conn.from_pos.y});
@@ -1732,25 +1745,21 @@ namespace {
 
         // Need PathingMapData. Acquire MilePath first (which loads the DAT data
         // if needed), then borrow its map data via GetMapData().
-        Pathing::MilePath* mp = (owner_map == GW::Map::GetMapID())
-            ? GetMilepathForCurrentMap()
-            : GetMilepathForMap(owner_map);
+        Pathing::MilePath* mp = (owner_map == GW::Map::GetMapID()) ? GetMilepathForCurrentMap() : GetMilepathForMap(owner_map);
         if (!mp && owner_map != GW::Map::GetMapID()) {
             LoadMapFromDAT(owner_map);
             mp = GetMilepathForMap(owner_map);
         }
         if (!mp) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: no MilePath → Euclidean=%.0f",
-                (int)owner_map, (int)other_map, fb);
+            Log::Warning("[Trapezoid] map %d->%d: no MilePath → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
         const Pathing::PathingMapData* data = mp->GetMapData();
         if (!data || !data->IsValid()) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: PathingMapData missing/invalid → Euclidean=%.0f",
-                (int)owner_map, (int)other_map, fb);
+            Log::Warning("[Trapezoid] map %d->%d: PathingMapData missing/invalid → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
@@ -1759,8 +1768,7 @@ namespace {
         const uint32_t fh = GetMapFileId(owner_map);
         if (!fh) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: no file_hash → Euclidean=%.0f",
-                (int)owner_map, (int)other_map, fb);
+            Log::Warning("[Trapezoid] map %d->%d: no file_hash → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
@@ -1769,7 +1777,8 @@ namespace {
         auto it = trapezoid_pf_by_coords.find(hash_key);
         if (it != trapezoid_pf_by_coords.end()) {
             pf = it->second;
-        } else {
+        }
+        else {
             pf = new OpenTyria::TrapezoidPathfinder(data);
             trapezoid_pf_by_coords[hash_key] = pf;
         }
@@ -1778,7 +1787,9 @@ namespace {
         GW::GamePos src = pos;
         for (const auto& c : candidates) {
             GW::GamePos dst{};
-            dst.x = c.x; dst.y = c.y; dst.zplane = pos.zplane;
+            dst.x = c.x;
+            dst.y = c.y;
+            dst.zplane = pos.zplane;
             OpenTyria::SearchResult reason = OpenTyria::SearchResult::OK;
             float cost = pf->SearchDistance(src, dst, &reason);
             if (cost < best) best = cost;
@@ -1795,9 +1806,7 @@ namespace {
     // Returns any portal position in `owner_map` that connects to `other_map` (game coords).
     // Prefers the first manual connection; falls back to the first auto-detected pair.
     // Used as an "anchor" to estimate in-map traversal between two portal pairs.
-    bool FindAnyPortalPosInMap(GW::Constants::MapID owner_map,
-                               GW::Constants::MapID other_map,
-                               GW::Vec2f& out)
+    bool FindAnyPortalPosInMap(GW::Constants::MapID owner_map, GW::Constants::MapID other_map, GW::Vec2f& out)
     {
         uint32_t fh_owner = GetMapFileId(owner_map);
         uint32_t fh_other = GetMapFileId(other_map);
@@ -1807,26 +1816,30 @@ namespace {
             return target_fh && GetMapFileId(mid) == target_fh;
         };
         for (const auto& conn : portal_connections.GetAll()) {
-            if (conn.from_type == Pathing::ConnectionType::Disabled ||
-                conn.to_type == Pathing::ConnectionType::Disabled) continue;
+            if (conn.from_type == Pathing::ConnectionType::Disabled || conn.to_type == Pathing::ConnectionType::Disabled) continue;
             bool fwd = maps_match(conn.from_map, owner_map, fh_owner) && maps_match(conn.to_map, other_map, fh_other);
             bool rev = !conn.IsOneWay() && maps_match(conn.to_map, owner_map, fh_owner) && maps_match(conn.from_map, other_map, fh_other);
-            if (fwd) { out = conn.from_pos; return true; }
-            if (rev) { out = conn.to_pos; return true; }
+            if (fwd) {
+                out = conn.from_pos;
+                return true;
+            }
+            if (rev) {
+                out = conn.to_pos;
+                return true;
+            }
         }
         auto pairs = FindPortalPairs(owner_map, other_map);
-        if (!pairs.empty()) { out = {pairs[0].pos_a.x, pairs[0].pos_a.y}; return true; }
+        if (!pairs.empty()) {
+            out = {pairs[0].pos_a.x, pairs[0].pos_a.y};
+            return true;
+        }
         return false;
     }
 
     // Resolve the correct zplane for a game position on a map by checking DAT pathing data
     // Pick the best portal pair for a segment, considering proximity to start/goal.
     // Priority: 1) manual connections, 2) automatic portal pairs, 3) boundary fallback
-    bool FindBestPortalPair(
-        GW::Constants::MapID map_a, GW::Constants::MapID map_b,
-        const GW::Vec2f& hint_wm_pos,
-        GW::GamePos& portal_a_out, GW::GamePos& portal_b_out,
-        const GW::GamePos* start_game = nullptr, const GW::GamePos* goal_game = nullptr)
+    bool FindBestPortalPair(GW::Constants::MapID map_a, GW::Constants::MapID map_b, const GW::Vec2f& hint_wm_pos, GW::GamePos& portal_a_out, GW::GamePos& portal_b_out, const GW::GamePos* start_game = nullptr, const GW::GamePos* goal_game = nullptr)
     {
         // Collect all candidate portal pairs (manual connections + auto portal props)
         // then score them. When start/goal game positions are available, use game-coordinate
@@ -1852,16 +1865,13 @@ namespace {
                 return target_fh && GetMapFileId(mid) == target_fh;
             };
             for (const auto& conn : portal_connections.GetAll()) {
-                if (conn.from_type == Pathing::ConnectionType::Disabled ||
-                    conn.to_type == Pathing::ConnectionType::Disabled) continue;
+                if (conn.from_type == Pathing::ConnectionType::Disabled || conn.to_type == Pathing::ConnectionType::Disabled) continue;
                 bool fwd = (maps_match(conn.from_map, map_a, fh_a) && maps_match(conn.to_map, map_b, fh_b));
                 bool rev = !conn.IsOneWay() && (maps_match(conn.from_map, map_b, fh_b) && maps_match(conn.to_map, map_a, fh_a));
                 if (!fwd && !rev) continue;
                 Candidate c;
-                c.pos_a = fwd ? GW::GamePos{conn.from_pos.x, conn.from_pos.y, 0}
-                              : GW::GamePos{conn.to_pos.x, conn.to_pos.y, 0};
-                c.pos_b = fwd ? GW::GamePos{conn.to_pos.x, conn.to_pos.y, 0}
-                              : GW::GamePos{conn.from_pos.x, conn.from_pos.y, 0};
+                c.pos_a = fwd ? GW::GamePos{conn.from_pos.x, conn.from_pos.y, 0} : GW::GamePos{conn.to_pos.x, conn.to_pos.y, 0};
+                c.pos_b = fwd ? GW::GamePos{conn.to_pos.x, conn.to_pos.y, 0} : GW::GamePos{conn.from_pos.x, conn.from_pos.y, 0};
                 c.wm_pos = fwd ? conn.from_wm_pos : conn.to_wm_pos;
                 c.source = "Manual";
                 candidates.push_back(c);
@@ -1898,11 +1908,13 @@ namespace {
                             if (res == Pathing::Error::OK && astr.m_path.ready()) {
                                 cost_a = astr.m_path.cost();
                                 method_a = "astar";
-                            } else {
+                            }
+                            else {
                                 cost_a = FAIL_PENALTY + GW::GetDistance(*start_game, c.pos_a);
                                 method_a = "FAIL";
                             }
-                        } else {
+                        }
+                        else {
                             cost_a = GW::GetDistance(*start_game, c.pos_a);
                             method_a = "line(nomp)";
                         }
@@ -1915,19 +1927,19 @@ namespace {
                             if (res == Pathing::Error::OK && astr.m_path.ready()) {
                                 cost_b = astr.m_path.cost();
                                 method_b = "astar";
-                            } else {
+                            }
+                            else {
                                 cost_b = FAIL_PENALTY + GW::GetDistance(c.pos_b, *goal_game);
                                 method_b = "FAIL";
                             }
-                        } else {
+                        }
+                        else {
                             cost_b = GW::GetDistance(c.pos_b, *goal_game);
                             method_b = "line(nomp)";
                         }
                     }
                     float cost = cost_a + cost_b;
-                    PATH_LOG_INFO("  [%s] a=(%.0f,%.0f) b=(%.0f,%.0f) cost_a=%.0f(%s) cost_b=%.0f(%s) total=%.0f",
-                        c.source, c.pos_a.x, c.pos_a.y, c.pos_b.x, c.pos_b.y,
-                        cost_a, method_a, cost_b, method_b, cost);
+                    PATH_LOG_INFO("  [%s] a=(%.0f,%.0f) b=(%.0f,%.0f) cost_a=%.0f(%s) cost_b=%.0f(%s) total=%.0f", c.source, c.pos_a.x, c.pos_a.y, c.pos_b.x, c.pos_b.y, cost_a, method_a, cost_b, method_b, cost);
                     if (cost < best_score) {
                         best_score = cost;
                         best = &c;
@@ -1936,13 +1948,11 @@ namespace {
                 if (best) {
                     portal_a_out = best->pos_a;
                     portal_b_out = best->pos_b;
-                    PATH_LOG_INFO("%s winner: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) [%d candidates, cost=%.0f]",
-                        best->source, (int)map_a, portal_a_out.x, portal_a_out.y,
-                        (int)map_b, portal_b_out.x, portal_b_out.y,
-                        (int)candidates.size(), best_score);
+                    PATH_LOG_INFO("%s winner: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) [%d candidates, cost=%.0f]", best->source, (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, (int)candidates.size(), best_score);
                     return true;
                 }
-            } else {
+            }
+            else {
                 // World map hint scoring (fallback when no game positions available)
                 float best_score = std::numeric_limits<float>::infinity();
                 const Candidate* best = nullptr;
@@ -1957,10 +1967,9 @@ namespace {
                 if (best) {
                     portal_a_out = best->pos_a;
                     portal_b_out = best->pos_b;
-                    PATH_LOG_INFO("%s connection: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) [%d candidates, wm_score=%.0f]",
-                        best->source, (int)map_a, portal_a_out.x, portal_a_out.y,
-                        (int)map_b, portal_b_out.x, portal_b_out.y,
-                        (int)candidates.size(), best_score);
+                    PATH_LOG_INFO(
+                        "%s connection: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) [%d candidates, wm_score=%.0f]", best->source, (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, (int)candidates.size(), best_score
+                    );
                     return true;
                 }
             }
@@ -1976,33 +1985,26 @@ namespace {
         if (!GW::Map::GetMapWorldMapBounds(area_b, &wm_b)) return false;
 
         // Overlap center in world map coords
-        ImRect overlap(
-            std::max(wm_a.Min.x, wm_b.Min.x), std::max(wm_a.Min.y, wm_b.Min.y),
-            std::min(wm_a.Max.x, wm_b.Max.x), std::min(wm_a.Max.y, wm_b.Max.y));
+        ImRect overlap(std::max(wm_a.Min.x, wm_b.Min.x), std::max(wm_a.Min.y, wm_b.Min.y), std::min(wm_a.Max.x, wm_b.Max.x), std::min(wm_a.Max.y, wm_b.Max.y));
         GW::Vec2f wm_center = {overlap.GetCenter().x, overlap.GetCenter().y};
 
         // Convert to each map's game coords (fall back to the current map if unknown)
-        if (!WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out, map_a))
-            WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out);
-        if (!WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out, map_b))
-            WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out);
+        if (!WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out, map_a)) WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out);
+        if (!WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out, map_b)) WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out);
 
-        PATH_LOG_INFO("Boundary fallback: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) wm=(%.0f,%.0f)",
-            (int)map_a, portal_a_out.x, portal_a_out.y,
-            (int)map_b, portal_b_out.x, portal_b_out.y,
-            wm_center.x, wm_center.y);
+        PATH_LOG_INFO("Boundary fallback: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) wm=(%.0f,%.0f)", (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, wm_center.x, wm_center.y);
         return true;
     }
 
     // Run AStar on a specific map between two game-coord positions
     // Returns the path points in that map's coordinate system
-    bool RunAStarOnMap(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to,
-                       std::vector<GW::GamePos>& path_out)
+    bool RunAStarOnMap(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::GamePos>& path_out)
     {
         Pathing::MilePath* mp = nullptr;
         if (map_id == GW::Map::GetMapID()) {
             mp = GetMilepathForCurrentMap();
-        } else {
+        }
+        else {
             mp = GetMilepathForMap(map_id);
         }
         if (!mp) {
@@ -2010,7 +2012,9 @@ namespace {
             return false;
         }
 
-        while (!mp->ready() && !pending_terminate) { Sleep(100); }
+        while (!mp->ready() && !pending_terminate) {
+            Sleep(100);
+        }
         if (pending_terminate) {
             PATH_LOG_INFO("[AStar] map %d aborted: pending_terminate", (int)map_id);
             return false;
@@ -2026,8 +2030,7 @@ namespace {
             auto res = astr.Search(from, to);
             if (res == Pathing::Error::OK && astr.m_path.ready()) {
                 path_out = astr.m_path.points();
-                PATH_LOG_INFO("[AStar] map %d OK=direct, cost=%.0f, points=%d",
-                    (int)map_id, astr.m_path.cost(), (int)path_out.size());
+                PATH_LOG_INFO("[AStar] map %d OK=direct, cost=%.0f, points=%d", (int)map_id, astr.m_path.cost(), (int)path_out.size());
                 return true;
             }
         }
@@ -2065,8 +2068,7 @@ namespace {
             }
         }
         if (!path_out.empty()) {
-            PATH_LOG_INFO("[AStar] map %d OK=offset(%d/%d), cost=%.0f, points=%d",
-                (int)map_id, offset_successes, offset_attempts, best_cost, (int)path_out.size());
+            PATH_LOG_INFO("[AStar] map %d OK=offset(%d/%d), cost=%.0f, points=%d", (int)map_id, offset_successes, offset_attempts, best_cost, (int)path_out.size());
             return true;
         }
 
@@ -2075,9 +2077,7 @@ namespace {
     }
 
     // Multi-map pathfinding: run AStar segments connected by portal pairs
-    void RecalculateMultiMapPath(
-        const std::vector<GW::Constants::MapID>& route,
-        const GW::GamePos& start, const GW::GamePos& goal)
+    void RecalculateMultiMapPath(const std::vector<GW::Constants::MapID>& route, const GW::GamePos& start, const GW::GamePos& goal)
     {
         ClearPathLines();
         ClearPortalPairLines();
@@ -2092,7 +2092,10 @@ namespace {
         auto goal_wm = path_to_world;
         auto cur_map = GW::Map::GetMapID();
 
-        struct PortalPairDraw { GW::GamePos a, b; GW::Constants::MapID map_a, map_b; };
+        struct PortalPairDraw {
+            GW::GamePos a, b;
+            GW::Constants::MapID map_a, map_b;
+        };
 
         Resources::EnqueueWorkerTask([route_copy, start_copy, goal_copy, start_wm, goal_wm, cur_map] {
             RouteJobScope job_scope; // defer eviction while we hold MilePath*
@@ -2111,7 +2114,8 @@ namespace {
                 // Determine segment start
                 if (seg == 0) {
                     seg_from = start_copy;
-                } else {
+                }
+                else {
                     // Entry portal from previous map — score by distance from last position
                     GW::GamePos prev_exit, this_entry;
                     const GW::GamePos* gg = (seg == route_copy.size() - 1) ? &goal_copy : nullptr;
@@ -2128,7 +2132,8 @@ namespace {
                 // Determine segment end
                 if (seg == route_copy.size() - 1) {
                     seg_to = goal_copy;
-                } else {
+                }
+                else {
                     // Exit portal to next map — score by distance from seg_from + to goal
                     GW::GamePos this_exit, next_entry;
                     GW::Vec2f hint = last_portal_wm;
@@ -2142,8 +2147,7 @@ namespace {
                     WorldMapWidget::GamePosToWorldMap(this_exit, last_portal_wm, map_id);
                 }
 
-                PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)",
-                    (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
+                PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)", (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
 
                 std::vector<GW::GamePos> seg_path;
                 if (!RunAStarOnMap(map_id, seg_from, seg_to, seg_path)) {
@@ -2162,10 +2166,7 @@ namespace {
                 // an underground intermediate — they need to see where to go.
                 bool is_first = (seg == 0);
                 bool is_last = (seg + 1 == route_copy.size());
-                bool segment_hidden = !is_first && !is_last
-                    && map_id != cur_map
-                    && HasNoDrawConnection(route_copy[seg - 1], map_id)
-                    && HasNoDrawConnection(map_id, route_copy[seg + 1]);
+                bool segment_hidden = !is_first && !is_last && map_id != cur_map && HasNoDrawConnection(route_copy[seg - 1], map_id) && HasNoDrawConnection(map_id, route_copy[seg + 1]);
 
                 if (segment_hidden) {
                     // Record native-coord segment for mission-map / underground-terrain rendering,
@@ -2189,8 +2190,7 @@ namespace {
                 full_path.insert(full_path.end(), converted.begin(), converted.end());
             }
 
-            PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)",
-                (int)full_path.size(), (int)route_copy.size(), (int)hidden_segments.size());
+            PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)", (int)full_path.size(), (int)route_copy.size(), (int)hidden_segments.size());
             Resources::EnqueueMainTask([full_path, hidden_segments, cur_map] {
                 DrawPathAsLines(full_path, cur_map);
                 AddHiddenUndergroundSegmentLines(hidden_segments);
@@ -2204,10 +2204,7 @@ namespace {
     // Retries with edge-blacklisting on per-map AStar failure. Returns false if no
     // route. This is the pure-computation core shared by the drawing path and the
     // QuestModule-owned CalculateRoute API.
-    bool BuildCrossMapRoute(
-        GW::Constants::MapID from_map, GW::Constants::MapID to_map,
-        const GW::GamePos& start, const GW::GamePos& goal, const GW::Vec2f& start_wm,
-        std::vector<GW::Vec2f>& out_points, std::vector<HiddenPathSegment>& out_hidden)
+    bool BuildCrossMapRoute(GW::Constants::MapID from_map, GW::Constants::MapID to_map, const GW::GamePos& start, const GW::GamePos& goal, const GW::Vec2f& start_wm, std::vector<GW::Vec2f>& out_points, std::vector<HiddenPathSegment>& out_hidden)
     {
         const auto cur_map = GW::Map::GetMapID();
         constexpr int max_retries = 3;
@@ -2220,7 +2217,9 @@ namespace {
                 return false;
             }
             std::string route_str;
-            for (auto m : route) { route_str += std::to_string((int)m) + " "; }
+            for (auto m : route) {
+                route_str += std::to_string((int)m) + " ";
+            }
             PATH_LOG_INFO("Map route (attempt %d): %s (%d maps)", attempt, route_str.c_str(), (int)route.size());
 
             for (auto m : route) {
@@ -2241,7 +2240,8 @@ namespace {
 
                 if (seg == 0) {
                     seg_from = start;
-                } else {
+                }
+                else {
                     GW::GamePos prev_exit, this_entry;
                     const GW::GamePos* gg = (seg == route.size() - 1) ? &goal : nullptr;
                     if (!FindBestPortalPair(route[seg - 1], map_id, last_portal_wm, prev_exit, this_entry, &last_seg_end, gg)) {
@@ -2255,7 +2255,8 @@ namespace {
 
                 if (seg == route.size() - 1) {
                     seg_to = goal;
-                } else {
+                }
+                else {
                     GW::GamePos this_exit, next_entry;
                     const GW::GamePos* gg = (seg == route.size() - 2) ? &goal : nullptr;
                     if (!FindBestPortalPair(map_id, route[seg + 1], last_portal_wm, this_exit, next_entry, &seg_from, gg)) {
@@ -2267,8 +2268,7 @@ namespace {
                     WorldMapWidget::GamePosToWorldMap(this_exit, last_portal_wm, map_id);
                 }
 
-                PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)",
-                    (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
+                PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)", (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
 
                 std::vector<GW::GamePos> seg_path;
                 if (!RunAStarOnMap(map_id, seg_from, seg_to, seg_path)) {
@@ -2277,11 +2277,12 @@ namespace {
                     // If both entry and exit connections exist, treat the walk
                     // through this map as a direct straight-line transition.
                     bool has_entry = seg == 0 || GetConnectionCost(route[seg - 1], map_id) < 1e9f;
-                    bool has_exit  = seg + 1 >= route.size() || GetConnectionCost(map_id, route[seg + 1]) < 1e9f;
+                    bool has_exit = seg + 1 >= route.size() || GetConnectionCost(map_id, route[seg + 1]) < 1e9f;
                     if (has_entry && has_exit) {
                         PATH_LOG_INFO("AStar unavailable on map %d, using direct transition", (int)map_id);
                         seg_path = {seg_from, seg_to};
-                    } else {
+                    }
+                    else {
                         // Blacklist the edges entering/exiting this map and retry.
                         // Resolve to graph representatives — Dijkstra works on graph nodes,
                         // not original MapIDs (route[0]/route.back() are originals).
@@ -2300,8 +2301,7 @@ namespace {
                         auto map_g = resolve_graph(map_id);
                         if (seg > 0) {
                             auto prev_g = resolve_graph(route[seg - 1]);
-                            Log::Warning("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)",
-                                (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
+                            Log::Warning("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)", (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
                             blacklisted_edges.insert(EdgeKey(prev_g, map_g));
                             blacklisted_edges.insert(EdgeKey(map_g, prev_g));
                         }
@@ -2322,10 +2322,7 @@ namespace {
                 // Exception: never hide the segment for the player's current map.
                 bool is_first_seg = (seg == 0);
                 bool is_last_seg = (seg + 1 == route.size());
-                bool segment_hidden = !is_first_seg && !is_last_seg
-                    && map_id != cur_map
-                    && HasNoDrawConnection(route[seg - 1], map_id)
-                    && HasNoDrawConnection(map_id, route[seg + 1]);
+                bool segment_hidden = !is_first_seg && !is_last_seg && map_id != cur_map && HasNoDrawConnection(route[seg - 1], map_id) && HasNoDrawConnection(map_id, route[seg + 1]);
 
                 if (segment_hidden) {
                     // Record native-coord segment for underground-terrain / mission-map rendering.
@@ -2346,8 +2343,7 @@ namespace {
             }
 
             if (!failed) {
-                PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)",
-                    (int)full_path.size(), (int)route.size(), (int)hidden_segments.size());
+                PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)", (int)full_path.size(), (int)route.size(), (int)hidden_segments.size());
                 out_points = std::move(full_path);
                 out_hidden = std::move(hidden_segments);
                 blacklisted_edges.clear();
@@ -2362,9 +2358,7 @@ namespace {
         return false;
     }
 
-    void RecalculateMultiMapPath_WithRetry(
-        GW::Constants::MapID from_map, GW::Constants::MapID to_map,
-        const GW::GamePos& start, const GW::GamePos& goal, const GW::Vec2f& start_wm)
+    void RecalculateMultiMapPath_WithRetry(GW::Constants::MapID from_map, GW::Constants::MapID to_map, const GW::GamePos& start, const GW::GamePos& goal, const GW::Vec2f& start_wm)
     {
         ClearPathLines();
         ClearPortalPairLines();
@@ -2377,16 +2371,14 @@ namespace {
             RouteJobScope job_scope; // defer eviction while we hold MilePath*
             std::vector<GW::Vec2f> full_path;
             std::vector<HiddenPathSegment> hidden_segments;
-            if (!BuildCrossMapRoute(from_map, to_map, start, goal, start_wm, full_path, hidden_segments))
-                return;
+            if (!BuildCrossMapRoute(from_map, to_map, start, goal, start_wm, full_path, hidden_segments)) return;
             // Legacy/world-map-only preview: the points are world coords now, so draw
             // them as world-coord lines (the world map renders these directly).
             Resources::EnqueueMainTask([full_path, cur_map] {
                 ClearPathLines();
                 for (size_t i = 0; i + 1 < full_path.size(); i++) {
                     if (IsPathBreak(full_path[i]) || IsPathBreak(full_path[i + 1])) continue;
-                    auto* line = Minimap::Instance().custom_renderer.AddCustomLine(
-                        {full_path[i].x, full_path[i].y, 0}, {full_path[i + 1].x, full_path[i + 1].y, 0});
+                    auto* line = Minimap::Instance().custom_renderer.AddCustomLine({full_path[i].x, full_path[i].y, 0}, {full_path[i + 1].x, full_path[i + 1].y, 0});
                     line->map = cur_map;
                     line->world_coords = true;
                     line->draw_on_minimap = false;
@@ -2401,22 +2393,21 @@ namespace {
 
     void RecalculatePath(const GW::GamePos& from, const GW::GamePos& to)
     {
-        if (!NeedsRecalculating(from, to))
-            return;
+        if (!NeedsRecalculating(from, to)) return;
         ClearPathLines();
         delete astar;
         astar = nullptr;
         // Use path_from_map if both are on the same map, otherwise current map
         auto target_map = GW::Map::GetMapID();
-        if (path_from_map != GW::Constants::MapID::None && path_from_map == path_to_map)
-            target_map = path_from_map;
+        if (path_from_map != GW::Constants::MapID::None && path_from_map == path_to_map) target_map = path_from_map;
         const auto map_id = target_map;
         Resources::EnqueueWorkerTask([from, to, map_id] {
             RouteJobScope job_scope; // defer eviction while we hold MilePath*
             Pathing::MilePath* milepath = nullptr;
             if (map_id == GW::Map::GetMapID()) {
                 milepath = GetMilepathForCurrentMap();
-            } else {
+            }
+            else {
                 milepath = GetMilepathForMap(map_id);
             }
             if (!milepath) {
@@ -2464,25 +2455,21 @@ namespace {
     {
         for (const auto& [file_hash, entries] : constant_maps_info) {
             for (const auto& entry : entries) {
-                if (entry.file_hash && !map_id_to_file_hash.contains(entry.map_id))
-                    map_id_to_file_hash[entry.map_id] = (uint32_t)entry.file_hash;
+                if (entry.file_hash && !map_id_to_file_hash.contains(entry.map_id)) map_id_to_file_hash[entry.map_id] = (uint32_t)entry.file_hash;
             }
         }
         PATH_LOG_INFO("Built map file hash lookup: %d entries", (int)map_id_to_file_hash.size());
         auto it837 = map_id_to_file_hash.find(GW::Constants::MapID::War_in_Kryta_Talmark_Wilderness);
-        PATH_LOG_INFO("  map 837: %s (0x%X)", it837 != map_id_to_file_hash.end() ? "found" : "NOT FOUND",
-            it837 != map_id_to_file_hash.end() ? it837->second : 0);
+        PATH_LOG_INFO("  map 837: %s (0x%X)", it837 != map_id_to_file_hash.end() ? "found" : "NOT FOUND", it837 != map_id_to_file_hash.end() ? it837->second : 0);
         // Debug: check specific map
         auto it381 = map_id_to_file_hash.find(GW::Constants::MapID::Yohlon_Haven_outpost);
-        PATH_LOG_INFO("  map 381: %s (0x%X)", it381 != map_id_to_file_hash.end() ? "found" : "NOT FOUND",
-            it381 != map_id_to_file_hash.end() ? it381->second : 0);
+        PATH_LOG_INFO("  map 381: %s (0x%X)", it381 != map_id_to_file_hash.end() ? "found" : "NOT FOUND", it381 != map_id_to_file_hash.end() ? it381->second : 0);
         // Check if constant_maps_info has the entry
         int found_381 = 0;
         for (const auto& [fh, entries] : constant_maps_info) {
             for (const auto& e : entries) {
                 if (e.map_id == GW::Constants::MapID::Yohlon_Haven_outpost) {
-                    PATH_LOG_INFO("  constant_maps_info: map=381 file_hash=0x%X outer_key=0x%X",
-                        e.file_hash, fh);
+                    PATH_LOG_INFO("  constant_maps_info: map=381 file_hash=0x%X outer_key=0x%X", e.file_hash, fh);
                     found_381++;
                 }
             }
@@ -2508,7 +2495,11 @@ namespace {
         if (canonical_file_hash_built.load(std::memory_order_acquire)) return;
         canonical_file_hash.clear();
 
-        struct Group { GW::Continent continent; ImRect bounds; uint32_t rep; };
+        struct Group {
+            GW::Continent continent;
+            ImRect bounds;
+            uint32_t rep;
+        };
         std::vector<Group> groups;
         std::set<uint32_t> seen;
         for (const auto& [file_hash, entries] : constant_maps_info) {
@@ -2524,14 +2515,15 @@ namespace {
                 uint32_t rep = fh;
                 for (const auto& g : groups) {
                     if (g.continent != area->continent) continue;
-                    if (fabsf(g.bounds.Min.x - b.Min.x) <= tol && fabsf(g.bounds.Min.y - b.Min.y) <= tol &&
-                        fabsf(g.bounds.Max.x - b.Max.x) <= tol && fabsf(g.bounds.Max.y - b.Max.y) <= tol) {
+                    if (fabsf(g.bounds.Min.x - b.Min.x) <= tol && fabsf(g.bounds.Min.y - b.Min.y) <= tol && fabsf(g.bounds.Max.x - b.Max.x) <= tol && fabsf(g.bounds.Max.y - b.Max.y) <= tol) {
                         rep = g.rep;
                         break;
                     }
                 }
-                if (rep == fh) groups.push_back({area->continent, b, fh});
-                else PATH_LOG_INFO("[Canonical] file 0x%X -> 0x%X (same continent+bounds)", fh, rep);
+                if (rep == fh)
+                    groups.push_back({area->continent, b, fh});
+                else
+                    PATH_LOG_INFO("[Canonical] file 0x%X -> 0x%X (same continent+bounds)", fh, rep);
                 canonical_file_hash[fh] = rep;
                 break;
             }
@@ -2544,8 +2536,7 @@ namespace {
     uint32_t CanonicalFileHash(uint32_t file_hash)
     {
         if (!file_hash) return 0;
-        if (!canonical_file_hash_built.load(std::memory_order_acquire))
-            BuildCanonicalFileHashes();
+        if (!canonical_file_hash_built.load(std::memory_order_acquire)) BuildCanonicalFileHashes();
         const auto it = canonical_file_hash.find(file_hash);
         return it != canonical_file_hash.end() ? it->second : file_hash;
     }
@@ -2583,26 +2574,28 @@ namespace {
                 uint32_t found_fh = 0;
                 for (const auto& [fh, entries] : constant_maps_info) {
                     for (const auto& e : entries) {
-                        if (e.map_id == GW::Constants::MapID::Shing_Jea_Monastery_outpost) { found_count++; found_fh = (uint32_t)fh; }
+                        if (e.map_id == GW::Constants::MapID::Shing_Jea_Monastery_outpost) {
+                            found_count++;
+                            found_fh = (uint32_t)fh;
+                        }
                     }
                 }
-                PATH_LOG_INFO("[FileId] map 242 debug: runtime=0x%X constant=0x%X lookup=%s brute=%d(0x%X) total_groups=%d",
-                    runtime_fid, constant_fid,
-                    map_id_to_file_hash.contains(GW::Constants::MapID::Shing_Jea_Monastery_outpost) ? "in table" : "NOT in table",
-                    found_count, found_fh, (int)constant_maps_info.size());
+                PATH_LOG_INFO(
+                    "[FileId] map 242 debug: runtime=0x%X constant=0x%X lookup=%s brute=%d(0x%X) total_groups=%d", runtime_fid, constant_fid, map_id_to_file_hash.contains(GW::Constants::MapID::Shing_Jea_Monastery_outpost) ? "in table" : "NOT in table",
+                    found_count, found_fh, (int)constant_maps_info.size()
+                );
             }
             if (runtime_fid && constant_fid && runtime_fid != constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: runtime=0x%X constant=0x%X MISMATCH",
-                    (int)map_id, runtime_fid, constant_fid);
-            } else if (runtime_fid && !constant_fid) {
+                Log::Warning("[FileId] map %d: runtime=0x%X constant=0x%X MISMATCH", (int)map_id, runtime_fid, constant_fid);
+            }
+            else if (runtime_fid && !constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: runtime=0x%X but MISSING from maps_constant_data.h",
-                    (int)map_id, runtime_fid);
-            } else if (!runtime_fid && !constant_fid) {
+                Log::Warning("[FileId] map %d: runtime=0x%X but MISSING from maps_constant_data.h", (int)map_id, runtime_fid);
+            }
+            else if (!runtime_fid && !constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: no file_id from runtime or constant data",
-                    (int)map_id);
+                Log::Warning("[FileId] map %d: no file_id from runtime or constant data", (int)map_id);
             }
         }
 
@@ -2642,7 +2635,7 @@ namespace {
                 ClearPathLines();
                 ClearPortalPairLines();
                 ClearSavedConnectionLines();
-    ClearEditorHighlightLines();
+                ClearEditorHighlightLines();
                 delete astar;
                 astar = nullptr;
 
@@ -2652,12 +2645,11 @@ namespace {
         }
     }
 
-}
+} // namespace
 
 bool PathfindingWindow::ReadyForPathing()
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
-        return false;
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return false;
     // GetMilepathForCurrentMap can create/insert into the route caches; don't touch them
     // while a build holds route_mutex. Report not-ready instead of blocking the game thread
     // (the caller retries next tick).
@@ -2681,7 +2673,10 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
     ProcessDeferredRemovals();
 }
 
-bool PathfindingWindow::WndProc(UINT, WPARAM, LPARAM) { return false; }
+bool PathfindingWindow::WndProc(UINT, WPARAM, LPARAM)
+{
+    return false;
+}
 
 void PathfindingWindow::SignalTerminate()
 {
@@ -2705,22 +2700,18 @@ void PathfindingWindow::SignalTerminate()
 
 bool PathfindingWindow::CanTerminate()
 {
-    if (!pending_terminate && pending_worker_task)
-        return false;
+    if (!pending_terminate && pending_worker_task) return false;
     for (const auto m : mile_paths_by_coords) {
-        if (m.second->isProcessing())
-            return false;
+        if (m.second->isProcessing()) return false;
     }
     return true;
 }
 
 clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args)
 {
-    if (pending_terminate)
-        return 0;
+    if (pending_terminate) return 0;
 
-    if (!ReadyForPathing())
-        return 0;
+    if (!ReadyForPathing()) return 0;
 
     pending_worker_task = true;
 
@@ -2799,9 +2790,12 @@ void PathfindingWindow::Terminate()
         std::vector<std::thread> deletes;
         deletes.reserve(mile_paths_by_coords.size());
         for (const auto& [hash, mp] : mile_paths_by_coords) {
-            deletes.emplace_back([mp] { delete mp; });
+            deletes.emplace_back([mp] {
+                delete mp;
+            });
         }
-        for (auto& t : deletes) t.join();
+        for (auto& t : deletes)
+            t.join();
     }
     mile_paths_by_coords.clear();
     {
@@ -2812,7 +2806,8 @@ void PathfindingWindow::Terminate()
     }
     // Trapezoid pathfinders only own scratch buffers — no worker threads — so
     // serial frees are fine.
-    for (const auto& [hash, pf] : trapezoid_pf_by_coords) delete pf;
+    for (const auto& [hash, pf] : trapezoid_pf_by_coords)
+        delete pf;
     trapezoid_pf_by_coords.clear();
     cached_map_info.clear();
     portal_props_cache.clear();
@@ -2835,7 +2830,12 @@ void PathfindingWindow::SetFrom(const GW::GamePos& pos)
     path_from_map = GW::Map::GetMapID();
     WorldMapWidget::GamePosToWorldMap(pos, path_from_world);
     uint32_t fh = GetMapFileId(path_from_map);
-    if (fh) { auto& sp = points_by_hash[fh]; sp.from = pos; sp.from_world = path_from_world; sp.from_set = true; }
+    if (fh) {
+        auto& sp = points_by_hash[fh];
+        sp.from = pos;
+        sp.from_world = path_from_world;
+        sp.from_set = true;
+    }
     UpdateMarkers(path_from, path_to);
 }
 
@@ -2845,36 +2845,31 @@ void PathfindingWindow::SetTo(const GW::GamePos& pos)
     path_to_map = GW::Map::GetMapID();
     WorldMapWidget::GamePosToWorldMap(pos, path_to_world);
     uint32_t fh = GetMapFileId(path_to_map);
-    if (fh) { auto& sp = points_by_hash[fh]; sp.to = pos; sp.to_world = path_to_world; sp.to_set = true; }
+    if (fh) {
+        auto& sp = points_by_hash[fh];
+        sp.to = pos;
+        sp.to_world = path_to_world;
+        sp.to_set = true;
+    }
     UpdateMarkers(path_from, path_to);
 }
 
-bool PathfindingWindow::GetNextPortalToward(
-    GW::Constants::MapID from_map,
-    const GW::GamePos& from_pos,
-    GW::Constants::MapID to_map,
-    const GW::Vec2f& goal_world_pos,
-    GW::GamePos& out_portal_pos)
+bool PathfindingWindow::GetNextPortalToward(GW::Constants::MapID from_map, const GW::GamePos& from_pos, GW::Constants::MapID to_map, const GW::Vec2f& goal_world_pos, GW::GamePos& out_portal_pos)
 {
-    if (from_map == GW::Constants::MapID::None || to_map == GW::Constants::MapID::None)
-        return false;
-    if (from_map == to_map)
-        return false;
+    if (from_map == GW::Constants::MapID::None || to_map == GW::Constants::MapID::None) return false;
+    if (from_map == to_map) return false;
     // Same physical map (outpost ↔ explorable variant): no portal needed.
     const uint32_t fh_from = GetMapFileId(from_map);
     const uint32_t fh_to = GetMapFileId(to_map);
-    if (fh_from && fh_from == fh_to)
-        return false;
+    if (fh_from && fh_from == fh_to) return false;
 
     // Resolve goal world pos → game pos in target map (force-load DAT if needed).
-    if (!GetCachedMapInfo(to_map))
-        LoadMapFromDAT(to_map);
+    if (!GetCachedMapInfo(to_map)) LoadMapFromDAT(to_map);
     GW::GamePos goal_game{};
     const bool have_goal = WorldMapWidget::WorldMapToGamePos(goal_world_pos, goal_game, to_map);
 
     auto route = FindMapRoute(from_map, to_map, &from_pos, have_goal ? &goal_game : nullptr);
-    if (route.size() < 2)
-        return false;
+    if (route.size() < 2) return false;
 
     const auto next = route[1];
 
@@ -2883,8 +2878,7 @@ bool PathfindingWindow::GetNextPortalToward(
 
     GW::GamePos exit_portal{}, next_entry{};
     const GW::GamePos* gg = (route.size() == 2 && have_goal) ? &goal_game : nullptr;
-    if (!FindBestPortalPair(from_map, next, hint_wm, exit_portal, next_entry, &from_pos, gg))
-        return false;
+    if (!FindBestPortalPair(from_map, next, hint_wm, exit_portal, next_entry, &from_pos, gg)) return false;
     out_portal_pos = exit_portal;
     return true;
 }
@@ -2898,8 +2892,7 @@ namespace {
         const auto from_map = GW::Map::GetMapID();
         // Prefer a direct same-map route when the goal lies within the current map's
         // bounds — GetMapIdForLocation can otherwise resolve to an overlapping map.
-        const auto to_map = PathfindingWindow::IsWorldPosOnMap(to_world, from_map)
-            ? from_map : WorldMapWidget::GetMapIdForLocation(to_world);
+        const auto to_map = PathfindingWindow::IsWorldPosOnMap(to_world, from_map) ? from_map : WorldMapWidget::GetMapIdForLocation(to_world);
         if (from_map == GW::Constants::MapID::None || to_map == GW::Constants::MapID::None) return false;
 
         GW::GamePos start;
@@ -2925,23 +2918,21 @@ namespace {
         SegmentToWorld(leg, map_id, out); // leg game -> world
         return true;
     }
-}
+} // namespace
 
 // Detect if click is near previous position (within ~5 world map units)
-static bool IsNearby(const GW::Vec2f& a, const GW::Vec2f& b) {
+static bool IsNearby(const GW::Vec2f& a, const GW::Vec2f& b)
+{
     float dx = a.x - b.x, dy = a.y - b.y;
     return (dx * dx + dy * dy) < 25.f;
 }
 
 // Resolve map ID for a world map click, cycling through overlapping maps
-static GW::Constants::MapID ResolveMapForClick(
-    const GW::Vec2f& world_map_pos, const GW::Vec2f& prev_world_pos,
-    GW::Constants::MapID prev_map)
+static GW::Constants::MapID ResolveMapForClick(const GW::Vec2f& world_map_pos, const GW::Vec2f& prev_world_pos, GW::Constants::MapID prev_map)
 {
     auto map_id = WorldMapWidget::GetMapIdForLocation(world_map_pos);
     // If clicking near the same spot, cycle to next overlapping map
-    if (map_id != GW::Constants::MapID::None && prev_map != GW::Constants::MapID::None &&
-        map_id == prev_map && IsNearby(world_map_pos, prev_world_pos)) {
+    if (map_id != GW::Constants::MapID::None && prev_map != GW::Constants::MapID::None && map_id == prev_map && IsNearby(world_map_pos, prev_world_pos)) {
         auto next = WorldMapWidget::GetMapIdForLocation(world_map_pos, prev_map);
         if (next != GW::Constants::MapID::None) map_id = next;
     }
@@ -2964,16 +2955,15 @@ void LoadAllMapsAtPosition(const GW::Vec2f& world_map_pos)
         if (node.wm_bounds.Contains({world_map_pos.x, world_map_pos.y})) {
             to_load.insert((uint32_t)node.map_id);
             if (IsInterestingMapForCacheTrace(node.map_id)) {
-                PATH_LOG_INFO("[CacheTrace] LoadAllMapsAtPosition click=(%.0f,%.0f) bounds=(%.0f,%.0f)-(%.0f,%.0f) added direct mid=%d",
-                    world_map_pos.x, world_map_pos.y,
-                    node.wm_bounds.Min.x, node.wm_bounds.Min.y, node.wm_bounds.Max.x, node.wm_bounds.Max.y,
-                    (int)node.map_id);
+                PATH_LOG_INFO(
+                    "[CacheTrace] LoadAllMapsAtPosition click=(%.0f,%.0f) bounds=(%.0f,%.0f)-(%.0f,%.0f) added direct mid=%d", world_map_pos.x, world_map_pos.y, node.wm_bounds.Min.x, node.wm_bounds.Min.y, node.wm_bounds.Max.x, node.wm_bounds.Max.y,
+                    (int)node.map_id
+                );
             }
             for (auto adj : GetAdjacentMaps(node.map_id)) {
                 to_load.insert((uint32_t)adj);
                 if (IsInterestingMapForCacheTrace(adj)) {
-                    PATH_LOG_INFO("[CacheTrace] LoadAllMapsAtPosition click=(%.0f,%.0f) added adj mid=%d via parent=%d",
-                        world_map_pos.x, world_map_pos.y, (int)adj, (int)node.map_id);
+                    PATH_LOG_INFO("[CacheTrace] LoadAllMapsAtPosition click=(%.0f,%.0f) added adj mid=%d via parent=%d", world_map_pos.x, world_map_pos.y, (int)adj, (int)node.map_id);
                 }
             }
         }
@@ -3004,11 +2994,14 @@ void PathfindingWindow::SetFromWorldMap(const GW::Vec2f& world_map_pos)
     path_from = game_pos;
 
     uint32_t fh = GetMapFileId(path_from_map);
-    if (fh) { auto& sp = points_by_hash[fh]; sp.from = game_pos; sp.from_world = world_map_pos; sp.from_set = true; }
+    if (fh) {
+        auto& sp = points_by_hash[fh];
+        sp.from = game_pos;
+        sp.from_world = world_map_pos;
+        sp.from_set = true;
+    }
 
-    PATH_LOG_INFO("SetFrom: wm=(%.1f,%.1f) game=(%.1f,%.1f) map=%d hash=0x%X cur=%d",
-        world_map_pos.x, world_map_pos.y, game_pos.x, game_pos.y,
-        (int)path_from_map, fh, (int)GW::Map::GetMapID());
+    PATH_LOG_INFO("SetFrom: wm=(%.1f,%.1f) game=(%.1f,%.1f) map=%d hash=0x%X cur=%d", world_map_pos.x, world_map_pos.y, game_pos.x, game_pos.y, (int)path_from_map, fh, (int)GW::Map::GetMapID());
     UpdateMarkers(path_from, path_to);
 }
 
@@ -3024,11 +3017,14 @@ void PathfindingWindow::SetToWorldMap(const GW::Vec2f& world_map_pos)
     path_to = game_pos;
 
     uint32_t fh = GetMapFileId(path_to_map);
-    if (fh) { auto& sp = points_by_hash[fh]; sp.to = game_pos; sp.to_world = world_map_pos; sp.to_set = true; }
+    if (fh) {
+        auto& sp = points_by_hash[fh];
+        sp.to = game_pos;
+        sp.to_world = world_map_pos;
+        sp.to_set = true;
+    }
 
-    PATH_LOG_INFO("SetTo: wm=(%.1f,%.1f) game=(%.1f,%.1f) map=%d hash=0x%X cur=%d",
-        world_map_pos.x, world_map_pos.y, game_pos.x, game_pos.y,
-        (int)path_to_map, fh, (int)GW::Map::GetMapID());
+    PATH_LOG_INFO("SetTo: wm=(%.1f,%.1f) game=(%.1f,%.1f) map=%d hash=0x%X cur=%d", world_map_pos.x, world_map_pos.y, game_pos.x, game_pos.y, (int)path_to_map, fh, (int)GW::Map::GetMapID());
     UpdateMarkers(path_from, path_to);
 }
 
@@ -3036,23 +3032,16 @@ void PathfindingWindow::FindPath()
 {
     UpdateMarkers(path_from, path_to);
 
-    if (path_from_map != GW::Constants::MapID::None &&
-        path_to_map != GW::Constants::MapID::None &&
-        path_from_map != path_to_map) {
-
+    if (path_from_map != GW::Constants::MapID::None && path_to_map != GW::Constants::MapID::None && path_from_map != path_to_map) {
         // Check if To is within From map's game bounds — if so, try direct single-map path
         const auto* from_info = GetCachedMapInfo(path_from_map);
         if (from_info && path_to_world.x != 0.f) {
             GW::GamePos to_on_from_map;
             if (WorldMapWidget::WorldMapToGamePos(path_to_world, to_on_from_map, path_from_map)) {
                 // Verify the converted position is within the map's actual game bounds
-                bool in_game_bounds =
-                    to_on_from_map.x >= from_info->bounds_min.x && to_on_from_map.x <= from_info->bounds_max.x &&
-                    to_on_from_map.y >= from_info->bounds_min.y && to_on_from_map.y <= from_info->bounds_max.y;
+                bool in_game_bounds = to_on_from_map.x >= from_info->bounds_min.x && to_on_from_map.x <= from_info->bounds_max.x && to_on_from_map.y >= from_info->bounds_min.y && to_on_from_map.y <= from_info->bounds_max.y;
                 if (in_game_bounds) {
-                    PATH_LOG_INFO("Overlap: To (map %d) at wm=(%.0f,%.0f) -> game=(%.0f,%.0f) on map %d, trying direct",
-                        (int)path_to_map, path_to_world.x, path_to_world.y,
-                        to_on_from_map.x, to_on_from_map.y, (int)path_from_map);
+                    PATH_LOG_INFO("Overlap: To (map %d) at wm=(%.0f,%.0f) -> game=(%.0f,%.0f) on map %d, trying direct", (int)path_to_map, path_to_world.x, path_to_world.y, to_on_from_map.x, to_on_from_map.y, (int)path_from_map);
                     std::vector<GW::GamePos> direct_path;
                     if (RunAStarOnMap(path_from_map, path_from, to_on_from_map, direct_path) && !direct_path.empty()) {
                         PATH_LOG_INFO("Direct path on map %d: %d points", (int)path_from_map, (int)direct_path.size());
@@ -3072,7 +3061,8 @@ void PathfindingWindow::FindPath()
         auto pt = path_to;
         auto pfw = path_from_world;
         RecalculateMultiMapPath_WithRetry(pfm, ptm, pf, pt, pfw);
-    } else {
+    }
+    else {
         RecalculatePath(path_from, path_to);
     }
 }
@@ -3094,7 +3084,7 @@ bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Ve
 {
     if (!out) return false;
     std::lock_guard route_lock(route_mutex); // one build at a time; see route_mutex
-    RouteJobScope job_scope; // defer eviction while we hold MilePath*
+    RouteJobScope job_scope;                 // defer eviction while we hold MilePath*
     return ComputeRoute(from_world, to_world, *out);
 }
 
@@ -3102,7 +3092,7 @@ bool PathfindingWindow::RecalculateSegment(GW::Constants::MapID map_id, const GW
 {
     if (!out) return false;
     std::lock_guard route_lock(route_mutex); // one build at a time; see route_mutex
-    RouteJobScope job_scope; // defer eviction while we hold MilePath*
+    RouteJobScope job_scope;                 // defer eviction while we hold MilePath*
     return ComputeSegment(map_id, from, to, *out);
 }
 

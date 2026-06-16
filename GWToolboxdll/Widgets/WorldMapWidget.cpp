@@ -436,8 +436,7 @@ namespace {
 
     void AppendMapFileInfo()
     {
-        if (!current_map_file_id || map_info_by_file_id.contains(current_map_file_id)) 
-            return;
+        if (!current_map_file_id || map_info_by_file_id.contains(current_map_file_id)) return;
         MapFileInfo info;
         const auto map_context = GW::GetMapContext();
         info.map_file_id = current_map_file_id;
@@ -792,9 +791,7 @@ namespace {
 
             if (zaishen_coin_texture && *zaishen_coin_texture && DailyQuests::GetZaishenCoinReward(quest->quest_id)) {
                 const float coin_half = quest_icon_size * 0.3f;
-                draw_list->AddImage(*zaishen_coin_texture,
-                    {viewport_quest_pos.x - coin_half, viewport_quest_pos.y - coin_half},
-                    {viewport_quest_pos.x + coin_half, viewport_quest_pos.y + coin_half});
+                draw_list->AddImage(*zaishen_coin_texture, {viewport_quest_pos.x - coin_half, viewport_quest_pos.y - coin_half}, {viewport_quest_pos.x + coin_half, viewport_quest_pos.y + coin_half});
             }
 
             return icon_rect.Contains(ImGui::GetMousePos());
@@ -972,7 +969,7 @@ namespace {
         };
         return true;
     }
-}
+} // namespace
 
 bool WorldMapWidget::WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos, GW::Constants::MapID map_id)
 {
@@ -1091,7 +1088,8 @@ void WorldMapWidget::SaveSettings(SettingsDoc& doc)
     std::ofstream out(map_info_by_file_id_file);
     if (!out.is_open()) return;
     for (const auto& [file_id, info] : map_info_by_file_id) {
-        out << "MAP " << static_cast<uint32_t>(info.map_id)  << info.map_file_id << " " << info.world_pos_start.x << " " << info.world_pos_start.y << " " << info.world_pos_end.x << " " << info.world_pos_end.y << " " << info.portals.size() << " " << static_cast<uint32_t>(info.map_id) << "\n";
+        out << "MAP " << static_cast<uint32_t>(info.map_id) << info.map_file_id << " " << info.world_pos_start.x << " " << info.world_pos_start.y << " " << info.world_pos_end.x << " " << info.world_pos_end.y << " " << info.portals.size() << " "
+            << static_cast<uint32_t>(info.map_id) << "\n";
         for (const auto& portal : info.portals) {
             out << "PORTAL " << portal.map_file_id << " " << portal.prop_index << " " << portal.world_pos.x << " " << portal.world_pos.y << "\n";
         }
@@ -1199,7 +1197,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         controls_window_rect.Translate(mouse_offset);
     }
     hovered_map_portal = 0;
-    #if 0
+#if 0
     DrawAreaOverlays();
     const auto current_map_info = GW::Map::GetMapInfo();
     for (auto& [_, map_info] : map_info_by_file_id) {
@@ -1210,8 +1208,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             }
         }
     }
-    #endif
     DrawLockedAreaHighlights();
+#endif
+
 
 
     hovered_boss = nullptr;
