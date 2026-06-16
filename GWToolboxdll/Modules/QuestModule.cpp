@@ -2,32 +2,32 @@
 
 #include "QuestModule.h"
 
-#include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Quest.h>
 
-#include <GWCA/Managers/UIMgr.h>
-#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hook.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
-#include <Windows/TravelWindow.h>
-#include <Windows/Pathfinding/PathfindingWindow.h>
+#include <Modules/Resources.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
-#include <Modules/Resources.h>
+#include <Windows/Pathfinding/PathfindingWindow.h>
+#include <Windows/TravelWindow.h>
 
-#include <Utils/GuiUtils.h>
 #include <GWCA/Context/WorldContext.h>
-#include <Widgets/WorldMapWidget.h>
-#include <GWCA/Utilities/MemoryPatcher.h>
-#include <Utils/ToolboxUtils.h>
-#include "AudioSettings.h"
 #include <GWCA/Managers/MemoryMgr.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
+#include <Utils/GuiUtils.h>
+#include <Utils/ToolboxUtils.h>
+#include <Widgets/WorldMapWidget.h>
+#include "AudioSettings.h"
 
 namespace {
     QuestModule::Settings settings;
@@ -57,14 +57,11 @@ namespace {
     {
         GW::Hook::EnterHook();
         QuestLogRow_UICallback_Ret(message, wParam, lParam);
-        if (!(settings.double_click_to_travel_to_quest
-            && message->message_id == GW::UI::UIMessage::kMouseClick2
-            && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost
-            && GW::UI::BelongsToFrame(GW::UI::GetFrameByLabel(L"Quest"), GW::UI::GetFrameById(message->frame_id))) )
+        if (!(settings.double_click_to_travel_to_quest && message->message_id == GW::UI::UIMessage::kMouseClick2 && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost &&
+              GW::UI::BelongsToFrame(GW::UI::GetFrameByLabel(L"Quest"), GW::UI::GetFrameById(message->frame_id))))
             return GW::Hook::LeaveHook();
         const auto packet = (GW::UI::UIPacket::kMouseAction*)wParam;
-        if (!(packet->current_state == GW::UI::UIPacket::ActionState::MouseClick && (packet->child_offset_id & 0xffff0000) == 0x80000000)) 
-            return GW::Hook::LeaveHook(); // Not a double click on a quest entry
+        if (!(packet->current_state == GW::UI::UIPacket::ActionState::MouseClick && (packet->child_offset_id & 0xffff0000) == 0x80000000)) return GW::Hook::LeaveHook(); // Not a double click on a quest entry
         if (last_quest_clicked && TIMER_DIFF(last_quest_clicked) < 250) {
             const auto quest_id = static_cast<GW::Constants::QuestID>(packet->child_offset_id & 0xffff);
             const auto quest = GW::QuestMgr::GetQuest(quest_id);
@@ -84,16 +81,12 @@ namespace {
     {
         const auto questlog = GW::QuestMgr::GetQuestLog();
         const auto active_quest = GW::QuestMgr::GetActiveQuest();
-        if (!questlog || !active_quest)
-            return false;
-        if (quest_id == active_quest->quest_id)
-            return true;
-        if (!settings.show_paths_to_all_quests)
-            return false;
+        if (!questlog || !active_quest) return false;
+        if (quest_id == active_quest->quest_id) return true;
+        if (!settings.show_paths_to_all_quests) return false;
         // De-duplicate other quests that are pointing to the same place!
         const auto quest = GW::QuestMgr::GetQuest(quest_id);
-        if (!quest)
-            return false; // Quest has just been removed?
+        if (!quest) return false; // Quest has just been removed?
         for (const auto q : *questlog) {
             if (quest->marker == q.marker) {
                 return q.quest_id == quest_id;
@@ -103,13 +96,9 @@ namespace {
     }
 
     struct CalculatedQuestPath {
-        CalculatedQuestPath(const GW::Constants::QuestID _quest_id)
-            : quest_id(_quest_id) {}
+        CalculatedQuestPath(const GW::Constants::QuestID _quest_id) : quest_id(_quest_id) {}
 
-        ~CalculatedQuestPath()
-        {
-            ClearMinimapLines();
-        }
+        ~CalculatedQuestPath() { ClearMinimapLines(); }
 
         CalculatedQuestPath(const CalculatedQuestPath&) = delete;
         CalculatedQuestPath& operator=(const CalculatedQuestPath&) = delete;
@@ -122,12 +111,12 @@ namespace {
         clock_t route_failed_at = 0; // last failed compute; backs off retries of an unroutable marker
         GW::Constants::QuestID quest_id{};
         clock_t calculating = 0;
-        GW::Vec2f goal_world{};        // world-map goal
-        bool has_full_route = false;   // the whole route has been plotted at least once
+        GW::Vec2f goal_world{};               // world-map goal
+        bool has_full_route = false;          // the whole route has been plotted at least once
         std::vector<GW::Vec2f> route_world{}; // the route, world-map coords (PATH_BREAK between maps)
-        bool IsCalculating() {
-            return calculating && TIMER_DIFF(calculating) < 5000;
-        }
+        size_t route_map_end_idx = 0;         // the last world point that was converted to a game pos and added to route_map
+        std::vector<GW::GamePos> route_map{};
+        bool IsCalculating() { return calculating && TIMER_DIFF(calculating) < 5000; }
 
         void ClearMinimapLines()
         {
@@ -144,47 +133,42 @@ namespace {
         void DrawLines()
         {
             ClearMinimapLines();
-            if (!(settings.draw_quest_path_on_terrain || settings.draw_quest_path_on_minimap || settings.draw_quest_path_on_mission_map))
-                return;
-            if (route_world.empty()) return;
+            if (!(settings.draw_quest_path_on_terrain || settings.draw_quest_path_on_minimap || settings.draw_quest_path_on_mission_map)) return;
             const auto color = QuestModule::GetQuestLineColor(quest_id);
+
+            CustomRenderer::CustomLine* l = nullptr;
             bool first_ingame = true;
-            for (size_t i = 0; i + 1 < route_world.size(); i++) {
-                if (PathfindingWindow::IsRouteBreak(route_world[i]) || PathfindingWindow::IsRouteBreak(route_world[i + 1]))
-                    continue;
+            for (size_t i = 0; i + 1 < route_map.size(); i++) {
+                // On the current map: world -> game, draw on the in-game surfaces.
                 const auto label = std::format("{} - {}", static_cast<uint32_t>(quest_id), i);
-                CustomRenderer::CustomLine* l = nullptr;
-                GW::GamePos a{}, b{};
-                if (PathfindingWindow::IsWorldPosOnMap(route_world[i]) && PathfindingWindow::IsWorldPosOnMap(route_world[i + 1]) &&
-                    WorldMapWidget::WorldMapToGamePos(route_world[i], a) && WorldMapWidget::WorldMapToGamePos(route_world[i + 1], b)) {
-                    // On the current map: world -> game, draw on the in-game surfaces.
-                    l = Minimap::Instance().custom_renderer.AddCustomLine(a, b, label.c_str(), true);
-                    l->from_player_pos = first_ingame;
-                    l->draw_on_terrain = settings.draw_quest_path_on_terrain;
-                    l->draw_on_minimap = settings.draw_quest_path_on_minimap;
-                    l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
-                    first_ingame = false;
-                }
-                else {
-                    // Another map: keep world coords, world map only.
-                    l = Minimap::Instance().custom_renderer.AddCustomLine(
-                        {route_world[i].x, route_world[i].y, 0}, {route_world[i + 1].x, route_world[i + 1].y, 0}, label.c_str(), true);
-                    l->world_coords = true;
-                    l->draw_on_terrain = false;
-                    l->draw_on_minimap = false;
-                    l->draw_on_mission_map = false;
-                }
+                l = Minimap::Instance().custom_renderer.AddCustomLine(route_map[i], route_map[i + 1], label.c_str(), true);
+                l->from_player_pos = first_ingame;
+                l->draw_on_terrain = settings.draw_quest_path_on_terrain;
+                l->draw_on_minimap = settings.draw_quest_path_on_minimap;
+                l->draw_on_mission_map = false;
+                first_ingame = false;
                 l->created_by_toolbox = true;
                 l->color = color;
                 minimap_lines.push_back(l);
             }
+            for (size_t i = 0; i + 1 < route_world.size(); i++) {
+                if (PathfindingWindow::IsRouteBreak(route_world[i]) || PathfindingWindow::IsRouteBreak(route_world[i + 1])) continue;
+                const auto label = std::format("{} - {}", static_cast<uint32_t>(quest_id), i);
+                // Another map: keep world coords, world map only.
+                l = Minimap::Instance().custom_renderer.AddCustomLine({route_world[i].x, route_world[i].y, 0}, {route_world[i + 1].x, route_world[i + 1].y, 0}, label.c_str(), true);
+                l->world_coords = true;
+                l->draw_on_terrain = false;
+                l->draw_on_minimap = false;
+                l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
+                l->created_by_toolbox = true;
+                l->color = color;
+                minimap_lines.push_back(l);
+            }
+
             GameWorldRenderer::TriggerSyncAllMarkers();
         }
 
-        [[nodiscard]] const GW::Quest* GetQuest() const
-        {
-            return GW::QuestMgr::GetQuest(quest_id);
-        }
+        [[nodiscard]] const GW::Quest* GetQuest() const { return GW::QuestMgr::GetQuest(quest_id); }
 
         [[nodiscard]] bool IsActive() const
         {
@@ -198,47 +182,47 @@ namespace {
         void Recalculate(const GW::GamePos& from)
         {
             if (IsCalculating()) return;
-            if (!PathfindingWindow::ReadyForPathing()) { calculating = 0; calculated_at = 0; return; }
+            if (!PathfindingWindow::ReadyForPathing()) {
+                calculating = 0;
+                calculated_at = 0;
+                return;
+            }
             calculating = TIMER_INIT();
             const auto qid = quest_id;
 
-            if (has_full_route && !route_world.empty()) {
-                // Keep the leading points still on this map; recompute player -> the last
-                // of them; reuse everything past it (other maps) verbatim.
-                const auto leg_map = GW::Map::GetMapID();
-                size_t last_on = route_world.size(); // one past the last on-map index
-                for (size_t i = 0; i < route_world.size(); i++) {
-                    if (PathfindingWindow::IsRouteBreak(route_world[i]) || !PathfindingWindow::IsWorldPosOnMap(route_world[i], leg_map)) {
-                        last_on = i;
-                        break;
-                    }
-                }
-                GW::GamePos seg_end{};
-                if (last_on >= 1 && WorldMapWidget::WorldMapToGamePos(route_world[last_on - 1], seg_end, leg_map)) {
-                    // Preserve the tail (everything past the leg) untouched.
-                    auto tail = std::make_shared<std::vector<GW::Vec2f>>(
-                        route_world.begin() + last_on, route_world.end());
-                    Resources::EnqueueWorkerTask([qid, leg_map, from, seg_end, tail] {
-                        auto pts = new std::vector<GW::Vec2f>(); // world-map coords
-                        const bool ok = PathfindingWindow::RecalculateSegment(leg_map, from, seg_end, pts);
-                        if (ok) pts->insert(pts->end(), tail->begin(), tail->end());
-                        Resources::EnqueueMainTask([qid, pts, ok] {
-                            const auto cqp = GetCalculatedQuestPath(qid, false);
-                            if (cqp && ok) {
-                                cqp->route_world = std::move(*pts);
-                                cqp->calculated_at = TIMER_INIT();
-                                cqp->route_failed_at = 0;
-                                cqp->calculating = 0;
-                                cqp->UpdateUI();
+            if (!route_world.empty()) {
+                // We've already calculated the route_world, then we know which world map position from route_map_end_idx
+                if (!route_map_end_idx) return;
+                GW::Vec2f from_world{};
+                WorldMapWidget::GamePosToWorldMap(from, from_world);
+                const auto gw = route_world[0];
+                Resources::EnqueueWorkerTask([qid, from_world, gw] {
+                    auto pts = new std::vector<GW::Vec2f>(); // world-map coords
+                    const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
+                    Resources::EnqueueMainTask([qid, pts, ok] {
+                        const auto cqp = GetCalculatedQuestPath(qid, false);
+                        if (cqp && ok) {
+                            cqp->route_map.clear();
+                            GW::GamePos gp;
+                            for (auto& pt : *pts) {
+                                if (PathfindingWindow::IsRouteBreak(pt)) continue;
+                                if (!(PathfindingWindow::IsWorldPosOnMap(pt) && WorldMapWidget::WorldMapToGamePos(pt, gp))) break;
+                                cqp->route_map.push_back(gp);
                             }
-                            else if (cqp) { cqp->calculating = 0; cqp->calculated_at = TIMER_INIT(); cqp->route_failed_at = TIMER_INIT(); }
-                            delete pts;
-                        });
+                            cqp->calculated_at = TIMER_INIT();
+                            cqp->route_failed_at = 0;
+                            cqp->calculating = 0;
+                            cqp->UpdateUI();
+                        }
+                        else if (cqp) {
+                            cqp->calculating = 0;
+                            cqp->calculated_at = TIMER_INIT();
+                            cqp->route_failed_at = TIMER_INIT();
+                        }
+                        delete pts;
                     });
-                    calculated_from = from;
-                    return;
-                }
-                // No leading current-map points (e.g. we zoned) → plot the whole route.
+                });
+                return; // Never re-calculate the world level path.
             }
 
             // No route yet, or it no longer starts on this map: plot it all.
@@ -252,13 +236,27 @@ namespace {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
                     if (cqp && ok) {
                         cqp->route_world = std::move(*pts);
+                        cqp->route_map.clear();
+                        GW::GamePos gp;
+                        auto data = cqp->route_world.data();
+                        cqp->route_map_end_idx = 0;
+                        for (cqp->route_map_end_idx = 0; cqp->route_map_end_idx < cqp->route_world.size(); cqp->route_map_end_idx++) {
+                            if (PathfindingWindow::IsRouteBreak(data[cqp->route_map_end_idx])) continue;
+                            if (!(PathfindingWindow::IsWorldPosOnMap(data[cqp->route_map_end_idx]) && WorldMapWidget::WorldMapToGamePos(data[cqp->route_map_end_idx], gp))) break;
+                            cqp->route_map.push_back(gp);
+                        }
+                        if (cqp->route_map_end_idx) cqp->route_world.erase(cqp->route_world.begin(), cqp->route_world.begin() + cqp->route_map_end_idx);
                         cqp->has_full_route = true;
                         cqp->calculated_at = TIMER_INIT();
                         cqp->route_failed_at = 0;
                         cqp->calculating = 0;
                         cqp->UpdateUI();
                     }
-                    else if (cqp) { cqp->calculating = 0; cqp->calculated_at = TIMER_INIT(); cqp->route_failed_at = TIMER_INIT(); }
+                    else if (cqp) {
+                        cqp->calculating = 0;
+                        cqp->calculated_at = TIMER_INIT();
+                        cqp->route_failed_at = TIMER_INIT();
+                    }
                     delete pts;
                 });
             });
@@ -284,18 +282,13 @@ namespace {
             // Marker couldn't be routed to — back off instead of recomputing (and
             // re-logging) every tick. A goal/map change re-plots via RefreshQuestPath.
             constexpr clock_t failed_route_backoff = 10000;
-            if (route_failed_at && TIMER_DIFF(route_failed_at) < failed_route_backoff)
-                return false;
+            if (route_failed_at && TIMER_DIFF(route_failed_at) < failed_route_backoff) return false;
             constexpr float recalculate_when_moved_further_than = 100.f * 100.f;
-            if (GetSquareDistance(from, calculated_from) > recalculate_when_moved_further_than)
-                Recalculate(from);
+            if (GetSquareDistance(from, calculated_from) > recalculate_when_moved_further_than) Recalculate(from);
             return false;
         }
 
-        void UpdateUI()
-        {
-            DrawLines();
-        }
+        void UpdateUI() { DrawLines(); }
     };
     void BlockQuestSound()
     {
@@ -320,8 +313,7 @@ namespace {
     void ClearCalculatedPath(GW::Constants::QuestID quest_id)
     {
         const auto found = calculated_quest_paths.find(quest_id);
-        if (found == calculated_quest_paths.end())
-            return;
+        if (found == calculated_quest_paths.end()) return;
         auto cqp = found->second;
         calculated_quest_paths.erase(found);
         delete cqp;
@@ -331,8 +323,7 @@ namespace {
     {
         const auto found = calculated_quest_paths.find(quest_id);
         if (found != calculated_quest_paths.end()) return found->second;
-        if (!create_if_not_found)
-            return nullptr;
+        if (!create_if_not_found) return nullptr;
         const auto cqp = new CalculatedQuestPath(quest_id);
         calculated_quest_paths[quest_id] = cqp;
         return cqp;
@@ -362,11 +353,9 @@ namespace {
             }
             const auto quest = GW::QuestMgr::GetQuest(quest_id);
             const auto pos = quest ? GetPlayerPos() : nullptr;
-            if (!pos)
-                return;
+            if (!pos) return;
             const auto cqp = GetCalculatedQuestPath(quest_id);
-            if (!cqp)
-                return;
+            if (!cqp) return;
 
             // Resolve the world-map goal. The custom marker owns its world pos directly.
             // Regular quests use their current-map marker, but fall back to the
@@ -390,6 +379,7 @@ namespace {
             }
             if (!have_goal) {
                 cqp->route_world.clear();
+                cqp->route_map.clear();
                 cqp->has_full_route = false;
                 cqp->calculated_at = 0;
                 cqp->route_failed_at = 0;
@@ -397,8 +387,8 @@ namespace {
                 return;
             }
             if (GetSquareDistance(goal, cqp->goal_world) > 10.f * 10.f) {
-                cqp->has_full_route = false;  // goal moved → re-plot the whole route
-                cqp->route_failed_at = 0;     // and give the new goal a clean retry
+                cqp->has_full_route = false; // goal moved → re-plot the whole route
+                cqp->route_failed_at = 0;    // and give the new goal a clean retry
             }
             cqp->goal_world = goal;
             cqp->Recalculate(*pos);
@@ -452,31 +442,27 @@ namespace {
                     status->blocked = true;
                     QuestModule::SetActiveQuestId(quest_id, false);
                 }
-            }
-            break;
+            } break;
             case GW::UI::UIMessage::kSendAbandonQuest: {
                 const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
                 if (quest_id == custom_quest_id) {
                     status->blocked = true;
                     QuestModule::SetCustomQuestMarker({0, 0});
                 }
-            }
-            break;
+            } break;
             case GW::UI::UIMessage::kOnScreenMessage: {
                 // Block the on-screen message when the custom marker is placed
                 if (setting_custom_quest_marker) {
                     status->blocked = true;
                 }
-            }
-            break;
+            } break;
         }
     }
 
     // Callback invoked by quest related ui messages. All messages sent should have the quest id as first wparam variable
     void OnPostUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* packet, void*)
     {
-        if (status->blocked)
-            return;
+        if (status->blocked) return;
         switch (message_id) {
             case GW::UI::UIMessage::kQuestDetailsChanged:
             case GW::UI::UIMessage::kQuestAdded:
@@ -500,7 +486,8 @@ namespace {
 
 
 
-    void OnMapLoaded() {
+    void OnMapLoaded()
+    {
         if (GW::UI::IsLoadingScreenShown()) return;
         BlockQuestSound();
         QuestModule::FetchMissingQuestInfo();
@@ -645,8 +632,14 @@ void QuestModule::ClearCustomQuestMarker()
     SetCustomQuestMarker({0, 0});
 }
 
-void QuestModule::AddCustomMarkerChangedCallback(CustomMarkerChangedCallback cb) { custom_marker_callbacks.push_back(cb); }
-void QuestModule::RemoveCustomMarkerChangedCallback(CustomMarkerChangedCallback cb) { std::erase(custom_marker_callbacks, cb); }
+void QuestModule::AddCustomMarkerChangedCallback(CustomMarkerChangedCallback cb)
+{
+    custom_marker_callbacks.push_back(cb);
+}
+void QuestModule::RemoveCustomMarkerChangedCallback(CustomMarkerChangedCallback cb)
+{
+    std::erase(custom_marker_callbacks, cb);
+}
 
 std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::QuestID quest_id)
 {
@@ -656,20 +649,18 @@ std::vector<QuestObjective> QuestModule::ParseQuestObjectives(GW::Constants::Que
     const wchar_t* next_objective_enc = nullptr;
     const wchar_t* current_objective_enc = quest->objectives;
     if (!quest->objectives) {
-        if (quest_id == custom_quest_id)
-            return out;
+        if (quest_id == custom_quest_id) return out;
         BlockQuestSound();
         GW::QuestMgr::RequestQuestInfo(quest);
     }
-        
+
     while (current_objective_enc) {
         next_objective_enc = wcschr(current_objective_enc, 0x2);
         size_t current_objective_len = next_objective_enc ? next_objective_enc - current_objective_enc : wcslen(current_objective_enc);
 
         auto enc_str = std::wstring(current_objective_enc, current_objective_len);
         auto content_start = enc_str.find(0x10a);
-        if (content_start == std::wstring::npos)
-            break;
+        if (content_start == std::wstring::npos) break;
         content_start++;
 
         enc_str = enc_str.substr(content_start, enc_str.size() - content_start - 1);
@@ -701,7 +692,8 @@ ImU32& QuestModule::GetQuestLineColor(GW::Constants::QuestID quest_id)
 
 void QuestModule::DrawSettingsInternal()
 {
-    ImGui::CheckboxWithHelp("Keep current quest when accepting a new one", &settings.keep_current_quest_when_new_quest_added,
+    ImGui::CheckboxWithHelp(
+        "Keep current quest when accepting a new one", &settings.keep_current_quest_when_new_quest_added,
         "By default, Guild Wars changes your currently selected quest to the one you've just taken from an NPC.\nThis can be annoying if you don't realise your quest marker is now taking you somewhere different!\nTick this to make sure your current quest isn't changed when a new quest is added to your log."
     );
     ImGui::Checkbox("Double click a quest in the quest log window to travel to nearest outpost", &settings.double_click_to_travel_to_quest);
@@ -714,8 +706,7 @@ void QuestModule::DrawSettingsInternal()
 #ifdef _DEBUG
     recalc_quest_paths |= ImGui::Checkbox("Show paths to all quests##drawallquestpaths", &settings.show_paths_to_all_quests);
 #endif
-    if(recalc_quest_paths)
-        RefreshAllQuestPaths();
+    if (recalc_quest_paths) RefreshAllQuestPaths();
 }
 
 void QuestModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
@@ -738,8 +729,7 @@ void QuestModule::SaveSettings(SettingsDoc& doc)
 
 void QuestModule::Initialize()
 {
-    if (initialised)
-        return;
+    if (initialised) return;
     initialised = true;
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
@@ -751,17 +741,9 @@ void QuestModule::Initialize()
         bypass_custom_quest_assertion_patch.TogglePatch(true);
     }
 
-    constexpr GW::UI::UIMessage ui_messages[] = {
-        GW::UI::UIMessage::kQuestDetailsChanged,
-        GW::UI::UIMessage::kQuestAdded,
-        GW::UI::UIMessage::kClientActiveQuestChanged,
-        GW::UI::UIMessage::kServerActiveQuestChanged,
-        GW::UI::UIMessage::kMapLoaded,
-        GW::UI::UIMessage::kOnScreenMessage,
-        GW::UI::UIMessage::kSendSetActiveQuest,
-        GW::UI::UIMessage::kSendAbandonQuest,
-        GW::UI::UIMessage::kStartMapLoad
-    };
+    constexpr GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kQuestDetailsChanged,      GW::UI::UIMessage::kQuestAdded,       GW::UI::UIMessage::kClientActiveQuestChanged,
+                                                 GW::UI::UIMessage::kServerActiveQuestChanged, GW::UI::UIMessage::kMapLoaded,        GW::UI::UIMessage::kOnScreenMessage,
+                                                 GW::UI::UIMessage::kSendSetActiveQuest,       GW::UI::UIMessage::kSendAbandonQuest, GW::UI::UIMessage::kStartMapLoad};
     for (const auto ui_message : ui_messages) {
         // Post callbacks, non blocking
         RegisterUIMessageCallback(&pre_ui_message_entry, ui_message, OnPreUIMessage, -0x4000);
@@ -770,7 +752,7 @@ void QuestModule::Initialize()
     RefreshQuestPath(GW::QuestMgr::GetActiveQuestId());
 
     QuestLogRow_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CtlFrameList.cpp", "selection", 0, 0), 0xfff);
-    
+
     if (QuestLogRow_UICallback_Func) {
         GW::Hook::CreateHook((void**)&QuestLogRow_UICallback_Func, OnQuestLogRow_UICallback, (void**)&QuestLogRow_UICallback_Ret);
         GW::Hook::EnableHooks(QuestLogRow_UICallback_Func);
@@ -780,7 +762,6 @@ void QuestModule::Initialize()
     ASSERT(QuestLogRow_UICallback_Func);
     ASSERT(bypass_custom_quest_assertion_patch.GetAddress());
 #endif
-    
 }
 
 bool QuestModule::SetActiveQuestId(GW::Constants::QuestID quest_id, bool notify_server)
@@ -791,9 +772,8 @@ bool QuestModule::SetActiveQuestId(GW::Constants::QuestID quest_id, bool notify_
         return false;
     }
     BlockQuestSound();
-    if (quest_id == custom_quest_id)
-        notify_server = false;
-    
+    if (quest_id == custom_quest_id) notify_server = false;
+
     if (notify_server) {
         GW::QuestMgr::SetActiveQuestId(quest_id);
     }
@@ -817,8 +797,7 @@ void QuestModule::SignalTerminate()
     if (QuestLogRow_UICallback_Func) {
         GW::Hook::RemoveHook(QuestLogRow_UICallback_Func);
     }
-    if (bypass_custom_quest_assertion_patch.IsValid())
-        bypass_custom_quest_assertion_patch.Reset();
+    if (bypass_custom_quest_assertion_patch.IsValid()) bypass_custom_quest_assertion_patch.Reset();
 }
 
 void QuestModule::Update(float)
@@ -829,8 +808,7 @@ void QuestModule::Update(float)
         return;
     }
     if (was_loading) {
-        if (GW::UI::IsLoadingScreenShown())
-            return;
+        if (GW::UI::IsLoadingScreenShown()) return;
         OnMapLoaded();
         was_loading = false;
     }
@@ -874,7 +852,7 @@ bool QuestModule::CanTerminate()
 void QuestModule::FetchMissingQuestInfo()
 {
     if (fetch_missing_quest_info_queued) return;
-    fetch_missing_quest_info_queued = TIMER_INIT();   
+    fetch_missing_quest_info_queued = TIMER_INIT();
 }
 
 void QuestModule::Terminate()
@@ -883,7 +861,4 @@ void QuestModule::Terminate()
     initialised = false;
 }
 
-QuestObjective::QuestObjective(const GW::Constants::QuestID quest_id, const wchar_t* objective_enc, const bool is_completed)
-    : quest_id(quest_id),
-      objective_enc(std::make_unique<GuiUtils::EncString>(objective_enc)),
-      is_completed(is_completed) {}
+QuestObjective::QuestObjective(const GW::Constants::QuestID quest_id, const wchar_t* objective_enc, const bool is_completed) : quest_id(quest_id), objective_enc(std::make_unique<GuiUtils::EncString>(objective_enc)), is_completed(is_completed) {}
