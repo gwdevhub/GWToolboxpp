@@ -42,6 +42,8 @@ public:
         bool show_any_elite_capture_locations = false;
         // Bitmask backing the per-profession show_elite_capture_locations runtime array
         unsigned int show_elite_capture_locations_val = 0xffffffff;
+        // Bitmask backing the per-campaign show_elite_capture_locations_campaign runtime array (bits 0-3: Core, Prophecies, Factions, Nightfall)
+        unsigned int show_elite_capture_locations_campaign_val = 0xffffffff;
     };
 
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
