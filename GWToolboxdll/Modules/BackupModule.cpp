@@ -8,6 +8,7 @@
 
 #include "BackupModule.h"
 #include "CodeOptimiserModule.h"
+#include "ImGuiAddons.h"
 
 // ============================================================
 // ZIP (STORE) writer/reader — no external dependencies
@@ -250,12 +251,6 @@ namespace {
     // Settings & state
     // ============================================================
 
-    struct Settings {
-        bool backup_text_files  = true;
-        bool backup_image_files = false;
-        bool backup_audio_files = false;
-    } settings;
-
     // Extensions by category (all lower-case).
     constexpr std::string_view TEXT_EXTS[]  = {".ini", ".json", ".txt", ".tsv", ".csv", ".xml"};
     constexpr std::string_view IMAGE_EXTS[] = {".png", ".jpg", ".jpeg", ".bmp", ".dds"};
@@ -271,15 +266,15 @@ namespace {
         for (const auto& e : ALWAYS_EXCLUDED)
             if (ext == e) return false;
 
-        if (settings.backup_text_files)
+        if (BackupModule::Instance().settings.backup_text_files)
             for (const auto& e : TEXT_EXTS)
                 if (ext == e) return true;
 
-        if (settings.backup_image_files)
+        if (BackupModule::Instance().settings.backup_image_files)
             for (const auto& e : IMAGE_EXTS)
                 if (ext == e) return true;
 
-        if (settings.backup_audio_files)
+        if (BackupModule::Instance().settings.backup_audio_files)
             for (const auto& e : AUDIO_EXTS)
                 if (ext == e) return true;
 
@@ -374,7 +369,7 @@ namespace {
         ZipEntry e;
         e.name     = "_gwtoolbox_backup.txt";
         e.data     = std::vector<uint8_t>(info.begin(), info.end());
-        e.size     = static_cast<uint32_t>(info.size());
+        e.size     = info.size();
         e.crc32    = CodeOptimiserModule::Crc32(e.data.data(), e.data.size());
         e.mod_time = t;
         e.mod_date = d;

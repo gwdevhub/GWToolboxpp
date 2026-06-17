@@ -7,6 +7,14 @@ class BackupModule : public ToolboxModule {
     ~BackupModule() override = default;
 
 public:
+    
+    struct Settings {
+        bool backup_text_files  = true;
+        bool backup_image_files = false;
+        bool backup_audio_files = false;
+    } settings;
+    
+    
     static BackupModule& Instance()
     {
         static BackupModule instance;
