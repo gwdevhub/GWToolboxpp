@@ -4,6 +4,7 @@
 #include <Defines.h>
 #include <Modules/Resources.h>
 #include <Utils/SettingsRegistry.h>
+#include <Utils/TextUtils.h>
 
 #include "BackupModule.h"
 
@@ -291,10 +292,7 @@ namespace {
 
     static bool is_extension_allowed(std::string ext)
     {
-        // Lowercase the extension.
-        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
-            return static_cast<char>(std::tolower(c));
-        });
+        ext = TextUtils::ToLower(std::move(ext));
 
         for (const auto& e : ALWAYS_EXCLUDED)
             if (ext == e) return false;
@@ -312,17 +310,6 @@ namespace {
                 if (ext == e) return true;
 
         return false;
-    }
-
-    // Timestamp string suitable for filenames: "2024-01-15_14-30-00"
-    static std::string timestamp_for_filename()
-    {
-        SYSTEMTIME st;
-        GetLocalTime(&st);
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%04d-%02d-%02d_%02d-%02d-%02d",
-                 st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-        return buf;
     }
 
     // Read a file in binary mode into a byte vector.
@@ -365,10 +352,7 @@ namespace {
                 if (!sub.empty() && sub.begin()->string() != "..") continue;
             }
 
-            auto ext = p.extension().string();
-            std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
-                return static_cast<char>(std::tolower(c));
-            });
+            const auto ext = TextUtils::ToLower(p.extension().string());
 
             // Always-excluded check.
             bool excluded = false;
@@ -431,7 +415,7 @@ namespace {
         std::vector<ZipEntry> entries;
         if (!collect_files(settings_folder, entries, text_only)) return false;
 
-        const auto ts = timestamp_for_filename();
+        const auto ts = TextUtils::FilenameTimestamp();
         add_info_entry(entries, ts);
 
         Resources::EnsureFolderExists(zip_path.parent_path());
@@ -516,7 +500,7 @@ void BackupModule::SaveSettings(SettingsDoc& doc)
 bool BackupModule::CreateAutoBackup()
 {
     const auto backups_dir = Resources::GetSettingsFolderPath() / "backups";
-    const auto zip_path    = backups_dir / std::format("auto_{}.zip", timestamp_for_filename());
+    const auto zip_path    = backups_dir / std::format("auto_{}.zip", TextUtils::FilenameTimestamp());
 
     return do_create_backup(zip_path, /*text_only=*/true);
 }
@@ -533,7 +517,7 @@ void BackupModule::DrawSettingsInternal()
     ImGui::Spacing();
 
     if (ImGui::Button("Create backup now...")) {
-        const auto ts  = timestamp_for_filename();
+        const auto ts  = TextUtils::FilenameTimestamp();
         const auto def = Resources::GetSettingsFolderPath() / std::format("backup_{}.zip", ts);
         Resources::SaveFileDialog(on_save_file_chosen, "zip", def.string().c_str());
     }
