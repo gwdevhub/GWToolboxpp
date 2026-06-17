@@ -58,6 +58,7 @@ public:
         bool overlay_party_window = false;
         bool show_damage = true;
         bool show_healing = false;
+        bool show_dps = false;
         // Distance away from the party window on the x axis; used with snap to party window
         int user_offset = 0;
     };

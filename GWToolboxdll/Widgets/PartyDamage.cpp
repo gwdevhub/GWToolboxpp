@@ -31,6 +31,10 @@ namespace {
     uint32_t total = 0;
     uint32_t total_healing = 0;
 
+    clock_t first_packet_time = 0;
+    clock_t last_packet_time = 0;
+    clock_t accumulated_combat_time_ms = 0;
+
     std::map<DWORD, DWORD> hp_map_nm{};
     std::map<DWORD, DWORD> hp_map_hm{};
     const std::pair<const char*, std::map<DWORD, DWORD>*> section_maps[] = {
@@ -388,6 +392,20 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
         }
     }
 
+    const clock_t now = TIMER_INIT();
+    if (first_packet_time == 0) {
+        first_packet_time = now;
+        last_packet_time = now;
+    }
+    else {
+        const clock_t elapsed = now - last_packet_time;
+        if (elapsed > 5000 && first_packet_time != 0) {
+            accumulated_combat_time_ms += (last_packet_time - first_packet_time);
+            first_packet_time = now;
+        }
+        last_packet_time = now;
+    }
+
     if (is_damage) {
         entry->damage += amount;
         total += amount;
@@ -411,6 +429,9 @@ void PartyDamage::ResetDamage()
     }
     departed_damage.clear();
     prev_party_agent_ids.clear();
+    first_packet_time = 0;
+    last_packet_time = 0;
+    accumulated_combat_time_ms = 0;
 }
 
 void PartyDamage::WriteOwnDamage()
@@ -709,6 +730,13 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 }
             }
 
+            if (settings.show_dps && settings.show_damage && entry->damage > 0) {
+                const uint32_t dps = accumulated_combat_time_ms == 0 ? 0 : static_cast<uint32_t>(std::llround(static_cast<double>(entry->damage) * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+                snprintf(buffer, buffer_size, "%d/s", dps);
+                const float dps_text_x = x + width * 0.75f;
+                draw_list->AddText(ImVec2(dps_text_x, text_y), IM_COL32(255, 255, 255, 255), buffer);
+            }
+
             if (settings.show_healing) {
                 // Healing text
                 const float healing_float = static_cast<float>(entry->healing);
@@ -834,6 +862,8 @@ void PartyDamage::DrawSettingsInternal()
     ImGui::Checkbox("Show damage", &settings.show_damage);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show healing", &settings.show_healing);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show DPS", &settings.show_dps);
 
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
