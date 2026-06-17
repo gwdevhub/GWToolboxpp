@@ -587,13 +587,17 @@ namespace {
         Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
     }
 
+    // Reduce a preference name to a comparable slug so user input matches the label regardless of case, spacing or punctuation.
+    std::wstring SanitisePrefName(std::wstring s)
+    {
+        return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(std::move(s))));
+    }
+
     std::unique_ptr<GuiUtils::EncString> MakePrefLabel(uint32_t enc_string_id)
     {
         auto label = std::make_unique<GuiUtils::EncString>(enc_string_id, true);
         label->language(GW::Constants::Language::English);
-        label->SetSanitiseCallback([](std::wstring s) {
-            return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
-        });
+        label->SetSanitiseCallback(SanitisePrefName);
         return label;
     }
 
@@ -601,9 +605,7 @@ namespace {
     {
         auto label = std::make_unique<GuiUtils::EncString>(enc_string, true);
         label->language(GW::Constants::Language::English);
-        label->SetSanitiseCallback([](std::wstring s) {
-            return TextUtils::RemovePunctuation(TextUtils::RemoveDiacritics(TextUtils::ToSlug(s)));
-        });
+        label->SetSanitiseCallback(SanitisePrefName);
         return label;
     }
 
@@ -667,26 +669,27 @@ namespace {
     void CHAT_CMD_FUNC(CmdPref)
     {
         const auto& options = getPrefCommandOptions();
-        if (argc > 1 && wcscmp(argv[1], L"list") == 0) {
+        if (argc < 2) {
+            return Log::Error(pref_syntax);
+        }
+        if (wcscmp(argv[1], L"list") == 0) {
             std::wstring buffer;
 
             for (auto& option : options) {
                 if (!buffer.empty()) buffer += L", ";
                 buffer += option.label->wstring();
             }
-            Log::InfoW(L"/pref options:\n%s", buffer.c_str());
-        }
-        if (argc < 2) {
-            return Log::Error(pref_syntax);
+            return Log::InfoW(L"/pref options:\n%s", buffer.c_str());
         }
 
-        // TODO: T
-        // Find preference by name
-        const auto found = std::ranges::find_if(options, [argv](const PrefMapCommand& cmd) {
-            return cmd.label->wstring() == argv[1];
+        // Match leniently: slug both sides so the input accepts any case/spacing/punctuation
+        // and matches whether the label has resolved to its slug yet or still reads as its decoded text.
+        const auto requested = SanitisePrefName(argv[1]);
+        const auto found = std::ranges::find_if(options, [&requested](const PrefMapCommand& cmd) {
+            return SanitisePrefName(cmd.label->wstring()) == requested;
         });
         if (found == options.end()) {
-            return Log::Error(pref_syntax);
+            return Log::ErrorW(L"Unknown preference \"%s\". Type '/pref list' to see the preferences you can set.", argv[1]);
         }
         const PrefMapCommand* pref = &(*found);
 
