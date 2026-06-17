@@ -271,6 +271,7 @@ namespace {
                 // Short king calculation: the goal is the same, but the player has moved. Recalculate only the current map leg.
                 RecalculateMap();
             }
+            calculated_from = from_world;
         }
 
         bool Update(const GW::GamePos& from)
