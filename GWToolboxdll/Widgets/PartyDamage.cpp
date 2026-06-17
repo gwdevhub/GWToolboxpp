@@ -392,25 +392,24 @@ void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::
         }
     }
 
-    const clock_t now = TIMER_INIT();
-    if (first_packet_time == 0) {
-        first_packet_time = now;
-        last_packet_time = now;
-    }
-    else {
-        const clock_t elapsed = now - last_packet_time;
-        if (elapsed > 5000 && first_packet_time != 0) {
-            accumulated_combat_time_ms += (last_packet_time - first_packet_time);
-            first_packet_time = now;
-        }
-        last_packet_time = now;
-    }
-
     if (is_damage) {
+        const clock_t now = TIMER_INIT();
         entry->damage += amount;
         total += amount;
         entry->recent_damage += amount;
-        entry->last_damage = TIMER_INIT();
+        entry->last_damage = now;
+        if (first_packet_time == 0) {
+            first_packet_time = now;
+            last_packet_time = now;
+        }
+        else {
+            const clock_t elapsed = now - last_packet_time;
+            if (elapsed > 5000 && first_packet_time != 0) {
+                accumulated_combat_time_ms += (last_packet_time - first_packet_time);
+                first_packet_time = now;
+            }
+            last_packet_time = now;
+        }
     }
     else {
         entry->healing += amount;
