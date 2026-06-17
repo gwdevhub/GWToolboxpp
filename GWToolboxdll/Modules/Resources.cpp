@@ -43,6 +43,8 @@
 
 #include <d3d9.h>
 
+#include <Modules/CodeOptimiserModule.h>
+
 
 
 namespace {
@@ -1786,17 +1788,6 @@ int Resources::GetBitsPerPixel(D3DFORMAT format)
 }
 uint32_t Resources::GetTexmodHash(const char* data, size_t size)
 {
-    // uMod CRC32 - bit-by-bit calculation, NO final inversion
-    constexpr static auto crc32_poly = 0xEDB88320u;
-    constexpr static auto ul_crc_in = 0xffffffffu;
-    unsigned int crc = ul_crc_in;
-
-    for (size_t idx = 0u; idx < size; idx++) {
-        unsigned int data_byte = static_cast<unsigned char>(data[idx]);
-        for (unsigned int bit = 0u; bit < 8u; bit++, data_byte >>= 1) {
-            crc = crc >> 1 ^ ((crc ^ data_byte) & 1 ? crc32_poly : 0);
-        }
-    }
-
-    return crc; // IMPORTANT: NO final XOR with 0xFFFFFFFF
+    // uMod format omits the final XOR that standard CRC32 applies, so invert the result.
+    return ~CodeOptimiserModule::Crc32(data, size);
 }

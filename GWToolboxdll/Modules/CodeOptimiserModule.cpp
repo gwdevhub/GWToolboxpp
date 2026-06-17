@@ -16,6 +16,7 @@ namespace {
     static constexpr uint32_t P = 0xEDB88320U;
 
     static uint32_t g_tbl[256 * 16];
+    static std::once_flag g_tbl_once;
 
     void compute_tabular_method_tables(uint32_t* pTbl, uint32_t kNumTables)
     {
@@ -42,10 +43,13 @@ namespace {
         }
     }
 
-    uint32_t ComputeCRC32(uint32_t crc_init, const void* data, uint32_t bytes) {
-        GW::Hook::EnterHook();
-        uint32_t R = ~crc_init;
+    static void ensure_crc32_tables() {
+        std::call_once(g_tbl_once, [] { compute_tabular_method_tables(g_tbl, 16); });
+    }
 
+    // Pure CRC32 table walk — no hook machinery, no init/final XOR.
+    static uint32_t crc32_process(uint32_t R, const void* data, uint32_t bytes)
+    {
         const uint8_t* M8 = (const uint8_t*)data;
 
         while (((uintptr_t)M8 & 0x3) && bytes) {
@@ -82,16 +86,28 @@ namespace {
         while (bytes--) {
             R = (R >> 8) ^ g_tbl[(R ^ *M8++) & 0xFF];
         }
+        return R;
+    }
+
+    uint32_t ComputeCRC32(uint32_t crc_init, const void* data, uint32_t bytes) {
+        GW::Hook::EnterHook();
+        const uint32_t result = crc32_process(~crc_init, data, bytes);
         GW::Hook::LeaveHook();
-        return ~R;
+        return ~result;
     }
 
 }
 
+uint32_t CodeOptimiserModule::Crc32(const void* data, size_t bytes)
+{
+    ensure_crc32_tables();
+    return ~crc32_process(~0u, data, static_cast<uint32_t>(bytes));
+}
+
 void CodeOptimiserModule::Initialize() {
+    ensure_crc32_tables();
     ComputeCRC32_func = (ComputeCRC32_pt)GW::Scanner::Find("\xf7\xd6\x85", "xxx", -0xF);
     if (ComputeCRC32_func) {
-        compute_tabular_method_tables(g_tbl, 16);
         GW::Hook::CreateHook((void**)&ComputeCRC32_func, ComputeCRC32, nullptr);
         GW::Hook::EnableHooks(ComputeCRC32_func);
     }

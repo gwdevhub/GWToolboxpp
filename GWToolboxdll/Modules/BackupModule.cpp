@@ -7,38 +7,12 @@
 #include <Utils/TextUtils.h>
 
 #include "BackupModule.h"
+#include "CodeOptimiserModule.h"
 
 // ============================================================
 // ZIP (STORE) writer/reader — no external dependencies
 // ============================================================
 namespace {
-
-    // --- CRC-32 -----------------------------------------------------------
-
-    static uint32_t crc32_table[256];
-    static std::once_flag crc32_once;
-
-    static void ensure_crc32()
-    {
-        std::call_once(crc32_once, [] {
-            for (uint32_t n = 0; n < 256; n++) {
-                uint32_t c = n;
-                for (int k = 0; k < 8; k++)
-                    c = (c >> 1) ^ (c & 1u ? 0xEDB88320u : 0u);
-                crc32_table[n] = c;
-            }
-        });
-    }
-
-    static uint32_t crc32_compute(const void* data, size_t len)
-    {
-        ensure_crc32();
-        uint32_t crc = 0xFFFFFFFFu;
-        const auto* p = static_cast<const uint8_t*>(data);
-        for (size_t i = 0; i < len; i++)
-            crc = (crc >> 8) ^ crc32_table[(crc ^ p[i]) & 0xFF];
-        return crc ^ 0xFFFFFFFFu;
-    }
 
     // --- DOS date/time ----------------------------------------------------
 
@@ -379,7 +353,7 @@ namespace {
             e.name     = rel;
             e.data     = std::move(data);
             e.size     = static_cast<uint32_t>(e.data.size());
-            e.crc32    = crc32_compute(e.data.data(), e.data.size());
+            e.crc32    = CodeOptimiserModule::Crc32(e.data.data(), e.data.size());
             e.mod_time = mod_time;
             e.mod_date = mod_date;
             entries.push_back(std::move(e));
@@ -401,7 +375,7 @@ namespace {
         e.name     = "_gwtoolbox_backup.txt";
         e.data     = std::vector<uint8_t>(info.begin(), info.end());
         e.size     = static_cast<uint32_t>(info.size());
-        e.crc32    = crc32_compute(e.data.data(), e.data.size());
+        e.crc32    = CodeOptimiserModule::Crc32(e.data.data(), e.data.size());
         e.mod_time = t;
         e.mod_date = d;
         entries.insert(entries.begin(), std::move(e));
