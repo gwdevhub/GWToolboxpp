@@ -22,6 +22,7 @@
 #include <Utils/RateLimiter.h>
 #include <CircurlarBuffer.h>
 
+#include <Modules/ChatFilter.h>
 #include <Modules/Resources.h>
 #include <Windows/FriendListWindow.h>
 #include <Windows/TradeWindow.h>
@@ -394,6 +395,9 @@ void TradeWindow::fetch()
                 messages.add(msg);
                 if (print_search_results && i < 12) {
                     std::wstring name_ws = TextUtils::StringToWString(msg.name);
+                    if (ChatFilter::IsSenderBlocked(name_ws)) {
+                        continue; // Skip search results from blocked players
+                    }
                     std::wstring msg_ws = TextUtils::StringToWString(msg.message);
                     time_t ts = msg.timestamp;
                     tm* local_tm = localtime(&ts);
@@ -440,8 +444,8 @@ void TradeWindow::fetch()
 
         if (print_message) {
             std::wstring name_ws = TextUtils::StringToWString(msg.name);
-            if (FriendListWindow::GetIsPlayerIgnored(name_ws)) {
-                return; // Skip messages from ignored players
+            if (FriendListWindow::GetIsPlayerIgnored(name_ws) || ChatFilter::IsSenderBlocked(name_ws)) {
+                return; // Skip messages from ignored or blocked players
             }
             std::wstring msg_ws = std::format(L"<c=#f96677><quote>{}",TextUtils::StringToWString(msg.message));
             external_trade_message = true;
