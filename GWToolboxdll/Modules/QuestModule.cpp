@@ -184,20 +184,24 @@ namespace {
             Resources::EnqueueWorkerTask([qid = quest_id, from_world, gw = calculated_to] {
                 auto pts = new std::vector<GW::Vec2f>(); // world-map coords
                 const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
-                Resources::EnqueueMainTask([qid, pts, ok] {
+                auto route_map = new std::vector<GW::GamePos>(); // game-map coords
+                if (ok) {
+                    size_t route_map_end_idx = 0;
+                    GW::GamePos gp;
+                    auto data = pts->data();
+                    for (route_map_end_idx = 0; route_map_end_idx < pts->size(); route_map_end_idx++) {
+                        if (PathfindingWindow::IsRouteBreak(data[route_map_end_idx])) continue;
+                        // @cleanup: is this bit safe to run on a worker thread?!
+                        if (!(PathfindingWindow::IsWorldPosOnMap(data[route_map_end_idx]) && WorldMapWidget::WorldMapToGamePos(data[route_map_end_idx], gp))) break;
+                        route_map->push_back(gp);
+                    }
+                    if (route_map_end_idx) pts->erase(pts->begin(), pts->begin() + route_map_end_idx);
+                }
+                Resources::EnqueueMainTask([qid, route_map, pts, ok] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
                     if (cqp && ok) {
                         cqp->route_world = std::move(*pts);
-                        cqp->route_map.clear();
-                        GW::GamePos gp;
-                        auto data = cqp->route_world.data();
-                        cqp->route_map_end_idx = 0;
-                        for (cqp->route_map_end_idx = 0; cqp->route_map_end_idx < cqp->route_world.size(); cqp->route_map_end_idx++) {
-                            if (PathfindingWindow::IsRouteBreak(data[cqp->route_map_end_idx])) continue;
-                            if (!(PathfindingWindow::IsWorldPosOnMap(data[cqp->route_map_end_idx]) && WorldMapWidget::WorldMapToGamePos(data[cqp->route_map_end_idx], gp))) break;
-                            cqp->route_map.push_back(gp);
-                        }
-                        if (cqp->route_map_end_idx) cqp->route_world.erase(cqp->route_world.begin(), cqp->route_world.begin() + cqp->route_map_end_idx);
+                        cqp->route_map = std::move(*route_map);
                         cqp->has_full_route = true;
                         cqp->calculated_at = TIMER_INIT();
                         cqp->route_failed_at = 0;
@@ -210,6 +214,7 @@ namespace {
                         cqp->route_failed_at = TIMER_INIT();
                     }
                     delete pts;
+                    delete route_map;
                 });
             });
         }
@@ -221,16 +226,20 @@ namespace {
             Resources::EnqueueWorkerTask([qid = quest_id, from_world = calculated_from, gw = route_world[0]] {
                 auto pts = new std::vector<GW::Vec2f>(); // world-map coords
                 const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
-                Resources::EnqueueMainTask([qid, pts, ok] {
+                auto route_map = new std::vector<GW::GamePos>(); // game-map coords
+                if (ok) {
+                    GW::GamePos gp;
+                    for (auto& pt : *pts) {
+                        if (PathfindingWindow::IsRouteBreak(pt)) continue;
+                        // @cleanup: is this bit safe to run on a worker thread?!
+                        if (!(PathfindingWindow::IsWorldPosOnMap(pt) && WorldMapWidget::WorldMapToGamePos(pt, gp))) break;
+                        route_map->push_back(gp);
+                    }
+                }
+                Resources::EnqueueMainTask([qid, route_map, pts, ok] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
                     if (cqp && ok) {
-                        cqp->route_map.clear();
-                        GW::GamePos gp;
-                        for (auto& pt : *pts) {
-                            if (PathfindingWindow::IsRouteBreak(pt)) continue;
-                            if (!(PathfindingWindow::IsWorldPosOnMap(pt) && WorldMapWidget::WorldMapToGamePos(pt, gp))) break;
-                            cqp->route_map.push_back(gp);
-                        }
+                        cqp->route_map = std::move(*route_map);
                         cqp->calculated_at = TIMER_INIT();
                         cqp->route_failed_at = 0;
                         cqp->calculating = 0;
@@ -242,6 +251,7 @@ namespace {
                         cqp->route_failed_at = TIMER_INIT();
                     }
                     delete pts;
+                    delete route_map;
                 });
             });
         }
