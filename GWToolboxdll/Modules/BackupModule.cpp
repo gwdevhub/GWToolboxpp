@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <ImGuiAddons.h>
 #include <Logger.h>
 #include <Defines.h>
 #include <Modules/Resources.h>
