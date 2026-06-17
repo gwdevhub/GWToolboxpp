@@ -4,6 +4,7 @@
 #include <GWToolbox.h>
 #include <Logger.h>
 
+#include <Modules/BackupModule.h>
 #include <Modules/Resources.h>
 #include <Modules/Updater.h>
 
@@ -122,6 +123,10 @@ namespace {
 
     void DoUpdate()
     {
+        Log::Warning("Creating settings backup before update...");
+        if (!BackupModule::CreateAutoBackup())
+            Log::Warning("Failed to create pre-update backup; continuing with update anyway.");
+
         Log::Warning("Downloading update...");
 
         step = Downloading;

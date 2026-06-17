@@ -29,6 +29,7 @@
 #include <Modules/GWFileRequester.h>
 #endif
 #include <Modules/AudioSettings.h>
+#include <Modules/BackupModule.h>
 #include <Modules/CameraUnlockModule.h>
 #include <Modules/CodeOptimiserModule.h>
 #include <Modules/FpsFix.h>
@@ -151,6 +152,7 @@ namespace {
         Obfuscator::Instance(),
 #endif
         PluginModule::Instance(),
+        BackupModule::Instance(),
         ChatFilter::Instance(),
         ItemDrops::Instance(),
         PartyWindowModule::Instance(),
