@@ -565,6 +565,8 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
 
         if (const auto found = find_matching_poly(poly_to_add)) {
+            found->from_player_pos = poly_to_add.from_player_pos;
+            found->use_dotted_effect = poly_to_add.use_dotted_effect;
             out.emplace_back(std::move(*found));
         }
         else {
