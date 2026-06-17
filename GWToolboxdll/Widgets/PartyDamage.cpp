@@ -38,6 +38,14 @@ namespace {
     clock_t last_packet_time = 0;
     clock_t accumulated_combat_time_ms = 0;
 
+    // Returns total combat time including the current battle segment,
+    // up to the last damage packet time (not wall clock).
+    clock_t GetEffectiveCombatTime() {
+        if (first_packet_time == 0)
+            return accumulated_combat_time_ms;
+        return accumulated_combat_time_ms + (last_packet_time - first_packet_time);
+    }
+
     // Condition DPS tracking
     enum class ConditionType : uint8_t { Bleeding, Poison, Disease, Burning, Count };
     constexpr uint32_t CONDITION_DPS_RATES[] = { 6, 8, 8, 14 };
@@ -45,7 +53,7 @@ namespace {
         uint32_t agent_id = 0;
         clock_t apply_time[4] = {}; // bleeding, poison, disease, burning
     };
-    CondTracker cond_trackers[512] = {};
+    CondTracker cond_trackers[64] = {};
     uint32_t cond_tracker_count = 0;
     double cond_damage[4] = {}; // accumulated damage per condition
 
@@ -378,7 +386,7 @@ void PartyDamage::ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC
                 break;
         }
         if (ti == cond_tracker_count) {
-            if (ti >= 512) return;
+            if (ti >= 64) return;
             cond_trackers[ti].agent_id = packet->agent_id;
             cond_tracker_count++;
         }
@@ -603,7 +611,6 @@ void PartyDamage::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(&GenericModifier_Entry, DamagePacketCallback, 0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, MapLoadedCallback, 0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, ConditionValueCallback, 0x8000);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Entry, ConditionAgentRemoveCallback, 0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, ConditionAgentStateCallback, 0x8000);
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"dmg", CmdDamage);
@@ -617,7 +624,6 @@ void PartyDamage::Terminate()
     GW::StoC::RemoveCallbacks(&GenericModifier_Entry);
     GW::StoC::RemoveCallbacks(&GenericValue_Entry);
     GW::StoC::RemoveCallbacks(&MapLoaded_Entry);
-    GW::StoC::RemoveCallbacks(&AgentRemove_Entry);
     GW::StoC::RemoveCallbacks(&AgentState_Entry);
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
@@ -697,6 +703,8 @@ void PartyDamage::Draw(IDirect3DDevice9*)
     }
 
     // @Cleanup: Only call when the party window has been moved or updated
+    const clock_t combat_time = GetEffectiveCombatTime();
+
     if (party_agent_ids_by_index.empty() || !RecalculatePartyPositions()) {
         return;
     }
@@ -767,7 +775,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             ImGui::Text(ICON_FA_TINT);
             ImGui::PopStyleColor();
             ImGui::SameLine();
-            const uint32_t bleed_dps = (accumulated_combat_time_ms == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[0] * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+            const uint32_t bleed_dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[0] * 1000.0 / static_cast<double>(combat_time)));
             ImGui::Text("%d/s", bleed_dps);
             ImGui::SameLine();
 
@@ -775,14 +783,14 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             ImGui::Text(ICON_FA_FIRE);
             ImGui::PopStyleColor();
             ImGui::SameLine();
-            const uint32_t burn_dps = (accumulated_combat_time_ms == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[3] * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+            const uint32_t burn_dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[3] * 1000.0 / static_cast<double>(combat_time)));
             ImGui::Text("%d/s", burn_dps);
 
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(120, 200, 80, 255));
             ImGui::Text(ICON_FA_TINT);
             ImGui::PopStyleColor();
             ImGui::SameLine();
-            const uint32_t poison_dps = (accumulated_combat_time_ms == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[1] * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+            const uint32_t poison_dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[1] * 1000.0 / static_cast<double>(combat_time)));
             ImGui::Text("%d/s", poison_dps);
             ImGui::SameLine();
 
@@ -790,7 +798,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             ImGui::Text(ICON_FA_SKULL);
             ImGui::PopStyleColor();
             ImGui::SameLine();
-            const uint32_t disease_dps = (accumulated_combat_time_ms == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[2] * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+            const uint32_t disease_dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[2] * 1000.0 / static_cast<double>(combat_time)));
             ImGui::Text("%d/s", disease_dps);
         }
 
@@ -881,7 +889,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             }
 
             if (settings.show_dps && settings.show_damage && entry->damage > 0) {
-                const uint32_t dps = accumulated_combat_time_ms == 0 ? 0 : static_cast<uint32_t>(std::llround(static_cast<double>(entry->damage) * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+                const uint32_t dps = combat_time == 0 ? 0 : static_cast<uint32_t>(std::llround(static_cast<double>(entry->damage) * 1000.0 / static_cast<double>(combat_time)));
                 snprintf(buffer, buffer_size, "%d/s", dps);
                 const float dps_text_x = x + width * 0.75f;
                 draw_list->AddText(ImVec2(dps_text_x, text_y), IM_COL32(255, 255, 255, 255), buffer);
