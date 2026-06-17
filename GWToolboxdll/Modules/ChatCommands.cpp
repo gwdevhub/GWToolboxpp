@@ -682,10 +682,11 @@ namespace {
             return Log::InfoW(L"/pref options:\n%s", buffer.c_str());
         }
 
-        // Match leniently: labels are stored as slugs, so slug the input too to accept any case/spacing.
+        // Match leniently: slug both sides so the input accepts any case/spacing/punctuation
+        // and matches whether the label has resolved to its slug yet or still reads as its decoded text.
         const auto requested = SanitisePrefName(argv[1]);
         const auto found = std::ranges::find_if(options, [&requested](const PrefMapCommand& cmd) {
-            return cmd.label->wstring() == requested;
+            return SanitisePrefName(cmd.label->wstring()) == requested;
         });
         if (found == options.end()) {
             return Log::ErrorW(L"Unknown preference \"%s\". Type '/pref list' to see the preferences you can set.", argv[1]);
