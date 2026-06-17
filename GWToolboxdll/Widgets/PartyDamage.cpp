@@ -9,6 +9,7 @@
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Packets/StoC.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
@@ -18,6 +19,8 @@
 #include <Widgets/PartyDamage.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
+
+#include <cmath>
 
 constexpr const wchar_t* INI_FILENAME = L"healthlog.ini";
 constexpr const wchar_t* JSON_FILENAME = L"healthlog.json";
@@ -35,6 +38,63 @@ namespace {
     clock_t last_packet_time = 0;
     clock_t accumulated_combat_time_ms = 0;
 
+    // Condition DPS tracking
+    enum class ConditionType : uint8_t { Bleeding, Poison, Disease, Burning, Count };
+    constexpr uint32_t CONDITION_DPS_RATES[] = { 6, 8, 8, 14 };
+    struct CondTracker {
+        uint32_t agent_id = 0;
+        clock_t apply_time[4] = {}; // bleeding, poison, disease, burning
+    };
+    CondTracker cond_trackers[512] = {};
+    uint32_t cond_tracker_count = 0;
+    double cond_damage[4] = {}; // accumulated damage per condition
+
+    int CondIdxFromEffectId(uint32_t effect_id) {
+        switch (effect_id) {
+            case 23: return 0; // bleeding
+            case 27: return 1; // poison
+            case 26: return 2; // disease
+            case 25: return 3; // burning
+            default: return -1;
+        }
+    }
+
+    // Finalize damage for all active conditions on a tracker, then remove it
+    void FinalizeAndRemoveTracker(uint32_t ti) {
+        if (ti >= cond_tracker_count) return;
+        const clock_t now = TIMER_INIT();
+        for (int ci = 0; ci < 4; ci++) {
+            if (cond_trackers[ti].apply_time[ci] != 0) {
+                const double elapsed = static_cast<double>(now - cond_trackers[ti].apply_time[ci]) / 1000.0;
+                cond_damage[ci] += static_cast<double>(CONDITION_DPS_RATES[ci]) * elapsed;
+            }
+        }
+        cond_tracker_count--;
+        cond_trackers[ti] = cond_trackers[cond_tracker_count];
+    }
+
+    GW::HookEntry AgentRemove_Entry;
+    GW::HookEntry AgentState_Entry;
+
+    void ConditionAgentRemoveCallback(GW::HookStatus*, const GW::Packet::StoC::AgentRemove* packet) {
+        for (uint32_t ti = 0; ti < cond_tracker_count; ti++) {
+            if (cond_trackers[ti].agent_id == packet->agent_id) {
+                FinalizeAndRemoveTracker(ti);
+                return;
+            }
+        }
+    }
+
+    void ConditionAgentStateCallback(GW::HookStatus*, const GW::Packet::StoC::AgentState* packet) {
+        if ((packet->state & 16) == 0) return;
+        for (uint32_t ti = 0; ti < cond_tracker_count; ti++) {
+            if (cond_trackers[ti].agent_id == packet->agent_id) {
+                FinalizeAndRemoveTracker(ti);
+                return;
+            }
+        }
+    }
+
     std::map<DWORD, DWORD> hp_map_nm{};
     std::map<DWORD, DWORD> hp_map_hm{};
     const std::pair<const char*, std::map<DWORD, DWORD>*> section_maps[] = {
@@ -50,6 +110,7 @@ namespace {
     PartyDamage::Settings settings;
 
     GW::HookEntry GenericModifier_Entry;
+    GW::HookEntry GenericValue_Entry;
     GW::HookEntry MapLoaded_Entry;
 
     float GetPartOfTotal(uint32_t dmg)
@@ -304,6 +365,51 @@ void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::Map
     }
 }
 
+void PartyDamage::ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet)
+{
+    if (packet->value_id == GW::Packet::StoC::GenericValueID::add_effect) {
+        const int ci = CondIdxFromEffectId(packet->value);
+        if (ci < 0) return;
+        const auto target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
+        if (!target || target->allegiance != GW::Constants::Allegiance::Enemy) return;
+        uint32_t ti = 0;
+        for (; ti < cond_tracker_count; ti++) {
+            if (cond_trackers[ti].agent_id == packet->agent_id)
+                break;
+        }
+        if (ti == cond_tracker_count) {
+            if (ti >= 512) return;
+            cond_trackers[ti].agent_id = packet->agent_id;
+            cond_tracker_count++;
+        }
+        cond_trackers[ti].apply_time[ci] = TIMER_INIT();
+        return;
+    }
+    if (packet->value_id == GW::Packet::StoC::GenericValueID::remove_effect) {
+        for (uint32_t ti = 0; ti < cond_tracker_count; ti++) {
+            if (cond_trackers[ti].agent_id != packet->agent_id) continue;
+            const clock_t now = TIMER_INIT();
+            for (int ci = 0; ci < 4; ci++) {
+                if (cond_trackers[ti].apply_time[ci] == 0) continue;
+                const double elapsed = static_cast<double>(now - cond_trackers[ti].apply_time[ci]) / 1000.0;
+                cond_damage[ci] += static_cast<double>(CONDITION_DPS_RATES[ci]) * elapsed;
+                cond_trackers[ti].apply_time[ci] = 0; // clear it
+            }
+            // If all conditions cleared, remove tracker
+            bool all_cleared = true;
+            for (int ci = 0; ci < 4; ci++) {
+                if (cond_trackers[ti].apply_time[ci] != 0) { all_cleared = false; break; }
+            }
+            if (all_cleared) {
+                cond_tracker_count--;
+                cond_trackers[ti] = cond_trackers[cond_tracker_count];
+            }
+            return;
+        }
+        return;
+    }
+}
+
 void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet)
 {
     // ignore non-damage/heal packets
@@ -431,6 +537,11 @@ void PartyDamage::ResetDamage()
     first_packet_time = 0;
     last_packet_time = 0;
     accumulated_combat_time_ms = 0;
+
+    cond_tracker_count = 0;
+    for (auto& d : cond_damage) {
+        d = 0.0;
+    }
 }
 
 void PartyDamage::WriteOwnDamage()
@@ -491,6 +602,9 @@ void PartyDamage::Initialize()
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericModifier>(&GenericModifier_Entry, DamagePacketCallback, 0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, MapLoadedCallback, 0x8000);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, ConditionValueCallback, 0x8000);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Entry, ConditionAgentRemoveCallback, 0x8000);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, ConditionAgentStateCallback, 0x8000);
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"dmg", CmdDamage);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"damage", CmdDamage);
@@ -501,7 +615,10 @@ void PartyDamage::Terminate()
 {
     SnapsToPartyWindow::Terminate();
     GW::StoC::RemoveCallbacks(&GenericModifier_Entry);
+    GW::StoC::RemoveCallbacks(&GenericValue_Entry);
     GW::StoC::RemoveCallbacks(&MapLoaded_Entry);
+    GW::StoC::RemoveCallbacks(&AgentRemove_Entry);
+    GW::StoC::RemoveCallbacks(&AgentState_Entry);
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     party_names_by_index.clear();
@@ -630,9 +747,11 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         }
     }
 
+    const float cond_h = settings.show_condition_dps ? ImGui::GetTextLineHeight() * 2.0f + 6.0f : 0.0f;
+
     // Add a window to capture mouse clicks.
-    ImGui::SetNextWindowPos({window_x, party_health_bars_position.top_left.y});
-    ImGui::SetNextWindowSize({width, party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y});
+    ImGui::SetNextWindowPos({window_x, party_health_bars_position.top_left.y - cond_h});
+    ImGui::SetNextWindowSize({width, party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y + cond_h});
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
@@ -642,6 +761,38 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         constexpr size_t buffer_size = 16;
         char buffer[buffer_size];
 
+        // Condition DPS header row
+        if (settings.show_condition_dps) {
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(200, 50, 50, 255));
+            ImGui::Text(ICON_FA_TINT);
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            const uint32_t bleed_dps = (accumulated_combat_time_ms == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[0] * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+            ImGui::Text("%d/s", bleed_dps);
+            ImGui::SameLine();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 120, 0, 255));
+            ImGui::Text(ICON_FA_FIRE);
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            const uint32_t burn_dps = (accumulated_combat_time_ms == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[3] * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+            ImGui::Text("%d/s", burn_dps);
+
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(120, 200, 80, 255));
+            ImGui::Text(ICON_FA_TINT);
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            const uint32_t poison_dps = (accumulated_combat_time_ms == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[1] * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+            ImGui::Text("%d/s", poison_dps);
+            ImGui::SameLine();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(200, 100, 200, 255));
+            ImGui::Text(ICON_FA_SKULL);
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            const uint32_t disease_dps = (accumulated_combat_time_ms == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[2] * 1000.0 / static_cast<double>(accumulated_combat_time_ms)));
+            ImGui::Text("%d/s", disease_dps);
+        }
 
         for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
             uint32_t this_agent_party_index = 0;
@@ -863,6 +1014,8 @@ void PartyDamage::DrawSettingsInternal()
     ImGui::Checkbox("Show healing", &settings.show_healing);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Show DPS", &settings.show_dps);
+    ImGui::NextSpacedElement();
+    ImGui::Checkbox("Show Condition DPS", &settings.show_condition_dps);
 
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();

@@ -34,6 +34,7 @@ protected:
 
     static void MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded*);
     static void DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier*);
+    static void ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
 
 public:
     static PartyDamage& Instance()
@@ -59,6 +60,7 @@ public:
         bool show_damage = true;
         bool show_healing = false;
         bool show_dps = false;
+        bool show_condition_dps = false;
         // Distance away from the party window on the x axis; used with snap to party window
         int user_offset = 0;
     };
