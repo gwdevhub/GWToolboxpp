@@ -131,6 +131,8 @@ namespace TextUtils {
     std::string TimeToString(time_t utc_timestamp = 0, bool include_seconds = false, int milliseconds = -1);
     std::string TimeToString(uint32_t utc_timestamp, bool include_seconds = false, int milliseconds = -1);
     std::string TimeToString(FILETIME utc_timestamp, bool include_seconds = false, int milliseconds = -1);
+    // Returns "YYYY-MM-DD_HH-MM-SS" from local time — safe for use in filenames.
+    std::string FilenameTimestamp();
 
     std::vector<std::string> Split(const std::string& in, const std::string& token);
     std::vector<std::wstring> Split(const std::wstring& in, const std::wstring& token);
