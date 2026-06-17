@@ -132,7 +132,7 @@ namespace {
     }
     bool FileIdField(const char* label, const wchar_t* enc_str)
     {
-        return FileIdField(label, GW::UI::EncStrToUInt32(enc_str));
+        return FileIdField(label, ArenaNetFileParser::FileHashToFileId(enc_str));
     }
 
     void GetIdsFromFileId(const uint32_t param_1, short* param_2)

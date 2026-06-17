@@ -190,12 +190,16 @@ namespace {
             calculating = TIMER_INIT();
             const auto qid = quest_id;
 
+            if (calculated_from == from) return;
+
             if (!route_world.empty()) {
+                
                 // We've already calculated the route_world, then we know which world map position from route_map_end_idx
                 if (!route_map_end_idx) return;
                 GW::Vec2f from_world{};
                 WorldMapWidget::GamePosToWorldMap(from, from_world);
                 const auto gw = route_world[0];
+                calculated_from = from;
                 Resources::EnqueueWorkerTask([qid, from_world, gw] {
                     auto pts = new std::vector<GW::Vec2f>(); // world-map coords
                     const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
