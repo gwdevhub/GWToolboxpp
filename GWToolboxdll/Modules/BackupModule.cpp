@@ -251,11 +251,7 @@ namespace {
     // Settings & state
     // ============================================================
 
-    struct Settings {
-        bool backup_text_files  = true;
-        bool backup_image_files = false;
-        bool backup_audio_files = false;
-    } settings;
+    BackupModule::Settings settings;
 
     // Extensions by category (all lower-case).
     constexpr std::string_view TEXT_EXTS[]  = {".ini", ".json", ".txt", ".tsv", ".csv", ".xml"};
