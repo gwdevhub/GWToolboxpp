@@ -462,18 +462,18 @@ namespace {
 
 
 
-    void UpdateBoundsLines();                                                                               // forward decl
-    void UpdatePortalMarkers();                                                                             // forward decl
-    void UpdateGraphEdgeLines();                                                                            // forward decl
+    void UpdateBoundsLines();    // forward decl
+    void UpdatePortalMarkers();  // forward decl
+    void UpdateGraphEdgeLines(); // forward decl
     struct PortalPair {
         GW::GamePos pos_a, pos_b; // game coords in each map
         GW::Vec2f wm_mid;         // world map midpoint
         float pair_dist;          // world map distance between the two portals
     };
     std::vector<PortalPair> FindPortalPairs(GW::Constants::MapID map_a, GW::Constants::MapID map_b); // forward decl
-    const struct CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                              // forward decl
-    uint32_t GetMapFileId(GW::Constants::MapID map_id);                                                     // forward decl
-    GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map);                   // forward decl
+    const struct CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                       // forward decl
+    uint32_t GetMapFileId(GW::Constants::MapID map_id);                                              // forward decl
+    GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map);            // forward decl
 
     // Load a map from DAT and create a MilePath for it. Returns the MilePath (may still be processing).
     Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id)
@@ -487,12 +487,26 @@ namespace {
             return nullptr;
         }
 
+
+
         PATH_LOG_INFO("LoadMapFromDAT: map=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
 
         auto dat_data = Pathing::PathingMapData();
         if (!Pathing::LoadPathingMapDataFromDAT(fid, &dat_data)) {
             PATH_LOG_ERROR("LoadMapFromDAT: DAT parse failed for map %d file_id=%u", (int)map_id, fid);
             return nullptr;
+        }
+
+        if (map_id == GW::Map::GetMapID()) {
+            auto ctx_data = Pathing::PathingMapData();
+            if (!Pathing::LoadFromMapContext(GW::GetMapContext(), fid, &ctx_data)) {
+                PATH_LOG_ERROR("LoadMapFromDAT: Context parse failed for map %d file_id=%u", (int)map_id, fid);
+            }
+            else {
+                if (ctx_data.bounds_max.x != dat_data.bounds_max.x || ctx_data.bounds_max.y != dat_data.bounds_max.y) {
+                    PATH_LOG_ERROR("LoadMapFromDAT: Context bounds_max dont match DAT portals for the current map, file_id=%u - check InfoWindow to update the map file id for this map!", fid);
+                }
+            }
         }
 
         auto hash = static_cast<uint64_t>(fid);

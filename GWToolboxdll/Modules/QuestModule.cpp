@@ -106,7 +106,8 @@ namespace {
         CalculatedQuestPath& operator=(CalculatedQuestPath&&) = delete;
 
         std::vector<CustomRenderer::CustomLine*> minimap_lines{};
-        GW::GamePos calculated_from{};
+        GW::Vec2f calculated_from{};
+        GW::Vec2f calculated_to{}; // world-map coords
         clock_t calculated_at = 0;
         clock_t route_failed_at = 0; // last failed compute; backs off retries of an unroutable marker
         GW::Constants::QuestID quest_id{};
@@ -176,64 +177,11 @@ namespace {
             return a || (GetQuest() && Minimap::ShouldDrawAllQuests());
         }
 
-        // Compute/refresh the route to goal_world. The whole route is plotted once via
-        // CalculateRoute; thereafter a move only re-walks the current-map leg (player ->
-        // the last route point still on this map) and keeps the rest untouched.
-        void Recalculate(const GW::GamePos& from)
+        void RecalculateWorld(const GW::Vec2f& from_world)
         {
-            if (IsCalculating()) return;
-            if (!PathfindingWindow::ReadyForPathing()) {
-                calculating = 0;
-                calculated_at = 0;
-                return;
-            }
-            calculating = TIMER_INIT();
-            const auto qid = quest_id;
-
-            if (calculated_from == from) return;
-
-            if (!route_world.empty()) {
-                
-                // We've already calculated the route_world, then we know which world map position from route_map_end_idx
-                if (!route_map_end_idx) return;
-                GW::Vec2f from_world{};
-                WorldMapWidget::GamePosToWorldMap(from, from_world);
-                const auto gw = route_world[0];
-                calculated_from = from;
-                Resources::EnqueueWorkerTask([qid, from_world, gw] {
-                    auto pts = new std::vector<GW::Vec2f>(); // world-map coords
-                    const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
-                    Resources::EnqueueMainTask([qid, pts, ok] {
-                        const auto cqp = GetCalculatedQuestPath(qid, false);
-                        if (cqp && ok) {
-                            cqp->route_map.clear();
-                            GW::GamePos gp;
-                            for (auto& pt : *pts) {
-                                if (PathfindingWindow::IsRouteBreak(pt)) continue;
-                                if (!(PathfindingWindow::IsWorldPosOnMap(pt) && WorldMapWidget::WorldMapToGamePos(pt, gp))) break;
-                                cqp->route_map.push_back(gp);
-                            }
-                            cqp->calculated_at = TIMER_INIT();
-                            cqp->route_failed_at = 0;
-                            cqp->calculating = 0;
-                            cqp->UpdateUI();
-                        }
-                        else if (cqp) {
-                            cqp->calculating = 0;
-                            cqp->calculated_at = TIMER_INIT();
-                            cqp->route_failed_at = TIMER_INIT();
-                        }
-                        delete pts;
-                    });
-                });
-                return; // Never re-calculate the world level path.
-            }
-
-            // No route yet, or it no longer starts on this map: plot it all.
-            GW::Vec2f from_world{};
-            WorldMapWidget::GamePosToWorldMap(from, from_world);
             const auto gw = goal_world;
-            Resources::EnqueueWorkerTask([qid, from_world, gw] {
+            calculated_to = goal_world;
+            Resources::EnqueueWorkerTask([qid = quest_id, from_world, gw = calculated_to] {
                 auto pts = new std::vector<GW::Vec2f>(); // world-map coords
                 const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
                 Resources::EnqueueMainTask([qid, pts, ok] {
@@ -264,7 +212,65 @@ namespace {
                     delete pts;
                 });
             });
-            calculated_from = from;
+        }
+
+        void RecalculateMap()
+        {
+            // We've already calculated the route_world, then we know which world map position from route_map_end_idx
+            if (!route_map_end_idx || route_world.empty()) return;
+            Resources::EnqueueWorkerTask([qid = quest_id, from_world = calculated_from, gw = route_world[0]] {
+                auto pts = new std::vector<GW::Vec2f>(); // world-map coords
+                const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
+                Resources::EnqueueMainTask([qid, pts, ok] {
+                    const auto cqp = GetCalculatedQuestPath(qid, false);
+                    if (cqp && ok) {
+                        cqp->route_map.clear();
+                        GW::GamePos gp;
+                        for (auto& pt : *pts) {
+                            if (PathfindingWindow::IsRouteBreak(pt)) continue;
+                            if (!(PathfindingWindow::IsWorldPosOnMap(pt) && WorldMapWidget::WorldMapToGamePos(pt, gp))) break;
+                            cqp->route_map.push_back(gp);
+                        }
+                        cqp->calculated_at = TIMER_INIT();
+                        cqp->route_failed_at = 0;
+                        cqp->calculating = 0;
+                        cqp->UpdateUI();
+                    }
+                    else if (cqp) {
+                        cqp->calculating = 0;
+                        cqp->calculated_at = TIMER_INIT();
+                        cqp->route_failed_at = TIMER_INIT();
+                    }
+                    delete pts;
+                });
+            });
+        }
+
+        // Compute/refresh the route to goal_world. The whole route is plotted once via
+        // CalculateRoute; thereafter a move only re-walks the current-map leg (player ->
+        // the last route point still on this map) and keeps the rest untouched.
+        void Recalculate(const GW::GamePos& from)
+        {
+            if (IsCalculating()) return;
+            if (!PathfindingWindow::ReadyForPathing()) {
+                calculating = 0;
+                calculated_at = 0;
+                return;
+            }
+            calculating = TIMER_INIT();
+
+            GW::Vec2f from_world{};
+            WorldMapWidget::GamePosToWorldMap(from, from_world);
+
+            if (calculated_from == from_world && calculated_to == goal_world) return;
+            if (calculated_to != goal_world) {
+                // Big boy calculation: the goal has moved, or we haven't calculated a route yet. Recalculate the whole route.
+                RecalculateWorld(calculated_from);
+            }
+            else {
+                // Short king calculation: the goal is the same, but the player has moved. Recalculate only the current map leg.
+                RecalculateMap();
+            }
         }
 
         bool Update(const GW::GamePos& from)
