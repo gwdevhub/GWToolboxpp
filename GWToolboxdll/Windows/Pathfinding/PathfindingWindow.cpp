@@ -497,20 +497,24 @@ namespace {
             return nullptr;
         }
 
+        // For the current map we can cross-check the DAT against live map memory. A bounds
+        // mismatch means the cached file_id is stale (wrong map version); fall back to the
+        // MapContext copy so pathing uses data matching the map we're actually on.
+        Pathing::PathingMapData ctx_data;
+        Pathing::PathingMapData* chosen = &dat_data;
         if (map_id == GW::Map::GetMapID()) {
-            auto ctx_data = Pathing::PathingMapData();
             if (!Pathing::LoadFromMapContext(GW::GetMapContext(), fid, &ctx_data)) {
                 PATH_LOG_ERROR("LoadMapFromDAT: Context parse failed for map %d file_id=%u", (int)map_id, fid);
             }
-            else {
-                if (ctx_data.bounds_max.x != dat_data.bounds_max.x || ctx_data.bounds_max.y != dat_data.bounds_max.y) {
-                    PATH_LOG_ERROR("LoadMapFromDAT: Context bounds_max dont match DAT portals for the current map, file_id=%u - check InfoWindow to update the map file id for this map!", fid);
-                }
+            else if (ctx_data.bounds_max.x != dat_data.bounds_max.x || ctx_data.bounds_max.y != dat_data.bounds_max.y) {
+                PATH_LOG_ERROR("LoadMapFromDAT: Context bounds_max dont match DAT portals for the current map, file_id=%u - check InfoWindow to update the map file id for this map! Using map context data for now.", fid);
+                chosen = &ctx_data;
             }
         }
+        auto& map_data = *chosen;
 
         auto hash = static_cast<uint64_t>(fid);
-        hash |= static_cast<uint64_t>(dat_data.pathNodeSize) << 32;
+        hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
 
         if (mile_paths_by_coords.contains(hash)) {
             TouchLru(hash);
@@ -520,13 +524,13 @@ namespace {
         // Cache map info for bounds drawing
         CachedMapInfo info;
         info.map_id = map_id;
-        info.bounds_min = dat_data.bounds_min;
-        info.bounds_max = dat_data.bounds_max;
-        info.portal_props = dat_data.portal_props;
+        info.bounds_min = map_data.bounds_min;
+        info.bounds_max = map_data.bounds_max;
+        info.portal_props = map_data.portal_props;
         cached_map_info[hash] = info;
         CacheSharedFileHashMaps(info);
 
-        PATH_LOG_INFO("Loaded DAT for map %d: %d portal props, bounds=(%.0f,%.0f)-(%.0f,%.0f)", (int)map_id, (int)dat_data.portal_props.size(), info.bounds_min.x, info.bounds_min.y, info.bounds_max.x, info.bounds_max.y);
+        PATH_LOG_INFO("Loaded DAT for map %d: %d portal props, bounds=(%.0f,%.0f)-(%.0f,%.0f)", (int)map_id, (int)map_data.portal_props.size(), info.bounds_min.x, info.bounds_min.y, info.bounds_max.x, info.bounds_max.y);
 
         // Collect all MapIDs sharing this (canonical) file_hash so teleporters from any
         // — including same-place duplicates folded onto this representative — are included
@@ -539,7 +543,7 @@ namespace {
 
         // Lightweight (full_build=false): keep only raw map data; the visgraph is
         // built lazily on first AStar walk, so probe-only maps never pay for one.
-        auto* m = new Pathing::MilePath(std::move(dat_data), map_id, all_ids, false);
+        auto* m = new Pathing::MilePath(std::move(map_data), map_id, all_ids, false);
         mile_paths_by_coords[hash] = m;
         TouchLru(hash); // eviction itself is deferred until the route job ends (RouteJobScope)
         // UpdateBoundsLines / UpdatePortalMarkers mutate the CustomRenderer's

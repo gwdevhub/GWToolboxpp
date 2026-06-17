@@ -78,6 +78,38 @@ namespace Pathing {
         plane.sink_node_count = sink_node_count;
     }
 
+    // Travel-portal model file IDs (asura gates / ferry portals). Shared by the DAT
+    // prop parser and the live MapContext extractor so both agree on what counts.
+    static bool IsPortalModelFileId(uint32_t fid)
+    {
+        switch (fid) {
+            case 0x4e6b2: case 0x3c5ac: case 0xa825: case 0xe723: case 0x858b: case 0x1c533: case 0x5e77a: return true;
+            default: return false;
+        }
+    }
+
+    // Decode a live prop's model file ID the way WorldMapWidget does:
+    // h0034[4] points at a sub-struct whose [1] is the model's file hash.
+    static uint32_t MapPropModelFileId(const GW::MapProp* prop)
+    {
+        if (!(prop && prop->h0034[4])) return 0;
+        const auto* sub_deets = reinterpret_cast<const uint32_t*>(prop->h0034[4]);
+        return ArenaNetFileParser::FileHashToFileId(reinterpret_cast<const wchar_t*>(sub_deets[1]));
+    }
+
+    // Extract travel-portal props from live map memory - the MapContext equivalent of
+    // ParsePortalProps' DAT chunk walk.
+    static void ParsePortalPropsFromMapContext(const GW::MapContext* map_context, std::vector<PortalProp>& out)
+    {
+        const auto props = map_context ? map_context->props : nullptr;
+        if (!props) return;
+        for (auto* prop : props->propArray) {
+            const uint32_t fid = MapPropModelFileId(prop);
+            if (IsPortalModelFileId(fid))
+                out.push_back({{prop->position.x, prop->position.y}, fid});
+        }
+    }
+
     // =============================================================================
     // LoadFromMapContext - Copy from live game memory with pointer fixup
     // =============================================================================
@@ -259,6 +291,7 @@ namespace Pathing {
         out->blockedPlanesPtr = &path_ctx->blockedPlanes;
         out->bounds_min = {map_context->start_pos.x, map_context->start_pos.y};
         out->bounds_max = {map_context->end_pos.x, map_context->end_pos.y};
+        ParsePortalPropsFromMapContext(map_context, out->portal_props);
         return true;
     }
 
@@ -427,13 +460,6 @@ namespace Pathing {
                 : 0;
         }
 
-        auto is_portal = [](uint32_t fid) -> bool {
-            switch (fid) {
-                case 0x4e6b2: case 0x3c5ac: case 0xa825: case 0xe723: case 0x858b: case 0x1c533: case 0x5e77a: return true;
-                default: return false;
-            }
-        };
-
         auto* pi_data = reinterpret_cast<const uint8_t*>(prop_info_chunk) + sizeof(*prop_info_chunk);
         uint32_t pi_chunk_size = prop_info_chunk->chunk_size;
         if (pi_chunk_size < 12) return;
@@ -452,7 +478,7 @@ namespace Pathing {
 
             if (filename_index < fn_count) {
                 uint32_t fid = prop_file_ids[filename_index];
-                if (is_portal(fid)) {
+                if (IsPortalModelFileId(fid)) {
                     out.push_back({{px, pz}, fid});
                 }
             }
