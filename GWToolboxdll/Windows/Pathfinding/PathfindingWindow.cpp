@@ -485,7 +485,13 @@ namespace {
             return nullptr;
         }
 
-
+        // Fast path: file already resident. readFromDat routes into the game's serialized file subsystem, so re-reading it every recompute stalls the game thread; file_id alone keys the map within a session (mirrors GetMilepathForMap).
+        for (const auto& [hash, mp] : mile_paths_by_coords) {
+            if (static_cast<uint32_t>(hash & 0xFFFFFFFF) == fid) {
+                TouchLru(hash);
+                return mp;
+            }
+        }
 
         PATH_LOG_INFO("LoadMapFromDAT: map=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
 
@@ -511,13 +517,9 @@ namespace {
         }
         auto& map_data = *chosen;
 
+        // file_id was not resident above, so this full key (file_id + pathNodeSize) is new too.
         auto hash = static_cast<uint64_t>(fid);
         hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
-
-        if (mile_paths_by_coords.contains(hash)) {
-            TouchLru(hash);
-            return mile_paths_by_coords[hash];
-        }
 
         // Cache map info for bounds drawing
         CachedMapInfo info;
