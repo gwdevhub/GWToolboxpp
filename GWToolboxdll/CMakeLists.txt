@@ -27,6 +27,9 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/GWToolbox.rc"
+    PROPERTIES OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/Dependencies/GWCA/bin/gwca.dll")
+
 # auto-generated files - export header & pch 
 include(GenerateExportHeader)
 generate_export_header(GWToolboxdll)

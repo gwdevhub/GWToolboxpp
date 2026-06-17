@@ -114,6 +114,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -Wno-delete-non-abstract-non-virtual-dtor
     )
     add_compile_options(${CLANG_WARNING_DISABLES})
+    
+    add_compile_options($<$<NOT:$<CONFIG:Debug>>:/clang:-O3>)
+    add_compile_options(/arch:AVX2)
 else()
     # MSVC: whole-program optimization + link-time codegen in non-Debug
     add_compile_options(/MP)
