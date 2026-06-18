@@ -40,6 +40,7 @@
 #include <Windows/Pathfinding/NavMesh.h> // viz-only navmesh for the debug overlay
 
 #include "OpenTyriaPathfinder.h"
+#include "PathingLog.h"
 #include "PathingMapData.h"
 #include "PathingMapDataLoader.h"
 #include "PortalConnections.h"
@@ -52,8 +53,9 @@
 #include <Widgets/WorldMapWidget.h>
 
 // Define PATHING_VERBOSE to re-enable pathfinding's per-frame Log::Info chatter
-// ([GetAdj]/[Dijkstra]/[CacheTrace]/[AStar:los|ok]/etc.). Errors and warnings
-// always log; only Log::Info inside this file is silenced when not defined.
+// ([GetAdj]/[Dijkstra]/[CacheTrace]/[AStar:los|ok]/etc.). PATH_LOG_ERROR/WARNING
+// (see PathingLog.h) only reach chat in debug; only Log::Info inside this file is
+// silenced when PATHING_VERBOSE is not defined.
 // #define PATHING_VERBOSE 1
 #ifdef PATHING_VERBOSE
 #define PATH_LOG_INFO(...) Log::Info(__VA_ARGS__)
@@ -63,14 +65,6 @@
 // `caller` arg of EnsureLightweightMapInfo exist only to be formatted into
 // PATH_LOG_INFO; with logging compiled out they're unused.
 #pragma warning(disable : 4189 4100)
-#endif
-
-// Pathing errors are expected for unreachable markers etc. — only surface them in chat
-// in debug; in release they still go to the log file.
-#ifdef _DEBUG
-#define PATH_LOG_ERROR(...) Log::Error(__VA_ARGS__)
-#else
-#define PATH_LOG_ERROR(...) Log::Log(__VA_ARGS__)
 #endif
 
 namespace {
@@ -1762,14 +1756,14 @@ namespace {
         }
         if (!mp) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: no MilePath → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
+            PATH_LOG_WARNING("[Trapezoid] map %d->%d: no MilePath → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
         const Pathing::PathingMapData* data = mp->GetMapData();
         if (!data || !data->IsValid()) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: PathingMapData missing/invalid → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
+            PATH_LOG_WARNING("[Trapezoid] map %d->%d: PathingMapData missing/invalid → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
@@ -1778,7 +1772,7 @@ namespace {
         const uint32_t fh = GetMapFileId(owner_map);
         if (!fh) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: no file_hash → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
+            PATH_LOG_WARNING("[Trapezoid] map %d->%d: no file_hash → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
@@ -2311,7 +2305,7 @@ namespace {
                         auto map_g = resolve_graph(map_id);
                         if (seg > 0) {
                             auto prev_g = resolve_graph(route[seg - 1]);
-                            Log::Warning("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)", (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
+                            PATH_LOG_WARNING("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)", (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
                             blacklisted_edges.insert(EdgeKey(prev_g, map_g));
                             blacklisted_edges.insert(EdgeKey(map_g, prev_g));
                         }
@@ -2534,15 +2528,15 @@ namespace {
             }
             if (runtime_fid && constant_fid && runtime_fid != constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: runtime=0x%X constant=0x%X MISMATCH", (int)map_id, runtime_fid, constant_fid);
+                PATH_LOG_WARNING("[FileId] map %d: runtime=0x%X constant=0x%X MISMATCH", (int)map_id, runtime_fid, constant_fid);
             }
             else if (runtime_fid && !constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: runtime=0x%X but MISSING from maps_constant_data.h", (int)map_id, runtime_fid);
+                PATH_LOG_WARNING("[FileId] map %d: runtime=0x%X but MISSING from maps_constant_data.h", (int)map_id, runtime_fid);
             }
             else if (!runtime_fid && !constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: no file_id from runtime or constant data", (int)map_id);
+                PATH_LOG_WARNING("[FileId] map %d: no file_id from runtime or constant data", (int)map_id);
             }
         }
 
@@ -3159,7 +3153,7 @@ void PathfindingWindow::Initialize()
             static_cast<const char*>(portal_json.data()), portal_json.size(), "<embedded resource>");
     }
     else {
-        Log::Error("Failed to load embedded portal connections resource");
+        PATH_LOG_ERROR("Failed to load embedded portal connections resource");
     }
     pending_connection_lines_update = true;
 }

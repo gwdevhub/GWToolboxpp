@@ -8,6 +8,7 @@
 
 #include <Logger.h>
 #include <Utils/TextUtils.h>
+#include "PathingLog.h"
 
 namespace Pathing {
 
@@ -138,7 +139,7 @@ namespace Pathing {
             return true;
         }
         catch (...) {
-            Log::Error("Failed to save portal connections");
+            PATH_LOG_ERROR("Failed to save portal connections");
             return false;
         }
     }
@@ -147,7 +148,7 @@ namespace Pathing {
     {
         std::ifstream f(path);
         if (!f.is_open()) {
-            Log::Error("Could not open portal connections file (%s)",
+            PATH_LOG_ERROR("Could not open portal connections file (%s)",
                 path.empty() ? "<empty path>" : path.c_str());
             return false;
         }
@@ -164,7 +165,7 @@ namespace Pathing {
 
             glz::generic j;
             if (auto ec = glz::read_json(j, buf); ec) {
-                Log::Error("Failed to parse portal connections JSON (%s)", source.c_str());
+                PATH_LOG_ERROR("Failed to parse portal connections JSON (%s)", source.c_str());
                 return false;
             }
             if (!j.contains("connections") || !j.at("connections").is_array()) {
@@ -244,7 +245,7 @@ namespace Pathing {
             return true;
         }
         catch (...) {
-            Log::Error("Failed to load portal connections from %s", source.c_str());
+            PATH_LOG_ERROR("Failed to load portal connections from %s", source.c_str());
             return false;
         }
     }
