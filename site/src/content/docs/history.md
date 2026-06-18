@@ -7,29 +7,38 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.26
-* [New] Added a Backup module — archive your entire GWToolbox settings folder to a ZIP and restore it later, all from the settings UI (with filters for text, image and audio files)
-* [New] Cross-map pathfinding — quest and travel routes can now be calculated across multiple maps, and the full cross-map route is drawn on the world map when you place a marker
-* [New] Minimap layers can now be overlaid on the in-game Mission Map (world map) frame
-* [New] Minimap: added an option to target gadgets (chests, resurrection shrines, etc.) when clicking the minimap
-* [New] Minimap: hero flag circle colour and thickness are now customisable
-* [New] World map: added campaign filter buttons (Core, Prophecies, Factions, Nightfall) to show/hide elite capture locations per campaign
-* [New] Added an option to combine the floating damage/heal numbers that appear over an agent's head, reducing on-screen noise
-* [New] Hero command panels now remember their on-screen positions per hero, so they are restored after reordering the party or swapping characters
-* [New] Custom quest markers are now plotted at their exact position on the world map
-* [New] `/target` now supports `|` as an OR separator between search terms, and pending `/target` searches accumulate across hotkeys
-* [New] Added `/pref resolution` chat command
-* [New] Objective Timer: added the Tunnels of the Forsaken dungeon
-* [New] Performance window: added opt-in CSV streaming of per-second timings to `performance_log.csv`
-* [Fix] Fixed being unable to target valid agents near an opened locked chest
-* [Fix] Fixed salvage auto-accept breaking after a Guild Wars UI update
-* [Fix] Fixed character name detection after the latest Guild Wars update
-* [Fix] Fixed slider-based `/pref` commands (e.g. `/volume`) not applying
-* [Fix] Fixed some module settings not appearing in the Toolbox settings window
-* [Fix] Fixed chat commands that broke after the move to shared encoded strings
-* [Fix] Materials window: enforce a minimum delay between quote requests to avoid server throttling at low ping
-* [Fix] Various quest and travel pathing fixes — paths now recalculate when the active quest changes, route to the destination map's marker, and stop retrying unreachable markers
-* [Minor] Settings files are now stored as JSON, with automatic migration from the old `.ini` files
-* [Minor] Pathfinding performance and memory improvements (lazy visibility graphs with an LRU cache, route building moved off the main thread, throttled minimap rebuilds)
+* [New] Multi-map pathfinding — quest paths now route across map boundaries. The path to a quest in another area is drawn on the world map and continues seamlessly once you zone in.
+* [New] Added Backup module to archive and restore your Toolbox settings.
+* [New] Added a feature to combine the floating damage/heal numbers that stack over an agent's head, to reduce on-screen noise (toggle in Game Settings).
+* [New] World map: added campaign filter buttons above the profession buttons.
+* [New] Minimap: added a setting to target gadgets (chests, levers, etc.) when clicking the minimap.
+* [New] Minimap: hero flag circle colour and thickness are now customisable.
+* [New] Minimap layers (markers and lines) now render on the in-game mission map frame.
+* [New] Hero command panel positions are now remembered and restored on map load.
+* [New] `/target` now supports `|` as an OR separator to match any of several search terms.
+* [New] Added `/pref resolution` chat command.
+* [Fix] Fixed compatibility with the latest Guild Wars update.
+* [Fix] Fixed salvage confirmation not being auto-accepted after the recent gw update; salvage-all flows work again.
+* [Fix] Fixed various quest pathing bugs — quest paths now recalculate when you change quest in the log, route to the destination map's marker when it points off the current map, and back off cleanly when a marker is unreachable instead of retrying every frame.
+* [Fix] Custom quest markers are now plotted at their exact world-map position.
+* [Fix] Fixed quest path corruption when routes were built concurrently.
+* [Fix] Fixed slider-related `/pref` settings not working, e.g. `/volume`.
+* [Fix] Fixed a bug preventing targeting of valid agents near an opened locked chest.
+* [Fix] Fixed a bug preventing some module settings from showing in the Toolbox settings window.
+* [Fix] Fixed some UI elements being drawn twice.
+* [Fix] Texmod module no longer shows an error when no texmods are selected.
+* [Fix] Fixed a crash/freeze and other bugs in chat command handling after the move to shared encoded-string pointers.
+* [Minor] Settings files are now stored as `.json` in the `configs` folder. Existing `.ini` settings are migrated automatically; the migration path stays in place until 9.0.
+* [Minor] `/pref` name matching is now more forgiving and gives a clearer error on an unknown name.
+* [Minor] `/target` accumulates pending searches across hotkeys triggered in quick succession.
+* [Minor] Performance improvements to pathfinding — skips redundant DAT re-reads, and bounds memory with an LRU cache and lazily-built visibility graphs.
+* [Minor] Minimap custom-line buffer rebuilds are throttled to reduce CPU use.
+* [Minor] Vanquish overlay map grid is now rebuilt on a worker thread to avoid frame hitches.
+* [Minor] Hero Builds: the load button is disabled when the party is full and the hero isn't already in the party.
+* [Minor] Added Tunnels of the Forsaken to the Objective Timer window.
+* [Minor] Performance window can now stream per-second timings to a CSV file (opt-in).
+* [Minor] Enforced a minimum interval between quote requests in the Materials window to avoid spamming the trader.
+* [Minor] Added anonymous gwmarket purchase analytics when whispering a seller/buyer (see the Anonymous Analytics docs page for what is sent).
 
 ## Version 8.25
 * [Minor] The texmod module now works with pre-loaded instances of gMod
