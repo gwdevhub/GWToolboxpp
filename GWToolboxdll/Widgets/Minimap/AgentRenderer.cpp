@@ -19,6 +19,7 @@
 
 #include <Defines.h>
 #include <Utils/GuiUtils.h>
+#include <Constants/EncStrings.h>
 
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/AgentRenderer.h>
@@ -51,6 +52,16 @@ namespace {
     bool show_props_on_minimap = false;
 
     bool target_drawn = false;
+
+    bool IsLockedChest(const GW::Agent* agent)
+    {
+        return agent && agent->GetIsGadgetType() && wcseq(GW::Agents::GetAgentEncName(agent->agent_id), GW::EncStrings::LockedChest);
+    }
+
+    bool IsOpenedLockedChest(const GW::Agent* agent)
+    {
+        return IsLockedChest(agent) && !GW::Agents::GetAgentMatchesFlags(agent, GW::TargetFilter::Gadgets);
+    }
 
     struct MarkedTarget {
         uint32_t type = 0;
@@ -187,6 +198,8 @@ void AgentRenderer::RegisterSettings(ToolboxModule* module)
         {"color_player", &color_player},
         {"color_player_dead", &color_player_dead},
         {"color_signpost", &color_signpost},
+        {"color_locked_chest", &color_locked_chest},
+        {"color_locked_chest_open", &color_locked_chest_open},
         {"color_item", &color_item},
         {"color_hostile", &color_hostile},
         {"color_hostile_dead", &color_hostile_dead},
@@ -224,6 +237,8 @@ void AgentRenderer::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "size_default", &size_default);
     SettingsRegistry::RegisterField(module, "size_player", &size_player);
     SettingsRegistry::RegisterField(module, "size_signpost", &size_signpost);
+    SettingsRegistry::RegisterField(module, "size_locked_chest", &size_locked_chest);
+    SettingsRegistry::RegisterField(module, "size_locked_chest_open", &size_locked_chest_open);
     SettingsRegistry::RegisterField(module, "size_item", &size_item);
     SettingsRegistry::RegisterField(module, "size_boss", &size_boss);
     SettingsRegistry::RegisterField(module, "size_minion", &size_minion);
@@ -307,6 +322,8 @@ void AgentRenderer::LoadDefaultSizes()
     size_default = 100.0f;
     size_player = size_default;
     size_signpost = size_default * .5f;
+    size_locked_chest = size_signpost;
+    size_locked_chest_open = size_signpost;
     size_item = size_default * .25f;
     size_boss = size_default * 1.25f;
     size_minion = size_default * .5f;
@@ -334,6 +351,8 @@ void AgentRenderer::LoadDefaultColors()
     color_player = 0xFFFF8000;
     color_player_dead = 0x64FF8000;
     color_signpost = 0xFF0000C8;
+    color_locked_chest = 0xFF0000C8;
+    color_locked_chest_open = 0xFF0000C8;
     color_item = 0xFF0000F0;
     color_hostile = 0xFFF00000;
     color_hostile_dead = 0xFF320000;
@@ -380,6 +399,8 @@ void AgentRenderer::DrawSettings()
             {"Player (alive)", &color_player, nullptr, nullptr, nullptr},
             {"Player (dead)", &color_player_dead, nullptr, nullptr, nullptr},
             {"Signpost", &color_signpost, nullptr, nullptr, nullptr},
+            {"Locked Chest (closed)", &color_locked_chest, &size_locked_chest, nullptr, "Unopened locked chest size"},
+            {"Locked Chest (opened)", &color_locked_chest_open, &size_locked_chest_open, nullptr, "Opened locked chest size"},
             {"Item", &color_item, nullptr, nullptr, nullptr},
             {"Hostile (>90% HP)", &color_hostile, &size_hostile, nullptr, "Hostile agent size"},
             {"Hostile (dead)", &color_hostile_dead, nullptr, nullptr, nullptr},
@@ -996,6 +1017,9 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     }
 
     if (agent->GetIsGadgetType()) {
+        if (IsLockedChest(agent)) {
+            return IsOpenedLockedChest(agent) ? color_locked_chest_open : color_locked_chest;
+        }
         return color_signpost;
     }
     if (agent->GetIsItemType()) {
@@ -1119,6 +1143,9 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
         return size_player;
     }
     if (agent->GetIsGadgetType()) {
+        if (IsLockedChest(agent)) {
+            return IsOpenedLockedChest(agent) ? size_locked_chest_open : size_locked_chest;
+        }
         return size_signpost;
     }
     if (agent->GetIsItemType()) {

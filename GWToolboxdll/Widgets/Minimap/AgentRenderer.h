@@ -178,6 +178,8 @@ private:
     Color color_player = 0xFFFF8000;
     Color color_player_dead = 0x64FF8000;
     Color color_signpost = 0xFF0000C8;
+    Color color_locked_chest = 0xFF0000C8;
+    Color color_locked_chest_open = 0xFF0000C8;
     Color color_item = 0xFF0000F0;
     Color color_hostile = 0xFFF00000;
     Color color_hostile_dead = 0xFF320000;
@@ -212,6 +214,8 @@ private:
     float size_default = 100.f;
     float size_player = 100.f;
     float size_signpost = 50.f;
+    float size_locked_chest = 50.f;
+    float size_locked_chest_open = 50.f;
     float size_item = 25.f;
     float size_boss = 125.f;
     float size_minion = 50.f;
