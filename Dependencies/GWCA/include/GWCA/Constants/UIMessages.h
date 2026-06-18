@@ -535,65 +535,66 @@ namespace GW {
 			kMessage_0x1000018b,                     // 0x10000191
 			kMessage_0x1000018c,                     // 0x10000192
 			kMessage_0x1000018d,                     // 0x10000193
-			kAppendMessageToChat,                    // 0x10000194, wparam = wchar_t* message
-			kMessage_0x1000018f,                     // 0x10000195
-			kMessage_0x10000190,                     // 0x10000196
-			kMessage_0x10000191,                     // 0x10000197
-			kMessage_0x10000192,                     // 0x10000198
-			kMessage_0x10000193,                     // 0x10000199
-			kMessage_0x10000194,                     // 0x1000019a
-			kMessage_0x10000195,                     // 0x1000019b
-			kMessage_0x10000196,                     // 0x1000019c
-			kMessage_0x10000197,                     // 0x1000019d
-			kMessage_0x10000198,                     // 0x1000019e
-			kMessage_0x10000199,                     // 0x1000019f
-			kMessage_0x1000019a,                     // 0x100001a0
-			kMessage_0x1000019b,                     // 0x100001a1
-			kHideHeroPanel,                          // 0x100001a2, wparam = hero_id
-			kShowHeroPanel,                          // 0x100001a3, wparam = hero_id
-			kMessage_0x1000019e,                     // 0x100001a4
-			kMessage_0x1000019f,                     // 0x100001a5
-			kQuerySuppressedKeyAction,               // 0x100001a6, wparam = 0, lparam = bool*. Used to check if the suppress action is pressed (usually shift)
-			kGetInventoryAgentId,                    // 0x100001a7, wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
-			kInventoryRelated1,                      // 0x100001a8, added to GW 2026-02-26
-			kInventoryRelated2,                      // 0x100001a9, added to GW 2026-02-26
-			kInventoryRelated3,                      // 0x100001aa, added to GW 2026-02-26
-			kInventoryRelated4,                      // 0x100001ab, added to GW 2026-04-28
-			kEquipItem,                              // 0x100001ac, wparam = { item_id, agent_id }
-			kMoveItem,                               // 0x100001ad, wparam = { item_id, to_bag, to_slot, bool prompt }
-			kItemRelated_1,                          // 0x100001ae
-			kItemTooltip,                            // 0x100001af
-			kItemRelated_3,                          // 0x100001b0, added to GW 2026-02-26
-			kItemRelated_4,                          // 0x100001b1, added to GW 2026-02-26
-			kItemRelated_5,                          // 0x100001b2, added to GW 2026-04-28
-			kInitiateTrade,                          // 0x100001b3
-			kMessage_0x100001a7,                     // 0x100001b4
-			kMessage_0x100001a8,                     // 0x100001b5
-			kMessage_0x100001a9,                     // 0x100001b6
-			kMessage_0x100001aa,                     // 0x100001b7
-			kPartySearchWindowDestroyed,             // 0x100001b8
-			kMessage_0x100001ac,                     // 0x100001b9
-			kPartySearchWindowCreated,               // 0x100001ba
-			kMessage_0x100001ae,                     // 0x100001bb
-			kMessage_0x100001af,                     // 0x100001bc
-			kMessage_0x100001b0,                     // 0x100001bd
-			kMessage_0x100001b1,                     // 0x100001be
-			kMessage_0x100001b2,                     // 0x100001bf
-			kMessage_0x100001b3,                     // 0x100001c0
-			kMessage_0x100001b4,                     // 0x100001c1
-			kMessage_0x100001b5,                     // 0x100001c2
-			kInventoryAgentChanged,                  // 0x100001c3, Triggered when inventory needs updating due to agent change; no args
-			kInventoryRelated_1,                     // 0x100001c4
-			kInventoryRelated_2,                     // 0x100001c5
-			kMissionStatusRelated,                   // 0x100001c6
-			kUnused_1c2,                             // 0x100001c7
-			kCollapseExpandSkillListSection,         // 0x100001c8
-			kPromptLoadTemplate,                     // 0x100001c9
-			kOpenTemplateManager,                    // 0x100001ca
-			kPromptSaveTemplate,                     // 0x100001cb
-			kOpenTemplate,                           // 0x100001cc, wparam = GW::UI::ChatTemplate*
-			kTemplateRelated_3,                      // 0x100001cd
-			kTemplateRelated_4,                      // 0x100001ce
+			kMessage_0x1000018d_2,                   // 0x10000194, added to GW 2026-06-17
+			kAppendMessageToChat,                    // 0x10000195, wparam = wchar_t* message
+			kMessage_0x1000018f,                     // 0x10000196
+			kMessage_0x10000190,                     // 0x10000197
+			kMessage_0x10000191,                     // 0x10000198
+			kMessage_0x10000192,                     // 0x10000199
+			kMessage_0x10000193,                     // 0x1000019a
+			kMessage_0x10000194,                     // 0x1000019b
+			kMessage_0x10000195,                     // 0x1000019c
+			kMessage_0x10000196,                     // 0x1000019d
+			kMessage_0x10000197,                     // 0x1000019e
+			kMessage_0x10000198,                     // 0x1000019f
+			kMessage_0x10000199,                     // 0x100001a0
+			kMessage_0x1000019a,                     // 0x100001a1
+			kMessage_0x1000019b,                     // 0x100001a2
+			kHideHeroPanel,                          // 0x100001a3, wparam = hero_id
+			kShowHeroPanel,                          // 0x100001a4, wparam = hero_id
+			kMessage_0x1000019e,                     // 0x100001a5
+			kMessage_0x1000019f,                     // 0x100001a6
+			kQuerySuppressedKeyAction,               // 0x100001a7, wparam = 0, lparam = bool*. Used to check if the suppress action is pressed (usually shift)
+			kGetInventoryAgentId,                    // 0x100001a8, wparam = 0, lparam = uint32_t* agent_id_out. Used to fetch which agent is selected
+			kInventoryRelated1,                      // 0x100001a9, added to GW 2026-02-26
+			kInventoryRelated2,                      // 0x100001aa, added to GW 2026-02-26
+			kInventoryRelated3,                      // 0x100001ab, added to GW 2026-02-26
+			kInventoryRelated4,                      // 0x100001ac, added to GW 2026-04-28
+			kEquipItem,                              // 0x100001ad, wparam = { item_id, agent_id }
+			kMoveItem,                               // 0x100001ae, wparam = { item_id, to_bag, to_slot, bool prompt }
+			kItemRelated_1,                          // 0x100001af
+			kItemTooltip,                            // 0x100001b0
+			kItemRelated_3,                          // 0x100001b1, added to GW 2026-02-26
+			kItemRelated_4,                          // 0x100001b2, added to GW 2026-02-26
+			kItemRelated_5,                          // 0x100001b3, added to GW 2026-04-28
+			kInitiateTrade,                          // 0x100001b4
+			kMessage_0x100001a7,                     // 0x100001b5
+			kMessage_0x100001a8,                     // 0x100001b6
+			kMessage_0x100001a9,                     // 0x100001b7
+			kMessage_0x100001aa,                     // 0x100001b8
+			kPartySearchWindowDestroyed,             // 0x100001b9
+			kMessage_0x100001ac,                     // 0x100001ba
+			kPartySearchWindowCreated,               // 0x100001bb
+			kMessage_0x100001ae,                     // 0x100001bc
+			kMessage_0x100001af,                     // 0x100001bd
+			kMessage_0x100001b0,                     // 0x100001be
+			kMessage_0x100001b1,                     // 0x100001bf
+			kMessage_0x100001b2,                     // 0x100001c0
+			kMessage_0x100001b3,                     // 0x100001c1
+			kMessage_0x100001b4,                     // 0x100001c2
+			kMessage_0x100001b5,                     // 0x100001c3
+			kInventoryAgentChanged,                  // 0x100001c4, Triggered when inventory needs updating due to agent change; no args
+			kInventoryRelated_1,                     // 0x100001c5
+			kInventoryRelated_2,                     // 0x100001c6
+			kMissionStatusRelated,                   // 0x100001c7
+			kUnused_1c2,                             // 0x100001c8
+			kCollapseExpandSkillListSection,         // 0x100001c9
+			kPromptLoadTemplate,                     // 0x100001ca
+			kOpenTemplateManager,                    // 0x100001cb
+			kPromptSaveTemplate,                     // 0x100001cc
+			kOpenTemplate,                           // 0x100001cd, wparam = GW::UI::ChatTemplate*
+			kTemplateRelated_3,                      // 0x100001ce
+			kTemplateRelated_4,                      // 0x100001cf
 
 			// GWCA Client to Server commands. Only added the ones that are used for hooks, everything else goes straight into GW
 
