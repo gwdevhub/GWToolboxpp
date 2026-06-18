@@ -144,6 +144,7 @@ public:
         bool block_vanquish_complete_popup = false;
 
         bool hide_dungeon_chest_popup = false;
+        bool hide_window_buttons_in_fullscreen = false;
         bool skip_entering_name_for_faction_donate = false;
         bool stop_screen_shake = false;
         bool disable_camera_smoothing = false;

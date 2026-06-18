@@ -27,6 +27,10 @@ namespace Pathing {
 
 	typedef uint16_t PointId;
 
+    class NavMesh; // viz-only Detour mesh exposed for the debug overlay
+
+    extern bool g_use_recast_pathing;
+
     class MilePath {
         volatile bool m_processing = false;
         volatile bool m_done = false;
@@ -80,6 +84,8 @@ namespace Pathing {
         // re-load the same DAT data twice. Pointer remains valid for the MilePath's
         // lifetime.
         const Pathing::PathingMapData* GetMapData() const;
+
+        NavMesh* GetNavMeshForDebug();
 
         bool ready()
         {

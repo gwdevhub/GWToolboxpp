@@ -23,6 +23,7 @@
 #include <fstream>
 #include <numeric>
 
+#include <EmbeddedResource.h>
 #include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Utils/EncString.h>
@@ -31,16 +32,20 @@
 #include <GWCA/Context/GameplayContext.h>
 #include <GWCA/Context/MapContext.h>
 #include <Modules/Resources.h>
+#include <Modules/ToolboxSettings.h>
 #include <Utils/ArenaNetFileParser.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/Pathing.h>
+#include <Windows/Pathfinding/NavMesh.h> // viz-only navmesh for the debug overlay
 
 #include "OpenTyriaPathfinder.h"
+#include "PathingLog.h"
 #include "PathingMapData.h"
 #include "PathingMapDataLoader.h"
 #include "PortalConnections.h"
 #include "maps_constant_data.h"
+#include "resource.h"
 
 #include <GWCA/Context/WorldContext.h>
 #include <Utils/ToolboxUtils.h>
@@ -48,8 +53,9 @@
 #include <Widgets/WorldMapWidget.h>
 
 // Define PATHING_VERBOSE to re-enable pathfinding's per-frame Log::Info chatter
-// ([GetAdj]/[Dijkstra]/[CacheTrace]/[AStar:los|ok]/etc.). Errors and warnings
-// always log; only Log::Info inside this file is silenced when not defined.
+// ([GetAdj]/[Dijkstra]/[CacheTrace]/[AStar:los|ok]/etc.). PATH_LOG_ERROR/WARNING
+// (see PathingLog.h) only reach chat in debug; only Log::Info inside this file is
+// silenced when PATHING_VERBOSE is not defined.
 // #define PATHING_VERBOSE 1
 #ifdef PATHING_VERBOSE
 #define PATH_LOG_INFO(...) Log::Info(__VA_ARGS__)
@@ -59,14 +65,6 @@
 // `caller` arg of EnsureLightweightMapInfo exist only to be formatted into
 // PATH_LOG_INFO; with logging compiled out they're unused.
 #pragma warning(disable : 4189 4100)
-#endif
-
-// Pathing errors are expected for unreachable markers etc. — only surface them in chat
-// in debug; in release they still go to the log file.
-#ifdef _DEBUG
-#define PATH_LOG_ERROR(...) Log::Error(__VA_ARGS__)
-#else
-#define PATH_LOG_ERROR(...) Log::Log(__VA_ARGS__)
 #endif
 
 namespace {
@@ -298,7 +296,6 @@ namespace {
 
     // Portal connection editor
     Pathing::PortalConnections portal_connections;
-    std::string portal_connections_path;
 
     struct EditorEndpoint {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
@@ -431,23 +428,6 @@ namespace {
             saved_connection_lines.push_back(line);
         }
     }
-
-    void InitPortalConnectionsPath()
-    {
-        if (!portal_connections_path.empty()) return;
-        // Resolve the path next to GWToolboxdll.dll. The portal_connections.json
-        // resource is committed in the repo at
-        //   GWToolboxdll/Windows/Pathfinding/portal_connections.json
-        // and copied next to the built DLL by a CMake POST_BUILD step.
-        wchar_t dll_path[MAX_PATH];
-        if (GetModuleFileNameW(GWToolbox::GetDLLModule(), dll_path, _countof(dll_path)) == 0) {
-            return;
-        }
-        std::filesystem::path p(dll_path);
-        p.replace_filename(L"portal_connections.json");
-        portal_connections_path = p.string();
-    }
-
 
     // LoadAndShowMapsAtWorldPos defined after anonymous namespace
 
@@ -603,6 +583,8 @@ namespace {
         return LoadMapFromContext(map_id);
     }
 
+    std::vector<CustomRenderer::CustomLine*> navmesh_edge_lines; // viz-only navmesh poly-edge overlay
+    PathfindingWindow::Settings settings;
     std::vector<CustomRenderer::CustomLine*> bounds_lines;
     std::vector<CustomRenderer::CustomLine*> graph_edge_lines;
     std::vector<CustomRenderer::CustomLine*> portal_marker_lines;
@@ -1774,14 +1756,14 @@ namespace {
         }
         if (!mp) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: no MilePath → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
+            PATH_LOG_WARNING("[Trapezoid] map %d->%d: no MilePath → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
         const Pathing::PathingMapData* data = mp->GetMapData();
         if (!data || !data->IsValid()) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: PathingMapData missing/invalid → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
+            PATH_LOG_WARNING("[Trapezoid] map %d->%d: PathingMapData missing/invalid → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
@@ -1790,7 +1772,7 @@ namespace {
         const uint32_t fh = GetMapFileId(owner_map);
         if (!fh) {
             float fb = euclidean_min();
-            Log::Warning("[Trapezoid] map %d->%d: no file_hash → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
+            PATH_LOG_WARNING("[Trapezoid] map %d->%d: no file_hash → Euclidean=%.0f", (int)owner_map, (int)other_map, fb);
             portal_walk_cache[key] = fb;
             return fb;
         }
@@ -2323,7 +2305,7 @@ namespace {
                         auto map_g = resolve_graph(map_id);
                         if (seg > 0) {
                             auto prev_g = resolve_graph(route[seg - 1]);
-                            Log::Warning("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)", (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
+                            PATH_LOG_WARNING("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)", (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
                             blacklisted_edges.insert(EdgeKey(prev_g, map_g));
                             blacklisted_edges.insert(EdgeKey(map_g, prev_g));
                         }
@@ -2546,15 +2528,15 @@ namespace {
             }
             if (runtime_fid && constant_fid && runtime_fid != constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: runtime=0x%X constant=0x%X MISMATCH", (int)map_id, runtime_fid, constant_fid);
+                PATH_LOG_WARNING("[FileId] map %d: runtime=0x%X constant=0x%X MISMATCH", (int)map_id, runtime_fid, constant_fid);
             }
             else if (runtime_fid && !constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: runtime=0x%X but MISSING from maps_constant_data.h", (int)map_id, runtime_fid);
+                PATH_LOG_WARNING("[FileId] map %d: runtime=0x%X but MISSING from maps_constant_data.h", (int)map_id, runtime_fid);
             }
             else if (!runtime_fid && !constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                Log::Warning("[FileId] map %d: no file_id from runtime or constant data", (int)map_id);
+                PATH_LOG_WARNING("[FileId] map %d: no file_id from runtime or constant data", (int)map_id);
             }
         }
 
@@ -2622,9 +2604,99 @@ void LoadAndShowMapsAtWorldPos(const GW::Vec2f& wm_pos); // forward decl
 // drains the deferred line-removal queue each frame (ClearPathLines etc. only
 // queue removals; without this drain, cleared route lines would stay on screen).
 // WndProc is a no-op stub so ToolboxWindow's vtable contract is satisfied.
+static void UpdateNavmeshOverlay()
+{
+    static GW::GamePos last_pos{};
+    static bool was_on = false;
+    if (!settings.draw_navmesh_overlay) {
+        if (was_on) { DeferRemoveLines(navmesh_edge_lines); was_on = false; }
+        return;
+    }
+    const auto me = GW::Agents::GetControlledCharacter();
+    float moved2 = 1e30f;
+    if (me) { const float dx = me->pos.x - last_pos.x, dy = me->pos.y - last_pos.y; moved2 = dx * dx + dy * dy; }
+    if (was_on && !navmesh_edge_lines.empty() && moved2 < 600.f * 600.f) return;
+    was_on = true;
+    if (me) last_pos = me->pos;
+
+    DeferRemoveLines(navmesh_edge_lines);
+    auto* mp = GetMilepathForCurrentMap();
+    if (!mp || !mp->ready()) return;
+    auto* nav = mp->GetNavMeshForDebug();
+    if (!nav || !nav->IsReady()) {
+        static Pathing::MilePath* build_requested = nullptr;
+        if (build_requested != mp && !mp->build_failed()) {
+            build_requested = mp;
+            Resources::EnqueueWorkerTask([mp] { mp->EnsureFullBuild(); });
+        }
+        return;
+    }
+    std::vector<Pathing::NavMesh::DebugEdge> edges;
+    nav->DebugExtractEdges(edges);
+    const float range2 = settings.navmesh_overlay_range * settings.navmesh_overlay_range;
+    const auto cur_map = GW::Map::GetMapID();
+    auto& cr = Minimap::Instance().custom_renderer;
+    for (const auto& e : edges) {
+        if (me) { const float dx = me->pos.x - e.a.x, dy = me->pos.y - e.a.y; if (dx * dx + dy * dy > range2) continue; }
+        auto* line = cr.AddCustomLine(e.a, e.b);
+        line->map = cur_map;
+        const bool hi = e.a.zplane != 0; // edges off the ground plane get the "hi" colour
+        line->color = e.wall ? (hi ? settings.navmesh_wall_color_hi : settings.navmesh_wall_color)
+                             : (hi ? settings.navmesh_connection_color_hi : settings.navmesh_connection_color);
+        line->draw_on_terrain = true;
+        line->draw_on_minimap = false;
+        line->draw_on_mission_map = false;
+        line->created_by_toolbox = true;
+        line->dotted = false; // solid edges so the mesh reads clearly
+        navmesh_edge_lines.push_back(line);
+    }
+}
+
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
+    Pathing::g_use_recast_pathing = settings.use_recast_pathing;
+    Pathing::NavMesh::s_use_recast_builder = settings.use_recast_builder;
     ProcessDeferredRemovals();
+    UpdateNavmeshOverlay();
+}
+
+void PathfindingWindow::DrawSettingsInternal()
+{
+    ImGui::Checkbox("Use recast (Detour) pathing", &settings.use_recast_pathing);
+    ImGui::ShowHelp("Off (default): visibility-graph pathfinder.\nOn: recast/Detour navmesh pathfinder (experimental — may misroute around the trapezoid mesh's seams).");
+    ImGui::Checkbox("Recast-generated mesh", &settings.use_recast_builder);
+    ImGui::ShowHelp("Build the recast (Detour) mesh that 'Use recast pathing' navigates on — cleaner topology than the hand-built one. The OVERLAY always draws the hand-built mesh (correct heights), so this doesn't change what's drawn. Applies on next map load / zone.");
+    ImGui::Separator();
+    ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
+    ImGui::ShowHelp("Draw the hand-built navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included). This is the drawn mesh; pathing may navigate on a different (recast) mesh.");
+    if (settings.draw_navmesh_overlay) {
+        auto color_edit = [](const char* label, uint32_t* argb) {
+            float c[4] = {((*argb >> 16) & 0xFF) / 255.f, ((*argb >> 8) & 0xFF) / 255.f, (*argb & 0xFF) / 255.f, ((*argb >> 24) & 0xFF) / 255.f};
+            if (ImGui::ColorEdit4(label, c, ImGuiColorEditFlags_AlphaBar)) {
+                auto q = [](float f) { return (uint32_t)std::clamp(f * 255.f + 0.5f, 0.f, 255.f); };
+                *argb = (q(c[3]) << 24) | (q(c[0]) << 16) | (q(c[1]) << 8) | q(c[2]);
+            }
+        };
+        color_edit("Wall colour (ground plane)", &settings.navmesh_wall_color);
+        color_edit("Wall colour (other planes)", &settings.navmesh_wall_color_hi);
+        color_edit("Connection colour (ground plane)", &settings.navmesh_connection_color);
+        color_edit("Connection colour (other planes)", &settings.navmesh_connection_color_hi);
+        ImGui::DragFloat("Draw range", &settings.navmesh_overlay_range, 100.f, 500.f, 20000.f, "%.0f");
+    }
+}
+
+void PathfindingWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    Pathing::g_use_recast_pathing = settings.use_recast_pathing;
+    Pathing::NavMesh::s_use_recast_builder = settings.use_recast_builder;
+}
+
+void PathfindingWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 bool PathfindingWindow::WndProc(UINT, WPARAM, LPARAM)
@@ -3072,8 +3144,16 @@ void PathfindingWindow::Initialize()
     BuildMapFileHashLookup();
     RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
 
-    // Load saved portal connections (drawing deferred until map is ready)
-    InitPortalConnectionsPath();
-    portal_connections.Load(portal_connections_path);
+    // Load portal connections from the JSON embedded in the DLL as an RCDATA
+    // resource (drawing deferred until map is ready). Shipping it inside the DLL
+    // avoids the file having to sit next to GWToolboxdll.dll at runtime.
+    const EmbeddedResource portal_json(IDR_PORTAL_CONNECTIONS_JSON, RT_RCDATA, GWToolbox::GetDLLModule());
+    if (portal_json.data() && portal_json.size()) {
+        portal_connections.LoadFromMemory(
+            static_cast<const char*>(portal_json.data()), portal_json.size(), "<embedded resource>");
+    }
+    else {
+        PATH_LOG_ERROR("Failed to load embedded portal connections resource");
+    }
     pending_connection_lines_update = true;
 }
