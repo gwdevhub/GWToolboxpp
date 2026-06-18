@@ -6,6 +6,14 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.27
+* [New] Chat: added a block list to hide messages from specific players by name (Chat Settings → "Hide any messages from these players").
+* [New] Minimap: opened and closed locked chests now have separate colour and size settings.
+* [New] Game Settings: added an option to hide the window buttons (minimise/restore/close) in borderless and fullscreen modes.
+* [Fix] Multi-map pathing now routes to the nearest map break, and portal/pathing diagnostic messages no longer appear in chat.
+* [Fix] Multi-map pathing no longer fails when the portal connection data isn't sitting next to the DLL — the data is now bundled inside Toolbox.
+* [Fix] Party damage monitor no longer shows a "0" for members who haven't dealt damage or healing.
+
 ## Version 8.26
 * [New] Multi-map pathfinding — quest paths now route across map boundaries. The path to a quest in another area is drawn on the world map and continues seamlessly once you zone in.
 * [New] Added Backup module to archive and restore your Toolbox settings.
