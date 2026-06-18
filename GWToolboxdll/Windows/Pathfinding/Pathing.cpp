@@ -7,6 +7,7 @@
 #include <Logger.h>
 #include "MathUtility.h"
 #include "Pathing.h"
+#include "PathingLog.h"
 #include "PathingMapDataLoader.h"
 
 // Define PATHING_VERBOSE to re-enable per-stage Log::Info chatter
@@ -19,13 +20,6 @@
 #define PATH_LOG_INFO(...) ((void)0)
 // log_timings(tag) and similar take args only used by the logger.
 #pragma warning(disable: 4189 4100)
-#endif
-
-// Pathing errors only reach chat in debug; in release they go to the log file.
-#ifdef _DEBUG
-#define PATH_LOG_ERROR(...) Log::Error(__VA_ARGS__)
-#else
-#define PATH_LOG_ERROR(...) Log::Log(__VA_ARGS__)
 #endif
 
 namespace {
