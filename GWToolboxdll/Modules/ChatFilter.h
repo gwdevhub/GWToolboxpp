@@ -57,6 +57,7 @@ public:
         bool item_already_identified = false;
 
         bool messagebycontent = false;
+        bool messagebyauthor = false;
         // Which channels to filter.
         bool filter_channel_local = true;
         bool filter_channel_guild = false;
@@ -69,6 +70,8 @@ public:
     void Initialize() override;
     void Terminate() override;
     static void BlockMessageForMs(const wchar_t* message_contains, clock_t ms);
+    // True if the user has added this player to the "Hide messages from" block list.
+    static bool IsSenderBlocked(const std::wstring& sender);
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
     void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;

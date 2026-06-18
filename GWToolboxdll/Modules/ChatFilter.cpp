@@ -52,15 +52,13 @@ namespace {
     std::vector<std::wregex> bycontent_regex;
     char bycontent_regex_buf[FILTER_BUF_SIZE] = "";
 
-#ifdef EXTENDED_IGNORE_LIST
-    bool messagebyauthor = false;
-    std::set<std::string> byauthor_words;
+    std::vector<std::wstring> byauthor_words;
     char byauthor_buf[FILTER_BUF_SIZE] = "";
     bool byauthor_filedirty = false;
-#endif
 
     uint32_t timer_parse_filters = 0;
     uint32_t timer_parse_regexes = 0;
+    uint32_t timer_parse_authors = 0;
 
     //void ByContent_ParseBuf() {
     //      ParseBuffer(bycontent_buf, bycontent_regex);
@@ -69,11 +67,6 @@ namespace {
     //  }
     //}
 
-#ifdef EXTENDED_IGNORE_LIST
-    void ByAuthor_ParseBuf() {
-        ParseBuffer(byauthor_buf, byauthor_words);
-    }
-#endif
     GW::HookEntry BlockIfApplicable_Entry;
 
 
@@ -292,10 +285,27 @@ namespace {
         return player_name && wcsncmp(player_name, _player_name, wcslen(player_name)) == 0;
     }
 
+    // Matches a sender against the user-defined "Hide messages from" block list.
+    bool IsAuthorBlocked(const std::wstring& sender)
+    {
+        using namespace TextUtils;
+        if (!settings.messagebyauthor || byauthor_words.empty()) {
+            return false;
+        }
+        // Normalise the same way ParseBuffer normalises the stored names.
+        const auto normalised = RemoveDiacritics(ToLower(SanitizePlayerName(sender)));
+        for (const auto& blocked : byauthor_words) {
+            if (blocked == normalised) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool ShouldIgnoreBySender(const std::wstring& sender)
     {
         const auto sanitised = TextUtils::SanitizePlayerName(sender);
-        return FriendListWindow::GetIsPlayerIgnored(sanitised) || GW::FriendListMgr::GetFriend(nullptr, sanitised.c_str(), GW::FriendType::Ignore) != nullptr;
+        return IsAuthorBlocked(sender) || FriendListWindow::GetIsPlayerIgnored(sanitised) || GW::FriendListMgr::GetFriend(nullptr, sanitised.c_str(), GW::FriendType::Ignore) != nullptr;
     }
 
     // Should this message be ignored by encoded string?
@@ -826,6 +836,10 @@ void ChatFilter::BlockMessageForMs(const wchar_t* message_contains, clock_t ms) 
     suppressed_messages.push_back({message_contains, TIMER_INIT() + ms});
 }
 
+bool ChatFilter::IsSenderBlocked(const std::wstring& sender) {
+    return IsAuthorBlocked(sender);
+}
+
 void ChatFilter::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
@@ -849,15 +863,14 @@ void ChatFilter::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         ParseBuffer(bycontent_regex_buf, bycontent_regex);
     }
 
-#ifdef EXTENDED_IGNORE_LIST
+    strcpy_s(byauthor_buf, "");
     std::ifstream byauthor_file;
     byauthor_file.open(Resources::GetSettingFileOrLegacy(L"FilterByAuthor.txt"));
     if (byauthor_file.is_open()) {
         byauthor_file.get(byauthor_buf, FILTER_BUF_SIZE, '\0');
         byauthor_file.close();
-        ByAuthor_ParseBuf();
+        ParseBuffer(byauthor_buf, byauthor_words);
     }
-#endif
 }
 
 void ChatFilter::SaveSettings(SettingsDoc& doc)
@@ -877,6 +890,12 @@ void ChatFilter::SaveSettings(SettingsDoc& doc)
         bycontent_filedirty = true;
     }
 
+    if (timer_parse_authors) {
+        timer_parse_authors = 0;
+        ParseBuffer(byauthor_buf, byauthor_words);
+        byauthor_filedirty = true;
+    }
+
     if (bycontent_filedirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream file1;
         file1.open(Resources::GetSettingFile(L"FilterByContent.txt"));
@@ -893,8 +912,7 @@ void ChatFilter::SaveSettings(SettingsDoc& doc)
         bycontent_filedirty = false;
     }
 
-#ifdef EXTENDED_IGNORE_LIST
-    if (byauthor_filedirty) {
+    if (byauthor_filedirty || GWToolbox::SettingsFolderChanged()) {
         std::ofstream byauthor_file;
         byauthor_file.open(Resources::GetSettingFile(L"FilterByAuthor.txt"));
         if (byauthor_file.is_open()) {
@@ -903,7 +921,6 @@ void ChatFilter::SaveSettings(SettingsDoc& doc)
             byauthor_filedirty = false;
         }
     }
-#endif
 }
 
 void ChatFilter::DrawSettingsInternal()
@@ -1050,18 +1067,14 @@ void ChatFilter::DrawSettingsInternal()
     }
     ImGui::Unindent();
 
-#ifdef EXTENDED_IGNORE_LIST
     ImGui::Separator();
-    ImGui::Checkbox("Hide any messages from: ", &messagebyauthor);
+    ImGui::Checkbox("Hide any messages from these players:", &settings.messagebyauthor);
     ImGui::Indent();
-    ImGui::TextDisabled("(Each in a separate line)");
-    ImGui::TextDisabled("(Not implemented)");
+    ImGui::TextDisabled("(One player name per line. Not case sensitive. Also hides their Kamadan/Ascalon trade chat.)");
     if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
-        ByAuthor_ParseBuf();
-        byauthor_filedirty = true;
+        timer_parse_authors = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
     }
     ImGui::Unindent();
-#endif // EXTENDED_IGNORE_LIST
 }
 
 void ChatFilter::Update(const float)
@@ -1077,5 +1090,11 @@ void ChatFilter::Update(const float)
         timer_parse_regexes = 0;
         ParseBuffer(bycontent_regex_buf, bycontent_regex);
         bycontent_filedirty = true;
+    }
+
+    if (timer_parse_authors && timer_parse_authors < timestamp) {
+        timer_parse_authors = 0;
+        ParseBuffer(byauthor_buf, byauthor_words);
+        byauthor_filedirty = true;
     }
 }
