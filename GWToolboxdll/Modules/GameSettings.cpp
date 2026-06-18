@@ -1045,6 +1045,13 @@ namespace {
             GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), false); // @TODO: Show this, but make it maximise the window on click instead
             GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnExit"), true);
         }
+        // pref 1 = borderless, pref 2 = fullscreen; hide window buttons if the user opted in
+        if (pref == 1 || pref == 2) {
+            const bool visible = !settings.hide_window_buttons_in_fullscreen;
+            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnMin"), visible);
+            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), visible);
+            GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnExit"), visible);
+        }
     }
 
     // Pre-fill character name when donating faction
@@ -1911,6 +1918,10 @@ void GameSettings::DrawSettingsInternal()
 
     if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &settings.set_window_title_as_charname)) {
         SetWindowTitle(settings.set_window_title_as_charname);
+    }
+
+    if (ImGui::Checkbox("Hide minimize/restore/close buttons in borderless and fullscreen modes", &settings.hide_window_buttons_in_fullscreen)) {
+        GW::GameThread::Enqueue(CheckRemoveWindowBorder);
     }
 
     ImGui::Checkbox("Show warning when earned faction reaches ", &settings.faction_warn_percent);
