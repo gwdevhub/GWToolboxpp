@@ -23,6 +23,7 @@
 #include <fstream>
 #include <numeric>
 
+#include <EmbeddedResource.h>
 #include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Utils/EncString.h>
@@ -41,6 +42,7 @@
 #include "PathingMapDataLoader.h"
 #include "PortalConnections.h"
 #include "maps_constant_data.h"
+#include "resource.h"
 
 #include <GWCA/Context/WorldContext.h>
 #include <Utils/ToolboxUtils.h>
@@ -298,7 +300,6 @@ namespace {
 
     // Portal connection editor
     Pathing::PortalConnections portal_connections;
-    std::string portal_connections_path;
 
     struct EditorEndpoint {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
@@ -431,23 +432,6 @@ namespace {
             saved_connection_lines.push_back(line);
         }
     }
-
-    void InitPortalConnectionsPath()
-    {
-        if (!portal_connections_path.empty()) return;
-        // Resolve the path next to GWToolboxdll.dll. The portal_connections.json
-        // resource is committed in the repo at
-        //   GWToolboxdll/Windows/Pathfinding/portal_connections.json
-        // and copied next to the built DLL by a CMake POST_BUILD step.
-        wchar_t dll_path[MAX_PATH];
-        if (GetModuleFileNameW(GWToolbox::GetDLLModule(), dll_path, _countof(dll_path)) == 0) {
-            return;
-        }
-        std::filesystem::path p(dll_path);
-        p.replace_filename(L"portal_connections.json");
-        portal_connections_path = p.string();
-    }
-
 
     // LoadAndShowMapsAtWorldPos defined after anonymous namespace
 
@@ -3072,8 +3056,16 @@ void PathfindingWindow::Initialize()
     BuildMapFileHashLookup();
     RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
 
-    // Load saved portal connections (drawing deferred until map is ready)
-    InitPortalConnectionsPath();
-    portal_connections.Load(portal_connections_path);
+    // Load portal connections from the JSON embedded in the DLL as an RCDATA
+    // resource (drawing deferred until map is ready). Shipping it inside the DLL
+    // avoids the file having to sit next to GWToolboxdll.dll at runtime.
+    const EmbeddedResource portal_json(IDR_PORTAL_CONNECTIONS_JSON, RT_RCDATA, GWToolbox::GetDLLModule());
+    if (portal_json.data() && portal_json.size()) {
+        portal_connections.LoadFromMemory(
+            static_cast<const char*>(portal_json.data()), portal_json.size(), "<embedded resource>");
+    }
+    else {
+        Log::Error("Failed to load embedded portal connections resource");
+    }
     pending_connection_lines_update = true;
 }
