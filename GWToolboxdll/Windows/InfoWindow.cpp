@@ -994,9 +994,38 @@ namespace {
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : (GW::Constants::Profession)0;
         [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
-        auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0, 0, 2);
-        HighlightFrame(frame);
+        if (ImGui::CollapsingHeader("Frame Finder")) {
+            static char frame_label[64] = "";
+            static int child_offsets[3] = {0, 0, 0};
+            static int depth = 0;
 
+            ImGui::InputText("Frame label", frame_label, sizeof(frame_label));
+            ImGui::ShowHelp("Passed to GW::UI::GetFrameByLabel, e.g. \"Vendor\", \"Game\", \"Compass\".");
+            ImGui::SliderInt("Child depth", &depth, 0, 3);
+            for (int j = 0; j < depth; j++) {
+                char lbl[24];
+                snprintf(lbl, sizeof(lbl), "Child offset %d", j);
+                ImGui::InputInt(lbl, &child_offsets[j]);
+                if (child_offsets[j] < 0) child_offsets[j] = 0;
+            }
+
+            GW::UI::Frame* frame = nullptr;
+            if (frame_label[0]) {
+                frame = GW::UI::GetFrameByLabel(TextUtils::StringToWString(frame_label).c_str());
+                for (int j = 0; j < depth && frame; j++)
+                    frame = GW::UI::GetChildFrame(frame, static_cast<uint32_t>(child_offsets[j]));
+            }
+
+            if (frame) {
+                InfoField("Frame address", "%p", static_cast<void*>(frame));
+                InfoField("Frame ID", "%u", frame->frame_id);
+                InfoField("Child offset ID", "%u", frame->child_offset_id);
+                HighlightFrame(frame); // draws a box around the frame's on-screen bounds
+            }
+            else {
+                ImGui::TextDisabled("%s", frame_label[0] ? "No frame for that label + offsets." : "Enter a frame label.");
+            }
+        }
 #endif
     }
 
@@ -1004,7 +1033,7 @@ namespace {
     {
         switch (message_id) {
             case GW::UI::UIMessage::kLoadMapContext: {
-                const auto packet = (GW::UI::UIPacket::kLoadMapContext*)wParam;
+                const auto packet = static_cast<GW::UI::UIPacket::kLoadMapContext*>(wParam);
                 wcscpy(mapfile, packet->file_name);
             } break;
         }
