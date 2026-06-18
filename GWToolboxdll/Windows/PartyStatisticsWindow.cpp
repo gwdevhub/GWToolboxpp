@@ -91,6 +91,8 @@ namespace {
         uint32_t attributed = 0;
         uint32_t damage = 0;
         uint32_t healing = 0;
+        uint32_t actual_damage = 0;
+        uint32_t actual_healing = 0;
         GuiUtils::EncString* name = nullptr;
     };
 
@@ -108,13 +110,22 @@ namespace {
         uint32_t party_idx = 0;
         GuiUtils::EncString name;
         std::vector<Skill> skills{};
-        std::vector<Skill> incoming_skills{};
         uint32_t autoattack_count = 0;
         uint32_t autoattack_damage = 0;
+        uint32_t autoattack_actual_damage = 0;
         uint32_t autoattack_healing = 0;
+        uint32_t autoattack_actual_healing = 0;
         uint32_t unattributable_count = 0;
         uint32_t unattributable_damage = 0;
         uint32_t unattributable_healing = 0;
+        uint32_t unattributable_actual_damage = 0;
+        uint32_t unattributable_actual_healing = 0;
+        uint32_t actual_damage_total = 0;
+        uint32_t combat_duration_ms_total = 0;
+        uint32_t combat_segment_start_timestamp = 0;
+        uint32_t last_damage_timestamp = 0;
+        uint32_t damage_taken_armor_ignoring = 0;
+        uint32_t damage_taken_non_armor_ignoring = 0;
     };
 
     struct SavedSkillStats {
@@ -124,6 +135,8 @@ namespace {
         uint32_t attributed = 0;
         uint32_t damage = 0;
         uint32_t healing = 0;
+        uint32_t actual_damage = 0;
+        uint32_t actual_healing = 0;
     };
 
     struct SavedPartyMemberStats {
@@ -131,12 +144,21 @@ namespace {
         uint32_t total_skills_used = 0;
         uint32_t autoattack_count = 0;
         uint32_t autoattack_damage = 0;
+        uint32_t autoattack_actual_damage = 0;
         uint32_t autoattack_healing = 0;
+        uint32_t autoattack_actual_healing = 0;
         uint32_t unattributable_count = 0;
         uint32_t unattributable_damage = 0;
         uint32_t unattributable_healing = 0;
+        uint32_t unattributable_actual_damage = 0;
+        uint32_t unattributable_actual_healing = 0;
+        uint32_t actual_damage_total = 0;
+        uint32_t combat_duration_ms_total = 0;
+        uint32_t combat_segment_start_timestamp = 0;
+        uint32_t last_damage_timestamp = 0;
+        uint32_t damage_taken_armor_ignoring = 0;
+        uint32_t damage_taken_non_armor_ignoring = 0;
         std::vector<SavedSkillStats> skills;
-        std::vector<SavedSkillStats> incoming_skills;
     };
 
 
@@ -175,7 +197,9 @@ namespace {
     GW::HookEntry ProjectileLaunched_Entry;
 
     /* Window settings */
-    PartyStatisticsWindow::Settings settings;
+    bool show_abs_values = true;
+    bool show_perc_values = true;
+    bool print_by_click = true;
 
     enum class ActionType {
         Skill,
@@ -232,6 +256,7 @@ namespace {
         uint32_t type = 0;
         float value = 0.0f;
         uint32_t amount = 0;
+        uint32_t actual_amount = 0;
         uint32_t timestamp = 0;
         bool handled = false;
         uint32_t group_player_number = 0;
@@ -284,6 +309,7 @@ namespace {
         {GW::Constants::SkillID::Balthazars_Aura, 0, 10000, {}},
         {GW::Constants::SkillID::Bed_of_Coals, 0, 5000, {}},
         {GW::Constants::SkillID::Breath_of_Fire, 0, 5000, {}},
+        {GW::Constants::SkillID::Chain_Lightning, 0, 0, {500, 1000}},
         {GW::Constants::SkillID::Chaos_Storm, 0, 10000, {}},
         {GW::Constants::SkillID::Churning_Earth, 0, 5000, {}},
         {GW::Constants::SkillID::Eruption, 0, 5000, {}},
@@ -293,6 +319,7 @@ namespace {
         {GW::Constants::SkillID::Kirins_Wrath, 0, 5000, {}},
         {GW::Constants::SkillID::Lava_Font, 0, 5000, {}},
         {GW::Constants::SkillID::Maelstrom, 0, 10000, {}},
+        {GW::Constants::SkillID::Meteor, 0, 0, {500}},
         {GW::Constants::SkillID::Meteor_Shower, 0, 0, {3000, 6000, 9000}},
         {GW::Constants::SkillID::Mystic_Sandstorm, 0, 3000, {}},
         {GW::Constants::SkillID::Ray_of_Judgment, 0, 5000, {}},
@@ -340,9 +367,27 @@ namespace {
     std::vector<SkillEndEvent> recent_skill_end_events;
     std::vector<ProjectileImpactEvent> recent_projectile_impacts;
     std::vector<DamageEvent> recent_damage_events;
+
+    struct BattleSegment {
+        uint32_t start_timestamp = 0;
+        uint32_t end_timestamp = 0;
+        uint32_t actual_damage = 0;
+        bool open = true;
+    };
+
+    std::vector<BattleSegment> recent_battle_segments;
+    uint32_t total_burn_enemy_ms = 0;
+    uint32_t current_burn_enemy_count = 0;
+    uint32_t current_burn_last_update_timestamp = 0;
+
+    uint32_t party_combat_duration_ms_total = 0;
+    uint32_t party_combat_segment_start_timestamp = 0;
+    uint32_t party_last_damage_timestamp = 0;
+
     constexpr uint32_t effect_infer_window_ms = 300;
     constexpr uint32_t damage_attribution_delay_ms = 1000;
     constexpr uint32_t timeline_window_ms = 20000;
+    constexpr uint32_t battle_gap_ms = 5000;
     constexpr size_t max_tracked_actions = 8;
     constexpr size_t max_party_skills = 8;
 
@@ -357,11 +402,25 @@ namespace {
     }
 
     uint32_t ToSkillValue(const GW::Packet::StoC::GenericModifier* packet);
+    uint32_t GetActualDamageAmount(const GW::Packet::StoC::GenericModifier* packet);
+    void AddPartyMemberCombatDamage(PartyMember* party_member, const uint32_t actual_amount, const uint32_t timestamp);
+    uint32_t GetPartyMemberDPS(const PartyMember& party_member, const uint32_t now);
+    uint32_t CountBurningEnemies();
+    void SetCurrentBurnEnemyCount(const uint32_t count, const uint32_t now);
+    void UpdateBurnEnemyDuration(const uint32_t now);
+    void UpdatePartyCombatDuration(const uint32_t timestamp);
+    uint32_t GetBurnDPS(const uint32_t now);
+    bool HasSkill(const PartyMember& party_member, const GW::Constants::SkillID skill_id);
+    void UpdateBattleSegments(const DamageEvent& damage);
+    void PruneOldBattleSegments();
     PartyMember* GetPartyMemberByAgentId(const uint32_t agent_id);
+    PartyMember* GetPartyMemberByPetAgentId(const uint32_t agent_id);
     void AddAutoattackValue(PartyMember* party_member, const GW::Packet::StoC::GenericModifier* packet, const bool is_healing);
     void AddSkillValue(PartyMember* party_member, const GW::Constants::SkillID skill_id,
                        const GW::Packet::StoC::GenericModifier* packet, const bool is_healing,
                        const bool count_attributed);
+    void AddUnattributableValue(PartyMember* party_member, const GW::Packet::StoC::GenericModifier* packet,
+                                const bool is_healing);
     void AddEnemyAutoattackValue(EnemyGroup* group, const GW::Packet::StoC::GenericModifier* packet,
                                  const bool is_healing);
     void AddEnemyUnattributableValue(EnemyGroup* group, const GW::Packet::StoC::GenericModifier* packet,
@@ -369,14 +428,11 @@ namespace {
     void AddEnemySkillValue(EnemyGroup* group, const GW::Constants::SkillID skill_id,
                             const GW::Packet::StoC::GenericModifier* packet, const bool is_healing,
                             const bool count_attributed);
-    void AddIncomingSkillValue(PartyMember* party_member, const GW::Constants::SkillID skill_id,
-                               const GW::Packet::StoC::GenericModifier* packet, const bool is_healing);
     EnemyGroup* GetEnemyGroupByPlayerNumber(const uint32_t player_number);
     EnemyGroup* GetEnemyGroupByCasterId(const uint32_t caster_id);
     EnemyGroup* GetOrAddEnemyGroup(const uint32_t caster_id);
     void CacheEnemyGroup(EnemyGroup* group);
     Skill* GetOrAddEnemySkill(const uint32_t caster_id, const GW::Constants::SkillID skill_id);
-    Skill* GetOrAddIncomingSkill(PartyMember* party_member, const GW::Constants::SkillID skill_id);
     bool IsDamageEvent(const DamageEvent& damage);
     bool IsDamageReadyForAttribution(const DamageEvent& damage);
     void ExpireOldDamageEvents();
@@ -436,6 +492,7 @@ namespace {
             recent_projectile_timeline_events.erase(recent_projectile_timeline_events.begin());
         }
         ExpireOldDamageEvents();
+        PruneOldBattleSegments();
     }
 
     uint32_t GetDamagePacketAmount(const GW::Packet::StoC::GenericModifier* packet)
@@ -982,7 +1039,47 @@ namespace {
     void AddUnmatchedDamageEvent(const DamageEvent& damage)
     {
         recent_damage_events.push_back(damage);
+        UpdateBattleSegments(damage);
         PruneOldTimelineEvents();
+    }
+
+    void UpdateBattleSegments(const DamageEvent& damage)
+    {
+        if (damage.value >= 0.0f || damage.actual_amount == 0) {
+            return;
+        }
+        const uint32_t now = damage.timestamp;
+        if (recent_battle_segments.empty()) {
+            recent_battle_segments.push_back({damage.timestamp, damage.timestamp, damage.actual_amount, true});
+            return;
+        }
+        auto& segment = recent_battle_segments.back();
+        if (!segment.open || now - segment.end_timestamp > battle_gap_ms) {
+            if (segment.open) {
+                segment.open = false;
+            }
+            recent_battle_segments.push_back({now, now, damage.actual_amount, true});
+            return;
+        }
+        segment.end_timestamp = now;
+        segment.actual_damage += damage.actual_amount;
+    }
+
+    void PruneOldBattleSegments()
+    {
+        const uint32_t now = GetTimeMs();
+        while (!recent_battle_segments.empty()) {
+            const auto& segment = recent_battle_segments.front();
+            const bool segment_ended = !segment.open || (now - segment.end_timestamp > battle_gap_ms);
+            if (!segment_ended) {
+                break;
+            }
+            if (segment.end_timestamp + timeline_window_ms < now) {
+                recent_battle_segments.erase(recent_battle_segments.begin());
+                continue;
+            }
+            break;
+        }
     }
 
     void ExpireOldDamageEvents()
@@ -993,47 +1090,28 @@ namespace {
             recent_damage_events.erase(recent_damage_events.begin());
             if (!damage.handled) {
                 const bool is_healing = damage.value > 0.0f;
-                if (auto* party_member = const_cast<PartyMember*>(GetPartyMemberByAgentId(damage.cause_id))) {
-                    if (is_healing) {
-                        party_member->unattributable_healing += damage.amount;
-                    } else {
-                        party_member->unattributable_damage += damage.amount;
-                    }
-                    party_member->unattributable_count++;
+                GW::Packet::StoC::GenericModifier packet{};
+                packet.type = damage.type;
+                packet.value = damage.value;
+                packet.target_id = damage.target_id;
+                packet.cause_id = damage.cause_id;
+
+                auto* party_member = const_cast<PartyMember*>(GetPartyMemberByAgentId(damage.cause_id));
+                if (!party_member) {
+                    party_member = const_cast<PartyMember*>(GetPartyMemberByPetAgentId(damage.cause_id));
+                }
+                if (party_member) {
+                    AddUnattributableValue(party_member, &packet, is_healing);
                 } else if (auto* group = GetEnemyGroupByCasterId(damage.cause_id)) {
-                    GW::Packet::StoC::GenericModifier packet{};
-                    packet.type = damage.type;
-                    packet.value = damage.value;
-                    packet.target_id = damage.target_id;
-                    packet.cause_id = damage.cause_id;
                     AddEnemyUnattributableValue(group, &packet, is_healing);
                 } else if (damage.group_player_number != 0) {
                     if (auto* enemy_group = GetEnemyGroupByPlayerNumber(damage.group_player_number)) {
-                        GW::Packet::StoC::GenericModifier packet{};
-                        packet.type = damage.type;
-                        packet.value = damage.value;
-                        packet.target_id = damage.target_id;
-                        packet.cause_id = damage.cause_id;
                         AddEnemyUnattributableValue(enemy_group, &packet, is_healing);
-                    } else {
-                        Log::LogW(L"PartyStats [timeline] Damage aged out failed unattributed group_player_number=%u cause=%u target=%u type=%u amount=%u ts=%u",
-                                  damage.group_player_number, damage.cause_id, damage.target_id, damage.type, damage.amount, damage.timestamp);
                     }
                 } else if (damage.group_caster_id != 0) {
                     if (auto* enemy_group = GetEnemyGroupByCasterId(damage.group_caster_id)) {
-                        GW::Packet::StoC::GenericModifier packet{};
-                        packet.type = damage.type;
-                        packet.value = damage.value;
-                        packet.target_id = damage.target_id;
-                        packet.cause_id = damage.cause_id;
                         AddEnemyUnattributableValue(enemy_group, &packet, is_healing);
-                    } else {
-                        Log::LogW(L"PartyStats [timeline] Damage aged out failed unattributed group_caster_id=%u cause=%u target=%u type=%u amount=%u ts=%u",
-                                  damage.group_caster_id, damage.cause_id, damage.target_id, damage.type, damage.amount, damage.timestamp);
                     }
-                } else {
-                    Log::LogW(L"PartyStats [timeline] Damage aged out failed unattributed no group info cause=%u target=%u type=%u amount=%u ts=%u",
-                              damage.cause_id, damage.target_id, damage.type, damage.amount, damage.timestamp);
                 }
             }
         }
@@ -1133,16 +1211,12 @@ namespace {
             packet.value = damage.value;
             packet.target_id = damage.target_id;
             packet.cause_id = damage.cause_id;
-            const bool is_healing = packet.value > 0.0f;
             if (auto* party_member = GetPartyMemberByAgentId(damage.cause_id)) {
                 AttributeDamageEvent(damage, *match.impact, &packet, party_member);
                 handled = true;
             }
             else if (auto* group = GetEnemyGroupByDamage(damage)) {
                 AttributeDamageEvent(damage, *match.impact, &packet, nullptr);
-                if (auto* target_party_member = GetPartyMemberByAgentId(damage.target_id)) {
-                    AddIncomingSkillValue(target_party_member, match.impact->skill_id, &packet, is_healing);
-                }
                 handled = true;
             }
             else {
@@ -1208,16 +1282,12 @@ namespace {
             packet.value = damage.value;
             packet.target_id = damage.target_id;
             packet.cause_id = damage.cause_id;
-            const bool is_healing = packet.value > 0.0f;
             if (auto* party_member = GetPartyMemberByAgentId(damage.cause_id)) {
                 AttributeDamageEvent(damage, *match.skill_end, &packet, party_member);
                 handled = true;
             }
             else if (auto* group = GetEnemyGroupByDamage(damage)) {
                 AttributeDamageEvent(damage, *match.skill_end, &packet, nullptr);
-                if (auto* target_party_member = GetPartyMemberByAgentId(damage.target_id)) {
-                    AddIncomingSkillValue(target_party_member, match.skill_end->skill_id, &packet, is_healing);
-                }
                 handled = true;
             }
             else {
@@ -1251,8 +1321,15 @@ namespace {
         if (!packet || !party_member) {
             return;
         }
+        if (packet->cause_id != 0 && packet->cause_id == packet->target_id && packet->value < 0.0f &&
+            (packet->type == GW::Packet::StoC::GenericValueID::damage ||
+             packet->type == GW::Packet::StoC::GenericValueID::critical ||
+             packet->type == GW::Packet::StoC::GenericValueID::armorignoring)) {
+            return;
+        }
+        const uint32_t potential_amount = ToSkillValue(packet);
         DamageEvent damage{packet->cause_id, packet->target_id, packet->type, packet->value,
-                           ToSkillValue(packet), GetTimeMs(), false, 0, 0};
+                           potential_amount, GetActualDamageAmount(packet), GetTimeMs(), false, 0, 0};
         if (auto* group = GetEnemyGroupByCasterId(packet->cause_id)) {
             damage.group_player_number = group->player_number;
             damage.group_caster_id = group->caster_id;
@@ -1335,20 +1412,13 @@ namespace {
         if (match.diff == UINT32_MAX) {
             return false;
         }
-        const bool is_healing = packet.value > 0.0f;
         if (match.impact) {
             AttributeDamageEvent(damage, *match.impact, &packet, nullptr);
-            if (auto* target_party_member = GetPartyMemberByAgentId(damage.target_id)) {
-                AddIncomingSkillValue(target_party_member, match.impact->skill_id, &packet, is_healing);
-            }
             damage.handled = true;
             return true;
         }
         if (match.skill_end) {
             AttributeDamageEvent(damage, *match.skill_end, &packet, nullptr);
-            if (auto* target_party_member = GetPartyMemberByAgentId(damage.target_id)) {
-                AddIncomingSkillValue(target_party_member, match.skill_end->skill_id, &packet, is_healing);
-            }
             damage.handled = true;
             return true;
         }
@@ -1855,12 +1925,21 @@ namespace {
 
     Skill* GetOrAddSkill(PartyMember* party_member, const GW::Constants::SkillID skill_id)
     {
+        if (skill_id == GW::Constants::SkillID::No_Skill) {
+            return nullptr;
+        }
         for (auto& skill : party_member->skills) {
             if (skill.id == skill_id) {
                 return &skill;
             }
         }
-        return nullptr;
+        // Not in the party member's skill bar (e.g. pet, spirit, minion skill).
+        // Add it so the damage can still be tracked and contributed to DPS.
+        if (party_member->skills.size() >= max_party_skills) {
+            return nullptr;
+        }
+        party_member->skills.emplace_back(skill_id);
+        return &party_member->skills.back();
     }
 
     std::wstring GetEnemyName(const uint32_t caster_id)
@@ -2008,20 +2087,6 @@ namespace {
         return &group->skills.back();
     }
 
-    Skill* GetOrAddIncomingSkill(PartyMember* party_member, const GW::Constants::SkillID skill_id)
-    {
-        if (!party_member) {
-            return nullptr;
-        }
-        for (auto& skill : party_member->incoming_skills) {
-            if (skill.id == skill_id) {
-                return &skill;
-            }
-        }
-        party_member->incoming_skills.emplace_back(skill_id);
-        return &party_member->incoming_skills.back();
-    }
-
     uint32_t ToSkillValue(const float value)
     {
         return static_cast<uint32_t>(std::floor(std::fabs(value) + 0.5f));
@@ -2050,6 +2115,35 @@ namespace {
             return static_cast<uint32_t>(std::lround(abs_value * approx_hp));
         }
         return ToSkillValue(packet->value);
+    }
+
+    uint32_t GetActualDamageAmount(const GW::Packet::StoC::GenericModifier* packet)
+    {
+        if (!packet) {
+            return 0;
+        }
+        const auto agent = GW::Agents::GetAgentByID(packet->target_id);
+        const auto target = agent ? agent->GetAsAgentLiving() : nullptr;
+        const uint32_t potential = ToSkillValue(packet);
+        if (!target) {
+            return potential;
+        }
+
+        uint32_t max_hp = PartyDamage::GetMaxHp(target->player_number);
+        if (max_hp == 0 && target->max_hp > 0 && target->max_hp < 100000) {
+            max_hp = target->max_hp;
+        }
+        if (max_hp == 0) {
+            const uint32_t approx_hp = target->level * 20 + 100;
+            max_hp = approx_hp;
+        }
+
+        const uint32_t current_hp = static_cast<uint32_t>(std::lround(target->hp * static_cast<float>(max_hp)));
+        if (packet->value > 0.0f) {
+            const uint32_t missing_hp = current_hp >= max_hp ? 0u : max_hp - current_hp;
+            return std::min(potential, missing_hp);
+        }
+        return std::min(potential, current_hp);
     }
 
     void LogSkillModifierDebug(const GW::Packet::StoC::GenericModifier* packet, const GW::Constants::SkillID skill_id,
@@ -2084,35 +2178,17 @@ namespace {
             return;
         }
         const uint32_t amount = ToSkillValue(packet);
+        const uint32_t actual_amount = GetActualDamageAmount(packet);
         if (is_healing) {
             skill->healing += amount;
+            skill->actual_healing += actual_amount;
         } else {
             skill->damage += amount;
+            skill->actual_damage += actual_amount;
         }
         if (count_attributed) {
             skill->attributed++;
         }
-    }
-
-    void AddIncomingSkillValue(PartyMember* party_member, const GW::Constants::SkillID skill_id,
-                               const GW::Packet::StoC::GenericModifier* packet, const bool is_healing)
-    {
-        if (!party_member || !packet || skill_id == GW::Constants::SkillID::No_Skill) {
-            return;
-        }
-        auto* skill = GetOrAddIncomingSkill(party_member, skill_id);
-        if (!skill) {
-            return;
-        }
-        const uint32_t amount = ToSkillValue(packet);
-        if (is_healing) {
-            skill->healing += amount;
-        } else {
-            skill->damage += amount;
-        }
-        skill->count++;
-        skill->ended++;
-        skill->attributed++;
     }
 
     void AddAutoattackValue(PartyMember* party_member, const GW::Packet::StoC::GenericModifier* packet,
@@ -2122,10 +2198,13 @@ namespace {
             return;
         }
         const uint32_t amount = ToSkillValue(packet);
+        const uint32_t actual_amount = GetActualDamageAmount(packet);
         if (is_healing) {
             party_member->autoattack_healing += amount;
+            party_member->autoattack_actual_healing += actual_amount;
         } else {
             party_member->autoattack_damage += amount;
+            party_member->autoattack_actual_damage += actual_amount;
         }
         party_member->autoattack_count++;
     }
@@ -2152,12 +2231,34 @@ namespace {
             return;
         }
         const uint32_t amount = ToSkillValue(packet);
+        const uint32_t actual_amount = GetActualDamageAmount(packet);
         if (is_healing) {
             party_member->unattributable_healing += amount;
+            party_member->unattributable_actual_healing += actual_amount;
         } else {
             party_member->unattributable_damage += amount;
+            party_member->unattributable_actual_damage += actual_amount;
         }
         party_member->unattributable_count++;
+    }
+
+    void AddPartyMemberDamageTaken(PartyMember* party_member, const GW::Packet::StoC::GenericModifier* packet)
+    {
+        if (!party_member || !packet) {
+            return;
+        }
+        if (packet->value >= 0.0f) {
+            return;
+        }
+        const uint32_t actual_amount = GetActualDamageAmount(packet);
+        if (actual_amount == 0) {
+            return;
+        }
+        if (packet->type == GW::Packet::StoC::GenericValueID::armorignoring) {
+            party_member->damage_taken_armor_ignoring += actual_amount;
+        } else {
+            party_member->damage_taken_non_armor_ignoring += actual_amount;
+        }
     }
 
     void AddEnemyUnattributableValue(EnemyGroup* group, const GW::Packet::StoC::GenericModifier* packet,
@@ -2173,6 +2274,144 @@ namespace {
             group->unattributable_damage += amount;
         }
         group->unattributable_count++;
+    }
+
+    void UpdatePartyCombatDuration(const uint32_t timestamp)
+    {
+        if (party_last_damage_timestamp != 0 && timestamp - party_last_damage_timestamp <= battle_gap_ms) {
+            party_last_damage_timestamp = timestamp;
+        } else {
+            if (party_combat_segment_start_timestamp != 0 && party_last_damage_timestamp != 0 &&
+                party_last_damage_timestamp > party_combat_segment_start_timestamp) {
+                const uint32_t segment_duration = party_last_damage_timestamp - party_combat_segment_start_timestamp;
+                party_combat_duration_ms_total += segment_duration;
+            }
+            party_combat_segment_start_timestamp = timestamp;
+            party_last_damage_timestamp = timestamp;
+        }
+    }
+
+    void AddPartyMemberCombatDamage(PartyMember* party_member, const uint32_t actual_amount, const uint32_t timestamp)
+    {
+        if (!party_member || actual_amount == 0 || timestamp == 0) {
+            return;
+        }
+
+        if (party_member->last_damage_timestamp != 0 && timestamp - party_member->last_damage_timestamp <= battle_gap_ms) {
+            // Continue the current combat segment.
+            party_member->last_damage_timestamp = timestamp;
+        } else {
+            // Close the previous segment if it exists.
+            if (party_member->combat_segment_start_timestamp != 0 && party_member->last_damage_timestamp != 0 &&
+                party_member->last_damage_timestamp > party_member->combat_segment_start_timestamp) {
+                const uint32_t segment_duration = party_member->last_damage_timestamp - party_member->combat_segment_start_timestamp;
+                party_member->combat_duration_ms_total += segment_duration;
+            }
+            party_member->combat_segment_start_timestamp = timestamp;
+            party_member->last_damage_timestamp = timestamp;
+        }
+
+        party_member->actual_damage_total += actual_amount;
+        UpdatePartyCombatDuration(timestamp);
+    }
+
+    uint32_t GetPartyMemberDPS(const PartyMember& party_member, const uint32_t now)
+    {
+        uint32_t total_duration = party_member.combat_duration_ms_total;
+        if (party_member.combat_segment_start_timestamp != 0 && party_member.last_damage_timestamp != 0 &&
+            now - party_member.last_damage_timestamp <= battle_gap_ms) {
+            total_duration += now - party_member.combat_segment_start_timestamp;
+        }
+        if (total_duration == 0) {
+            return 0;
+        }
+        const float seconds = static_cast<float>(total_duration) / 1000.0f;
+        return static_cast<uint32_t>(std::round(static_cast<float>(party_member.actual_damage_total) / seconds));
+    }
+
+    uint32_t CountBurningEnemies()
+    {
+        uint32_t count = 0;
+        auto agents = GW::Agents::GetAgentArray();
+        if (!agents) {
+            return 0;
+        }
+        for (GW::Agent* agent : *agents) {
+            if (!agent) {
+                continue;
+            }
+            GW::AgentLiving* living = agent->GetAsAgentLiving();
+            if (!living || living->allegiance != GW::Constants::Allegiance::Enemy) {
+                continue;
+            }
+            for (auto link = living->visible_effects.Get(); link != nullptr; link = link->NextLink()) {
+                auto node = link->Next();
+                if (!node) {
+                    break;
+                }
+                if (node->id == GW::Constants::EffectID::burning && !node->has_ended) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        return count;
+    }
+
+    void UpdateBurnEnemyDuration(const uint32_t now)
+    {
+        if (current_burn_last_update_timestamp == 0 || now <= current_burn_last_update_timestamp) {
+            current_burn_last_update_timestamp = now;
+            return;
+        }
+        const uint32_t delta = now - current_burn_last_update_timestamp;
+        total_burn_enemy_ms += current_burn_enemy_count * delta;
+        current_burn_last_update_timestamp = now;
+    }
+
+    void SetCurrentBurnEnemyCount(const uint32_t count, const uint32_t now)
+    {
+        UpdateBurnEnemyDuration(now);
+        current_burn_enemy_count = count;
+    }
+
+    uint32_t GetBurnDPS(const uint32_t now)
+    {
+        if (party_combat_duration_ms_total == 0) {
+            return 0;
+        }
+        uint32_t party_duration = party_combat_duration_ms_total;
+        if (party_combat_segment_start_timestamp != 0 && party_last_damage_timestamp != 0 &&
+            now - party_last_damage_timestamp <= battle_gap_ms) {
+            party_duration += now - party_combat_segment_start_timestamp;
+        }
+        if (party_duration == 0) {
+            return 0;
+        }
+        uint32_t burn_ms = total_burn_enemy_ms;
+        if (current_burn_last_update_timestamp != 0 && now > current_burn_last_update_timestamp) {
+            burn_ms += current_burn_enemy_count * (now - current_burn_last_update_timestamp);
+        }
+        return static_cast<uint32_t>(std::round(static_cast<float>(burn_ms) * 14.0f / static_cast<float>(party_duration)));
+    }
+
+    uint32_t GetPartyMemberActualHealing(const PartyMember& party_member)
+    {
+        uint32_t total_healing = party_member.autoattack_actual_healing + party_member.unattributable_actual_healing;
+        for (const auto& skill : party_member.skills) {
+            total_healing += skill.actual_healing;
+        }
+        return total_healing;
+    }
+
+    bool HasSkill(const PartyMember& party_member, const GW::Constants::SkillID skill_id)
+    {
+        for (const auto& skill : party_member.skills) {
+            if (skill.id == skill_id) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void AddEnemySkillValue(EnemyGroup* group, const GW::Constants::SkillID skill_id,
@@ -2277,194 +2516,6 @@ namespace {
         return right - t * (right - left);
     }
 
-    void DrawEnemyGroupTimeline(EnemyGroup& group)
-    {
-        const uint32_t now = GetTimeMs();
-        const float width = ImGui::GetContentRegionAvail().x;
-        const float height = 72.0f;
-        const ImVec2 origin = ImGui::GetCursorScreenPos();
-        ImGui::Dummy(ImVec2(width, height));
-        ImDrawList* draw_list = ImGui::GetWindowDrawList();
-        const float left = origin.x + 12.0f;
-        const float right = origin.x + width - 12.0f;
-        const float top_y = origin.y + 16.0f;
-        const float bottom_y = origin.y + 44.0f;
-        const ImU32 color_skill_end = IM_COL32(100, 150, 255, 255);
-        const ImU32 color_projectile = IM_COL32(100, 255, 150, 255);
-        const ImU32 color_link = IM_COL32(220, 220, 220, 180);
-        const ImU32 color_axis = IM_COL32(160, 160, 160, 255);
-
-        auto GroupMatchesCasterId = [&](const uint32_t caster_id) {
-            if (group.player_number != 0) {
-                const auto* agent = GW::Agents::GetAgentByID(caster_id);
-                if (!agent) {
-                    return false;
-                }
-                const auto* living = agent->GetAsAgentLiving();
-                return living && living->player_number == group.player_number;
-            }
-            return caster_id == group.caster_id;
-        };
-
-        std::vector<const SkillCastTimelineEvent*> cast_events;
-        std::vector<const ProjectileTimelineEvent*> projectile_events;
-        std::vector<const SkillEndEvent*> skill_ends;
-        std::vector<const ProjectileImpactEvent*> impact_events;
-        std::vector<const DamageEvent*> damage_events;
-
-        for (const auto& ev : recent_skill_cast_events) {
-            if (!GroupMatchesCasterId(ev.caster_id)) {
-                continue;
-            }
-            if (now >= ev.start_timestamp && now - ev.start_timestamp <= timeline_window_ms) {
-                cast_events.push_back(&ev);
-            }
-        }
-        for (const auto& ev : recent_projectile_timeline_events) {
-            if (!GroupMatchesCasterId(ev.caster_id)) {
-                continue;
-            }
-            if (now >= ev.spawn_timestamp && now - ev.spawn_timestamp <= timeline_window_ms) {
-                projectile_events.push_back(&ev);
-            }
-        }
-        for (const auto& ev : recent_skill_end_events) {
-            if (!GroupMatchesCasterId(ev.caster_id)) {
-                continue;
-            }
-            if (now >= ev.timestamp && now - ev.timestamp <= timeline_window_ms) {
-                skill_ends.push_back(&ev);
-            }
-        }
-        for (const auto& ev : recent_damage_events) {
-            if (!GroupMatchesCasterId(ev.cause_id)) {
-                continue;
-            }
-            if (now >= ev.timestamp && now - ev.timestamp <= timeline_window_ms) {
-                damage_events.push_back(&ev);
-            }
-        }
-        for (const auto& ev : recent_projectile_impacts) {
-            if (!GroupMatchesCasterId(ev.caster_id)) {
-                continue;
-            }
-            if (now >= ev.impact_timestamp && now - ev.impact_timestamp <= timeline_window_ms) {
-                impact_events.push_back(&ev);
-            }
-        }
-
-        std::vector<std::pair<ImVec2, ImVec2>> links;
-        for (const DamageEvent* ev : damage_events) {
-            if (!ev->handled) {
-                continue;
-            }
-            const ImVec2 damage_pos(TimestampToTimelineX(ev->timestamp, left, right, now), bottom_y);
-            const auto match = FindBestDamageMatch(*ev, group);
-            if (match.diff == UINT32_MAX) {
-                continue;
-            }
-            if (match.impact) {
-                const float x = TimestampToTimelineX(match.impact->impact_timestamp, left, right, now);
-                links.emplace_back(ImVec2(x, top_y), damage_pos);
-            } else if (match.skill_end) {
-                const float x = TimestampToTimelineX(match.skill_end->timestamp, left, right, now);
-                links.emplace_back(ImVec2(x, top_y), damage_pos);
-            }
-        }
-
-        for (const auto& link : links) {
-            draw_list->AddLine(link.first, link.second, color_link, 1.0f);
-        }
-
-        draw_list->AddLine(ImVec2(left, top_y), ImVec2(right, top_y), color_axis, 1.0f);
-        draw_list->AddLine(ImVec2(left, bottom_y), ImVec2(right, bottom_y), color_axis, 1.0f);
-        draw_list->AddText(ImVec2(left, origin.y + 2.0f), IM_COL32(220, 220, 220, 255), "End / Impact");
-        draw_list->AddText(ImVec2(left, bottom_y + 6.0f), IM_COL32(220, 220, 220, 255), "Damage / Heal");
-
-        for (const SkillCastTimelineEvent* ev : cast_events) {
-            const float x_start = TimestampToTimelineX(ev->start_timestamp, left, right, now);
-            const ImVec2 start_pos(x_start, top_y - 6.0f);
-            draw_list->AddCircleFilled(start_pos, 3.0f, IM_COL32(255, 220, 100, 255));
-            if (ev->is_autoattack) {
-                draw_list->AddText(ImVec2(x_start - 4.0f, top_y - 18.0f), IM_COL32(255, 255, 255, 255), "A");
-            } else if (const auto texture = GetSkillImage(ev->skill_id)) {
-                draw_list->AddImage((ImTextureID)texture, ImVec2(x_start - 10.0f, top_y - 18.0f),
-                                    ImVec2(x_start + 10.0f, top_y + 2.0f));
-            }
-            if (ev->finished) {
-                const float x_finish = TimestampToTimelineX(ev->finish_timestamp, left, right, now);
-                const ImVec2 finish_pos(x_finish, top_y + 6.0f);
-                draw_list->AddLine(start_pos, finish_pos, IM_COL32(200, 200, 255, 180), 1.0f);
-                draw_list->AddCircleFilled(finish_pos, 4.0f, color_skill_end);
-            }
-            if (ev->cancelled) {
-                const float icon_radius = 12.0f;
-                const ImVec2 icon_tl(x_start - icon_radius, top_y - 18.0f);
-                const ImVec2 icon_br(x_start + icon_radius, top_y + 2.0f);
-                draw_list->AddLine(icon_tl, icon_br, IM_COL32(255, 80, 80, 255), 2.0f);
-                draw_list->AddLine(ImVec2(icon_tl.x, icon_br.y), ImVec2(icon_br.x, icon_tl.y), IM_COL32(255, 80, 80, 255), 2.0f);
-            }
-        }
-
-        const ImU32 color_damage = IM_COL32(255, 100, 100, 255);
-        const ImU32 color_heal = IM_COL32(100, 255, 100, 255);
-        for (const ProjectileTimelineEvent* ev : projectile_events) {
-            const float x_spawn = TimestampToTimelineX(ev->spawn_timestamp, left, right, now);
-            const ImVec2 spawn_pos(x_spawn, top_y - 6.0f);
-            draw_list->AddCircleFilled(spawn_pos, 3.0f, IM_COL32(120, 220, 255, 255));
-            const float x_impact = TimestampToTimelineX(ev->impact_timestamp, left, right, now);
-            const ImVec2 impact_pos(x_impact, top_y + 6.0f);
-            draw_list->AddLine(spawn_pos, impact_pos, IM_COL32(120, 255, 180, 180), 1.0f);
-            draw_list->AddCircleFilled(impact_pos, 4.0f, color_projectile);
-            if (ev->is_autoattack) {
-                draw_list->AddText(ImVec2(x_spawn - 4.0f, top_y - 18.0f), IM_COL32(255, 255, 255, 255), "A");
-            } else if (const auto texture = GetSkillImage(ev->skill_id)) {
-                draw_list->AddImage((ImTextureID)texture, ImVec2(x_spawn - 10.0f, top_y - 18.0f),
-                                    ImVec2(x_spawn + 10.0f, top_y + 2.0f));
-            }
-        }
-
-        std::vector<int> damage_x_keys;
-        damage_x_keys.reserve(damage_events.size());
-        for (const DamageEvent* ev : damage_events) {
-            const float x = TimestampToTimelineX(ev->timestamp, left, right, now);
-            damage_x_keys.push_back(static_cast<int>(std::round(x)));
-        }
-
-        for (size_t i = 0; i < damage_events.size(); ++i) {
-            const DamageEvent* ev = damage_events[i];
-            const int x_key = damage_x_keys[i];
-            size_t group_idx = 0;
-            for (size_t j = 0; j < i; ++j) {
-                if (damage_x_keys[j] == x_key) {
-                    ++group_idx;
-                }
-            }
-            const float x = static_cast<float>(x_key);
-            const int lane = static_cast<int>(group_idx / 2) + 1;
-            const float y_offset = ((group_idx % 2) == 0 ? -1.0f : 1.0f) * lane * 10.0f;
-            const float y = bottom_y + y_offset;
-            const bool is_heal = ev->value > 0.0f;
-            const ImU32 color = is_heal ? color_heal : color_damage;
-            draw_list->AddCircleFilled(ImVec2(x, y), 5.0f, color);
-            char label[16];
-            const auto label_amount = ev->amount;
-            const int written = snprintf(label, sizeof(label), "%u", label_amount);
-            if (written > 0) {
-                draw_list->AddText(ImVec2(x + 6.0f, y - 8.0f), color, label);
-            }
-        }
-
-        for (const SkillEndEvent* ev : skill_ends) {
-            const float x = TimestampToTimelineX(ev->timestamp, left, right, now);
-            draw_list->AddCircleFilled(ImVec2(x, top_y), 4.0f, color_skill_end);
-        }
-        for (const ProjectileImpactEvent* ev : impact_events) {
-            const float x = TimestampToTimelineX(ev->impact_timestamp, left, right, now);
-            draw_list->AddCircleFilled(ImVec2(x, top_y), 4.0f, color_projectile);
-        }
-    }
-
     void DrawPartyMemberTimeline(PartyMember& party_member, const bool incoming = false)
     {
         const uint32_t now = GetTimeMs();
@@ -2529,13 +2580,32 @@ namespace {
         }
         for (const auto& ev : recent_damage_events) {
             if ((incoming ? ev.target_id == party_member.agent_id : ev.cause_id == party_member.agent_id) && now >= ev.timestamp && now - ev.timestamp <= timeline_window_ms) {
-                if (incoming && ev.value > 0.0f) {
+                if (ev.value > 0.0f) {
                     continue;
                 }
                 if (incoming && GetPartyMemberByAgentId(ev.cause_id)) {
                     continue;
                 }
                 damage_events.push_back(&ev);
+            }
+        }
+
+        std::vector<const BattleSegment*> visible_segments;
+        visible_segments.reserve(recent_battle_segments.size());
+        for (const auto& segment : recent_battle_segments) {
+            if (segment.end_timestamp >= now - timeline_window_ms || segment.start_timestamp >= now - timeline_window_ms) {
+                visible_segments.push_back(&segment);
+            }
+        }
+
+        const ImU32 color_battle_line = IM_COL32(255, 60, 60, 220);
+        for (const auto* segment : visible_segments) {
+            const bool segment_ended = !segment->open || (now - segment->end_timestamp > battle_gap_ms);
+            const float start_x = TimestampToTimelineX(segment->start_timestamp, left, right, now);
+            draw_list->AddLine(ImVec2(start_x, top_y), ImVec2(start_x, bottom_y), color_battle_line, 2.0f);
+            if (segment_ended) {
+                const float end_x = TimestampToTimelineX(segment->end_timestamp, left, right, now);
+                draw_list->AddLine(ImVec2(end_x, top_y), ImVec2(end_x, bottom_y), color_battle_line, 2.0f);
             }
         }
 
@@ -2656,9 +2726,15 @@ namespace {
             const bool is_heal = damage->value > 0.0f;
             const ImU32 color = is_heal ? color_heal : color_damage;
             draw_list->AddCircleFilled(ImVec2(x, y), 5.0f, color);
-            char label[16];
-            const auto label_amount = damage->amount;
-            const int written = snprintf(label, sizeof(label), "%u", label_amount);
+            char label[32];
+            const uint32_t label_amount = damage->amount;
+            const uint32_t actual_amount = damage->actual_amount;
+            int written;
+            if (actual_amount == label_amount) {
+                written = snprintf(label, sizeof(label), "%u", label_amount);
+            } else {
+                written = snprintf(label, sizeof(label), "%u(%u)", label_amount, actual_amount);
+            }
             if (written > 0) {
                 draw_list->AddText(ImVec2(x + 6.0f, y - 8.0f), color, label);
             }
@@ -2705,25 +2781,63 @@ namespace {
                         }
                     }
                     if (show_abs_values) {
-                        ImGui::Text("%u", skill.count);
-                    }
-                    if (show_perc_values) {
-                        ImGui::Text("%.2f%%", percentage);
+                        char damage_text[32];
+                        if (skill.actual_damage == skill.damage) {
+                            snprintf(damage_text, sizeof(damage_text), "%u", skill.damage);
+                        } else {
+                            snprintf(damage_text, sizeof(damage_text), "%u(%u)", skill.damage, skill.actual_damage);
+                        }
+                        char healing_text[32];
+                        if (skill.actual_healing == skill.healing) {
+                            snprintf(healing_text, sizeof(healing_text), "%u", skill.healing);
+                        } else {
+                            snprintf(healing_text, sizeof(healing_text), "%u(%u)", skill.healing, skill.actual_healing);
+                        }
+                        ImGui::Text("Start/Fin: %u/%u\nDmg: %s\nTotal Heal: %s", skill.count, skill.ended,
+                                    damage_text, healing_text);
                     }
                 }
                 ImGui::EndTable();
             }
-            if (party_member.autoattack_count > 0) {
-                ImGui::Separator();
+            ImGui::Separator();
+            if (party_member.autoattack_actual_damage == party_member.autoattack_damage) {
                 ImGui::Text("Autoattack: %u (%u / %u)", party_member.autoattack_count,
                             party_member.autoattack_damage, party_member.autoattack_healing);
+            } else {
+                ImGui::Text("Autoattack: %u (%u(%u) / %u)", party_member.autoattack_count,
+                            party_member.autoattack_damage, party_member.autoattack_actual_damage,
+                            party_member.autoattack_healing);
             }
-            if (party_member.unattributable_count > 0) {
+            if (party_member.unattributable_count == 0) {
+                ImGui::Text("Unattributable: 0 (0 / 0)");
+            } else if (party_member.unattributable_actual_damage == party_member.unattributable_damage &&
+                       party_member.unattributable_actual_healing == party_member.unattributable_healing) {
                 ImGui::Text("Unattributable: %u (%u / %u)", party_member.unattributable_count,
                             party_member.unattributable_damage, party_member.unattributable_healing);
+            } else {
+                ImGui::Text("Unattributable: %u (%u(%u) / %u(%u))", party_member.unattributable_count,
+                            party_member.unattributable_damage, party_member.unattributable_actual_damage,
+                            party_member.unattributable_healing, party_member.unattributable_actual_healing);
+            }
+            const uint32_t dps = GetPartyMemberDPS(party_member, GetTimeMs());
+            const uint32_t total_healing = GetPartyMemberActualHealing(party_member);
+            ImGui::Text("DPS: %u   Heal: %u   Taken: %u vs %u", dps, total_healing,
+                        party_member.damage_taken_non_armor_ignoring, party_member.damage_taken_armor_ignoring);
+            if (HasSkill(party_member, GW::Constants::SkillID::Mind_Burn) || HasSkill(party_member, GW::Constants::SkillID::Searing_Flames)) {
+                const uint32_t burn_dps = GetBurnDPS(GetTimeMs());
+                if (burn_dps > 0) {
+                    ImGui::Text("Burn DPS: %u", burn_dps);
+                }
             }
             DrawPartyMemberTimeline(party_member, false);
             ImGui::PopStyleVar();
+
+            const float end_y = ImGui::GetCursorPosY();
+            const float min_height = 160.0f;
+            const float current_height = end_y - start_y;
+            if (current_height < min_height) {
+                ImGui::Dummy(ImVec2(0.0f, min_height - current_height));
+            }
             if (print_by_click) {
                 ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0F);
                 char button_name[32];
@@ -2734,202 +2848,6 @@ namespace {
                     WritePlayerStatisticsAllSkills(&party_member);
                 }
                 ImGui::PopStyleVar();
-            }
-        }
-    }
-
-    void DrawPartyMemberTaken(PartyMember& party_member)
-    {
-        char header_label[256];
-        snprintf(header_label, _countof(header_label), "%s (Taken)###Taken%u", party_member.name.string().c_str(), party_member.party_idx);
-
-        if (ImGui::CollapsingHeader(header_label, ImGuiTreeNodeFlags_DefaultOpen)) {
-            const float start_y = ImGui::GetCursorPosY();
-            const float width = ImGui::GetContentRegionAvail().x;
-
-            if (!party_member.incoming_skills.empty()) {
-                char table_name[32];
-                snprintf(table_name, _countof(table_name), "###TakenTable%d", party_member.party_idx);
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-                if (ImGui::BeginTable(table_name, static_cast<int>(party_member.incoming_skills.size()))) {
-                    const float column_width = width / static_cast<float>(party_member.incoming_skills.size());
-                    const float scale = ImGui::GetFontSize() / 16.0f;
-                    const ImVec2 icon_size = {32.f * scale, 32.f * scale};
-                    for (size_t i = 0; i < party_member.incoming_skills.size(); i++) {
-                        char column_name[32];
-                        snprintf(column_name, _countof(column_name), "###%sColumn%d", table_name, i);
-                        ImGui::TableSetupColumn(column_name, ImGuiTableColumnFlags_WidthStretch, column_width);
-                    }
-                    ImGui::TableNextRow();
-                    for (const auto& skill : party_member.incoming_skills) {
-                        ImGui::TableNextColumn();
-                        if (skill.id == GW::Constants::SkillID::No_Skill) {
-                            continue;
-                        }
-                        if (const auto texture = GetSkillImage(skill.id)) {
-                            ImGui::Image((ImTextureID)texture, icon_size);
-                            if (ImGui::IsItemHovered()) {
-                                ImGui::SetTooltip("%ls", skill.name->wstring().c_str());
-                            }
-                        }
-                        if (show_abs_values) {
-                            ImGui::Text("Start/Fin: %u/%u\nDmg/Heal: %u/%u", skill.count,
-                                        skill.ended, skill.damage, skill.healing);
-                        }
-                    }
-                    ImGui::EndTable();
-                }
-                ImGui::PopStyleVar();
-            }
-            DrawPartyMemberTimeline(party_member, true);
-
-            const float end_y = ImGui::GetCursorPosY();
-            const float min_height = 160.0f;
-            const float current_height = end_y - start_y;
-            if (current_height < min_height) {
-                ImGui::Dummy(ImVec2(0.0f, min_height - current_height));
-            }
-            if (print_by_click) {
-                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.0F);
-                char button_name[32];
-                snprintf(button_name, _countof(button_name), "###WriteTakenStatistics%d", party_member.party_idx);
-                const float height = ImGui::GetCursorPosY() - start_y;
-                ImGui::SetCursorPosY(start_y);
-                if (ImGui::Button(button_name, ImVec2(width, height)) && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
-                    /* Intentionally no chat output for incoming statistics */
-                }
-                ImGui::PopStyleVar();
-            }
-        }
-    }
-
-    void DrawIncomingDamageTab()
-    {
-        const float width = ImGui::GetContentRegionAvail().x;
-        if (!party_members.empty()) {
-            ImGui::Text("Top 10 incoming damage taken per party member");
-            ImGui::Spacing();
-            if (ImGui::BeginTable("##TakenSummaryTable", 11, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable)) {
-                ImGui::TableSetupColumn("Party Member", ImGuiTableColumnFlags_WidthStretch);
-                for (int i = 1; i <= 10; ++i) {
-                    char column_name[32];
-                    snprintf(column_name, _countof(column_name), "Skill %d", i);
-                    ImGui::TableSetupColumn(column_name, ImGuiTableColumnFlags_WidthFixed, 70.0f);
-                }
-                ImGui::TableHeadersRow();
-
-                const float icon_scale = ImGui::GetFontSize() / 16.0f;
-                const ImVec2 icon_size = {24.0f * icon_scale, 24.0f * icon_scale};
-
-                for (auto* member : party_members) {
-                    std::vector<const Skill*> sorted_skills;
-                    sorted_skills.reserve(member->incoming_skills.size());
-                    for (const auto& skill : member->incoming_skills) {
-                        if (skill.id == GW::Constants::SkillID::No_Skill) {
-                            continue;
-                        }
-                        sorted_skills.push_back(&skill);
-                    }
-                    std::sort(sorted_skills.begin(), sorted_skills.end(), [](const Skill* a, const Skill* b) {
-                        return a->damage > b->damage;
-                    });
-
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::TextUnformatted(member->name.string().c_str());
-                    for (size_t col = 0; col < 10; ++col) {
-                        ImGui::TableNextColumn();
-                        if (col < sorted_skills.size()) {
-                            const Skill* skill = sorted_skills[col];
-                            const auto texture = GetSkillImage(skill->id);
-                            if (texture) {
-                                ImGui::Image((ImTextureID)texture, icon_size);
-                                if (ImGui::IsItemHovered()) {
-                                    ImGui::SetTooltip("%ls\n%u", skill->name->wstring().c_str(), skill->damage);
-                                }
-                                ImGui::SameLine();
-                                ImGui::Text("%u", skill->damage);
-                            } else {
-                                ImGui::Text("%u", skill->damage);
-                            }
-                        } else {
-                            ImGui::TextUnformatted("--");
-                        }
-                    }
-                }
-                ImGui::EndTable();
-            }
-            ImGui::Separator();
-        }
-
-        if (enemy_groups.empty()) {
-            ImGui::TextDisabled("No enemy groups tracked yet.");
-            return;
-        }
-
-        for (size_t group_idx = 0; group_idx < enemy_groups.size(); ++group_idx) {
-            auto& group = *enemy_groups[group_idx];
-            const auto enemy_name = TextUtils::WStringToString(group.name);
-            char header_label[256];
-            snprintf(header_label, _countof(header_label), "%s###EnemyGroup%zu", enemy_name.c_str(), group_idx);
-
-            if (!ImGui::CollapsingHeader(header_label, ImGuiTreeNodeFlags_DefaultOpen)) {
-                continue;
-            }
-
-            const float start_y = ImGui::GetCursorPosY();
-
-            char table_name[32];
-            snprintf(table_name, _countof(table_name), "##EnemySkills%zu", group_idx);
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-            if (ImGui::BeginTable(table_name, static_cast<int>(group.skills.size()))) {
-                const float column_width = width / static_cast<float>(group.skills.size());
-                const float scale = ImGui::GetFontSize() / 16.0f;
-                const ImVec2 icon_size = {32.f * scale, 32.f * scale};
-                for (size_t i = 0; i < group.skills.size(); i++) {
-                    char column_name[32];
-                    snprintf(column_name, _countof(column_name), "###EnemyCol%zu", i);
-                    ImGui::TableSetupColumn(column_name, ImGuiTableColumnFlags_WidthStretch, column_width);
-                }
-                ImGui::TableNextRow();
-                for (const auto& skill : group.skills) {
-                    ImGui::TableNextColumn();
-                    if (skill.id == GW::Constants::SkillID::No_Skill) {
-                        ImGui::TextUnformatted("--");
-                        continue;
-                    }
-                    if (const auto texture = GetSkillImage(skill.id)) {
-                        ImGui::Image((ImTextureID)texture, icon_size);
-                        if (ImGui::IsItemHovered()) {
-                            ImGui::SetTooltip("%ls", skill.name->wstring().c_str());
-                        }
-                    }
-                    if (show_abs_values) {
-                        ImGui::Text("Start/Fin: %u/%u\nDmg/Heal: %u/%u", skill.count,
-                                    skill.ended, skill.damage, skill.healing);
-                    }
-                }
-                ImGui::EndTable();
-            }
-            ImGui::PopStyleVar();
-
-            if (group.autoattack_count > 0) {
-                ImGui::Separator();
-                ImGui::Text("Autoattack: %u (%u / %u)", group.autoattack_count,
-                            group.autoattack_damage, group.autoattack_healing);
-            }
-            if (group.unattributable_count > 0) {
-                ImGui::Text("Unattributable: %u (%u / %u)", group.unattributable_count,
-                            group.unattributable_damage, group.unattributable_healing);
-            }
-
-            DrawEnemyGroupTimeline(group);
-
-            const float end_y = ImGui::GetCursorPosY();
-            const float min_height = 160.0f;
-            const float current_height = end_y - start_y;
-            if (current_height < min_height) {
-                ImGui::Dummy(ImVec2(0.0f, min_height - current_height));
             }
         }
     }
@@ -2947,10 +2865,17 @@ namespace {
         enemy_groups.clear();
         enemy_groups_by_caster_id.clear();
         enemy_groups_by_player_number.clear();
+        recent_battle_segments.clear();
 
         skill_names.clear();
         tracked_actions.clear();
         active_effects_by_agent.clear();
+        total_burn_enemy_ms = 0;
+        current_burn_enemy_count = 0;
+        current_burn_last_update_timestamp = 0;
+        party_combat_duration_ms_total = 0;
+        party_combat_segment_start_timestamp = 0;
+        party_last_damage_timestamp = 0;
     }
 
     std::vector<SavedPartyMemberStats> SavePartyMemberStats()
@@ -2962,18 +2887,24 @@ namespace {
             stats.party_idx = member->party_idx;
             stats.autoattack_count = member->autoattack_count;
             stats.autoattack_damage = member->autoattack_damage;
+            stats.autoattack_actual_damage = member->autoattack_actual_damage;
             stats.autoattack_healing = member->autoattack_healing;
+            stats.autoattack_actual_healing = member->autoattack_actual_healing;
             stats.unattributable_count = member->unattributable_count;
             stats.unattributable_damage = member->unattributable_damage;
             stats.unattributable_healing = member->unattributable_healing;
+            stats.unattributable_actual_damage = member->unattributable_actual_damage;
+            stats.unattributable_actual_healing = member->unattributable_actual_healing;
+            stats.actual_damage_total = member->actual_damage_total;
+            stats.combat_duration_ms_total = member->combat_duration_ms_total;
+            stats.combat_segment_start_timestamp = member->combat_segment_start_timestamp;
+            stats.last_damage_timestamp = member->last_damage_timestamp;
+            stats.damage_taken_armor_ignoring = member->damage_taken_armor_ignoring;
+            stats.damage_taken_non_armor_ignoring = member->damage_taken_non_armor_ignoring;
             stats.skills.reserve(member->skills.size());
-            stats.incoming_skills.reserve(member->incoming_skills.size());
             stats.total_skills_used = member->total_skills_used;
             for (const auto& skill : member->skills) {
-                stats.skills.push_back({skill.id, skill.count, skill.ended, skill.attributed, skill.damage, skill.healing});
-            }
-            for (const auto& skill : member->incoming_skills) {
-                stats.incoming_skills.push_back({skill.id, skill.count, skill.ended, skill.attributed, skill.damage, skill.healing});
+                stats.skills.push_back({skill.id, skill.count, skill.ended, skill.attributed, skill.damage, skill.healing, skill.actual_damage, skill.actual_healing});
             }
             saved.push_back(std::move(stats));
         }
@@ -2996,11 +2927,21 @@ namespace {
 
             party_member->autoattack_count = found->autoattack_count;
             party_member->autoattack_damage = found->autoattack_damage;
+            party_member->autoattack_actual_damage = found->autoattack_actual_damage;
             party_member->autoattack_healing = found->autoattack_healing;
+            party_member->autoattack_actual_healing = found->autoattack_actual_healing;
+            party_member->actual_damage_total = found->actual_damage_total;
+            party_member->combat_duration_ms_total = found->combat_duration_ms_total;
+            party_member->combat_segment_start_timestamp = found->combat_segment_start_timestamp;
+            party_member->last_damage_timestamp = found->last_damage_timestamp;
+            party_member->damage_taken_armor_ignoring = found->damage_taken_armor_ignoring;
+            party_member->damage_taken_non_armor_ignoring = found->damage_taken_non_armor_ignoring;
             party_member->total_skills_used = found->total_skills_used;
             party_member->unattributable_count = found->unattributable_count;
             party_member->unattributable_damage = found->unattributable_damage;
             party_member->unattributable_healing = found->unattributable_healing;
+            party_member->unattributable_actual_damage = found->unattributable_actual_damage;
+            party_member->unattributable_actual_healing = found->unattributable_actual_healing;
 
             const size_t restore_count = std::min(party_member->skills.size(), found->skills.size());
             for (size_t skill_idx = 0; skill_idx < restore_count; ++skill_idx) {
@@ -3009,16 +2950,8 @@ namespace {
                 party_member->skills[skill_idx].attributed = found->skills[skill_idx].attributed;
                 party_member->skills[skill_idx].damage = found->skills[skill_idx].damage;
                 party_member->skills[skill_idx].healing = found->skills[skill_idx].healing;
-            }
-            party_member->incoming_skills.clear();
-            party_member->incoming_skills.reserve(found->incoming_skills.size());
-            for (const auto& skill : found->incoming_skills) {
-                auto& restored_skill = party_member->incoming_skills.emplace_back(skill.id);
-                restored_skill.count = skill.count;
-                restored_skill.ended = skill.ended;
-                restored_skill.attributed = skill.attributed;
-                restored_skill.damage = skill.damage;
-                restored_skill.healing = skill.healing;
+                party_member->skills[skill_idx].actual_damage = found->skills[skill_idx].actual_damage;
+                party_member->skills[skill_idx].actual_healing = found->skills[skill_idx].actual_healing;
             }
         }
     }
@@ -3240,9 +3173,26 @@ namespace {
         pending_party_members = true;
     }
 
+    PartyMember* GetPartyMemberByPetAgentId(const uint32_t agent_id)
+    {
+        if (agent_id == 0) return nullptr;
+        const auto* agent = static_cast<const GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
+        if (!(agent && agent->GetIsLivingType())) return nullptr;
+        // Check if this agent is owned by a party member (e.g. pet, spirit, minion)
+        if (agent->owner == 0) return nullptr;
+        return GetPartyMemberByAgentId(agent->owner);
+    }
+
     void GenericModifierCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet)
     {
         if (!packet) {
+            return;
+        }
+
+        if (packet->cause_id != 0 && packet->cause_id == packet->target_id && packet->value < 0.0f &&
+            (packet->type == GW::Packet::StoC::GenericValueID::damage ||
+             packet->type == GW::Packet::StoC::GenericValueID::critical ||
+             packet->type == GW::Packet::StoC::GenericValueID::armorignoring)) {
             return;
         }
 
@@ -3257,8 +3207,23 @@ namespace {
             }
         }
 
-        const auto cause_party_member = GetPartyMemberByAgentId(packet->cause_id);
+        auto cause_party_member = GetPartyMemberByAgentId(packet->cause_id);
+        if (!cause_party_member) {
+            cause_party_member = GetPartyMemberByPetAgentId(packet->cause_id);
+        }
         const auto target_party_member = GetPartyMemberByAgentId(packet->target_id);
+
+        if (target_party_member && packet->value < 0.0f) {
+            AddPartyMemberDamageTaken(target_party_member, packet);
+        }
+
+        // Centralised combat damage tracking: all actual damage to enemies feeds
+        // into actual_damage_total (and thus DPS) via this single call, using the
+        // actual (non-overkill) damage amount computed from the target's current HP.
+        const uint32_t actual_amount = GetActualDamageAmount(packet);
+        if (cause_party_member && packet->value < 0.0f && actual_amount > 0) {
+            AddPartyMemberCombatDamage(cause_party_member, actual_amount, GetTimeMs());
+        }
 
         const auto tracked_action = LookupTrackedAction(packet->cause_id, packet->target_id);
         if (tracked_action && tracked_action->type == ActionType::Autoattack) {
@@ -3302,6 +3267,7 @@ namespace {
         const auto it = last_skill_cast.find(cause_id);
         const uint32_t cast_timestamp = it != last_skill_cast.end() ? GetCastFinishTimestamp(it->second) : 0;
         AddEffectTracker(target_id, {packet->effect_id, skill_id, cause_id, GetTimeMs(), cast_timestamp, true, false});
+        SetCurrentBurnEnemyCount(CountBurningEnemies(), GetTimeMs());
     }
 
     void RemoveEffectCallback(const GW::HookStatus*, const GW::Packet::StoC::RemoveEffect* packet)
@@ -3310,6 +3276,7 @@ namespace {
             return;
         }
         RemoveEffectTracker(packet->agent_id, packet->effect_id);
+        SetCurrentBurnEnemyCount(CountBurningEnemies(), GetTimeMs());
     }
 
     void ProjectileLaunchedCallback(const GW::HookStatus*, const GW::Packet::StoC::AgentProjectileLaunched* packet)
@@ -3448,7 +3415,6 @@ namespace {
 void PartyStatisticsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    SettingsRegistry::Register(this, settings);
 
     send_timer = TIMER_INIT();
 
@@ -3507,18 +3473,6 @@ void PartyStatisticsWindow::Initialize()
     pending_party_members = true;
 }
 
-void PartyStatisticsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
-{
-    ToolboxWindow::LoadSettings(doc, legacy);
-    doc.GetStruct(Name(), settings);
-}
-
-void PartyStatisticsWindow::SaveSettings(SettingsDoc& doc)
-{
-    ToolboxWindow::SaveSettings(doc);
-    doc.SetStruct(Name(), settings);
-}
-
 void PartyStatisticsWindow::Update(const float)
 {
     PruneOldTimelineEvents();
@@ -3527,7 +3481,11 @@ void PartyStatisticsWindow::Update(const float)
         if (!IsDamageEvent(damage) || !IsDamageReadyForAttribution(damage)) {
             continue;
         }
-        if (auto* party_member = GetPartyMemberByAgentId(damage.cause_id)) {
+        auto* party_member = GetPartyMemberByAgentId(damage.cause_id);
+        if (!party_member) {
+            party_member = GetPartyMemberByPetAgentId(damage.cause_id);
+        }
+        if (party_member) {
             TryAttributeDamageEvent(damage, nullptr, party_member);
         } else {
             TryAttributeDamageEventToEnemyGroup(damage);
@@ -3566,33 +3524,36 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9*)
         ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
     }
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        if (!in_explorable) {
-            ImGui::TextDisabled("BUILD CHECK: stats update only in explorable areas");
-        }
-        if (ImGui::BeginTabBar("##PartyStatisticsTabs")) {
-            if (ImGui::BeginTabItem("Outgoing")) {
-                for (const auto party_member : party_members) {
-                    DrawPartyMember(*party_member);
-                }
-                ImGui::EndTabItem();
-            }
-            if (ImGui::BeginTabItem("Damage Taken")) {
-                DrawIncomingDamageTab();
-                ImGui::EndTabItem();
-            }
-            ImGui::EndTabBar();
+        for (const auto party_member : party_members) {
+            DrawPartyMember(*party_member);
         }
     }
     ImGui::End();
 }
 
+void PartyStatisticsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    //LOAD_BOOL(show_abs_values);
+    //LOAD_BOOL(show_perc_values);
+    //LOAD_BOOL(print_by_click);
+}
+
+void PartyStatisticsWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    //SAVE_BOOL(show_abs_values);
+    //SAVE_BOOL(show_perc_values);
+    //SAVE_BOOL(print_by_click);
+}
+
 void PartyStatisticsWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Show the absolute skill count", &settings.show_abs_values);
+    ImGui::Checkbox("Show the absolute skill count", &show_abs_values);
     ImGui::SameLine();
-    ImGui::Checkbox("Show the percentage skill count", &settings.show_perc_values);
+    ImGui::Checkbox("Show the percentage skill count", &show_perc_values);
     ImGui::SameLine();
-    ImGui::Checkbox("Print skill statistics by Ctrl+LeftClick", &settings.print_by_click);
+    ImGui::Checkbox("Print skill statistics by Ctrl+LeftClick", &print_by_click);
 }
 
 void PartyStatisticsWindow::Terminate()

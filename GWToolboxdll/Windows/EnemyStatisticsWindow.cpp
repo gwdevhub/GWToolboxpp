@@ -2955,18 +2955,18 @@ void EnemyStatisticsWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-void EnemyStatisticsWindow::LoadSettings(ToolboxIni* ini)
+void EnemyStatisticsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(show_abs_values);
-    LOAD_BOOL(show_perc_values);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    //LOAD_BOOL(show_abs_values);
+    //LOAD_BOOL(show_perc_values);
 }
 
-void EnemyStatisticsWindow::SaveSettings(ToolboxIni* ini)
+void EnemyStatisticsWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(show_abs_values);
-    SAVE_BOOL(show_perc_values);
+    ToolboxWindow::SaveSettings(doc);
+    //SAVE_BOOL(show_abs_values);
+    //SAVE_BOOL(show_perc_values);
 }
 
 void EnemyStatisticsWindow::DrawSettingsInternal()
