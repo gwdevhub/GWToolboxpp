@@ -982,6 +982,8 @@ namespace {
                         const auto context = (int*)GW::UI::GetFrameContext(existing);
                         packet->amount += context[0x10];
                         GW::UI::DestroyUIComponent(existing);
+                        // A combined total of zero (e.g. damage cancelled out by a heal) is just noise
+                        status->blocked |= packet->amount == 0 && packet->h0004 != 2;
                     }
                 }
             } break;
