@@ -135,7 +135,7 @@ namespace Pathing {
             std::ofstream f(path);
             if (!f.is_open()) return false;
             f << str;
-            Log::Info("Saved %d portal connections to %s", (int)written, path.c_str());
+            PATH_LOG_NOTICE("Saved %d portal connections to %s", (int)written, path.c_str());
             return true;
         }
         catch (...) {
@@ -170,7 +170,7 @@ namespace Pathing {
             }
             if (!j.contains("connections") || !j.at("connections").is_array()) {
                 connections.clear();
-                Log::Info("Portal connections file has no \"connections\" array (%s)", source.c_str());
+                PATH_LOG_NOTICE("Portal connections file has no \"connections\" array (%s)", source.c_str());
                 return true;
             }
 
@@ -241,7 +241,7 @@ namespace Pathing {
                 }
                 if (!has_reverse) connections.push_back(MakeReverse(connections[i]));
             }
-            Log::Info("Loaded %d portal connections from %s", (int)connections.size(), source.c_str());
+            PATH_LOG_NOTICE("Loaded %d portal connections from %s", (int)connections.size(), source.c_str());
             return true;
         }
         catch (...) {
