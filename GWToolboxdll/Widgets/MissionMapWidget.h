@@ -27,8 +27,24 @@ public:
     [[nodiscard]] const char* Name() const override { return "Mission Map"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
-    void LoadSettings(ToolboxIni*) override;
-    void SaveSettings(ToolboxIni*) override;
+    struct Settings {
+        bool draw_all_terrain_lines = false;
+        bool draw_all_minimap_lines = true;
+        bool click_to_target = true;
+        // Minimap layers overlaid on the mission map via Minimap::Render
+        bool draw_minimap = false; // master toggle; off by default to keep current behaviour
+        bool draw_ranges = true;
+        bool draw_agents = true;
+        bool draw_pings = false;
+        bool draw_effects = false;
+        bool draw_background = false;
+        bool draw_pmap = false;
+        bool draw_symbols = false;
+    };
+
+    void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void Update(float) override;
     void DrawSettingsInternal() override;

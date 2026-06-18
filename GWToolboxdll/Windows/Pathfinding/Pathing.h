@@ -1,9 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
+#include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Pathing.h>
 #include "MapSpecificData.h"
+#include "PathingMapData.h"
 
 namespace Pathing {
     #define PATHING_MAX_PLANE_COUNT 192 // Be sure to ASSERT if this is ever higher!
@@ -18,7 +21,8 @@ namespace Pathing {
         FailedToFinializePath,
         InvalidMapContext,
         BuildPathLengthExceeded,
-        FailedToGetPathingMapBlock
+        FailedToGetPathingMapBlock,
+        MilePathBuildOOM // worker thread aborted with std::bad_alloc; visgraph is unsafe to use
     };
 
 	typedef uint16_t PointId;
@@ -26,13 +30,28 @@ namespace Pathing {
     class MilePath {
         volatile bool m_processing = false;
         volatile bool m_done = false;
+        volatile bool m_build_failed = false; // worker thread caught std::bad_alloc during visgraph build
         volatile int m_progress = 0;
+
+        // Lazy full-build state. A lightweight MilePath (full_build=false) keeps only
+        // raw map data; EnsureFullBuild() builds the visgraph on first walk.
+        // m_constructed_full marks maps built eagerly on the worker (live current map).
+        volatile bool m_full_built = false;
+        bool m_constructed_full = false;
+        std::mutex m_build_mutex;
+        // MapIDs sharing this file_hash — for teleport collection in a (possibly
+        // deferred) full build. Kept here (not in opaque Impl) to keep Impl small.
+        std::vector<GW::Constants::MapID> m_all_map_ids;
 
         std::thread* worker_thread = nullptr;
 
-    public:	
-        MilePath(GW::MapContext*);
+    public:
+        MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids = {}, bool full_build = true);
         ~MilePath();
+
+        // Build the full pathing graph (incl. visgraph) if not already present.
+        // Idempotent, thread-safe; called by AStar::Search to upgrade lazily.
+        void EnsureFullBuild();
 
         // Signals terminate to worker thread. Usually followed late by shutdown() to grab the thread again.
         void stopProcessing();
@@ -44,8 +63,8 @@ namespace Pathing {
             while (isProcessing())
                 Sleep(10);
             if (worker_thread) {
-                ASSERT(worker_thread->joinable());
-                worker_thread->join();
+                if (worker_thread->joinable())
+                    worker_thread->join();
                 delete worker_thread;
                 worker_thread = nullptr;
             }
@@ -56,16 +75,29 @@ namespace Pathing {
             return m_progress;
         }
 
+        // Read-only access to the underlying pathing map data (owned by MilePath).
+        // Used by sibling pathfinders (e.g. OpenTyria trapezoid AStar) so we don't
+        // re-load the same DAT data twice. Pointer remains valid for the MilePath's
+        // lifetime.
+        const Pathing::PathingMapData* GetMapData() const;
+
         bool ready()
         {
             return m_progress >= 100;
         }
 
-        void* GetImpl() { return opaque; };
-    private:
-        void LoadMapSpecificData();
+        // True if the worker thread aborted with std::bad_alloc. The MilePath is unusable —
+        // search will return early. The caller is expected to surface an error / not retry.
+        bool build_failed() const { return m_build_failed; }
 
-        int opaque[336 / sizeof(int)];
+        void* GetImpl() { return opaque; };
+
+        // Export vis graph data: per-point position + edge count + edge targets
+        // Returns JSON string
+        std::string ExportVisGraph() const;
+
+    private:
+        int opaque[512 / sizeof(int)];
     };
 
     class AStar {

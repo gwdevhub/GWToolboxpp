@@ -33,8 +33,6 @@ public:
     static const char* professions[];
     static const char* instance_types[];
 
-    static bool show_active_in_header;
-    static bool show_run_in_header;
     static bool hotkeys_changed;
 
     static TBHotkey* HotkeyFactory(ToolboxIni* ini, const char* section);

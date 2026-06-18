@@ -39,6 +39,7 @@
 #include <GWCA/GameEntities/Frame.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
+#include <Utils/UIFrameLookup.h>
 
 namespace {
     InventoryManager& Instance()
@@ -46,17 +47,11 @@ namespace {
         return InventoryManager::Instance();
     }
 
+    InventoryManager::Settings settings;
+
     ImVec4 ItemBlue = ImColor(153, 238, 255).Value;
     ImVec4 ItemPurple = ImColor(187, 137, 237).Value;
     ImVec4 ItemGold = ImColor(255, 204, 86).Value;
-
-    bool trade_whole_stacks = false;
-    bool move_to_trade_on_double_click = true;
-    bool move_to_trade_on_alt_click = false;
-    bool salvage_all_on_ctrl_click = false;
-    bool identify_all_on_ctrl_click = false;
-    bool auto_reuse_salvage_kit = false;
-    bool auto_reuse_id_kit = false;
 
     const char* bag_names[5] = {
         "None",
@@ -66,7 +61,7 @@ namespace {
         "Bag 2"
     };
 
-        bool show_item_context_menu = false;
+    bool show_item_context_menu = false;
     bool is_identifying = false;
     bool is_identifying_all = false;
     bool is_salvaging = false;
@@ -74,28 +69,23 @@ namespace {
     bool has_prompted_salvage = false;
     bool show_salvage_all_popup = true;
     bool salvage_listeners_attached = false;
-    bool only_use_superior_salvage_kits = false;
-
-    bool hide_unsellable_items = false;
-    bool hide_weapon_sets_and_customized_items = false;
-    bool hide_golds_from_merchant = false;
-
 
     std::map<uint32_t, std::string> hide_from_merchant_items{}; // This should be the same in functionality to block_from_being_salvaged, but players are using it now :(
     std::map<std::wstring, std::string> block_from_being_salvaged{};
 
-    bool salvage_rare_mats = false;
-    bool salvage_nicholas_items = true;
-    bool identify_greens = true;
     bool show_transact_quantity_popup = false;
     bool transaction_listeners_attached = false;
 
-    bool wiki_link_on_context_menu = false;
-    bool market_search_on_context_menu = false;
-    bool right_click_context_menu_in_explorable = true;
-    bool right_click_context_menu_in_outpost = true;
-
-    std::map<GW::Constants::Bag, bool> bags_to_salvage_from{};
+    bool IsBagToSalvageFrom(const GW::Constants::Bag bag_id)
+    {
+        switch (bag_id) {
+            case GW::Constants::Bag::Backpack: return settings.salvage_from_backpack;
+            case GW::Constants::Bag::Belt_Pouch: return settings.salvage_from_belt_pouch;
+            case GW::Constants::Bag::Bag_1: return settings.salvage_from_bag_1;
+            case GW::Constants::Bag::Bag_2: return settings.salvage_from_bag_2;
+            default: return false;
+        }
+    }
 
     size_t identified_count = 0;
     size_t salvaged_count = 0;
@@ -646,7 +636,6 @@ namespace {
     }
 
     GW::HookEntry on_offer_item_hook;
-    bool change_secondary_for_tome = true;
 
     void prompt_split_stack(const GW::Item* item)
     {
@@ -792,7 +781,7 @@ namespace {
         if (tome_pending_stage != None) {
             return;
         }
-        if (!change_secondary_for_tome) {
+        if (!settings.change_secondary_for_tome) {
             return;
         }
         const auto item = GW::Items::GetItemById(item_id);
@@ -908,7 +897,7 @@ namespace {
         UICallback_ChooseQuantityPopup_Ret(message, wParam, lParam);
 
         if(!(message->message_id == GW::UI::UIMessage::kInitFrame
-            && trade_whole_stacks
+            && settings.trade_whole_stacks
             && !ImGui::IsKeyDown(ImGuiMod_Shift)))
             return GW::Hook::LeaveHook();
         const auto frame = GW::UI::GetFrameById(message->frame_id);
@@ -1054,7 +1043,7 @@ namespace {
                 }
                 switch (identify_all_type) {
                     case InventoryManager::IdentifyAllType::All:
-                        if (identify_greens || !item->IsGreen()) {
+                        if (settings.identify_greens || !item->IsGreen()) {
                             return item;
                         }
                         break;
@@ -1235,13 +1224,13 @@ namespace {
             } break;
             case GW::UI::UIMessage::kPreStartSalvage: {
                 const auto kit = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[1]);
-                if (auto_reuse_salvage_kit && kit) {
+                if (settings.auto_reuse_salvage_kit && kit) {
                     last_salvage_kit_used = {.item_id = kit->item_id, .used_at = TIMER_INIT(), .uses = kit->GetUses()};
                 }
             } break;
             case GW::UI::UIMessage::kIdentifyItem: {
                 const auto kit = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[1]);
-                if (!(auto_reuse_id_kit && kit)) break;
+                if (!(settings.auto_reuse_id_kit && kit)) break;
                 const auto item = (InventoryManager::Item*)GW::Items::GetItemById(((uint32_t*)wparam)[0]);
                 if (!(item && item->CanBeIdentified()) && kit && kit->GetUses()) {
                     //  Run next frame to allow current cursor to be cleared otherwise it'll assert
@@ -1510,7 +1499,8 @@ namespace {
                 pending_salvage_at = TIMER_INIT();
             }
             // Auto accept "you can only salvage materials with a lesser salvage kit"
-            GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 0x6, 0x6e, 0x6));
+            const auto salvage_prompt = GW::UI::GetMultilineTextFrameByEncodedString(L"\x7c82\x10a", true);
+            GW::UI::ButtonClick(GW::UI::GetChildFrame(GW::UI::GetNthParentFrame(salvage_prompt, 3), 6));
             return;
         }
         is_salvaging = false;
@@ -1617,13 +1607,7 @@ namespace {
 void InventoryManager::Initialize()
 {
     ToolboxUIElement::Initialize();
-
-    bags_to_salvage_from = {
-        {GW::Constants::Bag::Backpack, true},
-        {GW::Constants::Bag::Belt_Pouch, true},
-        {GW::Constants::Bag::Bag_1, true},
-        {GW::Constants::Bag::Bag_2, true}
-    };
+    SettingsRegistry::Register(this, settings);
 
     GW::Items::RegisterItemClickCallback(&ItemClick_Entry, ItemClickCallback);
 
@@ -1724,68 +1708,43 @@ uint16_t InventoryManager::CountItemsByName(const wchar_t* name_enc)
         });
 }
 
-void InventoryManager::SaveSettings(ToolboxIni* ini)
+void InventoryManager::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxUIElement::SaveSettings(ini);
-    SAVE_BOOL(only_use_superior_salvage_kits);
-    SAVE_BOOL(salvage_rare_mats);
-    SAVE_BOOL(salvage_nicholas_items);
-    SAVE_BOOL(identify_greens);
-    SAVE_BOOL(trade_whole_stacks);
-    SAVE_BOOL(wiki_link_on_context_menu);
-    SAVE_BOOL(market_search_on_context_menu);
-    SAVE_BOOL(hide_unsellable_items);
-    SAVE_BOOL(hide_golds_from_merchant);
-    SAVE_BOOL(hide_weapon_sets_and_customized_items);
-    SAVE_BOOL(change_secondary_for_tome);
-    SAVE_BOOL(right_click_context_menu_in_outpost);
-    SAVE_BOOL(right_click_context_menu_in_explorable);
-    SAVE_BOOL(move_to_trade_on_double_click);
-    SAVE_BOOL(move_to_trade_on_alt_click);
-    SAVE_BOOL(salvage_all_on_ctrl_click);
-    SAVE_BOOL(identify_all_on_ctrl_click);
-    SAVE_BOOL(auto_reuse_salvage_kit);
-    SAVE_BOOL(auto_reuse_id_kit);
-
-    ini->SetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
-    ini->SetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
-    ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
-    ini->SetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-
-    GuiUtils::MapToIni(ini, Name(), VAR_NAME(hide_from_merchant_items), hide_from_merchant_items);
-    GuiUtils::MapToIni(ini, Name(), VAR_NAME(block_from_being_salvaged), block_from_being_salvaged);
+    ToolboxUIElement::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+    doc.Set(Name(), VAR_NAME(hide_from_merchant_items), hide_from_merchant_items);
+    // Glaze has no wchar_t serializer; stage wstring keys through hex encoding
+    std::map<std::string, std::string> staged;
+    for (const auto& [name_enc, label] : block_from_being_salvaged) {
+        std::string hex_key;
+        GuiUtils::ArrayToIni(name_enc, &hex_key);
+        staged.emplace(std::move(hex_key), label);
+    }
+    doc.Set(Name(), VAR_NAME(block_from_being_salvaged), staged);
 }
 
-void InventoryManager::LoadSettings(ToolboxIni* ini)
+void InventoryManager::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxUIElement::LoadSettings(ini);
-    LOAD_BOOL(only_use_superior_salvage_kits);
-    LOAD_BOOL(salvage_rare_mats);
-    LOAD_BOOL(salvage_nicholas_items);
-    LOAD_BOOL(identify_greens);
-    LOAD_BOOL(trade_whole_stacks);
-    LOAD_BOOL(wiki_link_on_context_menu);
-    LOAD_BOOL(market_search_on_context_menu);
-    LOAD_BOOL(hide_golds_from_merchant);
-    LOAD_BOOL(hide_unsellable_items);
-    LOAD_BOOL(hide_weapon_sets_and_customized_items);
-    LOAD_BOOL(change_secondary_for_tome);
-    LOAD_BOOL(right_click_context_menu_in_outpost);
-    LOAD_BOOL(right_click_context_menu_in_explorable);
-    LOAD_BOOL(move_to_trade_on_double_click);
-    LOAD_BOOL(move_to_trade_on_alt_click);
-    LOAD_BOOL(salvage_all_on_ctrl_click);
-    LOAD_BOOL(identify_all_on_ctrl_click);
-    LOAD_BOOL(auto_reuse_salvage_kit);
-    LOAD_BOOL(auto_reuse_id_kit);
-
-    bags_to_salvage_from[GW::Constants::Bag::Backpack] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_backpack), bags_to_salvage_from[GW::Constants::Bag::Backpack]);
-    bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_belt_pouch), bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
-    bags_to_salvage_from[GW::Constants::Bag::Bag_1] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_1), bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
-    bags_to_salvage_from[GW::Constants::Bag::Bag_2] = ini->GetBoolValue(Name(), VAR_NAME(salvage_from_bag_2), bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-
-    hide_from_merchant_items = GuiUtils::IniToMap<std::map<uint32_t, std::string>>(ini, Name(), VAR_NAME(hide_from_merchant_items));
-    block_from_being_salvaged = GuiUtils::IniToMap<std::map<std::wstring, std::string>>(ini, Name(), VAR_NAME(block_from_being_salvaged));
+    ToolboxUIElement::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    if (!doc.Get(Name(), VAR_NAME(hide_from_merchant_items), hide_from_merchant_items) && legacy) {
+        hide_from_merchant_items = GuiUtils::IniToMap<std::map<uint32_t, std::string>>(legacy, Name(), VAR_NAME(hide_from_merchant_items));
+    }
+    std::map<std::string, std::string> staged;
+    if (doc.Get(Name(), VAR_NAME(block_from_being_salvaged), staged)) {
+        block_from_being_salvaged.clear();
+        for (const auto& [hex_key, label] : staged) {
+            std::wstring name_enc;
+            if (GuiUtils::IniToArray(hex_key, name_enc) == 0) {
+                // Backward compat: key was written in old UTF-8 format before hex encoding was introduced
+                name_enc = TextUtils::StringToWString(hex_key);
+            }
+            block_from_being_salvaged.emplace(std::move(name_enc), label);
+        }
+    }
+    else if (legacy) {
+        block_from_being_salvaged = GuiUtils::IniToMap<std::map<std::wstring, std::string>>(legacy, Name(), VAR_NAME(block_from_being_salvaged));
+    }
 }
 
 InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit, const Item* start_after_item)
@@ -1798,7 +1757,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit,
     for (auto bag_id = start_bag_id; bag_id <= GW::Constants::Bag::Bag_2; bag_id++) {
         size_t slot = start_slot;
         start_slot = 0;
-        if (!bags_to_salvage_from[bag_id]) {
+        if (!IsBagToSalvageFrom(bag_id)) {
             continue;
         }
         GW::Bag* bag = GW::Items::GetBag(bag_id);
@@ -1820,7 +1779,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit,
             if (item->equipped) {
                 continue;
             }
-            if (item->IsRareMaterial() && !salvage_rare_mats) {
+            if (item->IsRareMaterial() && !settings.salvage_rare_mats) {
                 continue; // Don't salvage rare mats
             }
             if (item->IsArmor() || item->customized) {
@@ -1829,7 +1788,7 @@ InventoryManager::Item* InventoryManager::GetNextUnsalvagedItem(const Item* kit,
             if (item->IsBlue() && !item->GetIsIdentified() && (kit && kit->IsLesserKit())) {
                 continue; // Note: lesser kits cant salvage blue unids - Guild Wars bug/feature
             }
-            if (!salvage_nicholas_items && DailyQuests::IsNicholasItem(item)) {
+            if (!settings.salvage_nicholas_items && DailyQuests::IsNicholasItem(item)) {
                 continue; // Don't salvage nicholas items
             }
             const GW::Constants::Rarity rarity = item->GetRarity();
@@ -2047,46 +2006,46 @@ void InventoryManager::DrawSettingsInternal()
     ImGui::NewLine();
     ImGui::TextDisabled("Control extra item functions via ctrl+click, right click or double click");
     ImGui::Separator();
-    ImGui::Checkbox("Hide unsellable items from merchant window", &hide_unsellable_items);
-    ImGui::Checkbox("Hide weapon sets and customized items from merchant window", &hide_weapon_sets_and_customized_items);
-    ImGui::Checkbox("Hide gold items from merchant window", &hide_golds_from_merchant);
-    ImGui::CheckboxWithHelp("Move whole stacks by default", &trade_whole_stacks, "Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
+    ImGui::Checkbox("Hide unsellable items from merchant window", &settings.hide_unsellable_items);
+    ImGui::Checkbox("Hide weapon sets and customized items from merchant window", &settings.hide_weapon_sets_and_customized_items);
+    ImGui::Checkbox("Hide gold items from merchant window", &settings.hide_golds_from_merchant);
+    ImGui::CheckboxWithHelp("Move whole stacks by default", &settings.trade_whole_stacks, "Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
     ImGui::TextUnformatted("Move items to trade on:");
     ImGui::ShowHelp("When trading with another player, you normally have to drag an item from inventory to the trade window. Enable an option below to make it easier.");
     ImGui::Indent();
-    if (ImGui::Checkbox("Double Click", &move_to_trade_on_double_click) && move_to_trade_on_alt_click) move_to_trade_on_alt_click = false;
+    if (ImGui::Checkbox("Double Click", &settings.move_to_trade_on_double_click) && settings.move_to_trade_on_alt_click) settings.move_to_trade_on_alt_click = false;
     ImGui::SameLine();
-    if (ImGui::Checkbox("Alt+Click", &move_to_trade_on_alt_click) && move_to_trade_on_alt_click) move_to_trade_on_double_click = false;
+    if (ImGui::Checkbox("Alt+Click", &settings.move_to_trade_on_alt_click) && settings.move_to_trade_on_alt_click) settings.move_to_trade_on_double_click = false;
     ImGui::Unindent();
-    ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &wiki_link_on_context_menu);
-    ImGui::Checkbox("Show 'Search on Market' link on item context menu", &market_search_on_context_menu);
-    ImGui::Checkbox("Prompt to change secondary profession when using a tome", &change_secondary_for_tome);
+    ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &settings.wiki_link_on_context_menu);
+    ImGui::Checkbox("Show 'Search on Market' link on item context menu", &settings.market_search_on_context_menu);
+    ImGui::Checkbox("Prompt to change secondary profession when using a tome", &settings.change_secondary_for_tome);
     ImGui::Text("Right click an item to open context menu in:");
     ImGui::Indent();
-    ImGui::Checkbox("Exporable Area", &right_click_context_menu_in_explorable);
+    ImGui::Checkbox("Exporable Area", &settings.right_click_context_menu_in_explorable);
     ImGui::SameLine();
-    ImGui::Checkbox("Outpost", &right_click_context_menu_in_outpost);
+    ImGui::Checkbox("Outpost", &settings.right_click_context_menu_in_outpost);
     ImGui::Unindent();
     ImGui::Text("Salvage All options:");
     ImGui::SameLine();
     ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
-    ImGui::CheckboxWithHelp("Salvage Rare Materials", &salvage_rare_mats, "Untick to skip salvagable rare materials when checking for salvagable items");
+    ImGui::CheckboxWithHelp("Salvage Rare Materials", &settings.salvage_rare_mats, "Untick to skip salvagable rare materials when checking for salvagable items");
     ImGui::SameLine();
-    ImGui::CheckboxWithHelp("Salvage Nicholas Items", &salvage_nicholas_items, "Untick to skip items that Nicholas the Traveller collects when checking for salvagable items");
+    ImGui::CheckboxWithHelp("Salvage Nicholas Items", &settings.salvage_nicholas_items, "Untick to skip items that Nicholas the Traveller collects when checking for salvagable items");
     ImGui::Text("Salvage from:");
     ImGui::ShowHelp("Only ticked bags will be checked for salvagable items");
-    ImGui::Checkbox("Backpack", &bags_to_salvage_from[GW::Constants::Bag::Backpack]);
+    ImGui::Checkbox("Backpack", &settings.salvage_from_backpack);
     ImGui::SameLine();
-    ImGui::Checkbox("Belt Pouch", &bags_to_salvage_from[GW::Constants::Bag::Belt_Pouch]);
+    ImGui::Checkbox("Belt Pouch", &settings.salvage_from_belt_pouch);
     ImGui::SameLine();
-    ImGui::Checkbox("Bag 1", &bags_to_salvage_from[GW::Constants::Bag::Bag_1]);
+    ImGui::Checkbox("Bag 1", &settings.salvage_from_bag_1);
     ImGui::SameLine();
-    ImGui::Checkbox("Bag 2", &bags_to_salvage_from[GW::Constants::Bag::Bag_2]);
-    ImGui::CheckboxWithHelp("Salvage All with Control+Click", &salvage_all_on_ctrl_click, "Control+Click a salvage kit to open the Salvage All window");
-    ImGui::CheckboxWithHelp("Identify green items", &identify_greens, "Untick to skip green items when doing Identify All");
-    ImGui::CheckboxWithHelp("Identify All with Control+Click", &identify_all_on_ctrl_click, "Control+Click an identification kit to identify all items with it");
-    ImGui::CheckboxWithHelp("Auto re-use salvage kit", &auto_reuse_salvage_kit, "When a salvage kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been salvaged.");
-    ImGui::CheckboxWithHelp("Auto re-use identification kit", &auto_reuse_id_kit, "When an identification kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been identified.");
+    ImGui::Checkbox("Bag 2", &settings.salvage_from_bag_2);
+    ImGui::CheckboxWithHelp("Salvage All with Control+Click", &settings.salvage_all_on_ctrl_click, "Control+Click a salvage kit to open the Salvage All window");
+    ImGui::CheckboxWithHelp("Identify green items", &settings.identify_greens, "Untick to skip green items when doing Identify All");
+    ImGui::CheckboxWithHelp("Identify All with Control+Click", &settings.identify_all_on_ctrl_click, "Control+Click an identification kit to identify all items with it");
+    ImGui::CheckboxWithHelp("Auto re-use salvage kit", &settings.auto_reuse_salvage_kit, "When a salvage kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been salvaged.");
+    ImGui::CheckboxWithHelp("Auto re-use identification kit", &settings.auto_reuse_id_kit, "When an identification kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been identified.");
     DrawMerchantHiddenItemsSettings();
 }
 
@@ -2326,10 +2285,10 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
             return true;
         }
-        if (wiki_link_on_context_menu) {
+        if (settings.wiki_link_on_context_menu) {
             return true;
         }
-        if (market_search_on_context_menu) {
+        if (settings.market_search_on_context_menu) {
             return true;
         }
         return item->IsIdentificationKit() || item->IsSalvageKit();
@@ -2528,11 +2487,11 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
 
 
     context_item.wiki_name->wstring();
-    if (wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
+    if (settings.wiki_link_on_context_menu && ImGui::Button("Guild Wars Wiki", size)) {
         ImGui::CloseCurrentPopup();
         GuiUtils::SearchWiki(context_item.wiki_name->wstring());
     }
-    if (market_search_on_context_menu && context_item_actual->IsTradable() && ImGui::Button("Search on Market", size)) {
+    if (settings.market_search_on_context_menu && context_item_actual->IsTradable() && ImGui::Button("Search on Market", size)) {
         ImGui::CloseCurrentPopup();
         GWMarketWindow::SearchItem(context_item.wiki_name->string());
     }
@@ -2637,7 +2596,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                 // Get any hovered item in order to get info about it for Ctrl+Click shortcuts.
                 // May be null, in which case said shortcuts are ignored.
 
-                if (item && identify_all_on_ctrl_click && item->IsIdentificationKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
+                if (item && settings.identify_all_on_ctrl_click && item->IsIdentificationKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
                     // Ctrl+Click on identification kit: Identify all items
                     ImGui::CloseCurrentPopup();
                     CancelIdentify();
@@ -2649,7 +2608,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                     }
                     return;
                 }
-                else if (item && salvage_all_on_ctrl_click && item->IsSalvageKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
+                else if (item && settings.salvage_all_on_ctrl_click && item->IsSalvageKit() && ImGui::IsKeyDown(ImGuiMod_Ctrl)) {
                     // Ctrl+Click on salvage kit: Open salvage all window
                     ImGui::CloseCurrentPopup();
                     CancelSalvage();
@@ -2671,7 +2630,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                     return;
                 }
             }
-            if (ImGui::IsKeyDown(ImGuiMod_Alt) && move_to_trade_on_alt_click && IsTradeWindowOpen()) {
+            if (ImGui::IsKeyDown(ImGuiMod_Alt) && settings.move_to_trade_on_alt_click && IsTradeWindowOpen()) {
                 // Alt+Click: Add to trade window if available
                 if (!item || !item->CanOfferToTrade()) {
                     return;
@@ -2687,7 +2646,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
             }
             return;
         case GW::UI::UIPacket::ActionState::MouseDoubleClick: // Double click
-            if (move_to_trade_on_double_click && IsTradeWindowOpen()) {
+            if (settings.move_to_trade_on_double_click && IsTradeWindowOpen()) {
                 status->blocked = true;
                 // Alt+Click: Add to trade window if available
                 if (!item || !item->CanOfferToTrade()) {
@@ -2704,10 +2663,10 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
             }
             return;
         case static_cast<GW::UI::UIPacket::ActionState>(999u): // Right click (via GWToolbox)
-            if (!right_click_context_menu_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
+            if (!settings.right_click_context_menu_in_explorable && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
                 return;
             }
-            if (!right_click_context_menu_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+            if (!settings.right_click_context_menu_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
                 return;
             }
             if (!item) {
@@ -2778,16 +2737,16 @@ bool InventoryItem::IsSalvagable(bool check_bag, bool check_blocked_from_being_s
 
 bool InventoryItem::IsHiddenFromMerchants() const
 {
-    if (hide_unsellable_items && !value) {
+    if (settings.hide_unsellable_items && !value) {
         return true;
     }
-    if (hide_weapon_sets_and_customized_items && (customized || equipped)) {
+    if (settings.hide_weapon_sets_and_customized_items && (customized || equipped)) {
         return true;
     }
     if (hide_from_merchant_items.contains(model_id)) {
         return true;
     }
-    if (hide_golds_from_merchant && GetRarity() == GW::Constants::Rarity::Gold) {
+    if (settings.hide_golds_from_merchant && GetRarity() == GW::Constants::Rarity::Gold) {
         return true;
     }
     return false;

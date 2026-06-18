@@ -26,9 +26,6 @@ namespace GuiUtils {
             T,
             std::unordered_map<typename T::key_type, typename T::mapped_type, typename T::hasher, typename T::key_equal, typename T::allocator_type>>;
 
-    template <map_type T>
-    constexpr bool map_has_wstring_key = std::same_as<typename T::key_type, std::wstring>;
-
     std::string WikiUrl(const std::wstring& term);
     std::string WikiUrl(const std::string& term);
     std::string WikiTemplateUrlFromTitle(const std::string& title);
@@ -47,28 +44,6 @@ namespace GuiUtils {
     bool ArrayToIni(const std::wstring& in, std::string* out);
     bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
     size_t IniToArray(const std::string& in, std::wstring& out);
-
-    template <map_type T>
-    void MapToIni(ToolboxIni* ini, const char* section, const char* name, const T& map)
-    {
-        // Glaze has no wchar_t serializer; stage wstring keys through hex encoding.
-        // WStringToString is not safe here: GW encoded strings (e.g. item name_enc) can contain
-        // lone Unicode surrogates that WideCharToMultiByte rejects on Vista+, causing a crash.
-        if constexpr (map_has_wstring_key<T>) {
-            std::map<std::string, typename T::mapped_type> staged;
-            for (const auto& [k, v] : map) {
-                std::string hex_key;
-                ArrayToIni(k, &hex_key);
-                staged.emplace(std::move(hex_key), v);
-            }
-            const auto map_str = glz::write_json(staged).value_or(std::string{});
-            ini->SetValue(section, name, map_str.c_str());
-        }
-        else {
-            const auto map_str = glz::write_json(map).value_or(std::string{});
-            ini->SetValue(section, name, map_str.c_str());
-        }
-    }
 
     template <map_type T>
     T IniToMap(ToolboxIni* ini, const char* section, const char* name)

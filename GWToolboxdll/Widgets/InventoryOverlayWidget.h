@@ -14,10 +14,15 @@ public:
     [[nodiscard]] const char* Description() const override { return "Draws over the top of inventory slots in-game to better identify items"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_TH; }
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    struct Settings {
+        bool show_in_outpost = true;
+        bool show_in_explorable = true;
+    };
+
     void DrawSettingsInternal() override;
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void SignalTerminate() override;
 
     // Draw user interface. Will be called every frame if the element is visible

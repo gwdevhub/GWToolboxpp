@@ -13,7 +13,6 @@ class AlcoholWidget : public ToolboxWidget {
     DWORD alcohol_level = 0;
     time_t last_alcohol = 0;
     long alcohol_time = 0;
-    bool only_show_when_drunk = false;
     uint32_t GetAlcoholTitlePointsGained(); // Returns amount of alcohol points gained since last check (or map load)
     uint32_t prev_alcohol_title_points = 0; // Used in GetAlcoholTitlePointsGained
     GW::Constants::MapID map_id = GW::Constants::MapID::None;
@@ -30,11 +29,15 @@ public:
     [[nodiscard]] const char* Name() const override { return "Alcohol"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BEER; }
 
+    struct Settings {
+        bool only_show_when_drunk = false;
+    };
+
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Update(float delta) override;
     uint32_t GetAlcoholLevel() const;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
     static uint32_t GetAlcoholTitlePoints(); // Gets current alcohol title points.
     static void AlcUpdate(GW::HookStatus*, const GW::Packet::StoC::PostProcess* packet);
 

@@ -20,9 +20,9 @@ public:
     void Initialize() override;
     void Terminate() override;
 
-    void LoadSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
 
-    void SaveSettings(ToolboxIni* ini) override;
+    void SaveSettings(SettingsDoc& doc) override;
 
     // Called when the game switches between mobile and normal mode
     void OnMobileModeChanged(bool is_mobile);
@@ -52,7 +52,7 @@ public:
     bool auto_size = false;
     bool show_breakout_button = false;
     bool lock_breakout_button = false;
-    float breakout_pos[2] = {60.f, 60.f};
+    std::array<float, 2> breakout_pos = {60.f, 60.f};
     bool pending_breakout_pos = false;
 
     // Mobile-mode layout settings (separate from normal-mode settings above)
@@ -73,8 +73,8 @@ public:
 
     // Auto-resize width/height when window collapses or expands
     bool auto_resize_on_collapse = false;
-    float collapsed_size[2] = {0.f, 0.f};
-    float expanded_size[2] = {0.f, 0.f};
+    std::array<float, 2> collapsed_size = {0.f, 0.f};
+    std::array<float, 2> expanded_size = {0.f, 0.f};
 
     // Settings panel tab: 0 = Normal, 1 = Mobile, -1 = auto (tracks current mode)
     int settings_active_tab = -1;
@@ -89,19 +89,19 @@ protected:
     std::string mobile_snapped_frame_label;
 
     // Relative offset to the snapped GW frame's top-left corner (screen coords = frame_pos + snap_offset)
-    float snap_offset[2] = {0.f, 0.f};
-    float mobile_snap_offset[2] = {0.f, 0.f};
+    std::array<float, 2> snap_offset = {0.f, 0.f};
+    std::array<float, 2> mobile_snap_offset = {0.f, 0.f};
     // Set true when snap label changes; cleared once frame position is known and snap_offset is initialized
     bool snap_offset_needs_init = false;
     bool mobile_snap_offset_needs_init = false;
 
     // Stored positions for each mode (used when switching modes)
     bool has_normal_layout = false;
-    float normal_pos[2] = {};
-    float normal_size[2] = {};
+    std::array<float, 2> normal_pos = {};
+    std::array<float, 2> normal_size = {};
     bool has_mobile_layout = false;
-    float mobile_pos[2] = {};
-    float mobile_size[2] = {};
+    std::array<float, 2> mobile_pos = {};
+    std::array<float, 2> mobile_size = {};
 
     float min_size[2] = { 250.f,90.f };
     float max_size[2] = { FLT_MAX, FLT_MAX };

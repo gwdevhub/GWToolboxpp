@@ -27,6 +27,9 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/GWToolbox.rc"
+    PROPERTIES OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/Dependencies/GWCA/bin/gwca.dll")
+
 # auto-generated files - export header & pch 
 include(GenerateExportHeader)
 generate_export_header(GWToolboxdll)
@@ -81,6 +84,8 @@ find_package(minhook CONFIG REQUIRED)
 
 find_package(unofficial-uwebsockets CONFIG REQUIRED)
 
+find_package(recastnavigation CONFIG REQUIRED)
+
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
@@ -99,6 +104,7 @@ target_link_libraries(GWToolboxdll PRIVATE
 	minhook::minhook
 	ctre::ctre
     unofficial::uwebsockets::uwebsockets
+    RecastNavigation::Detour
 
     # libs:
     Dbghelp.lib # for MiniDump
@@ -146,5 +152,16 @@ add_custom_command(TARGET GWToolboxdll POST_BUILD
             "$<TARGET_PDB_FILE:GWToolboxdll>"
             "$<CONFIG>"
     COMMENT "Compressing PDB for distribution (RelWithDebInfo only)"
+    VERBATIM
+)
+
+# Stage portal_connections.json next to the built DLL. PathfindingWindow.cpp
+# resolves the path via GetModuleFileName + sibling lookup, so the JSON has to
+# live in the same directory as GWToolboxdll.dll at runtime.
+add_custom_command(TARGET GWToolboxdll POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/Windows/Pathfinding/portal_connections.json"
+            "$<TARGET_FILE_DIR:GWToolboxdll>/portal_connections.json"
+    COMMENT "Staging portal_connections.json next to GWToolboxdll.dll"
     VERBATIM
 )

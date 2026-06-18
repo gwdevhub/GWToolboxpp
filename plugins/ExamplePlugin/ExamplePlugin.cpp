@@ -26,6 +26,18 @@ void ExamplePlugin::DrawSettings()
     ImGui::Checkbox("Redirect ee to eee", &redirect_slash_ee_to_eee);
 }
 
+void ExamplePlugin::LoadSettings(const wchar_t* folder)
+{
+    ToolboxPlugin::LoadSettings(folder);
+    LoadSetting("redirect_slash_ee_to_eee", redirect_slash_ee_to_eee);
+}
+
+void ExamplePlugin::SaveSettings(const wchar_t* folder)
+{
+    SaveSetting("redirect_slash_ee_to_eee", redirect_slash_ee_to_eee);
+    ToolboxPlugin::SaveSettings(folder);
+}
+
 void EeCmd(GW::HookStatus*, const wchar_t*, const int, const LPWSTR*)
 {
     if (redirect_slash_ee_to_eee) {

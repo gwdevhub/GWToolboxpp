@@ -27,7 +27,6 @@ public:
 
     // Used to ensure that clicker doesn't clog up the event queue
     static inline bool processing = false;
-    static inline int clicker_delay_ms = 20;
 
     bool DrawSettings() override;
     int Description(char* buf, size_t bufsz) override;

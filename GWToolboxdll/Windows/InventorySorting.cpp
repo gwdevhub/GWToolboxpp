@@ -69,7 +69,7 @@ namespace {
 
     // Sort order configuration
     std::vector<GW::Constants::ItemType> sort_order;
-    bool sort_equipment_pack = false;
+    InventorySorting::Settings settings;
 
     // Primary key: item type (from sort_order). Secondary key: for Nicholas collectibles,
     // weeks until Nick requests them (0 = this week); for all other items, model_file_id.
@@ -269,6 +269,7 @@ namespace {
 void InventorySorting::Initialize()
 {
     ToolboxUIElement::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     ResetSortOrder();
 
@@ -283,20 +284,28 @@ void InventorySorting::Terminate()
     GW::Chat::DeleteCommand(&sort_storage_cmd_entry);
 }
 
-void InventorySorting::LoadSettings(ToolboxIni* ini)
+void InventorySorting::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxUIElement::LoadSettings(ini);
+    ToolboxUIElement::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    // Load sort order from ini
     sort_order.clear();
 
-    const size_t sort_order_count = ini->GetLongValue(Name(), "sort_order_count", 0);
-    if (sort_order_count > 0) {
-        // Load custom sort order
+    std::vector<int> sort_order_values;
+    if (doc.Get(Name(), "sort_order", sort_order_values)) {
+        for (const int type_value : sort_order_values) {
+            if (type_value >= 0) {
+                sort_order.push_back(static_cast<GW::Constants::ItemType>(type_value));
+            }
+        }
+    }
+    else {
+        // Legacy INI fallback: sort_order_count + sort_order_N keys
+        const size_t sort_order_count = legacy->GetLongValue(Name(), "sort_order_count", 0);
         for (size_t i = 0; i < sort_order_count; i++) {
             char key[32];
             snprintf(key, sizeof(key), "sort_order_%zu", i);
-            const int type_value = ini->GetLongValue(Name(), key, -1);
+            const int type_value = legacy->GetLongValue(Name(), key, -1);
             if (type_value >= 0) {
                 sort_order.push_back(static_cast<GW::Constants::ItemType>(type_value));
             }
@@ -307,24 +316,19 @@ void InventorySorting::LoadSettings(ToolboxIni* ini)
     if (sort_order.empty()) {
         ResetSortOrder();
     }
-
-    LOAD_BOOL(sort_equipment_pack);
 }
 
-void InventorySorting::SaveSettings(ToolboxIni* ini)
+void InventorySorting::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxUIElement::SaveSettings(ini);
+    ToolboxUIElement::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    // Save sort order to ini
-    ini->SetLongValue(Name(), "sort_order_count", static_cast<long>(sort_order.size()));
-
-    for (size_t i = 0; i < sort_order.size(); i++) {
-        char key[32];
-        snprintf(key, sizeof(key), "sort_order_%zu", i);
-        ini->SetLongValue(Name(), key, static_cast<long>(std::to_underlying(sort_order[i])));
+    std::vector<int> sort_order_values;
+    sort_order_values.reserve(sort_order.size());
+    for (const auto type : sort_order) {
+        sort_order_values.push_back(std::to_underlying(type));
     }
-
-    SAVE_BOOL(sort_equipment_pack);
+    doc.Set(Name(), "sort_order", sort_order_values);
 }
 
 void InventorySorting::Draw(IDirect3DDevice9*)
@@ -338,7 +342,7 @@ void InventorySorting::Draw(IDirect3DDevice9*)
     if (ImGui::BeginPopupModal("##sortinventory_confirm", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::TextUnformatted("Are you sure you want to sort character inventory?");
         if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyReleased(ImGuiKey_Enter)) {
-            const auto end_bag = sort_equipment_pack ? GW::Constants::Bag::Equipment_Pack : GW::Constants::Bag::Bag_2;
+            const auto end_bag = settings.sort_equipment_pack ? GW::Constants::Bag::Equipment_Pack : GW::Constants::Bag::Bag_2;
             Resources::EnqueueWorkerTask([end_bag]() {
                 SortInventory(GW::Constants::Bag::Backpack, end_bag);
             });
@@ -379,7 +383,7 @@ void InventorySorting::DrawSettingsInternal()
     {
         bool sort_char_inv = false;
         if (ImGui::ConfirmButton("Sort Character Inventory!", &sort_char_inv)) {
-            const auto end_bag = sort_equipment_pack
+            const auto end_bag = settings.sort_equipment_pack
                 ? GW::Constants::Bag::Equipment_Pack
                 : GW::Constants::Bag::Bag_2;
             Resources::EnqueueWorkerTask([end_bag]() {
@@ -387,7 +391,7 @@ void InventorySorting::DrawSettingsInternal()
             });
         }
         ImGui::SameLine();
-        ImGui::Checkbox("Include Equipment Pack", &sort_equipment_pack);
+        ImGui::Checkbox("Include Equipment Pack", &settings.sort_equipment_pack);
     }
 
     ImGui::Spacing();

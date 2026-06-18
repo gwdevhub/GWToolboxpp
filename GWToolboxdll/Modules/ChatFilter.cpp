@@ -24,50 +24,7 @@
 //#define PRINT_CHAT_PACKETS
 
 namespace {
-    bool guild_announcement = false;
-    bool self_drop_rare = false;
-    bool self_drop_common = false;
-    bool ally_drop_rare = false;
-    bool ally_drop_common = false;
-    bool ally_pickup_rare = false;
-    bool ally_pickup_common = false;
-    bool player_pickup_rare = false;
-    bool player_pickup_common = false;
-    bool salvage_messages = false;
-    bool skill_points = false;
-    bool pvp_messages = true;
-    bool hoh_messages = false;
-    bool favor = false;
-    bool ninerings = true;
-    bool noonehearsyou = true;
-    bool lunars = true;
-    bool away = false;
-    bool you_have_been_playing_for = false;
-    bool player_has_achieved_title = false;
-    bool faction_gain = false;
-    bool challenge_mission_messages = false;
-    bool block_messages_from_inactive_channels = false;
-    bool ashes_dropped = false;
-
-
-    // Error messages on-screen
-    bool invalid_target = false; // Includes other error messages, see ChatFilter.cpp.
-    bool opening_chest_messages = false;
-    bool inventory_is_full = false;
-    bool item_cannot_be_used = false; // Includes other error messages, see ChatFilter.cpp.
-    bool not_enough_energy = false;   // Includes other error messages, see ChatFilter.cpp.
-    bool targetting_messages_from_me = false;   // Includes other error messages, see ChatFilter.cpp.
-    bool targetting_messages_from_others = false;   // Includes other error messages, see ChatFilter.cpp.
-    bool item_already_identified = false;
-
-    bool messagebycontent = false;
-    // Which channels to filter.
-    bool filter_channel_local = true;
-    bool filter_channel_guild = false;
-    bool filter_channel_team = false;
-    bool filter_channel_trade = true;
-    bool filter_channel_alliance = false;
-    bool filter_channel_emotes = false;
+    ChatFilter::Settings settings;
 
     struct SuppressedMessage {
         std::wstring substring;
@@ -369,9 +326,9 @@ namespace {
             case 0x2AFC:
                 return false; // <agent name> hands you <quantity> <item name>
             case 0x0314:
-                return guild_announcement; // Guild Announcement by X: X
+                return settings.guild_announcement; // Guild Announcement by X: X
             case 0x4C32:
-                return item_cannot_be_used; // Item can only be used in towns or outposts.
+                return settings.item_cannot_be_used; // Item can only be used in towns or outposts.
             case 0x76D:
                 return false; // whisper received.
             case 0x76E:
@@ -383,7 +340,7 @@ namespace {
             case 0x782: // I'm targeting x!            (author is not part of the message)
             case 0x783: // I'm targeting myself!      (author is not part of the message)
             case 0x778: // I'm following x            (author is not part of the message)
-                return IsCurrentPlayerName(sender) ? targetting_messages_from_me : targetting_messages_from_others;
+                return IsCurrentPlayerName(sender) ? settings.targetting_messages_from_me : settings.targetting_messages_from_others;
             case 0x77B:
                 return false; // I'm talking to x           (author is not part of the message)
             case 0x77C:
@@ -413,17 +370,17 @@ namespace {
                 return false; // You gain (message[5] - 100) experience
             case 0x7CC:
                 if (FullMatch(&message[1], {0x962D, 0xFEB5, 0x1D08, 0x10A, 0xAC2, 0x101, 0x164, 0x1})) {
-                    return lunars; // you receive 100 gold
+                    return settings.lunars; // you receive 100 gold
                 }
                 break;
             case 0x7CD:
                 return false; // You receive <quantity> <item name>
             case 0x7E0:
-                return ally_pickup_common; // party shares gold
+                return settings.ally_pickup_common; // party shares gold
             case 0x7ED:
                 return false; // opening the chest reveals x, which your party reserves for y
             case 0x7DF:
-                return ally_pickup_common; // party shares gold ?
+                return settings.ally_pickup_common; // party shares gold ?
             case 0x7F0: {
                 // monster/player x drops item y (no assignment)
                 // monster x drops item y, your party assigns to player z
@@ -431,15 +388,15 @@ namespace {
                 // first segment describes the agent who dropped, second segment describes the item dropped
                 const auto item_argument = GetSecondSegment(message);
                 if (IsAshes(GetFirstSegment(item_argument))) {
-                    return ashes_dropped;
+                    return settings.ashes_dropped;
                 }
                 if (IsPlayerNameToken(GetFirstSegment(message))) {
                     return false; // Don't block other players dropping items
                 }
                 if (IsRare(item_argument)) {
-                    return self_drop_rare;
+                    return settings.self_drop_rare;
                 }
-                return self_drop_common;
+                return settings.self_drop_common;
             }
             case 0x7F1: {
                 // monster x drops item y, your party assigns to player z
@@ -456,43 +413,43 @@ namespace {
                 }
                 const bool rare = IsRare(GetSecondSegment(message));
                 if (for_player && rare) {
-                    return self_drop_rare;
+                    return settings.self_drop_rare;
                 }
                 if (for_player && !rare) {
-                    return self_drop_common;
+                    return settings.self_drop_common;
                 }
                 if (!for_player && rare) {
-                    return ally_drop_rare;
+                    return settings.ally_drop_rare;
                 }
                 if (!for_player && !rare) {
-                    return ally_drop_common;
+                    return settings.ally_drop_common;
                 }
                 return false;
             }
             case 0x7F2: {
                 if (IsAshes(GetFirstSegment(GetFirstSegment(message)))) {
-                    return ashes_dropped;
+                    return settings.ashes_dropped;
                 }
                 return false; // you drop item x
             }
             case 0x7F6: // player x picks up item y (note: item can be unassigned gold)
-                return IsRare(GetFirstSegment(message)) ? ally_pickup_rare : ally_pickup_common;
+                return IsRare(GetFirstSegment(message)) ? settings.ally_pickup_rare : settings.ally_pickup_common;
             case 0x7FC: // you pick up item y (note: item can be unassigned gold)
-                return IsRare(GetFirstSegment(message)) ? player_pickup_rare : player_pickup_common;
+                return IsRare(GetFirstSegment(message)) ? settings.player_pickup_rare : settings.player_pickup_common;
             case 0x807:
                 return false; // player joined the game
             case 0x816:
-                return skill_points; // you gain a skill point
+                return settings.skill_points; // you gain a skill point
             case 0x817:
-                return skill_points; // player x gained a skill point
+                return settings.skill_points; // player x gained a skill point
             case 0x846:
                 return false; // 'Screenshot saved as <path>'.
             case 0x87B:
-                return noonehearsyou; // 'no one hears you.' (outpost)
+                return settings.noonehearsyou; // 'no one hears you.' (outpost)
             case 0x87C:
-                return noonehearsyou; // 'no one hears you... ' (explorable)
+                return settings.noonehearsyou; // 'no one hears you... ' (explorable)
             case 0x87D:
-                return away; // 'Player <name> might not reply...' (Away)
+                return settings.away; // 'Player <name> might not reply...' (Away)
             case 0x87F:
                 return false; // 'Failed to send whisper to player <name>...' (Do not disturb)
             case 0x880:
@@ -500,55 +457,55 @@ namespace {
             case 0x881:
                 return false; // 'Player <name> is not online.' (Offline)
             case 0x88E:
-                return invalid_target; // Invalid attack target.
+                return settings.invalid_target; // Invalid attack target.
             case 0x89B:
-                return item_cannot_be_used; // Item cannot be used in towns or outposts.
+                return settings.item_cannot_be_used; // Item cannot be used in towns or outposts.
             case 0x89C:
-                return opening_chest_messages; // Chest is being used.
+                return settings.opening_chest_messages; // Chest is being used.
             case 0x89D:
-                return opening_chest_messages; // The chest is empty.
+                return settings.opening_chest_messages; // The chest is empty.
             case 0x89E:
-                return opening_chest_messages; // The chest is locked. You must have the correct key or a lockpick.
+                return settings.opening_chest_messages; // The chest is locked. You must have the correct key or a lockpick.
             case 0x8A0:
-                return opening_chest_messages; // Already used that chest
+                return settings.opening_chest_messages; // Already used that chest
             case 0x8A5:
-                return invalid_target; // Target is immune to bleeding (no flesh.)
+                return settings.invalid_target; // Target is immune to bleeding (no flesh.)
             case 0x8A6:
-                return invalid_target; // Target is immune to disease (no flesh.)
+                return settings.invalid_target; // Target is immune to disease (no flesh.)
             case 0x8A7:
-                return invalid_target; // Target is immune to poison (no flesh.)
+                return settings.invalid_target; // Target is immune to poison (no flesh.)
             case 0x8A8:
-                return not_enough_energy; // Not enough adrenaline
+                return settings.not_enough_energy; // Not enough adrenaline
             case 0x8A9:
-                return not_enough_energy; // Not enough energy.
+                return settings.not_enough_energy; // Not enough energy.
             case 0x8AA:
-                return inventory_is_full; // Inventory is full.
+                return settings.inventory_is_full; // Inventory is full.
             case 0x8AB:
-                return invalid_target; // Your view of the target is obstructed.
+                return settings.invalid_target; // Your view of the target is obstructed.
             case 0x8C1:
-                return invalid_target; // That skill requires a different weapon type.
+                return settings.invalid_target; // That skill requires a different weapon type.
             case 0x8C2:
-                return invalid_target; // Invalid spell target.
+                return settings.invalid_target; // Invalid spell target.
             case 0x8C3:
-                return invalid_target; // Target is out of range.
+                return settings.invalid_target; // Target is out of range.
             case 0x8C4:
-                return invalid_target; // That skill is still recharging
+                return settings.invalid_target; // That skill is still recharging
             case 0x52C3:               // 0x52C3 0xDE9C 0xCD2F 0x78E4 0x101 0x100 - Hold-out bonus: +(message[5] - 0x100) points
-                return FullMatch(&message[1], {0xDE9C, 0xCD2F, 0x78E4, 0x101}) && challenge_mission_messages;
+                return FullMatch(&message[1], {0xDE9C, 0xCD2F, 0x78E4, 0x101}) && settings.challenge_mission_messages;
             case 0x6C9C: // 0x6C9C 0x866F 0xB8D2 0x5A20 0x101 0x100 - You gain (message[5] - 0x100) Kurzick faction
                 if (!FullMatch(&message[1], {0x866F, 0xB8D2, 0x5A20, 0x101})) {
                     break;
                 }
-                return faction_gain || (challenge_mission_messages && IsInChallengeMission());
+                return settings.faction_gain || (settings.challenge_mission_messages && IsInChallengeMission());
             case 0x6D4D: // 0x6D4D 0xDD4E 0xB502 0x71CE 0x101 0x4E8 - You gain (message[5] - 0x100) Luxon faction
                 if (!FullMatch(&message[1], {0xDD4E, 0xB502, 0x71CE, 0x101})) {
                     break;
                 }
-                return faction_gain || (challenge_mission_messages && IsInChallengeMission());
+                return settings.faction_gain || (settings.challenge_mission_messages && IsInChallengeMission());
             case 0x7BF4:
-                return you_have_been_playing_for; // You have been playing for x time.
+                return settings.you_have_been_playing_for; // You have been playing for x time.
             case 0x7BF5:
-                return you_have_been_playing_for; // You have been playinf for x time. Please take a break.
+                return settings.you_have_been_playing_for; // You have been playinf for x time. Please take a break.
             case 0x8101:
                 switch (message[1]) {
                     // nine rings
@@ -565,37 +522,37 @@ namespace {
                     case 0x152A: // stay right were you are! rings of fortune is about to begin!
                     case 0x152B: // you win 12 festival tickets
                     case 0x152C: // You win 3 festival tickets
-                        return ninerings;
+                        return settings.ninerings;
                     case 0x39CD: // you have a special item available: <special item reward>
-                        return ninerings;
+                        return settings.ninerings;
                     case 0x3E3: // Spell failed. Spirits are not affected by this spell.
-                        return invalid_target;
+                        return settings.invalid_target;
                     case 0x6FD: // Target is immune to Spells. (Vow of Silence)
-                        return invalid_target;
+                        return settings.invalid_target;
                     case 0x679C:
                         return false; // You cannot use a <profession> tome because you are not a <profession> (Elite == message[5] == 0x6725)
                     case 0x72EB:
-                        return opening_chest_messages; // The chest is locked. You must use a lockpick to open it.
+                        return settings.opening_chest_messages; // The chest is locked. You must use a lockpick to open it.
                     case 0x7B91:                       // x minutes of favor of the gods remaining. Note: full message is 0x8101 0x7B91 0xC686 0xE490 0x6922 0x101 0x100+value
                     case 0x7B92:                       // x more achievements must be performed to earn the favor of the gods. // 0x8101 0x7B92 0x8B0A 0x8DB5 0x5135 0x101 0x100+value
-                        return favor;
+                        return settings.favor;
                     case 0x7C3E: // This item cannot be used here.
-                        return item_cannot_be_used;
+                        return settings.item_cannot_be_used;
                 }
                 if (FullMatch(&message[1], {0x6649, 0xA2F9, 0xBBFA, 0x3C27})) {
-                    return lunars; // you will celebrate a festive new year (rocket or popper)
+                    return settings.lunars; // you will celebrate a festive new year (rocket or popper)
                 }
                 if (FullMatch(&message[1], {0x664B, 0xDBAB, 0x9F4C, 0x6742})) {
-                    return lunars; // something special is in your future! (lucky aura)
+                    return settings.lunars; // something special is in your future! (lucky aura)
                 }
                 if (FullMatch(&message[1], {0x6648, 0xB765, 0xBC0D, 0x1F73})) {
-                    return lunars; // you will have a prosperous new year! (gain 100 gold)
+                    return settings.lunars; // you will have a prosperous new year! (gain 100 gold)
                 }
                 if (FullMatch(&message[1], {0x664C, 0xD634, 0x91F8, 0x76EF})) {
-                    return lunars; // your new year will be a blessed one (lunar blessing)
+                    return settings.lunars; // your new year will be a blessed one (lunar blessing)
                 }
                 if (FullMatch(&message[1], {0x664A, 0xEFB8, 0xDE25, 0x363})) {
-                    return lunars; // You will find bad luck in this new year... or bad luck will find you
+                    return settings.lunars; // You will find bad luck in this new year... or bad luck will find you
                 }
                 break;
 
@@ -603,51 +560,51 @@ namespace {
                 switch (message[1]) {
                     // 0xEFE is a player message
                     case 0x1443: // Player has achieved the title...
-                        return player_has_achieved_title;
+                        return settings.player_has_achieved_title;
                     case 0x42ad: // I'm using <skill name> on <target name>!
-                        return IsCurrentPlayerName(sender) ? targetting_messages_from_me : targetting_messages_from_others;
+                        return IsCurrentPlayerName(sender) ? settings.targetting_messages_from_me : settings.targetting_messages_from_others;
                     case 0x4650:
-                        return pvp_messages; // skill has been updated for pvp
+                        return settings.pvp_messages; // skill has been updated for pvp
                     case 0x4651:
-                        return pvp_messages; // a hero skill has been updated for pvp
+                        return settings.pvp_messages; // a hero skill has been updated for pvp
                     case 0x223F:
                         return false; // "x minutes of favor of the gods remaining" as a result of /favor command
                     case 0x223B:
-                        return hoh_messages; // a party won hall of heroes
+                        return settings.hoh_messages; // a party won hall of heroes
                     case 0x23E2:
-                        return player_has_achieved_title; // Player has achieved... The gods have blessed the world with their favor.
+                        return settings.player_has_achieved_title; // Player has achieved... The gods have blessed the world with their favor.
                     case 0x23E3:
-                        return favor; // The gods have blessed the world
+                        return settings.favor; // The gods have blessed the world
                     case 0x23E4:
-                        return favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
+                        return settings.favor; // 0xF8AA 0x95CD 0x2766 // the world no longer has the favor of the gods
                     case 0x23E5:
-                        return player_has_achieved_title; // Player has achieved... The gods have extended their blessings
+                        return settings.player_has_achieved_title; // Player has achieved... The gods have extended their blessings
                     case 0x23E6:
-                        return player_has_achieved_title; // Player has achieved... N more achievements will earn favor of the gods
+                        return settings.player_has_achieved_title; // Player has achieved... N more achievements will earn favor of the gods
                     case 0x29F1:
-                        return item_cannot_be_used; // Cannot use this item when no party members are dead.
+                        return settings.item_cannot_be_used; // Cannot use this item when no party members are dead.
                     case 0x3772:
                         return false; // I'm under the effect of x
                     case 0x3DCA:
-                        return item_cannot_be_used; // This item can only be used in a guild hall
+                        return settings.item_cannot_be_used; // This item can only be used in a guild hall
                     case 0x4684:
-                        return item_cannot_be_used; // There is already an ally from a summoning stone present in this instance.
+                        return settings.item_cannot_be_used; // There is already an ally from a summoning stone present in this instance.
                     case 0x4685:
-                        return item_cannot_be_used; // You have already used a summoning stone within the last 10 minutes.
+                        return settings.item_cannot_be_used; // You have already used a summoning stone within the last 10 minutes.
                 }
                 break;
             case 0x8103:
                 switch (message[1]) {
                     case 0x9CD:
-                        return item_cannot_be_used; // You must wait before using another tonic.
+                        return settings.item_cannot_be_used; // You must wait before using another tonic.
                 }
                 break;
             case 0xAD2:
-                return item_already_identified; // That item is already identified
+                return settings.item_already_identified; // That item is already identified
             case 0xAD7:
-                return salvage_messages; // You salvaged <number> <item name(s)> from the <item name>
+                return settings.salvage_messages; // You salvaged <number> <item name(s)> from the <item name>
             case 0xADD:
-                return item_cannot_be_used; // That item has no uses remaining
+                return settings.item_cannot_be_used; // That item has no uses remaining
             //default:
             //  for (size_t i = 0; pak->message[i] != 0; i++) printf(" 0x%X", pak->message[i]);
             //  printf("\n");
@@ -685,7 +642,7 @@ namespace {
             return true;
         }
 
-        if (!messagebycontent) {
+        if (!settings.messagebycontent) {
             return false;
         }
 
@@ -740,17 +697,17 @@ namespace {
     {
         switch (static_cast<GW::Chat::Channel>(channel)) {
             case GW::Chat::Channel::CHANNEL_ALL:
-                return filter_channel_local;
+                return settings.filter_channel_local;
             case GW::Chat::Channel::CHANNEL_GUILD:
-                return filter_channel_guild;
+                return settings.filter_channel_guild;
             case GW::Chat::Channel::CHANNEL_GROUP:
-                return filter_channel_team;
+                return settings.filter_channel_team;
             case GW::Chat::Channel::CHANNEL_TRADE:
-                return filter_channel_trade;
+                return settings.filter_channel_trade;
             case GW::Chat::Channel::CHANNEL_ALLIANCE:
-                return filter_channel_alliance;
+                return settings.filter_channel_alliance;
             case GW::Chat::Channel::CHANNEL_EMOTE:
-                return filter_channel_emotes;
+                return settings.filter_channel_emotes;
         }
         return false;
     }
@@ -758,7 +715,7 @@ namespace {
     // Should this channel be blocked altogether?
     bool ShouldBlockByChannel(uint32_t channel)
     {
-        if (!block_messages_from_inactive_channels) {
+        if (!settings.block_messages_from_inactive_channels) {
             return false;
         }
         // Don't log chat messages if the channel is turned off - avoids hitting the chat log limit
@@ -846,6 +803,7 @@ namespace {
 void ChatFilter::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     constexpr GW::UI::UIMessage message_ids[] = {
         GW::UI::UIMessage::kPrintChatMessage,
@@ -868,69 +826,23 @@ void ChatFilter::BlockMessageForMs(const wchar_t* message_contains, clock_t ms) 
     suppressed_messages.push_back({message_contains, TIMER_INIT() + ms});
 }
 
-void ChatFilter::LoadSettings(ToolboxIni* ini)
+void ChatFilter::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(self_drop_rare);
-    LOAD_BOOL(self_drop_common);
-    LOAD_BOOL(ally_drop_rare);
-    LOAD_BOOL(ally_drop_common);
-    LOAD_BOOL(ally_pickup_rare);
-    LOAD_BOOL(ally_pickup_common);
-    LOAD_BOOL(player_pickup_common);
-    LOAD_BOOL(player_pickup_rare);
-    LOAD_BOOL(ashes_dropped);
-    LOAD_BOOL(salvage_messages);
-
-    LOAD_BOOL(skill_points);
-    LOAD_BOOL(pvp_messages);
-    LOAD_BOOL(skill_points);
-    LOAD_BOOL(pvp_messages);
-    LOAD_BOOL(guild_announcement);
-    LOAD_BOOL(pvp_messages);
-    LOAD_BOOL(skill_points);
-    LOAD_BOOL(pvp_messages);
-    LOAD_BOOL(hoh_messages);
-    LOAD_BOOL(favor);
-    LOAD_BOOL(ninerings);
-    LOAD_BOOL(noonehearsyou);
-    LOAD_BOOL(away);
-    LOAD_BOOL(lunars);
-    LOAD_BOOL(messagebycontent);
-    LOAD_BOOL(you_have_been_playing_for);
-    LOAD_BOOL(player_has_achieved_title);
-    LOAD_BOOL(invalid_target);
-    LOAD_BOOL(opening_chest_messages);
-    LOAD_BOOL(inventory_is_full);
-    LOAD_BOOL(not_enough_energy);
-    LOAD_BOOL(targetting_messages_from_me);
-    LOAD_BOOL(targetting_messages_from_others);
-    LOAD_BOOL(item_cannot_be_used);
-    LOAD_BOOL(item_already_identified);
-    LOAD_BOOL(faction_gain);
-    LOAD_BOOL(challenge_mission_messages);
-
-    LOAD_BOOL(filter_channel_local);
-    LOAD_BOOL(filter_channel_guild);
-    LOAD_BOOL(filter_channel_team);
-    LOAD_BOOL(filter_channel_trade);
-    LOAD_BOOL(filter_channel_alliance);
-    LOAD_BOOL(filter_channel_emotes);
-
-    LOAD_BOOL(block_messages_from_inactive_channels);
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
     strcpy_s(bycontent_word_buf, "");
     strcpy_s(bycontent_regex_buf, "");
 
     std::ifstream file1;
-    file1.open(Resources::GetSettingFile(L"FilterByContent.txt"));
+    file1.open(Resources::GetSettingFileOrLegacy(L"FilterByContent.txt"));
     if (file1.is_open()) {
         file1.get(bycontent_word_buf, FILTER_BUF_SIZE, '\0');
         file1.close();
         ParseBuffer(bycontent_word_buf, bycontent_words);
     }
     std::ifstream file2;
-    file2.open(Resources::GetSettingFile(L"FilterByContent_regex.txt"));
+    file2.open(Resources::GetSettingFileOrLegacy(L"FilterByContent_regex.txt"));
     if (file2.is_open()) {
         file2.get(bycontent_regex_buf, FILTER_BUF_SIZE, '\0');
         file2.close();
@@ -939,7 +851,7 @@ void ChatFilter::LoadSettings(ToolboxIni* ini)
 
 #ifdef EXTENDED_IGNORE_LIST
     std::ifstream byauthor_file;
-    byauthor_file.open(Resources::GetSettingFile(L"FilterByAuthor.txt"));
+    byauthor_file.open(Resources::GetSettingFileOrLegacy(L"FilterByAuthor.txt"));
     if (byauthor_file.is_open()) {
         byauthor_file.get(byauthor_buf, FILTER_BUF_SIZE, '\0');
         byauthor_file.close();
@@ -948,56 +860,10 @@ void ChatFilter::LoadSettings(ToolboxIni* ini)
 #endif
 }
 
-void ChatFilter::SaveSettings(ToolboxIni* ini)
+void ChatFilter::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(self_drop_rare);
-    SAVE_BOOL(self_drop_common);
-    SAVE_BOOL(ally_drop_rare);
-    SAVE_BOOL(ally_drop_common);
-    SAVE_BOOL(ally_pickup_rare);
-    SAVE_BOOL(ally_pickup_common);
-    SAVE_BOOL(player_pickup_rare);
-    SAVE_BOOL(player_pickup_common);
-    SAVE_BOOL(ashes_dropped);
-    SAVE_BOOL(salvage_messages);
-
-    SAVE_BOOL(skill_points);
-    SAVE_BOOL(pvp_messages);
-    SAVE_BOOL(skill_points);
-    SAVE_BOOL(pvp_messages);
-    SAVE_BOOL(guild_announcement);
-    SAVE_BOOL(pvp_messages);
-    SAVE_BOOL(skill_points);
-    SAVE_BOOL(pvp_messages);
-    SAVE_BOOL(hoh_messages);
-    SAVE_BOOL(favor);
-    SAVE_BOOL(ninerings);
-    SAVE_BOOL(noonehearsyou);
-    SAVE_BOOL(away);
-    SAVE_BOOL(lunars);
-    SAVE_BOOL(messagebycontent);
-    SAVE_BOOL(you_have_been_playing_for);
-    SAVE_BOOL(player_has_achieved_title);
-    SAVE_BOOL(invalid_target);
-    SAVE_BOOL(opening_chest_messages);
-    SAVE_BOOL(inventory_is_full);
-    SAVE_BOOL(not_enough_energy);
-    SAVE_BOOL(targetting_messages_from_me);
-    SAVE_BOOL(targetting_messages_from_others);
-    SAVE_BOOL(item_cannot_be_used);
-    SAVE_BOOL(item_already_identified);
-    SAVE_BOOL(faction_gain);
-    SAVE_BOOL(challenge_mission_messages);
-
-    SAVE_BOOL(filter_channel_local);
-    SAVE_BOOL(filter_channel_guild);
-    SAVE_BOOL(filter_channel_team);
-    SAVE_BOOL(filter_channel_trade);
-    SAVE_BOOL(filter_channel_alliance);
-    SAVE_BOOL(filter_channel_emotes);
-
-    SAVE_BOOL(block_messages_from_inactive_channels);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
     if (timer_parse_filters) {
         timer_parse_filters = 0;
@@ -1049,43 +915,43 @@ void ChatFilter::DrawSettingsInternal()
     ImGui::TextDisabled("('Rare' stands for Gold item, Ecto, Obby shard or Lockpick)");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("A rare item drops for you", &self_drop_rare);
+    ImGui::Checkbox("A rare item drops for you", &settings.self_drop_rare);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("A common item drops for you", &self_drop_common);
+    ImGui::Checkbox("A common item drops for you", &settings.self_drop_common);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("A rare item drops for an ally", &ally_drop_rare);
+    ImGui::Checkbox("A rare item drops for an ally", &settings.ally_drop_rare);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("A common item drops for an ally", &ally_drop_common);
+    ImGui::Checkbox("A common item drops for an ally", &settings.ally_drop_common);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("An ally picks up a rare item", &ally_pickup_rare);
+    ImGui::Checkbox("An ally picks up a rare item", &settings.ally_pickup_rare);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("An ally picks up a common item", &ally_pickup_common);
+    ImGui::Checkbox("An ally picks up a common item", &settings.ally_pickup_common);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("You pick up a rare item", &player_pickup_rare);
+    ImGui::Checkbox("You pick up a rare item", &settings.player_pickup_rare);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("You pick up a common item", &player_pickup_common);
+    ImGui::Checkbox("You pick up a common item", &settings.player_pickup_common);
 
     ImGui::Separator();
     ImGui::Text("Announcements");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Guild Announcement", &guild_announcement);
+    ImGui::Checkbox("Guild Announcement", &settings.guild_announcement);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hall of Heroes winners", &hoh_messages);
+    ImGui::Checkbox("Hall of Heroes winners", &settings.hoh_messages);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Favor of the Gods announcements", &favor);
+    ImGui::Checkbox("Favor of the Gods announcements", &settings.favor);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'You have been playing for...'", &you_have_been_playing_for);
+    ImGui::Checkbox("'You have been playing for...'", &settings.you_have_been_playing_for);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'Player x has achieved title...'", &player_has_achieved_title);
+    ImGui::Checkbox("'Player x has achieved title...'", &settings.player_has_achieved_title);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'You gain x faction'", &faction_gain);
+    ImGui::Checkbox("'You gain x faction'", &settings.faction_gain);
 
     ImGui::Separator();
     ImGui::Text("Warnings");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Unable to use item", &item_cannot_be_used, "'Item can only/cannot be used in towns or outposts.'\n\
+    ImGui::CheckboxWithHelp("Unable to use item", &settings.item_cannot_be_used, "'Item can only/cannot be used in towns or outposts.'\n\
 'This item cannot be used here.'\n\
 'Cannot use this item when no party members are dead.'\n\
 'There is already an ally from a summoning stone present in this instance.'\n\
@@ -1094,69 +960,69 @@ void ChatFilter::DrawSettingsInternal()
 'You must wait before using another tonic.'\n\
 'This item can only be used in a guild hall'");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Invalid target", &invalid_target, "'Invalid spell/attack target.'\n\
+    ImGui::CheckboxWithHelp("Invalid target", &settings.invalid_target, "'Invalid spell/attack target.'\n\
 'Spell failed. Spirits are not affected by this spell.'\n\
 'Your view of the target is obstructed.'\n\
 'That skill requires a different weapon type.'\n\
 'Target is out of range.'\n\
 'Target is immune to bleeding/disease/poison (no flesh.)'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'Inventory is full'", &inventory_is_full);
+    ImGui::Checkbox("'Inventory is full'", &settings.inventory_is_full);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Opening chests", &opening_chest_messages, "'Chest is being used'\n\
+    ImGui::CheckboxWithHelp("Opening chests", &settings.opening_chest_messages, "'Chest is being used'\n\
 'The chest is locked. You must use a lockpick to open it.'\n\
 'The chest is locked. You must have the correct key or a lockpick.'\n\
 'The chest is empty.'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Item already identified", &item_already_identified);
+    ImGui::Checkbox("Item already identified", &settings.item_already_identified);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Not enough Adrenaline/Energy", &not_enough_energy);
+    ImGui::Checkbox("Not enough Adrenaline/Energy", &settings.not_enough_energy);
 
     ImGui::Separator();
     ImGui::Text("Others");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Earning skill points", &skill_points);
+    ImGui::Checkbox("Earning skill points", &settings.skill_points);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("PvP messages", &pvp_messages, "Such as 'A skill was updated for pvp!'");
+    ImGui::CheckboxWithHelp("PvP messages", &settings.pvp_messages, "Such as 'A skill was updated for pvp!'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("9 Rings messages", &ninerings);
+    ImGui::Checkbox("9 Rings messages", &settings.ninerings);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Lunar fortunes messages", &lunars);
+    ImGui::Checkbox("Lunar fortunes messages", &settings.lunars);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Challenge mission messages", &challenge_mission_messages, "Such as 'Hold-out bonus: +2 points'");
+    ImGui::CheckboxWithHelp("Challenge mission messages", &settings.challenge_mission_messages, "Such as 'Hold-out bonus: +2 points'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'No one hears you...'", &noonehearsyou);
+    ImGui::Checkbox("'No one hears you...'", &settings.noonehearsyou);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("'Player x might not reply...", &away, "...because his / her status is set to away'");
+    ImGui::CheckboxWithHelp("'Player x might not reply...", &settings.away, "...because his / her status is set to away'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Salvaging messages", &salvage_messages);
+    ImGui::Checkbox("Salvaging messages", &settings.salvage_messages);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Ashes dropped messages", &ashes_dropped);
+    ImGui::Checkbox("Ashes dropped messages", &settings.ashes_dropped);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Targetting messages from me", &targetting_messages_from_me, targetting_messages_help);
+    ImGui::CheckboxWithHelp("Targetting messages from me", &settings.targetting_messages_from_me, targetting_messages_help);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Targetting messages from others", &targetting_messages_from_others, targetting_messages_help);
+    ImGui::CheckboxWithHelp("Targetting messages from others", &settings.targetting_messages_from_others, targetting_messages_help);
 
     ImGui::Separator();
-    ImGui::CheckboxWithHelp("Block messages from inactive chat channels", &block_messages_from_inactive_channels, "Chat history in Guild Wars isn't unlimited.\n\nEnable this to prevent the game from logging messages in channels that you have turned off.");
-    if (block_messages_from_inactive_channels) {
+    ImGui::CheckboxWithHelp("Block messages from inactive chat channels", &settings.block_messages_from_inactive_channels, "Chat history in Guild Wars isn't unlimited.\n\nEnable this to prevent the game from logging messages in channels that you have turned off.");
+    if (settings.block_messages_from_inactive_channels) {
         ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "Messages from channels you have turned off in chat are not being logged in-game");
     }
-    ImGui::Checkbox("Hide any messages containing:", &messagebycontent);
+    ImGui::Checkbox("Hide any messages containing:", &settings.messagebycontent);
     ImGui::Indent();
     ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
-    ImGui::Checkbox("Local", &filter_channel_local);
+    ImGui::Checkbox("Local", &settings.filter_channel_local);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Guild", &filter_channel_guild);
+    ImGui::Checkbox("Guild", &settings.filter_channel_guild);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Team", &filter_channel_team);
+    ImGui::Checkbox("Team", &settings.filter_channel_team);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Trade", &filter_channel_trade);
+    ImGui::Checkbox("Trade", &settings.filter_channel_trade);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Alliance", &filter_channel_alliance);
+    ImGui::Checkbox("Alliance", &settings.filter_channel_alliance);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Emotes", &filter_channel_emotes);
+    ImGui::Checkbox("Emotes", &settings.filter_channel_emotes);
 
     if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf,
                                   FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {

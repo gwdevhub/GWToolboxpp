@@ -778,6 +778,16 @@ namespace TextUtils {
         return TimeToString(filetime_to_timet(utc_timestamp), include_seconds, milliseconds);
     }
 
+    std::string FilenameTimestamp()
+    {
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%04d-%02d-%02d_%02d-%02d-%02d",
+                 st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+        return buf;
+    }
+
     std::vector<std::string> Split(const std::string& in, const std::string& token)
     {
         std::vector<std::string> result;

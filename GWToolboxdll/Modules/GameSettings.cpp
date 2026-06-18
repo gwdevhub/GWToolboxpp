@@ -88,29 +88,31 @@ namespace {
         }
     }
 
-    void SaveChannelColor(ToolboxIni* ini, const char* section, const char* chanstr, const GW::Chat::Channel chan)
+    void SaveChannelColor(SettingsDoc& doc, const char* section, const char* chanstr, const GW::Chat::Channel chan)
     {
-        char key[128];
         GW::Chat::Color sender, message;
         GetChannelColors(chan, &sender, &message);
         // @Cleanup: We relie on the fact the Color and GW::Chat::Color are the same format
-        snprintf(key, 128, "%s_color_sender", chanstr);
-        Colors::Save(ini, section, key, sender);
-        snprintf(key, 128, "%s_color_message", chanstr);
-        Colors::Save(ini, section, key, message);
+        doc.Set(section, std::format("{}_color_sender", chanstr), Colors::SettingColor(sender));
+        doc.Set(section, std::format("{}_color_message", chanstr), Colors::SettingColor(message));
     }
 
-    void LoadChannelColor(const ToolboxIni* ini, const char* section, const char* chanstr, const GW::Chat::Channel chan)
+    void LoadChannelColor(const SettingsDoc& doc, const ToolboxIni* legacy, const char* section, const char* chanstr, const GW::Chat::Channel chan)
     {
-        char key[128];
         GW::Chat::Color sender, message;
         GetDefaultColors(chan, &sender, &message);
-        snprintf(key, 128, "%s_color_sender", chanstr);
-        sender = Colors::Load(ini, section, key, sender);
-        SetSenderColor(chan, sender);
-        snprintf(key, 128, "%s_color_message", chanstr);
-        message = Colors::Load(ini, section, key, message);
-        SetMessageColor(chan, message);
+        auto key = std::format("{}_color_sender", chanstr);
+        Colors::SettingColor color = sender;
+        if (!doc.Get(section, key, color) && legacy) {
+            color.value = Colors::Load(legacy, section, key.c_str(), color.value);
+        }
+        SetSenderColor(chan, color.value);
+        key = std::format("{}_color_message", chanstr);
+        color = message;
+        if (!doc.Get(section, key, color) && legacy) {
+            color.value = Colors::Load(legacy, section, key.c_str(), color.value);
+        }
+        SetMessageColor(chan, color.value);
     }
 
     // For some reason no matter whether this call is wrapped in Draw or Update or main thread, it passes garbage to window title on first load.
@@ -123,121 +125,25 @@ namespace {
     clock_t instance_entered_at = 0;
 
 
-    bool disable_skill_descriptions_in_outpost = false;
-    bool disable_skill_descriptions_in_explorable = false;
-
-    bool block_faction_gain = false;
-    bool block_experience_gain = false;
-    bool block_zero_experience_gain = true;
-
-    bool block_zero_damage_or_energy = false;
-
-    bool block_receiving_damage = false;
-    bool block_dealing_damage = false;
-    bool block_giving_heals = false;
-    bool block_receiving_heals = false;
-
-    bool lazy_chest_looting = false;
-    bool show_amount_of_lockpicks_under_locked_chest_nametag = false;
-
-    bool check_and_prompt_if_mission_already_completed = true; // When entering a mission you've completed, check whether you should be doing it in HM/NM instead
-
-    uint32_t last_online_status = static_cast<uint32_t>(GW::FriendStatus::Online);
-    bool remember_online_status = true;
+    GameSettings::Settings settings;
 
     bool targeting_nearest_item = false;
 
-    bool notify_when_friends_online = true;
-    bool notify_when_friends_offline = false;
-    bool notify_when_friends_join_outpost = true;
-    bool notify_when_friends_leave_outpost = false;
-
-    bool notify_when_players_join_outpost = false;
-    bool notify_when_players_leave_outpost = false;
-
-    bool notify_when_party_member_leaves = false;
-    bool notify_when_party_member_joins = false;
-
-    bool block_enter_area_message = false;
-
     std::unique_ptr<EncString> pending_wiki_search_term;
 
-    bool tick_is_toggle = false;
-
-    bool limit_signets_of_capture = true;
     uint32_t actual_signets_of_capture_amount = 1;
-
-    bool shorthand_item_ping = true;
     // bool select_with_chat_doubleclick = false;
-    bool move_item_on_ctrl_click = false;
-    bool move_item_to_current_storage_pane = true;
-    bool move_materials_to_current_storage_pane = false;
-    bool drop_ua_on_cast = false;
 
-    bool focus_window_on_launch = true;
-    bool flash_window_on_zoning = false;
-    bool focus_window_on_zoning = false;
-    bool flash_window_on_cinematic = true;
-    bool flash_window_on_trade = true;
-    bool focus_window_on_trade = false;
-    bool flash_window_on_name_ping = true;
-    bool set_window_title_as_charname = true;
-
-    bool auto_return_on_defeat = false;
-    bool auto_accept_invites = false;
-    bool auto_accept_join_requests = false;
-
-    bool auto_set_away = false;
-    int auto_set_away_delay = 10;
-    bool auto_set_online = false;
     clock_t activity_timer = 0;
 
-    bool auto_skip_cinematic = false;
-    bool hide_known_skills = false;
-    bool hide_nonelites_on_capture = false;
-    bool remove_min_skill_warmup_duration = false;
-
-    bool faction_warn_percent = true;
-    int faction_warn_percent_amount = 75;
-
-    bool disable_gold_selling_confirmation = false;
-    bool collectors_edition_emotes = true;
-    bool block_transmogrify_effect = false;
-    bool block_sugar_rush_effect = false;
-    bool block_snowman_summoner = false;
-    bool block_party_poppers = false;
-    bool block_fireworks = false;
-    bool block_bottle_rockets = false;
-    bool block_sparkly_drops_effect = false;
     bool skip_characters_from_another_campaign_prompt = true;
-    bool auto_age2_on_age = true;
-    bool auto_age_on_vanquish = false;
-    bool auto_screenshot_on_boss_kill = false;
-    bool auto_screenshot_on_vanquish = false;
-    bool auto_screenshot_on_mission_complete = false;
-    bool auto_screenshot_on_dungeon_complete = false;
-    bool auto_screenshot_on_title_maxed = false;
-    bool auto_open_locked_chest = false;
-    bool auto_open_locked_chest_with_key = false;
-    bool automatically_flag_pet_to_fight_called_target = true;
     bool remove_window_border_in_windowed_mode = false;
-    bool prevent_weapon_spell_animation_on_player = false;
-    bool block_dervish_avatar_form = false;
-    bool block_vanquish_complete_popup = false;
 
     bool was_leading = true;
-    bool hide_dungeon_chest_popup = false;
-    bool skip_entering_name_for_faction_donate = false;
-    bool stop_screen_shake = false;
-    bool disable_camera_smoothing = false;
-    bool disable_camera_smoothing_with_controller = false;
 
     bool check_message_on_party_change = true;
 
     bool is_prompting_hard_mode_mission = false;
-
-    bool useful_level_progress_label = true;
-    bool hide_store_page_on_char_select = false;
 
     std::map<GW::Constants::TitleID, uint32_t> last_recorded_tiers;
 
@@ -249,12 +155,12 @@ namespace {
     {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kFrameMessage_0x47) {
-            if (hide_known_skills && (static_cast<uint32_t*>(wParam)[1] & 0x3) != 0) {
+            if (settings.hide_known_skills && (static_cast<uint32_t*>(wParam)[1] & 0x3) != 0) {
                 GW::Hook::LeaveHook();
                 return; // Only show unlearned skills from tomes and skill trainers
             }
 
-            if (hide_nonelites_on_capture) {
+            if (settings.hide_nonelites_on_capture) {
                 const auto parent = GW::UI::GetFrameByLabel(L"DlgSkillCapture");
                 if (parent && GW::UI::BelongsToFrame(parent, GW::UI::GetFrameById(message->frame_id))) {
                     const auto skill = GW::SkillbarMgr::GetSkillConstantData(*static_cast<GW::Constants::SkillID*>(wParam));
@@ -269,28 +175,19 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    Color nametag_color_npc = static_cast<Color>(DEFAULT_NAMETAG_COLOR::NPC);
-    Color nametag_color_player_self = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_SELF);
-    Color nametag_color_player_other = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_OTHER);
-    Color nametag_color_player_in_party = static_cast<Color>(DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY);
-    Color nametag_color_gadget = static_cast<Color>(DEFAULT_NAMETAG_COLOR::GADGET);
-    Color nametag_color_enemy = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ENEMY);
-    Color nametag_color_item = static_cast<Color>(DEFAULT_NAMETAG_COLOR::ITEM);
-
     struct NametagColor {
-        const char* ini_key;
         const char* label;
         DEFAULT_NAMETAG_COLOR default_val;
         Color* ptr;
     };
     NametagColor nametag_color_settings[] = {
-        {"nametag_color_npc", "NPC", DEFAULT_NAMETAG_COLOR::NPC, &nametag_color_npc},
-        {"nametag_color_player_self", "Myself", DEFAULT_NAMETAG_COLOR::PLAYER_SELF, &nametag_color_player_self},
-        {"nametag_color_player_other", "Other Player", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &nametag_color_player_other},
-        {"nametag_color_player_in_party", "Other Player (In Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY, &nametag_color_player_in_party},
-        {"nametag_color_gadget", "Gadget", DEFAULT_NAMETAG_COLOR::GADGET, &nametag_color_gadget},
-        {"nametag_color_enemy", "Enemy", DEFAULT_NAMETAG_COLOR::ENEMY, &nametag_color_enemy},
-        {"nametag_color_item", "Item", DEFAULT_NAMETAG_COLOR::ITEM, &nametag_color_item},
+        {"NPC", DEFAULT_NAMETAG_COLOR::NPC, &settings.nametag_color_npc.value},
+        {"Myself", DEFAULT_NAMETAG_COLOR::PLAYER_SELF, &settings.nametag_color_player_self.value},
+        {"Other Player", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_player_other.value},
+        {"Other Player (In Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY, &settings.nametag_color_player_in_party.value},
+        {"Gadget", DEFAULT_NAMETAG_COLOR::GADGET, &settings.nametag_color_gadget.value},
+        {"Enemy", DEFAULT_NAMETAG_COLOR::ENEMY, &settings.nametag_color_enemy.value},
+        {"Item", DEFAULT_NAMETAG_COLOR::ITEM, &settings.nametag_color_item.value},
     };
 
     struct ChannelColorDef {
@@ -300,91 +197,6 @@ namespace {
     const ChannelColorDef channel_color_settings[] = {
         {"local", GW::Chat::Channel::CHANNEL_ALL},         {"guild", GW::Chat::Channel::CHANNEL_GUILD},      {"team", GW::Chat::Channel::CHANNEL_GROUP},   {"trade", GW::Chat::Channel::CHANNEL_TRADE},
         {"alliance", GW::Chat::Channel::CHANNEL_ALLIANCE}, {"whispers", GW::Chat::Channel::CHANNEL_WHISPER}, {"emotes", GW::Chat::Channel::CHANNEL_EMOTE}, {"other", GW::Chat::Channel::CHANNEL_GLOBAL},
-    };
-
-    struct BoolSetting {
-        const char* key;
-        bool* ptr;
-        bool def;
-    };
-    BoolSetting bool_settings[] = {
-        {"disable_camera_smoothing", &disable_camera_smoothing, false},
-        {"disable_camera_smoothing_with_controller", &disable_camera_smoothing_with_controller, false},
-        {"tick_is_toggle", &tick_is_toggle, false},
-        {"shorthand_item_ping", &shorthand_item_ping, true},
-        {"move_item_on_ctrl_click", &move_item_on_ctrl_click, false},
-        {"move_item_to_current_storage_pane", &move_item_to_current_storage_pane, true},
-        {"move_materials_to_current_storage_pane", &move_materials_to_current_storage_pane, false},
-        {"flash_window_on_zoning", &flash_window_on_zoning, false},
-        {"flash_window_on_cinematic", &flash_window_on_cinematic, true},
-        {"focus_window_on_launch", &focus_window_on_launch, true},
-        {"focus_window_on_zoning", &focus_window_on_zoning, false},
-        {"flash_window_on_trade", &flash_window_on_trade, true},
-        {"focus_window_on_trade", &focus_window_on_trade, false},
-        {"flash_window_on_name_ping", &flash_window_on_name_ping, true},
-        {"set_window_title_as_charname", &set_window_title_as_charname, true},
-        {"auto_set_away", &auto_set_away, false},
-        {"auto_set_online", &auto_set_online, false},
-        {"auto_return_on_defeat", &auto_return_on_defeat, false},
-        {"remove_min_skill_warmup_duration", &remove_min_skill_warmup_duration, false},
-        {"hide_known_skills", &hide_known_skills, false},
-        {"hide_nonelites_on_capture", &hide_nonelites_on_capture, false},
-        {"auto_skip_cinematic", &auto_skip_cinematic, false},
-        {"faction_warn_percent", &faction_warn_percent, true},
-        {"stop_screen_shake", &stop_screen_shake, false},
-        {"disable_gold_selling_confirmation", &disable_gold_selling_confirmation, false},
-        {"collectors_edition_emotes", &collectors_edition_emotes, true},
-        {"notify_when_friends_online", &notify_when_friends_online, true},
-        {"notify_when_friends_offline", &notify_when_friends_offline, false},
-        {"notify_when_friends_join_outpost", &notify_when_friends_join_outpost, true},
-        {"notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost, false},
-        {"notify_when_party_member_leaves", &notify_when_party_member_leaves, false},
-        {"notify_when_party_member_joins", &notify_when_party_member_joins, false},
-        {"notify_when_players_join_outpost", &notify_when_players_join_outpost, false},
-        {"notify_when_players_leave_outpost", &notify_when_players_leave_outpost, false},
-        {"auto_age_on_vanquish", &auto_age_on_vanquish, false},
-        {"auto_screenshot_on_boss_kill", &auto_screenshot_on_boss_kill, false},
-        {"auto_screenshot_on_vanquish", &auto_screenshot_on_vanquish, false},
-        {"auto_screenshot_on_mission_complete", &auto_screenshot_on_mission_complete, false},
-        {"auto_screenshot_on_dungeon_complete", &auto_screenshot_on_dungeon_complete, false},
-        {"auto_screenshot_on_title_maxed", &auto_screenshot_on_title_maxed, false},
-        {"hide_dungeon_chest_popup", &hide_dungeon_chest_popup, false},
-        {"auto_age2_on_age", &auto_age2_on_age, true},
-        {"auto_accept_invites", &auto_accept_invites, false},
-        {"auto_accept_join_requests", &auto_accept_join_requests, false},
-        {"skip_entering_name_for_faction_donate", &skip_entering_name_for_faction_donate, false},
-        {"drop_ua_on_cast", &drop_ua_on_cast, false},
-        {"lazy_chest_looting", &lazy_chest_looting, false},
-        {"check_and_prompt_if_mission_already_completed", &check_and_prompt_if_mission_already_completed, true},
-        {"block_transmogrify_effect", &block_transmogrify_effect, false},
-        {"block_sugar_rush_effect", &block_sugar_rush_effect, false},
-        {"block_snowman_summoner", &block_snowman_summoner, false},
-        {"block_fireworks", &block_fireworks, false},
-        {"block_party_poppers", &block_party_poppers, false},
-        {"block_bottle_rockets", &block_bottle_rockets, false},
-        {"block_sparkly_drops_effect", &block_sparkly_drops_effect, false},
-        {"limit_signets_of_capture", &limit_signets_of_capture, true},
-        {"auto_open_locked_chest", &auto_open_locked_chest, false},
-        {"auto_open_locked_chest_with_key", &auto_open_locked_chest_with_key, false},
-        {"block_faction_gain", &block_faction_gain, false},
-        {"block_experience_gain", &block_experience_gain, false},
-        {"block_zero_experience_gain", &block_zero_experience_gain, true},
-        {"block_zero_damage_or_energy", &block_zero_damage_or_energy, false},
-        {"block_receiving_damage", &block_receiving_damage, false},
-        {"block_dealing_damage", &block_dealing_damage, false},
-        {"block_giving_heals", &block_giving_heals, false},
-        {"block_receiving_heals", &block_receiving_heals, false},
-        {"disable_skill_descriptions_in_outpost", &disable_skill_descriptions_in_outpost, false},
-        {"disable_skill_descriptions_in_explorable", &disable_skill_descriptions_in_explorable, false},
-        {"prevent_weapon_spell_animation_on_player", &prevent_weapon_spell_animation_on_player, false},
-        {"block_dervish_avatar_form", &block_dervish_avatar_form, false},
-        {"block_vanquish_complete_popup", &block_vanquish_complete_popup, false},
-        {"useful_level_progress_label", &useful_level_progress_label, true},
-        {"hide_store_page_on_char_select", &hide_store_page_on_char_select, false},
-        {"show_amount_of_lockpicks_under_locked_chest_nametag", &show_amount_of_lockpicks_under_locked_chest_nametag, false},
-        {"block_enter_area_message", &block_enter_area_message, false},
-        {"automatically_flag_pet_to_fight_called_target", &automatically_flag_pet_to_fight_called_target, true},
-        {"remember_online_status", &remember_online_status, true},
     };
 
     GW::HookEntry ChatCmd_HookEntry;
@@ -560,7 +372,7 @@ namespace {
         GW::Hook::EnterHook();
         constexpr auto frame_set_text_ui_message = GW::UI::UIMessage::kFrameMessage_0x52;
         const auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameById(param->frame_id), 0xb);
-        bool block_description = disable_skill_descriptions_in_outpost && IsOutpost() || disable_skill_descriptions_in_explorable && IsExplorable();
+        bool block_description = settings.disable_skill_descriptions_in_outpost && IsOutpost() || settings.disable_skill_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_skill_descriptions) >= 0;
         if (block_description) {
             GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)L"\x101");
@@ -629,7 +441,7 @@ namespace {
                 }
             } break;
             case GW::UI::UIMessage::kCalledTargetChange: {
-                if (automatically_flag_pet_to_fight_called_target && party_target_info->source == GW::PlayerMgr::GetPlayerNumber()) {
+                if (settings.automatically_flag_pet_to_fight_called_target && party_target_info->source == GW::PlayerMgr::GetPlayerNumber()) {
                     if (const auto w = GW::GetWorldContext()) {
                         for (auto& pet : w->pets) {
                             GW::PartyMgr::SetPetBehavior(pet.owner_agent_id, GW::HeroBehavior::Fight);
@@ -827,12 +639,12 @@ namespace {
         }
         modifier_key_skill_descriptions_key_state = GetKeyState(modifier_key_skill_descriptions);
         if (IsExplorable()) {
-            if (!disable_skill_descriptions_in_explorable) {
+            if (!settings.disable_skill_descriptions_in_explorable) {
                 return;
             }
         }
         else if (IsOutpost()) {
-            if (!disable_skill_descriptions_in_outpost) {
+            if (!settings.disable_skill_descriptions_in_outpost) {
                 return;
             }
         }
@@ -855,7 +667,7 @@ namespace {
     void OverrideDefaultOnlineStatus()
     {
         GW::GameThread::Enqueue([] {
-            GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), last_online_status);
+            GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), settings.last_online_status);
         });
     }
 
@@ -864,7 +676,7 @@ namespace {
     {
         switch (static_cast<GW::UI::ControlAction>(key)) {
             case GW::UI::ControlAction_TargetNearestItem:
-                if (lazy_chest_looting) {
+                if (settings.lazy_chest_looting) {
                     targeting_nearest_item = true;
                     GW::Agents::ChangeTarget(0u); // To ensure OnChangeTarget is triggered
                 }
@@ -974,10 +786,10 @@ namespace {
         if (was_online == is_online) {
             return;
         }
-        if (is_online && notify_when_friends_online) {
+        if (is_online && settings.notify_when_friends_online) {
             WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) has just logged in.", new_state->charname, new_state->alias).c_str());
         }
-        else if (notify_when_friends_offline) {
+        else if (settings.notify_when_friends_offline) {
             WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"{} ({}) has just logged out.", old_state->charname, old_state->alias).c_str());
         }
     }
@@ -989,13 +801,13 @@ namespace {
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Zoning in a new map", &flash_window_on_zoning);
+        ImGui::Checkbox("Zoning in a new map", &settings.flash_window_on_zoning);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Cinematic start/end", &flash_window_on_cinematic);
+        ImGui::Checkbox("Cinematic start/end", &settings.flash_window_on_cinematic);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &flash_window_on_trade);
+        ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &settings.flash_window_on_trade);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("A party member pings your name", &flash_window_on_name_ping);
+        ImGui::Checkbox("A party member pings your name", &settings.flash_window_on_name_ping);
         ImGui::Unindent();
 
         ImGui::Text("Show Guild Wars in foreground when:");
@@ -1007,37 +819,37 @@ namespace {
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &focus_window_on_launch);
+        ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &settings.focus_window_on_launch);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &focus_window_on_zoning);
+        ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &settings.focus_window_on_zoning);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &focus_window_on_trade);
+        ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &settings.focus_window_on_trade);
         ImGui::Unindent();
 
         ImGui::Text("Show a chat message when a friend:");
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Logs in", &notify_when_friends_online);
+        ImGui::Checkbox("Logs in", &settings.notify_when_friends_online);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &notify_when_friends_join_outpost);
+        ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &settings.notify_when_friends_join_outpost);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Logs out", &notify_when_friends_offline);
+        ImGui::Checkbox("Logs out", &settings.notify_when_friends_offline);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &notify_when_friends_leave_outpost);
+        ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &settings.notify_when_friends_leave_outpost);
         ImGui::Unindent();
 
         ImGui::Text("Show a chat message when a player:");
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your party", &notify_when_party_member_joins);
+        ImGui::Checkbox("Joins your party", &settings.notify_when_party_member_joins);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &notify_when_players_join_outpost);
+        ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &settings.notify_when_players_join_outpost);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your party", &notify_when_party_member_leaves);
+        ImGui::Checkbox("Leaves your party", &settings.notify_when_party_member_leaves);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &notify_when_players_leave_outpost);
+        ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &settings.notify_when_players_leave_outpost);
         ImGui::Unindent();
     }
 
@@ -1054,24 +866,24 @@ namespace {
     bool ShouldBlockEffect(uint32_t effect_id)
     {
         if (effect_id >= 1292 && effect_id <= 1303) {
-            return block_fireworks;
+            return settings.block_fireworks;
         }
         if (effect_id >= 1685 && effect_id <= 1687) {
-            return block_fireworks;
+            return settings.block_fireworks;
         }
         switch (effect_id) {
             case 905:
-                return block_snowman_summoner;
+                return settings.block_snowman_summoner;
             case 1688:
-                return block_bottle_rockets;
+                return settings.block_bottle_rockets;
             case 1689:
-                return block_party_poppers;
+                return settings.block_party_poppers;
             case 758:  // Chocolate bunny
             case 2063: // e.g. Fruitcake, sugary blue drink
             case 1176: // e.g. Delicious cake
-                return block_sugar_rush_effect;
+                return settings.block_sugar_rush_effect;
             case 1491:
-                return block_transmogrify_effect;
+                return settings.block_transmogrify_effect;
         }
         return false;
     }
@@ -1093,7 +905,7 @@ namespace {
     // We've just asked the game to enter mission; check (and prompt) if we should really be in NM or HM instead
     void CheckPromptBeforeEnterMission(GW::HookStatus* status)
     {
-        if (!check_and_prompt_if_mission_already_completed) return;
+        if (!settings.check_and_prompt_if_mission_already_completed) return;
         if (mission_prompted || GW::PartyMgr::GetPartyPlayerCount() > 1) return;
         const auto map_id = GW::Map::GetMapID();
         const auto nm_complete = CompletionWindow::IsAreaComplete(map_id, NormalMode);
@@ -1143,26 +955,34 @@ namespace {
                 switch (packet->h0004) {
                     case 0: { // Healing or damage
                         const auto amount = packet->amount;
-                        status->blocked |= (amount == 0 && block_zero_damage_or_energy) || (amount > 0 && packet->agent_id == my_id && block_receiving_heals) || (amount > 0 && packet->agent_id != my_id && block_giving_heals) ||
-                                           (amount < 0 && packet->agent_id == my_id && block_receiving_damage) || (amount < 0 && packet->agent_id != my_id && block_dealing_damage);
+                        status->blocked |= (amount == 0 && settings.block_zero_damage_or_energy) || (amount > 0 && packet->agent_id == my_id && settings.block_receiving_heals) || (amount > 0 && packet->agent_id != my_id && settings.block_giving_heals) ||
+                                           (amount < 0 && packet->agent_id == my_id && settings.block_receiving_damage) || (amount < 0 && packet->agent_id != my_id && settings.block_dealing_damage);
                     } break;
                     case 1: { // Energy gain/loss
                         const auto amount = packet->amount;
-                        status->blocked |= (amount == 0 && block_zero_damage_or_energy);
+                        status->blocked |= (amount == 0 && settings.block_zero_damage_or_energy);
                     } break;
                     case 2: { // XP gain/faction gain
                         if (!packet->encoded_str) break;
                         switch (*packet->encoded_str) {
                             case 0x057e: { // +N Faction
                                 const auto amount = GW::UI::EncStrToUInt32(&packet->encoded_str[2]);
-                                status->blocked |= block_faction_gain || (amount == 0 && block_zero_experience_gain);
+                                status->blocked |= settings.block_faction_gain || (amount == 0 && settings.block_zero_experience_gain);
                             } break;
                             case 0x057d: { // +N XP
                                 const auto amount = GW::UI::EncStrToUInt32(&packet->encoded_str[2]);
-                                status->blocked |= block_experience_gain || (amount == 0 && block_zero_experience_gain);
+                                status->blocked |= settings.block_experience_gain || (amount == 0 && settings.block_zero_experience_gain);
                             } break;
                         }
                     } break;
+                }
+                if (settings.combine_overhead_numbers && !status->blocked) {
+                    // If a damage floater is already created, add together the amounts and destroy the old one, instead of creating a new floater for each hit
+                    if (const auto existing = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 0x1000000 + packet->agent_id)) {
+                        const auto context = (int*)GW::UI::GetFrameContext(existing);
+                        packet->amount += context[0x10];
+                        GW::UI::DestroyUIComponent(existing);
+                    }
                 }
             } break;
             case GW::UI::UIMessage::kMapLoaded: {
@@ -1230,7 +1050,7 @@ namespace {
     // Pre-fill character name when donating faction
     void SkipCharacterNameEntryForFactionDonation(bool immediate = true)
     {
-        if (!skip_entering_name_for_faction_donate) return;
+        if (!settings.skip_entering_name_for_faction_donate) return;
         if (!immediate) {
             Resources::EnqueueWorkerTask([] {
                 // When a donation is complete, there are several different ui messages that come in varying sequence; give 500ms to ensure all are processed by the game first
@@ -1255,11 +1075,11 @@ namespace {
 
     void OnDialogButton(GW::UI::DialogButtonInfo* packet)
     {
-        if (auto_open_locked_chest_with_key && wcscmp(packet->message, L"\x8101\x7F88\x10A\x8101\x13BE\x1") == 0) {
+        if (settings.auto_open_locked_chest_with_key && wcscmp(packet->message, L"\x8101\x7F88\x10A\x8101\x13BE\x1") == 0) {
             // Auto use key
             DialogModule::SendDialog(packet->dialog_id);
         }
-        if (auto_open_locked_chest && wcscmp(packet->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
+        if (settings.auto_open_locked_chest && wcscmp(packet->message, L"\x8101\x7f88\x010a\x8101\x730e\x1") == 0) {
             // Auto use lockpick
             DialogModule::SendDialog(packet->dialog_id);
         }
@@ -1294,7 +1114,7 @@ namespace {
         if (!xp_bar) return false;
         const auto current_xp = GW::GetWorldContext()->experience;
         const auto current_level = LevelFromXp(current_xp);
-        if (useful_level_progress_label) {
+        if (settings.useful_level_progress_label) {
             const auto current_level_req = XpReqForLevel(current_level);
             const auto next_level_req = XpReqForLevel(current_level + 1);
 
@@ -1345,7 +1165,7 @@ namespace {
         if (status->blocked) return;
         switch (message_id) {
             case GW::UI::UIMessage::kGetPreGameContext_Value0: {
-                hide_store_page_on_char_select&& GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"Purchase"), false);
+                settings.hide_store_page_on_char_select&& GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"Purchase"), false);
                 OverrideDefaultOnlineStatus();
             } break;
             case GW::UI::UIMessage::kPartyShowConfirmDialog: {
@@ -1359,10 +1179,10 @@ namespace {
                 // OnQuestAdded(*static_cast<uint32_t*>(wParam));
                 break;
             case GW::UI::UIMessage::kTradeSessionStart: {
-                if (flash_window_on_trade) {
+                if (settings.flash_window_on_trade) {
                     FlashWindow();
                 }
-                if (focus_window_on_trade) {
+                if (settings.focus_window_on_trade) {
                     FocusWindow();
                 }
                 if (need_to_hide_inventory_window_after_trade) {
@@ -1385,15 +1205,15 @@ namespace {
                 if (packet->preference_id == GW::UI::NumberPreference::ScreenBorderless) CheckRemoveWindowBorder();
             } break;
             case GW::UI::UIMessage::kPartyDefeated: {
-                if (auto_return_on_defeat && GW::PartyMgr::GetIsLeader()) GW::PartyMgr::ReturnToOutpost() || (Log::Warning("Failed to return to outpost"), true);
+                if (settings.auto_return_on_defeat && GW::PartyMgr::GetIsLeader()) GW::PartyMgr::ReturnToOutpost() || (Log::Warning("Failed to return to outpost"), true);
             } break;
             case GW::UI::UIMessage::kMapChange: {
                 RecordTitleTiers();
             } break;
             case GW::UI::UIMessage::kMapLoaded: {
-                last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
+                settings.last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
                 SetXpBarLabel();
-                block_enter_area_message&& GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 0), false);
+                settings.block_enter_area_message&& GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 0), false);
                 RecordTitleTiers();
             } break;
             case GW::UI::UIMessage::kExperienceGained: {
@@ -1405,21 +1225,21 @@ namespace {
                 break;
             } break;
             case GW::UI::UIMessage::kVanquishComplete: {
-                if (auto_age_on_vanquish) GW::Chat::SendChat('/', L"age");
-                if (auto_screenshot_on_vanquish) pending_screenshot = TIMER_INIT();
-                if (block_vanquish_complete_popup) GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 8), false) || (Log::Warning("Failed to hide vanquish popup"), true);
+                if (settings.auto_age_on_vanquish) GW::Chat::SendChat('/', L"age");
+                if (settings.auto_screenshot_on_vanquish) pending_screenshot = TIMER_INIT();
+                if (settings.block_vanquish_complete_popup) GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 8), false) || (Log::Warning("Failed to hide vanquish popup"), true);
             } break;
             case GW::UI::UIMessage::kMissionComplete: {
-                if (auto_screenshot_on_mission_complete) pending_screenshot = TIMER_INIT();
+                if (settings.auto_screenshot_on_mission_complete) pending_screenshot = TIMER_INIT();
             } break;
             case GW::UI::UIMessage::kDungeonComplete: {
-                if (auto_screenshot_on_dungeon_complete) pending_screenshot = TIMER_INIT();
+                if (settings.auto_screenshot_on_dungeon_complete) pending_screenshot = TIMER_INIT();
             } break;
             case GW::UI::UIMessage::kDialogButton: {
                 OnDialogButton(static_cast<GW::UI::DialogButtonInfo*>(wParam));
             } break;
             case GW::UI::UIMessage::kTitleProgressUpdated: {
-                if (auto_screenshot_on_title_maxed) {
+                if (settings.auto_screenshot_on_title_maxed) {
                     const auto title_id = static_cast<GW::Constants::TitleID>(reinterpret_cast<uint32_t>(wParam));
                     const auto title = GW::PlayerMgr::GetTitleTrack(title_id);
                     // @Cleanup: I don't think this behaves itself.
@@ -1447,7 +1267,7 @@ namespace {
 bool GameSettings::GetSettingBool(const char* setting)
 {
 #define RETURN_SETTING_IF_MATCH(var) \
-    if (strcmp(setting, #var) == 0) return var
+    if (strcmp(setting, #var) == 0) return settings.var
     RETURN_SETTING_IF_MATCH(auto_age2_on_age);
     RETURN_SETTING_IF_MATCH(flash_window_on_name_ping);
     RETURN_SETTING_IF_MATCH(move_materials_to_current_storage_pane);
@@ -1628,6 +1448,7 @@ bool PendingChatMessage::PrintMessage()
 void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     OnSkillTomeWindow_UIMessage_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmSkTome.cpp", "selection.skillId", 0, 0), 0xfff);
     Log::Log("[GameSettings] OnSkillTomeWindow_UIMessage_Func = %p\n", OnSkillTomeWindow_UIMessage_Func);
@@ -1730,7 +1551,7 @@ void GameSettings::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry, [this](GW::HookStatus* status, const GW::Packet::StoC::AgentModel* packet) {
         constexpr std::array<uint32_t, 5> avatar_model_file_ids = {0x3F8B, 0x3f4b, 0x3AAA, 0x3F81, 0x3212};
         const auto npc = GW::Agents::GetNPCByID(packet->model_id);
-        if (!block_dervish_avatar_form || packet->agent_id != GW::Agents::GetControlledCharacterId() || !npc) return;
+        if (!settings.block_dervish_avatar_form || packet->agent_id != GW::Agents::GetControlledCharacterId() || !npc) return;
         if (std::ranges::contains(avatar_model_file_ids, npc->model_file_id)) status->blocked = true;
     });
 
@@ -1787,7 +1608,7 @@ void GameSettings::Initialize()
 
     set_window_title_delay = TIMER_INIT();
 
-    last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
+    settings.last_online_status = static_cast<uint32_t>(GW::FriendListMgr::GetMyStatus());
 
     // Log::Log("[GameSettings] Enqueueing CheckRemoveWindowBorder");
     // GW::GameThread::Enqueue(CheckRemoveWindowBorder);
@@ -1832,7 +1653,7 @@ void GameSettings::MessageOnPartyChange()
     }
     if (current_party_names.size() > previous_party_names.size()) {
         // Someone joined my party
-        for (size_t i = 0; i < current_party_names.size() && notify_when_party_member_joins; i++) {
+        for (size_t i = 0; i < current_party_names.size() && settings.notify_when_party_member_joins; i++) {
             bool found = false;
             for (size_t j = 0; j < previous_party_names.size() && !found; j++) {
                 found = previous_party_names[j] == current_party_names[i];
@@ -1847,7 +1668,7 @@ void GameSettings::MessageOnPartyChange()
     }
     else if (current_party_names.size() < previous_party_names.size()) {
         // Someone left my party
-        for (size_t i = 0; i < previous_party_names.size() && notify_when_party_member_leaves; i++) {
+        for (size_t i = 0; i < previous_party_names.size() && settings.notify_when_party_member_leaves; i++) {
             bool found = false;
             for (size_t j = 0; j < current_party_names.size() && !found; j++) {
                 found = previous_party_names[i] == current_party_names[j];
@@ -1862,31 +1683,21 @@ void GameSettings::MessageOnPartyChange()
     check_message_on_party_change = false;
 }
 
-void GameSettings::LoadSettings(ToolboxIni* ini)
+void GameSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-
-
-    for (auto& s : bool_settings)
-        *s.ptr = ini->GetBoolValue(Name(), s.key, s.def);
-
-    LOAD_UINT(auto_set_away_delay);
-    LOAD_UINT(faction_warn_percent_amount);
-    LOAD_UINT(last_online_status);
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
     for (const auto& [key, chan] : channel_color_settings)
-        LoadChannelColor(ini, Name(), key, chan);
+        LoadChannelColor(doc, legacy, Name(), key, chan);
 
-    for (auto& c : nametag_color_settings)
-        *c.ptr = Colors::Load(ini, Name(), c.ini_key, static_cast<Color>(c.default_val));
+    GW::PartyMgr::SetTickToggle(settings.tick_is_toggle);
+    SetWindowTitle(settings.set_window_title_as_charname);
 
-    GW::PartyMgr::SetTickToggle(tick_is_toggle);
-    SetWindowTitle(set_window_title_as_charname);
+    remove_skill_warmup_duration_patch.TogglePatch(settings.remove_min_skill_warmup_duration);
+    gold_confirm_patch.TogglePatch(settings.disable_gold_selling_confirmation);
 
-    remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
-    gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
-
-    if (focus_window_on_launch) {
+    if (settings.focus_window_on_launch) {
         FocusWindow();
     }
     GW::GameThread::Enqueue(SetXpBarLabel);
@@ -1955,124 +1766,114 @@ void GameSettings::Terminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
-void GameSettings::SaveSettings(ToolboxIni* ini)
+void GameSettings::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-
-
-    for (const auto& s : bool_settings)
-        ini->SetBoolValue(Name(), s.key, *s.ptr);
-
-    SAVE_UINT(auto_set_away_delay);
-    SAVE_UINT(faction_warn_percent_amount);
-    SAVE_UINT(last_online_status);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
     for (const auto& [key, chan] : channel_color_settings)
-        SaveChannelColor(ini, Name(), key, chan);
-
-    for (const auto& c : nametag_color_settings)
-        Colors::Save(ini, Name(), c.ini_key, *c.ptr);
+        SaveChannelColor(doc, Name(), key, chan);
 }
 
 void GameSettings::DrawInventorySettings()
 {
-    ImGui::Checkbox("Move items from/to storage with Control+Click", &move_item_on_ctrl_click);
+    ImGui::Checkbox("Move items from/to storage with Control+Click", &settings.move_item_on_ctrl_click);
     ImGui::Indent();
-    ImGui::CheckboxWithHelp("Move items to current open storage pane on click", &move_item_to_current_storage_pane, "Materials follow different logic, see below");
+    ImGui::CheckboxWithHelp("Move items to current open storage pane on click", &settings.move_item_to_current_storage_pane, "Materials follow different logic, see below");
     ImGui::Indent();
     auto logic = "Storage logic: Any available stack/slot";
-    if (move_item_to_current_storage_pane) {
+    if (settings.move_item_to_current_storage_pane) {
         logic = "Storage logic: Current storage pane > Any available stack/slot";
     }
     ImGui::TextDisabled(logic);
     ImGui::Unindent();
-    ImGui::Checkbox("Move materials to current open storage pane on click", &move_materials_to_current_storage_pane);
+    ImGui::Checkbox("Move materials to current open storage pane on click", &settings.move_materials_to_current_storage_pane);
     ImGui::Indent();
     logic = "Storage logic: Materials pane > Any available stack/slot";
-    if (move_materials_to_current_storage_pane) {
+    if (settings.move_materials_to_current_storage_pane) {
         logic = "Storage logic: Current storage pane > Materials pane > Any available stack/slot";
     }
-    else if (move_item_to_current_storage_pane) {
+    else if (settings.move_item_to_current_storage_pane) {
         logic = "Storage logic: Materials pane > Current storage pane > Any available stack/slot";
     }
     ImGui::TextDisabled(logic);
     ImGui::Unindent();
     ImGui::Unindent();
 
-    ImGui::CheckboxWithHelp("Shorthand item description on weapon ping", &shorthand_item_ping, "Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
+    ImGui::CheckboxWithHelp("Shorthand item description on weapon ping", &settings.shorthand_item_ping, "Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
 
-    ImGui::CheckboxWithHelp("Lazy chest looting", &lazy_chest_looting, "Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
+    ImGui::CheckboxWithHelp("Lazy chest looting", &settings.lazy_chest_looting, "Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
 }
 
 void GameSettings::DrawPartySettings()
 {
-    if (ImGui::Checkbox("Tick is a toggle", &tick_is_toggle)) {
-        GW::PartyMgr::SetTickToggle(tick_is_toggle);
+    if (ImGui::Checkbox("Tick is a toggle", &settings.tick_is_toggle)) {
+        GW::PartyMgr::SetTickToggle(settings.tick_is_toggle);
     }
     ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
-    ImGui::CheckboxWithHelp("Automatically accept party invitations when ticked", &auto_accept_invites, "When you're invited to join someone elses party");
-    ImGui::CheckboxWithHelp("Automatically accept party join requests when ticked", &auto_accept_join_requests, "When a player wants to join your existing party");
-    ImGui::Checkbox("Automatically lock heroes and pets onto your called target", &automatically_flag_pet_to_fight_called_target);
+    ImGui::CheckboxWithHelp("Automatically accept party invitations when ticked", &settings.auto_accept_invites, "When you're invited to join someone elses party");
+    ImGui::CheckboxWithHelp("Automatically accept party join requests when ticked", &settings.auto_accept_join_requests, "When a player wants to join your existing party");
+    ImGui::Checkbox("Automatically lock heroes and pets onto your called target", &settings.automatically_flag_pet_to_fight_called_target);
 }
 
 void GameSettings::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Hide in-game store message on character select screen", &hide_store_page_on_char_select);
-    ImGui::CheckboxWithHelp("Apply Collector's Edition animations on player dance", &collectors_edition_emotes, "Only applies to your own character");
+    ImGui::Checkbox("Hide in-game store message on character select screen", &settings.hide_store_page_on_char_select);
+    ImGui::CheckboxWithHelp("Apply Collector's Edition animations on player dance", &settings.collectors_edition_emotes, "Only applies to your own character");
 
-    ImGui::Checkbox("Automatically cancel Unyielding Aura when re-casting", &drop_ua_on_cast);
+    ImGui::Checkbox("Automatically cancel Unyielding Aura when re-casting", &settings.drop_ua_on_cast);
 
-    ImGui::Checkbox("Automatically use available keys when interacting with locked chest", &auto_open_locked_chest_with_key);
+    ImGui::Checkbox("Automatically use available keys when interacting with locked chest", &settings.auto_open_locked_chest_with_key);
 
-    ImGui::Checkbox("Automatically use lockpick when interacting with locked chest", &auto_open_locked_chest);
+    ImGui::Checkbox("Automatically use lockpick when interacting with locked chest", &settings.auto_open_locked_chest);
 
-    ImGui::CheckboxWithHelp("Automatically return to outpost on defeat", &auto_return_on_defeat, "Automatically return party to outpost on party wipe if player is leading");
+    ImGui::CheckboxWithHelp("Automatically return to outpost on defeat", &settings.auto_return_on_defeat, "Automatically return party to outpost on party wipe if player is leading");
 
-    ImGui::Checkbox("Automatically set 'Away' after ", &auto_set_away);
+    ImGui::Checkbox("Automatically set 'Away' after ", &settings.auto_set_away);
     ImGui::SameLine();
     ImGui::PushItemWidth(50.0f * ImGui::FontScale());
-    ImGui::InputInt("##awaydelay", &auto_set_away_delay, 0);
+    ImGui::InputInt("##awaydelay", &settings.auto_set_away_delay, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("minutes of inactivity");
     ImGui::ShowHelp("Only if you were 'Online'");
 
-    ImGui::CheckboxWithHelp("Automatically set 'Online' after an input to Guild Wars", &auto_set_online, "Only if you were 'Away'");
+    ImGui::CheckboxWithHelp("Automatically set 'Online' after an input to Guild Wars", &settings.auto_set_online, "Only if you were 'Away'");
 
-    ImGui::Checkbox("Automatically skip cinematics", &auto_skip_cinematic);
+    ImGui::Checkbox("Automatically skip cinematics", &settings.auto_skip_cinematic);
 
-    ImGui::CheckboxWithHelp("Automatic /age on vanquish", &auto_age_on_vanquish, "As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
+    ImGui::CheckboxWithHelp("Automatic /age on vanquish", &settings.auto_age_on_vanquish, "As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
 
-    ImGui::CheckboxWithHelp("Automatic /age2 on /age", &auto_age2_on_age, "GWToolbox++ will show /age2 time after /age is shown in chat");
+    ImGui::CheckboxWithHelp("Automatic /age2 on /age", &settings.auto_age2_on_age, "GWToolbox++ will show /age2 time after /age is shown in chat");
 
     ImGui::TextUnformatted("Automatic screenshot on:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Vanquish", &auto_screenshot_on_vanquish);
+    ImGui::Checkbox("Vanquish", &settings.auto_screenshot_on_vanquish);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Boss kill", &auto_screenshot_on_boss_kill);
+    ImGui::Checkbox("Boss kill", &settings.auto_screenshot_on_boss_kill);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Mission complete", &auto_screenshot_on_mission_complete);
+    ImGui::Checkbox("Mission complete", &settings.auto_screenshot_on_mission_complete);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Dungeon complete", &auto_screenshot_on_dungeon_complete);
+    ImGui::Checkbox("Dungeon complete", &settings.auto_screenshot_on_dungeon_complete);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Title maxed", &auto_screenshot_on_title_maxed);
+    ImGui::Checkbox("Title maxed", &settings.auto_screenshot_on_title_maxed);
     ImGui::Unindent();
 
-    ImGui::Checkbox("Block full screen message when entering a new area", &block_enter_area_message);
+    ImGui::Checkbox("Block full screen message when entering a new area", &settings.block_enter_area_message);
 
-    ImGui::Checkbox("Block full screen popup what shows when completing a vanquish", &block_vanquish_complete_popup);
+    ImGui::Checkbox("Block full screen popup what shows when completing a vanquish", &settings.block_vanquish_complete_popup);
 
-    ImGui::Checkbox("Block full screen popup what shows when opening a dungeon chest", &hide_dungeon_chest_popup);
+    ImGui::Checkbox("Block full screen popup what shows when opening a dungeon chest", &settings.hide_dungeon_chest_popup);
 
-    ImGui::CheckboxWithHelp("Block sparkle effect on dropped items", &block_sparkly_drops_effect, "Applies to drops that appear after this setting has been changed");
+    ImGui::CheckboxWithHelp("Block sparkle effect on dropped items", &settings.block_sparkly_drops_effect, "Applies to drops that appear after this setting has been changed");
 
     auto hint = "The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.";
-    ImGui::CheckboxWithHelp("Disable camera smoothing with mouse", &disable_camera_smoothing, hint);
-    ImGui::CheckboxWithHelp("Disable camera smoothing with controller", &disable_camera_smoothing_with_controller, hint);
-    if (ImGui::Checkbox("Disable Gold/Green items confirmation", &disable_gold_selling_confirmation)) {
-        gold_confirm_patch.TogglePatch(disable_gold_selling_confirmation);
+    ImGui::CheckboxWithHelp("Disable camera smoothing with mouse", &settings.disable_camera_smoothing, hint);
+    ImGui::CheckboxWithHelp("Disable camera smoothing with controller", &settings.disable_camera_smoothing_with_controller, hint);
+    if (ImGui::Checkbox("Disable Gold/Green items confirmation", &settings.disable_gold_selling_confirmation)) {
+        gold_confirm_patch.TogglePatch(settings.disable_gold_selling_confirmation);
     }
     ImGui::ShowHelp(
         "Disable the confirmation request when\n"
@@ -2080,73 +1881,74 @@ void GameSettings::DrawSettingsInternal()
         "in February 5, 2019 update."
     );
 
-    ImGui::CheckboxWithHelp("Limit signet of capture to 10 in skills window", &limit_signets_of_capture, "If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
+    ImGui::CheckboxWithHelp("Limit signet of capture to 10 in skills window", &settings.limit_signets_of_capture, "If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
 
     ImGui::CheckboxWithHelp(
-        "Hide known skills when using a tome, capturing a skill or talking to a skill trainer", &hide_known_skills,
+        "Hide known skills when using a tome, capturing a skill or talking to a skill trainer", &settings.hide_known_skills,
         "When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has."
     );
 
-    ImGui::Checkbox("Hide all non-elite skills when capturing a skill", &hide_nonelites_on_capture);
+    ImGui::Checkbox("Hide all non-elite skills when capturing a skill", &settings.hide_nonelites_on_capture);
 
-    ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &prevent_weapon_spell_animation_on_player);
+    ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &settings.prevent_weapon_spell_animation_on_player);
 
-    ImGui::Checkbox("Prevent dervish avatar elites from changing your character's appearance", &block_dervish_avatar_form);
+    ImGui::Checkbox("Prevent dervish avatar elites from changing your character's appearance", &settings.block_dervish_avatar_form);
 
     ImGui::CheckboxWithHelp(
-        "Prompt if entering a mission you've already completed", &check_and_prompt_if_mission_already_completed,
+        "Prompt if entering a mission you've already completed", &settings.check_and_prompt_if_mission_already_completed,
         "Sometimes a player can forget to set Hard Mode/Normal Mode when starting a mission for their character.\nGwtoolbox can catch this and check your current character's achievements,\nand can show an 'Are you sure?' prompt if you're trying to do a mission\nthat you've already completed in the chosen mode."
     );
 
     ImGui::CheckboxWithHelp(
-        "Remember my online status when returning to character select screen", &remember_online_status,
+        "Remember my online status when returning to character select screen", &settings.remember_online_status,
         "Guild Wars doesn't remember your friend list status when you return to the character select screen,\n and sets your status to 'Online' when you select a character to play.\nTick this to avoid having to change it when you switch characters."
     );
 
-    if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &remove_min_skill_warmup_duration)) {
-        remove_skill_warmup_duration_patch.TogglePatch(remove_min_skill_warmup_duration);
+    if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &settings.remove_min_skill_warmup_duration)) {
+        remove_skill_warmup_duration_patch.TogglePatch(settings.remove_min_skill_warmup_duration);
     }
     ImGui::ShowHelp("When casting a skill, the in-game cast bar only shows up if the skill's cast time is more than 1.5 seconds.\nTick this to show the cast bar regardless of casting time.");
 
-    if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &set_window_title_as_charname)) {
-        SetWindowTitle(set_window_title_as_charname);
+    if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &settings.set_window_title_as_charname)) {
+        SetWindowTitle(settings.set_window_title_as_charname);
     }
 
-    ImGui::Checkbox("Show warning when earned faction reaches ", &faction_warn_percent);
+    ImGui::Checkbox("Show warning when earned faction reaches ", &settings.faction_warn_percent);
     ImGui::SameLine();
     ImGui::PushItemWidth(40.0f * ImGui::FontScale());
-    ImGui::InputInt("##faction_warn_percent_amount", &faction_warn_percent_amount, 0);
+    ImGui::InputInt("##faction_warn_percent_amount", &settings.faction_warn_percent_amount, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("%%");
     ImGui::ShowHelp("Displays when in a challenge mission or elite mission outpost");
 
-    ImGui::Checkbox("Skip character name input when donating faction", &skip_entering_name_for_faction_donate);
+    ImGui::Checkbox("Skip character name input when donating faction", &settings.skip_entering_name_for_faction_donate);
 
-    ImGui::CheckboxWithHelp("Stop screen shake from skills or effects", &stop_screen_shake, "e.g. Aftershock, Earth shaker, Avalanche effect");
+    ImGui::CheckboxWithHelp("Stop screen shake from skills or effects", &settings.stop_screen_shake, "e.g. Aftershock, Earth shaker, Avalanche effect");
 
     ImGui::NewLine();
     ImGui::Text("Block floating numbers above character on:");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Faction gain", &block_faction_gain);
+    ImGui::Checkbox("Faction gain", &settings.block_faction_gain);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("XP Gain", &block_experience_gain);
+    ImGui::Checkbox("XP Gain", &settings.block_experience_gain);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("0 XP Gain", &block_zero_experience_gain);
+    ImGui::Checkbox("0 XP Gain", &settings.block_zero_experience_gain);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Zero damage/heal/energy", &block_zero_damage_or_energy);
+    ImGui::Checkbox("Zero damage/heal/energy", &settings.block_zero_damage_or_energy);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Damage received", &block_receiving_damage);
+    ImGui::Checkbox("Damage received", &settings.block_receiving_damage);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Damage dealt", &block_dealing_damage);
+    ImGui::Checkbox("Damage dealt", &settings.block_dealing_damage);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Healing received", &block_receiving_heals);
+    ImGui::Checkbox("Healing received", &settings.block_receiving_heals);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Healing given", &block_giving_heals);
+    ImGui::Checkbox("Healing given", &settings.block_giving_heals);
     ImGui::Unindent();
-    if (ImGui::Checkbox("Show experience progress instead of current level on your experience bar", &useful_level_progress_label)) {
+    ImGui::CheckboxWithHelp("Combine floating numbers above character", &settings.combine_overhead_numbers, "Merges damage/heal numbers stacking on an agent into a single floater to reduce UI noise");
+    if (ImGui::Checkbox("Show experience progress instead of current level on your experience bar", &settings.useful_level_progress_label)) {
         GW::GameThread::Enqueue(SetXpBarLabel);
     }
 
@@ -2156,19 +1958,19 @@ void GameSettings::DrawSettingsInternal()
     ImGui::StartSpacedElements(checkbox_w);
     constexpr auto doesnt_affect_me = "Only applies to other players";
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Tonics", &block_transmogrify_effect, doesnt_affect_me);
+    ImGui::CheckboxWithHelp("Tonics", &settings.block_transmogrify_effect, doesnt_affect_me);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Sweets", &block_sugar_rush_effect, doesnt_affect_me);
+    ImGui::CheckboxWithHelp("Sweets", &settings.block_sugar_rush_effect, doesnt_affect_me);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Bottle rockets", &block_bottle_rockets, doesnt_affect_me);
+    ImGui::CheckboxWithHelp("Bottle rockets", &settings.block_bottle_rockets, doesnt_affect_me);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Party poppers", &block_party_poppers);
+    ImGui::Checkbox("Party poppers", &settings.block_party_poppers);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Snowman Summoners", &block_snowman_summoner, doesnt_affect_me);
-    ImGui::Checkbox("Fireworks", &block_fireworks);
+    ImGui::CheckboxWithHelp("Snowman Summoners", &settings.block_snowman_summoner, doesnt_affect_me);
+    ImGui::Checkbox("Fireworks", &settings.block_fireworks);
     ImGui::Unindent();
     ImGui::NewLine();
-    ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &show_amount_of_lockpicks_under_locked_chest_nametag);
+    ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &settings.show_amount_of_lockpicks_under_locked_chest_nametag);
     ImGui::Text("In-game name tag colors:");
     ImGui::ShowHelp("These set global name tag colors by category.\nTo set a custom color for a specific agent, see Minimap > Custom Agents > Text Color.");
     ImGui::Indent();
@@ -2184,10 +1986,10 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Text("Hide skill descriptions in:");
     ImGui::ShowHelp("When hovering a skill in the game,\nonly show the skill name  and cooldown etc in the tooltip that appears.");
     ImGui::Indent();
-    ImGui::Checkbox("Explorable Area###disable_skill_descriptions_in_explorable", &disable_skill_descriptions_in_explorable);
+    ImGui::Checkbox("Explorable Area###disable_skill_descriptions_in_explorable", &settings.disable_skill_descriptions_in_explorable);
     ImGui::SameLine();
-    ImGui::Checkbox("Outpost###disable_skill_descriptions_in_outpost", &disable_skill_descriptions_in_outpost);
-    if (disable_skill_descriptions_in_explorable || disable_skill_descriptions_in_outpost) {
+    ImGui::Checkbox("Outpost###disable_skill_descriptions_in_outpost", &settings.disable_skill_descriptions_in_outpost);
+    if (settings.disable_skill_descriptions_in_explorable || settings.disable_skill_descriptions_in_outpost) {
         ImGui::Indent();
         ImGui::TextDisabled("Hold Alt when hovering a skill to show full description");
         ImGui::Unindent();
@@ -2197,7 +1999,7 @@ void GameSettings::DrawSettingsInternal()
 
 void GameSettings::FactionEarnedCheckAndWarn()
 {
-    if (!faction_warn_percent) {
+    if (!settings.faction_warn_percent) {
         return; // Disabled
     }
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
@@ -2213,7 +2015,7 @@ void GameSettings::FactionEarnedCheckAndWarn()
         faction_checked = false;
         return; // No world context yet.
     }
-    faction_warn_percent_amount = std::clamp(faction_warn_percent_amount, 0, 100);
+    settings.faction_warn_percent_amount = std::clamp(settings.faction_warn_percent_amount, 0, 100);
 
     using MapID = GW::Constants::MapID;
     static constexpr std::array luxon_maps = {MapID::The_Deep, MapID::The_Jade_Quarry_Luxon_outpost, MapID::Fort_Aspenwood_Luxon_outpost, MapID::Zos_Shivros_Channel, MapID::The_Aurios_Mines};
@@ -2245,7 +2047,7 @@ void GameSettings::FactionEarnedCheckAndWarn()
     }
 
     const float pct = 100.0f * static_cast<float>(*current) / static_cast<float>(*max);
-    if (pct >= static_cast<float>(faction_warn_percent_amount))
+    if (pct >= static_cast<float>(settings.faction_warn_percent_amount))
         Log::Warning("%s faction earned is %d of %d", name, *current, *max);
     else if (*other_current > 4999 && *other_current > *current)
         Log::Warning("%s faction earned is greater than %s", other_name, name);
@@ -2261,7 +2063,7 @@ void GameSettings::Update(float)
     UpdateSkillTooltip();
     UpdateReinvite();
     if (set_window_title_delay && TIMER_DIFF(set_window_title_delay) > 3000) {
-        SetWindowTitle(set_window_title_as_charname);
+        SetWindowTitle(settings.set_window_title_as_charname);
         set_window_title_delay = 0;
     }
 
@@ -2271,14 +2073,14 @@ void GameSettings::Update(float)
         pending_wiki_search_term.reset();
     }
 
-    if (auto_set_away && TIMER_DIFF(activity_timer) > auto_set_away_delay * 60000 && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Online) {
+    if (settings.auto_set_away && TIMER_DIFF(activity_timer) > settings.auto_set_away_delay * 60000 && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Online) {
         GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Away);
         activity_timer = TIMER_INIT(); // refresh the timer to avoid spamming in case the set status call fails
     }
     // UpdateFOV();
     FactionEarnedCheckAndWarn();
 
-    if (((disable_camera_smoothing && !GW::UI::IsInControllerMode()) || (disable_camera_smoothing_with_controller && GW::UI::IsInControllerMode())) && !GW::CameraMgr::GetCameraUnlock()) {
+    if (((settings.disable_camera_smoothing && !GW::UI::IsInControllerMode()) || (settings.disable_camera_smoothing_with_controller && GW::UI::IsInControllerMode())) && !GW::CameraMgr::GetCameraUnlock()) {
         GW::Camera* cam = GW::CameraMgr::GetCamera();
         if (cam) {
             cam->position = cam->camera_pos_to_go;
@@ -2292,7 +2094,7 @@ void GameSettings::Update(float)
 #ifdef APRIL_FOOLS
     AF::ApplyPatchesIfItsTime();
 #endif
-    if (notify_when_party_member_joins || notify_when_party_member_leaves) {
+    if (settings.notify_when_party_member_joins || settings.notify_when_party_member_leaves) {
         if (!check_message_on_party_change && !GW::Map::GetIsMapLoaded()) {
             // Map changed - clear previous party names, flag to re-populate on map load
             previous_party_names.clear();
@@ -2314,7 +2116,7 @@ bool GameSettings::WndProc(const UINT Message, WPARAM, LPARAM)
 
     activity_timer = TIMER_INIT();
     static clock_t set_online_timer = TIMER_INIT();
-    if (auto_set_online && TIMER_DIFF(set_online_timer) > 5000 // to avoid spamming in case of failure
+    if (settings.auto_set_online && TIMER_DIFF(set_online_timer) > 5000 // to avoid spamming in case of failure
         && GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Away) {
         printf("%X\n", Message);
         GW::FriendListMgr::SetFriendListStatus(GW::FriendStatus::Online);
@@ -2328,7 +2130,7 @@ bool GameSettings::WndProc(const UINT Message, WPARAM, LPARAM)
 void GameSettings::OnPingWeaponSet(GW::HookStatus* status, const GW::UI::UIMessage message_id, void* wparam, void*)
 {
     ASSERT(message_id == GW::UI::UIMessage::kSendPingWeaponSet && wparam);
-    if (!shorthand_item_ping) {
+    if (!settings.shorthand_item_ping) {
         return;
     }
     const struct Packet {
@@ -2344,7 +2146,7 @@ void GameSettings::OnPingWeaponSet(GW::HookStatus* status, const GW::UI::UIMessa
 // Show a message when player joins the outpost
 void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::PlayerJoinInstance* pak)
 {
-    if (!notify_when_players_join_outpost && !notify_when_friends_join_outpost) {
+    if (!settings.notify_when_players_join_outpost && !settings.notify_when_friends_join_outpost) {
         return; // Dont notify about player joining
     }
     if (!(pak->player_name && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
@@ -2356,13 +2158,13 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::Playe
     if (GW::Agents::GetAgentByID(pak->agent_id)) {
         return; // Player already joined
     }
-    if (notify_when_friends_join_outpost) {
+    if (settings.notify_when_friends_join_outpost) {
         if (const auto f = GetFriend(nullptr, pak->player_name, GW::FriendType::Friend, GW::FriendStatus::Online)) {
             WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) entered the outpost.", f->charname, f->alias).c_str(), nullptr, true);
             return;
         }
     }
-    if (notify_when_players_join_outpost) {
+    if (settings.notify_when_players_join_outpost) {
         WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> entered the outpost.", pak->player_name).c_str(), nullptr, true);
     }
 }
@@ -2380,11 +2182,11 @@ void GameSettings::OnPartyInviteReceived(const GW::HookStatus* status, const GW:
     if (GW::PartyMgr::GetIsPlayerTicked()) {
         GW::PartyInfo* other_party = GW::PartyMgr::GetPartyInfo(packet->target_party_id);
         GW::PartyInfo* my_party = GW::PartyMgr::GetPartyInfo();
-        if (auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
+        if (settings.auto_accept_invites && other_party && my_party && my_party->GetPartySize() <= other_party->GetPartySize()) {
             // Auto accept if I'm joining a bigger party
             GW::PartyMgr::RespondToPartyRequest(packet->target_party_id, true);
         }
-        if (auto_accept_join_requests && other_party && my_party && my_party->GetPartySize() > other_party->GetPartySize()) {
+        if (settings.auto_accept_join_requests && other_party && my_party && my_party->GetPartySize() > other_party->GetPartySize()) {
             // Auto accept join requests if I'm the bigger party
             GW::PartyMgr::RespondToPartyRequest(packet->target_party_id, true);
         }
@@ -2421,7 +2223,7 @@ void GameSettings::OnAgentEffect(GW::HookStatus* status, const GW::Packet::StoC:
 // Block sparkly item animation
 void GameSettings::OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd* packet)
 {
-    if (block_sparkly_drops_effect && packet->type == 4 && packet->agent_type < 0xFFFFFF) {
+    if (settings.block_sparkly_drops_effect && packet->type == 4 && packet->agent_type < 0xFFFFFF) {
         GW::Item* item = GW::Items::GetItemById(packet->agent_type);
         if (item) {
             item->interaction |= 0x2000;
@@ -2432,7 +2234,7 @@ void GameSettings::OnAgentAdd(GW::HookStatus*, const GW::Packet::StoC::AgentAdd*
 // Block ghost in the box death animation & sound
 void GameSettings::OnUpdateAgentState(GW::HookStatus*, GW::Packet::StoC::AgentState* packet)
 {
-    if (auto_screenshot_on_boss_kill) {
+    if (settings.auto_screenshot_on_boss_kill) {
         const auto agent = GW::Agents::GetAgentByID(packet->agent_id);
         const auto living = agent ? agent->GetAsAgentLiving() : nullptr;
         if (living && living->GetHasBossGlow()) {
@@ -2442,7 +2244,7 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus*, GW::Packet::StoC::AgentSt
         }
     }
 
-    if (prevent_weapon_spell_animation_on_player && (packet->state & 0x8000) && packet->agent_id == GW::Agents::GetControlledCharacterId()) {
+    if (settings.prevent_weapon_spell_animation_on_player && (packet->state & 0x8000) && packet->agent_id == GW::Agents::GetControlledCharacterId()) {
         packet->state ^= 0x8000;
     }
 
@@ -2452,7 +2254,7 @@ void GameSettings::OnUpdateAgentState(GW::HookStatus*, GW::Packet::StoC::AgentSt
 // Apply Collector's Edition animations on player dancing,
 void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak)
 {
-    if (!(pak->agent_id == GW::Agents::GetControlledCharacterId() && collectors_edition_emotes)) {
+    if (!(pak->agent_id == GW::Agents::GetControlledCharacterId() && settings.collectors_edition_emotes)) {
         return;
     }
     static GW::Packet::StoC::GenericValue pak2;
@@ -2478,7 +2280,7 @@ void GameSettings::OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::St
 // Show a message when player leaves the outpost
 void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC::PlayerLeaveInstance* pak)
 {
-    if (!notify_when_players_leave_outpost && !notify_when_friends_leave_outpost) {
+    if (!settings.notify_when_players_leave_outpost && !settings.notify_when_friends_leave_outpost) {
         return; // Dont notify about player leaving
     }
     if (!(pak->player_number && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost)) {
@@ -2488,13 +2290,13 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC
     if (!player_name) {
         return; // Failed to get name
     }
-    if (notify_when_friends_leave_outpost) {
+    if (settings.notify_when_friends_leave_outpost) {
         if (const auto f = GetFriend(nullptr, player_name, GW::FriendType::Friend, GW::FriendStatus::Online)) {
             WriteChatF(GW::Chat::Channel::CHANNEL_GLOBAL, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->alias);
             return;
         }
     }
-    if (notify_when_players_leave_outpost) {
+    if (settings.notify_when_players_leave_outpost) {
         WriteChatF(GW::Chat::Channel::CHANNEL_GLOBAL, L"<a=1>%ls</a> left the outpost.", player_name);
     }
 }
@@ -2502,7 +2304,7 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC
 // Automatically send /age2 on /age.
 void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::MessageServer* pak)
 {
-    if (!auto_age2_on_age || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) {
+    if (!settings.auto_age2_on_age || static_cast<GW::Chat::Channel>(pak->channel) != GW::Chat::Channel::CHANNEL_GLOBAL) {
         return; // Disabled or message pending
     }
     const wchar_t* msg = GetMessageCore();
@@ -2515,7 +2317,7 @@ void GameSettings::OnServerMessage(const GW::HookStatus*, GW::Packet::StoC::Mess
 
 void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::DungeonReward*)
 {
-    if (hide_dungeon_chest_popup) {
+    if (settings.hide_dungeon_chest_popup) {
         status->blocked = true;
     }
 }
@@ -2523,7 +2325,7 @@ void GameSettings::OnDungeonReward(GW::HookStatus* status, GW::Packet::StoC::Dun
 // Stop screen shake from aftershock etc
 void GameSettings::OnScreenShake(GW::HookStatus* status, const void*)
 {
-    if (stop_screen_shake) {
+    if (settings.stop_screen_shake) {
         status->blocked = true;
     }
 }
@@ -2531,11 +2333,11 @@ void GameSettings::OnScreenShake(GW::HookStatus* status, const void*)
 // Automatically skip cinematics, flash window on cinematic
 void GameSettings::OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::CinematicPlay* packet)
 {
-    if (packet->play && auto_skip_cinematic) {
+    if (packet->play && settings.auto_skip_cinematic) {
         GW::Map::SkipCinematic();
         return;
     }
-    if (flash_window_on_cinematic) {
+    if (settings.flash_window_on_cinematic) {
         FlashWindow();
     }
 }
@@ -2543,10 +2345,10 @@ void GameSettings::OnCinematic(const GW::HookStatus*, const GW::Packet::StoC::Ci
 // Flash/focus window on zoning
 void GameSettings::OnMapTravel(const GW::HookStatus*, const GW::Packet::StoC::GameSrvTransfer* pak)
 {
-    if (flash_window_on_zoning) {
+    if (settings.flash_window_on_zoning) {
         FlashWindow();
     }
-    if (focus_window_on_zoning && pak->is_explorable) {
+    if (settings.focus_window_on_zoning && pak->is_explorable) {
         FocusWindow();
     }
 }
@@ -2596,7 +2398,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
 void GameSettings::OnAgentStartCast(GW::HookStatus*, GW::UI::UIMessage, void* wParam, void*)
 {
     const auto packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wParam);
-    if (drop_ua_on_cast && packet && packet->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
+    if (settings.drop_ua_on_cast && packet && packet->skill_id == GW::Constants::SkillID::Unyielding_Aura) {
         const auto buffs = GW::Effects::GetAgentBuffs(packet->agent_id);
         if (buffs) {
             for (auto& buff : *buffs) {
@@ -2648,14 +2450,14 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage me
 void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
 {
     instance_entered_at = TIMER_INIT();
-    SetWindowTitle(set_window_title_as_charname);
+    SetWindowTitle(settings.set_window_title_as_charname);
 }
 
 // Hide more than 10 signets of capture
 void GameSettings::OnUpdateSkillCount(GW::HookStatus*, void* packet)
 {
     const auto pak = static_cast<GW::Packet::StoC::UpdateSkillCountAfterMapLoad*>(packet);
-    if (limit_signets_of_capture && static_cast<GW::Constants::SkillID>(pak->skill_id) == GW::Constants::SkillID::Signet_of_Capture) {
+    if (settings.limit_signets_of_capture && static_cast<GW::Constants::SkillID>(pak->skill_id) == GW::Constants::SkillID::Signet_of_Capture) {
         actual_signets_of_capture_amount = pak->count;
         pak->count = std::min<uint32_t>(pak->count, 10);
     }
@@ -2674,7 +2476,7 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
             break;
         }
     }
-    if (show_amount_of_lockpicks_under_locked_chest_nametag && tag->name_enc && wcseq(tag->name_enc, GW::EncStrings::LockedChest) && !tag->underline) {
+    if (settings.show_amount_of_lockpicks_under_locked_chest_nametag && tag->name_enc && wcseq(tag->name_enc, GW::EncStrings::LockedChest) && !tag->underline) {
         static wchar_t you_have_n_lockpicks[12];
         const auto count = GW::Items::CountItemByModelId(GW::Constants::ItemID::Lockpick, (int)GW::Constants::Bag::Backpack, (int)GW::Constants::Bag::Bag_2);
         static wchar_t item_count[4];

@@ -10,6 +10,8 @@ namespace GW::Constants {
 
 using Color = uint32_t;
 
+class ToolboxModule;
+
 class CustomRenderer : public D3DVertexBuffer {
     friend class AgentRenderer;
     friend class GameWorldRenderer;
@@ -17,6 +19,54 @@ class CustomRenderer : public D3DVertexBuffer {
     enum class Shape {
         LineCircle,
         FullCircle
+    };
+
+    // glaze-serialized mirror of the persisted marker data (Markers.json); field set matches the legacy ini
+    struct MarkersFile {
+        struct Line {
+            std::string name = "line";
+            float x1 = 0.f;
+            float y1 = 0.f;
+            float x2 = 0.f;
+            float y2 = 0.f;
+            Colors::SettingColor color = 0xFFFFFFFF;
+            uint32_t map = 0;
+            bool visible = true;
+            bool draw_on_terrain = false;
+        };
+
+        struct Marker {
+            std::string name = "marker";
+            float x = 0.f;
+            float y = 0.f;
+            float size = 0.f;
+            int shape = 0;
+            uint32_t map = 0;
+            bool visible = true;
+            bool draw_on_terrain = false;
+            Colors::SettingColor color = 0x00FFFFFF;
+            Colors::SettingColor color_sub = 0x00FFFFFF;
+        };
+
+        struct Point {
+            float x = 0.f;
+            float y = 0.f;
+        };
+
+        struct Polygon {
+            std::string name = "polygon";
+            std::vector<Point> points{};
+            Colors::SettingColor color = 0xA0FFFFFF;
+            Colors::SettingColor color_sub = 0x00FFFFFF;
+            uint32_t map = 0;
+            bool visible = true;
+            bool draw_on_terrain = false;
+            bool filled = false;
+        };
+
+        std::vector<Line> lines{};
+        std::vector<Marker> markers{};
+        std::vector<Polygon> polygons{};
     };
 
     struct CustomMarker final {
@@ -85,6 +135,9 @@ public:
         bool draw_everywhere = false;
         bool created_by_toolbox = false;
         bool from_player_pos = false;
+        // p1/p2 hold world-map coords, not game coords; only the world map renders these
+        // (cross-map route tails, whose game positions belong to other maps).
+        bool world_coords = false;
         char name[128]{};
     };
 
@@ -95,8 +148,7 @@ public:
     void DrawLineSettings();
     void DrawMarkerSettings();
     void DrawPolygonSettings();
-    void LoadSettings(const ToolboxIni* ini, const char* section);
-    void SaveSettings(ToolboxIni* ini, const char* section);
+    void RegisterSettings(ToolboxModule* module);
     void LoadMarkers();
     void SaveMarkers();
     CustomLine* AddCustomLine(const GW::GamePos& from, const GW::GamePos& to, const char* _name = nullptr, bool draw_everywhere = false);
@@ -105,6 +157,8 @@ public:
     [[nodiscard]] const std::vector<CustomLine*>& GetLines() const { return lines; }
     [[nodiscard]] const std::vector<CustomPolygon>& GetPolys() const { return polygons; }
     [[nodiscard]] const std::vector<CustomMarker>& GetMarkers() const { return markers; }
+
+    void Render(IDirect3DDevice9* device, float gwinches_per_pixel);
 
 private:
     void Initialize(IDirect3DDevice9* device) override;
@@ -119,13 +173,29 @@ private:
         char tooltip_str[128]{};
     } map_id_tooltip;
 
-    D3DLineCircle linecircle{1.f, 0xFF666677};
-    
-    inline static Color color{0xFF00FFFF};
+    // Triangle-strip circle buffer for hero flag indicators
+    struct HeroCircles : D3DVertexBuffer {
+        static constexpr size_t circle_points = 192;
+        static constexpr size_t circle_triangles = circle_points - 2;
+        DWORD color = 0xFF666677;
+        float thickness = 1.f;
+        float gwinches_per_pixel = 1.f;
+        void Update(DWORD c, float t, float gpp);
+        void RenderAt(IDirect3DDevice9* device, float x, float y, bool is_allflag);
+    private:
+        void Initialize(IDirect3DDevice9* device) override;
+    };
+    HeroCircles hero_circles_{};
+    Color color_hero_flags_{0xFF666677};
+    float hero_flag_line_thickness_ = 1.f;
+    float gwinches_per_pixel_ = 1.f;
+
+    inline static Color color{0xFFFFFFFF};
 
     int show_polygon_details = -1;
     bool markers_changed = false;
     bool marker_file_dirty = true;
+    bool markers_loaded = false; // guards SaveMarkers against clobbering a file that was never read
     std::vector<CustomLine*> lines{};
     std::vector<CustomMarker> markers{};
     std::vector<CustomPolygon> polygons{};

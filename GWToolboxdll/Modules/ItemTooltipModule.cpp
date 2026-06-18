@@ -32,31 +32,35 @@ namespace {
     // Settings
     // -------------------------------------------------------------------------
 
-    // Salvage info
-    bool show_salvage_info = true;
-    bool show_trader_value_for_mats = false;
     constexpr Color salvage_color_default = GW::Chat::TextColor::ColorItemBasic;
-    Color salvage_color = salvage_color_default;
-
-    // Nicholas the Traveler info
-    bool show_nicholas_info = true;
     constexpr Color nicholas_color_default = GW::Chat::TextColor::ColorItemUnique;
-    Color nicholas_color = nicholas_color_default;
-
-    // Trader price info
-    bool show_trader_prices = true;
     constexpr Color price_color_default = GW::Chat::TextColor::ColorItemBasic;
-    Color price_color = price_color_default;
-    uint32_t high_price_threshold = 1000;
 
     const auto high_price_color = GW::Chat::TextColor::ColorItemRare;
-
-    bool disable_item_descriptions_in_outpost = false;
-    bool disable_item_descriptions_in_explorable = false;
 
     // Key held to show/hide item descriptions
     constexpr int modifier_key_item_descriptions = VK_MENU;
     int modifier_key_item_descriptions_key_state = 0;
+}
+
+// MSVC can't reflect member names of internal-linkage types, so this lives in a named namespace
+namespace ItemTooltipSettings {
+    struct Settings {
+        bool show_salvage_info = true;
+        bool show_trader_value_for_mats = false;
+        Colors::SettingColor salvage_color = salvage_color_default;
+        bool show_nicholas_info = true;
+        Colors::SettingColor nicholas_color = nicholas_color_default;
+        bool show_trader_prices = true;
+        Colors::SettingColor price_color = price_color_default;
+        uint32_t high_price_threshold = 1000;
+        bool disable_item_descriptions_in_outpost = false;
+        bool disable_item_descriptions_in_explorable = false;
+    };
+}
+
+namespace {
+    ItemTooltipSettings::Settings settings;
 
 
 
@@ -146,10 +150,10 @@ namespace {
             if (!name) continue;
             auto* write_to = material_id > GW::Constants::MaterialSlot::Feather ? &rare_materials : &common_materials;
             write_to->push_back(name);
-            if (show_trader_value_for_mats) {
+            if (settings.show_trader_value_for_mats) {
                 const auto sell_price = PriceCheckerModule::GetTraderSellPrice(material_id);
                 if (sell_price) {
-                    write_to->back().append(std::format(L"\x2{}\x2{}\x2{}", EncodedLiteral(L" ("), EncodedCurrencyString(sell_price,true,high_price_threshold,high_price_color), EncodedLiteral(L")")));
+                    write_to->back().append(std::format(L"\x2{}\x2{}\x2{}", EncodedLiteral(L" ("), EncodedCurrencyString(sell_price,true,settings.high_price_threshold,high_price_color), EncodedLiteral(L")")));
                 }
             }
         }
@@ -167,7 +171,7 @@ namespace {
         }
 
         if (!description.empty()) description += L"\x2";
-        description += EncodedNewParagraph + L"\x2" + EncodedColouredString(items, salvage_color);
+        description += EncodedNewParagraph + L"\x2" + EncodedColouredString(items, settings.salvage_color);
     }
 
     // -------------------------------------------------------------------------
@@ -183,7 +187,7 @@ namespace {
 
         auto append = [&](std::wstring text) {
             if (!description.empty()) description += L"\x2";
-            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(text), nicholas_color);
+            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(EncodedLiteral(text), settings.nicholas_color);
             last_nicholas_text = text;
         };
 
@@ -242,7 +246,7 @@ namespace {
     std::wstring PrintPrice(const uint32_t price, const char* name = nullptr)
     {
         const auto subject = EncodedLiteral(name && *name ? TextUtils::StringToWString(name) : L"Trader Value");
-        const auto currency = EncodedCurrencyString(price, false, high_price_threshold, high_price_color);
+        const auto currency = EncodedCurrencyString(price, false, settings.high_price_threshold, high_price_color);
         return std::format(L"{}\x2{}\x2{}", subject, EncodedLiteral(L": "), currency);
     }
 
@@ -268,7 +272,7 @@ namespace {
         }
         if (!prices_out.empty()) {
             if (!description.empty()) description += L"\x2";
-            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(prices_out, price_color);
+            description += EncodedNewParagraph + L"\x2" + EncodedColouredString(prices_out, settings.price_color);
         }
     }
 
@@ -280,12 +284,12 @@ namespace {
         }
         modifier_key_item_descriptions_key_state = GetKeyState(modifier_key_item_descriptions);
         if (ToolboxUtils::IsExplorable()) {
-            if (!disable_item_descriptions_in_explorable) {
+            if (!settings.disable_item_descriptions_in_explorable) {
                 return;
             }
         }
         else if (ToolboxUtils::IsOutpost()) {
-            if (!disable_item_descriptions_in_outpost) {
+            if (!settings.disable_item_descriptions_in_outpost) {
                 return;
             }
         }
@@ -338,7 +342,7 @@ namespace {
     std::wstring tmp_item_description;
     void OnGetItemDescription(uint32_t item_id, uint32_t, uint32_t, uint32_t, wchar_t**, wchar_t** out_desc)
     {
-        bool block_description = disable_item_descriptions_in_outpost && ToolboxUtils::IsOutpost() || disable_item_descriptions_in_explorable && ToolboxUtils::IsExplorable();
+        bool block_description = settings.disable_item_descriptions_in_outpost && ToolboxUtils::IsOutpost() || settings.disable_item_descriptions_in_explorable && ToolboxUtils::IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_item_descriptions) >= 0;
 
         if (block_description && out_desc) {
@@ -350,9 +354,9 @@ namespace {
         if (*out_desc != tmp_item_description.data()) {
             tmp_item_description.assign(*out_desc ? *out_desc : L"");
         }
-        if (show_salvage_info) AppendSalvageInfo(item_id, tmp_item_description);
-        if (show_trader_prices) AppendPriceInfo(item_id, tmp_item_description);
-        if (show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_description);
+        if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_description);
+        if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_description);
+        if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_description);
 
         if (!tmp_item_description.empty()) {
             if (GW::UI::IsValidEncStr(tmp_item_description.data())) {
@@ -377,9 +381,9 @@ namespace {
         if (agent->owner && agent->owner != GW::Agents::GetControlledCharacterId()) return;
 
         const auto item_id = agent->item_id;
-        if (show_salvage_info) AppendSalvageInfo(item_id, tmp_item_name_tag);
-        if (show_trader_prices) AppendPriceInfo(item_id, tmp_item_name_tag);
-        if (show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_name_tag);
+        if (settings.show_salvage_info) AppendSalvageInfo(item_id, tmp_item_name_tag);
+        if (settings.show_trader_prices) AppendPriceInfo(item_id, tmp_item_name_tag);
+        if (settings.show_nicholas_info) AppendNicholasInfo(item_id, tmp_item_name_tag);
 
         packet->extra_info_enc = tmp_item_name_tag.data();
     }
@@ -393,6 +397,7 @@ namespace {
 void ItemTooltipModule::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
     // Priority 200 keeps us after PriceCheckerModule (100), ensuring prices
     // are already fetched before we try to display them.
     ItemDescriptionHandler::RegisterDescriptionCallback(OnGetItemDescription, 200);
@@ -410,79 +415,54 @@ void ItemTooltipModule::Update(float) {
     UpdateItemTooltip();
 }
 
-void ItemTooltipModule::SaveSettings(ToolboxIni* ini)
+void ItemTooltipModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(show_salvage_info);
-    SAVE_BOOL(show_trader_value_for_mats);
-    SAVE_COLOR(salvage_color);
-    SAVE_BOOL(show_nicholas_info);
-    SAVE_COLOR(nicholas_color);
-    SAVE_BOOL(show_trader_prices);
-    SAVE_COLOR(price_color);
-    SAVE_FLOAT(high_price_threshold);
-    SAVE_BOOL(disable_item_descriptions_in_outpost);
-    SAVE_BOOL(disable_item_descriptions_in_explorable);
-}
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    if (!legacy) {
+        return;
+    }
 
-void ItemTooltipModule::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxModule::LoadSettings(ini);
-
-    // Load current settings (new keys under [ItemTooltipModule]).
-    LOAD_BOOL(show_salvage_info);
-    LOAD_BOOL(show_trader_value_for_mats);
-    LOAD_COLOR(salvage_color);
-    LOAD_BOOL(show_nicholas_info);
-    LOAD_COLOR(nicholas_color);
-    LOAD_BOOL(show_trader_prices);
-    LOAD_COLOR(price_color);
-    LOAD_UINT(high_price_threshold);
-    LOAD_BOOL(disable_item_descriptions_in_outpost);
-    LOAD_BOOL(disable_item_descriptions_in_explorable);
-
-    // One-time migration from the old split modules.
-    // Each key is only migrated if it hasn't been written to the new section yet
-    // (i.e. the new key is still at its compile-time default value), so we don't
-    // clobber settings that the user has already adjusted in the new module.
+    // One-time migration from the old split modules; only when the user never saved the new key.
     const char* salvage_section = "SalvageInfoModule";
     const char* price_section = "PriceCheckerModule";
+    const auto new_key_unset = [&](const char* key) {
+        return !doc.Has(Name(), key) && !legacy->KeyExists(Name(), key);
+    };
 
-    // SalvageInfoModule: add_salvage_info_to_description -> show_salvage_info
-    if (!ini->KeyExists(Name(), "show_salvage_info") && ini->KeyExists(salvage_section, "add_salvage_info_to_description")) {
-        show_salvage_info = ini->GetBoolValue(salvage_section, "add_salvage_info_to_description", show_salvage_info);
+    if (new_key_unset("show_salvage_info") && legacy->KeyExists(salvage_section, "add_salvage_info_to_description")) {
+        settings.show_salvage_info = legacy->GetBoolValue(salvage_section, "add_salvage_info_to_description", settings.show_salvage_info);
     }
-    // SalvageInfoModule: show_trader_value_for_salvage_items -> show_trader_value_for_mats
-    if (!ini->KeyExists(Name(), "show_trader_value_for_mats") && ini->KeyExists(salvage_section, "show_trader_value_for_salvage_items")) {
-        show_trader_value_for_mats = ini->GetBoolValue(salvage_section, "show_trader_value_for_salvage_items", show_trader_value_for_mats);
+    if (new_key_unset("show_trader_value_for_mats") && legacy->KeyExists(salvage_section, "show_trader_value_for_salvage_items")) {
+        settings.show_trader_value_for_mats = legacy->GetBoolValue(salvage_section, "show_trader_value_for_salvage_items", settings.show_trader_value_for_mats);
     }
-    // SalvageInfoModule: add_nicholas_info_to_description -> show_nicholas_info
-    if (!ini->KeyExists(Name(), "show_nicholas_info") && ini->KeyExists(salvage_section, "add_nicholas_info_to_description")) {
-        show_nicholas_info = ini->GetBoolValue(salvage_section, "add_nicholas_info_to_description", show_nicholas_info);
+    if (new_key_unset("show_nicholas_info") && legacy->KeyExists(salvage_section, "add_nicholas_info_to_description")) {
+        settings.show_nicholas_info = legacy->GetBoolValue(salvage_section, "add_nicholas_info_to_description", settings.show_nicholas_info);
     }
 
-    // PriceCheckerModule: show_prices_in_item_description -> show_trader_prices
-    if (!ini->KeyExists(Name(), "show_trader_prices") && ini->KeyExists(price_section, "show_prices_in_item_description")) {
-        show_trader_prices = ini->GetBoolValue(price_section, "show_prices_in_item_description", show_trader_prices);
+    if (new_key_unset("show_trader_prices") && legacy->KeyExists(price_section, "show_prices_in_item_description")) {
+        settings.show_trader_prices = legacy->GetBoolValue(price_section, "show_prices_in_item_description", settings.show_trader_prices);
     }
-    // PriceCheckerModule: text_color -> price_color
-    if (!ini->KeyExists(Name(), "price_color") && ini->KeyExists(price_section, "text_color")) {
-        price_color = Colors::Load(ini, price_section, "text_color", price_color);
+    if (new_key_unset("price_color") && legacy->KeyExists(price_section, "text_color")) {
+        settings.price_color = Colors::Load(legacy, price_section, "text_color", settings.price_color);
     }
-    // PriceCheckerModule: high_price_threshold -> high_price_threshold (same name, different section)
-    if (!ini->KeyExists(Name(), "high_price_threshold") && ini->KeyExists(price_section, "high_price_threshold")) {
-        high_price_threshold = static_cast<uint32_t>(ini->GetLongValue(price_section, "high_price_threshold", high_price_threshold));
+    if (new_key_unset("high_price_threshold") && legacy->KeyExists(price_section, "high_price_threshold")) {
+        settings.high_price_threshold = static_cast<uint32_t>(legacy->GetLongValue(price_section, "high_price_threshold", settings.high_price_threshold));
     }
 
     const char* show_descriptions_section = "Game Settings";
-    // Hide/show item descriptions
-    if (!ini->KeyExists(Name(), "disable_item_descriptions_in_outpost") && ini->KeyExists(show_descriptions_section, "disable_item_descriptions_in_outpost")) {
-        disable_item_descriptions_in_outpost = ini->GetBoolValue(show_descriptions_section, "disable_item_descriptions_in_outpost", disable_item_descriptions_in_outpost);
+    if (new_key_unset("disable_item_descriptions_in_outpost") && legacy->KeyExists(show_descriptions_section, "disable_item_descriptions_in_outpost")) {
+        settings.disable_item_descriptions_in_outpost = legacy->GetBoolValue(show_descriptions_section, "disable_item_descriptions_in_outpost", settings.disable_item_descriptions_in_outpost);
     }
-    if (!ini->KeyExists(Name(), "disable_item_descriptions_in_outpost") && ini->KeyExists(show_descriptions_section, "disable_item_descriptions_in_explorable")) {
-        disable_item_descriptions_in_explorable = ini->GetBoolValue(show_descriptions_section, "disable_item_descriptions_in_explorable", disable_item_descriptions_in_explorable);
+    if (new_key_unset("disable_item_descriptions_in_outpost") && legacy->KeyExists(show_descriptions_section, "disable_item_descriptions_in_explorable")) {
+        settings.disable_item_descriptions_in_explorable = legacy->GetBoolValue(show_descriptions_section, "disable_item_descriptions_in_explorable", settings.disable_item_descriptions_in_explorable);
     }
-    
+}
+
+void ItemTooltipModule::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void ItemTooltipModule::DrawSettingsInternal()
@@ -493,65 +473,65 @@ void ItemTooltipModule::DrawSettingsInternal()
     ImGui::Text("Hide item descriptions in:");
     ImGui::ShowHelp("When hovering an item in inventory or weapon sets,\nonly show the item name in the tooltip that appears.");
     ImGui::Indent();
-    ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &disable_item_descriptions_in_explorable);
+    ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &settings.disable_item_descriptions_in_explorable);
     ImGui::Unindent();
     ImGui::SameLine();
-    ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &disable_item_descriptions_in_outpost);
-    if (disable_item_descriptions_in_explorable || disable_item_descriptions_in_outpost) {
+    ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &settings.disable_item_descriptions_in_outpost);
+    if (settings.disable_item_descriptions_in_explorable || settings.disable_item_descriptions_in_outpost) {
         ImGui::Indent();
         ImGui::TextDisabled("Hold Alt when hovering an item to show full description");
         ImGui::Unindent();
     }
 
     // --- Salvage info --------------------------------------------------------
-    ImGui::CheckboxWithHelp("Show salvage materials in item tooltip", &show_salvage_info, "When hovering over a salvageable item, display which common and rare materials can be salvaged from it");
-    if (show_salvage_info) {
+    ImGui::CheckboxWithHelp("Show salvage materials in item tooltip", &settings.show_salvage_info, "When hovering over a salvageable item, display which common and rare materials can be salvaged from it");
+    if (settings.show_salvage_info) {
         ImGui::Indent();
 
-        ImGui::Checkbox("Show trader value next to salvage materials", &show_trader_value_for_mats);
+        ImGui::Checkbox("Show trader value next to salvage materials", &settings.show_trader_value_for_mats);
 
         ImGui::TextUnformatted("Text color:");
         ImGui::SameLine();
-        ImGui::ColorButtonPicker("Salvage info text color", &salvage_color);
+        ImGui::ColorButtonPicker("Salvage info text color", &settings.salvage_color.value);
         ImGui::SameLine();
         bool reset_salvage = false;
-        if (ImGui::ConfirmButton("Reset##salvage", &reset_salvage)) salvage_color = salvage_color_default;
+        if (ImGui::ConfirmButton("Reset##salvage", &reset_salvage)) settings.salvage_color = salvage_color_default;
 
         ImGui::Unindent();
     }
 
     // --- Nicholas info -------------------------------------------------------
-    ImGui::CheckboxWithHelp("Show Nicholas the Traveler info in item tooltip", &show_nicholas_info, "When hovering over an item that Nicholas collects, display when he will collect it and how many he wants");
-    if (show_nicholas_info) {
+    ImGui::CheckboxWithHelp("Show Nicholas the Traveler info in item tooltip", &settings.show_nicholas_info, "When hovering over an item that Nicholas collects, display when he will collect it and how many he wants");
+    if (settings.show_nicholas_info) {
         ImGui::Indent();
 
         ImGui::TextUnformatted("Text color:");
         ImGui::SameLine();
-        ImGui::ColorButtonPicker("Nicholas info text color", &nicholas_color);
+        ImGui::ColorButtonPicker("Nicholas info text color", &settings.nicholas_color.value);
         ImGui::SameLine();
         bool reset_nicholas = false;
-        if (ImGui::ConfirmButton("Reset##nicholas", &reset_nicholas)) nicholas_color = nicholas_color_default;
+        if (ImGui::ConfirmButton("Reset##nicholas", &reset_nicholas)) settings.nicholas_color = nicholas_color_default;
 
         ImGui::Unindent();
     }
 
     // --- Trader prices -------------------------------------------------------
-    ImGui::CheckboxWithHelp("Show trader prices in item tooltip", &show_trader_prices, "Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com");
-    if (show_trader_prices) {
+    ImGui::CheckboxWithHelp("Show trader prices in item tooltip", &settings.show_trader_prices, "Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com");
+    if (settings.show_trader_prices) {
         ImGui::Indent();
 
         ImGui::TextUnformatted("Text color:");
         ImGui::SameLine();
-        ImGui::ColorButtonPicker("Trader price text color", &price_color);
+        ImGui::ColorButtonPicker("Trader price text color", &settings.price_color.value);
         ImGui::SameLine();
         bool reset_price = false;
-        if (ImGui::ConfirmButton("Reset##price", &reset_price)) price_color = price_color_default;
+        if (ImGui::ConfirmButton("Reset##price", &reset_price)) settings.price_color = price_color_default;
 
 
 
         ImGui::Unindent();
     }
-    ImGui::SliderInt("High price threshold", (int*)&high_price_threshold, 100, 50000);
+    ImGui::SliderInt("High price threshold", (int*)&settings.high_price_threshold, 100, 50000);
     ImGui::ShowHelp("Prices above this threshold will be highlighted in gold");
     ImGui::NewLine();
 }

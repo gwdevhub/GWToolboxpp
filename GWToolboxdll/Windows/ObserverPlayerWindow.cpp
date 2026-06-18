@@ -16,6 +16,19 @@ using namespace std::string_literals;
 void ObserverPlayerWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
+}
+
+void ObserverPlayerWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void ObserverPlayerWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 
@@ -72,37 +85,37 @@ void ObserverPlayerWindow::DrawHeaders() const
     ImGui::Text("Name");
     float offset_d = text_long;
     // attempted
-    if (show_attempts) {
+    if (settings.show_attempts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Attempts);
         offset_d = text_tiny;
     }
     // cancelled
-    if (show_cancels) {
+    if (settings.show_cancels) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Cancels);
         offset_d = text_tiny;
     }
     // interrupted
-    if (show_interrupts) {
+    if (settings.show_interrupts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Interrupts);
         offset_d = text_tiny;
     }
     // finished
-    if (show_finishes) {
+    if (settings.show_finishes) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Finishes);
         offset_d = text_tiny;
     }
     // integrity
-    if (show_integrity) {
+    if (settings.show_integrity) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Integrity);
         offset_d = text_tiny;
     }
     // damage
-    if (show_damage) {
+    if (settings.show_damage) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text("Damage");
     }
@@ -114,37 +127,37 @@ void ObserverPlayerWindow::DrawAction(const std::string& name, const ObserverMod
     ImGui::Text(name.c_str());
     float offset_d = text_long;
     // attempted
-    if (show_attempts) {
+    if (settings.show_attempts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->started).c_str());
         offset_d = text_tiny;
     }
     // cancelled
-    if (show_cancels) {
+    if (settings.show_cancels) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->stopped).c_str());
         offset_d = text_tiny;
     }
     // interrupted
-    if (show_interrupts) {
+    if (settings.show_interrupts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->interrupted).c_str());
         offset_d = text_tiny;
     }
     // finished
-    if (show_finishes) {
+    if (settings.show_finishes) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->finished).c_str());
         offset_d = text_tiny;
     }
     // integrity
-    if (show_integrity) {
+    if (settings.show_integrity) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->integrity).c_str());
         offset_d = text_tiny;
     }
     // damage
-    if (show_damage) {
+    if (settings.show_damage) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->total_damage).c_str());
     }
@@ -224,7 +237,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
         text_tiny = 40.0f * global;
 
         // Display total damage dealt and received
-        if (show_damage_details) {
+        if (settings.show_damage_details) {
             ImGui::Separator();
             ImGui::Text("Damage & Healing Summary:");
             ImGui::Text(("Total Damage Dealt: "s + std::to_string(tracking->stats.total_damage_dealt)).c_str());
@@ -354,7 +367,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
             }
         }
 
-        if (show_tracking) {
+        if (settings.show_tracking) {
             // skills
             ImGui::Separator();
             ImGui::Text("Skills:");
@@ -363,7 +376,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
             DrawSkills(tracking->stats.skills_used, tracking->stats.skill_ids_used);
         }
 
-        if (show_comparison && compared && !(!show_skills_used_on_self && tracking && compared->agent_id == tracking->agent_id)) {
+        if (settings.show_comparison && compared && !(!settings.show_skills_used_on_self && tracking && compared->agent_id == tracking->agent_id)) {
             // skills
             ImGui::Text(""); // new line
             ImGui::Text(("Skills used on: "s + compared->DisplayName()).c_str());
@@ -377,7 +390,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
             }
 
             // Display damage and healing for this specific player
-            if (show_damage_details) {
+            if (settings.show_damage_details) {
                 ImGui::Text("");
                 ImGui::Text(("Stats with "s + compared->DisplayName()).c_str());
                 ImGui::Text(("  Damage dealt: " + std::to_string(tracking->stats.LazyGetDamageDealedAgainst(compared->agent_id))).c_str());
@@ -391,53 +404,18 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-// Load settings
-void ObserverPlayerWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-
-    show_tracking = ini->GetBoolValue(Name(), VAR_NAME(show_tracking), true);
-    show_comparison = ini->GetBoolValue(Name(), VAR_NAME(show_comparison), true);
-    show_skills_used_on_self = ini->GetBoolValue(Name(), VAR_NAME(show_skills_used_on_self), true);
-    show_attempts = ini->GetBoolValue(Name(), VAR_NAME(show_attempts), false);
-    show_cancels = ini->GetBoolValue(Name(), VAR_NAME(show_cancels), true);
-    show_interrupts = ini->GetBoolValue(Name(), VAR_NAME(show_interrupts), true);
-    show_finishes = ini->GetBoolValue(Name(), VAR_NAME(show_finishes), true);
-    show_integrity = ini->GetBoolValue(Name(), VAR_NAME(show_integrity), false);
-    show_damage = ini->GetBoolValue(Name(), VAR_NAME(show_damage), true);
-    show_damage_details = ini->GetBoolValue(Name(), VAR_NAME(show_damage_details), true);
-}
-
-
-// Save settings
-void ObserverPlayerWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-
-    SAVE_BOOL(show_tracking);
-    SAVE_BOOL(show_comparison);
-    SAVE_BOOL(show_skills_used_on_self);
-    SAVE_BOOL(show_attempts);
-    SAVE_BOOL(show_cancels);
-    SAVE_BOOL(show_interrupts);
-    SAVE_BOOL(show_finishes);
-    SAVE_BOOL(show_integrity);
-    SAVE_BOOL(show_damage);
-    SAVE_BOOL(show_damage_details);
-}
-
 // Draw settings
 void ObserverPlayerWindow::DrawSettingsInternal()
 {
     ImGui::Text("Make sure the Observer Module is enabled.");
-    ImGui::Checkbox("Show tracking player", &show_tracking);
-    ImGui::Checkbox("Show player comparison", &show_comparison);
-    ImGui::Checkbox("Show skills used on self", &show_skills_used_on_self);
-    ImGui::Checkbox(("Show attempts ("s + ObserverLabel::Attempts + ")").c_str(), &show_attempts);
-    ImGui::Checkbox(("Show cancels ("s + ObserverLabel::Cancels + ")").c_str(), &show_cancels);
-    ImGui::Checkbox(("Show interrupts ("s + ObserverLabel::Interrupts + ")").c_str(), &show_interrupts);
-    ImGui::Checkbox(("Show finishes ("s + ObserverLabel::Finishes + ")").c_str(), &show_finishes);
-    ImGui::Checkbox(("Show integrity ("s + ObserverLabel::Integrity + ")").c_str(), &show_integrity);
-    ImGui::Checkbox("Show damage", &show_damage);
-    ImGui::Checkbox("Show damage details", &show_damage_details);
+    ImGui::Checkbox("Show tracking player", &settings.show_tracking);
+    ImGui::Checkbox("Show player comparison", &settings.show_comparison);
+    ImGui::Checkbox("Show skills used on self", &settings.show_skills_used_on_self);
+    ImGui::Checkbox(("Show attempts ("s + ObserverLabel::Attempts + ")").c_str(), &settings.show_attempts);
+    ImGui::Checkbox(("Show cancels ("s + ObserverLabel::Cancels + ")").c_str(), &settings.show_cancels);
+    ImGui::Checkbox(("Show interrupts ("s + ObserverLabel::Interrupts + ")").c_str(), &settings.show_interrupts);
+    ImGui::Checkbox(("Show finishes ("s + ObserverLabel::Finishes + ")").c_str(), &settings.show_finishes);
+    ImGui::Checkbox(("Show integrity ("s + ObserverLabel::Integrity + ")").c_str(), &settings.show_integrity);
+    ImGui::Checkbox("Show damage", &settings.show_damage);
+    ImGui::Checkbox("Show damage details", &settings.show_damage_details);
 }

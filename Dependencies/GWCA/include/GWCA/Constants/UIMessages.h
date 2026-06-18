@@ -313,7 +313,7 @@ namespace GW {
 			kTargetNPCPartyMember,                   // 0x100000b3, wparam = { uint32_t unk, uint32_t agent_id }
 			kTargetPlayerPartyMember,                // 0x100000b4, wparam = { uint32_t unk, uint32_t player_number }
 			kVendorWindow,                           // 0x100000b5, wparam = UIPacket::kVendorWindow
-			kMessage_0x100000b6,                     // 0x100000b6
+			kVendorError,                            // 0x100000b6, wparam = { uint32_t flag, uint32_t error_id }
 			kMessage_0x100000b7,                     // 0x100000b7
 			kMessage_0x100000b8,                     // 0x100000b8
 			kVendorItems,                            // 0x100000b9, wparam = UIPacket::kVendorItems

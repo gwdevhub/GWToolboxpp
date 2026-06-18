@@ -118,9 +118,9 @@ namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
 
-    int ws_port = 5899;
+    Teamspeak5Module::Settings settings;
+
     std::string ws_host;
-    std::string gwtoolbox_teamspeak5_api_key;
 
     const char* gwtoolbox_teamspeak5_identifier = "com.guildwars.gwtoolboxpp";
     const char* gwtoolbox_teamspeak5_version = "1.0.0";
@@ -135,7 +135,6 @@ namespace {
 
     ConnectionStep step = Idle;
 
-    bool enabled = true;
     bool disconnecting = false;
     bool pending_connect = false;
     bool pending_disconnect = false;
@@ -187,7 +186,7 @@ namespace {
     const std::string& GetWebsocketHost(const bool force = false)
     {
         if (!(!ws_host.empty() && !force)) {
-            ws_host = std::format("ws://localhost:{}", ws_port);
+            ws_host = std::format("ws://localhost:{}", settings.ws_port);
         }
         return ws_host;
     }
@@ -264,7 +263,7 @@ namespace {
                 .version = gwtoolbox_teamspeak5_version,
                 .name = gwtoolbox_teamspeak5_name,
                 .description = gwtoolbox_teamspeak5_description,
-                .content = {.apiKey = gwtoolbox_teamspeak5_api_key},
+                .content = {.apiKey = settings.gwtoolbox_teamspeak5_api_key},
             },
         };
         websocket->send(glz::write_json(packet).value_or(std::string{}));
@@ -280,7 +279,7 @@ namespace {
             return true;
         }
         step = Connecting;
-        if (!enabled) {
+        if (!settings.enabled) {
             step = Idle;
             return false;
         }
@@ -354,7 +353,7 @@ namespace {
         if (!ParsePayload(raw_payload, payload)) {
             return false;
         }
-        if (!payload.apiKey.empty()) gwtoolbox_teamspeak5_api_key = payload.apiKey;
+        if (!payload.apiKey.empty()) settings.gwtoolbox_teamspeak5_api_key = payload.apiKey;
         current_server = 0xffffffff;
         for (size_t connection_id = 0; connection_id < payload.connections.size(); ++connection_id) {
             const auto& connection = payload.connections[connection_id];
@@ -379,7 +378,7 @@ namespace {
         if (!ParsePayload(raw_payload, payload)) {
             return false;
         }
-        if (!payload.apiKey.empty()) gwtoolbox_teamspeak5_api_key = payload.apiKey;
+        if (!payload.apiKey.empty()) settings.gwtoolbox_teamspeak5_api_key = payload.apiKey;
         const auto teamspeak_server = UpsertServer(payload.properties, payload.connectionId);
         Log::Log("Teamspeak server info updated:\n%s (%s:%d), %d users", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->user_count);
         return true;
@@ -391,7 +390,7 @@ namespace {
         if (!ParsePayload(raw_payload, payload)) {
             return false;
         }
-        if (!payload.apiKey.empty()) gwtoolbox_teamspeak5_api_key = payload.apiKey;
+        if (!payload.apiKey.empty()) settings.gwtoolbox_teamspeak5_api_key = payload.apiKey;
         const auto server = GetServer(payload.connectionId);
         if (server) {
             server->my_client_id = payload.clientId;
@@ -415,7 +414,7 @@ namespace {
         if (!ParsePayload(raw_payload, payload)) {
             return false;
         }
-        if (!payload.apiKey.empty()) gwtoolbox_teamspeak5_api_key = payload.apiKey;
+        if (!payload.apiKey.empty()) settings.gwtoolbox_teamspeak5_api_key = payload.apiKey;
         const auto server = GetServer(payload.connectionId);
         if (!server || payload.clientId != server->my_client_id) {
             return false;
@@ -466,6 +465,7 @@ namespace {
 void Teamspeak5Module::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ts", OnTeamspeakCommand);
     Connect();
 }
@@ -481,22 +481,18 @@ void Teamspeak5Module::Terminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
-void Teamspeak5Module::LoadSettings(ToolboxIni* ini)
+void Teamspeak5Module::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(enabled);
-    LOAD_UINT(ws_port);
-    LOAD_STRING(gwtoolbox_teamspeak5_api_key);
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     GetWebsocketHost(true);
     pending_connect = true;
 }
 
-void Teamspeak5Module::SaveSettings(ToolboxIni* ini)
+void Teamspeak5Module::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(enabled);
-    SAVE_UINT(ws_port);
-    SAVE_STRING(gwtoolbox_teamspeak5_api_key);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void Teamspeak5Module::Update(float)
@@ -505,7 +501,7 @@ void Teamspeak5Module::Update(float)
         Connect();
         pending_connect = false;
     }
-    if (!enabled && IsConnected()) {
+    if (!settings.enabled && IsConnected()) {
         pending_disconnect = true;
     }
     if (pending_disconnect) {
@@ -539,8 +535,8 @@ void Teamspeak5Module::Update(float)
 void Teamspeak5Module::DrawSettingsInternal()
 {
     ImGui::PushID("Teamspeak5Module");
-    if (ImGui::Checkbox("Enable Teamspeak 5 integration", &enabled)) {
-        if (enabled) {
+    if (ImGui::Checkbox("Enable Teamspeak 5 integration", &settings.enabled)) {
+        if (settings.enabled) {
             Connect(true);
         }
         else {
@@ -548,7 +544,7 @@ void Teamspeak5Module::DrawSettingsInternal()
         }
     }
     ImGui::ShowHelp(gwtoolbox_teamspeak5_description);
-    if (enabled) {
+    if (settings.enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, IsConnected() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
         auto status_str = [] {

@@ -276,35 +276,40 @@ void AudioSettings::SignalTerminate()
     logged_music.clear();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
 }
-void AudioSettings::LoadSettings(ToolboxIni* ini)
+void AudioSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    TNamesDepend keys{};
+    ToolboxModule::LoadSettings(doc, legacy);
     blocked_sounds.clear();
-    if (ini->GetAllKeys(Name(), keys)) {
-        for (const auto& key : keys) {
-            if (strncmp(key.pItem, "blocked_sounds", 14) != 0)
-                continue;
-            std::wstring out;
-            GuiUtils::IniToArray(ini->GetValue(Name(),key.pItem,""),out);
-            if (!out.empty())
-                blocked_sounds.push_back(std::move(out));
+    std::vector<SettingWString> stored;
+    if (doc.Get(Name(), "blocked_sounds", stored)) {
+        for (auto& s : stored) {
+            if (!s.value.empty())
+                blocked_sounds.push_back(std::move(s.value));
+        }
+    }
+    else if (legacy) {
+        TNamesDepend keys{};
+        if (legacy->GetAllKeys(Name(), keys)) {
+            for (const auto& key : keys) {
+                if (strncmp(key.pItem, "blocked_sounds", 14) != 0)
+                    continue;
+                std::wstring out;
+                GuiUtils::IniToArray(legacy->GetValue(Name(), key.pItem, ""), out);
+                if (!out.empty())
+                    blocked_sounds.push_back(std::move(out));
+            }
         }
     }
 }
-void AudioSettings::SaveSettings(ToolboxIni* ini)
+void AudioSettings::SaveSettings(SettingsDoc& doc)
 {
-    TNamesDepend values{};
-    ini->Delete(Name(), "blocked_sounds");
-    std::string buf;
-    size_t i = 0;
-    ini->Delete(Name(),NULL);
+    ToolboxModule::SaveSettings(doc);
+    std::vector<SettingWString> stored;
     for (const auto& filename : blocked_sounds) {
-        GuiUtils::ArrayToIni(filename, &buf);
-        if (!buf.empty()) {
-            auto key = std::format("blocked_sounds{}", i++);
-            ini->SetValue(Name(), key.c_str(), buf.c_str());
-        } 
+        if (!filename.empty())
+            stored.emplace_back(filename);
     }
+    doc.Set(Name(), "blocked_sounds", stored);
 }
 void AudioSettings::DrawSettingsInternal() {
 

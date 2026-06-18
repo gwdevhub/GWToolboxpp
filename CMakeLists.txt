@@ -34,6 +34,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 add_compile_definitions(
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
+    # glaze's zmij float writer uses _mm_cvtsi128_si64, an x64-only intrinsic, when SSE is detected; we build x86
+    "ZMIJ_USE_SIMD=0"
 
     "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""
     "GWTOOLBOXEXE_MODULE_VERSION=${GWTOOLBOXEXE_MODULE_VERSION}"
@@ -112,6 +114,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -Wno-delete-non-abstract-non-virtual-dtor
     )
     add_compile_options(${CLANG_WARNING_DISABLES})
+    
+    add_compile_options($<$<NOT:$<CONFIG:Debug>>:/clang:-O3>)
+    add_compile_options(/arch:AVX2)
 else()
     # MSVC: whole-program optimization + link-time codegen in non-Debug
     add_compile_options(/MP)

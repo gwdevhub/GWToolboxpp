@@ -9,6 +9,8 @@
 
 #include <D3DContainers.h>
 
+class ToolboxModule;
+
 class PingsLinesRenderer : public D3DVertexBuffer {
     friend class Minimap;
     const float drawing_scale = 96.0f;
@@ -83,14 +85,14 @@ class PingsLinesRenderer : public D3DVertexBuffer {
         void Initialize(IDirect3DDevice9* device) override;
 
     public:
-        Color color = 0;
+        Color color = Colors::ARGB(128, 255, 0, 0);
     };
 
     class Marker : public D3DVertexBuffer {
         void Initialize(IDirect3DDevice9* device) override;
 
     public:
-        Color color = 0;
+        Color color = Colors::ARGB(200, 128, 0, 128);
     };
 
 public:
@@ -125,8 +127,7 @@ public:
     void P153Callback(const GW::Packet::StoC::GenericValueTarget* pak);
 
     void DrawSettings();
-    void LoadSettings(const ToolboxIni* ini, const char* section);
-    void SaveSettings(ToolboxIni* ini, const char* section) const;
+    void RegisterSettings(ToolboxModule* module);
 
 private:
     void Initialize(IDirect3DDevice9* device) override;
@@ -171,7 +172,7 @@ private:
     clock_t lastqueued = 0;
     std::vector<GW::UI::CompassPoint> queue{};
 
-    Color color_drawings = 0;
+    Color color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
     Color color_shadowstep_line = Colors::ARGB(155, 128, 0, 128);
     Color color_shadowstep_line_maxrange = Colors::ARGB(255, 255, 0, 128);
     float maxrange_interp_begin = 0.85f;

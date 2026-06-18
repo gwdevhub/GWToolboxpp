@@ -19,6 +19,29 @@
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
+// JSON preset DTOs; in a NAMED namespace because glaze reflection can't bind anonymous-namespace types.
+namespace guild_wars_settings_json {
+    struct WindowPositionJson {
+        uint32_t state = 0;
+        float p1_x = 0.f;
+        float p1_y = 0.f;
+        float p2_x = 0.f;
+        float p2_y = 0.f;
+    };
+
+    struct PreferencesJson {
+        std::map<std::string, uint32_t> preference_values{};
+        std::map<std::string, uint32_t> preference_enums{};
+        std::map<std::string, uint32_t> preference_flags{};
+        std::vector<uint32_t> key_mappings{};
+        std::vector<WindowPositionJson> window_positions{};
+        int32_t gw_window_top = 0;
+        int32_t gw_window_left = 0;
+        int32_t gw_window_right = 0;
+        int32_t gw_window_bottom = 0;
+    };
+}
+
 namespace {
     uint32_t* key_mappings_array = nullptr;
     uint32_t key_mappings_array_length = 0x75;
@@ -311,43 +334,64 @@ namespace {
         prefs.gw_window_pos.bottom = ini.GetLongValue(ini_label_windows, "gw_window_bottom", 0);
     }
 
-    // Write preferences to an ini file from a PreferencesStruct
-    void SavePreferences(const PreferencesStruct& prefs, ToolboxIni& ini)
+    // Read preferences from a JSON preset to a PreferencesStruct
+    void LoadPreferences(PreferencesStruct& prefs, const guild_wars_settings_json::PreferencesJson& json)
     {
-        std::string tmp;
+        GetPreferences(prefs); // Use current settings as a default
 
-        char key_buf[16];
+        const auto get_or = [](const std::map<std::string, uint32_t>& values, const char* name, const uint32_t current) {
+            const auto found = values.find(name);
+            return found != values.end() ? found->second : current;
+        };
         for (size_t key = 0; key < prefs.preference_values.size(); key++) {
-            ini.SetLongValue(ini_label_numbers, number_pref_names[key], prefs.preference_values[key]);
+            prefs.preference_values[key] = get_or(json.preference_values, number_pref_names[key], prefs.preference_values[key]);
         }
         for (size_t key = 0; key < prefs.preference_enums.size(); key++) {
-            ini.SetLongValue(ini_label_enums, enum_pref_names[key], prefs.preference_enums[key]);
+            prefs.preference_enums[key] = get_or(json.preference_enums, enum_pref_names[key], prefs.preference_enums[key]);
         }
         for (size_t key = 0; key < prefs.preference_flags.size(); key++) {
-            ini.SetLongValue(ini_label_flags, flag_pref_names[key], prefs.preference_flags[key]);
+            prefs.preference_flags[key] = get_or(json.preference_flags, flag_pref_names[key], prefs.preference_flags[key]);
         }
-        for (size_t key = 0; key < prefs.key_mappings.size(); key++) {
-            snprintf(key_buf, _countof(key_buf), "0x%02x", key);
-            ini.SetLongValue(ini_label_key_mappings, key_buf, prefs.key_mappings[key]);
+        for (size_t key = 0; key < prefs.key_mappings.size() && key < json.key_mappings.size(); key++) {
+            prefs.key_mappings[key] = json.key_mappings[key];
         }
+        for (size_t window_id = 0; window_id < prefs.window_positions.size() && window_id < json.window_positions.size(); window_id++) {
+            const auto& in = json.window_positions[window_id];
+            auto& out = prefs.window_positions[window_id];
+            out.state = in.state;
+            out.p1 = {in.p1_x, in.p1_y};
+            out.p2 = {in.p2_x, in.p2_y};
+        }
+        prefs.gw_window_pos = {json.gw_window_left, json.gw_window_top, json.gw_window_right, json.gw_window_bottom};
+    }
 
-        for (size_t window_id = 0; window_id < prefs.window_positions.size(); window_id++) {
-            const auto& window_pos = prefs.window_positions[window_id];
-            snprintf(key_buf, _countof(key_buf), "0x%02x_state", window_id);
-            ini.SetLongValue(ini_label_windows, key_buf, window_pos.state);
-            snprintf(key_buf, _countof(key_buf), "0x%02x_p1_x", window_id);
-            ini.SetDoubleValue(ini_label_windows, key_buf, window_pos.p1.x);
-            snprintf(key_buf, _countof(key_buf), "0x%02x_p1_y", window_id);
-            ini.SetDoubleValue(ini_label_windows, key_buf, window_pos.p1.y);
-            snprintf(key_buf, _countof(key_buf), "0x%02x_p2_x", window_id);
-            ini.SetDoubleValue(ini_label_windows, key_buf, window_pos.p2.x);
-            snprintf(key_buf, _countof(key_buf), "0x%02x_p2_y", window_id);
-            ini.SetDoubleValue(ini_label_windows, key_buf, window_pos.p2.y);
+    // Write preferences from a PreferencesStruct to a JSON preset
+    void SavePreferences(const PreferencesStruct& prefs, guild_wars_settings_json::PreferencesJson& json)
+    {
+        for (size_t key = 0; key < prefs.preference_values.size(); key++) {
+            json.preference_values[number_pref_names[key]] = prefs.preference_values[key];
         }
-        ini.SetLongValue(ini_label_windows, "gw_window_top", prefs.gw_window_pos.top);
-        ini.SetLongValue(ini_label_windows, "gw_window_left", prefs.gw_window_pos.left);
-        ini.SetLongValue(ini_label_windows, "gw_window_right", prefs.gw_window_pos.right);
-        ini.SetLongValue(ini_label_windows, "gw_window_bottom", prefs.gw_window_pos.bottom);
+        for (size_t key = 0; key < prefs.preference_enums.size(); key++) {
+            json.preference_enums[enum_pref_names[key]] = prefs.preference_enums[key];
+        }
+        for (size_t key = 0; key < prefs.preference_flags.size(); key++) {
+            json.preference_flags[flag_pref_names[key]] = prefs.preference_flags[key];
+        }
+        json.key_mappings = prefs.key_mappings;
+        json.window_positions.resize(prefs.window_positions.size());
+        for (size_t window_id = 0; window_id < prefs.window_positions.size(); window_id++) {
+            const auto& in = prefs.window_positions[window_id];
+            auto& out = json.window_positions[window_id];
+            out.state = in.state;
+            out.p1_x = in.p1.x;
+            out.p1_y = in.p1.y;
+            out.p2_x = in.p2.x;
+            out.p2_y = in.p2.y;
+        }
+        json.gw_window_top = prefs.gw_window_pos.top;
+        json.gw_window_left = prefs.gw_window_pos.left;
+        json.gw_window_right = prefs.gw_window_pos.right;
+        json.gw_window_bottom = prefs.gw_window_pos.bottom;
     }
 
     void OnPreferencesLoadFileChosen(const char* result)
@@ -357,19 +401,31 @@ namespace {
         }
         GW::GameThread::Enqueue([filename_cpy = std::filesystem::path(result)] {
             PreferencesStruct prefs;
-            ToolboxIni ini;
             if (!exists(filename_cpy)) {
                 Log::Error("File name %s doesn't exist", filename_cpy.string().c_str());
                 return;
             }
 
-            const auto err = ini.LoadFile(filename_cpy.string().c_str());
-            if (err != SI_OK) {
-                Log::Error("Failed to load ini file %s - error code %d", filename_cpy.string().c_str(), err);
-                return;
+            if (filename_cpy.extension() == L".ini") {
+                // Legacy preset format; still readable, but presets are only ever written as .json now
+                ToolboxIni ini;
+                const auto err = ini.LoadFile(filename_cpy.string().c_str());
+                if (err != SI_OK) {
+                    Log::Error("Failed to load ini file %s - error code %d", filename_cpy.string().c_str(), err);
+                    return;
+                }
+                LoadPreferences(prefs, ini);
             }
-
-            LoadPreferences(prefs, ini);
+            else {
+                std::ifstream file(filename_cpy, std::ios::binary);
+                const std::string buffer{std::istreambuf_iterator(file), {}};
+                guild_wars_settings_json::PreferencesJson json;
+                if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(json, buffer)) {
+                    Log::Error("Failed to load json file %s", filename_cpy.string().c_str());
+                    return;
+                }
+                LoadPreferences(prefs, json);
+            }
             SetPreferences(prefs);
 
             Log::Info("Preferences loaded from %s", filename_cpy.filename().string().c_str());
@@ -379,7 +435,20 @@ namespace {
     std::filesystem::path GetDefaultFilename()
     {
         const auto uuid = GW::AccountMgr::GetAccountUuid();
-        return std::filesystem::path(TextUtils::StringToWString(TextUtils::GuidToString(&uuid)) + L"_GuildWarsSettings.ini");
+        return std::filesystem::path(TextUtils::StringToWString(TextUtils::GuidToString(&uuid)) + L"_GuildWarsSettings.json");
+    }
+
+    // Prefer the .json preset; fall back to a legacy .ini preset with the same basename
+    std::filesystem::path ResolveExistingPreset(std::filesystem::path filename)
+    {
+        if (filename.extension() == L".json" && !std::filesystem::exists(filename)) {
+            auto legacy = filename;
+            legacy.replace_extension(L".ini");
+            if (std::filesystem::exists(legacy)) {
+                return legacy;
+            }
+        }
+        return filename;
     }
 
     void OnPreferencesSaveFileChosen(const char* result)
@@ -387,20 +456,29 @@ namespace {
         if (!result) {
             return;
         }
-        auto filename_cpy = new std::filesystem::path(result);
-        GW::GameThread::Enqueue([filename_cpy] {
+        auto filename = std::filesystem::path(result);
+        // Presets are only ever written as .json
+        if (filename.extension() != L".json") {
+            filename.replace_extension(L".json");
+        }
+        GW::GameThread::Enqueue([filename_cpy = std::move(filename)] {
             PreferencesStruct current_prefs;
             GetPreferences(current_prefs);
-            ToolboxIni ini;
-            SavePreferences(current_prefs, ini);
-            const auto err = ini.SaveFile(filename_cpy->string().c_str());
-            if (err == SI_OK) {
-                Log::Info("Preferences saved to %s", filename_cpy->filename().string().c_str());
+            guild_wars_settings_json::PreferencesJson json;
+            SavePreferences(current_prefs, json);
+            std::string buffer;
+            if (glz::write<glz::opts{.prettify = true}>(json, buffer)) {
+                Log::Error("Failed to serialise preferences for %s", filename_cpy.string().c_str());
+                return;
+            }
+            std::ofstream file(filename_cpy, std::ios::binary | std::ios::trunc);
+            file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+            if (file.good()) {
+                Log::Info("Preferences saved to %s", filename_cpy.filename().string().c_str());
             }
             else {
-                Log::Error("Failed to save ini file %s - error code %d", filename_cpy->string().c_str(), err);
+                Log::Error("Failed to save json file %s", filename_cpy.string().c_str());
             }
-            delete filename_cpy;
         });
     }
 
@@ -410,8 +488,8 @@ namespace {
         if (argc > 1) {
             filename = argv[1];
         }
-        if (filename.extension() != L".ini") {
-            filename.append(L".ini");
+        if (filename.extension() != L".json") {
+            filename.replace_extension(L".json");
         }
         filename = TextUtils::SanitiseFilename(filename.string());
         filename = Resources::GetPath(filename);
@@ -425,11 +503,11 @@ namespace {
         if (argc > 1) {
             filename = argv[1];
         }
-        if (filename.extension() != L".ini") {
-            filename.append(L".ini");
+        if (filename.extension() != L".json" && filename.extension() != L".ini") {
+            filename.replace_extension(L".json");
         }
         filename = TextUtils::SanitiseFilename(filename.string());
-        filename = Resources::GetPath(filename);
+        filename = ResolveExistingPreset(Resources::GetPath(filename));
 
         OnPreferencesLoadFileChosen(filename.string().c_str());
     }
@@ -601,15 +679,13 @@ void GuildWarsSettingsModule::DrawSettingsInternal()
 {
     ImGui::TextUnformatted("Choose a file from your computer to load Guild Wars settings");
     if (ImGui::Button("Load from disk...")) {
-        std::filesystem::path filename = GetDefaultFilename();
-        filename = Resources::GetPath(filename);
-        Resources::OpenFileDialog(OnPreferencesLoadFileChosen, "ini", filename.string().c_str());
+        const auto filename = ResolveExistingPreset(Resources::GetPath(GetDefaultFilename()));
+        Resources::OpenFileDialog(OnPreferencesLoadFileChosen, "json,ini", filename.string().c_str());
     }
     ImGui::Separator();
     ImGui::TextUnformatted("Choose a file from your computer to save Guild Wars settings");
     if (ImGui::Button("Save to disk...")) {
-        std::filesystem::path filename = GetDefaultFilename();
-        filename = Resources::GetPath(filename);
-        Resources::SaveFileDialog(OnPreferencesSaveFileChosen, "ini", filename.string().c_str());
+        const auto filename = Resources::GetPath(GetDefaultFilename());
+        Resources::SaveFileDialog(OnPreferencesSaveFileChosen, "json", filename.string().c_str());
     }
 }

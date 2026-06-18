@@ -39,7 +39,7 @@ namespace {
     clock_t last_request_time = -request_interval;
     std::unordered_map<std::string, uint32_t> prices_by_identifier;
 
-    bool show_merchant_price_for_melandrus_accord_instead = true;
+    PriceCheckerModule::Settings settings;
 
     // -------------------------------------------------------------------------
     // Price lookup tables
@@ -330,7 +330,20 @@ namespace {
 void PriceCheckerModule::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
     FetchPrices();
+}
+
+void PriceCheckerModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void PriceCheckerModule::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void PriceCheckerModule::Terminate()
@@ -338,21 +351,9 @@ void PriceCheckerModule::Terminate()
     ToolboxModule::Terminate();
 }
 
-void PriceCheckerModule::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(show_merchant_price_for_melandrus_accord_instead);
-}
-
-void PriceCheckerModule::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(show_merchant_price_for_melandrus_accord_instead);
-}
-
 void PriceCheckerModule::DrawSettingsInternal()
 {
-    ImGui::CheckboxWithHelp("Show merchant price for Melandru's Accord instead of trader price", &show_merchant_price_for_melandrus_accord_instead, "In Melandru's Accord, show fixed merchant prices for materials instead of live trader prices");
+    ImGui::CheckboxWithHelp("Show merchant price for Melandru's Accord instead of trader price", &settings.show_merchant_price_for_melandrus_accord_instead, "In Melandru's Accord, show fixed merchant prices for materials instead of live trader prices");
 }
 
 const std::unordered_map<std::string, uint32_t>& PriceCheckerModule::FetchPrices()
@@ -378,7 +379,7 @@ uint32_t PriceCheckerModule::GetTraderSellPrice(const GW::Item* item)
 
 uint32_t PriceCheckerModule::GetTraderSellPrice(const GW::Constants::MaterialSlot material)
 {
-    if (GW::PlayerMgr::IsMelandrusAccord() && show_merchant_price_for_melandrus_accord_instead) return GetMerchantSellPrice(material);
+    if (GW::PlayerMgr::IsMelandrusAccord() && settings.show_merchant_price_for_melandrus_accord_instead) return GetMerchantSellPrice(material);
     GW::Item item;
     memset(&item, 0, sizeof(item));
     item.type = GW::Constants::ItemType::Materials_Zcoins;
@@ -428,7 +429,7 @@ uint32_t PriceCheckerModule::GetPriceByItem(const GW::Item* item, std::string* i
         uint32_t mod = (std::to_underlying(item->type) << 16) | (item->model_id & 0xffff);
         const auto found = price_info_by_unique_mod_struct.find(mod);
         if (found == price_info_by_unique_mod_struct.end()) return 0;
-        if (GW::PlayerMgr::IsMelandrusAccord() && show_merchant_price_for_melandrus_accord_instead) return GetMerchantSellPrice(GetItemMaterialSlot(item));
+        if (GW::PlayerMgr::IsMelandrusAccord() && settings.show_merchant_price_for_melandrus_accord_instead) return GetMerchantSellPrice(GetItemMaterialSlot(item));
         return GetPriceById(found->second.id);
     }
 

@@ -58,13 +58,39 @@ public:
     [[nodiscard]] const char* SettingsName() const override { return "Inventory Settings"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BOXES; }
 
+    struct Settings {
+        bool only_use_superior_salvage_kits = false;
+        bool salvage_rare_mats = false;
+        bool salvage_nicholas_items = true;
+        bool identify_greens = true;
+        bool trade_whole_stacks = false;
+        bool wiki_link_on_context_menu = false;
+        bool market_search_on_context_menu = false;
+        bool hide_unsellable_items = false;
+        bool hide_golds_from_merchant = false;
+        bool hide_weapon_sets_and_customized_items = false;
+        bool change_secondary_for_tome = true;
+        bool right_click_context_menu_in_outpost = true;
+        bool right_click_context_menu_in_explorable = true;
+        bool move_to_trade_on_double_click = true;
+        bool move_to_trade_on_alt_click = false;
+        bool salvage_all_on_ctrl_click = false;
+        bool identify_all_on_ctrl_click = false;
+        bool auto_reuse_salvage_kit = false;
+        bool auto_reuse_id_kit = false;
+        bool salvage_from_backpack = true;
+        bool salvage_from_belt_pouch = true;
+        bool salvage_from_bag_1 = true;
+        bool salvage_from_bag_2 = true;
+    };
+
     void Draw(IDirect3DDevice9* device) override;
     void Initialize() override;
     void Terminate() override;
     void Update(float delta) override;
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
 
     static uint16_t CountItemsByName(const wchar_t* name_enc);

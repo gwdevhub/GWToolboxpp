@@ -3,7 +3,8 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <D3DContainers.h>
-#include <ToolboxIni.h>
+
+class ToolboxModule;
 
 class GameWorldRenderer {
 public:
@@ -67,8 +68,8 @@ public:
     };
 
     static void Render(IDirect3DDevice9* device);
-    static void LoadSettings(const ToolboxIni* ini, const char* section);
-    static void SaveSettings(ToolboxIni* ini, const char* section);
+    static void RegisterSettings(ToolboxModule* module);
+    static void OnSettingsLoaded();
     static void DrawSettings();
     static void Terminate();
     static void TriggerSyncAllMarkers();

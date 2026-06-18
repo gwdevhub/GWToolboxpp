@@ -21,29 +21,20 @@ namespace {
     bool is_minimap_compass_draw = false;
 }
 
-void PingsLinesRenderer::LoadSettings(const ToolboxIni* ini, const char* section)
+void PingsLinesRenderer::RegisterSettings(ToolboxModule* module)
 {
-    color_drawings = Colors::Load(ini, section, "color_drawings", Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF));
-    ping_circle.color = Colors::Load(ini, section, "color_pings", Colors::ARGB(128, 255, 0, 0));
-    marker.color = Colors::Load(ini, section, "color_shadowstep_mark", Colors::ARGB(200, 128, 0, 128));
-    color_shadowstep_line = Colors::Load(ini, section, VAR_NAME(color_shadowstep_line), color_shadowstep_line);
-    color_shadowstep_line_maxrange = Colors::Load(ini, section, VAR_NAME(color_shadowstep_line_maxrange), color_shadowstep_line_maxrange);
-    maxrange_interp_begin = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(maxrange_interp_begin), maxrange_interp_begin));
-    maxrange_interp_end = static_cast<float>(ini->GetDoubleValue(section, VAR_NAME(maxrange_interp_end), maxrange_interp_end));
-    reduce_ping_spam = ini->GetBoolValue(section, VAR_NAME(reduce_ping_spam), reduce_ping_spam);
-    Invalidate();
-}
-
-void PingsLinesRenderer::SaveSettings(ToolboxIni* ini, const char* section) const
-{
-    Colors::Save(ini, section, "color_drawings", color_drawings);
-    Colors::Save(ini, section, "color_pings", ping_circle.color);
-    Colors::Save(ini, section, "color_shadowstep_mark", marker.color);
-    Colors::Save(ini, section, "color_shadowstep_line", color_shadowstep_line);
-    Colors::Save(ini, section, "color_shadowstep_line_maxrange", color_shadowstep_line_maxrange);
-    ini->SetDoubleValue(section, "maxrange_interp_begin", maxrange_interp_begin);
-    ini->SetDoubleValue(section, "maxrange_interp_end", maxrange_interp_end);
-    ini->SetBoolValue(section, VAR_NAME(reduce_ping_spam), reduce_ping_spam);
+    // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
+    const auto register_color = [module](const char* key, Color* color) {
+        SettingsRegistry::RegisterField(module, key, reinterpret_cast<Colors::SettingColor*>(color));
+    };
+    register_color("color_drawings", &color_drawings);
+    register_color("color_pings", &ping_circle.color);
+    register_color("color_shadowstep_mark", &marker.color);
+    register_color("color_shadowstep_line", &color_shadowstep_line);
+    register_color("color_shadowstep_line_maxrange", &color_shadowstep_line_maxrange);
+    SettingsRegistry::RegisterField(module, "maxrange_interp_begin", &maxrange_interp_begin);
+    SettingsRegistry::RegisterField(module, "maxrange_interp_end", &maxrange_interp_end);
+    SettingsRegistry::RegisterField(module, "reduce_ping_spam", &reduce_ping_spam);
 }
 
 void PingsLinesRenderer::DrawSettings()

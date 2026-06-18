@@ -70,9 +70,10 @@
 #define PLUGIN_ASSERT(expr) ((void)(!!(expr) || (std::cerr << (#expr, __FILE__, (unsigned)__LINE__), 0)))
 #endif
 
-#define PLUGIN_LOAD_BOOL(var) var = ini.GetBoolValue(Name(), #var, var);
-#define PLUGIN_SAVE_BOOL(var) ini.SetBoolValue(Name(), #var, var);
-#define PLUGIN_LOAD_FLOAT(var) var = static_cast<float>(ini.GetDoubleValue(Name(), #var, static_cast<double>(var)));
-#define PLUGIN_SAVE_FLOAT(var) ini.SetDoubleValue(Name(), #var, static_cast<double>(var));
-#define PLUGIN_LOAD_UINT(var) var = static_cast<unsigned int>(ini.GetLongValue(Name(), #var, static_cast<long>(var)));
-#define PLUGIN_SAVE_UINT(var) ini.SetLongValue(Name(), #var, static_cast<long>(var));
+// JSON-backed (with legacy ini read fallback); usable inside ToolboxPlugin member functions only.
+#define PLUGIN_LOAD_BOOL(var) LoadSetting(#var, var);
+#define PLUGIN_SAVE_BOOL(var) SaveSetting(#var, var);
+#define PLUGIN_LOAD_FLOAT(var) LoadSetting(#var, var);
+#define PLUGIN_SAVE_FLOAT(var) SaveSetting(#var, var);
+#define PLUGIN_LOAD_UINT(var) LoadSetting(#var, var);
+#define PLUGIN_SAVE_UINT(var) SaveSetting(#var, var);

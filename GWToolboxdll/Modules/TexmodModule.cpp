@@ -267,7 +267,7 @@ namespace {
         if (gmodReady) return true;
         if (gmodIncompatible) return false; // a restart is the only way out
 
-        auto device = GW::Render::GetDevice();
+        const auto device = GW::Render::GetDevice();
         if (!device) {
             statusMessage = "Error: Could not get IDirect3DDevice9 from GW::Render::GetDevice().";
             return false;
@@ -698,6 +698,9 @@ namespace {
         }
         else if (gmodIncompatible) {
             ImGui::TextColored({1.0f, 0.4f, 0.4f, 1.0f}, ICON_FA_TIMES " gMod blocked (incompatible version pre-loaded)");
+        }
+        else if (packs.empty()) {
+            ImGui::TextDisabled(ICON_FA_INFO_CIRCLE " gMod inactive - add a texture pack to enable");
         }
         else {
             ImGui::TextColored({1.0f, 0.4f, 0.4f, 1.0f}, ICON_FA_TIMES " gMod not initialised");
@@ -1159,20 +1162,31 @@ void TexmodModule::DrawSettingsInternal()
     DrawTextureGallery();
 }
 
-void TexmodModule::LoadSettings(ToolboxIni* ini)
+void TexmodModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    const int count = ini->GetLongValue(INI_SECTION, INI_PACK_COUNT, 0);
-    packs.clear();
-    for (int i = 0; i < count; i++) {
-        const std::string key = std::string(INI_PACK_PATH) + std::to_string(i);
-        const char* val = ini->GetValue(INI_SECTION, key.c_str(), nullptr);
-        if (!val || !*val) continue;
-        // Stored as UTF-8 (see SaveSettings); decode to a wide path so non-ASCII names survive.
-        std::filesystem::path p = TextUtils::StringToWString(val);
-        const std::string enabled_key = std::string(INI_PACK_ENABLED) + std::to_string(i);
-        const bool enabled = ini->GetBoolValue(INI_SECTION, enabled_key.c_str(), false);
-        packs.push_back({p, PathToUtf8(p.stem()), /*loaded=*/enabled});
+    ToolboxModule::LoadSettings(doc, legacy);
+    std::vector<PackSetting> stored;
+    if (doc.Get(Name(), "packs", stored)) {
+        packs.clear();
+        for (const auto& entry : stored) {
+            if (entry.path.empty()) continue;
+            // Stored as UTF-8 (see SaveSettings); decode to a wide path so non-ASCII names survive.
+            std::filesystem::path p = TextUtils::StringToWString(entry.path);
+            packs.push_back({p, PathToUtf8(p.stem()), /*loaded=*/entry.loaded});
+        }
+    }
+    else {
+        const int count = legacy ? legacy->GetLongValue(INI_SECTION, INI_PACK_COUNT, 0) : 0;
+        packs.clear();
+        for (int i = 0; i < count; i++) {
+            const std::string key = std::string(INI_PACK_PATH) + std::to_string(i);
+            const char* val = legacy->GetValue(INI_SECTION, key.c_str(), nullptr);
+            if (!val || !*val) continue;
+            std::filesystem::path p = TextUtils::StringToWString(val);
+            const std::string enabled_key = std::string(INI_PACK_ENABLED) + std::to_string(i);
+            const bool enabled = legacy->GetBoolValue(INI_SECTION, enabled_key.c_str(), false);
+            packs.push_back({p, PathToUtf8(p.stem()), /*loaded=*/enabled});
+        }
     }
     // gMod isn't ready yet (no device); the restored enabled flags are pushed later by RestoreLoadedPacks(), so this is a no-op until then.
     SyncExternalPacks();
@@ -1181,14 +1195,13 @@ void TexmodModule::LoadSettings(ToolboxIni* ini)
     if (!packs.empty()) CheckAndUpdateGmod();
 }
 
-void TexmodModule::SaveSettings(ToolboxIni* ini)
+void TexmodModule::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    ini->SetLongValue(INI_SECTION, INI_PACK_COUNT, static_cast<long>(packs.size()));
-    for (size_t i = 0; i < packs.size(); i++) {
-        const std::string key = std::string(INI_PACK_PATH) + std::to_string(i);
-        ini->SetValue(INI_SECTION, key.c_str(), PathToUtf8(packs[i].path).c_str());
-        const std::string enabled_key = std::string(INI_PACK_ENABLED) + std::to_string(i);
-        ini->SetBoolValue(INI_SECTION, enabled_key.c_str(), packs[i].loaded);
+    ToolboxModule::SaveSettings(doc);
+    std::vector<PackSetting> stored;
+    stored.reserve(packs.size());
+    for (const auto& pack : packs) {
+        stored.push_back({PathToUtf8(pack.path), pack.loaded});
     }
+    doc.Set(Name(), "packs", stored);
 }

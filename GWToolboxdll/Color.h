@@ -15,6 +15,17 @@ namespace ABI::Windows::UI { struct Color; }
 using Color = ImU32;
 
 namespace Colors {
+    // Transparent Color wrapper so glaze persists it as a "0xAARRGGBB" hex string instead of a number.
+    struct SettingColor {
+        Color value;
+
+        constexpr SettingColor(const Color c = 0)
+            : value(c) {}
+
+        constexpr operator Color&() { return value; }
+        constexpr operator const Color&() const { return value; }
+    };
+
     static constexpr Color ARGB(const int a, const int r, const int g, const int b)
     {
         return static_cast<Color>(a) << IM_COL32_A_SHIFT |
@@ -271,3 +282,20 @@ namespace Colors {
         return ConvertInt4ToU32(i3);
     }
 }
+
+template <>
+struct glz::meta<Colors::SettingColor> {
+    static constexpr auto read_color = [](Colors::SettingColor& c, const std::string& input) {
+        char* end = nullptr;
+        const auto parsed = strtoul(input.c_str(), &end, 16);
+        if (end != input.c_str() && errno != ERANGE) {
+            c.value = parsed;
+        }
+    };
+    static constexpr auto write_color = [](const Colors::SettingColor& c) -> std::string {
+        char buf[11];
+        snprintf(buf, sizeof(buf), "0x%X", c.value);
+        return buf;
+    };
+    static constexpr auto value = glz::custom<read_color, write_color>;
+};

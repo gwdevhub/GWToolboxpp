@@ -8,6 +8,7 @@
 #include <ImGuiAddons.h>
 #include <Logger.h>
 
+#include <Windows/HotkeysWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/Hotkeys/HotkeyToggle.h>
 
@@ -45,7 +46,7 @@ HotkeyToggle::HotkeyToggle(const ToolboxIni* ini, const char* section)
     initialised = true;
     switch (target) {
         case Clicker:
-            interval = clicker_delay_ms;
+            interval = HotkeysWindow::Instance().settings.clicker_delay_ms;
             break;
         case CoinDrop:
             interval = 500;
@@ -129,7 +130,7 @@ void HotkeyToggle::Execute()
             Toggle();
         }
         if (target == Clicker) {
-            interval = clicker_delay_ms;
+            interval = HotkeysWindow::Instance().settings.clicker_delay_ms;
         }
         if (TIMER_DIFF(last_use) < interval) {
             return;

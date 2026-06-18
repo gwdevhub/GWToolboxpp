@@ -23,39 +23,54 @@
 #include <Color.h>
 
 namespace {
-    bool click_to_print_health = false;
+    HealthWidget::Settings settings;
 
     std::wstring agent_name_ping;
-    bool hide_in_outpost = false;
-    float font_size_header = static_cast<float>(FontLoader::FontSize::header1);
-    float font_size_perc_value = static_cast<float>(FontLoader::FontSize::widget_small);
-    float font_size_abs_value = static_cast<float>(FontLoader::FontSize::widget_label);
-
-    bool thresholds_changed = false;
-    ToolboxIni inifile{};
 }
 
 constexpr auto HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
-void HealthWidget::LoadSettings(ToolboxIni* ini)
+void HealthWidget::Initialize()
 {
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_BOOL(click_to_print_health);
-    LOAD_BOOL(hide_in_outpost);
-    LOAD_FLOAT(font_size_header);
-    LOAD_FLOAT(font_size_perc_value);
-    LOAD_FLOAT(font_size_abs_value);
+    ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
+}
+
+void HealthWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     auto_size = true;
 
-    ASSERT(inifile.LoadIfExists(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
+    for (const auto* threshold : thresholds) {
+        delete threshold;
+    }
+    thresholds.clear();
 
-    TNamesDepend entries;
-    inifile.GetAllSections(entries);
+    std::vector<ThresholdSettings> stored;
+    if (doc.Get(Name(), "thresholds", stored)) {
+        for (const auto& t : stored) {
+            const auto threshold = new Threshold(t.name.c_str(), t.color, t.value);
+            threshold->active = t.active;
+            threshold->modelId = t.modelId;
+            threshold->skillId = t.skillId;
+            threshold->mapId = t.mapId;
+            threshold->index = thresholds.size();
+            thresholds.push_back(threshold);
+        }
+    }
+    else {
+        ToolboxIni inifile{};
+        ASSERT(inifile.LoadIfExists(Resources::GetLegacySettingFile(HEALTH_THRESHOLD_INIFILENAME)) == SI_OK);
 
-    for (const auto& entry : entries) {
-        auto threshold = new Threshold(&inifile, entry.pItem);
-        threshold->index = thresholds.size();
-        thresholds.push_back(threshold);
+        TNamesDepend entries;
+        inifile.GetAllSections(entries);
+
+        for (const auto& entry : entries) {
+            auto threshold = new Threshold(&inifile, entry.pItem);
+            threshold->index = thresholds.size();
+            thresholds.push_back(threshold);
+        }
     }
 
     if (thresholds.empty()) {
@@ -72,43 +87,32 @@ void HealthWidget::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void HealthWidget::SaveSettings(ToolboxIni* ini)
+void HealthWidget::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_BOOL(click_to_print_health);
-    SAVE_BOOL(hide_in_outpost);
-    SAVE_FLOAT(font_size_header);
-    SAVE_FLOAT(font_size_perc_value);
-    SAVE_FLOAT(font_size_abs_value);
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    if (thresholds_changed) {
-        inifile.Reset();
-
-        constexpr size_t buffer_size = 32;
-        char buf[buffer_size];
-        for (size_t i = 0; i < thresholds.size(); i++) {
-            snprintf(buf, sizeof(buf), "threshold%03zu", i);
-            thresholds[i]->SaveSettings(&inifile, buf);
-        }
-
-        ASSERT(inifile.SaveFile(Resources::GetSettingFile(HEALTH_THRESHOLD_INIFILENAME).c_str()) == SI_OK);
-        thresholds_changed = false;
+    std::vector<ThresholdSettings> stored;
+    stored.reserve(thresholds.size());
+    for (const auto* threshold : thresholds) {
+        stored.push_back({threshold->active, threshold->name, threshold->modelId, threshold->skillId, threshold->mapId, threshold->value, threshold->color});
     }
+    doc.Set(Name(), "thresholds", stored);
 }
 
 void HealthWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
     ImGui::SameLine();
-    ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
     ImGui::SameLine();
-    ImGui::Checkbox("Ctrl+Click to print target health", &click_to_print_health);
+    ImGui::Checkbox("Ctrl+Click to print target health", &settings.click_to_print_health);
     ImGui::Text("Text sizes:");
     ImGui::ShowHelp("A text size of 0 means that it's not drawn.");
     ImGui::Indent();
-    ImGui::DragFloat("'Health' header", &font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
-    ImGui::DragFloat("Percent value", &font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
-    ImGui::DragFloat("Absolute value", &font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("'Health' header", &settings.font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("Percent value", &settings.font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("Absolute value", &settings.font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
     ImGui::Unindent();
 
     const bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
@@ -116,7 +120,6 @@ void HealthWidget::DrawSettingsInternal()
         ImGui::SetTooltip("The first matching threshold will be used.");
     }
     if (thresholdsNode) {
-        bool changed = false;
         for (size_t i = 0; i < thresholds.size(); i++) {
             Threshold* threshold = thresholds[i];
 
@@ -127,7 +130,7 @@ void HealthWidget::DrawSettingsInternal()
             ImGui::PushID(static_cast<int>(threshold->ui_id));
 
             auto op = Threshold::Operation::None;
-            changed |= threshold->DrawSettings(op);
+            threshold->DrawSettings(op);
 
             switch (op) {
                 case Threshold::Operation::None:
@@ -156,14 +159,9 @@ void HealthWidget::DrawSettingsInternal()
         if (ImGui::Button("Add Threshold")) {
             thresholds.push_back(new Threshold("<name>", 0xFFFFFFFF, 0));
             thresholds.back()->index = thresholds.size() - 1;
-            changed = true;
         }
 
         ImGui::TreePop();
-
-        if (changed) {
-            thresholds_changed = true;
-        }
     }
 }
 
@@ -172,13 +170,13 @@ void HealthWidget::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+    if (settings.hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
     }
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(150, 100), ImGuiCond_FirstUseEver);
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiMod_Ctrl);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && click_to_print_health)))) {
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(ctrl_pressed && settings.click_to_print_health)))) {
         const GW::AgentLiving* target = GW::Agents::GetTargetAsAgentLiving();
         if (target) {
             ImColor color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
@@ -219,9 +217,9 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             }
 
             ImVec2 cur = ImGui::GetCursorPos();
-            if (font_size_header > 0.f && show_titlebar) {
+            if (settings.font_size_header > 0.f && show_titlebar) {
                 // 'health'
-                ImGui::PushFont(FontLoader::GetFont(), font_size_header);
+                ImGui::PushFont(FontLoader::GetFont(), settings.font_size_header);
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
                 ImGui::TextColored(background, "Health");
                 ImGui::SetCursorPos(cur);
@@ -230,8 +228,8 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             }
 
             // perc
-            if (font_size_perc_value > 0.f) {
-                ImGui::PushFont(FontLoader::GetFont(), font_size_perc_value);
+            if (settings.font_size_perc_value > 0.f) {
+                ImGui::PushFont(FontLoader::GetFont(), settings.font_size_perc_value);
                 cur = ImGui::GetCursorPos();
                 const auto health_perc = target->hp >= 0 ? std::format("{:.0f}%%", target->hp * 100.0f) : "-";
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
@@ -242,8 +240,8 @@ void HealthWidget::Draw(IDirect3DDevice9*)
             }
 
             // abs
-            if (font_size_abs_value > 0.f) {
-                ImGui::PushFont(FontLoader::GetFont(), font_size_abs_value);
+            if (settings.font_size_abs_value > 0.f) {
+                ImGui::PushFont(FontLoader::GetFont(), settings.font_size_abs_value);
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
                 const uint32_t display_max_hp = PartyDamage::GetMaxHp(target->player_number);
@@ -254,7 +252,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 ImGui::PopFont();
             }
 
-            if (click_to_print_health) {
+            if (settings.click_to_print_health) {
                 if (ctrl_pressed && ImGui::IsMouseReleased(0) && ImGui::IsWindowHovered()) {
                     if (target) {
                         GW::Agents::AsyncGetAgentName(target, agent_name_ping);
@@ -362,14 +360,3 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op)
     return changed;
 }
 
-void HealthWidget::Threshold::SaveSettings(ToolboxIni* ini, const char* section) const
-{
-    ini->SetBoolValue(section, VAR_NAME(active), active);
-    ini->SetValue(section, VAR_NAME(name), name);
-    ini->SetLongValue(section, VAR_NAME(modelId), modelId);
-    ini->SetLongValue(section, VAR_NAME(skillId), skillId);
-    ini->SetLongValue(section, VAR_NAME(mapId), mapId);
-
-    ini->SetLongValue(section, VAR_NAME(value), value);
-    Colors::Save(ini, section, VAR_NAME(color), color);
-}

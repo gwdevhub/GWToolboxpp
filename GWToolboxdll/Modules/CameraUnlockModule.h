@@ -25,15 +25,21 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CAMERA; }
     [[nodiscard]] const char* SettingsName() const override { return "Camera Settings"; }
 
+    struct Settings {
+        bool forward_fix_z = true;
+        float cam_speed = 1000.f;
+        float cam_max_distance = 900.f;
+    };
+
     void Initialize() override;
 
     void Terminate() override;
 
     void Update(float) override;
 
-    void LoadSettings(ToolboxIni*) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
 
-    void SaveSettings(ToolboxIni*) override;
+    void SaveSettings(SettingsDoc& doc) override;
 
     void DrawSettingsInternal() override;
 

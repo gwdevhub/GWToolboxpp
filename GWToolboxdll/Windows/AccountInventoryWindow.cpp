@@ -574,13 +574,7 @@ namespace {
     bool map_loaded_delayed_trigger = false;
 
     // config options
-    bool detailed_view = false;
-    bool merge_stacks = false;
-    bool hide_other_accounts = false;
-    bool hide_equipment = false;
-    bool hide_equipment_pack = false;
-    bool hide_hero_armor = false;
-    bool hide_unclaimed_items = false;
+    AccountInventoryWindow::Settings settings;
 
     // input buffers
     inline static const size_t BUFFER_SIZE = 128;
@@ -877,7 +871,7 @@ namespace {
         }
         free_slots_sorted = std::set<SlotRow*, SlotCompare>(SlotCompare{sort_specs});
         for (auto& row : slot_rows) {
-            if (hide_other_accounts && !memeq(&row.account, &current_account)) {
+            if (settings.hide_other_accounts && !memeq(&row.account, &current_account)) {
                 continue;
             }
             free_slots_sorted.insert(&row);
@@ -910,11 +904,11 @@ namespace {
         bool any_decoding = false; // keep re-sorting until every visible description has decoded
         std::unordered_map<std::wstring, size_t> merged_stacks{};
         for (auto& r : item_refs) {
-            if (hide_other_accounts && r.account->uuid != current_account) continue;
-            if (hide_equipment && (r.bag_id == GW::Constants::Bag::Equipped_Items || r.item->equipped)) continue;
-            if (hide_equipment_pack && r.bag_id == GW::Constants::Bag::Equipment_Pack) continue;
-            if (hide_hero_armor && IsHeroArmor(r.hero_id, r.slot)) continue;
-            if (hide_unclaimed_items && r.bag_id == GW::Constants::Bag::Unclaimed_Items) continue;
+            if (settings.hide_other_accounts && r.account->uuid != current_account) continue;
+            if (settings.hide_equipment && (r.bag_id == GW::Constants::Bag::Equipped_Items || r.item->equipped)) continue;
+            if (settings.hide_equipment_pack && r.bag_id == GW::Constants::Bag::Equipment_Pack) continue;
+            if (settings.hide_hero_armor && IsHeroArmor(r.hero_id, r.slot)) continue;
+            if (settings.hide_unclaimed_items && r.bag_id == GW::Constants::Bag::Unclaimed_Items) continue;
 
             if (!name_filter.empty()) {
                 const auto character_check = name_is_lower ? TextUtils::ToLower(r.character_name) : r.character_name;
@@ -934,7 +928,7 @@ namespace {
             if (r.item->description.IsDecoding()) any_decoding = true;
 
             auto merge_id = std::to_wstring(r.item->model_id) + desc;
-            if (!merge_stacks || !merged_stacks.contains(merge_id)) {
+            if (!settings.merge_stacks || !merged_stacks.contains(merge_id)) {
                 merged_stacks[merge_id] = inventory_sorted.size();
                 inventory_sorted.push_back(MergeStack(current_account, r.item->description.string()));
             }
@@ -1495,6 +1489,7 @@ namespace {
 void AccountInventoryWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     current_account = GW::AccountMgr::GetAccountUuid();
     current_character = GetCurrentPlayerNameS();
@@ -2031,25 +2026,25 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     }
 
     // view related settings
-    ImGui::Checkbox("Detailed View", &detailed_view);
+    ImGui::Checkbox("Detailed View", &settings.detailed_view);
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Merge Stacks", &merge_stacks)) needs_sorting = true;
+    if (ImGui::Checkbox("Merge Stacks", &settings.merge_stacks)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide other Accounts", &hide_other_accounts)) needs_sorting = true;
+    if (ImGui::Checkbox("Hide other Accounts", &settings.hide_other_accounts)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide Equipment", &hide_equipment)) needs_sorting = true;
+    if (ImGui::Checkbox("Hide Equipment", &settings.hide_equipment)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide Equipment Packs", &hide_equipment_pack)) needs_sorting = true;
+    if (ImGui::Checkbox("Hide Equipment Packs", &settings.hide_equipment_pack)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide Hero Armor", &hide_hero_armor)) needs_sorting = true;
+    if (ImGui::Checkbox("Hide Hero Armor", &settings.hide_hero_armor)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide unclaimed Items", &hide_unclaimed_items)) needs_sorting = true;
+    if (ImGui::Checkbox("Hide unclaimed Items", &settings.hide_unclaimed_items)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < 110.f * font_scale) ImGui::NewLine();
     if (ImGui::Button("Gather Inventories")) {
@@ -2121,7 +2116,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
 
 
     ImGuiTableFlags flags = ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_NoBordersInBody;
-    if (detailed_view) {
+    if (settings.detailed_view) {
         flags |= ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_RowBg;
     }
     else {
@@ -2129,7 +2124,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     }
 
     // filter/sort header table
-    if (!ImGui::BeginTable("###itemstable", ItemColumnID_Max, flags, ImVec2(inner_width, detailed_view ? items_table_height : 2 * ImGui::GetFrameHeight()))) {
+    if (!ImGui::BeginTable("###itemstable", ItemColumnID_Max, flags, ImVec2(inner_width, settings.detailed_view ? items_table_height : 2 * ImGui::GetFrameHeight()))) {
         ImGui::End();
         return;
     }
@@ -2196,7 +2191,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, btn_colors[2]);
         }
 
-        if (detailed_view) {
+        if (settings.detailed_view) {
             const std::string suffix = (ims.i.size() > 1) ? " +" : "";
             ImGui::Text("%s%s", i_front->character_name.c_str(), suffix.c_str());
             ImGui::TableNextColumn();
@@ -2248,7 +2243,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         }
     };
 
-    if (detailed_view) {
+    if (settings.detailed_view) {
         ImGuiListClipper clipper;
         clipper.Begin(item_count, ImGui::GetTextLineHeightWithSpacing());
         while (clipper.Step()) {
@@ -2331,25 +2326,25 @@ void AccountInventoryWindow::DrawSettingsInternal()
         free_slots_sorted.clear();
         SaveToFiles(true); // accounts is empty -> deletes every known inventory file
     }
-    ImGui::Checkbox("###account_inventory_detailed_view", &detailed_view);
+    ImGui::Checkbox("###account_inventory_detailed_view", &settings.detailed_view);
     ImGui::SameLine();
     ImGui::Text("Detailed View - Toggle between detailed list and icon grid view.");
-    ImGui::Checkbox("###account_inventory_merge_stacks", &merge_stacks);
+    ImGui::Checkbox("###account_inventory_merge_stacks", &settings.merge_stacks);
     ImGui::SameLine();
     ImGui::Text("Merge Stacks - Combine multiple of the same item, including non-stackable items.");
-    ImGui::Checkbox("###account_inventory_hide_other_accounts", &hide_other_accounts);
+    ImGui::Checkbox("###account_inventory_hide_other_accounts", &settings.hide_other_accounts);
     ImGui::SameLine();
     ImGui::Text("Hide other Accounts - Hide item which do not belong to the currently active account.");
-    ImGui::Checkbox("###account_inventory_hide_equipment", &hide_equipment);
+    ImGui::Checkbox("###account_inventory_hide_equipment", &settings.hide_equipment);
     ImGui::SameLine();
     ImGui::Text("Hide Equipment - Hide items currently equipped or part of a weapon set.");
-    ImGui::Checkbox("###account_inventory_hide_equipment_pack", &hide_equipment_pack);
+    ImGui::Checkbox("###account_inventory_hide_equipment_pack", &settings.hide_equipment_pack);
     ImGui::SameLine();
     ImGui::Text("Hide Equipment Packs - Hide contents of equipment packs.");
-    ImGui::Checkbox("###account_inventory_hide_hero_armor", &hide_hero_armor);
+    ImGui::Checkbox("###account_inventory_hide_hero_armor", &settings.hide_hero_armor);
     ImGui::SameLine();
     ImGui::Text("Hide Hero Armor - Hide armor worn by heroes.");
-    ImGui::Checkbox("###account_inventory_hide_unclaimed_items", &hide_unclaimed_items);
+    ImGui::Checkbox("###account_inventory_hide_unclaimed_items", &settings.hide_unclaimed_items);
     ImGui::SameLine();
     ImGui::Text("Hide unclaimed Items - Hide items from the unclaimed items window.");
     ImGui::PopTextWrapPos();
@@ -2367,33 +2362,20 @@ void AccountInventoryWindow::DrawSettingsInternal()
     }
 }
 
-void AccountInventoryWindow::LoadSettings(ToolboxIni* ini)
+void AccountInventoryWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     current_account = GW::AccountMgr::GetAccountUuid();
     current_character = GetCurrentPlayerNameS();
-
-    LOAD_BOOL(detailed_view);
-    LOAD_BOOL(merge_stacks);
-    LOAD_BOOL(hide_other_accounts);
-    LOAD_BOOL(hide_equipment);
-    LOAD_BOOL(hide_equipment_pack);
-    LOAD_BOOL(hide_hero_armor);
-    LOAD_BOOL(hide_unclaimed_items);
     needs_sorting = true;
     // only LoadFromFiles foreign items here. allowing the user to reload inventory data of the active account, may cause temporary inconsistencies
     LoadFromFiles(true);
 }
 
-void AccountInventoryWindow::SaveSettings(ToolboxIni* ini)
+void AccountInventoryWindow::SaveSettings(SettingsDoc& doc)
 {
-    SAVE_BOOL(hide_unclaimed_items);
-    SAVE_BOOL(hide_hero_armor);
-    SAVE_BOOL(hide_equipment_pack);
-    SAVE_BOOL(hide_equipment);
-    SAVE_BOOL(hide_other_accounts);
-    SAVE_BOOL(merge_stacks);
-    SAVE_BOOL(detailed_view);
-    ToolboxWindow::SaveSettings(ini);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
     SaveToFiles(false);
 }

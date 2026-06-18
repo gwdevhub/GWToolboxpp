@@ -19,19 +19,10 @@
 
 namespace {
 
-    bool override_title_sort_order = true;
+    TitleTrackerWidget::Settings settings;
     bool pending_title_sort_order = false;
-    bool show_overall_title_progress = false;
-    bool hide_completed_titles = true;
-    bool automatically_show_title_progress_for_current_map = true;
-    float progress_bar_height = 24.f;
     Color widget_background_color = IM_COL32(0,0,0,0);
-    Color progress_bar_background_color = IM_COL32(30, 30, 30, 255);
-    Color progress_bar_foreground_color = IM_COL32(110, 83, 123, 255);
     Color progress_bar_border_color = IM_COL32(80, 80, 80, 255);
-    Color progress_overlay_label_color = IM_COL32(255, 255, 255, 255);
-    Color title_label_color = IM_COL32_WHITE;
-    Color tier_label_color = IM_COL32_WHITE;
 
     std::vector<GW::Constants::TitleID> title_for_bounty;
 
@@ -141,8 +132,8 @@ namespace {
             return !unavailable_1; // available titles come first
         }
 
-        float ratio_1 = GetTitleProgressRatio(t1->title_id, title_1, show_overall_title_progress);
-        float ratio_2 = GetTitleProgressRatio(t2->title_id, title_2, show_overall_title_progress);
+        float ratio_1 = GetTitleProgressRatio(t1->title_id, title_1, settings.show_overall_title_progress);
+        float ratio_2 = GetTitleProgressRatio(t2->title_id, title_2, settings.show_overall_title_progress);
 
         if (ratio_1 != ratio_2) return ratio_1 > ratio_2; // higher progress comes first
             return t1->title_id < t2->title_id;               // stable tiebreaker
@@ -175,8 +166,8 @@ namespace {
                 progress->SetValue(static_cast<uint32_t>(std::floor(ratio * 1000.0f)));
             }
         };
-        update_progress(frame_id_1, GetTitleProgressRatio(title_id_1, title_1, show_overall_title_progress));
-        update_progress(frame_id_2, GetTitleProgressRatio(title_id_2, title_2, show_overall_title_progress));
+        update_progress(frame_id_1, GetTitleProgressRatio(title_id_1, title_1, settings.show_overall_title_progress));
+        update_progress(frame_id_2, GetTitleProgressRatio(title_id_2, title_2, settings.show_overall_title_progress));
 
         // Reuse TitleProgress comparison logic via temporary wrappers
         TitleProgress p1(title_id_1), p2(title_id_2);
@@ -196,7 +187,7 @@ namespace {
 
     void RefreshTitleProgress()
     {
-        OverrideTitleSortOrder(override_title_sort_order);
+        OverrideTitleSortOrder(settings.override_title_sort_order);
         for (auto& t : title_progress_by_id) {
             t->RefreshLabels();
             t->RefreshProgress();
@@ -205,12 +196,12 @@ namespace {
         std::ranges::sort(title_progress_by_title, [](TitleProgress* t1, TitleProgress* t2) {
             return t1->title_label.string() < t2->title_label.string();
         });
-        title_for_bounty = automatically_show_title_progress_for_current_map ? GW::Map::GetTitlesForMap(GW::Map::GetMapID()) : std::vector<GW::Constants::TitleID>();
+        title_for_bounty = settings.automatically_show_title_progress_for_current_map ? GW::Map::GetTitlesForMap(GW::Map::GetMapID()) : std::vector<GW::Constants::TitleID>();
     }
 
     void TitleProgress::RefreshProgress()
     {
-        percent = GetTitleProgressRatio(title_id, GW::PlayerMgr::GetTitleTrack(title_id), show_overall_title_progress);
+        percent = GetTitleProgressRatio(title_id, GW::PlayerMgr::GetTitleTrack(title_id), settings.show_overall_title_progress);
         std::wstring str_placeholder;
         uint32_t faction_gained = 0;
         uint32_t faction_max = 0;
@@ -315,7 +306,7 @@ namespace {
                 RefreshTitleProgress();
             } break;
             case GW::UI::UIMessage::kUIPositionChanged: {
-                OverrideTitleSortOrder(override_title_sort_order);
+                OverrideTitleSortOrder(settings.override_title_sort_order);
             } break;
         }
     }
@@ -331,9 +322,10 @@ float TitleTrackerWidget::GetTitleProgressRatio(GW::Constants::TitleID title_id,
 void TitleTrackerWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
     pending_title_sort_order = true;
     GW::GameThread::Enqueue([] {
-        OverrideTitleSortOrder(override_title_sort_order);
+        OverrideTitleSortOrder(settings.override_title_sort_order);
         pending_title_sort_order = false;
     });
     static constexpr GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kTitleProgressUpdated, GW::UI::UIMessage::kExperienceGained, GW::UI::UIMessage::kUIPositionChanged};
@@ -376,22 +368,22 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleColor(ImGuiCol_WindowBg, widget_background_color);
     ImGui::SetNextWindowSize(ImVec2(300.f, 0.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, true))) {
-        progress_bar_height = std::max(progress_bar_height, ImGui::GetTextLineHeight());
+        settings.progress_bar_height = std::max(settings.progress_bar_height, ImGui::GetTextLineHeight());
         const float available_width = std::max(ImGui::GetContentRegionAvail().x,280.f);
-        ImVec2 bar_size(available_width, progress_bar_height);
+        ImVec2 bar_size(available_width, settings.progress_bar_height);
         const auto draw_list = ImGui::GetWindowDrawList();
-        
+
         // Calculate progress bar colour
-        const ImVec4 base_color = ImGui::ColorConvertU32ToFloat4(progress_bar_foreground_color);
+        const ImVec4 base_color = ImGui::ColorConvertU32ToFloat4(settings.progress_bar_foreground_color);
         const float lighten_factor = 1.5f; // Adjust to control how much lighter
         ImVec4 light_color(std::min(base_color.x * lighten_factor, 1.0f), std::min(base_color.y * lighten_factor, 1.0f), std::min(base_color.z * lighten_factor, 1.0f), base_color.w);
 
         // Convert ImVec4 colors to ImU32
-        ImU32 color_start = progress_bar_foreground_color;
+        ImU32 color_start = settings.progress_bar_foreground_color;
         ImU32 color_end = ImGui::ColorConvertFloat4ToU32(light_color);
 
         for (const auto p : title_progress_by_id) {
-            if (p->percent == 1.f && hide_completed_titles) continue;
+            if (p->percent == 1.f && settings.hide_completed_titles) continue;
             if (!p->show && std::ranges::find(title_for_bounty.begin(), title_for_bounty.end(), p->title_id) == title_for_bounty.end()) {
                 continue;
             }
@@ -406,16 +398,16 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
             // Draw title label (left aligned) and sub-title label (right aligned) on same line
             
             ImVec2 label_pos = ImGui::GetCursorPos();
-            if (Colors::IsVisible(title_label_color)) {
-                ImGui::PushStyleColor(ImGuiCol_Text, title_label_color);
+            if (Colors::IsVisible(settings.title_label_color)) {
+                ImGui::PushStyleColor(ImGuiCol_Text, settings.title_label_color);
                 ImGui::TextShadowed(title_text.c_str());
                 ImGui::PopStyleColor();
             }
-            
-            if (Colors::IsVisible(tier_label_color)) {
+
+            if (Colors::IsVisible(settings.tier_label_color)) {
                 const auto sub_title_size = ImGui::CalcTextSize(sub_title_text.c_str());
                 ImGui::SetCursorPos({available_width - sub_title_size.x, label_pos.y});
-                ImGui::PushStyleColor(ImGuiCol_Text, tier_label_color);
+                ImGui::PushStyleColor(ImGuiCol_Text, settings.tier_label_color);
                 ImGui::TextShadowed(sub_title_text.c_str());
                 ImGui::PopStyleColor();
             }
@@ -423,7 +415,7 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
             ImVec2 bar_pos = ImGui::GetCursorScreenPos();
             ImVec2 bar_pos_max = ImVec2(bar_pos.x + bar_size.x, bar_pos.y + bar_size.y);
             // Background progress bar
-            draw_list->AddRectFilled(bar_pos, bar_pos_max, progress_bar_background_color);
+            draw_list->AddRectFilled(bar_pos, bar_pos_max, settings.progress_bar_background_color);
 
             // Foreground progress bar
             float fill_width = bar_size.x * p->percent;
@@ -454,12 +446,12 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
             draw_list->AddRect(bar_pos, bar_pos_max, progress_bar_border_color);
 
             // Overlay label
-            if (Colors::IsVisible(progress_overlay_label_color)) {
+            if (Colors::IsVisible(settings.progress_overlay_label_color)) {
                 ImVec2 overlay_size = ImGui::CalcTextSize(overlay_text.c_str());
                 ImVec2 overlay_pos(bar_pos.x + (bar_size.x - overlay_size.x) * 0.5f, bar_pos.y + (bar_size.y - overlay_size.y) * 0.5f);
 
                 draw_list->AddText(overlay_pos, IM_COL32_BLACK, overlay_text.c_str());
-                draw_list->AddText({overlay_pos.x + 1.f, overlay_pos.y + 1.f}, progress_overlay_label_color, overlay_text.c_str());
+                draw_list->AddText({overlay_pos.x + 1.f, overlay_pos.y + 1.f}, settings.progress_overlay_label_color, overlay_text.c_str());
             }
             if (ImGui::IsMouseHoveringRect(bar_pos, bar_pos_max)) {
                 auto label = std::format("{}\n{}\n{}", p->title_label.string(), sub_title_text, p->overlay_label->string());
@@ -487,16 +479,16 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
 
 void TitleTrackerWidget::DrawSettingsInternal()
 {
-    if (ImGui::Checkbox("Override title sort order in Hero Panel", &override_title_sort_order)) RefreshTitleProgress();
-    if (ImGui::Checkbox("Show progress by overall title, or by current tier", &show_overall_title_progress)) RefreshTitleProgress();
+    if (ImGui::Checkbox("Override title sort order in Hero Panel", &settings.override_title_sort_order)) RefreshTitleProgress();
+    if (ImGui::Checkbox("Show progress by overall title, or by current tier", &settings.show_overall_title_progress)) RefreshTitleProgress();
     ImGui::Separator();
     ImGui::TextUnformatted("Widget settings");
-    ImGui::Checkbox("Hide completed titles", &hide_completed_titles);
-    if (ImGui::Checkbox("Automatically show title progress for current map", &automatically_show_title_progress_for_current_map)) {
+    ImGui::Checkbox("Hide completed titles", &settings.hide_completed_titles);
+    if (ImGui::Checkbox("Automatically show title progress for current map", &settings.automatically_show_title_progress_for_current_map)) {
         RefreshTitleProgress();
     }
     ImGui::ShowHelp("e.g. when in an Asuran area, display title progress for the Asuran title track");
-    ImGui::InputFloat("Progress bar height", &progress_bar_height, 1.f, 4.f, "%.f");
+    ImGui::InputFloat("Progress bar height", &settings.progress_bar_height, 1.f, 4.f, "%.f");
     ImGui::Text("Show/Hide Titles:");
     ImGui::Indent();
     ImGui::StartSpacedElements(240.f);
@@ -513,64 +505,40 @@ void TitleTrackerWidget::DrawSettingsInternal()
     ImGui::StartSpacedElements(240.f);
     ImGui::Indent();
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Widget background color", &progress_bar_background_color, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("Widget background color", &settings.progress_bar_background_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Title label color", &title_label_color, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("Title label color", &settings.title_label_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Tier label color", &tier_label_color, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("Tier label color", &settings.tier_label_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Progress bar background color", &progress_bar_background_color, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("Progress bar background color", &settings.progress_bar_background_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Progress bar foreground color", &progress_bar_foreground_color, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("Progress bar foreground color", &settings.progress_bar_foreground_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Progress bar overlay text color", &progress_overlay_label_color, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("Progress bar overlay text color", &settings.progress_overlay_label_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::Unindent();
 }
 
-void TitleTrackerWidget::SaveSettings(ToolboxIni* ini)
+void TitleTrackerWidget::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-
-    std::string show_title_progress_widgets_str;
     std::vector<uint32_t> show_title_progress_widgets;
     for (auto p : title_progress_by_id) {
         if (p->show) {
             show_title_progress_widgets.push_back(std::to_underlying(p->title_id));
         }
     }
-    GuiUtils::ArrayToIni(show_title_progress_widgets.data(), show_title_progress_widgets.size(), &show_title_progress_widgets_str);
-    SAVE_STRING(show_title_progress_widgets_str);
-    SAVE_BOOL(automatically_show_title_progress_for_current_map);
-    SAVE_BOOL(hide_completed_titles);
-    SAVE_BOOL(override_title_sort_order);
-    SAVE_BOOL(show_overall_title_progress);
-    SAVE_COLOR(progress_bar_background_color);
-    SAVE_COLOR(title_label_color);
-    SAVE_COLOR(tier_label_color);
-    SAVE_COLOR(progress_bar_background_color);
-    SAVE_COLOR(progress_bar_foreground_color);
-    SAVE_COLOR(progress_overlay_label_color);
-    SAVE_FLOAT(progress_bar_height);
+    GuiUtils::ArrayToIni(show_title_progress_widgets.data(), show_title_progress_widgets.size(), &settings.show_title_progress_widgets_str);
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
-void TitleTrackerWidget::LoadSettings(ToolboxIni* ini) {
-    ToolboxWidget::LoadSettings(ini);
+void TitleTrackerWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     std::vector<uint32_t> show_title_progress_widgets;
-    std::string show_title_progress_widgets_str;
-    LOAD_STRING(show_title_progress_widgets_str);
-    GuiUtils::IniToArray(show_title_progress_widgets_str, show_title_progress_widgets);
+    GuiUtils::IniToArray(settings.show_title_progress_widgets_str, show_title_progress_widgets);
     for (auto p : title_progress_by_id) {
         p->show = std::ranges::find(show_title_progress_widgets, std::to_underlying(p->title_id)) != show_title_progress_widgets.end();
     }
-    LOAD_BOOL(automatically_show_title_progress_for_current_map);
-    LOAD_BOOL(hide_completed_titles);
-    LOAD_BOOL(override_title_sort_order);
-    LOAD_BOOL(show_overall_title_progress);
-    LOAD_COLOR(progress_bar_background_color);
-    LOAD_COLOR(title_label_color);
-    LOAD_COLOR(tier_label_color);
-    LOAD_COLOR(progress_bar_background_color);
-    LOAD_COLOR(progress_bar_foreground_color);
-    LOAD_COLOR(progress_overlay_label_color);
-    LOAD_FLOAT(progress_bar_height);
 }

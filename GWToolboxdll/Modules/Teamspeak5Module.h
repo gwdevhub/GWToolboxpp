@@ -16,11 +16,17 @@ public:
 
     [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }
 
+    struct Settings {
+        bool enabled = true;
+        int ws_port = 5899;
+        std::string gwtoolbox_teamspeak5_api_key;
+    };
+
     void Initialize() override;
     void Terminate() override;
     void Update(float) override;
     void DrawSettingsInternal() override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 };

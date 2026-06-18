@@ -21,8 +21,8 @@ public:
 
     void Update(float) override;
 
-    void SaveSettings(ToolboxIni* ini) override;
-    void LoadSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 
     void DrawSettingsInternal() override;
     void RegisterSettingsContent() override;

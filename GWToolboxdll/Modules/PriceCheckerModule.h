@@ -22,11 +22,14 @@ public:
     [[nodiscard]] const char* Name() const override { return "Price Checker"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_COINS; }
 
-    void Initialize() override;
-    void Terminate() override;
+    struct Settings {
+        bool show_merchant_price_for_melandrus_accord_instead = true;
+    };
 
-    void SaveSettings(ToolboxIni* ini) override;
-    void LoadSettings(ToolboxIni* ini) override;
+    void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
+    void Terminate() override;
 
     void DrawSettingsInternal() override;
 

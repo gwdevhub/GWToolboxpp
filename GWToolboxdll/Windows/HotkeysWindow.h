@@ -1,5 +1,8 @@
 #pragma once
 
+#include <map>
+#include <string>
+
 #include <ToolboxWindow.h>
 
 #include <Windows/Hotkeys.h>
@@ -18,6 +21,19 @@ public:
 
     [[nodiscard]] const char* Name() const override { return "Hotkeys"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_KEYBOARD; }
+
+    struct Settings {
+        bool show_active_in_header = false;
+        bool show_run_in_header = false;
+        int clicker_delay_ms = 20;
+    };
+    Settings settings;
+
+    // One hotkey in persisted form: legacy type name + the key/value pairs its INI serializer writes
+    struct HotkeyEntry {
+        std::string type;
+        std::map<std::string, std::string> fields;
+    };
 
     void Initialize() override;
     void Terminate() override;
@@ -38,6 +54,6 @@ public:
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 };

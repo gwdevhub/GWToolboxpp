@@ -27,8 +27,22 @@ void ToolboxModule::Initialize()
     RegisterSettingsContent();
 }
 
+void ToolboxModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    SettingsRegistry::LoadFieldsFromDoc(this, doc);
+    // Fills struct members too (entries point into them) for keys absent from the doc;
+    // the module's own override then overlays doc values via doc.GetStruct(Name(), settings).
+    SettingsRegistry::LoadFromIniFallback(this, legacy, doc);
+}
+
+void ToolboxModule::SaveSettings(SettingsDoc& doc)
+{
+    SettingsRegistry::SaveFieldsToDoc(this, doc);
+}
+
 void ToolboxModule::Terminate()
 {
+    SettingsRegistry::Unregister(this);
     // Remove any settings draw callbacks associated with this module
     auto callbacks_it = settings_draw_callbacks.begin();
     while (callbacks_it != settings_draw_callbacks.end()) {

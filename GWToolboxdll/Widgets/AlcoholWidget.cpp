@@ -18,15 +18,32 @@
 
 #include "Utils/FontLoader.h"
 
+namespace {
+    AlcoholWidget::Settings settings;
+}
+
 void AlcoholWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
     // how much time was queued up with drinks
     alcohol_time = 0;
     // last time the player used a drink
     last_alcohol = 0;
     alcohol_level = 0;
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PostProcess>(&PostProcess_Entry, &AlcoholWidget::AlcUpdate,-0x8000);
+}
+
+void AlcoholWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void AlcoholWidget::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 uint32_t AlcoholWidget::GetAlcoholTitlePoints()
@@ -116,7 +133,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9*)
         return;
     }
 
-    if (only_show_when_drunk && alcohol_level == 0) {
+    if (settings.only_show_when_drunk && alcohol_level == 0) {
         return;
     }
 
@@ -129,7 +146,7 @@ void AlcoholWidget::Draw(IDirect3DDevice9*)
         }
     }
 
-    if (only_show_when_drunk && t < 0) {
+    if (settings.only_show_when_drunk && t < 0) {
         return;
     }
 
@@ -164,18 +181,6 @@ void AlcoholWidget::Draw(IDirect3DDevice9*)
 
 void AlcoholWidget::DrawSettingsInternal()
 {
-    ImGui::CheckboxWithHelp("Only show when drunk", &only_show_when_drunk, "Hides widget when not using alcohol");
+    ImGui::CheckboxWithHelp("Only show when drunk", &settings.only_show_when_drunk, "Hides widget when not using alcohol");
     ImGui::Text("Note: only visible in explorable areas.");
-}
-
-void AlcoholWidget::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_BOOL(only_show_when_drunk);
-}
-
-void AlcoholWidget::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_BOOL(only_show_when_drunk);
 }

@@ -8,6 +8,7 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Map.h>
 
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -15,6 +16,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Logger.h>
+#include <RestClient.h>
 #include <Utils/GuiUtils.h>
 
 #include <Utils/ThreadedWebSocket.h>
@@ -24,13 +26,13 @@
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/Resources.h>
+#include <Modules/ToolboxSettings.h>
 
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/GameEntities/Frame.h>
 #include <Timer.h>
 #include <Utils/TextUtils.h>
 #include <algorithm>
-#include <chrono>
 #include <sstream>
 #include <unordered_set>
 
@@ -338,6 +340,22 @@ namespace {
     std::string edit_window_matching_item_name;
     bool edit_window_orders_needs_sort = true;
 
+    struct PendingPurchaseAnalytic {
+        std::string player_name;
+        std::string item_name;
+        OrderType order_type = OrderType::Sell;
+        Price price;
+        clock_t timestamp = 0;
+
+        bool IsActive() const
+        {
+            return !player_name.empty() && timestamp &&
+                   TIMER_DIFF(timestamp) < (60 * CLOCKS_PER_SEC);
+        }
+
+        void Clear() { player_name.clear(); timestamp = 0; }
+    } pending_purchase_analytic;
+
     struct ShopItem : MarketItem {
         bool hidden = false;
         bool dedicated = false;
@@ -430,8 +448,7 @@ namespace {
     };
 
     // Settings
-    bool auto_refresh = true;
-    int refresh_interval = 60;
+    GWMarketWindow::Settings settings;
 
     // WebSocket
     ThreadedWebSocket market_ws;
@@ -1144,6 +1161,13 @@ namespace {
 
             ImGui::SetCursorPos({ImGui::GetContentRegionAvail().x - 100.f, top + 5.f});
             if (ImGui::Button("Whisper##seller", {100.f, 0.f})) {
+                if (!order.prices.empty()) {
+                    pending_purchase_analytic.player_name = order.player;
+                    pending_purchase_analytic.item_name = order.name;
+                    pending_purchase_analytic.order_type = order.orderType;
+                    pending_purchase_analytic.price = order.prices[0];
+                    pending_purchase_analytic.timestamp = TIMER_INIT();
+                }
                 auto cpy = new MarketItem();
                 *cpy = order;
                 GW::GameThread::Enqueue([cpy] {
@@ -1579,6 +1603,57 @@ namespace {
         //
     }
 
+    AsyncRestClient purchase_analytics_client;
+
+    void SendPurchaseAnalytics(const std::string& item_name, OrderType order_type, const Price& price)
+    {
+        if (!ToolboxSettings::send_anonymous_gameplay_info) return;
+        if (purchase_analytics_client.IsPending()) return;
+        purchase_analytics_client.Clear();
+
+        json price_json;
+        price_json["type"] = static_cast<int>(price.type);
+        price_json["price"] = price.price;
+        price_json["quantity"] = price.quantity;
+
+        json payload;
+        payload["name"] = item_name;
+        payload["orderType"] = static_cast<int>(order_type);
+        payload["price"] = price_json;
+
+        const auto json_str = glz::write_json(payload).value_or(std::string{});
+
+        purchase_analytics_client.SetUrl(std::format("https://{}/api/shop/purchase/", market_host).c_str());
+        purchase_analytics_client.SetMethod(HttpMethod::Post);
+        purchase_analytics_client.SetHeader("Content-Type", "application/json");
+        purchase_analytics_client.SetPostContent(json_str, ContentFlag::Copy);
+        purchase_analytics_client.SetTimeoutSec(5);
+        purchase_analytics_client.SetConnectTimeoutSec(3);
+        purchase_analytics_client.SetVerifyPeer(false);
+        purchase_analytics_client.SetVerifyHost(false);
+        purchase_analytics_client.ExecuteAsync();
+    }
+
+    GW::HookEntry OnSendChatMessage_HookEntry;
+    void OnSendChatMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
+    {
+        if (!pending_purchase_analytic.IsActive()) return;
+
+        const auto message = static_cast<GW::UI::UIPacket::kSendChatMessage*>(wparam)->message;
+        if (!(message && *message)) return;
+        if (GW::Chat::GetChannel(*message) != GW::Chat::Channel::CHANNEL_WHISPER) return;
+
+        const wchar_t* name_start = message + 1; // skip channel opcode
+        const wchar_t* sep = wcschr(name_start, L',');
+        if (!sep) return;
+
+        const std::string recipient = TextUtils::WStringToString(std::wstring(name_start, sep - name_start));
+        if (recipient != pending_purchase_analytic.player_name) return;
+
+        SendPurchaseAnalytics(pending_purchase_analytic.item_name, pending_purchase_analytic.order_type, pending_purchase_analytic.price);
+        pending_purchase_analytic.Clear();
+    }
+
     struct PendingAddToSell {
         uint32_t item_id;
         std::unique_ptr<GuiUtils::EncString> decoded_complete_name;
@@ -1660,6 +1735,7 @@ namespace {
 void GWMarketWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     InitWebSocket();
 
     const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kMapLoaded};
@@ -1667,6 +1743,7 @@ void GWMarketWindow::Initialize()
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x4000);
     }
     OnPostUIMessage(0, GW::UI::UIMessage::kMapLoaded, 0, 0);
+    RegisterUIMessageCallback(&OnSendChatMessage_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChatMessage);
 }
 
 void GWMarketWindow::Terminate()
@@ -1674,6 +1751,8 @@ void GWMarketWindow::Terminate()
     Disconnect(true);
     ToolboxWindow::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnSendChatMessage_HookEntry);
+    purchase_analytics_client.Abort();
 }
 
 void GWMarketWindow::Update(float delta)
@@ -1698,9 +1777,9 @@ void GWMarketWindow::Update(float delta)
     }
 
     refresh_timer += delta;
-    if (refresh_timer >= refresh_interval) {
+    if (refresh_timer >= settings.refresh_interval) {
         refresh_timer = 0.0f;
-        if (auto_refresh) Refresh();
+        if (settings.auto_refresh) Refresh();
     }
 }
 
@@ -1733,15 +1812,23 @@ void GWMarketWindow::SearchItem(const std::string& item_name)
     }
 }
 
-void GWMarketWindow::LoadSettings(ToolboxIni* ini)
+void GWMarketWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(auto_refresh);
-    refresh_interval = static_cast<int>(ini->GetLongValue(Name(), "refresh_interval", 60));
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    // Load favorite items
     favorite_items.clear();
-    const char* favorites_str = ini->GetValue(Name(), "favorite_items", "");
+    std::vector<std::string> favorites_list;
+    if (doc.Get(Name(), "favorite_items", favorites_list)) {
+        for (const auto& item : favorites_list) {
+            if (!item.empty()) {
+                ToggleFavourite(item, true);
+            }
+        }
+        return;
+    }
+    // Legacy INI fallback: pipe-separated string
+    const char* favorites_str = legacy->GetValue(Name(), "favorite_items", "");
     if (favorites_str && strlen(favorites_str) > 0) {
         std::string favorites(favorites_str);
         size_t start = 0;
@@ -1763,28 +1850,24 @@ void GWMarketWindow::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void GWMarketWindow::SaveSettings(ToolboxIni* ini)
+void GWMarketWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(auto_refresh);
-    ini->SetLongValue(Name(), "refresh_interval", refresh_interval);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    // Save favorite items as pipe-separated string
-    std::string favorites_str;
+    std::vector<std::string> favorites_list;
+    favorites_list.reserve(favorite_items.size());
     for (const auto& item : favorite_items) {
-        if (!favorites_str.empty()) {
-            favorites_str += "|";
-        }
-        favorites_str += item.first;
+        favorites_list.push_back(item.first);
     }
-    ini->SetValue(Name(), "favorite_items", favorites_str.c_str());
+    doc.Set(Name(), "favorite_items", favorites_list);
 }
 
 void GWMarketWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Auto-refresh", &auto_refresh);
-    if (auto_refresh) {
-        ImGui::SliderInt("Interval (sec)", &refresh_interval, 30, 300);
+    ImGui::Checkbox("Auto-refresh", &settings.auto_refresh);
+    if (settings.auto_refresh) {
+        ImGui::SliderInt("Interval (sec)", &settings.refresh_interval, 30, 300);
     }
 
     ImGui::Separator();

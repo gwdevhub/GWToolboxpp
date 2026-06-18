@@ -1,13 +1,17 @@
 #include "stdafx.h"
 
+#include <charconv>
+
 #include <GWCA/Utilities/Hooker.h>
 
 #include <GWToolbox.h>
 #include <Defines.h>
+#include <ImGuiAddons.h>
+#include <Modules/Resources.h>
 #include <Windows/PerformanceWindow.h>
 
 namespace {
-    int slow_threshold_us = 1000;
+    PerformanceWindow::Settings settings;
 
     // QPC helper
     uint64_t QpcToMicroseconds(LONGLONG ticks)
@@ -105,8 +109,68 @@ namespace {
     std::map<std::string, ModuleStats> acc_modules;
     DWORD window_start_tick = 0;
 
-    void FlushWindow()
+    // Raw 1s accumulator values, so true averages can be recomputed offline
+    void AppendCsvRow(std::string& out, DWORD tick, const char* category, const char* name, const char* metric, const Stats& s)
     {
+        if (s.count == 0) return;
+        char line[192];
+        snprintf(line, sizeof(line), "%lu,%s,%s,%s,%u,%llu,%llu,%llu\n",
+                 tick, category, name, metric, s.count,
+                 static_cast<unsigned long long>(s.sum_us),
+                 static_cast<unsigned long long>(s.min_us),
+                 static_cast<unsigned long long>(s.max_us));
+        out += line;
+    }
+
+    // Identifies the build that produced a CSV, so MSVC and clang runs land in
+    // separate files instead of appending into one another.
+    std::wstring CompilerTag()
+    {
+#ifdef __clang__
+        return std::format(L"clang-{}.{}.{}", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#elifdef _MSC_VER
+        return std::format(L"msvc-{}", _MSC_FULL_VER);
+#else
+        return L"unknown";
+#endif
+    }
+
+    // Settings folder (not the computer root) so the file lands where "Open current
+    // settings folder" points and where the Compare tab looks for it.
+    std::filesystem::path CsvPath() { return Resources::GetSettingFile(L"performance_log_" + CompilerTag() + L".csv"); }
+
+    // Runs on a worker thread so the draw loop never touches the disk
+    void WriteCsvRows(const std::string& rows)
+    {
+        static std::mutex csv_mutex;
+        std::scoped_lock lock(csv_mutex);
+        std::ofstream file(CsvPath(), std::ios::app);
+        if (!file.is_open()) return;
+        // Header only for a fresh file; appending preserves earlier runs
+        if (file.tellp() == 0)
+            file << "tick_ms,category,name,metric,count,sum_us,min_us,max_us\n";
+        file << rows;
+    }
+
+    void StreamSnapshotToCsv(DWORD tick)
+    {
+        std::string rows;
+        AppendCsvRow(rows, tick, "frame", "frame", "period", acc_frame);
+        AppendCsvRow(rows, tick, "toolbox", "tb_update", "update", acc_tb_update);
+        AppendCsvRow(rows, tick, "toolbox", "tb_draw", "draw", acc_tb_draw);
+        AppendCsvRow(rows, tick, "toolbox", "present", "present", acc_present);
+        for (const auto& [name, ms] : acc_modules) {
+            AppendCsvRow(rows, tick, "module", name.c_str(), "update", ms.update);
+            AppendCsvRow(rows, tick, "module", name.c_str(), "draw", ms.draw);
+        }
+        if (!rows.empty())
+            Resources::EnqueueWorkerTask([rows = std::move(rows)] { WriteCsvRows(rows); });
+    }
+
+    void FlushWindow(DWORD tick)
+    {
+        if (settings.stream_to_csv) StreamSnapshotToCsv(tick);
+
         // Store current 1s snapshot into ring buffer
         hist_frame[hist_index] = acc_frame;
         hist_tb_update[hist_index] = acc_tb_update;
@@ -165,6 +229,49 @@ namespace {
         ImGui::TableNextColumn(); ImGui::TextColored(ImColor(ColorForTime(s.max_us)).Value, "%llu", s.max_us);
     }
 
+    // ── Compare tab support ──────────────────────────────────────────────────
+    template <typename T>
+    T ParseNum(std::string_view s)
+    {
+        T v{};
+        std::from_chars(s.data(), s.data() + s.size(), v);
+        return v;
+    }
+
+    // Pools every 1s row in an exported CSV into per-"category/name/metric" totals
+    // (count/sum/min/max), so true averages can be recomputed across the whole run.
+    std::map<std::string, Stats> LoadCsvAggregate(const std::filesystem::path& file)
+    {
+        std::map<std::string, Stats> out;
+        std::ifstream in(file);
+        if (!in.is_open()) return out;
+
+        std::string line;
+        std::getline(in, line); // header: tick_ms,category,name,metric,count,sum_us,min_us,max_us
+        while (std::getline(in, line)) {
+            if (line.empty()) continue;
+            std::string_view f[8];
+            int n = 0;
+            size_t start = 0;
+            for (; n < 8; n++) {
+                const size_t comma = line.find(',', start);
+                if (comma == std::string::npos) { f[n++] = std::string_view(line).substr(start); break; }
+                f[n] = std::string_view(line).substr(start, comma - start);
+                start = comma + 1;
+            }
+            if (n < 8) continue;
+
+            Stats s;
+            s.count = ParseNum<uint32_t>(f[4]);
+            if (s.count == 0) continue;
+            s.sum_us = ParseNum<uint64_t>(f[5]);
+            s.min_us = ParseNum<uint64_t>(f[6]);
+            s.max_us = ParseNum<uint64_t>(f[7]);
+            out[std::string(f[1]) + "/" + std::string(f[2]) + "/" + std::string(f[3])].Merge(s);
+        }
+        return out;
+    }
+
 }
 
 void PerformanceWindow::Draw(IDirect3DDevice9* device)
@@ -213,7 +320,7 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
     const DWORD now = GetTickCount();
     if (window_start_tick == 0) window_start_tick = now;
     if (now - window_start_tick >= 1000) {
-        FlushWindow();
+        FlushWindow(now);
         window_start_tick = now;
     }
 
@@ -328,7 +435,7 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
                     const uint64_t total_avg = e.stats.update.Avg() + e.stats.draw.Avg();
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    if (total_avg >= static_cast<uint64_t>(slow_threshold_us))
+                    if (total_avg >= static_cast<uint64_t>(settings.slow_threshold_us))
                         ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.name);
                     else
                         ImGui::TextUnformatted(e.name);
@@ -400,7 +507,7 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
                     for (const auto& e : ui_entries) {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
-                        if (e.stats.Avg() >= static_cast<uint64_t>(slow_threshold_us))
+                        if (e.stats.Avg() >= static_cast<uint64_t>(settings.slow_threshold_us))
                             ImGui::TextColored(ImVec4(1.f, 0.3f, 0.3f, 1.f), "%s", e.module_name);
                         else
                             ImGui::TextUnformatted(e.module_name);
@@ -417,10 +524,136 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
             ImGui::EndTabItem();
         }
 
+        // ── Tab 3: Compare (diff two exported CSVs, e.g. MSVC vs clang) ──────────
+        if (ImGui::BeginTabItem("Compare")) {
+            static std::vector<std::filesystem::path> csv_files;
+            static std::vector<std::string> csv_names;
+            static int sel_a = -1, sel_b = -1;
+            static std::map<std::string, Stats> agg_a, agg_b;
+            static std::string label_a, label_b;
+
+            auto refresh_files = [] {
+                csv_files.clear();
+                csv_names.clear();
+                std::error_code ec;
+                for (const auto& entry : std::filesystem::directory_iterator(Resources::GetSettingsFolderPath(), ec)) {
+                    if (!entry.is_regular_file(ec)) continue;
+                    const auto& p = entry.path();
+                    if (p.extension() == L".csv" && p.filename().wstring().starts_with(L"performance_log")) {
+                        csv_files.push_back(p);
+                        csv_names.push_back(p.filename().string());
+                    }
+                }
+            };
+            if (csv_files.empty()) refresh_files();
+
+            ImGui::TextWrapped("Compare per-module timings from two exported CSVs. "
+                               "%% is B relative to A; negative (green) means B is faster.");
+            if (ImGui::Button("Refresh file list")) refresh_files();
+            ImGui::SameLine();
+            ImGui::TextDisabled("(%d found)", static_cast<int>(csv_files.size()));
+
+            auto file_combo = [](const char* label, int& sel) {
+                const char* preview = (sel >= 0 && sel < static_cast<int>(csv_names.size())) ? csv_names[sel].c_str() : "(none)";
+                if (ImGui::BeginCombo(label, preview)) {
+                    for (int i = 0; i < static_cast<int>(csv_names.size()); i++) {
+                        const bool selected = sel == i;
+                        if (ImGui::Selectable(csv_names[i].c_str(), selected)) sel = i;
+                        if (selected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+            };
+            file_combo("A##cmp_a", sel_a);
+            file_combo("B##cmp_b", sel_b);
+
+            if (ImGui::Button("Load / Compare")) {
+                agg_a.clear();
+                agg_b.clear();
+                label_a.clear();
+                label_b.clear();
+                if (sel_a >= 0 && sel_a < static_cast<int>(csv_files.size())) {
+                    agg_a = LoadCsvAggregate(csv_files[sel_a]);
+                    label_a = csv_names[sel_a];
+                }
+                if (sel_b >= 0 && sel_b < static_cast<int>(csv_files.size())) {
+                    agg_b = LoadCsvAggregate(csv_files[sel_b]);
+                    label_b = csv_names[sel_b];
+                }
+            }
+
+            if (!agg_a.empty() || !agg_b.empty()) {
+                ImGui::TextDisabled("A = %s    B = %s", label_a.empty() ? "-" : label_a.c_str(), label_b.empty() ? "-" : label_b.c_str());
+
+                std::set<std::string> keys;
+                for (const auto& [k, s] : agg_a) keys.insert(k);
+                for (const auto& [k, s] : agg_b) keys.insert(k);
+
+                if (ImGui::BeginTable("##cmp_table", 6,
+                        ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY,
+                        ImGui::GetContentRegionAvail())) {
+                    ImGui::TableSetupColumn("category/name/metric");
+                    ImGui::TableSetupColumn("A avg");
+                    ImGui::TableSetupColumn("B avg");
+                    ImGui::TableSetupColumn("avg %");
+                    ImGui::TableSetupColumn("A max");
+                    ImGui::TableSetupColumn("B max");
+                    ImGui::TableSetupScrollFreeze(0, 1);
+                    ImGui::TableHeadersRow();
+
+                    for (const auto& key : keys) {
+                        const auto it_a = agg_a.find(key);
+                        const auto it_b = agg_b.find(key);
+                        const uint64_t a_avg = it_a != agg_a.end() ? it_a->second.Avg() : 0;
+                        const uint64_t b_avg = it_b != agg_b.end() ? it_b->second.Avg() : 0;
+                        const uint64_t a_max = it_a != agg_a.end() ? it_a->second.max_us : 0;
+                        const uint64_t b_max = it_b != agg_b.end() ? it_b->second.max_us : 0;
+
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn(); ImGui::TextUnformatted(key.c_str());
+                        ImGui::TableNextColumn(); ImGui::Text("%llu", a_avg);
+                        ImGui::TableNextColumn(); ImGui::Text("%llu", b_avg);
+                        ImGui::TableNextColumn();
+                        if (a_avg > 0 && it_b != agg_b.end()) {
+                            const double pct = (static_cast<double>(b_avg) - static_cast<double>(a_avg)) / static_cast<double>(a_avg) * 100.0;
+                            const ImVec4 col = pct < 0 ? ImVec4(0.55f, 1.f, 0.55f, 1.f) : ImVec4(1.f, 0.45f, 0.45f, 1.f);
+                            ImGui::TextColored(col, "%+.1f%%", pct);
+                        }
+                        else {
+                            ImGui::TextUnformatted("-");
+                        }
+                        ImGui::TableNextColumn(); ImGui::Text("%llu", a_max);
+                        ImGui::TableNextColumn(); ImGui::Text("%llu", b_max);
+                    }
+                    ImGui::EndTable();
+                }
+            }
+
+            ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
     }
 
     ImGui::End();
+}
+
+void PerformanceWindow::Initialize()
+{
+    ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
+}
+
+void PerformanceWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void PerformanceWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void PerformanceWindow::Terminate()
@@ -429,20 +662,13 @@ void PerformanceWindow::Terminate()
     ToolboxWindow::Terminate();
 }
 
-void PerformanceWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_UINT(slow_threshold_us);
-}
-
-void PerformanceWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_UINT(slow_threshold_us);
-}
-
 void PerformanceWindow::DrawSettingsInternal()
 {
-    ImGui::InputInt("Slow module threshold (us)", &slow_threshold_us, 100, 1000);
-    if (slow_threshold_us < 0) slow_threshold_us = 0;
+    ImGui::InputInt("Slow module threshold (us)", &settings.slow_threshold_us, 100, 1000);
+    settings.slow_threshold_us = std::max(settings.slow_threshold_us, 0);
+
+    ImGui::Checkbox("Stream timings to CSV", &settings.stream_to_csv);
+    ImGui::ShowHelp("Appends per-second timings to performance_log_<compiler>.csv in the settings folder "
+                    "while the Performance window is open. Each compiler writes its own file; load two of "
+                    "them in the Compare tab to diff builds (e.g. MSVC vs clang).");
 }
