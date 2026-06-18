@@ -6,6 +6,31 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.26
+* [New] Added a Backup module — archive your entire GWToolbox settings folder to a ZIP and restore it later, all from the settings UI (with filters for text, image and audio files)
+* [New] Cross-map pathfinding — quest and travel routes can now be calculated across multiple maps, and the full cross-map route is drawn on the world map when you place a marker
+* [New] Minimap layers can now be overlaid on the in-game Mission Map (world map) frame
+* [New] Minimap: added an option to target gadgets (chests, resurrection shrines, etc.) when clicking the minimap
+* [New] Minimap: hero flag circle colour and thickness are now customisable
+* [New] World map: added campaign filter buttons (Core, Prophecies, Factions, Nightfall) to show/hide elite capture locations per campaign
+* [New] Added an option to combine the floating damage/heal numbers that appear over an agent's head, reducing on-screen noise
+* [New] Hero command panels now remember their on-screen positions per hero, so they are restored after reordering the party or swapping characters
+* [New] Custom quest markers are now plotted at their exact position on the world map
+* [New] `/target` now supports `|` as an OR separator between search terms, and pending `/target` searches accumulate across hotkeys
+* [New] Added `/pref resolution` chat command
+* [New] Objective Timer: added the Tunnels of the Forsaken dungeon
+* [New] Performance window: added opt-in CSV streaming of per-second timings to `performance_log.csv`
+* [Fix] Fixed being unable to target valid agents near an opened locked chest
+* [Fix] Fixed salvage auto-accept breaking after a Guild Wars UI update
+* [Fix] Fixed character name detection after the latest Guild Wars update
+* [Fix] Fixed slider-based `/pref` commands (e.g. `/volume`) not applying
+* [Fix] Fixed some module settings not appearing in the Toolbox settings window
+* [Fix] Fixed chat commands that broke after the move to shared encoded strings
+* [Fix] Materials window: enforce a minimum delay between quote requests to avoid server throttling at low ping
+* [Fix] Various quest and travel pathing fixes — paths now recalculate when the active quest changes, route to the destination map's marker, and stop retrying unreachable markers
+* [Minor] Settings files are now stored as JSON, with automatic migration from the old `.ini` files
+* [Minor] Pathfinding performance and memory improvements (lazy visibility graphs with an LRU cache, route building moved off the main thread, throttled minimap rebuilds)
+
 ## Version 8.25
 * [Minor] The texmod module now works with pre-loaded instances of gMod
 
