@@ -84,6 +84,8 @@ find_package(minhook CONFIG REQUIRED)
 
 find_package(unofficial-uwebsockets CONFIG REQUIRED)
 
+find_package(recastnavigation CONFIG REQUIRED)
+
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
     RestClient
@@ -102,6 +104,7 @@ target_link_libraries(GWToolboxdll PRIVATE
 	minhook::minhook
 	ctre::ctre
     unofficial::uwebsockets::uwebsockets
+    RecastNavigation::Detour
 
     # libs:
     Dbghelp.lib # for MiniDump
