@@ -145,25 +145,31 @@ namespace Pathing {
 
     bool PortalConnections::Load(const std::string& path)
     {
+        std::ifstream f(path);
+        if (!f.is_open()) {
+            Log::Error("Could not open portal connections file (%s)",
+                path.empty() ? "<empty path>" : path.c_str());
+            return false;
+        }
+        std::ostringstream oss;
+        oss << f.rdbuf();
+        const std::string buf = oss.str();
+        return LoadFromMemory(buf.data(), buf.size(), path);
+    }
+
+    bool PortalConnections::LoadFromMemory(const char* data, size_t size, const std::string& source)
+    {
         try {
-            std::ifstream f(path);
-            if (!f.is_open()) {
-                Log::Error("Could not open portal connections file (%s)",
-                    path.empty() ? "<empty path>" : path.c_str());
-                return false;
-            }
-            std::ostringstream oss;
-            oss << f.rdbuf();
-            const std::string buf = oss.str();
+            const std::string buf(data, size);
 
             glz::generic j;
             if (auto ec = glz::read_json(j, buf); ec) {
-                Log::Error("Failed to parse portal connections JSON (%s)", path.c_str());
+                Log::Error("Failed to parse portal connections JSON (%s)", source.c_str());
                 return false;
             }
             if (!j.contains("connections") || !j.at("connections").is_array()) {
                 connections.clear();
-                Log::Info("Portal connections file has no \"connections\" array (%s)", path.c_str());
+                Log::Info("Portal connections file has no \"connections\" array (%s)", source.c_str());
                 return true;
             }
 
@@ -234,11 +240,11 @@ namespace Pathing {
                 }
                 if (!has_reverse) connections.push_back(MakeReverse(connections[i]));
             }
-            Log::Info("Loaded %d portal connections from %s", (int)connections.size(), path.c_str());
+            Log::Info("Loaded %d portal connections from %s", (int)connections.size(), source.c_str());
             return true;
         }
         catch (...) {
-            Log::Error("Failed to load portal connections from %s", path.c_str());
+            Log::Error("Failed to load portal connections from %s", source.c_str());
             return false;
         }
     }

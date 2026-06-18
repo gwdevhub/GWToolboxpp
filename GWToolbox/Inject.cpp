@@ -99,7 +99,7 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
 
     for (int i = 0; i < processes.size(); i++) {
         const ProcessScanner scanner(&processes[i]);
-        if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
+        if (!scanner.FindPatternRva("\x75\xD4\x5E\xC3\xCC\x55\x8B\xEC\x51\x66\x83\x3D", "xxxxxxxxxxxx", 12, &charname_rva)) {
             continue;
         }
 

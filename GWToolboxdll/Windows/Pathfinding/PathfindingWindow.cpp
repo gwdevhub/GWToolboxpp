@@ -23,6 +23,7 @@
 #include <fstream>
 #include <numeric>
 
+#include <EmbeddedResource.h>
 #include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Utils/EncString.h>
@@ -41,6 +42,7 @@
 #include "PathingMapDataLoader.h"
 #include "PortalConnections.h"
 #include "maps_constant_data.h"
+#include "resource.h"
 
 #include <GWCA/Context/WorldContext.h>
 #include <Utils/ToolboxUtils.h>
@@ -298,7 +300,6 @@ namespace {
 
     // Portal connection editor
     Pathing::PortalConnections portal_connections;
-    std::string portal_connections_path;
 
     struct EditorEndpoint {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
@@ -432,23 +433,6 @@ namespace {
         }
     }
 
-    void InitPortalConnectionsPath()
-    {
-        if (!portal_connections_path.empty()) return;
-        // Resolve the path next to GWToolboxdll.dll. The portal_connections.json
-        // resource is committed in the repo at
-        //   GWToolboxdll/Windows/Pathfinding/portal_connections.json
-        // and copied next to the built DLL by a CMake POST_BUILD step.
-        wchar_t dll_path[MAX_PATH];
-        if (GetModuleFileNameW(GWToolbox::GetDLLModule(), dll_path, _countof(dll_path)) == 0) {
-            return;
-        }
-        std::filesystem::path p(dll_path);
-        p.replace_filename(L"portal_connections.json");
-        portal_connections_path = p.string();
-    }
-
-
     // LoadAndShowMapsAtWorldPos defined after anonymous namespace
 
     std::vector<CustomRenderer::CustomLine*> editor_highlight_lines;
@@ -485,7 +469,13 @@ namespace {
             return nullptr;
         }
 
-
+        // Fast path: file already resident. readFromDat routes into the game's serialized file subsystem, so re-reading it every recompute stalls the game thread; file_id alone keys the map within a session (mirrors GetMilepathForMap).
+        for (const auto& [hash, mp] : mile_paths_by_coords) {
+            if (static_cast<uint32_t>(hash & 0xFFFFFFFF) == fid) {
+                TouchLru(hash);
+                return mp;
+            }
+        }
 
         PATH_LOG_INFO("LoadMapFromDAT: map=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
 
@@ -511,13 +501,9 @@ namespace {
         }
         auto& map_data = *chosen;
 
+        // file_id was not resident above, so this full key (file_id + pathNodeSize) is new too.
         auto hash = static_cast<uint64_t>(fid);
         hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
-
-        if (mile_paths_by_coords.contains(hash)) {
-            TouchLru(hash);
-            return mile_paths_by_coords[hash];
-        }
 
         // Cache map info for bounds drawing
         CachedMapInfo info;
@@ -3070,8 +3056,16 @@ void PathfindingWindow::Initialize()
     BuildMapFileHashLookup();
     RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
 
-    // Load saved portal connections (drawing deferred until map is ready)
-    InitPortalConnectionsPath();
-    portal_connections.Load(portal_connections_path);
+    // Load portal connections from the JSON embedded in the DLL as an RCDATA
+    // resource (drawing deferred until map is ready). Shipping it inside the DLL
+    // avoids the file having to sit next to GWToolboxdll.dll at runtime.
+    const EmbeddedResource portal_json(IDR_PORTAL_CONNECTIONS_JSON, RT_RCDATA, GWToolbox::GetDLLModule());
+    if (portal_json.data() && portal_json.size()) {
+        portal_connections.LoadFromMemory(
+            static_cast<const char*>(portal_json.data()), portal_json.size(), "<embedded resource>");
+    }
+    else {
+        Log::Error("Failed to load embedded portal connections resource");
+    }
     pending_connection_lines_update = true;
 }

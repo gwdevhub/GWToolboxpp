@@ -66,6 +66,8 @@ namespace Pathing {
         void Remove(size_t index);
         bool Save(const std::string& path) const;
         bool Load(const std::string& path);
+        // Parse connections from an in-memory JSON buffer (e.g. an embedded resource).
+        bool LoadFromMemory(const char* data, size_t size, const std::string& source = "<memory>");
         void Clear();
 
         const std::vector<PortalConnection>& GetAll() const { return connections; }

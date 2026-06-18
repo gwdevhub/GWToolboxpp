@@ -863,7 +863,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             const auto text_height = ImGui::GetTextLineHeight();
             const auto text_y = damage_top_left.y + (row_height - text_height) / 2;
 
-            if (settings.show_damage) {
+            if (settings.show_damage && entry->damage > 0) {
                 // Damage text
                 if (damage_float < 1000.f) {
                     snprintf(buffer, buffer_size, "%.0f", damage_float);
@@ -895,7 +895,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 draw_list->AddText(ImVec2(dps_text_x, text_y), IM_COL32(255, 255, 255, 255), buffer);
             }
 
-            if (settings.show_healing) {
+            if (settings.show_healing && entry->healing > 0) {
                 // Healing text
                 const float healing_float = static_cast<float>(entry->healing);
                 if (healing_float < 1000.f) {
