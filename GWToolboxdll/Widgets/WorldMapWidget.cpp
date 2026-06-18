@@ -625,7 +625,7 @@ namespace {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(boss.skill_id);
         if (!skill) return false;
         if (!show_elite_capture_locations[(uint32_t)skill->profession]) return false;
-        const auto campaign_idx = (uint32_t)map_info->campaign;
+        const auto campaign_idx = (uint32_t)skill->campaign;
         if (campaign_idx < _countof(show_elite_capture_locations_campaign) && !show_elite_capture_locations_campaign[campaign_idx]) return false;
         if (settings.hide_captured_elites) {
             const auto me = GW::Agents::GetControlledCharacter();
