@@ -26,7 +26,21 @@ public:
 
     bool HasSettings() { return true; }
 
+    struct Settings {
+        bool     use_recast_pathing = false;            // false = visgraph A* (default), true = recast/Detour navmesh
+        bool     use_recast_builder = false;            // false = hand-built mesh, true = recast-generated mesh (applies on next map load)
+        bool     draw_navmesh_overlay = false;
+        uint32_t navmesh_wall_color = 0xC0FF3030;          // ARGB: wall edge on plane 0 (red)
+        uint32_t navmesh_wall_color_hi = 0xC0FF30FF;       // wall edge on planes != 0 (magenta)
+        uint32_t navmesh_connection_color = 0x6030FF30;    // connection edge on plane 0 (green)
+        uint32_t navmesh_connection_color_hi = 0x6030C0FF; // connection edge on planes != 0 (cyan)
+        float    navmesh_overlay_range = 4500.f;           // game units around the player
+    };
+
     void Draw(IDirect3DDevice9* pDevice) override;
+    void DrawSettingsInternal() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
     void SignalTerminate() override;
     bool CanTerminate() override;

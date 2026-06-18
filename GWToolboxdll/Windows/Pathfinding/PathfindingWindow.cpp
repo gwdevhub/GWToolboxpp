@@ -32,10 +32,12 @@
 #include <GWCA/Context/GameplayContext.h>
 #include <GWCA/Context/MapContext.h>
 #include <Modules/Resources.h>
+#include <Modules/ToolboxSettings.h>
 #include <Utils/ArenaNetFileParser.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/Pathing.h>
+#include <Windows/Pathfinding/NavMesh.h> // viz-only navmesh for the debug overlay
 
 #include "OpenTyriaPathfinder.h"
 #include "PathingMapData.h"
@@ -587,6 +589,8 @@ namespace {
         return LoadMapFromContext(map_id);
     }
 
+    std::vector<CustomRenderer::CustomLine*> navmesh_edge_lines; // viz-only navmesh poly-edge overlay
+    PathfindingWindow::Settings settings;
     std::vector<CustomRenderer::CustomLine*> bounds_lines;
     std::vector<CustomRenderer::CustomLine*> graph_edge_lines;
     std::vector<CustomRenderer::CustomLine*> portal_marker_lines;
@@ -2606,9 +2610,99 @@ void LoadAndShowMapsAtWorldPos(const GW::Vec2f& wm_pos); // forward decl
 // drains the deferred line-removal queue each frame (ClearPathLines etc. only
 // queue removals; without this drain, cleared route lines would stay on screen).
 // WndProc is a no-op stub so ToolboxWindow's vtable contract is satisfied.
+static void UpdateNavmeshOverlay()
+{
+    static GW::GamePos last_pos{};
+    static bool was_on = false;
+    if (!settings.draw_navmesh_overlay) {
+        if (was_on) { DeferRemoveLines(navmesh_edge_lines); was_on = false; }
+        return;
+    }
+    const auto me = GW::Agents::GetControlledCharacter();
+    float moved2 = 1e30f;
+    if (me) { const float dx = me->pos.x - last_pos.x, dy = me->pos.y - last_pos.y; moved2 = dx * dx + dy * dy; }
+    if (was_on && !navmesh_edge_lines.empty() && moved2 < 600.f * 600.f) return;
+    was_on = true;
+    if (me) last_pos = me->pos;
+
+    DeferRemoveLines(navmesh_edge_lines);
+    auto* mp = GetMilepathForCurrentMap();
+    if (!mp || !mp->ready()) return;
+    auto* nav = mp->GetNavMeshForDebug();
+    if (!nav || !nav->IsReady()) {
+        static Pathing::MilePath* build_requested = nullptr;
+        if (build_requested != mp && !mp->build_failed()) {
+            build_requested = mp;
+            Resources::EnqueueWorkerTask([mp] { mp->EnsureFullBuild(); });
+        }
+        return;
+    }
+    std::vector<Pathing::NavMesh::DebugEdge> edges;
+    nav->DebugExtractEdges(edges);
+    const float range2 = settings.navmesh_overlay_range * settings.navmesh_overlay_range;
+    const auto cur_map = GW::Map::GetMapID();
+    auto& cr = Minimap::Instance().custom_renderer;
+    for (const auto& e : edges) {
+        if (me) { const float dx = me->pos.x - e.a.x, dy = me->pos.y - e.a.y; if (dx * dx + dy * dy > range2) continue; }
+        auto* line = cr.AddCustomLine(e.a, e.b);
+        line->map = cur_map;
+        const bool hi = e.a.zplane != 0; // edges off the ground plane get the "hi" colour
+        line->color = e.wall ? (hi ? settings.navmesh_wall_color_hi : settings.navmesh_wall_color)
+                             : (hi ? settings.navmesh_connection_color_hi : settings.navmesh_connection_color);
+        line->draw_on_terrain = true;
+        line->draw_on_minimap = false;
+        line->draw_on_mission_map = false;
+        line->created_by_toolbox = true;
+        line->dotted = false; // solid edges so the mesh reads clearly
+        navmesh_edge_lines.push_back(line);
+    }
+}
+
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
+    Pathing::g_use_recast_pathing = settings.use_recast_pathing;
+    Pathing::NavMesh::s_use_recast_builder = settings.use_recast_builder;
     ProcessDeferredRemovals();
+    UpdateNavmeshOverlay();
+}
+
+void PathfindingWindow::DrawSettingsInternal()
+{
+    ImGui::Checkbox("Use recast (Detour) pathing", &settings.use_recast_pathing);
+    ImGui::ShowHelp("Off (default): visibility-graph pathfinder.\nOn: recast/Detour navmesh pathfinder (experimental — may misroute around the trapezoid mesh's seams).");
+    ImGui::Checkbox("Recast-generated mesh", &settings.use_recast_builder);
+    ImGui::ShowHelp("Build the recast (Detour) mesh that 'Use recast pathing' navigates on — cleaner topology than the hand-built one. The OVERLAY always draws the hand-built mesh (correct heights), so this doesn't change what's drawn. Applies on next map load / zone.");
+    ImGui::Separator();
+    ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
+    ImGui::ShowHelp("Draw the hand-built navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included). This is the drawn mesh; pathing may navigate on a different (recast) mesh.");
+    if (settings.draw_navmesh_overlay) {
+        auto color_edit = [](const char* label, uint32_t* argb) {
+            float c[4] = {((*argb >> 16) & 0xFF) / 255.f, ((*argb >> 8) & 0xFF) / 255.f, (*argb & 0xFF) / 255.f, ((*argb >> 24) & 0xFF) / 255.f};
+            if (ImGui::ColorEdit4(label, c, ImGuiColorEditFlags_AlphaBar)) {
+                auto q = [](float f) { return (uint32_t)std::clamp(f * 255.f + 0.5f, 0.f, 255.f); };
+                *argb = (q(c[3]) << 24) | (q(c[0]) << 16) | (q(c[1]) << 8) | q(c[2]);
+            }
+        };
+        color_edit("Wall colour (ground plane)", &settings.navmesh_wall_color);
+        color_edit("Wall colour (other planes)", &settings.navmesh_wall_color_hi);
+        color_edit("Connection colour (ground plane)", &settings.navmesh_connection_color);
+        color_edit("Connection colour (other planes)", &settings.navmesh_connection_color_hi);
+        ImGui::DragFloat("Draw range", &settings.navmesh_overlay_range, 100.f, 500.f, 20000.f, "%.0f");
+    }
+}
+
+void PathfindingWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    Pathing::g_use_recast_pathing = settings.use_recast_pathing;
+    Pathing::NavMesh::s_use_recast_builder = settings.use_recast_builder;
+}
+
+void PathfindingWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 bool PathfindingWindow::WndProc(UINT, WPARAM, LPARAM)

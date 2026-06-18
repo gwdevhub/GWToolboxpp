@@ -560,7 +560,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         auto poly_to_add = GenericPolyRenderable(line->map, points, line->color, false);
 
         poly_to_add.from_player_pos = line->from_player_pos;
-        poly_to_add.use_dotted_effect = line->created_by_toolbox;
+        poly_to_add.use_dotted_effect = line->created_by_toolbox && line->dotted;
 
         // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
 
