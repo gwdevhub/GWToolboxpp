@@ -30,13 +30,13 @@ private: // From AsyncRestClient
     std::atomic<size_t> m_DownloadLength;
 };
 
-bool Download(std::string& content, const char* url)
+bool Download(std::string& content, const char* url, int timeout_sec = 5)
 {
     RestClient client;
     client.SetUrl(url);
     client.SetFollowLocation(true);
     client.SetVerifyPeer(false);
-    client.SetTimeoutSec(5);
+    client.SetTimeoutSec(timeout_sec);
     client.SetUserAgent("curl/7.71.1");
     client.Execute();
 
@@ -80,6 +80,16 @@ static bool ParseRelease(const std::string& json_text, Release* release)
     }
     if (release->tag_name.empty() || release->assets.empty()) {
         fprintf(stderr, "Required fields missing in '%s'\n", json_text.c_str());
+        return false;
+    }
+    return true;
+}
+
+static bool ParseReleases(const std::string& json_text, std::vector<Release>& releases)
+{
+    constexpr glz::opts opts{.error_on_unknown_keys = false};
+    if (auto ec = glz::read<opts>(releases, json_text); ec) {
+        fprintf(stderr, "Failed to parse releases list\n");
         return false;
     }
     return true;
@@ -224,6 +234,97 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
     }
 
     return true;
+}
+
+static constexpr wchar_t kReleasesPage[] = L"https://github.com/gwdevhub/GWToolboxpp/releases";
+
+// Windows locks a running exe against being overwritten, but still allows it to be renamed; so we move
+// the running file aside and drop the new one in its place. The new exe takes effect on the next launch.
+static bool UpdateExe(const std::filesystem::path& exe_path, const std::string& url, std::wstring& error)
+{
+    std::string data;
+    if (!Download(data, url.c_str(), 30) || data.empty())
+        return error = std::format(L"Couldn't download the update.\n\nAnti-virus software may be blocking it. "
+                                   L"Download the latest GWToolbox.exe manually from {}.", kReleasesPage), false;
+
+    auto new_path = exe_path;
+    new_path += L".new";
+    auto old_path = exe_path;
+    old_path += L".old";
+
+    if (!WriteEntireFile(new_path.wstring().c_str(), data.c_str(), data.size()))
+        return error = std::format(L"Couldn't write the update to {}.\n\nThe folder may be read-only, or anti-virus may "
+                                   L"have quarantined the file. Run GWToolbox from a writable folder, or download the "
+                                   L"latest version manually from {}.", new_path.wstring(), kReleasesPage), false;
+
+    DeleteFileW(old_path.wstring().c_str()); // leftover from a previous update, if any
+
+    if (!MoveFileW(exe_path.wstring().c_str(), old_path.wstring().c_str())) {
+        const DWORD err = GetLastError();
+        DeleteFileW(new_path.wstring().c_str());
+        return error = std::format(L"Couldn't replace GWToolbox.exe (error {}).\n\nIf it lives in a protected folder such "
+                                   L"as Program Files, run GWToolbox as administrator or move it to a normal folder. You "
+                                   L"can also download the latest version manually from {}.", err, kReleasesPage), false;
+    }
+    if (!MoveFileW(new_path.wstring().c_str(), exe_path.wstring().c_str())) {
+        const DWORD err = GetLastError();
+        MoveFileW(old_path.wstring().c_str(), exe_path.wstring().c_str()); // roll back the rename
+        return error = std::format(L"Couldn't move the update into place (error {}).\n\nDownload the latest GWToolbox.exe "
+                                   L"manually from {}.", err, kReleasesPage), false;
+    }
+    return true;
+}
+
+// Runs on a background thread so it never delays injection. Not every release ships a GWToolbox.exe, so we scan
+// the release list newest-first for the most recent one that does, and offer it if its size differs from ours.
+void CheckForExeUpdate()
+{
+    std::filesystem::path exe_path;
+    if (!PathGetExeFullPath(exe_path))
+        return;
+
+    std::string content;
+    if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30"))
+        return; // GitHub unreachable or rate-limited; never block a launch over an update check
+
+    std::vector<Release> releases;
+    if (!ParseReleases(content, releases))
+        return;
+
+    const Asset* exe_asset = nullptr;
+    std::string tag_name;
+    for (const auto& release : releases) {
+        for (const auto& asset : release.assets) {
+            if (asset.name == "GWToolbox.exe") {
+                exe_asset = &asset;
+                tag_name = release.tag_name;
+                break;
+            }
+        }
+        if (exe_asset)
+            break;
+    }
+    if (!exe_asset || exe_asset->browser_download_url.empty())
+        return;
+
+    std::error_code ec;
+    const auto current_size = std::filesystem::file_size(exe_path, ec);
+    if (ec || current_size == exe_asset->size)
+        return; // size is the only signal Github gives us without downloading; same size means up to date
+
+    const std::wstring tag_w(tag_name.begin(), tag_name.end());
+    const std::wstring prompt = std::format(
+        L"A newer version of GWToolbox.exe ({}) is available.\n\n"
+        L"Update now? GWToolbox will replace its own program file; the new version takes effect next launch.", tag_w);
+    if (MessageBoxW(nullptr, prompt.c_str(), L"GWToolbox - Update available", MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST) != IDYES)
+        return;
+
+    std::wstring error;
+    if (!UpdateExe(exe_path, exe_asset->browser_download_url, error))
+        MessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
+    else
+        MessageBoxW(nullptr, L"GWToolbox.exe was updated. The new version will be used next time you start GWToolbox.",
+                    L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
 }
 
 bool DownloadWindow::Create()

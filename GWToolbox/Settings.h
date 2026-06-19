@@ -11,6 +11,7 @@ struct Settings {
     bool reinstall = false;
     bool asadmin = false;
     bool noupdate = false;
+    bool noexecheck = false;
     bool noinstall = false;
     bool localdll = false;
     uint32_t pid;
