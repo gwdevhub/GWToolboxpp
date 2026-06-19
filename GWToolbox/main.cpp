@@ -15,20 +15,12 @@
 
 static void ShowError(const wchar_t* message)
 {
-    MessageBoxW(
-        nullptr,
-        message,
-        L"GWToolbox - Error",
-        0);
+    MessageBoxW(nullptr, message, L"GWToolbox - Error", 0);
 }
 
 static void ShowError(const char* message)
 {
-    MessageBoxA(
-        nullptr,
-        message,
-        "GWToolbox - Error",
-        0);
+    MessageBoxA(nullptr, message, "GWToolbox - Error", 0);
 }
 
 static bool RestartAsAdminForInjection(const uint32_t target_pid)
@@ -67,8 +59,7 @@ static bool GetWineDiagnostics(std::wstring& out)
 static bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
 {
     std::wstring exe_filename;
-    if (!PathGetExeFileName(exe_filename))
-        return error = L"PathGetExeFileName failed", false;
+    if (!PathGetExeFileName(exe_filename)) return error = L"PathGetExeFileName failed", false;
 
     error.clear();
     ProcessModule module;
@@ -83,12 +74,10 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
 
     std::filesystem::path dllpath;
     dllpath = GetInstallationDir();
-    if (dllpath.empty()) 
-        return error = L"GetInstallationDir failed", false;
+    if (dllpath.empty()) return error = L"GetInstallationDir failed", false;
     dllpath = dllpath.parent_path() / L"GWToolboxdll.dll";
     if (settings.localdll) {
-        if (!PathGetProgramDirectory(dllpath))
-            return error = L"PathGetProgramDirectory failed", false;
+        if (!PathGetProgramDirectory(dllpath)) return error = L"PathGetProgramDirectory failed", false;
         dllpath = dllpath / L"GWToolboxdll.dll";
         if (!exists(dllpath)) {
             return error = std::format(L"Application @ {} not found.\n\nEnsure your copy of {} is local to {} or run {} without the /localdll argument.", dllpath.wstring(), dllpath.filename().wstring(), exe_filename, exe_filename), false;
@@ -99,23 +88,27 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
         if (settings.noinstall) {
             return error = std::format(L"Application @ {} not found.\n\nYou may need to install GWToolbox by running {} without the /noinstall argument.", dllpath.wstring(), exe_filename), false;
         }
-        return error = std::format(L"Application @ {} not found; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(),
-                                   exe_filename), false;
+        return error =
+                   std::format(L"Application @ {} not found; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(), exe_filename),
+               false;
     }
 
     DWORD ExitCode;
-    if (!InjectRemoteThread(process, dllpath.wstring().c_str(), &ExitCode))
-        return error = std::format(L"InjectRemoteThread failed (ExitCode: {})", ExitCode), false;
+    if (!InjectRemoteThread(process, dllpath.wstring().c_str(), &ExitCode)) return error = std::format(L"InjectRemoteThread failed (ExitCode: {})", ExitCode), false;
     if (!exists(dllpath))
-        return error = std::format(L"Application @ {} did exist, but now it doesn't; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(),
-                                   dllpath.parent_path().wstring(), exe_filename), false;
+        return error = std::format(
+                   L"Application @ {} did exist, but now it doesn't; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(),
+                   exe_filename
+               ),
+               false;
     if (!process->GetModule(&module, L"GWToolboxdll.dll")) {
         std::wstring detail;
         if (FindRecentDefenderBlock(L"GWToolboxdll.dll", detail))
-            return error = std::format(L"Windows Defender blocked GWToolbox from loading:\n\n{}\n\nAdd an exclusion for the {} directory in Windows Security and re-launch {}.", detail,
-                                       dllpath.parent_path().wstring(), exe_filename), false;
-        return error = std::format(L"Application @ {} failed to inject; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(),
-                                   dllpath.parent_path().wstring(), exe_filename), false;
+            return error = std::format(L"Windows Defender blocked GWToolbox from loading:\n\n{}\n\nAdd an exclusion for the {} directory in Windows Security and re-launch {}.", detail, dllpath.parent_path().wstring(), exe_filename), false;
+        return error = std::format(
+                   L"Application @ {} failed to inject; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(), exe_filename
+               ),
+               false;
     }
 
     return true;
@@ -124,7 +117,10 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
 // Joins the exe-update worker when WinMain returns, so any open update prompt is honoured before we exit.
 struct ExeUpdateChecker {
     std::thread thread;
-    ~ExeUpdateChecker() { if (thread.joinable()) thread.join(); }
+    ~ExeUpdateChecker()
+    {
+        if (thread.joinable()) thread.join();
+    }
 };
 
 static bool SetProcessForeground(const Process* process)
@@ -177,9 +173,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     static FILE* stream;
     if (freopen_s(&stream, log_file_path.string().c_str(), "w", stderr) != 0) {
         wchar_t buf[MAX_PATH + 128];
-        swprintf(buf, MAX_PATH + 128,
-                 L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.",
-                 log_file_path.wstring().c_str());
+        swprintf(buf, MAX_PATH + 128, L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.", log_file_path.wstring().c_str());
         MessageBoxW(nullptr, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
@@ -223,11 +217,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             return 1;
         }
 
-        const int iRet = MessageBoxW(
-            nullptr,
-            L"GWToolbox doesn't seem to be installed, do you want to install it?",
-            L"GWToolbox",
-            MB_YESNO);
+        const int iRet = MessageBoxW(nullptr, L"GWToolbox doesn't seem to be installed, do you want to install it?", L"GWToolbox", MB_YESNO);
 
         if (iRet == IDNO) {
             fprintf(stderr, "User doesn't want to install GWToolbox\n");
@@ -254,9 +244,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     // Check Github for a newer launcher exe in parallel; it only ever prompts, never blocks the injection below.
     ExeUpdateChecker exe_update_checker;
-    if (!settings.noexecheck && !settings.noupdate && !settings.localdll && !settings.quiet && !settings.pid)
+    if (!settings.noexecheck) {
         exe_update_checker.thread = std::thread(CheckForExeUpdate);
-
+    }
     if (settings.pid) {
         if (!proc.Open(settings.pid)) {
             fprintf(stderr, "Couldn't open process %d\n", settings.pid);
@@ -287,8 +277,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             nullptr,
             L"Couldn't find character name RVA.\n"
             L"You need to update the launcher or contact the developers.",
-            L"GWToolbox - Error",
-            MB_OK | MB_ICONERROR | MB_TOPMOST);
+            L"GWToolbox - Error", MB_OK | MB_ICONERROR | MB_TOPMOST
+        );
         return 1;
     }
 
@@ -306,8 +296,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             L"Ensure Guild Wars is running before trying to run GWToolbox.\n"
             L"If such process exist GWToolbox.exe may require administrator privileges.\n"
             L"Do you want to restart as administrator?",
-            L"GWToolbox - Error",
-            MB_YESNO | MB_TOPMOST);
+            L"GWToolbox - Error", MB_YESNO | MB_TOPMOST
+        );
 
         if (iRet == IDNO) {
             fprintf(stderr, "User doesn't want to restart as admin\n");
@@ -322,15 +312,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     if (reply == InjectReply_NoProcess) {
         const auto gw2_processes = GetGuildWars2Processes();
         auto error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
-            L"Ensure Guild Wars is running before trying to run GWToolbox.\n";
+                             L"Ensure Guild Wars is running before trying to run GWToolbox.\n";
         if (!gw2_processes.empty()) {
             error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
-                L"GWToolboxpp is for Guild Wars Reforged, NOT Guild Wars 2!\n";
+                            L"GWToolboxpp is for Guild Wars Reforged, NOT Guild Wars 2!\n";
         }
-        const int iRet = MessageBoxW(
-            nullptr, error_message,
-            L"GWToolbox - Error",
-            MB_RETRYCANCEL | MB_TOPMOST);
+        const int iRet = MessageBoxW(nullptr, error_message, L"GWToolbox - Error", MB_RETRYCANCEL | MB_TOPMOST);
         if (iRet == IDCANCEL) {
             fprintf(stderr, "User doesn't want to retry\n");
             return 1;
@@ -345,8 +332,11 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     if (!InjectInstalledDllInProcess(&proc, error)) {
         std::wstring wine;
         if (GetWineDiagnostics(wine)) {
-            error += std::format(L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The "
-                                 L"Linux guide at https://www.gwtoolbox.com/linux is provided as-is for convenience only.\n\nDetected: {}", wine);
+            error += std::format(
+                L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The "
+                L"Linux guide at https://www.gwtoolbox.com/linux is provided as-is for convenience only.\n\nDetected: {}",
+                wine
+            );
             fprintf(stderr, "Wine detected: %S\n", wine.c_str());
         }
         ShowError(error.c_str());
