@@ -5,6 +5,9 @@
 bool Download(std::string& content, const wchar_t* url);
 bool Download(const wchar_t* path_to_file, const wchar_t* url);
 
+// Checks Github for a newer GWToolbox.exe and offers to self-update. Meant to run on a background thread.
+void CheckForExeUpdate();
+
 class DownloadWindow : public Window {
 public:
     DownloadWindow() = default;
