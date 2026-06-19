@@ -37,11 +37,30 @@ static bool RestartAsAdminForInjection(const uint32_t target_pid)
     return RestartAsAdmin(args);
 }
 
-// Wine exports wine_get_version from ntdll; its absence means a genuine Windows host.
-static bool IsRunningUnderWine()
+// Wine (and its forks: Proton, CrossOver, Lutris, ...) exports these from ntdll; absent on a real Windows host.
+// Returns false on Windows; otherwise fills `out` with the Wine version, host kernel and launcher environment.
+static bool GetWineDiagnostics(std::wstring& out)
 {
     const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-    return ntdll && GetProcAddress(ntdll, "wine_get_version") != nullptr;
+    if (!ntdll) return false;
+    const auto get_version = reinterpret_cast<const char*(__cdecl*)()>(GetProcAddress(ntdll, "wine_get_version"));
+    if (!get_version) return false;
+
+    const auto get_host = reinterpret_cast<void(__cdecl*)(const char**, const char**)>(GetProcAddress(ntdll, "wine_get_host_version"));
+    const char* sysname = nullptr;
+    const char* release = nullptr;
+    if (get_host) get_host(&sysname, &release);
+
+    wchar_t buf[256];
+    swprintf(buf, _countof(buf), L"Wine %S on %S %S", get_version(), sysname ? sysname : "unknown", release ? release : "");
+    out = buf;
+
+    // Steam/Proton and Lutris sandbox the wine prefix in ways known to break injection (see the Linux guide).
+    if (GetEnvironmentVariableW(L"STEAM_COMPAT_DATA_PATH", nullptr, 0) || GetEnvironmentVariableW(L"SteamAppId", nullptr, 0))
+        out += L"; launched via Steam/Proton (sandboxed prefix - known to break injection)";
+    else if (GetEnvironmentVariableW(L"LUTRIS_GAME_UUID", nullptr, 0) || GetEnvironmentVariableW(L"LUTRIS_PGA_DB", nullptr, 0))
+        out += L"; launched via Lutris (sandboxed prefix - known to break injection)";
+    return true;
 }
 
 static bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
@@ -307,9 +326,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     }
 
     if (!InjectInstalledDllInProcess(&proc, error)) {
-        if (IsRunningUnderWine())
-            error += L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The Linux "
-                     L"guide at https://www.gwtoolbox.com/linux is provided as-is for convenience only.";
+        std::wstring wine;
+        if (GetWineDiagnostics(wine)) {
+            error += std::format(L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The "
+                                 L"Linux guide at https://www.gwtoolbox.com/linux is provided as-is for convenience only.\n\nDetected: {}", wine);
+            fprintf(stderr, "Wine detected: %S\n", wine.c_str());
+        }
         ShowError(error.c_str());
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");
         return 1;
