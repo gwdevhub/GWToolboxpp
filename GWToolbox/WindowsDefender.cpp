@@ -168,6 +168,28 @@ bool IsPathExcludedFromDefender(const std::filesystem::path& path)
 }
 
 
+bool FindRecentDefenderBlock(const std::wstring& dll_name, std::wstring& detail)
+{
+    // Ids 1116-1119 = malware detected / action taken, 1121 = ASR rule blocked.
+    const std::wstring command =
+        L"Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational';"
+        L"Id=1116,1117,1118,1119,1121;StartTime=(Get-Date).AddSeconds(-30)} -ErrorAction SilentlyContinue|"
+        L"Where-Object{$_.Message -like '*" + dll_name + L"*'}|"
+        L"Select-Object -First 1 -ExpandProperty Message";
+
+    std::wstring output;
+    if (!ExecutePowerShellCommand(command, output))
+        return false;
+
+    output.erase(0, output.find_first_not_of(L" \t\r\n"));
+    output.erase(output.find_last_not_of(L" \t\r\n") + 1);
+    if (output.empty())
+        return false;
+
+    detail = output;
+    return true;
+}
+
 bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, std::wstring& error)
 {
     if (IsPathExcludedFromDefender(path)) {
