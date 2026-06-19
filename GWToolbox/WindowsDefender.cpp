@@ -173,7 +173,7 @@ bool FindRecentDefenderBlock(const std::wstring& dll_name, std::wstring& detail)
     // Ids 1116-1119 = malware detected / action taken, 1121 = ASR rule blocked.
     const std::wstring command =
         L"Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational';"
-        L"Id=1116,1117,1118,1119,1121;StartTime=(Get-Date).AddMinutes(-15)} -ErrorAction SilentlyContinue|"
+        L"Id=1116,1117,1118,1119,1121;StartTime=(Get-Date).AddSeconds(-30)} -ErrorAction SilentlyContinue|"
         L"Where-Object{$_.Message -like '*" + dll_name + L"*'}|"
         L"Select-Object -First 1 -ExpandProperty Message";
 
