@@ -37,6 +37,13 @@ static bool RestartAsAdminForInjection(const uint32_t target_pid)
     return RestartAsAdmin(args);
 }
 
+// Wine exports wine_get_version from ntdll; its absence means a genuine Windows host.
+static bool IsRunningUnderWine()
+{
+    const HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    return ntdll && GetProcAddress(ntdll, "wine_get_version") != nullptr;
+}
+
 static bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
 {
     std::wstring exe_filename;
@@ -300,6 +307,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     }
 
     if (!InjectInstalledDllInProcess(&proc, error)) {
+        if (IsRunningUnderWine())
+            error += L"\n\nGWToolbox is running under Wine on a non-Windows host. Toolbox support is only provided for "
+                     L"Windows hosts; running on Linux/Wine is community-supported - see https://www.gwtoolbox.com/linux";
         ShowError(error.c_str());
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");
         return 1;
