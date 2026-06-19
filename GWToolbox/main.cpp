@@ -308,8 +308,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     if (!InjectInstalledDllInProcess(&proc, error)) {
         if (IsRunningUnderWine())
-            error += L"\n\nGWToolbox is running under Wine on a non-Windows host. Toolbox support is only provided for "
-                     L"Windows hosts; running on Linux/Wine is community-supported - see https://www.gwtoolbox.com/linux";
+            error += L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The Linux "
+                     L"guide at https://www.gwtoolbox.com/linux is provided as-is for convenience only.";
         ShowError(error.c_str());
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");
         return 1;

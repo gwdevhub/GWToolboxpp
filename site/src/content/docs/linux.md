@@ -4,7 +4,9 @@ section: meta
 description: "How to run Guild Wars + GWToolbox++ on Linux."
 ---
 
-GWToolbox++ is a Windows DLL, but Guild Wars itself runs well on Linux through Wine, and Toolbox runs cleanly alongside it. The walkthrough below is a short summary — for the full, authoritative reference (including troubleshooting, performance tuning, optional DXVK setup, sound, DirectSong, and more) please use the excellent guide maintained by [**ChthonVII**](https://github.com/ChthonVII): [guildwarslinuxinstallguide](https://github.com/ChthonVII/guildwarslinuxinstallguide).
+> **GWToolbox++ does not officially support Linux or any non-Windows host.** Guild Wars itself runs well on Linux through Wine, and Toolbox can run alongside it, so this guide is provided purely as a convenience for anyone who wants to give it a go. Running outside Windows is unsupported and offered as-is — please don't expect help through the usual support channels if something here doesn't work.
+
+GWToolbox++ is a Windows DLL. The walkthrough below is a short summary — for the full, authoritative reference (including troubleshooting, performance tuning, optional DXVK setup, sound, DirectSong, and more) please use the excellent guide maintained by [**ChthonVII**](https://github.com/ChthonVII): [guildwarslinuxinstallguide](https://github.com/ChthonVII/guildwarslinuxinstallguide).
 
 If you hit anything that isn't covered here, that guide is the place to look first.
 
