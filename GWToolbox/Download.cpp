@@ -9,6 +9,7 @@
 #include "Download.h"
 
 #include "Install.h"
+#include "Settings.h"
 
 class AsyncFileDownloader : public AsyncRestClient {
 public:
@@ -370,11 +371,27 @@ void CheckForExeUpdate()
         return;
 
     std::wstring error;
-    if (!UpdateExe(exe_path, exe_asset->browser_download_url, error))
+    if (!UpdateExe(exe_path, exe_asset->browser_download_url, error)) {
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
-    else
-        MessageBoxW(nullptr, L"GWToolbox.exe was updated. The new version will be used next time you start GWToolbox.",
-                    L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
+        return;
+    }
+
+    // Offer to relaunch straight into the new exe (e.g. to retry an injection the old one failed). The restart
+    // re-runs from the original path, which now holds the new file. Closing the dialog defers it to next launch.
+    constexpr int restart_id = 100;
+    const TASKDIALOG_BUTTON restart_button{restart_id, L"Restart launcher"};
+    TASKDIALOGCONFIG config{};
+    config.cbSize = sizeof(config);
+    config.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION;
+    config.pszWindowTitle = L"GWToolbox - Update complete";
+    config.pszMainIcon = TD_INFORMATION_ICON;
+    config.pszContent = L"GWToolbox.exe was updated. Restart the launcher to start using the new version.";
+    config.pButtons = &restart_button;
+    config.cButtons = 1;
+
+    int clicked = 0;
+    if (SUCCEEDED(TaskDialogIndirect(&config, &clicked, nullptr, nullptr)) && clicked == restart_id)
+        RestartWithSameArgs();
 }
 
 bool DownloadWindow::Create()
