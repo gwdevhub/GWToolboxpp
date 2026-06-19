@@ -132,6 +132,53 @@ std::string GetDllRelease(const std::filesystem::path& dllpath)
     return {buffer};
 }
 
+// Lowercase hex sha256 of a file, streamed so we don't hold the whole file in memory; empty on failure.
+static std::string Sha256Hex(const std::filesystem::path& path)
+{
+    BCRYPT_ALG_HANDLE alg = nullptr;
+    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0)
+        return {};
+
+    std::string result;
+    BCRYPT_HASH_HANDLE hash = nullptr;
+    if (BCryptCreateHash(alg, &hash, nullptr, 0, nullptr, 0, 0) == 0) {
+        std::ifstream file(path, std::ios::binary);
+        bool ok = file.is_open();
+        char buffer[64 * 1024];
+        while (ok) {
+            file.read(buffer, sizeof(buffer));
+            const std::streamsize n = file.gcount();
+            if (n <= 0)
+                break;
+            ok = BCryptHashData(hash, reinterpret_cast<PUCHAR>(buffer), static_cast<ULONG>(n), 0) == 0;
+        }
+
+        unsigned char digest[32];
+        if (ok && BCryptFinishHash(hash, digest, sizeof(digest), 0) == 0) {
+            char hex[2 * sizeof(digest) + 1];
+            for (size_t i = 0; i < sizeof(digest); ++i)
+                sprintf_s(hex + i * 2, 3, "%02x", digest[i]);
+            result = hex;
+        }
+        BCryptDestroyHash(hash);
+    }
+    BCryptCloseAlgorithmProvider(alg, 0);
+    return result;
+}
+
+// True if the installed file already matches the release asset. Prefers Github's sha256 digest (exact identity)
+// and falls back to file size when the digest is absent or the local file can't be hashed.
+static bool FileMatchesAsset(const std::filesystem::path& file_path, const Asset& asset, size_t file_size)
+{
+    constexpr std::string_view sha_prefix = "sha256:";
+    if (asset.digest.starts_with(sha_prefix)) {
+        const std::string local = Sha256Hex(file_path);
+        if (!local.empty())
+            return local == asset.digest.substr(sha_prefix.size());
+    }
+    return file_size == asset.size;
+}
+
 bool DownloadWindow::DownloadAllFiles(std::wstring& error)
 {
     std::filesystem::path dllpath = GetInstallationDir();
@@ -161,18 +208,16 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
         return error = L"Failed to find dll in latest release", false;
     }
     if (std::filesystem::exists(dllpath)) {
-        const auto current_filesize = std::filesystem::file_size(dllpath);
-        if (current_filesize == release_dll_asset->size) {
-            const auto current_version = GetDllRelease(dllpath);
-            const auto available_version = std::regex_replace(release.tag_name, std::regex(R"([^0-9.])"), "");
-            if (current_version == available_version
-                && current_filesize == release_dll_asset->size) {
-                return true;
-            }
-            if (current_version.starts_with(available_version)) {
-                // NB: This allows 8.6 Beta1, 8.6 Beta123 etc
-                return true;
-            }
+        std::error_code ec;
+        const auto current_filesize = std::filesystem::file_size(dllpath, ec);
+        if (!ec && FileMatchesAsset(dllpath, *release_dll_asset, current_filesize)) {
+            return true;
+        }
+        const auto current_version = GetDllRelease(dllpath);
+        const auto available_version = std::regex_replace(release.tag_name, std::regex(R"([^0-9.])"), "");
+        if (current_version.starts_with(available_version)) {
+            // NB: keeps locally-built betas (8.6 Beta1, 8.6 Beta123, ...) from being overwritten by the release.
+            return true;
         }
     }
 
@@ -279,53 +324,6 @@ static bool UpdateExe(const std::filesystem::path& exe_path, const std::string& 
     return true;
 }
 
-// Lowercase hex sha256 of a file, streamed so we don't hold the whole exe in memory; empty on failure.
-static std::string Sha256Hex(const std::filesystem::path& path)
-{
-    BCRYPT_ALG_HANDLE alg = nullptr;
-    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0) != 0)
-        return {};
-
-    std::string result;
-    BCRYPT_HASH_HANDLE hash = nullptr;
-    if (BCryptCreateHash(alg, &hash, nullptr, 0, nullptr, 0, 0) == 0) {
-        std::ifstream file(path, std::ios::binary);
-        bool ok = file.is_open();
-        char buffer[64 * 1024];
-        while (ok) {
-            file.read(buffer, sizeof(buffer));
-            const std::streamsize n = file.gcount();
-            if (n <= 0)
-                break;
-            ok = BCryptHashData(hash, reinterpret_cast<PUCHAR>(buffer), static_cast<ULONG>(n), 0) == 0;
-        }
-
-        unsigned char digest[32];
-        if (ok && BCryptFinishHash(hash, digest, sizeof(digest), 0) == 0) {
-            char hex[2 * sizeof(digest) + 1];
-            for (size_t i = 0; i < sizeof(digest); ++i)
-                sprintf_s(hex + i * 2, 3, "%02x", digest[i]);
-            result = hex;
-        }
-        BCryptDestroyHash(hash);
-    }
-    BCryptCloseAlgorithmProvider(alg, 0);
-    return result;
-}
-
-// True if the installed exe already matches the release asset. Prefers Github's sha256 digest (exact identity)
-// and falls back to file size when the digest is absent or the local file can't be hashed.
-static bool ExeMatchesAsset(const std::filesystem::path& exe_path, const Asset& asset, size_t exe_size)
-{
-    constexpr std::string_view sha_prefix = "sha256:";
-    if (asset.digest.starts_with(sha_prefix)) {
-        const std::string local = Sha256Hex(exe_path);
-        if (!local.empty())
-            return local == asset.digest.substr(sha_prefix.size());
-    }
-    return exe_size == asset.size;
-}
-
 // Runs on a background thread so it never delays injection. Not every release ships a GWToolbox.exe, so we scan
 // the release list newest-first for the most recent one that does, and offer it if it differs from ours.
 void CheckForExeUpdate()
@@ -360,7 +358,7 @@ void CheckForExeUpdate()
 
     std::error_code ec;
     const auto current_size = std::filesystem::file_size(exe_path, ec);
-    if (ec || ExeMatchesAsset(exe_path, *exe_asset, current_size))
+    if (ec || FileMatchesAsset(exe_path, *exe_asset, current_size))
         return; // already running the released exe
 
     const std::wstring tag_w(tag_name.begin(), tag_name.end());

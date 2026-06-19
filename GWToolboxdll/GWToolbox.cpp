@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <bcrypt.h>
+#pragma comment(lib, "bcrypt.lib")
+
 #include <Utf8.h>
 
 #include <GWCA/GWCA.h>
@@ -251,18 +254,38 @@ namespace {
         });
     }
 
+    // Lowercase hex sha256 of a byte buffer; empty on failure.
+    std::string Sha256Hex(const void* data, const size_t size)
+    {
+        unsigned char hash[32];
+        if (BCryptHash(BCRYPT_SHA256_ALG_HANDLE, nullptr, 0, static_cast<PUCHAR>(const_cast<void*>(data)),
+                       static_cast<ULONG>(size), hash, sizeof(hash)) != 0)
+            return {};
+        char hex[2 * sizeof(hash) + 1];
+        for (size_t i = 0; i < sizeof(hash); ++i)
+            sprintf_s(hex + i * 2, 3, "%02x", hash[i]);
+        return hex;
+    }
+
+    std::string Sha256HexFile(const std::filesystem::path& path)
+    {
+        std::ifstream file(path, std::ios::binary);
+        if (!file) return {};
+        const std::vector<char> bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        return Sha256Hex(bytes.data(), bytes.size());
+    }
+
     bool IsValidGWCADll(const std::filesystem::path& dll_path_str, [[maybe_unused]] const EmbeddedResource& resource_dll)
     {
         if (!std::filesystem::exists(dll_path_str)) return false;
 
-        // Check file size if we have a resource module to compare against
 #ifndef _DEBUG
+        // The on-disk gwca.dll must be byte-for-byte the one embedded in this build.
         if (!resource_dll.data()) return false;
-        std::error_code ec;
-        const auto file_size = std::filesystem::file_size(dll_path_str, ec);
-        if (ec || file_size != resource_dll.size()) return false;
-#endif
-
+        const std::string expected = Sha256Hex(resource_dll.data(), resource_dll.size());
+        return !expected.empty() && Sha256HexFile(dll_path_str) == expected;
+#else
+        // Debug builds have no embedded resource; fall back to a version-number check.
         DWORD handle;
         DWORD version_info_size = GetFileVersionInfoSizeW(dll_path_str.c_str(), &handle);
         if (!version_info_size) return false;
@@ -274,8 +297,8 @@ namespace {
         WORD file_version_major = HIWORD(file_info->dwFileVersionMS);
         WORD file_version_minor = LOWORD(file_info->dwFileVersionMS);
         WORD file_version_patch = HIWORD(file_info->dwFileVersionLS);
-        [[maybe_unused]] WORD file_version_build = LOWORD(file_info->dwFileVersionLS);
         return (file_version_major == GWCA::VersionMajor && file_version_minor == GWCA::VersionMinor && file_version_patch == GWCA::VersionPatch);
+#endif
     }
 
     void TerminateExistingGWCADll(HMODULE existing_gwca)
