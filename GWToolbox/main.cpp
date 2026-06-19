@@ -83,9 +83,8 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
         return error = std::format(L"Application @ {} did exist, but now it doesn't; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(),
                                    dllpath.parent_path().wstring(), exe_filename), false;
     if (!process->GetModule(&module, L"GWToolboxdll.dll")) {
-        // gwca.dll is a delay-loaded dependency of GWToolboxdll.dll, so a quarantine of either breaks injection.
         std::wstring detail;
-        if (FindRecentDefenderBlock({L"GWToolboxdll.dll", L"gwca.dll"}, detail))
+        if (FindRecentDefenderBlock({L"GWToolboxdll.dll"}, detail))
             return error = std::format(L"Windows Defender blocked GWToolbox from loading:\n\n{}\n\nAdd an exclusion for the {} directory in Windows Security and re-launch {}.", detail,
                                        dllpath.parent_path().wstring(), exe_filename), false;
         return error = std::format(L"Application @ {} failed to inject; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(),
