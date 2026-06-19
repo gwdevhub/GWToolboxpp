@@ -9,6 +9,7 @@
 #include "Download.h"
 
 #include "Install.h"
+#include "Settings.h"
 
 class AsyncFileDownloader : public AsyncRestClient {
 public:
@@ -370,11 +371,16 @@ void CheckForExeUpdate()
         return;
 
     std::wstring error;
-    if (!UpdateExe(exe_path, exe_asset->browser_download_url, error))
+    if (!UpdateExe(exe_path, exe_asset->browser_download_url, error)) {
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
-    else
-        MessageBoxW(nullptr, L"GWToolbox.exe was updated. The new version will be used next time you start GWToolbox.",
-                    L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
+        return;
+    }
+
+    // Relaunch into the new exe (e.g. to retry an injection the old one failed). The single OK button is the
+    // restart; we re-run from the original path, which now holds the new file.
+    MessageBoxW(nullptr, L"GWToolbox.exe was updated.\n\nClick the button below to restart the launcher and start using the new version.",
+                L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
+    RestartWithSameArgs();
 }
 
 bool DownloadWindow::Create()
