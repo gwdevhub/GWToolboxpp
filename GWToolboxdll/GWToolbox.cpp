@@ -335,9 +335,22 @@ namespace {
             }
         }
 
+        // Defender returns these from CreateFile/LoadLibrary when it blocks or quarantines a file.
+        const auto warn_if_antivirus = [](const DWORD err) {
+            if (err != ERROR_VIRUS_INFECTED && err != ERROR_VIRUS_DELETED) return;
+            MessageBoxW(nullptr,
+                        L"Windows Defender (or another anti-virus) blocked gwca.dll, which GWToolbox needs to run.\n\n"
+                        L"Add an exclusion for your GWToolbox folder in Windows Security and re-launch.",
+                        L"GWToolbox", MB_OK | MB_ICONERROR | MB_TOPMOST);
+        };
+
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
             std::wstring err;
-            Resources::ResourceToFile(IDR_GWCA_DLL, gwca_dll_path, err);
+            if (!Resources::ResourceToFile(IDR_GWCA_DLL, gwca_dll_path, err)) {
+                const DWORD code = GetLastError();
+                Log::Log("[LoadGWCADll] ResourceToFile fail: %ls (%lu)", err.c_str(), code);
+                warn_if_antivirus(code);
+            }
             if (!IsValidGWCADll(gwca_dll_path, resource)) {
                 Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
                 return nullptr;
@@ -346,7 +359,9 @@ namespace {
 
         gwcamodule = LoadLibraryW(gwca_dll_path.wstring().c_str());
         if (!gwcamodule) {
-            Log::Log("[LoadGWCADll] LoadLibraryW fail, %d", GetLastError());
+            const DWORD code = GetLastError();
+            Log::Log("[LoadGWCADll] LoadLibraryW fail, %lu", code);
+            warn_if_antivirus(code);
             return nullptr;
         }
         Log::Log("[LoadGWCADll] success, module ptr %p", gwcamodule);
