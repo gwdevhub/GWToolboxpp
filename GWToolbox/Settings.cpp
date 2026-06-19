@@ -200,6 +200,11 @@ bool Restart(const wchar_t* args, const bool force_admin)
         fprintf(stderr, "GetCurrentDirectoryW failed: %lu\n", GetLastError());
         return false;
     }
+    // stderr is redirected to GWToolbox.error.log; release that handle before spawning the replacement so the
+    // new instance can open the log for writing while this one is still exiting.
+    FILE* stream;
+    freopen_s(&stream, "NUL", "w", stderr);
+
     const bool is_admin = force_admin ? true : IsRunningAsAdmin();
     CreateProcessInt(path, args, workdir, is_admin);
     ExitProcess(0);
