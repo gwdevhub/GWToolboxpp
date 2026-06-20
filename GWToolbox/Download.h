@@ -5,6 +5,8 @@
 bool Download(std::string& content, const wchar_t* url);
 bool Download(const wchar_t* path_to_file, const wchar_t* url);
 
+struct Release;
+
 class DownloadWindow : public Window {
 public:
     DownloadWindow() = default;
@@ -14,10 +16,15 @@ public:
     DownloadWindow& operator=(const DownloadWindow&) = delete;
 
     bool Create() override;
-    static bool DownloadAllFiles(std::wstring& error);
+    // Single Github fetch feeding the exe self-update check then the dll update; replaces two separate API calls.
+    static bool CheckForUpdates(std::wstring& error);
+    // dll-only update, fetching its own release list; used by the installer.
+    static bool DownloadDll(std::wstring& error);
     void SetChangelog(const char* str, size_t length) const;
 
 private:
+    static bool DownloadDll(const std::vector<Release>& releases, std::wstring& error);
+
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 
     void OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

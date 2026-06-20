@@ -6,16 +6,23 @@
 #include <string>
 
 namespace {
-    // Strip characters Windows forbids in filenames (spaces are kept); the stem is the section name on load
-    std::filesystem::path SectionFilename(const std::string_view section)
+    // Canonical section key, also its <section>.json filename stem, so forbidden chars are stripped.
+    std::string SanitiseSection(const std::string_view section)
     {
-        std::string sanitized(section);
-        for (auto& c : sanitized) {
-            if (std::string_view(R"(<>:"/\|?*)").find(c) != std::string_view::npos || static_cast<unsigned char>(c) < 0x20) {
-                c = '_';
+        std::string out;
+        out.reserve(section.size());
+        for (const char c : section) {
+            if (std::string_view(R"(<>:"/\|?*)").find(c) == std::string_view::npos && static_cast<unsigned char>(c) >= 0x20) {
+                out += c;
             }
         }
-        auto filename = std::filesystem::path(std::u8string(sanitized.begin(), sanitized.end()));
+        return out;
+    }
+
+    std::filesystem::path SectionFilename(const std::string_view section)
+    {
+        const std::string name = SanitiseSection(section);
+        auto filename = std::filesystem::path(std::u8string(name.begin(), name.end()));
         filename += L".json";
         return filename;
     }
@@ -122,7 +129,7 @@ bool SettingsDoc::HasSection(const std::string_view section) const
 
 void SettingsDoc::EraseSection(const std::string_view section)
 {
-    const auto found = sections.find(section);
+    const auto found = sections.find(SanitiseSection(section));
     if (found != sections.end()) {
         sections.erase(found);
     }
@@ -130,7 +137,7 @@ void SettingsDoc::EraseSection(const std::string_view section)
 
 void SettingsDoc::EraseKey(const std::string_view section, const std::string_view key)
 {
-    const auto found = sections.find(section);
+    const auto found = sections.find(SanitiseSection(section));
     if (found == sections.end()) {
         return;
     }
@@ -142,7 +149,7 @@ void SettingsDoc::EraseKey(const std::string_view section, const std::string_vie
 
 const SettingsDoc::Section* SettingsDoc::FindSection(const std::string_view section) const
 {
-    const auto found = sections.find(section);
+    const auto found = sections.find(SanitiseSection(section));
     return found != sections.end() ? &found->second : nullptr;
 }
 
@@ -158,9 +165,10 @@ const glz::raw_json* SettingsDoc::FindKey(const std::string_view section, const 
 
 SettingsDoc::Section& SettingsDoc::GetOrCreateSection(const std::string_view section)
 {
-    const auto found = sections.find(section);
+    std::string name = SanitiseSection(section);
+    const auto found = sections.find(name);
     if (found != sections.end()) {
         return found->second;
     }
-    return sections.emplace(std::string(section), Section{}).first->second;
+    return sections.emplace(std::move(name), Section{}).first->second;
 }

@@ -6,6 +6,14 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.28
+* [New] Launcher: GWToolbox.exe now updates itself from GitHub (separately from the DLL) and offers to restart into the new version once the download finishes.
+* [New] Launcher: failed injections are now diagnosed — you get a clear Windows Defender / anti-virus prompt (with the folder to exclude) instead of a generic crash, and Wine/Proton/Lutris details are reported when launching on Linux.
+* [New] Toolbox now detects when anti-virus quarantines its components at load time and shows an exclusion prompt instead of crashing.
+* [Fix] Fixed compatibility with the latest Guild Wars update.
+* [Fix] Texture packs (gMod/uMod/Texmod) are no longer lost on restart when stored in the new JSON settings.
+* [Minor] Docs site: the search box is now focused automatically when you open it, and the Linux page notes that non-Windows hosts are unsupported.
+
 ## Version 8.27
 * [New] Chat: added a block list to hide messages from specific players by name (Chat Settings → "Hide any messages from these players").
 * [New] Minimap: opened and closed locked chests now have separate colour and size settings.
