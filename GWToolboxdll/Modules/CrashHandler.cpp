@@ -169,19 +169,9 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
 
     const std::wstring crash_folder = Resources::GetPath(L"crashes");
 
-    std::error_code ensure_folder_ec;
-    if (!Resources::EnsureFolderExists(crash_folder.c_str(), &ensure_folder_ec)) {
-        const int err = ensure_folder_ec.value();
-        std::wstring error = std::format(
-            L"Failed to create crash directory:\n{}\n\nReason: {} (code {})",
-            crash_folder, TextUtils::StringToWString(ensure_folder_ec.message()), err);
-        // These are the codes antivirus / Windows Defender Controlled Folder Access return when they block the write
-        if (err == ERROR_ACCESS_DENIED || err == ERROR_VIRUS_INFECTED || err == ERROR_VIRUS_DELETED) {
-            error += L"\n\nThis is likely caused by antivirus software or Windows Defender Controlled Folder Access "
-                L"blocking writes to your Documents folder. Try allowing Guild Wars in your antivirus, "
-                L"or turning off Controlled Folder Access.";
-        }
-        MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+    std::string ensure_folder_error;
+    if (!Resources::EnsureFolderExists(crash_folder.c_str(), ensure_folder_error)) {
+        MessageBoxW(nullptr, TextUtils::StringToWString(ensure_folder_error).c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
