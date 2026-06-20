@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <cstdio>
-#include <thread>
 
 #include <Path.h>
 #include <RestClient.h>
@@ -114,15 +113,6 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
     return true;
 }
 
-// Joins the exe-update worker when WinMain returns, so any open update prompt is honoured before we exit.
-struct ExeUpdateChecker {
-    std::thread thread;
-    ~ExeUpdateChecker()
-    {
-        if (thread.joinable()) thread.join();
-    }
-};
-
 static bool SetProcessForeground(const Process* process)
 {
     HWND hWndIt = GetTopWindow(nullptr);
@@ -233,20 +223,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             }
         }
     }
-    else if (!settings.noupdate) {
+    else if (!settings.noupdate || !settings.noexecheck) {
+        // One Github fetch drives both the exe self-update prompt and the dll update.
         std::wstring error;
-        if (!DownloadWindow::DownloadAllFiles(error)) {
+        if (!DownloadWindow::CheckForUpdates(error)) {
             ShowError(std::format(L"Failed to download GWToolbox DLL: {}", error).c_str());
-            fprintf(stderr, "DownloadWindow::DownloadAllFiles failed\n");
+            fprintf(stderr, "DownloadWindow::CheckForUpdates failed\n");
             return 1;
         }
     }
 
-    // Check Github for a newer launcher exe in parallel; it only ever prompts, never blocks the injection below.
-    ExeUpdateChecker exe_update_checker;
-    if (!settings.noexecheck) {
-        exe_update_checker.thread = std::thread(CheckForExeUpdate);
-    }
     if (settings.pid) {
         if (!proc.Open(settings.pid)) {
             fprintf(stderr, "Couldn't open process %d\n", settings.pid);

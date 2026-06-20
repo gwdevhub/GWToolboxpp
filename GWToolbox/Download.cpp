@@ -75,20 +75,6 @@ struct Release {
     std::vector<Asset> assets{};
 };
 
-static bool ParseRelease(const std::string& json_text, Release* release)
-{
-    constexpr glz::opts opts{.error_on_unknown_keys = false};
-    if (auto ec = glz::read<opts>(*release, json_text); ec) {
-        fprintf(stderr, "Json::parse failed\n");
-        return false;
-    }
-    if (release->tag_name.empty() || release->assets.empty()) {
-        fprintf(stderr, "Required fields missing in '%s'\n", json_text.c_str());
-        return false;
-    }
-    return true;
-}
-
 static bool ParseReleases(const std::string& json_text, std::vector<Release>& releases)
 {
     constexpr glz::opts opts{.error_on_unknown_keys = false};
@@ -97,6 +83,15 @@ static bool ParseReleases(const std::string& json_text, std::vector<Release>& re
         return false;
     }
     return true;
+}
+
+// One Github request shared by the exe and dll checks, so we only tap the (rate-limited) API once per launch.
+static bool DownloadReleases(std::vector<Release>& releases)
+{
+    std::string content;
+    if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30"))
+        return false;
+    return ParseReleases(content, releases);
 }
 
 std::string GetDllRelease(const std::filesystem::path& dllpath)
@@ -179,30 +174,26 @@ static bool FileMatchesAsset(const std::filesystem::path& file_path, const Asset
     return file_size == asset.size;
 }
 
-bool DownloadWindow::DownloadAllFiles(std::wstring& error)
+bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstring& error)
 {
     std::filesystem::path dllpath = GetInstallationDir();
     if (dllpath.empty())
         return error = L"GetInstallPath failed", false;
     dllpath = dllpath.parent_path() / "GWToolboxdll.dll";
 
-    std::string content;
-    if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases/latest")) {
-        // @Remark:
-        // We may not be able to grep Github api. (For instance, if we spam it)
-        return error = L"Couldn't download the latest release of GWToolboxpp", true;
-    }
-
-    Release release;
-    if (!ParseRelease(content, &release))
-        return error = L"ParseRelease failed", false;
-
-    Asset* release_dll_asset = nullptr;
-    for (auto& asset : release.assets) {
-        if (asset.name == "GWToolbox.dll" || asset.name == "GWToolboxdll.dll") {
-            release_dll_asset = &asset;
-            break;
+    // Most recent release that ships the dll (normally the latest; scan to be safe).
+    const Release* release = nullptr;
+    const Asset* release_dll_asset = nullptr;
+    for (const auto& candidate : releases) {
+        for (const auto& asset : candidate.assets) {
+            if (asset.name == "GWToolbox.dll" || asset.name == "GWToolboxdll.dll") {
+                release = &candidate;
+                release_dll_asset = &asset;
+                break;
+            }
         }
+        if (release_dll_asset)
+            break;
     }
     if (!release_dll_asset) {
         return error = L"Failed to find dll in latest release", false;
@@ -214,7 +205,7 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
             return true;
         }
         const auto current_version = GetDllRelease(dllpath);
-        const auto available_version = std::regex_replace(release.tag_name, std::regex(R"([^0-9.])"), "");
+        const auto available_version = std::regex_replace(release->tag_name, std::regex(R"([^0-9.])"), "");
         if (current_version.starts_with(available_version)) {
             // NB: keeps locally-built betas (8.6 Beta1, 8.6 Beta123, ...) from being overwritten by the release.
             return true;
@@ -222,7 +213,7 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
     }
 
     // Convert tag_name to wstring for MessageBox
-    std::wstring tag_name_w(release.tag_name.begin(), release.tag_name.end());
+    std::wstring tag_name_w(release->tag_name.begin(), release->tag_name.end());
     std::wstring buffer = std::format(L"Downloading version '{}'", tag_name_w);
     MessageBoxW(nullptr, buffer.c_str(), L"Downloading...", 0);
 
@@ -235,7 +226,7 @@ bool DownloadWindow::DownloadAllFiles(std::wstring& error)
 
     DownloadWindow window;
     window.Create();
-    window.SetChangelog(release.body.c_str(), release.body.size());
+    window.SetChangelog(release->body.c_str(), release->body.size());
 
     AsyncFileDownloader downloader;
     AsyncDownload(url.c_str(), &downloader);
@@ -324,20 +315,12 @@ static bool UpdateExe(const std::filesystem::path& exe_path, const std::string& 
     return true;
 }
 
-// Runs on a background thread so it never delays injection. Not every release ships a GWToolbox.exe, so we scan
-// the release list newest-first for the most recent one that does, and offer it if it differs from ours.
-void CheckForExeUpdate()
+// Not every release ships a GWToolbox.exe, so we scan the release list newest-first for the most recent one
+// that does, and offer it if it differs from ours.
+static void CheckForExeUpdate(const std::vector<Release>& releases)
 {
     std::filesystem::path exe_path;
     if (!PathGetExeFullPath(exe_path))
-        return;
-
-    std::string content;
-    if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30"))
-        return; // GitHub unreachable or rate-limited; never block a launch over an update check
-
-    std::vector<Release> releases;
-    if (!ParseReleases(content, releases))
         return;
 
     const Asset* exe_asset = nullptr;
@@ -379,6 +362,31 @@ void CheckForExeUpdate()
     MessageBoxW(nullptr, L"GWToolbox.exe was updated.\n\nClick the button below to restart the launcher and start using the new version.",
                 L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
     RestartWithSameArgs();
+}
+
+bool DownloadWindow::CheckForUpdates(std::wstring& error)
+{
+    // Fetch the release list once and run both checks off it, rather than tapping Github twice.
+    std::vector<Release> releases;
+    if (!DownloadReleases(releases))
+        return error = L"Couldn't download the latest releases of GWToolboxpp", true; // non-fatal: don't block the launch
+
+    // Exe first: if it's out of date its dialog wins and may relaunch before we ever touch the dll.
+    if (!settings.noexecheck)
+        CheckForExeUpdate(releases);
+
+    if (settings.noupdate)
+        return true;
+    return DownloadDll(releases, error);
+}
+
+// dll-only entry (used by the installer); fetches its own release list since there's no exe check to share it with.
+bool DownloadWindow::DownloadDll(std::wstring& error)
+{
+    std::vector<Release> releases;
+    if (!DownloadReleases(releases))
+        return error = L"Couldn't download the latest releases of GWToolboxpp", true;
+    return DownloadDll(releases, error);
 }
 
 bool DownloadWindow::Create()
