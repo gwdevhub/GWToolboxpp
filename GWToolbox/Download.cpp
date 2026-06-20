@@ -276,8 +276,9 @@ static constexpr wchar_t kReleasesPage[] = L"https://github.com/gwdevhub/GWToolb
 
 // Windows locks a running exe against being overwritten, but still allows it to be renamed; so we move
 // the running file aside and drop the new one in its place. The new exe takes effect on the next launch.
-static bool UpdateExe(const std::filesystem::path& exe_path, const std::string& url, std::wstring& error)
+static bool UpdateExe(const std::filesystem::path& exe_path, const Asset& asset, std::wstring& error)
 {
+    const std::string& url = asset.browser_download_url;
     std::string data;
     if (!Download(data, url.c_str(), 30) || data.empty())
         return error = std::format(L"Couldn't download the update.\n\nAnti-virus software may be blocking it. "
@@ -308,6 +309,15 @@ static bool UpdateExe(const std::filesystem::path& exe_path, const std::string& 
         return error = std::format(L"Couldn't move the update into place (error {}).\n\nDownload the latest GWToolbox.exe "
                                    L"manually from {}.", err, kReleasesPage), false;
     }
+
+    // Confirm the new file actually landed; anti-virus has been seen to silently restore the old exe or quarantine
+    // the replacement, which would otherwise leave us re-prompting to update on every launch.
+    std::error_code ec;
+    const auto written_size = std::filesystem::file_size(exe_path, ec);
+    if (ec || !FileMatchesAsset(exe_path, asset, written_size))
+        return error = std::format(L"The update didn't stick - GWToolbox.exe still doesn't match the new version.\n\n"
+                                   L"Anti-virus software may be reverting or quarantining it. Add an exclusion for the "
+                                   L"GWToolbox folder, or download the latest version manually from {}.", kReleasesPage), false;
     return true;
 }
 
@@ -348,7 +358,7 @@ static void CheckForExeUpdate(const std::vector<Release>& releases)
         return;
 
     std::wstring error;
-    if (!UpdateExe(exe_path, exe_asset->browser_download_url, error)) {
+    if (!UpdateExe(exe_path, *exe_asset, error)) {
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
         return;
     }
