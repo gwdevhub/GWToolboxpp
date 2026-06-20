@@ -75,23 +75,19 @@ struct Release {
     std::vector<Asset> assets{};
 };
 
-static bool ParseReleases(const std::string& json_text, std::vector<Release>& releases)
-{
-    constexpr glz::opts opts{.error_on_unknown_keys = false};
-    if (auto ec = glz::read<opts>(releases, json_text); ec) {
-        fprintf(stderr, "Failed to parse releases list\n");
-        return false;
-    }
-    return true;
-}
-
 // One Github request shared by the exe and dll checks, so we only tap the (rate-limited) API once per launch.
 static bool DownloadReleases(std::vector<Release>& releases)
 {
     std::string content;
     if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30"))
         return false;
-    return ParseReleases(content, releases);
+    // Parse the JSON array, tolerating unknown keys so Github can add response fields without breaking us.
+    constexpr glz::opts opts{.error_on_unknown_keys = false};
+    if (auto ec = glz::read<opts>(releases, content); ec) {
+        fprintf(stderr, "Failed to parse releases list\n");
+        return false;
+    }
+    return true;
 }
 
 std::string GetDllRelease(const std::filesystem::path& dllpath)
