@@ -568,12 +568,14 @@ std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, co
     return GetComputerFolderPath() / folder / file;
 }
 
-bool Resources::EnsureFolderExists(const std::filesystem::path& path)
+bool Resources::EnsureFolderExists(const std::filesystem::path& path, std::error_code* out_ec)
 {
     if (path.empty()) return false;
     if (exists(path)) return true;
     std::error_code ec;
-    return create_directories(path, ec);
+    const bool created = create_directories(path, ec);
+    if (out_ec) *out_ec = ec;
+    return created;
 }
 
 bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response)

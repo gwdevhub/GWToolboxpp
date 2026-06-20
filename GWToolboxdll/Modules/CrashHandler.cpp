@@ -169,8 +169,16 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
 
     const std::wstring crash_folder = Resources::GetPath(L"crashes");
 
-    if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
-        MessageBoxW(nullptr, L"Failed to create crash directory", L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+    std::error_code ensure_folder_ec;
+    if (!Resources::EnsureFolderExists(crash_folder.c_str(), &ensure_folder_ec)) {
+        // Access-denied here is usually antivirus or Windows Defender Controlled Folder Access blocking writes under Documents
+        const std::wstring error = std::format(
+            L"Failed to create crash directory:\n{}\n\nReason: {} (code {})\n\n"
+            L"This is often caused by antivirus software or Windows Defender Controlled Folder Access "
+            L"blocking writes to your Documents folder. Try allowing Guild Wars in your antivirus, "
+            L"or turning off Controlled Folder Access.",
+            crash_folder, TextUtils::StringToWString(ensure_folder_ec.message()), ensure_folder_ec.value());
+        MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
