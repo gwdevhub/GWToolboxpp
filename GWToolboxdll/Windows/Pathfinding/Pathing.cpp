@@ -27,6 +27,13 @@
 #pragma warning(disable: 4189 4100)
 #endif
 
+static constexpr auto OPEN_CAPACITY = 2'000z;
+static constexpr auto PATHING_COUNT = 20'000z;
+// Max funnel-expansions of any one portal per source visibility build. The rollback DFS otherwise spends the
+// whole PATHING_COUNT step budget re-exploring a few dense portals via every funnel path and truncates before
+// covering the rest of the visible region (dense-area / gate detours). Capping spreads the budget for breadth.
+static constexpr auto PATHING_PORTAL_EXPAND_CAP = 8z;
+
 namespace {
     // Polyanya migration phase A: co-build the conforming convex mesh alongside the visgraph. OFF by default —
     // it's WIP (non-conforming) and must never run in the shipped path; flip on only when developing Polyanya.
@@ -177,8 +184,8 @@ namespace Pathing {
                     }
                     case 1: // YNode = 1,
                     {
-                        GW::YNode* yn = static_cast<GW::YNode*>(n);
-                        float d = point.y - yn->pos.y;
+                        const auto yn = static_cast<GW::YNode*>(n);
+                        const float d = point.y - yn->pos.y;
                         if ((d > tolerance) || (open.push_back(yn->below), (d >= -tolerance))) {
                             open.push_back(yn->above);
                         }
@@ -270,7 +277,7 @@ namespace Pathing {
     }
 
 
-    std::mutex pathing_mutex;
+    static std::mutex pathing_mutex;
 
     GW::Array<GW::MapProp*>* GetMapProps()
     {
@@ -635,7 +642,7 @@ namespace Pathing {
     struct node {
         GW::Vec2f funnel[2];            // 16 bytes
         uint32_t visited_checkpoint;    // 4 bytes
-        uint16_t blocked_idx;           // 2 bytes - index into BlockedPlanesPool
+        uint16_t blocked_idx;           // 2 bytes - index into BlockedPlanesPool (cnt bounded < 65535, see PATHING_COUNT)
         Portal::id next;                // 2 bytes
     };  // 24 bytes total
 
@@ -854,7 +861,7 @@ namespace Pathing {
                 }
                 pq_size = 0;
                 if (!insert_open) {
-                    insert_open = new node[2000];
+                    insert_open = new node[OPEN_CAPACITY];
                 }
             }
 
@@ -1451,8 +1458,6 @@ namespace Pathing {
             }
         }
 
-        static constexpr size_t OPEN_CAPACITY = 2000;
-
         inline void process_portal(node* open, size_t& sp, VisitedState& visited, BlockedPlanesPool& bp_pool, const Portal& portal, Portal::id other_portal_id)
         {
             size_t checkpoint = visited.checkpoint();
@@ -1495,17 +1500,19 @@ namespace Pathing {
             }
         }
 
-        // Seed the visibility DFS from every portal of the point's adjacent trapezoid(s), at checkpoint 0 with
-        // an empty blocked set — identical to how ComputeVisibleEdges seeds a query point. The older
-        // process_point seeding (per-portal neighbours) under-explored some cross-plane points, leaving their
-        // precomputed VG rows far sparser than live visibility from the same apex (the bridge-end zigzag: a z4
-        // node saw 4 VG edges vs 34 live). Seeding the whole trapezoid at a single checkpoint matches the live
-        // query and captures the full set. Empty seed bp (no source layer) also matches ComputeVisibleEdges.
-        void SeedVisibilityFromPoint(node* open, size_t& sp, BlockedPlanesPool& bp_pool, const Point& point)
+        // Seed the visibility DFS the same WAY ComputeVisibleEdges seeds a query point — whole-trapezoid funnel
+        // seeds, empty blocked set, checkpoint 0. For a boundary vertex (the source point lies on the edge
+        // between two trapezoids) this seeds BOTH adjacent traps, a strict superset of the single-trap live
+        // query. The older process_point seeding (per-portal neighbours, mixed checkpoints) under-explored some
+        // cross-plane points, leaving their precomputed VG rows far sparser than live visibility from the same
+        // apex (the bridge-end zigzag: a z4 node had 4 VG edges vs 34 live). Returns true if seeding hit
+        // OPEN_CAPACITY (truncated frontier — caller should flag it; a truncated seed re-sparsifies the row).
+        bool SeedVisibilityFromPoint(node* open, size_t& sp, BlockedPlanesPool& bp_pool, const Point& point)
         {
             const Point* const P = points.data();
             const Portal* const PT = portals.data();
             const uint16_t initial_bp = bp_pool.alloc_empty();
+            bool overflow = false;
             const auto seed_trap = [&](const GW::PathingTrapezoid* trap) {
                 if (!trap || trap->id >= pt_portal_map.size()) return;
                 const auto& seed = pt_portal_map[trap->id];
@@ -1513,7 +1520,7 @@ namespace Pathing {
                 const size_t sn = seed.size();
                 for (size_t k = 0; k < sn; ++k) {
                     const auto pid = sd[k];
-                    if (sp >= OPEN_CAPACITY) return;
+                    if (sp >= OPEN_CAPACITY) { overflow = true; return; }
                     node& n = open[sp++];
                     n.next = pid;
                     n.visited_checkpoint = 0;
@@ -1526,6 +1533,7 @@ namespace Pathing {
             const GW::PathingTrapezoid* trap1 = (point.m_portals[1] < portal_pt_map.size()) ? portal_pt_map[point.m_portals[1]] : nullptr;
             seed_trap(trap0);
             if (trap1 != trap0) seed_trap(trap1);
+            return overflow;
         }
 
         Point& createSinglePointPortal(const GW::PathingTrapezoid* pt, const GW::GamePos& gp)
@@ -1604,7 +1612,7 @@ namespace Pathing {
                 }
             }
 
-            int cnt = 20000;
+            int cnt = PATHING_COUNT;
             while (sp && --cnt) {
                 node cur = open[--sp];
                 visited.rollback(cur.visited_checkpoint);
@@ -1614,7 +1622,7 @@ namespace Pathing {
                 visited.visit(portal.m_id);
 
                 uint16_t bp_idx = cur.blocked_idx;
-                if (portal.m_pt_layer) {
+                if (portal.m_pt_layer && !bp_pool.data[cur.blocked_idx].test(portal.m_pt_layer)) {
                     bp_idx = bp_pool.alloc_with_bit(cur.blocked_idx, portal.m_pt_layer);
                 }
 
@@ -1681,6 +1689,13 @@ namespace Pathing {
                     child.visited_checkpoint = static_cast<uint32_t>(cp);
                 }
             }
+#ifdef _DEBUG
+            // Query-time truncation probe: if the per-query visibility DFS runs out of step budget with
+            // frontier remaining, start/goal edges are incomplete and the route can detour from this spot.
+            if (sp != 0)
+                Log::Log("[vistrunc] ComputeVisibleEdges step-cap from (%.0f,%.0f,z%d) edges=%zu",
+                    from_pos.x, from_pos.y, (int)from_pos.zplane, out_edges.size());
+#endif
         }
 
         void VisGraphInsertPoint(node* open, VisitedState& visited, BlockedPlanesPool& bp_pool, const Point& point)
@@ -1697,7 +1712,7 @@ namespace Pathing {
 
             process_point(open, sp, visited, bp_pool, point);
 
-            int cnt = 20000;
+            int cnt = PATHING_COUNT;
             const auto& p = point;
             while (sp && --cnt) {
                 node cur = open[--sp];
@@ -1709,7 +1724,7 @@ namespace Pathing {
                 visited.visit(portal.m_id);
 
                 uint16_t bp_idx = cur.blocked_idx;
-                if (portal.m_pt_layer) {
+                if (portal.m_pt_layer && !bp_pool.data[cur.blocked_idx].test(portal.m_pt_layer)) {
                     bp_idx = bp_pool.alloc_with_bit(cur.blocked_idx, portal.m_pt_layer);
                 }
 
@@ -1778,6 +1793,12 @@ namespace Pathing {
             int max_dfs_depth = 0;
             int edges_found = 0;
             int funnel_culled = 0;
+            // Cap-hit counters (always compiled): a nonzero value means a per-source DFS was truncated by the
+            // OPEN_CAPACITY frontier or the cnt step budget, which can write a one-directional VG row. The
+            // trapezoid seed explores ~8x more than the old per-portal seed, so these must be confirmed zero.
+            int seed_overflow = 0;  // SeedVisibilityFromPoint hit OPEN_CAPACITY while seeding
+            int open_overflow = 0;  // child push hit OPEN_CAPACITY (neighbours dropped)
+            int cnt_exhausted = 0;  // per-source DFS ran out of step budget with work remaining
         };
 
         void VisGraphWorker(int begin, int end, [[maybe_unused]] VisGraphThreadStats& stats)
@@ -1791,6 +1812,12 @@ namespace Pathing {
             visited.init(portals.size());
             vis_points.init(points.size());
             bp_pool.init(20004);
+
+            // Per-source per-portal expansion-cap state (see PATHING_PORTAL_EXPAND_CAP). gen-stamped to avoid
+            // an O(portals) clear per source.
+            std::vector<uint16_t> exp_count(portals.size());
+            std::vector<uint32_t> exp_gen(portals.size(), 0);
+            uint32_t exp_cur = 0;
 
             // Raw pointers into the (stable, read-only during the worker pass) containers —
             // skips MSVC debug's per-access bounds checks in this O(n^2) hot loop. m_visGraph's
@@ -1817,17 +1844,18 @@ namespace Pathing {
                 sp = 0;
                 visited.stack_size = 0;
                 visited.stamp++;
+                ++exp_cur; // new expansion-cap generation for this source
 
-                SeedVisibilityFromPoint(open, sp, bp_pool, point);
+                if (SeedVisibilityFromPoint(open, sp, bp_pool, point)) stats.seed_overflow++;
 
-                int cnt = 20000;
+                int cnt = PATHING_COUNT;
                 const auto& p = point;
                 while (sp && --cnt) {
-                    node cur = open[--sp];  // 24-byte copy
+                    auto [funnel, visited_checkpoint, blocked_idx, next] = open[--sp];  // 24-byte copy
 
-                    visited.rollback(cur.visited_checkpoint); // rollback to this node's state
+                    visited.rollback(visited_checkpoint); // rollback to this node's state
 
-                    const auto& portal = PT[cur.next];
+                    const auto& portal = PT[next];
                     if (visited.is_visited(portal.m_id)) continue;
 
                     visited.visit(portal.m_id);
@@ -1837,16 +1865,16 @@ namespace Pathing {
 #endif
 
                     // Only allocate new pool entry when layer actually changes
-                    uint16_t bp_idx = cur.blocked_idx;
-                    if (portal.m_pt_layer) {
-                        bp_idx = bp_pool.alloc_with_bit(cur.blocked_idx, portal.m_pt_layer);
+                    uint16_t bp_idx = blocked_idx;
+                    if (portal.m_pt_layer && !bp_pool.data[blocked_idx].test(portal.m_pt_layer)) {
+                        bp_idx = bp_pool.alloc_with_bit(blocked_idx, portal.m_pt_layer);
                     }
 
                     const auto& p0 = P[portal.m_point[0]];
                     const auto& p1 = P[portal.m_point[1]];
 
-                    auto& f0 = cur.funnel[0];
-                    auto& f1 = cur.funnel[1];
+                    auto& f0 = funnel[0];
+                    auto& f1 = funnel[1];
 
                     auto fl = f0 - p.m_pos;       // funnel left direction
                     auto fr = f1 - p.m_pos;       // funnel right direction
@@ -1883,6 +1911,15 @@ namespace Pathing {
                         f1 = p1.m_pos;
                     }
 
+                    // Expansion cap: bound how many times this portal is expanded (per source) so the step
+                    // budget spreads across the region instead of one dense portal's many funnel paths. Edges
+                    // to this portal's own endpoints were already emitted above; only deep re-exploration is cut.
+                    const Portal::id ek = portal.m_other_id;
+                    const uint16_t ec = (exp_gen[ek] == exp_cur) ? exp_count[ek] : 0;
+                    if (ec >= PATHING_PORTAL_EXPAND_CAP) continue;
+                    exp_gen[ek] = exp_cur;
+                    exp_count[ek] = static_cast<uint16_t>(ec + 1);
+
                     uint32_t checkpoint = static_cast<uint32_t>(visited.checkpoint());
                     visited.visit(portal.m_other_id);
 
@@ -1893,11 +1930,11 @@ namespace Pathing {
                         const auto pid = npd[k];
                         if (visited.is_visited(pid)) continue;
 
-                        if (sp >= OPEN_CAPACITY) break;
+                        if (sp >= OPEN_CAPACITY) { stats.open_overflow++; break; }
 
                         node& child = open[sp++];
-                        child.funnel[0] = cur.funnel[0];
-                        child.funnel[1] = cur.funnel[1];
+                        child.funnel[0] = funnel[0];
+                        child.funnel[1] = funnel[1];
                         child.blocked_idx = bp_idx;
                         child.next = pid;
                         child.visited_checkpoint = checkpoint;
@@ -1908,6 +1945,7 @@ namespace Pathing {
                         stats.max_dfs_depth = static_cast<int>(sp);
 #endif
                 }
+                if (sp != 0) stats.cnt_exhausted++; // DFS stopped on the step budget with frontier remaining
             }
             delete[] open;
         }
@@ -1934,6 +1972,10 @@ namespace Pathing {
                 VisGraphThreadStats stats;
                 VisGraphWorker(0, size, stats);
 
+#ifdef _DEBUG
+                Log::Log("[vgbuild] cap hits: seed_overflow=%d open_overflow=%d cnt_exhausted=%d (1 thread)",
+                    stats.seed_overflow, stats.open_overflow, stats.cnt_exhausted);
+#endif
 #ifdef DEBUG_PATHING
                 uint32_t total = 0;
                 for (const auto& v : m_visGraph)
@@ -1959,6 +2001,14 @@ namespace Pathing {
                 for (auto& t : threads)
                     t.join();
 
+#ifdef _DEBUG
+                {
+                    int so = 0, oo = 0, ce = 0;
+                    for (const auto& s : thread_stats) { so += s.seed_overflow; oo += s.open_overflow; ce += s.cnt_exhausted; }
+                    Log::Log("[vgbuild] cap hits: seed_overflow=%d open_overflow=%d cnt_exhausted=%d (%d threads)",
+                        so, oo, ce, (int)threads.size());
+                }
+#endif
 #ifdef DEBUG_PATHING
                 VisGraphThreadStats merged;
                 for (const auto& s : thread_stats) {
@@ -1974,6 +2024,38 @@ namespace Pathing {
                     total += static_cast<uint32_t>(v.size());
                 PATH_LOG_INFO("[VisGraph] edges=%u, viable=%d/%d, portals=%d (%d threads)",
                     total, merged.viable_count, size, (int)portals.size(), (int)threads.size());
+#endif
+            }
+
+            // Symmetrize visibility. 2D visibility is symmetric, but the per-source funnel DFS (apex, visit
+            // order, viability gating, dedup) can find A->B without B->A — and the worker only writes the
+            // source row. Missing reverse edges break routing: a bridge-end node ends up with deck->end but
+            // not end->deck, so a GROUND start can't take the deck and zigzags up-and-back, while a bridge
+            // start (whose live visibility sees the deck) routes clean. For every A->B add B->A if absent
+            // (same distance; a reversed visibility ray crosses the same planes => same blocked_planes). Also
+            // repairs edges a step-budget-truncated source missed but its neighbour found. Single-threaded,
+            // after the parallel build and BEFORE the directional teleport links below (those stay one-way).
+            {
+                const size_t vg_n = m_visGraph.size();
+                std::vector<uint32_t> orig_sizes(vg_n);
+                for (size_t i = 0; i < vg_n; ++i) orig_sizes[i] = static_cast<uint32_t>(m_visGraph[i].size());
+                [[maybe_unused]] int added = 0;
+                for (size_t a = 0; a < vg_n; ++a) {
+                    const uint32_t na = orig_sizes[a];
+                    for (uint32_t e = 0; e < na; ++e) {
+                        const float dist = m_visGraph[a][e].distance;
+                        const BlockedPlaneBitset bp = m_visGraph[a][e].blocked_planes;
+                        const PointId b = m_visGraph[a][e].point_id;
+                        if (b == a || b >= vg_n) continue;
+                        auto& vb = m_visGraph[b];
+                        bool has = false;
+                        for (size_t k = 0; k < vb.size(); ++k)
+                            if (vb[k].point_id == a) { has = true; break; }
+                        if (!has) { vb.emplace_back(dist, bp, static_cast<PointId>(a)); ++added; }
+                    }
+                }
+#ifdef _DEBUG
+                Log::Log("[vgsym] symmetrized: added %d reverse edges", added);
 #endif
             }
 
@@ -2111,7 +2193,7 @@ namespace Pathing {
 
         m_processing = true;
         ASSERT(!worker_thread);
-        worker_thread = new std::thread([this, start] {
+        worker_thread = new std::thread([this] {
             try {
                 mImpl->BuildFullGraph(m_all_map_ids);
                 const clock_t stop = clock();
@@ -2144,7 +2226,7 @@ namespace Pathing {
         out += "  \"points\": [\n";
         for (size_t i = 0; i < mImpl->points.size(); i++) {
             const auto& p = mImpl->points[i];
-            size_t edges = (i < mImpl->m_visGraph.size()) ? mImpl->m_visGraph[i].size() : 0;
+            const size_t edges = (i < mImpl->m_visGraph.size()) ? mImpl->m_visGraph[i].size() : 0;
             out += "    {\"id\":" + std::to_string(p.m_id) +
                    ",\"x\":" + std::to_string(p.m_pos.x) +
                    ",\"y\":" + std::to_string(p.m_pos.y) +
@@ -2191,7 +2273,7 @@ namespace Pathing {
             return;
         }
         // Lightweight map: build now, on the calling (worker) thread.
-        std::lock_guard lock(m_build_mutex);
+        std::scoped_lock lock(m_build_mutex);
         if (m_full_built || m_build_failed) return; // lost the race
         try {
             mImpl->BuildFullGraph(m_all_map_ids);
@@ -2208,7 +2290,7 @@ namespace Pathing {
         EnsureFullBuild(); // ensures m_mapData + m_teleports are ready (immutable afterwards)
         if (m_build_failed) return;
         {
-            std::lock_guard lock(pathing_mutex);
+            std::scoped_lock lock(pathing_mutex);
             if (mImpl->m_navmesh_recast) return; // already built or attempted
         }
         // Build off-lock — m_mapData/m_teleports don't change after the full build — so concurrent searches
@@ -2222,7 +2304,7 @@ namespace Pathing {
             delete mesh;
             return;
         }
-        std::lock_guard lock(pathing_mutex);
+        std::scoped_lock lock(pathing_mutex);
         if (mImpl->m_navmesh_recast) { delete mesh; return; } // another worker won the race
         mImpl->m_navmesh_recast = mesh; // publish; from now on Recast mode uses it
     }
@@ -2247,7 +2329,7 @@ namespace Pathing {
                     const PointId* came_from)
     {
         astar.m_path.clear();
-        auto* mp = (Impl*)astar.m_path.m_mp->GetImpl();
+        const auto* mp = (Impl*)astar.m_path.m_mp->GetImpl();
 
         // Collect waypoints start..goal first so the plane-continuity pass can see each point's neighbours.
         std::vector<GW::GamePos> wp;
@@ -2356,7 +2438,7 @@ namespace Pathing {
         // pathing_mutex so a slow first build doesn't stall other maps' searches.
         m_path.m_mp->EnsureFullBuild();
 
-        std::lock_guard lock(pathing_mutex);
+        std::scoped_lock lock(pathing_mutex);
 
         // Bail early if the MilePath's worker thread aborted with std::bad_alloc; mImpl's data
         // (m_visGraph, points, portals, etc.) is partially built and unsafe to traverse.
@@ -2517,7 +2599,7 @@ namespace Pathing {
             // For each bridge/deck node (plane >= 4) the search expands, dump its precomputed VG row and then
             // recompute visibility LIVE from the same point. A z6 target that the live pass finds but is absent
             // from the VG row (in_VG=0) pins the bug to a build-time gap and isolates which mechanism drops it.
-            if (current < n_real && dbg_vgdumps < 16) {
+            if (current < n_real && dbg_vgdumps < 0) { // per-node VG dump disabled (connectivity confirmed); flip <0 to <16 to re-enable
                 const Point& cpt = PTS[current];
                 const auto& cp0 = mp->portals[cpt.m_portals[0]];
                 const auto& cp1 = mp->portals[cpt.m_portals[1]];
