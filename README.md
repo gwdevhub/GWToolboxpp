@@ -104,6 +104,3 @@ All images in `resources/icons` are from www.flaticon.com
 
 **[JetBrains](https://github.com/JetBrains)** provides core contributors with <a href="https://www.jetbrains.com/community/opensource">OSS Development Licenses</a>
 
-[![Termius Logo](./resources/termius-logo.svg)](https://termius.com)
-
-**[Termius](https://termius.com/)** provides a secure, reliable, and collaborative SSH client.
