@@ -2,8 +2,8 @@
 
 #include "Window.h"
 
-bool Download(std::string& content, const wchar_t* url);
-bool Download(const wchar_t* path_to_file, const wchar_t* url);
+bool Download(std::string& content, const wchar_t* url, bool fresh);
+bool Download(const wchar_t* path_to_file, const wchar_t* url, bool fresh);
 
 struct Release;
 
