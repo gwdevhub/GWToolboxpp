@@ -7,13 +7,14 @@
 #include <Widgets/SnapsToPartyWindow.h>
 
 namespace GW {
+    struct AgentLiving;
     namespace Packet {
         namespace StoC {
             struct MapLoaded;
         }
-    }
+    } // namespace Packet
     struct HookStatus;
-}
+} // namespace GW
 
 class PartyDamage : public SnapsToPartyWindow {
 protected:
@@ -70,10 +71,10 @@ public:
 
     void Update(float delta) override;
 
-    static DWORD GetMaxHp(DWORD player_number);
+    // An agent only gets max_hp set when it begins to take damage. PartyDamage module caches the last known max hp of NPCs to sidestep this
+    static DWORD GetMaxHp(const GW::AgentLiving* agent);
 
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
     void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
-
 };

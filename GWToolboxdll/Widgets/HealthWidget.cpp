@@ -7,26 +7,26 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Skill.h>
 
-#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 
+#include <Color.h>
 #include <Defines.h>
-#include <Utils/GuiUtils.h>
 #include <Modules/Resources.h>
-#include <Widgets/PartyDamage.h>
-#include <Widgets/HealthWidget.h>
 #include <Utils/FontLoader.h>
+#include <Utils/GuiUtils.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
-#include <Color.h>
+#include <Widgets/HealthWidget.h>
+#include <Widgets/PartyDamage.h>
 
 namespace {
     HealthWidget::Settings settings;
 
     std::wstring agent_name_ping;
-}
+} // namespace
 
 constexpr auto HEALTH_THRESHOLD_INIFILENAME = L"HealthThreshold.ini";
 
@@ -244,9 +244,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_abs_value);
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-                uint32_t display_max_hp = target->max_hp > 0 && target->max_hp < 100000
-                    ? target->max_hp
-                    : PartyDamage::GetMaxHp(target->player_number);
+                uint32_t display_max_hp = PartyDamage::GetMaxHp(target);
                 const auto health_abs = display_max_hp > 0 ? std::format("{:.0f} / {}", target->hp * display_max_hp, display_max_hp) : std::string("-");
                 ImGui::TextColored(background, health_abs.c_str());
                 ImGui::SetCursorPos(cur);
@@ -275,8 +273,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
 unsigned int HealthWidget::Threshold::cur_ui_id = 0;
 
-HealthWidget::Threshold::Threshold(const ToolboxIni* ini, const char* section)
-    : ui_id(++cur_ui_id)
+HealthWidget::Threshold::Threshold(const ToolboxIni* ini, const char* section) : ui_id(++cur_ui_id)
 {
     active = ini->GetBoolValue(section, VAR_NAME(active));
 
@@ -288,10 +285,7 @@ HealthWidget::Threshold::Threshold(const ToolboxIni* ini, const char* section)
     color = Colors::Load(ini, section, VAR_NAME(color), color);
 }
 
-HealthWidget::Threshold::Threshold(const char* _name, const Color _color, const int _value)
-    : ui_id(++cur_ui_id)
-    , value(_value)
-    , color(_color)
+HealthWidget::Threshold::Threshold(const char* _name, const Color _color, const int _value) : ui_id(++cur_ui_id), value(_value), color(_color)
 {
     std::snprintf(name, sizeof(name), "%s", _name);
 }
@@ -361,4 +355,3 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op)
 
     return changed;
 }
-
