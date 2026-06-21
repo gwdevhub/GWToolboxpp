@@ -2652,9 +2652,26 @@ static void UpdateNavmeshOverlay()
     }
 }
 
+bool PathfindingWindow::draw_recast_comparison = true;
+
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
     Pathing::g_pathing_mode = (Pathing::PathingMode)settings.pathing_mode;
+    // Build the Recast mesh on a worker thread when it's needed — Recast mode, or the comparison overlay —
+    // so it's ready mid-map without a reload and without the search-thread build that froze recalcs.
+    // Idempotent; fires when the need turns on or the map changes.
+    {
+        const bool want_recast = settings.pathing_mode == (int)Pathing::PathingMode::Recast || draw_recast_comparison;
+        static bool last_want = false;
+        static GW::Constants::MapID last_map = (GW::Constants::MapID)0;
+        const auto cur_map = GW::Map::GetMapID();
+        if (want_recast && (!last_want || last_map != cur_map)) {
+            if (auto* mp = GetMilepathForCurrentMap())
+                Resources::EnqueueWorkerTask([mp] { mp->EnsureRecastMesh(); });
+        }
+        last_want = want_recast;
+        last_map = cur_map;
+    }
     ProcessDeferredRemovals();
     UpdateNavmeshOverlay();
 }
@@ -2664,6 +2681,8 @@ void PathfindingWindow::DrawSettingsInternal()
     const char* pathfinders[] = {"Visgraph (default)", "Recast (Detour)", "Polyanya (WIP)"};
     ImGui::Combo("Pathfinder", &settings.pathing_mode, pathfinders, 3);
     ImGui::ShowHelp("Visgraph (default): optimal visibility-graph A*.\nRecast (Detour): navmesh pathfinder (experimental; applies on next map load / zone).\nPolyanya (WIP): not implemented yet — falls back to the visgraph.");
+    ImGui::Checkbox("Compare Recast (blue)", &draw_recast_comparison);
+    ImGui::ShowHelp("Also draw the Recast route in blue alongside the active quest path, for visual comparison. Doubles path computation on each recompute.");
     ImGui::Separator();
     ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
     ImGui::ShowHelp("Draw the navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included).");

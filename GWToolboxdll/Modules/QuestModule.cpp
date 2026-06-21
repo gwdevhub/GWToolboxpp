@@ -116,6 +116,7 @@ namespace {
         bool has_full_route = false;          // the whole route has been plotted at least once
         std::vector<GW::Vec2f> route_world{}; // the route, world-map coords (PATH_BREAK between maps)
         std::vector<GW::GamePos> route_map{};
+        std::vector<GW::GamePos> route_map_recast{}; // Recast route for the current-map leg; drawn blue for comparison
         bool IsCalculating() { return calculating && TIMER_DIFF(calculating) < 5000; }
 
         void ClearMinimapLines()
@@ -149,6 +150,18 @@ namespace {
                 first_ingame = false;
                 l->created_by_toolbox = true;
                 l->color = color;
+                minimap_lines.push_back(l);
+            }
+            // Comparison overlay: the Recast route for this map's leg, drawn blue on the terrain so it can be
+            // compared against the active path. Only the current-map leg differs by pathfinder.
+            for (size_t i = 0; settings.draw_quest_path_on_terrain && i + 1 < route_map_recast.size(); i++) {
+                const auto label = std::format("{}-r-{}", static_cast<uint32_t>(quest_id), i);
+                l = Minimap::Instance().custom_renderer.AddCustomLine(route_map_recast[i], route_map_recast[i + 1], label.c_str(), true);
+                l->draw_on_terrain = true;
+                l->draw_on_minimap = false;
+                l->draw_on_mission_map = false;
+                l->created_by_toolbox = true;
+                l->color = 0xFF1E90FF; // dodger blue
                 minimap_lines.push_back(l);
             }
             for (size_t i = 0; i + 1 < route_world.size(); i++) {
@@ -238,36 +251,48 @@ namespace {
                 target = route_map.back();
             }
             Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map] {
-                auto pts = new std::vector<GW::Vec2f>(); // world-map coords
-                const bool ok = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, pts);
-                auto route_map = new std::vector<GW::GamePos>(); // game-map coords
-                if (ok) {
+                // Convert a RecalculateSegment world-coord result into this map's game coords: stop at the
+                // first route-break (portal) after plotting one point through it, then orient us -> target.
+                // Shared by the followed path and the Recast comparison overlay. (@cleanup: worker-thread safe?)
+                auto convert = [&](const std::vector<GW::Vec2f>& world, std::vector<GW::GamePos>& out) {
                     GW::GamePos gp;
                     bool passed_route_break = false;
-                    for (auto& pt : *pts) {
-                        if (PathfindingWindow::IsRouteBreak(pt)) {
-                            // We've hit a route break e.g. portal, but we want to try and plot the next point in this map so the player traverses through.
-                            passed_route_break = true;
-                            continue;
-                        }
-                        // @cleanup: is this bit safe to run on a worker thread?!
+                    for (auto& pt : world) {
+                        if (PathfindingWindow::IsRouteBreak(pt)) { passed_route_break = true; continue; }
                         if (!(PathfindingWindow::IsWorldPosOnMap(pt) && WorldMapWidget::WorldMapToGamePos(pt, gp))) break;
-                        route_map->push_back(gp);
+                        out.push_back(gp);
                         if (passed_route_break) break;
                     }
-                    // orient us -> target.
-                    if (route_map->size() > 1) {
+                    if (out.size() > 1) {
                         const auto sq = [](const GW::GamePos& a, const GW::GamePos& b) {
                             const float dx = a.x - b.x, dy = a.y - b.y;
                             return dx * dx + dy * dy;
                         };
-                        if (sq(route_map->front(), target) < sq(route_map->back(), target)) std::ranges::reverse(*route_map);
+                        if (sq(out.front(), target) < sq(out.back(), target)) std::ranges::reverse(out);
                     }
+                };
+
+                auto pts = new std::vector<GW::Vec2f>(); // world-map coords
+                const bool ok = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, pts);
+                auto route_map = new std::vector<GW::GamePos>(); // game-map coords
+                if (ok) convert(*pts, *route_map);
+
+                // Comparison overlay: also compute the Recast route for this leg (drawn blue). Uses a
+                // thread-local mode override so the global pathing mode other threads read is untouched.
+                auto route_map_recast = new std::vector<GW::GamePos>();
+                if (PathfindingWindow::draw_recast_comparison) {
+                    std::vector<GW::Vec2f> rpts;
+                    Pathing::SetThreadPathingModeOverride(static_cast<int>(Pathing::PathingMode::Recast));
+                    const bool ok_r = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, &rpts);
+                    Pathing::SetThreadPathingModeOverride(-1);
+                    if (ok_r) convert(rpts, *route_map_recast);
                 }
-                Resources::EnqueueMainTask([qid, route_map, pts, ok, same_map] {
+
+                Resources::EnqueueMainTask([qid, route_map, route_map_recast, pts, ok, same_map] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
                     if (cqp && ok) {
                         cqp->route_map = std::move(*route_map);
+                        cqp->route_map_recast = std::move(*route_map_recast);
                         if (same_map) {
                             cqp->route_world.clear(); // the whole route is the on-map leg
                             cqp->has_full_route = true;
@@ -285,6 +310,7 @@ namespace {
                     }
                     delete pts;
                     delete route_map;
+                    delete route_map_recast;
                 });
             });
         }

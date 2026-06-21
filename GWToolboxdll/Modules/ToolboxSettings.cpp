@@ -100,6 +100,7 @@
 #include <Widgets/InventoryOverlayWidget.h>
 #include <Widgets/LatencyWidget.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/PartyDamage.h>
 #include <Widgets/SkillMonitorWidget.h>
@@ -186,6 +187,7 @@ namespace {
         SkillbarWidget::Instance(),
         {DistanceWidget::Instance(), false},
         Minimap::Instance(),
+        GameWorldRenderer::Instance(),
         PartyDamage::Instance(),
         BondsWidget::Instance(),
         ClockWidget::Instance(),

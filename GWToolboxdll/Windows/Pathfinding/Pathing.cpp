@@ -2028,17 +2028,8 @@ namespace Pathing {
             catch (const std::bad_alloc&) {
                 PATH_LOG_ERROR("[pathing] overlay navmesh build OOM; overlay disabled for this map");
             }
-            // Recast pathing mode builds the recast-generated mesh (applies on next map build). If absent,
-            // Recast mode falls back to the hand-built m_navmesh, and that to the visgraph.
-            if (g_pathing_mode == PathingMode::Recast) {
-                try {
-                    if (!m_navmesh_recast) m_navmesh_recast = new NavMesh();
-                    m_navmesh_recast->BuildFromRecast(m_mapData, m_teleports);
-                }
-                catch (const std::bad_alloc&) {
-                    PATH_LOG_ERROR("[pathing] recast mesh build OOM; recast mode falls back for this map");
-                }
-            }
+            // (The recast-generated mesh is built lazily on a worker via MilePath::EnsureRecastMesh when
+            // Recast mode is selected — not here — so it works mid-map without freezing the search thread.)
 #ifdef _DEBUG
             // Ghost-wall audit: every visgraph portal is a real walkable connection; count how many the
             // hand-built Detour mesh failed to represent as adjacency. This is the "= 0" gate for the re-tiler.
@@ -2178,6 +2169,30 @@ namespace Pathing {
         }
     }
 
+    void MilePath::EnsureRecastMesh()
+    {
+        EnsureFullBuild(); // ensures m_mapData + m_teleports are ready (immutable afterwards)
+        if (m_build_failed) return;
+        {
+            std::lock_guard lock(pathing_mutex);
+            if (mImpl->m_navmesh_recast) return; // already built or attempted
+        }
+        // Build off-lock — m_mapData/m_teleports don't change after the full build — so concurrent searches
+        // (which see m_navmesh_recast == null and fall back) are never blocked by the voxelization.
+        NavMesh* mesh = nullptr;
+        try {
+            mesh = new NavMesh();
+            mesh->BuildFromRecast(mImpl->m_mapData, mImpl->m_teleports);
+        }
+        catch (...) {
+            delete mesh;
+            return;
+        }
+        std::lock_guard lock(pathing_mutex);
+        if (mImpl->m_navmesh_recast) { delete mesh; return; } // another worker won the race
+        mImpl->m_navmesh_recast = mesh; // publish; from now on Recast mode uses it
+    }
+
 
     AStar::AStar(MilePath* mp) : m_path(this)
     {
@@ -2200,8 +2215,10 @@ namespace Pathing {
         astar.m_path.clear();
         auto* mp = (Impl*)astar.m_path.m_mp->GetImpl();
 
-        astar.m_path.insertPoint(goal_pos);
-
+        // Collect waypoints start..goal first so the plane-continuity pass can see each point's neighbours.
+        std::vector<GW::GamePos> wp;
+        wp.push_back(start_pos);
+        std::vector<GW::GamePos> rev;
         PointId curr = came_from[goal_id];
         int count = 0;
         while (curr != start_id) {
@@ -2211,11 +2228,26 @@ namespace Pathing {
             }
             const auto& p = mp->points[curr];
             const auto zplane = std::max(mp->portals[p.m_portals[0]].m_pt_layer, mp->portals[p.m_portals[1]].m_pt_layer);
-            astar.m_path.insertPoint({p.m_pos.x, p.m_pos.y, zplane});
+            rev.push_back({p.m_pos.x, p.m_pos.y, zplane});
             curr = came_from[curr];
         }
+        for (auto it = rev.rbegin(); it != rev.rend(); ++it) wp.push_back(*it);
+        wp.push_back(goal_pos);
 
-        astar.m_path.insertPoint(start_pos);
+        // Plane-continuity. At a cross-plane ramp the ground (low plane) and bridge (high plane) overlap in XY
+        // via a zero-cost portal, so a transition waypoint's plane label is ambiguous and flickers as the start
+        // moves — the renderer then draws it at ground or bridge height, sinking the line. If a waypoint sits
+        // below a neighbour and the higher plane actually has a trapezoid at its XY, lift it so the drawn line
+        // stays on the surface it's traversing. XY is untouched; only the rendered height stabilises.
+        for (size_t i = 1; i + 1 < wp.size(); ++i) {
+            const uint32_t hi = std::max(wp[i - 1].zplane, wp[i + 1].zplane);
+            if (wp[i].zplane >= hi) continue;
+            GW::GamePos probe{wp[i].x, wp[i].y, hi};
+            if (FindTrapezoid(probe, &mp->m_mapData)) wp[i].zplane = hi;
+        }
+
+        // Insert goal-first (finalize() re-reverses to start..goal).
+        for (auto it = wp.rbegin(); it != wp.rend(); ++it) astar.m_path.insertPoint(*it);
         return Error::OK;
     }
 
@@ -2260,8 +2292,15 @@ namespace Pathing {
 
     PathingMode g_pathing_mode = PathingMode::Visgraph;
 
+    // Per-thread override of the pathfinder, -1 = use the global. Lets a worker compute an alternate-mode
+    // path (the Recast comparison overlay) without racing the global mode that other threads read.
+    thread_local int t_pathing_mode_override = -1;
+    void SetThreadPathingModeOverride(int mode) { t_pathing_mode_override = mode; }
+
     Error AStar::Search(const GW::GamePos& _start_pos, const GW::GamePos& _goal_pos)
     {
+        const PathingMode active_mode = (t_pathing_mode_override >= 0)
+            ? static_cast<PathingMode>(t_pathing_mode_override) : g_pathing_mode;
         Timing time(__FUNCTION__);
 
         // TODO: remove this microsecond phase timing once AStar perf is locked in.
@@ -2298,7 +2337,7 @@ namespace Pathing {
 
         // Recast pathing mode: route on the Detour navmesh (recast-generated if built, else hand-built).
         // Polyanya mode has no query yet, so it falls through to the visgraph below.
-        if (g_pathing_mode == PathingMode::Recast) {
+        if (active_mode == PathingMode::Recast) {
             NavMesh* rnav = (mp->m_navmesh_recast && mp->m_navmesh_recast->IsReady()) ? mp->m_navmesh_recast : mp->m_navmesh;
             if (rnav && rnav->IsReady()) {
                 rnav->ApplyBlockedPlanes(current_blocked_planes);
@@ -2325,6 +2364,13 @@ namespace Pathing {
         auto spt = FindClosestPositionOnTrapezoid(start_pos, &mp->m_mapData);
         auto gpt = FindClosestPositionOnTrapezoid(goal_pos, &mp->m_mapData);
         t_trap = clk::now();
+#ifdef _DEBUG
+        // Bridge non-determinism probe: the start plane (the player's incoming zplane, and what it snaps to)
+        // is shared by all 3 modes. If it flips between bridge and ground across sessions, that's the cause.
+        Log::Log("[bridge] start z%d->z%d (%.0f,%.0f)  goal z%d->z%d (%.0f,%.0f)",
+            (int)_start_pos.zplane, (int)start_pos.zplane, start_pos.x, start_pos.y,
+            (int)_goal_pos.zplane, (int)goal_pos.zplane, goal_pos.x, goal_pos.y);
+#endif
         if (!spt) return Error::FailedToFindStartPathingTrapezoid;
         if (!gpt) return Error::FailedToFindGoalPathingTrapezoid;
 
@@ -2490,6 +2536,22 @@ namespace Pathing {
                 m_path.finalize();
             }
         }
+
+#ifdef _DEBUG
+        // Dump the COMPUTED waypoints only for cross-plane (bridge/stairs) paths. Compare a good vs broken
+        // session: identical waypoints => computation is fine and the problem is rendering; differing => compute.
+        if (m_path.ready()) {
+            const auto& pts = m_path.points();
+            bool cross = false;
+            for (size_t i = 1; i < pts.size(); ++i) if (pts[i].zplane != pts[0].zplane) { cross = true; break; }
+            if (cross) {
+                std::string s;
+                for (size_t i = 0; i < pts.size() && i < 24; ++i)
+                    s += "(" + std::to_string((int)pts[i].x) + "," + std::to_string((int)pts[i].y) + ",z" + std::to_string(pts[i].zplane) + ") ";
+                Log::Log("[bridgepath] %zu pts: %s", pts.size(), s.c_str());
+            }
+        }
+#endif
 
 #ifdef DEBUG_PATHING
         PATH_LOG_INFO("[AStar] %s s=(%.0f,%.0f,z%d)t%d e%zu g=(%.0f,%.0f,z%d)t%d e%zu cost=%.0f pts=%d expanded=%d",

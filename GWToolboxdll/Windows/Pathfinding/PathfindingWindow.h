@@ -36,6 +36,10 @@ public:
         float    navmesh_overlay_range = 4500.f;           // game units around the player
     };
 
+    // Draw the Recast route in blue alongside the active path for visual comparison (debug). Public so
+    // QuestModule can gate its second (Recast) path computation on it; also forces the Recast mesh to build.
+    static bool draw_recast_comparison;
+
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;

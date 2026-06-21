@@ -790,7 +790,6 @@ void Minimap::SignalTerminate()
     symbols_renderer.Terminate();
     custom_renderer.Terminate();
     effect_renderer.Terminate();
-    GameWorldRenderer::Terminate();
     GW::GameThread::Enqueue([] {
         RefreshQuestMarker();
         ResetWindowPosition(GW::UI::WindowID_Compass, compass_frame);
@@ -844,7 +843,6 @@ void Minimap::Initialize()
     pingslines_renderer.RegisterSettings(this);
     symbols_renderer.RegisterSettings(this);
     custom_renderer.RegisterSettings(this);
-    GameWorldRenderer::RegisterSettings(this);
 
     uintptr_t address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
     if (address) {
@@ -1143,10 +1141,6 @@ void Minimap::DrawSettingsInternal()
         Colors::DrawSettingHueWheel("Background", &hero_flag_controls_background);
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("In-game rendering", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        GameWorldRenderer::DrawSettings();
-        ImGui::TreePop();
-    }
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Color enemies by profession", &agent_renderer.enemies_colors_by_profession);
@@ -1264,7 +1258,6 @@ void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     custom_renderer.Invalidate();
     custom_renderer.LoadMarkers();
     effect_renderer.LoadSettings(doc, legacy, Name());
-    GameWorldRenderer::OnSettingsLoaded();
 
     pending_refresh_quest_marker = true;
 }

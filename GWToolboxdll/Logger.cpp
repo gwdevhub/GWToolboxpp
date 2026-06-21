@@ -93,7 +93,9 @@ namespace {
     void OnLogWithArguments(uint32_t severity, const wchar_t* format, va_list argList)
     {
         GW::Hook::EnterHook();
-        vfwprintf(logfile, format, argList);
+        if (format && !wcsstr(format, L"Invalid tag name")) {
+            vfwprintf(logfile, format, argList);
+        }
         LogWithArguments_Ret(severity, format, argList);
         GW::Hook::LeaveHook();
     }

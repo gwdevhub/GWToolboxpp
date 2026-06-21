@@ -64,6 +64,7 @@ namespace {
     FrCacheRenderFn FrCacheRenderAll_Func = nullptr;
     FrCacheRenderFn FrCacheRenderAll_Ret = nullptr;
     GW::Array<FrCacheBufferEntry>* render_buffer = nullptr;
+    GW::Array<GW::UI::Frame*>* frame_array = nullptr;
     bool compositor_scanned = false;
     bool compositor_failed = false;
     bool compositor_hooked = false;
@@ -107,6 +108,8 @@ namespace {
         // &RenderFrameList.m_size; the Array<T> globals are consecutive 16-byte structs.
         const auto frame_list_size_addr = *reinterpret_cast<uintptr_t*>(render_addr + 5);
         const auto frame_list_base = frame_list_size_addr - 8; // m_size is at +8 in Array<T>
+        // Consecutive 16-byte Array<T> globals: RenderFrameList, FrameArray(+0x10), ..., RenderBuffer(+0x30).
+        frame_array = reinterpret_cast<GW::Array<GW::UI::Frame*>*>(frame_list_base + 0x10);
         render_buffer = reinterpret_cast<GW::Array<FrCacheBufferEntry>*>(frame_list_base + 0x30);
         FrCacheRenderAll_Func = reinterpret_cast<FrCacheRenderFn>(render_all);
         if (!render_buffer || !FrCacheRenderAll_Func) {
@@ -131,19 +134,17 @@ namespace {
 
         auto& buffer = *render_buffer;
 
-        // GW calls FrCache_RenderAll many times per frame; world (GPU_RENDER) and HUD
-        // (frame) entries are interleaved, and a few world renders can even follow the HUD
-        // (3D-in-UI). The HUD proper begins at the first RUN of several consecutive frame
-        // entries — draw there so the overlay sits over the world but under the HUD. Passes
-        // with no such run (small model sub-renders, world-only) get skipped.
-        constexpr uint32_t kHudRun = 3;
+        // GW renders the main 3D scene as the FIRST GPU_RENDER block (right after the
+        // full-screen game-view frame at the top of the buffer). Everything after that
+        // block is HUD — interleaved with agent / UI 3D renders, which should (and do)
+        // draw over the overlay. So split right after the first world block: draw the
+        // overlay there and all the HUD composites on top. Passes with no GPU block (UI-
+        // only / sub-renders) leave boundary == size and get skipped below.
         uint32_t boundary = buffer.size();
-        for (uint32_t i = 0; i + kHudRun <= buffer.size(); i++) {
-            bool run = true;
-            for (uint32_t j = 0; j < kHudRun; j++) {
-                if (buffer[i + j].type == FRCACHE_GPU_RENDER) { run = false; break; }
-            }
-            if (run) { boundary = i; break; }
+        bool seen_gpu = false;
+        for (uint32_t i = 0; i < buffer.size(); i++) {
+            if (buffer[i].type == FRCACHE_GPU_RENDER) { seen_gpu = true; continue; }
+            if (seen_gpu) { boundary = i; break; }
         }
 
         // Only the main pass (a clear world-then-HUD split) draws; sub-render and UI-only
@@ -431,8 +432,14 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         return;
     }
 
-    // copy the vertex buffer to the back buffer
-    filled ? device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3) : device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
+    // copy the vertex buffer to the back buffer. Guard the primitive counts: an empty line renderable would
+    // make vertices.size()-1 (size_t) underflow to a huge count and crash DrawPrimitive (D3D debug break).
+    if (filled) {
+        if (vertices.size() >= 3) device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3);
+    }
+    else if (vertices.size() >= 2) {
+        device->DrawPrimitive(D3DPT_LINESTRIP, 0, vertices.size() - 1);
+    }
 }
 
 bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
@@ -643,6 +650,14 @@ void GameWorldRenderer::DrawSettings()
     ImGui::Checkbox("Render under game UI", &render_under_ui);
     ImGui::ShowHelp("Draw overlays beneath the in-game UI (menus, party window, etc.) instead of on top.\n"
                     "Experimental: hooks GW's UI render pass. Turn off to restore the original on-top drawing.");
+    if (render_under_ui) {
+        if (compositor_failed)
+            ImGui::TextColored(red, "  under-UI hook FAILED to install - drawing on top.");
+        else if (compositor_hooked)
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(Colors::Green()), "  under-UI hook active.");
+        else
+            ImGui::TextDisabled("  under-UI hook: not installed yet.");
+    }
 
     ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
     ImGui::ShowHelp("Hide overlays behind walls, buildings and terrain using the game's depth buffer.\n"
@@ -679,6 +694,7 @@ void GameWorldRenderer::Terminate()
     if (vertex_declaration)
         vertex_declaration->Release();
     vertex_declaration = nullptr;
+    ToolboxModule::Terminate();
 }
 
 void GameWorldRenderer::SyncAllMarkers()
@@ -821,4 +837,47 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
         }
     }
     return out;
+}
+
+// ===========================================================================
+// ToolboxModule lifecycle (own settings section / JSON file, separate from Minimap)
+// ===========================================================================
+
+void GameWorldRenderer::Initialize()
+{
+    ToolboxModule::Initialize(); // registers DrawSettingsInternal() under "In-game rendering"
+    // Register the settings fields against this module so they persist in their own
+    // section ("In-game rendering" -> In-game rendering.json), not under the Minimap.
+    RegisterSettings(this);
+}
+
+void GameWorldRenderer::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxModule::LoadSettings(doc, legacy);
+    OnSettingsLoaded();
+}
+
+void GameWorldRenderer::DrawSettingsInternal()
+{
+    DrawSettings();
+}
+
+void GameWorldRenderer::Draw(IDirect3DDevice9* device)
+{
+    // Called once per frame by the toolbox module loop, only while this module is enabled.
+    // Drives the per-frame render (which installs/uses the FrCache under-UI compositor).
+    if (GW::UI::GetIsWorldMapShowing()) {
+        return;
+    }
+    Render(device);
+}
+
+void GameWorldRenderer::SignalTerminate()
+{
+    // Stop the compositor the instant the module is disabled (the module is removed from
+    // the draw loop at the same time, so Render() won't be called either).
+    if (compositor_hooked && FrCacheRenderAll_Func) {
+        GW::Hook::RemoveHook(FrCacheRenderAll_Func);
+        compositor_hooked = false;
+    }
 }

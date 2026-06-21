@@ -34,6 +34,10 @@ namespace Pathing {
     enum class PathingMode : uint8_t { Visgraph, Recast, Polyanya };
     extern PathingMode g_pathing_mode;
 
+    // Override the pathfinder for the CALLING THREAD only (-1 = use the global g_pathing_mode). Lets a worker
+    // compute an alternate-mode path for the comparison overlay without racing the global other threads read.
+    void SetThreadPathingModeOverride(int mode);
+
     class MilePath {
         volatile bool m_processing = false;
         volatile bool m_done = false;
@@ -59,6 +63,11 @@ namespace Pathing {
         // Build the full pathing graph (incl. visgraph) if not already present.
         // Idempotent, thread-safe; called by AStar::Search to upgrade lazily.
         void EnsureFullBuild();
+
+        // Build the recast-generated Detour mesh (used by Recast pathing mode). MUST be called from a
+        // worker thread (e.g. Resources::EnqueueWorkerTask), NEVER the search thread — building under the
+        // path mutex on the search thread freezes recalcs. Idempotent; builds the mesh off-lock, publishes on.
+        void EnsureRecastMesh();
 
         // Signals terminate to worker thread. Usually followed late by shutdown() to grab the thread again.
         void stopProcessing();
