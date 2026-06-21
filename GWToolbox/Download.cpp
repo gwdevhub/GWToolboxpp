@@ -347,27 +347,43 @@ static void CheckForExeUpdate(const std::vector<Release>& releases)
 
     std::error_code ec;
     const auto current_size = std::filesystem::file_size(exe_path, ec);
-    if (ec || FileMatchesAsset(exe_path, *exe_asset, current_size))
-        return; // already running the released exe
+    if (!ec && !FileMatchesAsset(exe_path, *exe_asset, current_size)) {
+        const std::wstring tag_w(tag_name.begin(), tag_name.end());
+        const std::wstring prompt = std::format(
+            L"A newer version of GWToolbox.exe ({}) is available.\n\n"
+            L"Update now? GWToolbox will replace its own program file; the new version takes effect next launch.", tag_w);
+        if (MessageBoxW(nullptr, prompt.c_str(), L"GWToolbox - Update available", MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST) != IDYES)
+            return;
 
-    const std::wstring tag_w(tag_name.begin(), tag_name.end());
-    const std::wstring prompt = std::format(
-        L"A newer version of GWToolbox.exe ({}) is available.\n\n"
-        L"Update now? GWToolbox will replace its own program file; the new version takes effect next launch.", tag_w);
-    if (MessageBoxW(nullptr, prompt.c_str(), L"GWToolbox - Update available", MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST) != IDYES)
+        std::wstring error;
+        if (!UpdateExe(exe_path, *exe_asset, error)) {
+            MessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
+            return;
+        }
+
+        // Relaunch into the new exe (e.g. to retry an injection the old one failed). The single OK button is the
+        // restart; we re-run from the original path, which now holds the new file.
+        MessageBoxW(nullptr, L"GWToolbox.exe was updated.\n\nClick the button below to restart the launcher and start using the new version.",
+                    L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
+        RestartWithSameArgs();
+    }
+
+    // When running from outside the install directory (e.g. a freshly downloaded exe), CopyInstaller() is never
+    // called because IsInstalled() is already true. The installed exe can therefore go stale while the user
+    // believes they updated by re-downloading. Sync it here so the shortcut/installed copy stays current.
+    const auto install_dir = GetInstallationDir();
+    if (install_dir.empty())
+        return;
+    const auto installed_exe = install_dir.parent_path() / L"GWToolbox.exe";
+    if (installed_exe == exe_path || !std::filesystem::exists(installed_exe))
+        return;
+    const auto installed_size = std::filesystem::file_size(installed_exe, ec);
+    if (ec || FileMatchesAsset(installed_exe, *exe_asset, installed_size))
         return;
 
     std::wstring error;
-    if (!UpdateExe(exe_path, *exe_asset, error)) {
+    if (!UpdateExe(installed_exe, *exe_asset, error))
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
-        return;
-    }
-
-    // Relaunch into the new exe (e.g. to retry an injection the old one failed). The single OK button is the
-    // restart; we re-run from the original path, which now holds the new file.
-    MessageBoxW(nullptr, L"GWToolbox.exe was updated.\n\nClick the button below to restart the launcher and start using the new version.",
-                L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
-    RestartWithSameArgs();
 }
 
 bool DownloadWindow::CheckForUpdates(std::wstring& error)
