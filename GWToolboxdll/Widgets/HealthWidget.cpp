@@ -244,7 +244,9 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_abs_value);
                 cur = ImGui::GetCursorPos();
                 ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
-                const uint32_t display_max_hp = PartyDamage::GetMaxHp(target->player_number);
+                uint32_t display_max_hp = target->max_hp > 0 && target->max_hp < 100000
+                    ? target->max_hp
+                    : PartyDamage::GetMaxHp(target->player_number);
                 const auto health_abs = display_max_hp > 0 ? std::format("{:.0f} / {}", target->hp * display_max_hp, display_max_hp) : std::string("-");
                 ImGui::TextColored(background, health_abs.c_str());
                 ImGui::SetCursorPos(cur);
