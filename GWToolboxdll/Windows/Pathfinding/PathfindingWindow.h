@@ -27,8 +27,7 @@ public:
     bool HasSettings() { return true; }
 
     struct Settings {
-        bool     use_recast_pathing = false;            // false = visgraph A* (default), true = recast/Detour navmesh
-        bool     use_recast_builder = false;            // false = hand-built mesh, true = recast-generated mesh (applies on next map load)
+        int      pathing_mode = 0;                       // 0 = Visgraph (default), 1 = Recast (Detour), 2 = Polyanya (WIP)
         bool     draw_navmesh_overlay = false;
         uint32_t navmesh_wall_color = 0xC0FF3030;          // ARGB: wall edge on plane 0 (red)
         uint32_t navmesh_wall_color_hi = 0xC0FF30FF;       // wall edge on planes != 0 (magenta)

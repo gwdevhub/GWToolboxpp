@@ -3,10 +3,12 @@
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Camera.h>
-#include <GWCA/GameEntities/Pathing.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/Scanner.h>
 
 #include <Defines.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
@@ -25,6 +27,15 @@ namespace {
     float fog_factor = 0.5f;
     bool need_sync_markers = true;
     bool need_configure_pipeline = true;
+    bool render_under_ui = true;
+
+    // Depth occlusion: test overlays against the scene depth buffer (still bound at the
+    // UI-render hook) so world geometry hides them. z_near/z_far must match GW's own
+    // projection for the comparison to be correct. Empirically GW's near clip is ~47
+    // (narrow valid window ~45-48); far is insensitive anywhere ~50k-200k.
+    bool occlude_behind_terrain = true;
+    float z_near = 47.0f;
+    float z_far = 100000.f;
 
 
     GameWorldRenderer::RenderableVectors renderables;
@@ -32,6 +43,163 @@ namespace {
     IDirect3DVertexShader9* vshader = nullptr;
     IDirect3DPixelShader9* pshader = nullptr;
     IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
+
+    // === FrCache compositor: draw the overlay between GW's world and UI passes ===
+    // GW renders into a deferred command buffer; the 3D world is FRCACHE_GPU_RENDER
+    // entries, the HUD is frame entries after. To land *under* the UI but occluded by
+    // world geometry we split the buffer at the world->HUD boundary, flush the world,
+    // draw, then let GW render the HUD on top. Only active while occlude_behind_terrain.
+    enum FrCacheEntryType : uint32_t {
+        FRCACHE_GPU_RENDER = 0,
+        FRCACHE_FRAME_CALLBACK = 1,
+        FRCACHE_CLIENT_VIEWPORT = 2,
+        FRCACHE_FRAME_VIEWPORT = 3,
+    };
+    struct FrCacheBufferEntry {
+        FrCacheEntryType type;
+        uint32_t index;
+        uint32_t param;
+    };
+    using FrCacheRenderFn = void(__cdecl*)(uint32_t, uint32_t);
+    FrCacheRenderFn FrCacheRenderAll_Func = nullptr;
+    FrCacheRenderFn FrCacheRenderAll_Ret = nullptr;
+    GW::Array<FrCacheBufferEntry>* render_buffer = nullptr;
+    bool compositor_scanned = false;
+    bool compositor_failed = false;
+    bool compositor_hooked = false;
+    bool in_compositor_draw = false; // true while drawing from the FrCache compositor
+    bool drawn_this_frame = false;   // guard: draw only in the first world pass per frame
+
+    // Draw the overlay from inside the compositor. Routes through Render (with the flag
+    // set) so the actual draw body lives in one place.
+    void DrawOverlay(IDirect3DDevice9* device)
+    {
+        in_compositor_draw = true;
+        GameWorldRenderer::Render(device);
+        in_compositor_draw = false;
+    }
+
+    bool ScanCompositor()
+    {
+        if (compositor_scanned) return !compositor_failed;
+        compositor_scanned = true;
+
+        // FrCache_RenderAll asserts "frame" in FrCache.cpp at line 0x9e (~0x120 bytes in).
+        const auto render_all = GW::Scanner::ToFunctionStart(
+            GW::Scanner::FindAssertion("FrCache.cpp", "frame", 0x9e, 0), 0x200);
+        if (!render_all) {
+            compositor_failed = true;
+            return false;
+        }
+        // FrCache_Render is the only caller of FrCache_RenderAll: scan back for the CALL.
+        uintptr_t render_addr = 0;
+        for (auto a = render_all - 5; a > render_all - 0x100; a--) {
+            if (*reinterpret_cast<uint8_t*>(a) == 0xE8 && GW::Scanner::FunctionFromNearCall(a) == render_all) {
+                render_addr = GW::Scanner::ToFunctionStart(a);
+                break;
+            }
+        }
+        if (!render_addr) {
+            compositor_failed = true;
+            return false;
+        }
+        // FrCache_Render begins: CMP [RenderFrameList.m_size], 0 — the 4 bytes at +5 are
+        // &RenderFrameList.m_size; the Array<T> globals are consecutive 16-byte structs.
+        const auto frame_list_size_addr = *reinterpret_cast<uintptr_t*>(render_addr + 5);
+        const auto frame_list_base = frame_list_size_addr - 8; // m_size is at +8 in Array<T>
+        render_buffer = reinterpret_cast<GW::Array<FrCacheBufferEntry>*>(frame_list_base + 0x30);
+        FrCacheRenderAll_Func = reinterpret_cast<FrCacheRenderFn>(render_all);
+        if (!render_buffer || !FrCacheRenderAll_Func) {
+            compositor_failed = true;
+            return false;
+        }
+        return true;
+    }
+
+    void __cdecl OnFrCacheRenderAll(uint32_t param_1, uint32_t param_2)
+    {
+        GW::Hook::EnterHook();
+        IDirect3DDevice9* device = GW::Render::GetDevice();
+
+        // OFF (or unusable) → behave exactly like the original function. The overlay is
+        // drawn at the 0xf hook in that case.
+        if (!render_under_ui || !render_buffer || !device) {
+            FrCacheRenderAll_Ret(param_1, param_2);
+            GW::Hook::LeaveHook();
+            return;
+        }
+
+        auto& buffer = *render_buffer;
+
+        // GW calls FrCache_RenderAll many times per frame; world (GPU_RENDER) and HUD
+        // (frame) entries are interleaved, and a few world renders can even follow the HUD
+        // (3D-in-UI). The HUD proper begins at the first RUN of several consecutive frame
+        // entries — draw there so the overlay sits over the world but under the HUD. Passes
+        // with no such run (small model sub-renders, world-only) get skipped.
+        constexpr uint32_t kHudRun = 3;
+        uint32_t boundary = buffer.size();
+        for (uint32_t i = 0; i + kHudRun <= buffer.size(); i++) {
+            bool run = true;
+            for (uint32_t j = 0; j < kHudRun; j++) {
+                if (buffer[i + j].type == FRCACHE_GPU_RENDER) { run = false; break; }
+            }
+            if (run) { boundary = i; break; }
+        }
+
+        // Only the main pass (a clear world-then-HUD split) draws; sub-render and UI-only
+        // passes pass through. The per-frame guard makes sure we draw exactly once.
+        if (boundary == 0 || boundary >= buffer.size() || drawn_this_frame) {
+            FrCacheRenderAll_Ret(param_1, param_2);
+            GW::Hook::LeaveHook();
+            return;
+        }
+
+        auto* const orig_buffer = buffer.m_buffer;
+        const auto orig_size = buffer.m_size;
+
+        // 1) world portion
+        buffer.m_buffer = orig_buffer;
+        buffer.m_size = boundary;
+        FrCacheRenderAll_Ret(param_1, param_2);
+
+        // 2) materialise the world into the back/depth buffer, then draw our overlay
+        buffer.m_buffer = orig_buffer;
+        buffer.m_size = orig_size;
+        GW::Render::FlushCommandQueue();
+        DrawOverlay(device);
+        drawn_this_frame = true;
+
+        // 3) HUD portion (drawn on top of the overlay)
+        buffer.m_buffer = orig_buffer + boundary;
+        buffer.m_size = orig_size - boundary;
+        FrCacheRenderAll_Ret(param_1, param_2);
+
+        // restore the buffer for GW
+        buffer.m_buffer = orig_buffer;
+        buffer.m_size = orig_size;
+
+        GW::Hook::LeaveHook();
+    }
+
+    void EnsureCompositorHook()
+    {
+        if (compositor_hooked || compositor_failed) return;
+        if (!ScanCompositor()) return;
+        if (GW::Hook::CreateHook(reinterpret_cast<void**>(&FrCacheRenderAll_Func), OnFrCacheRenderAll,
+                                 reinterpret_cast<void**>(&FrCacheRenderAll_Ret)) != 0) {
+            compositor_failed = true;
+            return;
+        }
+        GW::Hook::EnableHooks(FrCacheRenderAll_Func);
+        compositor_hooked = true;
+    }
+
+    // True when the overlay is being drawn by the FrCache compositor (under the UI), so
+    // the 0xf path must NOT also draw it.
+    bool CompositorDrawing()
+    {
+        return render_under_ui && compositor_hooked && !compositor_failed;
+    }
 
     constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
     {
@@ -302,7 +470,7 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
     XMStoreFloat4x4A(
         &mat_proj,
         XMMatrixTranspose(
-            DirectX::XMMatrixPerspectiveFovLH(fov, aspect_ratio, 0.1f, 100000.0f)
+            DirectX::XMMatrixPerspectiveFovLH(fov, aspect_ratio, z_near, z_far)
         )
     );
     if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, reinterpret_cast<const float*>(&mat_proj), 4) != D3D_OK) {
@@ -320,6 +488,22 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         // to the directX device for creating vertex buffers.
         SyncAllMarkers();
     }
+
+    // When occluding, the overlay is drawn by the FrCache compositor (between GW's world
+    // and UI passes) — not here on top. This 0xf path only draws when not occluding, or
+    // when the compositor can't run. (in_compositor_draw means this IS the compositor.)
+    if (!in_compositor_draw) {
+        // This runs once per frame at GW's End Scene, after all FrCache passes — reset the
+        // compositor's per-frame draw guard for the next frame.
+        drawn_this_frame = false;
+        if (render_under_ui) {
+            EnsureCompositorHook();
+            if (CompositorDrawing()) {
+                return;
+            }
+        }
+    }
+
     if (renderables.empty()) {
         // if nothing ticked "Draw On Terrain", don't waste performance
         return;
@@ -330,79 +514,61 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         }
     }
 
-    float old_view_matrix[16];
-    float old_proj_matrix[16];
-    float old_ps_constants[12];
-    device->GetVertexShaderConstantF(0, old_view_matrix, 4);
-    device->GetVertexShaderConstantF(4, old_proj_matrix, 4);
-    device->GetPixelShaderConstantF(0, old_ps_constants, 3);
-
-    IDirect3DVertexShader9* vshader_old = nullptr;
-    IDirect3DPixelShader9* pshader_old = nullptr;
-
-    if (device->GetVertexShader(&vshader_old) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to GetVertexShader, aborting render.");
-    }
-    if (device->GetPixelShader(&pshader_old) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to GetPixelShader, aborting render.");
-    }
-
-    if (vshader == nullptr || device->SetVertexShader(vshader) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to SetVertexShader, aborting render.");
-        return;
-    }
-    if (pshader == nullptr || device->SetPixelShader(pshader) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to SetPixelShader, aborting render.");
-        return;
-    }
-    IDirect3DVertexDeclaration9* old_vertex_declaration = nullptr;
-    if (device->GetVertexDeclaration(&old_vertex_declaration) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to GetVertexShader declaration, aborting render.");
-        return;
-    }
-    if (device->SetVertexDeclaration(vertex_declaration) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to SetVertexShader declaration, aborting render.");
+    // Snapshot all device state up front; restored unconditionally on exit so GW's own
+    // rendering (which continues after this callback) is never corrupted, even on the
+    // error paths below.
+    IDirect3DStateBlock9* state_block = nullptr;
+    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) {
         return;
     }
 
-    // backup original immediate state and transforms:
-    DWORD old_D3DRS_SCISSORTESTENABLE = 0;
-    DWORD old_D3DRS_STENCILENABLE = 0;
-    device->GetRenderState(D3DRS_SCISSORTESTENABLE, &old_D3DRS_SCISSORTESTENABLE);
-    device->GetRenderState(D3DRS_STENCILENABLE, &old_D3DRS_STENCILENABLE);
+    if (device->SetVertexShader(vshader) == D3D_OK
+        && device->SetPixelShader(pshader) == D3D_OK
+        && device->SetVertexDeclaration(vertex_declaration) == D3D_OK
+        && SetD3DTransform(device)) {
 
-    // no scissor test / stencil (used by minimap)
-    device->SetRenderState(D3DRS_SCISSORTESTENABLE, 0u);
-    device->SetRenderState(D3DRS_STENCILENABLE, 0u);
+        // Fully specify the pipeline: at the UI-render hook the ambient state is GW's
+        // (alpha test / cull / fog / colour-write set for UI), which would otherwise
+        // discard our draw. The state block restores all of this on exit.
+        device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+        device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+        device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+        device->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
+        device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+        device->SetRenderState(D3DRS_LIGHTING, FALSE);
+        device->SetRenderState(D3DRS_FOGENABLE, FALSE);
+        device->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+        device->SetRenderState(D3DRS_COLORWRITEENABLE,
+                               D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA);
+        device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+        device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+        device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 
-    if (SetD3DTransform(device)) {
+        if (occlude_behind_terrain) {
+            // test against the scene depth buffer so walls/buildings/terrain occlude the
+            // overlay; never write depth (we must not disturb GW's own depth values).
+            device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
+            device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+            device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
+        }
+        else {
+            device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
+        }
+
         const GW::Camera* cam = GW::CameraMgr::GetCamera();
         // set Pixel Shader constants. they are always expressed as Float4 here:
         // first is the player's position
-
-        constexpr auto pixel_shader_cur_pos_offset = 0u;
-        constexpr auto pixel_shader_max_dist_offset = 1u;
-        constexpr auto pixel_shader_fog_starts_at_offset = 2u;
-
         const float cur_pos_constant[4] = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z, 0.0f};
-        if (device->SetPixelShaderConstantF(pixel_shader_cur_pos_offset, cur_pos_constant, 1) != D3D_OK) {
-            Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#0, aborting render.");
-            return;
-        }
+        device->SetPixelShaderConstantF(0, cur_pos_constant, 1);
 
         // second is the render max distance
         const float max_dist_constant[4] = {render_max_distance, 0.0f, 0.0f, 0.0f};
-        if (device->SetPixelShaderConstantF(pixel_shader_max_dist_offset, max_dist_constant, 1) != D3D_OK) {
-            Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#1, aborting render.");
-            return;
-        }
+        device->SetPixelShaderConstantF(1, max_dist_constant, 1);
 
         // third is the fog constant
         const float fog_starts_at_constant[4] = {render_max_distance - render_max_distance * fog_factor, 0.0f, 0.0f, 0.0f};
-        if (device->SetPixelShaderConstantF(pixel_shader_fog_starts_at_offset, fog_starts_at_constant, 1) != D3D_OK) {
-            Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#2, aborting render.");
-            return;
-        }
+        device->SetPixelShaderConstantF(2, fog_starts_at_constant, 1);
 
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
@@ -414,30 +580,8 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         renderables_mutex.unlock();
     }
 
-    // restore immediate state:
-    device->SetRenderState(D3DRS_SCISSORTESTENABLE, old_D3DRS_SCISSORTESTENABLE);
-    device->SetRenderState(D3DRS_STENCILENABLE, old_D3DRS_STENCILENABLE);
-    device->SetVertexShaderConstantF(0, old_view_matrix, 4);
-    device->SetVertexShaderConstantF(4, old_proj_matrix, 4);
-    device->SetPixelShaderConstantF(0, old_ps_constants, 3);
-    if (device->SetVertexShader(vshader_old) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to reset SetVertexShader.");
-    }
-    if (device->SetPixelShader(pshader_old) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to reset SetPixelShader.");
-    }
-    if (device->SetVertexDeclaration(old_vertex_declaration) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to set old SetVertexShader declaration, aborting render.");
-    }
-    if (old_vertex_declaration) {
-        old_vertex_declaration->Release();
-    }
-    if (vshader_old) {
-        vshader_old->Release();
-    }
-    if (pshader_old) {
-        pshader_old->Release();
-    }
+    state_block->Apply();
+    state_block->Release();
 }
 
 bool GameWorldRenderer::ConfigureProgrammablePipeline(IDirect3DDevice9* device)
@@ -468,12 +612,18 @@ void GameWorldRenderer::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "lerp_steps_per_line", &lerp_steps_per_line);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
+    SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
+    SettingsRegistry::RegisterField(module, "depth_z_near", &z_near);
+    SettingsRegistry::RegisterField(module, "depth_z_far", &z_far);
+    SettingsRegistry::RegisterField(module, "render_under_ui", &render_under_ui);
 }
 
 void GameWorldRenderer::OnSettingsLoaded()
 {
     render_max_distance = std::max(render_max_distance, 10.0f);
     fog_factor = std::clamp(fog_factor, 0.0f, 1.0f);
+    z_near = std::max(z_near, 0.01f);
+    z_far = std::max(z_far, z_near + 1.0f);
     need_sync_markers = true;
 }
 
@@ -481,7 +631,7 @@ void GameWorldRenderer::DrawSettings()
 {
     // draw the settings using ImGui
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
-    ImGui::TextColored(red, "Warning: This is a beta feature and will render over your character, game props, and UI elements.");
+    ImGui::TextColored(red, "Warning: This is a beta feature.");
     ImGui::Text("Note: custom markers are only rendered in-game if the option is enabled for a particular marker (check settings).");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 0.f, 10000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("Maximum distance to render custom markers on the in-game terrain.");
@@ -489,6 +639,21 @@ void GameWorldRenderer::DrawSettings()
     ImGui::ShowHelp("Number of points to interpolate. Affects smoothness of rendering.");
     ImGui::DragFloat("Fog factor", &fog_factor, 0.1f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("Scales from 0.0 (disabled) to 1.0");
+
+    ImGui::Checkbox("Render under game UI", &render_under_ui);
+    ImGui::ShowHelp("Draw overlays beneath the in-game UI (menus, party window, etc.) instead of on top.\n"
+                    "Experimental: hooks GW's UI render pass. Turn off to restore the original on-top drawing.");
+
+    ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
+    ImGui::ShowHelp("Hide overlays behind walls, buildings and terrain using the game's depth buffer.\n"
+                    "If overlays vanish or z-fight badly, disable this or tune the depth values below.");
+    if (occlude_behind_terrain) {
+        ImGui::DragFloat("Projection near plane", &z_near, 0.1f, 1.f, 100.f, "%.1f");
+        ImGui::ShowHelp("Must match the game's near clip for occlusion to be accurate.\n"
+                        "~47 is correct; too low hides visible overlays, too high lets them show through walls.");
+        ImGui::DragFloat("Projection far plane", &z_far, 50.f, 1000.f, 200000.f, "%.0f");
+        ImGui::ShowHelp("Insensitive anywhere from ~50000 to 200000.");
+    }
 }
 
 void GameWorldRenderer::TriggerSyncAllMarkers()
@@ -499,6 +664,10 @@ void GameWorldRenderer::TriggerSyncAllMarkers()
 
 void GameWorldRenderer::Terminate()
 {
+    if (compositor_hooked && FrCacheRenderAll_Func) {
+        GW::Hook::RemoveHook(FrCacheRenderAll_Func);
+        compositor_hooked = false;
+    }
     // free up any vertex buffers
     renderables.clear();
     if (vshader)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 #include <GWCA/GameContainers/GamePos.h>
@@ -36,6 +37,12 @@ namespace Pathing {
         struct DebugEdge { GW::GamePos a; GW::GamePos b; bool wall; };
         void DebugExtractEdges(std::vector<DebugEdge>& out) const;
 
+#ifdef _DEBUG
+        // Ghost-wall audit: true if trapezoids a and b are connected in the built mesh (direct shared
+        // edge or 2-hop via an off-mesh connection). Used to count visgraph links dropped by the mesh.
+        bool AreTrapsConnected(const GW::PathingTrapezoid* a, const GW::PathingTrapezoid* b) const;
+#endif
+
         static bool s_smooth_paths;
 
         static bool s_use_recast_builder;
@@ -64,6 +71,10 @@ namespace Pathing {
 
         struct OffMeshPlanes { uint32_t poly_index; uint16_t plane_a; uint16_t plane_b; };
         std::vector<OffMeshPlanes> m_offmesh_planes; // disabled when either plane is blocked
+
+#ifdef _DEBUG
+        std::unordered_map<const GW::PathingTrapezoid*, uint32_t> m_trap_to_poly; // ghost-wall audit: trapezoid -> poly index
+#endif
 
         BlockedPlaneBitset m_applied_blocked;
         bool               m_applied_valid = false;

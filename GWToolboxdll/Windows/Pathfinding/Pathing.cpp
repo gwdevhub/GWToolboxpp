@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <array>
+#include <map>
+
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -10,6 +13,7 @@
 #include "PathingLog.h"
 #include "PathingMapDataLoader.h"
 #include "NavMesh.h" // viz-only Detour navmesh, co-built for the debug overlay (pathing uses the visgraph)
+#include "PolyanyaMesh.h" // conforming convex navmesh (Polyanya migration phase A); defines Pathing::PortalAdjacency
 
 // Define PATHING_VERBOSE to re-enable per-stage Log::Info chatter
 // (`[AStar:...]`, `Pathing::Impl::Generate*: N ms.`, `[VisGraph]`, `[Portals]`).
@@ -24,6 +28,14 @@
 #endif
 
 namespace {
+    // Polyanya migration phase A: co-build the conforming convex mesh alongside the visgraph. OFF by default —
+    // it's WIP (non-conforming) and must never run in the shipped path; flip on only when developing Polyanya.
+    static bool s_build_polyanya = false;
+
+    // Link same-plane left/right trapezoid seams that GW leaves unportaled. OFF: it's a no-op on the
+    // cross-plane bridge that motivated it (matched 0 seams); kept for a genuine within-plane weave.
+    static bool s_sameplane_lr = false;
+
     __forceinline float Cross(const GW::Vec2f& lhs, const GW::Vec2f& rhs)
     {
         return (lhs.x * rhs.y) - (lhs.y * rhs.x);
@@ -768,10 +780,10 @@ namespace Pathing {
     struct Impl {
         Impl() : m_msd(), m_visGraph(), points(), portals(), pt_portal_map(), portal_pt_map(), portal_portal_map(), tmp_portal_pt_map(), ptneighbours(), m_teleports(), travel_portals(), m_teleportGraph(), m_mapData() {}
 
-        ~Impl() { delete m_navmesh; delete m_navmesh_recast; }
+        ~Impl() { delete m_navmesh; delete m_navmesh_recast; delete m_navmesh_poly; }
 
-        NavMesh* m_navmesh = nullptr;        // hand-built (exact GW trapezoid coords) — drawn by the overlay at correct heights
-        NavMesh* m_navmesh_recast = nullptr; // recast-generated (clean topology, voxel-snapped coords) — recast pathing only
+        NavMesh* m_navmesh = nullptr;        // hand-built Detour mesh — drives the debug overlay (exact GW coords)
+        NavMesh* m_navmesh_recast = nullptr; // recast-generated Detour mesh — used by Recast pathing mode
         MapSpecific::MapSpecificData m_msd;
         std::vector<std::vector<PointVisElement>> m_visGraph;                          // PointId
         std::vector<Point> points;                                                     // PointId
@@ -786,6 +798,10 @@ namespace Pathing {
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
         std::vector<DefferedTeleport> m_defferedPortalLinks;
         volatile bool m_terminateThread = false;
+
+        // Polyanya migration phase A: visgraph adjacency capture, now load-bearing input to PolyanyaMesh::Build.
+        std::vector<PortalAdjacency> m_portal_adjacency;
+        PolyanyaMesh* m_navmesh_poly = nullptr; // conforming convex navmesh, co-built for the future Polyanya query
 
         // Runtime/tmp vars that would otherwise have been static for cca - maybe add mutex?
         std::unordered_map<const GW::PathingTrapezoid*, bool> GetTrapezoidNeighbours_visited;
@@ -937,6 +953,7 @@ namespace Pathing {
             }
             tmp_portal_pt_map[id] = pt1;
             tmp_portal_pt_map[id + 1] = pt2;
+            m_portal_adjacency.push_back({pt1, pt2, pt1_layer, pt2_layer, p1, p2, p1_viability, p2_viability, (uint8_t)edge});
         }
 
         void GetTrapezoidNeighbours(const CopiedPathingMap& m, const GW::PathingTrapezoid* trapezoid, uint8_t trapezoid_layer, std::vector<Neighbour>& neighbours)
@@ -1281,6 +1298,37 @@ namespace Pathing {
                     auto& n = ptneighbours[t];
                     GetTrapezoidNeighbours(m, t, i, n);
                 }
+            }
+
+            // Same-plane left/right adjacency. GW only portals top/bottom within a plane, leaving the slanted
+            // left/right decomposition seams unlinked — so the visgraph can't cross them and detours around
+            // (the bridge zig-zag). Two free trapezoids whose right/left edges coincide share walkable space,
+            // so link them. Additive: GeneratePortals' `visited` matrix dedups, and extra edges only shorten paths.
+            if (s_sameplane_lr) {
+                [[maybe_unused]] int lr_added = 0, lr_traps = 0;
+                for (uint8_t i = 0; i < size; ++i) {
+                    const auto& m = GetMap(i);
+                    std::map<std::array<long, 4>, const GW::PathingTrapezoid*> leftOwner;
+                    for (uint32_t j = 0; j < m.trapezoid_count; ++j) {
+                        const auto* u = &m.trapezoids[j];
+                        if (u->YB == u->YT) continue; // degenerate connector, no real edge
+                        leftOwner[{lroundf(u->XBL), lroundf(u->YB), lroundf(u->XTL), lroundf(u->YT)}] = u;
+                    }
+                    for (uint32_t j = 0; j < m.trapezoid_count; ++j) {
+                        const auto* t = &m.trapezoids[j];
+                        if (t->YB == t->YT) continue;
+                        ++lr_traps;
+                        const auto it = leftOwner.find({lroundf(t->XBR), lroundf(t->YB), lroundf(t->XTR), lroundf(t->YT)});
+                        if (it != leftOwner.end() && it->second != t) {
+                            ptneighbours[t].push_back({it->second, i, Edge::right});
+                            ++lr_added;
+                        }
+                    }
+                }
+#ifdef _DEBUG
+                Log::Log("[sameplane-lr] map %u: added %d exact-1:1 left/right links across %d trapezoids",
+                    m_mapData.map_file_id, lr_added, lr_traps);
+#endif
             }
         }
 
@@ -1938,6 +1986,41 @@ namespace Pathing {
             GenerateTeleportGraph();
             GenerateVisGraph();
 
+#ifdef _DEBUG
+            // Polyanya phase A: validate adjacency capture. The connection count must equal the ghost-wall
+            // audit's `checked` count (both = number of portal pairs) — cross-check the two log lines.
+            {
+                size_t cross = 0, viable = 0;
+                for (const auto& pa : m_portal_adjacency) {
+                    if (pa.layer_a != pa.layer_b) ++cross;
+                    viable += (size_t)pa.a_viable + (size_t)pa.b_viable;
+                }
+                Log::Log("[polyanya] adjacency capture: %zu connections (%zu cross-plane, %zu same-plane), %zu/%zu viable endpoints",
+                    m_portal_adjacency.size(), cross, m_portal_adjacency.size() - cross, viable, m_portal_adjacency.size() * 2);
+            }
+#endif
+
+            if (s_build_polyanya) {
+                try {
+                    if (!m_navmesh_poly) m_navmesh_poly = new PolyanyaMesh();
+                    m_navmesh_poly->Build(m_mapData, m_teleports, m_portal_adjacency);
+                }
+                catch (const std::bad_alloc&) {
+                    PATH_LOG_ERROR("[pathing] polyanya navmesh build OOM; polyanya mesh disabled for this map");
+                }
+#ifdef _DEBUG
+                // The conforming mesh must drop ZERO visgraph connections — this should read 0/N
+                // (vs the [ghostwall] line's 327/271 for the lossy Detour mesh).
+                if (m_navmesh_poly && m_navmesh_poly->IsReady()) {
+                    int ghosts = 0;
+                    for (const auto& pa : m_portal_adjacency)
+                        if (!m_navmesh_poly->AreConnected(pa.trap_a, pa.trap_b)) ++ghosts;
+                    Log::Log("[polyanya] ghost-wall audit: %d/%zu visgraph connections missing from Polyanya mesh",
+                        ghosts, m_portal_adjacency.size());
+                }
+#endif
+            }
+
             try {
                 if (!m_navmesh) m_navmesh = new NavMesh();
                 m_navmesh->Build(m_mapData, m_teleports);
@@ -1945,16 +2028,35 @@ namespace Pathing {
             catch (const std::bad_alloc&) {
                 PATH_LOG_ERROR("[pathing] overlay navmesh build OOM; overlay disabled for this map");
             }
-            if (NavMesh::s_use_recast_builder) {
+            // Recast pathing mode builds the recast-generated mesh (applies on next map build). If absent,
+            // Recast mode falls back to the hand-built m_navmesh, and that to the visgraph.
+            if (g_pathing_mode == PathingMode::Recast) {
                 try {
                     if (!m_navmesh_recast) m_navmesh_recast = new NavMesh();
                     m_navmesh_recast->BuildFromRecast(m_mapData, m_teleports);
                 }
                 catch (const std::bad_alloc&) {
-                    PATH_LOG_ERROR("[pathing] recast pathing navmesh build OOM; recast pathing disabled for this map");
+                    PATH_LOG_ERROR("[pathing] recast mesh build OOM; recast mode falls back for this map");
                 }
             }
-
+#ifdef _DEBUG
+            // Ghost-wall audit: every visgraph portal is a real walkable connection; count how many the
+            // hand-built Detour mesh failed to represent as adjacency. This is the "= 0" gate for the re-tiler.
+            if (m_navmesh && m_navmesh->IsReady()) {
+                int ghosts = 0, checked = 0;
+                for (size_t i = 0; i < portals.size(); ++i) {
+                    const auto& p = portals[i];
+                    if (i >= p.m_other_id) continue; // count each connection once
+                    const GW::PathingTrapezoid* A = p.m_pt;
+                    const GW::PathingTrapezoid* B = portals[p.m_other_id].m_pt;
+                    if (!A || !B) continue;
+                    ++checked;
+                    if (!m_navmesh->AreTrapsConnected(A, B)) ++ghosts;
+                }
+                Log::Log("[ghostwall] map %u: %d/%d visgraph connections missing from Detour mesh (%.1f%%)",
+                    m_mapData.map_file_id, ghosts, checked, checked ? 100.0 * ghosts / checked : 0.0);
+            }
+#endif
             ReleaseBuildScratch();
         }
 
@@ -2156,7 +2258,7 @@ namespace Pathing {
         return cost;
     }
 
-    bool g_use_recast_pathing = false;
+    PathingMode g_pathing_mode = PathingMode::Visgraph;
 
     Error AStar::Search(const GW::GamePos& _start_pos, const GW::GamePos& _goal_pos)
     {
@@ -2194,24 +2296,28 @@ namespace Pathing {
 
         if (res != Error::OK) return res;
 
-        NavMesh* rnav = (mp->m_navmesh_recast && mp->m_navmesh_recast->IsReady()) ? mp->m_navmesh_recast : mp->m_navmesh;
-        if (g_use_recast_pathing && rnav && rnav->IsReady()) {
-            rnav->ApplyBlockedPlanes(current_blocked_planes);
-            std::vector<GW::GamePos> rpts;
-            float rcost = 0.f;
-            const NavMesh::Result r = rnav->FindPath(_start_pos, _goal_pos, rpts, rcost);
-            switch (r) {
-                case NavMesh::Result::OK:
-                case NavMesh::Result::Partial: break;
-                case NavMesh::Result::StartNotFound: return Error::FailedToFindStartPathingTrapezoid;
-                case NavMesh::Result::GoalNotFound:  return Error::FailedToFindGoalPathingTrapezoid;
-                case NavMesh::Result::NoMesh:        return Error::InvalidMapContext;
-                default:                             return Error::FailedToFinializePath;
+        // Recast pathing mode: route on the Detour navmesh (recast-generated if built, else hand-built).
+        // Polyanya mode has no query yet, so it falls through to the visgraph below.
+        if (g_pathing_mode == PathingMode::Recast) {
+            NavMesh* rnav = (mp->m_navmesh_recast && mp->m_navmesh_recast->IsReady()) ? mp->m_navmesh_recast : mp->m_navmesh;
+            if (rnav && rnav->IsReady()) {
+                rnav->ApplyBlockedPlanes(current_blocked_planes);
+                std::vector<GW::GamePos> rpts;
+                float rcost = 0.f;
+                const NavMesh::Result r = rnav->FindPath(_start_pos, _goal_pos, rpts, rcost);
+                switch (r) {
+                    case NavMesh::Result::OK:
+                    case NavMesh::Result::Partial: break;
+                    case NavMesh::Result::StartNotFound: return Error::FailedToFindStartPathingTrapezoid;
+                    case NavMesh::Result::GoalNotFound:  return Error::FailedToFindGoalPathingTrapezoid;
+                    case NavMesh::Result::NoMesh:        return Error::InvalidMapContext;
+                    default:                             return Error::FailedToFinializePath;
+                }
+                for (auto it = rpts.rbegin(); it != rpts.rend(); ++it) m_path.insertPoint(*it);
+                m_path.setCost(rcost);
+                m_path.finalize();
+                return Error::OK;
             }
-            for (auto it = rpts.rbegin(); it != rpts.rend(); ++it) m_path.insertPoint(*it);
-            m_path.setCost(rcost);
-            m_path.finalize();
-            return Error::OK;
         }
 
         auto start_pos = _start_pos;

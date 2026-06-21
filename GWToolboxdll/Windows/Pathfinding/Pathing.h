@@ -29,7 +29,10 @@ namespace Pathing {
 
     class NavMesh; // viz-only Detour mesh exposed for the debug overlay
 
-    extern bool g_use_recast_pathing;
+    // Runtime pathfinder selection. Visgraph (default) = optimal visibility-graph A*; Recast = Detour navmesh
+    // (experimental); Polyanya = new optimal navmesh query (WIP — falls back to visgraph until implemented).
+    enum class PathingMode : uint8_t { Visgraph, Recast, Polyanya };
+    extern PathingMode g_pathing_mode;
 
     class MilePath {
         volatile bool m_processing = false;
@@ -103,7 +106,9 @@ namespace Pathing {
         std::string ExportVisGraph() const;
 
     private:
-        int opaque[512 / sizeof(int)];
+        // Pad sized for the largest (Debug) Impl; guarded by static_assert(sizeof(opaque) >= sizeof(Impl)).
+        // Bumped 512->1024 for the Polyanya-migration Impl members (visgraph adjacency capture + mesh ptr).
+        int opaque[1024 / sizeof(int)];
     };
 
     class AStar {

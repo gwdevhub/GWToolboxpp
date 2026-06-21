@@ -2654,21 +2654,19 @@ static void UpdateNavmeshOverlay()
 
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
-    Pathing::g_use_recast_pathing = settings.use_recast_pathing;
-    Pathing::NavMesh::s_use_recast_builder = settings.use_recast_builder;
+    Pathing::g_pathing_mode = (Pathing::PathingMode)settings.pathing_mode;
     ProcessDeferredRemovals();
     UpdateNavmeshOverlay();
 }
 
 void PathfindingWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Use recast (Detour) pathing", &settings.use_recast_pathing);
-    ImGui::ShowHelp("Off (default): visibility-graph pathfinder.\nOn: recast/Detour navmesh pathfinder (experimental — may misroute around the trapezoid mesh's seams).");
-    ImGui::Checkbox("Recast-generated mesh", &settings.use_recast_builder);
-    ImGui::ShowHelp("Build the recast (Detour) mesh that 'Use recast pathing' navigates on — cleaner topology than the hand-built one. The OVERLAY always draws the hand-built mesh (correct heights), so this doesn't change what's drawn. Applies on next map load / zone.");
+    const char* pathfinders[] = {"Visgraph (default)", "Recast (Detour)", "Polyanya (WIP)"};
+    ImGui::Combo("Pathfinder", &settings.pathing_mode, pathfinders, 3);
+    ImGui::ShowHelp("Visgraph (default): optimal visibility-graph A*.\nRecast (Detour): navmesh pathfinder (experimental; applies on next map load / zone).\nPolyanya (WIP): not implemented yet — falls back to the visgraph.");
     ImGui::Separator();
     ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
-    ImGui::ShowHelp("Draw the hand-built navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included). This is the drawn mesh; pathing may navigate on a different (recast) mesh.");
+    ImGui::ShowHelp("Draw the navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included).");
     if (settings.draw_navmesh_overlay) {
         auto color_edit = [](const char* label, uint32_t* argb) {
             float c[4] = {((*argb >> 16) & 0xFF) / 255.f, ((*argb >> 8) & 0xFF) / 255.f, (*argb & 0xFF) / 255.f, ((*argb >> 24) & 0xFF) / 255.f};
@@ -2689,8 +2687,7 @@ void PathfindingWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxWindow::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
-    Pathing::g_use_recast_pathing = settings.use_recast_pathing;
-    Pathing::NavMesh::s_use_recast_builder = settings.use_recast_builder;
+    Pathing::g_pathing_mode = (Pathing::PathingMode)settings.pathing_mode;
 }
 
 void PathfindingWindow::SaveSettings(SettingsDoc& doc)
