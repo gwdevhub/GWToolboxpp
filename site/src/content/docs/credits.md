@@ -44,12 +44,4 @@ All images in `resources/icons` are from [flaticon.com](https://www.flaticon.com
 
 **[JetBrains](https://github.com/JetBrains)** provides core contributors with [OSS Development Licenses](https://www.jetbrains.com/community/opensource).
 
-<p>
-  <a href="https://termius.com">
-    <img src="/sponsors/termius-logo.svg" alt="Termius Logo" width="200" />
-  </a>
-</p>
-
-**[Termius](https://termius.com/)** provides a secure, reliable, and collaborative SSH client.
-
 [back](./)
