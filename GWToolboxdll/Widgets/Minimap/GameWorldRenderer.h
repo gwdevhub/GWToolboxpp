@@ -92,7 +92,6 @@ public:
     void Terminate() override;
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
     void DrawSettingsInternal() override;
-    void Draw(IDirect3DDevice9* device) override; // per-frame render, only while enabled
 
     // Rendering entry points. State is file-static (single instance), so these stay static
     // and are called directly from the render hooks and from the marker data sources.

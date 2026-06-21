@@ -6,6 +6,7 @@
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
@@ -28,6 +29,8 @@ namespace {
     bool need_sync_markers = true;
     bool need_configure_pipeline = true;
     bool render_under_ui = true;
+    // Stencil the round compass out of overlays so they don't bleed across the minimap.
+    bool exclude_compass = true;
 
     // Depth occlusion: test overlays against the scene depth buffer (still bound at the
     // UI-render hook) so world geometry hides them. z_near/z_far must match GW's own
@@ -200,6 +203,64 @@ namespace {
     bool CompositorDrawing()
     {
         return render_under_ui && compositor_hooked && !compositor_failed;
+    }
+
+    // Screen-space circle of GW's compass *terrain* (inside the decorative frame), or false
+    // when the compass isn't shown. Mirrors Minimap's RepositionMinimapToCompass: inset the
+    // frame by compass_padding, square it off, and take the inscribed circle.
+    bool GetCompassTerrainCircle(float& cx, float& cy, float& radius)
+    {
+        const auto* frame = GW::UI::GetFrameByLabel(L"Compass");
+        if (!frame || !frame->IsCreated() || !frame->IsVisible()) {
+            return false;
+        }
+        constexpr float compass_padding = 1.05f;
+        auto top_left = frame->position.GetTopLeftOnScreen(frame);
+        auto bottom_right = frame->position.GetBottomRightOnScreen(frame);
+        const float height = bottom_right.y - top_left.y;
+        if (height <= 0.f) {
+            return false;
+        }
+        const float diff = height - height / compass_padding;
+        top_left.y += diff;
+        top_left.x += diff;
+        bottom_right.x -= diff;
+        bottom_right.y = top_left.y + (bottom_right.x - top_left.x);
+        cx = 0.5f * (top_left.x + bottom_right.x);
+        cy = 0.5f * (top_left.y + bottom_right.y);
+        radius = 0.5f * (bottom_right.x - top_left.x);
+        return radius > 0.f;
+    }
+
+    // Stamp (set) or clear a dedicated stencil bit in the shape of GW's round compass terrain,
+    // so the overlay can be punched out to match the circular minimap. Uses a fixed-function
+    // screen-space disc; touches only `bit` of the shared depth-stencil so GW's own values
+    // survive. Leaves the programmable pipeline unset — the caller restores it for the overlay.
+    void MarkCompassStencil(IDirect3DDevice9* device, const float cx, const float cy, const float radius, const DWORD bit, const bool set)
+    {
+        struct ScreenVertex { float x, y, z, rhw; };
+        constexpr unsigned segments = 64;
+        ScreenVertex fan[segments + 2];
+        fan[0] = {cx, cy, 0.f, 1.f};
+        for (unsigned i = 0; i <= segments; i++) {
+            const float a = static_cast<float>(i) / static_cast<float>(segments) * DirectX::XM_2PI;
+            fan[i + 1] = {cx + radius * std::cos(a), cy + radius * std::sin(a), 0.f, 1.f};
+        }
+
+        device->SetVertexShader(nullptr);
+        device->SetPixelShader(nullptr);
+        device->SetFVF(D3DFVF_XYZRHW);
+        device->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
+        device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
+        device->SetRenderState(D3DRS_STENCILENABLE, TRUE);
+        device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
+        device->SetRenderState(D3DRS_STENCILWRITEMASK, bit);
+        device->SetRenderState(D3DRS_STENCILREF, set ? bit : 0);
+        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+        device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_REPLACE);
+        device->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_REPLACE);
+        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+        device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, segments, fan, sizeof(ScreenVertex));
     }
 
     constexpr GW::Vec2f lerp(const GW::Vec2f& a, const GW::Vec2f& b, const float t)
@@ -579,10 +640,48 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
 
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
-        for (auto& renderable : renderables) {
-            if (renderable.map_id == map_id) {
-                renderable.Draw(device);
+
+        auto draw_renderables = [&] {
+            for (auto& renderable : renderables) {
+                if (renderable.map_id == map_id) {
+                    renderable.Draw(device);
+                }
             }
+        };
+
+        // GW draws the compass terrain disc in the world pass but its round frame in a later
+        // HUD pass, so the overlay lands between the two and bleeds across the minimap. Punch
+        // the compass terrain out of the overlay with a stencil disc matching that circle.
+        float compass_cx, compass_cy, compass_radius;
+        if (exclude_compass && GetCompassTerrainCircle(compass_cx, compass_cy, compass_radius)) {
+            constexpr DWORD compass_stencil_bit = 0x80;
+            MarkCompassStencil(device, compass_cx, compass_cy, compass_radius, compass_stencil_bit, true);
+
+            // restore the programmable pipeline + render state the mark pass changed
+            device->SetVertexShader(vshader);
+            device->SetPixelShader(pshader);
+            device->SetVertexDeclaration(vertex_declaration);
+            device->SetRenderState(D3DRS_COLORWRITEENABLE,
+                                   D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA);
+            device->SetRenderState(D3DRS_ZENABLE, occlude_behind_terrain ? D3DZB_TRUE : D3DZB_FALSE);
+
+            // draw the overlay only where our bit is clear, i.e. outside the compass disc
+            device->SetRenderState(D3DRS_STENCILENABLE, TRUE);
+            device->SetRenderState(D3DRS_STENCILMASK, compass_stencil_bit);
+            device->SetRenderState(D3DRS_STENCILREF, 0);
+            device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
+            device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);
+            device->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_KEEP);
+            device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
+
+            draw_renderables();
+
+            // clear our bit back so GW's shared stencil is left exactly as we found it
+            MarkCompassStencil(device, compass_cx, compass_cy, compass_radius, compass_stencil_bit, false);
+            device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+        }
+        else {
+            draw_renderables();
         }
         renderables_mutex.unlock();
     }
@@ -623,6 +722,7 @@ void GameWorldRenderer::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "depth_z_near", &z_near);
     SettingsRegistry::RegisterField(module, "depth_z_far", &z_far);
     SettingsRegistry::RegisterField(module, "render_under_ui", &render_under_ui);
+    SettingsRegistry::RegisterField(module, "exclude_compass", &exclude_compass);
 }
 
 void GameWorldRenderer::OnSettingsLoaded()
@@ -658,6 +758,11 @@ void GameWorldRenderer::DrawSettings()
         else
             ImGui::TextDisabled("  under-UI hook: not installed yet.");
     }
+
+    ImGui::Checkbox("Keep clear of the compass", &exclude_compass);
+    ImGui::ShowHelp("Don't draw in-world overlays over the in-game compass/minimap.\n"
+                    "GW renders the compass terrain and its frame in separate passes, so overlays "
+                    "would otherwise bleed across the inside of the minimap.");
 
     ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
     ImGui::ShowHelp("Hide overlays behind walls, buildings and terrain using the game's depth buffer.\n"
@@ -860,16 +965,6 @@ void GameWorldRenderer::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 void GameWorldRenderer::DrawSettingsInternal()
 {
     DrawSettings();
-}
-
-void GameWorldRenderer::Draw(IDirect3DDevice9* device)
-{
-    // Called once per frame by the toolbox module loop, only while this module is enabled.
-    // Drives the per-frame render (which installs/uses the FrCache under-UI compositor).
-    if (GW::UI::GetIsWorldMapShowing()) {
-        return;
-    }
-    Render(device);
 }
 
 void GameWorldRenderer::SignalTerminate()

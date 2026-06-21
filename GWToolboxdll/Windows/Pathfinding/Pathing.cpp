@@ -1495,6 +1495,39 @@ namespace Pathing {
             }
         }
 
+        // Seed the visibility DFS from every portal of the point's adjacent trapezoid(s), at checkpoint 0 with
+        // an empty blocked set — identical to how ComputeVisibleEdges seeds a query point. The older
+        // process_point seeding (per-portal neighbours) under-explored some cross-plane points, leaving their
+        // precomputed VG rows far sparser than live visibility from the same apex (the bridge-end zigzag: a z4
+        // node saw 4 VG edges vs 34 live). Seeding the whole trapezoid at a single checkpoint matches the live
+        // query and captures the full set. Empty seed bp (no source layer) also matches ComputeVisibleEdges.
+        void SeedVisibilityFromPoint(node* open, size_t& sp, BlockedPlanesPool& bp_pool, const Point& point)
+        {
+            const Point* const P = points.data();
+            const Portal* const PT = portals.data();
+            const uint16_t initial_bp = bp_pool.alloc_empty();
+            const auto seed_trap = [&](const GW::PathingTrapezoid* trap) {
+                if (!trap || trap->id >= pt_portal_map.size()) return;
+                const auto& seed = pt_portal_map[trap->id];
+                const Portal::id* sd = seed.data();
+                const size_t sn = seed.size();
+                for (size_t k = 0; k < sn; ++k) {
+                    const auto pid = sd[k];
+                    if (sp >= OPEN_CAPACITY) return;
+                    node& n = open[sp++];
+                    n.next = pid;
+                    n.visited_checkpoint = 0;
+                    n.blocked_idx = initial_bp;
+                    n.funnel[0] = P[PT[pid].m_point[0]].m_pos;
+                    n.funnel[1] = P[PT[pid].m_point[1]].m_pos;
+                }
+            };
+            const GW::PathingTrapezoid* trap0 = (point.m_portals[0] < portal_pt_map.size()) ? portal_pt_map[point.m_portals[0]] : nullptr;
+            const GW::PathingTrapezoid* trap1 = (point.m_portals[1] < portal_pt_map.size()) ? portal_pt_map[point.m_portals[1]] : nullptr;
+            seed_trap(trap0);
+            if (trap1 != trap0) seed_trap(trap1);
+        }
+
         Point& createSinglePointPortal(const GW::PathingTrapezoid* pt, const GW::GamePos& gp)
         {
             auto point_id = static_cast<PointId>(points.size());
@@ -1778,13 +1811,14 @@ namespace Pathing {
 #endif
 
                 vis_points.reset();
+                vis_points.test_and_set(point.m_id); // suppress self-edges (point sits on its own portals)
                 bp_pool.reset();
 
                 sp = 0;
                 visited.stack_size = 0;
                 visited.stamp++;
 
-                process_point(open, sp, visited, bp_pool, point);
+                SeedVisibilityFromPoint(open, sp, bp_pool, point);
 
                 int cnt = 20000;
                 const auto& p = point;
@@ -2443,6 +2477,14 @@ namespace Pathing {
         auto* const VG = mp->m_visGraph.data();
         const Point* const PTS = mp->points.data();
         PointId current = 0;
+#ifdef _DEBUG
+        // [bridge] root-cause probe. has_blocked=0 => blocked-planes filtering is a no-op this query, so any
+        // missing cross-plane route is an ABSENT precomputed VG edge (cause #1), not a rejected one (cause #2).
+        Log::Log("[bp] has_blocked=%d count=%zu", (int)has_blocked, current_blocked_planes.count());
+        int dbg_vgdumps = 0;
+        std::vector<PointVisElement> dbg_live_edges;
+        std::vector<char> dbg_in_vg, dbg_seen;
+#endif
 #ifdef DEBUG_PATHING
         int dbg_nodes_expanded = 0;
         int dbg_edges_examined = 0;
@@ -2471,6 +2513,66 @@ namespace Pathing {
             const auto& primary_edges = (current == START_ID) ? sb.start_edges : VG[current];
             const PointVisElement* edges = primary_edges.data();
             const size_t edge_count = primary_edges.size();
+#ifdef _DEBUG
+            // For each bridge/deck node (plane >= 4) the search expands, dump its precomputed VG row and then
+            // recompute visibility LIVE from the same point. A z6 target that the live pass finds but is absent
+            // from the VG row (in_VG=0) pins the bug to a build-time gap and isolates which mechanism drops it.
+            if (current < n_real && dbg_vgdumps < 16) {
+                const Point& cpt = PTS[current];
+                const auto& cp0 = mp->portals[cpt.m_portals[0]];
+                const auto& cp1 = mp->portals[cpt.m_portals[1]];
+                const uint32_t cz = std::max(cp0.m_pt_layer, cp1.m_pt_layer);
+                if (cz >= 4) {
+                    ++dbg_vgdumps;
+                    auto bits = [](const BlockedPlaneBitset& b) {
+                        std::string s;
+                        for (size_t i = 0; i < b.size(); ++i) if (b.test(i)) { s += std::to_string(i); s += ' '; }
+                        return s;
+                    };
+                    Log::Log("[vgdump] node id=%u (%.0f,%.0f,z%u) viable=%d vg_edges=%zu",
+                        (unsigned)current, cpt.m_pos.x, cpt.m_pos.y, cz, (int)cpt.is_viable, edge_count);
+                    for (size_t d = 0; d < edge_count; ++d) {
+                        const auto& v = edges[d];
+                        const bool hit = has_blocked && (v.blocked_planes & current_blocked_planes).any();
+                        if (v.point_id >= n_real) {
+                            Log::Log("[vgdump]   -> GOAL bp=[%s] hit=%d", bits(v.blocked_planes).c_str(), (int)hit);
+                            continue;
+                        }
+                        const Point& tp = PTS[v.point_id];
+                        const uint32_t tz = std::max(mp->portals[tp.m_portals[0]].m_pt_layer, mp->portals[tp.m_portals[1]].m_pt_layer);
+                        Log::Log("[vgdump]   -> id=%u (%.0f,%.0f,z%u) viable=%d bp=[%s] hit=%d",
+                            (unsigned)v.point_id, tp.m_pos.x, tp.m_pos.y, tz, (int)tp.is_viable, bits(v.blocked_planes).c_str(), (int)hit);
+                    }
+                    // Live recompute from this node (start-style seeding from the whole trapezoid) vs the VG row.
+                    const GW::PathingTrapezoid* ftrap = (cp0.m_pt_layer >= cp1.m_pt_layer) ? cp0.m_pt : cp1.m_pt;
+                    GW::GamePos fpos{cpt.m_pos.x, cpt.m_pos.y, cz};
+                    mp->ComputeVisibleEdges(sb.insert_open, sb.insert_visited, sb.insert_bp_pool,
+                                            fpos, ftrap, dbg_live_edges, nullptr, nullptr, 0);
+                    // Dedup live targets and compare against the precomputed VG row: live_unique vs vg vs
+                    // missing decides whether the build is under-connected (missing>>0) or correct (missing~0).
+                    dbg_in_vg.assign(n_real, 0);
+                    for (size_t d = 0; d < edge_count; ++d)
+                        if (edges[d].point_id < n_real) dbg_in_vg[edges[d].point_id] = 1;
+                    dbg_seen.assign(n_real, 0);
+                    int live_unique = 0, missing = 0, missing_logged = 0;
+                    for (const auto& v : dbg_live_edges) {
+                        if (v.point_id >= n_real || v.point_id == current || dbg_seen[v.point_id]) continue;
+                        dbg_seen[v.point_id] = 1;
+                        ++live_unique;
+                        if (dbg_in_vg[v.point_id]) continue;
+                        ++missing;
+                        if (missing_logged < 24) {
+                            ++missing_logged;
+                            const Point& tp = PTS[v.point_id];
+                            const uint32_t tz = std::max(mp->portals[tp.m_portals[0]].m_pt_layer, mp->portals[tp.m_portals[1]].m_pt_layer);
+                            Log::Log("[vgmiss]   id=%u (%.0f,%.0f,z%u) viable=%d", (unsigned)v.point_id, tp.m_pos.x, tp.m_pos.y, tz, (int)tp.is_viable);
+                        }
+                    }
+                    Log::Log("[vglive] node id=%u live_edges=%zu live_unique=%d vg=%u missing=%d",
+                        (unsigned)current, dbg_live_edges.size(), live_unique, (unsigned)edge_count, missing);
+                }
+            }
+#endif
             for (size_t ei = 0; ei < edge_count; ++ei) {
                 const auto& vis = edges[ei];
 #ifdef DEBUG_PATHING

@@ -1138,8 +1138,11 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
-    // In-world overlays render from the GameWorldRenderer module's own Draw() (in the
-    // module draw loop below) — gated by the module's enabled state, no special call here.
+    // Draw the in-world overlays BEFORE the minimap and the rest of the toolbox UI, so
+    // that UI composites on top of them. Gated on the module's real enabled state.
+    if (!world_map_showing && GW::UI::GetIsUIDrawn() && GWToolbox::IsModuleEnabled(&GameWorldRenderer::Instance())) {
+        GameWorldRenderer::Render(device);
+    }
 
     ImGui::NewFrame();
 
