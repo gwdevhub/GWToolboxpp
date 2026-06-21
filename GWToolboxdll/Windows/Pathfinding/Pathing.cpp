@@ -1505,14 +1505,12 @@ namespace Pathing {
         // between two trapezoids) this seeds BOTH adjacent traps, a strict superset of the single-trap live
         // query. The older process_point seeding (per-portal neighbours, mixed checkpoints) under-explored some
         // cross-plane points, leaving their precomputed VG rows far sparser than live visibility from the same
-        // apex (the bridge-end zigzag: a z4 node had 4 VG edges vs 34 live). Returns true if seeding hit
-        // OPEN_CAPACITY (truncated frontier — caller should flag it; a truncated seed re-sparsifies the row).
-        bool SeedVisibilityFromPoint(node* open, size_t& sp, BlockedPlanesPool& bp_pool, const Point& point)
+        // apex (the bridge-end zigzag: a z4 node had 4 VG edges vs 34 live).
+        void SeedVisibilityFromPoint(node* open, size_t& sp, BlockedPlanesPool& bp_pool, const Point& point)
         {
             const Point* const P = points.data();
             const Portal* const PT = portals.data();
             const uint16_t initial_bp = bp_pool.alloc_empty();
-            bool overflow = false;
             const auto seed_trap = [&](const GW::PathingTrapezoid* trap) {
                 if (!trap || trap->id >= pt_portal_map.size()) return;
                 const auto& seed = pt_portal_map[trap->id];
@@ -1520,7 +1518,7 @@ namespace Pathing {
                 const size_t sn = seed.size();
                 for (size_t k = 0; k < sn; ++k) {
                     const auto pid = sd[k];
-                    if (sp >= OPEN_CAPACITY) { overflow = true; return; }
+                    if (sp >= OPEN_CAPACITY) return;
                     node& n = open[sp++];
                     n.next = pid;
                     n.visited_checkpoint = 0;
@@ -1533,7 +1531,6 @@ namespace Pathing {
             const GW::PathingTrapezoid* trap1 = (point.m_portals[1] < portal_pt_map.size()) ? portal_pt_map[point.m_portals[1]] : nullptr;
             seed_trap(trap0);
             if (trap1 != trap0) seed_trap(trap1);
-            return overflow;
         }
 
         Point& createSinglePointPortal(const GW::PathingTrapezoid* pt, const GW::GamePos& gp)
@@ -1689,13 +1686,6 @@ namespace Pathing {
                     child.visited_checkpoint = static_cast<uint32_t>(cp);
                 }
             }
-#ifdef _DEBUG
-            // Query-time truncation probe: if the per-query visibility DFS runs out of step budget with
-            // frontier remaining, start/goal edges are incomplete and the route can detour from this spot.
-            if (sp != 0)
-                Log::Log("[vistrunc] ComputeVisibleEdges step-cap from (%.0f,%.0f,z%d) edges=%zu",
-                    from_pos.x, from_pos.y, (int)from_pos.zplane, out_edges.size());
-#endif
         }
 
         void VisGraphInsertPoint(node* open, VisitedState& visited, BlockedPlanesPool& bp_pool, const Point& point)
@@ -1793,12 +1783,6 @@ namespace Pathing {
             int max_dfs_depth = 0;
             int edges_found = 0;
             int funnel_culled = 0;
-            // Cap-hit counters (always compiled): a nonzero value means a per-source DFS was truncated by the
-            // OPEN_CAPACITY frontier or the cnt step budget, which can write a one-directional VG row. The
-            // trapezoid seed explores ~8x more than the old per-portal seed, so these must be confirmed zero.
-            int seed_overflow = 0;  // SeedVisibilityFromPoint hit OPEN_CAPACITY while seeding
-            int open_overflow = 0;  // child push hit OPEN_CAPACITY (neighbours dropped)
-            int cnt_exhausted = 0;  // per-source DFS ran out of step budget with work remaining
         };
 
         void VisGraphWorker(int begin, int end, [[maybe_unused]] VisGraphThreadStats& stats)
@@ -1846,7 +1830,7 @@ namespace Pathing {
                 visited.stamp++;
                 ++exp_cur; // new expansion-cap generation for this source
 
-                if (SeedVisibilityFromPoint(open, sp, bp_pool, point)) stats.seed_overflow++;
+                SeedVisibilityFromPoint(open, sp, bp_pool, point);
 
                 int cnt = PATHING_COUNT;
                 const auto& p = point;
@@ -1930,7 +1914,7 @@ namespace Pathing {
                         const auto pid = npd[k];
                         if (visited.is_visited(pid)) continue;
 
-                        if (sp >= OPEN_CAPACITY) { stats.open_overflow++; break; }
+                        if (sp >= OPEN_CAPACITY) break;
 
                         node& child = open[sp++];
                         child.funnel[0] = funnel[0];
@@ -1945,7 +1929,6 @@ namespace Pathing {
                         stats.max_dfs_depth = static_cast<int>(sp);
 #endif
                 }
-                if (sp != 0) stats.cnt_exhausted++; // DFS stopped on the step budget with frontier remaining
             }
             delete[] open;
         }
@@ -1972,10 +1955,6 @@ namespace Pathing {
                 VisGraphThreadStats stats;
                 VisGraphWorker(0, size, stats);
 
-#ifdef _DEBUG
-                Log::Log("[vgbuild] cap hits: seed_overflow=%d open_overflow=%d cnt_exhausted=%d (1 thread)",
-                    stats.seed_overflow, stats.open_overflow, stats.cnt_exhausted);
-#endif
 #ifdef DEBUG_PATHING
                 uint32_t total = 0;
                 for (const auto& v : m_visGraph)
@@ -2001,14 +1980,6 @@ namespace Pathing {
                 for (auto& t : threads)
                     t.join();
 
-#ifdef _DEBUG
-                {
-                    int so = 0, oo = 0, ce = 0;
-                    for (const auto& s : thread_stats) { so += s.seed_overflow; oo += s.open_overflow; ce += s.cnt_exhausted; }
-                    Log::Log("[vgbuild] cap hits: seed_overflow=%d open_overflow=%d cnt_exhausted=%d (%d threads)",
-                        so, oo, ce, (int)threads.size());
-                }
-#endif
 #ifdef DEBUG_PATHING
                 VisGraphThreadStats merged;
                 for (const auto& s : thread_stats) {
@@ -2039,7 +2010,6 @@ namespace Pathing {
                 const size_t vg_n = m_visGraph.size();
                 std::vector<uint32_t> orig_sizes(vg_n);
                 for (size_t i = 0; i < vg_n; ++i) orig_sizes[i] = static_cast<uint32_t>(m_visGraph[i].size());
-                [[maybe_unused]] int added = 0;
                 for (size_t a = 0; a < vg_n; ++a) {
                     const uint32_t na = orig_sizes[a];
                     for (uint32_t e = 0; e < na; ++e) {
@@ -2051,12 +2021,9 @@ namespace Pathing {
                         bool has = false;
                         for (size_t k = 0; k < vb.size(); ++k)
                             if (vb[k].point_id == a) { has = true; break; }
-                        if (!has) { vb.emplace_back(dist, bp, static_cast<PointId>(a)); ++added; }
+                        if (!has) vb.emplace_back(dist, bp, static_cast<PointId>(a));
                     }
                 }
-#ifdef _DEBUG
-                Log::Log("[vgsym] symmetrized: added %d reverse edges", added);
-#endif
             }
 
             // could not link portals earlier because vis graph is cleared at the beginning of this function.
@@ -2480,13 +2447,6 @@ namespace Pathing {
         auto spt = FindClosestPositionOnTrapezoid(start_pos, &mp->m_mapData);
         auto gpt = FindClosestPositionOnTrapezoid(goal_pos, &mp->m_mapData);
         t_trap = clk::now();
-#ifdef _DEBUG
-        // Bridge non-determinism probe: the start plane (the player's incoming zplane, and what it snaps to)
-        // is shared by all 3 modes. If it flips between bridge and ground across sessions, that's the cause.
-        Log::Log("[bridge] start z%d->z%d (%.0f,%.0f)  goal z%d->z%d (%.0f,%.0f)",
-            (int)_start_pos.zplane, (int)start_pos.zplane, start_pos.x, start_pos.y,
-            (int)_goal_pos.zplane, (int)goal_pos.zplane, goal_pos.x, goal_pos.y);
-#endif
         if (!spt) return Error::FailedToFindStartPathingTrapezoid;
         if (!gpt) return Error::FailedToFindGoalPathingTrapezoid;
 
@@ -2559,14 +2519,6 @@ namespace Pathing {
         auto* const VG = mp->m_visGraph.data();
         const Point* const PTS = mp->points.data();
         PointId current = 0;
-#ifdef _DEBUG
-        // [bridge] root-cause probe. has_blocked=0 => blocked-planes filtering is a no-op this query, so any
-        // missing cross-plane route is an ABSENT precomputed VG edge (cause #1), not a rejected one (cause #2).
-        Log::Log("[bp] has_blocked=%d count=%zu", (int)has_blocked, current_blocked_planes.count());
-        int dbg_vgdumps = 0;
-        std::vector<PointVisElement> dbg_live_edges;
-        std::vector<char> dbg_in_vg, dbg_seen;
-#endif
 #ifdef DEBUG_PATHING
         int dbg_nodes_expanded = 0;
         int dbg_edges_examined = 0;
@@ -2595,66 +2547,6 @@ namespace Pathing {
             const auto& primary_edges = (current == START_ID) ? sb.start_edges : VG[current];
             const PointVisElement* edges = primary_edges.data();
             const size_t edge_count = primary_edges.size();
-#ifdef _DEBUG
-            // For each bridge/deck node (plane >= 4) the search expands, dump its precomputed VG row and then
-            // recompute visibility LIVE from the same point. A z6 target that the live pass finds but is absent
-            // from the VG row (in_VG=0) pins the bug to a build-time gap and isolates which mechanism drops it.
-            if (current < n_real && dbg_vgdumps < 0) { // per-node VG dump disabled (connectivity confirmed); flip <0 to <16 to re-enable
-                const Point& cpt = PTS[current];
-                const auto& cp0 = mp->portals[cpt.m_portals[0]];
-                const auto& cp1 = mp->portals[cpt.m_portals[1]];
-                const uint32_t cz = std::max(cp0.m_pt_layer, cp1.m_pt_layer);
-                if (cz >= 4) {
-                    ++dbg_vgdumps;
-                    auto bits = [](const BlockedPlaneBitset& b) {
-                        std::string s;
-                        for (size_t i = 0; i < b.size(); ++i) if (b.test(i)) { s += std::to_string(i); s += ' '; }
-                        return s;
-                    };
-                    Log::Log("[vgdump] node id=%u (%.0f,%.0f,z%u) viable=%d vg_edges=%zu",
-                        (unsigned)current, cpt.m_pos.x, cpt.m_pos.y, cz, (int)cpt.is_viable, edge_count);
-                    for (size_t d = 0; d < edge_count; ++d) {
-                        const auto& v = edges[d];
-                        const bool hit = has_blocked && (v.blocked_planes & current_blocked_planes).any();
-                        if (v.point_id >= n_real) {
-                            Log::Log("[vgdump]   -> GOAL bp=[%s] hit=%d", bits(v.blocked_planes).c_str(), (int)hit);
-                            continue;
-                        }
-                        const Point& tp = PTS[v.point_id];
-                        const uint32_t tz = std::max(mp->portals[tp.m_portals[0]].m_pt_layer, mp->portals[tp.m_portals[1]].m_pt_layer);
-                        Log::Log("[vgdump]   -> id=%u (%.0f,%.0f,z%u) viable=%d bp=[%s] hit=%d",
-                            (unsigned)v.point_id, tp.m_pos.x, tp.m_pos.y, tz, (int)tp.is_viable, bits(v.blocked_planes).c_str(), (int)hit);
-                    }
-                    // Live recompute from this node (start-style seeding from the whole trapezoid) vs the VG row.
-                    const GW::PathingTrapezoid* ftrap = (cp0.m_pt_layer >= cp1.m_pt_layer) ? cp0.m_pt : cp1.m_pt;
-                    GW::GamePos fpos{cpt.m_pos.x, cpt.m_pos.y, cz};
-                    mp->ComputeVisibleEdges(sb.insert_open, sb.insert_visited, sb.insert_bp_pool,
-                                            fpos, ftrap, dbg_live_edges, nullptr, nullptr, 0);
-                    // Dedup live targets and compare against the precomputed VG row: live_unique vs vg vs
-                    // missing decides whether the build is under-connected (missing>>0) or correct (missing~0).
-                    dbg_in_vg.assign(n_real, 0);
-                    for (size_t d = 0; d < edge_count; ++d)
-                        if (edges[d].point_id < n_real) dbg_in_vg[edges[d].point_id] = 1;
-                    dbg_seen.assign(n_real, 0);
-                    int live_unique = 0, missing = 0, missing_logged = 0;
-                    for (const auto& v : dbg_live_edges) {
-                        if (v.point_id >= n_real || v.point_id == current || dbg_seen[v.point_id]) continue;
-                        dbg_seen[v.point_id] = 1;
-                        ++live_unique;
-                        if (dbg_in_vg[v.point_id]) continue;
-                        ++missing;
-                        if (missing_logged < 24) {
-                            ++missing_logged;
-                            const Point& tp = PTS[v.point_id];
-                            const uint32_t tz = std::max(mp->portals[tp.m_portals[0]].m_pt_layer, mp->portals[tp.m_portals[1]].m_pt_layer);
-                            Log::Log("[vgmiss]   id=%u (%.0f,%.0f,z%u) viable=%d", (unsigned)v.point_id, tp.m_pos.x, tp.m_pos.y, tz, (int)tp.is_viable);
-                        }
-                    }
-                    Log::Log("[vglive] node id=%u live_edges=%zu live_unique=%d vg=%u missing=%d",
-                        (unsigned)current, dbg_live_edges.size(), live_unique, (unsigned)edge_count, missing);
-                }
-            }
-#endif
             for (size_t ei = 0; ei < edge_count; ++ei) {
                 const auto& vis = edges[ei];
 #ifdef DEBUG_PATHING
@@ -2720,22 +2612,6 @@ namespace Pathing {
                 m_path.finalize();
             }
         }
-
-#ifdef _DEBUG
-        // Dump the COMPUTED waypoints only for cross-plane (bridge/stairs) paths. Compare a good vs broken
-        // session: identical waypoints => computation is fine and the problem is rendering; differing => compute.
-        if (m_path.ready()) {
-            const auto& pts = m_path.points();
-            bool cross = false;
-            for (size_t i = 1; i < pts.size(); ++i) if (pts[i].zplane != pts[0].zplane) { cross = true; break; }
-            if (cross) {
-                std::string s;
-                for (size_t i = 0; i < pts.size() && i < 24; ++i)
-                    s += "(" + std::to_string((int)pts[i].x) + "," + std::to_string((int)pts[i].y) + ",z" + std::to_string(pts[i].zplane) + ") ";
-                Log::Log("[bridgepath] %zu pts: %s", pts.size(), s.c_str());
-            }
-        }
-#endif
 
 #ifdef DEBUG_PATHING
         PATH_LOG_INFO("[AStar] %s s=(%.0f,%.0f,z%d)t%d e%zu g=(%.0f,%.0f,z%d)t%d e%zu cost=%.0f pts=%d expanded=%d",

@@ -2654,6 +2654,8 @@ static void UpdateNavmeshOverlay()
 
 bool PathfindingWindow::draw_recast_comparison = true;
 
+float PathfindingWindow::GetPathRecalcDistance() { return settings.path_recalc_distance; }
+
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
     Pathing::g_pathing_mode = (Pathing::PathingMode)settings.pathing_mode;
@@ -2683,6 +2685,8 @@ void PathfindingWindow::DrawSettingsInternal()
     ImGui::ShowHelp("Visgraph (default): optimal visibility-graph A*.\nRecast (Detour): navmesh pathfinder (experimental; applies on next map load / zone).\nPolyanya (WIP): not implemented yet — falls back to the visgraph.");
     ImGui::Checkbox("Compare Recast (blue)", &draw_recast_comparison);
     ImGui::ShowHelp("Also draw the Recast route in blue alongside the active quest path, for visual comparison. Doubles path computation on each recompute.");
+    ImGui::DragFloat("Path recalc distance", &settings.path_recalc_distance, 1.f, 1.f, 1000.f, "%.0f");
+    ImGui::ShowHelp("How far you must move (game units / gwinches) before the rendered quest path recomputes. Lower = more responsive but heavier; the recompute is also rate-capped to ~30/s.");
     ImGui::Separator();
     ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
     ImGui::ShowHelp("Draw the navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included).");

@@ -106,8 +106,8 @@ namespace {
         CalculatedQuestPath& operator=(CalculatedQuestPath&&) = delete;
 
         std::vector<CustomRenderer::CustomLine*> minimap_lines{};
-        GW::Vec2f calculated_from{};
-        GW::Vec2f calculated_to{}; // world-map coords
+        GW::Vec2f calculated_from{}; // GAME-coord XY anchor of the last recalc (fine-grained move detection)
+        GW::Vec2f calculated_to{};   // world-map coords (goal)
         clock_t calculated_at = 0;
         clock_t route_failed_at = 0; // last failed compute; backs off retries of an unroutable marker
         GW::Constants::QuestID quest_id{};
@@ -328,12 +328,13 @@ namespace {
             }
             GW::Vec2f from_world{};
             WorldMapWidget::GamePosToWorldMap(from, from_world);
+            const GW::Vec2f from_game{from.x, from.y};
 
-            if (calculated_from == from_world && calculated_to == goal_world) return;
+            if (calculated_from == from_game && calculated_to == goal_world) return;
 
             calculating = TIMER_INIT();
             const bool goal_changed = calculated_to != goal_world;
-            calculated_from = from_world; // anchor Update's move threshold here
+            calculated_from = from_game; // game-coord anchor for Update's fine-grained move threshold
             calculated_to = goal_world;
             const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world);
             if (!same_map && goal_changed) {
@@ -381,10 +382,13 @@ namespace {
             // re-logging) every tick. A goal/map change re-plots via RefreshQuestPath.
             constexpr clock_t failed_route_backoff = 10000;
             if (route_failed_at && TIMER_DIFF(route_failed_at) < failed_route_backoff) return false;
-            GW::Vec2f from_world{};
-            WorldMapWidget::GamePosToWorldMap(from, from_world);
-            constexpr float recalculate_when_moved_further_than = 1.f;
-            if (GetSquareDistance(from_world, calculated_from) > recalculate_when_moved_further_than) Recalculate(from);
+            // Recalc once the player has moved the configured distance (Pathfinder setting "Path recalc
+            // distance") from the last recalc, still rate-capped by the 33ms throttle above. calculated_from is
+            // the game-coord anchor; Recalculate() no-ops if the anchor/goal are unchanged, and runs the leg
+            // recompute on a worker thread.
+            const GW::Vec2f from_game{from.x, from.y};
+            const float d = PathfindingWindow::GetPathRecalcDistance();
+            if (GetSquareDistance(from_game, calculated_from) > d * d) Recalculate(from);
             return false;
         }
 
@@ -506,6 +510,10 @@ namespace {
 
     GW::Constants::QuestID quest_id_before_map_load = GW::Constants::QuestID::None;
 
+    // First map load of the session: re-activate a persisted custom marker so pathing resumes
+    // without the user re-placing it. Subsequent loads defer to quest_id_before_map_load.
+    bool restore_custom_quest_marker_active = true;
+
     void RefreshAllQuestPaths()
     {
         const auto q = GW::QuestMgr::GetQuestLog();
@@ -594,8 +602,10 @@ namespace {
         QuestModule::FetchMissingQuestInfo();
         ClearCalculatedQuestPaths();
         if (custom_quest_marker_world_pos.y != 0 || custom_quest_marker_world_pos.x != 0) {
-            QuestModule::SetCustomQuestMarker(custom_quest_marker_world_pos, quest_id_before_map_load == custom_quest_id);
+            const bool set_active = restore_custom_quest_marker_active || quest_id_before_map_load == custom_quest_id;
+            QuestModule::SetCustomQuestMarker(custom_quest_marker_world_pos, set_active);
         }
+        restore_custom_quest_marker_active = false;
         RefreshAllQuestPaths();
     }
 
