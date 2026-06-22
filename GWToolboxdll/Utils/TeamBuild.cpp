@@ -1079,6 +1079,7 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                                 build.disabled_skills &= static_cast<uint8_t>(~(1u << k));
                             else
                                 build.disabled_skills |= static_cast<uint8_t>(1u << k);
+                            builds_modified = true;
                         }
                         const ImVec2 p_max(pos.x + skill_px, pos.y + skill_px);
                         auto* dl = ImGui::GetWindowDrawList();
