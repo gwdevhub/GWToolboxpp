@@ -76,6 +76,21 @@ namespace SettingsRegistry {
         detail::AddEntry(module, key, Type::Float2, ptr, false, description);
     }
 
+    void Describe(ToolboxModule* module, const std::string_view key, const std::string_view label, const std::string_view description)
+    {
+        const auto found = std::ranges::find_if(entries, [module, key](const Entry& e) {
+            return e.module == module && e.key == key;
+        });
+        if (found == entries.end()) {
+            Log::Log("SettingsRegistry::Describe: no entry for %s.%.*s", module->Name(), static_cast<int>(key.size()), key.data());
+            return;
+        }
+        if (!label.empty()) {
+            found->label = label;
+        }
+        found->description = description;
+    }
+
     void Unregister(ToolboxModule* module)
     {
         std::erase_if(entries, [module](const Entry& e) { return e.module == module; });

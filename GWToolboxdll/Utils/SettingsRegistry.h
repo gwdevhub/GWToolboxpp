@@ -91,6 +91,10 @@ namespace SettingsRegistry {
     void RegisterField(ToolboxModule* module, std::string_view key, Colors::SettingColor* ptr, std::string_view description = {});
     void RegisterField(ToolboxModule* module, std::string_view key, std::array<float, 2>* ptr, std::string_view description = {});
 
+    // Override the auto-prettified label and attach a description on an already-registered entry, so
+    // settings search, the locate-highlight and /tb_setting match the text the user actually sees on screen.
+    void Describe(ToolboxModule* module, std::string_view key, std::string_view label, std::string_view description = {});
+
     // Called from ToolboxModule::Terminate.
     void Unregister(ToolboxModule* module);
 
