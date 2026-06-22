@@ -302,8 +302,8 @@ namespace {
     constexpr auto dialog_syntax = "'/dialog [dialog_id]' (e.g. '/dialog 0x184') sends a dialog id to the current NPC you're talking to.\n"
                                    "'/dailog take' automatically takes the first available quest/reward from the NPC you're talking to.";
     constexpr auto dropbuff_syntax = "'/dropbuff [skill_id]' drops the first instance of an upkept skill/buff";
-    constexpr auto dropitem_syntax = "'/dropitem <item_id> [quantity]' drops an item from your inventory by item id.\n"
-                                     "Without a quantity, the whole stack is dropped.";
+    constexpr auto dropitem_syntax = "'/dropitem <model_id> [quantity]' drops items from your inventory matching the model id.\n"
+                                     "Without a quantity, every matching stack is dropped.";
     constexpr auto fps_syntax = "'/fps [limit (15-400)]' sets a hard frame limit for Guild Wars. Pass '0' to remove the limit.\n'/fps' shows current frame limit";
     constexpr auto pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
 
@@ -482,34 +482,19 @@ namespace {
             Log::Warning("You can only drop items in an explorable area");
             return;
         }
-        uint32_t item_id = 0;
-        if (argc < 2 || !TextUtils::ParseUInt(argv[1], &item_id) || !item_id) {
+        uint32_t model_id = 0;
+        if (argc < 2 || !TextUtils::ParseUInt(argv[1], &model_id) || !model_id) {
             Log::Warning(dropitem_syntax);
             return;
         }
-        const auto item = static_cast<InventoryItem*>(GW::Items::GetItemById(item_id));
-        if (!item) {
-            Log::Warning("No item with id %u found", item_id);
+        uint32_t quantity = 0; // 0 == drop every matching stack
+        if (argc >= 3 && (!TextUtils::ParseUInt(argv[2], &quantity) || quantity == 0 || quantity > 0xFFFF)) {
+            Log::Warning(dropitem_syntax);
             return;
         }
-        if (!item->bag || !item->bag->IsInventoryBag() || item->equipped) {
-            Log::Warning("Item %u is not in your inventory", item_id);
-            return;
-        }
-        if (item->customized) {
-            Log::Warning("Item %u is customized and can't be dropped", item_id);
-            return;
-        }
-        uint32_t quantity = item->quantity;
-        if (argc >= 3) {
-            if (!TextUtils::ParseUInt(argv[2], &quantity) || quantity == 0) {
-                Log::Warning(dropitem_syntax);
-                return;
-            }
-            quantity = std::min(quantity, static_cast<uint32_t>(item->quantity));
-        }
-        if (!GW::Items::DropItem(item, quantity)) {
-            Log::Warning("Failed to drop item!");
+        const auto dropped = InventoryManager::DropItemsByModelID(model_id, static_cast<uint16_t>(quantity));
+        if (!dropped) {
+            Log::Warning("No droppable item with model id %u found in your inventory", model_id);
             return;
         }
     }

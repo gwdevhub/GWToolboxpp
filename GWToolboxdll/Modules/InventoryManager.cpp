@@ -1908,6 +1908,30 @@ uint16_t InventoryManager::StoreItems(uint16_t quantity, const std::vector<unsig
     return moved;
 }
 
+uint16_t InventoryManager::DropItemsByModelID(const uint32_t model_id, const uint16_t quantity)
+{
+    const auto is_droppable = [model_id](const Item* cmp) {
+        return cmp && cmp->model_id == model_id && !cmp->customized;
+    };
+    const auto items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_droppable);
+    uint16_t dropped = 0;
+    uint16_t remaining = quantity;
+    for (const auto item : items) {
+        const uint16_t to_drop = quantity ? std::min<uint16_t>(item->quantity, remaining) : item->quantity;
+        if (!GW::Items::DropItem(item, to_drop)) {
+            continue;
+        }
+        dropped += to_drop;
+        if (quantity) {
+            remaining -= to_drop;
+            if (remaining < 1) {
+                break;
+            }
+        }
+    }
+    return dropped;
+}
+
 uint16_t InventoryManager::WithdrawItemsByModelID(const uint32_t model_id, const uint32_t amount, const bool check_already_withdrawn)
 {
     const auto is_same_item = [model_id](const Item* cmp) {

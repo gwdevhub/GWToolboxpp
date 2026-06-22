@@ -100,6 +100,8 @@ public:
     static std::pair<GW::Bag*, uint32_t> GetAvailableInventorySlot(GW::Item* like_item = nullptr);
     static uint16_t RefillUpToQuantity(uint16_t quantity, const std::vector<uint32_t>& model_ids);
     static uint16_t StoreItems(uint16_t quantity, const std::vector<uint32_t>& model_ids);
+    // Drop items matching the model id from inventory, stack by stack. quantity == 0 drops every match. Returns the number dropped.
+    static uint16_t DropItemsByModelID(uint32_t model_id, uint16_t quantity = 0);
     // Withdraw `amount` items matching the encoded name from storage to inventory.
     // If check_already_withdrawn is true, items already in inventory count toward the amount.
     static uint16_t WithdrawItemsByName(const wchar_t* name_enc, uint32_t amount, bool check_already_withdrawn = true);
