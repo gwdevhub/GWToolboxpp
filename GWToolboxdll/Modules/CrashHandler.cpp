@@ -27,11 +27,7 @@ namespace {
         return L"";
     }
 
-    // Resolve the crashes folder WITHOUT asserting. Resources::GetPath() runs through
-    // GetComputerFolderPath(), which ASSERTs when the Documents folder can't be resolved or
-    // created (e.g. Controlled Folder Access blocking it). That assert re-enters this crash
-    // handler, so resolving the path defensively keeps a blocked folder from cascading into a
-    // secondary crash and lets EnsureFolderExists report the real cause to the user.
+    // Resolve the crashes folder without asserting; Resources::GetPath() would assert and re-enter the crash handler when Documents is blocked.
     std::wstring ResolveCrashFolder()
     {
         std::filesystem::path folder;
@@ -159,9 +155,7 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
 
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info)
 {
-    // A crash while handling a crash must not recurse. This happens when the crash-dump folder
-    // can't be reached (most often Controlled Folder Access or antivirus blocking Documents),
-    // so resolving or creating it asserts again and re-enters here. Bail with a clear message.
+    // A crash while handling a crash (e.g. resolving the blocked crash folder asserts again) must not recurse.
     static volatile LONG crashing = 0;
     if (InterlockedExchange(&crashing, 1) != 0) {
         MessageBoxW(nullptr,
