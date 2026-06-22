@@ -191,7 +191,7 @@ namespace {
         GW::SkillbarMgr::SkillTemplate skill_template;
         for (auto i = 0u; i < 8; i++) {
             Build build;
-            const uint32_t agent_id = ;
+            const uint32_t agent_id = GW::PartyMgr::GetPartyMemberAgentId(i);
             if (GW::SkillbarMgr::GetSkillTemplate(agent_id, skill_template)) {
                 char buf[64]{};
                 if (GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, _countof(buf))) {
