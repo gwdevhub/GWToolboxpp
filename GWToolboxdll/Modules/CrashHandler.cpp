@@ -11,11 +11,21 @@
 #include <Modules/Updater.h>
 #include <GWToolbox.h>
 #include <Defines.h>
+#include <Defender.h>
 #include <Path.h>
 #include <Utils/TextUtils.h>
 
 namespace {
     char* tb_exception_message = nullptr;
+
+    // If Defender quarantined/blocked the crash file in the last few seconds, surface the event text.
+    std::wstring RecentDefenderBlock(const std::wstring& needle)
+    {
+        std::wstring detail;
+        if (FindRecentDefenderBlock(needle, 15, detail))
+            return L"\n\nWindows Defender reported a block moments ago:\n" + detail;
+        return L"";
+    }
 
     struct GWDebugInfo {
         size_t len;
@@ -207,6 +217,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
             L"{}",
             last_error, FormatWindowsError(last_error), szFileName, PathDiagnoseWritability(crash_folder)
         );
+        error += RecentDefenderBlock(szFileName);
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
@@ -274,6 +285,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
                 szFileName, PathDiagnoseWritability(crash_folder)
             );
         }
+        error_info += RecentDefenderBlock(szFileName);
     }
     else {
         error_info = L"Guild Wars crashed!\n\n";

@@ -19,6 +19,7 @@
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
 
+#include <Defender.h>
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
@@ -361,10 +362,13 @@ namespace {
         // Defender returns these from CreateFile/LoadLibrary when it blocks or quarantines a file.
         const auto warn_if_antivirus = [](const DWORD err) {
             if (err != ERROR_VIRUS_INFECTED && err != ERROR_VIRUS_DELETED) return;
-            MessageBoxW(nullptr,
-                        L"Windows Defender (or another anti-virus) blocked gwca.dll, which GWToolbox needs to run.\n\n"
-                        L"Add an exclusion for your GWToolbox folder in Windows Security and re-launch.",
-                        L"GWToolbox", MB_OK | MB_ICONERROR | MB_TOPMOST);
+            std::wstring message =
+                L"Windows Defender (or another anti-virus) blocked gwca.dll, which GWToolbox needs to run.\n\n"
+                L"Add an exclusion for your GWToolbox folder in Windows Security and re-launch.";
+            std::wstring detail;
+            if (FindRecentDefenderBlock(L"gwca.dll", 15, detail))
+                message += L"\n\nWindows Defender reported:\n" + detail;
+            MessageBoxW(nullptr, message.c_str(), L"GWToolbox", MB_OK | MB_ICONERROR | MB_TOPMOST);
         };
 
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
