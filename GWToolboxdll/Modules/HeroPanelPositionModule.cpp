@@ -144,14 +144,20 @@ void HeroPanelPositionModule::SignalTerminate()
     GW::UI::RemoveUIMessageCallback(&ui_message_entry);
 }
 
-void HeroPanelPositionModule::DrawPositionKeySetting()
+void HeroPanelPositionModule::RegisterSettingsContent()
 {
-    ImGui::Text("Remember hero command panel positions by:");
-    ImGui::RadioButton("Party slot", &position_key_mode, ByHeroIndex);
-    ImGui::ShowHelp("Each party position keeps its panel placement, regardless of which hero is in that slot. Matches the base game's intended behaviour.");
-    ImGui::SameLine();
-    ImGui::RadioButton("Hero", &position_key_mode, ByHeroId);
-    ImGui::ShowHelp("Each hero keeps its panel placement, so it follows the hero across party slots and characters.");
+    RegisterSettingsContent(
+        "Party Settings", nullptr,
+        [](const std::string&, const bool is_showing) {
+            if (!is_showing) return;
+            ImGui::Text("Remember hero command panel positions by:");
+            ImGui::RadioButton("Party slot", &position_key_mode, ByHeroIndex);
+            ImGui::ShowHelp("Each party position keeps its panel placement, regardless of which hero is in that slot. Matches the base game's intended behaviour.");
+            ImGui::SameLine();
+            ImGui::RadioButton("Hero", &position_key_mode, ByHeroId);
+            ImGui::ShowHelp("Each hero keeps its panel placement, so it follows the hero across party slots and characters.");
+        },
+        1.1f);
 }
 
 void HeroPanelPositionModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)

@@ -5,8 +5,8 @@
 // Remembers where each hero's command panel (skill bar) was last placed and restores it
 // whenever that panel is recreated - e.g. after reordering the party or swapping characters,
 // which otherwise reshuffles the panels around the screen. Positions are keyed either by party
-// slot or by hero id (see PositionKeyMode); the game's own per-slot memory is unreliable, so we
-// override it in both modes.
+// slot or by hero id (user setting); the game's own per-slot memory is unreliable, so we override
+// it in both modes.
 class HeroPanelPositionModule : public ToolboxModule {
     HeroPanelPositionModule() = default;
     ~HeroPanelPositionModule() override = default;
@@ -22,8 +22,8 @@ public:
     [[nodiscard]] const char* Description() const override { return "Remembers the on-screen position of each hero's command panel and restores it when the panel reappears."; }
     [[nodiscard]] bool HasSettings() override { return false; }
 
-    // Radio buttons for the keying mode, drawn from the Party Settings section.
-    void DrawPositionKeySetting();
+    // Registers the keying-mode radio buttons into the existing Party Settings section.
+    void RegisterSettingsContent() override;
 
     void Initialize() override;
     void SignalTerminate() override;
