@@ -191,13 +191,19 @@ namespace {
         GW::SkillbarMgr::SkillTemplate skill_template;
         for (auto i = 0u; i < 8; i++) {
             Build build;
-            if (GW::SkillbarMgr::GetSkillTemplate(GW::PartyMgr::GetPartyMemberAgentId(i), skill_template)) {
+            const uint32_t agent_id = GW::PartyMgr::GetPartyMemberAgentId(i);
+            if (GW::SkillbarMgr::GetSkillTemplate(agent_id, skill_template)) {
                 char buf[64]{};
                 if (GW::SkillbarMgr::EncodeSkillTemplate(skill_template, buf, _countof(buf))) {
                     const auto party_info = GW::PartyMgr::GetPartyInfo();
                     const auto cur_hero_id = i > 0 && party_info && party_info->heroes.size() >= i ? party_info->heroes[i - 1].hero_id : HeroID::NoHero;
                     const GW::HeroFlag* flag = cur_hero_id != HeroID::NoHero ? HeroBuildsWindow::GetHeroFlagInfo(cur_hero_id) : nullptr;
-                    build = Build("", buf, cur_hero_id, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard));
+                    uint8_t disabled_skills = 0;
+                    const GW::Skillbar* skillbar = GW::SkillbarMgr::GetSkillbar(agent_id);
+                    if (skillbar) {
+                        disabled_skills = static_cast<uint8_t>(skillbar->disabled & 0xFF);
+                    }
+                    build = Build("", buf, cur_hero_id, 0, static_cast<uint32_t>(flag ? flag->hero_behavior : GW::HeroBehavior::Guard), disabled_skills);
                     build.name = build.GetFallbackBuildName();
                 }
             }

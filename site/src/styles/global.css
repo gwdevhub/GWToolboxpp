@@ -51,6 +51,9 @@
    the fixed z-index:-2 background layers and hide them. */
 html {
   background-color: var(--color-bg);
+  /* The site is dark-only; tell the browser so native UI (scrollbars,
+     form controls, overscroll) renders dark instead of light. */
+  color-scheme: dark;
 }
 body {
   color: var(--color-fg-body);
