@@ -94,9 +94,17 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
 
     uintptr_t charname_rva = 0;
     uintptr_t email_rva = 0;
+    bool read_blocked = false;
+    DWORD read_error = 0;
 
     for (int i = 0; i < processes.size(); i++) {
         const ProcessScanner scanner(&processes[i]);
+        if (!scanner.IsValid()) {
+            // Couldn't read the GW image to scan it - almost always AV/anti-tamper stripping our access.
+            read_blocked = true;
+            read_error = scanner.GetError();
+            continue;
+        }
         if (!scanner.FindPatternRva("\x6a\x14\x83\xc0\x18\x50\x68", "xxxxxxx", 7, &charname_rva)) {
             continue;
         }
@@ -109,6 +117,10 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
     }
 
     if (!charname_rva || !email_rva) {
+        if (read_blocked) {
+            fprintf(stderr, "Couldn't read Guild Wars memory to scan for RVAs (error %lu) - likely anti-virus interference\n", read_error);
+            return InjectReply_MemoryBlocked;
+        }
         fprintf(stderr, "Couldn't find charname/email RVAs in any potential process\n");
         return InjectReply_PatternError;
     }

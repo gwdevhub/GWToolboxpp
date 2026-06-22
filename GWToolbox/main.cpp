@@ -269,6 +269,18 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         return 1;
     }
 
+    if (reply == InjectReply_MemoryBlocked) {
+        std::wstring message =
+            L"GWToolbox found Guild Wars but couldn't read its memory to locate your character.\n\n"
+            L"This is almost always anti-virus or Controlled Folder Access blocking GWToolbox. "
+            L"Add an exclusion for your GWToolbox folder in Windows Security, allow GWToolbox through Controlled Folder Access, then re-launch.";
+        std::wstring detail;
+        if (FindRecentDefenderBlock(L"Gw.exe", 5, detail))
+            message += L"\n\nWindows Defender reported:\n" + detail;
+        MessageBoxW(nullptr, message.c_str(), L"GWToolbox - Error", MB_OK | MB_ICONERROR | MB_TOPMOST);
+        return 1;
+    }
+
     if (reply == InjectReply_NoValidProcess) {
         if (IsRunningAsAdmin()) {
             ShowError(L"Failed to inject GWToolbox into Guild Wars\n");
