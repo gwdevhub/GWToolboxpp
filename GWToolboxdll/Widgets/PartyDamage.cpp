@@ -67,6 +67,14 @@ namespace {
         }
     }
 
+    int FindTrackerByAgentId(uint32_t agent_id) {
+        for (uint32_t ti = 0; ti < cond_tracker_count; ti++) {
+            if (cond_trackers[ti].agent_id == agent_id)
+                return static_cast<int>(ti);
+        }
+        return -1;
+    }
+
     // Finalize damage for all active conditions on a tracker, then remove it
     void FinalizeAndRemoveTracker(uint32_t ti) {
         if (ti >= cond_tracker_count) return;
@@ -85,22 +93,14 @@ namespace {
     GW::HookEntry AgentState_Entry;
 
     void ConditionAgentRemoveCallback(GW::HookStatus*, const GW::Packet::StoC::AgentRemove* packet) {
-        for (uint32_t ti = 0; ti < cond_tracker_count; ti++) {
-            if (cond_trackers[ti].agent_id == packet->agent_id) {
-                FinalizeAndRemoveTracker(ti);
-                return;
-            }
-        }
+        const int ti = FindTrackerByAgentId(packet->agent_id);
+        if (ti >= 0) FinalizeAndRemoveTracker(static_cast<uint32_t>(ti));
     }
 
     void ConditionAgentStateCallback(GW::HookStatus*, const GW::Packet::StoC::AgentState* packet) {
         if ((packet->state & 16) == 0) return;
-        for (uint32_t ti = 0; ti < cond_tracker_count; ti++) {
-            if (cond_trackers[ti].agent_id == packet->agent_id) {
-                FinalizeAndRemoveTracker(ti);
-                return;
-            }
-        }
+        const int ti = FindTrackerByAgentId(packet->agent_id);
+        if (ti >= 0) FinalizeAndRemoveTracker(static_cast<uint32_t>(ti));
     }
 
     std::map<DWORD, DWORD> hp_map_nm{};
@@ -121,31 +121,16 @@ namespace {
     GW::HookEntry GenericValue_Entry;
     GW::HookEntry MapLoaded_Entry;
 
-    float GetPartOfTotal(uint32_t dmg)
+    float GetPercentageOfTotal(const uint32_t val)
     {
-        if (total == 0) {
-            return 0;
-        }
-        return static_cast<float>(dmg) / total;
+        return total == 0 ? 0.0f : 100.0f * static_cast<float>(val) / total;
     }
 
-    float GetPercentageOfTotal(const uint32_t dmg)
+    float GetPercentageOfTotalHealing(const uint32_t val)
     {
-        return GetPartOfTotal(dmg) * 100.0f;
+        return total_healing == 0 ? 0.0f : 100.0f * static_cast<float>(val) / total_healing;
     }
 
-    float GetPartOfTotalHealing(uint32_t heal)
-    {
-        if (total_healing == 0) {
-            return 0;
-        }
-        return static_cast<float>(heal) / total_healing;
-    }
-
-    float GetPercentageOfTotalHealing(const uint32_t heal)
-    {
-        return GetPartOfTotalHealing(heal) * 100.0f;
-    }
 }
 
 struct PartyDamage::PlayerDamage {
@@ -227,7 +212,7 @@ void PartyDamage::ReconcileDamageIndices()
                 }
                 // Check old damage entries by name
                 for (uint32_t i = 0; i < damage.size(); i++) {
-                    if (!claimed_old_indices.contains(i) && damage[i].name == name && !damage[i].name.empty()) {
+                    if (!claimed_old_indices.count(i) && damage[i].name == name && !damage[i].name.empty()) {
                         new_damage[new_idx] = damage[i];
                         new_damage[new_idx].agent_id = agent_id;
                         claimed_old_indices.insert(i);
@@ -240,23 +225,22 @@ void PartyDamage::ReconcileDamageIndices()
 
     // Move unclaimed entries with data to departed
     for (uint32_t i = 0; i < damage.size(); i++) {
-        if (claimed_old_indices.contains(i)) continue;
+        if (claimed_old_indices.count(i)) continue;
         if (damage[i].damage > 0 || damage[i].healing > 0)
             departed_damage.push_back(std::move(damage[i]));
     }
 
     damage = std::move(new_damage);
 
-    // Recompute totals
     total = 0;
     total_healing = 0;
-    for (const auto& entry : damage) {
-        total += entry.damage;
-        total_healing += entry.healing;
+    for (const auto& e : damage) {
+        total += e.damage;
+        total_healing += e.healing;
     }
-    for (const auto& entry : departed_damage) {
-        total += entry.damage;
-        total_healing += entry.healing;
+    for (const auto& e : departed_damage) {
+        total += e.damage;
+        total_healing += e.healing;
     }
 }
 
@@ -290,40 +274,32 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
     constexpr size_t buffer_size = 200;
     wchar_t buffer[buffer_size];
 
-    const bool has_damage = damage[index].damage > 0;
-    const bool has_healing = settings.show_healing && damage[index].healing > 0;
+    const auto& entry = damage[index];
+    std::wstring prof_str;
+    if (entry.primary != GW::Constants::Profession::None) {
+        auto* prim = ToolboxUtils::GetProfessionAcronym(entry.primary);
+        auto* sec = ToolboxUtils::GetProfessionAcronym(entry.secondary);
+        if (prim && sec)
+            prof_str = prim->wstring() + L"/" + sec->wstring();
+    }
 
-    if (has_damage && has_healing) {
-        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)",
-                   rank,
-                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
-                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
-                   damage[index].name.c_str(),
-                   GetPercentageOfTotal(damage[index].damage),
-                   damage[index].damage,
-                   GetPercentageOfTotalHealing(damage[index].healing),
-                   damage[index].healing);
-    }
-    else if (has_damage) {
-        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Dmg: %3.2f%% (%d)",
-                   rank,
-                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
-                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
-                   damage[index].name.c_str(),
-                   GetPercentageOfTotal(damage[index].damage),
-                   damage[index].damage);
-    }
-    else if (has_healing) {
-        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls/%ls %ls ~ Heal: %3.2f%% (%d)",
-                   rank,
-                   ToolboxUtils::GetProfessionAcronym(damage[index].primary)->wstring().c_str(),
-                   ToolboxUtils::GetProfessionAcronym(damage[index].secondary)->wstring().c_str(),
-                   damage[index].name.c_str(),
-                   GetPercentageOfTotalHealing(damage[index].healing),
-                   damage[index].healing);
+    const bool has_healing = settings.show_healing && entry.healing > 0;
+
+    if (has_healing) {
+        swprintf_s(buffer, buffer_size,
+            entry.damage > 0
+                ? L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)"
+                : L"#%2d ~ %ls %ls ~ Heal: %3.2f%% (%d)",
+            rank, prof_str.c_str(), entry.name.c_str(),
+            entry.damage > 0 ? GetPercentageOfTotal(entry.damage) : GetPercentageOfTotalHealing(entry.healing),
+            entry.damage > 0 ? entry.damage : entry.healing,
+            has_healing && entry.damage > 0 ? GetPercentageOfTotalHealing(entry.healing) : 0.0f,
+            has_healing && entry.damage > 0 ? entry.healing : 0);
     }
     else {
-        return; // Nothing to report
+        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d)",
+            rank, prof_str.c_str(), entry.name.c_str(),
+            GetPercentageOfTotal(entry.damage), entry.damage);
     }
 
     send_queue.push(buffer);
@@ -375,17 +351,14 @@ void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::Map
 
 void PartyDamage::ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet)
 {
+    const int ci = CondIdxFromEffectId(packet->value);
     if (packet->value_id == GW::Packet::StoC::GenericValueID::add_effect) {
-        const int ci = CondIdxFromEffectId(packet->value);
         if (ci < 0) return;
         const auto target = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
         if (!target || target->allegiance != GW::Constants::Allegiance::Enemy) return;
-        uint32_t ti = 0;
-        for (; ti < cond_tracker_count; ti++) {
-            if (cond_trackers[ti].agent_id == packet->agent_id)
-                break;
-        }
-        if (ti == cond_tracker_count) {
+        int ti = FindTrackerByAgentId(packet->agent_id);
+        if (ti < 0) {
+            ti = static_cast<int>(cond_tracker_count);
             if (ti >= 64) return;
             cond_trackers[ti].agent_id = packet->agent_id;
             cond_tracker_count++;
@@ -394,25 +367,21 @@ void PartyDamage::ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC
         return;
     }
     if (packet->value_id == GW::Packet::StoC::GenericValueID::remove_effect) {
-        for (uint32_t ti = 0; ti < cond_tracker_count; ti++) {
-            if (cond_trackers[ti].agent_id != packet->agent_id) continue;
-            const clock_t now = TIMER_INIT();
-            for (int ci = 0; ci < 4; ci++) {
-                if (cond_trackers[ti].apply_time[ci] == 0) continue;
-                const double elapsed = static_cast<double>(now - cond_trackers[ti].apply_time[ci]) / 1000.0;
-                cond_damage[ci] += static_cast<double>(CONDITION_DPS_RATES[ci]) * elapsed;
-                cond_trackers[ti].apply_time[ci] = 0; // clear it
-            }
-            // If all conditions cleared, remove tracker
-            bool all_cleared = true;
-            for (int ci = 0; ci < 4; ci++) {
-                if (cond_trackers[ti].apply_time[ci] != 0) { all_cleared = false; break; }
-            }
-            if (all_cleared) {
-                cond_tracker_count--;
-                cond_trackers[ti] = cond_trackers[cond_tracker_count];
-            }
-            return;
+        if (ci < 0) return;
+        const int ti = FindTrackerByAgentId(packet->agent_id);
+        if (ti < 0 || cond_trackers[ti].apply_time[ci] == 0) return;
+        const clock_t now = TIMER_INIT();
+        const double elapsed = static_cast<double>(now - cond_trackers[ti].apply_time[ci]) / 1000.0;
+        cond_damage[ci] += static_cast<double>(CONDITION_DPS_RATES[ci]) * elapsed;
+        cond_trackers[ti].apply_time[ci] = 0; // clear it
+        // If all conditions cleared, remove tracker
+        bool all_cleared = true;
+        for (int cj = 0; cj < 4; cj++) {
+            if (cond_trackers[ti].apply_time[cj] != 0) { all_cleared = false; break; }
+        }
+        if (all_cleared) {
+            cond_tracker_count--;
+            cond_trackers[ti] = cond_trackers[cond_tracker_count];
         }
         return;
     }
@@ -612,6 +581,7 @@ void PartyDamage::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, MapLoadedCallback, 0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&GenericValue_Entry, ConditionValueCallback, 0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(&AgentState_Entry, ConditionAgentStateCallback, 0x8000);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&AgentRemove_Entry, ConditionAgentRemoveCallback, 0x8000);
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"dmg", CmdDamage);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"damage", CmdDamage);
@@ -672,7 +642,6 @@ void PartyDamage::Update(const float)
                     damage[party_idx] = dep;
                     damage[party_idx].agent_id = agent_id;
                     dep.Reset();
-                    // Recompute totals
                     total = 0;
                     total_healing = 0;
                     for (const auto& e : damage) {
@@ -690,15 +659,30 @@ void PartyDamage::Update(const float)
     }
 }
 
+static void FormatValueString(char* buffer, size_t size, float value) {
+    if (value < 1000.f)
+        snprintf(buffer, size, "%.0f", value);
+    else if (value < 10000.f)
+        snprintf(buffer, size, "%.2f k", value / 1000.f);
+    else if (value < 1000000.f)
+        snprintf(buffer, size, "%.1f k", value / 1000.f);
+    else
+        snprintf(buffer, size, "%.2f m", value / (1000.f * 1000.f));
+}
+
+static void DrawGradientBar(ImDrawList* draw_list, float x, float width, float top_y, float bottom_y, bool bars_left, float part, Color col_from, Color col_to) {
+    if (part <= 0.f) return;
+    const float left = bars_left ? x + width * (1.0f - part) : x;
+    const float right = bars_left ? x + width : x + width * part;
+    draw_list->AddRectFilledMultiColor(
+        ImVec2(left, top_y), ImVec2(right, bottom_y),
+        col_from, col_from, col_to, col_to
+    );
+}
+
 void PartyDamage::Draw(IDirect3DDevice9*)
 {
-    if (!visible) {
-        return;
-    }
-    if (settings.hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        return;
-    }
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+    if (!visible || (settings.hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) || GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return;
     }
 
@@ -717,18 +701,10 @@ void PartyDamage::Draw(IDirect3DDevice9*)
     uint32_t max_recent_healing = 0;
     uint32_t max_healing = 0;
     for (const auto& i : damage) {
-        if (max_recent < i.recent_damage) {
-            max_recent = i.recent_damage;
-        }
-        if (max < i.damage) {
-            max = i.damage;
-        }
-        if (max_recent_healing < i.recent_healing) {
-            max_recent_healing = i.recent_healing;
-        }
-        if (max_healing < i.healing) {
-            max_healing = i.healing;
-        }
+        if (max_recent < i.recent_damage) max_recent = i.recent_damage;
+        if (max < i.damage) max = i.damage;
+        if (max_recent_healing < i.recent_healing) max_recent_healing = i.recent_healing;
+        if (max_healing < i.healing) max_healing = i.healing;
     }
 
     const Color damage_col_from = Colors::Add(settings.color_damage, Colors::ARGB(0, 20, 20, 20));
@@ -771,35 +747,22 @@ void PartyDamage::Draw(IDirect3DDevice9*)
 
         // Condition DPS header row
         if (settings.show_condition_dps) {
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(200, 50, 50, 255));
-            ImGui::Text(ICON_FA_TINT);
-            ImGui::PopStyleColor();
-            ImGui::SameLine();
-            const uint32_t bleed_dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[0] * 1000.0 / static_cast<double>(combat_time)));
-            ImGui::Text("%d/s", bleed_dps);
-            ImGui::SameLine();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 120, 0, 255));
-            ImGui::Text(ICON_FA_FIRE);
-            ImGui::PopStyleColor();
-            ImGui::SameLine();
-            const uint32_t burn_dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[3] * 1000.0 / static_cast<double>(combat_time)));
-            ImGui::Text("%d/s", burn_dps);
-
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(120, 200, 80, 255));
-            ImGui::Text(ICON_FA_TINT);
-            ImGui::PopStyleColor();
-            ImGui::SameLine();
-            const uint32_t poison_dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[1] * 1000.0 / static_cast<double>(combat_time)));
-            ImGui::Text("%d/s", poison_dps);
-            ImGui::SameLine();
-
-            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(200, 100, 200, 255));
-            ImGui::Text(ICON_FA_SKULL);
-            ImGui::PopStyleColor();
-            ImGui::SameLine();
-            const uint32_t disease_dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[2] * 1000.0 / static_cast<double>(combat_time)));
-            ImGui::Text("%d/s", disease_dps);
+            const struct { uint32_t color; const char* icon; int ci; } conds[] = {
+                {IM_COL32(200, 50, 50, 255), ICON_FA_TINT, 0},
+                {IM_COL32(255, 120, 0, 255), ICON_FA_FIRE, 3},
+                {IM_COL32(120, 200, 80, 255), ICON_FA_TINT, 1},
+                {IM_COL32(200, 100, 200, 255), ICON_FA_SKULL, 2},
+            };
+            for (const auto& c : conds) {
+                ImGui::PushStyleColor(ImGuiCol_Text, c.color);
+                ImGui::Text(c.icon);
+                ImGui::PopStyleColor();
+                ImGui::SameLine();
+                const uint32_t dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[c.ci] * 1000.0 / static_cast<double>(combat_time)));
+                ImGui::Text("%d/s", dps);
+                ImGui::SameLine();
+            }
+            ImGui::NewLine(); // flush last SameLine
         }
 
         for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
@@ -817,46 +780,18 @@ void PartyDamage::Draw(IDirect3DDevice9*)
 
             const auto x = damage_top_left.x;
 
-            const float& damage_float = static_cast<float>(entry->damage);
-            // Total damage as percent of total team's total damage
-            if (damage_float >= 0.f) {
-                const float part_of_max = max > 0 ? damage_float / max : 0;
-                const float bar_start_x = settings.bars_left ? x + width * (1.0f - part_of_max) : x;
-                const float bar_end_x = settings.bars_left ? x + width : x + width * part_of_max;
-                const auto bar_top_left = ImVec2(bar_start_x, damage_top_left.y);
-                const auto bar_bottom_right = ImVec2(bar_end_x, damage_bottom_right.y);
-                draw_list->AddRectFilledMultiColor(
-                    bar_top_left, bar_bottom_right, damage_col_from,
-                    damage_col_from, damage_col_to, damage_col_to
-                );
-            }
+            const float damage_float = static_cast<float>(entry->damage);
+            // Total damage bar
+            DrawGradientBar(draw_list, x, width, damage_top_left.y, damage_bottom_right.y, settings.bars_left, max > 0 ? damage_float / max : 0, damage_col_from, damage_col_to);
 
-            // Recent damage as percent of total team's recent damage (bottom bar)
+            // Recent damage bar (bottom)
             if (settings.show_damage && entry->recent_damage) {
-                const float part_of_recent = max_recent > 0 ? static_cast<float>(entry->recent_damage) / max_recent : 0;
-                const float recent_left = settings.bars_left ? x + width * (1.0f - part_of_recent) : x;
-                const float recent_right = settings.bars_left ? x + width : x + width * part_of_recent;
-                const auto recent_top_left = ImVec2(recent_left, damage_bottom_right.y - 6);
-                const auto recent_top_right = ImVec2(recent_right, damage_bottom_right.y);
-                draw_list->AddRectFilledMultiColor(
-                    recent_top_left, recent_top_right,
-                    damage_recent_from, damage_recent_from,
-                    damage_recent_to, damage_recent_to
-                );
+                DrawGradientBar(draw_list, x, width, damage_bottom_right.y - 6, damage_bottom_right.y, settings.bars_left, max_recent > 0 ? static_cast<float>(entry->recent_damage) / max_recent : 0, damage_recent_from, damage_recent_to);
             }
 
-            // Recent healing as percent of total team's recent healing (top bar)
+            // Recent healing bar (top)
             if (settings.show_healing && entry->recent_healing) {
-                const float part_of_recent_heal = max_recent_healing > 0 ? static_cast<float>(entry->recent_healing) / max_recent_healing : 0;
-                const float heal_left = settings.bars_left ? x + width * (1.0f - part_of_recent_heal) : x;
-                const float heal_right = settings.bars_left ? x + width : x + width * part_of_recent_heal;
-                const auto heal_top_left = ImVec2(heal_left, damage_top_left.y);
-                const auto heal_bottom_right = ImVec2(heal_right, damage_top_left.y + 6);
-                draw_list->AddRectFilledMultiColor(
-                    heal_top_left, heal_bottom_right,
-                    healing_from, healing_from,
-                    healing_to, healing_to
-                );
+                DrawGradientBar(draw_list, x, width, damage_top_left.y, damage_top_left.y + 6, settings.bars_left, max_recent_healing > 0 ? static_cast<float>(entry->recent_healing) / max_recent_healing : 0, healing_from, healing_to);
             }
 
             const auto row_height = damage_bottom_right.y - damage_top_left.y;
@@ -864,20 +799,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             const auto text_y = damage_top_left.y + (row_height - text_height) / 2;
 
             if (settings.show_damage && entry->damage > 0) {
-                // Damage text
-                if (damage_float < 1000.f) {
-                    snprintf(buffer, buffer_size, "%.0f", damage_float);
-                }
-                else if (damage_float < 1000.f * 10) {
-                    snprintf(buffer, buffer_size, "%.2f k", damage_float / 1000.f);
-                }
-                else if (damage_float < 1000.f * 1000.f) {
-                    snprintf(buffer, buffer_size, "%.1f k", damage_float / 1000.f);
-                }
-                else {
-                    snprintf(buffer, buffer_size, "%.2f m", damage_float / (1000.f * 1000.f));
-                }
-
+                FormatValueString(buffer, buffer_size, damage_float);
                 draw_list->AddText(ImVec2(x + ImGui::GetStyle().ItemSpacing.x, text_y), IM_COL32(255, 255, 255, 255), buffer);
 
                 // Damage percentage
@@ -896,20 +818,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             }
 
             if (settings.show_healing && entry->healing > 0) {
-                // Healing text
-                const float healing_float = static_cast<float>(entry->healing);
-                if (healing_float < 1000.f) {
-                    snprintf(buffer, buffer_size, "%.0f", healing_float);
-                }
-                else if (healing_float < 1000.f * 10) {
-                    snprintf(buffer, buffer_size, "%.2f k", healing_float / 1000.f);
-                }
-                else if (healing_float < 1000.f * 1000.f) {
-                    snprintf(buffer, buffer_size, "%.1f k", healing_float / 1000.f);
-                }
-                else {
-                    snprintf(buffer, buffer_size, "%.2f m", healing_float / (1000.f * 1000.f));
-                }
+                FormatValueString(buffer, buffer_size, static_cast<float>(entry->healing));
 
                 const float heal_text_x = settings.show_damage ? x + width / 2 : x + ImGui::GetStyle().ItemSpacing.x;
                 draw_list->AddText(ImVec2(heal_text_x, text_y), settings.color_healing, buffer);
@@ -970,7 +879,7 @@ void PartyDamage::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
             const long hp = inifile.GetLongValue(section, key.pItem, 0);
             if (hp <= 0)
                 continue;
-            if (keep_existing && map.contains(player_number))
+            if (keep_existing && map.count(player_number))
                 continue;
             map[player_number] = static_cast<DWORD>(hp);
         }
