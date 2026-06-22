@@ -27,6 +27,15 @@ namespace {
         return L"";
     }
 
+    // The assertion/exception that triggered the crash, so a screenshot shows the root cause even when no dump could be written.
+    std::wstring OriginalError(const char* extra_info)
+    {
+        const char* message = extra_info && *extra_info ? extra_info : tb_exception_message;
+        if (message && *message)
+            return L"\n\nOriginal error:\n" + TextUtils::StringToWString(message);
+        return L"";
+    }
+
     // Resolve the crashes folder without asserting; Resources::GetPath() would assert and re-enter the crash handler when Documents is blocked.
     std::wstring ResolveCrashFolder()
     {
@@ -158,13 +167,14 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     // A crash while handling a crash (e.g. resolving the blocked crash folder asserts again) must not recurse.
     static volatile LONG crashing = 0;
     if (InterlockedExchange(&crashing, 1) != 0) {
-        MessageBoxW(nullptr,
+        std::wstring error =
             L"Guild Wars crashed, and GWToolbox crashed again while trying to write the crash dump.\n\n"
             L"This almost always means something is blocking your Documents\\GWToolboxpp folder - "
             L"usually Windows Defender Controlled Folder Access or antivirus.\n\n"
             L"Allow Guild Wars through Controlled Folder Access, or add an exclusion for your "
-            L"GWToolbox folder, then try again.",
-            L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST);
+            L"GWToolbox folder, then try again.";
+        error += OriginalError(extra_info);
+        MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
         return EXCEPTION_EXECUTE_HANDLER;
     }
@@ -211,11 +221,13 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
             L"This is usually Windows Defender Controlled Folder Access or antivirus blocking access - "
             L"allow Guild Wars through Controlled Folder Access, or add an exclusion for your GWToolbox folder.";
         error += RecentDefenderBlock(L"GWToolbox");
+        error += OriginalError(extra_info);
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
     if (!Resources::EnsureFolderExists(crash_folder.c_str(), ensure_folder_error)) {
         ensure_folder_error += RecentDefenderBlock(crash_folder);
+        ensure_folder_error += OriginalError(extra_info);
         MessageBoxW(nullptr, ensure_folder_error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
@@ -252,6 +264,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
             last_error, FormatWindowsError(last_error), szFileName, PathDiagnoseWritability(crash_folder)
         );
         error += RecentDefenderBlock(szFileName);
+        error += OriginalError(extra_info);
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
@@ -320,6 +333,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
             );
         }
         error_info += RecentDefenderBlock(szFileName);
+        error_info += OriginalError(extra_info);
     }
     else {
         error_info = L"Guild Wars crashed!\n\n";
