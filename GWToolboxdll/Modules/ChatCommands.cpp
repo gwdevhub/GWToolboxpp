@@ -302,6 +302,8 @@ namespace {
     constexpr auto dialog_syntax = "'/dialog [dialog_id]' (e.g. '/dialog 0x184') sends a dialog id to the current NPC you're talking to.\n"
                                    "'/dailog take' automatically takes the first available quest/reward from the NPC you're talking to.";
     constexpr auto dropbuff_syntax = "'/dropbuff [skill_id]' drops the first instance of an upkept skill/buff";
+    constexpr auto dropitem_syntax = "'/dropitem <model_id> [quantity]' drops items from your inventory matching the model id.\n"
+                                     "Without a quantity, every matching stack is dropped.";
     constexpr auto fps_syntax = "'/fps [limit (15-400)]' sets a hard frame limit for Guild Wars. Pass '0' to remove the limit.\n'/fps' shows current frame limit";
     constexpr auto pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
 
@@ -467,6 +469,50 @@ namespace {
         if (!buff) return;
         if (!GW::Effects::DropBuff(buff->buff_id)) {
             Log::Warning("Failed to drop buff!");
+            return;
+        }
+    }
+
+    void CHAT_CMD_FUNC(CmdDropItem)
+    {
+        if (!IsMapReady()) {
+            return;
+        }
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
+            Log::Warning("You can only drop items in an explorable area");
+            return;
+        }
+        uint32_t model_id = 0;
+        if (argc < 2 || !TextUtils::ParseUInt(argv[1], &model_id) || !model_id) {
+            Log::Warning(dropitem_syntax);
+            return;
+        }
+        uint32_t quantity = 0; // 0 == drop every matching stack
+        if (argc >= 3 && (!TextUtils::ParseUInt(argv[2], &quantity) || quantity == 0 || quantity > 0xFFFF)) {
+            Log::Warning(dropitem_syntax);
+            return;
+        }
+        const auto is_droppable = [model_id](const InventoryManager::Item* item) {
+            return item && item->model_id == model_id && !item->customized;
+        };
+        const auto items = InventoryManager::FindItemsBy(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_droppable);
+        uint16_t remaining = static_cast<uint16_t>(quantity);
+        uint16_t dropped = 0;
+        for (const auto item : items) {
+            const uint16_t to_drop = quantity ? std::min<uint16_t>(item->quantity, remaining) : item->quantity;
+            if (!GW::Items::DropItem(item, to_drop)) {
+                continue;
+            }
+            dropped += to_drop;
+            if (quantity) {
+                remaining -= to_drop;
+                if (remaining < 1) {
+                    break;
+                }
+            }
+        }
+        if (!dropped) {
+            Log::Warning("No droppable item with model id %u found in your inventory", model_id);
             return;
         }
     }
@@ -1541,6 +1587,8 @@ namespace {
         ImGui::Bullet();
         ImGui::Text(dropbuff_syntax);
         ImGui::Bullet();
+        ImGui::Text(dropitem_syntax);
+        ImGui::Bullet();
         ImGui::Text(
             "'/enter [fow|uw]' to enter the mission for your outpost.\n"
             "If in embark, toa, urgoz or deep, it will use a scroll.\n"
@@ -1977,6 +2025,7 @@ void ChatCommands::Initialize()
         {L"config", CmdConfig},
         {settings_via_chat_commands_cmd, CmdSettingViaChatCommand},
         {L"dropbuff", CmdDropBuff},
+        {L"dropitem", CmdDropItem},
         {L"addhenchman", CmdAddHenchman},
         {L"addhero", CmdAddHero},
         {L"leave", CmdLeave},

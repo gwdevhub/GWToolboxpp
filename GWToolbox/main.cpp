@@ -2,6 +2,7 @@
 
 #include <cstdio>
 
+#include <Defender.h>
 #include <Path.h>
 #include <RestClient.h>
 
@@ -102,7 +103,7 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
                false;
     if (!process->GetModule(&module, L"GWToolboxdll.dll")) {
         std::wstring detail;
-        if (FindRecentDefenderBlock(L"GWToolboxdll.dll", detail))
+        if (FindRecentDefenderBlock(L"GWToolboxdll.dll", 30, detail))
             return error = std::format(L"Windows Defender blocked GWToolbox from loading:\n\n{}\n\nAdd an exclusion for the {} directory in Windows Security and re-launch {}.", detail, dllpath.parent_path().wstring(), exe_filename), false;
         return error = std::format(
                    L"Application @ {} failed to inject; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch {}.", dllpath.wstring(), dllpath.parent_path().wstring(), exe_filename
@@ -265,6 +266,18 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             L"You need to update the launcher or contact the developers.",
             L"GWToolbox - Error", MB_OK | MB_ICONERROR | MB_TOPMOST
         );
+        return 1;
+    }
+
+    if (reply == InjectReply_MemoryBlocked) {
+        std::wstring message =
+            L"GWToolbox found Guild Wars but couldn't read its memory to locate your character.\n\n"
+            L"This is almost always anti-virus or Controlled Folder Access blocking GWToolbox. "
+            L"Add an exclusion for your GWToolbox folder in Windows Security, allow GWToolbox through Controlled Folder Access, then re-launch.";
+        std::wstring detail;
+        if (FindRecentDefenderBlock(L"Gw.exe", 5, detail))
+            message += L"\n\nWindows Defender reported:\n" + detail;
+        ShowTroubleshootingError(message, L"GWToolbox - Error", Troubleshooting::CantReadMemory, MB_ICONERROR | MB_TOPMOST);
         return 1;
     }
 

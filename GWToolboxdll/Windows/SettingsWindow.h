@@ -28,8 +28,16 @@ public:
 
     bool DrawSettingsSection(const char* section);
 
-    // Open this window and scroll/expand the given settings section
-    void NavigateToSection(const char* section);
+    // Open this window and scroll/expand the given settings section. With expand_subsections set, any
+    // SubSectionHeader() tree nodes in that section are forced open so a nested setting can be located.
+    void NavigateToSection(const char* section, bool expand_subsections = false);
+
+    // Drop-in for ImGui::TreeNodeEx in settings draw code: force-opens the sub-header while navigating to
+    // a setting inside section, so the existing locate-highlight can reach controls nested under it.
+    static bool SubSectionHeader(const char* section, const char* label);
+
+    // Declare a settings sub-header (call from a module's Initialize) so it appears in settings search.
+    static void RegisterSubSection(const char* section, const char* label);
 
     size_t sep_modules = 0;
     size_t sep_windows = 0;
@@ -40,4 +48,5 @@ private:
     bool hide_when_entering_explorable = false;
     bool pending_uncollapse = false;
     std::string pending_navigate_to;
+    bool pending_expand_subsections = false;
 };

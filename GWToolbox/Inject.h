@@ -7,8 +7,9 @@
 enum InjectReply {
     InjectReply_Inject,
     InjectReply_Cancel,
-    InjectReply_NoProcess, 
+    InjectReply_NoProcess,
     InjectReply_PatternError,
+    InjectReply_MemoryBlocked,
     InjectReply_NoValidProcess
 };
 

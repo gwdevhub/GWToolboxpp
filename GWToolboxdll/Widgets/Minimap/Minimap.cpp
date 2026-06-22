@@ -40,6 +40,7 @@
 #include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
 #include <Utils/TextUtils.h>
+#include <Windows/SettingsWindow.h>
 #include "Minimap.h"
 #include <Utils/FontLoader.h>
 #include <Utils/ToolboxUtils.h>
@@ -844,6 +845,10 @@ void Minimap::Initialize()
     symbols_renderer.RegisterSettings(this);
     custom_renderer.RegisterSettings(this);
 
+    for (const char* sub : {"Ranges", "Pings and drawings", "AoE Effects", "Symbols", "Terrain", "Hero flagging"}) {
+        SettingsWindow::RegisterSubSection(SettingsName(), sub);
+    }
+
     uintptr_t address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
     if (address) {
         hide_flagging_controls_patch.SetPatch(address, "\xeb", 1);
@@ -1098,19 +1103,19 @@ void Minimap::DrawSettingsInternal()
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     // agent_rendered has its own TreeNodes
     agent_renderer.DrawSettings();
-    if (ImGui::TreeNodeEx("Ranges", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Ranges")) {
         range_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("Pings and drawings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Pings and drawings")) {
         pingslines_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("AoE Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "AoE Effects")) {
         EffectRenderer::DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("Symbols", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Symbols")) {
         symbols_renderer.DrawSettings();
         ImGui::Separator();
         ImGui::Text("Cardinal (N/S/E/W) directions");
@@ -1121,7 +1126,7 @@ void Minimap::DrawSettingsInternal()
         ImGui::SliderFloat("Font size##cardinal", &cardinal_font_size, 16.f, 56.f, "%.0f px");
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("Terrain", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Terrain")) {
         ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
             if (result) {
                 color_map = 0xFF999999;
@@ -1135,7 +1140,7 @@ void Minimap::DrawSettingsInternal()
         ImGui::TreePop();
     }
     custom_renderer.DrawSettings();
-    if (ImGui::TreeNodeEx("Hero flagging", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Hero flagging")) {
         ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
         ImGui::CheckboxWithHelp("Attach to minimap", &hero_flag_window_attach, "If disabled, you can move/resize the window with 'Unlock Move All'.");
         Colors::DrawSettingHueWheel("Background", &hero_flag_controls_background);

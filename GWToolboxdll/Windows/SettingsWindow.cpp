@@ -26,6 +26,10 @@ namespace {
         int score = 0;
     };
 
+    // Settings sub-headers (ImGui::TreeNodeEx within a section's draw) declared via RegisterSubSection,
+    // so search can surface them even while the parent section is collapsed.
+    std::vector<std::pair<std::string, std::string>> sub_sections; // {section, label}
+
     // -1 = no match; lower is better: exact prefix > word prefix > substring
     int MatchScore(const std::string& text_lower, const std::string& query_lower)
     {
@@ -172,6 +176,12 @@ namespace {
                 results.push_back({e.module->SettingsName(), e.label, best});
             }
         }
+        for (const auto& [section, label] : sub_sections) {
+            const auto score = MatchScore(TextUtils::ToLower(label), query_lower);
+            if (score >= 0) {
+                results.push_back({section, label, score});
+            }
+        }
         // The "Enable the following features" checkboxes; labels match the checkbox text so locate works
         const auto* toggles_section = ToolboxSettings::Instance().SettingsName();
         for (const auto& [name, description] : ToolboxSettings::GetOptionalModuleToggles()) {
@@ -241,7 +251,7 @@ namespace {
             const auto label = activated->label;
             search_buf[0] = 0;
             last_query.clear();
-            SettingsWindow::Instance().NavigateToSection(section.c_str());
+            SettingsWindow::Instance().NavigateToSection(section.c_str(), !label.empty());
             if (!label.empty()) {
                 locate.Arm(label);
             }
@@ -249,11 +259,31 @@ namespace {
     }
 } // namespace
 
-void SettingsWindow::NavigateToSection(const char* section)
+void SettingsWindow::NavigateToSection(const char* section, const bool expand_subsections)
 {
     visible = true;
     pending_uncollapse = true;
     pending_navigate_to = section;
+    pending_expand_subsections = expand_subsections;
+}
+
+void SettingsWindow::RegisterSubSection(const char* section, const char* label)
+{
+    const auto exists = std::ranges::any_of(sub_sections, [&](const auto& e) {
+        return e.first == section && e.second == label;
+    });
+    if (!exists) {
+        sub_sections.emplace_back(section, label);
+    }
+}
+
+bool SettingsWindow::SubSectionHeader(const char* section, const char* label)
+{
+    auto& self = Instance();
+    if (self.pending_expand_subsections && self.pending_navigate_to == section) {
+        ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+    }
+    return ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
 }
 
 void SettingsWindow::Initialize()
@@ -507,7 +537,10 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
     UpdateLocate();
     // Clear only targets present at frame start (consumed or stale); keep a mid-draw set for next frame.
-    if (had_pending_navigate) pending_navigate_to.clear();
+    if (had_pending_navigate) {
+        pending_navigate_to.clear();
+        pending_expand_subsections = false;
+    }
 }
 
 bool SettingsWindow::DrawSettingsSection(const char* section)

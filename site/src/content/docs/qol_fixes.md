@@ -9,7 +9,7 @@ Each can be toggled in its own section of the [Settings](/docs/settings/) panel.
 
 ## Fixes
 
-- **Hero command panel positions** — Remembers where you place each hero's skill-bar / command panel and restores it when the panel reappears, so they stop scattering across the screen after you reorder your party or swap characters. The position is tied to the hero, so it follows them regardless of party slot.
+- **Hero command panel positions** — Remembers where you place each hero's skill-bar / command panel and restores it when the panel reappears, so they stop scattering across the screen after you reorder your party or swap characters. In the Party Settings section you can choose whether positions are remembered by **party slot** (the default — each slot keeps its placement no matter which hero is in it) or by **hero** (the placement follows the specific hero across slots and characters).
 
 - **Experience bar shows XP progress** — Replaces the experience bar text so it shows your progress toward the next level (current XP / XP needed) instead of just repeating your current level number.
 
