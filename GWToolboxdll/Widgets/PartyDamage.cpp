@@ -127,11 +127,6 @@ namespace {
     {
         return total_healing == 0 ? 0.0f : 100.0f * static_cast<float>(val) / total_healing;
     }
-
-    float GetPercentageOfTotalHealing(const uint32_t heal)
-    {
-        return GetPartOfTotalHealing(heal) * 100.0f;
-    }
 } // namespace
 
 struct PartyDamage::PlayerDamage {
@@ -858,7 +853,7 @@ void PartyDamage::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
             TextUtils::ParseUInt(key.pItem, &player_number);
             const long hp = inifile.GetLongValue(section, key.pItem, 0);
             if (hp <= 0) continue;
-            if (keep_existing && map.contains(player_number)) continue;
+            if (keep_existing && map.count(player_number)) continue;
             map[player_number] = static_cast<DWORD>(hp);
         }
     };
