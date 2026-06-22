@@ -13,6 +13,7 @@ export const navGroups: NavGroup[] = [
     label: 'Getting Started',
     items: [
       { slug: 'faq', label: 'FAQ' },
+      { slug: 'troubleshooting', label: 'Troubleshooting' },
       { slug: 'launch_options', label: 'Launcher Arguments' },
       { slug: 'linux', label: 'Linux Install Guide' },
       { slug: 'analytics', label: 'Anonymous Analytics' },
