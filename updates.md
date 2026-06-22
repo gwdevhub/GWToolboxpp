@@ -20,6 +20,7 @@
 * [Fix] Fixed some UI elements being drawn twice.
 * [Fix] Texmod module no longer shows an error when no texmods are selected.
 * [Fix] Fixed a crash/freeze and other bugs in chat command handling after the move to shared encoded-string pointers.
+* [Fix] Hero Builds: fixed disabled skills not being saved with the build.
 * [Minor] Settings files are now stored as `.json` in the `configs` folder. Existing `.ini` settings are migrated automatically; the migration path stays in place until 9.0.
 * [Minor] `/pref` name matching is now more forgiving and gives a clearer error on an unknown name.
 * [Minor] `/target` accumulates pending searches across hotkeys triggered in quick succession.
