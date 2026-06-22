@@ -453,38 +453,17 @@ namespace {
         return to_move - remaining;
     }
 
-    std::vector<InventoryManager::Item*> filter_items(GW::Constants::Bag from, GW::Constants::Bag to, const std::function<bool(InventoryManager::Item*)>& cmp, const uint32_t limit = 0)
-    {
-        std::vector<InventoryManager::Item*> out;
-        for (auto bag_id = from; bag_id <= to; bag_id++) {
-            GW::Bag* bag = GW::Items::GetBag(bag_id);
-            if (!bag) {
-                continue;
-            }
-            for (size_t slot = 0; slot < bag->items.size(); slot++) {
-                const auto item = static_cast<InventoryManager::Item*>(bag->items[slot]);
-                if (!cmp(item)) {
-                    continue;
-                }
-                out.push_back(item);
-                if (out.size() == limit) {
-                    return out;
-                }
-            }
-        }
-        return out;
-    }
     std::vector<InventoryManager::Item*> filter_storage(const std::function<bool(InventoryManager::Item*)>& cmp, const uint32_t limit = 0)
     {
-        return filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, cmp, limit);
+        return InventoryManager::filter_items(GW::Constants::Bag::Material_Storage, GW::Constants::Bag::Storage_14, cmp, limit);
     }
     std::vector<InventoryManager::Item*> filter_inventory(const std::function<bool(InventoryManager::Item*)>& cmp, const uint32_t limit = 0)
     {
-        return filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, cmp, limit);
+        return InventoryManager::filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, cmp, limit);
     }
     uint16_t count_items(const GW::Constants::Bag from, const GW::Constants::Bag to, std::function<bool(InventoryManager::Item*)> cmp)
     {
-        const auto items = filter_items(from, to, std::move(cmp));
+        const auto items = InventoryManager::filter_items(from, to, std::move(cmp));
         uint16_t out = 0;
         for (const auto item : items) {
             out += item->quantity;
@@ -1908,28 +1887,26 @@ uint16_t InventoryManager::StoreItems(uint16_t quantity, const std::vector<unsig
     return moved;
 }
 
-uint16_t InventoryManager::DropItemsByModelID(const uint32_t model_id, const uint16_t quantity)
+std::vector<InventoryManager::Item*> InventoryManager::filter_items(const GW::Constants::Bag from, const GW::Constants::Bag to, const std::function<bool(Item*)>& cmp, const uint32_t limit)
 {
-    const auto is_droppable = [model_id](const Item* cmp) {
-        return cmp && cmp->model_id == model_id && !cmp->customized;
-    };
-    const auto items = filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_droppable);
-    uint16_t dropped = 0;
-    uint16_t remaining = quantity;
-    for (const auto item : items) {
-        const uint16_t to_drop = quantity ? std::min<uint16_t>(item->quantity, remaining) : item->quantity;
-        if (!GW::Items::DropItem(item, to_drop)) {
+    std::vector<Item*> out;
+    for (auto bag_id = from; bag_id <= to; bag_id++) {
+        GW::Bag* bag = GW::Items::GetBag(bag_id);
+        if (!bag) {
             continue;
         }
-        dropped += to_drop;
-        if (quantity) {
-            remaining -= to_drop;
-            if (remaining < 1) {
-                break;
+        for (size_t slot = 0; slot < bag->items.size(); slot++) {
+            const auto item = static_cast<Item*>(bag->items[slot]);
+            if (!cmp(item)) {
+                continue;
+            }
+            out.push_back(item);
+            if (out.size() == limit) {
+                return out;
             }
         }
     }
-    return dropped;
+    return out;
 }
 
 uint16_t InventoryManager::WithdrawItemsByModelID(const uint32_t model_id, const uint32_t amount, const bool check_already_withdrawn)

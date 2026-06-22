@@ -492,7 +492,25 @@ namespace {
             Log::Warning(dropitem_syntax);
             return;
         }
-        const auto dropped = InventoryManager::DropItemsByModelID(model_id, static_cast<uint16_t>(quantity));
+        const auto is_droppable = [model_id](const InventoryManager::Item* item) {
+            return item && item->model_id == model_id && !item->customized;
+        };
+        const auto items = InventoryManager::filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_droppable);
+        uint16_t remaining = static_cast<uint16_t>(quantity);
+        uint16_t dropped = 0;
+        for (const auto item : items) {
+            const uint16_t to_drop = quantity ? std::min<uint16_t>(item->quantity, remaining) : item->quantity;
+            if (!GW::Items::DropItem(item, to_drop)) {
+                continue;
+            }
+            dropped += to_drop;
+            if (quantity) {
+                remaining -= to_drop;
+                if (remaining < 1) {
+                    break;
+                }
+            }
+        }
         if (!dropped) {
             Log::Warning("No droppable item with model id %u found in your inventory", model_id);
             return;
