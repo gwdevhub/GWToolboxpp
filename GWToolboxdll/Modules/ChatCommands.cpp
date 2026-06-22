@@ -495,7 +495,7 @@ namespace {
         const auto is_droppable = [model_id](const InventoryManager::Item* item) {
             return item && item->model_id == model_id && !item->customized;
         };
-        const auto items = InventoryManager::filter_items(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_droppable);
+        const auto items = InventoryManager::FindItemsBy(GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2, is_droppable);
         uint16_t remaining = static_cast<uint16_t>(quantity);
         uint16_t dropped = 0;
         for (const auto item : items) {

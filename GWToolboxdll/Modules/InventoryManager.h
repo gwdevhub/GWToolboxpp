@@ -124,7 +124,7 @@ public:
     using Item = InventoryItem;
 
     // Collect items in bags [from, to] matching cmp. limit == 0 means no limit.
-    static std::vector<Item*> filter_items(GW::Constants::Bag from, GW::Constants::Bag to, const std::function<bool(Item*)>& cmp, uint32_t limit = 0);
+    static std::vector<Item*> FindItemsBy(GW::Constants::Bag from, GW::Constants::Bag to, const std::function<bool(Item*)>& cmp, uint32_t limit = 0);
 
     static uint16_t MoveItem(const Item* item, const uint16_t quantity = 1000u);
     static Item* GetNextUnsalvagedItem(const Item* salvage_kit = nullptr, const Item* start_after_item = nullptr);
