@@ -239,8 +239,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     DWORD lastError = GetLastError();
     CloseHandle(hFile);
 
-    // Antivirus tools sometimes let the write succeed and then quarantine/delete the file,
-    // so re-open it to confirm it's actually there and non-empty before claiming success.
+    // Antivirus can let the write succeed then delete the file, so confirm it's really there and non-empty.
     bool file_present = false;
     {
         const HANDLE hVerify = CreateFileW(szFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);

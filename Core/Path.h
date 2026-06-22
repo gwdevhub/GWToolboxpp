@@ -34,8 +34,5 @@ bool PathGetComputerName(std::filesystem::path& out);
 // Human-readable description for a Win32 error code (e.g. from GetLastError()), via FormatMessage.
 std::wstring FormatWindowsError(unsigned long error_code);
 
-// Best-effort, non-throwing diagnosis of why writes to `folder` might be failing: reports a
-// missing/inaccessible folder, a (nearly) full disk, and whether a test file can actually be
-// written - distinguishing a folder-wide permission/lock problem from antivirus blocking a
-// single file. Returns a user-facing, possibly multi-line message.
+// Non-throwing, user-facing diagnosis of why writes to `folder` may be failing (missing folder, full disk, permission/lock, or antivirus blocking a single file).
 std::wstring PathDiagnoseWritability(const std::filesystem::path& folder);

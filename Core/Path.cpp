@@ -268,8 +268,7 @@ std::wstring PathDiagnoseWritability(const fs::path& folder)
         out += buf;
     }
 
-    // Probe whether we can write a file into the folder right now; this distinguishes a
-    // folder-wide permission/lock problem from something blocking only a specific file.
+    // A real write probe tells a folder-wide permission/lock problem from a block on one file.
     const fs::path probe = folder / L"gwtoolbox_write_test.tmp";
     fs::remove(probe, ec);
     bool wrote = false;
