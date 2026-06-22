@@ -368,7 +368,7 @@ namespace {
             std::wstring detail;
             if (FindRecentDefenderBlock(L"gwca.dll", 15, detail))
                 message += L"\n\nWindows Defender reported:\n" + detail;
-            MessageBoxW(nullptr, message.c_str(), L"GWToolbox", MB_OK | MB_ICONERROR | MB_TOPMOST);
+            ShowTroubleshootingError(message, L"GWToolbox", Troubleshooting::BlockedFiles, MB_ICONERROR | MB_TOPMOST);
         };
 
         if (!IsValidGWCADll(gwca_dll_path, resource)) {

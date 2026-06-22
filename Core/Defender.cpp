@@ -2,6 +2,8 @@
 
 #include "Defender.h"
 
+#include <shellapi.h>
+
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -106,4 +108,16 @@ bool FindRecentDefenderBlock(const std::wstring& needle, const unsigned seconds,
 
     detail = output;
     return true;
+}
+
+void ShowTroubleshootingError(const std::wstring& message, const wchar_t* title, const wchar_t* url, const unsigned flags)
+{
+    const unsigned base = flags ? flags : MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST;
+    if (url && *url) {
+        const std::wstring body = message + L"\n\nOpen the troubleshooting guide for step-by-step instructions?\n" + url;
+        if (MessageBoxW(nullptr, body.c_str(), title, base | MB_YESNO) == IDYES)
+            ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
+        return;
+    }
+    MessageBoxW(nullptr, message.c_str(), title, base | MB_OK);
 }

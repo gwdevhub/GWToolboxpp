@@ -277,7 +277,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         std::wstring detail;
         if (FindRecentDefenderBlock(L"Gw.exe", 5, detail))
             message += L"\n\nWindows Defender reported:\n" + detail;
-        MessageBoxW(nullptr, message.c_str(), L"GWToolbox - Error", MB_OK | MB_ICONERROR | MB_TOPMOST);
+        ShowTroubleshootingError(message, L"GWToolbox - Error", Troubleshooting::CantReadMemory, MB_ICONERROR | MB_TOPMOST);
         return 1;
     }
 

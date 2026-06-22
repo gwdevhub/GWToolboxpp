@@ -174,7 +174,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
             L"Allow Guild Wars through Controlled Folder Access, or add an exclusion for your "
             L"GWToolbox folder, then try again.";
         error += OriginalError(extra_info);
-        MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST);
+        ShowTroubleshootingError(error, L"GWToolbox++ crash dump error", Troubleshooting::CrashDumps);
         TerminateProcess(GetCurrentProcess(), 1);
         return EXCEPTION_EXECUTE_HANDLER;
     }
@@ -222,13 +222,13 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
             L"allow Guild Wars through Controlled Folder Access, or add an exclusion for your GWToolbox folder.";
         error += RecentDefenderBlock(L"GWToolbox");
         error += OriginalError(extra_info);
-        MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        ShowTroubleshootingError(error, L"GWToolbox++ crash dump error", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
     if (!Resources::EnsureFolderExists(crash_folder.c_str(), ensure_folder_error)) {
         ensure_folder_error += RecentDefenderBlock(crash_folder);
         ensure_folder_error += OriginalError(extra_info);
-        MessageBoxW(nullptr, ensure_folder_error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        ShowTroubleshootingError(ensure_folder_error, L"GWToolbox++ crash dump error", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
@@ -265,7 +265,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
         );
         error += RecentDefenderBlock(szFileName);
         error += OriginalError(extra_info);
-        MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        ShowTroubleshootingError(error, L"GWToolbox++ crash dump error", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
@@ -358,7 +358,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     }
     delete ExpParam;
 
-    MessageBoxW(nullptr, error_info.c_str(), dump_ok ? L"GWToolbox++ crash dump created!" : L"GWToolbox++ crash dump failed!", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST);
+    ShowTroubleshootingError(error_info, dump_ok ? L"GWToolbox++ crash dump created!" : L"GWToolbox++ crash dump failed!", dump_ok ? nullptr : Troubleshooting::CrashDumps);
 
     #ifdef _DEBUG
     if (IsDebuggerPresent()) {
