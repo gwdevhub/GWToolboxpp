@@ -22,14 +22,7 @@ public:
     [[nodiscard]] const char* Description() const override { return "Remembers the on-screen position of each hero's command panel and restores it when the panel reappears."; }
     [[nodiscard]] bool HasSettings() override { return false; }
 
-    // How a remembered panel position is keyed.
-    enum PositionKeyMode : int {
-        ByHeroIndex = 0, // by party slot - matches the base game's per-slot memory (default)
-        ByHeroId = 1,    // by the specific hero, so it follows the hero across party slots
-    };
-    int position_key_mode = ByHeroIndex;
-
-    // Radio buttons for position_key_mode, drawn from the Party Settings section.
+    // Radio buttons for the keying mode, drawn from the Party Settings section.
     void DrawPositionKeySetting();
 
     void Initialize() override;
