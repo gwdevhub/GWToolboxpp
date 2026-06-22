@@ -2,11 +2,7 @@
 
 #include <ToolboxModule.h>
 
-// Remembers where each hero's command panel (skill bar) was last placed and restores it
-// whenever that panel is recreated - e.g. after reordering the party or swapping characters,
-// which otherwise reshuffles the panels around the screen. Positions are keyed either by party
-// slot or by hero id (user setting); the game's own per-slot memory is unreliable, so we override
-// it in both modes.
+// Remembers each hero command panel's position (keyed by party slot or hero id) and restores it when the panel reappears, since the game's own per-slot memory is unreliable.
 class HeroPanelPositionModule : public ToolboxModule {
     HeroPanelPositionModule() = default;
     ~HeroPanelPositionModule() override = default;
