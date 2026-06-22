@@ -585,13 +585,12 @@ bool Resources::EnsureFolderExists(const std::filesystem::path& path, std::wstri
     std::error_code ec;
     if (create_directories(path, ec)) return true;
 
-    error_description = std::format(L"Failed to create folder:\n{}\n\nReason: {} (code {})",
-                                    path.wstring(), TextUtils::StringToWString(ec.message()), ec.value());
+    error_description = std::format(L"Failed to create folder:\n{}\n\nReason: {} (code {})\n\n{}",
+                                    path.wstring(), FormatWindowsError(ec.value()), ec.value(), PathDiagnoseWritability(path.parent_path()));
     // ERROR_ACCESS_DENIED / ERROR_VIRUS_INFECTED / ERROR_VIRUS_DELETED are what antivirus and Controlled Folder Access return when blocking the write
     if (ec.value() == ERROR_ACCESS_DENIED || ec.value() == ERROR_VIRUS_INFECTED || ec.value() == ERROR_VIRUS_DELETED) {
-        error_description += L"\n\nThis is likely caused by antivirus software or Windows Defender Controlled Folder Access "
-            L"blocking writes to your Documents folder. Try allowing Guild Wars in your antivirus, "
-            L"or turning off Controlled Folder Access.";
+        error_description += L"\n\nIf this is your Documents folder, Windows Defender Controlled Folder Access "
+            L"may be the cause - try allowing Guild Wars, or turning Controlled Folder Access off.";
     }
     return false;
 }

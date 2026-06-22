@@ -22,6 +22,7 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <ImGuiAddons.h>
+#include <Defender.h>
 #include <Modules/Resources.h>
 #include <Utils/FontLoader.h>
 #include <Utils/TextUtils.h>
@@ -310,7 +311,11 @@ namespace {
 
         gmodDll = LoadLibraryW(path.wstring().c_str());
         if (!gmodDll) {
+            const DWORD err = GetLastError();
             statusMessage = "Error: Could not load gMod.dll.";
+            std::wstring detail;
+            if ((err == ERROR_VIRUS_INFECTED || err == ERROR_VIRUS_DELETED) && FindRecentDefenderBlock(L"gMod.dll", 15, detail))
+                statusMessage += " Windows Defender blocked it: " + TextUtils::WStringToString(detail);
             return false;
         }
         if (!ResolveTextureClientFunctions()) {

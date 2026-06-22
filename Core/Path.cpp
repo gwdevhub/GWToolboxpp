@@ -229,3 +229,65 @@ bool PathIsDirectorySafe(const fs::path& path, bool* out)
     }
     return true;
 }
+
+std::wstring FormatWindowsError(const unsigned long error_code)
+{
+    LPWSTR buffer = nullptr;
+    const DWORD len = FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<LPWSTR>(&buffer), 0, nullptr);
+
+    std::wstring message = len && buffer ? std::wstring(buffer, len) : L"no description available";
+    if (buffer) {
+        LocalFree(buffer);
+    }
+    while (!message.empty() && (message.back() == L'\n' || message.back() == L'\r' || message.back() == L' ')) {
+        message.pop_back();
+    }
+    return message;
+}
+
+std::wstring PathDiagnoseWritability(const fs::path& folder)
+{
+    if (folder.empty()) {
+        return L"No folder path was provided.";
+    }
+
+    std::error_code ec;
+    if (!fs::exists(folder, ec)) {
+        return ec
+            ? L"Could not access the folder: " + FormatWindowsError(ec.value())
+            : L"The folder no longer exists (" + folder.wstring() + L") - something deleted or moved it.";
+    }
+
+    std::wstring out;
+    if (const auto space = fs::space(folder, ec); !ec && space.available < 16ull * 1024 * 1024) {
+        wchar_t buf[128];
+        swprintf(buf, 128, L"Only %llu KB free on this drive - it may be full.\n", static_cast<unsigned long long>(space.available / 1024));
+        out += buf;
+    }
+
+    // A real write probe tells a folder-wide permission/lock problem from a block on one file.
+    const fs::path probe = folder / L"gwtoolbox_write_test.tmp";
+    fs::remove(probe, ec);
+    bool wrote = false;
+    const HANDLE h = CreateFileW(probe.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY, nullptr);
+    if (h != INVALID_HANDLE_VALUE) {
+        DWORD written = 0;
+        const char byte = 'x';
+        wrote = WriteFile(h, &byte, 1, &written, nullptr) && written == 1;
+        CloseHandle(h);
+    }
+    else {
+        out += L"A test file could not be created in the folder either: " + FormatWindowsError(GetLastError()) + L"\n";
+    }
+    fs::remove(probe, ec);
+
+    out += wrote
+        ? L"A test file could be written to the folder, so the folder itself is writable - "
+          L"something is blocking this specific file. Antivirus quarantine is the most common cause."
+        : L"Writing to the folder is being blocked entirely - check folder permissions, a "
+          L"read-only drive, or antivirus exclusions for your Guild Wars / GWToolbox folder.";
+    return out;
+}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
 
 // is_directory without catch; returns false on failure
 bool PathIsDirectorySafe(const std::filesystem::path& path, bool* out);
@@ -29,3 +30,9 @@ bool PathSafeCopy(const std::filesystem::path& from, const std::filesystem::path
 bool PathRecursiveRemove(const std::filesystem::path& from);
 
 bool PathGetComputerName(std::filesystem::path& out);
+
+// Human-readable description for a Win32 error code (e.g. from GetLastError()), via FormatMessage.
+std::wstring FormatWindowsError(unsigned long error_code);
+
+// Non-throwing, user-facing diagnosis of why writes to `folder` may be failing (missing folder, full disk, permission/lock, or antivirus blocking a single file).
+std::wstring PathDiagnoseWritability(const std::filesystem::path& folder);
