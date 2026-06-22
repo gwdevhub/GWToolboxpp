@@ -570,10 +570,29 @@ std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, co
 
 bool Resources::EnsureFolderExists(const std::filesystem::path& path)
 {
-    if (path.empty()) return false;
+    std::wstring error_description;
+    return EnsureFolderExists(path, error_description);
+}
+
+bool Resources::EnsureFolderExists(const std::filesystem::path& path, std::wstring& error_description)
+{
+    error_description.clear();
+    if (path.empty()) {
+        error_description = L"No folder path was provided";
+        return false;
+    }
     if (exists(path)) return true;
     std::error_code ec;
-    return create_directories(path, ec);
+    if (create_directories(path, ec)) return true;
+
+    error_description = std::format(L"Failed to create folder:\n{}\n\nReason: {} (code {})\n\n{}",
+                                    path.wstring(), FormatWindowsError(ec.value()), ec.value(), PathDiagnoseWritability(path.parent_path()));
+    // ERROR_ACCESS_DENIED / ERROR_VIRUS_INFECTED / ERROR_VIRUS_DELETED are what antivirus and Controlled Folder Access return when blocking the write
+    if (ec.value() == ERROR_ACCESS_DENIED || ec.value() == ERROR_VIRUS_INFECTED || ec.value() == ERROR_VIRUS_DELETED) {
+        error_description += L"\n\nIf this is your Documents folder, Windows Defender Controlled Folder Access "
+            L"may be the cause - try allowing Guild Wars, or turning Controlled Folder Access off.";
+    }
+    return false;
 }
 
 bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response)
@@ -1003,8 +1022,9 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     *texture = nullptr;
     guild_wars_wiki_images[filename] = texture;
     static std::filesystem::path path = GetPath(GUILD_WARS_WIKI_FILES_PATH);
-    if (!EnsureFolderExists(path)) {
-        trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
+    std::wstring folder_error;
+    if (!EnsureFolderExists(path, folder_error)) {
+        trigger_failure_callback(callback, L"%s", folder_error.c_str());
         return texture;
     }
     const auto path_to_file = std::format("{}\\{}", path.string(), filename_sanitised);
@@ -1105,8 +1125,9 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
         return texture;
     }
     static std::filesystem::path path = GetPath(SKILL_IMAGES_PATH);
-    if (!EnsureFolderExists(path)) {
-        trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
+    std::wstring folder_error;
+    if (!EnsureFolderExists(path, folder_error)) {
+        trigger_failure_callback(callback, L"%s", folder_error.c_str());
         return texture;
     }
     wchar_t path_to_file[MAX_PATH];

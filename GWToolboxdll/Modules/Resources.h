@@ -70,6 +70,8 @@ public:
     static HRESULT ResolveShortcut(const std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path);
 
     static bool EnsureFolderExists(const std::filesystem::path& path);
+    // On failure fills error_description with a user-facing reason, hinting at antivirus when the OS error matches
+    static bool EnsureFolderExists(const std::filesystem::path& path, std::wstring& error_description);
 
     // Returns current scale multiplier based on gw preferences. Cached for per frame access, pass force = true to get fresh from gw settings.
     static float GetGWScaleMultiplier(bool force = false);

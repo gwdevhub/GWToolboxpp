@@ -7,7 +7,9 @@
 #include <Logger.h>
 #include "MathUtility.h"
 #include "Pathing.h"
+#include "PathingLog.h"
 #include "PathingMapDataLoader.h"
+#include "NavMesh.h" // viz-only Detour navmesh, co-built for the debug overlay (pathing uses the visgraph)
 
 // Define PATHING_VERBOSE to re-enable per-stage Log::Info chatter
 // (`[AStar:...]`, `Pathing::Impl::Generate*: N ms.`, `[VisGraph]`, `[Portals]`).
@@ -19,13 +21,6 @@
 #define PATH_LOG_INFO(...) ((void)0)
 // log_timings(tag) and similar take args only used by the logger.
 #pragma warning(disable: 4189 4100)
-#endif
-
-// Pathing errors only reach chat in debug; in release they go to the log file.
-#ifdef _DEBUG
-#define PATH_LOG_ERROR(...) Log::Error(__VA_ARGS__)
-#else
-#define PATH_LOG_ERROR(...) Log::Log(__VA_ARGS__)
 #endif
 
 namespace {
@@ -773,8 +768,10 @@ namespace Pathing {
     struct Impl {
         Impl() : m_msd(), m_visGraph(), points(), portals(), pt_portal_map(), portal_pt_map(), portal_portal_map(), tmp_portal_pt_map(), ptneighbours(), m_teleports(), travel_portals(), m_teleportGraph(), m_mapData() {}
 
-        ~Impl() = default;
+        ~Impl() { delete m_navmesh; delete m_navmesh_recast; }
 
+        NavMesh* m_navmesh = nullptr;        // hand-built (exact GW trapezoid coords) — drawn by the overlay at correct heights
+        NavMesh* m_navmesh_recast = nullptr; // recast-generated (clean topology, voxel-snapped coords) — recast pathing only
         MapSpecific::MapSpecificData m_msd;
         std::vector<std::vector<PointVisElement>> m_visGraph;                          // PointId
         std::vector<Point> points;                                                     // PointId
@@ -1940,6 +1937,24 @@ namespace Pathing {
             GeneratePortals();
             GenerateTeleportGraph();
             GenerateVisGraph();
+
+            try {
+                if (!m_navmesh) m_navmesh = new NavMesh();
+                m_navmesh->Build(m_mapData, m_teleports);
+            }
+            catch (const std::bad_alloc&) {
+                PATH_LOG_ERROR("[pathing] overlay navmesh build OOM; overlay disabled for this map");
+            }
+            if (NavMesh::s_use_recast_builder) {
+                try {
+                    if (!m_navmesh_recast) m_navmesh_recast = new NavMesh();
+                    m_navmesh_recast->BuildFromRecast(m_mapData, m_teleports);
+                }
+                catch (const std::bad_alloc&) {
+                    PATH_LOG_ERROR("[pathing] recast pathing navmesh build OOM; recast pathing disabled for this map");
+                }
+            }
+
             ReleaseBuildScratch();
         }
 
@@ -2033,6 +2048,11 @@ namespace Pathing {
     const Pathing::PathingMapData* MilePath::GetMapData() const
     {
         return &mImpl->m_mapData;
+    }
+
+    NavMesh* MilePath::GetNavMeshForDebug()
+    {
+        return mImpl->m_navmesh; // null until the full build completes; viz overlay only
     }
 
     void MilePath::EnsureFullBuild()
@@ -2136,6 +2156,8 @@ namespace Pathing {
         return cost;
     }
 
+    bool g_use_recast_pathing = false;
+
     Error AStar::Search(const GW::GamePos& _start_pos, const GW::GamePos& _goal_pos)
     {
         Timing time(__FUNCTION__);
@@ -2171,6 +2193,26 @@ namespace Pathing {
         const Error res = CopyPathingMapBlocks(&mp->m_mapData, &current_blocked_planes);
 
         if (res != Error::OK) return res;
+
+        NavMesh* rnav = (mp->m_navmesh_recast && mp->m_navmesh_recast->IsReady()) ? mp->m_navmesh_recast : mp->m_navmesh;
+        if (g_use_recast_pathing && rnav && rnav->IsReady()) {
+            rnav->ApplyBlockedPlanes(current_blocked_planes);
+            std::vector<GW::GamePos> rpts;
+            float rcost = 0.f;
+            const NavMesh::Result r = rnav->FindPath(_start_pos, _goal_pos, rpts, rcost);
+            switch (r) {
+                case NavMesh::Result::OK:
+                case NavMesh::Result::Partial: break;
+                case NavMesh::Result::StartNotFound: return Error::FailedToFindStartPathingTrapezoid;
+                case NavMesh::Result::GoalNotFound:  return Error::FailedToFindGoalPathingTrapezoid;
+                case NavMesh::Result::NoMesh:        return Error::InvalidMapContext;
+                default:                             return Error::FailedToFinializePath;
+            }
+            for (auto it = rpts.rbegin(); it != rpts.rend(); ++it) m_path.insertPoint(*it);
+            m_path.setCost(rcost);
+            m_path.finalize();
+            return Error::OK;
+        }
 
         auto start_pos = _start_pos;
         auto goal_pos = _goal_pos;

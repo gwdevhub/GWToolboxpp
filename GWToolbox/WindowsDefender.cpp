@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <Defender.h>
 #include <Path.h>
 #include "WindowsDefender.h"
 
@@ -8,86 +9,6 @@
 namespace fs = std::filesystem;
 
 namespace {
-    std::wstring ReadFile(const std::filesystem::path& path)
-    {
-        std::wifstream file(path);
-        if (!file.is_open()) {
-            return L"";
-        }
-
-        std::wstringstream buffer;
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-
-
-    bool ExecutePowerShellCommand(const std::wstring& command, std::wstring& output)
-    {
-        // Create a temporary file for output
-        wchar_t temp_path[MAX_PATH];
-        wchar_t temp_file[MAX_PATH];
-
-        if (GetTempPathW(MAX_PATH, temp_path) == 0) {
-            fprintf(stderr, "GetTempPathW failed (%lu)\n", GetLastError());
-            return false;
-        }
-
-        if (GetTempFileNameW(temp_path, L"GWT", 0, temp_file) == 0) {
-            fprintf(stderr, "GetTempFileNameW failed (%lu)\n", GetLastError());
-            return false;
-        }
-
-        std::wstring full_command = L"powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"";
-        full_command += command;
-        full_command += L" | Out-File -FilePath '";
-        full_command += temp_file;
-        full_command += L"' -Encoding UTF8\"";
-
-        STARTUPINFOW si = {sizeof(STARTUPINFOW)};
-        PROCESS_INFORMATION pi = {nullptr};
-
-        si.dwFlags = STARTF_USESHOWWINDOW;
-        si.wShowWindow = SW_HIDE;
-
-        // Create a modifiable copy of the command string
-        std::vector cmd_buffer(full_command.begin(), full_command.end());
-        cmd_buffer.push_back(L'\0');
-
-        BOOL success = CreateProcessW(
-            nullptr,
-            cmd_buffer.data(),
-            nullptr,
-            nullptr,
-            FALSE,
-            CREATE_NO_WINDOW,
-            nullptr,
-            nullptr,
-            &si,
-            &pi);
-
-        if (!success) {
-            fprintf(stderr, "CreateProcessW failed (%lu)\n", GetLastError());
-            DeleteFileW(temp_file);
-            return false;
-        }
-
-        DWORD exit_code = STILL_ACTIVE;
-        DWORD elapsed = 0;
-        for (elapsed = 0; exit_code == STILL_ACTIVE && elapsed < 5000; elapsed += 10) {
-            Sleep(10);
-            GetExitCodeProcess(pi.hProcess, &exit_code);
-        }
-
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-
-        output = ReadFile(temp_file);
-
-        DeleteFileW(temp_file);
-
-        return exit_code == 0;
-    }
-
     bool ExecutePowerShellCommandElevated(const std::wstring& command, std::wstring& error)
     {
         std::wstring ps_command = L"-NoProfile -ExecutionPolicy Bypass -Command \"";
@@ -127,7 +48,7 @@ bool IsPathExcludedFromDefender(const std::filesystem::path& path)
     std::wstring output;
     const std::wstring command = L"Get-MpPreference | Select-Object -ExpandProperty ExclusionPath";
 
-    if (!ExecutePowerShellCommand(command, output)) {
+    if (!RunPowerShellCommand(command, output)) {
         // If we're not admin, this will fail, treat it as if it wasn't excluded but check registry later
         return false;
     }
@@ -167,7 +88,6 @@ bool IsPathExcludedFromDefender(const std::filesystem::path& path)
     return false;
 }
 
-
 bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, std::wstring& error)
 {
     if (IsPathExcludedFromDefender(path)) {
@@ -202,7 +122,7 @@ bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, s
     bool success;
     if (is_admin) {
         std::wstring output;
-        success = ExecutePowerShellCommand(command, output);
+        success = RunPowerShellCommand(command, output);
     }
     else {
         success = ExecutePowerShellCommandElevated(command, error);

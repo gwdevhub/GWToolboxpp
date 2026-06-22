@@ -24,4 +24,5 @@ target_link_libraries(GWToolbox PRIVATE
     glaze::glaze
 
     version.lib # for GetFileVersionInfo
+    bcrypt.lib # for sha256 of the launcher exe
     )

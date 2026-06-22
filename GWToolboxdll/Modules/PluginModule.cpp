@@ -6,6 +6,7 @@
 #include <GWToolbox.h>
 #include <GWCA/Managers/ChatMgr.h>
 
+#include <Defender.h>
 #include <Modules/Resources.h>
 #include <filesystem>
 #include <string>
@@ -58,8 +59,15 @@ namespace {
             plugin.dll = LoadLibraryW(plugin.path.wstring().c_str());
         }
         if (!plugin.dll) {
+            const DWORD err = GetLastError();
+            const auto filename = plugin.path.filename();
             UnloadPlugin(plugin_ptr);
-            Log::Error("Failed to load plugin %s (LoadLibraryW)", TextUtils::PrintFilename(plugin.path.filename().string()).c_str());
+            const auto name = TextUtils::PrintFilename(filename.wstring());
+            std::wstring detail;
+            if ((err == ERROR_VIRUS_INFECTED || err == ERROR_VIRUS_DELETED) && FindRecentDefenderBlock(filename.wstring(), 15, detail))
+                Log::ErrorW(L"Failed to load plugin %s - Windows Defender blocked it: %s", name.c_str(), detail.c_str());
+            else
+                Log::ErrorW(L"Failed to load plugin %s (LoadLibraryW)", name.c_str());
             return false;
         }
         using ToolboxPluginInstanceFn = ToolboxPlugin* (*)();

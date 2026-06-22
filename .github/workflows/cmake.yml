@@ -150,9 +150,10 @@ jobs:
         # Prepare artifacts
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
         cp "$BIN_DIR/GWToolboxdll.dll" .
+        cp "$BIN_DIR/GWToolbox.exe" .
         gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
-        
+
         # Create release
         gh release create "$TAG_NAME" \
           --title "$TAG_NAME" \
-          GWToolboxdll.dll GWToolboxdll.pdb.gz
+          GWToolbox.exe GWToolboxdll.dll GWToolboxdll.pdb.gz

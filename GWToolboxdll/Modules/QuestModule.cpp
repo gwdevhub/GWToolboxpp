@@ -187,12 +187,18 @@ namespace {
                 if (ok) {
                     size_t route_map_end_idx;
                     GW::GamePos gp;
+                    bool passed_route_break = false;
                     const auto data = pts->data();
                     for (route_map_end_idx = 0; route_map_end_idx < pts->size(); route_map_end_idx++) {
-                        if (PathfindingWindow::IsRouteBreak(data[route_map_end_idx])) continue;
+                        if (PathfindingWindow::IsRouteBreak(data[route_map_end_idx])) {
+                            // We've hit a route break e.g. portal, but we want to try and plot the next point in this map so the player traverses through.
+                            passed_route_break = true;
+                            continue;
+                        }
                         // @cleanup: is this bit safe to run on a worker thread?!
                         if (!(PathfindingWindow::IsWorldPosOnMap(data[route_map_end_idx]) && WorldMapWidget::WorldMapToGamePos(data[route_map_end_idx], gp))) break;
                         route_map->push_back(gp);
+                        if (passed_route_break) break;
                     }
                     if (route_map_end_idx) pts->erase(pts->begin(), pts->begin() + route_map_end_idx);
                 }
@@ -202,8 +208,7 @@ namespace {
                         cqp->route_world = std::move(*pts);
                         cqp->route_map = std::move(*route_map);
                         cqp->has_full_route = true;
-                        if (const auto self = GW::Agents::GetControlledCharacter())
-                            cqp->TrimLeadingWaypoints(self->pos);
+                        if (const auto self = GW::Agents::GetControlledCharacter()) cqp->TrimLeadingWaypoints(self->pos);
                         cqp->calculated_at = TIMER_INIT();
                         cqp->route_failed_at = 0;
                         cqp->calculating = 0;
@@ -238,11 +243,17 @@ namespace {
                 auto route_map = new std::vector<GW::GamePos>(); // game-map coords
                 if (ok) {
                     GW::GamePos gp;
+                    bool passed_route_break = false;
                     for (auto& pt : *pts) {
-                        if (PathfindingWindow::IsRouteBreak(pt)) continue;
+                        if (PathfindingWindow::IsRouteBreak(pt)) {
+                            // We've hit a route break e.g. portal, but we want to try and plot the next point in this map so the player traverses through.
+                            passed_route_break = true;
+                            continue;
+                        }
                         // @cleanup: is this bit safe to run on a worker thread?!
                         if (!(PathfindingWindow::IsWorldPosOnMap(pt) && WorldMapWidget::WorldMapToGamePos(pt, gp))) break;
                         route_map->push_back(gp);
+                        if (passed_route_break) break;
                     }
                     // orient us -> target.
                     if (route_map->size() > 1) {
@@ -250,8 +261,7 @@ namespace {
                             const float dx = a.x - b.x, dy = a.y - b.y;
                             return dx * dx + dy * dy;
                         };
-                        if (sq(route_map->front(), target) < sq(route_map->back(), target))
-                            std::ranges::reverse(*route_map);
+                        if (sq(route_map->front(), target) < sq(route_map->back(), target)) std::ranges::reverse(*route_map);
                     }
                 }
                 Resources::EnqueueMainTask([qid, route_map, pts, ok, same_map] {
@@ -262,8 +272,7 @@ namespace {
                             cqp->route_world.clear(); // the whole route is the on-map leg
                             cqp->has_full_route = true;
                         }
-                        if (const auto self = GW::Agents::GetControlledCharacter())
-                            cqp->TrimLeadingWaypoints(self->pos);
+                        if (const auto self = GW::Agents::GetControlledCharacter()) cqp->TrimLeadingWaypoints(self->pos);
                         cqp->calculated_at = TIMER_INIT();
                         cqp->route_failed_at = 0;
                         cqp->calculating = 0;
@@ -454,7 +463,7 @@ namespace {
             }
             if (GetSquareDistance(goal, cqp->goal_world) > 10.f * 10.f) {
                 cqp->has_full_route = false; // goal moved → re-plot the whole route
-                cqp->route_failed_at = 0; // and give the new goal a clean retry
+                cqp->route_failed_at = 0;    // and give the new goal a clean retry
             }
             cqp->goal_world = goal;
             cqp->Recalculate(*pos);
@@ -489,13 +498,11 @@ namespace {
                 if (quest->quest_id == custom_quest_id) {
                     quest->log_state |= 1; // Avoid asking for description about this quest
                 }
-            }
-            break;
+            } break;
             case GW::UI::UIMessage::kStartMapLoad: {
                 const auto q = GW::QuestMgr::GetActiveQuestId();
                 if (q != GW::Constants::QuestID::None) quest_id_before_map_load = q;
-            }
-            break;
+            } break;
             case GW::UI::UIMessage::kSendSetActiveQuest: {
                 const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
                 if (setting_custom_quest_marker) {
@@ -510,23 +517,20 @@ namespace {
                     status->blocked = true;
                     QuestModule::SetActiveQuestId(quest_id, false);
                 }
-            }
-            break;
+            } break;
             case GW::UI::UIMessage::kSendAbandonQuest: {
                 const auto quest_id = static_cast<GW::Constants::QuestID>((uint32_t)wparam);
                 if (quest_id == custom_quest_id) {
                     status->blocked = true;
                     QuestModule::SetCustomQuestMarker({0, 0});
                 }
-            }
-            break;
+            } break;
             case GW::UI::UIMessage::kOnScreenMessage: {
                 // Block the on-screen message when the custom marker is placed
                 if (setting_custom_quest_marker) {
                     status->blocked = true;
                 }
-            }
-            break;
+            } break;
         }
     }
 
@@ -544,8 +548,7 @@ namespace {
                     QuestModule::SetActiveQuestId(player_chosen_quest_id, true);
                 }
                 RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
-            }
-            break;
+            } break;
             case GW::UI::UIMessage::kServerActiveQuestChanged:
                 RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
                 break;
@@ -814,9 +817,9 @@ void QuestModule::Initialize()
         bypass_custom_quest_assertion_patch.TogglePatch(true);
     }
 
-    constexpr GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kQuestDetailsChanged, GW::UI::UIMessage::kQuestAdded, GW::UI::UIMessage::kClientActiveQuestChanged,
-                                                 GW::UI::UIMessage::kServerActiveQuestChanged, GW::UI::UIMessage::kMapLoaded, GW::UI::UIMessage::kOnScreenMessage,
-                                                 GW::UI::UIMessage::kSendSetActiveQuest, GW::UI::UIMessage::kSendAbandonQuest, GW::UI::UIMessage::kStartMapLoad};
+    constexpr GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kQuestDetailsChanged,      GW::UI::UIMessage::kQuestAdded,       GW::UI::UIMessage::kClientActiveQuestChanged,
+                                                 GW::UI::UIMessage::kServerActiveQuestChanged, GW::UI::UIMessage::kMapLoaded,        GW::UI::UIMessage::kOnScreenMessage,
+                                                 GW::UI::UIMessage::kSendSetActiveQuest,       GW::UI::UIMessage::kSendAbandonQuest, GW::UI::UIMessage::kStartMapLoad};
     for (const auto ui_message : ui_messages) {
         // Post callbacks, non blocking
         RegisterUIMessageCallback(&pre_ui_message_entry, ui_message, OnPreUIMessage, -0x4000);

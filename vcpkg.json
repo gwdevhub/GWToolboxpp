@@ -6,6 +6,7 @@
     "earcut-hpp",
     "glaze",
     "minhook",
+    "recastnavigation",
     "uwebsockets"
   ],
   "overrides": [

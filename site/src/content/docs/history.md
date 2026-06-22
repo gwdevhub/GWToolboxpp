@@ -6,6 +6,34 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.29
+* [New] Chat: added `/dropitem <model_id> [quantity]` to drop inventory items matching a model id, stack by stack — drops up to the given quantity, or every matching stack when no quantity is given. Only works in an explorable area and skips equipped/customized items.
+* [New] Hero command panel: you can now choose whether remembered panel positions track the party slot (new default) or follow a specific hero, via a radio in Party Settings.
+* [New] Defender detection now extends to gMod and plugin load failures — if Windows Defender blocks one from loading, you get an exclusion prompt instead of a silent failure.
+* [Fix] Launcher: the "Couldn't find character name RVA" error is no longer shown when anti-virus / Controlled Folder Access blocks Toolbox from reading the Guild Wars process. You now get a clear anti-virus message pointing at the real cause instead of being told to update the launcher.
+* [Fix] Launcher: re-downloading GWToolbox.exe from the website now also updates the installed copy used by desktop shortcuts, so a stale exe is properly replaced.
+* [Fix] Launcher: self-update now verifies the new GWToolbox.exe actually landed (and wasn't silently restored or quarantined by anti-virus) instead of re-prompting to update on every launch.
+* [Fix] Health widget: the absolute HP readout now uses the agent's own max HP, so it shows a value immediately instead of "-" until a party member damages or heals the target.
+* [Minor] Crash-file write failures now report the actual cause (missing folder, full disk, permissions) instead of only a raw error code.
+* [Minor] Plugins: plugin-load error messages now display non-ASCII (e.g. Korean) file paths correctly.
+* [Minor] Docs site: headings now have hover-to-copy permalink anchors.
+
+## Version 8.28
+* [New] Launcher: GWToolbox.exe now updates itself from GitHub (separately from the DLL) and offers to restart into the new version once the download finishes.
+* [New] Launcher: failed injections are now diagnosed — you get a clear Windows Defender / anti-virus prompt (with the folder to exclude) instead of a generic crash, and Wine/Proton/Lutris details are reported when launching on Linux.
+* [New] Toolbox now detects when anti-virus quarantines its components at load time and shows an exclusion prompt instead of crashing.
+* [Fix] Fixed compatibility with the latest Guild Wars update.
+* [Fix] Texture packs (gMod/uMod/Texmod) are no longer lost on restart when stored in the new JSON settings.
+* [Minor] Docs site: the search box is now focused automatically when you open it, and the Linux page notes that non-Windows hosts are unsupported.
+
+## Version 8.27
+* [New] Chat: added a block list to hide messages from specific players by name (Chat Settings → "Hide any messages from these players").
+* [New] Minimap: opened and closed locked chests now have separate colour and size settings.
+* [New] Game Settings: added an option to hide the window buttons (minimise/restore/close) in borderless and fullscreen modes.
+* [Fix] Multi-map pathing now routes to the nearest map break, and portal/pathing diagnostic messages no longer appear in chat.
+* [Fix] Multi-map pathing no longer fails when the portal connection data isn't sitting next to the DLL — the data is now bundled inside Toolbox.
+* [Fix] Party damage monitor no longer shows a "0" for members who haven't dealt damage or healing.
+
 ## Version 8.26
 * [New] Multi-map pathfinding — quest paths now route across map boundaries. The path to a quest in another area is drawn on the world map and continues seamlessly once you zone in.
 * [New] Added Backup module to archive and restore your Toolbox settings.

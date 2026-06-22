@@ -11,10 +11,41 @@
 #include <Modules/Updater.h>
 #include <GWToolbox.h>
 #include <Defines.h>
+#include <Defender.h>
+#include <Path.h>
 #include <Utils/TextUtils.h>
 
 namespace {
     char* tb_exception_message = nullptr;
+
+    // If Defender quarantined/blocked the crash file in the last few seconds, surface the event text.
+    std::wstring RecentDefenderBlock(const std::wstring& needle)
+    {
+        std::wstring detail;
+        if (FindRecentDefenderBlock(needle, 15, detail))
+            return L"\n\nWindows Defender reported a block moments ago:\n" + detail;
+        return L"";
+    }
+
+    // The assertion/exception that triggered the crash, so a screenshot shows the root cause even when no dump could be written.
+    std::wstring OriginalError(const char* extra_info)
+    {
+        const char* message = extra_info && *extra_info ? extra_info : tb_exception_message;
+        if (message && *message)
+            return L"\n\nOriginal error:\n" + TextUtils::StringToWString(message);
+        return L"";
+    }
+
+    // Resolve the crashes folder without asserting; Resources::GetPath() would assert and re-enter the crash handler when Documents is blocked.
+    std::wstring ResolveCrashFolder()
+    {
+        std::filesystem::path folder;
+        if (!PathGetDocumentsPath(folder, L"GWToolboxpp"))
+            return L"";
+        if (std::filesystem::path computer; PathGetComputerName(computer))
+            folder /= computer;
+        return (folder / L"crashes").wstring();
+    }
 
     struct GWDebugInfo {
         size_t len;
@@ -133,7 +164,20 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
 
 LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const char* extra_info)
 {
-
+    // A crash while handling a crash (e.g. resolving the blocked crash folder asserts again) must not recurse.
+    static volatile LONG crashing = 0;
+    if (InterlockedExchange(&crashing, 1) != 0) {
+        std::wstring error =
+            L"Guild Wars crashed, and GWToolbox crashed again while trying to write the crash dump.\n\n"
+            L"This almost always means something is blocking your Documents\\GWToolboxpp folder - "
+            L"usually Windows Defender Controlled Folder Access or antivirus.\n\n"
+            L"Allow Guild Wars through Controlled Folder Access, or add an exclusion for your "
+            L"GWToolbox folder, then try again.";
+        error += OriginalError(extra_info);
+        MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST);
+        TerminateProcess(GetCurrentProcess(), 1);
+        return EXCEPTION_EXECUTE_HANDLER;
+    }
 
     // Disable WER right at the start of crash handling
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
@@ -167,10 +211,24 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     }
 #endif
 
-    const std::wstring crash_folder = Resources::GetPath(L"crashes");
+    const std::wstring crash_folder = ResolveCrashFolder();
 
-    if (!Resources::EnsureFolderExists(crash_folder.c_str())) {
-        MessageBoxW(nullptr, L"Failed to create crash directory", L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+    std::wstring ensure_folder_error;
+    if (crash_folder.empty()) {
+        std::wstring error =
+            L"Guild Wars crashed!\n\n"
+            L"GWToolbox couldn't find your Documents folder to write a crash dump.\n\n"
+            L"This is usually Windows Defender Controlled Folder Access or antivirus blocking access - "
+            L"allow Guild Wars through Controlled Folder Access, or add an exclusion for your GWToolbox folder.";
+        error += RecentDefenderBlock(L"GWToolbox");
+        error += OriginalError(extra_info);
+        MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        TerminateProcess(GetCurrentProcess(), 1);
+    }
+    if (!Resources::EnsureFolderExists(crash_folder.c_str(), ensure_folder_error)) {
+        ensure_folder_error += RecentDefenderBlock(crash_folder);
+        ensure_folder_error += OriginalError(extra_info);
+        MessageBoxW(nullptr, ensure_folder_error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
@@ -196,7 +254,17 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     const HANDLE hFile = CreateFileW(szFileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE | FILE_SHARE_READ, nullptr, CREATE_ALWAYS, 0, nullptr);
 
     if (hFile == INVALID_HANDLE_VALUE) {
-        std::wstring error = std::format(L"Failed to create crash file\nGetLastError: {}", GetLastError());
+        const DWORD last_error = GetLastError();
+        std::wstring error = std::format(
+            L"Guild Wars crashed!\n\n"
+            L"GWToolbox tried to create a crash file, but Windows refused to create it.\n\n"
+            L"GetLastError: {} ({})\n\n"
+            L"File: {}\n\n"
+            L"{}",
+            last_error, FormatWindowsError(last_error), szFileName, PathDiagnoseWritability(crash_folder)
+        );
+        error += RecentDefenderBlock(szFileName);
+        error += OriginalError(extra_info);
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
@@ -229,16 +297,43 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     DWORD lastError = GetLastError();
     CloseHandle(hFile);
 
+    // Antivirus can let the write succeed then delete the file, so confirm it's really there and non-empty.
+    bool file_present = false;
+    {
+        const HANDLE hVerify = CreateFileW(szFileName, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (hVerify != INVALID_HANDLE_VALUE) {
+            LARGE_INTEGER file_size{};
+            file_present = GetFileSizeEx(hVerify, &file_size) && file_size.QuadPart > 0;
+            CloseHandle(hVerify);
+        }
+    }
+
+    const bool dump_ok = success && file_present;
+
     std::wstring error_info;
 
-    if (!success) {
-        error_info = std::format(
-            L"Guild Wars crashed!\n\n"
-            L"GWToolbox tried to create a crash dump, but MiniDumpWriteDump failed\n\n"
-            L"GetLastError: {}\n\n"
-            L"File: {}\n\n",
-            lastError, szFileName
-        );
+    if (!dump_ok) {
+        if (!success) {
+            error_info = std::format(
+                L"Guild Wars crashed!\n\n"
+                L"GWToolbox tried to create a crash dump, but MiniDumpWriteDump failed.\n\n"
+                L"GetLastError: {} ({})\n\n"
+                L"File: {}\n\n"
+                L"{}",
+                lastError, FormatWindowsError(lastError), szFileName, PathDiagnoseWritability(crash_folder)
+            );
+        }
+        else {
+            error_info = std::format(
+                L"Guild Wars crashed!\n\n"
+                L"GWToolbox wrote a crash dump, but the file is now empty or gone.\n\n"
+                L"File: {}\n\n"
+                L"{}",
+                szFileName, PathDiagnoseWritability(crash_folder)
+            );
+        }
+        error_info += RecentDefenderBlock(szFileName);
+        error_info += OriginalError(extra_info);
     }
     else {
         error_info = L"Guild Wars crashed!\n\n";
@@ -263,7 +358,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     }
     delete ExpParam;
 
-    MessageBoxW(nullptr, error_info.c_str(), success ? L"GWToolbox++ crash dump created!" : L"GWToolbox++ crash dump failed!", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST);
+    MessageBoxW(nullptr, error_info.c_str(), dump_ok ? L"GWToolbox++ crash dump created!" : L"GWToolbox++ crash dump failed!", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST);
 
     #ifdef _DEBUG
     if (IsDebuggerPresent()) {

@@ -100,6 +100,36 @@ body::before {
   border-bottom-color: var(--color-accent);
 }
 
+/* Permalink icons appended to headings by rehype-autolink-headings */
+.prose :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: 5rem;
+}
+.prose a.heading-anchor {
+  border-bottom: none;
+  margin-left: 0.4em;
+  padding: 0 0.15em;
+  color: var(--color-fg-faint);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+.prose a.heading-anchor svg {
+  display: inline;
+  vertical-align: middle;
+}
+.prose :is(h1, h2, h3, h4, h5, h6):hover a.heading-anchor,
+.prose a.heading-anchor:focus-visible {
+  opacity: 1;
+}
+.prose a.heading-anchor:hover {
+  color: var(--color-accent);
+}
+/* Touch devices have no hover — keep the permalinks visible but subtle */
+@media (hover: none) {
+  .prose a.heading-anchor {
+    opacity: 0.5;
+  }
+}
+
 .prose figure {
   margin: 1.5rem 0;
 }

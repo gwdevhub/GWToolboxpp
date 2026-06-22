@@ -121,7 +121,7 @@ bool Install(const bool quiet, std::wstring& error)
     if (!CopyInstaller())
         return error = L"CopyInstaller failed", false;
 
-    if (!DownloadWindow::DownloadAllFiles(error))
+    if (!DownloadWindow::DownloadDll(error))
         return false;
     const auto dll_path = install_path.parent_path() / "GWToolboxdll.dll";
     if (!fs::exists(dll_path)) {
