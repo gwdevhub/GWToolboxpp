@@ -11,75 +11,11 @@
 #include <Modules/Updater.h>
 #include <GWToolbox.h>
 #include <Defines.h>
+#include <Path.h>
 #include <Utils/TextUtils.h>
 
 namespace {
     char* tb_exception_message = nullptr;
-
-    // Turn a GetLastError() code into the human-readable description Windows ships with it.
-    std::wstring FormatWin32Error(const DWORD error_code)
-    {
-        LPWSTR buffer = nullptr;
-        const DWORD len = FormatMessageW(
-            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-            reinterpret_cast<LPWSTR>(&buffer), 0, nullptr);
-
-        std::wstring message = len && buffer ? std::wstring(buffer, len) : L"no description available";
-        if (buffer) {
-            LocalFree(buffer);
-        }
-        while (!message.empty() && (message.back() == L'\n' || message.back() == L'\r' || message.back() == L' ')) {
-            message.pop_back();
-        }
-        return message;
-    }
-
-    std::wstring ToWide(const std::error_code& ec)
-    {
-        return std::format(L"{} (category '{}', value {})", TextUtils::StringToWString(ec.message()), TextUtils::StringToWString(ec.category().name()), ec.value());
-    }
-
-    // Best-effort, non-throwing probe of the crashes folder so we report what's actually wrong
-    // (missing folder, full disk, blocked write) instead of guessing at the cause.
-    std::wstring DiagnoseCrashFolder(const std::filesystem::path& file)
-    {
-        std::error_code ec;
-        const std::filesystem::path folder = file.parent_path();
-
-        if (!std::filesystem::exists(folder, ec)) {
-            return ec
-                ? std::format(L"Could not access the crashes folder: {}", ToWide(ec))
-                : std::format(L"The crashes folder no longer exists ({}) - something deleted or moved it.", folder.wstring());
-        }
-
-        std::wstring out;
-        if (const auto space = std::filesystem::space(folder, ec); !ec && space.available < 16ull * 1024 * 1024) {
-            out += std::format(L"Only {} KB free on this drive - it may be full.\n", space.available / 1024);
-        }
-
-        // Probe whether we can write a file into the folder right now; this distinguishes a
-        // folder-wide permission/lock problem from something blocking only the dump file.
-        const std::filesystem::path probe = folder / L"gwtoolbox_write_test.tmp";
-        std::filesystem::remove(probe, ec);
-        bool wrote = false;
-        if (const HANDLE h = CreateFileW(probe.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY, nullptr); h != INVALID_HANDLE_VALUE) {
-            DWORD written = 0;
-            wrote = WriteFile(h, "x", 1, &written, nullptr) && written == 1;
-            CloseHandle(h);
-        }
-        else {
-            out += std::format(L"A test file could not be created in the folder either: {}\n", FormatWin32Error(GetLastError()));
-        }
-        std::filesystem::remove(probe, ec);
-
-        out += wrote
-            ? L"A test file could be written to the folder, so the folder itself is writable - "
-              L"something is blocking this specific file. Antivirus quarantine is the most common cause."
-            : L"Writing to the folder is being blocked entirely - check folder permissions, a "
-              L"read-only drive, or antivirus exclusions for your Guild Wars / GWToolbox folder.";
-        return out;
-    }
 
     struct GWDebugInfo {
         size_t len;
@@ -269,7 +205,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
             L"GetLastError: {} ({})\n\n"
             L"File: {}\n\n"
             L"{}",
-            last_error, FormatWin32Error(last_error), szFileName, DiagnoseCrashFolder(szFileName)
+            last_error, FormatWindowsError(last_error), szFileName, PathDiagnoseWritability(crash_folder)
         );
         MessageBoxW(nullptr, error.c_str(), L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
@@ -327,7 +263,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
                 L"GetLastError: {} ({})\n\n"
                 L"File: {}\n\n"
                 L"{}",
-                lastError, FormatWin32Error(lastError), szFileName, DiagnoseCrashFolder(szFileName)
+                lastError, FormatWindowsError(lastError), szFileName, PathDiagnoseWritability(crash_folder)
             );
         }
         else {
@@ -336,7 +272,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
                 L"GWToolbox wrote a crash dump, but the file is now empty or gone.\n\n"
                 L"File: {}\n\n"
                 L"{}",
-                szFileName, DiagnoseCrashFolder(szFileName)
+                szFileName, PathDiagnoseWritability(crash_folder)
             );
         }
     }
