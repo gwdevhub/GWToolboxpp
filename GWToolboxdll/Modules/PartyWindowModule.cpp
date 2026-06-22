@@ -29,6 +29,7 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Defines.h>
+#include <Modules/HeroPanelPositionModule.h>
 #include <Modules/PartyWindowModule.h>
 #include <Windows/FriendListWindow.h>
 #include "Resources.h"
@@ -1073,6 +1074,9 @@ void PartyWindowModule::DrawSettingsInternal()
         DrawCustomPartySortingSettings();
         ImGui::Unindent();
     }
+    ImGui::Separator();
+
+    HeroPanelPositionModule::Instance().DrawPositionKeySetting();
 }
 void PartyWindowModule::SaveSettings(SettingsDoc& doc)
 {

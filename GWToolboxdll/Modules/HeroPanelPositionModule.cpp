@@ -10,6 +10,7 @@
 #include <GWCA/Utilities/Hook.h>
 
 #include <GWCA/Managers/GameThreadMgr.h>
+#include <ImGuiAddons.h>
 #include <Modules/HeroPanelPositionModule.h>
 #include <Timer.h>
 #include <Utils/SettingsDoc.h>
@@ -23,30 +24,47 @@ namespace {
     static_assert(sizeof(GW::UI::FramePosition) % sizeof(uint32_t) == 0);
     using FramePosWords = std::array<uint32_t, frame_pos_words>;
 
-    // hero id -> last known panel position. Keyed by hero id so it survives party reordering.
-    std::map<uint32_t, GW::UI::FramePosition> saved_positions;
+    // Last known panel positions, kept separately per keying mode so switching modes (or upgrading
+    // from the original by-hero-id-only version) never reinterprets one mode's keys as the other's.
+    std::map<uint32_t, GW::UI::FramePosition> saved_positions_by_id;
+    std::map<uint32_t, GW::UI::FramePosition> saved_positions_by_index;
 
     GW::HookEntry ui_message_entry;
 
-    GW::UI::Frame* GetCommanderFrame(uint32_t commander_index, GW::Constants::HeroID* hero_id_out)
+    bool KeyByHeroId()
+    {
+        return HeroPanelPositionModule::Instance().position_key_mode == HeroPanelPositionModule::ByHeroId;
+    }
+
+    std::map<uint32_t, GW::UI::FramePosition>& ActivePositions()
+    {
+        return KeyByHeroId() ? saved_positions_by_id : saved_positions_by_index;
+    }
+
+    GW::UI::Frame* GetCommanderFrame(uint32_t commander_index, uint32_t* key_out)
     {
         wchar_t label[] = L"AgentCommander0";
         label[_countof(label) - 2] = static_cast<wchar_t>(L'0' + commander_index);
         const auto frame = GW::UI::GetFrameByLabel(label);
         if (!(frame && frame->IsCreated() && frame->IsVisible())) return nullptr;
+        if (!KeyByHeroId()) {
+            *key_out = commander_index;
+            return frame;
+        }
         const auto context = (uint32_t*)GW::UI::GetFrameContext(frame);
         const auto* hero = context ? ToolboxUtils::GetHeroPartyMember(context[1]) : 0;
-        return hero ? (*hero_id_out = hero->hero_id, frame) : nullptr;
+        return hero ? (*key_out = static_cast<uint32_t>(hero->hero_id), frame) : nullptr;
     }
 
     // User dragged a floating window; if it's a hero command panel, remember where.
     void SavePanelPositions()
     {
-        GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
+        auto& positions = ActivePositions();
+        uint32_t key = 0;
         for (uint32_t i = 0; i < hero_panel_count; i++) {
-            const auto frame = GetCommanderFrame(i, &hero_id);
+            const auto frame = GetCommanderFrame(i, &key);
             if (!frame) continue;
-            saved_positions[static_cast<uint32_t>(hero_id)] = frame->position;
+            positions[key] = frame->position;
         }
     }
 
@@ -54,19 +72,47 @@ namespace {
     // Returns true once the frame exists and has been handled; false while it's not created yet.
     void RestorePanelPositions()
     {
-        GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
+        auto& positions = ActivePositions();
+        uint32_t key = 0;
         for (uint32_t i = 0; i < hero_panel_count; i++) {
-            const auto frame = GetCommanderFrame(i, &hero_id);
+            const auto frame = GetCommanderFrame(i, &key);
             if (!frame) continue;
-            const auto found = saved_positions.find(static_cast<uint32_t>(hero_id));
-            if (found == saved_positions.end()) {
-                saved_positions[static_cast<uint32_t>(hero_id)] = frame->position;
+            const auto found = positions.find(key);
+            if (found == positions.end()) {
+                positions[key] = frame->position;
             }
             else {
                 frame->position = found->second;
                 GW::UI::TriggerFrameRedraw(frame);
             }
         }
+    }
+
+    void LoadPositions(const SettingsDoc& doc, const char* section, const char* key, std::map<uint32_t, GW::UI::FramePosition>& out)
+    {
+        std::map<std::string, FramePosWords> serialized;
+        if (!doc.Get(section, key, serialized)) return;
+        out.clear();
+        for (const auto& [id_str, words] : serialized) {
+            uint32_t id = 0;
+            const auto* first = id_str.data();
+            const auto* last = first + id_str.size();
+            if (std::from_chars(first, last, id).ec != std::errc{}) continue;
+            GW::UI::FramePosition position{};
+            memcpy(&position, words.data(), sizeof(position));
+            out[id] = position;
+        }
+    }
+
+    void SavePositions(SettingsDoc& doc, const char* section, const char* key, const std::map<uint32_t, GW::UI::FramePosition>& in)
+    {
+        std::map<std::string, FramePosWords> serialized;
+        for (const auto& [id, position] : in) {
+            FramePosWords words{};
+            memcpy(words.data(), &position, sizeof(position));
+            serialized[std::to_string(id)] = words;
+        }
+        doc.Set(section, key, serialized);
     }
 
     void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void*, void*)
@@ -102,31 +148,29 @@ void HeroPanelPositionModule::SignalTerminate()
     GW::UI::RemoveUIMessageCallback(&ui_message_entry);
 }
 
+void HeroPanelPositionModule::DrawPositionKeySetting()
+{
+    ImGui::Text("Remember hero command panel positions by:");
+    ImGui::RadioButton("Party slot", &position_key_mode, ByHeroIndex);
+    ImGui::ShowHelp("Each party position keeps its panel placement, regardless of which hero is in that slot. Matches the base game's intended behaviour.");
+    ImGui::SameLine();
+    ImGui::RadioButton("Hero", &position_key_mode, ByHeroId);
+    ImGui::ShowHelp("Each hero keeps its panel placement, so it follows the hero across party slots and characters.");
+}
+
 void HeroPanelPositionModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
-    std::map<std::string, FramePosWords> serialized;
-    if (!doc.Get(Name(), "positions", serialized)) return;
-    saved_positions.clear();
-    for (const auto& [key, words] : serialized) {
-        uint32_t hero_id = 0;
-        const auto* first = key.data();
-        const auto* last = first + key.size();
-        if (std::from_chars(first, last, hero_id).ec != std::errc{}) continue;
-        GW::UI::FramePosition position{};
-        memcpy(&position, words.data(), sizeof(position));
-        saved_positions[hero_id] = position;
-    }
+    // "positions" predates the keying mode and was always by hero id.
+    LoadPositions(doc, Name(), "positions", saved_positions_by_id);
+    LoadPositions(doc, Name(), "positions_by_index", saved_positions_by_index);
+    doc.Get(Name(), "position_key_mode", position_key_mode);
 }
 
 void HeroPanelPositionModule::SaveSettings(SettingsDoc& doc)
 {
     ToolboxModule::SaveSettings(doc);
-    std::map<std::string, FramePosWords> serialized;
-    for (const auto& [hero_id, position] : saved_positions) {
-        FramePosWords words{};
-        memcpy(words.data(), &position, sizeof(position));
-        serialized[std::to_string(hero_id)] = words;
-    }
-    doc.Set(Name(), "positions", serialized);
+    SavePositions(doc, Name(), "positions", saved_positions_by_id);
+    SavePositions(doc, Name(), "positions_by_index", saved_positions_by_index);
+    doc.Set(Name(), "position_key_mode", position_key_mode);
 }
