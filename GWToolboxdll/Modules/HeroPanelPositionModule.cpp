@@ -146,7 +146,7 @@ void HeroPanelPositionModule::SignalTerminate()
 
 void HeroPanelPositionModule::RegisterSettingsContent()
 {
-    RegisterSettingsContent(
+    ToolboxModule::RegisterSettingsContent(
         "Party Settings", nullptr,
         [](const std::string&, const bool is_showing) {
             if (!is_showing) return;
@@ -157,7 +157,8 @@ void HeroPanelPositionModule::RegisterSettingsContent()
             ImGui::RadioButton("Hero", &position_key_mode, ByHeroId);
             ImGui::ShowHelp("Each hero keeps its panel placement, so it follows the hero across party slots and characters.");
         },
-        1.1f);
+        1.1f
+    );
 }
 
 void HeroPanelPositionModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
