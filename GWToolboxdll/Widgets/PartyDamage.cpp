@@ -285,16 +285,16 @@ void PartyDamage::WriteDamageOf(size_t index, uint32_t rank)
 
     const bool has_healing = settings.show_healing && entry.healing > 0;
 
-    if (has_healing) {
-        swprintf_s(buffer, buffer_size,
-            entry.damage > 0
-                ? L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)"
-                : L"#%2d ~ %ls %ls ~ Heal: %3.2f%% (%d)",
+    if (has_healing && entry.damage > 0) {
+        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d) ~ Heal: %3.2f%% (%d)",
             rank, prof_str.c_str(), entry.name.c_str(),
-            entry.damage > 0 ? GetPercentageOfTotal(entry.damage) : GetPercentageOfTotalHealing(entry.healing),
-            entry.damage > 0 ? entry.damage : entry.healing,
-            has_healing && entry.damage > 0 ? GetPercentageOfTotalHealing(entry.healing) : 0.0f,
-            has_healing && entry.damage > 0 ? entry.healing : 0);
+            GetPercentageOfTotal(entry.damage), entry.damage,
+            GetPercentageOfTotalHealing(entry.healing), entry.healing);
+    }
+    else if (has_healing) {
+        swprintf_s(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Heal: %3.2f%% (%d)",
+            rank, prof_str.c_str(), entry.name.c_str(),
+            GetPercentageOfTotalHealing(entry.healing), entry.healing);
     }
     else {
         swprintf_s(buffer, buffer_size, L"#%2d ~ %ls %ls ~ Dmg: %3.2f%% (%d)",
@@ -595,6 +595,7 @@ void PartyDamage::Terminate()
     GW::StoC::RemoveCallbacks(&GenericValue_Entry);
     GW::StoC::RemoveCallbacks(&MapLoaded_Entry);
     GW::StoC::RemoveCallbacks(&AgentState_Entry);
+    GW::StoC::RemoveCallbacks(&AgentRemove_Entry);
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 
     party_names_by_index.clear();
@@ -731,7 +732,7 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         }
     }
 
-    const float cond_h = settings.show_condition_dps ? ImGui::GetTextLineHeight() * 2.0f + 6.0f : 0.0f;
+    const float cond_h = settings.show_condition_dps ? ImGui::GetTextLineHeight() + 6.0f : 0.0f;
 
     // Add a window to capture mouse clicks.
     ImGui::SetNextWindowPos({window_x, party_health_bars_position.top_left.y - cond_h});
