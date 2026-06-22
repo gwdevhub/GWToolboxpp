@@ -45,7 +45,7 @@ GWToolbox++ adds a wide variety of chat commands that you trigger by typing them
 
 - `/pcons [on|off]`: Turn [Pcons](/docs/pcons/) on or off. `/pcons` with no argument toggles.
 - `/dropbuff <skill_id>`: Drop the first instance of an upkept skill or buff by skill ID.
-- `/dropitem [quantity]`: Drop the item you're hovering over in your inventory. With no quantity, drops the whole stack; otherwise drops up to `[quantity]` from the stack.
+- `/dropitem <item_id> [quantity]`: Drop an inventory item by its item ID. With no quantity, drops the whole stack; otherwise drops up to `[quantity]` from the stack. Only works in an explorable area, and won't drop equipped or customized items.
 
 ## Targeting and minimap
 
