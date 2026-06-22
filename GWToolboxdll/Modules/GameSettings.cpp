@@ -73,6 +73,8 @@ namespace {
     GW::MemoryPatcher gold_confirm_patch;
     GW::MemoryPatcher remove_skill_warmup_duration_patch;
 
+    constexpr char combine_overhead_numbers_help[] = "Merges damage/heal numbers stacking on an agent into a single floater to reduce UI noise";
+
     void SetWindowTitle(const bool enabled)
     {
         if (!enabled) {
@@ -1456,6 +1458,7 @@ void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
+    SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
 
     OnSkillTomeWindow_UIMessage_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmSkTome.cpp", "selection.skillId", 0, 0), 0xfff);
     Log::Log("[GameSettings] OnSkillTomeWindow_UIMessage_Func = %p\n", OnSkillTomeWindow_UIMessage_Func);
@@ -1958,7 +1961,7 @@ void GameSettings::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::Checkbox("Healing given", &settings.block_giving_heals);
     ImGui::Unindent();
-    ImGui::CheckboxWithHelp("Combine floating numbers above character", &settings.combine_overhead_numbers, "Merges damage/heal numbers stacking on an agent into a single floater to reduce UI noise");
+    ImGui::CheckboxWithHelp("Combine floating numbers above character", &settings.combine_overhead_numbers, combine_overhead_numbers_help);
     if (ImGui::Checkbox("Show experience progress instead of current level on your experience bar", &settings.useful_level_progress_label)) {
         GW::GameThread::Enqueue(SetXpBarLabel);
     }
