@@ -104,7 +104,6 @@ target_link_libraries(GWToolboxdll PRIVATE
 	ctre::ctre
     unofficial::uwebsockets::uwebsockets
     RecastNavigation::Detour
-    RecastNavigation::Recast
 
     # libs:
     Dbghelp.lib # for MiniDump

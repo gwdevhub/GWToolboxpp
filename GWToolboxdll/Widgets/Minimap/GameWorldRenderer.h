@@ -70,7 +70,6 @@ public:
         unsigned int col = 0u;
         std::vector<GW::GamePos> points{};
         std::vector<D3DVertex> vertices{};
-        std::vector<uint32_t> vertices_zplanes{};
         bool filled = false;
         bool from_player_pos = false;
         bool use_dotted_effect = false;

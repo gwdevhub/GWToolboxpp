@@ -116,7 +116,6 @@ namespace {
         bool has_full_route = false;          // the whole route has been plotted at least once
         std::vector<GW::Vec2f> route_world{}; // the route, world-map coords (PATH_BREAK between maps)
         std::vector<GW::GamePos> route_map{};
-        std::vector<GW::GamePos> route_map_polyanya{}; // Polyanya route for the current-map leg; drawn white for comparison
         bool IsCalculating() { return calculating && TIMER_DIFF(calculating) < 5000; }
 
         void ClearMinimapLines()
@@ -150,19 +149,6 @@ namespace {
                 first_ingame = false;
                 l->created_by_toolbox = true;
                 l->color = color;
-                minimap_lines.push_back(l);
-            }
-            // Comparison overlay: the Polyanya route for this map's leg, drawn white on the terrain so it can be
-            // compared against the active path. Only the current-map leg differs by pathfinder.
-            for (size_t i = 0; settings.draw_quest_path_on_terrain && i + 1 < route_map_polyanya.size(); i++) {
-                const auto label = std::format("{}-r-{}", static_cast<uint32_t>(quest_id), i);
-                l = Minimap::Instance().custom_renderer.AddCustomLine(route_map_polyanya[i], route_map_polyanya[i + 1], label.c_str(), true);
-                l->from_player_pos = (i == 0); // anchor the first segment to the player's LIVE position
-                l->draw_on_terrain = true;
-                l->draw_on_minimap = false;
-                l->draw_on_mission_map = false;
-                l->created_by_toolbox = true;
-                l->color = 0xFFFFFFFF; // white
                 minimap_lines.push_back(l);
             }
             for (size_t i = 0; i + 1 < route_world.size(); i++) {
@@ -251,49 +237,31 @@ namespace {
                 if (route_world.empty() || route_map.empty()) return;
                 target = route_map.back();
             }
-            Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map] {
-                // Convert a RecalculateSegment world-coord result into this map's game coords: stop at the
-                // first route-break (portal) after plotting one point through it, then orient us -> target.
-                // Shared by the followed path and the Recast comparison overlay. (@cleanup: worker-thread safe?)
-                auto convert = [&](const std::vector<GW::Vec2f>& world, std::vector<GW::GamePos>& out) {
-                    GW::GamePos gp;
-                    bool passed_route_break = false;
-                    for (auto& pt : world) {
-                        if (PathfindingWindow::IsRouteBreak(pt)) { passed_route_break = true; continue; }
-                        if (!(PathfindingWindow::IsWorldPosOnMap(pt) && WorldMapWidget::WorldMapToGamePos(pt, gp))) break;
-                        out.push_back(gp);
-                        if (passed_route_break) break;
-                    }
-                    if (out.size() > 1) {
-                        const auto sq = [](const GW::GamePos& a, const GW::GamePos& b) {
-                            const float dx = a.x - b.x, dy = a.y - b.y;
-                            return dx * dx + dy * dy;
-                        };
-                        if (sq(out.front(), target) < sq(out.back(), target)) std::ranges::reverse(out);
-                    }
+            // The raw current-map leg from RecalculateSegment (out_game) already carries the pathfinder's
+            // per-waypoint zplane — it is the A* output, not a world-coord round-trip that zeroes the plane
+            // (WorldMapToGamePos never writes zplane). Feeding it straight into route_map lets the renderer
+            // drape the line on the surface the path actually traverses (bridge deck / ramp / bumps). A
+            // single same-map leg holds no route-break sentinels, so only the orientation guard remains:
+            // keep the point nearest the target last.
+            auto orient = [target](std::vector<GW::GamePos>& out) {
+                if (out.size() <= 1) return;
+                const auto sq = [](const GW::GamePos& a, const GW::GamePos& b) {
+                    const float dx = a.x - b.x, dy = a.y - b.y;
+                    return dx * dx + dy * dy;
                 };
+                if (sq(out.front(), target) < sq(out.back(), target)) std::ranges::reverse(out);
+            };
 
-                auto pts = new std::vector<GW::Vec2f>(); // world-map coords
-                const bool ok = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, pts);
-                auto route_map = new std::vector<GW::GamePos>(); // game-map coords
-                if (ok) convert(*pts, *route_map);
-
-                // Comparison overlay: also compute the Polyanya route for this leg (drawn white). Uses a
-                // thread-local mode override so the global pathing mode other threads read is untouched.
-                auto route_map_polyanya = new std::vector<GW::GamePos>();
-                if (PathfindingWindow::draw_polyanya_comparison) {
-                    std::vector<GW::Vec2f> rpts;
-                    Pathing::SetThreadPathingModeOverride(static_cast<int>(Pathing::PathingMode::Polyanya));
-                    const bool ok_r = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, &rpts);
-                    Pathing::SetThreadPathingModeOverride(-1);
-                    if (ok_r) convert(rpts, *route_map_polyanya);
-                }
-
-                Resources::EnqueueMainTask([qid, route_map, route_map_polyanya, pts, ok, same_map] {
+            // Recompute the followed/active route on a worker; it posts its result back to the main thread.
+            Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map, orient] {
+                auto pts = new std::vector<GW::Vec2f>();         // world-map coords (required out-param; unused for route_map)
+                auto route_map = new std::vector<GW::GamePos>(); // current-map game coords WITH carried zplane
+                const bool ok = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, pts, route_map);
+                if (ok) orient(*route_map);
+                Resources::EnqueueMainTask([qid, route_map, pts, ok, same_map] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
                     if (cqp && ok) {
                         cqp->route_map = std::move(*route_map);
-                        cqp->route_map_polyanya = std::move(*route_map_polyanya);
                         if (same_map) {
                             cqp->route_world.clear(); // the whole route is the on-map leg
                             cqp->has_full_route = true;
@@ -311,7 +279,6 @@ namespace {
                     }
                     delete pts;
                     delete route_map;
-                    delete route_map_polyanya;
                 });
             });
         }

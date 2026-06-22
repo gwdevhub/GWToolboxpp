@@ -12,8 +12,7 @@
 #include "Pathing.h"
 #include "PathingLog.h"
 #include "PathingMapDataLoader.h"
-#include "NavMesh.h" // viz-only Detour navmesh, co-built for the debug overlay (pathing uses the visgraph)
-#include "PolyanyaMesh.h" // conforming convex navmesh (Polyanya migration phase A); defines Pathing::PortalAdjacency
+#include "NavMesh.h" // hand-built Detour navmesh, co-built for the debug overlay (pathing uses the visgraph)
 
 // Define PATHING_VERBOSE to re-enable per-stage Log::Info chatter
 // (`[AStar:...]`, `Pathing::Impl::Generate*: N ms.`, `[VisGraph]`, `[Portals]`).
@@ -35,10 +34,6 @@ static constexpr auto PATHING_COUNT = 20'000z;
 static constexpr auto PATHING_PORTAL_EXPAND_CAP = 8z;
 
 namespace {
-    // Polyanya migration phase A: co-build the conforming convex mesh alongside the visgraph. OFF by default —
-    // it's WIP (non-conforming) and must never run in the shipped path; flip on only when developing Polyanya.
-    static bool s_build_polyanya = false;
-
     // Link same-plane left/right trapezoid seams that GW leaves unportaled. OFF: it's a no-op on the
     // cross-plane bridge that motivated it (matched 0 seams); kept for a genuine within-plane weave.
     static bool s_sameplane_lr = false;
@@ -787,10 +782,9 @@ namespace Pathing {
     struct Impl {
         Impl() : m_msd(), m_visGraph(), points(), portals(), pt_portal_map(), portal_pt_map(), portal_portal_map(), tmp_portal_pt_map(), ptneighbours(), m_teleports(), travel_portals(), m_teleportGraph(), m_mapData() {}
 
-        ~Impl() { delete m_navmesh; delete m_navmesh_recast; delete m_navmesh_poly; }
+        ~Impl() { delete m_navmesh; }
 
-        NavMesh* m_navmesh = nullptr;        // hand-built Detour mesh — drives the debug overlay (exact GW coords)
-        NavMesh* m_navmesh_recast = nullptr; // recast-generated Detour mesh — used by Recast pathing mode
+        NavMesh* m_navmesh = nullptr; // hand-built Detour mesh — drives the debug overlay (exact GW coords)
         MapSpecific::MapSpecificData m_msd;
         std::vector<std::vector<PointVisElement>> m_visGraph;                          // PointId
         std::vector<Point> points;                                                     // PointId
@@ -805,10 +799,6 @@ namespace Pathing {
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
         std::vector<DefferedTeleport> m_defferedPortalLinks;
         volatile bool m_terminateThread = false;
-
-        // Polyanya migration phase A: visgraph adjacency capture, now load-bearing input to PolyanyaMesh::Build.
-        std::vector<PortalAdjacency> m_portal_adjacency;
-        PolyanyaMesh* m_navmesh_poly = nullptr; // conforming convex navmesh, co-built for the future Polyanya query
 
         // Runtime/tmp vars that would otherwise have been static for cca - maybe add mutex?
         std::unordered_map<const GW::PathingTrapezoid*, bool> GetTrapezoidNeighbours_visited;
@@ -960,7 +950,6 @@ namespace Pathing {
             }
             tmp_portal_pt_map[id] = pt1;
             tmp_portal_pt_map[id + 1] = pt2;
-            m_portal_adjacency.push_back({pt1, pt2, pt1_layer, pt2_layer, p1, p2, p1_viability, p2_viability, (uint8_t)edge});
         }
 
         void GetTrapezoidNeighbours(const CopiedPathingMap& m, const GW::PathingTrapezoid* trapezoid, uint8_t trapezoid_layer, std::vector<Neighbour>& neighbours)
@@ -2064,45 +2053,14 @@ namespace Pathing {
             m_teleports = msd.m_teleports;
             travel_portals.clear();
 
+            const auto t_vg0 = std::chrono::high_resolution_clock::now();
             GenerateTrapezoidNeighbours();
             GeneratePortals();
             GenerateTeleportGraph();
             GenerateVisGraph();
-
-#ifdef _DEBUG
-            // Polyanya phase A: validate adjacency capture. The connection count must equal the ghost-wall
-            // audit's `checked` count (both = number of portal pairs) — cross-check the two log lines.
-            {
-                size_t cross = 0, viable = 0;
-                for (const auto& pa : m_portal_adjacency) {
-                    if (pa.layer_a != pa.layer_b) ++cross;
-                    viable += (size_t)pa.a_viable + (size_t)pa.b_viable;
-                }
-                Log::Log("[polyanya] adjacency capture: %zu connections (%zu cross-plane, %zu same-plane), %zu/%zu viable endpoints",
-                    m_portal_adjacency.size(), cross, m_portal_adjacency.size() - cross, viable, m_portal_adjacency.size() * 2);
-            }
-#endif
-
-            if (s_build_polyanya) {
-                try {
-                    if (!m_navmesh_poly) m_navmesh_poly = new PolyanyaMesh();
-                    m_navmesh_poly->Build(m_mapData, m_teleports, m_portal_adjacency);
-                }
-                catch (const std::bad_alloc&) {
-                    PATH_LOG_ERROR("[pathing] polyanya navmesh build OOM; polyanya mesh disabled for this map");
-                }
-#ifdef _DEBUG
-                // The conforming mesh must drop ZERO visgraph connections — this should read 0/N
-                // (vs the [ghostwall] line's 327/271 for the lossy Detour mesh).
-                if (m_navmesh_poly && m_navmesh_poly->IsReady()) {
-                    int ghosts = 0;
-                    for (const auto& pa : m_portal_adjacency)
-                        if (!m_navmesh_poly->AreConnected(pa.trap_a, pa.trap_b)) ++ghosts;
-                    Log::Log("[polyanya] ghost-wall audit: %d/%zu visgraph connections missing from Polyanya mesh",
-                        ghosts, m_portal_adjacency.size());
-                }
-#endif
-            }
+            const auto t_vg1 = std::chrono::high_resolution_clock::now();
+            const long long vg_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_vg1 - t_vg0).count();
+            Log::Log("[timing] visgraph build: %lld ms (%zu points)", vg_ms, points.size());
 
             try {
                 if (!m_navmesh) m_navmesh = new NavMesh();
@@ -2111,8 +2069,6 @@ namespace Pathing {
             catch (const std::bad_alloc&) {
                 PATH_LOG_ERROR("[pathing] overlay navmesh build OOM; overlay disabled for this map");
             }
-            // (The recast-generated mesh is built lazily on a worker via MilePath::EnsureRecastMesh when
-            // Recast mode is selected — not here — so it works mid-map without freezing the search thread.)
 #ifdef _DEBUG
             // Ghost-wall audit: every visgraph portal is a real walkable connection; count how many the
             // hand-built Detour mesh failed to represent as adjacency. This is the "= 0" gate for the re-tiler.
@@ -2228,7 +2184,7 @@ namespace Pathing {
 
     NavMesh* MilePath::GetNavMeshForDebug()
     {
-        return mImpl->m_navmesh; // null until the full build completes; viz overlay only
+        return mImpl->m_navmesh; // hand-built mesh; null until the full build completes (viz overlay only)
     }
 
     void MilePath::EnsureFullBuild()
@@ -2251,31 +2207,6 @@ namespace Pathing {
             m_build_failed = true;
         }
     }
-
-    void MilePath::EnsureRecastMesh()
-    {
-        EnsureFullBuild(); // ensures m_mapData + m_teleports are ready (immutable afterwards)
-        if (m_build_failed) return;
-        {
-            std::scoped_lock lock(pathing_mutex);
-            if (mImpl->m_navmesh_recast) return; // already built or attempted
-        }
-        // Build off-lock — m_mapData/m_teleports don't change after the full build — so concurrent searches
-        // (which see m_navmesh_recast == null and fall back) are never blocked by the voxelization.
-        NavMesh* mesh = nullptr;
-        try {
-            mesh = new NavMesh();
-            mesh->BuildFromRecast(mImpl->m_mapData, mImpl->m_teleports);
-        }
-        catch (...) {
-            delete mesh;
-            return;
-        }
-        std::scoped_lock lock(pathing_mutex);
-        if (mImpl->m_navmesh_recast) { delete mesh; return; } // another worker won the race
-        mImpl->m_navmesh_recast = mesh; // publish; from now on Recast mode uses it
-    }
-
 
     AStar::AStar(MilePath* mp) : m_path(this)
     {
@@ -2373,17 +2304,8 @@ namespace Pathing {
         return cost;
     }
 
-    PathingMode g_pathing_mode = PathingMode::Visgraph;
-
-    // Per-thread override of the pathfinder, -1 = use the global. Lets a worker compute an alternate-mode
-    // path (the Recast comparison overlay) without racing the global mode that other threads read.
-    thread_local int t_pathing_mode_override = -1;
-    void SetThreadPathingModeOverride(int mode) { t_pathing_mode_override = mode; }
-
     Error AStar::Search(const GW::GamePos& _start_pos, const GW::GamePos& _goal_pos)
     {
-        const PathingMode active_mode = (t_pathing_mode_override >= 0)
-            ? static_cast<PathingMode>(t_pathing_mode_override) : g_pathing_mode;
         Timing time(__FUNCTION__);
 
         // TODO: remove this microsecond phase timing once AStar perf is locked in.
@@ -2405,42 +2327,18 @@ namespace Pathing {
         // pathing_mutex so a slow first build doesn't stall other maps' searches.
         m_path.m_mp->EnsureFullBuild();
 
-        std::scoped_lock lock(pathing_mutex);
-
-        // Bail early if the MilePath's worker thread aborted with std::bad_alloc; mImpl's data
-        // (m_visGraph, points, portals, etc.) is partially built and unsafe to traverse.
+        // build_failed() and GetImpl() are stable once EnsureFullBuild() returns (it synchronises the
+        // build on m_build_mutex + m_full_built, NOT pathing_mutex), so read them lock-free. Bail early
+        // if the MilePath worker aborted with std::bad_alloc (mImpl's visgraph data is partially built).
         if (m_path.m_mp->build_failed()) return Error::MilePathBuildOOM;
-
         auto* mp = (Impl*)m_path.m_mp->GetImpl();
+
+        std::scoped_lock lock(pathing_mutex);
 
         BlockedPlaneBitset current_blocked_planes;
         const Error res = CopyPathingMapBlocks(&mp->m_mapData, &current_blocked_planes);
 
         if (res != Error::OK) return res;
-
-        // Recast pathing mode: route on the Detour navmesh (recast-generated if built, else hand-built).
-        // Polyanya mode has no query yet, so it falls through to the visgraph below.
-        if (active_mode == PathingMode::Recast) {
-            NavMesh* rnav = (mp->m_navmesh_recast && mp->m_navmesh_recast->IsReady()) ? mp->m_navmesh_recast : mp->m_navmesh;
-            if (rnav && rnav->IsReady()) {
-                rnav->ApplyBlockedPlanes(current_blocked_planes);
-                std::vector<GW::GamePos> rpts;
-                float rcost = 0.f;
-                const NavMesh::Result r = rnav->FindPath(_start_pos, _goal_pos, rpts, rcost);
-                switch (r) {
-                    case NavMesh::Result::OK:
-                    case NavMesh::Result::Partial: break;
-                    case NavMesh::Result::StartNotFound: return Error::FailedToFindStartPathingTrapezoid;
-                    case NavMesh::Result::GoalNotFound:  return Error::FailedToFindGoalPathingTrapezoid;
-                    case NavMesh::Result::NoMesh:        return Error::InvalidMapContext;
-                    default:                             return Error::FailedToFinializePath;
-                }
-                for (auto it = rpts.rbegin(); it != rpts.rend(); ++it) m_path.insertPoint(*it);
-                m_path.setCost(rcost);
-                m_path.finalize();
-                return Error::OK;
-            }
-        }
 
         auto start_pos = _start_pos;
         auto goal_pos = _goal_pos;
@@ -2491,6 +2389,12 @@ namespace Pathing {
                 m_path.setCost(vis.distance);
                 m_path.finalize();
                 t_search = clk::now();
+#if defined(_DEBUG) || defined(GWTB_HARNESS)
+                {
+                    const long long vg_us = std::chrono::duration_cast<std::chrono::microseconds>(clk::now() - t_begin).count();
+                    Log::Log("[visgraph] query los cost=%.0f pts=2 us=%lld", vis.distance, vg_us);
+                }
+#endif
                 log_timings("los");
                 return Error::OK;
             }
@@ -2623,6 +2527,24 @@ namespace Pathing {
 #endif
         t_search = clk::now();
 
+#if defined(_DEBUG) || defined(GWTB_HARNESS)
+        // Per-query cost + time for the visgraph A*.
+        {
+            const long long vg_us = std::chrono::duration_cast<std::chrono::microseconds>(clk::now() - t_begin).count();
+            Log::Log("[visgraph] query %s cost=%.0f pts=%zu us=%lld", m_path.ready() ? "ok" : "fail",
+                m_path.cost(), m_path.points().size(), vg_us);
+            if (m_path.ready()) {
+                const auto& vp = m_path.points();
+                std::string vs; char vb[40];
+                for (size_t i = 0; i < vp.size() && i < 40; ++i) {
+                    snprintf(vb, sizeof(vb), "(%.0f,%.0f,%u)", vp[i].x, vp[i].y, (unsigned)vp[i].zplane);
+                    vs += vb;
+                }
+                Log::Log("[vg-path] cost=%.0f %s", m_path.cost(), vs.c_str());
+            }
+        }
+
+#endif
         log_timings(m_path.ready() ? "ok" : "fail");
         return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }

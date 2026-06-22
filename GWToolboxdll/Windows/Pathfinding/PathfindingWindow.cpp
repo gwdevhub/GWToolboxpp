@@ -2652,47 +2652,16 @@ static void UpdateNavmeshOverlay()
     }
 }
 
-bool PathfindingWindow::draw_polyanya_comparison = true;
-
 float PathfindingWindow::GetPathRecalcDistance() { return settings.path_recalc_distance; }
-
-void PathfindingWindow::SetPathingMode(int mode)
-{
-    if (mode < 0 || mode > 2) return;
-    settings.pathing_mode = mode;
-    Pathing::g_pathing_mode = (Pathing::PathingMode)mode;
-}
-int PathfindingWindow::GetPathingMode() { return settings.pathing_mode; }
 
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
-    Pathing::g_pathing_mode = (Pathing::PathingMode)settings.pathing_mode;
-    // Build the Recast mesh on a worker thread when it's needed — Recast mode, or the comparison overlay —
-    // so it's ready mid-map without a reload and without the search-thread build that froze recalcs.
-    // Idempotent; fires when the need turns on or the map changes.
-    {
-        const bool want_recast = settings.pathing_mode == (int)Pathing::PathingMode::Recast;
-        static bool last_want = false;
-        static GW::Constants::MapID last_map = (GW::Constants::MapID)0;
-        const auto cur_map = GW::Map::GetMapID();
-        if (want_recast && (!last_want || last_map != cur_map)) {
-            if (auto* mp = GetMilepathForCurrentMap())
-                Resources::EnqueueWorkerTask([mp] { mp->EnsureRecastMesh(); });
-        }
-        last_want = want_recast;
-        last_map = cur_map;
-    }
     ProcessDeferredRemovals();
     UpdateNavmeshOverlay();
 }
 
 void PathfindingWindow::DrawSettingsInternal()
 {
-    const char* pathfinders[] = {"Visgraph (default)", "Recast (Detour)", "Polyanya (WIP)"};
-    ImGui::Combo("Pathfinder", &settings.pathing_mode, pathfinders, 3);
-    ImGui::ShowHelp("Visgraph (default): optimal visibility-graph A*.\nRecast (Detour): navmesh pathfinder (experimental; applies on next map load / zone).\nPolyanya (WIP): optimal any-angle query on the conforming convex mesh (cross-plane in progress; falls back to the visgraph where unsupported).");
-    ImGui::Checkbox("Compare Polyanya (white)", &draw_polyanya_comparison);
-    ImGui::ShowHelp("Also draw the Polyanya route in white alongside the active quest path, for visual comparison. Doubles path computation on each recompute.");
     ImGui::DragFloat("Path recalc distance", &settings.path_recalc_distance, 1.f, 1.f, 1000.f, "%.0f");
     ImGui::ShowHelp("How far you must move (game units / gwinches) before the rendered quest path recomputes. Lower = more responsive but heavier; the recompute is also rate-capped to ~30/s.");
     ImGui::Separator();
@@ -2718,7 +2687,6 @@ void PathfindingWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxWindow::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
-    Pathing::g_pathing_mode = (Pathing::PathingMode)settings.pathing_mode;
 }
 
 void PathfindingWindow::SaveSettings(SettingsDoc& doc)
@@ -2962,13 +2930,18 @@ namespace {
 
     // Blocking. A* across `map_id` from `from` to `to` (that map's game coords), leg out
     // in world coords. No shared state, so callers keep the rest of their route. False if no path.
-    bool ComputeSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>& out)
+    bool ComputeSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>& out, std::vector<GW::GamePos>* out_game = nullptr)
     {
         out.clear();
+        if (out_game) out_game->clear();
         if ((uint32_t)map_id == 0) map_id = GW::Map::GetMapID();
         if (map_id == GW::Constants::MapID::None) return false;
         std::vector<GW::GamePos> leg;
         if (!RunAStarOnMap(map_id, from, to, leg) || leg.empty()) return false;
+        // Hand back the raw leg (game coords WITH each waypoint's zplane) before SegmentToWorld flattens it to
+        // world Vec2f and loses the plane. map_id is now a concrete map and the leg is in its game coords, so
+        // the caller must treat out_game as that map's coords (it only requests it for the current map).
+        if (out_game) *out_game = leg;
         SegmentToWorld(leg, map_id, out); // leg game -> world
         return true;
     }
@@ -3142,12 +3115,12 @@ bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Ve
     return ComputeRoute(from_world, to_world, *out);
 }
 
-bool PathfindingWindow::RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out)
+bool PathfindingWindow::RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out, std::vector<GW::GamePos>* out_game)
 {
     if (!out) return false;
     std::lock_guard route_lock(route_mutex); // one build at a time; see route_mutex
     RouteJobScope job_scope;                 // defer eviction while we hold MilePath*
-    return ComputeSegment(map_id, from, to, *out);
+    return ComputeSegment(map_id, from, to, *out, out_game);
 }
 
 bool PathfindingWindow::IsWorldPosOnMap(const GW::Vec2f& world_pos, GW::Constants::MapID map_id)

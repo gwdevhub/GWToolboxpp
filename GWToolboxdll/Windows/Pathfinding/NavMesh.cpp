@@ -12,12 +12,8 @@
 
 #include <DetourNavMesh.h>
 #include <DetourNavMeshBuilder.h>
-#include <DetourNavMeshQuery.h>
 #include <DetourCommon.h>
 #include <DetourAlloc.h>
-
-#include <Recast.h>
-#include <RecastAlloc.h>
 
 #include <Logger.h>
 
@@ -33,19 +29,11 @@ namespace {
     constexpr float kWalkableHeight  = 20.0f;
     constexpr float kWalkableRadius  = 0.0f; // trapezoids are already the walkable surface, no erosion
 
-    constexpr float kQueryExtXZ    = 96.0f;   // snap tolerance
-    constexpr float kQueryExtXZFar = 6000.0f; // fallback when a point sits off the mesh
-    constexpr float kQueryExtY     = 450.0f;
-
     constexpr unsigned short kWalkableFlag = 0x1;
     constexpr unsigned char  kPolyArea     = 1; // traversal is gated by flags, not area
 
     constexpr float kOffMeshRadPortal   = 96.0f;
     constexpr float kOffMeshRadTeleport = 256.0f;
-
-    constexpr int kMaxPathPolys  = 2048;
-    constexpr int kMaxStraight   = 2048;
-    constexpr int kMaxQueryNodes = 8192;
 
     constexpr unsigned short kMeshNullIdx = 0xffff;    // RC_MESH_NULL_IDX: border / vertex padding
     constexpr unsigned int   kMaxGroundPolys = 0x8000; // internal neighbour indices must stay below this
@@ -73,25 +61,18 @@ namespace {
 
 namespace Pathing {
 
-    bool NavMesh::s_smooth_paths = false;
-    bool NavMesh::s_use_recast_builder = false;
-
     NavMesh::~NavMesh() { DestroyMesh(); }
 
     void NavMesh::DestroyMesh()
     {
-        if (m_query) { dtFreeNavMeshQuery(m_query); m_query = nullptr; }
         if (m_navmesh) { dtFreeNavMesh(m_navmesh); m_navmesh = nullptr; }
         m_poly_plane.clear();
-        m_plane_polys.clear();
-        m_offmesh_planes.clear();
 #ifdef _DEBUG
         m_trap_to_poly.clear();
 #endif
         m_ground_poly_count = 0;
         m_plane_count = 0;
         m_poly_base = 0;
-        m_applied_valid = false;
     }
 
     int NavMesh::PlaneIndex(uint32_t zplane) const
@@ -102,21 +83,12 @@ namespace Pathing {
 
     float NavMesh::PlaneY(int plane) const { return (float)plane * kPlaneSeparation; }
 
-    int NavMesh::PlaneOfPolyRef(unsigned int ref) const
-    {
-        if (!m_navmesh) return -1;
-        const unsigned int idx = m_navmesh->decodePolyIdPoly(ref);
-        if (idx < m_ground_poly_count) return m_poly_plane[idx];
-        return -1;
-    }
-
     bool NavMesh::Build(const PathingMapData& data, const MapSpecific::Teleports& teleports)
     {
         DestroyMesh();
         if (!data.IsValid()) return false;
         m_plane_count = (int)data.planes.size();
         if (m_plane_count <= 0 || m_plane_count > PATHING_MAX_PLANE_COUNT) return false;
-        m_plane_polys.assign(m_plane_count, {});
 
         size_t total_traps = 0;
         for (const auto& plane : data.planes) total_traps += plane.trapezoid_count;
@@ -142,7 +114,6 @@ namespace Pathing {
                 trap_idx.emplace(t, idx);
                 trap_list.push_back({t, p});
                 m_poly_plane.push_back((uint16_t)p);
-                m_plane_polys[p].push_back(idx);
             }
         }
         m_ground_poly_count = (uint32_t)trap_list.size();
@@ -490,462 +461,11 @@ namespace Pathing {
             DestroyMesh();
             return false;
         }
-        m_query = dtAllocNavMeshQuery();
-        if (!m_query || dtStatusFailed(m_query->init(m_navmesh, kMaxQueryNodes))) { DestroyMesh(); return false; }
 
         const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
         if (!tile || !tile->header) { DestroyMesh(); return false; }
         m_poly_base = m_navmesh->getPolyRefBase(tile);
-
-        for (int i = 0; i < tile->header->offMeshConCount; ++i) {
-            const dtOffMeshConnection& con = tile->offMeshCons[i];
-            if (con.userId < omPlanesByUser.size())
-                m_offmesh_planes.push_back({con.poly, omPlanesByUser[con.userId].first, omPlanesByUser[con.userId].second});
-        }
-        m_applied_valid = false;
         return true;
-    }
-
-    namespace {
-        struct NavMeshRcContext : public rcContext {
-            NavMeshRcContext() : rcContext(false) {}
-        };
-
-        struct RecastScratch {
-            rcHeightfield*        solid = nullptr;
-            rcCompactHeightfield* chf   = nullptr;
-            rcContourSet*         cset  = nullptr;
-            rcPolyMesh*           pmesh = nullptr;
-            rcPolyMeshDetail*     dmesh = nullptr;
-            ~RecastScratch()
-            {
-                if (dmesh) rcFreePolyMeshDetail(dmesh);
-                if (pmesh) rcFreePolyMesh(pmesh);
-                if (cset)  rcFreeContourSet(cset);
-                if (chf)   rcFreeCompactHeightfield(chf);
-                if (solid) rcFreeHeightField(solid);
-            }
-        };
-    } // namespace
-
-    bool NavMesh::BuildFromRecast(const PathingMapData& data, const MapSpecific::Teleports& teleports)
-    {
-        DestroyMesh();
-        if (!data.IsValid()) return false;
-        m_plane_count = (int)data.planes.size();
-        if (m_plane_count <= 0 || m_plane_count > PATHING_MAX_PLANE_COUNT) return false;
-        m_plane_polys.assign(m_plane_count, {});
-
-        float minx = FLT_MAX, minz = FLT_MAX, maxx = -FLT_MAX, maxz = -FLT_MAX;
-        size_t total_traps = 0;
-        for (int p = 0; p < m_plane_count; ++p) {
-            const auto& plane = data.planes[p];
-            for (uint32_t i = 0; i < plane.trapezoid_count; ++i) {
-                const auto& t = plane.trapezoids[i];
-                if (IsDegenerate(t)) continue;
-                ++total_traps;
-                minx = std::min({minx, t.XTL, t.XTR, t.XBL, t.XBR});
-                maxx = std::max({maxx, t.XTL, t.XTR, t.XBL, t.XBR});
-                minz = std::min({minz, t.YT, t.YB});
-                maxz = std::max({maxz, t.YT, t.YB});
-            }
-        }
-        if (total_traps == 0) return false;
-        minx -= 16.f; minz -= 16.f; maxx += 16.f; maxz += 16.f;
-
-        m_cs = std::max(8.0f, std::max(maxx - minx, maxz - minz) / 4096.0f);
-        m_ch = std::max(1.0f, ((float)(m_plane_count + 1) * kPlaneSeparation) / 60000.0f);
-
-        const int walkableHeightVx = std::max(1, (int)ceilf(kWalkableHeight / m_ch));
-        const int walkableClimbVx  = std::max(0, (int)floorf((kPlaneSeparation * 0.25f) / m_ch));
-        const int walkableRadiusVx = 0; // trapezoids are already the walkable surface; no erosion
-
-        NavMeshRcContext ctx;
-
-        std::vector<unsigned short> allVerts;   // (x,y,z) * vertCount, quantised to (bmin, cs/ch)
-        std::vector<unsigned short> allPolys;    // 2*nvp per poly (verts then neis)
-        std::vector<unsigned char>  allAreas;
-        std::vector<unsigned short> allFlags;
-        m_poly_plane.clear();
-
-        const int nvp = DT_VERTS_PER_POLYGON;
-        const float yrange = (float)(m_plane_count + 1) * kPlaneSeparation;
-        const float bmin[3] = {minx, -kPlaneSeparation, minz};
-        const float bmax[3] = {maxx, yrange, maxz};
-
-        auto quant = [&](float wx, float wy, float wz, unsigned short out[3]) -> bool {
-            long ix = lroundf((wx - bmin[0]) / m_cs);
-            long iy = lroundf((wy - bmin[1]) / m_ch);
-            long iz = lroundf((wz - bmin[2]) / m_cs);
-            if (ix < 0) ix = 0; if (iy < 0) iy = 0; if (iz < 0) iz = 0;
-            if (ix > 65535 || iy > 65535 || iz > 65535) return false;
-            out[0] = (unsigned short)ix; out[1] = (unsigned short)iy; out[2] = (unsigned short)iz;
-            return true;
-        };
-
-        for (int p = 0; p < m_plane_count; ++p) {
-            const auto& plane = data.planes[p];
-            const float planeY = PlaneY(p);
-
-            std::vector<float> verts;
-            std::vector<int>   tris;
-            verts.reserve(plane.trapezoid_count * 4 * 3);
-            tris.reserve(plane.trapezoid_count * 2 * 3);
-            for (uint32_t i = 0; i < plane.trapezoid_count; ++i) {
-                const auto& t = plane.trapezoids[i];
-                if (IsDegenerate(t)) continue;
-                const int base = (int)(verts.size() / 3);
-                verts.push_back(t.XTL); verts.push_back(planeY); verts.push_back(t.YT); // 0 TL
-                verts.push_back(t.XTR); verts.push_back(planeY); verts.push_back(t.YT); // 1 TR
-                verts.push_back(t.XBR); verts.push_back(planeY); verts.push_back(t.YB); // 2 BR
-                verts.push_back(t.XBL); verts.push_back(planeY); verts.push_back(t.YB); // 3 BL
-                tris.push_back(base + 0); tris.push_back(base + 1); tris.push_back(base + 2);
-                tris.push_back(base + 0); tris.push_back(base + 2); tris.push_back(base + 3);
-            }
-            const int nverts = (int)(verts.size() / 3);
-            const int ntris  = (int)(tris.size() / 3);
-            if (ntris == 0) continue;
-
-            float pbmin[3] = {minx, planeY - kPlaneSeparation * 0.5f, minz};
-            float pbmax[3] = {maxx, planeY + kPlaneSeparation * 0.5f, maxz};
-
-            rcConfig cfg;
-            std::memset(&cfg, 0, sizeof(cfg));
-            cfg.cs = m_cs;
-            cfg.ch = m_ch;
-            cfg.walkableSlopeAngle    = 60.0f;
-            cfg.walkableHeight        = walkableHeightVx;
-            cfg.walkableClimb         = walkableClimbVx;
-            cfg.walkableRadius        = walkableRadiusVx;
-            cfg.maxEdgeLen            = 0;       // 0 = no max edge length; keep contours faithful
-            cfg.maxSimplificationError = 1.3f;
-            cfg.minRegionArea         = 0;       // keep every island; tiny trapezoid strips are real surface
-            cfg.mergeRegionArea       = 400;
-            cfg.maxVertsPerPoly       = nvp;     // == DT_VERTS_PER_POLYGON (6)
-            cfg.detailSampleDist      = 0.0f;    // flat surface; detail mesh just mirrors the poly mesh
-            cfg.detailSampleMaxError  = 0.0f;
-            rcVcopy(cfg.bmin, pbmin);
-            rcVcopy(cfg.bmax, pbmax);
-            rcCalcGridSize(cfg.bmin, cfg.bmax, cfg.cs, &cfg.width, &cfg.height);
-            if (cfg.width <= 0 || cfg.height <= 0) continue;
-            if ((long long)cfg.width * cfg.height > (16LL << 20)) {
-                Log::Error("[navmesh-rc] grid %dx%d too large (map %u plane %d)", cfg.width, cfg.height, data.map_file_id, p);
-                DestroyMesh();
-                return false;
-            }
-
-            RecastScratch s;
-            s.solid = rcAllocHeightfield();
-            if (!s.solid || !rcCreateHeightfield(&ctx, *s.solid, cfg.width, cfg.height, cfg.bmin, cfg.bmax, cfg.cs, cfg.ch)) {
-                Log::Error("[navmesh-rc] rcCreateHeightfield failed (map %u plane %d)", data.map_file_id, p);
-                DestroyMesh();
-                return false;
-            }
-
-            std::vector<unsigned char> areas(ntris, RC_WALKABLE_AREA); // walkable by construction, winding-independent
-            if (!rcRasterizeTriangles(&ctx, verts.data(), nverts, tris.data(), areas.data(), ntris, *s.solid, cfg.walkableClimb)) {
-                Log::Error("[navmesh-rc] rcRasterizeTriangles failed (map %u plane %d)", data.map_file_id, p);
-                DestroyMesh();
-                return false;
-            }
-
-
-            s.chf = rcAllocCompactHeightfield();
-            if (!s.chf || !rcBuildCompactHeightfield(&ctx, cfg.walkableHeight, cfg.walkableClimb, *s.solid, *s.chf)) {
-                Log::Error("[navmesh-rc] rcBuildCompactHeightfield failed (map %u plane %d)", data.map_file_id, p);
-                DestroyMesh();
-                return false;
-            }
-            if (cfg.walkableRadius > 0 && !rcErodeWalkableArea(&ctx, cfg.walkableRadius, *s.chf)) {
-                Log::Error("[navmesh-rc] rcErodeWalkableArea failed (map %u plane %d)", data.map_file_id, p);
-                DestroyMesh();
-                return false;
-            }
-            if (!rcBuildDistanceField(&ctx, *s.chf) ||
-                !rcBuildRegions(&ctx, *s.chf, cfg.borderSize, cfg.minRegionArea, cfg.mergeRegionArea)) {
-                Log::Error("[navmesh-rc] rcBuildRegions failed (map %u plane %d)", data.map_file_id, p);
-                DestroyMesh();
-                return false;
-            }
-
-            s.cset = rcAllocContourSet();
-            if (!s.cset || !rcBuildContours(&ctx, *s.chf, cfg.maxSimplificationError, cfg.maxEdgeLen, *s.cset)) {
-                Log::Error("[navmesh-rc] rcBuildContours failed (map %u plane %d)", data.map_file_id, p);
-                DestroyMesh();
-                return false;
-            }
-            if (s.cset->nconts == 0) continue; // no walkable contour on this plane
-
-            s.pmesh = rcAllocPolyMesh();
-            if (!s.pmesh || !rcBuildPolyMesh(&ctx, *s.cset, cfg.maxVertsPerPoly, *s.pmesh)) {
-                Log::Error("[navmesh-rc] rcBuildPolyMesh failed (map %u plane %d)", data.map_file_id, p);
-                DestroyMesh();
-                return false;
-            }
-
-            const rcPolyMesh& pm = *s.pmesh;
-            if (pm.npolys == 0) continue;
-
-            const int vbase = (int)(allVerts.size() / 3);
-            for (int v = 0; v < pm.nverts; ++v) {
-                const unsigned short* src = &pm.verts[v * 3];
-                const float wx = pm.bmin[0] + src[0] * pm.cs;
-                const float wy = pm.bmin[1] + src[1] * pm.ch;
-                const float wz = pm.bmin[2] + src[2] * pm.cs;
-                unsigned short q[3];
-                if (!quant(wx, planeY, wz, q)) { // pin Y to the exact synthetic plane height for clean round-trip
-                    (void)wy;
-                    Log::Error("[navmesh-rc] vertex quantise overflow (map %u plane %d)", data.map_file_id, p);
-                    DestroyMesh();
-                    return false;
-                }
-                allVerts.push_back(q[0]); allVerts.push_back(q[1]); allVerts.push_back(q[2]);
-            }
-            if ((allVerts.size() / 3) >= 0xfffe) {
-                Log::Error("[navmesh-rc] too many verts for one tile (map %u)", data.map_file_id);
-                DestroyMesh();
-                return false;
-            }
-
-            const unsigned int polyBaseThisPlane = (unsigned int)m_poly_plane.size();
-            for (int i = 0; i < pm.npolys; ++i) {
-                const unsigned short* src = &pm.polys[i * 2 * nvp];
-                size_t out = allPolys.size();
-                allPolys.resize(out + 2 * nvp, kMeshNullIdx);
-                unsigned short* dst = &allPolys[out];
-                for (int j = 0; j < nvp; ++j) {
-                    const unsigned short vi = src[j];
-                    if (vi == RC_MESH_NULL_IDX) { dst[j] = kMeshNullIdx; continue; }
-                    dst[j] = (unsigned short)(vbase + vi);
-                    const unsigned short nei = src[nvp + j];
-                    if (nei == RC_MESH_NULL_IDX || (nei & 0x8000)) dst[nvp + j] = kMeshNullIdx; // wall / tile border
-                    else dst[nvp + j] = (unsigned short)(polyBaseThisPlane + nei);
-                }
-                allAreas.push_back(kPolyArea);
-                allFlags.push_back(kWalkableFlag); // MUST be nonzero or the default query filter drops every poly
-                m_poly_plane.push_back((uint16_t)p);
-                m_plane_polys[p].push_back((uint32_t)(m_poly_plane.size() - 1));
-            }
-        }
-
-        m_ground_poly_count = (uint32_t)m_poly_plane.size();
-        if (m_ground_poly_count == 0) {
-            Log::Error("[navmesh-rc] recast produced no polys (map %u)", data.map_file_id);
-            DestroyMesh();
-            return false;
-        }
-        if (m_ground_poly_count >= kMaxGroundPolys) {
-            Log::Error("[navmesh-rc] map %u recast polys %u exceed neighbour-index limit", data.map_file_id, m_ground_poly_count);
-            DestroyMesh();
-            return false;
-        }
-
-        std::vector<float> omVerts, omRad;
-        std::vector<unsigned short> omFlags;
-        std::vector<unsigned char> omAreas, omDir;
-        std::vector<unsigned int> omUser;
-        std::vector<std::pair<uint16_t, uint16_t>> omPlanesByUser;
-        auto addOffMesh = [&](GW::Vec2f a, int planeA, GW::Vec2f b, int planeB, float rad, bool bidir) {
-            omVerts.push_back(a.x); omVerts.push_back(PlaneY(planeA)); omVerts.push_back(a.y);
-            omVerts.push_back(b.x); omVerts.push_back(PlaneY(planeB)); omVerts.push_back(b.y);
-            omRad.push_back(rad); omFlags.push_back(kWalkableFlag); omAreas.push_back(kPolyArea);
-            omDir.push_back(bidir ? (unsigned char)DT_OFFMESH_CON_BIDIR : 0);
-            omUser.push_back((unsigned int)omPlanesByUser.size());
-            omPlanesByUser.push_back({(uint16_t)planeA, (uint16_t)planeB});
-        };
-        auto firstNonDegen = [](GW::PathingTrapezoid** traps, uint32_t count) -> const GW::PathingTrapezoid* {
-            if (!traps) return nullptr;
-            for (uint32_t i = 0; i < count; ++i) if (traps[i] && !IsDegenerate(*traps[i])) return traps[i];
-            return nullptr;
-        };
-        std::unordered_set<const GW::Portal*> seenPortals;
-        for (const auto& plane : data.planes) {
-            for (uint32_t i = 0; i < plane.portal_count; ++i) {
-                const GW::Portal* portal = &plane.portals[i];
-                if ((portal->flags & 0x4) || !portal->pair || seenPortals.count(portal)) continue;
-                seenPortals.insert(portal); seenPortals.insert(portal->pair);
-                const GW::PathingTrapezoid* ta = firstNonDegen(portal->trapezoids, portal->count);
-                const GW::PathingTrapezoid* tb = firstNonDegen(portal->pair->trapezoids, portal->pair->count);
-                if (!ta || !tb) continue;
-                const int pa = (int)portal->portal_plane, pb = (int)portal->pair->portal_plane;
-                if (pa < 0 || pa >= m_plane_count || pb < 0 || pb >= m_plane_count) continue;
-                const GW::Vec2f mid = 0.5f * (Centroid(*ta) + Centroid(*tb));
-                const GW::Vec2f pca = ClampToTrap(*ta, ClampToTrap(*tb, mid));
-                const GW::Vec2f pcb = ClampToTrap(*tb, pca);
-                addOffMesh(pca, pa, pcb, pb, kOffMeshRadPortal, true);
-            }
-        }
-        for (const auto& tp : teleports) {
-            const bool bidir = tp.m_directionality == MapSpecific::Teleport::direction::both_ways;
-            addOffMesh({tp.m_enter.x, tp.m_enter.y}, PlaneIndex(tp.m_enter.zplane),
-                       {tp.m_exit.x, tp.m_exit.y}, PlaneIndex(tp.m_exit.zplane), kOffMeshRadTeleport, bidir);
-        }
-
-        dtNavMeshCreateParams params;
-        std::memset(&params, 0, sizeof(params));
-        params.verts = allVerts.data();
-        params.vertCount = (int)(allVerts.size() / 3);
-        params.polys = allPolys.data();
-        params.polyAreas = allAreas.data();
-        params.polyFlags = allFlags.data();
-        params.polyCount = (int)m_ground_poly_count;
-        params.nvp = nvp;
-        params.offMeshConVerts = omVerts.empty() ? nullptr : omVerts.data();
-        params.offMeshConRad = omRad.empty() ? nullptr : omRad.data();
-        params.offMeshConFlags = omFlags.empty() ? nullptr : omFlags.data();
-        params.offMeshConAreas = omAreas.empty() ? nullptr : omAreas.data();
-        params.offMeshConDir = omDir.empty() ? nullptr : omDir.data();
-        params.offMeshConUserID = omUser.empty() ? nullptr : omUser.data();
-        params.offMeshConCount = (int)omRad.size();
-        params.detailMeshes = nullptr; // no detail: Detour synthesizes a flat detail mesh from the polys
-        params.detailVerts = nullptr;
-        params.detailVertsCount = 0;
-        params.detailTris = nullptr;
-        params.detailTriCount = 0;
-        params.walkableHeight = kWalkableHeight;
-        params.walkableRadius = kWalkableRadius;
-        params.walkableClimb = kWalkableClimb;
-        std::memcpy(params.bmin, bmin, sizeof(bmin));
-        std::memcpy(params.bmax, bmax, sizeof(bmax));
-        params.cs = m_cs;
-        params.ch = m_ch;
-        params.buildBvTree = true;
-
-        unsigned char* navData = nullptr;
-        int navSize = 0;
-        if (!dtCreateNavMeshData(&params, &navData, &navSize)) {
-            Log::Error("[navmesh-rc] dtCreateNavMeshData failed (map %u, %u polys)", data.map_file_id, m_ground_poly_count);
-            DestroyMesh();
-            return false;
-        }
-        m_navmesh = dtAllocNavMesh();
-        if (!m_navmesh) { dtFree(navData); DestroyMesh(); return false; }
-        if (dtStatusFailed(m_navmesh->init(navData, navSize, DT_TILE_FREE_DATA))) {
-            dtFree(navData);
-            DestroyMesh();
-            return false;
-        }
-        m_query = dtAllocNavMeshQuery();
-        if (!m_query || dtStatusFailed(m_query->init(m_navmesh, kMaxQueryNodes))) { DestroyMesh(); return false; }
-
-        const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
-        if (!tile || !tile->header) { DestroyMesh(); return false; }
-        m_poly_base = m_navmesh->getPolyRefBase(tile);
-        for (int i = 0; i < tile->header->offMeshConCount; ++i) {
-            const dtOffMeshConnection& con = tile->offMeshCons[i];
-            if (con.userId < omPlanesByUser.size())
-                m_offmesh_planes.push_back({con.poly, omPlanesByUser[con.userId].first, omPlanesByUser[con.userId].second});
-        }
-        m_applied_valid = false;
-        return true;
-    }
-
-    void NavMesh::ApplyBlockedPlanes(const BlockedPlaneBitset& blocked)
-    {
-        if (!m_navmesh) return;
-        if (m_applied_valid && blocked == m_applied_blocked) return;
-
-        for (int p = 0; p < m_plane_count; ++p) {
-            const bool nowB = blocked.test(p);
-            if (m_applied_valid && nowB == m_applied_blocked.test(p)) continue;
-            const unsigned short f = nowB ? 0 : kWalkableFlag;
-            for (uint32_t idx : m_plane_polys[p])
-                m_navmesh->setPolyFlags(m_poly_base | idx, f);
-        }
-        for (const auto& om : m_offmesh_planes) {
-            const bool b = blocked.test(om.plane_a) || blocked.test(om.plane_b);
-            m_navmesh->setPolyFlags(m_poly_base | om.poly_index, b ? 0 : kWalkableFlag);
-        }
-        m_applied_blocked = blocked;
-        m_applied_valid = true;
-    }
-
-    unsigned int NavMesh::SnapToPoly(const GW::Vec2f& xy, int preferred_plane, float* snapped, int& out_plane,
-                                     const dtQueryFilter& filter) const
-    {
-        auto tryPlane = [&](int p, float extXZ) -> dtPolyRef {
-            const float center[3] = {xy.x, PlaneY(p), xy.y};
-            const float ext[3] = {extXZ, kQueryExtY, extXZ};
-            dtPolyRef ref = 0;
-            float pt[3];
-            if (dtStatusSucceed(m_query->findNearestPoly(center, ext, &filter, &ref, pt)) && ref) {
-                dtVcopy(snapped, pt);
-                out_plane = p;
-                return ref;
-            }
-            return 0;
-        };
-
-        if (preferred_plane >= 0 && preferred_plane < m_plane_count) {
-            if (dtPolyRef r = tryPlane(preferred_plane, kQueryExtXZ)) return r;
-            if (dtPolyRef r = tryPlane(preferred_plane, kQueryExtXZFar)) return r;
-        }
-        dtPolyRef best = 0;
-        float bestDist = FLT_MAX, bestPt[3];
-        int bestPlane = -1;
-        for (int p = 0; p < m_plane_count; ++p) {
-            const float center[3] = {xy.x, PlaneY(p), xy.y};
-            const float ext[3] = {kQueryExtXZFar, kQueryExtY, kQueryExtXZFar};
-            dtPolyRef ref = 0;
-            float pt[3];
-            if (!dtStatusSucceed(m_query->findNearestPoly(center, ext, &filter, &ref, pt)) || !ref) continue;
-            const float dx = pt[0] - xy.x, dz = pt[2] - xy.y;
-            const float d = dx * dx + dz * dz;
-            if (d < bestDist) { bestDist = d; best = ref; bestPlane = p; dtVcopy(bestPt, pt); }
-            if (d <= 1.0f) break;
-        }
-        if (best) { dtVcopy(snapped, bestPt); out_plane = bestPlane; return best; }
-        return 0;
-    }
-
-    NavMesh::Result NavMesh::FindPath(const GW::GamePos& start, const GW::GamePos& goal,
-                                      std::vector<GW::GamePos>& out_points, float& out_cost)
-    {
-        out_points.clear();
-        out_cost = 0.f;
-        if (!m_navmesh || !m_query) return Result::NoMesh;
-
-        dtQueryFilter filter;
-        filter.setIncludeFlags(kWalkableFlag);
-        filter.setExcludeFlags(0);
-
-        float sPt[3], gPt[3];
-        int sPlane = 0, gPlane = 0;
-        const dtPolyRef sRef = SnapToPoly({start.x, start.y}, PlaneIndex(start.zplane), sPt, sPlane, filter);
-        if (!sRef) return Result::StartNotFound;
-        const dtPolyRef gRef = SnapToPoly({goal.x, goal.y}, PlaneIndex(goal.zplane), gPt, gPlane, filter);
-        if (!gRef) return Result::GoalNotFound;
-
-        dtPolyRef pathPolys[kMaxPathPolys];
-        int npolys = 0;
-        dtStatus st = m_query->findPath(sRef, gRef, sPt, gPt, &filter, pathPolys, &npolys, kMaxPathPolys);
-        if (dtStatusFailed(st) || npolys == 0) return Result::NoPath;
-        const bool partial = dtStatusDetail(st, DT_PARTIAL_RESULT) || pathPolys[npolys - 1] != gRef;
-
-        static thread_local float straight[kMaxStraight * 3];
-        static thread_local unsigned char sflags[kMaxStraight];
-        static thread_local dtPolyRef srefs[kMaxStraight];
-        int nstraight = 0;
-        st = m_query->findStraightPath(sPt, gPt, pathPolys, npolys, straight, sflags, srefs, &nstraight, kMaxStraight, 0);
-        if (dtStatusFailed(st) || nstraight == 0) return Result::NoPath;
-
-        out_points.reserve(nstraight);
-        int lastPlane = sPlane;
-        GW::Vec2f prev{};
-        bool haveprev = false, prev_offmesh = false; // segment leaving an off-mesh vertex is a teleport jump, not walking
-        for (int i = 0; i < nstraight; ++i) {
-            const float* v = &straight[i * 3];
-            int plane = PlaneOfPolyRef(srefs[i]);
-            if (plane < 0) plane = lastPlane; else lastPlane = plane;
-            out_points.push_back(GW::GamePos(v[0], v[2], (uint32_t)plane));
-            const GW::Vec2f cur{v[0], v[2]};
-            if (haveprev && !prev_offmesh) out_cost += std::sqrt((cur.x - prev.x) * (cur.x - prev.x) + (cur.y - prev.y) * (cur.y - prev.y));
-            prev = cur;
-            haveprev = true;
-            prev_offmesh = (sflags[i] & DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0;
-        }
-        if (s_smooth_paths) ShortcutPath(out_points, filter);
-        return partial ? Result::Partial : Result::OK;
     }
 
     void NavMesh::DebugExtractEdges(std::vector<DebugEdge>& out) const
@@ -1000,46 +520,5 @@ namespace Pathing {
         return false;
     }
 #endif
-
-    bool NavMesh::SegmentWalkable(const GW::Vec2f& a, const GW::Vec2f& b, int plane, const dtQueryFilter& filter) const
-    {
-        if (!m_query) return false;
-        const float planeY = PlaneY(plane);
-        const float ext[3] = {kQueryExtXZ, kQueryExtY, kQueryExtXZ};
-        const float dx = b.x - a.x, dy = b.y - a.y;
-        const float len = std::sqrt(dx * dx + dy * dy);
-        const int steps = std::max(2, (int)(len / 24.f)); // sample ~every 24 game units
-        for (int s = 0; s <= steps; ++s) {
-            const float u = (float)s / (float)steps;
-            const float p[3] = {a.x + dx * u, planeY, a.y + dy * u};
-            dtPolyRef ref = 0;
-            float nearest[3];
-            if (dtStatusFailed(m_query->findNearestPoly(p, ext, &filter, &ref, nearest)) || !ref) return false;
-            if (PlaneOfPolyRef(ref) != plane) return false; // nearest walkable poly is on a different plane
-            const float ndx = nearest[0] - p[0], ndz = nearest[2] - p[2];
-            if (ndx * ndx + ndz * ndz > 32.f * 32.f) return false;
-        }
-        return true;
-    }
-
-    void NavMesh::ShortcutPath(std::vector<GW::GamePos>& pts, const dtQueryFilter& filter) const
-    {
-        if (!m_query || pts.size() < 3) return;
-        std::vector<GW::GamePos> out;
-        out.reserve(pts.size());
-        out.push_back(pts.front());
-        size_t i = 0;
-        while (i + 1 < pts.size()) {
-            size_t j = i + 1; // farthest waypoint reachable from pts[i] by a walkable same-plane straight line
-            for (size_t k = i + 2; k < pts.size(); ++k) {
-                if (pts[k].zplane != pts[i].zplane) break; // never shortcut across a plane transition
-                if (!SegmentWalkable({pts[i].x, pts[i].y}, {pts[k].x, pts[k].y}, PlaneIndex(pts[i].zplane), filter)) break;
-                j = k;
-            }
-            out.push_back(pts[j]);
-            i = j;
-        }
-        pts.swap(out);
-    }
 
 } // namespace Pathing

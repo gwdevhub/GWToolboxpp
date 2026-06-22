@@ -1,7 +1,7 @@
 <#
   harness.ps1 — host-side driver for the autonomous GWToolbox pathfinding test loop.
 
-  Build config is Debug: the dev tooling (TestHarness module + [polyanya] diagnostics) is gated on
+  Build config is Debug: the dev tooling (TestHarness module + [timing]/[AStar] diagnostics) is gated on
   _DEBUG only, so it is compiled out of the shipped RelWithDebInfo/Release builds. Debug now mirrors
   the log to log.txt (Logger.cpp) in addition to the console, so the harness can read it. Pass
   -Config RelWithDebInfo (+ define GWTB_HARNESS) only if you deliberately want it in a release build.
@@ -12,8 +12,7 @@
   Loop (GW already in-game, toolbox injected once):
       .\harness.ps1 reload          # shutdown old DLL -> rebuild -> re-inject (GW stays open)
       .\harness.ps1 goto 1234 -5678 0
-      .\harness.ps1 mode 2
-      .\harness.ps1 tail            # follow log.txt for [polyanya]/[timing]
+      .\harness.ps1 tail            # follow log.txt for [timing]/[AStar]
   Cold start (GW not running): launch -> auto-login (foregrounded Enter presses) -> inject:
       .\harness.ps1 up
 #>
@@ -134,7 +133,6 @@ switch ($Cmd) {
   'goto'    { Send-Command ("waypoint " + ($Rest -join ' ')) }
   'setgoal' { Send-Command 'setgoal'; if (Wait-Status 'goal_captured' 6) { '[harness] ' + (Get-Content (Join-Path (Resolve-HarnessDir) 'harness_status.txt') -Raw) } }
   'repath'  { Send-Command 'repath' }
-  'mode'    { Send-Command ("mode " + ($Rest -join ' ')) }
   'login'   { Send-Command 'login' }
   'shutdown'{ Send-Command 'shutdown'; if (Wait-DllUnloaded) { '[harness] DLL unloaded.' } else { '[harness] WARN: DLL still locked.' } }
   'reload'  {
@@ -170,7 +168,7 @@ switch ($Cmd) {
   'tail'    {
     $log = Join-Path (Resolve-HarnessDir) 'log.txt'
     if (-not (Test-Path $log)) { throw "log not found: $log" }
-    Get-Content $log -Tail 60 -Wait | Where-Object { $_ -match '\[polyanya|\[harness|\[timing|\[AStar' }
+    Get-Content $log -Tail 60 -Wait | Where-Object { $_ -match '\[harness|\[timing|\[AStar' }
   }
-  default   { "Unknown '$Cmd'. Use: status|build|inject|goto|mode|login|shutdown|reload|up|tail" }
+  default   { "Unknown '$Cmd'. Use: status|build|inject|goto|login|shutdown|reload|up|tail" }
 }

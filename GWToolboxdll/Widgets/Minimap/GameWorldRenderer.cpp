@@ -270,6 +270,21 @@ namespace {
 
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
+    // Highest terrain surface at (x,y) among the candidate planes (GW "up" is -z, so the highest surface is
+    // the minimum altitude). QueryAltitude returns 0.f for out-of-bounds / no data on a plane, which is
+    // ignored. ALTITUDE_UNKNOWN when no candidate has data, so the caller can backfill.
+    float HighestSurfaceZ(const float x, const float y, const std::vector<uint32_t>& planes)
+    {
+        float best = ALTITUDE_UNKNOWN;
+        for (const uint32_t zp : planes) {
+            GW::GamePos p = {x, y, zp};
+            const float a = GW::Map::QueryAltitude(&p);
+            if (a != 0.f && (best == ALTITUDE_UNKNOWN || a < best))
+                best = a;
+        }
+        return best;
+    }
+
     std::vector<GW::GamePos> circular_points_from_marker(const GW::GamePos& marker, const float size)
     {
         std::vector<GW::GamePos> points{};
@@ -313,64 +328,38 @@ namespace {
         auto& vertices = poly.vertices;
         if (poly.vertices_processed == vertices.size())
             return true;
-        // altitudes (Z value) for each vertex can't be known until we are in the correct map,
-        // so these are dynamically computed, one-time.
-        float altitude = ALTITUDE_UNKNOWN;
-
-        // in order to properly query altitudes, we have to use the pathing map
-        // to determine the number of Z planes in the current map.
+        // Altitudes (Z) can't be known until we're in the correct map, so they're computed once here. Draw
+        // samples the line densely (every ~50 gwinches), so this runs between hops, not only at them. For each
+        // sample we query GW for the terrain altitude on each of the path's OWN waypoint planes (carried from
+        // the pathfinder through route_map) and keep the highest surface (min z). Restricting the candidates to
+        // the path's own planes drapes the line onto the surface it traverses — a bridge deck, ramp or bump the
+        // path runs along — without floating onto a plane it merely passes UNDER (that plane is never a
+        // waypoint, so never a candidate).
         const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
         if (!pathing_map || pathing_map->size() == 0)
             return false;
 
-        const auto z_plane0 = poly.vertices_zplanes[0];
-        GW::GamePos p = {vertices[0].x, vertices[0].y, z_plane0};
-        altitude = GW::Map::QueryAltitude(&p);
-        const auto altitude0 = altitude;
-        ++poly.vertices_processed;
-        vertices[0].z = altitude;
+        std::vector<uint32_t> candidate_planes;
+        for (const auto& pt : poly.points) {
+            if (std::ranges::find(candidate_planes, pt.zplane) == candidate_planes.end())
+                candidate_planes.push_back(pt.zplane);
+        }
 
-        const auto z_planeZ = poly.vertices_zplanes[vertices.size() - 1];
-        p = {vertices[vertices.size() - 1].x, vertices[vertices.size() - 1].y, z_planeZ};
-        altitude = GW::Map::QueryAltitude(&p);
-        const auto altitudeZ = altitude;
-        vertices[vertices.size() - 1].z = altitude;
+        for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
+            vertices[i].z = HighestSurfaceZ(vertices[i].x, vertices[i].y, candidate_planes);
+        }
 
-        const auto altitude_diff = altitudeZ - altitude0;
-
-        for (size_t i = poly.vertices_processed; i < vertices.size() - 1; i++, poly.vertices_processed++) {
-            // until we have a better solution, all Z planes will be queried per vertex
-            // to avoid a significant delay in the render thread, query one plane per frame
-            // until all have been queried. this might result in some renderables shifting
-            // not appearing for a while on first map load, but IMO is better than stalling.
-            // It seems to take, even in most extreme cases, less time than it takes for agents
-            // to appear.
-
-            // @Cleanup: zplane needs setting properly here!
-            const auto z_plane = poly.vertices_zplanes[i];
-            p = {vertices[i].x, vertices[i].y, z_plane};
-            altitude = GW::Map::QueryAltitude(&p);
-
-            if (altitude < vertices[i].z) {
-                // recall that the Up camera component is inverted
-                vertices[i].z = altitude;
-            }
-
-            const auto guessed_altitude = altitude0 + (altitude_diff * static_cast<float>(i) / static_cast<float>(vertices.size() - 1));
-            if (std::abs(altitude - guessed_altitude) > 20.f) {
-                auto min_diff = std::abs(altitude - guessed_altitude);
-                for (unsigned zplane = pathing_map->size() - 1; zplane >= 1; --zplane) {
-                    p = {vertices[i].x, vertices[i].y, zplane};
-                    altitude = GW::Map::QueryAltitude(&p);
-                    const auto cur_diff = std::abs(altitude - guessed_altitude);
-                    if (cur_diff < min_diff && altitude < vertices[i].z) {
-                        min_diff = cur_diff;
-                        vertices[i].z = altitude;
-                    }
-                }
+        // Backfill no-data vertices by holding the nearest known altitude, so the line never spikes off-screen.
+        float fill = ALTITUDE_UNKNOWN;
+        for (const auto& v : vertices)
+            if (v.z != ALTITUDE_UNKNOWN) { fill = v.z; break; }
+        if (fill != ALTITUDE_UNKNOWN) {
+            float last = fill;
+            for (auto& v : vertices) {
+                if (v.z == ALTITUDE_UNKNOWN) v.z = last;
+                else last = v.z;
             }
         }
-        ++poly.vertices_processed;
 
         // commit the completed vertices to vram
         auto res = device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &poly.vb, nullptr);
@@ -432,24 +421,26 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
             for (size_t i = 0; i < indices.size(); i++) {
                 const auto& pt = lerp_points[indices[i]];
                 vertices.emplace_back(pt.x, pt.y, ALTITUDE_UNKNOWN, col);
-                vertices_zplanes.push_back(pt.zplane);
             }
         }
         else {
+            // Sample each segment densely enough to query terrain altitude every ~50 gwinches, so a segment
+            // spanning a slope/stairs/bridge/bumps between two hops follows the surface instead of drawing a
+            // straight chord through it. lerp_steps_per_line stays the floor for short segments. The plane each
+            // sample is draped on is resolved in AddPolyToDevice from the path's own waypoint planes.
+            constexpr float sample_spacing = 50.f;
             for (size_t i = 0; i < points.size(); i++) {
                 const auto& pt = points[i];
-                if (!vertices.empty() && lerp_steps_per_line > 0) {
-                    for (auto j = 1u; j < lerp_steps_per_line; j++) {
-                        const auto div = static_cast<float>(j) / static_cast<float>(lerp_steps_per_line);
+                if (!vertices.empty()) {
+                    const float dx = points[i].x - points[i - 1].x, dy = points[i].y - points[i - 1].y;
+                    const auto steps = std::max(lerp_steps_per_line, static_cast<unsigned>(std::sqrt(dx * dx + dy * dy) / sample_spacing));
+                    for (auto j = 1u; j < steps; j++) {
+                        const auto div = static_cast<float>(j) / static_cast<float>(steps);
                         const auto split = lerp(points[i], points[i - 1], div);
                         vertices.emplace_back(split.x, split.y, ALTITUDE_UNKNOWN, col);
-                        const auto zplanes = std::vector{points[i].zplane, points[i - 1].zplane, points[0].zplane, points[points.size() - 1].zplane};
-                        const auto zplane = std::ranges::max_element(zplanes);
-                        vertices_zplanes.push_back(*zplane);
                     }
                 }
                 vertices.emplace_back(pt.x, pt.y, ALTITUDE_UNKNOWN, col);
-                vertices_zplanes.push_back(pt.zplane);
             }
         }
     }
@@ -459,22 +450,36 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 
     if (from_player_pos && vertices.size() > 1) {
         if (const auto player = GW::Agents::GetControlledCharacter()) {
-            size_t vertices_write_cnt = 0;
-            for (vertices_write_cnt = 0; vertices_write_cnt < vertices.size() - 1; ++vertices_write_cnt) {
-                auto& vertex = vertices[vertices_write_cnt];
-                if (vertices_write_cnt == 0 || GW::GetSquareDistance(player->pos, { vertex.x,vertex.y }) < GW::Constants::SqrRange::Earshot) {
-                    vertex.x = player->pos.x;
-                    vertex.y = player->pos.y;
-                    vertex.z = player->name_tag_z;
-                    continue;
-                }
-                break;
+            // Anchor the line to the player's LIVE position. The leading vertices within Earshot
+            // (including waypoints already walked past) are re-purposed as a densely terrain-draped
+            // line from the player to the first vertex beyond Earshot, so the leading segment lays on
+            // the ground. (Previously they were flattened to a single point at the player's head
+            // height, which chorded straight through elevated terrain.)
+            size_t anchor = 1;
+            while (anchor < vertices.size() - 1 &&
+                   GW::GetSquareDistance(player->pos, { vertices[anchor].x, vertices[anchor].y }) < GW::Constants::SqrRange::Earshot)
+                ++anchor;
+            const float ax = vertices[anchor].x, ay = vertices[anchor].y;
+            // Drape on the highest surface among the player's live plane and the segment's far waypoint plane,
+            // so stepping from the ground toward a bridge (or vice versa) rides the right surface rather than
+            // flattening the whole leading segment to the player's plane.
+            const std::vector<uint32_t> lead_planes =
+                points.empty() ? std::vector<uint32_t>{ player->pos.zplane }
+                               : std::vector<uint32_t>{ player->pos.zplane, points.back().zplane };
+            for (size_t j = 0; j < anchor; ++j) {
+                const float t = static_cast<float>(j) / static_cast<float>(anchor);
+                const float sx = player->pos.x + (ax - player->pos.x) * t;
+                const float sy = player->pos.y + (ay - player->pos.y) * t;
+                const float alt = HighestSurfaceZ(sx, sy, lead_planes);
+                vertices[j].x = sx;
+                vertices[j].y = sy;
+                vertices[j].z = (alt != ALTITUDE_UNKNOWN) ? alt : player->name_tag_z;
             }
 
             void* mem_loc = nullptr;
-            auto res = vb->Lock(0, vertices_write_cnt * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+            auto res = vb->Lock(0, anchor * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
             if (res == S_OK) {
-                memcpy(mem_loc, vertices.data(), vertices_write_cnt * sizeof(D3DVertex));
+                memcpy(mem_loc, vertices.data(), anchor * sizeof(D3DVertex));
                 vb->Unlock();
             }
         }

@@ -57,7 +57,6 @@ namespace {
         float wx = 0, wy = 0;
         uint32_t wplane = 0;
         bool have_waypoint = false;
-        int mode = -1;
         bool autostart = false;
     };
 
@@ -88,9 +87,6 @@ namespace {
                 std::istringstream vs(val);
                 if (vs >> c.wx >> c.wy >> c.wplane) c.have_waypoint = true;
             }
-            else if (key == "mode") {
-                c.mode = atoi(val.c_str());
-            }
             else if (key == "autostart") {
                 c.autostart = atoi(val.c_str()) != 0;
             }
@@ -113,8 +109,8 @@ namespace {
         PathfindingWindow::SetTo(goal);
         PathfindingWindow::FindPath();
         char buf[180];
-        snprintf(buf, sizeof(buf), "path_set(%s): from(%.0f,%.0f,z%u) to(%.0f,%.0f,z%u) mode=%d",
-                 src, self->pos.x, self->pos.y, self->pos.zplane, goal.x, goal.y, goal.zplane, PathfindingWindow::GetPathingMode());
+        snprintf(buf, sizeof(buf), "path_set(%s): from(%.0f,%.0f,z%u) to(%.0f,%.0f,z%u)",
+                 src, self->pos.x, self->pos.y, self->pos.zplane, goal.x, goal.y, goal.zplane);
         write_status(buf);
         Log::Log("[harness] %s", buf);
     }
@@ -143,8 +139,8 @@ namespace {
         const auto self = GW::Agents::GetControlledCharacter();
         if (!self) { write_status("setgoal: no controlled character"); return; }
         char cfg[256];
-        snprintf(cfg, sizeof(cfg), "# captured goal (player position)\nwaypoint=%.1f %.1f %u\nmode=%d\nautostart=1\n",
-                 self->pos.x, self->pos.y, self->pos.zplane, PathfindingWindow::GetPathingMode());
+        snprintf(cfg, sizeof(cfg), "# captured goal (player position)\nwaypoint=%.1f %.1f %u\nautostart=1\n",
+                 self->pos.x, self->pos.y, self->pos.zplane);
         Resources::WriteFile(config_path(), cfg);
         char buf[128];
         snprintf(buf, sizeof(buf), "goal_captured: (%.0f,%.0f,z%u)", self->pos.x, self->pos.y, self->pos.zplane);
@@ -164,16 +160,6 @@ namespace {
             terminating = true;
             GWToolbox::SignalTerminate(true); // clean self-unload; cascade tears modules down
             return;                            // do NOT touch anything after this
-        }
-        if (verb == "mode") {
-            int m = -1;
-            is >> m;
-            PathfindingWindow::SetPathingMode(m);
-            char buf[64];
-            snprintf(buf, sizeof(buf), "mode_set: %d", PathfindingWindow::GetPathingMode());
-            write_status(buf);
-            Log::Log("[harness] %s", buf);
-            return;
         }
         if (verb == "login") {
             press_enter();
@@ -217,7 +203,6 @@ void TestHarness::Initialize()
         Resources::WriteFile(config_path(),
             "# GWToolbox test harness config (read every poll)\n"
             "# waypoint=<x> <y> <plane>        (fixed startup destination)\n"
-            "# mode=0                          (0=Visgraph 1=Recast 2=Polyanya)\n"
             "# autostart=1                     (fire the waypoint once each map load)\n");
     }
     write_status("harness_initialized");
@@ -239,7 +224,7 @@ void TestHarness::Update(float)
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
         fired_waypoint_this_load = false; // re-arm the auto-waypoint for the next map
 
-    // Consume one queued command per poll FIRST, so shutdown/mode work in ANY game state
+    // Consume one queued command per poll FIRST, so shutdown works in ANY game state
     // (incl. the login screen) -- I must always be able to unload the DLL to relink.
     std::string body;
     if (Resources::ReadFile(cmd_path(), body)) {
@@ -275,7 +260,6 @@ void TestHarness::Update(float)
         const char* src = "";
         if (resolve_goal(cfg, goal, src)) {
             fired_waypoint_this_load = true;
-            if (cfg.mode >= 0) PathfindingWindow::SetPathingMode(cfg.mode);
             do_path_to(goal, src);
         }
     }
