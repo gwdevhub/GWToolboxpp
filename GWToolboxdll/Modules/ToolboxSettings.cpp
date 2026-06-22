@@ -104,6 +104,7 @@
 #include <Widgets/LatencyWidget.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
+#include <Modules/WeatherModule.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/PartyDamage.h>
 #include <Widgets/SkillMonitorWidget.h>
@@ -194,6 +195,7 @@ namespace {
         {DistanceWidget::Instance(), false},
         Minimap::Instance(),
         GameWorldRenderer::Instance(),
+        {WeatherModule::Instance(), false},
         PartyDamage::Instance(),
         BondsWidget::Instance(),
         ClockWidget::Instance(),

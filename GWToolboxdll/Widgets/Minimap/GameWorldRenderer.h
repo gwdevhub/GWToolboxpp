@@ -105,6 +105,8 @@ private:
     static RenderableVectors SyncPolys();
     static RenderableVectors SyncMarkers();
     static void SyncAllMarkers();
-    static bool ConfigureProgrammablePipeline(IDirect3DDevice9* device);
-    static bool SetD3DTransform(IDirect3DDevice9* device);
+    // Draws the markers into the world (compositor callback / on-top fallback).
+    static void DrawInWorld(IDirect3DDevice9* device);
+    // Register/unregister our under-UI draw with the shared compositor based on render_under_ui.
+    static void UpdateCompositorRegistration();
 };

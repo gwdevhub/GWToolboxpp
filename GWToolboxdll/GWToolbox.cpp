@@ -23,6 +23,7 @@
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
+#include <Utils/GameWorldCompositor.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/TeamBuild.h>
 
@@ -1137,6 +1138,10 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     if (!CanRenderToolbox()) return;
 
+    // Once-per-frame tick for the shared in-world compositor (installs its hook lazily, resets the
+    // per-frame draw guard) so any module that registered an under-UI draw runs this frame.
+    GameWorldCompositor::BeginFrame();
+
     ImGui_ImplDX9_NewFrame();
     ImGui_ImplWin32_NewFrame();
 
@@ -1308,6 +1313,9 @@ void GWToolbox::UpdateTerminating(float delta_f, bool panicking)
     ASSERT(DetachWndProcHandler());
 
     if (!CanTerminate()) return;
+
+    // All modules are gone (so the shared compositor has no registered draws); release its hook and GPU resources.
+    GameWorldCompositor::Terminate();
 
     GW::DisableHooks();
 
