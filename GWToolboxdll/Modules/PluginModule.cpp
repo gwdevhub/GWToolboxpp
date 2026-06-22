@@ -62,12 +62,12 @@ namespace {
             const DWORD err = GetLastError();
             const auto filename = plugin.path.filename();
             UnloadPlugin(plugin_ptr);
-            const auto name = TextUtils::PrintFilename(filename.string());
+            const auto name = TextUtils::PrintFilename(filename.wstring());
             std::wstring detail;
             if ((err == ERROR_VIRUS_INFECTED || err == ERROR_VIRUS_DELETED) && FindRecentDefenderBlock(filename.wstring(), 15, detail))
-                Log::Error("Failed to load plugin %s - Windows Defender blocked it: %s", name.c_str(), TextUtils::WStringToString(detail).c_str());
+                Log::ErrorW(L"Failed to load plugin %s - Windows Defender blocked it: %s", name.c_str(), detail.c_str());
             else
-                Log::Error("Failed to load plugin %s (LoadLibraryW)", name.c_str());
+                Log::ErrorW(L"Failed to load plugin %s (LoadLibraryW)", name.c_str());
             return false;
         }
         using ToolboxPluginInstanceFn = ToolboxPlugin* (*)();
