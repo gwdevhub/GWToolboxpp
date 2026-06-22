@@ -275,7 +275,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             L"This is almost always anti-virus or Controlled Folder Access blocking GWToolbox. "
             L"Add an exclusion for your GWToolbox folder in Windows Security, allow GWToolbox through Controlled Folder Access, then re-launch.";
         std::wstring detail;
-        if (FindRecentDefenderBlock(L"Gw.exe", 30, detail))
+        if (FindRecentDefenderBlock(L"Gw.exe", 5, detail))
             message += L"\n\nWindows Defender reported:\n" + detail;
         MessageBoxW(nullptr, message.c_str(), L"GWToolbox - Error", MB_OK | MB_ICONERROR | MB_TOPMOST);
         return 1;
