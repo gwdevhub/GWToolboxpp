@@ -14,30 +14,22 @@
 #include "PathingMapDataLoader.h"
 #include "NavMesh.h" // hand-built Detour navmesh, co-built for the debug overlay (pathing uses the visgraph)
 
-// Define PATHING_VERBOSE to re-enable per-stage Log::Info chatter
-// (`[AStar:...]`, `Pathing::Impl::Generate*: N ms.`, `[VisGraph]`, `[Portals]`).
-// Errors and warnings always log.
+// Define PATHING_VERBOSE to re-enable per-stage Log::Info chatter; errors/warnings always log.
 // #define PATHING_VERBOSE 1
 #ifdef PATHING_VERBOSE
 #define PATH_LOG_INFO(...) Log::Info(__VA_ARGS__)
 #else
 #define PATH_LOG_INFO(...) ((void)0)
-// log_timings(tag) and similar take args only used by the logger.
+// Locals/params that exist only to be formatted into PATH_LOG_INFO are unused when it compiles out.
 #pragma warning(disable: 4189 4100)
 #endif
 
 static constexpr auto OPEN_CAPACITY = 2'000z;
 static constexpr auto PATHING_COUNT = 20'000z;
-// Max funnel-expansions of any one portal per source visibility build. The rollback DFS otherwise spends the
-// whole PATHING_COUNT step budget re-exploring a few dense portals via every funnel path and truncates before
-// covering the rest of the visible region (dense-area / gate detours). Capping spreads the budget for breadth.
+// Max funnel-expansions of any one portal per source build; caps dense portals so the step budget covers breadth.
 static constexpr auto PATHING_PORTAL_EXPAND_CAP = 8z;
 
 namespace {
-    // Link same-plane left/right trapezoid seams that GW leaves unportaled. OFF: it's a no-op on the
-    // cross-plane bridge that motivated it (matched 0 seams); kept for a genuine within-plane weave.
-    static bool s_sameplane_lr = false;
-
     __forceinline float Cross(const GW::Vec2f& lhs, const GW::Vec2f& rhs)
     {
         return (lhs.x * rhs.y) - (lhs.y * rhs.x);
@@ -330,8 +322,7 @@ namespace Pathing {
             // DAT-loaded or no pointer: all planes unblocked
             return Pathing::Error::OK;
         }
-        // Use live MapContext to validate the pointer is still valid
-        // (blockedPlanesPtr may dangle after map change)
+        // Validate against live MapContext; blockedPlanesPtr may dangle after a map change.
         std::atomic<Pathing::Error> res{Pathing::Error::Unknown};
         GW::GameThread::Enqueue([mapData, dest, &res] {
             Pathing::Error r;
@@ -1296,36 +1287,6 @@ namespace Pathing {
                 }
             }
 
-            // Same-plane left/right adjacency. GW only portals top/bottom within a plane, leaving the slanted
-            // left/right decomposition seams unlinked — so the visgraph can't cross them and detours around
-            // (the bridge zig-zag). Two free trapezoids whose right/left edges coincide share walkable space,
-            // so link them. Additive: GeneratePortals' `visited` matrix dedups, and extra edges only shorten paths.
-            if (s_sameplane_lr) {
-                [[maybe_unused]] int lr_added = 0, lr_traps = 0;
-                for (uint8_t i = 0; i < size; ++i) {
-                    const auto& m = GetMap(i);
-                    std::map<std::array<long, 4>, const GW::PathingTrapezoid*> leftOwner;
-                    for (uint32_t j = 0; j < m.trapezoid_count; ++j) {
-                        const auto* u = &m.trapezoids[j];
-                        if (u->YB == u->YT) continue; // degenerate connector, no real edge
-                        leftOwner[{lroundf(u->XBL), lroundf(u->YB), lroundf(u->XTL), lroundf(u->YT)}] = u;
-                    }
-                    for (uint32_t j = 0; j < m.trapezoid_count; ++j) {
-                        const auto* t = &m.trapezoids[j];
-                        if (t->YB == t->YT) continue;
-                        ++lr_traps;
-                        const auto it = leftOwner.find({lroundf(t->XBR), lroundf(t->YB), lroundf(t->XTR), lroundf(t->YT)});
-                        if (it != leftOwner.end() && it->second != t) {
-                            ptneighbours[t].push_back({it->second, i, Edge::right});
-                            ++lr_added;
-                        }
-                    }
-                }
-#ifdef _DEBUG
-                Log::Log("[sameplane-lr] map %u: added %d exact-1:1 left/right links across %d trapezoids",
-                    m_mapData.map_file_id, lr_added, lr_traps);
-#endif
-            }
         }
 
 
@@ -1489,12 +1450,8 @@ namespace Pathing {
             }
         }
 
-        // Seed the visibility DFS the same WAY ComputeVisibleEdges seeds a query point — whole-trapezoid funnel
-        // seeds, empty blocked set, checkpoint 0. For a boundary vertex (the source point lies on the edge
-        // between two trapezoids) this seeds BOTH adjacent traps, a strict superset of the single-trap live
-        // query. The older process_point seeding (per-portal neighbours, mixed checkpoints) under-explored some
-        // cross-plane points, leaving their precomputed VG rows far sparser than live visibility from the same
-        // apex (the bridge-end zigzag: a z4 node had 4 VG edges vs 34 live).
+        // Seed the DFS like ComputeVisibleEdges: whole-trapezoid funnel seeds for both adjacent traps at a boundary
+        // vertex, empty blocked set, checkpoint 0 — a superset of the old process_point seeding that under-explored cross-plane points.
         void SeedVisibilityFromPoint(node* open, size_t& sp, BlockedPlanesPool& bp_pool, const Point& point)
         {
             const Point* const P = points.data();
@@ -1547,11 +1504,8 @@ namespace Pathing {
             return points[point_id];
         }
 
-        // Compute all visibility edges from `from_pos` (located in `from_trap`) to real visgraph points,
-        // writing them to `out_edges` without mutating m_visGraph / portals / points / portal maps.
-        // If `extra_pos` is non-null, also emit edges to `extra_id` whenever `extra_pos` is found
-        // visible from `from_pos` (extra_pos is assumed to be in `extra_trap`). Used to detect direct
-        // LOS from start to goal without inserting a virtual portal for goal.
+        // Visibility edges from `from_pos` (in `from_trap`) to real visgraph points -> `out_edges`, no mutation of
+        // m_visGraph/portals/points. If `extra_pos` (in `extra_trap`) is visible, also emit `extra_id` — detects direct start->goal LOS without a virtual goal portal.
         void ComputeVisibleEdges(node* open, VisitedState& visited, BlockedPlanesPool& bp_pool,
                                  const GW::GamePos& from_pos, const GW::PathingTrapezoid* from_trap,
                                  std::vector<PointVisElement>& out_edges,
@@ -1792,10 +1746,8 @@ namespace Pathing {
             std::vector<uint32_t> exp_gen(portals.size(), 0);
             uint32_t exp_cur = 0;
 
-            // Raw pointers into the (stable, read-only during the worker pass) containers —
-            // skips MSVC debug's per-access bounds checks in this O(n^2) hot loop. m_visGraph's
-            // outer storage is sized once before threads start and each thread writes only its
-            // own source rows, so VG[p.m_id] is stable too.
+            // Raw pointers into stable read-only containers — skip MSVC debug bounds checks in this O(n^2) loop;
+            // m_visGraph outer storage is pre-sized and each thread writes only its own source rows.
             const Point* P = points.data();
             const Portal* PT = portals.data();
             auto* const VG = m_visGraph.data();
@@ -1987,14 +1939,9 @@ namespace Pathing {
 #endif
             }
 
-            // Symmetrize visibility. 2D visibility is symmetric, but the per-source funnel DFS (apex, visit
-            // order, viability gating, dedup) can find A->B without B->A — and the worker only writes the
-            // source row. Missing reverse edges break routing: a bridge-end node ends up with deck->end but
-            // not end->deck, so a GROUND start can't take the deck and zigzags up-and-back, while a bridge
-            // start (whose live visibility sees the deck) routes clean. For every A->B add B->A if absent
-            // (same distance; a reversed visibility ray crosses the same planes => same blocked_planes). Also
-            // repairs edges a step-budget-truncated source missed but its neighbour found. Single-threaded,
-            // after the parallel build and BEFORE the directional teleport links below (those stay one-way).
+            // Symmetrize: 2D visibility is symmetric but the per-source funnel DFS can find A->B without B->A (and
+            // the worker writes only the source row); missing reverse edges break routing (ground-start bridge zigzag).
+            // For every A->B add B->A if absent (same distance/blocked_planes). Single-threaded, before the directional teleport links below.
             {
                 const size_t vg_n = m_visGraph.size();
                 std::vector<uint32_t> orig_sizes(vg_n);
@@ -2033,8 +1980,7 @@ namespace Pathing {
 #pragma optimize("", on) // Restore global optimizations to project default
 #endif
 
-        // Free build-only scratch once built (none are read at query time).
-        // swap-with-empty releases capacity; clear() would keep the storage.
+        // Free build-only scratch (unread at query time); swap-with-empty releases capacity, clear() would not.
         void ReleaseBuildScratch()
         {
             decltype(ptneighbours){}.swap(ptneighbours);
@@ -2059,8 +2005,8 @@ namespace Pathing {
             GenerateTeleportGraph();
             GenerateVisGraph();
             const auto t_vg1 = std::chrono::high_resolution_clock::now();
-            const long long vg_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_vg1 - t_vg0).count();
-            Log::Log("[timing] visgraph build: %lld ms (%zu points)", vg_ms, points.size());
+            PATH_LOG_INFO("[timing] visgraph build: %lld ms (%zu points)",
+                std::chrono::duration_cast<std::chrono::milliseconds>(t_vg1 - t_vg0).count(), points.size());
 
             try {
                 if (!m_navmesh) m_navmesh = new NavMesh();
@@ -2069,24 +2015,6 @@ namespace Pathing {
             catch (const std::bad_alloc&) {
                 PATH_LOG_ERROR("[pathing] overlay navmesh build OOM; overlay disabled for this map");
             }
-#ifdef _DEBUG
-            // Ghost-wall audit: every visgraph portal is a real walkable connection; count how many the
-            // hand-built Detour mesh failed to represent as adjacency. This is the "= 0" gate for the re-tiler.
-            if (m_navmesh && m_navmesh->IsReady()) {
-                int ghosts = 0, checked = 0;
-                for (size_t i = 0; i < portals.size(); ++i) {
-                    const auto& p = portals[i];
-                    if (i >= p.m_other_id) continue; // count each connection once
-                    const GW::PathingTrapezoid* A = p.m_pt;
-                    const GW::PathingTrapezoid* B = portals[p.m_other_id].m_pt;
-                    if (!A || !B) continue;
-                    ++checked;
-                    if (!m_navmesh->AreTrapsConnected(A, B)) ++ghosts;
-                }
-                Log::Log("[ghostwall] map %u: %d/%d visgraph connections missing from Detour mesh (%.1f%%)",
-                    m_mapData.map_file_id, ghosts, checked, checked ? 100.0 * ghosts / checked : 0.0);
-            }
-#endif
             ReleaseBuildScratch();
         }
 
@@ -2248,11 +2176,8 @@ namespace Pathing {
         for (auto it = rev.rbegin(); it != rev.rend(); ++it) wp.push_back(*it);
         wp.push_back(goal_pos);
 
-        // Plane-continuity. At a cross-plane ramp the ground (low plane) and bridge (high plane) overlap in XY
-        // via a zero-cost portal, so a transition waypoint's plane label is ambiguous and flickers as the start
-        // moves — the renderer then draws it at ground or bridge height, sinking the line. If a waypoint sits
-        // below a neighbour and the higher plane actually has a trapezoid at its XY, lift it so the drawn line
-        // stays on the surface it's traversing. XY is untouched; only the rendered height stabilises.
+        // Plane-continuity: at a cross-plane ramp ground/bridge overlap in XY, so a transition waypoint's plane label
+        // flickers and the renderer sinks the line. Lift a below-neighbour waypoint to the higher plane if a trapezoid exists there. XY untouched; only rendered height stabilises.
         for (size_t i = 1; i + 1 < wp.size(); ++i) {
             const uint32_t hi = std::max(wp[i - 1].zplane, wp[i + 1].zplane);
             if (wp[i].zplane >= hi) continue;
@@ -2308,28 +2233,11 @@ namespace Pathing {
     {
         Timing time(__FUNCTION__);
 
-        // TODO: remove this microsecond phase timing once AStar perf is locked in.
-        // Logs `[AStar:<tag>] trap=… insert=… search=… cleanup=… total=…` per call,
-        // adds noise to log.txt. Drop t_trap/t_insert/t_search and log_timings calls.
-        using clk = std::chrono::high_resolution_clock;
-        const auto t_begin = clk::now();
-        auto t_trap = t_begin, t_insert = t_begin, t_search = t_begin;
-        auto log_timings = [&](const char* tag) {
-            const auto t_end = clk::now();
-            auto us = [](auto a, auto b) {
-                return std::chrono::duration_cast<std::chrono::microseconds>(b - a).count();
-            };
-            PATH_LOG_INFO("[AStar:%s] trap=%lldus insert=%lldus search=%lldus cleanup=%lldus total=%lldus",
-                tag, us(t_begin, t_trap), us(t_trap, t_insert), us(t_insert, t_search), us(t_search, t_end), us(t_begin, t_end));
-        };
-
-        // A walk needs the visgraph — upgrade a lightweight map here. Before
-        // pathing_mutex so a slow first build doesn't stall other maps' searches.
+        // Upgrade a lightweight map to a visgraph; before pathing_mutex so a slow first build doesn't stall other maps.
         m_path.m_mp->EnsureFullBuild();
 
-        // build_failed() and GetImpl() are stable once EnsureFullBuild() returns (it synchronises the
-        // build on m_build_mutex + m_full_built, NOT pathing_mutex), so read them lock-free. Bail early
-        // if the MilePath worker aborted with std::bad_alloc (mImpl's visgraph data is partially built).
+        // build_failed()/GetImpl() are stable post-EnsureFullBuild (synced on m_build_mutex, not pathing_mutex) so
+        // read lock-free; bail if the worker aborted with bad_alloc (visgraph only partially built).
         if (m_path.m_mp->build_failed()) return Error::MilePathBuildOOM;
         auto* mp = (Impl*)m_path.m_mp->GetImpl();
 
@@ -2344,7 +2252,6 @@ namespace Pathing {
         auto goal_pos = _goal_pos;
         auto spt = FindClosestPositionOnTrapezoid(start_pos, &mp->m_mapData);
         auto gpt = FindClosestPositionOnTrapezoid(goal_pos, &mp->m_mapData);
-        t_trap = clk::now();
         if (!spt) return Error::FailedToFindStartPathingTrapezoid;
         if (!gpt) return Error::FailedToFindGoalPathingTrapezoid;
 
@@ -2355,8 +2262,7 @@ namespace Pathing {
         const size_t n = n_real + 2;
         sb.init_buffers(n);
 
-        // Compute visibility edges without mutating m_visGraph.
-        // Start's DFS also tests goal visibility so direct LOS is captured as an edge to GOAL_ID.
+        // Visibility edges without mutating m_visGraph; start's DFS also tests goal so direct LOS becomes a GOAL_ID edge.
         sb.insert_visited.init(mp->portals.size());
         sb.insert_bp_pool.init(20004);
         mp->ComputeVisibleEdges(sb.insert_open, sb.insert_visited, sb.insert_bp_pool,
@@ -2365,7 +2271,6 @@ namespace Pathing {
         mp->ComputeVisibleEdges(sb.insert_open, sb.insert_visited, sb.insert_bp_pool,
                                 goal_pos, gpt, sb.goal_edges,
                                 nullptr, nullptr, 0);
-        t_insert = clk::now();
 
         if (sb.start_edges.empty() || sb.goal_edges.empty()) {
             PATH_LOG_INFO("[AStar] insert: start=(%.0f,%.0f,z%d) trap=%d edges=%zu | goal=(%.0f,%.0f,z%d) trap=%d edges=%zu",
@@ -2375,8 +2280,6 @@ namespace Pathing {
             m_path.insertPoint(goal_pos);
             m_path.setCost(GW::GetDistance(start_pos, goal_pos));
             m_path.finalize();
-            t_search = clk::now();
-            log_timings("no-edges");
             return Error::FailedToFinializePath;
         }
 
@@ -2388,14 +2291,6 @@ namespace Pathing {
                 m_path.insertPoint(goal_pos);
                 m_path.setCost(vis.distance);
                 m_path.finalize();
-                t_search = clk::now();
-#if defined(_DEBUG) || defined(GWTB_HARNESS)
-                {
-                    const long long vg_us = std::chrono::duration_cast<std::chrono::microseconds>(clk::now() - t_begin).count();
-                    Log::Log("[visgraph] query los cost=%.0f pts=2 us=%lld", vis.distance, vg_us);
-                }
-#endif
-                log_timings("los");
                 return Error::OK;
             }
         }
@@ -2406,9 +2301,8 @@ namespace Pathing {
         int32_t* goal_edge_idx = sb.goal_edge_idx;
         sb.reset(n, START_ID);
 
-        // Build O(1) lookup: for each point p, index into goal_edges giving edge p->goal (or -1).
-        // Duplicates (different blocked_planes) collapse to the last one — acceptable since paths are
-        // re-checked against current_blocked_planes in the relax step.
+        // O(1) lookup: per point p, index into goal_edges for p->goal (or -1). Duplicate blocked_planes collapse to
+        // the last — fine, paths are re-checked against current_blocked_planes in the relax step.
         for (size_t i = 0; i < sb.goal_edges.size(); ++i) {
             const auto pid = sb.goal_edges[i].point_id;
             if (pid < n) goal_edge_idx[pid] = static_cast<int32_t>(i);
@@ -2525,27 +2419,6 @@ namespace Pathing {
             m_path.cost(), (int)m_path.points().size(),
             dbg_nodes_expanded);
 #endif
-        t_search = clk::now();
-
-#if defined(_DEBUG) || defined(GWTB_HARNESS)
-        // Per-query cost + time for the visgraph A*.
-        {
-            const long long vg_us = std::chrono::duration_cast<std::chrono::microseconds>(clk::now() - t_begin).count();
-            Log::Log("[visgraph] query %s cost=%.0f pts=%zu us=%lld", m_path.ready() ? "ok" : "fail",
-                m_path.cost(), m_path.points().size(), vg_us);
-            if (m_path.ready()) {
-                const auto& vp = m_path.points();
-                std::string vs; char vb[40];
-                for (size_t i = 0; i < vp.size() && i < 40; ++i) {
-                    snprintf(vb, sizeof(vb), "(%.0f,%.0f,%u)", vp[i].x, vp[i].y, (unsigned)vp[i].zplane);
-                    vs += vb;
-                }
-                Log::Log("[vg-path] cost=%.0f %s", m_path.cost(), vs.c_str());
-            }
-        }
-
-#endif
-        log_timings(m_path.ready() ? "ok" : "fail");
         return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }
 } // namespace Pathing

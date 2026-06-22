@@ -106,15 +106,15 @@ namespace {
         CalculatedQuestPath& operator=(CalculatedQuestPath&&) = delete;
 
         std::vector<CustomRenderer::CustomLine*> minimap_lines{};
-        GW::Vec2f calculated_from{}; // GAME-coord XY anchor of the last recalc (fine-grained move detection)
-        GW::Vec2f calculated_to{};   // world-map coords (goal)
+        GW::Vec2f calculated_from{}; // game-coord anchor of last recalc (move detection)
+        GW::Vec2f calculated_to{};   // world-map goal
         clock_t calculated_at = 0;
-        clock_t route_failed_at = 0; // last failed compute; backs off retries of an unroutable marker
+        clock_t route_failed_at = 0; // backs off retries of an unroutable marker
         GW::Constants::QuestID quest_id{};
         clock_t calculating = 0;
-        GW::Vec2f goal_world{};               // world-map goal
-        bool has_full_route = false;          // the whole route has been plotted at least once
-        std::vector<GW::Vec2f> route_world{}; // the route, world-map coords (PATH_BREAK between maps)
+        GW::Vec2f goal_world{};
+        bool has_full_route = false;
+        std::vector<GW::Vec2f> route_world{}; // world-map coords (PATH_BREAK between maps)
         std::vector<GW::GamePos> route_map{};
         bool IsCalculating() { return calculating && TIMER_DIFF(calculating) < 5000; }
 
@@ -126,10 +126,7 @@ namespace {
             minimap_lines.clear();
         }
 
-        // Draw the route (world coords). Segments whose endpoints are both on the current
-        // map are converted back to game coords and drawn on the in-game surfaces; the
-        // rest stay world coords (world map only), since their game positions belong to
-        // other maps and would overflow if projected here.
+        // Current-map segments draw on in-game surfaces; off-map segments stay world coords (world map only) to avoid overflow.
         void DrawLines()
         {
             ClearMinimapLines();
@@ -139,7 +136,6 @@ namespace {
             CustomRenderer::CustomLine* l = nullptr;
             bool first_ingame = true;
             for (size_t i = 0; i + 1 < route_map.size(); i++) {
-                // On the current map: world -> game, draw on the in-game surfaces.
                 const auto label = std::format("{} - {}", static_cast<uint32_t>(quest_id), i);
                 l = Minimap::Instance().custom_renderer.AddCustomLine(route_map[i], route_map[i + 1], label.c_str(), true);
                 l->from_player_pos = first_ingame;
@@ -154,7 +150,6 @@ namespace {
             for (size_t i = 0; i + 1 < route_world.size(); i++) {
                 if (PathfindingWindow::IsRouteBreak(route_world[i]) || PathfindingWindow::IsRouteBreak(route_world[i + 1])) continue;
                 const auto label = std::format("{} - {}", static_cast<uint32_t>(quest_id), i);
-                // Another map: keep world coords, world map only.
                 l = Minimap::Instance().custom_renderer.AddCustomLine({route_world[i].x, route_world[i].y, 0}, {route_world[i + 1].x, route_world[i + 1].y, 0}, label.c_str(), true);
                 l->world_coords = true;
                 l->draw_on_terrain = false;
@@ -183,7 +178,7 @@ namespace {
             Resources::EnqueueWorkerTask([qid = quest_id, from_world, gw = calculated_to] {
                 auto pts = new std::vector<GW::Vec2f>(); // world-map coords
                 const bool ok = PathfindingWindow::CalculateRoute(from_world, gw, pts);
-                auto route_map = new std::vector<GW::GamePos>(); // game-map coords
+                auto route_map = new std::vector<GW::GamePos>(); // game coords
                 if (ok) {
                     size_t route_map_end_idx;
                     GW::GamePos gp;
@@ -191,7 +186,7 @@ namespace {
                     const auto data = pts->data();
                     for (route_map_end_idx = 0; route_map_end_idx < pts->size(); route_map_end_idx++) {
                         if (PathfindingWindow::IsRouteBreak(data[route_map_end_idx])) {
-                            // We've hit a route break e.g. portal, but we want to try and plot the next point in this map so the player traverses through.
+                            // route break (e.g. portal): still plot the next point so the player traverses through.
                             passed_route_break = true;
                             continue;
                         }
@@ -227,7 +222,7 @@ namespace {
 
         void RecalculateMap(const GW::GamePos& from)
         {
-            // Direct single-map A* to the on-map endpoint (the goal, or where the route leaves this map); the multi-map planner detours out-and-back through chokepoint via points.
+            // Direct single-map A* to the on-map endpoint (goal, or where the route leaves this map).
             const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world);
             GW::GamePos target{};
             if (same_map) {
@@ -237,12 +232,7 @@ namespace {
                 if (route_world.empty() || route_map.empty()) return;
                 target = route_map.back();
             }
-            // The raw current-map leg from RecalculateSegment (out_game) already carries the pathfinder's
-            // per-waypoint zplane — it is the A* output, not a world-coord round-trip that zeroes the plane
-            // (WorldMapToGamePos never writes zplane). Feeding it straight into route_map lets the renderer
-            // drape the line on the surface the path actually traverses (bridge deck / ramp / bumps). A
-            // single same-map leg holds no route-break sentinels, so only the orientation guard remains:
-            // keep the point nearest the target last.
+            // RecalculateSegment's game-coord leg keeps the A* per-waypoint zplane (a world-coord round-trip would zero it), so the line drapes on the real surface; only orient it (point nearest target last).
             auto orient = [target](std::vector<GW::GamePos>& out) {
                 if (out.size() <= 1) return;
                 const auto sq = [](const GW::GamePos& a, const GW::GamePos& b) {
@@ -252,10 +242,9 @@ namespace {
                 if (sq(out.front(), target) < sq(out.back(), target)) std::ranges::reverse(out);
             };
 
-            // Recompute the followed/active route on a worker; it posts its result back to the main thread.
             Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map, orient] {
-                auto pts = new std::vector<GW::Vec2f>();         // world-map coords (required out-param; unused for route_map)
-                auto route_map = new std::vector<GW::GamePos>(); // current-map game coords WITH carried zplane
+                auto pts = new std::vector<GW::Vec2f>();         // required out-param; unused here
+                auto route_map = new std::vector<GW::GamePos>(); // current-map game coords with carried zplane
                 const bool ok = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, pts, route_map);
                 if (ok) orient(*route_map);
                 Resources::EnqueueMainTask([qid, route_map, pts, ok, same_map] {
@@ -263,7 +252,7 @@ namespace {
                     if (cqp && ok) {
                         cqp->route_map = std::move(*route_map);
                         if (same_map) {
-                            cqp->route_world.clear(); // the whole route is the on-map leg
+                            cqp->route_world.clear(); // whole route is the on-map leg
                             cqp->has_full_route = true;
                         }
                         if (const auto self = GW::Agents::GetControlledCharacter()) cqp->TrimLeadingWaypoints(self->pos);
@@ -283,9 +272,7 @@ namespace {
             });
         }
 
-        // Compute/refresh the route to goal_world. The whole route is plotted once via
-        // CalculateRoute; thereafter a move only re-walks the current-map leg (player ->
-        // the last route point still on this map) and keeps the rest untouched.
+        // Plot the full route to goal_world once; later moves only re-walk the current-map leg, leaving the rest untouched.
         void Recalculate(const GW::GamePos& from)
         {
             if (IsCalculating()) return;
@@ -302,7 +289,7 @@ namespace {
 
             calculating = TIMER_INIT();
             const bool goal_changed = calculated_to != goal_world;
-            calculated_from = from_game; // game-coord anchor for Update's fine-grained move threshold
+            calculated_from = from_game; // anchor for Update's move threshold
             calculated_to = goal_world;
             const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world);
             if (!same_map && goal_changed) {
@@ -346,14 +333,10 @@ namespace {
                 return false;
             }
             if (TrimLeadingWaypoints(from)) UpdateUI();
-            // Marker couldn't be routed to — back off instead of recomputing (and
-            // re-logging) every tick. A goal/map change re-plots via RefreshQuestPath.
+            // Unroutable marker: back off instead of recomputing (and re-logging) every tick; a goal/map change re-plots via RefreshQuestPath.
             constexpr clock_t failed_route_backoff = 10000;
             if (route_failed_at && TIMER_DIFF(route_failed_at) < failed_route_backoff) return false;
-            // Recalc once the player has moved the configured distance (Pathfinder setting "Path recalc
-            // distance") from the last recalc, still rate-capped by the 33ms throttle above. calculated_from is
-            // the game-coord anchor; Recalculate() no-ops if the anchor/goal are unchanged, and runs the leg
-            // recompute on a worker thread.
+            // Recalc once the player has moved the configured "Path recalc distance" from the last anchor.
             const GW::Vec2f from_game{from.x, from.y};
             const float d = PathfindingWindow::GetPathRecalcDistance();
             if (GetSquareDistance(from_game, calculated_from) > d * d) Recalculate(from);
@@ -430,11 +413,7 @@ namespace {
             const auto cqp = GetCalculatedQuestPath(quest_id);
             if (!cqp) return;
 
-            // Resolve the world-map goal. The custom marker owns its world pos directly.
-            // Regular quests use their current-map marker, but fall back to the
-            // destination map's world-map marker point when the objective is on another
-            // map and the in-map marker is invalid or far off (>5000 gwinches) — i.e. it's
-            // really pointing at another map. A changed goal forces a whole-route re-plot.
+            // Resolve world-map goal: custom marker owns its world pos; regular quests use the in-map marker, but fall back to the destination map's world marker when cross-map and the in-map marker is invalid or far off (>5000 gwinches).
             GW::Vec2f goal{};
             bool have_goal = false;
             if (quest_id == custom_quest_id) {

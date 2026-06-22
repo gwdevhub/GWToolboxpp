@@ -32,10 +32,7 @@ namespace {
     // Stencil the round compass out of overlays so they don't bleed across the minimap.
     bool exclude_compass = true;
 
-    // Depth occlusion: test overlays against the scene depth buffer (still bound at the
-    // UI-render hook) so world geometry hides them. z_near/z_far must match GW's own
-    // projection for the comparison to be correct. Empirically GW's near clip is ~47
-    // (narrow valid window ~45-48); far is insensitive anywhere ~50k-200k.
+    // Test overlays against the scene depth buffer so world geometry hides them; z_near/z_far must match GW's projection (near clip ~47, valid 45-48; far insensitive 50k-200k).
     bool occlude_behind_terrain = true;
     float z_near = 47.0f;
     float z_far = 100000.f;
@@ -48,10 +45,7 @@ namespace {
     IDirect3DVertexDeclaration9* vertex_declaration = nullptr;
 
     // === FrCache compositor: draw the overlay between GW's world and UI passes ===
-    // GW renders into a deferred command buffer; the 3D world is FRCACHE_GPU_RENDER
-    // entries, the HUD is frame entries after. To land *under* the UI but occluded by
-    // world geometry we split the buffer at the world->HUD boundary, flush the world,
-    // draw, then let GW render the HUD on top. Only active while occlude_behind_terrain.
+    // GW's deferred command buffer holds FRCACHE_GPU_RENDER (3D world) then frame entries (HUD); split at the boundary, flush world, draw, let GW render HUD on top.
     enum FrCacheEntryType : uint32_t {
         FRCACHE_GPU_RENDER = 0,
         FRCACHE_FRAME_CALLBACK = 1,
@@ -74,8 +68,6 @@ namespace {
     bool in_compositor_draw = false; // true while drawing from the FrCache compositor
     bool drawn_this_frame = false;   // guard: draw only in the first world pass per frame
 
-    // Draw the overlay from inside the compositor. Routes through Render (with the flag
-    // set) so the actual draw body lives in one place.
     void DrawOverlay(IDirect3DDevice9* device)
     {
         in_compositor_draw = true;
@@ -88,7 +80,7 @@ namespace {
         if (compositor_scanned) return !compositor_failed;
         compositor_scanned = true;
 
-        // FrCache_RenderAll asserts "frame" in FrCache.cpp at line 0x9e (~0x120 bytes in).
+        // FrCache_RenderAll asserts "frame" in FrCache.cpp at line 0x9e.
         const auto render_all = GW::Scanner::ToFunctionStart(
             GW::Scanner::FindAssertion("FrCache.cpp", "frame", 0x9e, 0), 0x200);
         if (!render_all) {
@@ -107,10 +99,9 @@ namespace {
             compositor_failed = true;
             return false;
         }
-        // FrCache_Render begins: CMP [RenderFrameList.m_size], 0 — the 4 bytes at +5 are
-        // &RenderFrameList.m_size; the Array<T> globals are consecutive 16-byte structs.
+        // FrCache_Render opens with CMP [RenderFrameList.m_size], 0: the 4 bytes at +5 are &RenderFrameList.m_size; Array<T> globals are consecutive 16-byte structs, m_size at +8.
         const auto frame_list_size_addr = *reinterpret_cast<uintptr_t*>(render_addr + 5);
-        const auto frame_list_base = frame_list_size_addr - 8; // m_size is at +8 in Array<T>
+        const auto frame_list_base = frame_list_size_addr - 8;
         // Consecutive 16-byte Array<T> globals: RenderFrameList, FrameArray(+0x10), ..., RenderBuffer(+0x30).
         frame_array = reinterpret_cast<GW::Array<GW::UI::Frame*>*>(frame_list_base + 0x10);
         render_buffer = reinterpret_cast<GW::Array<FrCacheBufferEntry>*>(frame_list_base + 0x30);
@@ -127,8 +118,7 @@ namespace {
         GW::Hook::EnterHook();
         IDirect3DDevice9* device = GW::Render::GetDevice();
 
-        // OFF (or unusable) → behave exactly like the original function. The overlay is
-        // drawn at the 0xf hook in that case.
+        // OFF (or unusable) -> run the original; the overlay is drawn at the 0xf hook instead.
         if (!render_under_ui || !render_buffer || !device) {
             FrCacheRenderAll_Ret(param_1, param_2);
             GW::Hook::LeaveHook();
@@ -137,12 +127,7 @@ namespace {
 
         auto& buffer = *render_buffer;
 
-        // GW renders the main 3D scene as the FIRST GPU_RENDER block (right after the
-        // full-screen game-view frame at the top of the buffer). Everything after that
-        // block is HUD — interleaved with agent / UI 3D renders, which should (and do)
-        // draw over the overlay. So split right after the first world block: draw the
-        // overlay there and all the HUD composites on top. Passes with no GPU block (UI-
-        // only / sub-renders) leave boundary == size and get skipped below.
+        // The main 3D scene is the FIRST GPU_RENDER block; everything after is HUD (incl. agent/UI 3D renders that correctly draw over us). Split right after it; UI-only/sub-render passes have no GPU block so boundary == size and skip below.
         uint32_t boundary = buffer.size();
         bool seen_gpu = false;
         for (uint32_t i = 0; i < buffer.size(); i++) {
@@ -150,8 +135,7 @@ namespace {
             if (seen_gpu) { boundary = i; break; }
         }
 
-        // Only the main pass (a clear world-then-HUD split) draws; sub-render and UI-only
-        // passes pass through. The per-frame guard makes sure we draw exactly once.
+        // Only the main world-then-HUD pass draws; others pass through, and the guard draws exactly once per frame.
         if (boundary == 0 || boundary >= buffer.size() || drawn_this_frame) {
             FrCacheRenderAll_Ret(param_1, param_2);
             GW::Hook::LeaveHook();
@@ -166,7 +150,7 @@ namespace {
         buffer.m_size = boundary;
         FrCacheRenderAll_Ret(param_1, param_2);
 
-        // 2) materialise the world into the back/depth buffer, then draw our overlay
+        // 2) flush the world into the back/depth buffer, then draw the overlay
         buffer.m_buffer = orig_buffer;
         buffer.m_size = orig_size;
         GW::Render::FlushCommandQueue();
@@ -198,16 +182,13 @@ namespace {
         compositor_hooked = true;
     }
 
-    // True when the overlay is being drawn by the FrCache compositor (under the UI), so
-    // the 0xf path must NOT also draw it.
+    // True when the compositor draws the overlay (under the UI), so the 0xf path must NOT also draw it.
     bool CompositorDrawing()
     {
         return render_under_ui && compositor_hooked && !compositor_failed;
     }
 
-    // Screen-space circle of GW's compass *terrain* (inside the decorative frame), or false
-    // when the compass isn't shown. Mirrors Minimap's RepositionMinimapToCompass: inset the
-    // frame by compass_padding, square it off, and take the inscribed circle.
+    // Screen-space circle of GW's compass terrain (inside the frame), or false when hidden. Mirrors Minimap's RepositionMinimapToCompass: inset by compass_padding, square off, inscribe.
     bool GetCompassTerrainCircle(float& cx, float& cy, float& radius)
     {
         const auto* frame = GW::UI::GetFrameByLabel(L"Compass");
@@ -232,10 +213,7 @@ namespace {
         return radius > 0.f;
     }
 
-    // Stamp (set) or clear a dedicated stencil bit in the shape of GW's round compass terrain,
-    // so the overlay can be punched out to match the circular minimap. Uses a fixed-function
-    // screen-space disc; touches only `bit` of the shared depth-stencil so GW's own values
-    // survive. Leaves the programmable pipeline unset — the caller restores it for the overlay.
+    // Set/clear `bit` in a screen-space disc over the compass terrain (fixed-function) so the overlay can be punched out to the circular minimap; touches only `bit` to spare GW's stencil, leaves pipeline unset for the caller to restore.
     void MarkCompassStencil(IDirect3DDevice9* device, const float cx, const float cy, const float radius, const DWORD bit, const bool set)
     {
         struct ScreenVertex { float x, y, z, rhw; };
@@ -270,9 +248,7 @@ namespace {
 
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
-    // Highest terrain surface at (x,y) among the candidate planes (GW "up" is -z, so the highest surface is
-    // the minimum altitude). QueryAltitude returns 0.f for out-of-bounds / no data on a plane, which is
-    // ignored. ALTITUDE_UNKNOWN when no candidate has data, so the caller can backfill.
+    // Highest terrain surface at (x,y) among candidate planes (GW up is -z, so highest = min altitude). QueryAltitude returns 0.f out-of-bounds (ignored); ALTITUDE_UNKNOWN if no plane has data.
     float HighestSurfaceZ(const float x, const float y, const std::vector<uint32_t>& planes)
     {
         float best = ALTITUDE_UNKNOWN;
@@ -281,6 +257,20 @@ namespace {
             const float a = GW::Map::QueryAltitude(&p);
             if (a != 0.f && (best == ALTITUDE_UNKNOWN || a < best))
                 best = a;
+        }
+        return best;
+    }
+
+    // Surface altitude at (x,y) closest to `prev` over all planes (continuity tracking): the line follows whichever surface it walks (deck/ramp/ground), so a straight visgraph edge rides a bridge instead of cutting through, and unlike "highest wins" never floats a ground sample onto an overhead deck. 0.f is out-of-bounds (skipped); ALTITUDE_UNKNOWN if no data.
+    float ClosestSurfaceZ(const float x, const float y, const uint32_t num_planes, const float prev)
+    {
+        float best = ALTITUDE_UNKNOWN, best_d = std::numeric_limits<float>::max();
+        for (uint32_t zp = 0; zp < num_planes; ++zp) {
+            GW::GamePos p = {x, y, zp};
+            const float a = GW::Map::QueryAltitude(&p);
+            if (a == 0.f) continue;
+            const float d = std::abs(a - prev);
+            if (d < best_d) { best_d = d; best = a; }
         }
         return best;
     }
@@ -295,13 +285,13 @@ namespace {
             const auto angle = slice * static_cast<float>(i);
             points.emplace_back(marker.x + size * std::cos(angle), marker.y + size * std::sin(angle), marker.zplane);
         }
-        points.push_back(points.at(0)); // to complete the line list
+        points.push_back(points.at(0)); // close the loop
         return points;
     }
 
     GameWorldRenderer::GenericPolyRenderable* find_matching_poly(const GameWorldRenderer::GenericPolyRenderable& poly_to_find)
     {
-        // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
+        // Reuse an already-plotted poly to skip recomputing altitudes.
         const auto found = std::ranges::find_if(renderables, [&poly_to_find](const GameWorldRenderer::GenericPolyRenderable& check) {
             if (!(check.map_id == poly_to_find.map_id
                   && check.col == poly_to_find.col
@@ -320,36 +310,42 @@ namespace {
         return nullptr;
     }
 
-    // update altitudes if not done already, then add to the device buffer
+    // Compute vertex altitudes (once, requires the correct map) then upload to the device buffer.
     bool AddPolyToDevice(GameWorldRenderer::GenericPolyRenderable& poly, IDirect3DDevice9* device)
     {
         if (poly.vb)
-            return true; // Already created the vertex buffer for this poly, which means altitudes have been done!
+            return true; // vb exists => altitudes already done
         auto& vertices = poly.vertices;
         if (poly.vertices_processed == vertices.size())
             return true;
-        // Altitudes (Z) can't be known until we're in the correct map, so they're computed once here. Draw
-        // samples the line densely (every ~50 gwinches), so this runs between hops, not only at them. For each
-        // sample we query GW for the terrain altitude on each of the path's OWN waypoint planes (carried from
-        // the pathfinder through route_map) and keep the highest surface (min z). Restricting the candidates to
-        // the path's own planes drapes the line onto the surface it traverses — a bridge deck, ramp or bump the
-        // path runs along — without floating onto a plane it merely passes UNDER (that plane is never a
-        // waypoint, so never a candidate).
         const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
         if (!pathing_map || pathing_map->size() == 0)
             return false;
+        const uint32_t num_planes = static_cast<uint32_t>(pathing_map->size());
 
-        std::vector<uint32_t> candidate_planes;
-        for (const auto& pt : poly.points) {
-            if (std::ranges::find(candidate_planes, pt.zplane) == candidate_planes.end())
-                candidate_planes.push_back(pt.zplane);
+        if (poly.filled) {
+            // Filled shapes are an earcut triangle soup (no vertex order), so no continuity: drape each vertex on the highest surface among the shape's own planes.
+            std::vector<uint32_t> candidate_planes;
+            for (const auto& pt : poly.points) {
+                if (std::ranges::find(candidate_planes, pt.zplane) == candidate_planes.end())
+                    candidate_planes.push_back(pt.zplane);
+            }
+            for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++)
+                vertices[i].z = HighestSurfaceZ(vertices[i].x, vertices[i].y, candidate_planes);
+        }
+        else {
+            // Ordered, densely-sampled path: drape by continuity (each sample follows the walked surface across bridges even with no waypoint on that plane). Seed from the first waypoint; the leading from_player_pos segment is re-seeded from live player height below.
+            GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
+            float prev = GW::Map::QueryAltitude(&seed_pos);
+            if (prev == 0.f) prev = ClosestSurfaceZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
+            for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
+                const float z = ClosestSurfaceZ(vertices[i].x, vertices[i].y, num_planes, prev);
+                if (z != ALTITUDE_UNKNOWN) prev = z;
+                vertices[i].z = z;
+            }
         }
 
-        for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
-            vertices[i].z = HighestSurfaceZ(vertices[i].x, vertices[i].y, candidate_planes);
-        }
-
-        // Backfill no-data vertices by holding the nearest known altitude, so the line never spikes off-screen.
+        // Backfill no-data vertices by holding the last known altitude so the line never spikes off-screen.
         float fill = ALTITUDE_UNKNOWN;
         for (const auto& v : vertices)
             if (v.z != ALTITUDE_UNKNOWN) { fill = v.z; break; }
@@ -361,14 +357,12 @@ namespace {
             }
         }
 
-        // commit the completed vertices to vram
         auto res = device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &poly.vb, nullptr);
         if (res != S_OK) {
             poly.vb = nullptr;
             return false;
         }
 
-        // map the vertex buffer memory and write vertices to it.
         void* mem_loc = nullptr;
         res = poly.vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
         if (res != S_OK || !mem_loc) {
@@ -404,8 +398,7 @@ GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable() noexcept
 void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 {
     if (vertices.empty()) {
-        if (filled && points.size() >= 3) {
-            // (filling doesn't make sense if there is not at least enough points for one triangle)
+        if (filled && points.size() >= 3) { // need >= 3 points for one triangle
             std::vector<GW::GamePos> lerp_points{};
             for (size_t i = 0; i < points.size(); i++) {
                 if (!lerp_points.empty() && lerp_steps_per_line > 0) {
@@ -424,10 +417,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
             }
         }
         else {
-            // Sample each segment densely enough to query terrain altitude every ~50 gwinches, so a segment
-            // spanning a slope/stairs/bridge/bumps between two hops follows the surface instead of drawing a
-            // straight chord through it. lerp_steps_per_line stays the floor for short segments. The plane each
-            // sample is draped on is resolved in AddPolyToDevice from the path's own waypoint planes.
+            // Sample each segment ~every 50 gwinches so a slope/stairs/bridge between hops follows the surface instead of a straight chord; lerp_steps_per_line is the floor. Plane draping is resolved in AddPolyToDevice.
             constexpr float sample_spacing = 50.f;
             for (size_t i = 0; i < points.size(); i++) {
                 const auto& pt = points[i];
@@ -450,56 +440,43 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 
     if (from_player_pos && vertices.size() > 1) {
         if (const auto player = GW::Agents::GetControlledCharacter()) {
-            // Anchor the line to the player's LIVE position. The leading vertices within Earshot
-            // (including waypoints already walked past) are re-purposed as a densely terrain-draped
-            // line from the player to the first vertex beyond Earshot, so the leading segment lays on
-            // the ground. (Previously they were flattened to a single point at the player's head
-            // height, which chorded straight through elevated terrain.)
-            size_t anchor = 1;
-            while (anchor < vertices.size() - 1 &&
-                   GW::GetSquareDistance(player->pos, { vertices[anchor].x, vertices[anchor].y }) < GW::Constants::SqrRange::Earshot)
-                ++anchor;
-            const float ax = vertices[anchor].x, ay = vertices[anchor].y;
-            // Drape on the highest surface among the player's live plane and the segment's far waypoint plane,
-            // so stepping from the ground toward a bridge (or vice versa) rides the right surface rather than
-            // flattening the whole leading segment to the player's plane.
-            const std::vector<uint32_t> lead_planes =
-                points.empty() ? std::vector<uint32_t>{ player->pos.zplane }
-                               : std::vector<uint32_t>{ player->pos.zplane, points.back().zplane };
-            for (size_t j = 0; j < anchor; ++j) {
-                const float t = static_cast<float>(j) / static_cast<float>(anchor);
-                const float sx = player->pos.x + (ax - player->pos.x) * t;
-                const float sy = player->pos.y + (ay - player->pos.y) * t;
-                const float alt = HighestSurfaceZ(sx, sy, lead_planes);
+            // Re-anchor the leading line to the player's live position each frame and drape by continuity from player->z, which is reliable even when the reported plane is 0 on a bridge (seeding from the plane sank the line to the ground beneath the bridge).
+            const float ex = vertices.back().x, ey = vertices.back().y;
+            const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
+            const uint32_t num_planes = pathing_map ? static_cast<uint32_t>(pathing_map->size()) : 0;
+            const size_t last = vertices.size() - 1;
+            float prev = player->z;
+            for (size_t j = 0; j <= last; ++j) {
+                const float t = static_cast<float>(j) / static_cast<float>(last);
+                const float sx = player->pos.x + (ex - player->pos.x) * t;
+                const float sy = player->pos.y + (ey - player->pos.y) * t;
+                float z = num_planes ? ClosestSurfaceZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN;
+                if (z != ALTITUDE_UNKNOWN) prev = z; else z = prev;
                 vertices[j].x = sx;
                 vertices[j].y = sy;
-                vertices[j].z = (alt != ALTITUDE_UNKNOWN) ? alt : player->name_tag_z;
+                vertices[j].z = z;
             }
 
             void* mem_loc = nullptr;
-            auto res = vb->Lock(0, anchor * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+            auto res = vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
             if (res == S_OK) {
-                memcpy(mem_loc, vertices.data(), anchor * sizeof(D3DVertex));
+                memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
                 vb->Unlock();
             }
         }
     }
 
-    // draw this specific renderable
     if (device->SetStreamSource(0, vb, 0, sizeof(D3DVertex)) != D3D_OK) {
-        // a safe failure mode
         return;
     }
 
-    // Set the use_dotted_effect value as a pixel shader constant
     const BOOL dotted_effect_constant[1] = {static_cast<BOOL>(use_dotted_effect)};
     if (device->SetPixelShaderConstantB(0, dotted_effect_constant, 1) != D3D_OK) {
         Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#3, aborting render.");
         return;
     }
 
-    // copy the vertex buffer to the back buffer. Guard the primitive counts: an empty line renderable would
-    // make vertices.size()-1 (size_t) underflow to a huge count and crash DrawPrimitive (D3D debug break).
+    // Guard the counts: an empty line would underflow vertices.size()-1 (size_t) and crash DrawPrimitive.
     if (filled) {
         if (vertices.size() >= 3) device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3);
     }
@@ -510,7 +487,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 
 bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
 {
-    // set up directX standard view/proj matrices according to those used to render the game world
+    // Build view/proj matrices matching GW's world-render camera.
     if (device == nullptr) {
         return false;
     }
@@ -518,7 +495,6 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
     constexpr auto vertex_shader_view_matrix_offset = 0u;
     constexpr auto vertex_shader_proj_matrix_offset = 4u;
 
-    // compute view matrix:
     DirectX::XMFLOAT4X4A mat_view{};
     const auto cam = GW::CameraMgr::GetCamera();
     const DirectX::XMFLOAT3 eye_pos = {cam->position.x, cam->position.y, cam->position.z};
@@ -535,7 +511,6 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
         return false;
     }
 
-    // compute projection matrix:
     DirectX::XMFLOAT4X4A mat_proj{};
     const auto fov = GW::Render::GetFieldOfView();
     const auto aspect_ratio = static_cast<float>(GW::Render::GetViewportWidth()) / static_cast<float>(GW::Render::GetViewportHeight());
@@ -557,17 +532,13 @@ bool GameWorldRenderer::SetD3DTransform(IDirect3DDevice9* device)
 void GameWorldRenderer::Render(IDirect3DDevice9* device)
 {
     if (need_sync_markers) {
-        // marker synchronisation is done when needed on the render thread, as it requires access
-        // to the directX device for creating vertex buffers.
+        // Sync on the render thread: creating vertex buffers needs the D3D device.
         SyncAllMarkers();
     }
 
-    // When occluding, the overlay is drawn by the FrCache compositor (between GW's world
-    // and UI passes) — not here on top. This 0xf path only draws when not occluding, or
-    // when the compositor can't run. (in_compositor_draw means this IS the compositor.)
+    // When occluding, the compositor draws the overlay between GW's world and UI passes, not here; this 0xf path draws only when not occluding or the compositor can't run (in_compositor_draw means this IS the compositor).
     if (!in_compositor_draw) {
-        // This runs once per frame at GW's End Scene, after all FrCache passes — reset the
-        // compositor's per-frame draw guard for the next frame.
+        // Runs once per frame at End Scene after all FrCache passes: reset the per-frame draw guard.
         drawn_this_frame = false;
         if (render_under_ui) {
             EnsureCompositorHook();
@@ -578,7 +549,6 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
     }
 
     if (renderables.empty()) {
-        // if nothing ticked "Draw On Terrain", don't waste performance
         return;
     }
     if (need_configure_pipeline) {
@@ -587,9 +557,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         }
     }
 
-    // Snapshot all device state up front; restored unconditionally on exit so GW's own
-    // rendering (which continues after this callback) is never corrupted, even on the
-    // error paths below.
+    // Snapshot all device state; restored unconditionally on exit (incl. error paths) so GW's later rendering isn't corrupted.
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) {
         return;
@@ -600,9 +568,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         && device->SetVertexDeclaration(vertex_declaration) == D3D_OK
         && SetD3DTransform(device)) {
 
-        // Fully specify the pipeline: at the UI-render hook the ambient state is GW's
-        // (alpha test / cull / fog / colour-write set for UI), which would otherwise
-        // discard our draw. The state block restores all of this on exit.
+        // Fully specify the pipeline: GW's ambient UI state (alpha test/cull/fog/colour-write) would otherwise discard our draw. The state block restores it on exit.
         device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
         device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
         device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
@@ -619,8 +585,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 
         if (occlude_behind_terrain) {
-            // test against the scene depth buffer so walls/buildings/terrain occlude the
-            // overlay; never write depth (we must not disturb GW's own depth values).
+            // Depth-test against the scene so geometry occludes the overlay; never write depth (must not disturb GW's values).
             device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
             device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
             device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
@@ -630,16 +595,13 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
         }
 
         const GW::Camera* cam = GW::CameraMgr::GetCamera();
-        // set Pixel Shader constants. they are always expressed as Float4 here:
-        // first is the player's position
+        // Pixel shader constants (all Float4): c0 player pos, c1 max distance, c2 fog start.
         const float cur_pos_constant[4] = {cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z, 0.0f};
         device->SetPixelShaderConstantF(0, cur_pos_constant, 1);
 
-        // second is the render max distance
         const float max_dist_constant[4] = {render_max_distance, 0.0f, 0.0f, 0.0f};
         device->SetPixelShaderConstantF(1, max_dist_constant, 1);
 
-        // third is the fog constant
         const float fog_starts_at_constant[4] = {render_max_distance - render_max_distance * fog_factor, 0.0f, 0.0f, 0.0f};
         device->SetPixelShaderConstantF(2, fog_starts_at_constant, 1);
 
@@ -654,9 +616,7 @@ void GameWorldRenderer::Render(IDirect3DDevice9* device)
             }
         };
 
-        // GW draws the compass terrain disc in the world pass but its round frame in a later
-        // HUD pass, so the overlay lands between the two and bleeds across the minimap. Punch
-        // the compass terrain out of the overlay with a stencil disc matching that circle.
+        // GW draws the compass disc (world pass) and its frame (later HUD pass) separately, so the overlay lands between and bleeds across the minimap; stencil the disc out.
         float compass_cx, compass_cy, compass_radius;
         if (exclude_compass && GetCompassTerrainCircle(compass_cx, compass_cy, compass_radius)) {
             constexpr DWORD compass_stencil_bit = 0x80;
@@ -741,7 +701,6 @@ void GameWorldRenderer::OnSettingsLoaded()
 
 void GameWorldRenderer::DrawSettings()
 {
-    // draw the settings using ImGui
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
     ImGui::TextColored(red, "Warning: This is a beta feature.");
     ImGui::Text("Note: custom markers are only rendered in-game if the option is enabled for a particular marker (check settings).");
@@ -783,7 +742,6 @@ void GameWorldRenderer::DrawSettings()
 
 void GameWorldRenderer::TriggerSyncAllMarkers()
 {
-    // a publicly accessible function to trigger a re-sync of all custom markers
     need_sync_markers = true;
 }
 
@@ -793,7 +751,6 @@ void GameWorldRenderer::Terminate()
         GW::Hook::RemoveHook(FrCacheRenderAll_Func);
         compositor_hooked = false;
     }
-    // free up any vertex buffers
     renderables.clear();
     if (vshader)
         vshader->Release();
@@ -832,14 +789,12 @@ void GameWorldRenderer::SyncAllMarkers()
 
 GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
 {
-    // sync lines with CustomRenderer
     const auto& lines = Minimap::Instance().custom_renderer.GetLines();
 
     const auto map_id = GW::Map::GetMapID();
 
     RenderableVectors out;
     out.reserve(lines.size());
-    // for each line, add as a renderable if appropriate
     for (const auto line : lines) {
         if (!(line->draw_on_terrain && line->visible)) {
             continue;
@@ -857,8 +812,6 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         poly_to_add.from_player_pos = line->from_player_pos;
         poly_to_add.use_dotted_effect = line->created_by_toolbox && line->dotted;
 
-        // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
-
         if (const auto found = find_matching_poly(poly_to_add)) {
             found->from_player_pos = poly_to_add.from_player_pos;
             found->use_dotted_effect = poly_to_add.use_dotted_effect;
@@ -873,14 +826,12 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
 
 GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
 {
-    // sync polygons with CustomRenderer
     const auto& polys = Minimap::Instance().custom_renderer.GetPolys();
     RenderableVectors out;
 
     const auto map_id = GW::Map::GetMapID();
 
     out.reserve(polys.size());
-    // for each poly, add as a renderable if appropriate
     for (const auto& poly : polys) {
         if (!(poly.draw_on_terrain && poly.visible && poly.points.size())) {
             continue;
@@ -896,8 +847,6 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
 
         auto poly_to_add = GenericPolyRenderable(poly.map, pts, poly.color, poly.filled);
 
-        // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
-
         if (const auto found = find_matching_poly(poly_to_add)) {
             out.emplace_back(std::move(*found));
         }
@@ -910,14 +859,12 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
 
 GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
 {
-    // sync markers with CustomRenderer
     const auto& markers = Minimap::Instance().custom_renderer.GetMarkers();
 
     const auto map_id = GW::Map::GetMapID();
 
     RenderableVectors out;
     out.reserve(markers.size());
-    // for each marker, add as a renderable if appropriate
     for (const auto& marker : markers) {
         if (!(marker.draw_on_terrain && marker.visible)) {
             continue;
@@ -936,7 +883,6 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
 
         auto poly_to_add = GenericPolyRenderable(marker.map, points, color, marker.IsFilled());
 
-        // Check to see if we've already got this poly plotted; this will save us having to calculate altitude later.
         auto found = find_matching_poly(poly_to_add);
 
         if (found) {
@@ -956,8 +902,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
 void GameWorldRenderer::Initialize()
 {
     ToolboxModule::Initialize(); // registers DrawSettingsInternal() under "In-game rendering"
-    // Register the settings fields against this module so they persist in their own
-    // section ("In-game rendering" -> In-game rendering.json), not under the Minimap.
+    // Register fields against this module so they persist in their own section, not under the Minimap.
     RegisterSettings(this);
 }
 
@@ -974,8 +919,7 @@ void GameWorldRenderer::DrawSettingsInternal()
 
 void GameWorldRenderer::SignalTerminate()
 {
-    // Stop the compositor the instant the module is disabled (the module is removed from
-    // the draw loop at the same time, so Render() won't be called either).
+    // Stop the compositor the instant the module is disabled (it leaves the draw loop too, so Render() also stops).
     if (compositor_hooked && FrCacheRenderAll_Func) {
         GW::Hook::RemoveHook(FrCacheRenderAll_Func);
         compositor_hooked = false;

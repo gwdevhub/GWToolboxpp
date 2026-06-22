@@ -67,12 +67,8 @@ namespace Pathing {
     {
         if (m_navmesh) { dtFreeNavMesh(m_navmesh); m_navmesh = nullptr; }
         m_poly_plane.clear();
-#ifdef _DEBUG
-        m_trap_to_poly.clear();
-#endif
         m_ground_poly_count = 0;
         m_plane_count = 0;
-        m_poly_base = 0;
     }
 
     int NavMesh::PlaneIndex(uint32_t zplane) const
@@ -152,7 +148,7 @@ namespace Pathing {
                         const float a = going_down ? n->XTL : n->XBL;
                         const float b = going_down ? n->XTR : n->XBR;
                         const float ov = std::min(std::max(a, b), ex1) - std::max(std::min(a, b), ex0);
-                        if (pass == 1 && ov <= 0.f) continue; // an all-directions fallback hop must genuinely overlap in X, never a far trap across a gap
+                        if (pass == 1 && ov <= 0.f) continue; // fallback hop must overlap in X, not a far trap across a gap
                         if (ov > best_ov) { best_ov = ov; best = n; }
                         continue;
                     }
@@ -367,9 +363,6 @@ namespace Pathing {
             DestroyMesh();
             return false;
         }
-#ifdef _DEBUG
-        m_trap_to_poly = trap_idx; // ghost-wall audit: trap -> poly index (1:1 in the hand-built mesh)
-#endif
 
         std::vector<float> omVerts, omRad;
         std::vector<unsigned short> omFlags;
@@ -464,7 +457,6 @@ namespace Pathing {
 
         const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
         if (!tile || !tile->header) { DestroyMesh(); return false; }
-        m_poly_base = m_navmesh->getPolyRefBase(tile);
         return true;
     }
 
@@ -491,34 +483,5 @@ namespace Pathing {
             }
         }
     }
-
-#ifdef _DEBUG
-    bool NavMesh::AreTrapsConnected(const GW::PathingTrapezoid* a, const GW::PathingTrapezoid* b) const
-    {
-        if (a == b) return true;
-        if (!m_navmesh) return true;
-        const auto ia = m_trap_to_poly.find(a);
-        const auto ib = m_trap_to_poly.find(b);
-        if (ia == m_trap_to_poly.end() || ib == m_trap_to_poly.end()) return true; // unmeshed (degenerate connector): skip
-        const uint32_t pa = ia->second, pb = ib->second;
-        if (pa == pb) return true;
-        const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
-        if (!tile || !tile->header) return true;
-        const unsigned int total = (unsigned int)tile->header->polyCount;
-        auto polyIdx = [&](dtPolyRef ref) -> unsigned int { return (unsigned int)(ref - m_poly_base); };
-        // Walk pa's links: direct adjacency, or 2-hop through an off-mesh connection poly.
-        for (unsigned int li = tile->polys[pa].firstLink; li != DT_NULL_LINK; li = tile->links[li].next) {
-            const unsigned int n = polyIdx(tile->links[li].ref);
-            if (n >= total) continue;
-            if (n == pb) return true;
-            if (tile->polys[n].getType() == DT_POLYTYPE_OFFMESH_CONNECTION) {
-                for (unsigned int lj = tile->polys[n].firstLink; lj != DT_NULL_LINK; lj = tile->links[lj].next) {
-                    if (polyIdx(tile->links[lj].ref) == pb) return true;
-                }
-            }
-        }
-        return false;
-    }
-#endif
 
 } // namespace Pathing
