@@ -37,6 +37,11 @@ add_compile_definitions(
     # glaze's zmij float writer uses _mm_cvtsi128_si64, an x64-only intrinsic, when SSE is detected; we build x86
     "ZMIJ_USE_SIMD=0"
 
+    # Dev test tooling (TestHarness module + extra pathfinding diagnostics) is gated on _DEBUG only, so
+    # it is compiled out of the shipped RelWithDebInfo/Release builds. Debug now also mirrors the log to
+    # log.txt (Logger.cpp) so the harness can read it. Define GWTB_HARNESS here to opt a non-Debug build
+    # into the harness, but it is OFF by default (the gates are `_DEBUG || GWTB_HARNESS`).
+
     "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""
     "GWTOOLBOXEXE_MODULE_VERSION=${GWTOOLBOXEXE_MODULE_VERSION}"
     "GWTOOLBOXDLL_VERSION=\"${GWTOOLBOXDLL_VERSION}\""

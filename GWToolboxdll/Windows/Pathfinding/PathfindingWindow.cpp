@@ -2652,9 +2652,17 @@ static void UpdateNavmeshOverlay()
     }
 }
 
-bool PathfindingWindow::draw_recast_comparison = true;
+bool PathfindingWindow::draw_polyanya_comparison = true;
 
 float PathfindingWindow::GetPathRecalcDistance() { return settings.path_recalc_distance; }
+
+void PathfindingWindow::SetPathingMode(int mode)
+{
+    if (mode < 0 || mode > 2) return;
+    settings.pathing_mode = mode;
+    Pathing::g_pathing_mode = (Pathing::PathingMode)mode;
+}
+int PathfindingWindow::GetPathingMode() { return settings.pathing_mode; }
 
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
@@ -2663,7 +2671,7 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
     // so it's ready mid-map without a reload and without the search-thread build that froze recalcs.
     // Idempotent; fires when the need turns on or the map changes.
     {
-        const bool want_recast = settings.pathing_mode == (int)Pathing::PathingMode::Recast || draw_recast_comparison;
+        const bool want_recast = settings.pathing_mode == (int)Pathing::PathingMode::Recast;
         static bool last_want = false;
         static GW::Constants::MapID last_map = (GW::Constants::MapID)0;
         const auto cur_map = GW::Map::GetMapID();
@@ -2682,9 +2690,9 @@ void PathfindingWindow::DrawSettingsInternal()
 {
     const char* pathfinders[] = {"Visgraph (default)", "Recast (Detour)", "Polyanya (WIP)"};
     ImGui::Combo("Pathfinder", &settings.pathing_mode, pathfinders, 3);
-    ImGui::ShowHelp("Visgraph (default): optimal visibility-graph A*.\nRecast (Detour): navmesh pathfinder (experimental; applies on next map load / zone).\nPolyanya (WIP): not implemented yet — falls back to the visgraph.");
-    ImGui::Checkbox("Compare Recast (blue)", &draw_recast_comparison);
-    ImGui::ShowHelp("Also draw the Recast route in blue alongside the active quest path, for visual comparison. Doubles path computation on each recompute.");
+    ImGui::ShowHelp("Visgraph (default): optimal visibility-graph A*.\nRecast (Detour): navmesh pathfinder (experimental; applies on next map load / zone).\nPolyanya (WIP): optimal any-angle query on the conforming convex mesh (cross-plane in progress; falls back to the visgraph where unsupported).");
+    ImGui::Checkbox("Compare Polyanya (white)", &draw_polyanya_comparison);
+    ImGui::ShowHelp("Also draw the Polyanya route in white alongside the active quest path, for visual comparison. Doubles path computation on each recompute.");
     ImGui::DragFloat("Path recalc distance", &settings.path_recalc_distance, 1.f, 1.f, 1000.f, "%.0f");
     ImGui::ShowHelp("How far you must move (game units / gwinches) before the rendered quest path recomputes. Lower = more responsive but heavier; the recompute is also rate-capped to ~30/s.");
     ImGui::Separator();

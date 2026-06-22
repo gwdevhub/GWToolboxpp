@@ -116,7 +116,7 @@ namespace {
         bool has_full_route = false;          // the whole route has been plotted at least once
         std::vector<GW::Vec2f> route_world{}; // the route, world-map coords (PATH_BREAK between maps)
         std::vector<GW::GamePos> route_map{};
-        std::vector<GW::GamePos> route_map_recast{}; // Recast route for the current-map leg; drawn blue for comparison
+        std::vector<GW::GamePos> route_map_polyanya{}; // Polyanya route for the current-map leg; drawn white for comparison
         bool IsCalculating() { return calculating && TIMER_DIFF(calculating) < 5000; }
 
         void ClearMinimapLines()
@@ -152,16 +152,17 @@ namespace {
                 l->color = color;
                 minimap_lines.push_back(l);
             }
-            // Comparison overlay: the Recast route for this map's leg, drawn blue on the terrain so it can be
+            // Comparison overlay: the Polyanya route for this map's leg, drawn white on the terrain so it can be
             // compared against the active path. Only the current-map leg differs by pathfinder.
-            for (size_t i = 0; settings.draw_quest_path_on_terrain && i + 1 < route_map_recast.size(); i++) {
+            for (size_t i = 0; settings.draw_quest_path_on_terrain && i + 1 < route_map_polyanya.size(); i++) {
                 const auto label = std::format("{}-r-{}", static_cast<uint32_t>(quest_id), i);
-                l = Minimap::Instance().custom_renderer.AddCustomLine(route_map_recast[i], route_map_recast[i + 1], label.c_str(), true);
+                l = Minimap::Instance().custom_renderer.AddCustomLine(route_map_polyanya[i], route_map_polyanya[i + 1], label.c_str(), true);
+                l->from_player_pos = (i == 0); // anchor the first segment to the player's LIVE position
                 l->draw_on_terrain = true;
                 l->draw_on_minimap = false;
                 l->draw_on_mission_map = false;
                 l->created_by_toolbox = true;
-                l->color = 0xFF1E90FF; // dodger blue
+                l->color = 0xFFFFFFFF; // white
                 minimap_lines.push_back(l);
             }
             for (size_t i = 0; i + 1 < route_world.size(); i++) {
@@ -277,22 +278,22 @@ namespace {
                 auto route_map = new std::vector<GW::GamePos>(); // game-map coords
                 if (ok) convert(*pts, *route_map);
 
-                // Comparison overlay: also compute the Recast route for this leg (drawn blue). Uses a
+                // Comparison overlay: also compute the Polyanya route for this leg (drawn white). Uses a
                 // thread-local mode override so the global pathing mode other threads read is untouched.
-                auto route_map_recast = new std::vector<GW::GamePos>();
-                if (PathfindingWindow::draw_recast_comparison) {
+                auto route_map_polyanya = new std::vector<GW::GamePos>();
+                if (PathfindingWindow::draw_polyanya_comparison) {
                     std::vector<GW::Vec2f> rpts;
-                    Pathing::SetThreadPathingModeOverride(static_cast<int>(Pathing::PathingMode::Recast));
+                    Pathing::SetThreadPathingModeOverride(static_cast<int>(Pathing::PathingMode::Polyanya));
                     const bool ok_r = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, &rpts);
                     Pathing::SetThreadPathingModeOverride(-1);
-                    if (ok_r) convert(rpts, *route_map_recast);
+                    if (ok_r) convert(rpts, *route_map_polyanya);
                 }
 
-                Resources::EnqueueMainTask([qid, route_map, route_map_recast, pts, ok, same_map] {
+                Resources::EnqueueMainTask([qid, route_map, route_map_polyanya, pts, ok, same_map] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
                     if (cqp && ok) {
                         cqp->route_map = std::move(*route_map);
-                        cqp->route_map_recast = std::move(*route_map_recast);
+                        cqp->route_map_polyanya = std::move(*route_map_polyanya);
                         if (same_map) {
                             cqp->route_world.clear(); // the whole route is the on-map leg
                             cqp->has_full_route = true;
@@ -310,7 +311,7 @@ namespace {
                     }
                     delete pts;
                     delete route_map;
-                    delete route_map_recast;
+                    delete route_map_polyanya;
                 });
             });
         }
@@ -510,10 +511,6 @@ namespace {
 
     GW::Constants::QuestID quest_id_before_map_load = GW::Constants::QuestID::None;
 
-    // First map load of the session: re-activate a persisted custom marker so pathing resumes
-    // without the user re-placing it. Subsequent loads defer to quest_id_before_map_load.
-    bool restore_custom_quest_marker_active = true;
-
     void RefreshAllQuestPaths()
     {
         const auto q = GW::QuestMgr::GetQuestLog();
@@ -602,10 +599,8 @@ namespace {
         QuestModule::FetchMissingQuestInfo();
         ClearCalculatedQuestPaths();
         if (custom_quest_marker_world_pos.y != 0 || custom_quest_marker_world_pos.x != 0) {
-            const bool set_active = restore_custom_quest_marker_active || quest_id_before_map_load == custom_quest_id;
-            QuestModule::SetCustomQuestMarker(custom_quest_marker_world_pos, set_active);
+            QuestModule::SetCustomQuestMarker(custom_quest_marker_world_pos, quest_id_before_map_load == custom_quest_id);
         }
-        restore_custom_quest_marker_active = false;
         RefreshAllQuestPaths();
     }
 

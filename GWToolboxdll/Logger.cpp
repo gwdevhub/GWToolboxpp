@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <share.h> // _SH_DENYWR for _wfsopen (shared-read log.txt in Debug)
+
 #include <GWCA/Utilities/Debug.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -15,6 +17,7 @@
 
 namespace {
     FILE* logfile = nullptr;
+    FILE* logfile2 = nullptr; // Debug: a second sink (log.txt on disk) so the harness can read it while the console stays
     [[maybe_unused]] FILE* stdout_file = nullptr;
     [[maybe_unused]] FILE* stderr_file = nullptr;
 
@@ -80,10 +83,12 @@ namespace {
     }
     void PrintTimestamp()
     {
-        if (!logfile) return;
+        if (!logfile && !logfile2) return;
         const auto now = std::chrono::floor<std::chrono::milliseconds>(std::chrono::system_clock::now());
         const auto ms = now.time_since_epoch().count() % 1000;
-        fprintf(logfile, "[%s] ", TextUtils::TimeToString(std::chrono::system_clock::to_time_t(now), true, static_cast<int>(ms)).c_str());
+        const std::string ts = TextUtils::TimeToString(std::chrono::system_clock::to_time_t(now), true, static_cast<int>(ms));
+        if (logfile) fprintf(logfile, "[%s] ", ts.c_str());
+        if (logfile2) fprintf(logfile2, "[%s] ", ts.c_str());
     }
 
 
@@ -157,6 +162,11 @@ bool Log::InitializeLog()
     freopen_s(&stderr_file, "CONOUT$", "w", stderr);
     SetConsoleTitle("GWTB++ Debug Console");
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    // Debug also writes to log.txt on disk (the harness reads it), keeping the console as the primary
+    // sink. _wfsopen with _SH_DENYWR allows other processes to READ the file while we hold it open --
+    // _wfopen_s opens it exclusively, which would block the harness host from tailing it.
+    Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
+    logfile2 = _wfsopen(Resources::GetPath(L"log.txt").c_str(), L"w", _SH_DENYWR);
 #else
     Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
     logfile = _wfreopen(Resources::GetPath(L"log.txt").c_str(), L"w", stdout);
@@ -194,7 +204,10 @@ void Log::Terminate()
     if (stderr_file) {
         fclose(stderr_file);
     }
-
+    if (logfile2) {
+        fflush(logfile2);
+        fclose(logfile2);
+    }
     FreeConsole();
 #else
     if (logfile) {
@@ -203,6 +216,7 @@ void Log::Terminate()
     }
 #endif
     logfile = nullptr;
+    logfile2 = nullptr;
 }
 
 // === File/console logging ===
@@ -210,41 +224,42 @@ void Log::Terminate()
 
 void Log::Log(const char* msg, ...)
 {
-    if (!logfile) {
+    if (!logfile && !logfile2) {
         return;
     }
     PrintTimestamp();
-
-    va_list args;
-    va_start(args, msg);
-    vfprintf(logfile, msg, args);
-    va_end(args);
-    if (msg[strlen(msg) - 1] != '\n') {
-        fprintf(logfile, "\n");
+    const bool nl = msg[strlen(msg) - 1] != '\n';
+    if (logfile) {
+        va_list args; va_start(args, msg); vfprintf(logfile, msg, args); va_end(args);
+        if (nl) fprintf(logfile, "\n");
+    }
+    if (logfile2) {
+        va_list args; va_start(args, msg); vfprintf(logfile2, msg, args); va_end(args);
+        if (nl) fprintf(logfile2, "\n");
     }
 }
 
 void Log::LogW(const wchar_t* msg, ...)
 {
-    if (!logfile) {
+    if (!logfile && !logfile2) {
         return;
     }
     PrintTimestamp();
-
-    va_list args;
-    va_start(args, msg);
-    vfwprintf(logfile, msg, args);
-    va_end(args);
-    if (msg[wcslen(msg) - 1] != '\n') {
-        fprintf(logfile, "\n");
+    const bool nl = msg[wcslen(msg) - 1] != '\n';
+    if (logfile) {
+        va_list args; va_start(args, msg); vfwprintf(logfile, msg, args); va_end(args);
+        if (nl) fprintf(logfile, "\n");
+    }
+    if (logfile2) {
+        va_list args; va_start(args, msg); vfwprintf(logfile2, msg, args); va_end(args);
+        if (nl) fprintf(logfile2, "\n");
     }
 }
 
 void Log::FlushFile()
 {
-    if (logfile) {
-        fflush(logfile);
-    }
+    if (logfile) fflush(logfile);
+    if (logfile2) fflush(logfile2);
 }
 
 void Log::Flash(const char* format, ...)

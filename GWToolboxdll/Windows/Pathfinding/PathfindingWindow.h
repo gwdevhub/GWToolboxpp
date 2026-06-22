@@ -37,9 +37,9 @@ public:
         float    path_recalc_distance = 100.f;              // game units the player must move before the quest path recomputes
     };
 
-    // Draw the Recast route in blue alongside the active path for visual comparison (debug). Public so
-    // QuestModule can gate its second (Recast) path computation on it; also forces the Recast mesh to build.
-    static bool draw_recast_comparison;
+    // Draw the Polyanya route in white alongside the active path for visual comparison (debug). Public so
+    // QuestModule can gate its second (Polyanya) path computation on it. The Polyanya mesh always co-builds.
+    static bool draw_polyanya_comparison;
 
     // Game units the player must move before the rendered quest path recomputes (persisted setting). Read by
     // QuestModule each tick; the recompute is still rate-capped by Update's 33ms throttle.
@@ -61,6 +61,11 @@ public:
 
     static void SetFrom(const GW::GamePos& pos);
     static void SetTo(const GW::GamePos& pos);
+
+    // Set/read the active pathfinder (0=Visgraph, 1=Recast, 2=Polyanya). Writes the persisted
+    // Settings.pathing_mode (the Draw loop syncs it to Pathing::g_pathing_mode). Used by the test harness.
+    static void SetPathingMode(int mode);
+    static int GetPathingMode();
     // Set from world map coordinates (handles cross-map detection + DAT loading)
     static void SetFromWorldMap(const GW::Vec2f& world_map_pos);
     static void SetToWorldMap(const GW::Vec2f& world_map_pos);
