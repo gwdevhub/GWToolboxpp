@@ -32,9 +32,13 @@ public:
     HANDLE GetHandle() const { return m_hProcess; }
     DWORD GetProcessId() const;
 
+    // Win32 error captured at the last failing OpenProcess/Read/GetModule call.
+    DWORD GetLastErrorCode() const { return m_last_error; }
+
 private:
     HANDLE m_hProcess = nullptr;
     DWORD m_Rights = 0;
+    mutable DWORD m_last_error = 0;
 };
 
 bool GetProcessesByName(std::vector<Process>& processes, const wchar_t* name, DWORD rights = PROCESS_ALL_ACCESS);
@@ -49,8 +53,15 @@ public:
     uintptr_t FindPattern(const char* pattern, const char* mask, int Offset) const;
     bool FindPatternRva(const char* pattern, const char* mask, int offset, uintptr_t* rva) const;
 
+    // False if the process image couldn't be read (module enumeration or ReadProcessMemory failed).
+    bool IsValid() const { return m_valid; }
+    // Win32 error from the failing call when IsValid() is false.
+    DWORD GetError() const { return m_error; }
+
 private:
     uintptr_t m_base = 0;
     size_t m_size = 0;
     uint8_t* m_buffer = nullptr;
+    bool m_valid = false;
+    DWORD m_error = 0;
 };
