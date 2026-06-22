@@ -41,45 +41,50 @@ namespace {
         return KeyByHeroId() ? saved_positions_by_id : saved_positions_by_index;
     }
 
-    GW::UI::Frame* GetCommanderFrame(uint32_t commander_index, uint32_t* key_out)
+    // Visible hero command panel for the given index. Fills the panel's hero id (0 if unknown).
+    GW::UI::Frame* GetCommanderFrame(uint32_t commander_index, uint32_t* hero_id_out)
     {
         wchar_t label[] = L"AgentCommander0";
         label[_countof(label) - 2] = static_cast<wchar_t>(L'0' + commander_index);
         const auto frame = GW::UI::GetFrameByLabel(label);
         if (!(frame && frame->IsCreated() && frame->IsVisible())) return nullptr;
-        if (!KeyByHeroId()) {
-            *key_out = commander_index;
-            return frame;
-        }
         const auto context = (uint32_t*)GW::UI::GetFrameContext(frame);
         const auto* hero = context ? ToolboxUtils::GetHeroPartyMember(context[1]) : 0;
-        return hero ? (*key_out = static_cast<uint32_t>(hero->hero_id), frame) : nullptr;
+        *hero_id_out = hero ? static_cast<uint32_t>(hero->hero_id) : 0;
+        return frame;
+    }
+
+    // Record a placement into both maps regardless of the active mode, so that toggling the mode
+    // restores from whichever keying was kept current right up to the switch.
+    void RememberPosition(uint32_t commander_index, uint32_t hero_id, const GW::UI::FramePosition& position)
+    {
+        saved_positions_by_index[commander_index] = position;
+        if (hero_id) saved_positions_by_id[hero_id] = position;
     }
 
     // User dragged a floating window; if it's a hero command panel, remember where.
     void SavePanelPositions()
     {
-        auto& positions = ActivePositions();
-        uint32_t key = 0;
+        uint32_t hero_id = 0;
         for (uint32_t i = 0; i < hero_panel_count; i++) {
-            const auto frame = GetCommanderFrame(i, &key);
-            if (!frame) continue;
-            positions[key] = frame->position;
+            const auto frame = GetCommanderFrame(i, &hero_id);
+            if (frame) RememberPosition(i, hero_id, frame->position);
         }
     }
 
     // Restore (or, the first time we see it, learn) a hero panel's position.
-    // Returns true once the frame exists and has been handled; false while it's not created yet.
     void RestorePanelPositions()
     {
-        auto& positions = ActivePositions();
-        uint32_t key = 0;
+        const auto& positions = ActivePositions();
+        const bool by_id = KeyByHeroId();
+        uint32_t hero_id = 0;
         for (uint32_t i = 0; i < hero_panel_count; i++) {
-            const auto frame = GetCommanderFrame(i, &key);
+            const auto frame = GetCommanderFrame(i, &hero_id);
             if (!frame) continue;
-            const auto found = positions.find(key);
+            if (by_id && !hero_id) continue;
+            const auto found = positions.find(by_id ? hero_id : i);
             if (found == positions.end()) {
-                positions[key] = frame->position;
+                RememberPosition(i, hero_id, frame->position);
             }
             else {
                 frame->position = found->second;
