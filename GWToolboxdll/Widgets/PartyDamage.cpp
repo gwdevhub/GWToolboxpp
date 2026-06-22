@@ -754,11 +754,12 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 {IM_COL32(200, 100, 200, 255), ICON_FA_SKULL, 2},
             };
             for (const auto& c : conds) {
+                const uint32_t dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[c.ci] * 1000.0 / static_cast<double>(combat_time)));
+                if (dps == 0) continue;
                 ImGui::PushStyleColor(ImGuiCol_Text, c.color);
                 ImGui::Text(c.icon);
                 ImGui::PopStyleColor();
                 ImGui::SameLine();
-                const uint32_t dps = (combat_time == 0) ? 0 : static_cast<uint32_t>(std::llround(cond_damage[c.ci] * 1000.0 / static_cast<double>(combat_time)));
                 ImGui::Text("%d/s", dps);
                 ImGui::SameLine();
             }
