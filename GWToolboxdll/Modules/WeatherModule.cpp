@@ -33,11 +33,11 @@ namespace weather_module {
         float fall_speed = 2000.f;    // gwinch/sec
         float spread_radius = 1500.f; // horizontal half-extent of the volume around the camera focus
         float wind_x = 0.f, wind_y = 0.f;
-        float splash_chance = 1.f;          // 0..1 chance an impact spawns a splash
-        std::vector<uint32_t> sounds;       // .dat sound file ids played at random while active
-        float sound_min_interval = 8.f;     // seconds between sounds
+        float splash_chance = 1.f;      // 0..1 chance an impact spawns a splash
+        std::vector<uint32_t> sounds;   // .dat sound file ids played at random while active
+        float sound_min_interval = 8.f; // seconds between sounds
         float sound_max_interval = 25.f;
-        bool sound_3d = false;              // play from a random nearby position (varies volume/pan)
+        bool sound_3d = false; // play from a random nearby position (varies volume/pan)
     };
 } // namespace weather_module
 
@@ -60,12 +60,15 @@ namespace {
     float splash_lift = 5.f;      // raise splash base above the ground to avoid z-fighting
     int max_splashes = 4000;      // per-condition cap on live splashes
 
-    constexpr bool HasSplash(const int type) { return type == kTypeRain; }
+    constexpr bool HasSplash(const int type)
+    {
+        return type == kTypeRain;
+    }
 
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 2000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed1}, 8.f, 25.f, false},
+            {"Heavy Rain", kTypeRain, false, 4000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed1}, 2.f, 60.f, false},
             {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {}, 8.f, 25.f, false},
         };
     }
@@ -475,7 +478,10 @@ void WeatherModule::Initialize()
     if (!compositor_token) compositor_token = GameWorldCompositor::RegisterDraw(&WeatherModule::DrawInWorld);
 }
 
-void WeatherModule::DrawSettingsInternal() { DrawSettings(); }
+void WeatherModule::DrawSettingsInternal()
+{
+    DrawSettings();
+}
 
 void WeatherModule::SignalTerminate()
 {
