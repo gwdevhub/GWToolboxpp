@@ -205,7 +205,7 @@ namespace {
         }
     }
 
-    void BuildSplashVertices()
+    void BuildSplashVertices(const float right[3])
     {
         splash_vertices.clear();
         if (splashes.empty()) {
@@ -213,8 +213,11 @@ namespace {
         }
         splash_vertices.reserve(splashes.size() * 6);
         const float s = splash_size * 0.5f;
-        const float ax[3] = {s, 0.f, 0.f}; // splash lies flat on the ground (world XY plane)
-        const float ay[3] = {0.f, s, 0.f};
+        // Vertical billboard standing on the ground: horizontal axis follows the camera (so the splash
+        // faces the viewer), vertical axis is world up (GW up is -z). Anchored so the base sits at the
+        // impact point, lifted slightly to avoid z-fighting with the ground.
+        const float ax[3] = {right[0] * s, right[1] * s, right[2] * s};
+        const float ay[3] = {0.f, 0.f, -s};
         const float u_step = 1.f / static_cast<float>(kSplashCols);
         const float v_step = 1.f / static_cast<float>(kSplashRows);
         for (const auto& sp : splashes) {
@@ -222,7 +225,7 @@ namespace {
             f = std::clamp(f, 0, kSplashFrames - 1);
             const float u0 = static_cast<float>(f % kSplashCols) * u_step;
             const float v0 = static_cast<float>(f / kSplashCols) * v_step;
-            emit_quad(splash_vertices, sp.x, sp.y, sp.z - splash_lift, ax, ay, rain_color, u0, v0, u0 + u_step, v0 + v_step);
+            emit_quad(splash_vertices, sp.x, sp.y, sp.z - s - splash_lift, ax, ay, rain_color, u0, v0, u0 + u_step, v0 + v_step);
         }
     }
 
@@ -306,7 +309,7 @@ namespace {
         cross3(fwd, right, up);
 
         BuildRainVertices(right, up);
-        BuildSplashVertices();
+        BuildSplashVertices(right);
         rain_ready = EnsureVb(device, rain_vb, rain_cap, rain_vertices);
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
     }
