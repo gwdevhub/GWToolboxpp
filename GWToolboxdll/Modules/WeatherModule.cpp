@@ -37,6 +37,7 @@ namespace weather_module {
         std::vector<uint32_t> sounds;       // .dat sound file ids played at random while active
         float sound_min_interval = 8.f;     // seconds between sounds
         float sound_max_interval = 25.f;
+        bool sound_3d = false;              // play from a random nearby position (varies volume/pan)
     };
 } // namespace weather_module
 
@@ -64,8 +65,8 @@ namespace {
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 2000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed1}, 8.f, 25.f},
-            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {}, 8.f, 25.f},
+            {"Heavy Rain", kTypeRain, false, 2000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed1}, 8.f, 25.f, false},
+            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {}, 8.f, 25.f, false},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -157,7 +158,7 @@ namespace {
         return ok;
     }
 
-    void UpdateSounds(const WeatherCondition& c, Particles& p, const float dt)
+    void UpdateSounds(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz)
     {
         if (c.sounds.empty() || c.sound_max_interval <= 0.f) return;
         if (p.sound_timer < 0.f) { // first active frame: schedule, don't play immediately
@@ -166,7 +167,17 @@ namespace {
         }
         if ((p.sound_timer -= dt) > 0.f) return;
         const size_t idx = std::min(c.sounds.size() - 1, static_cast<size_t>(frand(0.f, static_cast<float>(c.sounds.size()))));
-        if (c.sounds[idx]) AudioSettings::PlaySoundFileId(c.sounds[idx]); // PlaySound marshals to the game thread itself
+        if (c.sounds[idx]) {
+            // PlaySound marshals to the game thread itself, so calling from here is safe.
+            if (c.sound_3d) {
+                const float ang = frand(0.f, 6.2831853f), dist = frand(200.f, 1500.f);
+                const GW::Vec3f pos{cx + dist * std::cos(ang), cy + dist * std::sin(ang), cz - frand(0.f, 1000.f)};
+                AudioSettings::PlaySoundFileId(c.sounds[idx], &pos);
+            }
+            else {
+                AudioSettings::PlaySoundFileId(c.sounds[idx]);
+            }
+        }
         p.sound_timer = frand(c.sound_min_interval, c.sound_max_interval);
     }
 
@@ -307,7 +318,7 @@ namespace {
             UpdateCondition(conditions[i], particles[i], dt, cx, cy, cz);
             AppendRain(conditions[i], particles[i].raindrops, right, up);
             AppendSplashes(particles[i].splashes, right);
-            UpdateSounds(conditions[i], particles[i], dt);
+            UpdateSounds(conditions[i], particles[i], dt, cx, cy, cz);
         }
         rain_ready = EnsureVb(device, rain_vb, rain_cap, rain_vertices);
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
@@ -429,6 +440,8 @@ void WeatherModule::DrawSettings()
             if (snd_remove >= 0) c.sounds.erase(c.sounds.begin() + snd_remove);
             if (ImGui::SmallButton("Add sound")) c.sounds.push_back(0);
             ImGui::DragFloat2("Sound interval (s)", &c.sound_min_interval, 0.5f, 0.f, 600.f, "%.0f");
+            ImGui::Checkbox("Play sounds in 3D", &c.sound_3d);
+            ImGui::ShowHelp("Play each sound from a random nearby position so the game's 3D audio varies its\nvolume and stereo panning - reduces repetition when there's only one sound.\nNo effect if the sound isn't a positional one.");
 
             if (ImGui::Button("Remove condition")) to_remove = i;
         }
