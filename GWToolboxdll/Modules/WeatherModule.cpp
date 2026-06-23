@@ -17,103 +17,85 @@
 #include "Widgets/Minimap/Shaders/weather_billboard_ps.h"
 
 namespace {
-    // Game weather assets in the .dat: a 32px raindrop, and a 128x128 splash sheet (4x4 of 32px keyframes).
+    // Game weather assets in the .dat: a 32px raindrop, and a 128x128 splash sheet (4x4 keyframes).
     constexpr uint32_t kRaindropFileId = 0x1997d;
     constexpr uint32_t kSplashFileId = 0x1baa1;
-    constexpr int kSplashCols = 4;
-    constexpr int kSplashRows = 4;
-    constexpr int kSplashFrames = kSplashCols * kSplashRows;
+    constexpr int kSplashCols = 4, kSplashRows = 4, kSplashFrames = kSplashCols * kSplashRows;
+    constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
 
-    // GW's projection: near clip ~47, far insensitive. Must match for terrain occlusion to line up.
-    constexpr float kZNear = 47.0f;
-    constexpr float kZFar = 100000.f;
+    // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
+    float column_height = 2500.f;  // vertical span drops fall through
+    float fog_factor = 1.0f;       // distance-fade strength fed to the shader
+    float splash_size = 20.f;      // world size of a splash billboard
+    float splash_duration = 0.5f;  // seconds to play the 16 keyframes
+    float recycle_below = 600.f;   // fallback recycle band when no terrain altitude is available
+    float splash_lift = 5.f;       // raise splash base above the ground to avoid z-fighting
+    int max_splashes = 4000;       // hard cap on live splashes
+
+    enum class WeatherType { Rain };
+    constexpr bool HasSplash(const WeatherType t) { return t == WeatherType::Rain; }
+
+    struct WeatherCondition {
+        const char* name;
+        WeatherType type;
+        int drop_count;
+        float drop_size;
+        float fall_speed;    // gwinch/sec
+        float spread_radius; // horizontal half-extent of the volume around the camera focus
+        float wind_x, wind_y;
+        float splash_chance; // 0..1 chance an impact spawns a splash
+    };
+
+    std::vector<WeatherCondition> conditions = {
+        {"Heavy Rain", WeatherType::Rain, 2000, 20.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f},
+        {"Light Rain", WeatherType::Rain, 600, 16.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f},
+    };
+    int active = -1; // index into conditions, or -1 = off
 
     bool occlude_behind_terrain = true;
-    float render_max_distance = 5000.f; // fade/cull distance for the shared distance-fade shader
-    float fog_factor = 0.5f;
-
-    int drop_count = 1500;
-    float fall_speed = 9000.f;     // gwinch/sec
-    float box_radius = 3000.f;     // horizontal half-extent of the rain volume around the camera focus
-    float box_height = 3500.f;     // vertical span drops fall through
-    float recycle_below = 600.f;   // fallback recycle band when no terrain altitude is available
-    float wind_x = 700.f;          // gwinch/sec lateral drift
-    float wind_y = 0.f;
-    float drop_size = 40.f;        // world size of a raindrop billboard
-
-    float splash_size = 70.f;          // world size of a splash decal
-    float splash_duration = 0.5f;      // seconds to play the 16 keyframes
-    float splash_fraction = 0.5f;      // chance an impact spawns a splash
-    float splash_lift = 5.f;           // raise splash above the ground to avoid z-fighting
-    int max_splashes = 4000;           // hard cap on live splashes
-
+    float render_max_distance = 5000.f;
     unsigned int rain_color = 0xFFFFFFFFu; // tint (ImGui-packed); white shows the texture untinted
 
-    // POSITION (world) + D3DCOLOR tint + UV. Quads are built camera-/ground-aligned on the CPU.
-    struct WeatherVertex {
-        float x, y, z;
-        DWORD color;
-        float u, v;
-    };
+    // POSITION (world) + D3DCOLOR tint + UV; quads are built camera-/ground-aligned on the CPU.
+    struct WeatherVertex { float x, y, z; DWORD color; float u, v; };
+    struct Raindrop { float x, y, z, ground_z; }; // falls in +z (GW up is -z); ground_z queried at seed time
+    struct Splash { float x, y, z, age; };
 
-    // Drops live in world coords and fall in +z (GW up is -z). ground_z is queried once at seed time.
-    struct Raindrop {
-        float x, y, z, ground_z;
-    };
-    struct Splash {
-        float x, y, z, age;
-    };
     std::vector<Raindrop> raindrops;
     std::vector<Splash> splashes;
-    std::vector<WeatherVertex> rain_vertices;
-    std::vector<WeatherVertex> splash_vertices;
-
-    IDirect3DVertexBuffer9* rain_vb = nullptr;
-    IDirect3DVertexBuffer9* splash_vb = nullptr;
-    size_t rain_cap = 0;   // vertices
-    size_t splash_cap = 0; // vertices
+    std::vector<WeatherVertex> rain_vertices, splash_vertices;
+    IDirect3DVertexBuffer9 *rain_vb = nullptr, *splash_vb = nullptr;
+    size_t rain_cap = 0, splash_cap = 0; // in vertices
     IDirect3DVertexShader9* weather_vs = nullptr;
     IDirect3DPixelShader9* weather_ps = nullptr;
     IDirect3DVertexDeclaration9* weather_decl = nullptr;
-
-    // Stable slots from GwDatTextureModule's cache; the inner pointer is null until the async load lands.
-    IDirect3DTexture9** raindrop_tex_pp = nullptr;
-    IDirect3DTexture9** splash_tex_pp = nullptr;
+    IDirect3DTexture9 **raindrop_tex_pp = nullptr, **splash_tex_pp = nullptr; // stable slots from the texture cache
     bool textures_requested = false;
-
     DWORD last_tick = 0;
     uint32_t rng = 0x1234567u;
-    bool rain_ready = false;
-    bool splash_ready = false;
-
+    bool rain_ready = false, splash_ready = false;
     int compositor_token = 0;
 
     float frand(const float lo, const float hi)
     {
-        rng = rng * 1664525u + 1013904223u; // LCG
-        const float t = static_cast<float>(rng >> 8) / static_cast<float>(0xFFFFFFu);
-        return lo + t * (hi - lo);
+        rng = rng * 1664525u + 1013904223u;
+        return lo + static_cast<float>(rng >> 8) / static_cast<float>(0xFFFFFFu) * (hi - lo);
     }
 
-    void cross3(const float a[3], const float b[3], float out[3])
+    void cross3(const float a[3], const float b[3], float o[3])
     {
-        out[0] = a[1] * b[2] - a[2] * b[1];
-        out[1] = a[2] * b[0] - a[0] * b[2];
-        out[2] = a[0] * b[1] - a[1] * b[0];
+        o[0] = a[1] * b[2] - a[2] * b[1];
+        o[1] = a[2] * b[0] - a[0] * b[2];
+        o[2] = a[0] * b[1] - a[1] * b[0];
     }
 
     void normalize3(float v[3])
     {
         const float l = std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-        if (l > 1e-6f) {
-            v[0] /= l;
-            v[1] /= l;
-            v[2] /= l;
-        }
+        if (l > 1e-6f) { v[0] /= l; v[1] /= l; v[2] /= l; }
     }
 
-    // Highest terrain surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or
-    // `fallback` if no plane has data. Queried once per drop at seed time, so this is cheap overall.
+    // Highest terrain surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or fallback.
     float GroundZAt(const float x, const float y, const float fallback)
     {
         const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
@@ -122,39 +104,35 @@ namespace {
         for (uint32_t zp = 0; zp < n; ++zp) {
             GW::GamePos p{x, y, zp};
             const float a = GW::Map::QueryAltitude(&p);
-            if (a != 0.f && a < best) {
-                best = a;
-            }
+            if (a != 0.f && a < best) best = a;
         }
         return best == std::numeric_limits<float>::max() ? fallback : best;
     }
 
-    void seed_drop(Raindrop& d, const float cx, const float cy, const float cz, const bool randomize)
+    void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const bool randomize)
     {
-        const float top_z = cz - box_height;
-        d.x = cx + frand(-box_radius, box_radius);
-        d.y = cy + frand(-box_radius, box_radius);
-        d.z = randomize ? top_z + frand(0.f, box_height + recycle_below) : top_z;
+        const float top_z = cz - column_height;
+        d.x = cx + frand(-c.spread_radius, c.spread_radius);
+        d.y = cy + frand(-c.spread_radius, c.spread_radius);
+        d.z = randomize ? top_z + frand(0.f, column_height + recycle_below) : top_z;
         d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
     }
 
-    void UpdateWeather(const float dt, const float cx, const float cy, const float cz)
+    void UpdateWeather(const WeatherCondition& c, const float dt, const float cx, const float cy, const float cz)
     {
-        if (static_cast<int>(raindrops.size()) != drop_count) {
-            raindrops.resize(std::max(0, drop_count));
-            for (auto& d : raindrops) {
-                seed_drop(d, cx, cy, cz, true);
-            }
+        if (static_cast<int>(raindrops.size()) != c.drop_count) {
+            raindrops.resize(std::max(0, c.drop_count));
+            for (auto& d : raindrops) seed_drop(d, c, cx, cy, cz, true);
         }
+        const bool splash = HasSplash(c.type);
         for (auto& d : raindrops) {
-            d.z += fall_speed * dt;
-            d.x += wind_x * dt;
-            d.y += wind_y * dt;
+            d.z += c.fall_speed * dt;
+            d.x += c.wind_x * dt;
+            d.y += c.wind_y * dt;
             if (d.z >= d.ground_z) {
-                if (frand(0.f, 1.f) < splash_fraction && static_cast<int>(splashes.size()) < max_splashes) {
+                if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(splashes.size()) < max_splashes)
                     splashes.push_back({d.x, d.y, d.ground_z, 0.f});
-                }
-                seed_drop(d, cx, cy, cz, false);
+                seed_drop(d, c, cx, cy, cz, false);
             }
         }
     }
@@ -162,69 +140,47 @@ namespace {
     void UpdateSplashes(const float dt)
     {
         for (size_t i = 0; i < splashes.size();) {
-            splashes[i].age += dt;
-            if (splashes[i].age >= splash_duration) {
-                splashes[i] = splashes.back();
-                splashes.pop_back();
-            }
-            else {
-                ++i;
-            }
+            if ((splashes[i].age += dt) >= splash_duration) { splashes[i] = splashes.back(); splashes.pop_back(); }
+            else ++i;
         }
     }
 
     // Two triangles spanning center +/- the half-extent vectors ax, ay, with the given UV rect.
     void emit_quad(std::vector<WeatherVertex>& out, const float cx, const float cy, const float cz,
-                   const float ax[3], const float ay[3], const DWORD col,
-                   const float u0, const float v0, const float u1, const float v1)
+                   const float ax[3], const float ay[3], const DWORD col, const float u0, const float v0, const float u1, const float v1)
     {
         const WeatherVertex c00{cx - ax[0] - ay[0], cy - ax[1] - ay[1], cz - ax[2] - ay[2], col, u0, v1};
         const WeatherVertex c10{cx + ax[0] - ay[0], cy + ax[1] - ay[1], cz + ax[2] - ay[2], col, u1, v1};
         const WeatherVertex c11{cx + ax[0] + ay[0], cy + ax[1] + ay[1], cz + ax[2] + ay[2], col, u1, v0};
         const WeatherVertex c01{cx - ax[0] + ay[0], cy - ax[1] + ay[1], cz - ax[2] + ay[2], col, u0, v0};
-        out.push_back(c00);
-        out.push_back(c10);
-        out.push_back(c11);
-        out.push_back(c00);
-        out.push_back(c11);
-        out.push_back(c01);
+        out.insert(out.end(), {c00, c10, c11, c00, c11, c01});
     }
 
-    void BuildRainVertices(const float right[3], const float up[3])
+    void BuildRainVertices(const WeatherCondition& c, const float right[3], const float up[3])
     {
         rain_vertices.clear();
-        if (raindrops.empty()) {
-            return;
-        }
+        if (raindrops.empty()) return;
         rain_vertices.reserve(raindrops.size() * 6);
-        const float h = drop_size * 0.5f;
+        const float h = c.drop_size * 0.5f;
         const float ax[3] = {right[0] * h, right[1] * h, right[2] * h};
         const float ay[3] = {up[0] * h, up[1] * h, up[2] * h};
-        for (const auto& d : raindrops) {
-            emit_quad(rain_vertices, d.x, d.y, d.z, ax, ay, rain_color, 0.f, 0.f, 1.f, 1.f);
-        }
+        for (const auto& d : raindrops) emit_quad(rain_vertices, d.x, d.y, d.z, ax, ay, rain_color, 0.f, 0.f, 1.f, 1.f);
     }
 
+    // Vertical billboard standing on the ground: horizontal axis follows the camera so it faces the
+    // viewer, vertical axis is world up (-z), anchored so the base sits at the impact point.
     void BuildSplashVertices(const float right[3])
     {
         splash_vertices.clear();
-        if (splashes.empty()) {
-            return;
-        }
+        if (splashes.empty()) return;
         splash_vertices.reserve(splashes.size() * 6);
         const float s = splash_size * 0.5f;
-        // Vertical billboard standing on the ground: horizontal axis follows the camera (so the splash
-        // faces the viewer), vertical axis is world up (GW up is -z). Anchored so the base sits at the
-        // impact point, lifted slightly to avoid z-fighting with the ground.
         const float ax[3] = {right[0] * s, right[1] * s, right[2] * s};
         const float ay[3] = {0.f, 0.f, -s};
-        const float u_step = 1.f / static_cast<float>(kSplashCols);
-        const float v_step = 1.f / static_cast<float>(kSplashRows);
+        const float u_step = 1.f / kSplashCols, v_step = 1.f / kSplashRows;
         for (const auto& sp : splashes) {
-            int f = static_cast<int>(sp.age / splash_duration * static_cast<float>(kSplashFrames));
-            f = std::clamp(f, 0, kSplashFrames - 1);
-            const float u0 = static_cast<float>(f % kSplashCols) * u_step;
-            const float v0 = static_cast<float>(f / kSplashCols) * v_step;
+            const int f = std::clamp(static_cast<int>(sp.age / splash_duration * kSplashFrames), 0, kSplashFrames - 1);
+            const float u0 = static_cast<float>(f % kSplashCols) * u_step, v0 = static_cast<float>(f / kSplashCols) * v_step;
             emit_quad(splash_vertices, sp.x, sp.y, sp.z - s - splash_lift, ax, ay, rain_color, u0, v0, u0 + u_step, v0 + v_step);
         }
     }
@@ -232,26 +188,18 @@ namespace {
     bool EnsureVb(IDirect3DDevice9* device, IDirect3DVertexBuffer9*& vb, size_t& cap, const std::vector<WeatherVertex>& verts)
     {
         const size_t needed = verts.size();
-        if (needed == 0) {
-            return false;
-        }
+        if (needed == 0) return false;
         if (!vb || cap < needed) {
-            if (vb) {
-                vb->Release();
-                vb = nullptr;
-            }
+            if (vb) { vb->Release(); vb = nullptr; }
             const size_t c = needed + needed / 2; // headroom so count tweaks don't reallocate every frame
             if (device->CreateVertexBuffer(static_cast<UINT>(c * sizeof(WeatherVertex)), D3DUSAGE_WRITEONLY, 0, D3DPOOL_MANAGED, &vb, nullptr) != D3D_OK) {
-                vb = nullptr;
                 cap = 0;
                 return false;
             }
             cap = c;
         }
         void* mem = nullptr;
-        if (vb->Lock(0, static_cast<UINT>(needed * sizeof(WeatherVertex)), &mem, 0) != D3D_OK || !mem) {
-            return false;
-        }
+        if (vb->Lock(0, static_cast<UINT>(needed * sizeof(WeatherVertex)), &mem, 0) != D3D_OK || !mem) return false;
         memcpy(mem, verts.data(), needed * sizeof(WeatherVertex));
         vb->Unlock();
         return true;
@@ -259,46 +207,37 @@ namespace {
 
     bool EnsureShaders(IDirect3DDevice9* device)
     {
-        if (weather_vs && weather_ps && weather_decl) {
-            return true;
-        }
+        if (weather_vs && weather_ps && weather_decl) return true;
         constexpr D3DVERTEXELEMENT9 decl[] = {
             {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
             {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
             {0, 16, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
             D3DDECL_END()};
-        if (!weather_decl && device->CreateVertexDeclaration(decl, &weather_decl) != D3D_OK) {
-            return false;
-        }
-        if (!weather_vs && device->CreateVertexShader(reinterpret_cast<const DWORD*>(&weather_billboard_vs), &weather_vs) != D3D_OK) {
-            return false;
-        }
-        if (!weather_ps && device->CreatePixelShader(reinterpret_cast<const DWORD*>(&weather_billboard_ps), &weather_ps) != D3D_OK) {
-            return false;
-        }
+        if (!weather_decl && device->CreateVertexDeclaration(decl, &weather_decl) != D3D_OK) return false;
+        if (!weather_vs && device->CreateVertexShader(reinterpret_cast<const DWORD*>(&weather_billboard_vs), &weather_vs) != D3D_OK) return false;
+        if (!weather_ps && device->CreatePixelShader(reinterpret_cast<const DWORD*>(&weather_billboard_ps), &weather_ps) != D3D_OK) return false;
         return true;
     }
 
     // Advance + upload once per frame (called from the compositor callback, on the render thread).
     void SyncWeather(IDirect3DDevice9* device, const GW::Camera* cam)
     {
-        rain_ready = false;
-        splash_ready = false;
-        if (!cam || drop_count <= 0) {
+        rain_ready = splash_ready = false;
+        if (!cam || active < 0 || active >= static_cast<int>(conditions.size())) {
             raindrops.clear();
             splashes.clear();
             return;
         }
+        const WeatherCondition& c = conditions[active];
         const DWORD now = GetTickCount();
         float dt = last_tick ? static_cast<float>(now - last_tick) / 1000.f : 0.f;
         last_tick = now;
         dt = std::clamp(dt, 0.f, 0.1f); // ignore alt-tab / breakpoint gaps
 
         const float cx = cam->look_at_target.x, cy = cam->look_at_target.y, cz = cam->look_at_target.z;
-        UpdateWeather(dt, cx, cy, cz);
+        UpdateWeather(c, dt, cx, cy, cz);
         UpdateSplashes(dt);
 
-        // Camera basis for the round billboards (orthonormal, perpendicular to view direction).
         float fwd[3] = {cx - cam->position.x, cy - cam->position.y, cz - cam->position.z};
         normalize3(fwd);
         constexpr float world_up[3] = {0.f, 0.f, -1.f};
@@ -308,7 +247,7 @@ namespace {
         float up[3];
         cross3(fwd, right, up);
 
-        BuildRainVertices(right, up);
+        BuildRainVertices(c, right, up);
         BuildSplashVertices(right);
         rain_ready = EnsureVb(device, rain_vb, rain_cap, rain_vertices);
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
@@ -322,44 +261,33 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         splash_tex_pp = GwDatTextureModule::LoadTextureFromFileId(kSplashFileId);
         textures_requested = true;
     }
-
     SyncWeather(device, GW::CameraMgr::GetCamera());
 
     IDirect3DTexture9* rain_tex = raindrop_tex_pp ? *raindrop_tex_pp : nullptr;
     IDirect3DTexture9* splash_tex = splash_tex_pp ? *splash_tex_pp : nullptr;
     const bool have_rain = rain_ready && rain_tex && !rain_vertices.empty();
     const bool have_splash = splash_ready && splash_tex && !splash_vertices.empty();
-    if ((!have_rain && !have_splash) || !EnsureShaders(device)) {
-        return;
-    }
+    if ((!have_rain && !have_splash) || !EnsureShaders(device)) return;
 
-    // Snapshot device state; restored on exit so GW's own rendering isn't corrupted.
-    IDirect3DStateBlock9* state_block = nullptr;
-    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) {
-        return;
-    }
-    if (device->SetVertexShader(weather_vs) == D3D_OK
-        && device->SetPixelShader(weather_ps) == D3D_OK
-        && device->SetVertexDeclaration(weather_decl) == D3D_OK
-        && GameWorldCompositor::SetWorldViewProj(device, kZNear, kZFar)) {
+    IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
+    if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
+    if (device->SetVertexShader(weather_vs) == D3D_OK && device->SetPixelShader(weather_ps) == D3D_OK
+        && device->SetVertexDeclaration(weather_decl) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device, kZNear, kZFar)) {
         GameWorldCompositor::SetWorldRenderStates(device, occlude_behind_terrain);
         GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
         device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
         device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
         device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
         device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-
         if (have_rain) {
             device->SetTexture(0, rain_tex);
-            if (device->SetStreamSource(0, rain_vb, 0, sizeof(WeatherVertex)) == D3D_OK) {
+            if (device->SetStreamSource(0, rain_vb, 0, sizeof(WeatherVertex)) == D3D_OK)
                 device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, static_cast<UINT>(rain_vertices.size() / 3));
-            }
         }
         if (have_splash) {
             device->SetTexture(0, splash_tex);
-            if (device->SetStreamSource(0, splash_vb, 0, sizeof(WeatherVertex)) == D3D_OK) {
+            if (device->SetStreamSource(0, splash_vb, 0, sizeof(WeatherVertex)) == D3D_OK)
                 device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, static_cast<UINT>(splash_vertices.size() / 3));
-            }
         }
     }
     state_block->Apply();
@@ -368,89 +296,57 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
 
 void WeatherModule::RegisterSettings(ToolboxModule* module)
 {
+    SettingsRegistry::RegisterField(module, "active_condition", &active);
     SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
-    SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
-    SettingsRegistry::RegisterField(module, "drop_count", &drop_count);
-    SettingsRegistry::RegisterField(module, "fall_speed", &fall_speed);
-    SettingsRegistry::RegisterField(module, "box_radius", &box_radius);
-    SettingsRegistry::RegisterField(module, "box_height", &box_height);
-    SettingsRegistry::RegisterField(module, "recycle_below", &recycle_below);
-    SettingsRegistry::RegisterField(module, "wind_x", &wind_x);
-    SettingsRegistry::RegisterField(module, "wind_y", &wind_y);
-    SettingsRegistry::RegisterField(module, "drop_size", &drop_size);
-    SettingsRegistry::RegisterField(module, "splash_size", &splash_size);
-    SettingsRegistry::RegisterField(module, "splash_duration", &splash_duration);
-    SettingsRegistry::RegisterField(module, "splash_fraction", &splash_fraction);
-    SettingsRegistry::RegisterField(module, "splash_lift", &splash_lift);
-    SettingsRegistry::RegisterField(module, "max_splashes", &max_splashes);
     SettingsRegistry::RegisterField(module, "rain_color", &rain_color);
 }
 
 void WeatherModule::OnSettingsLoaded()
 {
     render_max_distance = std::max(render_max_distance, 10.0f);
-    fog_factor = std::clamp(fog_factor, 0.0f, 1.0f);
-    drop_count = std::clamp(drop_count, 0, 20000);
-    splash_duration = std::max(splash_duration, 0.05f);
-    splash_fraction = std::clamp(splash_fraction, 0.0f, 1.0f);
-    max_splashes = std::clamp(max_splashes, 0, 50000);
+    if (active >= static_cast<int>(conditions.size())) active = -1;
 }
 
 void WeatherModule::DrawSettings()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
     ImGui::TextColored(red, "Warning: This is a beta feature.");
-    ImGui::TextUnformatted("Rain uses the game's own raindrop/splash textures, drawn under the in-game UI.");
-    if (!GameWorldCompositor::IsActive()) {
-        if (GameWorldCompositor::HasFailed())
-            ImGui::TextColored(red, "  in-world compositor FAILED to install - rain cannot draw.");
-        else
-            ImGui::TextDisabled("  in-world compositor: not installed yet.");
+    if (!GameWorldCompositor::IsActive())
+        ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "  in-world compositor FAILED to install." : "  in-world compositor: not installed yet.");
+
+    ImGui::TextUnformatted("Active condition");
+    ImGui::RadioButton("Off", &active, -1);
+    for (int i = 0; i < static_cast<int>(conditions.size()); i++) {
+        ImGui::SameLine();
+        ImGui::RadioButton(conditions[i].name, &active, i);
     }
 
     ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
-    ImGui::ShowHelp("Hide rain and splashes behind walls, buildings and terrain using the game's depth buffer.");
+    ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 10.f, 10000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+    auto col = ImGui::ColorConvertU32ToFloat4(rain_color);
+    if (ImGui::ColorEdit4("Tint", &col.x, ImGuiColorEditFlags_AlphaBar)) rain_color = ImGui::ColorConvertFloat4ToU32(col);
 
-    if (ImGui::CollapsingHeader("Rain", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::DragInt("Drop count", &drop_count, 25.f, 0, 20000, "%d", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat("Drop size", &drop_size, 1.f, 1.f, 500.f, "%.0f");
-        ImGui::DragFloat("Fall speed", &fall_speed, 50.f, 0.f, 30000.f, "%.0f");
-        ImGui::DragFloat("Spread radius", &box_radius, 25.f, 100.f, 10000.f, "%.0f");
-        ImGui::ShowHelp("Horizontal radius of the rain volume around the camera focus.");
-        ImGui::DragFloat("Column height", &box_height, 25.f, 100.f, 10000.f, "%.0f");
-        float wind[2] = {wind_x, wind_y};
-        if (ImGui::DragFloat2("Wind (x, y)", wind, 10.f, -10000.f, 10000.f, "%.0f")) {
-            wind_x = wind[0];
-            wind_y = wind[1];
-        }
-        ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 10.f, 10000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat("Fog factor", &fog_factor, 0.1f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-        auto col = ImGui::ColorConvertU32ToFloat4(rain_color);
-        if (ImGui::ColorEdit4("Tint", &col.x, ImGuiColorEditFlags_AlphaBar)) {
-            rain_color = ImGui::ColorConvertFloat4ToU32(col);
-        }
-    }
-    if (ImGui::CollapsingHeader("Splashes", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::DragFloat("Splash chance", &splash_fraction, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::ShowHelp("Fraction of raindrop impacts that spawn a splash animation.");
-        ImGui::DragFloat("Splash size", &splash_size, 1.f, 1.f, 500.f, "%.0f");
-        ImGui::DragFloat("Splash duration", &splash_duration, 0.01f, 0.05f, 5.f, "%.2f");
-        ImGui::ShowHelp("Seconds to play the 16-frame splash animation.");
+    ImGui::Separator();
+    ImGui::TextDisabled("Presets (edits are not saved)");
+    for (auto& c : conditions) {
+        if (!ImGui::CollapsingHeader(c.name)) continue;
+        ImGui::PushID(c.name);
+        ImGui::DragInt("Drop count", &c.drop_count, 25.f, 0, 20000, "%d", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
+        ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
+        ImGui::DragFloat("Spread radius", &c.spread_radius, 25.f, 100.f, 10000.f, "%.0f");
+        ImGui::DragFloat2("Wind (x, y)", &c.wind_x, 10.f, -10000.f, 10000.f, "%.0f");
+        ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::PopID();
     }
 }
-
-// ===========================================================================
-// ToolboxModule lifecycle (own settings section / JSON file)
-// ===========================================================================
 
 void WeatherModule::Initialize()
 {
     ToolboxModule::Initialize();
     RegisterSettings(this);
-    if (!compositor_token) {
-        compositor_token = GameWorldCompositor::RegisterDraw(&WeatherModule::DrawInWorld);
-    }
+    if (!compositor_token) compositor_token = GameWorldCompositor::RegisterDraw(&WeatherModule::DrawInWorld);
 }
 
 void WeatherModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
@@ -459,10 +355,7 @@ void WeatherModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     OnSettingsLoaded();
 }
 
-void WeatherModule::DrawSettingsInternal()
-{
-    DrawSettings();
-}
+void WeatherModule::DrawSettingsInternal() { DrawSettings(); }
 
 void WeatherModule::SignalTerminate()
 {
@@ -474,37 +367,15 @@ void WeatherModule::SignalTerminate()
 
 void WeatherModule::Terminate()
 {
-    if (compositor_token) {
-        GameWorldCompositor::UnregisterDraw(compositor_token);
-        compositor_token = 0;
-    }
-    if (rain_vb) {
-        rain_vb->Release();
-        rain_vb = nullptr;
-    }
-    if (splash_vb) {
-        splash_vb->Release();
-        splash_vb = nullptr;
-    }
-    if (weather_vs) {
-        weather_vs->Release();
-        weather_vs = nullptr;
-    }
-    if (weather_ps) {
-        weather_ps->Release();
-        weather_ps = nullptr;
-    }
-    if (weather_decl) {
-        weather_decl->Release();
-        weather_decl = nullptr;
-    }
-    rain_cap = 0;
-    splash_cap = 0;
+    SignalTerminate();
+    for (auto** p : {&rain_vb, &splash_vb}) if (*p) { (*p)->Release(); *p = nullptr; }
+    if (weather_vs) { weather_vs->Release(); weather_vs = nullptr; }
+    if (weather_ps) { weather_ps->Release(); weather_ps = nullptr; }
+    if (weather_decl) { weather_decl->Release(); weather_decl = nullptr; }
+    rain_cap = splash_cap = 0;
     raindrops.clear();
     splashes.clear();
-    // Textures are owned by GwDatTextureModule's cache; just drop our references.
-    raindrop_tex_pp = nullptr;
-    splash_tex_pp = nullptr;
+    raindrop_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
     textures_requested = false;
     ToolboxModule::Terminate();
 }
