@@ -105,6 +105,9 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Modules/WeatherModule.h>
+#ifdef _DEBUG
+#include <Modules/RiverModule.h>
+#endif
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/PartyDamage.h>
 #include <Widgets/SkillMonitorWidget.h>
@@ -196,6 +199,9 @@ namespace {
         Minimap::Instance(),
         GameWorldRenderer::Instance(),
         {WeatherModule::Instance(), false},
+#ifdef _DEBUG
+        {RiverModule::Instance(), false},
+#endif
         PartyDamage::Instance(),
         BondsWidget::Instance(),
         ClockWidget::Instance(),

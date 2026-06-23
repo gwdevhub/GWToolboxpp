@@ -1,15 +1,17 @@
 #pragma once
 
-#include <ToolboxWindow.h>
+#include <ToolboxModule.h>
 #include <Windows/Pathfinding/Pathing.h>
 
 using CalculatedCallback = std::function<void (std::vector<GW::GamePos>& waypoints, void* args)>;
 
 /*
-    This should really have been a module to just manage pathing - its used in a lot of places.
-    Instead, disable the Draw function in release
+    Pathing manager (a module, NOT a window): builds/queries the visgraph, drives the optional navmesh overlay,
+    and exposes the cross-map route API used by QuestModule/WorldMapWidget. It has no window of its own — its
+    only UI is its settings page. Per-frame work runs in Draw() (called for every enabled module).
+    (The class is still named PathfindingWindow because it's referenced as a static API in several places.)
 */
-class PathfindingWindow : public ToolboxWindow {
+class PathfindingWindow : public ToolboxModule {
     PathfindingWindow() = default;
     ~PathfindingWindow() = default;
 
@@ -20,9 +22,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Pathfinding Window"; }
+    [[nodiscard]] const char* Name() const override { return "Pathfinding"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_DOOR_OPEN; }
-    [[nodiscard]] bool ShowOnWorldMap() const override { return true; }
 
     bool HasSettings() { return true; }
 

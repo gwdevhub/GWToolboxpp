@@ -2538,13 +2538,13 @@ void PathfindingWindow::DrawSettingsInternal()
 
 void PathfindingWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(doc, legacy);
+    ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
 }
 
 void PathfindingWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(doc);
+    ToolboxModule::SaveSettings(doc);
     doc.SetStruct(Name(), settings);
 }
 
@@ -2555,7 +2555,7 @@ bool PathfindingWindow::WndProc(UINT, WPARAM, LPARAM)
 
 void PathfindingWindow::SignalTerminate()
 {
-    ToolboxWindow::SignalTerminate();
+    ToolboxModule::SignalTerminate();
     pending_terminate = true;
     GW::UI::RemoveUIMessageCallback(&gw_ui_hookentry);
     ClearBoundsLines();
@@ -2654,7 +2654,7 @@ clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::Game
 
 void PathfindingWindow::Terminate()
 {
-    ToolboxWindow::Terminate();
+    ToolboxModule::Terminate();
     // Workers are already stopped/joined, so each `delete mp` is pure allocator work; parallelize since the Debug allocator is slow serially.
     if (!mile_paths_by_coords.empty()) {
         std::vector<std::thread> deletes;
@@ -2983,7 +2983,7 @@ bool PathfindingWindow::IsRouteBreak(const GW::Vec2f& p)
 
 void PathfindingWindow::Initialize()
 {
-    ToolboxWindow::Initialize();
+    ToolboxModule::Initialize();
     BuildMapFileHashLookup();
     RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
 

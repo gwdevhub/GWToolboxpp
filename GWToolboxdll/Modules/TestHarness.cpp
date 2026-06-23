@@ -20,10 +20,11 @@
 #include <Timer.h>
 
 #include "GWToolbox.h"
+#include "Modules/QuestModule.h"
 #include "Modules/Resources.h"
 #include "Modules/TestHarness.h"
 #include "Utils/ToolboxUtils.h"
-#include "Windows/Pathfinding/PathfindingWindow.h"
+#include "Widgets/WorldMapWidget.h"
 
 // Dev iteration tool: compiled in Debug (_DEBUG) and RelWithDebInfo (GWTB_HARNESS, which
 // logs to log.txt), excluded from the shipped Release build.
@@ -101,13 +102,20 @@ namespace {
         return cc && cc->player_name && cc->player_name[0];
     }
 
+    // Drive the REAL pathing target, exactly like the world-map right-click "Place Marker": set a custom
+    // quest marker so QuestModule computes and draws the real quest path (via the visgraph) to it. This
+    // replaces the old PathfindingWindow dev overlay (which drew its own from/to crosses + path).
+    // The goal is current-map game coords; SetCustomQuestMarker takes world-map coords.
     void do_path_to(const GW::GamePos& goal, const char* src)
     {
         const auto self = GW::Agents::GetControlledCharacter();
         if (!self) { write_status("path_failed: no controlled character"); return; }
-        PathfindingWindow::SetFrom(self->pos);
-        PathfindingWindow::SetTo(goal);
-        PathfindingWindow::FindPath();
+        GW::Vec2f world_pos;
+        if (!WorldMapWidget::GamePosToWorldMap(goal, world_pos)) {
+            write_status("path_failed: GamePosToWorldMap failed");
+            return;
+        }
+        QuestModule::SetCustomQuestMarker(world_pos, true);
         char buf[180];
         snprintf(buf, sizeof(buf), "path_set(%s): from(%.0f,%.0f,z%u) to(%.0f,%.0f,z%u)",
                  src, self->pos.x, self->pos.y, self->pos.zplane, goal.x, goal.y, goal.zplane);
