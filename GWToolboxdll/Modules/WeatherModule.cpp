@@ -68,8 +68,8 @@ namespace {
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 4000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed1}, 2.f, 60.f, false},
-            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {}, 8.f, 25.f, false},
+            {"Heavy Rain", kTypeRain, false, 4000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false},
+            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
