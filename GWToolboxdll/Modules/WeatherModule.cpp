@@ -7,8 +7,10 @@
 
 #include <Color.h>
 #include <ImGuiAddons.h>
+#include <Modules/AudioSettings.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/WeatherModule.h>
+#include <Utils/ArenaNetFileParser.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsDoc.h>
 #include <Utils/SettingsRegistry.h>
@@ -31,7 +33,10 @@ namespace weather_module {
         float fall_speed = 2000.f;    // gwinch/sec
         float spread_radius = 1500.f; // horizontal half-extent of the volume around the camera focus
         float wind_x = 0.f, wind_y = 0.f;
-        float splash_chance = 1.f; // 0..1 chance an impact spawns a splash
+        float splash_chance = 1.f;          // 0..1 chance an impact spawns a splash
+        std::vector<uint32_t> sounds;       // .dat sound file ids played at random while active
+        float sound_min_interval = 8.f;     // seconds between sounds
+        float sound_max_interval = 25.f;
     };
 } // namespace weather_module
 
@@ -59,8 +64,8 @@ namespace {
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 2000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f},
-            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f},
+            {"Heavy Rain", kTypeRain, false, 2000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed1}, 8.f, 25.f},
+            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {}, 8.f, 25.f},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -84,6 +89,7 @@ namespace {
     struct Particles {
         std::vector<Raindrop> raindrops;
         std::vector<Splash> splashes;
+        float sound_timer = -1.f; // seconds until the next sound; <0 = not yet scheduled
     };
     std::vector<Particles> particles; // runtime state, parallel to conditions (not saved)
 
@@ -135,6 +141,33 @@ namespace {
             if (a != 0.f && a < best) best = a;
         }
         return best == std::numeric_limits<float>::max() ? fallback : best;
+    }
+
+    // A .dat file is a sound if its type bytes look like an ANet/MP3 stream (mirrors FavorTracker).
+    bool IsValidSound(const uint32_t id)
+    {
+        static std::map<uint32_t, bool> cache;
+        if (!id) return false;
+        if (const auto it = cache.find(id); it != cache.end()) return it->second;
+        ArenaNetFileParser::GameAssetFile f;
+        f.readFromDat(id);
+        const char* ft = f.fileType();
+        const bool ok = f.file_id == id && ft && static_cast<unsigned char>(ft[0]) == 0xFF && (static_cast<unsigned char>(ft[1]) & 0xE6) == 0xE2;
+        cache[id] = ok;
+        return ok;
+    }
+
+    void UpdateSounds(const WeatherCondition& c, Particles& p, const float dt)
+    {
+        if (c.sounds.empty() || c.sound_max_interval <= 0.f) return;
+        if (p.sound_timer < 0.f) { // first active frame: schedule, don't play immediately
+            p.sound_timer = frand(c.sound_min_interval, c.sound_max_interval);
+            return;
+        }
+        if ((p.sound_timer -= dt) > 0.f) return;
+        const size_t idx = std::min(c.sounds.size() - 1, static_cast<size_t>(frand(0.f, static_cast<float>(c.sounds.size()))));
+        if (c.sounds[idx]) AudioSettings::PlaySoundFileId(c.sounds[idx]); // PlaySound marshals to the game thread itself
+        p.sound_timer = frand(c.sound_min_interval, c.sound_max_interval);
     }
 
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const bool randomize)
@@ -274,6 +307,7 @@ namespace {
             UpdateCondition(conditions[i], particles[i], dt, cx, cy, cz);
             AppendRain(conditions[i], particles[i].raindrops, right, up);
             AppendSplashes(particles[i].splashes, right);
+            UpdateSounds(conditions[i], particles[i], dt);
         }
         rain_ready = EnsureVb(device, rain_vb, rain_cap, rain_vertices);
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
@@ -331,6 +365,8 @@ void WeatherModule::OnSettingsLoaded()
         c.drop_count = std::clamp(c.drop_count, 0, 20000);
         c.spread_radius = std::clamp(c.spread_radius, 0.f, kMaxRadius);
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
+        c.sound_min_interval = std::max(c.sound_min_interval, 0.f);
+        c.sound_max_interval = std::max(c.sound_max_interval, c.sound_min_interval);
     }
 }
 
@@ -350,6 +386,7 @@ void WeatherModule::SaveSettings(SettingsDoc& doc)
 void WeatherModule::DrawSettings()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
+    const auto green = ImGui::ColorConvertU32ToFloat4(Colors::Green());
     ImGui::TextColored(red, "Warning: This is a beta feature.");
     if (!GameWorldCompositor::IsActive()) ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "  in-world compositor FAILED to install." : "  in-world compositor: not installed yet.");
 
@@ -373,6 +410,26 @@ void WeatherModule::DrawSettings()
             ImGui::DragFloat("Spread radius", &c.spread_radius, 25.f, 0.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat2("Wind (x, y)", &c.wind_x, 10.f, -10000.f, 10000.f, "%.0f");
             ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+
+            ImGui::TextUnformatted("Sounds (file id, played at random while active)");
+            int snd_remove = -1;
+            for (int s = 0; s < static_cast<int>(c.sounds.size()); s++) {
+                ImGui::PushID(s);
+                ImGui::SetNextItemWidth(120.f);
+                ImGui::InputScalar("##sid", ImGuiDataType_U32, &c.sounds[s], nullptr, nullptr, "%X", ImGuiInputTextFlags_CharsHexadecimal);
+                const bool ok = IsValidSound(c.sounds[s]);
+                ImGui::SameLine();
+                ImGui::TextColored(ok ? green : red, ok ? ICON_FA_CHECK : ICON_FA_TIMES);
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Test")) AudioSettings::PlaySoundFileId(c.sounds[s]);
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Remove##snd")) snd_remove = s;
+                ImGui::PopID();
+            }
+            if (snd_remove >= 0) c.sounds.erase(c.sounds.begin() + snd_remove);
+            if (ImGui::SmallButton("Add sound")) c.sounds.push_back(0);
+            ImGui::DragFloat2("Sound interval (s)", &c.sound_min_interval, 0.5f, 0.f, 600.f, "%.0f");
+
             if (ImGui::Button("Remove condition")) to_remove = i;
         }
         ImGui::PopID();
