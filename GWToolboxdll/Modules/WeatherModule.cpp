@@ -17,27 +17,11 @@
 #include "Widgets/Minimap/Shaders/weather_billboard_ps.h"
 #include "Widgets/Minimap/Shaders/weather_billboard_vs.h"
 
-namespace {
-    // Game weather assets in the .dat: a 32px raindrop, and a 128x128 splash sheet (4x4 keyframes).
-    constexpr uint32_t kRaindropFileId = 0x1997d;
-    constexpr uint32_t kSplashFileId = 0x1baa1;
-    constexpr int kSplashCols = 4, kSplashRows = 4, kSplashFrames = kSplashCols * kSplashRows;
-    constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
-    constexpr float kMaxRadius = 2500.f;              // compass range; cap for any radius in the UI
-    constexpr int kTypeRain = 0;
+// External linkage (not the anonymous namespace) so glaze can reflect it as a vector element when
+// (de)serialising the conditions list. A plain aggregate so reflection works without a glz::meta.
+namespace weather_module {
+    constexpr int kTypeRain = 0; // weather type
 
-    // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
-    float column_height = 2500.f; // vertical span drops fall through
-    float fog_factor = 1.0f;      // distance-fade strength fed to the shader
-    float splash_size = 8.f;      // world size of a splash billboard
-    float splash_duration = 0.5f; // seconds to play the 16 keyframes
-    float recycle_below = 600.f;  // fallback recycle band when no terrain altitude is available
-    float splash_lift = 5.f;      // raise splash base above the ground to avoid z-fighting
-    int max_splashes = 4000;      // per-condition cap on live splashes
-
-    constexpr bool HasSplash(const int type) { return type == kTypeRain; }
-
-    // Player-editable, saved to disk. A plain aggregate so glaze can (de)serialise the whole list.
     struct WeatherCondition {
         std::string name = "Rain";
         int type = kTypeRain;
@@ -49,6 +33,28 @@ namespace {
         float wind_x = 0.f, wind_y = 0.f;
         float splash_chance = 1.f; // 0..1 chance an impact spawns a splash
     };
+} // namespace weather_module
+
+namespace {
+    using namespace weather_module;
+
+    // Game weather assets in the .dat: a 32px raindrop, and a 128x128 splash sheet (4x4 keyframes).
+    constexpr uint32_t kRaindropFileId = 0x1997d;
+    constexpr uint32_t kSplashFileId = 0x1baa1;
+    constexpr int kSplashCols = 4, kSplashRows = 4, kSplashFrames = kSplashCols * kSplashRows;
+    constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
+    constexpr float kMaxRadius = 2500.f;              // compass range; cap for any radius in the UI
+
+    // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
+    float column_height = 2500.f; // vertical span drops fall through
+    float fog_factor = 1.0f;      // distance-fade strength fed to the shader
+    float splash_size = 8.f;      // world size of a splash billboard
+    float splash_duration = 0.5f; // seconds to play the 16 keyframes
+    float recycle_below = 600.f;  // fallback recycle band when no terrain altitude is available
+    float splash_lift = 5.f;      // raise splash base above the ground to avoid z-fighting
+    int max_splashes = 4000;      // per-condition cap on live splashes
+
+    constexpr bool HasSplash(const int type) { return type == kTypeRain; }
 
     std::vector<WeatherCondition> DefaultConditions()
     {
