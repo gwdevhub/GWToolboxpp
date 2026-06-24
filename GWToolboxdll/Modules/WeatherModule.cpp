@@ -210,10 +210,16 @@ namespace {
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const bool randomize)
     {
         const float top_z = cz - column_height;
-        d.x = cx + frand(-c.spread_radius, c.spread_radius);
-        d.y = cy + frand(-c.spread_radius, c.spread_radius);
+        const float base_x = cx + frand(-c.spread_radius, c.spread_radius);
+        const float base_y = cy + frand(-c.spread_radius, c.spread_radius);
         d.z = randomize ? top_z + frand(0.f, column_height + recycle_below) : top_z;
-        d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+        d.ground_z = GroundZAt(base_x, base_y, cz + recycle_below);
+        // Spread the wind drift symmetrically around the spawn point so the field stays centred on the
+        // player instead of trailing downwind: bias = (time already fallen) - (half the total fall).
+        const float inv_speed = c.fall_speed > 0.f ? 1.f / c.fall_speed : 0.f;
+        const float bias = (d.z - top_z) * inv_speed - 0.5f * (d.ground_z - top_z) * inv_speed;
+        d.x = base_x + c.wind_x * bias;
+        d.y = base_y + c.wind_y * bias;
         d.sway_phase = frand(0.f, 6.2831853f);
     }
 
