@@ -89,7 +89,7 @@ namespace {
         return {
             {"Heavy Rain", kTypeRain, false, 4000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false},
             {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false},
-            {"Snow", kTypeSnow, false, 1500, 16.f, 400.f, 1500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false},
+            {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 1500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -237,17 +237,19 @@ namespace {
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const bool randomize, const int index, const int grid)
     {
         const float top_z = cz - column_height;
-        // Stratified placement: each drop owns one cell of the grid, jittered within it, so respawns keep the
-        // field evenly covered instead of clumping the way independent random positions do.
+        // Stratified placement: each drop owns one cell of the grid, jittered within it, so its landing spot is
+        // evenly spread over the area around the player instead of clumping the way random positions do.
         const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
         const float base_x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
         const float base_y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
         d.z = randomize ? top_z + frand(0.f, column_height + recycle_below) : top_z;
         d.ground_z = GroundZAt(base_x, base_y, cz + recycle_below);
-        // Spread the wind drift symmetrically around the spawn point so the field stays centred on the
-        // player instead of trailing downwind: bias = (time already fallen) - (half the total fall).
+        // Tilt the whole column about its landing point so wind angles the fall but it still lands on base_xy
+        // (around the player), instead of shearing the impact zone downwind into a "trapeze". bias is the time
+        // left until landing, negated: 0 at the ground, -t_fall at the top, so the drop starts upwind and
+        // converges to base_xy as it descends.
         const float inv_speed = c.fall_speed > 0.f ? 1.f / c.fall_speed : 0.f;
-        const float bias = (d.z - top_z) * inv_speed - 0.5f * (d.ground_z - top_z) * inv_speed;
+        const float bias = (d.z - d.ground_z) * inv_speed;
         d.x = base_x + c.wind_x * bias;
         d.y = base_y + c.wind_y * bias;
         d.sway_phase = frand(0.f, 6.2831853f);
@@ -264,6 +266,7 @@ namespace {
         const bool splash = HasSplash(c.type);
         const bool meander = HasMeander(c.type);
         const bool settle = HasSettle(c.type);
+        const float spread_sq = c.spread_radius * c.spread_radius;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
             d.z += c.fall_speed * dt;
@@ -273,6 +276,14 @@ namespace {
             d.sway_phase += snow_sway_speed * dt;
             d.x += (c.wind_x + sway_x) * dt;
             d.y += (c.wind_y + sway_y) * dt;
+            // Harsh wind/sway can carry a drop out of the radius before it ever lands near the player; once it is
+            // outside and still heading out (so upwind, inbound spawns are spared) it can never contribute, so
+            // recycle it now rather than rendering it falling off into the distance.
+            const float dx = d.x - cx, dy = d.y - cy;
+            if (dx * dx + dy * dy > spread_sq && dx * (c.wind_x + sway_x) + dy * (c.wind_y + sway_y) > 0.f) {
+                seed_drop(d, c, cx, cy, cz, false, i, grid);
+                continue;
+            }
             if (d.z >= d.ground_z) {
                 // d.ground_z is the terrain height at the spawn point; wind/sway drift the drop sideways as it
                 // falls, so resample under where it actually lands - otherwise the mark sits above/below the
@@ -310,11 +321,35 @@ namespace {
         out.insert(out.end(), {c00, c10, c11, c00, c11, c01});
     }
 
-    void AppendRain(const WeatherCondition& c, std::vector<WeatherVertex>& out, const std::vector<Raindrop>& drops, const float right[3], const float up[3])
+    void AppendRain(const WeatherCondition& c, std::vector<WeatherVertex>& out, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float fwd[3], const bool streak)
     {
         const float h = c.drop_size * 0.5f;
-        const float ax[3] = {right[0] * h, right[1] * h, right[2] * h};
-        const float ay[3] = {up[0] * h, up[1] * h, up[2] * h};
+        float ax[3] = {right[0] * h, right[1] * h, right[2] * h};
+        float ay[3] = {up[0] * h, up[1] * h, up[2] * h};
+        if (streak) {
+            // Align the quad's long axis with the drop's velocity so wind tilts the streak (and it stays
+            // world-vertical in still air); the width axis is perpendicular to both velocity and view so it
+            // still faces the camera. Falls back to camera-right when looking straight along the streak.
+            float vel[3] = {c.wind_x, c.wind_y, c.fall_speed};
+            normalize3(vel);
+            float w[3];
+            cross3(vel, fwd, w);
+            const float wl = std::sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2]);
+            if (wl > 1e-4f) {
+                w[0] /= wl;
+                w[1] /= wl;
+                w[2] /= wl;
+            }
+            else {
+                w[0] = right[0];
+                w[1] = right[1];
+                w[2] = right[2];
+            }
+            for (int k = 0; k < 3; k++) {
+                ax[k] = w[k] * h;
+                ay[k] = vel[k] * h;
+            }
+        }
         for (const auto& d : drops)
             emit_quad(out, d.x, d.y, d.z, ax, ay, rain_color, 0.f, 0.f, 1.f, 1.f);
     }
@@ -417,7 +452,8 @@ namespace {
                 continue;
             }
             UpdateCondition(conditions[i], particles[i], dt, cx, cy, cz);
-            AppendRain(conditions[i], conditions[i].type == kTypeSnow ? snow_vertices : rain_vertices, particles[i].raindrops, right, up);
+            const bool is_snow = conditions[i].type == kTypeSnow;
+            AppendRain(conditions[i], is_snow ? snow_vertices : rain_vertices, particles[i].raindrops, right, up, fwd, !is_snow);
             AppendSplashes(particles[i].splashes, right);
             AppendSettled(particles[i].settled);
             UpdateSounds(conditions[i], particles[i], dt, cx, cy, cz);
