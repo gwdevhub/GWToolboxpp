@@ -131,6 +131,8 @@ namespace {
     std::vector<WeatherVertex> rain_vertices, snow_vertices, splash_vertices;
     IDirect3DVertexBuffer9 *rain_vb = nullptr, *snow_vb = nullptr, *splash_vb = nullptr;
     size_t rain_cap = 0, snow_cap = 0, splash_cap = 0; // in vertices
+    IDirect3DIndexBuffer9* quad_ib = nullptr; // shared 0-1-2 / 0-2-3 indices for every 4-vertex quad
+    size_t quad_ib_quads = 0;                 // capacity in quads
     IDirect3DVertexShader9* weather_vs = nullptr;
     IDirect3DPixelShader9* weather_ps = nullptr;
     IDirect3DVertexDeclaration9* weather_decl = nullptr;
@@ -319,14 +321,15 @@ namespace {
         }
     }
 
-    // Two triangles spanning center +/- the half-extent vectors ax, ay, with the given UV rect.
+    // The 4 corners of a quad spanning center +/- the half-extent vectors ax, ay, with the given UV rect.
+    // Drawn as two triangles (0-1-2, 0-2-3) via the shared index buffer, so only 4 verts are stored per quad.
     void emit_quad(std::vector<WeatherVertex>& out, const float cx, const float cy, const float cz, const float ax[3], const float ay[3], const DWORD col, const float u0, const float v0, const float u1, const float v1)
     {
         const WeatherVertex c00{cx - ax[0] - ay[0], cy - ax[1] - ay[1], cz - ax[2] - ay[2], col, u0, v1};
         const WeatherVertex c10{cx + ax[0] - ay[0], cy + ax[1] - ay[1], cz + ax[2] - ay[2], col, u1, v1};
         const WeatherVertex c11{cx + ax[0] + ay[0], cy + ax[1] + ay[1], cz + ax[2] + ay[2], col, u1, v0};
         const WeatherVertex c01{cx - ax[0] + ay[0], cy - ax[1] + ay[1], cz - ax[2] + ay[2], col, u0, v0};
-        out.insert(out.end(), {c00, c10, c11, c00, c11, c01});
+        out.insert(out.end(), {c00, c10, c11, c01});
     }
 
     void AppendRain(const WeatherCondition& c, std::vector<WeatherVertex>& out, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float fwd[3], const bool streak)
@@ -416,6 +419,42 @@ namespace {
         if (vb->Lock(0, static_cast<UINT>(needed * sizeof(WeatherVertex)), &mem, 0) != D3D_OK || !mem) return false;
         memcpy(mem, verts.data(), needed * sizeof(WeatherVertex));
         vb->Unlock();
+        return true;
+    }
+
+    // The quad index pattern is static (only the count grows), so build it once and reuse it across all passes.
+    bool EnsureQuadIB(IDirect3DDevice9* device, const size_t quads)
+    {
+        if (quads == 0) return false;
+        if (quad_ib && quad_ib_quads >= quads) return true;
+        if (quad_ib) {
+            quad_ib->Release();
+            quad_ib = nullptr;
+        }
+        const size_t cap = quads + quads / 2; // headroom so count tweaks don't reallocate every frame
+        if (device->CreateIndexBuffer(static_cast<UINT>(cap * 6 * sizeof(uint32_t)), D3DUSAGE_WRITEONLY, D3DFMT_INDEX32, D3DPOOL_MANAGED, &quad_ib, nullptr) != D3D_OK) {
+            quad_ib_quads = 0;
+            return false;
+        }
+        void* mem = nullptr;
+        if (quad_ib->Lock(0, 0, &mem, 0) != D3D_OK || !mem) {
+            quad_ib->Release();
+            quad_ib = nullptr;
+            quad_ib_quads = 0;
+            return false;
+        }
+        auto* idx = static_cast<uint32_t*>(mem);
+        for (size_t q = 0; q < cap; q++) {
+            const uint32_t b = static_cast<uint32_t>(q * 4);
+            idx[q * 6 + 0] = b + 0;
+            idx[q * 6 + 1] = b + 1;
+            idx[q * 6 + 2] = b + 2;
+            idx[q * 6 + 3] = b + 0;
+            idx[q * 6 + 4] = b + 2;
+            idx[q * 6 + 5] = b + 3;
+        }
+        quad_ib->Unlock();
+        quad_ib_quads = cap;
         return true;
     }
 
@@ -595,17 +634,24 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
         device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
         device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+        // 4 verts per quad -> 2 triangles via the shared index buffer (triangle count = verts / 2).
+        const size_t max_verts = std::max({rain_vertices.size(), snow_vertices.size(), splash_vertices.size()});
+        const bool indexed = EnsureQuadIB(device, max_verts / 4) && device->SetIndices(quad_ib) == D3D_OK;
+        const auto draw = [&](IDirect3DVertexBuffer9* vb, const size_t nverts) {
+            if (!indexed || device->SetStreamSource(0, vb, 0, sizeof(WeatherVertex)) != D3D_OK) return;
+            device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, static_cast<UINT>(nverts), 0, static_cast<UINT>(nverts / 2));
+        };
         if (have_rain) {
             device->SetTexture(0, rain_tex);
-            if (device->SetStreamSource(0, rain_vb, 0, sizeof(WeatherVertex)) == D3D_OK) device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, static_cast<UINT>(rain_vertices.size() / 3));
+            draw(rain_vb, rain_vertices.size());
         }
         if (have_snow) {
             device->SetTexture(0, snow_tex);
-            if (device->SetStreamSource(0, snow_vb, 0, sizeof(WeatherVertex)) == D3D_OK) device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, static_cast<UINT>(snow_vertices.size() / 3));
+            draw(snow_vb, snow_vertices.size());
         }
         if (have_splash) {
             device->SetTexture(0, splash_tex);
-            if (device->SetStreamSource(0, splash_vb, 0, sizeof(WeatherVertex)) == D3D_OK) device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, static_cast<UINT>(splash_vertices.size() / 3));
+            draw(splash_vb, splash_vertices.size());
         }
     }
     state_block->Apply();
@@ -757,6 +803,10 @@ void WeatherModule::Terminate()
             (*p)->Release();
             *p = nullptr;
         }
+    if (quad_ib) {
+        quad_ib->Release();
+        quad_ib = nullptr;
+    }
     if (weather_vs) {
         weather_vs->Release();
         weather_vs = nullptr;
@@ -769,7 +819,7 @@ void WeatherModule::Terminate()
         weather_decl->Release();
         weather_decl = nullptr;
     }
-    rain_cap = snow_cap = splash_cap = 0;
+    rain_cap = snow_cap = splash_cap = quad_ib_quads = 0;
     particles.clear();
     raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
     textures_requested = false;
