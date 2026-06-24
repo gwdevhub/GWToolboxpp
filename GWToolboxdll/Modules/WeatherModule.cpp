@@ -38,7 +38,7 @@ namespace weather_module {
         int drop_count = 1000;
         float drop_size = 8.f;
         float fall_speed = 2000.f;    // gwinch/sec
-        float spread_radius = 1500.f; // horizontal half-extent of the volume around the camera focus
+        float spread_radius = 2500.f; // horizontal half-extent of the volume; fixed (forced on load, no UI)
         float wind_x = 0.f, wind_y = 0.f;
         float splash_chance = 1.f;      // 0..1 chance an impact spawns a splash
         std::vector<uint32_t> sounds;   // .dat sound file ids played at random while active
@@ -92,9 +92,9 @@ namespace {
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 4000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
-            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
-            {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 1500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
+            {"Heavy Rain", kTypeRain, false, 4000, 10.f, 1000.f, 2500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
+            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 2500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
+            {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 2500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -137,7 +137,7 @@ namespace {
     IDirect3DTexture9 **raindrop_tex_pp = nullptr, **snowflake_tex_pp = nullptr, **splash_tex_pp = nullptr; // stable slots from the texture cache
     bool textures_requested = false;
     clock_t last_update = 0;                   // TIMER_INIT() at the last throttled update (0 = not yet run)
-    constexpr clock_t kUpdateIntervalMs = 33;  // rebuild physics + geometry at ~30 Hz; drawing stays per-frame
+    constexpr clock_t kUpdateIntervalMs = 16;  // rebuild physics + geometry at ~60 Hz; drawing stays per-frame
     uint32_t rng = 0x1234567u;
     bool rain_ready = false, snow_ready = false, splash_ready = false;
     int compositor_token = 0;
@@ -626,7 +626,7 @@ void WeatherModule::OnSettingsLoaded()
     for (auto& c : conditions) {
         c.type = std::clamp(c.type, 0, kTypeCount - 1);
         c.drop_count = std::clamp(c.drop_count, 0, 20000);
-        c.spread_radius = std::clamp(c.spread_radius, 0.f, kMaxRadius);
+        c.spread_radius = kMaxRadius; // fixed, not user-editable
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
         c.sound_min_interval = std::max(c.sound_min_interval, 0.f);
         c.sound_max_interval = std::max(c.sound_max_interval, c.sound_min_interval);
@@ -676,7 +676,6 @@ void WeatherModule::DrawSettings()
             ImGui::DragInt("Drop count", &c.drop_count, 25.f, 0, 20000, "%d", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
             ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
-            ImGui::DragFloat("Spread radius", &c.spread_radius, 25.f, 0.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat2("Wind (x, y)", &c.wind_x, 10.f, -10000.f, 10000.f, "%.0f");
             if (HasSplash(c.type)) ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat("Overcast", &c.ambient, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
