@@ -40,7 +40,8 @@ namespace weather_module {
         std::vector<uint32_t> sounds;   // .dat sound file ids played at random while active
         float sound_min_interval = 8.f; // seconds between sounds
         float sound_max_interval = 25.f;
-        bool sound_3d = false; // play from a random nearby position (varies volume/pan)
+        bool sound_3d = false;  // play from a random nearby position (varies volume/pan)
+        float ambient = 0.f;    // 0..1 overcast dimming this condition contributes to the scene
     };
 } // namespace weather_module
 
@@ -87,16 +88,18 @@ namespace {
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 4000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false},
-            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false},
-            {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 1500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false},
+            {"Heavy Rain", kTypeRain, false, 4000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
+            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
+            {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 1500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
 
     bool occlude_behind_terrain = true;
     float render_max_distance = 2500.f;
-    unsigned int rain_color = 0xFFFFFFFFu; // tint (ImGui-packed); white shows the texture untinted
+    unsigned int rain_color = 0xFFFFFFFFu;     // tint (ImGui-packed); white shows the texture untinted
+    unsigned int ambient_color = 0xFFA09078u;  // fully-overcast multiply tint (ImGui-packed RGB; alpha ignored)
+    float ambient_strength = 0.f;              // eased aggregate dimming of active conditions (runtime, not saved)
 
     // POSITION (world) + D3DCOLOR tint + UV; quads are built camera-/ground-aligned on the CPU.
     struct WeatherVertex {
@@ -446,11 +449,13 @@ namespace {
         float up[3];
         cross3(fwd, right, up);
 
+        float ambient_target = 0.f;
         for (size_t i = 0; i < conditions.size(); i++) {
             if (!conditions[i].active) {
                 particles[i] = {};
                 continue;
             }
+            ambient_target = std::max(ambient_target, conditions[i].ambient);
             UpdateCondition(conditions[i], particles[i], dt, cx, cy, cz);
             const bool is_snow = conditions[i].type == kTypeSnow;
             AppendRain(conditions[i], is_snow ? snow_vertices : rain_vertices, particles[i].raindrops, right, up, fwd, !is_snow);
@@ -458,9 +463,55 @@ namespace {
             AppendSettled(particles[i].settled);
             UpdateSounds(conditions[i], particles[i], dt, cx, cy, cz);
         }
+        ambient_strength += (ambient_target - ambient_strength) * std::clamp(dt * 3.f, 0.f, 1.f); // ease ~1/3 s
         rain_ready = EnsureVb(device, rain_vb, rain_cap, rain_vertices);
         snow_ready = EnsureVb(device, snow_vb, snow_cap, snow_vertices);
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
+    }
+
+    // Overcast: multiply-blend a screen-filling quad UNDER the HUD so the scene dims like cloud cover.
+    void DrawAmbient(IDirect3DDevice9* device, const float strength)
+    {
+        const GW::Camera* cam = GW::CameraMgr::GetCamera();
+        if (!cam || strength <= 0.003f) return;
+
+        // Per channel: scale the scene toward the tint by strength (white = untouched), then multiply-blend.
+        const auto t = ImGui::ColorConvertU32ToFloat4(ambient_color);
+        const auto chan = [&](const float c) { return static_cast<DWORD>(std::clamp(1.f - strength * (1.f - c), 0.f, 1.f) * 255.f + 0.5f); };
+        const DWORD col = D3DCOLOR_ARGB(255, chan(t.x), chan(t.y), chan(t.z));
+
+        float fwd[3] = {cam->look_at_target.x - cam->position.x, cam->look_at_target.y - cam->position.y, cam->look_at_target.z - cam->position.z};
+        normalize3(fwd);
+        constexpr float world_up[3] = {0.f, 0.f, -1.f};
+        float right[3];
+        cross3(world_up, fwd, right);
+        normalize3(right);
+        float up[3];
+        cross3(fwd, right, up);
+
+        const float d = kZNear + 1.f, hw = d * 4.f; // sit just past the near plane, oversized to cover any FOV
+        const float qx = cam->position.x + fwd[0] * d, qy = cam->position.y + fwd[1] * d, qz = cam->position.z + fwd[2] * d;
+        struct ColVtx {
+            float x, y, z;
+            DWORD c;
+        };
+        const auto corner = [&](const float sx, const float sy) -> ColVtx {
+            return {qx + (right[0] * sx + up[0] * sy) * hw, qy + (right[1] * sx + up[1] * sy) * hw, qz + (right[2] * sx + up[2] * sy) * hw, col};
+        };
+        const ColVtx q[6] = {corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, -1), corner(1, 1), corner(-1, 1)};
+
+        IDirect3DStateBlock9* sb = nullptr;
+        if (device->CreateStateBlock(D3DSBT_ALL, &sb) != D3D_OK) return;
+        if (GameWorldCompositor::SetupPipeline(device, false, kZNear, kZFar, kZFar, 0.f)) {
+            device->SetRenderState(D3DRS_ZENABLE, FALSE);
+            device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE); // must not touch the depth buffer or it culls the scene/particles
+            device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+            device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR); // result = scene * quad colour (multiply)
+            device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
+            device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 2, q, sizeof(ColVtx));
+        }
+        sb->Apply();
+        sb->Release();
     }
 } // namespace
 
@@ -480,6 +531,8 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         last_update = TIMER_INIT();
         SyncWeather(device, GW::CameraMgr::GetCamera(), dt);
     }
+
+    DrawAmbient(device, ambient_strength); // dim the scene first, so the particles stay bright on top
 
     IDirect3DTexture9* rain_tex = raindrop_tex_pp ? *raindrop_tex_pp : nullptr;
     IDirect3DTexture9* snow_tex = snowflake_tex_pp ? *snowflake_tex_pp : nullptr;
@@ -520,6 +573,7 @@ void WeatherModule::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "rain_color", &rain_color);
+    SettingsRegistry::RegisterField(module, "ambient_color", &ambient_color);
 }
 
 void WeatherModule::OnSettingsLoaded()
@@ -532,6 +586,7 @@ void WeatherModule::OnSettingsLoaded()
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
         c.sound_min_interval = std::max(c.sound_min_interval, 0.f);
         c.sound_max_interval = std::max(c.sound_max_interval, c.sound_min_interval);
+        c.ambient = std::clamp(c.ambient, 0.f, 1.f);
     }
 }
 
@@ -559,6 +614,9 @@ void WeatherModule::DrawSettings()
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 10.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     auto col = ImGui::ColorConvertU32ToFloat4(rain_color);
     if (ImGui::ColorEdit4("Tint", &col.x, ImGuiColorEditFlags_AlphaBar)) rain_color = ImGui::ColorConvertFloat4ToU32(col);
+    auto amb = ImGui::ColorConvertU32ToFloat4(ambient_color);
+    if (ImGui::ColorEdit3("Overcast tint", &amb.x)) ambient_color = ImGui::ColorConvertFloat4ToU32(amb);
+    ImGui::ShowHelp("Colour the scene is tinted toward while an overcast condition is active.\nPer-condition strength is set with each condition's \"Overcast\" slider.");
 
     ImGui::Separator();
     int to_remove = -1;
@@ -577,6 +635,8 @@ void WeatherModule::DrawSettings()
             ImGui::DragFloat("Spread radius", &c.spread_radius, 25.f, 0.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat2("Wind (x, y)", &c.wind_x, 10.f, -10000.f, 10000.f, "%.0f");
             if (HasSplash(c.type)) ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat("Overcast", &c.ambient, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::ShowHelp("How strongly this condition dims the scene toward the overcast tint while active.");
 
             ImGui::TextUnformatted("Sounds (file id, played at random while active)");
             int snd_remove = -1;
