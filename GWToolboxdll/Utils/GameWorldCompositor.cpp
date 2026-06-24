@@ -112,12 +112,17 @@ namespace {
 
         auto& buffer = *render_buffer;
 
-        // The main 3D scene is the FIRST GPU_RENDER block; everything after is HUD (incl. agent/UI 3D renders that correctly draw over us). Split right after it; UI-only/sub-render passes have no GPU block so boundary == size and skip below.
+        // The main 3D scene is the FIRST GPU_RENDER block; everything after is HUD - including the 2D HUD and
+        // agent/UI 3D renders, which all correctly draw over us. Split right after the first GPU block. (Skipping
+        // further consecutive GPU blocks would swallow GPU-rendered HUD entries into the world side, so our
+        // overlays would then draw on top of them.) UI-only/sub-render passes have no GPU block, so boundary
+        // stays == size and is skipped below.
         uint32_t boundary = buffer.size();
-        bool seen_gpu = false;
         for (uint32_t i = 0; i < buffer.size(); i++) {
-            if (buffer[i].type == FRCACHE_GPU_RENDER) { seen_gpu = true; continue; }
-            if (seen_gpu) { boundary = i; break; }
+            if (buffer[i].type == FRCACHE_GPU_RENDER) {
+                boundary = i + 1;
+                break;
+            }
         }
 
         // Only the main world-then-HUD pass draws; others pass through, and the guard draws exactly once per frame.
