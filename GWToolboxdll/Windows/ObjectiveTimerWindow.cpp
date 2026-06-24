@@ -539,10 +539,10 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
                                     MapID::Heart_of_the_Shiverpeaks_Level_2,
                                     MapID::Heart_of_the_Shiverpeaks_Level_3});
             break;
-        case MapID::Forsaken_Tunnels_Level1:
-            AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level1,
-                                    MapID::Forsaken_Tunnels_Level2,
-                                    MapID::Forsaken_Tunnels_Level3});
+        case MapID::Forsaken_Tunnels_Level2:
+            AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level2,
+                                    MapID::Forsaken_Tunnels_Level3,
+                                    MapID::Forsaken_Tunnels_Level4});
             break;
 
         // dungeons - 5 levels:
