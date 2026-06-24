@@ -7,6 +7,7 @@
 
 #include <Color.h>
 #include <ImGuiAddons.h>
+#include <Timer.h>
 #include <Modules/AudioSettings.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/WeatherModule.h>
@@ -128,7 +129,8 @@ namespace {
     IDirect3DVertexDeclaration9* weather_decl = nullptr;
     IDirect3DTexture9 **raindrop_tex_pp = nullptr, **snowflake_tex_pp = nullptr, **splash_tex_pp = nullptr; // stable slots from the texture cache
     bool textures_requested = false;
-    DWORD last_tick = 0;
+    clock_t last_update = 0;                   // TIMER_INIT() at the last throttled update (0 = not yet run)
+    constexpr clock_t kUpdateIntervalMs = 33;  // rebuild physics + geometry at ~30 Hz; drawing stays per-frame
     uint32_t rng = 0x1234567u;
     bool rain_ready = false, snow_ready = false, splash_ready = false;
     int compositor_token = 0;
@@ -156,18 +158,40 @@ namespace {
         }
     }
 
-    // Highest terrain surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or fallback.
-    float GroundZAt(const float x, const float y, const float fallback)
+    constexpr float kNoGround = std::numeric_limits<float>::max(); // "no terrain here" sentinel
+    constexpr float kGroundCell = 64.f;               // world-grid resolution of the altitude cache (gwinch)
+    constexpr size_t kGroundCacheMax = 1u << 16;      // entry cap; cleared wholesale past this
+    std::unordered_map<uint64_t, float> ground_cache; // (x,y) cell -> terrain altitude, valid within a map
+    uint32_t ground_cache_map = 0xFFFFFFFFu;          // map id the cache was built for
+
+    // Highest terrain surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or kNoGround.
+    float RawGroundZAt(const float x, const float y)
     {
         const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
         const uint32_t n = pm ? static_cast<uint32_t>(pm->size()) : 0;
-        float best = std::numeric_limits<float>::max();
+        float best = kNoGround;
         for (uint32_t zp = 0; zp < n; ++zp) {
             GW::GamePos p{x, y, zp};
             const float a = GW::Map::QueryAltitude(&p);
             if (a != 0.f && a < best) best = a;
         }
-        return best == std::numeric_limits<float>::max() ? fallback : best;
+        return best;
+    }
+
+    // Memoised by a coarse world cell: terrain is static per (x,y), but the per-plane query is costly and we
+    // sample it for every drop that lands, so nearby drops reuse a cell. Invalidated on map change in SyncWeather.
+    float GroundZAt(const float x, const float y, const float fallback)
+    {
+        const int gx = static_cast<int>(std::floor(x / kGroundCell));
+        const int gy = static_cast<int>(std::floor(y / kGroundCell));
+        const uint64_t key = static_cast<uint64_t>(static_cast<uint32_t>(gx)) << 32 | static_cast<uint32_t>(gy);
+        if (const auto it = ground_cache.find(key); it != ground_cache.end()) return it->second == kNoGround ? fallback : it->second;
+        const float z = RawGroundZAt(x, y);
+        if (z != kNoGround) { // don't cache misses: they're rare (drops over the void) and risk poisoning on transient null maps
+            if (ground_cache.size() >= kGroundCacheMax) ground_cache.clear();
+            ground_cache.emplace(key, z);
+        }
+        return z == kNoGround ? fallback : z;
     }
 
     // A .dat file is a sound if its type bytes look like an ANet/MP3 stream (mirrors FavorTracker).
@@ -207,11 +231,17 @@ namespace {
         p.sound_timer = frand(c.sound_min_interval, c.sound_max_interval);
     }
 
-    void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const bool randomize)
+    // Side count of the square grid that tiles the spawn area for stratified placement.
+    int SpawnGrid(const int drop_count) { return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(std::max(1, drop_count)))))); }
+
+    void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const bool randomize, const int index, const int grid)
     {
         const float top_z = cz - column_height;
-        const float base_x = cx + frand(-c.spread_radius, c.spread_radius);
-        const float base_y = cy + frand(-c.spread_radius, c.spread_radius);
+        // Stratified placement: each drop owns one cell of the grid, jittered within it, so respawns keep the
+        // field evenly covered instead of clumping the way independent random positions do.
+        const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
+        const float base_x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
+        const float base_y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
         d.z = randomize ? top_z + frand(0.f, column_height + recycle_below) : top_z;
         d.ground_z = GroundZAt(base_x, base_y, cz + recycle_below);
         // Spread the wind drift symmetrically around the spawn point so the field stays centred on the
@@ -225,15 +255,17 @@ namespace {
 
     void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz)
     {
+        const int grid = SpawnGrid(c.drop_count);
         if (static_cast<int>(p.raindrops.size()) != c.drop_count) {
             p.raindrops.resize(std::max(0, c.drop_count));
-            for (auto& d : p.raindrops)
-                seed_drop(d, c, cx, cy, cz, true);
+            for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++)
+                seed_drop(p.raindrops[i], c, cx, cy, cz, true, i, grid);
         }
         const bool splash = HasSplash(c.type);
         const bool meander = HasMeander(c.type);
         const bool settle = HasSettle(c.type);
-        for (auto& d : p.raindrops) {
+        for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
+            auto& d = p.raindrops[i];
             d.z += c.fall_speed * dt;
             // Snow drifts on an out-of-phase sin/cos wobble so each flake wanders rather than falling in a line.
             const float sway_x = meander ? snow_sway_amp * std::sin(d.sway_phase) : 0.f;
@@ -242,9 +274,12 @@ namespace {
             d.x += (c.wind_x + sway_x) * dt;
             d.y += (c.wind_y + sway_y) * dt;
             if (d.z >= d.ground_z) {
-                if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, d.ground_z, 0.f});
-                if (settle && frand(0.f, 1.f) < snow_settle_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, d.ground_z, 0.f});
-                seed_drop(d, c, cx, cy, cz, false);
+                // d.ground_z is the terrain height at the spawn point; wind/sway drift the drop sideways as it
+                // falls, so resample under where it actually lands - otherwise the mark sits above/below the
+                // real surface. The cache keeps this cheap despite running per impact.
+                if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
+                if (settle && frand(0.f, 1.f) < snow_settle_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
+                seed_drop(d, c, cx, cy, cz, false, i, grid);
             }
         }
         for (size_t i = 0; i < p.splashes.size();) {
@@ -352,7 +387,7 @@ namespace {
     }
 
     // Advance every active condition and accumulate its geometry, then upload once per frame.
-    void SyncWeather(IDirect3DDevice9* device, const GW::Camera* cam)
+    void SyncWeather(IDirect3DDevice9* device, const GW::Camera* cam, const float dt)
     {
         rain_ready = snow_ready = splash_ready = false;
         rain_vertices.clear();
@@ -361,10 +396,10 @@ namespace {
         particles.resize(conditions.size());
         if (!cam) return;
 
-        const DWORD now = GetTickCount();
-        float dt = last_tick ? static_cast<float>(now - last_tick) / 1000.f : 0.f;
-        last_tick = now;
-        dt = std::clamp(dt, 0.f, 0.1f); // ignore alt-tab / breakpoint gaps
+        if (const uint32_t map_id = static_cast<uint32_t>(GW::Map::GetMapID()); map_id != ground_cache_map) {
+            ground_cache.clear(); // terrain altitudes are per-map; drop them when the map changes
+            ground_cache_map = map_id;
+        }
 
         const float cx = cam->look_at_target.x, cy = cam->look_at_target.y, cz = cam->look_at_target.z;
         float fwd[3] = {cx - cam->position.x, cy - cam->position.y, cz - cam->position.z};
@@ -401,7 +436,14 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         splash_tex_pp = GwDatTextureModule::LoadTextureFromFileId(kSplashFileId);
         textures_requested = true;
     }
-    SyncWeather(device, GW::CameraMgr::GetCamera());
+
+    // Throttle the physics + geometry rebuild to ~30 Hz; the cached vertex buffers are still drawn every
+    // frame below, so motion advances in 30 Hz steps (with the full elapsed dt) while rendering stays smooth.
+    if (!last_update || TIMER_DIFF(last_update) >= kUpdateIntervalMs) {
+        const float dt = last_update ? std::clamp(static_cast<float>(TIMER_DIFF(last_update)) / 1000.f, 0.f, 0.1f) : 0.f;
+        last_update = TIMER_INIT();
+        SyncWeather(device, GW::CameraMgr::GetCamera(), dt);
+    }
 
     IDirect3DTexture9* rain_tex = raindrop_tex_pp ? *raindrop_tex_pp : nullptr;
     IDirect3DTexture9* snow_tex = snowflake_tex_pp ? *snowflake_tex_pp : nullptr;
@@ -590,5 +632,6 @@ void WeatherModule::Terminate()
     particles.clear();
     raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
     textures_requested = false;
+    last_update = 0;
     ToolboxModule::Terminate();
 }
