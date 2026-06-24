@@ -270,8 +270,11 @@ namespace {
         const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
         const float base_x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
         const float base_y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
-        d.z = randomize ? top_z + frand(0.f, column_height + recycle_below) : top_z;
         d.ground_z = GroundZAt(base_x, base_y, cz + recycle_below);
+        // Spread the initial fill only through the visible column (top..ground). Seeding past the ground would
+        // make every below-ground drop recycle together on the first frame and then fall as a synchronised
+        // "lump" once per cycle - very visible at high drop counts.
+        d.z = randomize ? top_z + frand(0.f, std::max(0.f, d.ground_z - top_z)) : top_z;
         // Tilt the whole column about its landing point so wind angles the fall but it still lands on base_xy
         // (around the player), instead of shearing the impact zone downwind into a "trapeze". bias is the time
         // left until landing, negated: 0 at the ground, -t_fall at the top, so the drop starts upwind and
