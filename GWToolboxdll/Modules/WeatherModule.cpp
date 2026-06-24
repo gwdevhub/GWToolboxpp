@@ -128,6 +128,7 @@ namespace {
         float sound_timer = -1.f; // seconds until the next sound; <0 = not yet scheduled
     };
     std::vector<Particles> particles; // runtime state, parallel to conditions (not saved)
+    bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
 
     // Rain is GPU-instanced: one record per drop (centre + the two half-extent axes), expanded to a quad
     // by weather_instanced_vs. Snow/splash/settle keep the CPU-built indexed-quad path (per-instance UV
@@ -552,14 +553,17 @@ namespace {
         particles.resize(conditions.size());
         if (!cam) return;
 
+        bool reset = reset_requested; // explicit Reset() request
+        reset_requested = false;
         if (const uint32_t map_id = static_cast<uint32_t>(GW::Map::GetMapID()); map_id != ground_cache_map) {
             ground_cache.clear(); // terrain altitudes are per-map; drop them when the map changes
             ground_cache_map = map_id;
-            // Drop carried-over particles: their old-map positions and stale ground heights otherwise recycle
-            // in waves around the new camera, reforming a dense band. Cleared particles reseed fresh below.
+            reset = true; // old-map positions/ground heights would recycle in waves, reforming a dense band
+        }
+        // Drop carried-over particles so every active condition reseeds fresh (spread top..ground) below.
+        if (reset)
             for (auto& p : particles)
                 p = {};
-        }
 
         const float cx = cam->look_at_target.x, cy = cam->look_at_target.y, cz = cam->look_at_target.z;
         float fwd[3] = {cx - cam->position.x, cy - cam->position.y, cz - cam->position.z};
@@ -867,6 +871,11 @@ void WeatherModule::DrawSettings()
         if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
+}
+
+void WeatherModule::Reset()
+{
+    reset_requested = true; // consumed by SyncWeather on the next update (clears particles -> reseed fresh)
 }
 
 void WeatherModule::Initialize()

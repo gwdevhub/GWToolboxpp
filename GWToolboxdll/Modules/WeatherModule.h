@@ -29,6 +29,11 @@ public:
     void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
 
+    // Reset the live weather to an idle state and rebuild it: all drops, splashes and settled marks are
+    // cleared so any active condition reseeds fresh on the next update. Conditions/settings are untouched.
+    // Safe to call from any thread - the reset is deferred to the next render tick.
+    void Reset();
+
 private:
     static void RegisterSettings(ToolboxModule* module);
     static void OnSettingsLoaded();
