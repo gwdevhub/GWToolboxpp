@@ -23,6 +23,8 @@
 // (de)serialising the conditions list. A plain aggregate so reflection works without a glz::meta.
 namespace weather_module {
     constexpr int kTypeRain = 0; // weather type
+    constexpr int kTypeSnow = 1;
+    constexpr int kTypeCount = 2;
 
     struct WeatherCondition {
         std::string name = "Rain";
@@ -44,8 +46,9 @@ namespace weather_module {
 namespace {
     using namespace weather_module;
 
-    // Game weather assets in the .dat: a 32px raindrop, and a 128x128 splash sheet (4x4 keyframes).
+    // Game weather assets in the .dat: a 32px raindrop, a 32px snowflake, and a 128x128 splash sheet (4x4 keyframes).
     constexpr uint32_t kRaindropFileId = 0x1997d;
+    constexpr uint32_t kSnowflakeFileId = 0xca1a;
     constexpr uint32_t kSplashFileId = 0x1baa1;
     constexpr int kSplashCols = 4, kSplashRows = 4, kSplashFrames = kSplashCols * kSplashRows;
     constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
@@ -59,10 +62,25 @@ namespace {
     float recycle_below = 600.f;  // fallback recycle band when no terrain altitude is available
     float splash_lift = 5.f;      // raise splash base above the ground to avoid z-fighting
     int max_splashes = 4000;      // per-condition cap on live splashes
+    float snow_sway_speed = 1.5f;     // radians/sec of snow's lateral wobble
+    float snow_sway_amp = 120.f;      // gwinch/sec horizontal sway velocity (positional amplitude = amp / speed)
+    float snow_settle_chance = 0.15f; // fraction of landed flakes that leave a lingering patch
+    float snow_settle_size = 14.f;    // world size of a settled flake billboard
+    float snow_settle_duration = 4.f; // seconds a settled flake holds before it has fully faded
+    float snow_settle_fade = 0.4f;    // last fraction of the lifetime spent fading out
+    int max_settled = 4000;           // per-condition cap on settled flakes
 
     constexpr bool HasSplash(const int type)
     {
         return type == kTypeRain;
+    }
+    constexpr bool HasMeander(const int type)
+    {
+        return type == kTypeSnow;
+    }
+    constexpr bool HasSettle(const int type)
+    {
+        return type == kTypeSnow;
     }
 
     std::vector<WeatherCondition> DefaultConditions()
@@ -70,6 +88,7 @@ namespace {
         return {
             {"Heavy Rain", kTypeRain, false, 4000, 8.f, 2000.f, 1500.f, 0.f, 0.f, 1.00f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false},
             {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 1500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false},
+            {"Snow", kTypeSnow, false, 1500, 16.f, 400.f, 1500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -85,29 +104,33 @@ namespace {
         float u, v;
     };
     struct Raindrop {
-        float x, y, z, ground_z;
-    }; // falls in +z (GW up is -z); ground_z queried at seed time
+        float x, y, z, ground_z, sway_phase;
+    }; // falls in +z (GW up is -z); ground_z queried at seed time; sway_phase drives snow's lateral wander
     struct Splash {
         float x, y, z, age;
     };
+    struct Settle {
+        float x, y, z, age;
+    }; // a snowflake lying flat on the ground; ages out with an alpha fade
     struct Particles {
         std::vector<Raindrop> raindrops;
         std::vector<Splash> splashes;
+        std::vector<Settle> settled;
         float sound_timer = -1.f; // seconds until the next sound; <0 = not yet scheduled
     };
     std::vector<Particles> particles; // runtime state, parallel to conditions (not saved)
 
-    std::vector<WeatherVertex> rain_vertices, splash_vertices;
-    IDirect3DVertexBuffer9 *rain_vb = nullptr, *splash_vb = nullptr;
-    size_t rain_cap = 0, splash_cap = 0; // in vertices
+    std::vector<WeatherVertex> rain_vertices, snow_vertices, splash_vertices;
+    IDirect3DVertexBuffer9 *rain_vb = nullptr, *snow_vb = nullptr, *splash_vb = nullptr;
+    size_t rain_cap = 0, snow_cap = 0, splash_cap = 0; // in vertices
     IDirect3DVertexShader9* weather_vs = nullptr;
     IDirect3DPixelShader9* weather_ps = nullptr;
     IDirect3DVertexDeclaration9* weather_decl = nullptr;
-    IDirect3DTexture9 **raindrop_tex_pp = nullptr, **splash_tex_pp = nullptr; // stable slots from the texture cache
+    IDirect3DTexture9 **raindrop_tex_pp = nullptr, **snowflake_tex_pp = nullptr, **splash_tex_pp = nullptr; // stable slots from the texture cache
     bool textures_requested = false;
     DWORD last_tick = 0;
     uint32_t rng = 0x1234567u;
-    bool rain_ready = false, splash_ready = false;
+    bool rain_ready = false, snow_ready = false, splash_ready = false;
     int compositor_token = 0;
 
     float frand(const float lo, const float hi)
@@ -191,6 +214,7 @@ namespace {
         d.y = cy + frand(-c.spread_radius, c.spread_radius);
         d.z = randomize ? top_z + frand(0.f, column_height + recycle_below) : top_z;
         d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+        d.sway_phase = frand(0.f, 6.2831853f);
     }
 
     void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz)
@@ -201,12 +225,19 @@ namespace {
                 seed_drop(d, c, cx, cy, cz, true);
         }
         const bool splash = HasSplash(c.type);
+        const bool meander = HasMeander(c.type);
+        const bool settle = HasSettle(c.type);
         for (auto& d : p.raindrops) {
             d.z += c.fall_speed * dt;
-            d.x += c.wind_x * dt;
-            d.y += c.wind_y * dt;
+            // Snow drifts on an out-of-phase sin/cos wobble so each flake wanders rather than falling in a line.
+            const float sway_x = meander ? snow_sway_amp * std::sin(d.sway_phase) : 0.f;
+            const float sway_y = meander ? snow_sway_amp * std::cos(d.sway_phase) : 0.f;
+            d.sway_phase += snow_sway_speed * dt;
+            d.x += (c.wind_x + sway_x) * dt;
+            d.y += (c.wind_y + sway_y) * dt;
             if (d.z >= d.ground_z) {
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, d.ground_z, 0.f});
+                if (settle && frand(0.f, 1.f) < snow_settle_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, d.ground_z, 0.f});
                 seed_drop(d, c, cx, cy, cz, false);
             }
         }
@@ -214,6 +245,14 @@ namespace {
             if ((p.splashes[i].age += dt) >= splash_duration) {
                 p.splashes[i] = p.splashes.back();
                 p.splashes.pop_back();
+            }
+            else
+                ++i;
+        }
+        for (size_t i = 0; i < p.settled.size();) {
+            if ((p.settled[i].age += dt) >= snow_settle_duration) {
+                p.settled[i] = p.settled.back();
+                p.settled.pop_back();
             }
             else
                 ++i;
@@ -230,13 +269,13 @@ namespace {
         out.insert(out.end(), {c00, c10, c11, c00, c11, c01});
     }
 
-    void AppendRain(const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float up[3])
+    void AppendRain(const WeatherCondition& c, std::vector<WeatherVertex>& out, const std::vector<Raindrop>& drops, const float right[3], const float up[3])
     {
         const float h = c.drop_size * 0.5f;
         const float ax[3] = {right[0] * h, right[1] * h, right[2] * h};
         const float ay[3] = {up[0] * h, up[1] * h, up[2] * h};
         for (const auto& d : drops)
-            emit_quad(rain_vertices, d.x, d.y, d.z, ax, ay, rain_color, 0.f, 0.f, 1.f, 1.f);
+            emit_quad(out, d.x, d.y, d.z, ax, ay, rain_color, 0.f, 0.f, 1.f, 1.f);
     }
 
     // Vertical billboard standing on the ground: horizontal axis follows the camera so it faces the
@@ -251,6 +290,23 @@ namespace {
             const int f = std::clamp(static_cast<int>(sp.age / splash_duration * kSplashFrames), 0, kSplashFrames - 1);
             const float u0 = static_cast<float>(f % kSplashCols) * u_step, v0 = static_cast<float>(f / kSplashCols) * v_step;
             emit_quad(splash_vertices, sp.x, sp.y, sp.z - hs - splash_lift, ax, ay, rain_color, u0, v0, u0 + u_step, v0 + v_step);
+        }
+    }
+
+    // Flat quad lying on the ground (world XY plane) drawn with the snowflake texture, so it shares the
+    // snow vertex buffer/pass. Holds at full tint, then fades its alpha out over the tail of its lifetime.
+    void AppendSettled(const std::vector<Settle>& s)
+    {
+        const float hs = snow_settle_size * 0.5f;
+        const float ax[3] = {hs, 0.f, 0.f};
+        const float ay[3] = {0.f, hs, 0.f};
+        const DWORD base_a = (rain_color >> 24) & 0xFFu;
+        const float fade_span = std::clamp(snow_settle_fade, 0.01f, 1.f);
+        for (const auto& sp : s) {
+            const float life = snow_settle_duration > 0.f ? sp.age / snow_settle_duration : 1.f;
+            const float fade = life < 1.f - fade_span ? 1.f : std::max(0.f, (1.f - life) / fade_span);
+            const DWORD col = (rain_color & 0x00FFFFFFu) | (static_cast<DWORD>(static_cast<float>(base_a) * fade) << 24);
+            emit_quad(snow_vertices, sp.x, sp.y, sp.z - splash_lift, ax, ay, col, 0.f, 0.f, 1.f, 1.f);
         }
     }
 
@@ -292,8 +348,9 @@ namespace {
     // Advance every active condition and accumulate its geometry, then upload once per frame.
     void SyncWeather(IDirect3DDevice9* device, const GW::Camera* cam)
     {
-        rain_ready = splash_ready = false;
+        rain_ready = snow_ready = splash_ready = false;
         rain_vertices.clear();
+        snow_vertices.clear();
         splash_vertices.clear();
         particles.resize(conditions.size());
         if (!cam) return;
@@ -319,11 +376,13 @@ namespace {
                 continue;
             }
             UpdateCondition(conditions[i], particles[i], dt, cx, cy, cz);
-            AppendRain(conditions[i], particles[i].raindrops, right, up);
+            AppendRain(conditions[i], conditions[i].type == kTypeSnow ? snow_vertices : rain_vertices, particles[i].raindrops, right, up);
             AppendSplashes(particles[i].splashes, right);
+            AppendSettled(particles[i].settled);
             UpdateSounds(conditions[i], particles[i], dt, cx, cy, cz);
         }
         rain_ready = EnsureVb(device, rain_vb, rain_cap, rain_vertices);
+        snow_ready = EnsureVb(device, snow_vb, snow_cap, snow_vertices);
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
     }
 } // namespace
@@ -332,16 +391,19 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
 {
     if (!textures_requested) {
         raindrop_tex_pp = GwDatTextureModule::LoadTextureFromFileId(kRaindropFileId);
+        snowflake_tex_pp = GwDatTextureModule::LoadTextureFromFileId(kSnowflakeFileId);
         splash_tex_pp = GwDatTextureModule::LoadTextureFromFileId(kSplashFileId);
         textures_requested = true;
     }
     SyncWeather(device, GW::CameraMgr::GetCamera());
 
     IDirect3DTexture9* rain_tex = raindrop_tex_pp ? *raindrop_tex_pp : nullptr;
+    IDirect3DTexture9* snow_tex = snowflake_tex_pp ? *snowflake_tex_pp : nullptr;
     IDirect3DTexture9* splash_tex = splash_tex_pp ? *splash_tex_pp : nullptr;
     const bool have_rain = rain_ready && rain_tex && !rain_vertices.empty();
+    const bool have_snow = snow_ready && snow_tex && !snow_vertices.empty();
     const bool have_splash = splash_ready && splash_tex && !splash_vertices.empty();
-    if ((!have_rain && !have_splash) || !EnsureShaders(device)) return;
+    if ((!have_rain && !have_snow && !have_splash) || !EnsureShaders(device)) return;
 
     IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
@@ -355,6 +417,10 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         if (have_rain) {
             device->SetTexture(0, rain_tex);
             if (device->SetStreamSource(0, rain_vb, 0, sizeof(WeatherVertex)) == D3D_OK) device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, static_cast<UINT>(rain_vertices.size() / 3));
+        }
+        if (have_snow) {
+            device->SetTexture(0, snow_tex);
+            if (device->SetStreamSource(0, snow_vb, 0, sizeof(WeatherVertex)) == D3D_OK) device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, static_cast<UINT>(snow_vertices.size() / 3));
         }
         if (have_splash) {
             device->SetTexture(0, splash_tex);
@@ -376,6 +442,7 @@ void WeatherModule::OnSettingsLoaded()
 {
     render_max_distance = std::clamp(render_max_distance, 10.0f, kMaxRadius);
     for (auto& c : conditions) {
+        c.type = std::clamp(c.type, 0, kTypeCount - 1);
         c.drop_count = std::clamp(c.drop_count, 0, 20000);
         c.spread_radius = std::clamp(c.spread_radius, 0.f, kMaxRadius);
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
@@ -418,12 +485,14 @@ void WeatherModule::DrawSettings()
         ImGui::SameLine();
         if (ImGui::CollapsingHeader(c.name.empty() ? "(unnamed)" : c.name.c_str())) {
             ImGui::InputText("Name", c.name, 32);
+            const char* type_names[kTypeCount] = {"Rain", "Snow"};
+            ImGui::Combo("Type", &c.type, type_names, kTypeCount);
             ImGui::DragInt("Drop count", &c.drop_count, 25.f, 0, 20000, "%d", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
             ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
             ImGui::DragFloat("Spread radius", &c.spread_radius, 25.f, 0.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat2("Wind (x, y)", &c.wind_x, 10.f, -10000.f, 10000.f, "%.0f");
-            ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            if (HasSplash(c.type)) ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 
             ImGui::TextUnformatted("Sounds (file id, played at random while active)");
             int snd_remove = -1;
@@ -459,7 +528,7 @@ void WeatherModule::DrawSettings()
     ImGui::SameLine();
     if (ImGui::Button("Reset to defaults")) ImGui::OpenPopup("Reset weather conditions?");
     if (ImGui::BeginPopupModal("Reset weather conditions?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::TextUnformatted("Replace all conditions with the 2 defaults?");
+        ImGui::Text("Replace all conditions with the %d defaults?", static_cast<int>(DefaultConditions().size()));
         if (ImGui::Button("Reset")) {
             conditions = DefaultConditions();
             particles.clear();
@@ -494,7 +563,7 @@ void WeatherModule::SignalTerminate()
 void WeatherModule::Terminate()
 {
     SignalTerminate();
-    for (auto** p : {&rain_vb, &splash_vb})
+    for (auto** p : {&rain_vb, &snow_vb, &splash_vb})
         if (*p) {
             (*p)->Release();
             *p = nullptr;
@@ -511,9 +580,9 @@ void WeatherModule::Terminate()
         weather_decl->Release();
         weather_decl = nullptr;
     }
-    rain_cap = splash_cap = 0;
+    rain_cap = snow_cap = splash_cap = 0;
     particles.clear();
-    raindrop_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
+    raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
     textures_requested = false;
     ToolboxModule::Terminate();
 }
