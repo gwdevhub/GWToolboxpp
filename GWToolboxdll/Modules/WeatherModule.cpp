@@ -555,6 +555,10 @@ namespace {
         if (const uint32_t map_id = static_cast<uint32_t>(GW::Map::GetMapID()); map_id != ground_cache_map) {
             ground_cache.clear(); // terrain altitudes are per-map; drop them when the map changes
             ground_cache_map = map_id;
+            // Drop carried-over particles: their old-map positions and stale ground heights otherwise recycle
+            // in waves around the new camera, reforming a dense band. Cleared particles reseed fresh below.
+            for (auto& p : particles)
+                p = {};
         }
 
         const float cx = cam->look_at_target.x, cy = cam->look_at_target.y, cz = cam->look_at_target.z;
