@@ -326,9 +326,6 @@ void PartyDamage::WritePartyDamage()
 void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded*)
 {
     cond_tracker_count = 0;
-    for (auto& d : cond_damage) {
-        d = 0.0;
-    }
 
     switch (GW::Map::GetInstanceType()) {
         case GW::Constants::InstanceType::Outpost:
@@ -505,6 +502,9 @@ void PartyDamage::ResetDamage()
     first_packet_time = 0;
     last_packet_time = 0;
     accumulated_combat_time_ms = 0;
+    for (auto& d : cond_damage) {
+        d = 0.0;
+    }
 }
 
 void PartyDamage::WriteOwnDamage()
