@@ -352,6 +352,9 @@ void GameWorldRenderer::UpdateCompositorRegistration()
 // Invoked either by the compositor (under the UI) or by Render() (on top), never both in one frame.
 void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
 {
+    if (GW::UI::GetIsWorldMapShowing()) {
+        return;
+    }
     if (need_sync_markers) {
         // Sync on the render thread: creating vertex buffers needs the D3D device.
         SyncAllMarkers();
