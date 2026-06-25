@@ -325,6 +325,11 @@ void PartyDamage::WritePartyDamage()
 
 void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded*)
 {
+    cond_tracker_count = 0;
+    for (auto& d : cond_damage) {
+        d = 0.0;
+    }
+
     switch (GW::Map::GetInstanceType()) {
         case GW::Constants::InstanceType::Outpost:
             in_explorable = false;
@@ -338,11 +343,6 @@ void PartyDamage::MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::Map
         case GW::Constants::InstanceType::Loading:
         default:
             break;
-    }
-
-    cond_tracker_count = 0;
-    for (auto& d : cond_damage) {
-        d = 0.0;
     }
 }
 
