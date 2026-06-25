@@ -178,6 +178,7 @@ namespace {
         PriceCheckerModule::Instance(),
         ItemTooltipModule::Instance(),
         ResignLogModule::Instance(),
+        PathfindingWindow::Instance(),
         QuestModule::Instance(),
 #if defined(_DEBUG) || defined(GWTB_HARNESS)
         TestHarness::Instance(), // autonomous pathfinder test driver (dev builds only)
@@ -278,7 +279,6 @@ void ToolboxSettings::LoadModules(ToolboxIni* ini)
     GWToolbox::ToggleModule(DoorMonitorWindow::Instance());
     GWToolbox::ToggleModule(SkillListingWindow::Instance());
 #endif
-    GWToolbox::ToggleModule(PathfindingWindow::Instance());
     GWToolbox::ToggleModule(VendorFix::Instance());
     GWToolbox::ToggleModule(AudioSettings::Instance());
 

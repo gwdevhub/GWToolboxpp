@@ -50,6 +50,9 @@ public:
     bool CanTerminate() override;
     void Initialize() override;
     void Terminate() override;
+    // True while the module is initialised and not terminating. Lock-free; safe to poll every frame.
+    // Quest pathing checks this before touching the route API (the module is now optional).
+    static bool IsPathingEnabled();
     // False if still calculating current map
     static bool ReadyForPathing();
     // False if still calculating current map

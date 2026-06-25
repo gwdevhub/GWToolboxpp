@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <chrono>
+#include <unordered_map>
+
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Camera.h>
@@ -34,6 +37,27 @@ namespace {
 
     GameWorldRenderer::RenderableVectors renderables;
     std::mutex renderables_mutex{};
+
+    // Hash index over `renderables`, rebuilt per sync, so the three Sync* passes can reuse already-draped polys in
+    // O(1). Without it, matching each incoming line against every existing renderable is O(N^2) — seconds for the
+    // navmesh overlay's thousands of edges, which froze the compositor draw on every overlay rebuild.
+    std::unordered_multimap<uint64_t, size_t> renderable_index;
+
+    uint64_t PolyMatchKey(const GameWorldRenderer::GenericPolyRenderable& p)
+    {
+        uint64_t h = 1469598103934665603ull; // FNV-1a over the fields find_matching_poly compares
+        const auto mix = [&h](uint32_t v) { h = (h ^ v) * 1099511628211ull; };
+        mix(static_cast<uint32_t>(p.map_id));
+        mix(p.col);
+        mix(p.filled ? 1u : 0u);
+        mix(static_cast<uint32_t>(p.points.size()));
+        for (const auto& pt : p.points) {
+            mix(*reinterpret_cast<const uint32_t*>(&pt.x));
+            mix(*reinterpret_cast<const uint32_t*>(&pt.y));
+            mix(pt.zplane);
+        }
+        return h;
+    }
 
     // Token for our under-UI draw registered with the shared compositor (0 = not registered).
     int compositor_token = 0;
@@ -141,21 +165,24 @@ namespace {
 
     GameWorldRenderer::GenericPolyRenderable* find_matching_poly(const GameWorldRenderer::GenericPolyRenderable& poly_to_find)
     {
-        // Reuse an already-plotted poly to skip recomputing altitudes.
-        const auto found = std::ranges::find_if(renderables, [&poly_to_find](const GameWorldRenderer::GenericPolyRenderable& check) {
+        // Reuse an already-plotted poly (keeps its draped vertex buffer) via the prebuilt index — O(1) average
+        // instead of an O(N) scan, so a full sync is O(N) not O(N^2).
+        const auto range = renderable_index.equal_range(PolyMatchKey(poly_to_find));
+        for (auto it = range.first; it != range.second; ++it) {
+            auto& check = renderables[it->second];
             if (!(check.map_id == poly_to_find.map_id
                   && check.col == poly_to_find.col
                   && check.filled == poly_to_find.filled
                   && check.points.size() == poly_to_find.points.size()))
-                return false;
+                continue;
+            bool same = true;
             for (size_t i = 0; i < check.points.size(); i++) {
-                if (check.points[i] != poly_to_find.points[i])
-                    return false;
+                if (check.points[i] != poly_to_find.points[i]) { same = false; break; }
             }
-            return true;
-        });
-        if (found != renderables.end()) {
-            return &(*found);
+            if (same) {
+                renderable_index.erase(it); // consume: the caller moves-from it, so it can't be claimed twice
+                return &check;
+            }
         }
         return nullptr;
     }
@@ -373,9 +400,23 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
 
+        // Bound first-time terrain draping to a slice of the frame. AddPolyToDevice samples QueryAltitude (~once
+        // per plane) along every new line, so a burst of fresh lines — e.g. the navmesh overlay's thousands of
+        // edges — would freeze the game thread if draped at once. QueryAltitude can't run off-thread (it swaps the
+        // global map context), so spread it across frames under a wall-clock budget; the geometry fills in over a
+        // few frames and no single frame stalls. Already-draped renderables (cached vb) always draw — that's cheap.
+        const auto drape_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(2);
+        bool drape_budget_spent = false;
+
         auto draw_renderables = [&] {
             for (auto& renderable : renderables) {
-                if (renderable.map_id == map_id) {
+                if (renderable.map_id != map_id) continue;
+                if (renderable.vb == nullptr) { // first draw computes altitudes (heavy)
+                    if (drape_budget_spent) continue; // out of time this frame; drape it next frame
+                    renderable.Draw(device);
+                    if (std::chrono::steady_clock::now() >= drape_deadline) drape_budget_spent = true;
+                }
+                else {
                     renderable.Draw(device);
                 }
             }
@@ -514,9 +555,16 @@ void GameWorldRenderer::Terminate()
 void GameWorldRenderer::SyncAllMarkers()
 {
     renderables_mutex.lock();
+    // Index the current renderables so the three Sync* passes match in O(1); find_matching_poly reads it.
+    renderable_index.clear();
+    renderable_index.reserve(renderables.size());
+    for (size_t i = 0; i < renderables.size(); i++)
+        renderable_index.emplace(PolyMatchKey(renderables[i]), i);
+
     auto lines = SyncLines();
     auto polys = SyncPolys();
     auto markers = SyncMarkers();
+    renderable_index.clear();
 
     renderables.clear();
     renderables.reserve(lines.size() + polys.size() + markers.size());

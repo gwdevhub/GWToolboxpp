@@ -32,6 +32,10 @@
 namespace {
     QuestModule::Settings settings;
 
+    // Quest pathing depends on the (now optional) Pathfinding module; without it there's no route API to call.
+    // Lock-free flag (not GWToolbox::IsModuleEnabled) so this stays cheap on the per-frame Update path.
+    bool QuestPathingAvailable() { return PathfindingWindow::IsPathingEnabled(); }
+
     bool fetch_missing_quest_info_queued = false;
 
     std::vector<QuestModule::CustomMarkerChangedCallback> custom_marker_callbacks;
@@ -276,7 +280,7 @@ namespace {
         void Recalculate(const GW::GamePos& from)
         {
             if (IsCalculating()) return;
-            if (!PathfindingWindow::ReadyForPathing()) {
+            if (!QuestPathingAvailable() || !PathfindingWindow::ReadyForPathing()) {
                 calculating = 0;
                 calculated_at = 0;
                 return;
@@ -403,7 +407,7 @@ namespace {
     void RefreshQuestPath(GW::Constants::QuestID quest_id)
     {
         GW::GameThread::Enqueue([quest_id] {
-            if (!IsActiveQuestPath(quest_id)) {
+            if (!QuestPathingAvailable() || !IsActiveQuestPath(quest_id)) {
                 ClearCalculatedPath(quest_id);
                 return;
             }
@@ -750,16 +754,21 @@ void QuestModule::DrawSettingsInternal()
         "By default, Guild Wars changes your currently selected quest to the one you've just taken from an NPC.\nThis can be annoying if you don't realise your quest marker is now taking you somewhere different!\nTick this to make sure your current quest isn't changed when a new quest is added to your log."
     );
     ImGui::Checkbox("Double click a quest in the quest log window to travel to nearest outpost", &settings.double_click_to_travel_to_quest);
-    ImGui::Text("Draw path to quest marker on:");
-    bool recalc_quest_paths = false;
-    recalc_quest_paths |= ImGui::Checkbox("Terrain##terrianquestpath", &settings.draw_quest_path_on_terrain);
-    recalc_quest_paths |= ImGui::Checkbox("Minimap##minimapquestpath", &settings.draw_quest_path_on_minimap);
-    recalc_quest_paths |= ImGui::Checkbox("Mission Map##missionmapquestpath", &settings.draw_quest_path_on_mission_map);
-    ImGui::Checkbox("World Map##worldmapquestpath", &WorldMapWidget::ShowLinesOnWorldMap());
+    if (QuestPathingAvailable()) {
+        ImGui::Text("Draw path to quest marker on:");
+        bool recalc_quest_paths = false;
+        recalc_quest_paths |= ImGui::Checkbox("Terrain##terrianquestpath", &settings.draw_quest_path_on_terrain);
+        recalc_quest_paths |= ImGui::Checkbox("Minimap##minimapquestpath", &settings.draw_quest_path_on_minimap);
+        recalc_quest_paths |= ImGui::Checkbox("Mission Map##missionmapquestpath", &settings.draw_quest_path_on_mission_map);
+        ImGui::Checkbox("World Map##worldmapquestpath", &WorldMapWidget::ShowLinesOnWorldMap());
 #ifdef _DEBUG
-    recalc_quest_paths |= ImGui::Checkbox("Show paths to all quests##drawallquestpaths", &settings.show_paths_to_all_quests);
+        recalc_quest_paths |= ImGui::Checkbox("Show paths to all quests##drawallquestpaths", &settings.show_paths_to_all_quests);
 #endif
-    if (recalc_quest_paths) RefreshAllQuestPaths();
+        if (recalc_quest_paths) RefreshAllQuestPaths();
+    }
+    else {
+        ImGui::TextDisabled("Enable the Pathfinding module to draw a path to the quest marker.");
+    }
 }
 
 void QuestModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
@@ -881,6 +890,12 @@ void QuestModule::Update(float)
         });
     }
 
+
+    // Pathfinding can be toggled off at runtime; drop any routes we'd otherwise keep recomputing/drawing.
+    if (!QuestPathingAvailable()) {
+        if (!calculated_quest_paths.empty()) ClearCalculatedPaths();
+        return;
+    }
 
     const size_t size = calculated_quest_paths.size();
 check_paths:

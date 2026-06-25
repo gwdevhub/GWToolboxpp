@@ -154,6 +154,8 @@ public:
     void SaveMarkers();
     CustomLine* AddCustomLine(const GW::GamePos& from, const GW::GamePos& to, const char* _name = nullptr, bool draw_everywhere = false);
     bool RemoveCustomLine(CustomLine* line);
+    // Bulk removal in a single O(N) pass; removing lines one-by-one is O(N^2) (linear find + vector erase each).
+    void RemoveCustomLines(const std::vector<CustomLine*>& lines_to_remove);
 
     [[nodiscard]] const std::vector<CustomLine*>& GetLines() const { return lines; }
     [[nodiscard]] const std::vector<CustomPolygon>& GetPolys() const { return polygons; }

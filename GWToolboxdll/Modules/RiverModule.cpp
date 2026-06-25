@@ -108,6 +108,27 @@ namespace {
     bool mesh_dirty = true;
     uint32_t built_map_id = 0xFFFFFFFFu;
 
+    // Incremental ground-mesh build. Tessellating every trapezoid (one QueryAltitude per grid vertex) across a
+    // large explorable is far too heavy for one frame, and QueryAltitude isn't thread-safe (it swaps the global
+    // map context), so the work can't move to a worker. Instead we spread it across frames on the render thread
+    // under a per-frame query budget: the floor fills in over a handful of frames and the load never stalls.
+    constexpr int kQueriesPerFrame = 2000; // max QueryAltitude calls per frame while a build is in progress
+    struct GroundGridVert {
+        float x, y, z;
+    };
+    std::vector<GroundGridVert> ground_grid_scratch; // reused per trapezoid to avoid re-allocating each one
+    struct GroundBuild {
+        bool active = false;
+        uint32_t map_id = 0;
+        uint32_t n_planes = 0;
+        int num = 0;        // texture/bucket count captured at build start
+        uint32_t plane = 0; // cursor: plane being tessellated
+        uint32_t trap = 0;  // cursor: next trapezoid within the plane
+        size_t total = 0;   // emitted vertices so far (for the kMaxVertices cap)
+        std::vector<std::vector<LavaVertex>> buckets;
+    };
+    GroundBuild gbuild;
+
     IDirect3DVertexShader9* lava_vs = nullptr;
     IDirect3DPixelShader9* lava_ps = nullptr;
     IDirect3DVertexDeclaration9* lava_decl = nullptr;
@@ -235,71 +256,135 @@ namespace {
         }
     }
 
-    // Flood the entire walkable floor: tessellate every pathing trapezoid into a grid (fine enough for the
-    // wave displacement to read), drape each sub-vertex onto that trapezoid's own plane (one cheap altitude
-    // query), and tile the texture by world position so it's seamless across trapezoids.
-    void BuildGroundMesh(const GW::PathingMapArray* pm, const uint32_t n_planes, std::vector<std::vector<LavaVertex>>& buckets)
+    // Tessellate one pathing trapezoid into its texture bucket: grid it (fine enough for the wave displacement to
+    // read), drape each sub-vertex onto the trapezoid's own plane via an altitude query, and tile the texture by
+    // world position so it's seamless across trapezoids. Returns the number of QueryAltitude calls made, or -1 if
+    // the per-map geometry cap was hit (the caller should stop the build).
+    int EmitGroundTrapezoid(const GW::PathingTrapezoid& tz, const uint32_t p)
     {
-        const int num = static_cast<int>(buckets.size());
+        if (tz.YT == tz.YB) return 0; // degenerate connector
+
         const float cell = std::max(16.f, cell_size);
         const float tile = std::max(1.f, tile_length);
         const DWORD col = lava_tint;
 
-        struct GV {
-            float x, y, z;
-        };
-        std::vector<GV> grid;
-        size_t total = 0; // across all buckets, for the geometry cap
+        const float maxw = std::max(std::fabs(tz.XTR - tz.XTL), std::fabs(tz.XBR - tz.XBL));
+        const int rows = std::clamp(static_cast<int>(std::fabs(tz.YT - tz.YB) / cell), 1, 64);
+        const int cols = std::clamp(static_cast<int>(maxw / cell), 1, 64);
+        if (gbuild.total + static_cast<size_t>(rows) * cols * 6 > kMaxVertices) return -1;
 
-        auto push = [&](std::vector<LavaVertex>& out, const GV& g) { out.push_back({g.x, g.y, g.z - z_lift, col, g.x / tile, g.y / tile}); };
+        const float cx = (tz.XTL + tz.XTR + tz.XBL + tz.XBR) * 0.25f;
+        const float cy = (tz.YT + tz.YB) * 0.5f;
+        std::vector<LavaVertex>& out = gbuild.buckets[TexBucket(cx, cy, gbuild.num)]; // which texture this patch uses
 
-        for (uint32_t p = 0; p < n_planes; ++p) {
-            const GW::PathingMap& map = (*pm)[p];
-            for (uint32_t ti = 0; ti < map.trapezoid_count; ++ti) {
-                const GW::PathingTrapezoid& tz = map.trapezoids[ti];
-                if (tz.YT == tz.YB) continue; // degenerate connector
+        int queries = 0;
+        const float fallback = QueryAltAt(cx, cy, p); // centre altitude, for sub-verts with no data
+        ++queries;
 
-                const float maxw = std::max(std::fabs(tz.XTR - tz.XTL), std::fabs(tz.XBR - tz.XBL));
-                const int rows = std::clamp(static_cast<int>(std::fabs(tz.YT - tz.YB) / cell), 1, 64);
-                const int cols = std::clamp(static_cast<int>(maxw / cell), 1, 64);
-                if (total + static_cast<size_t>(rows) * cols * 6 > kMaxVertices) return;
-
-                const float cx = (tz.XTL + tz.XTR + tz.XBL + tz.XBR) * 0.25f;
-                const float cy = (tz.YT + tz.YB) * 0.5f;
-                std::vector<LavaVertex>& out = buckets[TexBucket(cx, cy, num)]; // which texture this patch uses
-                const float fallback = QueryAltAt(cx, cy, p); // centre altitude, for sub-verts with no data
-
-                grid.assign(static_cast<size_t>(rows + 1) * (cols + 1), {});
-                for (int j = 0; j <= rows; ++j) {
-                    const float v = static_cast<float>(j) / static_cast<float>(rows);
-                    const float y = tz.YB + (tz.YT - tz.YB) * v;
-                    const float xl = tz.XBL + (tz.XTL - tz.XBL) * v;
-                    const float xr = tz.XBR + (tz.XTR - tz.XBR) * v;
-                    for (int i = 0; i <= cols; ++i) {
-                        const float u = static_cast<float>(i) / static_cast<float>(cols);
-                        const float x = xl + (xr - xl) * u;
-                        float z = QueryAltAt(x, y, p);
-                        if (z == 0.f) z = fallback;
-                        grid[static_cast<size_t>(j) * (cols + 1) + i] = {x, y, z};
-                    }
-                }
-                for (int j = 0; j < rows; ++j) {
-                    for (int i = 0; i < cols; ++i) {
-                        const GV& a = grid[static_cast<size_t>(j) * (cols + 1) + i];
-                        const GV& b = grid[static_cast<size_t>(j) * (cols + 1) + i + 1];
-                        const GV& c = grid[static_cast<size_t>(j + 1) * (cols + 1) + i];
-                        const GV& d = grid[static_cast<size_t>(j + 1) * (cols + 1) + i + 1];
-                        push(out, a);
-                        push(out, b);
-                        push(out, d);
-                        push(out, a);
-                        push(out, d);
-                        push(out, c);
-                        total += 6;
-                    }
-                }
+        std::vector<GroundGridVert>& grid = ground_grid_scratch;
+        grid.assign(static_cast<size_t>(rows + 1) * (cols + 1), {});
+        for (int j = 0; j <= rows; ++j) {
+            const float v = static_cast<float>(j) / static_cast<float>(rows);
+            const float y = tz.YB + (tz.YT - tz.YB) * v;
+            const float xl = tz.XBL + (tz.XTL - tz.XBL) * v;
+            const float xr = tz.XBR + (tz.XTR - tz.XBR) * v;
+            for (int i = 0; i <= cols; ++i) {
+                const float u = static_cast<float>(i) / static_cast<float>(cols);
+                const float x = xl + (xr - xl) * u;
+                float z = QueryAltAt(x, y, p);
+                ++queries;
+                if (z == 0.f) z = fallback;
+                grid[static_cast<size_t>(j) * (cols + 1) + i] = {x, y, z};
             }
         }
+        auto push = [&](const GroundGridVert& g) { out.push_back({g.x, g.y, g.z - z_lift, col, g.x / tile, g.y / tile}); };
+        for (int j = 0; j < rows; ++j) {
+            for (int i = 0; i < cols; ++i) {
+                const GroundGridVert& a = grid[static_cast<size_t>(j) * (cols + 1) + i];
+                const GroundGridVert& b = grid[static_cast<size_t>(j) * (cols + 1) + i + 1];
+                const GroundGridVert& c = grid[static_cast<size_t>(j + 1) * (cols + 1) + i];
+                const GroundGridVert& d = grid[static_cast<size_t>(j + 1) * (cols + 1) + i + 1];
+                push(a);
+                push(b);
+                push(d);
+                push(a);
+                push(d);
+                push(c);
+                gbuild.total += 6;
+            }
+        }
+        return queries;
+    }
+
+    // Assemble the finished per-texture buckets into the draw buffers and mark the map built.
+    void FinalizeGroundBuild()
+    {
+        mesh_vertices.clear();
+        tex_ranges.clear();
+        const int n = std::min(gbuild.num, static_cast<int>(textures.size())); // textures may have changed mid-build
+        for (int i = 0; i < n; ++i) {
+            if (gbuild.buckets[i].empty()) continue;
+            tex_ranges.push_back({textures[i], mesh_vertices.size(), gbuild.buckets[i].size()});
+            mesh_vertices.insert(mesh_vertices.end(), gbuild.buckets[i].begin(), gbuild.buckets[i].end());
+        }
+        Log::Info("[lava] build map=%u ground=1 verts=%zu planes=%u textures=%d ranges=%zu",
+            gbuild.map_id, mesh_vertices.size(), gbuild.n_planes, gbuild.num, tex_ranges.size());
+        built_map_id = gbuild.map_id;
+        gbuild = {}; // active=false, drop buckets
+    }
+
+    // Start (or restart) an incremental ground build for map_id. Clears the currently-drawn mesh so the previous
+    // map's lava stops showing immediately; the new floor fills in over the next few frames via StepGroundBuild.
+    void BeginGroundBuild(const uint32_t map_id)
+    {
+        const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
+        const uint32_t n_planes = pm ? static_cast<uint32_t>(pm->size()) : 0;
+        const int num = static_cast<int>(textures.size());
+        mesh_vertices.clear();
+        tex_ranges.clear();
+        built_map_id = 0xFFFFFFFFu;
+        gbuild = {};
+        if (!n_planes || num == 0) {
+            mesh_dirty = true; // pathing map not loaded yet (still loading); retry next frame
+            return;
+        }
+        gbuild.active = true;
+        gbuild.map_id = map_id;
+        gbuild.n_planes = n_planes;
+        gbuild.num = num;
+        gbuild.buckets.assign(num, {});
+        mesh_dirty = false;
+    }
+
+    // Advance the in-progress ground build within this frame's query budget; never blocks the render thread.
+    void StepGroundBuild()
+    {
+        if (!gbuild.active) return;
+        const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
+        if (!pm || static_cast<uint32_t>(pm->size()) != gbuild.n_planes) {
+            // Map geometry changed under us (zoning) — abandon; DrawInWorld's map-change check restarts the build.
+            gbuild = {};
+            built_map_id = 0xFFFFFFFFu;
+            mesh_dirty = true;
+            return;
+        }
+        int queries = 0;
+        while (gbuild.plane < gbuild.n_planes) {
+            const GW::PathingMap& map = (*pm)[gbuild.plane];
+            while (gbuild.trap < map.trapezoid_count) {
+                const int q = EmitGroundTrapezoid(map.trapezoids[gbuild.trap], gbuild.plane);
+                ++gbuild.trap;
+                if (q < 0) { // hit the geometry cap; finish with what we have
+                    FinalizeGroundBuild();
+                    return;
+                }
+                queries += q;
+                if (queries >= kQueriesPerFrame) return; // budget spent; resume next frame
+            }
+            ++gbuild.plane;
+            gbuild.trap = 0;
+        }
+        FinalizeGroundBuild(); // all planes tessellated
     }
 
     void BuildMesh(const uint32_t map_id)
@@ -323,12 +408,11 @@ namespace {
         }
 
         // One vertex bucket per selected texture; concatenated into mesh_vertices with a TexRange each.
+        // The cover-entire-ground flood is built incrementally (see BeginGroundBuild); here we only lay down the
+        // authored rivers, which are few enough to build in a single frame.
         std::vector<std::vector<LavaVertex>> buckets(num);
         size_t river_count = 0;
-        if (cover_entire_ground) {
-            BuildGroundMesh(pm, n_planes, buckets);
-        }
-        else if (const auto it = rivers_by_map.find(map_id); it != rivers_by_map.end()) {
+        if (const auto it = rivers_by_map.find(map_id); it != rivers_by_map.end()) {
             river_count = it->second.size();
             for (size_t r = 0; r < it->second.size(); ++r)
                 BuildRiverMesh(it->second[r], n_planes, buckets[r % static_cast<size_t>(num)]);
@@ -338,8 +422,8 @@ namespace {
             tex_ranges.push_back({textures[i], mesh_vertices.size(), buckets[i].size()});
             mesh_vertices.insert(mesh_vertices.end(), buckets[i].begin(), buckets[i].end());
         }
-        Log::Info("[lava] build map=%u ground=%d rivers=%zu verts=%zu planes=%u textures=%d ranges=%zu",
-            map_id, (int)cover_entire_ground, river_count, mesh_vertices.size(), n_planes, num, tex_ranges.size());
+        Log::Info("[lava] build map=%u rivers=%zu verts=%zu planes=%u textures=%d ranges=%zu",
+            map_id, river_count, mesh_vertices.size(), n_planes, num, tex_ranges.size());
     }
 
     bool EnsureVb(IDirect3DDevice9* device)
@@ -383,7 +467,17 @@ void RiverModule::DrawInWorld(IDirect3DDevice9* device)
     if (textures.empty()) return; // nothing selected -> nothing to draw
 
     const uint32_t cur_map = static_cast<uint32_t>(GW::Map::GetMapID());
-    if (cur_map != built_map_id || mesh_dirty) BuildMesh(cur_map);
+    if (cover_entire_ground) {
+        // Whole-floor flood is too heavy for one frame and QueryAltitude can't run off-thread — build it
+        // incrementally across frames under a query budget so entering a map never stalls the render thread.
+        if ((cur_map != built_map_id || mesh_dirty) && (!gbuild.active || gbuild.map_id != cur_map))
+            BeginGroundBuild(cur_map);
+        if (gbuild.active)
+            StepGroundBuild();
+    }
+    else if (cur_map != built_map_id || mesh_dirty) {
+        BuildMesh(cur_map); // authored rivers only: cheap enough to build in one frame
+    }
 
     if (mesh_vertices.empty() || tex_ranges.empty()) return;
     mesh_ready = EnsureVb(device);

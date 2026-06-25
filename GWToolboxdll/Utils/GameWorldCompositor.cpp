@@ -55,7 +55,10 @@ namespace {
     {
         for (auto& entry : callbacks) {
             if (entry.second) {
+                const clock_t ct0 = clock();
                 entry.second(device);
+                const clock_t ct1 = clock();
+                if (ct1 - ct0 > 60) Log::Log("[hitch] compositor callback token=%d took %ld ms", entry.first, (long)(ct1 - ct0)); // [perf-diag]
             }
         }
     }

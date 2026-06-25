@@ -669,20 +669,15 @@ namespace {
         force_exploration_update = true;
     }
 
-    void RebuildMapBorder()
-    {
-        auto data = ComputeMapGrid(SnapshotPathingMap(), cached_px_to_game);
-        ApplyMapGrid(data);
-    }
-
     bool grid_rebuild_pending = false;
 
-    // Async rebuild for mid-instance changes (gates, teleports): the heavy
-    // rasterization and vertex building run on the worker thread; only the
-    // BFS snapshot and the final swap touch the game thread.
-    void QueueRebuildMapBorder()
+    // Async rebuild: the heavy rasterization and vertex building run on the worker thread; only the BFS snapshot
+    // and the final swap touch the game thread. Used both on map change and for mid-instance changes (gates,
+    // teleports). `force` bypasses the in-flight guard so a map change always rebuilds even if a prior build for
+    // the old map is still running (its stale result is discarded by the map_id guard in the apply step).
+    void QueueRebuildMapBorder(bool force = false)
     {
-        if (grid_rebuild_pending) return;
+        if (grid_rebuild_pending && !force) return;
         grid_rebuild_pending = true;
         const auto snapshot = std::make_shared<std::vector<TrapezoidSnapshot>>(SnapshotPathingMap());
         const float px_to_game = cached_px_to_game;
@@ -1049,7 +1044,7 @@ void VanquishMapOverlayWidget::Update(float)
                 border_map_id = map_id;
                 border_instance_type = instance_type;
                 cached_blocked_planes.clear();
-                RebuildMapBorder(); // sync: loading screen hides the hitch
+                QueueRebuildMapBorder(true); // off-thread: the synchronous rebuild here froze the map load
             }
             else {
                 BuildStaticMapGeometry(); // zoom changed, rebuild with new thickness

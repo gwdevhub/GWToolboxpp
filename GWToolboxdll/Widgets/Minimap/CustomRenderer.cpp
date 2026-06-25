@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <unordered_set>
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/Array.h>
@@ -271,6 +273,21 @@ bool CustomRenderer::RemoveCustomLine(CustomLine* line)
         return true;
     }
     return false;
+}
+
+void CustomRenderer::RemoveCustomLines(const std::vector<CustomLine*>& lines_to_remove)
+{
+    if (lines_to_remove.empty()) return;
+    const std::unordered_set<CustomLine*> dead(lines_to_remove.begin(), lines_to_remove.end());
+    const size_t before = lines.size();
+    std::erase_if(lines, [&dead](CustomLine* l) {
+        if (dead.contains(l)) {
+            delete l;
+            return true;
+        }
+        return false;
+    });
+    if (lines.size() != before) markers_changed = true;
 }
 
 CustomRenderer::CustomLine* CustomRenderer::AddCustomLine(const GW::GamePos& from, const GW::GamePos& to, const char* _name, bool draw_everywhere)

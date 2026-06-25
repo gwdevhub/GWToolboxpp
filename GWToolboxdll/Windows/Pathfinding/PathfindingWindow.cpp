@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <atomic>
 #include <list>
 #include <mutex>
 #include <queue>
@@ -134,7 +135,7 @@ namespace {
     enum class PortalDistanceMode { Euclidean = 0, Trapezoid = 1, Walk = 2 };
     PortalDistanceMode portal_distance_mode = PortalDistanceMode::Trapezoid;
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map); // forward decl (early)
-    Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id);                       // forward decl (early)
+    Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id, bool allow_load = true); // forward decl (early)
     void BuildMapGraph();                                                                 // forward decl (early)
 
     // Walk-cost cache keyed by (owner_map, pos, other_map); cleared per FindMapRoute call so prior queries can't poison later ones.
@@ -334,10 +335,9 @@ namespace {
     void ProcessDeferredRemovals()
     {
         if (pending_line_removals.empty()) return;
-        auto& cr = Minimap::Instance().custom_renderer;
-        for (auto* line : pending_line_removals) {
-            cr.RemoveCustomLine(line);
-        }
+        // Single O(N) pass: per-line RemoveCustomLine is O(N) each (linear find + vector erase), so removing the
+        // navmesh overlay's thousands of lines one-by-one was O(N^2) and a big chunk of the map-load hitch.
+        Minimap::Instance().custom_renderer.RemoveCustomLines(pending_line_removals);
         pending_line_removals.clear();
     }
 
@@ -423,14 +423,16 @@ namespace {
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map);            // forward decl
 
     // Load a map from DAT and create a MilePath for it. Returns the MilePath (may still be processing).
-    Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id)
+    // allow_load=false makes this game-thread-safe: it returns a resident MilePath if present, else nullptr,
+    // and never touches the DAT. Only pass true off the game thread (the readFromDat below blocks).
+    Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id, bool allow_load)
     {
         if (IsInterestingMapForCacheTrace(map_id)) {
             PATH_LOG_INFO("[CacheTrace] LoadMapFromDAT(%d) entered", (int)map_id);
         }
         const uint32_t fid = GetMapFileId(map_id);
         if (!fid) {
-            PATH_LOG_ERROR("LoadMapFromDAT: no file_id for map %d (visit the map once to cache it)", (int)map_id);
+            if (allow_load) PATH_LOG_ERROR("LoadMapFromDAT: no file_id for map %d (visit the map once to cache it)", (int)map_id);
             return nullptr;
         }
 
@@ -441,6 +443,9 @@ namespace {
                 return mp;
             }
         }
+
+        // Not resident: the DAT read + parse below blocks the caller. Refuse on the game thread.
+        if (!allow_load) return nullptr;
 
         PATH_LOG_INFO("LoadMapFromDAT: map=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
 
@@ -501,21 +506,26 @@ namespace {
 
     // Fallback when no file_id is known: build PathingMapData from the live map context
     // and hand it to the standard MilePath ctor (eager build — it's the player's map).
-    Pathing::MilePath* LoadMapFromContext(GW::Constants::MapID map_id)
+    // allow_load=false is game-thread-safe: resident lookup only, never runs the deep-copy parse below.
+    Pathing::MilePath* LoadMapFromContext(GW::Constants::MapID map_id, bool allow_load = true)
     {
         const auto mc = GW::GetMapContext();
         if (!(mc && mc->path && mc->path->staticData)) return nullptr;
 
+        // pathNodeSize == pathNodes.size() (LoadFromMapContext sets it directly), so the cache key is
+        // available without the full deep-copy — check residency before paying the parse cost.
+        const auto hash = static_cast<uint64_t>(map_id)
+            | (static_cast<uint64_t>(mc->path->pathNodes.size()) << 32);
+        if (const auto it = mile_paths_by_coords.find(hash); it != mile_paths_by_coords.end()) {
+            TouchLru(hash);
+            return it->second;
+        }
+
+        // Not resident: LoadFromMapContext below is a full deep-copy + pointer-fixup. Refuse on the game thread.
+        if (!allow_load) return nullptr;
+
         auto map_data = Pathing::PathingMapData();
         if (!Pathing::LoadFromMapContext(mc, 0, &map_data)) return nullptr;
-
-        auto hash = static_cast<uint64_t>(map_id);
-        hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
-
-        if (mile_paths_by_coords.contains(hash)) {
-            TouchLru(hash);
-            return mile_paths_by_coords[hash];
-        }
 
         CachedMapInfo info;
         info.map_id = map_id;
@@ -534,16 +544,49 @@ namespace {
         return m;
     }
 
-    // Returns milepath pointer for the current map, nullptr if we're not in a valid state
-    Pathing::MilePath* GetMilepathForCurrentMap()
+    // Returns milepath pointer for the current map, nullptr if we're not in a valid state.
+    // allow_load=false is game-thread-safe (resident lookup only); true blocks on the DAT and must run off the game thread.
+    Pathing::MilePath* GetMilepathForCurrentMap(bool allow_load = true)
     {
         // todo: maybe use bool GetIsMapReady() from other modules?
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
         const auto map_id = GW::Map::GetMapID();
         if (map_id == GW::Constants::MapID::None) return nullptr;
         // Prefer DAT (shared with coordinate bounds); fall back to map context only with no file_id.
-        if (GetMapFileId(map_id)) return LoadMapFromDAT(map_id);
-        return LoadMapFromContext(map_id);
+        if (GetMapFileId(map_id)) return LoadMapFromDAT(map_id, allow_load);
+        return LoadMapFromContext(map_id, allow_load);
+    }
+
+    // Background prewarm so the game thread never blocks on a DAT read. ReadyForPathing/overlay probes call
+    // GetResidentMilepathOrPrewarm(); if the current map isn't resident yet, a single worker task loads it.
+    std::atomic<bool> prewarm_in_flight = false;
+
+    void PrewarmCurrentMap()
+    {
+        bool expected = false;
+        if (!prewarm_in_flight.compare_exchange_strong(expected, true)) return; // one load in flight at a time
+        Resources::EnqueueWorkerTask([] {
+            std::lock_guard route_lock(route_mutex); // same serialization as a route build; see route_mutex
+            RouteJobScope job_scope;
+            GetMilepathForCurrentMap(true); // the blocking DAT read happens here, on the worker
+            prewarm_in_flight = false;
+        });
+    }
+
+    // Game-thread-safe current-map MilePath accessor: returns it only if already resident, otherwise kicks off
+    // the background load and returns nullptr. Never reads the DAT or parses map context on the caller's thread.
+    Pathing::MilePath* GetResidentMilepathOrPrewarm()
+    {
+        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
+        {
+            // Try-lock so we never block the game thread; a held lock means a worker is mid-build → treat as not-ready.
+            std::unique_lock route_lock(route_mutex, std::try_to_lock);
+            if (route_lock.owns_lock()) {
+                if (const auto m = GetMilepathForCurrentMap(false)) return m;
+            }
+        }
+        PrewarmCurrentMap();
+        return nullptr;
     }
 
     std::vector<CustomRenderer::CustomLine*> navmesh_edge_lines; // viz-only navmesh poly-edge overlay
@@ -684,6 +727,7 @@ namespace {
 
     volatile bool pending_terminate = false;
     volatile bool pending_worker_task = false;
+    std::atomic<bool> pathing_enabled = false; // true between Initialize() and SignalTerminate(); polled by QuestModule
 
     GW::HookEntry gw_ui_hookentry;
 
@@ -2443,13 +2487,16 @@ namespace {
 
 } // namespace
 
+bool PathfindingWindow::IsPathingEnabled()
+{
+    return pathing_enabled;
+}
+
 bool PathfindingWindow::ReadyForPathing()
 {
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return false;
-    // GetMilepathForCurrentMap mutates the route caches; try-lock so we report not-ready instead of blocking the game thread on a build.
-    std::unique_lock route_lock(route_mutex, std::try_to_lock);
-    if (!route_lock.owns_lock()) return false;
-    const auto m = GetMilepathForCurrentMap();
+    // Never load the DAT here: probe the resident cache and, if missing, kick a background load. Returns false
+    // until that load lands, so callers (e.g. the quest path) simply retry next frame — the game thread never stalls.
+    const auto m = GetResidentMilepathOrPrewarm();
     return m && m->ready();
 }
 
@@ -2473,7 +2520,7 @@ static void UpdateNavmeshOverlay()
     if (me) last_pos = me->pos;
 
     DeferRemoveLines(navmesh_edge_lines);
-    auto* mp = GetMilepathForCurrentMap();
+    auto* mp = GetResidentMilepathOrPrewarm(); // Draw runs on the game thread — must not block on a DAT read
     if (!mp || !mp->ready()) return;
     auto* nav = mp->GetNavMeshForDebug();
     if (!nav || !nav->IsReady()) {
@@ -2556,6 +2603,7 @@ bool PathfindingWindow::WndProc(UINT, WPARAM, LPARAM)
 void PathfindingWindow::SignalTerminate()
 {
     ToolboxModule::SignalTerminate();
+    pathing_enabled = false;
     pending_terminate = true;
     GW::UI::RemoveUIMessageCallback(&gw_ui_hookentry);
     ClearBoundsLines();
@@ -2984,6 +3032,8 @@ bool PathfindingWindow::IsRouteBreak(const GW::Vec2f& p)
 void PathfindingWindow::Initialize()
 {
     ToolboxModule::Initialize();
+    pending_terminate = false; // module is now optional; a prior disable left this set, which would abort all routing
+    pathing_enabled = true;
     BuildMapFileHashLookup();
     RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
 
