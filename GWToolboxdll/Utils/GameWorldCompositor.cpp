@@ -10,6 +10,7 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <GWToolbox.h>
 #include <Utils/GameWorldCompositor.h>
 
 // The shared world shaders live with the original in-game renderer; both consumers use them.
@@ -53,12 +54,17 @@ namespace {
 
     void RunCallbacks(IDirect3DDevice9* device)
     {
+        const bool profiling = GWToolbox::IsProfilingEnabled(); // [perf-diag] gate on the profiling toggle
         for (auto& entry : callbacks) {
-            if (entry.second) {
+            if (!entry.second) continue;
+            if (profiling) {
                 const clock_t ct0 = clock();
                 entry.second(device);
                 const clock_t ct1 = clock();
-                if (ct1 - ct0 > 60) Log::Log("[hitch] compositor callback token=%d took %ld ms", entry.first, (long)(ct1 - ct0)); // [perf-diag]
+                if (ct1 - ct0 > 60) Log::Log("[hitch] compositor callback token=%d took %ld ms", entry.first, (long)(ct1 - ct0));
+            }
+            else {
+                entry.second(device);
             }
         }
     }

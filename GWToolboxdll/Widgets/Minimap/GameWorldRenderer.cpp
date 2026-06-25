@@ -149,6 +149,115 @@ namespace {
         return best;
     }
 
+    // ===== Batched navmesh-overlay line buffer =====
+    // The navmesh debug overlay can emit tens of thousands of edges; funnelling them through per-line CustomLines
+    // made every map-load rebuild O(N^2) (sync/find/remove) and re-draped them on every move. Instead we keep ONE
+    // line-list buffer, terrain-drape it incrementally on the game thread (QueryAltitude can't run off-thread), and
+    // draw it in a single call. Touched only on the render thread (DrawInWorld + Set/ClearNavmeshLines) — no mutex.
+    struct NavmeshBatch {
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;     // map the LIVE verts belong to
+        GW::Constants::MapID pending_map = GW::Constants::MapID::None; // map `lines`/`staging` are being built for
+        std::vector<GameWorldRenderer::BatchedLine> lines; // source segments (game coords + colour) being draped
+        std::vector<D3DVertex> verts;                      // LIVE draped line-list vertices (drawn)
+        std::vector<D3DVertex> staging;                    // next set, draped incrementally; swapped in when done
+        size_t build_cursor = 0;                           // next source line to drape into staging
+        bool building = false;                             // a staging build is in progress
+        IDirect3DVertexBuffer9* vb = nullptr;
+        size_t vb_cap = 0;                                 // capacity in vertices
+        bool vb_dirty = false;                             // verts changed since last upload
+    };
+    NavmeshBatch navmesh_batch;
+
+    // Full mesh (not draped) for the 2D top-down M-key world map. WorldMapWidget redraws these flat each frame.
+    std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
+    GW::Constants::MapID navmesh_worldmap_map = GW::Constants::MapID::None;
+
+    // Drape a per-frame, wall-clock-bounded slice into `staging`; the LIVE `verts` keep drawing until the new set is
+    // complete, then we swap (double-buffer) so a rebuild-on-move never blanks the overlay (no flicker).
+    void StepNavmeshBatchBuild()
+    {
+        auto& b = navmesh_batch;
+        if (!b.building) return;
+        const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
+        const uint32_t num_planes = pm ? static_cast<uint32_t>(pm->size()) : 0;
+        if (!num_planes) return; // pathing map not ready yet; retry next frame
+        constexpr float sample_spacing = 50.f; // sample altitude every ~50gw so the edge hugs the floor, not a chord
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(2);
+        for (; b.build_cursor < b.lines.size(); ++b.build_cursor) {
+            if (std::chrono::steady_clock::now() >= deadline) break; // budget spent; resume next frame
+            const auto& ln = b.lines[b.build_cursor];
+            const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
+            const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / sample_spacing));
+            // Drape by continuity: each sample follows whichever surface the previous one walked (ramp/bridge/floor),
+            // and we emit a sub-segment per step so the edge follows the terrain instead of a straight chord. Seed
+            // from the edge's OWN plane (ln.a carries its zplane), not the highest surface — else an edge under a
+            // bridge gets pulled up onto the deck.
+            GW::GamePos seed = ln.a;
+            float prev = GW::Map::QueryAltitude(&seed);
+            if (prev == 0.f) prev = ClosestSurfaceZ(ln.a.x, ln.a.y, num_planes, -1.0e9f);
+            if (prev == ALTITUDE_UNKNOWN) prev = 0.f;
+            float px = ln.a.x, py = ln.a.y, pz = prev;
+            for (int s = 1; s <= steps; ++s) {
+                const float t = static_cast<float>(s) / static_cast<float>(steps);
+                const float x = ln.a.x + dx * t, y = ln.a.y + dy * t;
+                float z = ClosestSurfaceZ(x, y, num_planes, prev);
+                if (z == ALTITUDE_UNKNOWN) z = prev;
+                else prev = z;
+                b.staging.push_back({px, py, pz, ln.color}); // LINELIST: each consecutive pair is one sub-segment
+                b.staging.push_back({x, y, z, ln.color});
+                px = x; py = y; pz = z;
+            }
+        }
+        if (b.build_cursor >= b.lines.size()) {
+            // Staging complete: swap it in as the live, drawn set (atomic — no blank frame).
+            b.verts.swap(b.staging);
+            b.staging.clear();
+            b.map_id = b.pending_map;
+            b.building = false;
+            b.vb_dirty = true;
+        }
+    }
+
+    // (Re)create and upload the batch VB when it grew or its contents changed.
+    bool EnsureNavmeshBatchVb(IDirect3DDevice9* device)
+    {
+        auto& b = navmesh_batch;
+        const size_t need = b.verts.size();
+        if (need < 2) return false;
+        if (!b.vb || b.vb_cap < need) {
+            if (b.vb) { b.vb->Release(); b.vb = nullptr; }
+            const size_t cap = need + need / 2; // headroom so the growing build doesn't reallocate every frame
+            if (device->CreateVertexBuffer(static_cast<UINT>(cap * sizeof(D3DVertex)), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &b.vb, nullptr) != D3D_OK) {
+                b.vb_cap = 0;
+                return false;
+            }
+            b.vb_cap = cap;
+            b.vb_dirty = true;
+        }
+        if (b.vb_dirty) {
+            void* mem = nullptr;
+            // flags=0, not D3DLOCK_DISCARD: DISCARD is only valid on D3DUSAGE_DYNAMIC buffers, and this is MANAGED
+            // (mirrors RiverModule's managed VB). The batch is rebuilt rarely (once per map), so no dynamic rename.
+            if (b.vb->Lock(0, static_cast<UINT>(need * sizeof(D3DVertex)), &mem, 0) != D3D_OK || !mem) return false;
+            memcpy(mem, b.verts.data(), need * sizeof(D3DVertex));
+            b.vb->Unlock();
+            b.vb_dirty = false;
+        }
+        return true;
+    }
+
+    // Draw the whole navmesh as one line list (called inside the shared world pipeline, with the compass stencil).
+    void DrawNavmeshBatch(IDirect3DDevice9* device, GW::Constants::MapID map_id)
+    {
+        auto& b = navmesh_batch;
+        if (b.map_id != map_id || b.verts.size() < 2) return;
+        if (!EnsureNavmeshBatchVb(device)) return;
+        const BOOL dotted_off[1] = {FALSE};
+        device->SetPixelShaderConstantB(0, dotted_off, 1);
+        if (device->SetStreamSource(0, b.vb, 0, sizeof(D3DVertex)) != D3D_OK) return;
+        device->DrawPrimitive(D3DPT_LINELIST, 0, static_cast<UINT>(b.verts.size() / 2));
+    }
+
     std::vector<GW::GamePos> circular_points_from_marker(const GW::GamePos& marker, const float size)
     {
         std::vector<GW::GamePos> points{};
@@ -386,7 +495,8 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         // Sync on the render thread: creating vertex buffers needs the D3D device.
         SyncAllMarkers();
     }
-    if (renderables.empty()) {
+    StepNavmeshBatchBuild(); // advance the incremental, terrain-draped navmesh line buffer (bounded per frame)
+    if (renderables.empty() && navmesh_batch.verts.empty()) {
         return;
     }
 
@@ -420,6 +530,7 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
                     renderable.Draw(device);
                 }
             }
+            DrawNavmeshBatch(device, map_id); // batched navmesh overlay: one draw call, same pipeline + compass stencil
         };
 
         // GW draws the compass disc (world pass) and its frame (later HUD pass) separately, so the overlay lands between and bleeds across the minimap; stencil the disc out.
@@ -542,6 +653,42 @@ void GameWorldRenderer::TriggerSyncAllMarkers()
     need_sync_markers = true;
 }
 
+void GameWorldRenderer::SetNavmeshLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines)
+{
+    // Render-thread only (called from PathfindingWindow::Draw, same thread as DrawInWorld) — no lock needed.
+    // Start a NEW build into staging; the live `verts` keep drawing until it completes, so the swap is seamless.
+    auto& b = navmesh_batch;
+    b.pending_map = map_id;
+    b.lines = std::move(lines);
+    b.staging.clear();
+    b.build_cursor = 0;
+    b.building = true;
+}
+
+void GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines)
+{
+    navmesh_worldmap_lines = std::move(lines);
+    navmesh_worldmap_map = map_id;
+}
+
+void GameWorldRenderer::ClearNavmeshLines()
+{
+    navmesh_batch.lines.clear();
+    navmesh_batch.staging.clear();
+    navmesh_batch.verts.clear();
+    navmesh_batch.build_cursor = 0;
+    navmesh_batch.building = false;
+    navmesh_batch.map_id = GW::Constants::MapID::None;
+    navmesh_batch.pending_map = GW::Constants::MapID::None;
+    navmesh_batch.vb_dirty = true;
+    navmesh_worldmap_lines.clear();
+    navmesh_worldmap_map = GW::Constants::MapID::None;
+}
+
+const std::vector<GameWorldRenderer::BatchedLine>& GameWorldRenderer::GetNavmeshWorldMapLines() { return navmesh_worldmap_lines; }
+GW::Constants::MapID GameWorldRenderer::GetNavmeshWorldMapMapId() { return navmesh_worldmap_map; }
+float GameWorldRenderer::GetRenderMaxDistance() { return render_max_distance; }
+
 void GameWorldRenderer::Terminate()
 {
     if (compositor_token) {
@@ -549,6 +696,12 @@ void GameWorldRenderer::Terminate()
         compositor_token = 0;
     }
     renderables.clear();
+    if (navmesh_batch.vb) {
+        navmesh_batch.vb->Release();
+        navmesh_batch.vb = nullptr;
+    }
+    navmesh_batch.lines.clear();
+    navmesh_batch.verts.clear();
     ToolboxModule::Terminate();
 }
 

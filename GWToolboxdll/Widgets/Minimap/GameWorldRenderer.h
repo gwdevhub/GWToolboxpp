@@ -97,6 +97,23 @@ public:
     static void Render(IDirect3DDevice9* device);
     static void TriggerSyncAllMarkers();
 
+    // Batched in-world line overlay: one incrementally terrain-draped vertex buffer drawn in a single call.
+    // Used by the navmesh debug overlay instead of thousands of per-line CustomLines (which made each map-load
+    // rebuild O(N^2) through the CustomLine sync/drape/remove path). Pass the full edge set once per map.
+    struct BatchedLine {
+        GW::GamePos a, b;
+        unsigned int color;
+    };
+    // Near subset (range-culled): terrain-draped and drawn in-world as one batched VB.
+    static void SetNavmeshLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines);
+    // Full mesh for the 2D top-down M-key world map: not draped, redrawn flat by WorldMapWidget (game coords -> map).
+    static void SetNavmeshWorldMapLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines);
+    static void ClearNavmeshLines();
+    static const std::vector<BatchedLine>& GetNavmeshWorldMapLines();
+    static GW::Constants::MapID GetNavmeshWorldMapMapId();
+    // Max in-world render distance (game units) — the shared "Maximum render distance" for terrain overlays.
+    static float GetRenderMaxDistance();
+
 private:
     static void RegisterSettings(ToolboxModule* module);
     static void OnSettingsLoaded();

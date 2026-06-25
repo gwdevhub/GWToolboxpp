@@ -33,7 +33,6 @@ public:
         uint32_t navmesh_wall_color_hi = 0xC0FF30FF;       // wall edge on planes != 0 (magenta)
         uint32_t navmesh_connection_color = 0x6030FF30;    // connection edge on plane 0 (green)
         uint32_t navmesh_connection_color_hi = 0x6030C0FF; // connection edge on planes != 0 (cyan)
-        float    navmesh_overlay_range = 4500.f;           // game units around the player
         float    path_recalc_distance = 100.f;              // game units the player must move before the quest path recomputes
     };
 

@@ -443,9 +443,10 @@ namespace {
         const clock_t t_init1 = clock();
         m.LoadSettings(*GWToolbox::GetSettingsDoc(), GWToolbox::OpenSettingsFile());
         const clock_t t_init2 = clock();
-        // [perf-diag] surface slow module startup; remove once the explorable-load stall is pinned.
-        Log::Log("ToggleTBModule: Initialised %s !! (Initialize %ld ms, LoadSettings %ld ms)", m.Name(),
-                 (long)(t_init1 - t_init0), (long)(t_init2 - t_init1));
+        Log::Log("ToggleTBModule: Initialised %s !!", m.Name());
+        if (profiling_enabled) // [perf-diag] slow-module-startup timing, gated on the profiling toggle
+            Log::Log("[perf] %s startup: Initialize %ld ms, LoadSettings %ld ms", m.Name(),
+                     (long)(t_init1 - t_init0), (long)(t_init2 - t_init1));
         ReorderModules(vec);
         return true; // Added successfully
     }
@@ -1084,12 +1085,10 @@ void GWToolbox::Update(GW::HookStatus*)
             m->Update(delta_f);
             QueryPerformanceCounter(&t1);
             m->last_update_time_us_ = QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
+            if (m->last_update_time_us_ > 60000) Log::Log("[hitch] %s::Update took %lld us", m->Name(), (long long)m->last_update_time_us_); // [perf-diag]
         }
         else {
-            const clock_t mt0 = clock();
             m->Update(delta_f);
-            const clock_t mt1 = clock();
-            if (mt1 - mt0 > 60) Log::Log("[hitch] %s::Update took %ld ms", m->Name(), (long)(mt1 - mt0)); // [perf-diag]
         }
     }
 
@@ -1194,22 +1193,25 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
                 uielement->Draw(device);
                 QueryPerformanceCounter(&t1);
                 uielement->last_draw_time_us_ = QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
+                if (uielement->last_draw_time_us_ > 60000) Log::Log("[hitch] %s::Draw took %lld us", uielement->Name(), (long long)uielement->last_draw_time_us_); // [perf-diag]
             }
             else {
-                const clock_t dt0 = clock();
                 uielement->Draw(device);
-                const clock_t dt1 = clock();
-                if (dt1 - dt0 > 60) Log::Log("[hitch] %s::Draw took %ld ms", uielement->Name(), (long)(dt1 - dt0)); // [perf-diag]
             }
         }
 
         // Non-UI modules have no window of their own but may still paint an overlay
         // this frame (e.g. Texmod's recording banner).
         for (size_t i = 0; i < other_modules_enabled.size(); i++) {
-            const clock_t dt0 = clock();
-            other_modules_enabled[i]->Draw(device);
-            const clock_t dt1 = clock();
-            if (dt1 - dt0 > 60) Log::Log("[hitch] %s::Draw took %ld ms", other_modules_enabled[i]->Name(), (long)(dt1 - dt0)); // [perf-diag]
+            if (profiling_enabled) { // [perf-diag]
+                const clock_t dt0 = clock();
+                other_modules_enabled[i]->Draw(device);
+                const clock_t dt1 = clock();
+                if (dt1 - dt0 > 60) Log::Log("[hitch] %s::Draw took %ld ms", other_modules_enabled[i]->Name(), (long)(dt1 - dt0));
+            }
+            else {
+                other_modules_enabled[i]->Draw(device);
+            }
         }
 
 #ifdef _DEBUG

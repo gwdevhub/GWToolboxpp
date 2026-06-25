@@ -36,6 +36,7 @@
 #include <Modules/ToolboxSettings.h>
 #include <Utils/ArenaNetFileParser.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/Pathing.h>
 #include <Windows/Pathfinding/NavMesh.h> // viz-only navmesh for the debug overlay
@@ -2506,20 +2507,29 @@ void LoadAndShowMapsAtWorldPos(const GW::Vec2f& wm_pos); // forward decl
 // deferred line-removal queue each frame, else cleared route lines stay on screen. WndProc is a no-op vtable stub.
 static void UpdateNavmeshOverlay()
 {
-    static GW::GamePos last_pos{};
     static bool was_on = false;
+    static GW::Constants::MapID built_map = GW::Constants::MapID::None;
+    static GW::GamePos last_build_pos{};
+    static std::vector<Pathing::NavMesh::DebugEdge> cached_edges; // whole-map edges, extracted once per map
     if (!settings.draw_navmesh_overlay) {
-        if (was_on) { DeferRemoveLines(navmesh_edge_lines); was_on = false; }
+        if (was_on) {
+            GameWorldRenderer::ClearNavmeshLines();
+            DeferRemoveLines(navmesh_edge_lines); // drop any lines left by the old per-line path
+            cached_edges.clear();
+            built_map = GW::Constants::MapID::None;
+            was_on = false;
+        }
         return;
     }
-    const auto me = GW::Agents::GetControlledCharacter();
-    float moved2 = 1e30f;
-    if (me) { const float dx = me->pos.x - last_pos.x, dy = me->pos.y - last_pos.y; moved2 = dx * dx + dy * dy; }
-    if (was_on && !navmesh_edge_lines.empty() && moved2 < 600.f * 600.f) return;
     was_on = true;
-    if (me) last_pos = me->pos;
 
-    DeferRemoveLines(navmesh_edge_lines);
+    const auto cur_map = GW::Map::GetMapID();
+    const auto me = GW::Agents::GetControlledCharacter();
+    const bool map_changed = cur_map != built_map;
+    float moved2 = 1e30f;
+    if (me && !map_changed) { const float dx = me->pos.x - last_build_pos.x, dy = me->pos.y - last_build_pos.y; moved2 = dx * dx + dy * dy; }
+    if (!map_changed && moved2 < 600.f * 600.f) return; // near set still fresh; nothing to rebuild
+
     auto* mp = GetResidentMilepathOrPrewarm(); // Draw runs on the game thread — must not block on a DAT read
     if (!mp || !mp->ready()) return;
     auto* nav = mp->GetNavMeshForDebug();
@@ -2531,25 +2541,36 @@ static void UpdateNavmeshOverlay()
         }
         return;
     }
-    std::vector<Pathing::NavMesh::DebugEdge> edges;
-    nav->DebugExtractEdges(edges);
-    const float range2 = settings.navmesh_overlay_range * settings.navmesh_overlay_range;
-    const auto cur_map = GW::Map::GetMapID();
-    auto& cr = Minimap::Instance().custom_renderer;
-    for (const auto& e : edges) {
-        if (me) { const float dx = me->pos.x - e.a.x, dy = me->pos.y - e.a.y; if (dx * dx + dy * dy > range2) continue; }
-        auto* line = cr.AddCustomLine(e.a, e.b);
-        line->map = cur_map;
+
+    auto edge_color = [](const Pathing::NavMesh::DebugEdge& e) -> unsigned int {
         const bool hi = e.a.zplane != 0; // edges off the ground plane get the "hi" colour
-        line->color = e.wall ? (hi ? settings.navmesh_wall_color_hi : settings.navmesh_wall_color)
-                             : (hi ? settings.navmesh_connection_color_hi : settings.navmesh_connection_color);
-        line->draw_on_terrain = true;
-        line->draw_on_minimap = false;
-        line->draw_on_mission_map = false;
-        line->created_by_toolbox = true;
-        line->dotted = false; // solid edges so the mesh reads clearly
-        navmesh_edge_lines.push_back(line);
+        return e.wall ? (hi ? settings.navmesh_wall_color_hi : settings.navmesh_wall_color)
+                      : (hi ? settings.navmesh_connection_color_hi : settings.navmesh_connection_color);
+    };
+
+    if (map_changed) {
+        cached_edges.clear();
+        nav->DebugExtractEdges(cached_edges); // extract the whole mesh once; re-cull cheaply on movement
+        // Hand the FULL mesh to the 2D world map (it's flat + cheap there, no draping / no per-move re-cull needed).
+        std::vector<GameWorldRenderer::BatchedLine> full;
+        full.reserve(cached_edges.size());
+        for (const auto& e : cached_edges) full.push_back({e.a, e.b, edge_color(e)});
+        GameWorldRenderer::SetNavmeshWorldMapLines(cur_map, std::move(full));
     }
+
+    // In-world: cull to the shared in-world render distance around the player so the batch stays small (drapes fast,
+    // tracks the player) — handed to the renderer as ONE double-buffered batched VB (one draw call, no flicker).
+    const float draw_range = GameWorldRenderer::GetRenderMaxDistance();
+    const float range2 = draw_range * draw_range;
+    std::vector<GameWorldRenderer::BatchedLine> lines;
+    lines.reserve(cached_edges.size());
+    for (const auto& e : cached_edges) {
+        if (me) { const float dx = me->pos.x - e.a.x, dy = me->pos.y - e.a.y; if (dx * dx + dy * dy > range2) continue; }
+        lines.push_back({e.a, e.b, edge_color(e)});
+    }
+    GameWorldRenderer::SetNavmeshLines(cur_map, std::move(lines));
+    built_map = cur_map;
+    if (me) last_build_pos = me->pos;
 }
 
 float PathfindingWindow::GetPathRecalcDistance() { return settings.path_recalc_distance; }
@@ -2579,7 +2600,7 @@ void PathfindingWindow::DrawSettingsInternal()
         color_edit("Wall colour (other planes)", &settings.navmesh_wall_color_hi);
         color_edit("Connection colour (ground plane)", &settings.navmesh_connection_color);
         color_edit("Connection colour (other planes)", &settings.navmesh_connection_color_hi);
-        ImGui::DragFloat("Draw range", &settings.navmesh_overlay_range, 100.f, 500.f, 20000.f, "%.0f");
+        ImGui::TextDisabled("Draw range follows In-game rendering's \"Maximum render distance\".");
     }
 }
 

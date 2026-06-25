@@ -27,6 +27,7 @@
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 
 #include <Widgets/WorldMapWidget.h>
 #include <Widgets/WorldMapWidget_Constants.h>
@@ -1343,6 +1344,21 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             line_end.y = (line_end.y - world_map_context->top_left.y) * ui_scale.y + viewport_offset.y;
 
             draw_list->AddLine(line_start, line_end, line->color);
+        }
+
+        // Navmesh debug overlay: it's a batched in-world VB now (not CustomLines), so redraw its source segments
+        // here in 2D — the world map is a top-down view. Empty unless the navmesh overlay is on. Matches the
+        // pre-batch behaviour where the navmesh rode along as custom lines on the world map.
+        if (GameWorldRenderer::GetNavmeshWorldMapMapId() == map_id) {
+            for (const auto& e : GameWorldRenderer::GetNavmeshWorldMapLines()) {
+                if (!GamePosToWorldMap(e.a, line_start)) continue;
+                if (!GamePosToWorldMap(e.b, line_end)) continue;
+                line_start.x = (line_start.x - world_map_context->top_left.x) * ui_scale.x + viewport_offset.x;
+                line_start.y = (line_start.y - world_map_context->top_left.y) * ui_scale.y + viewport_offset.y;
+                line_end.x = (line_end.x - world_map_context->top_left.x) * ui_scale.x + viewport_offset.x;
+                line_end.y = (line_end.y - world_map_context->top_left.y) * ui_scale.y + viewport_offset.y;
+                draw_list->AddLine({line_start.x, line_start.y}, {line_end.x, line_end.y}, e.color);
+            }
         }
     }
     if (settings.show_any_elite_capture_locations) {
