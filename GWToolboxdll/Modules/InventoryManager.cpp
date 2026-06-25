@@ -39,7 +39,6 @@
 #include <GWCA/GameEntities/Frame.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
-#include <Utils/UIFrameLookup.h>
 
 namespace {
     InventoryManager& Instance()

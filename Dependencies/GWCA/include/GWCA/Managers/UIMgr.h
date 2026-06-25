@@ -17,6 +17,10 @@ namespace GW {
 	struct Effect;
 	struct Vec2f;
 
+	struct TextLabelFrame;
+	struct MultiLineTextLabelFrame;
+	struct ButtonFrame;
+
 	enum class CallTargetType : uint32_t;
 	enum class WorldActionId : uint32_t;
 	typedef uint32_t AgentID;
@@ -765,6 +769,12 @@ namespace GW {
 		GWCA_API GW::Constants::Language GetTextLanguage();
 
 		GWCA_API bool ButtonClick(Frame* btn_frame);
+
+		GWCA_API GW::MultiLineTextLabelFrame* GetMultilineTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
+
+		GWCA_API GW::ButtonFrame* GetButtonFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
+
+		GWCA_API GW::TextLabelFrame* GetTextFrameByEncodedString(const wchar_t* encoded_string, const bool partial_match = true);
 
 		GWCA_API uint32_t CreateUIComponent(uint32_t parent_frame_id, uint32_t component_flags, uint32_t tab_index, UIInteractionCallback event_callback, void* wparam, const wchar_t* component_label);
 
