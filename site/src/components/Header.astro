@@ -90,11 +90,24 @@ const isActive = (href: string) =>
         <div
           class="absolute top-[calc(100%+0.25rem)] right-0 z-50 w-56 overflow-hidden rounded-lg border border-(--color-border-glass) bg-(--color-card) shadow-xl shadow-black/40"
         >
+          <button
+            type="button"
+            data-help-open
+            class="flex w-full items-start gap-3 px-3 py-2.5 text-left text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg)"
+          >
+            <svg viewBox="0 0 16 16" class="mt-0.5 h-4 w-4 shrink-0 fill-current text-(--color-accent)" aria-hidden="true">
+              <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM7.25 11.5a.75.75 0 1 1 1.5 0 .75.75 0 0 1-1.5 0zM8 4a2.25 2.25 0 0 0-2.13 1.5.75.75 0 0 0 1.42.5A.75.75 0 0 1 8 5.5a.75.75 0 0 1 .26 1.45c-.5.18-1.01.6-1.01 1.3v.5a.75.75 0 0 0 1.5 0c0-.1.06-.16.02-.15A2.25 2.25 0 0 0 8 4z" />
+            </svg>
+            <span>
+              <span class="block font-medium text-(--color-fg)">I need help</span>
+              <span class="block text-xs text-(--color-fg-meta)">Toolbox won't run or crashes</span>
+            </span>
+          </button>
           <a
             href={siteConfig.issueUrls.bug}
             target="_blank"
             rel="noopener"
-            class="flex items-start gap-3 px-3 py-2.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg)"
+            class="flex items-start gap-3 border-t border-(--color-border-glass-subtle) px-3 py-2.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg)"
           >
             <svg viewBox="0 0 16 16" class="mt-0.5 h-4 w-4 shrink-0 fill-current text-(--color-accent)" aria-hidden="true">
               <path d="M4.72 1.97a.75.75 0 0 1 1.06 0L7 3.19a4 4 0 0 1 2 0l1.22-1.22a.75.75 0 1 1 1.06 1.06l-1.13 1.13A4 4 0 0 1 12 7.5h2.25a.75.75 0 0 1 0 1.5H12v.5c0 .55-.11 1.06-.31 1.52l1.84 1.84a.75.75 0 1 1-1.06 1.06l-1.62-1.62A4 4 0 0 1 8 13.5a4 4 0 0 1-2.85-1.2l-1.62 1.62a.75.75 0 1 1-1.06-1.06l1.84-1.84A4 4 0 0 1 4 9.5V9H1.75a.75.75 0 0 1 0-1.5H4A4 4 0 0 1 4.85 4.16L3.72 3.03a.75.75 0 0 1 0-1.06z" />
@@ -138,6 +151,54 @@ const isActive = (href: string) =>
   </div>
 </header>
 
+<dialog
+  id="help-dialog"
+  class="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-(--color-border-glass) bg-(--color-card) p-0 text-(--color-fg) shadow-2xl shadow-black/50 backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+>
+  <div class="p-5">
+    <h2 class="font-display text-lg font-semibold text-(--color-fg)">Need a hand?</h2>
+    <p class="mt-2 text-sm text-(--color-fg-sub)">
+      Most problems — Toolbox not launching, crashing, or being blocked by security
+      software — are already covered in our guides. Please have a look at these first:
+    </p>
+    <div class="mt-4 flex flex-col gap-2">
+      <a
+        href="/docs/troubleshooting/"
+        class="flex items-center gap-2 rounded-lg border border-(--color-border-glass) bg-(--color-glass) px-3 py-2.5 text-sm font-medium text-(--color-fg) transition-colors hover:bg-(--color-glass-hover)"
+      >
+        Troubleshooting guide
+      </a>
+      <a
+        href="/docs/faq/"
+        class="flex items-center gap-2 rounded-lg border border-(--color-border-glass) bg-(--color-glass) px-3 py-2.5 text-sm font-medium text-(--color-fg) transition-colors hover:bg-(--color-glass-hover)"
+      >
+        FAQ
+      </a>
+    </div>
+    <p class="mt-4 text-sm text-(--color-fg-sub)">
+      Still stuck after working through those steps? Open an issue and include your exact
+      error message and Toolbox version so the team can help.
+    </p>
+    <div class="mt-4 flex items-center justify-end gap-2">
+      <button
+        type="button"
+        data-help-close
+        class="rounded px-3 py-1.5 text-sm text-(--color-fg-sub) transition-colors hover:bg-(--color-glass) hover:text-(--color-fg)"
+      >
+        Close
+      </button>
+      <a
+        href={siteConfig.issueUrls.bug}
+        target="_blank"
+        rel="noopener"
+        class="rounded bg-(--color-accent) px-3 py-1.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
+      >
+        Open a GitHub issue
+      </a>
+    </div>
+  </div>
+</dialog>
+
 <script>
   // Close the Feedback <details> dropdown when clicking outside it.
   // Plain DOM listener — no React needed for a tiny menu.
@@ -146,5 +207,22 @@ const isActive = (href: string) =>
     document.querySelectorAll<HTMLDetailsElement>('details.feedback[open]').forEach((d) => {
       if (target && !d.contains(target)) d.removeAttribute('open');
     });
+  });
+
+  // "I need help" opens a dialog steering users to the docs before they file an issue.
+  const helpDialog = document.getElementById('help-dialog') as HTMLDialogElement | null;
+  document.querySelectorAll('[data-help-open]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document
+        .querySelectorAll<HTMLDetailsElement>('details.feedback[open]')
+        .forEach((d) => d.removeAttribute('open'));
+      helpDialog?.showModal();
+    });
+  });
+  helpDialog?.querySelectorAll('[data-help-close]').forEach((btn) => {
+    btn.addEventListener('click', () => helpDialog.close());
+  });
+  helpDialog?.addEventListener('click', (event) => {
+    if (event.target === helpDialog) helpDialog.close();
   });
 </script>
