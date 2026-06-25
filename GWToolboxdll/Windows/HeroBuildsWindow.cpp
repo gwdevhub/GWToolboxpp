@@ -653,8 +653,9 @@ void HeroBuildsWindow::LoadFromFile()
     }
     else {
         // Legacy herobuilds.ini parser; only used when herobuilds.json doesn't exist yet.
+        // The ini lived in configs/default (or computer root pre-configs/default), not GetLegacySettingFile's path.
         ToolboxIni inifile(false, false, false);
-        inifile.LoadFile(Resources::GetLegacySettingFile(INI_FILENAME).c_str());
+        inifile.LoadFile(Resources::GetSettingFileOrLegacy(INI_FILENAME).c_str());
 
         TNamesDepend entries;
         inifile.GetAllSections(entries);
