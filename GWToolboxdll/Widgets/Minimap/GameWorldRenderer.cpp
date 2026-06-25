@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <chrono>
 #include <unordered_map>
 
 #include <GWCA/Context/MapContext.h>
@@ -12,6 +11,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Defines.h>
+#include <Timer.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -38,9 +38,7 @@ namespace {
     GameWorldRenderer::RenderableVectors renderables;
     std::mutex renderables_mutex{};
 
-    // Hash index over `renderables`, rebuilt per sync, so the three Sync* passes can reuse already-draped polys in
-    // O(1). Without it, matching each incoming line against every existing renderable is O(N^2) — seconds for the
-    // navmesh overlay's thousands of edges, which froze the compositor draw on every overlay rebuild.
+    // Hash index over `renderables`, rebuilt per sync, so the Sync* passes reuse already-draped polys in O(1) instead of O(N^2) matching (which froze the compositor draw on the navmesh overlay's thousands of edges).
     std::unordered_multimap<uint64_t, size_t> renderable_index;
 
     uint64_t PolyMatchKey(const GameWorldRenderer::GenericPolyRenderable& p)
@@ -150,10 +148,7 @@ namespace {
     }
 
     // ===== Batched navmesh-overlay line buffer =====
-    // The navmesh debug overlay can emit tens of thousands of edges; funnelling them through per-line CustomLines
-    // made every map-load rebuild O(N^2) (sync/find/remove) and re-draped them on every move. Instead we keep ONE
-    // line-list buffer, terrain-drape it incrementally on the game thread (QueryAltitude can't run off-thread), and
-    // draw it in a single call. Touched only on the render thread (DrawInWorld + Set/ClearNavmeshLines) — no mutex.
+    // One line-list buffer for the navmesh overlay's tens of thousands of edges (per-line CustomLines were O(N^2) per map-load and re-draped on every move): drape it incrementally on the game thread, draw in a single call, render-thread only (no mutex).
     struct NavmeshBatch {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;     // map the LIVE verts belong to
         GW::Constants::MapID pending_map = GW::Constants::MapID::None; // map `lines`/`staging` are being built for
@@ -172,8 +167,7 @@ namespace {
     std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
     GW::Constants::MapID navmesh_worldmap_map = GW::Constants::MapID::None;
 
-    // Drape a per-frame, wall-clock-bounded slice into `staging`; the LIVE `verts` keep drawing until the new set is
-    // complete, then we swap (double-buffer) so a rebuild-on-move never blanks the overlay (no flicker).
+    // Drape a per-frame, wall-clock-bounded slice into `staging`; LIVE `verts` keep drawing until complete, then swap (double-buffer) so a rebuild never blanks the overlay.
     void StepNavmeshBatchBuild()
     {
         auto& b = navmesh_batch;
@@ -182,16 +176,13 @@ namespace {
         const uint32_t num_planes = pm ? static_cast<uint32_t>(pm->size()) : 0;
         if (!num_planes) return; // pathing map not ready yet; retry next frame
         constexpr float sample_spacing = 50.f; // sample altitude every ~50gw so the edge hugs the floor, not a chord
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(2);
+        const auto budget_timer = TIMER_INIT();
         for (; b.build_cursor < b.lines.size(); ++b.build_cursor) {
-            if (std::chrono::steady_clock::now() >= deadline) break; // budget spent; resume next frame
+            if (TIMER_DIFF(budget_timer) >= 2) break; // budget spent; resume next frame
             const auto& ln = b.lines[b.build_cursor];
             const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
             const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / sample_spacing));
-            // Drape by continuity: each sample follows whichever surface the previous one walked (ramp/bridge/floor),
-            // and we emit a sub-segment per step so the edge follows the terrain instead of a straight chord. Seed
-            // from the edge's OWN plane (ln.a carries its zplane), not the highest surface — else an edge under a
-            // bridge gets pulled up onto the deck.
+            // Drape by continuity: each sample follows the previous one's surface (ramp/bridge/floor), emitting a sub-segment per step; seed from the edge's OWN plane (ln.a's zplane) so an edge under a bridge isn't pulled onto the deck.
             GW::GamePos seed = ln.a;
             float prev = GW::Map::QueryAltitude(&seed);
             if (prev == 0.f) prev = ClosestSurfaceZ(ln.a.x, ln.a.y, num_planes, -1.0e9f);
@@ -236,8 +227,7 @@ namespace {
         }
         if (b.vb_dirty) {
             void* mem = nullptr;
-            // flags=0, not D3DLOCK_DISCARD: DISCARD is only valid on D3DUSAGE_DYNAMIC buffers, and this is MANAGED
-            // (mirrors RiverModule's managed VB). The batch is rebuilt rarely (once per map), so no dynamic rename.
+            // flags=0, not D3DLOCK_DISCARD: DISCARD needs D3DUSAGE_DYNAMIC but this is MANAGED (like RiverModule's VB), and the batch is rebuilt rarely (once per map).
             if (b.vb->Lock(0, static_cast<UINT>(need * sizeof(D3DVertex)), &mem, 0) != D3D_OK || !mem) return false;
             memcpy(mem, b.verts.data(), need * sizeof(D3DVertex));
             b.vb->Unlock();
@@ -274,8 +264,7 @@ namespace {
 
     GameWorldRenderer::GenericPolyRenderable* find_matching_poly(const GameWorldRenderer::GenericPolyRenderable& poly_to_find)
     {
-        // Reuse an already-plotted poly (keeps its draped vertex buffer) via the prebuilt index — O(1) average
-        // instead of an O(N) scan, so a full sync is O(N) not O(N^2).
+        // Reuse an already-plotted poly (keeps its draped vertex buffer) via the prebuilt index — O(1) average instead of an O(N) scan, so a full sync is O(N) not O(N^2).
         const auto range = renderable_index.equal_range(PolyMatchKey(poly_to_find));
         for (auto it = range.first; it != range.second; ++it) {
             auto& check = renderables[it->second];
@@ -510,12 +499,8 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
 
-        // Bound first-time terrain draping to a slice of the frame. AddPolyToDevice samples QueryAltitude (~once
-        // per plane) along every new line, so a burst of fresh lines — e.g. the navmesh overlay's thousands of
-        // edges — would freeze the game thread if draped at once. QueryAltitude can't run off-thread (it swaps the
-        // global map context), so spread it across frames under a wall-clock budget; the geometry fills in over a
-        // few frames and no single frame stalls. Already-draped renderables (cached vb) always draw — that's cheap.
-        const auto drape_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(2);
+        // Bound first-time terrain draping to a frame slice: AddPolyToDevice samples QueryAltitude per new line, so a burst of fresh edges would freeze the game thread; QueryAltitude can't run off-thread, so spread draping across frames. Already-draped renderables (cached vb) always draw.
+        const auto drape_timer = TIMER_INIT();
         bool drape_budget_spent = false;
 
         auto draw_renderables = [&] {
@@ -524,7 +509,7 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
                 if (renderable.vb == nullptr) { // first draw computes altitudes (heavy)
                     if (drape_budget_spent) continue; // out of time this frame; drape it next frame
                     renderable.Draw(device);
-                    if (std::chrono::steady_clock::now() >= drape_deadline) drape_budget_spent = true;
+                    if (TIMER_DIFF(drape_timer) >= 2) drape_budget_spent = true;
                 }
                 else {
                     renderable.Draw(device);

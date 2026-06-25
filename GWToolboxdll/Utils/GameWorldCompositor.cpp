@@ -11,6 +11,7 @@
 #include <GWCA/Utilities/Scanner.h>
 
 #include <GWToolbox.h>
+#include <Timer.h>
 #include <Utils/GameWorldCompositor.h>
 
 // The shared world shaders live with the original in-game renderer; both consumers use them.
@@ -58,10 +59,10 @@ namespace {
         for (auto& entry : callbacks) {
             if (!entry.second) continue;
             if (profiling) {
-                const clock_t ct0 = clock();
+                const auto cb_timer = TIMER_INIT();
                 entry.second(device);
-                const clock_t ct1 = clock();
-                if (ct1 - ct0 > 60) Log::Log("[hitch] compositor callback token=%d took %ld ms", entry.first, (long)(ct1 - ct0));
+                const auto cb_ms = TIMER_DIFF(cb_timer);
+                if (cb_ms > 60) Log::Log("[hitch] compositor callback token=%d took %ld ms", entry.first, (long)cb_ms);
             }
             else {
                 entry.second(device);

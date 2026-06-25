@@ -23,6 +23,7 @@
 #include <Defines.h>
 #include <GWToolbox.h>
 #include <Logger.h>
+#include <Timer.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/TeamBuild.h>
@@ -438,15 +439,16 @@ namespace {
         }
         vec.push_back(&m);
         Log::Log("ToggleTBModule: Initializing %s...", m.Name());
-        const clock_t t_init0 = clock();
+        const auto init_timer = TIMER_INIT();
         m.Initialize();
-        const clock_t t_init1 = clock();
+        const auto initialize_ms = TIMER_DIFF(init_timer);
+        const auto settings_timer = TIMER_INIT();
         m.LoadSettings(*GWToolbox::GetSettingsDoc(), GWToolbox::OpenSettingsFile());
-        const clock_t t_init2 = clock();
+        const auto load_settings_ms = TIMER_DIFF(settings_timer);
         Log::Log("ToggleTBModule: Initialised %s !!", m.Name());
         if (profiling_enabled) // [perf-diag] slow-module-startup timing, gated on the profiling toggle
             Log::Log("[perf] %s startup: Initialize %ld ms, LoadSettings %ld ms", m.Name(),
-                     (long)(t_init1 - t_init0), (long)(t_init2 - t_init1));
+                     (long)initialize_ms, (long)load_settings_ms);
         ReorderModules(vec);
         return true; // Added successfully
     }
@@ -1200,14 +1202,13 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
             }
         }
 
-        // Non-UI modules have no window of their own but may still paint an overlay
-        // this frame (e.g. Texmod's recording banner).
+        // Non-UI modules have no window but may still paint an overlay this frame (e.g. Texmod's recording banner).
         for (size_t i = 0; i < other_modules_enabled.size(); i++) {
             if (profiling_enabled) { // [perf-diag]
-                const clock_t dt0 = clock();
+                const auto draw_timer = TIMER_INIT();
                 other_modules_enabled[i]->Draw(device);
-                const clock_t dt1 = clock();
-                if (dt1 - dt0 > 60) Log::Log("[hitch] %s::Draw took %ld ms", other_modules_enabled[i]->Name(), (long)(dt1 - dt0));
+                const auto draw_ms = TIMER_DIFF(draw_timer);
+                if (draw_ms > 60) Log::Log("[hitch] %s::Draw took %ld ms", other_modules_enabled[i]->Name(), (long)draw_ms);
             }
             else {
                 other_modules_enabled[i]->Draw(device);
