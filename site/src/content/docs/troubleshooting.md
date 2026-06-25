@@ -3,7 +3,7 @@ title: "Troubleshooting"
 section: meta
 ---
 
-Most problems launching GWToolbox++, loading its add-ons, or saving a crash dump come down to **security software** — Windows Defender, third-party antivirus, or **Controlled Folder Access** — blocking Toolbox from reading Guild Wars' memory, writing to your Documents folder, or loading a `.dll`. This page explains how to fix those, with direct links you can share.
+Most problems launching GWToolbox++, loading its add-ons, or saving a crash dump come down to **security software** — Windows Defender, third-party antivirus, **Controlled Folder Access**, or **Smart App Control** — blocking Toolbox from reading Guild Wars' memory, writing to your Documents folder, or loading a `.dll`. This page explains how to fix those, with direct links you can share.
 
 If you are not sure which section you need, the error message Toolbox showed you links straight to the relevant section below.
 
@@ -56,6 +56,19 @@ An antivirus exclusion alone does **not** cover this — Controlled Folder Acces
 6. Add **`Gw.exe`** and **`GWToolbox.exe`**.
 
 If you do not rely on Controlled Folder Access, you can instead turn it **Off** on the same screen.
+
+## Smart App Control
+
+**Smart App Control** is a Windows 11 security feature that blocks apps it does not recognise as trusted — and because Toolbox is a small, frequently-updated tool that is not signed by a big publisher, Smart App Control will silently block `GWToolbox.exe` from running at all. If you have worked through the steps above and Toolbox still will not start, this is the likely cause.
+
+1. Open **Windows Security**.
+2. Go to **App & browser control**.
+3. Under **Smart App Control**, click **Smart App Control settings**.
+4. Set Smart App Control to **Off**.
+
+> **Important:** Once you turn Smart App Control **off**, Windows will not let you turn it back on without **resetting or reinstalling Windows**. This is by design — only disable it if you are comfortable with that trade-off. (Smart App Control also has an "evaluation" mode that turns itself off automatically over time.)
+
+After disabling it, re-download `GWToolbox.exe` from [gwtoolbox.com](https://gwtoolbox.com/) and launch again.
 
 ## Toolbox can't read Guild Wars' memory
 
