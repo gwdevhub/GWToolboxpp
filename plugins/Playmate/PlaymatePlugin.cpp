@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <fstream>
 #include <format>
 #include <utility>
 
@@ -89,6 +90,28 @@ namespace {
         }
         return WideToUtf8(raw);
     }
+
+    std::string CurrentUtcTimestamp()
+    {
+        SYSTEMTIME now;
+        GetSystemTime(&now);
+        return std::format(
+            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+            now.wYear,
+            now.wMonth,
+            now.wDay,
+            now.wHour,
+            now.wMinute,
+            now.wSecond,
+            now.wMilliseconds);
+    }
+
+    std::wstring CurrentLocalLogDate()
+    {
+        SYSTEMTIME now;
+        GetLocalTime(&now);
+        return std::format(L"{:04}-{:02}-{:02}", now.wYear, now.wMonth, now.wDay);
+    }
 }
 
 DLLAPI ToolboxPlugin* ToolboxPluginInstance()
@@ -146,6 +169,8 @@ void PlaymatePlugin::LoadSettings(const wchar_t* folder)
     std::string backend_url = backend_url_input_;
     std::string api_token = api_token_input_;
     LoadSetting("enabled", enabled_);
+    LoadSetting("local_capture", local_capture_);
+    LoadSetting("send_to_backend", send_to_backend_);
     LoadSetting("inject_replies", inject_replies_);
     LoadSetting("backend_url", backend_url);
     LoadSetting("api_token", api_token);
@@ -154,6 +179,12 @@ void PlaymatePlugin::LoadSettings(const wchar_t* folder)
 
     strncpy_s(backend_url_input_, backend_url.c_str(), _TRUNCATE);
     strncpy_s(api_token_input_, api_token.c_str(), _TRUNCATE);
+    {
+        std::lock_guard lock(config_mutex_);
+        const std::filesystem::path plugin_folder = folder;
+        const auto computer_folder = plugin_folder.parent_path();
+        local_log_folder_ = (computer_folder.empty() ? plugin_folder : computer_folder) / L"Playmate";
+    }
     poll_interval_sec_ = std::clamp(poll_interval_sec_, 0.25f, 30.0f);
     snapshot_interval_sec_ = std::clamp(snapshot_interval_sec_, 1.0f, 120.0f);
     ApplyConfig();
@@ -162,6 +193,8 @@ void PlaymatePlugin::LoadSettings(const wchar_t* folder)
 void PlaymatePlugin::SaveSettings(const wchar_t* folder)
 {
     SaveSetting("enabled", enabled_);
+    SaveSetting("local_capture", local_capture_);
+    SaveSetting("send_to_backend", send_to_backend_);
     SaveSetting("inject_replies", inject_replies_);
     SaveSetting("backend_url", std::string(backend_url_input_));
     SaveSetting("api_token", std::string(api_token_input_));
@@ -174,6 +207,8 @@ void PlaymatePlugin::DrawSettings()
 {
     bool config_changed = false;
     config_changed |= ImGui::Checkbox("Enable telemetry", &enabled_);
+    config_changed |= ImGui::Checkbox("Write local JSONL capture", &local_capture_);
+    config_changed |= ImGui::Checkbox("Send telemetry to backend", &send_to_backend_);
     config_changed |= ImGui::Checkbox("Inject Azele replies into party chat", &inject_replies_);
     config_changed |= ImGui::InputText("Local backend URL", backend_url_input_, sizeof(backend_url_input_));
     config_changed |= ImGui::InputText("Local API token", api_token_input_, sizeof(api_token_input_), ImGuiInputTextFlags_Password);
@@ -186,6 +221,10 @@ void PlaymatePlugin::DrawSettings()
     std::lock_guard lock(status_mutex_);
     ImGui::Separator();
     ImGui::Text("Status: %s", status_.c_str());
+    const auto log_path = WideToUtf8(LocalLogPath().wstring().c_str());
+    ImGui::TextWrapped("Local log: %s", log_path.c_str());
+    ImGui::Text("Local: %zu", local_written_count_);
+    ImGui::SameLine();
     ImGui::Text("Sent: %zu", sent_count_);
     ImGui::SameLine();
     ImGui::Text("Failed: %zu", failed_count_);
@@ -281,14 +320,35 @@ void PlaymatePlugin::WorkerLoop()
         }
 
         if (has_event) {
-            if (PostTelemetry(event)) {
-                std::lock_guard lock(status_mutex_);
+            bool wrote_local = false;
+            bool posted_remote = false;
+            bool failed = false;
+
+            if (local_capture_enabled_.load()) {
+                wrote_local = WriteTelemetryLocal(event);
+                failed = failed || !wrote_local;
+            }
+
+            if (backend_enabled_.load()) {
+                posted_remote = PostTelemetry(event);
+                failed = failed || !posted_remote;
+            }
+
+            std::lock_guard lock(status_mutex_);
+            if (wrote_local) {
+                ++local_written_count_;
+            }
+            if (posted_remote) {
                 ++sent_count_;
-                status_ = "Connected";
+            }
+            if (failed) {
+                ++failed_count_;
+                if (wrote_local) {
+                    status_ = "Captured locally; backend failed";
+                }
             }
             else {
-                std::lock_guard lock(status_mutex_);
-                ++failed_count_;
+                status_ = posted_remote ? "Captured and sent" : "Captured locally";
             }
         }
 
@@ -298,6 +358,31 @@ void PlaymatePlugin::WorkerLoop()
             next_poll = now + std::chrono::milliseconds(poll_interval_ms_.load());
         }
     }
+}
+
+bool PlaymatePlugin::WriteTelemetryLocal(const TelemetryEvent& event)
+{
+    const auto path = LocalLogPath();
+    if (path.empty()) {
+        SetStatus("Local log path is empty");
+        return false;
+    }
+
+    std::error_code ec;
+    std::filesystem::create_directories(path.parent_path(), ec);
+    if (ec) {
+        SetStatus("Failed to create local log folder");
+        return false;
+    }
+
+    std::ofstream out(path, std::ios::app | std::ios::binary);
+    if (!out) {
+        SetStatus("Failed to open local telemetry log");
+        return false;
+    }
+
+    out << glz::write_json(event).value_or(std::string{}) << '\n';
+    return out.good();
 }
 
 bool PlaymatePlugin::PostTelemetry(const TelemetryEvent& event)
@@ -330,7 +415,7 @@ bool PlaymatePlugin::PostTelemetry(const TelemetryEvent& event)
 
 void PlaymatePlugin::PollReplies()
 {
-    if (!telemetry_enabled_.load() || !reply_injection_enabled_.load()) {
+    if (!telemetry_enabled_.load() || !backend_enabled_.load() || !reply_injection_enabled_.load()) {
         return;
     }
 
@@ -373,7 +458,7 @@ void PlaymatePlugin::PollReplies()
 
 void PlaymatePlugin::QueueTelemetry(std::string event_type, std::string sender, std::string channel, std::string message)
 {
-    if (!telemetry_enabled_.load() || message.empty()) {
+    if (!telemetry_enabled_.load() || (!local_capture_enabled_.load() && !backend_enabled_.load()) || message.empty()) {
         return;
     }
     if (channel == "trade") {
@@ -382,6 +467,7 @@ void PlaymatePlugin::QueueTelemetry(std::string event_type, std::string sender, 
 
     const Snapshot snapshot = BuildSnapshot();
     TelemetryEvent event;
+    event.client_time = CurrentUtcTimestamp();
     event.event_type = std::move(event_type);
     event.sender = std::move(sender);
     event.channel = std::move(channel);
@@ -444,6 +530,8 @@ void PlaymatePlugin::ApplyConfig()
     poll_interval_sec_ = std::clamp(poll_interval_sec_, 0.25f, 30.0f);
     snapshot_interval_sec_ = std::clamp(snapshot_interval_sec_, 1.0f, 120.0f);
     telemetry_enabled_.store(enabled_);
+    local_capture_enabled_.store(local_capture_);
+    backend_enabled_.store(send_to_backend_);
     reply_injection_enabled_.store(inject_replies_);
     poll_interval_ms_.store(static_cast<int>(poll_interval_sec_ * 1000.0f));
     std::lock_guard lock(config_mutex_);
@@ -486,6 +574,15 @@ std::pair<std::string, std::string> PlaymatePlugin::GetConfig() const
 {
     std::lock_guard lock(config_mutex_);
     return {backend_url_, api_token_};
+}
+
+std::filesystem::path PlaymatePlugin::LocalLogPath() const
+{
+    std::lock_guard lock(config_mutex_);
+    if (local_log_folder_.empty()) {
+        return {};
+    }
+    return local_log_folder_ / (L"telemetry-" + CurrentLocalLogDate() + L".jsonl");
 }
 
 std::string PlaymatePlugin::EventsUrl() const

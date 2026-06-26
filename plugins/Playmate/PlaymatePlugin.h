@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <filesystem>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -49,6 +50,7 @@ private:
     struct TelemetryEvent {
         std::string source = "gwtoolboxpp-playmate";
         std::string persona = "Azele";
+        std::string client_time;
         std::string event_type;
         std::string sender;
         std::string channel;
@@ -72,6 +74,7 @@ private:
     void StartWorker();
     void StopWorker();
     void WorkerLoop();
+    bool WriteTelemetryLocal(const TelemetryEvent& event);
     bool PostTelemetry(const TelemetryEvent& event);
     void PollReplies();
     void QueueTelemetry(std::string event_type, std::string sender, std::string channel, std::string message);
@@ -83,6 +86,7 @@ private:
 
     [[nodiscard]] Snapshot BuildSnapshot() const;
     [[nodiscard]] std::pair<std::string, std::string> GetConfig() const;
+    [[nodiscard]] std::filesystem::path LocalLogPath() const;
     [[nodiscard]] std::string EventsUrl() const;
     [[nodiscard]] std::string RepliesUrl() const;
 
@@ -92,8 +96,12 @@ private:
 
 private:
     bool enabled_ = true;
+    bool local_capture_ = true;
+    bool send_to_backend_ = false;
     bool inject_replies_ = true;
     std::atomic_bool telemetry_enabled_ = true;
+    std::atomic_bool local_capture_enabled_ = true;
+    std::atomic_bool backend_enabled_ = false;
     std::atomic_bool reply_injection_enabled_ = true;
     std::atomic<int> poll_interval_ms_ = 1000;
     float poll_interval_sec_ = 1.0f;
@@ -104,6 +112,7 @@ private:
     mutable std::mutex config_mutex_;
     std::string backend_url_ = "http://127.0.0.1:8787";
     std::string api_token_;
+    std::filesystem::path local_log_folder_;
 
     std::atomic_bool running_ = false;
     std::thread worker_;
@@ -114,6 +123,7 @@ private:
 
     mutable std::mutex status_mutex_;
     std::string status_ = "Idle";
+    size_t local_written_count_ = 0;
     size_t sent_count_ = 0;
     size_t failed_count_ = 0;
     size_t received_count_ = 0;
