@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Camera.h>
@@ -102,7 +103,7 @@ namespace {
     constexpr uint32_t kSplashFileId = 0x1baa1;
     constexpr int kSplashCols = 4, kSplashRows = 4, kSplashFrames = kSplashCols * kSplashRows;
     constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
-    constexpr float kMaxRadius = 2500.f;              // compass range; cap for any radius in the UI
+    constexpr float kMaxRadius = GW::Constants::Range::SpiritExtended; // 3500 gwinch; radius of the weather volume
 
     // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
     float column_height = 2500.f;     // vertical span drops fall through
