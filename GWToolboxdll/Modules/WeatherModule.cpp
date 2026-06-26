@@ -66,6 +66,7 @@ namespace weather_module {
         unsigned int overcast_tint = 0xFFA09078u; // the scene-dimming colour while this condition drives the overcast
         int floor_decal = kDecalAuto;             // what each impact leaves on the ground: none/splash/settle
         float drift = kDriftAuto;                 // lateral float as particles fall (gwinch/sec amplitude); 0 = none
+        bool wind_camera_relative = false;        // wind heading is relative to the camera (stays screen-fixed as you rotate)
     };
 
     // A broad weather climate. Maps/regions are grouped into one of these (see ClimateForRegion), so weather is
@@ -139,8 +140,8 @@ namespace {
             {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 1200, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
-            // Sand: snow-type tilted nearly sideways and blown from any heading, dense count, sandy, no floor decal.
-            {"Sandstorm", kTypeSnow, false, 10000, 6.f, 250.f, 2500.f, 0.f, 360.f, 80.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f},
+            // Sand: snow-type tilted nearly sideways, blown across the view (camera-relative), dense, sandy, no decal.
+            {"Sandstorm", kTypeSnow, false, 10000, 6.f, 250.f, 2500.f, 90.f, 90.f, 80.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f, true},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -789,11 +790,14 @@ namespace {
             auto& c = conditions[active];
             ambient_target = c.ambient;
             ambient_color = c.overcast_tint;
-            UpdateCondition(c, active_particles, dt, cx, cy, cz, active_wind_dir, dcz);
+            // For camera-relative wind, add the camera's heading (yaw, origin @ east) so the storm keeps the same
+            // on-screen direction as you rotate; recomputed each tick so it follows the camera live.
+            const float heading = active_wind_dir + (c.wind_camera_relative ? cam->yaw * 57.29578f : 0.f);
+            UpdateCondition(c, active_particles, dt, cx, cy, cz, heading, dcz);
             if (c.type == kTypeSnow)
                 AppendSnow(c, snow_vertices, active_particles.raindrops, right, up);
             else
-                AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, active_wind_dir);
+                AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading);
             AppendSplashes(active_particles.splashes, right, c.tint);
             AppendSettled(active_particles.settled, c.tint);
             UpdateSounds(c, active_particles, dt, cx, cy, cz);
@@ -1056,6 +1060,8 @@ void WeatherModule::DrawSettings()
             ImGui::ShowHelp("Range of compass headings the wind may blow toward; one is picked at random each time the\ncondition activates. A wide range (e.g. 0-360) varies the direction; a narrow one keeps it consistent.");
             ImGui::DragFloat("Wind tilt", &c.wind_tilt, 1.f, 0.f, 89.f, "%.0f deg", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("How far the fall is tilted from straight down: 0 = vertical, 89 = almost sideways.");
+            ImGui::Checkbox("Wind relative to camera", &c.wind_camera_relative);
+            ImGui::ShowHelp("Measure the wind direction from the camera instead of the world, so the storm keeps the same\non-screen direction as you rotate the camera (e.g. always blowing across the view).");
             if (c.type == kTypeSnow) {
                 float drift = EffectiveDrift(c);
                 if (ImGui::DragFloat("Drift", &drift, 1.f, 0.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) c.drift = drift;
