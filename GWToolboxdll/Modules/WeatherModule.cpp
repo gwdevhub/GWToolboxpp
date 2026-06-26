@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Map.h>
@@ -37,6 +38,12 @@ namespace weather_module {
     constexpr int kTypeSnow = 1;
     constexpr int kTypeCount = 2;
 
+    constexpr int kDecalNone = 0; // floor decal left at each impact
+    constexpr int kDecalSplash = 1;
+    constexpr int kDecalSettle = 2;
+    constexpr int kDecalCount = 3;
+    constexpr int kDecalAuto = -1; // not set: derive from type (rain -> splash, snow -> settle)
+
     struct WeatherCondition {
         std::string name = "Rain";
         int type = kTypeRain;
@@ -50,21 +57,34 @@ namespace weather_module {
         std::vector<uint32_t> sounds;   // .dat sound file ids played at random while active
         float sound_min_interval = 8.f; // seconds between sounds
         float sound_max_interval = 25.f;
-        bool sound_3d = false;       // play from a random nearby position (varies volume/pan)
-        float ambient = 0.f;         // 0..1 overcast dimming this condition contributes to the scene
-        unsigned int tint = 0xFFFFFFFFu; // per-condition multiply over the global tint (ImGui-packed); snow-type only
+        bool sound_3d = false;                    // play from a random nearby position (varies volume/pan)
+        float ambient = 0.f;                      // 0..1 overcast dimming this condition contributes to the scene
+        unsigned int tint = 0xFFFFFFFFu;          // this condition's particle tint (ImGui-packed); white = untinted
+        unsigned int overcast_tint = 0xFFA09078u; // the scene-dimming colour while this condition drives the overcast
+        int floor_decal = kDecalAuto;             // what each impact leaves on the ground: none/splash/settle
     };
 
-    // Automatic weather, defined separately from the conditions themselves: within a region, a reference to one
-    // condition (by name) and how likely it is to be chosen. The leftover probability across a region's entries
-    // is "clear" (no weather). Both are plain aggregates so glaze reflects them as the conditions list does.
-    struct RegionWeather {
-        std::string condition; // name of a WeatherCondition
-        float weight = 0.3f;   // 0..1 probability this condition is picked for the region on each weather roll
+    // A broad weather climate. Maps/regions are grouped into one of these (see ClimateForRegion), so weather is
+    // authored per-climate rather than per-region - the same region can later host more than one climate.
+    enum class Climate {
+        Temperate,
+        Arid,
+        Tropical,
+        Mountainous,
+        Volcanic,
+        Desertous, // appended so existing serialised values keep their meaning
     };
-    struct RegionProfile {
-        GW::Region region = GW::Region_Kryta;
-        std::vector<RegionWeather> entries;
+
+    // Automatic weather, defined separately from the conditions themselves: within a climate, a reference to one
+    // condition (by name) and how likely it is to be chosen. The leftover probability across a climate's entries
+    // is "clear" (no weather). Both are plain aggregates so glaze reflects them as the conditions list does.
+    struct ClimateWeather {
+        std::string condition; // name of a WeatherCondition
+        float weight = 0.3f;   // 0..1 probability this condition is picked for the climate on each weather roll
+    };
+    struct ClimateProfile {
+        Climate climate = Climate::Temperate;
+        std::vector<ClimateWeather> entries;
     };
 } // namespace weather_module
 
@@ -95,17 +115,15 @@ namespace {
     float snow_settle_fade = 0.4f;    // last fraction of the lifetime spent fading out
     int max_settled = 4000;           // per-condition cap on settled flakes
 
-    constexpr bool HasSplash(const int type)
-    {
-        return type == kTypeRain;
-    }
     constexpr bool HasMeander(const int type)
     {
         return type == kTypeSnow;
     }
-    constexpr bool HasSettle(const int type)
+    // The floor decal a condition leaves; resolves kDecalAuto from the weather type so old saved conditions and
+    // freshly-added ones behave as before (rain splashes, snow settles).
+    constexpr int EffectiveDecal(const WeatherCondition& c)
     {
-        return type == kTypeSnow;
+        return c.floor_decal != kDecalAuto ? c.floor_decal : (c.type == kTypeSnow ? kDecalSettle : kDecalSplash);
     }
 
     std::vector<WeatherCondition> DefaultConditions()
@@ -114,48 +132,97 @@ namespace {
             {"Heavy Rain", kTypeRain, false, 4000, 10.f, 1000.f, 2500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
             {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 2500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
             {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 2500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
-            // Ash: snow's drift/settle behaviour with a dark warm-grey tint and a heavier overcast.
-            {"Ashfall", kTypeSnow, false, 1200, 9.f, 350.f, 2500.f, 30.f, 30.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au},
+            // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
+            {"Ashfall", kTypeSnow, false, 1200, 9.f, 350.f, 2500.f, 30.f, 30.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
+            // Sand: snow-type with a strong horizontal wind, dense count, a sandy tint/overcast and no floor decal.
+            {"Sandstorm", kTypeSnow, false, 10000, 6.f, 250.f, 2500.f, 2500.f, 0.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF70A0C0u, kDecalNone},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
 
-    // Default region->weather table, referencing the default condition names above. Leftover probability per
-    // region is clear weather, so e.g. Maguuma is mostly heavy rain, Kryta mostly light, the Shiverpeaks snowy.
-    std::vector<RegionProfile> DefaultRegionProfiles()
+    // Default climate->weather table, referencing the default condition names above. Leftover probability per
+    // climate is clear weather. Arid is omitted on purpose: dry by default, but offered in the picker to edit.
+    std::vector<ClimateProfile> DefaultClimateProfiles()
     {
-        const auto p = [](const GW::Region r, std::vector<RegionWeather> e) { return RegionProfile{r, std::move(e)}; };
+        const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
         return {
-            p(GW::Region_Kryta, {{"Light Rain", 0.45f}, {"Heavy Rain", 0.15f}}),
-            p(GW::Region_Maguuma, {{"Heavy Rain", 0.55f}, {"Light Rain", 0.25f}}),
-            p(GW::Region_NorthernShiverpeaks, {{"Snow", 0.5f}}),
-            p(GW::Region_FarShiverpeaks, {{"Snow", 0.6f}}),
-            p(GW::Region_FissureOfWoe, {{"Ashfall", 0.6f}}),
+            p(Climate::Temperate, {{"Light Rain", 0.45f}, {"Heavy Rain", 0.15f}}),
+            p(Climate::Tropical, {{"Heavy Rain", 0.55f}, {"Light Rain", 0.25f}}),
+            p(Climate::Mountainous, {{"Snow", 0.6f}}),
+            p(Climate::Volcanic, {{"Ashfall", 0.6f}}),
+            p(Climate::Desertous, {{"Sandstorm", 0.30f}}),
+            p(Climate::Arid, {{"Sandstorm", 0.10f}}),
         };
     }
-    std::vector<RegionProfile> region_profiles = DefaultRegionProfiles();
+    std::vector<ClimateProfile> climate_profiles = DefaultClimateProfiles();
 
-    bool occlude_behind_terrain = true;
-    float render_max_distance = 2500.f;
-    unsigned int rain_color = 0xFFFFFFFFu;    // tint (ImGui-packed); white shows the texture untinted
-    unsigned int ambient_color = 0xFFA09078u; // fully-overcast multiply tint (ImGui-packed RGB; alpha ignored)
+    // Fixed, not user-facing: weather always occludes behind terrain and renders to the compass range.
+    constexpr bool occlude_behind_terrain = true;
+    constexpr float render_max_distance = kMaxRadius;
+    unsigned int ambient_color = 0xFFA09078u; // overcast tint of the condition currently driving the dimming (runtime)
     float ambient_strength = 0.f;             // eased aggregate dimming of active conditions (runtime, not saved)
 
-    bool auto_weather = false;   // drive which conditions are active from the region->weather table
+    bool auto_weather = false;   // drive which conditions are active from the climate->weather table
     float auto_change_min = 3.f; // minutes between automatic weather rolls (random in [min, max])
     float auto_change_max = 8.f;
-    GW::Region auto_region = GW::Region_DevRegion; // region the current automatic weather was last rolled for (runtime)
-    float auto_timer = -1.f;                       // minutes until the next automatic roll; <0 = roll on the next update (runtime)
+    Climate auto_climate = Climate::Temperate; // climate the current automatic weather was last rolled for (runtime)
+    float auto_timer = -1.f;                   // minutes until the next automatic roll; <0 = roll on the next update (runtime)
 
-    // The regions the picker offers, curated to the open-air PvE regions. Display names come from
-    // Resources::GetRegionName (which owns the decode + cache), so no encoded strings are kept here.
-    constexpr GW::Region kRegions[] = {
-        GW::Region_Kryta, GW::Region_Maguuma, GW::Region_Ascalon, GW::Region_Presearing, GW::Region_NorthernShiverpeaks, GW::Region_CrystalDesert, GW::Region_FissureOfWoe, GW::Region_Kaineng, GW::Region_Kurzick, GW::Region_Luxon,
-        GW::Region_ShingJea, GW::Region_Kourna, GW::Region_Vaabi, GW::Region_Desolation, GW::Region_Istan, GW::Region_DomainOfAnguish, GW::Region_TarnishedCoast, GW::Region_DepthsOfTyria, GW::Region_FarShiverpeaks, GW::Region_CharrHomelands,
+    // The climates the picker offers, with their display names (our own concept, so plain text - not EncStrings).
+    constexpr struct {
+        Climate climate;
+        const char* name;
+    } kClimates[] = {
+        {Climate::Temperate, "Temperate"}, {Climate::Arid, "Arid"}, {Climate::Desertous, "Desertous"}, {Climate::Tropical, "Tropical"}, {Climate::Mountainous, "Mountainous"}, {Climate::Volcanic, "Volcanic"},
     };
 
-    // The region's localised name (may be blank for the first frames while the game decodes it).
-    const char* RegionName(const GW::Region region) { return Resources::GetRegionName(region)->string().c_str(); }
+    const char* ClimateName(const Climate climate)
+    {
+        for (const auto& k : kClimates)
+            if (k.climate == climate) return k.name;
+        return "(climate)";
+    }
+
+    // Which climate a region currently belongs to. Coarse for now (whole-region); later this can become
+    // per-map so e.g. the arid stretches of Maguuma differ from its rainforest.
+    Climate ClimateForRegion(const GW::Region region)
+    {
+        switch (region) {
+            case GW::Region_NorthernShiverpeaks:
+            case GW::Region_FarShiverpeaks:
+            case GW::Region_DepthsOfTyria:
+                return Climate::Mountainous;
+            case GW::Region_CrystalDesert:
+            case GW::Region_Desolation:
+                return Climate::Desertous;
+            case GW::Region_Kourna:
+            case GW::Region_Vaabi:
+                return Climate::Arid;
+            case GW::Region_FissureOfWoe:
+            case GW::Region_DomainOfAnguish:
+                return Climate::Volcanic;
+            case GW::Region_Maguuma:
+            case GW::Region_Kurzick:
+            case GW::Region_ShingJea:
+            case GW::Region_Istan:
+            case GW::Region_TarnishedCoast:
+                return Climate::Tropical;
+            default: // Kryta, Ascalon, Kaineng, Luxon, Charr Homelands, ...
+                return Climate::Temperate;
+        }
+    }
+
+    // Climate for a specific map: an explicit per-map override wins, else fall back to the map's region. This is
+    // where sub-region variation lives - e.g. Dry Top sits in (tropical) Maguuma but is itself arid.
+    Climate ClimateForMap(const GW::Constants::MapID map_id)
+    {
+        static const std::unordered_map<GW::Constants::MapID, Climate> overrides = {
+            {GW::Constants::MapID::Dry_Top, Climate::Arid},
+        };
+        if (const auto it = overrides.find(map_id); it != overrides.end()) return it->second;
+        const auto info = GW::Map::GetMapInfo(map_id);
+        return ClimateForRegion(info ? info->region : GW::Region_DevRegion);
+    }
 
     // POSITION (world) + D3DCOLOR tint + UV; quads are built camera-/ground-aligned on the CPU.
     struct WeatherVertex {
@@ -178,7 +245,11 @@ namespace {
         std::vector<Settle> settled;
         float sound_timer = -1.f; // seconds until the next sound; <0 = not yet scheduled
     };
-    std::vector<Particles> particles; // runtime state, parallel to conditions (not saved)
+    // Only one condition runs at a time (enforced at every toggle point), so a single live particle set suffices
+    // instead of one per condition - a large memory saving at high drop counts. active_condition is the index
+    // currently driving it, -1 = clear.
+    Particles active_particles;
+    int active_condition = -1;
     bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
 
     // Rain is GPU-instanced: one record per drop (centre + the two half-extent axes), expanded to a quad
@@ -188,6 +259,7 @@ namespace {
         float cx, cy, cz;
         float ax0, ax1, ax2;
         float ay0, ay1, ay2;
+        float cr, cg, cb, ca; // per-instance tint (RGBA, unpacked) so rain conditions keep their own tint in one draw
     };
     struct GeomVert {
         float sx, sy, u, v;
@@ -313,11 +385,11 @@ namespace {
     // Pick one condition (or clear) for the region from its profile, weighted by each entry's probability, and
     // set exactly that condition active. Probability left over beyond the entries' sum is clear weather; if the
     // entries sum past 1 they are normalised among themselves (no clear).
-    void RerollAutoWeather(const GW::Region region)
+    void RerollAutoWeather(const Climate climate)
     {
-        const RegionProfile* prof = nullptr;
-        for (const auto& rp : region_profiles)
-            if (rp.region == region) { prof = &rp; break; }
+        const ClimateProfile* prof = nullptr;
+        for (const auto& cp : climate_profiles)
+            if (cp.climate == climate) { prof = &cp; break; }
 
         int chosen = -1; // index into conditions; -1 = clear
         if (prof) {
@@ -339,22 +411,21 @@ namespace {
             conditions[i].active = i == chosen;
     }
 
-    // While enabled, drive the active conditions from the region table: re-roll on a region change, on the first
-    // run, and then every few (random) minutes. dt is in seconds.
+    // While enabled, drive the active conditions from the climate table: re-roll when the climate changes (incl.
+    // the first run), and then every few (random) minutes. dt is in seconds.
     void UpdateAutoWeather(const float dt)
     {
         if (!auto_weather) return;
-        const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo();
-        if (!info) return; // map not loaded yet; leave whatever is showing
-        const GW::Region region = info->region;
-        if (region != auto_region || auto_timer < 0.f) {
-            auto_region = region;
-            RerollAutoWeather(region);
+        if (!GW::Map::GetCurrentMapInfo()) return; // map not loaded yet; leave whatever is showing
+        const Climate climate = ClimateForMap(GW::Map::GetMapID());
+        if (climate != auto_climate || auto_timer < 0.f) {
+            auto_climate = climate;
+            RerollAutoWeather(climate);
             auto_timer = frand(auto_change_min, auto_change_max);
             return;
         }
         if ((auto_timer -= dt / 60.f) <= 0.f) { // timer is in minutes
-            RerollAutoWeather(region);
+            RerollAutoWeather(climate);
             auto_timer = frand(auto_change_min, auto_change_max);
         }
     }
@@ -365,27 +436,19 @@ namespace {
         return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(std::max(1, drop_count))))));
     }
 
-    void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const bool randomize, const int index, const int grid)
+    // Initial fill of the column. Stratified placement: each drop owns one grid cell, jittered within it, so the
+    // volume is evenly spread over the player-centred area instead of clumping. The column stays centred on the
+    // player; wind only drifts drops through it (UpdateCondition wraps them at the bubble edge), so the origin
+    // does not shift with the wind direction.
+    void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid)
     {
         const float top_z = cz - column_height;
-        // Stratified placement: each drop owns one cell of the grid, jittered within it, so its landing spot is
-        // evenly spread over the area around the player instead of clumping the way random positions do.
         const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
-        const float base_x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
-        const float base_y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
-        d.ground_z = GroundZAt(base_x, base_y, cz + recycle_below);
-        // Spread the initial fill only through the visible column (top..ground). Seeding past the ground would
-        // make every below-ground drop recycle together on the first frame and then fall as a synchronised
-        // "lump" once per cycle - very visible at high drop counts.
-        d.z = randomize ? top_z + frand(0.f, std::max(0.f, d.ground_z - top_z)) : top_z;
-        // Tilt the whole column about its landing point so wind angles the fall but it still lands on base_xy
-        // (around the player), instead of shearing the impact zone downwind into a "trapeze". bias is the time
-        // left until landing, negated: 0 at the ground, -t_fall at the top, so the drop starts upwind and
-        // converges to base_xy as it descends.
-        const float inv_speed = c.fall_speed > 0.f ? 1.f / c.fall_speed : 0.f;
-        const float bias = (d.z - d.ground_z) * inv_speed;
-        d.x = base_x + c.wind_x * bias;
-        d.y = base_y + c.wind_y * bias;
+        d.x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
+        d.y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
+        d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+        // Spread the fill through the visible column (top..ground) so the drops don't fall as one synchronised lump.
+        d.z = top_z + frand(0.f, std::max(0.f, d.ground_z - top_z));
         d.sway_phase = frand(0.f, 6.2831853f);
     }
 
@@ -395,12 +458,14 @@ namespace {
         if (static_cast<int>(p.raindrops.size()) != c.drop_count) {
             p.raindrops.resize(std::max(0, c.drop_count));
             for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++)
-                seed_drop(p.raindrops[i], c, cx, cy, cz, true, i, grid);
+                seed_drop(p.raindrops[i], c, cx, cy, cz, i, grid);
         }
-        const bool splash = HasSplash(c.type);
+        const int decal = EffectiveDecal(c);
+        const bool splash = decal == kDecalSplash;
         const bool meander = HasMeander(c.type);
-        const bool settle = HasSettle(c.type);
-        const float spread_sq = c.spread_radius * c.spread_radius;
+        const bool settle = decal == kDecalSettle;
+        const float top_z = cz - column_height;
+        const float diameter = 2.f * c.spread_radius;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
             d.z += c.fall_speed * dt;
@@ -410,21 +475,23 @@ namespace {
             d.sway_phase += snow_sway_speed * dt;
             d.x += (c.wind_x + sway_x) * dt;
             d.y += (c.wind_y + sway_y) * dt;
-            // Harsh wind/sway can carry a drop out of the radius before it ever lands near the player; once it is
-            // outside and still heading out (so upwind, inbound spawns are spared) it can never contribute, so
-            // recycle it now rather than rendering it falling off into the distance.
-            const float dx = d.x - cx, dy = d.y - cy;
-            if (dx * dx + dy * dy > spread_sq && dx * (c.wind_x + sway_x) + dy * (c.wind_y + sway_y) > 0.f) {
-                seed_drop(d, c, cx, cy, cz, false, i, grid);
-                continue;
-            }
+            // Keep the volume centred on the player: a drop blown past one edge of the bubble wraps to the
+            // opposite edge (entering from upwind), so the wind only sets which way drops stream through a fixed,
+            // player-centred column. Re-query the terrain under the wrapped position.
+            bool wrapped = false;
+            if (const float rx = d.x - cx; rx > c.spread_radius) { d.x -= diameter; wrapped = true; }
+            else if (rx < -c.spread_radius) { d.x += diameter; wrapped = true; }
+            if (const float ry = d.y - cy; ry > c.spread_radius) { d.y -= diameter; wrapped = true; }
+            else if (ry < -c.spread_radius) { d.y += diameter; wrapped = true; }
+            if (wrapped) d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
             if (d.z >= d.ground_z) {
-                // d.ground_z is the terrain height at the spawn point; wind/sway drift the drop sideways as it
-                // falls, so resample under where it actually lands - otherwise the mark sits above/below the
-                // real surface. The cache keeps this cheap despite running per impact.
+                // Landed: drop a decal here (within the bubble, since x/y are kept centred), then fall again from
+                // the top of the same column. Resample the terrain in case it differs from the spawn point.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < snow_settle_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                seed_drop(d, c, cx, cy, cz, false, i, grid);
+                d.z = top_z;
+                d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+                d.sway_phase = frand(0.f, 6.2831853f);
             }
         }
         for (size_t i = 0; i < p.splashes.size();) {
@@ -445,11 +512,11 @@ namespace {
         }
     }
 
-    // Channel-wise multiply of two ImGui-packed colours (per-condition tint modulating the global tint).
-    DWORD MulColor(const DWORD a, const DWORD b)
+    // ImGui packs colours as 0xAABBGGRR (R low), but D3DDECLTYPE_D3DCOLOR (the CPU billboard vertex colour) wants
+    // 0xAARRGGBB - so swap R and B. The instanced rain path feeds float4 RGBA instead and needs no conversion.
+    DWORD ToD3DColor(const unsigned int imgui_col)
     {
-        const auto mul = [](const DWORD x, const DWORD y, const int shift) { return ((x >> shift & 0xFFu) * (y >> shift & 0xFFu) + 127u) / 255u << shift; };
-        return mul(a, b, 0) | mul(a, b, 8) | mul(a, b, 16) | mul(a, b, 24);
+        return (imgui_col & 0xFF00FF00u) | ((imgui_col & 0xFFu) << 16) | ((imgui_col >> 16) & 0xFFu);
     }
 
     // The 4 corners of a quad spanning center +/- the half-extent vectors ax, ay, with the given UV rect.
@@ -469,7 +536,7 @@ namespace {
         const float h = c.drop_size * 0.5f;
         const float ax[3] = {right[0] * h, right[1] * h, right[2] * h};
         const float ay[3] = {up[0] * h, up[1] * h, up[2] * h};
-        const DWORD col = MulColor(rain_color, c.tint); // per-condition tint (e.g. dark for ashfall)
+        const DWORD col = ToD3DColor(c.tint); // per-condition tint (e.g. dark for ashfall)
         for (const auto& d : drops)
             emit_quad(out, d.x, d.y, d.z, ax, ay, col, 0.f, 0.f, 1.f, 1.f);
     }
@@ -495,7 +562,8 @@ namespace {
             w[1] = right[1];
             w[2] = right[2];
         }
-        const WeatherInstance base{0.f, 0.f, 0.f, w[0] * h, w[1] * h, w[2] * h, vel[0] * h, vel[1] * h, vel[2] * h};
+        const auto t = ImGui::ColorConvertU32ToFloat4(c.tint); // unpacked RGBA, baked per instance (no R/B swap)
+        const WeatherInstance base{0.f, 0.f, 0.f, w[0] * h, w[1] * h, w[2] * h, vel[0] * h, vel[1] * h, vel[2] * h, t.x, t.y, t.z, t.w};
         out.reserve(out.size() + drops.size());
         for (const auto& d : drops) {
             WeatherInstance inst = base;
@@ -508,27 +576,29 @@ namespace {
 
     // Vertical billboard standing on the ground: horizontal axis follows the camera so it faces the
     // viewer, vertical axis is world up (-z), anchored so the base sits at the impact point.
-    void AppendSplashes(const std::vector<Splash>& s, const float right[3])
+    void AppendSplashes(const std::vector<Splash>& s, const float right[3], const unsigned int tint)
     {
         const float hs = splash_size * 0.5f;
         const float ax[3] = {right[0] * hs, right[1] * hs, right[2] * hs};
         const float ay[3] = {0.f, 0.f, -hs};
+        const DWORD col = ToD3DColor(tint);
         const float u_step = 1.f / kSplashCols, v_step = 1.f / kSplashRows;
         for (const auto& sp : s) {
             const int f = std::clamp(static_cast<int>(sp.age / splash_duration * kSplashFrames), 0, kSplashFrames - 1);
             const float u0 = static_cast<float>(f % kSplashCols) * u_step, v0 = static_cast<float>(f / kSplashCols) * v_step;
-            emit_quad(splash_vertices, sp.x, sp.y, sp.z - hs - splash_lift, ax, ay, rain_color, u0, v0, u0 + u_step, v0 + v_step);
+            emit_quad(splash_vertices, sp.x, sp.y, sp.z - hs - splash_lift, ax, ay, col, u0, v0, u0 + u_step, v0 + v_step);
         }
     }
 
 
     // Flat quad lying on the ground (world XY plane) drawn with the snowflake texture, so it shares the
     // snow vertex buffer/pass. Holds at full tint, then fades its alpha out over the tail of its lifetime.
-    void AppendSettled(const std::vector<Settle>& s, const DWORD base_col)
+    void AppendSettled(const std::vector<Settle>& s, const unsigned int tint)
     {
         const float hs = snow_settle_size * 0.5f;
         const float ax[3] = {hs, 0.f, 0.f};
         const float ay[3] = {0.f, hs, 0.f};
+        const DWORD base_col = ToD3DColor(tint);
         const DWORD base_a = (base_col >> 24) & 0xFFu;
         const float fade_span = std::clamp(snow_settle_fade, 0.01f, 1.f);
         for (const auto& sp : s) {
@@ -632,10 +702,10 @@ namespace {
         if (!weather_ps && device->CreatePixelShader(reinterpret_cast<const DWORD*>(&weather_billboard_ps), &weather_ps) != D3D_OK) return false;
 
         // Instanced pipeline: stream 0 = unit quad (POSITION = corner sign, TEXCOORD0 = uv); stream 1 =
-        // per-drop instance record (TEXCOORD1 = centre, TEXCOORD2/3 = the two half-extent axes).
+        // per-drop instance record (TEXCOORD1 = centre, TEXCOORD2/3 = the two half-extent axes, COLOR = tint).
         constexpr D3DVERTEXELEMENT9 inst_decl[] = {{0, 0, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},  {0, 8, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
                                                    {1, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1},  {1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 2},
-                                                   {1, 24, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 3}, D3DDECL_END()};
+                                                   {1, 24, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 3}, {1, 36, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
         if (!weather_inst_decl && device->CreateVertexDeclaration(inst_decl, &weather_inst_decl) != D3D_OK) return false;
         if (!weather_inst_vs && device->CreateVertexShader(reinterpret_cast<const DWORD*>(&weather_instanced_vs), &weather_inst_vs) != D3D_OK) return false;
         if (!quad_geom_vb) {
@@ -656,8 +726,7 @@ namespace {
         rain_instances.clear();
         snow_vertices.clear();
         splash_vertices.clear();
-        particles.resize(conditions.size());
-        UpdateAutoWeather(dt); // may toggle which conditions are active before they're read below
+        UpdateAutoWeather(dt); // may toggle which condition is active before it's read below
         if (!cam) return;
 
         bool reset = reset_requested; // explicit Reset() request
@@ -665,10 +734,15 @@ namespace {
 
         if (!GW::Map::GetIsMapLoaded() || GW::UI::IsLoadingScreenShown()) reset = true;
         const auto ready = !reset && !GW::UI::GetIsWorldMapShowing();
-        if (reset) {
-            ground_cache.clear(); // terrain altitudes are per-map; drop them when the map changes
-            for (auto& p : particles)
-                p = {};
+        if (reset) ground_cache.clear(); // terrain altitudes are per-map; drop them when the map changes
+
+        // The single active condition (first one flagged active; single-active is enforced wherever it's toggled).
+        int active = -1;
+        for (int i = 0; i < static_cast<int>(conditions.size()); i++)
+            if (conditions[i].active) { active = i; break; }
+        if (active != active_condition || reset) { // switched condition (or reset): drop the old particles, reseed fresh
+            active_particles = {};
+            active_condition = active;
         }
 
         const float cx = cam->look_at_target.x, cy = cam->look_at_target.y, cz = cam->look_at_target.z;
@@ -682,20 +756,18 @@ namespace {
         cross3(fwd, right, up);
 
         float ambient_target = 0.f;
-        for (size_t i = 0; i < conditions.size(); i++) {
-            if (!conditions[i].active || !ready) {
-                particles[i] = {};
-                continue;
-            }
-            ambient_target = std::max(ambient_target, conditions[i].ambient);
-            UpdateCondition(conditions[i], particles[i], dt, cx, cy, cz);
-            if (conditions[i].type == kTypeSnow)
-                AppendSnow(conditions[i], snow_vertices, particles[i].raindrops, right, up);
+        if (active >= 0 && ready) {
+            auto& c = conditions[active];
+            ambient_target = c.ambient;
+            ambient_color = c.overcast_tint;
+            UpdateCondition(c, active_particles, dt, cx, cy, cz);
+            if (c.type == kTypeSnow)
+                AppendSnow(c, snow_vertices, active_particles.raindrops, right, up);
             else
-                AppendRainInstances(rain_instances, conditions[i], particles[i].raindrops, right, fwd);
-            AppendSplashes(particles[i].splashes, right);
-            AppendSettled(particles[i].settled, MulColor(rain_color, conditions[i].tint));
-            UpdateSounds(conditions[i], particles[i], dt, cx, cy, cz);
+                AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd);
+            AppendSplashes(active_particles.splashes, right, c.tint);
+            AppendSettled(active_particles.settled, c.tint);
+            UpdateSounds(c, active_particles, dt, cx, cy, cz);
         }
         ambient_strength += (ambient_target - ambient_strength) * std::clamp(dt * 3.f, 0.f, 1.f); // ease ~1/3 s
         rain_ready = UploadVB(device, rain_inst_vb, rain_inst_cap, rain_instances.data(), rain_instances.size() * sizeof(WeatherInstance));
@@ -780,14 +852,17 @@ namespace {
         if (state < 0) state = 2; // no explicit state given -> toggle
 
         const std::string want = TextUtils::ToLower(name);
-        bool found = false;
-        for (auto& c : conditions) {
-            if (TextUtils::ToLower(c.name) != want) continue;
-            c.active = state == 2 ? !c.active : state == 1;
-            Log::Info("%s: %s", c.name.c_str(), c.active ? "on" : "off");
-            found = true;
+        for (size_t i = 0; i < conditions.size(); i++) {
+            if (TextUtils::ToLower(conditions[i].name) != want) continue;
+            const bool on = state == 2 ? !conditions[i].active : state == 1;
+            // Only one condition at a time: activate this one and clear the rest (deactivating just turns it off).
+            for (auto& o : conditions)
+                o.active = false;
+            conditions[i].active = on;
+            Log::Info("%s: %s", conditions[i].name.c_str(), on ? "on" : "off");
+            return;
         }
-        if (!found) Log::Error("No weather condition named '%s'", name.c_str());
+        Log::Error("No weather condition named '%s'", name.c_str());
     }
 } // namespace
 
@@ -850,11 +925,8 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         // Instanced pass: each rain drop is one record expanded into a quad on the GPU (stream 0 = unit
         // quad, stream 1 = per-drop data with INSTANCEDATA frequency).
         if (ib_ok && have_rain && device->SetVertexShader(weather_inst_vs) == D3D_OK && device->SetVertexDeclaration(weather_inst_decl) == D3D_OK) {
-            const auto tint = ImGui::ColorConvertU32ToFloat4(rain_color);
-            const float tintf[4] = {tint.x, tint.y, tint.z, tint.w};
             const float flags[4] = {1.f, 0.f, 0.f, 0.f}; // flip texture V (streak runs along the downward velocity)
-            device->SetVertexShaderConstantF(8, tintf, 1);
-            device->SetVertexShaderConstantF(9, flags, 1);
+            device->SetVertexShaderConstantF(9, flags, 1);   // tint is now per-instance (stream 1 COLOR), not a constant
             const UINT ninst = static_cast<UINT>(rain_instances.size());
             if (device->SetStreamSource(0, quad_geom_vb, 0, sizeof(GeomVert)) == D3D_OK && device->SetStreamSourceFreq(0, D3DSTREAMSOURCE_INDEXEDDATA | ninst) == D3D_OK && device->SetStreamSource(1, rain_inst_vb, 0, sizeof(WeatherInstance)) == D3D_OK &&
                 device->SetStreamSourceFreq(1, D3DSTREAMSOURCE_INSTANCEDATA | 1u) == D3D_OK) {
@@ -871,10 +943,6 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
 
 void WeatherModule::RegisterSettings(ToolboxModule* module)
 {
-    SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
-    SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
-    SettingsRegistry::RegisterField(module, "rain_color", &rain_color);
-    SettingsRegistry::RegisterField(module, "ambient_color", &ambient_color);
     SettingsRegistry::RegisterField(module, "auto_weather", &auto_weather);
     SettingsRegistry::RegisterField(module, "auto_change_min", &auto_change_min);
     SettingsRegistry::RegisterField(module, "auto_change_max", &auto_change_max);
@@ -882,9 +950,11 @@ void WeatherModule::RegisterSettings(ToolboxModule* module)
 
 void WeatherModule::OnSettingsLoaded()
 {
-    render_max_distance = std::clamp(render_max_distance, 10.0f, kMaxRadius);
+    bool seen_active = false; // single-active: keep only the first active condition (older configs may have several)
     for (auto& c : conditions) {
+        if (c.active && std::exchange(seen_active, true)) c.active = false;
         c.type = std::clamp(c.type, 0, kTypeCount - 1);
+        c.floor_decal = std::clamp(c.floor_decal, kDecalAuto, kDecalCount - 1);
         c.drop_count = std::clamp(c.drop_count, 0, 20000);
         c.spread_radius = kMaxRadius; // fixed, not user-editable
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
@@ -894,16 +964,16 @@ void WeatherModule::OnSettingsLoaded()
     }
     auto_change_min = std::max(auto_change_min, 0.1f);
     auto_change_max = std::max(auto_change_max, auto_change_min);
-    for (auto& rp : region_profiles)
-        for (auto& e : rp.entries)
+    for (auto& cp : climate_profiles)
+        for (auto& e : cp.entries)
             e.weight = std::clamp(e.weight, 0.f, 1.f);
 }
 
 void WeatherModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
-    doc.Get(Name(), "conditions", conditions);           // keeps defaults if the key is absent
-    doc.Get(Name(), "region_profiles", region_profiles); // region->weather table for automatic weather
+    doc.Get(Name(), "conditions", conditions);             // keeps defaults if the key is absent
+    doc.Get(Name(), "climate_profiles", climate_profiles); // climate->weather table for automatic weather
     OnSettingsLoaded();
 }
 
@@ -911,7 +981,7 @@ void WeatherModule::SaveSettings(SettingsDoc& doc)
 {
     ToolboxModule::SaveSettings(doc);
     doc.Set(Name(), "conditions", conditions);
-    doc.Set(Name(), "region_profiles", region_profiles);
+    doc.Set(Name(), "climate_profiles", climate_profiles);
 }
 
 void WeatherModule::DrawSettings()
@@ -921,24 +991,28 @@ void WeatherModule::DrawSettings()
     ImGui::TextColored(red, "Warning: This is a beta feature.");
     if (!GameWorldCompositor::IsActive()) ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "  in-world compositor FAILED to install." : "  in-world compositor: not installed yet.");
 
-    ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
-    ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 10.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    auto col = ImGui::ColorConvertU32ToFloat4(rain_color);
-    if (ImGui::ColorEdit4("Tint", &col.x, ImGuiColorEditFlags_AlphaBar)) rain_color = ImGui::ColorConvertFloat4ToU32(col);
-    auto amb = ImGui::ColorConvertU32ToFloat4(ambient_color);
-    if (ImGui::ColorEdit3("Overcast tint", &amb.x)) ambient_color = ImGui::ColorConvertFloat4ToU32(amb);
-    ImGui::ShowHelp("Colour the scene is tinted toward while an overcast condition is active.\nPer-condition strength is set with each condition's \"Overcast\" slider.");
+    // Info: the current map's climate, and which condition(s) are currently being shown.
+    if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo())
+        ImGui::Text("Current map: %s (climate: %s)", Resources::GetRegionName(info->region)->string().c_str(), ClimateName(ClimateForMap(GW::Map::GetMapID())));
+    std::string showing;
+    for (const auto& c : conditions)
+        if (c.active) showing += (showing.empty() ? "" : ", ") + c.name;
+    ImGui::Text("Showing: %s", showing.empty() ? "Clear" : showing.c_str());
 
     ImGui::Separator();
-    int to_remove = -1;
+    int to_remove = -1, to_duplicate = -1;
     for (int i = 0; i < static_cast<int>(conditions.size()); i++) {
         auto& c = conditions[i];
         ImGui::PushID(i);
         ImGui::BeginDisabled(auto_weather); // automatic weather owns the active state; show it read-only
-        ImGui::Checkbox("##active", &c.active);
+        if (ImGui::Checkbox("##active", &c.active) && c.active) // only one condition at a time: turning one on turns the rest off
+            for (int j = 0; j < static_cast<int>(conditions.size()); j++)
+                if (j != i) conditions[j].active = false;
         ImGui::EndDisabled();
         ImGui::SameLine();
-        if (ImGui::CollapsingHeader(c.name.empty() ? "(unnamed)" : c.name.c_str())) {
+        char header[64];
+        snprintf(header, sizeof(header), "%s###cond", c.name.empty() ? "(unnamed)" : c.name.c_str()); // stable id so editing the name doesn't collapse/unfocus the section
+        if (ImGui::CollapsingHeader(header)) {
             ImGui::InputText("Name", c.name, 32);
             const char* type_names[kTypeCount] = {"Rain", "Snow"};
             ImGui::Combo("Type", &c.type, type_names, kTypeCount);
@@ -946,14 +1020,19 @@ void WeatherModule::DrawSettings()
             ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
             ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
             ImGui::DragFloat2("Wind (x, y)", &c.wind_x, 10.f, -10000.f, 10000.f, "%.0f");
-            if (HasSplash(c.type)) ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            const char* decal_names[kDecalCount] = {"None", "Splash", "Settle"};
+            int decal = EffectiveDecal(c);
+            if (ImGui::Combo("Floor decal", &decal, decal_names, kDecalCount)) c.floor_decal = decal;
+            ImGui::ShowHelp("What each impact leaves on the ground: nothing, a water splash, or a settled flake/patch.");
+            if (decal == kDecalSplash) ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            auto ct = ImGui::ColorConvertU32ToFloat4(c.tint);
+            if (ImGui::ColorEdit4("Tint", &ct.x, ImGuiColorEditFlags_AlphaBar)) c.tint = ImGui::ColorConvertFloat4ToU32(ct);
+            ImGui::ShowHelp("This condition's particle colour - e.g. a dark grey for ashfall.");
             ImGui::DragFloat("Overcast", &c.ambient, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::ShowHelp("How strongly this condition dims the scene toward the overcast tint while active.");
-            if (c.type == kTypeSnow) {
-                auto ct = ImGui::ColorConvertU32ToFloat4(c.tint);
-                if (ImGui::ColorEdit4("Flake tint", &ct.x, ImGuiColorEditFlags_AlphaBar)) c.tint = ImGui::ColorConvertFloat4ToU32(ct);
-                ImGui::ShowHelp("Multiplies the global tint for this condition's flakes and settled marks - e.g. a dark grey for ashfall.\nApplies to snow-type conditions only.");
-            }
+            ImGui::ShowHelp("How strongly this condition dims the scene toward its overcast tint while active.");
+            auto oc = ImGui::ColorConvertU32ToFloat4(c.overcast_tint);
+            if (ImGui::ColorEdit3("Overcast tint", &oc.x)) c.overcast_tint = ImGui::ColorConvertFloat4ToU32(oc);
+            ImGui::ShowHelp("The colour the scene is dimmed toward while this condition drives the overcast.");
 
             ImGui::TextUnformatted("Sounds (file id, played at random while active)");
             int snd_remove = -1;
@@ -976,13 +1055,22 @@ void WeatherModule::DrawSettings()
             ImGui::Checkbox("Play sounds in 3D", &c.sound_3d);
             ImGui::ShowHelp("Play each sound from a random nearby position so the game's 3D audio varies its\nvolume and stereo panning - reduces repetition when there's only one sound.\nNo effect if the sound isn't a positional one.");
 
+            if (ImGui::Button("Duplicate")) to_duplicate = i;
+            ImGui::SameLine();
             if (ImGui::Button("Remove condition")) to_remove = i;
         }
         ImGui::PopID();
     }
     if (to_remove >= 0) {
         conditions.erase(conditions.begin() + to_remove);
-        if (to_remove < static_cast<int>(particles.size())) particles.erase(particles.begin() + to_remove);
+        active_particles = {};  // free the live buffer and let SyncWeather re-resolve (indices shifted)
+        active_condition = -1;
+    }
+    if (to_duplicate >= 0) {
+        WeatherCondition copy = conditions[to_duplicate]; // copy first: insert may reallocate the vector
+        copy.name += " copy";
+        copy.active = false; // single-active: the duplicate starts off
+        conditions.insert(conditions.begin() + to_duplicate + 1, std::move(copy));
     }
 
     if (ImGui::Button("Add condition")) conditions.push_back({});
@@ -992,7 +1080,8 @@ void WeatherModule::DrawSettings()
         ImGui::Text("Replace all conditions with the %d defaults?", static_cast<int>(DefaultConditions().size()));
         if (ImGui::Button("Reset")) {
             conditions = DefaultConditions();
-            particles.clear();
+            active_particles = {};
+            active_condition = -1;
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -1001,61 +1090,54 @@ void WeatherModule::DrawSettings()
     }
 
     ImGui::Separator();
-    if (ImGui::Checkbox("Automatic weather (by region)", &auto_weather) && auto_weather) auto_timer = -1.f; // roll at once on enable
-    ImGui::ShowHelp("Choose the active weather automatically from the table below, based on the region you're in,\nre-rolling every few minutes. While on, the manual on/off toggles above are disabled.");
-    if (auto_weather) {
-        // Two separate globals (not a contiguous pair), so DragFloatRange2's two pointers - not DragFloat2.
+    if (ImGui::Checkbox("Automatic weather (by climate)", &auto_weather) && auto_weather) auto_timer = -1.f; // roll at once on enable
+    ImGui::ShowHelp("Choose the active weather automatically from the table below, based on the climate of the region\nyou're in, re-rolling every few minutes. While on, the manual on/off toggles above are disabled.");
+    if (auto_weather) // two separate globals (not a contiguous pair), so DragFloatRange2's two pointers - not DragFloat2
         ImGui::DragFloatRange2("Change interval (min)", &auto_change_min, &auto_change_max, 0.25f, 0.1f, 240.f, "%.1f", "%.1f", ImGuiSliderFlags_AlwaysClamp);
-        if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo()) ImGui::Text("Current region: %s", RegionName(info->region));
-    }
 
-    ImGui::PushID("regions"); // keep these widget ids from colliding with the conditions loop above
-    int region_remove = -1;
-    for (int i = 0; i < static_cast<int>(region_profiles.size()); i++) {
-        auto& rp = region_profiles[i];
+    ImGui::PushID("climates"); // keep these widget ids from colliding with the conditions loop above
+    int climate_remove = -1;
+    for (int i = 0; i < static_cast<int>(climate_profiles.size()); i++) {
+        auto& cp = climate_profiles[i];
         ImGui::PushID(i);
-        char header[64];
-        snprintf(header, sizeof(header), "%s###r", RegionName(rp.region)); // stable id while the name finishes decoding
-        if (ImGui::CollapsingHeader(header)) {
+        if (ImGui::CollapsingHeader(ClimateName(cp.climate))) {
             int ent_remove = -1;
-            for (int e = 0; e < static_cast<int>(rp.entries.size()); e++) {
+            for (int e = 0; e < static_cast<int>(cp.entries.size()); e++) {
                 ImGui::PushID(e);
                 ImGui::SetNextItemWidth(160.f);
-                if (ImGui::BeginCombo("##cond", rp.entries[e].condition.c_str())) {
+                if (ImGui::BeginCombo("##cond", cp.entries[e].condition.c_str())) {
                     for (const auto& c : conditions)
-                        if (ImGui::Selectable(c.name.c_str(), c.name == rp.entries[e].condition)) rp.entries[e].condition = c.name;
+                        if (ImGui::Selectable(c.name.c_str(), c.name == cp.entries[e].condition)) cp.entries[e].condition = c.name;
                     ImGui::EndCombo();
                 }
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(110.f);
-                ImGui::DragFloat("##weight", &rp.entries[e].weight, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("##weight", &cp.entries[e].weight, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
                 ImGui::SameLine();
                 if (ImGui::SmallButton("Remove##ent")) ent_remove = e;
                 ImGui::PopID();
             }
-            if (ent_remove >= 0) rp.entries.erase(rp.entries.begin() + ent_remove);
-            if (ImGui::SmallButton("Add condition##ent")) rp.entries.push_back({conditions.empty() ? "" : conditions.front().name, 0.3f});
+            if (ent_remove >= 0) cp.entries.erase(cp.entries.begin() + ent_remove);
+            if (ImGui::SmallButton("Add condition##ent")) cp.entries.push_back({conditions.empty() ? "" : conditions.front().name, 0.3f});
             float sum = 0.f;
-            for (const auto& e : rp.entries) sum += std::max(0.f, e.weight);
+            for (const auto& e : cp.entries) sum += std::max(0.f, e.weight);
             ImGui::Text("Clear weather: %.0f%%", std::max(0.f, 1.f - sum) * 100.f);
-            if (ImGui::Button("Remove region")) region_remove = i;
+            if (ImGui::Button("Remove climate")) climate_remove = i;
         }
         ImGui::PopID();
     }
-    if (region_remove >= 0) region_profiles.erase(region_profiles.begin() + region_remove);
+    if (climate_remove >= 0) climate_profiles.erase(climate_profiles.begin() + climate_remove);
 
-    if (ImGui::Button("Add region")) ImGui::OpenPopup("add_region");
-    if (ImGui::BeginPopup("add_region")) {
-        for (const auto r : kRegions) {
-            if (std::any_of(region_profiles.begin(), region_profiles.end(), [&](const RegionProfile& rp) { return rp.region == r; })) continue;
-            ImGui::PushID(static_cast<int>(r)); // names may be blank while decoding, so don't rely on them for ids
-            if (ImGui::Selectable(RegionName(r))) region_profiles.push_back({r, {}});
-            ImGui::PopID();
+    if (ImGui::Button("Add climate")) ImGui::OpenPopup("add_climate");
+    if (ImGui::BeginPopup("add_climate")) {
+        for (const auto& k : kClimates) {
+            if (std::any_of(climate_profiles.begin(), climate_profiles.end(), [&](const ClimateProfile& cp) { return cp.climate == k.climate; })) continue;
+            if (ImGui::Selectable(k.name)) climate_profiles.push_back({k.climate, {}});
         }
         ImGui::EndPopup();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Reset region table")) region_profiles = DefaultRegionProfiles();
+    if (ImGui::Button("Reset climate table")) climate_profiles = DefaultClimateProfiles();
     ImGui::PopID();
 }
 
@@ -1113,11 +1195,12 @@ void WeatherModule::Terminate()
             *d = nullptr;
         }
     rain_inst_cap = snow_cap = splash_cap = quad_ib_quads = 0;
-    particles.clear();
+    active_particles = {};
+    active_condition = -1;
     raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
     textures_requested = false;
     last_update = 0;
-    auto_region = GW::Region_DevRegion;
+    auto_climate = Climate::Temperate;
     auto_timer = -1.f;
     ToolboxModule::Terminate();
 }

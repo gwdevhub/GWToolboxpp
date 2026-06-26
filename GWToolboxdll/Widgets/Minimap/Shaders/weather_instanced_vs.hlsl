@@ -4,7 +4,6 @@
 // matches weather_billboard_vs so the same pixel shader (distance fade) is reused.
 float4x4 view_matrix : register(c0);
 float4x4 proj_matrix : register(c4);
-float4 tint : register(c8);  // rgba multiplied into the sprite (was the per-vertex colour)
 float4 flags : register(c9); // x = flip texture V (rain streak runs along the downward velocity)
 
 struct VS_INPUT {
@@ -13,6 +12,7 @@ struct VS_INPUT {
     float3 center : TEXCOORD1; // stream 1 (per instance)
     float3 axis_x : TEXCOORD2; // stream 1
     float3 axis_y : TEXCOORD3; // stream 1
+    float4 tint : COLOR;       // stream 1: per-instance rgba tint
 };
 
 struct VS_OUTPUT {
@@ -25,7 +25,7 @@ struct VS_OUTPUT {
 VS_OUTPUT main(VS_INPUT input) {
     float3 world = input.center + input.corner.x * input.axis_x + input.corner.y * input.axis_y;
     VS_OUTPUT output;
-    output.color = tint;
+    output.color = input.tint;
     output.uv = float2(input.uv.x, lerp(input.uv.y, 1.0 - input.uv.y, flags.x));
     output.world = float4(world, 1.0);
     output.position = mul(float4(world, 1.0), view_matrix);
