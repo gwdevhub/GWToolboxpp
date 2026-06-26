@@ -147,19 +147,22 @@ namespace {
     {
         const float disk = 3.14159265f * c.spread_radius * c.spread_radius;
         const float per_particle = particle_area_full * 100.f / static_cast<float>(std::clamp(c.density, 1, 100));
-        return std::min(max_particles, static_cast<int>(disk / per_particle));
+        // Scale by the fraction of the full-radius column the capped fall height actually fills, so a shorter
+        // column holds proportionally fewer particles instead of packing the same count in tighter.
+        const float height_fraction = ColumnHeight(c) / c.spread_radius;
+        return std::min(max_particles, static_cast<int>(disk / per_particle * height_fraction));
     }
 
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 20, 10.f, 1000.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
-            {"Light Rain", kTypeRain, false, 2, 8.f, 1600.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
-            {"Snow", kTypeSnow, false, 8, 8.f, 400.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
+            {"Heavy Rain", kTypeRain, false, 33, 10.f, 1000.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
+            {"Light Rain", kTypeRain, false, 3, 8.f, 1600.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
+            {"Snow", kTypeSnow, false, 13, 8.f, 400.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
-            {"Ashfall", kTypeSnow, false, 6, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
+            {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
             // Sand: snow-type tilted nearly sideways, blown across the view (camera-relative), dense, sandy, no decal.
-            {"Sandstorm", kTypeSnow, false, 50, 6.f, 250.f, 2500.f, 90.f, 90.f, 80.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f, true},
+            {"Sandstorm", kTypeSnow, false, 83, 6.f, 250.f, 2500.f, 90.f, 90.f, 80.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f, true},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
