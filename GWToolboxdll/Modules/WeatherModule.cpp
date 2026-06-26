@@ -163,7 +163,7 @@ namespace {
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
             // Sand: snow-type tilted nearly sideways, blown across the view (camera-relative), dense, sandy, no decal.
-            {"Sandstorm", kTypeSnow, false, 83, 6.f, 250.f, 2500.f, 90.f, 90.f, 80.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f, true},
+            {"Sandstorm", kTypeSnow, false, 83, 6.f, 250.f, 2500.f, 90.f, 90.f, 90.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f, true},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -1049,7 +1049,7 @@ void WeatherModule::OnSettingsLoaded()
         c.floor_decal = std::clamp(c.floor_decal, kDecalAuto, kDecalCount - 1);
         c.drift = std::max(c.drift, kDriftAuto);
         c.wind_dir_max = std::max(c.wind_dir_max, c.wind_dir_min);
-        c.wind_tilt = std::clamp(c.wind_tilt, 0.f, 89.f);
+        c.wind_tilt = std::clamp(c.wind_tilt, 0.f, 90.f);
         c.density = std::clamp(c.density, 1, 100);
         c.spread_radius = kMaxRadius; // fixed, not user-editable
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
@@ -1119,8 +1119,8 @@ void WeatherModule::DrawSettings()
             ImGui::ShowHelp("The constant speed drops travel at. Wind tilts their direction without changing this speed.");
             ImGui::DragFloatRange2("Wind direction", &c.wind_dir_min, &c.wind_dir_max, 2.f, 0.f, 360.f, "%.0f deg", "%.0f deg", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("Range of compass headings the wind may blow toward; one is picked at random each time the\ncondition activates. A wide range (e.g. 0-360) varies the direction; a narrow one keeps it consistent.");
-            ImGui::DragFloat("Wind tilt", &c.wind_tilt, 1.f, 0.f, 89.f, "%.0f deg", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::ShowHelp("How far the fall is tilted from straight down: 0 = vertical, 89 = almost sideways.");
+            ImGui::DragFloat("Wind tilt", &c.wind_tilt, 1.f, 0.f, 90.f, "%.0f deg", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::ShowHelp("How far the fall is tilted from straight down: 0 = vertical, 90 = fully sideways (no fall -\nstreams horizontally and never sinks, e.g. a sandstorm).");
             ImGui::Checkbox("Wind relative to camera", &c.wind_camera_relative);
             ImGui::ShowHelp("Measure the wind direction from the camera instead of the world, so the storm keeps the same\non-screen direction as you rotate the camera (e.g. always blowing across the view).");
             if (c.type == kTypeSnow) {
