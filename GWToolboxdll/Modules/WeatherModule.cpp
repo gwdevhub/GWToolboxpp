@@ -50,7 +50,7 @@ namespace weather_module {
         std::string name = "Rain";
         int type = kTypeRain;
         bool active = false;
-        int drop_count = 1000;
+        int density = 30; // particle density 1..100%; the actual count is derived from this and the volume area
         float drop_size = 8.f;
         float fall_speed = 2000.f;    // gwinch/sec
         float spread_radius = 2500.f; // radius of the player-centred volume (horizontal wrap + column height); fixed on load
@@ -106,6 +106,9 @@ namespace {
     constexpr float kMaxRadius = GW::Constants::Range::SpiritExtended; // 3500 gwinch; radius of the weather volume
 
     // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
+    float particle_area_full = 2000.f; // gwinch^2 each particle covers at 100% density (smaller = denser); the per-
+                                       // particle area scales as this * 100 / density, so 100% is 100x denser than 1%
+    int max_particles = 30000;         // hard cap on a condition's particle count (FPS guard)
     float fog_factor = 1.0f;          // distance-fade strength fed to the shader
     float splash_size = 8.f;          // world size of a splash billboard
     float splash_duration = 0.5f;     // seconds to play the 16 keyframes
@@ -131,17 +134,25 @@ namespace {
     {
         return c.drift >= 0.f ? c.drift : (c.type == kTypeSnow ? snow_sway_amp : 0.f);
     }
+    // Particle count from the density %: cover the volume's horizontal disk (radius = spread_radius) with one
+    // particle per (particle_area_full * 100 / density) gwinch^2, so density scales the count linearly. Capped.
+    int DropCount(const WeatherCondition& c)
+    {
+        const float disk = 3.14159265f * c.spread_radius * c.spread_radius;
+        const float per_particle = particle_area_full * 100.f / static_cast<float>(std::clamp(c.density, 1, 100));
+        return std::min(max_particles, static_cast<int>(disk / per_particle));
+    }
 
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 4000, 10.f, 1000.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
-            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
-            {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
+            {"Heavy Rain", kTypeRain, false, 20, 10.f, 1000.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
+            {"Light Rain", kTypeRain, false, 2, 8.f, 1600.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
+            {"Snow", kTypeSnow, false, 8, 8.f, 400.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
-            {"Ashfall", kTypeSnow, false, 1200, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
+            {"Ashfall", kTypeSnow, false, 6, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
             // Sand: snow-type tilted nearly sideways, blown across the view (camera-relative), dense, sandy, no decal.
-            {"Sandstorm", kTypeSnow, false, 10000, 6.f, 250.f, 2500.f, 90.f, 90.f, 80.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f, true},
+            {"Sandstorm", kTypeSnow, false, 50, 6.f, 250.f, 2500.f, 90.f, 90.f, 80.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f, true},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -453,9 +464,9 @@ namespace {
     }
 
     // Side count of the square grid that tiles the spawn area for stratified placement.
-    int SpawnGrid(const int drop_count)
+    int SpawnGrid(const int count)
     {
-        return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(std::max(1, drop_count))))));
+        return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(std::max(1, count))))));
     }
 
     // Initial fill of the column. Stratified placement: each drop owns one grid cell, jittered within it, so the
@@ -476,9 +487,10 @@ namespace {
 
     void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz, const float wind_dir, const float center_dz)
     {
-        const int grid = SpawnGrid(c.drop_count);
-        if (static_cast<int>(p.raindrops.size()) != c.drop_count) {
-            p.raindrops.resize(std::max(0, c.drop_count));
+        const int count = DropCount(c);
+        const int grid = SpawnGrid(count);
+        if (static_cast<int>(p.raindrops.size()) != count) {
+            p.raindrops.resize(std::max(0, count));
             for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++)
                 seed_drop(p.raindrops[i], c, cx, cy, cz, i, grid);
         }
@@ -1002,7 +1014,7 @@ void WeatherModule::OnSettingsLoaded()
         c.drift = std::max(c.drift, kDriftAuto);
         c.wind_dir_max = std::max(c.wind_dir_max, c.wind_dir_min);
         c.wind_tilt = std::clamp(c.wind_tilt, 0.f, 89.f);
-        c.drop_count = std::clamp(c.drop_count, 0, 20000);
+        c.density = std::clamp(c.density, 1, 100);
         c.spread_radius = kMaxRadius; // fixed, not user-editable
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
         c.sound_min_interval = std::max(c.sound_min_interval, 0.f);
@@ -1063,7 +1075,9 @@ void WeatherModule::DrawSettings()
             ImGui::InputText("Name", c.name, 32);
             const char* type_names[kTypeCount] = {"Rain", "Snow"};
             ImGui::Combo("Type", &c.type, type_names, kTypeCount);
-            ImGui::DragInt("Drop count", &c.drop_count, 25.f, 0, 20000, "%d", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragInt("Density", &c.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::ShowHelp("How densely the volume is filled, 1-100%. The particle count is derived from this and\nthe spread area, so it stays consistent if the radius changes. Higher = denser (and heavier on FPS).");
+            ImGui::Text("  ~%d particles", DropCount(c));
             ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
             ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
             ImGui::ShowHelp("The constant speed drops travel at. Wind tilts their direction without changing this speed.");
