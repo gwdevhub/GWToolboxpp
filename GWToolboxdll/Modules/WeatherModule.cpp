@@ -8,6 +8,7 @@
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/RenderMgr.h>
 
 #include <Color.h>
 #include <Defines.h>
@@ -587,6 +588,19 @@ namespace {
         return (d.x - eye[0]) * fwd[0] + (d.y - eye[1]) * fwd[1] + (d.z - eye[2]) * fwd[2] >= kZNear;
     }
 
+    // A ground mark (splash/settle) is worth building only if it falls within the camera's view cone. Unlike the
+    // falling particles - which we only cull behind the near plane, so edge drops can still drift into view - these
+    // are static, so a tighter cull is safe. The cone circumscribes the screen rect (+10% margin), so it never
+    // culls a mark that's actually visible; the GPU clips whatever slips through the corners.
+    bool InView(const float px, const float py, const float pz, const float eye[3], const float fwd[3], const float cone_tan_sq)
+    {
+        const float dx = px - eye[0], dy = py - eye[1], dz = pz - eye[2];
+        const float depth = dx * fwd[0] + dy * fwd[1] + dz * fwd[2];
+        if (depth < kZNear) return false;
+        const float lat_sq = dx * dx + dy * dy + dz * dz - depth * depth; // squared perpendicular distance from the view axis
+        return lat_sq <= depth * depth * cone_tan_sq;
+    }
+
     // Snow/ash/sand: camera-aligned square billboards, instanced like rain (the GPU expands each record to a quad,
     // so the CPU only uploads ~52 bytes per flake instead of building four textured verts). The square's axes are
     // the camera right/up, constant per condition, so they bake into every record; tint is per-instance RGBA.
@@ -640,7 +654,7 @@ namespace {
 
     // Vertical billboard standing on the ground: horizontal axis follows the camera so it faces the
     // viewer, vertical axis is world up (-z), anchored so the base sits at the impact point.
-    void AppendSplashes(const std::vector<Splash>& s, const float right[3], const unsigned int tint)
+    void AppendSplashes(const std::vector<Splash>& s, const float right[3], const unsigned int tint, const float eye[3], const float fwd[3], const float cone_tan_sq)
     {
         const float hs = splash_size * 0.5f;
         const float ax[3] = {right[0] * hs, right[1] * hs, right[2] * hs};
@@ -648,6 +662,7 @@ namespace {
         const DWORD col = ToD3DColor(tint);
         const float u_step = 1.f / kSplashCols, v_step = 1.f / kSplashRows;
         for (const auto& sp : s) {
+            if (!InView(sp.x, sp.y, sp.z, eye, fwd, cone_tan_sq)) continue;
             const int f = std::clamp(static_cast<int>(sp.age / splash_duration * kSplashFrames), 0, kSplashFrames - 1);
             const float u0 = static_cast<float>(f % kSplashCols) * u_step, v0 = static_cast<float>(f / kSplashCols) * v_step;
             emit_quad(splash_vertices, sp.x, sp.y, sp.z - hs - splash_lift, ax, ay, col, u0, v0, u0 + u_step, v0 + v_step);
@@ -657,12 +672,13 @@ namespace {
 
     // Flat quad lying on the ground (world XY plane), drawn with the snowflake texture - so it shares the snow
     // instance buffer/pass. Holds at full tint, then fades out over the tail of its life via the per-instance alpha.
-    void AppendSettledInstances(std::vector<WeatherInstance>& out, const std::vector<Settle>& s)
+    void AppendSettledInstances(std::vector<WeatherInstance>& out, const std::vector<Settle>& s, const float eye[3], const float fwd[3], const float cone_tan_sq)
     {
         const float hs = snow_settle_size * 0.5f;
         const float fade_span = std::clamp(snow_settle_fade, 0.01f, 1.f);
         out.reserve(out.size() + s.size());
         for (const auto& sp : s) {
+            if (!InView(sp.x, sp.y, sp.z, eye, fwd, cone_tan_sq)) continue;
             const float life = snow_settle_duration > 0.f ? sp.age / snow_settle_duration : 1.f;
             const float fade = life < 1.f - fade_span ? 1.f : std::max(0.f, (1.f - life) / fade_span);
             out.push_back({sp.x, sp.y, sp.z - splash_lift, hs, 0.f, 0.f, 0.f, hs, 0.f, fade});
@@ -821,6 +837,16 @@ namespace {
         float up[3];
         cross3(fwd, right, up);
 
+        // View-cone half-angle (squared tangent) for culling off-screen ground marks: circumscribe the screen rect
+        // from the vertical FOV + aspect, with a 10% margin. Falls back to no cull if the FOV looks invalid.
+        float cone_tan_sq = 1e30f;
+        if (const float fov = GW::Render::GetFieldOfView(); fov > 0.1f) {
+            const int vh = GW::Render::GetViewportHeight();
+            const float aspect = vh > 0 ? static_cast<float>(GW::Render::GetViewportWidth()) / static_cast<float>(vh) : 1.7778f;
+            const float tan_v = std::tan(fov * 0.5f);
+            cone_tan_sq = tan_v * tan_v * (1.f + aspect * aspect) * 1.21f;
+        }
+
         float ambient_target = 0.f;
         if (active >= 0 && ready) {
             auto& c = conditions[active];
@@ -835,8 +861,8 @@ namespace {
                 AppendSnowInstances(snow_instances, c, active_particles.raindrops, right, up, eye, fwd);
             else
                 AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading, eye);
-            AppendSplashes(active_particles.splashes, right, c.tint);
-            AppendSettledInstances(snow_instances, active_particles.settled);
+            AppendSplashes(active_particles.splashes, right, c.tint, eye, fwd, cone_tan_sq);
+            AppendSettledInstances(snow_instances, active_particles.settled, eye, fwd, cone_tan_sq);
             UpdateSounds(c, active_particles, dt, cx, cy, cz);
         }
         ambient_strength += (ambient_target - ambient_strength) * std::clamp(dt * 3.f, 0.f, 1.f); // ease ~1/3 s
