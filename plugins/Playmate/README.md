@@ -1,8 +1,8 @@
 # Playmate for GWToolbox++
 
-Playmate is an experimental GWToolbox++ plugin for building an in-character AI companion inside Guild Wars 1.
+Playmate is an experimental GWToolbox++ plugin for building in-character AI companions inside Guild Wars 1.
 
-The first companion persona is Azele: a Human Elementalist who can eventually notice where you are, what quest you are pushing, what the party is saying, and what threats are nearby. The plugin is the in-game sensory layer for that system. It listens to GW1 through GWCA, turns useful game state into structured telemetry, and provides a safe local path for companion replies to appear in the party chat window.
+The plugin is the in-game sensory layer for that system. It is designed to support whichever companion persona a player wants to run, whether that is a roleplay character, a tactical guide, a lore-aware party member, or a test persona used during development. It listens to GW1 through GWCA, turns useful game state into structured telemetry, and provides a safe local path for companion replies to appear in the party chat window.
 
 ## What It Does Today
 
@@ -27,7 +27,7 @@ The plugin can also POST events to a local companion service:
 - `POST /v1/playmate/events` receives telemetry JSON.
 - `GET /v1/playmate/replies` returns either `{"replies":["..."]}` or a plain text reply.
 
-Replies are injected locally with `GW::Chat::WriteChat`, using `Azele` as the sender. This writes to the client chat window; it does not send a message to ArenaNet servers.
+Replies are injected locally with `GW::Chat::WriteChat`, using the active companion persona as the sender. This writes to the client chat window; it does not send a message to ArenaNet servers.
 
 ## Where It Is Going
 
@@ -37,7 +37,7 @@ The intended architecture is:
 GW1 + GWToolbox++ Playmate plugin
         -> local JSONL capture for inspection
         -> local or LAN companion service
-        -> Supabase game_logs / environment_alerts / companion_replies / azele_memories
+        -> Supabase game_logs / environment_alerts / companion_replies / companion memory storage
         -> LLM-driven in-character responses
         -> local in-game chat rendering
 ```
