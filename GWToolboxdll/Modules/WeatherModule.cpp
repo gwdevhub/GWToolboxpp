@@ -42,7 +42,8 @@ namespace weather_module {
     constexpr int kDecalSplash = 1;
     constexpr int kDecalSettle = 2;
     constexpr int kDecalCount = 3;
-    constexpr int kDecalAuto = -1; // not set: derive from type (rain -> splash, snow -> settle)
+    constexpr int kDecalAuto = -1;     // not set: derive from type (rain -> splash, snow -> settle)
+    constexpr float kDriftAuto = -1.f; // drift not set: derive from type (snow floats sideways, rain does not)
 
     struct WeatherCondition {
         std::string name = "Rain";
@@ -52,7 +53,9 @@ namespace weather_module {
         float drop_size = 8.f;
         float fall_speed = 2000.f;    // gwinch/sec
         float spread_radius = 2500.f; // horizontal half-extent of the volume; fixed (forced on load, no UI)
-        float wind_x = 0.f, wind_y = 0.f;
+        float wind_dir_min = 0.f; // a heading is picked at random in [min, max] when the condition activates (degrees)
+        float wind_dir_max = 0.f;
+        float wind_tilt = 0.f; // how far the fall is tilted from straight-down, degrees (0 = vertical, 89 = sideways)
         float splash_chance = 1.f;      // 0..1 chance an impact spawns a splash
         std::vector<uint32_t> sounds;   // .dat sound file ids played at random while active
         float sound_min_interval = 8.f; // seconds between sounds
@@ -62,6 +65,7 @@ namespace weather_module {
         unsigned int tint = 0xFFFFFFFFu;          // this condition's particle tint (ImGui-packed); white = untinted
         unsigned int overcast_tint = 0xFFA09078u; // the scene-dimming colour while this condition drives the overcast
         int floor_decal = kDecalAuto;             // what each impact leaves on the ground: none/splash/settle
+        float drift = kDriftAuto;                 // lateral float as particles fall (gwinch/sec amplitude); 0 = none
     };
 
     // A broad weather climate. Maps/regions are grouped into one of these (see ClimateForRegion), so weather is
@@ -115,27 +119,28 @@ namespace {
     float snow_settle_fade = 0.4f;    // last fraction of the lifetime spent fading out
     int max_settled = 4000;           // per-condition cap on settled flakes
 
-    constexpr bool HasMeander(const int type)
-    {
-        return type == kTypeSnow;
-    }
     // The floor decal a condition leaves; resolves kDecalAuto from the weather type so old saved conditions and
     // freshly-added ones behave as before (rain splashes, snow settles).
     constexpr int EffectiveDecal(const WeatherCondition& c)
     {
         return c.floor_decal != kDecalAuto ? c.floor_decal : (c.type == kTypeSnow ? kDecalSettle : kDecalSplash);
     }
+    // The lateral float amplitude; resolves kDriftAuto from the type (snow floats by default, rain falls straight).
+    float EffectiveDrift(const WeatherCondition& c)
+    {
+        return c.drift >= 0.f ? c.drift : (c.type == kTypeSnow ? snow_sway_amp : 0.f);
+    }
 
     std::vector<WeatherCondition> DefaultConditions()
     {
         return {
-            {"Heavy Rain", kTypeRain, false, 4000, 10.f, 1000.f, 2500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
-            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 2500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
-            {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 2500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
+            {"Heavy Rain", kTypeRain, false, 4000, 10.f, 1000.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
+            {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
+            {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
-            {"Ashfall", kTypeSnow, false, 1200, 9.f, 350.f, 2500.f, 30.f, 30.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
-            // Sand: snow-type with a strong horizontal wind, dense count, a sandy tint/overcast and no floor decal.
-            {"Sandstorm", kTypeSnow, false, 10000, 6.f, 250.f, 2500.f, 2500.f, 0.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF70A0C0u, kDecalNone},
+            {"Ashfall", kTypeSnow, false, 1200, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
+            // Sand: snow-type tilted nearly sideways and blown from any heading, dense count, sandy, no floor decal.
+            {"Sandstorm", kTypeSnow, false, 10000, 6.f, 250.f, 2500.f, 0.f, 360.f, 80.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -250,6 +255,7 @@ namespace {
     // currently driving it, -1 = clear.
     Particles active_particles;
     int active_condition = -1;
+    float active_wind_dir = 0.f; // heading rolled from the active condition's [wind_dir_min, max] when it activated
     bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
 
     // Rain is GPU-instanced: one record per drop (centre + the two half-extent axes), expanded to a quad
@@ -308,6 +314,18 @@ namespace {
             v[1] /= l;
             v[2] /= l;
         }
+    }
+
+    // Unit fall direction: straight down (world up is -z, so +z) tilted tilt_deg from vertical toward the dir_deg
+    // heading. Velocity is this scaled by fall_speed, so wind only sets direction. dir_deg is the per-activation
+    // roll within the condition's [wind_dir_min, wind_dir_max] range.
+    void WindDir(const float dir_deg, const float tilt_deg, float out[3])
+    {
+        constexpr float kDeg2Rad = 0.01745329f;
+        const float st = std::sin(tilt_deg * kDeg2Rad), ct = std::cos(tilt_deg * kDeg2Rad);
+        out[0] = st * std::cos(dir_deg * kDeg2Rad);
+        out[1] = st * std::sin(dir_deg * kDeg2Rad);
+        out[2] = ct;
     }
 
     constexpr float kNoGround = std::numeric_limits<float>::max(); // "no terrain here" sentinel
@@ -452,7 +470,7 @@ namespace {
         d.sway_phase = frand(0.f, 6.2831853f);
     }
 
-    void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz)
+    void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz, const float wind_dir)
     {
         const int grid = SpawnGrid(c.drop_count);
         if (static_cast<int>(p.raindrops.size()) != c.drop_count) {
@@ -462,19 +480,23 @@ namespace {
         }
         const int decal = EffectiveDecal(c);
         const bool splash = decal == kDecalSplash;
-        const bool meander = HasMeander(c.type);
+        const float drift = EffectiveDrift(c);
         const bool settle = decal == kDecalSettle;
         const float top_z = cz - column_height;
         const float diameter = 2.f * c.spread_radius;
+        // Velocity is the (unit) fall direction scaled by fall_speed, so wind sets the direction, not the speed.
+        float vel[3];
+        WindDir(wind_dir, c.wind_tilt, vel);
+        const float vx = vel[0] * c.fall_speed, vy = vel[1] * c.fall_speed, vz = vel[2] * c.fall_speed;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
-            d.z += c.fall_speed * dt;
-            // Snow drifts on an out-of-phase sin/cos wobble so each flake wanders rather than falling in a line.
-            const float sway_x = meander ? snow_sway_amp * std::sin(d.sway_phase) : 0.f;
-            const float sway_y = meander ? snow_sway_amp * std::cos(d.sway_phase) : 0.f;
+            d.z += vz * dt;
+            // Float: an out-of-phase sin/cos wobble so each flake wanders sideways rather than falling in a line.
+            const float sway_x = drift > 0.f ? drift * std::sin(d.sway_phase) : 0.f;
+            const float sway_y = drift > 0.f ? drift * std::cos(d.sway_phase) : 0.f;
             d.sway_phase += snow_sway_speed * dt;
-            d.x += (c.wind_x + sway_x) * dt;
-            d.y += (c.wind_y + sway_y) * dt;
+            d.x += (vx + sway_x) * dt;
+            d.y += (vy + sway_y) * dt;
             // Keep the volume centred on the player: a drop blown past one edge of the bubble wraps to the
             // opposite edge (entering from upwind), so the wind only sets which way drops stream through a fixed,
             // player-centred column. Re-query the terrain under the wrapped position.
@@ -544,11 +566,11 @@ namespace {
     // Rain: one instance record per drop. Streak axes (long axis along the downward velocity, width axis
     // facing the camera) are constant per condition, so they are baked into every record; the GPU expands
     // the quad. The instanced VS applies the V-flip so the texture stays upright.
-    void AppendRainInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float fwd[3])
+    void AppendRainInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float fwd[3], const float wind_dir)
     {
         const float h = c.drop_size * 0.5f;
-        float vel[3] = {c.wind_x, c.wind_y, c.fall_speed};
-        normalize3(vel);
+        float vel[3];
+        WindDir(wind_dir, c.wind_tilt, vel); // unit fall direction (streak runs along it)
         float w[3];
         cross3(vel, fwd, w);
         const float wl = std::sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2]);
@@ -743,6 +765,7 @@ namespace {
         if (active != active_condition || reset) { // switched condition (or reset): drop the old particles, reseed fresh
             active_particles = {};
             active_condition = active;
+            if (active >= 0) active_wind_dir = frand(conditions[active].wind_dir_min, conditions[active].wind_dir_max); // roll a heading for this run
         }
 
         const float cx = cam->look_at_target.x, cy = cam->look_at_target.y, cz = cam->look_at_target.z;
@@ -760,11 +783,11 @@ namespace {
             auto& c = conditions[active];
             ambient_target = c.ambient;
             ambient_color = c.overcast_tint;
-            UpdateCondition(c, active_particles, dt, cx, cy, cz);
+            UpdateCondition(c, active_particles, dt, cx, cy, cz, active_wind_dir);
             if (c.type == kTypeSnow)
                 AppendSnow(c, snow_vertices, active_particles.raindrops, right, up);
             else
-                AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd);
+                AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, active_wind_dir);
             AppendSplashes(active_particles.splashes, right, c.tint);
             AppendSettled(active_particles.settled, c.tint);
             UpdateSounds(c, active_particles, dt, cx, cy, cz);
@@ -955,6 +978,9 @@ void WeatherModule::OnSettingsLoaded()
         if (c.active && std::exchange(seen_active, true)) c.active = false;
         c.type = std::clamp(c.type, 0, kTypeCount - 1);
         c.floor_decal = std::clamp(c.floor_decal, kDecalAuto, kDecalCount - 1);
+        c.drift = std::max(c.drift, kDriftAuto);
+        c.wind_dir_max = std::max(c.wind_dir_max, c.wind_dir_min);
+        c.wind_tilt = std::clamp(c.wind_tilt, 0.f, 89.f);
         c.drop_count = std::clamp(c.drop_count, 0, 20000);
         c.spread_radius = kMaxRadius; // fixed, not user-editable
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
@@ -1019,7 +1045,16 @@ void WeatherModule::DrawSettings()
             ImGui::DragInt("Drop count", &c.drop_count, 25.f, 0, 20000, "%d", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
             ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
-            ImGui::DragFloat2("Wind (x, y)", &c.wind_x, 10.f, -10000.f, 10000.f, "%.0f");
+            ImGui::ShowHelp("The constant speed drops travel at. Wind tilts their direction without changing this speed.");
+            ImGui::DragFloatRange2("Wind direction", &c.wind_dir_min, &c.wind_dir_max, 2.f, 0.f, 360.f, "%.0f deg", "%.0f deg", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::ShowHelp("Range of compass headings the wind may blow toward; one is picked at random each time the\ncondition activates. A wide range (e.g. 0-360) varies the direction; a narrow one keeps it consistent.");
+            ImGui::DragFloat("Wind tilt", &c.wind_tilt, 1.f, 0.f, 89.f, "%.0f deg", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::ShowHelp("How far the fall is tilted from straight down: 0 = vertical, 89 = almost sideways.");
+            if (c.type == kTypeSnow) {
+                float drift = EffectiveDrift(c);
+                if (ImGui::DragFloat("Drift", &drift, 1.f, 0.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) c.drift = drift;
+                ImGui::ShowHelp("How much flakes wander sideways as they float down. 0 = fall straight (e.g. sandstorm).");
+            }
             const char* decal_names[kDecalCount] = {"None", "Splash", "Settle"};
             int decal = EffectiveDecal(c);
             if (ImGui::Combo("Floor decal", &decal, decal_names, kDecalCount)) c.floor_decal = decal;
