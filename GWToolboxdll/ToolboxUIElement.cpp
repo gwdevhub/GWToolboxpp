@@ -664,6 +664,12 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     }
     ImGui::End();
     ImGui::PopStyleVar(2);
+
+    // Keep breakout_pos current so SaveSettings captures the right position even without a live ImGui context.
+    if (const auto bw = ImGui::FindWindowByName(window_id)) {
+        breakout_pos[0] = bw->Pos.x;
+        breakout_pos[1] = bw->Pos.y;
+    }
 }
 
 bool ToolboxUIElement::DrawTabButton(const bool show_icon, const bool show_text, const bool center_align_text)
