@@ -106,6 +106,10 @@ public:
     };
     // Near subset (range-culled): terrain-draped and drawn in-world as one batched VB.
     static void SetNavmeshLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines);
+    // gw between terrain-altitude samples when draping overlay edges (smaller = hugs the floor closer, more verts).
+    static void SetNavmeshSampleSpacing(float gw);
+    // Re-drape the current edge set with the latest sample spacing (no re-cull). Call after SetNavmeshSampleSpacing.
+    static void RedrapeNavmesh();
     // Full mesh for the 2D top-down M-key world map: not draped, redrawn flat by WorldMapWidget (game coords -> map).
     static void SetNavmeshWorldMapLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines);
     static void ClearNavmeshLines();

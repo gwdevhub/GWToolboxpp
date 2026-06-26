@@ -162,6 +162,7 @@ namespace {
         bool vb_dirty = false;                             // verts changed since last upload
     };
     NavmeshBatch navmesh_batch;
+    float navmesh_sample_spacing = 5.f; // gw between terrain-altitude samples when draping overlay edges (user-tunable)
 
     // Full mesh (not draped) for the 2D top-down M-key world map. WorldMapWidget redraws these flat each frame.
     std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
@@ -175,20 +176,19 @@ namespace {
         const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
         const uint32_t num_planes = pm ? static_cast<uint32_t>(pm->size()) : 0;
         if (!num_planes) return; // pathing map not ready yet; retry next frame
-        constexpr float sample_spacing = 50.f; // sample altitude every ~50gw so the edge hugs the floor, not a chord
         const auto budget_timer = TIMER_INIT();
+        const float spacing = std::max(1.f, navmesh_sample_spacing); // user-tunable: smaller = closer to the floor, more verts
         for (; b.build_cursor < b.lines.size(); ++b.build_cursor) {
             if (TIMER_DIFF(budget_timer) >= 2) break; // budget spent; resume next frame
             const auto& ln = b.lines[b.build_cursor];
             const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
-            const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / sample_spacing));
+            const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / spacing));
             // Drape each sample on the edge's OWN plane. A navmesh edge lies on a single trapezoid, so its surface IS
-            // that plane's heightfield — which already ramps/steps where the floor does (e.g. a platform plane that
-            // slopes down to the floor over the steps). Querying the plane directly per point makes the line ride that
-            // surface: a flat platform stays flat, a ramp rises, a deck stays on the deck, and an edge under a bridge
-            // stays on the ground (its plane), never pulled onto the deck. The old ClosestSurfaceZ-continuity drift
-            // instead pinned each edge to whatever height it happened to start at, so an edge climbing a ramp stayed
-            // too low and a boundary edge could float onto an unrelated higher surface.
+            // that plane's heightfield (which ramps/steps where the floor does). Querying the plane directly per point —
+            // not the globally-closest surface — makes the line ride that surface: flat stays flat, a ramp rises, a
+            // deck stays on the deck, and an edge under a bridge stays on the ground rather than snapping to the deck.
+            // Sampling density is `spacing` gw; QueryAltitude is exact at each point, so the only error is the chord
+            // between samples — tighten `spacing` to shrink it.
             const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
             auto surfaceZ = [&](float x, float y, float fallback) -> float {
                 GW::GamePos p{x, y, plane};
@@ -654,6 +654,23 @@ void GameWorldRenderer::SetNavmeshLines(GW::Constants::MapID map_id, std::vector
     auto& b = navmesh_batch;
     b.pending_map = map_id;
     b.lines = std::move(lines);
+    b.staging.clear();
+    b.build_cursor = 0;
+    b.building = true;
+}
+
+void GameWorldRenderer::SetNavmeshSampleSpacing(float gw)
+{
+    navmesh_sample_spacing = std::max(1.f, gw);
+}
+
+void GameWorldRenderer::RedrapeNavmesh()
+{
+    // Re-drape the current edge set (e.g. after the sample-spacing slider changed) without re-culling: restart the
+    // incremental build from the existing source lines. No-op if nothing is loaded.
+    auto& b = navmesh_batch;
+    if (b.lines.empty()) return;
+    b.pending_map = b.map_id;
     b.staging.clear();
     b.build_cursor = 0;
     b.building = true;
