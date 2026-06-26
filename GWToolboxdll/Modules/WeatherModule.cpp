@@ -256,6 +256,8 @@ namespace {
     Particles active_particles;
     int active_condition = -1;
     float active_wind_dir = 0.f; // heading rolled from the active condition's [wind_dir_min, max] when it activated
+    float center_z = 0.f;        // last update's focus altitude; the column is shifted by its change each tick so a
+                                 // slow-falling condition (which rarely reseeds its top) still tracks the player's height
     bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
 
     // Rain is GPU-instanced: one record per drop (centre + the two half-extent axes), expanded to a quad
@@ -470,7 +472,7 @@ namespace {
         d.sway_phase = frand(0.f, 6.2831853f);
     }
 
-    void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz, const float wind_dir)
+    void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz, const float wind_dir, const float center_dz)
     {
         const int grid = SpawnGrid(c.drop_count);
         if (static_cast<int>(p.raindrops.size()) != c.drop_count) {
@@ -490,7 +492,7 @@ namespace {
         const float vx = vel[0] * c.fall_speed, vy = vel[1] * c.fall_speed, vz = vel[2] * c.fall_speed;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
-            d.z += vz * dt;
+            d.z += vz * dt + center_dz; // fall, plus the whole column tracking the player's vertical movement
             // Float: an out-of-phase sin/cos wobble so each flake wanders sideways rather than falling in a line.
             const float sway_x = drift > 0.f ? drift * std::sin(d.sway_phase) : 0.f;
             const float sway_y = drift > 0.f ? drift * std::cos(d.sway_phase) : 0.f;
@@ -758,6 +760,8 @@ namespace {
         const auto ready = !reset && !GW::UI::GetIsWorldMapShowing();
         if (reset) ground_cache.clear(); // terrain altitudes are per-map; drop them when the map changes
 
+        const float cx = cam->look_at_target.x, cy = cam->look_at_target.y, cz = cam->look_at_target.z;
+
         // The single active condition (first one flagged active; single-active is enforced wherever it's toggled).
         int active = -1;
         for (int i = 0; i < static_cast<int>(conditions.size()); i++)
@@ -765,10 +769,12 @@ namespace {
         if (active != active_condition || reset) { // switched condition (or reset): drop the old particles, reseed fresh
             active_particles = {};
             active_condition = active;
+            center_z = cz; // freshly seeded around the current altitude - no shift on this frame
             if (active >= 0) active_wind_dir = frand(conditions[active].wind_dir_min, conditions[active].wind_dir_max); // roll a heading for this run
         }
+        const float dcz = cz - center_z; // the focus's vertical move this tick; the column is shifted by it so it
+        center_z = cz;                   // keeps tracking the player's height even when drops barely fall (sandstorm)
 
-        const float cx = cam->look_at_target.x, cy = cam->look_at_target.y, cz = cam->look_at_target.z;
         float fwd[3] = {cx - cam->position.x, cy - cam->position.y, cz - cam->position.z};
         normalize3(fwd);
         constexpr float world_up[3] = {0.f, 0.f, -1.f};
@@ -783,7 +789,7 @@ namespace {
             auto& c = conditions[active];
             ambient_target = c.ambient;
             ambient_color = c.overcast_tint;
-            UpdateCondition(c, active_particles, dt, cx, cy, cz, active_wind_dir);
+            UpdateCondition(c, active_particles, dt, cx, cy, cz, active_wind_dir, dcz);
             if (c.type == kTypeSnow)
                 AppendSnow(c, snow_vertices, active_particles.raindrops, right, up);
             else
