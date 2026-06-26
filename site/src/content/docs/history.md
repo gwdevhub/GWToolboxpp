@@ -17,6 +17,10 @@ the latest version, go to the [Home Page](./) instead.
 * [Minor] Crash-file write failures now report the actual cause (missing folder, full disk, permissions) instead of only a raw error code.
 * [Minor] Plugins: plugin-load error messages now display non-ASCII (e.g. Korean) file paths correctly.
 * [Minor] Docs site: headings now have hover-to-copy permalink anchors.
+* [Fix] Quest paths now follow raised ground correctly — bridges, monuments, steps and similar props — instead of cutting straight through them at floor height.
+* [Fix] Navmesh overlay: fixed phantom walls drawn across flat, walkable seams where two map layers meet, and overlay edges now sit on the terrain (steps included) at their true height.
+* [New] Navmesh overlay: added a "Terrain sample spacing" setting controlling how closely the overlay hugs the floor (lower = tighter detail).
+* **[Perf] Quest pathing is much faster now — try turning "Path recalc distance" (Pathfinding settings) down for a near-instant quest path that keeps up as you move. New installs default to 5.**
 
 ## Version 8.28
 * [New] Launcher: GWToolbox.exe now updates itself from GitHub (separately from the DLL) and offers to restart into the new version once the download finishes.
