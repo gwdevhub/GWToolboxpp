@@ -166,6 +166,7 @@ namespace {
     constexpr bool occlude_behind_terrain = true;
     constexpr float render_max_distance = kMaxRadius;
     unsigned int ambient_color = 0xFFA09078u; // overcast tint of the condition currently driving the dimming (runtime)
+    unsigned int active_tint = 0xFFFFFFFFu;   // the active condition's particle tint, fed to the instanced draws (runtime)
     float ambient_strength = 0.f;             // eased aggregate dimming of active conditions (runtime, not saved)
 
     bool auto_weather = false;   // drive which conditions are active from the climate->weather table
@@ -261,14 +262,14 @@ namespace {
                                  // slow-falling condition (which rarely reseeds its top) still tracks the player's height
     bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
 
-    // Rain is GPU-instanced: one record per drop (centre + the two half-extent axes), expanded to a quad
-    // by weather_instanced_vs. Snow/splash/settle keep the CPU-built indexed-quad path (per-instance UV
-    // animation and alpha fade don't fit the simple instance record).
+    // GPU-instanced record: one per drop (centre + the two half-extent axes + an alpha), expanded to a quad by
+    // weather_instanced_vs. The tint is a per-draw shader constant (only one condition is active at a time, so all
+    // its particles share it); the per-instance alpha is the only thing that varies (1 for flakes, fade for settle).
     struct WeatherInstance {
         float cx, cy, cz;
         float ax0, ax1, ax2;
         float ay0, ay1, ay2;
-        float cr, cg, cb, ca; // per-instance tint (RGBA, unpacked) so rain conditions keep their own tint in one draw
+        float alpha; // per-instance alpha multiplier on the tint constant
     };
     struct GeomVert {
         float sx, sy, u, v;
@@ -570,8 +571,7 @@ namespace {
     void AppendSnowInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float eye[3], const float fwd[3])
     {
         const float h = c.drop_size * 0.5f;
-        const auto t = ImGui::ColorConvertU32ToFloat4(c.tint); // unpacked RGBA (no R/B swap, unlike the old D3DCOLOR path)
-        const WeatherInstance base{0.f, 0.f, 0.f, right[0] * h, right[1] * h, right[2] * h, up[0] * h, up[1] * h, up[2] * h, t.x, t.y, t.z, t.w};
+        const WeatherInstance base{0.f, 0.f, 0.f, right[0] * h, right[1] * h, right[2] * h, up[0] * h, up[1] * h, up[2] * h, 1.f}; // tint is the c8 constant; flakes don't fade
         out.reserve(out.size() + drops.size());
         for (const auto& d : drops) {
             if (!InFront(d, eye, fwd)) continue;
@@ -604,8 +604,7 @@ namespace {
             w[1] = right[1];
             w[2] = right[2];
         }
-        const auto t = ImGui::ColorConvertU32ToFloat4(c.tint); // unpacked RGBA, baked per instance (no R/B swap)
-        const WeatherInstance base{0.f, 0.f, 0.f, w[0] * h, w[1] * h, w[2] * h, vel[0] * h, vel[1] * h, vel[2] * h, t.x, t.y, t.z, t.w};
+        const WeatherInstance base{0.f, 0.f, 0.f, w[0] * h, w[1] * h, w[2] * h, vel[0] * h, vel[1] * h, vel[2] * h, 1.f}; // tint is the c8 constant; rain doesn't fade
         out.reserve(out.size() + drops.size());
         for (const auto& d : drops) {
             if (!InFront(d, eye, fwd)) continue; // skip behind-camera drops: clipped anyway, so don't pay to build them
@@ -636,16 +635,15 @@ namespace {
 
     // Flat quad lying on the ground (world XY plane), drawn with the snowflake texture - so it shares the snow
     // instance buffer/pass. Holds at full tint, then fades out over the tail of its life via the per-instance alpha.
-    void AppendSettledInstances(std::vector<WeatherInstance>& out, const std::vector<Settle>& s, const unsigned int tint)
+    void AppendSettledInstances(std::vector<WeatherInstance>& out, const std::vector<Settle>& s)
     {
         const float hs = snow_settle_size * 0.5f;
-        const auto t = ImGui::ColorConvertU32ToFloat4(tint);
         const float fade_span = std::clamp(snow_settle_fade, 0.01f, 1.f);
         out.reserve(out.size() + s.size());
         for (const auto& sp : s) {
             const float life = snow_settle_duration > 0.f ? sp.age / snow_settle_duration : 1.f;
             const float fade = life < 1.f - fade_span ? 1.f : std::max(0.f, (1.f - life) / fade_span);
-            out.push_back({sp.x, sp.y, sp.z - splash_lift, hs, 0.f, 0.f, 0.f, hs, 0.f, t.x, t.y, t.z, t.w * fade});
+            out.push_back({sp.x, sp.y, sp.z - splash_lift, hs, 0.f, 0.f, 0.f, hs, 0.f, fade});
         }
     }
 
@@ -742,10 +740,10 @@ namespace {
         if (!weather_ps && device->CreatePixelShader(reinterpret_cast<const DWORD*>(&weather_billboard_ps), &weather_ps) != D3D_OK) return false;
 
         // Instanced pipeline: stream 0 = unit quad (POSITION = corner sign, TEXCOORD0 = uv); stream 1 =
-        // per-drop instance record (TEXCOORD1 = centre, TEXCOORD2/3 = the two half-extent axes, COLOR = tint).
+        // per-drop instance record (TEXCOORD1 = centre, TEXCOORD2/3 = the two half-extent axes, TEXCOORD4 = alpha).
         constexpr D3DVERTEXELEMENT9 inst_decl[] = {{0, 0, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},  {0, 8, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
                                                    {1, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1},  {1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 2},
-                                                   {1, 24, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 3}, {1, 36, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0}, D3DDECL_END()};
+                                                   {1, 24, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 3}, {1, 36, D3DDECLTYPE_FLOAT1, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 4}, D3DDECL_END()};
         if (!weather_inst_decl && device->CreateVertexDeclaration(inst_decl, &weather_inst_decl) != D3D_OK) return false;
         if (!weather_inst_vs && device->CreateVertexShader(reinterpret_cast<const DWORD*>(&weather_instanced_vs), &weather_inst_vs) != D3D_OK) return false;
         if (!quad_geom_vb) {
@@ -806,6 +804,7 @@ namespace {
             auto& c = conditions[active];
             ambient_target = c.ambient;
             ambient_color = c.overcast_tint;
+            active_tint = c.tint; // one active condition -> one tint for the whole instanced draw (a shader constant)
             // For camera-relative wind, add the camera's heading (yaw, origin @ east) so the storm keeps the same
             // on-screen direction as you rotate; recomputed each tick so it follows the camera live.
             const float heading = active_wind_dir + (c.wind_camera_relative ? cam->yaw * 57.29578f : 0.f);
@@ -815,7 +814,7 @@ namespace {
             else
                 AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading, eye);
             AppendSplashes(active_particles.splashes, right, c.tint);
-            AppendSettledInstances(snow_instances, active_particles.settled, c.tint);
+            AppendSettledInstances(snow_instances, active_particles.settled);
             UpdateSounds(c, active_particles, dt, cx, cy, cz);
         }
         ambient_strength += (ambient_target - ambient_strength) * std::clamp(dt * 3.f, 0.f, 1.f); // ease ~1/3 s
@@ -965,6 +964,9 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         // unit quad, stream 1 = per-drop data). Rain flips the texture V (streak runs along velocity); snow doesn't.
         if (ib_ok && (have_rain || have_snow) && device->SetVertexShader(weather_inst_vs) == D3D_OK && device->SetVertexDeclaration(weather_inst_decl) == D3D_OK && device->SetStreamSource(0, quad_geom_vb, 0, sizeof(GeomVert)) == D3D_OK &&
             device->SetStreamSourceFreq(1, D3DSTREAMSOURCE_INSTANCEDATA | 1u) == D3D_OK) {
+            const auto at = ImGui::ColorConvertU32ToFloat4(active_tint); // tint is constant across the draw (single active condition)
+            const float tintf[4] = {at.x, at.y, at.z, at.w};
+            device->SetVertexShaderConstantF(8, tintf, 1);
             const auto draw_instanced = [&](IDirect3DVertexBuffer9* vb, const UINT ninst, IDirect3DTexture9* tex, const float flip) {
                 const float flags[4] = {flip, 0.f, 0.f, 0.f};
                 device->SetVertexShaderConstantF(9, flags, 1);
