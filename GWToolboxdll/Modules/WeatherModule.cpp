@@ -103,7 +103,7 @@ namespace {
     constexpr uint32_t kSplashFileId = 0x1baa1;
     constexpr int kSplashCols = 4, kSplashRows = 4, kSplashFrames = kSplashCols * kSplashRows;
     constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
-    constexpr float kMaxRadius = GW::Constants::Range::SpiritExtended; // 3500 gwinch; radius of the weather volume
+    constexpr float kMaxRadius = GW::Constants::Range::Compass / 2.f; // 2500 gwinch; radius of the weather volume
 
     // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
     float particle_area_full = 2000.f; // gwinch^2 each particle covers at 100% density (smaller = denser); the per-
