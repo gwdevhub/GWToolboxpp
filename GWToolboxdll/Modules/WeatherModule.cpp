@@ -47,8 +47,11 @@ namespace weather_module {
         std::vector<uint32_t> sounds;   // .dat sound file ids played at random while active
         float sound_min_interval = 8.f; // seconds between sounds
         float sound_max_interval = 25.f;
-        bool sound_3d = false; // play from a random nearby position (varies volume/pan)
-        float ambient = 0.f;   // 0..1 overcast dimming this condition contributes to the scene
+        bool sound_3d = false;             // play from a random nearby position (varies volume/pan)
+        float ambient = 0.f;               // 0..1 overcast dimming this condition contributes to the scene
+        bool thunder = false;              // periodic lightning flash + a thunderclap a beat later, while active
+        float thunder_min_interval = 15.f; // seconds between strikes
+        float thunder_max_interval = 60.f;
     };
 } // namespace weather_module
 
@@ -56,6 +59,7 @@ namespace {
     using namespace weather_module;
 
     // Game weather assets in the .dat: a 32px raindrop, a 32px snowflake, and a 128x128 splash sheet (4x4 keyframes).
+    constexpr uint32_t kThunderFileIds[2] = {0x20ed0, 0x20ed1}; // thunderclap sounds; one picked at random per strike
     constexpr uint32_t kRaindropFileId = 0x1997d;
     constexpr uint32_t kSnowflakeFileId = 0xca1a;
     constexpr uint32_t kSplashFileId = 0x1baa1;
@@ -78,6 +82,9 @@ namespace {
     float snow_settle_duration = 4.f; // seconds a settled flake holds before it has fully faded
     float snow_settle_fade = 0.4f;    // last fraction of the lifetime spent fading out
     int max_settled = 4000;           // per-condition cap on settled flakes
+    float thunder_sound_delay = 0.5f; // gap between the lightning flash and its thunderclap
+    float flash_duration = 0.25f;     // seconds the lightning flash takes to fade out
+    float flash_peak = 0.8f;          // peak brightness a strike adds to the scene (0..1)
 
     constexpr bool HasSplash(const int type)
     {
@@ -107,6 +114,7 @@ namespace {
     unsigned int rain_color = 0xFFFFFFFFu;    // tint (ImGui-packed); white shows the texture untinted
     unsigned int ambient_color = 0xFFA09078u; // fully-overcast multiply tint (ImGui-packed RGB; alpha ignored)
     float ambient_strength = 0.f;             // eased aggregate dimming of active conditions (runtime, not saved)
+    float flash_strength = 0.f;               // current lightning-flash brightness; decays each update (runtime)
 
     // POSITION (world) + D3DCOLOR tint + UV; quads are built camera-/ground-aligned on the CPU.
     struct WeatherVertex {
@@ -127,7 +135,10 @@ namespace {
         std::vector<Raindrop> raindrops;
         std::vector<Splash> splashes;
         std::vector<Settle> settled;
-        float sound_timer = -1.f; // seconds until the next sound; <0 = not yet scheduled
+        float sound_timer = -1.f;           // seconds until the next sound; <0 = not yet scheduled
+        float thunder_timer = -1.f;         // seconds until the next lightning strike; <0 = not yet scheduled
+        float thunder_sound_timer = -1.f;   // after a strike, counts down to the delayed thunderclap; <0 = none pending
+        uint32_t thunder_pending_sound = 0; // the sound id chosen for that pending thunderclap
     };
     std::vector<Particles> particles; // runtime state, parallel to conditions (not saved)
     bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
@@ -259,6 +270,28 @@ namespace {
             }
         }
         p.sound_timer = frand(c.sound_min_interval, c.sound_max_interval);
+    }
+
+    // Lightning: flash the scene at random intervals, then fire the thunderclap a beat later. The flash itself
+    // is a global brightness that DrawFlash renders; this only schedules strikes and the delayed sound.
+    void UpdateThunder(const WeatherCondition& c, Particles& p, const float dt)
+    {
+        // Always service a pending clap first, so a strike still booms even if thunder is toggled off meanwhile.
+        if (p.thunder_sound_timer >= 0.f && (p.thunder_sound_timer -= dt) <= 0.f) {
+            if (p.thunder_pending_sound) AudioSettings::PlaySoundFileId(p.thunder_pending_sound);
+            p.thunder_sound_timer = -1.f;
+            p.thunder_pending_sound = 0;
+        }
+        if (!c.thunder || c.thunder_max_interval <= 0.f) return;
+        if (p.thunder_timer < 0.f) { // first active frame: schedule, don't strike immediately
+            p.thunder_timer = frand(c.thunder_min_interval, c.thunder_max_interval);
+            return;
+        }
+        if ((p.thunder_timer -= dt) > 0.f) return;
+        flash_strength = std::max(flash_strength, flash_peak);                  // flash now...
+        p.thunder_pending_sound = kThunderFileIds[frand(0.f, 1.f) < 0.5f ? 0 : 1]; // ...thunderclap after thunder_sound_delay
+        p.thunder_sound_timer = thunder_sound_delay;
+        p.thunder_timer = frand(c.thunder_min_interval, c.thunder_max_interval);
     }
 
     // Side count of the square grid that tiles the spawn area for stratified placement.
@@ -589,25 +622,21 @@ namespace {
             AppendSplashes(particles[i].splashes, right);
             AppendSettled(particles[i].settled);
             UpdateSounds(conditions[i], particles[i], dt, cx, cy, cz);
+            UpdateThunder(conditions[i], particles[i], dt);
         }
         ambient_strength += (ambient_target - ambient_strength) * std::clamp(dt * 3.f, 0.f, 1.f); // ease ~1/3 s
+        flash_strength = std::max(0.f, flash_strength - (flash_duration > 0.f ? dt / flash_duration : 1.f)); // linear fade-out
         rain_ready = UploadVB(device, rain_inst_vb, rain_inst_cap, rain_instances.data(), rain_instances.size() * sizeof(WeatherInstance));
         snow_ready = EnsureVb(device, snow_vb, snow_cap, snow_vertices);
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
     }
 
-    // Overcast: multiply-blend a screen-filling quad UNDER the HUD so the scene dims like cloud cover.
-    void DrawAmbient(IDirect3DDevice9* device, const float strength)
+    // Blend a single screen-filling quad of one colour UNDER the HUD, using the given blend factors. Sits just
+    // past the near plane with depth off, so it covers the whole view regardless of FOV or scene depth.
+    void DrawScreenQuad(IDirect3DDevice9* device, const DWORD col, const D3DBLEND src_blend, const D3DBLEND dst_blend)
     {
         const GW::Camera* cam = GW::CameraMgr::GetCamera();
-        if (!cam || strength <= 0.003f) return;
-
-        // Per channel: scale the scene toward the tint by strength (white = untouched), then multiply-blend.
-        const auto t = ImGui::ColorConvertU32ToFloat4(ambient_color);
-        const auto chan = [&](const float c) {
-            return static_cast<DWORD>(std::clamp(1.f - strength * (1.f - c), 0.f, 1.f) * 255.f + 0.5f);
-        };
-        const DWORD col = D3DCOLOR_ARGB(255, chan(t.x), chan(t.y), chan(t.z));
+        if (!cam) return;
 
         float fwd[3] = {cam->look_at_target.x - cam->position.x, cam->look_at_target.y - cam->position.y, cam->look_at_target.z - cam->position.z};
         normalize3(fwd);
@@ -635,12 +664,31 @@ namespace {
             device->SetRenderState(D3DRS_ZENABLE, FALSE);
             device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE); // must not touch the depth buffer or it culls the scene/particles
             device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-            device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR); // result = scene * quad colour (multiply)
-            device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
+            device->SetRenderState(D3DRS_SRCBLEND, src_blend);
+            device->SetRenderState(D3DRS_DESTBLEND, dst_blend);
             device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, 2, q, sizeof(ColVtx));
         }
         sb->Apply();
         sb->Release();
+    }
+
+    // Overcast: multiply-blend the scene toward the tint so it dims like cloud cover (result = scene * col).
+    void DrawAmbient(IDirect3DDevice9* device, const float strength)
+    {
+        if (strength <= 0.003f) return;
+        // Per channel: scale the scene toward the tint by strength (white = untouched).
+        const auto t = ImGui::ColorConvertU32ToFloat4(ambient_color);
+        const auto chan = [&](const float c) { return static_cast<DWORD>(std::clamp(1.f - strength * (1.f - c), 0.f, 1.f) * 255.f + 0.5f); };
+        const DWORD col = D3DCOLOR_ARGB(255, chan(t.x), chan(t.y), chan(t.z));
+        DrawScreenQuad(device, col, D3DBLEND_DESTCOLOR, D3DBLEND_ZERO);
+    }
+
+    // Lightning flash: additive white over the scene (result = scene + col), brightening everything for an instant.
+    void DrawFlash(IDirect3DDevice9* device, const float strength)
+    {
+        if (strength <= 0.003f) return;
+        const DWORD a = static_cast<DWORD>(std::clamp(strength, 0.f, 1.f) * 255.f + 0.5f);
+        DrawScreenQuad(device, D3DCOLOR_ARGB(255, a, a, a), D3DBLEND_ONE, D3DBLEND_ONE);
     }
 
     // /weather <condition name> [on|off|toggle|1|0] - toggle a condition by name (names may be multi-word).
@@ -702,6 +750,7 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
     }
 
     DrawAmbient(device, ambient_strength); // dim the scene first, so the particles stay bright on top
+    DrawFlash(device, flash_strength);     // then a lightning flash brightens the dimmed scene
 
     IDirect3DTexture9* rain_tex = raindrop_tex_pp ? *raindrop_tex_pp : nullptr;
     IDirect3DTexture9* snow_tex = snowflake_tex_pp ? *snowflake_tex_pp : nullptr;
@@ -780,6 +829,8 @@ void WeatherModule::OnSettingsLoaded()
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
         c.sound_min_interval = std::max(c.sound_min_interval, 0.f);
         c.sound_max_interval = std::max(c.sound_max_interval, c.sound_min_interval);
+        c.thunder_min_interval = std::max(c.thunder_min_interval, 0.f);
+        c.thunder_max_interval = std::max(c.thunder_max_interval, c.thunder_min_interval);
         c.ambient = std::clamp(c.ambient, 0.f, 1.f);
     }
 }
@@ -851,6 +902,10 @@ void WeatherModule::DrawSettings()
             ImGui::DragFloat2("Sound interval (s)", &c.sound_min_interval, 0.5f, 0.f, 600.f, "%.0f");
             ImGui::Checkbox("Play sounds in 3D", &c.sound_3d);
             ImGui::ShowHelp("Play each sound from a random nearby position so the game's 3D audio varies its\nvolume and stereo panning - reduces repetition when there's only one sound.\nNo effect if the sound isn't a positional one.");
+
+            ImGui::Checkbox("Thunder", &c.thunder);
+            ImGui::ShowHelp("Flash the sky like lightning at random intervals, then play a thunderclap half a second later.");
+            if (c.thunder) ImGui::DragFloat2("Thunder interval (s)", &c.thunder_min_interval, 0.5f, 0.f, 600.f, "%.0f");
 
             if (ImGui::Button("Remove condition")) to_remove = i;
         }
@@ -935,5 +990,6 @@ void WeatherModule::Terminate()
     raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
     textures_requested = false;
     last_update = 0;
+    flash_strength = 0.f;
     ToolboxModule::Terminate();
 }
