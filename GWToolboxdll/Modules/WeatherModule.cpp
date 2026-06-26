@@ -53,7 +53,7 @@ namespace weather_module {
         int drop_count = 1000;
         float drop_size = 8.f;
         float fall_speed = 2000.f;    // gwinch/sec
-        float spread_radius = 2500.f; // horizontal half-extent of the volume; fixed (forced on load, no UI)
+        float spread_radius = 2500.f; // radius of the player-centred volume (horizontal wrap + column height); fixed on load
         float wind_dir_min = 0.f; // a heading is picked at random in [min, max] when the condition activates (degrees)
         float wind_dir_max = 0.f;
         float wind_tilt = 0.f; // how far the fall is tilted from straight-down, degrees (0 = vertical, 89 = sideways)
@@ -106,7 +106,6 @@ namespace {
     constexpr float kMaxRadius = GW::Constants::Range::SpiritExtended; // 3500 gwinch; radius of the weather volume
 
     // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
-    float column_height = 2500.f;     // vertical span drops fall through
     float fog_factor = 1.0f;          // distance-fade strength fed to the shader
     float splash_size = 8.f;          // world size of a splash billboard
     float splash_duration = 0.5f;     // seconds to play the 16 keyframes
@@ -465,7 +464,7 @@ namespace {
     // does not shift with the wind direction.
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid)
     {
-        const float top_z = cz - column_height;
+        const float top_z = cz - c.spread_radius; // column reaches the top of the sphere (radius = spread_radius)
         const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
         d.x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
         d.y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
@@ -487,7 +486,7 @@ namespace {
         const bool splash = decal == kDecalSplash;
         const float drift = EffectiveDrift(c);
         const bool settle = decal == kDecalSettle;
-        const float top_z = cz - column_height;
+        const float top_z = cz - c.spread_radius; // column reaches the top of the sphere (radius = spread_radius)
         const float diameter = 2.f * c.spread_radius;
         // Velocity is the (unit) fall direction scaled by fall_speed, so wind sets the direction, not the speed.
         float vel[3];
