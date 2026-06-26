@@ -54,3 +54,5 @@ macro(add_tb_plugin PLUGIN)
 endmacro()
 
 add_tb_plugin(ExamplePlugin)
+add_tb_plugin(Playmate)
+target_link_libraries(Playmate PRIVATE RestClient)
