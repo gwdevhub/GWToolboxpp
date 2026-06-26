@@ -27,6 +27,10 @@ namespace Pathing {
         struct DebugEdge { GW::GamePos a; GW::GamePos b; bool wall; };
         void DebugExtractEdges(std::vector<DebugEdge>& out) const;
 
+        // Diagnostic: log every ground poly within `radius` (game units) of `center` — source trapezoid
+        // fields + each ring edge's wall/connection classification and neighbour poly/plane. Writes to log.txt.
+        void DebugDumpNear(const GW::GamePos& center, float radius) const;
+
     private:
         void DestroyMesh();
         int PlaneIndex(uint32_t zplane) const; // GW query zplane -> plane index (ground sentinel -> 0)
@@ -40,6 +44,7 @@ namespace Pathing {
         uint32_t     m_ground_poly_count = 0;
 
         std::vector<uint16_t> m_poly_plane; // ground poly index -> plane index
+        std::vector<const GW::PathingTrapezoid*> m_poly_trap; // ground poly index -> source trapezoid (diagnostic)
     };
 
 } // namespace Pathing

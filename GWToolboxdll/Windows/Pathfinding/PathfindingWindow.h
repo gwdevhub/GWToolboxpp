@@ -40,6 +40,10 @@ public:
     // QuestModule each tick; the recompute is still rate-capped by Update's 33ms throttle.
     static float GetPathRecalcDistance();
 
+    // Diagnostic (harness): dump the current map's navmesh polys near `center` to log.txt. Triggers the full
+    // build if the nav isn't ready yet (returns false so the caller can retry). Game-thread safe.
+    static bool DebugDumpNavMeshNear(const GW::GamePos& center, float radius);
+
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
     void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;

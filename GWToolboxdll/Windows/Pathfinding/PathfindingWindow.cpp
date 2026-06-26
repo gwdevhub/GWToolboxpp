@@ -2575,6 +2575,21 @@ static void UpdateNavmeshOverlay()
 
 float PathfindingWindow::GetPathRecalcDistance() { return settings.path_recalc_distance; }
 
+bool PathfindingWindow::DebugDumpNavMeshNear(const GW::GamePos& center, float radius)
+{
+    auto* mp = GetResidentMilepathOrPrewarm();
+    if (!mp || !mp->ready()) { Log::Log("[navdump] milepath not ready (retry)"); return false; }
+    auto* nav = mp->GetNavMeshForDebug();
+    if (!nav || !nav->IsReady()) {
+        if (!mp->build_failed()) Resources::EnqueueWorkerTask([mp] { mp->EnsureFullBuild(); });
+        Log::Log("[navdump] navmesh building (retry)");
+        return false;
+    }
+    Log::Log("[navdump] map=%d", (int)GW::Map::GetMapID());
+    nav->DebugDumpNear(center, radius);
+    return true;
+}
+
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
     ProcessDeferredRemovals();

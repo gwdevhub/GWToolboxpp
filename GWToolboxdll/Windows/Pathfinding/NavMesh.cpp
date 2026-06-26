@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include <GWCA/GameEntities/Pathing.h>
+#include <GWCA/Managers/MapMgr.h> // QueryAltitude (diagnostic dump only)
 
 #include <DetourNavMesh.h>
 #include <DetourNavMeshBuilder.h>
@@ -67,6 +68,7 @@ namespace Pathing {
     {
         if (m_navmesh) { dtFreeNavMesh(m_navmesh); m_navmesh = nullptr; }
         m_poly_plane.clear();
+        m_poly_trap.clear();
         m_ground_poly_count = 0;
         m_plane_count = 0;
     }
@@ -95,6 +97,7 @@ namespace Pathing {
         std::vector<TrapRef> trap_list;
         trap_list.reserve(total_traps);
         m_poly_plane.reserve(total_traps);
+        m_poly_trap.reserve(total_traps);
 
         float minx = FLT_MAX, miny = FLT_MAX, maxx = -FLT_MAX, maxy = -FLT_MAX;
         for (int p = 0; p < m_plane_count; ++p) {
@@ -110,6 +113,7 @@ namespace Pathing {
                 trap_idx.emplace(t, idx);
                 trap_list.push_back({t, p});
                 m_poly_plane.push_back((uint16_t)p);
+                m_poly_trap.push_back(t);
             }
         }
         m_ground_poly_count = (uint32_t)trap_list.size();
@@ -462,10 +466,34 @@ namespace Pathing {
 
     void NavMesh::DebugExtractEdges(std::vector<DebugEdge>& out) const
     {
+        // Must run on the game thread: it calls GW::Map::QueryAltitude (not thread-safe) to resolve seam heights.
         out.clear();
         if (!m_navmesh) return;
         const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
         if (!tile || !tile->header) return;
+
+        // GW only records adjacency across a trapezoid's LEFT/RIGHT edges (via portals). Where two trapezoids on
+        // DIFFERENT pathing planes meet along a shared TOP/BOTTOM edge (constant game-Y) at the same terrain height
+        // — i.e. continuous flat floor that GW's decomposition split onto separate planes — there is no portal to
+        // record it, so Build finds no neighbour and the edge becomes a phantom "wall". Index every ~horizontal
+        // poly edge by rounded game-Y so we can detect those seams below and reclassify them as walkable.
+        constexpr float kHorizEps = 1.0f;     // |Δgame-Y| under which an edge counts as a top/bottom (horizontal) edge
+        constexpr float kSeamHeightEps = 50.f; // |Δaltitude| under which the two planes are the same surface, not an over/underpass
+        struct HEdge { int plane; float xmin, xmax; };
+        std::unordered_map<long, std::vector<HEdge>> horiz;
+        for (int i = 0; i < tile->header->polyCount; ++i) {
+            const dtPoly& p = tile->polys[i];
+            if (p.getType() == DT_POLYTYPE_OFFMESH_CONNECTION) continue;
+            const int nv = (int)p.vertCount;
+            for (int j = 0; j < nv; ++j) {
+                const float* va = &tile->verts[p.verts[j] * 3];
+                const float* vb = &tile->verts[p.verts[(j + 1) % nv] * 3];
+                if (std::fabs(va[2] - vb[2]) > kHorizEps) continue;
+                horiz[lroundf(va[2])].push_back({(int)lroundf(va[1] / kPlaneSeparation), std::min(va[0], vb[0]), std::max(va[0], vb[0])});
+            }
+        }
+
+        int reclassified = 0; // diagnostic: phantom top/bottom walls turned back into walkable seams
         out.reserve(tile->header->polyCount * 3);
         for (int i = 0; i < tile->header->polyCount; ++i) {
             const dtPoly& p = tile->polys[i];
@@ -473,15 +501,91 @@ namespace Pathing {
             const int nv = (int)p.vertCount;
             for (int j = 0; j < nv; ++j) {
                 const unsigned short ia = p.verts[j], ib = p.verts[(j + 1) % nv];
-                const bool wall = (p.neis[j] == 0);
+                bool wall = (p.neis[j] == 0);
                 if (!wall && ia > ib) continue; // shared internal edge: emit once
                 const float* va = &tile->verts[ia * 3];
                 const float* vb = &tile->verts[ib * 3];
                 const int pa = (int)lroundf(va[1] / kPlaneSeparation);
                 const int pb = (int)lroundf(vb[1] / kPlaneSeparation);
+
+                // Phantom-wall suppression: a horizontal wall edge that overlaps another plane's edge at the same
+                // game-Y and ~equal terrain height is really continuous walkable floor across a plane seam.
+                if (wall && std::fabs(va[2] - vb[2]) <= kHorizEps) {
+                    const float exmin = std::min(va[0], vb[0]), exmax = std::max(va[0], vb[0]);
+                    if (const auto it = horiz.find(lroundf(va[2])); it != horiz.end()) {
+                        for (const auto& h : it->second) {
+                            if (h.plane == pa) continue; // same plane: a true boundary, not a cross-plane seam
+                            const float lo = std::max(exmin, h.xmin), hi = std::min(exmax, h.xmax);
+                            if (hi - lo <= 2.f) continue; // edges don't actually overlap in X
+                            GW::GamePos qa(0.5f * (lo + hi), va[2], (uint32_t)pa), qb(0.5f * (lo + hi), va[2], (uint32_t)h.plane);
+                            const float za = GW::Map::QueryAltitude(&qa), zb = GW::Map::QueryAltitude(&qb);
+                            if (za != 0.f && zb != 0.f && std::fabs(za - zb) < kSeamHeightEps) { wall = false; ++reclassified; break; }
+                        }
+                    }
+                }
+
                 out.push_back({GW::GamePos(va[0], va[2], (uint32_t)pa), GW::GamePos(vb[0], vb[2], (uint32_t)pb), wall});
             }
         }
+        Log::Log("[navmesh] overlay edges=%zu, phantom-wall seams reclassified=%d", out.size(), reclassified);
+    }
+
+    void NavMesh::DebugDumpNear(const GW::GamePos& center, float radius) const
+    {
+        if (!m_navmesh) { Log::Log("[navdump] no navmesh"); return; }
+        const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
+        if (!tile || !tile->header) { Log::Log("[navdump] no tile"); return; }
+        const float r2 = radius * radius;
+        Log::Log("[navdump] center=(%.0f,%.0f) r=%.0f polys=%d planes=%d", center.x, center.y, radius, tile->header->polyCount, m_plane_count);
+        int dumped = 0;
+        for (int i = 0; i < tile->header->polyCount && dumped < 120; ++i) {
+            const dtPoly& p = tile->polys[i];
+            if (p.getType() == DT_POLYTYPE_OFFMESH_CONNECTION) continue;
+            const int nv = (int)p.vertCount;
+            float cx = 0.f, cz = 0.f;
+            for (int j = 0; j < nv; ++j) { const float* v = &tile->verts[p.verts[j] * 3]; cx += v[0]; cz += v[2]; }
+            cx /= nv; cz /= nv;
+            const float dx = cx - center.x, dz = cz - center.y;
+            if (dx * dx + dz * dz > r2) continue;
+            ++dumped;
+            const int plane = (i < (int)m_poly_plane.size()) ? m_poly_plane[i] : -1;
+            const GW::PathingTrapezoid* t = (i < (int)m_poly_trap.size()) ? m_poly_trap[i] : nullptr;
+            GW::GamePos cpos(cx, cz, (uint32_t)(plane < 0 ? 0 : plane));
+            const float calt = GW::Map::QueryAltitude(&cpos); // terrain height of this poly's surface (GW up = -z)
+            if (t)
+                Log::Log("[navdump] poly=%d plane=%d trap=%u alt=%.0f T=(%.0f,%.0f,%.0f) B=(%.0f,%.0f,%.0f) pL=%u pR=%u",
+                         i, plane, t->id, calt, t->XTL, t->XTR, t->YT, t->XBL, t->XBR, t->YB, t->portal_left, t->portal_right);
+            else
+                Log::Log("[navdump] poly=%d plane=%d alt=%.0f trap=? ", i, plane, calt);
+            for (int j = 0; j < nv; ++j) {
+                const unsigned short ia = p.verts[j], ib = p.verts[(j + 1) % nv];
+                const float* va = &tile->verts[ia * 3];
+                const float* vb = &tile->verts[ib * 3];
+                const unsigned short nei = p.neis[j];
+                if (nei == 0) {
+                    Log::Log("[navdump]   e (%.0f,%.0f)->(%.0f,%.0f) WALL", va[0], va[2], vb[0], vb[2]);
+                }
+                else {
+                    const int ni = (nei & 0x8000) ? -2 : (int)nei - 1; // single-tile internal edge: nei = neighbour poly idx + 1
+                    const int nplane = (ni >= 0 && ni < (int)m_poly_plane.size()) ? m_poly_plane[ni] : -1;
+                    const unsigned nid = (ni >= 0 && ni < (int)m_poly_trap.size() && m_poly_trap[ni]) ? m_poly_trap[ni]->id : 0u;
+                    if (nplane != plane && nplane >= 0) {
+                        // Cross-plane edge: query terrain height on BOTH planes at the shared edge midpoint. A large
+                        // delta = a cliff (this edge should be a WALL, not a walkable connection); ~0 = a same-height seam.
+                        const float mx = 0.5f * (va[0] + vb[0]), mz = 0.5f * (va[2] + vb[2]);
+                        GW::GamePos ma(mx, mz, (uint32_t)plane), mb(mx, mz, (uint32_t)nplane);
+                        const float za = GW::Map::QueryAltitude(&ma), zb = GW::Map::QueryAltitude(&mb);
+                        Log::Log("[navdump]   e (%.0f,%.0f)->(%.0f,%.0f) CONN->poly=%d(plane=%d,trap=%u) [CROSS-PLANE] alt_here=%.0f alt_there=%.0f d=%.0f",
+                                 va[0], va[2], vb[0], vb[2], ni, nplane, nid, za, zb, za - zb);
+                    }
+                    else {
+                        Log::Log("[navdump]   e (%.0f,%.0f)->(%.0f,%.0f) CONN->poly=%d(plane=%d,trap=%u)",
+                                 va[0], va[2], vb[0], vb[2], ni, nplane, nid);
+                    }
+                }
+            }
+        }
+        Log::Log("[navdump] done, dumped=%d", dumped);
     }
 
 } // namespace Pathing

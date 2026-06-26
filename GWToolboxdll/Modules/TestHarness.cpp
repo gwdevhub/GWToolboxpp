@@ -12,6 +12,7 @@
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
@@ -25,6 +26,7 @@
 #include "Modules/TestHarness.h"
 #include "Utils/ToolboxUtils.h"
 #include "Widgets/WorldMapWidget.h"
+#include "Windows/Pathfinding/PathfindingWindow.h"
 
 // Dev iteration tool: compiled in Debug (_DEBUG) and RelWithDebInfo (GWTB_HARNESS, which
 // logs to log.txt), excluded from the shipped Release build.
@@ -183,6 +185,30 @@ namespace {
             const char* src = "";
             if (resolve_goal(read_config(), goal, src)) do_path_to(goal, src);
             else write_status("repath: no config goal or active quest marker (use 'setgoal' first)");
+            return;
+        }
+        if (verb == "dumpnav") { // dump navmesh polys near a point: dumpnav [x y [radius]] (default: config goal / player pos, r=1500)
+            float x = 0, y = 0, radius = 1500.f;
+            bool have_xy = (bool)(is >> x >> y);
+            is >> radius;
+            GW::GamePos center;
+            if (have_xy) { center = GW::GamePos(x, y, 0); }
+            else {
+                const char* src = "";
+                if (!resolve_goal(read_config(), center, src)) {
+                    const auto self = GW::Agents::GetControlledCharacter();
+                    if (!self) { write_status("dumpnav: no coords, no goal, no character"); return; }
+                    center = self->pos;
+                }
+            }
+            const bool ok = PathfindingWindow::DebugDumpNavMeshNear(center, radius);
+            if (const auto self = GW::Agents::GetControlledCharacter())
+                Log::Log("[navdump] player=(%.0f,%.0f,z%u) z=%.0f facing=%.3f camyaw=%.3f",
+                         self->pos.x, self->pos.y, self->pos.zplane, self->z, self->rotation_angle, GW::CameraMgr::GetYaw());
+            char buf[160];
+            snprintf(buf, sizeof(buf), "dumpnav(%.0f,%.0f,r%.0f): %s", center.x, center.y, radius, ok ? "dumped" : "not ready (retry)");
+            write_status(buf);
+            Log::Log("[harness] %s", buf);
             return;
         }
         if (verb == "waypoint") {
