@@ -555,21 +555,30 @@ namespace {
         out.insert(out.end(), {c00, c10, c11, c01});
     }
 
+    // A drop is worth building geometry for only if its centre is in front of the near plane. Off-screen drops
+    // are clipped by the GPU anyway, but skipping the behind-camera ones here saves the CPU build + upload (a big
+    // share of a dense, all-round volume like the sandstorm). Sides-of-FOV are left to the GPU; tightening this to
+    // a full view-cone would save more but risks thinning the storm at screen edges, so keep it conservative.
+    bool InFront(const Raindrop& d, const float eye[3], const float fwd[3])
+    {
+        return (d.x - eye[0]) * fwd[0] + (d.y - eye[1]) * fwd[1] + (d.z - eye[2]) * fwd[2] >= kZNear;
+    }
+
     // Snow: camera-aligned square billboards on the CPU indexed path (flakes tumble, no streak).
-    void AppendSnow(const WeatherCondition& c, std::vector<WeatherVertex>& out, const std::vector<Raindrop>& drops, const float right[3], const float up[3])
+    void AppendSnow(const WeatherCondition& c, std::vector<WeatherVertex>& out, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float eye[3], const float fwd[3])
     {
         const float h = c.drop_size * 0.5f;
         const float ax[3] = {right[0] * h, right[1] * h, right[2] * h};
         const float ay[3] = {up[0] * h, up[1] * h, up[2] * h};
         const DWORD col = ToD3DColor(c.tint); // per-condition tint (e.g. dark for ashfall)
         for (const auto& d : drops)
-            emit_quad(out, d.x, d.y, d.z, ax, ay, col, 0.f, 0.f, 1.f, 1.f);
+            if (InFront(d, eye, fwd)) emit_quad(out, d.x, d.y, d.z, ax, ay, col, 0.f, 0.f, 1.f, 1.f);
     }
 
     // Rain: one instance record per drop. Streak axes (long axis along the downward velocity, width axis
     // facing the camera) are constant per condition, so they are baked into every record; the GPU expands
     // the quad. The instanced VS applies the V-flip so the texture stays upright.
-    void AppendRainInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float fwd[3], const float wind_dir)
+    void AppendRainInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float fwd[3], const float wind_dir, const float eye[3])
     {
         const float h = c.drop_size * 0.5f;
         float vel[3];
@@ -591,6 +600,7 @@ namespace {
         const WeatherInstance base{0.f, 0.f, 0.f, w[0] * h, w[1] * h, w[2] * h, vel[0] * h, vel[1] * h, vel[2] * h, t.x, t.y, t.z, t.w};
         out.reserve(out.size() + drops.size());
         for (const auto& d : drops) {
+            if (!InFront(d, eye, fwd)) continue; // skip behind-camera drops: clipped anyway, so don't pay to build them
             WeatherInstance inst = base;
             inst.cx = d.x;
             inst.cy = d.y;
@@ -776,6 +786,7 @@ namespace {
         const float dcz = cz - center_z; // the focus's vertical move this tick; the column is shifted by it so it
         center_z = cz;                   // keeps tracking the player's height even when drops barely fall (sandstorm)
 
+        const float eye[3] = {cam->position.x, cam->position.y, cam->position.z}; // for the behind-near-plane build cull
         float fwd[3] = {cx - cam->position.x, cy - cam->position.y, cz - cam->position.z};
         normalize3(fwd);
         constexpr float world_up[3] = {0.f, 0.f, -1.f};
@@ -795,9 +806,9 @@ namespace {
             const float heading = active_wind_dir + (c.wind_camera_relative ? cam->yaw * 57.29578f : 0.f);
             UpdateCondition(c, active_particles, dt, cx, cy, cz, heading, dcz);
             if (c.type == kTypeSnow)
-                AppendSnow(c, snow_vertices, active_particles.raindrops, right, up);
+                AppendSnow(c, snow_vertices, active_particles.raindrops, right, up, eye, fwd);
             else
-                AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading);
+                AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading, eye);
             AppendSplashes(active_particles.splashes, right, c.tint);
             AppendSettled(active_particles.settled, c.tint);
             UpdateSounds(c, active_particles, dt, cx, cy, cz);
