@@ -33,8 +33,8 @@ public:
         uint32_t navmesh_wall_color_hi = 0xC0FF30FF;       // wall edge on planes != 0 (magenta)
         uint32_t navmesh_connection_color = 0x6030FF30;    // connection edge on plane 0 (green)
         uint32_t navmesh_connection_color_hi = 0x6030C0FF; // connection edge on planes != 0 (cyan)
-        float    path_recalc_distance = 100.f;              // game units the player must move before the quest path recomputes
-        float    navmesh_sample_spacing = 5.f;              // gw between terrain-height samples when draping the overlay (lower = tighter to floor)
+        float    path_recalc_distance = 5.f;               // game units the player must move before the quest path recomputes
+        float    navmesh_sample_spacing = 5.f;             // gw between terrain-height samples when draping the overlay (lower = tighter to floor)
     };
 
     // Game units the player must move before the rendered quest path recomputes (persisted setting). Read by
@@ -44,6 +44,10 @@ public:
     // Diagnostic (harness): dump the current map's navmesh polys near `center` to log.txt. Triggers the full
     // build if the nav isn't ready yet (returns false so the caller can retry). Game-thread safe.
     static bool DebugDumpNavMeshNear(const GW::GamePos& center, float radius);
+
+    // The current map's overlay navmesh, only if resident and fully built (else nullptr). Game/render-thread safe
+    // (resident lookup only, never blocks on the DAT). Used by the in-world draper for per-sample plane resolution.
+    static Pathing::NavMesh* GetResidentNavMesh();
 
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;

@@ -493,7 +493,6 @@ namespace Pathing {
             }
         }
 
-        int reclassified = 0; // diagnostic: phantom top/bottom walls turned back into walkable seams
         out.reserve(tile->header->polyCount * 3);
         for (int i = 0; i < tile->header->polyCount; ++i) {
             const dtPoly& p = tile->polys[i];
@@ -510,10 +509,8 @@ namespace Pathing {
 
                 // Phantom-wall reclassification: a horizontal wall edge that overlaps a DIFFERENT plane's edge at the
                 // same game-Y and ~equal terrain height is really continuous walkable floor across a plane seam (GW
-                // can't record a top/bottom adjacency, so Build walls it). Mark it walkable AND re-tag it onto the
-                // NEIGHBOUR's plane: the two planes sit a few units apart, so draping this edge on its own (higher)
-                // plane would float it above the floor the seam actually runs along; the neighbour already draws its
-                // coincident edge on that plane, so this lands exactly on it instead of hovering over the steps.
+                // can't record a top/bottom adjacency across planes, so Build walls it). Mark it walkable; the in-world
+                // draper resolves its height per-sample against the navmesh so it sits on the floor.
                 if (wall && std::fabs(va[2] - vb[2]) <= kHorizEps) {
                     const float exmin = std::min(va[0], vb[0]), exmax = std::max(va[0], vb[0]);
                     if (const auto it = horiz.find(lroundf(va[2])); it != horiz.end()) {
@@ -523,7 +520,7 @@ namespace Pathing {
                             if (hi - lo <= 2.f) continue; // edges don't actually overlap in X
                             GW::GamePos qa(0.5f * (lo + hi), va[2], (uint32_t)pa), qb(0.5f * (lo + hi), va[2], (uint32_t)h.plane);
                             const float za = GW::Map::QueryAltitude(&qa), zb = GW::Map::QueryAltitude(&qb);
-                            if (za != 0.f && zb != 0.f && std::fabs(za - zb) < kSeamHeightEps) { wall = false; ++reclassified; break; }
+                            if (za != 0.f && zb != 0.f && std::fabs(za - zb) < kSeamHeightEps) { wall = false; break; }
                         }
                     }
                 }
@@ -531,7 +528,34 @@ namespace Pathing {
                 out.push_back({GW::GamePos(va[0], va[2], (uint32_t)pa), GW::GamePos(vb[0], vb[2], (uint32_t)pb), wall});
             }
         }
-        Log::Log("[navmesh] overlay edges=%zu, phantom-wall seams reclassified=%d", out.size(), reclassified);
+    }
+
+    float NavMesh::DrapeHeightAt(float x, float y, float prev_z) const
+    {
+        if (!m_navmesh || m_poly_trap.empty()) return FLT_MAX;
+        // Point-locate directly against the source trapezoids (cheap: a Y-band reject skips almost everything).
+        // Among every plane whose walkable trapezoid contains (x,y), return the QueryAltitude surface closest to
+        // prev_z. So over a monument the only containing plane is the monument's -> the path rides it; under a
+        // bridge the floor plane contains it -> the path stays on the floor.
+        float best = FLT_MAX, best_d = FLT_MAX;
+        for (uint32_t i = 0; i < m_ground_poly_count; ++i) {
+            const GW::PathingTrapezoid* t = m_poly_trap[i];
+            if (!t) continue;
+            const float lo = std::min(t->YB, t->YT), hi = std::max(t->YB, t->YT);
+            if (y < lo || y > hi) continue; // cheap Y-band reject
+            const float denom = t->YT - t->YB;
+            const float u = std::fabs(denom) > 1e-4f ? (y - t->YB) / denom : 0.f;
+            const float lx = t->XBL + (t->XTL - t->XBL) * u;
+            const float rx = t->XBR + (t->XTR - t->XBR) * u;
+            if (x < std::min(lx, rx) || x > std::max(lx, rx)) continue; // outside the trapezoid in X at this Y
+            const int plane = m_poly_plane[i];
+            GW::GamePos gp(x, y, (uint32_t)plane);
+            const float z = GW::Map::QueryAltitude(&gp); // surface of THIS walkable plane at (x,y)
+            if (z == 0.f) continue;                       // out of this plane's data
+            const float d = std::fabs(z - prev_z);
+            if (d < best_d) { best_d = d; best = z; } // continuity: nearest walkable surface to where we already are
+        }
+        return best;
     }
 
     void NavMesh::DebugDumpNear(const GW::GamePos& center, float radius) const

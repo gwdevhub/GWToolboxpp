@@ -15,6 +15,8 @@
 #include <Utils/GameWorldCompositor.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <Windows/Pathfinding/NavMesh.h>           // per-sample plane resolution for path/overlay draping
+#include <Windows/Pathfinding/PathfindingWindow.h> // GetResidentNavMesh
 #include <ImGuiAddons.h>
 
 #include "GWCA/GameEntities/Agent.h"
@@ -318,12 +320,25 @@ namespace {
                 vertices[i].z = HighestSurfaceZ(vertices[i].x, vertices[i].y, candidate_planes);
         }
         else {
-            // Ordered, densely-sampled path: drape by continuity (each sample follows the walked surface across bridges even with no waypoint on that plane). Seed from the first waypoint; the leading from_player_pos segment is re-seeded from live player height below.
+            // Ordered, densely-sampled path: drape on the navmesh-walkable plane at each sample (point-location),
+            // choosing the surface closest to the running height. This follows the surface the path actually walks —
+            // e.g. up onto a monument plane between two ground hops — instead of sinking onto the ground beneath it,
+            // which the old all-planes "closest surface" did because plane 0's heightfield still reports the floor
+            // under the monument. Falls back to that all-planes query when the navmesh isn't built yet or no walkable
+            // plane covers the sample (so cross-plane edges with no waypoint on the higher plane still drape sanely).
+            auto* nav = PathfindingWindow::GetResidentNavMesh();
             GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
             float prev = GW::Map::QueryAltitude(&seed_pos);
             if (prev == 0.f) prev = ClosestSurfaceZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
             for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
-                const float z = ClosestSurfaceZ(vertices[i].x, vertices[i].y, num_planes, prev);
+                float z;
+                if (nav) {
+                    z = nav->DrapeHeightAt(vertices[i].x, vertices[i].y, prev);
+                    if (z == ALTITUDE_UNKNOWN) z = prev; // over a gap with no walkable poly: hold height, don't sink to the ground
+                }
+                else {
+                    z = ClosestSurfaceZ(vertices[i].x, vertices[i].y, num_planes, prev); // navmesh not built yet
+                }
                 if (z != ALTITUDE_UNKNOWN) prev = z;
                 vertices[i].z = z;
             }
@@ -424,17 +439,27 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 
     if (from_player_pos && vertices.size() > 1) {
         if (const auto player = GW::Agents::GetControlledCharacter()) {
-            // Re-anchor the leading line to the player's live position each frame and drape by continuity from player->z, which is reliable even when the reported plane is 0 on a bridge (seeding from the plane sank the line to the ground beneath the bridge).
+            // Re-anchor the leading line to the player's live position each frame and drape on the navmesh-walkable
+            // plane at each sample, seeded from player->z (reliable even when the reported plane reads 0). This rides
+            // the surface the player actually walks (up a monument/ramp between hops) instead of the ground beneath.
             const float ex = vertices.back().x, ey = vertices.back().y;
             const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
             const uint32_t num_planes = pathing_map ? static_cast<uint32_t>(pathing_map->size()) : 0;
             const size_t last = vertices.size() - 1;
+            auto* nav = PathfindingWindow::GetResidentNavMesh();
             float prev = player->z;
             for (size_t j = 0; j <= last; ++j) {
                 const float t = static_cast<float>(j) / static_cast<float>(last);
                 const float sx = player->pos.x + (ex - player->pos.x) * t;
                 const float sy = player->pos.y + (ey - player->pos.y) * t;
-                float z = num_planes ? ClosestSurfaceZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN;
+                float z;
+                if (nav) {
+                    z = nav->DrapeHeightAt(sx, sy, prev);
+                    if (z == ALTITUDE_UNKNOWN) z = prev; // gap with no walkable poly: hold height, don't sink to the ground
+                }
+                else {
+                    z = num_planes ? ClosestSurfaceZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN; // navmesh not built yet
+                }
                 if (z != ALTITUDE_UNKNOWN) prev = z; else z = prev;
                 vertices[j].x = sx;
                 vertices[j].y = sy;
