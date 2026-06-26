@@ -64,9 +64,6 @@ namespace {
     };
 
 
-    // Cache map
-    std::map<std::wstring, std::unique_ptr<GuiUtils::EncString>> region_names;
-
     constexpr std::array hard_coded_wanted_by_shining_blade_names = {"Justiciar Kimii",        "Zaln the Jaded",          "Justiciar Sevaan",  "Insatiable Vakar",   "Amalek the Unmerciful",     "Carnak the Hungry", "Valis the Rampant",       "Cerris",
                                                                      "Sarnia the Red-Handed",  "Destor the Truth Seeker", "Selenas the Blunt", "Justiciar Amilyn",   "Maximilian the Meticulous", "Joh the Hostile",   "Barthimus the Provident", "Calamitous",
                                                                      "Greves the Overbearing", "Lev the Condemned",       "Justiciar Marron",  "Justiciar Kasandra", "Vess the Disputant"};
@@ -1772,8 +1769,6 @@ void DailyQuests::Terminate()
         it.Terminate();
     }
 
-    region_names.clear();
-
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
     ClearQuestLogInfo();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
@@ -1937,13 +1932,7 @@ const char* DailyQuests::QuestData::GetMapName()
 
 const std::string& DailyQuests::QuestData::GetRegionName()
 {
-    const auto region_name = Resources::GetRegionName(map_id);
-    auto found = region_names.find(region_name);
-    if (found == region_names.end()) {
-        region_names[region_name] = std::make_unique<GuiUtils::EncString>(region_name);
-        found = region_names.find(region_name);
-    }
-    return found->second->string();
+    return Resources::GetRegionName(map_id)->string(); // Resources owns the decode + cache
 }
 
 DailyQuests::NicholasCycleData::NicholasCycleData(const wchar_t* enc_name, uint32_t quantity, MapID map_id) : QuestData(map_id, enc_name), quantity(quantity) {}

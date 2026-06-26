@@ -7,6 +7,7 @@ namespace GuiUtils {
 }
 namespace GW {
     struct Item;
+    enum Region : uint32_t;
     namespace Constants {
         enum class Profession : uint32_t;
         enum class MapID : uint32_t;
@@ -128,7 +129,10 @@ public:
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetHeroName(GW::Constants::HeroID hero_id);
 
-    static const wchar_t* GetRegionName(GW::Constants::MapID map_id);
+    // Guaranteed to return a pointer, but may not yet be decoded. Does the region->name lookup.
+    static GuiUtils::EncString* GetRegionName(GW::Region region);
+    // Guaranteed to return a pointer, but may not yet be decoded. Resolves the map's region, then proxies above.
+    static GuiUtils::EncString* GetRegionName(GW::Constants::MapID map_id);
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* DecodeStringId(const uint32_t enc_str_id, GW::Constants::Language language = (GW::Constants::Language)0xff);
 

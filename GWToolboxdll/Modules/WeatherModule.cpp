@@ -2,6 +2,7 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Camera.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -12,10 +13,12 @@
 #include <Logger.h>
 #include <Modules/AudioSettings.h>
 #include <Modules/GwDatTextureModule.h>
+#include <Modules/Resources.h>
 #include <Modules/WeatherModule.h>
 #include <Timer.h>
 #include <Utils/ArenaNetFileParser.h>
 #include <Utils/GameWorldCompositor.h>
+#include <Utils/GuiUtils.h>
 #include <Utils/SettingsDoc.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TextUtils.h>
@@ -47,8 +50,21 @@ namespace weather_module {
         std::vector<uint32_t> sounds;   // .dat sound file ids played at random while active
         float sound_min_interval = 8.f; // seconds between sounds
         float sound_max_interval = 25.f;
-        bool sound_3d = false; // play from a random nearby position (varies volume/pan)
-        float ambient = 0.f;   // 0..1 overcast dimming this condition contributes to the scene
+        bool sound_3d = false;       // play from a random nearby position (varies volume/pan)
+        float ambient = 0.f;         // 0..1 overcast dimming this condition contributes to the scene
+        unsigned int tint = 0xFFFFFFFFu; // per-condition multiply over the global tint (ImGui-packed); snow-type only
+    };
+
+    // Automatic weather, defined separately from the conditions themselves: within a region, a reference to one
+    // condition (by name) and how likely it is to be chosen. The leftover probability across a region's entries
+    // is "clear" (no weather). Both are plain aggregates so glaze reflects them as the conditions list does.
+    struct RegionWeather {
+        std::string condition; // name of a WeatherCondition
+        float weight = 0.3f;   // 0..1 probability this condition is picked for the region on each weather roll
+    };
+    struct RegionProfile {
+        GW::Region region = GW::Region_Kryta;
+        std::vector<RegionWeather> entries;
     };
 } // namespace weather_module
 
@@ -98,15 +114,48 @@ namespace {
             {"Heavy Rain", kTypeRain, false, 4000, 10.f, 1000.f, 2500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.50f},
             {"Light Rain", kTypeRain, false, 300, 8.f, 1600.f, 2500.f, 0.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
             {"Snow", kTypeSnow, false, 1500, 8.f, 400.f, 2500.f, 40.f, 40.f, 0.f, {}, 10.f, 30.f, false, 0.30f},
+            // Ash: snow's drift/settle behaviour with a dark warm-grey tint and a heavier overcast.
+            {"Ashfall", kTypeSnow, false, 1200, 9.f, 350.f, 2500.f, 30.f, 30.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
+
+    // Default region->weather table, referencing the default condition names above. Leftover probability per
+    // region is clear weather, so e.g. Maguuma is mostly heavy rain, Kryta mostly light, the Shiverpeaks snowy.
+    std::vector<RegionProfile> DefaultRegionProfiles()
+    {
+        const auto p = [](const GW::Region r, std::vector<RegionWeather> e) { return RegionProfile{r, std::move(e)}; };
+        return {
+            p(GW::Region_Kryta, {{"Light Rain", 0.45f}, {"Heavy Rain", 0.15f}}),
+            p(GW::Region_Maguuma, {{"Heavy Rain", 0.55f}, {"Light Rain", 0.25f}}),
+            p(GW::Region_NorthernShiverpeaks, {{"Snow", 0.5f}}),
+            p(GW::Region_FarShiverpeaks, {{"Snow", 0.6f}}),
+            p(GW::Region_FissureOfWoe, {{"Ashfall", 0.6f}}),
+        };
+    }
+    std::vector<RegionProfile> region_profiles = DefaultRegionProfiles();
 
     bool occlude_behind_terrain = true;
     float render_max_distance = 2500.f;
     unsigned int rain_color = 0xFFFFFFFFu;    // tint (ImGui-packed); white shows the texture untinted
     unsigned int ambient_color = 0xFFA09078u; // fully-overcast multiply tint (ImGui-packed RGB; alpha ignored)
     float ambient_strength = 0.f;             // eased aggregate dimming of active conditions (runtime, not saved)
+
+    bool auto_weather = false;   // drive which conditions are active from the region->weather table
+    float auto_change_min = 3.f; // minutes between automatic weather rolls (random in [min, max])
+    float auto_change_max = 8.f;
+    GW::Region auto_region = GW::Region_DevRegion; // region the current automatic weather was last rolled for (runtime)
+    float auto_timer = -1.f;                       // minutes until the next automatic roll; <0 = roll on the next update (runtime)
+
+    // The regions the picker offers, curated to the open-air PvE regions. Display names come from
+    // Resources::GetRegionName (which owns the decode + cache), so no encoded strings are kept here.
+    constexpr GW::Region kRegions[] = {
+        GW::Region_Kryta, GW::Region_Maguuma, GW::Region_Ascalon, GW::Region_Presearing, GW::Region_NorthernShiverpeaks, GW::Region_CrystalDesert, GW::Region_FissureOfWoe, GW::Region_Kaineng, GW::Region_Kurzick, GW::Region_Luxon,
+        GW::Region_ShingJea, GW::Region_Kourna, GW::Region_Vaabi, GW::Region_Desolation, GW::Region_Istan, GW::Region_DomainOfAnguish, GW::Region_TarnishedCoast, GW::Region_DepthsOfTyria, GW::Region_FarShiverpeaks, GW::Region_CharrHomelands,
+    };
+
+    // The region's localised name (may be blank for the first frames while the game decodes it).
+    const char* RegionName(const GW::Region region) { return Resources::GetRegionName(region)->string().c_str(); }
 
     // POSITION (world) + D3DCOLOR tint + UV; quads are built camera-/ground-aligned on the CPU.
     struct WeatherVertex {
@@ -261,6 +310,55 @@ namespace {
         p.sound_timer = frand(c.sound_min_interval, c.sound_max_interval);
     }
 
+    // Pick one condition (or clear) for the region from its profile, weighted by each entry's probability, and
+    // set exactly that condition active. Probability left over beyond the entries' sum is clear weather; if the
+    // entries sum past 1 they are normalised among themselves (no clear).
+    void RerollAutoWeather(const GW::Region region)
+    {
+        const RegionProfile* prof = nullptr;
+        for (const auto& rp : region_profiles)
+            if (rp.region == region) { prof = &rp; break; }
+
+        int chosen = -1; // index into conditions; -1 = clear
+        if (prof) {
+            float sum = 0.f;
+            for (const auto& e : prof->entries) sum += std::max(0.f, e.weight);
+            float r = frand(0.f, std::max(sum, 1.f));
+            for (const auto& e : prof->entries) {
+                const float w = std::max(0.f, e.weight);
+                if (w <= 0.f) continue;
+                if (r < w) { // this entry won the roll; resolve its name to a live condition (clear if it's gone)
+                    for (int i = 0; i < static_cast<int>(conditions.size()); i++)
+                        if (conditions[i].name == e.condition) { chosen = i; break; }
+                    break;
+                }
+                r -= w;
+            }
+        }
+        for (int i = 0; i < static_cast<int>(conditions.size()); i++)
+            conditions[i].active = i == chosen;
+    }
+
+    // While enabled, drive the active conditions from the region table: re-roll on a region change, on the first
+    // run, and then every few (random) minutes. dt is in seconds.
+    void UpdateAutoWeather(const float dt)
+    {
+        if (!auto_weather) return;
+        const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo();
+        if (!info) return; // map not loaded yet; leave whatever is showing
+        const GW::Region region = info->region;
+        if (region != auto_region || auto_timer < 0.f) {
+            auto_region = region;
+            RerollAutoWeather(region);
+            auto_timer = frand(auto_change_min, auto_change_max);
+            return;
+        }
+        if ((auto_timer -= dt / 60.f) <= 0.f) { // timer is in minutes
+            RerollAutoWeather(region);
+            auto_timer = frand(auto_change_min, auto_change_max);
+        }
+    }
+
     // Side count of the square grid that tiles the spawn area for stratified placement.
     int SpawnGrid(const int drop_count)
     {
@@ -347,6 +445,13 @@ namespace {
         }
     }
 
+    // Channel-wise multiply of two ImGui-packed colours (per-condition tint modulating the global tint).
+    DWORD MulColor(const DWORD a, const DWORD b)
+    {
+        const auto mul = [](const DWORD x, const DWORD y, const int shift) { return ((x >> shift & 0xFFu) * (y >> shift & 0xFFu) + 127u) / 255u << shift; };
+        return mul(a, b, 0) | mul(a, b, 8) | mul(a, b, 16) | mul(a, b, 24);
+    }
+
     // The 4 corners of a quad spanning center +/- the half-extent vectors ax, ay, with the given UV rect.
     // Drawn as two triangles (0-1-2, 0-2-3) via the shared index buffer, so only 4 verts are stored per quad.
     void emit_quad(std::vector<WeatherVertex>& out, const float cx, const float cy, const float cz, const float ax[3], const float ay[3], const DWORD col, const float u0, const float v0, const float u1, const float v1)
@@ -364,8 +469,9 @@ namespace {
         const float h = c.drop_size * 0.5f;
         const float ax[3] = {right[0] * h, right[1] * h, right[2] * h};
         const float ay[3] = {up[0] * h, up[1] * h, up[2] * h};
+        const DWORD col = MulColor(rain_color, c.tint); // per-condition tint (e.g. dark for ashfall)
         for (const auto& d : drops)
-            emit_quad(out, d.x, d.y, d.z, ax, ay, rain_color, 0.f, 0.f, 1.f, 1.f);
+            emit_quad(out, d.x, d.y, d.z, ax, ay, col, 0.f, 0.f, 1.f, 1.f);
     }
 
     // Rain: one instance record per drop. Streak axes (long axis along the downward velocity, width axis
@@ -418,17 +524,17 @@ namespace {
 
     // Flat quad lying on the ground (world XY plane) drawn with the snowflake texture, so it shares the
     // snow vertex buffer/pass. Holds at full tint, then fades its alpha out over the tail of its lifetime.
-    void AppendSettled(const std::vector<Settle>& s)
+    void AppendSettled(const std::vector<Settle>& s, const DWORD base_col)
     {
         const float hs = snow_settle_size * 0.5f;
         const float ax[3] = {hs, 0.f, 0.f};
         const float ay[3] = {0.f, hs, 0.f};
-        const DWORD base_a = (rain_color >> 24) & 0xFFu;
+        const DWORD base_a = (base_col >> 24) & 0xFFu;
         const float fade_span = std::clamp(snow_settle_fade, 0.01f, 1.f);
         for (const auto& sp : s) {
             const float life = snow_settle_duration > 0.f ? sp.age / snow_settle_duration : 1.f;
             const float fade = life < 1.f - fade_span ? 1.f : std::max(0.f, (1.f - life) / fade_span);
-            const DWORD col = (rain_color & 0x00FFFFFFu) | (static_cast<DWORD>(static_cast<float>(base_a) * fade) << 24);
+            const DWORD col = (base_col & 0x00FFFFFFu) | (static_cast<DWORD>(static_cast<float>(base_a) * fade) << 24);
             emit_quad(snow_vertices, sp.x, sp.y, sp.z - splash_lift, ax, ay, col, 0.f, 0.f, 1.f, 1.f);
         }
     }
@@ -551,6 +657,7 @@ namespace {
         snow_vertices.clear();
         splash_vertices.clear();
         particles.resize(conditions.size());
+        UpdateAutoWeather(dt); // may toggle which conditions are active before they're read below
         if (!cam) return;
 
         bool reset = reset_requested; // explicit Reset() request
@@ -587,7 +694,7 @@ namespace {
             else
                 AppendRainInstances(rain_instances, conditions[i], particles[i].raindrops, right, fwd);
             AppendSplashes(particles[i].splashes, right);
-            AppendSettled(particles[i].settled);
+            AppendSettled(particles[i].settled, MulColor(rain_color, conditions[i].tint));
             UpdateSounds(conditions[i], particles[i], dt, cx, cy, cz);
         }
         ambient_strength += (ambient_target - ambient_strength) * std::clamp(dt * 3.f, 0.f, 1.f); // ease ~1/3 s
@@ -768,6 +875,9 @@ void WeatherModule::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "rain_color", &rain_color);
     SettingsRegistry::RegisterField(module, "ambient_color", &ambient_color);
+    SettingsRegistry::RegisterField(module, "auto_weather", &auto_weather);
+    SettingsRegistry::RegisterField(module, "auto_change_min", &auto_change_min);
+    SettingsRegistry::RegisterField(module, "auto_change_max", &auto_change_max);
 }
 
 void WeatherModule::OnSettingsLoaded()
@@ -782,12 +892,18 @@ void WeatherModule::OnSettingsLoaded()
         c.sound_max_interval = std::max(c.sound_max_interval, c.sound_min_interval);
         c.ambient = std::clamp(c.ambient, 0.f, 1.f);
     }
+    auto_change_min = std::max(auto_change_min, 0.1f);
+    auto_change_max = std::max(auto_change_max, auto_change_min);
+    for (auto& rp : region_profiles)
+        for (auto& e : rp.entries)
+            e.weight = std::clamp(e.weight, 0.f, 1.f);
 }
 
 void WeatherModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
-    doc.Get(Name(), "conditions", conditions); // keeps defaults if the key is absent
+    doc.Get(Name(), "conditions", conditions);           // keeps defaults if the key is absent
+    doc.Get(Name(), "region_profiles", region_profiles); // region->weather table for automatic weather
     OnSettingsLoaded();
 }
 
@@ -795,6 +911,7 @@ void WeatherModule::SaveSettings(SettingsDoc& doc)
 {
     ToolboxModule::SaveSettings(doc);
     doc.Set(Name(), "conditions", conditions);
+    doc.Set(Name(), "region_profiles", region_profiles);
 }
 
 void WeatherModule::DrawSettings()
@@ -817,7 +934,9 @@ void WeatherModule::DrawSettings()
     for (int i = 0; i < static_cast<int>(conditions.size()); i++) {
         auto& c = conditions[i];
         ImGui::PushID(i);
+        ImGui::BeginDisabled(auto_weather); // automatic weather owns the active state; show it read-only
         ImGui::Checkbox("##active", &c.active);
+        ImGui::EndDisabled();
         ImGui::SameLine();
         if (ImGui::CollapsingHeader(c.name.empty() ? "(unnamed)" : c.name.c_str())) {
             ImGui::InputText("Name", c.name, 32);
@@ -830,6 +949,11 @@ void WeatherModule::DrawSettings()
             if (HasSplash(c.type)) ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::DragFloat("Overcast", &c.ambient, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("How strongly this condition dims the scene toward the overcast tint while active.");
+            if (c.type == kTypeSnow) {
+                auto ct = ImGui::ColorConvertU32ToFloat4(c.tint);
+                if (ImGui::ColorEdit4("Flake tint", &ct.x, ImGuiColorEditFlags_AlphaBar)) c.tint = ImGui::ColorConvertFloat4ToU32(ct);
+                ImGui::ShowHelp("Multiplies the global tint for this condition's flakes and settled marks - e.g. a dark grey for ashfall.\nApplies to snow-type conditions only.");
+            }
 
             ImGui::TextUnformatted("Sounds (file id, played at random while active)");
             int snd_remove = -1;
@@ -875,6 +999,64 @@ void WeatherModule::DrawSettings()
         if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
         ImGui::EndPopup();
     }
+
+    ImGui::Separator();
+    if (ImGui::Checkbox("Automatic weather (by region)", &auto_weather) && auto_weather) auto_timer = -1.f; // roll at once on enable
+    ImGui::ShowHelp("Choose the active weather automatically from the table below, based on the region you're in,\nre-rolling every few minutes. While on, the manual on/off toggles above are disabled.");
+    if (auto_weather) {
+        // Two separate globals (not a contiguous pair), so DragFloatRange2's two pointers - not DragFloat2.
+        ImGui::DragFloatRange2("Change interval (min)", &auto_change_min, &auto_change_max, 0.25f, 0.1f, 240.f, "%.1f", "%.1f", ImGuiSliderFlags_AlwaysClamp);
+        if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo()) ImGui::Text("Current region: %s", RegionName(info->region));
+    }
+
+    ImGui::PushID("regions"); // keep these widget ids from colliding with the conditions loop above
+    int region_remove = -1;
+    for (int i = 0; i < static_cast<int>(region_profiles.size()); i++) {
+        auto& rp = region_profiles[i];
+        ImGui::PushID(i);
+        char header[64];
+        snprintf(header, sizeof(header), "%s###r", RegionName(rp.region)); // stable id while the name finishes decoding
+        if (ImGui::CollapsingHeader(header)) {
+            int ent_remove = -1;
+            for (int e = 0; e < static_cast<int>(rp.entries.size()); e++) {
+                ImGui::PushID(e);
+                ImGui::SetNextItemWidth(160.f);
+                if (ImGui::BeginCombo("##cond", rp.entries[e].condition.c_str())) {
+                    for (const auto& c : conditions)
+                        if (ImGui::Selectable(c.name.c_str(), c.name == rp.entries[e].condition)) rp.entries[e].condition = c.name;
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(110.f);
+                ImGui::DragFloat("##weight", &rp.entries[e].weight, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Remove##ent")) ent_remove = e;
+                ImGui::PopID();
+            }
+            if (ent_remove >= 0) rp.entries.erase(rp.entries.begin() + ent_remove);
+            if (ImGui::SmallButton("Add condition##ent")) rp.entries.push_back({conditions.empty() ? "" : conditions.front().name, 0.3f});
+            float sum = 0.f;
+            for (const auto& e : rp.entries) sum += std::max(0.f, e.weight);
+            ImGui::Text("Clear weather: %.0f%%", std::max(0.f, 1.f - sum) * 100.f);
+            if (ImGui::Button("Remove region")) region_remove = i;
+        }
+        ImGui::PopID();
+    }
+    if (region_remove >= 0) region_profiles.erase(region_profiles.begin() + region_remove);
+
+    if (ImGui::Button("Add region")) ImGui::OpenPopup("add_region");
+    if (ImGui::BeginPopup("add_region")) {
+        for (const auto r : kRegions) {
+            if (std::any_of(region_profiles.begin(), region_profiles.end(), [&](const RegionProfile& rp) { return rp.region == r; })) continue;
+            ImGui::PushID(static_cast<int>(r)); // names may be blank while decoding, so don't rely on them for ids
+            if (ImGui::Selectable(RegionName(r))) region_profiles.push_back({r, {}});
+            ImGui::PopID();
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reset region table")) region_profiles = DefaultRegionProfiles();
+    ImGui::PopID();
 }
 
 void WeatherModule::Reset()
@@ -935,5 +1117,7 @@ void WeatherModule::Terminate()
     raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
     textures_requested = false;
     last_update = 0;
+    auto_region = GW::Region_DevRegion;
+    auto_timer = -1.f;
     ToolboxModule::Terminate();
 }
