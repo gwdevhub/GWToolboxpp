@@ -103,13 +103,13 @@ namespace {
     constexpr uint32_t kSplashFileId = 0x1baa1;
     constexpr int kSplashCols = 4, kSplashRows = 4, kSplashFrames = kSplashCols * kSplashRows;
     constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
-    constexpr float kMaxRadius = GW::Constants::Range::Compass / 2.f; // 2500 gwinch; radius of the weather volume
+    constexpr float kMaxRadius = GW::Constants::Range::Spirit; // 2500 gwinch; radius of the weather volume
 
     // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
-    float particle_area_full = 2000.f; // gwinch^2 each particle covers at 100% density (smaller = denser); the per-
+    float particle_area_full = 500.f; // gwinch^2 each particle covers at 100% density (smaller = denser); the per-
                                        // particle area scales as this * 100 / density, so 100% is 100x denser than 1%
     int max_particles = 30000;         // hard cap on a condition's particle count (FPS guard)
-    float column_height_max = 1500.f;  // cap on how high above the focus particles start, so snow doesn't begin absurdly high
+    float column_height_max = GW::Constants::Range::Spirit; // cap on how high above the focus particles start, so snow doesn't begin absurdly high
     float fog_factor = 1.0f;          // distance-fade strength fed to the shader
     float splash_size = 8.f;          // world size of a splash billboard
     float splash_duration = 0.5f;     // seconds to play the 16 keyframes
