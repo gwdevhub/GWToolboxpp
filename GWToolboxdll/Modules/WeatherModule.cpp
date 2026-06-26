@@ -163,14 +163,13 @@ namespace {
             {"Snow", kTypeSnow, false, 13, 8.f, 100.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.50f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
-            // Sand: snow-type tilted nearly sideways, blown across the view (camera-relative), dense, sandy, no decal.
-            {"Sandstorm", kTypeSnow, false, 83, 6.f, 250.f, 1000.f, 90.f, 90.f, 90.f, 0.f, {}, 12.f, 35.f, false, 0.55f, 0xFF6EA8C2u, 0xFF00717Fu, kDecalNone, 0.f, true, true},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
 
     // Default climate->weather table, referencing the default condition names above. Leftover probability per
-    // climate is clear weather. Arid is omitted on purpose: dry by default, but offered in the picker to edit.
+    // climate is clear weather. Arid and Desertous are omitted on purpose: dry by default, but offered in the
+    // picker to edit.
     std::vector<ClimateProfile> DefaultClimateProfiles()
     {
         const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
@@ -179,8 +178,6 @@ namespace {
             p(Climate::Tropical, {{"Heavy Rain", 0.55f}, {"Light Rain", 0.25f}}),
             p(Climate::Mountainous, {{"Snow", 0.6f}}),
             p(Climate::Volcanic, {{"Ashfall", 0.6f}}),
-            p(Climate::Desertous, {{"Sandstorm", 0.30f}}),
-            p(Climate::Arid, {{"Sandstorm", 0.10f}}),
         };
     }
     std::vector<ClimateProfile> climate_profiles = DefaultClimateProfiles();
