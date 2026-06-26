@@ -109,6 +109,7 @@ namespace {
     float particle_area_full = 2000.f; // gwinch^2 each particle covers at 100% density (smaller = denser); the per-
                                        // particle area scales as this * 100 / density, so 100% is 100x denser than 1%
     int max_particles = 30000;         // hard cap on a condition's particle count (FPS guard)
+    float column_height_max = 1500.f;  // cap on how high above the focus particles start, so snow doesn't begin absurdly high
     float fog_factor = 1.0f;          // distance-fade strength fed to the shader
     float splash_size = 8.f;          // world size of a splash billboard
     float splash_duration = 0.5f;     // seconds to play the 16 keyframes
@@ -133,6 +134,12 @@ namespace {
     float EffectiveDrift(const WeatherCondition& c)
     {
         return c.drift >= 0.f ? c.drift : (c.type == kTypeSnow ? snow_sway_amp : 0.f);
+    }
+    // How high above the focus particles start: the volume radius, but capped so they don't begin absurdly high
+    // (the column still falls to the ground; only its top is limited).
+    float ColumnHeight(const WeatherCondition& c)
+    {
+        return std::min(c.spread_radius, column_height_max);
     }
     // Particle count from the density %: cover the volume's horizontal disk (radius = spread_radius) with one
     // particle per (particle_area_full * 100 / density) gwinch^2, so density scales the count linearly. Capped.
@@ -475,7 +482,7 @@ namespace {
     // does not shift with the wind direction.
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid)
     {
-        const float top_z = cz - c.spread_radius; // column reaches the top of the sphere (radius = spread_radius)
+        const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
         d.x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
         d.y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
@@ -498,7 +505,7 @@ namespace {
         const bool splash = decal == kDecalSplash;
         const float drift = EffectiveDrift(c);
         const bool settle = decal == kDecalSettle;
-        const float top_z = cz - c.spread_radius; // column reaches the top of the sphere (radius = spread_radius)
+        const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float diameter = 2.f * c.spread_radius;
         // Velocity is the (unit) fall direction scaled by fall_speed, so wind sets the direction, not the speed.
         float vel[3];
