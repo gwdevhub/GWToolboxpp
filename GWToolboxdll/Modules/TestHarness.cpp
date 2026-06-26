@@ -211,6 +211,28 @@ namespace {
             Log::Log("[harness] %s", buf);
             return;
         }
+        if (verb == "heightline") { // heightline x1 y1 x2 y2 plane [n] : QueryAltitude at n points along a segment on `plane`
+            float x1, y1, x2, y2;
+            uint32_t plane = 0, n = 16;
+            if (is >> x1 >> y1 >> x2 >> y2 >> plane) {
+                is >> n;
+                if (n < 2) n = 2;
+                if (n > 64) n = 64;
+                Log::Log("[heightline] (%.0f,%.0f)->(%.0f,%.0f) plane=%u n=%u", x1, y1, x2, y2, plane, n);
+                for (uint32_t i = 0; i < n; ++i) {
+                    const float t = (float)i / (float)(n - 1);
+                    const float x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t;
+                    GW::GamePos p(x, y, plane);
+                    const float a = GW::Map::QueryAltitude(&p);
+                    Log::Log("[heightline]   t=%.2f (%.0f,%.0f) plane%u_alt=%.1f", t, x, y, plane, a);
+                }
+                write_status("heightline: logged");
+            }
+            else {
+                write_status("heightline: bad args (x1 y1 x2 y2 plane [n])");
+            }
+            return;
+        }
         if (verb == "waypoint") {
             float x = 0, y = 0;
             uint32_t plane = 0;

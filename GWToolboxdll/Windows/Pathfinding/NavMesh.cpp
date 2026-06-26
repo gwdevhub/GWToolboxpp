@@ -505,11 +505,15 @@ namespace Pathing {
                 if (!wall && ia > ib) continue; // shared internal edge: emit once
                 const float* va = &tile->verts[ia * 3];
                 const float* vb = &tile->verts[ib * 3];
-                const int pa = (int)lroundf(va[1] / kPlaneSeparation);
-                const int pb = (int)lroundf(vb[1] / kPlaneSeparation);
+                int pa = (int)lroundf(va[1] / kPlaneSeparation);
+                int pb = (int)lroundf(vb[1] / kPlaneSeparation);
 
-                // Phantom-wall suppression: a horizontal wall edge that overlaps another plane's edge at the same
-                // game-Y and ~equal terrain height is really continuous walkable floor across a plane seam.
+                // Phantom-wall reclassification: a horizontal wall edge that overlaps a DIFFERENT plane's edge at the
+                // same game-Y and ~equal terrain height is really continuous walkable floor across a plane seam (GW
+                // can't record a top/bottom adjacency, so Build walls it). Mark it walkable AND re-tag it onto the
+                // NEIGHBOUR's plane: the two planes sit a few units apart, so draping this edge on its own (higher)
+                // plane would float it above the floor the seam actually runs along; the neighbour already draws its
+                // coincident edge on that plane, so this lands exactly on it instead of hovering over the steps.
                 if (wall && std::fabs(va[2] - vb[2]) <= kHorizEps) {
                     const float exmin = std::min(va[0], vb[0]), exmax = std::max(va[0], vb[0]);
                     if (const auto it = horiz.find(lroundf(va[2])); it != horiz.end()) {

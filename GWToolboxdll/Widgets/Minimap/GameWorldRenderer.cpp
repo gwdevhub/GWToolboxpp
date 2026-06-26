@@ -182,21 +182,30 @@ namespace {
             const auto& ln = b.lines[b.build_cursor];
             const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
             const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / sample_spacing));
-            // Drape by continuity: each sample follows the previous one's surface (ramp/bridge/floor), emitting a sub-segment per step; seed from the edge's OWN plane (ln.a's zplane) so an edge under a bridge isn't pulled onto the deck.
-            GW::GamePos seed = ln.a;
-            float prev = GW::Map::QueryAltitude(&seed);
-            if (prev == 0.f) prev = ClosestSurfaceZ(ln.a.x, ln.a.y, num_planes, -1.0e9f);
-            if (prev == ALTITUDE_UNKNOWN) prev = 0.f;
+            // Drape each sample on the edge's OWN plane. A navmesh edge lies on a single trapezoid, so its surface IS
+            // that plane's heightfield — which already ramps/steps where the floor does (e.g. a platform plane that
+            // slopes down to the floor over the steps). Querying the plane directly per point makes the line ride that
+            // surface: a flat platform stays flat, a ramp rises, a deck stays on the deck, and an edge under a bridge
+            // stays on the ground (its plane), never pulled onto the deck. The old ClosestSurfaceZ-continuity drift
+            // instead pinned each edge to whatever height it happened to start at, so an edge climbing a ramp stayed
+            // too low and a boundary edge could float onto an unrelated higher surface.
+            const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
+            auto surfaceZ = [&](float x, float y, float fallback) -> float {
+                GW::GamePos p{x, y, plane};
+                const float a = GW::Map::QueryAltitude(&p);
+                if (a != 0.f) return a;                                      // edge's plane has floor here (the common case)
+                const float c = ClosestSurfaceZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
+                return c == ALTITUDE_UNKNOWN ? fallback : c;
+            };
+            float prev = surfaceZ(ln.a.x, ln.a.y, 0.f);
             float px = ln.a.x, py = ln.a.y, pz = prev;
             for (int s = 1; s <= steps; ++s) {
                 const float t = static_cast<float>(s) / static_cast<float>(steps);
                 const float x = ln.a.x + dx * t, y = ln.a.y + dy * t;
-                float z = ClosestSurfaceZ(x, y, num_planes, prev);
-                if (z == ALTITUDE_UNKNOWN) z = prev;
-                else prev = z;
+                const float z = surfaceZ(x, y, prev);
                 b.staging.push_back({px, py, pz, ln.color}); // LINELIST: each consecutive pair is one sub-segment
                 b.staging.push_back({x, y, z, ln.color});
-                px = x; py = y; pz = z;
+                px = x; py = y; pz = z; prev = z;
             }
         }
         if (b.build_cursor >= b.lines.size()) {
