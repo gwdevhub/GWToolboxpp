@@ -109,51 +109,98 @@ jobs:
       with:
         path: ${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/
 
-    - name: Check version and create release
+    - name: Determine release version
+      id: version
       if: github.ref == 'refs/heads/master'
       shell: bash
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         VERSION=$(sed -n 's/.*set(GWTOOLBOXDLL_VERSION "\(.*\)").*/\1/p' CMakeLists.txt | tr -d '\r')
         BETA=$(sed -n 's/.*set(GWTOOLBOXDLL_VERSION_BETA "\(.*\)").*/\1/p' CMakeLists.txt | tr -d '\r')
-        
+
         if [ -z "$VERSION" ]; then
           echo "Could not find version in CMakeLists.txt"
           exit 1
         fi
-        
+
         if [ -z "$BETA" ]; then
           TAG_NAME="${VERSION}_Release"
         else
           TAG_NAME="${VERSION}_${BETA}"
         fi
-        
+
         echo "Detected version: $VERSION"
         echo "Detected beta: $BETA"
         echo "Target tag: $TAG_NAME"
-        
-        # Check if tag exists
+        echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
         if git ls-remote --tags origin "refs/tags/$TAG_NAME" | grep -q .; then
           echo "Tag $TAG_NAME already exists. Skipping release."
-          exit 0
+          echo "should_release=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "Tag $TAG_NAME does not exist. Will create release."
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
         fi
-        
-        echo "Tag $TAG_NAME does not exist. Creating release."
-          
-        # Create tag
+
+    # Signing is skipped automatically until SIGNPATH_ORGANIZATION_ID is set as a
+    # repo variable, so releases keep working (unsigned) before SignPath is wired up.
+    - name: Stage binaries for signing
+      if: steps.version.outputs.should_release == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
+      shell: bash
+      run: |
+        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
+        mkdir -p to-sign
+        cp "$BIN_DIR/GWToolbox.exe" to-sign/
+        cp "$BIN_DIR/GWToolboxdll.dll" to-sign/
+
+    - name: Upload unsigned binaries
+      id: upload-unsigned
+      if: steps.version.outputs.should_release == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-binaries
+        path: to-sign/
+
+    - name: Sign binaries with SignPath
+      if: steps.version.outputs.should_release == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
+      uses: signpath/github-action-submit-signing-request@v2
+      with:
+        api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+        organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+        project-slug: 'GWToolboxpp'
+        signing-policy-slug: 'release-signing'
+        artifact-configuration-slug: 'binaries'
+        github-artifact-id: '${{ steps.upload-unsigned.outputs.artifact-id }}'
+        wait-for-completion: true
+        output-artifact-directory: 'signed'
+
+    - name: Create release
+      if: steps.version.outputs.should_release == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG_NAME="${{ steps.version.outputs.tag_name }}"
+        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
+
+        # Prefer the SignPath-signed binaries; fall back to the build output if
+        # signing was skipped (SignPath not configured yet).
+        if [ -f signed/GWToolbox.exe ]; then
+          EXE="signed/GWToolbox.exe"
+          DLL="signed/GWToolboxdll.dll"
+          echo "Releasing signed binaries."
+        else
+          EXE="$BIN_DIR/GWToolbox.exe"
+          DLL="$BIN_DIR/GWToolboxdll.dll"
+          echo "Releasing unsigned binaries (SignPath not configured)."
+        fi
+
+        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
+
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git tag "$TAG_NAME"
         git push origin "$TAG_NAME"
-        
-        # Prepare artifacts
-        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        cp "$BIN_DIR/GWToolboxdll.dll" .
-        cp "$BIN_DIR/GWToolbox.exe" .
-        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
 
-        # Create release
         gh release create "$TAG_NAME" \
           --title "$TAG_NAME" \
-          GWToolbox.exe GWToolboxdll.dll GWToolboxdll.pdb.gz
+          "$EXE" "$DLL" GWToolboxdll.pdb.gz
