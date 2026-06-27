@@ -136,18 +136,17 @@ void SkillListingWindow::ExportHiResIconsAsDDS() const
     Resources::EnsureFolderExists(folder);
 
     size_t count = 0;
-    for (const auto skill : skills) {
+    for (size_t skill_id = 0; skill_id < skills.size(); skill_id++) {
+        const auto skill = skills[skill_id];
         if (!skill) {
             continue;
         }
         // Prefer the HD icon, falling back to the lower-res variants when a skill has none.
-        const auto file_id = skill->skill->icon_file_id_hi_res ? skill->skill->icon_file_id_hi_res
-                             : skill->skill->icon_file_id_2 ? skill->skill->icon_file_id_2
-                             : skill->skill->icon_file_id;
+        const auto file_id = skill->skill->icon_file_id_2 ? skill->skill->icon_file_id_2 : skill->skill->icon_file_id;
         if (!file_id) {
             continue;
         }
-        const auto filename = std::format(L"{}.dds", std::to_underlying(skill->skill->skill_id));
+        const auto filename = std::format(L"{}.dds", skill_id);
         GwDatTextureModule::SaveTextureFromFileIdToFile(file_id, folder / filename);
         count++;
     }
