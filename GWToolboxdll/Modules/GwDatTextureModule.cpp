@@ -239,23 +239,6 @@ namespace {
         tex->UnlockRect(0);
         return tex;
     }
-
-    // Maps the source texture's GW format to the equivalent block-compressed DDS format,
-    // defaulting to BC3 (DXT5) so alpha survives for anything that isn't a plain DXT1/3/5.
-    DXGI_FORMAT BlockCompressedFormatFor(GR_FORMAT format)
-    {
-        switch (format) {
-            case GR_FORMAT_DXT1:
-                return DXGI_FORMAT_BC1_UNORM;
-            case GR_FORMAT_DXT2:
-            case GR_FORMAT_DXT3:
-                return DXGI_FORMAT_BC2_UNORM;
-            case GR_FORMAT_DXT4:
-            case GR_FORMAT_DXT5:
-            default:
-                return DXGI_FORMAT_BC3_UNORM;
-        }
-    }
 } // namespace
 
 bool GwDatTextureModule::CloseHandle(GW::RecObject* handle) {
@@ -379,7 +362,7 @@ void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std
             return;
         }
 
-        // OpenImage hands back A8R8G8B8 pixels (D3D byte order is BGRA) but leaves the source format in `format`.
+        // OpenImage hands back A8R8G8B8 pixels (D3D byte order is BGRA).
         DirectX::Image src = {};
         src.width = dims.x;
         src.height = dims.y;
@@ -388,8 +371,13 @@ void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std
         src.slicePitch = src.rowPitch * dims.y;
         src.pixels = bits;
 
+        // DXT1/BC1 encodes color better (it can place a texel at the midpoint of its two RGB565
+        // endpoints, which DXT3/DXT5 cannot), so prefer it whenever the icon has no real alpha and
+        // only fall back to BC3 (DXT5) when smooth transparency must be preserved.
+        const auto target = DirectX::IsAlphaAllOpaque(src) ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC3_UNORM;
+
         DirectX::ScratchImage compressed;
-        const auto hr = DirectX::Compress(src, BlockCompressedFormatFor(format), DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed);
+        const auto hr = DirectX::Compress(src, target, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed);
         if (SUCCEEDED(hr)) {
             DirectX::SaveToDDSFile(compressed.GetImages(), compressed.GetImageCount(), compressed.GetMetadata(), DirectX::DDS_FLAGS_NONE, file_path.c_str());
         }
