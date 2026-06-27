@@ -9,21 +9,16 @@ import siteConfig from '../../site.config.json';
     <div>
       <p class="text-(--color-fg-sub)">{siteConfig.title} — {siteConfig.tagline}</p>
       <p class="mt-1">
-        Maintained by {
-          siteConfig.maintainers.map((m, i) => (
-            <>
-              <a
-                href={m.url}
-                target="_blank"
-                rel="noopener"
-                class="text-(--color-fg-dim) hover:text-(--color-accent)"
-              >
-                {m.name}
-              </a>
-              {i < siteConfig.maintainers.length - 1 ? ', ' : ''}
-            </>
-          ))
-        }
+        Maintained by the
+        {' '}
+        <a
+          href="https://github.com/orgs/gwdevhub/people"
+          target="_blank"
+          rel="noopener"
+          class="text-(--color-fg-dim) hover:text-(--color-accent)"
+        >
+          GWDevHub team
+        </a>.
       </p>
     </div>
     <div class="flex items-center gap-4">
