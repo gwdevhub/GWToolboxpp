@@ -1047,8 +1047,8 @@ namespace {
             GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), false); // @TODO: Show this, but make it maximise the window on click instead
             GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnExit"), true);
         }
-        // pref 1 = borderless, pref 2 = fullscreen; hide window buttons if the user opted in
-        if (pref == 1 || pref == 2) {
+        // pref 0 = windowed; any other mode (borderless, fullscreen, etc.) hides window buttons if the user opted in
+        if (pref != 0) {
             const bool visible = !settings.hide_window_buttons_in_fullscreen;
             GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnMin"), visible);
             GW::UI::SetFrameVisible(GW::UI::GetFrameByLabel(L"BtnRestore"), visible);
