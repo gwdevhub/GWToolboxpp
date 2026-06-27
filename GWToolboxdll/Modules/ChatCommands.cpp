@@ -1682,6 +1682,11 @@ namespace {
         ImGui::Bullet();
         ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
         ImGui::Bullet();
+        ImGui::Text(
+            "'/weather' lists the weather conditions and whether each is on.\n"
+            "'/weather <condition> [on|off|toggle]' toggles a condition by name (turning one on turns the rest off)."
+        );
+        ImGui::Bullet();
         ImGui::Text("'/wiki [quest|<search_term>]' search GWW for current quest or search term. By default, will search for the current map.");
         ImGui::Bullet();
         ImGui::Text(withdraw_syntax);
