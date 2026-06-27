@@ -19,6 +19,23 @@ Work through these first — they resolve the majority of issues:
 
 If you are still stuck after this, the cause is almost always security software — keep reading.
 
+## Your browser blocked the download
+
+Chromium-based browsers (Chrome, Edge, Brave, Opera, and others) increasingly block `GWToolbox.exe` **before it even finishes downloading**, showing a warning like *"This file isn't commonly downloaded"* or *"Failed – Virus detected"* with no obvious way to keep it. This is **Safe Browsing** reacting to an unsigned, infrequently-downloaded executable — the same false positive your antivirus makes — not a real threat.
+
+If your browser will not let you keep the file, lower its Safe Browsing level, download, then turn it back up if you like:
+
+1. Paste this into your browser's address bar and press Enter:
+   - Chrome / Brave / Opera: `chrome://settings/security`
+   - Edge: `edge://settings/privacy`
+2. Find **Safe Browsing** (Edge calls it **Microsoft Defender SmartScreen**).
+3. Switch it from **Enhanced protection** to **Standard protection**, or temporarily turn it **Off** / to **No protection**.
+4. Re-download `GWToolbox.exe` from [gwtoolbox.com](https://gwtoolbox.com/).
+
+You may still see a "keep anyway" prompt on the download — that one you *can* dismiss to keep the file. Once you have `GWToolbox.exe`, you can set Safe Browsing back to its previous level.
+
+> **Note:** managed browsers (a work or school computer, or an enterprise antivirus that locks browser settings) can grey this out entirely. If so, download on a personal device, or ask whoever manages the machine to allow it.
+
 ## Antivirus exclusions
 
 Toolbox has to inject into `Gw.exe` and read its memory, which looks like the behaviour antivirus software is built to stop — so antivirus (including Windows Defender) frequently flags it as a **false positive** and blocks it. The fix is to add an **exclusion** for your GWToolbox folder.

@@ -31,6 +31,8 @@ However, ArenaNet has indicated that GWToolbox++ from the official source is **a
 ### My antivirus detects toolbox as a virus! Are you hacking me?
 The detection is a false positive, and it is caused by some techniques that GWToolbox needs to use. Most notably, toolbox has to run into another program and manipulate its memory at runtime (note: no modification is permanent). Toolbox is open source, so if you don't trust me you can read through the source code and compile directly from the source yourself.
 
+**Can't even download it?** Chromium-based browsers (Chrome, Edge, Brave, etc.) often block `GWToolbox.exe` while it downloads, for the same false-positive reason. Lower your browser's Safe Browsing level before re-downloading — paste `chrome://settings/security` (or `edge://settings/privacy` on Edge) into the address bar, switch **Safe Browsing** to **Standard protection** (or turn it off temporarily), then download again. See the [troubleshooting page](/docs/troubleshooting/#your-browser-blocked-the-download) for the full steps.
+
 ### Can I run Toolbox with other programs such as Multi client Launchers, TexMod, uMod, or a screen recording software?
 TexMod, uMod, screen recording software (in game capture mode) and Toolbox all use similar techniques to capture and display information on the screen. Because of this, they may interfere with each other. Also note that when you use more than one of the above programs Guild Wars may crash when you close any of them.
 
