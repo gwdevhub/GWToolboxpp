@@ -146,6 +146,11 @@ All daily commands accept an optional `tomorrow` argument (e.g. `/zm tomorrow`) 
   - `/cam fov [amount]`: Set the field-of-view (no argument resets).
 - `/zoom [value]`: Set the maximum zoom distance. `/zoom` with no argument resets to the default 750.
 
+## Weather
+
+- `/weather`: List every [Weather](/docs/weather/) condition and whether it's on.
+- `/weather <condition> [on|off|toggle]`: Toggle a condition by name (names may contain spaces), or set its state explicitly (`1`/`0` also work). Turning one on turns the rest off.
+
 ## Appearance (transmog)
 
 - `/transmo`: Transmog your character into the model of the currently targeted NPC (visible only to you).

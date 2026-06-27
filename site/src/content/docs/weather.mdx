@@ -1,0 +1,48 @@
+---
+title: "Weather"
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this feature live under <ToolboxPath steps={["Settings", "Weather"]} />.
+
+The Weather module draws camera-anchored weather — rain, snow, ash and similar — into the 3D game world. The effect is composited under the in-game UI and occluded by terrain, and can dim the scene with an overcast tint. It ships with a few presets (Heavy Rain, Light Rain, Snow, Ashfall) and lets you author your own.
+
+<p class="text-(--color-fg-meta)">This is a beta feature. If the in-world compositor fails to install, the settings panel will say so at the top.</p>
+
+## Conditions
+
+Each condition is one weather effect. Only one runs at a time — turning a condition on (via its checkbox or [chat command](#chat-commands)) turns the others off. Expand a condition to edit it:
+
+- **Type** — Rain (streaked drops) or Snow (square flakes; also used for ash).
+- **Density** — how densely the volume is filled, 1–100%. The particle count is derived from this and the range, so it stays consistent if you change the radius. Higher = denser and heavier on FPS; the estimated particle count is shown below the slider.
+- **Range** — radius of the weather volume around the focus. A small range concentrates the effect close in; a large one fills out to compass range.
+- **Drop size** / **Fall speed** — particle size, and the constant speed they fall at (wind tilts direction without changing speed).
+- **Wind direction** — range of headings the wind may blow toward; one is picked at random each time the condition activates. A wide range (e.g. 0–360) varies it; a narrow one keeps it consistent.
+- **Wind tilt** — how far the fall tilts from straight down: 0 = vertical, 90 = fully sideways.
+- **Wind relative to camera** — measure wind direction from the camera, so the effect keeps the same on-screen direction as you rotate.
+- **Centre on camera** — centre the volume on the camera itself instead of its target, wrapping the effect tightly around the viewer. Best paired with a small range.
+- **Drift** (Snow only) — how much flakes wander sideways as they fall; 0 = straight down.
+- **Floor decal** — what each impact leaves on the ground: None, Splash, or a settled flake/patch. Splash adds a **Splash chance**.
+- **Tint** — the particle colour (e.g. a dark grey for ash).
+- **Overcast** — how strongly the condition dims the scene while active, toward the **Overcast tint** colour.
+- **Sounds** — `.dat` file IDs played at random while active. Each entry shows whether it's a valid sound, with **Test**, and **Remove** buttons. Set the **Sound interval** range, and optionally **Play sounds in 3D** so the game varies volume and panning.
+
+Use **Duplicate** / **Remove condition** per condition, **Add condition** to create one, and **Reset to defaults** to restore the presets.
+
+## Automatic weather
+
+Enable **Automatic weather (by climate)** to pick the active condition automatically from the climate of the region you're in, re-rolling every few minutes (set the **Change interval** range). While on, the manual on/off toggles are disabled.
+
+Below it is the climate table. Each climate lists conditions with a weight (0–1 probability per roll); the leftover probability is clear weather, shown as a percentage. Add or remove conditions per climate, **Add climate**, **Remove climate**, or **Reset climate table**. The current map's climate and the condition currently showing are displayed at the top of the panel.
+
+## Chat commands
+
+- `/weather` — list every condition and whether it's on.
+- `/weather <condition>` — toggle a condition by name (names may contain spaces).
+- `/weather <condition> on|off|toggle` — set a condition's state explicitly (`1`/`0` also work).
+
+Turning one condition on turns the rest off, matching the one-at-a-time behaviour of the settings panel.
+
+[back](./)
