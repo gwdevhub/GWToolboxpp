@@ -1,5 +1,6 @@
 ---
 title: "Widgets"
+description: "Always-on information overlays GWToolbox++ provides, including timer, health, distance, minimap, damage, bonds and vanquish."
 section: widgets
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Credits"
+description: "The contributors, reverse engineers and sponsors behind GWToolbox++, including JetBrains and everyone who proposed a PR."
 section: meta
 ---
 

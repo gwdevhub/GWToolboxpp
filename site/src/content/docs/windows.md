@@ -1,5 +1,6 @@
 ---
 title: "Windows"
+description: "How Toolbox windows are opened, closed, moved, resized, and edited, plus a rundown of each one."
 section: windows
 ---
 

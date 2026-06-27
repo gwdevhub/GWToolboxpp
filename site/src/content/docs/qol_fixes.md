@@ -1,5 +1,6 @@
 ---
 title: "Quality of Life Fixes"
+description: "Small base-game bugs and annoyances GWToolbox++ quietly fixes by default, from hero panels to the FPS cap."
 section: features
 ---
 

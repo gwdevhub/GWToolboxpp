@@ -1,5 +1,6 @@
 ---
 title: "Donate"
+description: "Why GWToolbox++ costs money to run and how to support it voluntarily through Open Collective without affecting development."
 section: meta
 ---
 

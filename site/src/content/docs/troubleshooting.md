@@ -1,5 +1,6 @@
 ---
 title: "Troubleshooting"
+description: "Fixing security software that blocks GWToolbox++, covering antivirus, Controlled Folder Access, Smart App Control and crash dumps."
 section: meta
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Frequently Asked Questions"
+description: "Common questions about GWToolbox++, covering bans, antivirus warnings, launch failures, crash dumps and in-game fixes."
 section: meta
 ---
 
