@@ -15,6 +15,7 @@ interface Props {
 const { title, description = siteConfig.tagline } = Astro.props;
 const pageTitle = title ? `${title} — ${siteConfig.title}` : siteConfig.title;
 const release = await getLatestRelease();
+const canonicalURL = new URL(Astro.url.pathname, Astro.site).href;
 ---
 
 <!doctype html>
@@ -24,9 +25,12 @@ const release = await getLatestRelease();
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="alternate" type="text/plain" title="llms.txt" href="/llms.txt" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
     <meta property="og:type" content="website" />
     <link
       rel="preload"

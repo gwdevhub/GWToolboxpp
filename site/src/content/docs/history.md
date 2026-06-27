@@ -1,5 +1,6 @@
 ---
 title: "Version History"
+description: "Release changelog for GWToolbox++, listing new features, fixes and minor changes across every published version."
 section: meta
 ---
 

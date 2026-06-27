@@ -1,5 +1,6 @@
 ---
 title: "World Map"
+description: "Extends the in-game world map with quest markers, elite-capture locations, travel shortcuts, and minimap line overlays."
 section: widgets
 ---
 

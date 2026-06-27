@@ -1,5 +1,6 @@
 ---
 title: "Chat Commands"
+description: "Reference for the chat commands GWToolbox++ adds, covering windows, targeting, travel, builds, items, dailies and more."
 section: features
 ---
 

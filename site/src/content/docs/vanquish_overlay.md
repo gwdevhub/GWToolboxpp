@@ -1,5 +1,6 @@
 ---
 title: "Vanquish Overlay"
+description: "Drawing fog of war, enemy markers and a compass-range circle on the mission map to plan Hard Mode vanquishes."
 section: widgets
 ---
 
