@@ -212,29 +212,35 @@ const isActive = (href: string) =>
 </dialog>
 
 <script>
-  // Close the Feedback <details> dropdown when clicking outside it.
-  // Plain DOM listener — no React needed for a tiny menu.
+  // All listeners are delegated through `document`, which survives Astro's
+  // client-side navigations — the header and dialog get swapped on each
+  // navigation, so caching element references (or binding to them directly)
+  // would leave the handlers dead after the first page transition.
+  const helpDialog = () => document.getElementById('help-dialog') as HTMLDialogElement | null;
+  const closeFeedback = () =>
+    document
+      .querySelectorAll<HTMLDetailsElement>('details.feedback[open]')
+      .forEach((d) => d.removeAttribute('open'));
+
   document.addEventListener('click', (event) => {
     const target = event.target as Element | null;
+
+    // "I need help" opens a dialog steering users to the docs before they file an issue.
+    if (target?.closest('[data-help-open]')) {
+      closeFeedback();
+      helpDialog()?.showModal();
+      return;
+    }
+
+    // Close button, or a click on the dialog backdrop itself.
+    if (target?.closest('[data-help-close]') || target === helpDialog()) {
+      helpDialog()?.close();
+      return;
+    }
+
+    // Click outside an open Feedback dropdown closes it.
     document.querySelectorAll<HTMLDetailsElement>('details.feedback[open]').forEach((d) => {
       if (target && !d.contains(target)) d.removeAttribute('open');
     });
-  });
-
-  // "I need help" opens a dialog steering users to the docs before they file an issue.
-  const helpDialog = document.getElementById('help-dialog') as HTMLDialogElement | null;
-  document.querySelectorAll('[data-help-open]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document
-        .querySelectorAll<HTMLDetailsElement>('details.feedback[open]')
-        .forEach((d) => d.removeAttribute('open'));
-      helpDialog?.showModal();
-    });
-  });
-  helpDialog?.querySelectorAll('[data-help-close]').forEach((btn) => {
-    btn.addEventListener('click', () => helpDialog.close());
-  });
-  helpDialog?.addEventListener('click', (event) => {
-    if (event.target === helpDialog) helpDialog.close();
   });
 </script>
