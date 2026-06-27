@@ -10,6 +10,8 @@
 #include <GWCA/Managers/MemoryMgr.h>
 #include <Utils/ArenaNetFileParser.h>
 
+#include <DirectXTex.h>
+
 namespace {
 
 
@@ -237,6 +239,23 @@ namespace {
         tex->UnlockRect(0);
         return tex;
     }
+
+    // Maps the source texture's GW format to the equivalent block-compressed DDS format,
+    // defaulting to BC3 (DXT5) so alpha survives for anything that isn't a plain DXT1/3/5.
+    DXGI_FORMAT BlockCompressedFormatFor(GR_FORMAT format)
+    {
+        switch (format) {
+            case GR_FORMAT_DXT1:
+                return DXGI_FORMAT_BC1_UNORM;
+            case GR_FORMAT_DXT2:
+            case GR_FORMAT_DXT3:
+                return DXGI_FORMAT_BC2_UNORM;
+            case GR_FORMAT_DXT4:
+            case GR_FORMAT_DXT5:
+            default:
+                return DXGI_FORMAT_BC3_UNORM;
+        }
+    }
 } // namespace
 
 bool GwDatTextureModule::CloseHandle(GW::RecObject* handle) {
@@ -347,13 +366,34 @@ void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std
 {
     if (!file_id)
         return;
-    Resources::Instance().EnqueueDxTask([file_id, file_path](IDirect3DDevice9* device) {
+    // Decoding reads from the dat through game functions, so keep it on the render thread like the other texture tasks.
+    Resources::Instance().EnqueueDxTask([file_id, file_path](IDirect3DDevice9*) {
+        gw_image_bits bits = nullptr;
         Vec2i dims;
-        const auto tex = CreateTexture(device, file_id, dims);
-        if (!tex)
+        int levels;
+        GR_FORMAT format;
+        if (!OpenImage(file_id, &bits, dims, levels, format) || !bits || !dims.x || !dims.y) {
+            if (bits) {
+                GW::MemoryMgr::MemFree(bits);
+            }
             return;
-        Resources::SaveTextureToFile(tex, file_path);
-        tex->Release();
+        }
+
+        // OpenImage hands back A8R8G8B8 pixels (D3D byte order is BGRA) but leaves the source format in `format`.
+        DirectX::Image src = {};
+        src.width = dims.x;
+        src.height = dims.y;
+        src.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        src.rowPitch = static_cast<size_t>(dims.x) * 4;
+        src.slicePitch = src.rowPitch * dims.y;
+        src.pixels = bits;
+
+        DirectX::ScratchImage compressed;
+        const auto hr = DirectX::Compress(src, BlockCompressedFormatFor(format), DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed);
+        if (SUCCEEDED(hr)) {
+            DirectX::SaveToDDSFile(compressed.GetImages(), compressed.GetImageCount(), compressed.GetMetadata(), DirectX::DDS_FLAGS_NONE, file_path.c_str());
+        }
+        GW::MemoryMgr::MemFree(bits);
     });
 }
 
