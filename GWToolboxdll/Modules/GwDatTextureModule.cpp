@@ -343,6 +343,20 @@ IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
         });
     return &gwimg_ptr->m_tex;
 }
+void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path)
+{
+    if (!file_id)
+        return;
+    Resources::Instance().EnqueueDxTask([file_id, file_path](IDirect3DDevice9* device) {
+        Vec2i dims;
+        const auto tex = CreateTexture(device, file_id, dims);
+        if (!tex)
+            return;
+        Resources::SaveTextureToFile(tex, file_path);
+        tex->Release();
+    });
+}
+
 void GwDatTextureModule::Terminate()
 {
     for (auto gwimg_ptr : textures_by_file_id) {

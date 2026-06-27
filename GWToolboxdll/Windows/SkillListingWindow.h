@@ -110,4 +110,5 @@ public:
     void Terminate() override;
 
     void ExportToJSON() const;
+    void ExportHiResIconsAsDDS() const;
 };

@@ -130,6 +130,47 @@ void SkillListingWindow::ExportToJSON() const
     WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 
+void SkillListingWindow::ExportHiResIconsAsDDS() const
+{
+    const auto folder = Resources::GetPath(L"hd_skill_icons");
+    Resources::EnsureFolderExists(folder);
+
+    size_t count = 0;
+    for (const auto skill : skills) {
+        if (!skill) {
+            continue;
+        }
+        // Prefer the HD icon, falling back to the lower-res variants when a skill has none.
+        const auto file_id = skill->skill->icon_file_id_hi_res ? skill->skill->icon_file_id_hi_res
+                             : skill->skill->icon_file_id_2 ? skill->skill->icon_file_id_2
+                             : skill->skill->icon_file_id;
+        if (!file_id) {
+            continue;
+        }
+        const auto filename = std::format(L"{}.dds", std::to_underlying(skill->skill->skill_id));
+        GwDatTextureModule::SaveTextureFromFileIdToFile(file_id, folder / filename);
+        count++;
+    }
+
+    wchar_t folder_wc[512];
+    size_t msg_len = 0;
+    const auto message = folder.wstring();
+    constexpr size_t max_len = _countof(folder_wc) - 1;
+    for (size_t i = 0; i < message.length() && msg_len < max_len; i++) {
+        if (message[i] == '\\' && msg_len < max_len) {
+            folder_wc[msg_len++] = message[i];
+        }
+        if (msg_len >= max_len) {
+            break;
+        }
+        folder_wc[msg_len++] = message[i];
+    }
+    folder_wc[msg_len] = 0;
+    wchar_t chat_message[1024];
+    swprintf(chat_message, _countof(chat_message), L"Exporting %zu HD skill icons to <a=1>\x200C%s</a>", count, folder_wc);
+    WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
+}
+
 void SkillListingWindow::Initialize()
 {
     ToolboxWindow::Initialize();
@@ -245,6 +286,10 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
     }
     if (ImGui::Button("Export to JSON")) {
         ExportToJSON();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Export HD skill icons as DDS")) {
+        ExportHiResIconsAsDDS();
     }
     ImGui::End();
 }
