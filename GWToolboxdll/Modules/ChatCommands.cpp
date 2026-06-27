@@ -2436,7 +2436,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings saved to %s", printable.c_str());
+            Log::InfoW(L"Settings saved to [%s;file://%s]", printable.c_str(), printable.c_str());
         }
         else if (arg1 == L"load") {
             // e.g. /tb load
@@ -2445,7 +2445,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings loaded from %s", printable.c_str());
+            Log::InfoW(L"Settings loaded from [%s;file://%s]", printable.c_str() ,printable.c_str());
         }
         else if (arg1 == L"reset") {
             // e.g. /tb reset

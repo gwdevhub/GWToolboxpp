@@ -166,7 +166,7 @@ void SkillListingWindow::ExportHiResIconsAsDDS() const
     }
     folder_wc[msg_len] = 0;
     wchar_t chat_message[1024];
-    swprintf(chat_message, _countof(chat_message), L"Exporting %zu HD skill icons to <a=1>\x200C%s</a>", count, folder_wc);
+    swprintf(chat_message, _countof(chat_message), L"<quote>Exporting %zu HD skill icons to [%s,file://%s]", count, folder_wc, folder_wc);
     WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 
