@@ -612,7 +612,6 @@ namespace {
         const bool splash = decal == kDecalSplash;
         const float drift = EffectiveDrift(c);
         const bool settle = decal == kDecalSettle;
-        const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float diameter = 2.f * c.spread_radius;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
@@ -623,31 +622,18 @@ namespace {
             d.sway_phase += snow_sway_speed * dt;
             d.x += (vx + sway_x) * dt;
             d.y += (vy + sway_y) * dt;
-            // Keep the volume centred on the player: a drop blown past one edge of the bubble wraps to the
-            // opposite edge (entering from upwind), so the wind only sets which way drops stream through a fixed,
-            // player-centred column.
-            bool wrapped = false;
-            if (const float rx = d.x - cx; rx > c.spread_radius) { d.x -= diameter; wrapped = true; }
-            else if (rx < -c.spread_radius) { d.x += diameter; wrapped = true; }
-            if (const float ry = d.y - cy; ry > c.spread_radius) { d.y -= diameter; wrapped = true; }
-            else if (ry < -c.spread_radius) { d.y += diameter; wrapped = true; }
-            // Re-query the terrain at the wrapped position, but shift d.z by the change so the drop keeps the SAME
-            // height above the ground. Otherwise a wrap onto higher terrain leaves the ground above the drop, which
-            // "lands" it with no fall -> recycles it to the top; with little or no fall to bring it back, every drop
-            // piles onto the top plane over time (worst at high wind tilt). Recycling is now driven only by falling.
-            if (wrapped) {
-                const float new_ground = GroundZAt(d.x, d.y, cz + recycle_below);
-                d.z += new_ground - d.ground_z;
-                d.ground_z = new_ground;
-            }
+            // Keep the volume centred on the player: a drop blown past one edge of the bubble wraps to the opposite
+            // edge, so the wind only sets which way drops stream through a fixed, player-centred column. Only x/y
+            // move here - the recycle floor was fixed when the drop was seeded, so a wrap can't fake a landing.
+            if (const float rx = d.x - cx; rx > c.spread_radius) d.x -= diameter; else if (rx < -c.spread_radius) d.x += diameter;
+            if (const float ry = d.y - cy; ry > c.spread_radius) d.y -= diameter; else if (ry < -c.spread_radius) d.y += diameter;
             if (d.z >= d.ground_z) {
-                // Landed: drop a decal here (within the bubble, since x/y are kept centred), then fall again from
-                // the top of the same column. Resample the terrain in case it differs from the spawn point.
+                // Run complete (the drop reached its projected landing): leave a decal here, then start a brand-new
+                // run by re-seeding from scratch - a fresh cell with a fresh projected floor. This replaces the old
+                // in-place "reset to the top" which, together with the wrap, nudged drops onto the top plane.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                d.z = top_z;
-                d.ground_z = LandingGroundZ(c, d.x, d.y, top_z, vx, vy, vz, cz); // floor = where it will drift onto next fall
-                d.sway_phase = frand(0.f, 6.2831853f);
+                seed_drop(d, c, cx, cy, cz, i, grid, vx, vy, vz);
             }
         }
         for (size_t i = 0; i < p.splashes.size();) {
