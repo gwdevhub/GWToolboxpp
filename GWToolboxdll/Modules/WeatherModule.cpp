@@ -69,10 +69,10 @@ namespace weather_module {
         float drop_size = 8.f;
         float fall_speed = 2000.f;    // gwinch/sec
         float spread_radius = 2500.f; // radius of the player-centred volume (horizontal wrap + column height); fixed on load
-        float wind_dir_min = 0.f; // a heading is picked at random in [min, max] when the condition activates (degrees)
-        float wind_dir_max = 0.f;
+        float wind_dir_min = 0.f; // retained but unused: the wind heading is always rolled across the full 0-360 circle
+        float wind_dir_max = 0.f; // (kept in case a directional range is wanted again)
         float wind_tilt = 0.f; // how far the fall is tilted from straight-down, degrees (0 = vertical, 89 = sideways)
-        float splash_chance = 1.f;      // 0..1 chance an impact spawns a splash
+        float splash_chance = 1.f;      // 0..1 chance a landing drop leaves its floor decal (splash or settle)
         std::vector<uint32_t> sounds;   // .dat sound file ids played at random while active
         float sound_min_interval = 8.f; // seconds between sounds
         float sound_max_interval = 25.f;
@@ -189,14 +189,14 @@ namespace {
         std::vector<WeatherCondition> v = {
             {"Heavy Rain", kTypeRain, false, 70, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 1.0f},
             {"Light Rain", kTypeRain, false, 2, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 1.0f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
-            {"Snow", kTypeSnow, false, 13, 8.f, 100.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.50f},
+            {"Snow", kTypeSnow, false, 13, 8.f, 100.f, 2500.f, 30.f, 55.f, 10.f, 0.15f, {}, 10.f, 30.f, false, 0.50f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
             // Cloud-cover-only conditions (density 0 = no falling particles); the look is entirely the cloud layer below.
             {"Fog", kTypeRain, false, 0, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f},
             {"Sandstorm", kTypeRain, false, 0, 10.f, 500.f, 2500.f, 90.f, 90.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.25f, 0xFFC8B080u},
             // Blizzard: heavy snow + a low white fog band.
-            {"Blizzard", kTypeSnow, false, 35, 8.f, 140.f, 2500.f, 35.f, 60.f, 18.f, 0.f, {}, 10.f, 30.f, false, 0.55f},
+            {"Blizzard", kTypeSnow, false, 35, 8.f, 140.f, 2500.f, 35.f, 60.f, 18.f, 0.15f, {}, 10.f, 30.f, false, 0.55f},
         };
         v[0].cloud = {1000.f, 1500.f, 0xB0303840u, 25, 700.f, 60.f};  // Heavy Rain: dark rain clouds high overhead
         v[1].cloud = {1000.f, 1500.f, 0x70404850u, 15, 700.f, 50.f};  // Light Rain: lighter, sparser clouds
@@ -337,7 +337,7 @@ namespace {
     // currently driving it, -1 = clear.
     Particles active_particles;
     int active_condition = -1;
-    float active_wind_dir = 0.f; // heading rolled from the active condition's [wind_dir_min, max] when it activated
+    float active_wind_dir = 0.f; // wind heading (degrees) rolled across the full circle when the condition activated
     float center_z = 0.f;        // last update's focus altitude; the column is shifted by its change each tick so a
                                  // slow-falling condition (which rarely reseeds its top) still tracks the player's height
     bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
@@ -628,7 +628,7 @@ namespace {
                 // Landed: drop a decal here (within the bubble, since x/y are kept centred), then fall again from
                 // the top of the same column. Resample the terrain in case it differs from the spawn point.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                if (settle && frand(0.f, 1.f) < snow_settle_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
+                if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 d.z = top_z;
                 d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
                 d.sway_phase = frand(0.f, 6.2831853f);
@@ -1032,7 +1032,7 @@ namespace {
             active_particles = {};
             active_condition = active;
             center_z = cz; // freshly seeded around the current altitude - no shift on this frame
-            if (active >= 0) active_wind_dir = frand(conditions[active].wind_dir_min, conditions[active].wind_dir_max); // roll a heading for this run
+            if (active >= 0) active_wind_dir = frand(0.f, 360.f); // wind heading is always randomised across the full circle
         }
         const float dcz = cz - center_z; // the focus's vertical move this tick; the column is shifted by it so it
         center_z = cz;                   // keeps tracking the player's height even when drops barely fall (sandstorm)
@@ -1436,8 +1436,8 @@ void WeatherModule::DrawSettings()
             ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
             ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
             ImGui::ShowHelp("The constant speed drops travel at. Wind tilts their direction without changing this speed.");
-            ImGui::DragFloatRange2("Wind direction", &c.wind_dir_min, &c.wind_dir_max, 2.f, 0.f, 360.f, "%.0f deg", "%.0f deg", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::ShowHelp("Range of compass headings the wind may blow toward; one is picked at random each time the\ncondition activates. A wide range (e.g. 0-360) varies the direction; a narrow one keeps it consistent.");
+            // Wind heading is always rolled across the full 0-360 circle when the condition activates; the
+            // wind_dir_min/max fields are kept (no longer UI-exposed) in case a directional range is wanted again.
             ImGui::DragFloat("Wind tilt", &c.wind_tilt, 1.f, 0.f, 90.f, "%.0f deg", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("How far the fall is tilted from straight down: 0 = vertical, 90 = fully sideways (no fall -\nstreams horizontally and never sinks, e.g. a sandstorm).");
             ImGui::Checkbox("Wind relative to camera", &c.wind_camera_relative);
@@ -1453,7 +1453,10 @@ void WeatherModule::DrawSettings()
             int decal = EffectiveDecal(c);
             if (ImGui::Combo("Floor decal", &decal, decal_names, kDecalCount)) c.floor_decal = decal;
             ImGui::ShowHelp("What each impact leaves on the ground: nothing, a water splash, or a settled flake/patch.");
-            if (decal == kDecalSplash) ImGui::DragFloat("Splash chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            if (decal != kDecalNone) {
+                ImGui::DragFloat("Floor decal chance", &c.splash_chance, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::ShowHelp("Chance (0..1) that a drop leaves its floor decal - a splash or a settled patch - when it lands.");
+            }
             auto ct = ImGui::ColorConvertU32ToFloat4(c.tint);
             if (ImGui::ColorEdit4("Tint", &ct.x, ImGuiColorEditFlags_AlphaBar)) c.tint = ImGui::ColorConvertFloat4ToU32(ct);
             ImGui::ShowHelp("This condition's particle colour - e.g. a dark grey for ashfall.");
