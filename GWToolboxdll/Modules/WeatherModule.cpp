@@ -146,6 +146,10 @@ namespace {
     // (the column still falls to the ground; only its top is limited).
     float ColumnHeight(const WeatherCondition& c)
     {
+        // Clouds fill only their fog band, not the whole volume radius: this keeps the particle count and the
+        // vertical overdraw proportional to the band thickness, so a thinner band (e.g. a low sandstorm haze) is
+        // correspondingly cheaper - the puffs above the band aren't simulated or drawn at all.
+        if (c.type == kTypeCloud) return std::clamp(cloud_band_height, 1.f, column_height_max);
         return std::min(c.spread_radius, column_height_max);
     }
     // Particle count from the density %: cover the volume's horizontal disk (radius = spread_radius) with one
@@ -654,18 +658,15 @@ namespace {
     {
         const float h = c.drop_size * 0.5f;
         const WeatherInstance base{0.f, 0.f, 0.f, right[0] * h, right[1] * h, right[2] * h, up[0] * h, up[1] * h, up[2] * h, 1.f};
-        const float band = std::max(1.f, cloud_band_height);
-        const float fade_in = band * 0.2f; // ramp up over the lowest fifth so the bank doesn't start with a hard floor
+        const float band = std::max(1.f, cloud_band_height); // total layer thickness == the simulated column (see ColumnHeight)
         out.reserve(out.size() + drops.size());
         for (const auto& d : drops) {
             if (!InFront(d, eye, fwd)) continue;
             const float above = d.ground_z - d.z; // +z is down, so ground_z - z > 0 means the puff sits above the floor
-            if (above <= 0.f) continue;            // at/under the terrain: skip (would seam against the ground)
-            float a;
-            if (above < fade_in) a = above / fade_in;                 // ramp in just above the ground
-            else if (above < band) a = 1.f;                           // full strength through the band
-            else a = std::max(0.f, 1.f - (above - band) / band);      // thin out over one more band-height, then gone
-            a *= cloud_opacity;
+            if (above <= 0.f || above >= band) continue; // outside the layer: skip (the column matches the band, so this is rare)
+            const float t = above / band;                // 0 at the ground, 1 at the top of the band
+            // Soft bottom and top inside the band, so thinning the band keeps both edges feathered (no hard cap).
+            const float a = (t < 0.2f ? t / 0.2f : t > 0.7f ? (1.f - t) / 0.3f : 1.f) * cloud_opacity;
             if (a <= 0.f) continue;
             WeatherInstance inst = base;
             inst.cx = d.x;
@@ -1280,7 +1281,12 @@ void WeatherModule::DrawSettings()
             ImGui::InputText("Name", c.name, 32);
             const char* type_names[kTypeCount] = {"Rain", "Snow", "Cloud"};
             ImGui::Combo("Type", &c.type, type_names, kTypeCount);
-            if (c.type == kTypeCloud) ImGui::TextDisabled("Cloud: large soft puffs height-faded into a low fog bank.");
+            if (c.type == kTypeCloud) {
+                ImGui::TextDisabled("Cloud: soft puffs faded into a fog/dust band (the two settings below are shared by all cloud conditions).");
+                ImGui::DragFloat("Fog band height", &cloud_band_height, 10.f, 50.f, column_height_max, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::ShowHelp("Vertical thickness of the layer above the ground. Thinner = fewer particles AND less overdraw\n(the view ray crosses a shorter stack of puffs), and a lower, denser haze - e.g. a sandstorm. The\nhorizontal density is unchanged, so the soft look is kept. Shared by all cloud conditions; not saved.");
+                ImGui::DragFloat("Fog opacity", &cloud_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            }
             ImGui::DragInt("Density", &c.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("How densely the volume is filled, 1-100%. The particle count is derived from this and\nthe spread area, so it stays consistent if the radius changes. Higher = denser (and heavier on FPS).");
             ImGui::Text("  ~%d particles", DropCount(c));
