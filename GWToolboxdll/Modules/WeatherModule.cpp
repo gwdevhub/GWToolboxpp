@@ -38,7 +38,8 @@
 namespace weather_module {
     constexpr int kTypeRain = 0; // weather type
     constexpr int kTypeSnow = 1;
-    constexpr int kTypeCount = 2;
+    constexpr int kTypeCloud = 2; // large soft camera-facing puffs, height-faded into a low fog bank
+    constexpr int kTypeCount = 3;
 
     constexpr int kDecalNone = 0; // floor decal left at each impact
     constexpr int kDecalSplash = 1;
@@ -126,17 +127,20 @@ namespace {
     float snow_settle_duration = 4.f; // seconds a settled flake holds before it has fully faded
     float snow_settle_fade = 0.4f;    // last fraction of the lifetime spent fading out
     int max_settled = 4000;           // per-condition cap on settled flakes
+    float cloud_band_height = 1500.f; // gwinch above the terrain the fog fills at full strength before thinning upward
+    float cloud_opacity = 0.5f;       // overall alpha multiplier for cloud puffs (they layer, so keep each one soft)
 
     // The floor decal a condition leaves; resolves kDecalAuto from the weather type so old saved conditions and
     // freshly-added ones behave as before (rain splashes, snow settles).
     constexpr int EffectiveDecal(const WeatherCondition& c)
     {
-        return c.floor_decal != kDecalAuto ? c.floor_decal : (c.type == kTypeSnow ? kDecalSettle : kDecalSplash);
+        if (c.floor_decal != kDecalAuto) return c.floor_decal;
+        return c.type == kTypeSnow ? kDecalSettle : c.type == kTypeRain ? kDecalSplash : kDecalNone; // clouds leave nothing
     }
-    // The lateral float amplitude; resolves kDriftAuto from the type (snow floats by default, rain falls straight).
+    // The lateral float amplitude; resolves kDriftAuto from the type (snow/cloud float by default, rain falls straight).
     float EffectiveDrift(const WeatherCondition& c)
     {
-        return c.drift >= 0.f ? c.drift : (c.type == kTypeSnow ? snow_sway_amp : 0.f);
+        return c.drift >= 0.f ? c.drift : (c.type == kTypeRain ? 0.f : snow_sway_amp);
     }
     // How high above the focus particles start: the volume radius, but capped so they don't begin absurdly high
     // (the column still falls to the ground; only its top is limited).
@@ -164,6 +168,8 @@ namespace {
             {"Snow", kTypeSnow, false, 13, 8.f, 100.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.50f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
+            // Fog: large soft camera-facing puffs (cloud type), drifting slowly and height-faded into a low bank. No decal.
+            {"Fog", kTypeCloud, false, 2, 800.f, 60.f, 2500.f, 0.f, 360.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f, 0xFFFFFFFFu, 0xFFB8BCC0u, kDecalNone, 150.f},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -175,7 +181,7 @@ namespace {
     {
         const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
         return {
-            p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}}),
+            p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}, {"Fog", 0.08f}}),
             p(Climate::Tropical, {{"Heavy Rain", 0.3f}, {"Light Rain", 0.2f}}),
             p(Climate::Arid, {{"Light Rain", 0.1f}}),
             p(Climate::Desertous, {{"Light Rain", 0.05f}}),
@@ -327,6 +333,8 @@ namespace {
     IDirect3DVertexDeclaration9* weather_inst_decl = nullptr;
     IDirect3DTexture9 **raindrop_tex_pp = nullptr, **snowflake_tex_pp = nullptr, **splash_tex_pp = nullptr; // stable slots from the texture cache
     bool textures_requested = false;
+    IDirect3DTexture9* cloud_tex = nullptr; // runtime-generated soft radial puff (no .dat asset); built lazily on first use
+    bool active_is_cloud = false;           // the active condition is a cloud/fog type -> bind cloud_tex in the snow pass
     clock_t last_update = 0;                  // TIMER_INIT() at the last throttled update (0 = not yet run)
     constexpr clock_t kUpdateIntervalMs = 16; // rebuild physics + geometry at ~60 Hz; drawing stays per-frame
     uint32_t rng = 0x1234567u;
@@ -635,6 +643,36 @@ namespace {
         }
     }
 
+    // Cloud/fog: large soft camera-facing puffs, instanced like snow but with a per-puff alpha that fades by
+    // height above the terrain. The bank is densest in a band just above the ground and thins out above it;
+    // puffs at or under the surface are dropped so the billboards never show a hard seam where they'd cut the
+    // floor (a cheap stand-in for true depth-fade soft particles, which would need a readable scene-depth texture).
+    void AppendCloudInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float eye[3], const float fwd[3])
+    {
+        const float h = c.drop_size * 0.5f;
+        const WeatherInstance base{0.f, 0.f, 0.f, right[0] * h, right[1] * h, right[2] * h, up[0] * h, up[1] * h, up[2] * h, 1.f};
+        const float band = std::max(1.f, cloud_band_height);
+        const float fade_in = band * 0.2f; // ramp up over the lowest fifth so the bank doesn't start with a hard floor
+        out.reserve(out.size() + drops.size());
+        for (const auto& d : drops) {
+            if (!InFront(d, eye, fwd)) continue;
+            const float above = d.ground_z - d.z; // +z is down, so ground_z - z > 0 means the puff sits above the floor
+            if (above <= 0.f) continue;            // at/under the terrain: skip (would seam against the ground)
+            float a;
+            if (above < fade_in) a = above / fade_in;                 // ramp in just above the ground
+            else if (above < band) a = 1.f;                           // full strength through the band
+            else a = std::max(0.f, 1.f - (above - band) / band);      // thin out over one more band-height, then gone
+            a *= cloud_opacity;
+            if (a <= 0.f) continue;
+            WeatherInstance inst = base;
+            inst.cx = d.x;
+            inst.cy = d.y;
+            inst.cz = d.z;
+            inst.alpha = a;
+            out.push_back(inst);
+        }
+    }
+
     // Rain: one instance record per drop. Streak axes (long axis along the downward velocity, width axis
     // facing the camera) are constant per condition, so they are baked into every record; the GPU expands
     // the quad. The instanced VS applies the V-flip so the texture stays upright.
@@ -812,9 +850,42 @@ namespace {
     }
 
     // Advance every active condition and accumulate its geometry, then upload once per frame.
+    // Build a soft round puff texture at runtime (no .dat asset): white RGB with a smooth radial alpha falloff,
+    // so overlapping cloud billboards blend into a continuous fog bank instead of showing hard quad edges.
+    bool BuildCloudTexture(IDirect3DDevice9* device)
+    {
+        if (cloud_tex) return true;
+        constexpr int N = 64;
+        if (device->CreateTexture(N, N, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &cloud_tex, nullptr) != D3D_OK) {
+            cloud_tex = nullptr;
+            return false;
+        }
+        D3DLOCKED_RECT lr;
+        if (cloud_tex->LockRect(0, &lr, nullptr, 0) != D3D_OK) {
+            cloud_tex->Release();
+            cloud_tex = nullptr;
+            return false;
+        }
+        auto* const base = static_cast<uint8_t*>(lr.pBits);
+        constexpr float c = (N - 1) * 0.5f;
+        for (int y = 0; y < N; y++) {
+            auto* const px = reinterpret_cast<uint32_t*>(base + y * lr.Pitch);
+            for (int x = 0; x < N; x++) {
+                const float dx = (static_cast<float>(x) - c) / c, dy = (static_cast<float>(y) - c) / c;
+                const float r = std::sqrt(dx * dx + dy * dy);
+                const float a = std::clamp(1.f - r, 0.f, 1.f);
+                const auto alpha = static_cast<uint8_t>(a * a * 255.f + 0.5f); // squared = softer, fatter-cored edge
+                px[x] = (static_cast<uint32_t>(alpha) << 24) | 0x00FFFFFFu;    // A8R8G8B8: white, radial alpha
+            }
+        }
+        cloud_tex->UnlockRect(0);
+        return true;
+    }
+
     void SyncWeather(IDirect3DDevice9* device, const GW::Camera* cam, const float dt)
     {
         rain_ready = snow_ready = splash_ready = false;
+        active_is_cloud = false;
         rain_instances.clear();
         snow_instances.clear();
         splash_vertices.clear();
@@ -880,7 +951,10 @@ namespace {
             // on-screen direction as you rotate; recomputed each tick so it follows the camera live.
             const float heading = active_wind_dir + (c.wind_camera_relative ? cam->yaw * 57.29578f : 0.f);
             UpdateCondition(c, active_particles, dt, cx, cy, cz, heading, dcz);
-            if (c.type == kTypeSnow)
+            active_is_cloud = c.type == kTypeCloud;
+            if (c.type == kTypeCloud)
+                AppendCloudInstances(snow_instances, c, active_particles.raindrops, right, up, eye, fwd); // shares the snow pass
+            else if (c.type == kTypeSnow)
                 AppendSnowInstances(snow_instances, c, active_particles.raindrops, right, up, eye, fwd);
             else
                 AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading, eye);
@@ -1071,8 +1145,11 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
     IDirect3DTexture9* rain_tex = raindrop_tex_pp ? *raindrop_tex_pp : nullptr;
     IDirect3DTexture9* snow_tex = snowflake_tex_pp ? *snowflake_tex_pp : nullptr;
     IDirect3DTexture9* splash_tex = splash_tex_pp ? *splash_tex_pp : nullptr;
+    // The cloud/fog type reuses the snow instanced pass but with a runtime soft puff texture (built on first use).
+    if (active_is_cloud && !cloud_tex) BuildCloudTexture(device);
+    IDirect3DTexture9* snow_pass_tex = active_is_cloud ? cloud_tex : snow_tex;
     const bool have_rain = rain_ready && rain_tex && !rain_instances.empty();
-    const bool have_snow = snow_ready && snow_tex && !snow_instances.empty();
+    const bool have_snow = snow_ready && snow_pass_tex && !snow_instances.empty();
     const bool have_splash = splash_ready && splash_tex && !splash_vertices.empty();
     if ((!have_rain && !have_snow && !have_splash) || !EnsureShaders(device)) return;
 
@@ -1111,7 +1188,7 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
                 }
             };
             if (have_rain) draw_instanced(rain_inst_vb, static_cast<UINT>(rain_instances.size()), rain_tex, 1.f);
-            if (have_snow) draw_instanced(snow_inst_vb, static_cast<UINT>(snow_instances.size()), snow_tex, 0.f);
+            if (have_snow) draw_instanced(snow_inst_vb, static_cast<UINT>(snow_instances.size()), snow_pass_tex, 0.f);
             device->SetStreamSourceFreq(0, 1); // restore non-instanced frequency (state block also restores)
             device->SetStreamSourceFreq(1, 1);
         }
@@ -1198,8 +1275,9 @@ void WeatherModule::DrawSettings()
         snprintf(header, sizeof(header), "%s###cond", c.name.empty() ? "(unnamed)" : c.name.c_str()); // stable id so editing the name doesn't collapse/unfocus the section
         if (ImGui::CollapsingHeader(header)) {
             ImGui::InputText("Name", c.name, 32);
-            const char* type_names[kTypeCount] = {"Rain", "Snow"};
+            const char* type_names[kTypeCount] = {"Rain", "Snow", "Cloud"};
             ImGui::Combo("Type", &c.type, type_names, kTypeCount);
+            if (c.type == kTypeCloud) ImGui::TextDisabled("Cloud: large soft puffs height-faded into a low fog bank.");
             ImGui::DragInt("Density", &c.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("How densely the volume is filled, 1-100%. The particle count is derived from this and\nthe spread area, so it stays consistent if the radius changes. Higher = denser (and heavier on FPS).");
             ImGui::Text("  ~%d particles", DropCount(c));
@@ -1216,10 +1294,10 @@ void WeatherModule::DrawSettings()
             ImGui::ShowHelp("Measure the wind direction from the camera instead of the world, so the storm keeps the same\non-screen direction as you rotate the camera (e.g. always blowing across the view).");
             ImGui::Checkbox("Centre on camera", &c.center_on_camera);
             ImGui::ShowHelp("Centre the volume on the camera itself instead of its target, so the effect wraps tightly\naround the viewer and fills the near view. Best paired with a small range (e.g. a sandstorm).");
-            if (c.type == kTypeSnow) {
+            if (c.type != kTypeRain) {
                 float drift = EffectiveDrift(c);
                 if (ImGui::DragFloat("Drift", &drift, 1.f, 0.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) c.drift = drift;
-                ImGui::ShowHelp("How much flakes wander sideways as they float down. 0 = fall straight (e.g. sandstorm).");
+                ImGui::ShowHelp("How much particles wander sideways as they float down. 0 = fall straight (e.g. sandstorm).");
             }
             const char* decal_names[kDecalCount] = {"None", "Splash", "Settle"};
             int decal = EffectiveDecal(c);
@@ -1385,6 +1463,10 @@ void WeatherModule::Terminate()
     if (quad_ib) {
         quad_ib->Release();
         quad_ib = nullptr;
+    }
+    if (cloud_tex) { // runtime-built; rebuilt lazily on next use
+        cloud_tex->Release();
+        cloud_tex = nullptr;
     }
     for (auto** s : {&weather_vs, &weather_inst_vs})
         if (*s) {
