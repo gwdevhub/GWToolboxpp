@@ -80,7 +80,8 @@ namespace weather_module {
         Tropical,
         Mountainous,
         Volcanic,
-        Desertous, // appended so existing serialised values keep their meaning
+        Desertous,
+        None
     };
 
     // Automatic weather, defined separately from the conditions themselves: within a climate, a reference to one
@@ -174,10 +175,12 @@ namespace {
     {
         const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
         return {
-            p(Climate::Temperate, {{"Light Rain", 0.45f}, {"Heavy Rain", 0.15f}}),
-            p(Climate::Tropical, {{"Heavy Rain", 0.55f}, {"Light Rain", 0.25f}}),
-            p(Climate::Mountainous, {{"Snow", 0.6f}}),
-            p(Climate::Volcanic, {{"Ashfall", 0.6f}}),
+            p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}}),
+            p(Climate::Tropical, {{"Heavy Rain", 0.3f}, {"Light Rain", 0.2f}}),
+            p(Climate::Arid, {{"Light Rain", 0.1f}}),
+            p(Climate::Desertous, {{"Light Rain", 0.05f}}),
+            p(Climate::Mountainous, {{"Snow", 0.4f}}),
+            p(Climate::Volcanic, {{"Ashfall", 0.4f}}),
         };
     }
     std::vector<ClimateProfile> climate_profiles = DefaultClimateProfiles();
@@ -210,17 +213,30 @@ namespace {
         return "(climate)";
     }
 
-    // Which climate a region currently belongs to. Coarse for now (whole-region); later this can become
-    // per-map so e.g. the arid stretches of Maguuma differ from its rainforest.
-    Climate ClimateForRegion(const GW::Region region)
+    // Climate for a specific map.
+    Climate ClimateForMap(const GW::Constants::MapID map_id)
     {
-        switch (region) {
+        // @Enhancement: We could handle edge case maps by inspecting textures used by the DAT file matching the map and counting stuff like sand, snow etc, but thats overkill atm.
+        static const std::unordered_map<GW::Constants::MapID, Climate> overrides = {
+            {GW::Constants::MapID::Dry_Top, Climate::Arid},
+            {GW::Constants::MapID::Ettins_Back, Climate::Arid},
+            {GW::Constants::MapID::Ventaris_Refuge_outpost, Climate::Arid},
+            {GW::Constants::MapID::Druids_Overlook_outpost, Climate::Arid},
+            {GW::Constants::MapID::Sage_Lands, Climate::Arid},
+            {GW::Constants::MapID::Jaya_Bluffs, Climate::Mountainous},
+        };
+        if (const auto it = overrides.find(map_id); it != overrides.end()) return it->second;
+        const auto info = GW::Map::GetMapInfo(map_id);
+        if (!GW::Map::HasMapDisplayInfo(info) && !info->GetIsOnWorldMap())
+            return Climate::None;
+        switch (info ? info->region : GW::Region_DevRegion) {
             case GW::Region_NorthernShiverpeaks:
             case GW::Region_FarShiverpeaks:
             case GW::Region_DepthsOfTyria:
                 return Climate::Mountainous;
             case GW::Region_CrystalDesert:
             case GW::Region_Desolation:
+            case GW::Region_Istan:
                 return Climate::Desertous;
             case GW::Region_Kourna:
             case GW::Region_Vaabi:
@@ -230,25 +246,10 @@ namespace {
                 return Climate::Volcanic;
             case GW::Region_Maguuma:
             case GW::Region_Kurzick:
-            case GW::Region_ShingJea:
-            case GW::Region_Istan:
             case GW::Region_TarnishedCoast:
                 return Climate::Tropical;
-            default: // Kryta, Ascalon, Kaineng, Luxon, Charr Homelands, ...
-                return Climate::Temperate;
         }
-    }
-
-    // Climate for a specific map: an explicit per-map override wins, else fall back to the map's region. This is
-    // where sub-region variation lives - e.g. Dry Top sits in (tropical) Maguuma but is itself arid.
-    Climate ClimateForMap(const GW::Constants::MapID map_id)
-    {
-        static const std::unordered_map<GW::Constants::MapID, Climate> overrides = {
-            {GW::Constants::MapID::Dry_Top, Climate::Arid},
-        };
-        if (const auto it = overrides.find(map_id); it != overrides.end()) return it->second;
-        const auto info = GW::Map::GetMapInfo(map_id);
-        return ClimateForRegion(info ? info->region : GW::Region_DevRegion);
+        return Climate::Temperate;
     }
 
     // POSITION (world) + D3DCOLOR tint + UV; quads are built camera-/ground-aligned on the CPU.
