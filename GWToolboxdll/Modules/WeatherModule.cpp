@@ -552,17 +552,32 @@ namespace {
         return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<float>(std::max(1, count))))));
     }
 
+    // The terrain a drop will land on: project its fall from (x, y, top) along the wind to where it reaches the
+    // ground, so the recycle floor matches the actual landing point DOWNWIND rather than the spawn column. With
+    // wind tilt a drop drifts sideways as it falls, so on a slope the spawn ground is the wrong height to land at.
+    // Near-horizontal weather (vz ~ 0) barely descends and just streams, so it uses the local ground.
+    float LandingGroundZ(const WeatherCondition& c, const float x, const float y, const float top, const float vx, const float vy, const float vz, const float cz)
+    {
+        const float fallback = cz + recycle_below;
+        const float local = GroundZAt(x, y, fallback);
+        if (vz < 1.f) return local; // streams horizontally - no meaningful landing projection (also avoids /vz blow-up)
+        const float drop = std::max(0.f, local - top);  // approx vertical distance from the column top to the ground
+        float hx = vx / vz * drop, hy = vy / vz * drop; // horizontal travel accrued over that drop (direction + tilt)
+        if (const float h = std::sqrt(hx * hx + hy * hy); h > c.spread_radius) { const float s = c.spread_radius / h; hx *= s; hy *= s; } // the drop wraps inside the bubble, so clamp the projection to it
+        return GroundZAt(x + hx, y + hy, fallback);
+    }
+
     // Initial fill of the column. Stratified placement: each drop owns one grid cell, jittered within it, so the
     // volume is evenly spread over the player-centred area instead of clumping. The column stays centred on the
     // player; wind only drifts drops through it (UpdateCondition wraps them at the bubble edge), so the origin
     // does not shift with the wind direction.
-    void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid)
+    void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid, const float vx, const float vy, const float vz)
     {
         const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
         d.x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
         d.y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
-        d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+        d.ground_z = LandingGroundZ(c, d.x, d.y, top_z, vx, vy, vz, cz); // terrain it will drift ONTO, not the spawn column
         // Spread the fill through the visible column (top..ground) so the drops don't fall as one synchronised lump.
         d.z = top_z + frand(0.f, std::max(0.f, d.ground_z - top_z));
         d.sway_phase = frand(0.f, 6.2831853f);
@@ -583,10 +598,15 @@ namespace {
     {
         const int count = DropCount(c);
         const int grid = SpawnGrid(count);
+        // Velocity is the (unit) fall direction scaled by fall_speed, so wind sets the direction, not the speed.
+        // Computed up front because the landing projection needs it when (re)seeding drops.
+        float vel[3];
+        WindDir(wind_dir, c.wind_tilt, vel);
+        const float vx = vel[0] * c.fall_speed, vy = vel[1] * c.fall_speed, vz = vel[2] * c.fall_speed;
         if (static_cast<int>(p.raindrops.size()) != count) {
             p.raindrops.resize(std::max(0, count));
             for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++)
-                seed_drop(p.raindrops[i], c, cx, cy, cz, i, grid);
+                seed_drop(p.raindrops[i], c, cx, cy, cz, i, grid, vx, vy, vz);
         }
         const int decal = EffectiveDecal(c);
         const bool splash = decal == kDecalSplash;
@@ -594,10 +614,6 @@ namespace {
         const bool settle = decal == kDecalSettle;
         const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float diameter = 2.f * c.spread_radius;
-        // Velocity is the (unit) fall direction scaled by fall_speed, so wind sets the direction, not the speed.
-        float vel[3];
-        WindDir(wind_dir, c.wind_tilt, vel);
-        const float vx = vel[0] * c.fall_speed, vy = vel[1] * c.fall_speed, vz = vel[2] * c.fall_speed;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
             d.z += vz * dt + center_dz; // fall, plus the whole column tracking the player's vertical movement
@@ -630,7 +646,7 @@ namespace {
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 d.z = top_z;
-                d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+                d.ground_z = LandingGroundZ(c, d.x, d.y, top_z, vx, vy, vz, cz); // floor = where it will drift onto next fall
                 d.sway_phase = frand(0.f, 6.2831853f);
             }
         }
