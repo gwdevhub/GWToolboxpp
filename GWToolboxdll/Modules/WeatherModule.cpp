@@ -515,11 +515,13 @@ namespace {
     // does not shift with the wind direction.
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid)
     {
-        const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
         d.x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
         d.y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
         d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+        // Clouds hang their column off the LOCAL ground (band above the terrain), so the layer hugs the ground
+        // regardless of the player's altitude; rain/snow hang it off the focus height.
+        const float top_z = (c.type == kTypeCloud ? d.ground_z : cz) - ColumnHeight(c);
         // Spread the fill through the visible column (top..ground) so the drops don't fall as one synchronised lump.
         d.z = top_z + frand(0.f, std::max(0.f, d.ground_z - top_z));
         d.sway_phase = frand(0.f, 6.2831853f);
@@ -538,11 +540,14 @@ namespace {
         const bool splash = decal == kDecalSplash;
         const float drift = EffectiveDrift(c);
         const bool settle = decal == kDecalSettle;
-        const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
+        const float col_h = ColumnHeight(c);
+        const float top_z = cz - col_h; // player-anchored column top for rain/snow; clouds re-anchor to local ground below
         const float diameter = 2.f * c.spread_radius;
         // Clouds are a terrain-anchored fog layer, not a player-anchored volume: don't drag their height with the
-        // player's vertical movement, or the whole bank lifts as you climb a hill and settles as you descend.
-        const float col_dz = c.type == kTypeCloud ? 0.f : center_dz;
+        // player's vertical movement (else the bank lifts as you climb and settles as you descend), and seed/reseed
+        // them a band above the LOCAL ground rather than above the player.
+        const bool is_cloud = c.type == kTypeCloud;
+        const float col_dz = is_cloud ? 0.f : center_dz;
         // Velocity is the (unit) fall direction scaled by fall_speed, so wind sets the direction, not the speed.
         float vel[3];
         WindDir(wind_dir, c.wind_tilt, vel);
@@ -564,14 +569,18 @@ namespace {
             else if (rx < -c.spread_radius) { d.x += diameter; wrapped = true; }
             if (const float ry = d.y - cy; ry > c.spread_radius) { d.y -= diameter; wrapped = true; }
             else if (ry < -c.spread_radius) { d.y += diameter; wrapped = true; }
-            if (wrapped) d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+            if (wrapped) {
+                const float new_ground = GroundZAt(d.x, d.y, cz + recycle_below);
+                if (is_cloud) d.z += new_ground - d.ground_z; // preserve height above ground across the wrap (terrain differs side to side)
+                d.ground_z = new_ground;
+            }
             if (d.z >= d.ground_z) {
                 // Landed: drop a decal here (within the bubble, since x/y are kept centred), then fall again from
                 // the top of the same column. Resample the terrain in case it differs from the spawn point.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < snow_settle_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                d.z = top_z;
                 d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
+                d.z = is_cloud ? d.ground_z - col_h : top_z; // clouds restart a band above LOCAL ground, not the player's altitude
                 d.sway_phase = frand(0.f, 6.2831853f);
             }
         }
