@@ -97,7 +97,7 @@ bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, s
     const bool is_admin = IsRunningAsAdmin();
 
     if (!is_admin && !quiet) {
-        const int iRet = MessageBoxW(
+        const int iRet = ShowMessageBoxW(
             nullptr,
             L"GWToolbox would like to add itself to Windows Defender exclusions to prevent false positives.\n\n"
             L"This requires administrator privileges. Would you like to add the exclusion?",
@@ -105,7 +105,7 @@ bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, s
             MB_YESNO | MB_ICONINFORMATION);
 
         if (iRet != IDYES) {
-            MessageBoxW(
+            ShowMessageBoxW(
                 nullptr,
                 L"GWToolbox will likely not function correctly without Windows Defender exclusions.\n\n"
                 L"You will be prompted again next time until the exclusion is added.",
@@ -135,7 +135,7 @@ bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, s
             message += path.wstring();
             message += L"\n\nIn Windows Security -> Virus & threat protection -> Manage settings -> Exclusions";
 
-            MessageBoxW(
+            ShowMessageBoxW(
                 nullptr,
                 message.c_str(),
                 L"Windows Defender Exclusion",
@@ -156,7 +156,7 @@ bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, s
 
     if (verified) {
         if (!quiet) {
-            MessageBoxW(
+            ShowMessageBoxW(
                 nullptr,
                 L"Windows Defender exclusion added successfully!",
                 L"Windows Defender Exclusion",
@@ -171,7 +171,7 @@ bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, s
             message += path.wstring();
             message += L"\n\nIn Windows Security -> Virus & threat protection -> Manage settings -> Exclusions";
 
-            MessageBoxW(
+            ShowMessageBoxW(
                 nullptr,
                 message.c_str(),
                 L"Windows Defender Exclusion - WARNING",

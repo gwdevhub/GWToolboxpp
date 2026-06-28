@@ -138,7 +138,7 @@ bool Install(const bool quiet, std::wstring& error)
                ), false;
     }
     if (!quiet) {
-        MessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
+        ShowMessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
     }
 
     return true;
@@ -148,7 +148,7 @@ bool Uninstall(const bool quiet, std::wstring& error)
 {
     bool DeleteAllFiles = true;
     if (quiet == false) {
-        const int iRet = MessageBoxW(
+        const int iRet = ShowMessageBoxW(
             nullptr,
             L"Do you want to delete *all* possible files from installation folder? (Default: no)\n",
             L"Uninstallation",
@@ -165,7 +165,7 @@ bool Uninstall(const bool quiet, std::wstring& error)
     }
 
     if (quiet == false) {
-        MessageBoxW(nullptr, L"Uninstallation successful", L"Uninstallation", 0);
+        ShowMessageBoxW(nullptr, L"Uninstallation successful", L"Uninstallation", 0);
     }
 
     return true;
