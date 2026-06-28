@@ -71,6 +71,7 @@ namespace weather_module {
         float drift = kDriftAuto;                 // lateral float as particles fall (gwinch/sec amplitude); 0 = none
         bool wind_camera_relative = false;        // wind heading is relative to the camera (stays screen-fixed as you rotate)
         bool center_on_camera = false;            // centre the volume on the camera itself, not its target (wraps tightly around the viewer)
+        float column_height = 2500.f;             // vertical extent of the volume above the focus (rain/snow fall column; cloud fog-band thickness), capped at column_height_max
     };
 
     // A broad weather climate. Maps/regions are grouped into one of these (see ClimateForRegion), so weather is
@@ -127,7 +128,6 @@ namespace {
     float snow_settle_duration = 4.f; // seconds a settled flake holds before it has fully faded
     float snow_settle_fade = 0.4f;    // last fraction of the lifetime spent fading out
     int max_settled = 4000;           // per-condition cap on settled flakes
-    float cloud_band_height = 1500.f; // vertical thickness of the fog/dust layer (overall opacity is the condition's tint alpha)
 
     // The floor decal a condition leaves; resolves kDecalAuto from the weather type so old saved conditions and
     // freshly-added ones behave as before (rain splashes, snow settles).
@@ -145,11 +145,11 @@ namespace {
     // (the column still falls to the ground; only its top is limited).
     float ColumnHeight(const WeatherCondition& c)
     {
-        // Clouds fill only their fog band, not the whole volume radius: this keeps the particle count and the
-        // vertical overdraw proportional to the band thickness, so a thinner band (e.g. a low sandstorm haze) is
-        // correspondingly cheaper - the puffs above the band aren't simulated or drawn at all.
-        if (c.type == kTypeCloud) return std::clamp(cloud_band_height, 1.f, column_height_max);
-        return std::min(c.spread_radius, column_height_max);
+        // Vertical extent of the volume above the focus, shared by every type: for rain/snow it's the fall-column
+        // height (previously the implicit column_height_max cap); for clouds it's the fog-band thickness, so the
+        // particle count and vertical overdraw stay proportional to it - a thin band is a cheap, low, dense haze
+        // (e.g. a sandstorm) with the puffs above it neither simulated nor drawn.
+        return std::clamp(c.column_height, 1.f, column_height_max);
     }
     // Particle count from the density %: cover the volume's horizontal disk (radius = spread_radius) with one
     // particle per (particle_area_full * 100 / density) gwinch^2, so density scales the count linearly. Capped.
@@ -171,9 +171,10 @@ namespace {
             {"Snow", kTypeSnow, false, 13, 8.f, 100.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.50f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
-            // Fog: large soft camera-facing puffs (cloud type), drifting slowly and height-faded into a low bank. No decal.
+            // Fog: large soft camera-facing puffs (cloud type), drifting slowly and faded into a low band. No decal.
             // Semi-transparent white tint (alpha ~0.5) sets the overall fog opacity; the puffs layer to build it up.
-            {"Fog", kTypeCloud, false, 2, 800.f, 60.f, 2500.f, 0.f, 360.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f, 0x80FFFFFFu, 0xFFB8BCC0u, kDecalNone, 150.f},
+            // Trailing fields: wind_camera_relative, center_on_camera, then column_height = the fog-band thickness.
+            {"Fog", kTypeCloud, false, 2, 800.f, 60.f, 2500.f, 0.f, 360.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f, 0x80FFFFFFu, 0xFFB8BCC0u, kDecalNone, 150.f, false, false, 1500.f},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -658,7 +659,7 @@ namespace {
     {
         const float h = c.drop_size * 0.5f;
         const WeatherInstance base{0.f, 0.f, 0.f, right[0] * h, right[1] * h, right[2] * h, up[0] * h, up[1] * h, up[2] * h, 1.f};
-        const float band = std::max(1.f, cloud_band_height); // total layer thickness == the simulated column (see ColumnHeight)
+        const float band = ColumnHeight(c); // total fog-layer thickness == the simulated column (per-condition Height)
         out.reserve(out.size() + drops.size());
         for (const auto& d : drops) {
             if (!InFront(d, eye, fwd)) continue;
@@ -1281,16 +1282,15 @@ void WeatherModule::DrawSettings()
             ImGui::InputText("Name", c.name, 32);
             const char* type_names[kTypeCount] = {"Rain", "Snow", "Cloud"};
             ImGui::Combo("Type", &c.type, type_names, kTypeCount);
-            if (c.type == kTypeCloud) {
-                ImGui::TextDisabled("Cloud: soft puffs faded into a fog/dust band. Overall opacity is the Tint alpha below.");
-                ImGui::DragFloat("Fog band height", &cloud_band_height, 10.f, 50.f, column_height_max, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-                ImGui::ShowHelp("Vertical thickness of the layer above the ground. Thinner = fewer particles AND less overdraw\n(the view ray crosses a shorter stack of puffs), and a lower, denser haze - e.g. a sandstorm. The\nhorizontal density is unchanged, so the soft look is kept. Shared by all cloud conditions; not saved.");
-            }
+            if (c.type == kTypeCloud)
+                ImGui::TextDisabled("Cloud: soft puffs faded into a fog/dust band (use Height for thickness, Tint alpha for opacity).");
             ImGui::DragInt("Density", &c.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("How densely the volume is filled, 1-100%. The particle count is derived from this and\nthe spread area, so it stays consistent if the radius changes. Higher = denser (and heavier on FPS).");
             ImGui::Text("  ~%d particles", DropCount(c));
             ImGui::DragFloat("Range", &c.spread_radius, 25.f, 250.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("Radius of the weather volume around the focus. A small range concentrates the effect close\nin (e.g. a sandstorm wrapping tightly around the camera); a large one fills out to compass range.");
+            ImGui::DragFloat("Height", &c.column_height, 25.f, 50.f, column_height_max, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::ShowHelp("Vertical extent of the volume above you. For rain/snow it's the fall-column height; for clouds it's\nthe fog/dust band thickness - thinner = fewer particles and less overdraw, giving a low dense haze (e.g. a sandstorm).");
             ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
             ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
             ImGui::ShowHelp("The constant speed drops travel at. Wind tilts their direction without changing this speed.");
