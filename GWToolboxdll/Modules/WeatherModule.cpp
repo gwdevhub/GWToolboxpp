@@ -36,10 +36,9 @@
 // External linkage (not the anonymous namespace) so glaze can reflect it as a vector element when
 // (de)serialising the conditions list. A plain aggregate so reflection works without a glz::meta.
 namespace weather_module {
-    constexpr int kTypeRain = 0; // weather type
+    constexpr int kTypeRain = 0; // weather type (the falling particles)
     constexpr int kTypeSnow = 1;
-    constexpr int kTypeCloud = 2; // large soft camera-facing puffs, height-faded into a low fog bank
-    constexpr int kTypeCount = 3;
+    constexpr int kTypeCount = 2;
 
     constexpr int kDecalNone = 0; // floor decal left at each impact
     constexpr int kDecalSplash = 1;
@@ -47,6 +46,19 @@ namespace weather_module {
     constexpr int kDecalCount = 3;
     constexpr int kDecalAuto = -1;     // not set: derive from type (rain -> splash, snow -> settle)
     constexpr float kDriftAuto = -1.f; // drift not set: derive from type (snow floats sideways, rain does not)
+
+    // Optional cloud-cover layer on a condition: soft puffs filling a height band ABOVE THE PLAYER (player-relative,
+    // so it follows you and is occluded by terrain via the depth test), drifting horizontally. Active when top > base.
+    // This is what makes overhead rain clouds, ground fog, a low blowing sandstorm, etc. - composable with the
+    // falling particles above (e.g. a blizzard is heavy snow + a fog band).
+    struct CloudCover {
+        float base = 0.f;                // bottom of the band, gwinch above the player
+        float top = 0.f;                 // top of the band; the layer is active only when top > base
+        unsigned int tint = 0x80808080u; // cloud colour + opacity (ImGui-packed; alpha is the overall density of the cover)
+        int density = 20;                // puff-count driver (like the particle density %)
+        float size = 600.f;              // puff billboard size (clouds are big and soft)
+        float speed = 0.f;               // horizontal drift speed; direction follows the condition's Wind direction
+    };
 
     struct WeatherCondition {
         std::string name = "Rain";
@@ -71,7 +83,8 @@ namespace weather_module {
         float drift = kDriftAuto;                 // lateral float as particles fall (gwinch/sec amplitude); 0 = none
         bool wind_camera_relative = false;        // wind heading is relative to the camera (stays screen-fixed as you rotate)
         bool center_on_camera = false;            // centre the volume on the camera itself, not its target (wraps tightly around the viewer)
-        float column_height = 2500.f;             // vertical extent of the volume above the focus (rain/snow fall column; cloud fog-band thickness), capped at column_height_max
+        float column_height = 2500.f;             // vertical extent of the falling-particle column above the focus, capped at column_height_max
+        CloudCover cloud;                         // optional cloud-cover layer (overhead clouds / fog / sandstorm), composable with the falling particles
     };
 
     // A broad weather climate. Maps/regions are grouped into one of these (see ClimateForRegion), so weather is
@@ -133,28 +146,23 @@ namespace {
     // freshly-added ones behave as before (rain splashes, snow settles).
     constexpr int EffectiveDecal(const WeatherCondition& c)
     {
-        if (c.floor_decal != kDecalAuto) return c.floor_decal;
-        return c.type == kTypeSnow ? kDecalSettle : c.type == kTypeRain ? kDecalSplash : kDecalNone; // clouds leave nothing
+        return c.floor_decal != kDecalAuto ? c.floor_decal : (c.type == kTypeSnow ? kDecalSettle : kDecalSplash);
     }
-    // The lateral float amplitude; resolves kDriftAuto from the type (snow/cloud float by default, rain falls straight).
+    // The lateral float amplitude; resolves kDriftAuto from the type (snow floats by default, rain falls straight).
     float EffectiveDrift(const WeatherCondition& c)
     {
-        return c.drift >= 0.f ? c.drift : (c.type == kTypeRain ? 0.f : snow_sway_amp);
+        return c.drift >= 0.f ? c.drift : (c.type == kTypeSnow ? snow_sway_amp : 0.f);
     }
-    // How high above the focus particles start: the volume radius, but capped so they don't begin absurdly high
-    // (the column still falls to the ground; only its top is limited).
+    // Height of the falling-particle column above the focus, capped so particles don't begin absurdly high.
     float ColumnHeight(const WeatherCondition& c)
     {
-        // Vertical extent of the volume above the focus, shared by every type: for rain/snow it's the fall-column
-        // height (previously the implicit column_height_max cap); for clouds it's the fog-band thickness, so the
-        // particle count and vertical overdraw stay proportional to it - a thin band is a cheap, low, dense haze
-        // (e.g. a sandstorm) with the puffs above it neither simulated nor drawn.
         return std::clamp(c.column_height, 1.f, column_height_max);
     }
     // Particle count from the density %: cover the volume's horizontal disk (radius = spread_radius) with one
     // particle per (particle_area_full * 100 / density) gwinch^2, so density scales the count linearly. Capped.
     int DropCount(const WeatherCondition& c)
     {
+        if (c.density <= 0) return 0; // 0 = no falling particles (e.g. a cloud-cover-only condition like fog/sandstorm)
         const float disk = 3.14159265f * c.spread_radius * c.spread_radius;
         const float per_particle = particle_area_full * 100.f / static_cast<float>(std::clamp(c.density, 1, 100));
         // Scale by the fraction of the full-radius column the capped fall height actually fills, so a shorter
@@ -163,19 +171,38 @@ namespace {
         return std::min(max_particles, static_cast<int>(disk / per_particle * height_fraction));
     }
 
+    // Puff count for a cloud-cover layer: cover the same horizontal disk by the layer's own density (the puffs are
+    // large and overlap, so an areal count is enough - height within the band is randomised per puff).
+    int CloudCount(const WeatherCondition& c)
+    {
+        if (c.cloud.top <= c.cloud.base || c.cloud.density <= 0) return 0;
+        const float disk = 3.14159265f * c.spread_radius * c.spread_radius;
+        const float per_particle = particle_area_full * 100.f / static_cast<float>(std::clamp(c.cloud.density, 1, 100));
+        return std::min(max_particles, static_cast<int>(disk / per_particle));
+    }
+
     std::vector<WeatherCondition> DefaultConditions()
     {
-        return {
+        // Falling-particle effect via aggregate init; the cloud-cover layer (band above the player) is assigned after,
+        // since most presets want both. CloudCover = {base, top, tint(argb), density, size, speed}.
+        std::vector<WeatherCondition> v = {
             {"Heavy Rain", kTypeRain, false, 70, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 1.0f},
             {"Light Rain", kTypeRain, false, 2, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 1.0f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
             {"Snow", kTypeSnow, false, 13, 8.f, 100.f, 2500.f, 30.f, 55.f, 10.f, 0.f, {}, 10.f, 30.f, false, 0.50f},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
-            // Fog: large soft camera-facing puffs (cloud type), drifting slowly and faded into a low band. No decal.
-            // Semi-transparent white tint (alpha ~0.5) sets the overall fog opacity; the puffs layer to build it up.
-            // Trailing fields: wind_camera_relative, center_on_camera, then column_height = the fog-band thickness.
-            {"Fog", kTypeCloud, false, 2, 800.f, 60.f, 2500.f, 0.f, 360.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f, 0x80FFFFFFu, 0xFFB8BCC0u, kDecalNone, 150.f, false, false, 1500.f},
+            // Cloud-cover-only conditions (density 0 = no falling particles); the look is entirely the cloud layer below.
+            {"Fog", kTypeRain, false, 0, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f},
+            {"Sandstorm", kTypeRain, false, 0, 10.f, 500.f, 2500.f, 90.f, 90.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.25f, 0xFFC8B080u},
+            // Blizzard: heavy snow + a low white fog band.
+            {"Blizzard", kTypeSnow, false, 35, 8.f, 140.f, 2500.f, 35.f, 60.f, 18.f, 0.f, {}, 10.f, 30.f, false, 0.55f},
         };
+        v[0].cloud = {1000.f, 1500.f, 0xB0303840u, 25, 700.f, 60.f};  // Heavy Rain: dark rain clouds high overhead
+        v[1].cloud = {1000.f, 1500.f, 0x70404850u, 15, 700.f, 50.f};  // Light Rain: lighter, sparser clouds
+        v[4].cloud = {0.f, 1000.f, 0x90C8C8D0u, 30, 600.f, 40.f};     // Fog: white, low, slow
+        v[5].cloud = {0.f, 200.f, 0xB0C8B080u, 45, 350.f, 700.f};     // Sandstorm: tan, ground-level, fast (Wind sets the heading)
+        v[6].cloud = {0.f, 1000.f, 0x80D0D8E0u, 25, 600.f, 50.f};     // Blizzard: white fog under the snow
+        return v;
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
 
@@ -187,10 +214,10 @@ namespace {
         const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
         return {
             p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}, {"Fog", 0.08f}}),
-            p(Climate::Tropical, {{"Heavy Rain", 0.3f}, {"Light Rain", 0.2f}}),
-            p(Climate::Arid, {{"Light Rain", 0.1f}}),
-            p(Climate::Desertous, {{"Light Rain", 0.05f}}),
-            p(Climate::Mountainous, {{"Snow", 0.4f}}),
+            p(Climate::Tropical, {{"Heavy Rain", 0.3f}, {"Light Rain", 0.2f}, {"Fog", 0.05f}}),
+            p(Climate::Arid, {{"Light Rain", 0.1f}, {"Sandstorm", 0.1f}}),
+            p(Climate::Desertous, {{"Light Rain", 0.05f}, {"Sandstorm", 0.15f}}),
+            p(Climate::Mountainous, {{"Snow", 0.4f}, {"Blizzard", 0.15f}}),
             p(Climate::Volcanic, {{"Ashfall", 0.4f}}),
         };
     }
@@ -294,11 +321,15 @@ namespace {
     struct Settle {
         float x, y, z, age;
     }; // a snowflake lying flat on the ground; ages out with an alpha fade
+    struct CloudPuff {
+        float x, y, h, phase;
+    }; // cloud-cover puff: world x/y (drifts + wraps in the bubble); h = height above the player (world z = cz - h)
     struct Particles {
         std::vector<Raindrop> raindrops;
         std::vector<Splash> splashes;
         std::vector<Settle> settled;
-        float sound_timer = -1.f; // seconds until the next sound; <0 = not yet scheduled
+        std::vector<CloudPuff> clouds; // cloud-cover layer puffs (separate from the falling particles)
+        float sound_timer = -1.f;      // seconds until the next sound; <0 = not yet scheduled
     };
     // Only one condition runs at a time (enforced at every toggle point), so a single live particle set suffices
     // instead of one per condition - a large memory saving at high drop counts. active_condition is the index
@@ -323,11 +354,11 @@ namespace {
         float sx, sy, u, v;
     }; // static unit quad: corner sign + uv
 
-    std::vector<WeatherInstance> rain_instances, snow_instances; // snow/ash/sand + settle: GPU-instanced like rain
+    std::vector<WeatherInstance> rain_instances, snow_instances, cloud_instances; // GPU-instanced; cloud = cloud-cover layer
     std::vector<WeatherVertex> splash_vertices;                  // splashes stay CPU-built (per-frame sprite-sheet UVs)
-    IDirect3DVertexBuffer9 *rain_inst_vb = nullptr, *snow_inst_vb = nullptr, *splash_vb = nullptr;
+    IDirect3DVertexBuffer9 *rain_inst_vb = nullptr, *snow_inst_vb = nullptr, *cloud_inst_vb = nullptr, *splash_vb = nullptr;
     IDirect3DVertexBuffer9* quad_geom_vb = nullptr;   // shared unit quad (stream 0 for instancing)
-    size_t rain_inst_cap = 0, snow_inst_cap = 0;      // bytes
+    size_t rain_inst_cap = 0, snow_inst_cap = 0, cloud_inst_cap = 0; // bytes
     size_t splash_cap = 0;                            // in vertices
     IDirect3DIndexBuffer9* quad_ib = nullptr;       // shared 0-1-2 / 0-2-3 indices for every 4-vertex quad
     size_t quad_ib_quads = 0;                       // capacity in quads
@@ -338,12 +369,13 @@ namespace {
     IDirect3DVertexDeclaration9* weather_inst_decl = nullptr;
     IDirect3DTexture9 **raindrop_tex_pp = nullptr, **snowflake_tex_pp = nullptr, **splash_tex_pp = nullptr; // stable slots from the texture cache
     bool textures_requested = false;
-    IDirect3DTexture9* cloud_tex = nullptr; // runtime-generated soft radial puff (no .dat asset); built lazily on first use
-    bool active_is_cloud = false;           // the active condition is a cloud/fog type -> bind cloud_tex in the snow pass
+    IDirect3DTexture9* cloud_tex = nullptr;       // runtime-generated soft radial puff (no .dat asset); built lazily on first use
+    bool active_has_cloud = false;                // the active condition has a cloud-cover layer to draw this frame
+    unsigned int active_cloud_tint = 0x80808080u; // the active condition's cloud tint, fed to the cloud-cover draw
     clock_t last_update = 0;                  // TIMER_INIT() at the last throttled update (0 = not yet run)
     constexpr clock_t kUpdateIntervalMs = 16; // rebuild physics + geometry at ~60 Hz; drawing stays per-frame
     uint32_t rng = 0x1234567u;
-    bool rain_ready = false, snow_ready = false, splash_ready = false;
+    bool rain_ready = false, snow_ready = false, cloud_ready = false, splash_ready = false;
     int compositor_token = 0;
     GW::HookEntry chat_hook_entry;
 
@@ -515,16 +547,25 @@ namespace {
     // does not shift with the wind direction.
     void seed_drop(Raindrop& d, const WeatherCondition& c, const float cx, const float cy, const float cz, const int index, const int grid)
     {
+        const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
         d.x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
         d.y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
         d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
-        // Clouds hang their column off the LOCAL ground (band above the terrain), so the layer hugs the ground
-        // regardless of the player's altitude; rain/snow hang it off the focus height.
-        const float top_z = (c.type == kTypeCloud ? d.ground_z : cz) - ColumnHeight(c);
         // Spread the fill through the visible column (top..ground) so the drops don't fall as one synchronised lump.
         d.z = top_z + frand(0.f, std::max(0.f, d.ground_z - top_z));
         d.sway_phase = frand(0.f, 6.2831853f);
+    }
+
+    // Initial fill of a cloud-cover puff: stratified over the bubble, at a random height within the band above the
+    // player. World z is derived from the live player altitude each frame (cz - h), so the layer follows the player.
+    void seed_cloud(CloudPuff& cl, const WeatherCondition& c, const float cx, const float cy, const int index, const int grid)
+    {
+        const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
+        cl.x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
+        cl.y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
+        cl.h = frand(c.cloud.base, c.cloud.top);
+        cl.phase = frand(0.f, 6.2831853f);
     }
 
     void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz, const float wind_dir, const float center_dz)
@@ -540,21 +581,15 @@ namespace {
         const bool splash = decal == kDecalSplash;
         const float drift = EffectiveDrift(c);
         const bool settle = decal == kDecalSettle;
-        const float col_h = ColumnHeight(c);
-        const float top_z = cz - col_h; // player-anchored column top for rain/snow; clouds re-anchor to local ground below
+        const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float diameter = 2.f * c.spread_radius;
-        // Clouds are a terrain-anchored fog layer, not a player-anchored volume: don't drag their height with the
-        // player's vertical movement (else the bank lifts as you climb and settles as you descend), and seed/reseed
-        // them a band above the LOCAL ground rather than above the player.
-        const bool is_cloud = c.type == kTypeCloud;
-        const float col_dz = is_cloud ? 0.f : center_dz;
         // Velocity is the (unit) fall direction scaled by fall_speed, so wind sets the direction, not the speed.
         float vel[3];
         WindDir(wind_dir, c.wind_tilt, vel);
         const float vx = vel[0] * c.fall_speed, vy = vel[1] * c.fall_speed, vz = vel[2] * c.fall_speed;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
-            d.z += vz * dt + col_dz; // fall, plus the column tracking the player's vertical movement (off for clouds)
+            d.z += vz * dt + center_dz; // fall, plus the whole column tracking the player's vertical movement
             // Float: an out-of-phase sin/cos wobble so each flake wanders sideways rather than falling in a line.
             const float sway_x = drift > 0.f ? drift * std::sin(d.sway_phase) : 0.f;
             const float sway_y = drift > 0.f ? drift * std::cos(d.sway_phase) : 0.f;
@@ -569,18 +604,14 @@ namespace {
             else if (rx < -c.spread_radius) { d.x += diameter; wrapped = true; }
             if (const float ry = d.y - cy; ry > c.spread_radius) { d.y -= diameter; wrapped = true; }
             else if (ry < -c.spread_radius) { d.y += diameter; wrapped = true; }
-            if (wrapped) {
-                const float new_ground = GroundZAt(d.x, d.y, cz + recycle_below);
-                if (is_cloud) d.z += new_ground - d.ground_z; // preserve height above ground across the wrap (terrain differs side to side)
-                d.ground_z = new_ground;
-            }
+            if (wrapped) d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
             if (d.z >= d.ground_z) {
                 // Landed: drop a decal here (within the bubble, since x/y are kept centred), then fall again from
                 // the top of the same column. Resample the terrain in case it differs from the spawn point.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < snow_settle_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
+                d.z = top_z;
                 d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
-                d.z = is_cloud ? d.ground_z - col_h : top_z; // clouds restart a band above LOCAL ground, not the player's altitude
                 d.sway_phase = frand(0.f, 6.2831853f);
             }
         }
@@ -660,28 +691,50 @@ namespace {
         }
     }
 
-    // Cloud/fog: large soft camera-facing puffs, instanced like snow but with a per-puff alpha that fades by
-    // height above the terrain. The bank is densest in a band just above the ground and thins out above it;
-    // puffs at or under the surface are dropped so the billboards never show a hard seam where they'd cut the
-    // floor (a cheap stand-in for true depth-fade soft particles, which would need a readable scene-depth texture).
-    void AppendCloudInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float eye[3], const float fwd[3])
+    // Cloud-cover layer: drift the puffs horizontally (direction = the condition's wind heading, speed = cloud.speed)
+    // and wrap them in the player-centred bubble. Height within the band is fixed per puff; world z is derived from
+    // the live player altitude at draw time, so the whole layer tracks the player without any terrain queries.
+    void UpdateCloudCover(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float wind_dir)
     {
-        const float h = c.drop_size * 0.5f;
-        const WeatherInstance base{0.f, 0.f, 0.f, right[0] * h, right[1] * h, right[2] * h, up[0] * h, up[1] * h, up[2] * h, 1.f};
-        const float band = ColumnHeight(c); // total fog-layer thickness == the simulated column (per-condition Height)
-        out.reserve(out.size() + drops.size());
-        for (const auto& d : drops) {
-            if (!InFront(d, eye, fwd)) continue;
-            const float above = d.ground_z - d.z; // +z is down, so ground_z - z > 0 means the puff sits above the floor
-            if (above <= 0.f || above >= band) continue; // outside the layer: skip (the column matches the band, so this is rare)
-            const float t = above / band;                // 0 at the ground, 1 at the top of the band
-            // Per-instance alpha is just the band fade shape (0..1): soft bottom and top inside the band so thinning
-            // it keeps both edges feathered. Overall opacity is the tint's alpha (applied as tint.a * this in the VS).
-            const float a = t < 0.2f ? t / 0.2f : t > 0.7f ? (1.f - t) / 0.3f : 1.f;
+        const int count = CloudCount(c);
+        const int grid = SpawnGrid(count);
+        if (static_cast<int>(p.clouds.size()) != count) {
+            p.clouds.resize(std::max(0, count));
+            for (int i = 0; i < static_cast<int>(p.clouds.size()); i++)
+                seed_cloud(p.clouds[i], c, cx, cy, i, grid);
+        }
+        float dir[3];
+        WindDir(wind_dir, 90.f, dir); // tilt 90 => purely horizontal unit vector along the heading
+        const float vx = dir[0] * c.cloud.speed, vy = dir[1] * c.cloud.speed;
+        const float diameter = 2.f * c.spread_radius;
+        for (auto& cl : p.clouds) {
+            cl.x += vx * dt;
+            cl.y += vy * dt;
+            cl.phase += snow_sway_speed * dt;
+            if (const float rx = cl.x - cx; rx > c.spread_radius) cl.x -= diameter; else if (rx < -c.spread_radius) cl.x += diameter;
+            if (const float ry = cl.y - cy; ry > c.spread_radius) cl.y -= diameter; else if (ry < -c.spread_radius) cl.y += diameter;
+        }
+    }
+
+    // Cloud-cover puffs: large soft camera-facing billboards at (x, y, cz - h), i.e. a band above the player. Per-puff
+    // alpha feathers the top and bottom of the band so the layer has soft edges; overall opacity is the cloud tint's
+    // alpha. Terrain occlusion is handled by the depth test (a puff inside a hill is hidden).
+    void AppendCloudCoverInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<CloudPuff>& puffs, const float right[3], const float up[3], const float eye[3], const float fwd[3], const float cz)
+    {
+        const float hs = c.cloud.size * 0.5f;
+        const WeatherInstance base{0.f, 0.f, 0.f, right[0] * hs, right[1] * hs, right[2] * hs, up[0] * hs, up[1] * hs, up[2] * hs, 1.f};
+        const float span = std::max(1.f, c.cloud.top - c.cloud.base);
+        out.reserve(out.size() + puffs.size());
+        for (const auto& cl : puffs) {
+            const float z = cz - cl.h; // height above the player (GW up is -z)
+            const float dx = cl.x - eye[0], dy = cl.y - eye[1], dz = z - eye[2];
+            if (dx * fwd[0] + dy * fwd[1] + dz * fwd[2] < kZNear) continue; // behind the near plane: skip the build
+            const float t = (cl.h - c.cloud.base) / span;                  // 0 at band bottom, 1 at band top
+            const float a = t < 0.2f ? t / 0.2f : t > 0.8f ? (1.f - t) / 0.2f : 1.f; // feather both edges
             WeatherInstance inst = base;
-            inst.cx = d.x;
-            inst.cy = d.y;
-            inst.cz = d.z;
+            inst.cx = cl.x;
+            inst.cy = cl.y;
+            inst.cz = z;
             inst.alpha = a;
             out.push_back(inst);
         }
@@ -898,10 +951,11 @@ namespace {
 
     void SyncWeather(IDirect3DDevice9* device, const GW::Camera* cam, const float dt)
     {
-        rain_ready = snow_ready = splash_ready = false;
-        active_is_cloud = false;
+        rain_ready = snow_ready = cloud_ready = splash_ready = false;
+        active_has_cloud = false;
         rain_instances.clear();
         snow_instances.clear();
+        cloud_instances.clear();
         splash_vertices.clear();
         UpdateAutoWeather(dt); // may toggle which condition is active before it's read below
         if (!cam) return;
@@ -964,21 +1018,30 @@ namespace {
             // For camera-relative wind, add the camera's heading (yaw, origin @ east) so the storm keeps the same
             // on-screen direction as you rotate; recomputed each tick so it follows the camera live.
             const float heading = active_wind_dir + (c.wind_camera_relative ? cam->yaw * 57.29578f : 0.f);
+            // Falling particles (rain/snow), skipped when density is 0 (cloud-cover-only conditions).
             UpdateCondition(c, active_particles, dt, cx, cy, cz, heading, dcz);
-            active_is_cloud = c.type == kTypeCloud;
-            if (c.type == kTypeCloud)
-                AppendCloudInstances(snow_instances, c, active_particles.raindrops, right, up, eye, fwd); // shares the snow pass
-            else if (c.type == kTypeSnow)
+            if (c.type == kTypeSnow)
                 AppendSnowInstances(snow_instances, c, active_particles.raindrops, right, up, eye, fwd);
             else
                 AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading, eye);
             AppendSplashes(active_particles.splashes, right, c.tint, eye, fwd, cone_tan_sq);
             AppendSettledInstances(snow_instances, active_particles.settled, eye, fwd, cone_tan_sq);
+            // Cloud-cover layer (overhead clouds / fog / sandstorm), drawn in addition to and independent of the above.
+            if (c.cloud.top > c.cloud.base) {
+                active_has_cloud = true;
+                active_cloud_tint = c.cloud.tint;
+                UpdateCloudCover(c, active_particles, dt, cx, cy, heading);
+                AppendCloudCoverInstances(cloud_instances, c, active_particles.clouds, right, up, eye, fwd, cz);
+            }
+            else {
+                active_particles.clouds.clear();
+            }
             UpdateSounds(c, active_particles, dt, cx, cy, cz);
         }
         ambient_strength += (ambient_target - ambient_strength) * std::clamp(dt * 3.f, 0.f, 1.f); // ease ~1/3 s
         rain_ready = UploadVB(device, rain_inst_vb, rain_inst_cap, rain_instances.data(), rain_instances.size() * sizeof(WeatherInstance));
         snow_ready = UploadVB(device, snow_inst_vb, snow_inst_cap, snow_instances.data(), snow_instances.size() * sizeof(WeatherInstance));
+        cloud_ready = UploadVB(device, cloud_inst_vb, cloud_inst_cap, cloud_instances.data(), cloud_instances.size() * sizeof(WeatherInstance));
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
     }
 
@@ -1159,13 +1222,13 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
     IDirect3DTexture9* rain_tex = raindrop_tex_pp ? *raindrop_tex_pp : nullptr;
     IDirect3DTexture9* snow_tex = snowflake_tex_pp ? *snowflake_tex_pp : nullptr;
     IDirect3DTexture9* splash_tex = splash_tex_pp ? *splash_tex_pp : nullptr;
-    // The cloud/fog type reuses the snow instanced pass but with a runtime soft puff texture (built on first use).
-    if (active_is_cloud && !cloud_tex) BuildCloudTexture(device);
-    IDirect3DTexture9* snow_pass_tex = active_is_cloud ? cloud_tex : snow_tex;
+    // The cloud-cover layer uses a runtime soft puff texture (no .dat asset), built on first use.
+    if (active_has_cloud && !cloud_tex) BuildCloudTexture(device);
     const bool have_rain = rain_ready && rain_tex && !rain_instances.empty();
-    const bool have_snow = snow_ready && snow_pass_tex && !snow_instances.empty();
+    const bool have_snow = snow_ready && snow_tex && !snow_instances.empty();
+    const bool have_cloud = cloud_ready && cloud_tex && !cloud_instances.empty();
     const bool have_splash = splash_ready && splash_tex && !splash_vertices.empty();
-    if ((!have_rain && !have_snow && !have_splash) || !EnsureShaders(device)) return;
+    if ((!have_rain && !have_snow && !have_cloud && !have_splash) || !EnsureShaders(device)) return;
 
     IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
@@ -1186,14 +1249,15 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
             device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, static_cast<UINT>(splash_vertices.size()), 0, static_cast<UINT>(splash_vertices.size() / 2));
         }
 
-        // Instanced pass: rain and snow/ash/sand+settle. Each record is expanded into a quad on the GPU (stream 0 =
-        // unit quad, stream 1 = per-drop data). Rain flips the texture V (streak runs along velocity); snow doesn't.
-        if (ib_ok && (have_rain || have_snow) && device->SetVertexShader(weather_inst_vs) == D3D_OK && device->SetVertexDeclaration(weather_inst_decl) == D3D_OK && device->SetStreamSource(0, quad_geom_vb, 0, sizeof(GeomVert)) == D3D_OK &&
+        // Instanced pass: rain, snow/ash+settle, and the cloud-cover layer. Each record is expanded into a quad on
+        // the GPU (stream 0 = unit quad, stream 1 = per-drop data). Rain flips the texture V (streak runs along
+        // velocity); snow and clouds don't. The tint is a per-draw constant, so the cloud layer can carry its own.
+        if (ib_ok && (have_rain || have_snow || have_cloud) && device->SetVertexShader(weather_inst_vs) == D3D_OK && device->SetVertexDeclaration(weather_inst_decl) == D3D_OK && device->SetStreamSource(0, quad_geom_vb, 0, sizeof(GeomVert)) == D3D_OK &&
             device->SetStreamSourceFreq(1, D3DSTREAMSOURCE_INSTANCEDATA | 1u) == D3D_OK) {
-            const auto at = ImGui::ColorConvertU32ToFloat4(active_tint); // tint is constant across the draw (single active condition)
-            const float tintf[4] = {at.x, at.y, at.z, at.w};
-            device->SetVertexShaderConstantF(8, tintf, 1);
-            const auto draw_instanced = [&](IDirect3DVertexBuffer9* vb, const UINT ninst, IDirect3DTexture9* tex, const float flip) {
+            const auto draw_instanced = [&](IDirect3DVertexBuffer9* vb, const UINT ninst, IDirect3DTexture9* tex, const float flip, const unsigned int tint) {
+                const auto t = ImGui::ColorConvertU32ToFloat4(tint);
+                const float tintf[4] = {t.x, t.y, t.z, t.w};
+                device->SetVertexShaderConstantF(8, tintf, 1);
                 const float flags[4] = {flip, 0.f, 0.f, 0.f};
                 device->SetVertexShaderConstantF(9, flags, 1);
                 if (device->SetStreamSourceFreq(0, D3DSTREAMSOURCE_INDEXEDDATA | ninst) == D3D_OK && device->SetStreamSource(1, vb, 0, sizeof(WeatherInstance)) == D3D_OK) {
@@ -1201,8 +1265,9 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
                     device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 4, 0, 2);
                 }
             };
-            if (have_rain) draw_instanced(rain_inst_vb, static_cast<UINT>(rain_instances.size()), rain_tex, 1.f);
-            if (have_snow) draw_instanced(snow_inst_vb, static_cast<UINT>(snow_instances.size()), snow_pass_tex, 0.f);
+            if (have_rain) draw_instanced(rain_inst_vb, static_cast<UINT>(rain_instances.size()), rain_tex, 1.f, active_tint);
+            if (have_snow) draw_instanced(snow_inst_vb, static_cast<UINT>(snow_instances.size()), snow_tex, 0.f, active_tint);
+            if (have_cloud) draw_instanced(cloud_inst_vb, static_cast<UINT>(cloud_instances.size()), cloud_tex, 0.f, active_cloud_tint);
             device->SetStreamSourceFreq(0, 1); // restore non-instanced frequency (state block also restores)
             device->SetStreamSourceFreq(1, 1);
         }
@@ -1289,17 +1354,16 @@ void WeatherModule::DrawSettings()
         snprintf(header, sizeof(header), "%s###cond", c.name.empty() ? "(unnamed)" : c.name.c_str()); // stable id so editing the name doesn't collapse/unfocus the section
         if (ImGui::CollapsingHeader(header)) {
             ImGui::InputText("Name", c.name, 32);
-            const char* type_names[kTypeCount] = {"Rain", "Snow", "Cloud"};
+            ImGui::TextDisabled("Falling particles (set Density 0 for a cloud-cover-only condition like fog).");
+            const char* type_names[kTypeCount] = {"Rain", "Snow"};
             ImGui::Combo("Type", &c.type, type_names, kTypeCount);
-            if (c.type == kTypeCloud)
-                ImGui::TextDisabled("Cloud: soft puffs faded into a fog/dust band (use Height for thickness, Tint alpha for opacity).");
-            ImGui::DragInt("Density", &c.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::ShowHelp("How densely the volume is filled, 1-100%. The particle count is derived from this and\nthe spread area, so it stays consistent if the radius changes. Higher = denser (and heavier on FPS).");
+            ImGui::DragInt("Density", &c.density, 1.f, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::ShowHelp("How densely the volume is filled, 0-100%. 0 = no falling particles (cloud-cover-only). The count\nis derived from this and the spread area, so it stays consistent if the radius changes. Higher = heavier on FPS.");
             ImGui::Text("  ~%d particles", DropCount(c));
             ImGui::DragFloat("Range", &c.spread_radius, 25.f, 250.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::ShowHelp("Radius of the weather volume around the focus. A small range concentrates the effect close\nin (e.g. a sandstorm wrapping tightly around the camera); a large one fills out to compass range.");
+            ImGui::ShowHelp("Radius of the weather volume around the focus (also the horizontal extent of the cloud-cover layer).");
             ImGui::DragFloat("Height", &c.column_height, 25.f, 50.f, column_height_max, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::ShowHelp("Vertical extent of the volume above you. For rain/snow it's the fall-column height; for clouds it's\nthe fog/dust band thickness - thinner = fewer particles and less overdraw, giving a low dense haze (e.g. a sandstorm).");
+            ImGui::ShowHelp("Height of the falling-particle column above you.");
             ImGui::DragFloat("Drop size", &c.drop_size, 1.f, 1.f, 500.f, "%.0f");
             ImGui::DragFloat("Fall speed", &c.fall_speed, 50.f, 0.f, 30000.f, "%.0f");
             ImGui::ShowHelp("The constant speed drops travel at. Wind tilts their direction without changing this speed.");
@@ -1311,10 +1375,10 @@ void WeatherModule::DrawSettings()
             ImGui::ShowHelp("Measure the wind direction from the camera instead of the world, so the storm keeps the same\non-screen direction as you rotate the camera (e.g. always blowing across the view).");
             ImGui::Checkbox("Centre on camera", &c.center_on_camera);
             ImGui::ShowHelp("Centre the volume on the camera itself instead of its target, so the effect wraps tightly\naround the viewer and fills the near view. Best paired with a small range (e.g. a sandstorm).");
-            if (c.type != kTypeRain) {
+            if (c.type == kTypeSnow) {
                 float drift = EffectiveDrift(c);
                 if (ImGui::DragFloat("Drift", &drift, 1.f, 0.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) c.drift = drift;
-                ImGui::ShowHelp("How much particles wander sideways as they float down. 0 = fall straight (e.g. sandstorm).");
+                ImGui::ShowHelp("How much flakes wander sideways as they float down. 0 = fall straight.");
             }
             const char* decal_names[kDecalCount] = {"None", "Splash", "Settle"};
             int decal = EffectiveDecal(c);
@@ -1329,6 +1393,21 @@ void WeatherModule::DrawSettings()
             auto oc = ImGui::ColorConvertU32ToFloat4(c.overcast_tint);
             if (ImGui::ColorEdit3("Overcast tint", &oc.x)) c.overcast_tint = ImGui::ColorConvertFloat4ToU32(oc);
             ImGui::ShowHelp("The colour the scene is dimmed toward while this condition drives the overcast.");
+
+            ImGui::Separator();
+            ImGui::TextDisabled("Cloud cover (a soft layer at a height band above you; combine with the falling particles above)");
+            ImGui::DragFloatRange2("Cloud band", &c.cloud.base, &c.cloud.top, 10.f, 0.f, 5000.f, "%.0f", "%.0f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::ShowHelp("Bottom and top of the cloud band, gwinch above the player (enabled when top > base).\nRain clouds ~1000-1500, fog ~0-1000, a ground sandstorm ~0-200.");
+            if (c.cloud.top > c.cloud.base) {
+                ImGui::DragInt("Cloud density", &c.cloud.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::Text("  ~%d puffs", CloudCount(c));
+                ImGui::DragFloat("Cloud puff size", &c.cloud.size, 5.f, 50.f, 3000.f, "%.0f");
+                ImGui::DragFloat("Cloud drift speed", &c.cloud.speed, 5.f, 0.f, 5000.f, "%.0f");
+                ImGui::ShowHelp("Horizontal drift of the cloud layer; direction follows Wind direction. High for a blowing sandstorm.");
+                auto cct = ImGui::ColorConvertU32ToFloat4(c.cloud.tint);
+                if (ImGui::ColorEdit4("Cloud tint", &cct.x, ImGuiColorEditFlags_AlphaBar)) c.cloud.tint = ImGui::ColorConvertFloat4ToU32(cct);
+                ImGui::ShowHelp("Cloud colour and opacity (alpha) - dark grey rain clouds, white fog, tan sand.");
+            }
 
             ImGui::TextUnformatted("Sounds (file id, played at random while active)");
             int snd_remove = -1;
@@ -1472,7 +1551,7 @@ void WeatherModule::SignalTerminate()
 void WeatherModule::Terminate()
 {
     SignalTerminate();
-    for (auto** p : {&rain_inst_vb, &snow_inst_vb, &splash_vb, &quad_geom_vb})
+    for (auto** p : {&rain_inst_vb, &snow_inst_vb, &cloud_inst_vb, &splash_vb, &quad_geom_vb})
         if (*p) {
             (*p)->Release();
             *p = nullptr;
@@ -1499,7 +1578,7 @@ void WeatherModule::Terminate()
             (*d)->Release();
             *d = nullptr;
         }
-    rain_inst_cap = snow_inst_cap = splash_cap = quad_ib_quads = 0;
+    rain_inst_cap = snow_inst_cap = cloud_inst_cap = splash_cap = quad_ib_quads = 0;
     active_particles = {};
     active_condition = -1;
     raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
