@@ -73,6 +73,17 @@ An antivirus exclusion alone does **not** cover this — Controlled Folder Acces
 5. Click **Add an allowed app → Browse all apps**.
 6. Add **`Gw.exe`** and **`GWToolbox.exe`**.
 
+You can do the same from an **administrator** PowerShell window — allow both apps through Controlled Folder Access (replace the `Gw.exe` path with your own Guild Wars install), or turn the feature off entirely:
+
+```powershell
+# Allow Guild Wars and Toolbox to write to protected folders
+Add-MpPreference -ControlledFolderAccessAllowedApplications 'C:\Path\To\Gw.exe'
+Add-MpPreference -ControlledFolderAccessAllowedApplications ([Environment]::GetFolderPath('MyDocuments') + '\GWToolboxpp\GWToolbox.exe')
+
+# ...or turn Controlled Folder Access off completely
+Set-MpPreference -EnableControlledFolderAccess Disabled
+```
+
 If you do not rely on Controlled Folder Access, you can instead turn it **Off** on the same screen.
 
 ## Smart App Control
@@ -96,6 +107,12 @@ If the launcher reports **"Couldn't find character name RVA"** or that it **foun
 - If you have [Controlled Folder Access](#controlled-folder-access) on, allow Guild Wars and Toolbox through it.
 - Then re-launch. If it still fails *after* you have done both, and you are on the latest version, report it — at that point it may be a genuine signature break from a Guild Wars update.
 
+If antivirus is intercepting the injection itself, excluding the two processes from scanning (in an **administrator** PowerShell window) can also help:
+
+```powershell
+Add-MpPreference -ExclusionProcess 'Gw.exe','GWToolbox.exe'
+```
+
 ## Crash dump errors
 
 When Guild Wars crashes, Toolbox tries to write a **crash dump** (`.dmp`) into `Documents\GWToolboxpp\<ComputerName>\crashes`. If a popup says Toolbox **couldn't find your Documents folder**, **couldn't create the crash file**, or that the dump **disappeared after being written**, something is blocking that folder:
@@ -113,6 +130,12 @@ If the launcher says a file such as `GWToolboxdll.dll`, `gwca.dll`, or `gMod.dll
 
 - Add an [antivirus exclusion](#antivirus-exclusions) for the GWToolbox folder so the files are not removed again.
 - Re-download `GWToolbox.exe` from [gwtoolbox.com](https://gwtoolbox.com/) and re-launch so the missing files are restored.
+
+If Windows Defender quarantined the files, you can restore them from an **administrator** PowerShell window instead of re-downloading (add the exclusion above first, or they may be quarantined again):
+
+```powershell
+Restore-MpThreat
+```
 
 When Windows Defender blocks one of these files, recent Toolbox versions read the Defender event log and show you the exact block reason in the error popup — include that text when you ask for help.
 

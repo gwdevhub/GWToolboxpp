@@ -50,3 +50,6 @@ bool InjectRemoteThread(const Process* process, LPCWSTR ImagePath, LPDWORD lpExi
 
 std::vector<Process> GetGuildWarsProcesses();
 std::vector<Process> GetGuildWars2Processes();
+
+// Full image paths of the currently running Guild Wars (Gw.exe) processes, de-duplicated.
+std::vector<std::filesystem::path> GetGuildWarsExecutablePaths();

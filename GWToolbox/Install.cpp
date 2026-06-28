@@ -2,6 +2,7 @@
 
 #include <Path.h>
 #include "Download.h"
+#include "Inject.h"
 #include "Install.h"
 #include "WindowsDefender.h"
 
@@ -130,7 +131,11 @@ bool Install(const bool quiet, std::wstring& error)
                    dll_path.parent_path().wstring()
                ), false;
     }
-    AddDefenderExclusion(install_path.parent_path(), quiet, error); // Silent fail, it'll show messages etc
+    // Allow the installed launcher and any running Guild Wars client through Controlled Folder
+    // Access too, so Toolbox can write its settings and crash dumps into the Documents folder.
+    std::vector<fs::path> cfa_apps = GetGuildWarsExecutablePaths();
+    cfa_apps.push_back(install_path.parent_path() / L"GWToolbox.exe");
+    AddDefenderExceptions(install_path.parent_path(), cfa_apps, quiet, error); // Silent fail, it'll show messages etc
     if (!IsInstalled()) {
         return error = std::format(
                    L"IsInstalled() returned false after installation; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch.", dll_path.wstring(),
