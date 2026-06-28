@@ -1395,10 +1395,15 @@ void WeatherModule::DrawSettings()
             ImGui::ShowHelp("The colour the scene is dimmed toward while this condition drives the overcast.");
 
             ImGui::Separator();
-            ImGui::TextDisabled("Cloud cover (a soft layer at a height band above you; combine with the falling particles above)");
-            ImGui::DragFloatRange2("Cloud band", &c.cloud.base, &c.cloud.top, 10.f, 0.f, 5000.f, "%.0f", "%.0f", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::ShowHelp("Bottom and top of the cloud band, gwinch above the player (enabled when top > base).\nRain clouds ~1000-1500, fog ~0-1000, a ground sandstorm ~0-200.");
+            bool cloud_on = c.cloud.top > c.cloud.base;
+            if (ImGui::Checkbox("Cloud cover", &cloud_on)) {
+                if (cloud_on && c.cloud.top <= c.cloud.base) { c.cloud.base = 0.f; c.cloud.top = 1000.f; } // enable with a default fog band
+                else if (!cloud_on) c.cloud.top = c.cloud.base;                                            // disable
+            }
+            ImGui::ShowHelp("Add a soft cloud/fog layer in a height band above you, ON TOP OF the falling particles above.\nThis is how you combine effects - e.g. tick this on Snow for a blizzard (snow + fog).");
             if (c.cloud.top > c.cloud.base) {
+                ImGui::DragFloatRange2("Cloud band (above you)", &c.cloud.base, &c.cloud.top, 10.f, 0.f, 5000.f, "%.0f", "%.0f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::ShowHelp("Bottom and top of the band, gwinch above the player. Rain clouds ~1000-1500, fog ~0-1000, a ground sandstorm ~0-200.");
                 ImGui::DragInt("Cloud density", &c.cloud.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
                 ImGui::Text("  ~%d puffs", CloudCount(c));
                 ImGui::DragFloat("Cloud puff size", &c.cloud.size, 5.f, 50.f, 3000.f, "%.0f");
