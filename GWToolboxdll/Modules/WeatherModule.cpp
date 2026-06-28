@@ -380,6 +380,16 @@ namespace {
     int compositor_token = 0;
     GW::HookEntry chat_hook_entry;
 
+#ifdef _DEBUG
+    // Debug overlay: a wireframe box around the active condition's particle column (red) and cloud band (cyan),
+    // drawn as a world-space line list so you can see the volumes the simulation is using.
+    bool debug_wireframe = false;
+    std::vector<WeatherVertex> wire_vertices;
+    IDirect3DVertexBuffer9* wire_vb = nullptr;
+    size_t wire_cap = 0;
+    bool wire_ready = false;
+#endif
+
     float frand(const float lo, const float hi)
     {
         rng = rng * 1664525u + 1013904223u;
@@ -950,6 +960,21 @@ namespace {
         return true;
     }
 
+#ifdef _DEBUG
+    // Append the 12 edges of an axis-aligned box (centre cx,cy; half-extent r; z spans z0..z1) as world-space line
+    // segments for the debug overlay. UV is the texture centre so the (opaque) texel gives a flat colour.
+    void AppendBoxWire(std::vector<WeatherVertex>& out, const float cx, const float cy, const float r, const float z0, const float z1, const DWORD col)
+    {
+        const float x0 = cx - r, x1 = cx + r, y0 = cy - r, y1 = cy + r;
+        const WeatherVertex c[8] = {
+            {x0, y0, z0, col, 0.5f, 0.5f}, {x1, y0, z0, col, 0.5f, 0.5f}, {x1, y1, z0, col, 0.5f, 0.5f}, {x0, y1, z0, col, 0.5f, 0.5f},
+            {x0, y0, z1, col, 0.5f, 0.5f}, {x1, y0, z1, col, 0.5f, 0.5f}, {x1, y1, z1, col, 0.5f, 0.5f}, {x0, y1, z1, col, 0.5f, 0.5f},
+        };
+        const int edges[12][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+        for (const auto& e : edges) { out.push_back(c[e[0]]); out.push_back(c[e[1]]); }
+    }
+#endif
+
     void SyncWeather(IDirect3DDevice9* device, const GW::Camera* cam, const float dt)
     {
         rain_ready = snow_ready = cloud_ready = splash_ready = false;
@@ -958,6 +983,10 @@ namespace {
         snow_instances.clear();
         cloud_instances.clear();
         splash_vertices.clear();
+#ifdef _DEBUG
+        wire_vertices.clear();
+        wire_ready = false;
+#endif
         UpdateAutoWeather(dt); // may toggle which condition is active before it's read below
         if (!cam) return;
 
@@ -1044,6 +1073,15 @@ namespace {
         snow_ready = UploadVB(device, snow_inst_vb, snow_inst_cap, snow_instances.data(), snow_instances.size() * sizeof(WeatherInstance));
         cloud_ready = UploadVB(device, cloud_inst_vb, cloud_inst_cap, cloud_instances.data(), cloud_instances.size() * sizeof(WeatherInstance));
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
+#ifdef _DEBUG
+        if (debug_wireframe && active >= 0 && ready) {
+            const auto& c = conditions[active];
+            AppendBoxWire(wire_vertices, cx, cy, c.spread_radius, cz - ColumnHeight(c), cz, 0xFFFF0000u); // particle column (red)
+            if (c.cloud.top > c.cloud.base)
+                AppendBoxWire(wire_vertices, cx, cy, c.cloud.radius, cz - c.cloud.top, cz - c.cloud.base, 0xFF00FFFFu); // cloud band (cyan)
+        }
+        wire_ready = EnsureVb(device, wire_vb, wire_cap, wire_vertices);
+#endif
     }
 
     // Overcast: multiply-blend a screen-filling quad UNDER the HUD so the scene dims like cloud cover.
@@ -1229,7 +1267,11 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
     const bool have_snow = snow_ready && snow_tex && !snow_instances.empty();
     const bool have_cloud = cloud_ready && cloud_tex && !cloud_instances.empty();
     const bool have_splash = splash_ready && splash_tex && !splash_vertices.empty();
-    if ((!have_rain && !have_snow && !have_cloud && !have_splash) || !EnsureShaders(device)) return;
+    bool have_any = have_rain || have_snow || have_cloud || have_splash;
+#ifdef _DEBUG
+    have_any = have_any || (wire_ready && !wire_vertices.empty()); // a wireframe-only frame (no particles) still draws
+#endif
+    if (!have_any || !EnsureShaders(device)) return;
 
     IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
@@ -1272,6 +1314,20 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
             device->SetStreamSourceFreq(0, 1); // restore non-instanced frequency (state block also restores)
             device->SetStreamSourceFreq(1, 1);
         }
+
+#ifdef _DEBUG
+        // Debug volume wireframe: world-space line list, drawn on top of everything (depth off) and without the
+        // distance fade, so the box stays fully visible. Reuses the billboard VS/PS with a flat-colour texel.
+        if (wire_ready && !wire_vertices.empty()) {
+            if (!cloud_tex) BuildCloudTexture(device);
+            if (cloud_tex && device->SetVertexShader(weather_vs) == D3D_OK && device->SetVertexDeclaration(weather_decl) == D3D_OK && device->SetStreamSource(0, wire_vb, 0, sizeof(WeatherVertex)) == D3D_OK) {
+                GameWorldCompositor::SetDistanceFog(device, 1.0e9f, 0.f); // no distance discard/fade for the overlay
+                device->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);       // always visible, even through terrain
+                device->SetTexture(0, cloud_tex);                        // opaque at the centre texel (uv 0.5,0.5)
+                device->DrawPrimitive(D3DPT_LINELIST, 0, static_cast<UINT>(wire_vertices.size() / 2));
+            }
+        }
+#endif
     }
     state_block->Apply();
     state_block->Release();
@@ -1339,6 +1395,10 @@ void WeatherModule::DrawSettings()
     for (const auto& c : conditions)
         if (c.active) showing += (showing.empty() ? "" : ", ") + c.name;
     ImGui::Text("Showing: %s", showing.empty() ? "Clear" : showing.c_str());
+#ifdef _DEBUG
+    ImGui::Checkbox("Show volume wireframe (debug)", &debug_wireframe);
+    ImGui::ShowHelp("Draw a box around the active condition's particle column (red) and cloud band (cyan) so you can see\nthe volumes the simulation is using. Debug builds only.");
+#endif
 
     ImGui::SeparatorText("Weather conditions");
     int to_remove = -1, to_duplicate = -1;
@@ -1584,6 +1644,13 @@ void WeatherModule::Terminate()
         cloud_tex->Release();
         cloud_tex = nullptr;
     }
+#ifdef _DEBUG
+    if (wire_vb) {
+        wire_vb->Release();
+        wire_vb = nullptr;
+    }
+    wire_cap = 0;
+#endif
     for (auto** s : {&weather_vs, &weather_inst_vs})
         if (*s) {
             (*s)->Release();
