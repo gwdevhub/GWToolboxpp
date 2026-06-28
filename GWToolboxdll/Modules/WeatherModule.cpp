@@ -612,6 +612,7 @@ namespace {
         const bool splash = decal == kDecalSplash;
         const float drift = EffectiveDrift(c);
         const bool settle = decal == kDecalSettle;
+        const float top_z = cz - ColumnHeight(c); // drops restart here on recycle (the spread height is seed-only)
         const float diameter = 2.f * c.spread_radius;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
@@ -628,12 +629,16 @@ namespace {
             if (const float rx = d.x - cx; rx > c.spread_radius) d.x -= diameter; else if (rx < -c.spread_radius) d.x += diameter;
             if (const float ry = d.y - cy; ry > c.spread_radius) d.y -= diameter; else if (ry < -c.spread_radius) d.y += diameter;
             if (d.z >= d.ground_z) {
-                // Run complete (the drop reached its projected landing): leave a decal here, then start a brand-new
-                // run by re-seeding from scratch - a fresh cell with a fresh projected floor. This replaces the old
-                // in-place "reset to the top" which, together with the wrap, nudged drops onto the top plane.
+                // Run complete (drop reached its projected landing): leave a decal, then restart this drop at the
+                // column TOP and project its next floor. Restarting at the top (rather than a spread height, as a
+                // full re-seed does) is what keeps drops from re-landing the same frame and re-seeding every tick -
+                // the per-frame cost that scaled with count. GroundZAt is memoised per cell, so the floor recompute
+                // here is a cheap cache hit, and the wrap above only moves x/y, so no spurious landings.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                seed_drop(d, c, cx, cy, cz, i, grid, vx, vy, vz);
+                d.z = top_z;
+                d.ground_z = LandingGroundZ(c, d.x, d.y, top_z, vx, vy, vz, cz);
+                d.sway_phase = frand(0.f, 6.2831853f);
             }
         }
         for (size_t i = 0; i < p.splashes.size();) {
