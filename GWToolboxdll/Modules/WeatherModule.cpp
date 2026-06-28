@@ -648,7 +648,11 @@ namespace {
                 // here is a cheap cache hit, and the wrap above only moves x/y, so no spurious landings.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                d.z = top_z;
+                // Restart at the top, but CARRY the overshoot past the ground (d.z - ground) instead of snapping to
+                // exactly top_z. Snapping quantises every drop to z-levels spaced one fall-step (vz*dt) apart, which
+                // shows as horizontal "layers" - and, with the wind drift, diagonal lines - at high fall speeds.
+                const float overshoot = d.z - d.ground_z;
+                d.z = top_z + overshoot;
                 d.ground_z = LandingGroundZ(c, d.x, d.y, top_z, vx, vy, vz, cz);
                 // sway vector carries over - it's already a rotating unit vector, no need to re-randomise it.
             }
