@@ -58,6 +58,7 @@ namespace weather_module {
         int density = 20;                // puff-count driver (like the particle density %)
         float size = 600.f;              // puff billboard size (clouds are big and soft)
         float speed = 0.f;               // horizontal drift speed; direction follows the condition's Wind direction
+        float radius = 2500.f;           // horizontal radius of the cover bubble, independent of the particle Range
     };
 
     struct WeatherCondition {
@@ -176,7 +177,7 @@ namespace {
     int CloudCount(const WeatherCondition& c)
     {
         if (c.cloud.top <= c.cloud.base || c.cloud.density <= 0) return 0;
-        const float disk = 3.14159265f * c.spread_radius * c.spread_radius;
+        const float disk = 3.14159265f * c.cloud.radius * c.cloud.radius;
         const float per_particle = particle_area_full * 100.f / static_cast<float>(std::clamp(c.cloud.density, 1, 100));
         return std::min(max_particles, static_cast<int>(disk / per_particle));
     }
@@ -561,9 +562,9 @@ namespace {
     // player. World z is derived from the live player altitude each frame (cz - h), so the layer follows the player.
     void seed_cloud(CloudPuff& cl, const WeatherCondition& c, const float cx, const float cy, const int index, const int grid)
     {
-        const float cell = 2.f * c.spread_radius / static_cast<float>(grid);
-        cl.x = cx - c.spread_radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
-        cl.y = cy - c.spread_radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
+        const float cell = 2.f * c.cloud.radius / static_cast<float>(grid);
+        cl.x = cx - c.cloud.radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
+        cl.y = cy - c.cloud.radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
         cl.h = frand(c.cloud.base, c.cloud.top);
         cl.phase = frand(0.f, 6.2831853f);
     }
@@ -706,13 +707,13 @@ namespace {
         float dir[3];
         WindDir(wind_dir, 90.f, dir); // tilt 90 => purely horizontal unit vector along the heading
         const float vx = dir[0] * c.cloud.speed, vy = dir[1] * c.cloud.speed;
-        const float diameter = 2.f * c.spread_radius;
+        const float r = c.cloud.radius, diameter = 2.f * r;
         for (auto& cl : p.clouds) {
             cl.x += vx * dt;
             cl.y += vy * dt;
             cl.phase += snow_sway_speed * dt;
-            if (const float rx = cl.x - cx; rx > c.spread_radius) cl.x -= diameter; else if (rx < -c.spread_radius) cl.x += diameter;
-            if (const float ry = cl.y - cy; ry > c.spread_radius) cl.y -= diameter; else if (ry < -c.spread_radius) cl.y += diameter;
+            if (const float rx = cl.x - cx; rx > r) cl.x -= diameter; else if (rx < -r) cl.x += diameter;
+            if (const float ry = cl.y - cy; ry > r) cl.y -= diameter; else if (ry < -r) cl.y += diameter;
         }
     }
 
@@ -1333,13 +1334,13 @@ void WeatherModule::DrawSettings()
     if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo())
         ImGui::Text("Current map: %s (climate: %s)", Resources::GetRegionName(info->region)->string().c_str(), ClimateName(ClimateForMap(GW::Map::GetMapID())));
     if (auto_climate_override != Climate::None)
-        ImGui::Text("Forced climate: %s (via /climate; 'Follow map' or /climate auto to clear)", ClimateName(auto_climate_override));
+        ImGui::Text("Forced climate: %s (untick it below, or tick 'Automatic weather (follow map climate)')", ClimateName(auto_climate_override));
     std::string showing;
     for (const auto& c : conditions)
         if (c.active) showing += (showing.empty() ? "" : ", ") + c.name;
     ImGui::Text("Showing: %s", showing.empty() ? "Clear" : showing.c_str());
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Weather conditions");
     int to_remove = -1, to_duplicate = -1;
     for (int i = 0; i < static_cast<int>(conditions.size()); i++) {
         auto& c = conditions[i];
@@ -1404,6 +1405,8 @@ void WeatherModule::DrawSettings()
             if (c.cloud.top > c.cloud.base) {
                 ImGui::DragFloatRange2("Cloud band (above you)", &c.cloud.base, &c.cloud.top, 10.f, 0.f, 5000.f, "%.0f", "%.0f", ImGuiSliderFlags_AlwaysClamp);
                 ImGui::ShowHelp("Bottom and top of the band, gwinch above the player. Rain clouds ~1000-1500, fog ~0-1000, a ground sandstorm ~0-200.");
+                ImGui::DragFloat("Cloud radius", &c.cloud.radius, 25.f, 250.f, kMaxRadius, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::ShowHelp("Horizontal radius of the cloud-cover bubble, independent of the particle Range above (e.g. wide overhead cloud cover over a small rain volume).");
                 ImGui::DragInt("Cloud density", &c.cloud.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
                 ImGui::Text("  ~%d puffs", CloudCount(c));
                 ImGui::DragFloat("Cloud puff size", &c.cloud.size, 5.f, 50.f, 3000.f, "%.0f");
@@ -1469,13 +1472,16 @@ void WeatherModule::DrawSettings()
         ImGui::EndPopup();
     }
 
-    ImGui::Separator();
-    if (ImGui::Checkbox("Automatic weather (by climate)", &auto_weather) && auto_weather) auto_timer = -1.f; // roll at once on enable
-    ImGui::ShowHelp("Choose the active weather automatically from the table below, based on the climate of the region\nyou're in, re-rolling every few minutes. While on, the manual on/off toggles above are disabled.\n\nThe /climate chat command controls this: /climate auto (follow map), /climate <name> (force a climate), /climate off.");
-    if (auto_weather && auto_climate_override != Climate::None) {
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Follow map")) { auto_climate_override = Climate::None; auto_timer = -1.f; } // clear the /climate override
+    ImGui::SeparatorText("Climates");
+    // "Follow map" auto = roll from the current map's climate (override None). Forcing a specific climate is done with
+    // the per-climate tickboxes below; the two are mutually exclusive, so following the map disables those tickboxes.
+    bool follow_map = auto_weather && auto_climate_override == Climate::None;
+    if (ImGui::Checkbox("Automatic weather (follow map climate)", &follow_map)) {
+        auto_weather = follow_map;
+        auto_climate_override = Climate::None;
+        if (follow_map) auto_timer = -1.f; // roll at once on enable
     }
+    ImGui::ShowHelp("Roll the active weather automatically from the current map's climate, re-rolling every few minutes.\nWhile on, the manual condition toggles AND the per-climate tickboxes below are disabled.\n\nThe /climate chat command mirrors this: /climate auto (follow map), /climate <name> (force a climate), /climate off.");
     if (auto_weather) // two separate globals (not a contiguous pair), so DragFloatRange2's two pointers - not DragFloat2
         ImGui::DragFloatRange2("Change interval (min)", &auto_change_min, &auto_change_max, 0.25f, 0.1f, 240.f, "%.1f", "%.1f", ImGuiSliderFlags_AlwaysClamp);
 
@@ -1484,6 +1490,15 @@ void WeatherModule::DrawSettings()
     for (int i = 0; i < static_cast<int>(climate_profiles.size()); i++) {
         auto& cp = climate_profiles[i];
         ImGui::PushID(i);
+        // Per-climate tickbox: force automatic weather to this climate (single-select), disabled while following the map.
+        bool forced = auto_weather && auto_climate_override == cp.climate;
+        ImGui::BeginDisabled(follow_map);
+        if (ImGui::Checkbox("##climate_active", &forced)) {
+            if (forced) { auto_climate_override = cp.climate; auto_weather = true; auto_timer = -1.f; }
+            else { auto_climate_override = Climate::None; auto_weather = false; }
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
         if (ImGui::CollapsingHeader(ClimateName(cp.climate))) {
             int ent_remove = -1;
             for (int e = 0; e < static_cast<int>(cp.entries.size()); e++) {
