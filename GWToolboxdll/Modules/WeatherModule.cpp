@@ -343,15 +343,17 @@ namespace {
                                  // slow-falling condition (which rarely reseeds its top) still tracks the player's height
     bool reset_requested = false;     // set by WeatherModule::Reset(); consumed on the next update
 
-    // GPU-instanced record: one per drop (centre + the two half-extent axes + an alpha), expanded to a quad by
-    // weather_instanced_vs. The tint is a per-draw shader constant (only one condition is active at a time, so all
-    // its particles share it); the per-instance alpha is the only thing that varies (1 for flakes, fade for settle).
+    // GPU-instanced record: one per drop - just the world centre + an alpha, expanded to a quad by
+    // weather_instanced_vs. The billboard axes and the tint are per-draw shader constants (only one condition is
+    // active at a time, so a draw's particles share them); the per-instance alpha varies (1 for flakes, fade for settle).
     struct WeatherInstance {
         float cx, cy, cz;
-        float ax0, ax1, ax2;
-        float ay0, ay1, ay2;
         float alpha; // per-instance alpha multiplier on the tint constant
     };
+    // Billboard half-extent axes for each instanced draw (was baked per record; now set as VS constants c10/c11).
+    struct InstAxes { float x[3], y[3]; };
+    InstAxes rain_axes{}, snow_axes{}, cloud_axes{}, settle_axes{};
+    size_t snow_flake_count = 0; // snow_instances holds [flakes .. settles]; this is where the settle sub-range starts
     struct GeomVert {
         float sx, sy, u, v;
     }; // static unit quad: corner sign + uv
@@ -709,22 +711,16 @@ namespace {
         return lat_sq <= depth * depth * cone_tan_sq;
     }
 
-    // Snow/ash/sand: camera-aligned square billboards, instanced like rain (the GPU expands each record to a quad,
-    // so the CPU only uploads ~52 bytes per flake instead of building four textured verts). The square's axes are
-    // the camera right/up, constant per condition, so they bake into every record; tint is per-instance RGBA.
+    // Snow/ash/sand: camera-aligned square billboards, instanced like rain (the GPU expands each 16-byte record to a
+    // quad). The square's axes are the camera right/up, constant per draw, so they go to the VS constants (snow_axes)
+    // rather than into every record; only the centre is per-instance (flakes don't fade, so alpha = 1).
     void AppendSnowInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float up[3], const float eye[3], const float fwd[3])
     {
         const float h = c.drop_size * 0.5f;
-        const WeatherInstance base{0.f, 0.f, 0.f, right[0] * h, right[1] * h, right[2] * h, up[0] * h, up[1] * h, up[2] * h, 1.f}; // tint is the c8 constant; flakes don't fade
+        snow_axes = {{right[0] * h, right[1] * h, right[2] * h}, {up[0] * h, up[1] * h, up[2] * h}};
         out.reserve(out.size() + drops.size());
-        for (const auto& d : drops) {
-            if (!InFront(d, eye, fwd)) continue;
-            WeatherInstance inst = base;
-            inst.cx = d.x;
-            inst.cy = d.y;
-            inst.cz = d.z;
-            out.push_back(inst);
-        }
+        for (const auto& d : drops)
+            if (InFront(d, eye, fwd)) out.push_back({d.x, d.y, d.z, 1.f});
     }
 
     // Cloud-cover layer: drift the puffs horizontally (direction = the condition's wind heading, speed = cloud.speed)
@@ -757,7 +753,7 @@ namespace {
     void AppendCloudCoverInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<CloudPuff>& puffs, const float right[3], const float up[3], const float eye[3], const float fwd[3], const float cz)
     {
         const float hs = c.cloud.size * 0.5f;
-        const WeatherInstance base{0.f, 0.f, 0.f, right[0] * hs, right[1] * hs, right[2] * hs, up[0] * hs, up[1] * hs, up[2] * hs, 1.f};
+        cloud_axes = {{right[0] * hs, right[1] * hs, right[2] * hs}, {up[0] * hs, up[1] * hs, up[2] * hs}};
         const float span = std::max(1.f, c.cloud.top - c.cloud.base);
         out.reserve(out.size() + puffs.size());
         for (const auto& cl : puffs) {
@@ -766,18 +762,13 @@ namespace {
             if (dx * fwd[0] + dy * fwd[1] + dz * fwd[2] < kZNear) continue; // behind the near plane: skip the build
             const float t = (cl.h - c.cloud.base) / span;                  // 0 at band bottom, 1 at band top
             const float a = t < 0.2f ? t / 0.2f : t > 0.8f ? (1.f - t) / 0.2f : 1.f; // feather both edges
-            WeatherInstance inst = base;
-            inst.cx = cl.x;
-            inst.cy = cl.y;
-            inst.cz = z;
-            inst.alpha = a;
-            out.push_back(inst);
+            out.push_back({cl.x, cl.y, z, a});
         }
     }
 
-    // Rain: one instance record per drop. Streak axes (long axis along the downward velocity, width axis
-    // facing the camera) are constant per condition, so they are baked into every record; the GPU expands
-    // the quad. The instanced VS applies the V-flip so the texture stays upright.
+    // Rain: one 16-byte record per drop (centre + alpha). The streak axes (long axis along the downward velocity,
+    // width axis facing the camera) are constant per draw, so they go to the VS constants (rain_axes). The instanced
+    // VS applies the V-flip so the texture stays upright.
     void AppendRainInstances(std::vector<WeatherInstance>& out, const WeatherCondition& c, const std::vector<Raindrop>& drops, const float right[3], const float fwd[3], const float wind_dir, const float eye[3])
     {
         const float h = c.drop_size * 0.5f;
@@ -796,16 +787,10 @@ namespace {
             w[1] = right[1];
             w[2] = right[2];
         }
-        const WeatherInstance base{0.f, 0.f, 0.f, w[0] * h, w[1] * h, w[2] * h, vel[0] * h, vel[1] * h, vel[2] * h, 1.f}; // tint is the c8 constant; rain doesn't fade
+        rain_axes = {{w[0] * h, w[1] * h, w[2] * h}, {vel[0] * h, vel[1] * h, vel[2] * h}};
         out.reserve(out.size() + drops.size());
-        for (const auto& d : drops) {
-            if (!InFront(d, eye, fwd)) continue; // skip behind-camera drops: clipped anyway, so don't pay to build them
-            WeatherInstance inst = base;
-            inst.cx = d.x;
-            inst.cy = d.y;
-            inst.cz = d.z;
-            out.push_back(inst);
-        }
+        for (const auto& d : drops)
+            if (InFront(d, eye, fwd)) out.push_back({d.x, d.y, d.z, 1.f}); // skip behind-camera drops (clipped anyway)
     }
 
     // Vertical billboard standing on the ground: horizontal axis follows the camera so it faces the
@@ -826,18 +811,20 @@ namespace {
     }
 
 
-    // Flat quad lying on the ground (world XY plane), drawn with the snowflake texture - so it shares the snow
-    // instance buffer/pass. Holds at full tint, then fades out over the tail of its life via the per-instance alpha.
+    // Flat quad lying on the ground (world XY plane), drawn with the snowflake texture. Its axes are world X/Y (not
+    // camera-aligned like the flakes), so it's a separate sub-draw of the snow buffer with its own constants
+    // (settle_axes). Holds at full tint, then fades out over the tail of its life via the per-instance alpha.
     void AppendSettledInstances(std::vector<WeatherInstance>& out, const std::vector<Settle>& s, const float eye[3], const float fwd[3], const float cone_tan_sq)
     {
         const float hs = snow_settle_size * 0.5f;
+        settle_axes = {{hs, 0.f, 0.f}, {0.f, hs, 0.f}}; // flat on the world XY plane
         const float fade_span = std::clamp(snow_settle_fade, 0.01f, 1.f);
         out.reserve(out.size() + s.size());
         for (const auto& sp : s) {
             if (!InView(sp.x, sp.y, sp.z, eye, fwd, cone_tan_sq)) continue;
             const float life = snow_settle_duration > 0.f ? sp.age / snow_settle_duration : 1.f;
             const float fade = life < 1.f - fade_span ? 1.f : std::max(0.f, (1.f - life) / fade_span);
-            out.push_back({sp.x, sp.y, sp.z - splash_lift, hs, 0.f, 0.f, 0.f, hs, 0.f, fade});
+            out.push_back({sp.x, sp.y, sp.z - splash_lift, fade});
         }
     }
 
@@ -935,9 +922,10 @@ namespace {
 
         // Instanced pipeline: stream 0 = unit quad (POSITION = corner sign, TEXCOORD0 = uv); stream 1 =
         // per-drop instance record (TEXCOORD1 = centre, TEXCOORD2/3 = the two half-extent axes, TEXCOORD4 = alpha).
-        constexpr D3DVERTEXELEMENT9 inst_decl[] = {{0, 0, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},  {0, 8, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
-                                                   {1, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1},  {1, 12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 2},
-                                                   {1, 24, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 3}, {1, 36, D3DDECLTYPE_FLOAT1, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 4}, D3DDECL_END()};
+        // Stream 1 (per instance) is now just the world centre + alpha; the billboard axes moved to VS constants
+        // c10/c11 (constant per draw), so each record is 16 bytes instead of 40.
+        constexpr D3DVERTEXELEMENT9 inst_decl[] = {{0, 0, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0}, {0, 8, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
+                                                   {1, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1}, {1, 12, D3DDECLTYPE_FLOAT1, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 2}, D3DDECL_END()};
         if (!weather_inst_decl && device->CreateVertexDeclaration(inst_decl, &weather_inst_decl) != D3D_OK) return false;
         if (!weather_inst_vs && device->CreateVertexShader(reinterpret_cast<const DWORD*>(&weather_instanced_vs), &weather_inst_vs) != D3D_OK) return false;
         if (!quad_geom_vb) {
@@ -1003,6 +991,7 @@ namespace {
     {
         rain_ready = snow_ready = cloud_ready = splash_ready = false;
         active_has_cloud = false;
+        snow_flake_count = 0;
         rain_instances.clear();
         snow_instances.clear();
         cloud_instances.clear();
@@ -1079,6 +1068,7 @@ namespace {
             else
                 AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading, eye);
             AppendSplashes(active_particles.splashes, right, c.tint, eye, fwd, cone_tan_sq);
+            snow_flake_count = snow_instances.size(); // settles append after the flakes; remember where they start
             AppendSettledInstances(snow_instances, active_particles.settled, eye, fwd, cone_tan_sq);
             // Cloud-cover layer (overhead clouds / fog / sandstorm), drawn in addition to and independent of the above.
             if (c.cloud.top > c.cloud.base) {
@@ -1321,20 +1311,30 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
         // velocity); snow and clouds don't. The tint is a per-draw constant, so the cloud layer can carry its own.
         if (ib_ok && (have_rain || have_snow || have_cloud) && device->SetVertexShader(weather_inst_vs) == D3D_OK && device->SetVertexDeclaration(weather_inst_decl) == D3D_OK && device->SetStreamSource(0, quad_geom_vb, 0, sizeof(GeomVert)) == D3D_OK &&
             device->SetStreamSourceFreq(1, D3DSTREAMSOURCE_INSTANCEDATA | 1u) == D3D_OK) {
-            const auto draw_instanced = [&](IDirect3DVertexBuffer9* vb, const UINT ninst, IDirect3DTexture9* tex, const float flip, const unsigned int tint) {
+            // first = starting instance (lets the snow buffer be drawn as two sub-ranges: camera-aligned flakes then
+            // ground-flat settles), with the billboard axes supplied as VS constants c10/c11 per (sub)draw.
+            const auto draw_instanced = [&](IDirect3DVertexBuffer9* vb, const UINT first, const UINT ninst, IDirect3DTexture9* tex, const float flip, const unsigned int tint, const InstAxes& ax) {
+                if (ninst == 0) return;
                 const auto t = ImGui::ColorConvertU32ToFloat4(tint);
                 const float tintf[4] = {t.x, t.y, t.z, t.w};
                 device->SetVertexShaderConstantF(8, tintf, 1);
                 const float flags[4] = {flip, 0.f, 0.f, 0.f};
                 device->SetVertexShaderConstantF(9, flags, 1);
-                if (device->SetStreamSourceFreq(0, D3DSTREAMSOURCE_INDEXEDDATA | ninst) == D3D_OK && device->SetStreamSource(1, vb, 0, sizeof(WeatherInstance)) == D3D_OK) {
+                const float axf[4] = {ax.x[0], ax.x[1], ax.x[2], 0.f}, ayf[4] = {ax.y[0], ax.y[1], ax.y[2], 0.f};
+                device->SetVertexShaderConstantF(10, axf, 1);
+                device->SetVertexShaderConstantF(11, ayf, 1);
+                if (device->SetStreamSourceFreq(0, D3DSTREAMSOURCE_INDEXEDDATA | ninst) == D3D_OK && device->SetStreamSource(1, vb, first * sizeof(WeatherInstance), sizeof(WeatherInstance)) == D3D_OK) {
                     device->SetTexture(0, tex);
                     device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 4, 0, 2);
                 }
             };
-            if (have_rain) draw_instanced(rain_inst_vb, static_cast<UINT>(rain_instances.size()), rain_tex, 1.f, active_tint);
-            if (have_snow) draw_instanced(snow_inst_vb, static_cast<UINT>(snow_instances.size()), snow_tex, 0.f, active_tint);
-            if (have_cloud) draw_instanced(cloud_inst_vb, static_cast<UINT>(cloud_instances.size()), cloud_tex, 0.f, active_cloud_tint);
+            if (have_rain) draw_instanced(rain_inst_vb, 0, static_cast<UINT>(rain_instances.size()), rain_tex, 1.f, active_tint, rain_axes);
+            if (have_snow) {
+                const UINT total = static_cast<UINT>(snow_instances.size()), flakes = static_cast<UINT>(snow_flake_count);
+                draw_instanced(snow_inst_vb, 0, flakes, snow_tex, 0.f, active_tint, snow_axes);                       // camera-aligned flakes
+                if (total > flakes) draw_instanced(snow_inst_vb, flakes, total - flakes, snow_tex, 0.f, active_tint, settle_axes); // ground-flat settles
+            }
+            if (have_cloud) draw_instanced(cloud_inst_vb, 0, static_cast<UINT>(cloud_instances.size()), cloud_tex, 0.f, active_cloud_tint, cloud_axes);
             device->SetStreamSourceFreq(0, 1); // restore non-instanced frequency (state block also restores)
             device->SetStreamSourceFreq(1, 1);
         }
