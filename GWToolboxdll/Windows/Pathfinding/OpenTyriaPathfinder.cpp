@@ -977,7 +977,11 @@ namespace OpenTyria {
         PathFindPoint closest_point{};
         float closest_point_dist = INFINITY;
 
-        AddNode(nodes, prioq, IndexOf(src_trap), nullptr, src_trap, src, 0.f, INFINITY);
+        // Guard before AddNode indexes nodes[]: FindClosestTrapezoid normally returns an indexed trap, but a
+        // bad/partial map could miss. Explicit here since AddNode now writes through nodes.data() (no debug check).
+        const uint32_t src_idx = IndexOf(src_trap);
+        if (src_idx == UINT32_MAX) return SearchResult::SrcTrapezoidNotFound;
+        AddNode(nodes, prioq, src_idx, nullptr, src_trap, src, 0.f, INFINITY);
 
         PathHeapNode top;
         // Raw pointer — skip MSVC debug bounds checks; `nodes` is sized once above and never resized here.
