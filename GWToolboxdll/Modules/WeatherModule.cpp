@@ -314,8 +314,9 @@ namespace {
         float u, v;
     };
     struct Raindrop {
-        float x, y, z, ground_z, sway_phase;
-    }; // falls in +z (GW up is -z); ground_z queried at seed time; sway_phase drives snow's lateral wander
+        float x, y, z, ground_z, sway_sin, sway_cos;
+    }; // falls in +z (GW up is -z); ground_z queried at seed time; (sway_sin, sway_cos) is a unit vector rotated each
+       // tick to drive snow's lateral wander - cheaper than recomputing sin/cos of a phase per drop per frame
     struct Splash {
         float x, y, z, age;
     };
@@ -323,7 +324,7 @@ namespace {
         float x, y, z, age;
     }; // a snowflake lying flat on the ground; ages out with an alpha fade
     struct CloudPuff {
-        float x, y, h, phase;
+        float x, y, h;
     }; // cloud-cover puff: world x/y (drifts + wraps in the bubble); h = height above the player (world z = cz - h)
     struct Particles {
         std::vector<Raindrop> raindrops;
@@ -580,7 +581,9 @@ namespace {
         d.ground_z = LandingGroundZ(c, d.x, d.y, top_z, vx, vy, vz, cz); // terrain it will drift ONTO, not the spawn column
         // Spread the fill through the visible column (top..ground) so the drops don't fall as one synchronised lump.
         d.z = top_z + frand(0.f, std::max(0.f, d.ground_z - top_z));
-        d.sway_phase = frand(0.f, 6.2831853f);
+        const float a = frand(0.f, 6.2831853f); // random initial sway direction (a unit vector, rotated each tick)
+        d.sway_sin = std::sin(a);
+        d.sway_cos = std::cos(a);
     }
 
     // Initial fill of a cloud-cover puff: stratified over the bubble, at a random height within the band above the
@@ -591,7 +594,6 @@ namespace {
         cl.x = cx - c.cloud.radius + (static_cast<float>(index % grid) + frand(0.f, 1.f)) * cell;
         cl.y = cy - c.cloud.radius + (static_cast<float>(index / grid) + frand(0.f, 1.f)) * cell;
         cl.h = frand(c.cloud.base, c.cloud.top);
-        cl.phase = frand(0.f, 6.2831853f);
     }
 
     void UpdateCondition(const WeatherCondition& c, Particles& p, const float dt, const float cx, const float cy, const float cz, const float wind_dir, const float center_dz)
@@ -614,13 +616,21 @@ namespace {
         const bool settle = decal == kDecalSettle;
         const float top_z = cz - ColumnHeight(c); // drops restart here on recycle (the spread height is seed-only)
         const float diameter = 2.f * c.spread_radius;
+        // Snow's lateral wobble: rotate each drop's unit sway vector by the same small angle every tick. The two
+        // trig calls are per-tick, not per-drop - the per-drop step is just a 2x2 rotation (a few mul/add).
+        const bool has_sway = drift > 0.f;
+        const float rs = std::sin(snow_sway_speed * dt), rc = std::cos(snow_sway_speed * dt);
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
             d.z += vz * dt + center_dz; // fall, plus the whole column tracking the player's vertical movement
-            // Float: an out-of-phase sin/cos wobble so each flake wanders sideways rather than falling in a line.
-            const float sway_x = drift > 0.f ? drift * std::sin(d.sway_phase) : 0.f;
-            const float sway_y = drift > 0.f ? drift * std::cos(d.sway_phase) : 0.f;
-            d.sway_phase += snow_sway_speed * dt;
+            float sway_x = 0.f, sway_y = 0.f;
+            if (has_sway) {
+                sway_x = drift * d.sway_sin;
+                sway_y = drift * d.sway_cos;
+                const float ns = d.sway_sin * rc + d.sway_cos * rs; // rotate the unit vector (preserves its length)
+                d.sway_cos = d.sway_cos * rc - d.sway_sin * rs;
+                d.sway_sin = ns;
+            }
             d.x += (vx + sway_x) * dt;
             d.y += (vy + sway_y) * dt;
             // Keep the volume centred on the player: a drop blown past one edge of the bubble wraps to the opposite
@@ -638,7 +648,7 @@ namespace {
                 if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 d.z = top_z;
                 d.ground_z = LandingGroundZ(c, d.x, d.y, top_z, vx, vy, vz, cz);
-                d.sway_phase = frand(0.f, 6.2831853f);
+                // sway vector carries over - it's already a rotating unit vector, no need to re-randomise it.
             }
         }
         for (size_t i = 0; i < p.splashes.size();) {
@@ -736,7 +746,6 @@ namespace {
         for (auto& cl : p.clouds) {
             cl.x += vx * dt;
             cl.y += vy * dt;
-            cl.phase += snow_sway_speed * dt;
             if (const float rx = cl.x - cx; rx > r) cl.x -= diameter; else if (rx < -r) cl.x += diameter;
             if (const float ry = cl.y - cy; ry > r) cl.y -= diameter; else if (ry < -r) cl.y += diameter;
         }
