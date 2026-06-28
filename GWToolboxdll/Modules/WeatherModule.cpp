@@ -127,8 +127,7 @@ namespace {
     float snow_settle_duration = 4.f; // seconds a settled flake holds before it has fully faded
     float snow_settle_fade = 0.4f;    // last fraction of the lifetime spent fading out
     int max_settled = 4000;           // per-condition cap on settled flakes
-    float cloud_band_height = 1500.f; // gwinch above the terrain the fog fills at full strength before thinning upward
-    float cloud_opacity = 0.5f;       // overall alpha multiplier for cloud puffs (they layer, so keep each one soft)
+    float cloud_band_height = 1500.f; // vertical thickness of the fog/dust layer (overall opacity is the condition's tint alpha)
 
     // The floor decal a condition leaves; resolves kDecalAuto from the weather type so old saved conditions and
     // freshly-added ones behave as before (rain splashes, snow settles).
@@ -173,7 +172,8 @@ namespace {
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
             // Fog: large soft camera-facing puffs (cloud type), drifting slowly and height-faded into a low bank. No decal.
-            {"Fog", kTypeCloud, false, 2, 800.f, 60.f, 2500.f, 0.f, 360.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f, 0xFFFFFFFFu, 0xFFB8BCC0u, kDecalNone, 150.f},
+            // Semi-transparent white tint (alpha ~0.5) sets the overall fog opacity; the puffs layer to build it up.
+            {"Fog", kTypeCloud, false, 2, 800.f, 60.f, 2500.f, 0.f, 360.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f, 0x80FFFFFFu, 0xFFB8BCC0u, kDecalNone, 150.f},
         };
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -665,9 +665,9 @@ namespace {
             const float above = d.ground_z - d.z; // +z is down, so ground_z - z > 0 means the puff sits above the floor
             if (above <= 0.f || above >= band) continue; // outside the layer: skip (the column matches the band, so this is rare)
             const float t = above / band;                // 0 at the ground, 1 at the top of the band
-            // Soft bottom and top inside the band, so thinning the band keeps both edges feathered (no hard cap).
-            const float a = (t < 0.2f ? t / 0.2f : t > 0.7f ? (1.f - t) / 0.3f : 1.f) * cloud_opacity;
-            if (a <= 0.f) continue;
+            // Per-instance alpha is just the band fade shape (0..1): soft bottom and top inside the band so thinning
+            // it keeps both edges feathered. Overall opacity is the tint's alpha (applied as tint.a * this in the VS).
+            const float a = t < 0.2f ? t / 0.2f : t > 0.7f ? (1.f - t) / 0.3f : 1.f;
             WeatherInstance inst = base;
             inst.cx = d.x;
             inst.cy = d.y;
@@ -1282,10 +1282,9 @@ void WeatherModule::DrawSettings()
             const char* type_names[kTypeCount] = {"Rain", "Snow", "Cloud"};
             ImGui::Combo("Type", &c.type, type_names, kTypeCount);
             if (c.type == kTypeCloud) {
-                ImGui::TextDisabled("Cloud: soft puffs faded into a fog/dust band (the two settings below are shared by all cloud conditions).");
+                ImGui::TextDisabled("Cloud: soft puffs faded into a fog/dust band. Overall opacity is the Tint alpha below.");
                 ImGui::DragFloat("Fog band height", &cloud_band_height, 10.f, 50.f, column_height_max, "%.0f", ImGuiSliderFlags_AlwaysClamp);
                 ImGui::ShowHelp("Vertical thickness of the layer above the ground. Thinner = fewer particles AND less overdraw\n(the view ray crosses a shorter stack of puffs), and a lower, denser haze - e.g. a sandstorm. The\nhorizontal density is unchanged, so the soft look is kept. Shared by all cloud conditions; not saved.");
-                ImGui::DragFloat("Fog opacity", &cloud_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             }
             ImGui::DragInt("Density", &c.density, 1.f, 1, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
             ImGui::ShowHelp("How densely the volume is filled, 1-100%. The particle count is derived from this and\nthe spread area, so it stays consistent if the radius changes. Higher = denser (and heavier on FPS).");
