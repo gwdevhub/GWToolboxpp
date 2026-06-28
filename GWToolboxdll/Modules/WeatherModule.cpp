@@ -1360,7 +1360,7 @@ void WeatherModule::OnSettingsLoaded()
         c.drift = std::max(c.drift, kDriftAuto);
         c.wind_dir_max = std::max(c.wind_dir_max, c.wind_dir_min);
         c.wind_tilt = std::clamp(c.wind_tilt, 0.f, 90.f);
-        c.density = std::clamp(c.density, 1, 100);
+        c.density = std::clamp(c.density, 0, 100); // 0 = no falling particles (cloud-cover-only conditions)
         c.spread_radius = std::clamp(c.spread_radius, 250.f, kMaxRadius); // user-editable, but bounded to compass-half range
         c.splash_chance = std::clamp(c.splash_chance, 0.f, 1.f);
         c.sound_min_interval = std::max(c.sound_min_interval, 0.f);
@@ -1393,7 +1393,6 @@ void WeatherModule::DrawSettings()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
     const auto green = ImGui::ColorConvertU32ToFloat4(Colors::Green());
-    ImGui::TextColored(red, "Warning: This is a beta feature.");
     if (!GameWorldCompositor::IsActive()) ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "  in-world compositor FAILED to install." : "  in-world compositor: not installed yet.");
 
     // Info: the current map's climate, and which condition(s) are currently being shown.
@@ -1405,6 +1404,11 @@ void WeatherModule::DrawSettings()
     for (const auto& c : conditions)
         if (c.active) showing += (showing.empty() ? "" : ", ") + c.name;
     ImGui::Text("Showing: %s", showing.empty() ? "Clear" : showing.c_str());
+#ifdef _DEBUG
+    ImGui::Text("Live: %d falling, %d cloud puffs | decals: %d splash, %d settled",
+                static_cast<int>(active_particles.raindrops.size()), static_cast<int>(active_particles.clouds.size()),
+                static_cast<int>(active_particles.splashes.size()), static_cast<int>(active_particles.settled.size()));
+#endif
 #ifdef _DEBUG
     ImGui::Checkbox("Show volume wireframe (debug)", &debug_wireframe);
     ImGui::ShowHelp("Draw a box around the active condition's particle column (red) and cloud band (cyan) so you can see\nthe volumes the simulation is using. Debug builds only.");
