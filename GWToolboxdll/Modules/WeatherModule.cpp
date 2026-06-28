@@ -535,13 +535,16 @@ namespace {
         const bool settle = decal == kDecalSettle;
         const float top_z = cz - ColumnHeight(c); // top of the fall column (capped so it doesn't start absurdly high)
         const float diameter = 2.f * c.spread_radius;
+        // Clouds are a terrain-anchored fog layer, not a player-anchored volume: don't drag their height with the
+        // player's vertical movement, or the whole bank lifts as you climb a hill and settles as you descend.
+        const float col_dz = c.type == kTypeCloud ? 0.f : center_dz;
         // Velocity is the (unit) fall direction scaled by fall_speed, so wind sets the direction, not the speed.
         float vel[3];
         WindDir(wind_dir, c.wind_tilt, vel);
         const float vx = vel[0] * c.fall_speed, vy = vel[1] * c.fall_speed, vz = vel[2] * c.fall_speed;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
-            d.z += vz * dt + center_dz; // fall, plus the whole column tracking the player's vertical movement
+            d.z += vz * dt + col_dz; // fall, plus the column tracking the player's vertical movement (off for clouds)
             // Float: an out-of-phase sin/cos wobble so each flake wanders sideways rather than falling in a line.
             const float sway_x = drift > 0.f ? drift * std::sin(d.sway_phase) : 0.f;
             const float sway_y = drift > 0.f ? drift * std::cos(d.sway_phase) : 0.f;
