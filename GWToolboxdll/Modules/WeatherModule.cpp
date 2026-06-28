@@ -598,11 +598,6 @@ namespace {
         float vel[3];
         WindDir(wind_dir, c.wind_tilt, vel);
         const float vx = vel[0] * c.fall_speed, vy = vel[1] * c.fall_speed, vz = vel[2] * c.fall_speed;
-        // Only "land and recycle to the top" when the fall has a real downward component. For (near-)horizontal
-        // weather (high wind tilt, so vz ~ 0) the particles just stream across keeping their height; otherwise
-        // drifting over higher terrain would push d.z below ground, recycle them to the top, and - with no fall to
-        // bring them back - pile every particle onto the top plane over time.
-        const bool falling = vz > 0.1f * c.fall_speed;
         for (int i = 0; i < static_cast<int>(p.raindrops.size()); i++) {
             auto& d = p.raindrops[i];
             d.z += vz * dt + center_dz; // fall, plus the whole column tracking the player's vertical movement
@@ -614,14 +609,22 @@ namespace {
             d.y += (vy + sway_y) * dt;
             // Keep the volume centred on the player: a drop blown past one edge of the bubble wraps to the
             // opposite edge (entering from upwind), so the wind only sets which way drops stream through a fixed,
-            // player-centred column. Re-query the terrain under the wrapped position.
+            // player-centred column.
             bool wrapped = false;
             if (const float rx = d.x - cx; rx > c.spread_radius) { d.x -= diameter; wrapped = true; }
             else if (rx < -c.spread_radius) { d.x += diameter; wrapped = true; }
             if (const float ry = d.y - cy; ry > c.spread_radius) { d.y -= diameter; wrapped = true; }
             else if (ry < -c.spread_radius) { d.y += diameter; wrapped = true; }
-            if (wrapped) d.ground_z = GroundZAt(d.x, d.y, cz + recycle_below);
-            if (falling && d.z >= d.ground_z) {
+            // Re-query the terrain at the wrapped position, but shift d.z by the change so the drop keeps the SAME
+            // height above the ground. Otherwise a wrap onto higher terrain leaves the ground above the drop, which
+            // "lands" it with no fall -> recycles it to the top; with little or no fall to bring it back, every drop
+            // piles onto the top plane over time (worst at high wind tilt). Recycling is now driven only by falling.
+            if (wrapped) {
+                const float new_ground = GroundZAt(d.x, d.y, cz + recycle_below);
+                d.z += new_ground - d.ground_z;
+                d.ground_z = new_ground;
+            }
+            if (d.z >= d.ground_z) {
                 // Landed: drop a decal here (within the bubble, since x/y are kept centred), then fall again from
                 // the top of the same column. Resample the terrain in case it differs from the spawn point.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
