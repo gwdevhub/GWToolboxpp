@@ -223,7 +223,8 @@ namespace {
             {GW::Constants::MapID::Ventaris_Refuge_outpost, Climate::Arid},
             {GW::Constants::MapID::Druids_Overlook_outpost, Climate::Arid},
             {GW::Constants::MapID::Sage_Lands, Climate::Arid},
-            {GW::Constants::MapID::Jaya_Bluffs, Climate::Mountainous},
+            {GW::Constants::MapID::The_Deep, Climate::None},
+            {GW::Constants::MapID::Urgozs_Warren, Climate::None}
         };
         if (const auto it = overrides.find(map_id); it != overrides.end()) return it->second;
         const auto info = GW::Map::GetMapInfo(map_id);
@@ -242,12 +243,17 @@ namespace {
             case GW::Region_Vaabi:
                 return Climate::Arid;
             case GW::Region_FissureOfWoe:
-            case GW::Region_DomainOfAnguish:
                 return Climate::Volcanic;
             case GW::Region_Maguuma:
             case GW::Region_Kurzick:
             case GW::Region_TarnishedCoast:
                 return Climate::Tropical;
+            case GW::Region_DomainOfAnguish:
+                return Climate::None;
+        }
+        switch (info ? info->type : GW::RegionType::DevRegion) {
+            case GW::RegionType::Dungeon:
+                return Climate::None;
         }
         return Climate::Temperate;
     }
