@@ -2384,7 +2384,7 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
     }
     status->blocked = true;
     std::wstring file_path(&msg->message[2], wcsstr(&msg->message[2], L"\x1"));
-    std::wstring new_message = std::format(L"\x846\x107<quote>[{}file://{}]\x1", file_path, file_path);
+    std::wstring new_message = std::format(L"\x846\x107<quote>[{};file://{}]\x1", file_path, file_path);
     is_redirecting = true;
     WriteChatEnc(static_cast<GW::Chat::Channel>(msg->channel), new_message.c_str());
 
