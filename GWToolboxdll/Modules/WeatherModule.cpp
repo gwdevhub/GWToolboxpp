@@ -648,10 +648,13 @@ namespace {
                 // here is a cheap cache hit, and the wrap above only moves x/y, so no spurious landings.
                 if (splash && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.splashes.size()) < max_splashes) p.splashes.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
                 if (settle && frand(0.f, 1.f) < c.splash_chance && static_cast<int>(p.settled.size()) < max_settled) p.settled.push_back({d.x, d.y, GroundZAt(d.x, d.y, d.ground_z), 0.f});
-                // Restart at the top with a RANDOM sub-step offset. Snapping to exactly top_z quantises every drop
-                // onto z-levels one fall-step (vz*dt) apart, which - sheared by the wind drift - reads as diagonal
-                // layers at high fall speed. A deterministic carry isn't enough (the phase can lock near a rational
-                // ratio and re-cluster), so jitter the start within one fall-step to keep the column continuous.
+                // Restart at a fresh RANDOM x/y in the bubble - keeping x/y across recycles preserves the stratified
+                // seed pattern (drift moves it as one block; the sway only wobbles it), so every drop traces a
+                // regularly-spaced diagonal path that reads as parallel "layers" along the wind, worst at high
+                // density. Random placement breaks that. z restarts near the top with a sub-step jitter (so no
+                // z-levels and no instant re-land/thrash). Floor is reprojected for the new column.
+                d.x = cx - c.spread_radius + frand(0.f, 2.f * c.spread_radius);
+                d.y = cy - c.spread_radius + frand(0.f, 2.f * c.spread_radius);
                 d.z = top_z + frand(0.f, std::max(1.f, vz * dt));
                 d.ground_z = LandingGroundZ(c, d.x, d.y, top_z, vx, vy, vz, cz);
                 // sway vector carries over - it's already a rotating unit vector, no need to re-randomise it.
