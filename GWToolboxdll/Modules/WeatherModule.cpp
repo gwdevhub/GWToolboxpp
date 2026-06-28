@@ -197,6 +197,7 @@ namespace {
     float auto_change_max = 8.f;
     Climate auto_climate = Climate::Temperate; // climate the current automatic weather was last rolled for (runtime)
     float auto_timer = -1.f;                   // minutes until the next automatic roll; <0 = roll on the next update (runtime)
+    Climate auto_climate_override = Climate::None; // /climate forces this climate regardless of map; None = follow the map (runtime, not saved)
 
     // The climates the picker offers, with their display names (our own concept, so plain text - not EncStrings).
     constexpr struct {
@@ -211,6 +212,15 @@ namespace {
         for (const auto& k : kClimates)
             if (k.climate == climate) return k.name;
         return "(climate)";
+    }
+
+    // Resolve a climate by its display name (case-insensitive). Returns false if no climate matches.
+    bool ClimateByName(const std::string& name, Climate& out)
+    {
+        const std::string want = TextUtils::ToLower(name);
+        for (const auto& k : kClimates)
+            if (TextUtils::ToLower(k.name) == want) { out = k.climate; return true; }
+        return false;
     }
 
     // Climate for a specific map.
@@ -466,7 +476,8 @@ namespace {
     {
         if (!auto_weather) return;
         if (!GW::Map::GetCurrentMapInfo()) return; // map not loaded yet; leave whatever is showing
-        const Climate climate = ClimateForMap(GW::Map::GetMapID());
+        // A forced climate (from /climate <name>) wins; otherwise follow the current map's climate.
+        const Climate climate = auto_climate_override != Climate::None ? auto_climate_override : ClimateForMap(GW::Map::GetMapID());
         if (climate != auto_climate || auto_timer < 0.f) {
             auto_climate = climate;
             RerollAutoWeather(climate);
@@ -930,15 +941,43 @@ namespace {
         sb->Release();
     }
 
+    // Turn on automatic weather, following the current map's climate (clears any forced climate). Shared by
+    // /weather auto and /climate auto.
+    void EnableAutoWeatherFollowMap()
+    {
+        auto_climate_override = Climate::None;
+        auto_weather = true;
+        auto_timer = -1.f; // roll now
+        Log::Info("Automatic weather on (by map): %s", ClimateName(ClimateForMap(GW::Map::GetMapID())));
+    }
+
+    // Turn off automatic weather and stop any running weather (clear every active condition). Shared by
+    // /weather off and /climate off.
+    void StopWeather()
+    {
+        auto_weather = false;
+        for (auto& c : conditions)
+            c.active = false;
+        Log::Info("Weather off");
+    }
+
     // /weather <condition name> [on|off|toggle|1|0] - toggle a condition by name (names may be multi-word).
+    // /weather auto|off - mirror /climate auto|off (start map-driven weather / stop everything).
     void CHAT_CMD_FUNC(CmdWeather)
     {
         if (argc < 2) {
             Log::Info("Weather conditions:");
             for (const auto& c : conditions)
                 Log::Info("  %s: %s", c.name.c_str(), c.active ? "on" : "off");
-            Log::Info("Usage: /weather <condition> [on|off|toggle]");
+            Log::Info("Usage: /weather <condition> [on|off|toggle] | /weather [auto|off]");
             return;
+        }
+        // A lone 'auto'/'off' controls automatic weather as a whole (same as /climate); anything else is a
+        // condition name. ('off' as a bare arg can't be a condition state here - there's no condition to apply it to.)
+        if (argc == 2) {
+            const std::string only = TextUtils::ToLower(TextUtils::WStringToString(argv[1]));
+            if (only == "auto") return EnableAutoWeatherFollowMap();
+            if (only == "off") return StopWeather();
         }
         // The trailing word, if it is a state keyword, sets the state; otherwise the whole tail is the name and
         // the command toggles. Names can contain spaces, so join everything that is not the state word.
@@ -971,6 +1010,42 @@ namespace {
             return;
         }
         Log::Error("No weather condition named '%s'", name.c_str());
+    }
+
+    // /climate [auto|off|<climate name>] - control automatic weather: 'auto' follows the current map's climate,
+    // a climate name forces that climate regardless of map, 'off' stops automatic weather.
+    void CHAT_CMD_FUNC(CmdClimate)
+    {
+        if (argc < 2) {
+            const Climate effective = auto_climate_override != Climate::None ? auto_climate_override : ClimateForMap(GW::Map::GetMapID());
+            Log::Info("Automatic weather: %s", !auto_weather ? "off" : auto_climate_override != Climate::None ? "on (forced climate)" : "on (by map)");
+            Log::Info("Current climate: %s", ClimateName(effective));
+            std::string names;
+            for (const auto& k : kClimates) names += (names.empty() ? "" : ", ") + std::string(k.name);
+            Log::Info("Usage: /climate [auto|off|<climate>] - climates: %s", names.c_str());
+            return;
+        }
+
+        // Join the tail so a multi-word climate name would still resolve (none today, but harmless).
+        std::string arg;
+        for (int i = 1; i < argc; i++) {
+            if (i > 1) arg += ' ';
+            arg += TextUtils::WStringToString(argv[i]);
+        }
+        const std::string key = TextUtils::ToLower(arg);
+
+        if (key == "off") return StopWeather();
+        if (key == "auto") return EnableAutoWeatherFollowMap();
+
+        Climate climate;
+        if (!ClimateByName(arg, climate)) {
+            Log::Error("Unknown climate '%s'. Use 'auto', 'off', or a climate name.", arg.c_str());
+            return;
+        }
+        auto_climate_override = climate;
+        auto_weather = true;
+        auto_timer = -1.f; // roll now for the forced climate
+        Log::Info("Climate forced to %s", ClimateName(climate));
     }
 } // namespace
 
@@ -1101,6 +1176,8 @@ void WeatherModule::DrawSettings()
     // Info: the current map's climate, and which condition(s) are currently being shown.
     if (const GW::AreaInfo* info = GW::Map::GetCurrentMapInfo())
         ImGui::Text("Current map: %s (climate: %s)", Resources::GetRegionName(info->region)->string().c_str(), ClimateName(ClimateForMap(GW::Map::GetMapID())));
+    if (auto_climate_override != Climate::None)
+        ImGui::Text("Forced climate: %s (via /climate; 'Follow map' or /climate auto to clear)", ClimateName(auto_climate_override));
     std::string showing;
     for (const auto& c : conditions)
         if (c.active) showing += (showing.empty() ? "" : ", ") + c.name;
@@ -1215,7 +1292,11 @@ void WeatherModule::DrawSettings()
 
     ImGui::Separator();
     if (ImGui::Checkbox("Automatic weather (by climate)", &auto_weather) && auto_weather) auto_timer = -1.f; // roll at once on enable
-    ImGui::ShowHelp("Choose the active weather automatically from the table below, based on the climate of the region\nyou're in, re-rolling every few minutes. While on, the manual on/off toggles above are disabled.");
+    ImGui::ShowHelp("Choose the active weather automatically from the table below, based on the climate of the region\nyou're in, re-rolling every few minutes. While on, the manual on/off toggles above are disabled.\n\nThe /climate chat command controls this: /climate auto (follow map), /climate <name> (force a climate), /climate off.");
+    if (auto_weather && auto_climate_override != Climate::None) {
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Follow map")) { auto_climate_override = Climate::None; auto_timer = -1.f; } // clear the /climate override
+    }
     if (auto_weather) // two separate globals (not a contiguous pair), so DragFloatRange2's two pointers - not DragFloat2
         ImGui::DragFloatRange2("Change interval (min)", &auto_change_min, &auto_change_max, 0.25f, 0.1f, 240.f, "%.1f", "%.1f", ImGuiSliderFlags_AlwaysClamp);
 
@@ -1276,6 +1357,7 @@ void WeatherModule::Initialize()
     RegisterSettings(this);
     if (!compositor_token) compositor_token = GameWorldCompositor::RegisterDraw(&WeatherModule::DrawInWorld);
     GW::Chat::CreateCommand(&chat_hook_entry, L"weather", CmdWeather);
+    GW::Chat::CreateCommand(&chat_hook_entry, L"climate", CmdClimate);
 }
 
 void WeatherModule::DrawSettingsInternal()

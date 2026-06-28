@@ -1,6 +1,6 @@
 ---
 title: "Weather"
-description: "Draw camera-anchored weather — rain, snow, ash — into the 3D game world, with presets, custom conditions, climate-based automatic weather and the /weather command."
+description: "Draw camera-anchored weather — rain, snow, ash — into the 3D game world, with presets, custom conditions, climate-based automatic weather and the /weather and /climate commands."
 section: features
 ---
 
@@ -38,6 +38,8 @@ Enable **Automatic weather (by climate)** to pick the active condition automatic
 
 Below it is the climate table. Each climate lists conditions with a weight (0–1 probability per roll); the leftover probability is clear weather, shown as a percentage. Add or remove conditions per climate, **Add climate**, **Remove climate**, or **Reset climate table**. The current map's climate and the condition currently showing are displayed at the top of the panel.
 
+By default the climate follows the map you're in. You can force a specific climate regardless of map with `/climate <climate>` (see below); while a climate is forced, the panel shows it and offers a **Follow map** button to clear it.
+
 ## Chat commands
 
 - `/weather` — list every condition and whether it's on.
@@ -45,5 +47,10 @@ Below it is the climate table. Each climate lists conditions with a weight (0–
 - `/weather <condition> on|off|toggle` — set a condition's state explicitly (`1`/`0` also work).
 
 Turning one condition on turns the rest off, matching the one-at-a-time behaviour of the settings panel.
+
+- `/climate` — show whether automatic weather is on and the climate currently driving it.
+- `/climate auto` (or `/weather auto`) — turn automatic weather on and follow the current map's climate.
+- `/climate <climate>` — turn automatic weather on and force a specific climate (e.g. `Temperate`, `Arid`, `Desertous`, `Tropical`, `Mountainous`, `Volcanic`), regardless of the map.
+- `/climate off` (or `/weather off`) — turn automatic weather off and clear any running weather effects.
 
 [back](./)
