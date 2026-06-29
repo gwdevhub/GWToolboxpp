@@ -53,6 +53,12 @@ if ($Algorithm -notin @('SHA1', 'SHA256', 'SHA512')) {
     exit 1
 }
 
+# Lengths only (no secret values): lets us confirm in CI logs that the stored
+# secret isn't truncated/edited. Expected here: uri-len=148 secret-len=56
+# alg=SHA256 digits=6 period=30 user-len=8.
+Write-Host ("OTP config: uri-len={0} secret-len={1} alg={2} digits={3} period={4}; user-len={5}" -f `
+    $OtpUri.Length, $Base32.Length, $Algorithm, $Digits, $Period, $UserId.Length)
+
 # --- TOTP generator (RFC 6238), inline C# so there are no dependencies --------
 Add-Type -Language CSharp @"
 using System;
@@ -201,18 +207,36 @@ Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
 Dump-SignDiagnostics "before-login"
 
 Start-Sleep -Milliseconds 400
+
+# Paste rather than type: SendKeys mangles characters like + ^ % ( ) and can
+# drop characters; pasting delivers the exact string. Falls back to typing if
+# the clipboard is unavailable.
+function Set-Field([string]$text) {
+    try {
+        Set-Clipboard -Value $text -ErrorAction Stop
+        Start-Sleep -Milliseconds 150
+        $wshell.SendKeys("^v")
+    } catch {
+        Write-Host "Clipboard unavailable ($($_.Exception.Message)); typing instead."
+        $wshell.SendKeys($text)
+    }
+    Start-Sleep -Milliseconds 250
+}
+
 Write-Host "Injecting credentials (user -> TAB -> TOTP -> ENTER)..."
-$wshell.SendKeys($UserId)
-Start-Sleep -Milliseconds 200
+Set-Field $UserId
 $wshell.SendKeys("{TAB}")
 Start-Sleep -Milliseconds 200
 
 # Generate the code right before sending it so it can't expire while we focus.
 $otp = [Totp]::Now($Base32, $Digits, $Period, $Algorithm)
 Write-Host "Generated TOTP using $Algorithm."
-$wshell.SendKeys($otp)
+Set-Field $otp
 Start-Sleep -Milliseconds 200
 $wshell.SendKeys("{ENTER}")
+
+# Don't leave the OTP / username sitting on the clipboard afterwards.
+try { Set-Clipboard -Value " " -ErrorAction Stop } catch {}
 
 Write-Host "Waiting for authentication to settle..."
 Start-Sleep -Seconds 5
