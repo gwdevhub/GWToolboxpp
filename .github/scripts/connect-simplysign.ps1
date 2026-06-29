@@ -111,6 +111,63 @@ public static class Totp
 }
 "@
 
+# --- Diagnostics: capture what the login form actually looks like -------------
+# A screenshot needs a framebuffer; the UI Automation tree dump works regardless
+# and gives us the exact control names/order to target.
+function Save-Screenshot([string]$path) {
+    try {
+        Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction Stop
+        $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+        $bmp = New-Object System.Drawing.Bitmap($b.Width, $b.Height)
+        $g = [System.Drawing.Graphics]::FromImage($bmp)
+        $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+        $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+        $g.Dispose(); $bmp.Dispose()
+        Write-Host "Saved screenshot: $path ($($b.Width)x$($b.Height))"
+    } catch {
+        Write-Host "Screenshot failed: $($_.Exception.Message)"
+    }
+}
+
+function Walk-Ui($el, $walker, $depth) {
+    $c = $walker.GetFirstChild($el)
+    while ($c) {
+        $info = $c.Current
+        Write-Host ("{0}[{1}] Name='{2}' Id='{3}'" -f ('  ' * $depth),
+            $info.ControlType.ProgrammaticName.Replace('ControlType.', ''), $info.Name, $info.AutomationId)
+        if ($depth -lt 8) { Walk-Ui $c $walker ($depth + 1) }
+        $c = $walker.GetNextSibling($c)
+    }
+}
+
+function Show-UiTree {
+    try {
+        Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction Stop
+    } catch { Write-Host "UI Automation unavailable: $($_.Exception.Message)"; return }
+    $procIds = @((Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue).Id)
+    if (-not $procIds) { Write-Host "No SimplySign process to inspect."; return }
+    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $top = $walker.GetFirstChild([System.Windows.Automation.AutomationElement]::RootElement)
+    while ($top) {
+        try {
+            if ($procIds -contains $top.Current.ProcessId) {
+                Write-Host "== WINDOW: '$($top.Current.Name)' =="
+                Walk-Ui $top $walker 1
+            }
+        } catch {}
+        $top = $walker.GetNextSibling($top)
+    }
+}
+
+function Dump-SignDiagnostics([string]$tag) {
+    $dir = Join-Path (Get-Location) "sign-diagnostics"
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    Save-Screenshot (Join-Path $dir "$tag.png")
+    Write-Host "--- UI tree ($tag) ---"
+    Show-UiTree
+    Write-Host "--- end UI tree ($tag) ---"
+}
+
 # Start from a clean slate so a stale window/session can't swallow the keystrokes.
 if ($existing = Get-Process -Name "SimplySignDesktop" -ErrorAction Ignore) {
     Write-Host "Killing existing SimplySignDesktop process..."
@@ -139,6 +196,9 @@ if (-not $focused) {
 Write-Host "SimplySign windows after focus:"
 Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
     Select-Object Name, Id, MainWindowTitle | Format-Table -AutoSize | Out-String | Write-Host
+
+# Capture the login form before typing into it so we can see its real layout.
+Dump-SignDiagnostics "before-login"
 
 Start-Sleep -Milliseconds 400
 Write-Host "Injecting credentials (user -> TAB -> TOTP -> ENTER)..."
@@ -186,5 +246,7 @@ if ($found) {
     Write-Host "CurrentUser\My + LocalMachine\My contents:"
     Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
         Select-Object Thumbprint, Subject, HasPrivateKey | Format-Table -AutoSize | Out-String | Write-Host
+    # Capture the post-attempt state (any error message / dialog) for debugging.
+    Dump-SignDiagnostics "after-fail"
     exit 1
 }
