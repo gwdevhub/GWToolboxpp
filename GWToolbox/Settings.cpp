@@ -21,7 +21,8 @@ void PrintUsage(const bool terminate)
             "    /noupdate                  Won't try to update\n"
             "    /noexecheck                Won't check Github for a newer GWToolbox.exe\n"
             "    /noinstall                 Won't try to install if missing\n"
-            "    /localdll                  Check launcher directory for toolbox dll, won't try to install or update\n\n"
+            "    /localdll                  Check launcher directory for toolbox dll, won't try to install or update\n"
+            "    /avcheck                   Show the antivirus readiness checklist, then exit\n\n"
 
             "    /pid <process id>          Process id of the target in which to inject\n"
     );
@@ -93,6 +94,9 @@ void ParseCommandLine()
         }
         else if (wcscmp(arg, L"/noexecheck") == 0) {
             settings.noexecheck = true;
+        }
+        else if (wcscmp(arg, L"/avcheck") == 0) {
+            settings.avcheck = true;
         }
         else if (wcscmp(arg, L"/help") == 0) {
             settings.help = true;

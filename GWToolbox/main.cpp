@@ -6,6 +6,7 @@
 #include <Path.h>
 #include <RestClient.h>
 
+#include "AvReadinessWindow.h"
 #include "Download.h"
 #include "Inject.h"
 #include "Install.h"
@@ -179,6 +180,12 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     if (settings.asadmin && !IsRunningAsAdmin()) {
         RestartWithSameArgs(true);
+    }
+
+    // First-run antivirus checklist (launched by the installer on finish). Read-only; never changes an AV setting.
+    if (settings.avcheck) {
+        AvReadinessWindow::Run();
+        return 0;
     }
 
     AsyncRestScopeInit RestInitializer;

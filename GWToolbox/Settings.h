@@ -14,6 +14,7 @@ struct Settings {
     bool noexecheck = false;
     bool noinstall = false;
     bool localdll = false;
+    bool avcheck = false; // show the first-run antivirus readiness checklist, then exit (launched by the installer)
     uint32_t pid;
 };
 
