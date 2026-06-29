@@ -29,15 +29,24 @@ Write-Host "Using signtool: $signtool"
 Write-Host "Waiting for certificate $thumb to appear in the store..."
 $deadline = (Get-Date).AddSeconds(120)
 $cert = $null
+$elapsed = 0
 do {
     $cert = Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
         Where-Object { $_.Thumbprint -eq $thumb } | Select-Object -First 1
     if ($cert) { break }
     Start-Sleep -Seconds 3
+    $elapsed += 3
+    Write-Host "  ...still waiting (${elapsed}s)"
 } while ((Get-Date) -lt $deadline)
 
 if (-not $cert) {
-    throw "Certificate $thumb not found in the store - SimplySign authentication likely failed."
+    Write-Host "Certificate not found. CurrentUser\My + LocalMachine\My contents:"
+    Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
+        Select-Object Thumbprint, Subject, HasPrivateKey | Format-Table -AutoSize | Out-String | Write-Host
+    Write-Host "SimplySign processes:"
+    Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
+        Select-Object Name, Id, Responding, MainWindowTitle | Format-Table -AutoSize | Out-String | Write-Host
+    throw "Certificate $thumb not found in the store - SimplySign authentication likely failed (see dump above)."
 }
 Write-Host "Found signing certificate: $($cert.Subject)"
 

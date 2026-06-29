@@ -136,6 +136,10 @@ if (-not $focused) {
     exit 1
 }
 
+Write-Host "SimplySign windows after focus:"
+Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
+    Select-Object Name, Id, MainWindowTitle | Format-Table -AutoSize | Out-String | Write-Host
+
 Start-Sleep -Milliseconds 400
 Write-Host "Injecting credentials (user -> TAB -> TOTP -> ENTER)..."
 $wshell.SendKeys($UserId)
@@ -153,11 +157,34 @@ $wshell.SendKeys("{ENTER}")
 Write-Host "Waiting for authentication to settle..."
 Start-Sleep -Seconds 5
 
-if (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue) {
-    Write-Host "SimplySign Desktop is running; cloud certificate should now be available."
-} else {
-    Write-Host "ERROR: SimplySign Desktop exited - authentication likely failed."
+if (-not (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue)) {
+    Write-Host "ERROR: SimplySign Desktop exited - authentication failed."
     exit 1
 }
 
-Write-Host "=== Authentication step complete ==="
+# Don't just trust that the process is alive: confirm the login actually mounted
+# the signing certificate into the store, and dump diagnostics if it didn't.
+$thumb = if ($env:CERTUM_CERT_SHA1) { ($env:CERTUM_CERT_SHA1 -replace '\s', '').ToUpperInvariant() } else { $null }
+Write-Host "Verifying the signing certificate reached the store..."
+$deadline = (Get-Date).AddSeconds(60)
+$found = $false
+do {
+    $certs = Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue
+    if ($thumb) { $found = [bool]($certs | Where-Object { $_.Thumbprint -eq $thumb }) }
+    else        { $found = [bool]($certs | Where-Object { $_.Subject -like '*Certum*' -or $_.Issuer -like '*Certum*' }) }
+    if ($found) { break }
+    Start-Sleep -Seconds 3
+} while ((Get-Date) -lt $deadline)
+
+if ($found) {
+    Write-Host "=== Authentication complete: signing certificate is available. ==="
+} else {
+    Write-Host "ERROR: signing certificate did not appear after authentication."
+    Write-Host "SimplySign processes/windows:"
+    Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
+        Select-Object Name, Id, Responding, MainWindowTitle | Format-Table -AutoSize | Out-String | Write-Host
+    Write-Host "CurrentUser\My + LocalMachine\My contents:"
+    Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
+        Select-Object Thumbprint, Subject, HasPrivateKey | Format-Table -AutoSize | Out-String | Write-Host
+    exit 1
+}
