@@ -11,7 +11,7 @@
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="GWToolbox" Manufacturer="GWToolbox" Version="$(var.ProductVersion)"
-           UpgradeCode="7C9D2F1A-3B6E-4E2A-9F4C-2A1B5D8E6F30" Scope="perUserOrPerMachine" Compressed="yes">
+           UpgradeCode="7C9D2F1A-3B6E-4E2A-9F4C-2A1B5D8E6F30" Scope="perUserOrMachine" Compressed="yes">
     <!-- UpgradeCode must never change across releases - it is how Windows recognises an upgrade vs a new product. -->
     <MajorUpgrade DowngradeErrorMessage="A newer version of GWToolbox is already installed." />
     <MediaTemplate EmbedCab="yes" />
