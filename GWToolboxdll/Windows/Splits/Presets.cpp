@@ -124,6 +124,7 @@ GoalList BuildFoWPreset()
     GoalList list;
     list.is_preset = true;
     list.name = "Fissure of Woe";
+    { GoalEntry hdr; hdr.is_header = true; hdr.label = "Fissure of Woe"; list.goals.push_back(std::move(hdr)); }
     auto addQ = [&](const char* label, uint32_t id) {
         GoalEntry g;
         g.label         = label;
@@ -142,6 +143,7 @@ GoalList BuildFoWPreset()
     addQ("ToS",            317);
     addQ("Burning Forest", 318);
     addQ("The Hunt",       319);
+    for (auto& g : list.goals) if (!g.is_header) g.indent = 1;
     return list;
 }
 
@@ -150,6 +152,7 @@ GoalList BuildUWPreset()
     GoalList list;
     list.is_preset = true;
     list.name = "The Underworld";
+    { GoalEntry hdr; hdr.is_header = true; hdr.label = "The Underworld"; list.goals.push_back(std::move(hdr)); }
     auto addQ = [&](const char* label, uint32_t id) {
         GoalEntry g;
         g.label         = label;
@@ -169,6 +172,7 @@ GoalList BuildUWPreset()
     addQ("Pools",    155);
     // Dhuum: allegiance fires when he activates, ObjectiveDone(157) on kill
     list.goals.push_back(MakeGoal("Dhuum", MakeTrigger(GoalTrigger::Type::ObjectiveDone, 157)));
+    for (auto& g : list.goals) if (!g.is_header) g.indent = 1;
     return list;
 }
 
@@ -177,6 +181,7 @@ GoalList BuildDeepPreset()
     GoalList list;
     list.is_preset = true;
     list.name = "The Deep";
+    { GoalEntry hdr; hdr.is_header = true; hdr.label = "The Deep"; list.goals.push_back(std::move(hdr)); }
 
     // Rooms 1-4 run in parallel; each has 2 possible door IDs (spawn variant).
     // All start at t=0 simultaneously (same as OT's SetStarted() on construction).
@@ -215,6 +220,7 @@ GoalList BuildDeepPreset()
     list.goals.push_back(MakeServerMsgGoal("Room 15 | Kanaxai",
         {L"\x6D4D\x0\x0\x0\x0\x2810", L"\x6D4D\x0\x0\x0\x0\x1488"}));
 
+    for (auto& g : list.goals) if (!g.is_header) g.indent = 1;
     return list;
 }
 
@@ -223,6 +229,7 @@ GoalList BuildUrgozPreset()
     GoalList list;
     list.is_preset = true;
     list.name = "Urgoz's Warren";
+    { GoalEntry hdr; hdr.is_header = true; hdr.label = "Urgoz's Warren"; list.goals.push_back(std::move(hdr)); }
 
     // Each zone's split fires when the door to the next zone opens.
     // Zone 1 starts at t=0 (SetStarted equivalent), all others start when their door opens.
@@ -247,6 +254,7 @@ GoalList BuildUrgozPreset()
     list.goals.push_back(MakeServerMsgGoal("Zone 11 | Urgoz",
         {L"\x6C9C\x0\x0\x0\x0\x2810", L"\x6C9C\x0\x0\x0\x0\x1488"}));
 
+    for (auto& g : list.goals) if (!g.is_header) g.indent = 1;
     return list;
 }
 
@@ -276,6 +284,7 @@ GoalList BuildDoAPreset(GW::Vec2f spawn)
 
     list.is_preset = true;
     list.name = "Domain of Anguish";
+    { GoalEntry hdr; hdr.is_header = true; hdr.label = "Domain of Anguish"; list.goals.push_back(std::move(hdr)); }
 
     using T = GoalTrigger::Type;
 
@@ -346,8 +355,14 @@ GoalList BuildDoAPreset(GW::Vec2f spawn)
 
     const std::function<void()> area_builders[] = {addFoundry, addCity, addVeil, addGloom};
     for (int i = 0; i < n_areas; ++i) {
+        const size_t before = list.goals.size();
         area_builders[(starting_area + i) % n_areas]();
+        // Mirrors OT's AddObjectiveAfterAll: entering a new area auto-completes any
+        // not-yet-done goals from earlier areas (e.g. skipped sub-objectives).
+        if (list.goals.size() > before)
+            list.goals[before].auto_complete_previous = -1;
     }
+    for (auto& g : list.goals) if (!g.is_header) g.indent = 1;
     return list;
 }
 
@@ -359,6 +374,7 @@ GoalList BuildDungeonPreset(const char* name, const std::vector<MapID>& levels)
     GoalList list;
     list.is_preset = true;
     list.name = name;
+    { GoalEntry hdr; hdr.is_header = true; hdr.label = name; list.goals.push_back(std::move(hdr)); }
     const int n = static_cast<int>(levels.size());
     for (int i = 0; i < n; ++i) {
         char label[32];
@@ -379,6 +395,9 @@ GoalList BuildDungeonPreset(const char* name, const std::vector<MapID>& levels)
                 MakeTrigger(GoalTrigger::Type::DungeonReward)));
         }
     }
+    // First non-header level starts at t=0 (mirrors OT's objectives.front()->SetStarted()).
+    for (auto& g : list.goals) if (!g.is_header) { g.starts_immediately = true; break; }
+    for (auto& g : list.goals) if (!g.is_header) g.indent = 1;
     return list;
 }
 
@@ -389,6 +408,7 @@ static GoalList BuildToPKPreset()
     GoalList list;
     list.is_preset = true;
     list.name = "Tomb of the Primeval Kings";
+    { GoalEntry hdr; hdr.is_header = true; hdr.label = "Tomb of the Primeval Kings"; list.goals.push_back(std::move(hdr)); }
     auto add = [&](const char* label, MapID map_id) {
         GoalEntry g;
         g.label          = label;
@@ -400,6 +420,7 @@ static GoalList BuildToPKPreset()
     add("Scarred Earth",   MapID::Scarred_Earth);
     add("The Courtyard",   MapID::The_Courtyard);
     add("Hall of Heroes",  MapID::The_Hall_of_Heroes);
+    for (auto& g : list.goals) if (!g.is_header) g.indent = 1;
     return list;
 }
 

@@ -1,7 +1,10 @@
 #include "stdafx.h"
+#include <ImGuiAddons.h>
 #include <Windows/Splits/SplitsGoalListWindow.h>
+#include <Windows/Splits/SplitsProfile.h>
 #include <Windows/SplitsWindow.h>
 #include <Windows/Splits/GoalEntry.h>
+#include <Windows/Splits/GoalList.h>
 #include <Windows/Splits/GoalClock.h>
 #include <Windows/Splits/MapNames.h>
 
@@ -76,6 +79,7 @@ static const char* RegionName(GW::Region r)
         case GW::Region_DepthsOfTyria:       return "Depths of Tyria";
         case GW::Region_FarShiverpeaks:      return "Far Shiverpeaks";
         case GW::Region_CharrHomelands:      return "Charr Homelands";
+        case GW::Region_Presearing:          return "Pre-Searing";
         default: return nullptr;
     }
 }
@@ -138,36 +142,40 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
     const GoalClock& clock = plugin.Clock();
     const GoalList*  list  = plugin.List();
 
-    // Header clocks
-    char real_buf[32], game_buf[32], town_buf[32];
-    FormatTime(real_buf, sizeof(real_buf), clock.RealTime());
-    FormatTime(game_buf, sizeof(game_buf), clock.GameTime());
-    FormatTime(town_buf, sizeof(town_buf), clock.TownTime());
-
+    // Header clock — shows whichever time the profile is set to display.
     {
-        const float avail   = ImGui::GetContentRegionAvail().x;
-        const float spacing = ImGui::CalcTextSize("   ").x;
-        const float w_real  = ImGui::CalcTextSize("Real: ").x + ImGui::CalcTextSize(real_buf).x;
-        const float w_game  = ImGui::CalcTextSize("Game: ").x + ImGui::CalcTextSize(game_buf).x;
-        const float w_town  = show_town_time_ ? ImGui::CalcTextSize("Town: ").x + ImGui::CalcTextSize(town_buf).x : 0.f;
-        const float total_w = w_real + spacing + w_game + (show_town_time_ ? spacing + w_town : 0.f);
-        const float start_x = ImGui::GetCursorPosX() + (avail - total_w) * 0.5f;
-        ImGui::SetCursorPosX(start_x < ImGui::GetCursorPosX() ? ImGui::GetCursorPosX() : start_x);
+        const SplitsProfile& hp = plugin.ActiveProfile();
+        const bool gt = hp.use_game_time;
+        char tbuf[32];
+        FormatTime(tbuf, sizeof(tbuf), gt ? clock.GameTime() : clock.RealTime());
+        const char* label = gt ? "Game: " : "Real: ";
+        const ImVec4 tcol = gt ? ImVec4{0.6f, 0.85f, 1.f, 1.f} : ImVec4{0.9f, 0.9f, 0.9f, 1.f};
 
-        ImGui::TextColored({0.9f, 0.9f, 0.9f, 1.f}, "Real: %s", real_buf);
-        ImGui::SameLine(0, spacing);
-        ImGui::TextColored({0.6f, 0.85f, 1.f, 1.f}, "Game: %s", game_buf);
-        if (show_town_time_) {
-            ImGui::SameLine(0, spacing);
-            ImGui::TextColored({1.f, 0.75f, 0.4f, 1.f}, "Town: %s", town_buf);
+        const float avail   = ImGui::GetContentRegionAvail().x;
+        const float total_w = ImGui::CalcTextSize(label).x + ImGui::CalcTextSize(tbuf).x;
+        const float start_x = ImGui::GetCursorPosX() + (avail - total_w) * 0.5f;
+        const float min_x   = ImGui::GetCursorPosX();
+        const float clamped_start_x = start_x < min_x ? min_x : start_x;
+
+        if (hp.show_paused_time) {
+            char pbuf[32]; FormatTime(pbuf, sizeof(pbuf), plugin.TotalPausedReal());
+            char ptext[48]; snprintf(ptext, sizeof(ptext), "Paused: %s", pbuf);
+            const float pause_w = ImGui::CalcTextSize(ptext).x;
+            const float pause_x = clamped_start_x - 12.f - pause_w;
+            ImGui::SetCursorPosX(pause_x > min_x ? pause_x : min_x);
+            ImGui::TextColored({1.f, 0.8f, 0.3f, 1.f}, "%s", ptext);
+            ImGui::SameLine(0, 0);
         }
+
+        ImGui::SetCursorPosX(clamped_start_x);
+        ImGui::TextColored(tcol, "%s%s", label, tbuf);
     }
 
     ImGui::Separator();
 
     if (plugin.RunComplete()) {
         const float avail = ImGui::GetContentRegionAvail().x;
-        static const char* kMsg = "Run complete! Results saved.";
+        static const char* kMsg = "Run complete!";
         const float tw = ImGui::CalcTextSize(kMsg).x;
         const float cx = ImGui::GetCursorPosX() + (avail - tw) * 0.5f;
         ImGui::SetCursorPosX(cx > ImGui::GetCursorPosX() ? cx : ImGui::GetCursorPosX());
@@ -175,23 +183,36 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
         ImGui::Separator();
     }
 
+    if (plugin.RunFailed()) {
+        const float avail = ImGui::GetContentRegionAvail().x;
+        static const char* kMsg = "Run failed";
+        const float tw = ImGui::CalcTextSize(kMsg).x;
+        const float cx = ImGui::GetCursorPosX() + (avail - tw) * 0.5f;
+        ImGui::SetCursorPosX(cx > ImGui::GetCursorPosX() ? cx : ImGui::GetCursorPosX());
+        ImGui::TextColored({1.f, 0.4f, 0.4f, 1.f}, "%s", kMsg);
+        ImGui::Separator();
+    }
+
     if (!list || list->goals.empty()) {
-        ImGui::TextDisabled("No goal list loaded. Open Settings to create one.");
+        if (plugin.ActiveProfileIdx() == 0)
+            ImGui::TextDisabled("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
+        else
+            ImGui::TextDisabled("No goal list loaded. Open Settings to create one.");
         ImGui::End();
         return;
     }
 
+    // Skip headers when computing the first non-finished goal.
     int current_idx = -1;
     for (int i = 0; i < static_cast<int>(list->goals.size()); ++i) {
-        if (!list->goals[i].completed) { current_idx = i; break; }
+        if (list->goals[i].is_header) continue;
+        const GoalStatus s = list->goals[i].status;
+        if (s != GoalStatus::Completed && s != GoalStatus::Failed) { current_idx = i; break; }
     }
 
-    const std::vector<double>& pb = (pb_basis_ == 1) ? plugin.PBSplitsGame() : plugin.PBSplits();
-    auto pb_for = [&](int idx) -> double {
-        if (idx < 0 || idx >= static_cast<int>(pb.size()))
-            return std::numeric_limits<double>::quiet_NaN();
-        return pb[static_cast<size_t>(idx)];
-    };
+    const SplitsProfile& profile = plugin.ActiveProfile();
+    const std::vector<double>& pb = profile.use_game_time ? plugin.PBSplitsGame() : plugin.PBSplits();
+    const auto nan = std::numeric_limits<double>::quiet_NaN();
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     const float pad_x   = 2.f;
@@ -199,177 +220,219 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
     const float win_x   = ImGui::GetWindowPos().x;
     const float avail_w = ImGui::GetContentRegionAvail().x;
 
-    int completed_before = 0;
+    // pb_idx counts only non-header goals; PB arrays are indexed the same way.
+    int pb_idx = 0;
 
     for (int i = 0; i < static_cast<int>(list->goals.size()); ) {
-        const auto& g    = list->goals[i];
-        const bool is_mis = g.trigger.type == GoalTrigger::Type::MissionComplete;
-        const bool is_bon = g.trigger.type == GoalTrigger::Type::MissionBonus;
+        const auto& g = list->goals[i];
 
-        const GoalEntry* bon = nullptr;
-        if (is_mis && i + 1 < static_cast<int>(list->goals.size())) {
-            const auto& next = list->goals[i + 1];
-            if (next.trigger.type == GoalTrigger::Type::MissionBonus &&
-                next.trigger.map_id == g.trigger.map_id)
-                bon = &next;
+        if (g.is_header) {
+            const bool hdr_open = DrawHeaderRow(*list, i, profile);
+            ++i;
+            if (!hdr_open) {
+                // collapsed — skip until next header at same/shallower indent, advancing pb_idx to keep PB alignment
+                while (i < static_cast<int>(list->goals.size())) {
+                    const auto& child = list->goals[i];
+                    if (child.is_header && child.indent <= g.indent) break;
+                    if (!child.is_header) ++pb_idx;
+                    ++i;
+                }
+            }
+            continue;
         }
 
-        const bool has_prior_split = (completed_before > 0);
+        auto pb_at = [&]() -> double {
+            if (pb_idx < 0 || pb_idx >= static_cast<int>(pb.size())) return nan;
+            return pb[static_cast<size_t>(pb_idx)];
+        };
+
         const float row_y0 = ImGui::GetCursorScreenPos().y - pad_y;
 
-        if (is_mis || is_bon) {
-            const bool row_current = (i == current_idx) || (bon && (i + 1) == current_idx);
-            DrawMissionRow(g, bon, clock, row_current, has_prior_split,
-                           pb_for(i), bon ? pb_for(i + 1) : std::numeric_limits<double>::quiet_NaN());
-            if (g.completed)           ++completed_before;
-            if (bon && bon->completed) ++completed_before;
-            i += bon ? 2 : 1;
-        } else {
-            DrawGoalRow(g, clock, i, i == current_idx, has_prior_split, pb_for(i));
-            if (g.completed) ++completed_before;
-            ++i;
-        }
+        DrawGoalRow(g, clock, i, i == current_idx, pb_at(), profile);
+        ++pb_idx;
+        ++i;
 
         const float row_y1 = ImGui::GetCursorScreenPos().y + pad_y;
-        const ImVec2 r_min = { win_x + pad_x,           row_y0 };
-        const ImVec2 r_max = { win_x + avail_w - pad_x, row_y1 };
-        draw_list->AddRect(r_min, r_max, IM_COL32(80, 80, 80, 140), 2.f);
+        draw_list->AddRect({win_x + pad_x, row_y0}, {win_x + avail_w - pad_x, row_y1},
+                           IM_COL32(80, 80, 80, 140), 2.f);
     }
 
     ImGui::End();
 }
 
-void SplitsGoalListWindow::DrawMissionRow(const GoalEntry& mis, const GoalEntry* bon,
-                                           const GoalClock& /*clock*/, bool is_current,
-                                           bool has_prior_split,
-                                           double pb_split_mis, double pb_split_bon)
-{
-    const bool either_done = mis.completed || (bon && bon->completed);
-    ImVec4 color;
-    if (either_done)     color = {0.5f, 1.f, 0.5f, 1.f};
-    else if (is_current) color = {1.f,  1.f, 0.6f, 1.f};
-    else                 color = {0.5f, 0.5f, 0.5f, 1.f};
-
-    const bool mis_is_bonus = (mis.trigger.type == GoalTrigger::Type::MissionBonus);
-
-    if (!ImGui::BeginTable("##misrow", 3, ImGuiTableFlags_None)) return;
-    ImGui::TableSetupColumn("name", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("col2", ImGuiTableColumnFlags_WidthFixed, 110.f);
-    ImGui::TableSetupColumn("col3", ImGuiTableColumnFlags_WidthFixed, 110.f);
-    ImGui::TableNextRow();
-
-    ImGui::TableSetColumnIndex(0);
-    ImGui::TextColored(color, "%s", mis.label.c_str());
-
-    if (!mis_is_bonus) {
-        ImGui::TableSetColumnIndex(1);
-        if (mis.completed) {
-            char buf[32], seg[32];
-            FormatTime(buf, sizeof(buf), mis.split.game_time);
-            FormatTime(seg, sizeof(seg), mis.split.segment_game);
-            ImGui::TextColored({0.6f, 0.85f, 1.f, 1.f}, "%s", buf);
-            if (show_segment_ && has_prior_split) ImGui::TextDisabled("+%s", seg);
-            DrawPBDelta(pb_basis_ == 1 ? mis.split.game_time : mis.split.real_time, pb_split_mis);
-        } else {
-            ImGui::TextDisabled("---");
-        }
-
-        ImGui::TableSetColumnIndex(2);
-        if (bon) {
-            if (bon->completed) {
-                char buf[32], seg[32];
-                FormatTime(buf, sizeof(buf), bon->split.game_time);
-                FormatTime(seg, sizeof(seg), bon->split.segment_game);
-                ImGui::TextColored({1.f, 0.85f, 0.4f, 1.f}, "%s", buf);
-                if (show_segment_ && has_prior_split) ImGui::TextDisabled("+%s", seg);
-                DrawPBDelta(pb_basis_ == 1 ? bon->split.game_time : bon->split.real_time, pb_split_bon);
-            } else {
-                ImGui::TextDisabled("---");
-            }
-        }
-    } else {
-        ImGui::TableSetColumnIndex(2);
-        if (mis.completed) {
-            char buf[32], seg[32];
-            FormatTime(buf, sizeof(buf), mis.split.game_time);
-            FormatTime(seg, sizeof(seg), mis.split.segment_game);
-            ImGui::TextColored({1.f, 0.85f, 0.4f, 1.f}, "%s", buf);
-            if (show_segment_ && has_prior_split) ImGui::TextDisabled("+%s", seg);
-            DrawPBDelta(pb_basis_ == 1 ? mis.split.game_time : mis.split.real_time, pb_split_mis);
-        } else {
-            ImGui::TextDisabled("---");
-        }
-    }
-
-    ImGui::EndTable();
-}
-
 void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*clock*/,
-                                        int /*index*/, bool is_current,
-                                        bool has_prior_split, double pb_split)
+                                        int /*index*/, bool is_current, double pb_split,
+                                        const SplitsProfile& profile)
 {
-    ImVec4 color;
-    if (g.completed)     color = {0.5f, 1.f, 0.5f, 1.f};
-    else if (is_current) color = {1.f,  1.f, 0.6f, 1.f};
-    else                 color = {0.5f, 0.5f, 0.5f, 1.f};
+    const bool done = (g.status == GoalStatus::Completed || g.status == GoalStatus::Failed);
 
-    if (!ImGui::BeginTable("##goalrow", 3, ImGuiTableFlags_None)) return;
-    ImGui::TableSetupColumn("name", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("game", ImGuiTableColumnFlags_WidthFixed, show_game_time_ ? 110.f : 0.f);
-    ImGui::TableSetupColumn("real", ImGuiTableColumnFlags_WidthFixed, show_real_time_ ? 110.f : 0.f);
+    ImVec4 color;
+    if (g.status == GoalStatus::Failed)         color = ImGui::ColorConvertU32ToFloat4(profile.color_failed);
+    else if (g.status == GoalStatus::Completed) color = ImGui::ColorConvertU32ToFloat4(profile.color_completed);
+    else if (is_current)                        color = ImGui::ColorConvertU32ToFloat4(profile.color_active);
+    else                                        color = ImGui::ColorConvertU32ToFloat4(profile.color_inactive);
+
+    const bool gt = profile.use_game_time;
+
+    if (!ImGui::BeginTable("##goalrow", 4, ImGuiTableFlags_None)) return;
+    ImGui::TableSetupColumn("name",  ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("start", ImGuiTableColumnFlags_WidthFixed, profile.show_start_time ? 90.f : 0.f);
+    ImGui::TableSetupColumn("time",  ImGuiTableColumnFlags_WidthFixed, 110.f);
+    ImGui::TableSetupColumn("seg",   ImGuiTableColumnFlags_WidthFixed, profile.show_segment ? 80.f : 0.f);
     ImGui::TableNextRow();
 
     ImGui::TableSetColumnIndex(0);
+    if (g.indent > 0) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + g.indent * 12.f);
     ImGui::TextColored(color, "%s", g.label.c_str());
 
-    if (!g.completed && g.trigger.type == GoalTrigger::Type::ReachTitleRank) {
+    if (g.status != GoalStatus::Completed && g.trigger.type == GoalTrigger::Type::ReachTitleRank) {
         auto* title = GW::PlayerMgr::GetTitleTrack(g.trigger.title_id);
         if (title) {
-            char prog_buf[64];
-            if (title->is_percentage_based()) {
-                snprintf(prog_buf, sizeof(prog_buf), "%.1f%% / 100%%",
-                    title->max_title_rank > 0
-                        ? static_cast<float>(title->current_points) / static_cast<float>(title->max_title_rank) * 100.f
-                        : 0.f);
+            if (title->current_points == 0) {
+                ImGui::TextDisabled("No progress detected");
             } else {
-                snprintf(prog_buf, sizeof(prog_buf), "%u / %u",
-                    title->current_points,
-                    title->points_needed_next_rank);
+            const bool at_max = (title->points_needed_next_rank == 0xFFFFFFFF);
+            char buf[96];
+            if (title->is_percentage_based()) {
+                // Points are percentage × 10 (e.g. 863 = 86.3%)
+                const float cur  = title->current_points * 0.1f;
+                const float next = at_max ? 100.0f : title->points_needed_next_rank * 0.1f;
+                if (at_max)
+                    snprintf(buf, sizeof(buf), "%.1f%% (Max)", cur);
+                else
+                    snprintf(buf, sizeof(buf), "%.1f%% / %.1f%%", cur, next);
+            } else {
+                auto* wc = GW::GetWorldContext();
+                uint32_t cur_rank = 0;
+                if (wc && title->current_title_tier_index < wc->title_tiers.size())
+                    cur_rank = wc->title_tiers[title->current_title_tier_index].tier_number;
+                const uint32_t max_rank = title->max_title_rank;
+                if (at_max)
+                    snprintf(buf, sizeof(buf), "rank %u/%u (Max)  %u pts",
+                        cur_rank, max_rank, title->current_points);
+                else
+                    snprintf(buf, sizeof(buf), "rank %u/%u  %u / %u",
+                        cur_rank, max_rank,
+                        title->current_points, title->points_needed_next_rank);
             }
-            ImGui::TextDisabled("%s", prog_buf);
+            ImGui::TextDisabled("%s", buf);
+            } // end else (has progress)
         }
     }
 
-    if (show_game_time_) {
+    if (profile.show_start_time) {
         ImGui::TableSetColumnIndex(1);
-        if (g.completed) {
-            char buf[32], seg[32];
-            FormatTime(buf, sizeof(buf), g.split.game_time);
-            FormatTime(seg, sizeof(seg), g.split.segment_game);
-            ImGui::TextColored({0.6f, 0.85f, 1.f, 1.f}, "%s", buf);
-            if (show_segment_ && has_prior_split) ImGui::TextDisabled("+%s", seg);
-            if (pb_basis_ == 1) DrawPBDelta(g.split.game_time, pb_split);
+        const double st = gt ? g.start_game_time : g.start_real_time;
+        if (st >= 0.0) {
+            char buf[32]; FormatTime(buf, sizeof(buf), st);
+            ImGui::TextDisabled("%s", buf);
+        } else {
+            ImGui::TextDisabled("--:--");
+        }
+    }
+
+    {
+        ImGui::TableSetColumnIndex(2);
+        if (done) {
+            const double t = gt ? g.split.game_time : g.split.real_time;
+            const ImVec4 tc = gt ? ImVec4{0.6f, 0.85f, 1.f, 1.f} : ImVec4{0.9f, 0.9f, 0.9f, 1.f};
+            char buf[32]; FormatTime(buf, sizeof(buf), t);
+            ImGui::TextColored(tc, "%s", buf);
+            DrawPBDelta(t, pb_split);
         } else if (is_current) {
             ImGui::TextDisabled("---");
         }
     }
 
-    if (show_real_time_) {
-        ImGui::TableSetColumnIndex(2);
-        if (g.completed) {
-            char buf[32], seg[32];
-            FormatTime(buf, sizeof(buf), g.split.real_time);
-            FormatTime(seg, sizeof(seg), g.split.segment_real);
-            ImGui::TextColored({0.9f, 0.9f, 0.9f, 1.f}, "%s", buf);
-            if (show_segment_ && has_prior_split) ImGui::TextDisabled("+%s", seg);
-            if (pb_basis_ == 0) DrawPBDelta(g.split.real_time, pb_split);
-        } else if (is_current) {
-            ImGui::TextDisabled("---");
+    if (profile.show_segment) {
+        ImGui::TableSetColumnIndex(3);
+        if (done) {
+            char seg[32];
+            if (gt) {
+                if (profile.segment_is_duration && g.start_game_time >= 0.0)
+                    FormatTime(seg, sizeof(seg), g.split.game_time - g.start_game_time);
+                else
+                    FormatTime(seg, sizeof(seg), g.split.segment_game);
+            } else {
+                if (profile.segment_is_duration && g.start_real_time >= 0.0)
+                    FormatTime(seg, sizeof(seg), g.split.real_time - g.start_real_time);
+                else
+                    FormatTime(seg, sizeof(seg), g.split.segment_real);
+            }
+            ImGui::TextDisabled("+%s", seg);
         }
     }
 
     ImGui::EndTable();
 }
+
+bool SplitsGoalListWindow::DrawHeaderRow(const GoalList& list, int header_idx, const SplitsProfile& profile)
+{
+    const GoalEntry& h = list.goals[header_idx];
+
+    const bool gt = profile.use_game_time;
+
+    // Derive timing and status from all non-header descendants.
+    double start_t = -1.0, end_t = -1.0;
+    bool any_started = false, any_failed = false, all_done = true, has_any = false;
+
+    for (int j = header_idx + 1; j < static_cast<int>(list.goals.size()); ++j) {
+        const GoalEntry& child = list.goals[j];
+        if (child.indent <= h.indent) break;
+        if (child.is_header) continue;
+        has_any = true;
+
+        if (child.status == GoalStatus::Failed)  any_failed  = true;
+        if (child.status == GoalStatus::Started)  any_started = true;
+        if (child.status != GoalStatus::Completed && child.status != GoalStatus::Failed) all_done = false;
+
+        const double cs = gt ? child.start_game_time : child.start_real_time;
+        if (cs >= 0.0 && (start_t < 0.0 || cs < start_t)) start_t = cs;
+
+        if (child.status == GoalStatus::Completed || child.status == GoalStatus::Failed) {
+            const double ce = gt ? child.split.game_time : child.split.real_time;
+            if (end_t < 0.0 || ce > end_t) end_t = ce;
+        }
+    }
+
+    if (!has_any) all_done = false;
+    GoalStatus status = GoalStatus::NotStarted;
+    if (any_failed)                           status = GoalStatus::Failed;
+    else if (all_done && has_any)             status = GoalStatus::Completed;
+    else if (any_started || start_t >= 0.0)  status = GoalStatus::Started;
+
+    // Build label — use ### so the ID stays stable while the time text changes.
+    char label[160];
+    // Include list name in the ID so headers from different lists never share ImGui collapse state.
+    // First render of a freshly loaded list always hits DefaultOpen (expanded).
+    if (end_t >= 0.0) {
+        char tbuf[32]; FormatTime(tbuf, sizeof(tbuf), end_t);
+        if (status == GoalStatus::Failed)
+            snprintf(label, sizeof(label), "%s - %s [Failed]###%s_hdr%d", h.label.c_str(), tbuf, list.name.c_str(), header_idx);
+        else
+            snprintf(label, sizeof(label), "%s - %s###%s_hdr%d", h.label.c_str(), tbuf, list.name.c_str(), header_idx);
+    } else {
+        snprintf(label, sizeof(label), "%s###%s_hdr%d", h.label.c_str(), list.name.c_str(), header_idx);
+    }
+
+    // Tint the bar red for failed runs; everything else uses the toolbox theme colour.
+    const bool push_color = (status == GoalStatus::Failed);
+    if (push_color) {
+        ImGui::PushStyleColor(ImGuiCol_Header,        ImVec4(0.55f, 0.08f, 0.08f, 0.90f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.65f, 0.12f, 0.12f, 1.00f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive,  ImVec4(0.75f, 0.18f, 0.18f, 1.00f));
+    }
+
+    const bool is_open = ImGui::CollapsingHeader(label, ImGuiTreeNodeFlags_DefaultOpen);
+
+    if (push_color) ImGui::PopStyleColor(3);
+
+    return is_open;
+}
+
+void SplitsGoalListWindow::LoadSettings(SettingsDoc& /*doc*/, ToolboxIni* /*legacy*/) {}
+
+void SplitsGoalListWindow::SaveSettings(SettingsDoc& /*doc*/) {}
 
 // ---------------------------------------------------------------------------
 // Settings panel
@@ -421,23 +484,57 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
     if (list_name_buf_[0] == '\0' && !list->name.empty())
         snprintf(list_name_buf_, sizeof(list_name_buf_), "%s", list->name.c_str());
 
+    // Profile switcher
+    ImGui::TextUnformatted("Profile:");
+    for (int i = 0; i < kProfileCount; ++i) {
+        ImGui::SameLine();
+        const bool active = (plugin.ActiveProfileIdx() == i);
+        if (active) {
+            ImGui::PushStyleColor(ImGuiCol_Button,        ImGui::GetStyleColorVec4(ImGuiCol_Header));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive));
+        }
+        if (ImGui::Button(plugin.Profiles()[i].name.c_str())) {
+            plugin.SwitchProfile(i);
+            list_name_buf_[0] = '\0';
+            list = plugin.List();
+        }
+        if (active) {
+            ImGui::PopStyleColor(3);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Active — auto-loads on next session");
+        }
+    }
+    ImGui::Separator();
+
     ImGui::Columns(3, "settings_cols", false);
 
-    // Col 0: display toggles + PB basis
-    ImGui::Checkbox("Show real time column", &show_real_time_);
-    ImGui::Checkbox("Show game time column", &show_game_time_);
-    ImGui::Checkbox("Show segment column",   &show_segment_);
-    ImGui::Checkbox("Show town time clock",  &show_town_time_);
+    // Col 0: display toggles + PB basis + behavior flags
+    SplitsProfile& p = plugin.ActiveProfile();
+    ImGui::Checkbox("Show start time column", &p.show_start_time);
+    ImGui::TextUnformatted("Time:");
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Game", p.use_game_time))  p.use_game_time = true;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Real", !p.use_game_time)) p.use_game_time = false;
+    ImGui::Checkbox("Show split column",      &p.show_segment);
+    if (p.show_segment) {
+        ImGui::SameLine();
+        if (ImGui::RadioButton("End-Start##seg",   p.segment_is_duration))  p.segment_is_duration = true;
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Since last##seg", !p.segment_is_duration)) p.segment_is_duration = false;
+    }
+    ImGui::Checkbox("Auto /age on completion", &p.auto_send_age);
+    ImGui::Checkbox("Show paused time",        &p.show_paused_time);
+
     ImGui::Spacing();
-    ImGui::TextUnformatted("Compare PB by:");
-    ImGui::SameLine();
-    ImGui::RadioButton("Real", &pb_basis_, 0);
-    ImGui::SameLine();
-    ImGui::RadioButton("Game", &pb_basis_, 1);
+    ImGui::Checkbox("Stop on party wipe",         &p.stop_on_party_defeated);
+    if (plugin.ActiveProfileIdx() != 0)
+        ImGui::Checkbox("Game time: explorable only", &p.game_time_explorable_only);
 
     ImGui::NextColumn();
 
-    // Col 1: keybinds
+    // Col 1: keybinds + row colors
     ImGui::TextUnformatted("Keybinds:");
     draw_keybind("Start", plugin.KeyStart());
     draw_keybind("Reset", plugin.KeyReset());
@@ -445,135 +542,224 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
     if (capturing_active)
         ImGui::TextDisabled("(Esc to clear)");
 
+    ImGui::Spacing();
+    ImGui::ColorButtonPicker("Completed##sc", &p.color_completed); ImGui::SameLine(); ImGui::TextUnformatted("Done");
+    ImGui::SameLine(0, 12.f);
+    ImGui::ColorButtonPicker("Active##sc",    &p.color_active);    ImGui::SameLine(); ImGui::TextUnformatted("Active");
+    ImGui::ColorButtonPicker("Inactive##sc",  &p.color_inactive);  ImGui::SameLine(); ImGui::TextUnformatted("Inactive");
+    ImGui::SameLine(0, 12.f);
+    ImGui::ColorButtonPicker("Failed##sc",    &p.color_failed);    ImGui::SameLine(); ImGui::TextUnformatted("Failed");
+    ImGui::Spacing();
+
     ImGui::NextColumn();
 
-    // Col 2: list management
-    ImGui::TextUnformatted("Goal List");
-    ImGui::SetNextItemWidth(130.f);
-    ImGui::InputText("##listname", list_name_buf_, sizeof(list_name_buf_));
-    ImGui::SameLine();
-    if (ImGui::Button("New")) {
-        plugin.NewActiveList(list_name_buf_);
-        list = plugin.List();
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Save")) {
-        list->name = list_name_buf_;
-        plugin.SaveActiveList();
-    }
-
-    const auto saved = plugin.GetSavedLists();
-    if (!saved.empty()) {
-        ImGui::TextUnformatted("Load:");
-        ImGui::Indent();
-        for (const auto& [display, path] : saved) {
-            if (ImGui::Button(display.c_str())) {
-                plugin.LoadActiveList(path);
-                list = plugin.List();
-                snprintf(list_name_buf_, sizeof(list_name_buf_), "%s", list->name.c_str());
-            }
+    // Col 2: list management — hidden for auto-load-preset profiles (SC)
+    if (plugin.ActiveProfileIdx() != 0) {
+        ImGui::TextUnformatted("Goal List");
+        ImGui::SetNextItemWidth(130.f);
+        ImGui::InputText("##listname", list_name_buf_, sizeof(list_name_buf_));
+        ImGui::SameLine();
+        if (ImGui::Button("New")) {
+            plugin.NewActiveList(list_name_buf_);
+            list = plugin.List();
         }
-        ImGui::Unindent();
+        ImGui::SameLine();
+        if (ImGui::Button("Save")) {
+            list->name = list_name_buf_;
+            plugin.SaveActiveList();
+        }
+
+        const auto saved = plugin.GetSavedLists();
+        if (!saved.empty()) {
+            ImGui::TextUnformatted("Load:");
+            ImGui::Indent();
+            for (const auto& [display, path] : saved) {
+                const bool is_active = (display == list->name);
+                if (is_active) {
+                    ImGui::PushStyleColor(ImGuiCol_Button,        ImGui::GetStyleColorVec4(ImGuiCol_Header));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_HeaderHovered));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive));
+                }
+                if (ImGui::Button(display.c_str())) {
+                    plugin.LoadActiveList(path);
+                    list = plugin.List();
+                    snprintf(list_name_buf_, sizeof(list_name_buf_), "%s", list->name.c_str());
+                }
+                if (is_active) {
+                    ImGui::PopStyleColor(3);
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Currently loaded");
+                }
+            }
+            ImGui::Unindent();
+        }
+
     }
 
     ImGui::Columns(1);
     ImGui::Separator();
 
-    // Existing goals list
-    ImGui::TextUnformatted("Goals:");
-    list = plugin.List();
-    bool erased = false;
-    for (int i = 0; i < static_cast<int>(list->goals.size()) && !erased; ++i) {
-        const auto& g = list->goals[i];
-        ImGui::PushID(i);
+    if (plugin.ActiveProfileIdx() != 0) {
+        // Existing goals list
+        ImGui::TextUnformatted("Goals:");
+        list = plugin.List();
+        bool erased = false;
+        bool moved = false;
+        for (int i = 0; i < static_cast<int>(list->goals.size()) && !erased && !moved; ++i) {
+            auto& g = list->goals[i];
+            ImGui::PushID(i);
 
-        const char* tname = "Man";
-        switch (g.trigger.type) {
-            case GoalTrigger::Type::MapEnter:         tname = "Map";  break;
-            case GoalTrigger::Type::EnterExplorable:  tname = "Exp";  break;
-            case GoalTrigger::Type::ExitExplorable:   tname = "Exit"; break;
-            case GoalTrigger::Type::VanquishComplete: tname = "VQ";   break;
-            case GoalTrigger::Type::MissionComplete:  tname = g.trigger.hard_mode ? "HM"  : "Mis"; break;
-            case GoalTrigger::Type::MissionBonus:     tname = g.trigger.hard_mode ? "HMB" : "Bon"; break;
-            case GoalTrigger::Type::ReachLevel:       tname = "Lv";   break;
-            default: break;
-        }
-        ImGui::TextDisabled("[%s]", tname);
-        ImGui::SameLine();
-        ImGui::TextUnformatted(g.label.c_str());
-        ImGui::SameLine();
-        if (ImGui::SmallButton("X")) {
-            list->goals.erase(list->goals.begin() + i);
-            erased = true;
-        }
-        ImGui::PopID();
-    }
+            if (g.is_header) {
+                ImGui::TextColored({1.f, 0.85f, 0.4f, 1.f}, "[HDR]");
+            } else {
+                const char* tname = "Man";
+                switch (g.trigger.type) {
+                    case GoalTrigger::Type::MapEnter:         tname = "Map";  break;
+                    case GoalTrigger::Type::EnterExplorable:  tname = "Exp";  break;
+                    case GoalTrigger::Type::ExitExplorable:   tname = "Exit"; break;
+                    case GoalTrigger::Type::VanquishComplete: tname = "VQ";   break;
+                    case GoalTrigger::Type::MissionComplete:  tname = g.trigger.hard_mode ? "HM"  : "Mis"; break;
+                    case GoalTrigger::Type::MissionBonus:     tname = g.trigger.hard_mode ? "HMB" : "Bon"; break;
+                    case GoalTrigger::Type::ReachLevel:       tname = "Lv";   break;
+                    default: break;
+                }
+                ImGui::TextDisabled("[%s]", tname);
+            }
+            ImGui::SameLine();
+            // Visual indent hint
+            for (int d = 0; d < g.indent; ++d) { ImGui::TextDisabled("|"); ImGui::SameLine(0, 2); }
+            ImGui::TextUnformatted(g.label.c_str());
+            ImGui::SameLine();
 
-    ImGui::Separator();
+            // Indent controls
+            if (g.indent > 0) {
+                if (ImGui::SmallButton("<##ui")) { g.indent--; moved = true; }
+            } else {
+                ImGui::BeginDisabled(); ImGui::SmallButton("<##ui"); ImGui::EndDisabled();
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton(">##ui")) { g.indent++; moved = true; }
+            ImGui::SameLine();
 
-    // Add goal form
-    ImGui::TextUnformatted("Add Goal:");
+            if (i > 0) {
+                if (ImGui::SmallButton("^##up")) {
+                    std::swap(list->goals[static_cast<size_t>(i)], list->goals[static_cast<size_t>(i - 1)]);
+                    moved = true;
+                }
+            } else {
+                ImGui::BeginDisabled();
+                ImGui::SmallButton("^##up");
+                ImGui::EndDisabled();
+            }
+            ImGui::SameLine();
 
-    struct TriggerOption { const char* label; GoalTrigger::Type type; };
-    static const TriggerOption trigger_opts[] = {
-        { "Manual",      GoalTrigger::Type::Manual          },
-        { "Missions",    GoalTrigger::Type::MissionComplete },
-        { "Explorables", GoalTrigger::Type::MapEnter        },
-        { "Towns",       GoalTrigger::Type::EnterExplorable },
-        { "Titles",      GoalTrigger::Type::ReachTitleRank  },
-        { "Reach Level", GoalTrigger::Type::ReachLevel      },
-    };
-    const char* current_trigger_label = trigger_opts[0].label;
-    for (const auto& opt : trigger_opts)
-        if (static_cast<int>(opt.type) == edit_trigger_type_) { current_trigger_label = opt.label; break; }
-    ImGui::SetNextItemWidth(220.f);
-    if (ImGui::BeginCombo("Trigger##add", current_trigger_label)) {
-        for (const auto& opt : trigger_opts) {
-            const bool selected = (static_cast<int>(opt.type) == edit_trigger_type_);
-            if (ImGui::Selectable(opt.label, selected))
-                edit_trigger_type_ = static_cast<int>(opt.type);
-            if (selected) ImGui::SetItemDefaultFocus();
-        }
-        ImGui::EndCombo();
-    }
+            if (i + 1 < static_cast<int>(list->goals.size())) {
+                if (ImGui::SmallButton("v##down")) {
+                    std::swap(list->goals[static_cast<size_t>(i)], list->goals[static_cast<size_t>(i + 1)]);
+                    moved = true;
+                }
+            } else {
+                ImGui::BeginDisabled();
+                ImGui::SmallButton("v##down");
+                ImGui::EndDisabled();
+            }
+            ImGui::SameLine();
 
-    const bool is_mission_batch    = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MissionComplete) ||
-                                      edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MissionBonus));
-    const bool is_explorable_batch = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MapEnter));
-    const bool is_town_batch       = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::EnterExplorable));
-    const bool is_title_picker     = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::ReachTitleRank));
-    const bool needs_level         = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::ReachLevel));
-
-    if (is_mission_batch) {
-        DrawMissionBatchPicker(plugin);
-    } else if (is_explorable_batch) {
-        DrawExplorableBatchPicker(plugin);
-    } else if (is_town_batch) {
-        DrawTownBatchPicker(plugin);
-    } else if (is_title_picker) {
-        DrawTitlePicker(plugin);
-    } else {
-        ImGui::SetNextItemWidth(200.f);
-        ImGui::InputText("Label##add", edit_label_, sizeof(edit_label_));
-        if (needs_level) {
-            ImGui::SetNextItemWidth(100.f);
-            ImGui::InputInt("Level##add", &edit_level_);
-            if (edit_level_ < 1)  edit_level_ = 1;
-            if (edit_level_ > 20) edit_level_ = 20;
+            if (ImGui::SmallButton("X")) {
+                list->goals.erase(list->goals.begin() + i);
+                list->RenumberDuplicateLabels();
+                erased = true;
+            }
+            ImGui::PopID();
         }
 
-        const bool can_add = edit_label_[0] != '\0';
-        if (!can_add) ImGui::BeginDisabled();
-        if (ImGui::Button("Add Goal")) {
-            GoalEntry new_g;
-            new_g.label          = edit_label_;
-            new_g.trigger.type   = static_cast<GoalTrigger::Type>(edit_trigger_type_);
-            new_g.trigger.map_id = GW::Constants::MapID::None;
-            new_g.trigger.level  = edit_level_;
-            list->goals.push_back(std::move(new_g));
-            edit_label_[0] = '\0';
+        ImGui::Separator();
+
+        // Add goal / header form
+        ImGui::TextUnformatted("Add Goal:");
+
+        if (plugin.ActiveProfileIdx() == 2) {
+            // Running profile: combined from/to leg picker only.
+            DrawRunningLegPicker(plugin);
+        } else {
+        // Trigger type combo — sentinel -1 means "Header (no trigger)".
+        struct TriggerOpt { const char* label; int type_int; };
+        static const TriggerOpt trigger_opts_full[] = {
+            { "Header",      -1 },
+            { "Manual",      static_cast<int>(GoalTrigger::Type::Manual)          },
+            { "Missions",    static_cast<int>(GoalTrigger::Type::MissionComplete)  },
+            { "Explorables", static_cast<int>(GoalTrigger::Type::MapEnter)         },
+            { "Towns",       static_cast<int>(GoalTrigger::Type::EnterExplorable)  },
+            { "Titles",      static_cast<int>(GoalTrigger::Type::ReachTitleRank)   },
+            { "Reach Level", static_cast<int>(GoalTrigger::Type::ReachLevel)       },
+        };
+        const TriggerOpt* trigger_opts      = trigger_opts_full;
+        int               trigger_opts_count = 7;
+        const char* current_trigger_label = trigger_opts[0].label;
+        for (int i = 0; i < trigger_opts_count; ++i)
+            if (trigger_opts[i].type_int == edit_trigger_type_) { current_trigger_label = trigger_opts[i].label; break; }
+        ImGui::SetNextItemWidth(220.f);
+        if (ImGui::BeginCombo("Trigger##add", current_trigger_label)) {
+            for (int i = 0; i < trigger_opts_count; ++i) {
+                const bool selected = (trigger_opts[i].type_int == edit_trigger_type_);
+                if (ImGui::Selectable(trigger_opts[i].label, selected))
+                    edit_trigger_type_ = trigger_opts[i].type_int;
+                if (selected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
         }
-        if (!can_add) ImGui::EndDisabled();
+
+        const bool is_header_mode      = (edit_trigger_type_ == -1);
+        const bool is_mission_batch    = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MissionComplete) ||
+                                          edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MissionBonus));
+        const bool is_explorable_batch = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MapEnter));
+        const bool is_town_batch       = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::EnterExplorable));
+        const bool is_title_picker     = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::ReachTitleRank));
+        const bool needs_level         = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::ReachLevel));
+
+        if (is_mission_batch) {
+            DrawMissionBatchPicker(plugin);
+        } else if (is_explorable_batch) {
+            DrawExplorableBatchPicker(plugin);
+        } else if (is_town_batch) {
+            DrawTownBatchPicker(plugin);
+        } else if (is_title_picker) {
+            DrawTitlePicker(plugin);
+        } else {
+            ImGui::SetNextItemWidth(200.f);
+            ImGui::InputText("Label##add", edit_label_, sizeof(edit_label_));
+            if (needs_level) {
+                ImGui::SetNextItemWidth(100.f);
+                ImGui::InputInt("Level##add", &edit_level_);
+                if (edit_level_ < 1)  edit_level_ = 1;
+                if (edit_level_ > 20) edit_level_ = 20;
+            }
+
+            const bool can_add = edit_label_[0] != '\0';
+            if (!can_add) ImGui::BeginDisabled();
+            if (is_header_mode) {
+                if (ImGui::Button("Add Header")) {
+                    GoalEntry hdr;
+                    hdr.is_header = true;
+                    hdr.label     = edit_label_;
+                    list->goals.push_back(std::move(hdr));
+                    edit_label_[0] = '\0';
+                }
+            } else {
+                if (ImGui::Button("Add Goal")) {
+                    GoalEntry new_g;
+                    new_g.label          = edit_label_;
+                    new_g.trigger.type   = static_cast<GoalTrigger::Type>(edit_trigger_type_);
+                    new_g.trigger.map_id = GW::Constants::MapID::None;
+                    new_g.trigger.level  = edit_level_;
+                    list->goals.push_back(std::move(new_g));
+                    list->RenumberDuplicateLabels();
+                    edit_label_[0] = '\0';
+                }
+            }
+            if (!can_add) ImGui::EndDisabled();
+        }
+        } // end else (non-Running add form)
     }
 }
 
@@ -656,8 +842,12 @@ void SplitsGoalListWindow::DrawTitlePicker(SplitsWindow& plugin)
             }
             const bool selected = (edit_title_id_ == static_cast<int>(e.id));
             ImGui::Indent(searching ? 0.f : 8.f);
-            if (ImGui::Selectable(e.name, selected))
-                edit_title_id_ = static_cast<int>(e.id);
+            if (ImGui::Selectable(e.name, selected)) {
+                if (edit_title_id_ != static_cast<int>(e.id)) {
+                    edit_title_id_ = static_cast<int>(e.id);
+                    edit_title_rank_ = -1; // reset rank so it defaults to max for the new title
+                }
+            }
             ImGui::Unindent(searching ? 0.f : 8.f);
             if (selected) ImGui::SetItemDefaultFocus();
         }
@@ -675,23 +865,177 @@ void SplitsGoalListWindow::DrawTitlePicker(SplitsWindow& plugin)
     auto* live_title = GW::PlayerMgr::GetTitleTrack(static_cast<TitleID>(edit_title_id_));
     const bool can_add = (sel_title_name != nullptr);
 
+    // Rank selector.
+    // max_title_rank = total ranks for this title.
+    // max_title_tier_index = global flat index of rank-1 tier (anchor).
+    // Rank R global index = max_title_tier_index + (R - 1).
+    if (can_add && live_title) {
+        const int total_ranks   = static_cast<int>(live_title->max_title_rank);
+        const int max_tier_base = static_cast<int>(live_title->max_title_tier_index);
+        const bool pct_title    = live_title->is_percentage_based();
+        auto* wc = GW::GetWorldContext();
+
+        if (total_ranks > 0) {
+            if (edit_title_rank_ <= 0 || edit_title_rank_ > total_ranks)
+                edit_title_rank_ = total_ranks;
+
+            ImGui::Text("Target rank (1..%d):", total_ranks);
+            if (ImGui::BeginListBox("##rankbox", { -1.f, 80.f })) {
+                for (int r = 1; r <= total_ranks; ++r) {
+                    char rank_label[48];
+                    const int tier_idx = max_tier_base + (r - 1);
+                    if (pct_title && wc && tier_idx < static_cast<int>(wc->title_tiers.size())) {
+                        const float pct = wc->title_tiers[tier_idx].tier_number * 0.1f;
+                        if (r == total_ranks)
+                            snprintf(rank_label, sizeof(rank_label), "Rank %d — %.1f%% (Max)", r, pct);
+                        else
+                            snprintf(rank_label, sizeof(rank_label), "Rank %d — %.1f%%", r, pct);
+                    } else {
+                        if (r == total_ranks)
+                            snprintf(rank_label, sizeof(rank_label), "Rank %d (Max)", r);
+                        else
+                            snprintf(rank_label, sizeof(rank_label), "Rank %d", r);
+                    }
+                    const bool rank_sel = (edit_title_rank_ == r);
+                    if (ImGui::Selectable(rank_label, rank_sel))
+                        edit_title_rank_ = r;
+                    if (rank_sel) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndListBox();
+            }
+        }
+    } else if (can_add) {
+        ImGui::TextDisabled("(connect to game to see rank list)");
+    }
+
     if (!can_add) ImGui::BeginDisabled();
     if (ImGui::Button("Add Goal##titleadd")) {
+        const int total_ranks   = live_title && live_title->max_title_rank > 0
+                                    ? static_cast<int>(live_title->max_title_rank) : edit_title_rank_;
+        const int max_tier_base = live_title ? static_cast<int>(live_title->max_title_tier_index) : 0;
+        const int global_tier_idx = max_tier_base + (edit_title_rank_ - 1);
+
+        char label_buf[160];
+        snprintf(label_buf, sizeof(label_buf), "%s r%d/%d", sel_title_name, edit_title_rank_, total_ranks);
+
         GoalEntry g;
-        g.label            = sel_title_name;
+        g.label            = label_buf;
         g.trigger.type     = GoalTrigger::Type::ReachTitleRank;
         g.trigger.title_id = static_cast<TitleID>(edit_title_id_);
-        g.trigger.level    = live_title ? static_cast<int>(live_title->max_title_tier_index) : 99;
+        g.trigger.level    = global_tier_idx;
         g.trigger.map_id   = GW::Constants::MapID::None;
 
         GoalList* list = plugin.List();
         const bool dup = std::any_of(list->goals.begin(), list->goals.end(),
             [&g](const GoalEntry& e) {
-                return e.trigger.type == g.trigger.type && e.trigger.title_id == g.trigger.title_id;
+                return e.trigger.type == g.trigger.type &&
+                       e.trigger.title_id == g.trigger.title_id &&
+                       e.trigger.level == g.trigger.level;
             });
         if (!dup) list->goals.push_back(std::move(g));
     }
     if (!can_add) ImGui::EndDisabled();
+}
+
+// ---------------------------------------------------------------------------
+// Running profile: combined from/to leg picker
+// ---------------------------------------------------------------------------
+void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
+{
+    using MapID = GW::Constants::MapID;
+
+    struct MapRow { int id; std::string name; };
+
+    auto build_map_list = []() -> std::vector<MapRow> {
+        std::unordered_map<uint32_t, int> seen;
+        std::vector<MapRow> out;
+        for (int id = 1; id < static_cast<int>(MapID::Count); ++id) {
+            const auto mid = static_cast<MapID>(id);
+            const auto* inf = GW::Map::GetMapInfo(mid);
+            if (!inf || !inf->name_id) continue;
+            if (inf->region != GW::Region_Presearing && !inf->GetIsOnWorldMap()) continue;
+            const bool is_exp  = (inf->type == GW::RegionType::ExplorableZone ||
+                                   inf->type == GW::RegionType::MissionArea);
+            const bool is_town = (inf->type == GW::RegionType::City          ||
+                                   inf->type == GW::RegionType::Outpost       ||
+                                   inf->type == GW::RegionType::MissionOutpost);
+            if (!is_exp && !is_town) continue;
+            if (seen.count(inf->name_id)) continue;
+            seen[inf->name_id] = id;
+            out.push_back({ id, MapNames::Get(mid) });
+        }
+        std::sort(out.begin(), out.end(), [](const MapRow& a, const MapRow& b) {
+            return a.name < b.name;
+        });
+        return out;
+    };
+
+    static std::vector<MapRow> s_map_list;
+    if (s_map_list.empty()) s_map_list = build_map_list();
+
+    // Single map picker — each split fires when entering this map.
+    const std::string sel_name = run_map_id_ > 0 ? MapNames::Get(static_cast<MapID>(run_map_id_)) : std::string{};
+    const char* preview = run_map_id_ > 0 ? sel_name.c_str() : "(pick map)";
+    ImGui::SetNextItemWidth(200.f);
+    if (ImGui::BeginCombo("Map##runmap", preview)) {
+        ImGui::SetNextItemWidth(-1.f);
+        ImGui::InputText("##runmapflt", run_filter_, sizeof(run_filter_));
+        const std::string_view filt(run_filter_);
+        for (const auto& row : s_map_list) {
+            if (!filt.empty()) {
+                bool match = false;
+                for (size_t i = 0; i + filt.size() <= row.name.size(); ++i)
+                    if (_strnicmp(row.name.c_str() + i, filt.data(), filt.size()) == 0) { match = true; break; }
+                if (!match) continue;
+            }
+            const bool sel = (row.id == run_map_id_);
+            if (ImGui::Selectable(row.name.c_str(), sel)) run_map_id_ = row.id;
+            if (sel) ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
+    // Auto-fill label from map name.
+    if (run_map_id_ > 0 && edit_label_[0] == '\0') {
+        const std::string fn = MapNames::Get(static_cast<MapID>(run_map_id_));
+        snprintf(edit_label_, sizeof(edit_label_), "%s", fn.c_str());
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(180.f);
+    ImGui::InputText("Label##runlabel", edit_label_, sizeof(edit_label_));
+
+    const bool can_add = run_map_id_ > 0 && edit_label_[0] != '\0';
+    if (!can_add) ImGui::BeginDisabled();
+    ImGui::SameLine();
+    if (ImGui::Button("Add Split")) {
+        GoalList* list = plugin.List();
+        GoalEntry g;
+        g.label = edit_label_;
+        GoalTrigger st;
+        st.type   = GoalTrigger::Type::MapEnter;
+        st.map_id = static_cast<MapID>(run_map_id_);
+        g.start_trigger          = st;
+        g.auto_complete_previous = 1;
+        list->goals.push_back(std::move(g));
+        list->RenumberDuplicateLabels();
+        edit_label_[0] = '\0';
+        run_map_id_    = 0;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add End")) {
+        GoalList* list = plugin.List();
+        GoalEntry g;
+        g.label              = edit_label_;
+        g.trigger.type       = GoalTrigger::Type::MapEnter;
+        g.trigger.map_id     = static_cast<MapID>(run_map_id_);
+        g.auto_complete_previous = 1; // closes the last running leg before this goal fires
+        list->goals.push_back(std::move(g));
+        list->RenumberDuplicateLabels();
+        edit_label_[0] = '\0';
+        run_map_id_    = 0;
+    }
+    if (!can_add) ImGui::EndDisabled();
+    ImGui::TextDisabled("Add Split: fires on entry, ends previous leg.  Add End: destination closes the run.");
 }
 
 // ---------------------------------------------------------------------------
@@ -813,6 +1157,79 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
             }
             ImGui::EndTabItem();
         }
+        if (ImGui::BeginTabItem("Pre-Searing")) {
+            auto build_ps_town_list = []() -> std::vector<TownRow> {
+                std::unordered_map<uint32_t, int> best;
+                for (int id = 1; id < static_cast<int>(MapID::Count); ++id) {
+                    const auto mid = static_cast<MapID>(id);
+                    const auto* inf = GW::Map::GetMapInfo(mid);
+                    if (!inf || !inf->name_id || inf->region != GW::Region_Presearing) continue;
+                    bool is_town = false;
+                    for (auto t : s_town_types) if (inf->type == t) { is_town = true; break; }
+                    if (!is_town) continue;
+                    if (best.find(inf->name_id) == best.end()) best[inf->name_id] = id;
+                }
+                std::vector<TownRow> out;
+                out.reserve(best.size());
+                for (const auto& kv : best)
+                    out.push_back({ kv.second, MapNames::Get(static_cast<MapID>(kv.second)), GW::Region_Presearing });
+                std::sort(out.begin(), out.end(), [](const TownRow& a, const TownRow& b) { return a.name < b.name; });
+                return out;
+            };
+            const auto ps_rows = build_ps_town_list();
+
+            std::vector<const TownRow*> ps_filtered;
+            for (const auto& r : ps_rows) {
+                if (town_filter_buf_[0] != '\0') {
+                    auto it = std::search(r.name.begin(), r.name.end(),
+                        town_filter_buf_, town_filter_buf_ + strlen(town_filter_buf_),
+                        [](char a, char b) { return tolower((unsigned char)a) == tolower((unsigned char)b); });
+                    if (it == r.name.end()) continue;
+                }
+                ps_filtered.push_back(&r);
+            }
+
+            if (ImGui::SmallButton("All En"))  { for (auto* r : ps_filtered) batch_town_checked_[r->id] |=  BIT_ENTER; }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("None En")) { for (auto* r : ps_filtered) batch_town_checked_[r->id] &= ~BIT_ENTER; }
+            ImGui::SameLine(0, 10);
+            if (ImGui::SmallButton("All Lv"))  { for (auto* r : ps_filtered) batch_town_checked_[r->id] |=  BIT_LEAVE; }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("None Lv")) { for (auto* r : ps_filtered) batch_town_checked_[r->id] &= ~BIT_LEAVE; }
+
+            constexpr ImGuiTableFlags ps_tflags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY;
+            if (ImGui::BeginTable("##towntbl_ps", 4, ps_tflags, { -1.f, 220.f })) {
+                ImGui::TableSetupScrollFreeze(0, 1);
+                ImGui::TableSetupColumn("Town / Outpost", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Enter",          ImGuiTableColumnFlags_WidthFixed, 40.f);
+                ImGui::TableSetupColumn("Leave",          ImGuiTableColumnFlags_WidthFixed, 40.f);
+                ImGui::TableSetupColumn("##cur",          ImGuiTableColumnFlags_WidthFixed, 24.f);
+                ImGui::TableHeadersRow();
+
+                for (const auto* r : ps_filtered) {
+                    ImGui::PushID(r->id);
+                    ImGui::TableNextRow();
+                    uint8_t& bits = batch_town_checked_[r->id];
+
+                    ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(r->name.c_str());
+                    ImGui::TableSetColumnIndex(1);
+                    bool en = (bits & BIT_ENTER) != 0;
+                    if (ImGui::Checkbox("##en", &en)) bits = en ? (bits | BIT_ENTER) : (bits & ~BIT_ENTER);
+                    ImGui::TableSetColumnIndex(2);
+                    bool lv = (bits & BIT_LEAVE) != 0;
+                    if (ImGui::Checkbox("##lv", &lv)) bits = lv ? (bits | BIT_LEAVE) : (bits & ~BIT_LEAVE);
+                    ImGui::TableSetColumnIndex(3);
+                    if (ImGui::SmallButton("@")) {
+                        const int cur = static_cast<int>(plugin.CurrentMap());
+                        if (cur == r->id) bits |= (BIT_ENTER | BIT_LEAVE);
+                    }
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Current map?");
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
+            }
+            ImGui::EndTabItem();
+        }
         ImGui::EndTabBar();
     }
 
@@ -847,17 +1264,13 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
             return a.type < b.type;
         });
         for (const auto& item : items) {
-            const bool dup = std::any_of(list->goals.begin(), list->goals.end(),
-                [&](const GoalEntry& e) {
-                    return e.trigger.type == item.type && e.trigger.map_id == static_cast<MapID>(item.id);
-                });
-            if (dup) continue;
             GoalEntry g;
             g.label = (item.type == GoalTrigger::Type::ExitOutpost) ? "Leave " + item.name : "Enter " + item.name;
             g.trigger.type   = item.type;
             g.trigger.map_id = static_cast<MapID>(item.id);
             list->goals.push_back(std::move(g));
         }
+        list->RenumberDuplicateLabels();
         batch_town_checked_.clear();
     }
     if (total == 0) ImGui::EndDisabled();
@@ -982,6 +1395,77 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
             }
             ImGui::EndTabItem();
         }
+        if (ImGui::BeginTabItem("Pre-Searing")) {
+            auto build_ps_exp_list = []() -> std::vector<ExpRow> {
+                std::unordered_map<uint32_t, int> best;
+                for (int id = 1; id < static_cast<int>(MapID::Count); ++id) {
+                    const auto mid = static_cast<MapID>(id);
+                    const auto* inf = GW::Map::GetMapInfo(mid);
+                    if (!inf || !inf->name_id || inf->region != GW::Region_Presearing) continue;
+                    if (inf->type != GW::RegionType::ExplorableZone && inf->type != GW::RegionType::MissionArea) continue;
+                    if (best.find(inf->name_id) == best.end()) best[inf->name_id] = id;
+                }
+                std::vector<ExpRow> out;
+                out.reserve(best.size());
+                for (const auto& kv : best)
+                    out.push_back({ kv.second, MapNames::Get(static_cast<MapID>(kv.second)), GW::Region_Presearing });
+                std::sort(out.begin(), out.end(), [](const ExpRow& a, const ExpRow& b) { return a.name < b.name; });
+                return out;
+            };
+            const auto ps_rows = build_ps_exp_list();
+
+            std::vector<const ExpRow*> ps_filtered;
+            for (const auto& r : ps_rows) {
+                if (exp_filter_buf_[0] != '\0') {
+                    auto it = std::search(r.name.begin(), r.name.end(),
+                        exp_filter_buf_, exp_filter_buf_ + strlen(exp_filter_buf_),
+                        [](char a, char b) { return tolower((unsigned char)a) == tolower((unsigned char)b); });
+                    if (it == r.name.end()) continue;
+                }
+                ps_filtered.push_back(&r);
+            }
+
+            if (ImGui::SmallButton("All En"))  { for (auto* r : ps_filtered) batch_exp_checked_[r->id] |=  BIT_ENTER; }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("None En")) { for (auto* r : ps_filtered) batch_exp_checked_[r->id] &= ~BIT_ENTER; }
+            ImGui::SameLine(0, 10);
+            if (ImGui::SmallButton("All Lv"))  { for (auto* r : ps_filtered) batch_exp_checked_[r->id] |=  BIT_LEAVE; }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("None Lv")) { for (auto* r : ps_filtered) batch_exp_checked_[r->id] &= ~BIT_LEAVE; }
+
+            constexpr ImGuiTableFlags ps_tflags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY;
+            if (ImGui::BeginTable("##exptbl_ps", 4, ps_tflags, { -1.f, 220.f })) {
+                ImGui::TableSetupScrollFreeze(0, 1);
+                ImGui::TableSetupColumn("Explorable", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Enter",      ImGuiTableColumnFlags_WidthFixed, 40.f);
+                ImGui::TableSetupColumn("Leave",      ImGuiTableColumnFlags_WidthFixed, 40.f);
+                ImGui::TableSetupColumn("##cur",      ImGuiTableColumnFlags_WidthFixed, 24.f);
+                ImGui::TableHeadersRow();
+
+                for (const auto* r : ps_filtered) {
+                    ImGui::PushID(r->id);
+                    ImGui::TableNextRow();
+                    uint8_t& bits = batch_exp_checked_[r->id];
+
+                    ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(r->name.c_str());
+                    ImGui::TableSetColumnIndex(1);
+                    bool en = (bits & BIT_ENTER) != 0;
+                    if (ImGui::Checkbox("##en", &en)) bits = en ? (bits | BIT_ENTER) : (bits & ~BIT_ENTER);
+                    ImGui::TableSetColumnIndex(2);
+                    bool lv = (bits & BIT_LEAVE) != 0;
+                    if (ImGui::Checkbox("##lv", &lv)) bits = lv ? (bits | BIT_LEAVE) : (bits & ~BIT_LEAVE);
+                    ImGui::TableSetColumnIndex(3);
+                    if (ImGui::SmallButton("@")) {
+                        const int cur = static_cast<int>(plugin.CurrentMap());
+                        if (cur == r->id) bits |= (BIT_ENTER | BIT_LEAVE);
+                    }
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Current map?");
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
+            }
+            ImGui::EndTabItem();
+        }
         ImGui::EndTabBar();
     }
 
@@ -1026,11 +1510,6 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
         });
         GoalList* list = plugin.List();
         for (const auto& item : items) {
-            const bool dup = std::any_of(list->goals.begin(), list->goals.end(),
-                [&](const GoalEntry& e) {
-                    return e.trigger.type == item.type && e.trigger.map_id == static_cast<MapID>(item.id);
-                });
-            if (dup) continue;
             GoalEntry g;
             if (item.type == GoalTrigger::Type::MapEnter)               g.label = "Enter " + item.name;
             else if (item.type == GoalTrigger::Type::VanquishComplete)  g.label = "VQ " + item.name;
@@ -1040,6 +1519,7 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
             g.trigger.map_id = static_cast<MapID>(item.id);
             list->goals.push_back(std::move(g));
         }
+        list->RenumberDuplicateLabels();
         batch_exp_checked_.clear();
     }
     if (total == 0) ImGui::EndDisabled();
@@ -1221,6 +1701,7 @@ void SplitsGoalListWindow::DrawMissionBatchPicker(SplitsWindow& plugin)
             g.trigger.hard_mode = batch_hm_;
             list->goals.push_back(std::move(g));
         }
+        list->RenumberDuplicateLabels();
         batch_mis_checked_.clear();
         batch_bon_checked_.clear();
     }

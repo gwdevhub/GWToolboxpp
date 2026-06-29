@@ -55,7 +55,6 @@
 #include <Windows/PartyStatisticsWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/ObjectiveTimerWindow.h>
-#include <Windows/SplitsWindow.h>
 #include <Windows/FactionLeaderboardWindow.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/FriendListWindow.h>
@@ -70,8 +69,8 @@
 #include <Windows/EnemyWindow.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/DropTrackerWindow.h>
-#ifdef _DEBUG
 #include <Windows/PacketLoggerWindow.h>
+#ifdef _DEBUG
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/StringDecoderWindow.h>
 #include <Windows/SkillListingWindow.h>
@@ -231,7 +230,8 @@ namespace {
         FavorTracker::Instance(),
         LoginModule::Instance(),
         {AccountInventoryWindow::Instance(), false},
-        {PerformanceWindow::Instance(), false}
+        {PerformanceWindow::Instance(), false},
+        {PacketLoggerWindow::Instance(), false}
     };
 
     bool modules_sorted = false;
