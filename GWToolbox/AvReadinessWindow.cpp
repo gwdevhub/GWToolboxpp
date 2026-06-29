@@ -32,6 +32,7 @@ void AvReadinessWindow::Run()
 
 void AvReadinessWindow::OnCreate(const HWND hWnd)
 {
+    m_hWnd = hWnd; // WM_CREATE fires before Window::Create assigns m_hWnd; the background check needs it now
     const auto label = [&](const wchar_t* text, const int x, const int y, const int w, const int h, const DWORD style, const int id) {
         const HWND ctl = CreateWindowW(WC_STATICW, text, WS_VISIBLE | WS_CHILD | style, x, y, w, h, hWnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), m_hInstance, nullptr);
         SendMessageW(ctl, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), TRUE);
