@@ -129,6 +129,17 @@ namespace {
         RouteJobScope& operator=(const RouteJobScope&) = delete;
     };
 
+    // In-flight world-map route/path computations. Each async route worker holds a PathCalcScope; the world map
+    // polls IsCalculatingPath() to show a "calculating" indicator while one is running. Atomic: incremented on
+    // worker threads, read on the game/render thread.
+    std::atomic<int> path_calc_in_flight = 0;
+    struct PathCalcScope {
+        PathCalcScope() { ++path_calc_in_flight; }
+        ~PathCalcScope() { --path_calc_in_flight; }
+        PathCalcScope(const PathCalcScope&) = delete;
+        PathCalcScope& operator=(const PathCalcScope&) = delete;
+    };
+
     bool draw_map_bounds = false;
     bool draw_graph_edges = false;
     bool draw_portals = false;
@@ -2034,6 +2045,7 @@ namespace {
 
         Resources::EnqueueWorkerTask([route_copy, start_copy, goal_copy, start_wm, goal_wm, cur_map] {
             RouteJobScope job_scope; // defer eviction while we hold MilePath*
+            PathCalcScope calc_scope; // flag a path calculation for the world-map indicator
             std::vector<GW::GamePos> full_path;
             std::vector<HiddenPathSegment> hidden_segments;
             std::vector<PortalPairDraw> portal_draws;
@@ -2283,6 +2295,7 @@ namespace {
 
         Resources::EnqueueWorkerTask([from_map, to_map, start, goal, start_wm, cur_map] {
             RouteJobScope job_scope; // defer eviction while we hold MilePath*
+            PathCalcScope calc_scope; // flag a path calculation for the world-map indicator
             std::vector<GW::Vec2f> full_path;
             std::vector<HiddenPathSegment> hidden_segments;
             if (!BuildCrossMapRoute(from_map, to_map, start, goal, start_wm, full_path, hidden_segments)) return;
@@ -2316,6 +2329,7 @@ namespace {
         const auto map_id = target_map;
         Resources::EnqueueWorkerTask([from, to, map_id] {
             RouteJobScope job_scope; // defer eviction while we hold MilePath*
+            PathCalcScope calc_scope; // flag a path calculation for the world-map indicator
             Pathing::MilePath* milepath = nullptr;
             if (map_id == GW::Map::GetMapID()) {
                 milepath = GetMilepathForCurrentMap();
@@ -2499,6 +2513,11 @@ bool PathfindingWindow::ReadyForPathing()
     // until that load lands, so callers (e.g. the quest path) simply retry next frame — the game thread never stalls.
     const auto m = GetResidentMilepathOrPrewarm();
     return m && m->ready();
+}
+
+bool PathfindingWindow::IsCalculatingPath()
+{
+    return path_calc_in_flight.load() > 0;
 }
 
 void LoadAndShowMapsAtWorldPos(const GW::Vec2f& wm_pos); // forward decl
@@ -2771,6 +2790,7 @@ void PathfindingWindow::Terminate()
         lru_pos.clear();
         route_jobs_active = 0;
     }
+    path_calc_in_flight = 0; // force-clear the indicator on shutdown (mirrors route_jobs_active above)
     // Trapezoid pathfinders own only scratch buffers (no threads), so serial frees are fine.
     for (const auto& [hash, pf] : trapezoid_pf_by_coords)
         delete pf;
