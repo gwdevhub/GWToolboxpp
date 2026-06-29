@@ -187,6 +187,10 @@ jobs:
       shell: bash
       run: |
         dotnet tool install --global wix
+        export PATH="$PATH:$HOME/.dotnet/tools"
+        # Accept the FireGiant OSMF EULA non-interactively (https://docs.firegiant.com/wix/osmf/); free for this OSS project.
+        WIX_MAJOR=$(wix --version | grep -oE '[0-9]+' | head -1)
+        wix eula accept "wix${WIX_MAJOR}" || true
         wix extension add --global WixToolset.UI.wixext
 
     - name: Build MSI

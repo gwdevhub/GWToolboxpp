@@ -14,9 +14,10 @@ Only needed to build the MSI (not for a normal Toolbox build):
 - The [WiX Toolset](https://wixtoolset.org/) v4+ as a .NET tool, plus the UI extension:
   ```powershell
   dotnet tool install --global wix
+  wix eula accept wix7   # accept the FireGiant OSMF EULA (match your installed major version); see https://docs.firegiant.com/wix/osmf/
   wix extension add --global WixToolset.UI.wixext
   ```
-  (Requires the .NET SDK. CI installs both automatically.)
+  (Requires the .NET SDK. CI installs and accepts these automatically. The OSMF is free for this project; only orgs with >$10k/yr revenue from WiX-built products owe the fee.)
 
 ## Build
 
