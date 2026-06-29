@@ -37,6 +37,7 @@
 #include <Utils/GuiUtils.h>
 
 #include <Defines.h>
+#include <GWToolbox.h>
 #include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
 #include <Utils/TextUtils.h>
@@ -1514,8 +1515,16 @@ bool Minimap::ShouldDrawAllQuests()
     return render_all_quests;
 }
 
+bool Minimap::IsEnabled()
+{
+    return GWToolbox::IsModuleEnabled(&Instance());
+}
+
 void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& context)
 {
+    if (!IsEnabled()) {
+        return;
+    }
     const GW::Agent* me = GW::Agents::GetObservingAgent();
     if (me == nullptr) {
         return;
