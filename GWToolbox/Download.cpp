@@ -340,6 +340,28 @@ static bool UpdateExe(const std::filesystem::path& exe_path, const Asset& asset,
     return true;
 }
 
+// Hand the update to the MSI installer: download it to temp, launch msiexec, and exit so it can replace the running
+// launcher (Windows keeps the exe locked while we run). The installer relaunches Toolbox on finish.
+static bool RunMsiUpdate(const Asset& msi, std::wstring& error)
+{
+    std::string data;
+    if (!Download(data, msi.browser_download_url.c_str(), 60) || data.empty())
+        return error = std::format(L"Couldn't download the installer.\n\nAnti-virus software may be blocking it. Download the latest version manually from {}.", kReleasesPage), false;
+
+    wchar_t temp_dir[MAX_PATH];
+    if (GetTempPathW(MAX_PATH, temp_dir) == 0)
+        return error = L"Couldn't find a temp folder for the installer download.", false;
+    const std::filesystem::path msi_path = std::filesystem::path(temp_dir) / L"GWToolbox.msi";
+    if (!WriteEntireFile(msi_path.wstring().c_str(), data.c_str(), data.size()))
+        return error = std::format(L"Couldn't write the installer to {}.", msi_path.wstring()), false;
+
+    const std::wstring args = L"/i \"" + msi_path.wstring() + L"\"";
+    if (reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", L"msiexec.exe", args.c_str(), nullptr, SW_SHOWNORMAL)) <= 32)
+        return error = std::format(L"Couldn't launch the installer.\n\nRun {} manually from {}.", msi_path.wstring(), kReleasesPage), false;
+    ExitProcess(0); // unlock our exe so the installer can replace it
+    return true;
+}
+
 // Not every release ships a GWToolbox.exe, so we scan the release list newest-first for the most recent one
 // that does, and offer it if it differs from ours.
 static void CheckForExeUpdate(const std::vector<Release>& releases)
@@ -372,15 +394,26 @@ static void CheckForExeUpdate(const std::vector<Release>& releases)
 
     if (!installed_exe_out_of_date && !this_exe_out_of_date) return; // up-to-date
 
+    // Prefer the MSI installer when a release ships one; it replaces the launcher cleanly. Fall back to the bare-exe
+    // swap for older releases that only ship GWToolbox.exe.
+    const Asset* msi_asset = nullptr;
+    for (const auto& release : releases) {
+        for (const auto& asset : release.assets)
+            if (asset.name == "GWToolbox.msi") { msi_asset = &asset; break; }
+        if (msi_asset) break;
+    }
+
     const std::wstring tag_w(tag_name.begin(), tag_name.end());
-    const std::wstring prompt = std::format(
-        L"A newer version of GWToolbox.exe ({}) is available.\n\n"
-        L"Update now? GWToolbox will replace its own program file; the new version takes effect next launch.",
-        tag_w
-    );
+    const std::wstring prompt = std::format(L"A newer version of GWToolbox ({}) is available.\n\nUpdate now?", tag_w);
     if (ShowMessageBoxW(nullptr, prompt.c_str(), L"GWToolbox - Update available", MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST) != IDYES) return;
 
     std::wstring error;
+    if (msi_asset && !msi_asset->browser_download_url.empty()) {
+        if (!RunMsiUpdate(*msi_asset, error)) // exits the process on success
+            ShowMessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
+        return;
+    }
+
     if ((installed_exe_out_of_date && !UpdateExe(installed_exe, *exe_asset, error)) || (this_exe_out_of_date && !UpdateExe(exe_path, *exe_asset, error))) {
         ShowMessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
         return;
