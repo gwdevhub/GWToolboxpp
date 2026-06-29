@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  GWToolbox installer. Deliberately boring: it lays down the launcher and a shortcut and nothing else - no scripts,
+  no antivirus changes - so the signed .msi keeps a clean reputation. The launcher fetches the dll on first run and
+  shows the (read-only) antivirus checklist via /avcheck.
+
+  Build (from the repo root, see installer/README.md):
+    wix build installer/GWToolbox.wxs -ext WixToolset.UI.wixext ^
+      -d ExePath=bin/RelWithDebInfo/GWToolbox.exe -d IconPath=resources/gwtoolbox.ico ^
+      -d ProductVersion=4.7.0.0 -o GWToolbox.msi
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="GWToolbox" Manufacturer="GWToolbox" Version="$(var.ProductVersion)"
+           UpgradeCode="7C9D2F1A-3B6E-4E2A-9F4C-2A1B5D8E6F30" Scope="perUserOrPerMachine" Compressed="yes">
+    <!-- UpgradeCode must never change across releases - it is how Windows recognises an upgrade vs a new product. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of GWToolbox is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="gwtoolbox.ico" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="gwtoolbox.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://www.gwtoolbox.com" />
+
+    <!-- Default to a per-user install (no UAC); the Advanced UI lets the user switch to all-users or change the folder. -->
+    <Property Id="ApplicationFolderName" Value="GWToolbox" />
+    <Property Id="WixAppFolder" Value="WixPerUserFolder" />
+
+    <Feature Id="Main" Title="GWToolbox" Level="1">
+      <ComponentGroupRef Id="Components" />
+    </Feature>
+
+    <!-- Optional "launch now" tickbox on the last page: runs the read-only antivirus checklist. -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Check my antivirus is set up for GWToolbox" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <CustomAction Id="LaunchAvCheck" Directory="APPLICATIONFOLDER"
+                  ExeCommand="&quot;[#GWToolboxExe]&quot; /avcheck" Execute="immediate" Impersonate="yes" Return="asyncNoWait" />
+
+    <ui:WixUI Id="WixUI_Advanced" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchAvCheck"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
+    </UI>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFilesFolder">
+      <Directory Id="APPLICATIONFOLDER" Name="GWToolbox" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="Components">
+      <Component Directory="APPLICATIONFOLDER">
+        <File Id="GWToolboxExe" Source="$(var.ExePath)" Name="GWToolbox.exe" KeyPath="yes" />
+      </Component>
+      <Component Directory="ProgramMenuFolder" Guid="*">
+        <Shortcut Id="StartMenuShortcut" Name="GWToolbox" Target="[#GWToolboxExe]" WorkingDirectory="APPLICATIONFOLDER" Icon="gwtoolbox.ico" />
+        <RegistryValue Root="HKMU" Key="Software\GWToolbox" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

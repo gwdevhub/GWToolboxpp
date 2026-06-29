@@ -46,6 +46,8 @@ CMakeCache.txt
 *.wxs
 *.wixobj
 *.msi
+# tracked installer source, not a build artifact
+!installer/GWToolbox.wxs
 *_ps.h
 *_vs.h
 

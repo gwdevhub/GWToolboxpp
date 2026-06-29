@@ -173,6 +173,56 @@ jobs:
         wait-for-completion: true
         output-artifact-directory: 'signed'
 
+    # The MSI is built from the SIGNED launcher (so the exe inside it is trusted), then signed itself.
+    - name: Determine MSI product version
+      id: msiver
+      if: steps.version.outputs.should_release == 'true'
+      shell: bash
+      run: |
+        MOD=$(sed -n 's/.*set(GWTOOLBOXEXE_MODULE_VERSION "\(.*\)").*/\1/p' CMakeLists.txt | tr -d '\r' | tr ',' '.')
+        echo "version=$MOD" >> "$GITHUB_OUTPUT"
+
+    - name: Install WiX
+      if: steps.version.outputs.should_release == 'true'
+      shell: bash
+      run: |
+        dotnet tool install --global wix
+        wix extension add --global WixToolset.UI.wixext
+
+    - name: Build MSI
+      if: steps.version.outputs.should_release == 'true'
+      shell: bash
+      run: |
+        export PATH="$PATH:$HOME/.dotnet/tools"
+        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
+        EXE="$BIN_DIR/GWToolbox.exe"
+        [ -f signed/GWToolbox.exe ] && EXE="signed/GWToolbox.exe"
+        wix build installer/GWToolbox.wxs -ext WixToolset.UI.wixext \
+          -d ExePath="$EXE" -d IconPath=resources/gwtoolbox.ico \
+          -d ProductVersion="${{ steps.msiver.outputs.version }}" \
+          -o GWToolbox.msi
+
+    - name: Upload unsigned MSI
+      id: upload-unsigned-msi
+      if: steps.version.outputs.should_release == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-msi
+        path: GWToolbox.msi
+
+    - name: Sign MSI with SignPath
+      if: steps.version.outputs.should_release == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
+      uses: signpath/github-action-submit-signing-request@v2
+      with:
+        api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+        organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+        project-slug: 'GWToolboxpp'
+        signing-policy-slug: 'release-signing'
+        artifact-configuration-slug: 'installer'
+        github-artifact-id: '${{ steps.upload-unsigned-msi.outputs.artifact-id }}'
+        wait-for-completion: true
+        output-artifact-directory: 'signed-msi'
+
     - name: Create release
       if: steps.version.outputs.should_release == 'true'
       shell: bash
@@ -196,11 +246,16 @@ jobs:
 
         gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
 
+        # Prefer the signed MSI; fall back to the unsigned build when SignPath isn't configured.
+        MSI="GWToolbox.msi"
+        [ -f signed-msi/GWToolbox.msi ] && MSI="signed-msi/GWToolbox.msi"
+
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git tag "$TAG_NAME"
         git push origin "$TAG_NAME"
 
+        # GWToolbox.exe stays published during the transition so pre-MSI launchers can still self-update to the MSI build.
         gh release create "$TAG_NAME" \
           --title "$TAG_NAME" \
-          "$EXE" "$DLL" GWToolboxdll.pdb.gz
+          "$EXE" "$DLL" "$MSI" GWToolboxdll.pdb.gz
