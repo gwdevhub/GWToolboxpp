@@ -1366,6 +1366,12 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         const auto text = "Elite capture locations extracted from MappingOut v4.0.0 by Aylee Sedai";
         draw_list->AddText({16.f, rect.y - 28.f}, ImGui::GetColorU32(ImGuiCol_TextDisabled), text);
     }
+    // A cross-map route can take a few seconds to build on its worker thread; let the player know it's working
+    // rather than that nothing happened. Sits just above the MappingOut attribution line (bottom-left).
+    if (PathfindingWindow::IsCalculatingPath()) {
+        const auto rect = draw_list->GetClipRectMax();
+        draw_list->AddText({16.f, rect.y - 48.f}, ImGui::GetColorU32(ImGuiCol_Text), "Calculating path...");
+    }
     drawn = true;
 }
 

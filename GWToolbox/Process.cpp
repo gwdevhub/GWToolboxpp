@@ -110,7 +110,7 @@ bool Process::Write(const uintptr_t address, const void* buffer, const size_t si
     return true;
 }
 
-bool Process::GetName(std::wstring& name)
+bool Process::GetPath(std::wstring& path)
 {
     assert(m_Rights & (PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_QUERY_INFORMATION));
 
@@ -135,8 +135,18 @@ bool Process::GetName(std::wstring& name)
         }
     }
 
-    const std::string::size_type pos = process_path.rfind('\\');
-    if (pos == std::string::npos) {
+    path = std::move(process_path);
+    return true;
+}
+
+bool Process::GetName(std::wstring& name)
+{
+    std::wstring process_path;
+    if (!GetPath(process_path))
+        return false;
+
+    const std::wstring::size_type pos = process_path.rfind(L'\\');
+    if (pos == std::wstring::npos) {
         fprintf(stderr, "Invalid process path: '%ls'\n", process_path.c_str());
         Close();
         return false;

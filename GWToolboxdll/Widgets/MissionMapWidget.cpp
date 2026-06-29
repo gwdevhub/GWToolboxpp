@@ -289,7 +289,7 @@ namespace {
 
         // When the overlay is off (default), draw the lines directly — a single DrawPrimitive with the
         // state already set above. Only the opt-in overlay pays for Minimap::Render (D3DSBT_ALL capture).
-        if (settings.draw_minimap) {
+        if (settings.draw_minimap && Minimap::IsEnabled()) {
             RenderMinimapLayers(dx_device, gameToScreen, ortho);
         }
         else {
@@ -428,22 +428,41 @@ void MissionMapWidget::Update(float)
 
 void MissionMapWidget::DrawSettingsInternal()
 {
+    const bool minimap_enabled = Minimap::IsEnabled();
+    const auto needs_minimap = [minimap_enabled] {
+        if (!minimap_enabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("Enable the Minimap module to use this.");
+    };
+
+    ImGui::BeginDisabled(!minimap_enabled);
     ImGui::Checkbox("Draw all terrain lines", &settings.draw_all_terrain_lines);
+    needs_minimap();
     ImGui::Checkbox("Draw all minimap lines", &settings.draw_all_minimap_lines);
+    needs_minimap();
 
     ImGui::Separator();
     ImGui::Checkbox("Show minimap on mission map", &settings.draw_minimap);
+    needs_minimap();
     ImGui::BeginDisabled(!settings.draw_minimap);
     ImGui::TextDisabled("Minimap layers drawn on the mission map");
     ImGui::Checkbox("Range rings", &settings.draw_ranges);
+    needs_minimap();
     ImGui::Checkbox("Agents", &settings.draw_agents);
+    needs_minimap();
     ImGui::Checkbox("Pings & drawings", &settings.draw_pings);
+    needs_minimap();
     ImGui::Checkbox("Effects", &settings.draw_effects);
+    needs_minimap();
     ImGui::Checkbox("Background", &settings.draw_background);
+    needs_minimap();
     ImGui::Checkbox("Pathing map (terrain)", &settings.draw_pmap);
+    needs_minimap();
     ImGui::Checkbox("Symbols", &settings.draw_symbols);
+    needs_minimap();
     ImGui::Checkbox("Click to target", &settings.click_to_target);
+    needs_minimap();
     ImGui::ShowHelp("Left-click (without dragging) on the mission map to target the nearest agent");
+    ImGui::EndDisabled();
     ImGui::EndDisabled();
 
     if (ImGui::Button("Customise minimap (colours, agents, ranges)...")) {
@@ -466,7 +485,7 @@ bool MissionMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
 
         // A left click that doesn't drag selects a target; drags are left to the game (it pans the map), so never capture.
         case WM_LBUTTONDOWN: {
-            left_clicking = settings.draw_minimap && settings.click_to_target && IsScreenPosOnMissionMap(cursor_pos) && !GW::UI::GetCurrentTooltip();
+            left_clicking = settings.draw_minimap && Minimap::IsEnabled() && settings.click_to_target && IsScreenPosOnMissionMap(cursor_pos) && !GW::UI::GetCurrentTooltip();
             left_click_dragged = false;
             left_click_pos = cursor_pos;
         } break;

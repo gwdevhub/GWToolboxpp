@@ -83,6 +83,20 @@ std::vector<Process> GetGuildWarsProcesses()
     return processes;
 }
 
+std::vector<std::filesystem::path> GetGuildWarsExecutablePaths()
+{
+    std::vector<std::filesystem::path> paths;
+    for (auto& process : GetGuildWarsProcesses()) {
+        std::wstring path;
+        if (!process.GetPath(path))
+            continue;
+        std::filesystem::path exe(std::move(path));
+        if (std::ranges::find(paths, exe) == paths.end())
+            paths.push_back(std::move(exe));
+    }
+    return paths;
+}
+
 InjectReply InjectWindow::AskInjectProcess(Process* target_process)
 {
     std::vector<Process> processes = GetGuildWarsProcesses();

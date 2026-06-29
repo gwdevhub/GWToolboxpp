@@ -150,6 +150,10 @@ All daily commands accept an optional `tomorrow` argument (e.g. `/zm tomorrow`) 
 
 - `/weather`: List every [Weather](/docs/weather/) condition and whether it's on.
 - `/weather <condition> [on|off|toggle]`: Toggle a condition by name (names may contain spaces), or set its state explicitly (`1`/`0` also work). Turning one on turns the rest off.
+- `/weather auto`: Start [automatic weather](/docs/weather/#automatic-weather) following the current map's climate (same as `/climate auto`).
+- `/weather off`: Stop automatic weather and clear any running weather effects (same as `/climate off`).
+- `/climate`: Show whether automatic weather is on and which climate is currently driving it.
+- `/climate [auto|off|<climate>]`: Control [automatic weather](/docs/weather/#automatic-weather). `auto` follows the current map's climate, a climate name (e.g. `Tropical`) forces that climate regardless of map, and `off` stops automatic weather and clears any running weather effects.
 
 ## Appearance (transmog)
 

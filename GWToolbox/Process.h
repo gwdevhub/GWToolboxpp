@@ -25,6 +25,7 @@ public:
     bool Write(uintptr_t address, const void* buffer, size_t size) const;
 
     bool GetName(std::wstring& name);
+    bool GetPath(std::wstring& path);
     bool GetModule(ProcessModule* module);
     bool GetModule(ProcessModule* module, const wchar_t* module_name) const;
     bool GetModules(std::vector<ProcessModule>& modules) const;

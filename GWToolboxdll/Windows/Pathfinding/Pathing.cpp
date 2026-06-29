@@ -1752,6 +1752,8 @@ namespace Pathing {
             const Portal* PT = portals.data();
             auto* const VG = m_visGraph.data();
             const auto* const PPM = portal_portal_map.data();
+            uint16_t* const EC = exp_count.data(); // per-portal expansion counters, indexed every DFS node
+            uint32_t* const EG = exp_gen.data();
 
             for (int i = begin; i < end; ++i) {
                 if (m_terminateThread) break;
@@ -1840,10 +1842,10 @@ namespace Pathing {
                     // budget spreads across the region instead of one dense portal's many funnel paths. Edges
                     // to this portal's own endpoints were already emitted above; only deep re-exploration is cut.
                     const Portal::id ek = portal.m_other_id;
-                    const uint16_t ec = (exp_gen[ek] == exp_cur) ? exp_count[ek] : 0;
+                    const uint16_t ec = (EG[ek] == exp_cur) ? EC[ek] : 0;
                     if (ec >= PATHING_PORTAL_EXPAND_CAP) continue;
-                    exp_gen[ek] = exp_cur;
-                    exp_count[ek] = static_cast<uint16_t>(ec + 1);
+                    EG[ek] = exp_cur;
+                    EC[ek] = static_cast<uint16_t>(ec + 1);
 
                     uint32_t checkpoint = static_cast<uint32_t>(visited.checkpoint());
                     visited.visit(portal.m_other_id);
@@ -2284,7 +2286,11 @@ namespace Pathing {
         }
 
         // LOS fast path: start has a direct edge to goal (emitted by ComputeVisibleEdges).
-        for (const auto& vis : sb.start_edges) {
+        // Raw pointer — skip MSVC debug bounds checks (cheap, but this runs on every search).
+        const PointVisElement* const SE = sb.start_edges.data();
+        const size_t se_count = sb.start_edges.size();
+        for (size_t i = 0; i < se_count; ++i) {
+            const auto& vis = SE[i];
             if (vis.point_id != GOAL_ID) continue;
             if ((vis.blocked_planes & current_blocked_planes).none()) {
                 m_path.insertPoint(start_pos);
@@ -2303,8 +2309,11 @@ namespace Pathing {
 
         // O(1) lookup: per point p, index into goal_edges for p->goal (or -1). Duplicate blocked_planes collapse to
         // the last — fine, paths are re-checked against current_blocked_planes in the relax step.
-        for (size_t i = 0; i < sb.goal_edges.size(); ++i) {
-            const auto pid = sb.goal_edges[i].point_id;
+        // Raw pointer — skip MSVC debug bounds checks (reused in the goal-edge relax below).
+        const PointVisElement* const GE = sb.goal_edges.data();
+        const size_t goal_edge_count = sb.goal_edges.size();
+        for (size_t i = 0; i < goal_edge_count; ++i) {
+            const auto pid = GE[i].point_id;
             if (pid < n) goal_edge_idx[pid] = static_cast<int32_t>(i);
         }
 
@@ -2382,7 +2391,7 @@ namespace Pathing {
             if (current != START_ID) {
                 const int32_t ge_idx = goal_edge_idx[current];
                 if (ge_idx >= 0) {
-                    const auto& vis = sb.goal_edges[ge_idx];
+                    const auto& vis = GE[ge_idx];
 #ifdef DEBUG_PATHING
                     dbg_edges_examined++;
 #endif

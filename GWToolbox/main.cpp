@@ -15,12 +15,12 @@
 
 static void ShowError(const wchar_t* message)
 {
-    MessageBoxW(nullptr, message, L"GWToolbox - Error", 0);
+    ShowMessageBoxW(nullptr, message, L"GWToolbox - Error", 0);
 }
 
 static void ShowError(const char* message)
 {
-    MessageBoxA(nullptr, message, "GWToolbox - Error", 0);
+    ShowMessageBoxA(nullptr, message, "GWToolbox - Error", 0);
 }
 
 static bool RestartAsAdminForInjection(const uint32_t target_pid)
@@ -152,7 +152,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     std::wstring error;
     std::filesystem::path log_file_path;
     if (!PathGetExeFullPath(log_file_path)) {
-        MessageBoxW(nullptr, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
+        ShowMessageBoxW(nullptr, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
     // A previous self-update renames the old exe aside; clean it up now that it's no longer locked.
@@ -165,7 +165,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     if (freopen_s(&stream, log_file_path.string().c_str(), "w", stderr) != 0) {
         wchar_t buf[MAX_PATH + 128];
         swprintf(buf, MAX_PATH + 128, L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.", log_file_path.wstring().c_str());
-        MessageBoxW(nullptr, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
+        ShowMessageBoxW(nullptr, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
 
@@ -208,7 +208,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             return 1;
         }
 
-        const int iRet = MessageBoxW(nullptr, L"GWToolbox doesn't seem to be installed, do you want to install it?", L"GWToolbox", MB_YESNO);
+        const int iRet = ShowMessageBoxW(nullptr, L"GWToolbox doesn't seem to be installed, do you want to install it?", L"GWToolbox", MB_YESNO);
 
         if (iRet == IDNO) {
             fprintf(stderr, "User doesn't want to install GWToolbox\n");
@@ -260,7 +260,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     }
 
     if (reply == InjectReply_PatternError) {
-        MessageBoxW(
+        ShowMessageBoxW(
             nullptr,
             L"Couldn't find character name RVA.\n"
             L"You need to update the launcher or contact the developers.",
@@ -277,7 +277,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         std::wstring detail;
         if (FindRecentDefenderBlock(L"Gw.exe", 5, detail))
             message += L"\n\nWindows Defender reported:\n" + detail;
-        ShowTroubleshootingError(message, L"GWToolbox - Error", Troubleshooting::CantReadMemory, MB_ICONERROR | MB_TOPMOST);
+        ShowTroubleshootingError(message, GwtbDialogTitle(L"GWToolbox - Error").c_str(), Troubleshooting::CantReadMemory, MB_ICONERROR | MB_TOPMOST);
         return 1;
     }
 
@@ -289,7 +289,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         }
         // @Enhancement:
         // Add UAC shield to the yes button
-        const int iRet = MessageBoxW(
+        const int iRet = ShowMessageBoxW(
             nullptr,
             L"Couldn't find any valid process to start GWToolboxpp.\n"
             L"Ensure Guild Wars is running before trying to run GWToolbox.\n"
@@ -316,7 +316,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
                             L"GWToolboxpp is for Guild Wars Reforged, NOT Guild Wars 2!\n";
         }
-        const int iRet = MessageBoxW(nullptr, error_message, L"GWToolbox - Error", MB_RETRYCANCEL | MB_TOPMOST);
+        const int iRet = ShowMessageBoxW(nullptr, error_message, L"GWToolbox - Error", MB_RETRYCANCEL | MB_TOPMOST);
         if (iRet == IDCANCEL) {
             fprintf(stderr, "User doesn't want to retry\n");
             return 1;

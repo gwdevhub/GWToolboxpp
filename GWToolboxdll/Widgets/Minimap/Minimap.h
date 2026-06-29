@@ -54,6 +54,10 @@ public:
     // Static rendering with explicit context (for multiple minimaps)
     static void Render(IDirect3DDevice9* device, const MinimapRenderContext& context);
 
+    // True only while the Minimap module is enabled; callers reusing the pipeline (e.g. the mission map) must
+    // check this first, as the render resources don't exist while the module is off.
+    static bool IsEnabled();
+
     // Setup projection matrix for a given context
     static void RenderSetupProjection(IDirect3DDevice9* device, const MinimapRenderContext& context);
 

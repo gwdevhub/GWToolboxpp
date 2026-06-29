@@ -1565,6 +1565,11 @@ namespace {
         ImGui::Text("'/chest' opens xunlai in outposts.");
         ImGui::Bullet();
         ImGui::Text(
+            "'/climate' shows the automatic weather state and the current climate.\n"
+            "'/climate [auto|off|<climate>]' drives automatic weather: 'auto' follows the map, a climate name forces one, 'off' stops automatic weather and clears any running weather."
+        );
+        ImGui::Bullet();
+        ImGui::Text(
             "'/config set|get|toggle|load [section key [value]]...' edit configuration values from GWToolbox.ini.\n"
             "\t'set' apply a setting to the running configuration.\n"
             "\t'get' show value of given key.\n"
@@ -1684,7 +1689,8 @@ namespace {
         ImGui::Bullet();
         ImGui::Text(
             "'/weather' lists the weather conditions and whether each is on.\n"
-            "'/weather <condition> [on|off|toggle]' toggles a condition by name (turning one on turns the rest off)."
+            "'/weather <condition> [on|off|toggle]' toggles a condition by name (turning one on turns the rest off).\n"
+            "'/weather auto' starts automatic weather (same as '/climate auto'); '/weather off' stops all weather (same as '/climate off')."
         );
         ImGui::Bullet();
         ImGui::Text("'/wiki [quest|<search_term>]' search GWW for current quest or search term. By default, will search for the current map.");
@@ -2436,7 +2442,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings saved to %s", printable.c_str());
+            Log::InfoW(L"Settings saved to [%s;file://%s]", printable.c_str(), printable.c_str());
         }
         else if (arg1 == L"load") {
             // e.g. /tb load
@@ -2445,7 +2451,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings loaded from %s", printable.c_str());
+            Log::InfoW(L"Settings loaded from [%s;file://%s]", printable.c_str() ,printable.c_str());
         }
         else if (arg1 == L"reset") {
             // e.g. /tb reset

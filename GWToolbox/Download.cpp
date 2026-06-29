@@ -211,7 +211,7 @@ bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstr
     // Convert tag_name to wstring for MessageBox
     std::wstring tag_name_w(release->tag_name.begin(), release->tag_name.end());
     std::wstring buffer = std::format(L"Downloading version '{}'", tag_name_w);
-    MessageBoxW(nullptr, buffer.c_str(), L"Downloading...", 0);
+    ShowMessageBoxW(nullptr, buffer.c_str(), L"Downloading...", 0);
 
     if (release_dll_asset->browser_download_url.empty()) return error = L"Didn't find GWTooolboxdll.dll", false;
 
@@ -378,14 +378,14 @@ static void CheckForExeUpdate(const std::vector<Release>& releases)
         L"Update now? GWToolbox will replace its own program file; the new version takes effect next launch.",
         tag_w
     );
-    if (MessageBoxW(nullptr, prompt.c_str(), L"GWToolbox - Update available", MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST) != IDYES) return;
+    if (ShowMessageBoxW(nullptr, prompt.c_str(), L"GWToolbox - Update available", MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST) != IDYES) return;
 
     std::wstring error;
     if ((installed_exe_out_of_date && !UpdateExe(installed_exe, *exe_asset, error)) || (this_exe_out_of_date && !UpdateExe(exe_path, *exe_asset, error))) {
-        MessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
+        ShowMessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
         return;
     }
-    MessageBoxW(nullptr, L"GWToolbox.exe was updated.\n\nClick the button below to restart the launcher and start using the new version.", L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
+    ShowMessageBoxW(nullptr, L"GWToolbox.exe was updated.\n\nClick the button below to restart the launcher and start using the new version.", L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
     RestartWithSameArgs();
 }
 

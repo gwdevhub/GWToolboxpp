@@ -158,6 +158,8 @@ namespace {
                 record.charnames.emplace(TextUtils::WStringToString(name), profession);
             }
         }
+        // reached the legacy .ini fallback; flag changed so the next save migrates it to friends.json
+        friends_changed = true;
         return records;
     }
 

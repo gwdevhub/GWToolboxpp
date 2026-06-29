@@ -531,7 +531,8 @@ namespace OpenTyria {
             float current_cost,
             float estimated_cost)
         {
-            PathFindNode& n = nodes[trap_idx];
+            // Raw pointer — skip MSVC debug bounds checks; `nodes` isn't resized during a search.
+            PathFindNode& n = nodes.data()[trap_idx];
             n.closed = false;
             n.cost_to_node = current_cost;
             n.pos = pos;
@@ -637,7 +638,7 @@ namespace OpenTyria {
                 const GW::PathingTrapezoid* portal_trap = pair->trapezoids[idx];
                 uint32_t pidx = pf.IndexOf(portal_trap);
                 if (pidx == UINT32_MAX) continue;
-                if (nodes[pidx].closed) continue;
+                if (nodes.data()[pidx].closed) continue;
 
                 Vec2f point1, point2;
                 if (left_side) {
@@ -976,11 +977,17 @@ namespace OpenTyria {
         PathFindPoint closest_point{};
         float closest_point_dist = INFINITY;
 
-        AddNode(nodes, prioq, IndexOf(src_trap), nullptr, src_trap, src, 0.f, INFINITY);
+        // Guard before AddNode indexes nodes[]: FindClosestTrapezoid normally returns an indexed trap, but a
+        // bad/partial map could miss. Explicit here since AddNode now writes through nodes.data() (no debug check).
+        const uint32_t src_idx = IndexOf(src_trap);
+        if (src_idx == UINT32_MAX) return SearchResult::SrcTrapezoidNotFound;
+        AddNode(nodes, prioq, src_idx, nullptr, src_trap, src, 0.f, INFINITY);
 
         PathHeapNode top;
+        // Raw pointer — skip MSVC debug bounds checks; `nodes` is sized once above and never resized here.
+        PathFindNode* const N = nodes.data();
         while (HeapPop(prioq, top)) {
-            PathFindNode* curr_node = &nodes[top.trap_id];
+            PathFindNode* curr_node = &N[top.trap_id];
             curr_node->closed = true;
             const GW::PathingTrapezoid* curr_trap = curr_node->trap;
 
@@ -1002,13 +1009,13 @@ namespace OpenTyria {
             auto try_visit_above = [&](const GW::PathingTrapezoid* nb) {
                 if (!nb) return;
                 uint32_t nidx = IndexOf(nb);
-                if (nidx == UINT32_MAX || !nodes[nidx].closed)
+                if (nidx == UINT32_MAX || !N[nidx].closed)
                     VisitAbove(*this, nodes, prioq, curr_node, dst_pos, nb, MAX_COST);
             };
             auto try_visit_below = [&](const GW::PathingTrapezoid* nb) {
                 if (!nb) return;
                 uint32_t nidx = IndexOf(nb);
-                if (nidx == UINT32_MAX || !nodes[nidx].closed)
+                if (nidx == UINT32_MAX || !N[nidx].closed)
                     VisitBelow(*this, nodes, prioq, curr_node, dst_pos, nb, MAX_COST);
             };
 

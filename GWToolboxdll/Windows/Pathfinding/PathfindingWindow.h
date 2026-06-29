@@ -63,6 +63,9 @@ public:
     static bool IsPathingEnabled();
     // False if still calculating current map
     static bool ReadyForPathing();
+    // True while one or more cross-map/world-map route computations are running on a worker thread. Lock-free;
+    // safe to poll every frame (the world map shows a "calculating" indicator while true).
+    static bool IsCalculatingPath();
     // False if still calculating current map
     static clock_t CalculatePath(const GW::GamePos& from, const GW::GamePos& to, CalculatedCallback callback, void* args = nullptr);
 

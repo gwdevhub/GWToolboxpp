@@ -25,9 +25,15 @@ on:
 jobs:
   build:
     runs-on: windows-2025-vs2026
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write
+    # Exposed at job level so the release steps can gate on `env.CERTUM_OTP_URI`
+    # (secrets can't be referenced directly in an `if:` expression).
+    env:
+      CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
+      CERTUM_USERID: ${{ secrets.CERTUM_USERID }}
+      CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
 
     steps:
 #    - name: Setup Windows 10 SDK Action
@@ -141,37 +147,29 @@ jobs:
           echo "should_release=true" >> "$GITHUB_OUTPUT"
         fi
 
-    # Signing is skipped automatically until SIGNPATH_ORGANIZATION_ID is set as a
-    # repo variable, so releases keep working (unsigned) before SignPath is wired up.
-    - name: Stage binaries for signing
-      if: steps.version.outputs.should_release == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
+    # Certum SimplySign code signing. The binaries are signed in place in
+    # bin/RelWithDebInfo before the release upload. Each signing step is gated on
+    # the CERTUM_OTP_URI secret being present, so forks and un-provisioned
+    # environments still publish a release (unsigned) instead of failing.
+    - name: Set up Certum SimplySign
+      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
       shell: bash
       run: |
-        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        mkdir -p to-sign
-        cp "$BIN_DIR/GWToolbox.exe" to-sign/
-        cp "$BIN_DIR/GWToolboxdll.dll" to-sign/
+        chmod +x ./.github/scripts/install-simplysign.sh
+        ./.github/scripts/install-simplysign.sh
+        powershell -ExecutionPolicy Bypass -File "./.github/scripts/configure-simplysign.ps1"
 
-    - name: Upload unsigned binaries
-      id: upload-unsigned
-      if: steps.version.outputs.should_release == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
-      uses: actions/upload-artifact@v4
-      with:
-        name: unsigned-binaries
-        path: to-sign/
+    - name: Authenticate Certum SimplySign
+      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
+      shell: bash
+      run: powershell -ExecutionPolicy Bypass -File "./.github/scripts/connect-simplysign.ps1"
 
-    - name: Sign binaries with SignPath
-      if: steps.version.outputs.should_release == 'true' && vars.SIGNPATH_ORGANIZATION_ID != ''
-      uses: signpath/github-action-submit-signing-request@v2
-      with:
-        api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-        organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
-        project-slug: 'GWToolboxpp'
-        signing-policy-slug: 'release-signing'
-        artifact-configuration-slug: 'binaries'
-        github-artifact-id: '${{ steps.upload-unsigned.outputs.artifact-id }}'
-        wait-for-completion: true
-        output-artifact-directory: 'signed'
+    - name: Sign release binaries
+      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
+      shell: pwsh
+      run: |
+        $bin = "${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
+        ./.github/scripts/sign-certum.ps1 -Files @("$bin/GWToolbox.exe", "$bin/GWToolboxdll.dll")
 
     - name: Create release
       if: steps.version.outputs.should_release == 'true'
@@ -182,18 +180,6 @@ jobs:
         TAG_NAME="${{ steps.version.outputs.tag_name }}"
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
 
-        # Prefer the SignPath-signed binaries; fall back to the build output if
-        # signing was skipped (SignPath not configured yet).
-        if [ -f signed/GWToolbox.exe ]; then
-          EXE="signed/GWToolbox.exe"
-          DLL="signed/GWToolboxdll.dll"
-          echo "Releasing signed binaries."
-        else
-          EXE="$BIN_DIR/GWToolbox.exe"
-          DLL="$BIN_DIR/GWToolboxdll.dll"
-          echo "Releasing unsigned binaries (SignPath not configured)."
-        fi
-
         gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
 
         git config user.name "GitHub Actions"
@@ -203,4 +189,4 @@ jobs:
 
         gh release create "$TAG_NAME" \
           --title "$TAG_NAME" \
-          "$EXE" "$DLL" GWToolboxdll.pdb.gz
+          "$BIN_DIR/GWToolbox.exe" "$BIN_DIR/GWToolboxdll.dll" GWToolboxdll.pdb.gz

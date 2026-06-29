@@ -264,6 +264,7 @@ void AgentRenderer::LoadCustomAgents()
     }
     custom_agents.clear();
 
+    bool migrated_from_ini = false;
     const auto json_path = Resources::GetSettingFile(AGENTCOLOR_JSONFILENAME);
     std::error_code ec;
     if (std::filesystem::exists(json_path, ec)) {
@@ -295,9 +296,11 @@ void AgentRenderer::LoadCustomAgents()
             custom_agent->index = custom_agents.size();
             custom_agents.push_back(custom_agent);
         }
+        migrated_from_ini = true;
     }
     BuildCustomAgentsMap();
-    agentcolors_changed = false;
+    // a legacy .ini load leaves no .json on disk; flag changed so the next save migrates it
+    agentcolors_changed = migrated_from_ini;
     custom_agents_loaded = true;
 }
 
