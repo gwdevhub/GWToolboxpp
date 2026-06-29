@@ -174,6 +174,51 @@ function Dump-SignDiagnostics([string]$tag) {
     Write-Host "--- end UI tree ($tag) ---"
 }
 
+function Find-UiByName($el, $walker, $name) {
+    $c = $walker.GetFirstChild($el)
+    while ($c) {
+        if ($c.Current.Name -eq $name) { return $c }
+        $r = Find-UiByName $c $walker $name
+        if ($r) { return $r }
+        $c = $walker.GetNextSibling($c)
+    }
+    return $null
+}
+
+# An outdated SimplySign build pops a modal "New version found - download?" box
+# over the login form, which swallows the credential keystrokes. Decline it by
+# clicking "No" (Invoke / legacy default action / click the element's point).
+function Dismiss-UpdatePrompt {
+    try { Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction Stop } catch { return $false }
+    if (-not ('Win32Mouse' -as [type])) {
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class Win32Mouse {
+    [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] static extern void mouse_event(uint f, uint x, uint y, uint d, int e);
+    public static void Click(int x, int y){ SetCursorPos(x,y); mouse_event(0x02,0,0,0,0); mouse_event(0x04,0,0,0,0); }
+}
+"@
+    }
+    $procIds = @((Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue).Id)
+    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $top = $walker.GetFirstChild([System.Windows.Automation.AutomationElement]::RootElement)
+    while ($top) {
+        if ($procIds -contains $top.Current.ProcessId) {
+            $no = Find-UiByName $top $walker "No"
+            if ($no) {
+                Write-Host "Update prompt detected; declining (clicking 'No')."
+                try { ($no.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke(); return $true } catch {}
+                try { ($no.GetCurrentPattern([System.Windows.Automation.LegacyIAccessiblePattern]::Pattern)).DoDefaultAction(); return $true } catch {}
+                try { $pt = $no.GetClickablePoint(); [Win32Mouse]::Click([int]$pt.X, [int]$pt.Y); return $true } catch { Write-Host "Click 'No' failed: $($_.Exception.Message)" }
+            }
+        }
+        $top = $walker.GetNextSibling($top)
+    }
+    return $false
+}
+
 # Start from a clean slate so a stale window/session can't swallow the keystrokes.
 if ($existing = Get-Process -Name "SimplySignDesktop" -ErrorAction Ignore) {
     Write-Host "Killing existing SimplySignDesktop process..."
@@ -206,6 +251,16 @@ Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
 # Capture the login form before typing into it so we can see its real layout.
 Dump-SignDiagnostics "before-login"
 
+# Decline the "new version available" modal if it's covering the login form.
+if (Dismiss-UpdatePrompt) {
+    Start-Sleep -Milliseconds 800
+    Dump-SignDiagnostics "after-dismiss"
+}
+
+# Re-assert focus: the dialog dismissal / screenshot / UI-tree walk above can move
+# the foreground window, and keystrokes sent to the wrong window are silently dropped.
+$wshell.AppActivate($proc.Id) | Out-Null
+$wshell.AppActivate('SimplySign Desktop') | Out-Null
 Start-Sleep -Milliseconds 400
 
 # Paste rather than type: SendKeys mangles characters like + ^ % ( ) and can
