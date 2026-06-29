@@ -185,24 +185,30 @@ namespace {
     std::vector<WeatherCondition> DefaultConditions()
     {
         // Falling-particle effect via aggregate init; the cloud-cover layer (band above the player) is assigned after,
-        // since most presets want both. CloudCover = {base, top, tint(argb), density, size, speed}.
+        // since most presets want both. CloudCover = {base, top, tint(argb), density, size, speed[, radius]}.
         std::vector<WeatherCondition> v = {
             {"Heavy Rain", kTypeRain, false, 70, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 0.30f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 1.0f},
-            {"Light Rain", kTypeRain, false, 2, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 1.0f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.20f},
-            {"Snow", kTypeSnow, false, 13, 8.f, 100.f, 2500.f, 30.f, 55.f, 10.f, 0.15f, {}, 10.f, 30.f, false, 0.50f},
+            {"Light Rain", kTypeRain, false, 5, 10.f, 500.f, 1500.f, 0.f, 25.f, 10.f, 1.0f, {0x20ed0, 0x20ed1}, 6.f, 60.f, false, 0.40f},
+            {"Snow", kTypeSnow, false, 20, 8.f, 100.f, 1500.f, 30.f, 55.f, 10.f, 0.15f, {}, 10.f, 30.f, false, 0.40f, 0xFFFFFFFFu, 0xFF98E4FFu},
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
-            // Cloud-cover-only conditions (density 0 = no falling particles); the look is entirely the cloud layer below.
-            {"Fog", kTypeRain, false, 0, 10.f, 500.f, 2500.f, 0.f, 25.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.10f},
-            {"Sandstorm", kTypeRain, false, 0, 10.f, 500.f, 2500.f, 90.f, 90.f, 0.f, 0.f, {}, 10.f, 30.f, false, 0.25f, 0xFFC8B080u},
+            // Cloud-cover-only conditions (low density = sparse/no falling particles); the look is mostly the cloud layer below.
+            {"Fog", kTypeRain, true, 2, 10.f, 300.f, 1500.f, 0.f, 25.f, 0.f, 1.0f, {}, 10.f, 30.f, false, 0.0f, 0xFFFFFFFFu, 0xFFFFFFFFu},
+            {"Sandstorm", kTypeRain, false, 10, 4.f, 500.f, 1000.f, 90.f, 90.f, 85.f, 0.f, {}, 10.f, 30.f, false, 0.0f, 0xFFC8B080u, 0xFFA09078u, kDecalNone},
             // Blizzard: heavy snow + a low white fog band.
-            {"Blizzard", kTypeSnow, false, 35, 8.f, 140.f, 2500.f, 35.f, 60.f, 18.f, 0.15f, {}, 10.f, 30.f, false, 0.55f},
+            {"Blizzard", kTypeSnow, false, 85, 6.f, 700.f, 1500.f, 35.f, 60.f, 39.f, 0.f, {}, 10.f, 30.f, false, 0.55f, 0xFFFFFFFFu, 0xFFA09078u, kDecalAuto, 23.f},
         };
-        v[0].cloud = {1000.f, 1500.f, 0xB0303840u, 25, 700.f, 60.f};  // Heavy Rain: dark rain clouds high overhead
-        v[1].cloud = {1000.f, 1500.f, 0x70404850u, 15, 700.f, 50.f};  // Light Rain: lighter, sparser clouds
-        v[4].cloud = {0.f, 1000.f, 0x90C8C8D0u, 30, 600.f, 40.f};     // Fog: white, low, slow
-        v[5].cloud = {0.f, 200.f, 0xB0C8B080u, 45, 350.f, 700.f};     // Sandstorm: tan, ground-level, fast (Wind sets the heading)
-        v[6].cloud = {0.f, 1000.f, 0x80D0D8E0u, 25, 600.f, 50.f};     // Blizzard: white fog under the snow
+        v[1].column_height = 1500.f;
+        v[2].column_height = 1500.f;
+        v[4].column_height = 1500.f;
+        v[5].column_height = 60.f;
+        v[6].column_height = 1000.f;
+        v[0].cloud = {1000.f, 1500.f, 0xB0303840u, 25, 700.f, 60.f};   // Heavy Rain: dark rain clouds high overhead
+        v[1].cloud = {1000.f, 1500.f, 0x70404850u, 15, 700.f, 20.f};   // Light Rain: lighter, sparser clouds
+        v[2].cloud = {1000.f, 1500.f, 0xFDC6C6C6u, 20, 500.f, 20.f};   // Snow: pale overcast band
+        v[4].cloud = {-500.f, 100.f, 0x11C8C8D0u, 10, 800.f, 10.f, 1500.f}; // Fog: white, low, slow, thin
+        v[5].cloud = {-400.f, 60.f, 0x38C8B080u, 10, 500.f, 700.f, 600.f};  // Sandstorm: tan, ground-level, fast, tight (Wind sets the heading)
+        v[6].cloud = {0.f, 1000.f, 0x2ED0D8E0u, 3, 800.f, 0.f, 1500.f}; // Blizzard: faint white fog under the snow
         return v;
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -214,12 +220,12 @@ namespace {
     {
         const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
         return {
-            p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}, {"Fog", 0.08f}}),
-            p(Climate::Tropical, {{"Heavy Rain", 0.3f}, {"Light Rain", 0.2f}, {"Fog", 0.05f}}),
-            p(Climate::Arid, {{"Light Rain", 0.1f}, {"Sandstorm", 0.1f}}),
+            p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}, {"Fog", 0.02f}}),
+            p(Climate::Tropical, {{"Heavy Rain", 0.2f}, {"Light Rain", 0.1f}, {"Fog", 0.05f}}),
+            p(Climate::Arid, {{"Light Rain", 0.1f}, {"Sandstorm", 0.05f}}),
             p(Climate::Desertous, {{"Light Rain", 0.05f}, {"Sandstorm", 0.15f}}),
             p(Climate::Mountainous, {{"Snow", 0.4f}, {"Blizzard", 0.15f}}),
-            p(Climate::Volcanic, {{"Ashfall", 0.4f}}),
+            p(Climate::Volcanic, {{"Ashfall", 0.4f}, {"Fog", 0.05f}}),
         };
     }
     std::vector<ClimateProfile> climate_profiles = DefaultClimateProfiles();
@@ -231,9 +237,9 @@ namespace {
     unsigned int active_tint = 0xFFFFFFFFu;   // the active condition's particle tint, fed to the instanced draws (runtime)
     float ambient_strength = 0.f;             // eased aggregate dimming of active conditions (runtime, not saved)
 
-    bool auto_weather = false;   // drive which conditions are active from the climate->weather table
-    float auto_change_min = 3.f; // minutes between automatic weather rolls (random in [min, max])
-    float auto_change_max = 8.f;
+    bool auto_weather = true;    // drive which conditions are active from the climate->weather table
+    float auto_change_min = 2.f; // minutes between automatic weather rolls (random in [min, max])
+    float auto_change_max = 5.f;
     Climate auto_climate = Climate::Temperate; // climate the current automatic weather was last rolled for (runtime)
     float auto_timer = -1.f;                   // minutes until the next automatic roll; <0 = roll on the next update (runtime)
     Climate auto_climate_override = Climate::None; // /climate forces this climate regardless of map; None = follow the map (runtime, not saved)
@@ -1172,23 +1178,34 @@ namespace {
         Log::Info("Weather off");
     }
 
+    // Unset the current weather (deactivate every condition) without touching automatic weather. With automatic
+    // weather on this clears the sky until the next scheduled roll; /weather off stops it entirely. Used by /weather clear.
+    void ClearWeather()
+    {
+        for (auto& c : conditions)
+            c.active = false;
+        Log::Info("Weather cleared");
+    }
+
     // /weather <condition name> [on|off|toggle|1|0] - toggle a condition by name (names may be multi-word).
-    // /weather auto|off - mirror /climate auto|off (start map-driven weather / stop everything).
+    // /weather auto|off|clear - mirror /climate auto|off, or unset the current condition (clear) without stopping auto.
     void CHAT_CMD_FUNC(CmdWeather)
     {
         if (argc < 2) {
             Log::Info("Weather conditions:");
             for (const auto& c : conditions)
                 Log::Info("  %s: %s", c.name.c_str(), c.active ? "on" : "off");
-            Log::Info("Usage: /weather <condition> [on|off|toggle] | /weather [auto|off]");
+            Log::Info("Usage: /weather <condition> [on|off|toggle] | /weather [auto|off|clear]");
             return;
         }
-        // A lone 'auto'/'off' controls automatic weather as a whole (same as /climate); anything else is a
-        // condition name. ('off' as a bare arg can't be a condition state here - there's no condition to apply it to.)
+        // A lone 'auto'/'off'/'clear' controls automatic weather as a whole (same as /climate), or clears the current
+        // condition; anything else is a condition name. ('off' as a bare arg can't be a condition state here - there's
+        // no condition to apply it to.)
         if (argc == 2) {
             const std::string only = TextUtils::ToLower(TextUtils::WStringToString(argv[1]));
             if (only == "auto") return EnableAutoWeatherFollowMap();
             if (only == "off") return StopWeather();
+            if (only == "clear") return ClearWeather();
         }
         // The trailing word, if it is a state keyword, sets the state; otherwise the whole tail is the name and
         // the command toggles. Names can contain spaces, so join everything that is not the state word.
@@ -1444,6 +1461,8 @@ void WeatherModule::DrawSettings()
         if (ImGui::Checkbox("##active", &c.active) && c.active) // only one condition at a time: turning one on turns the rest off
             for (int j = 0; j < static_cast<int>(conditions.size()); j++)
                 if (j != i) conditions[j].active = false;
+        if (auto_weather && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) // explain the disabled state
+            ImGui::SetTooltip("Automatic weather is on and controls which condition is active.\nTurn off \"Automatic weather\" below to switch conditions manually.");
         ImGui::EndDisabled();
         ImGui::SameLine();
         char header[64];
@@ -1595,6 +1614,8 @@ void WeatherModule::DrawSettings()
             if (forced) { auto_climate_override = cp.climate; auto_weather = true; auto_timer = -1.f; }
             else { auto_climate_override = Climate::None; auto_weather = false; }
         }
+        if (follow_map && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) // explain the disabled state
+            ImGui::SetTooltip("Automatic weather is following the map's climate.\nTurn off \"Automatic weather (follow map climate)\" above to force a specific climate.");
         ImGui::EndDisabled();
         ImGui::SameLine();
         if (ImGui::CollapsingHeader(ClimateName(cp.climate))) {
@@ -1634,7 +1655,17 @@ void WeatherModule::DrawSettings()
         ImGui::EndPopup();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Reset climate table")) climate_profiles = DefaultClimateProfiles();
+    if (ImGui::Button("Reset climate table")) ImGui::OpenPopup("Reset climate table?");
+    if (ImGui::BeginPopupModal("Reset climate table?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Replace the climate->weather table with the %d defaults?", static_cast<int>(DefaultClimateProfiles().size()));
+        if (ImGui::Button("Reset")) {
+            climate_profiles = DefaultClimateProfiles();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
     ImGui::PopID();
 }
 

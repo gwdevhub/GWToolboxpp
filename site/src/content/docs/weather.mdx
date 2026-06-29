@@ -45,6 +45,7 @@ By default the climate follows the map you're in. You can force a specific clima
 - `/weather` — list every condition and whether it's on.
 - `/weather <condition>` — toggle a condition by name (names may contain spaces).
 - `/weather <condition> on|off|toggle` — set a condition's state explicitly (`1`/`0` also work).
+- `/weather clear` — unset the current condition (clear skies) without turning automatic weather off; if automatic weather is on it re-rolls at the next scheduled change.
 
 Turning one condition on turns the rest off, matching the one-at-a-time behaviour of the settings panel.
 
