@@ -8,6 +8,9 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.29
+* **[New] Weather module: draws weather — rain, snow, ash, fog and overhead clouds — into the 3D game world, occluded by terrain and able to dim the scene with an overcast. Ships with presets (Heavy/Light Rain, Snow, Ashfall, Fog, Sandstorm, Blizzard) and lets you author your own. Optional automatic weather picks conditions from the climate of the region you're in; the new `/weather` and `/climate` chat commands control it.**
+* [New] Skills: added an "Export HD skill icons as DDS" button to save high-resolution skill icons to image files.
+* [New] Launcher: can now allow GWToolbox.exe and Guild Wars through Windows Defender Controlled Folder Access during install, so Toolbox can still write settings and crash dumps to your Documents folder when ransomware protection is on.
 * [New] Chat: added `/dropitem <model_id> [quantity]` to drop inventory items matching a model id, stack by stack — drops up to the given quantity, or every matching stack when no quantity is given. Only works in an explorable area and skips equipped/customized items.
 * [New] Hero command panel: you can now choose whether remembered panel positions track the party slot (new default) or follow a specific hero, via a radio in Party Settings.
 * [New] Defender detection now extends to gMod and plugin load failures — if Windows Defender blocks one from loading, you get an exclusion prompt instead of a silent failure.
@@ -15,6 +18,12 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Launcher: re-downloading GWToolbox.exe from the website now also updates the installed copy used by desktop shortcuts, so a stale exe is properly replaced.
 * [Fix] Launcher: self-update now verifies the new GWToolbox.exe actually landed (and wasn't silently restored or quarantined by anti-virus) instead of re-prompting to update on every launch.
 * [Fix] Health widget: the absolute HP readout now uses the agent's own max HP, so it shows a value immediately instead of "-" until a party member damages or heals the target.
+* [Fix] Mission map: fixed a crash when the minimap overlay drew while the Minimap module was turned off; mission-map options that require the Minimap are now disabled (with a tooltip) while it's off.
+* [Fix] Game Settings: the "hide window buttons" option now applies in every non-windowed mode, not only borderless and fullscreen.
+* [Fix] Settings migration: custom minimap agent colours and your friend list now carry across correctly when upgrading from the old `.ini` settings.
+* [Minor] World map: shows a "Calculating path…" indicator while a cross-map route is still being calculated.
+* [Minor] Release builds are now code-signed (via SignPath), which should reduce false antivirus warnings.
+* [Minor] Launcher dialogs now show the launcher version in their title bar.
 * [Minor] Crash-file write failures now report the actual cause (missing folder, full disk, permissions) instead of only a raw error code.
 * [Minor] Plugins: plugin-load error messages now display non-ASCII (e.g. Korean) file paths correctly.
 * [Minor] Docs site: headings now have hover-to-copy permalink anchors.
