@@ -32,8 +32,9 @@ export async function getLatestRelease(): Promise<LatestRelease> {
     }
     // Two-pass lookup over recent releases:
     //   - Latest entry overall → the "version" label users see.
-    //   - Most recent entry that ships an .exe asset → the actual download URL,
-    //     because DLL-only `*_Release` tags don't carry the installer.
+    //   - Most recent entry that ships an installer asset → the actual download URL.
+    //     Prefer the .msi installer; fall back to the bare .exe for older releases.
+    //     (DLL-only `*_Release` tags carry neither.)
     const res = await fetch(
       'https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30',
       { headers },
@@ -50,20 +51,25 @@ export async function getLatestRelease(): Promise<LatestRelease> {
     const published = releases.filter((r) => !r.draft && !r.prerelease);
     if (published.length === 0) return FALLBACK;
     const latest = published[0];
-    const exeRelease = published.find((r) =>
-      r.assets?.some((a) => a.name.toLowerCase().endsWith('.exe')),
+    const isInstaller = (name: string) => {
+      const n = name.toLowerCase();
+      return n.endsWith('.msi') || n.endsWith('.exe');
+    };
+    const installerRelease = published.find((r) =>
+      r.assets?.some((a) => isInstaller(a.name)),
     );
-    const exe = exeRelease?.assets?.find((a) =>
-      a.name.toLowerCase().endsWith('.exe'),
-    );
-    if (!exe) return FALLBACK;
+    const assets = installerRelease?.assets ?? [];
+    const installer =
+      assets.find((a) => a.name.toLowerCase().endsWith('.msi')) ??
+      assets.find((a) => a.name.toLowerCase().endsWith('.exe'));
+    if (!installer) return FALLBACK;
     // Strip the conventional "_Release" / "_Exe" suffix from the tag for display.
     const version = (latest.name ?? latest.tag_name ?? FALLBACK.version)
       .replace(/_Release$/i, '')
       .replace(/_Exe$/i, '');
     return {
       version,
-      url: exe.browser_download_url,
+      url: installer.browser_download_url,
       publishedAt: latest.published_at ?? null,
       source: 'github',
     };
