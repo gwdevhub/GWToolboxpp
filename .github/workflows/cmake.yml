@@ -171,16 +171,6 @@ jobs:
         $bin = "${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
         ./.github/scripts/sign-certum.ps1 -Files @("$bin/GWToolbox.exe", "$bin/GWToolboxdll.dll")
 
-    # Screenshot + UI-tree of the SimplySign login form, captured by
-    # connect-simplysign.ps1. Uploaded even on failure to debug signing.
-    - name: Upload signing diagnostics
-      if: always() && steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
-      uses: actions/upload-artifact@v4
-      with:
-        name: signing-diagnostics
-        path: sign-diagnostics/
-        if-no-files-found: ignore
-
     - name: Create release
       if: steps.version.outputs.should_release == 'true'
       shell: bash

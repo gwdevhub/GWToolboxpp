@@ -2,9 +2,9 @@
 #
 # Certum's SimplySign cloud has no headless login: the certificate only reaches
 # the Windows store after the GUI client authenticates. So we generate the
-# current TOTP from the otpauth:// secret (CERTUM_OTP_URI) and type the
-# credentials into the login dialog via SendKeys. This needs an interactive
-# desktop session, which GitHub-hosted Windows runners provide.
+# current TOTP from the otpauth:// secret (CERTUM_OTP_URI) and paste the
+# credentials into the login dialog. This needs an interactive desktop session,
+# which GitHub-hosted Windows runners provide.
 #
 # Based on https://www.devas.life/how-to-automate-signing-your-windows-app-with-certum/
 # and the refinements in blinkdisk's connect-simplysign.ps1.
@@ -22,9 +22,6 @@ if (-not $ExePath) {
 }
 
 Write-Host "=== SimplySign Desktop TOTP authentication ==="
-Write-Host "User: $UserId"
-Write-Host "Executable: $ExePath"
-
 if (-not (Test-Path $ExePath)) {
     Write-Host "ERROR: SimplySign Desktop not found at $ExePath"
     exit 1
@@ -52,12 +49,6 @@ if ($Algorithm -notin @('SHA1', 'SHA256', 'SHA512')) {
     Write-Host "ERROR: unsupported TOTP algorithm: $Algorithm"
     exit 1
 }
-
-# Lengths only (no secret values): lets us confirm in CI logs that the stored
-# secret isn't truncated/edited. Expected here: uri-len=148 secret-len=56
-# alg=SHA256 digits=6 period=30 user-len=8.
-Write-Host ("OTP config: uri-len={0} secret-len={1} alg={2} digits={3} period={4}; user-len={5}" -f `
-    $OtpUri.Length, $Base32.Length, $Algorithm, $Digits, $Period, $UserId.Length)
 
 # --- TOTP generator (RFC 6238), inline C# so there are no dependencies --------
 Add-Type -Language CSharp @"
@@ -116,63 +107,6 @@ public static class Totp
     }
 }
 "@
-
-# --- Diagnostics: capture what the login form actually looks like -------------
-# A screenshot needs a framebuffer; the UI Automation tree dump works regardless
-# and gives us the exact control names/order to target.
-function Save-Screenshot([string]$path) {
-    try {
-        Add-Type -AssemblyName System.Windows.Forms, System.Drawing -ErrorAction Stop
-        $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
-        $bmp = New-Object System.Drawing.Bitmap($b.Width, $b.Height)
-        $g = [System.Drawing.Graphics]::FromImage($bmp)
-        $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
-        $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
-        $g.Dispose(); $bmp.Dispose()
-        Write-Host "Saved screenshot: $path ($($b.Width)x$($b.Height))"
-    } catch {
-        Write-Host "Screenshot failed: $($_.Exception.Message)"
-    }
-}
-
-function Walk-Ui($el, $walker, $depth) {
-    $c = $walker.GetFirstChild($el)
-    while ($c) {
-        $info = $c.Current
-        Write-Host ("{0}[{1}] Name='{2}' Id='{3}'" -f ('  ' * $depth),
-            $info.ControlType.ProgrammaticName.Replace('ControlType.', ''), $info.Name, $info.AutomationId)
-        if ($depth -lt 8) { Walk-Ui $c $walker ($depth + 1) }
-        $c = $walker.GetNextSibling($c)
-    }
-}
-
-function Show-UiTree {
-    try {
-        Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction Stop
-    } catch { Write-Host "UI Automation unavailable: $($_.Exception.Message)"; return }
-    $procIds = @((Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue).Id)
-    if (-not $procIds) { Write-Host "No SimplySign process to inspect."; return }
-    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
-    $top = $walker.GetFirstChild([System.Windows.Automation.AutomationElement]::RootElement)
-    while ($top) {
-        try {
-            if ($procIds -contains $top.Current.ProcessId) {
-                Write-Host "== WINDOW: '$($top.Current.Name)' =="
-                Walk-Ui $top $walker 1
-            }
-        } catch {}
-        $top = $walker.GetNextSibling($top)
-    }
-}
-
-function Dump-SignDiagnostics([string]$tag) {
-    $dir = Join-Path (Get-Location) "sign-diagnostics"
-    New-Item -ItemType Directory -Force -Path $dir | Out-Null
-    Save-Screenshot (Join-Path $dir "$tag.png")
-    Write-Host "--- UI tree ($tag) ---"
-    Show-UiTree
-    Write-Host "--- end UI tree ($tag) ---"
-}
 
 function Find-UiByName($el, $walker, $name) {
     $c = $walker.GetFirstChild($el)
@@ -244,21 +178,11 @@ if (-not $focused) {
     exit 1
 }
 
-Write-Host "SimplySign windows after focus:"
-Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
-    Select-Object Name, Id, MainWindowTitle | Format-Table -AutoSize | Out-String | Write-Host
-
-# Capture the login form before typing into it so we can see its real layout.
-Dump-SignDiagnostics "before-login"
-
 # Decline the "new version available" modal if it's covering the login form.
-if (Dismiss-UpdatePrompt) {
-    Start-Sleep -Milliseconds 800
-    Dump-SignDiagnostics "after-dismiss"
-}
+if (Dismiss-UpdatePrompt) { Start-Sleep -Milliseconds 800 }
 
-# Re-assert focus: the dialog dismissal / screenshot / UI-tree walk above can move
-# the foreground window, and keystrokes sent to the wrong window are silently dropped.
+# Re-assert focus: dismissing the dialog can move the foreground window, and
+# keystrokes sent to the wrong window are silently dropped.
 $wshell.AppActivate($proc.Id) | Out-Null
 $wshell.AppActivate('SimplySign Desktop') | Out-Null
 Start-Sleep -Milliseconds 400
@@ -278,14 +202,13 @@ function Set-Field([string]$text) {
     Start-Sleep -Milliseconds 250
 }
 
-Write-Host "Injecting credentials (user -> TAB -> TOTP -> ENTER)..."
+Write-Host "Injecting credentials..."
 Set-Field $UserId
 $wshell.SendKeys("{TAB}")
 Start-Sleep -Milliseconds 200
 
 # Generate the code right before sending it so it can't expire while we focus.
 $otp = [Totp]::Now($Base32, $Digits, $Period, $Algorithm)
-Write-Host "Generated TOTP using $Algorithm."
 Set-Field $otp
 Start-Sleep -Milliseconds 200
 $wshell.SendKeys("{ENTER}")
@@ -301,8 +224,7 @@ if (-not (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# Don't just trust that the process is alive: confirm the login actually mounted
-# the signing certificate into the store, and dump diagnostics if it didn't.
+# Confirm the login actually mounted the signing certificate into the store.
 $thumb = if ($env:CERTUM_CERT_SHA1) { ($env:CERTUM_CERT_SHA1 -replace '\s', '').ToUpperInvariant() } else { $null }
 Write-Host "Verifying the signing certificate reached the store..."
 $deadline = (Get-Date).AddSeconds(60)
@@ -319,13 +241,5 @@ if ($found) {
     Write-Host "=== Authentication complete: signing certificate is available. ==="
 } else {
     Write-Host "ERROR: signing certificate did not appear after authentication."
-    Write-Host "SimplySign processes/windows:"
-    Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
-        Select-Object Name, Id, Responding, MainWindowTitle | Format-Table -AutoSize | Out-String | Write-Host
-    Write-Host "CurrentUser\My + LocalMachine\My contents:"
-    Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
-        Select-Object Thumbprint, Subject, HasPrivateKey | Format-Table -AutoSize | Out-String | Write-Host
-    # Capture the post-attempt state (any error message / dialog) for debugging.
-    Dump-SignDiagnostics "after-fail"
     exit 1
 }
