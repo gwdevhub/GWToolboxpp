@@ -14,11 +14,15 @@ public:
     [[nodiscard]] const char* Description() const override { return "Displays info about current target including any notes from GWW"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CROSSHAIRS; }
 
+    struct Settings {
+        bool auto_hide = true;
+    };
+
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Terminate() override;
 
-    void LoadSettings(ToolboxIni*) override;
-    void SaveSettings(ToolboxIni*) override;
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
     void Update(float) override;

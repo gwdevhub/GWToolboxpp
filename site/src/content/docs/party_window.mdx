@@ -1,0 +1,89 @@
+---
+title: "Party Window Enhancements"
+description: "Party-window tweaks adding player numbers, renaming summons, listing special NPCs, sorting by profession, and an offline party-search reminder."
+section: widgets
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this module live under <ToolboxPath steps={["Settings", "Party Settings"]} />.
+
+GWToolbox++ extends the in-game party window (P) with a handful of quality-of-life features: showing player numbers next to names, renaming summoned allies to the elite skill they cast, cleaning up dead imperial summons, attaching extra NPCs to the *Allies* list so they get a health bar in the party window, and sorting your party by profession.
+
+This page documents only the controls under <ToolboxPath steps={["Settings", "Party Settings"]} />. Other "party-adjacent" features have their own pages:
+
+- [Damage Monitor](/docs/damage_monitor/) — per-player damage tracking that snaps to the party window.
+- [Miscellaneous Widgets](/docs/misc_widgets/) — Bonds widget, Health/Distance widget, and other party-window overlays.
+
+## Player Numbers
+
+- **Add player numbers to party window** <ToolboxPath steps={["Settings", "Party Settings", "Add player numbers to party window"]} /> — Appends each player's instance number in parentheses to their name in the party window (for example, `PlayerName (3)`). Only takes effect on the next map load and is suppressed in PvP areas (Alliance Battle, Arena, GvG, Hero Battles, HA, Zaishen Battle, Competitive Mission).
+
+## Summon Renaming
+
+- **Rename Tengu and Imperial Guard Ally summons to their respective elite skill** <ToolboxPath steps={["Settings", "Party Settings", "Rename Tengu and Imperial Guard Ally summons to their respective elite skill"]} /> — Replaces the agent name of newly-spawned Imperial Guard and Tengu summoning-stone allies with the elite skill they bring (e.g. *Crippling Slash*, *Triple Chop*, *Barrage*, *Hundred Blades*, *Broad Head Arrow*, *Aura of the Lich*, *Sandstorm*, etc.). Only applies to summons that spawn after the option is enabled — existing summons are not renamed.
+
+- **Remove dead imperial guard allies** <ToolboxPath steps={["Settings", "Party Settings", "Remove dead imperial guard allies"]} /> — When an Imperial Guard summon (Crippling Slash, Quivering Blade, Triple Chop, or Barrage) dies, its entry is removed from the party window's Allies list so it does not clutter the bar with a corpse.
+
+## Special NPCs in the Party Window
+
+- **Add special NPCs to party window** <ToolboxPath steps={["Settings", "Party Settings", "Add special NPCs to party window"]} /> — Toggles the feature that promotes selected NPCs into the *Allies* section of the party window when they spawn within compass range, so you can see their health bar without having to click them. Only works in explorable areas and only on friendly NPCs — not enemies, minions, or spirits. Disabling the option removes any previously added allies on the next pass.
+
+When enabled, the settings panel expands to show the editable NPC list:
+
+- **Name** — Label shown in the list (also used in the flash message when adding/removing).
+- **Model ID** — The NPC's model id. NPCs match by model id only — different models of the same "kind" need separate entries.
+- **Map** — The map this entry applies to. `Any` matches everywhere; a specific map restricts the entry to that outpost/explorable. Edit by removing and re-adding with a different Map ID.
+- **X** — Remove this entry from the list.
+
+**Add new** lets you append a row:
+
+- **Name** <ToolboxPath steps={["Settings", "Party Settings", "Name"]} /> — Display alias for the entry.
+- **Model ID** <ToolboxPath steps={["Settings", "Party Settings", "Model ID"]} /> — Model id of the NPC to add. Must be greater than 0.
+- **Map ID (0 = Any)** <ToolboxPath steps={["Settings", "Party Settings", "Map ID (0 = Any)"]} /> — Restrict the entry to a single map by id, or leave at `0` to match every map.
+- **Add** <ToolboxPath steps={["Settings", "Party Settings", "Add"]} /> — Adds the row to the list. The current map is rechecked immediately so matching NPCs already in compass range are added without waiting for the next spawn.
+
+A starter set of entries is created the first time the module loads (with no saved settings), covering:
+
+- **Underworld** — friendly spirits in The Vale (2 entries) and The Pits (4 entries).
+- **Fissure of Woe** — Griffons and the Forgemaster.
+- **Polymock summons** — Mursaat Elementalist, Flame Djinn, Ice Imp, Naga Shaman (any map).
+- **Ebon Vanguard Assassin** summons (any map).
+- **Ben Wolfson** (Pre-Searing, any map).
+- **Mission bonus NPCs** — Gyala Hatchery siege turtle, Rornak Stonesledge (The Frost Gate bonus), Oink (Gates of Kryta bonus), Restless Spirit (Sanctum Cay bonus), Captain Besuz (Blacktide Den bonus).
+
+## Custom Party Sorting
+
+- **Add custom sorting to party window** <ToolboxPath steps={["Settings", "Party Settings", "Add custom sorting to party window"]} /> — Reorders the player list inside the party window based on profession (and optionally map / party size), instead of the default join order. Sorting reruns when a player joins or leaves, when a profession changes, and on map load.
+
+When enabled, the panel expands to a table of sorting rules. Each row matches against the current map and party size; the most specific matching rule wins (a rule with a fixed map beats one with `Any Map`, and a rule with a fixed party size beats one with `Any`).
+
+Columns:
+
+- **Map** — `Any Map`, the resolved map name, or `Map <id>` if the name isn't loaded yet.
+- **Party Size** — `Any`, or the exact number of players the rule applies to.
+- **Sort Order** — The profession sequence as `Primary/Secondary -> Primary/Secondary -> …`. `None` in either slot means "wildcard". Higher up in the list = earlier in the party window.
+- **Edit** <ToolboxPath steps={["Settings", "Party Settings", "Edit"]} /> — Loads the rule into the editor below.
+- **Delete** <ToolboxPath steps={["Settings", "Party Settings", "Delete"]} /> — Removes the rule.
+
+### Editing a sorting rule
+
+The editor below the list applies to either a new rule or the rule currently being edited:
+
+- **Map ID (0 = Any)** <ToolboxPath steps={["Settings", "Party Settings", "Map ID (0 = Any)"]} /> — Restrict the rule to a single map id, or `0` to match anywhere. When non-zero, the resolved map name is shown next to the input.
+- **Party Size (0 = Any)** <ToolboxPath steps={["Settings", "Party Settings", "Party Size (0 = Any)"]} /> — Restrict to a specific party size from 1 to 12, or `0` for any size.
+- **Profession Order** — Ordered list of profession slots. Each slot is a `Primary / Secondary` pair; leaving either as `None` makes that half a wildcard. Each player is placed at the first slot they match best (primary + secondary match beats primary-only beats secondary-only); players who match no slot fall to the end.
+  - **▲ / ▼** — Move the slot up or down in the order.
+  - **Remove** — Delete the slot.
+- **Add Profession** <ToolboxPath steps={["Settings", "Party Settings", "Add Profession"]} /> — Append a new `None/None` slot to the order.
+- **Add Sorting** / **Save Changes** <ToolboxPath steps={["Settings", "Party Settings", "Add Sorting"]} /> — Commit the new rule, or save changes to the rule being edited. At least one profession slot is required.
+- **Cancel** <ToolboxPath steps={["Settings", "Party Settings", "Cancel"]} /> — Discard edits and return to "add new" mode (only shown while editing).
+
+## Party Search Offline Reminder
+
+When you create or update a party search while your friend-list status is **Offline**, Toolbox flashes a reminder:
+
+> You're currently offline, and won't receive party search responses.
+> Type '/online' in chat to set your status to Online.
+
+The reminder is rate-limited to once every 10 seconds and has no setting — it always triggers when the conditions are met.

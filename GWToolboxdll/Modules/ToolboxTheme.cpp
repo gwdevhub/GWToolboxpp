@@ -8,19 +8,35 @@
 #include "GWToolbox.h"
 #include <ImGuiAddons.h>
 
-constexpr auto IniFilename = L"Theme.ini";
+constexpr auto IniFilename = L"Theme.ini"; // legacy, read-only fallback
+constexpr auto ThemeJsonFilename = L"Theme.json";
 // @Enhancement: Allow users to save different layouts by changing this variable in settings
-constexpr auto WindowPositionsFilename = L"Layout.ini";
+constexpr auto WindowPositionsFilename = L"Layout.ini"; // legacy, read-only fallback
+constexpr auto LayoutJsonFilename = L"Layout.json";
 constexpr auto IniSection = "Theme";
 
 namespace {
+    // Returns the stable save identifier for a window name.
+    // For "Display Name###ID" returns "ID" (the part after ###).
+    // For "Label##ID" returns "ID" (the part after ##).
+    // For plain names returns the full name.
+    const char* GetWindowSaveId(const char* name)
+    {
+        const char* triple = strstr(name, "###");
+        if (triple) return triple + 3;
+        const char* dbl = strstr(name, "##");
+        if (dbl) return dbl + 2;
+        return name;
+    }
+
     ToolboxIni* LoadIni(ToolboxIni** out, const wchar_t* filename, bool reload_from_disk = false)
     {
         if (!*out) {
             *out = new ToolboxIni(false, false, false);
             reload_from_disk = true;
         }
-        const auto path = Resources::GetSettingFile(filename);
+        // Theme.ini / Layout.ini are read-only legacy fallbacks; they only exist in the old layout
+        const auto path = Resources::GetLegacySettingFile(filename);
         if (!reload_from_disk && !GWToolbox::SettingsFolderChanged()) {
             return *out;
         }
@@ -33,6 +49,81 @@ namespace {
         delete *out;
         *out = tmp;
         return *out;
+    }
+
+    template <typename T>
+    bool ReadJsonFile(const std::filesystem::path& path, T& value)
+    {
+        std::ifstream file(path, std::ios::binary);
+        if (!file) {
+            return false;
+        }
+        const std::string buffer{std::istreambuf_iterator(file), {}};
+        return !glz::read<glz::opts{.error_on_unknown_keys = false}>(value, buffer);
+    }
+
+    template <typename T>
+    bool WriteJsonFile(const std::filesystem::path& path, const T& value)
+    {
+        std::string buffer;
+        if (glz::write<glz::opts{.prettify = true}>(value, buffer)) {
+            return false;
+        }
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        if (!file) {
+            return false;
+        }
+        file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+        return file.good();
+    }
+
+    ToolboxTheme::ThemeSettings ThemeFromStyle(const ImGuiStyle& style, const float font_scale)
+    {
+        ToolboxTheme::ThemeSettings theme;
+        theme.FontGlobalScale = font_scale;
+        theme.GlobalAlpha = style.Alpha;
+        theme.WindowPadding = {style.WindowPadding.x, style.WindowPadding.y};
+        theme.WindowRounding = style.WindowRounding;
+        theme.FramePadding = {style.FramePadding.x, style.FramePadding.y};
+        theme.FrameRounding = style.FrameRounding;
+        theme.ItemSpacing = {style.ItemSpacing.x, style.ItemSpacing.y};
+        theme.ItemInnerSpacing = {style.ItemInnerSpacing.x, style.ItemInnerSpacing.y};
+        theme.IndentSpacing = style.IndentSpacing;
+        theme.ScrollbarSize = style.ScrollbarSize;
+        theme.ScrollbarRounding = style.ScrollbarRounding;
+        theme.GrabMinSize = style.GrabMinSize;
+        theme.GrabRounding = style.GrabRounding;
+        theme.WindowTitleAlign = {style.WindowTitleAlign.x, style.WindowTitleAlign.y};
+        theme.ButtonTextAlign = {style.ButtonTextAlign.x, style.ButtonTextAlign.y};
+        for (auto i = 0; i < ImGuiCol_COUNT; i++) {
+            const Color color = ImColor(style.Colors[i]);
+            theme.Colors[ImGui::GetStyleColorName(i)] = color;
+        }
+        return theme;
+    }
+
+    void ApplyThemeToStyle(const ToolboxTheme::ThemeSettings& theme, ImGuiStyle& style)
+    {
+        style.Alpha = theme.GlobalAlpha;
+        style.WindowPadding = {theme.WindowPadding[0], theme.WindowPadding[1]};
+        style.WindowRounding = theme.WindowRounding;
+        style.FramePadding = {theme.FramePadding[0], theme.FramePadding[1]};
+        style.FrameRounding = theme.FrameRounding;
+        style.ItemSpacing = {theme.ItemSpacing[0], theme.ItemSpacing[1]};
+        style.ItemInnerSpacing = {theme.ItemInnerSpacing[0], theme.ItemInnerSpacing[1]};
+        style.IndentSpacing = theme.IndentSpacing;
+        style.ScrollbarSize = theme.ScrollbarSize;
+        style.ScrollbarRounding = theme.ScrollbarRounding;
+        style.GrabMinSize = theme.GrabMinSize;
+        style.GrabRounding = theme.GrabRounding;
+        style.WindowTitleAlign = {theme.WindowTitleAlign[0], theme.WindowTitleAlign[1]};
+        style.ButtonTextAlign = {theme.ButtonTextAlign[0], theme.ButtonTextAlign[1]};
+        for (auto i = 0; i < ImGuiCol_COUNT; i++) {
+            const auto found = theme.Colors.find(ImGui::GetStyleColorName(i));
+            if (found != theme.Colors.end()) {
+                style.Colors[i] = ImColor(found->second.value);
+            }
+        }
     }
 }
 
@@ -79,9 +170,23 @@ void ToolboxTheme::Terminate()
     layout_ini = theme_ini = nullptr;
 }
 
-void ToolboxTheme::LoadSettings(ToolboxIni* ini)
+// Theme values live in Theme.json (a separate, shareable file), not in the SettingsDoc
+void ToolboxTheme::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxUIElement::LoadSettings(ini);
+    ToolboxUIElement::LoadSettings(doc, legacy);
+
+    const auto json_path = Resources::GetSettingFile(ThemeJsonFilename);
+    if (std::filesystem::exists(json_path)) {
+        // Seed from the current style so keys missing from the file keep their values
+        auto theme = ThemeFromStyle(ini_style, font_scale_main);
+        if (ReadJsonFile(json_path, theme)) {
+            font_scale_main = theme.FontGlobalScale;
+            ApplyThemeToStyle(theme, ini_style);
+            ini_style.Alpha = std::min(std::max(ini_style.Alpha, 0.2f), 1.0f); // clamp to [0.2, 1.0]
+            layout_dirty = true;
+            return;
+        }
+    }
 
     const auto inifile = GetThemeIni();
     if (!inifile) {
@@ -126,31 +231,31 @@ void ToolboxTheme::SaveUILayout()
     if (!ImGui::GetCurrentContext() || !imgui_style_loaded) {
         return;
     }
-    const auto ini = GetLayoutIni(false);
-    const auto window_ini_section = "Windows";
+
+    // Flags that mark windows not worth persisting (child widgets, popups, tooltips, etc.)
+    constexpr ImGuiWindowFlags skip_flags =
+        ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup |
+        ImGuiWindowFlags_Modal | ImGuiWindowFlags_Tooltip |
+        ImGuiWindowFlags_NoSavedSettings;
+
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
     for (const ImGuiWindow* window : windows) {
-        if (!window) 
+        if (!window)
             continue;
-        char key[128];
-        auto pos = &window->OuterRectClipped.Min;
-        if (pos->x == 0.f && pos->y == 0.f) {
-            // If SaveUILayout was called outside of the ImGui draw loop, Pos may be zeroed out.
-            pos = &window->OuterRectClipped.Min;
-        }
+        if (window->Flags & skip_flags)
+            continue;
 
-        snprintf(key, _countof(key), "_%s_X", window->Name);
-        ini->SetDoubleValue(window_ini_section, key, pos->x);
-        snprintf(key, _countof(key), "_%s_Y", window->Name);
-        ini->SetDoubleValue(window_ini_section, key, pos->y);
-        snprintf(key, _countof(key), "_%s_W", window->Name);
-        ini->SetDoubleValue(window_ini_section, key, window->SizeFull.x);
-        snprintf(key, _countof(key), "_%s_H", window->Name);
-        ini->SetDoubleValue(window_ini_section, key, window->SizeFull.y);
-        snprintf(key, _countof(key), "_%s_Collapsed", window->Name);
-        ini->SetBoolValue(window_ini_section, key, window->Collapsed);
+        // Use only the stable ID (part after ### or ##) so renaming a window doesn't
+        // orphan old entries. E.g. "My Build###teambuild_1" → key "teambuild_1".
+        const char* save_id = GetWindowSaveId(window->Name);
+
+        layout[save_id] = {
+            .pos = {window->Pos.x, window->Pos.y},
+            .size = {window->SizeFull.x, window->SizeFull.y},
+            .collapsed = window->Collapsed
+        };
     }
-    ASSERT(Resources::SaveIniToFile(Resources::GetSettingFile(WindowPositionsFilename), ini) == 0);
+    ASSERT(WriteJsonFile(Resources::GetSettingFile(LayoutJsonFilename), layout));
 }
 
 ToolboxIni* ToolboxTheme::GetLayoutIni(const bool reload)
@@ -173,8 +278,67 @@ void ToolboxTheme::LoadUILayout()
     // Copy window positions over
     ImGui::GetStyle().FontScaleMain = font_scale_main;
 
-    const auto ini = GetLayoutIni();
-    const auto window_ini_section = "Windows";
+    layout.clear();
+    const auto json_path = Resources::GetSettingFile(LayoutJsonFilename);
+    const bool json_loaded = std::filesystem::exists(json_path) && ReadJsonFile(json_path, layout);
+    if (json_loaded) {
+        // Repair entries an earlier fallback keyed by full window name; stable-id entries are newer and win
+        std::map<std::string, WindowLayout> normalized;
+        for (const auto& [name, entry] : layout) {
+            if (GetWindowSaveId(name.c_str()) == name) {
+                normalized[name] = entry;
+            }
+        }
+        for (const auto& [name, entry] : layout) {
+            const std::string save_id = GetWindowSaveId(name.c_str());
+            if (save_id != name && !save_id.empty()) {
+                normalized.try_emplace(save_id, entry);
+            }
+        }
+        layout = std::move(normalized);
+    }
+    if (!json_loaded) {
+        // Legacy fallback: convert Layout.ini's _<save_id>_X/_Y/_W/_H/_Collapsed keys.
+        // save_id is the stable identifier (part after ### or ## in the window name, or the full name).
+        const auto ini = GetLayoutIni();
+        const auto window_ini_section = "Windows";
+
+        TNamesDepend keys;
+        ini->GetAllKeys(window_ini_section, keys);
+
+        for (const auto& key : keys) {
+            const char* k = key.pItem;
+            if (k[0] != '_') continue;
+
+            // Only process _X keys to avoid visiting each window 5 times.
+            const size_t klen = strlen(k);
+            if (klen < 3 || k[klen - 2] != '_' || k[klen - 1] != 'X') continue;
+
+            // Extract window name: strip leading _ and trailing _X
+            const std::string window_name(k + 1, klen - 3);
+            if (window_name.empty()) continue;
+
+            // Old versions keyed entries by full window name (e.g. "My Build###teambuild_1");
+            // normalise to the stable save id so lookups and re-saves use the same key.
+            const std::string save_id = GetWindowSaveId(window_name.c_str());
+            if (save_id.empty()) continue;
+
+            WindowLayout entry;
+            char key_buf[128];
+            snprintf(key_buf, sizeof(key_buf), "_%s_X", window_name.c_str());
+            entry.pos[0] = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
+            snprintf(key_buf, sizeof(key_buf), "_%s_Y", window_name.c_str());
+            entry.pos[1] = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
+            snprintf(key_buf, sizeof(key_buf), "_%s_W", window_name.c_str());
+            entry.size[0] = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
+            snprintf(key_buf, sizeof(key_buf), "_%s_H", window_name.c_str());
+            entry.size[1] = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
+            snprintf(key_buf, sizeof(key_buf), "_%s_Collapsed", window_name.c_str());
+            entry.collapsed = ini->GetBoolValue(window_ini_section, key_buf, false);
+
+            layout[save_id] = entry;
+        }
+    }
 
     // First, handle existing windows
     ImVector<ImGuiWindow*>& windows = ImGui::GetCurrentContext()->Windows;
@@ -182,69 +346,35 @@ void ToolboxTheme::LoadUILayout()
         if (!window) {
             continue;
         }
-        ApplyWindowSettings(ini, window_ini_section, window);
+        ApplyWindowSettings(window);
     }
 
-    // Second, pre-populate settings for windows that don't exist yet
-    // This uses ImGui's internal settings system
-    CSimpleIniA::TNamesDepend keys;
-    ini->GetAllKeys(window_ini_section, keys);
-
-    for (const auto& key : keys) {
-        if (key.pItem[0] != '_') continue; // Skip non-window keys
-
-        // Extract window name from key (format: _WindowName_X, _WindowName_Y, etc.)
-        std::string key_str(key.pItem);
-        size_t first_underscore = key_str.find('_', 1);
-        if (first_underscore == std::string::npos) continue;
-
-        std::string window_name = key_str.substr(1, first_underscore - 1);
-
-        // Check if this window already exists
+    // Second, pre-populate ImGui's internal settings for windows not yet open.
+    for (const auto& [save_id, entry] : layout) {
+        // Check if a window with this stable ID already exists (handled above).
         bool exists = false;
         for (ImGuiWindow* window : windows) {
-            if (window && strcmp(window->Name, window_name.c_str()) == 0) {
+            if (window && strcmp(GetWindowSaveId(window->Name), save_id.c_str()) == 0) {
                 exists = true;
                 break;
             }
         }
+        if (exists) {
+            continue;
+        }
 
-        if (!exists) {
-            // Create settings entry for windows that don't exist yet
-            const ImGuiID window_id = ImHashStr(window_name.c_str());
-            ImGuiWindowSettings* settings = ImGui::FindWindowSettingsByID(window_id);
-
-            if (!settings) {
-                settings = ImGui::CreateNewWindowSettings(window_name.c_str());
-            }
-
-            if (settings) {
-                char key_buf[128];
-
-                // Read positions from INI (these are stored as floats in your INI)
-                snprintf(key_buf, sizeof(key_buf), "_%s_X", window_name.c_str());
-                float x = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
-                snprintf(key_buf, sizeof(key_buf), "_%s_Y", window_name.c_str());
-                float y = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
-                snprintf(key_buf, sizeof(key_buf), "_%s_W", window_name.c_str());
-                float w = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
-                snprintf(key_buf, sizeof(key_buf), "_%s_H", window_name.c_str());
-                float h = static_cast<float>(ini->GetDoubleValue(window_ini_section, key_buf, 0.0f));
-
-                // Convert to ImVec2ih (short integers)
-                // Note: Pos should be relative to viewport, but if you're storing absolute positions,
-                // you might need to adjust this. For single-viewport setups, they're often the same.
-                settings->Pos.x = (short)x;
-                settings->Pos.y = (short)y;
-                settings->Size.x = (short)w;
-                settings->Size.y = (short)h;
-
-                snprintf(key_buf, sizeof(key_buf), "_%s_Collapsed", window_name.c_str());
-                settings->Collapsed = ini->GetBoolValue(window_ini_section, key_buf, false);
-
-                // Important: Tell ImGui to apply these settings when the window is created
-                settings->WantApply = true;
-            }
+        const ImGuiID window_id = ImHashStr(save_id.c_str());
+        ImGuiWindowSettings* settings = ImGui::FindWindowSettingsByID(window_id);
+        if (!settings) {
+            settings = ImGui::CreateNewWindowSettings(save_id.c_str());
+        }
+        if (settings) {
+            settings->Pos.x = static_cast<short>(entry.pos[0]);
+            settings->Pos.y = static_cast<short>(entry.pos[1]);
+            settings->Size.x = static_cast<short>(entry.size[0]);
+            settings->Size.y = static_cast<short>(entry.size[1]);
+            settings->Collapsed = entry.collapsed;
+            settings->WantApply = true;
         }
     }
 
@@ -252,67 +382,29 @@ void ToolboxTheme::LoadUILayout()
     imgui_style_loaded = true;
 }
 
-void ToolboxTheme::ApplyWindowSettings(ToolboxIni* ini, const char* section, ImGuiWindow* window)
+void ToolboxTheme::ApplyWindowSettings(ImGuiWindow* window) const
 {
-    ImVec2 pos = window->Pos;
-    ImVec2 size = window->Size;
-    char key[128];
-
-    snprintf(key, sizeof(key), "_%s_X", window->Name);
-    pos.x = static_cast<float>(ini->GetDoubleValue(section, key, pos.x));
-    snprintf(key, sizeof(key), "_%s_Y", window->Name);
-    pos.y = static_cast<float>(ini->GetDoubleValue(section, key, pos.y));
-    snprintf(key, sizeof(key), "_%s_W", window->Name);
-    size.x = static_cast<float>(ini->GetDoubleValue(section, key, size.x));
-    snprintf(key, sizeof(key), "_%s_H", window->Name);
-    size.y = static_cast<float>(ini->GetDoubleValue(section, key, size.y));
-    snprintf(key, sizeof(key), "_%s_Collapsed", window->Name);
-    const bool collapsed = ini->GetBoolValue(section, key, false);
-
-    ImGui::SetWindowPos(window, pos);
-    ImGui::SetWindowSize(window, size);
-    ImGui::SetWindowCollapsed(window, collapsed);
+    const auto found = layout.find(GetWindowSaveId(window->Name));
+    if (found == layout.end()) {
+        return;
+    }
+    const WindowLayout& entry = found->second;
+    ImGui::SetWindowPos(window, {entry.pos[0], entry.pos[1]});
+    ImGui::SetWindowSize(window, {entry.size[0], entry.size[1]});
+    ImGui::SetWindowCollapsed(window, entry.collapsed);
 }
 
-void ToolboxTheme::SaveSettings(ToolboxIni* ini)
+void ToolboxTheme::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxUIElement::SaveSettings(ini);
+    ToolboxUIElement::SaveSettings(doc);
 
     if (!ImGui::GetCurrentContext() || !imgui_style_loaded) {
         return; // Imgui not initialised, can happen if destructing before first draw
     }
 
     const ImGuiStyle& style = ImGui::GetStyle();
-    const auto inifile = GetThemeIni(false);
-
-    inifile->SetDoubleValue(IniSection, "FontGlobalScale", ImGui::FontScale());
-    inifile->SetDoubleValue(IniSection, "GlobalAlpha", style.Alpha);
-    inifile->SetDoubleValue(IniSection, "WindowPaddingX", style.WindowPadding.x);
-    inifile->SetDoubleValue(IniSection, "WindowPaddingY", style.WindowPadding.y);
-    inifile->SetDoubleValue(IniSection, "WindowRounding", style.WindowRounding);
-    inifile->SetDoubleValue(IniSection, "FramePaddingX", style.FramePadding.x);
-    inifile->SetDoubleValue(IniSection, "FramePaddingY", style.FramePadding.y);
-    inifile->SetDoubleValue(IniSection, "FrameRounding", style.FrameRounding);
-    inifile->SetDoubleValue(IniSection, "ItemSpacingX", style.ItemSpacing.x);
-    inifile->SetDoubleValue(IniSection, "ItemSpacingY", style.ItemSpacing.y);
-    inifile->SetDoubleValue(IniSection, "ItemInnerSpacingX", style.ItemInnerSpacing.x);
-    inifile->SetDoubleValue(IniSection, "ItemInnerSpacingY", style.ItemInnerSpacing.y);
-    inifile->SetDoubleValue(IniSection, "IndentSpacing", style.IndentSpacing);
-    inifile->SetDoubleValue(IniSection, "ScrollbarSize", style.ScrollbarSize);
-    inifile->SetDoubleValue(IniSection, "ScrollbarRounding", style.ScrollbarRounding);
-    inifile->SetDoubleValue(IniSection, "GrabMinSize", style.GrabMinSize);
-    inifile->SetDoubleValue(IniSection, "GrabRounding", style.GrabRounding);
-    inifile->SetDoubleValue(IniSection, "WindowTitleAlignX", style.WindowTitleAlign.x);
-    inifile->SetDoubleValue(IniSection, "WindowTitleAlignY", style.WindowTitleAlign.y);
-    inifile->SetDoubleValue(IniSection, "ButtonTextAlignX", style.ButtonTextAlign.x);
-    inifile->SetDoubleValue(IniSection, "ButtonTextAlignY", style.ButtonTextAlign.y);
-    for (auto i = 0; i < ImGuiCol_COUNT; i++) {
-        const char* name = ImGui::GetStyleColorName(i);
-        const Color color = ImColor(style.Colors[i]);
-        Colors::Save(inifile, IniSection, name, color);
-    }
-
-    ASSERT(Resources::SaveIniToFile(Resources::GetSettingFile(IniFilename), inifile) == 0);
+    const auto theme = ThemeFromStyle(style, ImGui::FontScale());
+    ASSERT(WriteJsonFile(Resources::GetSettingFile(ThemeJsonFilename), theme));
 
     SaveUILayout();
 }
@@ -330,8 +422,8 @@ void ToolboxTheme::DrawSettingsInternal()
     if (ImGui::SmallButton("Restore Default")) {
         style = DefaultTheme();
     }
-    ImGui::Text("Note: window position/size is stored in 'Layout.ini' in settings folder. You can share the file or parts of it with other people.");
-    ImGui::Text("Note: theme is stored in 'Theme.ini' in settings folder. You can share the file or parts of it with other people.");
+    ImGui::Text("Note: window position/size is stored in 'Layout.json' in settings folder. You can share the file or parts of it with other people.");
+    ImGui::Text("Note: theme is stored in 'Theme.json' in settings folder. You can share the file or parts of it with other people.");
     ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
     style.Alpha = std::clamp(style.Alpha, 0.2f, 1.f);
     ImGui::DragFloat("Global Font Scale", &ImGui::GetStyle().FontScaleMain, 0.005f, 0.3f, 2.0f, "%.2f");
@@ -359,7 +451,7 @@ void ToolboxTheme::DrawSettingsInternal()
         if (cur != ImColor(ini_style.Colors[i])) {
             ImGui::SameLine();
             if (ImGui::Button("Revert")) {
-                style.Colors[i] = ImColor(Colors::Load(GetThemeIni(), IniSection, name, ImColor(ini_style.Colors[i])));
+                style.Colors[i] = ini_style.Colors[i];
             }
         }
         ImGui::PopID();

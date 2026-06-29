@@ -7,13 +7,14 @@
 #include <Widgets/SnapsToPartyWindow.h>
 
 namespace GW {
+    struct AgentLiving;
     namespace Packet {
         namespace StoC {
             struct MapLoaded;
         }
-    }
+    } // namespace Packet
     struct HookStatus;
-}
+} // namespace GW
 
 class PartyDamage : public SnapsToPartyWindow {
 protected:
@@ -34,6 +35,7 @@ protected:
 
     static void MapLoadedCallback(GW::HookStatus*, const GW::Packet::StoC::MapLoaded*);
     static void DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier*);
+    static void ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
 
 public:
     static PartyDamage& Instance()
@@ -45,6 +47,25 @@ public:
     [[nodiscard]] const char* Name() const override { return "Damage"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BARS; }
 
+    struct Settings {
+        Colors::SettingColor color_background = Colors::ARGB(76, 0, 0, 0);
+        Colors::SettingColor color_damage = Colors::ARGB(76, 0, 0, 0);
+        Colors::SettingColor color_recent = Colors::ARGB(205, 102, 153, 230);
+        Colors::SettingColor color_healing = Colors::ARGB(205, 102, 230, 102);
+        float width = 100.0f;
+        bool bars_left = true;
+        int recent_max_time = 7000;
+        bool hide_in_outpost = false;
+        bool print_by_click = false;
+        bool overlay_party_window = false;
+        bool show_damage = true;
+        bool show_healing = false;
+        bool show_dps = false;
+        bool show_condition_dps = false;
+        // Distance away from the party window on the x axis; used with snap to party window
+        int user_offset = 0;
+    };
+
     void Initialize() override;
     void Terminate() override;
 
@@ -53,8 +74,11 @@ public:
 
     void Update(float delta) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    // An agent only gets max_hp set when it begins to take damage. PartyDamage module caches the last known max hp of NPCs to sidestep this
+    static DWORD GetMaxHp(const GW::AgentLiving* agent);
+
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
 
 };

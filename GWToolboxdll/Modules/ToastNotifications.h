@@ -19,11 +19,39 @@ public:
     [[nodiscard]] const char* Description() const override { return "Enables desktop notifications when in-game events happen."; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BULLHORN; }
 
+    struct Settings {
+        bool show_notifications_when_focussed = false;
+        bool show_notifications_when_in_background = true;
+        bool show_notifications_when_minimised = true;
+        bool show_notifications_when_in_outpost = true;
+        bool show_notifications_when_in_explorable = true;
+
+        bool show_notifications_on_whisper = true;
+        bool show_notifications_on_guild_chat = false;
+        bool show_notifications_on_ally_chat = false;
+        bool show_notifications_on_team_chat = false;
+        bool show_notifications_on_last_to_ready = false;
+        bool show_notifications_on_invite = false;
+        bool show_notifications_on_everyone_ready = false;
+        bool show_notifications_on_self_resurrected = false;
+
+        bool flash_window_on_whisper = true;
+        bool flash_window_on_guild_chat = false;
+        bool flash_window_on_ally_chat = false;
+        bool flash_window_on_team_chat = false;
+        bool flash_window_on_last_to_ready = false;
+        bool flash_window_on_invite = false;
+        bool flash_window_on_everyone_ready = false;
+        bool flash_window_on_self_resurrected = false;
+
+        bool change_title_on_notification = false;
+    };
+
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Terminate() override;
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni*) override;
-    void SaveSettings(ToolboxIni*) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
     class Toast;

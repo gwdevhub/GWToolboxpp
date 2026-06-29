@@ -18,10 +18,19 @@
 
 constexpr auto IPGEO_API_KEY = "161f3834252a4ec6988e49bb75ccd902";
 
+namespace ipgeo_api {
+    struct GeoResponse {
+        std::string city;
+        std::string country_name;
+    };
+}
+
 namespace {
     char server_ip[32];
     char server_location[255];
     bool server_string_dirty = false;
+
+    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
 }
 
 static int
@@ -110,15 +119,16 @@ void ServerInfoWidget::Update(float)
                 return;
             }
             if (!response.empty()) {
-                using Json = nlohmann::json;
-                Json json = Json::parse(response.c_str());
-                if (current_server_info->city.empty() && json["city"].is_string()) {
-                    current_server_info->city = json["city"];
+                ipgeo_api::GeoResponse geo{};
+                if (auto ec = glz::read<json_opts>(geo, response); !ec) {
+                    if (current_server_info->city.empty() && !geo.city.empty()) {
+                        current_server_info->city = std::move(geo.city);
+                    }
+                    if (current_server_info->country.empty() && !geo.country_name.empty()) {
+                        current_server_info->country = std::move(geo.country_name);
+                    }
+                    server_string_dirty = true;
                 }
-                if (current_server_info->country.empty() && json["country_name"].is_string()) {
-                    current_server_info->country = json["country_name"];
-                }
-                server_string_dirty = true;
             }
         });
     }
@@ -174,14 +184,4 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*)
 void ServerInfoWidget::DrawSettingsInternal()
 {
     ImGui::Text("Displays current server IP Address and location if available");
-}
-
-void ServerInfoWidget::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::SaveSettings(ini);
-}
-
-void ServerInfoWidget::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWidget::LoadSettings(ini);
 }

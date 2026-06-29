@@ -7,9 +7,26 @@
 #include <Windows/ObserverPartyWindow.h>
 using namespace std::string_literals;
 
+namespace {
+    ObserverPartyWindow::Settings settings;
+}
+
 void ObserverPartyWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
+}
+
+void ObserverPartyWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void ObserverPartyWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 
@@ -18,14 +35,14 @@ void ObserverPartyWindow::DrawHeaders(const size_t party_count) const
 {
     float offset = 0;
 
-    if (show_player_number) {
+    if (settings.show_player_number) {
         ImGui::Text("");
         ImGui::SameLine(offset += text_tiny);
     }
 
     for (size_t i = 0; i < party_count; i += 1) {
         // [profession:short]
-        if (show_profession) {
+        if (settings.show_profession) {
             ImGui::Text(ObserverLabel::Profession);
             ImGui::SameLine(offset += text_short);
         }
@@ -35,127 +52,127 @@ void ObserverPartyWindow::DrawHeaders(const size_t party_count) const
         ImGui::SameLine(offset += text_long);
 
         // [guild-tag:short]
-        if (show_player_guild_tag) {
+        if (settings.show_player_guild_tag) {
             ImGui::Text(ObserverLabel::PlayerGuildTag);
             ImGui::SameLine(offset += text_short);
         }
 
         // [guild-rating:tiny]
-        if (show_player_guild_rating) {
+        if (settings.show_player_guild_rating) {
             ImGui::Text(ObserverLabel::PlayerGuildRating);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [guild-rank]
-        if (show_player_guild_rank) {
+        if (settings.show_player_guild_rank) {
             ImGui::Text(ObserverLabel::PlayerGuildRank);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [kills:tiny]
-        if (show_kills) {
+        if (settings.show_kills) {
             ImGui::Text(ObserverLabel::Kills);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [deaths:tiny]
-        if (show_deaths) {
+        if (settings.show_deaths) {
             ImGui::Text(ObserverLabel::Deaths);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [kdr:tiny]
-        if (show_kdr) {
+        if (settings.show_kdr) {
             ImGui::Text(ObserverLabel::KDR);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [cancels:tiny]
-        if (show_cancels) {
+        if (settings.show_cancels) {
             ImGui::Text(ObserverLabel::Cancels);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [rupts:tiny]
-        if (show_interrupts) {
+        if (settings.show_interrupts) {
             ImGui::Text(ObserverLabel::Interrupts);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [kds:tiny]
-        if (show_knockdowns) {
+        if (settings.show_knockdowns) {
             ImGui::Text(ObserverLabel::Knockdowns);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [-atk:tiny]
-        if (show_dealt_party_attacks) {
+        if (settings.show_dealt_party_attacks) {
             ImGui::Text(ObserverLabel::AttacksReceivedFromOtherParties);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [+atk:tiny]
-        if (show_received_party_attacks) {
+        if (settings.show_received_party_attacks) {
             ImGui::Text(ObserverLabel::AttacksDealtToOtherParties);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [-Crt:tiny]
-        if (show_received_party_crits) {
+        if (settings.show_received_party_crits) {
             ImGui::Text(ObserverLabel::CritsReceivedFromOtherParties);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [+crit:tiny]
-        if (show_dealt_party_crits) {
+        if (settings.show_dealt_party_crits) {
             ImGui::Text(ObserverLabel::CritsDealToOtherParties);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [-skl:tiny]
-        if (show_received_party_skills) {
+        if (settings.show_received_party_skills) {
             ImGui::Text(ObserverLabel::SkillsReceivedFromOtherParties);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [+skl:tiny]
-        if (show_dealt_party_skills) {
+        if (settings.show_dealt_party_skills) {
             ImGui::Text(ObserverLabel::SkillsUsedOnOtherParties);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [+skl:tiny]
-        if (show_skills_used) {
+        if (settings.show_skills_used) {
             ImGui::Text(ObserverLabel::SkillsUsed);
             ImGui::SameLine(offset += text_tiny);
         }
 
         // [dmg+:short]
-        if (show_damage_dealt) {
+        if (settings.show_damage_dealt) {
             ImGui::Text("Dmg+");
             ImGui::SameLine(offset += text_short);
         }
 
         // [dmg-:short]
-        if (show_damage_received) {
+        if (settings.show_damage_received) {
             ImGui::Text("Dmg-");
             ImGui::SameLine(offset += text_short);
         }
 
         // [heal+:short]
-        if (show_healing_dealt) {
+        if (settings.show_healing_dealt) {
             ImGui::Text("Heal+");
             ImGui::SameLine(offset += text_short);
         }
 
         // [heal-:short]
-        if (show_healing_received) {
+        if (settings.show_healing_received) {
             ImGui::Text("Heal-");
             ImGui::SameLine(offset += text_short);
         }
 
         // [max hp:tiny]
-        if (show_max_hp) {
+        if (settings.show_max_hp) {
             ImGui::Text("MaxHP");
             ImGui::SameLine(offset += text_tiny);
         }
@@ -168,70 +185,70 @@ void ObserverPartyWindow::DrawBlankPartyMember(float& offset) const
 {
     uint16_t tinys = 0;
     uint16_t shorts = 0;
-    if (show_profession) {
+    if (settings.show_profession) {
         shorts += 1;
     }
-    if (show_player_guild_tag) {
+    if (settings.show_player_guild_tag) {
         shorts += 1;
     }
-    if (show_player_guild_rating) {
+    if (settings.show_player_guild_rating) {
         tinys += 1;
     }
-    if (show_player_guild_rank) {
+    if (settings.show_player_guild_rank) {
         tinys += 1;
     }
-    if (show_kills) {
+    if (settings.show_kills) {
         tinys += 1;
     }
-    if (show_deaths) {
+    if (settings.show_deaths) {
         tinys += 1;
     }
-    if (show_kdr) {
+    if (settings.show_kdr) {
         tinys += 1;
     }
-    if (show_cancels) {
+    if (settings.show_cancels) {
         tinys += 1;
     }
-    if (show_interrupts) {
+    if (settings.show_interrupts) {
         tinys += 1;
     }
-    if (show_knockdowns) {
+    if (settings.show_knockdowns) {
         tinys += 1;
     }
-    if (show_received_party_attacks) {
+    if (settings.show_received_party_attacks) {
         tinys += 1;
     }
-    if (show_dealt_party_attacks) {
+    if (settings.show_dealt_party_attacks) {
         tinys += 1;
     }
-    if (show_received_party_crits) {
+    if (settings.show_received_party_crits) {
         tinys += 1;
     }
-    if (show_dealt_party_crits) {
+    if (settings.show_dealt_party_crits) {
         tinys += 1;
     }
-    if (show_received_party_skills) {
+    if (settings.show_received_party_skills) {
         tinys += 1;
     }
-    if (show_dealt_party_skills) {
+    if (settings.show_dealt_party_skills) {
         tinys += 1;
     }
-    if (show_skills_used) {
+    if (settings.show_skills_used) {
         tinys += 1;
     }
-    if (show_damage_dealt) {
+    if (settings.show_damage_dealt) {
         shorts += 1;
     }
-    if (show_damage_received) {
+    if (settings.show_damage_received) {
         shorts += 1;
     }
-    if (show_healing_dealt) {
+    if (settings.show_healing_dealt) {
         shorts += 1;
     }
-    if (show_healing_received) {
+    if (settings.show_healing_received) {
         shorts += 1;
     }
-    if (show_max_hp) {
+    if (settings.show_max_hp) {
         tinys += 1;
     }
 
@@ -247,7 +264,7 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
     auto& Text = odd ? ImGui::TextDisabled : ImGui::Text;
 
     // [profession:short]
-    if (show_profession) {
+    if (settings.show_profession) {
         Text(agent.profession.c_str());
         ImGui::SameLine(offset += text_short);
     }
@@ -257,7 +274,7 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
     ImGui::SameLine(offset += text_long);
 
     // [guild-tag:short]
-    if (show_player_guild_tag) {
+    if (settings.show_player_guild_tag) {
         if (guild) {
             ImGui::Text(guild->wrapped_tag.c_str());
         }
@@ -268,7 +285,7 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
     }
 
     // [guild-rating:tiny]
-    if (show_player_guild_rating) {
+    if (settings.show_player_guild_rating) {
         if (guild) {
             ImGui::Text(std::to_string(guild->rating).c_str());
         }
@@ -279,7 +296,7 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
     }
 
     // [guild-rank]
-    if (show_player_guild_rank) {
+    if (settings.show_player_guild_rank) {
         if (guild) {
             ImGui::Text(std::to_string(guild->rank).c_str());
         }
@@ -290,109 +307,109 @@ void ObserverPartyWindow::DrawPartyMember(float& offset, ObserverModule::Observa
     }
 
     // [kills:tiny]
-    if (show_kills) {
+    if (settings.show_kills) {
         Text(std::to_string(agent.stats.kills).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [deaths:tiny]
-    if (show_deaths) {
+    if (settings.show_deaths) {
         Text(std::to_string(agent.stats.deaths).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [kdr:tiny]
-    if (show_kdr) {
+    if (settings.show_kdr) {
         Text(agent.stats.kdr_str.c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [cancels:tiny]
-    if (show_cancels) {
+    if (settings.show_cancels) {
         Text(std::to_string(agent.stats.cancelled_skills_count).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [rupts:tiny]
-    if (show_interrupts) {
+    if (settings.show_interrupts) {
         Text(std::to_string(agent.stats.interrupted_skills_count).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [kds:tiny]
-    if (show_knockdowns) {
+    if (settings.show_knockdowns) {
         Text(std::to_string(agent.stats.knocked_down_count).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [-atk:tiny]
-    if (show_received_party_attacks) {
+    if (settings.show_received_party_attacks) {
         Text(std::to_string(agent.stats.total_attacks_received_from_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+atk:tiny]
-    if (show_dealt_party_attacks) {
+    if (settings.show_dealt_party_attacks) {
         Text(std::to_string(agent.stats.total_attacks_dealt_to_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [-Crt:tiny]
-    if (show_received_party_crits) {
+    if (settings.show_received_party_crits) {
         Text(std::to_string(agent.stats.total_party_crits_received).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+crit:tiny]
-    if (show_dealt_party_crits) {
+    if (settings.show_dealt_party_crits) {
         Text(std::to_string(agent.stats.total_party_crits_dealt).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [-skl:tiny]
-    if (show_received_party_skills) {
+    if (settings.show_received_party_skills) {
         Text(std::to_string(agent.stats.total_skills_received_from_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+skl:tiny]
-    if (show_dealt_party_skills) {
+    if (settings.show_dealt_party_skills) {
         Text(std::to_string(agent.stats.total_skills_used_on_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+skl:tiny]
-    if (show_skills_used) {
+    if (settings.show_skills_used) {
         Text(std::to_string(agent.stats.total_skills_used.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [dmg+:short]
-    if (show_damage_dealt) {
+    if (settings.show_damage_dealt) {
         Text(std::to_string(agent.stats.total_damage_dealt).c_str());
         ImGui::SameLine(offset += text_short);
     }
 
     // [dmg-:short]
-    if (show_damage_received) {
+    if (settings.show_damage_received) {
         Text(std::to_string(agent.stats.total_damage_received).c_str());
         ImGui::SameLine(offset += text_short);
     }
 
     // [heal+:short]
-    if (show_healing_dealt) {
+    if (settings.show_healing_dealt) {
         Text(std::to_string(agent.stats.total_healing_dealt).c_str());
         ImGui::SameLine(offset += text_short);
     }
 
     // [heal-:short]
-    if (show_healing_received) {
+    if (settings.show_healing_received) {
         Text(std::to_string(agent.stats.total_healing_received).c_str());
         ImGui::SameLine(offset += text_short);
     }
 
     // [max hp:tiny]
-    if (show_max_hp) {
+    if (settings.show_max_hp) {
         uint32_t max_hp = ObserverModule::Instance().GetCachedMaxHP(agent.agent_id);
         if (max_hp > 0) {
             Text(std::to_string(max_hp).c_str());
@@ -412,134 +429,134 @@ void ObserverPartyWindow::DrawParty(float& offset, const ObserverModule::Observa
     ImGui::SameLine(offset += text_long);
 
     // [profession:tiny]
-    if (show_profession) {
+    if (settings.show_profession) {
         ImGui::Text("");
         ImGui::SameLine(offset += text_short);
     }
 
     // [guild-tag:short]
-    if (show_player_guild_tag) {
+    if (settings.show_player_guild_tag) {
         // tag is in display_name
         // this makes it not hideable
         ImGui::SameLine(offset += text_short);
     }
 
     // [guild-rating:tiny]
-    if (show_player_guild_rating) {
+    if (settings.show_player_guild_rating) {
         ImGui::Text(std::to_string(party.rating).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [guild-rank]
-    if (show_player_guild_rank) {
+    if (settings.show_player_guild_rank) {
         ImGui::Text(std::to_string(party.rank).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [kills:tiny]
-    if (show_kills) {
+    if (settings.show_kills) {
         ImGui::Text(std::to_string(party.stats.kills).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [deaths:tiny]
-    if (show_deaths) {
+    if (settings.show_deaths) {
         ImGui::Text(std::to_string(party.stats.deaths).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [kdr:tiny]
-    if (show_kdr) {
+    if (settings.show_kdr) {
         ImGui::Text(party.stats.kdr_str.c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [cancels:tiny]
-    if (show_cancels) {
+    if (settings.show_cancels) {
         ImGui::Text(std::to_string(party.stats.cancelled_skills_count).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [rupts:tiny]
-    if (show_interrupts) {
+    if (settings.show_interrupts) {
         ImGui::Text(std::to_string(party.stats.interrupted_skills_count).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [kds:tiny]
-    if (show_knockdowns) {
+    if (settings.show_knockdowns) {
         ImGui::Text(std::to_string(party.stats.knocked_down_count).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [-atk:tiny]
-    if (show_received_party_attacks) {
+    if (settings.show_received_party_attacks) {
         ImGui::Text(std::to_string(party.stats.total_attacks_received_from_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+atk:tiny]
-    if (show_dealt_party_attacks) {
+    if (settings.show_dealt_party_attacks) {
         ImGui::Text(std::to_string(party.stats.total_attacks_dealt_to_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [-Crt:tiny]
-    if (show_received_party_crits) {
+    if (settings.show_received_party_crits) {
         ImGui::Text(std::to_string(party.stats.total_party_crits_received).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+crit:tiny]
-    if (show_received_party_crits) {
+    if (settings.show_received_party_crits) {
         ImGui::Text(std::to_string(party.stats.total_party_crits_dealt).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [-skl:tiny]
-    if (show_received_party_skills) {
+    if (settings.show_received_party_skills) {
         ImGui::Text(std::to_string(party.stats.total_skills_received_from_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+skl:tiny]
-    if (show_dealt_party_skills) {
+    if (settings.show_dealt_party_skills) {
         ImGui::Text(std::to_string(party.stats.total_skills_used_on_other_parties.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [+skl:tiny]
-    if (show_skills_used) {
+    if (settings.show_skills_used) {
         ImGui::Text(std::to_string(party.stats.total_skills_used.finished).c_str());
         ImGui::SameLine(offset += text_tiny);
     }
 
     // [dmg+:short]
-    if (show_damage_dealt) {
+    if (settings.show_damage_dealt) {
         ImGui::Text(std::to_string(party.stats.total_damage_dealt).c_str());
         ImGui::SameLine(offset += text_short);
     }
 
     // [dmg-:short]
-    if (show_damage_received) {
+    if (settings.show_damage_received) {
         ImGui::Text(std::to_string(party.stats.total_damage_received).c_str());
         ImGui::SameLine(offset += text_short);
     }
 
     // [heal+:short]
-    if (show_healing_dealt) {
+    if (settings.show_healing_dealt) {
         ImGui::Text(std::to_string(party.stats.total_healing_dealt).c_str());
         ImGui::SameLine(offset += text_short);
     }
 
     // [heal-:short]
-    if (show_healing_received) {
+    if (settings.show_healing_received) {
         ImGui::Text(std::to_string(party.stats.total_healing_received).c_str());
         ImGui::SameLine(offset += text_short);
     }
 
     // [max hp:tiny]
-    if (show_max_hp) {
+    if (settings.show_max_hp) {
         ImGui::Text("");
         ImGui::SameLine(offset += text_tiny);
     }
@@ -618,7 +635,7 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9*)
         // iterate through each party
         for (auto party_index = 0u; party_index < party_count; party_index += 1) {
             // party member #
-            if (show_player_number && party_index == 0) {
+            if (settings.show_player_number && party_index == 0) {
                 // print #1. <player> for players, not the party
                 if (party_member_index != -1) {
                     ImGui::Text(("# "s + std::to_string(party_member_index + 1) + ".").c_str());
@@ -673,143 +690,82 @@ void ObserverPartyWindow::Draw(IDirect3DDevice9*)
 }
 
 
-// Load settings
-void ObserverPartyWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-
-    LOAD_BOOL(show_player_number);
-    LOAD_BOOL(show_profession);
-    LOAD_BOOL(show_player_guild_tag);
-    LOAD_BOOL(show_player_guild_rank);
-    LOAD_BOOL(show_player_guild_rating);
-    LOAD_BOOL(show_kills);
-    LOAD_BOOL(show_deaths);
-    LOAD_BOOL(show_kdr);
-    LOAD_BOOL(show_cancels);
-    LOAD_BOOL(show_interrupts);
-    LOAD_BOOL(show_knockdowns);
-    LOAD_BOOL(show_received_party_attacks);
-    LOAD_BOOL(show_dealt_party_attacks);
-    LOAD_BOOL(show_received_party_crits);
-    LOAD_BOOL(show_dealt_party_crits);
-    LOAD_BOOL(show_received_party_skills);
-    LOAD_BOOL(show_dealt_party_skills);
-    LOAD_BOOL(show_skills_used);
-    LOAD_BOOL(show_damage_dealt);
-    LOAD_BOOL(show_damage_received);
-    LOAD_BOOL(show_healing_dealt);
-    LOAD_BOOL(show_healing_received);
-    LOAD_BOOL(show_max_hp);
-}
-
-
-// Save settings
-void ObserverPartyWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-
-    SAVE_BOOL(show_player_number);
-    SAVE_BOOL(show_profession);
-    SAVE_BOOL(show_player_guild_tag);
-    SAVE_BOOL(show_player_guild_rank);
-    SAVE_BOOL(show_player_guild_rating);
-    SAVE_BOOL(show_kills);
-    SAVE_BOOL(show_deaths);
-    SAVE_BOOL(show_kdr);
-    SAVE_BOOL(show_cancels);
-    SAVE_BOOL(show_interrupts);
-    SAVE_BOOL(show_knockdowns);
-    SAVE_BOOL(show_received_party_attacks);
-    SAVE_BOOL(show_dealt_party_attacks);
-    SAVE_BOOL(show_received_party_crits);
-    SAVE_BOOL(show_dealt_party_crits);
-    SAVE_BOOL(show_received_party_skills);
-    SAVE_BOOL(show_dealt_party_skills);
-    SAVE_BOOL(show_skills_used);
-    SAVE_BOOL(show_damage_dealt);
-    SAVE_BOOL(show_damage_received);
-    SAVE_BOOL(show_healing_dealt);
-    SAVE_BOOL(show_healing_received);
-    SAVE_BOOL(show_max_hp);
-}
-
 // Draw settings
 void ObserverPartyWindow::DrawSettingsInternal()
 {
     ImGui::Text("Make sure the Observer Module is enabled.");
-    ImGui::Checkbox("Show player number (#)", &show_player_number);
+    ImGui::Checkbox("Show player number (#)", &settings.show_player_number);
     ImGui::Checkbox(("Show professions ("s
                      + ObserverLabel::Profession
-                     + ")").c_str(), &show_profession);
+                     + ")").c_str(), &settings.show_profession);
 
     ImGui::Checkbox(("Show Player Guild Tags ("s
                      + ObserverLabel::PlayerGuildTag
-                     + ")").c_str(), &show_player_guild_tag);
+                     + ")").c_str(), &settings.show_player_guild_tag);
 
     ImGui::Checkbox(("Show Player Guild Rating ("s
                      + ObserverLabel::PlayerGuildRating
-                     + ")").c_str(), &show_player_guild_rating);
+                     + ")").c_str(), &settings.show_player_guild_rating);
 
     ImGui::Checkbox(("Show Player Guild Rank ("s
                      + ObserverLabel::PlayerGuildRank
-                     + ")").c_str(), &show_player_guild_rank);
+                     + ")").c_str(), &settings.show_player_guild_rank);
 
     ImGui::Checkbox(("Show kills ("s
                      + ObserverLabel::Kills
-                     + ")").c_str(), &show_kills);
+                     + ")").c_str(), &settings.show_kills);
 
     ImGui::Checkbox(("Show deaths ("s
                      + ObserverLabel::Deaths
-                     + ")").c_str(), &show_deaths);
+                     + ")").c_str(), &settings.show_deaths);
 
     ImGui::Checkbox(("Show KDR ("s
                      + ObserverLabel::KDR
-                     + ")").c_str(), &show_kdr);
+                     + ")").c_str(), &settings.show_kdr);
 
     ImGui::Checkbox(("Show cancels ("s
                      + ObserverLabel::Cancels
-                     + ")").c_str(), &show_cancels);
+                     + ")").c_str(), &settings.show_cancels);
 
     ImGui::Checkbox(("Show interrupts ("s
                      + ObserverLabel::Interrupts
-                     + ")").c_str(), &show_interrupts);
+                     + ")").c_str(), &settings.show_interrupts);
 
     ImGui::Checkbox(("Show knockdowns ("s
-                     + ObserverLabel::Knockdowns + ")").c_str(), &show_knockdowns);
+                     + ObserverLabel::Knockdowns + ")").c_str(), &settings.show_knockdowns);
 
     ImGui::Checkbox(("Show attacks from other parties ("s
                      + ObserverLabel::AttacksReceivedFromOtherParties
-                     + ")").c_str(), &show_received_party_attacks);
+                     + ")").c_str(), &settings.show_received_party_attacks);
 
     ImGui::Checkbox(("Show attacks to other parties ("s
                      + ObserverLabel::AttacksDealtToOtherParties
-                     + ")").c_str(), &show_dealt_party_attacks);
+                     + ")").c_str(), &settings.show_dealt_party_attacks);
 
     ImGui::Checkbox(("Show crits from other parties ("s
                      + ObserverLabel::CritsReceivedFromOtherParties
-                     + ")").c_str(), &show_received_party_crits);
+                     + ")").c_str(), &settings.show_received_party_crits);
 
     ImGui::Checkbox(("Show crits to other parties ("s
                      + ObserverLabel::CritsDealToOtherParties
-                     + ")").c_str(), &show_dealt_party_crits);
+                     + ")").c_str(), &settings.show_dealt_party_crits);
 
     ImGui::Checkbox(("Show skills from other parties ("s
                      + ObserverLabel::SkillsReceivedFromOtherParties
                      + ")").c_str(),
-                    &show_received_party_skills);
+                    &settings.show_received_party_skills);
 
     ImGui::Checkbox(("Show skills used on other parties ("s
                      + ObserverLabel::SkillsUsedOnOtherParties
-                     + ")").c_str(), &show_dealt_party_skills);
+                     + ")").c_str(), &settings.show_dealt_party_skills);
 
     ImGui::Checkbox(("Show skills used ("s
                      + ObserverLabel::SkillsUsed
-                     + ")").c_str(), &show_skills_used);
+                     + ")").c_str(), &settings.show_skills_used);
 
-    ImGui::Checkbox("Show damage dealt (Dmg+)", &show_damage_dealt);
-    ImGui::Checkbox("Show damage received (Dmg-)", &show_damage_received);
-    ImGui::Checkbox("Show healing dealt (Heal+)", &show_healing_dealt);
-    ImGui::Checkbox("Show healing received (Heal-)", &show_healing_received);
-    ImGui::Checkbox("Show max HP (MaxHP)", &show_max_hp);
+    ImGui::Checkbox("Show damage dealt (Dmg+)", &settings.show_damage_dealt);
+    ImGui::Checkbox("Show damage received (Dmg-)", &settings.show_damage_received);
+    ImGui::Checkbox("Show healing dealt (Heal+)", &settings.show_healing_dealt);
+    ImGui::Checkbox("Show healing received (Heal-)", &settings.show_healing_received);
+    ImGui::Checkbox("Show max HP (MaxHP)", &settings.show_max_hp);
 }

@@ -1,14 +1,8 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Debug.h>
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
-#include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/MemoryMgr.h>
-
-#include <Defines.h>
-#include <ImGuiAddons.h>
 #include "VendorFix.h"
 
 #include <GWCA/Managers/UIMgr.h>
@@ -16,7 +10,6 @@
 #include <GWCA/GameEntities/Item.h>
 
 #include <GWCA/Managers/ItemMgr.h>
-#include "Timer.h"
 
 namespace {
 

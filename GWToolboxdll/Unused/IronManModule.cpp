@@ -89,6 +89,5 @@ void IronManModule::Initialize() {
 
 void IronManModule::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Limit available skills to character's campaign", &limit_available_skills_to_campaign);
-    ImGui::ShowHelp("e.g. if your character is from Nightfall, skill trainers and available skills will be limited to Nightfall/Core skills");
+    ImGui::CheckboxWithHelp("Limit available skills to character's campaign", &limit_available_skills_to_campaign, "e.g. if your character is from Nightfall, skill trainers and available skills will be limited to Nightfall/Core skills");
 }

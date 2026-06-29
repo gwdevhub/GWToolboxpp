@@ -74,12 +74,28 @@ public:
     [[nodiscard]] const char* Name() const override { return "Chat Settings"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_COMMENTS; }
 
+    struct Settings {
+        bool show_timestamps = false;
+        bool hide_player_speech_bubbles = false;
+        bool hide_all_friendly_speech_bubbles = false;
+        bool show_timestamp_seconds = false;
+        bool show_timestamp_24h = false;
+        bool npc_speech_bubbles_as_chat = false;
+        bool redirect_npc_messages_to_emote_chat = false;
+        bool redirect_outgoing_whisper_to_whisper_channel = false;
+        bool openlinks = true;
+        bool auto_url = true;
+        bool clear_chat_message_when_hiding_chat = false;
+        int chat_window_font_id_index = 0;
+        Colors::SettingColor timestamps_color = Colors::RGB(0xc0, 0xc0, 0xbf);
+    };
+
     void Initialize() override;
     void Terminate() override;
     void Update(float) override;
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni*) override;
-    void SaveSettings(ToolboxIni*) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     bool WndProc(UINT, WPARAM, LPARAM) override;
 
     static void AddPendingMessage(PendingChatMessage* pending_chat_message);

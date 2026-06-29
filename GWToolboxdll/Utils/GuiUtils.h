@@ -2,13 +2,19 @@
 
 // ReSharper disable once CppUnusedIncludeDirective
 #include <ImGuiAddons.h>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 #include <ToolboxIni.h>
 #include <RectF.h>
 
 // ReSharper disable once CppUnusedIncludeDirective
 #include <Utils/EncString.h>
+#include <Utils/TextUtils.h>
 
+namespace GW {
+    namespace SkillbarMgr {
+        struct SkillTemplate;
+    }
+}
 
 namespace GuiUtils {
     template <typename T>
@@ -33,24 +39,51 @@ namespace GuiUtils {
     // Reposition a rect within its container to make sure it isn't overflowing it.
     ImVec4& ClampRect(ImVec4& rect, const ImVec4& viewport);
 
-    template <map_type T>
-    void MapToIni(ToolboxIni* ini, const char* section, const char* name, const T& map)
-    {
-        const auto map_json = nlohmann::json(map);
-        const auto map_str = map_json.dump();
-        ini->SetValue(section, name, map_str.c_str());
-    }
+    // Takes a wstring and translates into a string of hex values, separated by spaces.
+    // Lossless: handles all wchar_t values including lone Unicode surrogates present in GW encoded strings.
+    bool ArrayToIni(const std::wstring& in, std::string* out);
+    bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
+    size_t IniToArray(const std::string& in, std::wstring& out);
 
     template <map_type T>
     T IniToMap(ToolboxIni* ini, const char* section, const char* name)
     {
-        std::string map_str = ini->GetValue(section, name, "");
-        try {
-            const auto map_json = nlohmann::json::parse(map_str);
-            return map_json.get<T>();
-        } catch (nlohmann::json::exception e) {
+        const std::string map_str = ini->GetValue(section, name, "");
+        if (map_str.empty()) {
             return {};
         }
+
+        using key_type = typename T::key_type;
+        using staged_key = std::conditional_t<std::is_same_v<key_type, std::wstring>, std::string, key_type>;
+        using staged_map = std::map<staged_key, typename T::mapped_type>;
+
+        staged_map staged;
+        if (glz::read_json(staged, map_str)) {
+            staged.clear();
+            // TODO: delete this branch once pre-glaze configs are gone.
+            std::vector<std::tuple<staged_key, typename T::mapped_type>> legacy;
+            if (glz::read_json(legacy, map_str)) {
+                return {};
+            }
+            for (auto& [k, v] : legacy) {
+                staged.emplace(std::move(k), std::move(v));
+            }
+        }
+
+        T out;
+        for (auto& [k, v] : staged) {
+            if constexpr (std::is_same_v<key_type, std::wstring>) {
+                std::wstring wkey;
+                if (IniToArray(k, wkey) == 0) {
+                    // Backward compat: key was written in old UTF-8 format before hex encoding was introduced
+                    wkey = TextUtils::StringToWString(k);
+                }
+                out.emplace(std::move(wkey), std::move(v));
+            } else {
+                out.emplace(std::move(k), std::move(v));
+            }
+        }
+        return out;
     }
 
     template <map_type T>
@@ -61,11 +94,6 @@ namespace GuiUtils {
         }
         return IniToMap<T>(ini, section, name);
     }
-
-    // Takes a wstring and translates into a string of hex values, separated by spaces
-    bool ArrayToIni(const std::wstring& in, std::string* out);
-    bool ArrayToIni(const uint32_t* in, size_t len, std::string* out);
-    size_t IniToArray(const std::string& in, std::wstring& out);
     void BitsetToIni(const std::bitset<256>& key_combo, std::string& out_str);
     void IniToBitset(const std::string& str, std::bitset<256>& key_combo);
     // Convert token separated cstring into array of strings
@@ -82,13 +110,14 @@ namespace GuiUtils {
     void FlashWindow(bool force = false);
     void FocusWindow();
 
-    // Same as std::format, but use printf formatting
-    std::string format(const char* msg, ...);
-    // Same as std::format, but use printf formatting
-    std::wstring format(const wchar_t* msg, ...);
-
     // Create an ImGui representation of the skill bar
     void DrawSkillbar(const char* build_code, bool show_attributes = true);
 
+    void DrawSkillbar(const GW::SkillbarMgr::SkillTemplate* skill_template_pt, bool show_attributes = true);
+
     int DecimalPlaces(float value, int max_places = 4);
+
+    enum class GwButtonIcon { Save, LoadFromTemplate, SaveToTemplate, ManageTemplates, TemplateCode, ChatIcon };
+    bool IconButton(const char* label, GwButtonIcon icon, const ImVec2& size = ImVec2(0, 0), const ImGuiButtonFlags flags = ImGuiButtonFlags_None);
+    bool IconButtonConfirm(const char* label, GwButtonIcon icon, const ImVec2& size = ImVec2(0, 0), const ImGuiButtonFlags flags = ImGuiButtonFlags_None);
 };

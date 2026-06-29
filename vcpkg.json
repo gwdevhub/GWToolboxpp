@@ -1,20 +1,13 @@
 {
   "dependencies": [
     "ctre",
-    {
-      "name": "curl",
-      "features": [
-        "wolfssl"
-      ]
-    },
     "directxtex",
     "discord-game-sdk",
     "earcut-hpp",
+    "glaze",
     "minhook",
-    "nlohmann-json",
-    "simpleini",
-    "uwebsockets",
-    "wolfssl"
+    "recastnavigation",
+    "uwebsockets"
   ],
   "overrides": [
     {

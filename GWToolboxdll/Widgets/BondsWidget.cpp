@@ -5,8 +5,6 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Context/WorldContext.h>
 
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <GWCA/GameEntities/Attribute.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
@@ -18,8 +16,6 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 
 #include <Color.h>
 #include <Defines.h>
@@ -86,20 +82,7 @@ namespace {
     }
 
 
-    // settings
-    bool hide_in_outpost = false;
-    bool click_to_cast = true;
-    bool click_to_drop = true;
-    bool show_allies = true;
-    bool flip_bonds = false;
-
-    // Distance away from the party window on the x axis; used with snap to party window
-    int user_offset = 64;
-
-    bool overlay_party_window = false;
-
-    Color background = Colors::ARGB(76, 0, 0, 0);
-    Color low_attribute_overlay = Colors::ARGB(76, 0, 0, 0);
+    BondsWidget::Settings settings;
 
     std::vector<GW::Constants::SkillID> bond_list{};               // index to skill id
     std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // skill id to index
@@ -254,6 +237,7 @@ bool BondsWidget::IsBondLikeSkill(GW::Constants::SkillID skill_id) {
 void BondsWidget::Initialize()
 {
     SnapsToPartyWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"bonds", CmdBondsAddRemove);
     for (auto& b : available_bonds) {
         b.Initialize();
@@ -285,7 +269,7 @@ bool BondsWidget::GetBondPosition(uint32_t agent_id, GW::Constants::SkillID skil
     if (!party_indeces_by_agent_id.contains(agent_id))
         return false;
     const auto party_slot = party_indeces_by_agent_id[agent_id];
-    if (party_slot >= allies_start_idx && !show_allies)
+    if (party_slot >= allies_start_idx && !settings.show_allies)
         return false;
 
     if (!bond_map.contains(skill_id)) {
@@ -306,7 +290,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     if (!visible) {
         return;
     }
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+    if (settings.hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
     }
     const GW::PartyInfo* info = GW::PartyMgr::GetPartyInfo();
@@ -336,18 +320,18 @@ void BondsWidget::Draw(IDirect3DDevice9*)
 
     const float width = bond_list.size() * img_width;
 
-    const auto user_offset_x = abs(static_cast<float>(user_offset));
+    const auto user_offset_x = abs(static_cast<float>(settings.user_offset));
     float window_x = .0f;
-    if (overlay_party_window) {
+    if (settings.overlay_party_window) {
         window_x = party_health_bars_position.top_left.x + user_offset_x;
-        if (user_offset < 0) {
+        if (settings.user_offset < 0) {
             window_x = party_health_bars_position.bottom_right.x - user_offset_x - width;
         }
 
     }
     else {
         window_x = party_health_bars_position.top_left.x - user_offset_x - width;
-        if (window_x < 0 || user_offset < 0) {
+        if (window_x < 0 || settings.user_offset < 0) {
             // Right placement
             window_x = party_health_bars_position.bottom_right.x + user_offset_x;
         }
@@ -359,7 +343,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(10.0f, 10.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_cast || click_to_drop)))) {
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(settings.click_to_cast || settings.click_to_drop)))) {
         const auto draw_list = ImGui::GetWindowDrawList();
         bool handled_click = false;
         ImVec2 bond_top_left;
@@ -368,14 +352,14 @@ void BondsWidget::Draw(IDirect3DDevice9*)
         for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
             if (!GetBondPosition(agent_id, bond_list[0], &bond_top_left, &bond_bottom_right))
                 continue;
-            draw_list->AddRectFilled({ window_x , bond_top_left.y}, { window_x + width, bond_bottom_right.y }, background);
+            draw_list->AddRectFilled({ window_x , bond_top_left.y}, { window_x + width, bond_bottom_right.y }, settings.background);
         }
 
         if (GW::BuffArray* buffs = GW::Effects::GetPlayerBuffs()) {
             for (const auto& buff : *buffs) {
                 DrawBondImage(buff.target_agent_id, buff.skill_id, &bond_top_left, &bond_bottom_right);
                 if (!handled_click && ImGui::IsMouseHoveringRect(bond_top_left, bond_bottom_right, false) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                    if(click_to_drop)
+                    if(settings.click_to_drop)
                         DropBuffs(buff.target_agent_id, buff.skill_id);
                     handled_click = true;
                 }
@@ -407,7 +391,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                     const bool overlay = effect.attribute_level < agentAttributes->level;
 
                     if (overlay) {
-                        draw_list->AddRectFilled(bond_top_left, bond_bottom_right, low_attribute_overlay);
+                        draw_list->AddRectFilled(bond_top_left, bond_bottom_right, settings.low_attribute_overlay);
                     }
                 }
             }
@@ -422,7 +406,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
                         continue;
                     draw_list->AddRect(bond_top_left, bond_bottom_right, IM_COL32(255, 255, 255, 255));
                     if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                        if(click_to_cast)
+                        if(settings.click_to_cast)
                             UseBuff(agent_id, skill_id);
                         handled_click = true;
                     }
@@ -435,63 +419,45 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     ImGui::PopStyleVar(3);
 }
 
-void BondsWidget::LoadSettings(ToolboxIni* ini)
+void BondsWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-    background = Colors::Load(ini, Name(), VAR_NAME(background), background);
-    low_attribute_overlay = Colors::Load(ini, Name(), VAR_NAME(low_attribute_overlay), low_attribute_overlay);
-
-    LOAD_BOOL(click_to_cast);
-    LOAD_BOOL(click_to_drop);
-    LOAD_BOOL(show_allies);
-    LOAD_BOOL(flip_bonds);
-    LOAD_BOOL(hide_in_outpost);
-    LOAD_UINT(user_offset);
-    LOAD_BOOL(overlay_party_window);
-
+    SnapsToPartyWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     for (auto& b : available_bonds) {
         char buf[128];
         const int written = snprintf(buf, sizeof(buf), "bond_enabled_%d", b.skill_id);
         ASSERT(written != -1);
-        b.enabled = ini->GetBoolValue(Name(), buf, b.enabled);
+        if (!doc.Get(Name(), buf, b.enabled) && legacy) {
+            b.enabled = legacy->GetBoolValue(Name(), buf, b.enabled);
+        }
     }
 }
 
-void BondsWidget::SaveSettings(ToolboxIni* ini)
+void BondsWidget::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_COLOR(background);
-    SAVE_COLOR(low_attribute_overlay);
-    SAVE_BOOL(click_to_cast);
-    SAVE_BOOL(click_to_drop);
-    SAVE_BOOL(show_allies);
-    SAVE_BOOL(flip_bonds);
-    SAVE_BOOL(hide_in_outpost);
-    SAVE_UINT(user_offset);
-    SAVE_BOOL(overlay_party_window);
-
+    SnapsToPartyWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
     for (const auto& b : available_bonds) {
         char buf[128];
         const int written = snprintf(buf, sizeof(buf), "bond_enabled_%d", b.skill_id);
         ASSERT(written != -1);
-        ini->SetBoolValue(Name(), buf, b.enabled);
+        doc.Set(Name(), buf, b.enabled);
     }
 }
 
 void BondsWidget::DrawSettingsInternal()
 {
     ImGui::SameLine();
-    ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
+    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
     if (bond_list.empty()) {
         ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "Equip a maintainable enchantment or refrain to show bonds widget on-screen");
     }
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show on top of health bars", &overlay_party_window);
-    ImGui::ShowHelp("Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("Show on top of health bars", &settings.overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
-    ImGui::DragInt("Party window offset", &user_offset);
+    ImGui::DragInt("Party window offset", &settings.user_offset);
     ImGui::TextUnformatted("Skills enabled for bond monitor:");
     ImGui::Indent();
     ImGui::StartSpacedElements(180.f);
@@ -506,14 +472,12 @@ void BondsWidget::DrawSettingsInternal()
     }
     ImGui::Unindent();
 
-    Colors::DrawSettingHueWheel("Background", &background, 0);
-    ImGui::Checkbox("Click to cast bond", &click_to_cast);
-    ImGui::Checkbox("Click to cancel bond", &click_to_drop);
-    ImGui::Checkbox("Show bonds for Allies", &show_allies);
-    ImGui::ShowHelp("'Allies' meaning the ones that show in party window, such as summoning stones");
-    ImGui::Checkbox("Flip bond order (left/right)", &flip_bonds);
-    ImGui::ShowHelp("Bond order is based on your build. Check this to flip them left <-> right");
-    Colors::DrawSetting("Low Attribute Overlay", &low_attribute_overlay);
+    Colors::DrawSettingHueWheel("Background", &settings.background.value, 0);
+    ImGui::Checkbox("Click to cast bond", &settings.click_to_cast);
+    ImGui::Checkbox("Click to cancel bond", &settings.click_to_drop);
+    ImGui::CheckboxWithHelp("Show bonds for Allies", &settings.show_allies, "'Allies' meaning the ones that show in party window, such as summoning stones");
+    ImGui::CheckboxWithHelp("Flip bond order (left/right)", &settings.flip_bonds, "Bond order is based on your build. Check this to flip them left <-> right");
+    Colors::DrawSetting("Low Attribute Overlay", &settings.low_attribute_overlay.value);
     ImGui::ShowHelp(
         "Overlays effects casted with less than current attribute level.\n"
         "Only works for yourself and your heroes and doesn't include bonds."

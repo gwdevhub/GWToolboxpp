@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ToolboxWindow.h>
-#include <vector>
 #include <cstdint>
 
 namespace GW {
@@ -25,11 +24,15 @@ public:
     [[nodiscard]] const char* Name() const override { return "Inventory Sorting"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_SORT; }
 
+    struct Settings {
+        bool sort_equipment_pack = false;
+    };
+
     void Initialize() override;
     void Terminate() override;
     void Draw(IDirect3DDevice9* device) override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     void RegisterSettingsContent() override;
 

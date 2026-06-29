@@ -1,0 +1,45 @@
+---
+import { navGroups } from '../lib/nav';
+
+interface Props {
+  slug: string;
+}
+
+const { slug } = Astro.props;
+---
+
+<aside
+  class="hidden w-64 shrink-0 border-r border-(--color-border-glass) lg:block"
+>
+  <nav class="sticky top-14 max-h-[calc(100vh-3.5rem)] overflow-y-auto p-4 pr-2 text-sm">
+    {
+      navGroups.map((group) => (
+        <div class="mb-6">
+          <h3 class="mb-2 px-2 text-[0.7rem] font-semibold uppercase tracking-wider text-(--color-fg-meta)">
+            {group.label}
+          </h3>
+          <ul class="space-y-px">
+            {group.items.map((item) => {
+              const active = item.slug === slug;
+              return (
+                <li>
+                  <a
+                    href={`/docs/${item.slug}/`}
+                    class:list={[
+                      'block rounded px-2 py-1.5 transition-colors',
+                      active
+                        ? 'bg-(--color-glass) text-(--color-accent)'
+                        : 'text-(--color-fg-sub) hover:bg-(--color-glass) hover:text-(--color-fg)',
+                    ]}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))
+    }
+  </nav>
+</aside>

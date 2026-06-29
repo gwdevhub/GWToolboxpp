@@ -13,6 +13,12 @@ Please make sure you take a look at the code and respect the somewhat consistent
 Create a new branch and commit the changes relevant to your contribution. Please make sure you don't commit unrelated lines.
 Finally submit a pull request and let us review your code. Stay updated in the pull request page for feedback and comments.
 
+### Formatting
+
+`.clang-format` is the source of truth for C++ style. `.editorconfig` mirrors it so editors that don't run clang-format stay consistent — including a block of Visual Studio `cpp_*` keys that drive VS's built-in formatter. If you change `.clang-format`, update the matching `cpp_*` keys in `.editorconfig` so the two don't drift.
+
+In Visual Studio, enable Tools → Options → Text Editor → C/C++ → Code Style → Formatting → **Enable ClangFormat support** with **Use custom clang-format file**, so it formats with the repo's `.clang-format` rather than the IDE defaults. Note that VS does not commit a "format on save" trigger to the repo; whether formatting runs on save is a per-developer IDE/extension setting. Please only commit formatting changes to lines your contribution actually touches.
+
 ### Quick code overview:
 There are three main kinds of Toolbox components: Modules, Widgets and Windows. Any code change is most likely an additional one of those, or some change in one.
 

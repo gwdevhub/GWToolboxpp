@@ -1,0 +1,475 @@
+{
+   "lines": [
+      {
+         "name": "lab-mnt jump",
+         "x1": 1874,
+         "y1": 4640,
+         "x2": 2559,
+         "y2": 3727,
+         "color": "0xFFFFFFFF",
+         "map": 72,
+         "visible": false,
+         "draw_on_terrain": false
+      },
+      {
+         "name": "mnt jump",
+         "x1": 6759,
+         "y1": -3348,
+         "x2": 7680,
+         "y2": -3648,
+         "color": "0xFFFFFFFF",
+         "map": 72,
+         "visible": false,
+         "draw_on_terrain": false
+      },
+      {
+         "name": "mnt-planes jump",
+         "x1": 9637,
+         "y1": -8503,
+         "x2": 10224.67,
+         "y2": -8903,
+         "color": "0xFFFFFFFF",
+         "map": 72,
+         "visible": false,
+         "draw_on_terrain": false
+      },
+      {
+         "name": "pits jump",
+         "x1": 11135,
+         "y1": -1530,
+         "x2": 12097,
+         "y2": -106,
+         "color": "0xFFFFFFFF",
+         "map": 72,
+         "visible": false,
+         "draw_on_terrain": false
+      }
+   ],
+   "markers": [
+      {
+         "name": "gloom chest",
+         "x": 3435,
+         "y": 15590,
+         "size": 75,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "veil chest",
+         "x": 10943,
+         "y": -10151,
+         "size": 75,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "city chest",
+         "x": 227,
+         "y": -10264,
+         "size": 75,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "foundry chest",
+         "x": -14436,
+         "y": -523,
+         "size": 75,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "foundry chest range",
+         "x": -14436,
+         "y": -523,
+         "size": 1300,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "rift left claw",
+         "x": 8394,
+         "y": 17811,
+         "size": 75,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "rift right claw",
+         "x": 8097,
+         "y": 17567,
+         "size": 75,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "rift water group",
+         "x": 9498,
+         "y": 18311,
+         "size": 350,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "rift cap area",
+         "x": 7704,
+         "y": 17844,
+         "size": 500,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "tendril",
+         "x": 8575,
+         "y": -9447,
+         "size": 100,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "tendril",
+         "x": 7904,
+         "y": -10086,
+         "size": 100,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "tendril",
+         "x": 8217,
+         "y": -11223,
+         "size": 100,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "tendril",
+         "x": 9933,
+         "y": -9339,
+         "size": 100,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "tendril",
+         "x": 9225,
+         "y": -11579,
+         "size": 100,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "tendril",
+         "x": 10476,
+         "y": -10867,
+         "size": 100,
+         "shape": 0,
+         "map": 474,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "fow cave 1",
+         "x": -7252,
+         "y": -14778,
+         "size": 50,
+         "shape": 0,
+         "map": 34,
+         "visible": false,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "fow cave 2",
+         "x": -4803,
+         "y": -11217,
+         "size": 50,
+         "shape": 0,
+         "map": 34,
+         "visible": false,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "fow cave 3",
+         "x": -3719,
+         "y": -10165,
+         "size": 50,
+         "shape": 0,
+         "map": 34,
+         "visible": false,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "fow cave 4",
+         "x": -1857,
+         "y": -9120,
+         "size": 50,
+         "shape": 0,
+         "map": 34,
+         "visible": false,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "fow cave 5",
+         "x": -6557,
+         "y": -12656,
+         "size": 50,
+         "shape": 0,
+         "map": 34,
+         "visible": false,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "reaper: lab",
+         "x": -5794,
+         "y": 12788,
+         "size": 75,
+         "shape": 1,
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "reaper: vale",
+         "x": -13248,
+         "y": 5256,
+         "size": 75,
+         "shape": 1,
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "reaper: pits",
+         "x": 8638,
+         "y": 6248,
+         "size": 75,
+         "shape": 1,
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "reaper: pools",
+         "x": -6885,
+         "y": -19455,
+         "size": 75,
+         "shape": 1,
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "reaper: planes",
+         "x": 11391,
+         "y": -18030,
+         "size": 75,
+         "shape": 1,
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "reaper: wastes",
+         "x": 632,
+         "y": 18364,
+         "size": 75,
+         "shape": 1,
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "reaper: mnt",
+         "x": -8260,
+         "y": -5238,
+         "size": 75,
+         "shape": 1,
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFF",
+         "color_sub": "0xFFFFFF"
+      },
+      {
+         "name": "last pits q soul",
+         "x": 12813,
+         "y": 4696,
+         "size": 1012,
+         "shape": 0,
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "color": "0xFFFFFFFF",
+         "color_sub": "0xFFFF0000"
+      }
+   ],
+   "polygons": [
+      {
+         "name": "mnts safe area",
+         "points": [
+            {
+               "x": -8809,
+               "y": -5233
+            },
+            {
+               "x": -9120,
+               "y": -5265
+            },
+            {
+               "x": -9120,
+               "y": -5376
+            },
+            {
+               "x": -8809,
+               "y": -5233
+            },
+            {
+               "x": -9120,
+               "y": -5376
+            },
+            {
+               "x": -9024,
+               "y": -5378
+            },
+            {
+               "x": -8809,
+               "y": -5233
+            },
+            {
+               "x": -9024,
+               "y": -5378
+            },
+            {
+               "x": -9024,
+               "y": -5512
+            },
+            {
+               "x": -8809,
+               "y": -5233
+            },
+            {
+               "x": -9024,
+               "y": -5512
+            },
+            {
+               "x": -8920,
+               "y": -5462
+            },
+            {
+               "x": -8809,
+               "y": -5233
+            },
+            {
+               "x": -8920,
+               "y": -5462
+            },
+            {
+               "x": -8860,
+               "y": -5545
+            },
+            {
+               "x": -8809,
+               "y": -5233
+            },
+            {
+               "x": -8860,
+               "y": -5545
+            },
+            {
+               "x": -8713,
+               "y": -5468
+            },
+            {
+               "x": -8809,
+               "y": -5233
+            }
+         ],
+         "color": "0x4B34FF00",
+         "color_sub": "0xFF7C5525",
+         "map": 72,
+         "visible": true,
+         "draw_on_terrain": false,
+         "filled": true
+      }
+   ]
+}

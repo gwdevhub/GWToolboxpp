@@ -1,163 +1,146 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 #include <vector>
-#include <nlohmann/json.hpp>
+
+#include <GWCA/GameContainers/Array.h>
+#include <GWCA/GameEntities/Pathing.h>
 
 // =============================================================================
 // PathingMapData
 //
-// A self-contained, pointer-free representation of map pathfinding data that
-// can be constructed from either:
+// A self-contained representation of map pathfinding data using GW's actual
+// pointer-based types (GW::PathingTrapezoid*, GW::Portal*) with a single
+// continuous buffer per plane.
+//
+// Can be constructed from either:
 //   1. GW::PathContext (live game memory)
 //   2. FFNA Type-3 file chunk 0x20000008 (raw file data)
 //
 // Design principles:
-//   - No runtime pointers - all references use indices
-//   - All data is stored in flat vectors for easy serialization
-//   - Neighbor/portal relationships stored as indices, not pointers
-//   - BSP tree stored as index-based nodes
-//   - Can be used for pathfinding without any external dependencies
+//   - Uses GW's native pointer-based types directly
+//   - Single buffer allocation per plane (mirrors GW::PathingMap::allocatedBuffer)
+//   - All internal pointers resolved within the buffer
+//   - No external pointer dependencies - fully self-contained deep copy
 //
 // This struct owns all its data and is fully self-contained.
 // =============================================================================
 
 namespace Pathing {
-    constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF;
-    constexpr uint16_t INVALID_INDEX16 = 0xFFFF;
 
     struct Vec2f {
         float x, y;
     };
 
-    // Simplified trapezoid - only geometry and neighbor connectivity
-    struct Trapezoid {
-        // Geometry (6 floats defining the trapezoid shape)
-        float XTL, XTR; // X coords of top edge (left, right)
-        float YT;       // Y coord of top edge
-        float XBL, XBR; // X coords of bottom edge (left, right)
-        float YB;       // Y coord of bottom edge
+    // One per plane - mirrors GW::PathingMap but we own the memory
+    struct CopiedPathingMap {
+        uint32_t zplane = 0;
+        uint32_t trapezoid_count = 0;
+        GW::PathingTrapezoid* trapezoids = nullptr;
+        uint32_t portal_count = 0;
+        GW::Portal* portals = nullptr;
+        uint32_t portal_trapezoids_count = 0;
+        GW::PathingTrapezoid** portal_trapezoids = nullptr;
 
-        // Neighbor connectivity (indices into same plane's trapezoid array)
-        // Order: [top, right, bottom, left]
-        uint32_t neighbors[4];
+        // BSP tree nodes
+        GW::Node* root_node = nullptr;
+        uint32_t x_node_count = 0;
+        GW::XNode* x_nodes = nullptr;
+        uint32_t y_node_count = 0;
+        GW::YNode* y_nodes = nullptr;
+        uint32_t sink_node_count = 0;
+        GW::SinkNode* sink_nodes = nullptr;
 
-        // Portal indices for cross-plane connections
-        uint16_t portal_left;
-        uint16_t portal_right;
+        uint8_t* buffer = nullptr;  // single allocation owns all above
+
+        CopiedPathingMap() = default;
+        ~CopiedPathingMap() { delete[] buffer; }
+        CopiedPathingMap(const CopiedPathingMap&) = delete;
+        CopiedPathingMap& operator=(const CopiedPathingMap&) = delete;
+        CopiedPathingMap(CopiedPathingMap&& o) noexcept
+            : zplane(o.zplane)
+            , trapezoid_count(o.trapezoid_count)
+            , trapezoids(o.trapezoids)
+            , portal_count(o.portal_count)
+            , portals(o.portals)
+            , portal_trapezoids_count(o.portal_trapezoids_count)
+            , portal_trapezoids(o.portal_trapezoids)
+            , root_node(o.root_node)
+            , x_node_count(o.x_node_count)
+            , x_nodes(o.x_nodes)
+            , y_node_count(o.y_node_count)
+            , y_nodes(o.y_nodes)
+            , sink_node_count(o.sink_node_count)
+            , sink_nodes(o.sink_nodes)
+            , buffer(o.buffer)
+        {
+            o.buffer = nullptr;
+            o.trapezoids = nullptr;
+            o.portals = nullptr;
+            o.portal_trapezoids = nullptr;
+            o.root_node = nullptr;
+            o.x_nodes = nullptr;
+            o.y_nodes = nullptr;
+            o.sink_nodes = nullptr;
+        }
+        CopiedPathingMap& operator=(CopiedPathingMap&& o) noexcept {
+            if (this != &o) {
+                delete[] buffer;
+                zplane = o.zplane;
+                trapezoid_count = o.trapezoid_count;
+                trapezoids = o.trapezoids;
+                portal_count = o.portal_count;
+                portals = o.portals;
+                portal_trapezoids_count = o.portal_trapezoids_count;
+                portal_trapezoids = o.portal_trapezoids;
+                root_node = o.root_node;
+                x_node_count = o.x_node_count;
+                x_nodes = o.x_nodes;
+                y_node_count = o.y_node_count;
+                y_nodes = o.y_nodes;
+                sink_node_count = o.sink_node_count;
+                sink_nodes = o.sink_nodes;
+                buffer = o.buffer;
+                o.buffer = nullptr;
+                o.trapezoids = nullptr;
+                o.portals = nullptr;
+                o.portal_trapezoids = nullptr;
+                o.root_node = nullptr;
+                o.x_nodes = nullptr;
+                o.y_nodes = nullptr;
+                o.sink_nodes = nullptr;
+            }
+            return *this;
+        }
     };
 
-    // Portal for cross-plane connectivity
-    struct Portal {
-        uint16_t trapezoid_count;       // Number of trapezoids in this portal
-        uint16_t trapezoid_index_start; // Start index in portal_trapezoid_indices array
-        uint16_t neighbor_plane;        // Index of connected plane
-        uint16_t shared_id;             // ID shared between portal pairs
-        uint8_t flags;                  // Portal flags (0x1 = blocked)
-
-        bool IsBlocked() const { return (flags & 0x1) != 0; }
-    };
-
-    // Navigation plane (one height layer)
-    struct NavPlane {
-        std::vector<Trapezoid> trapezoids;
-        std::vector<Portal> portals;
-        std::vector<uint32_t> portal_trapezoid_indices;
-
-        // Z-plane identifier (for multi-level maps)
-        // Can be: 0 (ground), or positive integer for elevated planes
-        uint32_t zplane;
+    struct PortalProp {
+        Vec2f pos;              // game coordinates (x, y)
+        uint32_t model_file_id; // model file ID for portal type identification
     };
 
     // Complete pathing map data
     struct PathingMapData {
-        uint32_t map_file_id;
-        Vec2f bounds_min;
-        Vec2f bounds_max; 
-        std::vector<NavPlane> planes;
+        uint32_t map_file_id = 0;
+        uint32_t pathNodeSize = 0;
+        Vec2f bounds_min{}, bounds_max{};
+        std::vector<CopiedPathingMap> planes;
+        std::vector<PortalProp> portal_props; // travel portal props from DAT
+        uint32_t total_props_parsed = 0;   // debug: total props in DAT
+        uint32_t total_prop_filenames = 0; // debug: total prop filenames in DAT
+
+        // Points to live game blockedPlanes array (MapContext-loaded),
+        // or nullptr for DAT-loaded (treat all planes as unblocked)
+        const GW::BaseArray<uint32_t>* blockedPlanesPtr = nullptr;
 
         bool IsValid() const { return !planes.empty(); }
-
         size_t GetPlaneCount() const { return planes.size(); }
-
-        size_t GetTotalTrapezoidCount() const
-        {
-            size_t total = 0;
-            for (const auto& plane : planes) {
-                total += plane.trapezoids.size();
-            }
-            return total;
+        size_t GetTotalTrapezoidCount() const {
+            size_t t = 0;
+            for (const auto& p : planes) t += p.trapezoid_count;
+            return t;
         }
     };
 
-    // =========================================================================
-    // JSON Serialization for PathingMapData
-    //
-    // Converts the complete pathing data structure to JSON format.
-    // Useful for:
-    //   - Debugging and visualization
-    //   - Exporting to external tools
-    //   - Comparing different map versions
-    //   - Web-based map viewers
-    // =========================================================================
-
-    inline void to_json(nlohmann::json& j, const Vec2f& v)
-    {
-        j = nlohmann::json::array({v.x, v.y});
-    }
-
-    inline void to_json(nlohmann::json& j, const Trapezoid& t)
-    {
-        j = nlohmann::json{
-            {"geometry", nlohmann::json::array({
-                             t.XTL, // Top left
-                             t.XTR, // Top right
-                             t.YT,  // Top Y
-                             t.XBL, // Bottom left
-                             t.XBR, // Bottom right,
-                             t.YB   // Bottom y
-                         })},
-             {"neighbors", nlohmann::json::array({
-                               t.neighbors[0] == INVALID_INDEX ? nullptr : nlohmann::json(t.neighbors[0]), // top left
-                               t.neighbors[1] == INVALID_INDEX ? nullptr : nlohmann::json(t.neighbors[1]), // top right
-                               t.neighbors[2] == INVALID_INDEX ? nullptr : nlohmann::json(t.neighbors[2]), // bottom left
-                               t.neighbors[3] == INVALID_INDEX ? nullptr : nlohmann::json(t.neighbors[3])  // bottom right
-                           })},
-                     {"portals", nlohmann::json::array({t.portal_left == INVALID_INDEX16 ? nullptr : nlohmann::json(t.portal_left), t.portal_right == INVALID_INDEX16 ? nullptr : nlohmann::json(t.portal_right)})}
-        };
-    }
-
-    inline void to_json(nlohmann::json& j, const Portal& p)
-    {
-        j = nlohmann::json{
-            {"trap_index_start", p.trapezoid_index_start},
-            {"trap_count", p.trapezoid_count},
-            {"neighbor_plane", p.neighbor_plane == INVALID_INDEX16 ? nullptr : nlohmann::json(p.neighbor_plane)},
-            {"shared_id", p.shared_id == INVALID_INDEX16 ? nullptr : nlohmann::json(p.shared_id)},
-            {"flags", p.flags},
-            {"blocked", (p.flags & 0x04) != 0}
-        };
-    }
-
-    inline void to_json(nlohmann::json& j, const NavPlane& plane)
-    {
-
-        j = nlohmann::json{
-            {"zplane", plane.zplane == UINT32_MAX ? "ground" : nlohmann::json(plane.zplane)},
-            {"trapezoids", plane.trapezoids},
-            {"portals", plane.portals},
-            {"portal_trapezoid_indices", plane.portal_trapezoid_indices},
-            {"stats", {{"trapezoid_count", plane.trapezoids.size()}, {"portal_count", plane.portals.size()}}}
-        };
-    }
-
-    inline void to_json(nlohmann::json& j, const PathingMapData& data)
-    {
-        j = nlohmann::json{
-            {"map_file_id", data.map_file_id},
-            {"bounds", {{"min", data.bounds_min}, {"max", data.bounds_max}}},
-            {"planes", data.planes},
-            {"stats", {{"plane_count", data.planes.size()}, {"total_trapezoids", data.GetTotalTrapezoidCount()}, {"is_valid", data.IsValid()}}}
-        };
-    }
 } // namespace Pathing

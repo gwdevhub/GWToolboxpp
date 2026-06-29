@@ -49,7 +49,8 @@ bool Process::Open(const uint32_t pid, const DWORD rights)
     Close();
     m_hProcess = OpenProcess(rights, FALSE, pid);
     if (m_hProcess == nullptr) {
-        // fprintf(stderr, "OpenProcess failed: %lu\n", GetLastError());
+        m_last_error = GetLastError();
+        // fprintf(stderr, "OpenProcess failed: %lu\n", m_last_error);
         return false;
     }
 
@@ -80,7 +81,8 @@ bool Process::Read(const uintptr_t address, void* buffer, const size_t size) con
         &NumberOfBytesRead);
 
     if (!(success && size == NumberOfBytesRead)) {
-        fprintf(stderr, "ReadProcessMemory failed: %lu\n", GetLastError());
+        m_last_error = GetLastError();
+        fprintf(stderr, "ReadProcessMemory failed: %lu\n", m_last_error);
         return false;
     }
 
@@ -108,7 +110,7 @@ bool Process::Write(const uintptr_t address, const void* buffer, const size_t si
     return true;
 }
 
-bool Process::GetName(std::wstring& name)
+bool Process::GetPath(std::wstring& path)
 {
     assert(m_Rights & (PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_QUERY_INFORMATION));
 
@@ -119,6 +121,7 @@ bool Process::GetName(std::wstring& name)
         if (!QueryFullProcessImageNameW(m_hProcess, 0, process_path.data(), &size)) {
             const DWORD error = GetLastError();
             if (error != ERROR_INSUFFICIENT_BUFFER) {
+                m_last_error = error;
                 fprintf(stderr, "QueryFullProcessImageNameW failed: %lu\n", error);
                 Close();
                 return false;
@@ -132,8 +135,18 @@ bool Process::GetName(std::wstring& name)
         }
     }
 
-    const std::string::size_type pos = process_path.rfind('\\');
-    if (pos == std::string::npos) {
+    path = std::move(process_path);
+    return true;
+}
+
+bool Process::GetName(std::wstring& name)
+{
+    std::wstring process_path;
+    if (!GetPath(process_path))
+        return false;
+
+    const std::wstring::size_type pos = process_path.rfind(L'\\');
+    if (pos == std::wstring::npos) {
         fprintf(stderr, "Invalid process path: '%ls'\n", process_path.c_str());
         Close();
         return false;
@@ -159,26 +172,30 @@ bool Process::GetModule(ProcessModule* module, const wchar_t* module_name) const
 
     DWORD cbNeeded;
     if (!EnumProcessModules(m_hProcess, nullptr, 0, &cbNeeded)) {
-        fprintf(stderr, "EnumProcessModules failed: %lu\n", GetLastError());
+        m_last_error = GetLastError();
+        fprintf(stderr, "EnumProcessModules failed: %lu\n", m_last_error);
         return false;
     }
 
     std::vector<HMODULE> handles(cbNeeded / sizeof(HMODULE));
     if (!EnumProcessModules(m_hProcess, handles.data(), cbNeeded, &cbNeeded)) {
-        fprintf(stderr, "EnumProcessModules failed: %lu\n", GetLastError());
+        m_last_error = GetLastError();
+        fprintf(stderr, "EnumProcessModules failed: %lu\n", m_last_error);
         return false;
     }
 
     for (const HMODULE hModule : handles) {
         wchar_t name[512];
         if (!GetModuleBaseNameW(m_hProcess, hModule, name, _countof(name))) {
-            fprintf(stderr, "GetModuleBaseNameW failed: %lu\n", GetLastError());
+            m_last_error = GetLastError();
+            fprintf(stderr, "GetModuleBaseNameW failed: %lu\n", m_last_error);
             return false;
         }
 
         MODULEINFO ModuleInfo;
         if (!GetModuleInformation(m_hProcess, hModule, &ModuleInfo, sizeof(ModuleInfo))) {
-            fprintf(stderr, "GetModuleInformation failed: %lu\n", GetLastError());
+            m_last_error = GetLastError();
+            fprintf(stderr, "GetModuleInformation failed: %lu\n", m_last_error);
             return false;
         }
 
@@ -326,12 +343,20 @@ bool GetProcessesByWindowClass(std::vector<Process>& processes, const wchar_t* c
 ProcessScanner::ProcessScanner(Process* process)
 {
     ProcessModule module;
-    process->GetModule(&module);
+    if (!process->GetModule(&module)) {
+        m_error = process->GetLastErrorCode();
+        return;
+    }
 
     m_base = module.base;
     m_size = module.size;
     m_buffer = new uint8_t[module.size];
-    process->Read(module.base, m_buffer, m_size);
+    if (!process->Read(module.base, m_buffer, m_size)) {
+        m_error = process->GetLastErrorCode();
+        return;
+    }
+
+    m_valid = true;
 }
 
 ProcessScanner::~ProcessScanner()

@@ -27,7 +27,6 @@
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -38,9 +37,11 @@
 #include <Utils/GuiUtils.h>
 
 #include <Defines.h>
+#include <GWToolbox.h>
 #include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
 #include <Utils/TextUtils.h>
+#include <Windows/SettingsWindow.h>
 #include "Minimap.h"
 #include <Utils/FontLoader.h>
 #include <Utils/ToolboxUtils.h>
@@ -111,6 +112,7 @@ namespace {
     bool compass_fix_pending = false;
     bool mouse_clickthrough_in_explorable = false;
     bool mouse_clickthrough_in_outpost = false;
+    bool target_gadgets_on_ctrl_click = false;
     bool flip_on_reverse = false;
     bool rotate_minimap = true;
     bool smooth_rotation = true;
@@ -136,7 +138,7 @@ namespace {
     // -------------------------------------------------------------------------
     Color& cardinal_color = reinterpret_cast<Color&>(default_minimap_context.cardinal_color);
     float cardinal_offset = 0.0f;     // game-unit offset from compass edge; +ve = outward
-    float cardinal_font_size = 20.0f; // screen-space font size in pixels
+    float cardinal_font_size = 13.0f; // screen-space font size in pixels
 
     // Projects a game-world position to an ImGui screen pixel, using the same
     // transform chain that Minimap::Render / RenderSetupProjection applies.
@@ -295,6 +297,7 @@ namespace {
         const auto compass = GetCompassFrame();
         if (!compass) return false;
         const auto context = static_cast<CompassContext*>(GW::UI::GetFrameContext(compass));
+        if (!context) return false;
         if (!context->compass_canvas) {
             SetWindowVisibleTmp(GW::UI::WindowID_Compass, true);
             pending_compass_hide = true;
@@ -789,7 +792,6 @@ void Minimap::SignalTerminate()
     symbols_renderer.Terminate();
     custom_renderer.Terminate();
     effect_renderer.Terminate();
-    GameWorldRenderer::Terminate();
     GW::GameThread::Enqueue([] {
         RefreshQuestMarker();
         ResetWindowPosition(GW::UI::WindowID_Compass, compass_frame);
@@ -805,6 +807,48 @@ bool Minimap::CanTerminate()
 void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
+
+    // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
+    const auto register_color = [this](const char* key, Color* color) {
+        SettingsRegistry::RegisterField(this, key, reinterpret_cast<Colors::SettingColor*>(color));
+    };
+    SettingsRegistry::RegisterField(this, "scale", &scale);
+    SettingsRegistry::RegisterField(this, "hero_flag_controls_show", &hero_flag_controls_show);
+    SettingsRegistry::RegisterField(this, "hero_flag_window_attach", &hero_flag_window_attach);
+    register_color("hero_flag_controls_background", &hero_flag_controls_background);
+    SettingsRegistry::RegisterField(this, "mouse_clickthrough_in_outpost", &mouse_clickthrough_in_outpost);
+    SettingsRegistry::RegisterField(this, "mouse_clickthrough_in_explorable", &mouse_clickthrough_in_explorable);
+    SettingsRegistry::RegisterField(this, "target_gadgets_on_ctrl_click", &target_gadgets_on_ctrl_click);
+    SettingsRegistry::RegisterField(this, "minimap_draw_key", &MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]);
+    SettingsRegistry::RegisterField(this, "minimap_target_key", &MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]);
+    SettingsRegistry::RegisterField(this, "minimap_drag_key", &MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag]);
+    SettingsRegistry::RegisterField(this, "minimap_moveto_key", &MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo]);
+    SettingsRegistry::RegisterField(this, "rotate_minimap", &rotate_minimap);
+    SettingsRegistry::RegisterField(this, "flip_on_reverse", &flip_on_reverse);
+    SettingsRegistry::RegisterField(this, "smooth_rotation", &smooth_rotation);
+    SettingsRegistry::RegisterField(this, "circular_map", &circular_map);
+    SettingsRegistry::RegisterField(this, "snap_to_compass", &snap_to_compass);
+    SettingsRegistry::RegisterField(this, "hide_compass_agents", &hide_compass_agents);
+    SettingsRegistry::RegisterField(this, "render_all_quests", &render_all_quests);
+    SettingsRegistry::RegisterField(this, "hide_compass_quest_marker", &hide_compass_quest_marker);
+    SettingsRegistry::RegisterField(this, "hide_compass_drawings", &hide_compass_drawings);
+    SettingsRegistry::RegisterField(this, "hide_flagging_controls", &hide_flagging_controls);
+    SettingsRegistry::RegisterField(this, "hide_compass_when_minimap_draws", &hide_compass_when_minimap_draws);
+    register_color("color_map", &color_map);
+    register_color("color_mapshadow", &color_mapshadow);
+    register_color("color_mapbackground", &color_mapbackground);
+    register_color("cardinal_color", &cardinal_color);
+    SettingsRegistry::RegisterField(this, "cardinal_offset", &cardinal_offset);
+    SettingsRegistry::RegisterField(this, "cardinal_font_size", &cardinal_font_size);
+    range_renderer.RegisterSettings(this);
+    agent_renderer.RegisterSettings(this);
+    pingslines_renderer.RegisterSettings(this);
+    symbols_renderer.RegisterSettings(this);
+    custom_renderer.RegisterSettings(this);
+
+    for (const char* sub : {"Ranges", "Pings and drawings", "AoE Effects", "Symbols", "Terrain", "Hero flagging"}) {
+        SettingsWindow::RegisterSubSection(SettingsName(), sub);
+    }
 
     uintptr_t address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
     if (address) {
@@ -1029,11 +1073,9 @@ void Minimap::DrawSettingsInternal()
         pending_refresh_quest_marker = true;
     }
     ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
-    ImGui::Checkbox("Draw all quest markers", &render_all_quests);
-    ImGui::ShowHelp("Draw quest markers for all quests in your quest log, not just the active quest");
+    ImGui::CheckboxWithHelp("Draw all quest markers", &render_all_quests, "Draw quest markers for all quests in your quest log, not just the active quest");
 
-    ImGui::Checkbox("Hide GW compass drawings", &hide_compass_drawings);
-    ImGui::ShowHelp("Drawings made by other players will be visible on the minimap, but not the compass");
+    ImGui::CheckboxWithHelp("Hide GW compass drawings", &hide_compass_drawings, "Drawings made by other players will be visible on the minimap, but not the compass");
     if (ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws)) {
         GW::GameThread::Enqueue(OverrideCompassVisibility);
     }
@@ -1062,19 +1104,19 @@ void Minimap::DrawSettingsInternal()
     ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
     // agent_rendered has its own TreeNodes
     agent_renderer.DrawSettings();
-    if (ImGui::TreeNodeEx("Ranges", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Ranges")) {
         range_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("Pings and drawings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Pings and drawings")) {
         pingslines_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("AoE Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "AoE Effects")) {
         EffectRenderer::DrawSettings();
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("Symbols", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Symbols")) {
         symbols_renderer.DrawSettings();
         ImGui::Separator();
         ImGui::Text("Cardinal (N/S/E/W) directions");
@@ -1085,7 +1127,7 @@ void Minimap::DrawSettingsInternal()
         ImGui::SliderFloat("Font size##cardinal", &cardinal_font_size, 16.f, 56.f, "%.0f px");
         ImGui::TreePop();
     }
-    if (ImGui::TreeNodeEx("Terrain", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Terrain")) {
         ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
             if (result) {
                 color_map = 0xFF999999;
@@ -1099,23 +1141,24 @@ void Minimap::DrawSettingsInternal()
         ImGui::TreePop();
     }
     custom_renderer.DrawSettings();
-    if (ImGui::TreeNodeEx("Hero flagging", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "Hero flagging")) {
         ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
-        ImGui::Checkbox("Attach to minimap", &hero_flag_window_attach);
-        ImGui::ShowHelp("If disabled, you can move/resize the window with 'Unlock Move All'.");
+        ImGui::CheckboxWithHelp("Attach to minimap", &hero_flag_window_attach, "If disabled, you can move/resize the window with 'Unlock Move All'.");
         Colors::DrawSettingHueWheel("Background", &hero_flag_controls_background);
-        ImGui::TreePop();
-    }
-    if (ImGui::TreeNodeEx("In-game rendering", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        GameWorldRenderer::DrawSettings();
         ImGui::TreePop();
     }
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show boss by profession color on minimap", &agent_renderer.boss_colors);
-    if (agent_renderer.boss_colors) {
+    ImGui::Checkbox("Color enemies by profession", &agent_renderer.enemies_colors_by_profession);
+    if (agent_renderer.enemies_colors_by_profession) {
         ImGui::Indent();
-        if (ImGui::TreeNodeEx("Boss profession colors", ImGuiTreeNodeFlags_FramePadding)) {
+        if (ImGui::RadioButton("Color only bosses", agent_renderer.only_color_bosses == true)) {
+            agent_renderer.only_color_bosses = true;
+        }
+        if (ImGui::RadioButton("Color all enemies", agent_renderer.only_color_bosses == false)) {
+            agent_renderer.only_color_bosses = false;
+        }
+        if (ImGui::TreeNodeEx("Profession colors", ImGuiTreeNodeFlags_FramePadding)) {
             constexpr uint32_t color_flags = ImGuiColorEditFlags_NoInputs;
             static const char* prof_names[] = {
                 nullptr,        // 0 = None, hidden
@@ -1141,11 +1184,9 @@ void Minimap::DrawSettingsInternal()
         ImGui::StartSpacedElements(300.f);
     }
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show hidden NPCs", &agent_renderer.show_hidden_npcs);
-    ImGui::ShowHelp("Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
+    ImGui::CheckboxWithHelp("Show hidden NPCs", &agent_renderer.show_hidden_npcs, "Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap);
-    ImGui::ShowHelp("Show a star for NPCs that have quest progress available");
+    ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
 
     ImGui::SliderFloat("Agent Border thickness", &agent_renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
     ImGui::SliderFloat("Target Border thickness", &agent_renderer.target_border_thickness, 0.f, 100.f, "%.0f");
@@ -1172,6 +1213,7 @@ void Minimap::DrawSettingsInternal()
     ImGui::ShowHelp("Click to target agents.");
     ImGui::SameLine(140.f);
     ImGui::Combo("##Target", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]), available_modifiers_combo, _countof(available_modifiers_combo));
+    ImGui::CheckboxWithHelp("Target gadgets", &target_gadgets_on_ctrl_click, "Allow clicking the minimap to target gadgets (e.g. chests, signposts) as well as living agents.");
     ImGui::TextUnformatted("Drag: ");
     ImGui::ShowHelp("Drag the minimap outside of compass range.");
     ImGui::SameLine(140.f);
@@ -1185,121 +1227,54 @@ void Minimap::DrawSettingsInternal()
 
     ImGui::StartSpacedElements(256.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam);
-    ImGui::ShowHelp("Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
+    ImGui::CheckboxWithHelp("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam, "Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Map Rotation", &rotate_minimap);
-    ImGui::ShowHelp("Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
+    ImGui::CheckboxWithHelp("Map Rotation", &rotate_minimap, "Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Flip when reversed", &flip_on_reverse);
-    ImGui::ShowHelp("Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
+    ImGui::CheckboxWithHelp("Flip when reversed", &flip_on_reverse, "Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Map rotation smoothing", &smooth_rotation);
-    ImGui::ShowHelp("Minimap rotation speed matches compass rotation speed.");
+    ImGui::CheckboxWithHelp("Map rotation smoothing", &smooth_rotation, "Minimap rotation speed matches compass rotation speed.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Circular", &circular_map);
-    ImGui::ShowHelp("Whether the map should be circular like the compass (default) or a square.");
+    ImGui::CheckboxWithHelp("Circular", &circular_map, "Whether the map should be circular like the compass (default) or a square.");
 }
 
-void Minimap::LoadSettings(ToolboxIni* ini)
+void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-    Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Markers.ini", [](const bool success, const std::wstring& error) {
-        if (success) {
-            Instance().custom_renderer.LoadMarkers();
-        }
-        else {
-            Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
-        }
-    });
-    scale = static_cast<float>(ini->GetDoubleValue(Name(), VAR_NAME(scale), 1.0));
-    LOAD_BOOL(hero_flag_controls_show);
-    LOAD_BOOL(hero_flag_window_attach);
-    LOAD_COLOR(hero_flag_controls_background);
-    LOAD_BOOL(mouse_clickthrough_in_outpost);
-    LOAD_BOOL(mouse_clickthrough_in_explorable);
-    LOAD_BOOL(rotate_minimap);
-    LOAD_BOOL(flip_on_reverse);
-    LOAD_BOOL(smooth_rotation);
-    LOAD_BOOL(circular_map);
-    LOAD_BOOL(snap_to_compass);
-    LOAD_BOOL(hide_compass_agents);
-    LOAD_BOOL(render_all_quests);
-    LOAD_BOOL(hide_compass_quest_marker);
-    LOAD_BOOL(hide_compass_drawings);
-    LOAD_BOOL(hide_flagging_controls);
-    LOAD_BOOL(hide_compass_when_minimap_draws);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    std::error_code ec;
+    if (!std::filesystem::exists(Resources::GetSettingFile(L"Markers.json"), ec)) {
+        // No Markers.json yet; fetch the legacy ini if needed and parse it via the ini fallback. TODO: download Markers.json once it exists on master.
+        Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Markers.ini", [](const bool success, const std::wstring& error) {
+            if (success) {
+                Instance().custom_renderer.LoadMarkers();
+            }
+            else {
+                Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
+            }
+        });
+    }
 
     hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
 
-    MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw] = ini->GetLongValue(Name(), VAR_NAME(minimap_draw_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]);
-    MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target] = ini->GetLongValue(Name(), VAR_NAME(minimap_target_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]);
-    MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag] = ini->GetLongValue(Name(), VAR_NAME(minimap_drag_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag]);
-    MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo] = ini->GetLongValue(Name(), VAR_NAME(minimap_moveto_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo]);
-
-    LOAD_COLOR(color_map);
-    LOAD_COLOR(color_mapshadow);
-    LOAD_COLOR(color_mapbackground);
-
-    cardinal_color = Colors::Load(ini, Name(), "cardinal_color", 0xFFFFFFFF);
-    cardinal_offset = static_cast<float>(ini->GetDoubleValue(Name(), "cardinal_offset", 0.0));
-    cardinal_font_size = static_cast<float>(ini->GetDoubleValue(Name(), "cardinal_font_size", 13.0));
-
-    range_renderer.LoadSettings(ini, Name());
-    agent_renderer.LoadSettings(ini, Name());
-    pingslines_renderer.LoadSettings(ini, Name());
-    symbols_renderer.LoadSettings(ini, Name());
-    custom_renderer.LoadSettings(ini, Name());
-    effect_renderer.LoadSettings(ini, Name());
-    GameWorldRenderer::LoadSettings(ini, Name());
-
-    range_renderer.Invalidate();
+    range_renderer.LoadSettings(doc, legacy, Name());
+    agent_renderer.LoadCustomAgents();
+    agent_renderer.Invalidate();
+    pingslines_renderer.Invalidate();
+    symbols_renderer.Invalidate();
+    custom_renderer.Invalidate();
+    custom_renderer.LoadMarkers();
+    effect_renderer.LoadSettings(doc, legacy, Name());
 
     pending_refresh_quest_marker = true;
 }
 
-void Minimap::SaveSettings(ToolboxIni* ini)
+void Minimap::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-    ini->SetDoubleValue(Name(), VAR_NAME(scale), scale);
-    SAVE_BOOL(hero_flag_controls_show);
-    SAVE_BOOL(hero_flag_window_attach);
-    SAVE_COLOR(hero_flag_controls_background);
-    SAVE_BOOL(mouse_clickthrough_in_outpost);
-    SAVE_BOOL(mouse_clickthrough_in_explorable);
-
-    ini->SetLongValue(Name(), VAR_NAME(minimap_draw_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]);
-    ini->SetLongValue(Name(), VAR_NAME(minimap_target_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]);
-    ini->SetLongValue(Name(), VAR_NAME(minimap_drag_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag]);
-    ini->SetLongValue(Name(), VAR_NAME(minimap_moveto_key), MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo]);
-
-    SAVE_BOOL(rotate_minimap);
-    SAVE_BOOL(flip_on_reverse);
-    SAVE_BOOL(smooth_rotation);
-    SAVE_BOOL(circular_map);
-    SAVE_BOOL(snap_to_compass);
-    SAVE_BOOL(hide_compass_agents);
-    SAVE_BOOL(hide_compass_quest_marker);
-    SAVE_BOOL(hide_compass_drawings);
-    SAVE_BOOL(render_all_quests);
-    SAVE_BOOL(hide_flagging_controls);
-    SAVE_BOOL(hide_compass_when_minimap_draws);
-
-    SAVE_COLOR(color_map);
-    SAVE_COLOR(color_mapshadow);
-    SAVE_COLOR(color_mapbackground);
-
-    Colors::Save(ini, Name(), "cardinal_color", cardinal_color);
-    ini->SetDoubleValue(Name(), "cardinal_offset", static_cast<double>(cardinal_offset));
-    ini->SetDoubleValue(Name(), "cardinal_font_size", static_cast<double>(cardinal_font_size));
-
-    range_renderer.SaveSettings(ini, Name());
-    agent_renderer.SaveSettings(ini, Name());
-    pingslines_renderer.SaveSettings(ini, Name());
-    symbols_renderer.SaveSettings(ini, Name());
-    custom_renderer.SaveSettings(ini, Name());
-    EffectRenderer::SaveSettings(ini, Name());
-    GameWorldRenderer::SaveSettings(ini, Name());
+    ToolboxWidget::SaveSettings(doc);
+    range_renderer.SaveSettings(doc, Name());
+    EffectRenderer::SaveSettings(doc, Name());
+    agent_renderer.SaveCustomAgents();
+    custom_renderer.SaveMarkers();
 }
 
 size_t Minimap::GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags)
@@ -1540,8 +1515,16 @@ bool Minimap::ShouldDrawAllQuests()
     return render_all_quests;
 }
 
+bool Minimap::IsEnabled()
+{
+    return GWToolbox::IsModuleEnabled(&Instance());
+}
+
 void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& context)
 {
+    if (!IsEnabled()) {
+        return;
+    }
     const GW::Agent* me = GW::Agents::GetObservingAgent();
     if (me == nullptr) {
         return;
@@ -1611,23 +1594,25 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
 
     // Use context.circular_map instead of global
-    if (context.circular_map) {
-        device->SetRenderState(D3DRS_STENCILENABLE, true);
-        device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
-        device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
+    if (context.draw_background) {
+        if (context.circular_map) {
+            device->SetRenderState(D3DRS_STENCILENABLE, true);
+            device->SetRenderState(D3DRS_STENCILMASK, 0xffffffff);
+            device->SetRenderState(D3DRS_STENCILWRITEMASK, 0xffffffff);
 
-        device->Clear(0, nullptr, D3DCLEAR_STENCIL | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
+            device->Clear(0, nullptr, D3DCLEAR_STENCIL | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0);
 
-        device->SetRenderState(D3DRS_STENCILREF, 1);
-        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-        FillCircle(0, 0, 5000.f, context.background_color);
-        device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
-        device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
-        device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-    }
-    else {
-        FillRect(context.background_color, -5000.0f, -5000.0f, 10000.f, 10000.f);
+            device->SetRenderState(D3DRS_STENCILREF, 1);
+            device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+            device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+            FillCircle(0, 0, 5000.f, context.background_color);
+            device->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
+            device->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_ZERO);
+            device->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+        }
+        else {
+            FillRect(context.background_color, -5000.0f, -5000.0f, 10000.f, 10000.f);
+        }
     }
 
 
@@ -1644,10 +1629,18 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     const auto translationM = DirectX::XMMatrixTranslation(context.translation.x, context.translation.y, 0);
 
     const auto view = translate_char * rotate_char * scaleM * translationM;
-    device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
+    if (context.view_override)
+        device->SetTransform(D3DTS_VIEW, context.view_override);
+    else
+        device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
 
-    instance.pmap_renderer.Render(device, context);
-    instance.custom_renderer.Render(device);
+    [[maybe_unused]] const float gwinches_per_pixel = context.gwinches_per_pixel_override > 0.f
+        ? context.gwinches_per_pixel_override
+        : context.base_scale / 5000.0f / 2.f * context.zoom_scale;
+
+    if (context.draw_pmap) instance.pmap_renderer.Render(device, context);
+    if (context.draw_custom) instance.custom_renderer.Render(device, gwinches_per_pixel);
+    if (context.lines) context.lines->Render(device);
 
 
 
@@ -1655,7 +1648,6 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     if (context.draw_ranges) {
         translate_char = DirectX::XMMatrixTranslation(me->pos.x, me->pos.y, 0);
         device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate_char));
-        const float gwinches_per_pixel = context.base_scale / 5000.0f / 2.f * context.zoom_scale;
         instance.range_renderer.Render(device, gwinches_per_pixel);
         device->SetTransform(D3DTS_WORLD, &reset_world);
     }
@@ -1671,15 +1663,15 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view));
     }
 
-    instance.symbols_renderer.Render(device, context.zoom_scale);
+    if (context.draw_symbols) instance.symbols_renderer.Render(device, context.zoom_scale);
     device->SetTransform(D3DTS_WORLD, &reset_world);
-    instance.agent_renderer.Render(device);
-    instance.effect_renderer.Render(device);
-    instance.pingslines_renderer.Render(device);
+    if (context.draw_agents) instance.agent_renderer.Render(device);
+    if (context.draw_effects) instance.effect_renderer.Render(device);
+    if (context.draw_pings) instance.pingslines_renderer.Render(device);
     for (auto renderer : instance.registered_renderers)
         renderer->RenderMinimap(device, context);
-    
-    DrawNSEW(context);
+
+    if (context.draw_cardinals) DrawNSEW(context);
 
     if (context.circular_map) {
         device->SetRenderState(D3DRS_STENCILREF, 0);
@@ -1700,6 +1692,11 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     d3d9_state_block->Release();
 }
 
+const MinimapRenderContext& Minimap::GetRenderContext()
+{
+    return default_minimap_context;
+}
+
 void Minimap::SelectTarget(const GW::Vec2f pos)
 {
     const auto* agents = GW::Agents::GetAgentArray();
@@ -1709,9 +1706,14 @@ void Minimap::SelectTarget(const GW::Vec2f pos)
     auto distance = 600.0f * 600.0f;
     const GW::Agent* closest = nullptr;
 
+   
     for (const auto* agent : *agents) {
         const auto agent_is_locked_chest = agent && agent->GetIsGadgetType() && wcseq(GW::Agents::GetAgentEncName(agent->agent_id), GW::EncStrings::LockedChest);
-        if (!agent_is_locked_chest && !GW::Agents::GetAgentMatchesFlags(agent,GW::TargetFilter::AnyLiving)) continue;
+        auto target_filter = GW::TargetFilter::AnyLiving;
+        if (agent_is_locked_chest || target_gadgets_on_ctrl_click) 
+            target_filter = target_filter | GW::TargetFilter::Gadgets;
+        if (!GW::Agents::GetAgentMatchesFlags(agent, target_filter)) 
+            continue;
         const float new_distance = GetSquareDistance(pos, agent->pos);
         if (distance > new_distance) {
             distance = new_distance;
@@ -1961,6 +1963,11 @@ bool Minimap::IsActive()
 
 void Minimap::RenderSetupProjection(IDirect3DDevice9* device, const MinimapRenderContext& context)
 {
+    if (context.projection_override) {
+        device->SetTransform(D3DTS_PROJECTION, context.projection_override);
+        return;
+    }
+
     D3DVIEWPORT9 viewport;
     device->GetViewport(&viewport);
 

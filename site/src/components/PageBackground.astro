@@ -1,0 +1,63 @@
+---
+const continents = [
+  '/backgrounds/continent1_z3.webp',
+  '/backgrounds/continent2_z3.webp',
+  '/backgrounds/continent3_z3.webp',
+];
+---
+
+<div class="page-bg" aria-hidden="true" transition:persist="page-bg">
+  <div id="page-bg-image" class="page-bg-image"></div>
+  <div class="page-bg-overlay"></div>
+</div>
+
+<script is:inline define:vars={{ continents }}>
+  /* Pick one of the three continent maps at random on the first page
+     load. Once picked, stay on that map for the rest of the session:
+     the bg element is persisted across view-transition navigations
+     (transition:persist) so re-randomising on every doc click would
+     cause a hard cut underneath an otherwise smooth nav transition. */
+  (() => {
+    const el = document.getElementById('page-bg-image');
+    if (!el || el.dataset.bgSet === '1') return;
+    const img = continents[Math.floor(Math.random() * continents.length)];
+    el.style.backgroundImage = `url('${img}')`;
+    el.classList.add('is-ready');
+    el.dataset.bgSet = '1';
+  })();
+</script>
+
+<style>
+  .page-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .page-bg-image {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 400ms ease-out;
+  }
+  .page-bg-image.is-ready {
+    opacity: 0.32;
+  }
+  .page-bg-overlay {
+    position: absolute;
+    inset: 0;
+    /* Dark in the centre column where content sits, fading toward the
+       viewport edges so the map shows through in the gutters. */
+    background:
+      radial-gradient(
+        ellipse 55% 75% at center,
+        rgba(10, 10, 10, 0.72) 0%,
+        rgba(10, 10, 10, 0.6) 45%,
+        rgba(10, 10, 10, 0.05) 100%
+      );
+  }
+</style>

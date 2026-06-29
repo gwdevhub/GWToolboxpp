@@ -18,13 +18,8 @@
 #include <Timer.h>
 
 namespace {
-    bool show_enemy_level = true;
-    bool show_enemy_last_skill = true;
+    EnemyWindow::Settings settings;
     float triangle_y_offset = 3.f;
-    float enemies_threshhold = 1.f;
-    float range = GW::Constants::Range::Spellcast;
-    float triangle_spacing = 22.f;
-    float last_skill_threshold = 3000.f;
     ImU32 HexedColor = IM_COL32(253, 113, 255, 255);
     ImU32 ConditionedColor = IM_COL32(160, 117, 85, 255);
     ImU32 EnchantedColor = IM_COL32(224, 253, 94, 255);
@@ -60,9 +55,9 @@ namespace {
 
     void DrawStatusTriangle(const int triangleCount, const ImVec2 position, const ImU32 triangleColor, const bool upsidedown)
     {
-        const auto point1 = ImVec2(position.x - (triangleCount * triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 10.f : 0.f));
-        const auto point2 = ImVec2(position.x + 20 - (triangleCount * triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 10.f : 0.f));
-        const auto point3 = ImVec2(position.x + 10 - (triangleCount * triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 0.f : 10.f));
+        const auto point1 = ImVec2(position.x - (triangleCount * settings.triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 10.f : 0.f));
+        const auto point2 = ImVec2(position.x + 20 - (triangleCount * settings.triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 10.f : 0.f));
+        const auto point3 = ImVec2(position.x + 10 - (triangleCount * settings.triangle_spacing), position.y + triangle_y_offset + (upsidedown ? 0.f : 10.f));
 
         ImGui::GetWindowDrawList()->AddTriangleFilled(point1, point2, point3, triangleColor);
     }
@@ -71,11 +66,11 @@ namespace {
     {
         std::string text;
 
-        if (show_enemy_level) {
+        if (settings.show_enemy_level) {
             text += std::format("Lvl {} ", level);
         }
         text += agent_name;
-        if (show_enemy_last_skill && TIMER_DIFF(last_casted) < last_skill_threshold && skill_name && !skill_name->empty()) {
+        if (settings.show_enemy_last_skill && TIMER_DIFF(last_casted) < settings.last_skill_threshold && skill_name && !skill_name->empty()) {
             text += std::format(" - {}", *skill_name);
         }
         ImGui::GetWindowDrawList()->AddText(position, IM_COL32(253, 255, 255, 255), text.c_str());
@@ -125,7 +120,7 @@ namespace {
 
             for (const auto& enemy_info : vec) {
                 const auto living = GetAgentLivingByID(enemy_info.agent_id);
-                if (!living || enemy_info.distance > range * range) {
+                if (!living || enemy_info.distance > settings.range * settings.range) {
                     continue;
                 }
                 const auto selected = target && target->agent_id == living->agent_id;
@@ -251,7 +246,7 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
                 continue;
             }
 
-            if (living->hp <= enemies_threshhold) {
+            if (living->hp <= settings.enemies_threshhold) {
                 all_enemies.insert(living->agent_id);
 
                 const bool is_casting = living->skill != static_cast<uint16_t>(GW::Constants::SkillID::No_Skill);
@@ -289,43 +284,39 @@ void EnemyWindow::Draw(IDirect3DDevice9*)
 
 void EnemyWindow::DrawSettingsInternal()
 {
-    ImGui::DragFloat("Range", &range, 50.f, 0, 5000.f);
+    ImGui::DragFloat("Range", &settings.range, 50.f, 0, 5000.f);
     ImGui::Separator();
     ImGui::StartSpacedElements(275.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show level", &show_enemy_level);
+    ImGui::Checkbox("Show level", &settings.show_enemy_level);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show enemy last skill", &show_enemy_last_skill);
+    ImGui::Checkbox("Show enemy last skill", &settings.show_enemy_last_skill);
     ImGui::Separator();
     ImGui::Text("HP thresholds:");
     ImGui::ShowHelp("Threshold HP below which enemy  info is displayed");
-    ImGui::DragFloat("Percent", &enemies_threshhold, 0.01f, 0, 1.f);
+    ImGui::DragFloat("Percent", &settings.enemies_threshhold, 0.01f, 0, 1.f);
     ImGui::Separator();
     ImGui::Text("Last skill casted threshold:");
-    ImGui::DragFloat("Milliseconds", &last_skill_threshold, 1.f, 0, 60000.f);
+    ImGui::DragFloat("Milliseconds", &settings.last_skill_threshold, 1.f, 0, 60000.f);
     ImGui::Separator();
     ImGui::Text("Status triange spacing");
-    ImGui::DragFloat("Spacing", &triangle_spacing, 0.01f, 0, 100.f);
+    ImGui::DragFloat("Spacing", &settings.triangle_spacing, 0.01f, 0, 100.f);
 }
 
-void EnemyWindow::LoadSettings(ToolboxIni* ini)
+void EnemyWindow::Initialize()
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(show_enemy_level);
-    LOAD_BOOL(show_enemy_last_skill);
-    LOAD_FLOAT(enemies_threshhold);
-    LOAD_FLOAT(range);
-    LOAD_FLOAT(triangle_spacing);
-    LOAD_FLOAT(last_skill_threshold);
+    ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 }
 
-void EnemyWindow::SaveSettings(ToolboxIni* ini)
+void EnemyWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(show_enemy_level);
-    SAVE_BOOL(show_enemy_last_skill);
-    SAVE_FLOAT(enemies_threshhold);
-    SAVE_FLOAT(range);
-    SAVE_FLOAT(triangle_spacing);
-    SAVE_FLOAT(last_skill_threshold);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void EnemyWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }

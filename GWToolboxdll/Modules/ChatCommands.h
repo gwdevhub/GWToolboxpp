@@ -26,10 +26,20 @@ public:
     [[nodiscard]] const char* Name() const override { return "Chat Commands"; }
     [[nodiscard]] const char* SettingsName() const override { return "Chat Settings"; }
 
+    // MSVC can't reflect member names of internal-linkage types, so settings structs are nested in the class
+    struct Settings {
+        uint32_t default_title_id = std::to_underlying(GW::Constants::TitleID::Lightbringer);
+    };
+
+    struct CmdAliasSetting {
+        std::string alias;
+        std::string command;
+    };
+
     void Initialize() override;
     void Terminate() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* ini) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
 
     void DrawHelp() override;
@@ -41,11 +51,6 @@ public:
 
     static void CHAT_CMD_FUNC(CmdReapplyTitle);
     static void CHAT_CMD_FUNC(CmdCustomMarker);
-
-    // Add a /setting <setting_name> [1|0|toggle] command to easily change a static setting in memory. NB: static_setting_ptr MUST be a pointer to a STATIC location in memory!
-    static void RegisterSettingChatCommand(const wchar_t* setting_name, const bool* static_setting_ptr, const wchar_t* description = nullptr);
-
-    static void RemoveSettingChatCommand(const wchar_t* setting_name);
 
 private:
     static bool ReadTemplateFile(const std::wstring& path, char* buff, size_t buffSize);
@@ -83,11 +88,6 @@ private:
 
     static std::vector<ToolboxUIElement*> CHAT_CMD_FUNC(MatchingWindows);
     static GW::UI::WindowID CHAT_CMD_FUNC(MatchingGWWindow);
-
-    uint32_t default_title_id = std::to_underlying(GW::Constants::TitleID::Lightbringer);
-
-
-
 
 
     struct QuestPing {

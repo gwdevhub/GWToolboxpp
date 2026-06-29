@@ -8,9 +8,26 @@
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_OVERLAY_PORTS": "${sourceDir}/vcpkg-overlays/ports",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg-overlays/triplets",
         "VCPKG_TARGET_TRIPLET": "x86-windows-mixed"
+      }
+    },
+    {
+      "name": "clang",
+      "inherits": "vcpkg",
+      "displayName": "clang-cl (experimental, Ninja)",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "Win32",
+        "strategy": "external"
+      },
+      "binaryDir": "${sourceDir}/build-clang",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_RC_COMPILER": "llvm-rc",
+        "CMAKE_C_FLAGS_INIT": "-m32",
+        "CMAKE_CXX_FLAGS_INIT": "-m32"
       }
     }
   ]

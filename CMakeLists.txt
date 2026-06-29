@@ -1,22 +1,29 @@
 cmake_minimum_required(VERSION 3.29)
 
-set(CMAKE_GENERATOR_PLATFORM win32)
+if(NOT CMAKE_GENERATOR MATCHES "Ninja|Makefile")
+    set(CMAKE_GENERATOR_PLATFORM win32)
+endif()
 
 project(gwtoolbox)
 
-set(GWTOOLBOXEXE_VERSION "4.6")
-set(GWTOOLBOXEXE_MODULE_VERSION "4,6,0,0") # used for exe module info. See GWToolbox/GWToolbox.rc
-set(GWTOOLBOXDLL_VERSION "8.17")
+set(GWTOOLBOXEXE_VERSION "4.7")
+set(GWTOOLBOXEXE_MODULE_VERSION "4,7,0,0") # used for exe module info. See GWToolbox/GWToolbox.rc
+set(GWTOOLBOXDLL_VERSION "8.29")
 set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
-set(GWTOOLBOX_MODULE_VERSION "8,17,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
+set(GWTOOLBOX_MODULE_VERSION "8,29,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 
 if(MSVC_TOOLSET_VERSION LESS 143)
     message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
 endif()
 
-# Increase constexpr depth for CTRE compile-time regex library
-add_compile_options(/constexpr:depth2048 /constexpr:steps10000000)
+# Increase constexpr and template instantiation depth for CTRE compile-time regex library
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # SHELL: prefix prevents CMake from deduplicating the repeated -Xclang flags.
+    add_compile_options("SHELL:-Xclang -fconstexpr-depth=2048" "SHELL:-Xclang -fconstexpr-steps=10000000" /bigobj)
+else()
+    add_compile_options(/constexpr:depth2048 /constexpr:steps10000000 /templateDepth:2048 /bigobj)
+endif()
 
 if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 4))
     message(FATAL_ERROR "You are configuring a non 32-bit build, this is not supported. Run cmake with `-A Win32`")
@@ -27,7 +34,13 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 add_compile_definitions(
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
-	"WOLFSSL_NO_OPTIONS_H"
+    # glaze's zmij float writer uses _mm_cvtsi128_si64, an x64-only intrinsic, when SSE is detected; we build x86
+    "ZMIJ_USE_SIMD=0"
+
+    # Dev test tooling (TestHarness module + extra pathfinding diagnostics) is gated on _DEBUG only, so
+    # it is compiled out of the shipped RelWithDebInfo/Release builds. Debug now also mirrors the log to
+    # log.txt (Logger.cpp) so the harness can read it. Define GWTB_HARNESS here to opt a non-Debug build
+    # into the harness, but it is OFF by default (the gates are `_DEBUG || GWTB_HARNESS`).
 
     "GWTOOLBOXEXE_VERSION=\"${GWTOOLBOXEXE_VERSION}\""
     "GWTOOLBOXEXE_MODULE_VERSION=${GWTOOLBOXEXE_MODULE_VERSION}"
@@ -36,9 +49,91 @@ add_compile_definitions(
     "GWTOOLBOX_MODULE_VERSION=${GWTOOLBOX_MODULE_VERSION}"
     )
 	
-add_compile_options(/MP /permissive-)
+add_compile_options(/permissive-)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Warning suppressions for clang-cl. Stored in a variable so they can also be
+    # re-applied at target level AFTER any /Wn flag (which expands to -Wall/-Wextra
+    # and re-enables warnings disabled by earlier -Wno-* flags on the same line).
+    set(CLANG_WARNING_DISABLES
+        # glaze's exported INTERFACE_COMPILE_OPTIONS include MSVC-only switches
+        # (/Zc:preprocessor, /Zc:lambda, etc.)
+        -Wno-unused-command-line-argument
 
-set(CMAKE_CXX_STANDARD 23)
+        # Microsoft-specific extensions accepted by MSVC that clang-cl flags
+        -Wno-microsoft-cast
+        -Wno-microsoft-include
+        -Wno-nonportable-include-path
+        -Wno-pragma-once-outside-header
+        -Wno-backslash-newline-escape
+        -Wno-unknown-attributes
+        -Wno-ignored-attributes
+
+        # Pointer / cast conversions
+        -Wno-pointer-bool-conversion
+        -Wno-int-to-void-pointer-cast
+        -Wno-cast-function-type-mismatch
+
+        # Unused code (kept on purpose in this codebase)
+        -Wno-unused-variable
+        -Wno-unused-function
+        -Wno-unused-private-field
+        -Wno-unused-lambda-capture
+        -Wno-unused-const-variable
+        -Wno-unused-value
+        -Wno-unused-but-set-variable
+        -Wno-unused-parameter
+        -Wno-unused-local-typedef
+        -Wno-unused-but-set-parameter
+        -Wno-missing-declarations
+
+        # Cosmetic / stylistic
+        -Wno-ignored-qualifiers
+        -Wno-missing-field-initializers
+        -Wno-missing-designated-field-initializers
+        -Wno-missing-braces
+        -Wno-braced-scalar-init
+        -Wno-reorder-ctor
+        -Wno-inconsistent-missing-override
+        -Wno-parentheses
+        -Wno-logical-op-parentheses
+        -Wno-bitwise-op-parentheses
+        -Wno-misleading-indentation
+
+        # Switch / enum coverage (deliberate fall-through in this codebase)
+        -Wno-switch
+
+        # Format strings (ImGui::Text(buf) style calls — buf never contains user-controlled %)
+        -Wno-format-security
+        -Wno-format
+        -Wno-format-extra-args
+
+        # Char/sign comparison (codebase only uses ASCII subscripts)
+        -Wno-char-subscripts
+        -Wno-sign-compare
+        -Wno-tautological-constant-out-of-range-compare
+        -Wno-multichar
+        -Wno-sizeof-array-argument
+
+        # Defaulted/deleted special members + non-virtual dtor through base
+        -Wno-defaulted-function-deleted
+        -Wno-delete-non-abstract-non-virtual-dtor
+    )
+    add_compile_options(${CLANG_WARNING_DISABLES})
+    
+    add_compile_options($<$<NOT:$<CONFIG:Debug>>:/clang:-O3>)
+    add_compile_options(/arch:AVX2)
+else()
+    # MSVC: whole-program optimization + link-time codegen in non-Debug
+    add_compile_options(/MP)
+    add_compile_options($<$<NOT:$<CONFIG:Debug>>:/GL>)
+    add_link_options($<$<NOT:$<CONFIG:Debug>>:/LTCG>)
+endif()
+
+set(CMAKE_CXX_STANDARD 26)
+# CMake 4.3 doesn't yet know MSVC 14.50 supports C++26 — fall back to 23 for MSVC.
+if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_CXX_STANDARD 23)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
@@ -60,10 +155,8 @@ include(steamworks_sdk)
 find_library(GAME_SDK discord_game_sdk)
 find_path(GAME_SDK_INCLUDE discord-game-sdk/discord.h)
 find_path(EARCUT_HPP_INCLUDE_DIRS "mapbox/earcut.hpp")
-find_path(SIMPLEINI_INCLUDE_DIRS "ConvertUTF.c")
-find_package(wolfssl CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
+find_package(glaze CONFIG REQUIRED)
 find_package(ctre CONFIG REQUIRED)
 find_package(directxtex CONFIG REQUIRED)
 

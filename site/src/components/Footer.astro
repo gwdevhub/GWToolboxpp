@@ -1,0 +1,104 @@
+---
+import siteConfig from '../../site.config.json';
+---
+
+<footer class="mt-16 border-t border-(--color-border-glass) bg-(--color-bg)" transition:persist="site-footer">
+  <div
+    class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 text-sm text-(--color-fg-meta) sm:px-6 md:flex-row md:items-center md:justify-between"
+  >
+    <div>
+      <p class="text-(--color-fg-sub)">{siteConfig.title} — {siteConfig.tagline}</p>
+      <p class="mt-1">
+        Maintained by the
+        {' '}
+        <a
+          href="https://github.com/orgs/gwdevhub/people"
+          target="_blank"
+          rel="noopener"
+          class="text-(--color-fg-dim) hover:text-(--color-accent)"
+        >
+          GWDevHub team
+        </a>.
+      </p>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href={siteConfig.githubUrl} target="_blank" rel="noopener" class="hover:text-(--color-accent)">GitHub</a>
+      <a href={siteConfig.discordUrl} target="_blank" rel="noopener" class="hover:text-(--color-accent)">Discord</a>
+      <a href="/docs/faq/" class="hover:text-(--color-accent)">FAQ</a>
+      <a href="/docs/donate/" class="hover:text-(--color-accent)">Donate</a>
+      <a href="/docs/privacy/" class="hover:text-(--color-accent)">Privacy</a>
+    </div>
+  </div>
+  <div
+    class="mx-auto flex max-w-7xl flex-col gap-2 border-t border-(--color-border-glass-subtle) px-4 py-3 text-xs text-(--color-fg-faint) sm:px-6 md:flex-row md:items-center md:justify-between"
+  >
+    <p>
+      This site is built and maintained with the assistance of AI tools — please
+      {' '}
+      <a
+        href={siteConfig.issueUrls.bug}
+        target="_blank"
+        rel="noopener"
+        class="text-(--color-fg-meta) underline decoration-(--color-border-glass) underline-offset-2 hover:text-(--color-accent) hover:decoration-(--color-accent)"
+      >
+        flag any inaccuracies
+      </a>{' '}
+      on the issue tracker.
+    </p>
+    <p class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span class="text-(--color-fg-meta)">Our other projects:</span>
+      {
+        siteConfig.otherProjects.map((p, i) => (
+          <>
+            <a
+              href={p.url}
+              target="_blank"
+              rel="noopener"
+              title={p.desc}
+              class="text-(--color-fg-meta) hover:text-(--color-accent)"
+            >
+              {p.label}
+            </a>
+            {i < siteConfig.otherProjects.length - 1 ? <span aria-hidden="true">·</span> : ''}
+          </>
+        ))
+      }
+    </p>
+  </div>
+  <div
+    class="mx-auto max-w-7xl border-t border-(--color-border-glass-subtle) px-4 py-3 text-[0.7rem] leading-relaxed text-(--color-fg-faint) sm:px-6"
+  >
+    <p class="font-semibold text-(--color-fg-meta)">
+      GWToolbox++ is an independent fan project and is in no way affiliated with or endorsed by ArenaNet or NCSoft.
+    </p>
+    <p class="mt-1">
+      Free code signing provided by
+      {' '}
+      <a
+        href="https://about.signpath.io"
+        target="_blank"
+        rel="noopener"
+        class="text-(--color-fg-meta) underline decoration-(--color-border-glass) underline-offset-2 hover:text-(--color-accent) hover:decoration-(--color-accent)"
+      >
+        SignPath.io
+      </a>, certificate by
+      {' '}
+      <a
+        href="https://signpath.org"
+        target="_blank"
+        rel="noopener"
+        class="text-(--color-fg-meta) underline decoration-(--color-border-glass) underline-offset-2 hover:text-(--color-accent) hover:decoration-(--color-accent)"
+      >
+        SignPath Foundation
+      </a>.
+    </p>
+    <p class="mt-1">
+      Guild Wars and all associated game content are
+      © 2005&ndash;{new Date().getFullYear()} ArenaNet, Inc. All rights reserved. NCsoft, the interlocking NC logo,
+      ArenaNet, Arena.net, Guild Wars, Guild Wars Factions, Factions, Guild Wars Nightfall, Nightfall,
+      Guild Wars: Eye of the North, Eye of the North, Guild Wars 2, and all associated logos and designs
+      are trademarks or registered trademarks of NCsoft Corporation. All other trademarks are the
+      property of their respective owners.
+    </p>
+  </div>
+</footer>

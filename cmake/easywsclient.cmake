@@ -11,6 +11,5 @@ target_sources(easywsclient PRIVATE ${SOURCES})
 target_include_directories(easywsclient PUBLIC "${EASYWSCLIENT_FOLDER}")
 
 set_target_properties(easywsclient PROPERTIES FOLDER "Dependencies/")
-find_package(wolfssl CONFIG REQUIRED)
 
-target_link_libraries(easywsclient PUBLIC wolfssl::wolfssl)
+target_link_libraries(easywsclient PUBLIC winhttp)

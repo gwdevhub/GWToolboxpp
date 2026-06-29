@@ -10,6 +10,8 @@
 #include <GWCA/Managers/MemoryMgr.h>
 #include <Utils/ArenaNetFileParser.h>
 
+#include <DirectXTex.h>
+
 namespace {
 
 
@@ -34,7 +36,7 @@ namespace {
 
     typedef uint8_t* gw_image_bits; // array of pointers to mipmap images
 
-    
+
 
     typedef GW::RecObject*(__cdecl* OpenFileByFileId_pt)(uint32_t archive, uint32_t file_id,uint32_t stream_id, uint32_t flags, uint32_t* error_out);
     OpenFileByFileId_pt OpenFileByFileId_func;
@@ -101,7 +103,7 @@ namespace {
         gw_image_bits bits = nullptr;
 
         ArenaNetFileParser::GameAssetFile asset;
-        if (!asset.readFromDat(file_id)) 
+        if (!asset.readFromDat(file_id))
             return 0;
 
         uint8_t* image_bytes = asset.data.data();
@@ -112,23 +114,23 @@ namespace {
             if (!anet_file->isValid())
                 return 0;
             const auto chunk = (ArenaNetFileParser::UnknownChunk*)anet_file->FindChunk(ArenaNetFileParser::ChunkType::FA3_InlineTextureDXT3);
-            if (!chunk) 
+            if (!chunk)
                 return 0;
             image_bytes = chunk->data;
             image_size = chunk->chunk_size;
         }
-        if (strncmp((char*)image_bytes, "ATEX", 4) != 0 
+        if (strncmp((char*)image_bytes, "ATEX", 4) != 0
             && strncmp((char*)image_bytes, "DDS", 3) != 0) {
             return 0;
         }
 
         uint32_t result = DecodeImage_func(image_size, image_bytes, &bits, pallete, &format, &dims, &levels);
 
-        if (format >= GR_FORMATS || !result) 
+        if (format >= GR_FORMATS || !result)
             return 0;
 
         levels = 1;
-        
+
         *dst_bits = AllocateImage_func(GR_FORMAT_A8R8G8B8, &dims, levels, 0);
         Depalletize_func((gw_image_bits)dst_bits, nullptr, GR_FORMAT_A8R8G8B8, nullptr, bits, pallete, format, nullptr, &dims, levels, 0, 0);
 
@@ -144,7 +146,7 @@ namespace {
         if (!device || !file_id) {
             return nullptr;
         }
-        
+
         gw_image_bits bits = nullptr;
         int levels;
         GR_FORMAT format;
@@ -193,18 +195,69 @@ namespace {
         uint32_t m_file_id = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
+        ~GwImg()
+        {
+            if (m_tex) {
+                m_tex->Release();
+                m_tex = nullptr;
+            }
+        }
     };
 
     std::map<uint32_t,GwImg*> textures_by_file_id;
+
+    std::map<uint32_t, GwImg*> greyscale_textures_by_file_id;
+
+    IDirect3DTexture9* CreateGreyscaleTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims)
+    {
+        if (!device || !file_id) return nullptr;
+        gw_image_bits bits = nullptr;
+        int levels;
+        GR_FORMAT format;
+        if (!OpenImage(file_id, &bits, dims, levels, format) || !bits || !dims.x || !dims.y) {
+            if (bits) GW::MemoryMgr::MemFree(bits);
+            return nullptr;
+        }
+        IDirect3DTexture9* tex = nullptr;
+        if (device->CreateTexture(dims.x, dims.y, levels, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, 0) != D3D_OK) return nullptr;
+        D3DLOCKED_RECT rect;
+        if (tex->LockRect(0, &rect, 0, D3DLOCK_DISCARD) != D3D_OK) return nullptr;
+        auto* srcdata = reinterpret_cast<uint32_t*>(bits);
+        for (int y = 0; y < dims.y; y++) {
+            auto* dst = reinterpret_cast<uint32_t*>((uint8_t*)rect.pBits + y * rect.Pitch);
+            for (int x = 0; x < dims.x; x++) {
+                const uint32_t c = *srcdata++;
+                const uint8_t r = (c >> 16) & 0xFF;
+                const uint8_t g = (c >> 8) & 0xFF;
+                const uint8_t b = c & 0xFF;
+                const uint8_t a = (c >> 24) & 0xFF;
+                const uint8_t grey = static_cast<uint8_t>(r * 0.299f + g * 0.587f + b * 0.114f);
+                *dst++ = (a << 24) | (grey << 16) | (grey << 8) | grey;
+            }
+        }
+        GW::MemoryMgr::MemFree(bits);
+        tex->UnlockRect(0);
+        return tex;
+    }
 } // namespace
 
 bool GwDatTextureModule::CloseHandle(GW::RecObject* handle) {
     return handle && CloseRecObj_func ? CloseRecObj_func(handle), true : false;
 }
-
+IDirect3DTexture9** GwDatTextureModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
+{
+    auto found = greyscale_textures_by_file_id.find(file_id);
+    if (found != greyscale_textures_by_file_id.end()) return &found->second->m_tex;
+    auto gwimg_ptr = new GwImg(file_id);
+    greyscale_textures_by_file_id[file_id] = gwimg_ptr;
+    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
+        gwimg_ptr->m_tex = CreateGreyscaleTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
+    });
+    return &gwimg_ptr->m_tex;
+}
 bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out, uint32_t stream_id)
 {
-    if (!(file_name && *file_name && CloseRecObj_func && FileHashToRecObj_func && FreeFileBuffer_Func)) 
+    if (!(file_name && *file_name && CloseRecObj_func && FileHashToRecObj_func && FreeFileBuffer_Func))
         return false;
 
     uint32_t file_id = ArenaNetFileParser::FileHashToFileId(file_name);
@@ -231,7 +284,7 @@ void GwDatTextureModule::Initialize()
 
     using namespace GW;
 
-    
+
     uintptr_t address = 0;
 
     DecodeImage_func = (DecodeImage_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("GrImage.cpp", "bits || !palette",0,0));
@@ -292,9 +345,57 @@ IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
         });
     return &gwimg_ptr->m_tex;
 }
+void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path)
+{
+    if (!file_id)
+        return;
+    // Decoding reads from the dat through game functions, so keep it on the render thread like the other texture tasks.
+    Resources::Instance().EnqueueDxTask([file_id, file_path](IDirect3DDevice9*) {
+        gw_image_bits bits = nullptr;
+        Vec2i dims;
+        int levels;
+        GR_FORMAT format;
+        if (!OpenImage(file_id, &bits, dims, levels, format) || !bits || !dims.x || !dims.y) {
+            if (bits) {
+                GW::MemoryMgr::MemFree(bits);
+            }
+            return;
+        }
+
+        // OpenImage hands back A8R8G8B8 pixels (D3D byte order is BGRA).
+        DirectX::Image src = {};
+        src.width = dims.x;
+        src.height = dims.y;
+        src.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        src.rowPitch = static_cast<size_t>(dims.x) * 4;
+        src.slicePitch = src.rowPitch * dims.y;
+        src.pixels = bits;
+        DirectX::ScratchImage scratch;
+        auto hr = scratch.InitializeFromImage(src);
+        if (!SUCCEEDED(hr)) {
+            return;
+        }
+
+        // DXT1/BC1 encodes color better (it can place a texel at the midpoint of its two RGB565
+        // endpoints, which DXT3/DXT5 cannot), so prefer it whenever the icon has no real alpha and
+        // only fall back to BC3 (DXT5) when smooth transparency must be preserved.
+        const auto target = scratch.IsAlphaAllOpaque() ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC3_UNORM;
+
+        DirectX::ScratchImage compressed;
+        hr = DirectX::Compress(src, target, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed);
+        if (SUCCEEDED(hr)) {
+            DirectX::SaveToDDSFile(compressed.GetImages(), compressed.GetImageCount(), compressed.GetMetadata(), DirectX::DDS_FLAGS_NONE, file_path.c_str());
+        }
+        GW::MemoryMgr::MemFree(bits);
+    });
+}
+
 void GwDatTextureModule::Terminate()
 {
     for (auto gwimg_ptr : textures_by_file_id) {
+        delete gwimg_ptr.second;
+    }
+    for (auto gwimg_ptr : greyscale_textures_by_file_id) {
         delete gwimg_ptr.second;
     }
     textures_by_file_id.clear();

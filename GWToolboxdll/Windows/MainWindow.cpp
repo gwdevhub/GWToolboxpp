@@ -8,31 +8,36 @@
 #include <Modules/PluginModule.h>
 
 
-void MainWindow::LoadSettings(ToolboxIni* ini)
+namespace {
+    MainWindow::Settings settings;
+}
+
+void MainWindow::Initialize()
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(one_panel_at_time_only);
-    LOAD_BOOL(show_icons);
-    LOAD_BOOL(center_align_text);
+    ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
+}
+
+void MainWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     show_menubutton = false;
     pending_refresh_buttons = true;
 }
 
-void MainWindow::SaveSettings(ToolboxIni* ini)
+void MainWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(one_panel_at_time_only);
-    SAVE_BOOL(show_icons);
-    SAVE_BOOL(center_align_text);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void MainWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Close other windows when opening a new one", &one_panel_at_time_only);
-    ImGui::ShowHelp("Only affects windows (with a title bar), not widgets");
+    ImGui::CheckboxWithHelp("Close other windows when opening a new one", &settings.one_panel_at_time_only, "Only affects windows (with a title bar), not widgets");
 
-    ImGui::Checkbox("Show Icons", &show_icons);
-    ImGui::Checkbox("Center-align text", &center_align_text);
+    ImGui::Checkbox("Show Icons", &settings.show_icons);
+    ImGui::Checkbox("Center-align text", &settings.center_align_text);
 }
 
 void MainWindow::RegisterSettingsContent()
@@ -93,8 +98,8 @@ void MainWindow::Draw(IDirect3DDevice9*)
             }
             drawn = true;
             const auto& ui_module = modules_to_draw[i].second;
-            if (ui_module->DrawTabButton(show_icons, true, center_align_text)) {
-                if (one_panel_at_time_only && ui_module->visible && ui_module->IsWindow()) {
+            if (ui_module->DrawTabButton(settings.show_icons, true, settings.center_align_text)) {
+                if (settings.one_panel_at_time_only && ui_module->visible && ui_module->IsWindow()) {
                     for (const auto& module : modules_to_draw | std::views::values) {
                         if (module == ui_module) {
                             continue;
@@ -113,15 +118,16 @@ void MainWindow::Draw(IDirect3DDevice9*)
             }
             ImGui::PopID();
         }
+        size_t i = 0;
         for (const auto plugin : PluginModule::GetPlugins() | std::views::filter([](ToolboxPlugin* p) {
             return p && p->GetVisiblePtr() && p->ShowInMainMenu();
         })) {
-            ImGui::PushID(plugin);
+            ImGui::PushID(i++);
             if (drawn) {
                 ImGui::Separator();
             }
-            if (plugin->DrawTabButton(show_icons, true, center_align_text)) {
-                if (one_panel_at_time_only && plugin->GetVisiblePtr() && *plugin->GetVisiblePtr()) {
+            if (plugin->DrawTabButton(settings.show_icons, true, settings.center_align_text)) {
+                if (settings.one_panel_at_time_only && plugin->GetVisiblePtr() && *plugin->GetVisiblePtr()) {
                     for (const auto& module : modules_to_draw | std::views::values) {
                         if (!module->IsWindow()) {
                             continue;

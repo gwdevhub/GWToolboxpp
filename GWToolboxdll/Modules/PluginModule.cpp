@@ -6,6 +6,7 @@
 #include <GWToolbox.h>
 #include <GWCA/Managers/ChatMgr.h>
 
+#include <Defender.h>
 #include <Modules/Resources.h>
 #include <filesystem>
 #include <string>
@@ -58,8 +59,15 @@ namespace {
             plugin.dll = LoadLibraryW(plugin.path.wstring().c_str());
         }
         if (!plugin.dll) {
+            const DWORD err = GetLastError();
+            const auto filename = plugin.path.filename();
             UnloadPlugin(plugin_ptr);
-            Log::Error("Failed to load plugin %s (LoadLibraryW)", TextUtils::PrintFilename(plugin.path.filename().string()).c_str());
+            const auto name = TextUtils::PrintFilename(filename.wstring());
+            std::wstring detail;
+            if ((err == ERROR_VIRUS_INFECTED || err == ERROR_VIRUS_DELETED) && FindRecentDefenderBlock(filename.wstring(), 15, detail))
+                Log::ErrorW(L"Failed to load plugin %s - Windows Defender blocked it: %s", name.c_str(), detail.c_str());
+            else
+                Log::ErrorW(L"Failed to load plugin %s (LoadLibraryW)", name.c_str());
             return false;
         }
         using ToolboxPluginInstanceFn = ToolboxPlugin* (*)();
@@ -132,8 +140,9 @@ void PluginModule::DrawSettingsInternal()
 {
     ImGui::PushID("Plugins");
 
+    size_t i = 0;
     for (const auto plugin : plugins_available) {
-        ImGui::PushID(plugin);
+        ImGui::PushID(i++);
         auto& style = ImGui::GetStyle();
         const auto origin_header_col = style.Colors[ImGuiCol_Header];
         style.Colors[ImGuiCol_Header] = {0, 0, 0, 0};
@@ -239,43 +248,51 @@ void PluginModule::Draw(IDirect3DDevice9* device)
     }
 }
 
-void PluginModule::LoadSettings(ToolboxIni* ini)
+void PluginModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    std::list<CSimpleIniA::Entry> dlls_to_load;
-    std::vector<Plugin*> plugins_loaded_from_ini;
-    if (ini->GetAllKeys(plugins_enabled_section, dlls_to_load)) {
-        for (const auto& entry : dlls_to_load) {
-            std::filesystem::path path = entry.pItem;
-            const auto filename = path.filename();
-            auto matching_plugins = std::views::filter(plugins_available, [filename](auto plugin) {
-                return plugin->path.filename() == filename;
-            });
-            // Find any matching plugins and load them
-            for (const auto plugin : matching_plugins) {
-                if (!LoadPlugin(plugin)) {
-                    continue;
-                }
-                InitializePlugin(plugin);
-                plugins_loaded_from_ini.push_back(plugin);
+    ToolboxUIElement::LoadSettings(doc, legacy);
+    std::vector<std::string> enabled_plugins;
+    if (!doc.Get(Name(), "enabled_plugins", enabled_plugins) && legacy) {
+        TNamesDepend dlls_to_load;
+        if (legacy->GetAllKeys(plugins_enabled_section, dlls_to_load)) {
+            for (const auto& entry : dlls_to_load) {
+                enabled_plugins.push_back(entry.pItem);
             }
+        }
+    }
+    std::vector<Plugin*> plugins_enabled_from_settings;
+    for (const auto& entry : enabled_plugins) {
+        const auto filename = std::filesystem::path(entry).filename();
+        auto matching_plugins = std::views::filter(plugins_available, [filename](auto plugin) {
+            return plugin->path.filename() == filename;
+        });
+        // Find any matching plugins and load them
+        for (const auto plugin : matching_plugins) {
+            if (!LoadPlugin(plugin)) {
+                continue;
+            }
+            InitializePlugin(plugin);
+            plugins_enabled_from_settings.push_back(plugin);
         }
     }
     // Find any plugins that are currently loaded but not supposed to be
     auto to_unload = std::views::filter(plugins_loaded, [&](auto plugin) {
-        return !std::ranges::contains(plugins_loaded_from_ini, plugin);
+        return !std::ranges::contains(plugins_enabled_from_settings, plugin);
     }) | std::ranges::to<std::vector>();
     for (const auto plugin : std::views::reverse(to_unload)) {
         UnloadPlugin(plugin);
     }
 }
 
-void PluginModule::SaveSettings(ToolboxIni* ini)
+void PluginModule::SaveSettings(SettingsDoc& doc)
 {
-    ini->Delete(plugins_enabled_section, nullptr);
+    ToolboxUIElement::SaveSettings(doc);
+    std::vector<std::string> enabled_plugins;
     for (const auto plugin : plugins_loaded) {
         plugin->instance->SaveSettings(pluginsfoldername.c_str());
-        ini->SetBoolValue(plugins_enabled_section, plugin->path.filename().string().c_str(), true);
+        enabled_plugins.push_back(plugin->path.filename().string());
     }
+    doc.Set(Name(), "enabled_plugins", enabled_plugins);
 }
 
 void PluginModule::Update(const float delta)

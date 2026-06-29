@@ -1,7 +1,8 @@
 #pragma once
 
 #include "stl.h"
-#include <SimpleIni.h>
+#include <ToolboxIni.h>
+#include <Utils/SettingsDoc.h>
 
 #ifndef DLLAPI
 #ifdef BUILD_DLL
@@ -44,7 +45,7 @@ public:
     ToolboxPlugin& operator=(ToolboxPlugin&&) = delete;
     ToolboxPlugin& operator=(const ToolboxPlugin&) = delete;
 
-    // name of the window and the ini section
+    // name of the window and the settings section
     [[nodiscard]] virtual const char* Name() const = 0;
 
     [[nodiscard]] virtual const char* Icon() const { return nullptr; }
@@ -61,7 +62,11 @@ public:
     // do we want to draw while the world map is showing?
     [[nodiscard]] virtual bool ShowOnWorldMap() const { return false; }
 
+    // JSON settings file for this plugin: <folder>/<Name>.json
     [[nodiscard]] virtual std::filesystem::path GetSettingFile(const wchar_t* folder) const;
+
+    // Pre-JSON settings file (<folder>/<Name>.ini), only read as a legacy fallback - never written.
+    [[nodiscard]] virtual std::filesystem::path GetLegacySettingFile(const wchar_t* folder) const;
 
     // Initialize module
     virtual void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll);
@@ -85,23 +90,15 @@ public:
     // Optional. Prefer using ImGui::GetIO() during update or render, if possible.
     virtual bool WndProc(UINT, WPARAM, LPARAM) { return false; }
 
-    // Load settings from folder
-    virtual void LoadSettings(const wchar_t* folder)
-    {
-        if (!HasSettings()) {
-            return;
-        }
-        ini.LoadFile(GetSettingFile(folder).c_str());
-    }
+    // Called by GWToolbox when you need to (re)load any settings; the suitable settings folder is given.
+    // The base implementation loads GetSettingFile() into `settings` and GetLegacySettingFile() into
+    // `legacy_ini` (read-only). Override, call the base first, then read your values with LoadSetting().
+    virtual void LoadSettings(const wchar_t* folder);
 
-    // Save settings from folder
-    virtual void SaveSettings(const wchar_t* folder)
-    {
-        if (!HasSettings()) {
-            return;
-        }
-        PLUGIN_ASSERT(ini.SaveFile(GetSettingFile(folder).c_str()) == SI_OK);
-    }
+    // Called by GWToolbox when you need to (re)save any settings; the suitable settings folder is given.
+    // The base implementation writes `settings` to GetSettingFile(). Override, stage your values with
+    // SaveSetting(), then call the base last. The legacy ini file is never written.
+    virtual void SaveSettings(const wchar_t* folder);
 
     // Will be drawn in the Settings/Plugins menu. Must use ImGui.
     virtual void DrawSettings() {}
@@ -110,6 +107,39 @@ public:
     virtual bool DrawTabButton(bool, bool, bool) { return false; }
 
 protected:
+    // Reads `key` from this plugin's JSON settings doc, falling back to the legacy ini value.
+    template <typename T>
+    void LoadSetting(const char* key, T& value)
+    {
+        if (settings.Get(Name(), key, value)) {
+            return;
+        }
+        if (!legacy_ini.KeyExists(Name(), key)) {
+            return;
+        }
+        if constexpr (std::same_as<T, bool>) {
+            value = legacy_ini.GetBoolValue(Name(), key, value);
+        }
+        else if constexpr (std::floating_point<T>) {
+            value = static_cast<T>(legacy_ini.GetDoubleValue(Name(), key, static_cast<double>(value)));
+        }
+        else if constexpr (std::integral<T> || std::is_enum_v<T>) {
+            value = static_cast<T>(legacy_ini.GetLongValue(Name(), key, static_cast<long>(value)));
+        }
+        else if constexpr (std::same_as<T, std::string>) {
+            value = std::string(legacy_ini.GetValue(Name(), key, ""));
+        }
+        // other types have no legacy ini representation; JSON only
+    }
+
+    // Stages `key` into this plugin's JSON settings doc; written to disk by ToolboxPlugin::SaveSettings.
+    template <typename T>
+    void SaveSetting(const char* key, const T& value)
+    {
+        settings.Set(Name(), key, value);
+    }
+
     HMODULE toolbox_handle = nullptr;
-    CSimpleIniA ini{};
+    SettingsDoc settings;
+    ToolboxIni legacy_ini;
 };

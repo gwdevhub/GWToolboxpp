@@ -1,6 +1,6 @@
 #pragma once
-#include <GWCA/Constants/Constants.h>
 #include <ToolboxWindow.h>
+#include <Utils/GuiUtils.h> // GuiUtils::EncString
 namespace GW::Constants {
     enum class QuestID : uint32_t;
 }
@@ -18,9 +18,23 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CALENDAR_ALT; }
     void Initialize() override;
     void Terminate() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
+
+    struct Settings {
+        bool show_zaishen_bounty_in_window = true;
+        bool show_zaishen_combat_in_window = true;
+        bool show_zaishen_missions_in_window = true;
+        bool show_zaishen_vanquishes_in_window = true;
+        bool show_wanted_quests_in_window = true;
+        bool show_nicholas_in_window = true;
+        bool show_weekly_bonus_pve_in_window = true;
+        bool show_weekly_bonus_pvp_in_window = true;
+        bool show_other_searing_dailies = false;
+        bool notify_zaishen_mission_outpost = true;
+        int nicholas_withdraw_gott_count = 5;
+    };
     void DrawHelp() override;
     void Update(float delta) override;
     void Draw(IDirect3DDevice9* pDevice) override;
@@ -34,6 +48,7 @@ public:
     public:
         const GW::Constants::MapID map_id;
         std::wstring enc_name;
+        const wchar_t* quest_location_enc = nullptr; // Expected location field in the quest log for this quest type
         QuestData(GW::Constants::MapID map_id = (GW::Constants::MapID)0, const wchar_t* enc_name = nullptr);
         QuestData(QuestData&&) noexcept = default;
         QuestData& operator=(QuestData&&) noexcept = default;
@@ -82,6 +97,14 @@ public:
     static NicholasCycleData* GetNicholasItemInfo(const wchar_t* item_name_encoded);
     // Returns info about the Nicholas Sandford (pre-searing) item if the given item name matches
     static QuestData* GetNicholasSandfordItemInfo(const wchar_t* item_name_encoded);
+    static bool IsNicholasItem(const GW::Item* item);
+    struct NicholasIngredientInfo {
+        const wchar_t* ingredient;
+        const wchar_t* nicholas_item;
+        uint32_t ingredient_quantity;
+    };
+    // Returns info about the Nicholas item crafted from the given ingredient enc name, if a match is found
+    static const NicholasIngredientInfo* GetNicholasIngredientInfo(const wchar_t* ingredient_enc);
 
     struct ZaishenCoinReward {
         uint32_t nm;

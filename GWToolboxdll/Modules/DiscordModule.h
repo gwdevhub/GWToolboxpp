@@ -21,10 +21,18 @@ public:
 
     [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }
 
+    struct Settings {
+        bool discord_enabled = true;
+        bool hide_activity_when_offline = true;
+        bool show_location_info = true;
+        bool show_character_info = true;
+        bool show_party_info = true;
+    };
+
     void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Terminate() override;
     void Update(float delta) override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
     void DrawSettingsInternal() override;
 };

@@ -11,7 +11,6 @@
 #include <ImGuiAddons.h>
 #include "MouseFix.h"
 
-#include <hidusage.h>
 #include <GWCA/Managers/UIMgr.h>
 
 namespace {
@@ -78,12 +77,11 @@ namespace {
     // This could be a patch really, but rewriting the function out is a bit more readable.
     
     bool initialized = false;
-    bool enable_cursor_fix = false;
+    MouseFix::Settings settings;
 
     bool ShouldFixCursor() {
-        return enable_cursor_fix && !GW::UI::IsInControllerMode();
+        return settings.enable_cursor_fix && !GW::UI::IsInControllerMode();
     }
-    int cursor_size = 32;
     HCURSOR current_cursor = nullptr;
     bool cursor_size_hooked = false;
     
@@ -367,7 +365,7 @@ namespace {
         ChangeCursorIcon_Ret(user_data, edx, cursor_type, bitmap_data, bitmap_mask, hotspot);
 
         // Your existing cursor scaling logic...
-        if (cursor_size < 0 || cursor_size > 64 || cursor_size == 32) {
+        if (settings.cursor_size < 0 || settings.cursor_size > 64 || settings.cursor_size == 32) {
             return GW::Hook::LeaveHook();
         }
 
@@ -378,7 +376,7 @@ namespace {
         if (!(user_data && *cursor && *cursor != current_cursor)) {
             return GW::Hook::LeaveHook();
         }
-        const HCURSOR new_cursor = ScaleCursor(*cursor, cursor_size);
+        const HCURSOR new_cursor = ScaleCursor(*cursor, settings.cursor_size);
         if (!new_cursor) {
             return GW::Hook::LeaveHook();
         }
@@ -416,7 +414,7 @@ namespace {
 
     void SetCursorSize(const int new_size)
     {
-        cursor_size = new_size;
+        settings.cursor_size = new_size;
         RedrawCursorIcon();
     }
 
@@ -428,7 +426,7 @@ namespace {
             CursorFixEnable(false);
             break;
         case GW::UI::UIMessage::kMapLoaded:
-            CursorFixEnable(enable_cursor_fix);
+            CursorFixEnable(settings.enable_cursor_fix);
             break;
         }
     }
@@ -438,6 +436,7 @@ namespace {
 void MouseFix::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     ChangeCursorIcon_Func = (ChangeCursorIcon_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x80\x7e\x01\x80", "xxxx"));
     if (ChangeCursorIcon_Func) {
@@ -455,21 +454,21 @@ void MouseFix::Initialize()
     };
 
     for (const auto ui_message : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, ui_message, OnUIMessage);
+        RegisterUIMessageCallback(&UIMessage_HookEntry, ui_message, OnUIMessage);
     }
 }
 
-void MouseFix::LoadSettings(ToolboxIni* ini)
+void MouseFix::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    LOAD_BOOL(enable_cursor_fix);
-    SetCursorSize(ini->GetLongValue(Name(), VAR_NAME(cursor_size), cursor_size));
-    RedrawCursorIcon();
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    SetCursorSize(settings.cursor_size);
 }
 
-void MouseFix::SaveSettings(ToolboxIni* ini)
+void MouseFix::SaveSettings(SettingsDoc& doc)
 {
-    SAVE_BOOL(enable_cursor_fix);
-    SAVE_UINT(cursor_size);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void MouseFix::Terminate()
@@ -485,14 +484,14 @@ void MouseFix::Terminate()
 
 void MouseFix::DrawSettingsInternal()
 {
-    if (ImGui::Checkbox("Enable cursor fix", &enable_cursor_fix)) {
-        CursorFixEnable(enable_cursor_fix);
+    if (ImGui::Checkbox("Enable cursor fix", &settings.enable_cursor_fix)) {
+        CursorFixEnable(settings.enable_cursor_fix);
     }
-    ImGui::SliderInt("Guild Wars cursor size", &cursor_size, 16, 64);
+    ImGui::SliderInt("Guild Wars cursor size", &settings.cursor_size, 16, 64);
     ImGui::ShowHelp("Sizes other than 32 might lead the the cursor disappearing at random.\n"
         "Right click to make the cursor dis- and reappear for this to take effect.");
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-        SetCursorSize(cursor_size);
+        SetCursorSize(settings.cursor_size);
         RedrawCursorIcon();
     }
     if (ImGui::Button("Reset")) {
@@ -507,7 +506,7 @@ bool MouseFix::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lPa
         return false;
     }
     if (!initialized) {
-        CursorFixEnable(enable_cursor_fix);
+        CursorFixEnable(settings.enable_cursor_fix);
         initialized = true;
     }
     CursorFixWndProc(Message, wParam, lParam);

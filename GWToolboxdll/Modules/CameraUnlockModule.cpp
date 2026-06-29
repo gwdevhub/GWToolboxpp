@@ -17,11 +17,9 @@ namespace {
     const float default_cam_speed = 1000.f;            // 600 units per sec
     const float rotation_speed = DirectX::XM_PI / 3.f; // 6 seconds for full rotation
 
-    bool forward_fix_z = true;
-    float cam_speed = default_cam_speed;
-
     const float default_max_distance = 900.f;
-    float cam_max_distance = default_max_distance;
+
+    CameraUnlockModule::Settings settings;
 
     GW::HookEntry ChatCmdHookEntry;
     std::vector<GW::Camera*> last_camera_by_mode(10);
@@ -149,9 +147,9 @@ namespace {
                 else if (!TextUtils::ParseFloat(TextUtils::ToLower(argv[2]).c_str(), &speed)) {
                     goto print_warning;
                 }
-                cam_speed = speed;
+                settings.cam_speed = speed;
             }
-            return Log::Flash("Camera speed is now %f", cam_speed);
+            return Log::Flash("Camera speed is now %f", settings.cam_speed);
         }
         else if (arg1 == L"distance") {
             if (argc > 2) {
@@ -164,9 +162,9 @@ namespace {
                     goto print_warning;
                 }
                 GW::CameraMgr::SetMaxDist(dist);
-                cam_max_distance = dist;
+                settings.cam_max_distance = dist;
             }
-            return Log::Flash("Camera distance is now %f", cam_max_distance);
+            return Log::Flash("Camera distance is now %f", settings.cam_max_distance);
         }
     print_warning:
         Log::Warning(CameraUnlockModule::camera_syntax);
@@ -186,6 +184,7 @@ void CameraUnlockModule::Terminate()
 void CameraUnlockModule::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
     GW::Chat::CreateCommand(&ChatCmdHookEntry, L"cam", CmdCamera);
     GW::Chat::CreateCommand(&ChatCmdHookEntry, L"camera", CmdCamera);
 
@@ -196,34 +195,36 @@ void CameraUnlockModule::Initialize()
     }
     DEBUG_ASSERT(OnSetCameraMode_Func);
 }
-void CameraUnlockModule::LoadSettings(ToolboxIni* ini) {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(forward_fix_z);
-    LOAD_FLOAT(cam_speed);
-    LOAD_FLOAT(cam_max_distance);
-    cam_max_distance = std::clamp(cam_max_distance, 25.f, 5000.f);
-    GW::CameraMgr::SetMaxDist(cam_max_distance);
+void CameraUnlockModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) {
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    // Pre-2026 builds persisted these under [Chat Commands]; any newer value wins
+    if (legacy && !doc.HasSection(Name()) && !legacy->SectionExists(Name())) {
+        settings.cam_speed = static_cast<float>(legacy->GetDoubleValue("Chat Commands", "cam_speed", settings.cam_speed));
+        settings.forward_fix_z = legacy->GetBoolValue("Chat Commands", "forward_fix_z", settings.forward_fix_z);
+    }
+    settings.cam_max_distance = std::clamp(settings.cam_max_distance, 25.f, 5000.f);
+    GW::CameraMgr::SetMaxDist(settings.cam_max_distance);
 }
 
-void CameraUnlockModule::SaveSettings(ToolboxIni* ini)
+void CameraUnlockModule::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(forward_fix_z);
-    SAVE_FLOAT(cam_speed);
-    SAVE_FLOAT(cam_max_distance);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
+
 void CameraUnlockModule::DrawSettingsInternal()
 {
     ToolboxModule::DrawSettingsInternal();
     ImGui::Text("'/cam unlock' options");
     ImGui::Indent();
-    ImGui::Checkbox("Fix height when moving forward", &forward_fix_z);
-    ImGui::InputFloat("Camera speed", &cam_speed);
+    ImGui::Checkbox("Fix height when moving forward", &settings.forward_fix_z);
+    ImGui::InputFloat("Camera speed", &settings.cam_speed);
     ImGui::Unindent();
-    if (ImGui::InputFloat("Camera max distance", &cam_max_distance, 100.f, 100.f, "%.f")) {
-        cam_max_distance = std::clamp(cam_max_distance, 25.f, 5000.f);
-        GW::CameraMgr::SetMaxDist(cam_max_distance);
-    }  
+    if (ImGui::InputFloat("Camera max distance", &settings.cam_max_distance, 100.f, 100.f, "%.f")) {
+        settings.cam_max_distance = std::clamp(settings.cam_max_distance, 25.f, 5000.f);
+        GW::CameraMgr::SetMaxDist(settings.cam_max_distance);
+    }
 }
 
 bool CameraUnlockModule::WndProc(const UINT Message, const WPARAM wParam, const LPARAM) {
@@ -311,10 +312,10 @@ void CameraUnlockModule::Update(float delta) {
             rotate = 0.f;
         }
 
-        ForwardMovement(forward * delta * cam_speed, !forward_fix_z);
-        VerticalMovement(vertical * delta * cam_speed);
+        ForwardMovement(forward * delta * settings.cam_speed, !settings.forward_fix_z);
+        VerticalMovement(vertical * delta * settings.cam_speed);
         RotateMovement(rotate * delta * rotation_speed);
-        SideMovement(side * delta * cam_speed);
+        SideMovement(side * delta * settings.cam_speed);
         GW::CameraMgr::UpdateCameraPos();
     }
 }

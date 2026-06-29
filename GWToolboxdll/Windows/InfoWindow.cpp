@@ -1,51 +1,50 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/Scanner.h>
 
-#include <GWCA/Context/MapContext.h>
-#include <GWCA/Context/GameplayContext.h>
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/GameplayContext.h>
+#include <GWCA/Context/MapContext.h>
 
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
+#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Camera.h>
+#include <GWCA/GameEntities/Frame.h>
+#include <GWCA/GameEntities/Guild.h>
+#include <GWCA/GameEntities/Item.h>
+#include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/NPC.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Pathing.h>
+#include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/Item.h>
-#include <GWCA/GameEntities/Player.h>
-#include <GWCA/GameEntities/Guild.h>
-#include <GWCA/GameEntities/NPC.h>
-#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Title.h>
-#include <GWCA/GameEntities/Agent.h>
-#include <GWCA/GameEntities/Pathing.h>
-#include <GWCA/GameEntities/Frame.h>
 
 
+#include <GWCA/Context/AccountContext.h>
 #include <GWCA/Context/GameContext.h>
 #include <GWCA/Context/WorldContext.h>
-#include <GWCA/Context/AccountContext.h>
 
-#include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/ItemMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/PartyMgr.h>
-#include <GWCA/Managers/EffectMgr.h>
-#include <GWCA/Managers/GuildMgr.h>
-#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
-#include <GWCA/Managers/SkillbarMgr.h>
-#include <GWCA/Managers/QuestMgr.h>
-#include <GWCA/Managers/RenderMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/EffectMgr.h>
 #include <GWCA/Managers/EventMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/GuildMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
 
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -53,20 +52,19 @@
 #include <Windows/InfoWindow.h>
 #include <Windows/NotepadWindow.h>
 
-#include <Modules/ItemDescriptionHandler.h>
-#include <Modules/ResignLogModule.h>
-#include <Modules/ToolboxSettings.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/HallOfMonumentsModule.h>
-#include <Modules/AudioSettings.h>
+#include <Modules/ItemDescriptionHandler.h>
+#include <Modules/ResignLogModule.h>
 #include <Modules/Resources.h>
-#include <Utils/ToolboxUtils.h>
+#include <Modules/ToolboxSettings.h>
 #include <Utils/ArenaNetFileParser.h>
 #include <Utils/TextUtils.h>
+#include <Utils/ToolboxUtils.h>
 
-#include <Logger.h>
 #include <GWToolbox.h>
+#include <Logger.h>
 
 #include <CircurlarBuffer.h>
 #include <Widgets/WorldMapWidget.h>
@@ -81,16 +79,7 @@ namespace {
     uint32_t quoted_item_id = 0;
     GW::Constants::SkillID last_hovered_skill_id = static_cast<GW::Constants::SkillID>(0);
 
-    bool show_widgets = true;
-    bool show_open_chest = true;
-    bool show_player = true;
-    bool show_target = true;
-    bool show_map = true;
-    bool show_dialog = true;
-    bool show_item = true;
-    bool show_mobcount = true;
-    bool show_quest = true;
-    bool show_resignlog = true;
+    InfoWindow::Settings settings;
 
     GW::HookEntry MessageCore_Entry;
     GW::HookEntry InstanceLoadFile_Entry;
@@ -105,6 +94,10 @@ namespace {
     bool record_ui_messages = false;
     bool record_event_messages = false;
     bool record_enc_strings = false;
+
+
+
+
 
     bool EncInfoField(const char* label, const wchar_t* enc_string)
     {
@@ -128,6 +121,19 @@ namespace {
         va_end(vl);
         return ImGui::InputTextEx(label, nullptr, info_string, _countof(info_string), ImVec2(-160.f * ImGui::FontScale(), 0), ImGuiInputTextFlags_ReadOnly);
     }
+    bool FileIdField(const char* label, const uint32_t file_id)
+    {
+        wchar_t enc_string[8] = {0};
+        GW::UI::UInt32ToEncStr(file_id, enc_string, 8);
+        EncInfoField(label, enc_string);
+        std::string label2 = std::format("{} (File ID)", label);
+        InfoField(label2.c_str(), "0x%X", file_id);
+        return false;
+    }
+    bool FileIdField(const char* label, const wchar_t* enc_str)
+    {
+        return FileIdField(label, ArenaNetFileParser::FileHashToFileId(enc_str));
+    }
 
     void GetIdsFromFileId(const uint32_t param_1, short* param_2)
     {
@@ -135,46 +141,46 @@ namespace {
         *param_2 = static_cast<short>((param_1 - 1) % 0xff00) + 0x100;
     }
 
-    void DrawMapInfo(GW::Constants::MapID map_id) {
+    void DrawMapInfo(GW::Constants::MapID map_id)
+    {
         static char info_id[16];
         snprintf(info_id, _countof(info_id), "map_info_%d", map_id);
         ImGui::PushID(info_id);
         auto type = "";
         switch (GW::Map::GetInstanceType()) {
-        case GW::Constants::InstanceType::Outpost:
-            type = "Outpost\0\0\0";
-            break;
-        case GW::Constants::InstanceType::Explorable:
-            type = "Explorable";
-            break;
-        case GW::Constants::InstanceType::Loading:
-            type = "Loading\0\0\0";
-            break;
+            case GW::Constants::InstanceType::Outpost:
+                type = "Outpost\0\0\0";
+                break;
+            case GW::Constants::InstanceType::Explorable:
+                type = "Explorable";
+                break;
+            case GW::Constants::InstanceType::Loading:
+                type = "Loading\0\0\0";
+                break;
         }
         InfoField("Map ID", "%d", map_id);
         ImGui::ShowHelp("Map ID is unique for each area");
         InfoField("Map Region", "%d", GW::Map::GetRegion());
         InfoField("Map District", "%d", GW::Map::GetDistrict());
         InfoField("Map Type", type);
-        EncInfoField("Map File ID", mapfile);
+        FileIdField("Map File ID", mapfile);
         ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
         const GW::AreaInfo* map_info = GW::Map::GetMapInfo(map_id);
         if (map_info) {
             static wchar_t name_enc[8];
             if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8)) {
-                EncInfoField("Name Enc", name_enc);
+                FileIdField("Name Enc", name_enc);
                 InfoField("Name", "%s", Resources::DecodeStringId(map_info->name_id)->string().c_str());
             }
 
             static wchar_t desc_enc[8];
             if (GW::UI::UInt32ToEncStr(map_info->description_id, desc_enc, 8)) {
-                EncInfoField("Desc Enc", desc_enc);
+                FileIdField("Desc Enc", desc_enc);
                 InfoField("Desc", "%s", Resources::DecodeStringId(map_info->description_id)->string().c_str());
             }
         }
 
         if (ImGui::TreeNodeEx("Advanced##map_advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            
             if (map_info) {
                 InfoField("Campaign", "%d", map_info->campaign);
                 InfoField("Continent", "%d", map_info->continent);
@@ -291,7 +297,7 @@ namespace {
         InfoField("Bag/Slot", "%s", slot);
         InfoField("ModelID", "%d", item->model_id);
         InfoField("Name", "%s", name->string().c_str());
-        ImGui::Image(*Resources::GetItemImage(item), { 48,48 });
+        ImGui::Image(*Resources::GetItemImage(item), {48, 48});
         auto draw_advanced = [&, item] {
             InfoField("Addr", "%p", item);
             InfoField("Id", "%d", item->item_id);
@@ -359,10 +365,12 @@ namespace {
         InfoField("Speed (Relative)", "%.2f (%.2f) ", speed, speed > 0.f ? speed / 288.0f : 0.f);
         if (living) {
             InfoField(living->IsPlayer() ? "Player ID" : "Model ID", "%d", living->player_number);
-            ImGui::ShowHelp("Model ID is unique for each kind of agent.\n"
+            ImGui::ShowHelp(
+                "Model ID is unique for each kind of agent.\n"
                 "It is static and shared by the same agents.\n"
                 "When targeting players, this is Player ID instead, unique for each player in the instance.\n"
-                "For the purpose of targeting hotkeys and commands, use this value");
+                "For the purpose of targeting hotkeys and commands, use this value"
+            );
         }
         if (item && item_actual) {
             if (ImGui::TreeNodeEx("Item Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -482,8 +490,7 @@ namespace {
         }
         std::wstring buf;
         for (auto& partymember : *players) {
-            if (!ResignLogModule::PrintResignStatus(partymember.login_number, buf, true))
-                continue;
+            if (!ResignLogModule::PrintResignStatus(partymember.login_number, buf, true)) continue;
             ImGui::PushID(static_cast<int>(partymember.login_number));
             if (ImGui::Button("Send")) {
                 GW::Chat::SendChat('#', buf.c_str());
@@ -540,31 +547,31 @@ namespace {
 
 
     struct RecordedAsyncDecode {
-        std::wstring s; 
+        std::wstring s;
         void* cb;
         void* wParam;
         std::wstring decoded;
         std::string decoded_str;
     };
-    std::unordered_map<std::wstring,RecordedAsyncDecode*> enc_strings_recorded;
+    std::unordered_map<std::wstring, RecordedAsyncDecode*> enc_strings_recorded;
 
-    void OnRecordedAsyncDecode_Decoded(void* param, const wchar_t* decoded) {
+    void OnRecordedAsyncDecode_Decoded(void* param, const wchar_t* decoded)
+    {
         auto e = (RecordedAsyncDecode*)param;
         e->decoded = decoded;
         e->decoded_str = TextUtils::WStringToString(e->decoded);
     }
 
-    void __cdecl OnValidateAsyncDecodeStr(const wchar_t* s, void* cb, void* wParam) {
+    void __cdecl OnValidateAsyncDecodeStr(const wchar_t* s, void* cb, void* wParam)
+    {
         GW::Hook::EnterHook();
-        if (s && wcsncmp(s, L"\x8103\xBB3", 2) != 0 && wcsncmp(s, L"\x55b\x101", 2) != 0 
-            && enc_strings_recorded.find(s) == enc_strings_recorded.end()) {
+        if (s && wcsncmp(s, L"\x8103\xBB3", 2) != 0 && wcsncmp(s, L"\x55b\x101", 2) != 0 && enc_strings_recorded.find(s) == enc_strings_recorded.end()) {
             auto e = new RecordedAsyncDecode();
             e->s = s;
             e->cb = cb;
             e->wParam = wParam;
             enc_strings_recorded[s] = e;
             ValidateAsyncDecodeStr_Ret(e->s.c_str(), OnRecordedAsyncDecode_Decoded, e);
-                
         }
 
 
@@ -577,10 +584,8 @@ namespace {
     std::unordered_map<IDirect3DTexture9**, uint32_t> texture_file_ids;
     std::vector<IDirect3DTexture9**> textures_created;
 
-    std::map<uint32_t, IDirect3DTexture9*> dx9_textures_created_by_hash;
-    bool record_dx9_textures = false;
-
-    bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks) {
+    bool OnGWCASendUIMessage(GW::UI::UIMessage msgid, void* wParam, void* lParam, bool skip_hooks)
+    {
         GW::Hook::EnterHook();
         auto res = GWCA_SendUIMessage_Ret(msgid, wParam, lParam, skip_hooks);
         if (record_ui_messages) ui_message_packets_recorded.add({msgid, wParam, lParam, skip_hooks});
@@ -588,82 +593,22 @@ namespace {
         return res;
     }
 
-    void OnEventMessage(GW::HookStatus*, GW::EventMgr::EventID event_id, void* packet, uint32_t packet_size) {
-        if (record_event_messages) 
-            event_message_packets_recorded.add({event_id, packet, packet_size});
-    }
-
-    typedef HRESULT(WINAPI* CreateDx9Texture_pt)(IDirect3DDevice9*, UINT, UINT, UINT, DWORD, D3DFORMAT, D3DPOOL, IDirect3DTexture9**, HANDLE*);
-    CreateDx9Texture_pt CreateDx9Texture_Func = 0, CreateDx9Texture_Ret = 0;
-
-    using TextureRelease_pt = ULONG(WINAPI*)(IDirect3DTexture9*);
-    TextureRelease_pt TextureRelease_Func = nullptr;
-    TextureRelease_pt TextureRelease_Ret = nullptr;
-
-    IDirect3DTexture9* LastCreatedTexture = nullptr;
-
-        // Hook Release to clean up tracking
-    ULONG WINAPI OnD3D9TextureRelease(IDirect3DTexture9* texture)
+    void OnEventMessage(GW::HookStatus*, GW::EventMgr::EventID event_id, void* packet, uint32_t packet_size)
     {
-        GW::Hook::EnterHook();
-        ULONG ref = TextureRelease_Ret(texture);
-        if (ref == 0) {
-            if (texture == LastCreatedTexture) LastCreatedTexture = 0;
-            // Remove from hash map if present
-            for (auto it = dx9_textures_created_by_hash.begin(); it != dx9_textures_created_by_hash.end();) {
-                if (it->second == texture) {
-                    it = dx9_textures_created_by_hash.erase(it);
-                }
-                else {
-                    ++it;
-                }
-            }
-        }
-        GW::Hook::LeaveHook();
-
-        return ref;
+        if (record_event_messages) event_message_packets_recorded.add({event_id, packet, packet_size});
     }
 
-    HRESULT WINAPI OnD3D9CreateTexture(IDirect3DDevice9* device, UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, IDirect3DTexture9** ppTexture, HANDLE* pSharedHandle)
+    uint32_t FileHashToFileId(wchar_t* param_1)
     {
-        GW::Hook::EnterHook();
-        HRESULT result = CreateDx9Texture_Ret(device, Width, Height, Levels, Usage, Format, Pool, ppTexture, pSharedHandle);
-
-        if (LastCreatedTexture != nullptr) {
-            const auto hash = Resources::GetTexmodHash(LastCreatedTexture);
-            if (!dx9_textures_created_by_hash.contains(hash)) {
-                dx9_textures_created_by_hash[hash] = LastCreatedTexture;
-            }
-            LastCreatedTexture = 0;
-        }
-
-        if (SUCCEEDED(result) && *ppTexture) {
-            // Hook Release on first texture creation
-            if (!TextureRelease_Func) {
-                uintptr_t* texture_vtable = *reinterpret_cast<uintptr_t**>(*ppTexture);
-                constexpr int RELEASE_INDEX = 2;
-                TextureRelease_Func = (TextureRelease_pt)texture_vtable[RELEASE_INDEX];
-                GW::Hook::CreateHook((void**)&TextureRelease_Func, OnD3D9TextureRelease, (void**)&TextureRelease_Ret);
-                GW::Hook::EnableHooks(TextureRelease_Func);
-            }
-            LastCreatedTexture = *ppTexture;
-        }
-
-        GW::Hook::LeaveHook();
-        return result;
-    }
-
-    uint32_t FileHashToFileId(wchar_t* param_1) {
-        if (!param_1)
-            return 0;
-        if (((0xff < *param_1) && (0xff < param_1[1])) &&
-            ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
+        if (!param_1) return 0;
+        if (((0xff < *param_1) && (0xff < param_1[1])) && ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
             return (*param_1 - 0xff00ff) + (uint32_t)param_1[1] * 0xff00;
         }
         return 0;
     }
 
-    uint32_t* OnCreateTexture(wchar_t* file_name, uint32_t flags) {
+    uint32_t* OnCreateTexture(wchar_t* file_name, uint32_t flags)
+    {
         GW::Hook::EnterHook();
         const auto out = CreateTexture_Ret(file_name, flags);
         uint32_t file_id = FileHashToFileId(file_name);
@@ -677,16 +622,15 @@ namespace {
         return out;
     }
 
-    void HookOnValidateAsyncDecodeStr(bool hook) {
-        if (hook && ValidateAsyncDecodeStr_Func)
-            return;
+    void HookOnValidateAsyncDecodeStr(bool hook)
+    {
+        if (hook && ValidateAsyncDecodeStr_Func) return;
         if (hook) {
             ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE"));
             if (ValidateAsyncDecodeStr_Func) {
                 GW::Hook::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
                 GW::Hook::EnableHooks(ValidateAsyncDecodeStr_Func);
             }
-
         }
         else if (ValidateAsyncDecodeStr_Func) {
             GW::Hook::RemoveHook(ValidateAsyncDecodeStr_Func);
@@ -697,18 +641,17 @@ namespace {
             ValidateAsyncDecodeStr_Func = 0;
         }
     }
-    void HookOnCreateTexture(bool hook) {
-        if (hook && CreateTexture_Func)
-            return;
+    void HookOnCreateTexture(bool hook)
+    {
+        if (hook && CreateTexture_Func) return;
         if (hook) {
-            CreateTexture_Func = (CreateTexture_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GrTex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", 0,0));
+            CreateTexture_Func = (CreateTexture_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GrTex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", 0, 0));
             if (CreateTexture_Func) {
                 GW::Hook::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
                 GW::Hook::EnableHooks(CreateTexture_Func);
             }
-
         }
-        else if(CreateTexture_Func) {
+        else if (CreateTexture_Func) {
             GW::Hook::RemoveHook(CreateTexture_Func);
             CreateTexture_Func = 0;
             textures_created_by_file_id.clear();
@@ -716,9 +659,9 @@ namespace {
             texture_file_ids.clear();
         }
     }
-    void HookOnGWCASendUIMessage(bool hook) {
-        if (hook && GWCA_SendUIMessage_Func)
-            return;
+    void HookOnGWCASendUIMessage(bool hook)
+    {
+        if (hook && GWCA_SendUIMessage_Func) return;
         if (hook) {
             GWCA_SendUIMessage_Func = (GWCA_SendUIMessage_pt)GW::UI::SendUIMessage;
             if (GWCA_SendUIMessage_Func) {
@@ -751,13 +694,14 @@ namespace {
         }
     }
 
-    void HighlightFrame(GW::UI::Frame* frame) {
+    void HighlightFrame(GW::UI::Frame* frame)
+    {
         if (!frame) return;
         const auto root = GW::UI::GetRootFrame();
         const auto top_left = frame->position.GetTopLeftOnScreen(root);
         const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
         const auto draw_list = ImGui::GetBackgroundDrawList();
-        draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, IM_COL32_WHITE);
+        draw_list->AddRect({top_left.x, top_left.y}, {bottom_right.x, bottom_right.y}, IM_COL32_WHITE);
     }
 
     typedef void(__cdecl* SetFpsLimits_pt)(uint32_t target_fps);
@@ -771,55 +715,6 @@ namespace {
         target_fps = _target_fps;
         SetFpsLimits_Ret(_target_fps);
         GW::Hook::LeaveHook();
-    }
-
-    void HookOnCreateDx9Texture(bool enable = true)
-    {
-        if (enable) {
-            if (!CreateDx9Texture_Func) {
-                IDirect3DDevice9* device = GW::Render::GetDevice();
-                if (!device) return;
-                // Get vtable pointer
-                uintptr_t* vtable = *reinterpret_cast<uintptr_t**>(device);
-                // CreateTexture is at index 23 in IDirect3DDevice9 vtable
-                constexpr int CREATE_TEXTURE_INDEX = 23;
-                CreateDx9Texture_Func = (CreateDx9Texture_pt)vtable[CREATE_TEXTURE_INDEX];
-                GW::Hook::CreateHook((void**)&CreateDx9Texture_Func, OnD3D9CreateTexture, (void**)&CreateDx9Texture_Ret);
-                GW::Hook::EnableHooks(CreateDx9Texture_Func);
-            }
-
-            // Hook texture Release to track when textures are destroyed
-            if (!TextureRelease_Func) {
-                // We need any texture to get its vtable
-                // Create a temporary dummy texture to get the vtable
-                IDirect3DTexture9* temp_texture = nullptr;
-                IDirect3DDevice9* device = GW::Render::GetDevice();
-                if (device && SUCCEEDED(device->CreateTexture(1, 1, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &temp_texture, nullptr))) {
-                    uintptr_t* texture_vtable = *reinterpret_cast<uintptr_t**>(temp_texture);
-                    // Release is at index 2 in IUnknown (inherited by IDirect3DTexture9)
-                    constexpr int RELEASE_INDEX = 2;
-                    TextureRelease_Func = (TextureRelease_pt)texture_vtable[RELEASE_INDEX];
-                    GW::Hook::CreateHook((void**)&TextureRelease_Func, OnD3D9TextureRelease, (void**)&TextureRelease_Ret);
-                    GW::Hook::EnableHooks(TextureRelease_Func);
-                    temp_texture->Release(); // Clean up temp texture
-                }
-            }
-            return;
-        }
-        else {
-            if (CreateDx9Texture_Func) {
-                GW::Hook::DisableHooks(CreateDx9Texture_Func);
-                GW::Hook::RemoveHook(CreateDx9Texture_Func);
-                CreateDx9Texture_Func = nullptr;
-            }
-            if (TextureRelease_Func) {
-                GW::Hook::DisableHooks(TextureRelease_Func);
-                GW::Hook::RemoveHook(TextureRelease_Func);
-                TextureRelease_Func = nullptr;
-            }
-            dx9_textures_created_by_hash.clear();
-            LastCreatedTexture = nullptr;
-        }
     }
 
     bool DownloadStringFiles()
@@ -836,10 +731,8 @@ namespace {
             wchar_t** language_files = &file_ids[language_id * 99];
             for (size_t file_idx = 0; file_idx < 99; file_idx++) {
                 const auto file_name = language_files[file_idx];
-                if (!(file_name && *file_name)) 
-                    continue;
-                if (!asset.readFromDat(file_name)) 
-                    return false;
+                if (!(file_name && *file_name)) continue;
+                if (!asset.readFromDat(file_name)) return false;
                 const auto filename = std::format("language_file_{}_{}.txt", language_id, file_idx);
                 const auto write_to = Resources::GetPath("language_files", filename);
 
@@ -852,8 +745,8 @@ namespace {
         return true;
     }
 
-    void PostDraw() {
-        HookOnCreateDx9Texture(record_dx9_textures);
+    void PostDraw()
+    {
         HookOnCreateTexture(record_textures);
         HookOnValidateAsyncDecodeStr(record_enc_strings);
         HookOnGWCASendUIMessage(record_ui_messages);
@@ -861,12 +754,12 @@ namespace {
     }
     const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
-        if (!(prop && prop->h0034[4]))
-            return 0;
+        if (!(prop && prop->h0034[4])) return 0;
         uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
         return ArenaNetFileParser::FileHashToFileId((wchar_t*)sub_deets[1]);
     };
-    void DrawDebugInfo() {
+    void DrawDebugInfo()
+    {
         if (!SetFpsLimits_Func) {
             SetFpsLimits_Func = (SetFpsLimits_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x68\x40\x42\x0f\x00\xe8", "xxxxxx"));
             if (SetFpsLimits_Func) {
@@ -884,12 +777,12 @@ namespace {
             ImGui::SameLine();
             ImGui::TextUnformatted("Value 2");
             for (const auto& feature : features) {
-                ImGui::PushID(&feature);
-                ImGui::Text("0x%x",feature.id);
+                ImGui::PushID(feature.id);
+                ImGui::Text("0x%x", feature.id);
                 ImGui::SameLine();
-                ImGui::Text("%d",feature.unk1);
+                ImGui::Text("%d", feature.unk1);
                 ImGui::SameLine();
-                ImGui::Text("%d",feature.unk2);
+                ImGui::Text("%d", feature.unk2);
                 ImGui::PopID();
             }
         }
@@ -899,17 +792,15 @@ namespace {
             DrawItemInfo(GW::Items::GetItemById(quoted_item_id), &quoted_name);
         }
 
-        
+
         if (ImGui::CollapsingHeader("UI Message Log")) {
             record_ui_messages = true;
-            ImGui::PushID(&ui_message_packets_recorded);
+            ImGui::PushID("ui_message_packets_recorded");
             if (ImGui::SmallButton("Reset")) {
                 ui_message_packets_recorded.clear();
             }
             for (const auto packet : ui_message_packets_recorded) {
-                ImGui::PushID(&packet);
                 ImGui::Text("0x%08x 0x%08x 0x%08x", packet.msgid, packet.wParam, packet.lParam);
-                ImGui::PopID();
             }
             ImGui::PopID();
             if (ImGui::IsKeyDown(ImGuiMod_Alt)) {
@@ -918,39 +809,34 @@ namespace {
         }
         if (ImGui::CollapsingHeader("Event Message Log")) {
             record_event_messages = true;
-            ImGui::PushID(&event_message_packets_recorded);
             if (ImGui::SmallButton("Reset")) {
                 event_message_packets_recorded.clear();
             }
             for (const auto packet : event_message_packets_recorded) {
-                ImGui::PushID(&packet);
                 ImGui::Text("0x%08x 0x%08x", packet.event_id, packet.packet);
-                ImGui::PopID();
             }
-            ImGui::PopID();
             if (ImGui::IsKeyDown(ImGuiMod_Alt)) {
                 ImGui::SetScrollHereY();
             }
         }
 
-        
+
 
         if (ImGui::CollapsingHeader("Async Str Log")) {
             record_enc_strings = true;
-            ImGui::PushID(&enc_strings_recorded);
             if (ImGui::SmallButton("Reset")) {
                 while (enc_strings_recorded.begin() != enc_strings_recorded.end()) {
                     delete enc_strings_recorded.begin()->second;
                     enc_strings_recorded.erase(enc_strings_recorded.begin());
                 }
             }
-            for (const auto packet : enc_strings_recorded) {
-                ImGui::PushID(packet.second);
-                EncInfoField("Encoded", packet.second->s.c_str());
-                InfoField("Decoded", "%s", packet.second->decoded_str.c_str());
+            size_t i = 0;
+            for (const auto& [key, value] : enc_strings_recorded) {
+                ImGui::PushID(i++);
+                EncInfoField("Encoded", value->s.c_str());
+                InfoField("Decoded", "%s", value->decoded_str.c_str());
                 ImGui::PopID();
             }
-            ImGui::PopID();
         }
         const auto target = GW::Agents::GetTarget();
         if (target && ImGui::CollapsingHeader("Props within range of target")) {
@@ -964,18 +850,18 @@ namespace {
                 ImGui::SameLine(256.f);
                 ImGui::TextUnformatted("Location");
                 ImGui::Separator();
-                for (const auto prop : *props) {
-                    float distance = GW::GetDistance(target->pos, GW::GamePos({ prop->position.x,prop->position.y,0 }));
-                    if (distance > range)
-                        continue;
-                    ImGui::PushID(prop);
+                for (size_t i = 0, cnt = props->size(); i < cnt; i++) {
+                    const auto& prop = (*props)[i];
+                    float distance = GW::GetDistance(target->pos, GW::GamePos({prop->position.x, prop->position.y, 0}));
+                    if (distance > range) continue;
+                    ImGui::PushID(i);
                     ImGui::Text("%08X", GetMapPropModelFileId(prop));
                     ImGui::SameLine(128.f);
                     ImGui::Text("%.2f", distance);
                     ImGui::SameLine(256.f);
                     const auto label = std::format("{}, {}", prop->position.x, prop->position.y);
                     if (ImGui::Button(label.c_str())) {
-                        GW::Map::PingCompass(GW::GamePos({ prop->position.x, prop->position.y ,0 }));
+                        GW::Map::PingCompass(GW::GamePos({prop->position.x, prop->position.y, 0}));
                     }
                     ImGui::PopID();
                 }
@@ -984,8 +870,7 @@ namespace {
         }
         if (ImGui::CollapsingHeader("Loaded Textures by GW File")) {
             record_textures = true;
-            ImGui::PushID(&textures_created);
-            constexpr ImVec2 scaled_size = { 64.f, 64.f };
+            constexpr ImVec2 scaled_size = {64.f, 64.f};
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
             constexpr auto uv0 = ImVec2(0, 0);
@@ -1002,8 +887,9 @@ namespace {
 
             ImGui::StartSpacedElements(scaled_size.x);
 
+            size_t i = 0;
             for (const auto texture : textures_created) {
-                ImGui::PushID(texture);
+                ImGui::PushID(i++);
                 if (!texture || !*texture) {
                     ImGui::PopID();
                     continue;
@@ -1035,7 +921,7 @@ namespace {
                             return false;
                         }
                         return true;
-                        });
+                    });
                 }
                 ImGui::PopID();
             }
@@ -1043,7 +929,6 @@ namespace {
             ImGui::PopStyleColor();
             ImGui::PopStyleVar();
             ImGui::PopStyleVar();
-            ImGui::PopID();
         }
         static bool game_master_mode = false;
         if (ImGui::Checkbox("Game Master Mode", &game_master_mode)) {
@@ -1062,14 +947,14 @@ namespace {
                 packet.state_flags = 0x6; // Ctrl and shift
                 GW::UI::SendFrameUIMessage(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6), GW::UI::UIMessage::kKeyDown, &packet);
                 GW::GetCharContext()->player_flags ^= 0x8;
-                });
+            });
         }
         if (ImGui::Button("Open GM Start Menu?")) {
             GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::SendUIMessage((GW::UI::UIMessage)0x1000008a, 0, 0);
-                //GW::GetCharContext()->player_flags ^= 0x8;
-                });
+                // GW::GetCharContext()->player_flags ^= 0x8;
+            });
         }
         // DownloadStringFiles
         if (ImGui::Button("DownloadStringFiles")) {
@@ -1097,34 +982,64 @@ namespace {
         [[maybe_unused]] const GW::AreaInfo* ai = GW::Map::GetMapInfo(GW::Map::GetMapID());
         [[maybe_unused]] const auto ac = me_player ? GW::AccountMgr::GetAvailableCharacter(me_player->name) : nullptr;
         [[maybe_unused]] const auto gpc = GW::GetGameplayContext();
-        
+
 
         [[maybe_unused]] const auto mission_map_context = GW::Map::GetMissionMapContext();
         [[maybe_unused]] const auto mission_map_frame = mission_map_context ? GW::UI::GetFrameById(mission_map_context->frame_id) : nullptr;
         [[maybe_unused]] const auto world_map_context = GW::Map::GetWorldMapContext();
 
-        [[maybe_unused]]  const auto campaign = ac ? ac->campaign() : (GW::Constants::Campaign)0;
-        [[maybe_unused]]  const auto level = ac ? ac->level() : 0;
+        [[maybe_unused]] const auto campaign = ac ? ac->campaign() : (GW::Constants::Campaign)0;
+        [[maybe_unused]] const auto level = ac ? ac->level() : 0;
         [[maybe_unused]] const auto primary = ac ? ac->primary() : (GW::Constants::Profession)0;
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : (GW::Constants::Profession)0;
         [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
-        auto frame = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Vendor"), 0,0,2);
-        HighlightFrame(frame); 
+        if (ImGui::CollapsingHeader("Frame Finder")) {
+            static char frame_label[64] = "";
+            static int child_offsets[3] = {0, 0, 0};
+            static int depth = 0;
 
+            ImGui::InputText("Frame label", frame_label, sizeof(frame_label));
+            ImGui::ShowHelp("Passed to GW::UI::GetFrameByLabel, e.g. \"Vendor\", \"Game\", \"Compass\".");
+            ImGui::SliderInt("Child depth", &depth, 0, 3);
+            for (int j = 0; j < depth; j++) {
+                char lbl[24];
+                snprintf(lbl, sizeof(lbl), "Child offset %d", j);
+                ImGui::InputInt(lbl, &child_offsets[j]);
+                if (child_offsets[j] < 0) child_offsets[j] = 0;
+            }
+
+            GW::UI::Frame* frame = nullptr;
+            if (frame_label[0]) {
+                frame = GW::UI::GetFrameByLabel(TextUtils::StringToWString(frame_label).c_str());
+                for (int j = 0; j < depth && frame; j++)
+                    frame = GW::UI::GetChildFrame(frame, static_cast<uint32_t>(child_offsets[j]));
+            }
+
+            if (frame) {
+                InfoField("Frame address", "%p", static_cast<void*>(frame));
+                InfoField("Frame ID", "%u", frame->frame_id);
+                InfoField("Child offset ID", "%u", frame->child_offset_id);
+                HighlightFrame(frame); // draws a box around the frame's on-screen bounds
+            }
+            else {
+                ImGui::TextDisabled("%s", frame_label[0] ? "No frame for that label + offsets." : "Enter a frame label.");
+            }
+        }
 #endif
     }
 
-    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*) {
+    void OnPostUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wParam, void*)
+    {
         switch (message_id) {
             case GW::UI::UIMessage::kLoadMapContext: {
-                const auto packet = (GW::UI::UIPacket::kLoadMapContext*)wParam;
+                const auto packet = static_cast<GW::UI::UIPacket::kLoadMapContext*>(wParam);
                 wcscpy(mapfile, packet->file_name);
             } break;
         }
     }
 
-}
+} // namespace
 
 void InfoWindow::Terminate()
 {
@@ -1137,27 +1052,39 @@ void InfoWindow::Terminate()
     HookOnCreateTexture(false);
     HookOnGWCASendUIMessage(false);
 }
-void InfoWindow::SignalTerminate() {
+void InfoWindow::SignalTerminate()
+{
     visible = false;
 }
 
 void InfoWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     ui_message_packets_recorded = CircularBuffer<UIMessagePacket>(512);
     event_message_packets_recorded = CircularBuffer<EventPacket>(512);
 
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry,
-                                                                        [this](GW::HookStatus*, const GW::Packet::StoC::QuotedItemPrice* packet) -> void {
-                                                                            quoted_item_id = packet->itemid;
-                                                                        });
-    GW::UI::RegisterUIMessageCallback(&InstanceLoadFile_Entry, GW::UI::UIMessage::kLoadMapContext, OnPostUIMessage, 0x8000);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuotedItemPrice>(&InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::QuotedItemPrice* packet) -> void {
+        quoted_item_id = packet->itemid;
+    });
+    RegisterUIMessageCallback(&InstanceLoadFile_Entry, GW::UI::UIMessage::kLoadMapContext, OnPostUIMessage, 0x8000);
+}
+
+void InfoWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void InfoWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void InfoWindow::Draw(IDirect3DDevice9*)
 {
-    record_dx9_textures = false;
     record_textures = false;
     record_ui_messages = false;
     record_enc_strings = false;
@@ -1168,8 +1095,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-
-        if (show_widgets) {
+        if (settings.show_widgets) {
             const auto& widgets = GWToolbox::GetWidgets();
 
             const unsigned cols = static_cast<unsigned>(ceil(ImGui::GetWindowSize().x / 200.f));
@@ -1188,7 +1114,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::PopID();
         }
 
-        if (show_open_chest) {
+        if (settings.show_open_chest) {
             if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
                 GW::GameThread::Enqueue([] {
                     GW::Items::OpenXunlaiWindow();
@@ -1204,28 +1130,27 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                 InfoField("Yaw/Pitch##cam_angle", "%.2f, %.2f", cam->GetCurrentYaw(), cam->pitch);
             }
         }
-        if (show_player && ImGui::CollapsingHeader("Player")) {
+        if (settings.show_player && ImGui::CollapsingHeader("Player")) {
             ImGui::PushID("player_info");
             InfoField("Is Typing?", "%s", GW::Chat::GetIsTyping() ? "Yes" : "No");
             DrawAgentInfo(GW::Agents::GetObservingAgent());
             ImGui::PopID();
         }
-        if (show_target && ImGui::CollapsingHeader("Target")) {
+        if (settings.show_target && ImGui::CollapsingHeader("Target")) {
             ImGui::PushID("target_info");
             DrawAgentInfo(GW::Agents::GetTarget());
             ImGui::PopID();
         }
-        if (show_map && ImGui::CollapsingHeader("Map")) {
+        if (settings.show_map && ImGui::CollapsingHeader("Map")) {
             DrawMapInfo(GW::Map::GetMapID());
         }
-        if (show_map && ImGui::CollapsingHeader("Lookup Map")) {
+        if (settings.show_map && ImGui::CollapsingHeader("Lookup Map")) {
             static int map_id = 0;
             ImGui::InputInt("Map ID", &map_id, 1, 1);
             const auto current = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
-            if(current)
-                DrawMapInfo(static_cast<GW::Constants::MapID>(map_id));
+            if (current) DrawMapInfo(static_cast<GW::Constants::MapID>(map_id));
         }
-        if (show_dialog && ImGui::CollapsingHeader("Dialog")) {
+        if (settings.show_dialog && ImGui::CollapsingHeader("Dialog")) {
             EncInfoField("Dialog Body", DialogModule::GetDialogBody());
             InfoField("Last Dialog", "0x%X", DialogModule::LastDialogId());
             ImGui::Text("Available NPC Dialogs:");
@@ -1262,10 +1187,9 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             static int skill_id = 0;
             ImGui::InputInt("Skill ID", &skill_id, 1, 1);
             const auto current = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
-            if(current)
-                DrawSkillInfo(current, &skill_name, true);
+            if (current) DrawSkillInfo(current, &skill_name, true);
         }
-        if (show_item && ImGui::CollapsingHeader("Hovered Item")) {
+        if (settings.show_item && ImGui::CollapsingHeader("Hovered Item")) {
             static GuiUtils::EncString item_name;
             ImGui::PushID("hovered_item");
             const GW::Item* current = GW::Items::GetHoveredItem();
@@ -1275,75 +1199,12 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             DrawItemInfo(GW::Items::GetItemById(last_hovered_item_id), &item_name, true);
             ImGui::PopID();
         }
-        if (show_item && ImGui::CollapsingHeader("Item")) {
+        if (settings.show_item && ImGui::CollapsingHeader("Item")) {
             ImGui::Text("First item in inventory");
             static GuiUtils::EncString item_name;
             DrawItemInfo(GW::Items::GetItemBySlot(GW::Items::GetBag(GW::Constants::Bag::Backpack), 1), &item_name);
         }
-        if (ImGui::CollapsingHeader("Loaded DirectX9 Textures")) {
-            record_dx9_textures = true;
-            ImGui::PushID(&dx9_textures_created_by_hash);
-            constexpr ImVec2 scaled_size = {64.f, 64.f};
-            constexpr ImVec4 tint(1, 1, 1, 1);
-            const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
-            constexpr auto uv0 = ImVec2(0, 0);
-
-            if (ImGui::SmallButton("Reset")) {
-                dx9_textures_created_by_hash.clear();
-            }
-
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-            ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-
-            ImGui::StartSpacedElements(scaled_size.x);
-
-            for (const auto& it : dx9_textures_created_by_hash) {
-                const auto texture = it.second;
-                const auto hash = it.first;
-                if (!texture) continue;
-                ImGui::PushID(texture);
-
-                const auto uv1 = ImGui::CalculateUvCrop(texture, scaled_size);
-                ImGui::NextSpacedElement();
-                const auto clicked = ImGui::ImageButton(texture, scaled_size, uv0, uv1, -1, normal_bg, tint);
-                static wchar_t out[3];
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("gMod/uMod/Texmod Hash: 0x%08x (Click to download)", hash);
-                }
-                if (clicked) {
-                    ImGui::SetContextMenu([hash](void*) {
-                        ImGui::Text("gMod/uMod/Texmod Hash: 0x%08x", hash);
-                        ImGui::Separator();
-                        const char* ext = 0;
-                        if (ImGui::Button("Download as DDS (for gMod/uMod/Texmod)")) {
-                            ext = "dds";
-                        }
-                        if (ImGui::Button("Download as PNG")) {
-                            ext = "png";
-                        }
-                        if (ext) {
-                            const auto filename = std::format("GW.EXE_0x{:08X}.{}", hash, ext);
-                            const auto write_to = Resources::GetPath("extracted_textures", filename);
-                            Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
-                            const auto found = dx9_textures_created_by_hash.find(hash);
-                            if (found != dx9_textures_created_by_hash.end()) {
-                                Resources::SaveTextureToFile(found->second, write_to);
-                            }
-                            return false;
-                        }
-                        return true;
-                    });
-                }
-                ImGui::PopID();
-            }
-
-            ImGui::PopStyleColor();
-            ImGui::PopStyleVar();
-            ImGui::PopStyleVar();
-            ImGui::PopID();
-        }
-        if (show_quest && ImGui::CollapsingHeader("Quest")) {
+        if (settings.show_quest && ImGui::CollapsingHeader("Quest")) {
             const GW::Quest* q = GW::QuestMgr::GetActiveQuest();
             if (q) {
                 ImGui::Text("ID: 0x%X", q->quest_id);
@@ -1375,7 +1236,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             }
 #endif
         }
-        if (show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
+        if (settings.show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
             constexpr float sqr_soul_range = 1400.0f * 1400.0f;
             int soul_count = 0;
             int cast_count = 0;
@@ -1383,9 +1244,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             int compass_count = 0;
             GW::AgentArray* agents = GW::Agents::GetAgentArray();
             const GW::Agent* player = GW::Agents::GetObservingAgent();
-            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading
-                && agents
-                && player != nullptr) {
+            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && agents && player != nullptr) {
                 for (auto* a : *agents) {
                     const GW::AgentLiving* agent = a ? a->GetAsAgentLiving() : nullptr;
                     if (!(agent && agent->allegiance == GW::Constants::Allegiance::Enemy)) {
@@ -1395,10 +1254,8 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                         continue; // ignore dead
                     }
                     const float sqrd = GetSquareDistance(player->pos, agent->pos);
-                    if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor
-                        || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
-                        if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish
-                            && sqrd < sqr_soul_range) {
+                    if (agent->player_number == GW::Constants::ModelID::DoA::SoulTormentor || agent->player_number == GW::Constants::ModelID::DoA::VeilSoulTormentor) {
+                        if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish && sqrd < sqr_soul_range) {
                             ++soul_count;
                         }
                     }
@@ -1420,9 +1277,7 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             ImGui::Text("%d foes in spirit range", spirit_count);
             ImGui::Text("%d foes in compass range", compass_count);
         }
-        if (show_resignlog 
-            && ImGui::CollapsingHeader("Resign Log") 
-            && GWToolbox::IsModuleEnabled("Resign Log")) {
+        if (settings.show_resignlog && ImGui::CollapsingHeader("Resign Log") && GWToolbox::IsModuleEnabled("Resign Log")) {
             DrawResignlog();
         }
     }
@@ -1438,54 +1293,23 @@ void InfoWindow::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::StartSpacedElements(250.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show widget toggles", &show_widgets);
+    ImGui::Checkbox("Show widget toggles", &settings.show_widgets);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show 'Open Xunlai Chest' button", &show_open_chest);
+    ImGui::Checkbox("Show 'Open Xunlai Chest' button", &settings.show_open_chest);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Player", &show_player);
+    ImGui::Checkbox("Show Player", &settings.show_player);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Target", &show_target);
+    ImGui::Checkbox("Show Target", &settings.show_target);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Map", &show_map);
+    ImGui::Checkbox("Show Map", &settings.show_map);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Dialog", &show_dialog);
+    ImGui::Checkbox("Show Dialog", &settings.show_dialog);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Item", &show_item);
+    ImGui::Checkbox("Show Item", &settings.show_item);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Quest", &show_quest);
+    ImGui::Checkbox("Show Quest", &settings.show_quest);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Enemy Count", &show_mobcount);
+    ImGui::Checkbox("Show Enemy Count", &settings.show_mobcount);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Resign Log", &show_resignlog);
+    ImGui::Checkbox("Show Resign Log", &settings.show_resignlog);
 }
-
-void InfoWindow::LoadSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(show_widgets);
-    LOAD_BOOL(show_open_chest);
-    LOAD_BOOL(show_player);
-    LOAD_BOOL(show_target);
-    LOAD_BOOL(show_map);
-    LOAD_BOOL(show_dialog);
-    LOAD_BOOL(show_item);
-    LOAD_BOOL(show_quest);
-    LOAD_BOOL(show_mobcount);
-    LOAD_BOOL(show_resignlog);
-}
-
-void InfoWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(show_widgets);
-    SAVE_BOOL(show_open_chest);
-    SAVE_BOOL(show_player);
-    SAVE_BOOL(show_target);
-    SAVE_BOOL(show_map);
-    SAVE_BOOL(show_dialog);
-    SAVE_BOOL(show_item);
-    SAVE_BOOL(show_quest);
-    SAVE_BOOL(show_mobcount);
-    SAVE_BOOL(show_resignlog);
-}
-

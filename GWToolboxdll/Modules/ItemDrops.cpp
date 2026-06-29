@@ -22,8 +22,6 @@
 #include <Timer.h>
 #include <Utils/TextUtils.h>
 
-#define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
-#define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
 #define MAP_ENTRY(var) \
     {                  \
         var, #var      \
@@ -53,17 +51,7 @@ namespace {
     std::vector<ItemDrops::PendingDrop*> pending_write_to_csv;
     std::vector<std::string> pending_full_exports;
 
-    bool hide_player_white = false;
-    bool hide_player_blue = false;
-    bool hide_player_purple = false;
-    bool hide_player_gold = false;
-    bool hide_player_green = false;
-    bool hide_party_white = false;
-    bool hide_party_blue = false;
-    bool hide_party_purple = false;
-    bool hide_party_gold = false;
-    bool hide_party_green = false;
-    bool track_drops = false;
+    ItemDrops::Settings settings;
     std::map<ItemModelID, std::string> dont_hide_for_player{};
     std::map<ItemModelID, std::string> dont_hide_for_party{};
     std::map<ItemModelID, std::string> always_hide_for_player{};
@@ -273,15 +261,15 @@ namespace {
 
             switch (rarity) {
                 case GW::Constants::Rarity::White:
-                    return hide_player_white;
+                    return settings.hide_player_white;
                 case GW::Constants::Rarity::Blue:
-                    return hide_player_blue;
+                    return settings.hide_player_blue;
                 case GW::Constants::Rarity::Purple:
-                    return hide_player_purple;
+                    return settings.hide_player_purple;
                 case GW::Constants::Rarity::Gold:
-                    return hide_player_gold;
+                    return settings.hide_player_gold;
                 case GW::Constants::Rarity::Green:
-                    return hide_player_green;
+                    return settings.hide_player_green;
             }
         }
 
@@ -294,15 +282,15 @@ namespace {
 
         switch (rarity) {
             case GW::Constants::Rarity::White:
-                return hide_party_white;
+                return settings.hide_party_white;
             case GW::Constants::Rarity::Blue:
-                return hide_party_blue;
+                return settings.hide_party_blue;
             case GW::Constants::Rarity::Purple:
-                return hide_party_purple;
+                return settings.hide_party_purple;
             case GW::Constants::Rarity::Gold:
-                return hide_party_gold;
+                return settings.hide_party_gold;
             case GW::Constants::Rarity::Green:
-                return hide_party_green;
+                return settings.hide_party_green;
         }
 
         return false;
@@ -374,7 +362,7 @@ namespace {
     std::map<uint32_t, bool> already_seen_items;
 
     bool ShouldTrackItem(GW::Item* item) {
-        return track_drops && item && item->type != GW::Constants::ItemType::Bundle;
+        return settings.track_drops && item && item->type != GW::Constants::ItemType::Bundle;
     }
 
     void OnAgentAdd(GW::HookStatus* status, const GW::Packet::StoC::AgentAdd* packet)
@@ -477,6 +465,7 @@ namespace {
 void ItemDrops::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentAdd>(&OnAgentAdd_Entry, OnAgentAdd);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentRemove>(&OnAgentRemove_Entry, OnAgentRemove);
@@ -540,53 +529,38 @@ bool ItemDrops::CanTerminate()
     return suppressed_packets.empty();
 }
 
-void ItemDrops::LoadSettings(ToolboxIni* ini)
+void ItemDrops::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(hide_player_white);
-    LOAD_BOOL(hide_player_blue);
-    LOAD_BOOL(hide_player_purple);
-    LOAD_BOOL(hide_player_gold);
-    LOAD_BOOL(hide_player_green);
-    LOAD_BOOL(hide_party_white);
-    LOAD_BOOL(hide_party_blue);
-    LOAD_BOOL(hide_party_purple);
-    LOAD_BOOL(hide_party_gold);
-    LOAD_BOOL(hide_party_green);
-    LOAD_BOOL(track_drops);
-
-    dont_hide_for_player = GuiUtils::IniToMap<decltype(dont_hide_for_player)>(ini, Name(), "dont_hide_for_player", default_dont_hide_for_player);
-    dont_hide_for_party = GuiUtils::IniToMap<decltype(dont_hide_for_party)>(ini, Name(), "dont_hide_for_party", default_dont_hide_for_party);
-    always_hide_for_player = GuiUtils::IniToMap<decltype(always_hide_for_player)>(ini, Name(), "always_hide_for_player", {});
-    always_hide_for_party = GuiUtils::IniToMap<decltype(always_hide_for_party)>(ini, Name(), "always_hide_for_party", {});
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    if (!doc.Get(Name(), "dont_hide_for_player", dont_hide_for_player)) {
+        dont_hide_for_player = legacy ? GuiUtils::IniToMap<decltype(dont_hide_for_player)>(legacy, Name(), "dont_hide_for_player", default_dont_hide_for_player) : default_dont_hide_for_player;
+    }
+    if (!doc.Get(Name(), "dont_hide_for_party", dont_hide_for_party)) {
+        dont_hide_for_party = legacy ? GuiUtils::IniToMap<decltype(dont_hide_for_party)>(legacy, Name(), "dont_hide_for_party", default_dont_hide_for_party) : default_dont_hide_for_party;
+    }
+    if (!doc.Get(Name(), "always_hide_for_player", always_hide_for_player) && legacy) {
+        always_hide_for_player = GuiUtils::IniToMap<decltype(always_hide_for_player)>(legacy, Name(), "always_hide_for_player", {});
+    }
+    if (!doc.Get(Name(), "always_hide_for_party", always_hide_for_party) && legacy) {
+        always_hide_for_party = GuiUtils::IniToMap<decltype(always_hide_for_party)>(legacy, Name(), "always_hide_for_party", {});
+    }
 }
 
-void ItemDrops::SaveSettings(ToolboxIni* ini)
+void ItemDrops::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(hide_player_white);
-    SAVE_BOOL(hide_player_blue);
-    SAVE_BOOL(hide_player_purple);
-    SAVE_BOOL(hide_player_gold);
-    SAVE_BOOL(hide_player_green);
-    SAVE_BOOL(hide_party_white);
-    SAVE_BOOL(hide_party_blue);
-    SAVE_BOOL(hide_party_purple);
-    SAVE_BOOL(hide_party_gold);
-    SAVE_BOOL(hide_party_green);
-    SAVE_BOOL(track_drops);
-
-    GuiUtils::MapToIni(ini, Name(), "dont_hide_for_player", dont_hide_for_player);
-    GuiUtils::MapToIni(ini, Name(), "dont_hide_for_party", dont_hide_for_party);
-    GuiUtils::MapToIni(ini, Name(), "always_hide_for_player", always_hide_for_player);
-    GuiUtils::MapToIni(ini, Name(), "always_hide_for_party", always_hide_for_party);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+    doc.Set(Name(), "dont_hide_for_player", dont_hide_for_player);
+    doc.Set(Name(), "dont_hide_for_party", dont_hide_for_party);
+    doc.Set(Name(), "always_hide_for_player", always_hide_for_player);
+    doc.Set(Name(), "always_hide_for_party", always_hide_for_party);
 }
 
 void ItemDrops::DrawSettingsInternal()
 {
     ImGui::Text("Drop Tracking Settings");
-    ImGui::Checkbox("Drop Tracking Enabled", &track_drops);
-    ImGui::ShowHelp("This creates a CSV at DIRECTORY which contains all the information about drops you've gotten.");
+    ImGui::CheckboxWithHelp("Drop Tracking Enabled", &settings.track_drops, "This creates a CSV at DIRECTORY which contains all the information about drops you've gotten.");
     ImGui::Separator();
     ImGui::Text("Item Filter Settings");
     ImGui::NewLine();
@@ -595,19 +569,19 @@ void ItemDrops::DrawSettingsInternal()
     ImGui::TextDisabled("First column is for items you can pick up, second for items reserved for a party member");
     ImGui::Columns(2, "player_or_ally");
 
-    ImGui::Checkbox("White##player", &hide_player_white);
-    ImGui::Checkbox("Blue##player", &hide_player_blue);
-    ImGui::Checkbox("Purple##player", &hide_player_purple);
-    ImGui::Checkbox("Gold##player", &hide_player_gold);
-    ImGui::Checkbox("Green##player", &hide_player_green);
+    ImGui::Checkbox("White##player", &settings.hide_player_white);
+    ImGui::Checkbox("Blue##player", &settings.hide_player_blue);
+    ImGui::Checkbox("Purple##player", &settings.hide_player_purple);
+    ImGui::Checkbox("Gold##player", &settings.hide_player_gold);
+    ImGui::Checkbox("Green##player", &settings.hide_player_green);
 
     ImGui::NextColumn();
 
-    ImGui::Checkbox("White##party", &hide_party_white);
-    ImGui::Checkbox("Blue##party", &hide_party_blue);
-    ImGui::Checkbox("Purple##party", &hide_party_purple);
-    ImGui::Checkbox("Gold##party", &hide_party_gold);
-    ImGui::Checkbox("Green##party", &hide_party_green);
+    ImGui::Checkbox("White##party", &settings.hide_party_white);
+    ImGui::Checkbox("Blue##party", &settings.hide_party_blue);
+    ImGui::Checkbox("Purple##party", &settings.hide_party_purple);
+    ImGui::Checkbox("Gold##party", &settings.hide_party_gold);
+    ImGui::Checkbox("Green##party", &settings.hide_party_green);
 
     ImGui::EndColumns();
 
@@ -820,7 +794,7 @@ void ItemDrops::ClearDropHistory()
 
 bool ItemDrops::IsTrackingEnabled() const
 {
-    return track_drops;
+    return settings.track_drops;
 }
 
 ItemDrops::PendingDrop::PendingDrop(GW::Item* _item)

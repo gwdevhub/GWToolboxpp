@@ -14,9 +14,13 @@ public:
     [[nodiscard]] const char* Name() const override { return "Hints"; }
     [[nodiscard]] const char* SettingsName() const override { return "In-Game Hints"; }
 
+    struct Settings {
+        bool only_show_hints_once = false;
+    };
+
     void Initialize() override;
     void Update(float) override;
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
 };

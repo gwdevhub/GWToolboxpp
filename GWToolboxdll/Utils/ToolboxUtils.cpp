@@ -13,7 +13,6 @@
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Player.h>
 #include <GWCA/GameEntities/Skill.h>
-#include <GWCA/GameEntities/NPC.h>
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/EffectMgr.h>
@@ -47,6 +46,9 @@ namespace {
 
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
+    constexpr uint32_t bogus_area_info_flags = 0x5000000; // e.g. "wrong" Augury Rock is map 119, no NPCs.
+    constexpr uint32_t debug_area_info_flag = 0x80000000;
+
     bool IsInfused(const GW::Item* item)
     {
         return item && item->info_string && wcschr(item->info_string, 0xAC9);
@@ -56,12 +58,40 @@ namespace {
     {
         return GW::UI::GetFrameByLabel(L"Selector");
     }
+    struct CharSelectorChar {
+        uint32_t h0000;
+        uint32_t h0004;
+        uint32_t h0008;
+        uint32_t h000C;
+        uint32_t h0010;
+        uint32_t h0014;
+        uint32_t h0018;
+        uint32_t h001C;
+        wchar_t name[0x14];
+        // ...
+    };
+    struct CharSelectorContext {
+        uint32_t vtable;
+        uint32_t frame_id;
+        GW::Array<CharSelectorChar*> chars;
+        // ...
+    };
 
 } // namespace
 
 namespace GW {
 
     namespace Map {
+        bool HasMapDisplayInfo(const GW::AreaInfo* map_info)
+        {
+            return map_info && map_info->thumbnail_id && map_info->name_id && (map_info->x || map_info->y);
+        }
+
+        bool IsExcludedMapInfo(const GW::AreaInfo* map_info)
+        {
+            return map_info && ((map_info->flags & bogus_area_info_flags) == bogus_area_info_flags || (map_info->flags & debug_area_info_flag) != 0);
+        }
+
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out)
         {
             if (!map) return false;
@@ -92,7 +122,20 @@ namespace GW {
                 case MapID::Ravens_Point_Level_2:
                 case MapID::Ravens_Point_Level_3:
                 case MapID::Glints_Challenge_mission: // CrystalDesert
+                // Deldrimor: EotN missions with Destroyers (would otherwise show Norn/Asuran by region)
+                case MapID::A_Gate_Too_Far_Level_1:
+                case MapID::A_Gate_Too_Far_Level_2:
+                case MapID::A_Gate_Too_Far_Level_3:
+                case MapID::A_Gate_Too_Far_mission:
+                case MapID::The_Elusive_Golemancer_Level_1:
+                case MapID::The_Elusive_Golemancer_Level_2:
+                case MapID::The_Elusive_Golemancer_Level_3:
+                case MapID::The_Elusive_Golemancer_mission:
+                case MapID::Genius_Operated_Living_Enchanted_Manifestation_mission:
                     return {TitleID::Deldrimor};
+                // Lightbringer: Grand Court of Sebelkeh mission has Margonites (would otherwise show Sunspear by continent)
+                case MapID::Grand_Court_of_Sebelkeh:
+                    return {TitleID::Lightbringer};
                 // Vanguard: DepthsOfTyria dungeons in Charr territory
                 case MapID::Cathedral_of_Flames_Level_1:
                 case MapID::Cathedral_of_Flames_Level_2:
@@ -167,7 +210,7 @@ namespace GW {
             const auto p = m ? m->props : nullptr;
             return p ? &p->propArray : nullptr;
         }
-        
+
         bool IsFestivalOutpost(const GW::Constants::MapID map_id)
         {
             using namespace GW::Constants;
@@ -193,39 +236,35 @@ namespace GW {
         }
 
     } // namespace Map
+    namespace SkillbarMgr {
+        GW::Attribute* GetPlayerAttribute(GW::Constants::Attribute attribute_id)
+        {
+            const auto my_id = GW::Agents::GetControlledCharacterId();
+            PartyAttributeArray& party_attributes = GW::GetWorldContext()->attributes;
+            for (PartyAttribute& agent_attributes : party_attributes) {
+                if (agent_attributes.agent_id != my_id) continue;
+                return &agent_attributes.attribute[(uint32_t)attribute_id];
+            }
+            return 0;
+        }
+    } // namespace SkillbarMgr
     namespace LoginMgr {
         const bool IsCharSelectReady()
         {
             uint32_t ui_state = 10;
             SendUIMessage(GW::UI::UIMessage::kCheckUIState, nullptr, &ui_state);
             const auto frame = GetSelectorFrame();
-            return ui_state == 2 && frame && frame->IsVisible() && GW::UI::GetFrameContext(frame);
+            if (!(ui_state == 2 && frame && frame->IsVisible())) return false;
+            const auto ctx = (CharSelectorContext*)GW::UI::GetFrameContext(frame);
+            return ((uintptr_t)ctx > 0xFFFF) && ctx->frame_id == frame->frame_id;
         }
 
         const bool SelectCharacterToPlay(const wchar_t* name, bool play)
         {
-            if (!IsCharSelectReady()) return false;
-            struct CharSelectorChar {
-                uint32_t h0000;
-                uint32_t h0004;
-                uint32_t h0008;
-                uint32_t h000C;
-                uint32_t h0010;
-                uint32_t h0014;
-                uint32_t h0018;
-                uint32_t h001C;
-                wchar_t name[0x14];
-                // ...
-            };
-            struct CharSelectorContext {
-                uint32_t vtable;
-                uint32_t frame_id;
-                GW::Array<CharSelectorChar*> chars;
-                // ...
-            };
+            if (!(name && *name && IsCharSelectReady())) return false;
+
             const auto selector = GetSelectorFrame();
             const auto ctx = (CharSelectorContext*)GW::UI::GetFrameContext(selector);
-            if (!(name && ctx)) return false;
 
             const auto panes = GW::UI::GetChildFrame(selector, 0);
 
@@ -438,14 +477,12 @@ namespace GW {
             out.resize(wcslen(out.data()));
             return !out.empty();
         }
-        std::filesystem::path GetBuildsDir() {
+        std::filesystem::path GetBuildsDir()
+        {
             std::wstring builds_folder;
             GetPersonalDir(builds_folder);
             if (builds_folder.empty()) return L"";
-            return std::filesystem::path(builds_folder) /
-                   L"Guild Wars" / 
-                   L"Templates" /
-                   L"Skills";
+            return std::filesystem::path(builds_folder) / L"Guild Wars" / L"Templates" / L"Skills";
         }
     } // namespace MemoryMgr
 
@@ -480,6 +517,13 @@ namespace GW {
             }
             return false;
         }
+        GW::UI::Frame* GetNthParentFrame(GW::UI::Frame* frame, uint32_t n)
+        {
+            for (uint32_t i = 0; i < n && frame; i++) {
+                frame = GetParentFrame(frame);
+            }
+            return frame;
+        }
         void Screenshot()
         {
             GW::GameThread::Enqueue([] {
@@ -501,7 +545,8 @@ namespace GW {
             const auto c = GW::PlayerMgr::GetPlayerByID();
             return (c->reforged_or_dhuums_flags & 0x2) != 0;
         }
-        GW::GamePos* GetPlayerPosition() {
+        GW::GamePos* GetPlayerPosition()
+        {
             const auto player = GW::Agents::GetControlledCharacter();
             return player ? &player->pos : nullptr;
         }
@@ -795,16 +840,7 @@ namespace GW {
 
             const uint32_t target_id = custom_effect_id_base | static_cast<uint32_t>(skill_id);
 
-            // Update if this skill's custom effect already exists.
-            for (uint32_t i = 0; i < arr.m_size; i++) {
-                auto& e = arr.m_buffer[i];
-                if (e.effect_id == target_id) {
-                    e.duration = duration_seconds;
-                    e.timestamp = GW::MemoryMgr::GetSkillTimer();
-                    GW::UI::SendUIMessage(GW::UI::UIMessage::kEffectRenew, &e);
-                    return e.effect_id;
-                }
-            }
+            RemoveCustomEffect(target_id);
 
             GW::Effect new_effect{};
             new_effect.skill_id = skill_id;
@@ -1072,8 +1108,7 @@ namespace ToolboxUtils {
             return false;
         }
         for (auto& a : w->hero_info) {
-            if (a.hero_id != hero_id)
-                continue;
+            if (a.hero_id != hero_id) continue;
             switch (hero_id) {
                 case GW::Constants::HeroID::Merc1:
                 case GW::Constants::HeroID::Merc2:
@@ -1083,7 +1118,7 @@ namespace ToolboxUtils {
                 case GW::Constants::HeroID::Merc6:
                 case GW::Constants::HeroID::Merc7:
                 case GW::Constants::HeroID::Merc8:
-                    if (!(a.name && !a.name)) return false; // Unlocked, but not assigned.
+                    return (a.appearance_bitmap && !wcseq(GW::AccountMgr::GetCurrentPlayerName(), a.name)); // Unlocked, but not assigned.
             }
             return true;
         }
@@ -1276,14 +1311,14 @@ namespace ToolboxUtils {
 
                 static constexpr ctll::fixed_string stacking_pattern = L"\x2.\x10A\xA84\x10A(.{1,2})\x1\x101\x101\x1\x2\xA3E\x10A\xAA8\x10A\xAB1\x1\x1";
                 if (const auto stacking_match = ctre::match<stacking_pattern>(item_str)) {
-                    auto capture = stacking_match.get<1>().to_view();
+                    auto capture = stacking_match.template get<1>().to_view();
                     swprintf(buffer, _countof(buffer), L"\x2\xAA8\x10A\xA84\x10A%ls\x1\x101\x101\x1", capture.data());
                     original += buffer;
                 }
 
                 static constexpr ctll::fixed_string armor_pattern = L"\xA3B\x10A\xA86\x10A\xA44\x1\x101(.)\x1\x2";
                 if (auto armor_match = ctre::match<armor_pattern>(item_str)) {
-                    auto capture = armor_match.get<1>().to_view();
+                    auto capture = armor_match.template get<1>().to_view();
                     swprintf(buffer, _countof(buffer), L"\x2\x102\x2\xA86\x10A\xA44\x1\x101%ls", capture.data());
                     original += buffer;
                 }
@@ -1299,49 +1334,49 @@ namespace ToolboxUtils {
 
         // Replace "Requires 9 Divine Favor" > "q9 Divine Favor"
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\x0AA8\x10A\xAA9\x10A.\x1\x101.\x1\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107, q%d \x1\x2%c", found.at(9) - 0x100, found.at(6));
             return buffer;
         });
 
         // Replace "Requires 9 Scythe Mastery" > "q9 Scythe Mastery"
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\xAA8\x10A\xAA9\x10A\x8101.\x1\x101.\x1\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107, q%d \x1\x2\x8101%c", found.at(10) - 0x100, found.at(7));
             return buffer;
         });
 
         // "vs. Earth damage" > "Earth"
         original = TextUtils::ctre_regex_replace_with_formatter<L"[\xAAC\xAAF]\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c", found.at(2));
             return buffer;
         });
 
         // Replace "Lengthens ??? duration on foes by 33%" > "??? duration +33%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA4\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107 +33%%\x1", found.at(2));
             return buffer;
         });
 
         // Replace "Reduces ??? duration on you by 20%" > "??? duration -20%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA7\x10A.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107 -20%%\x1", found.at(2));
             return buffer;
         });
 
         // Change " (while Health is above n)" to "^n";
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA8\x10A\xABC\x10A\xA52\x1\x101.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107^%d\x1", found.at(7) - 0x100);
             return buffer;
         });
 
         // Change "Enchantments last 20% longer" to "Ench +20%"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xAA2\x101.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1353,14 +1388,14 @@ namespace ToolboxUtils {
 
         // "(Chance: 18%)" > "(18%)"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA87\x10A\xA48\x1\x101.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"\x108\x107%d%%\x1", found.at(5) - 0x100);
             return buffer;
         });
 
         // Change "Halves skill recharge of <attribute> spells" > "HSR <attribute>"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA81\x10A\xA58\x1\x10B.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1372,14 +1407,14 @@ namespace ToolboxUtils {
 
         // Change "Inscription: "Blah Blah"" to just "Blah Blah"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\x8101\x5DC5\x10A..\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c%c", found.at(3), found.at(4));
             return buffer;
         });
 
         // Change "Halves casting time of <attribute> spells" > "HCT <attribute>"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA81\x10A\xA47\x1\x10B.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(
                 buffer, _countof(buffer),
                 L"\x108\x107"
@@ -1391,7 +1426,7 @@ namespace ToolboxUtils {
 
         // Change "Piercing Dmg: 11-22" > "Piercing: 11-22"
         original = TextUtils::ctre_regex_replace_with_formatter<L"\xA89\x10A\xA4E\x1\x10B.\x1\x101.\x102.">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             swprintf(buffer, _countof(buffer), L"%c\x2\x108\x107: %d-%d\x1", found.at(5), found.at(8) - 0x100, found.at(10) - 0x100);
             return buffer;
         });
@@ -1437,7 +1472,7 @@ namespace ToolboxUtils {
 
         // Replace (while affected by a(n) to just (n)
         original = TextUtils::ctre_regex_replace_with_formatter<L"\x8101\x4D9C\x10A.\x1">(original, [](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             return std::wstring(1, found.at(3));
         });
 
@@ -1469,7 +1504,7 @@ namespace ToolboxUtils {
 
         // Combine Attribute + 3, Attribute + 1 to Attribute +3 +1 (e.g. headpiece)
         original = TextUtils::ctre_regex_replace_with_formatter<L".\x10A\xA84\x10A.\x1\x101.\x1\x2\x102\x2.\x10A\xA84\x10A.\x1\x101.\x1">(original, [&buffer](auto& match) -> std::wstring {
-            auto found = match.get<0>().to_view();
+            auto found = match.template get<0>().to_view();
             if (found[4] != found[16]) {
                 return std::wstring(found); // Different attributes, return unchanged
             }

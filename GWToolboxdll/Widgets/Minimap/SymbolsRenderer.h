@@ -2,6 +2,8 @@
 
 #include <D3DContainers.h>
 
+class ToolboxModule;
+
 class SymbolsRenderer : public D3DVertexBuffer {
     friend class QuestModule;
 
@@ -12,16 +14,15 @@ public:
     void Render(IDirect3DDevice9* device) override { Render(device, 1.f); };
 
     void DrawSettings();
-    void LoadSettings(const ToolboxIni* ini, const char* section);
-    void SaveSettings(ToolboxIni* ini, const char* section) const;
+    void RegisterSettings(ToolboxModule* module);
 
 private:
     void Initialize(IDirect3DDevice9* device) override;
-    Color color_quest = 0;
-    Color color_quest_line = 0;
-    Color color_other_quests = 0;
-    Color color_north = 0;
-    Color color_modifier = 0;
+    Color color_quest = 0xFF22EF22;
+    Color color_quest_line = 0xFF22EF22;
+    Color color_other_quests = 0x00006400;
+    Color color_north = 0xFFFF8000;
+    Color color_modifier = 0x001E1E1E;
 
     const DWORD star_ntriangles = 16;
     DWORD star_offset = 0;

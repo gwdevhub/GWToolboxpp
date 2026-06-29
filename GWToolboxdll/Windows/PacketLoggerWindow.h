@@ -18,13 +18,27 @@ public:
     [[nodiscard]] const char* Name() const override { return "Packet Logger"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BOX; };
 
+    enum TimestampType : int {
+        TimestampType_None,
+        TimestampType_Local,
+        TimestampType_Instance,
+    };
+
+    struct Settings {
+        int timestamp_type = TimestampType_None;
+        bool timestamp_show_hours = true;
+        bool timestamp_show_minutes = true;
+        bool timestamp_show_seconds = true;
+        bool timestamp_show_milliseconds = true;
+    };
+
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
 
     void Initialize() override;
     void Terminate() override;
-    void SaveSettings(ToolboxIni* ini) override;
-    void LoadSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void Update(float delta) override;
     static void OnMessagePacket(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);
     void Enable();
@@ -38,12 +52,6 @@ public:
     std::string PrefixTimestamp(std::string message) const;
 
 private:
-    enum TimestampType : int {
-        TimestampType_None,
-        TimestampType_Local,
-        TimestampType_Instance,
-    };
-
     std::unordered_map<std::wstring, std::wstring*> message_log{};
     std::wstring* last_message_decoded = nullptr;
     uint32_t identifiers[512] = {0}; // Presume 512 is big enough for header size...
@@ -61,10 +69,4 @@ private:
     GW::HookEntry MessageCore_Entry;
     GW::HookEntry MessageLocal_Entry;
     GW::HookEntry NpcGeneralStats_Entry;
-
-    int timestamp_type = TimestampType_None;
-    bool timestamp_show_hours = true;
-    bool timestamp_show_minutes = true;
-    bool timestamp_show_seconds = true;
-    bool timestamp_show_milliseconds = true;
 };

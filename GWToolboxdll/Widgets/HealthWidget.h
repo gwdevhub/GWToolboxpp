@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ToolboxWidget.h>
+#include <Utils/FontLoader.h>
 
 class HealthWidget : public ToolboxWidget {
     HealthWidget()
@@ -28,8 +29,27 @@ public:
     [[nodiscard]] const char* Name() const override { return "Health"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_PERCENTAGE; }
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    struct Settings {
+        bool click_to_print_health = false;
+        bool hide_in_outpost = false;
+        float font_size_header = static_cast<float>(FontLoader::FontSize::header1);
+        float font_size_perc_value = static_cast<float>(FontLoader::FontSize::widget_small);
+        float font_size_abs_value = static_cast<float>(FontLoader::FontSize::widget_label);
+    };
+
+    struct ThresholdSettings {
+        bool active = true;
+        std::string name;
+        int modelId = 0;
+        int skillId = 0;
+        int mapId = 0;
+        int value = 0;
+        Colors::SettingColor color = 0xFFFFFFFF;
+    };
+
+    void Initialize() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
 
     // Draw user interface. Will be called every frame if the element is visible
@@ -51,7 +71,6 @@ private:
 
         bool DrawHeader();
         bool DrawSettings(Operation& op);
-        void SaveSettings(ToolboxIni* ini, const char* section) const;
 
         const unsigned int ui_id = 0;
         size_t index = 0;

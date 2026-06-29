@@ -5,9 +5,7 @@
 #include <ToolboxWidget.h>
 
 #include "Defines.h"
-#include "gwtoolboxdll_export.h"
 
-#include <Utils/GuiUtils.h>
 #include <MinimapPlugin.h>
 
 #include <Widgets/Minimap/AgentRenderer.h>
@@ -56,8 +54,18 @@ public:
     // Static rendering with explicit context (for multiple minimaps)
     static void Render(IDirect3DDevice9* device, const MinimapRenderContext& context);
 
+    // True only while the Minimap module is enabled; callers reusing the pipeline (e.g. the mission map) must
+    // check this first, as the render resources don't exist while the module is off.
+    static bool IsEnabled();
+
     // Setup projection matrix for a given context
     static void RenderSetupProjection(IDirect3DDevice9* device, const MinimapRenderContext& context);
+
+    // Current runtime render context (colours etc.) for surfaces reusing the pipeline
+    static const MinimapRenderContext& GetRenderContext();
+
+    // Target the nearest agent to a game-world position
+    static void SelectTarget(GW::Vec2f pos);
 
     bool FlagHeros(LPARAM lParam);
     bool OnMouseDown(UINT Message, WPARAM wParam, LPARAM lParam);
@@ -68,8 +76,8 @@ public:
     static void CHAT_CMD_FUNC(OnFlagHeroCmd);
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
 
     [[nodiscard]] float GetMapRotation() const;
@@ -99,7 +107,6 @@ private:
     [[nodiscard]] bool IsInside(int x, int y) const;
     // returns true if the map is visible, valid, not loading, etc
 
-    static void SelectTarget(GW::Vec2f pos);
     static size_t GetPlayerHeroes(const GW::PartyInfo* party, std::vector<GW::AgentID>& _player_heroes, bool* has_flags = nullptr);
 
     static void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage /*msgid*/, void* /*wParam*/, void*);

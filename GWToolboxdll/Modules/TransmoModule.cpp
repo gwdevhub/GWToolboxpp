@@ -503,8 +503,9 @@ void TransmoModule::DrawSettingsInternal()
         ImGui::TableSetupColumn("##del",         ImGuiTableColumnFlags_WidthFixed, 30.f);
         ImGui::TableHeadersRow();
 
+        size_t i = 0;
         for (auto* entry : npc_transmo_list) {
-            ImGui::PushID(entry);
+            ImGui::PushID(i++);
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::SetNextItemWidth(-1);
@@ -560,22 +561,41 @@ void TransmoModule::DrawSettingsInternal()
     });
 }
 
-void TransmoModule::LoadSettings(ToolboxIni* ini)
+void TransmoModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    // Load custom transmo NPC list; only override defaults if we've previously saved settings
-    const auto transmo_section = "Transmo NPC List";
-    if (ini->GetValue(transmo_section, "_saved", nullptr) != nullptr) {
+    ToolboxModule::LoadSettings(doc, legacy);
+    std::vector<TransmoEntrySetting> stored;
+    if (doc.Get(Name(), "npc_transmo_list", stored)) {
         for (auto* e : npc_transmo_list) {
             delete e;
         }
         npc_transmo_list.clear();
-        ToolboxIni::TNamesDepend transmo_keys;
-        ini->GetAllKeys(transmo_section, transmo_keys);
+        for (const auto& entry : stored) {
+            auto* e = new TransmoEntry;
+            snprintf(e->name, sizeof(e->name), "%s", entry.name.c_str());
+            e->npc_id = entry.npc_id;
+            e->scale = entry.scale;
+            e->model_file_id = entry.model_file_id;
+            e->model_file_data = entry.model_file_data;
+            e->flags = entry.flags;
+            npc_transmo_list.push_back(e);
+        }
+        return;
+    }
+    // Legacy ini list; only override defaults if we've previously saved settings
+    const auto transmo_section = "Transmo NPC List";
+    if (legacy && legacy->GetValue(transmo_section, "_saved", nullptr) != nullptr) {
+        for (auto* e : npc_transmo_list) {
+            delete e;
+        }
+        npc_transmo_list.clear();
+        TNamesDepend transmo_keys;
+        legacy->GetAllKeys(transmo_section, transmo_keys);
         for (const auto& key : transmo_keys) {
             if (!key.pItem[0] || strcmp(key.pItem, "_saved") == 0) {
                 continue;
             }
-            const std::string val = ini->GetValue(transmo_section, key.pItem, "");
+            const std::string val = legacy->GetValue(transmo_section, key.pItem, "");
             if (val.empty()) {
                 continue;
             }
@@ -600,15 +620,13 @@ void TransmoModule::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void TransmoModule::SaveSettings(ToolboxIni* ini)
+void TransmoModule::SaveSettings(SettingsDoc& doc)
 {
-    const auto transmo_section = "Transmo NPC List";
-    ini->Delete(transmo_section, nullptr);
-    ini->SetValue(transmo_section, "_saved", "1");
-    for (const auto& [index, entry] : npc_transmo_list | std::views::enumerate) {
-        const auto key = std::format("{}:{}", index, entry->name);
-        const auto val = std::format("{},{},{},{},{}", entry->npc_id, entry->scale,
-                                     entry->model_file_id, entry->model_file_data, entry->flags);
-        ini->SetValue(transmo_section, key.c_str(), val.c_str());
+    ToolboxModule::SaveSettings(doc);
+    std::vector<TransmoEntrySetting> stored;
+    stored.reserve(npc_transmo_list.size());
+    for (const auto* entry : npc_transmo_list) {
+        stored.push_back({entry->name, entry->npc_id, entry->scale, entry->model_file_id, entry->model_file_data, entry->flags});
     }
+    doc.Set(Name(), "npc_transmo_list", stored);
 }

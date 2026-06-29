@@ -1,48 +1,55 @@
 #include "stdafx.h"
 
+#include <bcrypt.h>
+#pragma comment(lib, "bcrypt.lib")
+
+#include <Utf8.h>
+
 #include <GWCA/GWCA.h>
 #include <GWCA/GWCAVersion.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Utilities/Hooker.h>
 
-#include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/PreGameContext.h>
 
 #include <GWCA/GameEntities/Map.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/RenderMgr.h>
-#include <GWCA/Managers/EventMgr.h>
 
+#include <Defender.h>
 #include <Defines.h>
-#include <Utils/GuiUtils.h>
 #include <GWToolbox.h>
 #include <Logger.h>
+#include <Timer.h>
+#include <Utils/GameWorldCompositor.h>
+#include <Utils/GuiUtils.h>
+#include <Utils/TeamBuild.h>
 
-#include <Modules/Resources.h>
 #include <Modules/CameraUnlockModule.h>
 #include <Modules/ChatCommands.h>
-#include <Modules/TransmoModule.h>
-#include <Modules/ToolboxTheme.h>
-#include <Modules/ToolboxSettings.h>
+#include <Modules/ChatSettings.h>
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
-#include <Modules/ChatSettings.h>
 #include <Modules/GameSettings.h>
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/ItemDescriptionHandler.h>
+#include <Modules/Resources.h>
+#include <Modules/ToolboxSettings.h>
+#include <Modules/ToolboxTheme.h>
+#include <Modules/TransmoModule.h>
 #include <Modules/Updater.h>
 #include <Windows/SettingsWindow.h>
 
-#include <Windows/MainWindow.h>
 #include <Widgets/Minimap/Minimap.h>
-#include <hidusage.h>
+#include <Windows/MainWindow.h>
 
-#include "Utils/FontLoader.h"
-#include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
+#include "Utils/FontLoader.h"
 
 #include <EmbeddedResource.h>
 #include "resource.h"
@@ -67,9 +74,28 @@ namespace {
 
     bool profiling_enabled = false;
 
+    utf8::string GetImguiIniPath()
+    {
+        const auto path = Resources::GetSettingFile(L"interface.ini");
+        std::error_code ec;
+        if (!std::filesystem::exists(path, ec)) {
+            // Carry the window layout over from the pre-configs/default location
+            const auto legacy = Resources::GetLegacySettingFile(L"interface.ini");
+            if (std::filesystem::exists(legacy, ec)) {
+                Resources::EnsureFolderExists(path.parent_path());
+                std::filesystem::copy_file(legacy, path, ec);
+            }
+        }
+        return Unicode16ToUtf8(path.c_str());
+    }
+
     uint64_t QpcToMicroseconds(LONGLONG ticks)
     {
-        static LARGE_INTEGER freq = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
+        static LARGE_INTEGER freq = [] {
+            LARGE_INTEGER f;
+            QueryPerformanceFrequency(&f);
+            return f;
+        }();
         return static_cast<uint64_t>(ticks * 1000000 / freq.QuadPart);
     }
     std::recursive_mutex module_management_mutex;
@@ -90,11 +116,9 @@ namespace {
 
     bool HookUiRoot()
     {
-        if (OnUiRoot_UICallback_Func)
-            return true;
+        if (OnUiRoot_UICallback_Func) return true;
         const auto frame = GW::UI::GetParentFrame(GW::UI::GetFrameByLabel(L"Game"));
-        if (!(frame && frame->frame_callbacks.size()))
-            return false;
+        if (!(frame && frame->frame_callbacks.size())) return false;
         OnUiRoot_UICallback_Func = frame->frame_callbacks[0].callback;
         GW::Hook::CreateHook((void**)&OnUiRoot_UICallback_Func, OnUiRoot_UICallback, (void**)&OnUiRoot_UICallback_Ret);
         GW::Hook::EnableHooks(OnUiRoot_UICallback_Func);
@@ -157,11 +181,11 @@ namespace {
 
         io.MouseDrawCursor = false;
         io.IniFilename = imgui_inifile.bytes;
-        //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
         io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
         io.ConfigNavCaptureKeyboard = false;
 
-        //ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
+        // ImGui_ImplDX9_Init(GW::MemoryMgr().GetGWWindowHandle(), device);
         ImGui_ImplDX9_Init(device);
         ImGui_ImplWin32_Init(GW::MemoryMgr::GetGWWindowHandle());
 
@@ -171,16 +195,13 @@ namespace {
 
         imgui_initialized = true;
 
-        Resources::EnsureFileExists(
-            Resources::GetPath(L"Font.ttf"),
-            "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Font.ttf",
-            [](const bool success, const std::wstring& error) {
-                FontLoader::LoadFonts();
-                if (!success) {
-                    Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
-                    GWToolbox::SignalTerminate();
-                }
-            });
+        Resources::EnsureFileExists(Resources::GetPath(L"Font.ttf"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Font.ttf", [](const bool success, const std::wstring& error) {
+            FontLoader::LoadFonts();
+            if (!success) {
+                Log::ErrorW(L"Cannot download font, please download it manually!\n%s", error.c_str());
+                GWToolbox::SignalTerminate();
+            }
+        });
 
         return true;
     }
@@ -218,16 +239,7 @@ namespace {
     bool mouse_moved_whilst_right_clicking = false;
     LPARAM right_click_lparam;
 
-    enum class GWToolboxState {
-        Initialising,
-        UpdateInitialising,
-        DrawInitialising,
-        Initialised,
-        DrawTerminating,
-        Terminating,
-        Terminated,
-        Disabled
-    };
+    enum class GWToolboxState { Initialising, UpdateInitialising, DrawInitialising, Initialised, DrawTerminating, Terminating, Terminated, Disabled };
 
     auto gwtoolbox_state = GWToolboxState::Terminated;
     bool gwtoolbox_disabled = false;
@@ -245,53 +257,76 @@ namespace {
         });
     }
 
+    // Lowercase hex sha256 of a byte buffer; empty on failure.
+    std::string Sha256Hex(const void* data, const size_t size)
+    {
+        unsigned char hash[32];
+        if (BCryptHash(BCRYPT_SHA256_ALG_HANDLE, nullptr, 0, static_cast<PUCHAR>(const_cast<void*>(data)),
+                       static_cast<ULONG>(size), hash, sizeof(hash)) != 0)
+            return {};
+        char hex[2 * sizeof(hash) + 1];
+        for (size_t i = 0; i < sizeof(hash); ++i)
+            sprintf_s(hex + i * 2, 3, "%02x", hash[i]);
+        return hex;
+    }
+
+    std::string Sha256HexFile(const std::filesystem::path& path)
+    {
+        std::ifstream file(path, std::ios::binary);
+        if (!file) return {};
+        const std::vector<char> bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        return Sha256Hex(bytes.data(), bytes.size());
+    }
+
     bool IsValidGWCADll(const std::filesystem::path& dll_path_str, [[maybe_unused]] const EmbeddedResource& resource_dll)
     {
         if (!std::filesystem::exists(dll_path_str)) return false;
 
-        // Check file size if we have a resource module to compare against
-        (resource_dll);
 #ifndef _DEBUG
-        if (!resource_dll.data())
-            return false;
-        std::error_code ec;
-        const auto file_size = std::filesystem::file_size(dll_path_str, ec);
-        if (ec || file_size != resource_dll.size())
-            return false;
-#endif
-
+        // The on-disk gwca.dll must be byte-for-byte the one embedded in this build.
+        if (!resource_dll.data()) return false;
+        const std::string expected = Sha256Hex(resource_dll.data(), resource_dll.size());
+        return !expected.empty() && Sha256HexFile(dll_path_str) == expected;
+#else
+        // Debug builds have no embedded resource; fall back to a version-number check.
         DWORD handle;
         DWORD version_info_size = GetFileVersionInfoSizeW(dll_path_str.c_str(), &handle);
-        if (!version_info_size)
-            return false;
+        if (!version_info_size) return false;
         std::vector<BYTE> version_data(version_info_size);
-        if (!GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data()))
-            return false;
+        if (!GetFileVersionInfoW(dll_path_str.c_str(), handle, version_info_size, version_data.data())) return false;
         VS_FIXEDFILEINFO* file_info;
         UINT len;
-        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len))
-            return false;
+        if (!VerQueryValueA(version_data.data(), "\\", (LPVOID*)&file_info, &len)) return false;
         WORD file_version_major = HIWORD(file_info->dwFileVersionMS);
         WORD file_version_minor = LOWORD(file_info->dwFileVersionMS);
         WORD file_version_patch = HIWORD(file_info->dwFileVersionLS);
-        [[maybe_unused]] WORD file_version_build = LOWORD(file_info->dwFileVersionLS);
-        return (file_version_major == GWCA::VersionMajor
-                && file_version_minor == GWCA::VersionMinor
-                && file_version_patch == GWCA::VersionPatch);
+        return (file_version_major == GWCA::VersionMajor && file_version_minor == GWCA::VersionMinor && file_version_patch == GWCA::VersionPatch);
+#endif
     }
 
     void TerminateExistingGWCADll(HMODULE existing_gwca)
     {
-        typedef void(__cdecl* GWFnVoid)();
+        typedef void(__cdecl * GWFnVoid)();
         const auto disable_hooks = (GWFnVoid)GetProcAddress(existing_gwca, "?DisableHooks@GW@@YAXXZ");
         const auto terminate = (GWFnVoid)GetProcAddress(existing_gwca, "?Terminate@GW@@YAXXZ");
+        // The old gwca.dll's hooks may point into a previously-unloaded toolbox dll;
+        // calling DisableHooks/Terminate can therefore crash. Swallow it via SEH
+        // and continue to FreeLibrary.
         if (disable_hooks) {
             Log::Log("[LoadGWCADll] Calling DisableHooks on old gwca.dll");
-            disable_hooks();
+            __try {
+                disable_hooks();
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                Log::Log("[LoadGWCADll] DisableHooks on old gwca.dll crashed; continuing");
+            }
         }
         if (terminate) {
             Log::Log("[LoadGWCADll] Calling Terminate on old gwca.dll");
-            terminate();
+            __try {
+                terminate();
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                Log::Log("[LoadGWCADll] Terminate on old gwca.dll crashed; continuing");
+            }
         }
         Sleep(160);
         // Unload: may need multiple calls if ref count > 1
@@ -305,8 +340,7 @@ namespace {
 
     HMODULE LoadGWCADll(HMODULE resource_module)
     {
-        if (gwcamodule)
-            return gwcamodule;
+        if (gwcamodule) return gwcamodule;
         const auto gwca_dll_path = Resources::GetPath("gwca.dll");
         const auto dll_path_str = gwca_dll_path.wstring();
 
@@ -327,18 +361,36 @@ namespace {
             }
         }
 
+        // Defender returns these from CreateFile/LoadLibrary when it blocks or quarantines a file.
+        const auto warn_if_antivirus = [](const DWORD err) {
+            if (err != ERROR_VIRUS_INFECTED && err != ERROR_VIRUS_DELETED) return;
+            std::wstring message =
+                L"Windows Defender (or another anti-virus) blocked gwca.dll, which GWToolbox needs to run.\n\n"
+                L"Add an exclusion for your GWToolbox folder in Windows Security and re-launch.";
+            std::wstring detail;
+            if (FindRecentDefenderBlock(L"gwca.dll", 15, detail))
+                message += L"\n\nWindows Defender reported:\n" + detail;
+            ShowTroubleshootingError(message, L"GWToolbox", Troubleshooting::BlockedFiles, MB_ICONERROR | MB_TOPMOST);
+        };
+
         if (!IsValidGWCADll(gwca_dll_path, resource)) {
             std::wstring err;
-            Resources::ResourceToFile(IDR_GWCA_DLL, gwca_dll_path,err);
-        }
-        if (!IsValidGWCADll(gwca_dll_path, resource)) {
-            Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
-            return nullptr;
+            if (!Resources::ResourceToFile(IDR_GWCA_DLL, gwca_dll_path, err)) {
+                const DWORD code = GetLastError();
+                Log::Log("[LoadGWCADll] ResourceToFile fail: %ls (%lu)", err.c_str(), code);
+                warn_if_antivirus(code);
+            }
+            if (!IsValidGWCADll(gwca_dll_path, resource)) {
+                Log::Log("[LoadGWCADll] resource fail, GWCA not valid after replacing");
+                return nullptr;
+            }
         }
 
         gwcamodule = LoadLibraryW(gwca_dll_path.wstring().c_str());
         if (!gwcamodule) {
-            Log::Log("[LoadGWCADll] LoadLibraryW fail, %d", GetLastError());
+            const DWORD code = GetLastError();
+            Log::Log("[LoadGWCADll] LoadLibraryW fail, %lu", code);
+            warn_if_antivirus(code);
             return nullptr;
         }
         Log::Log("[LoadGWCADll] success, module ptr %p", gwcamodule);
@@ -359,12 +411,8 @@ namespace {
             // Device is lost or not ready - skip all rendering
             return false;
         }
-        return !gwtoolbox_disabled
-               && !GW::GetPreGameContext()
-               && !GW::Map::GetIsInCinematic()
-               && !IsIconic(GW::MemoryMgr::GetGWWindowHandle())
-               && (!ToolboxSettings::hide_on_loading_screen || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading)
-               && FontLoader::FontsLoaded();
+        return !gwtoolbox_disabled && !GW::GetPreGameContext() && !GW::Map::GetIsInCinematic() && !IsIconic(GW::MemoryMgr::GetGWWindowHandle()) &&
+               (!ToolboxSettings::hide_on_loading_screen || GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading) && FontLoader::FontsLoaded();
     }
 
     bool ToggleTBModule(ToolboxModule& m, std::vector<ToolboxModule*>& vec, const bool enable)
@@ -375,7 +423,7 @@ namespace {
             if (enable) {
                 return true;
             }
-            m.SaveSettings(GWToolbox::OpenSettingsFile());
+            m.SaveSettings(*GWToolbox::GetSettingsDoc());
             modules_terminating.push_back(&m);
             m.SignalTerminate();
             vec.erase(found);
@@ -391,9 +439,16 @@ namespace {
         }
         vec.push_back(&m);
         Log::Log("ToggleTBModule: Initializing %s...", m.Name());
+        const auto init_timer = TIMER_INIT();
         m.Initialize();
-        m.LoadSettings(GWToolbox::OpenSettingsFile());
+        const auto initialize_ms = TIMER_DIFF(init_timer);
+        const auto settings_timer = TIMER_INIT();
+        m.LoadSettings(*GWToolbox::GetSettingsDoc(), GWToolbox::OpenSettingsFile());
+        const auto load_settings_ms = TIMER_DIFF(settings_timer);
         Log::Log("ToggleTBModule: Initialised %s !!", m.Name());
+        if (profiling_enabled) // [perf-diag] slow-module-startup timing, gated on the profiling toggle
+            Log::Log("[perf] %s startup: Initialize %ld ms, LoadSettings %ld ms", m.Name(),
+                     (long)initialize_ms, (long)load_settings_ms);
         ReorderModules(vec);
         return true; // Added successfully
     }
@@ -417,10 +472,16 @@ namespace {
         windows_enabled.clear();
         other_modules_enabled.clear();
         for (auto module : modules_enabled) {
-            if (module->IsUIElement()) ui_elements_enabled.push_back(static_cast<ToolboxUIElement*>(module));
-            if (module->IsWidget()) widgets_enabled.push_back(static_cast<ToolboxWidget*>(module));
-            else if (module->IsWindow()) windows_enabled.push_back(static_cast<ToolboxWindow*>(module));
-            else other_modules_enabled.push_back(module);
+            if (module->IsWidget()) {
+                widgets_enabled.push_back(static_cast<ToolboxWidget*>(module));
+                ui_elements_enabled.push_back(static_cast<ToolboxUIElement*>(module));
+            }
+            else if (module->IsWindow()) {
+                windows_enabled.push_back(static_cast<ToolboxWindow*>(module));
+                ui_elements_enabled.push_back(static_cast<ToolboxUIElement*>(module));
+            }
+            else
+                other_modules_enabled.push_back(module);
         }
         minimap_enabled = GWToolbox::IsModuleEnabled(&Minimap::Instance());
     }
@@ -463,9 +524,8 @@ namespace {
 
         // === Send events to ImGui ===
 
-        const bool skip_mouse_capture = right_mouse_down || /* GW::UI::GetIsWorldMapShowing() || */GW::Map::GetIsInCinematic();
-        if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture)
-            return TRUE;
+        const bool skip_mouse_capture = right_mouse_down || /* GW::UI::GetIsWorldMapShowing() || */ GW::Map::GetIsInCinematic();
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, Message, wParam, lParam) && !skip_mouse_capture) return TRUE;
 
         // === Send events to toolbox ===
 
@@ -479,8 +539,7 @@ namespace {
         switch (Message) {
             case WM_MOUSELEAVE:
             case WM_NCMOUSELEAVE:
-                if (GetCapture() == nullptr && ImGui::IsMouseDown(ImGuiMouseButton_Left))
-                    SetCapture(hWnd);
+                if (GetCapture() == nullptr && ImGui::IsMouseDown(ImGuiMouseButton_Left)) SetCapture(hWnd);
                 break;
             // Send button up mouse events to everything, to avoid being stuck on mouse-down
             case WM_INPUT: {
@@ -499,8 +558,7 @@ namespace {
                 for (const auto m : tb.GetAllModules()) {
                     m->WndProc(Message, wParam, lParam);
                 }
-            }
-            break;
+            } break;
 
             // Other mouse events:
             // - If right mouse down, leave it to gw
@@ -528,9 +586,9 @@ namespace {
                     return true;
                 }
             }
-                //if (!skip_mouse_capture) {
+            // if (!skip_mouse_capture) {
 
-                //}
+            //}
             break;
 
             // keyboard messages
@@ -560,22 +618,22 @@ namespace {
                 }
             case WM_ACTIVATE:
                 // send to toolbox modules and plugins
-            {
-                bool captured = false;
-                for (const auto m : tb.GetAllModules()) {
-                    if (m->WndProc(Message, wParam, lParam)) {
-                        captured = true;
+                {
+                    bool captured = false;
+                    for (const auto m : tb.GetAllModules()) {
+                        if (m->WndProc(Message, wParam, lParam)) {
+                            captured = true;
+                        }
+                    }
+                    if (captured) {
+                        return true;
                     }
                 }
-                if (captured) {
-                    return true;
-                }
-            }
                 // note: capturing those events would prevent typing if you have a hotkey assigned to normal letters.
                 // We may want to not send events to toolbox if the player is typing in-game
                 // Otherwise, we may want to capture events.
                 // For that, we may want to only capture *successfull* hotkey activations.
-            break;
+                break;
 
             case WM_SIZE:
                 // ImGui doesn't need this, it reads the viewport size directly
@@ -637,7 +695,7 @@ namespace {
         Log::Log("Installed input event handler, oldwndproc = 0x%X\n", OldWndProc);
 
         // NB: Inputs are being listened to in reforged
-        //DEBUG_ASSERT(RegisterRawInputs(true));
+        // DEBUG_ASSERT(RegisterRawInputs(true));
 
         event_handler_attached = true;
         return true;
@@ -650,7 +708,7 @@ namespace {
         }
         Log::Log("Restoring input hook\n");
         // NB: Don't unregister the raw input - Guild Wars needs it
-        //DEBUG_ASSERT(RegisterRawInputs(false));
+        // DEBUG_ASSERT(RegisterRawInputs(false));
 
         SetWindowLongPtr(gw_window_handle, GWL_WNDPROC, reinterpret_cast<LONG>(OldWndProc));
         event_handler_attached = false;
@@ -661,25 +719,22 @@ namespace {
     {
         switch (dliNotify) {
             case dliNotePreLoadLibrary: {
-                if (_stricmp(pdli->szDll, "gwca.dll") != 0)
-                    break;
+                if (_stricmp(pdli->szDll, "gwca.dll") != 0) break;
                 const auto loaded = LoadGWCADll(dllmodule);
                 ASSERT(loaded);
                 return (FARPROC)loaded;
-            }
-            break;
+            } break;
             case dliFailGetProc: {
                 if (_stricmp(pdli->szDll, "gwca.dll") != 0) break;
                 ASSERT(pdli && *(pdli->dlp.szProcName));
                 Log::Log("Something is trying to access %ls, but failed", pdli->dlp.szProcName);
                 ASSERT(false && "Failed to find a valid proc address in GWCA. Ensure you're running the correct version, or delete gwca.dll in your toolbox folder!");
-            }
-            break;
+            } break;
                 // Add other sliNotify cases for debugging if you need to later
         }
         return nullptr;
     }
-}
+} // namespace
 
 extern const PfnDliHook __pfnDliFailureHook2 = CustomDliHook;
 extern const PfnDliHook __pfnDliNotifyHook2 = CustomDliHook;
@@ -714,19 +769,26 @@ void GWToolbox::SetProfilingEnabled(bool enabled)
     profiling_enabled = enabled;
 }
 
+bool GWToolbox::IsProfilingEnabled()
+{
+    return profiling_enabled;
+}
+
 bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
 {
     const auto m = GW::Map::GetMapInfo(map_id);
     return m && (m->GetIsPvP() || m->GetIsGuildHall());
 }
 
-bool GWToolbox::IsInitialized() { return gwtoolbox_state == GWToolboxState::Initialised; }
+bool GWToolbox::IsInitialized()
+{
+    return gwtoolbox_state == GWToolboxState::Initialised;
+}
 
 bool GWToolbox::ToggleModule(ToolboxModule& m, const bool enable)
 {
     std::lock_guard lock(module_management_mutex);
-    if (IsModuleEnabled(&m) == enable)
-        return enable;
+    if (IsModuleEnabled(&m) == enable) return enable;
     const bool added = ToggleTBModule(m, modules_enabled, enable);
     UpdateEnabledWidgetVectors(&m, added);
     return added;
@@ -747,11 +809,11 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
             Sleep(100);
 
             // Feel free to uncomment to get this behavior for testing, but don't commit.
-            //#ifdef _DEBUG
+            // #ifdef _DEBUG
             //        if (GetAsyncKeyState(VK_END) & 1) {
             //            GWToolbox::Instance().StartSelfDestruct();
             //        }
-            //#endif
+            // #endif
         }
 
         // @Remark:
@@ -786,8 +848,7 @@ void GWToolbox::Initialize(LPVOID module)
     if (module) {
         dllmodule = static_cast<HMODULE>(module);
     }
-    if (gwtoolbox_state != GWToolboxState::Terminated)
-        return;
+    if (gwtoolbox_state != GWToolboxState::Terminated) return;
     gwtoolbox_state = GWToolboxState::Initialising;
 
     Log::InitializeLog();
@@ -812,20 +873,25 @@ void GWToolbox::Initialize(LPVOID module)
 std::filesystem::path GWToolbox::LoadSettings()
 {
     const auto ini = OpenSettingsFile();
-    ToolboxSettings::Instance().LoadSettings(ini);
+    const auto doc = GetSettingsDoc();
+    // Reset the flag so nested OpenSettingsFile() calls (via ToggleTBModule) don't
+    // free and reallocate the ini we just loaded, causing a use-after-free.
+    settings_folder_changed = false;
+    ToolboxSettings::Instance().LoadSettings(*doc, ini);
     ToolboxSettings::LoadModules(ini);
     if (!ini->location_on_disk.empty()) {
+        // Loaded sequentially on purpose, not threaded: a fixed load order keeps config loading deterministic, so a shared settings folder always reproduces the same behaviour and bugs aren't order-dependent. The ~100ms cost is negligible; revisit only if it ever causes noticeable lag.
         for (const auto m : modules_enabled) {
-            m->LoadSettings(ini);
+            m->LoadSettings(*doc, ini);
         }
         for (const auto m : widgets_enabled) {
-            m->LoadSettings(ini);
+            m->LoadSettings(*doc, ini);
         }
         for (const auto m : windows_enabled) {
-            m->LoadSettings(ini);
+            m->LoadSettings(*doc, ini);
         }
     }
-    return ini->location_on_disk;
+    return doc->location_on_disk;
 }
 
 bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
@@ -833,7 +899,7 @@ bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
     static auto last_path = std::filesystem::path{};
     if (last_path != path) {
         if (Resources::SetSettingsFolder(path)) {
-            imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
+            imgui_inifile = GetImguiIniPath();
             settings_folder_changed = true;
             imgui_inifile_changed = true;
             last_path = path;
@@ -854,8 +920,8 @@ bool GWToolbox::IsModuleEnabled(const char* name)
 {
     std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
     return name && std::ranges::find_if(modules_enabled, [name](ToolboxModule* m) {
-        return strcmp(m->Name(), name) == 0;
-    }) != modules_enabled.end();
+                       return strcmp(m->Name(), name) == 0;
+                   }) != modules_enabled.end();
 }
 
 bool GWToolbox::SettingsFolderChanged()
@@ -863,52 +929,85 @@ bool GWToolbox::SettingsFolderChanged()
     return settings_folder_changed;
 }
 
-ToolboxIni* GWToolbox::OpenSettingsFile()
+ToolboxIni* GWToolbox::OpenSettingsFile(bool fresh)
 {
     static ToolboxIni* inifile = nullptr;
-    const auto full_path = Resources::GetSettingFile(GWTOOLBOX_INI_FILENAME);
-    if (!SettingsFolderChanged() && inifile) {
+    const auto full_path = Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME);
+    if (!SettingsFolderChanged() && inifile && !fresh) {
         return inifile;
     }
     auto tmp = new ToolboxIni(false, false, false);
     ASSERT(tmp->LoadIfExists(full_path) == SI_OK);
     tmp->location_on_disk = full_path;
+    if (inifile) delete inifile;
     inifile = tmp;
     return inifile;
+}
+
+SettingsDoc* GWToolbox::GetSettingsDoc(bool fresh)
+{
+    static SettingsDoc* doc = nullptr;
+    const auto modules_path = Resources::GetSettingFile(GWTOOLBOX_MODULES_FOLDERNAME);
+    if (!SettingsFolderChanged() && doc && !fresh) {
+        return doc;
+    }
+    auto tmp = new SettingsDoc();
+    tmp->LoadFolder(modules_path);
+    if (tmp->Empty()) {
+        // One-time seed: pre-split installs kept all sections in a single GWToolbox.json
+        auto seed_path = Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME);
+        std::error_code ec;
+        if (!std::filesystem::exists(seed_path, ec)) {
+            seed_path = Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME);
+        }
+        if (std::filesystem::exists(seed_path, ec)) {
+            tmp->LoadFile(seed_path);
+            tmp->location_on_disk = modules_path;
+        }
+    }
+    if (doc) delete doc;
+    doc = tmp;
+    return doc;
 }
 
 std::filesystem::path GWToolbox::SaveSettings()
 {
     const auto ini = OpenSettingsFile();
+    const auto doc = GetSettingsDoc(true);
     for (const auto m : modules_enabled) {
-        m->SaveSettings(ini);
+        m->SaveSettings(*doc);
     }
     for (const auto m : widgets_enabled) {
-        m->SaveSettings(ini);
+        m->SaveSettings(*doc);
     }
     for (const auto m : windows_enabled) {
-        m->SaveSettings(ini);
+        m->SaveSettings(*doc);
     }
     ToolboxSettings::LoadModules(ini);
-    ASSERT(Resources::SaveIniToFile(ini->location_on_disk, ini) == 0);
-    const auto dir = ini->location_on_disk.parent_path();
+    ASSERT(doc->SaveFolder());
+    if (ImGui::GetCurrentContext()) {
+        auto& io = ImGui::GetIO();
+        if (io.IniFilename) {
+            ImGui::SaveIniSettingsToDisk(io.IniFilename);
+        }
+    }
+    const auto dir = doc->location_on_disk.parent_path();
     const auto dirstr = dir.wstring();
     const auto printable = TextUtils::str_replace_all(dirstr, LR"(\\)", L"/");
     Log::LogW(L"Toolbox settings saved to %s", printable.c_str());
     settings_folder_changed = false;
-    return ini->location_on_disk;
+    return doc->location_on_disk;
 }
 
 void GWToolbox::ForceTerminate(bool detach_wndproc_handler)
 {
-    if (gwtoolbox_state == GWToolboxState::Terminated)
-        return;
+    if (gwtoolbox_state == GWToolboxState::Terminated) return;
     ASSERT(DetachGameLoopCallback());
     ASSERT(!detach_wndproc_handler || DetachWndProcHandler());
 
     SignalTerminate();
     DrawTerminating(nullptr);
-    UpdateTerminating(0.f,true);
+    UpdateTerminating(0.f, true);
 
     GW::DisableHooks();
 
@@ -932,16 +1031,14 @@ void GWToolbox::SignalTerminate(bool detach_dll)
 
 void GWToolbox::Enable()
 {
-    if (!gwtoolbox_disabled)
-        return;
+    if (!gwtoolbox_disabled) return;
     GW::EnableHooks();
     gwtoolbox_disabled = false;
 }
 
 void GWToolbox::Disable()
 {
-    if (gwtoolbox_disabled)
-        return;
+    if (gwtoolbox_disabled) return;
     GW::DisableHooks();
     GW::Render::EnableHooks();
     if (OnUiRoot_UICallback_Func) GW::Hook::EnableHooks(OnUiRoot_UICallback_Func);
@@ -951,11 +1048,7 @@ void GWToolbox::Disable()
 
 bool GWToolbox::CanTerminate()
 {
-    return modules_terminating.empty()
-           && FontLoader::FontsLoaded()
-           && modules_enabled.empty()
-           && !imgui_initialized
-           && !event_handler_attached;
+    return modules_terminating.empty() && FontLoader::FontsLoaded() && modules_enabled.empty() && !imgui_initialized && !event_handler_attached;
 }
 
 void GWToolbox::Update(GW::HookStatus*)
@@ -984,6 +1077,8 @@ void GWToolbox::Update(GW::HookStatus*)
 
     UpdateModulesTerminating(delta_f);
 
+    Build::Update();
+
     // Update loop
     for (const auto m : modules_enabled) {
         if (profiling_enabled) {
@@ -992,7 +1087,9 @@ void GWToolbox::Update(GW::HookStatus*)
             m->Update(delta_f);
             QueryPerformanceCounter(&t1);
             m->last_update_time_us_ = QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
-        } else {
+            if (m->last_update_time_us_ > 60000) Log::Log("[hitch] %s::Update took %lld us", m->Name(), (long long)m->last_update_time_us_); // [perf-diag]
+        }
+        else {
             m->Update(delta_f);
         }
     }
@@ -1003,15 +1100,11 @@ void GWToolbox::Update(GW::HookStatus*)
             Log::Flash("Hello!");
             greeted = true;
 
-            // we wants here to alert the player if he inits GWToolbox++ in a PvP area that it's disabled 
+            // we wants here to alert the player if he inits GWToolbox++ in a PvP area that it's disabled
             // check here if the player is in a PvP area
             if (ShouldDisableToolbox()) {
-                GW::Chat::WriteChat(
-                    GW::Chat::Channel::CHANNEL_GWCA2,
-                    L"<c=#FF0000>GWToolbox++ is disabled in PvP areas. (It includes Guild Halls)</c>", GWTOOLBOX_SENDER, true);
-                GW::Chat::WriteChat(
-                    GW::Chat::Channel::CHANNEL_WARNING,
-                    L"Toolbox is disabled in PvP areas.", nullptr, true);
+                GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA2, L"<c=#FF0000>GWToolbox++ is disabled in PvP areas. (It includes Guild Halls)</c>", GWTOOLBOX_SENDER, true);
+                GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_WARNING, L"Toolbox is disabled in PvP areas.", nullptr, true);
             }
         }
     }
@@ -1052,15 +1145,20 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     // Draw loop
     Resources::DxUpdate(device);
 
-    if (!CanRenderToolbox())
-        return;
+    if (!CanRenderToolbox()) return;
+
+    // Once-per-frame tick for the shared in-world compositor (installs its hook lazily, resets the
+    // per-frame draw guard) so any module that registered an under-UI draw runs this frame.
+    GameWorldCompositor::BeginFrame();
 
     ImGui_ImplDX9_NewFrame();
     ImGui_ImplWin32_NewFrame();
 
     const bool world_map_showing = GW::UI::GetIsWorldMapShowing();
 
-    if (!world_map_showing && GW::UI::GetIsUIDrawn()) {
+    // Draw the in-world overlays BEFORE the minimap and the rest of the toolbox UI, so
+    // that UI composites on top of them. Gated on the module's real enabled state.
+    if (!world_map_showing && GW::UI::GetIsUIDrawn() && GWToolbox::IsModuleEnabled(&GameWorldRenderer::Instance())) {
         GameWorldRenderer::Render(device);
     }
 
@@ -1097,25 +1195,44 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
                 uielement->Draw(device);
                 QueryPerformanceCounter(&t1);
                 uielement->last_draw_time_us_ = QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
-            } else {
+                if (uielement->last_draw_time_us_ > 60000) Log::Log("[hitch] %s::Draw took %lld us", uielement->Name(), (long long)uielement->last_draw_time_us_); // [perf-diag]
+            }
+            else {
                 uielement->Draw(device);
+            }
+        }
+
+        // Non-UI modules have no window but may still paint an overlay this frame (e.g. Texmod's recording banner).
+        for (size_t i = 0; i < other_modules_enabled.size(); i++) {
+            if (profiling_enabled) { // [perf-diag]
+                const auto draw_timer = TIMER_INIT();
+                other_modules_enabled[i]->Draw(device);
+                const auto draw_ms = TIMER_DIFF(draw_timer);
+                if (draw_ms > 60) Log::Log("[hitch] %s::Draw took %ld ms", other_modules_enabled[i]->Name(), (long)draw_ms);
+            }
+            else {
+                other_modules_enabled[i]->Draw(device);
             }
         }
 
 #ifdef _DEBUG
         // Feel free to uncomment to play with ImGui's features
-        //ImGui::ShowDemoWindow();
-        //ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
+        // ImGui::ShowDemoWindow();
+        // ImGui::ShowStyleEditor(); // Warning, this WILL change your theme. Back up theme.ini first!
 #endif
         ToolboxSettings::DrawSettingsCogButtons();
         ImGui::DrawContextMenu();
         ImGui::DrawConfirmDialog();
-        if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
-            ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
+        if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0) ImGui::ClampAllWindowsToScreen(gwtoolbox_state < GWToolboxState::DrawTerminating && ToolboxSettings::clamp_windows_to_screen);
     }
     ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+
+    // The Toolbox windows are now drawn into the back buffer; if the user
+    // clicked a title-bar camera button last frame, this is where we
+    // actually read the pixels out and save them to disk.
+    ToolboxSettings::FlushPendingScreenshot(device);
 
     // Update and Render additional Platform Windows
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
@@ -1129,8 +1246,7 @@ void GWToolbox::DrawInitialising(IDirect3DDevice9* device)
 {
     ASSERT(gwtoolbox_state == GWToolboxState::DrawInitialising);
 
-    if (!imgui_inifile.bytes)
-        imgui_inifile = Unicode16ToUtf8(Resources::GetSettingFile(L"interface.ini").c_str());
+    if (!imgui_inifile.bytes) imgui_inifile = GetImguiIniPath();
 
     // Attach WndProc in the render loop to make sure the window is loaded and ready
     ASSERT(AttachWndProcHandler());
@@ -1155,7 +1271,7 @@ void GWToolbox::UpdateInitialising(float)
     Resources::EnsureFolderExists(Resources::GetComputerFolderPath());
     Resources::EnsureFolderExists(Resources::GetPath(L"img"));
     Resources::EnsureFolderExists(Resources::GetPath(L"location logs"));
-    Resources::EnsureFolderExists(Resources::GetPath(L"configs"));
+    Resources::EnsureFolderExists(Resources::GetSettingsFolderPath());
 
     // if the file does not exist we'll load module settings once downloaded, but we need the file open
     // in order to read defaults
@@ -1209,13 +1325,14 @@ void GWToolbox::UpdateTerminating(float delta_f, bool panicking)
     }
     ASSERT(modules_enabled.empty());
     UpdateModulesTerminating(delta_f, panicking);
-    if (!modules_terminating.empty())
-        return;
+    if (!modules_terminating.empty()) return;
 
     ASSERT(DetachWndProcHandler());
 
-    if (!CanTerminate())
-        return;
+    if (!CanTerminate()) return;
+
+    // All modules are gone (so the shared compositor has no registered draws); release its hook and GPU resources.
+    GameWorldCompositor::Terminate();
 
     GW::DisableHooks();
 

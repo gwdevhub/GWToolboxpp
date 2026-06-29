@@ -26,6 +26,10 @@ namespace Missions {
         bool icons_loaded = false;
         ImVec2 icon_uv_offset[2] = { { .0f,.0f },{0.f,0.f} };
 
+        static size_t ui_id_cnt;
+
+        size_t ui_id;
+
     public:
         virtual ~Mission() = default;
         Mission(GW::Constants::MapID, GW::Constants::QuestID = static_cast<GW::Constants::QuestID>(0));
@@ -61,6 +65,7 @@ namespace Missions {
 
     public:
         GW::Constants::ProfessionByte profession = (GW::Constants::ProfessionByte)0;
+        bool is_account_unlocked = false;
         PvESkill(GW::Constants::SkillID _skill_id);
         bool IsDaily() override { return false; }
         bool HasQuest() override { return false; }
@@ -252,6 +257,35 @@ public:
     [[nodiscard]] const char* Name() const override { return "Completion"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BOOK; }
 
+    struct Settings {
+        bool show_as_list = true;
+        bool hide_unlocked_achievements = false;
+        bool hide_unlocked_skills = false;
+        bool hide_account_unlocked_skills = false;
+        bool hide_completed_vanquishes = false;
+        bool hide_completed_missions = false;
+        bool hide_collected_hats = false;
+        bool only_show_account_chars = true;
+    };
+
+    // Per-character payload of character_completion.json (utf8 strings; live data is CharacterCompletion)
+    struct CharacterCompletionJson {
+        uint32_t profession = 0;
+        std::string account;
+        bool is_pvp = false;
+        bool is_pre_searing = false;
+        std::vector<uint32_t> skills;
+        std::vector<uint32_t> mission;
+        std::vector<uint32_t> mission_bonus;
+        std::vector<uint32_t> mission_hm;
+        std::vector<uint32_t> mission_bonus_hm;
+        std::vector<uint32_t> vanquishes;
+        std::vector<uint32_t> heroes;
+        std::vector<uint32_t> maps_unlocked;
+        std::vector<uint32_t> minipets_unlocked;
+        std::vector<uint32_t> festival_hats;
+        std::string hom_code;
+    };
 
     void Initialize() override;
     static void Initialize_Prophecies();
@@ -281,8 +315,8 @@ public:
     static std::vector<CharacterCompletion*> GetCharactersWithoutSkillUnlocked(GW::Constants::SkillID skill_id);
 
     void DrawSettingsInternal() override;
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     // Check explicitly rather than every frame
     CompletionWindow* CheckProgress(bool fetch_hom = false);
 };

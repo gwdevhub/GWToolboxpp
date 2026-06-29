@@ -17,10 +17,7 @@ name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 struct InjectProcess {
-    InjectProcess(const bool injected, Process&& process, std::wstring&& charname)
-        : m_Injected(injected)
-        , m_Process(std::move(process))
-        , m_Charname(std::move(charname)) { }
+    InjectProcess(const bool injected, Process&& process, std::wstring&& charname) : m_Injected(injected), m_Process(std::move(process)), m_Charname(std::move(charname)) {}
 
     InjectProcess(const InjectProcess&) = delete;
     InjectProcess(InjectProcess&&) = default;
@@ -36,9 +33,10 @@ struct InjectProcess {
 static bool FindTopMostProcess(const std::vector<InjectProcess>& processes, size_t* top_most_index)
 {
     if (processes.size() >= 250) {
-        fprintf(stderr,
-                "Process::FindTopMostProcess is O(n^2) where n is the number of processes."
-                "Consider rewriting the function to have a better scaling for large number of processes.\n");
+        fprintf(
+            stderr, "Process::FindTopMostProcess is O(n^2) where n is the number of processes."
+                    "Consider rewriting the function to have a better scaling for large number of processes.\n"
+        );
     }
 
     HWND hWndIt = GetTopWindow(nullptr);
@@ -85,6 +83,20 @@ std::vector<Process> GetGuildWarsProcesses()
     return processes;
 }
 
+std::vector<std::filesystem::path> GetGuildWarsExecutablePaths()
+{
+    std::vector<std::filesystem::path> paths;
+    for (auto& process : GetGuildWarsProcesses()) {
+        std::wstring path;
+        if (!process.GetPath(path))
+            continue;
+        std::filesystem::path exe(std::move(path));
+        if (std::ranges::find(paths, exe) == paths.end())
+            paths.push_back(std::move(exe));
+    }
+    return paths;
+}
+
 InjectReply InjectWindow::AskInjectProcess(Process* target_process)
 {
     std::vector<Process> processes = GetGuildWarsProcesses();
@@ -96,14 +108,22 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
 
     uintptr_t charname_rva = 0;
     uintptr_t email_rva = 0;
+    bool read_blocked = false;
+    DWORD read_error = 0;
 
     for (int i = 0; i < processes.size(); i++) {
         const ProcessScanner scanner(&processes[i]);
-        if (!scanner.FindPatternRva("\x8B\xF8\x6A\x03\x68\x0F\x00\x00\xC0\x8B\xCF\xE8", "xxxxxxxxxxxx", -0x42, &charname_rva)) {
+        if (!scanner.IsValid()) {
+            // Couldn't read the GW image to scan it - almost always AV/anti-tamper stripping our access.
+            read_blocked = true;
+            read_error = scanner.GetError();
+            continue;
+        }
+        if (!scanner.FindPatternRva("\x6a\x14\x83\xc0\x18\x50\x68", "xxxxxxx", 7, &charname_rva)) {
             continue;
         }
 
-        if (!scanner.FindPatternRva("\x33\xC0\x5D\xC2\x10\x00\xCC\x68\x80\x00\x00\x00", "xxxxxxxxxxxx", 0xE, &email_rva)) {
+        if (!scanner.FindPatternRva("\x68\x80\x00\x00\x00\x51\x68", "xxxxxxx", 7, &email_rva)) {
             continue;
         }
 
@@ -111,6 +131,10 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
     }
 
     if (!charname_rva || !email_rva) {
+        if (read_blocked) {
+            fprintf(stderr, "Couldn't read Guild Wars memory to scan for RVAs (error %lu) - likely anti-virus interference\n", read_error);
+            return InjectReply_MemoryBlocked;
+        }
         fprintf(stderr, "Couldn't find charname/email RVAs in any potential process\n");
         return InjectReply_PatternError;
     }
@@ -136,27 +160,23 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
 
         uint32_t charname_ptr;
         if (!process.Read(module.base + charname_rva, &charname_ptr, 4)) {
-            fprintf(stderr, "Can't read the address 0x%08X in process %lu\n",
-                    module.base + charname_rva, process.GetProcessId());
+            fprintf(stderr, "Can't read the address 0x%08X in process %lu\n", module.base + charname_rva, process.GetProcessId());
             continue;
         }
         uint32_t email_ptr = 0;
         if (!process.Read(module.base + email_rva, &email_ptr, 4)) {
-            fprintf(stderr, "Can't read the address 0x%08X in process %lu\n",
-                    module.base + email_rva, process.GetProcessId());
+            fprintf(stderr, "Can't read the address 0x%08X in process %lu\n", module.base + email_rva, process.GetProcessId());
             continue;
         }
         wchar_t charname[128] = {0};
         if (!process.Read(charname_ptr, charname, 20 * sizeof(wchar_t))) {
-            fprintf(stderr, "Can't read the character name at address 0x%08X in process %lu\n",
-                    charname_ptr, process.GetProcessId());
+            fprintf(stderr, "Can't read the character name at address 0x%08X in process %lu\n", charname_ptr, process.GetProcessId());
             continue;
         }
         if (!charname[0]) {
             char email[_countof(charname)] = {0};
             if (!process.Read(email_ptr, email, _countof(email) - 1)) {
-                fprintf(stderr, "Can't read the email at address 0x%08X in process %lu\n",
-                        email_ptr, process.GetProcessId());
+                fprintf(stderr, "Can't read the email at address 0x%08X in process %lu\n", email_ptr, process.GetProcessId());
                 continue;
             }
             for (int i = 0; i < _countof(email) && email[i]; i++) {
@@ -186,10 +206,9 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
     }
 
     // Sort by name
-    std::ranges::sort(inject_processes,
-                      [](const InjectProcess& proc1, const InjectProcess& proc2) {
-                          return proc1.m_Charname < proc2.m_Charname;
-                      });
+    std::ranges::sort(inject_processes, [](const InjectProcess& proc1, const InjectProcess& proc2) {
+        return proc1.m_Charname < proc2.m_Charname;
+    });
 
     InjectWindow inject;
     inject.Create();
@@ -226,12 +245,7 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
     return InjectReply_Inject;
 }
 
-InjectWindow::InjectWindow()
-    : m_hCharacters(nullptr)
-    , m_hLaunchButton(nullptr)
-    , m_hRestartAsAdmin(nullptr)
-    , m_hSettings(nullptr)
-    , m_Selected(-1) {}
+InjectWindow::InjectWindow() : m_hCharacters(nullptr), m_hLaunchButton(nullptr), m_hRestartAsAdmin(nullptr), m_hSettings(nullptr), m_Selected(-1) {}
 
 InjectWindow::~InjectWindow() {}
 
@@ -286,77 +300,36 @@ LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, c
 
 void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    const HWND hGroupBox = CreateWindowW(
-        WC_BUTTONW,
-        L"Select Character",
-        WS_VISIBLE | WS_CHILD | BS_GROUPBOX,
-        10,
-        5,
-        270,
-        55,
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
+    const HWND hGroupBox = CreateWindowW(WC_BUTTONW, L"Select Character", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 5, 270, 55, hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(hGroupBox, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 
     m_hCharacters = CreateWindowW(
-        WC_COMBOBOXW,
-        L"",
-        WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST,
+        WC_COMBOBOXW, L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST,
         20,  // x
         25,  // y
         155, // width
         25,  // height
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
+        hWnd, nullptr, m_hInstance, nullptr
+    );
     SendMessageW(m_hCharacters, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 
     m_hLaunchButton = CreateWindowW(
-        WC_BUTTONW,
-        L"Launch",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
+        WC_BUTTONW, L"Launch", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
         180, // x
         24,  // y
         90,  // width
         25,  // height
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
+        hWnd, nullptr, m_hInstance, nullptr
+    );
     SendMessageW(m_hLaunchButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 
     if (!IsRunningAsAdmin()) {
-        m_hRestartAsAdmin = CreateWindowW(
-            WC_BUTTONW,
-            L"Can't find your character?",
-            WS_VISIBLE | WS_CHILD | WS_TABSTOP,
-            10,
-            65,
-            165,
-            25,
-            hWnd,
-            nullptr,
-            m_hInstance,
-            nullptr);
+        m_hRestartAsAdmin = CreateWindowW(WC_BUTTONW, L"Can't find your character?", WS_VISIBLE | WS_CHILD | WS_TABSTOP, 10, 65, 165, 25, hWnd, nullptr, m_hInstance, nullptr);
         SendMessageW(m_hRestartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
         Button_SetElevationRequiredState(m_hRestartAsAdmin, TRUE);
     }
 
-    m_hSettings = CreateWindowW(
-        WC_BUTTONW,
-        L"Settings...",
-        WS_VISIBLE | WS_CHILD | WS_TABSTOP,
-        200,
-        65,
-        80,
-        25,
-        hWnd,
-        nullptr,
-        m_hInstance,
-        nullptr);
+    m_hSettings = CreateWindowW(WC_BUTTONW, L"Settings...", WS_VISIBLE | WS_CHILD | WS_TABSTOP, 200, 65, 80, 25, hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 }
 
@@ -409,12 +382,7 @@ bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD
     const size_t ImagePathLength = wcslen(ImagePath);
     const size_t ImagePathSize = ImagePathLength * 2 + 2;
 
-    const LPVOID ImagePathAddress = VirtualAllocEx(
-        ProcessHandle,
-        nullptr,
-        ImagePathSize,
-        MEM_COMMIT | MEM_RESERVE,
-        PAGE_READWRITE);
+    const LPVOID ImagePathAddress = VirtualAllocEx(ProcessHandle, nullptr, ImagePathSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
     if (ImagePathAddress == nullptr) {
         fprintf(stderr, "VirtualAllocEx failed (%lu)\n", GetLastError());
@@ -422,12 +390,7 @@ bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD
     }
 
     SIZE_T BytesWritten;
-    BOOL Success = WriteProcessMemory(
-        ProcessHandle,
-        ImagePathAddress,
-        ImagePath,
-        ImagePathSize,
-        &BytesWritten);
+    BOOL Success = WriteProcessMemory(ProcessHandle, ImagePathAddress, ImagePath, ImagePathSize, &BytesWritten);
 
     if (!Success || ImagePathSize != BytesWritten) {
         fprintf(stderr, "WriteProcessMemory failed (%lu)\n", GetLastError());
@@ -436,15 +399,7 @@ bool InjectRemoteThread(const Process* process, const LPCWSTR ImagePath, LPDWORD
     }
 
     DWORD ThreadId;
-    const HANDLE hThread = CreateRemoteThreadEx(
-        ProcessHandle,
-        nullptr,
-        0,
-        reinterpret_cast<LPTHREAD_START_ROUTINE>(pLoadLibraryW),
-        ImagePathAddress,
-        0,
-        nullptr,
-        &ThreadId);
+    const HANDLE hThread = CreateRemoteThreadEx(ProcessHandle, nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(pLoadLibraryW), ImagePathAddress, 0, nullptr, &ThreadId);
 
     if (hThread == nullptr) {
         fprintf(stderr, "CreateRemoteThreadEx failed (%lu)\n", GetLastError());

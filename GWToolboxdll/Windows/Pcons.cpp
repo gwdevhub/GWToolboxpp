@@ -36,7 +36,7 @@ int Pcon::pcons_delay = 5000;
 int Pcon::lunar_delay = 500;
 bool Pcon::disable_when_not_found = true;
 bool Pcon::refill_if_below_threshold = false;
-Color Pcon::enabled_bg_color = Colors::ARGB(102, 0, 255, 0);
+Colors::SettingColor Pcon::enabled_bg_color = Colors::ARGB(102, 0, 255, 0);
 
 DWORD Pcon::alcohol_level = 0;
 bool Pcon::suppress_drunk_effect = false;
@@ -130,7 +130,7 @@ void Pcon::Draw(IDirect3DDevice9*)
     if (!(t && *t)) return;
     const ImVec2 pos = ImGui::GetCursorPos();
     const ImVec2 s(size, size);
-    const ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color).Value : ImVec4(0, 0, 0, 0);
+    const ImVec4 bg = IsEnabled() ? ImColor(enabled_bg_color.value).Value : ImVec4(0, 0, 0, 0);
     constexpr ImVec4 tint(1, 1, 1, 1);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     if (ImGui::ImageButton(*t, s, uv0, uv1, 0, bg, tint)) {
@@ -162,7 +162,7 @@ void Pcon::Draw(IDirect3DDevice9*)
         ImGui::TextColored(color, "%d", quantity);
         ImGui::PopFont();
 
-        if (maptype == GW::Constants::InstanceType::Outpost && PconsWindow::Instance().show_storage_quantity) {
+        if (maptype == GW::Constants::InstanceType::Outpost && PconsWindow::Instance().settings.show_storage_quantity) {
             ImGui::SetCursorPos(ImVec2(pos.x + 3, nextPos.y - ImGui::GetTextLineHeight()));
             ImGui::TextColored(ImVec4(0, 0, 0, 1), "%d", quantity_storage);
             ImGui::SetCursorPos(ImVec2(pos.x + 2, nextPos.y - ImGui::GetTextLineHeight() - 1));
@@ -585,6 +585,34 @@ bool* Pcon::GetSettingsByName(const wchar_t* name)
     return settings_by_charname[name];
 }
 
+void Pcon::LoadSettings(const SettingsDoc& doc, const char* section, const ToolboxIni* legacy)
+{
+    Settings state;
+    if (!doc.Get(section, ini, state)) {
+        if (legacy) {
+            LoadSettings(legacy, section);
+        }
+        return;
+    }
+    threshold = state.threshold;
+    visible = state.visible;
+    for (const auto& [charname, active] : state.active) {
+        *GetSettingsByName(TextUtils::StringToWString(charname).c_str()) = active;
+    }
+}
+
+void Pcon::SaveSettings(SettingsDoc& doc, const char* section) const
+{
+    Settings state{.threshold = threshold, .visible = visible};
+    for (const auto& [charname, active] : settings_by_charname) {
+        if (charname.empty()) {
+            continue;
+        }
+        state.active[TextUtils::WStringToString(charname)] = *active;
+    }
+    doc.Set(section, ini, state);
+}
+
 void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
 {
     char buf_active[256];
@@ -599,12 +627,12 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
     *def = inifile->GetBoolValue(section, buf_active, *def);
     visible = inifile->GetBoolValue(section, buf_visible, visible);
 
-    ToolboxIni::TNamesDepend entries;
+    TNamesDepend entries;
     inifile->GetAllSections(entries);
     std::string sectionsub(section);
     sectionsub += ':';
     const size_t section_len = sectionsub.size();
-    for (const ToolboxIni::Entry& entry : entries) {
+    for (const auto& entry : entries) {
         if (strncmp(entry.pItem, sectionsub.c_str(), section_len) != 0) {
             continue;
         }
@@ -613,34 +641,6 @@ void Pcon::LoadSettings(const ToolboxIni* inifile, const char* section)
         std::wstring charname = TextUtils::StringToWString(entry.pItem + charname_pos);
         bool* char_enabled = GetSettingsByName(charname.c_str());
         *char_enabled = inifile->GetBoolValue(entry.pItem, buf_active, *char_enabled);
-    }
-}
-
-void Pcon::SaveSettings(ToolboxIni* inifile, const char* section) const
-{
-    char buf_active[256];
-    char buf_threshold[256];
-    char buf_visible[256];
-    snprintf(buf_active, 256, "%s_active", ini.c_str());
-    snprintf(buf_threshold, 256, "%s_threshold", ini.c_str());
-    snprintf(buf_visible, 256, "%s_visible", ini.c_str());
-    inifile->SetLongValue(section, buf_threshold, threshold);
-    inifile->SetBoolValue(section, buf_visible, visible);
-
-    for (const auto& charname_pcons : settings_by_charname) {
-        const bool _enabled = *charname_pcons.second;
-        if (charname_pcons.first == L"default") {
-            inifile->SetBoolValue(section, buf_active, _enabled);
-            continue;
-        }
-        const auto& charname = charname_pcons.first;
-        if (charname.empty()) {
-            continue;
-        }
-        std::string char_section(section);
-        char_section.append(":");
-        char_section.append(TextUtils::WStringToString(charname).c_str());
-        inifile->SetBoolValue(char_section.c_str(), buf_active, _enabled);
     }
 }
 
@@ -658,7 +658,7 @@ void PconGeneric::OnButtonClick()
     using namespace GW::Constants;
     Pcon::OnButtonClick();
 
-    if (PconsWindow::Instance().shift_click_toggles_category && ImGui::IsKeyDown(ImGuiMod_Shift)) {
+    if (PconsWindow::Instance().settings.shift_click_toggles_category && ImGui::IsKeyDown(ImGuiMod_Shift)) {
         namespace r = std::ranges;
         const std::vector<std::vector<DWORD>> categories{
             {ItemID::ConsEssence, ItemID::ConsGrail, ItemID::ConsArmor},

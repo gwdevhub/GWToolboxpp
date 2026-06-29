@@ -2,10 +2,9 @@
 
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
-#include <GWCA/Packets/StoC.h>
 
 #include <ToolboxWindow.h>
-#include <thread>
+#include <optional>
 #include <vector>
 
 #include <uWebsockets/App.h>
@@ -40,10 +39,24 @@ public:
     void Draw(IDirect3DDevice9* pDevice) override;
     void DrawSettingsInternal() override;
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void LoadRuns();
     void SaveRuns();
+
+    struct Settings {
+        bool show_decimal = false;
+        bool show_start_column = true;
+        bool show_end_column = true;
+        bool show_time_column = true;
+        bool show_current_run_window = false;
+        bool auto_send_age = false;
+        bool save_to_disk = true;
+        bool show_past_runs = false;
+        bool show_start_date_time = false;
+        bool show_detailed_objectives = true; // currently only for doa
+        int websocket_server_port = 9001;
+    };
 
 private:
 
@@ -127,8 +140,16 @@ private:
         Objective* SetStarted();
         Objective* SetDone();
         Objective* AddChild(Objective* child);
-        static Objective* FromJson(const nlohmann::json& json);
-        nlohmann::json ToJson();
+        struct Serialized {
+            std::string name;
+            uint32_t status = 0;
+            uint32_t start = 0;
+            uint32_t done = 0;
+            std::optional<uint32_t> indent;
+            std::optional<uint32_t> duration;
+        };
+        static Objective* FromJson(const Serialized& json);
+        Serialized ToJson();
 
         [[nodiscard]] bool IsStarted() const;
         [[nodiscard]] bool IsDone() const;
@@ -193,8 +214,15 @@ private:
         void CheckSetDone();
         bool Draw(); // returns false when should be deleted
         void StopObjectives();
-        static ObjectiveSet* FromJson(const nlohmann::json& json);
-        nlohmann::json ToJson();
+        struct Serialized {
+            std::string name;
+            uint32_t instance_start = 0;
+            uint32_t utc_start = 0;
+            std::vector<Objective::Serialized> objectives;
+            std::optional<uint32_t> duration;
+        };
+        static ObjectiveSet* FromJson(const Serialized& json);
+        Serialized ToJson();
         void Update() const;
         void GetStartTime(tm* timeinfo) const;
 
@@ -209,10 +237,7 @@ private:
     std::map<DWORD, ObjectiveSet*> objective_sets{};
 
     ObjectiveSet* GetCurrentObjectiveSet() const;
-    bool show_current_run_window = false;
     bool clear_cached_times = false;
-    bool auto_send_age = false;
-    bool show_detailed_objectives = true; // currently only for doa
     bool show_debug_events = false;
     ObjectiveSet* current_objective_set = nullptr;
 

@@ -21,10 +21,7 @@
 #include "BountyKillTrackerWidget.h"
 
 namespace {
-    float font_size = 18.f;
-    Color color_text = Colors::White();
-    Color color_text_shadow = Colors::Black();
-    Color color_background = Colors::ARGB(128, 0, 0, 0);
+    BountyKillTrackerWidget::Settings settings;
 
     GW::UI::Frame* effects_frame = nullptr;
     ImGuiViewport* viewport = nullptr;
@@ -242,18 +239,18 @@ namespace {
         if (label_size.x > frame_size.x) {
             const auto scale_factor = frame_size.x / label_size.x;
             overridden_font = FontLoader::GetFont();
-            ImGui::PushFont(overridden_font, draw_list, scale_factor * font_size);
+            ImGui::PushFont(overridden_font, draw_list, scale_factor * settings.font_size);
             label_size *= scale_factor;
         }
 
         const ImVec2 label_pos(bottom_right.x - label_size.x, bottom_right.y - label_size.y);
-        if ((color_background & IM_COL32_A_MASK) != 0) {
-            draw_list->AddRectFilled(label_pos, bottom_right, color_background);
+        if ((settings.color_background & IM_COL32_A_MASK) != 0) {
+            draw_list->AddRectFilled(label_pos, bottom_right, settings.color_background);
         }
-        if ((color_text_shadow & IM_COL32_A_MASK) != 0) {
-            draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_shadow, text);
+        if ((settings.color_text_shadow & IM_COL32_A_MASK) != 0) {
+            draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, settings.color_text_shadow, text);
         }
-        draw_list->AddText(label_pos, color_text, text);
+        draw_list->AddText(label_pos, settings.color_text, text);
         if (overridden_font) {
             ImGui::PopFont(draw_list);
         }
@@ -288,6 +285,7 @@ namespace {
 void BountyKillTrackerWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     // Pick up bounties already active when the module loads
     GW::GameThread::Enqueue([] {
@@ -305,7 +303,7 @@ void BountyKillTrackerWidget::Initialize()
         GW::UI::UIMessage::kMapChange,
     };
     for (const auto msg : messages) {
-        GW::UI::RegisterUIMessageCallback(&UIMessage_HookEntry, msg, OnUIMessage, -0x6000);
+        RegisterUIMessageCallback(&UIMessage_HookEntry, msg, OnUIMessage, -0x6000);
     }
 }
 
@@ -328,7 +326,7 @@ void BountyKillTrackerWidget::Draw(IDirect3DDevice9*)
     DummyWindow();
     viewport = ImGui::GetMainViewport();
     draw_list = ImGui::GetBackgroundDrawList(viewport);
-    ImGui::PushFont(FontLoader::GetFont(), draw_list, font_size);
+    ImGui::PushFont(FontLoader::GetFont(), draw_list, settings.font_size);
 
     for (const auto& [skill_id, state] : active_bounties) {
         const auto* skill_frame = GW::UI::GetChildFrame(effects_frame, static_cast<uint32_t>(skill_id) + 0x4);
@@ -342,32 +340,26 @@ void BountyKillTrackerWidget::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-void BountyKillTrackerWidget::LoadSettings(ToolboxIni* ini)
+void BountyKillTrackerWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_FLOAT(font_size);
-    LOAD_COLOR(color_text);
-    LOAD_COLOR(color_text_shadow);
-    LOAD_COLOR(color_background);
-    font_size = std::clamp(font_size, 16.f, 48.f);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    settings.font_size = std::clamp(settings.font_size, 16.f, 48.f);
 }
 
-void BountyKillTrackerWidget::SaveSettings(ToolboxIni* ini)
+void BountyKillTrackerWidget::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_FLOAT(font_size);
-    SAVE_COLOR(color_text);
-    SAVE_COLOR(color_text_shadow);
-    SAVE_COLOR(color_background);
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void BountyKillTrackerWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
     ImGui::PushID("bounty_kill_tracker_settings");
-    ImGui::DragFloat("Text size", &font_size, 1.f, 16.f, 48.f, "%.f");
-    Colors::DrawSettingHueWheel("Text color", &color_text);
-    Colors::DrawSettingHueWheel("Text shadow", &color_text_shadow);
-    Colors::DrawSettingHueWheel("Background", &color_background);
+    ImGui::DragFloat("Text size", &settings.font_size, 1.f, 16.f, 48.f, "%.f");
+    Colors::DrawSettingHueWheel("Text color", &settings.color_text.value);
+    Colors::DrawSettingHueWheel("Text shadow", &settings.color_text_shadow.value);
+    Colors::DrawSettingHueWheel("Background", &settings.color_background.value);
     ImGui::PopID();
 }

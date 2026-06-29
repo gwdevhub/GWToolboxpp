@@ -27,10 +27,29 @@
 
 #include <GWCA/Utilities/Hook.h>
 
+namespace teamspeak_invite_api {
+    struct CreateRequest {
+        std::string address;
+        std::string name;
+        std::string password; // empty when no password
+        std::string channel_id;
+        std::string channel_name;
+        double expires_in_days = 1.0;
+    };
+
+    struct CreateResponse {
+        std::string id;
+    };
+}
+
 namespace {
+
+    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
     GW::HookEntry ChatCmd_HookEntry;
+
+    TeamspeakModule::Settings settings;
+
     const char* teamspeak3_host = "127.0.0.1";
-    char teamspeak3_api_key[128] = {0};
     u_short teamspeak3_port = 25639;
 
     clock_t check_interval = 0;
@@ -43,7 +62,6 @@ namespace {
 
     ConnectionStep step = Idle;
 
-    bool enabled = false;
     bool pending_connect = false;
     bool pending_disconnect = false;
     WSAData wsaData = {0};
@@ -265,7 +283,7 @@ namespace {
             return true;
         }
         step = Connecting;
-        if (!enabled) {
+        if (!settings.enabled) {
             return failed(nullptr);
         }
         //BOOL is_x64 = false;
@@ -274,7 +292,7 @@ namespace {
         //    return failed("Error finding running teamspeak executable (%04X)",GetLastError());
         //if (running_teamspeak_exe.empty())
         //    return failed("Failed to find running teamspeak executable; is Teamspeak 3 running?");
-        if (!teamspeak3_api_key[0]) {
+        if (settings.teamspeak3_api_key.empty()) {
             return failed("No API Key provided; find this in Teamspeak > Tools > Options > Addons > ClientQuery > Settings");
         }
         int res;
@@ -320,7 +338,7 @@ namespace {
         Log::Log("Teamspeak 3 welcome message:\n%s", response->content.c_str());
 
         // Send auth message
-        const std::string to_send = std::format("auth apikey={}\r\n", teamspeak3_api_key);
+        const std::string to_send = std::format("auth apikey={}\r\n", settings.teamspeak3_api_key);
         response = PollSocket(to_send);
         if (!response) {
             return failed("Couldn't connect to teamspeak 3; auth failure or empty response");
@@ -351,44 +369,31 @@ namespace {
         return true;
     }
 
-    bool GetValue(const nlohmann::json& content, const char* key, std::string* out)
-    {
-        const auto found = content.find(key);
-        if (!(found != content.end() && found->is_string())) {
-            return false;
-        }
-        *out = *found;
-        return true;
-    }
-
     void GetServerInviteLink(TS3Server* server, std::string channel_id, std::function<void(const std::string&)> callback)
     {
-        using nlohmann::json;
-        json packet;
-        packet["address"] = std::format("{}:{}", server->host, server->port);
-        packet["name"] = server->name;
-        packet["password"] = NULL;
-        packet["channel_id"] = channel_id;
-        packet["channel_name"] = channel_id;
-        packet["expires_in_days"] = 1;
+        teamspeak_invite_api::CreateRequest packet{
+            .address = std::format("{}:{}", server->host, server->port),
+            .name = server->name,
+            .channel_id = channel_id,
+            .channel_name = channel_id,
+        };
 
-        Resources::Post("https://invites.teamspeak.com/servers/create", packet.dump(), [callback](const bool success, const std::string& response, void*) {
+        Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
                 Log::Error("Failed to get teamspeak invite link (1)");
                 Log::Log("%s", response.c_str());
                 return;
             }
-            const json& res = json::parse(response.c_str(), nullptr, false);
-            if (res == json::value_t::discarded) {
+            teamspeak_invite_api::CreateResponse res{};
+            if (auto ec = glz::read<json_opts>(res, response); ec) {
                 Log::Error("Failed to get teamspeak invite link (2)");
                 return;
             }
-            std::string invite_id;
-            if (!GetValue(res, "id", &invite_id)) {
+            if (res.id.empty()) {
                 Log::Error("Failed to get teamspeak invite link (3)");
                 return;
             }
-            const std::string url = std::format("https://tmspk.gg/{}", invite_id);
+            const std::string url = std::format("https://tmspk.gg/{}", res.id);
             callback(url);
         });
     }
@@ -434,13 +439,14 @@ namespace {
 void TeamspeakModule::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"ts", OnTeamspeakCommand);
     GetServerInfo();
 }
 
 void TeamspeakModule::Terminate()
 {
-    enabled = false;
+    settings.enabled = false;
     DeleteSocket();
     if (wsaData.wVersion) {
         WSACleanup();
@@ -449,20 +455,17 @@ void TeamspeakModule::Terminate()
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
-void TeamspeakModule::LoadSettings(ToolboxIni* ini)
+void TeamspeakModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
-    LOAD_BOOL(enabled);
-    const char* tmp = ini->GetValue(Name(), VAR_NAME(teamspeak3_api_key), teamspeak3_api_key);
-    strncpy(teamspeak3_api_key, tmp, sizeof(teamspeak3_api_key) - 1);
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
     pending_connect = true;
 }
 
-void TeamspeakModule::SaveSettings(ToolboxIni* ini)
+void TeamspeakModule::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-    SAVE_BOOL(enabled);
-    ini->SetValue(Name(), VAR_NAME(teamspeak3_api_key), teamspeak3_api_key);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void TeamspeakModule::Update(float)
@@ -471,7 +474,7 @@ void TeamspeakModule::Update(float)
         Connect();
         pending_connect = false;
     }
-    if (!enabled && IsConnected()) {
+    if (!settings.enabled && IsConnected()) {
         pending_disconnect = true;
     }
     if (pending_disconnect) {
@@ -489,8 +492,8 @@ void TeamspeakModule::DrawSettingsInternal()
 {
     check_interval = 5000;
     ImGui::PushID("TeamspeakModule");
-    if (ImGui::Checkbox("Enable Teamspeak 3 integration", &enabled)) {
-        if (enabled) {
+    if (ImGui::Checkbox("Enable Teamspeak 3 integration", &settings.enabled)) {
+        if (settings.enabled) {
             Connect(true);
         }
         else {
@@ -498,7 +501,7 @@ void TeamspeakModule::DrawSettingsInternal()
         }
     }
     ImGui::ShowHelp("Allows GWToolbox retrieve info from Teamspeak 3");
-    if (enabled) {
+    if (settings.enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, IsConnected() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
         auto status_str = [] {
@@ -541,7 +544,7 @@ void TeamspeakModule::DrawSettingsInternal()
             }
             ImGui::Unindent();
         }
-        ImGui::InputText("Teamspeak 3 ClientQuery API Key", teamspeak3_api_key, sizeof(teamspeak3_api_key) - 1);
+        ImGui::InputText("Teamspeak 3 ClientQuery API Key", settings.teamspeak3_api_key, 127);
         ImGui::ShowHelp("Find this in Teamspeak > Tools > Options > Addons > ClientQuery > Settings");
         ImGui::TextDisabled("Use the /ts3 command to send your current server info in chat");
     }

@@ -89,12 +89,12 @@ const wchar_t* SkillListingWindow::Skill::GWWConcise()
 
 void SkillListingWindow::ExportToJSON() const
 {
-    nlohmann::json json;
+    std::map<std::string, skilllist_export::SkillJson> output;
     for (size_t i = 0; i < skills.size(); i++) {
         if (!skills[i]) {
             continue;
         }
-        json[std::to_underlying(skills[i]->skill->skill_id)] = skills[i]->ToJson();
+        output.emplace(std::to_string(std::to_underlying(skills[i]->skill->skill_id)), skills[i]->ToJson());
     }
     const auto file_location = Resources::GetPath(L"skills.json");
     if (exists(file_location)) {
@@ -102,7 +102,7 @@ void SkillListingWindow::ExportToJSON() const
     }
 
     std::ofstream out(file_location);
-    out << json.dump();
+    out << glz::write_json(output).value_or(std::string{});
     out.close();
     wchar_t file_location_wc[512];
     size_t msg_len = 0;
@@ -127,6 +127,46 @@ void SkillListingWindow::ExportToJSON() const
     file_location_wc[msg_len] = 0;
     wchar_t chat_message[1024];
     swprintf(chat_message, _countof(chat_message), L"Skills exported to <a=1>\x200C%s</a>", file_location_wc);
+    WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
+}
+
+void SkillListingWindow::ExportHiResIconsAsDDS() const
+{
+    const auto folder = Resources::GetPath(L"hd_skill_icons");
+    Resources::EnsureFolderExists(folder);
+
+    size_t count = 0;
+    for (size_t skill_id = 0; skill_id < skills.size(); skill_id++) {
+        const auto skill = skills[skill_id];
+        if (!skill) {
+            continue;
+        }
+        // Prefer the HD icon, falling back to the lower-res variants when a skill has none.
+        const auto file_id = skill->skill->icon_file_id_2 ? skill->skill->icon_file_id_2 : skill->skill->icon_file_id;
+        if (!file_id) {
+            continue;
+        }
+        const auto filename = std::format(L"{}.dds", skill_id);
+        GwDatTextureModule::SaveTextureFromFileIdToFile(file_id, folder / filename);
+        count++;
+    }
+
+    wchar_t folder_wc[512];
+    size_t msg_len = 0;
+    const auto message = folder.wstring();
+    constexpr size_t max_len = _countof(folder_wc) - 1;
+    for (size_t i = 0; i < message.length() && msg_len < max_len; i++) {
+        if (message[i] == '\\' && msg_len < max_len) {
+            folder_wc[msg_len++] = message[i];
+        }
+        if (msg_len >= max_len) {
+            break;
+        }
+        folder_wc[msg_len++] = message[i];
+    }
+    folder_wc[msg_len] = 0;
+    wchar_t chat_message[1024];
+    swprintf(chat_message, _countof(chat_message), L"<quote>Exporting %zu HD skill icons to [%s,file://%s]", count, folder_wc, folder_wc);
     WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 
@@ -246,51 +286,40 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
     if (ImGui::Button("Export to JSON")) {
         ExportToJSON();
     }
+    ImGui::SameLine();
+    if (ImGui::Button("Export HD skill icons as DDS")) {
+        ExportHiResIconsAsDDS();
+    }
     ImGui::End();
 }
 
-nlohmann::json SkillListingWindow::Skill::ToJson()
+skilllist_export::SkillJson SkillListingWindow::Skill::ToJson()
 {
-    nlohmann::json json;
-    json["n"] = TextUtils::WStringToString(Name());
-    json["d"] = TextUtils::WStringToString(GWWDescription());
-    json["cd"] = TextUtils::WStringToString(GWWConcise());
-    json["t"] = skill->type;
-    json["p"] = skill->profession;
-    json["a"] = IsPvE() ? 255 - skill->title : (int)skill->attribute;
-    if (IsElite()) {
-        json["e"] = 1;
-    }
-    json["c"] = skill->campaign;
-    nlohmann::json z_json;
-    if (HasExhaustion()) {
-        z_json["x"] = skill->overcast;
-    }
-    if (skill->recharge) {
-        z_json["r"] = skill->recharge;
-    }
-    if (skill->activation) {
-        z_json["c"] = skill->activation;
-    }
-    if (IsMaintained()) {
-        z_json["d"] = 1;
-    }
-    if (skill->adrenaline) {
-        z_json["a"] = skill->adrenaline;
-    }
-    if (skill->energy_cost) {
-        z_json["e"] = skill->GetEnergyCost();
-    }
-    if (skill->health_cost) {
-        z_json["s"] = skill->health_cost;
-    }
-    z_json["sp"] = skill->special;
-    z_json["co"] = skill->combo;
-    z_json["q"] = skill->weapon_req;
-    if (z_json.size()) {
-        json["z"] = z_json;
-    }
-    return json;
+    skilllist_export::SkillJson out{
+        .n = TextUtils::WStringToString(Name()),
+        .d = TextUtils::WStringToString(GWWDescription()),
+        .cd = TextUtils::WStringToString(GWWConcise()),
+        .t = static_cast<uint32_t>(skill->type),
+        .p = static_cast<uint32_t>(skill->profession),
+        .a = static_cast<uint32_t>(IsPvE() ? 255 - skill->title : static_cast<int>(skill->attribute)),
+        .c = static_cast<uint32_t>(skill->campaign),
+    };
+    if (IsElite()) out.e = 1u;
+
+    skilllist_export::SkillExtras z{
+        .sp = skill->special,
+        .co = static_cast<uint32_t>(skill->combo),
+        .q = skill->weapon_req,
+    };
+    if (HasExhaustion()) z.x = skill->overcast;
+    if (skill->recharge) z.r = skill->recharge;
+    if (skill->activation != 0.f) z.c = static_cast<uint32_t>(skill->activation);
+    if (IsMaintained()) z.d = 1u;
+    if (skill->adrenaline) z.a = skill->adrenaline;
+    if (skill->energy_cost) z.e = skill->GetEnergyCost();
+    if (skill->health_cost) z.s = skill->health_cost;
+    out.z = z;
+    return out;
 }
 
 const std::wstring SkillListingWindow::Skill::GetSkillType() const

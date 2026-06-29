@@ -2,7 +2,8 @@
 
 #include <GWCA/Constants/Constants.h>
 #include <ToolboxIni.h>
-#include <nlohmann/json.hpp>
+#include <Utils/SettingsDoc.h>
+#include <glaze/glaze.hpp>
 
 namespace PluginUtils {
     template <typename T>
@@ -69,32 +70,59 @@ namespace PluginUtils {
     size_t TimeToString(FILETIME utc_timestamp, std::string& out);
 
     template <map_type T>
-    void MapToIni(ToolboxIni* ini, const char* section, const char* name, const T& map)
-    {
-        const auto map_json = nlohmann::json(map);
-        const auto map_str = map_json.dump();
-        ini->SetValue(section, name, map_str.c_str());
-    }
+    constexpr bool map_has_wstring_key = std::same_as<typename T::key_type, std::wstring>;
 
     template <map_type T>
-    T IniToMap(ToolboxIni* ini, const char* section, const char* name)
+    void MapToSettings(SettingsDoc& settings, const char* section, const char* key, const T& map)
     {
-        std::string map_str = ini->GetValue(section, name, "");
-        try {
-            const auto map_json = nlohmann::json::parse(map_str);
-            return map_json.get<T>();
-        } catch (nlohmann::json::exception e) {
-            return {};
+        // Glaze has no wchar_t serializer; stage wstring keys through UTF-8.
+        if constexpr (map_has_wstring_key<T>) {
+            std::map<std::string, typename T::mapped_type> staged;
+            for (const auto& [k, v] : map) {
+                staged.emplace(WStringToString(k), v);
+            }
+            settings.Set(section, key, staged);
+        }
+        else {
+            settings.Set(section, key, map);
         }
     }
 
+    // Reads a map from the JSON doc; falls back to the legacy ini value MapToIni used to write (a JSON string).
     template <map_type T>
-    T IniToMap(ToolboxIni* ini, const char* section, const char* name, T default_map)
+    T SettingsToMap(const SettingsDoc& settings, const ToolboxIni* legacy_ini, const char* section, const char* key, T default_map = {})
     {
-        if (!ini->KeyExists(section, name)) {
-            return std::move(default_map);
+        if constexpr (map_has_wstring_key<T>) {
+            std::map<std::string, typename T::mapped_type> staged;
+            if (!settings.Get(section, key, staged)) {
+                if (!legacy_ini || !legacy_ini->KeyExists(section, key)) {
+                    return default_map;
+                }
+                const std::string map_str = legacy_ini->GetValue(section, key, "");
+                if (glz::read_json(staged, map_str)) {
+                    return default_map;
+                }
+            }
+            T out{};
+            for (auto& [k, v] : staged) {
+                out.emplace(StringToWString(k), std::move(v));
+            }
+            return out;
         }
-        return IniToMap<T>(ini, section, name);
+        else {
+            T out{};
+            if (settings.Get(section, key, out)) {
+                return out;
+            }
+            if (!legacy_ini || !legacy_ini->KeyExists(section, key)) {
+                return default_map;
+            }
+            const std::string map_str = legacy_ini->GetValue(section, key, "");
+            if (glz::read_json(out, map_str)) {
+                return default_map;
+            }
+            return out;
+        }
     }
 
     // Takes a wstring and translates into a string of hex values, separated by spaces

@@ -1,9 +1,6 @@
 #pragma once
 
-#include <Color.h>
 #include <ToolboxWidget.h>
-
-#include "Utils/FontLoader.h"
 
 namespace FontLoader {
     enum class FontSize;
@@ -31,8 +28,44 @@ public:
 
     [[nodiscard]] const char* Icon() const override { return ICON_FA_HISTORY; }
 
-    void LoadSettings(ToolboxIni* ini) override;
-    void SaveSettings(ToolboxIni* ini) override;
+    struct Settings {
+        // duration -> color settings
+        int medium_treshold = 5000; // long to medium color
+        int short_treshold = 2500;  // medium to short color
+        Colors::SettingColor color_long = Colors::ARGB(50, 0, 255, 0);
+        Colors::SettingColor color_medium = Colors::ARGB(50, 255, 255, 0);
+        Colors::SettingColor color_short = Colors::ARGB(80, 255, 0, 0);
+
+        // duration -> string settings
+        int decimal_threshold = 600; // when to start displaying decimals
+        bool round_up = true;        // round up or down?
+
+        // Skill overlay settings
+        bool display_skill_overlay = true;
+        float font_recharge = 64.f;
+        Colors::SettingColor color_text_recharge = Colors::White();
+        Colors::SettingColor color_text_outline = 0;
+        Colors::SettingColor color_border = Colors::ARGB(100, 255, 255, 255);
+
+        // Effect monitor settings
+        bool display_effect_monitor = false;
+        float effect_monitor_size = 20.f;
+        int effect_monitor_offset = -100;
+        bool effects_symmetric = true;
+        bool display_multiple_effects = false;
+        bool effects_flip_order = false;
+        bool effects_flip_direction = false;
+        bool effect_text_color = false;
+        bool effect_progress_bar_color = false;
+        float font_effects = 16.f;
+        Colors::SettingColor color_text_effects = Colors::White();
+        Colors::SettingColor color_effect_background = Colors::ARGB(100, 0, 0, 0);
+        Colors::SettingColor color_effect_border = Colors::ARGB(255, 0, 0, 0);
+        Colors::SettingColor color_effect_progress = Colors::Blue();
+    };
+
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
     void DrawSettingsInternal() override;
     void Initialize() override;
     void Terminate() override;

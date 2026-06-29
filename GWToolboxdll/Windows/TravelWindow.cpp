@@ -33,7 +33,7 @@
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
-    bool search_in_english = true;
+    TravelWindow::Settings settings;
 
     std::string SanitiseForSearch(const std::wstring& in)
     {
@@ -65,7 +65,7 @@ namespace {
             }
             else {
                 enc_name = std::make_unique<GuiUtils::EncString>(map_info->name_id);
-                if (search_in_english)
+                if (settings.search_in_english)
                     enc_name->language(GW::Constants::Language::English);
                 enc_name->wstring();
             }
@@ -143,12 +143,8 @@ namespace {
         if (map_id == GW::Constants::MapID::Gate_of_Anguish_elite_mission)
             return false;
         const auto map_info = GW::Map::GetMapInfo(map_id);
-        if (!map_info || !map_info->thumbnail_id || !map_info->name_id || !(map_info->x || map_info->y))
+        if (!GW::Map::HasMapDisplayInfo(map_info) || GW::Map::IsExcludedMapInfo(map_info))
             return false;
-        if ((map_info->flags & 0x5000000) == 0x5000000)
-            return false; // e.g. "wrong" augury rock is map 119, no NPCs
-        if ((map_info->flags & 0x80000000) == 0x80000000)
-            return false; // e.g. Debug map)
         switch (map_info->type) {
             case GW::RegionType::City:
             case GW::RegionType::Challenge:
@@ -171,28 +167,21 @@ namespace {
         uint32_t district_number = 0;
     };
 
-    struct AliasEntry {
-        char alias[32]{};
-        GW::Constants::MapID map_id = GW::Constants::MapID::None;
-        GW::Constants::District district = GW::Constants::District::Current;
-        uint8_t district_number = 0;
-    };
-
-    std::vector<AliasEntry> user_aliases{};
+    std::vector<TravelWindow::AliasEntry> user_aliases{};
 
     void PopulateDefaultAliases()
     {
         user_aliases.clear();
         for (const auto& [key, val] : default_outpost_aliases) {
-            AliasEntry entry{};
-            strncpy(entry.alias, key.c_str(), sizeof(entry.alias) - 1);
+            TravelWindow::AliasEntry entry{};
+            entry.alias = key;
             entry.map_id = val.map_id;
             entry.district = val.district;
             entry.district_number = val.district_number;
             user_aliases.push_back(entry);
         }
-        std::ranges::sort(user_aliases, [](const AliasEntry& a, const AliasEntry& b) {
-            return strcmp(a.alias, b.alias) < 0;
+        std::ranges::sort(user_aliases, [](const TravelWindow::AliasEntry& a, const TravelWindow::AliasEntry& b) {
+            return a.alias < b.alias;
         });
     }
 
@@ -210,7 +199,6 @@ namespace {
         wchar_t* message;
     };
 
-    bool retry_map_travel = false;
     MapStruct pending_map_travel;
 
     constexpr auto messages_to_hook = {
@@ -221,13 +209,7 @@ namespace {
     GW::HookEntry OnUIMessage_HookEntry;
 
 
-    struct UserDestEntry {
-        GW::Constants::MapID map_id = GW::Constants::MapID::None;
-        GW::Constants::District district = GW::Constants::District::Current;
-        uint8_t district_number = 0;
-    };
-
-    const std::vector<UserDestEntry> default_user_destinations = {
+    const std::vector<TravelWindow::UserDestEntry> default_user_destinations = {
         {GW::Constants::MapID::Temple_of_the_Ages},
         {GW::Constants::MapID::Domain_of_Anguish},
         {GW::Constants::MapID::Kamadan_Jewel_of_Istan_outpost},
@@ -239,17 +221,12 @@ namespace {
     };
 
     // ==== User-defined travel destinations (shown as 2-column buttons in main window) ====
-    std::vector<UserDestEntry> user_destinations{};
+    std::vector<TravelWindow::UserDestEntry> user_destinations{};
 
     void PopulateDefaultDestinations()
     {
         user_destinations = default_user_destinations;
     }
-
-    // ==== options ====
-    bool close_on_travel = false;
-    bool collapse_on_travel = false;
-    bool show_zaishen_buttons = true;
 
     // ==== scroll to outpost ====
     GW::Constants::MapID scroll_to_outpost_id = GW::Constants::MapID::None;   // Which outpost do we want to end up in?
@@ -302,7 +279,7 @@ namespace {
             }
             break;
             case GW::UI::UIMessage::kErrorMessage: {
-                if (!(retry_map_travel && pending_map_travel.map_id != GW::Constants::MapID::None)) {
+                if (!(settings.retry_map_travel && pending_map_travel.map_id != GW::Constants::MapID::None)) {
                     break;
                 }
                 const auto msg = static_cast<UIErrorMessage*>(wparam);
@@ -389,6 +366,7 @@ namespace {
         auto FindMatchingMapVec = [](const char* compare, std::vector<SearchableArea*>& maps) -> GW::Constants::MapID {
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
+            bool bestMatchIsOutpost = false;
 
             const auto searchStringLength = compare ? strlen(compare) : 0;
             if (!searchStringLength) {
@@ -408,9 +386,12 @@ namespace {
                 if (thisMapLength == searchStringLength) {
                     return map.map_id; // Exact match, break.
                 }
-                if (!bestMatchMapName || strcmp(map.Name(), bestMatchMapName) < 0) {
+                const bool thisIsOutpost = IsValidOutpost(map.map_id);
+                if (!bestMatchMapName || (thisIsOutpost && !bestMatchIsOutpost) ||
+                    (thisIsOutpost == bestMatchIsOutpost && strcmp(map.Name(), bestMatchMapName) < 0)) {
                     bestMatchMapID = map.map_id;
                     bestMatchMapName = map.Name();
+                    bestMatchIsOutpost = thisIsOutpost;
                 }
             }
             return bestMatchMapID;
@@ -648,6 +629,7 @@ namespace {
 void TravelWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     scroll_texture = Resources::GetItemImage(L"Passage Scroll to the Deep");
     district = GW::Constants::District::Current;
     district_number = 0;
@@ -750,7 +732,7 @@ void TravelWindow::Draw(IDirect3DDevice9*)
                 TravelButton(dest.map_id, static_cast<int>(render_idx % 2), effective_district, effective_district_number);
                 render_idx++;
             }
-            if (show_zaishen_buttons) {
+            if (settings.show_zaishen_buttons) {
                 const float w = (ImGui::GetWindowWidth() - ImGui::GetStyle().ItemInnerSpacing.x) / 2 - 2.f * ImGui::GetStyle().WindowPadding.x;
                 if (ImGui::Button("Zaishen Bounty", {w, 0})) {
                     GW::Chat::SendChat('/', "tp zb");
@@ -1068,11 +1050,11 @@ bool TravelWindow::Travel(const GW::Constants::MapID map_id, const GW::Constants
         return true;
     }
 
-    if (collapse_on_travel) {
+    if (settings.collapse_on_travel) {
         to_minimize = true;
     }
 
-    if (close_on_travel) {
+    if (settings.close_on_travel) {
         visible = false;
     }
 
@@ -1102,16 +1084,11 @@ bool TravelWindow::TravelFavorite(const unsigned int idx)
 
 void TravelWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Close on travel", &close_on_travel);
-    ImGui::ShowHelp("Will close the travel window when clicking on a travel destination");
-    ImGui::Checkbox("Collapse on travel", &collapse_on_travel);
-    ImGui::ShowHelp("Will collapse the travel window when clicking on a travel destination");
-    ImGui::Checkbox("Automatically retry if the district is full", &retry_map_travel);
-    ImGui::ShowHelp("Use /tp stop to stop retrying.");
-    ImGui::Checkbox("Use English map names", &search_in_english);
-    ImGui::ShowHelp("If this is unchecked, the /tp command will use the localized map names based on your current language.");
-    ImGui::Checkbox("Show Zaishen quest buttons", &show_zaishen_buttons);
-    ImGui::ShowHelp("Show the Zaishen Bounty, Mission, Vanquish and Combat travel buttons in the Travel window.");
+    ImGui::CheckboxWithHelp("Close on travel", &settings.close_on_travel, "Will close the travel window when clicking on a travel destination");
+    ImGui::CheckboxWithHelp("Collapse on travel", &settings.collapse_on_travel, "Will collapse the travel window when clicking on a travel destination");
+    ImGui::CheckboxWithHelp("Automatically retry if the district is full", &settings.retry_map_travel, "Use /tp stop to stop retrying.");
+    ImGui::CheckboxWithHelp("Use English map names", &settings.search_in_english, "If this is unchecked, the /tp command will use the localized map names based on your current language.");
+    ImGui::CheckboxWithHelp("Show Zaishen quest buttons", &settings.show_zaishen_buttons, "Show the Zaishen Bounty, Mission, Vanquish and Combat travel buttons in the Travel window.");
 
     ImGui::Separator();
     ImGui::Text("User Travel Destinations");
@@ -1207,7 +1184,7 @@ void TravelWindow::DrawSettingsInternal()
             // Alias key
             ImGui::TableSetColumnIndex(0);
             ImGui::SetNextItemWidth(-1);
-            if (ImGui::InputText("##alias", entry.alias, sizeof(entry.alias)))
+            if (ImGui::InputText("##alias", entry.alias, 32))
                 aliases_changed = true;
 
             // Map combo
@@ -1267,111 +1244,78 @@ void TravelWindow::DrawSettingsInternal()
     (void)aliases_changed;
 }
 
-void TravelWindow::LoadSettings(ToolboxIni* ini)
+void TravelWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
     user_destinations.clear();
-    if (ini->GetValue(Name(), "dest_count", nullptr)) {
-        const auto dest_count = static_cast<size_t>(ini->GetLongValue(Name(), "dest_count", 0));
-        for (size_t i = 0; i < dest_count; i++) {
-            char key[64];
-            snprintf(key, _countof(key), "Dest%zu", i);
-            const auto map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
-            if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None) {
-                UserDestEntry entry{};
-                entry.map_id = map_id;
-                snprintf(key, _countof(key), "Dest%zu_district", i);
-                entry.district = static_cast<GW::Constants::District>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::District::Current)));
-                snprintf(key, _countof(key), "Dest%zu_district_num", i);
-                entry.district_number = static_cast<uint8_t>(ini->GetLongValue(Name(), key, 0));
-                user_destinations.push_back(entry);
+    if (!doc.Get(Name(), "user_destinations", user_destinations)) {
+        if (legacy && legacy->GetValue(Name(), "dest_count", nullptr)) {
+            const auto dest_count = static_cast<size_t>(legacy->GetLongValue(Name(), "dest_count", 0));
+            for (size_t i = 0; i < dest_count; i++) {
+                char key[64];
+                snprintf(key, _countof(key), "Dest%zu", i);
+                const auto map_id = static_cast<GW::Constants::MapID>(legacy->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
+                if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None) {
+                    UserDestEntry entry{};
+                    entry.map_id = map_id;
+                    snprintf(key, _countof(key), "Dest%zu_district", i);
+                    entry.district = static_cast<GW::Constants::District>(legacy->GetLongValue(Name(), key, static_cast<int>(GW::Constants::District::Current)));
+                    snprintf(key, _countof(key), "Dest%zu_district_num", i);
+                    entry.district_number = static_cast<uint8_t>(legacy->GetLongValue(Name(), key, 0));
+                    user_destinations.push_back(entry);
+                }
             }
         }
-    }
-    else {
-        // Migrate from old fav_ keys if present
-        size_t fav_count = 0;
-        LOAD_UINT(fav_count);
-        for (size_t i = 0; i < fav_count; i++) {
-            char key[32];
-            snprintf(key, _countof(key), "Fav%d", i);
-            const auto map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
-            if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None)
-                user_destinations.push_back({map_id});
-        }
-        // If still empty, populate defaults (respecting old show_default_destinations setting)
-        if (user_destinations.empty()) {
-            const bool old_show_defaults = ini->GetBoolValue(Name(), "show_default_destinations", true);
-            if (old_show_defaults) {
-                PopulateDefaultDestinations();
+        else {
+            // Migrate from old fav_ keys if present
+            const auto fav_count = legacy ? static_cast<size_t>(legacy->GetLongValue(Name(), "fav_count", 0)) : 0;
+            for (size_t i = 0; i < fav_count; i++) {
+                char key[32];
+                snprintf(key, _countof(key), "Fav%d", i);
+                const auto map_id = static_cast<GW::Constants::MapID>(legacy->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
+                if (map_id < GW::Constants::MapID::Count && map_id > GW::Constants::MapID::None)
+                    user_destinations.push_back({map_id});
+            }
+            // If still empty, populate defaults (respecting old show_default_destinations setting)
+            if (user_destinations.empty()) {
+                const bool old_show_defaults = legacy ? legacy->GetBoolValue(Name(), "show_default_destinations", true) : true;
+                if (old_show_defaults) {
+                    PopulateDefaultDestinations();
+                }
             }
         }
     }
 
-    size_t alias_count = 0;
-    LOAD_UINT(alias_count);
     user_aliases.clear();
-    for (size_t i = 0; i < alias_count; i++) {
-        char key[64];
-        AliasEntry entry{};
-        snprintf(key, sizeof(key), "Alias%zu_key", i);
-        const auto* alias_str = ini->GetValue(Name(), key, nullptr);
-        if (!alias_str || !*alias_str)
-            continue;
-        strncpy(entry.alias, alias_str, sizeof(entry.alias) - 1);
-        snprintf(key, sizeof(key), "Alias%zu_map", i);
-        entry.map_id = static_cast<GW::Constants::MapID>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
-        snprintf(key, sizeof(key), "Alias%zu_district", i);
-        entry.district = static_cast<GW::Constants::District>(ini->GetLongValue(Name(), key, static_cast<int>(GW::Constants::District::Current)));
-        snprintf(key, sizeof(key), "Alias%zu_district_num", i);
-        entry.district_number = static_cast<uint8_t>(ini->GetLongValue(Name(), key, 0));
-        user_aliases.push_back(entry);
+    if (!doc.Get(Name(), "user_aliases", user_aliases) && legacy) {
+        const auto alias_count = static_cast<size_t>(legacy->GetLongValue(Name(), "alias_count", 0));
+        for (size_t i = 0; i < alias_count; i++) {
+            char key[64];
+            AliasEntry entry{};
+            snprintf(key, sizeof(key), "Alias%zu_key", i);
+            const auto* alias_str = legacy->GetValue(Name(), key, nullptr);
+            if (!alias_str || !*alias_str)
+                continue;
+            entry.alias = alias_str;
+            snprintf(key, sizeof(key), "Alias%zu_map", i);
+            entry.map_id = static_cast<GW::Constants::MapID>(legacy->GetLongValue(Name(), key, static_cast<int>(GW::Constants::MapID::None)));
+            snprintf(key, sizeof(key), "Alias%zu_district", i);
+            entry.district = static_cast<GW::Constants::District>(legacy->GetLongValue(Name(), key, static_cast<int>(GW::Constants::District::Current)));
+            snprintf(key, sizeof(key), "Alias%zu_district_num", i);
+            entry.district_number = static_cast<uint8_t>(legacy->GetLongValue(Name(), key, 0));
+            user_aliases.push_back(entry);
+        }
     }
     if (user_aliases.empty())
         PopulateDefaultAliases();
-
-    LOAD_BOOL(close_on_travel);
-    LOAD_BOOL(collapse_on_travel);
-    LOAD_BOOL(retry_map_travel);
-    LOAD_BOOL(search_in_english);
-    LOAD_BOOL(show_zaishen_buttons);
 }
 
-void TravelWindow::SaveSettings(ToolboxIni* ini)
+void TravelWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    const size_t dest_count = user_destinations.size();
-    ini->SetLongValue(Name(), "dest_count", static_cast<long>(dest_count));
-    for (size_t i = 0; i < dest_count; i++) {
-        char key[64];
-        const auto& dest = user_destinations[i];
-        snprintf(key, _countof(key), "Dest%zu", i);
-        ini->SetLongValue(Name(), key, static_cast<int>(dest.map_id));
-        snprintf(key, _countof(key), "Dest%zu_district", i);
-        ini->SetLongValue(Name(), key, static_cast<int>(dest.district));
-        snprintf(key, _countof(key), "Dest%zu_district_num", i);
-        ini->SetLongValue(Name(), key, dest.district_number);
-    }
-
-    const size_t alias_count = user_aliases.size();
-    SAVE_UINT(alias_count);
-    for (size_t i = 0; i < alias_count; i++) {
-        char key[64];
-        const auto& entry = user_aliases[i];
-        snprintf(key, sizeof(key), "Alias%zu_key", i);
-        ini->SetValue(Name(), key, entry.alias);
-        snprintf(key, sizeof(key), "Alias%zu_map", i);
-        ini->SetLongValue(Name(), key, static_cast<int>(entry.map_id));
-        snprintf(key, sizeof(key), "Alias%zu_district", i);
-        ini->SetLongValue(Name(), key, static_cast<int>(entry.district));
-        snprintf(key, sizeof(key), "Alias%zu_district_num", i);
-        ini->SetLongValue(Name(), key, entry.district_number);
-    }
-
-    SAVE_BOOL(close_on_travel);
-    SAVE_BOOL(collapse_on_travel);
-    SAVE_BOOL(retry_map_travel);
-    SAVE_BOOL(search_in_english);
-    SAVE_BOOL(show_zaishen_buttons);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+    doc.Set(Name(), "user_destinations", user_destinations);
+    doc.Set(Name(), "user_aliases", user_aliases);
 }

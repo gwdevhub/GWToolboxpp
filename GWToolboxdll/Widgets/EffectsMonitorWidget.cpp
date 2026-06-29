@@ -27,17 +27,7 @@
 #include <Utils/FontLoader.h>
 
 namespace {
-    auto font_effects = 18.f;
-    Color color_text_effects = Colors::White();
-    Color color_background = Colors::ARGB(128, 0, 0, 0);
-    Color color_text_shadow = Colors::Black();
-
-    // duration -> string settings
-    int decimal_threshold = 600;   // when to start displaying decimals
-    int only_under_seconds = 3600; // hide effect durations over n seconds
-    bool round_up = true;          // round up or down?
-    bool show_vanquish_counter = true;
-    bool track_spirit_effects = false;
+    EffectsMonitorWidget::Settings settings;
 
     GW::UI::Frame* effects_frame = nullptr;
 
@@ -68,16 +58,25 @@ namespace {
         uint32_t timestamp_ms = 0;
     } pending_spirit_spawn;
 
+    // Set when a spirit agent spawns before the skill activation message arrives.
+    struct PendingAgentSpawn {
+        uint32_t agent_id = 0;
+        GW::Constants::SkillID skill_id = GW::Constants::SkillID::No_Skill;
+        uint32_t timestamp_ms = 0;
+    } pending_agent_spawn;
+
+    bool IsAlliedSpirit(const GW::Agent* agent) {
+        return GW::Agents::GetAgentMatchesFlags(agent, GW::AgentTargetFlags::Include_SpiritPet | GW::AgentTargetFlags::Exclude_DeadSpiritPet);
+    }
+
     GW::HookEntry spirit_ui_hook;
 
-    float GetSpiritDuration(const GW::Constants::SkillID skill_id, const uint32_t npc_level)
+    float GetSpiritDuration(const GW::Constants::SkillID skill_id)
     {
         const auto* skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-        if (!skill || skill->duration0 == 0) return 60.f;
-        const float d0 = static_cast<float>(skill->duration0);
-        const float d15 = static_cast<float>(skill->duration15);
-        const float level = std::min(static_cast<float>(npc_level), 20.f);
-        return d0 + (d15 - d0) * level / 15.f;
+        if (!(skill && skill->duration0)) return 60.f;
+        const auto att = GW::SkillbarMgr::GetPlayerAttribute((GW::Constants::Attribute)skill->attribute);
+        return !att || att->level == 0 ? skill->duration0 : skill->duration0 + (skill->duration15 - skill->duration0) * att->level / 15.f;
     }
 
     void RemoveTrackedSpirit(const uint32_t agent_id)
@@ -88,38 +87,70 @@ namespace {
         tracked_spirits.erase(it);
     }
 
+    void TrackSpirit(const uint32_t agent_id, const GW::Constants::SkillID skill_id)
+    {
+        // Evict any previously tracked spirit for this skill_id.
+        // The old agent's kAgentDestroy may arrive after us, so we must unlink it
+        // from tracked_spirits now so RemoveTrackedSpirit doesn't kill our new effect.
+        for (auto it = tracked_spirits.begin(); it != tracked_spirits.end();) {
+            if (it->second == skill_id && it->first != agent_id) {
+                tracked_spirits.erase(it); // don't call RemoveTrackedSpirit - that would remove the effect
+                break;
+            }
+            else
+                ++it;
+        }
+        const float duration = GetSpiritDuration(skill_id);
+        GW::Effects::AddCustomEffect(skill_id, duration);
+        tracked_spirits[agent_id] = skill_id;
+    }
+
     void OnSpiritUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
     {
         switch (message_id) {
         case GW::UI::UIMessage::kAgentSkillActivated: {
-            if (!track_spirit_effects) break;
+            if (!settings.track_spirit_effects) break;
             const auto* packet = static_cast<GW::UI::UIPacket::kAgentSkillPacket*>(wparam);
             if (packet->agent_id != GW::Agents::GetControlledCharacterId()) break;
             const bool is_spirit = std::any_of(
                 spirit_enc_name_to_skill_id.begin(), spirit_enc_name_to_skill_id.end(),
                 [&](const auto& kv) { return kv.second == packet->skill_id; });
             if (!is_spirit) break;
-            pending_spirit_spawn = {packet->skill_id, GW::MemoryMgr::GetSkillTimer()};
+            // Agent may have already spawned before this activation message arrived.
+            if (pending_agent_spawn.skill_id == packet->skill_id
+                && GW::MemoryMgr::GetSkillTimer() - pending_agent_spawn.timestamp_ms <= 500
+                && IsAlliedSpirit(GW::Agents::GetAgentByID(pending_agent_spawn.agent_id))) {
+                TrackSpirit(pending_agent_spawn.agent_id, packet->skill_id);
+                pending_agent_spawn = {};
+            }
+            else {
+                pending_spirit_spawn = {packet->skill_id, GW::MemoryMgr::GetSkillTimer()};
+            }
         } break;
         case GW::UI::UIMessage::kAgentUpdate: {
-            if (!track_spirit_effects || pending_spirit_spawn.skill_id == GW::Constants::SkillID::No_Skill) break;
+            if (!settings.track_spirit_effects) break;
             const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
-            if (GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
-                pending_spirit_spawn = {};
-                break;
-            }
             if (tracked_spirits.contains(agent_id)) break;
             const auto* agent = GW::Agents::GetAgentByID(agent_id);
-            const auto* living = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (!living || living->allegiance != GW::Constants::Allegiance::Spirit_Pet) break;
+            if (!IsAlliedSpirit(agent)) break;
             const auto* enc_name = GW::Agents::GetAgentEncName(agent);
             if (!enc_name) break;
             const auto name_it = spirit_enc_name_to_skill_id.find(enc_name);
-            if (name_it == spirit_enc_name_to_skill_id.end() || name_it->second != pending_spirit_spawn.skill_id) break;
-            const float duration = GetSpiritDuration(name_it->second, living->level);
-            GW::Effects::AddCustomEffect(name_it->second, duration);
-            tracked_spirits[agent_id] = name_it->second;
-            pending_spirit_spawn = {};
+            if (name_it == spirit_enc_name_to_skill_id.end()) break;
+            if (pending_spirit_spawn.skill_id != GW::Constants::SkillID::No_Skill) {
+                // Skill activation arrived first: resolve now.
+                if (GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
+                    pending_spirit_spawn = {};
+                    break;
+                }
+                if (name_it->second != pending_spirit_spawn.skill_id) break;
+                TrackSpirit(agent_id, name_it->second);
+                pending_spirit_spawn = {};
+            }
+            else {
+                // Agent spawned before skill activation: store and wait.
+                pending_agent_spawn = {agent_id, name_it->second, GW::MemoryMgr::GetSkillTimer()};
+            }
         } break;
         case GW::UI::UIMessage::kAgentDestroy: {
             const auto agent_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
@@ -131,11 +162,11 @@ namespace {
     int UptimeToString(char arr[8], int cd)
     {
         cd = std::abs(cd);
-        if (cd > only_under_seconds * 1000) {
+        if (cd > settings.only_under_seconds * 1000) {
             return 0;
         }
-        if (cd >= decimal_threshold) {
-            if (round_up) {
+        if (cd >= settings.decimal_threshold) {
+            if (settings.round_up) {
                 cd += 1000;
             }
             return snprintf(arr, 8, "%d", cd / 1000);
@@ -158,20 +189,20 @@ namespace {
         if (label_size.x > skill_frame_size.x) {
             // If the label is wider than the frame, scale text size.
             const auto scale_factor = skill_frame_size.x / label_size.x;
-            const auto scaled_size = scale_factor * font_effects;
+            const auto scaled_size = scale_factor * settings.font_effects;
             overridden_font = FontLoader::GetFont();
             ImGui::PushFont(overridden_font, draw_list, scaled_size);
             label_size *= scale_factor;
         }
 
         const ImVec2 label_pos(skill_bottom_right.x - label_size.x, skill_bottom_right.y - label_size.y);
-        if ((color_background & IM_COL32_A_MASK) != 0) {
-            draw_list->AddRectFilled(label_pos, skill_bottom_right, color_background);
+        if ((settings.color_background.value & IM_COL32_A_MASK) != 0) {
+            draw_list->AddRectFilled(label_pos, skill_bottom_right, settings.color_background);
         }
-        if ((color_text_shadow & IM_COL32_A_MASK) != 0) {
-            draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, color_text_shadow, text);
+        if ((settings.color_text_shadow.value & IM_COL32_A_MASK) != 0) {
+            draw_list->AddText({label_pos.x + 1, label_pos.y + 1}, settings.color_text_shadow, text);
         }
-        draw_list->AddText(label_pos, color_text_effects, text);
+        draw_list->AddText(label_pos, settings.color_text_effects, text);
         if (overridden_font) {
             ImGui::PopFont(draw_list);
         }
@@ -210,13 +241,13 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
     viewport = ImGui::GetMainViewport();
     draw_list = ImGui::GetBackgroundDrawList(viewport);
     const auto font = FontLoader::GetFont();
-    ImGui::PushFont(font, draw_list, font_effects);
+    ImGui::PushFont(font, draw_list, settings.font_effects);
 
     const auto hard_mode_frame = GW::UI::GetChildFrame(effects_frame, 1);
     // const auto minion_count_frame = GW::UI::GetChildFrame(effects_frame, 2);
     // const auto morale_frame = GW::UI::GetChildFrame(effects_frame, 3);
 
-    if (hard_mode_frame && show_vanquish_counter) {
+    if (hard_mode_frame && settings.show_vanquish_counter) {
         if (const auto foes_left = GW::Map::GetFoesToKill()) {
             const auto foes_killed = GW::Map::GetFoesKilled();
             std::array<char, 16> remaining_str;
@@ -252,7 +283,8 @@ void EffectsMonitorWidget::Draw(IDirect3DDevice9*)
 void EffectsMonitorWidget::Initialize()
 {
     ToolboxWidget::Initialize();
-    GW::UI::RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPreUIMessage, -0x6000);
+    SettingsRegistry::Register(this, settings);
+    RegisterUIMessageCallback(&OnPreUIMessage_HookEntry, GW::UI::UIMessage::kEffectAdd, OnPreUIMessage, -0x6000);
 
     GW::UI::UIMessage spirit_messages[] = {
         GW::UI::UIMessage::kAgentSkillActivated,
@@ -260,7 +292,7 @@ void EffectsMonitorWidget::Initialize()
         GW::UI::UIMessage::kAgentDestroy
     };
     for (auto msg : spirit_messages) {
-        GW::UI::RegisterUIMessageCallback(&spirit_ui_hook, msg, OnSpiritUIMessage, 0x100);
+        RegisterUIMessageCallback(&spirit_ui_hook, msg, OnSpiritUIMessage, 0x100);
     }
 }
 void EffectsMonitorWidget::Terminate()
@@ -273,6 +305,7 @@ void EffectsMonitorWidget::Terminate()
     }
     tracked_spirits.clear();
     pending_spirit_spawn = {};
+    pending_agent_spawn = {};
 }
 void EffectsMonitorWidget::Update(float delta)
 {
@@ -303,18 +336,20 @@ void EffectsMonitorWidget::Update(float delta)
         }
     }
 
-    // Expire a pending spirit spawn that never produced a matching agent.
-    if (pending_spirit_spawn.skill_id != GW::Constants::SkillID::No_Skill && GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
+    // Expire pending states that never produced a matching counterpart.
+    const auto now_ms = GW::MemoryMgr::GetSkillTimer();
+    if (pending_spirit_spawn.skill_id != GW::Constants::SkillID::No_Skill && now_ms - pending_spirit_spawn.timestamp_ms > 500) {
         pending_spirit_spawn = {};
+    }
+    if (pending_agent_spawn.skill_id != GW::Constants::SkillID::No_Skill && now_ms - pending_agent_spawn.timestamp_ms > 500) {
+        pending_agent_spawn = {};
     }
 
     // Validate that tracked spirits still exist and are alive.
     if (!tracked_spirits.empty()) {
         std::vector<uint32_t> to_remove;
         for (const auto& [agent_id, skill_id] : tracked_spirits) {
-            const auto* agent = GW::Agents::GetAgentByID(agent_id);
-            const auto* living = agent ? agent->GetAsAgentLiving() : nullptr;
-            if (!living || living->hp <= 0.f || living->allegiance != GW::Constants::Allegiance::Spirit_Pet) {
+            if (!IsAlliedSpirit(GW::Agents::GetAgentByID(agent_id))) {
                 to_remove.push_back(agent_id);
             }
         }
@@ -322,36 +357,17 @@ void EffectsMonitorWidget::Update(float delta)
     }
 }
 
-void EffectsMonitorWidget::LoadSettings(ToolboxIni* ini)
+void EffectsMonitorWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-
-    LOAD_UINT(decimal_threshold);
-    LOAD_UINT(only_under_seconds);
-    LOAD_BOOL(round_up);
-    LOAD_BOOL(show_vanquish_counter);
-    LOAD_BOOL(track_spirit_effects);
-    LOAD_FLOAT(font_effects);
-    LOAD_COLOR(color_text_effects);
-    LOAD_COLOR(color_text_shadow);
-    LOAD_COLOR(color_background);
-
-    font_effects = std::clamp(font_effects, 16.f, 48.f);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    settings.font_effects = std::clamp(settings.font_effects, 16.f, 48.f);
 }
 
-void EffectsMonitorWidget::SaveSettings(ToolboxIni* ini)
+void EffectsMonitorWidget::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-
-    SAVE_UINT(decimal_threshold);
-    SAVE_UINT(only_under_seconds);
-    SAVE_BOOL(round_up);
-    SAVE_BOOL(show_vanquish_counter);
-    SAVE_BOOL(track_spirit_effects);
-    SAVE_FLOAT(font_effects);
-    SAVE_COLOR(color_text_effects);
-    SAVE_COLOR(color_text_shadow);
-    SAVE_COLOR(color_background);
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void EffectsMonitorWidget::DrawSettingsInternal()
@@ -360,27 +376,27 @@ void EffectsMonitorWidget::DrawSettingsInternal()
 
     ImGui::PushID("effects_monitor_overlay_settings");
 
-    ImGui::DragFloat("Text size", &font_effects, 1.f, 16.f, 48.f, "%.f");
-    Colors::DrawSettingHueWheel("Text color", &color_text_effects);
-    Colors::DrawSettingHueWheel("Text shadow", &color_text_shadow);
-    Colors::DrawSettingHueWheel("Effect duration background", &color_background);
+    ImGui::DragFloat("Text size", &settings.font_effects, 1.f, 16.f, 48.f, "%.f");
+    Colors::DrawSettingHueWheel("Text color", &settings.color_text_effects.value);
+    Colors::DrawSettingHueWheel("Text shadow", &settings.color_text_shadow.value);
+    Colors::DrawSettingHueWheel("Effect duration background", &settings.color_background.value);
     ImGui::Text("Don't show effect durations longer than");
     ImGui::SameLine();
     ImGui::PushItemWidth(64.f * ImGui::FontScale());
-    ImGui::InputInt("###only_under_seconds", &only_under_seconds, 0);
+    ImGui::InputInt("###only_under_seconds", &settings.only_under_seconds, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("seconds");
     ImGui::Text("Show decimal places when duration is less than");
     ImGui::SameLine();
     ImGui::PushItemWidth(64.f * ImGui::FontScale());
-    ImGui::InputInt("###decimal_threshold", &decimal_threshold, 0);
+    ImGui::InputInt("###decimal_threshold", &settings.decimal_threshold, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::Text("milliseconds");
-    ImGui::Checkbox("Round up integers", &round_up);
+    ImGui::Checkbox("Round up integers", &settings.round_up);
     ImGui::SameLine();
-    ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &show_vanquish_counter);
-    ImGui::Checkbox("Track nearby spirit timers (Bloodsong, Vampirism, etc.)", &track_spirit_effects);
+    ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &settings.show_vanquish_counter);
+    ImGui::Checkbox("Track nearby spirit timers (Bloodsong, Vampirism, etc.)", &settings.track_spirit_effects);
     ImGui::PopID();
 }

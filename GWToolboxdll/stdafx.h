@@ -71,7 +71,7 @@
 #include <discord-game-sdk/discord_game_sdk.h>
 #include <ToolboxIni.h>
 
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 #include <easywsclient.hpp>
 #include <mp3.h>
 #include <IconsFontAwesome5.h>
@@ -85,6 +85,8 @@
 #include <imgui_internal.h>
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx9.h"
+
+#include <Utils/SettingsRegistry.h>
 
 #pragma warning(pop)
 

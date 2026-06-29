@@ -25,8 +25,10 @@ namespace MapSpecific {
         
     class MapSpecificData {
     public:
-        MapSpecificData() {};    
-        MapSpecificData(GW::Constants::MapID id)
+        MapSpecificData() {}
+        MapSpecificData(GW::Constants::MapID id) { AddTeleportsForMap(id); }
+
+        void AddTeleportsForMap(GW::Constants::MapID id)
         {
             switch (id) {
 				case GW::Constants::MapID::Diviners_Ascent: {

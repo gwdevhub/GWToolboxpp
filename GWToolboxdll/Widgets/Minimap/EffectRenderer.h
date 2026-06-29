@@ -6,6 +6,8 @@
 
 #include <D3DContainers.h>
 
+class SettingsDoc;
+
 class EffectRenderer : public D3DVertexBuffer {
     friend class Minimap;
 
@@ -20,8 +22,8 @@ public:
 
     static void LoadDefaults();
     static void DrawSettings();
-    void LoadSettings(const ToolboxIni* ini, const char* section);
-    static void SaveSettings(ToolboxIni* ini, const char* section);
+    void LoadSettings(const SettingsDoc& doc, const ToolboxIni* legacy, const char* section);
+    static void SaveSettings(SettingsDoc& doc, const char* section);
 
 private:
     void Initialize(IDirect3DDevice9* device) override;

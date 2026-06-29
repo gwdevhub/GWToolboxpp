@@ -9,15 +9,17 @@ target_sources(plugin_base INTERFACE
     "plugins/Base/ToolboxUIPlugin.h"
     "plugins/Base/ToolboxUIPlugin.cpp"
     "GWToolboxdll/RectF.h"
-    "GWToolboxdll/MinimapPlugin.h")
+    "GWToolboxdll/MinimapPlugin.h"
+    # Compiled into each plugin DLL: plugins get their own SettingsDoc/ToolboxIni (not exported by GWToolboxdll).
+    "GWToolboxdll/ToolboxIni.cpp"
+    "GWToolboxdll/Utils/SettingsDoc.cpp")
 target_include_directories(plugin_base INTERFACE
     "plugins/Base"
     "GWToolboxdll" # careful here, we only get access to exported and header functions!
-    ${SIMPLEINI_INCLUDE_DIRS}
     )
 target_link_libraries(plugin_base INTERFACE
     imgui
-    nlohmann_json::nlohmann_json
+    glaze::glaze
     gwca
     IconFontCppHeaders
     GWToolboxdll # for GetFont
@@ -33,11 +35,19 @@ macro(add_tb_plugin PLUGIN)
     target_include_directories(${PLUGIN} PRIVATE "${PROJECT_SOURCE_DIR}/plugins/${PLUGIN}")
     target_link_libraries(${PLUGIN} PRIVATE plugin_base)
     target_compile_options(${PLUGIN} PRIVATE /wd4201 /wd4505)
-    target_compile_options(${PLUGIN} PRIVATE /W4 /WX /Gy)
-    target_compile_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
-    target_compile_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
-    target_link_options(${PLUGIN} PRIVATE /WX /OPT:REF /OPT:ICF /SAFESEH:NO)
-    target_link_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>)
+    target_compile_options(${PLUGIN} PRIVATE /Gy)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        # See note in GWToolboxdll/CMakeLists.txt — /W4 (=-Wall -Wextra)
+        target_compile_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/Z7 /Od>)
+        target_link_options(${PLUGIN} PRIVATE /OPT:REF /OPT:ICF /SAFESEH:NO)
+        target_link_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/INCREMENTAL:NO>)
+    else()
+        target_compile_options(${PLUGIN} PRIVATE /W4 /WX)
+        target_compile_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/GL>)
+        target_compile_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+        target_link_options(${PLUGIN} PRIVATE /WX /OPT:REF /OPT:ICF /SAFESEH:NO)
+        target_link_options(${PLUGIN} PRIVATE $<$<NOT:$<CONFIG:Debug>>:/LTCG /INCREMENTAL:NO>)
+    endif()
     target_link_options(${PLUGIN} PRIVATE $<$<CONFIG:Debug>:/IGNORE:4098 /OPT:NOREF /OPT:NOICF>)
     target_link_options(${PLUGIN} PRIVATE $<$<CONFIG:RelWithDebInfo>:/OPT:NOICF>)
     set_target_properties(${PLUGIN} PROPERTIES FOLDER "plugins/")

@@ -8,8 +8,6 @@
 #include <D3DContainers.h>
 #include <Widgets/Minimap/PmapRenderer.h>
 
-#include <ImGuiAddons.h>
-
 #include "Minimap.h"
 
 namespace {

@@ -1,94 +1,14 @@
 #include "stdafx.h"
 
+#include <Defender.h>
 #include <Path.h>
 #include "WindowsDefender.h"
 
 #include "Settings.h"
-#include "Registry.h"
 
 namespace fs = std::filesystem;
 
 namespace {
-    std::wstring ReadFile(const std::filesystem::path& path)
-    {
-        std::wifstream file(path);
-        if (!file.is_open()) {
-            return L"";
-        }
-
-        std::wstringstream buffer;
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-
-
-    bool ExecutePowerShellCommand(const std::wstring& command, std::wstring& output)
-    {
-        // Create a temporary file for output
-        wchar_t temp_path[MAX_PATH];
-        wchar_t temp_file[MAX_PATH];
-
-        if (GetTempPathW(MAX_PATH, temp_path) == 0) {
-            fprintf(stderr, "GetTempPathW failed (%lu)\n", GetLastError());
-            return false;
-        }
-
-        if (GetTempFileNameW(temp_path, L"GWT", 0, temp_file) == 0) {
-            fprintf(stderr, "GetTempFileNameW failed (%lu)\n", GetLastError());
-            return false;
-        }
-
-        std::wstring full_command = L"powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"";
-        full_command += command;
-        full_command += L" | Out-File -FilePath '";
-        full_command += temp_file;
-        full_command += L"' -Encoding UTF8\"";
-
-        STARTUPINFOW si = {sizeof(STARTUPINFOW)};
-        PROCESS_INFORMATION pi = {nullptr};
-
-        si.dwFlags = STARTF_USESHOWWINDOW;
-        si.wShowWindow = SW_HIDE;
-
-        // Create a modifiable copy of the command string
-        std::vector cmd_buffer(full_command.begin(), full_command.end());
-        cmd_buffer.push_back(L'\0');
-
-        BOOL success = CreateProcessW(
-            nullptr,
-            cmd_buffer.data(),
-            nullptr,
-            nullptr,
-            FALSE,
-            CREATE_NO_WINDOW,
-            nullptr,
-            nullptr,
-            &si,
-            &pi);
-
-        if (!success) {
-            fprintf(stderr, "CreateProcessW failed (%lu)\n", GetLastError());
-            DeleteFileW(temp_file);
-            return false;
-        }
-
-        DWORD exit_code = STILL_ACTIVE;
-        DWORD elapsed = 0;
-        for (elapsed = 0; exit_code == STILL_ACTIVE && elapsed < 5000; elapsed += 10) {
-            Sleep(10);
-            GetExitCodeProcess(pi.hProcess, &exit_code);
-        }
-
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-
-        output = ReadFile(temp_file);
-
-        DeleteFileW(temp_file);
-
-        return exit_code == 0;
-    }
-
     bool ExecutePowerShellCommandElevated(const std::wstring& command, std::wstring& error)
     {
         std::wstring ps_command = L"-NoProfile -ExecutionPolicy Bypass -Command \"";
@@ -128,7 +48,7 @@ bool IsPathExcludedFromDefender(const std::filesystem::path& path)
     std::wstring output;
     const std::wstring command = L"Get-MpPreference | Select-Object -ExpandProperty ExclusionPath";
 
-    if (!ExecutePowerShellCommand(command, output)) {
+    if (!RunPowerShellCommand(command, output)) {
         // If we're not admin, this will fail, treat it as if it wasn't excluded but check registry later
         return false;
     }
@@ -168,42 +88,59 @@ bool IsPathExcludedFromDefender(const std::filesystem::path& path)
     return false;
 }
 
-
-bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, std::wstring& error)
+bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
+                           const std::vector<std::filesystem::path>& controlled_folder_access_apps,
+                           const bool quiet, std::wstring& error)
 {
-    if (IsPathExcludedFromDefender(path)) {
-        return true;
+    // Collect only the changes we actually need, so a re-run with nothing to do is a silent no-op.
+    // Re-allowing an app already on the Controlled Folder Access list is idempotent, so those are
+    // unconditional; the folder exclusion we can cheaply check first.
+    std::vector<std::wstring> cmdlets;
+    if (!IsPathExcludedFromDefender(exclusion_path))
+        cmdlets.push_back(L"Add-MpPreference -ExclusionPath '" + exclusion_path.wstring() + L"'");
+
+    for (const auto& app : controlled_folder_access_apps) {
+        std::error_code ec;
+        if (std::filesystem::exists(app, ec))
+            cmdlets.push_back(L"Add-MpPreference -ControlledFolderAccessAllowedApplications '" + app.wstring() + L"'");
     }
+
+    if (cmdlets.empty())
+        return true;
 
     const bool is_admin = IsRunningAsAdmin();
 
     if (!is_admin && !quiet) {
-        const int iRet = MessageBoxW(
+        const int iRet = ShowMessageBoxW(
             nullptr,
-            L"GWToolbox would like to add itself to Windows Defender exclusions to prevent false positives.\n\n"
-            L"This requires administrator privileges. Would you like to add the exclusion?",
+            L"GWToolbox would like to add Windows Security exceptions for itself (a Defender exclusion and "
+            L"Controlled Folder Access permissions) to prevent false positives and let it save settings and crash dumps.\n\n"
+            L"This requires administrator privileges. Would you like to add them?",
             L"Windows Defender Exclusion",
             MB_YESNO | MB_ICONINFORMATION);
 
         if (iRet != IDYES) {
-            MessageBoxW(
+            ShowMessageBoxW(
                 nullptr,
-                L"GWToolbox will likely not function correctly without Windows Defender exclusions.\n\n"
-                L"You will be prompted again next time until the exclusion is added.",
+                L"GWToolbox will likely not function correctly without these exceptions.\n\n"
+                L"You will be prompted again next time until they are added.",
                 L"Windows Defender Exclusion - Warning",
                 MB_OK | MB_ICONWARNING);
             return true;
         }
     }
 
-    std::wstring command = L"Add-MpPreference -ExclusionPath '";
-    command += path.wstring();
-    command += L"'";
+    // One elevated invocation for every cmdlet, so the user sees at most a single UAC prompt.
+    std::wstring command;
+    for (size_t i = 0; i < cmdlets.size(); i++) {
+        if (i) command += L"; ";
+        command += cmdlets[i];
+    }
 
     bool success;
     if (is_admin) {
         std::wstring output;
-        success = ExecutePowerShellCommand(command, output);
+        success = RunPowerShellCommand(command, output);
     }
     else {
         success = ExecutePowerShellCommandElevated(command, error);
@@ -211,12 +148,13 @@ bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, s
 
     if (!success) {
         if (!quiet) {
-            std::wstring message = L"Failed to add Windows Defender exclusion.\n\n"
-                L"You can manually add an exclusion for:\n";
-            message += path.wstring();
-            message += L"\n\nIn Windows Security -> Virus & threat protection -> Manage settings -> Exclusions";
+            std::wstring message = L"Failed to add Windows Security exceptions for GWToolbox.\n\n"
+                L"You can add them manually in Windows Security -> Virus & threat protection:\n"
+                L"- Add a folder exclusion for:\n  ";
+            message += exclusion_path.wstring();
+            message += L"\n- Allow Guild Wars and GWToolbox through Controlled Folder Access (Ransomware protection).";
 
-            MessageBoxW(
+            ShowMessageBoxW(
                 nullptr,
                 message.c_str(),
                 L"Windows Defender Exclusion",
@@ -226,33 +164,25 @@ bool AddDefenderExclusion(const std::filesystem::path& path, const bool quiet, s
         return false;
     }
 
-    bool verified = false;
-    if (is_admin) {
-        verified = IsPathExcludedFromDefender(path);
-    }
-    else {
-        // Not admin, but elevated command succeeded - can't think of anything better than to trust it worked
-        verified = true;
-    }
+    // The folder exclusion we can verify directly; Controlled Folder Access entries we trust to the exit code.
+    const bool verified = !is_admin || IsPathExcludedFromDefender(exclusion_path);
 
-    if (verified) {
-        if (!quiet) {
-            MessageBoxW(
+    if (!quiet) {
+        if (verified) {
+            ShowMessageBoxW(
                 nullptr,
-                L"Windows Defender exclusion added successfully!",
+                L"Windows Security exceptions added successfully!",
                 L"Windows Defender Exclusion",
                 MB_OK | MB_ICONINFORMATION);
         }
-    }
-    else {
-        if (!quiet) {
-            std::wstring message = L"Failed to verify Windows Defender exclusion was added.\n\n";
+        else {
+            std::wstring message = L"Failed to verify the Windows Defender exclusion was added.\n\n";
             message += L"GWToolbox may not function correctly without this exclusion.\n\n";
             message += L"Please manually add an exclusion for:\n";
-            message += path.wstring();
+            message += exclusion_path.wstring();
             message += L"\n\nIn Windows Security -> Virus & threat protection -> Manage settings -> Exclusions";
 
-            MessageBoxW(
+            ShowMessageBoxW(
                 nullptr,
                 message.c_str(),
                 L"Windows Defender Exclusion - WARNING",

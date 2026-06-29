@@ -74,15 +74,7 @@ namespace {
         {GW::Constants::SkillID::Frozen_Soil, "Frozen Soil"}
     };
 
-    bool hide_in_outpost = false;
-    bool show_deep_timer = true;
-    bool show_urgoz_timer = true;
-    bool show_doa_timer = true;
-    bool show_dhuum_timer = true;
-    bool show_dungeon_traps_timer = true;
-    bool show_spirit_timers = true;
-    float font_size = static_cast<float>(FontLoader::FontSize::widget_large);
-    float font_size_extra_timers = static_cast<float>(FontLoader::FontSize::widget_label);
+    TimerWidget::Settings settings;
     std::map<GW::Constants::SkillID, bool> spirit_effects_enabled{
         {GW::Constants::SkillID::Edge_of_Extinction, true},
         {GW::Constants::SkillID::Quickening_Zephyr, true}
@@ -92,16 +84,6 @@ namespace {
     char extra_buffer[32] = "";
     char spirits_buffer[128] = "";
     ImColor extra_color = 0;
-
-    bool use_instance_timer = false;
-    bool never_reset = false;
-    bool stop_at_objective_completion = true;
-    bool also_show_instance_timer = false;
-    int show_decimals = 1;
-
-    bool click_to_print_time = false;
-    bool print_time_zoning = false;
-    bool print_time_objective = true;
 
     bool reset_next_loading_screen = false;
     bool in_explorable = false;
@@ -141,7 +123,7 @@ namespace {
     {
         using namespace GW::Constants;
 
-        if (!show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable) {
+        if (!settings.show_spirit_timers || GW::Map::GetInstanceType() != InstanceType::Explorable) {
             return false;
         }
 
@@ -355,7 +337,7 @@ namespace {
 // Called before map change
 void TimerWidget::OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*)
 {
-    if (print_time_zoning && in_explorable && !is_valid(run_completed)) {
+    if (settings.print_time_zoning && in_explorable && !is_valid(run_completed)) {
         // do this here, before we actually reset it
         PrintTimer();
     }
@@ -378,7 +360,7 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
         reset_next_loading_screen = false;
     }
 
-    if (!never_reset) {
+    if (!settings.never_reset) {
         if (pak->is_explorable && !in_explorable) {
             // if zoning from outpost to explorable
             run_started = now_tp;
@@ -410,6 +392,7 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
 void TimerWidget::Initialize()
 {
     ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
     for (const auto& skill_id : spirit_effects | std::views::keys) {
         if (!spirit_effects_enabled.contains(skill_id)) {
             spirit_effects_enabled[skill_id] = false;
@@ -462,59 +445,28 @@ void TimerWidget::Terminate() {
     GW::Chat::DeleteCommand(&ChatCmd_HookEntry);
 }
 
-void TimerWidget::LoadSettings(ToolboxIni* ini)
+void TimerWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_FLOAT(font_size);
-    LOAD_FLOAT(font_size_extra_timers);
-    LOAD_BOOL(hide_in_outpost);
-    LOAD_BOOL(use_instance_timer);
-    LOAD_BOOL(never_reset);
-    stop_at_objective_completion =
-        ini->GetBoolValue(Name(), VAR_NAME(stop_at_objective_completion), stop_at_objective_completion);
-    LOAD_BOOL(also_show_instance_timer);
-    LOAD_UINT(show_decimals);
-    show_decimals = std::clamp(show_decimals, 0, 3);
-    LOAD_BOOL(click_to_print_time);
-    LOAD_BOOL(print_time_zoning);
-    LOAD_BOOL(print_time_objective);
-    LOAD_BOOL(show_deep_timer);
-    LOAD_BOOL(show_urgoz_timer);
-    LOAD_BOOL(show_doa_timer);
-    LOAD_BOOL(show_dhuum_timer);
-    LOAD_BOOL(show_dungeon_traps_timer);
-    LOAD_BOOL(show_spirit_timers);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    settings.show_decimals = std::clamp(settings.show_decimals, 0, 3);
     for (const auto& effect_id : spirit_effects | std::views::keys) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", effect_id);
-        spirit_effects_enabled[effect_id] = ini->GetBoolValue(Name(), ini_name, spirit_effects_enabled[effect_id]);
+        if (!doc.Get(Name(), ini_name, spirit_effects_enabled[effect_id]) && legacy) {
+            spirit_effects_enabled[effect_id] = legacy->GetBoolValue(Name(), ini_name, spirit_effects_enabled[effect_id]);
+        }
     }
 }
 
-void TimerWidget::SaveSettings(ToolboxIni* ini)
+void TimerWidget::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_FLOAT(font_size);
-    SAVE_FLOAT(font_size_extra_timers);
-    SAVE_BOOL(hide_in_outpost);
-    SAVE_BOOL(use_instance_timer);
-    SAVE_BOOL(never_reset);
-    SAVE_BOOL(stop_at_objective_completion);
-    SAVE_BOOL(also_show_instance_timer);
-    SAVE_UINT(show_decimals);
-    SAVE_BOOL(click_to_print_time);
-    SAVE_BOOL(print_time_zoning);
-    SAVE_BOOL(print_time_objective);
-    SAVE_BOOL(show_spirit_timers);
-    SAVE_BOOL(show_deep_timer);
-    SAVE_BOOL(show_doa_timer);
-    SAVE_BOOL(show_urgoz_timer);
-    SAVE_BOOL(show_dhuum_timer);
-    SAVE_BOOL(show_dungeon_traps_timer);
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
     for (const auto& effect_id : spirit_effects | std::views::keys) {
         char ini_name[32];
         snprintf(ini_name, 32, "spirit_effect_%d", effect_id);
-        ini->SetBoolValue(Name(), ini_name, spirit_effects_enabled[effect_id]);
+        doc.Set(Name(), ini_name, spirit_effects_enabled[effect_id]);
     }
 }
 
@@ -522,49 +474,48 @@ void TimerWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
 
-    ImGui::DragFloat("Text size", &font_size, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
-    ImGui::Checkbox("Hide in outpost", &hide_in_outpost);
-    if (ImGui::RadioButton("Instance timer", use_instance_timer)) {
-        use_instance_timer = true;
+    ImGui::DragFloat("Text size", &settings.font_size, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
+    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
+    if (ImGui::RadioButton("Instance timer", settings.use_instance_timer)) {
+        settings.use_instance_timer = true;
     }
-    if (ImGui::RadioButton("Real-time timer", !use_instance_timer)) {
-        use_instance_timer = false;
+    if (ImGui::RadioButton("Real-time timer", !settings.use_instance_timer)) {
+        settings.use_instance_timer = false;
     }
     ImGui::ShowHelp("Real-time timer does not reset when zoning between explorable areas.\n \
         You can use /resettimer to force a reset at the next loading screen.");
     ImGui::Indent();
-    ImGui::Checkbox("Never reset", &never_reset);
-    ImGui::ShowHelp(
+    ImGui::CheckboxWithHelp("Never reset", &settings.never_reset,
         "Don't reset when entering outposts, explorables (from outposts), and dungeons. \n"
         "Useful for timing longer runs.\n"
         "Requires 'Use instance timer' above NOT ticked");
-    ImGui::Checkbox("Stop at objective completion", &stop_at_objective_completion);
-    ImGui::Checkbox("Also show instance timer", &also_show_instance_timer);
+    ImGui::Checkbox("Stop at objective completion", &settings.stop_at_objective_completion);
+    ImGui::Checkbox("Also show instance timer", &settings.also_show_instance_timer);
     ImGui::Unindent();
-    if (ImGui::SliderInt("Show decimals", &show_decimals, 0, 3)) {
-        show_decimals = std::clamp(show_decimals, 0, 3);
+    if (ImGui::SliderInt("Show decimals", &settings.show_decimals, 0, 3)) {
+        settings.show_decimals = std::clamp(settings.show_decimals, 0, 3);
     }
     ImGui::Text("Print time:");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("With Ctrl+Click on timer", &click_to_print_time);
+    ImGui::Checkbox("With Ctrl+Click on timer", &settings.click_to_print_time);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("At objective completion", &print_time_objective);
+    ImGui::Checkbox("At objective completion", &settings.print_time_objective);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("When leaving explorables", &print_time_zoning);
+    ImGui::Checkbox("When leaving explorables", &settings.print_time_zoning);
     ImGui::Unindent();
 
-    ImGui::DragFloat("Text size for extra timers", &font_size_extra_timers, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
+    ImGui::DragFloat("Text size for extra timers", &settings.font_size_extra_timers, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
     ImGui::Text("Show extra timers:");
     ImGui::Indent();
 
     const std::vector<std::pair<const char*, bool*>> timers = {
-        {"Deep aspects", &show_deep_timer},
-        {"DoA cave", &show_doa_timer},
-        {"Dhuum", &show_dhuum_timer},
-        {"Urgoz doors", &show_urgoz_timer},
-        {"Dungeon traps", &show_dungeon_traps_timer}
+        {"Deep aspects", &settings.show_deep_timer},
+        {"DoA cave", &settings.show_doa_timer},
+        {"Dhuum", &settings.show_dhuum_timer},
+        {"Urgoz doors", &settings.show_urgoz_timer},
+        {"Dungeon traps", &settings.show_dungeon_traps_timer}
     };
     ImGui::StartSpacedElements(140.f);
     for (size_t i = 0; i < timers.size(); i++) {
@@ -572,9 +523,8 @@ void TimerWidget::DrawSettingsInternal()
         ImGui::Checkbox(timers[i].first, timers[i].second);
     }
     ImGui::Unindent();
-    ImGui::Checkbox("Show spirit timers", &show_spirit_timers);
-    ImGui::ShowHelp("Time until spirits die in seconds");
-    if (show_spirit_timers) {
+    ImGui::CheckboxWithHelp("Show spirit timers", &settings.show_spirit_timers, "Time until spirits die in seconds");
+    if (settings.show_spirit_timers) {
         ImGui::Indent();
         ImGui::StartSpacedElements(140.f);
         for (const auto& it : spirit_effects) {
@@ -596,7 +546,7 @@ milliseconds TimerWidget::GetMapTimeElapsed()
 
 milliseconds TimerWidget::GetTimer()
 {
-    if (use_instance_timer) {
+    if (settings.use_instance_timer) {
         return milliseconds(instance_timer_valid ? GW::Map::GetInstanceTime() : 0);
     }
     return GetRunTimeElapsed();
@@ -611,7 +561,7 @@ milliseconds TimerWidget::GetRunTimeElapsed()
         return duration_cast<milliseconds>(run_completed - run_started);
     }
     // rare case that OnPostGameSrvTransfer was not called
-    if (duration_cast<milliseconds>(now() - run_started) - milliseconds{GW::Map::GetInstanceTime()} > 5000ms && !never_reset) {
+    if (duration_cast<milliseconds>(now() - run_started) - milliseconds{GW::Map::GetInstanceTime()} > 5000ms && !settings.never_reset) {
         const GW::AreaInfo* info = GW::Map::GetMapInfo(GW::Map::GetMapID());
         if (info) {
             if (info->type == GW::RegionType::ExplorableZone) {
@@ -624,7 +574,7 @@ milliseconds TimerWidget::GetRunTimeElapsed()
 
 unsigned long TimerWidget::GetStartPoint() const
 {
-    const auto time_point = use_instance_timer ? instance_started : run_started;
+    const auto time_point = settings.use_instance_timer ? instance_started : run_started;
     if (!is_valid(time_point)) {
         return static_cast<unsigned long>(-1);
     }
@@ -639,10 +589,10 @@ unsigned long TimerWidget::GetRunTimeElapsedMs() { return static_cast<unsigned l
 
 void TimerWidget::SetRunCompleted(const bool no_print)
 {
-    if (is_valid(run_started) && stop_at_objective_completion) {
+    if (is_valid(run_started) && settings.stop_at_objective_completion) {
         run_completed = now();
     }
-    if (print_time_objective && is_valid(run_started) && is_valid(run_completed) && !no_print) {
+    if (settings.print_time_objective && is_valid(run_started) && is_valid(run_completed) && !no_print) {
         PrintTimer();
     }
 }
@@ -667,24 +617,24 @@ void TimerWidget::Draw(IDirect3DDevice9*)
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
         return;
     }
-    if (hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+    if (settings.hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
     }
 
     const bool ctrl_pressed = ImGui::IsKeyDown(ImGuiMod_Ctrl);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(click_to_print_time && ctrl_pressed)))) {
+    if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(settings.click_to_print_time && ctrl_pressed)))) {
         const auto font = FontLoader::GetFont();
         // Main timer:
-        print_time(GetTimer(), show_decimals, 32, timer_buffer);
-        ImGui::PushFont(font, font_size);
+        print_time(GetTimer(), settings.show_decimals, 32, timer_buffer);
+        ImGui::PushFont(font, settings.font_size);
         ImGui::TextShadowed(timer_buffer, {2, 2});
         ImGui::PopFont();
 
-        if (also_show_instance_timer) {
-            print_time(milliseconds(GW::Map::GetInstanceTime()), show_decimals, 32, timer_buffer);
-            ImGui::PushFont(font, font_size);
+        if (settings.also_show_instance_timer) {
+            print_time(milliseconds(GW::Map::GetInstanceTime()), settings.show_decimals, 32, timer_buffer);
+            ImGui::PushFont(font, settings.font_size);
             ImGui::TextShadowed(timer_buffer, {2, 2});
             ImGui::PopFont();
         }
@@ -701,33 +651,33 @@ void TimerWidget::Draw(IDirect3DDevice9*)
                 ImGui::Text(buffer);
             }
         };
-        if (font_size_extra_timers > 0.f) {
+        if (settings.font_size_extra_timers > 0.f) {
             const auto extra_timer_font = FontLoader::GetFont();
-            ImGui::PushFont(extra_timer_font, font_size_extra_timers);
+            ImGui::PushFont(extra_timer_font, settings.font_size_extra_timers);
 
-            if (show_deep_timer && GetDeepTimer()) {
+            if (settings.show_deep_timer && GetDeepTimer()) {
                 draw_timer(extra_buffer, &extra_color);
             }
-            if (show_urgoz_timer && GetUrgozTimer()) {
+            if (settings.show_urgoz_timer && GetUrgozTimer()) {
                 draw_timer(extra_buffer, &extra_color);
             }
-            if (show_doa_timer && GetDoATimer()) {
+            if (settings.show_doa_timer && GetDoATimer()) {
                 draw_timer(extra_buffer, &extra_color);
             }
-            if (show_dungeon_traps_timer && GetTrapTimer()) {
+            if (settings.show_dungeon_traps_timer && GetTrapTimer()) {
                 draw_timer(extra_buffer, &extra_color);
             }
-            if (show_dhuum_timer && GetDhuumTimer()) {
+            if (settings.show_dhuum_timer && GetDhuumTimer()) {
                 draw_timer(extra_buffer, &extra_color);
             }
-            if (show_spirit_timers && GetSpiritTimer()) {
+            if (settings.show_spirit_timers && GetSpiritTimer()) {
                 draw_timer(spirits_buffer);
             }
 
             ImGui::PopFont();
         }
 
-        if (click_to_print_time) {
+        if (settings.click_to_print_time) {
             const ImVec2 size = ImGui::GetWindowSize();
             const ImVec2 min = ImGui::GetWindowPos();
             const ImVec2 max(min.x + size.x, min.y + size.y);

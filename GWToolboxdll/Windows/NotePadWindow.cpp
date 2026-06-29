@@ -1,17 +1,16 @@
 #include "stdafx.h"
 
+#include <ImGuiAddons.h>
 #include <Modules/Resources.h>
 #include <Windows/NotePadWindow.h>
 #include <Utils/FontLoader.h>
-
-#include <ImGuiAddons.h>
 
 namespace {
     constexpr size_t text_buffer_length = 2024 * 16;
     constexpr size_t tab_name_length = 64;
 
     constexpr float text_size_min = static_cast<float>(FontLoader::FontSize::text);
-    float font_size = static_cast<float>(FontLoader::FontSize::text);
+    NotePadWindow::Settings settings;
 
     struct NotepadTab {
         char name[tab_name_length]{};
@@ -37,6 +36,7 @@ namespace {
     std::vector<std::unique_ptr<NotepadTab>> tabs;
     int next_tab_id = 0;
     int renaming_tab = -1;
+    int active_tab_idx = 0;
     bool rename_needs_focus = false;
     char rename_buf[tab_name_length]{};
 
@@ -51,6 +51,12 @@ namespace {
             id = next_tab_id++;
         }
         else {
+            // Deduplicate: skip if a tab with this id already exists
+            for (const auto& existing : tabs) {
+                if (existing->id == id) {
+                    return existing.get();
+                }
+            }
             next_tab_id = std::max(next_tab_id, id + 1);
         }
         std::string default_name;
@@ -112,6 +118,7 @@ namespace {
 void NotePadWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
 }
 
 void NotePadWindow::Terminate()
@@ -120,6 +127,7 @@ void NotePadWindow::Terminate()
     tabs.clear();
     next_tab_id = 0;
     renaming_tab = -1;
+    active_tab_idx = 0;
 }
 
 void NotePadWindow::Draw(IDirect3DDevice9*)
@@ -136,12 +144,25 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                 AddTab();
             }
 
-            int delete_tab = -1;
+            active_tab_idx = std::clamp(active_tab_idx, 0, static_cast<int>(tabs.size()) - 1);
+            const auto confirm_close_tab = [](bool result, void* wparam) {
+                if (!result) return;
+                const int tab_id = static_cast<int>(reinterpret_cast<intptr_t>(wparam));
+                for (int i = 0; i < static_cast<int>(tabs.size()); i++) {
+                    if (tabs[i]->id == tab_id) {
+                        DeleteTab(i);
+                        return;
+                    }
+                }
+            };
             for (int i = 0; i < static_cast<int>(tabs.size()); i++) {
+                ImGui::PushID(i);
                 auto& tab = *tabs[i];
                 const ImGuiTabItemFlags flags = tab.dirty ? ImGuiTabItemFlags_UnsavedDocument : ImGuiTabItemFlags_None;
                 bool tab_open = true;
-                const bool tab_visible = ImGui::BeginTabItem(tab.name, tabs.size() > 1 ? &tab_open : nullptr, flags);
+                // Only show the close button (X) on the currently active tab to prevent accidental closure
+                bool* const p_open = (tabs.size() > 1 && i == active_tab_idx) ? &tab_open : nullptr;
+                const bool tab_visible = ImGui::BeginTabItem(tab.name, p_open, flags);
 
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::MenuItem("Rename")) {
@@ -150,16 +171,17 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
                         rename_needs_focus = true;
                     }
                     if (tabs.size() > 1 && ImGui::MenuItem("Close")) {
-                        delete_tab = i;
+                        ImGui::ConfirmDialog("Are you sure you want to close this tab?", confirm_close_tab, reinterpret_cast<void*>(static_cast<intptr_t>(tab.id)));
                     }
                     ImGui::EndPopup();
                 }
 
                 if (!tab_open) {
-                    delete_tab = i;
+                    ImGui::ConfirmDialog("Are you sure you want to close this tab?", confirm_close_tab, reinterpret_cast<void*>(static_cast<intptr_t>(tab.id)));
                 }
 
                 if (tab_visible) {
+                    active_tab_idx = i;
                     if (renaming_tab == i) {
                         ImGui::SetNextItemWidth(-1.0f);
                         if (rename_needs_focus) {
@@ -181,17 +203,14 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
 
                     const ImVec2 avail = ImGui::GetContentRegionAvail();
                     const auto font = FontLoader::GetFont();
-                    ImGui::PushFont(font, font_size);
+                    ImGui::PushFont(font, settings.font_size);
                     if (ImGui::InputTextMultiline("##text", tab.text, text_buffer_length, avail, ImGuiInputTextFlags_AllowTabInput)) {
                         tab.dirty = true;
                     }
                     ImGui::PopFont();
                     ImGui::EndTabItem();
                 }
-            }
-
-            if (delete_tab >= 0) {
-                DeleteTab(delete_tab);
+                ImGui::PopID();
             }
 
             ImGui::EndTabBar();
@@ -201,14 +220,31 @@ void NotePadWindow::Draw(IDirect3DDevice9*)
     ImGui::PopStyleVar();
 }
 
-void NotePadWindow::LoadSettings(ToolboxIni* ini)
+void NotePadWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_FLOAT(font_size);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    const long tab_count = ini->GetLongValue(Name(), "tab_count", -1);
+    std::vector<TabSettings> stored;
+    if (doc.Get(Name(), "tabs", stored)) {
+        doc.Get(Name(), "next_tab_id", next_tab_id);
+        for (const auto& t : stored) {
+            const size_t prev_size = tabs.size();
+            AddTab(t.name.c_str(), t.id);
+            if (tabs.size() > prev_size) {
+                // Only load content for genuinely new tabs
+                LoadTabContent(tabs.size() - 1);
+            }
+        }
+        if (tabs.empty()) {
+            AddTab("Note 1");
+        }
+        return;
+    }
+
+    const long tab_count = legacy ? legacy->GetLongValue(Name(), "tab_count", -1) : -1;
     if (tab_count < 0) {
-        // Old single-tab config: try to load legacy Notepad.txt
+        // Legacy single-tab config
         auto* tab = AddTab("Note 1");
         std::ifstream file(Resources::GetPath(L"Notepad.txt"));
         if (file) {
@@ -216,15 +252,18 @@ void NotePadWindow::LoadSettings(ToolboxIni* ini)
         }
     }
     else {
-        next_tab_id = static_cast<int>(ini->GetLongValue(Name(), "next_tab_id", tab_count));
+        next_tab_id = static_cast<int>(legacy->GetLongValue(Name(), "next_tab_id", tab_count));
         for (long i = 0; i < tab_count; i++) {
             char id_key[32], name_key[32];
             snprintf(id_key, sizeof(id_key), "tab_%ld_id", i);
             snprintf(name_key, sizeof(name_key), "tab_%ld_name", i);
-            const int id = static_cast<int>(ini->GetLongValue(Name(), id_key, i));
-            const char* name = ini->GetValue(Name(), name_key, "Note");
-            AddTab(name, id);
-            LoadTabContent(tabs.size() - 1);
+            const int id = static_cast<int>(legacy->GetLongValue(Name(), id_key, i));
+            const size_t prev_size = tabs.size();
+            AddTab(legacy->GetValue(Name(), name_key, "Note"), id);
+            if (tabs.size() > prev_size) {
+                // Only load content for genuinely new tabs
+                LoadTabContent(tabs.size() - 1);
+            }
         }
         if (tabs.empty()) {
             AddTab("Note 1");
@@ -232,26 +271,23 @@ void NotePadWindow::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void NotePadWindow::SaveSettings(ToolboxIni* ini)
+void NotePadWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_FLOAT(font_size);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    ini->SetLongValue(Name(), "tab_count", static_cast<long>(tabs.size()));
-    ini->SetLongValue(Name(), "next_tab_id", static_cast<long>(next_tab_id));
-
+    std::vector<TabSettings> stored;
+    stored.reserve(tabs.size());
     for (size_t i = 0; i < tabs.size(); i++) {
-        char id_key[32], name_key[32];
-        snprintf(id_key, sizeof(id_key), "tab_%zu_id", i);
-        snprintf(name_key, sizeof(name_key), "tab_%zu_name", i);
-        ini->SetLongValue(Name(), id_key, static_cast<long>(tabs[i]->id));
-        ini->SetValue(Name(), name_key, tabs[i]->name);
+        stored.push_back({tabs[i]->id, tabs[i]->name});
         SaveTabContent(i);
     }
+    doc.Set(Name(), "tabs", stored);
+    doc.Set(Name(), "next_tab_id", next_tab_id);
 }
 
 void NotePadWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::DragFloat("Text size", &font_size, 1.0, text_size_min, FontLoader::text_size_max, "%.0f");
+    ImGui::DragFloat("Text size", &settings.font_size, 1.0, text_size_min, FontLoader::text_size_max, "%.0f");
 }

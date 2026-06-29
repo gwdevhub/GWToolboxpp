@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ToolboxPlugin.h"
 
@@ -10,10 +10,10 @@ public:
     void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll) override;
     void SignalTerminate() override;
     void Terminate() override;
+    void LoadSettings(const wchar_t* folder) override;
+    void SaveSettings(const wchar_t* folder) override;
     bool HasSettings() const override { return true; }
     void DrawSettings() override;
-    void LoadSettings(const wchar_t*) override;
-    void SaveSettings(const wchar_t*) override;
     bool DrawTabButton(bool show_icon, bool show_text, bool center_align_text) override;
 
 protected:

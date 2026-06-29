@@ -17,16 +17,4 @@ public:
         has_closebutton = true;
         has_titlebar = true;
     }
-
-    void LoadSettings(ToolboxIni* ini) override
-    {
-        ToolboxUIElement::LoadSettings(ini);
-        LOAD_BOOL(show_closebutton);
-    }
-
-    void SaveSettings(ToolboxIni* ini) override
-    {
-        ToolboxUIElement::SaveSettings(ini);
-        SAVE_BOOL(show_closebutton);
-    }
 };

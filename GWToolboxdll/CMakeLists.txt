@@ -15,7 +15,7 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     "Widgets/*.cpp"
     "Widgets/Minimap/*.h"
     "Widgets/Minimap/*.cpp"
-    "Windows/*.h" 
+    "Windows/*.h"
     "Windows/*.cpp"
     "Windows/Hotkeys/*.h"
     "Windows/Hotkeys/*.cpp"
@@ -25,9 +25,12 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
     "Windows/Pathfinding/*.hpp"
     "Windows/Pathfinding/*.cpp"
     )
-     
+    
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
+
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/GWToolbox.rc"
+    PROPERTIES OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/Dependencies/GWCA/bin/gwca.dll")
 
 # auto-generated files - export header & pch 
 include(GenerateExportHeader)
@@ -45,9 +48,15 @@ target_compile_definitions(GWToolboxdll PRIVATE
     "GWCA_IMPORT"
     )
       
-target_compile_options(GWToolboxdll PRIVATE /W4 /WX /Gy /utf-8)
-target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+target_compile_options(GWToolboxdll PRIVATE /Gy /utf-8)
 target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:RelWithDebInfo>:/Zi>)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Skip /W4 for clang-cl: it expands to -Wall -Wextra
+    target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/Z7 /Od>)
+else()
+    target_compile_options(GWToolboxdll PRIVATE /W4 /WX)
+    target_compile_options(GWToolboxdll PRIVATE $<$<CONFIG:Debug>:/ZI /Od>)
+endif()
 
 set_target_properties(GWToolboxdll PROPERTIES
     VS_GLOBAL_RunCodeAnalysis false
@@ -69,7 +78,6 @@ target_include_directories(GWToolboxdll PRIVATE
     "${PROJECT_SOURCE_DIR}/Dependencies"
     "${PROJECT_SOURCE_DIR}/Dependencies/GWCA/include"
     "${CMAKE_CURRENT_SOURCE_DIR}"
-	"${SIMPLEINI_INCLUDE_DIRS}"
     ) 
 
 include(imgui_fonts)
@@ -77,6 +85,7 @@ include(imgui_fonts)
 find_package(minhook CONFIG REQUIRED)
 
 find_package(unofficial-uwebsockets CONFIG REQUIRED)
+find_package(recastnavigation CONFIG REQUIRED)
 
 target_link_libraries(GWToolboxdll PRIVATE
     # cmake targets:
@@ -88,18 +97,19 @@ target_link_libraries(GWToolboxdll PRIVATE
     steamworks_sdk
     easywsclient
     ${CPP_GAME_SDK}
-    nlohmann_json::nlohmann_json
+    glaze::glaze
     imgui::fonts
     IconFontCppHeaders
     nativefiledialog
     wintoast
-    wolfssl::wolfssl
 	minhook::minhook
 	ctre::ctre
     unofficial::uwebsockets::uwebsockets
+    RecastNavigation::Detour
 
     # libs:
     Dbghelp.lib # for MiniDump
+    bcrypt.lib  # for SHA256 (Resources.cpp)
 	delayimp # for delay loading gwca
     )
 
@@ -136,3 +146,12 @@ endforeach()
 add_custom_target(compile_shaders DEPENDS ${SHADER_OUTPUTS})
 
 add_dependencies(GWToolboxdll compile_shaders) 
+
+add_custom_command(TARGET GWToolboxdll POST_BUILD
+    COMMAND powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/compress.ps1"
+            "$<TARGET_PDB_FILE:GWToolboxdll>"
+            "$<CONFIG>"
+    COMMENT "Compressing PDB for distribution (RelWithDebInfo only)"
+    VERBATIM
+)

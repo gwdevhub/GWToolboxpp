@@ -8,33 +8,31 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Map.h>
 
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Logger.h>
+#include <RestClient.h>
 #include <Utils/GuiUtils.h>
-#include <Utils/RateLimiter.h>
 
 #include <Utils/ThreadedWebSocket.h>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 
 
 #include <Modules/GwDatTextureModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/Resources.h>
+#include <Modules/ToolboxSettings.h>
 
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/GameEntities/Frame.h>
 #include <Timer.h>
 #include <Utils/TextUtils.h>
-#include <Utils/ToolboxUtils.h>
 #include <algorithm>
-#include <chrono>
-#include <iomanip>
 #include <sstream>
 #include <unordered_set>
 
@@ -44,7 +42,7 @@
 #define GWMARKET_SELLING_ENABLED 0
 
 namespace {
-    using json = nlohmann::json;
+    using json = glz::generic;
 
     const char* market_host = "gwmarket.net";
     const char* market_name = "GWMarket.net";
@@ -282,7 +280,7 @@ namespace {
         static MarketItem FromJson(const json& j)
         {
             MarketItem item;
-            if (j.is_discarded()) return item;
+            if (!j.is_object()) return item;
 
             item.name = TextUtils::parseStringFromJson(j, "name", "");
             item.player = TextUtils::parseStringFromJson(j, "player", "");
@@ -298,7 +296,7 @@ namespace {
             item.lastRefresh = lastRefresh_ms ? lastRefresh_ms / 1000 : 0;
 
             if (j.contains("prices") && j["prices"].is_array()) {
-                for (const auto& price_json : j["prices"]) {
+                for (const auto& price_json : j["prices"].get_array()) {
                     auto p = Price::FromJson(price_json);
                     if (p.valid()) item.prices.push_back(p);
                 }
@@ -321,9 +319,9 @@ namespace {
                 j["weaponDetails"] = weaponDetails.ToJson();
             }
 
-            j["prices"] = json::array();
+            j["prices"] = json::array_t{};
             for (const auto& price : prices) {
-                j["prices"].push_back(price.ToJson());
+                j["prices"].get_array().push_back(price.ToJson());
             }
 
             return j;
@@ -341,6 +339,22 @@ namespace {
     std::vector<MarketItem> edit_window_matching_orders;
     std::string edit_window_matching_item_name;
     bool edit_window_orders_needs_sort = true;
+
+    struct PendingPurchaseAnalytic {
+        std::string player_name;
+        std::string item_name;
+        OrderType order_type = OrderType::Sell;
+        Price price;
+        clock_t timestamp = 0;
+
+        bool IsActive() const
+        {
+            return !player_name.empty() && timestamp &&
+                   TIMER_DIFF(timestamp) < (60 * CLOCKS_PER_SEC);
+        }
+
+        void Clear() { player_name.clear(); timestamp = 0; }
+    } pending_purchase_analytic;
 
     struct ShopItem : MarketItem {
         bool hidden = false;
@@ -377,7 +391,7 @@ namespace {
         static MarketShop FromJson(const json& j)
         {
             MarketShop shop;
-            if (j.is_discarded()) return shop;
+            if (!j.is_object()) return shop;
 
             shop.player = TextUtils::parseStringFromJson(j, "player", "");
             shop.uuid = TextUtils::parseStringFromJson(j, "uuid", "");
@@ -386,7 +400,7 @@ namespace {
             shop.lastRefresh = lastRefresh_ms ? lastRefresh_ms / 1000 : 0;
 
             if (j.contains("items") && j["items"].is_array()) {
-                for (const auto& item_json : j["items"]) {
+                for (const auto& item_json : j["items"].get_array()) {
                     auto item = ShopItem::FromJson(item_json);
                     if (item.valid()) {
                         shop.items.push_back(item);
@@ -394,7 +408,7 @@ namespace {
                 }
             }
             if (j.contains("certified") && j["certified"].is_array()) {
-                for (const auto& player_name : j["certified"]) {
+                for (const auto& player_name : j["certified"].get_array()) {
                     if (player_name.is_string()) shop.certified.push_back(player_name.get<std::string>());
                 }
             }
@@ -410,13 +424,13 @@ namespace {
             j["uuid"] = uuid;
             j["lastRefresh"] = (uint64_t)(lastRefresh * 1000);
             j["authCertified"] = certified.size() > 0;
-            std::vector<json> certified_json;
+            json::array_t certified_json;
             for (auto& player_name : certified) {
                 certified_json.push_back(player_name);
             }
             j["certified"] = certified_json;
             j["daybreakOnline"] = true;
-            std::vector<json> items_json;
+            json::array_t items_json;
             for (auto& item : items) {
                 items_json.push_back(item.ToJson());
             }
@@ -434,8 +448,7 @@ namespace {
     };
 
     // Settings
-    bool auto_refresh = true;
-    int refresh_interval = 60;
+    GWMarketWindow::Settings settings;
 
     // WebSocket
     ThreadedWebSocket market_ws;
@@ -563,28 +576,29 @@ namespace {
 
     std::string EncodeSocketIOMessage(const std::string& event, const std::string& data = "")
     {
-        json msg = json::array();
-        msg.push_back(event);
+        json msg = json::array_t{};
+        msg.get_array().push_back(event);
         if (!data.empty()) {
-            msg.push_back(data);
+            msg.get_array().push_back(data);
         }
-        return "42" + msg.dump();
+        return "42" + glz::write_json(msg).value_or(std::string{});
     }
 
     std::string EncodeSocketIOMessage(const std::string& event, const json& data)
     {
-        json msg = json::array();
-        msg.push_back(event);
-        msg.push_back(data);
-        return "42" + msg.dump();
+        json msg = json::array_t{};
+        msg.get_array().push_back(event);
+        msg.get_array().push_back(data);
+        return "42" + glz::write_json(msg).value_or(std::string{});
     }
 
     bool ParseSocketIOMessage(const std::string& message, std::string& event, json& data)
     {
         if (message.length() < 2 || message.substr(0, 2) != "42") return false;
 
-        json parsed = json::parse(message.substr(2), nullptr, false);
-        if (!parsed.is_discarded() && parsed.is_array() && parsed.size() >= 1) {
+        json parsed;
+        if (auto ec = glz::read_json(parsed, message.substr(2)); ec) return false;
+        if (parsed.is_array() && parsed.size() >= 1) {
             if (!parsed[0].is_string()) return false;
             event = parsed[0].get<std::string>();
             if (parsed.size() >= 2) {
@@ -598,14 +612,18 @@ namespace {
     void OnGetAvailableOrders(const json& orders)
     {
         available_items.clear();
+        if (!orders.is_object()) {
+            available_items_needs_sort = true;
+            Log::Log("Received 0 available items");
+            return;
+        }
         available_items.reserve(orders.size());
         for (auto& i : favorite_items) {
             i.second = {};
         }
-        for (auto it = orders.begin(); it != orders.end(); ++it) {
+        for (const auto& [key, j] : orders.get_object()) {
             AvailableItem item;
-            const auto& j = it.value();
-            item.name = InternString(it.key());
+            item.name = InternString(key);
             item.sellOrders = TextUtils::parseIntFromJson(j, "sellWeek", 0);
             item.buyOrders = TextUtils::parseIntFromJson(j, "buyWeek", 0);
             available_items.push_back(item);
@@ -622,7 +640,7 @@ namespace {
         last_items.clear();
         if (items.is_array()) {
             last_items.reserve(items.size());
-            for (const auto& item_json : items) {
+            for (const auto& item_json : items.get_array()) {
                 last_items.push_back(MarketItem::FromJson(item_json));
             }
         }
@@ -634,7 +652,7 @@ namespace {
         std::vector<MarketItem> _orders;
         if (orders.is_array()) {
             _orders.reserve(orders.size());
-            for (const auto& order_json : orders) {
+            for (const auto& order_json : orders.get_array()) {
                 _orders.push_back(MarketItem::FromJson(order_json));
             }
         }
@@ -696,12 +714,13 @@ namespace {
     {
         if (message[0] != '0') return;
 
-        json handshake = json::parse(message.substr(1));
-        if (handshake.contains("pingInterval")) {
-            ping_interval = handshake["pingInterval"].get<int>();
+        json handshake;
+        if (auto ec = glz::read_json(handshake, message.substr(1)); ec) return;
+        if (handshake.contains("pingInterval") && handshake["pingInterval"].is_number()) {
+            ping_interval = static_cast<int>(handshake["pingInterval"].get<double>());
         }
-        if (handshake.contains("pingTimeout")) {
-            ping_timeout = handshake["pingTimeout"].get<int>();
+        if (handshake.contains("pingTimeout") && handshake["pingTimeout"].is_number()) {
+            ping_timeout = static_cast<int>(handshake["pingTimeout"].get<double>());
         }
 
         Log::Log("Handshake: ping %dms, timeout %dms", ping_interval, ping_timeout);
@@ -938,7 +957,7 @@ namespace {
                 if (name_lower.find(search_lower) == std::string::npos) continue;
             }
 
-            ImGui::PushID(item.name);
+            ImGui::PushID(item.name->c_str());
 
             bool selected = (current_viewing_item == *item.name);
             if (ImGui::Selectable(item.name->c_str(), selected)) {
@@ -1103,7 +1122,7 @@ namespace {
             const auto& price = order.prices[0];
             if (order_view_currency != Currency::All && order_view_currency != price.type) return;
 
-            ImGui::PushID(&order);
+            ImGui::PushID(order.description.c_str());
             const auto top = ImGui::GetCursorPosY();
             ImGui::TextUnformatted(order.player.c_str());
             const auto timetext = TextUtils::RelativeTime(order.lastRefresh);
@@ -1142,6 +1161,13 @@ namespace {
 
             ImGui::SetCursorPos({ImGui::GetContentRegionAvail().x - 100.f, top + 5.f});
             if (ImGui::Button("Whisper##seller", {100.f, 0.f})) {
+                if (!order.prices.empty()) {
+                    pending_purchase_analytic.player_name = order.player;
+                    pending_purchase_analytic.item_name = order.name;
+                    pending_purchase_analytic.order_type = order.orderType;
+                    pending_purchase_analytic.price = order.prices[0];
+                    pending_purchase_analytic.timestamp = TIMER_INIT();
+                }
                 auto cpy = new MarketItem();
                 *cpy = order;
                 GW::GameThread::Enqueue([cpy] {
@@ -1149,7 +1175,7 @@ namespace {
                     std::wstring item_ws = TextUtils::StringToWString(cpy->name);
 
                     GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)name_ws.c_str());
-                    const auto frame = (GW::EditableTextFrame*)GW::UI::GetFrameByLabel(L"EditMessage");
+                    
                     std::wstring message;
                     if (cpy->orderType == OrderType::Buy) {
                         message = std::format(L"Hi, are you still looking for {}?", item_ws.c_str());
@@ -1157,7 +1183,7 @@ namespace {
                     else {
                         message = std::format(L"Hi, do you still have {} for sale?", item_ws.c_str());
                     }
-                    frame && frame->SetValue(message.c_str());
+                    GW::UI::SendUIMessage(GW::UI::UIMessage::kAppendMessageToChat, (void*)message.c_str());
                     delete cpy;
                 });
             }
@@ -1216,7 +1242,7 @@ namespace {
 
             const auto& price = order.prices[0];
 
-            ImGui::PushID(&order);
+            ImGui::PushID(order.description.c_str());
             // const auto top = ImGui::GetCursorPosY();
 
             // Player name and time
@@ -1577,6 +1603,57 @@ namespace {
         //
     }
 
+    AsyncRestClient purchase_analytics_client;
+
+    void SendPurchaseAnalytics(const std::string& item_name, OrderType order_type, const Price& price)
+    {
+        if (!ToolboxSettings::send_anonymous_gameplay_info) return;
+        if (purchase_analytics_client.IsPending()) return;
+        purchase_analytics_client.Clear();
+
+        json price_json;
+        price_json["type"] = static_cast<int>(price.type);
+        price_json["price"] = price.price;
+        price_json["quantity"] = price.quantity;
+
+        json payload;
+        payload["name"] = item_name;
+        payload["orderType"] = static_cast<int>(order_type);
+        payload["price"] = price_json;
+
+        const auto json_str = glz::write_json(payload).value_or(std::string{});
+
+        purchase_analytics_client.SetUrl(std::format("https://{}/api/shop/purchase/", market_host).c_str());
+        purchase_analytics_client.SetMethod(HttpMethod::Post);
+        purchase_analytics_client.SetHeader("Content-Type", "application/json");
+        purchase_analytics_client.SetPostContent(json_str, ContentFlag::Copy);
+        purchase_analytics_client.SetTimeoutSec(5);
+        purchase_analytics_client.SetConnectTimeoutSec(3);
+        purchase_analytics_client.SetVerifyPeer(false);
+        purchase_analytics_client.SetVerifyHost(false);
+        purchase_analytics_client.ExecuteAsync();
+    }
+
+    GW::HookEntry OnSendChatMessage_HookEntry;
+    void OnSendChatMessage(GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*)
+    {
+        if (!pending_purchase_analytic.IsActive()) return;
+
+        const auto message = static_cast<GW::UI::UIPacket::kSendChatMessage*>(wparam)->message;
+        if (!(message && *message)) return;
+        if (GW::Chat::GetChannel(*message) != GW::Chat::Channel::CHANNEL_WHISPER) return;
+
+        const wchar_t* name_start = message + 1; // skip channel opcode
+        const wchar_t* sep = wcschr(name_start, L',');
+        if (!sep) return;
+
+        const std::string recipient = TextUtils::WStringToString(std::wstring(name_start, sep - name_start));
+        if (recipient != pending_purchase_analytic.player_name) return;
+
+        SendPurchaseAnalytics(pending_purchase_analytic.item_name, pending_purchase_analytic.order_type, pending_purchase_analytic.price);
+        pending_purchase_analytic.Clear();
+    }
+
     struct PendingAddToSell {
         uint32_t item_id;
         std::unique_ptr<GuiUtils::EncString> decoded_complete_name;
@@ -1658,13 +1735,15 @@ namespace {
 void GWMarketWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     InitWebSocket();
 
     const GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kMapLoaded};
     for (auto ui_message : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x4000);
+        RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, ui_message, OnPostUIMessage, 0x4000);
     }
     OnPostUIMessage(0, GW::UI::UIMessage::kMapLoaded, 0, 0);
+    RegisterUIMessageCallback(&OnSendChatMessage_HookEntry, GW::UI::UIMessage::kSendChatMessage, OnSendChatMessage);
 }
 
 void GWMarketWindow::Terminate()
@@ -1672,6 +1751,8 @@ void GWMarketWindow::Terminate()
     Disconnect(true);
     ToolboxWindow::Terminate();
     GW::UI::RemoveUIMessageCallback(&OnPostUIMessage_HookEntry);
+    GW::UI::RemoveUIMessageCallback(&OnSendChatMessage_HookEntry);
+    purchase_analytics_client.Abort();
 }
 
 void GWMarketWindow::Update(float delta)
@@ -1696,9 +1777,9 @@ void GWMarketWindow::Update(float delta)
     }
 
     refresh_timer += delta;
-    if (refresh_timer >= refresh_interval) {
+    if (refresh_timer >= settings.refresh_interval) {
         refresh_timer = 0.0f;
-        if (auto_refresh) Refresh();
+        if (settings.auto_refresh) Refresh();
     }
 }
 
@@ -1731,15 +1812,23 @@ void GWMarketWindow::SearchItem(const std::string& item_name)
     }
 }
 
-void GWMarketWindow::LoadSettings(ToolboxIni* ini)
+void GWMarketWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(auto_refresh);
-    refresh_interval = static_cast<int>(ini->GetLongValue(Name(), "refresh_interval", 60));
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    // Load favorite items
     favorite_items.clear();
-    const char* favorites_str = ini->GetValue(Name(), "favorite_items", "");
+    std::vector<std::string> favorites_list;
+    if (doc.Get(Name(), "favorite_items", favorites_list)) {
+        for (const auto& item : favorites_list) {
+            if (!item.empty()) {
+                ToggleFavourite(item, true);
+            }
+        }
+        return;
+    }
+    // Legacy INI fallback: pipe-separated string
+    const char* favorites_str = legacy->GetValue(Name(), "favorite_items", "");
     if (favorites_str && strlen(favorites_str) > 0) {
         std::string favorites(favorites_str);
         size_t start = 0;
@@ -1761,28 +1850,24 @@ void GWMarketWindow::LoadSettings(ToolboxIni* ini)
     }
 }
 
-void GWMarketWindow::SaveSettings(ToolboxIni* ini)
+void GWMarketWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(auto_refresh);
-    ini->SetLongValue(Name(), "refresh_interval", refresh_interval);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    // Save favorite items as pipe-separated string
-    std::string favorites_str;
+    std::vector<std::string> favorites_list;
+    favorites_list.reserve(favorite_items.size());
     for (const auto& item : favorite_items) {
-        if (!favorites_str.empty()) {
-            favorites_str += "|";
-        }
-        favorites_str += item.first;
+        favorites_list.push_back(item.first);
     }
-    ini->SetValue(Name(), "favorite_items", favorites_str.c_str());
+    doc.Set(Name(), "favorite_items", favorites_list);
 }
 
 void GWMarketWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Auto-refresh", &auto_refresh);
-    if (auto_refresh) {
-        ImGui::SliderInt("Interval (sec)", &refresh_interval, 30, 300);
+    ImGui::Checkbox("Auto-refresh", &settings.auto_refresh);
+    if (settings.auto_refresh) {
+        ImGui::SliderInt("Interval (sec)", &settings.refresh_interval, 30, 300);
     }
 
     ImGui::Separator();

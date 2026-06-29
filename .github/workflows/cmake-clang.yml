@@ -1,0 +1,114 @@
+name: CMake (clang-cl)
+
+on:
+  push:
+    paths:
+      # C/C++ source and headers
+      - '**/*.cpp'
+      - '**/*.c'
+      - '**/*.h'
+      # Win32 resources
+      - '**/*.rc'
+      - '**/*.ico'
+      - '**/*.manifest'
+      # Build system
+      - 'CMakeLists.txt'
+      - 'cmake/*.cmake'
+      - 'CMakePresets.json'
+      - 'CMakeSettings.json'
+      - 'vcpkg.json'
+      - 'vcpkg-configuration.json'
+      - 'vcpkg-overlays/**'
+      # The workflow itself
+      - '.github/workflows/cmake-clang.yml'
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+#    - name: Setup Windows 10 SDK Action
+#      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
+#      with:
+#        sdk-version: 22621
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install LLVM (clang-cl)
+      run: choco install llvm --no-progress -y
+
+    - name: Source vcvars32 (x86)
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x86
+
+    - name: Cache vcpkg toolchain
+      id: cache-vcpkg-tool
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/vcpkg
+        key: vcpkg-tool-${{ runner.os }}-ce613c41372b23b1f51333815feb3edd87ef8a8b
+
+    - name: Install vcpkg
+      if: steps.cache-vcpkg-tool.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VCPKG_COMMIT: ce613c41372b23b1f51333815feb3edd87ef8a8b
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git
+        cd vcpkg
+        git checkout "$VCPKG_COMMIT"
+        ./bootstrap-vcpkg.bat
+
+    - name: Set VCPKG_ROOT
+      run: |
+        echo "VCPKG_ROOT=$(Get-Location)\vcpkg" >> $env:GITHUB_ENV
+      shell: powershell
+
+    - name: Restore vcpkg binary cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/vcpkg-bincache
+        key: vcpkg-bin-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg-overlays/**') }}
+        restore-keys: |
+          vcpkg-bin-${{ runner.os }}-
+
+    - name: Restore FetchContent cache
+      uses: actions/cache@v4
+      with:
+        path: ${{runner.workspace}}/GWToolboxpp/build-clang/_deps
+        key: deps-clang-${{ runner.os }}-${{ hashFiles('cmake/*.cmake') }}
+        restore-keys: |
+          deps-clang-${{ runner.os }}-
+
+    - name: Restore vcpkg installed cache
+      uses: actions/cache@v4
+      with:
+        path: ${{runner.workspace}}/GWToolboxpp/build-clang/vcpkg_installed
+        key: vcpkg-inst-clang-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/GWToolboxpp/build-clang
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/GWToolboxpp/build-clang
+      run: cmake $GITHUB_WORKSPACE --preset=clang -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      env:
+        VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+        VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/GWToolboxpp/build-clang
+      shell: bash
+      run: cmake --build .
+
+    - name: Save output
+      uses: actions/upload-artifact@v4
+      with:
+        name: GWToolbox-clang-RelWithDebInfo
+        path: ${{runner.workspace}}/GWToolboxpp/bin/

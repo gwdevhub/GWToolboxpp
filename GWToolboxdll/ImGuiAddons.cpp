@@ -6,6 +6,26 @@
 #include <Keys.h>
 
 namespace {
+    // Renders text rotated clockwise by angle_rad around center on draw list dl.
+    void RenderTextRotated(ImDrawList* dl, ImVec2 center, ImU32 col, const char* text, float angle_rad)
+    {
+        if (!text || !*text)
+            return;
+        const ImVec2 sz = ImGui::CalcTextSize(text);
+        const float cos_a = cosf(angle_rad);
+        const float sin_a = sinf(angle_rad);
+        const int vtx0 = dl->VtxBuffer.Size;
+        dl->AddText({center.x - sz.x * 0.5f, center.y - sz.y * 0.5f}, col, text);
+        // CW rotation: (dx, dy) -> (dx*cos + dy*sin, -dx*sin + dy*cos)
+        for (int i = vtx0; i < dl->VtxBuffer.Size; i++) {
+            ImDrawVert& v = dl->VtxBuffer[i];
+            const float dx = v.pos.x - center.x;
+            const float dy = v.pos.y - center.y;
+            v.pos.x = center.x + dx * cos_a + dy * sin_a;
+            v.pos.y = center.y - dx * sin_a + dy * cos_a;
+        }
+    }
+
     ImGui::ImGuiContextMenuCallback imguiaddons_context_menu_callback = nullptr;
     void* imguiaddons_context_menu_wparam = nullptr;
     const char* imguiaddons_context_menu_id = "###imguiaddons_context_menu";
@@ -50,13 +70,14 @@ namespace ImGui {
         if (push_texture) draw_list->PopTexture();
     }
 
-    bool InputText(const char* label, std::string& buf, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+    bool InputText(const char* label, std::string& buf, size_t max_length, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
     {
-        if (InputText(label, buf.data(), (int)buf.capacity(), flags, callback, user_data)) {
-            buf.resize(strlen(buf.data()));
-            return true;
-        }
-        return false;
+        // Resize to max_length so ImGui can write up to max_length chars into a fully-initialised
+        // buffer. This avoids UB from writing past buf.size() and ensures capacity >= max_length+1.
+        buf.resize(max_length, '\0');
+        const bool changed = InputText(label, buf.data(), max_length + 1, flags, callback, user_data);
+        buf.resize(strnlen(buf.data(), max_length));
+        return changed;
     }
 
     void SetTooltip(std::function<void()> tooltip_callback)
@@ -181,6 +202,13 @@ namespace ImGui {
         }
     }
 
+    bool CheckboxWithHelp(const char* label, bool* v, const char* help_text)
+    {
+        const bool result = Checkbox(label, v);
+        ShowHelp(help_text);
+        return result;
+    }
+
     void TextShadowed(const char* label, const ImVec2 offset, const ImVec4& shadow_color)
     {
         const ImVec2 pos = GetCursorPos();
@@ -271,8 +299,6 @@ namespace ImGui {
 
     bool SmallConfirmButton(const char* label, const char* confirm_content, ImGui::ImGuiConfirmDialogCallback callback, void* wparam)
     {
-        static char id_buf[128];
-        snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, label);
         if (SmallButton(label)) {
             ConfirmDialog(confirm_content, callback, wparam);
             return true;
@@ -318,24 +344,39 @@ namespace ImGui {
         return pressedKeys;
     }
 
+    bool BeginConfirmTrigger(const char* confirm_id, bool triggered)
+    {
+        if (triggered) {
+            OpenPopup(confirm_id);
+        }
+        if (BeginPopupModal(confirm_id, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            return true;
+        }
+        return false;
+    }
+
+    void EndConfirmTrigger(bool* confirm_bool)
+    {
+        if (Button("OK", ImVec2(120, 0)) || IsKeyReleased(ImGuiKey_Enter)) {
+            *confirm_bool = true;
+            CloseCurrentPopup();
+        }
+        SameLine();
+        if (Button("Cancel", ImVec2(120, 0))) {
+            CloseCurrentPopup();
+        }
+        EndPopup();
+    }
     bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content)
     {
         static char id_buf[128];
-        snprintf(id_buf, sizeof(id_buf), "%s##confirm_popup%p", label, confirm_bool);
-        if (Button(label)) {
-            OpenPopup(id_buf);
-        }
-        if (BeginPopupModal(id_buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        const ImGuiID h = ImHashStr(confirm_content, 0, ImHashStr(label));
+        snprintf(id_buf, sizeof(id_buf), "%s###confirm_popup_%u", label, h);
+
+        const bool triggered = Button(label);
+        if (BeginConfirmTrigger(id_buf, triggered)) {
             Text(confirm_content);
-            if (Button("OK", ImVec2(120, 0)) || ImGui::IsKeyReleased(ImGuiKey_Enter)) {
-                *confirm_bool = true;
-                CloseCurrentPopup();
-            }
-            SameLine();
-            if (Button("Cancel", ImVec2(120, 0))) {
-                CloseCurrentPopup();
-            }
-            EndPopup();
+            EndConfirmTrigger(confirm_bool);
         }
         return *confirm_bool;
     }
@@ -349,10 +390,9 @@ namespace ImGui {
     bool CompositeIconButton(const char* label, ImTextureID* icons, size_t icons_len, const ImVec2& size, const ImGuiButtonFlags flags, const ImVec2& icon_size, const ImVec2& uv0, ImVec2 uv1)
     {
         const ImVec2 pos = GetCursorScreenPos();
-        const bool has_label = label && *label;
+        const bool has_label = label && *label && strncmp(label,"##",2);
         const ImVec2 textsize = has_label ? CalcTextSize(label) : ImVec2(0.f, 0.f);
 
-        // build button id - skip sprintf, just use the label directly as the id suffix
         char button_id[128];
         snprintf(button_id, sizeof(button_id), "###icon_button_%s", label ? label : "");
         const bool clicked = ButtonEx(button_id, size, flags);
@@ -360,31 +400,43 @@ namespace ImGui {
         ImGuiContext& g = *GImGui;
         const auto clip_rect = g.LastItemData.Rect.ToVec4();
         const ImVec2 button_size = GetItemRectSize();
-
-        const float img_h = icon_size.y > 0.f ? icon_size.y : button_size.y - 2.f;
-        const float img_w = icon_size.x > 0.f ? icon_size.x : img_h;
-
         const ImGuiStyle& style = GetStyle();
-        const float content_width = img_w + textsize.x + style.FramePadding.x * 2.f;
-        float content_x = pos.x + style.FramePadding.x;
-        if (content_width < button_size.x) content_x += (button_size.x - content_width) * style.ButtonTextAlign.x;
 
-        const float img_x = content_x;
+        const float available_h = button_size.y - style.FramePadding.y;
+        const float available_w = button_size.x - style.FramePadding.x;
+
+        float img_h = icon_size.y > 0.f ? icon_size.y : available_h;
+        float img_w = icon_size.x > 0.f ? icon_size.x : img_h;
+
+        // Scale down if icon is larger than the button interior, preserving aspect ratio
+        if (img_h > available_h || img_w > available_w) {
+            const float scale = std::min(available_w / img_w, available_h / img_h);
+            img_w *= scale;
+            img_h *= scale;
+        }
+
+        float img_x;
+        if (has_label) {
+            const float content_width = img_w + style.ItemSpacing.x + textsize.x;
+            float content_x = pos.x + style.FramePadding.x;
+            if (content_width < button_size.x - style.FramePadding.x * 2.f) content_x += (button_size.x - style.FramePadding.x * 2.f - content_width) * style.ButtonTextAlign.x;
+            img_x = content_x;
+        }
+        else {
+            img_x = pos.x + (button_size.x - img_w) / 2.f;
+        }
         const float img_y = pos.y + (button_size.y - img_h) / 2.f;
-        const float text_x = img_x + img_w + 3.f;
-        const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
-        const ImVec2 top_left = ImVec2(img_x, img_y);
-        const ImVec2 bottom_right = ImVec2(img_x + img_w, img_y + img_h);
 
-        // hoist draw list and uv check outside the loop
+        const float text_x = img_x + img_w + style.ItemSpacing.x;
+        const float text_y = pos.y + (button_size.y - textsize.y) * style.ButtonTextAlign.y;
+
         ImDrawList* draw_list = GetWindowDrawList();
         const bool use_custom_uv = uv0.x != uv1.x || uv0.y != uv1.y;
         for (size_t i = 0; i < icons_len; i++) {
             ImTextureID tex = icons[i];
             if (!tex) continue;
-            draw_list->AddImage(tex, top_left, bottom_right, uv0, use_custom_uv ? uv1 : CalculateUvCrop(tex, ImVec2(img_w, img_h)));
+            draw_list->AddImage(tex, ImVec2(img_x, img_y), ImVec2(img_x + img_w, img_y + img_h), uv0, use_custom_uv ? uv1 : CalculateUvCrop(tex, ImVec2(img_w, img_h)));
         }
-
         if (has_label) draw_list->AddText(nullptr, 0.f, ImVec2(text_x, text_y), ImColor(style.Colors[ImGuiCol_Text]), label, nullptr, 0.f, &clip_rect);
 
         return clicked;
@@ -783,6 +835,89 @@ namespace ImGui {
         DrawTextWithOutline(GetWindowDrawList(), text, GetCursorScreenPos(), textColor, outlineColor, thickness);
         ImVec2 textSize = CalcTextSize(text);
         SetCursorPosY(GetCursorPosY() + textSize.y);
+    }
+
+    void TextRotated(const char* text, float angle_degrees)
+    {
+        if (!text || !*text) {
+            Dummy({0.f, 0.f});
+            return;
+        }
+        ImDrawList* dl = GetWindowDrawList();
+        const ImVec2 sz = CalcTextSize(text);
+        const float angle_rad = angle_degrees * IM_PI / 180.f;
+        const float abs_cos = fabsf(cosf(angle_rad));
+        const float abs_sin = fabsf(sinf(angle_rad));
+        const float rotated_w = sz.x * abs_cos + sz.y * abs_sin;
+        const float rotated_h = sz.x * abs_sin + sz.y * abs_cos;
+        const ImVec2 pos = GetCursorScreenPos();
+        const ImVec2 center = {pos.x + rotated_w * 0.5f, pos.y + rotated_h * 0.5f};
+        RenderTextRotated(dl, center, GetColorU32(ImGuiCol_Text), text, angle_rad);
+        Dummy({rotated_w, rotated_h});
+    }
+
+    bool BeginVerticalTabBar(const char* str_id, const char* const* labels, const int labels_count,
+                              int* active_tab, const int highlighted_tab, const float tab_width_hint)
+    {
+        const ImGuiStyle& style = GetStyle();
+        const float font_sz = GetFontSize();
+        const float tab_w   = tab_width_hint > 0.f ? tab_width_hint : font_sz + style.FramePadding.x * 4.f;
+
+        if (!BeginTable(str_id, 2, ImGuiTableFlags_BordersInnerV))
+            return false;
+
+        TableSetupColumn("##vtabs",    ImGuiTableColumnFlags_WidthFixed,   tab_w);
+        TableSetupColumn("##vcontent", ImGuiTableColumnFlags_WidthStretch);
+        TableNextRow();
+        TableSetColumnIndex(0);
+
+        ImDrawList* const dl = GetWindowDrawList();
+        PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
+
+        for (int i = 0; i < labels_count; i++) {
+            const char* label    = labels[i];
+            const bool  selected = (*active_tab == i);
+            const float text_w   = CalcTextSize(label).x;
+            const float btn_h    = text_w + style.FramePadding.y * 4.f;
+
+            PushID(i);
+            PushStyleColor(ImGuiCol_Button,
+                selected ? style.Colors[ImGuiCol_ButtonActive] : ImVec4(0.f, 0.f, 0.f, 0.f));
+            PushStyleColor(ImGuiCol_ButtonHovered,
+                selected ? style.Colors[ImGuiCol_ButtonActive] : style.Colors[ImGuiCol_ButtonHovered]);
+
+            const ImVec2 tl = GetCursorScreenPos();
+            if (ButtonEx("##vtab", {tab_w, btn_h}, ImGuiButtonFlags_None))
+                *active_tab = i;
+
+            PopStyleColor(2);
+
+            RenderTextRotated(dl, {tl.x + tab_w * 0.5f, tl.y + btn_h * 0.5f},
+                GetColorU32(selected ? ImGuiCol_Text : ImGuiCol_TextDisabled), label, IM_PI * 0.5f);
+
+            // Small dot on the right edge marks the currently-active mode tab
+            if (i == highlighted_tab) {
+                constexpr float r = 3.f;
+                dl->AddCircleFilled(
+                    {tl.x + tab_w - style.FramePadding.x - r, tl.y + btn_h * 0.5f},
+                    r, GetColorU32(ImGuiCol_CheckMark));
+            }
+
+            if (IsItemHovered())
+                SetTooltip("%s", label);
+
+            PopID();
+        }
+
+        PopStyleVar(); // ItemSpacing
+
+        TableSetColumnIndex(1);
+        return true;
+    }
+
+    void EndVerticalTabBar()
+    {
+        EndTable();
     }
 
 }

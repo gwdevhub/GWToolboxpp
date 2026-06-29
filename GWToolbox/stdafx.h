@@ -52,7 +52,7 @@
 #include <ranges>
 #include <regex>
 
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
 
 #include "resource.h"
 #pragma warning(pop)
@@ -70,3 +70,21 @@
 #pragma warning(disable: 4820) // 'bytes' bytes padding added after construct 'member_name'
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
 #pragma warning(disable: 5045) // Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+
+// Every launcher dialog title carries the launcher version, so a user's screenshot of
+// any message box immediately tells us which build produced it. Use these in place of
+// MessageBoxW/MessageBoxA throughout the launcher.
+inline std::wstring GwtbDialogTitle(const wchar_t* base)
+{
+    return std::wstring(base) + L" (v" GWTOOLBOXEXE_VERSION L")";
+}
+
+inline int ShowMessageBoxW(HWND hwnd, const wchar_t* text, const wchar_t* title, UINT type)
+{
+    return MessageBoxW(hwnd, text, GwtbDialogTitle(title).c_str(), type);
+}
+
+inline int ShowMessageBoxA(HWND hwnd, const char* text, const char* title, UINT type)
+{
+    return MessageBoxA(hwnd, text, (std::string(title) + " (v" GWTOOLBOXEXE_VERSION ")").c_str(), type);
+}

@@ -1,0 +1,59 @@
+name: Deploy site to GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'site/**'
+      - '.github/workflows/site-deploy.yml'
+  # Rebuild after a release publishes so the download button picks up the new
+  # exe; the release-creating DLL build outlives this job, so the push above
+  # always captures the previous release.
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment, but cancel any in-flight run when a new push
+# arrives so we don't ship stale content if two pushes land back-to-back.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+      - run: npm run build
+        env:
+          # Higher rate limit when querying the Releases API at build time.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

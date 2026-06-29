@@ -29,8 +29,12 @@ set(SOURCES
     # we copied (and modified) impl_imgui_dx9.h/cpp files under GWToolboxdll
     # we copied (and modified) imgui_impl_win32.h/cpp files under GWToolboxdll
 )
+set(HOOK_SOURCES
+    "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/imgui_test_engine_hooks/imgui_test_engine_hooks.h"
+    "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/imgui_test_engine_hooks/imgui_test_engine_hooks.cpp"
+)
 source_group(TREE "${imgui_SOURCE_DIR}" FILES ${SOURCES})
-target_sources(imgui PRIVATE ${SOURCES})
+target_sources(imgui PRIVATE ${SOURCES} ${HOOK_SOURCES})
 target_include_directories(imgui PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/../Dependencies"
     "${imgui_SOURCE_DIR}"

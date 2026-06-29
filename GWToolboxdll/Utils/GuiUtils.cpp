@@ -11,6 +11,7 @@
 
 #include "GuiUtils.h"
 #include <Utils/TextUtils.h>
+#include <Modules/GwDatTextureModule.h>
 
 namespace {
     struct AttributeConstData {
@@ -98,6 +99,11 @@ namespace {
     {
         return "https://wiki.guildwars.com/index.php";
     }
+
+    const uint32_t TEMPLATE_ICONS_FILE_ID = 0x40D6B;
+    const uint32_t SKILL_ICONS_FILE_ID = 0x43aa4;
+    const uint32_t GW_BUTTON_ICONS_FILE_ID = 0x22ea6;
+
 }
 
 namespace GuiUtils {
@@ -115,14 +121,65 @@ namespace GuiUtils {
         return max_places;
     }
 
-    void DrawSkillbar(const char* build_code, bool show_attributes) {
-        GW::SkillbarMgr::SkillTemplate skill_template;
-        if (!(build_code && *build_code && GW::SkillbarMgr::DecodeSkillTemplate(skill_template, build_code)))
+    bool IconButtonConfirm(const char* label, GwButtonIcon icon, const ImVec2& size, const ImGuiButtonFlags flags)
+    {
+        bool confirmed = false;
+        const bool triggered = IconButton(label, icon, size, flags);
+        if (ImGui::BeginConfirmTrigger("##IconButtonConfirm", triggered)) {
+            ImGui::Text("Are you sure?");
+            ImGui::EndConfirmTrigger(&confirmed);
+        }
+        return confirmed;
+    }
+
+    bool IconButton(const char* label, GwButtonIcon icon, const ImVec2& size, const ImGuiButtonFlags flags)
+    {
+        // Icons from GW_BUTTON_ICONS_FILE_ID
+        if (icon == GwButtonIcon::ChatIcon) {
+            IDirect3DTexture9** tex = GwDatTextureModule::LoadTextureFromFileId(GW_BUTTON_ICONS_FILE_ID);
+            if (!tex || !*tex) return false;
+
+            static constexpr float SPRITE_W = 64.f;
+            static constexpr float SPRITE_H = 64.f;
+            static constexpr ImVec2 ICON_SIZE = ImVec2(40.f, 32.f);
+
+            // Normal at row 0, active at row 1 — both at x=0
+            const ImVec2 uv0(0.f, 0.f);
+            const ImVec2 uv1(ICON_SIZE.x / SPRITE_W, ICON_SIZE.y / SPRITE_H);
+
+            ImTextureID tex_id = reinterpret_cast<ImTextureID>(*tex);
+            return ImGui::CompositeIconButton(label, &tex_id, 1, size, flags, ICON_SIZE, uv0, uv1);
+        }
+
+        // Icons from TEMPLATE_ICONS_FILE_ID
+        IDirect3DTexture9** tex = GwDatTextureModule::LoadTextureFromFileId(TEMPLATE_ICONS_FILE_ID);
+        if (!tex || !*tex) return false;
+
+        static constexpr float SPRITE_W = 128.f;
+        static constexpr float SPRITE_H = 64.f;
+        static constexpr ImVec2 ICON_SIZE = ImVec2(23.f, 23.f);
+
+        const int base = static_cast<int>(icon) * 2;
+        const float x0 = (base % 5) * ICON_SIZE.x;
+        const float y0 = (base / 5) * ICON_SIZE.y;
+        const ImVec2 uv0(x0 / SPRITE_W, y0 / SPRITE_H);
+        const ImVec2 uv1((x0 + ICON_SIZE.x) / SPRITE_W, (y0 + ICON_SIZE.y) / SPRITE_H);
+
+        ImTextureID tex_id = reinterpret_cast<ImTextureID>(*tex);
+        return ImGui::CompositeIconButton(label, &tex_id, 1, size, flags, ICON_SIZE, uv0, uv1);
+    }
+
+
+    void DrawSkillbar(const GW::SkillbarMgr::SkillTemplate* skill_template_pt, bool show_attributes)
+    {
+        if (!skill_template_pt)
             return;
+        const auto& skill_template = *skill_template_pt;
 
         const float text_size = ImGui::CalcTextSize(" ").y;
         const float skill_height = text_size * 2.f;
         const auto skill_size = ImVec2(skill_height, skill_height);
+
 
         if (show_attributes) {
             std::string attributes_str;
@@ -147,23 +204,33 @@ namespace GuiUtils {
         const auto primary_icon = Resources::GetProfessionIcon(skill_template.primary);
 
         auto cursor_pos = ImGui::GetCursorPos();
-        ImGui::ImageCropped(*primary_icon, { text_size, text_size });
+        ImGui::ImageCropped(*primary_icon, {text_size, text_size});
 
         if (skill_template.secondary != GW::Constants::Profession::None) {
             cursor_pos.y += text_size;
             ImGui::SetCursorPos(cursor_pos);
             const auto secondary_icon = Resources::GetProfessionIcon(skill_template.secondary);
-            ImGui::ImageCropped(*secondary_icon, { text_size, text_size });
+            ImGui::ImageCropped(*secondary_icon, {text_size, text_size});
             cursor_pos.y -= text_size;
         }
         cursor_pos.x += text_size;
         for (auto& skill : skill_template.skills) {
+            ImGui::SetCursorPos(cursor_pos);
             if (skill != GW::Constants::SkillID::No_Skill) {
-                ImGui::SetCursorPos(cursor_pos);
                 ImGui::ImageCropped(*Resources::GetSkillImage(skill), skill_size);
+            }
+            else {
+                ImGui::Dummy(skill_size);
             }
             cursor_pos.x += skill_size.x;
         }
+    }
+
+    void DrawSkillbar(const char* build_code, bool show_attributes) {
+        GW::SkillbarMgr::SkillTemplate skill_template;
+        if (!(build_code && *build_code && GW::SkillbarMgr::DecodeSkillTemplate(skill_template, build_code)))
+            return;
+        DrawSkillbar(&skill_template, show_attributes);
     }
 
     void FlashWindow(const bool force)

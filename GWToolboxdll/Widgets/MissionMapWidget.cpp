@@ -1,7 +1,9 @@
 #include "stdafx.h"
 
 #include <GWCA/Context/GameplayContext.h>
+#include <GWCA/Context/WorldContext.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -9,17 +11,20 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <ImGuiAddons.h>
+#include <Modules/GwDatTextureModule.h>
 #include <Modules/QuestModule.h>
+#include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
+#include <Windows/SettingsWindow.h>
 #include <Utils/ToolboxUtils.h>
-#include <GWCA/Context/WorldContext.h>
 #include <D3DContainers.h>
 
 namespace {
-    bool draw_all_terrain_lines = false;
-    bool draw_all_minimap_lines = true;
+    MissionMapWidget::Settings settings;
+
+    IDirect3DPixelShader9* icon_tint_shader = nullptr;
 
     std::vector<MissionMapWidget::DrawCallback> draw_callbacks;
     std::vector<MissionMapWidget::ContextMenuCallback> context_menu_callbacks;
@@ -35,6 +40,7 @@ namespace {
     const D3DMATRIX IDENTITY_MATRIX = {{1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f}};
 
     bool GamePosToMissionMapScreenPos(const GW::GamePos& game_map_position, GW::Vec2f& screen_coords);
+    void RenderMinimapLayers(IDirect3DDevice9* dx_device, const D3DMATRIX& game_to_screen, const D3DMATRIX& projection);
 
     struct GameToScreenBasis {
         float ox, oy;
@@ -66,6 +72,12 @@ namespace {
     GW::Vec2f world_map_click_pos;
 
     bool right_clicking = false;
+
+    // Left-click-to-target: a press that doesn't drag (the game uses drag to pan) selects a target
+    bool left_clicking = false;
+    bool left_click_dragged = false;
+    GW::Vec2f left_click_pos;
+    constexpr float left_click_drag_threshold_sq = 25.f; // 5px
 
     GW::UI::Frame* mission_map_frame = nullptr;
 
@@ -99,6 +111,17 @@ namespace {
     {
         GW::Vec2f world_map_pos;
         return WorldMapWidget::GamePosToWorldMap(game_map_position, world_map_pos) && WorldMapCoordsToMissionMapScreenPos(world_map_pos, screen_coords);
+    }
+
+    // Invert the game->screen basis so a screen click maps back to game coords.
+    bool ScreenPosToGamePos(const GW::Vec2f& screen, GW::Vec2f& game)
+    {
+        const float det = g2s.ax * g2s.by - g2s.bx * g2s.ay;
+        if (!g2s.valid || fabsf(det) < 1e-9f) return false;
+        const float dx = screen.x - g2s.ox;
+        const float dy = screen.y - g2s.oy;
+        game = {(g2s.by * dx - g2s.bx * dy) / det, (-g2s.ay * dx + g2s.ax * dy) / det};
+        return true;
     }
 
     void GameToScreenBasis::Rebuild()
@@ -177,7 +200,7 @@ namespace {
         GW::Hook::EnableHooks(OnMissionMap_UICallback_Func);
         return true;
     }
-
+    bool mission_map_ready = false;
     bool InitializeMissionMapParameters()
     {
         const auto gameplay_context = GW::GetGameplayContext();
@@ -186,6 +209,8 @@ namespace {
 
         const auto root = GW::UI::GetRootFrame();
         mission_map_top_left = mission_map_frame->position.GetContentTopLeft(root);
+        if (!std::isfinite(mission_map_top_left.x)) 
+            return false;
         mission_map_bottom_right = mission_map_frame->position.GetContentBottomRight(root);
         mission_map_scale = mission_map_frame->position.GetViewportScale(root);
         mission_map_zoom = gameplay_context->mission_map_zoom;
@@ -258,11 +283,51 @@ namespace {
         dx_device->SetTransform(D3DTS_VIEW, &IDENTITY_MATRIX);
         dx_device->SetTransform(D3DTS_PROJECTION, &ortho);
 
-        minimap_lines.Render(dx_device);
-
         for (const auto& cb : draw_callbacks) {
             cb(dx_device);
         }
+
+        // When the overlay is off (default), draw the lines directly — a single DrawPrimitive with the
+        // state already set above. Only the opt-in overlay pays for Minimap::Render (D3DSBT_ALL capture).
+        if (settings.draw_minimap && Minimap::IsEnabled()) {
+            RenderMinimapLayers(dx_device, gameToScreen, ortho);
+        }
+        else {
+            dx_device->SetTransform(D3DTS_WORLD, &gameToScreen);
+            minimap_lines.Render(dx_device);
+        }
+    }
+
+    // Overlay the minimap layers on the mission map; mission-map lines feed ctx.lines (a context layer,
+    // separate from the minimap's draw_on_minimap CustomRenderer). Only called when the overlay is on.
+    void RenderMinimapLayers(IDirect3DDevice9* dx_device, const D3DMATRIX& game_to_screen, const D3DMATRIX& projection)
+    {
+        MinimapRenderContext ctx = Minimap::GetRenderContext(); // inherit user colours (symbols)
+        ctx.top_left = {mission_map_top_left.x, mission_map_top_left.y};
+        ctx.bottom_right = {mission_map_bottom_right.x, mission_map_bottom_right.y};
+        ctx.view_override = &game_to_screen;
+        ctx.projection_override = &projection;
+        ctx.gwinches_per_pixel_override = 1.f / cached_px_to_game;
+        ctx.lines = &minimap_lines;
+
+        ctx.translation = {};
+        ctx.zoom_scale = 1.f;
+        ctx.circular_map = false;
+        ctx.draw_center_marker = false;
+        ctx.draw_custom = false; // lines come from ctx.lines; minimap markers/polygons are not wanted here
+
+        ctx.draw_background = false;
+        ctx.draw_cardinals = false; // mission map is always north-aligned
+        ctx.draw_pmap = settings.draw_pmap;
+        ctx.draw_symbols = settings.draw_symbols;
+        ctx.draw_ranges = settings.draw_ranges;
+        ctx.draw_agents = settings.draw_agents;
+        ctx.draw_pings = settings.draw_pings;
+        ctx.draw_effects = settings.draw_effects;
+
+        // Sub-renderers draw in game coords via the view override, so WORLD must be identity.
+        dx_device->SetTransform(D3DTS_WORLD, &IDENTITY_MATRIX);
+        Minimap::Render(dx_device, ctx);
     }
 
     void EnqueueMinimapLines(GW::Constants::MapID map_id)
@@ -275,7 +340,7 @@ namespace {
         const float LINE_HALF_THICKNESS = 1.f * cached_px_to_game;
         for (const auto& line : lines) {
             if (!line->visible) continue;
-            if (!line->draw_on_mission_map && !(draw_all_minimap_lines && line->draw_on_minimap) && !(draw_all_terrain_lines && line->draw_on_terrain)) continue;
+            if (!line->draw_on_mission_map && !(settings.draw_all_minimap_lines && line->draw_on_minimap) && !(settings.draw_all_terrain_lines && line->draw_on_terrain)) continue;
             if (line->map != map_id) continue;
             if (line->from_player_pos && player_pos) {
                 minimap_lines.push_back(D3DLine(*player_pos, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
@@ -284,35 +349,68 @@ namespace {
                 minimap_lines.push_back(D3DLine(line->p1, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
             }
         }
+        
     }
 } // namespace
 
-void MissionMapWidget::LoadSettings(ToolboxIni* ini)
+void MissionMapWidget::Initialize()
 {
-    ToolboxWidget::LoadSettings(ini);
-    LOAD_BOOL(draw_all_terrain_lines);
-    LOAD_BOOL(draw_all_minimap_lines);
+    ToolboxWidget::Initialize();
+    SettingsRegistry::Register(this, settings);
 }
 
-void MissionMapWidget::SaveSettings(ToolboxIni* ini)
+void MissionMapWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWidget::SaveSettings(ini);
-    SAVE_BOOL(draw_all_terrain_lines);
-    SAVE_BOOL(draw_all_minimap_lines);
+    ToolboxWidget::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+}
+
+void MissionMapWidget::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWidget::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 }
 
 void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
 {
-    if (!visible || !GW::Map::GetIsMapLoaded() || !mission_map_frame || !mission_map_frame->IsVisible()) return;
+    if (!visible || !mission_map_ready) return;
 
     SubmitVertexBuffers(dx_device);
-    HookMissionMapFrame();
+
+    // POC: mission map icons, desaturated. Res shrine icon (maybe others) are wrong colour by default so we desaturate, but this impacts other icons!
+    #if 0
+    const auto* world_ctx = GW::GetWorldContext();
+    if (!world_ctx) return;
+    auto* draw_list = ImGui::GetBackgroundDrawList();
+    draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y});
+    static constexpr ImU32 kAffiliationColors[] = {
+        IM_COL32_WHITE,                   // 0: gray
+        IM_COL32(0x20, 0x20, 0xFF, 0xFF), // 1: blue
+        IM_COL32(0xFF, 0x20, 0x20, 0xFF), // 2: red
+        IM_COL32(0xFF, 0xFF, 0x20, 0xFF), // 3: yellow
+        IM_COL32(0x20, 0xFF, 0xFF, 0xFF), // 4: teal
+        IM_COL32(0x80, 0x20, 0xFF, 0xFF), // 5: purple
+        IM_COL32(0x20, 0xFF, 0x20, 0xFF), // 6: green
+        IM_COL32_WHITE,                   // 7: gray (same as 0)
+    };
+    for (const auto& icon : world_ctx->mission_map_icons) {
+        auto** tex = GwDatTextureModule::LoadGreyscaleTextureFromFileId(icon.model_id);
+        if (!tex || !*tex) continue;
+        GW::Vec2f pos;
+        GamePosToMissionMapScreenPos({icon.X, icon.Y}, pos);
+        ImVec2 sz = {42.f, 42.f};
+        const ImU32 tint = icon.option < std::size(kAffiliationColors) ? kAffiliationColors[icon.option] : IM_COL32_WHITE;
+        draw_list->AddImage(*tex, {pos.x - sz.x / 2, pos.y - sz.y / 2}, {pos.x + sz.x / 2, pos.y + sz.y / 2}, {0, 0}, {1, 1}, tint);
+    }
+    draw_list->PopClipRect();
+    #endif
 }
 
 void MissionMapWidget::Update(float)
 {
     if (!HookMissionMapFrame()) return;
-    if (!InitializeMissionMapParameters()) return;
+    mission_map_ready = InitializeMissionMapParameters();
+    if (!mission_map_ready) return;
 
     g2s.Rebuild();
     if (!g2s.valid) { render_ready = false; return; }
@@ -330,8 +428,46 @@ void MissionMapWidget::Update(float)
 
 void MissionMapWidget::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Draw all terrain lines", &draw_all_terrain_lines);
-    ImGui::Checkbox("Draw all minimap lines", &draw_all_minimap_lines);
+    const bool minimap_enabled = Minimap::IsEnabled();
+    const auto needs_minimap = [minimap_enabled] {
+        if (!minimap_enabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("Enable the Minimap module to use this.");
+    };
+
+    ImGui::BeginDisabled(!minimap_enabled);
+    ImGui::Checkbox("Draw all terrain lines", &settings.draw_all_terrain_lines);
+    needs_minimap();
+    ImGui::Checkbox("Draw all minimap lines", &settings.draw_all_minimap_lines);
+    needs_minimap();
+
+    ImGui::Separator();
+    ImGui::Checkbox("Show minimap on mission map", &settings.draw_minimap);
+    needs_minimap();
+    ImGui::BeginDisabled(!settings.draw_minimap);
+    ImGui::TextDisabled("Minimap layers drawn on the mission map");
+    ImGui::Checkbox("Range rings", &settings.draw_ranges);
+    needs_minimap();
+    ImGui::Checkbox("Agents", &settings.draw_agents);
+    needs_minimap();
+    ImGui::Checkbox("Pings & drawings", &settings.draw_pings);
+    needs_minimap();
+    ImGui::Checkbox("Effects", &settings.draw_effects);
+    needs_minimap();
+    ImGui::Checkbox("Background", &settings.draw_background);
+    needs_minimap();
+    ImGui::Checkbox("Pathing map (terrain)", &settings.draw_pmap);
+    needs_minimap();
+    ImGui::Checkbox("Symbols", &settings.draw_symbols);
+    needs_minimap();
+    ImGui::Checkbox("Click to target", &settings.click_to_target);
+    needs_minimap();
+    ImGui::ShowHelp("Left-click (without dragging) on the mission map to target the nearest agent");
+    ImGui::EndDisabled();
+    ImGui::EndDisabled();
+
+    if (ImGui::Button("Customise minimap (colours, agents, ranges)...")) {
+        SettingsWindow::Instance().NavigateToSection(Minimap::Instance().SettingsName());
+    }
 }
 
 bool MissionMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
@@ -346,6 +482,24 @@ bool MissionMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             world_map_click_pos = ScreenPosToMissionMapCoords(cursor_pos);
             ImGui::SetContextMenu(MissionMapContextMenu);
         } break;
+
+        // A left click that doesn't drag selects a target; drags are left to the game (it pans the map), so never capture.
+        case WM_LBUTTONDOWN: {
+            left_clicking = settings.draw_minimap && Minimap::IsEnabled() && settings.click_to_target && IsScreenPosOnMissionMap(cursor_pos) && !GW::UI::GetCurrentTooltip();
+            left_click_dragged = false;
+            left_click_pos = cursor_pos;
+        } break;
+        case WM_MOUSEMOVE: {
+            const float dx = cursor_pos.x - left_click_pos.x, dy = cursor_pos.y - left_click_pos.y;
+            if (left_clicking && dx * dx + dy * dy > left_click_drag_threshold_sq) left_click_dragged = true;
+        } break;
+        case WM_LBUTTONUP: {
+            if (left_clicking && !left_click_dragged && IsScreenPosOnMissionMap(cursor_pos)) {
+                GW::Vec2f game_pos;
+                if (ScreenPosToGamePos(left_click_pos, game_pos)) Minimap::SelectTarget(game_pos);
+            }
+            left_clicking = false;
+        } break;
     }
     return false;
 }
@@ -355,6 +509,11 @@ void MissionMapWidget::Terminate()
     ToolboxWidget::Terminate();
     if (OnMissionMap_UICallback_Func) GW::Hook::RemoveHook(OnMissionMap_UICallback_Func);
     OnMissionMap_UICallback_Func = nullptr;
+
+    if (icon_tint_shader) {
+        icon_tint_shader->Release();
+        icon_tint_shader = nullptr;
+    }
 
     minimap_lines.Terminate();
     render_ready = false;

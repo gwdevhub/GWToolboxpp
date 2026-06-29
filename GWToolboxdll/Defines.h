@@ -8,6 +8,9 @@
 #define WM_GW_RBUTTONCLICK 0x8110
 
 constexpr auto GWTOOLBOX_INI_FILENAME = L"GWToolbox.ini";
+// Legacy single-doc settings file, only read as a seed for the split per-module files
+constexpr auto GWTOOLBOX_JSON_FILENAME = L"GWToolbox.json";
+constexpr auto GWTOOLBOX_MODULES_FOLDERNAME = L"modules";
 
 #ifndef GWTOOLBOXDLL_VERSION
 #define GWTOOLBOXDLL_VERSION "6.0"
@@ -18,18 +21,7 @@ constexpr auto GWTOOLBOX_INI_FILENAME = L"GWToolbox.ini";
 
 #define VAR_NAME(v) (#v)
 
-#define LOAD_STRING(var) var = ini->GetValue(Name(), #var, (var).c_str());
-#define SAVE_STRING(var) ini->SetValue(Name(), #var, (var).c_str());
-#define LOAD_BOOL(var) var = ini->GetBoolValue(Name(), #var, var);
-#define SAVE_BOOL(var) ini->SetBoolValue(Name(), #var, var);
-#define LOAD_FLOAT(var) var = static_cast<float>(ini->GetDoubleValue(Name(), #var, static_cast<double>(var)));
-#define SAVE_FLOAT(var) ini->SetDoubleValue(Name(), #var, static_cast<double>(var));
-#define LOAD_UINT(var) var = static_cast<unsigned int>(ini->GetLongValue(Name(), #var, static_cast<long>(var)));
-#define SAVE_UINT(var) ini->SetLongValue(Name(), #var, static_cast<long>(var));
-#define LOAD_COLOR(var) var = Colors::Load(ini, Name(), #var, var);
-#define SAVE_COLOR(var) Colors::Save(ini, Name(), #var, var);
-
-#define CLEAR_PTR_VEC(var) for(size_t i=0;i < var.size();i++) { delete var[i]; }; var.clear();
+#define CLEAR_PTR_VEC(var) for(size_t i=0;i < var.size();i++) { delete var[i]; }; var.clear()
 
 #define CHAT_CMD_FUNC(fn) fn([[maybe_unused]] GW::HookStatus* status, [[maybe_unused]] const wchar_t* message,[[maybe_unused]] int argc,[[maybe_unused]] const LPWSTR* argv)
 /*

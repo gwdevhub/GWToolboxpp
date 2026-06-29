@@ -1,0 +1,199 @@
+---
+title: "Text-to-Speech Module"
+description: "Speak NPC dialogue and speech bubbles aloud through GWDevHub, ElevenLabs, OpenAI and other providers, with per-race voices and cost controls."
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this feature live under <ToolboxPath steps={["Settings", "Text-to-speech"]} />.
+
+The Text-to-Speech (TTS) Module in GWToolbox++ brings Guild Wars to life by converting NPC dialogue, speech bubbles, and other in-game text into spoken audio. This feature enhances immersion and accessibility by allowing you to hear conversations and interactions as you play.
+
+## Features
+
+- Convert NPC dialogue to speech using multiple TTS providers
+- Play speech bubbles from NPCs, enemies, and party members
+- Customizable voice settings for different races and genders
+- Support for both explorable areas and outposts
+- Custom voice assignments for specific NPCs
+- Activity logging and recent playback tracking
+
+## TTS Providers
+
+The module supports multiple text-to-speech providers:
+
+1. **GWDevHub TTS** (Default)
+   - Free service specifically for Guild Wars players
+   - No API key required
+   - Only processes the first sentence of NPC dialogue
+
+2. **ElevenLabs**
+   - High-quality AI voices
+   - Requires API key from [ElevenLabs](https://elevenlabs.io/app/settings/api-keys)
+
+3. **OpenAI**
+   - Natural-sounding TTS
+   - Requires API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+
+4. **Google Cloud**
+   - Enterprise-grade text-to-speech
+   - Requires API key and Text-to-Speech API enabled
+   - Get credentials at [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+
+5. **Play.ht**
+   - Voice cloning and custom voices
+   - Requires both API key and User ID
+   - Sign up at [Play.ht](https://play.ht)
+
+## Getting Started
+
+To access the Text-to-Speech settings:
+1. Open the GWToolbox++ main window
+2. Navigate to Settings
+3. Find the "Text-to-speech" section
+
+### Basic Configuration
+
+1. **Choose TTS Provider**
+   - Select your preferred provider from the dropdown
+   - For paid services, enter your API credentials
+   - GWDevHub TTS works immediately with no setup
+
+2. **Configure Processing Options**
+   - Enable/disable first sentence only processing
+   - Enable/disable first dialog only processing
+   - Toggle goodbye messages when closing dialogs
+   - Choose whether to play merchant greetings
+
+## Location Settings
+
+Control where TTS is active:
+
+### Play Speech In
+- **Explorable Areas**: Enable TTS in missions, quests, and explorable zones
+- **Outposts**: Enable TTS in towns and outposts
+
+### Play Speech Bubbles
+- **When in an outpost**: Process speech bubbles from NPCs in towns
+- **When in an explorable area**: Process speech from skills, enemy quotes, and ally dialogue
+- **From other party members**: Include speech from your party (Warning: may use additional API credits)
+- **From non-friendly NPCs**: Include enemy dialogue and quotes
+
+### NPC Speech Bubble Range
+- Set the distance (in game units) for processing speech bubbles
+- Default: 166.000 (earshot range)
+- Range: 0 to 2500
+- Higher values process more speech but use more API credits
+
+## Race and Character Voices
+
+The module can generate speech for different Guild Wars races:
+
+### Supported Races
+- **Human**: Default human male/female voices
+- **Charr**: Deep, gravelly voices
+- **Norn**: Strong, resonant voices
+- **Asura**: Higher-pitched, energetic voices
+- **Tengu**: Unique avian-inspired voices
+- **Dwarf**: Traditional dwarven voices
+- **Centaur**: Distinctive centaur voices
+
+Enable or disable TTS for each race individually to customize your experience.
+
+## Advanced Features
+
+### Custom NPC Voice Assignment
+
+For paid TTS providers (ElevenLabs, OpenAI, etc.), you can assign specific voice IDs to individual NPCs:
+
+1. Find the NPC ID of the character you want to customize
+2. Enter the NPC ID in the input field
+3. Enter the Voice ID from your TTS provider
+4. Click "Add Custom Voice Assignment"
+
+Voice settings (stability, similarity, style) are automatically inherited from the NPC's race and gender.
+
+**Example:**
+- NPC ID: `1234`
+- Voice ID: `2EiwWnXFnvU5JabPnv8n`
+
+You can remove custom assignments at any time using the "Remove" button next to each assignment.
+
+### Stop Conditions
+
+- **Stop speech when dialog window is closed**: Immediately halt audio playback when you close an NPC dialogue
+- Useful for quickly moving through conversations
+
+## Cost Management
+
+When using paid TTS services, several options help manage API usage:
+
+**Cost Optimization Settings:**
+- Only process first sentence (reduces API calls)
+- Only process first dialog (limits conversation length)
+- Disable speech bubbles in explorable areas (reduces frequent triggers)
+- Limit NPC speech bubble range (processes fewer ambient quotes)
+- Disable party member speech bubbles (reduces multiplayer triggers)
+
+The module displays a warning when settings that increase API usage are enabled.
+
+## Recent Activity Log
+
+The bottom of the settings panel shows recent TTS activity:
+- Audio files being played
+- Estimated duration of each clip
+- Success/failure messages
+- Generation status from GWDevHub voice service
+
+This helps you monitor what's being processed and troubleshoot any issues.
+
+## Language Support
+
+- The module respects Guild Wars' audio language settings
+- Guild Wars officially supports 6 audio languages
+- Goodbye messages and some merchant greetings currently only support English
+- Text processing uses the game's configured audio language preference
+
+## Tips and Best Practices
+
+1. **Start with GWDevHub TTS**: It's free and requires no setup
+2. **Enable selectively**: Start with outposts only to test the feature
+3. **Monitor API usage**: Keep an eye on the Recent Activity log when using paid services
+4. **Adjust bubble range**: Lower the range in busy areas to reduce processing
+5. **Use race filters**: Disable races you don't want to hear to reduce load
+6. **First sentence only**: Keep this enabled for most content to save on API costs
+
+## Troubleshooting
+
+**No audio playing?**
+- Check that your TTS provider is configured correctly
+- Verify API credentials are valid (for paid services)
+- Ensure the location settings allow speech in your current area
+- Check that the NPC's race is enabled in the race filters
+
+**Too many API calls?**
+- Enable "Only process the first sentence"
+- Enable "Only process the first dialog"
+- Reduce NPC speech bubble range
+- Disable speech bubbles in explorable areas
+- Disable non-friendly NPC speech
+
+**Audio cutting off?**
+- Disable "Stop speech when dialog window is closed"
+- Check the Recent Activity log for error messages
+
+**Quality issues?**
+- Try a different TTS provider
+- For ElevenLabs/OpenAI, experiment with custom voice IDs
+- Check that your API key has sufficient credits
+
+## Notes
+
+- TTS processing happens asynchronously to avoid impacting game performance
+- Audio files are cached where possible to reduce API calls
+- The GWDevHub service is optimized for Guild Wars dialogue and lore-appropriate voices
+- Custom voice assignments only work with providers that support voice selection
+- Speech bubbles from skills and combat quotes may be frequent in explorable areas
+
+[back](./)

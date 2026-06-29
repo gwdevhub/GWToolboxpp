@@ -1,7 +1,5 @@
 #pragma once
 
-#include <GWCA/Managers/GameThreadMgr.h>
-
 #include <ToolboxModule.h>
 #include <ToolboxUIElement.h>
 
@@ -10,6 +8,7 @@
 class ToolboxWidget;
 class ToolboxWindow;
 class ToolboxModule;
+class SettingsDoc;
 
 namespace GW {
     namespace Constants {
@@ -38,7 +37,8 @@ public:
     static void Disable();
     static bool CanTerminate();
 
-    static ToolboxIni* OpenSettingsFile();
+    static ToolboxIni* OpenSettingsFile(bool fresh = false);
+    static SettingsDoc* GetSettingsDoc(bool fresh = false);
     static std::filesystem::path SaveSettings();
     static void ForceTerminate(bool detach_wndproc_handler = true);
     static std::filesystem::path LoadSettings();
@@ -66,6 +66,7 @@ public:
     static bool ToggleModule(ToolboxModule& m, bool enable = true);
 
     static void SetProfilingEnabled(bool enabled);
+    static bool IsProfilingEnabled();
 
 private:
     static void DrawInitialising(IDirect3DDevice9* device);

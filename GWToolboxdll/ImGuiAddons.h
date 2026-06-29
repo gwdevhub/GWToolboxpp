@@ -1,5 +1,6 @@
 #pragma once
 
+namespace ABI::Windows::UI { struct Color; }
 using Color = ImU32;
 
 constexpr uint32_t ImGuiButtonFlags_AlignTextLeft = 1 << 20;
@@ -29,8 +30,8 @@ namespace ImGui {
     // ImDrawList::AddImage, but allows you to scale the added image down to fit.
     IMGUI_API void AddImageScaled(ImDrawList* draw_list, ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& size, float max_width, float max_height, const ImVec2& uv_min = ImVec2(0, 0), const ImVec2& uv_max = ImVec2(1, 1), ImU32 col = IM_COL32_WHITE);
 
-    // InputText using a std::string - make sure you set the capacity for the string first, otherwise it won't be able to be filled.
-    IMGUI_API bool InputText(const char* label, std::string& buf, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
+    // InputText using a std::string. max_length is the maximum number of characters the user can type.
+    IMGUI_API bool InputText(const char* label, std::string& buf, size_t max_length, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
 
     IMGUI_API void SetTooltip(std::function<void()> tooltip_callback);
 
@@ -45,6 +46,7 @@ namespace ImGui {
 
     // Shows '(?)' and the helptext when hovered
     IMGUI_API void ShowHelp(const char* help);
+    IMGUI_API bool CheckboxWithHelp(const char* label, bool* v, const char* help_text);
     // Shows current text with a drop shadow
     IMGUI_API void TextShadowed(const char* label, ImVec2 offset = {1, 1}, const ImVec4& shadow_color = {0, 0, 0, 1});
 
@@ -63,7 +65,11 @@ namespace ImGui {
     IMGUI_API bool SmallConfirmButton(const char* label, const char* confirm_content, ImGui::ImGuiConfirmDialogCallback callback, void* wparam = nullptr);
     IMGUI_API bool ChooseKey(const char* label, char* buf, size_t buf_len, long* key_code);
 
+    // Returns true to draw the content of the confirm
+    IMGUI_API bool BeginConfirmTrigger(const char* confirm_id, bool triggered);
+    IMGUI_API void EndConfirmTrigger(bool* confirm_bool);
     IMGUI_API bool ConfirmButton(const char* label, bool* confirm_bool, const char* confirm_content = "Are you sure you want to continue?");
+    
 
     // Button with single icon texture
     IMGUI_API bool IconButton(const char* label, ImTextureID icon, const ImVec2& size, ImGuiButtonFlags flags = ImGuiButtonFlags_None, const ImVec2& icon_size = {0.f, 0.f});
@@ -105,4 +111,18 @@ namespace ImGui {
                                        ImU32 textColor = IM_COL32(255, 255, 255, 255),
                                        ImU32 outlineColor = IM_COL32(0, 0, 0, 255),
                                        float thickness = 1.0f);
+
+    // Render text rotated clockwise by angle_degrees (default 90°) around its center.
+    // Advances the cursor by the axis-aligned bounding box of the rotated text.
+    IMGUI_API void TextRotated(const char* text, float angle_degrees = 90.f);
+
+    // Vertical tab bar: tabs on the left with rotated labels, content on the right.
+    // labels/labels_count: tab label strings.
+    // active_tab: in/out 0-indexed selection.
+    // highlighted_tab: index shown with a small dot indicator (-1 = none); use to mark the currently-active mode.
+    // tab_width: override tab strip width (0 = auto-sized from font height).
+    // Returns true when rendered; always call EndVerticalTabBar() iff this returns true.
+    IMGUI_API bool BeginVerticalTabBar(const char* str_id, const char* const* labels, int labels_count,
+                                       int* active_tab, int highlighted_tab = -1, float tab_width = 0.f);
+    IMGUI_API void EndVerticalTabBar();
 }

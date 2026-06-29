@@ -33,7 +33,8 @@
 #include <nfd_win.cpp>
 #pragma warning(pop)
 #include <dxgiformat.h>
-#include <wolfssl/wolfcrypt/asn.h>
+#include <bcrypt.h>
+#pragma comment(lib, "bcrypt.lib")
 
 #include <Modules/GwDatTextureModule.h>
 #include <Constants/EncStrings.h>
@@ -41,6 +42,8 @@
 #include <wincodec.h>
 
 #include <d3d9.h>
+
+#include <Modules/CodeOptimiserModule.h>
 
 
 
@@ -133,7 +136,7 @@ namespace {
     std::unordered_map<std::string, IDirect3DTexture9**> damagetype_icons;
     std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> map_names;
     std::unordered_map<GW::Constants::SkillID, GuiUtils::EncString*> skill_names;
-    std::unordered_map<GW::Constants::MapID, GuiUtils::EncString*> region_names;
+    std::unordered_map<GW::Region, std::unique_ptr<GuiUtils::EncString>> region_names;
     std::unordered_map<GW::Constants::HeroID, GuiUtils::EncString*> hero_names;
     std::unordered_map<GW::Constants::Language, std::unordered_map<uint32_t, std::unique_ptr<GuiUtils::EncString>>> encoded_string_ids;
     std::filesystem::path current_settings_folder;
@@ -235,12 +238,16 @@ namespace {
 
     const std::string HashStr(const std::string& str)
     {
-        const auto bytes_to_hash = std::vector<byte>(str.begin(), str.end());
-        auto hash = std::vector<byte>(WC_SHA256_DIGEST_SIZE);
-        wc_Sha256Hash(bytes_to_hash.data(), bytes_to_hash.size(), hash.data());
+        constexpr DWORD kSha256Size = 32;
+        BYTE hash[kSha256Size] = {};
+        BCryptHash(BCRYPT_SHA256_ALG_HANDLE,
+                   nullptr, 0,
+                   reinterpret_cast<PUCHAR>(const_cast<char*>(str.data())),
+                   static_cast<ULONG>(str.size()),
+                   hash, kSha256Size);
         std::stringstream hexstream;
         hexstream << std::hex << std::setfill('0');
-        for (auto b : hash) {
+        for (BYTE b : hash) {
             hexstream << std::setw(2) << static_cast<unsigned>(b);
         }
         return hexstream.str();
@@ -449,6 +456,8 @@ void Resources::Cleanup()
     damagetype_icons.clear();
     map_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
     skill_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
+    hero_names.clear();
+    region_names.clear(); // owns its EncStrings (built from raw encoded strings, not encoded_string_ids)
     encoded_string_ids.clear();
 }
 
@@ -505,11 +514,19 @@ std::filesystem::path Resources::GetComputerFolderPath()
 
 std::filesystem::path Resources::GetSettingsFolderName()
 {
-    return current_settings_folder;
+    // Bare config name (no configs\ prefix) so it can be passed back to SetSettingsFolder
+    return current_settings_folder.empty() ? std::filesystem::path() : current_settings_folder.filename();
 }
 
 std::filesystem::path Resources::GetSettingsFolderPath()
 {
+    const auto computer_path = GetComputerFolderPath();
+    return current_settings_folder.empty() ? computer_path / L"configs" / L"default" : computer_path / current_settings_folder;
+}
+
+std::filesystem::path Resources::GetLegacySettingsFolderPath()
+{
+    // Pre-configs/default layout: the default config lived at the computer root
     const auto computer_path = GetComputerFolderPath();
     return current_settings_folder.empty() ? computer_path : computer_path / current_settings_folder;
 }
@@ -530,6 +547,18 @@ std::filesystem::path Resources::GetSettingFile(const std::filesystem::path& fil
     return GetSettingsFolderPath() / file;
 }
 
+std::filesystem::path Resources::GetLegacySettingFile(const std::filesystem::path& file)
+{
+    return GetLegacySettingsFolderPath() / file;
+}
+
+std::filesystem::path Resources::GetSettingFileOrLegacy(const std::filesystem::path& file)
+{
+    const auto path = GetSettingFile(file);
+    std::error_code ec;
+    return std::filesystem::exists(path, ec) ? path : GetLegacySettingFile(file);
+}
+
 std::filesystem::path Resources::GetPath(const std::filesystem::path& file)
 {
     return GetComputerFolderPath() / file;
@@ -542,10 +571,29 @@ std::filesystem::path Resources::GetPath(const std::filesystem::path& folder, co
 
 bool Resources::EnsureFolderExists(const std::filesystem::path& path)
 {
-    if (path.empty()) return false;
+    std::wstring error_description;
+    return EnsureFolderExists(path, error_description);
+}
+
+bool Resources::EnsureFolderExists(const std::filesystem::path& path, std::wstring& error_description)
+{
+    error_description.clear();
+    if (path.empty()) {
+        error_description = L"No folder path was provided";
+        return false;
+    }
     if (exists(path)) return true;
     std::error_code ec;
-    return create_directories(path, ec);
+    if (create_directories(path, ec)) return true;
+
+    error_description = std::format(L"Failed to create folder:\n{}\n\nReason: {} (code {})\n\n{}",
+                                    path.wstring(), FormatWindowsError(ec.value()), ec.value(), PathDiagnoseWritability(path.parent_path()));
+    // ERROR_ACCESS_DENIED / ERROR_VIRUS_INFECTED / ERROR_VIRUS_DELETED are what antivirus and Controlled Folder Access return when blocking the write
+    if (ec.value() == ERROR_ACCESS_DENIED || ec.value() == ERROR_VIRUS_INFECTED || ec.value() == ERROR_VIRUS_DELETED) {
+        error_description += L"\n\nIf this is your Documents folder, Windows Defender Controlled Folder Access "
+            L"may be the cause - try allowing Guild Wars, or turning Controlled Folder Access off.";
+    }
+    return false;
 }
 
 bool Resources::Download(const std::filesystem::path& path_to_file, const std::string& url, std::wstring& response)
@@ -704,7 +752,8 @@ bool Resources::Post(const std::string& url, const std::string& payload, std::st
     r.SetMethod(HttpMethod::Post);
     r.SetPostContent(payload.c_str(), payload.size(), ContentFlag::ByRef);
 
-    std::string content_type = nlohmann::json::accept(payload) ? "application/json" : "application/x-www-form-urlencoded";
+    // Probe whether the payload is valid JSON so we can set the right Content-Type.
+    const std::string content_type = glz::validate_json(payload) ? "application/x-www-form-urlencoded" : "application/json";
     r.SetHeader("Content-Type", content_type.c_str());
     r.SetUrl(url.c_str());
     r.Execute();
@@ -859,31 +908,6 @@ bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_
     return WriteFile(path_to_file, std::string(static_cast<char*>(resource.data()), resource.size()));
 }
 
-// Load from absolute file path on disk with 3 retries
-int Resources::LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile)
-{
-    return inifile->LoadFile(absolute_path);
-}
-
-int Resources::SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* ini)
-{
-    auto tmp_file = std::filesystem::path(absolute_path);
-    tmp_file += ".tmp";
-    const SI_Error res = ini->SaveFile(tmp_file.c_str());
-    if (res < 0) {
-        return res;
-    }
-    std::error_code ec;
-    std::filesystem::rename(tmp_file, absolute_path, ec);
-    if (ec.value() != 0) {
-        return ec.value();
-    }
-    if (!(!exists(tmp_file) && exists(absolute_path))) {
-        return -1; // rename failed
-    }
-    return 0;
-}
-
 void Resources::DxUpdate(IDirect3DDevice9* device)
 {
     while (true) {
@@ -999,8 +1023,9 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     *texture = nullptr;
     guild_wars_wiki_images[filename] = texture;
     static std::filesystem::path path = GetPath(GUILD_WARS_WIKI_FILES_PATH);
-    if (!EnsureFolderExists(path)) {
-        trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
+    std::wstring folder_error;
+    if (!EnsureFolderExists(path, folder_error)) {
+        trigger_failure_callback(callback, L"%s", folder_error.c_str());
         return texture;
     }
     const auto path_to_file = std::format("{}\\{}", path.string(), filename_sanitised);
@@ -1101,8 +1126,9 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
         return texture;
     }
     static std::filesystem::path path = GetPath(SKILL_IMAGES_PATH);
-    if (!EnsureFolderExists(path)) {
-        trigger_failure_callback(callback, L"Failed to create folder %s", path.wstring().c_str());
+    std::wstring folder_error;
+    if (!EnsureFolderExists(path, folder_error)) {
+        trigger_failure_callback(callback, L"%s", folder_error.c_str());
         return texture;
     }
     wchar_t path_to_file[MAX_PATH];
@@ -1211,64 +1237,96 @@ GuiUtils::EncString* Resources::GetMapName(const GW::Constants::MapID map_id)
     return map_names[map_id];
 }
 
-const wchar_t* Resources::GetRegionName(const GW::Constants::MapID map_id)
+GuiUtils::EncString* Resources::GetRegionName(const GW::Region region)
 {
-    const auto area_info = GW::Map::GetMapInfo(map_id);
-    switch (area_info ? area_info->region : GW::Region_DevRegion) {
+    if (const auto found = region_names.find(region); found != region_names.end())
+        return found->second.get();
+
+    const wchar_t* enc;
+    switch (region) {
         case GW::Region_BattleIslands:
-            return GW::EncStrings::MapRegion::BattleIsles;
+            enc = GW::EncStrings::MapRegion::BattleIsles;
+            break;
 
         // Prophecies
         case GW::Region::Region_Maguuma:
-            return GW::EncStrings::MapRegion::MaguumaJungle;
+            enc = GW::EncStrings::MapRegion::MaguumaJungle;
+            break;
         case GW::Region::Region_Ascalon:
         case GW::Region::Region_Presearing:
-            return GW::EncStrings::MapRegion::Ascalon;
+            enc = GW::EncStrings::MapRegion::Ascalon;
+            break;
         case GW::Region::Region_Kryta:
-            return GW::EncStrings::MapRegion::Kryta;
-        case GW::Region::Region_NorthernShiverpeaks: {
+            enc = GW::EncStrings::MapRegion::Kryta;
+            break;
+        case GW::Region::Region_NorthernShiverpeaks:
             // TODO: Southern vs northern shivers
-            return GW::EncStrings::MapRegion::NorthernShiverpeaks;
-        }
+            enc = GW::EncStrings::MapRegion::NorthernShiverpeaks;
+            break;
         case GW::Region_CrystalDesert:
-            return GW::EncStrings::MapRegion::CrystalDesert;
-        case GW::Region_FissureOfWoe: {
-            // TODO: Ring of fire?
-            // TODO: Underworld
-            return GW::EncStrings::MapRegion::FissureOfWoe;
-        }
+            enc = GW::EncStrings::MapRegion::CrystalDesert;
+            break;
+        case GW::Region_FissureOfWoe:
+            // TODO: Ring of fire? Underworld
+            enc = GW::EncStrings::MapRegion::FissureOfWoe;
+            break;
 
         // Factions
         case GW::Region::Region_Kurzick:
-            return GW::EncStrings::MapRegion::EchovaldForest;
+            enc = GW::EncStrings::MapRegion::EchovaldForest;
+            break;
         case GW::Region::Region_Luxon:
-            return GW::EncStrings::MapRegion::TheJadeSea;
+            enc = GW::EncStrings::MapRegion::TheJadeSea;
+            break;
         case GW::Region::Region_ShingJea:
-            return GW::EncStrings::MapRegion::ShingJeaIsland;
+            enc = GW::EncStrings::MapRegion::ShingJeaIsland;
+            break;
         case GW::Region::Region_Kaineng:
-            return GW::EncStrings::MapRegion::KainengCity;
+            enc = GW::EncStrings::MapRegion::KainengCity;
+            break;
 
         // Nightfall
         case GW::Region::Region_Kourna:
-            return GW::EncStrings::MapRegion::Kourna;
+            enc = GW::EncStrings::MapRegion::Kourna;
+            break;
         case GW::Region::Region_Vaabi:
-            return GW::EncStrings::MapRegion::Vabbi;
+            enc = GW::EncStrings::MapRegion::Vabbi;
+            break;
+        case GW::Region::Region_Desolation:
+            enc = GW::EncStrings::MapRegion::TheDesolation;
+            break;
         case GW::Region::Region_Istan:
-            return GW::EncStrings::MapRegion::Istan;
+            enc = GW::EncStrings::MapRegion::Istan;
+            break;
         case GW::Region::Region_DomainOfAnguish:
-            return GW::EncStrings::MapRegion::RealmOfTorment;
+            enc = GW::EncStrings::MapRegion::RealmOfTorment;
+            break;
 
         // Eye of the north
         case GW::Region::Region_CharrHomelands:
-            return GW::EncStrings::MapRegion::CharrHomelands;
+            enc = GW::EncStrings::MapRegion::CharrHomelands;
+            break;
         case GW::Region::Region_DepthsOfTyria:
-            return GW::EncStrings::MapRegion::DepthsOfTyria;
+            enc = GW::EncStrings::MapRegion::DepthsOfTyria;
+            break;
         case GW::Region::Region_FarShiverpeaks:
-            return GW::EncStrings::MapRegion::FarShiverpeaks;
+            enc = GW::EncStrings::MapRegion::FarShiverpeaks;
+            break;
         case GW::Region::Region_TarnishedCoast:
-            return GW::EncStrings::MapRegion::TarnishedCoast;
+            enc = GW::EncStrings::MapRegion::TarnishedCoast;
+            break;
+
+        default:
+            enc = L"\x108\107No region name yet :(\x1";
+            break;
     }
-    return L"\x108\107No region name yet :(\x1";
+    return region_names.emplace(region, std::make_unique<GuiUtils::EncString>(enc)).first->second.get();
+}
+
+GuiUtils::EncString* Resources::GetRegionName(const GW::Constants::MapID map_id)
+{
+    const auto area_info = GW::Map::GetMapInfo(map_id);
+    return GetRegionName(area_info ? area_info->region : GW::Region_DevRegion);
 }
 
 GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Constants::Language language)
@@ -1498,6 +1556,110 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
     return true;
 }
 
+bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* region, const std::filesystem::path& file_path)
+{
+    if (!device) {
+        Log::Warning("SaveBackbufferRectToFile: device is null");
+        return false;
+    }
+
+    // Pick the WIC codec from the extension up front so we fail fast on
+    // unsupported output formats before we copy any pixels.
+    auto ext = file_path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    GUID codec_guid;
+    if (ext == ".png")  codec_guid = GUID_ContainerFormatPng;
+    else if (ext == ".jpg" || ext == ".jpeg") codec_guid = GUID_ContainerFormatJpeg;
+    else if (ext == ".bmp") codec_guid = GUID_ContainerFormatBmp;
+    else {
+        Log::Warning("SaveBackbufferRectToFile: unsupported file format: %s", ext.c_str());
+        return false;
+    }
+
+    IDirect3DSurface9* backbuffer = nullptr;
+    HRESULT hr = device->GetRenderTarget(0, &backbuffer);
+    if (FAILED(hr) || !backbuffer) {
+        Log::Warning("SaveBackbufferRectToFile: GetRenderTarget failed: 0x%X", hr);
+        return false;
+    }
+
+    D3DSURFACE_DESC desc;
+    backbuffer->GetDesc(&desc);
+
+    // GetRenderTargetData requires a SYSTEMMEM destination of identical
+    // dimensions & format. We copy the whole back buffer, then construct a
+    // DirectX::Image that points at just the sub-rect.
+    IDirect3DSurface9* sysmem = nullptr;
+    hr = device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_SYSTEMMEM, &sysmem, nullptr);
+    if (FAILED(hr) || !sysmem) {
+        backbuffer->Release();
+        Log::Warning("SaveBackbufferRectToFile: CreateOffscreenPlainSurface failed: 0x%X", hr);
+        return false;
+    }
+
+    hr = device->GetRenderTargetData(backbuffer, sysmem);
+    backbuffer->Release();
+    if (FAILED(hr)) {
+        sysmem->Release();
+        Log::Warning("SaveBackbufferRectToFile: GetRenderTargetData failed: 0x%X", hr);
+        return false;
+    }
+
+    const DXGI_FORMAT dxgi = ConvertD3D9FormatToDXGI(desc.Format);
+    if (dxgi == DXGI_FORMAT_UNKNOWN) {
+        sysmem->Release();
+        Log::Warning("SaveBackbufferRectToFile: unsupported back buffer format: 0x%X", desc.Format);
+        return false;
+    }
+
+    // Clamp the requested rect to the back buffer; degenerate rects fail out.
+    LONG x = 0, y = 0;
+    LONG w = static_cast<LONG>(desc.Width);
+    LONG h = static_cast<LONG>(desc.Height);
+    if (region) {
+        x = std::max<LONG>(0, region->left);
+        y = std::max<LONG>(0, region->top);
+        w = std::min<LONG>(static_cast<LONG>(desc.Width)  - x, region->right  - region->left);
+        h = std::min<LONG>(static_cast<LONG>(desc.Height) - y, region->bottom - region->top);
+    }
+    if (w <= 0 || h <= 0) {
+        sysmem->Release();
+        Log::Warning("SaveBackbufferRectToFile: degenerate region after clamp (%dx%d)", w, h);
+        return false;
+    }
+
+    D3DLOCKED_RECT locked;
+    hr = sysmem->LockRect(&locked, nullptr, D3DLOCK_READONLY);
+    if (FAILED(hr)) {
+        sysmem->Release();
+        Log::Warning("SaveBackbufferRectToFile: LockRect failed: 0x%X", hr);
+        return false;
+    }
+
+    const size_t bpp = DirectX::BitsPerPixel(dxgi) / 8;
+    uint8_t* base = static_cast<uint8_t*>(locked.pBits) + static_cast<size_t>(y) * locked.Pitch + static_cast<size_t>(x) * bpp;
+
+    DirectX::Image img = {};
+    img.width  = static_cast<size_t>(w);
+    img.height = static_cast<size_t>(h);
+    img.format = dxgi;
+    img.rowPitch   = static_cast<size_t>(locked.Pitch);
+    img.slicePitch = static_cast<size_t>(locked.Pitch) * static_cast<size_t>(h);
+    img.pixels = base;
+
+    const HRESULT save_hr = DirectX::SaveToWICFile(img, DirectX::WIC_FLAGS_NONE, codec_guid, file_path.c_str());
+    sysmem->UnlockRect();
+    sysmem->Release();
+
+    if (FAILED(save_hr)) {
+        Log::Warning("SaveBackbufferRectToFile: SaveToWICFile failed: 0x%X", save_hr);
+        return false;
+    }
+
+    Log::Info("Saved screenshot to %s (%dx%d)", file_path.string().c_str(), (int)w, (int)h);
+    return true;
+}
+
 uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
 {
     if (!cubeTexture) {
@@ -1559,62 +1721,77 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
 
     return hash;
 }
+// Bytes per 4x4 block for block-compressed formats, or 0 if not block compressed.
+static UINT DxtBlockBytes(D3DFORMAT fmt)
+{
+    switch (fmt) {
+        case D3DFMT_DXT1:
+            return 8;
+        case D3DFMT_DXT2:
+        case D3DFMT_DXT3:
+        case D3DFMT_DXT4:
+        case D3DFMT_DXT5:
+            return 16;
+        default:
+            return 0;
+    }
+}
+
+// SEH-guarded row copy (no unwinding objects, so __try is allowed). LockRect can
+// return a pointer whose backing store is gone (lost surface, reused memory); on a
+// fault we bail instead of crashing. Callers must keep row_bytes <= pitch.
+static bool SafeCopyRows(uint8_t* dst, const uint8_t* src, size_t rows, size_t row_bytes, size_t pitch)
+{
+    __try {
+        for (size_t y = 0; y < rows; ++y) {
+            memcpy(dst + y * row_bytes, src + y * pitch, row_bytes);
+        }
+        return true;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+
 uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
 {
     if (!texture) return 0;
 
     D3DSURFACE_DESC desc;
-    HRESULT hr = texture->GetLevelDesc(0, &desc);
-    if (FAILED(hr)) return 0;
+    if (FAILED(texture->GetLevelDesc(0, &desc))) return 0;
 
     D3DLOCKED_RECT d3dlr;
-    hr = texture->LockRect(0, &d3dlr, nullptr, D3DLOCK_READONLY);
-    if (FAILED(hr) || !d3dlr.pBits) {
+    if (FAILED(texture->LockRect(0, &d3dlr, nullptr, D3DLOCK_READONLY)) || !d3dlr.pBits || d3dlr.Pitch <= 0) {
         return 0;
     }
+    const auto* bits = static_cast<const uint8_t*>(d3dlr.pBits);
+    const size_t pitch = static_cast<size_t>(d3dlr.Pitch);
 
     uint32_t hash = 0;
 
-    // For compressed formats (DXT1/3/5), calculate the actual compressed data size
-    if (desc.Format == D3DFMT_DXT1) {
-        // DXT1: 8 bytes per 4x4 block
-        const UINT block_size = 8;
-        const UINT num_blocks_wide = (desc.Width + 3) / 4;
-        const UINT num_blocks_high = (desc.Height + 3) / 4;
-        const UINT total_size = num_blocks_wide * num_blocks_high * block_size;
-
-        hash = GetTexmodHash(static_cast<const char*>(d3dlr.pBits), total_size);
-    }
-    else if (desc.Format == D3DFMT_DXT3 || desc.Format == D3DFMT_DXT5) {
-        // DXT3/5: 16 bytes per 4x4 block
-        const UINT block_size = 16;
-        const UINT num_blocks_wide = (desc.Width + 3) / 4;
-        const UINT num_blocks_high = (desc.Height + 3) / 4;
-        const UINT total_size = num_blocks_wide * num_blocks_high * block_size;
-
-        hash = GetTexmodHash(static_cast<const char*>(d3dlr.pBits), total_size);
+    if (const UINT block = DxtBlockBytes(desc.Format)) {
+        // Block-compressed: hash the blocks contiguously.
+        const size_t blocks_wide = (desc.Width + 3) / 4;
+        const size_t blocks_high = (desc.Height + 3) / 4;
+        const size_t total_size = blocks_wide * blocks_high * block;
+        if (total_size && total_size <= pitch * blocks_high) { // reject an implausibly small pitch
+            std::vector<uint8_t> compact(total_size);
+            if (SafeCopyRows(compact.data(), bits, 1, total_size, total_size)) {
+                hash = GetTexmodHash(reinterpret_cast<const char*>(compact.data()), compact.size());
+            }
+        }
     }
     else {
-        // Uncompressed formats - use your existing row-by-row code
+        // Uncompressed: repack row-by-row, stripping the pitch padding.
         const int bits_per_pixel = GetBitsPerPixel(desc.Format);
-        if (bits_per_pixel == 0) {
-            texture->UnlockRect(0);
-            return 0;
+        const size_t row_size = bits_per_pixel ? static_cast<size_t>(desc.Width) * (bits_per_pixel / 8) : 0;
+        // row_size > pitch means a wrong/unknown format; skip rather than overrun.
+        if (row_size && desc.Height && row_size <= pitch) {
+            std::vector<uint8_t> compact(static_cast<size_t>(desc.Height) * row_size);
+            if (SafeCopyRows(compact.data(), bits, desc.Height, row_size, pitch)) {
+                hash = GetTexmodHash(reinterpret_cast<const char*>(compact.data()), compact.size());
+            }
         }
-
-        const int bytes_per_pixel = bits_per_pixel / 8;
-        const int row_size = desc.Width * bytes_per_pixel;
-
-        std::vector<uint8_t> compact_data(desc.Height * row_size);
-        size_t offset = 0;
-
-        for (UINT y = 0; y < desc.Height; ++y) {
-            const uint8_t* row = static_cast<const uint8_t*>(d3dlr.pBits) + y * d3dlr.Pitch;
-            memcpy(compact_data.data() + offset, row, row_size);
-            offset += row_size;
-        }
-
-        hash = GetTexmodHash(reinterpret_cast<const char*>(compact_data.data()), compact_data.size());
     }
 
     texture->UnlockRect(0);
@@ -1665,17 +1842,6 @@ int Resources::GetBitsPerPixel(D3DFORMAT format)
 }
 uint32_t Resources::GetTexmodHash(const char* data, size_t size)
 {
-    // uMod CRC32 - bit-by-bit calculation, NO final inversion
-    constexpr static auto crc32_poly = 0xEDB88320u;
-    constexpr static auto ul_crc_in = 0xffffffffu;
-    unsigned int crc = ul_crc_in;
-
-    for (size_t idx = 0u; idx < size; idx++) {
-        unsigned int data_byte = static_cast<unsigned char>(data[idx]);
-        for (unsigned int bit = 0u; bit < 8u; bit++, data_byte >>= 1) {
-            crc = crc >> 1 ^ ((crc ^ data_byte) & 1 ? crc32_poly : 0);
-        }
-    }
-
-    return crc; // IMPORTANT: NO final XOR with 0xFFFFFFFF
+    // uMod format omits the final XOR that standard CRC32 applies, so invert the result.
+    return ~CodeOptimiserModule::Crc32(data, size);
 }

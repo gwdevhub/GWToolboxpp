@@ -4,24 +4,33 @@
 #include <GWToolbox.h>
 #include <Logger.h>
 
+#include <Modules/BackupModule.h>
 #include <Modules/Resources.h>
 #include <Modules/Updater.h>
 
-namespace {
-    // 0=none, 1=check and warn, 2=check and ask, 3=check and do
-    enum class ReleaseType : int {
-        Stable,
-        Beta
-    };
-    enum class Mode : int {
-        DontCheckForUpdates,
-        CheckAndWarn,
-        CheckAndAsk,
-        CheckAndAutoUpdate
+namespace github_api {
+    struct ReleaseAsset {
+        std::string name;
+        std::string browser_download_url;
+        double size = 0.0; // bytes (double to survive 53-bit JSON precision)
     };
 
-    ReleaseType release_type = ReleaseType::Stable;
-    Mode mode = Mode::CheckAndAsk;
+    struct Release {
+        std::string tag_name;
+        std::string body;
+        bool prerelease = false;
+        std::vector<ReleaseAsset> assets;
+    };
+}
+
+namespace {
+
+    constexpr glz::opts json_opts{.error_on_unknown_keys = false};
+
+    using ReleaseType = Updater::ReleaseType;
+    using Mode = Updater::Mode;
+
+    Updater::Settings settings;
 
     // 0=checking, 1=asking, 2=downloading, 3=done
     enum Step {
@@ -59,48 +68,33 @@ namespace {
             Log::Log("Failed to download %s\n%s", url, response.c_str());
             return nullptr;
         }
-        using Json = nlohmann::json;
-        Json json = Json::parse(response.c_str(), nullptr, false);
-        if (json == Json::value_t::discarded || json.empty() || !json.is_array()) {
+        std::vector<github_api::Release> releases;
+        if (auto ec = glz::read<json_opts>(releases, response); ec) {
             return nullptr;
         }
-        for (const auto& js : json) {
-            if (!(js.contains("tag_name") && js["tag_name"].is_string())) {
+        for (const auto& js : releases) {
+            if (js.tag_name.empty() || js.assets.empty()) {
                 continue;
             }
-            const auto is_prerelease = js["prerelease"].get<bool>();
-            if (is_prerelease && release_type == ReleaseType::Stable) {
+            if (js.prerelease && settings.update_release_type == ReleaseType::Stable) {
                 continue;
             }
-            auto tag_name = js["tag_name"].get<std::string>();
-            const auto version_number_len = tag_name.find(tag_name.contains("_Release") ? "_Release" : "_Beta", 0);
+            const auto version_number_len = js.tag_name.find(js.tag_name.contains("_Release") ? "_Release" : "_Beta", 0);
             if (version_number_len == std::string::npos) {
                 continue;
             }
-            if (!(js.contains("assets") && js["assets"].is_array() && js["assets"].size() > 0)) {
-                continue;
-            }
-            if (!(js.contains("body") && js["body"].is_string())) {
-                continue;
-            }
-            for (unsigned int j = 0; j < js["assets"].size(); j++) {
-                const Json& asset = js["assets"][j];
-                if (!(asset.contains("name") && asset["name"].is_string())
-                    || !(asset.contains("browser_download_url") && asset["browser_download_url"].is_string())) {
-                    continue;
-                }
-                auto asset_name = asset["name"].get<std::string>();
-                if (asset_name != "GWToolbox.dll" && asset_name != "GWToolboxdll.dll") {
+            for (const auto& asset : js.assets) {
+                if (asset.name != "GWToolbox.dll" && asset.name != "GWToolboxdll.dll") {
                     continue; // This release doesn't have a dll download.
                 }
-                release->download_url = asset["browser_download_url"].get<std::string>();
-                release->version = tag_name.substr(0, version_number_len);
-                if (is_prerelease) {
-                    release->version += tag_name.substr(version_number_len + 1);
+                release->download_url = asset.browser_download_url;
+                release->version = js.tag_name.substr(0, version_number_len);
+                if (js.prerelease) {
+                    release->version += js.tag_name.substr(version_number_len + 1);
                 }
                 std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
-                release->body = js["body"].get<std::string>();
-                auto size_bytes = asset["size"].get<uintmax_t>(); // Slight rounding, GitHub isn't always correct down to the byte.
+                release->body = js.body;
+                const auto size_bytes = static_cast<uintmax_t>(asset.size); // Slight rounding, GitHub isn't always correct down to the byte.
                 release->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
                 return release;
             }
@@ -129,6 +123,10 @@ namespace {
 
     void DoUpdate()
     {
+        Log::Warning("Creating settings backup before update...");
+        if (!BackupModule::CreateAutoBackup())
+            Log::Warning("Failed to create pre-update backup; continuing with update anyway.");
+
         Log::Warning("Downloading update...");
 
         step = Downloading;
@@ -207,32 +205,37 @@ const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
     return out;
 }
 
-void Updater::LoadSettings(ToolboxIni* ini)
+void Updater::Initialize()
 {
-    ToolboxModule::LoadSettings(ini);
+    ToolboxUIElement::Initialize();
+#ifndef _DEBUG
+    // Debug builds never load/save update settings (forced values below), so don't register them
+    SettingsRegistry::Register(this, settings);
+#endif
+}
+
+void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+{
+    ToolboxUIElement::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 #ifdef _DEBUG
-    mode = Mode::DontCheckForUpdates;
-    release_type = ReleaseType::Beta;
-#else
-    mode = static_cast<Mode>(ini->GetLongValue(Name(), "update_mode", static_cast<int>(mode)));
-    release_type = static_cast<ReleaseType>(ini->GetLongValue(Name(), "update_release_type", static_cast<int>(release_type)));
+    settings.update_mode = Mode::DontCheckForUpdates;
+    settings.update_release_type = ReleaseType::Beta;
 #endif
     CheckForUpdate();
 }
 
-void Updater::SaveSettings(ToolboxIni* ini)
+void Updater::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
-#ifdef _DEBUG
-#else
-    ini->SetLongValue(Name(), "update_mode", static_cast<int>(mode));
-    ini->SetLongValue(Name(), "update_release_type", static_cast<int>(release_type));
-    ini->SetValue(Name(), "dllversion", GWTOOLBOXDLL_VERSION);
+    ToolboxUIElement::SaveSettings(doc);
+#ifndef _DEBUG
+    doc.SetStruct(Name(), settings);
+    doc.Set(Name(), "dllversion", std::string(GWTOOLBOXDLL_VERSION));
 
     const HMODULE module = GWToolbox::GetDLLModule();
     CHAR dllfile[MAX_PATH];
     const DWORD size = GetModuleFileName(module, dllfile, MAX_PATH);
-    ini->SetValue(Name(), "dllpath", size > 0 ? dllfile : "error");
+    doc.Set(Name(), "dllpath", std::string(size > 0 ? dllfile : "error"));
 #endif
 }
 
@@ -244,13 +247,13 @@ void Updater::DrawSettingsInternal()
     if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates", ImVec2(btnWidth, 0)) && step != Checking) {
         CheckForUpdate(true);
     }
-    ImGui::RadioButton("Stable", (int*)&release_type, static_cast<int>(ReleaseType::Stable));
-    ImGui::RadioButton("Beta", (int*)&release_type, static_cast<int>(ReleaseType::Beta));
+    ImGui::RadioButton("Stable", (int*)&settings.update_release_type, static_cast<int>(ReleaseType::Stable));
+    ImGui::RadioButton("Beta", (int*)&settings.update_release_type, static_cast<int>(ReleaseType::Beta));
     ImGui::Text("Update mode:");
-    ImGui::RadioButton("Do not check for updates", (int*)&mode, static_cast<int>(Mode::DontCheckForUpdates));
-    ImGui::RadioButton("Check and display a message", (int*)&mode, static_cast<int>(Mode::CheckAndWarn));
-    ImGui::RadioButton("Check and ask before updating", (int*)&mode, static_cast<int>(Mode::CheckAndAsk));
-    ImGui::RadioButton("Check and automatically update", (int*)&mode, static_cast<int>(Mode::CheckAndAutoUpdate));
+    ImGui::RadioButton("Do not check for updates", (int*)&settings.update_mode, static_cast<int>(Mode::DontCheckForUpdates));
+    ImGui::RadioButton("Check and display a message", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndWarn));
+    ImGui::RadioButton("Check and ask before updating", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndAsk));
+    ImGui::RadioButton("Check and automatically update", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndAutoUpdate));
 }
 
 void Updater::CheckForUpdate(const bool forced)
@@ -281,14 +284,14 @@ void Updater::CheckForUpdate(const bool forced)
             return;
         }
         is_latest_version = false;
-        if (!forced && mode == Mode::DontCheckForUpdates) {
+        if (!forced && settings.update_mode == Mode::DontCheckForUpdates) {
             step = Done;
             return; // Do not check for updates
         }
 
         // we have a new version!
-        Mode iMode = forced ? Mode::CheckAndAsk : mode;
-        if constexpr (!std::string(GWTOOLBOXDLL_VERSION_BETA).empty()) {
+        Mode iMode = forced ? Mode::CheckAndAsk : settings.update_mode;
+        if constexpr (!std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             iMode = Mode::CheckAndAsk;
         }
         switch (iMode) {

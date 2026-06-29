@@ -1,6 +1,7 @@
 #pragma once
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/GameEntities/Attribute.h>
 
 class StoCCallback {
     GW::HookEntry* hook_entry = nullptr;
@@ -125,6 +126,18 @@ namespace GW {
         {
             return ((props[7] >> 9) & 0x1) == 0x1;
         }
+
+        // Returns true if character is on the Melandru's Accord server.
+        // Mirrors the reforged_or_dhuums_flags & 0x2 check used for in-game players.
+        bool is_melandrus_accord() const { 
+            return ((props[7] >> 17) & 0x1) == 0x1; 
+        }
+        bool is_reforged() const {
+            return ((props[7] >> 16) & 0x1) == 0x1; 
+        }
+        bool is_dhuums_covenant() const { 
+            return ((props[7] >> 15) & 0x1) == 0x1; 
+        }
     };
     static_assert(sizeof(AvailableCharacterInfo) == 0x84);
 
@@ -133,6 +146,8 @@ namespace GW {
     namespace Map {
         GW::Array<GW::MapProp*>* GetMapProps();
         bool GetMapWorldMapBounds(GW::AreaInfo* map, ImRect* out);
+        bool HasMapDisplayInfo(const GW::AreaInfo* map_info);
+        bool IsExcludedMapInfo(const GW::AreaInfo* map_info);
         std::vector<GW::Constants::TitleID> GetTitlesForMap(GW::Constants::MapID map_id);
         GW::Constants::TitleID GetTitleForMap(GW::Constants::MapID map_id);
 
@@ -142,6 +157,11 @@ namespace GW {
 
         bool IsPreSearing(const GW::Constants::MapID map_id = (GW::Constants::MapID)0);
     } // namespace Map
+
+    namespace SkillbarMgr {
+        GW::Attribute* GetPlayerAttribute(GW::Constants::Attribute);
+
+    }
     namespace LoginMgr {
         const bool IsCharSelectReady();
         const bool SelectCharacterToPlay(const wchar_t* name, bool play = true);
@@ -180,6 +200,8 @@ namespace GW {
         void AsyncDecodeStrS(const wchar_t* enc_str, std::string* out, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
         void AsyncDecodeStr(const wchar_t* enc_str, std::wstring* out, GW::Constants::Language language_id = (GW::Constants::Language)0xff);
         bool BelongsToFrame(GW::UI::Frame* parent, GW::UI::Frame* child);
+        // Walk up the frame hierarchy n levels. Returns null if a parent is missing along the way.
+        GW::UI::Frame* GetNthParentFrame(GW::UI::Frame* frame, uint32_t n);
 
         void Screenshot();
         bool IsLoadingScreenShown();

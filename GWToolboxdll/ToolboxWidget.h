@@ -4,7 +4,7 @@
 
 class ToolboxWidget : public ToolboxUIElement {
 public:
-    ToolboxWidget() { lock_move = lock_size = true; }
+    ToolboxWidget() { lock_move = lock_size = mobile_lock_move = mobile_lock_size = true; }
     ~ToolboxWidget() override = default;
 
     [[nodiscard]] bool IsWidget() const override { return true; }

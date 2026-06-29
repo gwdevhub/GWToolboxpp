@@ -91,6 +91,11 @@ namespace GW {
 
         GWCA_API RenderCallback GetRenderCallback();
 
+        // Flush GW's deferred GR command queue so previously-submitted draws (e.g. the 3D
+        // world) are materialised into the back/depth buffer. No-op unless the queue is in
+        // a flushable state. Lets a render hook draw between GW's world and UI passes.
+        GWCA_API void FlushCommandQueue();
+
         // Can be used to get information like vsync status or monitor refresh rate of the renderer
         GWCA_API uint32_t GetGraphicsRendererValue(Metric metric_id, uint32_t renderer_mode = 0xf);
         GWCA_API bool SetGraphicsRendererValue(Metric metric_id, uint32_t value, uint32_t renderer_mode = 0xf);

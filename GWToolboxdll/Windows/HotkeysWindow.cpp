@@ -13,6 +13,7 @@
 #include <GWCA/Managers/PlayerMgr.h>
 
 #include <Utils/GuiUtils.h>
+#include <Defines.h>
 #include <Keys.h>
 
 #include <Windows/HotkeysWindow.h>
@@ -23,31 +24,16 @@
 #include <Modules/Resources.h>
 
 namespace {
+    constexpr char hotkey_section_prefix[] = "hotkey-";
+    constexpr auto HotkeysIniFilename = L"Hotkeys.ini";
+
     typedef std::bitset<256> KeysHeldBitset;
 
-    std::vector<TBHotkey*> hotkeys; // list of hotkeys
-    // Subset of hotkeys that are valid to current character/map combo
     std::vector<TBHotkey*> valid_hotkeys;
 
     KeysHeldBitset keys_currently_held;
     KeysHeldBitset wndproc_keys_held;
 
-    // Ordered subsets
-    enum class GroupBy : int {
-        None [[maybe_unused]],
-        Profession,
-        Map,
-        PlayerName,
-        Group
-    };
-
-    GroupBy group_by = GroupBy::Group;
-    std::unordered_map<int, std::vector<TBHotkey*>> by_profession;
-    std::unordered_map<int, std::vector<TBHotkey*>> by_map;
-    std::unordered_map<int, std::vector<TBHotkey*>> by_instance_type;
-    std::unordered_map<std::string, std::vector<TBHotkey*>> by_player_name;
-    std::unordered_map<std::string, std::vector<TBHotkey*>> by_group;
-    std::vector<std::string> group_order;
 
     bool clickerActive = false;   // clicker is active or not
     bool dropCoinsActive = false; // coin dropper is active or not
@@ -58,11 +44,57 @@ namespace {
 
     TBHotkey* current_hotkey = nullptr;
 
-    std::queue<TBHotkey*> pending_hotkeys;
+    std::deque<TBHotkey*> pending_hotkeys;
     std::recursive_mutex pending_mutex;
+
+    bool IsHotkeySection(const char* section)
+    {
+        return strncmp(section, hotkey_section_prefix, sizeof(hotkey_section_prefix) - 1) == 0;
+    }
+
+    void DeleteHotkeySections(ToolboxIni* ini)
+    {
+        TNamesDepend sections;
+        ini->GetAllSections(sections);
+        for (const auto& section : sections) {
+            if (IsHotkeySection(section.pItem)) {
+                ini->Delete(section.pItem, nullptr);
+            }
+        }
+    }
+
+    bool MigrateLegacyHotkeys(const ToolboxIni* src, ToolboxIni* dst)
+    {
+        TNamesDepend dst_sections;
+        dst->GetAllSections(dst_sections);
+        for (const auto& s : dst_sections) {
+            if (IsHotkeySection(s.pItem)) return false;
+        }
+        TNamesDepend src_sections;
+        src->GetAllSections(src_sections);
+        bool copied = false;
+        for (const auto& section : src_sections) {
+            if (!IsHotkeySection(section.pItem)) continue;
+            TNamesDepend keys;
+            src->GetAllKeys(section.pItem, keys);
+            for (const auto& key : keys) {
+                TNamesDepend values;
+                src->GetAllValues(section.pItem, key.pItem, values);
+                for (const auto& value : values) {
+                    dst->SetValue(section.pItem, key.pItem, value.pItem);
+                }
+            }
+            copied = true;
+        }
+        if (copied) Log::LogW(L"Migrated hotkeys to %s", dst->location_on_disk.wstring().c_str());
+        return copied;
+    }
+
     void PushPendingHotkey(TBHotkey* hk) {
         pending_mutex.lock();
-        pending_hotkeys.push(hk);
+        if (std::ranges::find(pending_hotkeys, hk) == pending_hotkeys.end()) {
+            pending_hotkeys.push_back(hk);
+        }
         pending_mutex.unlock();
     }
     TBHotkey* PopPendingHotkey() {
@@ -70,7 +102,7 @@ namespace {
         pending_mutex.lock();
         if (pending_hotkeys.size()) {
             hk = pending_hotkeys.front();
-            pending_hotkeys.pop();
+            pending_hotkeys.pop_front();
         }
         pending_mutex.unlock();
         return hk;
@@ -122,6 +154,18 @@ namespace {
             && IsFrameCreated(GW::UI::GetFrameByLabel(L"Skillbar"));
     }
 
+    void AddHotkeyIfValid(TBHotkey* hotkey, const char* player_name, GW::Constants::InstanceType instance_type, GW::Constants::Profession primary, GW::Constants::MapID map_id, bool is_pvp, std::vector<TBHotkey*>& valid)
+    {
+        if (const auto* grp = dynamic_cast<HotkeyGroup*>(hotkey)) {
+            for (auto* child : grp->hotkeys) {
+                AddHotkeyIfValid(child, player_name,instance_type,primary,map_id,is_pvp,valid);
+            }
+        }
+        if (hotkey && hotkey->IsValid(player_name, instance_type, primary, map_id, is_pvp)) {
+            valid.push_back(hotkey);
+        }
+    }
+
     // Repopulates applicable_hotkeys based on current character/map context.
     // Used because its not necessary to check these vars on every keystroke, only when they change
     bool CheckSetValidHotkeys()
@@ -140,48 +184,8 @@ namespace {
         const auto primary = static_cast<GW::Constants::Profession>(me->primary);
         const bool is_pvp = me->IsPvP();
         valid_hotkeys.clear();
-        by_profession.clear();
-        by_map.clear();
-        by_instance_type.clear();
-        by_player_name.clear();
-        by_group.clear();
-        group_order.clear();
-        for (auto* hotkey : hotkeys) {
-            if (hotkey->IsValid(player_name.c_str(), instance_type, primary, map_id, is_pvp)) {
-                valid_hotkeys.push_back(hotkey);
-            }
-
-            for (size_t i = 0; i < _countof(hotkey->prof_ids); i++) {
-                if (!hotkey->prof_ids[i]) {
-                    continue;
-                }
-                if (!by_profession.contains(i)) {
-                    by_profession[i] = std::vector<TBHotkey*>();
-                }
-                by_profession[i].push_back(hotkey);
-            }
-            for (const auto h_map_id : hotkey->map_ids) {
-                if (!by_map.contains(h_map_id)) {
-                    by_map[h_map_id] = std::vector<TBHotkey*>();
-                }
-                by_map[h_map_id].push_back(hotkey);
-            }
-
-            if (!by_instance_type.contains(hotkey->instance_type)) {
-                by_instance_type[hotkey->instance_type] = std::vector<TBHotkey*>();
-            }
-            by_instance_type[hotkey->instance_type].push_back(hotkey);
-            for (const auto& h_player_name : hotkey->player_names) {
-                if (!by_player_name.contains(h_player_name)) {
-                    by_player_name[h_player_name] = std::vector<TBHotkey*>();
-                }
-                by_player_name[player_name].push_back(hotkey);
-            }
-            if (!by_group.contains(hotkey->group)) {
-                by_group[hotkey->group] = std::vector<TBHotkey*>();
-                group_order.push_back(hotkey->group);
-            }
-            by_group[hotkey->group].push_back(hotkey);
+        for (auto* hotkey : TBHotkey::top_level_hotkeys) {
+            AddHotkeyIfValid(hotkey, player_name.c_str(), instance_type, primary, map_id, is_pvp, valid_hotkeys);
         }
 
         return true;
@@ -203,11 +207,18 @@ namespace {
             return false;
         }
         bool is_in_controller_mode = GW::UI::IsInControllerMode();
+        // Check if the hotkey or any ancestor group has the trigger flag set.
+        auto inherited_trigger = [&mt](const TBHotkey* hk) -> bool {
+            for (const TBHotkey* cur = hk; cur; cur = cur->group) {
+                if (cur->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable) return true;
+                if (cur->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost) return true;
+            }
+            return false;
+        };
         // NB: CheckSetValidHotkeys() has already checked validity of char/map etc
         for (TBHotkey* hk : valid_hotkeys) {
-            if (((hk->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable)
-                    || (hk->trigger_on_outpost && mt == GW::Constants::InstanceType::Outpost))
-                && !hk->pressed 
+            if (inherited_trigger(hk)
+                && !hk->pressed
                 &&
                 ((is_in_controller_mode && hk->trigger_in_controller_mode) || (!is_in_controller_mode && hk->trigger_in_desktop_mode))) {
                 hk->pressed = true;
@@ -304,7 +315,6 @@ namespace {
         if (ImGui::Button("Save")) {
             keys_being_assigned->key_combo = keys_selected;
             ImGui::CloseCurrentPopup();
-            TBHotkey::hotkeys_changed = true;
         }
         ImGui::EndPopup();
     }
@@ -332,6 +342,7 @@ namespace {
 void HotkeysWindow::Initialize()
 {
     ToolboxWindow::Initialize();
+    SettingsRegistry::Register(this, settings);
     clickerTimer = TIMER_INIT();
     dropCoinsTimer = TIMER_INIT();
 }
@@ -344,10 +355,8 @@ const TBHotkey* HotkeysWindow::CurrentHotkey()
 void HotkeysWindow::Terminate()
 {
     ToolboxWindow::Terminate();
-    for (const TBHotkey* hotkey : hotkeys) {
-        delete hotkey;
-    }
-    hotkeys.clear();
+    while (TBHotkey::all_hotkeys.size())
+        delete TBHotkey::all_hotkeys[0];
     HotkeyGWKey::control_labels.clear();
 }
 
@@ -362,6 +371,7 @@ void HotkeysWindow::ChooseKeyCombo(TBHotkey* hotkey)
 void HotkeysWindow::Draw(IDirect3DDevice9*)
 {
     DrawSelectHotkeyPopup();
+
     if (!visible) {
         return;
     }
@@ -371,10 +381,6 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        // Group By is proof of concept, but isn't really practical for use yet (move up/down, player name change boots you out of section etc)
-#if 0
-        ImGui::Combo("Group By", (int*)&group_by, "None\0Profession\0Map\0Player Name");
-#endif
         if (ImGui::Button("Create Hotkey...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
             ImGui::OpenPopup("Create Hotkey");
         }
@@ -434,13 +440,7 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Send a Dialog");
             }
-            if (ImGui::Selectable("Load Hero Team Build")) {
-                new_hotkey = new HotkeyHeroTeamBuild(nullptr, nullptr);
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Load a team hero build from the Hero Build Panel");
-            }
-            if (ImGui::Selectable("Equip Item")) {
+if (ImGui::Selectable("Equip Item")) {
                 new_hotkey = new HotkeyEquipItem(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
@@ -458,279 +458,27 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Change behavior of your pet");
             }
-            ImGui::EndPopup();
-            if (new_hotkey) {
-                hotkeys.push_back(new_hotkey);
-                hotkeys_changed = true;
+            ImGui::Separator();
+            if (ImGui::Selectable("Hotkey Group")) {
+                new_hotkey = new HotkeyGroup(nullptr, nullptr);
             }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Create a named group to organise and reorder hotkeys");
+            }
+            ImGui::EndPopup();
+            hotkeys_changed = new_hotkey != 0;
         }
 
-        // === each hotkey ===
-        const auto draw_hotkeys_vec = [&](const std::vector<TBHotkey*>& in) -> bool {
-            bool these_hotkeys_changed = false;
-            for (unsigned int i = 0; i < in.size(); ++i) {
-                TBHotkey::Op op = TBHotkey::Op_None;
-                these_hotkeys_changed |= in[i]->Draw(&op, i == 0, i == in.size() - 1);
-                switch (op) {
-                    case TBHotkey::Op_None:
-                        break;
-                    case TBHotkey::Op_MoveUp: {
-                        const auto it = std::ranges::find(hotkeys, in[i]);
-                        if (it != hotkeys.end() && it != hotkeys.begin()) {
-                            auto prev = it - 1;
-                            if (group_by == GroupBy::Group) {
-                                if (strcmp((*it)->group, (*prev)->group) != 0) {
-                                    while (prev != hotkeys.begin()) {
-                                        if (strcmp((*(prev - 1))->group, (*prev)->group) != 0)
-                                            break;
-                                        --prev;
-                                    }
-                                    std::rotate(prev, it, it + 1);
-                                    these_hotkeys_changed = true;
-                                    break;
-                                }
-                            }
-                            std::swap(*it, *prev);
-                            these_hotkeys_changed = true;
-                        }
-                    }
-                    break;
-                    case TBHotkey::Op_MoveDown: {
-                        const auto it = std::ranges::find(hotkeys, in[i]);
-                        if (it != hotkeys.end() && it != hotkeys.end() - 1) {
-                            auto next = it + 1;
-                            if (group_by == GroupBy::Group) {
-                                if (strcmp((*it)->group, (*next)->group) != 0) {
-                                    while (next != hotkeys.end() - 1) {
-                                        if (strcmp((*(next + 1))->group, (*next)->group) != 0)
-                                            break;
-                                        ++next;
-                                    }
-                                    std::rotate(it, it + 1, next + 1);
-                                    these_hotkeys_changed = true;
-                                    break;
-                                }
-                            }
-                            std::swap(*it, *next);
-                            these_hotkeys_changed = true;
-                        }
-                    }
-                    break;
-                    case TBHotkey::Op_Delete: {
-                        const auto it = std::ranges::find(hotkeys, in[i]);
-                        if (it != hotkeys.end()) {
-                            hotkeys.erase(it);
-                            delete in[i];
-                            return true;
-                        }
-                    }
-                    break;
-                    case TBHotkey::Op_Duplicate: {
-                        const auto it = std::ranges::find(hotkeys, in[i]);
-                        if (it != hotkeys.end()) {
-                            ToolboxIni tmp_ini;
-                            char section_buf[64];
-                            snprintf(section_buf, sizeof(section_buf), "hotkey-dup:%s", in[i]->Name());
-                            in[i]->Save(&tmp_ini, section_buf);
-                            TBHotkey* copy = TBHotkey::HotkeyFactory(&tmp_ini, section_buf);
-                            if (copy) {
-                                // Determine base name: strip existing " (Copy N)" suffix if any
-                                char base[128];
-                                if (*in[i]->label) {
-                                    snprintf(base, sizeof(base), "%s", in[i]->label);
-                                    if (char* suffix = strstr(base, " (Copy "))
-                                        *suffix = '\0';
-                                } else {
-                                    in[i]->Description(base, sizeof(base));
-                                }
-                                // Find the highest existing copy number for this base
-                                int copy_num = 0;
-                                const size_t base_len = strlen(base);
-                                for (const auto* hk : hotkeys) {
-                                    if (!*hk->label) continue;
-                                    if (strncmp(hk->label, base, base_len) == 0 &&
-                                        strncmp(hk->label + base_len, " (Copy ", 7) == 0) {
-                                        int n = 0;
-                                        if (sscanf(hk->label + base_len + 7, "%d)", &n) == 1)
-                                            copy_num = std::max(copy_num, n);
-                                    }
-                                }
-                                snprintf(copy->label, sizeof(copy->label), "%s (Copy %d)", base, copy_num + 1);
-                                (*it)->open_state_override = 0; // collapse original
-                                copy->open_state_override = 1;  // expand copy
-                                hotkeys.insert(it + 1, copy);
-                                return true;
-                            }
-                        }
-                    }
-                    break;
-                    default:
-                        break;
-                }
-            }
-            return these_hotkeys_changed;
-        };
-        switch (group_by) {
-            case GroupBy::Group:
-                for (size_t i = 0; i < group_order.size(); ++i) {
-                    const auto& group = group_order[i];
-                    auto& tb_hotkeys = by_group[group];
-                    if (group == "") {
-                        // No collapsing header for hotkeys without a group.
-                        if (draw_hotkeys_vec(tb_hotkeys)) {
-                            hotkeys_changed = true;
-                            break;
-                        }
-                    }
-                    else {
-                        ImGui::PushID(group.c_str());
-                        bool all_active = true;
-                        for (const auto hk : tb_hotkeys) if (!hk->active) { all_active = false; break; }
-
-                        const float btn_size = ImGui::GetFrameHeight();
-                        const float spacing = ImGui::GetStyle().ItemSpacing.x;
-
-                        const std::string header_label = "[Group: " + group + "]";
-                        const bool open = ImGui::CollapsingHeader(header_label.c_str(), ImGuiTreeNodeFlags_AllowOverlap);
-                        ImGui::SameLine(ImGui::GetContentRegionAvail().x - (btn_size * 3 + spacing * 2));
-
-                        if (ImGui::Checkbox("##active", &all_active)) {
-                            for (auto* hk : tb_hotkeys) hk->active = all_active;
-                            hotkeys_changed = true;
-                        }
-                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle all hotkeys in this group");
-
-                        ImGui::SameLine();
-                        if (i > 0) {
-                            if (ImGui::Button(ICON_FA_ARROW_UP "##up")) {
-                                if (!tb_hotkeys.empty()) {
-                                    auto it_first = std::ranges::find(hotkeys, tb_hotkeys.front());
-                                    const auto it_last = std::ranges::find(hotkeys, tb_hotkeys.back());
-
-                                    if (std::distance(it_first, it_last) + 1 != static_cast<ptrdiff_t>(tb_hotkeys.size())) {
-                                        Log::Error("Cannot move group: hotkeys are not contiguous in list");
-                                    }
-                                    else if (it_first != hotkeys.begin()) {
-                                        auto prev = it_first - 1;
-                                        const std::string prev_group = (*prev)->group;
-                                        while (prev != hotkeys.begin()) {
-                                            if (strcmp((*(prev - 1))->group, prev_group.c_str()) != 0)
-                                                break;
-                                            --prev;
-                                        }
-                                        std::rotate(prev, it_first, it_last + 1);
-                                        hotkeys_changed = true;
-                                        ImGui::PopID();
-                                        break;
-                                    }
-                                }
-                            }
-                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move group up");
-                        } else {
-                            ImGui::Dummy(ImVec2(btn_size, btn_size));
-                        }
-
-                        ImGui::SameLine();
-                        if (i < group_order.size() - 1) {
-                            if (ImGui::Button(ICON_FA_ARROW_DOWN "##down")) {
-                                if (!tb_hotkeys.empty()) {
-                                    const auto it_first = std::ranges::find(hotkeys, tb_hotkeys.front());
-                                    auto it_last = std::ranges::find(hotkeys, tb_hotkeys.back());
-
-                                    if (std::distance(it_first, it_last) + 1 != static_cast<ptrdiff_t>(tb_hotkeys.size())) {
-                                        Log::Error("Cannot move group: hotkeys are not contiguous in list");
-                                    }
-                                    else if (it_last != hotkeys.end() - 1) {
-                                        auto next = it_last + 1;
-                                        const std::string next_group = (*next)->group;
-                                        while (next != hotkeys.end() - 1) {
-                                            if (strcmp((*(next + 1))->group, next_group.c_str()) != 0)
-                                                break;
-                                            ++next;
-                                        }
-                                        std::rotate(it_first, it_last + 1, next + 1);
-                                        hotkeys_changed = true;
-                                        ImGui::PopID();
-                                        break;
-                                    }
-                                }
-                            }
-                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move group down");
-                        } else {
-                            ImGui::Dummy(ImVec2(btn_size, btn_size));
-                        }
-
-                        if (open) {
-                            ImGui::Indent();
-                            if (draw_hotkeys_vec(tb_hotkeys)) {
-                                hotkeys_changed = true;
-                                ImGui::Unindent();
-                                ImGui::PopID();
-                                break;
-                            }
-                            ImGui::Unindent();
-                        }
-                        ImGui::PopID();
-                    }
-                }
-                break;
-            case GroupBy::Profession:
-                for (auto& [profession, tb_hotkeys] : by_profession) {
-                    if (ImGui::CollapsingHeader(TBHotkey::professions[profession])) {
-                        ImGui::Indent();
-                        if (draw_hotkeys_vec(tb_hotkeys)) {
-                            hotkeys_changed = true;
-                            ImGui::Unindent();
-                            break;
-                        }
-                        ImGui::Unindent();
-                    }
-                }
-                break;
-            case GroupBy::Map: {
-                for (auto& [map, tb_hotkeys] : by_map) {
-                    const auto& map_name = map == 0 ? "Any" : Resources::GetMapName((GW::Constants::MapID)map)->string();
-                    if (ImGui::CollapsingHeader(map_name.c_str())) {
-                        ImGui::Indent();
-                        if (draw_hotkeys_vec(tb_hotkeys)) {
-                            hotkeys_changed = true;
-                            ImGui::Unindent();
-                            break;
-                        }
-                        ImGui::Unindent();
-                    }
-                }
-            }
-            break;
-            case GroupBy::PlayerName: {
-                const char* player_name;
-                for (auto& [player, tb_hotkeys] : by_player_name) {
-                    if (player.empty()) {
-                        player_name = "Any";
-                    }
-                    else {
-                        player_name = player.c_str();
-                    }
-                    if (ImGui::CollapsingHeader(player_name)) {
-                        ImGui::Indent();
-                        if (draw_hotkeys_vec(tb_hotkeys)) {
-                            hotkeys_changed = true;
-                            ImGui::Unindent();
-                            break;
-                        }
-                        ImGui::Unindent();
-                    }
-                }
-            }
-            break;
-            default:
-                hotkeys_changed |= draw_hotkeys_vec(hotkeys);
-                break;
+        // === each hotkey / group ===
+        // Groups are first-class items in `hotkeys`; HotkeyGroup::Draw handles its children.
+        // All moves at the top level are simple swaps — no rotation needed.
+        for (auto hotkey : TBHotkey::top_level_hotkeys) {
+            if (hotkey->Draw()) break; // re-render next frame after list mutation
         }
     }
     if (hotkeys_changed) {
+        TBHotkey::SortHotkeys();
         CheckSetValidHotkeys();
-        TBHotkey::hotkeys_changed = true;
     }
 
     ImGui::End();
@@ -739,63 +487,80 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
 void HotkeysWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::Checkbox("Show 'Active' checkbox in header", &TBHotkey::show_active_in_header);
-    ImGui::Checkbox("Show 'Run' button in header", &TBHotkey::show_run_in_header);
-    ImGui::SliderInt("Autoclicker delay (ms)", &HotkeyToggle::clicker_delay_ms, 1, 1'000);
+    ImGui::Checkbox("Show 'Active' checkbox in header", &settings.show_active_in_header);
+    ImGui::Checkbox("Show 'Run' button in header", &settings.show_run_in_header);
+    ImGui::SliderInt("Autoclicker delay (ms)", &settings.clicker_delay_ms, 1, 1'000);
 }
 
-void HotkeysWindow::LoadSettings(ToolboxIni* ini)
+void HotkeysWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
+    while (!TBHotkey::all_hotkeys.empty())
+        delete TBHotkey::all_hotkeys[0]; // removes the first element in the destructor
 
-    TBHotkey::show_active_in_header = ini->GetBoolValue(Name(), "show_active_in_header", false);
-    TBHotkey::show_run_in_header = ini->GetBoolValue(Name(), "show_run_in_header", false);
-    HotkeyToggle::clicker_delay_ms = ini->GetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
-
-    // clear hotkeys from toolbox
-    for (const TBHotkey* hotkey : hotkeys) {
-        delete hotkey;
-    }
-    hotkeys.clear();
-
-    // then load again
-    ToolboxIni::TNamesDepend entries;
-    ini->GetAllSections(entries);
-    for (const ToolboxIni::Entry& entry : entries) {
-        TBHotkey* hk = TBHotkey::HotkeyFactory(ini, entry.pItem);
-        if (hk) {
-            hotkeys.push_back(hk);
-        }
-    }
-    CheckSetValidHotkeys();
-    TBHotkey::hotkeys_changed = false;
-}
-
-void HotkeysWindow::SaveSettings(ToolboxIni* ini)
-{
-    ToolboxWindow::SaveSettings(ini);
-    ini->SetBoolValue(Name(), "show_active_in_header", TBHotkey::show_active_in_header);
-    ini->SetBoolValue(Name(), "show_run_in_header", TBHotkey::show_run_in_header);
-    ini->SetLongValue(Name(), "clicker_delay_ms", HotkeyToggle::clicker_delay_ms);
-
-    if (TBHotkey::hotkeys_changed || GWToolbox::SettingsFolderChanged()) {
-        // clear hotkeys from ini
-        ToolboxIni::TNamesDepend entries;
-        ini->GetAllSections(entries);
-        for (const ToolboxIni::Entry& entry : entries) {
-            if (strncmp(entry.pItem, "hotkey-", 7) == 0) {
-                ini->Delete(entry.pItem, nullptr);
+    std::vector<HotkeyEntry> entries;
+    if (doc.Get(Name(), "hotkeys", entries)) {
+        ToolboxIni tmp_ini;
+        char buf[256];
+        int sec_idx = 0;
+        for (const auto& [type, fields] : entries) {
+            snprintf(buf, sizeof(buf), "hotkey-%04d:%s", sec_idx++, type.c_str());
+            for (const auto& [key, value] : fields) {
+                tmp_ini.SetValue(buf, key.c_str(), value.c_str());
             }
-        }
-
-        // then save again
-        for (unsigned int i = 0; i < hotkeys.size(); ++i) {
-            char buf[256];
-            snprintf(buf, 256, "hotkey-%03d:%s", i, hotkeys[i]->Name());
-            hotkeys[i]->Save(ini, buf);
+            TBHotkey::HotkeyFactory(&tmp_ini, buf);
         }
     }
+    else {
+        ToolboxIni hotkeys_ini;
+        const auto hotkeys_ini_path = Resources::GetLegacySettingFile(HotkeysIniFilename);
+        ASSERT(hotkeys_ini.LoadIfExists(hotkeys_ini_path) == SI_OK);
+        hotkeys_ini.location_on_disk = hotkeys_ini_path;
+
+        // Migrated hotkeys only live in memory until the JSON save; never write any .ini back to disk
+        if (legacy && MigrateLegacyHotkeys(legacy, &hotkeys_ini)) {
+            DeleteHotkeySections(legacy);
+        }
+
+        TNamesDepend ini_sections;
+        hotkeys_ini.GetAllSections(ini_sections);
+
+        for (const auto& section : ini_sections) {
+            TBHotkey::HotkeyFactory(&hotkeys_ini, section.pItem);
+        }
+    }
+
+    TBHotkey::SortHotkeys();
+    CheckSetValidHotkeys();
+}
+
+void HotkeysWindow::SaveSettings(SettingsDoc& doc)
+{
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+
+    // Save all hotkeys as flat tagged entries. Every entry gets a sort_order field
+    // that determines display order on load. Children also get a group field
+    // containing their parent group's label.
+    std::vector<HotkeyEntry> entries;
+    entries.reserve(TBHotkey::all_hotkeys.size());
+    ToolboxIni tmp_ini;
+    int sec_idx = 0;
+    char buf[256];
+    for (const auto hotkey : TBHotkey::all_hotkeys) {
+        snprintf(buf, sizeof(buf), "hotkey-%04d:%s", sec_idx++, hotkey->Name());
+        hotkey->Save(&tmp_ini, buf);
+        auto& entry = entries.emplace_back();
+        entry.type = hotkey->Name();
+        TNamesDepend keys;
+        tmp_ini.GetAllKeys(buf, keys);
+        for (const auto& key : keys) {
+            entry.fields[key.pItem] = tmp_ini.GetValue(buf, key.pItem, "");
+        }
+    }
+    doc.Set(Name(), "hotkeys", entries);
 }
 
 bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
@@ -905,7 +670,7 @@ void HotkeysWindow::Update(const float)
         if (map_change_triggered) {
             map_change_triggered = false;
             while (PopPendingHotkey()) {} // Clear any pending hotkeys from the last map
-            for (auto hk : hotkeys) {
+            for (auto hk : TBHotkey::all_hotkeys) {
                 hk->pressed = false;
             }
         }
@@ -914,11 +679,8 @@ void HotkeysWindow::Update(const float)
     if (!map_change_triggered) {
         map_change_triggered = OnMapChanged();
     }
-
-    for (unsigned int i = 0; i < hotkeys.size(); ++i) {
-        if (hotkeys[i]->ongoing) {
-            hotkeys[i]->Execute();
-        }
+    for (auto hotkey : TBHotkey::all_hotkeys) {
+        if (hotkey->ongoing) hotkey->Execute();
     }
     while (const auto hk = PopPendingHotkey()) {
         hk->pressed = true;

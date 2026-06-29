@@ -1,0 +1,62 @@
+---
+title: "Mission Map"
+description: "Overlaying minimap layers, custom lines, and quest paths onto the in-game mission map, with optional click-to-target."
+section: widgets
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+The Mission Map widget draws extra information on top of the in-game mission
+map (`U` by default). It is not a separate window — everything it adds paints
+directly onto the game's map, so it scales and pans with the map itself.
+
+All settings for this widget live under <ToolboxPath steps={["Settings", "Mission Map"]} />.
+
+## Lines and quest paths
+Custom lines you have drawn on the [Minimap](/docs/minimap/), and the calculated
+path to your [active quest](/docs/quest/), can be projected onto the mission map:
+
+* **Draw all minimap lines** (on by default) — also show lines that are set to
+  draw on the minimap.
+* **Draw all terrain lines** (off by default) — also show lines that are set to
+  draw on the in-game terrain.
+
+Lines explicitly set to draw on the mission map always appear regardless of
+these two toggles.
+
+## Show the minimap on the mission map
+Enabling **Show minimap on mission map** overlays the [Minimap](/docs/minimap/)
+layers on top of the game's mission map, using the same colours, agent styles
+and range circles you have already configured for the minimap. It is **off by
+default**, so the mission map is unchanged until you turn it on.
+
+The layers are always drawn north-aligned (the mission map never rotates) and
+follow the map as you pan and zoom. Each can be toggled individually:
+
+* **Range rings** — your configured range circles, centred on your character.
+* **Agents** — players, enemies and NPCs as the minimap's shaped/coloured markers.
+* **Pings & drawings** — compass pings and player drawings.
+* **Effects** — AoE spell footprints.
+* **Background** — the minimap background fill.
+* **Pathing map (terrain)** — the accurate walkable-area map.
+* **Symbols** — quest markers and other minimap symbols.
+
+Use the **Customise minimap (colours, agents, ranges)…** button to jump
+straight to the [Minimap](/docs/minimap/) settings, where the appearance of
+all of these is configured.
+
+## Click to target
+With the minimap overlay shown, **Click to target** lets you left-click
+(without dragging) anywhere on the mission map to target the nearest agent to
+that point — the same targeting the minimap offers. Click-and-drag is left to
+the game so you can still pan the map as normal. This option only applies while
+the minimap overlay is shown.
+
+## See also
+* [Minimap](/docs/minimap/) — the full compass replacement and where its
+  appearance is configured.
+* [Vanquish Overlay](/docs/vanquish_overlay/) — fog-of-war, enemy tracking and
+  navigation drawn on the same mission map.
+* [World Map](/docs/world_map/) — the equivalent extras for the continent map (`M`).
+
+[back](./)

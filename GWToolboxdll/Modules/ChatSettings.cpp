@@ -10,7 +10,6 @@
 #include <GWCA/Managers/PlayerMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/FriendListMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/GameEntities/Frame.h>
 
 #include <Modules/GameSettings.h>
@@ -21,27 +20,16 @@
 #include <Utils/TextUtils.h>
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
+#include <GWCA/Utilities/MemoryPatcher.h>
 
 namespace {
     // Settings
-    bool show_timestamps = false;
-    bool hide_player_speech_bubbles = false;
-    bool hide_all_friendly_speech_bubbles = false;
-    bool show_timestamp_seconds = false;
-    bool show_timestamp_24h = false;
-    bool npc_speech_bubbles_as_chat = false;
-    bool redirect_npc_messages_to_emote_chat = false;
-    bool redirect_outgoing_whisper_to_whisper_channel = false;
-    bool openlinks = true;
-    bool auto_url = true;
-    bool clear_chat_message_when_hiding_chat = false;
+    ChatSettings::Settings settings;
 
-    Color timestamps_color = Colors::RGB(0xc0, 0xc0, 0xbf);
+    GW::MemoryPatcher bypass_chat_codepage_limitation;
 
     const char* chat_window_font_names = "Default\0Large\0Larger\0Largest";
     const uint32_t chat_window_font_ids[] = {0, 7, 8, 9};
-
-    int chat_window_font_id_index = 0;
 
     std::map<std::wstring, GW::Chat::Color> chat_token_colors_original = {
         {L"CinName", 0xFFFFD373},
@@ -96,7 +84,7 @@ namespace {
             case GW::UI::UIMessage::kFrameMessage_0x49: {
                 auto frame = (GW::TextLabelFrame*)GW::UI::GetChildFrame(GW::UI::GetFrameById(message->frame_id),0);
                 if (!frame) break;
-                frame->SetFont(chat_window_font_ids[chat_window_font_id_index]);
+                frame->SetFont(chat_window_font_ids[settings.chat_window_font_id_index]);
             }
             break;
         }
@@ -224,16 +212,15 @@ namespace {
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendChatMessage);
         const auto packet = (GW::UI::UIPacket::kSendChatMessage*)wparam;
-        if (converting_message_into_url || !(auto_url && packet->message && *packet->message)) {
+        if (converting_message_into_url || !(settings.auto_url && packet->message && *packet->message)) {
             return;
         }
         const auto channel = GW::Chat::GetChannel(*packet->message);
         auto msg = &packet->message[1];
         switch (channel) {
             case GW::Chat::Channel::CHANNEL_WHISPER: {
-                // msg == "Whisper Target Name,msg"
                 const auto sep = wcschr(msg, ',');
-                if (!sep) return; // Invalid format for message; no separator between recipient and message
+                if (!sep) return;
                 msg = &sep[1];
             } break;
             case GW::Chat::Channel::CHANNEL_GUILD:
@@ -242,39 +229,68 @@ namespace {
             case GW::Chat::Channel::CHANNEL_GROUP:
                 break;
             default:
-                return; // Channel doesn't support templates
+                return;
         }
-
-        // Match http(s):// URLs that are NOT already in skill templates [url;code]
-        // Negative lookbehind (?<!\[) ensures URL doesn't start with '['
-        // Negative lookahead (?!;[^\]]+\]) ensures URL doesn't have ';code]' pattern following it
-        // Match http(s):// URLs that are NOT already in skill templates [url;code]
-        static constexpr ctll::fixed_string url_regex = LR"((^|[^\[])(https?://[^\s\[\]]+)(?![;\]]))";
 
         std::wstring msg_str(msg);
-        // Use regex_replace to wrap all matching URLs
-        std::wstring new_msg = TextUtils::ctre_regex_replace<url_regex, L"$1[$2;xx]">(msg_str);
+        bool changed = false;
+        static constexpr ctll::fixed_string link_regex = LR"((https?://[^\s\]]+)|\[([^\];]+);([^\]]*)\])";
+        const auto new_msg = TextUtils::ctre_regex_replace_with_formatter<link_regex>(msg_str, [&](auto& match) -> std::wstring {
+            if (const auto bare_url = match.template get<1>().to_view(); !bare_url.empty()) {
+                changed = true;
+                return std::format(L"[{};{}]", bare_url, bare_url);
+            }
+            const auto name = match.template get<2>().to_view();
+            const auto code = match.template get<3>().to_view();
+            if (TextUtils::IsUrl(name.data()) && !TextUtils::IsUrl(code.data())) {
+                changed = true;
+                return std::format(L"[{};{}]", name, name);
+            }
+            return std::wstring(match.template get<0>());
+        });
 
-        if (new_msg == msg_str) {
-            return; // No changes made
-        }
+        if (!changed) return;
 
-        // Build full message with channel prefix
         std::wstring full_msg;
         full_msg.append(packet->message, msg - packet->message);
         full_msg.append(new_msg);
-
-        if (full_msg.length() > 121) {
-            return; // Message too long
-        }
+        if (full_msg.length() > 121) return;
 
         GW::UI::UIPacket::kSendChatMessage new_packet = *packet;
         new_packet.message = full_msg.data();
-
         status->blocked = true;
         converting_message_into_url = true;
         GW::UI::SendUIMessage(GW::UI::UIMessage::kSendChatMessage, &new_packet);
         converting_message_into_url = false;
+    }
+
+    void OnChatLinkClicked(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
+    {
+        const auto packet = (GW::UI::UIPacket::kChatLinkClicked*)wparam;
+        const auto url = packet->url;
+        // @Cleanup: this is dangerous - anyone could send you crap and you could click on it thinking its all ok.
+        if (!(url && *url)) return;
+        if (wcsncmp(url, L"wiki:", 5) == 0) {
+            GuiUtils::SearchWiki(&url[5]);
+            status->blocked = true;
+            return;
+        }
+        if (wcsncmp(url, L"travel:", 7) == 0) {
+            GW::Chat::SendChat('/',std::format(L"travel {}",&url[7]).c_str());
+            status->blocked = true;
+            return;
+        }
+        if (TextUtils::IsUrl(url)) {
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)TextUtils::WStringToString(url).c_str());
+            status->blocked = true;
+            return;
+        }
+        if (!wcsncmp(url, L"file://", 7)) {
+            const std::filesystem::path p(&url[7]);
+            ShellExecuteW(nullptr, L"open", p.parent_path().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+            status->blocked = true;
+            return;
+        }
     }
 
     // Open links on player name click, Ctrl + click name to target, Ctrl + Shift + click name to invite
@@ -284,25 +300,8 @@ namespace {
         if (!(name && *name)) {
             return;
         }
-        switch (name[0]) {
-            case 0x200B: {
-                // Zero-Width Space - wiki link
-                GuiUtils::SearchWiki(&name[1]);
-                status->blocked = true;
-                return;
-            }
-            case 0x200C: {
-                // Zero Width Non-Joiner - location on disk
-                std::wstring path = &name[1];
-                path = TextUtils::str_replace_all(path, L"\x00A0", L" ");
-                const std::filesystem::path p(path);
-                ShellExecuteW(nullptr, L"open", p.parent_path().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-                status->blocked = true;
-                return;
-            }
-        }
-        if (openlinks && (!wcsncmp(name, L"http://", 7) || !wcsncmp(name, L"https://", 8))) {
-            ShellExecuteW(nullptr, L"open", name, nullptr, nullptr, SW_SHOWNORMAL);
+        if (TextUtils::IsUrl(name)) {
+            GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)name);
             status->blocked = true;
             return;
         }
@@ -328,9 +327,16 @@ namespace {
         if (status->blocked)
             return;
         switch (message_id) {
+            case GW::UI::UIMessage::kAddCustomChatLink: {
+                const auto packet = (GW::UI::UIPacket::kAddCustomChatLink*)wParam;
+                if (TextUtils::IsUrl(packet->url))
+                    wcscpy(packet->link_prefix, L"URL: ");
+                else if (!wcsncmp(packet->url, L"file://", 7))
+                    wcscpy(packet->link_prefix, L"File: ");
+            } break;
             case GW::UI::UIMessage::kDialogueMessage: {
                 const auto packet = (GW::UI::UIPacket::kDialogueMessage*)wParam;
-                if (!redirect_npc_messages_to_emote_chat) {
+                if (!settings.redirect_npc_messages_to_emote_chat) {
                     break; // Disabled or message pending
                 }
                 GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, packet->message, packet->sender);
@@ -340,12 +346,12 @@ namespace {
             case GW::UI::UIMessage::kAgentSpeechBubble: {
                 const auto packet = static_cast<GW::UI::UIPacket::kAgentSpeechBubble*>(wParam);
                 const auto source_living = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(packet->agent_id));
-                if (hide_all_friendly_speech_bubbles && source_living && source_living->GetIsLivingType() && source_living->allegiance != GW::Constants::Allegiance::Enemy) {
+                if (settings.hide_all_friendly_speech_bubbles && source_living && source_living->GetIsLivingType() && source_living->allegiance != GW::Constants::Allegiance::Enemy) {
                     status->blocked = true;
                     break;
                 }
                 // NB: Shout skill etc is wcslen < 3, don't worry about player messages e.g. drunk
-                if (npc_speech_bubbles_as_chat && source_living && !source_living->login_number && packet->message && wcslen(packet->message) >= 3) {
+                if (settings.npc_speech_bubbles_as_chat && source_living && !source_living->login_number && packet->message && wcslen(packet->message) >= 3) {
                     const auto sender = GW::Agents::GetAgentEncName(packet->agent_id);
                     GW::Chat::WriteChatEnc(GW::Chat::Channel::CHANNEL_EMOTE, packet->message, sender);
                     break;
@@ -355,12 +361,12 @@ namespace {
                 // Remember user setting for chat timestamps
                 const auto packet = static_cast<GW::UI::UIPacket::kPreferenceFlagChanged*>(wParam);
                 if (packet->preference_id == GW::UI::FlagPreference::ShowChatTimestamps)
-                    show_timestamps = packet->new_value ? true : false;
+                    settings.show_timestamps = packet->new_value ? true : false;
             } break;
             case GW::UI::UIMessage::kPreferenceValueChanged: {
                 // Remember user setting for chat timestamps
                 const auto packet = static_cast<GW::UI::UIPacket::kPreferenceValueChanged*>(wParam);
-                if (clear_chat_message_when_hiding_chat && packet->preference_id == GW::UI::NumberPreference::ChatState && packet->new_value == 0) {
+                if (settings.clear_chat_message_when_hiding_chat && packet->preference_id == GW::UI::NumberPreference::ChatState && packet->new_value == 0) {
                     const auto frame = (GW::EditableTextFrame*)GW::UI::GetFrameByLabel(L"EditMessage");
                     frame && frame->SetValue(L"");
                 }
@@ -368,7 +374,7 @@ namespace {
             case GW::UI::UIMessage::kPlayerChatMessage: {
                 OnLocalChatMessage(status, message_id, wParam, lParam);
                 // Hide player chat message speech bubbles by redirecting from 0x10000081 to 0x1000007E
-                if (!hide_player_speech_bubbles) 
+                if (!settings.hide_player_speech_bubbles)
                     break;
                 const auto packet = static_cast<GW::UI::UIPacket::kPlayerChatMessage*>(wParam);
                 const auto agent = GW::PlayerMgr::GetPlayerByID(packet->player_number);
@@ -380,7 +386,7 @@ namespace {
             case GW::UI::UIMessage::kWriteToChatLog: {
                 // Redirect outgoing whispers to the whisper channel; allows sender to be coloured
                 const auto param = static_cast<GW::UI::UIChatMessage*>(wParam);
-                if (redirect_outgoing_whisper_to_whisper_channel && param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e)
+                if (settings.redirect_outgoing_whisper_to_whisper_channel && param->channel == GW::Chat::Channel::CHANNEL_GLOBAL && *param->message == 0x76e)
                     param->channel = GW::Chat::Channel::CHANNEL_WHISPER;
 
                 // Send /age2 on /age
@@ -395,7 +401,7 @@ namespace {
             } break;
             case GW::UI::UIMessage::kWriteToChatLogWithSender: {
                 // Redirect NPC messages from team chat to emote chat
-                if (!redirect_npc_messages_to_emote_chat) 
+                if (!settings.redirect_npc_messages_to_emote_chat)
                     break;
                 const auto param = static_cast<GW::UI::UIPacket::kWriteToChatLogWithSender*>(wParam);
                 if (param->channel == GW::Chat::Channel::CHANNEL_GROUP || param->channel == GW::Chat::Channel::CHANNEL_ALLIES)
@@ -403,6 +409,9 @@ namespace {
             } break;
             case GW::UI::UIMessage::kStartWhisper: {
                 OnStartWhisper(status, message_id, wParam, lParam);
+            } break;
+            case GW::UI::UIMessage::kChatLinkClicked: {
+                OnChatLinkClicked(status, message_id, wParam, lParam);
             } break;
             case GW::UI::UIMessage::kSendChatMessage: {
                 OnSendChat(status, message_id, wParam, lParam);
@@ -423,12 +432,13 @@ namespace {
 void ChatSettings::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
 
     constexpr GW::UI::UIMessage ui_messages[] = {GW::UI::UIMessage::kAgentSpeechBubble, GW::UI::UIMessage::kDialogueMessage, GW::UI::UIMessage::kPreferenceFlagChanged,    GW::UI::UIMessage::kPreferenceValueChanged,
                                                  GW::UI::UIMessage::kPlayerChatMessage, GW::UI::UIMessage::kWriteToChatLog,  GW::UI::UIMessage::kWriteToChatLogWithSender, GW::UI::UIMessage::kRecvWhisper,
-                                                 GW::UI::UIMessage::kStartWhisper,      GW::UI::UIMessage::kSendChatMessage, GW::UI::UIMessage::kAgentSpeechBubble};
+                                                 GW::UI::UIMessage::kStartWhisper,      GW::UI::UIMessage::kSendChatMessage, GW::UI::UIMessage::kAgentSpeechBubble,        GW::UI::UIMessage::kChatLinkClicked, GW::UI::UIMessage::kAddCustomChatLink};
     for (const auto message_id : ui_messages) {
-        GW::UI::RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
+        RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
     }
     ColorHexOrLabelToColor_Func = (ColorHexOrLabelToColor_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CtlTextMl.cpp", "value", 0, 0));
     if (ColorHexOrLabelToColor_Func) {
@@ -442,6 +452,14 @@ void ChatSettings::Initialize()
         GW::Hook::CreateHook((void**)&ChatLogLine_UICallback_Func, OnChatLogLine_UICallback, (void**)&ChatLogLine_UICallback_Ret);
         GW::Hook::EnableHooks(ChatLogLine_UICallback_Func);
     }
+
+
+    uintptr_t address = GW::Scanner::Find("\x74?\xc7??\xff\xff\xff\xff\xc7??\xff\xff\xff\xff", "x?x??xxxxx??xxxx", 1);
+    if (address) {
+        bypass_chat_codepage_limitation.SetPatch(address, "\x0", 1);
+        //bypass_chat_codepage_limitation.TogglePatch(true);
+    }
+    ASSERT(bypass_chat_codepage_limitation.IsValid());
 }
 void ChatSettings::Terminate()
 {
@@ -474,7 +492,7 @@ void ChatSettings::DrawSettingsInternal()
 {
     ToolboxModule::DrawSettingsInternal();
 
-    ImGui::Combo("Chat window font size", &chat_window_font_id_index, chat_window_font_names);
+    ImGui::Combo("Chat window font size", &settings.chat_window_font_id_index, chat_window_font_names);
 
     constexpr ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
     if (ImGui::TreeNodeEx("Chat Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
@@ -504,7 +522,7 @@ void ChatSettings::DrawSettingsInternal()
         ImGui::TextDisabled("Some text throughout the game are highlighted depending on their rarity or other properties.");
         for (auto& [token,color] : chat_token_colors) {
             const auto token_s = TextUtils::WStringToString(token)+":";
-            ImGui::PushID(&token);
+            ImGui::PushID(token_s.c_str());
             constexpr ImGuiColorEditFlags chat_token_color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel;
             ImGui::TextUnformatted(token_s.c_str());
             ImGui::SameLine(chat_colors_grid_x[1] * scale);
@@ -522,104 +540,86 @@ void ChatSettings::DrawSettingsInternal()
         ImGui::Spacing();
     }
 
-    show_timestamps = GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps);
-    if (ImGui::Checkbox("Show chat messages timestamp", &show_timestamps)) {
-        GW::Chat::ToggleTimestamps(show_timestamps);
+    settings.show_timestamps = GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps);
+    if (ImGui::Checkbox("Show chat messages timestamp", &settings.show_timestamps)) {
+        GW::Chat::ToggleTimestamps(settings.show_timestamps);
     }
     ImGui::ShowHelp("Show timestamps in message history.");
-    if (show_timestamps) {
+    if (settings.show_timestamps) {
         ImGui::Indent();
-        if (ImGui::Checkbox("Use 24h", &show_timestamp_24h)) {
-            GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+        if (ImGui::Checkbox("Use 24h", &settings.show_timestamp_24h)) {
+            GW::Chat::SetTimestampsFormat(settings.show_timestamp_24h, settings.show_timestamp_seconds);
         }
         ImGui::SameLine();
-        if (ImGui::Checkbox("Show seconds", &show_timestamp_seconds)) {
-            GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+        if (ImGui::Checkbox("Show seconds", &settings.show_timestamp_seconds)) {
+            GW::Chat::SetTimestampsFormat(settings.show_timestamp_24h, settings.show_timestamp_seconds);
         }
         ImGui::SameLine();
         ImGui::Text("Color:");
         ImGui::SameLine();
-        if (Colors::DrawSettingHueWheel("Color:", &timestamps_color, flags)) {
-            GW::Chat::SetTimestampsColor(timestamps_color);
+        if (Colors::DrawSettingHueWheel("Color:", &settings.timestamps_color.value, flags)) {
+            GW::Chat::SetTimestampsColor(settings.timestamps_color);
         }
         ImGui::Unindent();
     }
-    ImGui::Checkbox("Hide player chat speech bubbles", &hide_player_speech_bubbles);
-    ImGui::ShowHelp("Don't show in-game speech bubbles over player characters that send a message in chat");
-    ImGui::Checkbox("Hide all friendly speech bubbles", &hide_all_friendly_speech_bubbles);
-    ImGui::ShowHelp("Don't show any in-game speech bubbles");
-    ImGui::Checkbox("Show NPC speech bubbles in emote channel", &npc_speech_bubbles_as_chat);
-    ImGui::ShowHelp("Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
-    ImGui::Checkbox("Redirect NPC dialog to emote channel", &redirect_npc_messages_to_emote_chat);
-    ImGui::ShowHelp("Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
-    ImGui::Checkbox("Redirect outgoing whispers to whisper channel", &redirect_outgoing_whisper_to_whisper_channel);
-    ImGui::ShowHelp("Whispers that you send are typically shown in colour of the global channel (green).\n"
+    ImGui::CheckboxWithHelp("Hide player chat speech bubbles", &settings.hide_player_speech_bubbles, "Don't show in-game speech bubbles over player characters that send a message in chat");
+    ImGui::CheckboxWithHelp("Hide all friendly speech bubbles", &settings.hide_all_friendly_speech_bubbles, "Don't show any in-game speech bubbles");
+    ImGui::CheckboxWithHelp("Show NPC speech bubbles in emote channel", &settings.npc_speech_bubbles_as_chat, "Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
+    ImGui::CheckboxWithHelp("Redirect NPC dialog to emote channel", &settings.redirect_npc_messages_to_emote_chat, "Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
+    ImGui::CheckboxWithHelp("Redirect outgoing whispers to whisper channel", &settings.redirect_outgoing_whisper_to_whisper_channel, "Whispers that you send are typically shown in colour of the global channel (green).\n"
                     "This setting makes them appear blue like an incoming message, with -> before the name.");
-    if (ImGui::Checkbox("Open web links from templates", &openlinks)) {
-        GW::UI::SetOpenLinks(openlinks);
+    if (ImGui::Checkbox("Open web links from templates", &settings.openlinks)) {
+        GW::UI::SetOpenLinks(settings.openlinks);
     }
     ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
 
-    ImGui::Checkbox("Automatically change urls into build templates.", &auto_url);
-    ImGui::ShowHelp("When you write a message starting with 'http://' or 'https://', it will be converted in template format");
-    ImGui::Checkbox("Clear chat message when hiding the in-game chat window", &clear_chat_message_when_hiding_chat);
+    ImGui::CheckboxWithHelp("Automatically change urls into build templates.", &settings.auto_url, "When you write a message starting with 'http://' or 'https://', it will be converted in template format");
+    ImGui::Checkbox("Clear chat message when hiding the in-game chat window", &settings.clear_chat_message_when_hiding_chat);
 }
 
-void ChatSettings::LoadSettings(ToolboxIni* ini)
+void ChatSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(ini);
+    ToolboxModule::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
 
-    LOAD_BOOL(show_timestamps);
-    // NB: Don't want to override the current in-game setting if not found in ini
-    show_timestamps = ini->GetBoolValue(Name(), VAR_NAME(show_timestamps), GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps));
-    LOAD_BOOL(show_timestamp_24h);
-    LOAD_BOOL(show_timestamp_seconds);
-    LOAD_BOOL(hide_player_speech_bubbles);
-    LOAD_BOOL(hide_all_friendly_speech_bubbles);
-    LOAD_BOOL(npc_speech_bubbles_as_chat);
-    LOAD_BOOL(redirect_npc_messages_to_emote_chat);
-    LOAD_BOOL(redirect_outgoing_whisper_to_whisper_channel);
-    LOAD_BOOL(openlinks);
-    LOAD_BOOL(auto_url);
-    LOAD_BOOL(clear_chat_message_when_hiding_chat);
-    LOAD_UINT(chat_window_font_id_index);
+    // NB: Don't want to override the current in-game setting if not found in settings
+    if (!doc.Has(Name(), VAR_NAME(show_timestamps)) && !(legacy && legacy->KeyExists(Name(), VAR_NAME(show_timestamps)))) {
+        settings.show_timestamps = GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps);
+    }
 
+    std::map<std::string, Colors::SettingColor> token_colors;
+    const bool have_doc_colors = doc.Get(Name(), "chat_token_colors", token_colors);
     for (auto& [token, color] : chat_token_colors_original) {
-        auto key = std::format("chat_token_color_{}", TextUtils::WStringToString(token));
-        chat_token_colors[token] = Colors::Load(ini, Name(), key.c_str(), color);
+        const auto key = TextUtils::WStringToString(token);
+        if (have_doc_colors) {
+            const auto found = token_colors.find(key);
+            chat_token_colors[token] = found != token_colors.end() ? found->second.value : color;
+        }
+        else if (legacy) {
+            const auto ini_key = std::format("chat_token_color_{}", key);
+            chat_token_colors[token] = Colors::Load(legacy, Name(), ini_key.c_str(), color);
+        }
+        else {
+            chat_token_colors[token] = color;
+        }
     }
 
-    timestamps_color = Colors::Load(ini, Name(), VAR_NAME(timestamps_color), Colors::RGB(0xc0, 0xc0, 0xbf));
-    GW::UI::SetOpenLinks(openlinks);
-    GW::Chat::ToggleTimestamps(show_timestamps);
-    GW::Chat::SetTimestampsColor(timestamps_color);
-    GW::Chat::SetTimestampsFormat(show_timestamp_24h, show_timestamp_seconds);
+    GW::UI::SetOpenLinks(settings.openlinks);
+    GW::Chat::ToggleTimestamps(settings.show_timestamps);
+    GW::Chat::SetTimestampsColor(settings.timestamps_color);
+    GW::Chat::SetTimestampsFormat(settings.show_timestamp_24h, settings.show_timestamp_seconds);
 }
 
-void ChatSettings::SaveSettings(ToolboxIni* ini)
+void ChatSettings::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxModule::SaveSettings(ini);
+    ToolboxModule::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
 
-    SAVE_BOOL(show_timestamps);
-    SAVE_BOOL(show_timestamp_24h);
-    SAVE_BOOL(show_timestamp_seconds);
-    SAVE_BOOL(hide_player_speech_bubbles);
-    SAVE_BOOL(hide_all_friendly_speech_bubbles);
-    SAVE_BOOL(npc_speech_bubbles_as_chat);
-    SAVE_BOOL(redirect_npc_messages_to_emote_chat);
-    SAVE_BOOL(redirect_outgoing_whisper_to_whisper_channel);
-    SAVE_BOOL(openlinks);
-    SAVE_BOOL(auto_url);
-    SAVE_BOOL(clear_chat_message_when_hiding_chat);
-    SAVE_UINT(chat_window_font_id_index);
-
-    SAVE_COLOR(timestamps_color);
-
-    for (auto& [token, color] : chat_token_colors) {
-        auto key = std::format("chat_token_color_{}", TextUtils::WStringToString(token));
-        Colors::Save(ini, Name(), key.c_str(), color);
+    std::map<std::string, Colors::SettingColor> token_colors;
+    for (const auto& [token, color] : chat_token_colors) {
+        token_colors[TextUtils::WStringToString(token)] = color;
     }
-
+    doc.Set(Name(), "chat_token_colors", token_colors);
 }
 
 bool ChatSettings::WndProc(const UINT Message, const WPARAM wParam, LPARAM)

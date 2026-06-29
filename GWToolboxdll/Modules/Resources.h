@@ -1,13 +1,13 @@
 #pragma once
 
 #include <ToolboxModule.h>
-#include <Utf8.h>
 
 namespace GuiUtils {
     class EncString;
 }
 namespace GW {
     struct Item;
+    enum Region : uint32_t;
     namespace Constants {
         enum class Profession : uint32_t;
         enum class MapID : uint32_t;
@@ -52,23 +52,27 @@ public:
     static void OpenFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
     static void SaveFileDialog(std::function<void(const char*)> callback, const char* filterList = nullptr, const char* defaultPath = nullptr);
 
-    static int LoadIniFromFile(const std::filesystem::path& absolute_path, ToolboxIni* inifile);
-    static int SaveIniToFile(const std::filesystem::path& absolute_path, const ToolboxIni* inifile);
-
     static std::filesystem::path GetComputerFolderPath();
     static std::filesystem::path GetSettingsFolderName();
     static std::filesystem::path GetSettingsFolderPath();
+    // Old-layout settings folder (computer root for the default config); legacy files are only read from here
+    static std::filesystem::path GetLegacySettingsFolderPath();
 
 private:
     static bool SetSettingsFolder(const std::filesystem::path& foldername);
 
 public:
     static std::filesystem::path GetSettingFile(const std::filesystem::path& file);
+    static std::filesystem::path GetLegacySettingFile(const std::filesystem::path& file);
+    // New location if the file exists there, else the legacy one; for data files read at startup but written new
+    static std::filesystem::path GetSettingFileOrLegacy(const std::filesystem::path& file);
     static std::filesystem::path GetPath(const std::filesystem::path& file);
     static std::filesystem::path GetPath(const std::filesystem::path& folder, const std::filesystem::path& file);
     static HRESULT ResolveShortcut(const std::filesystem::path& in_shortcut_path, std::filesystem::path& out_actual_path);
 
     static bool EnsureFolderExists(const std::filesystem::path& path);
+    // On failure fills error_description with a user-facing reason, hinting at antivirus when the OS error matches
+    static bool EnsureFolderExists(const std::filesystem::path& path, std::wstring& error_description);
 
     // Returns current scale multiplier based on gw preferences. Cached for per frame access, pass force = true to get fresh from gw settings.
     static float GetGWScaleMultiplier(bool force = false);
@@ -108,6 +112,10 @@ public:
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
     static IDirect3DTexture9** GetItemImage(const std::wstring& item_name);
     static bool SaveTextureToFile(IDirect3DTexture9* texture, const std::filesystem::path& file_path);
+    // Captures a sub-rect of the current D3D9 back buffer to disk as PNG/JPG/BMP
+    // (extension is taken from file_path). Pass nullptr for region to capture
+    // the whole back buffer.
+    static bool SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* region, const std::filesystem::path& file_path);
     // Fetches File page from GWW, parses out the image for the file given
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
@@ -121,7 +129,10 @@ public:
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* GetHeroName(GW::Constants::HeroID hero_id);
 
-    static const wchar_t* GetRegionName(GW::Constants::MapID map_id);
+    // Guaranteed to return a pointer, but may not yet be decoded. Does the region->name lookup.
+    static GuiUtils::EncString* GetRegionName(GW::Region region);
+    // Guaranteed to return a pointer, but may not yet be decoded. Resolves the map's region, then proxies above.
+    static GuiUtils::EncString* GetRegionName(GW::Constants::MapID map_id);
     // Guaranteed to return a pointer, but may not yet be decoded.
     static GuiUtils::EncString* DecodeStringId(const uint32_t enc_str_id, GW::Constants::Language language = (GW::Constants::Language)0xff);
 

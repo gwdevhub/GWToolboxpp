@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Modules/Resources.h>
 #include <Modules/GameSettings.h>
@@ -21,6 +19,7 @@
 
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
@@ -34,16 +33,9 @@ constexpr uint32_t TIME_UNKNOWN = std::numeric_limits<uint32_t>::max();
 unsigned int ObjectiveTimerWindow::ObjectiveSet::cur_ui_id = 0;
 
 namespace {
-    // settings in the unnamed namespace. This is ugly. DO NOT COPY.
-    // just doing it because Objective needs them and I'm too lazy to pass them all the way there.
+    ObjectiveTimerWindow::Settings settings;
+
     int n_columns = 4;
-    bool show_decimal = false;
-    bool show_start_column = true;
-    bool show_end_column = true;
-    bool show_time_column = true;
-    bool show_start_date_time = false;
-    bool save_to_disk = true;
-    bool show_past_runs = false;
 
     bool loading = false;
 
@@ -149,7 +141,7 @@ namespace {
         }
         else {
             const DWORD sec = time / 1000;
-            if (show_ms && show_decimal) {
+            if (show_ms && settings.show_decimal) {
                 snprintf(buf, size, "%02lu:%02lu.%1lu", sec / 60, sec % 60, time / 100 % 10);
             }
             else {
@@ -160,7 +152,7 @@ namespace {
 
     void ComputeNColumns()
     {
-        n_columns = 0 + (show_start_column ? 1 : 0) + (show_end_column ? 1 : 0) + (show_time_column ? 1 : 0);
+        n_columns = 0 + (settings.show_start_column ? 1 : 0) + (settings.show_end_column ? 1 : 0) + (settings.show_time_column ? 1 : 0);
     }
 
     float GetTimestampWidth() { return 65.0f * ImGui::FontScale(); }
@@ -179,7 +171,6 @@ namespace {
 
     std::thread* websocket_server = nullptr;
     uWS::App* websocket_app = nullptr;
-    int websocket_server_port = 9001;
     enum WebsocketMode {
         None,
         LiveSplitOneJSON,
@@ -188,7 +179,7 @@ namespace {
     };
     WebsocketMode websocket_mode = None;
     void EnableWebsocketServer(bool enable) {
-        websocket_server_port = std::max(websocket_server_port, 0);
+        settings.websocket_server_port = std::max(settings.websocket_server_port, 0);
         if (!enable) {
             if (websocket_app) {
                 websocket_app->close();
@@ -227,10 +218,10 @@ namespace {
                         }
                     )
                     .listen(
-                        websocket_server_port,
+                        settings.websocket_server_port,
                         [](auto* listen_socket) {
                             if (listen_socket) {
-                                Log::Log("EnableWebsocketServer listening on port %d", websocket_server_port);
+                                Log::Log("EnableWebsocketServer listening on port %d", settings.websocket_server_port);
                             }
                         }
                     )
@@ -271,7 +262,6 @@ void ObjectiveTimerWindow::CheckIsMapLoaded()
 
 void ObjectiveTimerWindow::Terminate() {
     ToolboxWindow::Terminate();
-    ChatCommands::RemoveSettingChatCommand(L"objectives_current_run");
     for (size_t i = 0; i < 5000 && loading; i += 10) {
         Sleep(10);
     }
@@ -281,7 +271,7 @@ void ObjectiveTimerWindow::Terminate() {
 void ObjectiveTimerWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    ChatCommands::RegisterSettingChatCommand(L"objectives_current_run", &show_current_run_window, L"Toggles the current run separate window");
+    SettingsRegistry::Register(this, settings);
 
     static GW::HookEntry PartyDefeated_Entry;
     static GW::HookEntry GameSrvTransfer_Entry;
@@ -549,6 +539,11 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
                                     MapID::Heart_of_the_Shiverpeaks_Level_2,
                                     MapID::Heart_of_the_Shiverpeaks_Level_3});
             break;
+        case MapID::Forsaken_Tunnels_Level2:
+            AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level2,
+                                    MapID::Forsaken_Tunnels_Level3,
+                                    MapID::Forsaken_Tunnels_Level4});
+            break;
 
         // dungeons - 5 levels:
         case MapID::Frostmaws_Burrows_Level_1:
@@ -664,7 +659,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
                                   ->AddStartEvent(EventType::DoACompleteZone, Gloom)
                                   ->AddStartEvent(EventType::DoorOpen, DoA_foundry_entrance_r1)
                                   ->AddEndEvent(EventType::DoACompleteZone, Foundry);
-            if (show_detailed_objectives) {
+            if (settings.show_detailed_objectives) {
                 parent->AddChild(os->AddObjective(new Objective("Room 1"), 0)
                                    ->AddStartEvent(EventType::DoorClose, DoA_foundry_entrance_r1)
                                    ->AddEndEvent(EventType::DoorOpen, DoA_foundry_r1_r2));
@@ -697,7 +692,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
             Objective* parent = os->AddObjectiveAfterAll(new Objective("City"))
                                   ->AddStartEvent(EventType::DoACompleteZone, Foundry)
                                   ->AddEndEvent(EventType::DoACompleteZone, City);
-            if (show_detailed_objectives) {
+            if (settings.show_detailed_objectives) {
                 parent->AddChild(os->AddObjective(new Objective("Outside"), 0)
                                    ->AddStartEvent(EventType::DoorOpen, DoA_city_entrance)
                                    ->AddEndEvent(EventType::DoorOpen, DoA_city_wall));
@@ -712,7 +707,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
             Objective* parent = os->AddObjectiveAfterAll(new Objective("Veil"))
                                   ->AddStartEvent(EventType::DoACompleteZone, City)
                                   ->AddEndEvent(EventType::DoACompleteZone, Veil);
-            if (show_detailed_objectives) {
+            if (settings.show_detailed_objectives) {
                 parent->AddChild(os->AddObjective(new Objective("360"), 0)
                                    ->AddStartEvent(EventType::DoorOpen, DoA_veil_360_left)
                                    ->AddStartEvent(EventType::DoorOpen, DoA_veil_360_middle)
@@ -735,7 +730,7 @@ void ObjectiveTimerWindow::AddDoAObjectiveSet(const GW::Vec2f spawn)
             Objective* parent = os->AddObjectiveAfterAll(new Objective("Gloom"))
                                   ->AddStartEvent(EventType::DoACompleteZone, Veil)
                                   ->AddEndEvent(EventType::DoACompleteZone, Gloom);
-            if (show_detailed_objectives) {
+            if (settings.show_detailed_objectives) {
                 parent->AddChild(os->AddObjective(new Objective("Cave"), 0)
                                    ->AddStartEvent(EventType::DisplayDialogue, 4, L"\x8101\x5765\x9846\xA72B")
                                    ->AddEndEvent(EventType::DisplayDialogue, 4, L"\x8101\x5767\xA547\xB2C2"));
@@ -966,13 +961,13 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
     }
 
     // Breakout objective set for current run
-    if (show_current_run_window && current_objective_set) {
+    if (settings.show_current_run_window && current_objective_set) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
         char buf[256];
         sprintf(buf, "%s - %s###ObjectiveTimerCurrentRun", current_objective_set->name.c_str(), current_objective_set->GetDurationStr());
 
-        if (ImGui::Begin(buf, &show_current_run_window, GetWinFlags())) {
+        if (ImGui::Begin(buf, &settings.show_current_run_window, GetWinFlags())) {
             ImGui::PushID(static_cast<int>(current_objective_set->ui_id));
             for (Objective* objective : current_objective_set->objectives) {
                 objective->Draw();
@@ -1000,37 +995,32 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::StartSpacedElements(275.f);
     ImGui::NextSpacedElement();
-    clear_cached_times = ImGui::Checkbox("Show second decimal", &show_decimal);
+    clear_cached_times = ImGui::Checkbox("Show second decimal", &settings.show_decimal);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show 'Start' column", &show_start_column);
+    ImGui::Checkbox("Show 'Start' column", &settings.show_start_column);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show 'End' column", &show_end_column);
+    ImGui::Checkbox("Show 'End' column", &settings.show_end_column);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show 'Time' column", &show_time_column);
+    ImGui::Checkbox("Show 'Time' column", &settings.show_time_column);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show detailed objectives", &show_detailed_objectives);
-    ImGui::ShowHelp("Currently only affects DoA objectives");
+    ImGui::CheckboxWithHelp("Show detailed objectives", &settings.show_detailed_objectives, "Currently only affects DoA objectives");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Debug: log events", &show_debug_events);
-    ImGui::ShowHelp(
+    ImGui::CheckboxWithHelp("Debug: log events", &show_debug_events,
         "Will spam your chat with the events used in the objective timer. \nUse for debugging and to ask for more stuff to be added");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show run start date/time", &show_start_date_time);
+    ImGui::Checkbox("Show run start date/time", &settings.show_start_date_time);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show current run in separate window", &show_current_run_window);
-    ImGui::ShowHelp("Toggle via chat: /tb_setting objectives_current_run");
+    ImGui::CheckboxWithHelp("Show current run in separate window", &settings.show_current_run_window, "Toggle via chat: /tb_setting show_current_run_window");
     ImGui::NextSpacedElement();
-    if (ImGui::Checkbox("Save/Load runs to disk", &save_to_disk)) {
+    if (ImGui::Checkbox("Save/Load runs to disk", &settings.save_to_disk)) {
         SaveRuns();
     }
     ImGui::ShowHelp(
         "Keep a record or your runs in JSON format on disk, and load past runs from disk when starting GWToolbox.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show past runs", &show_past_runs);
-    ImGui::ShowHelp("Display from previous days in the Objective Timer window.");
+    ImGui::CheckboxWithHelp("Show past runs", &settings.show_past_runs, "Display from previous days in the Objective Timer window.");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Automatic /age on completion", &auto_send_age);
-    ImGui::ShowHelp(
+    ImGui::CheckboxWithHelp("Automatic /age on completion", &settings.auto_send_age,
         "As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();
     
@@ -1041,7 +1031,7 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     }
     if (enable_websocket_server) {
         ImGui::Indent();
-        if (ImGui::InputInt("LiveSplit Websocket server port", &websocket_server_port)) {
+        if (ImGui::InputInt("LiveSplit Websocket server port", &settings.websocket_server_port)) {
             EnableWebsocketServer(false);
             EnableWebsocketServer(enable_websocket_server);
         }
@@ -1049,7 +1039,7 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
         ImGui::Text("LiveSplit Server status: %s", websocket_app && websocket_server ? "Running" : "Stopped");
         if (websocket_app && websocket_server) {
             ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "(Port %d)", websocket_server_port);
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "(Port %d)", settings.websocket_server_port);
         }
         if (ImGui::SmallButton("Restart")) {
             EnableWebsocketServer(false);
@@ -1062,49 +1052,32 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
 
 }
 
-void ObjectiveTimerWindow::LoadSettings(ToolboxIni* ini)
+void ObjectiveTimerWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxWindow::LoadSettings(ini);
-    LOAD_BOOL(show_decimal);
-    LOAD_BOOL(show_start_column);
-    LOAD_BOOL(show_end_column);
-    LOAD_BOOL(show_time_column);
-    LOAD_BOOL(show_current_run_window);
-    LOAD_BOOL(auto_send_age);
-    LOAD_BOOL(save_to_disk);
-    LOAD_BOOL(show_past_runs);
-    LOAD_BOOL(show_start_date_time);
-    LOAD_BOOL(show_detailed_objectives);
-    LOAD_UINT(websocket_server_port);
-    auto ini_websocket_mode = (uint32_t)ini->GetLongValue(Name(), VAR_NAME(websocket_mode), (long)websocket_mode);
-    if (ini_websocket_mode >= (uint32_t)WebsocketMode::Count) 
-        ini_websocket_mode = (uint32_t)WebsocketMode::None;
-    websocket_mode = (WebsocketMode)ini_websocket_mode;
+    ToolboxWindow::LoadSettings(doc, legacy);
+    doc.GetStruct(Name(), settings);
+    auto stored_websocket_mode = (uint32_t)websocket_mode;
+    if (!doc.Get(Name(), VAR_NAME(websocket_mode), stored_websocket_mode)) {
+        stored_websocket_mode = (uint32_t)legacy->GetLongValue(Name(), VAR_NAME(websocket_mode), (long)websocket_mode);
+    }
+    if (stored_websocket_mode >= (uint32_t)WebsocketMode::Count)
+        stored_websocket_mode = (uint32_t)WebsocketMode::None;
+    websocket_mode = (WebsocketMode)stored_websocket_mode;
     ComputeNColumns();
     LoadRuns();
 }
 
-void ObjectiveTimerWindow::SaveSettings(ToolboxIni* ini)
+void ObjectiveTimerWindow::SaveSettings(SettingsDoc& doc)
 {
-    ToolboxWindow::SaveSettings(ini);
-    SAVE_BOOL(show_decimal);
-    SAVE_BOOL(show_start_column);
-    SAVE_BOOL(show_end_column);
-    SAVE_BOOL(show_time_column);
-    SAVE_BOOL(show_current_run_window);
-    SAVE_BOOL(auto_send_age);
-    SAVE_BOOL(show_start_date_time);
-    SAVE_BOOL(save_to_disk);
-    SAVE_BOOL(show_past_runs);
-    SAVE_BOOL(show_detailed_objectives);
-    SAVE_UINT(websocket_server_port);
-    SAVE_UINT(websocket_mode);
+    ToolboxWindow::SaveSettings(doc);
+    doc.SetStruct(Name(), settings);
+    doc.Set(Name(), VAR_NAME(websocket_mode), (uint32_t)websocket_mode);
     SaveRuns();
 }
 
 void ObjectiveTimerWindow::LoadRuns()
 {
-    if (!save_to_disk) {
+    if (!settings.save_to_disk) {
         return;
     }
     // Because this does a load of file reads and JSON decoding, its on a separate thread; it could delay rendering by
@@ -1138,18 +1111,22 @@ void ObjectiveTimerWindow::LoadRuns()
                 std::wstring fn = Resources::GetPath(L"runs", *it);
                 file.open(fn);
                 if (file.is_open()) {
-                    nlohmann::json os_json_arr;
-                    file >> os_json_arr;
-                    for (auto json_it = os_json_arr.begin(); json_it != os_json_arr.end(); ++json_it) {
-                        ObjectiveSet* os = ObjectiveSet::FromJson(json_it.value());
-                        if (instance.objective_sets.contains(os->system_time)) {
-                            delete os;
-                            continue; // Don't load in a run that already exists
+                    std::stringstream ss;
+                    ss << file.rdbuf();
+                    std::vector<ObjectiveSet::Serialized> os_arr;
+                    constexpr glz::opts opts{.error_on_unknown_keys = false};
+                    if (auto ec = glz::read<opts>(os_arr, ss.str()); !ec) {
+                        for (const auto& elem : os_arr) {
+                            ObjectiveSet* os = ObjectiveSet::FromJson(elem);
+                            if (instance.objective_sets.contains(os->system_time)) {
+                                delete os;
+                                continue; // Don't load in a run that already exists
+                            }
+                            os->StopObjectives();
+                            os->need_to_collapse = true;
+                            os->from_disk = true;
+                            instance.objective_sets.emplace(os->system_time, os);
                         }
-                        os->StopObjectives();
-                        os->need_to_collapse = true;
-                        os->from_disk = true;
-                        instance.objective_sets.emplace(os->system_time, os);
                     }
                     file.close();
                 }
@@ -1163,7 +1140,7 @@ void ObjectiveTimerWindow::LoadRuns()
 
 void ObjectiveTimerWindow::SaveRuns()
 {
-    if (!save_to_disk || objective_sets.empty()) {
+    if (!settings.save_to_disk || objective_sets.empty()) {
         return;
     }
     while (loading) {
@@ -1192,11 +1169,12 @@ void ObjectiveTimerWindow::SaveRuns()
                 std::ofstream file;
                 file.open(Resources::GetPath(L"runs", it.first));
                 if (file.is_open()) {
-                    nlohmann::json os_json_arr;
+                    std::vector<ObjectiveSet::Serialized> os_arr;
+                    os_arr.reserve(it.second.size());
                     for (const auto os : it.second) {
-                        os_json_arr.push_back(os->ToJson());
+                        os_arr.push_back(os->ToJson());
                     }
-                    file << os_json_arr << std::endl;
+                    file << glz::write_json(os_arr).value_or(std::string{}) << std::endl;
                     file.close();
                 }
             } catch (const std::exception&) {
@@ -1319,7 +1297,7 @@ const char* ObjectiveTimerWindow::Objective::GetEndTimeStr()
         return "--:--";
     }
     if (!cached_done[0]) {
-        PrintTime(cached_done, sizeof(cached_done), done, show_decimal);
+        PrintTime(cached_done, sizeof(cached_done), done, settings.show_decimal);
     }
     return cached_done;
 }
@@ -1330,7 +1308,7 @@ const char* ObjectiveTimerWindow::Objective::GetStartTimeStr()
         return "--:--";
     }
     if (!cached_start[0]) {
-        PrintTime(cached_start, sizeof(cached_start), start, show_decimal);
+        PrintTime(cached_start, sizeof(cached_start), start, settings.show_decimal);
     }
     return cached_start;
 }
@@ -1341,7 +1319,7 @@ const char* ObjectiveTimerWindow::Objective::GetDurationStr()
         return "--:--";
     }
     if (!cached_duration[0] || status == Status::Started) {
-        PrintTime(cached_duration, sizeof(cached_duration), GetDuration(), show_decimal);
+        PrintTime(cached_duration, sizeof(cached_duration), GetDuration(), settings.show_decimal);
     }
     return cached_duration;
 }
@@ -1404,7 +1382,7 @@ void ObjectiveTimerWindow::Objective::Draw()
     float offset = style.ItemSpacing.x + label_width + style.ItemSpacing.x;
 
     ImGui::PushItemWidth(ts_width);
-    if (show_start_column) {
+    if (settings.show_start_column) {
         ImGui::SameLine(offset);
         ImGui::Text(GetStartTimeStr());
         if (ImGui::IsItemHovered()) {
@@ -1412,7 +1390,7 @@ void ObjectiveTimerWindow::Objective::Draw()
         }
         offset += ts_width;
     }
-    if (show_end_column) {
+    if (settings.show_end_column) {
         ImGui::SameLine(offset);
         ImGui::Text(GetEndTimeStr());
         if (ImGui::IsItemHovered()) {
@@ -1420,7 +1398,7 @@ void ObjectiveTimerWindow::Objective::Draw()
         }
         offset += ts_width + style.ItemSpacing.x;
     }
-    if (show_time_column) {
+    if (settings.show_time_column) {
         ImGui::SameLine(offset);
         ImGui::Text(GetDurationStr());
         if (ImGui::IsItemHovered()) {
@@ -1542,7 +1520,7 @@ void ObjectiveTimerWindow::ObjectiveSet::CheckSetDone()
                                           [](const Objective* a, const Objective* b) { return a->done < b->done; });
         duration = std::max((*max)->done, duration);
         active = false;
-        if (Instance().auto_send_age) {
+        if (settings.auto_send_age) {
             GW::Chat::SendChat('/', "age");
         }
         TimerWidget::Instance().SetRunCompleted(GameSettings::GetSettingBool("auto_age2_on_age"));
@@ -1568,65 +1546,56 @@ ObjectiveTimerWindow::ObjectiveSet::~ObjectiveSet()
     objectives.clear();
 }
 
-ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(const nlohmann::json& json)
+ObjectiveTimerWindow::ObjectiveSet* ObjectiveTimerWindow::ObjectiveSet::FromJson(const Serialized& json)
 {
     const auto os = new ObjectiveSet;
     os->active = false;
-    os->system_time = json.at("utc_start").get<DWORD>();
-    os->name = json.at("name").get<std::string>();
-    os->run_start_time_point = json.at("instance_start").get<DWORD>();
-    if (json.contains("duration")) {
-        os->duration = json.at("duration").get<DWORD>();
-    }
-    nlohmann::json json_objs = json.at("objectives");
-    for (auto it = json_objs.begin(); it != json_objs.end(); ++it) {
-        const nlohmann::json& o = it.value();
+    os->system_time = static_cast<DWORD>(json.utc_start);
+    os->name = json.name;
+    os->run_start_time_point = static_cast<DWORD>(json.instance_start);
+    if (json.duration) os->duration = static_cast<DWORD>(*json.duration);
+    for (const auto& o : json.objectives) {
         os->objectives.emplace_back(Objective::FromJson(o));
     }
     os->StopObjectives();
     return os;
 }
 
-nlohmann::json ObjectiveTimerWindow::ObjectiveSet::ToJson()
+ObjectiveTimerWindow::ObjectiveSet::Serialized ObjectiveTimerWindow::ObjectiveSet::ToJson()
 {
-    nlohmann::json json;
-    json["name"] = name;
-    json["instance_start"] = run_start_time_point;
-    json["utc_start"] = system_time;
-    nlohmann::json json_objectives;
+    Serialized out{
+        .name = name,
+        .instance_start = run_start_time_point,
+        .utc_start = system_time,
+        .duration = GetDuration(),
+    };
+    out.objectives.reserve(objectives.size());
     for (auto* obj : objectives) {
-        json_objectives.push_back(obj->ToJson());
+        out.objectives.push_back(obj->ToJson());
     }
-    json["objectives"] = json_objectives;
-    json["duration"] = GetDuration();
-    return json;
+    return out;
 }
 
-nlohmann::json ObjectiveTimerWindow::Objective::ToJson()
+ObjectiveTimerWindow::Objective::Serialized ObjectiveTimerWindow::Objective::ToJson()
 {
-    nlohmann::json json;
-    json["name"] = name;
-    json["status"] = status;
-    json["start"] = start;
-    json["done"] = done;
-    json["indent"] = indent;
-    json["duration"] = GetDuration();
-    return json;
+    return {
+        .name = name,
+        .status = static_cast<uint32_t>(std::to_underlying(status)),
+        .start = start,
+        .done = done,
+        .indent = static_cast<uint32_t>(indent),
+        .duration = GetDuration(),
+    };
 }
 
-ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const nlohmann::json& json)
+ObjectiveTimerWindow::Objective* ObjectiveTimerWindow::Objective::FromJson(const Serialized& json)
 {
-    const auto name = json.at("name").get<std::string>();
-    const auto obj = new Objective(name.c_str());
-    obj->status = json.at("status").get<Status>();
-    obj->start = json.at("start").get<DWORD>();
-    obj->done = json.at("done").get<DWORD>();
-    if (json.contains("indent")) {
-        obj->indent = json.at("indent").get<DWORD>();
-    }
-    if (json.contains("duration")) {
-        obj->duration = json.at("duration").get<DWORD>();
-    }
+    const auto obj = new Objective(json.name.c_str());
+    obj->status = static_cast<Status>(static_cast<int>(json.status));
+    obj->start = static_cast<DWORD>(json.start);
+    obj->done = static_cast<DWORD>(json.done);
+    if (json.indent) obj->indent = static_cast<DWORD>(*json.indent);
+    if (json.duration) obj->duration = static_cast<DWORD>(*json.duration);
     return obj;
 }
 
@@ -1670,7 +1639,7 @@ DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration()
 const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
 {
     if (!cached_time[0] || active) {
-        PrintTime(cached_time, sizeof(cached_time), GetDuration(), show_decimal);
+        PrintTime(cached_time, sizeof(cached_time), GetDuration(), settings.show_decimal);
     }
     return cached_time;
 }
@@ -1678,7 +1647,7 @@ const char* ObjectiveTimerWindow::ObjectiveSet::GetDurationStr()
 bool ObjectiveTimerWindow::ObjectiveSet::Draw()
 {
     char buf[256];
-    if (!show_past_runs && from_disk) {
+    if (!settings.show_past_runs && from_disk) {
         tm timeinfo{};
         GetStartTime(&timeinfo);
         const time_t now = time(nullptr);
@@ -1687,7 +1656,7 @@ bool ObjectiveTimerWindow::ObjectiveSet::Draw()
             return true; // Hide this objective set; its from a previous day
         }
     }
-    if (show_start_date_time) {
+    if (settings.show_start_date_time) {
         sprintf(buf, "%s - %s - %s%s###header%u", GetStartTimeStr(), name.c_str(), GetDurationStr(), failed ? " [Failed]" : "", ui_id);
     }
     else {

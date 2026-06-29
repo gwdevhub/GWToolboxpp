@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <array>
+#include <map>
+
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -7,7 +10,24 @@
 #include <Logger.h>
 #include "MathUtility.h"
 #include "Pathing.h"
-#include "constant_vector.hpp"
+#include "PathingLog.h"
+#include "PathingMapDataLoader.h"
+#include "NavMesh.h" // hand-built Detour navmesh, co-built for the debug overlay (pathing uses the visgraph)
+
+// Define PATHING_VERBOSE to re-enable per-stage Log::Info chatter; errors/warnings always log.
+// #define PATHING_VERBOSE 1
+#ifdef PATHING_VERBOSE
+#define PATH_LOG_INFO(...) Log::Info(__VA_ARGS__)
+#else
+#define PATH_LOG_INFO(...) ((void)0)
+// Locals/params that exist only to be formatted into PATH_LOG_INFO are unused when it compiles out.
+#pragma warning(disable: 4189 4100)
+#endif
+
+static constexpr auto OPEN_CAPACITY = 2'000z;
+static constexpr auto PATHING_COUNT = 20'000z;
+// Max funnel-expansions of any one portal per source build; caps dense portals so the step budget covers breadth.
+static constexpr auto PATHING_PORTAL_EXPAND_CAP = 8z;
 
 namespace {
     __forceinline float Cross(const GW::Vec2f& lhs, const GW::Vec2f& rhs)
@@ -26,15 +46,22 @@ namespace {
         std::chrono::time_point<std::chrono::high_resolution_clock> start;
 
     public:
-        Timing(std::string_view label) : label(std::move(label)), start(std::chrono::high_resolution_clock::now()) {}
+        Timing(std::string_view label) : label(label), start(std::chrono::high_resolution_clock::now()) {}
         ~Timing()
         {
             auto elapsed = std::chrono::high_resolution_clock::now() - start;
-            Log::Info("%s: %ld ms.", label.c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed));
+            PATH_LOG_INFO("%s: %lld ms.", label.c_str(), std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+        }
+
+        long long elapsed_ms() const
+        {
+            auto elapsed = std::chrono::high_resolution_clock::now() - start;
+            return std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
         }
 #else
     public:
         Timing(...) {};
+        long long elapsed_ms() const { return 0; }
 #endif
     };
 } // namespace
@@ -144,8 +171,8 @@ namespace Pathing {
                     }
                     case 1: // YNode = 1,
                     {
-                        GW::YNode* yn = static_cast<GW::YNode*>(n);
-                        float d = point.y - yn->pos.y;
+                        const auto yn = static_cast<GW::YNode*>(n);
+                        const float d = point.y - yn->pos.y;
                         if ((d > tolerance) || (open.push_back(yn->below), (d >= -tolerance))) {
                             open.push_back(yn->above);
                         }
@@ -237,7 +264,7 @@ namespace Pathing {
     }
 
 
-    std::mutex pathing_mutex;
+    static std::mutex pathing_mutex;
 
     GW::Array<GW::MapProp*>* GetMapProps()
     {
@@ -250,38 +277,79 @@ namespace Pathing {
     // Grab a copy of map_context->sub1->pathing_map_block for processing on a different thread - Blocks until copy is complete
     Pathing::Error CopyPathingMapBlocks(GW::MapContext* mapContext, Pathing::BlockedPlaneBitset* dest)
     {
-        volatile Pathing::Error res = Pathing::Error::Unknown;
-        std::mutex mutex;
         *dest = {0};
         if (!(mapContext && mapContext->path)) {
             return Pathing::Error::InvalidMapContext;
         }
-        // Enqueue
-        GW::GameThread::Enqueue([mapContext, dest, &res, &mutex] {
-            const std::lock_guard lock(mutex);
+        std::atomic<Pathing::Error> res{Pathing::Error::Unknown};
+        GW::GameThread::Enqueue([mapContext, dest, &res] {
+            Pathing::Error r;
             if (!(mapContext && mapContext->path)) {
-                res = Pathing::Error::InvalidMapContext;
-                return ;
+                r = Pathing::Error::InvalidMapContext;
             }
-            auto& block = mapContext->path->blockedPlanes;
-            ASSERT(block.size() < dest->size());
-            for (size_t i = 0; i < block.size(); i++) {
-                dest->set(i, block[i] != 0);
+            else {
+                auto& block = mapContext->path->blockedPlanes;
+                if (block.size() >= dest->size()) {
+                    r = Pathing::Error::InvalidMapContext;
+                }
+                else {
+                    for (size_t i = 0; i < block.size(); i++) {
+                        dest->set(i, block[i] != 0);
+                    }
+                    r = Pathing::Error::OK;
+                }
             }
-            res = Pathing::Error::OK;
+            res.store(r, std::memory_order_release);
         });
-        // Wait
-        do {
-            const std::lock_guard lock(mutex);
-            if (res != Pathing::Error::Unknown) break;
-        } while (true);
-        return res;
+        Pathing::Error r;
+        while ((r = res.load(std::memory_order_acquire)) == Pathing::Error::Unknown) {
+            std::this_thread::yield();
+        }
+        return r;
     }
 
     // Overload that gets MapContext automatically
     Pathing::Error CopyPathingMapBlocks(Pathing::BlockedPlaneBitset* dest)
     {
         return CopyPathingMapBlocks(GW::GetMapContext(), dest);
+    }
+
+    // Overload using PathingMapData's blockedPlanesPtr (no MapContext needed)
+    Pathing::Error CopyPathingMapBlocks(const Pathing::PathingMapData* mapData, Pathing::BlockedPlaneBitset* dest)
+    {
+        *dest = {0};
+        if (!mapData || !mapData->blockedPlanesPtr) {
+            // DAT-loaded or no pointer: all planes unblocked
+            return Pathing::Error::OK;
+        }
+        // Validate against live MapContext; blockedPlanesPtr may dangle after a map change.
+        std::atomic<Pathing::Error> res{Pathing::Error::Unknown};
+        GW::GameThread::Enqueue([mapData, dest, &res] {
+            Pathing::Error r;
+            const auto mc = GW::GetMapContext();
+            if (!(mc && mc->path && &mc->path->blockedPlanes == mapData->blockedPlanesPtr)) {
+                // Pointer is stale (map changed), treat as all unblocked
+                r = Pathing::Error::OK;
+            }
+            else {
+                const auto& block = mc->path->blockedPlanes;
+                if (block.size() >= dest->size()) {
+                    r = Pathing::Error::InvalidMapContext;
+                }
+                else {
+                    for (size_t i = 0; i < block.size(); i++) {
+                        dest->set(i, block[i] != 0);
+                    }
+                    r = Pathing::Error::OK;
+                }
+            }
+            res.store(r, std::memory_order_release);
+        });
+        Pathing::Error r;
+        while ((r = res.load(std::memory_order_acquire)) == Pathing::Error::Unknown) {
+            std::this_thread::yield();
+        }
+        return r;
     }
 
     // Helper wrappers that get the map from the current MapContext
@@ -297,6 +365,170 @@ namespace Pathing {
         auto* mapContext = GW::GetMapContext();
         if (!mapContext || !mapContext->path || !mapContext->path->staticData) return nullptr;
         return FindClosestPositionOnTrapezoid(point, &mapContext->path->staticData->map);
+    }
+
+    // PathingMapData-based overloads (no MapContext needed)
+    GW::PathingTrapezoid* FindTrapezoid(const GW::GamePos& point, const Pathing::PathingMapData* mapData)
+    {
+        if (!mapData || point.zplane >= mapData->planes.size()) return nullptr;
+
+        const auto& pm = mapData->planes[point.zplane];
+        GW::Node* n = pm.root_node;
+
+        int cnt = 50000;
+        while (n && cnt--) {
+            switch (n->type) {
+                case 0: {
+                    GW::XNode* xn = static_cast<GW::XNode*>(n);
+                    float d = (point.y - xn->pos.y) * xn->dir.x - (point.x - xn->pos.x) * xn->dir.y;
+                    n = (d >= 0.0f) ? xn->right : xn->left;
+                    break;
+                }
+                case 1: {
+                    GW::YNode* yn = static_cast<GW::YNode*>(n);
+                    if (point.y > yn->pos.y) n = yn->above;
+                    else if (point.y < yn->pos.y) n = yn->below;
+                    else n = (point.x >= yn->pos.x) ? yn->above : yn->below;
+                    break;
+                }
+                case 2: {
+                    GW::SinkNode* sn = static_cast<GW::SinkNode*>(n);
+                    return sn ? sn->trapezoid : nullptr;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    GW::PathingTrapezoid* FindClosestTrapezoid(const GW::GamePos& point, const Pathing::PathingMapData* mapData, uint32_t* resolved_layer = nullptr)
+    {
+        if (!mapData || mapData->planes.empty()) return nullptr;
+
+        GW::PathingTrapezoid* closest = FindTrapezoid(point, mapData);
+        if (closest) {
+            if (resolved_layer) *resolved_layer = point.zplane;
+            return closest;
+        }
+
+        float closest_dist = std::numeric_limits<float>::infinity();
+        uint32_t closest_layer = point.zplane;
+        constexpr float tolerance = 50.0f;
+
+        std::vector<GW::Node*> open;
+
+        for (size_t i = 0; i < mapData->planes.size(); ++i) {
+            const auto& pm = mapData->planes[i];
+            open.push_back(pm.root_node);
+
+            int cnt = 50000;
+            while (open.size() && cnt--) {
+                GW::Node* n = std::move(open.back());
+                open.pop_back();
+
+                if (!n) continue;
+
+                switch (n->type) {
+                    case 0: {
+                        GW::XNode* xn = static_cast<GW::XNode*>(n);
+                        float d = ((point.y - xn->pos.y) * xn->dir.x - (point.x - xn->pos.x) * xn->dir.y) / GW::GetNorm(xn->dir);
+                        if ((d > tolerance) || (open.push_back(xn->left), (d >= -tolerance))) {
+                            open.push_back(xn->right);
+                        }
+                        break;
+                    }
+                    case 1: {
+                        GW::YNode* yn = static_cast<GW::YNode*>(n);
+                        float d = point.y - yn->pos.y;
+                        if ((d > tolerance) || (open.push_back(yn->below), (d >= -tolerance))) {
+                            open.push_back(yn->above);
+                        }
+                        break;
+                    }
+                    case 2: {
+                        GW::SinkNode* sn = static_cast<GW::SinkNode*>(n);
+                        if (!sn->trapezoid) continue;
+                        GW::PathingTrapezoid* pt = sn->trapezoid;
+
+                        if (IsOnPathingTrapezoid(pt, point)) {
+                            if (resolved_layer) *resolved_layer = static_cast<uint32_t>(i);
+                            return pt;
+                        }
+
+                        float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
+                        float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
+                        float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
+                        float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
+                        float d = std::min({d1, d2, d3, d4});
+                        if (closest_dist > d) {
+                            closest_dist = d;
+                            closest = pt;
+                            closest_layer = static_cast<uint32_t>(i);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (resolved_layer) *resolved_layer = closest_layer;
+        return closest;
+    }
+
+    GW::PathingTrapezoid* FindClosestPositionOnTrapezoid(GW::GamePos& point, const Pathing::PathingMapData* mapData)
+    {
+        if (!mapData || mapData->planes.empty()) return nullptr;
+
+        uint32_t resolved_layer = point.zplane;
+        GW::PathingTrapezoid* pt = FindClosestTrapezoid(point, mapData, &resolved_layer);
+        if (pt) {
+            point.zplane = resolved_layer;
+            return pt;
+        }
+
+        float closest_dist = std::numeric_limits<float>::infinity();
+        GW::PathingTrapezoid* closest = nullptr;
+
+        for (size_t z = 0; z < mapData->planes.size(); ++z) {
+            const auto& m = mapData->planes[z];
+            for (uint32_t i = 0; i < m.trapezoid_count; ++i) {
+                pt = &m.trapezoids[i];
+                float d1 = MathUtil::getDistanceFromLine({pt->XTL, pt->YT}, {pt->XTR, pt->YT}, point);
+                float d2 = MathUtil::getDistanceFromLine({pt->XTR, pt->YT}, {pt->XBR, pt->YB}, point);
+                float d3 = MathUtil::getDistanceFromLine({pt->XBR, pt->YB}, {pt->XBL, pt->YB}, point);
+                float d4 = MathUtil::getDistanceFromLine({pt->XBL, pt->YB}, {pt->XTL, pt->YT}, point);
+                float d = std::min({d1, d2, d3, d4});
+                if (closest_dist > d) {
+                    closest_dist = d;
+                    closest = pt;
+                    point.zplane = static_cast<uint32_t>(z);
+                }
+            }
+        }
+        if (!closest) return nullptr;
+
+        GW::Vec2f p0, p1;
+        if (closest_dist == MathUtil::getDistanceFromLine({closest->XTL, closest->YT}, {closest->XTR, closest->YT}, point)) {
+            p0 = {closest->XTL, closest->YT};
+            p1 = {closest->XTR, closest->YT};
+        }
+        else if (closest_dist == MathUtil::getDistanceFromLine({closest->XTR, closest->YT}, {closest->XBR, closest->YB}, point)) {
+            p0 = {closest->XTR, closest->YT};
+            p1 = {closest->XBR, closest->YB};
+        }
+        else if (closest_dist == MathUtil::getDistanceFromLine({closest->XBR, closest->YB}, {closest->XBL, closest->YB}, point)) {
+            p0 = {closest->XBR, closest->YB};
+            p1 = {closest->XBL, closest->YB};
+        }
+        else {
+            p0 = {closest->XBL, closest->YB};
+            p1 = {closest->XTL, closest->YT};
+        }
+
+        auto ba = p1 - p0, pa = point - p0;
+        float h = std::clamp(Dot(pa, ba) / Dot(ba, ba), 0.0f, 1.0f);
+        point = p0 + h * ba;
+
+        return closest;
     }
 
     uint32_t FileHashToFileId(wchar_t* param_1)
@@ -330,6 +562,10 @@ namespace Pathing {
             case 0x4e6b2: // Eotn asura gate
             case 0x3c5ac: // Eotn, Nightfall
             case 0xa825:  // Prophecies, Factions
+            case 0xe723:  // Prophecies
+            case 0x858b:  // Prophecies
+            case 0x1c533:
+            case 0x5e77a:
                 return true;
         }
         return false;
@@ -350,8 +586,6 @@ namespace Pathing {
         PointId m_enter, m_exit;
         MapSpecific::Teleport::direction m_directionality;
     };
-    std::vector<DefferedTeleport> m_defferedPortalLinks;
-
     enum class Edge : uint8_t { top, right, bottom, left };
 
     class Portal {
@@ -392,66 +626,143 @@ namespace Pathing {
     } Explore;
 
     struct node {
-        BlockedPlaneBitset blocked_planes;
-        size_t visited_checkpoint; // rollback checkpoint
-        GW::Vec2f funnel[2];
-        Portal::id next;
+        GW::Vec2f funnel[2];            // 16 bytes
+        uint32_t visited_checkpoint;    // 4 bytes
+        uint16_t blocked_idx;           // 2 bytes - index into BlockedPlanesPool (cnt bounded < 65535, see PATHING_COUNT)
+        Portal::id next;                // 2 bytes
+    };  // 24 bytes total
+
+    struct BlockedPlanesPool {
+        BlockedPlaneBitset* data = nullptr;
+        uint16_t size = 0;
+        uint16_t capacity = 0;
+
+        BlockedPlanesPool() = default;
+        ~BlockedPlanesPool() { delete[] data; }
+        BlockedPlanesPool(const BlockedPlanesPool&) = delete;
+        BlockedPlanesPool& operator=(const BlockedPlanesPool&) = delete;
+
+        void init(uint16_t cap)
+        {
+            if (capacity < cap) {
+                delete[] data;
+                data = new BlockedPlaneBitset[cap];
+                capacity = cap;
+            }
+            size = 0;
+        }
+
+        __forceinline void reset() { size = 0; }
+
+        __forceinline uint16_t alloc_empty()
+        {
+            if (size >= capacity) grow();
+            uint16_t idx = size++;
+            data[idx].reset();
+            return idx;
+        }
+
+        __forceinline uint16_t alloc_with_bit(uint16_t src, size_t bit)
+        {
+            if (size >= capacity) grow();
+            uint16_t idx = size++;
+            data[idx] = data[src];
+            data[idx].set(bit, true);
+            return idx;
+        }
+
+        void grow()
+        {
+            uint16_t new_cap = capacity ? capacity * 2 : 4096;
+            auto* new_data = new BlockedPlaneBitset[new_cap];
+            if (data) {
+                memcpy(new_data, data, size * sizeof(BlockedPlaneBitset));
+                delete[] data;
+            }
+            data = new_data;
+            capacity = new_cap;
+        }
     };
 
     struct VisitedState {
-        cv::vector<uint16_t> visited; // size = portals.size()
-        cv::vector<Portal::id> stack; // change history
+        uint16_t* visited = nullptr;  // flat array indexed by portal id
+        Portal::id* stack = nullptr;  // rollback history stack
+        size_t stack_size = 0;
+        size_t stack_capacity = 0;
+        size_t visited_count = 0;
         uint16_t stamp = 1;
+
+        VisitedState() = default;
+        ~VisitedState() { delete[] visited; delete[] stack; }
+        VisitedState(const VisitedState&) = delete;
+        VisitedState& operator=(const VisitedState&) = delete;
 
         void init(size_t n)
         {
-            visited.resize(n);
-            stack.reserve(2048);
-            stamp = 1;
+            if (visited_count < n) {
+                delete[] visited;
+                visited = new uint16_t[n]();
+                visited_count = n;
+                stamp = 1; // only reset stamp on fresh allocation
+            }
+            if (stack_capacity == 0) {
+                stack_capacity = 4096;
+                stack = new Portal::id[stack_capacity];
+            }
+            stack_size = 0;
         }
 
-        inline bool is_visited(Portal::id id) const { return visited[static_cast<uint16_t>(id)] == stamp; }
+        __forceinline bool is_visited(Portal::id id) const { return visited[static_cast<uint16_t>(id)] == stamp; }
 
-        inline void visit(Portal::id id)
+        __forceinline void visit(Portal::id id)
         {
             if (visited[static_cast<uint16_t>(id)] != stamp) {
                 visited[id] = stamp;
-                stack.push_back(id);
+                stack[stack_size++] = id;
             }
         }
 
-        inline size_t checkpoint() const { return stack.size(); }
+        __forceinline size_t checkpoint() const { return stack_size; }
 
-        inline void rollback(size_t checkpoint)
+        __forceinline void rollback(size_t cp)
         {
-            while (stack.size() > checkpoint) {
-                visited[stack.back()] = 0;
-                stack.pop_back();
+            while (stack_size > cp) {
+                visited[stack[--stack_size]] = 0;
             }
         }
     };
 
 
     struct VisitedPoints {
-        cv::vector<uint32_t> gen;
+        uint32_t* gen = nullptr;
+        size_t count = 0;
         uint32_t cur = 1;
+
+        VisitedPoints() = default;
+        ~VisitedPoints() { delete[] gen; }
+        VisitedPoints(const VisitedPoints&) = delete;
+        VisitedPoints& operator=(const VisitedPoints&) = delete;
 
         void init(size_t n)
         {
-            gen.resize(n);
+            if (count < n) {
+                delete[] gen;
+                gen = new uint32_t[n]();
+                count = n;
+            }
             cur = 1;
         }
 
-        inline void reset()
+        __forceinline void reset()
         {
             ++cur;
             if (cur == 0) { // overflow safety
-                std::fill(gen.begin(), gen.end(), 0);
+                memset(gen, 0, count * sizeof(uint32_t));
                 cur = 1;
             }
         }
 
-        inline bool test_and_set(PointId id)
+        __forceinline bool test_and_set(PointId id)
         {
             if (gen[id] == cur) return false;
             gen[id] = cur;
@@ -460,10 +771,11 @@ namespace Pathing {
     };
 
     struct Impl {
-        Impl() : m_msd(), m_visGraph(), points(), portals(), pt_portal_map(), portal_pt_map(), portal_portal_map(), tmp_portal_pt_map(), ptneighbours(), m_teleports(), travel_portals(), m_teleportGraph(), m_copiedMapData() {}
+        Impl() : m_msd(), m_visGraph(), points(), portals(), pt_portal_map(), portal_pt_map(), portal_portal_map(), tmp_portal_pt_map(), ptneighbours(), m_teleports(), travel_portals(), m_teleportGraph(), m_mapData() {}
 
-        ~Impl() { CleanupCopiedMapData(); }
+        ~Impl() { delete m_navmesh; }
 
+        NavMesh* m_navmesh = nullptr; // hand-built Detour mesh — drives the debug overlay (exact GW coords)
         MapSpecific::MapSpecificData m_msd;
         std::vector<std::vector<PointVisElement>> m_visGraph;                          // PointId
         std::vector<Point> points;                                                     // PointId
@@ -476,6 +788,7 @@ namespace Pathing {
         MapSpecific::Teleports m_teleports;
         std::vector<GW::MapProp*> travel_portals;
         std::vector<MapSpecific::teleport_node> m_teleportGraph;
+        std::vector<DefferedTeleport> m_defferedPortalLinks;
         volatile bool m_terminateThread = false;
 
         // Runtime/tmp vars that would otherwise have been static for cca - maybe add mutex?
@@ -483,174 +796,129 @@ namespace Pathing {
         std::vector<Explore> GetTrapezoidNeighbours_to_explore;
         std::vector<Neighbour> isNeighbourOf_neighbours;
 
-        // Deep copied map data - NO external pointers allowed!
-        struct CopiedPathingMap {
-            uint32_t trapezoid_count;
-            GW::PathingTrapezoid* trapezoids;
-            uint32_t portal_count;
-            GW::Portal* portals;
-            GW::Node* root_node; // We'll keep tree nodes from game (they're const data)
-            uint32_t zplane;
+        // Reusable AStar::Search buffers (avoid per-call heap allocations)
+        struct SearchBuffers {
+            float* cost_so_far = nullptr;
+            PointId* came_from = nullptr;
+            bool* closed = nullptr;
+            int32_t* goal_edge_idx = nullptr; // per-point index into goal_edges, -1 if no goal edge from this point
+            size_t buf_capacity = 0;
 
-            CopiedPathingMap() : trapezoid_count(0), trapezoids(nullptr), portal_count(0), portals(nullptr), root_node(nullptr), zplane(0) {}
-        };
+            // Binary heap priority queue on raw arrays. g_cost is recovered from cost_so_far[id]
+            // after pop, so it doesn't need to live in the heap entry — keeps the entry at 8 bytes.
+            struct PQEntry { float priority; PointId id; };
+            PQEntry* pq_data = nullptr;
+            size_t pq_size = 0;
+            size_t pq_capacity = 0;
 
-        struct CopiedMapData {
-            std::vector<CopiedPathingMap> maps;
-            uint32_t pathNodeSize;
-        };
+            // VisGraphInsertPoint reusable state
+            node* insert_open = nullptr;
+            VisitedState insert_visited;
+            BlockedPlanesPool insert_bp_pool;
 
-        CopiedMapData m_copiedMapData;
+            // Per-query visibility edges for virtual start/goal (no m_visGraph mutation)
+            std::vector<PointVisElement> start_edges;
+            std::vector<PointVisElement> goal_edges;
 
-        void CleanupCopiedMapData()
-        {
-            for (auto& map : m_copiedMapData.maps) {
-                if (map.trapezoids) {
-                    delete[] map.trapezoids;
-                    map.trapezoids = nullptr;
+            ~SearchBuffers() { delete[] cost_so_far; delete[] came_from; delete[] closed; delete[] goal_edge_idx; delete[] pq_data; delete[] insert_open; }
+
+            void init_buffers(size_t n)
+            {
+                if (buf_capacity < n) {
+                    delete[] cost_so_far;
+                    delete[] came_from;
+                    delete[] closed;
+                    delete[] goal_edge_idx;
+                    cost_so_far = new float[n];
+                    came_from = new PointId[n];
+                    closed = new bool[n];
+                    goal_edge_idx = new int32_t[n];
+                    buf_capacity = n;
                 }
-                if (map.portals) {
-                    // First delete the trapezoid pointer arrays in each portal
-                    for (uint32_t i = 0; i < map.portal_count; ++i) {
-                        if (map.portals[i].trapezoids) {
-                            delete[] map.portals[i].trapezoids;
-                        }
-                    }
-                    delete[] map.portals;
-                    map.portals = nullptr;
+                if (pq_capacity < n) {
+                    delete[] pq_data;
+                    pq_data = new PQEntry[n];
+                    pq_capacity = n;
                 }
-                // root_node points to game memory - don't delete
-            }
-            m_copiedMapData.maps.clear();
-        }
-
-        void CopyMapData(const GW::PathContext* src)
-        {
-            if (!src || !src->staticData) return;
-
-            CleanupCopiedMapData();
-
-            const auto& srcMaps = src->staticData->map;
-            m_copiedMapData.maps.resize(srcMaps.size());
-            m_copiedMapData.pathNodeSize = src->pathNodes.size();
-
-            // Build ID->pointer mappings for fixup
-            std::unordered_map<uint32_t, GW::PathingTrapezoid*> idToTrapezoid;
-            std::unordered_map<const GW::Portal*, GW::Portal*> oldToNewPortal;
-
-            // Pass 1: Copy all trapezoids and build ID map
-            for (size_t mapIdx = 0; mapIdx < srcMaps.size(); ++mapIdx) {
-                const auto& srcMap = srcMaps[mapIdx];
-                auto& dstMap = m_copiedMapData.maps[mapIdx];
-
-                dstMap.zplane = srcMap.zplane;
-                dstMap.trapezoid_count = srcMap.trapezoid_count;
-                dstMap.portal_count = srcMap.portal_count;
-
-                // Copy trapezoids
-                if (srcMap.trapezoids && srcMap.trapezoid_count > 0) {
-                    dstMap.trapezoids = new GW::PathingTrapezoid[srcMap.trapezoid_count];
-                    for (uint32_t i = 0; i < srcMap.trapezoid_count; ++i) {
-                        // Copy the trapezoid data
-                        dstMap.trapezoids[i] = srcMap.trapezoids[i];
-                        // Clear adjacent pointers for now - will fix up in pass 2
-                        dstMap.trapezoids[i].adjacent[0] = nullptr;
-                        dstMap.trapezoids[i].adjacent[1] = nullptr;
-                        dstMap.trapezoids[i].adjacent[2] = nullptr;
-                        dstMap.trapezoids[i].adjacent[3] = nullptr;
-
-                        // Build ID map
-                        idToTrapezoid[srcMap.trapezoids[i].id] = &dstMap.trapezoids[i];
-                    }
-                }
-
-                // Copy portals (before fixup)
-                if (srcMap.portals && srcMap.portal_count > 0) {
-                    dstMap.portals = new GW::Portal[srcMap.portal_count];
-                    for (uint32_t i = 0; i < srcMap.portal_count; ++i) {
-                        // Copy portal data
-                        dstMap.portals[i] = srcMap.portals[i];
-                        dstMap.portals[i].pair = nullptr;       // Will fix up in pass 2
-                        dstMap.portals[i].trapezoids = nullptr; // Will fix up in pass 2
-
-                        // Build portal map
-                        oldToNewPortal[&srcMap.portals[i]] = &dstMap.portals[i];
-                    }
+                pq_size = 0;
+                if (!insert_open) {
+                    insert_open = new node[OPEN_CAPACITY];
                 }
             }
 
-            // Pass 2: Fix up all pointers using IDs/maps
-            for (size_t mapIdx = 0; mapIdx < srcMaps.size(); ++mapIdx) {
-                const auto& srcMap = srcMaps[mapIdx];
-                auto& dstMap = m_copiedMapData.maps[mapIdx];
+            void reset(size_t n, PointId start_id)
+            {
+                for (size_t i = 0; i < n; ++i)
+                    cost_so_far[i] = INFINITY;
+                cost_so_far[start_id] = 0.0f;
+                memset(closed, 0, n * sizeof(bool));
+                memset(goal_edge_idx, 0xFF, n * sizeof(int32_t)); // fill with -1
+                pq_size = 0;
+            }
 
-                // Fix up adjacent pointers in trapezoids
-                if (srcMap.trapezoids && srcMap.trapezoid_count > 0) {
-                    for (uint32_t i = 0; i < srcMap.trapezoid_count; ++i) {
-                        for (int j = 0; j < 4; ++j) {
-                            if (srcMap.trapezoids[i].adjacent[j]) {
-                                uint32_t adjacentId = srcMap.trapezoids[i].adjacent[j]->id;
-                                auto it = idToTrapezoid.find(adjacentId);
-                                if (it != idToTrapezoid.end()) {
-                                    dstMap.trapezoids[i].adjacent[j] = it->second;
-                                }
-                                // else leave as nullptr
-                            }
-                        }
-                    }
+            // Lazy deletion means A* can push a node once per cost improvement, so worst-case
+            // heap size isn't bounded by n — pq_push grows on demand instead of asserting.
+            void pq_grow()
+            {
+                const size_t new_cap = pq_capacity ? pq_capacity * 2 : 64;
+                auto* new_data = new PQEntry[new_cap];
+                if (pq_data) {
+                    memcpy(new_data, pq_data, pq_size * sizeof(PQEntry));
+                    delete[] pq_data;
                 }
+                pq_data = new_data;
+                pq_capacity = new_cap;
+            }
 
-                // Fix up portal pointers
-                if (srcMap.portals && srcMap.portal_count > 0) {
-                    for (uint32_t i = 0; i < srcMap.portal_count; ++i) {
-                        // Fix up pair pointer
-                        if (srcMap.portals[i].pair) {
-                            auto it = oldToNewPortal.find(srcMap.portals[i].pair);
-                            if (it != oldToNewPortal.end()) {
-                                dstMap.portals[i].pair = it->second;
-                            }
-                            // else leave as nullptr
-                        }
-
-                        // Fix up trapezoid pointers in portal
-                        if (srcMap.portals[i].trapezoids && srcMap.portals[i].count > 0) {
-                            auto newTrapPtrs = new GW::PathingTrapezoid*[srcMap.portals[i].count];
-                            for (uint32_t j = 0; j < srcMap.portals[i].count; ++j) {
-                                if (srcMap.portals[i].trapezoids[j]) {
-                                    uint32_t trapId = srcMap.portals[i].trapezoids[j]->id;
-                                    auto it = idToTrapezoid.find(trapId);
-                                    if (it != idToTrapezoid.end()) {
-                                        newTrapPtrs[j] = it->second;
-                                    }
-                                    else {
-                                        newTrapPtrs[j] = nullptr;
-                                    }
-                                }
-                                else {
-                                    newTrapPtrs[j] = nullptr;
-                                }
-                            }
-                            dstMap.portals[i].trapezoids = newTrapPtrs;
-                        }
-                        else {
-                            dstMap.portals[i].trapezoids = nullptr;
-                        }
-                    }
+            // Min-heap operations
+            __forceinline void pq_push(float priority, PointId id)
+            {
+                if (pq_size == pq_capacity) pq_grow();
+                size_t i = pq_size++;
+                pq_data[i] = {priority, id};
+                // sift up
+                while (i > 0) {
+                    size_t parent = (i - 1) >> 1;
+                    if (pq_data[parent].priority <= pq_data[i].priority) break;
+                    PQEntry tmp = pq_data[parent];
+                    pq_data[parent] = pq_data[i];
+                    pq_data[i] = tmp;
+                    i = parent;
                 }
             }
-        }
 
-        // Helper to get pathNodes size for reserving
-        size_t GetPathNodesSize() const { return m_copiedMapData.pathNodeSize; }
+            __forceinline PQEntry pq_pop()
+            {
+                PQEntry top = pq_data[0];
+                pq_data[0] = pq_data[--pq_size];
+                // sift down
+                size_t i = 0;
+                for (;;) {
+                    size_t left = (i << 1) + 1;
+                    size_t right = left + 1;
+                    size_t smallest = i;
+                    if (left < pq_size && pq_data[left].priority < pq_data[smallest].priority)
+                        smallest = left;
+                    if (right < pq_size && pq_data[right].priority < pq_data[smallest].priority)
+                        smallest = right;
+                    if (smallest == i) break;
+                    PQEntry tmp = pq_data[i];
+                    pq_data[i] = pq_data[smallest];
+                    pq_data[smallest] = tmp;
+                    i = smallest;
+                }
+                return top;
+            }
 
-        // Helper to check if map data is valid
-        bool HasMapData() const { return !m_copiedMapData.maps.empty(); }
+            __forceinline bool pq_empty() const { return pq_size == 0; }
+        } m_searchBufs;
 
-        // Helper to get map count
-        size_t GetMapCount() const { return m_copiedMapData.maps.size(); }
+        Pathing::PathingMapData m_mapData;
 
-        // Helper to get specific map
-        const CopiedPathingMap& GetMap(size_t index) const { return m_copiedMapData.maps[index]; }
+        size_t GetPathNodesSize() const { return m_mapData.pathNodeSize; }
+        bool HasMapData() const { return !m_mapData.planes.empty(); }
+        size_t GetMapCount() const { return m_mapData.planes.size(); }
+        const Pathing::CopiedPathingMap& GetMap(size_t index) const { return m_mapData.planes[index]; }
 
         void createPortalPair(const GW::PathingTrapezoid* pt1, uint8_t pt1_layer, const GW::PathingTrapezoid* pt2, uint8_t pt2_layer, GW::Vec2f p1, bool p1_viability, GW::Vec2f p2, bool p2_viability, Edge edge)
         {
@@ -665,8 +933,12 @@ namespace Pathing {
 
             portals.emplace_back(id + 1, id, p_id + 1, p_id, pt2, pt2_layer, (Edge)(((uint32_t)edge + 2u) % 4u));
 
-            pt_portal_map[pt1->id].push_back(id);
-            pt_portal_map[pt2->id].push_back(id + 1);
+            if (pt1->id < pt_portal_map.size()) {
+                pt_portal_map[pt1->id].push_back(id);
+            }
+            if (pt2->id < pt_portal_map.size()) {
+                pt_portal_map[pt2->id].push_back(id + 1);
+            }
             tmp_portal_pt_map[id] = pt1;
             tmp_portal_pt_map[id + 1] = pt2;
         }
@@ -741,7 +1013,7 @@ namespace Pathing {
                             else {
                                 if (onSegment({trapezoid->XTR, trapezoid->YT}, {(*it)->XTL, (*it)->YT}, {trapezoid->XBR, trapezoid->YB}) || onSegment({trapezoid->XTR, trapezoid->YT}, {(*it)->XBL, (*it)->YB}, {trapezoid->XBR, trapezoid->YB}) ||
                                     onSegment({(*it)->XTL, (*it)->YT}, {trapezoid->XTR, trapezoid->YT}, {(*it)->XBL, (*it)->YB}) || onSegment({(*it)->XTL, (*it)->YT}, {trapezoid->XTR, trapezoid->YT}, {(*it)->XBL, (*it)->YB})) {
-                                    neighbours.emplace_back(*it, (uint8_t)portal->neighbor_plane, Edge::right);
+                                    neighbours.emplace_back(*it, (uint8_t)portal->portal_plane, Edge::right);
                                     visited[(*it)] = true;
                                 }
                             }
@@ -993,7 +1265,7 @@ namespace Pathing {
                 createPortalPair(pt1, pt1_layer, pt2, pt2_layer, a, point1_viability, b, point2_viability, edge);
             }
             else {
-                Log::Error("linkTrapezoids(): edge == Edge::none");
+                PATH_LOG_ERROR("linkTrapezoids(): edge == Edge::none");
             }
         }
 
@@ -1014,6 +1286,7 @@ namespace Pathing {
                     GetTrapezoidNeighbours(m, t, i, n);
                 }
             }
+
         }
 
 
@@ -1072,13 +1345,10 @@ namespace Pathing {
             });
 
 #ifdef DEBUG_PATHING
-            Log::Info("total trapezoid count: %d", mapContex->path->pathNodes.size());
-            Log::Info("new portals: %d", portals.size());
-            Log::Info("viable points: %d", std::ranges::count_if(points, [](const auto& point) {
-                          return point.is_viable;
-                      }));
-            Log::Info("total points: %d", points.size());
-            ;
+            PATH_LOG_INFO("[Portals] trapezoids=%zu, portals=%zu, points=%zu",
+                GetPathNodesSize(), portals.size(), points.size());
+            PATH_LOG_INFO("[Portals] viable_points=%d",
+                (int)std::ranges::count_if(points, [](const auto& point) { return point.is_viable; }));
 #endif
         }
 
@@ -1091,11 +1361,11 @@ namespace Pathing {
 
             m_defferedPortalLinks.clear();
             for (const auto& teleport : m_teleports) {
-                auto pt = Pathing::FindClosestTrapezoid(teleport.m_enter);
+                auto pt = Pathing::FindClosestTrapezoid(teleport.m_enter, &m_mapData);
                 if (!pt) continue;
                 auto& enter_id = createSinglePointPortal(pt, teleport.m_enter);
 
-                pt = Pathing::FindClosestTrapezoid(teleport.m_exit);
+                pt = Pathing::FindClosestTrapezoid(teleport.m_exit, &m_mapData);
                 if (!pt) continue;
                 auto& exit_id = createSinglePointPortal(pt, teleport.m_enter);
                 m_defferedPortalLinks.emplace_back(enter_id.m_id, exit_id.m_id, teleport.m_directionality);
@@ -1138,37 +1408,75 @@ namespace Pathing {
             }
         }
 
-        inline void process_portal(std::vector<node>& open, size_t& sp, VisitedState& visited, const Portal& portal, Portal::id other_portal_id)
+        inline void process_portal(node* open, size_t& sp, VisitedState& visited, BlockedPlanesPool& bp_pool, const Portal& portal, Portal::id other_portal_id)
         {
             size_t checkpoint = visited.checkpoint();
 
             visited.visit(portal.m_id);
             visited.visit(other_portal_id);
 
-            for (auto pid : portal_portal_map[portal.m_id]) {
+            // All siblings share the same blocked_planes - allocate once
+            uint16_t bp_idx = bp_pool.alloc_empty();
+            if (portal.m_pt_layer) bp_pool.data[bp_idx].set(portal.m_pt_layer, true);
+
+            const Point* const P = points.data();
+            const Portal* const PT = portals.data();
+            const auto& neighbours = portal_portal_map.data()[portal.m_id];
+            const Portal::id* npd = neighbours.data();
+            const size_t nn = neighbours.size();
+            for (size_t k = 0; k < nn; ++k) {
+                const auto pid = npd[k];
                 if (pid == portal.m_id || pid == other_portal_id) continue;
 
-                if (sp >= open.size()) return; // safety guard
+                if (sp >= OPEN_CAPACITY) return; // safety guard
 
                 node& n = open[sp++];
                 n.next = pid;
-                n.visited_checkpoint = checkpoint;
+                n.visited_checkpoint = static_cast<uint32_t>(checkpoint);
+                n.blocked_idx = bp_idx;
 
-                n.blocked_planes.reset();
-                if (portal.m_pt_layer) n.blocked_planes.set(portal.m_pt_layer, true);
-
-                n.funnel[0] = points[portals[pid].m_point[0]].m_pos;
-                n.funnel[1] = points[portals[pid].m_point[1]].m_pos;
+                n.funnel[0] = P[PT[pid].m_point[0]].m_pos;
+                n.funnel[1] = P[PT[pid].m_point[1]].m_pos;
             }
         }
 
-        inline void process_point(std::vector<node>& open, size_t& sp, VisitedState& visited, const Point& point)
+        inline void process_point(node* open, size_t& sp, VisitedState& visited, BlockedPlanesPool& bp_pool, const Point& point)
         {
-            process_portal(open, sp, visited, portals[point.m_portals[0]], point.m_portals[1]);
+            const Portal* const PT = portals.data();
+            process_portal(open, sp, visited, bp_pool, PT[point.m_portals[0]], point.m_portals[1]);
 
             if (point.m_portals[0] != point.m_portals[1]) {
-                process_portal(open, sp, visited, portals[point.m_portals[1]], point.m_portals[0]);
+                process_portal(open, sp, visited, bp_pool, PT[point.m_portals[1]], point.m_portals[0]);
             }
+        }
+
+        // Seed the DFS like ComputeVisibleEdges: whole-trapezoid funnel seeds for both adjacent traps at a boundary
+        // vertex, empty blocked set, checkpoint 0 — a superset of the old process_point seeding that under-explored cross-plane points.
+        void SeedVisibilityFromPoint(node* open, size_t& sp, BlockedPlanesPool& bp_pool, const Point& point)
+        {
+            const Point* const P = points.data();
+            const Portal* const PT = portals.data();
+            const uint16_t initial_bp = bp_pool.alloc_empty();
+            const auto seed_trap = [&](const GW::PathingTrapezoid* trap) {
+                if (!trap || trap->id >= pt_portal_map.size()) return;
+                const auto& seed = pt_portal_map[trap->id];
+                const Portal::id* sd = seed.data();
+                const size_t sn = seed.size();
+                for (size_t k = 0; k < sn; ++k) {
+                    const auto pid = sd[k];
+                    if (sp >= OPEN_CAPACITY) return;
+                    node& n = open[sp++];
+                    n.next = pid;
+                    n.visited_checkpoint = 0;
+                    n.blocked_idx = initial_bp;
+                    n.funnel[0] = P[PT[pid].m_point[0]].m_pos;
+                    n.funnel[1] = P[PT[pid].m_point[1]].m_pos;
+                }
+            };
+            const GW::PathingTrapezoid* trap0 = (point.m_portals[0] < portal_pt_map.size()) ? portal_pt_map[point.m_portals[0]] : nullptr;
+            const GW::PathingTrapezoid* trap1 = (point.m_portals[1] < portal_pt_map.size()) ? portal_pt_map[point.m_portals[1]] : nullptr;
+            seed_trap(trap0);
+            if (trap1 != trap0) seed_trap(trap1);
         }
 
         Point& createSinglePointPortal(const GW::PathingTrapezoid* pt, const GW::GamePos& gp)
@@ -1179,35 +1487,165 @@ namespace Pathing {
 
             portals.emplace_back(id, id, point_id, point_id, pt, static_cast<uint8_t>(gp.zplane), Edge::top);
 
-            portal_pt_map[id] = pt;
-
-            for (const auto& pid : pt_portal_map[pt->id]) {
-                portal_portal_map[id].push_back(pid);
-                portal_portal_map[pid].push_back(id);
+            if (id < portal_pt_map.size()) {
+                portal_pt_map[id] = pt;
             }
-            pt_portal_map[pt->id].push_back(id);
+
+            if (pt && pt->id < pt_portal_map.size()) {
+                for (const auto& pid : pt_portal_map[pt->id]) {
+                    if (id < portal_portal_map.size() && pid < portal_portal_map.size()) {
+                        portal_portal_map[id].push_back(pid);
+                        portal_portal_map[pid].push_back(id);
+                    }
+                }
+                pt_portal_map[pt->id].push_back(id);
+            }
 
             return points[point_id];
         }
 
-        void VisGraphInsertPoint(std::vector<node>& open, const Point& point)
+        // Visibility edges from `from_pos` (in `from_trap`) to real visgraph points -> `out_edges`, no mutation of
+        // m_visGraph/portals/points. If `extra_pos` (in `extra_trap`) is visible, also emit `extra_id` — detects direct start->goal LOS without a virtual goal portal.
+        void ComputeVisibleEdges(node* open, VisitedState& visited, BlockedPlanesPool& bp_pool,
+                                 const GW::GamePos& from_pos, const GW::PathingTrapezoid* from_trap,
+                                 std::vector<PointVisElement>& out_edges,
+                                 const GW::GamePos* extra_pos, const GW::PathingTrapezoid* extra_trap, PointId extra_id)
         {
-            // Timing time(__FUNCTION__);
+            out_edges.clear();
+            visited.init(portals.size());
+            bp_pool.init(20004);
+
+            if (!from_trap) return;
 
             size_t sp = 0;
+            visited.stack_size = 0;
+            visited.stamp++;
+            bp_pool.reset();
 
-            VisitedState visited; // portals (rollback)
+            // Raw pointers — skip MSVC debug bounds checks in this per-search DFS.
+            const Point* const P = points.data();
+            const Portal* const PT = portals.data();
+            const auto* const PtPM = pt_portal_map.data();
+            const auto* const PortalPtM = portal_pt_map.data();
+
+            // Same-trapezoid shortcut: extra_pos is directly visible (no portal traversal needed).
+            if (extra_pos && extra_trap == from_trap) {
+                const uint16_t bp_idx = bp_pool.alloc_empty();
+                out_edges.emplace_back(GW::GetDistance(from_pos, *extra_pos), bp_pool.data[bp_idx], extra_id);
+            }
+
+            // Seed DFS from each portal adjacent to from_trap (replaces the single-point-portal trick).
+            const uint16_t initial_bp = bp_pool.alloc_empty();
+            {
+                const auto& seed = PtPM[from_trap->id];
+                const Portal::id* sd = seed.data();
+                const size_t sn = seed.size();
+                for (size_t k = 0; k < sn; ++k) {
+                    const auto pid = sd[k];
+                    if (sp >= OPEN_CAPACITY) break;
+                    node& n = open[sp++];
+                    n.next = pid;
+                    n.visited_checkpoint = 0;
+                    n.blocked_idx = initial_bp;
+                    n.funnel[0] = P[PT[pid].m_point[0]].m_pos;
+                    n.funnel[1] = P[PT[pid].m_point[1]].m_pos;
+                }
+            }
+
+            int cnt = PATHING_COUNT;
+            while (sp && --cnt) {
+                node cur = open[--sp];
+                visited.rollback(cur.visited_checkpoint);
+
+                const auto& portal = PT[cur.next];
+                if (visited.is_visited(portal.m_id)) continue;
+                visited.visit(portal.m_id);
+
+                uint16_t bp_idx = cur.blocked_idx;
+                if (portal.m_pt_layer && !bp_pool.data[cur.blocked_idx].test(portal.m_pt_layer)) {
+                    bp_idx = bp_pool.alloc_with_bit(cur.blocked_idx, portal.m_pt_layer);
+                }
+
+                const auto& p0 = P[portal.m_point[0]];
+                const auto& p1 = P[portal.m_point[1]];
+
+                auto& f0 = cur.funnel[0];
+                auto& f1 = cur.funnel[1];
+
+                auto fl = f0 - from_pos;
+                auto fr = f1 - from_pos;
+                auto nl = p0.m_pos - from_pos;
+                auto nr = p1.m_pos - from_pos;
+
+                float fl_nl = Cross(fl, nl);
+                float fr_nr = Cross(fr, nr);
+                float fl_nr = Cross(fl, nr);
+                float fr_nl = Cross(fr, nl);
+
+                constexpr float tolerance = 1.0f;
+                if (fr_nl < -tolerance || fl_nr > tolerance) continue;
+
+                if (fl_nl <= tolerance) {
+                    if (p0.is_viable) {
+                        const float dist = GW::GetDistance(from_pos, p0.m_pos);
+                        out_edges.emplace_back(dist, bp_pool.data[bp_idx], p0.m_id);
+                    }
+                    f0 = p0.m_pos;
+                }
+                if (fr_nr >= -tolerance) {
+                    if (p1.is_viable) {
+                        const float dist = GW::GetDistance(from_pos, p1.m_pos);
+                        out_edges.emplace_back(dist, bp_pool.data[bp_idx], p1.m_id);
+                    }
+                    f1 = p1.m_pos;
+                }
+
+                // Extra-point visibility: if this portal opens into extra_trap, test extra_pos against
+                // the (narrowed) funnel. Emits at most one entry per portal chain into extra_trap.
+                if (extra_pos && PortalPtM[portal.m_other_id] == extra_trap) {
+                    const auto ng = *extra_pos - from_pos;
+                    const float fl_ng = Cross(f0 - from_pos, ng);
+                    const float fr_ng = Cross(f1 - from_pos, ng);
+                    if (fl_ng <= tolerance && fr_ng >= -tolerance) {
+                        out_edges.emplace_back(GW::GetDistance(from_pos, *extra_pos), bp_pool.data[bp_idx], extra_id);
+                    }
+                }
+
+                const size_t cp = visited.checkpoint();
+                visited.visit(portal.m_other_id);
+
+                const auto& neighbours = portal_portal_map.data()[portal.m_other_id];
+                const Portal::id* npd = neighbours.data();
+                const size_t nn = neighbours.size();
+                for (size_t k = 0; k < nn; ++k) {
+                    const auto pid = npd[k];
+                    if (visited.is_visited(pid)) continue;
+                    if (sp >= OPEN_CAPACITY) break;
+                    node& child = open[sp++];
+                    child.funnel[0] = cur.funnel[0];
+                    child.funnel[1] = cur.funnel[1];
+                    child.blocked_idx = bp_idx;
+                    child.next = pid;
+                    child.visited_checkpoint = static_cast<uint32_t>(cp);
+                }
+            }
+        }
+
+        void VisGraphInsertPoint(node* open, VisitedState& visited, BlockedPlanesPool& bp_pool, const Point& point)
+        {
             visited.init(portals.size());
+            bp_pool.init(20004);
 
             if (!point.is_viable) return;
 
-            sp = 0;
-            visited.stack.clear();
+            size_t sp = 0;
+            visited.stack_size = 0;
             visited.stamp++;
+            bp_pool.reset();
 
-            process_point(open, sp, visited, point);
+            process_point(open, sp, visited, bp_pool, point);
 
-            int cnt = 20000;
+            int cnt = PATHING_COUNT;
             const auto& p = point;
             while (sp && --cnt) {
                 node cur = open[--sp];
@@ -1218,7 +1656,10 @@ namespace Pathing {
 
                 visited.visit(portal.m_id);
 
-                if (portal.m_pt_layer) cur.blocked_planes.set(portal.m_pt_layer, true);
+                uint16_t bp_idx = cur.blocked_idx;
+                if (portal.m_pt_layer && !bp_pool.data[cur.blocked_idx].test(portal.m_pt_layer)) {
+                    bp_idx = bp_pool.alloc_with_bit(cur.blocked_idx, portal.m_pt_layer);
+                }
 
                 const auto& p0 = points[portal.m_point[0]];
                 const auto& p1 = points[portal.m_point[1]];
@@ -1242,8 +1683,8 @@ namespace Pathing {
                 if (fl_nl <= tolerance) {
                     if (p0.is_viable) {
                         float dist = GW::GetDistance(p.m_pos, p0.m_pos);
-                        m_visGraph[p.m_id].emplace_back(dist, cur.blocked_planes, p0.m_id);
-                        m_visGraph[p0.m_id].emplace_back(dist, cur.blocked_planes, p.m_id);
+                        m_visGraph[p.m_id].emplace_back(dist, bp_pool.data[bp_idx], p0.m_id);
+                        m_visGraph[p0.m_id].emplace_back(dist, bp_pool.data[bp_idx], p.m_id);
                     }
                     f0 = p0.m_pos;
                 }
@@ -1251,8 +1692,8 @@ namespace Pathing {
                 if (fr_nr >= -tolerance) {
                     if (p1.is_viable) {
                         float dist = GW::GetDistance(p.m_pos, p1.m_pos);
-                        m_visGraph[p.m_id].emplace_back(dist, cur.blocked_planes, p1.m_id);
-                        m_visGraph[p1.m_id].emplace_back(dist, cur.blocked_planes, p.m_id);
+                        m_visGraph[p.m_id].emplace_back(dist, bp_pool.data[bp_idx], p1.m_id);
+                        m_visGraph[p1.m_id].emplace_back(dist, bp_pool.data[bp_idx], p.m_id);
                     }
                     f1 = p1.m_pos;
                 }
@@ -1263,20 +1704,184 @@ namespace Pathing {
                 for (auto pid : portal_portal_map[portal.m_other_id]) {
                     if (visited.is_visited(pid)) continue;
 
-                    if (sp >= open.size()) break;
+                    if (sp >= OPEN_CAPACITY) break;
 
                     node& child = open[sp++];
-                    child = cur;
+                    child.funnel[0] = cur.funnel[0];
+                    child.funnel[1] = cur.funnel[1];
+                    child.blocked_idx = bp_idx;
                     child.next = pid;
-                    child.visited_checkpoint = cp;
+                    child.visited_checkpoint = static_cast<uint32_t>(cp);
                 }
             }
         }
 
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma optimize("gty", on) // Enable optimizations
+#endif
+
+        struct VisGraphThreadStats {
+            int viable_count = 0;
+            int64_t dfs_nodes_total = 0;
+            int max_dfs_depth = 0;
+            int edges_found = 0;
+            int funnel_culled = 0;
+        };
+
+        void VisGraphWorker(int begin, int end, [[maybe_unused]] VisGraphThreadStats& stats)
+        {
+            node* open = new node[OPEN_CAPACITY];
+            size_t sp = 0;
+
+            VisitedState visited;     // portals (rollback)
+            VisitedPoints vis_points; // points (per source)
+            BlockedPlanesPool bp_pool;
+            visited.init(portals.size());
+            vis_points.init(points.size());
+            bp_pool.init(20004);
+
+            // Per-source per-portal expansion-cap state (see PATHING_PORTAL_EXPAND_CAP). gen-stamped to avoid
+            // an O(portals) clear per source.
+            std::vector<uint16_t> exp_count(portals.size());
+            std::vector<uint32_t> exp_gen(portals.size(), 0);
+            uint32_t exp_cur = 0;
+
+            // Raw pointers into stable read-only containers — skip MSVC debug bounds checks in this O(n^2) loop;
+            // m_visGraph outer storage is pre-sized and each thread writes only its own source rows.
+            const Point* P = points.data();
+            const Portal* PT = portals.data();
+            auto* const VG = m_visGraph.data();
+            const auto* const PPM = portal_portal_map.data();
+            uint16_t* const EC = exp_count.data(); // per-portal expansion counters, indexed every DFS node
+            uint32_t* const EG = exp_gen.data();
+
+            for (int i = begin; i < end; ++i) {
+                if (m_terminateThread) break;
+                const auto& point = P[i];
+                if (!point.is_viable) continue;
+
+#ifdef DEBUG_PATHING
+                stats.viable_count++;
+#endif
+
+                vis_points.reset();
+                vis_points.test_and_set(point.m_id); // suppress self-edges (point sits on its own portals)
+                bp_pool.reset();
+
+                sp = 0;
+                visited.stack_size = 0;
+                visited.stamp++;
+                ++exp_cur; // new expansion-cap generation for this source
+
+                SeedVisibilityFromPoint(open, sp, bp_pool, point);
+
+                int cnt = PATHING_COUNT;
+                const auto& p = point;
+                while (sp && --cnt) {
+                    auto [funnel, visited_checkpoint, blocked_idx, next] = open[--sp];  // 24-byte copy
+
+                    visited.rollback(visited_checkpoint); // rollback to this node's state
+
+                    const auto& portal = PT[next];
+                    if (visited.is_visited(portal.m_id)) continue;
+
+                    visited.visit(portal.m_id);
+
+#ifdef DEBUG_PATHING
+                    stats.dfs_nodes_total++;
+#endif
+
+                    // Only allocate new pool entry when layer actually changes
+                    uint16_t bp_idx = blocked_idx;
+                    if (portal.m_pt_layer && !bp_pool.data[blocked_idx].test(portal.m_pt_layer)) {
+                        bp_idx = bp_pool.alloc_with_bit(blocked_idx, portal.m_pt_layer);
+                    }
+
+                    const auto& p0 = P[portal.m_point[0]];
+                    const auto& p1 = P[portal.m_point[1]];
+
+                    auto& f0 = funnel[0];
+                    auto& f1 = funnel[1];
+
+                    auto fl = f0 - p.m_pos;       // funnel left direction
+                    auto fr = f1 - p.m_pos;       // funnel right direction
+                    auto nl = p0.m_pos - p.m_pos; // portal left direction
+                    auto nr = p1.m_pos - p.m_pos; // portal right direction
+
+                    constexpr float tolerance = 1.0f;
+                    if (Cross(fr, nl) < -tolerance || Cross(fl, nr) > tolerance) {
+#ifdef DEBUG_PATHING
+                        stats.funnel_culled++;
+#endif
+                        continue;
+                    }
+
+                    if (Cross(fl, nl) <= tolerance) {
+                        if (p0.is_viable && vis_points.test_and_set(p0.m_id)) {
+                            float dist = GW::GetDistance(p.m_pos, p0.m_pos);
+                            VG[p.m_id].emplace_back(dist, bp_pool.data[bp_idx], p0.m_id);
+#ifdef DEBUG_PATHING
+                            stats.edges_found++;
+#endif
+                        }
+                        f0 = p0.m_pos;
+                    }
+
+                    if (Cross(fr, nr) >= -tolerance) {
+                        if (p1.is_viable && vis_points.test_and_set(p1.m_id)) {
+                            float dist = GW::GetDistance(p.m_pos, p1.m_pos);
+                            VG[p.m_id].emplace_back(dist, bp_pool.data[bp_idx], p1.m_id);
+#ifdef DEBUG_PATHING
+                            stats.edges_found++;
+#endif
+                        }
+                        f1 = p1.m_pos;
+                    }
+
+                    // Expansion cap: bound how many times this portal is expanded (per source) so the step
+                    // budget spreads across the region instead of one dense portal's many funnel paths. Edges
+                    // to this portal's own endpoints were already emitted above; only deep re-exploration is cut.
+                    const Portal::id ek = portal.m_other_id;
+                    const uint16_t ec = (EG[ek] == exp_cur) ? EC[ek] : 0;
+                    if (ec >= PATHING_PORTAL_EXPAND_CAP) continue;
+                    EG[ek] = exp_cur;
+                    EC[ek] = static_cast<uint16_t>(ec + 1);
+
+                    uint32_t checkpoint = static_cast<uint32_t>(visited.checkpoint());
+                    visited.visit(portal.m_other_id);
+
+                    const auto& neighbours = PPM[portal.m_other_id];
+                    const Portal::id* npd = neighbours.data();
+                    const size_t nn = neighbours.size();
+                    for (size_t k = 0; k < nn; ++k) {
+                        const auto pid = npd[k];
+                        if (visited.is_visited(pid)) continue;
+
+                        if (sp >= OPEN_CAPACITY) break;
+
+                        node& child = open[sp++];
+                        child.funnel[0] = funnel[0];
+                        child.funnel[1] = funnel[1];
+                        child.blocked_idx = bp_idx;
+                        child.next = pid;
+                        child.visited_checkpoint = checkpoint;
+                    }
+
+#ifdef DEBUG_PATHING
+                    if (sp > static_cast<size_t>(stats.max_dfs_depth))
+                        stats.max_dfs_depth = static_cast<int>(sp);
+#endif
+                }
+            }
+            delete[] open;
+        }
+
         void GenerateVisGraph()
         {
             Timing time(__FUNCTION__);
+
+            PATH_LOG_INFO("[VisGraph] start: points=%d portals=%d deferred=%d teleports=%d",
+                (int)points.size(), (int)portals.size(), (int)m_defferedPortalLinks.size(), (int)m_teleports.size());
 
             m_visGraph.clear();
             m_visGraph.resize(points.size() + 2); // reserve also for start and goal points
@@ -1284,116 +1889,136 @@ namespace Pathing {
             for (auto& v : m_visGraph)
                 v.reserve(32);
 
-//#pragma omp parallel
+            const int size = (int)points.size();
+            const unsigned int hw_threads = std::thread::hardware_concurrency();
+            const int num_threads = std::max(1, std::min((int)hw_threads, std::min(size, 8)));
+
+            if (num_threads <= 1) {
+                // Single-threaded path
+                VisGraphThreadStats stats;
+                VisGraphWorker(0, size, stats);
+
+#ifdef DEBUG_PATHING
+                uint32_t total = 0;
+                for (const auto& v : m_visGraph)
+                    total += static_cast<uint32_t>(v.size());
+                PATH_LOG_INFO("[VisGraph] edges=%u, viable=%d/%d, portals=%d (1 thread)",
+                    total, stats.viable_count, size, (int)portals.size());
+#endif
+            }
+            else {
+                // Multi-threaded path
+                std::vector<std::thread> threads;
+                std::vector<VisGraphThreadStats> thread_stats(num_threads);
+                threads.reserve(num_threads);
+
+                const int chunk = (size + num_threads - 1) / num_threads;
+                for (int t = 0; t < num_threads; ++t) {
+                    int begin = t * chunk;
+                    int end = std::min(begin + chunk, size);
+                    if (begin >= end) break;
+                    threads.emplace_back(&Impl::VisGraphWorker, this, begin, end, std::ref(thread_stats[t]));
+                }
+
+                for (auto& t : threads)
+                    t.join();
+
+#ifdef DEBUG_PATHING
+                VisGraphThreadStats merged;
+                for (const auto& s : thread_stats) {
+                    merged.viable_count += s.viable_count;
+                    merged.dfs_nodes_total += s.dfs_nodes_total;
+                    merged.max_dfs_depth = std::max(merged.max_dfs_depth, s.max_dfs_depth);
+                    merged.edges_found += s.edges_found;
+                    merged.funnel_culled += s.funnel_culled;
+                }
+
+                uint32_t total = 0;
+                for (const auto& v : m_visGraph)
+                    total += static_cast<uint32_t>(v.size());
+                PATH_LOG_INFO("[VisGraph] edges=%u, viable=%d/%d, portals=%d (%d threads)",
+                    total, merged.viable_count, size, (int)portals.size(), (int)threads.size());
+#endif
+            }
+
+            // Symmetrize: 2D visibility is symmetric but the per-source funnel DFS can find A->B without B->A (and
+            // the worker writes only the source row); missing reverse edges break routing (ground-start bridge zigzag).
+            // For every A->B add B->A if absent (same distance/blocked_planes). Single-threaded, before the directional teleport links below.
             {
-                std::vector<node> open;
-                open.resize(2000); // max DFS depth
-                size_t sp = 0;
-
-                VisitedState visited;     // portals (rollback)
-                VisitedPoints vis_points; // points (per source)
-                visited.init(portals.size());
-                vis_points.init(points.size());
-                auto size = (int)points.size();
-
-//#pragma omp for schedule(static, 4)
-                for (int i = 0; i < size; ++i) {
-                    if (m_terminateThread) break;
-                    const auto& point = points[i];
-                    if (!point.is_viable) continue;
-
-                    vis_points.reset();
-
-                    sp = 0;
-                    visited.stack.clear();
-                    visited.stamp++;
-
-                    process_point(open, sp, visited, point);
-
-                    int cnt = 20000;
-                    const auto& p = point;
-                    while (sp && --cnt) {
-                        node cur = open[--sp];
-
-                        visited.rollback(cur.visited_checkpoint); // rollback to this node's state
-
-                        const auto& portal = portals[cur.next];
-                        if (visited.is_visited(portal.m_id)) continue;
-
-                        visited.visit(portal.m_id);
-
-                        if (portal.m_pt_layer) cur.blocked_planes.set(portal.m_pt_layer, true);
-
-                        const auto& p0 = points[portal.m_point[0]];
-                        const auto& p1 = points[portal.m_point[1]];
-
-                        auto& f0 = cur.funnel[0];
-                        auto& f1 = cur.funnel[1];
-
-                        auto fl = f0 - p.m_pos;       // funnel left direction
-                        auto fr = f1 - p.m_pos;       // funnel right direction
-                        auto nl = p0.m_pos - p.m_pos; // portal left direction
-                        auto nr = p1.m_pos - p.m_pos; // portal right direction
-
-                        constexpr float tolerance = 1.0f;
-                        if (Cross(fr, nl) < -tolerance || Cross(fl, nr) > tolerance) continue;
-
-                        if (Cross(fl, nl) <= tolerance) {
-                            if (p0.is_viable && vis_points.test_and_set(p0.m_id)) {
-                                {
-                                    float dist = GW::GetDistance(p.m_pos, p0.m_pos);
-                                    m_visGraph[p.m_id].emplace_back(dist, cur.blocked_planes, p0.m_id);
-                                }
-                            }
-                            f0 = p0.m_pos;
-                        }
-
-                        if (Cross(fr, nr) >= -tolerance) {
-                            if (p1.is_viable && vis_points.test_and_set(p1.m_id)) {
-                                {
-                                    float dist = GW::GetDistance(p.m_pos, p1.m_pos);
-                                    m_visGraph[p.m_id].emplace_back(dist, cur.blocked_planes, p1.m_id);
-                                }
-                            }
-                            f1 = p1.m_pos;
-                        }
-
-                        size_t checkpoint = visited.checkpoint();
-                        visited.visit(portal.m_other_id);
-
-                        for (auto pid : portal_portal_map[portal.m_other_id]) {
-                            if (visited.is_visited(pid)) continue;
-
-                            if (sp >= open.size()) break;
-
-                            node& child = open[sp++];
-                            child = cur;
-                            child.next = pid;
-                            child.visited_checkpoint = checkpoint;
-                        }
+                const size_t vg_n = m_visGraph.size();
+                std::vector<uint32_t> orig_sizes(vg_n);
+                for (size_t i = 0; i < vg_n; ++i) orig_sizes[i] = static_cast<uint32_t>(m_visGraph[i].size());
+                for (size_t a = 0; a < vg_n; ++a) {
+                    const uint32_t na = orig_sizes[a];
+                    for (uint32_t e = 0; e < na; ++e) {
+                        const float dist = m_visGraph[a][e].distance;
+                        const BlockedPlaneBitset bp = m_visGraph[a][e].blocked_planes;
+                        const PointId b = m_visGraph[a][e].point_id;
+                        if (b == a || b >= vg_n) continue;
+                        auto& vb = m_visGraph[b];
+                        bool has = false;
+                        for (size_t k = 0; k < vb.size(); ++k)
+                            if (vb[k].point_id == a) { has = true; break; }
+                        if (!has) vb.emplace_back(dist, bp, static_cast<PointId>(a));
                     }
                 }
             }
 
             // could not link portals earlier because vis graph is cleared at the beginning of this function.
             for (const auto& dp : m_defferedPortalLinks) {
+                if (dp.m_enter >= points.size() || dp.m_exit >= points.size()) {
+                    PATH_LOG_ERROR("[VisGraph] deferred portal link out of bounds: enter=%d exit=%d points=%d",
+                        (int)dp.m_enter, (int)dp.m_exit, (int)points.size());
+                    continue;
+                }
                 auto dist = GW::GetDistance(points[dp.m_enter].m_pos, points[dp.m_exit].m_pos);
 
                 BlockedPlaneBitset bp;
                 m_visGraph[dp.m_enter].emplace_back(dist * 0.01f, bp, dp.m_exit);
                 if (dp.m_directionality == MapSpecific::Teleport::direction::both_ways) m_visGraph[dp.m_exit].emplace_back(dist * 0.01f, bp, dp.m_enter);
             }
-
-            uint32_t total = 0;
-            for (const auto& v : m_visGraph) {
-                total += v.size();
-            }
-
-#ifdef DEBUG_PATHING
-            Log::Info("m_visGraph total elements = %d", total);
-#endif
         }
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma optimize("", on) // Restore global optimizations to project default
+#endif
+
+        // Free build-only scratch (unread at query time); swap-with-empty releases capacity, clear() would not.
+        void ReleaseBuildScratch()
+        {
+            decltype(ptneighbours){}.swap(ptneighbours);
+            decltype(tmp_portal_pt_map){}.swap(tmp_portal_pt_map);
+            std::vector<DefferedTeleport>{}.swap(m_defferedPortalLinks);
+            decltype(GetTrapezoidNeighbours_visited){}.swap(GetTrapezoidNeighbours_visited);
+            std::vector<Explore>{}.swap(GetTrapezoidNeighbours_to_explore);
+            std::vector<Neighbour>{}.swap(isNeighbourOf_neighbours);
+        }
+
+        // Full graph build, shared by the eager worker and lazy EnsureFullBuild().
+        void BuildFullGraph(const std::vector<GW::Constants::MapID>& all_map_ids)
+        {
+            MapSpecific::MapSpecificData msd;
+            for (auto id : all_map_ids) msd.AddTeleportsForMap(id);
+            m_teleports = msd.m_teleports;
+            travel_portals.clear();
+
+            const auto t_vg0 = std::chrono::high_resolution_clock::now();
+            GenerateTrapezoidNeighbours();
+            GeneratePortals();
+            GenerateTeleportGraph();
+            GenerateVisGraph();
+            const auto t_vg1 = std::chrono::high_resolution_clock::now();
+            PATH_LOG_INFO("[timing] visgraph build: %lld ms (%zu points)",
+                std::chrono::duration_cast<std::chrono::milliseconds>(t_vg1 - t_vg0).count(), points.size());
+
+            try {
+                if (!m_navmesh) m_navmesh = new NavMesh();
+                m_navmesh->Build(m_mapData, m_teleports);
+            }
+            catch (const std::bad_alloc&) {
+                PATH_LOG_ERROR("[pathing] overlay navmesh build OOM; overlay disabled for this map");
+            }
+            ReleaseBuildScratch();
+        }
 
 #define mImpl ((Impl*)opaque)
     }; // Impl
@@ -1402,51 +2027,39 @@ namespace Pathing {
 namespace Pathing {
     // using namespace MathUtil;
 
-    // Traverse map props and copy an array of valid in-game portals; later used for travel calcs
-    void MilePath::LoadMapSpecificData()
+    MilePath::MilePath(Pathing::PathingMapData&& map_data, GW::Constants::MapID map_id, const std::vector<GW::Constants::MapID>& all_map_ids, bool full_build)
     {
-        MapSpecific::MapSpecificData map_data(GW::Map::GetMapID());
-        mImpl->m_teleports = map_data.m_teleports;
-        mImpl->travel_portals.clear();
-        const auto props = GetMapProps();
-        if (!props) return;
-        for (const auto prop : *props) {
-            if (IsTravelPortal(prop)) {
-                // NB: May need to guess height and width for these - 1100.f ?
-                mImpl->travel_portals.push_back(prop);
-            }
-        }
-    }
-
-    MilePath::MilePath([[maybe_unused]] GW::MapContext* map_context)
-    {
-        //constexpr size_t sz = sizeof(Impl);
         static_assert(sizeof(opaque) >= sizeof(Impl));
         new (opaque) Impl();
 
-        m_processing = true;
         const clock_t start = clock();
 
-        // Copy map data from game into Impl
-        auto* mapContext = GW::GetMapContext();
-        if (mapContext && mapContext->path) {
-            mImpl->CopyMapData(mapContext->path);
+        mImpl->m_mapData = std::move(map_data);
+        m_all_map_ids = all_map_ids.empty() ? std::vector{map_id} : all_map_ids;
+        m_constructed_full = full_build;
+
+        // Lightweight: raw map data only; visgraph built later by EnsureFullBuild().
+        if (!full_build) {
+            m_progress = 100; // map data is immediately usable; no worker needed
+            return;
         }
 
+        m_processing = true;
         ASSERT(!worker_thread);
-        worker_thread = new std::thread([&, start] {
-            LoadMapSpecificData();
-            mImpl->GenerateTrapezoidNeighbours(); // needs to run in game thread
-            mImpl->GeneratePortals();             // needs to run in game thread
-            mImpl->GenerateTeleportGraph();
-            mImpl->GenerateVisGraph();
-#ifdef _DEBUG
-            const clock_t stop = clock();
-            Log::Flash("Processing %s in %d ms", mImpl->m_terminateThread ? "terminated" : "done", stop - start);
-#endif
+        worker_thread = new std::thread([this] {
+            try {
+                mImpl->BuildFullGraph(m_all_map_ids);
+                const clock_t stop = clock();
+                PATH_LOG_INFO("DAT processing %s in %d ms", mImpl->m_terminateThread ? "terminated" : "done", stop - start);
+                m_full_built = true;
+                m_progress = 100;
+            }
+            catch (const std::bad_alloc&) {
+                PATH_LOG_ERROR("[pathing] MilePath worker OOM (DAT build); marking build_failed");
+                m_build_failed = true;
+            }
             m_processing = false;
             m_done = true;
-            m_progress = 100;
         });
         worker_thread->detach();
     }
@@ -1457,11 +2070,73 @@ namespace Pathing {
         mImpl->~Impl();
     }
 
+    std::string MilePath::ExportVisGraph() const
+    {
+        std::string out = "{\n";
+        out += "  \"point_count\": " + std::to_string(mImpl->points.size()) + ",\n";
+        out += "  \"visgraph_size\": " + std::to_string(mImpl->m_visGraph.size()) + ",\n";
+        out += "  \"portal_count\": " + std::to_string(mImpl->portals.size()) + ",\n";
+        out += "  \"points\": [\n";
+        for (size_t i = 0; i < mImpl->points.size(); i++) {
+            const auto& p = mImpl->points[i];
+            const size_t edges = (i < mImpl->m_visGraph.size()) ? mImpl->m_visGraph[i].size() : 0;
+            out += "    {\"id\":" + std::to_string(p.m_id) +
+                   ",\"x\":" + std::to_string(p.m_pos.x) +
+                   ",\"y\":" + std::to_string(p.m_pos.y) +
+                   ",\"viable\":" + (p.is_viable ? "true" : "false") +
+                   ",\"edges\":" + std::to_string(edges) +
+                   ",\"portals\":[" + std::to_string(p.m_portals[0]) + "," + std::to_string(p.m_portals[1]) + "]";
+            if (edges > 0 && edges <= 200) {
+                out += ",\"targets\":[";
+                for (size_t e = 0; e < edges; e++) {
+                    if (e) out += ",";
+                    out += std::to_string(mImpl->m_visGraph[i][e].point_id);
+                }
+                out += "]";
+            }
+            out += "}";
+            if (i + 1 < mImpl->points.size()) out += ",";
+            out += "\n";
+        }
+        out += "  ]\n}\n";
+        return out;
+    }
+
     void MilePath::stopProcessing()
     {
         mImpl->m_terminateThread = true;
     }
 
+    const Pathing::PathingMapData* MilePath::GetMapData() const
+    {
+        return &mImpl->m_mapData;
+    }
+
+    NavMesh* MilePath::GetNavMeshForDebug()
+    {
+        return mImpl->m_navmesh; // hand-built mesh; null until the full build completes (viz overlay only)
+    }
+
+    void MilePath::EnsureFullBuild()
+    {
+        if (m_full_built || m_build_failed) return;
+        if (m_constructed_full) {
+            // Built eagerly on the worker — just wait for it.
+            while (!m_full_built && !m_build_failed && !mImpl->m_terminateThread) Sleep(10);
+            return;
+        }
+        // Lightweight map: build now, on the calling (worker) thread.
+        std::scoped_lock lock(m_build_mutex);
+        if (m_full_built || m_build_failed) return; // lost the race
+        try {
+            mImpl->BuildFullGraph(m_all_map_ids);
+            m_full_built = true;
+        }
+        catch (const std::bad_alloc&) {
+            PATH_LOG_ERROR("[pathing] MilePath lazy full build OOM; marking build_failed");
+            m_build_failed = true;
+        }
+    }
 
     AStar::AStar(MilePath* mp) : m_path(this)
     {
@@ -1476,40 +2151,48 @@ namespace Pathing {
     };
 
     // https://github.com/Rikora/A-star/blob/master/src/AStar.cpp
-    Error BuildPath(AStar& astar, const Point& start, const Point& goal, const std::vector<PointId>& came_from)
+    Error BuildPath(AStar& astar,
+                    const GW::GamePos& start_pos, PointId start_id,
+                    const GW::GamePos& goal_pos, PointId goal_id,
+                    const PointId* came_from)
     {
-        Point current(goal);
-
         astar.m_path.clear();
-        auto* mp = (Impl*)astar.m_path.m_mp->GetImpl();
+        const auto* mp = (Impl*)astar.m_path.m_mp->GetImpl();
 
+        // Collect waypoints start..goal first so the plane-continuity pass can see each point's neighbours.
+        std::vector<GW::GamePos> wp;
+        wp.push_back(start_pos);
+        std::vector<GW::GamePos> rev;
+        PointId curr = came_from[goal_id];
         int count = 0;
-        while (current.m_id != start.m_id) {
+        while (curr != start_id) {
             if (count++ > 256) {
-                Log::Error("build path failed\n");
+                PATH_LOG_ERROR("build path failed\n");
                 return Error::BuildPathLengthExceeded;
             }
-            if (current.m_id < 0) {
-                break;
-            }
+            const auto& p = mp->points[curr];
+            const auto zplane = std::max(mp->portals[p.m_portals[0]].m_pt_layer, mp->portals[p.m_portals[1]].m_pt_layer);
+            rev.push_back({p.m_pos.x, p.m_pos.y, zplane});
+            curr = came_from[curr];
+        }
+        for (auto it = rev.rbegin(); it != rev.rend(); ++it) wp.push_back(*it);
+        wp.push_back(goal_pos);
 
-            // Finding zplane here and in this way is more of a workaround:
-            auto zplane = std::max(mp->portals[current.m_portals[0]].m_pt_layer, mp->portals[current.m_portals[1]].m_pt_layer);
-            astar.m_path.insertPoint({current.m_pos.x, current.m_pos.y, zplane});
-
-            auto& id = came_from[current.m_id];
-            if (id == start.m_id) break;
-
-            current = mp->points[id];
+        // Plane-continuity: at a cross-plane ramp ground/bridge overlap in XY, so a transition waypoint's plane label
+        // flickers and the renderer sinks the line. Lift a below-neighbour waypoint to the higher plane if a trapezoid exists there. XY untouched; only rendered height stabilises.
+        for (size_t i = 1; i + 1 < wp.size(); ++i) {
+            const uint32_t hi = std::max(wp[i - 1].zplane, wp[i + 1].zplane);
+            if (wp[i].zplane >= hi) continue;
+            GW::GamePos probe{wp[i].x, wp[i].y, hi};
+            if (FindTrapezoid(probe, &mp->m_mapData)) wp[i].zplane = hi;
         }
 
-        auto zplane = std::max(mp->portals[start.m_portals[0]].m_pt_layer, mp->portals[start.m_portals[1]].m_pt_layer);
-        astar.m_path.insertPoint({start.m_pos.x, start.m_pos.y, zplane});
-
+        // Insert goal-first (finalize() re-reverses to start..goal).
+        for (auto it = wp.rbegin(); it != wp.rend(); ++it) astar.m_path.insertPoint(*it);
         return Error::OK;
     }
 
-    float TeleporterHeuristic(const MapSpecific::Teleports& teleports, const std::vector<MapSpecific::teleport_node>& teleportGraph, const Point& start, const Point& goal)
+    float TeleporterHeuristic(const MapSpecific::Teleports& teleports, const std::vector<MapSpecific::teleport_node>& teleportGraph, const GW::GamePos& start_pos, const GW::GamePos& goal_pos)
     {
         if (teleports.empty()) return 0.0f;
 
@@ -1521,16 +2204,16 @@ namespace Pathing {
         float dist_start = cost;
         float dist_goal = cost;
         for (const auto& tp : teleports) {
-            float dist = GW::GetSquareDistance(start.m_pos, tp.m_enter);
-            if (tp.m_directionality == Teleport::direction::both_ways) dist = std::min(dist, GW::GetSquareDistance(start.m_pos, tp.m_exit));
+            float dist = GW::GetSquareDistance(start_pos, tp.m_enter);
+            if (tp.m_directionality == Teleport::direction::both_ways) dist = std::min(dist, GW::GetSquareDistance(start_pos, tp.m_exit));
 
             if (dist_start > dist) {
                 dist_start = dist;
                 ts = &tp;
             }
 
-            dist = GW::GetSquareDistance(goal.m_pos, tp.m_exit);
-            if (tp.m_directionality == Teleport::direction::both_ways) dist = std::min(dist, GW::GetSquareDistance(goal.m_pos, tp.m_enter));
+            dist = GW::GetSquareDistance(goal_pos, tp.m_exit);
+            if (tp.m_directionality == Teleport::direction::both_ways) dist = std::min(dist, GW::GetSquareDistance(goal_pos, tp.m_enter));
 
             if (dist_goal > dist) {
                 dist_goal = dist;
@@ -1548,145 +2231,203 @@ namespace Pathing {
         return cost;
     }
 
-    typedef std::pair<float, PointId> PQElement;
-    class MyPQueue : public std::priority_queue<PQElement, std::vector<PQElement>, std::greater<PQElement>> {
-    public:
-        MyPQueue(size_t reserve_size) { this->c.reserve(reserve_size); }
-    };
-
     Error AStar::Search(const GW::GamePos& _start_pos, const GW::GamePos& _goal_pos)
     {
         Timing time(__FUNCTION__);
 
-        std::lock_guard lock(pathing_mutex);
+        // Upgrade a lightweight map to a visgraph; before pathing_mutex so a slow first build doesn't stall other maps.
+        m_path.m_mp->EnsureFullBuild();
+
+        // build_failed()/GetImpl() are stable post-EnsureFullBuild (synced on m_build_mutex, not pathing_mutex) so
+        // read lock-free; bail if the worker aborted with bad_alloc (visgraph only partially built).
+        if (m_path.m_mp->build_failed()) return Error::MilePathBuildOOM;
+        auto* mp = (Impl*)m_path.m_mp->GetImpl();
+
+        std::scoped_lock lock(pathing_mutex);
 
         BlockedPlaneBitset current_blocked_planes;
-        const Error res = CopyPathingMapBlocks(&current_blocked_planes);
+        const Error res = CopyPathingMapBlocks(&mp->m_mapData, &current_blocked_planes);
 
         if (res != Error::OK) return res;
 
         auto start_pos = _start_pos;
         auto goal_pos = _goal_pos;
-        auto spt = FindClosestPositionOnTrapezoid(start_pos);
-        auto gpt = FindClosestPositionOnTrapezoid(goal_pos);
+        auto spt = FindClosestPositionOnTrapezoid(start_pos, &mp->m_mapData);
+        auto gpt = FindClosestPositionOnTrapezoid(goal_pos, &mp->m_mapData);
         if (!spt) return Error::FailedToFindStartPathingTrapezoid;
         if (!gpt) return Error::FailedToFindGoalPathingTrapezoid;
 
-        auto* mp = (Impl*)m_path.m_mp->GetImpl();
+        auto& sb = mp->m_searchBufs;
+        const size_t n_real = mp->points.size();
+        const PointId START_ID = static_cast<PointId>(n_real);
+        const PointId GOAL_ID = static_cast<PointId>(n_real + 1);
+        const size_t n = n_real + 2;
+        sb.init_buffers(n);
 
-        auto cleanup = [&](const Point& point) {
-            auto& elements = mp->m_visGraph[point.m_id];
-            for (auto& elem : elements) {
-                std::erase_if(mp->m_visGraph[elem.point_id], [&point](auto& elem) {
-                    return elem.point_id == point.m_id;
-                });
-            }
-            elements.clear();
+        // Visibility edges without mutating m_visGraph; start's DFS also tests goal so direct LOS becomes a GOAL_ID edge.
+        sb.insert_visited.init(mp->portals.size());
+        sb.insert_bp_pool.init(20004);
+        mp->ComputeVisibleEdges(sb.insert_open, sb.insert_visited, sb.insert_bp_pool,
+                                start_pos, spt, sb.start_edges,
+                                &goal_pos, gpt, GOAL_ID);
+        mp->ComputeVisibleEdges(sb.insert_open, sb.insert_visited, sb.insert_bp_pool,
+                                goal_pos, gpt, sb.goal_edges,
+                                nullptr, nullptr, 0);
 
-            mp->points.pop_back();
-
-            auto& adjacent = mp->portal_portal_map[point.m_portals[0]];
-            for (auto& a : adjacent) {
-                std::erase_if(mp->portal_portal_map[a], [&point](auto& portal) {
-                    return portal == point.m_portals[0];
-                });
-            }
-            adjacent.clear();
-
-            auto pt = std::exchange(mp->portal_pt_map[point.m_portals[0]], nullptr);
-            std::erase_if(mp->pt_portal_map[pt->id], [&point](auto& portal) {
-                return portal == point.m_portals[0];
-            });
-
-            mp->portals.pop_back();
-        };
-
-        Point start = mp->createSinglePointPortal(spt, start_pos);
-        Point goal = mp->createSinglePointPortal(gpt, goal_pos);
-
-        {
-            std::vector<node> open_points;
-            open_points.resize(2000);
-            mp->VisGraphInsertPoint(open_points, start);
-            open_points.clear();
-            open_points.resize(2000);
-            mp->VisGraphInsertPoint(open_points, goal);
-        }
-
-        if (mp->m_visGraph.size() <= start.m_id || mp->m_visGraph.size() <= goal.m_id) {
+        if (sb.start_edges.empty() || sb.goal_edges.empty()) {
+            PATH_LOG_INFO("[AStar] insert: start=(%.0f,%.0f,z%d) trap=%d edges=%zu | goal=(%.0f,%.0f,z%d) trap=%d edges=%zu",
+                start_pos.x, start_pos.y, (int)start_pos.zplane, (int)spt->id, sb.start_edges.size(),
+                goal_pos.x, goal_pos.y, (int)goal_pos.zplane, (int)gpt->id, sb.goal_edges.size());
             m_path.insertPoint(start_pos);
             m_path.insertPoint(goal_pos);
             m_path.setCost(GW::GetDistance(start_pos, goal_pos));
             m_path.finalize();
-
-            // Log::Error("invalid index into vis graph: m_visGraph.size(): %d, start.m_id: %d, goal.m_id: %d", m_visGraph.size(), start.m_id, goal.m_id);
-
-            cleanup(goal);
-            cleanup(start);
             return Error::FailedToFinializePath;
         }
 
-        // Check if points have a direct line of sight
-        for (const auto& vis : mp->m_visGraph[start.m_id]) {
-            if (vis.point_id != goal.m_id) continue;
+        // LOS fast path: start has a direct edge to goal (emitted by ComputeVisibleEdges).
+        // Raw pointer — skip MSVC debug bounds checks (cheap, but this runs on every search).
+        const PointVisElement* const SE = sb.start_edges.data();
+        const size_t se_count = sb.start_edges.size();
+        for (size_t i = 0; i < se_count; ++i) {
+            const auto& vis = SE[i];
+            if (vis.point_id != GOAL_ID) continue;
             if ((vis.blocked_planes & current_blocked_planes).none()) {
                 m_path.insertPoint(start_pos);
                 m_path.insertPoint(goal_pos);
                 m_path.setCost(vis.distance);
                 m_path.finalize();
-
-                cleanup(goal);
-                cleanup(start);
                 return Error::OK;
             }
-        };
+        }
 
-        std::vector<float> cost_so_far;
-        std::vector<PointId> came_from;
-        MyPQueue open(mp->points.size() + 2);
+        // A* search using raw buffers
+        float* cost_so_far = sb.cost_so_far;
+        PointId* came_from = sb.came_from;
+        int32_t* goal_edge_idx = sb.goal_edge_idx;
+        sb.reset(n, START_ID);
 
-        cost_so_far.resize(mp->points.size() + 2, -INFINITY);
-        cost_so_far[start.m_id] = 0.0f;
+        // O(1) lookup: per point p, index into goal_edges for p->goal (or -1). Duplicate blocked_planes collapse to
+        // the last — fine, paths are re-checked against current_blocked_planes in the relax step.
+        // Raw pointer — skip MSVC debug bounds checks (reused in the goal-edge relax below).
+        const PointVisElement* const GE = sb.goal_edges.data();
+        const size_t goal_edge_count = sb.goal_edges.size();
+        for (size_t i = 0; i < goal_edge_count; ++i) {
+            const auto pid = GE[i].point_id;
+            if (pid < n) goal_edge_idx[pid] = static_cast<int32_t>(i);
+        }
 
-        came_from.resize(mp->points.size() + 2);
-        came_from[start.m_id] = start.m_id;
-        open.emplace(0.0f, start.m_id);
+        came_from[START_ID] = START_ID;
+        sb.pq_push(0.0f, START_ID);
 
-        bool teleports = mp->m_teleports.size();
+        const bool teleports = !mp->m_teleports.empty();
+        const bool has_blocked = current_blocked_planes.any(); // skip 2M+ bitset ANDs when no planes blocked
+        // Raw pointers — skip MSVC debug bounds checks on every node expansion / edge.
+        auto* const VG = mp->m_visGraph.data();
+        const Point* const PTS = mp->points.data();
         PointId current = 0;
-        while (!open.empty()) {
-            current = open.top().second;
-            open.pop();
-            if (current == goal.m_id) break;
+#ifdef DEBUG_PATHING
+        int dbg_nodes_expanded = 0;
+        int dbg_edges_examined = 0;
+        int dbg_edges_blocked = 0;
+        int dbg_edges_relaxed = 0;
+        int dbg_pq_max_size = 0;
+#endif
+        while (!sb.pq_empty()) {
+#ifdef DEBUG_PATHING
+            if ((int)sb.pq_size > dbg_pq_max_size)
+                dbg_pq_max_size = (int)sb.pq_size;
+#endif
+            auto top = sb.pq_pop();
+            current = top.id;
+            if (current == GOAL_ID) break;
 
-            for (auto& vis : mp->m_visGraph[current]) {
-                if ((vis.blocked_planes & current_blocked_planes).any()) continue;
-                float new_cost = cost_so_far[current] + vis.distance;
-                if (cost_so_far[vis.point_id] == -INFINITY || new_cost < cost_so_far[vis.point_id]) {
-                    cost_so_far[vis.point_id] = new_cost;
-                    came_from[vis.point_id] = current;
+            if (sb.closed[current]) continue;
+            sb.closed[current] = true;
 
-                    float priority = new_cost;
+#ifdef DEBUG_PATHING
+            dbg_nodes_expanded++;
+#endif
+            const float cost_current = cost_so_far[current];
+
+            // Primary edges: start uses local start_edges, every other node uses m_visGraph.
+            const auto& primary_edges = (current == START_ID) ? sb.start_edges : VG[current];
+            const PointVisElement* edges = primary_edges.data();
+            const size_t edge_count = primary_edges.size();
+            for (size_t ei = 0; ei < edge_count; ++ei) {
+                const auto& vis = edges[ei];
+#ifdef DEBUG_PATHING
+                dbg_edges_examined++;
+#endif
+                if (has_blocked && (vis.blocked_planes & current_blocked_planes).any()) {
+#ifdef DEBUG_PATHING
+                    dbg_edges_blocked++;
+#endif
+                    continue;
+                }
+                const float new_cost = cost_current + vis.distance;
+                if (new_cost >= cost_so_far[vis.point_id]) continue;
+                cost_so_far[vis.point_id] = new_cost;
+                came_from[vis.point_id] = current;
+#ifdef DEBUG_PATHING
+                dbg_edges_relaxed++;
+#endif
+                float h;
+                if (vis.point_id == GOAL_ID) {
+                    h = 0.0f;
+                }
+                else {
+                    const auto& p = PTS[vis.point_id];
+                    h = GetDistance(p.m_pos, goal_pos);
                     if (teleports) {
-                        auto& point = mp->points[vis.point_id];
-                        float tp_cost = TeleporterHeuristic(mp->m_teleports, mp->m_teleportGraph, point, goal);
-                        priority += std::min(GetDistance(point.m_pos, goal.m_pos), tp_cost);
+                        const float tp_cost = TeleporterHeuristic(mp->m_teleports, mp->m_teleportGraph, p.m_pos, goal_pos);
+                        h = std::min(h, tp_cost);
                     }
-                    open.emplace(priority, vis.point_id);
+                }
+                sb.pq_push(new_cost + h, vis.point_id);
+            }
+
+            // Implicit edge to goal via visibility (goal_edges is symmetric; O(1) lookup).
+            if (current != START_ID) {
+                const int32_t ge_idx = goal_edge_idx[current];
+                if (ge_idx >= 0) {
+                    const auto& vis = GE[ge_idx];
+#ifdef DEBUG_PATHING
+                    dbg_edges_examined++;
+#endif
+                    if (!has_blocked || (vis.blocked_planes & current_blocked_planes).none()) {
+                        const float new_cost = cost_current + vis.distance;
+                        if (new_cost < cost_so_far[GOAL_ID]) {
+                            cost_so_far[GOAL_ID] = new_cost;
+                            came_from[GOAL_ID] = current;
+#ifdef DEBUG_PATHING
+                            dbg_edges_relaxed++;
+#endif
+                            sb.pq_push(new_cost, GOAL_ID);
+                        }
+                    }
+#ifdef DEBUG_PATHING
+                    else dbg_edges_blocked++;
+#endif
                 }
             }
         }
 
-        if (current == goal.m_id) {
+        if (current == GOAL_ID) {
             m_path.setCost(cost_so_far[current]);
-            if (BuildPath(*this, start, goal, came_from) == Error::OK) {
+            if (BuildPath(*this, start_pos, START_ID, goal_pos, GOAL_ID, came_from) == Error::OK) {
                 m_path.finalize();
             }
         }
 
-        cleanup(goal);
-        cleanup(start);
-
+#ifdef DEBUG_PATHING
+        PATH_LOG_INFO("[AStar] %s s=(%.0f,%.0f,z%d)t%d e%zu g=(%.0f,%.0f,z%d)t%d e%zu cost=%.0f pts=%d expanded=%d",
+            m_path.ready() ? "OK" : "FAIL",
+            start_pos.x, start_pos.y, (int)start_pos.zplane, (int)spt->id, sb.start_edges.size(),
+            goal_pos.x, goal_pos.y, (int)goal_pos.zplane, (int)gpt->id, sb.goal_edges.size(),
+            m_path.cost(), (int)m_path.points().size(),
+            dbg_nodes_expanded);
+#endif
         return m_path.ready() ? Error::OK : Error::FailedToFinializePath;
     }
 } // namespace Pathing

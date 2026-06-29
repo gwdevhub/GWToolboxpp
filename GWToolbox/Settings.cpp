@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "Settings.h"
-#include "Registry.h"
 
 Settings settings;
 
@@ -20,6 +19,7 @@ void PrintUsage(const bool terminate)
 
             "    /asadmin                   GWToolbox will try to run as admin\n"
             "    /noupdate                  Won't try to update\n"
+            "    /noexecheck                Won't check Github for a newer GWToolbox.exe\n"
             "    /noinstall                 Won't try to install if missing\n"
             "    /localdll                  Check launcher directory for toolbox dll, won't try to install or update\n\n"
 
@@ -90,6 +90,9 @@ void ParseCommandLine()
         }
         else if (wcscmp(arg, L"/noupdate") == 0) {
             settings.noupdate = true;
+        }
+        else if (wcscmp(arg, L"/noexecheck") == 0) {
+            settings.noexecheck = true;
         }
         else if (wcscmp(arg, L"/help") == 0) {
             settings.help = true;
@@ -197,6 +200,11 @@ bool Restart(const wchar_t* args, const bool force_admin)
         fprintf(stderr, "GetCurrentDirectoryW failed: %lu\n", GetLastError());
         return false;
     }
+    // stderr is redirected to GWToolbox.error.log; release that handle before spawning the replacement so the
+    // new instance can open the log for writing while this one is still exiting.
+    FILE* stream;
+    freopen_s(&stream, "NUL", "w", stderr);
+
     const bool is_admin = force_admin ? true : IsRunningAsAdmin();
     CreateProcessInt(path, args, workdir, is_admin);
     ExitProcess(0);

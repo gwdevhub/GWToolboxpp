@@ -4,9 +4,28 @@
 #undef RGB
 #endif
 
+// clang-cl: forward-declare ABI::Windows::UI::Color so that the
+// `typedef struct Color Color;` inside ABI::Windows::UI (Windows.UI.h,
+// brought in transitively by WinRT/wintoast headers) resolves to its
+// own namespace-scoped struct rather than colliding with the global
+// type alias below during elaborated-type-specifier lookup. MSVC is
+// more permissive here.
+namespace ABI::Windows::UI { struct Color; }
+
 using Color = ImU32;
 
 namespace Colors {
+    // Transparent Color wrapper so glaze persists it as a "0xAARRGGBB" hex string instead of a number.
+    struct SettingColor {
+        Color value;
+
+        constexpr SettingColor(const Color c = 0)
+            : value(c) {}
+
+        constexpr operator Color&() { return value; }
+        constexpr operator const Color&() const { return value; }
+    };
+
     static constexpr Color ARGB(const int a, const int r, const int g, const int b)
     {
         return static_cast<Color>(a) << IM_COL32_A_SHIFT |
@@ -57,7 +76,7 @@ namespace Colors {
     static constexpr Color BlueGrey() { return RGB(96, 125, 139); }
     static constexpr Color Grey() { return RGB(158, 158, 158); }
 
-    static Color Load(const CSimpleIni* ini, const char* section, const char* key, const Color def)
+    static Color Load(const ToolboxIni* ini, const char* section, const char* key, const Color def)
     {
         auto ParseUInt = [](const char* str, unsigned int* val, const int base)
         {
@@ -82,7 +101,7 @@ namespace Colors {
         return def;
     }
 
-    static void Save(CSimpleIni* ini, const char* section, const char* key, const Color val)
+    static void Save(ToolboxIni* ini, const char* section, const char* key, const Color val)
     {
         char buf[11];
         snprintf(buf, sizeof(buf), "0x%X", val);
@@ -263,3 +282,20 @@ namespace Colors {
         return ConvertInt4ToU32(i3);
     }
 }
+
+template <>
+struct glz::meta<Colors::SettingColor> {
+    static constexpr auto read_color = [](Colors::SettingColor& c, const std::string& input) {
+        char* end = nullptr;
+        const auto parsed = strtoul(input.c_str(), &end, 16);
+        if (end != input.c_str() && errno != ERANGE) {
+            c.value = parsed;
+        }
+    };
+    static constexpr auto write_color = [](const Colors::SettingColor& c) -> std::string {
+        char buf[11];
+        snprintf(buf, sizeof(buf), "0x%X", c.value);
+        return buf;
+    };
+    static constexpr auto value = glz::custom<read_color, write_color>;
+};

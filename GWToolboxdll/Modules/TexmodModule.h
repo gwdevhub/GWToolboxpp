@@ -1,0 +1,46 @@
+#pragma once
+
+#include <ToolboxModule.h>
+
+// ---------------------------------------------------------------------------
+// TexmodModule
+// GWToolbox module that loads gMod.dll at runtime and hands it the game's
+// already-created D3D9 device via gMod's exported SetDevice(), then loads texture
+// replacement packs (TPF/ZIP/DDS) through AddFile/RemoveFile. The list order is
+// priority: when two packs replace the same texture, the one higher in the list
+// wins, so reordering re-adds packs in the desired order.
+//
+// Draw() (a plain-module render hook) is used only to paint the texture-recording
+// overlay; the module has no window of its own.
+// ---------------------------------------------------------------------------
+class TexmodModule final : public ToolboxModule {
+public:
+    static TexmodModule& Instance()
+    {
+        static TexmodModule instance;
+        return instance;
+    }
+
+    [[nodiscard]] const char* Name() const override { return "gMod/uMod/Texmod"; }
+    [[nodiscard]] const char* Icon() const override { return ICON_FA_IMAGE; }
+    [[nodiscard]] const char* Description() const override
+    {
+        return "Load texture replacement packs (TPF/ZIP) via gMod at runtime.";
+    }
+
+    // Persisted shape of one texture pack entry (path stored as UTF-8)
+    struct PackSetting {
+        std::string path;
+        bool loaded = false;
+    };
+
+    void Update(float dt) override;
+    void Terminate() override;
+    void Draw(IDirect3DDevice9* device) override;
+    void DrawSettingsInternal() override;
+    void LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) override;
+    void SaveSettings(SettingsDoc& doc) override;
+
+private:
+    TexmodModule() = default;
+};

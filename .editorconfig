@@ -5,3 +5,39 @@ end_of_line = lf
 insert_final_newline = true
 charset = utf-8
 indent_style = space
+
+# C/C++ — mirror .clang-format. .clang-format is authoritative; these Visual
+# Studio cpp_* keys exist so VS's built-in formatter matches it when clang-format
+# isn't driving. Each key maps to an explicit .clang-format option.
+[*.{c,cc,cpp,cxx,h,hh,hpp,hxx,inl}]
+indent_size = 4
+tab_width = 4
+max_line_length = 256
+trim_trailing_whitespace = true
+
+# Indentation
+cpp_indent_access_specifiers = false        # AccessModifierOffset: -4
+cpp_indent_namespace_contents = true        # NamespaceIndentation: All
+cpp_indent_case_labels = true               # IndentCaseLabels: true
+cpp_indent_within_parentheses = indent      # AlignAfterOpenBracket: BlockIndent
+cpp_indent_preserve_within_parentheses = false
+
+# New lines
+cpp_new_line_before_open_brace_function = new_line   # BraceWrapping.AfterFunction: true
+cpp_new_line_before_open_brace_type = same_line      # AfterClass/Struct/Union/Enum: false
+cpp_new_line_before_open_brace_namespace = same_line # AfterNamespace: false
+cpp_new_line_before_open_brace_block = same_line     # AfterControlStatement: false
+cpp_new_line_before_open_brace_lambda = same_line    # BeforeLambdaBody: false
+cpp_new_line_before_else = true                      # BeforeElse: true
+cpp_new_line_before_catch = false                    # BeforeCatch: false
+cpp_new_line_before_while_in_do_while = false        # BeforeWhile: false
+cpp_new_line_close_brace_same_line_empty_function = true  # SplitEmptyFunction: false
+cpp_new_line_close_brace_same_line_empty_type = true      # SplitEmptyRecord: false
+
+# Spacing
+cpp_space_pointer_reference_alignment = left              # PointerAlignment: Left
+cpp_space_after_keywords_in_control_flow_statements = true # SpaceBeforeParens: ControlStatements
+cpp_space_before_function_open_parenthesis = remove        # SpaceBeforeParens: ControlStatements
+
+# Wrapping
+cpp_wrap_preserve_blocks = one_liners       # AllowShort{If,Block,Function}OnASingleLine

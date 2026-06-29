@@ -5,7 +5,7 @@
 
 #include <Modules/Resources.h>
 #include <Modules/HallOfMonumentsModule.h>
-#include <CurlWrapper.h>
+#include <HttpClient.h>
 #include <Utils/TextUtils.h>
 
 namespace {
