@@ -13,7 +13,7 @@ set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not e
 set(GWTOOLBOX_MODULE_VERSION "8,29,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
 
-if(MSVC_TOOLSET_VERSION LESS 143)
+if(MSVC_TOOLSET_VERSION LESS 143) 
     message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
 endif()
 
