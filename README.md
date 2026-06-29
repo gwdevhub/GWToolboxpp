@@ -7,7 +7,7 @@ If you are here to check toolbox features or for a download link, go to [https:/
 ## How to download, build, and run
 ### Requirements
 * Visual Studio 2026 version 18.0+. You can download [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/) for free. You will also need the "Desktop development with C++" package.
-* C++23 compatible v144 MSVC Platform Toolset
+* C++23 compatible v143 (or higher) MSVC Platform Toolset
 * Windows 11 SDK
 * CMake 3.29 or higher. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://cmake.org/download/](https://cmake.org/download/).
 * vcpkg. This is integrated in the [Visual Studio Developer PowerShell](https://learn.microsoft.com/en-us/visualstudio/ide/reference/command-prompt-powershell?view=vs-2022). Alternatively download the latest version from [https://github.com/microsoft/vcpkg/releases/](https://github.com/microsoft/vcpkg/releases/latest).
@@ -28,6 +28,17 @@ If you are here to check toolbox features or for a download link, go to [https:/
 6. Build the solution. `cmake --build build --config RelWithDebInfo`
 
 7. Run.
+
+### Building the installer (MSI) — optional
+
+The website download is `GWToolbox.msi`, which installs the launcher and is built with the [WiX Toolset](https://wixtoolset.org/) (a .NET tool). You only need this to produce the installer — the normal Toolbox build above does **not** require it. One-time setup (needs the .NET SDK):
+
+```powershell
+dotnet tool install --global wix
+wix extension add --global WixToolset.UI.wixext
+```
+
+Then build the launcher (above) and follow [`installer/README.md`](installer/README.md) for the `wix build` command. CI builds and signs the MSI automatically on release, so you rarely need to build it by hand.
 
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolboxdll.dll`) and EXE (`GWToolbox.exe`). The exe lets you select a Guild Wars Client and injects the dll, but you can also use other dll injectors of your choice.
