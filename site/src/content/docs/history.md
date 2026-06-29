@@ -22,7 +22,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Game Settings: the "hide window buttons" option now applies in every non-windowed mode, not only borderless and fullscreen.
 * [Fix] Settings migration: custom minimap agent colours and your friend list now carry across correctly when upgrading from the old `.ini` settings.
 * [Minor] World map: shows a "Calculating path…" indicator while a cross-map route is still being calculated.
-* [Minor] Release builds are now code-signed, which should reduce false antivirus warnings over the long run.
+* [Minor] Release builds are now code-signed (via SignPath), which should reduce false antivirus warnings.
 * [Minor] Launcher dialogs now show the launcher version in their title bar.
 * [Minor] Crash-file write failures now report the actual cause (missing folder, full disk, permissions) instead of only a raw error code.
 * [Minor] Plugins: plugin-load error messages now display non-ASCII (e.g. Korean) file paths correctly.

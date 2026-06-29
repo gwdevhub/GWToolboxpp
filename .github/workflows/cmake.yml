@@ -28,41 +28,69 @@ env:
 jobs:
   build:
     runs-on: windows-2025-vs2026
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write
+    # Exposed at job level so the release steps can gate on `env.CERTUM_OTP_URI`
+    # (secrets can't be referenced directly in an `if:` expression).
+    env:
+      CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
+      CERTUM_USERID: ${{ secrets.CERTUM_USERID }}
+      CERTUM_CERT_SHA1: ${{ secrets.CERTUM_CERT_SHA1 }}
 
     steps:
-    - name: Setup Windows 10 SDK Action
-      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
-      with:
-        sdk-version: 22621
+#    - name: Setup Windows 10 SDK Action
+#      uses: GuillaumeFalourd/setup-windows10-sdk-action@v2
+#      with:
+#        sdk-version: 22621
 
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
-    - name: Checkout submodules
-      shell: bash
-      run: git submodule update --init --recursive
-      
+    - name: Cache vcpkg toolchain
+      id: cache-vcpkg-tool
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/vcpkg
+        key: vcpkg-tool-${{ runner.os }}-ce613c41372b23b1f51333815feb3edd87ef8a8b
+
     - name: Install vcpkg
+      if: steps.cache-vcpkg-tool.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        VCPKG_COMMIT: ce613c41372b23b1f51333815feb3edd87ef8a8b
       run: |
         git clone https://github.com/microsoft/vcpkg.git
-        .\vcpkg\bootstrap-vcpkg.bat
-        
+        cd vcpkg
+        git checkout "$VCPKG_COMMIT"
+        ./bootstrap-vcpkg.bat
+
     - name: Set VCPKG_ROOT
       run: |
         echo "VCPKG_ROOT=$(Get-Location)\vcpkg" >> $env:GITHUB_ENV
       shell: powershell
-      
-    - name: Export GitHub Actions cache environment variables
-      uses: actions/github-script@v7
+
+    - name: Restore vcpkg binary cache
+      uses: actions/cache@v4
       with:
-        script: |
-          core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-          core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+        path: ${{ github.workspace }}/vcpkg-bincache
+        key: vcpkg-bin-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg-overlays/**') }}
+        restore-keys: |
+          vcpkg-bin-${{ runner.os }}-
+
+    - name: Restore FetchContent cache
+      uses: actions/cache@v4
+      with:
+        path: ${{runner.workspace}}/GWToolboxpp/build/_deps
+        key: deps-${{ runner.os }}-${{ hashFiles('cmake/*.cmake') }}
+        restore-keys: |
+          deps-${{ runner.os }}-
+
+    - name: Restore vcpkg installed cache
+      uses: actions/cache@v4
+      with:
+        path: ${{runner.workspace}}/GWToolboxpp/build/vcpkg_installed
+        key: vcpkg-inst-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
 
     - name: Create Build Environment
       # Some projects don't allow in-source building, so create a separate build directory
@@ -77,7 +105,7 @@ jobs:
       run: cmake $GITHUB_WORKSPACE --preset=vcpkg
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
-        VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+        VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
 
     - name: Build
       working-directory: ${{runner.workspace}}/GWToolboxpp/build
@@ -90,50 +118,78 @@ jobs:
       with:
         path: ${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/
 
-    - name: Check version and create release
+    - name: Determine release version
+      id: version
       if: github.ref == 'refs/heads/master'
       shell: bash
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         VERSION=$(sed -n 's/.*set(GWTOOLBOXDLL_VERSION "\(.*\)").*/\1/p' CMakeLists.txt | tr -d '\r')
         BETA=$(sed -n 's/.*set(GWTOOLBOXDLL_VERSION_BETA "\(.*\)").*/\1/p' CMakeLists.txt | tr -d '\r')
-        
+
         if [ -z "$VERSION" ]; then
           echo "Could not find version in CMakeLists.txt"
           exit 1
         fi
-        
+
         if [ -z "$BETA" ]; then
           TAG_NAME="${VERSION}_Release"
         else
           TAG_NAME="${VERSION}_${BETA}"
         fi
-        
+
         echo "Detected version: $VERSION"
         echo "Detected beta: $BETA"
         echo "Target tag: $TAG_NAME"
-        
-        # Check if tag exists
-        if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+        echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
+        if git ls-remote --tags origin "refs/tags/$TAG_NAME" | grep -q .; then
           echo "Tag $TAG_NAME already exists. Skipping release."
-          exit 0
+          echo "should_release=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "Tag $TAG_NAME does not exist. Will create release."
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
         fi
-        
-        echo "Tag $TAG_NAME does not exist. Creating release."
-          
-        # Create tag
+
+    # Certum SimplySign code signing. The binaries are signed in place in
+    # bin/RelWithDebInfo before the release upload. Each signing step is gated on
+    # the CERTUM_OTP_URI secret being present, so forks and un-provisioned
+    # environments still publish a release (unsigned) instead of failing.
+    - name: Set up Certum SimplySign
+      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
+      shell: bash
+      run: |
+        chmod +x ./.github/scripts/install-simplysign.sh
+        ./.github/scripts/install-simplysign.sh
+        powershell -ExecutionPolicy Bypass -File "./.github/scripts/configure-simplysign.ps1"
+
+    - name: Authenticate Certum SimplySign
+      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
+      shell: bash
+      run: powershell -ExecutionPolicy Bypass -File "./.github/scripts/connect-simplysign.ps1"
+
+    - name: Sign release binaries
+      if: steps.version.outputs.should_release == 'true' && env.CERTUM_OTP_URI != ''
+      shell: pwsh
+      run: |
+        $bin = "${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
+        ./.github/scripts/sign-certum.ps1 -Files @("$bin/GWToolbox.exe", "$bin/GWToolboxdll.dll")
+
+    - name: Create release
+      if: steps.version.outputs.should_release == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG_NAME="${{ steps.version.outputs.tag_name }}"
+        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
+
+        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
+
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git tag "$TAG_NAME"
         git push origin "$TAG_NAME"
-        
-        # Prepare artifacts
-        BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
-        cp "$BIN_DIR/GWToolboxdll.dll" .
-        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
-        
-        # Create release
+
         gh release create "$TAG_NAME" \
           --title "$TAG_NAME" \
-          GWToolboxdll.dll GWToolboxdll.pdb.gz
+          "$BIN_DIR/GWToolbox.exe" "$BIN_DIR/GWToolboxdll.dll" GWToolboxdll.pdb.gz
