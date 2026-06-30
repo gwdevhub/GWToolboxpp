@@ -285,6 +285,10 @@ namespace {
         const auto info = GW::Map::GetMapInfo(map_id);
         if (!GW::Map::HasMapDisplayInfo(info) && !info->GetIsOnWorldMap())
             return Climate::None;
+        // Interiors (dungeons) have no sky, so never apply climate weather. Checked before the region switch:
+        // otherwise a dungeon in a handled region (e.g. a Desolation dungeon) resolves to that region's climate first.
+        if (info && info->type == GW::RegionType::Dungeon)
+            return Climate::None;
         switch (info ? info->region : GW::Region_DevRegion) {
             case GW::Region_NorthernShiverpeaks:
             case GW::Region_FarShiverpeaks:
@@ -304,10 +308,6 @@ namespace {
             case GW::Region_TarnishedCoast:
                 return Climate::Tropical;
             case GW::Region_DomainOfAnguish:
-                return Climate::None;
-        }
-        switch (info ? info->type : GW::RegionType::DevRegion) {
-            case GW::RegionType::Dungeon:
                 return Climate::None;
         }
         return Climate::Temperate;
