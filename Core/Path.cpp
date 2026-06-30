@@ -41,7 +41,8 @@ bool PathGetProgramDirectory(std::filesystem::path& out)
 bool PathGetDocumentsPath(fs::path& out, const wchar_t* suffix)
 {
     wchar_t temp[MAX_PATH];
-    const HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS, nullptr, 0, temp);
+    // CSIDL_FLAG_DONT_VERIFY: return the path without touching the folder, else Controlled Folder Access denies it (0x80070005).
+    const HRESULT result = SHGetFolderPathW(nullptr, CSIDL_MYDOCUMENTS | CSIDL_FLAG_DONT_VERIFY, nullptr, 0, temp);
 
     if (FAILED(result)) {
         fwprintf(stderr, L"%S: SHGetFolderPathW failed (HRESULT:0x%lX)\n", __func__, result);
