@@ -285,15 +285,16 @@ namespace {
         const auto info = GW::Map::GetMapInfo(map_id);
         if (!GW::Map::HasMapDisplayInfo(info) && !info->GetIsOnWorldMap())
             return Climate::None;
-        // Interiors (dungeons) have no sky, so never apply climate weather. Checked before the region switch:
-        // otherwise a dungeon in a handled region (e.g. a Desolation dungeon) resolves to that region's climate first.
+        // Interiors (dungeons) have no sky, so never apply climate weather. Checked before the region switch so a
+        // dungeon in a region that the switch otherwise maps to a climate still resolves to clear.
         if (info && info->type == GW::RegionType::Dungeon)
             return Climate::None;
         switch (info ? info->region : GW::Region_DevRegion) {
             case GW::Region_NorthernShiverpeaks:
             case GW::Region_FarShiverpeaks:
-            case GW::Region_DepthsOfTyria:
                 return Climate::Mountainous;
+            case GW::Region_DepthsOfTyria: // EotN underground, no sky
+                return Climate::None;
             case GW::Region_CrystalDesert:
             case GW::Region_Desolation:
             case GW::Region_Istan:
