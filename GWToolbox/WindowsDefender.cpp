@@ -9,6 +9,110 @@
 namespace fs = std::filesystem;
 
 namespace {
+    // A snapshot of the Windows Defender settings that decide whether Toolbox can use its folder.
+    struct DefenderState {
+        bool readable = false;             // false when Get-MpPreference couldn't be read (locked-down host, third-party AV, ...)
+        std::vector<std::wstring> exclusion_paths;  // lowercased
+        int controlled_folder_access = 0;  // 0 disabled, 1 enabled, 2 audit (only 1 actually blocks writes)
+        std::vector<std::wstring> cfa_apps; // lowercased, Controlled Folder Access allowed applications
+    };
+
+    void TrimWhitespace(std::wstring& s)
+    {
+        const auto first = s.find_first_not_of(L" \t\r\n\xFEFF");
+        if (first == std::wstring::npos) {
+            s.clear();
+            return;
+        }
+        s.erase(0, first);
+        s.erase(s.find_last_not_of(L" \t\r\n") + 1);
+    }
+
+    std::wstring ToLower(std::wstring s)
+    {
+        std::ranges::transform(s, s.begin(), towlower);
+        return s;
+    }
+
+    std::wstring LowerCanonical(const fs::path& path)
+    {
+        std::error_code ec;
+        const fs::path canonical = fs::canonical(path, ec);
+        return ToLower((ec ? path : canonical).wstring());
+    }
+
+    // True if `target` is one of `list`, or (when prefix is set) sits inside a listed folder.
+    bool ListCoversPath(const std::vector<std::wstring>& list, const std::wstring& target, const bool prefix)
+    {
+        for (const auto& entry : list) {
+            if (entry == target)
+                return true;
+            if (prefix && target.starts_with(entry))
+                return true;
+        }
+        return false;
+    }
+
+    // One PowerShell spawn reads exclusion paths, CFA mode and allowed apps; the <<<OK>>> sentinel only prints on a successful read.
+    bool QueryDefenderState(DefenderState& out)
+    {
+        const std::wstring command =
+            L"&{ try { $p = Get-MpPreference -ErrorAction Stop } catch { return }; "
+            L"'<<<OK>>>'; $p.ExclusionPath; "
+            L"'<<<CFA>>>'; [int]$p.EnableControlledFolderAccess; "
+            L"'<<<APPS>>>'; $p.ControlledFolderAccessAllowedApplications }";
+
+        std::wstring output;
+        if (!RunPowerShellCommand(command, output))
+            return false;
+
+        enum { Header, Exclusions, ControlledFolderAccess, Apps } section = Header;
+        std::wstring line;
+        std::wstringstream ss(output);
+        while (std::getline(ss, line)) {
+            TrimWhitespace(line);
+            if (line.empty())
+                continue;
+
+            // .find rather than == so a UTF-8 BOM glued to the first line still matches the sentinel.
+            if (line.find(L"<<<OK>>>") != std::wstring::npos) { out.readable = true; section = Exclusions; continue; }
+            if (line.find(L"<<<CFA>>>") != std::wstring::npos) { section = ControlledFolderAccess; continue; }
+            if (line.find(L"<<<APPS>>>") != std::wstring::npos) { section = Apps; continue; }
+            if (!out.readable)
+                continue;
+
+            switch (section) {
+                case Exclusions: out.exclusion_paths.push_back(ToLower(line)); break;
+                case ControlledFolderAccess: out.controlled_folder_access = _wtoi(line.c_str()); break;
+                case Apps: out.cfa_apps.push_back(ToLower(line)); break;
+                default: break;
+            }
+        }
+
+        return out.readable;
+    }
+
+    // Cmdlets needed to fix `state`: the exclusion unless already covered, plus CFA apps only while CFA is on.
+    std::vector<std::wstring> RequiredCmdlets(const DefenderState& state,
+                                              const fs::path& exclusion_path,
+                                              const std::vector<fs::path>& cfa_apps)
+    {
+        std::vector<std::wstring> cmdlets;
+
+        if (!state.readable || !ListCoversPath(state.exclusion_paths, LowerCanonical(exclusion_path), true))
+            cmdlets.push_back(L"Add-MpPreference -ExclusionPath '" + exclusion_path.wstring() + L"'");
+
+        if (state.controlled_folder_access == 1) {
+            for (const auto& app : cfa_apps) {
+                std::error_code ec;
+                if (fs::exists(app, ec) && !ListCoversPath(state.cfa_apps, LowerCanonical(app), false))
+                    cmdlets.push_back(L"Add-MpPreference -ControlledFolderAccessAllowedApplications '" + app.wstring() + L"'");
+            }
+        }
+
+        return cmdlets;
+    }
+
     bool ExecutePowerShellCommandElevated(const std::wstring& command, std::wstring& error)
     {
         std::wstring ps_command = L"-NoProfile -ExecutionPolicy Bypass -Command \"";
@@ -45,47 +149,12 @@ namespace {
 
 bool IsPathExcludedFromDefender(const std::filesystem::path& path)
 {
-    std::wstring output;
-    const std::wstring command = L"Get-MpPreference | Select-Object -ExpandProperty ExclusionPath";
-
-    if (!RunPowerShellCommand(command, output)) {
-        // If we're not admin, this will fail, treat it as if it wasn't excluded but check registry later
+    DefenderState state;
+    if (!QueryDefenderState(state)) {
+        // If we can't read Defender (e.g. not admin on a locked-down host), treat it as not excluded.
         return false;
     }
-
-    std::wstring normalized_path;
-    try {
-        normalized_path = fs::canonical(path).wstring();
-        std::ranges::transform(normalized_path, normalized_path.begin(), towlower);
-    } catch (...) {
-        normalized_path = path.wstring();
-        std::ranges::transform(normalized_path, normalized_path.begin(), towlower);
-    }
-
-    std::wstring line;
-    std::wstringstream ss(output);
-
-    while (std::getline(ss, line)) {
-        line.erase(0, line.find_first_not_of(L" \t\r\n"));
-        line.erase(line.find_last_not_of(L" \t\r\n") + 1);
-
-        if (line.empty()) {
-            continue;
-        }
-
-        std::wstring excluded_path = line;
-        std::ranges::transform(excluded_path, excluded_path.begin(), towlower);
-
-        if (excluded_path == normalized_path) {
-            return true;
-        }
-
-        if (normalized_path.starts_with(excluded_path)) {
-            return true;
-        }
-    }
-
-    return false;
+    return ListCoversPath(state.exclusion_paths, LowerCanonical(path), true);
 }
 
 bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
@@ -93,17 +162,9 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
                            const bool quiet, std::wstring& error)
 {
     // Collect only the changes we actually need, so a re-run with nothing to do is a silent no-op.
-    // Re-allowing an app already on the Controlled Folder Access list is idempotent, so those are
-    // unconditional; the folder exclusion we can cheaply check first.
-    std::vector<std::wstring> cmdlets;
-    if (!IsPathExcludedFromDefender(exclusion_path))
-        cmdlets.push_back(L"Add-MpPreference -ExclusionPath '" + exclusion_path.wstring() + L"'");
-
-    for (const auto& app : controlled_folder_access_apps) {
-        std::error_code ec;
-        if (std::filesystem::exists(app, ec))
-            cmdlets.push_back(L"Add-MpPreference -ControlledFolderAccessAllowedApplications '" + app.wstring() + L"'");
-    }
+    DefenderState state;
+    QueryDefenderState(state);
+    const std::vector<std::wstring> cmdlets = RequiredCmdlets(state, exclusion_path, controlled_folder_access_apps);
 
     if (cmdlets.empty())
         return true;
@@ -191,4 +252,21 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
     }
 
     return verified;
+}
+
+void EnsureDefenderReadiness(const std::filesystem::path& exclusion_path,
+                             const std::vector<std::filesystem::path>& controlled_folder_access_apps)
+{
+    DefenderState state;
+    if (!QueryDefenderState(state)) {
+        // Can't read Defender state (locked-down host, third-party AV): don't nag on a guess.
+        return;
+    }
+
+    if (RequiredCmdlets(state, exclusion_path, controlled_folder_access_apps).empty())
+        return;
+
+    // Something's missing: hand off to the prompt-and-fix path (it surfaces its own errors).
+    std::wstring error;
+    AddDefenderExceptions(exclusion_path, controlled_folder_access_apps, false, error);
 }
