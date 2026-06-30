@@ -32,7 +32,7 @@ namespace {
     bool exclude_compass = true;
 
     // Test overlays against the scene depth buffer so world geometry hides them; z_near/z_far must match GW's projection (near clip ~47, valid 45-48; far insensitive 50k-200k).
-    bool occlude_behind_terrain = true;
+    bool occlude_behind_terrain = false;
     float z_near = 47.0f;
     float z_far = 100000.f;
 
