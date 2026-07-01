@@ -71,6 +71,53 @@ namespace {
         CloseHandle(mapping);
         return nullptr;
     }
+
+    // Minimal declarations for NtQuerySystemInformation(SystemExtendedHandleInformation),
+    // used to enumerate this process's real open handles instead of guessing values.
+    constexpr ULONG kSystemExtendedHandleInformation = 64;
+    constexpr ULONG kStatusInfoLengthMismatch = 0xC0000004UL;
+
+    struct SystemHandleEntryEx {
+        void* Object;
+        ULONG_PTR UniqueProcessId;
+        ULONG_PTR HandleValue;
+        ULONG GrantedAccess;
+        USHORT CreatorBackTraceIndex;
+        USHORT ObjectTypeIndex;
+        ULONG HandleAttributes;
+        ULONG Reserved;
+    };
+    struct SystemHandleInfoEx {
+        ULONG_PTR NumberOfHandles;
+        ULONG_PTR Reserved;
+        SystemHandleEntryEx Handles[1];
+    };
+    using NtQuerySystemInformation_t = LONG(__stdcall*)(ULONG, void*, ULONG, ULONG*);
+
+    // Snapshots this process's handle table. Empty on failure.
+    std::vector<uint8_t> QueryProcessHandles()
+    {
+        const auto ntdll = GetModuleHandleW(L"ntdll.dll");
+        const auto NtQuerySystemInformation =
+            ntdll ? reinterpret_cast<NtQuerySystemInformation_t>(GetProcAddress(ntdll, "NtQuerySystemInformation"))
+                  : nullptr;
+        if (!NtQuerySystemInformation)
+            return {};
+
+        std::vector<uint8_t> buffer(0x10000);
+        for (;;) {
+            ULONG needed = 0;
+            const LONG status = NtQuerySystemInformation(kSystemExtendedHandleInformation, buffer.data(),
+                                                         static_cast<ULONG>(buffer.size()), &needed);
+            if (static_cast<ULONG>(status) == kStatusInfoLengthMismatch) {
+                buffer.resize(needed ? needed + 0x10000 : buffer.size() * 2);
+                continue;
+            }
+            if (status != 0)
+                return {};
+            return buffer;
+        }
+    }
 } // namespace
 
 GwDatArchive& GwDatArchive::Instance()
@@ -94,10 +141,19 @@ bool GwDatArchive::AcquireMapping()
     // The running client opens Gw.dat read/write with no sharing (NtFile.cpp), so
     // we can't open our own handle, and it binds the handle to its I/O completion
     // port, so we must not ReadFile it either. Instead map the client's already-open
-    // handle: scan the process handle table for the disk handle that maps to the
-    // archive magic. If none is found the client hasn't opened the dat yet.
-    for (ULONG_PTR v = 4; v <= 0x40000; v += 4) {
-        const HANDLE h = reinterpret_cast<HANDLE>(v);
+    // handle: walk this process's open handles for the disk handle whose contents
+    // start with the archive magic. If none is found the client hasn't opened the
+    // dat yet (EnsureLoaded will retry).
+    const std::vector<uint8_t> snapshot = QueryProcessHandles();
+    if (snapshot.empty())
+        return false;
+    const auto* info = reinterpret_cast<const SystemHandleInfoEx*>(snapshot.data());
+    const ULONG_PTR pid = GetCurrentProcessId();
+    for (ULONG_PTR i = 0; i < info->NumberOfHandles; ++i) {
+        const SystemHandleEntryEx& entry = info->Handles[i];
+        if (entry.UniqueProcessId != pid)
+            continue;
+        const HANDLE h = reinterpret_cast<HANDLE>(entry.HandleValue);
         if (GetFileType(h) != FILE_TYPE_DISK)
             continue;
         const HANDLE mapping = MapDat(h);
