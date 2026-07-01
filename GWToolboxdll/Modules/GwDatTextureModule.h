@@ -3,10 +3,6 @@
 #include <ToolboxModule.h>
 #include <filesystem>
 
-namespace GW {
-    struct RecObject;
-}
-
 class GwDatTextureModule : public ToolboxModule {
     GwDatTextureModule() = default;
     ~GwDatTextureModule() override = default;
@@ -23,10 +19,9 @@ public:
     bool HasSettings() override { return false; }
 
     void Initialize() override;
-    
+
     void Terminate() override;
 
-    static bool CloseHandle(GW::RecObject* handle);
     static IDirect3DTexture9** LoadGreyscaleTextureFromFileId(uint32_t file_id);
     static bool ReadDatFile(const wchar_t* fileHash, std::vector<uint8_t>* bytes_out, uint32_t stream_id = 0);
 
