@@ -826,8 +826,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
             // don't draw normal polys in doa outpost
             continue;
         }
-        std::vector<GW::GamePos> pts{};
-        std::ranges::transform(poly.points, std::back_inserter(pts), [](const GW::Vec2f& pt) { return GW::GamePos(pt); });
+        const std::vector<GW::GamePos> pts(poly.points.begin(), poly.points.end());
 
         auto poly_to_add = GenericPolyRenderable(poly.map, pts, poly.color, poly.filled);
 
