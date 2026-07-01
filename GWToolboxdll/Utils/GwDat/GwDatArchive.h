@@ -9,9 +9,9 @@
 
 // Native reader for the Guild Wars .dat archive.
 //
-// Reads and decompresses files straight off disk (Gw.dat next to the running
-// executable) - no game functions and no memory scans, so it is immune to the
-// byte shifts that break Scanner-based access on client updates.
+// The running client holds Gw.dat open exclusively, so we memory-map its handle and
+// parse/decompress the archive ourselves - no game functions and no memory scans, so
+// it is immune to the byte shifts that break Scanner-based access on client updates.
 //
 // The MFT/decompression logic is derived from GuildWarsMapBrowser
 // (https://github.com/Jonathan-Greve/GuildWarsMapBrowser) - see GwDat/CREDITS.txt.
@@ -19,22 +19,15 @@ class GwDatArchive {
 public:
     static GwDatArchive& Instance();
 
-    // Indexes Gw.dat by mapping the client's open handle. Retries on each call
-    // until it succeeds, so an early request before the client has opened the dat
-    // doesn't latch failure. Thread-safe.
+    // Maps the client's open dat handle on first use; retries until it succeeds. Thread-safe.
     bool EnsureLoaded();
 
-    // Diagnostics (valid after EnsureLoaded()): the resolved dat path and whether
-    // the index has loaded.
+    // Diagnostics, valid after EnsureLoaded().
     const std::wstring& DatPath() const { return m_dat_path; }
     bool Loaded() const { return m_loaded.load(std::memory_order_acquire); }
 
-    // Reads the decompressed bytes for a GW file id (the dat "file number", the
-    // same value ArenaNetFileParser::FileHashToFileId produces). stream_id is an
-    // offset added to the file's base MFT slot, matching the game's file API: e.g.
-    // maps keep a stub at stream 0 and the full data (Map_Pathfinding etc.) at
-    // stream 1. Returns false if the archive can't be opened or the id/stream
-    // isn't present.
+    // Decompressed bytes for a GW file id; stream_id offsets the base MFT slot to
+    // pick a stream (maps keep a stub at 0 and the full data at 1). False if absent.
     bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
 private:

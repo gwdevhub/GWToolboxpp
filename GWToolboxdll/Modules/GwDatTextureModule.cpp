@@ -49,8 +49,7 @@ namespace {
         return true;
     }
 
-    // Reads file_id from the dat and decodes it to tightly-packed A8R8G8B8 pixels.
-    // Handles ATEX/ATTX textures, model files with an inline DXT texture chunk, and DDS.
+    // Decodes file_id to tightly-packed A8R8G8B8: ATEX/ATTX, ffna inline DXT chunk, or DDS.
     bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims)
     {
         ArenaNetFileParser::GameAssetFile asset;
@@ -197,8 +196,7 @@ bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8
         return false;
     auto& dat = GwDatArchive::Instance();
     const bool ok = dat.ReadFile(file_id, *bytes_out, stream_id);
-    // Log once, the first time the archive is available (early failures are
-    // transient - the client may not have opened the dat yet).
+    // Log once the archive is available; earlier failures are transient (dat not opened yet).
     if (dat.Loaded()) {
         static std::once_flag reported;
         std::call_once(reported, [&dat] {
@@ -211,8 +209,7 @@ bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8
 void GwDatTextureModule::Initialize()
 {
     ToolboxModule::Initialize();
-    // The dat is indexed lazily on the first read (GwDatArchive::EnsureLoaded is
-    // guarded by std::call_once), so there's nothing to scan or set up here.
+    // The dat is indexed lazily on the first read, so there's nothing to set up here.
 }
 
 IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
@@ -250,9 +247,7 @@ void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std
         if (!SUCCEEDED(scratch.InitializeFromImage(src)))
             return;
 
-        // DXT1/BC1 encodes color better (it can place a texel at the midpoint of its two RGB565
-        // endpoints, which DXT3/DXT5 cannot), so prefer it whenever the icon has no real alpha and
-        // only fall back to BC3 (DXT5) when smooth transparency must be preserved.
+        // BC1 encodes color better than BC3, so prefer it unless real alpha must be preserved.
         const auto target = scratch.IsAlphaAllOpaque() ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC3_UNORM;
 
         DirectX::ScratchImage compressed;
