@@ -11,6 +11,7 @@ the latest version, go to the [Home Page](./) instead.
 * [New] Item icons are now shown in the item's applied dye colour — including combined multi-dye colours — wherever Toolbox draws an item icon, such as the item info window and the Armory piece previews.
 * [Fix] Item and skill icons now load directly from the game's `Gw.dat` file, so they keep working across Guild Wars updates that shift the game's memory (which broke the previous method).
 * [Fix] Fixed a crash when opening a skill trainer — the merchant "hold Ctrl for a bulk quote" hint mistook the trainer window for a merchant window and read the wrong field.
+* [Fix] Fixed a crash when using `/chest` or `/xunlai` to close the Xunlai storage window.
 * [Fix] The hero command panel position-memory option added in 8.29 is temporarily disabled — it caused UI drawing glitches and could crash.
 * [Fix] Launcher now verifies Windows Defender folder permissions before injecting, so a blocked injection is caught up front with a clear prompt instead of failing quietly.
 * [Fix] Toolbox now resolves your Documents folder correctly when Windows Defender Controlled Folder Access is enabled, so settings and crash dumps save to the right place.
