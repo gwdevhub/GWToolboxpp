@@ -907,6 +907,10 @@ namespace {
 
     void UpdateQuoteHelpText()
     {
+        // Skill trainers reuse the buy/sell layout without the quote text label; guard on the trader/merchant-only Request Quote button, else GetEncodedLabel returns junk and wcslen crashes below.
+        if (!GW::UI::GetFrameByLabel(L"BtnRequestQuote"))
+            return;
+
         auto SetFrameText = [](GW::UI::Frame* frame) {
             const auto quote_help_text = (GW::TextLabelFrame*)frame;
             if (!quote_help_text) return;
