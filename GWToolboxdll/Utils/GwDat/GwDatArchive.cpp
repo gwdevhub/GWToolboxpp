@@ -18,6 +18,16 @@ namespace {
         return (std::filesystem::path(exe).parent_path() / L"Gw.dat").wstring();
     }
 
+    // Opens our own read handle to Gw.dat. The running client keeps the archive
+    // open read/write (it appends streamed content while you play), so we must
+    // share write/delete or CreateFile fails with a sharing violation.
+    HANDLE OpenDat(const std::wstring& path)
+    {
+        return CreateFileW(path.c_str(), GENERIC_READ,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    }
+
     // Reads `count` bytes at absolute `offset`. Returns false on short/failed read.
     bool ReadAt(HANDLE file, int64_t offset, void* buffer, DWORD count)
     {
@@ -48,8 +58,7 @@ bool GwDatArchive::ParseIndex()
     if (m_dat_path.empty())
         return false;
 
-    const HANDLE file = CreateFileW(m_dat_path.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                                    nullptr, OPEN_EXISTING, 0, nullptr);
+    const HANDLE file = OpenDat(m_dat_path);
     if (file == INVALID_HANDLE_VALUE)
         return false;
 
@@ -129,8 +138,7 @@ bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_
     if (!e.b || e.size <= 0) // b == 0 marks an empty/base slot with no payload
         return false;
 
-    const HANDLE file = CreateFileW(m_dat_path.c_str(), GENERIC_READ, FILE_SHARE_READ,
-                                    nullptr, OPEN_EXISTING, 0, nullptr);
+    const HANDLE file = OpenDat(m_dat_path);
     if (file == INVALID_HANDLE_VALUE)
         return false;
 
