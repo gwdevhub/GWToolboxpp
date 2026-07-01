@@ -22,10 +22,12 @@ public:
     bool EnsureLoaded();
 
     // Diagnostics (valid after EnsureLoaded()): the resolved dat path, whether the
-    // index loaded, and the Win32 error from the failing CreateFile (0 if none).
+    // index loaded, the Win32 error from a failing CreateFile (0 if none), and
+    // whether we fell back to the client's own (exclusively-held) dat handle.
     const std::wstring& DatPath() const { return m_dat_path; }
     bool Loaded() const { return m_loaded; }
     unsigned long LastError() const { return m_last_error; }
+    bool UsingGameHandle() const { return m_using_game_handle; }
 
     // Reads the decompressed bytes for a GW file id (the dat "file number", the
     // same value ArenaNetFileParser::FileHashToFileId produces). stream_id is an
@@ -69,11 +71,15 @@ private:
 #pragma pack(pop)
     static_assert(sizeof(MftEntry) == 24, "on-disk MFT entry must be 24 bytes");
 
-    bool ParseIndex(); // reads header + MFT once, driven by EnsureLoaded's call_once
+    bool ParseIndex();      // reads header + MFT once, driven by EnsureLoaded's call_once
+    bool AcquireMapping();  // maps the dat via our own handle, or the client's open one
 
     std::once_flag m_load_once;
     bool m_loaded = false;
+    bool m_using_game_handle = false;
     unsigned long m_last_error = 0; // Win32 error from a failed CreateFile
+    void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, kept for the archive lifetime
+    long long m_file_size = 0;      // dat size captured when the mapping was created
     std::wstring m_dat_path;
     std::vector<MftEntry> m_slots;                       // indexed by physical MFT slot
     std::unordered_map<uint32_t, int> m_fileid_to_slot;  // GW file id -> base MFT slot

@@ -7,6 +7,9 @@
 #include "xentax.h"
 
 namespace {
+    const uint8_t kDatMagic[4] = {0x33, 0x41, 0x4e, 0x1a}; // "3ANa"
+    constexpr size_t kMaxView = 0x800000;                  // cap each mapped window at 8 MB
+
     // Resolves Gw.dat next to the running executable. The client always keeps the
     // dat in its own directory, so the exe path is the authoritative source.
     std::wstring ResolveDatPath()
@@ -18,25 +21,55 @@ namespace {
         return (std::filesystem::path(exe).parent_path() / L"Gw.dat").wstring();
     }
 
-    // Opens our own read handle to Gw.dat. The running client keeps the archive
-    // open read/write (it appends streamed content while you play), so we must
-    // share write/delete or CreateFile fails with a sharing violation.
-    HANDLE OpenDat(const std::wstring& path)
+    DWORD AllocationGranularity()
     {
-        return CreateFileW(path.c_str(), GENERIC_READ,
-                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                           nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        return si.dwAllocationGranularity;
     }
 
-    // Reads `count` bytes at absolute `offset`. Returns false on short/failed read.
-    bool ReadAt(HANDLE file, int64_t offset, void* buffer, DWORD count)
+    // Reads `count` bytes at absolute `offset` through the file mapping. Views are
+    // served by the memory manager's paging path, so this never issues ReadFile on
+    // the underlying handle - critical, because the client's dat handle is bound to
+    // its I/O completion port and a stray ReadFile would corrupt its I/O loop.
+    // Windows are granularity-aligned and capped so we never map a huge span.
+    bool ReadAt(HANDLE mapping, int64_t offset, void* buffer, size_t count)
     {
-        LARGE_INTEGER pos;
-        pos.QuadPart = offset;
-        if (!SetFilePointerEx(file, pos, nullptr, FILE_BEGIN))
-            return false;
-        DWORD read = 0;
-        return ReadFile(file, buffer, count, &read, nullptr) && read == count;
+        static const DWORD gran = AllocationGranularity();
+        auto* dst = static_cast<uint8_t*>(buffer);
+        while (count > 0) {
+            const int64_t base = offset - (offset % gran);
+            const size_t delta = static_cast<size_t>(offset - base);
+            const size_t chunk = count < kMaxView ? count : kMaxView;
+            void* view = MapViewOfFile(mapping, FILE_MAP_READ,
+                                       static_cast<DWORD>((static_cast<uint64_t>(base) >> 32) & 0xFFFFFFFF),
+                                       static_cast<DWORD>(base & 0xFFFFFFFF), delta + chunk);
+            if (!view)
+                return false;
+            memcpy(dst, static_cast<uint8_t*>(view) + delta, chunk);
+            UnmapViewOfFile(view);
+            dst += chunk;
+            offset += static_cast<int64_t>(chunk);
+            count -= chunk;
+        }
+        return true;
+    }
+
+    // A whole-file, read-only mapping of the given dat handle, or nullptr. Verifies
+    // the archive magic through a view (no ReadFile).
+    HANDLE MapDat(HANDLE file)
+    {
+        const HANDLE mapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
+        if (!mapping)
+            return nullptr;
+        void* head = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, sizeof(kDatMagic));
+        const bool is_dat = head && memcmp(head, kDatMagic, sizeof(kDatMagic)) == 0;
+        if (head)
+            UnmapViewOfFile(head);
+        if (is_dat)
+            return mapping;
+        CloseHandle(mapping);
+        return nullptr;
     }
 } // namespace
 
@@ -52,46 +85,85 @@ bool GwDatArchive::EnsureLoaded()
     return m_loaded;
 }
 
+bool GwDatArchive::AcquireMapping()
+{
+    // Fast path: open and map our own handle. Works when the client isn't holding
+    // the dat exclusively (e.g. it isn't running).
+    const HANDLE own = CreateFileW(m_dat_path.c_str(), GENERIC_READ,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                   nullptr, OPEN_EXISTING, 0, nullptr);
+    if (own != INVALID_HANDLE_VALUE) {
+        const HANDLE mapping = MapDat(own);
+        LARGE_INTEGER sz;
+        if (GetFileSizeEx(own, &sz))
+            m_file_size = sz.QuadPart;
+        CloseHandle(own);
+        if (mapping) {
+            m_mapping = mapping;
+            m_using_game_handle = false;
+            return true;
+        }
+    }
+    else {
+        m_last_error = GetLastError();
+    }
+
+    // The running client opens Gw.dat read/write with no sharing (NtFile.cpp), so
+    // our own open fails. It is bound to the client's I/O completion port, so we
+    // must not ReadFile it - instead map the client's already-open handle. Scan
+    // the process handle table for the disk handle that maps to the archive magic.
+    for (ULONG_PTR v = 4; v <= 0x40000; v += 4) {
+        const HANDLE h = reinterpret_cast<HANDLE>(v);
+        if (GetFileType(h) != FILE_TYPE_DISK)
+            continue;
+        const HANDLE mapping = MapDat(h);
+        if (!mapping)
+            continue;
+        LARGE_INTEGER sz;
+        if (GetFileSizeEx(h, &sz))
+            m_file_size = sz.QuadPart;
+        m_mapping = mapping;
+        m_using_game_handle = true;
+        return true;
+    }
+    return false;
+}
+
 bool GwDatArchive::ParseIndex()
 {
     m_dat_path = ResolveDatPath();
     if (m_dat_path.empty())
         return false;
 
-    const HANDLE file = OpenDat(m_dat_path);
-    if (file == INVALID_HANDLE_VALUE) {
-        m_last_error = GetLastError();
+    if (!AcquireMapping())
         return false;
-    }
+    const HANDLE mapping = reinterpret_cast<HANDLE>(m_mapping);
 
     bool ok = false;
     do {
         MainHeader head = {};
-        if (!ReadAt(file, 0, &head, sizeof(head)))
+        if (!ReadAt(mapping, 0, &head, sizeof(head)))
             break;
         // "3ANa" archive magic.
         if (!(head.id[0] == 0x33 && head.id[1] == 0x41 && head.id[2] == 0x4e && head.id[3] == 0x1a))
             break;
 
         MftHeader mft_head = {};
-        if (!ReadAt(file, head.mft_offset, &mft_head, sizeof(mft_head)))
+        if (!ReadAt(mapping, head.mft_offset, &mft_head, sizeof(mft_head)))
             break;
-        if (mft_head.entry_count <= 16)
+        if (mft_head.entry_count <= 16 || m_file_size <= head.mft_offset)
             break;
 
         // The MFT is one contiguous table of 24-byte slots starting at mft_offset:
         // slot 0 is the header, slots 1..15 are reserved (slot [2] -> hash list),
-        // and slots 16.. are the real files. Pull it into memory in one read rather
-        // than issuing a syscall per (potentially 600k+) entry.
-        LARGE_INTEGER file_size;
-        if (!GetFileSizeEx(file, &file_size))
-            break;
+        // and slots 16.. are the real files. Copy it out in one pass rather than
+        // resolving a view per (potentially 600k+) entry.
         const int64_t table_bytes = static_cast<int64_t>(mft_head.entry_count) * 24;
-        const int64_t avail = file_size.QuadPart - head.mft_offset;
-        const size_t read_bytes = static_cast<size_t>((table_bytes < avail ? table_bytes : avail));
+        const int64_t avail = m_file_size - head.mft_offset;
+        const size_t read_bytes = static_cast<size_t>(table_bytes < avail ? table_bytes : avail);
         std::vector<uint8_t> table(read_bytes);
         if (read_bytes < static_cast<size_t>(17 * 24) ||
-            !ReadAt(file, head.mft_offset, table.data(), static_cast<DWORD>(read_bytes)))
+            !ReadAt(mapping, head.mft_offset, table.data(), read_bytes))
             break;
         const int slot_count = static_cast<int>(read_bytes / 24);
 
@@ -106,8 +178,8 @@ bool GwDatArchive::ParseIndex()
         std::vector<MftExpansion> mftx;
         const int expansion_count = hash_list.size / static_cast<int>(sizeof(MftExpansion));
         mftx.resize(static_cast<size_t>(expansion_count));
-        if (expansion_count > 0 && !ReadAt(file, hash_list.offset, mftx.data(),
-                                           static_cast<DWORD>(expansion_count * sizeof(MftExpansion))))
+        if (expansion_count > 0 && !ReadAt(mapping, hash_list.offset, mftx.data(),
+                                           expansion_count * sizeof(MftExpansion)))
             break;
 
         // Each expansion maps a file id (file_number) to its base slot (file_offset).
@@ -119,7 +191,7 @@ bool GwDatArchive::ParseIndex()
         ok = !m_fileid_to_slot.empty();
     } while (false);
 
-    CloseHandle(file);
+    // m_mapping stays open for the archive lifetime; reads reuse it.
     return ok;
 }
 
@@ -140,14 +212,8 @@ bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_
     if (!e.b || e.size <= 0) // b == 0 marks an empty/base slot with no payload
         return false;
 
-    const HANDLE file = OpenDat(m_dat_path);
-    if (file == INVALID_HANDLE_VALUE)
-        return false;
-
     std::vector<uint8_t> input(static_cast<size_t>(e.size));
-    const bool read_ok = ReadAt(file, e.offset, input.data(), static_cast<DWORD>(e.size));
-    CloseHandle(file);
-    if (!read_ok)
+    if (!ReadAt(reinterpret_cast<HANDLE>(m_mapping), e.offset, input.data(), static_cast<size_t>(e.size)))
         return false;
 
     if (e.a) {
