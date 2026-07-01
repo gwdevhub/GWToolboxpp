@@ -26,8 +26,9 @@ public:
     const std::wstring& DatPath() const { return m_dat_path; }
     bool Loaded() const { return m_loaded.load(std::memory_order_acquire); }
 
-    // Decompressed bytes for a GW file id; stream_id offsets the base MFT slot to
-    // pick a stream (maps keep a stub at 0 and the full data at 1). False if absent.
+    // Decompressed bytes for a GW file id. A file's streams form a linked list of MFT
+    // entries; stream_id selects one by its stream number (0 = the file's own data;
+    // e.g. item models keep their UI icon at stream 1). False if absent.
     bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
 private:
@@ -57,8 +58,8 @@ private:
         int32_t size; // compressed size on disk
         uint16_t a;   // non-zero => the payload is GWDat-compressed
         uint8_t b;    // zero marks an empty/base slot with no payload
-        uint8_t c;
-        int32_t id;
+        uint8_t c;    // this entry's stream number within its file
+        int32_t id;   // slot index of the next stream in the file's chain (0 = end)
         int32_t crc;
     };
 #pragma pack(pop)

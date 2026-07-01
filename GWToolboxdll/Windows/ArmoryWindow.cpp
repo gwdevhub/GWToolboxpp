@@ -690,7 +690,8 @@ namespace GWArmory {
         if (!model_id_to_load)
             model_id_to_load = model_file_id;
 
-        return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load);
+        // The UI icon is stream 1 of the model file (stream 0 is the 3D model itself).
+        return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load, 1);
     }
     
     std::string GetChatCommand(Armor* armor, GW::ItemData* data)
