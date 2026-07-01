@@ -156,10 +156,12 @@ namespace {
     };
 
     // Builds an item icon: stream 1 is the base colour, stream 0xc a single-channel dye
-    // mask. Where masked, the base is recoloured by the dye's colour matrix + neutral bias
-    // (clamped) and blended back by the mask. dye is a GW::DyeColor value; 0/None (or a
-    // missing/mismatched mask, or a value outside Blue..Pink) yields the plain, undyed icon.
-    IDirect3DTexture9* CreateItemTexture(IDirect3DDevice9* device, uint32_t file_id, uint32_t dye, Vec2i& dims)
+    // mask. Where masked, the base is recoloured by the dye colour matrix + neutral bias
+    // (clamped) and blended back by the mask. `dyes` packs up to four GW::DyeColor values,
+    // one per byte (as GW combines up to four dye slots into one icon colour); each applied
+    // slot's matrix is averaged, which is exact since the matrices are linear. No applied
+    // slot (or a missing/mismatched mask) yields the plain, undyed icon.
+    IDirect3DTexture9* CreateItemTexture(IDirect3DDevice9* device, uint32_t file_id, uint32_t dyes, Vec2i& dims)
     {
         if (!device || !file_id)
             return nullptr;
@@ -168,11 +170,25 @@ namespace {
         if (!DecodeTextureToArgb(file_id, base, dims, 1) || !dims.x || !dims.y)
             return nullptr;
 
+        // Average the applied dye slots' matrices into one combined transform.
+        float M[10] = {};
+        int applied = 0;
+        for (int slot = 0; slot < 4; ++slot) {
+            const uint32_t d = (dyes >> (slot * 8)) & 0xFF;
+            if (d >= 2 && d <= 13) {
+                const float* const K = kDyeColorMatrix[d - 2];
+                for (int j = 0; j < 10; ++j)
+                    M[j] += K[j];
+                ++applied;
+            }
+        }
+
         std::vector<uint32_t> mask;
         Vec2i mask_dims;
-        if (dye >= 2 && dye <= 13 && DecodeTextureToArgb(file_id, mask, mask_dims, 0xc) &&
+        if (applied && DecodeTextureToArgb(file_id, mask, mask_dims, 0xc) &&
             mask_dims.x == dims.x && mask_dims.y == dims.y && mask.size() == base.size()) {
-            const float* const M = kDyeColorMatrix[dye - 2];
+            for (float& v : M)
+                v /= static_cast<float>(applied);
             const float bias = M[9]; // neutral: added equally to R,G,B
             const auto clamp8 = [](float v) -> uint32_t {
                 return static_cast<uint32_t>(v < 0.0f ? 0.0f : v > 255.0f ? 255.0f : v);
@@ -233,11 +249,11 @@ namespace {
     struct GwImg {
         uint32_t m_file_id = 0;
         uint32_t m_stream_id = 0;
-        uint32_t m_dye = 0;
+        uint32_t m_dyes = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
-        explicit GwImg(uint32_t file_id, uint32_t stream_id = 0, uint32_t dye = 0)
-            : m_file_id(file_id), m_stream_id(stream_id), m_dye(dye) {}
+        explicit GwImg(uint32_t file_id, uint32_t stream_id = 0, uint32_t dyes = 0)
+            : m_file_id(file_id), m_stream_id(stream_id), m_dyes(dyes) {}
         ~GwImg()
         {
             if (m_tex) {
@@ -252,7 +268,7 @@ namespace {
 
     std::map<uint64_t, GwImg*> textures_by_file_id;
     std::map<uint32_t, GwImg*> greyscale_textures_by_file_id;
-    std::map<uint64_t, GwImg*> item_images_by_file_id; // key = dye << 32 | model_file_id
+    std::map<uint64_t, GwImg*> item_images_by_file_id; // key = dyes << 32 | model_file_id
 } // namespace
 
 IDirect3DTexture9** GwDatTextureModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
@@ -306,16 +322,16 @@ IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, 
     return &gwimg_ptr->m_tex;
 }
 
-IDirect3DTexture9** GwDatTextureModule::LoadItemImage(uint32_t model_file_id, uint32_t dye)
+IDirect3DTexture9** GwDatTextureModule::LoadItemImage(uint32_t model_file_id, uint32_t dyes)
 {
-    const uint64_t key = (static_cast<uint64_t>(dye) << 32) | model_file_id;
+    const uint64_t key = (static_cast<uint64_t>(dyes) << 32) | model_file_id;
     auto found = item_images_by_file_id.find(key);
     if (found != item_images_by_file_id.end())
         return &found->second->m_tex;
-    auto gwimg_ptr = new GwImg(model_file_id, 1, dye);
+    auto gwimg_ptr = new GwImg(model_file_id, 1, dyes);
     item_images_by_file_id[key] = gwimg_ptr;
     Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
-        gwimg_ptr->m_tex = CreateItemTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dye, gwimg_ptr->m_dims);
+        gwimg_ptr->m_tex = CreateItemTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dyes, gwimg_ptr->m_dims);
     });
     return &gwimg_ptr->m_tex;
 }

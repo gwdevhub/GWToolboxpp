@@ -29,8 +29,9 @@ public:
     static IDirect3DTexture9** LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id = 0);
 
     // Loads an item's UI icon (stream 1 of the model file), recolouring its dyeable region
-    // (the stream 0xc mask) for the given GW::DyeColor value. 0/None yields the undyed icon.
-    static IDirect3DTexture9** LoadItemImage(uint32_t model_file_id, uint32_t dye = 0);
+    // (the stream 0xc mask). `dyes` packs up to four GW::DyeColor values, one per byte, which
+    // are blended as GW combines dye slots; 0 (no applied slot) yields the undyed icon.
+    static IDirect3DTexture9** LoadItemImage(uint32_t model_file_id, uint32_t dyes = 0);
 
     // Decodes the texture for file_id from the dat and writes it to disk (format chosen by extension).
     static void SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path);
