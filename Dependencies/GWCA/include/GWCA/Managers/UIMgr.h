@@ -217,6 +217,9 @@ namespace GW {
 			bool IsCreated() const {
 				return (frame_state & 0x4) != 0;
 			}
+			bool IsBeingDestroyed() const {
+				return (frame_state & 0x8) != 0;
+			}
 			bool IsVisible() const {
 				return !IsHidden();
 			}
