@@ -1,7 +1,5 @@
 #include <Windows.h>
 
-#include <algorithm>
-#include <cstddef>
 #include <cstring>
 #include <filesystem>
 
@@ -85,52 +83,29 @@ bool GwDatArchive::ParseIndex()
             !ReadAt(file, head.mft_offset, table.data(), static_cast<DWORD>(read_bytes)))
             break;
         const int slot_count = static_cast<int>(read_bytes / 24);
-        const auto slot = [&table](int s) { MftEntry e = {}; memcpy(&e, table.data() + static_cast<size_t>(s) * 24, 24); return e; };
 
-        // Reserved entries occupy slots 1..15; browser indexes these as MFT[0..14],
-        // so MFT[1] (the hash list) is slot 2.
-        m_mft.reserve(static_cast<size_t>(slot_count));
-        for (int s = 1; s <= 15; ++s)
-            m_mft.push_back(slot(s));
+        // Keep every physical slot: the game addresses a file as base_slot + stream_id,
+        // so a file's extra streams are the slots that immediately follow its base.
+        m_slots.resize(static_cast<size_t>(slot_count));
+        memcpy(m_slots.data(), table.data(), static_cast<size_t>(slot_count) * 24);
 
-        const MftEntry& hash_list = m_mft[1];
+        // MFT[1] (the hash list) is slot 2: slot 0 is the header, and the 15 reserved
+        // entries the game reads after it are slots 1..15.
+        const MftEntry& hash_list = m_slots[2];
         std::vector<MftExpansion> mftx;
         const int expansion_count = hash_list.size / static_cast<int>(sizeof(MftExpansion));
         mftx.resize(static_cast<size_t>(expansion_count));
         if (expansion_count > 0 && !ReadAt(file, hash_list.offset, mftx.data(),
                                            static_cast<DWORD>(expansion_count * sizeof(MftExpansion))))
             break;
-        std::sort(mftx.begin(), mftx.end(),
-                  [](const MftExpansion& a, const MftExpansion& b) { return a.file_offset < b.file_offset; });
 
-        size_t hashcounter = 0;
-        while (hashcounter < mftx.size() && mftx[hashcounter].file_offset < 16)
-            ++hashcounter;
-
-        for (int x = 16; x < slot_count && x < mft_head.entry_count - 1; ++x) {
-            MftEntry e = slot(x);
-            if (hashcounter < mftx.size() && x == mftx[hashcounter].file_offset) {
-                e.hash = static_cast<uint32_t>(mftx[hashcounter].file_number);
-                m_mft.push_back(e);
-                // A single physical entry can be referenced by several file numbers.
-                while (hashcounter + 1 < mftx.size() &&
-                       mftx[hashcounter].file_offset == mftx[hashcounter + 1].file_offset) {
-                    ++hashcounter;
-                    e.hash = static_cast<uint32_t>(mftx[hashcounter].file_number);
-                    m_mft.push_back(e);
-                }
-                ++hashcounter;
-            }
-            else {
-                m_mft.push_back(e);
-            }
+        // Each expansion maps a file id (file_number) to its base slot (file_offset).
+        // Several ids can alias the same slot; each still gets its own mapping.
+        for (const auto& e : mftx) {
+            if (e.file_offset >= 16 && e.file_offset < slot_count)
+                m_fileid_to_slot[static_cast<uint32_t>(e.file_number)] = e.file_offset;
         }
-
-        for (int i = 0; i < static_cast<int>(m_mft.size()); ++i) {
-            if (m_mft[i].hash != 0)
-                m_hash_index[m_mft[i].hash].push_back(i);
-        }
-        ok = !m_hash_index.empty();
+        ok = !m_fileid_to_slot.empty();
     } while (false);
 
     CloseHandle(file);
@@ -143,12 +118,14 @@ bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_
     if (!EnsureLoaded() || !file_id)
         return false;
 
-    const auto found = m_hash_index.find(file_id);
-    if (found == m_hash_index.end() || found->second.empty())
+    const auto found = m_fileid_to_slot.find(file_id);
+    if (found == m_fileid_to_slot.end())
         return false;
-    const auto& indices = found->second;
-    const int index = indices[stream_id < indices.size() ? stream_id : 0];
-    const MftEntry& e = m_mft[static_cast<size_t>(index)];
+    // stream_id offsets from the file's base slot (stream 0 = base, 1 = next, ...).
+    const int64_t target = static_cast<int64_t>(found->second) + stream_id;
+    if (target < 0 || target >= static_cast<int64_t>(m_slots.size()))
+        return false;
+    const MftEntry& e = m_slots[static_cast<size_t>(target)];
     if (!e.b || e.size <= 0) // b == 0 marks an empty/base slot with no payload
         return false;
 

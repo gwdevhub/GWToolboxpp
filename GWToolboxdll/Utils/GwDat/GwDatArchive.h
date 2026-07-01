@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <mutex>
 #include <string>
@@ -23,9 +22,11 @@ public:
     bool EnsureLoaded();
 
     // Reads the decompressed bytes for a GW file id (the dat "file number", the
-    // same value ArenaNetFileParser::FileHashToFileId produces). stream_id picks
-    // among multiple dat entries that share an id (0 = first). Returns false if
-    // the archive can't be opened or the id isn't present.
+    // same value ArenaNetFileParser::FileHashToFileId produces). stream_id is an
+    // offset added to the file's base MFT slot, matching the game's file API: e.g.
+    // maps keep a stub at stream 0 and the full data (Map_Pathfinding etc.) at
+    // stream 1. Returns false if the archive can't be opened or the id/stream
+    // isn't present.
     bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
 private:
@@ -49,25 +50,24 @@ private:
         int32_t file_number;
         int32_t file_offset;
     };
-    // The first 24 bytes map directly onto the on-disk MFT entry.
+    // The whole struct maps directly onto the 24-byte on-disk MFT entry.
     struct MftEntry {
         int64_t offset;
         int32_t size; // compressed size on disk
         uint16_t a;   // non-zero => the payload is GWDat-compressed
-        uint8_t b;
+        uint8_t b;    // zero marks an empty/base slot with no payload
         uint8_t c;
         int32_t id;
         int32_t crc;
-        uint32_t hash = 0; // GW file number (from the MFT expansion table)
     };
 #pragma pack(pop)
-    static_assert(offsetof(MftEntry, hash) == 24, "on-disk MFT entry must be 24 bytes");
+    static_assert(sizeof(MftEntry) == 24, "on-disk MFT entry must be 24 bytes");
 
     bool ParseIndex(); // reads header + MFT once, driven by EnsureLoaded's call_once
 
     std::once_flag m_load_once;
     bool m_loaded = false;
     std::wstring m_dat_path;
-    std::vector<MftEntry> m_mft;
-    std::unordered_map<uint32_t, std::vector<int>> m_hash_index; // file id -> MFT indices
+    std::vector<MftEntry> m_slots;                       // indexed by physical MFT slot
+    std::unordered_map<uint32_t, int> m_fileid_to_slot;  // GW file id -> base MFT slot
 };
