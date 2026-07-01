@@ -1345,6 +1345,19 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
     return raw;
 }
 
+namespace {
+    // The first applied dye slot drives the icon recolour; GwDatTextureModule maps the
+    // GW::DyeColor value to a colour matrix. Returns 0 (None) when the item is undyed.
+    uint32_t ItemDyeColor(GW::Item* item)
+    {
+        for (const GW::DyeColor color : {item->dye.dye1, item->dye.dye2, item->dye.dye3, item->dye.dye4}) {
+            if (color != GW::DyeColor::None)
+                return static_cast<uint32_t>(color);
+        }
+        return 0;
+    }
+}
+
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
 {
     if (!(item && item->model_file_id))
@@ -1364,9 +1377,8 @@ IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
     }
     if (!model_id_to_load)
         model_id_to_load = item->model_file_id;
-    // The UI icon is stream 1 of the model file (stream 0 is the 3D model itself).
-    return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load, 1);
-    // @Enhancement: How to apply dye_info to the result?
+    // The UI icon is stream 1 of the model file; the item's dye recolours its stream 0xc mask region.
+    return GwDatTextureModule::LoadItemImage(model_id_to_load, ItemDyeColor(item));
 }
 
 IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
