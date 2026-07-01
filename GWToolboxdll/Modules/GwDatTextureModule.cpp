@@ -88,12 +88,10 @@ namespace {
 
         dims.x = tex.width;
         dims.y = tex.height;
+        // The decoder's RGBA is really B8G8R8A8 in memory, matching D3DFMT_A8R8G8B8, so copy as-is.
         argb.resize(static_cast<size_t>(tex.width) * tex.height);
-        for (size_t i = 0; i < argb.size() && i < tex.rgba_data.size(); ++i) {
-            const RGBA p = tex.rgba_data[i];
-            argb[i] = (static_cast<uint32_t>(p.a) << 24) | (static_cast<uint32_t>(p.r) << 16) |
-                      (static_cast<uint32_t>(p.g) << 8) | static_cast<uint32_t>(p.b);
-        }
+        for (size_t i = 0; i < argb.size() && i < tex.rgba_data.size(); ++i)
+            argb[i] = tex.rgba_data[i].dw;
         return true;
     }
 
