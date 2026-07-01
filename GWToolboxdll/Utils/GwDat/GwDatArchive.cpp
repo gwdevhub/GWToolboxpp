@@ -1,6 +1,7 @@
 #include <Windows.h>
 
 #include <cstring>
+#include <cwchar>
 #include <filesystem>
 
 #include "GwDatArchive.h"
@@ -10,8 +11,7 @@ namespace {
     const uint8_t kDatMagic[4] = {0x33, 0x41, 0x4e, 0x1a}; // "3ANa"
     constexpr size_t kMaxView = 0x800000;                  // cap each mapped window at 8 MB
 
-    // Resolves Gw.dat next to the running executable. The client always keeps the
-    // dat in its own directory, so the exe path is the authoritative source.
+    // The client keeps Gw.dat in its own directory, so derive it from the exe path.
     std::wstring ResolveDatPath()
     {
         wchar_t exe[MAX_PATH] = {0};
@@ -28,11 +28,8 @@ namespace {
         return si.dwAllocationGranularity;
     }
 
-    // Reads `count` bytes at absolute `offset` through the file mapping. Views are
-    // served by the memory manager's paging path, so this never issues ReadFile on
-    // the underlying handle - critical, because the client's dat handle is bound to
-    // its I/O completion port and a stray ReadFile would corrupt its I/O loop.
-    // Windows are granularity-aligned and capped so we never map a huge span.
+    // Read via mapped views, never ReadFile: the client's dat handle is bound to its
+    // I/O completion port and a stray ReadFile on it would corrupt its I/O loop.
     bool ReadAt(HANDLE mapping, int64_t offset, void* buffer, size_t count)
     {
         static const DWORD gran = AllocationGranularity();
@@ -55,8 +52,20 @@ namespace {
         return true;
     }
 
-    // A whole-file, read-only mapping of the given dat handle, or nullptr. Verifies
-    // the archive magic through a view (no ReadFile).
+    // True if the handle refers to a file named "Gw.dat". GetFinalPathNameByHandle is
+    // a metadata query, so it's safe on the client's port-bound handle (no I/O issued).
+    bool HandleIsGwDat(HANDLE file)
+    {
+        wchar_t path[MAX_PATH];
+        const DWORD n = GetFinalPathNameByHandleW(file, path, MAX_PATH, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+        if (!n || n >= MAX_PATH)
+            return false;
+        const wchar_t* name = wcsrchr(path, L'\\');
+        return _wcsicmp(name ? name + 1 : path, L"Gw.dat") == 0;
+    }
+
+    // Whole-file read-only mapping, but only if the contents start with the archive
+    // magic; nullptr otherwise. Confirms via a view, never ReadFile.
     HANDLE MapDat(HANDLE file)
     {
         const HANDLE mapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
@@ -70,6 +79,53 @@ namespace {
             return mapping;
         CloseHandle(mapping);
         return nullptr;
+    }
+
+    // NtQuerySystemInformation(SystemExtendedHandleInformation) lets us enumerate our
+    // real open handles instead of guessing handle values.
+    constexpr ULONG kSystemExtendedHandleInformation = 64;
+    constexpr ULONG kStatusInfoLengthMismatch = 0xC0000004UL;
+
+    struct SystemHandleEntryEx {
+        void* Object;
+        ULONG_PTR UniqueProcessId;
+        ULONG_PTR HandleValue;
+        ULONG GrantedAccess;
+        USHORT CreatorBackTraceIndex;
+        USHORT ObjectTypeIndex;
+        ULONG HandleAttributes;
+        ULONG Reserved;
+    };
+    struct SystemHandleInfoEx {
+        ULONG_PTR NumberOfHandles;
+        ULONG_PTR Reserved;
+        SystemHandleEntryEx Handles[1];
+    };
+    using NtQuerySystemInformation_t = LONG(__stdcall*)(ULONG, void*, ULONG, ULONG*);
+
+    // Snapshots this process's handle table. Empty on failure.
+    std::vector<uint8_t> QueryProcessHandles()
+    {
+        const auto ntdll = GetModuleHandleW(L"ntdll.dll");
+        const auto NtQuerySystemInformation =
+            ntdll ? reinterpret_cast<NtQuerySystemInformation_t>(GetProcAddress(ntdll, "NtQuerySystemInformation"))
+                  : nullptr;
+        if (!NtQuerySystemInformation)
+            return {};
+
+        std::vector<uint8_t> buffer(0x10000);
+        for (;;) {
+            ULONG needed = 0;
+            const LONG status = NtQuerySystemInformation(kSystemExtendedHandleInformation, buffer.data(),
+                                                         static_cast<ULONG>(buffer.size()), &needed);
+            if (static_cast<ULONG>(status) == kStatusInfoLengthMismatch) {
+                buffer.resize(needed ? needed + 0x10000 : buffer.size() * 2);
+                continue;
+            }
+            if (status != 0)
+                return {};
+            return buffer;
+        }
     }
 } // namespace
 
@@ -91,14 +147,19 @@ bool GwDatArchive::EnsureLoaded()
 
 bool GwDatArchive::AcquireMapping()
 {
-    // The running client opens Gw.dat read/write with no sharing (NtFile.cpp), so
-    // we can't open our own handle, and it binds the handle to its I/O completion
-    // port, so we must not ReadFile it either. Instead map the client's already-open
-    // handle: scan the process handle table for the disk handle that maps to the
-    // archive magic. If none is found the client hasn't opened the dat yet.
-    for (ULONG_PTR v = 4; v <= 0x40000; v += 4) {
-        const HANDLE h = reinterpret_cast<HANDLE>(v);
-        if (GetFileType(h) != FILE_TYPE_DISK)
+    // The client holds Gw.dat exclusively and bound to its I/O completion port, so we
+    // can neither open nor ReadFile it - locate its open handle and map that instead.
+    const std::vector<uint8_t> snapshot = QueryProcessHandles();
+    if (snapshot.empty())
+        return false;
+    const auto* info = reinterpret_cast<const SystemHandleInfoEx*>(snapshot.data());
+    const ULONG_PTR pid = GetCurrentProcessId();
+    for (ULONG_PTR i = 0; i < info->NumberOfHandles; ++i) {
+        const SystemHandleEntryEx& entry = info->Handles[i];
+        if (entry.UniqueProcessId != pid)
+            continue;
+        const HANDLE h = reinterpret_cast<HANDLE>(entry.HandleValue);
+        if (GetFileType(h) != FILE_TYPE_DISK || !HandleIsGwDat(h))
             continue;
         const HANDLE mapping = MapDat(h);
         if (!mapping)
@@ -147,10 +208,7 @@ bool GwDatArchive::ParseIndex()
         if (mft_head.entry_count <= 16 || m_file_size <= head.mft_offset)
             break;
 
-        // The MFT is one contiguous table of 24-byte slots starting at mft_offset:
-        // slot 0 is the header, slots 1..15 are reserved (slot [2] -> hash list),
-        // and slots 16.. are the real files. Copy it out in one pass rather than
-        // resolving a view per (potentially 600k+) entry.
+        // Copy the whole 24-byte-per-slot MFT out in one pass rather than mapping a view per 600k+ entry.
         const int64_t table_bytes = static_cast<int64_t>(mft_head.entry_count) * 24;
         const int64_t avail = m_file_size - head.mft_offset;
         const size_t read_bytes = static_cast<size_t>(table_bytes < avail ? table_bytes : avail);
@@ -160,13 +218,11 @@ bool GwDatArchive::ParseIndex()
             break;
         const int slot_count = static_cast<int>(read_bytes / 24);
 
-        // Keep every physical slot: the game addresses a file as base_slot + stream_id,
-        // so a file's extra streams are the slots that immediately follow its base.
+        // Keep every physical slot: the game addresses a file as base_slot + stream_id.
         m_slots.resize(static_cast<size_t>(slot_count));
         memcpy(m_slots.data(), table.data(), static_cast<size_t>(slot_count) * 24);
 
-        // MFT[1] (the hash list) is slot 2: slot 0 is the header, and the 15 reserved
-        // entries the game reads after it are slots 1..15.
+        // Hash list is MFT[1] = slot 2 (slot 0 is the header, slots 1..15 reserved).
         const MftEntry& hash_list = m_slots[2];
         std::vector<MftExpansion> mftx;
         const int expansion_count = hash_list.size / static_cast<int>(sizeof(MftExpansion));
@@ -175,8 +231,7 @@ bool GwDatArchive::ParseIndex()
                                            expansion_count * sizeof(MftExpansion)))
             break;
 
-        // Each expansion maps a file id (file_number) to its base slot (file_offset).
-        // Several ids can alias the same slot; each still gets its own mapping.
+        // Map each file id to its base slot; several ids may alias the same slot.
         for (const auto& e : mftx) {
             if (e.file_offset >= 16 && e.file_offset < slot_count)
                 m_fileid_to_slot[static_cast<uint32_t>(e.file_number)] = e.file_offset;

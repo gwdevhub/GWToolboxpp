@@ -9,8 +9,7 @@ int ImgFmt(unsigned int Format)
 {
     if (Format >= 0x17)
     {
-        // Corrupt/unknown format: bail with a benign value rather than exit() -
-        // this code runs inside the game process and must never terminate it.
+        // Bail (not exit()) on a bad format - this runs in the game process and must not kill it.
         return 0;
     }
     return ImageFormats[Format];
