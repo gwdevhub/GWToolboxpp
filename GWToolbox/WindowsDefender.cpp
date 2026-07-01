@@ -4,6 +4,7 @@
 #include <Path.h>
 #include "WindowsDefender.h"
 
+#include "Inject.h"
 #include "Settings.h"
 
 namespace fs = std::filesystem;
@@ -169,6 +170,19 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
     if (cmdlets.empty())
         return true;
 
+    // Controlled Folder Access fixes a process's allowed status at launch, so allowing an
+    // already-running Gw.exe now won't let the injected Toolbox write to Documents until that
+    // client restarts. Note it here so we can tell the user once the change lands.
+    bool allowing_running_gw = false;
+    if (state.controlled_folder_access == 1) {
+        for (const auto& gw : GetGuildWarsExecutablePaths()) {
+            if (!ListCoversPath(state.cfa_apps, LowerCanonical(gw), false)) {
+                allowing_running_gw = true;
+                break;
+            }
+        }
+    }
+
     const bool is_admin = IsRunningAsAdmin();
 
     if (!is_admin && !quiet) {
@@ -232,7 +246,12 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
         if (verified) {
             ShowMessageBoxW(
                 nullptr,
-                L"Windows Security exceptions added successfully!",
+                allowing_running_gw
+                    ? L"Windows Security exceptions added successfully!\n\n"
+                      L"Guild Wars is now allowed through Controlled Folder Access (Ransomware protection), "
+                      L"but Windows only applies that to newly-started programs. Close and re-open Guild Wars, "
+                      L"then start Toolbox again, so it can save your settings and crash dumps."
+                    : L"Windows Security exceptions added successfully!",
                 L"Windows Defender Exclusion",
                 MB_OK | MB_ICONINFORMATION);
         }
