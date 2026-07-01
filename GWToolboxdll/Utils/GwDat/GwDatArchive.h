@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 #include <string>
@@ -18,8 +19,15 @@ class GwDatArchive {
 public:
     static GwDatArchive& Instance();
 
-    // Opens and indexes Gw.dat on first use. Thread-safe and idempotent.
+    // Indexes Gw.dat by mapping the client's open handle. Retries on each call
+    // until it succeeds, so an early request before the client has opened the dat
+    // doesn't latch failure. Thread-safe.
     bool EnsureLoaded();
+
+    // Diagnostics (valid after EnsureLoaded()): the resolved dat path and whether
+    // the index has loaded.
+    const std::wstring& DatPath() const { return m_dat_path; }
+    bool Loaded() const { return m_loaded.load(std::memory_order_acquire); }
 
     // Reads the decompressed bytes for a GW file id (the dat "file number", the
     // same value ArenaNetFileParser::FileHashToFileId produces). stream_id is an
@@ -63,10 +71,13 @@ private:
 #pragma pack(pop)
     static_assert(sizeof(MftEntry) == 24, "on-disk MFT entry must be 24 bytes");
 
-    bool ParseIndex(); // reads header + MFT once, driven by EnsureLoaded's call_once
+    bool ParseIndex();      // resets state, then reads header + MFT; safe to retry
+    bool AcquireMapping();  // maps the client's open dat handle; false if not found yet
 
-    std::once_flag m_load_once;
-    bool m_loaded = false;
+    std::mutex m_load_mutex;
+    std::atomic<bool> m_loaded{false};
+    void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, kept for the archive lifetime
+    long long m_file_size = 0;      // dat size captured when the mapping was created
     std::wstring m_dat_path;
     std::vector<MftEntry> m_slots;                       // indexed by physical MFT slot
     std::unordered_map<uint32_t, int> m_fileid_to_slot;  // GW file id -> base MFT slot
