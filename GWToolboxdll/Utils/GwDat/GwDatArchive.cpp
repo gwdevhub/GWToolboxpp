@@ -252,22 +252,34 @@ bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_
     const auto found = m_fileid_to_slot.find(file_id);
     if (found == m_fileid_to_slot.end())
         return false;
-    // stream_id offsets from the file's base slot (stream 0 = base, 1 = next, ...).
-    const int64_t target = static_cast<int64_t>(found->second) + stream_id;
-    if (target < 0 || target >= static_cast<int64_t>(m_slots.size()))
-        return false;
-    const MftEntry& e = m_slots[static_cast<size_t>(target)];
-    if (!e.b || e.size <= 0) // b == 0 marks an empty/base slot with no payload
+    // A file's streams form a linked list, not consecutive slots: each entry's `c`
+    // holds its stream number and `id` points at the next stream's slot. Walk from the
+    // base entry until the requested stream turns up (the game's own lookup does this).
+    int idx = found->second;
+    const MftEntry* e = nullptr;
+    for (int guard = 0; guard < 256; ++guard) {
+        if (idx < 16 || idx >= static_cast<int>(m_slots.size()))
+            return false;
+        const MftEntry& candidate = m_slots[static_cast<size_t>(idx)];
+        if (candidate.c == stream_id) {
+            e = &candidate;
+            break;
+        }
+        idx = candidate.id; // follow the chain to the next stream
+        if (idx <= 0)
+            return false;
+    }
+    if (!e || !e->b || e->size <= 0) // b == 0 marks an empty/base slot with no payload
         return false;
 
-    std::vector<uint8_t> input(static_cast<size_t>(e.size));
-    if (!ReadAt(reinterpret_cast<HANDLE>(m_mapping), e.offset, input.data(), static_cast<size_t>(e.size)))
+    std::vector<uint8_t> input(static_cast<size_t>(e->size));
+    if (!ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size)))
         return false;
 
-    if (e.a) {
+    if (e->a) {
         unsigned char* output = nullptr;
         int out_size = 0;
-        UnpackGWDat(input.data(), e.size, output, out_size);
+        UnpackGWDat(input.data(), e->size, output, out_size);
         if (output) {
             if (out_size > 0)
                 out.assign(output, output + out_size);

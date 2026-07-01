@@ -1364,7 +1364,8 @@ IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
     }
     if (!model_id_to_load)
         model_id_to_load = item->model_file_id;
-    return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load);
+    // The UI icon is stream 1 of the model file (stream 0 is the 3D model itself).
+    return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load, 1);
     // @Enhancement: How to apply dye_info to the result?
 }
 

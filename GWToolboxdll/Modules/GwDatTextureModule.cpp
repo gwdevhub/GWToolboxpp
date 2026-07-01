@@ -50,10 +50,11 @@ namespace {
     }
 
     // Decodes file_id to tightly-packed A8R8G8B8: ATEX/ATTX, ffna inline DXT chunk, or DDS.
-    bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims)
+    // stream_id picks a stream within the file (item models keep their UI icon at stream 1).
+    bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims, uint32_t stream_id = 0)
     {
         ArenaNetFileParser::GameAssetFile asset;
-        if (!asset.readFromDat(file_id))
+        if (!asset.readFromDat(file_id, stream_id))
             return false;
 
         uint8_t* image_bytes = asset.data.data();
@@ -95,13 +96,13 @@ namespace {
         return true;
     }
 
-    IDirect3DTexture9* CreateTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims)
+    IDirect3DTexture9* CreateTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims, uint32_t stream_id = 0)
     {
         if (!device || !file_id)
             return nullptr;
 
         std::vector<uint32_t> argb;
-        if (!DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
+        if (!DecodeTextureToArgb(file_id, argb, dims, stream_id) || !dims.x || !dims.y)
             return nullptr;
 
         IDirect3DTexture9* tex = nullptr;
@@ -158,8 +159,10 @@ namespace {
 
     struct GwImg {
         uint32_t m_file_id = 0;
+        uint32_t m_stream_id = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
+        explicit GwImg(uint32_t file_id, uint32_t stream_id = 0) : m_file_id(file_id), m_stream_id(stream_id) {}
         ~GwImg()
         {
             if (m_tex) {
@@ -169,7 +172,10 @@ namespace {
         }
     };
 
-    std::map<uint32_t, GwImg*> textures_by_file_id;
+    // Keyed by (stream_id << 32 | file_id) so different streams of one file cache separately.
+    uint64_t TextureKey(uint32_t file_id, uint32_t stream_id) { return (static_cast<uint64_t>(stream_id) << 32) | file_id; }
+
+    std::map<uint64_t, GwImg*> textures_by_file_id;
     std::map<uint32_t, GwImg*> greyscale_textures_by_file_id;
 } // namespace
 
@@ -210,15 +216,16 @@ void GwDatTextureModule::Initialize()
     // The dat is indexed lazily on the first read, so there's nothing to set up here.
 }
 
-IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
+IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id)
 {
-    auto found = textures_by_file_id.find(file_id);
+    const uint64_t key = TextureKey(file_id, stream_id);
+    auto found = textures_by_file_id.find(key);
     if (found != textures_by_file_id.end())
         return &found->second->m_tex;
-    auto gwimg_ptr = new GwImg(file_id);
-    textures_by_file_id[file_id] = gwimg_ptr;
+    auto gwimg_ptr = new GwImg(file_id, stream_id);
+    textures_by_file_id[key] = gwimg_ptr;
     Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
-        gwimg_ptr->m_tex = CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
+        gwimg_ptr->m_tex = CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims, gwimg_ptr->m_stream_id);
         });
     return &gwimg_ptr->m_tex;
 }
