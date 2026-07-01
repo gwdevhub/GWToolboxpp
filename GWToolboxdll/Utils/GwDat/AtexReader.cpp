@@ -233,6 +233,51 @@ std::vector<RGBA> ProcessDXT5(unsigned char* data, int xr, int yr)
 
 #include <vector>
 
+// DXTA has no colour: it's a single channel of 8-byte interpolated-alpha blocks
+// (BC4/DXT5-alpha style). Present the channel as opaque greyscale.
+std::vector<RGBA> ProcessDXTA(unsigned char* data, int xr, int yr)
+{
+    std::vector<RGBA> image(xr * yr);
+    memset(image.data(), 0, xr * yr * 4);
+
+    const int blocks_per_row = xr / 4;
+    for (int by = 0; by < yr / 4; by++)
+        for (int bx = 0; bx < xr / 4; bx++)
+        {
+            unsigned char* blk = data + ((by * blocks_per_row + bx) * 8);
+            unsigned char a0 = blk[0], a1 = blk[1], atbl[8];
+            atbl[0] = a0;
+            atbl[1] = a1;
+            if (a0 > a1)
+            {
+                for (int z = 0; z < 6; z++)
+                    atbl[z + 2] = ((6 - z) * a0 + (z + 1) * a1) / 7;
+            }
+            else
+            {
+                for (int z = 0; z < 4; z++)
+                    atbl[z + 2] = ((4 - z) * a0 + (z + 1) * a1) / 5;
+                atbl[6] = 0;
+                atbl[7] = 255;
+            }
+
+            __int64 k = 0;
+            for (int i = 0; i < 6; i++)
+                k |= (__int64)blk[2 + i] << (8 * i);
+
+            for (int b = 0; b < 4; b++)
+                for (int a = 0; a < 4; a++)
+                {
+                    const unsigned char v = atbl[k & 7];
+                    k = k >> 3;
+                    RGBA& p = image[bx * 4 + a + (by * 4 + b) * xr];
+                    p.r = p.g = p.b = v;
+                    p.a = 255;
+                }
+        }
+    return image;
+}
+
 DatTexture ProcessImageFile(unsigned char* img, int size)
 {
     int id1, id2;
@@ -304,6 +349,11 @@ DatTexture ProcessImageFile(unsigned char* img, int size)
             image[x].g = (image[x].g * image[x].a) / 255;
             image[x].b = (image[x].b * image[x].a) / 255;
         }
+        tex_type = TextureType::BC5;
+        break;
+    case 'A':
+        AtexDecompress((unsigned int*)img, size, 0x14, r, (unsigned int*)output.data());
+        image = ProcessDXTA((unsigned char*)output.data(), r.xres, r.yres);
         tex_type = TextureType::BC5;
         break;
     default:
