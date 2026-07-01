@@ -1361,6 +1361,23 @@ IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
 {
     if (!(item && item->model_file_id))
         return nullptr;
+
+    // TEMP debug: log how a dyed item stores its dye (raw 16-bit value vs decoded nibbles),
+    // deduped so it fires once per distinct item/dye rather than every frame while hovering.
+    {
+        const auto* raw = reinterpret_cast<const uint8_t*>(&item->dye);
+        const uint32_t dye16 = raw[1] | (static_cast<uint32_t>(raw[2]) << 8);
+        static uint64_t last = ~0ull;
+        const uint64_t key = (static_cast<uint64_t>(item->model_file_id) << 24) | (static_cast<uint64_t>(dye16) << 8) | raw[0];
+        if (key != last) {
+            last = key;
+            Log::Info("[dye] model=0x%X interaction=0x%X tint=%u dye16=0x%04X nibbles(dye1-4)=%u,%u,%u,%u",
+                item->model_file_id, item->interaction, raw[0], dye16,
+                static_cast<uint32_t>(item->dye.dye1), static_cast<uint32_t>(item->dye.dye2),
+                static_cast<uint32_t>(item->dye.dye3), static_cast<uint32_t>(item->dye.dye4));
+        }
+    }
+
     uint32_t model_id_to_load = 0;
     const bool is_composite_item = (item->interaction & 4) != 0;
 
