@@ -7,6 +7,13 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.30
+* [New] Item icons are now shown in the item's applied dye colour — including combined multi-dye colours — wherever Toolbox draws an item icon, such as the item info window and the Armory piece previews.
+* [Fix] Item and skill icons now load directly from the game's `Gw.dat` file, so they keep working across Guild Wars updates that shift the game's memory (which broke the previous method).
+* [Fix] The hero command panel position-memory option added in 8.29 is temporarily disabled — it caused UI drawing glitches and could crash.
+* [Fix] Launcher now verifies Windows Defender folder permissions before injecting, so a blocked injection is caught up front with a clear prompt instead of failing quietly.
+* [Fix] Toolbox now resolves your Documents folder correctly when Windows Defender Controlled Folder Access is enabled, so settings and crash dumps save to the right place.
+
 ## Version 8.29
 * **[New] Weather module: draws weather — rain, snow, ash, fog and overhead clouds — into the 3D game world, occluded by terrain and able to dim the scene with an overcast. Ships with presets (Heavy/Light Rain, Snow, Ashfall, Fog, Sandstorm, Blizzard) and lets you author your own. Optional automatic weather picks conditions from the climate of the region you're in; the new `/weather` and `/climate` chat commands control it.**
 * [New] Skills: added an "Export HD skill icons as DDS" button to save high-resolution skill icons to image files.
