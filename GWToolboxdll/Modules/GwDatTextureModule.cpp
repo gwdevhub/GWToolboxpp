@@ -2,6 +2,7 @@
 
 #include <cstring>
 
+#include <Logger.h>
 #include "GwDatTextureModule.h"
 
 #include "Resources.h"
@@ -194,7 +195,17 @@ bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8
     const uint32_t file_id = ArenaNetFileParser::FileHashToFileId(file_name);
     if (!file_id)
         return false;
-    return GwDatArchive::Instance().ReadFile(file_id, *bytes_out, stream_id);
+    auto& dat = GwDatArchive::Instance();
+    const bool ok = dat.ReadFile(file_id, *bytes_out, stream_id);
+    if (!dat.Loaded()) {
+        // Report why the archive couldn't be opened, exactly once.
+        static std::once_flag warned;
+        std::call_once(warned, [&dat] {
+            Log::LogW(L"[GwDat] Could not open dat '%s' (Win32 error %lu)",
+                      dat.DatPath().c_str(), dat.LastError());
+        });
+    }
+    return ok;
 }
 
 void GwDatTextureModule::Initialize()

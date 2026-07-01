@@ -21,6 +21,12 @@ public:
     // Opens and indexes Gw.dat on first use. Thread-safe and idempotent.
     bool EnsureLoaded();
 
+    // Diagnostics (valid after EnsureLoaded()): the resolved dat path, whether the
+    // index loaded, and the Win32 error from the failing CreateFile (0 if none).
+    const std::wstring& DatPath() const { return m_dat_path; }
+    bool Loaded() const { return m_loaded; }
+    unsigned long LastError() const { return m_last_error; }
+
     // Reads the decompressed bytes for a GW file id (the dat "file number", the
     // same value ArenaNetFileParser::FileHashToFileId produces). stream_id is an
     // offset added to the file's base MFT slot, matching the game's file API: e.g.
@@ -67,6 +73,7 @@ private:
 
     std::once_flag m_load_once;
     bool m_loaded = false;
+    unsigned long m_last_error = 0; // Win32 error from a failed CreateFile
     std::wstring m_dat_path;
     std::vector<MftEntry> m_slots;                       // indexed by physical MFT slot
     std::unordered_map<uint32_t, int> m_fileid_to_slot;  // GW file id -> base MFT slot

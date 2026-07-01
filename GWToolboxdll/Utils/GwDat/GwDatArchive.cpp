@@ -59,8 +59,10 @@ bool GwDatArchive::ParseIndex()
         return false;
 
     const HANDLE file = OpenDat(m_dat_path);
-    if (file == INVALID_HANDLE_VALUE)
+    if (file == INVALID_HANDLE_VALUE) {
+        m_last_error = GetLastError();
         return false;
+    }
 
     bool ok = false;
     do {
