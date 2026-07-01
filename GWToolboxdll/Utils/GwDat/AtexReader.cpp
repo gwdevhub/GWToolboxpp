@@ -341,6 +341,8 @@ DatTexture ProcessImageFile(unsigned char* img, int size)
         tex_type = TextureType::BC5;
         break;
     case 'L':
+        // DXTL's fourth channel is luminance, not transparency: premultiply the
+        // colour by it and leave the texture opaque (skill icons etc. are DXTL).
         AtexDecompress((unsigned int*)img, size, 0x12, r, (unsigned int*)output.data());
         image = ProcessDXT5((unsigned char*)output.data(), r.xres, r.yres);
         for (int x = 0; x < r.xres * r.yres; x++)
@@ -348,6 +350,7 @@ DatTexture ProcessImageFile(unsigned char* img, int size)
             image[x].r = (image[x].r * image[x].a) / 255;
             image[x].g = (image[x].g * image[x].a) / 255;
             image[x].b = (image[x].b * image[x].a) / 255;
+            image[x].a = 255;
         }
         tex_type = TextureType::BC5;
         break;
