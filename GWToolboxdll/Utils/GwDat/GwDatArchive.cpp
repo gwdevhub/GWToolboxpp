@@ -81,37 +81,21 @@ GwDatArchive& GwDatArchive::Instance()
 
 bool GwDatArchive::EnsureLoaded()
 {
-    std::call_once(m_load_once, [this] { m_loaded = ParseIndex(); });
-    return m_loaded;
+    if (m_loaded.load(std::memory_order_acquire))
+        return true;
+    std::lock_guard<std::mutex> lock(m_load_mutex);
+    if (!m_loaded.load(std::memory_order_relaxed) && ParseIndex())
+        m_loaded.store(true, std::memory_order_release);
+    return m_loaded.load(std::memory_order_relaxed);
 }
 
 bool GwDatArchive::AcquireMapping()
 {
-    // Fast path: open and map our own handle. Works when the client isn't holding
-    // the dat exclusively (e.g. it isn't running).
-    const HANDLE own = CreateFileW(m_dat_path.c_str(), GENERIC_READ,
-                                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                   nullptr, OPEN_EXISTING, 0, nullptr);
-    if (own != INVALID_HANDLE_VALUE) {
-        const HANDLE mapping = MapDat(own);
-        LARGE_INTEGER sz;
-        if (GetFileSizeEx(own, &sz))
-            m_file_size = sz.QuadPart;
-        CloseHandle(own);
-        if (mapping) {
-            m_mapping = mapping;
-            m_using_game_handle = false;
-            return true;
-        }
-    }
-    else {
-        m_last_error = GetLastError();
-    }
-
     // The running client opens Gw.dat read/write with no sharing (NtFile.cpp), so
-    // our own open fails. It is bound to the client's I/O completion port, so we
-    // must not ReadFile it - instead map the client's already-open handle. Scan
-    // the process handle table for the disk handle that maps to the archive magic.
+    // we can't open our own handle, and it binds the handle to its I/O completion
+    // port, so we must not ReadFile it either. Instead map the client's already-open
+    // handle: scan the process handle table for the disk handle that maps to the
+    // archive magic. If none is found the client hasn't opened the dat yet.
     for (ULONG_PTR v = 4; v <= 0x40000; v += 4) {
         const HANDLE h = reinterpret_cast<HANDLE>(v);
         if (GetFileType(h) != FILE_TYPE_DISK)
@@ -123,7 +107,6 @@ bool GwDatArchive::AcquireMapping()
         if (GetFileSizeEx(h, &sz))
             m_file_size = sz.QuadPart;
         m_mapping = mapping;
-        m_using_game_handle = true;
         return true;
     }
     return false;
@@ -131,7 +114,17 @@ bool GwDatArchive::AcquireMapping()
 
 bool GwDatArchive::ParseIndex()
 {
-    m_dat_path = ResolveDatPath();
+    // Reset any state from a previous failed attempt so retries start clean.
+    if (m_mapping) {
+        CloseHandle(reinterpret_cast<HANDLE>(m_mapping));
+        m_mapping = nullptr;
+    }
+    m_file_size = 0;
+    m_slots.clear();
+    m_fileid_to_slot.clear();
+
+    if (m_dat_path.empty())
+        m_dat_path = ResolveDatPath();
     if (m_dat_path.empty())
         return false;
 

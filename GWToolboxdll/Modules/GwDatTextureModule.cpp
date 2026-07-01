@@ -197,18 +197,14 @@ bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8
         return false;
     auto& dat = GwDatArchive::Instance();
     const bool ok = dat.ReadFile(file_id, *bytes_out, stream_id);
-    // Report the archive outcome exactly once.
-    static std::once_flag reported;
-    std::call_once(reported, [&dat] {
-        if (!dat.Loaded()) {
-            Log::LogW(L"[GwDat] Could not open dat '%s' (Win32 error %lu)",
-                      dat.DatPath().c_str(), dat.LastError());
-        }
-        else {
-            Log::LogW(L"[GwDat] Opened dat '%s' via %s handle", dat.DatPath().c_str(),
-                      dat.UsingGameHandle() ? L"the client's" : L"our own");
-        }
-    });
+    // Log once, the first time the archive is available (early failures are
+    // transient - the client may not have opened the dat yet).
+    if (dat.Loaded()) {
+        static std::once_flag reported;
+        std::call_once(reported, [&dat] {
+            Log::LogW(L"[GwDat] Mapped client's Gw.dat ('%s')", dat.DatPath().c_str());
+        });
+    }
     return ok;
 }
 
