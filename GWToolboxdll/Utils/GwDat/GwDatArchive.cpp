@@ -9,6 +9,7 @@
 namespace {
     const uint8_t kDatMagic[4] = {0x33, 0x41, 0x4e, 0x1a}; // "3ANa"
     constexpr size_t kMaxView = 0x800000;                  // cap each mapped window at 8 MB
+    constexpr uint32_t kRefreshThrottleMs = 2000;          // min gap between re-parses on a read miss
 
     DWORD AllocationGranularity()
     {
@@ -145,7 +146,7 @@ bool GwDatArchive::EnsureLoaded()
     return m_loaded.load(std::memory_order_relaxed);
 }
 
-bool GwDatArchive::AcquireMapping()
+bool GwDatArchive::AcquireMappingInto(void*& out_mapping, long long& out_size, std::wstring& out_path)
 {
     // The client holds Gw.dat exclusively and bound to its I/O completion port, so we
     // can neither open nor ReadFile it - locate its open handle and map that instead.
@@ -168,22 +169,74 @@ bool GwDatArchive::AcquireMapping()
         const std::wstring path = HandlePath(h);
         if (path.empty() || !HasDatExtension(path))
             continue;
+        // Re-map whole-file each time: the dat grows as the client streams files in, and a mapping
+        // created with size 0 only ever covers the file size at creation.
         const HANDLE mapping = MapDat(h);
         if (!mapping)
             continue;
         LARGE_INTEGER sz;
-        if (GetFileSizeEx(h, &sz))
-            m_file_size = sz.QuadPart;
-        m_mapping = mapping;
-        m_dat_path = path; // the archive we actually bound to, for diagnostics
+        out_size = GetFileSizeEx(h, &sz) ? sz.QuadPart : 0;
+        out_mapping = mapping;
+        out_path = path; // the archive we actually bound to, for diagnostics
         return true;
     }
     return false;
 }
 
+// Reads the header + MFT + hash list from `mapping` into fresh temporaries. Non-destructive: on
+// failure the caller's existing index is untouched, so a bad refresh never drops a working index.
+bool GwDatArchive::ParseFrom(void* mapping_v, long long file_size, std::vector<MftEntry>& slots,
+                             std::unordered_map<uint32_t, int>& fileid_to_slot)
+{
+    const HANDLE mapping = reinterpret_cast<HANDLE>(mapping_v);
+    MainHeader head = {};
+    if (!ReadAt(mapping, 0, &head, sizeof(head)))
+        return false;
+    // "3ANa" archive magic.
+    if (!(head.id[0] == 0x33 && head.id[1] == 0x41 && head.id[2] == 0x4e && head.id[3] == 0x1a))
+        return false;
+
+    MftHeader mft_head = {};
+    if (!ReadAt(mapping, head.mft_offset, &mft_head, sizeof(mft_head)))
+        return false;
+    if (mft_head.entry_count <= 16 || file_size <= head.mft_offset)
+        return false;
+
+    // Copy the whole 24-byte-per-slot MFT out in one pass rather than mapping a view per 600k+ entry.
+    const int64_t table_bytes = static_cast<int64_t>(mft_head.entry_count) * 24;
+    const int64_t avail = file_size - head.mft_offset;
+    const size_t read_bytes = static_cast<size_t>(table_bytes < avail ? table_bytes : avail);
+    if (read_bytes < static_cast<size_t>(17 * 24))
+        return false;
+    std::vector<uint8_t> table(read_bytes);
+    if (!ReadAt(mapping, head.mft_offset, table.data(), read_bytes))
+        return false;
+    const int slot_count = static_cast<int>(read_bytes / 24);
+
+    // Keep every physical slot: the game addresses a file as base_slot + stream_id.
+    slots.resize(static_cast<size_t>(slot_count));
+    memcpy(slots.data(), table.data(), static_cast<size_t>(slot_count) * 24);
+
+    // Hash list is MFT[1] = slot 2 (slot 0 is the header, slots 1..15 reserved).
+    const MftEntry& hash_list = slots[2];
+    std::vector<MftExpansion> mftx;
+    const int expansion_count = hash_list.size / static_cast<int>(sizeof(MftExpansion));
+    mftx.resize(static_cast<size_t>(expansion_count));
+    if (expansion_count > 0 && !ReadAt(mapping, hash_list.offset, mftx.data(),
+                                       expansion_count * sizeof(MftExpansion)))
+        return false;
+
+    // Map each file id to its base slot; several ids may alias the same slot.
+    for (const auto& e : mftx) {
+        if (e.file_offset >= 16 && e.file_offset < slot_count)
+            fileid_to_slot[static_cast<uint32_t>(e.file_number)] = e.file_offset;
+    }
+    return !fileid_to_slot.empty();
+}
+
 bool GwDatArchive::ParseIndex()
 {
-    // Reset any state from a previous failed attempt so retries start clean.
+    // First load (under m_load_mutex, before any reads): map and parse straight into members.
     if (m_mapping) {
         CloseHandle(reinterpret_cast<HANDLE>(m_mapping));
         m_mapping = nullptr;
@@ -192,67 +245,61 @@ bool GwDatArchive::ParseIndex()
     m_slots.clear();
     m_fileid_to_slot.clear();
 
-    // AcquireMapping resolves m_dat_path from the bound handle; we never open the dat off disk.
-    if (!AcquireMapping())
+    void* mapping = nullptr;
+    long long size = 0;
+    std::wstring path;
+    if (!AcquireMappingInto(mapping, size, path))
         return false;
-    const HANDLE mapping = reinterpret_cast<HANDLE>(m_mapping);
-
-    bool ok = false;
-    do {
-        MainHeader head = {};
-        if (!ReadAt(mapping, 0, &head, sizeof(head)))
-            break;
-        // "3ANa" archive magic.
-        if (!(head.id[0] == 0x33 && head.id[1] == 0x41 && head.id[2] == 0x4e && head.id[3] == 0x1a))
-            break;
-
-        MftHeader mft_head = {};
-        if (!ReadAt(mapping, head.mft_offset, &mft_head, sizeof(mft_head)))
-            break;
-        if (mft_head.entry_count <= 16 || m_file_size <= head.mft_offset)
-            break;
-
-        // Copy the whole 24-byte-per-slot MFT out in one pass rather than mapping a view per 600k+ entry.
-        const int64_t table_bytes = static_cast<int64_t>(mft_head.entry_count) * 24;
-        const int64_t avail = m_file_size - head.mft_offset;
-        const size_t read_bytes = static_cast<size_t>(table_bytes < avail ? table_bytes : avail);
-        std::vector<uint8_t> table(read_bytes);
-        if (read_bytes < static_cast<size_t>(17 * 24) ||
-            !ReadAt(mapping, head.mft_offset, table.data(), read_bytes))
-            break;
-        const int slot_count = static_cast<int>(read_bytes / 24);
-
-        // Keep every physical slot: the game addresses a file as base_slot + stream_id.
-        m_slots.resize(static_cast<size_t>(slot_count));
-        memcpy(m_slots.data(), table.data(), static_cast<size_t>(slot_count) * 24);
-
-        // Hash list is MFT[1] = slot 2 (slot 0 is the header, slots 1..15 reserved).
-        const MftEntry& hash_list = m_slots[2];
-        std::vector<MftExpansion> mftx;
-        const int expansion_count = hash_list.size / static_cast<int>(sizeof(MftExpansion));
-        mftx.resize(static_cast<size_t>(expansion_count));
-        if (expansion_count > 0 && !ReadAt(mapping, hash_list.offset, mftx.data(),
-                                           expansion_count * sizeof(MftExpansion)))
-            break;
-
-        // Map each file id to its base slot; several ids may alias the same slot.
-        for (const auto& e : mftx) {
-            if (e.file_offset >= 16 && e.file_offset < slot_count)
-                m_fileid_to_slot[static_cast<uint32_t>(e.file_number)] = e.file_offset;
-        }
-        ok = !m_fileid_to_slot.empty();
-    } while (false);
-
-    // m_mapping stays open for the archive lifetime; reads reuse it.
-    return ok;
+    if (!ParseFrom(mapping, size, m_slots, m_fileid_to_slot)) {
+        CloseHandle(reinterpret_cast<HANDLE>(mapping));
+        return false;
+    }
+    m_mapping = mapping;
+    m_file_size = size;
+    m_dat_path = path;
+    return true;
 }
 
-bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id)
+// Re-read the on-disk MFT to pick up files the client has streamed in (and flushed to the dat)
+// since the last parse. Throttled, and swapped in only on success so a transient failure keeps
+// the working index. Called on a read miss.
+void GwDatArchive::MaybeRefresh()
 {
-    out.clear();
-    if (!EnsureLoaded() || !file_id)
-        return false;
+    {
+        std::lock_guard<std::mutex> guard(m_load_mutex);
+        const uint32_t now = GetTickCount();
+        if (m_last_refresh_ms && now - m_last_refresh_ms < kRefreshThrottleMs)
+            return;
+        m_last_refresh_ms = now;
+    }
 
+    void* mapping = nullptr;
+    long long size = 0;
+    std::wstring path;
+    if (!AcquireMappingInto(mapping, size, path))
+        return;
+    std::vector<MftEntry> slots;
+    std::unordered_map<uint32_t, int> fileid_to_slot;
+    if (!ParseFrom(mapping, size, slots, fileid_to_slot)) {
+        CloseHandle(reinterpret_cast<HANDLE>(mapping));
+        return;
+    }
+
+    std::unique_lock<std::shared_mutex> lock(m_index_mutex);
+    CloseHandle(reinterpret_cast<HANDLE>(m_mapping));
+    m_mapping = mapping;
+    m_file_size = size;
+    m_dat_path = path;
+    m_slots.swap(slots);
+    m_fileid_to_slot.swap(fileid_to_slot);
+}
+
+// Resolves file_id/stream_id in the current index and copies the raw (still-compressed) bytes out
+// of the mapping. Holds a shared lock so a concurrent MaybeRefresh can't swap the index/mapping
+// mid-read; decompression happens after, off-lock, in ReadFile.
+bool GwDatArchive::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed)
+{
+    std::shared_lock<std::shared_mutex> lock(m_index_mutex);
     const auto found = m_fileid_to_slot.find(file_id);
     if (found == m_fileid_to_slot.end())
         return false;
@@ -276,14 +323,31 @@ bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_
     if (!e || !e->b || e->size <= 0) // b == 0 marks an empty/base slot with no payload
         return false;
 
-    std::vector<uint8_t> input(static_cast<size_t>(e->size));
-    if (!ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size)))
+    input.resize(static_cast<size_t>(e->size));
+    compressed = e->a != 0;
+    return ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size));
+}
+
+bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id)
+{
+    out.clear();
+    if (!EnsureLoaded() || !file_id)
         return false;
 
-    if (e->a) {
+    std::vector<uint8_t> input;
+    bool compressed = false;
+    if (!ReadRaw(file_id, stream_id, input, compressed)) {
+        // Missing from our index: the client streams files into the dat as you play and flushes
+        // them asynchronously, so re-read the on-disk MFT (throttled) and try once more.
+        MaybeRefresh();
+        if (!ReadRaw(file_id, stream_id, input, compressed))
+            return false;
+    }
+
+    if (compressed) {
         unsigned char* output = nullptr;
         int out_size = 0;
-        UnpackGWDat(input.data(), e->size, output, out_size);
+        UnpackGWDat(input.data(), static_cast<int>(input.size()), output, out_size);
         if (output) {
             if (out_size > 0)
                 out.assign(output, output + out_size);

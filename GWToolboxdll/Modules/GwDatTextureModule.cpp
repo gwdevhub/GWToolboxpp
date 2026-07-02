@@ -120,18 +120,6 @@ namespace {
         return tex;
     }
 
-    IDirect3DTexture9* CreateTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims, uint32_t stream_id = 0)
-    {
-        if (!device || !file_id)
-            return nullptr;
-
-        std::vector<uint32_t> argb;
-        if (!DecodeTextureToArgb(file_id, argb, dims, stream_id) || !dims.x || !dims.y)
-            return nullptr;
-
-        return MakeTextureFromArgb(device, argb, dims);
-    }
-
     // Per-dye colour transforms. GW recolours a dyed item's icon with a linear operation
     // (verified against the client: a hue-rotation about the grey axis with saturation/luma
     // scaling, plus a neutral bias added equally to R,G,B). Each entry is a 3x3 matrix (m0..m8,
@@ -161,14 +149,11 @@ namespace {
     // one per byte (as GW combines up to four dye slots into one icon colour); each applied
     // slot's matrix is averaged, which is exact since the matrices are linear. No applied
     // slot (or a missing/mismatched mask) yields the plain, undyed icon.
-    IDirect3DTexture9* CreateItemTexture(IDirect3DDevice9* device, uint32_t file_id, uint32_t dyes, Vec2i& dims)
+    // Decodes an item icon to A8R8G8B8 (worker-thread safe; no device). See MakeTextureFromArgb for upload.
+    bool DecodeItemToArgb(uint32_t file_id, uint32_t dyes, std::vector<uint32_t>& base, Vec2i& dims)
     {
-        if (!device || !file_id)
-            return nullptr;
-
-        std::vector<uint32_t> base;
-        if (!DecodeTextureToArgb(file_id, base, dims, 1) || !dims.x || !dims.y)
-            return nullptr;
+        if (!file_id || !DecodeTextureToArgb(file_id, base, dims, 1) || !dims.x || !dims.y)
+            return false;
 
         // Average the applied dye slots' matrices into one combined transform.
         float M[10] = {};
@@ -208,42 +193,23 @@ namespace {
                 base[i] = (c & 0xFF000000) | (mix(r, nr) << 16) | (mix(g, ng) << 8) | mix(b, nb);
             }
         }
-
-        return MakeTextureFromArgb(device, base, dims);
+        return true;
     }
 
-    IDirect3DTexture9* CreateGreyscaleTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims)
+    // Decodes file_id and converts it to greyscale A8R8G8B8 in place (worker-thread safe; no device).
+    bool DecodeGreyscaleToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims)
     {
-        if (!device || !file_id)
-            return nullptr;
-
-        std::vector<uint32_t> argb;
-        if (!DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
-            return nullptr;
-
-        IDirect3DTexture9* tex = nullptr;
-        if (device->CreateTexture(dims.x, dims.y, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, 0) != D3D_OK)
-            return nullptr;
-        D3DLOCKED_RECT rect;
-        if (tex->LockRect(0, &rect, 0, D3DLOCK_DISCARD) != D3D_OK) {
-            tex->Release();
-            return nullptr;
+        if (!file_id || !DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
+            return false;
+        for (uint32_t& c : argb) {
+            const uint8_t r = (c >> 16) & 0xFF;
+            const uint8_t g = (c >> 8) & 0xFF;
+            const uint8_t b = c & 0xFF;
+            const uint8_t a = (c >> 24) & 0xFF;
+            const uint8_t grey = static_cast<uint8_t>(r * 0.299f + g * 0.587f + b * 0.114f);
+            c = (a << 24) | (grey << 16) | (grey << 8) | grey;
         }
-        const uint32_t* srcdata = argb.data();
-        for (int y = 0; y < dims.y; y++) {
-            auto* dst = reinterpret_cast<uint32_t*>((uint8_t*)rect.pBits + y * rect.Pitch);
-            for (int x = 0; x < dims.x; x++) {
-                const uint32_t c = *srcdata++;
-                const uint8_t r = (c >> 16) & 0xFF;
-                const uint8_t g = (c >> 8) & 0xFF;
-                const uint8_t b = c & 0xFF;
-                const uint8_t a = (c >> 24) & 0xFF;
-                const uint8_t grey = static_cast<uint8_t>(r * 0.299f + g * 0.587f + b * 0.114f);
-                *dst++ = (a << 24) | (grey << 16) | (grey << 8) | grey;
-            }
-        }
-        tex->UnlockRect(0);
-        return tex;
+        return true;
     }
 
     struct GwImg {
@@ -252,9 +218,9 @@ namespace {
         uint32_t m_dyes = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
-        bool m_pending = false;      // a decode task is queued and hasn't finished yet
-        bool m_tried_loaded = false; // a decode completed while the archive was mapped (a real miss, stop retrying)
-        uint16_t m_attempts = 0;     // decode attempts so far, capped to bound retries
+        bool m_pending = false;         // a decode task is queued and hasn't finished yet
+        uint16_t m_attempts = 0;        // pre-map decode attempts, capped to bound retries before the dat maps
+        uint32_t m_first_missed_ms = 0; // GetTickCount of the first mapped-archive miss (0 = none); opens the retry window
         explicit GwImg(uint32_t file_id, uint32_t stream_id = 0, uint32_t dyes = 0)
             : m_file_id(file_id), m_stream_id(stream_id), m_dyes(dyes) {}
         ~GwImg()
@@ -266,25 +232,44 @@ namespace {
         }
     };
 
-    constexpr uint16_t kMaxDecodeAttempts = 240; // ~a few seconds at 60fps
+    constexpr uint16_t kMaxDecodeAttempts = 240;   // ~a few seconds at 60fps, before the dat is mapped
+    constexpr uint32_t kMissRetryWindowMs = 60000; // keep retrying a mapped-but-missing file ~1 min
 
-    // Retry a decode that ran before Gw.dat was mapped; stop once a mapped-archive attempt fails (a real miss).
+    // Keep retrying a decode until it lands or we give up. Before the dat is mapped, retries are
+    // bounded by a frame count. Once mapped-but-missing, we retry over a time window instead: the
+    // client streams files into the dat as you play and GwDatArchive::ReadFile re-parses on a miss,
+    // so a file that arrives mid-window is picked up on a later attempt.
     bool WantsDecode(const GwImg* img)
     {
-        return !img->m_tex && !img->m_pending && !img->m_tried_loaded && img->m_attempts < kMaxDecodeAttempts;
+        if (img->m_tex || img->m_pending)
+            return false;
+        if (img->m_first_missed_ms != 0)
+            return GetTickCount() - img->m_first_missed_ms < kMissRetryWindowMs;
+        return img->m_attempts < kMaxDecodeAttempts;
     }
 
+    struct ArgbImage {
+        std::vector<uint32_t> pixels;
+        Vec2i dims;
+    };
+
+    // Decodes on a worker thread (the dat read + re-parse + pixel work all run off the render loop),
+    // then uploads on the DX thread. `decode(pixels, dims)` returns whether it produced an image.
     template <typename Decode>
     void QueueDecode(GwImg* img, Decode decode)
     {
         img->m_pending = true;
         ++img->m_attempts;
-        Resources::Instance().EnqueueDxTask([img, decode](IDirect3DDevice9* device) {
-            IDirect3DTexture9* const tex = decode(device);
-            img->m_tex = tex;
-            img->m_pending = false;
-            if (!tex)
-                img->m_tried_loaded = GwDatArchive::Instance().Loaded();
+        Resources::Instance().EnqueueWorkerTask([img, decode] {
+            auto result = std::make_shared<ArgbImage>();
+            const bool ok = decode(result->pixels, result->dims) && result->dims.x > 0 && result->dims.y > 0;
+            Resources::Instance().EnqueueDxTask([img, result, ok](IDirect3DDevice9* device) {
+                img->m_tex = ok ? MakeTextureFromArgb(device, result->pixels, result->dims) : nullptr;
+                img->m_dims = result->dims;
+                img->m_pending = false;
+                if (!img->m_tex && img->m_first_missed_ms == 0 && GwDatArchive::Instance().Loaded())
+                    img->m_first_missed_ms = GetTickCount(); // open the retry window on the first mapped miss
+            });
         });
     }
 
@@ -305,8 +290,8 @@ IDirect3DTexture9** GwDatTextureModule::LoadGreyscaleTextureFromFileId(uint32_t 
         greyscale_textures_by_file_id[file_id] = gwimg_ptr;
     }
     if (WantsDecode(gwimg_ptr))
-        QueueDecode(gwimg_ptr, [gwimg_ptr](IDirect3DDevice9* device) {
-            return CreateGreyscaleTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
+        QueueDecode(gwimg_ptr, [file_id = gwimg_ptr->m_file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+            return DecodeGreyscaleToArgb(file_id, argb, dims);
         });
     return &gwimg_ptr->m_tex;
 }
@@ -360,8 +345,8 @@ IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, 
         textures_by_file_id[key] = gwimg_ptr;
     }
     if (WantsDecode(gwimg_ptr))
-        QueueDecode(gwimg_ptr, [gwimg_ptr](IDirect3DDevice9* device) {
-            return CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims, gwimg_ptr->m_stream_id);
+        QueueDecode(gwimg_ptr, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+            return DecodeTextureToArgb(file_id, argb, dims, stream_id);
         });
     return &gwimg_ptr->m_tex;
 }
@@ -376,8 +361,8 @@ IDirect3DTexture9** GwDatTextureModule::LoadItemImage(uint32_t model_file_id, ui
         item_images_by_file_id[key] = gwimg_ptr;
     }
     if (WantsDecode(gwimg_ptr))
-        QueueDecode(gwimg_ptr, [gwimg_ptr](IDirect3DDevice9* device) {
-            return CreateItemTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dyes, gwimg_ptr->m_dims);
+        QueueDecode(gwimg_ptr, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
+            return DecodeItemToArgb(model_file_id, dyes, argb, dims);
         });
     return &gwimg_ptr->m_tex;
 }
@@ -386,7 +371,8 @@ void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std
 {
     if (!file_id)
         return;
-    Resources::Instance().EnqueueDxTask([file_id, file_path](IDirect3DDevice9*) {
+    // Pure CPU (decode + block-compress + write); run it off the render loop.
+    Resources::Instance().EnqueueWorkerTask([file_id, file_path] {
         std::vector<uint32_t> argb;
         Vec2i dims;
         if (!DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)

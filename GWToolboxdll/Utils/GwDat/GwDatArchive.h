@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -68,13 +69,19 @@ private:
 #pragma pack(pop)
     static_assert(sizeof(MftEntry) == 24, "on-disk MFT entry must be 24 bytes");
 
-    bool ParseIndex();      // resets state, then reads header + MFT; safe to retry
-    bool AcquireMapping();  // maps the client's open dat handle; false if not found yet
+    bool ParseIndex();                                                     // first load: map + parse into members
+    bool AcquireMappingInto(void*& mapping, long long& size, std::wstring& path); // maps the client's dat handle
+    bool ParseFrom(void* mapping, long long size, std::vector<MftEntry>& slots,
+                   std::unordered_map<uint32_t, int>& fileid_to_slot);     // header + MFT + hash list -> temporaries
+    void MaybeRefresh();                                                   // throttled re-read to pick up streamed-in files
+    bool ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed);
 
     std::mutex m_load_mutex;
     std::atomic<bool> m_loaded{false};
     std::atomic<bool> m_handle_enum_failed{false}; // set when the handle scan itself failed (AV/anti-cheat)
-    void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, kept for the archive lifetime
+    std::shared_mutex m_index_mutex;               // guards m_mapping/m_slots/m_fileid_to_slot against MaybeRefresh
+    uint32_t m_last_refresh_ms = 0;                // GetTickCount of the last re-parse, to throttle refreshes
+    void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, replaced by MaybeRefresh when the dat grows
     long long m_file_size = 0;      // dat size captured when the mapping was created
     std::wstring m_dat_path;
     std::vector<MftEntry> m_slots;                       // indexed by physical MFT slot
