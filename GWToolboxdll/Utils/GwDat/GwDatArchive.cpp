@@ -136,6 +136,60 @@ GwDatArchive& GwDatArchive::Instance()
     return instance;
 }
 
+void GwDatArchive::WorkerLoop()
+{
+    for (;;) {
+        std::function<void()> task;
+        {
+            std::unique_lock<std::mutex> lock(m_task_mutex);
+            m_task_cv.wait(lock, [this] { return m_worker_stop || !m_tasks.empty(); });
+            if (m_worker_stop)
+                return; // drop any queued tasks on shutdown
+            task = std::move(m_tasks.front());
+            m_tasks.pop();
+        }
+        task();
+    }
+}
+
+void GwDatArchive::StartWorker()
+{
+    std::lock_guard<std::mutex> lock(m_task_mutex);
+    if (m_worker_running)
+        return;
+    m_worker_stop = false;
+    m_worker_running = true;
+    m_worker = std::thread([this] { WorkerLoop(); });
+}
+
+void GwDatArchive::StopWorker()
+{
+    {
+        std::lock_guard<std::mutex> lock(m_task_mutex);
+        if (!m_worker_running)
+            return;
+        m_worker_stop = true;
+    }
+    m_task_cv.notify_all();
+    if (m_worker.joinable())
+        m_worker.join();
+    std::lock_guard<std::mutex> lock(m_task_mutex);
+    m_worker_running = false;
+}
+
+void GwDatArchive::EnqueueTask(std::function<void()> task)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_task_mutex);
+        if (m_worker_running) {
+            m_tasks.push(std::move(task));
+            m_task_cv.notify_one();
+            return;
+        }
+    }
+    task(); // no worker running: run inline
+}
+
 bool GwDatArchive::EnsureLoaded()
 {
     if (m_loaded.load(std::memory_order_acquire))

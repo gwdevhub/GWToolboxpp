@@ -1,10 +1,14 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <functional>
 #include <mutex>
+#include <queue>
 #include <shared_mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -35,8 +39,17 @@ public:
     // e.g. item models keep their UI icon at stream 1). False if absent.
     bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
+    // Dedicated worker so dat reads/decodes run off the caller's (e.g. render) thread and out of
+    // shared thread pools. Start once at startup, stop at shutdown; EnqueueTask runs the task on
+    // the worker, or inline if it isn't running.
+    void StartWorker();
+    void StopWorker();
+    void EnqueueTask(std::function<void()> task);
+
 private:
     GwDatArchive() = default;
+
+    void WorkerLoop();
 
 #pragma pack(push, 1)
     struct MainHeader {
@@ -79,6 +92,13 @@ private:
     std::mutex m_load_mutex;
     std::atomic<bool> m_loaded{false};
     std::atomic<bool> m_handle_enum_failed{false}; // set when the handle scan itself failed (AV/anti-cheat)
+
+    std::thread m_worker;                          // dedicated read/decode worker
+    std::mutex m_task_mutex;
+    std::condition_variable m_task_cv;
+    std::queue<std::function<void()>> m_tasks;
+    bool m_worker_running = false;
+    bool m_worker_stop = false;
     std::shared_mutex m_index_mutex;               // guards m_mapping/m_slots/m_fileid_to_slot against MaybeRefresh
     uint32_t m_last_refresh_ms = 0;                // GetTickCount of the last re-parse, to throttle refreshes
     void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, replaced by MaybeRefresh when the dat grows
