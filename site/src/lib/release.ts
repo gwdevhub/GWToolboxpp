@@ -30,40 +30,33 @@ export async function getLatestRelease(): Promise<LatestRelease> {
     if (process.env.GITHUB_TOKEN) {
       headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
     }
-    // Two-pass lookup over recent releases:
-    //   - Latest entry overall → the "version" label users see.
-    //   - Most recent entry that ships an .exe asset → the actual download URL,
-    //     because DLL-only `*_Release` tags don't carry the installer.
+    // Use the dedicated latest-published endpoint rather than scanning the
+    // paginated list: when the build token has push access GitHub returns the
+    // repo's many draft releases first, crowding published ones out of any
+    // reasonable page size. `/releases/latest` excludes drafts and prereleases.
     const res = await fetch(
-      'https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30',
+      'https://api.github.com/repos/gwdevhub/GWToolboxpp/releases/latest',
       { headers },
     );
     if (!res.ok) return FALLBACK;
-    const releases = (await res.json()) as {
+    const latest = (await res.json()) as {
       tag_name?: string;
       name?: string;
       published_at?: string;
-      draft?: boolean;
-      prerelease?: boolean;
       assets?: { name: string; browser_download_url: string }[];
-    }[];
-    const published = releases.filter((r) => !r.draft && !r.prerelease);
-    if (published.length === 0) return FALLBACK;
-    const latest = published[0];
-    const exeRelease = published.find((r) =>
-      r.assets?.some((a) => a.name.toLowerCase().endsWith('.exe')),
-    );
-    const exe = exeRelease?.assets?.find((a) =>
-      a.name.toLowerCase().endsWith('.exe'),
-    );
-    if (!exe) return FALLBACK;
+    };
     // Strip the conventional "_Release" / "_Exe" suffix from the tag for display.
     const version = (latest.name ?? latest.tag_name ?? FALLBACK.version)
       .replace(/_Release$/i, '')
       .replace(/_Exe$/i, '');
+    // DLL-only `*_Release` tags don't carry the installer; keep the stable
+    // fallback download URL when the latest release ships no .exe.
+    const exe = latest.assets?.find((a) =>
+      a.name.toLowerCase().endsWith('.exe'),
+    );
     return {
       version,
-      url: exe.browser_download_url,
+      url: exe?.browser_download_url ?? FALLBACK.url,
       publishedAt: latest.published_at ?? null,
       source: 'github',
     };
