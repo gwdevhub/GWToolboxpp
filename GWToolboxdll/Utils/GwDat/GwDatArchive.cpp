@@ -2,7 +2,6 @@
 
 #include <cstring>
 #include <cwchar>
-#include <filesystem>
 
 #include "GwDatArchive.h"
 #include "xentax.h"
@@ -10,16 +9,6 @@
 namespace {
     const uint8_t kDatMagic[4] = {0x33, 0x41, 0x4e, 0x1a}; // "3ANa"
     constexpr size_t kMaxView = 0x800000;                  // cap each mapped window at 8 MB
-
-    // The client keeps Gw.dat in its own directory, so derive it from the exe path.
-    std::wstring ResolveDatPath()
-    {
-        wchar_t exe[MAX_PATH] = {0};
-        const DWORD n = GetModuleFileNameW(nullptr, exe, MAX_PATH);
-        if (!n || n >= MAX_PATH)
-            return {};
-        return (std::filesystem::path(exe).parent_path() / L"Gw.dat").wstring();
-    }
 
     DWORD AllocationGranularity()
     {
@@ -52,16 +41,27 @@ namespace {
         return true;
     }
 
-    // True if the handle refers to a file named "Gw.dat". GetFinalPathNameByHandle is
-    // a metadata query, so it's safe on the client's port-bound handle (no I/O issued).
-    bool HandleIsGwDat(HANDLE file)
+    // Full DOS path of a handle (empty on failure). Length-sized so installs past MAX_PATH
+    // resolve; a pure metadata query, so no I/O on the client's port-bound handle.
+    std::wstring HandlePath(HANDLE file)
     {
-        wchar_t path[MAX_PATH];
-        const DWORD n = GetFinalPathNameByHandleW(file, path, MAX_PATH, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
-        if (!n || n >= MAX_PATH)
-            return false;
-        const wchar_t* name = wcsrchr(path, L'\\');
-        return _wcsicmp(name ? name + 1 : path, L"Gw.dat") == 0;
+        const DWORD needed = GetFinalPathNameByHandleW(file, nullptr, 0, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+        if (!needed)
+            return {};
+        std::wstring path(needed, L'\0');
+        const DWORD n = GetFinalPathNameByHandleW(file, path.data(), needed, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+        if (!n || n >= needed)
+            return {};
+        path.resize(n);
+        return path;
+    }
+
+    // Match by extension, not the name "Gw.dat", so a renamed/-dat-relocated archive resolves;
+    // MapDat's 3ANa magic check confirms it's really the archive.
+    bool HasDatExtension(const std::wstring& path)
+    {
+        const size_t dot = path.find_last_of(L'.');
+        return dot != std::wstring::npos && _wcsicmp(path.c_str() + dot, L".dat") == 0;
     }
 
     // Whole-file read-only mapping, but only if the contents start with the archive
@@ -150,8 +150,12 @@ bool GwDatArchive::AcquireMapping()
     // The client holds Gw.dat exclusively and bound to its I/O completion port, so we
     // can neither open nor ReadFile it - locate its open handle and map that instead.
     const std::vector<uint8_t> snapshot = QueryProcessHandles();
-    if (snapshot.empty())
+    if (snapshot.empty()) {
+        // Scan failed (NtQuerySystemInformation blocked, usually AV/anti-cheat); flag for the UI.
+        m_handle_enum_failed.store(true, std::memory_order_release);
         return false;
+    }
+    m_handle_enum_failed.store(false, std::memory_order_release);
     const auto* info = reinterpret_cast<const SystemHandleInfoEx*>(snapshot.data());
     const ULONG_PTR pid = GetCurrentProcessId();
     for (ULONG_PTR i = 0; i < info->NumberOfHandles; ++i) {
@@ -159,7 +163,10 @@ bool GwDatArchive::AcquireMapping()
         if (entry.UniqueProcessId != pid)
             continue;
         const HANDLE h = reinterpret_cast<HANDLE>(entry.HandleValue);
-        if (GetFileType(h) != FILE_TYPE_DISK || !HandleIsGwDat(h))
+        if (GetFileType(h) != FILE_TYPE_DISK)
+            continue;
+        const std::wstring path = HandlePath(h);
+        if (path.empty() || !HasDatExtension(path))
             continue;
         const HANDLE mapping = MapDat(h);
         if (!mapping)
@@ -168,6 +175,7 @@ bool GwDatArchive::AcquireMapping()
         if (GetFileSizeEx(h, &sz))
             m_file_size = sz.QuadPart;
         m_mapping = mapping;
+        m_dat_path = path; // the archive we actually bound to, for diagnostics
         return true;
     }
     return false;
@@ -184,11 +192,7 @@ bool GwDatArchive::ParseIndex()
     m_slots.clear();
     m_fileid_to_slot.clear();
 
-    if (m_dat_path.empty())
-        m_dat_path = ResolveDatPath();
-    if (m_dat_path.empty())
-        return false;
-
+    // AcquireMapping resolves m_dat_path from the bound handle; we never open the dat off disk.
     if (!AcquireMapping())
         return false;
     const HANDLE mapping = reinterpret_cast<HANDLE>(m_mapping);

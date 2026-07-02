@@ -252,6 +252,9 @@ namespace {
         uint32_t m_dyes = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
+        bool m_pending = false;      // a decode task is queued and hasn't finished yet
+        bool m_tried_loaded = false; // a decode completed while the archive was mapped (a real miss, stop retrying)
+        uint16_t m_attempts = 0;     // decode attempts so far, capped to bound retries
         explicit GwImg(uint32_t file_id, uint32_t stream_id = 0, uint32_t dyes = 0)
             : m_file_id(file_id), m_stream_id(stream_id), m_dyes(dyes) {}
         ~GwImg()
@@ -262,6 +265,28 @@ namespace {
             }
         }
     };
+
+    constexpr uint16_t kMaxDecodeAttempts = 240; // ~a few seconds at 60fps
+
+    // Retry a decode that ran before Gw.dat was mapped; stop once a mapped-archive attempt fails (a real miss).
+    bool WantsDecode(const GwImg* img)
+    {
+        return !img->m_tex && !img->m_pending && !img->m_tried_loaded && img->m_attempts < kMaxDecodeAttempts;
+    }
+
+    template <typename Decode>
+    void QueueDecode(GwImg* img, Decode decode)
+    {
+        img->m_pending = true;
+        ++img->m_attempts;
+        Resources::Instance().EnqueueDxTask([img, decode](IDirect3DDevice9* device) {
+            IDirect3DTexture9* const tex = decode(device);
+            img->m_tex = tex;
+            img->m_pending = false;
+            if (!tex)
+                img->m_tried_loaded = GwDatArchive::Instance().Loaded();
+        });
+    }
 
     // Keyed by (stream_id << 32 | file_id) so different streams of one file cache separately.
     uint64_t TextureKey(uint32_t file_id, uint32_t stream_id) { return (static_cast<uint64_t>(stream_id) << 32) | file_id; }
@@ -274,12 +299,15 @@ namespace {
 IDirect3DTexture9** GwDatTextureModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
 {
     auto found = greyscale_textures_by_file_id.find(file_id);
-    if (found != greyscale_textures_by_file_id.end()) return &found->second->m_tex;
-    auto gwimg_ptr = new GwImg(file_id);
-    greyscale_textures_by_file_id[file_id] = gwimg_ptr;
-    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
-        gwimg_ptr->m_tex = CreateGreyscaleTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
-    });
+    GwImg* gwimg_ptr = found != greyscale_textures_by_file_id.end() ? found->second : nullptr;
+    if (!gwimg_ptr) {
+        gwimg_ptr = new GwImg(file_id);
+        greyscale_textures_by_file_id[file_id] = gwimg_ptr;
+    }
+    if (WantsDecode(gwimg_ptr))
+        QueueDecode(gwimg_ptr, [gwimg_ptr](IDirect3DDevice9* device) {
+            return CreateGreyscaleTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
+        });
     return &gwimg_ptr->m_tex;
 }
 
@@ -292,11 +320,25 @@ bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8
         return false;
     auto& dat = GwDatArchive::Instance();
     const bool ok = dat.ReadFile(file_id, *bytes_out, stream_id);
-    // Log once the archive is available; earlier failures are transient (dat not opened yet).
     if (dat.Loaded()) {
-        static std::once_flag reported;
+        static std::once_flag reported; // log the bound archive once for support reports
         std::call_once(reported, [&dat] {
             Log::LogW(L"[GwDat] Mapped client's Gw.dat ('%s')", dat.DatPath().c_str());
+        });
+    }
+    else if (dat.HandleEnumerationBlocked()) {
+        // Handle scan blocked (almost always AV/anti-cheat) - tell the user once.
+        static std::once_flag warned;
+        std::call_once(warned, [] {
+            Log::Warning("GWToolbox can't read Gw.dat: it was blocked from listing its own file handles, "
+                         "usually by anti-virus or anti-cheat. In-game images won't load until it's allowed.");
+            Log::Log("[GwDat] NtQuerySystemInformation returned no data - handle enumeration blocked (AV/anti-cheat?).");
+        });
+    }
+    else {
+        static std::once_flag noted; // dat handle not open yet; transient, note once
+        std::call_once(noted, [] {
+            Log::Log("[GwDat] Gw.dat not mapped yet (client handle not found); will keep retrying.");
         });
     }
     return ok;
@@ -312,12 +354,14 @@ IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, 
 {
     const uint64_t key = TextureKey(file_id, stream_id);
     auto found = textures_by_file_id.find(key);
-    if (found != textures_by_file_id.end())
-        return &found->second->m_tex;
-    auto gwimg_ptr = new GwImg(file_id, stream_id);
-    textures_by_file_id[key] = gwimg_ptr;
-    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
-        gwimg_ptr->m_tex = CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims, gwimg_ptr->m_stream_id);
+    GwImg* gwimg_ptr = found != textures_by_file_id.end() ? found->second : nullptr;
+    if (!gwimg_ptr) {
+        gwimg_ptr = new GwImg(file_id, stream_id);
+        textures_by_file_id[key] = gwimg_ptr;
+    }
+    if (WantsDecode(gwimg_ptr))
+        QueueDecode(gwimg_ptr, [gwimg_ptr](IDirect3DDevice9* device) {
+            return CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims, gwimg_ptr->m_stream_id);
         });
     return &gwimg_ptr->m_tex;
 }
@@ -326,13 +370,15 @@ IDirect3DTexture9** GwDatTextureModule::LoadItemImage(uint32_t model_file_id, ui
 {
     const uint64_t key = (static_cast<uint64_t>(dyes) << 32) | model_file_id;
     auto found = item_images_by_file_id.find(key);
-    if (found != item_images_by_file_id.end())
-        return &found->second->m_tex;
-    auto gwimg_ptr = new GwImg(model_file_id, 1, dyes);
-    item_images_by_file_id[key] = gwimg_ptr;
-    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
-        gwimg_ptr->m_tex = CreateItemTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dyes, gwimg_ptr->m_dims);
-    });
+    GwImg* gwimg_ptr = found != item_images_by_file_id.end() ? found->second : nullptr;
+    if (!gwimg_ptr) {
+        gwimg_ptr = new GwImg(model_file_id, 1, dyes);
+        item_images_by_file_id[key] = gwimg_ptr;
+    }
+    if (WantsDecode(gwimg_ptr))
+        QueueDecode(gwimg_ptr, [gwimg_ptr](IDirect3DDevice9* device) {
+            return CreateItemTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dyes, gwimg_ptr->m_dims);
+        });
     return &gwimg_ptr->m_tex;
 }
 

@@ -26,6 +26,9 @@ public:
     const std::wstring& DatPath() const { return m_dat_path; }
     bool Loaded() const { return m_loaded.load(std::memory_order_acquire); }
 
+    // True if the handle scan itself failed (NtQuerySystemInformation blocked, usually AV/anti-cheat).
+    bool HandleEnumerationBlocked() const { return m_handle_enum_failed.load(std::memory_order_acquire); }
+
     // Decompressed bytes for a GW file id. A file's streams form a linked list of MFT
     // entries; stream_id selects one by its stream number (0 = the file's own data;
     // e.g. item models keep their UI icon at stream 1). False if absent.
@@ -70,6 +73,7 @@ private:
 
     std::mutex m_load_mutex;
     std::atomic<bool> m_loaded{false};
+    std::atomic<bool> m_handle_enum_failed{false}; // set when the handle scan itself failed (AV/anti-cheat)
     void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, kept for the archive lifetime
     long long m_file_size = 0;      // dat size captured when the mapping was created
     std::wstring m_dat_path;
