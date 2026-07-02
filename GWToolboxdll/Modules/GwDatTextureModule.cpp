@@ -50,8 +50,7 @@ namespace {
         return true;
     }
 
-    // Decodes file_id to tightly-packed A8R8G8B8: ATEX/ATTX, ffna inline DXT chunk, or DDS.
-    // stream_id picks a stream within the file (item models keep their UI icon at stream 1).
+    // Decodes file_id to A8R8G8B8 (ATEX/ATTX, ffna inline DXT chunk, or DDS); stream_id picks a stream.
     bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims, uint32_t stream_id = 0)
     {
         ArenaNetFileParser::GameAssetFile asset;
@@ -121,14 +120,7 @@ namespace {
         return tex;
     }
 
-    // Per-dye colour transforms. GW recolours a dyed item's icon with a linear operation
-    // (verified against the client: a hue-rotation about the grey axis with saturation/luma
-    // scaling, plus a neutral bias added equally to R,G,B). Each entry is a 3x3 matrix (m0..m8,
-    // out_c = m[3c+0]*R + m[3c+1]*G + m[3c+2]*B) followed by that neutral bias. GW's rotation
-    // is near grey-preserving, so a neutral input maps back to neutral and shadows keep their
-    // dark hue instead of taking on a colour cast; the bias lets bright dyes lift shadows
-    // without tinting them. Indexed by GW::DyeColor - Blue, fitted to the client's own dyed
-    // exports (white/pink are the least exact - their icon region is mostly clipped highlights).
+    // Per-dye linear recolour (index = GW::DyeColor - Blue): 3x3 matrix m0..m8 (out_c = row.RGB) + neutral bias m9, fitted to the client's dyed icon exports.
     constexpr float kDyeColorMatrix[12][10] = {
         {  0.0063f,  1.5704f, -0.8800f,  0.2402f,  0.3491f,  0.1148f,  0.4809f, -0.2126f,  0.4076f, -1.7549f }, // Blue
         {  0.0400f,  1.5283f, -0.9086f,  0.5069f,  0.2335f, -0.1058f,  0.0880f,  0.4994f,  0.0077f, -2.5436f }, // Green
@@ -144,13 +136,7 @@ namespace {
         {  1.8355f, -2.6588f,  2.6553f,  0.0835f,  0.6695f,  0.4196f,  0.3850f, -0.8128f,  1.8695f, 36.8231f }, // Pink
     };
 
-    // Builds an item icon: stream 1 is the base colour, stream 0xc a single-channel dye
-    // mask. Where masked, the base is recoloured by the dye colour matrix + neutral bias
-    // (clamped) and blended back by the mask. `dyes` packs up to four GW::DyeColor values,
-    // one per byte (as GW combines up to four dye slots into one icon colour); each applied
-    // slot's matrix is averaged, which is exact since the matrices are linear. No applied
-    // slot (or a missing/mismatched mask) yields the plain, undyed icon.
-    // Decodes an item icon to A8R8G8B8 (worker-thread safe; no device). See MakeTextureFromArgb for upload.
+    // Item icon to A8R8G8B8: stream 1 base, stream 0xc dye mask; masked pixels use the averaged dye matrices (`dyes` = up to 4 GW::DyeColor, one per byte).
     bool DecodeItemToArgb(uint32_t file_id, uint32_t dyes, std::vector<uint32_t>& base, Vec2i& dims)
     {
         if (!file_id || !DecodeTextureToArgb(file_id, base, dims, 1) || !dims.x || !dims.y)
@@ -236,10 +222,7 @@ namespace {
     constexpr uint16_t kMaxDecodeAttempts = 240;   // ~a few seconds at 60fps, before the dat is mapped
     constexpr uint32_t kMissRetryWindowMs = 60000; // keep retrying a mapped-but-missing file ~1 min
 
-    // Keep retrying a decode until it lands or we give up. Before the dat is mapped, retries are
-    // bounded by a frame count. Once mapped-but-missing, we retry over a time window instead: the
-    // client streams files into the dat as you play and GwDatArchive::ReadFile re-parses on a miss,
-    // so a file that arrives mid-window is picked up on a later attempt.
+    // Retry until decoded: frame-bounded before the dat maps, then a time window once mapped-but-missing (ReadFile re-parses on a miss, so streamed-in files are caught).
     bool WantsDecode(const GwImg* img)
     {
         if (img->m_tex || img->m_pending)
@@ -254,8 +237,7 @@ namespace {
         Vec2i dims;
     };
 
-    // Decodes on a worker thread (the dat read + re-parse + pixel work all run off the render loop),
-    // then uploads on the DX thread. `decode(pixels, dims)` returns whether it produced an image.
+    // Decodes on the dat worker (read + re-parse + pixel work off the render loop), then uploads on the DX thread.
     template <typename Decode>
     void QueueDecode(GwImg* img, Decode decode)
     {
@@ -280,21 +262,24 @@ namespace {
     std::map<uint64_t, GwImg*> textures_by_file_id;
     std::map<uint32_t, GwImg*> greyscale_textures_by_file_id;
     std::map<uint64_t, GwImg*> item_images_by_file_id; // key = dyes << 32 | model_file_id
+
+    // Cached GwImg for key, created from the given GwImg ctor args if absent.
+    template <typename Map, typename Key, typename... Args>
+    GwImg* GetOrCreate(Map& map, Key key, Args... args)
+    {
+        const auto found = map.find(key);
+        return found != map.end() ? found->second : (map[key] = new GwImg(args...));
+    }
 } // namespace
 
 IDirect3DTexture9** GwDatTextureModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
 {
-    auto found = greyscale_textures_by_file_id.find(file_id);
-    GwImg* gwimg_ptr = found != greyscale_textures_by_file_id.end() ? found->second : nullptr;
-    if (!gwimg_ptr) {
-        gwimg_ptr = new GwImg(file_id);
-        greyscale_textures_by_file_id[file_id] = gwimg_ptr;
-    }
-    if (WantsDecode(gwimg_ptr))
-        QueueDecode(gwimg_ptr, [file_id = gwimg_ptr->m_file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+    GwImg* img = GetOrCreate(greyscale_textures_by_file_id, file_id, file_id);
+    if (WantsDecode(img))
+        QueueDecode(img, [file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeGreyscaleToArgb(file_id, argb, dims);
         });
-    return &gwimg_ptr->m_tex;
+    return &img->m_tex;
 }
 
 bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out, uint32_t stream_id)
@@ -339,34 +324,23 @@ void GwDatTextureModule::Initialize()
 
 IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id)
 {
-    const uint64_t key = TextureKey(file_id, stream_id);
-    auto found = textures_by_file_id.find(key);
-    GwImg* gwimg_ptr = found != textures_by_file_id.end() ? found->second : nullptr;
-    if (!gwimg_ptr) {
-        gwimg_ptr = new GwImg(file_id, stream_id);
-        textures_by_file_id[key] = gwimg_ptr;
-    }
-    if (WantsDecode(gwimg_ptr))
-        QueueDecode(gwimg_ptr, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+    GwImg* img = GetOrCreate(textures_by_file_id, TextureKey(file_id, stream_id), file_id, stream_id);
+    if (WantsDecode(img))
+        QueueDecode(img, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeTextureToArgb(file_id, argb, dims, stream_id);
         });
-    return &gwimg_ptr->m_tex;
+    return &img->m_tex;
 }
 
 IDirect3DTexture9** GwDatTextureModule::LoadItemImage(uint32_t model_file_id, uint32_t dyes)
 {
     const uint64_t key = (static_cast<uint64_t>(dyes) << 32) | model_file_id;
-    auto found = item_images_by_file_id.find(key);
-    GwImg* gwimg_ptr = found != item_images_by_file_id.end() ? found->second : nullptr;
-    if (!gwimg_ptr) {
-        gwimg_ptr = new GwImg(model_file_id, 1, dyes);
-        item_images_by_file_id[key] = gwimg_ptr;
-    }
-    if (WantsDecode(gwimg_ptr))
-        QueueDecode(gwimg_ptr, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
+    GwImg* img = GetOrCreate(item_images_by_file_id, key, model_file_id, 1u, dyes);
+    if (WantsDecode(img))
+        QueueDecode(img, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeItemToArgb(model_file_id, dyes, argb, dims);
         });
-    return &gwimg_ptr->m_tex;
+    return &img->m_tex;
 }
 
 void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path)

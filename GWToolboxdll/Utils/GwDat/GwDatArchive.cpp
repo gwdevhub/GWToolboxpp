@@ -18,8 +18,7 @@ namespace {
         return si.dwAllocationGranularity;
     }
 
-    // Read via mapped views, never ReadFile: the client's dat handle is bound to its
-    // I/O completion port and a stray ReadFile on it would corrupt its I/O loop.
+    // Read via mapped views, never ReadFile: the client's dat handle is bound to its I/O port.
     bool ReadAt(HANDLE mapping, int64_t offset, void* buffer, size_t count)
     {
         static const DWORD gran = AllocationGranularity();
@@ -42,8 +41,7 @@ namespace {
         return true;
     }
 
-    // Full DOS path of a handle (empty on failure). Length-sized so installs past MAX_PATH
-    // resolve; a pure metadata query, so no I/O on the client's port-bound handle.
+    // Full DOS path of a handle (empty on failure); length-sized so installs past MAX_PATH resolve.
     std::wstring HandlePath(HANDLE file)
     {
         const DWORD needed = GetFinalPathNameByHandleW(file, nullptr, 0, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
@@ -57,16 +55,14 @@ namespace {
         return path;
     }
 
-    // Match by extension, not the name "Gw.dat", so a renamed/-dat-relocated archive resolves;
-    // MapDat's 3ANa magic check confirms it's really the archive.
+    // Match by extension, not "Gw.dat", so a renamed/-dat-relocated archive resolves (MapDat checks the magic).
     bool HasDatExtension(const std::wstring& path)
     {
         const size_t dot = path.find_last_of(L'.');
         return dot != std::wstring::npos && _wcsicmp(path.c_str() + dot, L".dat") == 0;
     }
 
-    // Whole-file read-only mapping, but only if the contents start with the archive
-    // magic; nullptr otherwise. Confirms via a view, never ReadFile.
+    // Whole-file read-only mapping, or nullptr unless the contents start with the 3ANa magic.
     HANDLE MapDat(HANDLE file)
     {
         const HANDLE mapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
@@ -82,8 +78,7 @@ namespace {
         return nullptr;
     }
 
-    // NtQuerySystemInformation(SystemExtendedHandleInformation) lets us enumerate our
-    // real open handles instead of guessing handle values.
+    // NtQuerySystemInformation(SystemExtendedHandleInformation) enumerates our real open handles.
     constexpr ULONG kSystemExtendedHandleInformation = 64;
     constexpr ULONG kStatusInfoLengthMismatch = 0xC0000004UL;
 
@@ -202,8 +197,7 @@ bool GwDatArchive::EnsureLoaded()
 
 bool GwDatArchive::AcquireMappingInto(void*& out_mapping, long long& out_size, std::wstring& out_path)
 {
-    // The client holds Gw.dat exclusively and bound to its I/O completion port, so we
-    // can neither open nor ReadFile it - locate its open handle and map that instead.
+    // The client holds Gw.dat exclusively, so we locate its open handle and map that instead.
     const std::vector<uint8_t> snapshot = QueryProcessHandles();
     if (snapshot.empty()) {
         // Scan failed (NtQuerySystemInformation blocked, usually AV/anti-cheat); flag for the UI.
@@ -223,8 +217,7 @@ bool GwDatArchive::AcquireMappingInto(void*& out_mapping, long long& out_size, s
         const std::wstring path = HandlePath(h);
         if (path.empty() || !HasDatExtension(path))
             continue;
-        // Re-map whole-file each time: the dat grows as the client streams files in, and a mapping
-        // created with size 0 only ever covers the file size at creation.
+        // Re-map whole-file each time: the dat grows as files stream in, and a size-0 mapping is fixed at creation.
         const HANDLE mapping = MapDat(h);
         if (!mapping)
             continue;
@@ -237,8 +230,7 @@ bool GwDatArchive::AcquireMappingInto(void*& out_mapping, long long& out_size, s
     return false;
 }
 
-// Reads the header + MFT + hash list from `mapping` into fresh temporaries. Non-destructive: on
-// failure the caller's existing index is untouched, so a bad refresh never drops a working index.
+// Reads the header + MFT + hash list from `mapping` into fresh temporaries (untouched on failure).
 bool GwDatArchive::ParseFrom(void* mapping_v, long long file_size, std::vector<MftEntry>& slots,
                              std::unordered_map<uint32_t, int>& fileid_to_slot)
 {
@@ -246,8 +238,7 @@ bool GwDatArchive::ParseFrom(void* mapping_v, long long file_size, std::vector<M
     MainHeader head = {};
     if (!ReadAt(mapping, 0, &head, sizeof(head)))
         return false;
-    // "3ANa" archive magic.
-    if (!(head.id[0] == 0x33 && head.id[1] == 0x41 && head.id[2] == 0x4e && head.id[3] == 0x1a))
+    if (memcmp(head.id, kDatMagic, sizeof(kDatMagic)) != 0) // "3ANa" archive magic
         return false;
 
     MftHeader mft_head = {};
@@ -314,9 +305,7 @@ bool GwDatArchive::ParseIndex()
     return true;
 }
 
-// Re-read the on-disk MFT to pick up files the client has streamed in (and flushed to the dat)
-// since the last parse. Throttled, and swapped in only on success so a transient failure keeps
-// the working index. Called on a read miss.
+// Re-read the on-disk MFT (on a read miss, throttled) to pick up files streamed in since the last parse.
 void GwDatArchive::MaybeRefresh()
 {
     {
@@ -348,18 +337,14 @@ void GwDatArchive::MaybeRefresh()
     m_fileid_to_slot.swap(fileid_to_slot);
 }
 
-// Resolves file_id/stream_id in the current index and copies the raw (still-compressed) bytes out
-// of the mapping. Holds a shared lock so a concurrent MaybeRefresh can't swap the index/mapping
-// mid-read; decompression happens after, off-lock, in ReadFile.
+// Copies the raw (still-compressed) bytes for file_id/stream_id, shared-locked against MaybeRefresh.
 bool GwDatArchive::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed)
 {
     std::shared_lock<std::shared_mutex> lock(m_index_mutex);
     const auto found = m_fileid_to_slot.find(file_id);
     if (found == m_fileid_to_slot.end())
         return false;
-    // A file's streams form a linked list, not consecutive slots: each entry's `c`
-    // holds its stream number and `id` points at the next stream's slot. Walk from the
-    // base entry until the requested stream turns up (the game's own lookup does this).
+    // A file's streams are a linked list: `c` is the stream number, `id` the next stream's slot.
     int idx = found->second;
     const MftEntry* e = nullptr;
     for (int guard = 0; guard < 256; ++guard) {
@@ -391,8 +376,7 @@ bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_
     std::vector<uint8_t> input;
     bool compressed = false;
     if (!ReadRaw(file_id, stream_id, input, compressed)) {
-        // Missing from our index: the client streams files into the dat as you play and flushes
-        // them asynchronously, so re-read the on-disk MFT (throttled) and try once more.
+        // Missing: the client may have streamed this file in since our last parse - re-read and retry.
         MaybeRefresh();
         if (!ReadRaw(file_id, stream_id, input, compressed))
             return false;

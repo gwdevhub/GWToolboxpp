@@ -34,14 +34,10 @@ public:
     // True if the handle scan itself failed (NtQuerySystemInformation blocked, usually AV/anti-cheat).
     bool HandleEnumerationBlocked() const { return m_handle_enum_failed.load(std::memory_order_acquire); }
 
-    // Decompressed bytes for a GW file id. A file's streams form a linked list of MFT
-    // entries; stream_id selects one by its stream number (0 = the file's own data;
-    // e.g. item models keep their UI icon at stream 1). False if absent.
+    // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
     bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
-    // Dedicated worker so dat reads/decodes run off the caller's (e.g. render) thread and out of
-    // shared thread pools. Start once at startup, stop at shutdown; EnqueueTask runs the task on
-    // the worker, or inline if it isn't running.
+    // Dedicated worker so reads/decodes run off the caller's thread; EnqueueTask runs inline if not started.
     void StartWorker();
     void StopWorker();
     void EnqueueTask(std::function<void()> task);
