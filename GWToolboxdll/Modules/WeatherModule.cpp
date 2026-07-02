@@ -236,6 +236,7 @@ namespace {
     unsigned int ambient_color = 0xFFA09078u; // overcast tint of the condition currently driving the dimming (runtime)
     unsigned int active_tint = 0xFFFFFFFFu;   // the active condition's particle tint, fed to the instanced draws (runtime)
     float ambient_strength = 0.f;             // eased aggregate dimming of active conditions (runtime, not saved)
+    float weather_intensity = 0.f;            // eased 0..1 cross-fade of the shown condition (runtime): 1 = full, 0 = faded out
 
     bool auto_weather = true;    // drive which conditions are active from the climate->weather table
     float auto_change_min = 2.f; // minutes between automatic weather rolls (random in [min, max])
@@ -1035,24 +1036,31 @@ namespace {
         float up[3];
         cross3(fwd, right, up);
 
-        // The single active condition (first one flagged active; single-active is enforced wherever it's toggled).
-        int active = -1;
+        // The single desired condition (first one flagged active; single-active is enforced wherever it's toggled).
+        int desired = -1;
         for (int i = 0; i < static_cast<int>(conditions.size()); i++)
-            if (conditions[i].active) { active = i; break; }
+            if (conditions[i].active) { desired = i; break; }
+
+        // Cross-fade condition changes through one eased 0..1 intensity: hold the currently-shown condition until it
+        // has faded out, then swap and let the new one fade back in - so a switch reads as a brief lull, not a hard pop.
+        const float intensity_target = (!reset && desired == active_condition && active_condition >= 0) ? 1.f : 0.f;
+        weather_intensity += (intensity_target - weather_intensity) * std::clamp(dt * 2.f, 0.f, 1.f); // ease ~1/2 s
+        bool just_swapped = false;
+        if (reset || (desired != active_condition && weather_intensity < 0.02f)) {
+            active_particles = {}; // drop the old particles; the new condition reseeds fresh below
+            active_condition = desired;
+            if (reset) weather_intensity = 0.f; // hidden (loading/world map): start the new condition from clear
+            just_swapped = true;
+            if (active_condition >= 0) active_wind_dir = frand(0.f, 360.f); // wind heading is always randomised across the full circle
+        }
 
         // Volume centre: the camera itself for camera-relative conditions (sand wraps tightly around the viewer), else
         // the camera's target - the player - so most weather follows where you're looking.
-        const bool cam_centred = active >= 0 && conditions[active].center_on_camera;
+        const bool cam_centred = active_condition >= 0 && conditions[active_condition].center_on_camera;
         const float cx = cam_centred ? eye[0] : cam->look_at_target.x;
         const float cy = cam_centred ? eye[1] : cam->look_at_target.y;
         const float cz = cam_centred ? eye[2] : cam->look_at_target.z;
-
-        if (active != active_condition || reset) { // switched condition (or reset): drop the old particles, reseed fresh
-            active_particles = {};
-            active_condition = active;
-            center_z = cz; // freshly seeded around the current altitude - no shift on this frame
-            if (active >= 0) active_wind_dir = frand(0.f, 360.f); // wind heading is always randomised across the full circle
-        }
+        if (just_swapped) center_z = cz; // freshly seeded around the current altitude - no shift on this frame
         const float dcz = cz - center_z; // the focus's vertical move this tick; the column is shifted by it so it
         center_z = cz;                   // keeps tracking the player's height even when drops barely fall (sandstorm)
 
@@ -1067,9 +1075,9 @@ namespace {
         }
 
         float ambient_target = 0.f;
-        if (active >= 0 && ready) {
-            auto& c = conditions[active];
-            ambient_target = c.ambient;
+        if (active_condition >= 0 && ready) {
+            auto& c = conditions[active_condition];
+            ambient_target = c.ambient * weather_intensity; // dimming rides the same cross-fade as the particles
             ambient_color = c.overcast_tint;
             active_tint = c.tint; // one active condition -> one tint for the whole instanced draw (a shader constant)
             // For camera-relative wind, add the camera's heading (yaw, origin @ east) so the storm keeps the same
@@ -1081,7 +1089,9 @@ namespace {
                 AppendSnowInstances(snow_instances, c, active_particles.raindrops, right, up, eye, fwd);
             else
                 AppendRainInstances(rain_instances, c, active_particles.raindrops, right, fwd, heading, eye);
-            AppendSplashes(active_particles.splashes, right, c.tint, eye, fwd, cone_tan_sq);
+            // Newly-spawned splashes ride the cross-fade too (alpha is the top byte, whatever the channel order).
+            const unsigned int splash_tint = (c.tint & 0x00FFFFFFu) | (static_cast<unsigned int>(((c.tint >> 24) & 0xFFu) * weather_intensity + 0.5f) << 24);
+            AppendSplashes(active_particles.splashes, right, splash_tint, eye, fwd, cone_tan_sq);
             snow_flake_count = snow_instances.size(); // settles append after the flakes; remember where they start
             AppendSettledInstances(snow_instances, active_particles.settled, eye, fwd, cone_tan_sq);
             // Cloud-cover layer (overhead clouds / fog / sandstorm), drawn in addition to and independent of the above.
@@ -1102,8 +1112,8 @@ namespace {
         cloud_ready = UploadVB(device, cloud_inst_vb, cloud_inst_cap, cloud_instances.data(), cloud_instances.size() * sizeof(WeatherInstance));
         splash_ready = EnsureVb(device, splash_vb, splash_cap, splash_vertices);
 #ifdef _DEBUG
-        if (debug_wireframe && active >= 0 && ready) {
-            const auto& c = conditions[active];
+        if (debug_wireframe && active_condition >= 0 && ready) {
+            const auto& c = conditions[active_condition];
             AppendBoxWire(wire_vertices, cx, cy, c.spread_radius, cz - ColumnHeight(c), cz, 0xFFFF0000u); // particle column (red)
             if (c.cloud.top > c.cloud.base)
                 AppendBoxWire(wire_vertices, cx, cy, c.cloud.radius, cz - c.cloud.top, cz - c.cloud.base, 0xFF00FFFFu); // cloud band (cyan)
@@ -1341,7 +1351,7 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
             const auto draw_instanced = [&](IDirect3DVertexBuffer9* vb, const UINT first, const UINT ninst, IDirect3DTexture9* tex, const float flip, const unsigned int tint, const InstAxes& ax) {
                 if (ninst == 0) return;
                 const auto t = ImGui::ColorConvertU32ToFloat4(tint);
-                const float tintf[4] = {t.x, t.y, t.z, t.w};
+                const float tintf[4] = {t.x, t.y, t.z, t.w * weather_intensity}; // whole draw fades with the cross-fade
                 device->SetVertexShaderConstantF(8, tintf, 1);
                 const float flags[4] = {flip, 0.f, 0.f, 0.f};
                 device->SetVertexShaderConstantF(9, flags, 1);
