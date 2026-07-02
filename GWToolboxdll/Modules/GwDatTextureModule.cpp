@@ -1,6 +1,11 @@
 #include "stdafx.h"
 
+#include <condition_variable>
 #include <cstring>
+#include <functional>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 #include <Logger.h>
 #include "GwDatTextureModule.h"
@@ -18,6 +23,40 @@ namespace {
         int x = 0;
         int y = 0;
     };
+
+    // Dedicated worker for dat reads/decodes so they never contend with the shared Resources pool
+    // (curl, wiki image downloads). One thread suffices for icon-sized work and naturally serialises
+    // the archive's re-parse; the GPU upload still hops to the DX thread via Resources::EnqueueDxTask.
+    std::thread dat_worker;
+    std::mutex dat_task_mutex;
+    std::condition_variable dat_task_cv;
+    std::queue<std::function<void()>> dat_tasks;
+    bool dat_worker_stop = false;
+
+    void DatWorkerLoop()
+    {
+        for (;;) {
+            std::function<void()> task;
+            {
+                std::unique_lock<std::mutex> lock(dat_task_mutex);
+                dat_task_cv.wait(lock, [] { return dat_worker_stop || !dat_tasks.empty(); });
+                if (dat_worker_stop)
+                    return; // drop any queued decodes on shutdown
+                task = std::move(dat_tasks.front());
+                dat_tasks.pop();
+            }
+            task();
+        }
+    }
+
+    void EnqueueDatTask(std::function<void()> f)
+    {
+        {
+            std::lock_guard<std::mutex> lock(dat_task_mutex);
+            dat_tasks.push(std::move(f));
+        }
+        dat_task_cv.notify_one();
+    }
 
     // Decodes a DDS payload (raw or block-compressed) to tightly-packed A8R8G8B8.
     bool DecodeDdsToArgb(const uint8_t* bytes, size_t size, std::vector<uint32_t>& argb, Vec2i& dims)
@@ -260,7 +299,7 @@ namespace {
     {
         img->m_pending = true;
         ++img->m_attempts;
-        Resources::Instance().EnqueueWorkerTask([img, decode] {
+        EnqueueDatTask([img, decode] {
             auto result = std::make_shared<ArgbImage>();
             const bool ok = decode(result->pixels, result->dims) && result->dims.x > 0 && result->dims.y > 0;
             Resources::Instance().EnqueueDxTask([img, result, ok](IDirect3DDevice9* device) {
@@ -332,7 +371,9 @@ bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8
 void GwDatTextureModule::Initialize()
 {
     ToolboxModule::Initialize();
-    // The dat is indexed lazily on the first read, so there's nothing to set up here.
+    // The dat is indexed lazily on the first read; just spin up the dedicated read/decode worker.
+    dat_worker_stop = false;
+    dat_worker = std::thread(DatWorkerLoop);
 }
 
 IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id)
@@ -371,8 +412,8 @@ void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std
 {
     if (!file_id)
         return;
-    // Pure CPU (decode + block-compress + write); run it off the render loop.
-    Resources::Instance().EnqueueWorkerTask([file_id, file_path] {
+    // Pure CPU (decode + block-compress + write); run it on the dat worker, off the render loop.
+    EnqueueDatTask([file_id, file_path] {
         std::vector<uint32_t> argb;
         Vec2i dims;
         if (!DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
@@ -402,6 +443,15 @@ void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std
 
 void GwDatTextureModule::Terminate()
 {
+    // Stop the worker before freeing the cache so no in-flight decode touches a deleted GwImg.
+    {
+        std::lock_guard<std::mutex> lock(dat_task_mutex);
+        dat_worker_stop = true;
+    }
+    dat_task_cv.notify_all();
+    if (dat_worker.joinable())
+        dat_worker.join();
+
     for (auto gwimg_ptr : textures_by_file_id) {
         delete gwimg_ptr.second;
     }
