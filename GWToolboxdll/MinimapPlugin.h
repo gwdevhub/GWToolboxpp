@@ -33,6 +33,7 @@ struct MinimapRenderContext : RectF {
     D3DCOLOR background_color = D3DCOLOR_ARGB(50, 0, 0, 0); // Background color (or 0 to use renderer's default)
     D3DCOLOR foreground_color = D3DCOLOR_ARGB(0xff, 0xe0, 0xe0, 0xe0); // Foreground color (or 0 to use renderer's default)
     D3DCOLOR shadow_color = 0; // Drop shadow for foreground color
+    float shadow_translation = -100.f; // Drop-shadow offset, in the view's output space (px under a game->px view_override)
     D3DCOLOR cardinal_color = 0;
 
     bool draw_ranges = false;

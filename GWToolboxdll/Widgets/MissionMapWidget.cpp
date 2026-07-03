@@ -319,6 +319,11 @@ namespace {
         ctx.draw_background = false;
         ctx.draw_cardinals = false; // mission map is always north-aligned
         ctx.draw_pmap = settings.draw_pmap;
+        // The pmap shadow offset is applied in the view's output space, which for the mission map's
+        // game->px view is raw pixels; express a small game-unit offset in px so it stays subtle and
+        // scales with the mission-map zoom (the compass keeps the default, applied in its own space).
+        constexpr float shadow_gwinches = 180.f;
+        ctx.shadow_translation = shadow_gwinches / cached_px_to_game;
         ctx.draw_symbols = settings.draw_symbols;
         ctx.draw_ranges = settings.draw_ranges;
         ctx.draw_agents = settings.draw_agents;
@@ -340,6 +345,7 @@ namespace {
         const float LINE_HALF_THICKNESS = 1.f * cached_px_to_game;
         for (const auto& line : lines) {
             if (!line->visible) continue;
+            if (line->world_coords) continue; // world coords, not game coords; drawn by DrawWorldCoordRouteLines
             if (!line->draw_on_mission_map && !(settings.draw_all_minimap_lines && line->draw_on_minimap) && !(settings.draw_all_terrain_lines && line->draw_on_terrain)) continue;
             if (line->map != map_id) continue;
             if (line->from_player_pos && player_pos) {
@@ -349,7 +355,30 @@ namespace {
                 minimap_lines.push_back(D3DLine(line->p1, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
             }
         }
-        
+
+    }
+
+    // Cross-map route tails are stored in world-map coords (the only form that can place other
+    // maps' positions). Draw them in an ImGui overlay via the world->mission-map transform,
+    // clipped to the widget. These cover the whole route (incl. the current map's exit stretch
+    // past the nearest portal, which the game-coord lines don't reach); the overlap with the
+    // game-coord current-map lines is the same path, so it's harmless - matches the world map.
+    void DrawWorldCoordRouteLines()
+    {
+        const auto& lines = Minimap::Instance().custom_renderer.GetLines();
+        if (lines.empty()) return;
+
+        auto* draw_list = ImGui::GetBackgroundDrawList();
+        draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y}, true);
+        const float thickness = 1.5f * mission_map_scale.x;
+        for (const auto& line : lines) {
+            if (!(line->visible && line->world_coords && line->draw_on_mission_map)) continue;
+            GW::Vec2f s1, s2;
+            WorldMapCoordsToMissionMapScreenPos({line->p1.x, line->p1.y}, s1);
+            WorldMapCoordsToMissionMapScreenPos({line->p2.x, line->p2.y}, s2);
+            draw_list->AddLine({s1.x, s1.y}, {s2.x, s2.y}, line->color, thickness);
+        }
+        draw_list->PopClipRect();
     }
 } // namespace
 
@@ -376,6 +405,8 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
     if (!visible || !mission_map_ready) return;
 
     SubmitVertexBuffers(dx_device);
+
+    DrawWorldCoordRouteLines();
 
     // POC: mission map icons, desaturated. Res shrine icon (maybe others) are wrong colour by default so we desaturate, but this impacts other icons!
     #if 0

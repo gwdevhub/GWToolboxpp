@@ -130,7 +130,7 @@ namespace {
             minimap_lines.clear();
         }
 
-        // Current-map segments draw on in-game surfaces; off-map segments stay world coords (world map only) to avoid overflow.
+        // Current-map segments draw on in-game surfaces; off-map segments stay world coords (world & mission map) to avoid overflow.
         void DrawLines()
         {
             ClearMinimapLines();
@@ -157,8 +157,10 @@ namespace {
                 l = Minimap::Instance().custom_renderer.AddCustomLine({route_world[i].x, route_world[i].y, 0}, {route_world[i + 1].x, route_world[i + 1].y, 0}, label.c_str(), true);
                 l->world_coords = true;
                 l->draw_on_terrain = false;
-                l->draw_on_minimap = false;
-                l->draw_on_mission_map = false;
+                // World coords render on the world map, mission map, and compass (each projects them
+                // into its own space); in-world terrain can't place other maps' positions.
+                l->draw_on_minimap = settings.draw_quest_path_on_minimap;
+                l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
                 l->color = color;
                 minimap_lines.push_back(l);
