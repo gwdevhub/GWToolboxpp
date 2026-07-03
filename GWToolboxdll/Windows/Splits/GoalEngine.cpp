@@ -72,7 +72,8 @@ int GoalEngine::Update(const GoalClock& clock,
                        bool just_entered_map,
                        bool came_from_explorable,
                        GW::Constants::InstanceType instance_type,
-                       int  player_level)
+                       int  player_level,
+                       bool simple_order)
 {
     const bool is_explorable = (instance_type == GW::Constants::InstanceType::Explorable);
 
@@ -164,7 +165,10 @@ int GoalEngine::Update(const GoalClock& clock,
             if (g.status == GoalStatus::Completed) continue;
             // A goal with a start_trigger must be Started before it can complete,
             // preventing its start and end from firing on the same map-entry tick.
-            if (g.start_trigger.has_value() && g.status == GoalStatus::NotStarted) continue;
+            if (g.start_trigger.has_value() && g.status == GoalStatus::NotStarted) {
+                if (simple_order) break; // strict order: this goal blocks all later ones too
+                continue;
+            }
 
             bool fire = false;
             const GoalTrigger& t = g.trigger;
@@ -256,6 +260,7 @@ int GoalEngine::Update(const GoalClock& clock,
                 fired = i;
                 break;
             }
+            if (simple_order) break; // strict order: stop at the earliest pending goal
         } // end Pass 2
     }
 

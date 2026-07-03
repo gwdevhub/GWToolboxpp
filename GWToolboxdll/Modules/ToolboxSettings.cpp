@@ -47,6 +47,7 @@
 #include <Modules/TexmodModule.h>
 #include <Modules/TextToSpeechModule.h>
 #include <Modules/ToastNotifications.h>
+#include <Modules/GWEventBus.h>
 #include <Modules/VendorFix.h>
 
 #include <Widgets/VanquishMapOverlayWidget.h>
@@ -230,6 +231,7 @@ namespace {
         MaterialsWindow::Instance(),
         TradeWindow::Instance(),
         NotePadWindow::Instance(),
+        GWEventBus::Instance(),
         ObjectiveTimerWindow::Instance(),
         SplitsWindow::Instance(),
         FactionLeaderboardWindow::Instance(),

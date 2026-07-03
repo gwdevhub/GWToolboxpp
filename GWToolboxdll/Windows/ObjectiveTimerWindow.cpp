@@ -6,22 +6,15 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Constants/AgentIDs.h>
 
-#include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-#include <GWCA/Packets/StoC.h>
-
-#include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
 
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
-
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
+
+#include <Modules/GWEventBus.h>
 
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
@@ -39,10 +32,17 @@ namespace {
 
     bool loading = false;
 
-    bool map_load_pending = false;
-    GW::Packet::StoC::InstanceLoadInfo* InstanceLoadInfo = nullptr;
-    GW::Packet::StoC::InstanceLoadFile* InstanceLoadFile = nullptr;
-    GW::Packet::StoC::InstanceTimer* InstanceTimer = nullptr;
+    bool map_load_pending      = false;
+    bool has_load_info         = false;
+    bool has_load_file         = false;
+    bool has_timer             = false;
+    uint32_t  pending_map_id   = 0;
+    bool pending_is_explorable = false;
+    uint32_t  pending_file_id  = 0;
+    GW::Vec2f pending_spawn    = {};
+
+    bool     in_dungeon  = false;
+    uint32_t prev_map_id = 0;
 
     //@Cleanup: These IDs should be wchar_t[]'s e.g. L"\x8101\x273F" and the doa event should be a wchar_t comparison instead of something bespoke.
     enum DoA_ObjId : uint32_t {
@@ -231,7 +231,11 @@ namespace {
 
     }
 
-    void WebsocketSendMessage(std::string_view message) {
+    std::string last_ws_command;
+
+    void WebsocketSendMessage(std::string_view message, std::string_view context = {}) {
+        if (!context.empty())
+            last_ws_command = std::string(context);
         if (websocket_app) {
             // @Cleanup: Should we be sending this from a different thread to the websocket? Doesn't seem right...
             if(websocket_mode == LiveSplitOneJSON) {
@@ -244,23 +248,29 @@ namespace {
     }
 } // namespace
 
+void ObjectiveTimerWindow::BroadcastWebsocket(std::string_view msg, std::string_view context)
+{
+    WebsocketSendMessage(msg, context);
+}
+
 void ObjectiveTimerWindow::CheckIsMapLoaded()
 {
-    if (!map_load_pending || !InstanceLoadInfo || !InstanceLoadFile || !InstanceTimer) {
+    if (!map_load_pending || !has_load_info || !has_load_file || !has_timer)
         return;
-    }
     map_load_pending = false;
-    // use TimerWidgets start point, default first frame of 0% load, to comply with GWSCR timing
-    if (TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN && InstanceLoadInfo && InstanceLoadInfo->is_explorable) {
-        AddObjectiveSet(static_cast<GW::Constants::MapID>(InstanceLoadInfo->map_id));
-        Event(EventType::InstanceLoadInfo, InstanceLoadInfo->map_id);
+    // use TimerWidget's start point (first frame of 0% load) to comply with GWSCR timing
+    if (TimerWidget::Instance().GetStartPoint() != TIME_UNKNOWN && pending_is_explorable) {
+        AddObjectiveSet(static_cast<GW::Constants::MapID>(pending_map_id));
+        Event(EventType::InstanceLoadInfo, pending_map_id);
     }
-    if (InstanceLoadFile && InstanceLoadFile->map_fileID == 219215) {
-        AddDoAObjectiveSet(InstanceLoadFile->spawn_point);
+    if (pending_file_id == 219215) {
+        AddDoAObjectiveSet(pending_spawn);
     }
 }
 
-void ObjectiveTimerWindow::Terminate() {
+void ObjectiveTimerWindow::Terminate()
+{
+    GWEventBus::Instance().Unsubscribe(this);
     ToolboxWindow::Terminate();
     for (size_t i = 0; i < 5000 && loading; i += 10) {
         Sleep(10);
@@ -273,152 +283,89 @@ void ObjectiveTimerWindow::Initialize()
     ToolboxWindow::Initialize();
     SettingsRegistry::Register(this, settings);
 
-    static GW::HookEntry PartyDefeated_Entry;
-    static GW::HookEntry GameSrvTransfer_Entry;
-    static GW::HookEntry InstanceLoadFile_Entry;
-    static GW::HookEntry ObjectiveAdd_Entry;
-    static GW::HookEntry ObjectiveUpdateName_Entry;
-    static GW::HookEntry ObjectiveDone_Entry;
-    static GW::HookEntry AgentUpdateAllegiance_Entry;
-    static GW::HookEntry DoACompleteZone_Entry;
-    static GW::HookEntry DisplayDialogue_Entry;
-    static GW::HookEntry MessageServer_Entry;
-    static GW::HookEntry InstanceLoadInfo_Entry;
-    static GW::HookEntry ManipulateMapObject_Entry;
-    static GW::HookEntry DungeonReward_Entry;
-    static GW::HookEntry CountdownStart_Enty;
-
-    // packet hooks used to create or manipulate objective sets:
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyDefeated>(
-        &PartyDefeated_Entry, [this](GW::HookStatus*, GW::Packet::StoC::PartyDefeated*) { StopObjectives(); });
-
-    // NB: Server may not send packets in the order we want them
-    // e.g. InstanceLoadInfo comes in before ExamplePlugin which means the run start is whacked out
-    // keep track of the packets and only trigger relevant events when the needed packets are in.
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadInfo>(
-        &InstanceLoadInfo_Entry,
-        [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadInfo* packet) {
-            InstanceLoadInfo = new GW::Packet::StoC::InstanceLoadInfo;
-            memcpy(InstanceLoadInfo, packet, sizeof(GW::Packet::StoC::InstanceLoadInfo));
-            CheckIsMapLoaded();
-            if (!GW::GetCharContext() || current_objective_set && current_objective_set->character_name != GW::GetCharContext()->player_name)
+    GWEventBus::Instance().Subscribe(this, [this](const GWEvent& e) {
+        using T = GWEvent::Type;
+        switch (e.type) {
+            case T::PartyDefeated:
                 StopObjectives();
-        });
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
-        &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* packet) {
-            InstanceLoadFile = new GW::Packet::StoC::InstanceLoadFile;
-            memcpy(InstanceLoadFile, packet, sizeof(GW::Packet::StoC::InstanceLoadFile));
-            CheckIsMapLoaded();
-        });
-    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::InstanceTimer>(
-        &InstanceLoadFile_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::InstanceTimer* packet) {
-            InstanceTimer = new GW::Packet::StoC::InstanceTimer;
-            memcpy(InstanceTimer, packet, sizeof(GW::Packet::StoC::InstanceTimer));
-            CheckIsMapLoaded();
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(
-        &GameSrvTransfer_Entry, [this](GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* packet) {
-            // Exited map
-            const GW::AreaInfo* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(packet->map_id));
-            if (!info) {
-                return; // we should always have this
-            }
-
-            static bool in_dungeon = false;
-            const bool new_in_dungeon = info->type == GW::RegionType::Dungeon;
-            if (in_dungeon && !new_in_dungeon) {
-                // moved from dungeon to outside
-                StopObjectives();
-            }
-            else if (!packet->is_explorable) {
-                // zoning to outpost
-                StopObjectives();
-            }
-            in_dungeon = new_in_dungeon;
-
-            static uint32_t map_id = 0;
-            Event(EventType::InstanceEnd, map_id);
-            map_id = packet->map_id;
-            // Reset loading map vars (see CheckIsMapLoaded)
-            if (InstanceLoadFile) {
-                delete InstanceLoadFile;
-            }
-            InstanceLoadFile = nullptr;
-            if (InstanceLoadInfo) {
-                delete InstanceLoadInfo;
-            }
-            InstanceLoadInfo = nullptr;
-            if (InstanceTimer) {
-                delete InstanceTimer;
-            }
-            InstanceTimer = nullptr;
-            map_load_pending = true;
-        }, -5);
-    // packet hooks that trigger events:
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(
-        &MessageServer_Entry,
-        [this](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {
-            const GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
-            if (!buff || !buff->valid() || !buff->size()) {
-                return; // Message buffer empty!?
-            }
-            const wchar_t* msg = buff->begin();
-            // NB: buff->size() includes null terminating char. All GW strings are null terminated, use wcslen instead
-            Event(EventType::ServerMessage, wcslen(msg), msg);
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(
-        &DisplayDialogue_Entry,
-        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* packet) {
-            // NB: All GW strings are null terminated, use wcslen to avoid having to check all 122 chars
-            Event(EventType::DisplayDialogue, wcslen(packet->message), packet->message);
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
-        &ManipulateMapObject_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* packet) {
-            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-                if (packet->animation_type == 16 && packet->animation_stage == 2) {
-                    Event(EventType::DoorOpen, packet->object_id);
+                break;
+            // Server may not send load packets in order — collect all three, then act.
+            case T::InstanceLoadInfo:
+                has_load_info      = true;
+                pending_map_id     = e.id1;
+                pending_is_explorable = (e.id2 != 0);
+                if (!GW::GetCharContext() ||
+                    (current_objective_set &&
+                     current_objective_set->character_name != GW::GetCharContext()->player_name))
+                    StopObjectives();
+                CheckIsMapLoaded();
+                break;
+            case T::InstanceLoadFile:
+                has_load_file    = true;
+                pending_file_id  = e.id1;
+                pending_spawn    = e.spawn;
+                CheckIsMapLoaded();
+                break;
+            case T::InstanceTimer:
+                has_timer = true;
+                CheckIsMapLoaded();
+                break;
+            case T::GameSrvTransfer: {
+                const auto* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(e.id1));
+                if (info) {
+                    const bool new_in_dungeon = info->type == GW::RegionType::Dungeon;
+                    if (in_dungeon && !new_in_dungeon)
+                        StopObjectives();
+                    else if (!e.id2)
+                        StopObjectives();
+                    in_dungeon = new_in_dungeon;
                 }
-                else if (packet->animation_type == 3 && packet->animation_stage == 2) {
-                    Event(EventType::DoorClose, packet->object_id);
+                Event(EventType::InstanceEnd, prev_map_id);
+                prev_map_id = e.id1;
+                has_load_info = false;
+                has_load_file = false;
+                has_timer     = false;
+                map_load_pending = true;
+                break;
+            }
+            case T::ServerMessage:
+                Event(EventType::ServerMessage, static_cast<uint32_t>(e.str_len), e.str);
+                break;
+            case T::DisplayDialogue:
+                Event(EventType::DisplayDialogue, static_cast<uint32_t>(e.str_len), e.str);
+                break;
+            case T::DoorOpen:
+                Event(EventType::DoorOpen, e.id1);
+                break;
+            case T::DoorClose:
+                Event(EventType::DoorClose, e.id1);
+                break;
+            case T::ObjectiveStarted:
+                Event(EventType::ObjectiveStarted, e.id1);
+                break;
+            case T::ObjectiveDone:
+                Event(EventType::ObjectiveDone, e.id1);
+                break;
+            case T::AgentUpdateAllegiance:
+                Event(EventType::AgentUpdateAllegiance, e.id1, e.id2);
+                break;
+            case T::DoACompleteZone:
+                Event(EventType::DoACompleteZone, e.id1);
+                break;
+            case T::CountdownStart:
+                Event(EventType::CountdownStart, e.id1);
+                break;
+            case T::DungeonReward:
+                Event(EventType::DungeonReward);
+                if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
+                    os->objectives.back()->SetDone();
+                    os->CheckSetDone();
                 }
-                // TODO: maybe add a more generic ManipulateMapObject packet?
-            }
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(
-        &ObjectiveUpdateName_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveUpdateName* packet) {
-            Event(EventType::ObjectiveStarted, packet->objective_id);
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(
-        &ObjectiveDone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* packet) {
-            Event(EventType::ObjectiveDone, packet->objective_id);
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
-        &AgentUpdateAllegiance_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::AgentUpdateAllegiance* packet) {
-            if (const GW::Agent* agent = GW::Agents::GetAgentByID(packet->agent_id)) {
-                if (const GW::AgentLiving* agentliving = agent->GetAsAgentLiving()) {
-                    Event(EventType::AgentUpdateAllegiance, agentliving->player_number, packet->allegiance_bits);
-                }
-            }
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(
-        &DoACompleteZone_Entry, [this](GW::HookStatus*, const GW::Packet::StoC::DoACompleteZone* packet) {
-            if (packet->message[0] == 0x8101) {
-                Event(EventType::DoACompleteZone, packet->message[1]);
-            }
-        });
-    GW::StoC::RegisterPacketCallback(
-        &CountdownStart_Enty, GAME_SMSG_INSTANCE_COUNTDOWN,
-        [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
-            Event(EventType::CountdownStart, std::to_underlying(GW::Map::GetMapID()));
-        });
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(
-        &DungeonReward_Entry, [this](GW::HookStatus*, GW::Packet::StoC::DungeonReward*) {
-            Event(EventType::DungeonReward);
-            if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
-                os->objectives.back()->SetDone();
-                os->CheckSetDone();
-            }
-        });
+                break;
+            default:
+                break;
+        }
+    });
     EnableWebsocketServer(websocket_mode != WebsocketMode::None);
 
 }
@@ -571,8 +518,8 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
             break;
     }
     // clang-format on
-    WebsocketSendMessage("reset");
-    WebsocketSendMessage("start");
+    WebsocketSendMessage("reset", "OT: Reset - new area");
+    WebsocketSendMessage("start", "OT: Start - area loaded");
 
 }
 
@@ -1047,6 +994,42 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
         }
         ImGui::RadioButton("LiveSplit One JSON Format", (int*)&websocket_mode, static_cast<int>(WebsocketMode::LiveSplitOneJSON));
         ImGui::RadioButton("LiveSplit Server Command Format", (int*)&websocket_mode, static_cast<int>(WebsocketMode::LiveSplitServerCommand));
+
+        ImGui::Spacing();
+        const auto draw_event_table = [](const char* label, std::initializer_list<std::pair<const char*, const char*>> rows) {
+            ImGui::TextDisabled("%s", label);
+            if (ImGui::BeginTable(label, 2, ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
+                ImGui::TableSetupColumn("When",    ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Sends",   ImGuiTableColumnFlags_WidthFixed, 90.f);
+                ImGui::TableHeadersRow();
+                for (const auto& [when, msg] : rows) {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0); ImGui::TextDisabled("%s", when);
+                    ImGui::TableSetColumnIndex(1); ImGui::TextDisabled("%s", msg);
+                }
+                ImGui::EndTable();
+            }
+        };
+
+        draw_event_table("Objective Timer events", {
+            { "Entering a tracked area (FoW, UW, DoA, Deep, dungeons, ToPK)", "reset  start" },
+            { "Any objective completes",                                        "split"        },
+            { "Run ends (party wipe, outpost, character change)",               "reset"        },
+        });
+        ImGui::Spacing();
+        draw_event_table("Splits events", {
+            { "Run starts (button / Running movement / Manual first goal)", "reset  start" },
+            { "Any goal completes",                                         "split"        },
+            { "Run failed (party defeated)",                                "reset"        },
+            { "Run reset while a run was active",                           "reset"        },
+        });
+
+        ImGui::Spacing();
+        if (last_ws_command.empty())
+            ImGui::TextDisabled("Last command: none");
+        else
+            ImGui::Text("Last command: %s", last_ws_command.c_str());
+
         ImGui::Unindent();
     }
 
@@ -1198,7 +1181,7 @@ void ObjectiveTimerWindow::StopObjectives()
 {
     if (current_objective_set) {
         current_objective_set->StopObjectives();
-        WebsocketSendMessage("reset");
+        WebsocketSendMessage("reset", "OT: Reset - run ended");
     }
     current_objective_set = nullptr;
 }
@@ -1478,7 +1461,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
                         Objective* other = objectives[j];
                         if (!other->IsDone()) {
                             other->SetDone();
-                            WebsocketSendMessage("split");
+                            WebsocketSendMessage("split", "OT: Split - objective complete");
                         }
                     }
                     break;
@@ -1506,7 +1489,7 @@ void ObjectiveTimerWindow::ObjectiveSet::Event(const EventType type, const uint3
     }
 
     if (just_set_something_done) {
-        WebsocketSendMessage("split");
+        WebsocketSendMessage("split", "OT: Split - objective complete");
         CheckSetDone();
     }
 }

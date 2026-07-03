@@ -2,23 +2,17 @@
 
 #include <Windows/SplitsWindow.h>
 #include <Windows/Splits/MapNames.h>
-#include <Windows/Splits/Presets.h>
-
 #include <Modules/Resources.h>
 
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
-#include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
-#include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
-#include <GWCA/Packets/StoC.h>
-#include <GWCA/Packets/Opcodes.h>
-#include <GWCA/Context/GameContext.h>
-#include <GWCA/Context/WorldContext.h>
-#include <GWCA/GameContainers/Array.h>
+
+#include <Modules/GWEventBus.h>
+#include <Windows/ObjectiveTimerWindow.h>
 
 // ---------------------------------------------------------------------------
 // JSON DTOs for resume.json / per-list run history (glaze reflection requires external linkage).
@@ -116,160 +110,93 @@ void SplitsWindow::Initialize()
     ToolboxWindow::Initialize();
     // MapNames::Init() deferred to first Update() — GW UI context may not be ready yet.
 
-    GW::UI::RegisterUIMessageCallback(
-        &on_mission_complete_hook_,
-        GW::UI::UIMessage::kMissionComplete,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-            engine_.NotifyMissionComplete(GW::Map::GetMapID());
-        });
-
-    GW::UI::RegisterUIMessageCallback(
-        &on_objective_complete_hook_,
-        GW::UI::UIMessage::kObjectiveComplete,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-            engine_.NotifyMissionBonus(GW::Map::GetMapID());
-        });
-
-    GW::UI::RegisterUIMessageCallback(
-        &on_vanquish_complete_hook_,
-        GW::UI::UIMessage::kVanquishComplete,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-            engine_.NotifyVanquishComplete(GW::Map::GetMapID());
-        });
-
-    GW::UI::RegisterUIMessageCallback(
-        &on_party_defeated_hook_,
-        GW::UI::UIMessage::kPartyDefeated,
-        [this](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-            if (ActiveProfile().stop_on_party_defeated && clock_.IsRunning())
-                FailRun();
-        });
-
-    // Preset-only StoC hooks for elite area / dungeon triggers
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(
-        &on_objective_done_hook_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* p) {
-            engine_.NotifyEvent(GoalTrigger::Type::ObjectiveDone, p->objective_id);
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(
-        &on_objective_started_hook_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveUpdateName* p) {
-            engine_.NotifyEvent(GoalTrigger::Type::ObjectiveStarted, p->objective_id);
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ManipulateMapObject>(
-        &on_door_hook_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::ManipulateMapObject* p) {
-            if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) return;
-            if (p->animation_type == 16 && p->animation_stage == 2)
-                engine_.NotifyEvent(GoalTrigger::Type::DoorOpen, p->object_id);
-            else if (p->animation_type == 3 && p->animation_stage == 2)
-                engine_.NotifyEvent(GoalTrigger::Type::DoorClose, p->object_id);
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(
-        &on_agent_allegiance_hook_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::AgentUpdateAllegiance* p) {
-            const GW::Agent* agent = GW::Agents::GetAgentByID(p->agent_id);
-            if (!agent) return;
-            const GW::AgentLiving* living = agent->GetAsAgentLiving();
-            if (!living) return;
-            engine_.NotifyEvent(GoalTrigger::Type::AgentUpdateAllegiance,
-                                living->player_number, p->allegiance_bits);
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DoACompleteZone>(
-        &on_doa_zone_hook_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::DoACompleteZone* p) {
-            if (p->message[0] == 0x8101)
-                engine_.NotifyEvent(GoalTrigger::Type::DoACompleteZone, p->message[1]);
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(
-        &on_dungeon_reward_hook_,
-        [this](GW::HookStatus*, GW::Packet::StoC::DungeonReward*) {
-            engine_.NotifyEvent(GoalTrigger::Type::DungeonReward);
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MessageServer>(
-        &on_server_message_hook_,
-        [this](GW::HookStatus*, GW::Packet::StoC::MessageServer*) {
-            const GW::Array<wchar_t>* buff = &GW::GetGameContext()->world->message_buff;
-            if (!buff || !buff->valid() || !buff->size()) return;
-            const wchar_t* msg = buff->begin();
-            engine_.NotifyEvent(GoalTrigger::Type::ServerMessage, 0, 0, msg, wcslen(msg));
-        });
-
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DisplayDialogue>(
-        &on_display_dialogue_hook_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::DisplayDialogue* p) {
-            engine_.NotifyEvent(GoalTrigger::Type::DisplayDialogue, 0, 0,
-                                p->message, wcslen(p->message));
-        });
-
-    // Cache DoA spawn point so the preset builder can determine starting area.
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::InstanceLoadFile>(
-        &on_instance_load_file_hook_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::InstanceLoadFile* p) {
-            doa_spawn_point_ = p->spawn_point;
-        });
-
-    // ToPK arena countdown — fires when the GvG match countdown begins. Also doubles as the
-    // Ascalon Academy queue's only signal (solo queue, no PartyLock); gated to our map list so
-    // ToPK/other countdown uses elsewhere don't pause Manual's game time.
-    GW::StoC::RegisterPacketCallback(
-        &on_countdown_start_hook_, GAME_SMSG_INSTANCE_COUNTDOWN,
-        [this](GW::HookStatus*, GW::Packet::StoC::PacketBase*) {
-            const GW::Constants::MapID map = GW::Map::GetMapID();
-            if (active_profile_idx_ == 1 && IsMissionQueueMap(map))
-                in_mission_queue_ = true;
-            engine_.NotifyEvent(GoalTrigger::Type::CountdownStart,
-                                static_cast<uint32_t>(map));
-        });
-
-    // Running profile: capture local player skill use for shadow-step auto-start.
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::SkillActivate>(
-        &on_skill_activate_hook_,
-        [this](GW::HookStatus*, GW::Packet::StoC::SkillActivate* p) {
-            if (p->agent_id == GW::Agents::GetControlledCharacterId())
-                pending_skill_id_ = p->skill_id;
-        });
-
-    // Manual: "Time until mission start" ready-check dialog (Vizunah Square, Unwaking Waters)
-    // — server toggles party lock while the queue is pending. Gated to our map list since
-    // PartyLock also fires for unrelated party-window locks (e.g. mission entry elsewhere)
-    // where we don't want to pause game time.
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyLock>(
-        &on_mission_queue_hook_,
-        [this](GW::HookStatus*, GW::Packet::StoC::PartyLock* p) {
-            if (!p->unk2) {
+    GWEventBus::Instance().Subscribe(this, [this](const GWEvent& e) {
+        using T = GWEvent::Type;
+        switch (e.type) {
+            case T::MissionComplete:
+                engine_.NotifyMissionComplete(static_cast<GW::Constants::MapID>(e.id1));
+                break;
+            case T::MissionBonus:
+                engine_.NotifyMissionBonus(static_cast<GW::Constants::MapID>(e.id1));
+                break;
+            case T::VanquishComplete:
+                engine_.NotifyVanquishComplete(static_cast<GW::Constants::MapID>(e.id1));
+                break;
+            case T::PartyDefeated:
+                if (ActiveProfile().stop_on_party_defeated && clock_.IsRunning())
+                    FailRun();
+                break;
+            case T::ObjectiveDone:
+                engine_.NotifyEvent(GoalTrigger::Type::ObjectiveDone, e.id1);
+                break;
+            case T::ObjectiveStarted:
+                engine_.NotifyEvent(GoalTrigger::Type::ObjectiveStarted, e.id1);
+                break;
+            case T::DoorOpen:
+                engine_.NotifyEvent(GoalTrigger::Type::DoorOpen, e.id1);
+                break;
+            case T::DoorClose:
+                engine_.NotifyEvent(GoalTrigger::Type::DoorClose, e.id1);
+                break;
+            case T::AgentUpdateAllegiance:
+                engine_.NotifyEvent(GoalTrigger::Type::AgentUpdateAllegiance, e.id1, e.id2);
+                break;
+            case T::DoACompleteZone:
+                engine_.NotifyEvent(GoalTrigger::Type::DoACompleteZone, e.id1);
+                break;
+            case T::DungeonReward:
+                engine_.NotifyEvent(GoalTrigger::Type::DungeonReward);
+                break;
+            case T::ServerMessage:
+                engine_.NotifyEvent(GoalTrigger::Type::ServerMessage, 0, 0, e.str, e.str_len);
+                break;
+            case T::DisplayDialogue:
+                engine_.NotifyEvent(GoalTrigger::Type::DisplayDialogue, 0, 0, e.str, e.str_len);
+                break;
+            // ToPK/Ascalon Academy countdown — gated to mission queue maps so unrelated
+            // countdowns don't pause Manual's game time.
+            case T::CountdownStart:
+                if (active_profile_idx_ == 0 && IsMissionQueueMap(static_cast<GW::Constants::MapID>(e.id1)))
+                    in_mission_queue_ = true;
+                engine_.NotifyEvent(GoalTrigger::Type::CountdownStart, e.id1);
+                break;
+            // Running: shadow-step auto-start — filter to local player only.
+            case T::SkillActivate:
+                if (e.id1 == GW::Agents::GetControlledCharacterId())
+                    pending_skill_id_ = e.id2;
+                break;
+            // Manual: party lock signals the mission-start ready-check queue is up/down.
+            // Gated to mission queue maps so unrelated party locks don't affect game time.
+            case T::PartyLock:
+                if (!e.id1) {
+                    in_mission_queue_ = false;
+                } else if (active_profile_idx_ == 0 && IsMissionQueueMap(last_map_)) {
+                    in_mission_queue_ = true;
+                }
+                break;
+            // Zone entry — fires for every new instance including same-map re-entry
+            // (district change, new character into same starting map, etc.).
+            case T::InstanceLoadInfo:
+                pending_came_from_explorable_ = last_was_explorable_;
+                last_was_explorable_          = (e.id2 != 0);
+                last_map_                     = static_cast<GW::Constants::MapID>(e.id1);
+                in_mission_queue_             = false;
+                pending_map_enter_            = true;
+                break;
+            // Transfer packet fires before InstanceLoadInfo — clear queue state immediately
+            // on any server transfer (covers district changes where the map doesn't change).
+            case T::GameSrvTransfer:
                 in_mission_queue_ = false;
-                return;
-            }
-            if (active_profile_idx_ == 1 && IsMissionQueueMap(GW::Map::GetMapID()))
-                in_mission_queue_ = true;
-        });
+                break;
+            default:
+                break;
+        }
+    });
 }
 
 void SplitsWindow::Terminate()
 {
-    GW::UI::RemoveUIMessageCallback(&on_mission_complete_hook_);
-    GW::UI::RemoveUIMessageCallback(&on_objective_complete_hook_);
-    GW::UI::RemoveUIMessageCallback(&on_vanquish_complete_hook_);
-    GW::UI::RemoveUIMessageCallback(&on_party_defeated_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::ObjectiveDone>(&on_objective_done_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::ObjectiveUpdateName>(&on_objective_started_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::ManipulateMapObject>(&on_door_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&on_agent_allegiance_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::DoACompleteZone>(&on_doa_zone_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::DungeonReward>(&on_dungeon_reward_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::MessageServer>(&on_server_message_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::DisplayDialogue>(&on_display_dialogue_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::InstanceLoadFile>(&on_instance_load_file_hook_);
-    GW::StoC::RemoveCallback(GAME_SMSG_INSTANCE_COUNTDOWN, &on_countdown_start_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::SkillActivate>(&on_skill_activate_hook_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::PartyLock>(&on_mission_queue_hook_);
+    GWEventBus::Instance().Unsubscribe(this);
     engine_.Detach();
     ToolboxWindow::Terminate();
 }
@@ -382,8 +309,8 @@ void SplitsWindow::LoadActiveList(const std::wstring& path)
     manually_paused_           = false;
     manual_pause_accum_        = 0.0;
     total_paused_real_         = 0.0;
-    last_map_                  = GW::Constants::MapID::None;
-    last_instance_time_        = 0;
+    pending_map_enter_            = false;
+    pending_came_from_explorable_ = false;
 }
 
 void SplitsWindow::LoadPB()
@@ -514,8 +441,8 @@ void SplitsWindow::ApplyResume()
     clock_.Restore(real_time, game_time);
     engine_.ForceStarted();
     total_paused_real_   = j.total_paused.value_or(0.0);
-    last_map_            = GW::Constants::MapID::None;
-    last_instance_time_  = 0;
+    pending_map_enter_            = false;
+    pending_came_from_explorable_ = false;
 }
 
 void SplitsWindow::DiscardResume()
@@ -546,6 +473,7 @@ void SplitsWindow::FailRun()
     engine_.FailRun(clock_);
     clock_.Pause();
     run_failed_ = true;
+    ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - party defeated");
     SaveRunToHistory(/*failed=*/true);
     DeleteResumeState();
 }
@@ -615,15 +543,15 @@ void SplitsWindow::SaveRunToHistory(bool failed)
 // ---------------------------------------------------------------------------
 std::wstring SplitsWindow::ActiveSplitsFolder() const
 {
-    if (active_profile_idx_ == 1) return splits_folder_ + L"manual\\";
-    if (active_profile_idx_ == 2) return splits_folder_ + L"running\\";
+    if (active_profile_idx_ == 0) return splits_folder_ + L"manual\\";
+    if (active_profile_idx_ == 1) return splits_folder_ + L"running\\";
     return splits_folder_;
 }
 
 std::wstring SplitsWindow::ActiveRunsFolder() const
 {
-    if (active_profile_idx_ == 1) return runs_folder_ + L"manual\\";
-    if (active_profile_idx_ == 2) return runs_folder_ + L"running\\";
+    if (active_profile_idx_ == 0) return runs_folder_ + L"manual\\";
+    if (active_profile_idx_ == 1) return runs_folder_ + L"running\\";
     return runs_folder_;
 }
 
@@ -662,55 +590,26 @@ void SplitsWindow::Update(float delta)
     const auto instance_type   = GW::Map::GetInstanceType();
     const bool is_explorable   = (instance_type == GW::Constants::InstanceType::Explorable);
     const bool is_loading      = (instance_type == GW::Constants::InstanceType::Loading);
-    const bool in_outpost      = (instance_type == GW::Constants::InstanceType::Outpost);
     const bool in_cinematic    = GW::Map::GetIsInCinematic();
-    const GW::Constants::MapID current_map = GW::Map::GetMapID();
 
-    const uint32_t instance_time     = GW::Map::GetInstanceTime();
-    const bool map_changed           = (current_map != last_map_) && current_map != GW::Constants::MapID::None;
-    if (map_changed)
-        in_mission_queue_ = false; // queue resolved into a real zone change; stop pausing for it
+    // Consume bus-sourced map-entry flags (set by InstanceLoadInfo / GameSrvTransfer callbacks).
+    const bool just_entered_map     = pending_map_enter_;
+    const bool came_from_explorable = pending_came_from_explorable_;
+    pending_map_enter_            = false;
+    pending_came_from_explorable_ = false;
 
     // Accumulate wall-clock time while manually paused (clock_.RealTime() is frozen during
     // a manual pause, so it can't be used to measure how long the pause lasted).
     if (manually_paused_)
         manual_pause_accum_ += static_cast<double>(delta);
-    // Detect entering a new instance of the same map (e.g. creating a new character into the same
-    // starting map as a previous session): instance_time resets to near-0 for every new instance.
-    // We only update last_instance_time_ when not loading and the map is valid, so the large
-    // instance_time from the previous session is preserved across the character-select screen
-    // (which has no active instance), making the reset detectable on entry.
-    // Manual-only: this exists solely for the character-creation case (new char loads into the
-    // same map a previous Manual session ended in). Scoped to idx==1 so it cannot affect Running/SC.
-    const bool instance_reset        = active_profile_idx_ == 1 && !clock_.IsRunning() && !is_loading
-                                      && !map_changed
-                                      && current_map != GW::Constants::MapID::None
-                                      && instance_time < last_instance_time_;
-    // Manual: the player going through "no active character" (character select) and coming back
-    // valid, while landing in the same map, also means a new session loaded in — independent of
-    // whether the new character happens to share the old one's name (belt-and-suspenders
-    // alongside instance_reset above, in case instance_time doesn't behave as expected across
-    // the character-select screen).
-    const wchar_t* current_player_name = GW::PlayerMgr::GetPlayerName();
-    const bool     has_player_name     = current_player_name && *current_player_name;
-    const bool character_changed     = active_profile_idx_ == 1 && !clock_.IsRunning() && !is_loading
-                                      && !map_changed
-                                      && current_map != GW::Constants::MapID::None
-                                      && has_player_name && !had_player_name_;
-    const bool just_entered_map      = map_changed || instance_reset || character_changed;
-    const bool came_from_explorable  = map_changed && last_was_explorable_;
-    // SC (idx 0): count loading time to match OT and /age; pause only in outpost.
-    // Other profiles: pause during loading and cinematics; optionally pause in outpost.
-    // Manual (idx 1) additionally pauses while a mission-start ready-check queue is up.
-    const bool time_paused  = (active_profile_idx_ == 0)
-        ? in_outpost
-        : (is_loading || in_cinematic || (ActiveProfile().game_time_explorable_only && !is_explorable)
-           || (active_profile_idx_ == 1 && in_mission_queue_));
+    // Manual (idx 0) also pauses while a mission-start ready-check queue is up.
+    const bool time_paused = is_loading || in_cinematic
+        || (ActiveProfile().game_time_explorable_only && !is_explorable)
+        || (active_profile_idx_ == 0 && in_mission_queue_);
 
     // Real: raw wall-clock, never paused.
     clock_.AddRealTime(static_cast<double>(delta));
 
-    // Game: pause on loading, cinematics, and (in SC mode) outposts.
     if (!time_paused)
         clock_.AddGameTime(static_cast<double>(delta));
 
@@ -722,7 +621,7 @@ void SplitsWindow::Update(float delta)
 
     // Running: pause clock at load-start, resume only when the player struct is available.
     // Avoids "is_loading" flickering causing the timer to flap start/stop.
-    if (active_profile_idx_ == 2) {
+    if (active_profile_idx_ == 1) {
         if (is_loading && clock_.IsRunning() && !running_load_paused_) {
             clock_.Pause();
             running_load_paused_ = true;
@@ -732,43 +631,10 @@ void SplitsWindow::Update(float delta)
         }
     }
 
-    // SC: zone to outpost mid-run → fail (mirrors OT's StopObjectives on zone-out).
-    // FailRun() pauses the clock, so this is naturally one-shot.
-    if (active_profile_idx_ == 0 && in_outpost && clock_.IsRunning() && !run_complete_)
-        FailRun();
-
-    // Auto-load preset when entering a supported elite area or dungeon (SC profile).
-    // Always resets and starts a fresh run, mirroring OT's "new ObjectiveSet on every instance entry".
-    if (just_entered_map && active_profile_idx_ == 0) {
-        if (auto preset = Presets::GetPresetForMap(current_map, doa_spawn_point_)) {
-            DeleteResumeState();
-            engine_.Detach();
-            active_list_ = std::move(*preset);
-            run_complete_ = false;
-            run_failed_   = false;
-            clock_.Reset();
-            engine_.Attach(&active_list_);
-            LoadPB();
-            run_char_name_.clear();
-            run_char_level_ = 0;
-            run_start_unix_ = static_cast<int64_t>(time(nullptr));
-            if (const wchar_t* wname = GW::PlayerMgr::GetPlayerName()) {
-                const int sz = WideCharToMultiByte(CP_UTF8, 0, wname, -1, nullptr, 0, nullptr, nullptr);
-                if (sz > 1) {
-                    run_char_name_.resize(static_cast<size_t>(sz) - 1);
-                    WideCharToMultiByte(CP_UTF8, 0, wname, -1, run_char_name_.data(), sz, nullptr, nullptr);
-                }
-            }
-            if (controlled_living)
-                run_char_level_ = static_cast<int>(controlled_living->level);
-            clock_.Start();
-        }
-    }
-
     // Running: two-stage auto-start.
     // Stage 1 (map entry): arm the movement detector when entering the first goal's map.
     // Stage 2 (movement/shadow step): start the clock the moment the runner actually moves.
-    if (active_profile_idx_ == 2 && !clock_.IsRunning() && !run_complete_ && !run_failed_) {
+    if (active_profile_idx_ == 1 && !clock_.IsRunning() && !run_complete_ && !run_failed_) {
         // Find the first non-header goal with a MapEnter start trigger.
         const GoalEntry* first_goal = nullptr;
         for (const auto& g : active_list_.goals) {
@@ -783,7 +649,7 @@ void SplitsWindow::Update(float delta)
         // Stage 1: entering the first goal's map arms the detector.
         if (just_entered_map) {
             running_awaiting_movement_ =
-                has_start_map && (current_map == first_goal->start_trigger->map_id);
+                has_start_map && (last_map_ == first_goal->start_trigger->map_id);
         }
 
         // Stage 2: movement or shadow step fires the clock.
@@ -815,6 +681,8 @@ void SplitsWindow::Update(float delta)
                         WideCharToMultiByte(CP_UTF8, 0, wname, -1, run_char_name_.data(), sz, nullptr, nullptr);
                     }
                 }
+                ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - run starting");
+                ObjectiveTimerWindow::BroadcastWebsocket("start", "Splits: Start - movement detected");
                 clock_.Start();
                 engine_.ForceStarted();
             }
@@ -823,9 +691,9 @@ void SplitsWindow::Update(float delta)
         }
     }
 
-    const int fired = engine_.Update(clock_, current_map, just_entered_map,
+    const int fired = engine_.Update(clock_, last_map_, just_entered_map,
                                      came_from_explorable, instance_type,
-                                     player_level);
+                                     player_level, ActiveProfile().simple_order);
 
     if (clock_.IsRunning()) {
         resume_save_timer_ += static_cast<float>(delta);
@@ -833,6 +701,8 @@ void SplitsWindow::Update(float delta)
             SaveResumeState();
             resume_save_timer_ = 0.f;
         }
+        if (fired >= 0)
+            ObjectiveTimerWindow::BroadcastWebsocket("split", "Splits: Split - goal complete");
     }
 
     if (!run_complete_ && !run_failed_ && clock_.IsRunning() && !active_list_.goals.empty()) {
@@ -843,13 +713,6 @@ void SplitsWindow::Update(float delta)
         }
         if (all_done) SaveCompletedRun();
     }
-
-    last_map_ = current_map;
-    if (!is_loading && current_map != GW::Constants::MapID::None)
-        last_instance_time_ = instance_time;
-    if (!is_loading)
-        last_was_explorable_ = is_explorable;
-    had_player_name_ = has_player_name;
 
     // Keybind edge detection
     auto poll_key = [](int vk, bool& prev) -> bool {
@@ -867,7 +730,7 @@ void SplitsWindow::Update(float delta)
     // Checked here so it catches both engine_.Update() fires and TriggerManualSplit() fires.
     // Excludes manually_paused_ so a user-initiated pause doesn't get immediately undone by
     // the first goal's already-fired status (it was fired before the pause, not by it).
-    if (active_profile_idx_ == 1 && !clock_.IsRunning() && !run_complete_ && !run_failed_ &&
+    if (active_profile_idx_ == 0 && !clock_.IsRunning() && !run_complete_ && !run_failed_ &&
         !manually_paused_) {
         for (const auto& g : active_list_.goals) {
             if (g.is_header) continue;
@@ -882,6 +745,8 @@ void SplitsWindow::Update(float delta)
                         WideCharToMultiByte(CP_UTF8, 0, wname, -1, run_char_name_.data(), sz, nullptr, nullptr);
                     }
                 }
+                ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - run starting");
+                ObjectiveTimerWindow::BroadcastWebsocket("start", "Splits: Start - first goal fired");
                 clock_.Start();
             }
             break; // only check the first non-header goal
@@ -941,14 +806,16 @@ void SplitsWindow::StartRun()
     if (const auto* agent = GW::Agents::GetControlledCharacter())
         run_char_level_ = static_cast<int>(agent->level);
     run_start_unix_ = static_cast<int64_t>(time(nullptr));
+    ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - run starting");
+    ObjectiveTimerWindow::BroadcastWebsocket("start", "Splits: Start - manually started");
     clock_.Start();
     engine_.ForceStarted();
-    last_map_           = GW::Constants::MapID::None;
-    last_instance_time_ = 0;
 }
 
 void SplitsWindow::ResetRun()
 {
+    if (clock_.IsRunning() || run_complete_ || run_failed_)
+        ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - run reset");
     DeleteResumeState();
     run_complete_              = false;
     run_failed_                = false;
@@ -961,9 +828,10 @@ void SplitsWindow::ResetRun()
     total_paused_real_         = 0.0;
     engine_.Reset();
     clock_.Reset();
-    // last_map_/last_instance_time_ deliberately left untouched: forcing them to a "just
-    // entered" sentinel would re-fire the first goal's MapEnter trigger immediately if the
-    // player is still standing in that zone. They should have to actually leave and re-enter.
+    pending_map_enter_            = false;
+    pending_came_from_explorable_ = false;
+    // last_map_ deliberately left untouched: re-entry only fires when InstanceLoadInfo arrives,
+    // so the player must leave and re-enter the zone — no spurious MapEnter re-trigger on reset.
 }
 
 void SplitsWindow::TriggerManualSplit()
@@ -975,9 +843,7 @@ void SplitsWindow::SwitchProfile(int idx)
 {
     if (idx < 0 || idx >= kProfileCount || idx == active_profile_idx_) return;
 
-    // Save the outgoing profile's list name so we can restore it later.
-    // SC's list is always a preset (not file-backed), so don't save it.
-    if (active_profile_idx_ != 0 && !active_list_.name.empty())
+    if (!active_list_.name.empty())
         profiles_[active_profile_idx_].last_list_name = active_list_.name;
 
     active_profile_idx_ = idx;
@@ -996,14 +862,11 @@ void SplitsWindow::SwitchProfile(int idx)
 
     active_list_ = GoalList{};
 
-    // SC always starts empty — presets auto-load on map entry. Never restore from file.
-    if (active_profile_idx_ != 0) {
-        const SplitsProfile& p = ActiveProfile();
-        if (!p.last_list_name.empty() && !splits_folder_.empty()) {
-            const std::wstring path = ActiveSplitsFolder() +
-                std::wstring(p.last_list_name.begin(), p.last_list_name.end()) + L".json";
-            if (std::filesystem::exists(path))
-                LoadActiveList(path);
-        }
+    const SplitsProfile& p = ActiveProfile();
+    if (!p.last_list_name.empty() && !splits_folder_.empty()) {
+        const std::wstring path = ActiveSplitsFolder() +
+            std::wstring(p.last_list_name.begin(), p.last_list_name.end()) + L".json";
+        if (std::filesystem::exists(path))
+            LoadActiveList(path);
     }
 }

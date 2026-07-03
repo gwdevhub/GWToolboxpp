@@ -8,7 +8,7 @@ class SettingsDoc;
 
 // ---------------------------------------------------------------------------
 // SplitsProfile — all per-profile settings: display, behaviour, timer rules.
-// SplitsWindow owns an array of 3 of these and hot-switches between them.
+// SplitsWindow owns an array of 2 of these and hot-switches between them.
 // ---------------------------------------------------------------------------
 struct SplitsProfile {
     // Human-readable label shown in the profile switcher.
@@ -20,13 +20,15 @@ struct SplitsProfile {
     // ---- Behavioural flags -------------------------------------------------
     bool stop_on_party_defeated = true;
     bool auto_send_age          = false;
+    // false (Dynamic) = any not-yet-completed goal's trigger can fire whenever met;
+    // true (Simple) = goals must complete strictly in list order.
+    bool simple_order           = false;
 
     // ---- Display settings --------------------------------------------------
-    bool show_start_time     = false;
-    bool use_game_time       = true;  // true = show game time column; false = show real time column
-    bool show_segment        = true;
-    bool segment_is_duration = false;
-    bool show_paused_time    = false; // shows running total of manually-paused real time next to the clock
+    bool use_game_time    = true;  // true = show game time column; false = show real time column
+    bool show_segment     = true;
+    bool show_segment_pb  = true;  // shows the segment-vs-PB-segment delta under the split column
+    bool show_paused_time = false; // shows running total of manually-paused real time next to the clock
 
     Color color_completed = Colors::RGB(0,   255, 0  );
     Color color_active    = Colors::RGB(255, 255, 255);
@@ -44,6 +46,5 @@ struct SplitsProfile {
 // ---------------------------------------------------------------------------
 // Factory helpers — produce profiles with sensible per-mode defaults.
 // ---------------------------------------------------------------------------
-SplitsProfile MakeSCProfile();
 SplitsProfile MakeManualProfile();
 SplitsProfile MakeRunningProfile();

@@ -44,6 +44,10 @@ public:
     void LoadRuns();
     void SaveRuns();
 
+    // Broadcast a LiveSplit command ("start", "split", "reset") to connected websocket clients.
+    // context is shown in the settings UI as the last command sent (e.g. "Splits: Start - first goal").
+    static void BroadcastWebsocket(std::string_view msg, std::string_view context = {});
+
     struct Settings {
         bool show_decimal = false;
         bool show_start_column = true;

@@ -3,16 +3,13 @@
 #include <array>
 #include <ToolboxWindow.h>
 
-#include <GWCA/Utilities/Hook.h>
-#include <GWCA/GameContainers/GamePos.h>
-
 #include <Windows/Splits/GoalClock.h>
 #include <Windows/Splits/GoalEngine.h>
 #include <Windows/Splits/GoalList.h>
 #include <Windows/Splits/SplitsProfile.h>
 #include <Windows/Splits/SplitsGoalListWindow.h>
 
-inline constexpr int kProfileCount = 3;
+inline constexpr int kProfileCount = 2;
 
 // ---------------------------------------------------------------------------
 // SplitsWindow — speedrun split timer, ported from the GWSplits plugin.
@@ -95,20 +92,17 @@ private:
     GoalList              active_list_;
     SplitsGoalListWindow  window_;
 
-    // Profiles: 0=SC, 1=Manual, 2=Running
+    // Profiles: 0=Manual, 1=Running
     std::array<SplitsProfile, kProfileCount> profiles_ = {
-        MakeSCProfile(), MakeManualProfile(), MakeRunningProfile()
+        MakeManualProfile(), MakeRunningProfile()
     };
     int active_profile_idx_ = 0;
 
-    GW::Constants::MapID  last_map_            = GW::Constants::MapID::None;
-    uint32_t              last_instance_time_  = 0;
-    bool                  last_was_explorable_ = false;
-    // Manual: detects a new character loading into the same starting map after a reset
-    // (reset -> character select -> new character -> same start zone). instance_time alone
-    // is not a reliable signal for this transition, so we also watch for the player name
-    // going invalid (character select) and then valid again (same OR different name).
-    bool                  had_player_name_     = false;
+    GW::Constants::MapID  last_map_                 = GW::Constants::MapID::None;
+    bool                  last_was_explorable_      = false;
+    // Set by the InstanceLoadInfo bus event; consumed once per Update() tick.
+    bool                  pending_map_enter_        = false;
+    bool                  pending_came_from_explorable_ = false;
 
     int  key_start_ = 0;
     int  key_reset_ = 0;
@@ -116,23 +110,6 @@ private:
     bool key_start_prev_ = false;
     bool key_reset_prev_ = false;
     bool key_split_prev_ = false;
-
-    GW::HookEntry on_mission_complete_hook_;
-    GW::HookEntry on_objective_complete_hook_;
-    GW::HookEntry on_vanquish_complete_hook_;
-    GW::HookEntry on_party_defeated_hook_;
-    GW::HookEntry on_objective_done_hook_;
-    GW::HookEntry on_objective_started_hook_;
-    GW::HookEntry on_door_hook_;
-    GW::HookEntry on_agent_allegiance_hook_;
-    GW::HookEntry on_doa_zone_hook_;
-    GW::HookEntry on_dungeon_reward_hook_;
-    GW::HookEntry on_server_message_hook_;
-    GW::HookEntry on_display_dialogue_hook_;
-    GW::HookEntry on_instance_load_file_hook_;
-    GW::HookEntry on_countdown_start_hook_;
-    GW::HookEntry on_skill_activate_hook_;
-    GW::HookEntry on_mission_queue_hook_;
 
     uint32_t pending_skill_id_          = 0;     // skill fired by local player this tick (shadow step bus)
     bool     running_awaiting_movement_ = false; // armed after entering first Running goal's map
@@ -145,8 +122,6 @@ private:
     bool     manually_paused_           = false;
     double   manual_pause_accum_        = 0.0;
     double   total_paused_real_         = 0.0; // running total across the whole run; persisted with the run
-
-    GW::Vec2f    doa_spawn_point_ = {};
 
     std::wstring splits_folder_;
     std::wstring runs_folder_;
@@ -175,6 +150,6 @@ private:
     std::string pending_resume_data_;
 
     static constexpr std::array<const char*, kProfileCount> kProfileSections = {
-        "Splits.SC", "Splits.Manual", "Splits.Running"
+        "Splits.Manual", "Splits.Running"
     };
 };

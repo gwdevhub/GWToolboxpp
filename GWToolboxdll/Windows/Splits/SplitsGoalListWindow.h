@@ -27,7 +27,7 @@ public:
 private:
     bool DrawHeaderRow(const GoalList& list, int header_idx, const struct SplitsProfile& profile);
     void DrawGoalRow(const GoalEntry& g, const GoalClock& clock, int index,
-                     bool is_current, double pb_split,
+                     bool is_current, double pb_split, double pb_segment,
                      const struct SplitsProfile& profile);
     void DrawMissionBatchPicker(SplitsWindow& window);
     void DrawExplorableBatchPicker(SplitsWindow& window);

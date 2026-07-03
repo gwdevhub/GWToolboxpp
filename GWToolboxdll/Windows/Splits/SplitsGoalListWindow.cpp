@@ -91,36 +91,6 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
 {
     const bool is_open = ImGui::Begin(plugin.Name(), plugin.GetVisiblePtr(), plugin.GetWinFlags());
 
-    // Title bar buttons
-    {
-        const bool   running = plugin.Clock().IsRunning();
-        const char*  lbl0    = running ? "Pause" : "Start";
-        const float  fp_x    = ImGui::GetStyle().FramePadding.x;
-        const float  sp      = ImGui::GetStyle().ItemSpacing.x;
-        const float  bh      = ImGui::GetFrameHeight() - 4.f;
-        const float  bw0     = ImGui::CalcTextSize(lbl0).x    + fp_x * 2.f;
-        const float  bw1     = ImGui::CalcTextSize("Reset").x  + fp_x * 2.f;
-        const float  bw2     = ImGui::CalcTextSize("Split").x  + fp_x * 2.f;
-        const float  total_w = bw0 + bw1 + bw2 + sp * 2.f;
-
-        const ImVec2 win_pos  = ImGui::GetWindowPos();
-        const float  win_w    = ImGui::GetWindowWidth();
-        const float  title_h  = ImGui::GetFrameHeight();
-
-        const ImVec2 saved_cursor = ImGui::GetCursorPos();
-        ImGui::PushClipRect(win_pos, {win_pos.x + win_w, win_pos.y + title_h}, false);
-        ImGui::SetCursorScreenPos({win_pos.x + win_w - total_w - 8.f, win_pos.y + 2.f});
-
-        if (ImGui::Button(lbl0,    {bw0, bh})) plugin.StartRun();
-        ImGui::SameLine(0, sp);
-        if (ImGui::Button("Reset", {bw1, bh})) plugin.ResetRun();
-        ImGui::SameLine(0, sp);
-        if (ImGui::Button("Split", {bw2, bh})) plugin.TriggerManualSplit();
-
-        ImGui::PopClipRect();
-        ImGui::SetCursorPos(saved_cursor);
-    }
-
     if (!is_open) {
         ImGui::End();
         return;
@@ -142,7 +112,7 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
     const GoalClock& clock = plugin.Clock();
     const GoalList*  list  = plugin.List();
 
-    // Header clock — shows whichever time the profile is set to display.
+    // Header clock — shows whichever time the profile is set to display, plus run controls.
     {
         const SplitsProfile& hp = plugin.ActiveProfile();
         const bool gt = hp.use_game_time;
@@ -169,6 +139,24 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
 
         ImGui::SetCursorPosX(clamped_start_x);
         ImGui::TextColored(tcol, "%s%s", label, tbuf);
+
+        // Run controls, right-aligned on the same row as the clock.
+        const bool   running = plugin.Clock().IsRunning();
+        const char*  lbl0    = running ? "Pause" : "Start";
+        const float  fp_x    = ImGui::GetStyle().FramePadding.x;
+        const float  sp      = ImGui::GetStyle().ItemSpacing.x;
+        const float  bw0     = ImGui::CalcTextSize(lbl0).x    + fp_x * 2.f;
+        const float  bw1     = ImGui::CalcTextSize("Reset").x + fp_x * 2.f;
+        const float  bw2     = ImGui::CalcTextSize("Split").x + fp_x * 2.f;
+        const float  buttons_w = bw0 + bw1 + bw2 + sp * 2.f;
+        const float  button_x  = min_x + avail - buttons_w;
+
+        ImGui::SameLine(button_x);
+        if (ImGui::Button(lbl0,    {bw0, 0})) plugin.StartRun();
+        ImGui::SameLine(0, sp);
+        if (ImGui::Button("Reset", {bw1, 0})) plugin.ResetRun();
+        ImGui::SameLine(0, sp);
+        if (ImGui::Button("Split", {bw2, 0})) plugin.TriggerManualSplit();
     }
 
     ImGui::Separator();
@@ -194,10 +182,7 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
     }
 
     if (!list || list->goals.empty()) {
-        if (plugin.ActiveProfileIdx() == 0)
-            ImGui::TextDisabled("Enter DoA, FoW, UW, Deep, Urgoz or a Dungeon to begin");
-        else
-            ImGui::TextDisabled("No goal list loaded. Open Settings to create one.");
+        ImGui::TextDisabled("No goal list loaded. Open Settings to create one.");
         ImGui::End();
         return;
     }
@@ -210,7 +195,10 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
         if (s != GoalStatus::Completed && s != GoalStatus::Failed) { current_idx = i; break; }
     }
 
-    const SplitsProfile& profile = plugin.ActiveProfile();
+    // Manual/Running goals always start exactly when the previous one ended (relay/cascade),
+    // so the start-time column never shows anything the row above didn't already say. SC's
+    // parallel start_trigger objectives (e.g. Deep rooms) are the only case where it can differ.
+    SplitsProfile profile = plugin.ActiveProfile();
     const std::vector<double>& pb = profile.use_game_time ? plugin.PBSplitsGame() : plugin.PBSplits();
     const auto nan = std::numeric_limits<double>::quiet_NaN();
 
@@ -245,10 +233,20 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
             if (pb_idx < 0 || pb_idx >= static_cast<int>(pb.size())) return nan;
             return pb[static_cast<size_t>(pb_idx)];
         };
+        // PB time for just this leg: cumulative PB at this goal minus cumulative PB at the
+        // previous one (0.0 before the first goal, matching how live segments start from last_real_ = 0).
+        auto pb_seg_at = [&]() -> double {
+            const double cur = pb_at();
+            if (std::isnan(cur)) return nan;
+            if (pb_idx == 0) return cur;
+            if (pb_idx - 1 >= static_cast<int>(pb.size())) return nan;
+            const double prev = pb[static_cast<size_t>(pb_idx - 1)];
+            return std::isnan(prev) ? nan : (cur - prev);
+        };
 
         const float row_y0 = ImGui::GetCursorScreenPos().y - pad_y;
 
-        DrawGoalRow(g, clock, i, i == current_idx, pb_at(), profile);
+        DrawGoalRow(g, clock, i, i == current_idx, pb_at(), pb_seg_at(), profile);
         ++pb_idx;
         ++i;
 
@@ -262,7 +260,7 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
 
 void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*clock*/,
                                         int /*index*/, bool is_current, double pb_split,
-                                        const SplitsProfile& profile)
+                                        double pb_segment, const SplitsProfile& profile)
 {
     const bool done = (g.status == GoalStatus::Completed || g.status == GoalStatus::Failed);
 
@@ -274,9 +272,8 @@ void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*cl
 
     const bool gt = profile.use_game_time;
 
-    if (!ImGui::BeginTable("##goalrow", 4, ImGuiTableFlags_None)) return;
+    if (!ImGui::BeginTable("##goalrow", 3, ImGuiTableFlags_None)) return;
     ImGui::TableSetupColumn("name",  ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("start", ImGuiTableColumnFlags_WidthFixed, profile.show_start_time ? 90.f : 0.f);
     ImGui::TableSetupColumn("time",  ImGuiTableColumnFlags_WidthFixed, 110.f);
     ImGui::TableSetupColumn("seg",   ImGuiTableColumnFlags_WidthFixed, profile.show_segment ? 80.f : 0.f);
     ImGui::TableNextRow();
@@ -320,19 +317,8 @@ void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*cl
         }
     }
 
-    if (profile.show_start_time) {
-        ImGui::TableSetColumnIndex(1);
-        const double st = gt ? g.start_game_time : g.start_real_time;
-        if (st >= 0.0) {
-            char buf[32]; FormatTime(buf, sizeof(buf), st);
-            ImGui::TextDisabled("%s", buf);
-        } else {
-            ImGui::TextDisabled("--:--");
-        }
-    }
-
     {
-        ImGui::TableSetColumnIndex(2);
+        ImGui::TableSetColumnIndex(1);
         if (done) {
             const double t = gt ? g.split.game_time : g.split.real_time;
             const ImVec4 tc = gt ? ImVec4{0.6f, 0.85f, 1.f, 1.f} : ImVec4{0.9f, 0.9f, 0.9f, 1.f};
@@ -345,21 +331,14 @@ void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*cl
     }
 
     if (profile.show_segment) {
-        ImGui::TableSetColumnIndex(3);
+        ImGui::TableSetColumnIndex(2);
         if (done) {
+            const double seg_val = gt ? g.split.segment_game : g.split.segment_real;
             char seg[32];
-            if (gt) {
-                if (profile.segment_is_duration && g.start_game_time >= 0.0)
-                    FormatTime(seg, sizeof(seg), g.split.game_time - g.start_game_time);
-                else
-                    FormatTime(seg, sizeof(seg), g.split.segment_game);
-            } else {
-                if (profile.segment_is_duration && g.start_real_time >= 0.0)
-                    FormatTime(seg, sizeof(seg), g.split.real_time - g.start_real_time);
-                else
-                    FormatTime(seg, sizeof(seg), g.split.segment_real);
-            }
+            FormatTime(seg, sizeof(seg), seg_val);
             ImGui::TextDisabled("+%s", seg);
+            if (profile.show_segment_pb)
+                DrawPBDelta(seg_val, pb_segment);
         }
     }
 
@@ -511,26 +490,34 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
 
     // Col 0: display toggles + PB basis + behavior flags
     SplitsProfile& p = plugin.ActiveProfile();
-    ImGui::Checkbox("Show start time column", &p.show_start_time);
     ImGui::TextUnformatted("Time:");
     ImGui::SameLine();
     if (ImGui::RadioButton("Game", p.use_game_time))  p.use_game_time = true;
     ImGui::SameLine();
     if (ImGui::RadioButton("Real", !p.use_game_time)) p.use_game_time = false;
-    ImGui::Checkbox("Show split column",      &p.show_segment);
+    ImGui::Checkbox("Show split column", &p.show_segment);
     if (p.show_segment) {
         ImGui::SameLine();
-        if (ImGui::RadioButton("End-Start##seg",   p.segment_is_duration))  p.segment_is_duration = true;
-        ImGui::SameLine();
-        if (ImGui::RadioButton("Since last##seg", !p.segment_is_duration)) p.segment_is_duration = false;
+        ImGui::Checkbox("Show split PB", &p.show_segment_pb);
     }
     ImGui::Checkbox("Auto /age on completion", &p.auto_send_age);
     ImGui::Checkbox("Show paused time",        &p.show_paused_time);
+    if (plugin.ActiveProfileIdx() == 0) {
+        ImGui::TextUnformatted("Goal order:");
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Dynamic", !p.simple_order)) p.simple_order = false;
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Simple",   p.simple_order)) p.simple_order = true;
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Dynamic: any not-yet-completed goal can fire whenever its own\n"
+                               "trigger is met. Simple: goals must complete strictly in list order.");
+    }
 
     ImGui::Spacing();
     ImGui::Checkbox("Stop on party wipe",         &p.stop_on_party_defeated);
-    if (plugin.ActiveProfileIdx() != 0)
-        ImGui::Checkbox("Game time: explorable only", &p.game_time_explorable_only);
+    ImGui::Checkbox("Game time: explorable only", &p.game_time_explorable_only);
 
     ImGui::NextColumn();
 
@@ -553,8 +540,8 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
 
     ImGui::NextColumn();
 
-    // Col 2: list management — hidden for auto-load-preset profiles (SC)
-    if (plugin.ActiveProfileIdx() != 0) {
+    // Col 2: list management
+    {
         ImGui::TextUnformatted("Goal List");
         ImGui::SetNextItemWidth(130.f);
         ImGui::InputText("##listname", list_name_buf_, sizeof(list_name_buf_));
@@ -599,7 +586,7 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
     ImGui::Columns(1);
     ImGui::Separator();
 
-    if (plugin.ActiveProfileIdx() != 0) {
+    {
         // Existing goals list
         ImGui::TextUnformatted("Goals:");
         list = plugin.List();
@@ -678,7 +665,7 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
         // Add goal / header form
         ImGui::TextUnformatted("Add Goal:");
 
-        if (plugin.ActiveProfileIdx() == 2) {
+        if (plugin.ActiveProfileIdx() == 1) {
             // Running profile: combined from/to leg picker only.
             DrawRunningLegPicker(plugin);
         } else {

@@ -16,12 +16,17 @@ public:
     void Detach();
 
     // Returns the index of a goal that just completed this frame, or -1.
+    // simple_order: when true, only the earliest not-yet-completed goal's end trigger is
+    // ever checked, so goals must complete strictly in list order. When false (dynamic),
+    // every not-yet-completed goal's trigger is checked, so any of them can fire whenever
+    // its own condition is met, regardless of list position.
     int Update(const GoalClock& clock,
                GW::Constants::MapID current_map,
                bool just_entered_map,
                bool came_from_explorable,
                GW::Constants::InstanceType instance_type,
-               int  player_level);
+               int  player_level,
+               bool simple_order = false);
 
     void TriggerManual(const GoalClock& clock);
 
