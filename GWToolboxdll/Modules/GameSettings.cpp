@@ -377,7 +377,8 @@ namespace {
         bool block_description = settings.disable_skill_descriptions_in_outpost && IsOutpost() || settings.disable_skill_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_skill_descriptions) >= 0;
         if (block_description) {
-            GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)L"\x101");
+            if (frame)
+                GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)L"\x101");
             GW::Hook::LeaveHook();
             return;
         }
@@ -402,7 +403,8 @@ namespace {
             wchar_t buf[16] = {0};
             if (GW::UI::UInt32ToEncStr(GW::EncStrings::Campaign[static_cast<uint32_t>(skill->campaign)], buf, _countof(buf))) {
                 encoded_text_set += std::format(L"\x2\x102\x2\x108\x107<c=@SkillDull>\x1\x2{}\x2\x108\x107</c>\x1", buf);
-                GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)encoded_text_set.c_str());
+                if (frame)
+                    GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)encoded_text_set.c_str());
             }
         }
         GW::Hook::LeaveHook();
