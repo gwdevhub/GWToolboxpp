@@ -10,7 +10,7 @@
     { "label": "Kamadan", "url": "https://kamadan.gwtoolbox.com/", "desc": "Kamadan AE1 trade chat archive" },
     { "label": "Ascalon", "url": "https://ascalon.gwtoolbox.com/", "desc": "Ascalon AE1 trade chat archive" }
   ],
-  "toolboxVersion": "8.28",
+  "toolboxVersion": "8.30",
   "fallbackDownloadUrl": "https://github.com/gwdevhub/GWToolboxpp/releases/latest/download/gwtoolbox.exe",
   "issueUrls": {
     "bug": "https://github.com/gwdevhub/GWToolboxpp/issues/new?labels=bug&title=%5BBug%5D+",

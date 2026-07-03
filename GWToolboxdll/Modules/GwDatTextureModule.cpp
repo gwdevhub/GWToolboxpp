@@ -1,200 +1,215 @@
 #include "stdafx.h"
 
-#include <GWCA/Utilities/Scanner.h>
-#include <GWCA/Managers/ItemMgr.h>
+#include <cstring>
+#include <mutex>
 
 #include <Logger.h>
 #include "GwDatTextureModule.h"
 
 #include "Resources.h"
-#include <GWCA/Managers/MemoryMgr.h>
 #include <Utils/ArenaNetFileParser.h>
+#include <Utils/GwDat/GwDatArchive.h>
+#include <Utils/GwDat/AtexReader.h>
 
 #include <DirectXTex.h>
 
 namespace {
-
 
     struct Vec2i {
         int x = 0;
         int y = 0;
     };
 
-    typedef enum : uint32_t {
-        GR_FORMAT_A8R8G8B8 = 0, // raw?
-        GR_FORMAT_UNK = 0x4,    //.bmp,...
-        GR_FORMAT_DXT1 = 0xF,
-        GR_FORMAT_DXT2,
-        GR_FORMAT_DXT3,
-        GR_FORMAT_DXT4,
-        GR_FORMAT_DXT5,
-        GR_FORMAT_DXTA,
-        GR_FORMAT_DXTL,
-        GR_FORMAT_DXTN,
-        GR_FORMATS
-    } GR_FORMAT;
-
-    typedef uint8_t* gw_image_bits; // array of pointers to mipmap images
-
-
-
-    typedef GW::RecObject*(__cdecl* OpenFileByFileId_pt)(uint32_t archive, uint32_t file_id,uint32_t stream_id, uint32_t flags, uint32_t* error_out);
-    OpenFileByFileId_pt OpenFileByFileId_func;
-
-    typedef GW::RecObject*(__cdecl* OpenFileByFilename_pt)(const wchar_t* fileHash, int unk1_1, int unk2_0);
-    OpenFileByFilename_pt OpenFileByFilename_func;
-
-    typedef GW::RecObject*(__cdecl* FileIdToRecObj_pt)(const wchar_t* fileHash, int unk1_1, int unk2_0);
-    FileIdToRecObj_pt FileHashToRecObj_func;
-
-    typedef uint8_t*(__cdecl* GetRecObjectBytes_pt)(GW::RecObject* rec, int* size_out);
-    GetRecObjectBytes_pt ReadFileBuffer_Func;
-
-    typedef uint32_t(__cdecl* DecodeImage_pt)(int size, uint8_t* bytes, gw_image_bits* bits, uint8_t* pallete, GR_FORMAT* format, Vec2i* dims, int* levels);
-    DecodeImage_pt DecodeImage_func;
-
-    typedef void(__cdecl* UnkRecObjBytes_pt)(GW::RecObject* rec, uint8_t* bytes);
-    UnkRecObjBytes_pt FreeFileBuffer_Func;
-
-    typedef void(__cdecl* CloseRecObj_pt)(GW::RecObject* rec);
-    CloseRecObj_pt CloseRecObj_func;
-
-    typedef gw_image_bits(__cdecl* AllocateImage_pt)(GR_FORMAT format, Vec2i* destDims, uint32_t levels, uint32_t unk2);
-    AllocateImage_pt AllocateImage_func;
-
-    typedef void(__cdecl* Depalletize_pt)(
-        gw_image_bits destBits, uint8_t* destPalette, GR_FORMAT destFormat, int* destMipWidths, gw_image_bits sourceBits, uint8_t* sourcePallete, GR_FORMAT sourceFormat, int* sourceMipWidths, Vec2i* sourceDims, uint32_t sourceLevels,
-        uint32_t unk1_0, int* unk2_0
-    );
-    Depalletize_pt Depalletize_func;
-
-    // typedef void(__cdecl *ConvertImage_pt) (uint8_t *destBytes, int *destPallete, uint32_t destFormat, Vec2i *destDims,
-    //                                         uint8_t *sourceBytes, int *sourcePallete, uint32_t sourceFormat, Vec2i *sourceDims, float sharpness);
-    // ConvertImage_pt ConvertImage_func;
-
-    // typedef uint8_t*(__cdecl *ConvertToRaw_pt) (uint8_t *sourceBits, int *sourcePallete, uint32_t sourceFormat, Vec2i *sourceDims,
-    //     Vec2i *maybeDestDims, uint32_t levelsProvided, uint32_t levelsRequested, float sharpness);
-    // ConvertUnk_pt ConvertUnk_func;
-
-    // typedef void(__cdecl *GetLevelWidths_pt) (int format, int width, uint32_t levels, int *widths);
-    // GetLevelWidths_pt GetLevelWidths_func;
-
-    const char* strnstr(char* str, const char* substr, size_t n)
+    // Decodes a DDS payload (raw or block-compressed) to tightly-packed A8R8G8B8.
+    bool DecodeDdsToArgb(const uint8_t* bytes, size_t size, std::vector<uint32_t>& argb, Vec2i& dims)
     {
-        char* p = str, * pEnd = str + n;
-        size_t substr_len = strlen(substr);
+        DirectX::ScratchImage loaded;
+        if (FAILED(DirectX::LoadFromDDSMemory(bytes, size, DirectX::DDS_FLAGS_NONE, nullptr, loaded)))
+            return false;
 
-        if (0 == substr_len)
-            return str; // the empty string is contained everywhere.
+        DirectX::ScratchImage converted;
+        const auto& meta = loaded.GetMetadata();
+        const auto hr = DirectX::IsCompressed(meta.format)
+            ? DirectX::Decompress(loaded.GetImages(), loaded.GetImageCount(), meta, DXGI_FORMAT_B8G8R8A8_UNORM, converted)
+            : DirectX::Convert(loaded.GetImages(), loaded.GetImageCount(), meta, DXGI_FORMAT_B8G8R8A8_UNORM,
+                               DirectX::TEX_FILTER_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, converted);
+        if (FAILED(hr))
+            return false;
 
-        pEnd -= (substr_len - 1);
-        for (; p < pEnd; ++p)
-        {
-            if (0 == strncmp(p, substr, substr_len))
-                return p;
+        const DirectX::Image* img = converted.GetImage(0, 0, 0);
+        if (!img || !img->width || !img->height)
+            return false;
+
+        dims.x = static_cast<int>(img->width);
+        dims.y = static_cast<int>(img->height);
+        argb.resize(img->width * img->height);
+        for (size_t y = 0; y < img->height; ++y) {
+            // B8G8R8A8 is byte-identical to D3DFMT_A8R8G8B8, so copy each row straight across.
+            memcpy(&argb[y * img->width], img->pixels + y * img->rowPitch, img->width * 4);
         }
-        return NULL;
+        return true;
     }
 
-    // OpenImage converts any GW format to ARGB. It is possible to skip conversion if gw format is compatible with D3FMT.
-    uint32_t OpenImage(uint32_t file_id, gw_image_bits* dst_bits, Vec2i& dims, int& levels, GR_FORMAT& format)
+    // Decodes file_id to A8R8G8B8 (ATEX/ATTX, ffna inline DXT chunk, or DDS); stream_id picks a stream.
+    bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims, uint32_t stream_id = 0)
     {
-        uint8_t* pallete = nullptr;
-        gw_image_bits bits = nullptr;
-
         ArenaNetFileParser::GameAssetFile asset;
-        if (!asset.readFromDat(file_id))
-            return 0;
+        if (!asset.readFromDat(file_id, stream_id))
+            return false;
 
         uint8_t* image_bytes = asset.data.data();
         size_t image_size = asset.data.size();
+        if (image_size < 4)
+            return false;
 
-        if (strncmp((char*)image_bytes, "ffna", 4) == 0) {
-            const auto anet_file = (ArenaNetFileParser::ArenaNetFile*)&asset;
+        // Model files (ffna) carry the texture as an inline DXT3 chunk.
+        if (memcmp(image_bytes, "ffna", 4) == 0) {
+            const auto anet_file = reinterpret_cast<ArenaNetFileParser::ArenaNetFile*>(&asset);
             if (!anet_file->isValid())
-                return 0;
-            const auto chunk = (ArenaNetFileParser::UnknownChunk*)anet_file->FindChunk(ArenaNetFileParser::ChunkType::FA3_InlineTextureDXT3);
-            if (!chunk)
-                return 0;
-            image_bytes = chunk->data;
+                return false;
+            const auto found = anet_file->FindChunk(ArenaNetFileParser::ChunkType::FA3_InlineTextureDXT3);
+            if (!found)
+                return false;
+            const auto chunk = reinterpret_cast<const ArenaNetFileParser::UnknownChunk*>(found);
+            image_bytes = const_cast<uint8_t*>(chunk->data);
             image_size = chunk->chunk_size;
-        }
-        if (strncmp((char*)image_bytes, "ATEX", 4) != 0
-            && strncmp((char*)image_bytes, "DDS", 3) != 0) {
-            return 0;
+            if (image_size < 4)
+                return false;
         }
 
-        uint32_t result = DecodeImage_func(image_size, image_bytes, &bits, pallete, &format, &dims, &levels);
+        if (memcmp(image_bytes, "DDS", 3) == 0)
+            return DecodeDdsToArgb(image_bytes, image_size, argb, dims);
 
-        if (format >= GR_FORMATS || !result)
-            return 0;
+        if (memcmp(image_bytes, "ATEX", 4) != 0 && memcmp(image_bytes, "ATTX", 4) != 0)
+            return false;
 
-        levels = 1;
+        const DatTexture tex = ProcessImageFile(image_bytes, static_cast<int>(image_size));
+        if (tex.width <= 0 || tex.height <= 0 || tex.rgba_data.empty())
+            return false;
 
-        *dst_bits = AllocateImage_func(GR_FORMAT_A8R8G8B8, &dims, levels, 0);
-        Depalletize_func((gw_image_bits)dst_bits, nullptr, GR_FORMAT_A8R8G8B8, nullptr, bits, pallete, format, nullptr, &dims, levels, 0, 0);
-
-        GW::MemoryMgr::MemFree(bits);
-
-        // todo: free bytes;
-        return result;
+        dims.x = tex.width;
+        dims.y = tex.height;
+        // The decoder's RGBA is really B8G8R8A8 in memory, matching D3DFMT_A8R8G8B8, so copy as-is.
+        argb.resize(static_cast<size_t>(tex.width) * tex.height);
+        for (size_t i = 0; i < argb.size() && i < tex.rgba_data.size(); ++i)
+            argb[i] = tex.rgba_data[i].dw;
+        return true;
     }
 
-    // Replace your existing CreateTexture function with this:
-    IDirect3DTexture9* CreateTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims)
+    // Uploads a tightly-packed A8R8G8B8 buffer into a fresh managed D3D texture.
+    IDirect3DTexture9* MakeTextureFromArgb(IDirect3DDevice9* device, const std::vector<uint32_t>& argb, const Vec2i& dims)
     {
-        if (!device || !file_id) {
+        if (!device || dims.x <= 0 || dims.y <= 0 || argb.size() < static_cast<size_t>(dims.x) * dims.y)
             return nullptr;
-        }
 
-        gw_image_bits bits = nullptr;
-        int levels;
-        GR_FORMAT format;
-        auto ret = OpenImage(file_id, &bits, dims, levels, format);
-        if (!ret || !bits || !dims.x || !dims.y) {
-            if (bits) {
-                GW::MemoryMgr::MemFree(bits);
-            }
-            return nullptr;
-        }
-
-        // Create a texture: http://msdn.microsoft.com/en-us/library/windows/desktop/bb174363(v=vs.85).aspx
         IDirect3DTexture9* tex = nullptr;
-        if (device->CreateTexture(dims.x, dims.y, levels, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, 0) != D3D_OK) {
+        if (device->CreateTexture(dims.x, dims.y, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, 0) != D3D_OK)
             return nullptr;
-        }
 
-        // Lock the texture for writing: http://msdn.microsoft.com/en-us/library/windows/desktop/bb205913(v=vs.85).aspx
         D3DLOCKED_RECT rect;
         if (tex->LockRect(0, &rect, 0, D3DLOCK_DISCARD) != D3D_OK) {
+            tex->Release();
             return nullptr;
         }
-
-        unsigned int* srcdata = (unsigned int*)bits;
+        const uint32_t* srcdata = argb.data();
         for (int y = 0; y < dims.y; y++) {
-            uint8_t* destAddr = ((uint8_t*)rect.pBits + y * rect.Pitch);
-            memcpy(destAddr, srcdata, dims.x * 4);
+            memcpy((uint8_t*)rect.pBits + y * rect.Pitch, srcdata, dims.x * 4);
             srcdata += dims.x;
-            /* for (int x = 0; x < dims.x; ++x) {
-                uint8_t* destAddr = ((uint8_t*)rect.pBits + y * rect.Pitch + 4 * x);
-
-                // unsigned int data = 0xFF000000 | (*srcdata >> 24 & 0xFF) | (*srcdata >> 16 & 0xFF00) | (*srcdata >> 8 & 0xFF0000);
-                // memcpy(destAddr, &data, 4);
-                memcpy(destAddr, srcdata, 4);
-                srcdata++;
-            }*/
         }
-        GW::MemoryMgr::MemFree(bits);
-
-        // Unlock the texture so it can be used.
         tex->UnlockRect(0);
         return tex;
     }
 
+    // Per-dye linear recolour (index = GW::DyeColor - Blue): 3x3 matrix m0..m8 (out_c = row.RGB) + neutral bias m9, fitted to the client's dyed icon exports.
+    constexpr float kDyeColorMatrix[12][10] = {
+        {  0.0063f,  1.5704f, -0.8800f,  0.2402f,  0.3491f,  0.1148f,  0.4809f, -0.2126f,  0.4076f, -1.7549f }, // Blue
+        {  0.0400f,  1.5283f, -0.9086f,  0.5069f,  0.2335f, -0.1058f,  0.0880f,  0.4994f,  0.0077f, -2.5436f }, // Green
+        {  0.3772f,  1.1171f, -0.5635f,  0.0830f,  0.7292f,  0.0987f,  0.4554f, -0.3237f,  0.7615f, -1.6173f }, // Purple
+        {  0.7145f,  0.5876f, -0.5985f, -0.0546f,  1.2018f, -0.4863f, -0.0552f,  0.3371f,  0.3935f, -1.9912f }, // Red
+        {  1.0416f, -0.3918f,  0.0173f,  0.6754f,  0.7037f, -0.8175f, -0.0567f,  0.3604f,  0.2142f, -2.3883f }, // Yellow
+        {  0.4120f,  0.9786f, -0.6260f,  0.1970f,  0.7051f, -0.1848f,  0.0856f,  0.2242f,  0.4018f, -1.7041f }, // Brown
+        {  0.8177f,  0.2268f, -0.2246f,  0.3377f,  0.7852f, -0.3681f, -0.1749f,  0.5605f,  0.3787f, -2.0703f }, // Orange
+        {  0.4087f,  0.8914f, -0.1474f,  0.4254f,  0.2711f,  0.4090f,  0.4590f, -0.1482f,  0.7493f, -0.3684f }, // Silver
+        {  0.1580f,  1.5613f, -1.2757f,  0.1257f,  0.9275f, -0.6480f,  0.1152f,  0.4434f, -0.1769f, -5.8428f }, // Black
+        {  0.3537f,  1.0440f, -0.4641f,  0.2955f,  0.4642f,  0.1454f,  0.2728f,  0.0251f,  0.5898f, -1.6518f }, // Gray
+        {  0.7139f, -0.3890f,  0.8050f,  0.6868f, -0.7796f,  1.1579f,  0.6846f, -1.0262f,  1.3027f, 58.4929f }, // White
+        {  1.8355f, -2.6588f,  2.6553f,  0.0835f,  0.6695f,  0.4196f,  0.3850f, -0.8128f,  1.8695f, 36.8231f }, // Pink
+    };
+
+    // Item icon to A8R8G8B8: stream 1 base, stream 0xc dye mask; masked pixels use the averaged dye matrices (`dyes` = up to 4 GW::DyeColor, one per byte).
+    bool DecodeItemToArgb(uint32_t file_id, uint32_t dyes, std::vector<uint32_t>& base, Vec2i& dims)
+    {
+        if (!file_id || !DecodeTextureToArgb(file_id, base, dims, 1) || !dims.x || !dims.y)
+            return false;
+
+        // Average the applied dye slots' matrices into one combined transform.
+        float M[10] = {};
+        int applied = 0;
+        for (int slot = 0; slot < 4; ++slot) {
+            const uint32_t d = (dyes >> (slot * 8)) & 0xFF;
+            if (d >= 2 && d <= 13) {
+                const float* const K = kDyeColorMatrix[d - 2];
+                for (int j = 0; j < 10; ++j)
+                    M[j] += K[j];
+                ++applied;
+            }
+        }
+
+        std::vector<uint32_t> mask;
+        Vec2i mask_dims;
+        if (applied && DecodeTextureToArgb(file_id, mask, mask_dims, 0xc) &&
+            mask_dims.x == dims.x && mask_dims.y == dims.y && mask.size() == base.size()) {
+            for (float& v : M)
+                v /= static_cast<float>(applied);
+            const float bias = M[9]; // neutral: added equally to R,G,B
+            const auto clamp8 = [](float v) -> uint32_t {
+                return static_cast<uint32_t>(v < 0.0f ? 0.0f : v > 255.0f ? 255.0f : v);
+            };
+            for (size_t i = 0; i < base.size(); ++i) {
+                const float m = (mask[i] & 0xFF) / 255.0f; // DXTA mask is greyscale; any channel is the strength
+                const uint32_t c = base[i];
+                const float r = static_cast<float>((c >> 16) & 0xFF);
+                const float g = static_cast<float>((c >> 8) & 0xFF);
+                const float b = static_cast<float>(c & 0xFF);
+                const float nr = M[0] * r + M[1] * g + M[2] * b + bias;
+                const float ng = M[3] * r + M[4] * g + M[5] * b + bias;
+                const float nb = M[6] * r + M[7] * g + M[8] * b + bias;
+                const auto mix = [&](float base_c, float dyed) -> uint32_t {
+                    return clamp8(base_c * (1.0f - m) + dyed * m);
+                };
+                base[i] = (c & 0xFF000000) | (mix(r, nr) << 16) | (mix(g, ng) << 8) | mix(b, nb);
+            }
+        }
+        return true;
+    }
+
+    // Decodes file_id and converts it to greyscale A8R8G8B8 in place (worker-thread safe; no device).
+    bool DecodeGreyscaleToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims)
+    {
+        if (!file_id || !DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
+            return false;
+        for (uint32_t& c : argb) {
+            const uint8_t r = (c >> 16) & 0xFF;
+            const uint8_t g = (c >> 8) & 0xFF;
+            const uint8_t b = c & 0xFF;
+            const uint8_t a = (c >> 24) & 0xFF;
+            const uint8_t grey = static_cast<uint8_t>(r * 0.299f + g * 0.587f + b * 0.114f);
+            c = (a << 24) | (grey << 16) | (grey << 8) | grey;
+        }
+        return true;
+    }
+
     struct GwImg {
         uint32_t m_file_id = 0;
+        uint32_t m_stream_id = 0;
+        uint32_t m_dyes = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
+        bool m_pending = false;         // a decode task is queued and hasn't finished yet
+        uint16_t m_attempts = 0;        // pre-map decode attempts, capped to bound retries before the dat maps
+        uint32_t m_first_missed_ms = 0; // GetTickCount of the first mapped-archive miss (0 = none); opens the retry window
+        explicit GwImg(uint32_t file_id, uint32_t stream_id = 0, uint32_t dyes = 0)
+            : m_file_id(file_id), m_stream_id(stream_id), m_dyes(dyes) {}
         ~GwImg()
         {
             if (m_tex) {
@@ -204,200 +219,178 @@ namespace {
         }
     };
 
-    std::map<uint32_t,GwImg*> textures_by_file_id;
+    constexpr uint16_t kMaxDecodeAttempts = 240;   // ~a few seconds at 60fps, before the dat is mapped
+    constexpr uint32_t kMissRetryWindowMs = 60000; // keep retrying a mapped-but-missing file ~1 min
 
-    std::map<uint32_t, GwImg*> greyscale_textures_by_file_id;
-
-    IDirect3DTexture9* CreateGreyscaleTexture(IDirect3DDevice9* device, uint32_t file_id, Vec2i& dims)
+    // Retry until decoded: frame-bounded before the dat maps, then a time window once mapped-but-missing (ReadFile re-parses on a miss, so streamed-in files are caught).
+    bool WantsDecode(const GwImg* img)
     {
-        if (!device || !file_id) return nullptr;
-        gw_image_bits bits = nullptr;
-        int levels;
-        GR_FORMAT format;
-        if (!OpenImage(file_id, &bits, dims, levels, format) || !bits || !dims.x || !dims.y) {
-            if (bits) GW::MemoryMgr::MemFree(bits);
-            return nullptr;
-        }
-        IDirect3DTexture9* tex = nullptr;
-        if (device->CreateTexture(dims.x, dims.y, levels, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &tex, 0) != D3D_OK) return nullptr;
-        D3DLOCKED_RECT rect;
-        if (tex->LockRect(0, &rect, 0, D3DLOCK_DISCARD) != D3D_OK) return nullptr;
-        auto* srcdata = reinterpret_cast<uint32_t*>(bits);
-        for (int y = 0; y < dims.y; y++) {
-            auto* dst = reinterpret_cast<uint32_t*>((uint8_t*)rect.pBits + y * rect.Pitch);
-            for (int x = 0; x < dims.x; x++) {
-                const uint32_t c = *srcdata++;
-                const uint8_t r = (c >> 16) & 0xFF;
-                const uint8_t g = (c >> 8) & 0xFF;
-                const uint8_t b = c & 0xFF;
-                const uint8_t a = (c >> 24) & 0xFF;
-                const uint8_t grey = static_cast<uint8_t>(r * 0.299f + g * 0.587f + b * 0.114f);
-                *dst++ = (a << 24) | (grey << 16) | (grey << 8) | grey;
-            }
-        }
-        GW::MemoryMgr::MemFree(bits);
-        tex->UnlockRect(0);
-        return tex;
+        if (img->m_tex || img->m_pending)
+            return false;
+        if (img->m_first_missed_ms != 0)
+            return GetTickCount() - img->m_first_missed_ms < kMissRetryWindowMs;
+        return img->m_attempts < kMaxDecodeAttempts;
+    }
+
+    struct ArgbImage {
+        std::vector<uint32_t> pixels;
+        Vec2i dims;
+    };
+
+    // Decodes on the dat worker (read + re-parse + pixel work off the render loop), then uploads on the DX thread.
+    template <typename Decode>
+    void QueueDecode(GwImg* img, Decode decode)
+    {
+        img->m_pending = true;
+        ++img->m_attempts;
+        GwDatArchive::Instance().EnqueueTask([img, decode] {
+            auto result = std::make_shared<ArgbImage>();
+            const bool ok = decode(result->pixels, result->dims) && result->dims.x > 0 && result->dims.y > 0;
+            Resources::Instance().EnqueueDxTask([img, result, ok](IDirect3DDevice9* device) {
+                img->m_tex = ok ? MakeTextureFromArgb(device, result->pixels, result->dims) : nullptr;
+                img->m_dims = result->dims;
+                img->m_pending = false;
+                if (!img->m_tex && img->m_first_missed_ms == 0 && GwDatArchive::Instance().Loaded())
+                    img->m_first_missed_ms = GetTickCount(); // open the retry window on the first mapped miss
+            });
+        });
+    }
+
+    // Keyed by (stream_id << 32 | file_id) so different streams of one file cache separately.
+    uint64_t TextureKey(uint32_t file_id, uint32_t stream_id) { return (static_cast<uint64_t>(stream_id) << 32) | file_id; }
+
+    std::map<uint64_t, GwImg*> textures_by_file_id;
+    std::map<uint32_t, GwImg*> greyscale_textures_by_file_id;
+    std::map<uint64_t, GwImg*> item_images_by_file_id; // key = dyes << 32 | model_file_id
+
+    // Cached GwImg for key, created from the given GwImg ctor args if absent.
+    template <typename Map, typename Key, typename... Args>
+    GwImg* GetOrCreate(Map& map, Key key, Args... args)
+    {
+        const auto found = map.find(key);
+        return found != map.end() ? found->second : (map[key] = new GwImg(args...));
     }
 } // namespace
 
-bool GwDatTextureModule::CloseHandle(GW::RecObject* handle) {
-    return handle && CloseRecObj_func ? CloseRecObj_func(handle), true : false;
-}
 IDirect3DTexture9** GwDatTextureModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
 {
-    auto found = greyscale_textures_by_file_id.find(file_id);
-    if (found != greyscale_textures_by_file_id.end()) return &found->second->m_tex;
-    auto gwimg_ptr = new GwImg(file_id);
-    greyscale_textures_by_file_id[file_id] = gwimg_ptr;
-    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
-        gwimg_ptr->m_tex = CreateGreyscaleTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
-    });
-    return &gwimg_ptr->m_tex;
+    GwImg* img = GetOrCreate(greyscale_textures_by_file_id, file_id, file_id);
+    if (WantsDecode(img))
+        QueueDecode(img, [file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+            return DecodeGreyscaleToArgb(file_id, argb, dims);
+        });
+    return &img->m_tex;
 }
+
 bool GwDatTextureModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out, uint32_t stream_id)
 {
-    if (!(file_name && *file_name && CloseRecObj_func && FileHashToRecObj_func && FreeFileBuffer_Func))
+    if (!(file_name && *file_name && bytes_out))
         return false;
-
-    uint32_t file_id = ArenaNetFileParser::FileHashToFileId(file_name);
-    GW::RecObject* rec = 0;
-    if (file_id) {
-        rec = OpenFileByFileId_func ? OpenFileByFileId_func(0, file_id, stream_id, 1, 0) : 0;
+    const uint32_t file_id = ArenaNetFileParser::FileHashToFileId(file_name);
+    if (!file_id)
+        return false;
+    auto& dat = GwDatArchive::Instance();
+    const bool ok = dat.ReadFile(file_id, *bytes_out, stream_id);
+    if (dat.Loaded()) {
+        static std::once_flag reported; // log the bound archive once for support reports
+        std::call_once(reported, [&dat] {
+            Log::LogW(L"[GwDat] Mapped client's Gw.dat ('%s')", dat.DatPath().c_str());
+        });
     }
-    if (!rec) {
-        rec = FileHashToRecObj_func ? FileHashToRecObj_func(file_name, 1, 0) : 0;
+    else if (dat.HandleEnumerationBlocked()) {
+        // Handle scan blocked (almost always AV/anti-cheat) - tell the user once.
+        static std::once_flag warned;
+        std::call_once(warned, [] {
+            Log::Warning("GWToolbox can't read Gw.dat: it was blocked from listing its own file handles, "
+                         "usually by anti-virus or anti-cheat. In-game images won't load until it's allowed.");
+            Log::Log("[GwDat] NtQuerySystemInformation returned no data - handle enumeration blocked (AV/anti-cheat?).");
+        });
     }
-    if (!rec) return false;
-    int size = 0;
-    const auto bytes = ReadFileBuffer_Func(rec, &size);
-    if (!bytes) return CloseRecObj_func(rec), false;
-    bytes_out->resize(size);
-    memcpy(bytes_out->data(), bytes, size);
-    FreeFileBuffer_Func(rec, bytes);
-    CloseRecObj_func(rec);
-    return !bytes_out->empty();
+    else {
+        static std::once_flag noted; // dat handle not open yet; transient, note once
+        std::call_once(noted, [] {
+            Log::Log("[GwDat] Gw.dat not mapped yet (client handle not found); will keep retrying.");
+        });
+    }
+    return ok;
 }
+
 void GwDatTextureModule::Initialize()
 {
     ToolboxModule::Initialize();
-
-    using namespace GW;
-
-
-    uintptr_t address = 0;
-
-    DecodeImage_func = (DecodeImage_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("GrImage.cpp", "bits || !palette",0,0));
-
-    address = Scanner::FindAssertion("Amet.cpp", "data",0,0);
-    if (address) {
-        address = Scanner::FindInRange("\xe8", "x", 0, address + 0xc, address + 0xff);
-        FileHashToRecObj_func = (FileIdToRecObj_pt)Scanner::FunctionFromNearCall(address);
-        address = Scanner::FindInRange("\xe8", "x", 0, address + 1, address + 0xff);
-        ReadFileBuffer_Func = (GetRecObjectBytes_pt)Scanner::FunctionFromNearCall(address);
-    }
-    address = Scanner::Find("\x81\x3a\x41\x4d\x45\x54", "xxxxxx");
-    if (address) {
-        address = Scanner::FindInRange("\xe8", "x", 0, address, address - 0xff);
-        CloseRecObj_func = (CloseRecObj_pt)Scanner::FunctionFromNearCall(address);
-        address = Scanner::FindInRange("\xe8", "x", 0, address - 1, address - 0xff);
-        FreeFileBuffer_Func = (UnkRecObjBytes_pt)Scanner::FunctionFromNearCall(address);
-    }
-
-    OpenFileByFileId_func = (OpenFileByFileId_pt)Scanner::ToFunctionStart(Scanner::FindAssertion("File.cpp", "!(flags & (FILE_OPEN_READ | FILE_OPEN_WRITE) & ~source.m_flags)", 0, 0), 0xfff);
-
-    address = (uintptr_t)DecodeImage_func;
-
-
-    AllocateImage_func = (AllocateImage_pt)Scanner::ToFunctionStart(Scanner::Find("\x7c\x11\x6a\x5c", "xxxx"));
-
-    Depalletize_func = (Depalletize_pt)Scanner::ToFunctionStart(Scanner::FindNthUseOfString("destPalette", 1));
-
-    Log::Log("[GwDatTextureModule] FileHashToRecObj_func = %p", FileHashToRecObj_func);
-    Log::Log("[GwDatTextureModule] ReadFileBuffer_Func = %p", ReadFileBuffer_Func);
-    Log::Log("[GwDatTextureModule] DecodeImage_func = %p", DecodeImage_func);
-    Log::Log("[GwDatTextureModule] FreeFileBuffer_Func = %p", FreeFileBuffer_Func);
-    Log::Log("[GwDatTextureModule] CloseRecObj_func = %p", CloseRecObj_func);
-    Log::Log("[GwDatTextureModule] AllocateImage_func = %p", AllocateImage_func);
-    Log::Log("[GwDatTextureModule] Depalletize_func = %p", Depalletize_func);
-#ifdef _DEBUG
-    ASSERT(FileHashToRecObj_func);
-    ASSERT(ReadFileBuffer_Func);
-    ASSERT(DecodeImage_func);
-    ASSERT(FreeFileBuffer_Func);
-    ASSERT(CloseRecObj_func);
-    ASSERT(AllocateImage_func);
-    ASSERT(Depalletize_func);
-#endif
+    // The dat is indexed lazily on the first read; start its dedicated read/decode worker.
+    GwDatArchive::Instance().StartWorker();
 }
 
-
-
-IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id)
+IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id)
 {
-    auto found = textures_by_file_id.find(file_id);
-    if (found != textures_by_file_id.end())
-        return &found->second->m_tex;
-    auto gwimg_ptr = new GwImg(file_id);
-    textures_by_file_id[file_id] = gwimg_ptr;
-    Resources::Instance().EnqueueDxTask([gwimg_ptr](IDirect3DDevice9* device) {
-        gwimg_ptr->m_tex = CreateTexture(device, gwimg_ptr->m_file_id, gwimg_ptr->m_dims);
+    GwImg* img = GetOrCreate(textures_by_file_id, TextureKey(file_id, stream_id), file_id, stream_id);
+    if (WantsDecode(img))
+        QueueDecode(img, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+            return DecodeTextureToArgb(file_id, argb, dims, stream_id);
         });
-    return &gwimg_ptr->m_tex;
+    return &img->m_tex;
 }
+
+IDirect3DTexture9** GwDatTextureModule::LoadItemImage(uint32_t model_file_id, uint32_t dyes)
+{
+    const uint64_t key = (static_cast<uint64_t>(dyes) << 32) | model_file_id;
+    GwImg* img = GetOrCreate(item_images_by_file_id, key, model_file_id, 1u, dyes);
+    if (WantsDecode(img))
+        QueueDecode(img, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
+            return DecodeItemToArgb(model_file_id, dyes, argb, dims);
+        });
+    return &img->m_tex;
+}
+
 void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path)
 {
     if (!file_id)
         return;
-    // Decoding reads from the dat through game functions, so keep it on the render thread like the other texture tasks.
-    Resources::Instance().EnqueueDxTask([file_id, file_path](IDirect3DDevice9*) {
-        gw_image_bits bits = nullptr;
+    // Pure CPU (decode + block-compress + write); run it on the dat worker, off the render loop.
+    GwDatArchive::Instance().EnqueueTask([file_id, file_path] {
+        std::vector<uint32_t> argb;
         Vec2i dims;
-        int levels;
-        GR_FORMAT format;
-        if (!OpenImage(file_id, &bits, dims, levels, format) || !bits || !dims.x || !dims.y) {
-            if (bits) {
-                GW::MemoryMgr::MemFree(bits);
-            }
+        if (!DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
             return;
-        }
 
-        // OpenImage hands back A8R8G8B8 pixels (D3D byte order is BGRA).
+        // Decoded pixels are A8R8G8B8 (D3D byte order is BGRA).
         DirectX::Image src = {};
         src.width = dims.x;
         src.height = dims.y;
         src.format = DXGI_FORMAT_B8G8R8A8_UNORM;
         src.rowPitch = static_cast<size_t>(dims.x) * 4;
         src.slicePitch = src.rowPitch * dims.y;
-        src.pixels = bits;
+        src.pixels = reinterpret_cast<uint8_t*>(argb.data());
         DirectX::ScratchImage scratch;
-        auto hr = scratch.InitializeFromImage(src);
-        if (!SUCCEEDED(hr)) {
+        if (!SUCCEEDED(scratch.InitializeFromImage(src)))
             return;
-        }
 
-        // DXT1/BC1 encodes color better (it can place a texel at the midpoint of its two RGB565
-        // endpoints, which DXT3/DXT5 cannot), so prefer it whenever the icon has no real alpha and
-        // only fall back to BC3 (DXT5) when smooth transparency must be preserved.
+        // BC1 encodes color better than BC3, so prefer it unless real alpha must be preserved.
         const auto target = scratch.IsAlphaAllOpaque() ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC3_UNORM;
 
         DirectX::ScratchImage compressed;
-        hr = DirectX::Compress(src, target, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed);
-        if (SUCCEEDED(hr)) {
+        if (SUCCEEDED(DirectX::Compress(src, target, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed))) {
             DirectX::SaveToDDSFile(compressed.GetImages(), compressed.GetImageCount(), compressed.GetMetadata(), DirectX::DDS_FLAGS_NONE, file_path.c_str());
         }
-        GW::MemoryMgr::MemFree(bits);
     });
 }
 
 void GwDatTextureModule::Terminate()
 {
+    // Stop the worker before freeing the cache so no in-flight decode touches a deleted GwImg.
+    GwDatArchive::Instance().StopWorker();
+
     for (auto gwimg_ptr : textures_by_file_id) {
         delete gwimg_ptr.second;
     }
     for (auto gwimg_ptr : greyscale_textures_by_file_id) {
         delete gwimg_ptr.second;
     }
+    for (auto gwimg_ptr : item_images_by_file_id) {
+        delete gwimg_ptr.second;
+    }
     textures_by_file_id.clear();
+    greyscale_textures_by_file_id.clear();
+    item_images_by_file_id.clear();
 }
-

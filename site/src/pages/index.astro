@@ -60,7 +60,40 @@ const featureCards = [
         GWToolbox++ adds builds, hotkeys, automation, widgets, plugins and quality-of-life
         fixes — a single drop-in client modification for both veteran and casual players.
       </p>
-      <div class="mt-8 flex flex-wrap items-center gap-3">
+      <div class="mt-8 rounded-xl border border-(--color-accent-deep) bg-(--color-card) p-4 sm:p-5">
+        <div class="flex items-start gap-3">
+          <svg viewBox="0 0 16 16" class="mt-0.5 h-5 w-5 shrink-0 fill-(--color-accent)" aria-hidden="true">
+            <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.79L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z" />
+          </svg>
+          <div>
+            <h2 class="font-display text-base font-semibold text-(--color-fg) sm:text-lg">
+              Please leave us a star on GitHub
+            </h2>
+            <p class="mt-1.5 text-sm text-(--color-fg-sub)">
+              GWToolbox++ is built by a small group of volunteers and maintained for free. Because
+              Toolbox injects into Guild Wars to do its job, antivirus software often flags it as a
+              <a href="/docs/faq/#my-antivirus-detects-toolbox-as-a-virus-are-you-hacking-me" class="text-(--color-accent) hover:underline">false positive</a>.
+              A popular, active project looks more trustworthy to those vendors, so a star
+              helps cut down false detections for everyone. Stars also help us qualify for the free
+              developer tooling we rely on to keep improving Toolbox — programs like JetBrains'
+              open-source licences and Anthropic's Open Source program.
+              Thank you! ♥
+            </p>
+            <a
+              href={siteConfig.githubUrl}
+              target="_blank"
+              rel="noopener"
+              class="mt-3 inline-flex items-center gap-2 rounded border border-(--color-accent-deep) bg-(--color-glass) px-4 py-2 text-sm font-semibold text-(--color-fg) transition-colors hover:bg-(--color-glass-hover)"
+            >
+              <svg viewBox="0 0 16 16" class="h-4 w-4 fill-(--color-accent)" aria-hidden="true">
+                <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.79L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z" />
+              </svg>
+              Star on GitHub
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 flex flex-wrap items-center gap-3">
         <a
           href={release.url}
           class="inline-flex items-center gap-2 rounded bg-(--color-accent) px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-(--color-accent-soft)"
@@ -88,9 +121,6 @@ const featureCards = [
       <p class="mt-4 text-xs text-(--color-fg-meta)">
         Free, open source, MIT licensed. Windows only.
         <a href="/docs/troubleshooting/#your-browser-blocked-the-download" class="text-(--color-accent) hover:underline">Trouble downloading?</a>
-      </p>
-      <p class="mt-2 text-xs text-(--color-fg-meta)">
-        Code signing policy: free code signing provided by <a href="https://about.signpath.io" target="_blank" rel="noopener" class="text-(--color-accent) hover:underline">SignPath.io</a>, certificate by <a href="https://signpath.org" target="_blank" rel="noopener" class="text-(--color-accent) hover:underline">SignPath Foundation</a>.
       </p>
 
       <div class="mt-10 max-w-full">

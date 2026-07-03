@@ -1345,6 +1345,18 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
     return raw;
 }
 
+namespace {
+    // Packs the item's four dye slots one per byte; GwDatTextureModule blends them (as GW
+    // combines up to four dyes) into the icon's colour. 0 when the item is undyed.
+    uint32_t ItemDyes(GW::Item* item)
+    {
+        return static_cast<uint32_t>(item->dye.dye1)
+            | (static_cast<uint32_t>(item->dye.dye2) << 8)
+            | (static_cast<uint32_t>(item->dye.dye3) << 16)
+            | (static_cast<uint32_t>(item->dye.dye4) << 24);
+    }
+}
+
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
 {
     if (!(item && item->model_file_id))
@@ -1364,8 +1376,8 @@ IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
     }
     if (!model_id_to_load)
         model_id_to_load = item->model_file_id;
-    return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load);
-    // @Enhancement: How to apply dye_info to the result?
+    // The UI icon is stream 1 of the model file; the item's dyes recolour its stream 0xc mask region.
+    return GwDatTextureModule::LoadItemImage(model_id_to_load, ItemDyes(item));
 }
 
 IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)

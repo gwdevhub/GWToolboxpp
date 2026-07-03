@@ -166,7 +166,7 @@ namespace {
         ChatFilter::Instance(),
         ItemDrops::Instance(),
         PartyWindowModule::Instance(),
-        HeroPanelPositionModule::Instance(),
+        //HeroPanelPositionModule::Instance(),
         ToastNotifications::Instance(),
         DiscordModule::Instance(),
         TwitchModule::Instance(),

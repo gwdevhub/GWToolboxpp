@@ -2,9 +2,9 @@
 #
 # Certum's SimplySign cloud has no headless login: the certificate only reaches
 # the Windows store after the GUI client authenticates. So we generate the
-# current TOTP from the otpauth:// secret (CERTUM_OTP_URI) and type the
-# credentials into the login dialog via SendKeys. This needs an interactive
-# desktop session, which GitHub-hosted Windows runners provide.
+# current TOTP from the otpauth:// secret (CERTUM_OTP_URI) and paste the
+# credentials into the login dialog. This needs an interactive desktop session,
+# which GitHub-hosted Windows runners provide.
 #
 # Based on https://www.devas.life/how-to-automate-signing-your-windows-app-with-certum/
 # and the refinements in blinkdisk's connect-simplysign.ps1.
@@ -22,9 +22,6 @@ if (-not $ExePath) {
 }
 
 Write-Host "=== SimplySign Desktop TOTP authentication ==="
-Write-Host "User: $UserId"
-Write-Host "Executable: $ExePath"
-
 if (-not (Test-Path $ExePath)) {
     Write-Host "ERROR: SimplySign Desktop not found at $ExePath"
     exit 1
@@ -111,6 +108,51 @@ public static class Totp
 }
 "@
 
+function Find-UiByName($el, $walker, $name) {
+    $c = $walker.GetFirstChild($el)
+    while ($c) {
+        if ($c.Current.Name -eq $name) { return $c }
+        $r = Find-UiByName $c $walker $name
+        if ($r) { return $r }
+        $c = $walker.GetNextSibling($c)
+    }
+    return $null
+}
+
+# An outdated SimplySign build pops a modal "New version found - download?" box
+# over the login form, which swallows the credential keystrokes. Decline it by
+# clicking "No" (Invoke / legacy default action / click the element's point).
+function Dismiss-UpdatePrompt {
+    try { Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction Stop } catch { return $false }
+    if (-not ('Win32Mouse' -as [type])) {
+        Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class Win32Mouse {
+    [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] static extern void mouse_event(uint f, uint x, uint y, uint d, int e);
+    public static void Click(int x, int y){ SetCursorPos(x,y); mouse_event(0x02,0,0,0,0); mouse_event(0x04,0,0,0,0); }
+}
+"@
+    }
+    $procIds = @((Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue).Id)
+    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $top = $walker.GetFirstChild([System.Windows.Automation.AutomationElement]::RootElement)
+    while ($top) {
+        if ($procIds -contains $top.Current.ProcessId) {
+            $no = Find-UiByName $top $walker "No"
+            if ($no) {
+                Write-Host "Update prompt detected; declining (clicking 'No')."
+                try { ($no.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke(); return $true } catch {}
+                try { ($no.GetCurrentPattern([System.Windows.Automation.LegacyIAccessiblePattern]::Pattern)).DoDefaultAction(); return $true } catch {}
+                try { $pt = $no.GetClickablePoint(); [Win32Mouse]::Click([int]$pt.X, [int]$pt.Y); return $true } catch { Write-Host "Click 'No' failed: $($_.Exception.Message)" }
+            }
+        }
+        $top = $walker.GetNextSibling($top)
+    }
+    return $false
+}
+
 # Start from a clean slate so a stale window/session can't swallow the keystrokes.
 if ($existing = Get-Process -Name "SimplySignDesktop" -ErrorAction Ignore) {
     Write-Host "Killing existing SimplySignDesktop process..."
@@ -136,23 +178,43 @@ if (-not $focused) {
     exit 1
 }
 
-Write-Host "SimplySign windows after focus:"
-Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
-    Select-Object Name, Id, MainWindowTitle | Format-Table -AutoSize | Out-String | Write-Host
+# Decline the "new version available" modal if it's covering the login form.
+if (Dismiss-UpdatePrompt) { Start-Sleep -Milliseconds 800 }
 
+# Re-assert focus: dismissing the dialog can move the foreground window, and
+# keystrokes sent to the wrong window are silently dropped.
+$wshell.AppActivate($proc.Id) | Out-Null
+$wshell.AppActivate('SimplySign Desktop') | Out-Null
 Start-Sleep -Milliseconds 400
-Write-Host "Injecting credentials (user -> TAB -> TOTP -> ENTER)..."
-$wshell.SendKeys($UserId)
-Start-Sleep -Milliseconds 200
+
+# Paste rather than type: SendKeys mangles characters like + ^ % ( ) and can
+# drop characters; pasting delivers the exact string. Falls back to typing if
+# the clipboard is unavailable.
+function Set-Field([string]$text) {
+    try {
+        Set-Clipboard -Value $text -ErrorAction Stop
+        Start-Sleep -Milliseconds 150
+        $wshell.SendKeys("^v")
+    } catch {
+        Write-Host "Clipboard unavailable ($($_.Exception.Message)); typing instead."
+        $wshell.SendKeys($text)
+    }
+    Start-Sleep -Milliseconds 250
+}
+
+Write-Host "Injecting credentials..."
+Set-Field $UserId
 $wshell.SendKeys("{TAB}")
 Start-Sleep -Milliseconds 200
 
 # Generate the code right before sending it so it can't expire while we focus.
 $otp = [Totp]::Now($Base32, $Digits, $Period, $Algorithm)
-Write-Host "Generated TOTP using $Algorithm."
-$wshell.SendKeys($otp)
+Set-Field $otp
 Start-Sleep -Milliseconds 200
 $wshell.SendKeys("{ENTER}")
+
+# Don't leave the OTP / username sitting on the clipboard afterwards.
+try { Set-Clipboard -Value " " -ErrorAction Stop } catch {}
 
 Write-Host "Waiting for authentication to settle..."
 Start-Sleep -Seconds 5
@@ -162,8 +224,7 @@ if (-not (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# Don't just trust that the process is alive: confirm the login actually mounted
-# the signing certificate into the store, and dump diagnostics if it didn't.
+# Confirm the login actually mounted the signing certificate into the store.
 $thumb = if ($env:CERTUM_CERT_SHA1) { ($env:CERTUM_CERT_SHA1 -replace '\s', '').ToUpperInvariant() } else { $null }
 Write-Host "Verifying the signing certificate reached the store..."
 $deadline = (Get-Date).AddSeconds(60)
@@ -180,11 +241,5 @@ if ($found) {
     Write-Host "=== Authentication complete: signing certificate is available. ==="
 } else {
     Write-Host "ERROR: signing certificate did not appear after authentication."
-    Write-Host "SimplySign processes/windows:"
-    Get-Process -Name '*SimplySign*' -ErrorAction SilentlyContinue |
-        Select-Object Name, Id, Responding, MainWindowTitle | Format-Table -AutoSize | Out-String | Write-Host
-    Write-Host "CurrentUser\My + LocalMachine\My contents:"
-    Get-ChildItem Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
-        Select-Object Thumbprint, Subject, HasPrivateKey | Format-Table -AutoSize | Out-String | Write-Host
     exit 1
 }

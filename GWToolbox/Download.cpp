@@ -74,7 +74,7 @@ struct Asset {
 
 struct Release {
     std::string tag_name{};
-    std::string body{};
+    std::optional<std::string> body{}; // Github sends null when a release has no description text
     std::vector<Asset> assets{};
 };
 
@@ -221,7 +221,8 @@ bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstr
 
     DownloadWindow window;
     window.Create();
-    window.SetChangelog(release->body.c_str(), release->body.size());
+    const auto body = release->body.value_or("");
+    window.SetChangelog(body.c_str(), body.size());
 
     AsyncFileDownloader downloader;
     AsyncDownload(url.c_str(), &downloader);

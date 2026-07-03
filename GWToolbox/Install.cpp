@@ -115,6 +115,18 @@ bool Install(const bool quiet, std::wstring& error)
 {
     if (IsInstalled())
         return true;
+
+    // Grant the exclusion and Controlled Folder Access permissions before writing into Documents, so CFA can't block the install.
+    fs::path docs_dir;
+    if (PathGetDocumentsPath(docs_dir, L"GWToolboxpp")) {
+        std::vector<fs::path> cfa_apps = GetGuildWarsExecutablePaths();
+        fs::path running_exe;
+        if (PathGetExeFullPath(running_exe))
+            cfa_apps.push_back(running_exe); // the launcher doing the writing right now (e.g. from Downloads)
+        cfa_apps.push_back(docs_dir / L"GWToolbox.exe"); // the installed copy, once it exists
+        AddDefenderExceptions(docs_dir, cfa_apps, quiet, error); // Silent fail, it shows its own messages
+    }
+
     fs::path install_path = EnsureInstallationDirectoryExist();
     if (install_path.empty())
         return error = L"EnsureInstallationDirectoryExist failed", false;
@@ -131,11 +143,6 @@ bool Install(const bool quiet, std::wstring& error)
                    dll_path.parent_path().wstring()
                ), false;
     }
-    // Allow the installed launcher and any running Guild Wars client through Controlled Folder
-    // Access too, so Toolbox can write its settings and crash dumps into the Documents folder.
-    std::vector<fs::path> cfa_apps = GetGuildWarsExecutablePaths();
-    cfa_apps.push_back(install_path.parent_path() / L"GWToolbox.exe");
-    AddDefenderExceptions(install_path.parent_path(), cfa_apps, quiet, error); // Silent fail, it'll show messages etc
     if (!IsInstalled()) {
         return error = std::format(
                    L"IsInstalled() returned false after installation; it may have been quarantined by anti virus software!\n\nExclude the {} directory in your anti virus settings and re-launch.", dll_path.wstring(),

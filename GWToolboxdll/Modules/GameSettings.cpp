@@ -981,9 +981,11 @@ namespace {
                 if (settings.combine_overhead_numbers && !status->blocked) {
                     // If a damage floater is already created, add together the amounts and destroy the old one, instead of creating a new floater for each hit
                     if (const auto existing = GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 0x1000000 + packet->agent_id)) {
-                        const auto context = (int*)GW::UI::GetFrameContext(existing);
-                        packet->amount += context[0x10];
-                        GW::UI::DestroyUIComponent(existing);
+                        if (existing && existing->IsCreated()) {
+                            const auto context = (int*)GW::UI::GetFrameContext(existing);
+                            packet->amount += context[0x10];
+                            GW::UI::DestroyUIComponent(existing);
+                        }
                     }
                 }
             } break;

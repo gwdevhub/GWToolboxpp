@@ -17,7 +17,7 @@ namespace github_api {
 
     struct Release {
         std::string tag_name;
-        std::string body;
+        std::optional<std::string> body; // Github sends null when a release has no description text
         bool prerelease = false;
         std::vector<ReleaseAsset> assets;
     };
@@ -49,6 +49,10 @@ namespace {
     bool notified = false;
     bool forced_ask = false;
     clock_t last_check = 0;
+
+    // Set once on launch when the running version differs from the version we
+    // last saved — i.e. Toolbox was just updated. Drives the one-time star request.
+    bool show_star_request = false;
 
     GWToolboxRelease latest_release;
     GWToolboxRelease current_release;
@@ -93,7 +97,7 @@ namespace {
                     release->version += js.tag_name.substr(version_number_len + 1);
                 }
                 std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
-                release->body = js.body;
+                release->body = js.body.value_or("");
                 const auto size_bytes = static_cast<uintmax_t>(asset.size); // Slight rounding, GitHub isn't always correct down to the byte.
                 release->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
                 return release;
@@ -181,6 +185,61 @@ namespace {
                 }
             });
     }
+
+    // Shown once, the first time a freshly-updated build runs. A heartfelt, human
+    // ask — Toolbox gets flagged as a false positive because it injects into Gw.exe,
+    // and a lively, well-starred GitHub project reads as more trustworthy to AV
+    // vendors over time, which means fewer false detections for everyone.
+    void DrawStarRequest()
+    {
+        if (!show_star_request) {
+            return;
+        }
+        bool keep_open = true;
+        ImGui::SetNextWindowSize(ImVec2(440.0f * ImGui::FontScale(), -1), ImGuiCond_Appearing);
+        ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
+        if (ImGui::Begin("Thank you for updating GWToolbox++!###gwtoolbox_star_request", &keep_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::PushTextWrapPos(0.0f);
+            ImGui::TextUnformatted(
+                "GWToolbox++ is built and maintained by a small group of volunteers, in our "
+                "spare time, and given away for free. That's never going to change.");
+            ImGui::Spacing();
+            ImGui::TextUnformatted(
+                "There is one small thing you can do that genuinely helps us. Because Toolbox "
+                "has to inject into Guild Wars and read its memory, antivirus software often "
+                "flags it as a false positive. A GitHub project with lots of stars and steady "
+                "activity looks far more legitimate to those vendors, and over time that means "
+                "fewer false detections for everyone who plays.");
+            ImGui::Spacing();
+            ImGui::TextUnformatted(
+                "Stars also help us qualify for the free developer tooling we rely on to keep "
+                "improving Toolbox - programs like JetBrains' open-source licences recently "
+                "tightened their requirements, and project activity is part of how they decide.");
+            ImGui::Spacing();
+            ImGui::TextUnformatted(
+                "So if Toolbox has been useful to you, would you take a few seconds to leave us "
+                "a star on GitHub? It is completely free, it helps our reputation with antivirus "
+                "software, and honestly - it makes our day every single time.");
+            ImGui::Spacing();
+            ImGui::TextUnformatted("Thank you for being part of this. <3");
+            ImGui::PopTextWrapPos();
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+            if (ImGui::Button("Star us on GitHub###gwtoolbox_open_star", ImVec2(200.0f * ImGui::FontScale(), 0))) {
+                ShellExecute(nullptr, "open", "https://github.com/gwdevhub/GWToolboxpp", nullptr, nullptr, SW_SHOWNORMAL);
+                show_star_request = false;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Maybe later###gwtoolbox_dismiss_star", ImVec2(120.0f * ImGui::FontScale(), 0))) {
+                show_star_request = false;
+            }
+        }
+        ImGui::End();
+        if (!keep_open) {
+            show_star_request = false;
+        }
+    }
 }
 
 const std::string& Updater::GetServerVersion()
@@ -221,6 +280,14 @@ void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 #ifdef _DEBUG
     settings.update_mode = Mode::DontCheckForUpdates;
     settings.update_release_type = ReleaseType::Beta;
+#else
+    // If the version we ran last differs from this one, Toolbox was just updated
+    // (in-app or by hand) — show the star request once. SaveSettings rewrites
+    // dllversion below, so it won't fire again until the next update.
+    std::string previous_version;
+    if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION) {
+        show_star_request = true;
+    }
 #endif
     CheckForUpdate();
 }
@@ -315,6 +382,7 @@ bool Updater::IsLatestVersion()
 
 void Updater::Draw(IDirect3DDevice9*)
 {
+    DrawStarRequest();
     switch (step) {
         case CheckAndWarn:
             Log::Warning(UpdateAvailableText());

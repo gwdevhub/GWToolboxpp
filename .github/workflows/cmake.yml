@@ -141,6 +141,7 @@ jobs:
         echo "Detected beta: $BETA"
         echo "Target tag: $TAG_NAME"
         echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
         if git ls-remote --tags origin "refs/tags/$TAG_NAME" | grep -q .; then
           echo "Tag $TAG_NAME already exists. Skipping release."
@@ -181,9 +182,23 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         TAG_NAME="${{ steps.version.outputs.tag_name }}"
+        VERSION="${{ steps.version.outputs.version }}"
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
 
         gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
+
+        # Pull this version's patch notes from history.md for the release body. Exact heading
+        # match so "8.3" can't grab "8.30"; stop at the next version heading. Fall back to a
+        # non-empty placeholder so the Github API never returns a null body (which the updater
+        # can't parse).
+        awk -v ver="## Version ${VERSION}" '
+          $0 == ver { f = 1; next }
+          f && /^## Version / { exit }
+          f { print }
+        ' site/src/content/docs/history.md > release_notes.md
+        if [ ! -s release_notes.md ]; then
+          printf 'GWToolbox++ %s\n\nSee https://gwtoolbox.com/history for details.\n' "$VERSION" > release_notes.md
+        fi
 
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
@@ -192,4 +207,5 @@ jobs:
 
         gh release create "$TAG_NAME" \
           --title "$TAG_NAME" \
+          --notes-file release_notes.md \
           "$BIN_DIR/GWToolbox.exe" "$BIN_DIR/GWToolboxdll.dll" GWToolboxdll.pdb.gz

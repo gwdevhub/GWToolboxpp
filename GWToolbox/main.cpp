@@ -328,6 +328,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         }
     }
 
+    // Before injecting, make sure Windows Security won't block the DLL from writing to its Documents folder.
+    if (!settings.quiet) {
+        const auto install_dir = GetInstallationDir();
+        if (!install_dir.empty()) {
+            std::vector<std::filesystem::path> cfa_apps = GetGuildWarsExecutablePaths();
+            cfa_apps.push_back(install_dir.parent_path() / L"GWToolbox.exe");
+            EnsureDefenderReadiness(install_dir.parent_path(), cfa_apps);
+        }
+    }
+
     if (!InjectInstalledDllInProcess(&proc, error)) {
         std::wstring wine;
         if (GetWineDiagnostics(wine)) {

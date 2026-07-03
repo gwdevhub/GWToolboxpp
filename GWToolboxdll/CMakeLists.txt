@@ -29,6 +29,23 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_sources(GWToolboxdll PRIVATE ${SOURCES})
 
+# Native Gw.dat reader/decoders (Utils/GwDat). Added explicitly rather than via the
+# Utils glob so the reverse-engineered ATEX/xentax sources can build with warnings
+# relaxed and without the precompiled header (they are self-contained).
+file(GLOB GWDAT_SOURCES CONFIGURE_DEPENDS
+    "Utils/GwDat/*.h"
+    "Utils/GwDat/*.cpp"
+    )
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${GWDAT_SOURCES})
+target_sources(GWToolboxdll PRIVATE ${GWDAT_SOURCES})
+set_source_files_properties(${GWDAT_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+set_source_files_properties(
+    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/xentax.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/AtexAsm.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/AtexReader.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/AtexDecompress.cpp"
+    PROPERTIES COMPILE_FLAGS "/W0")
+
 set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/GWToolbox.rc"
     PROPERTIES OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/Dependencies/GWCA/bin/gwca.dll")
 

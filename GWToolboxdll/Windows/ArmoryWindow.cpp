@@ -671,7 +671,18 @@ namespace GWArmory {
         return player && player->GetIsFemale();
     }
 
-    IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction) {
+    // The four chosen dye slots for the piece being previewed (global override wins),
+    // packed one per byte for LoadItemImage, which blends them like GW combines dyes.
+    uint32_t ChosenDyes(const GW::ItemData* player_piece) {
+        const GW::DyeColor slots[4] = {player_piece->dye.dye1, player_piece->dye.dye2,
+                                       player_piece->dye.dye3, player_piece->dye.dye4};
+        uint32_t dyes = 0;
+        for (int i = 0; i < 4; ++i)
+            dyes |= static_cast<uint32_t>(use_global_color ? global_dyes[i] : slots[i]) << (i * 8);
+        return dyes;
+    }
+
+    IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes = 0) {
         const bool is_composite_item = (interaction & 4) != 0;
 
         uint32_t model_id_to_load = 0;
@@ -690,7 +701,8 @@ namespace GWArmory {
         if (!model_id_to_load)
             model_id_to_load = model_file_id;
 
-        return GwDatTextureModule::LoadTextureFromFileId(model_id_to_load);
+        // The UI icon is stream 1 of the model file; recolour its stream 0xc mask for the dyes.
+        return GwDatTextureModule::LoadItemImage(model_id_to_load, dyes);
     }
     
     std::string GetChatCommand(Armor* armor, GW::ItemData* data)
@@ -851,12 +863,12 @@ namespace GWArmory {
                 player_piece->dye.dye_tint = state->current_piece->dye_tint;
             }
 
-            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction);
+            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction, ChosenDyes(player_piece));
             if (!texture || !*texture) {
                 ImGui::PopID();
                 continue;
             }
-    
+
             const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
             const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
             ImGui::NextSpacedElement();
@@ -970,7 +982,7 @@ namespace GWArmory {
         for (const auto& piece : type_pieces) {
             ImGui::PushID(piece->label);
 
-            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction);
+            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction, ChosenDyes(player_piece));
             if (!texture || !*texture) {
                 ImGui::PopID();
                 continue;
