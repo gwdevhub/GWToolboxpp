@@ -153,6 +153,7 @@ namespace {
     GW::Vec2f viewport_offset;
     GW::Vec2f ui_scale;
     float world_map_scale = 1.f;
+    GW::Vec2f world_map_proj_scale = {1.f, 1.f}; // px per world-map coord, animation-aware
     GW::WorldMapContext* world_map_context = nullptr;
     float quest_star_rotation_angle = .0f;
     float quest_icon_size = 24.f;
@@ -529,7 +530,7 @@ namespace {
     // Function to calculate viewport position
     ImVec2 CalculateViewportPos(const GW::Vec2f& marker_world_pos, const ImVec2& top_left)
     {
-        return {ui_scale.x * world_map_scale * (marker_world_pos.x - top_left.x) + viewport_offset.x, ui_scale.y * world_map_scale * (marker_world_pos.y - top_left.y) + viewport_offset.y};
+        return {world_map_proj_scale.x * (marker_world_pos.x - top_left.x) + viewport_offset.x, world_map_proj_scale.y * (marker_world_pos.y - top_left.y) + viewport_offset.y};
     }
 
     GW::Vec2f GetMapMarkerPoint(GW::AreaInfo* map_info)
@@ -556,7 +557,8 @@ namespace {
         const auto viewport = ImGui::GetMainViewport();
         viewport_offset = viewport->Pos;
         draw_list = ImGui::GetBackgroundDrawList(viewport);
-        ui_scale = GW::UI::GetFrameById(world_map_context->frame_id)->position.GetViewportScale(GW::UI::GetRootFrame());
+        const auto world_map_frame = GW::UI::GetFrameById(world_map_context->frame_id);
+        ui_scale = world_map_frame->position.GetViewportScale(GW::UI::GetRootFrame());
 
         const auto me = GW::Agents::GetControlledCharacter();
         if (!(me && WorldMapWidget::GamePosToWorldMap(me->pos, player_world_map_pos))) return false;
@@ -577,6 +579,19 @@ namespace {
                 world_map_scale = world_map_zoomed_out_size.x / world_map_size_in_coords.x;
             }
         }
+        // Per-frame pixels-per-world-coord from the live visible rect (top_left..bottom_right),
+        // which the client re-derives every frame from the animating zoom. Projecting through it
+        // tracks the zoom animation, where world_map_scale (rest states only) cannot. Falls back
+        // to the rest-state factor until the client populates the rect.
+        world_map_proj_scale = {ui_scale.x * world_map_scale, ui_scale.y * world_map_scale};
+        if (world_map_frame) {
+            const auto frame_size = world_map_frame->position.GetSizeOnScreen();
+            const auto span = world_map_context->bottom_right - world_map_context->top_left;
+            if (span.x != 0.f && span.y != 0.f && frame_size.x > 0.f && frame_size.y > 0.f) {
+                world_map_proj_scale = {frame_size.x / span.x, frame_size.y / span.y};
+            }
+        }
+
         quest_icon_size = 24.0f * ui_scale.x;
         quest_icon_size_half = quest_icon_size / 2.f;
 
@@ -618,7 +633,6 @@ namespace {
     {
         if (!settings.show_any_elite_capture_locations) return false;
         if (!(world_map_context)) return false;
-        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return false; // Map is animating
 
         const auto map_info = GW::Map::GetMapInfo(boss.map_id);
         if (!(map_info && map_info->continent == world_map_context->continent)) return false;
@@ -651,7 +665,7 @@ namespace {
 
         if (!Resources::GetTextureSize(*texture, &skill_texture_size)) return false;
 
-        float icon_size = world_map_context->zoom == 1.f ? 32.f : 16.f;
+        const float icon_size = std::lerp(16.f, 32.f, std::clamp(world_map_context->zoom, 0.f, 1.f)); // grow with zoom
         const auto half_size = icon_size / 2.f;
 
         bool hovered = false;
@@ -770,7 +784,6 @@ namespace {
     bool DrawQuestMarkerOnWorldMap(const GW::Quest* quest)
     {
         if (!(world_map_context && quest)) return false;
-        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return false; // Map is animating
 
 
         bool is_hovered = false;
@@ -850,7 +863,6 @@ namespace {
     void DrawAreaOverlays()
     {
         if (!world_map_context) return;
-        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return; // Map is animating
 
         for (const auto& [file_id, info] : map_info_by_file_id) {
             // Filter to the continent currently shown on the world map.
@@ -868,7 +880,6 @@ namespace {
     void DrawLockedAreaHighlights()
     {
         if (!(settings.showing_all_outposts && settings.highlight_locked_areas && world_map_context)) return;
-        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return; // Map is animating
         if (!Colors::IsVisible(settings.locked_area_highlight_color)) return;
 
         std::unordered_set<uint32_t> highlighted_names;
@@ -893,7 +904,6 @@ namespace {
     bool DrawPortalOnWorldMap(const MapPortal& portal)
     {
         if (!world_map_context) return false;
-        if (world_map_context->zoom != 1.f && world_map_context->zoom != .0f) return false; // Map is animating
 
         auto& pos = portal.world_pos;
         const auto viewport_pos = CalculateViewportPos(pos, world_map_context->top_left);
@@ -1338,12 +1348,10 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
                 if (!GamePosToWorldMap(line->p2, line_end)) continue;
             }
 
-            line_start.x = (line_start.x - world_map_context->top_left.x) * ui_scale.x + viewport_offset.x;
-            line_start.y = (line_start.y - world_map_context->top_left.y) * ui_scale.y + viewport_offset.y;
-            line_end.x = (line_end.x - world_map_context->top_left.x) * ui_scale.x + viewport_offset.x;
-            line_end.y = (line_end.y - world_map_context->top_left.y) * ui_scale.y + viewport_offset.y;
+            const auto p1 = CalculateViewportPos(line_start, world_map_context->top_left);
+            const auto p2 = CalculateViewportPos(line_end, world_map_context->top_left);
 
-            draw_list->AddLine(line_start, line_end, line->color);
+            draw_list->AddLine(p1, p2, line->color);
         }
 
         // Navmesh debug overlay: it's a batched in-world VB now (not CustomLines), so redraw its source segments
@@ -1353,11 +1361,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             for (const auto& e : GameWorldRenderer::GetNavmeshWorldMapLines()) {
                 if (!GamePosToWorldMap(e.a, line_start)) continue;
                 if (!GamePosToWorldMap(e.b, line_end)) continue;
-                line_start.x = (line_start.x - world_map_context->top_left.x) * ui_scale.x + viewport_offset.x;
-                line_start.y = (line_start.y - world_map_context->top_left.y) * ui_scale.y + viewport_offset.y;
-                line_end.x = (line_end.x - world_map_context->top_left.x) * ui_scale.x + viewport_offset.x;
-                line_end.y = (line_end.y - world_map_context->top_left.y) * ui_scale.y + viewport_offset.y;
-                draw_list->AddLine({line_start.x, line_start.y}, {line_end.x, line_end.y}, e.color);
+                const auto p1 = CalculateViewportPos(line_start, world_map_context->top_left);
+                const auto p2 = CalculateViewportPos(line_end, world_map_context->top_left);
+                draw_list->AddLine(p1, p2, e.color);
             }
         }
     }
