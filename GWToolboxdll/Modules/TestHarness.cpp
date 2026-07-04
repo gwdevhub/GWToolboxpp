@@ -8,6 +8,7 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/PreGameContext.h>
@@ -28,6 +29,9 @@
 #include "Modules/QuestModule.h"
 #include "Modules/Resources.h"
 #include "Modules/TestHarness.h"
+
+#include <GWCA/Managers/PartyMgr.h>
+
 #include "Utils/ToolboxUtils.h"
 #include "Widgets/WorldMapWidget.h"
 #include "Windows/Pathfinding/PathfindingWindow.h"
@@ -251,6 +255,23 @@ namespace {
             else {
                 write_status("waypoint: bad args (need: waypoint <x> <y> [plane])");
             }
+            return;
+        }
+        if (verb == "heropanels") {
+            const auto party = GW::PartyMgr::GetPartyInfo();
+            const auto hero_count = party ? party->heroes.size() : 0;
+            Log::Log("[heropanels] party=%p heroes=%u instance=%d", static_cast<void*>(party), static_cast<unsigned>(hero_count), static_cast<int>(GW::Map::GetInstanceType()));
+            wchar_t label[] = L"AgentCommander0";
+            for (int i = 0; i < 7; i++) {
+                label[_countof(label) - 2] = static_cast<wchar_t>(L'0' + i);
+                const auto frame = GW::UI::GetFrameByLabel(label);
+                if (!frame) continue;
+                const auto* w = reinterpret_cast<const uint32_t*>(&frame->position);
+                Log::Log("[heropanels] AgentCommander%d frame=%p created=%d visible=%d pos=[%u,%u,%u,%u,%u]", i, static_cast<void*>(frame),
+                         frame->IsCreated(), frame->IsVisible(), w[0], w[1], w[2], w[3], w[4]);
+            }
+            Log::FlushFile();
+            write_status("heropanels: logged");
             return;
         }
         if (verb == "chest") {
