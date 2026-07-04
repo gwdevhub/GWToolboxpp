@@ -1125,7 +1125,9 @@ namespace {
     {
         const auto xp_bar = static_cast<GW::ProgressBar*>(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"LevelProgress"), 1));
         if (!xp_bar) return false;
-        const auto current_xp = GW::GetWorldContext()->experience;
+        const auto world = GW::GetWorldContext();
+        if (!world) return false;
+        const auto current_xp = world->experience;
         const auto current_level = LevelFromXp(current_xp);
         if (settings.useful_level_progress_label) {
             const auto current_level_req = XpReqForLevel(current_level);
