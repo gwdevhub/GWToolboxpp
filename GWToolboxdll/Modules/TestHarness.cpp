@@ -11,11 +11,15 @@
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/PreGameContext.h>
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <Logger.h>
 #include <Timer.h>
@@ -27,6 +31,8 @@
 #include "Utils/ToolboxUtils.h"
 #include "Widgets/WorldMapWidget.h"
 #include "Windows/Pathfinding/PathfindingWindow.h"
+#include "Modules/GwDatTextureModule.h"
+#include "Utils/ArenaNetFileParser.h"
 
 // Dev iteration tool: compiled in Debug (_DEBUG) and RelWithDebInfo (GWTB_HARNESS, which
 // logs to log.txt), excluded from the shipped Release build.
@@ -41,6 +47,8 @@ namespace {
     clock_t last_poll = 0;
     bool fired_waypoint_this_load = false;
     bool terminating = false; // set once shutdown is signalled; Update no-ops after
+    int chest_on_load_remaining = 0; // regress the Xunlai auto-open crash: toggle the chest across the post-load window, N loads
+    int chest_burst = -1;            // -1 idle; 0..N counts the post-load toggle burst polls
 
     std::filesystem::path cmd_path() { return Resources::GetPath(L"harness_command.txt"); }
     std::filesystem::path status_path() { return Resources::GetPath(L"harness_status.txt"); }
@@ -245,6 +253,59 @@ namespace {
             }
             return;
         }
+        if (verb == "chest") {
+            int n = 1;
+            is >> n;
+            if (n < 0) n = 0;
+            if (n > 1000) n = 1000;
+            const bool can = GW::Items::CanAccessXunlaiChest();
+            const auto inv = GW::UI::GetFrameByLabel(L"InvAccount");
+            Log::Log("[harness] chest x%d: CanAccessXunlai=%d InvAccount=%p (OnShowXunlaiChest crash branch runs only when CanAccess=0)", n, static_cast<int>(can), static_cast<void*>(inv));
+            for (int i = 0; i < n; ++i) GW::Chat::SendChat('/', L"chest");
+            write_status("chest: sent");
+            return;
+        }
+        if (verb == "chestonload") {
+            int n = 50;
+            is >> n;
+            if (n < 1) n = 1;
+            if (n > 5000) n = 5000;
+            chest_on_load_remaining = n;
+            chest_burst = -1;
+            Log::Log("[chestonload] armed for %d map loads", n);
+            write_status("chestonload: armed");
+            return;
+        }
+        if (verb == "travel") {
+            int mapid = 0;
+            is >> mapid;
+            if (mapid > 0) {
+                const bool ok = GW::Map::Travel(static_cast<GW::Constants::MapID>(mapid), GW::Constants::District::Current, 0);
+                Log::Log("[harness] travel -> map %d (queued=%d)", mapid, static_cast<int>(ok));
+                char b[48];
+                snprintf(b, sizeof(b), "travel: %d queued=%d", mapid, static_cast<int>(ok));
+                write_status(b);
+            }
+            else {
+                write_status("travel: bad mapid (need: travel <mapid>)");
+            }
+            return;
+        }
+        if (verb == "dattex") {
+            uint32_t id = 0;
+            is >> std::hex >> id;
+            if (!id) { write_status("dattex: bad id (need hex file_id)"); return; }
+            ArenaNetFileParser::GameAssetFile asset;
+            const bool read_ok = asset.readFromDat(id, 0);
+            char magic[8] = {0};
+            const size_t sz = read_ok ? asset.data.size() : 0;
+            if (sz >= 4) memcpy(magic, asset.data.data(), 4);
+            Log::Log("[harness] dattex 0x%x: read=%d size=%u magic=[%s]", id, static_cast<int>(read_ok), static_cast<unsigned>(sz), magic);
+            const std::wstring fn = L"dattex_" + std::to_wstring(id) + L".png";
+            GwDatTextureModule::SaveTextureFromFileIdToFile(id, Resources::GetPath(fn.c_str()));
+            write_status("dattex: queued");
+            return;
+        }
         write_status("unknown_command: " + verb);
     }
 } // namespace
@@ -277,8 +338,28 @@ void TestHarness::Update(float)
 
     const Config cfg = read_config();
 
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
-        fired_waypoint_this_load = false; // re-arm the auto-waypoint for the next map
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+        fired_waypoint_this_load = false;                       // re-arm the auto-waypoint for the next map
+        if (chest_on_load_remaining > 0) chest_burst = 0;       // arm the post-load chest-toggle burst
+    }
+
+    // Toggle the Xunlai panel every poll (~250ms) for ~3s from map-ready -- the exact work /chest enqueues,
+    // minus the chat+foreground gates that silently drop SendChat when GW isn't the active window.
+    if (chest_on_load_remaining > 0 && chest_burst >= 0 && GW::Map::GetIsMapLoaded()) {
+        constexpr int kChestBurstPolls = 13;
+        if (chest_burst == 0) {
+            Log::Log("[chestonload] fire map=%d remaining=%d", static_cast<int>(GW::Map::GetMapID()), chest_on_load_remaining - 1);
+            Log::FlushFile();
+        }
+        if (const auto frame = GW::UI::GetFrameByLabel(L"InvAccount"))
+            GW::UI::DestroyUIComponent(frame);
+        else
+            GW::Items::OpenXunlaiWindow();
+        if (++chest_burst >= kChestBurstPolls) {
+            chest_burst = -1;
+            chest_on_load_remaining--;
+        }
+    }
 
     // Consume one queued command per poll FIRST, so shutdown works in ANY game state
     // (incl. the login screen) -- I must always be able to unload the DLL to relink.
