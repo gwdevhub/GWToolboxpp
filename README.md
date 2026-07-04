@@ -29,6 +29,29 @@ If you are here to check toolbox features or for a download link, go to [https:/
 
 7. Run.
 
+## Building on Linux (Docker + Wine)
+
+GWToolboxdll can also be cross-compiled from Linux using a real MSVC toolchain running under Wine, packaged in a Docker image.
+
+### Requirements
+* [Docker](https://docs.docker.com/get-docker/)
+
+### Steps
+1. Clone the repository and `cd` into it.
+2. Build: `./scripts/build-wine-prefix.sh`
+
+The first run builds the Docker image (downloads MSVC + Windows SDK, expect it to take a while), then configures and builds `GWToolboxdll` into `bin/GWToolboxdll.dll`. Later runs reuse the cached image and only rebuild changed files.
+
+Useful options (see `./scripts/build-wine-prefix.sh --help`):
+* `--target <name>` - build a different CMake target (default: `GWToolboxdll`; use `all` for everything)
+* `--config <Debug|RelWithDebInfo|Release>` - CMake config to build (default: `RelWithDebInfo`)
+* `--shell` - drop into a shell in the build container instead of building
+* `--rebuild-image` - force a clean rebuild of the Docker image
+
+Notes:
+* The container runs as root; the script hands ownership of any files it writes back to your user once done.
+* Build output lives in `build-wine/` (gitignored). Delete it for a fully clean reconfigure, e.g. after switching `--config` or branches.
+
 ## Notes
 * GWToolbox compiles as a DLL (`GWToolboxdll.dll`) and EXE (`GWToolbox.exe`). The exe lets you select a Guild Wars Client and injects the dll, but you can also use other dll injectors of your choice.
 * By default, the launcher (`GWToolbox.exe`) will run the `GWToolboxdll.dll` in the same folder, if there is none, it will inject the one in your installation folder.
