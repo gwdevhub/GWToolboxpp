@@ -51,6 +51,7 @@ export const navGroups: NavGroup[] = [
       { slug: 'minimap', label: 'Minimap' },
       { slug: 'misc_widgets', label: 'Miscellaneous' },
       { slug: 'party_window', label: 'Party' },
+      { slug: 'party_statistics', label: 'Party Statistics' },
       { slug: 'target_widgets', label: 'Target' },
       { slug: 'enemy_window', label: 'Enemy' },
       { slug: 'items', label: 'Items' },
