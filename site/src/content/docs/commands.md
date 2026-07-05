@@ -90,7 +90,7 @@ GWToolbox++ adds a wide variety of chat commands that you trigger by typing them
 - `/loadbuild`: Load a [Builds](/docs/builds/) entry by name onto yourself. See [Builds → Chat commands](/docs/builds/#chat-commands).
 - `/pingbuild <template_name> [template_name...]`: Ping one or more saved skill templates to team chat as clickable build links.
 - `/herobuild` or `/heroteam <name>`: Load a saved [Hero Build](/docs/herobuilds/) onto the active hero team.
-- `/skillstats [reset|<player_number>]`: From the [Party Statistics](/docs/party_window/) module, print skill-usage statistics for yourself, for a specific party member (by number), or `reset` to clear collected stats.
+- `/skillstats [reset|<player_number>]`: From the [Party Statistics](/docs/party_statistics/) module, print skill-usage statistics for yourself, for a specific party member (by number), or `reset` to clear collected stats.
 - `/bonds (add|remove) <party_index|all> (<skill_id>|all)`: Add or remove maintained-bond highlights on the [Bonds Monitor](/docs/widgets/#bonds) widget.
 - `/dmg` or `/damage`: Control the [Damage Monitor](/docs/damage_monitor/#chat-commands). See that page for the full sub-command list.
 
