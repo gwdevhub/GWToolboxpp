@@ -37,6 +37,9 @@ detect update (build-id) → survey breakage ([SCAN]=0 lines in log.txt)
 | [05-verification-matrix.md](05-verification-matrix.md) | What "all functionality works" means, machine-checkably. |
 | [06-orchestration.md](06-orchestration.md) | Control loop, the three workflows, safety, fallbacks. |
 | [07-roadmap-and-8.29-dryrun.md](07-roadmap-and-8.29-dryrun.md) | Phased build-out + the 8.29 answer-key validation. |
+| [08-live-breakage-findings.md](08-live-breakage-findings.md) | Session findings: live-client breakage hunt vs 389033. |
+| [09-ghidra-project-updates.md](09-ghidra-project-updates.md) | Migrating the Ghidra markup to each new client build. |
+| [10-crash-triage.md](10-crash-triage.md) | `triage_dumps.py`: batch-symbolize + cluster wild crash dumps. |
 
 ## Code that will be built (not yet present)
 
