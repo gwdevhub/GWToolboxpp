@@ -242,7 +242,8 @@ namespace {
         }
     };
 
-    // One async attempt per image; ReadFileAsync owns the wait/retry/trigger and the ~1 min timeout.
+    // Decode until it succeeds: a failed/timed-out attempt clears m_pending (in the upload callback) so
+    // it's retried, letting an image whose file streams in later (e.g. on a map change) still load.
     bool WantsDecode(const GwImg* img) { return !img->m_tex && !img->m_pending; }
 
     struct ArgbImage {
@@ -263,6 +264,7 @@ namespace {
             Resources::Instance().EnqueueDxTask([img, result, ok](IDirect3DDevice9* device) {
                 img->m_tex = ok ? MakeTextureFromArgb(device, result->pixels, result->dims) : nullptr;
                 img->m_dims = result->dims;
+                img->m_pending = false; // clear so a miss retries next frame (file may stream in later)
             });
         }, stream_id);
     }
