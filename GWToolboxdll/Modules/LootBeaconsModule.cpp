@@ -305,7 +305,6 @@ void LootBeaconsModule::DrawSettingsInternal()
     ImGui::Checkbox("Beacon on valuable items", &enable_value_beacons);
     ImGui::ShowHelp("Any drop whose Kamadan trader price meets the threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.");
     if (enable_value_beacons) {
-        ImGui::SameLine();
         Colors::DrawSettingHueWheel("##value_color", &value_color);
         ImGui::DragInt("Value threshold (gold)", &value_threshold, 50.f, 0, 1000000);
     }
