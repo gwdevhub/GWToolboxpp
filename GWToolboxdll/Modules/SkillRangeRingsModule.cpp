@@ -22,11 +22,11 @@ namespace {
     constexpr float kMaxRingRadius = 5200.f; // ignore bogus range data past compass-ish sizes
     constexpr uint8_t kTargetNone = 0;        // Skill.target == no_target (flash enchant / stance / self-cast form)
 
-    // Occlusion (whether the rings hide behind terrain, and the depth-projection planes it needs) is shared with
-    // the "In-game rendering" module via GameWorldRenderer::GetOccludeBehindTerrain()/GetDepthZNear()/GetDepthZFar()
-    // so it's configured in one place. It defaults off there: with occlusion on, the ring and the terrain it hugs
-    // land at nearly-equal depths, and the depth-test tie is resolved by the compositor's reconstructed projection
-    // vs GW's real one - a mismatch that grows non-linearly with distance, so arcs drop in/out as the camera moves.
+    // Occlusion behind terrain (and the depth-projection planes it needs) is shared with the "In-game rendering"
+    // module via GameWorldRenderer::GetOccludeBehindTerrain()/GetDepthZNear()/GetDepthZFar(), so it's configured in
+    // one place. The incomplete-ring artifact (arcs that drop in/out with the camera) only occurs with occlusion
+    // ON - it's an interaction between our depth test and GW's depth buffer - and this shared setting defaults off,
+    // so rings draw whole by default.
     float render_max_distance = 7000.f;
     float fog_factor = 0.6f;
     float ring_thickness = 24.f;
