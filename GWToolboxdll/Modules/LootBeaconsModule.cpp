@@ -27,8 +27,8 @@ namespace {
     bool occlude_behind_terrain = true;
     float render_max_distance = 20000.f;
     float fog_factor = 0.5f;
-    float beam_height = 800.f;
-    float beam_width = 50.f;
+    float beam_height = 225.f;
+    float beam_width = 35.f;
     float beam_opacity = 0.5f;
     float ring_radius = 45.f;
     float ring_opacity = 0.8f;
