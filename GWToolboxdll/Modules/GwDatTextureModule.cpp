@@ -231,9 +231,7 @@ namespace {
         uint32_t m_dyes = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
-        bool m_pending = false;         // a decode task is queued and hasn't finished yet
-        uint16_t m_attempts = 0;        // pre-map decode attempts, capped to bound retries before the dat maps
-        uint32_t m_first_missed_ms = 0; // GetTickCount of the first mapped-archive miss (0 = none); opens the retry window
+        bool m_pending = false; // a decode has been dispatched (async); don't dispatch twice
         explicit GwImg(uint32_t file_id, uint32_t stream_id = 0, uint32_t dyes = 0)
             : m_file_id(file_id), m_stream_id(stream_id), m_dyes(dyes) {}
         ~GwImg()
@@ -245,41 +243,29 @@ namespace {
         }
     };
 
-    constexpr uint16_t kMaxDecodeAttempts = 240;   // ~a few seconds at 60fps, before the dat is mapped
-    constexpr uint32_t kMissRetryWindowMs = 60000; // keep retrying a mapped-but-missing file ~1 min
-
-    // Retry until decoded: frame-bounded before the dat maps, then a time window once mapped-but-missing (ReadFile re-parses on a miss, so streamed-in files are caught).
-    bool WantsDecode(const GwImg* img)
-    {
-        if (img->m_tex || img->m_pending)
-            return false;
-        if (img->m_first_missed_ms != 0)
-            return GetTickCount() - img->m_first_missed_ms < kMissRetryWindowMs;
-        return img->m_attempts < kMaxDecodeAttempts;
-    }
+    // One async attempt per image; ReadFileAsync owns the wait/retry/trigger and the ~1 min timeout.
+    bool WantsDecode(const GwImg* img) { return !img->m_tex && !img->m_pending; }
 
     struct ArgbImage {
         std::vector<uint32_t> pixels;
         Vec2i dims;
     };
 
-    // Decodes on the dat worker (read + re-parse + pixel work off the render loop), then uploads on the DX thread.
+    // Waits for file_id/stream_id to be resident (fetching it if the client must stream it), decodes on
+    // the dat worker, then uploads on the DX thread. Gating on one stream is enough - a file's streams
+    // arrive together, so multi-stream decoders (item dye masks) find theirs too.
     template <typename Decode>
-    void QueueDecode(GwImg* img, Decode decode)
+    void QueueDecode(GwImg* img, uint32_t file_id, uint32_t stream_id, Decode decode)
     {
         img->m_pending = true;
-        ++img->m_attempts;
-        GwDatArchive::Instance().EnqueueTask([img, decode] {
+        GwDatArchive::Instance().ReadFileAsync(file_id, [img, decode](std::vector<uint8_t>& bytes) {
             auto result = std::make_shared<ArgbImage>();
-            const bool ok = decode(result->pixels, result->dims) && result->dims.x > 0 && result->dims.y > 0;
+            const bool ok = !bytes.empty() && decode(result->pixels, result->dims) && result->dims.x > 0 && result->dims.y > 0;
             Resources::Instance().EnqueueDxTask([img, result, ok](IDirect3DDevice9* device) {
                 img->m_tex = ok ? MakeTextureFromArgb(device, result->pixels, result->dims) : nullptr;
                 img->m_dims = result->dims;
-                img->m_pending = false;
-                if (!img->m_tex && img->m_first_missed_ms == 0 && GwDatArchive::Instance().Loaded())
-                    img->m_first_missed_ms = GetTickCount(); // open the retry window on the first mapped miss
             });
-        });
+        }, stream_id);
     }
 
     // Keyed by (stream_id << 32 | file_id) so different streams of one file cache separately.
@@ -302,7 +288,7 @@ IDirect3DTexture9** GwDatTextureModule::LoadGreyscaleTextureFromFileId(uint32_t 
 {
     GwImg* img = GetOrCreate(greyscale_textures_by_file_id, file_id, file_id);
     if (WantsDecode(img))
-        QueueDecode(img, [file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+        QueueDecode(img, file_id, 0, [file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeGreyscaleToArgb(file_id, argb, dims);
         });
     return &img->m_tex;
@@ -353,7 +339,7 @@ IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, 
 {
     GwImg* img = GetOrCreate(textures_by_file_id, TextureKey(file_id, stream_id), file_id, stream_id);
     if (WantsDecode(img))
-        QueueDecode(img, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+        QueueDecode(img, file_id, stream_id, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeTextureToArgb(file_id, argb, dims, stream_id);
         });
     return &img->m_tex;
@@ -364,7 +350,7 @@ IDirect3DTexture9** GwDatTextureModule::LoadItemImage(uint32_t model_file_id, ui
     const uint64_t key = (static_cast<uint64_t>(dyes) << 32) | model_file_id;
     GwImg* img = GetOrCreate(item_images_by_file_id, key, model_file_id, 1u, dyes);
     if (WantsDecode(img))
-        QueueDecode(img, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
+        QueueDecode(img, model_file_id, 1, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeItemToArgb(model_file_id, dyes, argb, dims);
         });
     return &img->m_tex;
@@ -374,8 +360,11 @@ void GwDatTextureModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std
 {
     if (!file_id)
         return;
-    // Pure CPU (decode + block-compress + write); run it on the dat worker, off the render loop.
-    GwDatArchive::Instance().EnqueueTask([file_id, file_path] {
+    // Wait for the file (fetching it if streamed-only), then decode + block-compress + write, all on
+    // the dat worker off the render loop.
+    GwDatArchive::Instance().ReadFileAsync(file_id, [file_id, file_path](std::vector<uint8_t>& bytes) {
+        if (bytes.empty())
+            return;
         std::vector<uint32_t> argb;
         Vec2i dims;
         if (!DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
