@@ -244,8 +244,9 @@ namespace {
         }
     };
 
-    // Decode until it succeeds: a failed/timed-out attempt clears m_pending (in the upload callback) so
-    // it's retried, letting an image whose file streams in later (e.g. on a map change) still load.
+    // Dispatch once: ReadFileAsync has no timeout, so it keeps retrying the read (and re-requesting the
+    // file) until it resolves, then delivers - an image whose file streams in later (e.g. on a map
+    // change) still loads without us re-dispatching here.
     bool WantsDecode(const GwImg* img) { return !img->m_tex && !img->m_pending; }
 
     struct ArgbImage {
@@ -266,7 +267,8 @@ namespace {
             Resources::Instance().EnqueueDxTask([img, result, ok](IDirect3DDevice9* device) {
                 img->m_tex = ok ? MakeTextureFromArgb(device, result->pixels, result->dims) : nullptr;
                 img->m_dims = result->dims;
-                img->m_pending = false; // clear so a miss retries next frame (file may stream in later)
+                // Delivered (the file resolved): leave m_pending set so we don't re-decode - if the
+                // decode itself failed on present bytes, retrying would just loop on the same data.
             });
         }, stream_id);
     }
@@ -433,7 +435,6 @@ namespace {
     const uint8_t kDatMagic[4] = {0x33, 0x41, 0x4e, 0x1a}; // "3ANa"
     constexpr size_t kMaxView = 0x800000;                  // cap each mapped window at 8 MB
     constexpr uint32_t kRefreshThrottleMs = 2000;          // min gap between re-parses on a read miss
-    constexpr uint32_t kAsyncReadTimeoutMs = 60000;        // give up on an async read after ~1 minute
     constexpr uint32_t kAsyncPollMs = 250;                 // worker re-scan cadence for pending async reads
     constexpr uint32_t kTickleThrottleMs = 10000;          // re-ask the client for a given missed file at most this often
 
@@ -759,8 +760,14 @@ void GwDatModule::MaybeRefresh()
         m_slots.swap(slots);
         m_fileid_to_slot.swap(fileid_to_slot);
     }
-    std::scoped_lock<std::mutex> guard(m_load_mutex);
-    m_indexed_size = size; // next MaybeRefresh skips the re-parse until the dat grows again
+    {
+        std::scoped_lock<std::mutex> guard(m_load_mutex);
+        m_indexed_size = size; // next MaybeRefresh skips the re-parse until the dat grows again
+    }
+    // The dat grew (files streamed in, e.g. a map load, which also clears the client's request queue),
+    // so drop the tickle throttle: still-missing pending reads re-request their files on the next pass.
+    std::scoped_lock<std::mutex> tlock(m_trigger_mutex);
+    m_tickled_at.clear();
 }
 
 // Copies the raw (still-compressed) bytes for file_id/stream_id, shared-locked against MaybeRefresh.
@@ -838,9 +845,8 @@ void GwDatModule::ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_
     }
     auto& self = Instance();
     self.StartWorker(); // the poll loop delivers
-    const uint32_t deadline = GetTickCount() + kAsyncReadTimeoutMs;
     std::scoped_lock<std::mutex> lock(self.m_pending_mutex);
-    self.m_pending_reads.push_back({file_id, stream_id, deadline, std::move(callback)});
+    self.m_pending_reads.push_back({file_id, stream_id, std::move(callback)});
 }
 
 void GwDatModule::SetTrigger(TriggerFn trigger)
@@ -879,24 +885,21 @@ void GwDatModule::FlushTickles()
     trigger(batch.data(), batch.size());
 }
 
-// Worker pass: deliver resolved reads and time out stale ones. A miss tickles the client via ReadFile.
+// Worker pass: deliver reads that now resolve; a miss stays queued (no timeout) and tickles the client
+// via ReadFile, so the read persists until the file streams in (e.g. on a later map change).
 void GwDatModule::ProcessPendingReads()
 {
     std::vector<std::pair<ReadCallback, std::vector<uint8_t>>> ready; // callbacks fire outside the lock
     {
         std::scoped_lock<std::mutex> lock(m_pending_mutex);
-        const uint32_t now = GetTickCount();
         for (auto it = m_pending_reads.begin(); it != m_pending_reads.end();) {
             std::vector<uint8_t> data;
-            if (ReadFile(it->file_id, data, it->stream_id))
+            if (ReadFile(it->file_id, data, it->stream_id)) {
                 ready.emplace_back(std::move(it->callback), std::move(data));
-            else if (static_cast<int32_t>(now - it->deadline_ms) >= 0) // deadline passed (wrap-safe)
-                ready.emplace_back(std::move(it->callback), std::vector<uint8_t>{});
-            else {
-                ++it;
-                continue;
+                it = m_pending_reads.erase(it);
             }
-            it = m_pending_reads.erase(it);
+            else
+                ++it;
         }
     }
     for (auto& [callback, data] : ready)

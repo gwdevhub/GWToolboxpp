@@ -129,11 +129,10 @@ private:
     struct PendingRead {
         uint32_t file_id;
         uint32_t stream_id;
-        uint32_t deadline_ms; // GetTickCount() at which the request gives up
         ReadCallback callback;
     };
     std::mutex m_pending_mutex; // guards m_pending_reads
-    std::vector<PendingRead> m_pending_reads;
+    std::vector<PendingRead> m_pending_reads; // retried until they resolve (no timeout)
 
     std::mutex m_trigger_mutex; // guards m_trigger + m_tickled_at + m_tickle_batch
     TriggerFn m_trigger;
