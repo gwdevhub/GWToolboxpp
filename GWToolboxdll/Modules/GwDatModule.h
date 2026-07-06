@@ -118,6 +118,7 @@ private:
 
     std::mutex m_load_mutex;
     std::atomic<bool> m_loaded{false};
+    std::atomic<bool> m_terminated{false}; // set by Terminate(); blocks worker respawn + new async reads
     std::atomic<bool> m_handle_enum_failed{false}; // set when the handle scan itself failed (AV/anti-cheat)
 
     std::thread m_worker;       // dedicated read/decode worker (polls for pending async reads)

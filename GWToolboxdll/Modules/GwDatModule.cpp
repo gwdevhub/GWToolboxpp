@@ -274,9 +274,10 @@ namespace {
     // the dat worker, then uploads on the DX thread. Gating on one stream is enough - a file's streams
     // arrive together, so multi-stream decoders (item dye masks) find theirs too.
     template <typename Decode>
-    void QueueDecode(GwImg* img, uint32_t file_id, uint32_t stream_id, Decode decode)
+    void QueueDecode(std::shared_ptr<GwImg> img, uint32_t file_id, uint32_t stream_id, Decode decode)
     {
         img->m_pending = true;
+        // Both lambdas copy the shared_ptr, so the image outlives Terminate() until the upload runs.
         GwDatModule::ReadFileAsync(file_id, [img, decode](std::vector<uint8_t>& bytes) {
             auto result = std::make_shared<ArgbImage>();
             const bool ok = !bytes.empty() && decode(result->pixels, result->dims) && result->dims.x > 0 && result->dims.y > 0;
@@ -292,23 +293,27 @@ namespace {
     // Keyed by (stream_id << 32 | file_id) so different streams of one file cache separately.
     uint64_t TextureKey(uint32_t file_id, uint32_t stream_id) { return (static_cast<uint64_t>(stream_id) << 32) | file_id; }
 
-    std::map<uint64_t, GwImg*> textures_by_file_id;
-    std::map<uint32_t, GwImg*> greyscale_textures_by_file_id;
-    std::map<uint64_t, GwImg*> item_images_by_file_id; // key = dyes << 32 | model_file_id
+    // Shared-owned: an in-flight decode / DX-upload task keeps its GwImg alive even if Terminate() clears
+    // the cache first, so the worker/render threads never touch a freed image (the teardown race).
+    std::map<uint64_t, std::shared_ptr<GwImg>> textures_by_file_id;
+    std::map<uint32_t, std::shared_ptr<GwImg>> greyscale_textures_by_file_id;
+    std::map<uint64_t, std::shared_ptr<GwImg>> item_images_by_file_id; // key = dyes << 32 | model_file_id
 
     // Cached GwImg for key, created from the given GwImg ctor args if absent.
     template <typename Map, typename Key, typename... Args>
-    GwImg* GetOrCreate(Map& map, Key key, Args... args)
+    const std::shared_ptr<GwImg>& GetOrCreate(Map& map, Key key, Args... args)
     {
         const auto found = map.find(key);
-        return found != map.end() ? found->second : (map[key] = new GwImg(args...));
+        if (found != map.end())
+            return found->second;
+        return map[key] = std::make_shared<GwImg>(args...);
     }
 } // namespace
 
 IDirect3DTexture9** GwDatModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
 {
-    GwImg* img = GetOrCreate(greyscale_textures_by_file_id, file_id, file_id);
-    if (WantsDecode(img))
+    const auto& img = GetOrCreate(greyscale_textures_by_file_id, file_id, file_id);
+    if (WantsDecode(img.get()))
         QueueDecode(img, file_id, 0, [file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeGreyscaleToArgb(file_id, argb, dims);
         });
@@ -373,8 +378,8 @@ void GwDatModule::Initialize()
 
 IDirect3DTexture9** GwDatModule::LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id)
 {
-    GwImg* img = GetOrCreate(textures_by_file_id, TextureKey(file_id, stream_id), file_id, stream_id);
-    if (WantsDecode(img))
+    const auto& img = GetOrCreate(textures_by_file_id, TextureKey(file_id, stream_id), file_id, stream_id);
+    if (WantsDecode(img.get()))
         QueueDecode(img, file_id, stream_id, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeTextureToArgb(file_id, argb, dims, stream_id);
         });
@@ -384,8 +389,8 @@ IDirect3DTexture9** GwDatModule::LoadTextureFromFileId(uint32_t file_id, uint32_
 IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t dyes)
 {
     const uint64_t key = (static_cast<uint64_t>(dyes) << 32) | model_file_id;
-    GwImg* img = GetOrCreate(item_images_by_file_id, key, model_file_id, 1u, dyes);
-    if (WantsDecode(img))
+    const auto& img = GetOrCreate(item_images_by_file_id, key, model_file_id, 1u, dyes);
+    if (WantsDecode(img.get()))
         QueueDecode(img, model_file_id, 1, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeItemToArgb(model_file_id, dyes, argb, dims);
         });
@@ -430,18 +435,11 @@ void GwDatModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::files
 
 void GwDatModule::Terminate()
 {
-    // Stop the worker before freeing the cache so no in-flight decode touches a deleted GwImg.
+    // Latch termination first so a late ReadFileAsync/render can't respawn the worker mid-teardown, then
+    // stop it. The cache is shared_ptr-owned: clearing it here only drops our references; any decode/upload
+    // task still in flight holds its own reference and frees its GwImg when it finishes.
+    m_terminated.store(true, std::memory_order_release);
     StopWorker();
-
-    for (auto gwimg_ptr : textures_by_file_id) {
-        delete gwimg_ptr.second;
-    }
-    for (auto gwimg_ptr : greyscale_textures_by_file_id) {
-        delete gwimg_ptr.second;
-    }
-    for (auto gwimg_ptr : item_images_by_file_id) {
-        delete gwimg_ptr.second;
-    }
     textures_by_file_id.clear();
     greyscale_textures_by_file_id.clear();
     item_images_by_file_id.clear();
@@ -617,6 +615,8 @@ void GwDatModule::WorkerLoop()
 
 void GwDatModule::StartWorker()
 {
+    if (m_terminated.load(std::memory_order_acquire))
+        return; // never respawn after Terminate()
     std::scoped_lock<std::mutex> lock(m_worker_mutex);
     if (m_worker_running)
         return;
@@ -942,6 +942,8 @@ void GwDatModule::ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_
         return;
     }
     auto& self = Instance();
+    if (self.m_terminated.load(std::memory_order_acquire))
+        return; // dropping the callback (and its GwImg ref) - the module is going away
     self.StartWorker(); // the poll loop delivers
     std::scoped_lock<std::mutex> lock(self.m_pending_mutex);
     self.m_pending_reads.push_back({file_id, stream_id, std::move(callback)});
