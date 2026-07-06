@@ -263,7 +263,7 @@ namespace {
         AddEffect(pak->value, target->pos.x, target->pos.y, target->pos.zplane, src == 1, settings);
     }
 
-    void OnPlayEffect(GW::HookStatus*, GW::Packet::StoC::PlayEffect* pak)
+    void OnPlayEffect(GW::HookStatus*, const GW::Packet::StoC::PlayEffect* pak)
     {
         if (!InExplorable()) {
             return;
