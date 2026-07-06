@@ -34,6 +34,7 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
+#include <Utils/AoeEffects.h>
 #include <Utils/GuiUtils.h>
 
 #include <Defines.h>
@@ -579,23 +580,10 @@ namespace {
         Instance().pingslines_renderer.P046Callback(pak);
     }
 
-    void OnPlayEffect(const GW::HookStatus*, GW::Packet::StoC::PlayEffect* pak)
-    {
-        if (!(Instance().visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)) return;
-        Instance().effect_renderer.PacketCallback(pak);
-    }
-
-    void OnGenericValue(const GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak)
-    {
-        if (!(Instance().visible && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable)) return;
-        Instance().effect_renderer.PacketCallback(pak);
-    }
-
     void OnGenericValueTarget(GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* pak)
     {
         if (!Instance().visible) return;
         Instance().pingslines_renderer.P153Callback(pak);
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) Instance().effect_renderer.PacketCallback(pak);
     }
 
     bool RepositionMinimapToCompass()
@@ -873,9 +861,8 @@ void Minimap::Initialize()
     GW::UI::RegisterKeyupCallback(&Generic_HookEntry, OnKeyup);
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentPinged>(&Generic_HookEntry, OnAgentPinged);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&Generic_HookEntry, OnPlayEffect);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(&Generic_HookEntry, OnGenericValue);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(&Generic_HookEntry, OnGenericValueTarget);
+    AoeEffects::Initialize();
     constexpr std::array hook_messages = {GW::UI::UIMessage::kMapChange,
                                           GW::UI::UIMessage::kMapLoaded,
                                           GW::UI::UIMessage::kChangeTarget,

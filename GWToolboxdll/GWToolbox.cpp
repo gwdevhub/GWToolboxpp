@@ -24,6 +24,7 @@
 #include <GWToolbox.h>
 #include <Logger.h>
 #include <Timer.h>
+#include <Utils/AoeEffects.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/TeamBuild.h>
@@ -1333,6 +1334,7 @@ void GWToolbox::UpdateTerminating(float delta_f, bool panicking)
 
     // All modules are gone (so the shared compositor has no registered draws); release its hook and GPU resources.
     GameWorldCompositor::Terminate();
+    AoeEffects::Terminate();
 
     GW::DisableHooks();
 
