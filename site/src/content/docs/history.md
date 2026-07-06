@@ -7,6 +7,11 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.31
+* [New] When an item icon isn't present in your local `Gw.dat` — common on the Steam release, which downloads game data on demand — the Armory now shows a warning and explains the fix: launch Guild Wars once with the `-image` command line option to download all game data. A new [Troubleshooting](/docs/troubleshooting/#missing-images-in-toolbox) section walks through the setup for Steam and standalone installs.
+* [Fix] Fixed occasional crashing.
+* [Fix] Fixed layout bugs with the party window position module.
+
 ## Version 8.30
 * [New] Item icons are now shown in the item's applied dye colour — including combined multi-dye colours — wherever Toolbox draws an item icon, such as the item info window and the Armory piece previews.
 * [Fix] Item and skill icons now load directly from the game's `Gw.dat` file, so they keep working across Guild Wars updates that shift the game's memory (which broke the previous method).
