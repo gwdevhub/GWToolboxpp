@@ -154,6 +154,7 @@ void GwDatArchive::WorkerLoop()
         if (task)
             task();
         ProcessPendingReads();
+        FlushTickles(); // send the reads' fetch requests as one batch
     }
 }
 
@@ -182,8 +183,12 @@ void GwDatArchive::StopWorker()
         std::scoped_lock<std::mutex> lock(m_task_mutex);
         m_worker_running = false;
     }
-    std::scoped_lock<std::mutex> lock(m_pending_mutex);
-    m_pending_reads.clear(); // undelivered async reads are dropped on stop
+    {
+        std::scoped_lock<std::mutex> lock(m_pending_mutex);
+        m_pending_reads.clear(); // undelivered async reads are dropped on stop
+    }
+    std::scoped_lock<std::mutex> tlock(m_trigger_mutex);
+    m_tickle_batch.clear(); // undelivered fetch requests are dropped on stop
 }
 
 void GwDatArchive::EnqueueTask(std::function<void()> task)
@@ -448,23 +453,34 @@ void GwDatArchive::SetTrigger(TriggerFn trigger)
     m_trigger = std::move(trigger);
 }
 
-// Ask the client to fetch a just-missed file so a later read may find it; throttled per id so a
-// per-frame retry loop doesn't spam. Fires the trigger outside the lock.
+// Queue a just-missed file for the client to fetch so a later read may find it; throttled per id so a
+// per-frame retry loop doesn't spam. The batch is sent by FlushTickles (worker thread).
 void GwDatArchive::TickleFetch(uint32_t file_id)
 {
+    std::scoped_lock<std::mutex> lock(m_trigger_mutex);
+    if (!m_trigger)
+        return;
+    const uint32_t now = GetTickCount();
+    const auto it = m_tickled_at.find(file_id);
+    if (it != m_tickled_at.end() && now - it->second < kTickleThrottleMs)
+        return; // asked recently (elapsed is unsigned, wrap-safe for a session)
+    m_tickled_at[file_id] = now;
+    m_tickle_batch.push_back(file_id);
+}
+
+// Hand every queued fetch id to the client in one request instead of one call per file.
+void GwDatArchive::FlushTickles()
+{
+    std::vector<uint32_t> batch;
     TriggerFn trigger;
     {
         std::scoped_lock<std::mutex> lock(m_trigger_mutex);
-        if (!m_trigger)
+        if (m_tickle_batch.empty() || !m_trigger)
             return;
-        const uint32_t now = GetTickCount();
-        const auto it = m_tickled_at.find(file_id);
-        if (it != m_tickled_at.end() && now - it->second < kTickleThrottleMs)
-            return; // asked recently (elapsed is unsigned, wrap-safe for a session)
-        m_tickled_at[file_id] = now;
+        batch.swap(m_tickle_batch);
         trigger = m_trigger;
     }
-    trigger(file_id);
+    trigger(batch.data(), batch.size());
 }
 
 // Worker pass: deliver resolved reads and time out stale ones. A miss tickles the client via ReadFile.

@@ -37,10 +37,13 @@ namespace {
             return;
         }
         Log::Log("[GwDat] game file-request trigger resolved at %p", reinterpret_cast<void*>(RequestFiles_Func));
-        GwDatArchive::Instance().SetTrigger([](uint32_t file_id) {
-            GW::GameThread::Enqueue([file_id] { // touches client state; run on the game thread
-                if (RequestFiles_Func)
-                    RequestFiles_Func(1, &file_id, kTriggerFlags);
+        GwDatArchive::Instance().SetTrigger([](const uint32_t* ids, size_t count) {
+            if (!count)
+                return;
+            std::vector<uint32_t> batch(ids, ids + count); // copy for the game-thread lambda
+            GW::GameThread::Enqueue([batch = std::move(batch)] { // touches client state; run on the game thread
+                if (RequestFiles_Func && !batch.empty())
+                    RequestFiles_Func(static_cast<uint32_t>(batch.size()), batch.data(), kTriggerFlags);
             });
         });
     }

@@ -43,10 +43,10 @@ public:
     using ReadCallback = std::function<void(std::vector<uint8_t>&)>;
     void ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id = 0);
 
-    // Optional hook to ask the client to fetch a file id. ReadFile calls it (throttled per id) whenever
-    // a read misses, so a streamed-only file gets pulled in for a later read. Wired by the GWCA layer;
-    // the reader works with or without it.
-    using TriggerFn = std::function<void(uint32_t file_id)>;
+    // Optional hook to ask the client to fetch file ids. Read misses accumulate (throttled per id) and
+    // are handed to this in batches by the worker, so a burst of missing files is one request, not one
+    // per file. Wired by the GWCA layer; the reader works with or without it.
+    using TriggerFn = std::function<void(const uint32_t* file_ids, size_t count)>;
     void SetTrigger(TriggerFn trigger);
 
     // Dedicated worker so reads/decodes run off the caller's thread; EnqueueTask runs inline if not started.
@@ -59,7 +59,8 @@ private:
 
     void WorkerLoop();
     void ProcessPendingReads();         // deliver/expire queued ReadFileAsync requests (worker thread)
-    void TickleFetch(uint32_t file_id); // ask the client to fetch a missed file (throttled per id)
+    void TickleFetch(uint32_t file_id); // queue a missed file for the client to fetch (throttled per id)
+    void FlushTickles();                // hand the queued fetch ids to the trigger as one batch (worker thread)
 
 #pragma pack(push, 1)
     struct MainHeader {
@@ -119,9 +120,10 @@ private:
     std::mutex m_pending_mutex; // guards m_pending_reads
     std::vector<PendingRead> m_pending_reads;
 
-    std::mutex m_trigger_mutex; // guards m_trigger + m_tickled_at
+    std::mutex m_trigger_mutex; // guards m_trigger + m_tickled_at + m_tickle_batch
     TriggerFn m_trigger;
     std::unordered_map<uint32_t, uint32_t> m_tickled_at; // file_id -> GetTickCount() of last fetch tickle
+    std::vector<uint32_t> m_tickle_batch;                // file ids queued for the next FlushTickles
     std::shared_mutex m_index_mutex;               // guards m_mapping/m_slots/m_fileid_to_slot against MaybeRefresh
     uint32_t m_last_refresh_ms = 0;                // GetTickCount of the last re-parse, to throttle refreshes
     long long m_indexed_size = 0;                  // dat size at the last parse; skip re-parsing if unchanged (guarded by m_load_mutex, like m_last_refresh_ms)
