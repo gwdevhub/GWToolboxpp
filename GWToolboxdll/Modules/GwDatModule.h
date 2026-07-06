@@ -52,9 +52,9 @@ public:
     // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
     static bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
-    // Async ReadFile: the worker retries until the file resolves, then calls `callback` (worker thread)
-    // with the bytes, or with an empty vector after ~1 min; dropped if the worker stops. For files the
-    // client streams in on demand.
+    // Async ReadFile: the worker retries the read (re-requesting the file each dat-growth epoch), then calls
+    // `callback` (worker thread) with the bytes; or, after the retry budget runs out with no new content,
+    // with an empty vector (treat as "unavailable"). Dropped silently if the worker stops.
     using ReadCallback = std::function<void(std::vector<uint8_t>&)>;
     static void ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id = 0);
 
@@ -131,9 +131,12 @@ private:
         uint32_t file_id;
         uint32_t stream_id;
         ReadCallback callback;
+        int attempts = 0;  // consecutive misses in the current epoch; give up at kMaxReadAttempts
+        int epoch = 0;     // m_index_epoch when the retry budget was last reset (a dat growth resets it)
     };
     std::mutex m_pending_mutex; // guards m_pending_reads
-    std::vector<PendingRead> m_pending_reads; // retried until they resolve (no timeout)
+    std::vector<PendingRead> m_pending_reads; // retried until they resolve or the retry budget runs out
+    std::atomic<int> m_index_epoch{0};        // bumped on each dat re-parse; grants pending reads fresh retries
 
     std::mutex m_trigger_mutex; // guards m_trigger + m_tickled_at + m_tickle_batch
     TriggerFn m_trigger;

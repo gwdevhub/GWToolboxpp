@@ -32,29 +32,13 @@ namespace {
     // than our old 0x2 (priority 1 + a no-op "flush" bit the item path never sets).
     constexpr uint32_t kTriggerFlags = 0x10;
     RequestFiles_pt RequestFiles_Func = nullptr;
-    // TEMP experiment: DAT_01075278, the download-suspend flag Main toggles. FUN_0082da30 no-ops the entire
-    // request while it's non-zero, so clearing it right before a request (== FUN_0082d830(1), whose only
-    // effect on the resume path is this store) tests whether Main-suspend is what silently drops our fetches.
-    uint32_t* SuspendFlag = nullptr;
 
     void ResolveRequestFn()
     {
         // PUSH 0x10008; PUSH EAX; PUSH [EBP-4]; CALL <wrapper> - the ...E8 near call resolves the target.
         const uintptr_t call_addr = GW::Scanner::Find("\x68\x08\x00\x01\x00\x50\xff\x75\xfc\xe8", "xxxxxxxxxx", 9);
         RequestFiles_Func = call_addr ? reinterpret_cast<RequestFiles_pt>(GW::Scanner::FunctionFromNearCall(call_addr)) : nullptr;
-        if (RequestFiles_Func) {
-            Log::Log("[GwDat] game file-request trigger resolved at %p", reinterpret_cast<void*>(RequestFiles_Func));
-            // The wrapper opens with `CMP dword ptr [DAT_01075278], 0` (83 3D <addr32> 00); grab that addr.
-            const uint8_t* p = reinterpret_cast<const uint8_t*>(RequestFiles_Func);
-            for (int i = 0; i < 0x30; ++i) {
-                if (p[i] == 0x83 && p[i + 1] == 0x3D && p[i + 6] == 0x00) {
-                    SuspendFlag = reinterpret_cast<uint32_t*>(*reinterpret_cast<const uintptr_t*>(p + i + 2));
-                    break;
-                }
-            }
-            Log::Log("[GwDat] download-suspend flag %p", reinterpret_cast<void*>(SuspendFlag)); // TEMP
-        }
-        else
+        if (!RequestFiles_Func)
             Log::Log("[GwDat] game file-request trigger not found; async reads will wait passively.");
     }
 
@@ -260,9 +244,9 @@ namespace {
         }
     };
 
-    // Dispatch once: ReadFileAsync has no timeout, so it keeps retrying the read (and re-requesting the
-    // file) until it resolves, then delivers - an image whose file streams in later (e.g. on a map
-    // change) still loads without us re-dispatching here.
+    // Dispatch once: ReadFileAsync retries the read across dat-growth epochs, then delivers the bytes (or
+    // an empty vector once it gives up). Either way m_pending stays set, so a file that can't be resolved
+    // just leaves m_tex null (a placeholder) instead of us re-dispatching every frame.
     bool WantsDecode(const GwImg* img) { return !img->m_tex && !img->m_pending; }
 
     struct ArgbImage {
@@ -367,11 +351,8 @@ void GwDatModule::Initialize()
                 return;
             std::vector<uint32_t> batch(ids, ids + count); // copy for the game-thread lambda
             GW::GameThread::Enqueue([batch = std::move(batch)] {
-                if (RequestFiles_Func && !batch.empty()) {
-                    if (SuspendFlag) // TEMP: un-suspend downloads on the game thread just before requesting,
-                        *SuspendFlag = 0; // so no Main tick can re-suspend between the clear and the request.
+                if (RequestFiles_Func && !batch.empty())
                     RequestFiles_Func(static_cast<uint32_t>(batch.size()), batch.data(), kTriggerFlags);
-                }
             });
         });
 }
@@ -453,6 +434,7 @@ namespace {
     constexpr size_t kMaxView = 0x800000;                  // cap each mapped window at 8 MB
     constexpr uint32_t kRefreshThrottleMs = 2000;          // min gap between re-parses on a read miss
     constexpr uint32_t kAsyncPollMs = 250;                 // worker re-scan cadence for pending async reads
+    constexpr int kMaxReadAttempts = 80;                   // ~20s of misses (per dat-growth epoch) then give up
     constexpr uint32_t kTickleThrottleMs = 10000;          // re-ask the client for a given missed file at most this often
 
     DWORD AllocationGranularity()
@@ -566,36 +548,6 @@ namespace {
             return buffer;
         }
     }
-
-    // CRC32 (zlib/IEEE: reflected, init 0xFFFFFFFF, final XOR) - matches the client's own FUN_00471560.
-    // `crc` is the running (pre-final-XOR) value so buffers can be chained; seed with 0xFFFFFFFF.
-    uint32_t Crc32Acc(uint32_t crc, const uint8_t* data, size_t len)
-    {
-        for (size_t i = 0; i < len; ++i) {
-            crc ^= data[i];
-            for (int k = 0; k < 8; ++k)
-                crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
-        }
-        return crc;
-    }
-
-    // TEMP probe (not gating): logs the first few reads so we can confirm whether the MFT entry's crc is
-    // CRC32(payload) or CRC32(payload + file_id) before we trust it to reject mid-write reads.
-    void ProbeEntryCrc(uint32_t file_id, const std::vector<uint8_t>& payload, int32_t stored_crc)
-    {
-        static std::atomic<int> logged{0};
-        if (logged.fetch_add(1, std::memory_order_relaxed) >= 8)
-            return;
-        const uint32_t acc = Crc32Acc(0xFFFFFFFFu, payload.data(), payload.size());
-        const uint32_t crc_payload = ~acc;
-        const uint8_t id[4] = {static_cast<uint8_t>(file_id), static_cast<uint8_t>(file_id >> 8),
-                               static_cast<uint8_t>(file_id >> 16), static_cast<uint8_t>(file_id >> 24)};
-        const uint32_t crc_both = ~Crc32Acc(acc, id, 4);
-        Log::Log("[GwDat][crcprobe] id=%u size=%u stored=%08X payload=%08X both=%08X%s%s", file_id,
-                 static_cast<unsigned>(payload.size()), static_cast<unsigned>(stored_crc), crc_payload, crc_both,
-                 crc_payload == static_cast<uint32_t>(stored_crc) ? " MATCH:payload" : "",
-                 crc_both == static_cast<uint32_t>(stored_crc) ? " MATCH:both" : "");
-    }
 } // namespace
 
 
@@ -670,36 +622,6 @@ bool GwDatModule::AcquireMappingInto(void*& out_mapping, long long& out_size, st
     m_handle_enum_failed.store(false, std::memory_order_release);
     const auto* info = reinterpret_cast<const SystemHandleInfoEx*>(snapshot.data());
     const ULONG_PTR pid = GetCurrentProcessId();
-    // TEMP: on first load, list every dat-like handle the client holds (path + size + whether it carries
-    // the archive magic) so we can tell if streamed content lands in a file other than the one we bind to.
-    static std::atomic<bool> enumerated{false};
-    if (!enumerated.exchange(true)) {
-        for (ULONG_PTR i = 0; i < info->NumberOfHandles; ++i) {
-            const SystemHandleEntryEx& e = info->Handles[i];
-            if (e.UniqueProcessId != pid)
-                continue;
-            const HANDLE h = reinterpret_cast<HANDLE>(e.HandleValue);
-            if (GetFileType(h) != FILE_TYPE_DISK)
-                continue;
-            const std::wstring p = HandlePath(h);
-            if (p.empty())
-                continue;
-            const bool dat_ext = HasDatExtension(p);
-            if (!dat_ext && p.find(L"snapshot") == std::wstring::npos && p.find(L"temp") == std::wstring::npos &&
-                p.find(L".dat") == std::wstring::npos && p.find(L"$") == std::wstring::npos)
-                continue;
-            LARGE_INTEGER sz{};
-            const bool got = GetFileSizeEx(h, &sz);
-            int magic = -1;
-            if (dat_ext) {
-                const HANDLE m = MapDat(h);
-                magic = m ? 1 : 0;
-                if (m)
-                    CloseHandle(m);
-            }
-            Log::Log("[GwDat][handles] size=%lld magic=%d %S", got ? sz.QuadPart : -1, magic, p.c_str());
-        }
-    }
     for (ULONG_PTR i = 0; i < info->NumberOfHandles; ++i) {
         const SystemHandleEntryEx& entry = info->Handles[i];
         if (entry.UniqueProcessId != pid)
@@ -796,8 +718,6 @@ bool GwDatModule::ParseIndex()
     m_file_size = size;
     m_indexed_size = size;
     m_dat_path = path;
-    Log::Log("[GwDat] bound to archive %S (%lld bytes, %u files indexed)", // TEMP
-             path.c_str(), size, static_cast<unsigned>(m_fileid_to_slot.size()));
     return true;
 }
 
@@ -831,9 +751,6 @@ void GwDatModule::MaybeRefresh()
         CloseHandle(reinterpret_cast<HANDLE>(mapping));
         return;
     }
-    Log::Log("[GwDat] dat grew %lld -> %lld bytes, reindexed %u files (streamed-in files now readable)", // TEMP
-             last_size, size, static_cast<unsigned>(fileid_to_slot.size()));
-
     {
         std::unique_lock<std::shared_mutex> lock(m_index_mutex);
         CloseHandle(reinterpret_cast<HANDLE>(m_mapping));
@@ -847,8 +764,9 @@ void GwDatModule::MaybeRefresh()
         std::scoped_lock<std::mutex> guard(m_load_mutex);
         m_indexed_size = size; // next MaybeRefresh skips the re-parse until the dat grows again
     }
-    // The dat grew (files streamed in, e.g. a map load, which also clears the client's request queue),
-    // so drop the tickle throttle: still-missing pending reads re-request their files on the next pass.
+    // The dat grew (files streamed in, e.g. a map load): bump the epoch so still-pending reads get a fresh
+    // batch of retries, and drop the tickle throttle so they re-request on the next pass.
+    m_index_epoch.fetch_add(1, std::memory_order_relaxed);
     std::scoped_lock<std::mutex> tlock(m_trigger_mutex);
     m_tickled_at.clear();
 }
@@ -862,18 +780,6 @@ bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint
         return false;
     // A file's streams are a linked list: `c` is the stream number, `id` the next stream's slot.
     int idx = found->second;
-    // TEMP: dump the slot neighbourhood for the first few reads to reveal the true on-disk stream layout.
-    static std::atomic<int> dumped{0};
-    if (dumped.fetch_add(1, std::memory_order_relaxed) < 3) {
-        Log::Log("[GwDat][dump] file_id=%u want_stream=%u base_slot=%d total_slots=%u", file_id, stream_id,
-                 idx, static_cast<unsigned>(m_slots.size()));
-        for (int k = 0; k <= 0xd && idx + k >= 0 && idx + k < static_cast<int>(m_slots.size()); ++k) {
-            const MftEntry& s = m_slots[static_cast<size_t>(idx + k)];
-            Log::Log("[GwDat][dump]  +%d slot=%d c=%u b=%u a=%u size=%d id=%d crc=%08X off=%lld", k, idx + k,
-                     static_cast<unsigned>(s.c), static_cast<unsigned>(s.b), static_cast<unsigned>(s.a),
-                     s.size, s.id, static_cast<unsigned>(s.crc), static_cast<long long>(s.offset));
-        }
-    }
     const MftEntry* e = nullptr;
     for (int guard = 0; guard < 256; ++guard) {
         if (idx < 16 || idx >= static_cast<int>(m_slots.size()))
@@ -892,10 +798,7 @@ bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint
 
     input.resize(static_cast<size_t>(e->size));
     compressed = e->a != 0;
-    if (!ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size)))
-        return false;
-    ProbeEntryCrc(file_id, input, e->crc); // TEMP: confirm the crc semantics before gating reads on it
-    return true;
+    return ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size));
 }
 
 bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id)
@@ -946,7 +849,8 @@ void GwDatModule::ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_
         return; // dropping the callback (and its GwImg ref) - the module is going away
     self.StartWorker(); // the poll loop delivers
     std::scoped_lock<std::mutex> lock(self.m_pending_mutex);
-    self.m_pending_reads.push_back({file_id, stream_id, std::move(callback)});
+    self.m_pending_reads.push_back(
+        {file_id, stream_id, std::move(callback), 0, self.m_index_epoch.load(std::memory_order_relaxed)});
 }
 
 void GwDatModule::SetTrigger(TriggerFn trigger)
@@ -982,19 +886,13 @@ void GwDatModule::FlushTickles()
         batch.swap(m_tickle_batch);
         trigger = m_trigger;
     }
-    size_t base_present = 0; // TEMP: how many of these are already indexed (resident) - i.e. read-path bug,
-    {                        // not a download problem, if this is high
-        std::shared_lock<std::shared_mutex> ilock(m_index_mutex);
-        for (const uint32_t id : batch)
-            base_present += m_fileid_to_slot.count(id);
-    }
-    Log::Log("[GwDat] requesting %u file(s) (first id=%u; %u already have a base slot indexed)", // TEMP
-             static_cast<unsigned>(batch.size()), batch[0], static_cast<unsigned>(base_present));
     trigger(batch.data(), batch.size());
 }
 
-// Worker pass: deliver reads that now resolve; a miss stays queued (no timeout) and tickles the client
-// via ReadFile, so the read persists until the file streams in (e.g. on a later map change).
+// Worker pass: deliver reads that now resolve. A miss stays queued and tickles the client (via ReadFile);
+// each dat growth (map load) grants a fresh batch of retries, but after kMaxReadAttempts passes with no new
+// content we give up and deliver an empty vector so the consumer shows a placeholder instead of retrying
+// forever - files the client won't stream to us (e.g. unowned-item icons on a partial install) can't resolve.
 void GwDatModule::ProcessPendingReads()
 {
     std::vector<std::pair<ReadCallback, std::vector<uint8_t>>> ready; // callbacks fire outside the lock
@@ -1004,6 +902,17 @@ void GwDatModule::ProcessPendingReads()
             std::vector<uint8_t> data;
             if (ReadFile(it->file_id, data, it->stream_id)) {
                 ready.emplace_back(std::move(it->callback), std::move(data));
+                it = m_pending_reads.erase(it);
+                continue;
+            }
+            const int epoch = m_index_epoch.load(std::memory_order_relaxed); // ReadFile may have bumped it
+            if (it->epoch != epoch) {
+                it->epoch = epoch; // dat grew: reset the retry budget for a fresh look
+                it->attempts = 0;
+                ++it;
+            }
+            else if (++it->attempts >= kMaxReadAttempts) {
+                ready.emplace_back(std::move(it->callback), std::vector<uint8_t>{}); // give up: empty = failure
                 it = m_pending_reads.erase(it);
             }
             else
