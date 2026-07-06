@@ -24,12 +24,13 @@ namespace {
     // own preloads). Resolved from a unique call site via FunctionFromNearCall, which survives byte
     // shifts better than a prologue scan.
     using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
-    // 0x2 = enqueue + FLUSH. In the wrapper (FUN_0082da30), only `flags & 2` calls FUN_00832f00(), the
-    // flush that actually kicks the download queue on-the-fly; without it the id is enqueued but never
-    // fetched until the client flushes on its own (e.g. a map transition). We avoid 0x8 (asserts unless
-    // the download system is in a specific state), 0x10000/0x1 (cancel-tracking - returns a handle we'd
-    // leak, and 0x10001 hits the DAT_01075280 "offline" bail-out). 0x2 enqueues at priority 1, no leak.
-    constexpr uint32_t kTriggerFlags = 0x2;
+    // 0x10 = the client's own flag for UI item/icon/model requests: FUN_004d3660 (CrAppearanceDoll - the
+    // dress-up doll, the armory's twin), FUN_004c8180 (StoreFile), and the composite loaders FUN_008458e0
+    // / FUN_007fa450 all call FUN_0082da30(.., 0x10) to fetch an item's files (then open stream 1 to read
+    // the icon). It enqueues at priority 2 (the interactive/UI bucket), no cancel-tracking handle to leak,
+    // and dodges the 0x8 readiness assert and the 0x10001 "offline" bail-out. We match it verbatim rather
+    // than our old 0x2 (priority 1 + a no-op "flush" bit the item path never sets).
+    constexpr uint32_t kTriggerFlags = 0x10;
     RequestFiles_pt RequestFiles_Func = nullptr;
 
     void ResolveRequestFn()
