@@ -32,14 +32,28 @@ namespace {
     // than our old 0x2 (priority 1 + a no-op "flush" bit the item path never sets).
     constexpr uint32_t kTriggerFlags = 0x10;
     RequestFiles_pt RequestFiles_Func = nullptr;
+    // TEMP experiment: DAT_01075278, the download-suspend flag Main toggles. FUN_0082da30 no-ops the entire
+    // request while it's non-zero, so clearing it right before a request (== FUN_0082d830(1), whose only
+    // effect on the resume path is this store) tests whether Main-suspend is what silently drops our fetches.
+    uint32_t* SuspendFlag = nullptr;
 
     void ResolveRequestFn()
     {
         // PUSH 0x10008; PUSH EAX; PUSH [EBP-4]; CALL <wrapper> - the ...E8 near call resolves the target.
         const uintptr_t call_addr = GW::Scanner::Find("\x68\x08\x00\x01\x00\x50\xff\x75\xfc\xe8", "xxxxxxxxxx", 9);
         RequestFiles_Func = call_addr ? reinterpret_cast<RequestFiles_pt>(GW::Scanner::FunctionFromNearCall(call_addr)) : nullptr;
-        if (RequestFiles_Func)
+        if (RequestFiles_Func) {
             Log::Log("[GwDat] game file-request trigger resolved at %p", reinterpret_cast<void*>(RequestFiles_Func));
+            // The wrapper opens with `CMP dword ptr [DAT_01075278], 0` (83 3D <addr32> 00); grab that addr.
+            const uint8_t* p = reinterpret_cast<const uint8_t*>(RequestFiles_Func);
+            for (int i = 0; i < 0x30; ++i) {
+                if (p[i] == 0x83 && p[i + 1] == 0x3D && p[i + 6] == 0x00) {
+                    SuspendFlag = reinterpret_cast<uint32_t*>(*reinterpret_cast<const uintptr_t*>(p + i + 2));
+                    break;
+                }
+            }
+            Log::Log("[GwDat] download-suspend flag %p", reinterpret_cast<void*>(SuspendFlag)); // TEMP
+        }
         else
             Log::Log("[GwDat] game file-request trigger not found; async reads will wait passively.");
     }
@@ -348,8 +362,11 @@ void GwDatModule::Initialize()
                 return;
             std::vector<uint32_t> batch(ids, ids + count); // copy for the game-thread lambda
             GW::GameThread::Enqueue([batch = std::move(batch)] {
-                if (RequestFiles_Func && !batch.empty())
+                if (RequestFiles_Func && !batch.empty()) {
+                    if (SuspendFlag) // TEMP: un-suspend downloads on the game thread just before requesting,
+                        *SuspendFlag = 0; // so no Main tick can re-suspend between the clear and the request.
                     RequestFiles_Func(static_cast<uint32_t>(batch.size()), batch.data(), kTriggerFlags);
+                }
             });
         });
 }
