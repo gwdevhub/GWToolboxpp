@@ -124,6 +124,7 @@ private:
     std::unordered_map<uint32_t, uint32_t> m_tickled_at; // file_id -> GetTickCount() of last fetch tickle
     std::shared_mutex m_index_mutex;               // guards m_mapping/m_slots/m_fileid_to_slot against MaybeRefresh
     uint32_t m_last_refresh_ms = 0;                // GetTickCount of the last re-parse, to throttle refreshes
+    long long m_indexed_size = 0;                  // dat size at the last parse; skip re-parsing if unchanged (guarded by m_load_mutex, like m_last_refresh_ms)
     void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, replaced by MaybeRefresh when the dat grows
     long long m_file_size = 0;      // dat size captured when the mapping was created
     std::wstring m_dat_path;

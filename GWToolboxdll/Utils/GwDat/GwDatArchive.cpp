@@ -315,6 +315,7 @@ bool GwDatArchive::ParseIndex()
     }
     m_mapping = mapping;
     m_file_size = size;
+    m_indexed_size = size;
     m_dat_path = path;
     return true;
 }
@@ -322,12 +323,14 @@ bool GwDatArchive::ParseIndex()
 // Re-read the on-disk MFT (on a read miss, throttled) to pick up files streamed in since the last parse.
 void GwDatArchive::MaybeRefresh()
 {
+    long long last_size = 0;
     {
         std::scoped_lock<std::mutex> guard(m_load_mutex);
         const uint32_t now = GetTickCount();
         if (m_last_refresh_ms && now - m_last_refresh_ms < kRefreshThrottleMs)
             return;
         m_last_refresh_ms = now;
+        last_size = m_indexed_size;
     }
 
     void* mapping = nullptr;
@@ -335,6 +338,12 @@ void GwDatArchive::MaybeRefresh()
     std::wstring path;
     if (!AcquireMappingInto(mapping, size, path))
         return;
+    // The dat only grows as files stream in, so an unchanged size means nothing new to index - skip
+    // the costly MFT re-read (the fresh handle above still catches an atomic rename, which resizes).
+    if (size == last_size && size != 0) {
+        CloseHandle(reinterpret_cast<HANDLE>(mapping));
+        return;
+    }
     std::vector<MftEntry> slots;
     std::unordered_map<uint32_t, int> fileid_to_slot;
     if (!ParseFrom(mapping, size, slots, fileid_to_slot)) {
@@ -342,13 +351,17 @@ void GwDatArchive::MaybeRefresh()
         return;
     }
 
-    std::unique_lock<std::shared_mutex> lock(m_index_mutex);
-    CloseHandle(reinterpret_cast<HANDLE>(m_mapping));
-    m_mapping = mapping;
-    m_file_size = size;
-    m_dat_path = path;
-    m_slots.swap(slots);
-    m_fileid_to_slot.swap(fileid_to_slot);
+    {
+        std::unique_lock<std::shared_mutex> lock(m_index_mutex);
+        CloseHandle(reinterpret_cast<HANDLE>(m_mapping));
+        m_mapping = mapping;
+        m_file_size = size;
+        m_dat_path = path;
+        m_slots.swap(slots);
+        m_fileid_to_slot.swap(fileid_to_slot);
+    }
+    std::scoped_lock<std::mutex> guard(m_load_mutex);
+    m_indexed_size = size; // next MaybeRefresh skips the re-parse until the dat grows again
 }
 
 // Copies the raw (still-compressed) bytes for file_id/stream_id, shared-locked against MaybeRefresh.
