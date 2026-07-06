@@ -424,7 +424,13 @@ void GwDatArchive::ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32
     StartWorker(); // the poll loop must be running to deliver
     const uint32_t deadline = GetTickCount() + kAsyncReadTimeoutMs;
     std::scoped_lock<std::mutex> lock(m_pending_mutex);
-    m_pending_reads.push_back({file_id, stream_id, deadline, std::move(callback)});
+    m_pending_reads.push_back({file_id, stream_id, deadline, std::move(callback), false});
+}
+
+void GwDatArchive::SetTrigger(TriggerFn trigger)
+{
+    std::scoped_lock<std::mutex> lock(m_pending_mutex);
+    m_trigger = std::move(trigger);
 }
 
 // Worker-thread pass over the pending async reads: deliver any that now resolve, expire any past
@@ -432,10 +438,13 @@ void GwDatArchive::ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32
 void GwDatArchive::ProcessPendingReads()
 {
     std::vector<std::pair<ReadCallback, std::vector<uint8_t>>> ready;
+    std::vector<uint32_t> to_trigger; // file ids to ask the client to load, fired outside the lock
+    TriggerFn trigger;
     {
         std::scoped_lock<std::mutex> lock(m_pending_mutex);
         if (m_pending_reads.empty())
             return;
+        trigger = m_trigger; // copy so we can call it after releasing the lock
         const uint32_t now = GetTickCount();
         for (auto it = m_pending_reads.begin(); it != m_pending_reads.end();) {
             std::vector<uint8_t> data;
@@ -448,10 +457,17 @@ void GwDatArchive::ProcessPendingReads()
                 it = m_pending_reads.erase(it);
             }
             else {
+                // Not resident yet: ask the client to fetch it, but only once per request.
+                if (trigger && !it->triggered) {
+                    to_trigger.push_back(it->file_id);
+                    it->triggered = true;
+                }
                 ++it;
             }
         }
     }
+    for (uint32_t file_id : to_trigger)
+        trigger(file_id);
     for (auto& [callback, data] : ready)
         callback(data);
 }

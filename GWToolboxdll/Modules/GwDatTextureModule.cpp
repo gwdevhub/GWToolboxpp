@@ -6,6 +6,9 @@
 #include <Logger.h>
 #include "GwDatTextureModule.h"
 
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Utilities/Scanner.h>
+
 #include "Resources.h"
 #include <Utils/ArenaNetFileParser.h>
 #include <Utils/GwDat/GwDatArchive.h>
@@ -14,6 +17,34 @@
 #include <DirectXTex.h>
 
 namespace {
+
+    // Game file-request trigger: asks the client to load a file id from its dat/network (the safe
+    // FUN_0082da30 variant, which no-ops on bad state). Byte-pattern scanned against build 388118, so
+    // it may need re-deriving after a client update; if it doesn't resolve, async reads just wait
+    // passively for the client to stream the file on its own.
+    using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
+    constexpr uint32_t kTriggerFlags = 0x2; // enqueue + kick the download pump
+    RequestFiles_pt RequestFiles_Func = nullptr;
+
+    void WireGameFileTrigger()
+    {
+        RequestFiles_Func = reinterpret_cast<RequestFiles_pt>(GW::Scanner::Find(
+            "\x55\x8b\xec\x53\x8b\x5d\x08\x56\x57\x85\xdb\x0f\x84\x9c\x02\x00\x00"
+            "\x83\x3d\x78\x52\x07\x01\x00\x0f\x85\x8f\x02\x00\x00\x8b\x35\xf4\x76\xbe\x00\x85\xf6",
+            "xxxxxxxxxxxxx????xx????xxx????xx????xx", 0));
+        if (!RequestFiles_Func) {
+            Log::Log("[GwDat] game file-request trigger not found; async reads will wait passively.");
+            return;
+        }
+        Log::Log("[GwDat] game file-request trigger resolved at %p", reinterpret_cast<void*>(RequestFiles_Func));
+        GwDatArchive::Instance().SetTrigger([](uint32_t file_id) {
+            // FUN_0082da30 touches client state, so issue the request on the game thread.
+            GW::GameThread::Enqueue([file_id] {
+                if (RequestFiles_Func)
+                    RequestFiles_Func(1, &file_id, kTriggerFlags);
+            });
+        });
+    }
 
     struct Vec2i {
         int x = 0;
@@ -320,6 +351,8 @@ void GwDatTextureModule::Initialize()
     ToolboxModule::Initialize();
     // The dat is indexed lazily on the first read; start its dedicated read/decode worker.
     GwDatArchive::Instance().StartWorker();
+    // Let async reads prompt the client to fetch a streamed-only file (best-effort; see the helper).
+    WireGameFileTrigger();
 }
 
 IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id)

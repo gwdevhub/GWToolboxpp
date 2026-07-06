@@ -45,6 +45,13 @@ public:
     using ReadCallback = std::function<void(std::vector<uint8_t>&)>;
     void ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id = 0);
 
+    // Optional hook that asks the running client to load a file id (from the dat or the network). When
+    // set, ReadFileAsync calls it once per pending file that isn't resident yet, so streamed-only files
+    // (e.g. a Steam .snapshot) get fetched instead of only waited for. Wired by the GWCA layer, which
+    // owns the game-function lookup; the pure reader here works with or without it.
+    using TriggerFn = std::function<void(uint32_t file_id)>;
+    void SetTrigger(TriggerFn trigger);
+
     // Dedicated worker so reads/decodes run off the caller's thread; EnqueueTask runs inline if not started.
     void StartWorker();
     void StopWorker();
@@ -109,11 +116,13 @@ private:
     struct PendingRead {
         uint32_t file_id;
         uint32_t stream_id;
-        uint32_t deadline_ms; // GetTickCount() value at which this request gives up
+        uint32_t deadline_ms;   // GetTickCount() value at which this request gives up
         ReadCallback callback;
+        bool triggered = false; // whether we've already asked the client to load this file
     };
-    std::mutex m_pending_mutex; // guards m_pending_reads
+    std::mutex m_pending_mutex; // guards m_pending_reads + m_trigger
     std::vector<PendingRead> m_pending_reads;
+    TriggerFn m_trigger;
     std::shared_mutex m_index_mutex;               // guards m_mapping/m_slots/m_fileid_to_slot against MaybeRefresh
     uint32_t m_last_refresh_ms = 0;                // GetTickCount of the last re-parse, to throttle refreshes
     void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, replaced by MaybeRefresh when the dat grows
