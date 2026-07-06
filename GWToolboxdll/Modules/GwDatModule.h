@@ -48,6 +48,10 @@ public:
     // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
     static bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
+    // True once any read found the dat mapped but did not contain the requested file - i.e. an incomplete
+    // (streaming/Steam) install. UI can surface this to suggest running Guild Wars with -image.
+    static bool MissingDatData();
+
 private:
     // Maps the client's open dat handle on first use (idempotent, thread-safe).
     bool EnsureLoaded();
@@ -92,6 +96,7 @@ private:
     std::mutex m_load_mutex;                        // serialises the one-time ParseIndex
     std::atomic<bool> m_loaded{false};
     std::atomic<bool> m_handle_enum_failed{false}; // set when the handle scan itself failed (AV/anti-cheat)
+    std::atomic<bool> m_missing_data{false};       // set when the dat is mapped but lacks a requested file
 
     // Written once by ParseIndex() under m_load_mutex, then immutable and read lock-free.
     void* m_mapping = nullptr; // file-mapping HANDLE for the dat

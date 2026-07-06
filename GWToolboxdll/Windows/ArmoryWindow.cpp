@@ -1410,6 +1410,14 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
                 SetArmorItem(&imgui_armor_pieces[GetSlotFromItemType(weapon_type)]);
             }
         }
+        if (GwDatModule::MissingDatData()) {
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.0f, 1.0f)); // amber warning
+            ImGui::TextWrapped("Some images couldn't be loaded: your Gw.dat is missing data (a partial "
+                               "Steam/streaming install). Run Guild Wars once with the -image command-line "
+                               "option to download all game data, then restart.");
+            ImGui::PopStyleColor();
+        }
         #ifdef _DEBUG
         if (ImGui::Button("Snapshot inventory weapons")) {
             state = SnapshotState::Pending;
