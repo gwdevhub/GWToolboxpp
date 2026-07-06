@@ -149,7 +149,7 @@ void GwDatArchive::WorkerLoop()
 
 void GwDatArchive::StartWorker()
 {
-    std::lock_guard<std::mutex> lock(m_task_mutex);
+    std::scoped_lock<std::mutex> lock(m_task_mutex);
     if (m_worker_running)
         return;
     m_worker_stop = false;
@@ -160,7 +160,7 @@ void GwDatArchive::StartWorker()
 void GwDatArchive::StopWorker()
 {
     {
-        std::lock_guard<std::mutex> lock(m_task_mutex);
+        std::scoped_lock<std::mutex> lock(m_task_mutex);
         if (!m_worker_running)
             return;
         m_worker_stop = true;
@@ -168,14 +168,14 @@ void GwDatArchive::StopWorker()
     m_task_cv.notify_all();
     if (m_worker.joinable())
         m_worker.join();
-    std::lock_guard<std::mutex> lock(m_task_mutex);
+    std::scoped_lock<std::mutex> lock(m_task_mutex);
     m_worker_running = false;
 }
 
 void GwDatArchive::EnqueueTask(std::function<void()> task)
 {
     {
-        std::lock_guard<std::mutex> lock(m_task_mutex);
+        std::scoped_lock<std::mutex> lock(m_task_mutex);
         if (m_worker_running) {
             m_tasks.push(std::move(task));
             m_task_cv.notify_one();
@@ -189,7 +189,7 @@ bool GwDatArchive::EnsureLoaded()
 {
     if (m_loaded.load(std::memory_order_acquire))
         return true;
-    std::lock_guard<std::mutex> lock(m_load_mutex);
+    std::scoped_lock<std::mutex> lock(m_load_mutex);
     if (!m_loaded.load(std::memory_order_relaxed) && ParseIndex())
         m_loaded.store(true, std::memory_order_release);
     return m_loaded.load(std::memory_order_relaxed);
@@ -309,7 +309,7 @@ bool GwDatArchive::ParseIndex()
 void GwDatArchive::MaybeRefresh()
 {
     {
-        std::lock_guard<std::mutex> guard(m_load_mutex);
+        std::scoped_lock<std::mutex> guard(m_load_mutex);
         const uint32_t now = GetTickCount();
         if (m_last_refresh_ms && now - m_last_refresh_ms < kRefreshThrottleMs)
             return;

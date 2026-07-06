@@ -82,7 +82,7 @@ bool ThreadedWebSocket::Send(std::string payload)
     if (pending_disconnect_.load()) return false;
     connect_requested_ = true;
     EnsureThreadRunning();
-    std::lock_guard lk(queue_mutex_);
+    std::scoped_lock lk(queue_mutex_);
     send_queue_.push(std::move(payload));
     return true;
 }
@@ -198,7 +198,7 @@ void ThreadedWebSocket::DrainSendQueue()
     while (ws_ && ws_->getReadyState() == easywsclient::WebSocket::OPEN) {
         std::string msg;
         {
-            std::lock_guard lk(queue_mutex_);
+            std::scoped_lock lk(queue_mutex_);
             if (send_queue_.empty()) break;
             msg = std::move(send_queue_.front());
             send_queue_.pop();
@@ -215,7 +215,7 @@ void ThreadedWebSocket::CloseSocket()
     delete ws_;
     ws_ = nullptr;
     {
-        std::lock_guard lk(queue_mutex_);
+        std::scoped_lock lk(queue_mutex_);
         while (!send_queue_.empty())
             send_queue_.pop();
     }

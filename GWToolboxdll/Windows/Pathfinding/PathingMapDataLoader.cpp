@@ -651,7 +651,7 @@ namespace Pathing {
         static std::mutex mtx;
         static std::unordered_map<uint32_t, std::pair<Vec2f, Vec2f>> cache;
         {
-            std::lock_guard lock(mtx);
+            std::scoped_lock lock(mtx);
             if (const auto it = cache.find(map_file_id); it != cache.end()) {
                 bounds_min = it->second.first;
                 bounds_max = it->second.second;
@@ -662,7 +662,7 @@ namespace Pathing {
         PathingMapData data;
         if (!LoadPathingMapDataFromDAT(map_file_id, &data)) return false;
 
-        std::lock_guard lock(mtx);
+        std::scoped_lock lock(mtx);
         cache[map_file_id] = {data.bounds_min, data.bounds_max};
         bounds_min = data.bounds_min;
         bounds_max = data.bounds_max;

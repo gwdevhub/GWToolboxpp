@@ -131,7 +131,7 @@ namespace {
         if (!InExplorable()) {
             return;
         }
-        std::lock_guard lock(effects_mutex); // the settings table can be rebuilt from the render thread
+        std::scoped_lock lock(effects_mutex); // the settings table can be rebuilt from the render thread
         const auto it = effect_settings.find(pak->value);
         if (it == effect_settings.end()) {
             return;
@@ -156,7 +156,7 @@ namespace {
         if (!InExplorable()) {
             return;
         }
-        std::lock_guard lock(effects_mutex);
+        std::scoped_lock lock(effects_mutex);
         const auto it = effect_settings.find(pak->value);
         if (it == effect_settings.end()) {
             return;
@@ -227,7 +227,7 @@ void AoeEffects::Terminate()
         GW::StoC::RemoveCallbacks(&StoC_Hook);
         callbacks_registered = false;
     }
-    std::lock_guard lock(effects_mutex);
+    std::scoped_lock lock(effects_mutex);
     effects.clear();
     for (const auto& settings : effect_settings) {
         delete settings.second;
@@ -241,7 +241,7 @@ void AoeEffects::Terminate()
 
 void AoeEffects::LoadDefaults()
 {
-    std::lock_guard lock(effects_mutex);
+    std::scoped_lock lock(effects_mutex);
     effects.clear(); // records hold pointers into the settings table below
     for (const auto& settings : effect_settings) {
         delete settings.second;
@@ -278,7 +278,7 @@ std::unordered_map<uint32_t, AoeEffects::EffectSettings*>& AoeEffects::GetEffect
 void AoeEffects::GetActiveEffects(std::vector<ActiveEffect>& out)
 {
     out.clear();
-    std::lock_guard lock(effects_mutex);
+    std::scoped_lock lock(effects_mutex);
     std::erase_if(effects, [](const EffectRecord& e) {
         return TIMER_DIFF(e.start) > static_cast<clock_t>(e.duration);
     });
@@ -290,7 +290,7 @@ void AoeEffects::GetActiveEffects(std::vector<ActiveEffect>& out)
 
 void AoeEffects::Clear()
 {
-    std::lock_guard lock(effects_mutex);
+    std::scoped_lock lock(effects_mutex);
     effects.clear();
     for (const auto& trigger : effect_triggers) {
         trigger.second->triggers_handled.clear();

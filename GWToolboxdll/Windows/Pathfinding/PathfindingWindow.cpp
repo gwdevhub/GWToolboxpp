@@ -99,7 +99,7 @@ namespace {
 
     void TouchLru(uint64_t key)
     {
-        std::lock_guard lock(lru_mutex);
+        std::scoped_lock lock(lru_mutex);
         auto it = lru_pos.find(key);
         if (it != lru_pos.end()) lru_order.erase(it->second);
         lru_order.push_front(key);
@@ -112,13 +112,13 @@ namespace {
     struct RouteJobScope {
         RouteJobScope()
         {
-            std::lock_guard lock(lru_mutex);
+            std::scoped_lock lock(lru_mutex);
             ++route_jobs_active;
         }
         ~RouteJobScope()
         {
             {
-                std::lock_guard lock(lru_mutex);
+                std::scoped_lock lock(lru_mutex);
                 --route_jobs_active;
             }
             Resources::EnqueueMainTask([] {
@@ -251,7 +251,7 @@ namespace {
     {
         std::vector<uint64_t> evicted;
         {
-            std::lock_guard lock(lru_mutex);
+            std::scoped_lock lock(lru_mutex);
             if (route_jobs_active > 0) return;
             // Current-map keys low32 = MapID, foreign-map keys low32 = file_hash — pin against both forms.
             const uint32_t cur_fh = GetMapFileId(GW::Map::GetMapID());
@@ -578,7 +578,7 @@ namespace {
         bool expected = false;
         if (!prewarm_in_flight.compare_exchange_strong(expected, true)) return; // one load in flight at a time
         Resources::EnqueueWorkerTask([] {
-            std::lock_guard route_lock(route_mutex); // same serialization as a route build; see route_mutex
+            std::scoped_lock route_lock(route_mutex); // same serialization as a route build; see route_mutex
             RouteJobScope job_scope;
             GetMilepathForCurrentMap(true); // the blocking DAT read happens here, on the worker
             prewarm_in_flight = false;
@@ -2785,7 +2785,7 @@ void PathfindingWindow::Terminate()
     }
     mile_paths_by_coords.clear();
     {
-        std::lock_guard lock(lru_mutex);
+        std::scoped_lock lock(lru_mutex);
         lru_order.clear();
         lru_pos.clear();
         route_jobs_active = 0;
@@ -3069,7 +3069,7 @@ void PathfindingWindow::ClearWorldMapRoute()
 bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>* out)
 {
     if (!out) return false;
-    std::lock_guard route_lock(route_mutex); // one build at a time; see route_mutex
+    std::scoped_lock route_lock(route_mutex); // one build at a time; see route_mutex
     RouteJobScope job_scope;                 // defer eviction while we hold MilePath*
     return ComputeRoute(from_world, to_world, *out);
 }
@@ -3077,7 +3077,7 @@ bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Ve
 bool PathfindingWindow::RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out, std::vector<GW::GamePos>* out_game)
 {
     if (!out) return false;
-    std::lock_guard route_lock(route_mutex); // one build at a time; see route_mutex
+    std::scoped_lock route_lock(route_mutex); // one build at a time; see route_mutex
     RouteJobScope job_scope;                 // defer eviction while we hold MilePath*
     return ComputeSegment(map_id, from, to, *out, out_game);
 }

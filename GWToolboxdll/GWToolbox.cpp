@@ -788,7 +788,7 @@ bool GWToolbox::IsInitialized()
 
 bool GWToolbox::ToggleModule(ToolboxModule& m, const bool enable)
 {
-    std::lock_guard lock(module_management_mutex);
+    std::scoped_lock lock(module_management_mutex);
     if (IsModuleEnabled(&m) == enable) return enable;
     const bool added = ToggleTBModule(m, modules_enabled, enable);
     UpdateEnabledWidgetVectors(&m, added);
@@ -845,7 +845,7 @@ DWORD __stdcall GWToolbox::MainLoop(LPVOID module) noexcept
 
 void GWToolbox::Initialize(LPVOID module)
 {
-    std::lock_guard<std::recursive_mutex> lock(initialize_mutex);
+    std::scoped_lock<std::recursive_mutex> lock(initialize_mutex);
     if (module) {
         dllmodule = static_cast<HMODULE>(module);
     }
@@ -913,13 +913,13 @@ bool GWToolbox::SetSettingsFolder(const std::filesystem::path& path)
 
 bool GWToolbox::IsModuleEnabled(ToolboxModule* m)
 {
-    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
+    std::scoped_lock<std::recursive_mutex> lock(module_management_mutex);
     return m && std::ranges::find(modules_enabled, m) != modules_enabled.end();
 }
 
 bool GWToolbox::IsModuleEnabled(const char* name)
 {
-    std::lock_guard<std::recursive_mutex> lock(module_management_mutex);
+    std::scoped_lock<std::recursive_mutex> lock(module_management_mutex);
     return name && std::ranges::find_if(modules_enabled, [name](ToolboxModule* m) {
                        return strcmp(m->Name(), name) == 0;
                    }) != modules_enabled.end();
@@ -1181,7 +1181,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
 
     if (GW::UI::GetIsUIDrawn()) {
         ToolboxUIElement::UpdateCachedFrameStates();
-        std::lock_guard lock(module_management_mutex);
+        std::scoped_lock lock(module_management_mutex);
         // NB: Don't use an iterator here, because it could be invalidated during draw
         for (size_t i = 0; i < ui_elements_enabled.size(); i++) {
             const auto uielement = ui_elements_enabled[i];
