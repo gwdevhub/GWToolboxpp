@@ -23,7 +23,7 @@
 #include <glaze/glaze.hpp>
 
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/Resources.h>
 #include <Modules/ToolboxSettings.h>
@@ -83,13 +83,13 @@ namespace {
     {
         switch (currency) {
             case Currency::Platinum:
-                return GwDatTextureModule::LoadTextureFromFileId(0x1df32);
+                return GwDatModule::LoadTextureFromFileId(0x1df32);
             case Currency::Ecto:
-                return GwDatTextureModule::LoadTextureFromFileId(0x151fa);
+                return GwDatModule::LoadTextureFromFileId(0x151fa);
             case Currency::Zkeys:
-                return GwDatTextureModule::LoadTextureFromFileId(0x52ecf);
+                return GwDatModule::LoadTextureFromFileId(0x52ecf);
             case Currency::Arms:
-                return GwDatTextureModule::LoadTextureFromFileId(0x2ae18);
+                return GwDatModule::LoadTextureFromFileId(0x2ae18);
         }
         return nullptr;
     }

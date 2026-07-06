@@ -9,7 +9,7 @@ Files derived from that project:
     AtexAsm.cpp / AtexAsm.h         - ATEX decompression sub-codes
     AtexDecompress.cpp / AtexDecompress.h - ATEX decompression driver
 
-GwDatArchive.cpp / GwDatArchive.h (the MFT parsing and file lookup) is an
+The MFT parsing and file lookup (in Modules/GwDatModule.cpp) is an
 independent reimplementation based on GuildWarsMapBrowser's GWUnpacker.
 
 ------------------------------------------------------------------------------

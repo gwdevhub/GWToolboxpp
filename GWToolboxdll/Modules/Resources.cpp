@@ -36,7 +36,7 @@
 #include <bcrypt.h>
 #pragma comment(lib, "bcrypt.lib")
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Constants/EncStrings.h>
 #include <Utils/TextUtils.h>
 #include <wincodec.h>
@@ -1098,12 +1098,12 @@ std::filesystem::path Resources::GetExePath()
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    return skill && skill->icon_file_id ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id) : &empty_texture_ptr;
+    return skill && skill->icon_file_id ? GwDatModule::LoadTextureFromFileId(skill->icon_file_id) : &empty_texture_ptr;
 }
 IDirect3DTexture9** Resources::GetSkillHiResImage(GW::Constants::SkillID skill_id)
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    return skill && skill->icon_file_id_hi_res ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id_hi_res) : &empty_texture_ptr;
+    return skill && skill->icon_file_id_hi_res ? GwDatModule::LoadTextureFromFileId(skill->icon_file_id_hi_res) : &empty_texture_ptr;
 }
 
 IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill_id)
@@ -1346,7 +1346,7 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
 }
 
 namespace {
-    // Packs the item's four dye slots one per byte; GwDatTextureModule blends them (as GW
+    // Packs the item's four dye slots one per byte; GwDatModule blends them (as GW
     // combines up to four dyes) into the icon's colour. 0 when the item is undyed.
     uint32_t ItemDyes(GW::Item* item)
     {
@@ -1377,7 +1377,7 @@ IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
     if (!model_id_to_load)
         model_id_to_load = item->model_file_id;
     // The UI icon is stream 1 of the model file; the item's dyes recolour its stream 0xc mask region.
-    return GwDatTextureModule::LoadItemImage(model_id_to_load, ItemDyes(item));
+    return GwDatModule::LoadItemImage(model_id_to_load, ItemDyes(item));
 }
 
 IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)

@@ -9,7 +9,7 @@
 #include <Color.h>
 #include <ImGuiAddons.h>
 #include <Logger.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/RiverModule.h>
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsDoc.h>
@@ -514,7 +514,7 @@ void RiverModule::DrawInWorld(IDirect3DDevice9* device)
         if (device->SetStreamSource(0, mesh_vb, 0, sizeof(LavaVertex)) == D3D_OK) {
             // One draw per selected texture (each its own contiguous run of the shared vertex buffer).
             for (const auto& r : tex_ranges) {
-                IDirect3DTexture9** pp = GwDatTextureModule::LoadTextureFromFileId(r.file_id);
+                IDirect3DTexture9** pp = GwDatModule::LoadTextureFromFileId(r.file_id);
                 IDirect3DTexture9* tex = pp ? *pp : nullptr;
                 if (!tex || r.count < 3) continue;
                 device->SetTexture(0, tex);
@@ -580,7 +580,7 @@ void RiverModule::DrawSettings()
         ImGui::SameLine(0.f, 8.f);
         ImGui::TextDisabled("0x%X", kt.id);
         if (on) {
-            IDirect3DTexture9** pp = GwDatTextureModule::LoadTextureFromFileId(kt.id);
+            IDirect3DTexture9** pp = GwDatModule::LoadTextureFromFileId(kt.id);
             const bool ok = pp && *pp;
             ImGui::SameLine();
             ImGui::TextColored(ok ? green : red, ok ? ICON_FA_CHECK : "loading/invalid");

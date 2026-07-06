@@ -40,7 +40,7 @@
 #include "Widgets/WorldMapWidget.h"
 #include "Windows/Pathfinding/PathfindingWindow.h"
 #include "Windows/TravelWindow.h"
-#include "Modules/GwDatTextureModule.h"
+#include "Modules/GwDatModule.h"
 #include "Utils/ArenaNetFileParser.h"
 
 // Dev iteration tool: compiled in Debug (_DEBUG) and RelWithDebInfo (GWTB_HARNESS, which
@@ -408,7 +408,7 @@ namespace {
             if (sz >= 4) memcpy(magic, asset.data.data(), 4);
             Log::Log("[harness] dattex 0x%x: read=%d size=%u magic=[%s]", id, static_cast<int>(read_ok), static_cast<unsigned>(sz), magic);
             const std::wstring fn = L"dattex_" + std::to_wstring(id) + L".png";
-            GwDatTextureModule::SaveTextureFromFileIdToFile(id, Resources::GetPath(fn.c_str()));
+            GwDatModule::SaveTextureFromFileIdToFile(id, Resources::GetPath(fn.c_str()));
             write_status("dattex: queued");
             return;
         }

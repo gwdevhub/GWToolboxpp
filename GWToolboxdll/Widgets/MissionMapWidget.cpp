@@ -12,7 +12,7 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <ImGuiAddons.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -686,7 +686,7 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
         IM_COL32_WHITE,                   // 7: gray (same as 0)
     };
     for (const auto& icon : world_ctx->mission_map_icons) {
-        auto** tex = GwDatTextureModule::LoadGreyscaleTextureFromFileId(icon.model_id);
+        auto** tex = GwDatModule::LoadGreyscaleTextureFromFileId(icon.model_id);
         if (!tex || !*tex) continue;
         GW::Vec2f pos;
         GamePosToMissionMapScreenPos({icon.X, icon.Y}, pos);

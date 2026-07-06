@@ -15,7 +15,7 @@
 #include <ImGuiAddons.h>
 #include <Logger.h>
 #include <Modules/AudioSettings.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
 #include <Modules/WeatherModule.h>
 #include <Timer.h>
@@ -1292,9 +1292,9 @@ namespace {
 void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
 {
     if (!textures_requested) {
-        raindrop_tex_pp = GwDatTextureModule::LoadTextureFromFileId(kRaindropFileId);
-        snowflake_tex_pp = GwDatTextureModule::LoadTextureFromFileId(kSnowflakeFileId);
-        splash_tex_pp = GwDatTextureModule::LoadTextureFromFileId(kSplashFileId);
+        raindrop_tex_pp = GwDatModule::LoadTextureFromFileId(kRaindropFileId);
+        snowflake_tex_pp = GwDatModule::LoadTextureFromFileId(kSnowflakeFileId);
+        splash_tex_pp = GwDatModule::LoadTextureFromFileId(kSplashFileId);
         textures_requested = true;
     }
 
@@ -1749,7 +1749,7 @@ void WeatherModule::Terminate()
     rain_inst_cap = snow_inst_cap = cloud_inst_cap = splash_cap = quad_ib_quads = 0;
     active_particles = {};
     active_condition = -1;
-    raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatTextureModule's cache
+    raindrop_tex_pp = snowflake_tex_pp = splash_tex_pp = nullptr; // owned by GwDatModule's cache
     textures_requested = false;
     last_update = 0;
     auto_climate = Climate::Temperate;
