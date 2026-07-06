@@ -814,6 +814,18 @@ bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint
         return false;
     // A file's streams are a linked list: `c` is the stream number, `id` the next stream's slot.
     int idx = found->second;
+    // TEMP: dump the slot neighbourhood for the first few reads to reveal the true on-disk stream layout.
+    static std::atomic<int> dumped{0};
+    if (dumped.fetch_add(1, std::memory_order_relaxed) < 3) {
+        Log::Log("[GwDat][dump] file_id=%u want_stream=%u base_slot=%d total_slots=%u", file_id, stream_id,
+                 idx, static_cast<unsigned>(m_slots.size()));
+        for (int k = 0; k <= 0xd && idx + k >= 0 && idx + k < static_cast<int>(m_slots.size()); ++k) {
+            const MftEntry& s = m_slots[static_cast<size_t>(idx + k)];
+            Log::Log("[GwDat][dump]  +%d slot=%d c=%u b=%u a=%u size=%d id=%d crc=%08X off=%lld", k, idx + k,
+                     static_cast<unsigned>(s.c), static_cast<unsigned>(s.b), static_cast<unsigned>(s.a),
+                     s.size, s.id, static_cast<unsigned>(s.crc), static_cast<long long>(s.offset));
+        }
+    }
     const MftEntry* e = nullptr;
     for (int guard = 0; guard < 256; ++guard) {
         if (idx < 16 || idx >= static_cast<int>(m_slots.size()))
