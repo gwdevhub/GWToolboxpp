@@ -1535,6 +1535,7 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     device->SetIndices(nullptr);
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
+    device->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, true); // MULTISAMPLEANTIALIAS alone doesn't smooth native D3DPT_LINELIST/LINESTRIP draws (range rings, custom lines/polygons, ping lines)
     device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
     device->SetPixelShader(nullptr);
     device->SetVertexShader(nullptr);
