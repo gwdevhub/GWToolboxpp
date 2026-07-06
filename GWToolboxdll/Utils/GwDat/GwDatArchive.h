@@ -37,18 +37,14 @@ public:
     // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
     bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
-    // Async variant of ReadFile: the worker retries the read until the file appears in the dat, then
-    // invokes `callback` (on the worker thread) with the decompressed bytes; if it hasn't shown up
-    // within ~1 minute the callback fires once with an empty vector. Lets callers wait for files the
-    // client streams in on demand (e.g. Steam .snapshot installs) without blocking. Starts the worker
-    // if needed. Undelivered requests are dropped (callback not called) if the worker is stopped.
+    // Async ReadFile: the worker retries until the file resolves, then calls `callback` (worker
+    // thread) with the bytes, or with an empty vector after ~1 min; dropped if the worker stops.
+    // For files the client streams in on demand (e.g. a Steam .snapshot).
     using ReadCallback = std::function<void(std::vector<uint8_t>&)>;
     void ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id = 0);
 
-    // Optional hook that asks the running client to load a file id (from the dat or the network). When
-    // set, ReadFileAsync calls it once per pending file that isn't resident yet, so streamed-only files
-    // (e.g. a Steam .snapshot) get fetched instead of only waited for. Wired by the GWCA layer, which
-    // owns the game-function lookup; the pure reader here works with or without it.
+    // Optional hook to ask the client to fetch a file id; ReadFileAsync calls it once per pending
+    // file not yet resident. Wired by the GWCA layer; the reader works with or without it.
     using TriggerFn = std::function<void(uint32_t file_id)>;
     void SetTrigger(TriggerFn trigger);
 
@@ -112,13 +108,12 @@ private:
     bool m_worker_running = false;
     bool m_worker_stop = false;
 
-    // Async ReadFile requests, retried by the worker until the file appears or the deadline passes.
     struct PendingRead {
         uint32_t file_id;
         uint32_t stream_id;
-        uint32_t deadline_ms;   // GetTickCount() value at which this request gives up
+        uint32_t deadline_ms;   // GetTickCount() at which the request gives up
         ReadCallback callback;
-        bool triggered = false; // whether we've already asked the client to load this file
+        bool triggered = false; // whether we've asked the client to fetch it yet
     };
     std::mutex m_pending_mutex; // guards m_pending_reads + m_trigger
     std::vector<PendingRead> m_pending_reads;

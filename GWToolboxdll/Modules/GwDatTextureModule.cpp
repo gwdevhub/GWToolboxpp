@@ -18,11 +18,8 @@
 
 namespace {
 
-    // Game file-request trigger: asks the client to load a file id from its dat/network. Anchored on
-    // the request function's unique DOWNLOAD_FLAG assertion string, so it survives client updates
-    // (unlike a raw byte pattern). It's the enqueue entry; the client pumps its download queue on its
-    // own, so no explicit "kick" is needed, and it's safe to call in-game (the requests-suspended flag
-    // it asserts on is only toggled from the client's Main).
+    // Asks the client to fetch a file id (dat or network). Found via its unique DOWNLOAD_FLAG assert
+    // string (survives client updates); safe in-game and enqueue-only - the client pumps its own queue.
     using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
     constexpr uint32_t kTriggerFlags = 0; // normal priority, non-cancelable
     RequestFiles_pt RequestFiles_Func = nullptr;
@@ -37,8 +34,7 @@ namespace {
         }
         Log::Log("[GwDat] game file-request trigger resolved at %p", reinterpret_cast<void*>(RequestFiles_Func));
         GwDatArchive::Instance().SetTrigger([](uint32_t file_id) {
-            // The request function touches client state, so issue it on the game thread.
-            GW::GameThread::Enqueue([file_id] {
+            GW::GameThread::Enqueue([file_id] { // touches client state; run on the game thread
                 if (RequestFiles_Func)
                     RequestFiles_Func(1, &file_id, kTriggerFlags);
             });
@@ -350,8 +346,7 @@ void GwDatTextureModule::Initialize()
     ToolboxModule::Initialize();
     // The dat is indexed lazily on the first read; start its dedicated read/decode worker.
     GwDatArchive::Instance().StartWorker();
-    // Let async reads prompt the client to fetch a streamed-only file (best-effort; see the helper).
-    WireGameFileTrigger();
+    WireGameFileTrigger(); // lets async reads tickle the client to fetch streamed-only files
 }
 
 IDirect3DTexture9** GwDatTextureModule::LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id)
