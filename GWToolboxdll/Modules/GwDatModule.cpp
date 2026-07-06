@@ -920,8 +920,14 @@ void GwDatModule::FlushTickles()
         batch.swap(m_tickle_batch);
         trigger = m_trigger;
     }
-    Log::Log("[GwDat] requesting %u file(s) from the client (first id=%u)", // TEMP
-             static_cast<unsigned>(batch.size()), batch[0]);
+    size_t base_present = 0; // TEMP: how many of these are already indexed (resident) - i.e. read-path bug,
+    {                        // not a download problem, if this is high
+        std::shared_lock<std::shared_mutex> ilock(m_index_mutex);
+        for (const uint32_t id : batch)
+            base_present += m_fileid_to_slot.count(id);
+    }
+    Log::Log("[GwDat] requesting %u file(s) (first id=%u; %u already have a base slot indexed)", // TEMP
+             static_cast<unsigned>(batch.size()), batch[0], static_cast<unsigned>(base_present));
     trigger(batch.data(), batch.size());
 }
 
