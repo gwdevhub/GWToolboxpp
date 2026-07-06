@@ -11,9 +11,9 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
-#include <ImGuiAddons.h>
 #include <Timer.h>
 #include <Utils/AoeEffects.h>
+#include <Utils/SettingsDoc.h>
 
 namespace {
     using namespace AoeEffects;
@@ -23,6 +23,8 @@ namespace {
         Meteor_Shower        = 341,
         Savannah_heat        = 346,
         Lava_font            = 347,
+        Lava_font_overcast   = 348, // Lava Font cast while overcast - larger radius, distinct effect id
+        Fire_Storm           = 350,
         Breath_of_fire       = 351,
         Maelstrom            = 381,
         Barbed_Trap          = 772,
@@ -61,11 +63,23 @@ namespace {
         clock_t start;
         uint32_t duration;
         float range;
+        bool from_enemy;
         const EffectSettings* settings;
     };
 
+    // A recent skill activation, kept briefly so a caster-less ground effect (Fire Storm, Meteor Shower -
+    // their PlayEffect carries no caster) can be attributed to enemy/ally by matching its landing coords.
+    struct PendingCast {
+        GW::Vec2f pos;
+        bool from_enemy;
+        clock_t time;
+    };
+    constexpr size_t kMaxPendingCasts = 32;
+    constexpr clock_t kPendingCastTtl = 8000; // ms; long enough to cover Meteor Shower's cast + fall
+
     std::recursive_mutex effects_mutex;
     std::vector<EffectRecord> effects;
+    std::vector<PendingCast> pending_casts;
     std::unordered_map<uint32_t, EffectSettings*> effect_settings;
     std::unordered_map<uint32_t, EffectTrigger*> effect_triggers;
     uint64_t next_uid = 1;
@@ -78,9 +92,70 @@ namespace {
         return GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     }
 
-    void AddEffect(const uint32_t effect_id, const float x, const float y, const uint32_t zplane, const EffectSettings* settings)
+    // 1 = enemy (red), 0 = one of our own (green), -1 = ignore (neutral / minions / spirits / no agent).
+    int SourceOf(const GW::AgentLiving* caster)
     {
-        effects.push_back({next_uid++, effect_id, {x, y}, zplane, TIMER_INIT(), settings->duration, settings->range, settings});
+        if (!caster) return -1;
+        if (caster->allegiance == GW::Constants::Allegiance::Enemy) return 1;
+        if (caster->allegiance == GW::Constants::Allegiance::Ally_NonAttackable) return 0; // player, party, heroes, henchmen
+        return -1;
+    }
+
+    void AddEffect(const uint32_t effect_id, const float x, const float y, const uint32_t zplane, const bool from_enemy, const EffectSettings* settings)
+    {
+        const GW::Vec2f pos(x, y);
+        // Overcast Lava Font (348) fires alongside the normal one (347) at the same spot; show only the larger
+        // overcast ring - it supersedes the normal one, in either arrival order.
+        if (effect_id == Lava_font) {
+            for (const auto& e : effects)
+                if (e.effect_id == Lava_font_overcast && GetSquareDistance(pos, e.pos) < GW::Constants::SqrRange::Adjacent) return;
+        }
+        else if (effect_id == Lava_font_overcast) {
+            std::erase_if(effects, [&](const EffectRecord& e) {
+                return e.effect_id == Lava_font && GetSquareDistance(pos, e.pos) < GW::Constants::SqrRange::Adjacent;
+            });
+        }
+        // Meteor Shower / Fire Storm fire a PlayEffect per wave at the same spot; refresh the existing ring
+        // rather than stacking copies, keeping the first wave's (correctly attributed) allegiance.
+        for (auto& e : effects) {
+            if (e.effect_id == effect_id && GetSquareDistance(pos, e.pos) < GW::Constants::SqrRange::Adjacent) {
+                e.start = TIMER_INIT();
+                return;
+            }
+        }
+        effects.push_back({next_uid++, effect_id, pos, zplane, TIMER_INIT(), settings->duration, settings->range, from_enemy, settings});
+    }
+
+    // Record where a skill was cast (the victim's position, or the caster's if there is no victim) tagged with
+    // the caster's side, so a following caster-less PlayEffect at those coords can be coloured correctly.
+    void RecordPendingCast(const uint32_t caster_agent_id, const uint32_t location_agent_id)
+    {
+        const auto caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(caster_agent_id));
+        const int src = SourceOf(caster);
+        if (src < 0) return;
+        const GW::Agent* loc = GW::Agents::GetAgentByID(location_agent_id ? location_agent_id : caster_agent_id);
+        if (!loc) return;
+        const auto now = TIMER_INIT();
+        std::erase_if(pending_casts, [now](const PendingCast& p) { return now - p.time > kPendingCastTtl; });
+        pending_casts.push_back({{loc->pos.x, loc->pos.y}, src == 1, now});
+        if (pending_casts.size() > kMaxPendingCasts) pending_casts.erase(pending_casts.begin());
+    }
+
+    // Attribute a caster-less effect at `pos` to the nearest recent skill cast. 1 = enemy, 0 = ally, -1 = none.
+    int MatchPendingCast(const GW::Vec2f& pos)
+    {
+        int best = -1;
+        float best_d = GW::Constants::SqrRange::Area;
+        const auto now = TIMER_INIT();
+        for (const auto& pc : pending_casts) {
+            if (now - pc.time > kPendingCastTtl) continue;
+            const float d = GetSquareDistance(pos, pc.pos);
+            if (d <= best_d) {
+                best_d = d;
+                best = pc.from_enemy ? 1 : 0;
+            }
+        }
+        return best;
     }
 
     void RemoveTriggeredEffect(const uint32_t effect_id, const GW::Vec2f& pos)
@@ -124,14 +199,17 @@ namespace {
 
     void OnGenericValue(GW::HookStatus*, const GW::Packet::StoC::GenericValue* pak)
     {
-        if (pak->value_id != 21) {
-            // Not "effect on agent"
-            return;
-        }
         if (!InExplorable()) {
             return;
         }
         std::scoped_lock lock(effects_mutex); // the settings table can be rebuilt from the render thread
+        if (pak->value_id == GW::Packet::StoC::GenericValueID::skill_activated) {
+            RecordPendingCast(pak->agent_id, 0); // no victim in this variant - land at the caster
+            return;
+        }
+        if (pak->value_id != GW::Packet::StoC::GenericValueID::effect_on_agent) {
+            return;
+        }
         const auto it = effect_settings.find(pak->value);
         if (it == effect_settings.end()) {
             return;
@@ -141,22 +219,27 @@ namespace {
             return;
         }
         const auto* caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-        if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) {
+        const int src = SourceOf(caster);
+        if (src < 0) {
             return;
         }
-        AddEffect(pak->value, caster->pos.x, caster->pos.y, caster->pos.zplane, settings);
+        AddEffect(pak->value, caster->pos.x, caster->pos.y, caster->pos.zplane, src == 1, settings);
     }
 
     void OnGenericValueTarget(GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* pak)
     {
-        if (pak->Value_id != 20) {
-            // Not "effect on target"
-            return;
-        }
         if (!InExplorable()) {
             return;
         }
         std::scoped_lock lock(effects_mutex);
+        if (pak->Value_id == GW::Packet::StoC::GenericValueID::skill_activated) {
+            // skill_activated swaps the fields: the actual caster is pak->target, the victim is pak->caster.
+            RecordPendingCast(pak->target, pak->caster);
+            return;
+        }
+        if (pak->Value_id != GW::Packet::StoC::GenericValueID::effect_on_target) {
+            return;
+        }
         const auto it = effect_settings.find(pak->value);
         if (it == effect_settings.end()) {
             return;
@@ -169,14 +252,15 @@ namespace {
             return;
         }
         const auto caster = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->caster));
-        if (!caster || caster->allegiance != GW::Constants::Allegiance::Enemy) {
+        const int src = SourceOf(caster);
+        if (src < 0) {
             return;
         }
         const GW::Agent* target = GW::Agents::GetAgentByID(pak->target);
         if (!target) {
             return;
         }
-        AddEffect(pak->value, target->pos.x, target->pos.y, target->pos.zplane, settings);
+        AddEffect(pak->value, target->pos.x, target->pos.y, target->pos.zplane, src == 1, settings);
     }
 
     void OnPlayEffect(GW::HookStatus*, GW::Packet::StoC::PlayEffect* pak)
@@ -185,8 +269,6 @@ namespace {
             return;
         }
         std::scoped_lock lock(effects_mutex);
-        // TODO: Fire storm and Meteor shower have no caster!
-        // Need to record GenericValueTarget with value_id matching these skills, then roughly match the coords after.
         RemoveTriggeredEffect(pak->effect_id, pak->coords);
         const auto it = effect_settings.find(pak->effect_id);
         if (it == effect_settings.end()) {
@@ -197,12 +279,19 @@ namespace {
             return;
         }
         const auto a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(pak->agent_id));
-        if (!a || a->allegiance != GW::Constants::Allegiance::Enemy) {
-            return;
+        int src = SourceOf(a);
+        if (src < 0) {
+            // Fire Storm / Meteor Shower carry no caster in their PlayEffect; attribute by matching the
+            // landing coords to a recent skill cast. Unknown -> show as enemy danger rather than drop it.
+            src = MatchPendingCast(pak->coords);
+            if (src < 0) src = 1;
         }
-        AddEffect(pak->effect_id, pak->coords.x, pak->coords.y, pak->plane, settings);
+        AddEffect(pak->effect_id, pak->coords.x, pak->coords.y, pak->plane, src == 1, settings);
     }
 } // namespace
+
+Color AoeEffects::color_enemy = Colors::ARGB(51, 235, 40, 40); // red, ~20% alpha
+Color AoeEffects::color_ally = Colors::ARGB(0, 40, 210, 70);   // green, hidden by default (alpha 0)
 
 void AoeEffects::Initialize()
 {
@@ -257,7 +346,12 @@ void AoeEffects::LoadDefaults()
     effect_settings.emplace(Savannah_heat, new EffectSettings{0xFFFF0000, "Savannah Heat", Savannah_heat, GW::Constants::Range::Adjacent, 0, 5000});
     effect_settings.emplace(Breath_of_fire, new EffectSettings{0xFFFF0000, "Breath of Fire", Breath_of_fire, GW::Constants::Range::Adjacent, 0, 5000});
     effect_settings.emplace(Lava_font, new EffectSettings{0xFFFF0000, "Lava font", Lava_font, GW::Constants::Range::Adjacent, 0, 5000});
+    effect_settings.emplace(Lava_font_overcast, new EffectSettings{0xFFFF0000, "Lava Font (overcast)", Lava_font_overcast, GW::Constants::Range::Nearby, 0, 5000});
     effect_settings.emplace(Churning_earth, new EffectSettings{0xFFFF0000, "Churning Earth", Churning_earth, GW::Constants::Range::Nearby, 0, 5000});
+    // Caster-less ground showers - each fires a PlayEffect per wave; a short duration + wave dedup keeps one ring.
+    effect_settings.emplace(Meteor_Shower, new EffectSettings{0xFFFF0000, "Meteor Shower", Meteor_Shower, GW::Constants::Range::Adjacent, 0, 4000});
+    effect_settings.emplace(Fire_Storm, new EffectSettings{0xFFFF0000, "Fire Storm", Fire_Storm, GW::Constants::Range::Adjacent, 0, 4000});
+    effect_settings.emplace(Bed_of_coals, new EffectSettings{0xFFFF0000, "Bed of Coals", Bed_of_coals, GW::Constants::Range::Adjacent, 0, 5000});
 
     effect_settings.emplace(Barbed_Trap, new EffectSettings{0xFFFF0000, "Barbed Trap", Barbed_Trap, GW::Constants::Range::Adjacent, GW::Packet::StoC::GenericValue::STATIC_HEADER, 90000});
     effect_triggers.emplace(Barbed_Trap_Activate, new EffectTrigger(Barbed_Trap, 2000, GW::Constants::Range::Nearby));
@@ -284,7 +378,8 @@ void AoeEffects::GetActiveEffects(std::vector<ActiveEffect>& out)
     });
     out.reserve(effects.size());
     for (const auto& e : effects) {
-        out.push_back({e.uid, e.effect_id, e.pos, e.zplane, e.start, e.duration, e.range, e.settings->color});
+        out.push_back({e.uid, e.effect_id, e.pos, e.zplane, e.start, e.duration, e.range,
+                       e.from_enemy ? color_enemy : color_ally, e.from_enemy});
     }
 }
 
@@ -292,23 +387,32 @@ void AoeEffects::Clear()
 {
     std::scoped_lock lock(effects_mutex);
     effects.clear();
+    pending_casts.clear();
     for (const auto& trigger : effect_triggers) {
         trigger.second->triggers_handled.clear();
     }
 }
 
-void AoeEffects::DrawColorSettings()
+bool AoeEffects::DrawColorSettings()
 {
-    ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [](const bool result, void*) {
-        if (result) {
-            LoadDefaults();
-        }
-    });
-    for (const auto& s : GetEffectSettings()) {
-        ImGui::PushID(static_cast<int>(s.first));
-        Colors::DrawSettingHueWheel("", &s.second->color, 0);
-        ImGui::SameLine();
-        ImGui::TextUnformatted(s.second->name.c_str());
-        ImGui::PopID();
-    }
+    bool changed = false;
+    changed |= Colors::DrawSettingHueWheel("Enemy AoE", &color_enemy, ImGuiColorEditFlags_AlphaBar);
+    changed |= Colors::DrawSettingHueWheel("Our AoE", &color_ally, ImGuiColorEditFlags_AlphaBar);
+    ImGui::TextDisabled("Alpha 0 hides that side. Drives both the minimap circles and the in-world danger rings.");
+    return changed;
+}
+
+void AoeEffects::LoadColorSettings(const SettingsDoc& doc, const ToolboxIni* legacy, const char* section)
+{
+    Colors::SettingColor enemy(color_enemy), ally(color_ally);
+    if (doc.Get(section, "color_aoe_enemy", enemy)) color_enemy = enemy.value;
+    else if (legacy) color_enemy = Colors::Load(legacy, section, "color_aoe_enemy", color_enemy);
+    if (doc.Get(section, "color_aoe_ally", ally)) color_ally = ally.value;
+    else if (legacy) color_ally = Colors::Load(legacy, section, "color_aoe_ally", color_ally);
+}
+
+void AoeEffects::SaveColorSettings(SettingsDoc& doc, const char* section)
+{
+    doc.Set(section, "color_aoe_enemy", Colors::SettingColor(color_enemy));
+    doc.Set(section, "color_aoe_ally", Colors::SettingColor(color_ally));
 }

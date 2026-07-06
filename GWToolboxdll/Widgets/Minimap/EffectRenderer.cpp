@@ -40,26 +40,12 @@ void EffectRenderer::LoadSettings(const SettingsDoc& doc, const ToolboxIni* lega
 {
     Invalidate();
     AoeEffects::LoadDefaults();
-    for (const auto& settings : AoeEffects::GetEffectSettings()) {
-        char color_buf[64];
-        sprintf(color_buf, "color_aoe_effect_%d", settings.first);
-        Colors::SettingColor staged(settings.second->color);
-        if (doc.Get(section, color_buf, staged)) {
-            settings.second->color = staged.value;
-        }
-        else if (legacy) {
-            settings.second->color = Colors::Load(legacy, section, color_buf, settings.second->color);
-        }
-    }
+    AoeEffects::LoadColorSettings(doc, legacy, section);
 }
 
 void EffectRenderer::SaveSettings(SettingsDoc& doc, const char* section)
 {
-    for (const auto& settings : AoeEffects::GetEffectSettings()) {
-        char color_buf[64];
-        sprintf(color_buf, "color_aoe_effect_%d", settings.first);
-        doc.Set(section, color_buf, Colors::SettingColor(settings.second->color));
-    }
+    AoeEffects::SaveColorSettings(doc, section);
 }
 
 void EffectRenderer::DrawSettings()
@@ -93,6 +79,7 @@ void EffectRenderer::DrawAoeEffects(IDirect3DDevice9* device)
         return std::ranges::none_of(effects_snapshot, [&entry](const auto& e) { return e.uid == entry.first; });
     });
     for (const auto& effect : effects_snapshot) {
+        if ((effect.color >> IM_COL32_A_SHIFT) == 0) continue; // colour hidden for this side (alpha 0)
         auto& circle = circles[effect.uid];
         if (!circle) {
             circle = std::make_unique<EffectCircle>();

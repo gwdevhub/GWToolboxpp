@@ -4,6 +4,9 @@
 
 #include <Color.h>
 
+class SettingsDoc;
+class ToolboxIni;
+
 // Shared tracking of hostile ground AoE effects (Meteor Shower, Maelstrom, traps, ...), fed by
 // StoC packets. Single source of truth for the minimap EffectRenderer and the in-world
 // DangerRingsModule; tracking runs regardless of whether either consumer is visible.
@@ -25,8 +28,14 @@ namespace AoeEffects {
         clock_t start = 0;
         uint32_t duration = 0;
         float range = 0.f;
-        Color color = 0;
+        Color color = 0;      // per-skill colour (minimap)
+        bool from_enemy = true; // cast by an enemy (vs one of our own) - in-world danger rings colour by this
     };
+
+    // Allegiance colours (ARGB), shared by the in-world danger rings and the minimap circles: enemy AoE
+    // is drawn in color_enemy, our own in color_ally. Alpha 0 hides that side (ally is hidden by default).
+    extern Color color_enemy;
+    extern Color color_ally;
 
     // Idempotent; registers the packet callbacks on first call.
     void Initialize();
@@ -39,7 +48,11 @@ namespace AoeEffects {
     void GetActiveEffects(std::vector<ActiveEffect>& out);
     void Clear();
 
-    // The per-skill colour pickers + restore-defaults button, shared by every settings page that
-    // exposes these colours. Persistence stays with the minimap section (EffectRenderer).
-    void DrawColorSettings();
+    // The enemy/ally colour pickers, shared by every settings page that exposes these colours.
+    // Returns true if a colour was changed this frame.
+    bool DrawColorSettings();
+
+    // Persist the two allegiance colours (called from the minimap's settings section).
+    void LoadColorSettings(const SettingsDoc& doc, const ToolboxIni* legacy, const char* section);
+    void SaveColorSettings(SettingsDoc& doc, const char* section);
 }

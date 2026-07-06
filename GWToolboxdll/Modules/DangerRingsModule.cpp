@@ -66,10 +66,11 @@ namespace {
             }
         }
 
+        const Color base = effect.color; // resolved by allegiance in AoeEffects (enemy red / ally green)
         const auto band_color = [&](const int band) {
-            const auto base_a = static_cast<float>((effect.color >> IM_COL32_A_SHIFT) & 0xFF);
+            const auto base_a = static_cast<float>((base >> IM_COL32_A_SHIFT) & 0xFF);
             const auto a = static_cast<DWORD>(std::clamp(base_a * band_opacity[band], 0.f, 255.f));
-            return (effect.color & ~(0xFFu << IM_COL32_A_SHIFT)) | (a << IM_COL32_A_SHIFT);
+            return (base & ~(0xFFu << IM_COL32_A_SHIFT)) | (a << IM_COL32_A_SHIFT);
         };
 
         mesh.verts.reserve(static_cast<size_t>(n_radii - 1) * kSegments * 6);
@@ -128,6 +129,7 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
     scratch.clear();
     int builds = 0;
     for (const auto& effect : effects_snapshot) {
+        if ((effect.color >> IM_COL32_A_SHIFT) == 0) continue; // this side is hidden (colour alpha 0)
         auto& mesh = meshes[effect.uid];
         if (mesh.verts.empty() || mesh.built_range != effect.range) {
             if (!n_planes || builds >= kMaxBuildsPerFrame) continue; // no altitude data yet / budget spent; retry next frame
@@ -207,6 +209,5 @@ void DangerRingsModule::DrawSettingsInternal()
     ImGui::ShowHelp("0 = no pulsing.");
 
     ImGui::Separator();
-    ImGui::TextUnformatted("Effect colors (shared with the minimap's AoE display)");
-    AoeEffects::DrawColorSettings();
+    if (AoeEffects::DrawColorSettings()) meshes_dirty = true;
 }
