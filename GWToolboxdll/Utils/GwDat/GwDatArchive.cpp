@@ -1,7 +1,9 @@
 #include <Windows.h>
 
+#include <chrono>
 #include <cstring>
 #include <cwchar>
+#include <utility>
 
 #include "GwDatArchive.h"
 #include "xentax.h"
@@ -10,6 +12,8 @@ namespace {
     const uint8_t kDatMagic[4] = {0x33, 0x41, 0x4e, 0x1a}; // "3ANa"
     constexpr size_t kMaxView = 0x800000;                  // cap each mapped window at 8 MB
     constexpr uint32_t kRefreshThrottleMs = 2000;          // min gap between re-parses on a read miss
+    constexpr uint32_t kAsyncReadTimeoutMs = 60000;        // give up on an async read after ~1 minute
+    constexpr uint32_t kAsyncPollMs = 250;                 // worker re-scan cadence for pending async reads
 
     DWORD AllocationGranularity()
     {
@@ -136,13 +140,19 @@ void GwDatArchive::WorkerLoop()
         std::function<void()> task;
         {
             std::unique_lock<std::mutex> lock(m_task_mutex);
-            m_task_cv.wait(lock, [this] { return m_worker_stop || !m_tasks.empty(); });
+            // Wake for queued tasks, or periodically to re-scan pending async reads.
+            m_task_cv.wait_for(lock, std::chrono::milliseconds(kAsyncPollMs),
+                               [this] { return m_worker_stop || !m_tasks.empty(); });
             if (m_worker_stop)
                 return; // drop any queued tasks on shutdown
-            task = std::move(m_tasks.front());
-            m_tasks.pop();
+            if (!m_tasks.empty()) {
+                task = std::move(m_tasks.front());
+                m_tasks.pop();
+            }
         }
-        task();
+        if (task)
+            task();
+        ProcessPendingReads();
     }
 }
 
@@ -167,8 +177,13 @@ void GwDatArchive::StopWorker()
     m_task_cv.notify_all();
     if (m_worker.joinable())
         m_worker.join();
-    std::scoped_lock<std::mutex> lock(m_task_mutex);
-    m_worker_running = false;
+    {
+        std::scoped_lock<std::mutex> lock(m_task_mutex);
+        m_worker_running = false;
+    }
+    // Drop any undelivered async reads; callers tolerate non-delivery across a worker stop.
+    std::scoped_lock<std::mutex> lock(m_pending_mutex);
+    m_pending_reads.clear();
 }
 
 void GwDatArchive::EnqueueTask(std::function<void()> task)
@@ -395,4 +410,48 @@ bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_
         out = std::move(input);
     }
     return !out.empty();
+}
+
+void GwDatArchive::ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id)
+{
+    if (!callback)
+        return;
+    if (!file_id) {
+        std::vector<uint8_t> empty;
+        callback(empty); // nothing to look up
+        return;
+    }
+    StartWorker(); // the poll loop must be running to deliver
+    const uint32_t deadline = GetTickCount() + kAsyncReadTimeoutMs;
+    std::scoped_lock<std::mutex> lock(m_pending_mutex);
+    m_pending_reads.push_back({file_id, stream_id, deadline, std::move(callback)});
+}
+
+// Worker-thread pass over the pending async reads: deliver any that now resolve, expire any past
+// their deadline. Callbacks fire outside the lock so they can't stall other ReadFileAsync callers.
+void GwDatArchive::ProcessPendingReads()
+{
+    std::vector<std::pair<ReadCallback, std::vector<uint8_t>>> ready;
+    {
+        std::scoped_lock<std::mutex> lock(m_pending_mutex);
+        if (m_pending_reads.empty())
+            return;
+        const uint32_t now = GetTickCount();
+        for (auto it = m_pending_reads.begin(); it != m_pending_reads.end();) {
+            std::vector<uint8_t> data;
+            if (ReadFile(it->file_id, data, it->stream_id)) {
+                ready.emplace_back(std::move(it->callback), std::move(data));
+                it = m_pending_reads.erase(it);
+            }
+            else if (static_cast<int32_t>(now - it->deadline_ms) >= 0) { // deadline passed (wrap-safe)
+                ready.emplace_back(std::move(it->callback), std::vector<uint8_t>{});
+                it = m_pending_reads.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+    }
+    for (auto& [callback, data] : ready)
+        callback(data);
 }

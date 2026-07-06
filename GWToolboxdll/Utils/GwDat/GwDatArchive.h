@@ -37,6 +37,14 @@ public:
     // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
     bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
 
+    // Async variant of ReadFile: the worker retries the read until the file appears in the dat, then
+    // invokes `callback` (on the worker thread) with the decompressed bytes; if it hasn't shown up
+    // within ~1 minute the callback fires once with an empty vector. Lets callers wait for files the
+    // client streams in on demand (e.g. Steam .snapshot installs) without blocking. Starts the worker
+    // if needed. Undelivered requests are dropped (callback not called) if the worker is stopped.
+    using ReadCallback = std::function<void(std::vector<uint8_t>&)>;
+    void ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id = 0);
+
     // Dedicated worker so reads/decodes run off the caller's thread; EnqueueTask runs inline if not started.
     void StartWorker();
     void StopWorker();
@@ -46,6 +54,7 @@ private:
     GwDatArchive() = default;
 
     void WorkerLoop();
+    void ProcessPendingReads(); // deliver/expire queued ReadFileAsync requests (worker thread)
 
 #pragma pack(push, 1)
     struct MainHeader {
@@ -95,6 +104,16 @@ private:
     std::queue<std::function<void()>> m_tasks;
     bool m_worker_running = false;
     bool m_worker_stop = false;
+
+    // Async ReadFile requests, retried by the worker until the file appears or the deadline passes.
+    struct PendingRead {
+        uint32_t file_id;
+        uint32_t stream_id;
+        uint32_t deadline_ms; // GetTickCount() value at which this request gives up
+        ReadCallback callback;
+    };
+    std::mutex m_pending_mutex; // guards m_pending_reads
+    std::vector<PendingRead> m_pending_reads;
     std::shared_mutex m_index_mutex;               // guards m_mapping/m_slots/m_fileid_to_slot against MaybeRefresh
     uint32_t m_last_refresh_ms = 0;                // GetTickCount of the last re-parse, to throttle refreshes
     void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, replaced by MaybeRefresh when the dat grows
