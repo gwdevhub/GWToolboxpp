@@ -1,15 +1,13 @@
 #include "stdafx.h"
 
-#include <chrono>
 #include <cstring>
+#include <map>
+#include <memory>
 #include <mutex>
 #include <utility>
 
 #include <Logger.h>
 #include "GwDatModule.h"
-
-#include <GWCA/Managers/GameThreadMgr.h>
-#include <GWCA/Utilities/Scanner.h>
 
 #include "Resources.h"
 #include <Utils/ArenaNetFileParser.h>
@@ -18,29 +16,12 @@
 
 #include <DirectXTex.h>
 
+// GwDatModule reads/decodes textures straight from the client's on-disk Gw.dat. It does NOT interface with
+// the game's streaming/download subsystem: whatever is in the dat, we can decode; a file the dat doesn't
+// contain simply won't load (see ReadFile's one-time -image hint). On a Steam streaming install the dat can
+// be incomplete until the user runs Guild Wars with -image to download everything.
+
 namespace {
-
-    // Asks the client to queue a file id for download (the same FUN_0082da30 the client uses for its
-    // own preloads). Resolved from a unique call site via FunctionFromNearCall, which survives byte
-    // shifts better than a prologue scan.
-    using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
-    // 0x10 = the client's own flag for UI item/icon/model requests: FUN_004d3660 (CrAppearanceDoll - the
-    // dress-up doll, the armory's twin), FUN_004c8180 (StoreFile), and the composite loaders FUN_008458e0
-    // / FUN_007fa450 all call FUN_0082da30(.., 0x10) to fetch an item's files (then open stream 1 to read
-    // the icon). It enqueues at priority 2 (the interactive/UI bucket), no cancel-tracking handle to leak,
-    // and dodges the 0x8 readiness assert and the 0x10001 "offline" bail-out. We match it verbatim rather
-    // than our old 0x2 (priority 1 + a no-op "flush" bit the item path never sets).
-    constexpr uint32_t kTriggerFlags = 0x10;
-    RequestFiles_pt RequestFiles_Func = nullptr;
-
-    void ResolveRequestFn()
-    {
-        // PUSH 0x10008; PUSH EAX; PUSH [EBP-4]; CALL <wrapper> - the ...E8 near call resolves the target.
-        const uintptr_t call_addr = GW::Scanner::Find("\x68\x08\x00\x01\x00\x50\xff\x75\xfc\xe8", "xxxxxxxxxx", 9);
-        RequestFiles_Func = call_addr ? reinterpret_cast<RequestFiles_pt>(GW::Scanner::FunctionFromNearCall(call_addr)) : nullptr;
-        if (!RequestFiles_Func)
-            Log::Log("[GwDat] game file-request trigger not found; async reads will wait passively.");
-    }
 
     struct Vec2i {
         int x = 0;
@@ -210,7 +191,7 @@ namespace {
         return true;
     }
 
-    // Decodes file_id and converts it to greyscale A8R8G8B8 in place (worker-thread safe; no device).
+    // Decodes file_id and converts it to greyscale A8R8G8B8 in place.
     bool DecodeGreyscaleToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims)
     {
         if (!file_id || !DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
@@ -227,141 +208,68 @@ namespace {
     }
 
     struct GwImg {
-        uint32_t m_file_id = 0;
-        uint32_t m_stream_id = 0;
-        uint32_t m_dyes = 0;
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
-        bool m_pending = false; // a decode has been dispatched (async); don't dispatch twice
-        explicit GwImg(uint32_t file_id, uint32_t stream_id = 0, uint32_t dyes = 0)
-            : m_file_id(file_id), m_stream_id(stream_id), m_dyes(dyes) {}
+        bool m_pending = false; // a decode has been dispatched; don't dispatch twice
         ~GwImg()
         {
-            if (m_tex) {
+            if (m_tex)
                 m_tex->Release();
-                m_tex = nullptr;
-            }
         }
     };
 
-    // Dispatch once: ReadFileAsync retries the read across dat-growth epochs, then delivers the bytes (or
-    // an empty vector once it gives up). Either way m_pending stays set, so a file that can't be resolved
-    // just leaves m_tex null (a placeholder) instead of us re-dispatching every frame.
+    // Dispatch once. On failure (file not in the dat) m_tex stays null - a placeholder - and m_pending stays
+    // set, so we don't re-decode the same missing file every frame.
     bool WantsDecode(const GwImg* img) { return !img->m_tex && !img->m_pending; }
 
-    struct ArgbImage {
-        std::vector<uint32_t> pixels;
-        Vec2i dims;
-    };
-
-    // Waits for file_id/stream_id to be resident (fetching it if the client must stream it), decodes on
-    // the dat worker, then uploads on the DX thread. Gating on one stream is enough - a file's streams
-    // arrive together, so multi-stream decoders (item dye masks) find theirs too.
+    // Reads + decodes + uploads on the DX thread (the only place we have the device). GwImg is shared-owned,
+    // so the task keeps its image alive even if Terminate() clears the cache before it runs.
     template <typename Decode>
-    void QueueDecode(std::shared_ptr<GwImg> img, uint32_t file_id, uint32_t stream_id, Decode decode)
+    void QueueDecode(std::shared_ptr<GwImg> img, Decode decode)
     {
         img->m_pending = true;
-        // Both lambdas copy the shared_ptr, so the image outlives Terminate() until the upload runs.
-        GwDatModule::ReadFileAsync(file_id, [img, decode](std::vector<uint8_t>& bytes) {
-            auto result = std::make_shared<ArgbImage>();
-            const bool ok = !bytes.empty() && decode(result->pixels, result->dims) && result->dims.x > 0 && result->dims.y > 0;
-            Resources::Instance().EnqueueDxTask([img, result, ok](IDirect3DDevice9* device) {
-                img->m_tex = ok ? MakeTextureFromArgb(device, result->pixels, result->dims) : nullptr;
-                img->m_dims = result->dims;
-                // Delivered (the file resolved): leave m_pending set so we don't re-decode - if the
-                // decode itself failed on present bytes, retrying would just loop on the same data.
-            });
-        }, stream_id);
+        Resources::Instance().EnqueueDxTask([img, decode](IDirect3DDevice9* device) {
+            std::vector<uint32_t> argb;
+            Vec2i dims;
+            if (decode(argb, dims) && dims.x > 0 && dims.y > 0)
+                img->m_tex = MakeTextureFromArgb(device, argb, dims);
+            img->m_dims = dims;
+        });
     }
 
     // Keyed by (stream_id << 32 | file_id) so different streams of one file cache separately.
     uint64_t TextureKey(uint32_t file_id, uint32_t stream_id) { return (static_cast<uint64_t>(stream_id) << 32) | file_id; }
 
-    // Shared-owned: an in-flight decode / DX-upload task keeps its GwImg alive even if Terminate() clears
-    // the cache first, so the worker/render threads never touch a freed image (the teardown race).
+    // Shared-owned so an in-flight DX-upload task never touches a GwImg freed by Terminate().
     std::map<uint64_t, std::shared_ptr<GwImg>> textures_by_file_id;
     std::map<uint32_t, std::shared_ptr<GwImg>> greyscale_textures_by_file_id;
     std::map<uint64_t, std::shared_ptr<GwImg>> item_images_by_file_id; // key = dyes << 32 | model_file_id
 
-    // Cached GwImg for key, created from the given GwImg ctor args if absent.
-    template <typename Map, typename Key, typename... Args>
-    const std::shared_ptr<GwImg>& GetOrCreate(Map& map, Key key, Args... args)
+    template <typename Map, typename Key>
+    const std::shared_ptr<GwImg>& GetOrCreate(Map& map, Key key)
     {
-        const auto found = map.find(key);
-        if (found != map.end())
-            return found->second;
-        return map[key] = std::make_shared<GwImg>(args...);
+        std::shared_ptr<GwImg>& slot = map[key];
+        if (!slot)
+            slot = std::make_shared<GwImg>();
+        return slot;
     }
 } // namespace
 
 IDirect3DTexture9** GwDatModule::LoadGreyscaleTextureFromFileId(uint32_t file_id)
 {
-    const auto& img = GetOrCreate(greyscale_textures_by_file_id, file_id, file_id);
+    const auto& img = GetOrCreate(greyscale_textures_by_file_id, file_id);
     if (WantsDecode(img.get()))
-        QueueDecode(img, file_id, 0, [file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+        QueueDecode(img, [file_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeGreyscaleToArgb(file_id, argb, dims);
         });
     return &img->m_tex;
 }
 
-bool GwDatModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out, uint32_t stream_id)
-{
-    if (!(file_name && *file_name && bytes_out))
-        return false;
-    const uint32_t file_id = ArenaNetFileParser::FileHashToFileId(file_name);
-    if (!file_id)
-        return false;
-    const bool ok = ReadFile(file_id, *bytes_out, stream_id);
-    auto& dat = Instance(); // for the diagnostics below
-    if (dat.Loaded()) {
-        static std::once_flag reported; // log the bound archive once for support reports
-        std::call_once(reported, [&dat] {
-            Log::LogW(L"[GwDat] Mapped client's Gw.dat ('%s')", dat.DatPath().c_str());
-        });
-    }
-    else if (dat.HandleEnumerationBlocked()) {
-        // Handle scan blocked (almost always AV/anti-cheat) - tell the user once.
-        static std::once_flag warned;
-        std::call_once(warned, [] {
-            Log::Warning("GWToolbox can't read Gw.dat: it was blocked from listing its own file handles, "
-                         "usually by anti-virus or anti-cheat. In-game images won't load until it's allowed.");
-            Log::Log("[GwDat] NtQuerySystemInformation returned no data - handle enumeration blocked (AV/anti-cheat?).");
-        });
-    }
-    else {
-        static std::once_flag noted; // dat handle not open yet; transient, note once
-        std::call_once(noted, [] {
-            Log::Log("[GwDat] Gw.dat not mapped yet (client handle not found); will keep retrying.");
-        });
-    }
-    return ok;
-}
-
-void GwDatModule::Initialize()
-{
-    ToolboxModule::Initialize();
-    // The dat is indexed lazily on the first read; start the async-read poll worker.
-    StartWorker();
-    // Let a read miss tickle the client to fetch streamed-only files: it batches the missing ids here,
-    // and we send them (on the game thread) via the client's request+flush wrapper.
-    ResolveRequestFn();
-    if (RequestFiles_Func)
-        SetTrigger([](const uint32_t* ids, size_t count) {
-            if (!count)
-                return;
-            std::vector<uint32_t> batch(ids, ids + count); // copy for the game-thread lambda
-            GW::GameThread::Enqueue([batch = std::move(batch)] {
-                if (RequestFiles_Func && !batch.empty())
-                    RequestFiles_Func(static_cast<uint32_t>(batch.size()), batch.data(), kTriggerFlags);
-            });
-        });
-}
-
 IDirect3DTexture9** GwDatModule::LoadTextureFromFileId(uint32_t file_id, uint32_t stream_id)
 {
-    const auto& img = GetOrCreate(textures_by_file_id, TextureKey(file_id, stream_id), file_id, stream_id);
+    const auto& img = GetOrCreate(textures_by_file_id, TextureKey(file_id, stream_id));
     if (WantsDecode(img.get()))
-        QueueDecode(img, file_id, stream_id, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
+        QueueDecode(img, [file_id, stream_id](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeTextureToArgb(file_id, argb, dims, stream_id);
         });
     return &img->m_tex;
@@ -370,9 +278,9 @@ IDirect3DTexture9** GwDatModule::LoadTextureFromFileId(uint32_t file_id, uint32_
 IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t dyes)
 {
     const uint64_t key = (static_cast<uint64_t>(dyes) << 32) | model_file_id;
-    const auto& img = GetOrCreate(item_images_by_file_id, key, model_file_id, 1u, dyes);
+    const auto& img = GetOrCreate(item_images_by_file_id, key);
     if (WantsDecode(img.get()))
-        QueueDecode(img, model_file_id, 1, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
+        QueueDecode(img, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeItemToArgb(model_file_id, dyes, argb, dims);
         });
     return &img->m_tex;
@@ -380,62 +288,54 @@ IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t 
 
 void GwDatModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path)
 {
-    if (!file_id)
+    std::vector<uint32_t> argb;
+    Vec2i dims;
+    if (!file_id || !DecodeTextureToArgb(file_id, argb, dims) || dims.x <= 0 || dims.y <= 0)
         return;
-    // Wait for the file (fetching it if streamed-only), then decode + block-compress + write, all on
-    // the dat worker off the render loop.
-    GwDatModule::ReadFileAsync(file_id, [file_id, file_path](std::vector<uint8_t>& bytes) {
-        if (bytes.empty())
-            return;
-        std::vector<uint32_t> argb;
-        Vec2i dims;
-        if (!DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)
-            return;
 
-        // Decoded pixels are A8R8G8B8 (D3D byte order is BGRA).
-        DirectX::Image src = {};
-        src.width = dims.x;
-        src.height = dims.y;
-        src.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-        src.rowPitch = static_cast<size_t>(dims.x) * 4;
-        src.slicePitch = src.rowPitch * dims.y;
-        src.pixels = reinterpret_cast<uint8_t*>(argb.data());
-        DirectX::ScratchImage scratch;
-        if (!SUCCEEDED(scratch.InitializeFromImage(src)))
-            return;
+    // Decoded pixels are A8R8G8B8 (D3D byte order is BGRA).
+    DirectX::Image src = {};
+    src.width = dims.x;
+    src.height = dims.y;
+    src.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    src.rowPitch = static_cast<size_t>(dims.x) * 4;
+    src.slicePitch = src.rowPitch * dims.y;
+    src.pixels = reinterpret_cast<uint8_t*>(argb.data());
+    DirectX::ScratchImage scratch;
+    if (!SUCCEEDED(scratch.InitializeFromImage(src)))
+        return;
 
-        // BC1 encodes color better than BC3, so prefer it unless real alpha must be preserved.
-        const auto target = scratch.IsAlphaAllOpaque() ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC3_UNORM;
+    // BC1 encodes color better than BC3, so prefer it unless real alpha must be preserved.
+    const auto target = scratch.IsAlphaAllOpaque() ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC3_UNORM;
+    DirectX::ScratchImage compressed;
+    if (SUCCEEDED(DirectX::Compress(src, target, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed)))
+        DirectX::SaveToDDSFile(compressed.GetImages(), compressed.GetImageCount(), compressed.GetMetadata(), DirectX::DDS_FLAGS_NONE, file_path.c_str());
+}
 
-        DirectX::ScratchImage compressed;
-        if (SUCCEEDED(DirectX::Compress(src, target, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed))) {
-            DirectX::SaveToDDSFile(compressed.GetImages(), compressed.GetImageCount(), compressed.GetMetadata(), DirectX::DDS_FLAGS_NONE, file_path.c_str());
-        }
-    });
+bool GwDatModule::ReadDatFile(const wchar_t* file_name, std::vector<uint8_t>* bytes_out, uint32_t stream_id)
+{
+    if (!(file_name && *file_name && bytes_out))
+        return false;
+    const uint32_t file_id = ArenaNetFileParser::FileHashToFileId(file_name);
+    return file_id && ReadFile(file_id, *bytes_out, stream_id);
 }
 
 void GwDatModule::Terminate()
 {
-    // Latch termination first so a late ReadFileAsync/render can't respawn the worker mid-teardown, then
-    // stop it. The cache is shared_ptr-owned: clearing it here only drops our references; any decode/upload
-    // task still in flight holds its own reference and frees its GwImg when it finishes.
-    m_terminated.store(true, std::memory_order_release);
-    StopWorker();
+    // The cache is shared_ptr-owned: clearing it here only drops our references; any DX-upload task still in
+    // flight holds its own reference and frees its GwImg (releasing the texture) when it finishes. The dat
+    // mapping is left open (written once, read lock-free) and released by the OS on unload.
     textures_by_file_id.clear();
     greyscale_textures_by_file_id.clear();
     item_images_by_file_id.clear();
 }
 
 // ============================================================================
-// Archive reader (dat mapping, MFT parsing, decompression, async reads, tickle)
+// Archive reader: map the client's on-disk Gw.dat once, parse its MFT, read + decompress by file id.
 // ============================================================================
 namespace {
     const uint8_t kDatMagic[4] = {0x33, 0x41, 0x4e, 0x1a}; // "3ANa"
     constexpr size_t kMaxView = 0x800000;                  // cap each mapped window at 8 MB
-    constexpr uint32_t kRefreshThrottleMs = 2000;          // min gap between re-parses on a read miss
-    constexpr uint32_t kAsyncPollMs = 250;                 // worker re-scan cadence for pending async reads
-    constexpr int kMaxReadAttempts = 80;                   // ~20s of misses (per dat-growth epoch) then give up
-    constexpr uint32_t kTickleThrottleMs = 10000;          // re-ask the client for a given missed file at most this often
 
     DWORD AllocationGranularity()
     {
@@ -447,6 +347,8 @@ namespace {
     // Read via mapped views, never ReadFile: the client's dat handle is bound to its I/O port.
     bool ReadAt(HANDLE mapping, int64_t offset, void* buffer, size_t count)
     {
+        if (!mapping)
+            return false;
         static const DWORD gran = AllocationGranularity();
         auto* dst = static_cast<uint8_t*>(buffer);
         while (count > 0) {
@@ -550,56 +452,6 @@ namespace {
     }
 } // namespace
 
-
-void GwDatModule::WorkerLoop()
-{
-    for (;;) {
-        {
-            std::unique_lock<std::mutex> lock(m_worker_mutex);
-            m_worker_cv.wait_for(lock, std::chrono::milliseconds(kAsyncPollMs), [this] { return m_worker_stop; });
-            if (m_worker_stop)
-                return;
-        }
-        ProcessPendingReads();
-        FlushTickles(); // send the reads' fetch requests as one batch
-    }
-}
-
-void GwDatModule::StartWorker()
-{
-    if (m_terminated.load(std::memory_order_acquire))
-        return; // never respawn after Terminate()
-    std::scoped_lock<std::mutex> lock(m_worker_mutex);
-    if (m_worker_running)
-        return;
-    m_worker_stop = false;
-    m_worker_running = true;
-    m_worker = std::thread([this] { WorkerLoop(); });
-}
-
-void GwDatModule::StopWorker()
-{
-    {
-        std::scoped_lock<std::mutex> lock(m_worker_mutex);
-        if (!m_worker_running)
-            return;
-        m_worker_stop = true;
-    }
-    m_worker_cv.notify_all();
-    if (m_worker.joinable())
-        m_worker.join();
-    {
-        std::scoped_lock<std::mutex> lock(m_worker_mutex);
-        m_worker_running = false;
-    }
-    {
-        std::scoped_lock<std::mutex> lock(m_pending_mutex);
-        m_pending_reads.clear(); // undelivered async reads are dropped on stop
-    }
-    std::scoped_lock<std::mutex> tlock(m_trigger_mutex);
-    m_tickle_batch.clear(); // undelivered fetch requests are dropped on stop
-}
-
 bool GwDatModule::EnsureLoaded()
 {
     if (m_loaded.load(std::memory_order_acquire))
@@ -610,12 +462,12 @@ bool GwDatModule::EnsureLoaded()
     return m_loaded.load(std::memory_order_relaxed);
 }
 
-bool GwDatModule::AcquireMappingInto(void*& out_mapping, long long& out_size, std::wstring& out_path)
+bool GwDatModule::AcquireMappingInto(void*& out_mapping, long long& out_size)
 {
     // The client holds Gw.dat exclusively, so we locate its open handle and map that instead.
     const std::vector<uint8_t> snapshot = QueryProcessHandles();
     if (snapshot.empty()) {
-        // Scan failed (NtQuerySystemInformation blocked, usually AV/anti-cheat); flag for the UI.
+        // Scan failed (NtQuerySystemInformation blocked, usually AV/anti-cheat); flag for the diagnostic.
         m_handle_enum_failed.store(true, std::memory_order_release);
         return false;
     }
@@ -632,14 +484,12 @@ bool GwDatModule::AcquireMappingInto(void*& out_mapping, long long& out_size, st
         const std::wstring path = HandlePath(h);
         if (path.empty() || !HasDatExtension(path))
             continue;
-        // Re-map whole-file each time: the dat grows as files stream in, and a size-0 mapping is fixed at creation.
         const HANDLE mapping = MapDat(h);
         if (!mapping)
             continue;
         LARGE_INTEGER sz;
         out_size = GetFileSizeEx(h, &sz) ? sz.QuadPart : 0;
         out_mapping = mapping;
-        out_path = path; // the archive we actually bound to, for diagnostics
         return true;
     }
     return false;
@@ -696,85 +546,25 @@ bool GwDatModule::ParseFrom(void* mapping_v, long long file_size, std::vector<Mf
 
 bool GwDatModule::ParseIndex()
 {
-    // First load (under m_load_mutex, before any reads): map and parse straight into members.
-    if (m_mapping) {
-        CloseHandle(reinterpret_cast<HANDLE>(m_mapping));
-        m_mapping = nullptr;
-    }
-    m_file_size = 0;
-    m_slots.clear();
-    m_fileid_to_slot.clear();
-
+    // First load only (under m_load_mutex, before any reads): map once and parse straight into members. We
+    // don't re-map/re-parse afterwards - whatever the dat holds when first touched is what we can read.
     void* mapping = nullptr;
     long long size = 0;
-    std::wstring path;
-    if (!AcquireMappingInto(mapping, size, path))
+    if (!AcquireMappingInto(mapping, size))
         return false;
     if (!ParseFrom(mapping, size, m_slots, m_fileid_to_slot)) {
         CloseHandle(reinterpret_cast<HANDLE>(mapping));
+        m_slots.clear();
+        m_fileid_to_slot.clear();
         return false;
     }
     m_mapping = mapping;
-    m_file_size = size;
-    m_indexed_size = size;
-    m_dat_path = path;
     return true;
 }
 
-// Re-read the on-disk MFT (on a read miss, throttled) to pick up files streamed in since the last parse.
-void GwDatModule::MaybeRefresh()
-{
-    long long last_size = 0;
-    {
-        std::scoped_lock<std::mutex> guard(m_load_mutex);
-        const uint32_t now = GetTickCount();
-        if (m_last_refresh_ms && now - m_last_refresh_ms < kRefreshThrottleMs)
-            return;
-        m_last_refresh_ms = now;
-        last_size = m_indexed_size;
-    }
-
-    void* mapping = nullptr;
-    long long size = 0;
-    std::wstring path;
-    if (!AcquireMappingInto(mapping, size, path))
-        return;
-    // The dat only grows as files stream in, so an unchanged size means nothing new to index - skip
-    // the costly MFT re-read (the fresh handle above still catches an atomic rename, which resizes).
-    if (size == last_size && size != 0) {
-        CloseHandle(reinterpret_cast<HANDLE>(mapping));
-        return;
-    }
-    std::vector<MftEntry> slots;
-    std::unordered_map<uint32_t, int> fileid_to_slot;
-    if (!ParseFrom(mapping, size, slots, fileid_to_slot)) {
-        CloseHandle(reinterpret_cast<HANDLE>(mapping));
-        return;
-    }
-    {
-        std::unique_lock<std::shared_mutex> lock(m_index_mutex);
-        CloseHandle(reinterpret_cast<HANDLE>(m_mapping));
-        m_mapping = mapping;
-        m_file_size = size;
-        m_dat_path = path;
-        m_slots.swap(slots);
-        m_fileid_to_slot.swap(fileid_to_slot);
-    }
-    {
-        std::scoped_lock<std::mutex> guard(m_load_mutex);
-        m_indexed_size = size; // next MaybeRefresh skips the re-parse until the dat grows again
-    }
-    // The dat grew (files streamed in, e.g. a map load): bump the epoch so still-pending reads get a fresh
-    // batch of retries, and drop the tickle throttle so they re-request on the next pass.
-    m_index_epoch.fetch_add(1, std::memory_order_relaxed);
-    std::scoped_lock<std::mutex> tlock(m_trigger_mutex);
-    m_tickled_at.clear();
-}
-
-// Copies the raw (still-compressed) bytes for file_id/stream_id, shared-locked against MaybeRefresh.
+// Copies the raw (still-compressed) bytes for file_id/stream_id. The index is immutable after EnsureLoaded().
 bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed)
 {
-    std::shared_lock<std::shared_mutex> lock(m_index_mutex);
     const auto found = m_fileid_to_slot.find(file_id);
     if (found == m_fileid_to_slot.end())
         return false;
@@ -805,18 +595,33 @@ bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t
 {
     auto& self = Instance();
     out.clear();
-    if (!self.EnsureLoaded() || !file_id)
+    if (!self.EnsureLoaded()) {
+        // Only warn about the AV/anti-cheat case; a not-yet-open handle is transient and retries silently.
+        if (self.m_handle_enum_failed.load(std::memory_order_acquire)) {
+            static std::once_flag warned;
+            std::call_once(warned, [] {
+                Log::Warning("GWToolbox can't read Gw.dat: it was blocked from listing its own file handles, "
+                             "usually by anti-virus or anti-cheat. In-game images won't load until it's allowed.");
+            });
+        }
+        return false;
+    }
+    if (!file_id)
         return false;
 
     std::vector<uint8_t> input;
     bool compressed = false;
     if (!self.ReadRaw(file_id, stream_id, input, compressed)) {
-        // Missing: the client may have streamed this file in since our last parse - re-read and retry.
-        self.MaybeRefresh();
-        if (!self.ReadRaw(file_id, stream_id, input, compressed)) {
-            self.TickleFetch(file_id); // not resident; ask the client to fetch it for a later read
-            return false;
-        }
+        // The dat is mapped but doesn't contain this file - almost always an incomplete Steam/streaming
+        // install. Point the user at -image once; re-tickling the client to stream it doesn't work.
+        static std::once_flag warned;
+        std::call_once(warned, [] {
+            Log::Warning("GWToolbox couldn't find some image data in your Gw.dat - your local game data looks "
+                         "incomplete (Steam downloads it on demand). Run Guild Wars once with the -image "
+                         "command-line option to download all game data, then restart. Setup steps: "
+                         "https://gwtoolbox.com/docs/troubleshooting/#missing-images-in-toolbox");
+        });
+        return false;
     }
 
     if (compressed) {
@@ -833,92 +638,4 @@ bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t
         out = std::move(input);
     }
     return !out.empty();
-}
-
-void GwDatModule::ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id)
-{
-    if (!callback)
-        return;
-    if (!file_id) {
-        std::vector<uint8_t> empty;
-        callback(empty);
-        return;
-    }
-    auto& self = Instance();
-    if (self.m_terminated.load(std::memory_order_acquire))
-        return; // dropping the callback (and its GwImg ref) - the module is going away
-    self.StartWorker(); // the poll loop delivers
-    std::scoped_lock<std::mutex> lock(self.m_pending_mutex);
-    self.m_pending_reads.push_back(
-        {file_id, stream_id, std::move(callback), 0, self.m_index_epoch.load(std::memory_order_relaxed)});
-}
-
-void GwDatModule::SetTrigger(TriggerFn trigger)
-{
-    std::scoped_lock<std::mutex> lock(m_trigger_mutex);
-    m_trigger = std::move(trigger);
-}
-
-// Queue a just-missed file for the client to fetch so a later read may find it; throttled per id so a
-// per-frame retry loop doesn't spam. The batch is sent by FlushTickles (worker thread).
-void GwDatModule::TickleFetch(uint32_t file_id)
-{
-    std::scoped_lock<std::mutex> lock(m_trigger_mutex);
-    if (!m_trigger)
-        return;
-    const uint32_t now = GetTickCount();
-    const auto it = m_tickled_at.find(file_id);
-    if (it != m_tickled_at.end() && now - it->second < kTickleThrottleMs)
-        return; // asked recently (elapsed is unsigned, wrap-safe for a session)
-    m_tickled_at[file_id] = now;
-    m_tickle_batch.push_back(file_id);
-}
-
-// Hand every queued fetch id to the client in one request instead of one call per file.
-void GwDatModule::FlushTickles()
-{
-    std::vector<uint32_t> batch;
-    TriggerFn trigger;
-    {
-        std::scoped_lock<std::mutex> lock(m_trigger_mutex);
-        if (m_tickle_batch.empty() || !m_trigger)
-            return;
-        batch.swap(m_tickle_batch);
-        trigger = m_trigger;
-    }
-    trigger(batch.data(), batch.size());
-}
-
-// Worker pass: deliver reads that now resolve. A miss stays queued and tickles the client (via ReadFile);
-// each dat growth (map load) grants a fresh batch of retries, but after kMaxReadAttempts passes with no new
-// content we give up and deliver an empty vector so the consumer shows a placeholder instead of retrying
-// forever - files the client won't stream to us (e.g. unowned-item icons on a partial install) can't resolve.
-void GwDatModule::ProcessPendingReads()
-{
-    std::vector<std::pair<ReadCallback, std::vector<uint8_t>>> ready; // callbacks fire outside the lock
-    {
-        std::scoped_lock<std::mutex> lock(m_pending_mutex);
-        for (auto it = m_pending_reads.begin(); it != m_pending_reads.end();) {
-            std::vector<uint8_t> data;
-            if (ReadFile(it->file_id, data, it->stream_id)) {
-                ready.emplace_back(std::move(it->callback), std::move(data));
-                it = m_pending_reads.erase(it);
-                continue;
-            }
-            const int epoch = m_index_epoch.load(std::memory_order_relaxed); // ReadFile may have bumped it
-            if (it->epoch != epoch) {
-                it->epoch = epoch; // dat grew: reset the retry budget for a fresh look
-                it->attempts = 0;
-                ++it;
-            }
-            else if (++it->attempts >= kMaxReadAttempts) {
-                ready.emplace_back(std::move(it->callback), std::vector<uint8_t>{}); // give up: empty = failure
-                it = m_pending_reads.erase(it);
-            }
-            else
-                ++it;
-        }
-    }
-    for (auto& [callback, data] : ready)
-        callback(data);
 }
