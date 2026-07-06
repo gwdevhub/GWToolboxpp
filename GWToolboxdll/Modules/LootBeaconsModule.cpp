@@ -16,15 +16,16 @@
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
 #include <Utils/ToolboxUtils.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 
 namespace {
-    constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
     constexpr int kRingSegments = 32;
     constexpr float kRingBandWidth = 12.f;
     constexpr int kMaxBuildsPerFrame = 8;   // draping QueryAltitude budget: ~70 queries per beacon build
     constexpr uint32_t kScanIntervalMs = 250; // item agents don't move; classification only needs a coarse tick
 
-    bool occlude_behind_terrain = true;
+    // Occlusion behind terrain (and its depth-projection planes) is shared with the "In-game rendering" module
+    // via GameWorldRenderer::GetOccludeBehindTerrain()/GetDepthZNear()/GetDepthZFar() so it's set in one place.
     float render_max_distance = 20000.f;
     float fog_factor = 0.5f;
     float beam_height = 225.f;
@@ -237,7 +238,9 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
 
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, kZNear, kZFar, render_max_distance, fog_factor)) {
+    if (GameWorldCompositor::SetupPipeline(device, GameWorldRenderer::GetOccludeBehindTerrain(),
+                                           GameWorldRenderer::GetDepthZNear(), GameWorldRenderer::GetDepthZFar(),
+                                           render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(BeaconVertex));
@@ -248,7 +251,6 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
 
 void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
 {
-    SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
     SettingsRegistry::RegisterField(module, "beam_height", &beam_height);
@@ -321,7 +323,7 @@ void LootBeaconsModule::DrawSettingsInternal()
     ImGui::ShowHelp("Drawn dimmed. Off: only unreserved drops and drops assigned to you.");
 
     ImGui::Separator();
-    ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
+    ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 25.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     if (ImGui::DragFloat("Beam height", &beam_height, 5.f, 50.f, 5000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
     if (ImGui::DragFloat("Beam width", &beam_width, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
