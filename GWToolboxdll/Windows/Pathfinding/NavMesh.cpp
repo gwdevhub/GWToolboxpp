@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <algorithm>
 #include <array>
 #include <cfloat>
 #include <cmath>
@@ -57,6 +58,13 @@ namespace {
         const float rx = t.XBR + (t.XTR - t.XBR) * u;
         const float x = std::min(std::max(p.x, std::min(lx, rx)), std::max(lx, rx));
         return {x, y};
+    }
+
+    inline void NeighbourSpanAtY(const GW::PathingTrapezoid& t, float y, float& lo, float& hi)
+    {
+        const bool bottom = std::fabs(t.YB - y) <= std::fabs(t.YT - y);
+        lo = bottom ? std::min(t.XBL, t.XBR) : std::min(t.XTL, t.XTR);
+        hi = bottom ? std::max(t.XBL, t.XBR) : std::max(t.XTL, t.XTR);
     }
 }
 
@@ -479,7 +487,7 @@ namespace Pathing {
         // poly edge by rounded game-Y so we can detect those seams below and reclassify them as walkable.
         constexpr float kHorizEps = 1.0f;     // |Δgame-Y| under which an edge counts as a top/bottom (horizontal) edge
         constexpr float kSeamHeightEps = 50.f; // |Δaltitude| under which the two planes are the same surface, not an over/underpass
-        struct HEdge { int plane; float xmin, xmax; };
+        struct HEdge { int plane; int poly; float xmin, xmax; };
         std::unordered_map<long, std::vector<HEdge>> horiz;
         for (int i = 0; i < tile->header->polyCount; ++i) {
             const dtPoly& p = tile->polys[i];
@@ -489,10 +497,68 @@ namespace Pathing {
                 const float* va = &tile->verts[p.verts[j] * 3];
                 const float* vb = &tile->verts[p.verts[(j + 1) % nv] * 3];
                 if (std::fabs(va[2] - vb[2]) > kHorizEps) continue;
-                horiz[lroundf(va[2])].push_back({(int)lroundf(va[1] / kPlaneSeparation), std::min(va[0], vb[0]), std::max(va[0], vb[0])});
+                horiz[lroundf(va[2])].push_back({(int)lroundf(va[1] / kPlaneSeparation), i, std::min(va[0], vb[0]), std::max(va[0], vb[0])});
             }
         }
 
+        auto cross_plane_seam = [&](float exmin, float exmax, float y, int plane) -> bool {
+            const auto it = horiz.find(lroundf(y));
+            if (it == horiz.end()) return false;
+            for (const auto& h : it->second) {
+                if (h.plane == plane) continue; // same plane: a true boundary, not a cross-plane seam
+                const float lo = std::max(exmin, h.xmin), hi = std::min(exmax, h.xmax);
+                if (hi - lo <= 2.f) continue; // edges don't actually overlap in X
+                GW::GamePos qa(0.5f * (lo + hi), y, (uint32_t)plane), qb(0.5f * (lo + hi), y, (uint32_t)h.plane);
+                const float za = GW::Map::QueryAltitude(&qa), zb = GW::Map::QueryAltitude(&qb);
+                if (za != 0.f && zb != 0.f && std::fabs(za - zb) < kSeamHeightEps) return true;
+            }
+            return false;
+        };
+
+        auto push_line = [&](float x0, float x1, float y, int plane, bool w) {
+            if (x1 - x0 <= 2.f) return;
+            if (w && cross_plane_seam(x0, x1, y, plane)) w = false;
+            out.push_back({GW::GamePos(x0, y, (uint32_t)plane), GW::GamePos(x1, y, (uint32_t)plane), w});
+        };
+        // Terrain height just inside `poly`'s own side of the horizontal line at game-Y `y` (body is below its
+        // top edge / above its bottom edge) — lets abutment checks tell continuous floor from a sheer ledge.
+        auto side_altitude = [&](int poly, float x, float y) -> float {
+            const GW::PathingTrapezoid* t = (poly >= 0 && poly < (int)m_poly_trap.size()) ? m_poly_trap[poly] : nullptr;
+            if (!t) return 0.f;
+            const float off = std::min(8.f, 0.5f * std::fabs(t->YT - t->YB));
+            const float ys = std::fabs(t->YT - y) < std::fabs(t->YB - y) ? y - off : y + off;
+            GW::GamePos q(x, ys, (uint32_t)((poly < (int)m_poly_plane.size()) ? m_poly_plane[poly] : 0));
+            return GW::Map::QueryAltitude(&q);
+        };
+        // A horizontal boundary stretch of poly_i's edge: wherever another same-plane poly abuts the line at
+        // ~the same height it is walkable floor (trapezoids can have 3+ neighbours per edge, Build links at
+        // most two); only the un-abutted remainder is wall — unless it's a cross-plane seam (push_line).
+        auto emit_boundary = [&](int poly_i, float x0, float x1, float y, int plane) {
+            if (x1 - x0 <= 2.f) return;
+            std::vector<std::pair<float, float>> cov;
+            if (const auto it = horiz.find(lroundf(y)); it != horiz.end()) {
+                for (const auto& h : it->second) {
+                    if (h.poly == poly_i || h.plane != plane) continue;
+                    const float lo = std::max(x0, h.xmin), hi = std::min(x1, h.xmax);
+                    if (hi - lo <= 2.f) continue;
+                    const float za = side_altitude(poly_i, 0.5f * (lo + hi), y);
+                    const float zb = side_altitude(h.poly, 0.5f * (lo + hi), y);
+                    if (za != 0.f && zb != 0.f && std::fabs(za - zb) >= kSeamHeightEps) continue; // sheer ledge, not floor
+                    cov.push_back({lo, hi});
+                }
+            }
+            std::sort(cov.begin(), cov.end());
+            float cur = x0;
+            for (const auto& [lo, hi] : cov) {
+                if (lo > cur) push_line(cur, lo, y, plane, true);
+                if (hi > cur) push_line(std::max(cur, lo), hi, y, plane, false);
+                cur = std::max(cur, hi);
+                if (cur >= x1) return;
+            }
+            push_line(cur, x1, y, plane, true);
+        };
+
+        constexpr float kGapMin = 8.f; // min uncovered stretch worth re-emitting (above vertex quantisation noise)
         out.reserve(tile->header->polyCount * 3);
         for (int i = 0; i < tile->header->polyCount; ++i) {
             const dtPoly& p = tile->polys[i];
@@ -500,31 +566,45 @@ namespace Pathing {
             const int nv = (int)p.vertCount;
             for (int j = 0; j < nv; ++j) {
                 const unsigned short ia = p.verts[j], ib = p.verts[(j + 1) % nv];
-                bool wall = (p.neis[j] == 0);
-                if (!wall && ia > ib) continue; // shared internal edge: emit once
+                const bool wall = (p.neis[j] == 0);
                 const float* va = &tile->verts[ia * 3];
                 const float* vb = &tile->verts[ib * 3];
                 int pa = (int)lroundf(va[1] / kPlaneSeparation);
                 int pb = (int)lroundf(vb[1] / kPlaneSeparation);
+                const bool horizontal = std::fabs(va[2] - vb[2]) <= kHorizEps;
+                const bool dup = !wall && ia > ib; // shared internal edge: the conn is emitted once, by the other side
 
-                // Phantom-wall reclassification: a horizontal wall edge that overlaps a DIFFERENT plane's edge at the
-                // same game-Y and ~equal terrain height is really continuous walkable floor across a plane seam (GW
-                // can't record a top/bottom adjacency across planes, so Build walls it). Mark it walkable; the in-world
-                // draper resolves its height per-sample against the navmesh so it sits on the floor.
-                if (wall && std::fabs(va[2] - vb[2]) <= kHorizEps) {
-                    const float exmin = std::min(va[0], vb[0]), exmax = std::max(va[0], vb[0]);
-                    if (const auto it = horiz.find(lroundf(va[2])); it != horiz.end()) {
-                        for (const auto& h : it->second) {
-                            if (h.plane == pa) continue; // same plane: a true boundary, not a cross-plane seam
-                            const float lo = std::max(exmin, h.xmin), hi = std::min(exmax, h.xmax);
-                            if (hi - lo <= 2.f) continue; // edges don't actually overlap in X
-                            GW::GamePos qa(0.5f * (lo + hi), va[2], (uint32_t)pa), qb(0.5f * (lo + hi), va[2], (uint32_t)h.plane);
-                            const float za = GW::Map::QueryAltitude(&qa), zb = GW::Map::QueryAltitude(&qb);
-                            if (za != 0.f && zb != 0.f && std::fabs(za - zb) < kSeamHeightEps) { wall = false; break; }
+                // Horizontal Build walls are only trustworthy where nothing abuts: T-junction misses (Build links
+                // at most two neighbours per edge) and cross-plane seams both surface as false walls here.
+                if (wall && horizontal) {
+                    emit_boundary(i, std::min(va[0], vb[0]), std::max(va[0], vb[0]), va[2], pa);
+                    continue;
+                }
+
+                // The reverse: Build's two-neighbour top/bottom split hands the whole edge to the two neighbours (a
+                // 3-segment edge would exceed Detour's 6-vert poly cap), swallowing any wall stretch between them —
+                // e.g. a pillar whose base sits on the slab line. Re-emit the uncovered remainder via emit_boundary.
+                // This must run on the dup side too: these edges are asymmetric (different verts per side), so the
+                // gap exists only in the wider poly's segment and the other side can't recover it.
+                if (!wall && horizontal && !(p.neis[j] & DT_EXT_LINK)) {
+                    const int ni = (int)p.neis[j] - 1;
+                    const GW::PathingTrapezoid* tb = (ni >= 0 && ni < (int)m_poly_trap.size()) ? m_poly_trap[ni] : nullptr;
+                    if (tb && i < (int)m_poly_plane.size() && m_poly_plane[ni] == m_poly_plane[i]) {
+                        float nlo, nhi;
+                        NeighbourSpanAtY(*tb, va[2], nlo, nhi);
+                        const float slo = std::min(va[0], vb[0]), shi = std::max(va[0], vb[0]);
+                        const float clo = std::max(slo, nlo), chi = std::min(shi, nhi);
+                        if (clo - slo > kGapMin || shi - chi > kGapMin) {
+                            const float y = va[2];
+                            emit_boundary(i, slo, std::min(clo, shi), y, pa);
+                            if (!dup) push_line(clo, chi, y, pa, false);
+                            emit_boundary(i, std::max(chi, slo), shi, y, pa);
+                            continue;
                         }
                     }
                 }
 
+                if (dup) continue;
                 out.push_back({GW::GamePos(va[0], va[2], (uint32_t)pa), GW::GamePos(vb[0], vb[2], (uint32_t)pb), wall});
             }
         }
@@ -609,6 +689,13 @@ namespace Pathing {
                     else {
                         Log::Log("[navdump]   e (%.0f,%.0f)->(%.0f,%.0f) CONN->poly=%d(plane=%d,trap=%u)",
                                  va[0], va[2], vb[0], vb[2], ni, nplane, nid);
+                        if (ni >= 0 && ni < (int)m_poly_trap.size() && m_poly_trap[ni] && std::fabs(va[2] - vb[2]) <= 1.f) {
+                            float nlo, nhi;
+                            NeighbourSpanAtY(*m_poly_trap[ni], va[2], nlo, nhi);
+                            const float slo = std::min(va[0], vb[0]), shi = std::max(va[0], vb[0]);
+                            if (std::max(slo, nlo) - slo > 8.f || shi - std::min(shi, nhi) > 8.f)
+                                Log::Log("[navdump]     neighbour only spans [%.0f..%.0f]: uncovered = wall gap or 3+-neighbour T-junction", nlo, nhi);
+                        }
                     }
                 }
             }
