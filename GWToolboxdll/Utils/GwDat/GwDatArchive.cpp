@@ -58,8 +58,7 @@ namespace {
     // Match by extension, not "Gw.dat", so a renamed/-dat-relocated archive resolves (MapDat checks the magic).
     bool HasDatExtension(const std::wstring& path)
     {
-        const size_t dot = path.find_last_of(L'.');
-        return dot != std::wstring::npos && _wcsicmp(path.c_str() + dot, L".dat") == 0;
+        return path.ends_with(L".dat") || path.ends_with(L".snapshot");
     }
 
     // Whole-file read-only mapping, or nullptr unless the contents start with the 3ANa magic.
