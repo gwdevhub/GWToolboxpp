@@ -14,6 +14,7 @@ namespace {
     constexpr uint32_t kRefreshThrottleMs = 2000;          // min gap between re-parses on a read miss
     constexpr uint32_t kAsyncReadTimeoutMs = 60000;        // give up on an async read after ~1 minute
     constexpr uint32_t kAsyncPollMs = 250;                 // worker re-scan cadence for pending async reads
+    constexpr uint32_t kTickleThrottleMs = 10000;          // re-ask the client for a given missed file at most this often
 
     DWORD AllocationGranularity()
     {
@@ -391,8 +392,10 @@ bool GwDatArchive::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_
     if (!ReadRaw(file_id, stream_id, input, compressed)) {
         // Missing: the client may have streamed this file in since our last parse - re-read and retry.
         MaybeRefresh();
-        if (!ReadRaw(file_id, stream_id, input, compressed))
+        if (!ReadRaw(file_id, stream_id, input, compressed)) {
+            TickleFetch(file_id); // not resident; ask the client to fetch it for a later read
             return false;
+        }
     }
 
     if (compressed) {
@@ -423,16 +426,35 @@ void GwDatArchive::ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32
     StartWorker(); // the poll loop delivers
     const uint32_t deadline = GetTickCount() + kAsyncReadTimeoutMs;
     std::scoped_lock<std::mutex> lock(m_pending_mutex);
-    m_pending_reads.push_back({file_id, stream_id, deadline, std::move(callback), false});
+    m_pending_reads.push_back({file_id, stream_id, deadline, std::move(callback)});
 }
 
 void GwDatArchive::SetTrigger(TriggerFn trigger)
 {
-    std::scoped_lock<std::mutex> lock(m_pending_mutex);
+    std::scoped_lock<std::mutex> lock(m_trigger_mutex);
     m_trigger = std::move(trigger);
 }
 
-// Worker pass: deliver resolved reads, time out stale ones, tickle the client once per pending file.
+// Ask the client to fetch a just-missed file so a later read may find it; throttled per id so a
+// per-frame retry loop doesn't spam. Fires the trigger outside the lock.
+void GwDatArchive::TickleFetch(uint32_t file_id)
+{
+    TriggerFn trigger;
+    {
+        std::scoped_lock<std::mutex> lock(m_trigger_mutex);
+        if (!m_trigger)
+            return;
+        const uint32_t now = GetTickCount();
+        const auto it = m_tickled_at.find(file_id);
+        if (it != m_tickled_at.end() && now - it->second < kTickleThrottleMs)
+            return; // asked recently (elapsed is unsigned, wrap-safe for a session)
+        m_tickled_at[file_id] = now;
+        trigger = m_trigger;
+    }
+    trigger(file_id);
+}
+
+// Worker pass: deliver resolved reads and time out stale ones. A miss tickles the client via ReadFile.
 void GwDatArchive::ProcessPendingReads()
 {
     std::vector<std::pair<ReadCallback, std::vector<uint8_t>>> ready; // callbacks fire outside the lock
@@ -446,10 +468,6 @@ void GwDatArchive::ProcessPendingReads()
             else if (static_cast<int32_t>(now - it->deadline_ms) >= 0) // deadline passed (wrap-safe)
                 ready.emplace_back(std::move(it->callback), std::vector<uint8_t>{});
             else {
-                if (m_trigger && !it->triggered) { // ask the client to fetch it, once
-                    m_trigger(it->file_id);
-                    it->triggered = true;
-                }
                 ++it;
                 continue;
             }

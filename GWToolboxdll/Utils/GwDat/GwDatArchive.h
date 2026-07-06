@@ -43,8 +43,9 @@ public:
     using ReadCallback = std::function<void(std::vector<uint8_t>&)>;
     void ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id = 0);
 
-    // Optional hook to ask the client to fetch a file id; ReadFileAsync calls it once per pending
-    // file not yet resident. Wired by the GWCA layer; the reader works with or without it.
+    // Optional hook to ask the client to fetch a file id. ReadFile calls it (throttled per id) whenever
+    // a read misses, so a streamed-only file gets pulled in for a later read. Wired by the GWCA layer;
+    // the reader works with or without it.
     using TriggerFn = std::function<void(uint32_t file_id)>;
     void SetTrigger(TriggerFn trigger);
 
@@ -57,7 +58,8 @@ private:
     GwDatArchive() = default;
 
     void WorkerLoop();
-    void ProcessPendingReads(); // deliver/expire queued ReadFileAsync requests (worker thread)
+    void ProcessPendingReads();         // deliver/expire queued ReadFileAsync requests (worker thread)
+    void TickleFetch(uint32_t file_id); // ask the client to fetch a missed file (throttled per id)
 
 #pragma pack(push, 1)
     struct MainHeader {
@@ -111,13 +113,15 @@ private:
     struct PendingRead {
         uint32_t file_id;
         uint32_t stream_id;
-        uint32_t deadline_ms;   // GetTickCount() at which the request gives up
+        uint32_t deadline_ms; // GetTickCount() at which the request gives up
         ReadCallback callback;
-        bool triggered = false; // whether we've asked the client to fetch it yet
     };
-    std::mutex m_pending_mutex; // guards m_pending_reads + m_trigger
+    std::mutex m_pending_mutex; // guards m_pending_reads
     std::vector<PendingRead> m_pending_reads;
+
+    std::mutex m_trigger_mutex; // guards m_trigger + m_tickled_at
     TriggerFn m_trigger;
+    std::unordered_map<uint32_t, uint32_t> m_tickled_at; // file_id -> GetTickCount() of last fetch tickle
     std::shared_mutex m_index_mutex;               // guards m_mapping/m_slots/m_fileid_to_slot against MaybeRefresh
     uint32_t m_last_refresh_ms = 0;                // GetTickCount of the last re-parse, to throttle refreshes
     void* m_mapping = nullptr;      // file-mapping HANDLE for the dat, replaced by MaybeRefresh when the dat grows
