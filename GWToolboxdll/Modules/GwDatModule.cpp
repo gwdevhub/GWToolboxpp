@@ -24,11 +24,12 @@ namespace {
     // own preloads). Resolved from a unique call site via FunctionFromNearCall, which survives byte
     // shifts better than a prologue scan.
     using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
-    // 0 = plain non-cancelable request (matches the client's own FUN_0082dd80). The client downloads it
-    // when it next processes its queue (a map transition); we retry the read until it lands. Not 0x2
-    // (a "flush" the client itself never uses, and which doesn't force an on-the-fly download); not
-    // 0x1/0x10000 (cancel-tracking, which returns a handle that leaks unless released).
-    constexpr uint32_t kTriggerFlags = 0;
+    // 0x2 = enqueue + FLUSH. In the wrapper (FUN_0082da30), only `flags & 2` calls FUN_00832f00(), the
+    // flush that actually kicks the download queue on-the-fly; without it the id is enqueued but never
+    // fetched until the client flushes on its own (e.g. a map transition). We avoid 0x8 (asserts unless
+    // the download system is in a specific state), 0x10000/0x1 (cancel-tracking - returns a handle we'd
+    // leak, and 0x10001 hits the DAT_01075280 "offline" bail-out). 0x2 enqueues at priority 1, no leak.
+    constexpr uint32_t kTriggerFlags = 0x2;
     RequestFiles_pt RequestFiles_Func = nullptr;
 
     void ResolveRequestFn()
@@ -747,6 +748,8 @@ bool GwDatModule::ParseIndex()
     m_file_size = size;
     m_indexed_size = size;
     m_dat_path = path;
+    Log::Log("[GwDat] bound to archive %S (%lld bytes, %u files indexed)", // TEMP
+             path.c_str(), size, static_cast<unsigned>(m_fileid_to_slot.size()));
     return true;
 }
 
@@ -780,6 +783,8 @@ void GwDatModule::MaybeRefresh()
         CloseHandle(reinterpret_cast<HANDLE>(mapping));
         return;
     }
+    Log::Log("[GwDat] dat grew %lld -> %lld bytes, reindexed %u files (streamed-in files now readable)", // TEMP
+             last_size, size, static_cast<unsigned>(fileid_to_slot.size()));
 
     {
         std::unique_lock<std::shared_mutex> lock(m_index_mutex);
@@ -915,6 +920,8 @@ void GwDatModule::FlushTickles()
         batch.swap(m_tickle_batch);
         trigger = m_trigger;
     }
+    Log::Log("[GwDat] requesting %u file(s) from the client (first id=%u)", // TEMP
+             static_cast<unsigned>(batch.size()), batch[0]);
     trigger(batch.data(), batch.size());
 }
 
