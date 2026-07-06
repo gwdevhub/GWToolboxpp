@@ -18,40 +18,29 @@
 
 namespace {
 
-    // Asks the client to fetch a file id (dat or network). Found via its unique DOWNLOAD_FLAG assert
-    // string (survives client updates); safe in-game and enqueue-only - the client pumps its own queue.
+    // Asks the client to fetch a file id and flush the download queue so it sends now, not at the next
+    // map change (the client's request+flush wrapper, 0x2 flag). Resolved from a unique call site via
+    // FunctionFromNearCall, which survives byte shifts better than a prologue scan.
     using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
-    // 0 = non-cancelable: client frees its own request batch, fire-and-forget. Don't add a cancelable
-    // flag (0x1/0x10000) - that returns a handle that leaks unless released.
-    constexpr uint32_t kTriggerFlags = 0;
+    // 0x2 = enqueue + flush, non-cancelable (stores no handle). Don't add 0x1/0x10000 - they return a
+    // handle that leaks unless released.
+    constexpr uint32_t kTriggerFlags = 0x2;
     RequestFiles_pt RequestFiles_Func = nullptr;
-
-    // Flush the download queue so the request is sent now instead of at the next map change - it just
-    // clears one bit of a client flag (what the wrapper's 0x2 flag does after enqueuing). The 8-byte
-    // 'AND dword[flag],~1; RET' is unique in the client; best-effort, null just falls back to the
-    // client's own pump.
-    using FlushDownloads_pt = void(__cdecl*)();
-    FlushDownloads_pt FlushDownloads_Func = nullptr;
 
     void WireGameFileTrigger()
     {
-        RequestFiles_Func = reinterpret_cast<RequestFiles_pt>(GW::Scanner::ToFunctionStart(
-            GW::Scanner::FindUseOfString("!(flags & DOWNLOAD_FLAG_LOW_PRIORITY) || !ITrackIsLoadingScreenActive()"), 0xfff));
+        // PUSH 0x10008; PUSH EAX; PUSH [EBP-4]; CALL <wrapper> - the ...E8 near call resolves the target.
+        const uintptr_t call_addr = GW::Scanner::Find("\x68\x08\x00\x01\x00\x50\xff\x75\xfc\xe8", "xxxxxxxxxx", 9);
+        RequestFiles_Func = call_addr ? reinterpret_cast<RequestFiles_pt>(GW::Scanner::FunctionFromNearCall(call_addr)) : nullptr;
         if (!RequestFiles_Func) {
             Log::Log("[GwDat] game file-request trigger not found; async reads will wait passively.");
             return;
         }
-        FlushDownloads_Func = reinterpret_cast<FlushDownloads_pt>(
-            GW::Scanner::Find("\x83\x25\x00\x00\x00\x00\xfe\xc3", "xx????xx", 0));
-        Log::Log("[GwDat] game file-request trigger resolved at %p (flush %s)", reinterpret_cast<void*>(RequestFiles_Func),
-                 FlushDownloads_Func ? "ok" : "missing");
+        Log::Log("[GwDat] game file-request trigger resolved at %p", reinterpret_cast<void*>(RequestFiles_Func));
         GwDatArchive::Instance().SetTrigger([](uint32_t file_id) {
             GW::GameThread::Enqueue([file_id] { // touches client state; run on the game thread
-                if (!RequestFiles_Func)
-                    return;
-                RequestFiles_Func(1, &file_id, kTriggerFlags);
-                if (FlushDownloads_Func)
-                    FlushDownloads_Func(); // send now, don't wait for a map change
+                if (RequestFiles_Func)
+                    RequestFiles_Func(1, &file_id, kTriggerFlags);
             });
         });
     }
