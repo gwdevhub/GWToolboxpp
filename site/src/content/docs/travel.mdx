@@ -27,10 +27,13 @@ The Travel window allows you to quickly travel to any outpost in the game that y
 3. Choose a district if desired.
 4. Click to travel to the selected outpost.
 
-## Favorites
-- Add outposts to your favorites list for easy access.
-- Click the "Add" button to add a new favorite.
-- Edit or remove favorites as needed.
+## User Travel Destinations
+The quick-access buttons in the Travel window are fully configurable. To manage them, go to <ToolboxPath steps={["Settings", "Travel"]} /> and scroll to the **User Travel Destinations** section:
+- **Add**: Click "Add Destination" to append a new button. Select the outpost, district, and optional district number for each entry.
+- **Remove**: Click the trash button on any row to delete that destination.
+- **Reset**: "Reset to Defaults" restores the original set of destinations.
+
+Note: reordering destinations is not currently supported in the UI.
 
 ## Chat Commands
 Use `/tp`, `/to`, or `/travel` followed by the outpost name or abbreviation to quickly travel. For example:
@@ -52,9 +55,15 @@ You can use various shortcuts and partial names for outposts and districts. Some
 - In pre-Searing Ascalon, only the 5 pre-Searing outposts are available.
 
 ## Settings
+Open via <ToolboxPath steps={["Settings", "Travel"]} />.
+
 - **Close on travel**: Automatically close the Travel window after selecting a destination.
 - **Collapse on travel**: Automatically collapse the Travel window after selecting a destination.
-- **Automatically retry if the district is full**: Keep trying to enter a full district.
+- **Automatically retry if the district is full**: Keep trying to enter a full district. Use `/tp stop` to cancel.
+- **Use English map names**: When unchecked, the `/tp` command uses localized map names matching your current language.
+- **Show Zaishen quest buttons**: Toggle the Zaishen Bounty, Mission, Vanquish, and Combat travel buttons in the Travel window.
+- **User Travel Destinations**: Add or remove the quick-travel buttons shown in the Travel window (see [above](#user-travel-destinations)).
+- **Outpost Aliases**: Add, edit, or remove shorthand aliases used with the `/tp` command.
 
 ## Notes
 
