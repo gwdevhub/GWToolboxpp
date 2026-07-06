@@ -18,27 +18,26 @@
 
 namespace {
 
-    // Game file-request trigger: asks the client to load a file id from its dat/network (the safe
-    // FUN_0082da30 variant, which no-ops on bad state). Byte-pattern scanned against build 388118, so
-    // it may need re-deriving after a client update; if it doesn't resolve, async reads just wait
-    // passively for the client to stream the file on its own.
+    // Game file-request trigger: asks the client to load a file id from its dat/network. Anchored on
+    // the request function's unique DOWNLOAD_FLAG assertion string, so it survives client updates
+    // (unlike a raw byte pattern). It's the enqueue entry; the client pumps its download queue on its
+    // own, so no explicit "kick" is needed, and it's safe to call in-game (the requests-suspended flag
+    // it asserts on is only toggled from the client's Main).
     using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
-    constexpr uint32_t kTriggerFlags = 0x2; // enqueue + kick the download pump
+    constexpr uint32_t kTriggerFlags = 0; // normal priority, non-cancelable
     RequestFiles_pt RequestFiles_Func = nullptr;
 
     void WireGameFileTrigger()
     {
-        RequestFiles_Func = reinterpret_cast<RequestFiles_pt>(GW::Scanner::Find(
-            "\x55\x8b\xec\x53\x8b\x5d\x08\x56\x57\x85\xdb\x0f\x84\x9c\x02\x00\x00"
-            "\x83\x3d\x78\x52\x07\x01\x00\x0f\x85\x8f\x02\x00\x00\x8b\x35\xf4\x76\xbe\x00\x85\xf6",
-            "xxxxxxxxxxxxx????xx????xxx????xx????xx", 0));
+        RequestFiles_Func = reinterpret_cast<RequestFiles_pt>(GW::Scanner::ToFunctionStart(
+            GW::Scanner::FindUseOfString("!(flags & DOWNLOAD_FLAG_LOW_PRIORITY) || !ITrackIsLoadingScreenActive()"), 0xfff));
         if (!RequestFiles_Func) {
             Log::Log("[GwDat] game file-request trigger not found; async reads will wait passively.");
             return;
         }
         Log::Log("[GwDat] game file-request trigger resolved at %p", reinterpret_cast<void*>(RequestFiles_Func));
         GwDatArchive::Instance().SetTrigger([](uint32_t file_id) {
-            // FUN_0082da30 touches client state, so issue the request on the game thread.
+            // The request function touches client state, so issue it on the game thread.
             GW::GameThread::Enqueue([file_id] {
                 if (RequestFiles_Func)
                     RequestFiles_Func(1, &file_id, kTriggerFlags);
