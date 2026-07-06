@@ -12,13 +12,16 @@
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 
 namespace {
-    constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
     constexpr int kSegments = 48;
     constexpr int kMaxBuildsPerFrame = 4; // draping QueryAltitude budget: ~200 queries per ring build
 
-    bool occlude_behind_terrain = true;
+    // Occlusion (whether the rings hide behind terrain, and the depth-projection planes it needs) is shared with
+    // the "In-game rendering" module via GameWorldRenderer::GetOccludeBehindTerrain()/GetDepthZNear()/GetDepthZFar()
+    // so it's configured in one place. It defaults off there: a ring draped tight to the floor otherwise self-
+    // occludes against terrain it dips into between segments, dropping arcs that change with the camera angle.
     float render_max_distance = 5000.f;
     float fog_factor = 1.0f;
     float ring_thickness = 40.f;
@@ -149,7 +152,9 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
 
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, kZNear, kZFar, render_max_distance, fog_factor)) {
+    if (GameWorldCompositor::SetupPipeline(device, GameWorldRenderer::GetOccludeBehindTerrain(),
+                                           GameWorldRenderer::GetDepthZNear(), GameWorldRenderer::GetDepthZFar(),
+                                           render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(RingVertex));
@@ -160,7 +165,6 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
 
 void DangerRingsModule::RegisterSettings(ToolboxModule* module)
 {
-    SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
     SettingsRegistry::RegisterField(module, "ring_thickness", &ring_thickness);
@@ -199,7 +203,7 @@ void DangerRingsModule::DrawSettingsInternal()
     if (!GameWorldCompositor::IsActive())
         ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "In-world compositor FAILED to install." : "In-world compositor: not installed yet.");
 
-    if (ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain)) meshes_dirty = true;
+    ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     if (ImGui::DragFloat("Ring thickness", &ring_thickness, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
     if (ImGui::DragFloat("Rim opacity", &rim_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
