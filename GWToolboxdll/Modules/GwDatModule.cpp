@@ -383,12 +383,6 @@ namespace {
         return path;
     }
 
-    // Match by extension, not "Gw.dat", so a renamed/-dat-relocated archive resolves (MapDat checks the magic).
-    bool HasDatExtension(const std::wstring& path)
-    {
-        return path.ends_with(L".dat") || path.ends_with(L".snapshot");
-    }
-
     // Whole-file read-only mapping, or nullptr unless the contents start with the 3ANa magic.
     HANDLE MapDat(HANDLE file)
     {
@@ -482,13 +476,19 @@ bool GwDatModule::AcquireMappingInto(void*& out_mapping, long long& out_size)
         if (GetFileType(h) != FILE_TYPE_DISK)
             continue;
         const std::wstring path = HandlePath(h);
-        if (path.empty() || !HasDatExtension(path))
+        if (path.empty())
+            continue;
+        if (!path.ends_with(L".dat") && !path.ends_with(L".snapshot"))
             continue;
         const HANDLE mapping = MapDat(h);
         if (!mapping)
             continue;
         LARGE_INTEGER sz;
-        out_size = GetFileSizeEx(h, &sz) ? sz.QuadPart : 0;
+        if (!GetFileSizeEx(h, &sz))
+            continue;
+        if (sz.QuadPart < 1024 * 1024 * 100)
+            continue; // Gw.dat is always > 100 MB; ignore small .dat files (e.g. the Steam overlay's .dat)
+        out_size = sz.QuadPart;
         out_mapping = mapping;
         return true;
     }
