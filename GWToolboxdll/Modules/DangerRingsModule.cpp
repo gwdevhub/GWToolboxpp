@@ -20,8 +20,9 @@ namespace {
 
     // Occlusion (whether the rings hide behind terrain, and the depth-projection planes it needs) is shared with
     // the "In-game rendering" module via GameWorldRenderer::GetOccludeBehindTerrain()/GetDepthZNear()/GetDepthZFar()
-    // so it's configured in one place. It defaults off there: a ring draped tight to the floor otherwise self-
-    // occludes against terrain it dips into between segments, dropping arcs that change with the camera angle.
+    // so it's configured in one place. It defaults off there: with occlusion on, the ring and the terrain it hugs
+    // land at nearly-equal depths, and the depth-test tie is resolved by the compositor's reconstructed projection
+    // vs GW's real one - a mismatch that grows non-linearly with distance, so arcs drop in/out as the camera moves.
     float render_max_distance = 5000.f;
     float fog_factor = 1.0f;
     float ring_thickness = 40.f;
