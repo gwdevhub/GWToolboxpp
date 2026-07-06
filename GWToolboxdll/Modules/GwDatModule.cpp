@@ -653,6 +653,36 @@ bool GwDatModule::AcquireMappingInto(void*& out_mapping, long long& out_size, st
     m_handle_enum_failed.store(false, std::memory_order_release);
     const auto* info = reinterpret_cast<const SystemHandleInfoEx*>(snapshot.data());
     const ULONG_PTR pid = GetCurrentProcessId();
+    // TEMP: on first load, list every dat-like handle the client holds (path + size + whether it carries
+    // the archive magic) so we can tell if streamed content lands in a file other than the one we bind to.
+    static std::atomic<bool> enumerated{false};
+    if (!enumerated.exchange(true)) {
+        for (ULONG_PTR i = 0; i < info->NumberOfHandles; ++i) {
+            const SystemHandleEntryEx& e = info->Handles[i];
+            if (e.UniqueProcessId != pid)
+                continue;
+            const HANDLE h = reinterpret_cast<HANDLE>(e.HandleValue);
+            if (GetFileType(h) != FILE_TYPE_DISK)
+                continue;
+            const std::wstring p = HandlePath(h);
+            if (p.empty())
+                continue;
+            const bool dat_ext = HasDatExtension(p);
+            if (!dat_ext && p.find(L"snapshot") == std::wstring::npos && p.find(L"temp") == std::wstring::npos &&
+                p.find(L".dat") == std::wstring::npos && p.find(L"$") == std::wstring::npos)
+                continue;
+            LARGE_INTEGER sz{};
+            const bool got = GetFileSizeEx(h, &sz);
+            int magic = -1;
+            if (dat_ext) {
+                const HANDLE m = MapDat(h);
+                magic = m ? 1 : 0;
+                if (m)
+                    CloseHandle(m);
+            }
+            Log::Log("[GwDat][handles] size=%lld magic=%d %S", got ? sz.QuadPart : -1, magic, p.c_str());
+        }
+    }
     for (ULONG_PTR i = 0; i < info->NumberOfHandles; ++i) {
         const SystemHandleEntryEx& entry = info->Handles[i];
         if (entry.UniqueProcessId != pid)
