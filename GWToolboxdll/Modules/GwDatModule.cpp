@@ -20,13 +20,15 @@
 
 namespace {
 
-    // Asks the client to fetch a file id and flush the download queue so it sends now, not at the next
-    // map change (the client's request+flush wrapper, 0x2 flag). Resolved from a unique call site via
-    // FunctionFromNearCall, which survives byte shifts better than a prologue scan.
+    // Asks the client to queue a file id for download (the same FUN_0082da30 the client uses for its
+    // own preloads). Resolved from a unique call site via FunctionFromNearCall, which survives byte
+    // shifts better than a prologue scan.
     using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
-    // 0x2 = enqueue + flush, non-cancelable (stores no handle). Don't add 0x1/0x10000 - they return a
-    // handle that leaks unless released.
-    constexpr uint32_t kTriggerFlags = 0x2;
+    // 0 = plain non-cancelable request (matches the client's own FUN_0082dd80). The client downloads it
+    // when it next processes its queue (a map transition); we retry the read until it lands. Not 0x2
+    // (a "flush" the client itself never uses, and which doesn't force an on-the-fly download); not
+    // 0x1/0x10000 (cancel-tracking, which returns a handle that leaks unless released).
+    constexpr uint32_t kTriggerFlags = 0;
     RequestFiles_pt RequestFiles_Func = nullptr;
 
     void ResolveRequestFn()
