@@ -35,7 +35,7 @@
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/ItemDescriptionHandler.h>
@@ -1287,7 +1287,7 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(MainWindow::Instance());
     ToggleModule(DialogModule::Instance());
 
-    ToggleModule(GwDatTextureModule::Instance());
+    ToggleModule(GwDatModule::Instance());
     ToggleModule(Updater::Instance());
     ToggleModule(ChatCommands::Instance());
     ToggleModule(TransmoModule::Instance());

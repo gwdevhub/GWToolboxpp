@@ -12,7 +12,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 
 #include <Windows/ArmoryWindow_Constants.h>
 #include <Windows/ArmoryWindow.h>
@@ -702,7 +702,7 @@ namespace GWArmory {
             model_id_to_load = model_file_id;
 
         // The UI icon is stream 1 of the model file; recolour its stream 0xc mask for the dyes.
-        return GwDatTextureModule::LoadItemImage(model_id_to_load, dyes);
+        return GwDatModule::LoadItemImage(model_id_to_load, dyes);
     }
     
     std::string GetChatCommand(Armor* armor, GW::ItemData* data)
