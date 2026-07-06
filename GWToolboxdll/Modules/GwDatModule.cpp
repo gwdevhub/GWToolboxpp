@@ -591,6 +591,11 @@ bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint
     return ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size));
 }
 
+bool GwDatModule::MissingDatData()
+{
+    return Instance().m_missing_data.load(std::memory_order_relaxed);
+}
+
 bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id)
 {
     auto& self = Instance();
@@ -613,7 +618,8 @@ bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t
     bool compressed = false;
     if (!self.ReadRaw(file_id, stream_id, input, compressed)) {
         // The dat is mapped but doesn't contain this file - almost always an incomplete Steam/streaming
-        // install. Point the user at -image once; re-tickling the client to stream it doesn't work.
+        // install. Flag it (the UI surfaces this) and point the user at -image once.
+        self.m_missing_data.store(true, std::memory_order_relaxed);
         static std::once_flag warned;
         std::call_once(warned, [] {
             Log::Warning("GWToolbox couldn't find some image data in your Gw.dat - your local game data looks "

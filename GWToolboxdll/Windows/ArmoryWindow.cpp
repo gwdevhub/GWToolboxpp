@@ -682,6 +682,10 @@ namespace GWArmory {
         return dyes;
     }
 
+    // Set by GetArmorPieceImage whenever a piece it returns has no icon loaded; consumed (and reset) by
+    // Draw() each frame to decide whether to show the missing-data warning at the top of the window.
+    bool armor_icon_missing = false;
+
     IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes = 0) {
         const bool is_composite_item = (interaction & 4) != 0;
 
@@ -702,7 +706,10 @@ namespace GWArmory {
             model_id_to_load = model_file_id;
 
         // The UI icon is stream 1 of the model file; recolour its stream 0xc mask for the dyes.
-        return GwDatModule::LoadItemImage(model_id_to_load, dyes);
+        IDirect3DTexture9** result = GwDatModule::LoadItemImage(model_id_to_load, dyes);
+        if (!*result)
+            armor_icon_missing = true; // a shown piece has no icon (yet) - flag for the warning
+        return result;
     }
     
     std::string GetChatCommand(Armor* armor, GW::ItemData* data)
@@ -1368,6 +1375,18 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+        // From last frame's render: a shown piece had no icon and the dat is missing data. Warn, then reset
+        // so this frame's DrawArmorPiece*/DrawWeapons* calls below recompute it.
+        if (armor_icon_missing && GwDatModule::MissingDatData()) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.0f, 1.0f)); // amber warning
+            ImGui::TextWrapped("Some images are missing because your Gw.dat is an incomplete (Steam/streaming) "
+                               "install. Run Guild Wars once with the -image command-line option to download "
+                               "all game data, then restart.");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+        }
+        armor_icon_missing = false;
+
         ImGui::Text("Profession: %s", ToolboxUtils::GetProfessionName(current_profession)->string().c_str());
 
         ImGui::SameLine();
