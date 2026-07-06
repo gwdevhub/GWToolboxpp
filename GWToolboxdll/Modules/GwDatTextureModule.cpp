@@ -21,9 +21,8 @@ namespace {
     // Asks the client to fetch a file id (dat or network). Found via its unique DOWNLOAD_FLAG assert
     // string (survives client updates); safe in-game and enqueue-only - the client pumps its own queue.
     using RequestFiles_pt = void(__cdecl*)(uint32_t count, const uint32_t* file_ids, uint32_t flags);
-    // 0 = normal priority, non-cancelable: the client owns and frees the request batch itself, so it's
-    // fire-and-forget with nothing to release. Do NOT add a cancelable flag (0x1/0x10000) - those
-    // return a handle that must be released or it leaks.
+    // 0 = non-cancelable: client frees its own request batch, fire-and-forget. Don't add a cancelable
+    // flag (0x1/0x10000) - that returns a handle that leaks unless released.
     constexpr uint32_t kTriggerFlags = 0;
     RequestFiles_pt RequestFiles_Func = nullptr;
 
