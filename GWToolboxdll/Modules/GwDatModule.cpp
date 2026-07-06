@@ -549,6 +549,36 @@ namespace {
             return buffer;
         }
     }
+
+    // CRC32 (zlib/IEEE: reflected, init 0xFFFFFFFF, final XOR) - matches the client's own FUN_00471560.
+    // `crc` is the running (pre-final-XOR) value so buffers can be chained; seed with 0xFFFFFFFF.
+    uint32_t Crc32Acc(uint32_t crc, const uint8_t* data, size_t len)
+    {
+        for (size_t i = 0; i < len; ++i) {
+            crc ^= data[i];
+            for (int k = 0; k < 8; ++k)
+                crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
+        }
+        return crc;
+    }
+
+    // TEMP probe (not gating): logs the first few reads so we can confirm whether the MFT entry's crc is
+    // CRC32(payload) or CRC32(payload + file_id) before we trust it to reject mid-write reads.
+    void ProbeEntryCrc(uint32_t file_id, const std::vector<uint8_t>& payload, int32_t stored_crc)
+    {
+        static std::atomic<int> logged{0};
+        if (logged.fetch_add(1, std::memory_order_relaxed) >= 8)
+            return;
+        const uint32_t acc = Crc32Acc(0xFFFFFFFFu, payload.data(), payload.size());
+        const uint32_t crc_payload = ~acc;
+        const uint8_t id[4] = {static_cast<uint8_t>(file_id), static_cast<uint8_t>(file_id >> 8),
+                               static_cast<uint8_t>(file_id >> 16), static_cast<uint8_t>(file_id >> 24)};
+        const uint32_t crc_both = ~Crc32Acc(acc, id, 4);
+        Log::Log("[GwDat][crcprobe] id=%u size=%u stored=%08X payload=%08X both=%08X%s%s", file_id,
+                 static_cast<unsigned>(payload.size()), static_cast<unsigned>(stored_crc), crc_payload, crc_both,
+                 crc_payload == static_cast<uint32_t>(stored_crc) ? " MATCH:payload" : "",
+                 crc_both == static_cast<uint32_t>(stored_crc) ? " MATCH:both" : "");
+    }
 } // namespace
 
 
@@ -797,7 +827,10 @@ bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint
 
     input.resize(static_cast<size_t>(e->size));
     compressed = e->a != 0;
-    return ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size));
+    if (!ReadAt(reinterpret_cast<HANDLE>(m_mapping), e->offset, input.data(), static_cast<size_t>(e->size)))
+        return false;
+    ProbeEntryCrc(file_id, input, e->crc); // TEMP: confirm the crc semantics before gating reads on it
+    return true;
 }
 
 bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id)
