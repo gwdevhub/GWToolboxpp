@@ -26,6 +26,13 @@ namespace {
     constexpr uint32_t kTriggerFlags = 0;
     RequestFiles_pt RequestFiles_Func = nullptr;
 
+    // Flush the download queue so the request is sent now instead of at the next map change - it just
+    // clears one bit of a client flag (what the wrapper's 0x2 flag does after enqueuing). The 8-byte
+    // 'AND dword[flag],~1; RET' is unique in the client; best-effort, null just falls back to the
+    // client's own pump.
+    using FlushDownloads_pt = void(__cdecl*)();
+    FlushDownloads_pt FlushDownloads_Func = nullptr;
+
     void WireGameFileTrigger()
     {
         RequestFiles_Func = reinterpret_cast<RequestFiles_pt>(GW::Scanner::ToFunctionStart(
@@ -34,11 +41,17 @@ namespace {
             Log::Log("[GwDat] game file-request trigger not found; async reads will wait passively.");
             return;
         }
-        Log::Log("[GwDat] game file-request trigger resolved at %p", reinterpret_cast<void*>(RequestFiles_Func));
+        FlushDownloads_Func = reinterpret_cast<FlushDownloads_pt>(
+            GW::Scanner::Find("\x83\x25\x00\x00\x00\x00\xfe\xc3", "xx????xx", 0));
+        Log::Log("[GwDat] game file-request trigger resolved at %p (flush %s)", reinterpret_cast<void*>(RequestFiles_Func),
+                 FlushDownloads_Func ? "ok" : "missing");
         GwDatArchive::Instance().SetTrigger([](uint32_t file_id) {
             GW::GameThread::Enqueue([file_id] { // touches client state; run on the game thread
-                if (RequestFiles_Func)
-                    RequestFiles_Func(1, &file_id, kTriggerFlags);
+                if (!RequestFiles_Func)
+                    return;
+                RequestFiles_Func(1, &file_id, kTriggerFlags);
+                if (FlushDownloads_Func)
+                    FlushDownloads_Func(); // send now, don't wait for a map change
             });
         });
     }
