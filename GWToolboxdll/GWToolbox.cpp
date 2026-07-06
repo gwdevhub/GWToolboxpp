@@ -37,6 +37,7 @@
 #include <Modules/GameSettings.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/HallOfMonumentsModule.h>
+#include <Modules/PartyLoadoutModule.h>
 #include <Modules/InventoryManager.h>
 #include <Modules/ItemDescriptionHandler.h>
 #include <Modules/Resources.h>
@@ -1295,6 +1296,7 @@ void GWToolbox::UpdateInitialising(float)
     ToggleModule(ChatSettings::Instance());
     ToggleModule(InventoryManager::Instance());
     ToggleModule(HallOfMonumentsModule::Instance());
+    ToggleModule(PartyLoadoutModule::Instance());
     ToggleModule(SettingsWindow::Instance());
 
     ToolboxSettings::LoadModules(ini); // initialize all other modules as specified by the user
