@@ -8,7 +8,6 @@
 #include <filesystem>
 #include <functional>
 #include <mutex>
-#include <queue>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -49,7 +48,17 @@ public:
     // Decodes the texture for file_id from the dat and writes it to disk (format chosen by extension).
     static void SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path);
 
-    // --- Archive reading (public so the module's own helpers can drive it) ---
+    // --- Archive reading ---
+    // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
+    static bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
+
+    // Async ReadFile: the worker retries until the file resolves, then calls `callback` (worker thread)
+    // with the bytes, or with an empty vector after ~1 min; dropped if the worker stops. For files the
+    // client streams in on demand.
+    using ReadCallback = std::function<void(std::vector<uint8_t>&)>;
+    static void ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id = 0);
+
+private:
     // Maps the client's open dat handle on first use; retries until it succeeds. Thread-safe.
     bool EnsureLoaded();
     const std::wstring& DatPath() const { return m_dat_path; } // diagnostics, valid after EnsureLoaded()
@@ -57,26 +66,13 @@ public:
     // True if the handle scan itself failed (NtQuerySystemInformation blocked, usually AV/anti-cheat).
     bool HandleEnumerationBlocked() const { return m_handle_enum_failed.load(std::memory_order_acquire); }
 
-    // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
-    bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);
-
-    // Async ReadFile: the worker retries until the file resolves, then calls `callback` (worker thread)
-    // with the bytes, or with an empty vector after ~1 min; dropped if the worker stops. For files the
-    // client streams in on demand.
-    using ReadCallback = std::function<void(std::vector<uint8_t>&)>;
-    void ReadFileAsync(uint32_t file_id, ReadCallback callback, uint32_t stream_id = 0);
-
     // Optional hook to ask the client to fetch file ids. Read misses accumulate (throttled per id) and
     // are handed to this in batches by the worker. Wired by Initialize; the reader works without it.
     using TriggerFn = std::function<void(const uint32_t* file_ids, size_t count)>;
     void SetTrigger(TriggerFn trigger);
 
-    // Dedicated worker so reads/decodes run off the caller's thread; EnqueueTask runs inline if not started.
-    void StartWorker();
+    void StartWorker();                 // spins up the async-read poll worker (idempotent)
     void StopWorker();
-    void EnqueueTask(std::function<void()> task);
-
-private:
     void WorkerLoop();
     void ProcessPendingReads();         // deliver/expire queued ReadFileAsync requests (worker thread)
     void TickleFetch(uint32_t file_id); // queue a missed file for the client to fetch (throttled per id)
@@ -124,10 +120,9 @@ private:
     std::atomic<bool> m_loaded{false};
     std::atomic<bool> m_handle_enum_failed{false}; // set when the handle scan itself failed (AV/anti-cheat)
 
-    std::thread m_worker;                          // dedicated read/decode worker
-    std::mutex m_task_mutex;
-    std::condition_variable m_task_cv;
-    std::queue<std::function<void()>> m_tasks;
+    std::thread m_worker;       // dedicated read/decode worker (polls for pending async reads)
+    std::mutex m_worker_mutex;  // guards the worker lifecycle flags below + the wait
+    std::condition_variable m_worker_cv;
     bool m_worker_running = false;
     bool m_worker_stop = false;
 
