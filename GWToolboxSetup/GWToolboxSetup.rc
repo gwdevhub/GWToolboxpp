@@ -1,3 +1,0 @@
-#include "resource.h"
-
-IDI_ICON1 ICON "..\\resources\\gwtoolbox.ico"
