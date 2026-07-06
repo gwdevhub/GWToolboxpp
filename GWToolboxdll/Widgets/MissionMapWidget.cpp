@@ -48,12 +48,14 @@ namespace {
         float ax, ay;
         float bx, by;
         bool valid = false;
+        bool has_basis = false;
+        bool has_origin = false;
         clock_t last_rebuild = TIMER_INIT();
 
         float cached_basis_zoom = 0.f;
         void Rebuild();
 
-        void Project(float gx, float gy, float& sx, float& sy) const
+        void Project(const float gx, const float gy, float& sx, float& sy) const
         {
             sx = ox + gx * ax + gy * bx;
             sy = oy + gx * ay + gy * by;
@@ -151,7 +153,7 @@ namespace {
             py = player->pos.y;
         }
 
-        if (mission_map_zoom != cached_basis_zoom || !valid) {
+        if (mission_map_zoom != cached_basis_zoom || !has_basis) {
             cached_basis_zoom = mission_map_zoom;
 
             constexpr float STEP = 1000.f;
@@ -164,6 +166,7 @@ namespace {
             ay = (s10.y - s00.y) / STEP;
             bx = (s01.x - s00.x) / STEP;
             by = (s01.y - s00.y) / STEP;
+            has_basis = true;
         }
 
         const GW::Vec2f mm_offset = mm_pos - current_pan_offset;
@@ -171,8 +174,29 @@ namespace {
         const GW::Vec2f player_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
                                          mm_scaled.y * mission_map_zoom + mission_map_screen_pos.y};
 
-        ox = player_screen.x - px * ax - py * bx;
-        oy = player_screen.y - px * ay - py * by;
+        const float target_ox = player_screen.x - px * ax - py * bx;
+        const float target_oy = player_screen.y - px * ay - py * by;
+
+        // GW's own mission-map background pans with a follow-cam ease rather than snapping
+        // instantly to the player; matching that here (instead of tracking the raw position
+        // exactly) keeps our overlays visually glued to the backdrop instead of swimming
+        // against it. Snap instead of easing on the first frame or after a big jump (map
+        // change/teleport/zoom) so it doesn't visibly slide in from a stale position.
+        constexpr float SNAP_THRESHOLD_PX = 300.f;
+        const float dt_ms = static_cast<float>(TIMER_DIFF(last_rebuild));
+        last_rebuild = TIMER_INIT();
+
+        if (!has_origin || fabsf(target_ox - ox) > SNAP_THRESHOLD_PX || fabsf(target_oy - oy) > SNAP_THRESHOLD_PX) {
+            ox = target_ox;
+            oy = target_oy;
+            has_origin = true;
+        }
+        else {
+            constexpr float TAU_MS = 120.f;
+            const float alpha = 1.f - expf(-dt_ms / TAU_MS);
+            ox += (target_ox - ox) * alpha;
+            oy += (target_oy - oy) * alpha;
+        }
         valid = true;
     }
 
@@ -499,6 +523,7 @@ namespace {
         dx_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
         dx_device->SetRenderState(D3DRS_LIGHTING, FALSE);
         dx_device->SetRenderState(D3DRS_ZENABLE, FALSE);
+        dx_device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 
         RECT scissorRect;
         scissorRect.left = static_cast<LONG>(floorf(mission_map_top_left.x));

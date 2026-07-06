@@ -316,6 +316,8 @@ void GameWorldCompositor::SetWorldRenderStates(IDirect3DDevice9* device, const b
     device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
+    device->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, TRUE); // MULTISAMPLEANTIALIAS doesn't smooth native D3DPT_LINELIST/LINESTRIP draws (navmesh, in-world path lines)
 
     if (occlude) {
         // Depth-test against the scene so geometry occludes the overlay; never write depth (must not disturb GW's values).
