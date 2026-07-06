@@ -1334,6 +1334,10 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         const auto map_id = GW::Map::GetMapID();
         GW::Vec2f line_start;
         GW::Vec2f line_end;
+        // Cull to the visible viewport: with many portal/route lines loaded, submitting the off-screen ones to ImGui
+        // (vertex generation) every frame is the FPS sink. A cheap screen-space AABB reject keeps only what's visible.
+        const ImVec2 clip_min = draw_list->GetClipRectMin();
+        const ImVec2 clip_max = draw_list->GetClipRectMax();
         for (auto& line : lines | std::views::filter([](auto line) {
                               return line->visible;
                           })) {
@@ -1350,6 +1354,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
 
             const auto p1 = CalculateViewportPos(line_start, world_map_context->top_left);
             const auto p2 = CalculateViewportPos(line_end, world_map_context->top_left);
+
+            // Skip segments whose screen-space bounding box doesn't intersect the visible area.
+            if (std::max(p1.x, p2.x) < clip_min.x || std::min(p1.x, p2.x) > clip_max.x || std::max(p1.y, p2.y) < clip_min.y || std::min(p1.y, p2.y) > clip_max.y) continue;
 
             draw_list->AddLine(p1, p2, line->color);
         }
