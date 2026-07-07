@@ -70,7 +70,7 @@ namespace {
         if (image_size < 4)
             return false;
 
-        // Model files (ffna) carry the texture as an inline DXT3 chunk.
+        // Model files (ffna) carry the texture as an inline DXT3 chunk - confirmed to be a real icon, not a skin texture.
         if (memcmp(image_bytes, "ffna", 4) == 0) {
             const auto anet_file = reinterpret_cast<ArenaNetFileParser::ArenaNetFile*>(&asset);
             if (!anet_file->isValid())
@@ -145,11 +145,7 @@ namespace {
     };
 
     // Item icon to A8R8G8B8: stream 1 base, stream 0xc dye mask; masked pixels use the averaged dye matrices (`dyes` = up to 4 GW::DyeColor, one per byte).
-    // Some items (a composite piece's gendered model, or a plain weapon skin) were simply never given
-    // a stream 1 icon substream. Fall back to that same file's stream 0: for a model (ffna) file,
-    // that's its own inline surface texture, which is usually small enough to stand in as an icon and
-    // is strictly better than showing nothing. Undyeable either way: there's no separate stream 0xc
-    // mask to blend for it. This is the only fallback - if it also fails, there is no icon.
+    // A few items store their icon at stream 0 instead of stream 1 (standalone, or an ffna model's inline texture); undyeable, no stream 0xc mask for it.
     bool DecodeItemToArgb(uint32_t file_id, uint32_t dyes, std::vector<uint32_t>& base, Vec2i& dims)
     {
         if (!file_id)
@@ -239,12 +235,7 @@ namespace {
     // failure (missing dat data) rather than merely not-yet-decoded.
     bool HasFailed(const GwImg* img) { return img->m_completed && !img->m_tex; }
 
-    // Reads + decompresses + decodes on a worker thread (mapping/MFT reads are safe from any thread once
-    // loaded, per EnsureLoaded/ParseIndex) - this is the slow part (a cold dat-mapping/MFT parse, or just a
-    // big/compressed file) and previously ran inline on the render thread, stalling the game for as long as
-    // it took. Only the final GPU upload needs the D3D device, which only the render thread may touch, so
-    // that alone hops to the DX task queue. GwImg is shared-owned, so both tasks keep it alive even if
-    // Terminate() clears the cache before they run.
+    // Reads/decodes on a worker thread (was inline on the render thread, stalling the game); only the GPU upload needs the DX thread.
     template <typename Decode>
     void QueueDecode(std::shared_ptr<GwImg> img, Decode decode)
     {
@@ -563,10 +554,7 @@ bool GwDatModule::ParseFrom(void* mapping_v, long long file_size, std::vector<Mf
                                        expansion_count * sizeof(MftExpansion)))
         return false;
 
-    // Map each file id to its base slot; several ids may alias the same slot. Reserve up front (this
-    // is a ~150k+ entry table) so the loop doesn't rehash repeatedly, and index rather than range-for
-    // over `mftx` - in a debug build (checked iterators) that's a measurable chunk of the one-time
-    // parse cost, which previously ran inline on the render thread.
+    // Map each file id to its base slot; reserve + index rather than range-for to avoid rehashing and debug-iterator overhead on this ~150k+ entry table.
     fileid_to_slot.reserve(static_cast<size_t>(expansion_count));
     for (int i = 0; i < expansion_count; ++i) {
         const MftExpansion& e = mftx[static_cast<size_t>(i)];
