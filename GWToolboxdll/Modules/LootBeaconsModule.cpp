@@ -201,23 +201,51 @@ namespace {
         return true;
     }
 
-    // Appends a single vertical quad standing on the ground and facing the camera - `right_x`/`right_y` is
-    // the horizontal axis (from GetCameraRight below) so the quad rotates to face the viewer without ever
-    // being edge-on, unlike two fixed crossed quads.
-    void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const DWORD bottom_col, const DWORD top_col)
+    constexpr float kBeamSolidFraction = 0.25f; // bottom fraction of beam_height that stays fully solid before fading
+
+    // Appends a single quad standing on the ground and facing the camera - `right_x`/`right_y` is the
+    // horizontal axis (from GetCameraRight below) so the quad rotates to face the viewer without ever
+    // being edge-on, unlike two fixed crossed quads. Subdivided into a 3x3 vertex grid (4 quads) so the
+    // beam holds solid near the item before fading upward, and tapers to transparent at its left/right
+    // edges too, instead of a single hard-edged rectangle with a flat top-to-bottom gradient.
+    void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const Color base_color, const float base_alpha)
     {
         const float half = std::max(1.f, beam_width) * 0.5f;
-        const float z_top = ground_z - std::max(1.f, beam_height);
-        const float x0 = pos.x - right_x * half, y0 = pos.y - right_y * half;
-        const float x1 = pos.x + right_x * half, y1 = pos.y + right_y * half;
-        const BeaconVertex b0 = {x0, y0, ground_z, bottom_col}, b1 = {x1, y1, ground_z, bottom_col};
-        const BeaconVertex t0 = {x0, y0, z_top, top_col}, t1 = {x1, y1, z_top, top_col};
-        out.push_back(b0);
-        out.push_back(b1);
-        out.push_back(t1);
-        out.push_back(b0);
-        out.push_back(t1);
-        out.push_back(t0);
+        const float height = std::max(1.f, beam_height);
+        const float z_solid = ground_z - height * kBeamSolidFraction;
+        const float z_top = ground_z - height;
+
+        const DWORD col_full = WithAlpha(base_color, base_alpha);
+        const DWORD col_zero = WithAlpha(base_color, 0.f);
+
+        struct GridVert {
+            float x, y, z;
+            DWORD color;
+        };
+        const auto at = [&](const float t, const float z, const DWORD color) {
+            return GridVert{pos.x + right_x * half * t, pos.y + right_y * half * t, z, color};
+        };
+        // Columns: left edge (t=-1), centre (t=0), right edge (t=1) - only the centre carries alpha, so
+        // every row tapers to transparent at both edges.
+        const GridVert row_base[3] = {at(-1.f, ground_z, col_zero), at(0.f, ground_z, col_full), at(1.f, ground_z, col_zero)};
+        const GridVert row_solid[3] = {at(-1.f, z_solid, col_zero), at(0.f, z_solid, col_full), at(1.f, z_solid, col_zero)};
+        const GridVert row_top[3] = {at(-1.f, z_top, col_zero), at(0.f, z_top, col_zero), at(1.f, z_top, col_zero)};
+
+        const auto quad = [&](const GridVert& a0, const GridVert& a1, const GridVert& b0, const GridVert& b1) {
+            const BeaconVertex v00{a0.x, a0.y, a0.z, a0.color}, v10{a1.x, a1.y, a1.z, a1.color};
+            const BeaconVertex v01{b0.x, b0.y, b0.z, b0.color}, v11{b1.x, b1.y, b1.z, b1.color};
+            out.push_back(v00);
+            out.push_back(v10);
+            out.push_back(v11);
+            out.push_back(v00);
+            out.push_back(v11);
+            out.push_back(v01);
+        };
+        // row_base -> row_solid is identical alpha at both ends (holds solid); row_solid -> row_top fades to zero.
+        quad(row_base[0], row_base[1], row_solid[0], row_solid[1]);
+        quad(row_base[1], row_base[2], row_solid[1], row_solid[2]);
+        quad(row_solid[0], row_solid[1], row_top[0], row_top[1]);
+        quad(row_solid[1], row_solid[2], row_top[1], row_top[2]);
     }
 
     // Horizontal axis perpendicular to the camera's view direction, for a vertical (upright) billboard -
@@ -294,9 +322,7 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
             if (!BuildBeacon(beacon, n_planes)) continue;
         }
         const float beam_env = beacon.dimmed ? env * 0.4f : env;
-        const DWORD bottom_col = WithAlpha(beacon.color, beam_opacity * beam_env);
-        const DWORD top_col = WithAlpha(beacon.color, 0.f);
-        EmitBeamQuad(scratch, beacon.pos, beacon.ground_z, right_x, right_y, bottom_col, top_col);
+        EmitBeamQuad(scratch, beacon.pos, beacon.ground_z, right_x, right_y, beacon.color, beam_opacity * beam_env);
 
         // Ring opacity comes straight from the beacon colour's own alpha channel; dimmed (reserved for
         // other party members) is the one exception, same as the beam.
