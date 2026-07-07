@@ -1,14 +1,11 @@
-// Procedural soft-edged ring: no texture. Shades a single ring by distance from centre - a triangular
-// profile that ramps 0->1 approaching `ring_radius` (shared by every ring instance in this draw call,
-// since every beacon pulses on the same shared timer), peaks there, then ramps 1->0 moving past it.
-// The fade width is a fixed 4 gwinches, not user-configurable, so it's a compile-time constant here
-// rather than another shader register.
-static const float RING_EDGE = 4.0; // gwinches
-
+// Procedural soft-edged ring: no texture. Shades a single ring by distance from centre - solid
+// (alpha=1) within `ring_params.y` (thickness) of `ring_params.x` (radius, shared by every ring
+// instance in this draw call, since every beacon pulses on the same shared timer), then a
+// smoothstepped fade to transparent over `ring_params.z` (fade distance) beyond that.
 float4 cur_pos : register(c0);       // only xyz used: camera focus
 float4 max_dist : register(c1);      // only x used
 float4 fog_starts_at : register(c2); // only x used
-float4 ring_radius : register(c3);   // only x used: this draw's ring radius, world units
+float4 ring_params : register(c3);   // x = radius, y = thickness (solid half-width), z = fade distance - world units
 
 struct PS_INPUT {
     float4 position : SV_POSITION;
@@ -29,7 +26,9 @@ float4 main(PS_INPUT input) : COLOR {
     }
 
     float r = length(input.local);
-    float t = saturate(1.0 - abs(r - ring_radius.x) / RING_EDGE);
+    float fade = max(ring_params.z, 0.0001);
+    float past_thickness = max(abs(r - ring_params.x) - ring_params.y, 0.0);
+    float t = saturate(1.0 - past_thickness / fade);
     float ring_alpha = smoothstep(0.0, 1.0, t);
 
     float4 output = input.color;

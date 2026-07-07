@@ -26,9 +26,8 @@ namespace {
     constexpr int kMaxBuildsPerFrame = 8;   // draping QueryAltitude budget: ~70 queries per beacon build
     constexpr uint32_t kScanIntervalMs = 250; // item agents don't move; classification only needs a coarse tick
 
-    // Not user-configurable - fixed so the ring primitive's only inputs are position, colour and diameter.
-    constexpr float kRingEdgeWidth = 6.f; // gwinches, soft fade on each side of a ring's current radius
-    constexpr float kRingSpacing = 4.f;   // gwinches, how far the two rings start from the true diameter
+    // Not user-configurable - how far apart the two rings pulse (their "animation distance").
+    constexpr float kRingSpacing = 4.f; // gwinches, how far the two rings start from the true diameter
 
     // Occlusion behind terrain is shared with the "In-game rendering" module
     // via GameWorldRenderer::GetOccludeBehindTerrain() so it's set in one place.
@@ -37,9 +36,11 @@ namespace {
     float beam_height = 225.f;
     float beam_width = 35.f;
     float beam_opacity = 0.5f;
-    float ring_diameter = 90.f; // the true diameter the two rings pulse toward/away from (procedural, no texture)
-    float z_lift = 5.f;         // raise above the floor to avoid z-fighting (GW up is -z)
-    float pulse_interval = 1.f; // seconds for the two rings to go from spread apart to meeting in the middle
+    float ring_diameter = 90.f;      // the true diameter the two rings pulse toward/away from (procedural, no texture)
+    float ring_thickness = 0.f;      // solid (alpha=1) half-width on each side of a ring's current radius
+    float ring_fade_distance = 6.f;  // fade width beyond ring_thickness, on each side of a ring (soft edge)
+    float z_lift = 5.f;              // raise above the floor to avoid z-fighting (GW up is -z)
+    float pulse_interval = 1.f;      // seconds for the two rings to go from spread apart to meeting in the middle
     bool show_reserved_for_others = false;
 
     bool enable_value_beacons = true;
@@ -123,7 +124,7 @@ namespace {
     // shared radius constant. `radius` here only sizes the quad - it is NOT baked into the vertex data.
     void EmitRingQuad(std::vector<RingVertex>& out, const GW::Vec2f& pos, const float z, const float radius, const DWORD col)
     {
-        const float half = radius + kRingEdgeWidth + 1.f; // +1 slack against float precision at the outer fade boundary
+        const float half = radius + std::max(ring_thickness, 0.f) + std::max(ring_fade_distance, 0.f) + 1.f; // +1 slack against float precision at the outer fade boundary
         const RingVertex v00{pos.x - half, pos.y - half, z, col, -half, -half};
         const RingVertex v10{pos.x + half, pos.y - half, z, col, half, -half};
         const RingVertex v11{pos.x + half, pos.y + half, z, col, half, half};
@@ -310,8 +311,8 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
                 GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
                 const auto draw_ring_batch = [&](const std::vector<RingVertex>& verts, const float radius) {
                     if (verts.empty()) return;
-                    const float radius_constant[4] = {radius, 0.f, 0.f, 0.f};
-                    device->SetPixelShaderConstantF(3, radius_constant, 1);
+                    const float ring_params[4] = {radius, std::max(ring_thickness, 0.f), std::max(ring_fade_distance, 0.1f), 0.f};
+                    device->SetPixelShaderConstantF(3, ring_params, 1);
                     device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(verts.size() / 3), verts.data(), sizeof(RingVertex));
                 };
                 draw_ring_batch(ring_scratch_outer, r_outer);
@@ -331,6 +332,8 @@ void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "beam_width", &beam_width);
     SettingsRegistry::RegisterField(module, "beam_opacity", &beam_opacity);
     SettingsRegistry::RegisterField(module, "ring_diameter", &ring_diameter);
+    SettingsRegistry::RegisterField(module, "ring_thickness", &ring_thickness);
+    SettingsRegistry::RegisterField(module, "ring_fade_distance", &ring_fade_distance);
     SettingsRegistry::RegisterField(module, "z_lift", &z_lift);
     SettingsRegistry::RegisterField(module, "pulse_interval", &pulse_interval);
     SettingsRegistry::RegisterField(module, "show_reserved_for_others", &show_reserved_for_others);
@@ -402,8 +405,12 @@ void LootBeaconsModule::DrawSettingsInternal()
     if (ImGui::DragFloat("Beam width", &beam_width, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
     if (ImGui::DragFloat("Beam opacity", &beam_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
     ImGui::DragFloat("Ring diameter", &ring_diameter, 1.f, 5.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("The two rings pulse 4 gwinches in and out of this diameter, crossing over it. Fade width is a "
-                     "fixed 6 gwinches; opacity comes from the beacon colour's own alpha - no separate ring settings.");
+    ImGui::ShowHelp("The two rings pulse 4 gwinches in and out of this diameter, crossing over it. Opacity comes "
+                     "from the beacon colour's own alpha - no separate ring opacity setting.");
+    ImGui::DragFloat("Ring thickness", &ring_thickness, 0.5f, 0.f, 100.f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("Solid half-width of each ring's core, on each side of its current radius. 0 = a pure soft peak, no solid core.");
+    ImGui::DragFloat("Ring fade distance", &ring_fade_distance, 0.5f, 0.1f, 100.f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("Width of the soft fade beyond the thickness, on each side of a ring - procedural, no texture asset.");
     if (ImGui::DragFloat("Height lift", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
     ImGui::DragFloat("Pulse interval", &pulse_interval, 0.05f, 0.f, 10.f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("Seconds for the two rings to go from spread apart to meeting in the middle. 0 = no pulsing; "
