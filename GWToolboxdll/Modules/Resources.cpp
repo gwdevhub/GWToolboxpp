@@ -1366,24 +1366,37 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
     if (!model_file_id)
         return nullptr;
 
-    // Composite items (armor/runes) point at the given gender's model slot (file_ids[0] male,
-    // file_ids[5] female) - confirmed against the client's own composite-model loader
-    // (CICompositePlayer, used by the character-creation dress-up doll): it walks every populated
-    // file_ids slot to gather ALL of them as required texture layers for the 3D worn model, with no
-    // per-slot priority or "alternate icon" concept - there is no slot that means "the icon". So
-    // there's nothing to gain by trying other slots as fallbacks; if the gendered slot has no icon,
-    // there isn't one. LoadItemImage/DecodeItemToArgb already covers "check the same file another
-    // way" by falling back to that file's own stream 0 when stream 1 (the usual icon substream)
-    // doesn't exist. Beyond that, give up - don't guess at unrelated slots.
-    uint32_t candidate = model_file_id;
+    // Composite items (armor/runes) keep their per-gender variants in one contiguous block of the 11
+    // file_ids slots: 0-4 for male, 5-9 for female (slot 10 is unused by anything we've found - see
+    // the client's own composite-model loader, CICompositePlayer, used by the character-creation
+    // dress-up doll: it just walks every populated slot as an equally-required texture layer for the
+    // 3D worn model, no per-slot priority). Try this gender's block in order, one at a time - only
+    // advancing to the next slot once the current one is *confirmed* to have no icon at all (not
+    // merely still decoding), so a slot that's going to succeed is never skipped past in favour of
+    // touching a later, unrelated (and possibly invalid) one. LoadItemImage/DecodeItemToArgb already
+    // covers "check this same file another way" via its stream 0 fallback; beyond the block, give up.
     if (interaction & 4) {
         const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
-        const uint32_t gendered = model_file_info ? model_file_info->file_ids[is_female ? 5 : 0] : 0;
-        if (gendered)
-            candidate = gendered;
+        if (model_file_info) {
+            const size_t first_slot = is_female ? 5 : 0;
+            static IDirect3DTexture9* null_tex = nullptr;
+            IDirect3DTexture9** result = &null_tex;
+            for (size_t i = first_slot; i < first_slot + 5; ++i) {
+                const uint32_t slot_id = model_file_info->file_ids[i];
+                if (!slot_id)
+                    continue;
+                bool slot_failed = false;
+                result = GwDatModule::LoadItemImage(slot_id, dyes, &slot_failed);
+                if (*result || !slot_failed)
+                    return result; // succeeded, or still resolving - stop here either way
+            }
+            if (failed_out)
+                *failed_out = true;
+            return result;
+        }
     }
 
-    return GwDatModule::LoadItemImage(candidate, dyes, failed_out);
+    return GwDatModule::LoadItemImage(model_file_id, dyes, failed_out);
 }
 
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
