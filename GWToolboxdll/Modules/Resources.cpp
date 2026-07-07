@@ -1359,8 +1359,10 @@ namespace {
     }
 }
 
-IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes, bool is_female)
+IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes, bool is_female, bool* failed_out)
 {
+    if (failed_out)
+        *failed_out = false;
     if (!model_file_id)
         return nullptr;
 
@@ -1388,16 +1390,24 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
         candidates.push_back(model_file_id);
 
     // Kick off a load for every candidate (a no-op once cached) and use the first one that has
-    // actually produced a texture; a null result means none of them have an icon (yet).
+    // actually produced a texture. If none have, failed_out is only set once every candidate has
+    // actually finished decoding and failed - while any are still pending, the caller should treat
+    // this as "no icon yet" rather than a permanent failure.
     IDirect3DTexture9** first_result = nullptr;
+    bool any_pending = false;
     for (const uint32_t candidate : candidates) {
+        bool candidate_failed = false;
         // The UI icon is normally stream 1 of the model file; recolour its stream 0xc mask for the dyes.
-        IDirect3DTexture9** result = GwDatModule::LoadItemImage(candidate, dyes);
+        IDirect3DTexture9** result = GwDatModule::LoadItemImage(candidate, dyes, &candidate_failed);
         if (*result)
             return result;
+        if (!candidate_failed)
+            any_pending = true;
         if (!first_result)
             first_result = result;
     }
+    if (failed_out)
+        *failed_out = !any_pending;
     return first_result;
 }
 
