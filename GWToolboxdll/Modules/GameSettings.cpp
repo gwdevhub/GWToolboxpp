@@ -86,7 +86,11 @@ namespace {
         }
         const std::wstring title = GetPlayerName();
         if (!title.empty()) {
-            SetWindowTextW(hwnd, title.c_str());
+            // Guild Wars' window may be registered as an ANSI (non-Unicode) window class; in that
+            // case SetWindowTextW() gets thunked down to the system codepage before being applied,
+            // corrupting any character outside it. Sending WM_SETTEXT via DefWindowProcW directly
+            // bypasses that thunking, same trick already used for our own windows in imgui_impl_win32.cpp.
+            DefWindowProcW(hwnd, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(title.c_str()));
         }
     }
 
