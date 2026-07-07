@@ -27,7 +27,7 @@ namespace {
     constexpr uint32_t kScanIntervalMs = 250; // item agents don't move; classification only needs a coarse tick
 
     // Not user-configurable - fixed so the ring primitive's only inputs are position, colour and diameter.
-    constexpr float kRingEdgeWidth = 4.f; // gwinches, soft fade on each side of a ring's current radius
+    constexpr float kRingEdgeWidth = 6.f; // gwinches, soft fade on each side of a ring's current radius
     constexpr float kRingSpacing = 4.f;   // gwinches, how far the two rings start from the true diameter
 
     // Occlusion behind terrain is shared with the "In-game rendering" module
@@ -39,7 +39,7 @@ namespace {
     float beam_opacity = 0.5f;
     float ring_diameter = 90.f; // the true diameter the two rings pulse toward/away from (procedural, no texture)
     float z_lift = 5.f;         // raise above the floor to avoid z-fighting (GW up is -z)
-    float pulse_speed = 0.8f;   // drives both the beam's alpha pulse and the rings' converge/diverge motion, in sync
+    float pulse_interval = 1.f; // seconds for the two rings to go from spread apart to meeting in the middle
     bool show_reserved_for_others = false;
 
     bool enable_value_beacons = true;
@@ -247,11 +247,12 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
 
     // One shared timer for every beacon - "the set pulse interval" is a single global setting, not
     // per-beacon - so the beam's brightness and the rings' radii are each a single value per frame,
-    // not per-vertex data: brightness peaks (sin=1) exactly when the two rings cross at the midpoint (cos=0).
-    const float cycle = t_seconds * pulse_speed * DirectX::XM_2PI;
+    // not per-vertex data. cycle hits pi/2 exactly when t_seconds == pulse_interval, i.e. exactly when
+    // the two rings first meet at the midpoint (cos=0) - which is also when the beam is brightest (sin=1).
     float env = 1.f;
     float osc01 = 0.5f;
-    if (pulse_speed > 0.f) {
+    if (pulse_interval > 0.f) {
+        const float cycle = t_seconds * (DirectX::XM_PIDIV2 / pulse_interval);
         env = 0.75f + 0.25f * std::sin(cycle);
         osc01 = 0.5f - 0.5f * std::cos(cycle);
     }
@@ -331,7 +332,7 @@ void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "beam_opacity", &beam_opacity);
     SettingsRegistry::RegisterField(module, "ring_diameter", &ring_diameter);
     SettingsRegistry::RegisterField(module, "z_lift", &z_lift);
-    SettingsRegistry::RegisterField(module, "pulse_speed", &pulse_speed);
+    SettingsRegistry::RegisterField(module, "pulse_interval", &pulse_interval);
     SettingsRegistry::RegisterField(module, "show_reserved_for_others", &show_reserved_for_others);
     SettingsRegistry::RegisterField(module, "enable_value_beacons", &enable_value_beacons);
     SettingsRegistry::RegisterField(module, "value_threshold", &value_threshold);
@@ -402,8 +403,9 @@ void LootBeaconsModule::DrawSettingsInternal()
     if (ImGui::DragFloat("Beam opacity", &beam_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
     ImGui::DragFloat("Ring diameter", &ring_diameter, 1.f, 5.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("The two rings pulse 4 gwinches in and out of this diameter, crossing over it. Fade width is a "
-                     "fixed 4 gwinches; opacity comes from the beacon colour's own alpha - no separate ring settings.");
+                     "fixed 6 gwinches; opacity comes from the beacon colour's own alpha - no separate ring settings.");
     if (ImGui::DragFloat("Height lift", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
-    ImGui::DragFloat("Pulse speed", &pulse_speed, 0.05f, 0.f, 5.f, "%.2f Hz", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("0 = no pulsing; rings hold at their midpoint and the beam pulse pauses too.");
+    ImGui::DragFloat("Pulse interval", &pulse_interval, 0.05f, 0.f, 10.f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("Seconds for the two rings to go from spread apart to meeting in the middle. 0 = no pulsing; "
+                     "rings hold at their midpoint and the beam pulse pauses too.");
 }
