@@ -26,7 +26,7 @@
 namespace {
     constexpr int kMaxBuildsPerFrame = 8;   // draping QueryAltitude budget: ~70 queries per beacon build
     constexpr uint32_t kScanIntervalMs = 250; // item agents don't move; classification only needs a coarse tick
-    constexpr uint32_t kRingTextureFileId = 0x03F2F1BB; // GW dat texture for the pulsing ring sprite
+    constexpr uint32_t kRingTextureFileId = 0x2381; // GW dat texture for the pulsing ring sprite
 
     // Not user-configurable - how far apart the two rings pulse (their "animation distance").
     constexpr float kRingSpacing = 4.f; // gwinches, how far the two rings start from the true diameter
