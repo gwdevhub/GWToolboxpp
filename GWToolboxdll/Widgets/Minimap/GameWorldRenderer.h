@@ -118,6 +118,10 @@ public:
     // Max in-world render distance (game units) — the shared "Maximum render distance" for terrain overlays.
     static float GetRenderMaxDistance();
 
+    // Shared "Occlude behind terrain" configuration, so other in-world overlays (e.g. Danger Rings) test
+    // against the scene depth buffer identically and occlusion is controlled from one place (these settings).
+    static bool GetOccludeBehindTerrain();
+
 private:
     static void RegisterSettings(ToolboxModule* module);
     static void OnSettingsLoaded();

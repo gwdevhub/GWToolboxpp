@@ -15,13 +15,18 @@
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 
 namespace {
     constexpr int kSegments = 64;
     constexpr float kMaxRingRadius = 5200.f; // ignore bogus range data past compass-ish sizes
     constexpr uint8_t kTargetNone = 0;        // Skill.target == no_target (flash enchant / stance / self-cast form)
 
-    bool occlude_behind_terrain = true;
+    // Occlusion behind terrain is shared with the "In-game rendering" module
+    // via GameWorldRenderer::GetOccludeBehindTerrain(), so it's configured in
+    // one place. The incomplete-ring artifact (arcs that drop in/out with the camera) only occurs with occlusion
+    // ON - it's an interaction between our depth test and GW's depth buffer - and this shared setting defaults off,
+    // so rings draw whole by default.
     float render_max_distance = 7000.f;
     float fog_factor = 0.6f;
     float ring_thickness = 24.f;
@@ -177,7 +182,7 @@ void SkillRangeRingsModule::DrawInWorld(IDirect3DDevice9* device)
 
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, render_max_distance, fog_factor)) {
+    if (GameWorldCompositor::SetupPipeline(device, GameWorldRenderer::GetOccludeBehindTerrain(), render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(RingVertex));
@@ -188,7 +193,6 @@ void SkillRangeRingsModule::DrawInWorld(IDirect3DDevice9* device)
 
 void SkillRangeRingsModule::RegisterSettings(ToolboxModule* module)
 {
-    SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
     SettingsRegistry::RegisterField(module, "ring_thickness", &ring_thickness);
@@ -231,7 +235,7 @@ void SkillRangeRingsModule::DrawSettingsInternal()
     ImGui::TextUnformatted("Hover any skill (skillbar, skills window...) to see its ranges on the ground.");
     if (ImGui::Checkbox("Show AoE ring at your current target", &aoe_at_target)) rings_dirty = true;
     ImGui::ShowHelp("For targeted skills with an area effect. Off: always around you.");
-    ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
+    ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 25.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     if (ImGui::DragFloat("Ring thickness", &ring_thickness, 1.f, 4.f, 200.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) rings_dirty = true;
     if (ImGui::DragFloat("Opacity", &opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) rings_dirty = true;

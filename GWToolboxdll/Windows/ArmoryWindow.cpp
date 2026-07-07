@@ -12,7 +12,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 
 #include <Windows/ArmoryWindow_Constants.h>
 #include <Windows/ArmoryWindow.h>
@@ -682,29 +682,29 @@ namespace GWArmory {
         return dyes;
     }
 
-    IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes = 0) {
-        const bool is_composite_item = (interaction & 4) != 0;
+    // Set by GetArmorPieceImage whenever a piece it returns has no icon loaded; consumed (and reset) by
+    // Draw() each frame to decide whether to show the missing-data warning at the top of the window.
+    bool armor_icon_missing = false;
 
-        uint32_t model_id_to_load = 0;
-
-        if (is_composite_item) {
-            // Armor/runes
-            const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
-            if (model_file_info) {
-                if(!model_id_to_load)
-                    model_id_to_load = model_file_info->file_ids[0xa];
-                if (!model_id_to_load)
-                    model_id_to_load = GetIsFemale() ? model_file_info->file_ids[5] : model_file_info->file_ids[0];
-
-            }
-        }
-        if (!model_id_to_load)
-            model_id_to_load = model_file_id;
-
-        // The UI icon is stream 1 of the model file; recolour its stream 0xc mask for the dyes.
-        return GwDatTextureModule::LoadItemImage(model_id_to_load, dyes);
+    IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes = 0, bool* failed_out = nullptr) {
+        IDirect3DTexture9** result = Resources::GetItemImage(model_file_id, interaction, dyes, GetIsFemale(), failed_out);
+        if (!*result)
+            armor_icon_missing = true; // a shown piece has no icon (yet) - flag for the warning
+        return result;
     }
-    
+
+    // Grid slot for an icon whose decode has permanently failed - keeps the piece selectable and in the
+    // grid (rather than silently vanishing), but visually distinct from a loaded icon.
+    bool DrawFailedIconButton(const ImVec2& size)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.1f, 0.1f, 0.6f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.15f, 0.15f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.2f, 0.2f, 0.9f));
+        const bool clicked = ImGui::Button("?", size);
+        ImGui::PopStyleColor(3);
+        return clicked;
+    }
+
     std::string GetChatCommand(Armor* armor, GW::ItemData* data)
     {
         return std::format("/armory \"{}\" {} {} {} {}", armor->label, std::to_underlying(data->dye.dye1), std::to_underlying(data->dye.dye2), std::to_underlying(data->dye.dye3), std::to_underlying(data->dye.dye4));
@@ -863,16 +863,24 @@ namespace GWArmory {
                 player_piece->dye.dye_tint = state->current_piece->dye_tint;
             }
 
-            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction, ChosenDyes(player_piece));
-            if (!texture || !*texture) {
+            bool image_failed = false;
+            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction, ChosenDyes(player_piece), &image_failed);
+            if (!texture || (!*texture && !image_failed)) {
                 ImGui::PopID();
-                continue;
+                continue; // not decoded yet - skip for now, will show once it resolves
             }
 
-            const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
             const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
             ImGui::NextSpacedElement();
-            if (ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint)) {
+            bool clicked;
+            if (*texture) {
+                const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+                clicked = ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint);
+            }
+            else {
+                clicked = DrawFailedIconButton(scaled_size);
+            }
+            if (clicked) {
                 player_piece->model_file_id = piece->model_file_id;
                 player_piece->interaction = piece->interaction;
                 player_piece->type = piece->type;
@@ -881,9 +889,14 @@ namespace GWArmory {
             }
 
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip([piece, player_piece]() {
-                    ImGui::TextUnformatted(piece->label);
-                    ImGui::TextDisabled(GetChatCommand(piece, player_piece).c_str());
+                ImGui::SetTooltip([piece, player_piece, image_failed]() {
+                    if (image_failed) {
+                        ImGui::TextUnformatted(std::format("Image load failed for {}", piece->label).c_str());
+                    }
+                    else {
+                        ImGui::TextUnformatted(piece->label);
+                        ImGui::TextDisabled(GetChatCommand(piece, player_piece).c_str());
+                    }
                 });
             }
             if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
@@ -982,16 +995,24 @@ namespace GWArmory {
         for (const auto& piece : type_pieces) {
             ImGui::PushID(piece->label);
 
-            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction, ChosenDyes(player_piece));
-            if (!texture || !*texture) {
+            bool image_failed = false;
+            const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction, ChosenDyes(player_piece), &image_failed);
+            if (!texture || (!*texture && !image_failed)) {
                 ImGui::PopID();
-                continue;
+                continue; // not decoded yet - skip for now, will show once it resolves
             }
 
-            const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
             const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
             ImGui::NextSpacedElement();
-            if (ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint)) {
+            bool clicked;
+            if (*texture) {
+                const auto uv1 = ImGui::CalculateUvCrop(*texture, scaled_size);
+                clicked = ImGui::ImageButton(*texture, scaled_size, uv0, uv1, -1, bg, tint);
+            }
+            else {
+                clicked = DrawFailedIconButton(scaled_size);
+            }
+            if (clicked) {
                 player_piece->model_file_id = piece->model_file_id;
                 player_piece->interaction = piece->interaction;
                 player_piece->type = piece->type;
@@ -1000,9 +1021,14 @@ namespace GWArmory {
             }
 
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip([piece, player_piece]() {
-                    ImGui::TextUnformatted(piece->label);
-                    ImGui::TextDisabled(GetChatCommand(piece, player_piece).c_str());
+                ImGui::SetTooltip([piece, player_piece, image_failed]() {
+                    if (image_failed) {
+                        ImGui::TextUnformatted(std::format("Image load failed for {}", piece->label).c_str());
+                    }
+                    else {
+                        ImGui::TextUnformatted(piece->label);
+                        ImGui::TextDisabled(GetChatCommand(piece, player_piece).c_str());
+                    }
                 });
             }
             if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
@@ -1368,6 +1394,18 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
+        // From last frame's render: a shown piece had no icon and the dat is missing data. Warn, then reset
+        // so this frame's DrawArmorPiece*/DrawWeapons* calls below recompute it.
+        if (armor_icon_missing && GwDatModule::MissingDatData()) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.0f, 1.0f)); // amber warning
+            ImGui::TextWrapped("Some images are missing because your Gw.dat is an incomplete (Steam/streaming) "
+                               "install. Run Guild Wars once with the -image command-line option to download "
+                               "all game data, then restart.");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+        }
+        armor_icon_missing = false;
+
         ImGui::Text("Profession: %s", ToolboxUtils::GetProfessionName(current_profession)->string().c_str());
 
         ImGui::SameLine();

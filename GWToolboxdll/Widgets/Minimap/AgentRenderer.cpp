@@ -194,6 +194,7 @@ void AgentRenderer::RegisterSettings(ToolboxModule* module)
         {"color_qz", &color_qz},
         {"color_winnowing", &color_winnowing},
         {"color_frozen_soil", &color_frozen_soil},
+        {"color_symbiosis", &color_symbiosis},
         {"color_target", &color_target},
         {"color_player", &color_player},
         {"color_player_dead", &color_player_dead},
@@ -350,6 +351,7 @@ void AgentRenderer::LoadDefaultColors()
     color_qz = 0x320000FF;
     color_winnowing = 0x3200FFFF;
     color_frozen_soil = 0x00FEFFFF;
+    color_symbiosis = 0x00FF00FF;
     color_target = 0xFFFFFF00;
     color_player = 0xFFFF8000;
     color_player_dead = 0x64FF8000;
@@ -398,6 +400,7 @@ void AgentRenderer::DrawSettings()
             {"QZ", &color_qz, nullptr, nullptr, "This is the color at the edge, the color in the middle is the same, with alpha-50"},
             {"Winnowing", &color_winnowing, nullptr, nullptr, "This is the color at the edge, the color in the middle is the same, with alpha-50"},
             {"Frozen Soil", &color_frozen_soil, nullptr, nullptr, "This is the color at the edge, the color in the middle is the same, with alpha-50"},
+            {"Symbiosis", &color_symbiosis, nullptr, nullptr, "This is the color at the edge, the color in the middle is the same, with alpha-50"},
             {"Target", &color_target, nullptr, nullptr, nullptr},
             {"Player (alive)", &color_player, nullptr, nullptr, nullptr},
             {"Player (dead)", &color_player_dead, nullptr, nullptr, nullptr},
@@ -819,6 +822,9 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
                     break;
                 case GW::Constants::ModelID::FrozenSoil:
                     Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, color_frozen_soil);
+                    break;
+                case GW::Constants::ModelID::Symbiosis:
+                    Enqueue(BigCircle, agent, GW::Constants::Range::SpiritExtended, color_symbiosis);
                     break;
                 default:
                     break;

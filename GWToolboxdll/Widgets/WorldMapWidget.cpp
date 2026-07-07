@@ -24,7 +24,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
@@ -938,10 +938,10 @@ void WorldMapWidget::Initialize()
     SettingsRegistry::Register(this, settings);
 
     memset(show_elite_capture_locations, true, sizeof(show_elite_capture_locations));
-    quest_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x1b4d5);
-    player_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x5d3b);
-    portal_icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x246c); // IDirect3DTexture9**
-    zaishen_coin_texture = GwDatTextureModule::LoadTextureFromFileId(0x55778);
+    quest_icon_texture = GwDatModule::LoadTextureFromFileId(0x1b4d5);
+    player_icon_texture = GwDatModule::LoadTextureFromFileId(0x5d3b);
+    portal_icon_texture = GwDatModule::LoadTextureFromFileId(0x246c); // IDirect3DTexture9**
+    zaishen_coin_texture = GwDatModule::LoadTextureFromFileId(0x55778);
 
     uintptr_t address = GW::Scanner::Find("\x8b\x45\xfc\xf7\x40\x10\x00\x00\x01\x00", "xxxxxxxxxx", 0xa);
     if (address) {
@@ -1322,7 +1322,7 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
             portal_pos, {portal_pos.x + ICON_SIZE.x, portal_pos.y + ICON_SIZE.y}
         };
 
-        draw_list->AddImage(*GwDatTextureModule::LoadTextureFromFileId(0x1b4d5), hover_rect.GetTL(), hover_rect.GetBR());
+        draw_list->AddImage(*GwDatModule::LoadTextureFromFileId(0x1b4d5), hover_rect.GetTL(), hover_rect.GetBR());
 
 
         if (hover_rect.Contains(ImGui::GetMousePos())) {

@@ -710,6 +710,7 @@ void GameWorldRenderer::ClearNavmeshLines()
 const std::vector<GameWorldRenderer::BatchedLine>& GameWorldRenderer::GetNavmeshWorldMapLines() { return navmesh_worldmap_lines; }
 GW::Constants::MapID GameWorldRenderer::GetNavmeshWorldMapMapId() { return navmesh_worldmap_map; }
 float GameWorldRenderer::GetRenderMaxDistance() { return render_max_distance; }
+bool GameWorldRenderer::GetOccludeBehindTerrain() { return occlude_behind_terrain; }
 
 void GameWorldRenderer::Terminate()
 {

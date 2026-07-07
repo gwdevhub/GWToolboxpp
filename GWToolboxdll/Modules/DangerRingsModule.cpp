@@ -12,12 +12,17 @@
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
+#include <Widgets/Minimap/GameWorldRenderer.h>
 
 namespace {
     constexpr int kSegments = 48;
     constexpr int kMaxBuildsPerFrame = 4; // draping QueryAltitude budget: ~200 queries per ring build
 
-    bool occlude_behind_terrain = true;
+    // Occlusion behind terrain is shared with the "In-game rendering" module
+    // via GameWorldRenderer::GetOccludeBehindTerrain(), so it's configured in
+    // one place. The incomplete-ring artifact (arcs that drop in/out with the camera) only occurs with occlusion
+    // ON - it's an interaction between our depth test and GW's depth buffer - and this shared setting defaults off,
+    // so rings draw whole by default.
     float render_max_distance = 5000.f;
     float fog_factor = 1.0f;
     float ring_thickness = 40.f;
@@ -148,7 +153,7 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
 
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, render_max_distance, fog_factor)) {
+    if (GameWorldCompositor::SetupPipeline(device, GameWorldRenderer::GetOccludeBehindTerrain(), render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(RingVertex));
@@ -159,7 +164,6 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
 
 void DangerRingsModule::RegisterSettings(ToolboxModule* module)
 {
-    SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
     SettingsRegistry::RegisterField(module, "ring_thickness", &ring_thickness);
@@ -198,7 +202,7 @@ void DangerRingsModule::DrawSettingsInternal()
     if (!GameWorldCompositor::IsActive())
         ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "In-world compositor FAILED to install." : "In-world compositor: not installed yet.");
 
-    if (ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain)) meshes_dirty = true;
+    ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     if (ImGui::DragFloat("Ring thickness", &ring_thickness, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
     if (ImGui::DragFloat("Rim opacity", &rim_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;

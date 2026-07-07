@@ -2,7 +2,7 @@
 
 #include <Widgets/ActiveQuestWidget.h>
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/ToolboxSettings.h>
 
 #include <GWCA/Constants/QuestIDs.h>
@@ -60,7 +60,7 @@ namespace {
 void ActiveQuestWidget::Initialize() {
     ToolboxWidget::Initialize();
 
-    p_quest_marker_texture = GwDatTextureModule::LoadTextureFromFileId(QUEST_MARKER_FILE_ID);
+    p_quest_marker_texture = GwDatModule::LoadTextureFromFileId(QUEST_MARKER_FILE_ID);
 
     constexpr auto ui_messages = std::to_array({
         GW::UI::UIMessage::kQuestDetailsChanged,

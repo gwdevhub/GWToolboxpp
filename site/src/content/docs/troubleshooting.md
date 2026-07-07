@@ -1,6 +1,6 @@
 ---
 title: "Troubleshooting"
-description: "Fixing security software that blocks GWToolbox++, covering antivirus, Controlled Folder Access, Smart App Control and crash dumps."
+description: "Fixing security software that blocks GWToolbox++, covering antivirus, Controlled Folder Access, Smart App Control, crash dumps, and missing images (the -image download)."
 section: meta
 ---
 
@@ -138,6 +138,28 @@ Restore-MpThreat
 ```
 
 When Windows Defender blocks one of these files, recent Toolbox versions read the Defender event log and show you the exact block reason in the error popup — include that text when you ask for help.
+
+## Missing images in Toolbox
+
+If item, armor, skill, or map images show up **blank** in Toolbox — for example in the Armory, the skills list, or item tooltips — and Toolbox logs a message about not finding image data in `Gw.dat`, the cause is almost always an **incomplete local game install**, not a Toolbox bug.
+
+Guild Wars can run from a partial `Gw.dat` and **stream** the rest of its data from ArenaNet's servers on demand as you play — the **Steam** release does this by default, so a fresh install only has the data you have actually seen in-game. Toolbox reads images straight from that `Gw.dat` on disk: whatever the game hasn't downloaded yet simply isn't there for Toolbox to load, which is why images you own or have seen appear while others stay blank.
+
+The fix is to download **all** game data once, with the `-image` command-line option. Guild Wars will fetch the complete `Gw.dat` (several GB — it can take a while), after which every image is available to both the game and Toolbox.
+
+**Steam:**
+
+1. In your Steam **Library**, right-click **Guild Wars** and choose **Properties**.
+2. On the **General** tab, find **Launch Options**.
+3. Enter `-image` in the box.
+4. **Launch** Guild Wars and leave it running until the download completes (there is a progress bar; it may take a long time on a slow connection).
+5. Close Guild Wars, reopen **Properties → Launch Options**, and **remove** `-image` so it doesn't re-check every launch.
+
+**Standalone client (`Gw.exe`):**
+
+- Add `-image` to the end of your shortcut's **Target** (right-click the shortcut → **Properties**), e.g. `"C:\Path\To\Gw.exe" -image`, launch it, let it finish, then remove the `-image` again — or just run it once from a command prompt: `Gw.exe -image`.
+
+Once the download has finished, restart Guild Wars (and Toolbox) and the images will load. If a specific image is *still* missing after a full `-image` download, that one may be genuinely absent from your client version — report it on the [Discord](https://discord.gg/ZpKzer4dK9).
 
 ## Still stuck?
 
