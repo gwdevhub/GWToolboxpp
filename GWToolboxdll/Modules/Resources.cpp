@@ -1366,14 +1366,14 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
     if (!model_file_id)
         return nullptr;
 
-    // Composite items (armor/runes) carry a real icon in only two of the 11 file_ids slots: the
-    // given gender's own model slot (0 male, 5 female) and, for some items, a separate shared icon
-    // slot (8) - both confirmed to hold a real standalone icon file directly (not a 3D model). The
-    // other slots hold that model's own render textures (diffuse/normal/specular/detail layers for
-    // the character-creation dress-up doll's 3D preview) - decodable, but the wrong image for an
-    // icon, not merely a worse one. DecodeItemToArgb's stream 0 fallback already rejects those (it
-    // only accepts a standalone image, never an ffna model's inline texture), so trying the other
-    // slots at all would just show a random skin/material layer instead of the real icon.
+    // Composite items (armor/runes) carry a usable icon in only two of the 11 file_ids slots: the
+    // given gender's own model slot (0 male, 5 female - stream 1, or failing that its model's own
+    // inline texture, both confirmed by visual inspection to be a genuine icon of the item) and, for
+    // some items, a separate shared icon slot (8, a standalone icon file). The other slots (checked
+    // against the real dat and visually decoded) are separate skin/pattern-template textures used to
+    // render the 3D worn model for the character-creation dress-up doll - e.g. a flattened garment
+    // outline, not a picture of the item - so trying them would show the wrong image, not just a
+    // worse one.
     if (interaction & 4) {
         const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
         if (model_file_info) {

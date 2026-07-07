@@ -59,12 +59,7 @@ namespace {
     }
 
     // Decodes file_id to A8R8G8B8 (ATEX/ATTX, ffna inline DXT chunk, or DDS); stream_id picks a stream.
-    // allow_ffna_chunk lets a caller refuse an ffna model's own inline surface texture: that texture is
-    // a material/skin layer for 3D rendering, not a UI icon (it can be a normal map, a specular mask, a
-    // fragment of a UV-unwrapped diffuse atlas, etc.) - showing it as an item's icon is wrong, not just
-    // a lesser fallback, so callers probing a file that might just be a model must reject it.
-    bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims, uint32_t stream_id = 0,
-                             bool allow_ffna_chunk = true)
+    bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims, uint32_t stream_id = 0)
     {
         ArenaNetFileParser::GameAssetFile asset;
         if (!asset.readFromDat(file_id, stream_id))
@@ -75,10 +70,10 @@ namespace {
         if (image_size < 4)
             return false;
 
-        // Model files (ffna) carry the texture as an inline DXT3 chunk.
+        // Model files (ffna) carry the texture as an inline DXT3 chunk - confirmed (visually, against
+        // the real dat) to reliably be a genuine small icon of the item, distinct from the larger
+        // skin/pattern textures referenced elsewhere in the model for 3D rendering.
         if (memcmp(image_bytes, "ffna", 4) == 0) {
-            if (!allow_ffna_chunk)
-                return false;
             const auto anet_file = reinterpret_cast<ArenaNetFileParser::ArenaNetFile*>(&asset);
             if (!anet_file->isValid())
                 return false;
@@ -152,17 +147,17 @@ namespace {
     };
 
     // Item icon to A8R8G8B8: stream 1 base, stream 0xc dye mask; masked pixels use the averaged dye matrices (`dyes` = up to 4 GW::DyeColor, one per byte).
-    // A few items store their icon directly as the file's own stream 0 rather than stream 1 (e.g. a
-    // composite piece's dedicated icon slot). Accept that ONLY if it's a standalone ATEX/ATTX/DDS
-    // image - reject an ffna model's inline texture chunk, which is a 3D-rendering material/skin layer
-    // (normal map, specular mask, a fragment of a UV-unwrapped atlas...), not a UI icon; showing it
-    // would be a wrong image, not just a lesser one. Undyeable either way: no stream 0xc mask for it.
+    // A few items store their icon directly as the file's own stream 0 rather than stream 1 - either a
+    // standalone ATEX/ATTX/DDS icon file, or an ffna model's own inline texture chunk (confirmed, both
+    // visually and empirically against the real dat, to reliably be a genuine small icon rather than
+    // one of the model's other, externally-referenced skin/pattern textures). Undyeable either way:
+    // no stream 0xc mask for it.
     bool DecodeItemToArgb(uint32_t file_id, uint32_t dyes, std::vector<uint32_t>& base, Vec2i& dims)
     {
         if (!file_id)
             return false;
         const bool has_icon_stream = DecodeTextureToArgb(file_id, base, dims, 1);
-        if (!has_icon_stream && !DecodeTextureToArgb(file_id, base, dims, 0, /*allow_ffna_chunk=*/false))
+        if (!has_icon_stream && !DecodeTextureToArgb(file_id, base, dims, 0))
             return false;
         if (!dims.x || !dims.y)
             return false;
