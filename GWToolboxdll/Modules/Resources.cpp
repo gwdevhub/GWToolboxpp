@@ -1366,14 +1366,7 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
     if (!model_file_id)
         return nullptr;
 
-    // Composite items (armor/runes) carry a usable icon in only two of the 11 file_ids slots: the
-    // given gender's own model slot (0 male, 5 female - stream 1, or failing that its model's own
-    // inline texture, both confirmed by visual inspection to be a genuine icon of the item) and, for
-    // some items, a separate shared icon slot (8, a standalone icon file). The other slots (checked
-    // against the real dat and visually decoded) are separate skin/pattern-template textures used to
-    // render the 3D worn model for the character-creation dress-up doll - e.g. a flattened garment
-    // outline, not a picture of the item - so trying them would show the wrong image, not just a
-    // worse one.
+    // Composite items (armor/runes) only have a usable icon in file_ids[0/5] (gendered) or [8] (shared) - the other slots are skin/pattern textures for the 3D worn model, confirmed by visual inspection to be the wrong image.
     if (interaction & 4) {
         const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
         if (model_file_info) {
