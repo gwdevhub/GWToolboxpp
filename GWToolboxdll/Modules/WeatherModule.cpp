@@ -121,7 +121,7 @@ namespace {
     constexpr uint32_t kSnowflakeFileId = 0xca1a;
     constexpr uint32_t kSplashFileId = 0x1baa1;
     constexpr int kSplashCols = 4, kSplashRows = 4, kSplashFrames = kSplashCols * kSplashRows;
-    constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
+    constexpr float kZNear = GameWorldCompositor::kZNear, kZFar = GameWorldCompositor::kZFar;
     constexpr float kMaxRadius = GW::Constants::Range::Spirit; // 2500 gwinch; radius of the weather volume
 
     // Fixed in code (deliberately not in the UI, but handy to tweak while debugging).
@@ -1157,7 +1157,7 @@ namespace {
 
         IDirect3DStateBlock9* sb = nullptr;
         if (device->CreateStateBlock(D3DSBT_ALL, &sb) != D3D_OK) return;
-        if (GameWorldCompositor::SetupPipeline(device, false, kZNear, kZFar, kZFar, 0.f)) {
+        if (GameWorldCompositor::SetupPipeline(device, false, kZFar, 0.f)) {
             device->SetRenderState(D3DRS_ZENABLE, FALSE);
             device->SetRenderState(D3DRS_ZWRITEENABLE, FALSE); // must not touch the depth buffer or it culls the scene/particles
             device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
@@ -1324,7 +1324,7 @@ void WeatherModule::DrawInWorld(IDirect3DDevice9* device)
 
     IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (device->SetPixelShader(weather_ps) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device, kZNear, kZFar)) {
+    if (device->SetPixelShader(weather_ps) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device)) {
         GameWorldCompositor::SetWorldRenderStates(device, occlude_behind_terrain);
         GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
         device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);

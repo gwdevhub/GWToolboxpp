@@ -9,6 +9,7 @@
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/PreGameContext.h>
@@ -20,6 +21,7 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
@@ -351,6 +353,22 @@ namespace {
             SkillRangeRingsModule::SetDebugSkill(skill_id);
             char b[64];
             snprintf(b, sizeof(b), "hoverskill: %u", skill_id);
+            Log::Log("[harness] %s", b);
+            write_status(b);
+            return;
+        }
+        if (verb == "skillinfo") { // skillinfo <skill_id>: log the constant skill data fields the range rings use
+            uint32_t skill_id = 0;
+            is >> skill_id;
+            const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
+            char b[192];
+            if (skill) {
+                snprintf(b, sizeof(b), "skillinfo %u: type=%u target=%u special=0x%x aoe_range=%.1f const_effect=%.1f",
+                         skill_id, static_cast<uint32_t>(skill->type), skill->target, skill->special, skill->aoe_range, skill->const_effect);
+            }
+            else {
+                snprintf(b, sizeof(b), "skillinfo %u: no data", skill_id);
+            }
             Log::Log("[harness] %s", b);
             write_status(b);
             return;

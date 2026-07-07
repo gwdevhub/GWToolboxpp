@@ -35,7 +35,6 @@ namespace lava_river_module {
 namespace {
     using namespace lava_river_module;
 
-    constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
     constexpr float kSampleSpacing = 50.f;            // resample a river centerline every ~50 gu (follow slopes)
     constexpr float kAltUnknown = 1e30f;              // sentinel: no terrain data at this (x,y)
     constexpr size_t kMaxVertices = 1500000;          // safety cap on total surface geometry per map (raise cell_size if hit)
@@ -499,7 +498,7 @@ void RiverModule::DrawInWorld(IDirect3DDevice9* device)
 
     IDirect3DStateBlock9* state_block = nullptr; // restored on exit so GW's own rendering isn't corrupted
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (device->SetVertexShader(lava_vs) == D3D_OK && device->SetPixelShader(lava_ps) == D3D_OK && device->SetVertexDeclaration(lava_decl) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device, kZNear, kZFar)) {
+    if (device->SetVertexShader(lava_vs) == D3D_OK && device->SetPixelShader(lava_ps) == D3D_OK && device->SetVertexDeclaration(lava_decl) == D3D_OK && GameWorldCompositor::SetWorldViewProj(device)) {
         GameWorldCompositor::SetWorldRenderStates(device, occlude_behind_terrain);
         GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
         const float wave_const[4] = {t_seconds, wave_amplitude * env, wave_scale, 0.f};

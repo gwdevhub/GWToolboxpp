@@ -18,7 +18,6 @@
 #include <Utils/ToolboxUtils.h>
 
 namespace {
-    constexpr float kZNear = 47.0f, kZFar = 100000.f; // must match GW's projection for occlusion to line up
     constexpr int kRingSegments = 32;
     constexpr float kRingBandWidth = 12.f;
     constexpr int kMaxBuildsPerFrame = 8;   // draping QueryAltitude budget: ~70 queries per beacon build
@@ -237,7 +236,7 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
 
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, kZNear, kZFar, render_max_distance, fog_factor)) {
+    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(BeaconVertex));

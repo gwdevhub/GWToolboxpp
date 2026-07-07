@@ -31,10 +31,8 @@ namespace {
     // Stencil the round compass out of overlays so they don't bleed across the minimap.
     bool exclude_compass = true;
 
-    // Test overlays against the scene depth buffer so world geometry hides them; z_near/z_far must match GW's projection (near clip ~47, valid 45-48; far insensitive 50k-200k).
+    // Test overlays against the scene depth buffer so world geometry hides them.
     bool occlude_behind_terrain = false;
-    float z_near = 47.0f;
-    float z_far = 100000.f;
 
 
     GameWorldRenderer::RenderableVectors renderables;
@@ -529,7 +527,7 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
 
-    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, z_near, z_far, render_max_distance, fog_factor)) {
+    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, render_max_distance, fog_factor)) {
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
 
@@ -608,8 +606,6 @@ void GameWorldRenderer::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "lerp_steps_per_line", &lerp_steps_per_line);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
     SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
-    SettingsRegistry::RegisterField(module, "depth_z_near", &z_near);
-    SettingsRegistry::RegisterField(module, "depth_z_far", &z_far);
     SettingsRegistry::RegisterField(module, "render_under_ui", &render_under_ui);
     SettingsRegistry::RegisterField(module, "exclude_compass", &exclude_compass);
 }
@@ -618,8 +614,6 @@ void GameWorldRenderer::OnSettingsLoaded()
 {
     render_max_distance = std::max(render_max_distance, 10.0f);
     fog_factor = std::clamp(fog_factor, 0.0f, 1.0f);
-    z_near = std::max(z_near, 0.01f);
-    z_far = std::max(z_far, z_near + 1.0f);
     need_sync_markers = true;
     UpdateCompositorRegistration();
 }
@@ -656,15 +650,7 @@ void GameWorldRenderer::DrawSettings()
                     "would otherwise bleed across the inside of the minimap.");
 
     ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
-    ImGui::ShowHelp("Hide overlays behind walls, buildings and terrain using the game's depth buffer.\n"
-                    "If overlays vanish or z-fight badly, disable this or tune the depth values below.");
-    if (occlude_behind_terrain) {
-        ImGui::DragFloat("Projection near plane", &z_near, 0.1f, 1.f, 100.f, "%.1f");
-        ImGui::ShowHelp("Must match the game's near clip for occlusion to be accurate.\n"
-                        "~47 is correct; too low hides visible overlays, too high lets them show through walls.");
-        ImGui::DragFloat("Projection far plane", &z_far, 50.f, 1000.f, 200000.f, "%.0f");
-        ImGui::ShowHelp("Insensitive anywhere from ~50000 to 200000.");
-    }
+    ImGui::ShowHelp("Hide overlays behind walls, buildings and terrain using the game's depth buffer.");
 }
 
 void GameWorldRenderer::TriggerSyncAllMarkers()
