@@ -30,19 +30,19 @@ namespace {
     constexpr uint32_t kScanIntervalMs = 250; // item agents don't move; classification only needs a coarse tick
     constexpr uint32_t kRingTextureFileId = 0x03F2F1BB; // GW dat texture for the pulsing ring sprite
 
-    // Not user-configurable - how far apart the two rings pulse (their "animation distance").
-    constexpr float kRingSpacing = 4.f; // gwinches, how far the two rings start from the true diameter
+    // Not user-configurable.
+    constexpr float kRingSpacing = 4.f;    // gwinches, how far the two rings start from the true diameter
+    constexpr float kRingDiameter = 90.f;  // the true diameter the two rings pulse toward/away from
+    constexpr float kBeamHeight = 600.f;   // beam height
+    constexpr float kBeamOpacity = 1.f;    // beam is unpulsed and always drawn at full opacity
+    constexpr float kPulseInterval = 0.85f; // seconds for the two rings to go from spread apart to meeting in the middle
 
     // Occlusion behind terrain is shared with the "In-game rendering" module
     // via GameWorldRenderer::GetOccludeBehindTerrain() so it's set in one place.
     float render_max_distance = 20000.f;
     float fog_factor = 0.5f;
-    float beam_height = 225.f;
     float beam_width = 35.f;
-    float beam_opacity = 0.5f;
-    float ring_diameter = 90.f; // the true diameter the two rings pulse toward/away from
-    float z_lift = 5.f;         // raise above the floor to avoid z-fighting (GW up is -z)
-    float pulse_interval = 1.f; // seconds for the two rings to go from spread apart to meeting in the middle
+    float z_lift = 5.f; // raise above the floor to avoid z-fighting (GW up is -z)
     bool show_reserved_for_others = false;
 
     bool enable_value_beacons = true;
@@ -201,7 +201,7 @@ namespace {
         return true;
     }
 
-    constexpr float kBeamSolidFraction = 0.25f; // bottom fraction of beam_height that stays fully solid before fading
+    constexpr float kBeamSolidFraction = 0.25f; // bottom fraction of kBeamHeight that stays fully solid before fading
 
     // Appends a single quad standing on the ground and facing the camera - `right_x`/`right_y` is the
     // horizontal axis (from GetCameraRight below) so the quad rotates to face the viewer without ever
@@ -211,7 +211,7 @@ namespace {
     void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const Color base_color, const float base_alpha)
     {
         const float half = std::max(1.f, beam_width) * 0.5f;
-        const float height = std::max(1.f, beam_height);
+        const float height = kBeamHeight;
         const float z_solid = ground_z - height * kBeamSolidFraction;
         const float z_top = ground_z - height;
 
@@ -291,18 +291,11 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     const auto n_planes = TerrainDrape::PathingPlaneCount();
     const float t_seconds = static_cast<float>(now % 3600000) / 1000.f;
 
-    // One shared timer for every beacon - "the set pulse interval" is a single global setting, not
-    // per-beacon - so the beam's brightness and the rings' radii are each a single value per frame,
-    // not per-vertex data. cycle hits pi/2 exactly when t_seconds == pulse_interval, i.e. exactly when
-    // the two rings first meet at the midpoint (cos=0) - which is also when the beam is brightest (sin=1).
-    float env = 1.f;
-    float osc01 = 0.5f;
-    if (pulse_interval > 0.f) {
-        const float cycle = t_seconds * (DirectX::XM_PIDIV2 / pulse_interval);
-        env = 0.75f + 0.25f * std::sin(cycle);
-        osc01 = 0.5f - 0.5f * std::cos(cycle);
-    }
-    const float true_radius = std::max(1.f, ring_diameter * 0.5f);
+    // One shared timer for every beacon - a single global interval, not per-beacon - so the rings' radii
+    // are a single value per frame, not per-vertex data. The beam doesn't pulse at all, just the rings.
+    const float cycle = t_seconds * (DirectX::XM_PIDIV2 / kPulseInterval);
+    const float osc01 = 0.5f - 0.5f * std::cos(cycle);
+    const float true_radius = kRingDiameter * 0.5f;
     const float r_min = std::max(1.f, true_radius - kRingSpacing);
     const float r_max = true_radius + kRingSpacing;
     const float r_outer = std::lerp(r_max, r_min, osc01);
@@ -321,8 +314,7 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
             ++builds;
             if (!BuildBeacon(beacon, n_planes)) continue;
         }
-        const float beam_env = beacon.dimmed ? env * 0.4f : env;
-        EmitBeamQuad(scratch, beacon.pos, beacon.ground_z, right_x, right_y, beacon.color, beam_opacity * beam_env);
+        EmitBeamQuad(scratch, beacon.pos, beacon.ground_z, right_x, right_y, beacon.color, beacon.dimmed ? kBeamOpacity * 0.4f : kBeamOpacity);
 
         // Ring opacity comes straight from the beacon colour's own alpha channel; dimmed (reserved for
         // other party members) is the one exception, same as the beam.
@@ -369,12 +361,8 @@ void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
 {
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
-    SettingsRegistry::RegisterField(module, "beam_height", &beam_height);
     SettingsRegistry::RegisterField(module, "beam_width", &beam_width);
-    SettingsRegistry::RegisterField(module, "beam_opacity", &beam_opacity);
-    SettingsRegistry::RegisterField(module, "ring_diameter", &ring_diameter);
     SettingsRegistry::RegisterField(module, "z_lift", &z_lift);
-    SettingsRegistry::RegisterField(module, "pulse_interval", &pulse_interval);
     SettingsRegistry::RegisterField(module, "show_reserved_for_others", &show_reserved_for_others);
     SettingsRegistry::RegisterField(module, "enable_value_beacons", &enable_value_beacons);
     SettingsRegistry::RegisterField(module, "value_threshold", &value_threshold);
@@ -440,14 +428,6 @@ void LootBeaconsModule::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 25.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Beam height", &beam_height, 5.f, 50.f, 5000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Beam width", &beam_width, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Beam opacity", &beam_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Ring diameter", &ring_diameter, 1.f, 5.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("The two rings pulse 4 gwinches in and out of this diameter, crossing over it. Opacity comes "
-                     "from the beacon colour's own alpha - no separate ring opacity setting.");
     if (ImGui::DragFloat("Height lift", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
-    ImGui::DragFloat("Pulse interval", &pulse_interval, 0.05f, 0.f, 10.f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("Seconds for the two rings to go from spread apart to meeting in the middle. 0 = no pulsing; "
-                     "rings hold at their midpoint and the beam pulse pauses too.");
 }
