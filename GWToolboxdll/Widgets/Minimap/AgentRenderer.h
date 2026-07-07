@@ -174,6 +174,7 @@ private:
     Color color_qz = 0x320000FF;
     Color color_winnowing = 0x3200FFFF;
     Color color_frozen_soil = 0x00FEFFFF;
+    Color color_symbiosis = 0x32FF00FF;
     Color color_target = 0xFFFFFF00;
     Color color_player = 0xFFFF8000;
     Color color_player_dead = 0x64FF8000;
