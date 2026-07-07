@@ -1366,49 +1366,24 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
     if (!model_file_id)
         return nullptr;
 
-    // Composite items (armor/runes) can carry their icon in any of the 11 file_ids slots - most
-    // commonly slot 0xa (an explicit "icon override") or the given gender's model slot, but a few
-    // items (some elite armor pieces observed) have no icon substream on either gendered model file
-    // at all, and instead point straight at a standalone icon file in some other slot. Try every
-    // populated slot, favouring the usual ones, rather than giving up after just one or two.
-    std::vector<uint32_t> candidates;
+    // Composite items (armor/runes) point at the given gender's model slot (file_ids[0] male,
+    // file_ids[5] female) - confirmed against the client's own composite-model loader
+    // (CICompositePlayer, used by the character-creation dress-up doll): it walks every populated
+    // file_ids slot to gather ALL of them as required texture layers for the 3D worn model, with no
+    // per-slot priority or "alternate icon" concept - there is no slot that means "the icon". So
+    // there's nothing to gain by trying other slots as fallbacks; if the gendered slot has no icon,
+    // there isn't one. LoadItemImage/DecodeItemToArgb already covers "check the same file another
+    // way" by falling back to that file's own stream 0 when stream 1 (the usual icon substream)
+    // doesn't exist. Beyond that, give up - don't guess at unrelated slots.
+    uint32_t candidate = model_file_id;
     if (interaction & 4) {
         const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
-        if (model_file_info) {
-            const auto try_add = [&](size_t idx) {
-                if (model_file_info->file_ids[idx])
-                    candidates.push_back(model_file_info->file_ids[idx]);
-            };
-            try_add(0xa);
-            try_add(is_female ? 5 : 0);
-            try_add(is_female ? 0 : 5);
-            for (size_t i = 0; i < 11; ++i)
-                try_add(i);
-        }
+        const uint32_t gendered = model_file_info ? model_file_info->file_ids[is_female ? 5 : 0] : 0;
+        if (gendered)
+            candidate = gendered;
     }
-    if (candidates.empty())
-        candidates.push_back(model_file_id);
 
-    // Kick off a load for every candidate (a no-op once cached) and use the first one that has
-    // actually produced a texture. If none have, failed_out is only set once every candidate has
-    // actually finished decoding and failed - while any are still pending, the caller should treat
-    // this as "no icon yet" rather than a permanent failure.
-    IDirect3DTexture9** first_result = nullptr;
-    bool any_pending = false;
-    for (const uint32_t candidate : candidates) {
-        bool candidate_failed = false;
-        // The UI icon is normally stream 1 of the model file; recolour its stream 0xc mask for the dyes.
-        IDirect3DTexture9** result = GwDatModule::LoadItemImage(candidate, dyes, &candidate_failed);
-        if (*result)
-            return result;
-        if (!candidate_failed)
-            any_pending = true;
-        if (!first_result)
-            first_result = result;
-    }
-    if (failed_out)
-        *failed_out = !any_pending;
-    return first_result;
+    return GwDatModule::LoadItemImage(candidate, dyes, failed_out);
 }
 
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
