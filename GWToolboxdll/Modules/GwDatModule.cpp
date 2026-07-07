@@ -240,19 +240,26 @@ namespace {
     // failure (missing dat data) rather than merely not-yet-decoded.
     bool HasFailed(const GwImg* img) { return img->m_completed && !img->m_tex; }
 
-    // Reads + decodes + uploads on the DX thread (the only place we have the device). GwImg is shared-owned,
-    // so the task keeps its image alive even if Terminate() clears the cache before it runs.
+    // Reads + decompresses + decodes on a worker thread (mapping/MFT reads are safe from any thread once
+    // loaded, per EnsureLoaded/ParseIndex) - this is the slow part (a cold dat-mapping/MFT parse, or just a
+    // big/compressed file) and previously ran inline on the render thread, stalling the game for as long as
+    // it took. Only the final GPU upload needs the D3D device, which only the render thread may touch, so
+    // that alone hops to the DX task queue. GwImg is shared-owned, so both tasks keep it alive even if
+    // Terminate() clears the cache before they run.
     template <typename Decode>
     void QueueDecode(std::shared_ptr<GwImg> img, Decode decode)
     {
         img->m_pending = true;
-        Resources::Instance().EnqueueDxTask([img, decode](IDirect3DDevice9* device) {
+        Resources::Instance().EnqueueWorkerTask([img, decode] {
             std::vector<uint32_t> argb;
             Vec2i dims;
-            if (decode(argb, dims) && dims.x > 0 && dims.y > 0)
-                img->m_tex = MakeTextureFromArgb(device, argb, dims);
-            img->m_dims = dims;
-            img->m_completed = true;
+            const bool ok = decode(argb, dims) && dims.x > 0 && dims.y > 0;
+            Resources::Instance().EnqueueDxTask([img, argb, dims, ok](IDirect3DDevice9* device) {
+                if (ok)
+                    img->m_tex = MakeTextureFromArgb(device, argb, dims);
+                img->m_dims = dims;
+                img->m_completed = true;
+            });
         });
     }
 
@@ -557,8 +564,13 @@ bool GwDatModule::ParseFrom(void* mapping_v, long long file_size, std::vector<Mf
                                        expansion_count * sizeof(MftExpansion)))
         return false;
 
-    // Map each file id to its base slot; several ids may alias the same slot.
-    for (const auto& e : mftx) {
+    // Map each file id to its base slot; several ids may alias the same slot. Reserve up front (this
+    // is a ~150k+ entry table) so the loop doesn't rehash repeatedly, and index rather than range-for
+    // over `mftx` - in a debug build (checked iterators) that's a measurable chunk of the one-time
+    // parse cost, which previously ran inline on the render thread.
+    fileid_to_slot.reserve(static_cast<size_t>(expansion_count));
+    for (int i = 0; i < expansion_count; ++i) {
+        const MftExpansion& e = mftx[static_cast<size_t>(i)];
         if (e.file_offset >= 16 && e.file_offset < slot_count)
             fileid_to_slot[static_cast<uint32_t>(e.file_number)] = e.file_offset;
     }
