@@ -210,7 +210,8 @@ namespace {
     struct GwImg {
         Vec2i m_dims;
         IDirect3DTexture9* m_tex = nullptr;
-        bool m_pending = false; // a decode has been dispatched; don't dispatch twice
+        bool m_pending = false;   // a decode has been dispatched; don't dispatch twice
+        bool m_completed = false; // the dispatched decode has run (success or failure)
         ~GwImg()
         {
             if (m_tex)
@@ -221,6 +222,10 @@ namespace {
     // Dispatch once. On failure (file not in the dat) m_tex stays null - a placeholder - and m_pending stays
     // set, so we don't re-decode the same missing file every frame.
     bool WantsDecode(const GwImg* img) { return !img->m_tex && !img->m_pending; }
+
+    // True once the dispatched decode has actually run and produced no texture - i.e. a genuine, permanent
+    // failure (missing dat data) rather than merely not-yet-decoded.
+    bool HasFailed(const GwImg* img) { return img->m_completed && !img->m_tex; }
 
     // Reads + decodes + uploads on the DX thread (the only place we have the device). GwImg is shared-owned,
     // so the task keeps its image alive even if Terminate() clears the cache before it runs.
@@ -234,6 +239,7 @@ namespace {
             if (decode(argb, dims) && dims.x > 0 && dims.y > 0)
                 img->m_tex = MakeTextureFromArgb(device, argb, dims);
             img->m_dims = dims;
+            img->m_completed = true;
         });
     }
 
@@ -275,7 +281,7 @@ IDirect3DTexture9** GwDatModule::LoadTextureFromFileId(uint32_t file_id, uint32_
     return &img->m_tex;
 }
 
-IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t dyes)
+IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t dyes, bool* failed_out)
 {
     const uint64_t key = (static_cast<uint64_t>(dyes) << 32) | model_file_id;
     const auto& img = GetOrCreate(item_images_by_file_id, key);
@@ -283,6 +289,8 @@ IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t 
         QueueDecode(img, [model_file_id, dyes](std::vector<uint32_t>& argb, Vec2i& dims) {
             return DecodeItemToArgb(model_file_id, dyes, argb, dims);
         });
+    if (failed_out)
+        *failed_out = HasFailed(img.get());
     return &img->m_tex;
 }
 
