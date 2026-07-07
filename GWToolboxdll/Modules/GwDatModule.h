@@ -93,7 +93,7 @@ private:
     bool AcquireMappingInto(void*& mapping, long long& size);
     bool ParseFrom(void* mapping, long long size, std::vector<MftEntry>& slots,
                    std::unordered_map<uint32_t, int>& fileid_to_slot); // header + MFT + hash list -> temporaries
-    bool ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed);
+    bool ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed, bool& file_known);
 
     std::mutex m_load_mutex;                        // serialises the one-time ParseIndex
     std::atomic<bool> m_loaded{false};

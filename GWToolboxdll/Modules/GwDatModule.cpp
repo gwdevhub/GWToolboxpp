@@ -583,11 +583,14 @@ bool GwDatModule::ParseIndex()
 }
 
 // Copies the raw (still-compressed) bytes for file_id/stream_id. The index is immutable after EnsureLoaded().
-bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed)
+// file_known is set true once file_id itself is found, so callers can tell "no such file" apart from "file exists, just not this stream".
+bool GwDatModule::ReadRaw(uint32_t file_id, uint32_t stream_id, std::vector<uint8_t>& input, bool& compressed, bool& file_known)
 {
+    file_known = false;
     const auto found = m_fileid_to_slot.find(file_id);
     if (found == m_fileid_to_slot.end())
         return false;
+    file_known = true;
     // A file's streams are a linked list: `c` is the stream number, `id` the next stream's slot.
     int idx = found->second;
     const MftEntry* e = nullptr;
@@ -636,19 +639,20 @@ bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t
 
     std::vector<uint8_t> input;
     bool compressed = false;
-    if (!self.ReadRaw(file_id, stream_id, input, compressed)) {
-        // The dat is mapped but doesn't contain this file - almost always an incomplete Steam/streaming
-        // install. Flag it (the UI surfaces this) and point the user at -image once.
-        self.m_missing_data.store(true, std::memory_order_relaxed);
-        static std::once_flag warned;
-        std::call_once(warned, [file_id] {
-            Log::Warning("GWToolbox couldn't find some image data in your Gw.dat - your local game data looks "
-                         "incomplete (Steam downloads it on demand). Run Guild Wars once with the -image "
-                         "command-line option to download all game data, then restart. file_id %d. Setup steps: "
-                "https://gwtoolbox.com/docs/troubleshooting/#missing-images-in-toolbox",
-                file_id
-            );
-        });
+    bool file_known = false;
+    if (!self.ReadRaw(file_id, stream_id, input, compressed, file_known)) {
+        if (!file_known) {
+            // The dat doesn't have this file at all - likely an incomplete Steam/streaming install; a missing stream on a file that does exist doesn't count (routine - several icon streams are speculatively probed).
+            self.m_missing_data.store(true, std::memory_order_relaxed);
+            static std::once_flag warned;
+            std::call_once(warned, [file_id] {
+                Log::Warning("GWToolbox couldn't find some image data in your Gw.dat - your local game data looks "
+                             "incomplete (Steam downloads it on demand). Run Guild Wars once with the -image "
+                             "command-line option to download all game data, then restart. file_id %d. Setup steps: "
+                             "https://gwtoolbox.com/docs/troubleshooting/#missing-images-in-toolbox",
+                             file_id);
+            });
+        }
         return false;
     }
 
