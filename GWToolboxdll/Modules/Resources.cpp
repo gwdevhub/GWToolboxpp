@@ -1366,11 +1366,14 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
     if (!model_file_id)
         return nullptr;
 
-    // Composite items (armor/runes) only have a usable icon in file_ids[0/5] (gendered) or [8] (shared) - the other slots are skin/pattern textures for the 3D worn model, confirmed by visual inspection to be the wrong image.
+    // Composite items (armor/runes): mirrors the client's own CICompositePlayer::GetCompositeGeometry
+    // slot order - file_ids[10] is the shared geometry/icon slot, tried first regardless of gender;
+    // only when that's absent does it fall back to the gendered slot (file_ids[5] female, [0] male).
+    // The other slots are skin/pattern textures for the 3D worn model, not icons.
     if (interaction & 4) {
         const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
         if (model_file_info) {
-            const size_t slots_to_try[] = {is_female ? 5u : 0u, 8u};
+            const size_t slots_to_try[] = {10u, is_female ? 5u : 0u};
             static IDirect3DTexture9* null_tex = nullptr;
             IDirect3DTexture9** result = &null_tex;
             for (const size_t i : slots_to_try) {
