@@ -1,10 +1,10 @@
 // Procedural soft-edged ring: no texture. Shades a single ring band by distance from centre -
-// a triangular profile that ramps 0->1 approaching `ring_radius`, then 1->0 moving past it, so the
-// whole band is `2 * ring_edge` wide with a soft (smoothstepped) fade on both the inner and outer edge.
+// solid (alpha=1) for `ring_band` world units on each side of `ring_radius`, then a smoothstepped
+// fade to transparent over `ring_edge` world units beyond that, on both the inner and outer side.
 float4 cur_pos : register(c0);       // only xyz used: camera focus
 float4 max_dist : register(c1);      // only x used
 float4 fog_starts_at : register(c2); // only x used
-float4 ring_params : register(c3);   // x = ring_radius (world units), y = ring_edge (fade width, world units)
+float4 ring_params : register(c3);   // x = ring_radius, y = ring_edge (fade width), z = ring_band (solid half-width) - all world units
 
 struct PS_INPUT {
     float4 position : SV_POSITION;
@@ -26,7 +26,8 @@ float4 main(PS_INPUT input) : COLOR {
 
     float r = length(input.local);
     float edge = max(ring_params.y, 0.0001);
-    float t = saturate(1.0 - abs(r - ring_params.x) / edge);
+    float past_band = max(abs(r - ring_params.x) - ring_params.z, 0.0);
+    float t = saturate(1.0 - past_band / edge);
     float ring_alpha = smoothstep(0.0, 1.0, t);
 
     float4 output = input.color;
