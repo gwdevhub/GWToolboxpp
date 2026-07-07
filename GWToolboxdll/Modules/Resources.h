@@ -107,6 +107,10 @@ public:
     static GuiUtils::EncString* GetSkillName(const GW::Constants::SkillID skill_id);
 
     static IDirect3DTexture9** GetItemImage(GW::Item* item);
+    // Resolves a composite (armor/rune) model's icon by trying every populated file_ids slot rather
+    // than assuming a fixed one - see the .cpp for why. is_female picks which gendered model slot to
+    // prefer; dyes packs up to four GW::DyeColor values one per byte (0 = undyed).
+    static IDirect3DTexture9** GetItemImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes, bool is_female);
     // Fetches item page from GWW, parses out the image for the item then downloads that to disk
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded

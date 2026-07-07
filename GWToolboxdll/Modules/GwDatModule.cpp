@@ -59,7 +59,11 @@ namespace {
     }
 
     // Decodes file_id to A8R8G8B8 (ATEX/ATTX, ffna inline DXT chunk, or DDS); stream_id picks a stream.
-    bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims, uint32_t stream_id = 0)
+    // allow_ffna_chunk lets a caller refuse an ffna model's own inline surface texture - needed when
+    // probing an unknown file id as a *standalone* icon, where that texture would be the wrong image
+    // (the model's skin map, not a UI icon) rather than a decode failure.
+    bool DecodeTextureToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims, uint32_t stream_id = 0,
+                             bool allow_ffna_chunk = true)
     {
         ArenaNetFileParser::GameAssetFile asset;
         if (!asset.readFromDat(file_id, stream_id))
@@ -72,6 +76,8 @@ namespace {
 
         // Model files (ffna) carry the texture as an inline DXT3 chunk.
         if (memcmp(image_bytes, "ffna", 4) == 0) {
+            if (!allow_ffna_chunk)
+                return false;
             const auto anet_file = reinterpret_cast<ArenaNetFileParser::ArenaNetFile*>(&asset);
             if (!anet_file->isValid())
                 return false;
@@ -145,10 +151,21 @@ namespace {
     };
 
     // Item icon to A8R8G8B8: stream 1 base, stream 0xc dye mask; masked pixels use the averaged dye matrices (`dyes` = up to 4 GW::DyeColor, one per byte).
+    // A few items (mostly composite armor pieces whose per-gender model file has no icon substream
+    // at all) have no stream 1; their real icon is instead the file's own stream 0, as a standalone
+    // ATEX/ATTX/DDS image rather than an ffna model - fall back to that (undyeable: there's no
+    // separate stream 0xc mask to blend for it).
     bool DecodeItemToArgb(uint32_t file_id, uint32_t dyes, std::vector<uint32_t>& base, Vec2i& dims)
     {
-        if (!file_id || !DecodeTextureToArgb(file_id, base, dims, 1) || !dims.x || !dims.y)
+        if (!file_id)
             return false;
+        const bool has_icon_stream = DecodeTextureToArgb(file_id, base, dims, 1);
+        if (!has_icon_stream && !DecodeTextureToArgb(file_id, base, dims, 0, /*allow_ffna_chunk=*/false))
+            return false;
+        if (!dims.x || !dims.y)
+            return false;
+        if (!has_icon_stream)
+            return true;
 
         // Average the applied dye slots' matrices into one combined transform.
         float M[10] = {};

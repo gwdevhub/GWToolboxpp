@@ -687,26 +687,7 @@ namespace GWArmory {
     bool armor_icon_missing = false;
 
     IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes = 0) {
-        const bool is_composite_item = (interaction & 4) != 0;
-
-        uint32_t model_id_to_load = 0;
-
-        if (is_composite_item) {
-            // Armor/runes
-            const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
-            if (model_file_info) {
-                if(!model_id_to_load)
-                    model_id_to_load = model_file_info->file_ids[0xa];
-                if (!model_id_to_load)
-                    model_id_to_load = GetIsFemale() ? model_file_info->file_ids[5] : model_file_info->file_ids[0];
-
-            }
-        }
-        if (!model_id_to_load)
-            model_id_to_load = model_file_id;
-
-        // The UI icon is stream 1 of the model file; recolour its stream 0xc mask for the dyes.
-        IDirect3DTexture9** result = GwDatModule::LoadItemImage(model_id_to_load, dyes);
+        IDirect3DTexture9** result = Resources::GetItemImage(model_file_id, interaction, dyes, GetIsFemale());
         if (!*result)
             armor_icon_missing = true; // a shown piece has no icon (yet) - flag for the warning
         return result;
