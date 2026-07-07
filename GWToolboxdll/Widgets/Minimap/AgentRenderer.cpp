@@ -351,7 +351,7 @@ void AgentRenderer::LoadDefaultColors()
     color_qz = 0x320000FF;
     color_winnowing = 0x3200FFFF;
     color_frozen_soil = 0x00FEFFFF;
-    color_symbiosis = 0x32FF00FF;
+    color_symbiosis = 0x00FF00FF;
     color_target = 0xFFFFFF00;
     color_player = 0xFFFF8000;
     color_player_dead = 0x64FF8000;
