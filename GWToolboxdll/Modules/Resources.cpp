@@ -8,12 +8,14 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
@@ -1357,27 +1359,55 @@ namespace {
     }
 }
 
+IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes, bool is_female)
+{
+    if (!model_file_id)
+        return nullptr;
+
+    // Composite items (armor/runes) can carry their icon in any of the 11 file_ids slots - most
+    // commonly slot 0xa (an explicit "icon override") or the given gender's model slot, but a few
+    // items (some elite armor pieces observed) have no icon substream on either gendered model file
+    // at all, and instead point straight at a standalone icon file in some other slot. Try every
+    // populated slot, favouring the usual ones, rather than giving up after just one or two.
+    std::vector<uint32_t> candidates;
+    if (interaction & 4) {
+        const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
+        if (model_file_info) {
+            const auto try_add = [&](size_t idx) {
+                if (model_file_info->file_ids[idx])
+                    candidates.push_back(model_file_info->file_ids[idx]);
+            };
+            try_add(0xa);
+            try_add(is_female ? 5 : 0);
+            try_add(is_female ? 0 : 5);
+            for (size_t i = 0; i < 11; ++i)
+                try_add(i);
+        }
+    }
+    if (candidates.empty())
+        candidates.push_back(model_file_id);
+
+    // Kick off a load for every candidate (a no-op once cached) and use the first one that has
+    // actually produced a texture; a null result means none of them have an icon (yet).
+    IDirect3DTexture9** first_result = nullptr;
+    for (const uint32_t candidate : candidates) {
+        // The UI icon is normally stream 1 of the model file; recolour its stream 0xc mask for the dyes.
+        IDirect3DTexture9** result = GwDatModule::LoadItemImage(candidate, dyes);
+        if (*result)
+            return result;
+        if (!first_result)
+            first_result = result;
+    }
+    return first_result;
+}
+
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
 {
     if (!(item && item->model_file_id))
         return nullptr;
-    uint32_t model_id_to_load = 0;
-    const bool is_composite_item = (item->interaction & 4) != 0;
-
-    const bool is_female = true;
-
-    if (is_composite_item) {
-        // Armor/runes
-        const auto model_file_info = GW::Items::GetCompositeModelInfo(item->model_file_id);
-        if (model_file_info && !model_id_to_load)
-            model_id_to_load = model_file_info->file_ids[0xa];
-        if (model_file_info && !model_id_to_load)
-            model_id_to_load = is_female ? model_file_info->file_ids[5] : model_file_info->file_ids[0];
-    }
-    if (!model_id_to_load)
-        model_id_to_load = item->model_file_id;
-    // The UI icon is stream 1 of the model file; the item's dyes recolour its stream 0xc mask region.
-    return GwDatModule::LoadItemImage(model_id_to_load, ItemDyes(item));
+    const auto player = GW::Agents::GetControlledCharacter();
+    const bool is_female = player && player->GetIsFemale();
+    return GetItemImage(item->model_file_id, item->interaction, ItemDyes(item), is_female);
 }
 
 IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)

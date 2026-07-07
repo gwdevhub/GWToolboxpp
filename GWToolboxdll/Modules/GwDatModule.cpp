@@ -145,10 +145,23 @@ namespace {
     };
 
     // Item icon to A8R8G8B8: stream 1 base, stream 0xc dye mask; masked pixels use the averaged dye matrices (`dyes` = up to 4 GW::DyeColor, one per byte).
+    // Some items (composite armor pieces whose gendered model has no icon substream at all, or plain
+    // weapon skins that were simply never given one) have no stream 1. Fall back to the file's own
+    // stream 0: either a standalone ATEX/ATTX/DDS icon file some composite slots point at directly,
+    // or - for a model (ffna) file - its own inline surface texture, which is usually small enough to
+    // stand in as an icon and is strictly better than showing nothing. Either way it's undyeable:
+    // there's no separate stream 0xc mask to blend for it.
     bool DecodeItemToArgb(uint32_t file_id, uint32_t dyes, std::vector<uint32_t>& base, Vec2i& dims)
     {
-        if (!file_id || !DecodeTextureToArgb(file_id, base, dims, 1) || !dims.x || !dims.y)
+        if (!file_id)
             return false;
+        const bool has_icon_stream = DecodeTextureToArgb(file_id, base, dims, 1);
+        if (!has_icon_stream && !DecodeTextureToArgb(file_id, base, dims, 0))
+            return false;
+        if (!dims.x || !dims.y)
+            return false;
+        if (!has_icon_stream)
+            return true;
 
         // Average the applied dye slots' matrices into one combined transform.
         float M[10] = {};
