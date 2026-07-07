@@ -3,8 +3,10 @@
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Camera.h>
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/Managers/AgentMgr.h>
+#include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
@@ -24,7 +26,7 @@
 #include "Widgets/Minimap/Shaders/loot_beacon_ring_vs.h"
 
 namespace {
-    constexpr int kMaxBuildsPerFrame = 8;   // draping QueryAltitude budget: ~70 queries per beacon build
+    constexpr int kMaxBuildsPerFrame = 8;   // caps QueryAltitude calls (1 per beacon build) spent per frame
     constexpr uint32_t kScanIntervalMs = 250; // item agents don't move; classification only needs a coarse tick
     constexpr uint32_t kRingTextureFileId = 0x03F2F1BB; // GW dat texture for the pulsing ring sprite
 
@@ -76,10 +78,10 @@ namespace {
         Color color = 0;
         bool draw = false;
         bool dimmed = false;
-        bool built = false;
+        bool built = false;   // true once ground_z has been resolved via a terrain query
         uint32_t seen = 0;
-        float ground_z = 0.f;            // draped terrain height (post z_lift) the pulsing ring sits on
-        std::vector<BeaconVertex> verts; // beam pillar only; baked with base alpha, scaled by the pulse envelope per frame
+        float ground_z = 0.f; // draped terrain height (post z_lift); resolved once and cached, everything
+                               // drawn from it (beam quad, ring quads) is rebuilt fresh every frame instead
     };
 
     std::unordered_map<uint32_t, Beacon> beacons;
@@ -192,34 +194,46 @@ namespace {
 
     bool BuildBeacon(Beacon& beacon, const uint32_t n_planes)
     {
-        float base_z = TerrainDrape::SurfaceZ(beacon.pos.x, beacon.pos.y, beacon.zplane, n_planes);
+        const float base_z = TerrainDrape::SurfaceZ(beacon.pos.x, beacon.pos.y, beacon.zplane, n_planes);
         if (base_z == 0.f) return false; // no altitude data yet; retry next frame
-        base_z -= z_lift;
-        beacon.ground_z = base_z; // the ring quad sits here, rebuilt fresh every frame - no draping to cache
-
-        beacon.verts.clear();
-        beacon.verts.reserve(12);
-
-        // Two crossed vertical quads read as a pillar from any camera angle without per-frame billboarding.
-        const DWORD bottom_col = WithAlpha(beacon.color, beam_opacity);
-        const DWORD top_col = WithAlpha(beacon.color, 0.f);
-        const float half = std::max(1.f, beam_width) * 0.5f;
-        const float z_top = base_z - std::max(1.f, beam_height);
-        const auto quad = [&](const float x0, const float y0, const float x1, const float y1) {
-            const BeaconVertex b0 = {x0, y0, base_z, bottom_col}, b1 = {x1, y1, base_z, bottom_col};
-            const BeaconVertex t0 = {x0, y0, z_top, top_col}, t1 = {x1, y1, z_top, top_col};
-            beacon.verts.push_back(b0);
-            beacon.verts.push_back(b1);
-            beacon.verts.push_back(t1);
-            beacon.verts.push_back(b0);
-            beacon.verts.push_back(t1);
-            beacon.verts.push_back(t0);
-        };
-        quad(beacon.pos.x - half, beacon.pos.y, beacon.pos.x + half, beacon.pos.y);
-        quad(beacon.pos.x, beacon.pos.y - half, beacon.pos.x, beacon.pos.y + half);
-
+        beacon.ground_z = base_z - z_lift; // everything (beam quad, ring quads) is built fresh from this every frame
         beacon.built = true;
         return true;
+    }
+
+    // Appends a single vertical quad standing on the ground and facing the camera - `right_x`/`right_y` is
+    // the horizontal axis (from GetCameraRight below) so the quad rotates to face the viewer without ever
+    // being edge-on, unlike two fixed crossed quads.
+    void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const DWORD bottom_col, const DWORD top_col)
+    {
+        const float half = std::max(1.f, beam_width) * 0.5f;
+        const float z_top = ground_z - std::max(1.f, beam_height);
+        const float x0 = pos.x - right_x * half, y0 = pos.y - right_y * half;
+        const float x1 = pos.x + right_x * half, y1 = pos.y + right_y * half;
+        const BeaconVertex b0 = {x0, y0, ground_z, bottom_col}, b1 = {x1, y1, ground_z, bottom_col};
+        const BeaconVertex t0 = {x0, y0, z_top, top_col}, t1 = {x1, y1, z_top, top_col};
+        out.push_back(b0);
+        out.push_back(b1);
+        out.push_back(t1);
+        out.push_back(b0);
+        out.push_back(t1);
+        out.push_back(t0);
+    }
+
+    // Horizontal axis perpendicular to the camera's view direction, for a vertical (upright) billboard -
+    // world_up is (0,0,-1) since GW's up is -z, so right = cross(world_up, fwd) reduces to (fwd.y, -fwd.x).
+    void GetCameraRight(float& right_x, float& right_y)
+    {
+        right_x = 1.f;
+        right_y = 0.f;
+        const auto* cam = GW::CameraMgr::GetCamera();
+        if (!cam) return;
+        const float fx = cam->look_at_target.x - cam->position.x;
+        const float fy = cam->look_at_target.y - cam->position.y;
+        const float len = std::sqrt(fx * fx + fy * fy);
+        if (len < 0.0001f) return;
+        right_x = fy / len;
+        right_y = -fx / len;
     }
 } // namespace
 
@@ -266,6 +280,9 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     const float r_outer = std::lerp(r_max, r_min, osc01);
     const float r_inner = std::lerp(r_min, r_max, osc01);
 
+    float right_x, right_y;
+    GetCameraRight(right_x, right_y);
+
     scratch.clear();
     ring_scratch.clear();
     int builds = 0;
@@ -277,12 +294,9 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
             if (!BuildBeacon(beacon, n_planes)) continue;
         }
         const float beam_env = beacon.dimmed ? env * 0.4f : env;
-        for (const auto& v : beacon.verts) {
-            BeaconVertex out = v;
-            const auto a = static_cast<DWORD>(static_cast<float>((v.color >> IM_COL32_A_SHIFT) & 0xFF) * beam_env);
-            out.color = (v.color & ~(0xFFu << IM_COL32_A_SHIFT)) | (a << IM_COL32_A_SHIFT);
-            scratch.push_back(out);
-        }
+        const DWORD bottom_col = WithAlpha(beacon.color, beam_opacity * beam_env);
+        const DWORD top_col = WithAlpha(beacon.color, 0.f);
+        EmitBeamQuad(scratch, beacon.pos, beacon.ground_z, right_x, right_y, bottom_col, top_col);
 
         // Ring opacity comes straight from the beacon colour's own alpha channel; dimmed (reserved for
         // other party members) is the one exception, same as the beam.
@@ -400,9 +414,9 @@ void LootBeaconsModule::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 25.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    if (ImGui::DragFloat("Beam height", &beam_height, 5.f, 50.f, 5000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
-    if (ImGui::DragFloat("Beam width", &beam_width, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
-    if (ImGui::DragFloat("Beam opacity", &beam_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
+    ImGui::DragFloat("Beam height", &beam_height, 5.f, 50.f, 5000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Beam width", &beam_width, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Beam opacity", &beam_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Ring diameter", &ring_diameter, 1.f, 5.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("The two rings pulse 4 gwinches in and out of this diameter, crossing over it. Opacity comes "
                      "from the beacon colour's own alpha - no separate ring opacity setting.");
