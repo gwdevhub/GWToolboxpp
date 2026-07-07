@@ -31,6 +31,8 @@ public:
 
     // Force rings as if hovering the given skill id (0 = back to real hover). Test harness hook.
     static void SetDebugSkill(uint32_t skill_id);
+    // Ring radii the module would draw for a skill id (harness `skillinfo` verification).
+    static size_t DebugSpecs(uint32_t skill_id, float* radii, size_t max);
 
 private:
     static void RegisterSettings(ToolboxModule* module);

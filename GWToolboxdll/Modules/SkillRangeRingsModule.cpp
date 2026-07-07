@@ -22,6 +22,13 @@ namespace {
     constexpr float kMaxRingRadius = 5200.f; // ignore bogus range data past compass-ish sizes
     constexpr uint8_t kTargetNone = 0;        // Skill.target == no_target (flash enchant / stance / self-cast form)
 
+    // Skills whose aoe_range is a leftover from a pre-rework version of the skill; const_effect holds the
+    // live radius (Double Dragon: aoe_range=240 "nearby" from its 2008 incarnation, const_effect=156 is
+    // the actual adjacent pulse since the 2012 rework).
+    constexpr GW::Constants::SkillID kStaleAoeRange[] = {
+        GW::Constants::SkillID::Double_Dragon,
+    };
+
     // Occlusion behind terrain is shared with the "In-game rendering" module
     // via GameWorldRenderer::GetOccludeBehindTerrain(), so it's configured in
     // one place. The incomplete-ring artifact (arcs that drop in/out with the camera) only occurs with occlusion
@@ -77,7 +84,8 @@ namespace {
             out.push_back({GW::Constants::Range::Spirit, color_effect, false}); // what the placed spirit will cover
         }
         // Sub-50 values are spawn offsets (e.g. Shelter's 10), ~5000 means "party-wide/everywhere" - neither is a ring.
-        if (skill.aoe_range > 50.f && skill.aoe_range < 4990.f) {
+        const bool stale_aoe = std::ranges::contains(kStaleAoeRange, skill.skill_id);
+        if (!stale_aoe && skill.aoe_range > 50.f && skill.aoe_range < 4990.f) {
             out.push_back({skill.aoe_range, color_aoe, spell_like && targets_other});
         }
         if (skill.const_effect > 50.f && skill.const_effect < 4990.f) {
@@ -146,6 +154,19 @@ namespace {
 void SkillRangeRingsModule::SetDebugSkill(const uint32_t skill_id)
 {
     debug_skill_id = skill_id;
+}
+
+size_t SkillRangeRingsModule::DebugSpecs(const uint32_t skill_id, float* radii, const size_t max)
+{
+    const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
+    if (!skill) return 0;
+    std::vector<RingSpec> specs;
+    SpecsForSkill(*skill, specs);
+    const size_t n = std::min(max, specs.size());
+    for (size_t i = 0; i < n; ++i) {
+        radii[i] = specs[i].radius;
+    }
+    return n;
 }
 
 void SkillRangeRingsModule::DrawInWorld(IDirect3DDevice9* device)
