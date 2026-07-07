@@ -33,12 +33,12 @@ namespace {
     float beam_height = 225.f;
     float beam_width = 35.f;
     float beam_opacity = 0.5f;
-    float ring_diameter = 90.f;   // world-space diameter the ring band is centred on (procedural, no texture)
-    float ring_band_width = 8.f;  // solid (alpha=1) half-width on each side of ring_diameter
-    float ring_edge_width = 12.f; // fade width beyond ring_band_width, on each side (soft inner/outer edge)
+    float ring_max_diameter = 90.f; // the two rings' spread apart diameter (procedural, no texture)
+    float ring_min_diameter = 30.f; // the two rings' converged/crossed diameter
+    float ring_edge_width = 12.f;   // fade width on each side of a ring's current radius (soft inner/outer edge)
     float ring_opacity = 0.8f;
     float z_lift = 5.f; // raise above the floor to avoid z-fighting (GW up is -z)
-    float pulse_speed = 0.8f; // beam-only pulse for now; the ring is static (proof of concept)
+    float pulse_speed = 0.8f; // drives both the beam's alpha pulse and the rings' converge/diverge motion, in sync
     bool show_reserved_for_others = false;
 
     bool enable_value_beacons = true;
@@ -62,11 +62,13 @@ namespace {
     };
 
     // POSITION (world) + D3DCOLOR tint + local offset from the ring's centre (world units, NOT a 0..1
-    // texture UV) - the pixel shader turns length(local) back into a radius to shade the ring procedurally.
+    // texture UV) + this ring instance's current radius (per-vertex so two differently-sized rings, or
+    // rings from beacons at different pulse phases, can be batched into one draw call).
     struct RingVertex {
         float x, y, z;
         DWORD color;
         float local_x, local_y;
+        float radius;
     };
 
     struct Beacon {
@@ -107,6 +109,7 @@ namespace {
             {0, 0, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
             {0, 12, D3DDECLTYPE_D3DCOLOR, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_COLOR, 0},
             {0, 16, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
+            {0, 24, D3DDECLTYPE_FLOAT1, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 1},
             D3DDECL_END()
         };
         if (!ring_decl && device->CreateVertexDeclaration(decl, &ring_decl) != D3D_OK) return false;
@@ -116,14 +119,14 @@ namespace {
     }
 
     // Appends a flat, ground-aligned quad (2 triangles) sized to just cover the ring's soft outer edge;
-    // the pixel shader shades the actual ring band from `local` (each corner's offset from `pos`).
-    void EmitRingQuad(std::vector<RingVertex>& out, const GW::Vec2f& pos, const float z, const float radius, const float band, const float edge, const DWORD col)
+    // the pixel shader shades the actual ring from `local` (each corner's offset from `pos`) vs `radius`.
+    void EmitRingQuad(std::vector<RingVertex>& out, const GW::Vec2f& pos, const float z, const float radius, const float edge, const DWORD col)
     {
-        const float half = radius + band + edge + 1.f; // +1 slack against float precision at the outer fade boundary
-        const RingVertex v00{pos.x - half, pos.y - half, z, col, -half, -half};
-        const RingVertex v10{pos.x + half, pos.y - half, z, col, half, -half};
-        const RingVertex v11{pos.x + half, pos.y + half, z, col, half, half};
-        const RingVertex v01{pos.x - half, pos.y + half, z, col, -half, half};
+        const float half = radius + edge + 1.f; // +1 slack against float precision at the outer fade boundary
+        const RingVertex v00{pos.x - half, pos.y - half, z, col, -half, -half, radius};
+        const RingVertex v10{pos.x + half, pos.y - half, z, col, half, -half, radius};
+        const RingVertex v11{pos.x + half, pos.y + half, z, col, half, half, radius};
+        const RingVertex v01{pos.x - half, pos.y + half, z, col, -half, half, radius};
         out.push_back(v00);
         out.push_back(v10);
         out.push_back(v11);
@@ -251,9 +254,12 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
             ++builds;
             if (!BuildBeacon(beacon, n_planes)) continue;
         }
+        // A single shared oscillator drives both the beam's brightness pulse and the rings' motion, so they
+        // stay in time: brightness peaks (sin=1) exactly when the two rings cross at the midpoint (cos=0).
         const float phase = static_cast<float>(agent_id % 628) / 100.f;
+        const float cycle = t_seconds * pulse_speed * DirectX::XM_2PI + phase;
         float env = 1.f;
-        if (pulse_speed > 0.f) env = 0.75f + 0.25f * std::sin(t_seconds * pulse_speed * DirectX::XM_2PI + phase);
+        if (pulse_speed > 0.f) env = 0.75f + 0.25f * std::sin(cycle);
         if (beacon.dimmed) env *= 0.4f;
         for (const auto& v : beacon.verts) {
             BeaconVertex out = v;
@@ -262,9 +268,15 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
             scratch.push_back(out);
         }
 
-        // Proof of concept: a single static procedural ring (no texture, no animation yet).
+        // Two rings pulsing toward each other and away: the outer one closes in toward ring_min_diameter/2
+        // while the inner one opens out toward ring_max_diameter/2, mirrored so they cross at the midpoint.
+        float osc01 = 0.5f;
+        if (pulse_speed > 0.f) osc01 = 0.5f - 0.5f * std::cos(cycle);
+        const float r_min = std::max(1.f, ring_min_diameter * 0.5f);
+        const float r_max = std::max(r_min, ring_max_diameter * 0.5f);
         const DWORD ring_col = WithAlpha(beacon.color, ring_opacity * (beacon.dimmed ? 0.4f : 1.f));
-        EmitRingQuad(ring_scratch, beacon.pos, beacon.ground_z, ring_diameter * 0.5f, ring_band_width, ring_edge_width, ring_col);
+        EmitRingQuad(ring_scratch, beacon.pos, beacon.ground_z, std::lerp(r_max, r_min, osc01), ring_edge_width, ring_col);
+        EmitRingQuad(ring_scratch, beacon.pos, beacon.ground_z, std::lerp(r_min, r_max, osc01), ring_edge_width, ring_col);
     }
 
     if (!scratch.empty()) {
@@ -287,8 +299,8 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
                 GameWorldCompositor::SetWorldViewProj(device)) {
                 GameWorldCompositor::SetWorldRenderStates(device, GameWorldRenderer::GetOccludeBehindTerrain());
                 GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
-                const float ring_params[4] = {ring_diameter * 0.5f, std::max(ring_edge_width, 0.1f), std::max(ring_band_width, 0.f), 0.f};
-                device->SetPixelShaderConstantF(3, ring_params, 1);
+                const float ring_edge[4] = {std::max(ring_edge_width, 0.1f), 0.f, 0.f, 0.f};
+                device->SetPixelShaderConstantF(3, ring_edge, 1);
                 device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(ring_scratch.size() / 3), ring_scratch.data(), sizeof(RingVertex));
             }
             state_block->Apply();
@@ -304,8 +316,8 @@ void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "beam_height", &beam_height);
     SettingsRegistry::RegisterField(module, "beam_width", &beam_width);
     SettingsRegistry::RegisterField(module, "beam_opacity", &beam_opacity);
-    SettingsRegistry::RegisterField(module, "ring_diameter", &ring_diameter);
-    SettingsRegistry::RegisterField(module, "ring_band_width", &ring_band_width);
+    SettingsRegistry::RegisterField(module, "ring_max_diameter", &ring_max_diameter);
+    SettingsRegistry::RegisterField(module, "ring_min_diameter", &ring_min_diameter);
     SettingsRegistry::RegisterField(module, "ring_edge_width", &ring_edge_width);
     SettingsRegistry::RegisterField(module, "ring_opacity", &ring_opacity);
     SettingsRegistry::RegisterField(module, "z_lift", &z_lift);
@@ -378,13 +390,14 @@ void LootBeaconsModule::DrawSettingsInternal()
     if (ImGui::DragFloat("Beam height", &beam_height, 5.f, 50.f, 5000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
     if (ImGui::DragFloat("Beam width", &beam_width, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
     if (ImGui::DragFloat("Beam opacity", &beam_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
-    ImGui::DragFloat("Ring diameter", &ring_diameter, 1.f, 5.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Ring band width", &ring_band_width, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("Solid half-width of the ring's core, on each side of the diameter - the part with no fade.");
+    ImGui::DragFloat("Ring max diameter", &ring_max_diameter, 1.f, 5.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("How far apart the two rings spread before reversing.");
+    ImGui::DragFloat("Ring min diameter", &ring_min_diameter, 1.f, 0.f, 1000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("How far in the two rings converge/cross before reversing.");
     ImGui::DragFloat("Ring edge width", &ring_edge_width, 0.5f, 0.5f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("Width of the soft fade beyond the band, on each side of the ring - procedural, no texture asset.");
+    ImGui::ShowHelp("Width of the soft fade on each side of a ring - procedural, no texture asset.");
     ImGui::DragFloat("Ring opacity", &ring_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     if (ImGui::DragFloat("Height lift", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
     ImGui::DragFloat("Pulse speed", &pulse_speed, 0.05f, 0.f, 5.f, "%.2f Hz", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("0 = no pulsing (beam only, for now - the ring is still static).");
+    ImGui::ShowHelp("0 = no pulsing; rings hold at their midpoint and the beam pulse pauses too.");
 }
