@@ -654,11 +654,13 @@ bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t
         // install. Flag it (the UI surfaces this) and point the user at -image once.
         self.m_missing_data.store(true, std::memory_order_relaxed);
         static std::once_flag warned;
-        std::call_once(warned, [] {
+        std::call_once(warned, [file_id] {
             Log::Warning("GWToolbox couldn't find some image data in your Gw.dat - your local game data looks "
                          "incomplete (Steam downloads it on demand). Run Guild Wars once with the -image "
-                         "command-line option to download all game data, then restart. Setup steps: "
-                         "https://gwtoolbox.com/docs/troubleshooting/#missing-images-in-toolbox");
+                         "command-line option to download all game data, then restart. file_id %d. Setup steps: "
+                "https://gwtoolbox.com/docs/troubleshooting/#missing-images-in-toolbox",
+                file_id
+            );
         });
         return false;
     }
