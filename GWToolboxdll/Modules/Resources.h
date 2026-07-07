@@ -110,7 +110,10 @@ public:
     // Resolves a composite (armor/rune) model's icon by trying every populated file_ids slot rather
     // than assuming a fixed one - see the .cpp for why. is_female picks which gendered model slot to
     // prefer; dyes packs up to four GW::DyeColor values one per byte (0 = undyed).
-    static IDirect3DTexture9** GetItemImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes, bool is_female);
+    // failed_out, if given, is set true only once every candidate has actually finished decoding and
+    // none produced a texture - callers can use this to render a placeholder rather than treating a
+    // null result as permanently missing while a decode may still be in flight.
+    static IDirect3DTexture9** GetItemImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes, bool is_female, bool* failed_out = nullptr);
     // Fetches item page from GWW, parses out the image for the item then downloads that to disk
     // Not elegant, but without a proper API to provide images, and to avoid including libxml, this is the next best thing.
     // Guaranteed to return a pointer, but reference will be null until the texture has been loaded
