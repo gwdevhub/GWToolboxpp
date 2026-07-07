@@ -23,8 +23,8 @@ namespace {
     constexpr uint8_t kTargetNone = 0;        // Skill.target == no_target (flash enchant / stance / self-cast form)
 
     // Skills whose aoe_range is a leftover from a pre-rework version of the skill; const_effect holds the
-    // live radius (Double Dragon: aoe_range=240 "nearby" from its 2008 incarnation, const_effect=156 is
-    // the actual adjacent pulse since the 2012 rework).
+    // live radius and is drawn AS the AoE ring (Double Dragon: aoe_range=240 "nearby" from its 2008
+    // incarnation, const_effect=156 is the actual adjacent pulse since the 2012 rework).
     constexpr GW::Constants::SkillID kStaleAoeRange[] = {
         GW::Constants::SkillID::Double_Dragon,
     };
@@ -85,10 +85,11 @@ namespace {
         }
         // Sub-50 values are spawn offsets (e.g. Shelter's 10), ~5000 means "party-wide/everywhere" - neither is a ring.
         const bool stale_aoe = std::ranges::contains(kStaleAoeRange, skill.skill_id);
-        if (!stale_aoe && skill.aoe_range > 50.f && skill.aoe_range < 4990.f) {
-            out.push_back({skill.aoe_range, color_aoe, spell_like && targets_other});
+        const float aoe_range = stale_aoe ? skill.const_effect : skill.aoe_range;
+        if (aoe_range > 50.f && aoe_range < 4990.f) {
+            out.push_back({aoe_range, color_aoe, spell_like && targets_other});
         }
-        if (skill.const_effect > 50.f && skill.const_effect < 4990.f) {
+        if (!stale_aoe && skill.const_effect > 50.f && skill.const_effect < 4990.f) {
             out.push_back({skill.const_effect, color_effect, false});
         }
         // Same radius twice (e.g. a shout whose aoe_range is already earshot) reads as one ring.
@@ -156,17 +157,22 @@ void SkillRangeRingsModule::SetDebugSkill(const uint32_t skill_id)
     debug_skill_id = skill_id;
 }
 
-size_t SkillRangeRingsModule::DebugSpecs(const uint32_t skill_id, float* radii, const size_t max)
+size_t SkillRangeRingsModule::DebugSpecs(const uint32_t skill_id, char* buf, const size_t len)
 {
+    if (!buf || !len) return 0;
+    buf[0] = 0;
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
     if (!skill) return 0;
     std::vector<RingSpec> specs;
     SpecsForSkill(*skill, specs);
-    const size_t n = std::min(max, specs.size());
-    for (size_t i = 0; i < n; ++i) {
-        radii[i] = specs[i].radius;
+    size_t off = 0;
+    for (const auto& s : specs) {
+        const char* palette = s.color == color_aoe ? "aoe" : s.color == color_earshot ? "earshot" : "effect";
+        const auto wrote = snprintf(buf + off, len - off, "%s%.0f:%s%s", off ? "," : "", s.radius, palette, s.at_target ? "@target" : "");
+        if (wrote < 0 || static_cast<size_t>(wrote) >= len - off) break;
+        off += wrote;
     }
-    return n;
+    return specs.size();
 }
 
 void SkillRangeRingsModule::DrawInWorld(IDirect3DDevice9* device)

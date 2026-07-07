@@ -162,6 +162,15 @@ bool Log::InitializeLog()
     freopen_s(&stderr_file, "CONOUT$", "w", stderr);
     SetConsoleTitle("GWTB++ Debug Console");
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
+    // QuickEdit: one stray click puts the console in Select mode, which blocks console writes ->
+    // the game thread wedges on its next Log call until someone presses Esc in the console.
+    if (const HANDLE conin = CreateFileA("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr); conin != INVALID_HANDLE_VALUE) {
+        DWORD mode = 0;
+        if (GetConsoleMode(conin, &mode)) {
+            SetConsoleMode(conin, (mode | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
+        }
+        CloseHandle(conin);
+    }
     // Debug also writes to log.txt on disk (the harness reads it), keeping the console as the primary
     // sink. _wfsopen with _SH_DENYWR allows other processes to READ the file while we hold it open --
     // _wfopen_s opens it exclusively, which would block the harness host from tailing it.

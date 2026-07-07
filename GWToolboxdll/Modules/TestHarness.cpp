@@ -363,14 +363,10 @@ namespace {
             const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
             char b[256];
             if (skill) {
-                float radii[8];
-                const auto n = SkillRangeRingsModule::DebugSpecs(skill_id, radii, std::size(radii));
-                auto len = snprintf(b, sizeof(b), "skillinfo %u: type=%u target=%u special=0x%x aoe_range=%.1f const_effect=%.1f rings=[",
-                                    skill_id, static_cast<uint32_t>(skill->type), skill->target, skill->special, skill->aoe_range, skill->const_effect);
-                for (size_t i = 0; i < n && len < static_cast<int>(sizeof(b)); ++i) {
-                    len += snprintf(b + len, sizeof(b) - len, i ? ",%.0f" : "%.0f", radii[i]);
-                }
-                if (len < static_cast<int>(sizeof(b))) snprintf(b + len, sizeof(b) - len, "]");
+                char rings[96];
+                SkillRangeRingsModule::DebugSpecs(skill_id, rings, sizeof(rings));
+                snprintf(b, sizeof(b), "skillinfo %u: type=%u target=%u special=0x%x aoe_range=%.1f const_effect=%.1f rings=[%s]",
+                         skill_id, static_cast<uint32_t>(skill->type), skill->target, skill->special, skill->aoe_range, skill->const_effect, rings);
             }
             else {
                 snprintf(b, sizeof(b), "skillinfo %u: no data", skill_id);
