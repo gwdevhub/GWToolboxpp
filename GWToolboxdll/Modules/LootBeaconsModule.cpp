@@ -34,15 +34,15 @@ namespace {
     constexpr float kRingSpacing = 4.f;    // gwinches, how far the two rings start from the true diameter
     constexpr float kRingDiameter = 90.f;  // the true diameter the two rings pulse toward/away from
     constexpr float kBeamHeight = 600.f;   // beam height
+    constexpr float kBeamWidth = 35.f;     // beam width
     constexpr float kBeamOpacity = 1.f;    // beam is unpulsed and always drawn at full opacity
     constexpr float kPulseInterval = 0.85f; // seconds for the two rings to go from spread apart to meeting in the middle
+    constexpr float kZLift = 5.f;          // raise above the floor to avoid z-fighting (GW up is -z)
 
     // Occlusion behind terrain is shared with the "In-game rendering" module
     // via GameWorldRenderer::GetOccludeBehindTerrain() so it's set in one place.
     float render_max_distance = 20000.f;
     float fog_factor = 0.5f;
-    float beam_width = 35.f;
-    float z_lift = 5.f; // raise above the floor to avoid z-fighting (GW up is -z)
     bool show_reserved_for_others = false;
 
     bool enable_value_beacons = true;
@@ -80,7 +80,7 @@ namespace {
         bool dimmed = false;
         bool built = false;   // true once ground_z has been resolved via a terrain query
         uint32_t seen = 0;
-        float ground_z = 0.f; // draped terrain height (post z_lift); resolved once and cached, everything
+        float ground_z = 0.f; // draped terrain height (post kZLift); resolved once and cached, everything
                                // drawn from it (beam quad, ring quads) is rebuilt fresh every frame instead
     };
 
@@ -196,7 +196,7 @@ namespace {
     {
         const float base_z = TerrainDrape::SurfaceZ(beacon.pos.x, beacon.pos.y, beacon.zplane, n_planes);
         if (base_z == 0.f) return false; // no altitude data yet; retry next frame
-        beacon.ground_z = base_z - z_lift; // everything (beam quad, ring quads) is built fresh from this every frame
+        beacon.ground_z = base_z - kZLift; // everything (beam quad, ring quads) is built fresh from this every frame
         beacon.built = true;
         return true;
     }
@@ -210,7 +210,7 @@ namespace {
     // edges too, instead of a single hard-edged rectangle with a flat top-to-bottom gradient.
     void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const Color base_color, const float base_alpha)
     {
-        const float half = std::max(1.f, beam_width) * 0.5f;
+        const float half = kBeamWidth * 0.5f;
         const float height = kBeamHeight;
         const float z_solid = ground_z - height * kBeamSolidFraction;
         const float z_top = ground_z - height;
@@ -361,8 +361,6 @@ void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
 {
     SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
-    SettingsRegistry::RegisterField(module, "beam_width", &beam_width);
-    SettingsRegistry::RegisterField(module, "z_lift", &z_lift);
     SettingsRegistry::RegisterField(module, "show_reserved_for_others", &show_reserved_for_others);
     SettingsRegistry::RegisterField(module, "enable_value_beacons", &enable_value_beacons);
     SettingsRegistry::RegisterField(module, "value_threshold", &value_threshold);
@@ -428,6 +426,4 @@ void LootBeaconsModule::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
     ImGui::DragFloat("Maximum render distance", &render_max_distance, 25.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Beam width", &beam_width, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    if (ImGui::DragFloat("Height lift", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) beacons_dirty = true;
 }
