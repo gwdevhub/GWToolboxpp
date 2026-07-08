@@ -91,11 +91,20 @@ namespace {
         return s;
     }
 
+    // Strips a trailing separator so folder exclusions with/without one still compare equal.
+    void TrimTrailingSeparators(std::wstring& s)
+    {
+        while (!s.empty() && (s.back() == L'\\' || s.back() == L'/'))
+            s.pop_back();
+    }
+
     std::wstring LowerCanonical(const fs::path& path)
     {
         std::error_code ec;
         const fs::path canonical = fs::canonical(path, ec);
-        return ToLower((ec ? path : canonical).wstring());
+        std::wstring result = ToLower((ec ? path : canonical).wstring());
+        TrimTrailingSeparators(result);
+        return result;
     }
 
     // True if `target` is one of `list`, or (when prefix is set) sits inside a listed folder.
@@ -139,7 +148,12 @@ namespace {
                 continue;
 
             switch (section) {
-                case Exclusions: out.exclusion_paths.push_back(ToLower(line)); break;
+                case Exclusions: {
+                    std::wstring path = ToLower(line);
+                    TrimTrailingSeparators(path);
+                    out.exclusion_paths.push_back(std::move(path));
+                    break;
+                }
                 case ControlledFolderAccess: out.controlled_folder_access = _wtoi(line.c_str()); break;
                 case Apps: out.cfa_apps.push_back(ToLower(line)); break;
                 default: break;
@@ -304,7 +318,7 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
     }
 
     // The folder exclusion we can verify directly; Controlled Folder Access entries we trust to the exit code.
-    const bool verified = !is_admin || IsPathExcludedFromDefender(exclusion_path);
+    const bool verified = IsPathExcludedFromDefender(exclusion_path);
 
     if (!quiet) {
         if (verified) {
