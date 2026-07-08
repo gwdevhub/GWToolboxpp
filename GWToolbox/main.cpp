@@ -114,6 +114,21 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
     return true;
 }
 
+// Opts in to per-monitor DPI awareness so scaled displays get real layout instead of blurry bitmap-stretching; must run before any window (incl. a MessageBox) is created.
+static void EnableDpiAwareness()
+{
+    const HMODULE user32 = GetModuleHandleW(L"user32.dll");
+    if (user32) {
+        using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT);
+        const auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContextFn>(GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
+        if (pSetProcessDpiAwarenessContext && pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+            return;
+        }
+    }
+
+    SetProcessDPIAware(); // Vista+ fallback: system-DPI aware still beats fully unaware.
+}
+
 static bool SetProcessForeground(const Process* process)
 {
     HWND hWndIt = GetTopWindow(nullptr);
@@ -149,6 +164,8 @@ int main()
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 #endif
 {
+    EnableDpiAwareness();
+
     std::wstring error;
     std::filesystem::path log_file_path;
     if (!PathGetExeFullPath(log_file_path)) {

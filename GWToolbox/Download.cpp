@@ -466,6 +466,10 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam,
                 DestroyWindow(hWnd);
             }
             break;
+
+        case WM_DPICHANGED:
+            OnDpiChanged(wParam, lParam);
+            break;
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -473,23 +477,25 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam,
 
 void DownloadWindow::OnCreate(HWND hWnd, UINT, WPARAM, LPARAM)
 {
-    m_hProgressBar = CreateWindowW(PROGRESS_CLASSW, L"Inject", WS_VISIBLE | WS_CHILD, 5, 215, 475, 15, hWnd, nullptr, m_hInstance, nullptr);
+    ApplyDpiScaling(hWnd);
+
+    m_hProgressBar = CreateWindowW(PROGRESS_CLASSW, L"Inject", WS_VISIBLE | WS_CHILD, Scale(5), Scale(215), Scale(475), Scale(15), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hProgressBar, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
     SendMessageW(m_hProgressBar, PBM_SETPOS, 0, 0);
 
     m_hCloseButton = CreateWindowW(
         WC_BUTTONW, L"Close", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
-        400, // x
-        235, // y
-        80,  // width
-        25,  // height
+        Scale(400), // x
+        Scale(235), // y
+        Scale(80),  // width
+        Scale(25),  // height
         hWnd, nullptr, m_hInstance, nullptr
     );
     SendMessageW(m_hCloseButton, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 
-    m_hChangelog = CreateWindowW(WC_EDITW, L"", WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL, 5, 5, 475, 170, hWnd, nullptr, m_hInstance, nullptr);
+    m_hChangelog = CreateWindowW(WC_EDITW, L"", WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL, Scale(5), Scale(5), Scale(475), Scale(170), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hChangelog, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 
-    m_hStatusLabel = CreateWindowW(WC_STATICW, L"Downloading...", WS_VISIBLE | WS_CHILD | SS_LEFT, 5, 180, 475, 30, hWnd, nullptr, m_hInstance, nullptr);
+    m_hStatusLabel = CreateWindowW(WC_STATICW, L"Downloading...", WS_VISIBLE | WS_CHILD | SS_LEFT, Scale(5), Scale(180), Scale(475), Scale(30), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hStatusLabel, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 }

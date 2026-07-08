@@ -293,6 +293,10 @@ LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, c
                 DestroyWindow(hWnd);
             }
             break;
+
+        case WM_DPICHANGED:
+            OnDpiChanged(wParam, lParam);
+            break;
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -300,36 +304,43 @@ LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, c
 
 void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    const HWND hGroupBox = CreateWindowW(WC_BUTTONW, L"Select Character", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 5, 270, 55, hWnd, nullptr, m_hInstance, nullptr);
+    ApplyDpiScaling(hWnd);
+
+    const HWND hGroupBox = CreateWindowW(WC_BUTTONW, L"Select Character", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, Scale(10), Scale(5), Scale(270), Scale(55), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(hGroupBox, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 
     m_hCharacters = CreateWindowW(
         WC_COMBOBOXW, L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST,
-        20,  // x
-        25,  // y
-        155, // width
-        25,  // height
+        Scale(20),  // x
+        Scale(25),  // y
+        Scale(155), // width
+        Scale(25),  // height when dropped only - Windows fixes the closed-box height from the font, ignoring this
         hWnd, nullptr, m_hInstance, nullptr
     );
     SendMessageW(m_hCharacters, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 
+    // Read back the combo box's real rendered rect so the button matches it exactly, since its closed height isn't the one requested above.
+    RECT comboRect;
+    GetWindowRect(m_hCharacters, &comboRect);
+    MapWindowPoints(nullptr, hWnd, reinterpret_cast<LPPOINT>(&comboRect), 2);
+
     m_hLaunchButton = CreateWindowW(
         WC_BUTTONW, L"Launch", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
-        180, // x
-        24,  // y
-        90,  // width
-        25,  // height
+        Scale(180),                       // x
+        comboRect.top,                    // y
+        Scale(90),                        // width
+        comboRect.bottom - comboRect.top, // height
         hWnd, nullptr, m_hInstance, nullptr
     );
     SendMessageW(m_hLaunchButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 
     if (!IsRunningAsAdmin()) {
-        m_hRestartAsAdmin = CreateWindowW(WC_BUTTONW, L"Can't find your character?", WS_VISIBLE | WS_CHILD | WS_TABSTOP, 10, 65, 165, 25, hWnd, nullptr, m_hInstance, nullptr);
+        m_hRestartAsAdmin = CreateWindowW(WC_BUTTONW, L"Can't find your character?", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(65), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
         SendMessageW(m_hRestartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
         Button_SetElevationRequiredState(m_hRestartAsAdmin, TRUE);
     }
 
-    m_hSettings = CreateWindowW(WC_BUTTONW, L"Settings...", WS_VISIBLE | WS_CHILD | WS_TABSTOP, 200, 65, 80, 25, hWnd, nullptr, m_hInstance, nullptr);
+    m_hSettings = CreateWindowW(WC_BUTTONW, L"Settings...", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(200), Scale(65), Scale(80), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
 }
 
