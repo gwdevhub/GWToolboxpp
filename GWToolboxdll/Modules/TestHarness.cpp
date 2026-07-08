@@ -8,6 +8,7 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Pathing.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
@@ -38,6 +39,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 
 #include "Modules/SkillRangeRingsModule.h"
+#include "Utils/TerrainDrape.h"
 #include "Utils/ToolboxUtils.h"
 #include "Widgets/WorldMapWidget.h"
 #include "Windows/Pathfinding/PathfindingWindow.h"
@@ -255,6 +257,44 @@ namespace {
             else {
                 write_status("heightline: bad args (x1 y1 x2 y2 plane [n])");
             }
+            return;
+        }
+        if (verb == "surfaceprobe") { // surfaceprobe [radius step]: compare preferred-plane terrain with all-plane surface choices near the player
+            float radius = 1200.f, step = 120.f;
+            is >> radius >> step;
+            radius = std::clamp(radius, 100.f, 5000.f);
+            step = std::clamp(step, 25.f, 500.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("surfaceprobe: no character or pathing map");
+                return;
+            }
+            Log::Log("[surfaceprobe] map=%d player=(%.0f,%.0f,z%u) player_z=%.1f radius=%.0f step=%.0f planes=%u",
+                     static_cast<int>(GW::Map::GetMapID()), self->pos.x, self->pos.y, self->pos.zplane, self->z, radius, step, pm->size());
+            uint32_t samples = 0, diffs = 0, logged = 0;
+            float max_delta = 0.f;
+            for (float dx = -radius; dx <= radius; dx += step) {
+                for (float dy = -radius; dy <= radius; dy += step) {
+                    const float x = self->pos.x + dx, y = self->pos.y + dy;
+                    const float preferred_z = TerrainDrape::QueryAltAt(x, y, self->pos.zplane);
+                    const float surface_z = TerrainDrape::SurfaceZ(x, y, self->pos.zplane, pm->size());
+                    const float draped_z = TerrainDrape::DrapeZ(x, y, self->pos.zplane, pm->size(), self->z);
+                    ++samples;
+                    if ((preferred_z == 0.f && surface_z == 0.f) || std::fabs(preferred_z - surface_z) <= 1.f) continue;
+                    ++diffs;
+                    max_delta = std::max(max_delta, std::fabs(preferred_z - surface_z));
+                    if (logged++ < 20) {
+                        Log::Log("[surfaceprobe]   diff (%.0f,%.0f) preferred=%.1f surface=%.1f draped=%.1f delta=%.1f",
+                                 x, y, preferred_z, surface_z, draped_z, surface_z - preferred_z);
+                    }
+                }
+            }
+            char b[128];
+            snprintf(b, sizeof(b), "surfaceprobe: samples=%u diffs=%u max_delta=%.1f", samples, diffs, max_delta);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
             return;
         }
         if (verb == "waypoint") {

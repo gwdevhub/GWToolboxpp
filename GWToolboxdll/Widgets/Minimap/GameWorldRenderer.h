@@ -97,16 +97,16 @@ public:
     static void Render(IDirect3DDevice9* device);
     static void TriggerSyncAllMarkers();
 
-    // Batched in-world line overlay: one incrementally terrain-draped vertex buffer drawn in a single call.
+    // Batched in-world line overlay: one incrementally surface-draped vertex buffer drawn in a single call.
     // Used by the navmesh debug overlay instead of thousands of per-line CustomLines (which made each map-load
     // rebuild O(N^2) through the CustomLine sync/drape/remove path). Pass the full edge set once per map.
     struct BatchedLine {
         GW::GamePos a, b;
         unsigned int color;
     };
-    // Near subset (range-culled): terrain-draped and drawn in-world as one batched VB.
+    // Near subset (range-culled): surface-draped and drawn in-world as one batched VB.
     static void SetNavmeshLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines);
-    // gw between terrain-altitude samples when draping overlay edges (smaller = hugs the floor closer, more verts).
+    // gw between surface samples when draping overlay edges (smaller = hugs the floor closer, more verts).
     static void SetNavmeshSampleSpacing(float gw);
     // Re-drape the current edge set with the latest sample spacing (no re-cull). Call after SetNavmeshSampleSpacing.
     static void RedrapeNavmesh();

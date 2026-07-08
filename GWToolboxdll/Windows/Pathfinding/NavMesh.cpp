@@ -10,7 +10,7 @@
 #include <unordered_set>
 
 #include <GWCA/GameEntities/Pathing.h>
-#include <GWCA/Managers/MapMgr.h> // QueryAltitude (diagnostic dump only)
+#include <GWCA/Managers/MapMgr.h> // pathing map access and diagnostic dumps
 
 #include <DetourNavMesh.h>
 #include <DetourNavMeshBuilder.h>
@@ -18,6 +18,7 @@
 #include <DetourAlloc.h>
 
 #include <Logger.h>
+#include <Utils/TerrainDrape.h>
 
 #include "NavMesh.h"
 
@@ -474,7 +475,7 @@ namespace Pathing {
 
     void NavMesh::DebugExtractEdges(std::vector<DebugEdge>& out) const
     {
-        // Must run on the game thread: it calls GW::Map::QueryAltitude (not thread-safe) to resolve seam heights.
+        // Must run on the game thread: altitude queries are not thread-safe.
         out.clear();
         if (!m_navmesh) return;
         const dtMeshTile* tile = static_cast<const dtNavMesh*>(m_navmesh)->getTile(0);
@@ -508,8 +509,9 @@ namespace Pathing {
                 if (h.plane == plane) continue; // same plane: a true boundary, not a cross-plane seam
                 const float lo = std::max(exmin, h.xmin), hi = std::min(exmax, h.xmax);
                 if (hi - lo <= 2.f) continue; // edges don't actually overlap in X
-                GW::GamePos qa(0.5f * (lo + hi), y, (uint32_t)plane), qb(0.5f * (lo + hi), y, (uint32_t)h.plane);
-                const float za = GW::Map::QueryAltitude(&qa), zb = GW::Map::QueryAltitude(&qb);
+                const auto x = 0.5f * (lo + hi);
+                const float za = TerrainDrape::QueryAltAt(x, y, static_cast<uint32_t>(plane));
+                const float zb = TerrainDrape::QueryAltAt(x, y, static_cast<uint32_t>(h.plane));
                 if (za != 0.f && zb != 0.f && std::fabs(za - zb) < kSeamHeightEps) return true;
             }
             return false;
@@ -527,8 +529,8 @@ namespace Pathing {
             if (!t) return 0.f;
             const float off = std::min(8.f, 0.5f * std::fabs(t->YT - t->YB));
             const float ys = std::fabs(t->YT - y) < std::fabs(t->YB - y) ? y - off : y + off;
-            GW::GamePos q(x, ys, (uint32_t)((poly < (int)m_poly_plane.size()) ? m_poly_plane[poly] : 0));
-            return GW::Map::QueryAltitude(&q);
+            const auto plane = static_cast<uint32_t>((poly < (int)m_poly_plane.size()) ? m_poly_plane[poly] : 0);
+            return TerrainDrape::QueryAltAt(x, ys, plane);
         };
         // A horizontal boundary stretch of poly_i's edge: wherever another same-plane poly abuts the line at
         // ~the same height it is walkable floor (trapezoids can have 3+ neighbours per edge, Build links at
@@ -629,8 +631,7 @@ namespace Pathing {
             const float rx = t->XBR + (t->XTR - t->XBR) * u;
             if (x < std::min(lx, rx) || x > std::max(lx, rx)) continue; // outside the trapezoid in X at this Y
             const int plane = m_poly_plane[i];
-            GW::GamePos gp(x, y, (uint32_t)plane);
-            const float z = GW::Map::QueryAltitude(&gp); // surface of THIS walkable plane at (x,y)
+            const float z = TerrainDrape::QueryAltAt(x, y, static_cast<uint32_t>(plane)); // surface of THIS walkable plane at (x,y)
             if (z == 0.f) continue;                       // out of this plane's data
             const float d = std::fabs(z - prev_z);
             if (d < best_d) { best_d = d; best = z; } // continuity: nearest walkable surface to where we already are

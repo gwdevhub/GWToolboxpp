@@ -12,17 +12,13 @@
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
-#include <Widgets/Minimap/GameWorldRenderer.h>
 
 namespace {
-    constexpr int kSegments = 48;
-    constexpr int kMaxBuildsPerFrame = 4; // draping QueryAltitude budget: ~200 queries per ring build
+    constexpr int kMinSegments = 64;
+    constexpr int kMaxSegments = 512;
+    constexpr float kSampleSpacing = 25.f;
+    constexpr int kMaxBuildsPerFrame = 1; // all-plane surface queries are intentionally bounded per frame
 
-    // Occlusion behind terrain is shared with the "In-game rendering" module
-    // via GameWorldRenderer::GetOccludeBehindTerrain(), so it's configured in
-    // one place. The incomplete-ring artifact (arcs that drop in/out with the camera) only occurs with occlusion
-    // ON - it's an interaction between our depth test and GW's depth buffer - and this shared setting defaults off,
-    // so rings draw whole by default.
     float render_max_distance = 5000.f;
     float fog_factor = 1.0f;
     float ring_thickness = 40.f;
@@ -47,41 +43,54 @@ namespace {
     bool meshes_dirty = false;
     int compositor_token = 0;
 
+    int RingSegments(const float radius)
+    {
+        const auto circumference = std::max(radius, ring_thickness) * DirectX::XM_2PI;
+        return std::clamp(static_cast<int>(std::ceil(circumference / kSampleSpacing)), kMinSegments, kMaxSegments);
+    }
+
     void BuildRingMesh(const AoeEffects::ActiveEffect& effect, RingMesh& mesh, const uint32_t n_planes)
     {
         mesh.built_range = effect.range;
         mesh.verts.clear();
+        const int segments = RingSegments(effect.range);
 
         const float center_z = TerrainDrape::SurfaceZ(effect.pos.x, effect.pos.y, effect.zplane, n_planes);
 
         const float rim_in = std::max(0.f, effect.range - ring_thickness);
-        const float radii[] = {0.f, rim_in * 0.5f, rim_in, effect.range};
-        const float band_opacity[] = {fill_opacity, fill_opacity, rim_opacity};
-        constexpr int n_radii = static_cast<int>(std::size(radii));
+        std::vector<float> radii;
+        radii.push_back(0.f);
+        for (float r = kSampleSpacing; r < rim_in; r += kSampleSpacing)
+            radii.push_back(r);
+        if (radii.back() != rim_in)
+            radii.push_back(rim_in);
+        if (radii.back() != effect.range)
+            radii.push_back(effect.range);
+        const auto n_radii = static_cast<int>(radii.size());
 
-        RingVertex points[n_radii][kSegments];
+        std::vector<std::vector<RingVertex>> points(n_radii, std::vector<RingVertex>(segments));
         for (int r = 0; r < n_radii; ++r) {
-            for (int s = 0; s < kSegments; ++s) {
-                const float angle = s * (DirectX::XM_2PI / kSegments);
+            for (int s = 0; s < segments; ++s) {
+                const float angle = s * (DirectX::XM_2PI / segments);
                 const float x = effect.pos.x + std::cos(angle) * radii[r];
                 const float y = effect.pos.y + std::sin(angle) * radii[r];
-                const float z = radii[r] > 0.f ? TerrainDrape::DrapeZ(x, y, effect.zplane, n_planes, center_z) : center_z;
+                const float z = radii[r] > 0.f ? TerrainDrape::SurfaceZ(x, y, effect.zplane, n_planes) : center_z;
                 points[r][s] = {x, y, z - z_lift, 0};
             }
         }
 
         const Color base = effect.color; // resolved by allegiance in AoeEffects (enemy red / ally green)
-        const auto band_color = [&](const int band) {
+        const auto band_color = [&](const float opacity) {
             const auto base_a = static_cast<float>((base >> IM_COL32_A_SHIFT) & 0xFF);
-            const auto a = static_cast<DWORD>(std::clamp(base_a * band_opacity[band], 0.f, 255.f));
+            const auto a = static_cast<DWORD>(std::clamp(base_a * opacity, 0.f, 255.f));
             return (base & ~(0xFFu << IM_COL32_A_SHIFT)) | (a << IM_COL32_A_SHIFT);
         };
 
-        mesh.verts.reserve(static_cast<size_t>(n_radii - 1) * kSegments * 6);
+        mesh.verts.reserve(static_cast<size_t>(n_radii - 1) * segments * 6);
         for (int band = 0; band < n_radii - 1; ++band) {
-            const DWORD col = band_color(band);
-            for (int s = 0; s < kSegments; ++s) {
-                const int s1 = (s + 1) % kSegments;
+            const DWORD col = band_color(radii[band] >= rim_in ? rim_opacity : fill_opacity);
+            for (int s = 0; s < segments; ++s) {
+                const int s1 = (s + 1) % segments;
                 RingVertex a = points[band][s], b = points[band + 1][s], c = points[band + 1][s1], d = points[band][s1];
                 a.color = b.color = c.color = d.color = col;
                 mesh.verts.push_back(a);
@@ -153,7 +162,8 @@ void DangerRingsModule::DrawInWorld(IDirect3DDevice9* device)
 
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (GameWorldCompositor::SetupPipeline(device, GameWorldRenderer::GetOccludeBehindTerrain(), render_max_distance, fog_factor)) {
+    // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
+    if (GameWorldCompositor::SetupPipeline(device, true, render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(RingVertex));

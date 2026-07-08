@@ -13,6 +13,7 @@
 #include <Defines.h>
 #include <Timer.h>
 #include <Utils/GameWorldCompositor.h>
+#include <Utils/TerrainDrape.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Windows/Pathfinding/NavMesh.h>           // per-sample plane resolution for path/overlay draping
@@ -120,13 +121,12 @@ namespace {
 
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
-    // Highest terrain surface at (x,y) among candidate planes (GW up is -z, so highest = min altitude). QueryAltitude returns 0.f out-of-bounds (ignored); ALTITUDE_UNKNOWN if no plane has data.
+    // Highest static surface at (x,y) among candidate planes (GW up is -z, so highest = min altitude). QueryAltitude returns 0.f out-of-bounds (ignored); ALTITUDE_UNKNOWN if no plane has data.
     float HighestSurfaceZ(const float x, const float y, const std::vector<uint32_t>& planes)
     {
         float best = ALTITUDE_UNKNOWN;
         for (const uint32_t zp : planes) {
-            GW::GamePos p = {x, y, zp};
-            const float a = GW::Map::QueryAltitude(&p);
+            const float a = TerrainDrape::QueryAltAt(x, y, zp);
             if (a != 0.f && (best == ALTITUDE_UNKNOWN || a < best))
                 best = a;
         }
@@ -138,8 +138,7 @@ namespace {
     {
         float best = ALTITUDE_UNKNOWN, best_d = std::numeric_limits<float>::max();
         for (uint32_t zp = 0; zp < num_planes; ++zp) {
-            GW::GamePos p = {x, y, zp};
-            const float a = GW::Map::QueryAltitude(&p);
+            const float a = TerrainDrape::QueryAltAt(x, y, zp);
             if (a == 0.f) continue;
             const float d = std::abs(a - prev);
             if (d < best_d) { best_d = d; best = a; }
@@ -162,7 +161,7 @@ namespace {
         bool vb_dirty = false;                             // verts changed since last upload
     };
     NavmeshBatch navmesh_batch;
-    float navmesh_sample_spacing = 5.f; // gw between terrain-altitude samples when draping overlay edges (user-tunable)
+    float navmesh_sample_spacing = 5.f; // gw between surface samples when draping overlay edges (user-tunable)
 
     // Full mesh (not draped) for the 2D top-down M-key world map. WorldMapWidget redraws these flat each frame.
     std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
@@ -187,12 +186,11 @@ namespace {
             // that plane's heightfield (which ramps/steps where the floor does). Querying the plane directly per point —
             // not the globally-closest surface — makes the line ride that surface: flat stays flat, a ramp rises, a
             // deck stays on the deck, and an edge under a bridge stays on the ground rather than snapping to the deck.
-            // Sampling density is `spacing` gw; QueryAltitude is exact at each point, so the only error is the chord
+            // Sampling density is `spacing` gw; each surface query is exact at that point, so the only error is the chord
             // between samples — tighten `spacing` to shrink it.
             const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
             auto surfaceZ = [&](float x, float y, float fallback) -> float {
-                GW::GamePos p{x, y, plane};
-                const float a = GW::Map::QueryAltitude(&p);
+                const float a = TerrainDrape::QueryAltAt(x, y, plane);
                 if (a != 0.f) return a;                                      // edge's plane has floor here (the common case)
                 const float c = ClosestSurfaceZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
                 return c == ALTITUDE_UNKNOWN ? fallback : c;
@@ -326,7 +324,7 @@ namespace {
             // plane covers the sample (so cross-plane edges with no waypoint on the higher plane still drape sanely).
             auto* nav = PathfindingWindow::GetResidentNavMesh();
             GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
-            float prev = GW::Map::QueryAltitude(&seed_pos);
+            float prev = TerrainDrape::QueryAltAt(seed_pos.x, seed_pos.y, seed_pos.zplane);
             if (prev == 0.f) prev = ClosestSurfaceZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
             for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
                 float z;
@@ -516,7 +514,7 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         // Sync on the render thread: creating vertex buffers needs the D3D device.
         SyncAllMarkers();
     }
-    StepNavmeshBatchBuild(); // advance the incremental, terrain-draped navmesh line buffer (bounded per frame)
+    StepNavmeshBatchBuild(); // advance the incremental, surface-draped navmesh line buffer (bounded per frame)
     if (renderables.empty() && navmesh_batch.verts.empty()) {
         return;
     }
@@ -531,7 +529,7 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
 
-        // Bound first-time terrain draping to a frame slice: AddPolyToDevice samples QueryAltitude per new line, so a burst of fresh edges would freeze the game thread; QueryAltitude can't run off-thread, so spread draping across frames. Already-draped renderables (cached vb) always draw.
+        // Bound first-time surface draping to a frame slice: AddPolyToDevice samples QueryAltitude per new line, so a burst of fresh edges would freeze the game thread; QueryAltitude can't run off-thread, so spread draping across frames. Already-draped renderables (cached vb) always draw.
         const auto drape_timer = TIMER_INIT();
         bool drape_budget_spent = false;
 

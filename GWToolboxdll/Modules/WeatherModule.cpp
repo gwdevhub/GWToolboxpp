@@ -23,6 +23,7 @@
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/SettingsDoc.h>
+#include <Utils/TerrainDrape.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TextUtils.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
@@ -442,15 +443,14 @@ namespace {
     constexpr size_t kGroundCacheMax = 1u << 16;                   // entry cap; cleared wholesale past this
     std::unordered_map<uint64_t, float> ground_cache;              // (x,y) cell -> terrain altitude, valid within a map
 
-    // Highest terrain surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or kNoGround.
+    // Highest static surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or kNoGround.
     float RawGroundZAt(const float x, const float y)
     {
         const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
         const uint32_t n = pm ? static_cast<uint32_t>(pm->size()) : 0;
         float best = kNoGround;
         for (uint32_t zp = 0; zp < n; ++zp) {
-            GW::GamePos p{x, y, zp};
-            const float a = GW::Map::QueryAltitude(&p);
+            const float a = TerrainDrape::QueryAltAt(x, y, zp);
             if (a != 0.f && a < best) best = a;
         }
         return best;

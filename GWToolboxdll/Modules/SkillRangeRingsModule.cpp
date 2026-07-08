@@ -15,10 +15,11 @@
 #include <Utils/GameWorldCompositor.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
-#include <Widgets/Minimap/GameWorldRenderer.h>
 
 namespace {
-    constexpr int kSegments = 64;
+    constexpr int kMinSegments = 64;
+    constexpr int kMaxSegments = 512;
+    constexpr float kSampleSpacing = 25.f;
     constexpr float kMaxRingRadius = 5200.f; // ignore bogus range data past compass-ish sizes
     constexpr uint8_t kTargetNone = 0;        // Skill.target == no_target (flash enchant / stance / self-cast form)
 
@@ -29,11 +30,6 @@ namespace {
         GW::Constants::SkillID::Double_Dragon,
     };
 
-    // Occlusion behind terrain is shared with the "In-game rendering" module
-    // via GameWorldRenderer::GetOccludeBehindTerrain(), so it's configured in
-    // one place. The incomplete-ring artifact (arcs that drop in/out with the camera) only occurs with occlusion
-    // ON - it's an interaction between our depth test and GW's depth buffer - and this shared setting defaults off,
-    // so rings draw whole by default.
     float render_max_distance = 7000.f;
     float fog_factor = 0.6f;
     float ring_thickness = 24.f;
@@ -56,15 +52,20 @@ namespace {
     };
 
     // Rings are rebuilt into `scratch` (absolute world coords) every frame and drawn with DrawPrimitiveUP,
-    // so following the character is smooth. They are FLAT (a range is a horizontal distance, drawn at the
-    // anchor's foot height) rather than terrain-draped, which keeps the per-frame rebuild trivially cheap
-    // (no altitude queries). The per-ring specs only change when the hovered skill or the settings change.
+    // so following the character is smooth. The per-ring specs only change when the hovered skill or the
+    // settings change.
     std::vector<RingSpec> built_specs;
     std::vector<RingVertex> scratch;
     GW::Constants::SkillID built_skill = static_cast<GW::Constants::SkillID>(0);
     bool rings_dirty = false;
     uint32_t debug_skill_id = 0;
     int compositor_token = 0;
+
+    int RingSegments(const float radius)
+    {
+        const auto circumference = std::max(radius, ring_thickness) * DirectX::XM_2PI;
+        return std::clamp(static_cast<int>(std::ceil(circumference / kSampleSpacing)), kMinSegments, kMaxSegments);
+    }
 
     void SpecsForSkill(const GW::Skill& skill, std::vector<RingSpec>& out)
     {
@@ -107,7 +108,7 @@ namespace {
         return (color & ~(0xFFu << IM_COL32_A_SHIFT)) | (a << IM_COL32_A_SHIFT);
     }
 
-    // Append a ring band for one spec into `out`, draped onto the terrain: each vertex takes the surface
+    // Append a ring band for one spec into `out`, draped onto the visible surface: each vertex takes the surface
     // height at its own (x,y), preferring the anchor's plane so the ring hugs the surface you're standing on.
     void EmitBand(std::vector<RingVertex>& out, const float cx, const float cy, const uint32_t zplane,
                   const uint32_t n_planes, const float ref_z, const RingSpec& spec)
@@ -116,17 +117,20 @@ namespace {
         const float r_in = std::max(1.f, spec.radius - half);
         const float r_out = spec.radius + half;
         const DWORD col = WithOpacity(spec.color);
-        RingVertex inner[kSegments], outer[kSegments];
-        for (int s = 0; s < kSegments; ++s) {
-            const float angle = s * (DirectX::XM_2PI / kSegments);
+        const int segments = RingSegments(spec.radius);
+        std::vector<RingVertex> inner(segments), outer(segments);
+        for (int s = 0; s < segments; ++s) {
+            const float angle = s * (DirectX::XM_2PI / segments);
             const float cos_a = std::cos(angle), sin_a = std::sin(angle);
             const float xi = cx + cos_a * r_in, yi = cy + sin_a * r_in;
             const float xo = cx + cos_a * r_out, yo = cy + sin_a * r_out;
-            inner[s] = {xi, yi, TerrainDrape::DrapeZ(xi, yi, zplane, n_planes, ref_z) - z_lift, col};
-            outer[s] = {xo, yo, TerrainDrape::DrapeZ(xo, yo, zplane, n_planes, ref_z) - z_lift, col};
+            const float zi = TerrainDrape::SurfaceZ(xi, yi, zplane, n_planes);
+            const float zo = TerrainDrape::SurfaceZ(xo, yo, zplane, n_planes);
+            inner[s] = {xi, yi, (zi ? zi : ref_z) - z_lift, col};
+            outer[s] = {xo, yo, (zo ? zo : ref_z) - z_lift, col};
         }
-        for (int s = 0; s < kSegments; ++s) {
-            const int s1 = (s + 1) % kSegments;
+        for (int s = 0; s < segments; ++s) {
+            const int s1 = (s + 1) % segments;
             out.push_back(inner[s]);
             out.push_back(outer[s]);
             out.push_back(outer[s1]);
@@ -203,13 +207,15 @@ void SkillRangeRingsModule::DrawInWorld(IDirect3DDevice9* device)
     scratch.clear();
     for (const auto& spec : built_specs) {
         const GW::Agent* anchor = (spec.at_target && tgt_valid) ? target : static_cast<const GW::Agent*>(me);
-        EmitBand(scratch, anchor->pos.x, anchor->pos.y, anchor->pos.zplane, n_planes, anchor->z, spec);
+        const float ref_z = TerrainDrape::SurfaceZ(anchor->pos.x, anchor->pos.y, anchor->pos.zplane, n_planes);
+        EmitBand(scratch, anchor->pos.x, anchor->pos.y, anchor->pos.zplane, n_planes, ref_z ? ref_z : anchor->z, spec);
     }
     if (scratch.size() < 3) return;
 
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) return;
-    if (GameWorldCompositor::SetupPipeline(device, GameWorldRenderer::GetOccludeBehindTerrain(), render_max_distance, fog_factor)) {
+    // Static depth keeps walls/props occluding overlays; agents draw later in GW's pass.
+    if (GameWorldCompositor::SetupPipeline(device, true, render_max_distance, fog_factor)) {
         constexpr BOOL dotted_off[1] = {FALSE};
         device->SetPixelShaderConstantB(0, dotted_off, 1);
         device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(RingVertex));

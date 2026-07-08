@@ -14,17 +14,12 @@ float TerrainDrape::QueryAltAt(const float x, const float y, const uint32_t zpla
 
 float TerrainDrape::DrapeZ(const float x, const float y, const uint32_t zplane, const uint32_t n_planes, const float ref)
 {
-    if (zplane < n_planes) {
-        const float a = QueryAltAt(x, y, zplane);
-        if (a != 0.f) return a;
-    }
     float best = ref, best_d = FLT_MAX;
     for (uint32_t zp = 0; zp < n_planes; ++zp) {
-        if (zp == zplane) continue;
         const float a = QueryAltAt(x, y, zp);
         if (a == 0.f) continue;
         const float d = std::fabs(a - ref);
-        if (d < best_d) {
+        if (d < best_d || (d == best_d && zp == zplane)) {
             best_d = d;
             best = a;
         }
@@ -32,12 +27,8 @@ float TerrainDrape::DrapeZ(const float x, const float y, const uint32_t zplane, 
     return best;
 }
 
-float TerrainDrape::SurfaceZ(const float x, const float y, const uint32_t zplane, const uint32_t n_planes)
+float TerrainDrape::SurfaceZ(const float x, const float y, const uint32_t, const uint32_t n_planes)
 {
-    if (zplane < n_planes) {
-        const float a = QueryAltAt(x, y, zplane);
-        if (a != 0.f) return a;
-    }
     float best = 0.f;
     for (uint32_t zp = 0; zp < n_planes; ++zp) {
         const float a = QueryAltAt(x, y, zp);
