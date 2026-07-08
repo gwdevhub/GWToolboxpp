@@ -144,17 +144,12 @@ namespace {
     // Authoring state (not persisted): which river of the current map "Add point" appends to.
     int active_river = -1;
 
-    float QueryAltAt(const float x, const float y, const uint32_t zplane)
-    {
-        return TerrainDrape::QueryAltAt(x, y, zplane);
-    }
-
     // Highest static surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or sentinel.
     float HighestSurfaceZ(const float x, const float y, const uint32_t n_planes)
     {
         float best = kAltUnknown;
         for (uint32_t zp = 0; zp < n_planes; ++zp) {
-            const float a = QueryAltAt(x, y, zp);
+            const float a = TerrainDrape::QueryAltAt(x, y, zp);
             if (a != 0.f && (best == kAltUnknown || a < best)) best = a;
         }
         return best;
@@ -166,7 +161,7 @@ namespace {
     {
         float best = kAltUnknown, best_d = kAltUnknown;
         for (uint32_t zp = 0; zp < n_planes; ++zp) {
-            const float a = QueryAltAt(x, y, zp);
+            const float a = TerrainDrape::QueryAltAt(x, y, zp);
             if (a == 0.f) continue;
             const float d = std::fabs(a - prev);
             if (best == kAltUnknown || d < best_d) {
@@ -279,7 +274,7 @@ namespace {
         std::vector<LavaVertex>& out = gbuild.buckets[TexBucket(cx, cy, gbuild.num)]; // which texture this patch uses
 
         int queries = 0;
-        const float fallback = QueryAltAt(cx, cy, p); // centre altitude, for sub-verts with no data
+        const float fallback = TerrainDrape::QueryAltAt(cx, cy, p); // centre altitude, for sub-verts with no data
         ++queries;
 
         std::vector<GroundGridVert>& grid = ground_grid_scratch;
@@ -292,7 +287,7 @@ namespace {
             for (int i = 0; i <= cols; ++i) {
                 const float u = static_cast<float>(i) / static_cast<float>(cols);
                 const float x = xl + (xr - xl) * u;
-                float z = QueryAltAt(x, y, p);
+                float z = TerrainDrape::QueryAltAt(x, y, p);
                 ++queries;
                 if (z == 0.f) z = fallback;
                 grid[static_cast<size_t>(j) * (cols + 1) + i] = {x, y, z};
