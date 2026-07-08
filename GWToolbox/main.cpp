@@ -12,6 +12,29 @@
 #include "Settings.h"
 #include "WindowsDefender.h"
 
+// Redirects stderr to a log file; never blocks the launcher on failure (e.g. CFA can block the exe's own folder before any AV exception is granted) - falls back to %TEMP%, then gives up silently.
+static void OpenLogFile(const std::filesystem::path& exe_path)
+{
+    static FILE* stream;
+
+    const auto primary = exe_path.parent_path() / L"GWToolbox.error.log";
+    if (freopen_s(&stream, primary.string().c_str(), "w", stderr) == 0) {
+        return;
+    }
+
+    wchar_t temp_dir[MAX_PATH];
+    if (!GetTempPathW(_countof(temp_dir), temp_dir)) {
+        return;
+    }
+    const auto fallback = std::filesystem::path(temp_dir) / L"GWToolbox.error.log";
+    if (freopen_s(&stream, fallback.string().c_str(), "w", stderr) != 0) {
+        return;
+    }
+
+    fprintf(stderr, "Couldn't open the log at '%S'; falling back to this file.\n", primary.c_str());
+    fprintf(stderr, "%S\n", PathDiagnoseWritability(exe_path.parent_path()).c_str());
+}
+
 static void ShowError(const wchar_t* message)
 {
     ShowMessageBoxW(nullptr, message, L"GWToolbox - Error", 0);
@@ -166,24 +189,17 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     EnableDpiAwareness();
 
     std::wstring error;
-    std::filesystem::path log_file_path;
-    if (!PathGetExeFullPath(log_file_path)) {
+    std::filesystem::path exe_path;
+    if (!PathGetExeFullPath(exe_path)) {
         ShowMessageBoxW(nullptr, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
     // A previous self-update renames the old exe aside; clean it up now that it's no longer locked.
-    std::filesystem::path stale_exe = log_file_path;
+    std::filesystem::path stale_exe = exe_path;
     stale_exe += L".old";
     DeleteFileW(stale_exe.wstring().c_str());
 
-    log_file_path = log_file_path.parent_path() / L"GWToolbox.error.log";
-    static FILE* stream;
-    if (freopen_s(&stream, log_file_path.string().c_str(), "w", stderr) != 0) {
-        wchar_t buf[MAX_PATH + 128];
-        swprintf(buf, MAX_PATH + 128, L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.", log_file_path.wstring().c_str());
-        ShowMessageBoxW(nullptr, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
-        return 0;
-    }
+    OpenLogFile(exe_path);
 
     ParseCommandLine();
 
@@ -272,7 +288,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         const auto install_dir = GetInstallationDir();
         if (!install_dir.empty()) {
             std::vector<std::filesystem::path> cfa_apps = GetGuildWarsExecutablePaths();
-            cfa_apps.push_back(install_dir.parent_path() / L"GWToolbox.exe");
+            cfa_apps.push_back(install_dir.parent_path() / L"GWToolbox.exe"); // the installed copy
+            cfa_apps.push_back(exe_path);                                    // the copy actually running right now (e.g. a fresh, not-yet-installed download)
             EnsureDefenderReadiness(install_dir.parent_path(), cfa_apps);
         }
     }
