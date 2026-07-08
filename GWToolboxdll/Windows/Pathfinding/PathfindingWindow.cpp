@@ -9,6 +9,7 @@
 #include <queue>
 #include <set>
 #include <tuple>
+#include <unordered_set>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Packets/StoC.h>
@@ -77,6 +78,12 @@ namespace {
     // Per-map caches (low 32 bits = file_hash), LRU-bounded — see MAX_CACHED_MAPS.
     std::unordered_map<uint64_t, Pathing::MilePath*> mile_paths_by_coords;
     std::unordered_map<uint64_t, CachedMapInfo> cached_map_info;
+
+    // file_ids LoadMapFromDAT has already failed to parse this session — suppresses re-read + re-log spam on every route recompute.
+    std::unordered_set<uint32_t> dat_load_failed_fids;
+
+    // map_ids already warned about having no cached file_id — suppresses re-log spam; the lookup itself still retries since it can resolve later.
+    std::unordered_set<uint32_t> warned_no_fid_maps;
 
     // Serializes whole route computations: the global route caches assume one build at a time (concurrent builds read
     // half-inserted MilePaths → crash). Game thread try-locks so it never blocks; recursive since build helpers re-enter.
@@ -426,7 +433,9 @@ namespace {
         }
         const uint32_t fid = GetMapFileId(map_id);
         if (!fid) {
-            if (allow_load) PATH_LOG_ERROR("LoadMapFromDAT: no file_id for map %d (visit the map once to cache it)", (int)map_id);
+            if (allow_load && warned_no_fid_maps.insert((uint32_t)map_id).second) {
+                PATH_LOG_ERROR("LoadMapFromDAT: no file_id for map %d (visit the map once to cache it)", (int)map_id);
+            }
             return nullptr;
         }
 
@@ -441,10 +450,14 @@ namespace {
         // Not resident: the DAT read + parse below blocks the caller. Refuse on the game thread.
         if (!allow_load) return nullptr;
 
+        // Already known unreadable this session — skip the blocking re-read and the repeat log.
+        if (dat_load_failed_fids.contains(fid)) return nullptr;
+
         PATH_LOG_INFO("LoadMapFromDAT: map=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
 
         auto dat_data = Pathing::PathingMapData();
         if (!Pathing::LoadPathingMapDataFromDAT(fid, &dat_data)) {
+            dat_load_failed_fids.insert(fid);
             PATH_LOG_ERROR("LoadMapFromDAT: DAT parse failed for map %d file_id=%u", (int)map_id, fid);
             return nullptr;
         }
