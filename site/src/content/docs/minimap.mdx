@@ -71,8 +71,8 @@ Settings sit under <ToolboxPath steps={["Settings", "Minimap", "Agents"]} /> wit
 - **Player (alive)** / **Player (dead)** — you.
 - **Signpost** / **Item** — interactive props / ground items.
 - **Hostile (>90% HP)** / **Hostile (dead)** — enemies; below 90% HP they shift by the *Agent damaged modifier*.
-- **Neutral** — chargeable animals before they turn hostile.
-- **Ally (player)** / **Ally (NPC)** / **Ally (NPC Quest Giver)** / **Ally (spirit)** / **Ally (minion)** / **Ally (dead)**.
+- **Ally (NPC Quest Giver)** / **Ally (dead)** — apply across every friendly allegiance.
+- **Neutral**, **Ally (player)**, **Ally (NPC)**, **Ally (spirit)** and **Ally (minion)** have moved to seeded rows in **Custom Agents** below, so they're reorderable and filterable alongside your own custom colours.
 - **Agent modifier** — subtracted at the border and added at the centre of every agent to create a shaded look. Set to 0 for flat-colour agents.
 - **Agent damaged modifier** — subtracted from hostile agents under 90% HP.
 - **Marked Target** — outline colour for agents highlighted via [`/marktarget`](#chat-commands).
@@ -80,8 +80,8 @@ Settings sit under <ToolboxPath steps={["Settings", "Minimap", "Agents"]} /> wit
 
 #### Agent Sizes
 
-- **Default Size** — every agent except the player, signposts, items, bosses, and minions.
-- **Player Size** / **Signpost Size** / **Item Size** / **Boss Size** / **Minion Size**.
+- **Default Size** — every agent except the player, signposts, items, and bosses.
+- **Player Size** / **Signpost Size** / **Item Size** / **Boss Size**. (Minion size moved to the **Ally (Minion)** row in Custom Agents.)
 - **Marked Target Size** — size of agents highlighted via `/marktarget`.
 - **Marked Targets Inherit Custom Size/Shape** <ToolboxPath steps={["Settings", "Minimap", "Agents", "Marked Targets Inherit Custom Size/Shape"]} /> — When on, marked agents that also have a Custom Agent entry use *that* entry's size and shape instead of the marked-target defaults.
 - **Default Shape** / **Player Shape** / **Other Player Shape** — pick from `Tear`, `Circle`, `Square`, `Big Circle`.
@@ -89,13 +89,15 @@ Settings sit under <ToolboxPath steps={["Settings", "Minimap", "Agents"]} /> wit
 
 #### Custom Agents
 
-Override colour/size/shape per model id. **Add Agent Custom Color** appends a new row. Each row exposes:
+Override colour/size/shape per model id, or per agent allegiance. Shown in a scrollable list with a **Filter** box (matches on **Name** or **Group**, display-only — it doesn't change list order). **Add Agent Custom Color** appends a new row. Each row exposes:
 
-- **Visible** toggle, **Name** (free-text label), **Model ID** (required), **Map ID** (`0` = all maps).
+- **Visible** toggle, **Name** (free-text label), **Group** (free-text tag, e.g. `Farming`, used only for the filter box above).
+- **Match by** — `Model ID` (a specific agent) or an allegiance (`Ally`, `Neutral`, `Enemy`, `Spirit/Pet`, `Minion`, `NPC/Minipet`) that matches every living agent of that type. Matching by allegiance shows extra **Dead state** and **Quest state** filters and disables the **Model ID** field.
+- **Model ID** (when matching by Model ID) / **Map ID** (`0` = all maps).
 - **Combat** — `In combat` / `Not in combat` / `Either`.
 - **Weapon** — `Has weapon` / `No weapon` / `Either`.
 - **Color** / **Text color** / **Size** / **Shape** — each with an *enable* checkbox; leave unchecked to fall through to the defaults.
-- **Move Up / Move Down / Delete** — entries are evaluated top-to-bottom, so order matters when multiple rules could match.
+- **Move Up / Move Down / Delete** — entries are evaluated top-to-bottom, so order matters when multiple rules could match. The seeded default rows (**Neutral**, **Ally**, **Ally (NPC)**, **Ally (Spirit/Pet)**, **Ally (Minion)**) can't be deleted, only disabled via the **Visible** toggle.
 
 ### Ranges
 

@@ -232,6 +232,7 @@ void AgentRenderer::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "show_quest_npcs_on_minimap", &show_quest_npcs_on_minimap);
     SettingsRegistry::RegisterField(module, "show_hidden_npcs", &show_hidden_npcs);
     SettingsRegistry::RegisterField(module, "marked_target_inherit_custom_agents", &marked_target_inherit_custom_agents);
+    SettingsRegistry::RegisterField(module, "custom_agent_defaults_seeded", &custom_agent_defaults_seeded);
 #ifdef _DEBUG
     SettingsRegistry::RegisterField(module, "show_props_on_minimap", &show_props_on_minimap);
 #endif
@@ -303,6 +304,67 @@ void AgentRenderer::LoadCustomAgents()
     // a legacy .ini load leaves no .json on disk; flag changed so the next save migrates it
     agentcolors_changed = migrated_from_ini;
     custom_agents_loaded = true;
+
+    if (!custom_agent_defaults_seeded) {
+        SeedDefaultCustomAgents();
+        custom_agent_defaults_seeded = true;
+    }
+}
+
+void AgentRenderer::SeedDefaultCustomAgents()
+{
+    // One-time migration of the categories that map onto a single allegiance; dead/quest-giver
+    // overrides apply across all friendly allegiances so they stay as the untouched GetColor()/GetSize() fallback.
+    // dead_state is left "Either": that fallback already gates color by dead state, and GetSize() doesn't vary by it.
+    struct DefaultRow {
+        const char* label;
+        GW::Constants::Allegiance allegiance;
+        QuestState quest_state;
+        Color* color;
+        float* size;
+    };
+    const DefaultRow rows[] = {
+        {"Neutral", GW::Constants::Allegiance::Neutral, EitherQuestState, &color_neutral, &size_neutral},
+        {"Ally", GW::Constants::Allegiance::Ally_NonAttackable, NotQuestGiver, &color_ally, &size_ally},
+        {"Ally (NPC)", GW::Constants::Allegiance::Npc_Minipet, NotQuestGiver, &color_ally_npc, &size_ally_npc},
+        {"Ally (Spirit/Pet)", GW::Constants::Allegiance::Spirit_Pet, NotQuestGiver, &color_ally_spirit, &size_ally_spirit},
+        {"Ally (Minion)", GW::Constants::Allegiance::Minion, NotQuestGiver, &color_ally_minion, &size_minion},
+    };
+    for (const auto& row : rows) {
+        auto* ca = new CustomAgent(0, *row.color, row.label);
+        ca->allegiance = static_cast<int>(row.allegiance);
+        ca->quest_state = row.quest_state;
+        ca->size = *row.size;
+        ca->size_active = true;
+        ca->is_default = true;
+        std::snprintf(ca->group, sizeof(ca->group), "Defaults");
+        ca->index = custom_agents.size();
+        custom_agents.push_back(ca);
+    }
+    BuildCustomAgentsMap();
+    agentcolors_changed = true;
+}
+
+void AgentRenderer::SyncSeededDefaultsFromLegacyFields()
+{
+    // Keeps the seeded Custom Agents rows in sync when "Restore Defaults" is hit elsewhere.
+    const std::pair<GW::Constants::Allegiance, std::pair<Color, float>> legacy_values[] = {
+        {GW::Constants::Allegiance::Neutral, {color_neutral, size_neutral}},
+        {GW::Constants::Allegiance::Ally_NonAttackable, {color_ally, size_ally}},
+        {GW::Constants::Allegiance::Npc_Minipet, {color_ally_npc, size_ally_npc}},
+        {GW::Constants::Allegiance::Spirit_Pet, {color_ally_spirit, size_ally_spirit}},
+        {GW::Constants::Allegiance::Minion, {color_ally_minion, size_minion}},
+    };
+    for (const auto& [allegiance, values] : legacy_values) {
+        for (CustomAgent* ca : custom_agents) {
+            if (!ca->is_default || ca->allegiance != static_cast<int>(allegiance)) {
+                continue;
+            }
+            ca->color = values.first;
+            ca->size = values.second;
+        }
+    }
+    agentcolors_changed = true;
 }
 
 void AgentRenderer::SaveCustomAgents() const
@@ -382,6 +444,7 @@ void AgentRenderer::DrawSettings()
             if (result) {
                 LoadDefaultColors();
                 LoadDefaultSizes();
+                SyncSeededDefaultsFromLegacyFields();
             }
         });
 
@@ -410,12 +473,9 @@ void AgentRenderer::DrawSettings()
             {"Item", &color_item, nullptr, nullptr, nullptr},
             {"Hostile (>90% HP)", &color_hostile, &size_hostile, nullptr, "Hostile agent size"},
             {"Hostile (dead)", &color_hostile_dead, nullptr, nullptr, nullptr},
-            {"Neutral", &color_neutral, &size_neutral, nullptr, "Neutral agent size"},
-            {"Ally (player)", &color_ally, &size_ally, nullptr, "Ally (player) size"},
-            {"Ally (NPC)", &color_ally_npc, &size_ally_npc, nullptr, "Ally (NPC) size"},
+            // Neutral/Ally/Ally (NPC)/Ally (spirit)/Ally (minion) migrated to seeded Custom Agents rows (see SeedDefaultCustomAgents()).
+            // Ally (NPC Quest Giver)/Ally (dead) stay here: those colors apply across every friendly allegiance.
             {"Ally (NPC Quest Giver)", &color_ally_npc_quest, &size_ally_npc_quest, nullptr, "Ally (NPC Quest Giver) size"},
-            {"Ally (spirit)", &color_ally_spirit, &size_ally_spirit, nullptr, "Ally (spirit) size"},
-            {"Ally (minion)", &color_ally_minion, nullptr, nullptr, nullptr},
             {"Ally (dead)", &color_ally_dead, nullptr, nullptr, nullptr},
             {"Agent modifier", &color_agent_modifier, nullptr, nullptr, "Each agent has this value removed on the border and added at the center\nZero makes agents have solid color, while a high number makes them appear more shaded."},
             {"Agent damaged modifier", &color_agent_damaged_modifier, nullptr, nullptr, "Each hostile agent has this value subtracted from it when under 90% HP."},
@@ -450,6 +510,7 @@ void AgentRenderer::DrawSettings()
             [&](const bool result, void*) {
                 if (result) {
                     LoadDefaultSizes();
+                    SyncSeededDefaultsFromLegacyFields();
                 }
             });
         {
@@ -460,7 +521,7 @@ void AgentRenderer::DrawSettings()
                 {"Signpost Size",      &size_signpost,      nullptr},
                 {"Item Size",          &size_item,          nullptr},
                 {"Boss Size",          &size_boss,          nullptr},
-                {"Minion Size",        &size_minion,        nullptr},
+                // Minion Size has been migrated to the seeded "Ally (Minion)" row in Custom Agents.
                 {"Marked Target Size", &size_marked_target, "Agents highlighted as marked target via /marktarget command"},
             };
             for (const auto& [label, sz, help] : entries) {
@@ -483,10 +544,30 @@ void AgentRenderer::DrawSettings()
     }
 
     if (ImGui::TreeNodeEx("Custom Agents", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        static char group_filter[64] = "";
+        ImGui::InputTextWithHint("Filter", "Filter by name or group...", group_filter, sizeof(group_filter));
+        ImGui::ShowHelp("Only affects what's shown here; list order (and therefore minimap draw order) is unchanged.");
+
+        const auto matches_filter = [](const CustomAgent* ca) {
+            if (!group_filter[0]) {
+                return true;
+            }
+            const auto to_lower = [](std::string s) {
+                std::ranges::transform(s, s.begin(), [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                return s;
+            };
+            const auto needle = to_lower(group_filter);
+            return to_lower(ca->name).find(needle) != std::string::npos || to_lower(ca->group).find(needle) != std::string::npos;
+        };
+
         bool changed = false;
+        ImGui::BeginChild("##custom_agents_scroll", ImVec2(0.f, 400.f), true);
         for (unsigned i = 0; i < custom_agents.size(); ++i) {
             CustomAgent* custom = custom_agents[i];
             if (!custom) {
+                continue;
+            }
+            if (!matches_filter(custom)) {
                 continue;
             }
 
@@ -543,6 +624,7 @@ void AgentRenderer::DrawSettings()
                     break;
             }
         }
+        ImGui::EndChild();
         if (changed) {
             agentcolors_changed = true;
             BuildCustomAgentsMap();
@@ -724,37 +806,62 @@ std::vector<const AgentRenderer::CustomAgent*>* AgentRenderer::GetCustomAgentsTo
     if (!agent) {
         return nullptr;
     }
-    const auto agent_identifier = agent->GetIsLivingType() ? agent->GetAsAgentLiving()->player_number : (agent->GetIsGadgetType() ? agent->GetAsAgentGadget()->gadget_id : 0);
-    const auto it = custom_agents_map.find(agent_identifier);
-    if (it == custom_agents_map.end()) {
-        return nullptr;
-    }
+    const auto living = agent->GetAsAgentLiving();
+    const auto agent_identifier = living ? living->player_number : (agent->GetIsGadgetType() ? agent->GetAsAgentGadget()->gadget_id : 0);
+
     static std::vector<const CustomAgent*> out;
     out.clear();
-    for (const CustomAgent* ca : it->second) {
+
+    const auto try_add = [&](const CustomAgent* ca) {
         if (!ca->active) {
-            continue;
+            return;
         }
         if (ca->mapId > 0 && ca->mapId != static_cast<DWORD>(GW::Map::GetMapID())) {
-            continue;
+            return;
         }
-        if (agent->GetIsLivingType()) {
-            const auto living = agent->GetAsAgentLiving();
+        if (living) {
             if (ca->combat_state == CombatState::InCombat && !living->GetInCombatStance()) {
-                continue;
+                return;
             }
             if (ca->combat_state == CombatState::NotInCombat && living->GetInCombatStance()) {
-                continue;
+                return;
             }
             if (ca->weapon_state == WeaponState::HasWeapon && (living->weapon_type == 0 || living->weapon_type == 512)) {
-                continue;
+                return;
             }
             if (ca->weapon_state == WeaponState::NoWeapon && !(living->weapon_type == 0 || living->weapon_type == 512)) {
-                continue;
+                return;
+            }
+            if (ca->dead_state == DeadState::Dead && !living->GetIsDead()) {
+                return;
+            }
+            if (ca->dead_state == DeadState::Alive && living->GetIsDead()) {
+                return;
+            }
+            if (ca->quest_state == QuestState::QuestGiver && !living->GetHasQuest()) {
+                return;
+            }
+            if (ca->quest_state == QuestState::NotQuestGiver && living->GetHasQuest()) {
+                return;
             }
         }
         out.push_back(ca);
+    };
+
+    if (const auto it = custom_agents_map.find(agent_identifier); it != custom_agents_map.end()) {
+        for (const CustomAgent* ca : it->second) {
+            try_add(ca);
+        }
     }
+    // default-by-type rows match every living agent of that allegiance, in addition to any modelId match above.
+    if (living && !custom_agents_by_allegiance.empty()) {
+        if (const auto it = custom_agents_by_allegiance.find(static_cast<int>(living->allegiance)); it != custom_agents_by_allegiance.end()) {
+            for (const CustomAgent* ca : it->second) {
+                try_add(ca);
+            }
+        }
+    }
+
     if (out.empty()) {
         return nullptr;
     }
@@ -1398,9 +1505,11 @@ void AgentRenderer::Enqueue(const Shape_e shape, const RenderPosition& pos, cons
 void AgentRenderer::BuildCustomAgentsMap()
 {
     custom_agents_map.clear();
+    custom_agents_by_allegiance.clear();
     for (const CustomAgent* ca : custom_agents) {
-        if (!custom_agents_map.contains(ca->modelId)) {
-            custom_agents_map[ca->modelId] = std::vector<const CustomAgent*>();
+        if (ca->allegiance >= 0) {
+            custom_agents_by_allegiance[ca->allegiance].push_back(ca);
+            continue;
         }
         custom_agents_map[ca->modelId].push_back(ca);
     }
@@ -1411,10 +1520,15 @@ AgentRenderer::CustomAgent::CustomAgent(const ToolboxIni* ini, const char* secti
 {
     active = ini->GetBoolValue(section, VAR_NAME(active), active);
     std::snprintf(name, sizeof(name), "%s", ini->GetValue(section, VAR_NAME(name), ""));
+    std::snprintf(group, sizeof(group), "%s", ini->GetValue(section, VAR_NAME(group), ""));
     modelId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(modelId), static_cast<long>(modelId)));
     mapId = static_cast<DWORD>(ini->GetLongValue(section, VAR_NAME(mapId), static_cast<long>(mapId)));
     combat_state = static_cast<CombatState>(ini->GetLongValue(section, VAR_NAME(combat_state), static_cast<long>(combat_state)));
     weapon_state = static_cast<WeaponState>(ini->GetLongValue(section, VAR_NAME(weapon_state), static_cast<long>(weapon_state)));
+    allegiance = static_cast<int>(ini->GetLongValue(section, VAR_NAME(allegiance), allegiance));
+    dead_state = static_cast<DeadState>(ini->GetLongValue(section, VAR_NAME(dead_state), static_cast<long>(dead_state)));
+    quest_state = static_cast<QuestState>(ini->GetLongValue(section, VAR_NAME(quest_state), static_cast<long>(quest_state)));
+    is_default = ini->GetBoolValue(section, VAR_NAME(is_default), is_default);
 
     color = Colors::Load(ini, section, VAR_NAME(color), color);
     color_text = Colors::Load(ini, section, VAR_NAME(color_text), color_text);
@@ -1437,10 +1551,15 @@ AgentRenderer::CustomAgent::CustomAgent(const Settings& settings)
 {
     active = settings.active;
     std::snprintf(name, sizeof(name), "%s", settings.name.c_str());
+    std::snprintf(group, sizeof(group), "%s", settings.group.c_str());
     modelId = settings.modelId;
     mapId = settings.mapId;
     combat_state = static_cast<CombatState>(settings.combat_state);
     weapon_state = static_cast<WeaponState>(settings.weapon_state);
+    allegiance = settings.allegiance;
+    dead_state = static_cast<DeadState>(settings.dead_state);
+    quest_state = static_cast<QuestState>(settings.quest_state);
+    is_default = settings.is_default;
 
     color = settings.color;
     color_text = settings.color_text;
@@ -1469,10 +1588,15 @@ AgentRenderer::CustomAgent::Settings AgentRenderer::CustomAgent::ToSettings() co
     Settings settings;
     settings.active = active;
     settings.name = name;
+    settings.group = group;
     settings.modelId = modelId;
     settings.mapId = mapId;
     settings.combat_state = combat_state;
     settings.weapon_state = weapon_state;
+    settings.allegiance = allegiance;
+    settings.dead_state = dead_state;
+    settings.quest_state = quest_state;
+    settings.is_default = is_default;
 
     settings.color = color;
     settings.color_text = color_text;
@@ -1539,11 +1663,38 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
         }
         ImGui::ShowHelp("A name to help you remember what this is. Optional.");
         ImGui::SetCursorPosX(x);
+        if (ImGui::InputText("Group", group, sizeof(group))) {
+            changed = true;
+        }
+        ImGui::ShowHelp("An optional tag to filter this list by, e.g. 'Farming' or 'Bosses'. Purely organisational.");
+        ImGui::SetCursorPosX(x);
+        static const char* allegiance_items[] = {"Model ID (below)", "Ally", "Neutral", "Enemy", "Spirit/Pet", "Minion", "NPC/Minipet"};
+        int allegiance_combo = allegiance < 0 ? 0 : allegiance;
+        if (ImGui::Combo("Match by", &allegiance_combo, allegiance_items, 7)) {
+            allegiance = allegiance_combo == 0 ? -1 : allegiance_combo;
+            changed = true;
+        }
+        ImGui::ShowHelp("Match a specific agent by Model ID, or every agent of a given allegiance (used for the seeded default rows).");
+        if (allegiance >= 0) {
+            ImGui::SetCursorPosX(x);
+            static const char* dead_state_items[] = {"Dead", "Alive", "Either"};
+            if (ImGui::Combo("Dead state", (int*)&dead_state, dead_state_items, 3)) {
+                changed = true;
+            }
+            ImGui::SetCursorPosX(x);
+            static const char* quest_state_items[] = {"Quest giver", "Not quest giver", "Either"};
+            if (ImGui::Combo("Quest state", (int*)&quest_state, quest_state_items, 3)) {
+                changed = true;
+            }
+        }
+        ImGui::SetCursorPosX(x);
+        ImGui::BeginDisabled(allegiance >= 0);
         if (ImGui::InputInt("Model ID", (int*)&modelId)) {
             op = Operation::ModelIdChange;
             changed = true;
         }
-        ImGui::ShowHelp("The Agent to which this custom attributes will be applied. Required.");
+        ImGui::EndDisabled();
+        ImGui::ShowHelp("The Agent to which this custom attributes will be applied. Ignored when matching by allegiance above.");
         ImGui::SetCursorPosX(x);
         if (ImGui::InputInt("Map ID", (int*)&mapId)) {
             changed = true;
@@ -1632,11 +1783,13 @@ bool AgentRenderer::CustomAgent::DrawSettings(Operation& op)
             ImGui::SetTooltip("Move the color down in the list");
         }
         ImGui::SameLine(0, spacing);
+        ImGui::BeginDisabled(is_default);
         if (ImGui::Button("Delete", ImVec2(width, 0))) {
             ImGui::OpenPopup("Delete Color?");
         }
+        ImGui::EndDisabled();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Delete the color");
+            ImGui::SetTooltip(is_default ? "Default rows can't be deleted; uncheck \"active\" to disable this one instead" : "Delete the color");
         }
 
         if (ImGui::BeginPopupModal("Delete Color?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
