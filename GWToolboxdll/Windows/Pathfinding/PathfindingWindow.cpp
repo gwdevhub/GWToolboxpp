@@ -79,18 +79,10 @@ namespace {
     std::unordered_map<uint64_t, Pathing::MilePath*> mile_paths_by_coords;
     std::unordered_map<uint64_t, CachedMapInfo> cached_map_info;
 
-    // file_ids LoadMapFromDAT has already failed to parse this session (e.g. a partial/streaming
-    // install missing that map's pathfinding chunk). Route builds re-evaluate edges from scratch on
-    // every recompute, so without this a still-missing map spams the same DAT-parse-failed error on
-    // every route query instead of once. Same non-locking assumption as mile_paths_by_coords: only
-    // touched while the caller holds route_mutex.
+    // file_ids LoadMapFromDAT has already failed to parse this session — suppresses re-read + re-log spam on every route recompute.
     std::unordered_set<uint32_t> dat_load_failed_fids;
 
-    // map_ids already warned about having no cached file_id (GetMapFileId returned 0 — the map has
-    // never been visited/StoC-resolved this session). Unlike dat_load_failed_fids this doesn't gate
-    // the lookup itself (GetMapFileId is cheap and the mapping can still resolve later, e.g. once the
-    // player visits the map) — it only stops the same "no file_id" error from repeating on every
-    // route recompute in the meantime.
+    // map_ids already warned about having no cached file_id — suppresses re-log spam; the lookup itself still retries since it can resolve later.
     std::unordered_set<uint32_t> warned_no_fid_maps;
 
     // Serializes whole route computations: the global route caches assume one build at a time (concurrent builds read
@@ -458,8 +450,7 @@ namespace {
         // Not resident: the DAT read + parse below blocks the caller. Refuse on the game thread.
         if (!allow_load) return nullptr;
 
-        // Already known unreadable this session (e.g. missing from a partial/streaming install) —
-        // don't re-block on the DAT read or re-log the same error on every route recompute.
+        // Already known unreadable this session — skip the blocking re-read and the repeat log.
         if (dat_load_failed_fids.contains(fid)) return nullptr;
 
         PATH_LOG_INFO("LoadMapFromDAT: map=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
