@@ -137,6 +137,9 @@ namespace TeamBuildEncoder {
     // Returns true if the string looks like a GW party loadout (magic byte 0x1F).
     bool              IsDaybreakTeamBuild(const DaybreakTeamBuild& daybreak);
 
+    // Decode a GW base64 template string into its raw LSB-first bit bytes.
+    std::vector<uint8_t> DaybreakToBytes(const DaybreakTeamBuild& daybreak);
+
     // ---------------------------------------------------------------------------
     // Chat helpers
     // ---------------------------------------------------------------------------

@@ -246,7 +246,7 @@ namespace TeamBuildEncoder {
         return result;
     }
 
-    static std::vector<uint8_t> DaybreakToBytes(const DaybreakTeamBuild& daybreak)
+    std::vector<uint8_t> DaybreakToBytes(const DaybreakTeamBuild& daybreak)
     {
         std::vector<uint8_t> result;
         int bit = 0;
