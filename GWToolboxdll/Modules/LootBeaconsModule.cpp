@@ -26,39 +26,43 @@
 #include "Widgets/Minimap/Shaders/loot_beacon_ring_vs.h"
 
 namespace {
-    constexpr int kMaxBuildsPerFrame = 8;   // caps QueryAltitude calls (1 per beacon build) spent per frame
+    constexpr int kMaxBuildsPerFrame = 4;   // caps terrain-drape heightfield builds spent per frame
+    constexpr int kDrapeGrid = 8;           // heightfield resolution sampled across a beacon's footprint
+    constexpr int kRingDivs = 12;           // ring quad subdivision, so the sprite bends to follow the ground
     constexpr uint32_t kScanIntervalMs = 250; // item agents don't move; classification only needs a coarse tick
     constexpr uint32_t kRingTextureFileId = 0x2381; // GW dat texture for the pulsing ring sprite
 
     // Not user-configurable.
     constexpr float kRingSpacing = 4.f;    // gwinches, how far the two rings start from the true diameter
     constexpr float kRingDiameter = 90.f;  // the true diameter the two rings pulse toward/away from
-    constexpr float kBeamHeight = 600.f;   // beam height
+    constexpr float kFieldRadius = kRingDiameter * 0.5f + kRingSpacing; // footprint half-extent = the largest ring radius
     constexpr float kBeamWidth = 35.f;     // beam width
     constexpr float kBeamOpacity = 1.f;    // beam is unpulsed and always drawn at full opacity
     constexpr float kPulseInterval = 0.85f; // seconds for the two rings to go from spread apart to meeting in the middle
-    constexpr float kZLift = 5.f;          // raise above the floor to avoid z-fighting (GW up is -z)
+    constexpr float kNoDistanceLimit = 1e9f;
 
-    // Occlusion behind terrain is shared with the "In-game rendering" module
-    // via GameWorldRenderer::GetOccludeBehindTerrain() so it's set in one place.
-    float render_max_distance = 20000.f;
-    float fog_factor = 0.5f;
+    float beam_height = 225.f;
     bool show_reserved_for_others = false;
 
-    bool enable_value_beacons = true;
-    int value_threshold = 1000; // gold, against the Kamadan trader price
-    Color value_color = Colors::ARGB(255, 255, 140, 0);
+    struct ValueBeacon {
+        const char* label;
+        bool enabled;
+        int threshold; // gold, against the Kamadan trader price
+        Color color;
+    };
+    ValueBeacon value_low = {"value_low", true, 1000, Colors::ARGB(50, 255, 140, 0)};
+    ValueBeacon value_high = {"value_high", true, 15000, Colors::ARGB(170, 255, 140, 0)};
 
     struct RarityBeacon {
         const char* label;
         bool enabled;
         Color color;
     };
-    RarityBeacon rarity_white = {"White items", false, Colors::ARGB(255, 255, 255, 255)};
-    RarityBeacon rarity_blue = {"Blue items", false, Colors::ARGB(255, 80, 160, 255)};
-    RarityBeacon rarity_purple = {"Purple items", true, Colors::ARGB(255, 180, 80, 250)};
-    RarityBeacon rarity_gold = {"Gold items", true, Colors::ARGB(255, 255, 210, 60)};
-    RarityBeacon rarity_green = {"Green items", true, Colors::ARGB(255, 40, 220, 40)};
+    RarityBeacon rarity_white = {"White items", false, Colors::ARGB(170, 255, 255, 255)};
+    RarityBeacon rarity_blue = {"Blue items", false, Colors::ARGB(170, 80, 160, 255)};
+    RarityBeacon rarity_purple = {"Purple items", true, Colors::ARGB(170, 180, 80, 250)};
+    RarityBeacon rarity_gold = {"Gold items", true, Colors::ARGB(170, 255, 210, 60)};
+    RarityBeacon rarity_green = {"Green items", true, Colors::ARGB(170, 40, 220, 40)};
 
     struct BeaconVertex {
         float x, y, z;
@@ -74,14 +78,14 @@ namespace {
 
     struct Beacon {
         GW::Vec2f pos;
+        float z = 0.f; // the item agent's own world height; GW up is -z
         uint32_t zplane = 0;
         Color color = 0;
         bool draw = false;
         bool dimmed = false;
-        bool built = false;   // true once ground_z has been resolved via a terrain query
+        bool draped = false; // heightfield resolved once (items don't move), then sampled every frame
         uint32_t seen = 0;
-        float ground_z = 0.f; // draped terrain height (post kZLift); resolved once and cached, everything
-                               // drawn from it (beam quad, ring quads) is rebuilt fresh every frame instead
+        float field[kDrapeGrid + 1][kDrapeGrid + 1] = {}; // terrain z sampled across pos +/- kFieldRadius
     };
 
     std::unordered_map<uint32_t, Beacon> beacons;
@@ -120,21 +124,63 @@ namespace {
         return true;
     }
 
-    // Appends a flat, ground-aligned textured quad (2 triangles) centred on `pos`, sized to the ring's
-    // current diameter (2*radius) so the ring texture fills it exactly.
-    void EmitRingQuad(std::vector<RingVertex>& out, const GW::Vec2f& pos, const float z, const float radius, const DWORD col)
+    // Bilinearly samples the cached heightfield at world (wx, wy); outside the footprint clamps to the edge.
+    float SampleDrape(const Beacon& beacon, const float wx, const float wy)
+    {
+        const float fx = std::clamp(((wx - beacon.pos.x) / kFieldRadius * 0.5f + 0.5f) * kDrapeGrid, 0.f, static_cast<float>(kDrapeGrid));
+        const float fy = std::clamp(((wy - beacon.pos.y) / kFieldRadius * 0.5f + 0.5f) * kDrapeGrid, 0.f, static_cast<float>(kDrapeGrid));
+        const int x0 = std::min(static_cast<int>(fx), kDrapeGrid - 1);
+        const int y0 = std::min(static_cast<int>(fy), kDrapeGrid - 1);
+        const float tx = fx - static_cast<float>(x0);
+        const float ty = fy - static_cast<float>(y0);
+        const float z0 = std::lerp(beacon.field[x0][y0], beacon.field[x0 + 1][y0], tx);
+        const float z1 = std::lerp(beacon.field[x0][y0 + 1], beacon.field[x0 + 1][y0 + 1], tx);
+        return std::lerp(z0, z1, ty);
+    }
+
+    // Resolves the terrain height across the beacon's footprint once, using the item's own height to pick
+    // the pathing plane (so multi-level maps drape onto the floor the item actually rests on).
+    void BuildDrape(Beacon& beacon, const uint32_t n_planes)
+    {
+        for (int i = 0; i <= kDrapeGrid; ++i) {
+            const float wx = beacon.pos.x + (static_cast<float>(i) / kDrapeGrid * 2.f - 1.f) * kFieldRadius;
+            for (int j = 0; j <= kDrapeGrid; ++j) {
+                const float wy = beacon.pos.y + (static_cast<float>(j) / kDrapeGrid * 2.f - 1.f) * kFieldRadius;
+                beacon.field[i][j] = TerrainDrape::DrapeZ(wx, wy, beacon.zplane, n_planes, beacon.z);
+            }
+        }
+        beacon.draped = true;
+    }
+
+    // Appends a textured ring quad subdivided into a kRingDivs grid, each vertex dropped onto the cached
+    // terrain so the sprite hugs the ground instead of floating as a flat disc over slopes.
+    void EmitDrapedRing(std::vector<RingVertex>& out, const Beacon& beacon, const float radius, const DWORD col)
     {
         const float r = std::max(1.f, radius);
-        const RingVertex v00{pos.x - r, pos.y - r, z, col, 0.f, 1.f};
-        const RingVertex v10{pos.x + r, pos.y - r, z, col, 1.f, 1.f};
-        const RingVertex v11{pos.x + r, pos.y + r, z, col, 1.f, 0.f};
-        const RingVertex v01{pos.x - r, pos.y + r, z, col, 0.f, 0.f};
-        out.push_back(v00);
-        out.push_back(v10);
-        out.push_back(v11);
-        out.push_back(v00);
-        out.push_back(v11);
-        out.push_back(v01);
+        RingVertex grid[kRingDivs + 1][kRingDivs + 1];
+        for (int i = 0; i <= kRingDivs; ++i) {
+            const float u = static_cast<float>(i) / kRingDivs;
+            const float wx = beacon.pos.x + (u * 2.f - 1.f) * r;
+            for (int j = 0; j <= kRingDivs; ++j) {
+                const float v = static_cast<float>(j) / kRingDivs;
+                const float wy = beacon.pos.y + (v * 2.f - 1.f) * r;
+                grid[i][j] = {wx, wy, SampleDrape(beacon, wx, wy), col, u, 1.f - v};
+            }
+        }
+        for (int i = 0; i < kRingDivs; ++i) {
+            for (int j = 0; j < kRingDivs; ++j) {
+                const RingVertex& a = grid[i][j];
+                const RingVertex& b = grid[i + 1][j];
+                const RingVertex& c = grid[i + 1][j + 1];
+                const RingVertex& d = grid[i][j + 1];
+                out.push_back(a);
+                out.push_back(b);
+                out.push_back(c);
+                out.push_back(a);
+                out.push_back(c);
+                out.push_back(d);
+            }
+        }
     }
 
     void Classify(const GW::AgentItem& agent_item, const GW::Item& item, const uint32_t my_agent_id, Beacon& beacon)
@@ -144,8 +190,15 @@ namespace {
         Color color = 0;
         bool draw = false;
         if (mine || show_reserved_for_others) {
-            if (enable_value_beacons && value_threshold > 0 && PriceCheckerModule::GetPriceByItem(&item) >= static_cast<uint32_t>(value_threshold)) {
-                color = value_color;
+            const uint32_t price = PriceCheckerModule::GetPriceByItem(&item);
+            const ValueBeacon* by_value = nullptr;
+            for (const auto* value : {&value_low, &value_high}) {
+                if (value->enabled && value->threshold > 0 && price >= static_cast<uint32_t>(value->threshold)) {
+                    if (!by_value || value->threshold > by_value->threshold) by_value = value;
+                }
+            }
+            if (by_value) {
+                color = by_value->color;
                 draw = true;
             }
             else {
@@ -164,7 +217,6 @@ namespace {
                 }
             }
         }
-        if (draw && color != beacon.color) beacon.built = false;
         beacon.color = color;
         beacon.draw = draw;
     }
@@ -186,22 +238,14 @@ namespace {
             auto& beacon = beacons[agent_item->agent_id];
             beacon.seen = scan_counter;
             beacon.pos = {agent_item->pos.x, agent_item->pos.y};
+            beacon.z = agent_item->z;
             beacon.zplane = agent_item->pos.zplane;
             Classify(*agent_item, *item, my_agent_id, beacon);
         }
         std::erase_if(beacons, [](const auto& entry) { return entry.second.seen != scan_counter; });
     }
 
-    bool BuildBeacon(Beacon& beacon, const uint32_t n_planes)
-    {
-        const float base_z = TerrainDrape::SurfaceZ(beacon.pos.x, beacon.pos.y, beacon.zplane, n_planes);
-        if (base_z == 0.f) return false; // no altitude data yet; retry next frame
-        beacon.ground_z = base_z - kZLift; // everything (beam quad, ring quads) is built fresh from this every frame
-        beacon.built = true;
-        return true;
-    }
-
-    constexpr float kBeamSolidFraction = 0.25f; // bottom fraction of kBeamHeight that stays fully solid before fading
+    constexpr float kBeamSolidFraction = 0.25f; // bottom fraction of the beam height that stays fully solid before fading
 
     // Appends a single quad standing on the ground and facing the camera - `right_x`/`right_y` is the
     // horizontal axis (from GetCameraRight below) so the quad rotates to face the viewer without ever
@@ -211,7 +255,7 @@ namespace {
     void EmitBeamQuad(std::vector<BeaconVertex>& out, const GW::Vec2f& pos, const float ground_z, const float right_x, const float right_y, const Color base_color, const float base_alpha)
     {
         const float half = kBeamWidth * 0.5f;
-        const float height = kBeamHeight;
+        const float height = beam_height;
         const float z_solid = ground_z - height * kBeamSolidFraction;
         const float z_top = ground_z - height;
 
@@ -272,7 +316,7 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
     if (beacons_dirty) {
-        for (auto& [id, beacon] : beacons) beacon.built = false;
+        last_scan_tick = 0;
         beacons_dirty = false;
     }
 
@@ -309,24 +353,24 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
     int builds = 0;
     for (auto& [id, beacon] : beacons) {
         if (!beacon.draw) continue;
-        if (!beacon.built) {
+        if (!beacon.draped) {
             if (!n_planes || builds >= kMaxBuildsPerFrame) continue;
             ++builds;
-            if (!BuildBeacon(beacon, n_planes)) continue;
+            BuildDrape(beacon, n_planes);
         }
-        EmitBeamQuad(scratch, beacon.pos, beacon.ground_z, right_x, right_y, beacon.color, beacon.dimmed ? kBeamOpacity * 0.4f : kBeamOpacity);
+        EmitBeamQuad(scratch, beacon.pos, beacon.z, right_x, right_y, beacon.color, beacon.dimmed ? kBeamOpacity * 0.4f : kBeamOpacity);
 
         // Ring opacity comes straight from the beacon colour's own alpha channel; dimmed (reserved for
         // other party members) is the one exception, same as the beam.
         const DWORD ring_col = beacon.dimmed ? WithAlpha(beacon.color, 0.4f) : beacon.color;
-        EmitRingQuad(ring_scratch, beacon.pos, beacon.ground_z, r_outer, ring_col);
-        EmitRingQuad(ring_scratch, beacon.pos, beacon.ground_z, r_inner, ring_col);
+        EmitDrapedRing(ring_scratch, beacon, r_outer, ring_col);
+        EmitDrapedRing(ring_scratch, beacon, r_inner, ring_col);
     }
 
     if (!scratch.empty()) {
         IDirect3DStateBlock9* state_block = nullptr;
         if (device->CreateStateBlock(D3DSBT_ALL, &state_block) == D3D_OK) {
-            if (GameWorldCompositor::SetupPipeline(device, GameWorldRenderer::GetOccludeBehindTerrain(), render_max_distance, fog_factor)) {
+            if (GameWorldCompositor::SetupPipeline(device, GameWorldRenderer::GetOccludeBehindTerrain(), kNoDistanceLimit, 0.f)) {
                 constexpr BOOL dotted_off[1] = {FALSE};
                 device->SetPixelShaderConstantB(0, dotted_off, 1);
                 device->DrawPrimitiveUP(D3DPT_TRIANGLELIST, static_cast<UINT>(scratch.size() / 3), scratch.data(), sizeof(BeaconVertex));
@@ -343,7 +387,16 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
             if (device->SetVertexShader(ring_vs) == D3D_OK && device->SetPixelShader(ring_ps) == D3D_OK && device->SetVertexDeclaration(ring_decl) == D3D_OK &&
                 GameWorldCompositor::SetWorldViewProj(device)) {
                 GameWorldCompositor::SetWorldRenderStates(device, GameWorldRenderer::GetOccludeBehindTerrain());
-                GameWorldCompositor::SetDistanceFog(device, render_max_distance, fog_factor);
+                if (GameWorldRenderer::GetOccludeBehindTerrain()) {
+                    // The ring sits flush on the terrain, so its depth ties with the ground and z-fights as the
+                    // camera tilts. Bias the depth toward the viewer (not the geometry) so it wins the test and
+                    // stays flush - slope-scaled to handle grazing angles, plus a small constant floor.
+                    constexpr float slope_bias = -1.5f;
+                    constexpr float const_bias = -1e-5f;
+                    device->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS, *reinterpret_cast<const DWORD*>(&slope_bias));
+                    device->SetRenderState(D3DRS_DEPTHBIAS, *reinterpret_cast<const DWORD*>(&const_bias));
+                }
+                GameWorldCompositor::SetDistanceFog(device, kNoDistanceLimit, 0.f);
                 device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
                 device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
                 device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
@@ -359,12 +412,14 @@ void LootBeaconsModule::DrawInWorld(IDirect3DDevice9* device)
 
 void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
 {
-    SettingsRegistry::RegisterField(module, "render_max_distance", &render_max_distance);
-    SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
+    SettingsRegistry::RegisterField(module, "beam_height", &beam_height);
     SettingsRegistry::RegisterField(module, "show_reserved_for_others", &show_reserved_for_others);
-    SettingsRegistry::RegisterField(module, "enable_value_beacons", &enable_value_beacons);
-    SettingsRegistry::RegisterField(module, "value_threshold", &value_threshold);
-    SettingsRegistry::RegisterField(module, "value_color", &value_color);
+    SettingsRegistry::RegisterField(module, "value_low_enabled", &value_low.enabled);
+    SettingsRegistry::RegisterField(module, "value_low_threshold", &value_low.threshold);
+    SettingsRegistry::RegisterField(module, "value_low_color", &value_low.color);
+    SettingsRegistry::RegisterField(module, "value_high_enabled", &value_high.enabled);
+    SettingsRegistry::RegisterField(module, "value_high_threshold", &value_high.threshold);
+    SettingsRegistry::RegisterField(module, "value_high_color", &value_high.color);
     SettingsRegistry::RegisterField(module, "white_enabled", &rarity_white.enabled);
     SettingsRegistry::RegisterField(module, "white_color", &rarity_white.color);
     SettingsRegistry::RegisterField(module, "blue_enabled", &rarity_blue.enabled);
@@ -405,11 +460,17 @@ void LootBeaconsModule::DrawSettingsInternal()
     if (!GameWorldCompositor::IsActive())
         ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "In-world compositor FAILED to install." : "In-world compositor: not installed yet.");
 
-    ImGui::Checkbox("Beacon on valuable items", &enable_value_beacons);
-    ImGui::ShowHelp("Any drop whose Kamadan trader price meets the threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.");
-    if (enable_value_beacons) {
-        Colors::DrawSettingHueWheel("##value_color", &value_color);
-        ImGui::DragInt("Value threshold (gold)", &value_threshold, 50.f, 0, 1000000);
+    ImGui::TextUnformatted("Beacon by gold value");
+    ImGui::ShowHelp("Any drop whose Kamadan trader price meets a threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.\nAn item that clears both thresholds uses the higher tier's colour.");
+    for (auto* value : {&value_low, &value_high}) {
+        ImGui::PushID(value->label);
+        if (ImGui::Checkbox("##enabled", &value->enabled)) beacons_dirty = true;
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100.f);
+        ImGui::DragInt("##threshold", &value->threshold, 50.f, 0, 1000000);
+        ImGui::SameLine(180.f);
+        Colors::DrawSettingHueWheel("##color", &value->color);
+        ImGui::PopID();
     }
     ImGui::Separator();
     ImGui::TextUnformatted("Beacon by rarity");
@@ -424,6 +485,5 @@ void LootBeaconsModule::DrawSettingsInternal()
     ImGui::ShowHelp("Drawn dimmed. Off: only unreserved drops and drops assigned to you.");
 
     ImGui::Separator();
-    ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
-    ImGui::DragFloat("Maximum render distance", &render_max_distance, 25.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Beam height", &beam_height, 5.f, 10.f, 2000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
 }
