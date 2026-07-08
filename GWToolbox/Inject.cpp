@@ -234,7 +234,11 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
     InjectWindow inject;
     inject.SetInitialScanResult(std::move(scan));
     inject.Create();
-    inject.WaitMessages();
+
+    while (!inject.ShouldClose()) {
+        inject.PollMessages(16);
+        inject.Tick();
+    }
 
     size_t index;
     if (!inject.GetSelected(&index)) {
@@ -254,6 +258,8 @@ InjectWindow::InjectWindow()
     , m_hTroubleshootingLink(nullptr)
     , m_hRestartAsAdmin(nullptr)
     , m_hSettings(nullptr)
+    , m_hUpdateStatus(nullptr)
+    , m_hUpdateButton(nullptr)
     , m_hErrorBrush(CreateSolidBrush(RGB(255, 214, 224)))
     , m_Selected(-1)
 {
@@ -277,7 +283,7 @@ bool InjectWindow::Create()
         m_PendingScanResult = RunScan();
     }
     SetWindowName(L"GWToolbox - Launch");
-    SetWindowDimension(305, 135);
+    SetWindowDimension(305, 165);
     return Window::Create();
 }
 
@@ -355,13 +361,16 @@ void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         m_PendingScanResult.reset();
     }
 
+    m_UpdateChecker.Start(!settings.noexecheck, !settings.noupdate);
+
     BuildControls(hWnd);
 }
 
 void InjectWindow::BuildControls(HWND hWnd)
 {
     // A Retry rebuild starts from a blank slate rather than patching the previous state in place.
-    for (const auto handle : {&m_hCharacters, &m_hLaunchButton, &m_hErrorText, &m_hRetryButton, &m_hTroubleshootingLink, &m_hRestartAsAdmin, &m_hSettings}) {
+    for (const auto handle :
+         {&m_hCharacters, &m_hLaunchButton, &m_hErrorText, &m_hRetryButton, &m_hTroubleshootingLink, &m_hRestartAsAdmin, &m_hSettings, &m_hUpdateStatus, &m_hUpdateButton}) {
         if (*handle) {
             DestroyWindow(*handle);
             *handle = nullptr;
@@ -426,23 +435,60 @@ void InjectWindow::BuildControls(HWND hWnd)
     }
 
     if (m_ScanResult.m_TroubleshootingUrl) {
-        m_hTroubleshootingLink = CreateWindowW(WC_BUTTONW, L"Open troubleshooting guide", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(65), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
+        m_hTroubleshootingLink = CreateWindowW(WC_BUTTONW, L"Open troubleshooting guide", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(95), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
         SendMessageW(m_hTroubleshootingLink, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
     }
     else if (!IsRunningAsAdmin()) {
-        m_hRestartAsAdmin = CreateWindowW(WC_BUTTONW, L"Can't find your character?", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(65), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
+        m_hRestartAsAdmin = CreateWindowW(WC_BUTTONW, L"Can't find your character?", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(95), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
         SendMessageW(m_hRestartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
         Button_SetElevationRequiredState(m_hRestartAsAdmin, TRUE);
     }
 
+    // Update status row: status text and (when available) an Update button, both to the left of Settings.
+    m_hUpdateStatus = CreateWindowW(WC_STATICW, L"", WS_VISIBLE | WS_CHILD | SS_LEFT, Scale(10), Scale(65), Scale(115), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
+    SendMessageW(m_hUpdateStatus, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+    m_hUpdateButton = CreateWindowW(WC_BUTTONW, L"Update", WS_CHILD | WS_TABSTOP, Scale(130), Scale(65), Scale(60), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
+    SendMessageW(m_hUpdateButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
     m_hSettings = CreateWindowW(WC_BUTTONW, L"Settings...", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(200), Scale(65), Scale(80), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+    RefreshUpdateStatus();
 }
 
 void InjectWindow::Rescan()
 {
     m_ScanResult = RunScan();
     BuildControls(m_hWnd);
+}
+
+void InjectWindow::Tick()
+{
+    if (m_UpdateChecker.Poll()) {
+        RefreshUpdateStatus();
+    }
+}
+
+void InjectWindow::RefreshUpdateStatus()
+{
+    if (!m_hUpdateStatus) return; // controls not built yet
+
+    if (m_UpdateChecker.IsAnyUpdateAvailable()) {
+        SetWindowTextW(m_hUpdateStatus, L"Updates available!");
+        ShowWindow(m_hUpdateButton, SW_SHOW);
+        return;
+    }
+
+    ShowWindow(m_hUpdateButton, SW_HIDE);
+    SetWindowTextW(m_hUpdateStatus, m_UpdateChecker.IsChecking() ? L"Checking..." : L"");
+}
+
+void InjectWindow::SetControlsEnabled(const bool enabled)
+{
+    for (const HWND handle : {m_hCharacters, m_hLaunchButton, m_hRetryButton, m_hTroubleshootingLink, m_hRestartAsAdmin, m_hSettings, m_hUpdateButton}) {
+        if (handle) EnableWindow(handle, enabled);
+    }
 }
 
 void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationCode)
@@ -459,6 +505,15 @@ void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationC
     }
     else if (hWnd == m_hTroubleshootingLink && ControlId == STN_CLICKED) {
         ShellExecuteW(nullptr, L"open", m_ScanResult.m_TroubleshootingUrl, nullptr, nullptr, SW_SHOWNORMAL);
+    }
+    else if (hWnd == m_hUpdateButton && ControlId == STN_CLICKED) {
+        SetControlsEnabled(false);
+        std::wstring error;
+        if (!m_UpdateChecker.ApplyUpdates(error)) {
+            fprintf(stderr, "ApplyUpdates failed: %ls\n", error.c_str());
+        }
+        SetControlsEnabled(true);
+        RefreshUpdateStatus();
     }
     else if (hWnd == m_hSettings && ControlId == STN_CLICKED) {
         m_SettingsWindow.Create();

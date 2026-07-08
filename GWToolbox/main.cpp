@@ -6,7 +6,6 @@
 #include <Path.h>
 #include <RestClient.h>
 
-#include "Download.h"
 #include "Inject.h"
 #include "Install.h"
 #include "Process.h"
@@ -241,15 +240,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             }
         }
     }
-    else if (!settings.noupdate || !settings.noexecheck) {
-        // One Github fetch drives both the exe self-update prompt and the dll update.
-        std::wstring error;
-        if (!DownloadWindow::CheckForUpdates(error)) {
-            ShowError(std::format(L"Failed to download GWToolbox DLL: {}", error).c_str());
-            fprintf(stderr, "DownloadWindow::CheckForUpdates failed\n");
-            return 1;
-        }
-    }
+    // Exe/dll update checking now happens inside InjectWindow (status row + Update button), not here.
 
     if (settings.pid) {
         if (!proc.Open(settings.pid)) {

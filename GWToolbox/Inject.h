@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include "Download.h"
 #include "Process.h"
 #include "Settings.h"
 #include "Window.h"
@@ -66,6 +67,12 @@ private:
     void BuildControls(HWND hWnd);
     void Rescan();
 
+    // Advances the background update check and, on the tick it resolves, refreshes the status row. Call every message-loop tick.
+    void Tick();
+    // Syncs the status row's text/button to the current UpdateChecker state; safe to call whether or not the row has been built yet.
+    void RefreshUpdateStatus();
+    void SetControlsEnabled(bool enabled);
+
 private:
     HWND m_hCharacters;
     HWND m_hLaunchButton;
@@ -74,8 +81,11 @@ private:
     HWND m_hTroubleshootingLink;
     HWND m_hRestartAsAdmin;
     HWND m_hSettings;
+    HWND m_hUpdateStatus;
+    HWND m_hUpdateButton;
     HBRUSH m_hErrorBrush;
     SettingsWindow m_SettingsWindow;
+    UpdateChecker m_UpdateChecker;
 
     InjectScanResult m_ScanResult;
     std::optional<InjectScanResult> m_PendingScanResult;
