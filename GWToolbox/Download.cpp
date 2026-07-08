@@ -9,6 +9,8 @@
 #include "Download.h"
 
 #include "Install.h"
+#include "Settings.h"
+#include "WindowsDefender.h"
 
 namespace {
     std::unordered_map<std::string, std::string> cached_download_data;
@@ -442,6 +444,18 @@ bool UpdateChecker::Poll()
 bool UpdateChecker::ApplyUpdates(std::wstring& error)
 {
     if (!IsAnyUpdateAvailable()) return true;
+
+    // Unlike main.cpp's pre-injection check (which only covers Gw.exe), these writes are made by this launcher process itself.
+    if (!settings.quiet) {
+        const auto install_dir = GetInstallationDir();
+        if (!install_dir.empty()) {
+            std::vector<std::filesystem::path> cfa_apps = m_ExeInfo.targets; // installed and/or running exe, whichever are stale
+            std::filesystem::path running_exe;
+            if (PathGetExeFullPath(running_exe)) cfa_apps.push_back(running_exe); // covers a dll-only update, where m_ExeInfo.targets is empty
+            EnsureDefenderReadiness(install_dir.parent_path(), cfa_apps);
+        }
+    }
+
     if (!DownloadWindow::ApplyUpdates(m_Releases, m_ExeInfo, m_DllInfo, error)) return false;
 
     m_ExeInfo = {};
