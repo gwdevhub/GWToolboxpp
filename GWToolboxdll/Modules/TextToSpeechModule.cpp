@@ -590,7 +590,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         // but our refcount won't hit zero until this scope exits.
         const auto pos = GetAgentVec3f(agent_id);
         VoiceLog("Playing audio file: %s (estimated duration: %dms)", path.filename().string().c_str(), duration);
-        const uint32_t flags = is_dialog_window ? 0x4 : 0x1404;
+        const uint32_t flags = is_dialog_window ? SoundFlags_Dialog : (SoundFlags_Dialog | SoundFlags_Positional);
         const bool success = AudioSettings::PlaySound(path.wstring().c_str(), &pos, flags, &gw_handle);
 
         if (!success) {
@@ -1355,7 +1355,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     void OnPlaySound(GW::HookStatus* status, const wchar_t* filename, SoundProps* props)
     {
         if (status->blocked) return;
-        if (!(props && (props->flags & 0xffff) == 0x1404)) return;
+        if (!(props && (props->flags & 0xffff) == (SoundFlags_Dialog | SoundFlags_Positional))) return;
         if (GW::Map::GetIsInCinematic()) return;
         if (wcslen(filename) > 4) return;
         if (!GetApiKey()) return;
