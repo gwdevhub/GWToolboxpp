@@ -39,7 +39,10 @@
 #include <GWCA/Managers/PartyMgr.h>
 
 #include "Modules/SkillRangeRingsModule.h"
+#include "Utils/GameWorldCompositor.h"
+#include "Utils/SettingsRegistry.h"
 #include "Utils/TerrainDrape.h"
+#include "Utils/TextUtils.h"
 #include "Utils/ToolboxUtils.h"
 #include "Widgets/WorldMapWidget.h"
 #include "Windows/Pathfinding/PathfindingWindow.h"
@@ -430,6 +433,35 @@ namespace {
             }
             Log::Log("[harness] %s", b);
             write_status(b);
+            return;
+        }
+        if (verb == "settingsearch") { // settingsearch <query>: log registered settings matching <query>, same fields the settings-window search scans
+            std::string query;
+            std::getline(is, query);
+            query = TextUtils::ToLower(TextUtils::trim(query));
+            if (query.empty()) {
+                write_status("settingsearch: bad args (need: settingsearch <query>)");
+                return;
+            }
+            uint32_t hits = 0;
+            for (const auto& e : SettingsRegistry::GetEntries()) {
+                const bool hit = TextUtils::ToLower(e.label).find(query) != std::string::npos
+                                 || TextUtils::ToLower(e.section).find(query) != std::string::npos
+                                 || TextUtils::ToLower(e.description).find(query) != std::string::npos;
+                if (!hit) continue;
+                ++hits;
+                Log::Log("[settingsearch] %s > %s (%s.%s)", e.module->SettingsName(), e.label.c_str(), e.section.c_str(), e.key.c_str());
+            }
+            char b[96];
+            snprintf(b, sizeof(b), "settingsearch '%s': %u entries", query.c_str(), hits);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "frcache") { // log the FrCache render buffer layout for the next ~50 calls
+            GameWorldCompositor::RequestBufferDump();
+            write_status("frcache: dump queued");
             return;
         }
         if (verb == "mapinfo") {

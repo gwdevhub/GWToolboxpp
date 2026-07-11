@@ -33,6 +33,7 @@
 #include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Utils/EncString.h>
+#include <Utils/SettingsRegistry.h>
 #include <Utils/TextUtils.h>
 
 #include <GWCA/Context/GameplayContext.h>
@@ -598,6 +599,9 @@ namespace {
 
     std::vector<CustomRenderer::CustomLine*> navmesh_edge_lines; // viz-only navmesh poly-edge overlay
     PathfindingWindow::Settings settings;
+    constexpr const char* path_recalc_distance_help = "How far you must move (game units / gwinches) before the rendered quest path recomputes. Lower = more responsive but heavier; the recompute is also rate-capped to ~30/s.";
+    constexpr const char* navmesh_overlay_help = "Draw the navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included).";
+    constexpr const char* navmesh_sample_spacing_help = "How often the overlay samples terrain height when draping edges (game units). Lower = lines hug the floor/steps more exactly, but more vertices to build and draw.";
     std::vector<CustomRenderer::CustomLine*> bounds_lines;
     std::vector<CustomRenderer::CustomLine*> graph_edge_lines;
     std::vector<CustomRenderer::CustomLine*> portal_marker_lines;
@@ -2461,11 +2465,20 @@ namespace {
                 const auto packet = static_cast<GW::UI::UIPacket::kLoadMapContext*>(wParam);
                 if (packet->file_name && *packet->file_name) {
                     const uint32_t fid = ArenaNetFileParser::FileHashToFileId(packet->file_name);
-                    if (fid && !map_id_to_file_hash.contains(packet->map_id)) {
-                        map_id_to_file_hash[packet->map_id] = fid;
-                        // Rebuild graph to include newly discovered map
-                        map_graph_built = false;
-                        PATH_LOG_INFO("Discovered map %d file_id=0x%X", (int)packet->map_id, fid);
+                    if (fid) {
+                        const auto it = map_id_to_file_hash.find(packet->map_id);
+                        if (it == map_id_to_file_hash.end()) {
+                            map_id_to_file_hash[packet->map_id] = fid;
+                            // Rebuild graph to include newly discovered map
+                            map_graph_built = false;
+                            PATH_LOG_INFO("Discovered map %d file_id=0x%X", (int)packet->map_id, fid);
+                        }
+                        else if (it->second != fid) {
+                            // The client-loaded file is ground truth; a differing cached id means stale constant data.
+                            PATH_LOG_WARNING("[FileId] map %d: loaded file 0x%X overrides cached 0x%X", (int)packet->map_id, fid, it->second);
+                            it->second = fid;
+                            map_graph_built = false;
+                        }
                     }
                 }
 
@@ -2615,9 +2628,9 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
 void PathfindingWindow::DrawSettingsInternal()
 {
     ImGui::DragFloat("Path recalc distance", &settings.path_recalc_distance, 1.f, 1.f, 1000.f, "%.0f");
-    ImGui::ShowHelp("How far you must move (game units / gwinches) before the rendered quest path recomputes. Lower = more responsive but heavier; the recompute is also rate-capped to ~30/s.");
+    ImGui::ShowHelp(path_recalc_distance_help);
     ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
-    ImGui::ShowHelp("Draw the navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included).");
+    ImGui::ShowHelp(navmesh_overlay_help);
     ImGui::Separator();
     if (settings.draw_navmesh_overlay) {
         auto color_edit = [](const char* label, uint32_t* argb) {
@@ -2631,7 +2644,7 @@ void PathfindingWindow::DrawSettingsInternal()
             GameWorldRenderer::SetNavmeshSampleSpacing(settings.navmesh_sample_spacing);
             GameWorldRenderer::RedrapeNavmesh(); // re-drape live so the change is visible immediately
         }
-        ImGui::ShowHelp("How often the overlay samples terrain height when draping edges (game units). Lower = lines hug the floor/steps more exactly, but more vertices to build and draw.");
+        ImGui::ShowHelp(navmesh_sample_spacing_help);
         color_edit("Wall colour (ground plane)", &settings.navmesh_wall_color);
         color_edit("Wall colour (other planes)", &settings.navmesh_wall_color_hi);
         color_edit("Connection colour (ground plane)", &settings.navmesh_connection_color);
@@ -3085,6 +3098,14 @@ bool PathfindingWindow::IsRouteBreak(const GW::Vec2f& p)
 void PathfindingWindow::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
+    SettingsRegistry::Describe(this, "draw_navmesh_overlay", "Navmesh overlay", navmesh_overlay_help);
+    SettingsRegistry::Describe(this, "path_recalc_distance", "Path recalc distance", path_recalc_distance_help);
+    SettingsRegistry::Describe(this, "navmesh_sample_spacing", "Terrain sample spacing", navmesh_sample_spacing_help);
+    SettingsRegistry::Describe(this, "navmesh_wall_color", "Wall colour (ground plane)");
+    SettingsRegistry::Describe(this, "navmesh_wall_color_hi", "Wall colour (other planes)");
+    SettingsRegistry::Describe(this, "navmesh_connection_color", "Connection colour (ground plane)");
+    SettingsRegistry::Describe(this, "navmesh_connection_color_hi", "Connection colour (other planes)");
     pending_terminate = false; // module is now optional; a prior disable left this set, which would abort all routing
     pathing_enabled = true;
     BuildMapFileHashLookup();
