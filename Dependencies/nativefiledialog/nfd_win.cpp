@@ -361,6 +361,27 @@ static nfdresult_t SetDefaultPath( IFileDialog *dialog, const char *defaultPath 
     // Valid non results.
     if ( result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) || result == HRESULT_FROM_WIN32(ERROR_INVALID_DRIVE) )
     {
+        // defaultPath may be a full path ending in a filename that doesn't exist yet (e.g. a
+        // suggested save name) - SHCreateItemFromParsingName can't resolve a nonexistent leaf.
+        // Split off the parent folder (which does exist) and pre-fill the file name box separately.
+        wchar_t *sep = wcsrchr( defaultPathW, L'\\' );
+        if ( sep )
+        {
+            *sep = L'\0'; // temporarily split into folder + filename
+            IShellItem *parentFolder;
+            if ( SUCCEEDED(SHCreateItemFromParsingName( defaultPathW, NULL, IID_PPV_ARGS(&parentFolder) )) )
+            {
+                dialog->SetFolder( parentFolder );
+                parentFolder->Release();
+            }
+            dialog->SetFileName( sep + 1 );
+        }
+        else
+        {
+            // No folder component at all - just a suggested file name.
+            dialog->SetFileName( defaultPathW );
+        }
+
         NFDi_Free( defaultPathW );
         return NFD_OKAY;
     }
