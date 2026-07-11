@@ -51,12 +51,13 @@ void GWEventBus::Initialize()
                   static_cast<uint32_t>(GW::Map::GetMapID())});
         });
 
-    GW::UI::RegisterUIMessageCallback(
-        &on_mission_bonus_,
-        GW::UI::UIMessage::kObjectiveComplete, // GW calls the bonus "objective"
-        [this](GW::HookStatus*, GW::UI::UIMessage, void*, void*) {
-            Emit({GWEvent::Type::MissionBonus,
-                  static_cast<uint32_t>(GW::Map::GetMapID())});
+    // ObjectiveAdd: fires at mission start for each objective; type_flags 0x1 = bullet/sub-objective,
+    // 0x0 = base/primary objective. GoalEngine uses the base objective's completion to
+    // synthesize both MissionComplete and MissionBonus with a reliable map_id.
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveAdd>(
+        &on_objective_add_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveAdd* p) {
+            Emit({GWEvent::Type::ObjectiveAdd, p->objective_id, p->type});
         });
 
     GW::UI::RegisterUIMessageCallback(
@@ -79,7 +80,8 @@ void GWEventBus::Initialize()
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveDone>(
         &on_objective_done_,
         [this](GW::HookStatus*, const GW::Packet::StoC::ObjectiveDone* p) {
-            Emit({GWEvent::Type::ObjectiveDone, p->objective_id});
+            Emit({GWEvent::Type::ObjectiveDone, p->objective_id,
+                  static_cast<uint32_t>(GW::Map::GetMapID())});
         });
 
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ObjectiveUpdateName>(
@@ -205,7 +207,7 @@ void GWEventBus::Initialize()
 void GWEventBus::SignalTerminate()
 {
     GW::UI::RemoveUIMessageCallback(&on_mission_complete_);
-    GW::UI::RemoveUIMessageCallback(&on_mission_bonus_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::ObjectiveAdd>(&on_objective_add_);
     GW::UI::RemoveUIMessageCallback(&on_vanquish_complete_);
     GW::UI::RemoveUIMessageCallback(&on_party_defeated_);
     GW::StoC::RemoveCallback<GW::Packet::StoC::ObjectiveDone>(&on_objective_done_);

@@ -15,12 +15,13 @@ struct GWEvent {
     enum class Type : uint8_t {
         // UIMessage-sourced
         MissionComplete,        // id1 = map_id
-        MissionBonus,           // id1 = map_id  (kObjectiveComplete in GW terms)
+        MissionBonus,           // id1 = map_id
         VanquishComplete,       // id1 = map_id
         PartyDefeated,
 
         // StoC-sourced
-        ObjectiveDone,          // id1 = objective_id
+        ObjectiveAdd,           // id1 = objective_id, id2 = type_flags (0x1 = bullet/sub-objective)
+        ObjectiveDone,          // id1 = objective_id, id2 = map_id
         ObjectiveStarted,       // id1 = objective_id
         DoorOpen,               // id1 = object_id
         DoorClose,              // id1 = object_id
@@ -82,7 +83,7 @@ private:
     std::vector<std::pair<const void*, GWBusCallback>> subscribers_;
 
     GW::HookEntry on_mission_complete_;
-    GW::HookEntry on_mission_bonus_;
+    GW::HookEntry on_objective_add_;
     GW::HookEntry on_vanquish_complete_;
     GW::HookEntry on_party_defeated_;
     GW::HookEntry on_objective_done_;

@@ -27,7 +27,9 @@ public:
 private:
     bool DrawHeaderRow(const GoalList& list, int header_idx, const struct SplitsProfile& profile);
     void DrawGoalRow(const GoalEntry& g, const GoalClock& clock, int index,
-                     bool is_current, double pb_split, double pb_segment,
+                     bool is_current,
+                     double pb_split_real, double pb_seg_real,
+                     double pb_split_game, double pb_seg_game,
                      const struct SplitsProfile& profile);
     void DrawMissionBatchPicker(SplitsWindow& window);
     void DrawExplorableBatchPicker(SplitsWindow& window);
@@ -52,11 +54,12 @@ private:
     std::map<int, uint8_t> batch_town_checked_;
     char                   town_filter_buf_[128] = {};
 
+    // Running profile leg picker
+    int  run_map_id_    = 0;
+    char run_filter_[128] = {};
+
     int  edit_title_id_       = 0xff;
     int  edit_title_rank_     = -1; // 0-based tier index; -1 = unset (defaults to max on first use)
     char title_filter_buf_[128] = {};
 
-    // Running profile leg picker
-    int  run_map_id_    = 0;
-    char run_filter_[128] = {};
 };

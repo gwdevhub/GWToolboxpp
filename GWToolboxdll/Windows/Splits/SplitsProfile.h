@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <Color.h>
 
@@ -14,26 +15,25 @@ struct SplitsProfile {
     // Human-readable label shown in the profile switcher.
     std::string name;
 
-    // ---- Timer rules -------------------------------------------------------
-    bool game_time_explorable_only = false;
-
     // ---- Behavioural flags -------------------------------------------------
     bool stop_on_party_defeated = true;
     bool auto_send_age          = false;
-    // false (Dynamic) = any not-yet-completed goal's trigger can fire whenever met;
-    // true (Simple) = goals must complete strictly in list order.
-    bool simple_order           = false;
 
     // ---- Display settings --------------------------------------------------
-    bool use_game_time    = true;  // true = show game time column; false = show real time column
+    enum class TimeDisplay : uint8_t { Real = 0, Game = 1, Both = 2 };
+    TimeDisplay time_display       = TimeDisplay::Game;
+    bool        both_header_only   = false; // Both: show Real+Game in clock only, rows stay game-only
+    bool show_split_pb    = true;  // shows the cumulative-time-vs-PB delta under the time column
     bool show_segment     = true;
     bool show_segment_pb  = true;  // shows the segment-vs-PB-segment delta under the split column
     bool show_paused_time = false; // shows running total of manually-paused real time next to the clock
 
-    Color color_completed = Colors::RGB(0,   255, 0  );
-    Color color_active    = Colors::RGB(255, 255, 255);
-    Color color_inactive  = Colors::ARGB(255, 128, 128, 128);
-    Color color_failed    = Colors::RGB(255, 0,   0  );
+    Color color_completed = Colors::RGB(0,   255, 0  );   // goal label: done
+    Color color_active    = Colors::RGB(255, 255, 255);   // goal label: current objective
+    Color color_real_time = Colors::RGB(230, 230, 230);   // real time text; segment uses muted
+    Color color_game_time = Colors::RGB(153, 217, 255);   // game time text; segment uses muted
+    Color color_pb_ahead  = Colors::RGB(255, 217,   0);   // PB delta: ahead
+    Color color_pb_behind = Colors::RGB(255, 102, 102);   // PB delta: behind; also failed goal label
 
     // ---- Goal list binding -------------------------------------------------
     // Manual/Running: remembers the last-used list so it reloads on profile switch.

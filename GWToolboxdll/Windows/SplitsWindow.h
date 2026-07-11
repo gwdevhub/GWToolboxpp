@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <string>
+#include <vector>
 #include <ToolboxWindow.h>
 
 #include <Windows/Splits/GoalClock.h>

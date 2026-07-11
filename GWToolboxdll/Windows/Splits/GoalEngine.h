@@ -15,24 +15,31 @@ public:
     void Attach(GoalList* list);
     void Detach();
 
-    // Returns the index of a goal that just completed this frame, or -1.
-    // simple_order: when true, only the earliest not-yet-completed goal's end trigger is
-    // ever checked, so goals must complete strictly in list order. When false (dynamic),
-    // every not-yet-completed goal's trigger is checked, so any of them can fire whenever
-    // its own condition is met, regardless of list position.
+    // Returns the count of goals that fired this tick (0 = none).
+    // Ordered trigger types (explorable/town/level/manual) act as barriers: an unmet
+    // ordered goal blocks all subsequent goals in the pass. Unordered types (mission/bonus/
+    // title/objective events) never block each other, so e.g. MissionComplete + MissionBonus
+    // can both fire in the same tick.
+    // When sequential=true, MapEnter goals fire on any explorable entry (map_id ignored) —
+    // used by the Running profile to advance splits in order without map-ID matching.
     int Update(const GoalClock& clock,
                GW::Constants::MapID current_map,
                bool just_entered_map,
                bool came_from_explorable,
                GW::Constants::InstanceType instance_type,
                int  player_level,
-               bool simple_order = false);
+               bool sequential = false);
 
     void TriggerManual(const GoalClock& clock);
 
-    void NotifyMissionComplete(GW::Constants::MapID map);
+    // Returns true if the bonus bit was also set (WorldContext bitmask check).
+    bool NotifyMissionComplete(GW::Constants::MapID map);
     void NotifyMissionBonus(GW::Constants::MapID map);
     void NotifyVanquishComplete(GW::Constants::MapID map);
+    // Tracks which objective is the base/primary (type_flags without BULLET bit).
+    // When that objective fires ObjectiveDone, GoalEngine synthesizes both
+    // MissionComplete and MissionBonus with the correct server-side map_id.
+    void NotifyObjectiveAdd(uint32_t obj_id, uint32_t type_flags);
 
     // Generic event notification for preset-only triggers (DoorOpen, ObjectiveDone, etc.)
     // str is only needed for ServerMessage/DisplayDialogue and must remain valid until Update() runs.
@@ -46,9 +53,10 @@ public:
     // Goals that never started (NotStarted) and goals already Completed are untouched.
     void FailRun(const GoalClock& clock);
 
-    [[nodiscard]] bool HasList()   const { return list_ != nullptr; }
-    [[nodiscard]] bool IsStarted() const { return started_; }
-    [[nodiscard]] GoalList* List() const { return list_; }
+    [[nodiscard]] bool     HasList()       const { return list_ != nullptr; }
+    [[nodiscard]] bool     IsStarted()     const { return started_; }
+    [[nodiscard]] GoalList* List()         const { return list_; }
+    [[nodiscard]] uint32_t PrimaryObjId() const { return primary_obj_id_; }
 
 private:
     void FireGoal(int index, const GoalClock& clock);
@@ -73,6 +81,13 @@ private:
     GW::Constants::MapID mission_complete_map_  = GW::Constants::MapID::None;
     GW::Constants::MapID mission_bonus_map_     = GW::Constants::MapID::None;
     GW::Constants::MapID vanquish_complete_map_ = GW::Constants::MapID::None;
+    // Base/primary objective id (type_flags & 0x1 == 0, no BULLET bit).
+    // When this objective fires ObjectiveDone, both mission_complete_map_ and
+    // mission_bonus_map_ are set using the reliable server-side map_id (Prophecies path).
+    uint32_t             primary_obj_id_        = 0;
+    // WorldContext missions_bonus bitmask is historical (not cleared on instance load).
+    // Snapshot the bit at entry so we can distinguish "earned this run" from "done before".
+    bool                 bonus_was_set_at_entry_ = false;
 
     std::vector<PendingEvent> pending_events_;
 };

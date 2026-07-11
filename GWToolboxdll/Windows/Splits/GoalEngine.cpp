@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GoalEngine.h"
 
+#include <GWCA/Context/WorldContext.h>
+
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/GameEntities/Title.h>
 #include <GWCA/Managers/PartyMgr.h>
@@ -35,19 +37,45 @@ void GoalEngine::Reset()
     prev_map_             = GW::Constants::MapID::None;
     last_real_            = 0.0;
     last_game_            = 0.0;
-    mission_complete_map_ = GW::Constants::MapID::None;
-    mission_bonus_map_    = GW::Constants::MapID::None;
+    mission_complete_map_   = GW::Constants::MapID::None;
+    mission_bonus_map_      = GW::Constants::MapID::None;
+    vanquish_complete_map_  = GW::Constants::MapID::None;
+    primary_obj_id_         = 0;
+    bonus_was_set_at_entry_ = false;
     if (list_) list_->ResetRunState();
 }
 
-void GoalEngine::NotifyMissionComplete(GW::Constants::MapID map)
+bool GoalEngine::NotifyMissionComplete(GW::Constants::MapID map)
 {
     mission_complete_map_ = map;
+
+    // missions_bonus bitmask is historical — bit stays set from previous runs.
+    // Only count it if the bit was clear when this instance loaded (earned this run).
+    if (bonus_was_set_at_entry_) return false;
+
+    const auto* w = GW::GetWorldContext();
+    if (!w) return false;
+    const uint32_t idx  = static_cast<uint32_t>(map);
+    const uint32_t word = idx >> 5;
+    const uint32_t bit  = 1u << (idx & 31);
+    if (word < w->missions_bonus.size() && (w->missions_bonus[word] & bit)) {
+        mission_bonus_map_ = map;
+        return true;
+    }
+    return false;
 }
 
 void GoalEngine::NotifyMissionBonus(GW::Constants::MapID map)
 {
     mission_bonus_map_ = map;
+}
+
+void GoalEngine::NotifyObjectiveAdd(uint32_t obj_id, uint32_t type_flags)
+{
+    // No BULLET bit (0x1) = base/primary objective. Its ObjectiveDone fires
+    // reliable MissionComplete + MissionBonus signals in Update() (Prophecies path).
+    if (!(type_flags & 0x1))
+        primary_obj_id_ = obj_id;
 }
 
 void GoalEngine::NotifyVanquishComplete(GW::Constants::MapID map)
@@ -73,7 +101,7 @@ int GoalEngine::Update(const GoalClock& clock,
                        bool came_from_explorable,
                        GW::Constants::InstanceType instance_type,
                        int  player_level,
-                       bool simple_order)
+                       bool sequential)
 {
     const bool is_explorable = (instance_type == GW::Constants::InstanceType::Explorable);
 
@@ -82,13 +110,52 @@ int GoalEngine::Update(const GoalClock& clock,
         mission_complete_map_ = GW::Constants::MapID::None;
         mission_bonus_map_    = GW::Constants::MapID::None;
         pending_events_.clear();
-        return -1;
+        return 0;
     }
 
     if (!started_ && just_entered_map)
         started_ = true;
 
-    int fired = -1;
+    // Snapshot the WorldContext bonus bit on map entry so NotifyMissionComplete can
+    // distinguish "earned this run" (bit was clear at entry) from a historical bit
+    // left over from a previous completion.
+    if (just_entered_map && current_map != GW::Constants::MapID::None) {
+        const auto* w = GW::GetWorldContext();
+        if (w) {
+            const uint32_t idx  = static_cast<uint32_t>(current_map);
+            const uint32_t word = idx >> 5;
+            const uint32_t bit  = 1u << (idx & 31);
+            bonus_was_set_at_entry_ = (word < w->missions_bonus.size()) &&
+                                      ((w->missions_bonus[word] & bit) != 0);
+        } else {
+            bonus_was_set_at_entry_ = false;
+        }
+    }
+
+    int fired = 0;
+
+    // Returns true for trigger types that act as barriers in Pass 2:
+    // an unmet ordered goal stops the loop so later goals cannot fire out of sequence.
+    // Unordered types (mission/bonus/title/objective events) never block each other.
+    auto is_ordered = [](GoalTrigger::Type type) -> bool {
+        switch (type) {
+            case GoalTrigger::Type::MissionComplete:
+            case GoalTrigger::Type::MissionBonus:
+            case GoalTrigger::Type::ReachTitleRank:
+            case GoalTrigger::Type::ObjectiveDone:
+            case GoalTrigger::Type::DoorOpen:
+            case GoalTrigger::Type::DoorClose:
+            case GoalTrigger::Type::AgentUpdateAllegiance:
+            case GoalTrigger::Type::DoACompleteZone:
+            case GoalTrigger::Type::DungeonReward:
+            case GoalTrigger::Type::ServerMessage:
+            case GoalTrigger::Type::DisplayDialogue:
+            case GoalTrigger::Type::ObjectiveStarted:
+                return false;
+            default:
+                return true;
+        }
+    };
 
     // Returns true when trigger 't' matches any event currently in pending_events_.
     auto matchesPendingTrigger = [&](const GoalTrigger& tr) -> bool {
@@ -124,6 +191,20 @@ int GoalEngine::Update(const GoalClock& clock,
     };
 
     if (started_) {
+        // If the base/primary objective (type=0 at mission start) fires ObjectiveDone,
+        // synthesize MissionComplete (and conditionally MissionBonus) using the reliable
+        // server-side map_id from the packet. This covers missions where kMissionComplete
+        // fires with a wrong/missing map_id (e.g. GNW in Prophecies).
+        // Delegates to NotifyMissionComplete so the WorldContext bonus-bitmask check runs
+        // in one place — bonus only fires if the server has already set the bit.
+        if (primary_obj_id_ != 0) {
+            for (const auto& ev : pending_events_) {
+                if (ev.type == GoalTrigger::Type::ObjectiveDone &&
+                    ev.id1 == primary_obj_id_ && ev.id2 != 0)
+                    (void)NotifyMissionComplete(static_cast<GW::Constants::MapID>(ev.id2));
+            }
+        }
+
         // Pass 1: check start triggers — records when each objective begins.
         // Checked for ALL non-completed goals (supports parallel objectives like Deep rooms 1-4).
         std::vector<const GoalTrigger*> claimed_this_tick;
@@ -166,7 +247,7 @@ int GoalEngine::Update(const GoalClock& clock,
             // A goal with a start_trigger must be Started before it can complete,
             // preventing its start and end from firing on the same map-entry tick.
             if (g.start_trigger.has_value() && g.status == GoalStatus::NotStarted) {
-                if (simple_order) break; // strict order: this goal blocks all later ones too
+                if (is_ordered(g.trigger.type)) break;
                 continue;
             }
 
@@ -175,7 +256,9 @@ int GoalEngine::Update(const GoalClock& clock,
 
             switch (t.type) {
                 case GoalTrigger::Type::MapEnter:
-                    fire = just_entered_map && (current_map == t.map_id);
+                    // Sequential (Running): any zone transition fires the next split in order.
+                    // Non-sequential (Manual): requires the specific map_id.
+                    fire = sequential ? just_entered_map : (just_entered_map && current_map == t.map_id);
                     break;
 
                 case GoalTrigger::Type::EnterExplorable:
@@ -190,15 +273,17 @@ int GoalEngine::Update(const GoalClock& clock,
                     fire = (vanquish_complete_map_ == t.map_id);
                     break;
 
-                case GoalTrigger::Type::MissionComplete:
-                    fire = (mission_complete_map_ == t.map_id) &&
-                           (!t.hard_mode || GW::PartyMgr::GetIsPartyInHardMode());
+                case GoalTrigger::Type::MissionComplete: {
+                    const bool hm_ok = !t.hard_mode || GW::PartyMgr::GetIsPartyInHardMode();
+                    fire = (mission_complete_map_ == t.map_id) && hm_ok;
                     break;
+                }
 
-                case GoalTrigger::Type::MissionBonus:
-                    fire = (mission_bonus_map_ == t.map_id) &&
-                           (!t.hard_mode || GW::PartyMgr::GetIsPartyInHardMode());
+                case GoalTrigger::Type::MissionBonus: {
+                    const bool hm_ok = !t.hard_mode || GW::PartyMgr::GetIsPartyInHardMode();
+                    fire = (mission_bonus_map_ == t.map_id) && hm_ok;
                     break;
+                }
 
                 case GoalTrigger::Type::ReachLevel:
                     fire = (player_level >= t.level);
@@ -257,10 +342,21 @@ int GoalEngine::Update(const GoalClock& clock,
                     FireGoal(i, clock);
                     CompletePreviousGoals(i, clock);
                 }
-                fired = i;
+                fired++;
+                if (is_ordered(t.type)) break;
+            }
+            if (!fire && is_ordered(g.trigger.type)) {
+                // Running: skip non-matching goals so earlier entries in the list don't block
+                // later ones when the start zone is already behind the runner.
+                if (sequential) continue;
+                // A Manual goal that has already Started should not block subsequent auto-
+                // completing goals (e.g. an "Add End" MapEnter with auto_complete_previous
+                // that closes this leg when the player reaches the next town/explorable).
+                if (g.trigger.type == GoalTrigger::Type::Manual &&
+                    g.status == GoalStatus::Started)
+                    continue;
                 break;
             }
-            if (simple_order) break; // strict order: stop at the earliest pending goal
         } // end Pass 2
     }
 

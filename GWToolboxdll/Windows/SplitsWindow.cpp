@@ -126,8 +126,11 @@ void SplitsWindow::Initialize()
                 if (ActiveProfile().stop_on_party_defeated && clock_.IsRunning())
                     FailRun();
                 break;
+            case T::ObjectiveAdd:
+                engine_.NotifyObjectiveAdd(e.id1, e.id2);
+                break;
             case T::ObjectiveDone:
-                engine_.NotifyEvent(GoalTrigger::Type::ObjectiveDone, e.id1);
+                engine_.NotifyEvent(GoalTrigger::Type::ObjectiveDone, e.id1, e.id2); // id2 = map_id
                 break;
             case T::ObjectiveStarted:
                 engine_.NotifyEvent(GoalTrigger::Type::ObjectiveStarted, e.id1);
@@ -192,6 +195,7 @@ void SplitsWindow::Initialize()
                 break;
         }
     });
+
 }
 
 void SplitsWindow::Terminate()
@@ -426,6 +430,7 @@ void SplitsWindow::ApplyResume()
     engine_.Detach();
     active_list_.LoadFromFile(list_path);
     engine_.Attach(&active_list_);
+    LoadPB();
 
     for (size_t i = 0; i < j.goals.size() && i < active_list_.goals.size(); ++i) {
         const auto& jg = j.goals[i];
@@ -602,12 +607,11 @@ void SplitsWindow::Update(float delta)
     // a manual pause, so it can't be used to measure how long the pause lasted).
     if (manually_paused_)
         manual_pause_accum_ += static_cast<double>(delta);
-    // Manual (idx 0) also pauses while a mission-start ready-check queue is up.
+    // Manual (idx 0): pause game time during loading, cinematics, and mission-start queues.
+    // Running (idx 1): game time is controlled entirely by the clock pause below (explorable only).
     const bool time_paused = is_loading || in_cinematic
-        || (ActiveProfile().game_time_explorable_only && !is_explorable)
         || (active_profile_idx_ == 0 && in_mission_queue_);
 
-    // Real: raw wall-clock, never paused.
     clock_.AddRealTime(static_cast<double>(delta));
 
     if (!time_paused)
@@ -619,43 +623,21 @@ void SplitsWindow::Update(float delta)
     if (controlled_living)
         player_level = static_cast<int>(controlled_living->level);
 
-    // Running: pause clock at load-start, resume only when the player struct is available.
-    // Avoids "is_loading" flickering causing the timer to flap start/stop.
+    // Running: clock only ticks in explorable areas (no loading, no town time).
     if (active_profile_idx_ == 1) {
-        if (is_loading && clock_.IsRunning() && !running_load_paused_) {
+        if (!is_explorable && clock_.IsRunning() && !running_load_paused_) {
             clock_.Pause();
             running_load_paused_ = true;
-        } else if (running_load_paused_ && !is_loading && controlled) {
-            clock_.Resume();
-            running_load_paused_ = false;
         }
+        // Arm movement detector whenever in explorable and clock isn't active — matches
+        // GWChrono's continuous check so the player doesn't need to re-zone to arm.
+        if (is_explorable && !clock_.IsRunning() && !run_complete_ && !run_failed_)
+            running_awaiting_movement_ = true;
     }
 
-    // Running: two-stage auto-start.
-    // Stage 1 (map entry): arm the movement detector when entering the first goal's map.
-    // Stage 2 (movement/shadow step): start the clock the moment the runner actually moves.
-    if (active_profile_idx_ == 1 && !clock_.IsRunning() && !run_complete_ && !run_failed_) {
-        // Find the first non-header goal with a MapEnter start trigger.
-        const GoalEntry* first_goal = nullptr;
-        for (const auto& g : active_list_.goals) {
-            if (g.is_header) continue;
-            first_goal = &g;
-            break;
-        }
-        const bool has_start_map = first_goal &&
-            first_goal->start_trigger.has_value() &&
-            first_goal->start_trigger->type == GoalTrigger::Type::MapEnter;
-
-        // Stage 1: entering the first goal's map arms the detector.
-        if (just_entered_map) {
-            running_awaiting_movement_ =
-                has_start_map && (last_map_ == first_goal->start_trigger->map_id);
-        }
-
-        // Stage 2: movement or shadow step fires the clock.
-        // Gated on !is_loading: stale move_x/y values from the previous map linger
-        // during loading and would otherwise trigger a spurious start.
-        if (running_awaiting_movement_ && !is_loading) {
+    // Running: movement or shadow step in an explorable starts or resumes the clock.
+    if (active_profile_idx_ == 1 && !run_complete_ && !run_failed_) {
+        if (running_awaiting_movement_ && is_explorable) {
             const uint32_t skill = pending_skill_id_;
             pending_skill_id_    = 0;
 
@@ -663,49 +645,67 @@ void SplitsWindow::Update(float delta)
             if (!triggered) {
                 triggered = controlled_living &&
                     (controlled_living->GetIsMoving() ||
+                     controlled_living->model_state == 204 ||
                      controlled_living->move_x != 0.f ||
                      controlled_living->move_y != 0.f);
             }
 
             if (triggered) {
                 running_awaiting_movement_ = false;
-                run_complete_   = false;
-                run_failed_     = false;
-                run_char_name_.clear();
-                run_char_level_ = player_level;
-                run_start_unix_ = static_cast<int64_t>(time(nullptr));
-                if (const wchar_t* wname = GW::PlayerMgr::GetPlayerName()) {
-                    const int sz = WideCharToMultiByte(CP_UTF8, 0, wname, -1, nullptr, 0, nullptr, nullptr);
-                    if (sz > 1) {
-                        run_char_name_.resize(static_cast<size_t>(sz) - 1);
-                        WideCharToMultiByte(CP_UTF8, 0, wname, -1, run_char_name_.data(), sz, nullptr, nullptr);
+                if (running_load_paused_) {
+                    // Mid-run resume after a town or loading screen.
+                    clock_.Resume();
+                    running_load_paused_ = false;
+                } else {
+                    // Initial run start.
+                    run_complete_   = false;
+                    run_failed_     = false;
+                    run_char_name_.clear();
+                    run_char_level_ = player_level;
+                    run_start_unix_ = static_cast<int64_t>(time(nullptr));
+                    if (const wchar_t* wname = GW::PlayerMgr::GetPlayerName()) {
+                        const int sz = WideCharToMultiByte(CP_UTF8, 0, wname, -1, nullptr, 0, nullptr, nullptr);
+                        if (sz > 1) {
+                            run_char_name_.resize(static_cast<size_t>(sz) - 1);
+                            WideCharToMultiByte(CP_UTF8, 0, wname, -1, run_char_name_.data(), sz, nullptr, nullptr);
+                        }
                     }
+                    ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - run starting");
+                    ObjectiveTimerWindow::BroadcastWebsocket("start", "Splits: Start - movement detected");
+                    clock_.Start();
+                    engine_.ForceStarted();
                 }
-                ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - run starting");
-                ObjectiveTimerWindow::BroadcastWebsocket("start", "Splits: Start - movement detected");
-                clock_.Start();
-                engine_.ForceStarted();
             }
         } else {
-            pending_skill_id_ = 0; // drain bus when not armed
+            pending_skill_id_ = 0;
         }
     }
 
-    const int fired = engine_.Update(clock_, last_map_, just_entered_map,
+    // Running (sequential): split on every zone transition after the clock has started.
+    // No zone-type filter — routes can pass through towns/outposts as checkpoints.
+    // Manual: fire on any map entry.
+    const bool fire_map_enter = active_profile_idx_ != 1
+        ? just_entered_map
+        : (just_entered_map && clock_.RealTime() > 0.0);
+
+    const int fired = engine_.Update(clock_, last_map_, fire_map_enter,
                                      came_from_explorable, instance_type,
-                                     player_level, ActiveProfile().simple_order);
+                                     player_level,
+                                     /*sequential=*/(active_profile_idx_ == 1));
 
     if (clock_.IsRunning()) {
         resume_save_timer_ += static_cast<float>(delta);
-        if (fired >= 0 || resume_save_timer_ >= 1.0f) {
+        if (fired > 0 || resume_save_timer_ >= 1.0f) {
             SaveResumeState();
             resume_save_timer_ = 0.f;
         }
-        if (fired >= 0)
+        if (fired > 0)
             ObjectiveTimerWindow::BroadcastWebsocket("split", "Splits: Split - goal complete");
     }
 
-    if (!run_complete_ && !run_failed_ && clock_.IsRunning() && !active_list_.goals.empty()) {
+    // Running: also check completion when a split just fired with the clock paused (final outpost entry).
+    if (!run_complete_ && !run_failed_ && !active_list_.goals.empty() &&
+        (clock_.IsRunning() || (active_profile_idx_ == 1 && fired > 0))) {
         bool all_done = true;
         for (const auto& g : active_list_.goals) {
             if (g.is_header) continue;
@@ -727,29 +727,38 @@ void SplitsWindow::Update(float delta)
     if (poll_key(key_split_, key_split_prev_)) TriggerManualSplit();
 
     // Manual: auto-start clock when the first goal fires (any trigger, including a manual Split).
-    // Checked here so it catches both engine_.Update() fires and TriggerManualSplit() fires.
-    // Excludes manually_paused_ so a user-initiated pause doesn't get immediately undone by
-    // the first goal's already-fired status (it was fired before the pause, not by it).
+    // For Mission/MissionBonus/VanquishComplete first goals, also start on map entry into
+    // the goal's map — so the clock is running for the whole attempt, not just from completion.
+    // Excludes manually_paused_ so a user-initiated pause doesn't get immediately undone.
     if (active_profile_idx_ == 0 && !clock_.IsRunning() && !run_complete_ && !run_failed_ &&
         !manually_paused_) {
+        bool should_start = false;
         for (const auto& g : active_list_.goals) {
             if (g.is_header) continue;
             if (g.status == GoalStatus::Started || g.status == GoalStatus::Completed) {
-                run_char_name_.clear();
-                run_char_level_ = player_level;
-                run_start_unix_ = static_cast<int64_t>(time(nullptr));
-                if (const wchar_t* wname = GW::PlayerMgr::GetPlayerName()) {
-                    const int sz = WideCharToMultiByte(CP_UTF8, 0, wname, -1, nullptr, 0, nullptr, nullptr);
-                    if (sz > 1) {
-                        run_char_name_.resize(static_cast<size_t>(sz) - 1);
-                        WideCharToMultiByte(CP_UTF8, 0, wname, -1, run_char_name_.data(), sz, nullptr, nullptr);
-                    }
-                }
-                ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - run starting");
-                ObjectiveTimerWindow::BroadcastWebsocket("start", "Splits: Start - first goal fired");
-                clock_.Start();
+                should_start = true;
+            } else if (just_entered_map && last_map_ == g.trigger.map_id) {
+                using TT = GoalTrigger::Type;
+                const auto tt = g.trigger.type;
+                if (tt == TT::MissionComplete || tt == TT::MissionBonus || tt == TT::VanquishComplete)
+                    should_start = true;
             }
             break; // only check the first non-header goal
+        }
+        if (should_start) {
+            run_char_name_.clear();
+            run_char_level_ = player_level;
+            run_start_unix_ = static_cast<int64_t>(time(nullptr));
+            if (const wchar_t* wname = GW::PlayerMgr::GetPlayerName()) {
+                const int sz = WideCharToMultiByte(CP_UTF8, 0, wname, -1, nullptr, 0, nullptr, nullptr);
+                if (sz > 1) {
+                    run_char_name_.resize(static_cast<size_t>(sz) - 1);
+                    WideCharToMultiByte(CP_UTF8, 0, wname, -1, run_char_name_.data(), sz, nullptr, nullptr);
+                }
+            }
+            ObjectiveTimerWindow::BroadcastWebsocket("reset", "Splits: Reset - run starting");
+            ObjectiveTimerWindow::BroadcastWebsocket("start", "Splits: Start - first goal fired");
+            clock_.Start();
         }
     }
 }
@@ -766,6 +775,7 @@ void SplitsWindow::Draw(IDirect3DDevice9*)
 void SplitsWindow::DrawSettingsInternal()
 {
     window_.DrawSettings(*this);
+
 }
 
 // ---------------------------------------------------------------------------

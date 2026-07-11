@@ -7,6 +7,7 @@
 #include <Windows/Splits/GoalList.h>
 #include <Windows/Splits/GoalClock.h>
 #include <Windows/Splits/MapNames.h>
+#include <Windows/SettingsWindow.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -31,16 +32,13 @@ static void FormatTime(char* buf, int bufsz, double seconds)
         snprintf(buf, bufsz, "%02d:%02d.%02d", m, s, cs);
 }
 
-static void DrawPBDelta(double actual, double pb_split)
+static void DrawPBDelta(double actual, double pb_split, ImVec4 col_ahead, ImVec4 col_behind)
 {
     if (std::isnan(pb_split) || std::isnan(actual)) return;
     const double delta = actual - pb_split;
     char dbuf[32];
     FormatTime(dbuf, sizeof(dbuf), std::abs(delta));
-    if (delta < 0.0)
-        ImGui::TextColored({1.f, 0.85f, 0.0f, 1.f}, "-%s", dbuf);
-    else
-        ImGui::TextColored({1.f, 0.4f, 0.4f, 1.f}, "+%s", dbuf);
+    ImGui::TextColored(delta < 0.0 ? col_ahead : col_behind, delta < 0.0 ? "-%s" : "+%s", dbuf);
 }
 
 // ---------------------------------------------------------------------------
@@ -115,16 +113,25 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
     // Header clock — shows whichever time the profile is set to display, plus run controls.
     {
         const SplitsProfile& hp = plugin.ActiveProfile();
-        const bool gt = hp.use_game_time;
-        char tbuf[32];
-        FormatTime(tbuf, sizeof(tbuf), gt ? clock.GameTime() : clock.RealTime());
-        const char* label = gt ? "Game: " : "Real: ";
-        const ImVec4 tcol = gt ? ImVec4{0.6f, 0.85f, 1.f, 1.f} : ImVec4{0.9f, 0.9f, 0.9f, 1.f};
+        using TD = SplitsProfile::TimeDisplay;
+        const auto td = hp.time_display;
+        const float avail = ImGui::GetContentRegionAvail().x;
+        const float min_x = ImGui::GetCursorPosX();
 
-        const float avail   = ImGui::GetContentRegionAvail().x;
-        const float total_w = ImGui::CalcTextSize(label).x + ImGui::CalcTextSize(tbuf).x;
-        const float start_x = ImGui::GetCursorPosX() + (avail - total_w) * 0.5f;
-        const float min_x   = ImGui::GetCursorPosX();
+        char tbuf_r[32], tbuf_g[32];
+        FormatTime(tbuf_r, sizeof(tbuf_r), clock.RealTime());
+        FormatTime(tbuf_g, sizeof(tbuf_g), clock.GameTime());
+
+        float total_w;
+        if (td == TD::Both) {
+            total_w = ImGui::CalcTextSize("Real: ").x + ImGui::CalcTextSize(tbuf_r).x
+                    + ImGui::CalcTextSize("  Game: ").x + ImGui::CalcTextSize(tbuf_g).x;
+        } else {
+            const bool gt = (td == TD::Game);
+            const char* lbl = gt ? "Game: " : "Real: ";
+            total_w = ImGui::CalcTextSize(lbl).x + ImGui::CalcTextSize(gt ? tbuf_g : tbuf_r).x;
+        }
+        const float start_x = min_x + (avail - total_w) * 0.5f;
         const float clamped_start_x = start_x < min_x ? min_x : start_x;
 
         if (hp.show_paused_time) {
@@ -137,26 +144,39 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
             ImGui::SameLine(0, 0);
         }
 
+        const ImVec4 real_col = ImGui::ColorConvertU32ToFloat4(hp.color_real_time);
+        const ImVec4 game_col = ImGui::ColorConvertU32ToFloat4(hp.color_game_time);
         ImGui::SetCursorPosX(clamped_start_x);
-        ImGui::TextColored(tcol, "%s%s", label, tbuf);
+        if (td == TD::Both) {
+            ImGui::TextColored(real_col, "Real: %s", tbuf_r);
+            ImGui::SameLine(0, 0);
+            ImGui::TextColored(game_col, "  Game: %s", tbuf_g);
+        } else {
+            const bool gt = (td == TD::Game);
+            ImGui::TextColored(gt ? game_col : real_col, gt ? "Game: %s" : "Real: %s", gt ? tbuf_g : tbuf_r);
+        }
 
-        // Run controls, right-aligned on the same row as the clock.
+        // Run controls + settings gear, right-aligned on the same row as the clock.
         const bool   running = plugin.Clock().IsRunning();
         const char*  lbl0    = running ? "Pause" : "Start";
         const float  fp_x    = ImGui::GetStyle().FramePadding.x;
         const float  sp      = ImGui::GetStyle().ItemSpacing.x;
-        const float  bw0     = ImGui::CalcTextSize(lbl0).x    + fp_x * 2.f;
-        const float  bw1     = ImGui::CalcTextSize("Reset").x + fp_x * 2.f;
-        const float  bw2     = ImGui::CalcTextSize("Split").x + fp_x * 2.f;
-        const float  buttons_w = bw0 + bw1 + bw2 + sp * 2.f;
+        const float  bw0     = ImGui::CalcTextSize(lbl0).x          + fp_x * 2.f;
+        const float  bw1     = ImGui::CalcTextSize("Reset").x        + fp_x * 2.f;
+        const float  bw2     = ImGui::CalcTextSize("Split").x        + fp_x * 2.f;
+        const float  bwg     = ImGui::CalcTextSize(ICON_FA_COGS).x  + fp_x * 2.f;
+        const float  buttons_w = bw0 + bw1 + bw2 + bwg + sp * 3.f;
         const float  button_x  = min_x + avail - buttons_w;
 
         ImGui::SameLine(button_x);
-        if (ImGui::Button(lbl0,    {bw0, 0})) plugin.StartRun();
+        if (ImGui::Button(lbl0,          {bw0, 0})) plugin.StartRun();
         ImGui::SameLine(0, sp);
-        if (ImGui::Button("Reset", {bw1, 0})) plugin.ResetRun();
+        if (ImGui::Button("Reset",       {bw1, 0})) plugin.ResetRun();
         ImGui::SameLine(0, sp);
-        if (ImGui::Button("Split", {bw2, 0})) plugin.TriggerManualSplit();
+        if (ImGui::Button("Split",       {bw2, 0})) plugin.TriggerManualSplit();
+        ImGui::SameLine(0, sp);
+        if (ImGui::Button(ICON_FA_COGS,  {bwg, 0}))
+            SettingsWindow::Instance().NavigateToSection(plugin.SettingsName());
     }
 
     ImGui::Separator();
@@ -177,7 +197,24 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
         const float tw = ImGui::CalcTextSize(kMsg).x;
         const float cx = ImGui::GetCursorPosX() + (avail - tw) * 0.5f;
         ImGui::SetCursorPosX(cx > ImGui::GetCursorPosX() ? cx : ImGui::GetCursorPosX());
-        ImGui::TextColored({1.f, 0.4f, 0.4f, 1.f}, "%s", kMsg);
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(plugin.ActiveProfile().color_pb_behind), "%s", kMsg);
+        ImGui::Separator();
+    }
+
+    // List picker — only visible when the run hasn't started so switching mid-run isn't possible.
+    if (plugin.Clock().RealTime() == 0.0) {
+        const char* current = (list && !list->name.empty()) ? list->name.c_str() : "(no list)";
+        ImGui::SetNextItemWidth(-1.f);
+        if (ImGui::BeginCombo("##list_picker", current)) {
+            for (const auto& [name, path] : plugin.GetSavedLists()) {
+                const bool selected = list && list->name == name;
+                if (ImGui::Selectable(name.c_str(), selected))
+                    plugin.LoadActiveList(path);
+                if (selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
         ImGui::Separator();
     }
 
@@ -199,7 +236,8 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
     // so the start-time column never shows anything the row above didn't already say. SC's
     // parallel start_trigger objectives (e.g. Deep rooms) are the only case where it can differ.
     SplitsProfile profile = plugin.ActiveProfile();
-    const std::vector<double>& pb = profile.use_game_time ? plugin.PBSplitsGame() : plugin.PBSplits();
+    const std::vector<double>& pb_real = plugin.PBSplits();
+    const std::vector<double>& pb_game = plugin.PBSplitsGame();
     const auto nan = std::numeric_limits<double>::quiet_NaN();
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -229,24 +267,25 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
             continue;
         }
 
-        auto pb_at = [&]() -> double {
-            if (pb_idx < 0 || pb_idx >= static_cast<int>(pb.size())) return nan;
-            return pb[static_cast<size_t>(pb_idx)];
+        auto pb_at_v = [&](const std::vector<double>& v) -> double {
+            if (pb_idx < 0 || pb_idx >= static_cast<int>(v.size())) return nan;
+            return v[static_cast<size_t>(pb_idx)];
         };
-        // PB time for just this leg: cumulative PB at this goal minus cumulative PB at the
-        // previous one (0.0 before the first goal, matching how live segments start from last_real_ = 0).
-        auto pb_seg_at = [&]() -> double {
-            const double cur = pb_at();
+        auto pb_seg_v = [&](const std::vector<double>& v) -> double {
+            const double cur = pb_at_v(v);
             if (std::isnan(cur)) return nan;
             if (pb_idx == 0) return cur;
-            if (pb_idx - 1 >= static_cast<int>(pb.size())) return nan;
-            const double prev = pb[static_cast<size_t>(pb_idx - 1)];
+            if (pb_idx - 1 >= static_cast<int>(v.size())) return nan;
+            const double prev = v[static_cast<size_t>(pb_idx - 1)];
             return std::isnan(prev) ? nan : (cur - prev);
         };
 
         const float row_y0 = ImGui::GetCursorScreenPos().y - pad_y;
 
-        DrawGoalRow(g, clock, i, i == current_idx, pb_at(), pb_seg_at(), profile);
+        DrawGoalRow(g, clock, i, i == current_idx,
+                    pb_at_v(pb_real), pb_seg_v(pb_real),
+                    pb_at_v(pb_game), pb_seg_v(pb_game),
+                    profile);
         ++pb_idx;
         ++i;
 
@@ -259,18 +298,29 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
 }
 
 void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*clock*/,
-                                        int /*index*/, bool is_current, double pb_split,
-                                        double pb_segment, const SplitsProfile& profile)
+                                        int /*index*/, bool is_current,
+                                        double pb_split_real, double pb_seg_real,
+                                        double pb_split_game, double pb_seg_game,
+                                        const SplitsProfile& profile)
 {
     const bool done = (g.status == GoalStatus::Completed || g.status == GoalStatus::Failed);
 
     ImVec4 color;
-    if (g.status == GoalStatus::Failed)         color = ImGui::ColorConvertU32ToFloat4(profile.color_failed);
+    if (g.status == GoalStatus::Failed)         color = ImGui::ColorConvertU32ToFloat4(profile.color_pb_behind);
     else if (g.status == GoalStatus::Completed) color = ImGui::ColorConvertU32ToFloat4(profile.color_completed);
     else if (is_current)                        color = ImGui::ColorConvertU32ToFloat4(profile.color_active);
-    else                                        color = ImGui::ColorConvertU32ToFloat4(profile.color_inactive);
+    else                                        color = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
 
-    const bool gt = profile.use_game_time;
+    using TD = SplitsProfile::TimeDisplay;
+    const auto td = profile.time_display;
+    const bool show_real = (td != TD::Game) && !(td == TD::Both && profile.both_header_only);
+    const bool show_game = (td != TD::Real);
+
+    const ImVec4 real_col   = ImGui::ColorConvertU32ToFloat4(profile.color_real_time);
+    const ImVec4 game_col   = ImGui::ColorConvertU32ToFloat4(profile.color_game_time);
+    const ImVec4 ahead_col  = ImGui::ColorConvertU32ToFloat4(profile.color_pb_ahead);
+    const ImVec4 behind_col = ImGui::ColorConvertU32ToFloat4(profile.color_pb_behind);
+    auto muted = [](ImVec4 c) { return ImVec4{c.x, c.y, c.z, c.w * 0.55f}; };
 
     if (!ImGui::BeginTable("##goalrow", 3, ImGuiTableFlags_None)) return;
     ImGui::TableSetupColumn("name",  ImGuiTableColumnFlags_WidthStretch);
@@ -320,11 +370,16 @@ void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*cl
     {
         ImGui::TableSetColumnIndex(1);
         if (done) {
-            const double t = gt ? g.split.game_time : g.split.real_time;
-            const ImVec4 tc = gt ? ImVec4{0.6f, 0.85f, 1.f, 1.f} : ImVec4{0.9f, 0.9f, 0.9f, 1.f};
-            char buf[32]; FormatTime(buf, sizeof(buf), t);
-            ImGui::TextColored(tc, "%s", buf);
-            DrawPBDelta(t, pb_split);
+            if (show_real) {
+                char buf[32]; FormatTime(buf, sizeof(buf), g.split.real_time);
+                ImGui::TextColored(real_col, "%s", buf);
+                if (profile.show_split_pb) DrawPBDelta(g.split.real_time, pb_split_real, ahead_col, behind_col);
+            }
+            if (show_game) {
+                char buf[32]; FormatTime(buf, sizeof(buf), g.split.game_time);
+                ImGui::TextColored(game_col, "%s", buf);
+                if (profile.show_split_pb) DrawPBDelta(g.split.game_time, pb_split_game, ahead_col, behind_col);
+            }
         } else if (is_current) {
             ImGui::TextDisabled("---");
         }
@@ -333,12 +388,16 @@ void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*cl
     if (profile.show_segment) {
         ImGui::TableSetColumnIndex(2);
         if (done) {
-            const double seg_val = gt ? g.split.segment_game : g.split.segment_real;
-            char seg[32];
-            FormatTime(seg, sizeof(seg), seg_val);
-            ImGui::TextDisabled("+%s", seg);
-            if (profile.show_segment_pb)
-                DrawPBDelta(seg_val, pb_segment);
+            if (show_real) {
+                char seg[32]; FormatTime(seg, sizeof(seg), g.split.segment_real);
+                ImGui::TextColored(muted(real_col), "+%s", seg);
+                if (profile.show_segment_pb) DrawPBDelta(g.split.segment_real, pb_seg_real, ahead_col, behind_col);
+            }
+            if (show_game) {
+                char seg[32]; FormatTime(seg, sizeof(seg), g.split.segment_game);
+                ImGui::TextColored(muted(game_col), "+%s", seg);
+                if (profile.show_segment_pb) DrawPBDelta(g.split.segment_game, pb_seg_game, ahead_col, behind_col);
+            }
         }
     }
 
@@ -349,7 +408,9 @@ bool SplitsGoalListWindow::DrawHeaderRow(const GoalList& list, int header_idx, c
 {
     const GoalEntry& h = list.goals[header_idx];
 
-    const bool gt = profile.use_game_time;
+    using TD = SplitsProfile::TimeDisplay;
+    const bool gt = (profile.time_display == TD::Game) ||
+                    (profile.time_display == TD::Both && profile.both_header_only);
 
     // Derive timing and status from all non-header descendants.
     double start_t = -1.0, end_t = -1.0;
@@ -490,11 +551,21 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
 
     // Col 0: display toggles + PB basis + behavior flags
     SplitsProfile& p = plugin.ActiveProfile();
+    using TD = SplitsProfile::TimeDisplay;
     ImGui::TextUnformatted("Time:");
     ImGui::SameLine();
-    if (ImGui::RadioButton("Game", p.use_game_time))  p.use_game_time = true;
+    if (ImGui::RadioButton("Game", p.time_display == TD::Game)) p.time_display = TD::Game;
     ImGui::SameLine();
-    if (ImGui::RadioButton("Real", !p.use_game_time)) p.use_game_time = false;
+    if (ImGui::RadioButton("Real", p.time_display == TD::Real)) p.time_display = TD::Real;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Both", p.time_display == TD::Both)) p.time_display = TD::Both;
+    if (p.time_display == TD::Both) {
+        ImGui::SameLine(0, 12.f);
+        ImGui::Checkbox("Clock only", &p.both_header_only);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Show Real+Game in the header clock only;\ngoal rows display game time.");
+    }
+    ImGui::Checkbox("Show total PB", &p.show_split_pb);
     ImGui::Checkbox("Show split column", &p.show_segment);
     if (p.show_segment) {
         ImGui::SameLine();
@@ -502,22 +573,9 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
     }
     ImGui::Checkbox("Auto /age on completion", &p.auto_send_age);
     ImGui::Checkbox("Show paused time",        &p.show_paused_time);
-    if (plugin.ActiveProfileIdx() == 0) {
-        ImGui::TextUnformatted("Goal order:");
-        ImGui::SameLine();
-        if (ImGui::RadioButton("Dynamic", !p.simple_order)) p.simple_order = false;
-        ImGui::SameLine();
-        if (ImGui::RadioButton("Simple",   p.simple_order)) p.simple_order = true;
-        ImGui::SameLine();
-        ImGui::TextDisabled("(?)");
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Dynamic: any not-yet-completed goal can fire whenever its own\n"
-                               "trigger is met. Simple: goals must complete strictly in list order.");
-    }
 
     ImGui::Spacing();
-    ImGui::Checkbox("Stop on party wipe",         &p.stop_on_party_defeated);
-    ImGui::Checkbox("Game time: explorable only", &p.game_time_explorable_only);
+    ImGui::Checkbox("Stop on party wipe", &p.stop_on_party_defeated);
 
     ImGui::NextColumn();
 
@@ -530,12 +588,15 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
         ImGui::TextDisabled("(Esc to clear)");
 
     ImGui::Spacing();
-    ImGui::ColorButtonPicker("Completed##sc", &p.color_completed); ImGui::SameLine(); ImGui::TextUnformatted("Done");
+    ImGui::ColorButtonPicker("Completed##sc", &p.color_completed); ImGui::SameLine(); ImGui::TextUnformatted("Completed");
     ImGui::SameLine(0, 12.f);
-    ImGui::ColorButtonPicker("Active##sc",    &p.color_active);    ImGui::SameLine(); ImGui::TextUnformatted("Active");
-    ImGui::ColorButtonPicker("Inactive##sc",  &p.color_inactive);  ImGui::SameLine(); ImGui::TextUnformatted("Inactive");
+    ImGui::ColorButtonPicker("Current##sc",   &p.color_active);    ImGui::SameLine(); ImGui::TextUnformatted("Current");
+    ImGui::ColorButtonPicker("Real##sc",      &p.color_real_time); ImGui::SameLine(); ImGui::TextUnformatted("Real");
     ImGui::SameLine(0, 12.f);
-    ImGui::ColorButtonPicker("Failed##sc",    &p.color_failed);    ImGui::SameLine(); ImGui::TextUnformatted("Failed");
+    ImGui::ColorButtonPicker("Game##sc",      &p.color_game_time); ImGui::SameLine(); ImGui::TextUnformatted("Game");
+    ImGui::ColorButtonPicker("Ahead##sc",     &p.color_pb_ahead);  ImGui::SameLine(); ImGui::TextUnformatted("Ahead PB");
+    ImGui::SameLine(0, 12.f);
+    ImGui::ColorButtonPicker("Behind##sc",    &p.color_pb_behind); ImGui::SameLine(); ImGui::TextUnformatted("Behind PB");
     ImGui::Spacing();
 
     ImGui::NextColumn();
@@ -925,7 +986,7 @@ void SplitsGoalListWindow::DrawTitlePicker(SplitsWindow& plugin)
 }
 
 // ---------------------------------------------------------------------------
-// Running profile: combined from/to leg picker
+// Running profile: sequential split picker
 // ---------------------------------------------------------------------------
 void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
 {
@@ -941,12 +1002,6 @@ void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
             const auto* inf = GW::Map::GetMapInfo(mid);
             if (!inf || !inf->name_id) continue;
             if (inf->region != GW::Region_Presearing && !inf->GetIsOnWorldMap()) continue;
-            const bool is_exp  = (inf->type == GW::RegionType::ExplorableZone ||
-                                   inf->type == GW::RegionType::MissionArea);
-            const bool is_town = (inf->type == GW::RegionType::City          ||
-                                   inf->type == GW::RegionType::Outpost       ||
-                                   inf->type == GW::RegionType::MissionOutpost);
-            if (!is_exp && !is_town) continue;
             if (seen.count(inf->name_id)) continue;
             seen[inf->name_id] = id;
             out.push_back({ id, MapNames::Get(mid) });
@@ -960,11 +1015,10 @@ void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
     static std::vector<MapRow> s_map_list;
     if (s_map_list.empty()) s_map_list = build_map_list();
 
-    // Single map picker — each split fires when entering this map.
     const std::string sel_name = run_map_id_ > 0 ? MapNames::Get(static_cast<MapID>(run_map_id_)) : std::string{};
     const char* preview = run_map_id_ > 0 ? sel_name.c_str() : "(pick map)";
     ImGui::SetNextItemWidth(200.f);
-    if (ImGui::BeginCombo("Map##runmap", preview)) {
+    if (ImGui::BeginCombo("##runmap", preview)) {
         ImGui::SetNextItemWidth(-1.f);
         ImGui::InputText("##runmapflt", run_filter_, sizeof(run_filter_));
         const std::string_view filt(run_filter_);
@@ -976,20 +1030,19 @@ void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
                 if (!match) continue;
             }
             const bool sel = (row.id == run_map_id_);
-            if (ImGui::Selectable(row.name.c_str(), sel)) run_map_id_ = row.id;
+            if (ImGui::Selectable(row.name.c_str(), sel)) {
+                run_map_id_ = row.id;
+                const auto nm = MapNames::Get(static_cast<MapID>(row.id));
+                snprintf(edit_label_, sizeof(edit_label_), "%s", nm.c_str());
+                run_filter_[0] = '\0';
+            }
             if (sel) ImGui::SetItemDefaultFocus();
         }
         ImGui::EndCombo();
     }
-
-    // Auto-fill label from map name.
-    if (run_map_id_ > 0 && edit_label_[0] == '\0') {
-        const std::string fn = MapNames::Get(static_cast<MapID>(run_map_id_));
-        snprintf(edit_label_, sizeof(edit_label_), "%s", fn.c_str());
-    }
     ImGui::SameLine();
     ImGui::SetNextItemWidth(180.f);
-    ImGui::InputText("Label##runlabel", edit_label_, sizeof(edit_label_));
+    ImGui::InputText("##runlabel", edit_label_, sizeof(edit_label_));
 
     const bool can_add = run_map_id_ > 0 && edit_label_[0] != '\0';
     if (!can_add) ImGui::BeginDisabled();
@@ -997,32 +1050,16 @@ void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
     if (ImGui::Button("Add Split")) {
         GoalList* list = plugin.List();
         GoalEntry g;
-        g.label = edit_label_;
-        GoalTrigger st;
-        st.type   = GoalTrigger::Type::MapEnter;
-        st.map_id = static_cast<MapID>(run_map_id_);
-        g.start_trigger          = st;
-        g.auto_complete_previous = 1;
+        g.label          = edit_label_;
+        g.trigger.type   = GoalTrigger::Type::MapEnter;
+        g.trigger.map_id = static_cast<MapID>(run_map_id_);
         list->goals.push_back(std::move(g));
         list->RenumberDuplicateLabels();
         edit_label_[0] = '\0';
-        run_map_id_    = 0;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Add End")) {
-        GoalList* list = plugin.List();
-        GoalEntry g;
-        g.label              = edit_label_;
-        g.trigger.type       = GoalTrigger::Type::MapEnter;
-        g.trigger.map_id     = static_cast<MapID>(run_map_id_);
-        g.auto_complete_previous = 1; // closes the last running leg before this goal fires
-        list->goals.push_back(std::move(g));
-        list->RenumberDuplicateLabels();
-        edit_label_[0] = '\0';
-        run_map_id_    = 0;
+        run_map_id_     = 0;
     }
     if (!can_add) ImGui::EndDisabled();
-    ImGui::TextDisabled("Add Split: fires on entry, ends previous leg.  Add End: destination closes the run.");
+    ImGui::TextDisabled("Fires on each explorable entry in order. Last split completes the run.");
 }
 
 // ---------------------------------------------------------------------------
