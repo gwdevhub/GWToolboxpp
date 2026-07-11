@@ -547,7 +547,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         // Use new directly because the constructor is private; make_shared would
         // need friendship or a public constructor.
         std::shared_ptr<PendingNPCAudio> audio(new PendingNPCAudio(agent_id, message, is_dialog_window));
-        std::lock_guard lock(playing_audio_mutex);
+        std::scoped_lock lock(playing_audio_mutex);
         pending_audio.push_back(audio);
         return audio;
     }
@@ -571,7 +571,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     {
         // --- Phase 1: check for duplicate / prepare under lock ---
         {
-            std::lock_guard lock(playing_audio_mutex);
+            std::scoped_lock lock(playing_audio_mutex);
 
             auto found = playing_audio_map.find(agent_id);
             if (found != playing_audio_map.end()) {
@@ -590,19 +590,19 @@ Gender GetGenderByFileId(const uint32_t file_id)
         // but our refcount won't hit zero until this scope exits.
         const auto pos = GetAgentVec3f(agent_id);
         VoiceLog("Playing audio file: %s (estimated duration: %dms)", path.filename().string().c_str(), duration);
-        const uint32_t flags = is_dialog_window ? 0x4 : 0x1404;
+        const uint32_t flags = is_dialog_window ? SoundFlags_Dialog : (SoundFlags_Dialog | SoundFlags_Positional);
         const bool success = AudioSettings::PlaySound(path.wstring().c_str(), &pos, flags, &gw_handle);
 
         if (!success) {
             // PlaySound failed; remove ourselves from pending and bail.
-            std::lock_guard lock(playing_audio_mutex);
+            std::scoped_lock lock(playing_audio_mutex);
             RemoveFromPending(shared_from_this());
             return;
         }
 
         // --- Phase 3: register as playing under lock ---
         {
-            std::lock_guard lock(playing_audio_mutex);
+            std::scoped_lock lock(playing_audio_mutex);
             started = TIMER_INIT();
             RemoveFromPending(shared_from_this());
             playing_audio_map[agent_id] = shared_from_this();
@@ -614,7 +614,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     // -------------------------------------------------------------------------
     void CancelDialogSpeech(uint32_t agent_id)
     {
-        std::lock_guard lock(playing_audio_mutex);
+        std::scoped_lock lock(playing_audio_mutex);
         auto found = playing_audio_map.find(agent_id);
         if (found != playing_audio_map.end()) {
             found->second->Stop();
@@ -627,7 +627,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     void ClearSounds()
     {
-        std::lock_guard lock(playing_audio_mutex);
+        std::scoped_lock lock(playing_audio_mutex);
         for (auto& [id, audio] : playing_audio_map)
             audio->Stop();
         playing_audio_map.clear();
@@ -640,7 +640,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     std::shared_ptr<PendingNPCAudio> FindAlreadyProcessingAudio(const std::shared_ptr<PendingNPCAudio>& compare)
     {
         if (!compare) return nullptr;
-        std::lock_guard lock(playing_audio_mutex);
+        std::scoped_lock lock(playing_audio_mutex);
         for (const auto& audio : pending_audio) {
             if (audio != compare && audio->agent_id == compare->agent_id && audio->encoded_message == compare->encoded_message && audio->IsPlaying()) {
                 return audio;
@@ -1241,7 +1241,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         auto bail = [&]() {
             // Remove from pending so it's not left dangling, then release.
             {
-                std::lock_guard lock(playing_audio_mutex);
+                std::scoped_lock lock(playing_audio_mutex);
                 RemoveFromPending(audio);
             }
             generating_voice = false;
@@ -1289,7 +1289,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
             // Confirm still in pending_audio (not cancelled between enqueue and execution).
             {
-                std::lock_guard lock(playing_audio_mutex);
+                std::scoped_lock lock(playing_audio_mutex);
                 if (!IsPending(audio)) {
                     generating_voice = false;
                     return;
@@ -1312,7 +1312,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
             // Re-check that audio wasn't cancelled during the (potentially slow) API call.
             {
-                std::lock_guard lock(playing_audio_mutex);
+                std::scoped_lock lock(playing_audio_mutex);
                 if (!IsPending(audio)) {
                     generating_voice = false;
                     return;
@@ -1321,7 +1321,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
             if (audio_data.empty()) {
                 VoiceLog("Failed to generate voice data");
-                std::lock_guard lock(playing_audio_mutex);
+                std::scoped_lock lock(playing_audio_mutex);
                 RemoveFromPending(audio);
                 generating_voice = false;
                 return;
@@ -1329,7 +1329,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
             if (!Resources::WriteFile(audio->path, audio_data)) {
                 VoiceLog("Failed to write audio data to file: %s", TextUtils::WStringToString(audio->path.wstring()).c_str());
-                std::lock_guard lock(playing_audio_mutex);
+                std::scoped_lock lock(playing_audio_mutex);
                 RemoveFromPending(audio);
                 generating_voice = false;
                 return;
@@ -1337,7 +1337,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
             // Final pending check before play.
             {
-                std::lock_guard lock(playing_audio_mutex);
+                std::scoped_lock lock(playing_audio_mutex);
                 if (!IsPending(audio)) {
                     generating_voice = false;
                     return;
@@ -1355,7 +1355,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     void OnPlaySound(GW::HookStatus* status, const wchar_t* filename, SoundProps* props)
     {
         if (status->blocked) return;
-        if (!(props && (props->flags & 0xffff) == 0x1404)) return;
+        if (!(props && (props->flags & 0xffff) == (SoundFlags_Dialog | SoundFlags_Positional))) return;
         if (GW::Map::GetIsInCinematic()) return;
         if (wcslen(filename) > 4) return;
         if (!GetApiKey()) return;
@@ -1368,7 +1368,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
             return;
         }
 
-        std::lock_guard lock(playing_audio_mutex);
+        std::scoped_lock lock(playing_audio_mutex);
         auto found = playing_audio_map.find(agent_id);
         if (found != playing_audio_map.end() && found->second->IsPlaying()) {
             status->blocked = true;
@@ -1422,7 +1422,7 @@ void TextToSpeechModule::Update(float delta)
     if (last_check < 1.f) return;
     last_check = 0.f;
 
-    std::lock_guard lock(playing_audio_mutex);
+    std::scoped_lock lock(playing_audio_mutex);
     for (auto it = playing_audio_map.begin(); it != playing_audio_map.end();) {
         if (TIMER_DIFF(it->second->started) > std::max(it->second->duration, (clock_t)10000)) {
             it->second->Stop();

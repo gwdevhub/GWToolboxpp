@@ -6,12 +6,34 @@
 #include <Path.h>
 #include <RestClient.h>
 
-#include "Download.h"
 #include "Inject.h"
 #include "Install.h"
 #include "Process.h"
 #include "Settings.h"
 #include "WindowsDefender.h"
+
+// Redirects stderr to a log file; never blocks the launcher on failure (e.g. CFA can block the exe's own folder before any AV exception is granted) - falls back to %TEMP%, then gives up silently.
+static void OpenLogFile(const std::filesystem::path& exe_path)
+{
+    static FILE* stream;
+
+    const auto primary = exe_path.parent_path() / L"GWToolbox.error.log";
+    if (freopen_s(&stream, primary.string().c_str(), "w", stderr) == 0) {
+        return;
+    }
+
+    wchar_t temp_dir[MAX_PATH];
+    if (!GetTempPathW(_countof(temp_dir), temp_dir)) {
+        return;
+    }
+    const auto fallback = std::filesystem::path(temp_dir) / L"GWToolbox.error.log";
+    if (freopen_s(&stream, fallback.string().c_str(), "w", stderr) != 0) {
+        return;
+    }
+
+    fprintf(stderr, "Couldn't open the log at '%S'; falling back to this file.\n", primary.c_str());
+    fprintf(stderr, "%S\n", PathDiagnoseWritability(exe_path.parent_path()).c_str());
+}
 
 static void ShowError(const wchar_t* message)
 {
@@ -114,6 +136,21 @@ static bool InjectInstalledDllInProcess(const Process* process, std::wstring& er
     return true;
 }
 
+// Opts in to per-monitor DPI awareness so scaled displays get real layout instead of blurry bitmap-stretching; must run before any window (incl. a MessageBox) is created.
+static void EnableDpiAwareness()
+{
+    const HMODULE user32 = GetModuleHandleW(L"user32.dll");
+    if (user32) {
+        using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(DPI_AWARENESS_CONTEXT);
+        const auto pSetProcessDpiAwarenessContext = reinterpret_cast<SetProcessDpiAwarenessContextFn>(GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
+        if (pSetProcessDpiAwarenessContext && pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+            return;
+        }
+    }
+
+    SetProcessDPIAware(); // Vista+ fallback: system-DPI aware still beats fully unaware.
+}
+
 static bool SetProcessForeground(const Process* process)
 {
     HWND hWndIt = GetTopWindow(nullptr);
@@ -149,25 +186,20 @@ int main()
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 #endif
 {
+    EnableDpiAwareness();
+
     std::wstring error;
-    std::filesystem::path log_file_path;
-    if (!PathGetExeFullPath(log_file_path)) {
+    std::filesystem::path exe_path;
+    if (!PathGetExeFullPath(exe_path)) {
         ShowMessageBoxW(nullptr, L"Failed to get qualified path for logs file.", L"GWToolbox", MB_OK | MB_TOPMOST);
         return 0;
     }
     // A previous self-update renames the old exe aside; clean it up now that it's no longer locked.
-    std::filesystem::path stale_exe = log_file_path;
+    std::filesystem::path stale_exe = exe_path;
     stale_exe += L".old";
     DeleteFileW(stale_exe.wstring().c_str());
 
-    log_file_path = log_file_path.parent_path() / L"GWToolbox.error.log";
-    static FILE* stream;
-    if (freopen_s(&stream, log_file_path.string().c_str(), "w", stderr) != 0) {
-        wchar_t buf[MAX_PATH + 128];
-        swprintf(buf, MAX_PATH + 128, L"Failed to open log file for writing:\n\n%s\n\nEnsure you have write permissions to this folder.", log_file_path.wstring().c_str());
-        ShowMessageBoxW(nullptr, buf, L"GWToolbox", MB_OK | MB_TOPMOST);
-        return 0;
-    }
+    OpenLogFile(exe_path);
 
     ParseCommandLine();
 
@@ -224,15 +256,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
             }
         }
     }
-    else if (!settings.noupdate || !settings.noexecheck) {
-        // One Github fetch drives both the exe self-update prompt and the dll update.
-        std::wstring error;
-        if (!DownloadWindow::CheckForUpdates(error)) {
-            ShowError(std::format(L"Failed to download GWToolbox DLL: {}", error).c_str());
-            fprintf(stderr, "DownloadWindow::CheckForUpdates failed\n");
-            return 1;
-        }
-    }
+    // Exe/dll update checking now happens inside InjectWindow (status row + Update button), not here.
 
     if (settings.pid) {
         if (!proc.Open(settings.pid)) {
@@ -259,81 +283,13 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         return 0;
     }
 
-    if (reply == InjectReply_PatternError) {
-        ShowMessageBoxW(
-            nullptr,
-            L"Couldn't find character name RVA.\n"
-            L"You need to update the launcher or contact the developers.",
-            L"GWToolbox - Error", MB_OK | MB_ICONERROR | MB_TOPMOST
-        );
-        return 1;
-    }
-
-    if (reply == InjectReply_MemoryBlocked) {
-        std::wstring message =
-            L"GWToolbox found Guild Wars but couldn't read its memory to locate your character.\n\n"
-            L"This is almost always anti-virus or Controlled Folder Access blocking GWToolbox. "
-            L"Add an exclusion for your GWToolbox folder in Windows Security, allow GWToolbox through Controlled Folder Access, then re-launch.";
-        std::wstring detail;
-        if (FindRecentDefenderBlock(L"Gw.exe", 5, detail))
-            message += L"\n\nWindows Defender reported:\n" + detail;
-        ShowTroubleshootingError(message, GwtbDialogTitle(L"GWToolbox - Error").c_str(), Troubleshooting::CantReadMemory, MB_ICONERROR | MB_TOPMOST);
-        return 1;
-    }
-
-    if (reply == InjectReply_NoValidProcess) {
-        if (IsRunningAsAdmin()) {
-            ShowError(L"Failed to inject GWToolbox into Guild Wars\n");
-            fprintf(stderr, "InjectWindow::AskInjectName failed\n");
-            return 0;
-        }
-        // @Enhancement:
-        // Add UAC shield to the yes button
-        const int iRet = ShowMessageBoxW(
-            nullptr,
-            L"Couldn't find any valid process to start GWToolboxpp.\n"
-            L"Ensure Guild Wars is running before trying to run GWToolbox.\n"
-            L"If such process exist GWToolbox.exe may require administrator privileges.\n"
-            L"Do you want to restart as administrator?",
-            L"GWToolbox - Error", MB_YESNO | MB_TOPMOST
-        );
-
-        if (iRet == IDNO) {
-            fprintf(stderr, "User doesn't want to restart as admin\n");
-            return 1;
-        }
-
-        if (iRet == IDYES) {
-            RestartWithSameArgs(true);
-            return 0;
-        }
-    }
-    if (reply == InjectReply_NoProcess) {
-        const auto gw2_processes = GetGuildWars2Processes();
-        auto error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
-                             L"Ensure Guild Wars is running before trying to run GWToolbox.\n";
-        if (!gw2_processes.empty()) {
-            error_message = L"Couldn't find any valid process to start GWToolboxpp.\n"
-                            L"GWToolboxpp is for Guild Wars Reforged, NOT Guild Wars 2!\n";
-        }
-        const int iRet = ShowMessageBoxW(nullptr, error_message, L"GWToolbox - Error", MB_RETRYCANCEL | MB_TOPMOST);
-        if (iRet == IDCANCEL) {
-            fprintf(stderr, "User doesn't want to retry\n");
-            return 1;
-        }
-
-        if (iRet == IDRETRY) {
-            RestartWithSameArgs();
-            return 0;
-        }
-    }
-
     // Before injecting, make sure Windows Security won't block the DLL from writing to its Documents folder.
     if (!settings.quiet) {
         const auto install_dir = GetInstallationDir();
         if (!install_dir.empty()) {
             std::vector<std::filesystem::path> cfa_apps = GetGuildWarsExecutablePaths();
-            cfa_apps.push_back(install_dir.parent_path() / L"GWToolbox.exe");
+            cfa_apps.push_back(install_dir.parent_path() / L"GWToolbox.exe"); // the installed copy
+            cfa_apps.push_back(exe_path);                                    // the copy actually running right now (e.g. a fresh, not-yet-installed download)
             EnsureDefenderReadiness(install_dir.parent_path(), cfa_apps);
         }
     }

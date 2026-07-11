@@ -1,0 +1,4341 @@
+{
+  "generated_from": {
+    "gwca": "C:\\Users\\m\\source\\repos\\GWCA",
+    "toolbox": "C:\\Users\\m\\source\\repos\\gwtoolboxpp"
+  },
+  "counts": {
+    "total_sites": 345,
+    "by_repo": {
+      "gwca": 242,
+      "toolbox": 103
+    },
+    "by_kind": {
+      "raw": 102,
+      "string": 30,
+      "assertion": 75,
+      "wrapper": 138
+    },
+    "by_repo_kind": {
+      "gwca": {
+        "raw": 70,
+        "string": 26,
+        "assertion": 49,
+        "wrapper": 97
+      },
+      "toolbox": {
+        "raw": 32,
+        "string": 4,
+        "assertion": 26,
+        "wrapper": 41
+      }
+    },
+    "by_repo_call": {
+      "gwca": {
+        "FindNthUseOfString": 6,
+        "FindUseOfString": 20,
+        "FindInRange": 18,
+        "FindAssertion": 49,
+        "FunctionFromNearCall": 17,
+        "ToFunctionStart": 80,
+        "Find": 52
+      },
+      "toolbox": {
+        "FindNthUseOfString": 1,
+        "FindUseOfString": 3,
+        "FindInRange": 2,
+        "FindAssertion": 26,
+        "FunctionFromNearCall": 5,
+        "ToFunctionStart": 36,
+        "Find": 30
+      }
+    },
+    "anchor_sites_excluding_wrappers": {
+      "gwca": 145,
+      "toolbox": 62,
+      "total": 207
+    },
+    "scan_reports": {
+      "total": 125,
+      "gwca": 120,
+      "toolbox": 5,
+      "linked_to_site": 125
+    },
+    "files_scanned": {
+      "gwca": 110,
+      "toolbox": 194
+    }
+  },
+  "sites": [
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 322,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::FindUseOfString(\"!(autoAgentId && !ManagerFindAgent(autoAgentId))\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 322,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"!(autoAgentId && !ManagerFindAgent(autoAgentId))\")",
+      "string_literal": "!(autoAgentId && !ManagerFindAgent(autoAgentId))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 324,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x8b\\x0c\\x90\\x85\\xc9\\x74\\x19\", \"xxxxxxx\", -0x4)",
+      "pattern": "\\x8b\\x0c\\x90\\x85\\xc9\\x74\\x19",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 328,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x81\\xf9\\x26\\x0b\\x00\\x00\", \"xxxxxx\")",
+      "pattern": "\\x81\\xf9\\x26\\x0b\\x00\\x00",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 330,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(Scanner::FindInRange(\"\\x6a\\x08\\xe8\",\"xxx\",2,address,address + 0xff))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 330,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\x6a\\x08\\xe8\",\"xxx\",2,address,address + 0xff)",
+      "pattern": "\\x6a\\x08\\xe8",
+      "mask": "xxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 333,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x83\\xc4\\x0c\\x85\\xff\\x74\\x0b\\x56\\x6a\\x03\", \"xxxxxxxxxx\", -0x5)",
+      "pattern": "\\x83\\xc4\\x0c\\x85\\xff\\x74\\x0b\\x56\\x6a\\x03",
+      "mask": "xxxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 334,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 336,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::FindUseOfString(\"action < WORLD_ACTIONS\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 336,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"action < WORLD_ACTIONS\")",
+      "string_literal": "action < WORLD_ACTIONS"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 339,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x8d\\x34\\x80\\xd9\\x44\\xb2\\x14\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 339,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x8d\\x34\\x80\\xd9\\x44\\xb2\\x14\")",
+      "pattern": "\\x8d\\x34\\x80\\xd9\\x44\\xb2\\x14",
+      "mask": null
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 341,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "GW::Scanner::FindInRange(\"\\x0f\\x83\\xc5\\x00\\x00\\x00\\xa1\", \"xxxxxxx\", 7, address, address + 0xff)",
+      "pattern": "\\x0f\\x83\\xc5\\x00\\x00\\x00\\xa1",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 345,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(GW::Scanner::Find(\"\\x0d\\x00\\x00\\x00\\x0e\\x50\", \"xxxxxx\",6))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 345,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x0d\\x00\\x00\\x00\\x0e\\x50\", \"xxxxxx\",6)",
+      "pattern": "\\x0d\\x00\\x00\\x00\\x0e\\x50",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 346,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x6a\\x01\\x68\\x7d\\x04\\x00\\x00\", \"xxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/AgentMgr.cpp",
+      "line": 346,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x6a\\x01\\x68\\x7d\\x04\\x00\\x00\", \"xxxxxxx\")",
+      "pattern": "\\x6a\\x01\\x68\\x7d\\x04\\x00\\x00",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/CameraMgr.cpp",
+      "line": 30,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"GmCam.cpp\", \"fov\", 0, 0xf)",
+      "assertion_file": "GmCam.cpp",
+      "assertion_msg": "fov"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/CameraMgr.cpp",
+      "line": 32,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\xd9\\xee\\xb9\", \"xxx\", 3, address, address + 0xf)",
+      "pattern": "\\xd9\\xee\\xb9",
+      "mask": "xxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/CameraMgr.cpp",
+      "line": 36,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x8b\\x45\\xe8\\x8b\\x4d\\xec\\x8b\\x55\\xf0\", \"xxxxxxxxx\", 0)",
+      "pattern": "\\x8b\\x45\\xe8\\x8b\\x4d\\xec\\x8b\\x55\\xf0",
+      "mask": "xxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/CameraMgr.cpp",
+      "line": 41,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x83\\x60\\x2c\\xf3\\xd9\\x58\\x68\", \"xxxxxxx\", -4)",
+      "pattern": "\\x83\\x60\\x2c\\xf3\\xd9\\x58\\x68",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 559,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::Find(\"\\xC7\\x00\\x60\\xC0\\xFF\\xFF\\x5D\\xC3\", \"xxxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 559,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\xC7\\x00\\x60\\xC0\\xFF\\xFF\\x5D\\xC3\", \"xxxxxxxx\")",
+      "pattern": "\\xC7\\x00\\x60\\xC0\\xFF\\xFF\\x5D\\xC3",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 561,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::Find(\"\\xC7\\x00\\xB0\\xB0\\xB0\\xFF\\x5D\\xC3\", \"xxxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 561,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\xC7\\x00\\xB0\\xB0\\xB0\\xFF\\x5D\\xC3\", \"xxxxxxxx\")",
+      "pattern": "\\xC7\\x00\\xB0\\xB0\\xB0\\xFF\\x5D\\xC3",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 563,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::Find(\"\\x8D\\x85\\xE0\\xFE\\xFF\\xFF\\x50\\x68\\x1C\\x01\", \"xxxxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 563,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x8D\\x85\\xE0\\xFE\\xFF\\xFF\\x50\\x68\\x1C\\x01\", \"xxxxxxxxx\")",
+      "pattern": "\\x8D\\x85\\xE0\\xFE\\xFF\\xFF\\x50\\x68\\x1C\\x01",
+      "mask": "xxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 565,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(Scanner::Find(\"\\x83\\xff\\x05\\x75\\x10\\x6a\\x00\", \"xxxxxxx\",9))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 565,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x83\\xff\\x05\\x75\\x10\\x6a\\x00\", \"xxxxxxx\",9)",
+      "pattern": "\\x83\\xff\\x05\\x75\\x10\\x6a\\x00",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 567,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::Find(\"\\x40\\x25\\xff\\x01\\x00\\x00\", \"xxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 567,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x40\\x25\\xff\\x01\\x00\\x00\", \"xxxxxx\")",
+      "pattern": "\\x40\\x25\\xff\\x01\\x00\\x00",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 569,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::FindAssertion(\"CtChatEdit.cpp\", \"length\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 569,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"CtChatEdit.cpp\", \"length\", 0, 0)",
+      "assertion_file": "CtChatEdit.cpp",
+      "assertion_msg": "length"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 571,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x8B\\x45\\x08\\x83\\x7D\\x0C\\x07\\x74\", \"xxxxxxxx\", -4)",
+      "pattern": "\\x8B\\x45\\x08\\x83\\x7D\\x0C\\x07\\x74",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 575,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::Find(\"\\x83\\xc4\\x04\\x8d\\x58\\x2e\\x8b\\xc3\", \"xxxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 575,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x83\\xc4\\x04\\x8d\\x58\\x2e\\x8b\\xc3\", \"xxxxxxxx\")",
+      "pattern": "\\x83\\xc4\\x04\\x8d\\x58\\x2e\\x8b\\xc3",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 577,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"\\\\Code\\\\Engine\\\\Controls\\\\CtlEdit.cpp\",\"charCount >= 1\",0,0)",
+      "assertion_file": "\\\\Code\\\\Engine\\\\Controls\\\\CtlEdit.cpp",
+      "assertion_msg": "charCount >= 1"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 579,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\x89\\x7e\\x50\", \"xxx\", 5, address, address + 0x40)",
+      "pattern": "\\x89\\x7e\\x50",
+      "mask": "xxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 583,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"readOnly\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 583,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"readOnly\")",
+      "string_literal": "readOnly"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 585,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x6a\\x07\\x68\\xae\\x87\\x01\\x00\", \"xxxxxxx\", 0), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 585,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x6a\\x07\\x68\\xae\\x87\\x01\\x00\", \"xxxxxxx\", 0)",
+      "pattern": "\\x6a\\x07\\x68\\xae\\x87\\x01\\x00",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 588,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x83\\xc4\\x0c\\x85\\xc0\\x75\\x0c\\x6a\\x01\", \"xxxxxxxxx\", 0x5)",
+      "pattern": "\\x83\\xc4\\x0c\\x85\\xc0\\x75\\x0c\\x6a\\x01",
+      "mask": "xxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 596,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Ui\\\\Game\\\\GmChatLog.cpp\", \"m_itemCount <= CHAT_LOG_SIZE\", 0,0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ChatMgr.cpp",
+      "line": 596,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Ui\\\\Game\\\\GmChatLog.cpp\", \"m_itemCount <= CHAT_LOG_SIZE\", 0,0)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Ui\\\\Game\\\\GmChatLog.cpp",
+      "assertion_msg": "m_itemCount <= CHAT_LOG_SIZE"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/EffectMgr.cpp",
+      "line": 60,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\xf6\\x40\\x04\\x01\\x74\\x10\\xff\\x76\\x14\", \"xxxxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/EffectMgr.cpp",
+      "line": 60,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xf6\\x40\\x04\\x01\\x74\\x10\\xff\\x76\\x14\", \"xxxxxxxxx\")",
+      "pattern": "\\xf6\\x40\\x04\\x01\\x74\\x10\\xff\\x76\\x14",
+      "mask": "xxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/EventMgr.cpp",
+      "line": 97,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"EvtDispatch.cpp\", \"id < arrsize(m_handler)\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/EventMgr.cpp",
+      "line": 97,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"EvtDispatch.cpp\", \"id < arrsize(m_handler)\", 0, 0)",
+      "assertion_file": "EvtDispatch.cpp",
+      "assertion_msg": "id < arrsize(m_handler)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 30,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"UiCtlBtn.cpp\", \"!s_btnCheckImageList\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 30,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"UiCtlBtn.cpp\", \"!s_btnCheckImageList\", 0, 0)",
+      "assertion_file": "UiCtlBtn.cpp",
+      "assertion_msg": "!s_btnCheckImageList"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 31,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"CtlText.cpp\", \"FrameTestStyles(hdr.frameId, CTLTEXT_STYLE_MODEL)\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 31,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"CtlText.cpp\", \"FrameTestStyles(hdr.frameId, CTLTEXT_STYLE_MODEL)\", 0, 0)",
+      "assertion_file": "CtlText.cpp",
+      "assertion_msg": "FrameTestStyles(hdr.frameId, CTLTEXT_STYLE_MODEL)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 32,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x81\\xe1\\x00\\x00\\xf8\\xff\", \"xxxxxx\", -0x4)",
+      "pattern": "\\x81\\xe1\\x00\\x00\\xf8\\xff",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 33,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"CtlFrameList.cpp\", \"No valid case for switch variable 'msg.relation'\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 33,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"CtlFrameList.cpp\", \"No valid case for switch variable 'msg.relation'\", 0, 0)",
+      "assertion_file": "CtlFrameList.cpp",
+      "assertion_msg": "No valid case for switch variable 'msg.relation'"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 35,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"FrApi.cpp\", \"params->inputMask < FrameMarginsParams::INPUT_ILLEGAL_BIT_FIRST\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Frame.cpp",
+      "line": 35,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"FrApi.cpp\", \"params->inputMask < FrameMarginsParams::INPUT_ILLEGAL_BIT_FIRST\", 0, 0)",
+      "assertion_file": "FrApi.cpp",
+      "assertion_msg": "params->inputMask < FrameMarginsParams::INPUT_ILLEGAL_BIT_FIRST"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 124,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"FriendApi.cpp\", \"friendName && *friendName\",0,0)",
+      "assertion_file": "FriendApi.cpp",
+      "assertion_msg": "friendName && *friendName"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 126,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\x57\\xb9\", \"xx\", 2, address, address + 0xff)",
+      "pattern": "\\x57\\xb9",
+      "mask": "xx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 130,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x83\\xc0\\xda\\x83\\xf8\\x06\", \"xxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 130,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x83\\xc0\\xda\\x83\\xf8\\x06\", \"xxxxxx\")",
+      "pattern": "\\x83\\xc0\\xda\\x83\\xf8\\x06",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 131,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"FriendApi.cpp\", \"status < FRIEND_STATUSES\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 131,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"FriendApi.cpp\", \"status < FRIEND_STATUSES\", 0, 0)",
+      "assertion_file": "FriendApi.cpp",
+      "assertion_msg": "status < FRIEND_STATUSES"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 132,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"FriendApi.cpp\", \"characterName && *characterName\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 132,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"FriendApi.cpp\", \"characterName && *characterName\", 0, 0)",
+      "assertion_file": "FriendApi.cpp",
+      "assertion_msg": "characterName && *characterName"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 133,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"FriendApi.cpp\", \"data\",0x1dc,0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 133,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"FriendApi.cpp\", \"data\",0x1dc,0)",
+      "assertion_file": "FriendApi.cpp",
+      "assertion_msg": "data"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/GWCA.cpp",
+      "line": 97,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"GmContext.cpp\", \"!s_context\",0,-0x9)",
+      "assertion_file": "GmContext.cpp",
+      "assertion_msg": "!s_context"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/GWCA.cpp",
+      "line": 102,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"UiPregame.cpp\", \"!s_scene\", 0, 0x34)",
+      "assertion_file": "UiPregame.cpp",
+      "assertion_msg": "!s_scene"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/GWCA.cpp",
+      "line": 107,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x8B\\x35\\x00\\x00\\x00\\x00\\x57\\x69\\xF8\\x84\\x00\\x00\\x00\", \"xx????xxxxxxx\", 0x2)",
+      "pattern": "\\x8B\\x35\\x00\\x00\\x00\\x00\\x57\\x69\\xF8\\x84\\x00\\x00\\x00",
+      "mask": "xx????xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/GameThreadMgr.cpp",
+      "line": 73,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"FrApi.cpp\", \"renderElapsed >= 0\", 0, 0), 0x300)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/GameThreadMgr.cpp",
+      "line": 73,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"FrApi.cpp\", \"renderElapsed >= 0\", 0, 0)",
+      "assertion_file": "FrApi.cpp",
+      "assertion_msg": "renderElapsed >= 0"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/Hooker.cpp",
+      "line": 52,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(*(uintptr_t*)target, false)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 317,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"InvSalvage.cpp\", \"m_toolId\", 0, 0), 0x200)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 317,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"InvSalvage.cpp\", \"m_toolId\", 0, 0)",
+      "assertion_file": "InvSalvage.cpp",
+      "assertion_msg": "m_toolId"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 318,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"InvSlot.cpp\", \"!m_dragOverlayTexture\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 318,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"InvSlot.cpp\", \"!m_dragOverlayTexture\", 0, 0)",
+      "assertion_file": "InvSlot.cpp",
+      "assertion_msg": "!m_dragOverlayTexture"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 319,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"InvBag.cpp\"), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 319,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"InvBag.cpp\")",
+      "string_literal": "InvBag.cpp"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 321,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x6a\\x14\\xe8????\\x83\\xc4\\x08\\x5d\\xc2\\x04\\x00\", \"xxx????xxxxxxx\", 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 321,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x6a\\x14\\xe8????\\x83\\xc4\\x08\\x5d\\xc2\\x04\\x00\", \"xxx????xxxxxxx\", 0)",
+      "pattern": "\\x6a\\x14\\xe8????\\x83\\xc4\\x08\\x5d\\xc2\\x04\\x00",
+      "mask": "xxx????xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 322,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"InvElementBag.cpp\", \"No valid case for switch variable 'msg.code'\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 322,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"InvElementBag.cpp\", \"No valid case for switch variable 'msg.code'\", 0, 0)",
+      "assertion_file": "InvElementBag.cpp",
+      "assertion_msg": "No valid case for switch variable 'msg.code'"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 323,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"InvTrash.cpp\"), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 323,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"InvTrash.cpp\")",
+      "string_literal": "InvTrash.cpp"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 324,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"GmItemHelpers.cpp\", \"quantity == sourceQuantityTotal\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 324,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"GmItemHelpers.cpp\", \"quantity == sourceQuantityTotal\", 0, 0)",
+      "assertion_file": "GmItemHelpers.cpp",
+      "assertion_msg": "quantity == sourceQuantityTotal"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 326,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x8b\\x42\\x04\\x51\\x23\\xc1\", \"xxxxxx\", 0x7)",
+      "pattern": "\\x8b\\x42\\x04\\x51\\x23\\xc1",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 327,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 329,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Ui\\\\Game\\\\GmWeaponBar.cpp\", \"slotIndex < ITEM_PLAYER_EQUIP_SETS\", 0, 0x128)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Ui\\\\Game\\\\GmWeaponBar.cpp",
+      "assertion_msg": "slotIndex < ITEM_PLAYER_EQUIP_SETS"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 330,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 332,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Const\\\\ConstItemPvp.cpp\", \"unlockIndex < ITEM_PVP_UNLOCK_COUNT\", 0, 0)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Const\\\\ConstItemPvp.cpp",
+      "assertion_msg": "unlockIndex < ITEM_PVP_UNLOCK_COUNT"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 338,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Const\\\\ConstItemPvp.cpp\", \"index < ITEM_PVP_ITEM_COUNT\", 0, 0)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Const\\\\ConstItemPvp.cpp",
+      "assertion_msg": "index < ITEM_PVP_ITEM_COUNT"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 344,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Composite\\\\Data\\\\CpsData.cpp\", \"id < s_items.Count()\", 0, -0xb)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Composite\\\\Data\\\\CpsData.cpp",
+      "assertion_msg": "id < s_items.Count()"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 350,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xff\\x75\\x0c\\x81\\xc1\\xb4\\x00\\x00\\x00\", \"xxxxxxxxx\", -0x11)",
+      "pattern": "\\xff\\x75\\x0c\\x81\\xc1\\xb4\\x00\\x00\\x00",
+      "mask": "xxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/ItemMgr.cpp",
+      "line": 355,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x00\\x00\\x16\\x43\\x0a\\x00\\x00\\x00\", \"xxxxxxxx\", 0, GW::ScannerSection::Section_RDATA)",
+      "pattern": "\\x00\\x00\\x16\\x43\\x0a\\x00\\x00\\x00",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 87,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(Scanner::FindUseOfString(\"index < arrsize(s_missionClientData)\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 87,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"index < arrsize(s_missionClientData)\")",
+      "string_literal": "index < arrsize(s_missionClientData)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 88,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"MapQueryAltitude() invalid params point=(%f,%f,%u) mapRect=(%f,%f,%f,%f)\"), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 88,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"MapQueryAltitude() invalid params point=(%f,%f,%u) mapRect=(%f,%f,%f,%f)\")",
+      "string_literal": "MapQueryAltitude() invalid params point=(%f,%f,%u) mapRect=(%f,%f,%f,%f)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 90,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x74\\x1d\\x68\\xa9\\x01\\x00\\x00\", \"xxxxxxx\")",
+      "pattern": "\\x74\\x1d\\x68\\xa9\\x01\\x00\\x00",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 96,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"ptr->id < arrsize(s_chunkInfo)\"), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 96,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"ptr->id < arrsize(s_chunkInfo)\")",
+      "string_literal": "ptr->id < arrsize(s_chunkInfo)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 98,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(L\"Map file \\'%s\\' failed to load. Attempting to re-bloat.\"), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 98,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(L\"Map file \\'%s\\' failed to load. Attempting to re-bloat.\")",
+      "string_literal": "Map file \\'%s\\' failed to load.  Attempting to re-bloat."
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 101,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\xb9\\x24\\x02\\x00\\x00\\xe8\", \"xxxxxx\"),0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MapMgr.cpp",
+      "line": 101,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\xb9\\x24\\x02\\x00\\x00\\xe8\", \"xxxxxx\")",
+      "pattern": "\\xb9\\x24\\x02\\x00\\x00\\xe8",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 118,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString(\"chars>=MAX_PATH\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 118,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "GW::Scanner::FindUseOfString(\"chars>=MAX_PATH\")",
+      "string_literal": "chars>=MAX_PATH"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 119,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(GW::Scanner::Find(\"\\x72\\x74\\x76\\x65\\xe8\", \"xxxxx\", 4))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 119,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x72\\x74\\x76\\x65\\xe8\", \"xxxxx\", 4)",
+      "pattern": "\\x72\\x74\\x76\\x65\\xe8",
+      "mask": "xxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 121,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x57\\xe8\\x00\\x00\\x00\\x00\\x8b\\xf0\\x83\\xc4\\x04\\x85\\xf6\\x75\\x00\\x8b\", \"xx????xxxxxxxx?x\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 121,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x57\\xe8\\x00\\x00\\x00\\x00\\x8b\\xf0\\x83\\xc4\\x04\\x85\\xf6\\x75\\x00\\x8b\", \"xx????xxxxxxxx?x\")",
+      "pattern": "\\x57\\xe8\\x00\\x00\\x00\\x00\\x8b\\xf0\\x83\\xc4\\x04\\x85\\xf6\\x75\\x00\\x8b",
+      "mask": "xx????xxxxxxxx?x"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 123,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x56\\xe8\\x00\\x00\\x00\\x00\\x8b\\xf8\\x83\\xc4\\x04\\x85\\xff\\x75\\x00\\x8b\", \"xx????xxxxxxxx?x\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 123,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x56\\xe8\\x00\\x00\\x00\\x00\\x8b\\xf8\\x83\\xc4\\x04\\x85\\xff\\x75\\x00\\x8b\", \"xx????xxxxxxxx?x\")",
+      "pattern": "\\x56\\xe8\\x00\\x00\\x00\\x00\\x8b\\xf8\\x83\\xc4\\x04\\x85\\xff\\x75\\x00\\x8b",
+      "mask": "xx????xxxxxxxx?x"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 128,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"\\\\Code\\\\Base\\\\Os\\\\Win32\\\\Exe\\\\ExeIo.cpp\", \"!s_api.initialize\", 0, 0x14)",
+      "assertion_file": "\\\\Code\\\\Base\\\\Os\\\\Win32\\\\Exe\\\\ExeIo.cpp",
+      "assertion_msg": "!s_api.initialize"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 129,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 136,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(GW::Scanner::Find(\"\\x3d\\x18\\x79\\x00\\x00\", \"xxxxx\",-0x8))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 136,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x3d\\x18\\x79\\x00\\x00\", \"xxxxx\",-0x8)",
+      "pattern": "\\x3d\\x18\\x79\\x00\\x00",
+      "mask": "xxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MerchantMgr.cpp",
+      "line": 130,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"VnTradeSell.cpp\", \"listItemFrameId\", 0, 0), 0x500)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MerchantMgr.cpp",
+      "line": 130,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"VnTradeSell.cpp\", \"listItemFrameId\", 0, 0)",
+      "assertion_file": "VnTradeSell.cpp",
+      "assertion_msg": "listItemFrameId"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MerchantMgr.cpp",
+      "line": 134,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"VnTradeBuy.cpp\", \"listItemFrameId\", 0, 0), 0x500)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/MerchantMgr.cpp",
+      "line": 134,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"VnTradeBuy.cpp\", \"listItemFrameId\", 0, 0)",
+      "assertion_file": "VnTradeBuy.cpp",
+      "assertion_msg": "listItemFrameId"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 274,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x05\\xfb\\x0b\\x01\\x00\",\"xxxxx\"),0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 274,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x05\\xfb\\x0b\\x01\\x00\",\"xxxxx\")",
+      "pattern": "\\x05\\xfb\\x0b\\x01\\x00",
+      "mask": "xxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 276,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x8b\\x78\\x4c\\x8d\\x8f\\x9c\\x00\\x00\\x00\", \"xxxxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 276,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x8b\\x78\\x4c\\x8d\\x8f\\x9c\\x00\\x00\\x00\", \"xxxxxxxxx\")",
+      "pattern": "\\x8b\\x78\\x4c\\x8d\\x8f\\x9c\\x00\\x00\\x00",
+      "mask": "xxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 279,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Ui\\\\Game\\\\Party\\\\PtSearch.cpp\", \"m_activeList == LIST_HEROES\",0,0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 279,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Ui\\\\Game\\\\Party\\\\PtSearch.cpp\", \"m_activeList == LIST_HEROES\",0,0)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Ui\\\\Game\\\\Party\\\\PtSearch.cpp",
+      "assertion_msg": "m_activeList == LIST_HEROES"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 281,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"PtJoin.cpp\", \"selection.memberType == MEMBER_TYPE_INVITE_IN\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 281,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"PtJoin.cpp\", \"selection.memberType == MEMBER_TYPE_INVITE_IN\", 0, 0)",
+      "assertion_file": "PtJoin.cpp",
+      "assertion_msg": "selection.memberType == MEMBER_TYPE_INVITE_IN"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 283,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"ConstHero.cpp\", \"index < arrsize(s_heroClientData)\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 283,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"ConstHero.cpp\", \"index < arrsize(s_heroClientData)\", 0, 0)",
+      "assertion_file": "ConstHero.cpp",
+      "assertion_msg": "index < arrsize(s_heroClientData)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 285,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x83\\xe0\\xef\\x51\", \"xxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PartyMgr.cpp",
+      "line": 285,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x83\\xe0\\xef\\x51\", \"xxxx\")",
+      "pattern": "\\x83\\xe0\\xef\\x51",
+      "mask": "xxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 35,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"AttribTitles.cpp\", \"!*hdr.param\",0,0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 35,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"AttribTitles.cpp\", \"!*hdr.param\",0,0)",
+      "assertion_file": "AttribTitles.cpp",
+      "assertion_msg": "!*hdr.param"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 37,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\xff\\x76\\x08\\xe8\", \"xxxx\", 3, address, address + 0x3ff)",
+      "pattern": "\\xff\\x76\\x08\\xe8",
+      "mask": "xxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 38,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 41,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\x55\\x8b\\xec\\x51\", \"xxxx\", 0, address + 0x10, address + 0xff)",
+      "pattern": "\\x55\\x8b\\xec\\x51",
+      "mask": "xxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 46,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x00\\x00\\x00\\x00\\x23\\x40\\x00\\x00\", \"xxxxxxxx\",-0x4, ScannerSection::Section_RDATA)",
+      "pattern": "\\x00\\x00\\x00\\x00\\x23\\x40\\x00\\x00",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/QuestMgr.cpp",
+      "line": 61,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"context->challengeSortArray.Find(challenge)\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/QuestMgr.cpp",
+      "line": 61,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"context->challengeSortArray.Find(challenge)\")",
+      "string_literal": "context->challengeSortArray.Find(challenge)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/QuestMgr.cpp",
+      "line": 62,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindNthUseOfString(\"context->challengeSortArray.Find(challenge)\",1))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/QuestMgr.cpp",
+      "line": 62,
+      "kind": "string",
+      "call": "FindNthUseOfString",
+      "raw_expr": "Scanner::FindNthUseOfString(\"context->challengeSortArray.Find(challenge)\",1)",
+      "string_literal": "context->challengeSortArray.Find(challenge)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/QuestMgr.cpp",
+      "line": 63,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x89\\xb9\\x28\\x05\\x00\\x00\", \"xxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/QuestMgr.cpp",
+      "line": 63,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x89\\xb9\\x28\\x05\\x00\\x00\", \"xxxxxx\")",
+      "pattern": "\\x89\\xb9\\x28\\x05\\x00\\x00",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/QuestMgr.cpp",
+      "line": 66,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\x8b\\xe5\\x5d\\xc3\", \"xxxx\", -0xb, address, address + 0xfff)",
+      "pattern": "\\x8b\\xe5\\x5d\\xc3",
+      "mask": "xxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/QuestMgr.cpp",
+      "line": 67,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 219,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\xf7\\x46\\x10\\x00\\x20\\x00\\x00\", \"xxxxxxx\")",
+      "pattern": "\\xf7\\x46\\x10\\x00\\x20\\x00\\x00",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 220,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\x56\\xe8\", \"xx\", 1, address, address + 0x20)",
+      "pattern": "\\x56\\xe8",
+      "mask": "xx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 221,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 223,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\xb9\\x10\\x19\\x00\\x00\", \"xxxxx\"), 0x300)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 223,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\xb9\\x10\\x19\\x00\\x00\", \"xxxxx\")",
+      "pattern": "\\xb9\\x10\\x19\\x00\\x00",
+      "mask": "xxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 225,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x7c\\x14\\x68\\xdb\\x02\\x00\\x00\", \"xxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 225,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x7c\\x14\\x68\\xdb\\x02\\x00\\x00\", \"xxxxxxx\")",
+      "pattern": "\\x7c\\x14\\x68\\xdb\\x02\\x00\\x00",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 227,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"GrDev.cpp\", \"m_queueFlushing == GR_QUEUES\", 0,0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/RenderMgr.cpp",
+      "line": 227,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"GrDev.cpp\", \"m_queueFlushing == GR_QUEUES\", 0,0)",
+      "assertion_file": "GrDev.cpp",
+      "assertion_msg": "m_queueFlushing == GR_QUEUES"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/SkillbarMgr.cpp",
+      "line": 107,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "GW::Scanner::FindUseOfString(\"index < arrsize(s_skill)\", 0x11)",
+      "string_literal": "index < arrsize(s_skill)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/SkillbarMgr.cpp",
+      "line": 114,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xba\\x33\\x00\\x00\\x00\\x89\\x08\\x8d\\x40\\x04\", \"x?xxxxxxxx\", -4)",
+      "pattern": "\\xba\\x33\\x00\\x00\\x00\\x89\\x08\\x8d\\x40\\x04",
+      "mask": "x?xxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/SkillbarMgr.cpp",
+      "line": 120,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"TemplatesHelpers.cpp\", \"targetPrimaryProf == templateData.profPrimary\",0,0),0x200)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/SkillbarMgr.cpp",
+      "line": 120,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"TemplatesHelpers.cpp\", \"targetPrimaryProf == templateData.profPrimary\",0,0)",
+      "assertion_file": "TemplatesHelpers.cpp",
+      "assertion_msg": "targetPrimaryProf == templateData.profPrimary"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/StoCMgr.cpp",
+      "line": 131,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x75\\x04\\x33\\xC0\\x5D\\xC3\\x8B\\x41\\x08\\xA8\\x01\\x75\", \"xxxxxxxxxxxx\", -6)",
+      "pattern": "\\x75\\x04\\x33\\xC0\\x5D\\xC3\\x8B\\x41\\x08\\xA8\\x01\\x75",
+      "mask": "xxxxxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 498,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"\\\\Code\\\\Engine\\\\Frame\\\\FrMsg.cpp\", \"frame\", 0, -0x14)",
+      "assertion_file": "\\\\Code\\\\Engine\\\\Frame\\\\FrMsg.cpp",
+      "assertion_msg": "frame"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 506,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(Scanner::Find(\"\\x83\\xc1\\xdc\\xe8\", \"xxxx\", 3))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 506,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x83\\xc1\\xdc\\xe8\", \"xxxx\", 3)",
+      "pattern": "\\x83\\xc1\\xdc\\xe8",
+      "mask": "xxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 508,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x83\\xe8\\x1c\\x3d\\xf7\", \"xxxxx\", 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 508,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x83\\xe8\\x1c\\x3d\\xf7\", \"xxxxx\", 0)",
+      "pattern": "\\x83\\xe8\\x1c\\x3d\\xf7",
+      "mask": "xxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 510,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"FrRelation.cpp\", \"s_codeTable.Head()\", 0, 0)",
+      "assertion_file": "FrRelation.cpp",
+      "assertion_msg": "s_codeTable.Head()"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 511,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\xcc\\xcc\\xcc\\xcc\", \"xxxx\", 4, address, address - 0xff)",
+      "pattern": "\\xcc\\xcc\\xcc\\xcc",
+      "mask": "xxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 513,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"FrMsg.cpp\", \"hdr.reserved < frame->msg.m_classes.Count()\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 513,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"FrMsg.cpp\", \"hdr.reserved < frame->msg.m_classes.Count()\", 0, 0)",
+      "assertion_file": "FrMsg.cpp",
+      "assertion_msg": "hdr.reserved < frame->msg.m_classes.Count()"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 515,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(Scanner::Find(\"\\x68\\xde\\x00\\x00\\x10\\xe8\", \"xxxxxx\", 5))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 515,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x68\\xde\\x00\\x00\\x10\\xe8\", \"xxxxxx\", 5)",
+      "pattern": "\\x68\\xde\\x00\\x00\\x10\\xe8",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 517,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Ui\\\\UiRoot.cpp\", \"!s_count++\", 0, -0xD)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Ui\\\\UiRoot.cpp",
+      "assertion_msg": "!s_count++"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 522,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find( \"\\x75\\x19\\x6A\\x00\\xC7\\x05\\x00\\x00\\x00\\x00\\x01\\x00\", \"xxxxxx????xx\", +6)",
+      "pattern": "\\x75\\x19\\x6A\\x00\\xC7\\x05\\x00\\x00\\x00\\x00\\x01\\x00",
+      "mask": "xxxxxx????xx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 526,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x6a\\x00\\x6a\\x00\\x68\\x00\\x20\\x00\\x00\", \"xxxxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 526,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x6a\\x00\\x6a\\x00\\x68\\x00\\x20\\x00\\x00\", \"xxxxxxxxx\")",
+      "pattern": "\\x6a\\x00\\x6a\\x00\\x68\\x00\\x20\\x00\\x00",
+      "mask": "xxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 528,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Pref\\\\PrApi.cpp\", \"location < arrsize(s_flushDelay)\", 0, 0)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Pref\\\\PrApi.cpp",
+      "assertion_msg": "location < arrsize(s_flushDelay)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 530,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\xc7\\x05????\\x01\\x00\\x00\\x00\", \"xx????xxxx\", 2, address, address - 0xff)",
+      "pattern": "\\xc7\\x05????\\x01\\x00\\x00\\x00",
+      "mask": "xx????xxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 535,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"pref < PREF_STRINGS\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 535,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"pref < PREF_STRINGS\")",
+      "string_literal": "pref < PREF_STRINGS"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 536,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindNthUseOfString(\"pref < PREF_STRINGS\", 1))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 536,
+      "kind": "string",
+      "call": "FindNthUseOfString",
+      "raw_expr": "Scanner::FindNthUseOfString(\"pref < PREF_STRINGS\", 1)",
+      "string_literal": "pref < PREF_STRINGS"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 538,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"pref < PREF_FLAGS\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 538,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"pref < PREF_FLAGS\")",
+      "string_literal": "pref < PREF_FLAGS"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 539,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindNthUseOfString(\"pref < PREF_FLAGS\", 1))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 539,
+      "kind": "string",
+      "call": "FindNthUseOfString",
+      "raw_expr": "Scanner::FindNthUseOfString(\"pref < PREF_FLAGS\", 1)",
+      "string_literal": "pref < PREF_FLAGS"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 541,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"pref < PREF_ENUMS\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 541,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"pref < PREF_ENUMS\")",
+      "string_literal": "pref < PREF_ENUMS"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 542,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"tableCount\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 542,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"tableCount\")",
+      "string_literal": "tableCount"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 544,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"pref < PREF_VALUES\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 544,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"pref < PREF_VALUES\")",
+      "string_literal": "pref < PREF_VALUES"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 545,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindNthUseOfString(\"pref < PREF_VALUES\", 1))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 545,
+      "kind": "string",
+      "call": "FindNthUseOfString",
+      "raw_expr": "Scanner::FindNthUseOfString(\"pref < PREF_VALUES\", 1)",
+      "string_literal": "pref < PREF_VALUES"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 547,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"Param.cpp\", \"parser\", 0, 0)",
+      "assertion_file": "Param.cpp",
+      "assertion_msg": "parser"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 548,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "GW::Scanner::FindInRange(\"\\x6a?\\x68\", \"x?x\", 0, address, address - 0x30)",
+      "pattern": "\\x6a?\\x68",
+      "mask": "x?x"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 554,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"Param.cpp\", \"flag - PARAM_FLAG_FIRST < (sizeof(s_flags) / sizeof((s_flags)[0]))\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 554,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"Param.cpp\", \"flag - PARAM_FLAG_FIRST < (sizeof(s_flags) / sizeof((s_flags)[0]))\", 0, 0)",
+      "assertion_file": "Param.cpp",
+      "assertion_msg": "flag - PARAM_FLAG_FIRST < (sizeof(s_flags) / sizeof((s_flags)[0]))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 557,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "GW::Scanner::FindInRange(\"\\x8b\\x04\", \"xx\", 3, address, address + 0x40)",
+      "pattern": "\\x8b\\x04",
+      "mask": "xx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 563,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"Param.cpp\", \"value - PARAM_VALUE_FIRST < (sizeof(s_values) / sizeof((s_values)[0]))\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 563,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"Param.cpp\", \"value - PARAM_VALUE_FIRST < (sizeof(s_values) / sizeof((s_values)[0]))\", 0, 0)",
+      "assertion_file": "Param.cpp",
+      "assertion_msg": "value - PARAM_VALUE_FIRST < (sizeof(s_values) / sizeof((s_values)[0]))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 566,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "GW::Scanner::FindInRange(\"\\x8b\\x04\", \"xx\", 3, address, address + 0x40)",
+      "pattern": "\\x8b\\x04",
+      "mask": "xx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 572,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x81\\xff\\x40\\x06\\x00\\x00\", \"xxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 572,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x81\\xff\\x40\\x06\\x00\\x00\", \"xxxxxx\")",
+      "pattern": "\\x81\\xff\\x40\\x06\\x00\\x00",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 574,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Pref\\\\PrConst.cpp\", \"pref < arrsize(s_enumInfo)\", 0, 0x15)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Pref\\\\PrConst.cpp",
+      "assertion_msg": "pref < arrsize(s_enumInfo)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 577,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Pref\\\\PrConst.cpp\", \"pref < arrsize(s_valueInfo)\", 0, 0x15)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Pref\\\\PrConst.cpp",
+      "assertion_msg": "pref < arrsize(s_valueInfo)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 582,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"\\\\Code\\\\Engine\\\\Frame\\\\FrTip.cpp\", \"CMsg::Validate(id)\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 582,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"\\\\Code\\\\Engine\\\\Frame\\\\FrTip.cpp\", \"CMsg::Validate(id)\", 0, 0)",
+      "assertion_file": "\\\\Code\\\\Engine\\\\Frame\\\\FrTip.cpp",
+      "assertion_msg": "CMsg::Validate(id)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 591,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x8D\\x4B\\x28\\x89\\x73\\x24\\x8B\\xD7\", \"xxxxxxx\", +0x10)",
+      "pattern": "\\x8D\\x4B\\x28\\x89\\x73\\x24\\x8B\\xD7",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 598,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindNthUseOfString(\"pref < arrsize(s_windows)\", 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 598,
+      "kind": "string",
+      "call": "FindNthUseOfString",
+      "raw_expr": "Scanner::FindNthUseOfString(\"pref < arrsize(s_windows)\", 0)",
+      "string_literal": "pref < arrsize(s_windows)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 600,
+      "kind": "string",
+      "call": "FindNthUseOfString",
+      "raw_expr": "Scanner::FindNthUseOfString(\"pref < PREF_WINDOWS\", 0)",
+      "string_literal": "pref < PREF_WINDOWS"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 601,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\x8d\\x14\\xbf\", \"xxx\", 6, address, address + 0xff)",
+      "pattern": "\\x8d\\x14\\xbf",
+      "mask": "xxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 607,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindUseOfString(\"(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 607,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE\")",
+      "string_literal": "(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 609,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Char\\\\CharMsg.cpp\", \"knotCount <= arrsize(message.knotData)\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 609,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "Scanner::FindAssertion(\"\\\\Code\\\\Gw\\\\Char\\\\CharMsg.cpp\", \"knotCount <= arrsize(message.knotData)\", 0, 0)",
+      "assertion_file": "\\\\Code\\\\Gw\\\\Char\\\\CharMsg.cpp",
+      "assertion_msg": "knotCount <= arrsize(message.knotData)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 611,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x33\\xd2\\x89\\x45\\x08\\xb9\\xc8\\x01\\x00\\x00\", \"xxxxxxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 611,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x33\\xd2\\x89\\x45\\x08\\xb9\\xc8\\x01\\x00\\x00\", \"xxxxxxxxxx\")",
+      "pattern": "\\x33\\xd2\\x89\\x45\\x08\\xb9\\xc8\\x01\\x00\\x00",
+      "mask": "xxxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 613,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"FrApi.cpp\", \"frame->state.Test(FRAME_STATE_CREATED)\", 0, 0)",
+      "assertion_file": "FrApi.cpp",
+      "assertion_msg": "frame->state.Test(FRAME_STATE_CREATED)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 616,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "GW::Scanner::FindInRange((const char*)address, \"xxxxxxxxxx\", 0, address + 1, address + 0xffff)",
+      "pattern": null,
+      "mask": "xxxxxxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 617,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 620,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "GW::Scanner::FindUseOfString(L\"ActCdKey\")",
+      "string_literal": "ActCdKey"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 622,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\xe8\", \"x\", 0, address - 1, address - 0xff)",
+      "pattern": "\\xe8",
+      "mask": "x"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 623,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(address)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 626,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"FrApi.cpp\", \"encodedTitle\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 626,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"FrApi.cpp\", \"encodedTitle\", 0, 0)",
+      "assertion_file": "FrApi.cpp",
+      "assertion_msg": "encodedTitle"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 628,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "Scanner::ToFunctionStart(Scanner::Find(\"\\x0b\\x45\\x08\\x33\\x45\\x10\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 628,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "Scanner::Find(\"\\x0b\\x45\\x08\\x33\\x45\\x10\")",
+      "pattern": "\\x0b\\x45\\x08\\x33\\x45\\x10",
+      "mask": null
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 629,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "Scanner::FunctionFromNearCall(GW::Scanner::Find(\"\\x6a\\x0e\\xe8??\\x00\\x00\\x83\\xc4\\x0c\\xe8\", \"xxx??xxxxxx\", 10))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 629,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x6a\\x0e\\xe8??\\x00\\x00\\x83\\xc4\\x0c\\xe8\", \"xxx??xxxxxx\", 10)",
+      "pattern": "\\x6a\\x0e\\xe8??\\x00\\x00\\x83\\xc4\\x0c\\xe8",
+      "mask": "xxx??xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 631,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "Scanner::FindUseOfString(\"modifierKeyCount == OS_GAMEPAD_MODIFIER_COUNT\")",
+      "string_literal": "modifierKeyCount == OS_GAMEPAD_MODIFIER_COUNT"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 633,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "Scanner::FindInRange(\"\\xb9????\\x6a\\x0c\", \"x????xx\", 1, address, address + 0xff)",
+      "pattern": "\\xb9????\\x6a\\x0c",
+      "mask": "x????xx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 638,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x83\\xc0\\xf8\\x83\\xf8\\x5b\", \"xxxxxx\"))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 638,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x83\\xc0\\xf8\\x83\\xf8\\x5b\", \"xxxxxx\")",
+      "pattern": "\\x83\\xc0\\xf8\\x83\\xf8\\x5b",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 639,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"CtlBtn.cpp\", \"checked\", 0, 0))"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 639,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"CtlBtn.cpp\", \"checked\", 0, 0)",
+      "assertion_file": "CtlBtn.cpp",
+      "assertion_msg": "checked"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 640,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"CtlText.cpp\", \"color\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "gwca",
+      "file": "Source/UIMgr.cpp",
+      "line": 640,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"CtlText.cpp\", \"color\", 0, 0)",
+      "assertion_file": "CtlText.cpp",
+      "assertion_msg": "color"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Logger.cpp",
+      "line": 110,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"Log.cpp\", \"argListPtr\", 0, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Logger.cpp",
+      "line": 110,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"Log.cpp\", \"argListPtr\", 0, 0)",
+      "assertion_file": "Log.cpp",
+      "assertion_msg": "argListPtr"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/AudioSettings.cpp",
+      "line": 224,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"SndMain.cpp\",\"filename\",0,0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/AudioSettings.cpp",
+      "line": 224,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"SndMain.cpp\",\"filename\",0,0)",
+      "assertion_file": "SndMain.cpp",
+      "assertion_msg": "filename"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/AudioSettings.cpp",
+      "line": 229,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x8d\\x77\\x0c\\x83\\xe0\\xf3\", \"xxxxxx\", 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/AudioSettings.cpp",
+      "line": 229,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x8d\\x77\\x0c\\x83\\xe0\\xf3\", \"xxxxxx\", 0)",
+      "pattern": "\\x8d\\x77\\x0c\\x83\\xe0\\xf3",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/AudioSettings.cpp",
+      "line": 236,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"Handle.cpp\", \"s_allocCount\", 0xa7, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/AudioSettings.cpp",
+      "line": 236,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"Handle.cpp\", \"s_allocCount\", 0xa7, 0)",
+      "assertion_file": "Handle.cpp",
+      "assertion_msg": "s_allocCount"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/AudioSettings.cpp",
+      "line": 241,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"SndMain.cpp\", \"handle\", 0x3d8, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/AudioSettings.cpp",
+      "line": 241,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"SndMain.cpp\", \"handle\", 0x3d8, 0)",
+      "assertion_file": "SndMain.cpp",
+      "assertion_msg": "handle"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/CameraUnlockModule.cpp",
+      "line": 191,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindNthUseOfString(\"mode < arrsize(s_mode)\", 1))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/CameraUnlockModule.cpp",
+      "line": 191,
+      "kind": "string",
+      "call": "FindNthUseOfString",
+      "raw_expr": "GW::Scanner::FindNthUseOfString(\"mode < arrsize(s_mode)\", 1)",
+      "string_literal": "mode < arrsize(s_mode)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/ChatSettings.cpp",
+      "line": 443,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"CtlTextMl.cpp\", \"value\", 0, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/ChatSettings.cpp",
+      "line": 443,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"CtlTextMl.cpp\", \"value\", 0, 0)",
+      "assertion_file": "CtlTextMl.cpp",
+      "assertion_msg": "value"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/ChatSettings.cpp",
+      "line": 450,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x75\\x16\\x68\\x88\\xe1\\x00\\x00\", \"xxxxxxx\"),0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/ChatSettings.cpp",
+      "line": 450,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x75\\x16\\x68\\x88\\xe1\\x00\\x00\", \"xxxxxxx\")",
+      "pattern": "\\x75\\x16\\x68\\x88\\xe1\\x00\\x00",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/ChatSettings.cpp",
+      "line": 457,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x74?\\xc7??\\xff\\xff\\xff\\xff\\xc7??\\xff\\xff\\xff\\xff\", \"x?x??xxxxx??xxxx\", 1)",
+      "pattern": "\\x74?\\xc7??\\xff\\xff\\xff\\xff\\xc7??\\xff\\xff\\xff\\xff",
+      "mask": "x?x??xxxxx??xxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/CodeOptimiserModule.cpp",
+      "line": 109,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xf7\\xd6\\x85\", \"xxx\", -0xF)",
+      "pattern": "\\xf7\\xd6\\x85",
+      "mask": "xxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/CrashHandler.cpp",
+      "line": 405,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString(\"%p %08x %08x %08x %08x \"), 0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/CrashHandler.cpp",
+      "line": 405,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "GW::Scanner::FindUseOfString(\"%p %08x %08x %08x %08x \")",
+      "string_literal": "%p  %08x %08x %08x %08x "
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/DialogModule.cpp",
+      "line": 244,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"GmNpc.cpp\", \"msg.createParam\", 0x3fe, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/DialogModule.cpp",
+      "line": 244,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"GmNpc.cpp\", \"msg.createParam\", 0x3fe, 0)",
+      "assertion_file": "GmNpc.cpp",
+      "assertion_msg": "msg.createParam"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/FpsFix.cpp",
+      "line": 30,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x6a\\x00\\x68\\x40\\x42\\x0f\\x00\\xe8\", \"xxxxxxxx\", 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/FpsFix.cpp",
+      "line": 30,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x6a\\x00\\x68\\x40\\x42\\x0f\\x00\\xe8\", \"xxxxxxxx\", 0)",
+      "pattern": "\\x6a\\x00\\x68\\x40\\x42\\x0f\\x00\\xe8",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1465,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"GmSkTome.cpp\", \"selection.skillId\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1465,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"GmSkTome.cpp\", \"selection.skillId\", 0, 0)",
+      "assertion_file": "GmSkTome.cpp",
+      "assertion_msg": "selection.skillId"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1468,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"GmCtlSkList.cpp\", \"!obj\", 0xc71, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1468,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"GmCtlSkList.cpp\", \"!obj\", 0xc71, 0)",
+      "assertion_file": "GmCtlSkList.cpp",
+      "assertion_msg": "!obj"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1471,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xF7\\x40\\x0C\\x10\\x00\\x02\\x00\\x75\", \"xxxxxx??\", +7)",
+      "pattern": "\\xF7\\x40\\x0C\\x10\\x00\\x02\\x00\\x75",
+      "mask": "xxxxxx??"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1475,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xdf\\xe0\\xf6\\xc4\\x41\\x7a\\x79\", \"xxxxxxx\", 0x5)",
+      "pattern": "\\xdf\\xe0\\xf6\\xc4\\x41\\x7a\\x79",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1480,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"GmTipSkill.cpp\", \"No valid case for switch variable \\'m_powerType\\'\", 0, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1480,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"GmTipSkill.cpp\", \"No valid case for switch variable \\'m_powerType\\'\", 0, 0)",
+      "assertion_file": "GmTipSkill.cpp",
+      "assertion_msg": "No valid case for switch variable \\'m_powerType\\'"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1485,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x81\\xce\\xa0\\x06\\x00\\x00\", \"xxxxxx\")",
+      "pattern": "\\x81\\xce\\xa0\\x06\\x00\\x00",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1486,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange(\"\\xe8\", \"x\", 0, address, address + 0xff))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GameSettings.cpp",
+      "line": 1486,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "GW::Scanner::FindInRange(\"\\xe8\", \"x\", 0, address, address + 0xff)",
+      "pattern": "\\xe8",
+      "mask": "x"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/GuildWarsSettingsModule.cpp",
+      "line": 659,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"FrKey.cpp\", \"count == arrsize(s_remapTable)\", 0, 0x13)",
+      "assertion_file": "FrKey.cpp",
+      "assertion_msg": "count == arrsize(s_remapTable)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/InventoryManager.cpp",
+      "line": 1618,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find( \"\\x83\\xc4\\x04\\x80\\x78\\x04\\x06\\x0f\\x84\\xd3\\x00\\x00\\x00\\x6a\\x02\\xff\\x37\", nullptr, -0x10)",
+      "pattern": "\\x83\\xc4\\x04\\x80\\x78\\x04\\x06\\x0f\\x84\\xd3\\x00\\x00\\x00\\x6a\\x02\\xff\\x37",
+      "mask": null
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/InventoryManager.cpp",
+      "line": 1625,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"GmItemSplit.cpp\", \"inventorySlot\", 0, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/InventoryManager.cpp",
+      "line": 1625,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"GmItemSplit.cpp\", \"inventorySlot\", 0, 0)",
+      "assertion_file": "GmItemSplit.cpp",
+      "assertion_msg": "inventorySlot"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/ItemDescriptionHandler.cpp",
+      "line": 108,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x25\\xfd\\x00\\x00\\x00\\x3c\\xfd\", \"xxxxxxx\"))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/ItemDescriptionHandler.cpp",
+      "line": 108,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x25\\xfd\\x00\\x00\\x00\\x3c\\xfd\", \"xxxxxxx\")",
+      "pattern": "\\x25\\xfd\\x00\\x00\\x00\\x3c\\xfd",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/KeyboardLanguageFix.cpp",
+      "line": 35,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x81\\xe6\\xff\\xff\\xff\\x7f\\x85\\xc0\", \"xxxxxxxx\", -0x4)",
+      "pattern": "\\x81\\xe6\\xff\\xff\\xff\\x7f\\x85\\xc0",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/LoginModule.cpp",
+      "line": 65,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"Param.cpp\", \"string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))\", 0, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/LoginModule.cpp",
+      "line": 65,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"Param.cpp\", \"string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))\", 0, 0)",
+      "assertion_file": "Param.cpp",
+      "assertion_msg": "string - PARAM_STRING_FIRST < (sizeof(s_strings) / sizeof((s_strings)[0]))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 171,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xc7\\x45\\xf0\\x10\\x00\\x00\\x00\\xc7\\x45\\xf4\\x02\\x00\\x00\\x00\", \"xx?xxxxxx?xxxx\", 0x15)",
+      "pattern": "\\xc7\\x45\\xf0\\x10\\x00\\x00\\x00\\xc7\\x45\\xf4\\x02\\x00\\x00\\x00",
+      "mask": "xx?xxxxxx?xxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 173,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(address, 0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 176,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange(\"\\x89\\x46\\x08\\xe8????\", \"xxxx????\", 3, address, address + 0xff))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 176,
+      "kind": "raw",
+      "call": "FindInRange",
+      "raw_expr": "GW::Scanner::FindInRange(\"\\x89\\x46\\x08\\xe8????\", \"xxxx????\", 3, address, address + 0xff)",
+      "pattern": "\\x89\\x46\\x08\\xe8????",
+      "mask": "xxxx????"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 441,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x80\\x7e\\x01\\x80\", \"xxxx\"))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 441,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x80\\x7e\\x01\\x80\", \"xxxx\")",
+      "pattern": "\\x80\\x7e\\x01\\x80",
+      "mask": "xxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/Obfuscator.cpp",
+      "line": 850,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(R\"(p:\\code\\gw\\ui\\char\\uichinfo.cpp)\", \"!StrCmp(m_characterName, characterInfo.characterName)\",0,0)",
+      "assertion_file": "(p:\\code\\gw\\ui\\char\\uichinfo.cpp)",
+      "assertion_msg": "!StrCmp(m_characterName, characterInfo.characterName)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/Obfuscator.cpp",
+      "line": 853,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GetCharacterSummary_Assertion)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/Obfuscator.cpp",
+      "line": 861,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(R\"(p:\\code\\gw\\ui\\game\\vendor\\vnacctnameset.cpp)\", \"charName\", 0, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/Obfuscator.cpp",
+      "line": 861,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(R\"(p:\\code\\gw\\ui\\game\\vendor\\vnacctnameset.cpp)\", \"charName\", 0, 0)",
+      "assertion_file": "(p:\\code\\gw\\ui\\game\\vendor\\vnacctnameset.cpp)",
+      "assertion_msg": "charName"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/QuestModule.cpp",
+      "line": 800,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"UiCtlWebLink.cpp\", \"challengeId < CHALLENGES\", 0, -0x7)",
+      "assertion_file": "UiCtlWebLink.cpp",
+      "assertion_msg": "challengeId < CHALLENGES"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/QuestModule.cpp",
+      "line": 816,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"CtlFrameList.cpp\", \"selection\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/QuestModule.cpp",
+      "line": 816,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"CtlFrameList.cpp\", \"selection\", 0, 0)",
+      "assertion_file": "CtlFrameList.cpp",
+      "assertion_msg": "selection"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/TextToSpeechModule.cpp",
+      "line": 1724,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"AtMonolog.cpp\", \"msg.createParam\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/TextToSpeechModule.cpp",
+      "line": 1724,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"AtMonolog.cpp\", \"msg.createParam\", 0, 0)",
+      "assertion_file": "AtMonolog.cpp",
+      "assertion_msg": "msg.createParam"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/VendorFix.cpp",
+      "line": 73,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"VnCollect.cpp\", \"collect.service == CHAR_TRANSACTION_COLLECT\", 0,0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/VendorFix.cpp",
+      "line": 73,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"VnCollect.cpp\", \"collect.service == CHAR_TRANSACTION_COLLECT\", 0,0)",
+      "assertion_file": "VnCollect.cpp",
+      "assertion_msg": "collect.service == CHAR_TRANSACTION_COLLECT"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/VendorFix.cpp",
+      "line": 78,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"VnCraft.cpp\", \"service.service == CHAR_TRANSACTION_CRAFT\", 0,0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Modules/VendorFix.cpp",
+      "line": 78,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"VnCraft.cpp\", \"service.service == CHAR_TRANSACTION_CRAFT\", 0,0)",
+      "assertion_file": "VnCraft.cpp",
+      "assertion_msg": "service.service == CHAR_TRANSACTION_CRAFT"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/ChatLog.cpp",
+      "line": 652,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(R\"(p:\\code\\gw\\chat\\ctchatedit.cpp)\", \"length\", -0x5A)",
+      "assertion_file": "(p:\\code\\gw\\chat\\ctchatedit.cpp)",
+      "assertion_msg": "length"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/ChatLog.cpp",
+      "line": 665,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x83\\xc4\\x08\\x8d\\x77\\x0c\\xbb\\x00\\x02\\x00\\x00\", \"xxxxxxxxxxx\", -0x70)",
+      "pattern": "\\x83\\xc4\\x08\\x8d\\x77\\x0c\\xbb\\x00\\x02\\x00\\x00",
+      "mask": "xxxxxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/ChatLog.cpp",
+      "line": 670,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(GW::Scanner::Find(\"\\x68\\x7e\\x00\\x00\\x10\\x53\", \"xxxxxx\", -0x5))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/ChatLog.cpp",
+      "line": 670,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x68\\x7e\\x00\\x00\\x10\\x53\", \"xxxxxx\", -0x5)",
+      "pattern": "\\x68\\x7e\\x00\\x00\\x10\\x53",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/HeroEquipmentModule.cpp",
+      "line": 334,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x6a\\x00\\x6a\\x00\\x68\\xb0\\x01\\x00\\x10\", \"xxxxxxxxx\", 10)",
+      "pattern": "\\x6a\\x00\\x6a\\x00\\x68\\xb0\\x01\\x00\\x10",
+      "mask": "xxxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/HeroEquipmentModule.cpp",
+      "line": 338,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"InvBag.cpp\",\"slot < m_slotItem.Count()\",0,0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/HeroEquipmentModule.cpp",
+      "line": 338,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"InvBag.cpp\",\"slot < m_slotItem.Count()\",0,0)",
+      "assertion_file": "InvBag.cpp",
+      "assertion_msg": "slot < m_slotItem.Count()"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/InventoryOverlayWidget.cpp",
+      "line": 66,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x3d\\xef\\x00\\x00\\x10\\x0f\\x87\\x9b\\x09\\x00\\x00\", \"xxxxxxxxxxx\", -0x21)",
+      "pattern": "\\x3d\\xef\\x00\\x00\\x10\\x0f\\x87\\x9b\\x09\\x00\\x00",
+      "mask": "xxxxxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/IronManModule.cpp",
+      "line": 83,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x69\\x7b\\x08\\xbc\\x00\\x00\\x00\", \"xxxxxxx\"))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/IronManModule.cpp",
+      "line": 83,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x69\\x7b\\x08\\xbc\\x00\\x00\\x00\", \"xxxxxxx\")",
+      "pattern": "\\x69\\x7b\\x08\\xbc\\x00\\x00\\x00",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/UIScaler.cpp",
+      "line": 103,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"FrFont.cpp\", \"s_curScale > -10\", 0, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/UIScaler.cpp",
+      "line": 103,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"FrFont.cpp\", \"s_curScale > -10\", 0, 0)",
+      "assertion_file": "FrFont.cpp",
+      "assertion_msg": "s_curScale > -10"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/UIScaler.cpp",
+      "line": 108,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"FrFont.cpp\", \"(*fontDataArray)[fontDataIndex].height != 0\", 0, 0), 0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Unused/UIScaler.cpp",
+      "line": 108,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"FrFont.cpp\", \"(*fontDataArray)[fontDataIndex].height != 0\", 0, 0)",
+      "assertion_file": "FrFont.cpp",
+      "assertion_msg": "(*fontDataArray)[fontDataIndex].height != 0"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Utils/GameWorldCompositor.cpp",
+      "line": 79,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart( GW::Scanner::FindAssertion(\"FrCache.cpp\", \"frame\", 0x9e, 0), 0x200)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Utils/GameWorldCompositor.cpp",
+      "line": 80,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"FrCache.cpp\", \"frame\", 0x9e, 0)",
+      "assertion_file": "FrCache.cpp",
+      "assertion_msg": "frame"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Utils/GameWorldCompositor.cpp",
+      "line": 88,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(a)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Utils/GameWorldCompositor.cpp",
+      "line": 89,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(a)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Utils/ToolboxUtils.cpp",
+      "line": 393,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x8b\\x35\\x00\\x00\\x00\\x00\\x57\\x69\\xF8\\x84\\x00\\x00\\x00\", \"xx????xxxxxxx\", 0x2)",
+      "pattern": "\\x8b\\x35\\x00\\x00\\x00\\x00\\x57\\x69\\xF8\\x84\\x00\\x00\\x00",
+      "mask": "xx????xxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Utils/ToolboxUtils.cpp",
+      "line": 419,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x50\\x6a\\x18\\x6a\\x02\\xff\\x15\", \"xxxxxxx\", 0x7)",
+      "pattern": "\\x50\\x6a\\x18\\x6a\\x02\\xff\\x15",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Widgets/InventoryOverlayWidget.cpp",
+      "line": 67,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"InvSlot.cpp\",\"!m_dragOverlayTexture\",0,0),0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Widgets/InventoryOverlayWidget.cpp",
+      "line": 67,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"InvSlot.cpp\",\"!m_dragOverlayTexture\",0,0)",
+      "assertion_file": "InvSlot.cpp",
+      "assertion_msg": "!m_dragOverlayTexture"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Widgets/Minimap/Minimap.cpp",
+      "line": 853,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x8b\\x46\\x40\\x85\\xc0\\x74\\x0c\", \"xxxxx?x\", 0x5)",
+      "pattern": "\\x8b\\x46\\x40\\x85\\xc0\\x74\\x0c",
+      "mask": "xxxxx?x"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Widgets/Minimap/Minimap.cpp",
+      "line": 858,
+      "kind": "wrapper",
+      "call": "FunctionFromNearCall",
+      "raw_expr": "GW::Scanner::FunctionFromNearCall(GW::Scanner::Find(\"\\x68\\x00\\x09\\x14\\x00\\x57\\x56\\xe8\", \"xxxxxxxx\", 7))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Widgets/Minimap/Minimap.cpp",
+      "line": 858,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x68\\x00\\x09\\x14\\x00\\x57\\x56\\xe8\", \"xxxxxxxx\", 7)",
+      "pattern": "\\x68\\x00\\x09\\x14\\x00\\x57\\x56\\xe8",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Widgets/WorldMapWidget.cpp",
+      "line": 936,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x8b\\x45\\xfc\\xf7\\x40\\x10\\x00\\x00\\x01\\x00\", \"xxxxxxxxxx\", 0xa)",
+      "pattern": "\\x8b\\x45\\xfc\\xf7\\x40\\x10\\x00\\x00\\x01\\x00",
+      "mask": "xxxxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Widgets/WorldMapWidget.cpp",
+      "line": 940,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x8b\\xd8\\x83\\xc4\\x10\\x8b\\xcb\\x8b\\xf3\\xd1\\xe9\", \"xxxxxxxxxxx\", -0x5)",
+      "pattern": "\\x8b\\xd8\\x83\\xc4\\x10\\x8b\\xcb\\x8b\\xf3\\xd1\\xe9",
+      "mask": "xxxxxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/ArmoryWindow.cpp",
+      "line": 1425,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\xc6\\x86\\xba\\x01\\x00\\x00\\x04\", \"xxxxxxx\", 0), 0xfff)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/ArmoryWindow.cpp",
+      "line": 1425,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xc6\\x86\\xba\\x01\\x00\\x00\\x04\", \"xxxxxxx\", 0)",
+      "pattern": "\\xc6\\x86\\xba\\x01\\x00\\x00\\x04",
+      "mask": "xxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/ArmoryWindow.cpp",
+      "line": 1427,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xe5\\x09\\x00\\x00\\xf0\\x09\\x00\\x00\", \"xxxxxxxx\", -0xc, GW::ScannerSection::Section_RDATA)",
+      "pattern": "\\xe5\\x09\\x00\\x00\\xf0\\x09\\x00\\x00",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/ArmoryWindow.cpp",
+      "line": 1428,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\xe3\\x09\\x00\\x00\\xef\\x09\\x00\\x00\", \"xxxxxxxx\", 0, GW::ScannerSection::Section_RDATA)",
+      "pattern": "\\xe3\\x09\\x00\\x00\\xef\\x09\\x00\\x00",
+      "mask": "xxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/HotkeysWindow.cpp",
+      "line": 122,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x83\\xfe\\x5b\\x74\\x27\\x83\\xfe\\x5c\\x74\\x22\\x83\\xfe\\x5d\\x74\\x1d\", \"xxxxxxxxxxxxxxx\", -0x7)",
+      "pattern": "\\x83\\xfe\\x5b\\x74\\x27\\x83\\xfe\\x5c\\x74\\x22\\x83\\xfe\\x5d\\x74\\x1d",
+      "mask": "xxxxxxxxxxxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/InfoWindow.cpp",
+      "line": 629,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString(\"(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE\"))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/InfoWindow.cpp",
+      "line": 629,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "GW::Scanner::FindUseOfString(\"(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE\")",
+      "string_literal": "(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/InfoWindow.cpp",
+      "line": 648,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion(\"GrTex2d.cpp\", \"!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)\", 0, 0))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/InfoWindow.cpp",
+      "line": 648,
+      "kind": "assertion",
+      "call": "FindAssertion",
+      "raw_expr": "GW::Scanner::FindAssertion(\"GrTex2d.cpp\", \"!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)\", 0, 0)",
+      "assertion_file": "GrTex2d.cpp",
+      "assertion_msg": "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/InfoWindow.cpp",
+      "line": 724,
+      "kind": "string",
+      "call": "FindUseOfString",
+      "raw_expr": "GW::Scanner::FindUseOfString(\"index < arrsize(s_fileId)\", 0x11)",
+      "string_literal": "index < arrsize(s_fileId)"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/InfoWindow.cpp",
+      "line": 764,
+      "kind": "wrapper",
+      "call": "ToFunctionStart",
+      "raw_expr": "GW::Scanner::ToFunctionStart(GW::Scanner::Find(\"\\x68\\x40\\x42\\x0f\\x00\\xe8\", \"xxxxxx\"))"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/InfoWindow.cpp",
+      "line": 764,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x68\\x40\\x42\\x0f\\x00\\xe8\", \"xxxxxx\")",
+      "pattern": "\\x68\\x40\\x42\\x0f\\x00\\xe8",
+      "mask": "xxxxxx"
+    },
+    {
+      "repo": "toolbox",
+      "file": "GWToolboxdll/Windows/PacketLoggerWindow.cpp",
+      "line": 185,
+      "kind": "raw",
+      "call": "Find",
+      "raw_expr": "GW::Scanner::Find(\"\\x75\\x04\\x33\\xC0\\x5D\\xC3\\x8B\\x41\\x08\\xA8\\x01\\x75\", \"xxxxxxxxxxxx\", -6)",
+      "pattern": "\\x75\\x04\\x33\\xC0\\x5D\\xC3\\x8B\\x41\\x08\\xA8\\x01\\x75",
+      "mask": "xxxxxxxxxxxx"
+    }
+  ],
+  "reports": [
+    {
+      "repo": "gwca",
+      "name": "ProcessAgentEffect_Func",
+      "var": "ProcessAgentEffect_Func",
+      "file": "Source/AgentMgr.cpp",
+      "line": 354,
+      "owning_site_line": 346,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "agent_char_data_array",
+      "var": "agent_char_data_array",
+      "file": "Source/AgentMgr.cpp",
+      "line": 355,
+      "owning_site_line": 346,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "CallTarget_Func",
+      "var": "CallTarget_Func",
+      "file": "Source/AgentMgr.cpp",
+      "line": 356,
+      "owning_site_line": 346,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "AgentArrayPtr",
+      "var": "AgentArrayPtr",
+      "file": "Source/AgentMgr.cpp",
+      "line": 357,
+      "owning_site_line": 346,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "MoveTo_Func",
+      "var": "MoveTo_Func",
+      "file": "Source/AgentMgr.cpp",
+      "line": 358,
+      "owning_site_line": 346,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "ChangeTargetFunction",
+      "var": "ChangeTarget_Func",
+      "file": "Source/AgentMgr.cpp",
+      "line": 359,
+      "owning_site_line": 346,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "scan_cam_class",
+      "var": "scan_cam_class",
+      "file": "Source/CameraMgr.cpp",
+      "line": 45,
+      "owning_site_line": 41,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "patch_max_dist",
+      "var": "patch_max_dist.GetAddress(",
+      "file": "Source/CameraMgr.cpp",
+      "line": 46,
+      "owning_site_line": 41,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "patch_cam_update_addr",
+      "var": "patch_cam_update.GetAddress(",
+      "file": "Source/CameraMgr.cpp",
+      "line": 47,
+      "owning_site_line": 41,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "PrintChatMessage_Func",
+      "var": "PrintChatMessage_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 598,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetSenderColor",
+      "var": "GetSenderColor_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 599,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetMessageColor",
+      "var": "GetMessageColor_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 600,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SendChat",
+      "var": "SendChat_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 601,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "StartWhisper",
+      "var": "StartWhisper_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 602,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "RecvWhisper_Func",
+      "var": "RecvWhisper_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 603,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "AddToChatLog_Func",
+      "var": "AddToChatLog_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 604,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "ChatBuffer_Addr",
+      "var": "ChatBuffer_Addr",
+      "file": "Source/ChatMgr.cpp",
+      "line": 605,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "IsTyping_FrameId",
+      "var": "IsTyping_FrameId",
+      "file": "Source/ChatMgr.cpp",
+      "line": 606,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "UICallback_AssignEditableText_Func",
+      "var": "UICallback_AssignEditableText_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 607,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "UICallback_ChatLogLine_Func",
+      "var": "UICallback_ChatLogLine_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 608,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "AddToSendLog_Func",
+      "var": "AddToSendLog_Func",
+      "file": "Source/ChatMgr.cpp",
+      "line": 609,
+      "owning_site_line": 596,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "HandleBuffSkillClick_Func",
+      "var": "HandleBuffSkillClick_Func",
+      "file": "Source/EffectMgr.cpp",
+      "line": 61,
+      "owning_site_line": 60,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SendEventMessage_Func",
+      "var": "SendEventMessage_Func",
+      "file": "Source/EventMgr.cpp",
+      "line": 103,
+      "owning_site_line": 97,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "FriendList_Addr",
+      "var": "FriendList_Addr",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 141,
+      "owning_site_line": 133,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "FriendStatusHandler",
+      "var": "FriendEventHandler_Func",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 142,
+      "owning_site_line": 133,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetOnlineStatus",
+      "var": "SetOnlineStatus_Func",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 143,
+      "owning_site_line": 133,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "AddFriend_Func",
+      "var": "AddFriend_Func",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 144,
+      "owning_site_line": 133,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "ChangeFriendType_Func",
+      "var": "ChangeFriendType_Func",
+      "file": "Source/FriendListMgr.cpp",
+      "line": 145,
+      "owning_site_line": 133,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GameplayContext_addr",
+      "var": "GameplayContext_addr",
+      "file": "Source/GWCA.cpp",
+      "line": 111,
+      "owning_site_line": 107,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "PreGameContext_addr",
+      "var": "PreGameContext_addr",
+      "file": "Source/GWCA.cpp",
+      "line": 112,
+      "owning_site_line": 107,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "AvailableChars_addr",
+      "var": "AvailableChars_addr",
+      "file": "Source/GWCA.cpp",
+      "line": 113,
+      "owning_site_line": 107,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "Trash_UICallback_Func",
+      "var": "Trash_UICallback_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 359,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "MaterialStorageBag_UICallback_Func",
+      "var": "MaterialStorageBag_UICallback_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 360,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "MoveItem_Func",
+      "var": "MoveItem_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 361,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "OnSalvagePopup_UICallback_Func",
+      "var": "OnSalvagePopup_UICallback_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 362,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "InventorySlot_UICallback_Func",
+      "var": "InventorySlot_UICallback_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 363,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "InventoryBag_UICallback_Func",
+      "var": "InventoryBag_UICallback_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 364,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "item_formulas",
+      "var": "item_formulas.m_buffer",
+      "file": "Source/ItemMgr.cpp",
+      "line": 365,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "ChangeEquipmentVisibility Function",
+      "var": "ChangeEquipmentVisibility_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 366,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "StorageGold_UICallback_0x2e_Func",
+      "var": "StorageGold_UICallback_0x2e_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 367,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "PingWeaponSet_Func",
+      "var": "PingWeaponSet_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 368,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "unlocked_pvp_item_upgrade_array",
+      "var": "unlocked_pvp_item_upgrade_array.m_buffer",
+      "file": "Source/ItemMgr.cpp",
+      "line": 369,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetPvPItemUpgradeInfoName_Func",
+      "var": "GetPvPItemUpgradeInfoName_Func",
+      "file": "Source/ItemMgr.cpp",
+      "line": 370,
+      "owning_site_line": 355,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "WorldMapFrame_UICallback_Func",
+      "var": "WorldMapFrame_UICallback_Func",
+      "file": "Source/MapMgr.cpp",
+      "line": 103,
+      "owning_site_line": 101,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "DestroyMapContext_Func",
+      "var": "DestroyMapContext_Func",
+      "file": "Source/MapMgr.cpp",
+      "line": 104,
+      "owning_site_line": 101,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "CreateMapContext_Func",
+      "var": "CreateMapContext_Func",
+      "file": "Source/MapMgr.cpp",
+      "line": 105,
+      "owning_site_line": 101,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetAreaInfo_Func",
+      "var": "GetAreaInfo_Func",
+      "file": "Source/MapMgr.cpp",
+      "line": 106,
+      "owning_site_line": 101,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "QueryAltitude Function",
+      "var": "QueryAltitude_Func",
+      "file": "Source/MapMgr.cpp",
+      "line": 107,
+      "owning_site_line": 101,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetSkillTimer_Func",
+      "var": "GetSkillTimer_Func",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 143,
+      "owning_site_line": 136,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "FreeLibrary_Func",
+      "var": "FreeLibrary_Func",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 144,
+      "owning_site_line": 136,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetPersonalDir_Func",
+      "var": "GetPersonalDir_Func",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 145,
+      "owning_site_line": 136,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetGWVersion_Func",
+      "var": "GetGWVersion_Func",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 146,
+      "owning_site_line": 136,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "MemAllocHelper_Func",
+      "var": "MemAllocHelper_Func",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 147,
+      "owning_site_line": 136,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "MemReallocHelper_Func",
+      "var": "MemReallocHelper_Func",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 148,
+      "owning_site_line": 136,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "MemFree_Func",
+      "var": "MemFree_Func",
+      "file": "Source/MemoryMgr.cpp",
+      "line": 149,
+      "owning_site_line": 136,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetHardMode_Func",
+      "var": "SetHardMode_Func",
+      "file": "Source/PartyMgr.cpp",
+      "line": 287,
+      "owning_site_line": 285,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetHeroConstData_Func",
+      "var": "GetHeroConstData_Func",
+      "file": "Source/PartyMgr.cpp",
+      "line": 288,
+      "owning_site_line": 285,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetSelectedParty_Func",
+      "var": "GetSelectedParty_Func",
+      "file": "Source/PartyMgr.cpp",
+      "line": 289,
+      "owning_site_line": 285,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "TickButtonUICallback Function",
+      "var": "TickButtonUICallback",
+      "file": "Source/PartyMgr.cpp",
+      "line": 290,
+      "owning_site_line": 285,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "PartySearchSeek_Func",
+      "var": "PartySearchSeek_Func",
+      "file": "Source/PartyMgr.cpp",
+      "line": 291,
+      "owning_site_line": 285,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "PartySearchButtonCallback_Func",
+      "var": "PartySearchButtonCallback_Func",
+      "file": "Source/PartyMgr.cpp",
+      "line": 292,
+      "owning_site_line": 285,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "title_data",
+      "var": "title_data",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 48,
+      "owning_site_line": 46,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "RemoveActiveTitle_Func",
+      "var": "RemoveActiveTitle_Func",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 49,
+      "owning_site_line": 46,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetActiveTitle_Func",
+      "var": "SetActiveTitle_Func",
+      "file": "Source/PlayerMgr.cpp",
+      "line": 50,
+      "owning_site_line": 46,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "AbandonQuest_Func",
+      "var": "AbandonQuest_Func",
+      "file": "Source/QuestMgr.cpp",
+      "line": 70,
+      "owning_site_line": 67,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetActiveQuest_Func",
+      "var": "SetActiveQuest_Func",
+      "file": "Source/QuestMgr.cpp",
+      "line": 71,
+      "owning_site_line": 67,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "RequestQuestData_Func",
+      "var": "RequestQuestData_Func",
+      "file": "Source/QuestMgr.cpp",
+      "line": 72,
+      "owning_site_line": 67,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "RequestQuestInfo_Func",
+      "var": "RequestQuestInfo_Func",
+      "file": "Source/QuestMgr.cpp",
+      "line": 73,
+      "owning_site_line": 67,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "ProcessVirtualDeviceCommands_Func",
+      "var": "ProcessVirtualDeviceCommands_Func",
+      "file": "Source/RenderMgr.cpp",
+      "line": 229,
+      "owning_site_line": 227,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GwGetTransform",
+      "var": "GwGetTransform_func",
+      "file": "Source/RenderMgr.cpp",
+      "line": 230,
+      "owning_site_line": 227,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GwReset",
+      "var": "GwReset_Func",
+      "file": "Source/RenderMgr.cpp",
+      "line": 231,
+      "owning_site_line": 227,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "HandleRenderCommand_Func",
+      "var": "HandleRenderCommand_Func",
+      "file": "Source/RenderMgr.cpp",
+      "line": 232,
+      "owning_site_line": 227,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SkillArray",
+      "var": "skill_array_addr",
+      "file": "Source/SkillbarMgr.cpp",
+      "line": 122,
+      "owning_site_line": 120,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "AttributeArray",
+      "var": "attribute_array_addr",
+      "file": "Source/SkillbarMgr.cpp",
+      "line": 123,
+      "owning_site_line": 120,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "LoadSkillTemplate_Func",
+      "var": "LoadSkillTemplate_Func",
+      "file": "Source/SkillbarMgr.cpp",
+      "line": 124,
+      "owning_site_line": 120,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "StoCHandler pattern",
+      "var": "address",
+      "file": "Source/StoCMgr.cpp",
+      "line": 132,
+      "owning_site_line": 131,
+      "owning_site_kind": "raw"
+    },
+    {
+      "repo": "gwca",
+      "name": "CtlText_UICallback_Func",
+      "var": "CtlText_UICallback_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 643,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "CtlButton_UICallback_Func",
+      "var": "CtlButton_UICallback_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 644,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "TextMultiline_UICallback_Func",
+      "var": "TextMultiline_UICallback_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 645,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "IsInGamePadCursorMode_pt",
+      "var": "IsInGamePadCursorMode_pt",
+      "file": "Source/UIMgr.cpp",
+      "line": 646,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetGamePadMode_Func",
+      "var": "GetGamePadMode_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 647,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "s_FrameArray",
+      "var": "s_FrameArray",
+      "file": "Source/UIMgr.cpp",
+      "line": 648,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SendFrameUIMessage_Func",
+      "var": "SendFrameUIMessage_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 649,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "ProcessInput_Func",
+      "var": "ProcessInput_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 650,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetRootFrame_Func",
+      "var": "GetRootFrame_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 651,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SendUIMessage_Func",
+      "var": "SendUIMessage_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 652,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "ui_drawn_addr",
+      "var": "ui_drawn_addr",
+      "file": "Source/UIMgr.cpp",
+      "line": 653,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "shift_screen_addr",
+      "var": "shift_screen_addr",
+      "file": "Source/UIMgr.cpp",
+      "line": 654,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "TriggerFrameRedraw_Func",
+      "var": "TriggerFrameRedraw_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 655,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "PreferencesInitialised_Addr",
+      "var": "PreferencesInitialised_Addr",
+      "file": "Source/UIMgr.cpp",
+      "line": 656,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetStringPreference_Func",
+      "var": "GetStringPreference_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 657,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetFlagPreference_Func",
+      "var": "GetFlagPreference_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 658,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetEnumPreference_Func",
+      "var": "GetEnumPreference_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 659,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetNumberPreference_Func",
+      "var": "GetNumberPreference_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 660,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "command_line_pref_info",
+      "var": "command_line_pref_info",
+      "file": "Source/UIMgr.cpp",
+      "line": 661,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "command_line_pref_size",
+      "var": "command_line_pref_size",
+      "file": "Source/UIMgr.cpp",
+      "line": 662,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetCommandLineFlag_Func",
+      "var": "GetCommandLineFlag_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 663,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "CommandLineFlag_Buffer",
+      "var": "CommandLineFlag_Buffer",
+      "file": "Source/UIMgr.cpp",
+      "line": 664,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GetCommandLineNumber_Func",
+      "var": "GetCommandLineNumber_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 665,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "CommandLineNumber_Buffer",
+      "var": "CommandLineNumber_Buffer",
+      "file": "Source/UIMgr.cpp",
+      "line": 666,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetInGameUIScale_Func",
+      "var": "SetInGameUIScale_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 667,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetStringPreference_Func",
+      "var": "SetStringPreference_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 668,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetEnumPreference_Func",
+      "var": "SetEnumPreference_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 669,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetFlagPreference_Func",
+      "var": "SetFlagPreference_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 670,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetNumberPreference_Func",
+      "var": "SetNumberPreference_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 671,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "EnumPreferenceOptions_Addr",
+      "var": "EnumPreferenceOptions_Addr",
+      "file": "Source/UIMgr.cpp",
+      "line": 672,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "NumberPreferenceOptions_Addr",
+      "var": "NumberPreferenceOptions_Addr",
+      "file": "Source/UIMgr.cpp",
+      "line": 673,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetTooltip_Func",
+      "var": "SetTooltip_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 674,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "CurrentTooltipPtr",
+      "var": "CurrentTooltipPtr",
+      "file": "Source/UIMgr.cpp",
+      "line": 675,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "GameSettings_Addr",
+      "var": "GameSettings_Addr",
+      "file": "Source/UIMgr.cpp",
+      "line": 676,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetWindowPosition_Func",
+      "var": "SetWindowPosition_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 677,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "window_positions_array",
+      "var": "window_positions_array",
+      "file": "Source/UIMgr.cpp",
+      "line": 678,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "ValidateAsyncDecodeStr",
+      "var": "ValidateAsyncDecodeStr",
+      "file": "Source/UIMgr.cpp",
+      "line": 679,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "DrawOnCompass_Func",
+      "var": "DrawOnCompass_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 680,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "CreateUIComponent_Func",
+      "var": "CreateUIComponent_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 681,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "DestroyUIComponent_Func",
+      "var": "DestroyUIComponent_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 682,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "AddUIComponentCallback_Func",
+      "var": "AddUIComponentCallback_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 683,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "SetFrameTitle_Func",
+      "var": "SetFrameTitle_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 684,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "UpdateFrameState_Func",
+      "var": "UpdateFrameState_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 685,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "gwca",
+      "name": "Default_UICallback_Func",
+      "var": "Default_UICallback_Func",
+      "file": "Source/UIMgr.cpp",
+      "line": 686,
+      "owning_site_line": 640,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "toolbox",
+      "name": "ProcessInput_Func",
+      "var": "ProcessInput_Func",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 179,
+      "owning_site_line": 176,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "toolbox",
+      "name": "HasRegisteredTrackMouseEvent",
+      "var": "HasRegisteredTrackMouseEvent",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 180,
+      "owning_site_line": 176,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "toolbox",
+      "name": "gw_mouse_move",
+      "var": "gw_mouse_move",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 181,
+      "owning_site_line": 176,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "toolbox",
+      "name": "SetCursorPosCenter_Func",
+      "var": "SetCursorPosCenter_Func",
+      "file": "GWToolboxdll/Modules/MouseFix.cpp",
+      "line": 182,
+      "owning_site_line": 176,
+      "owning_site_kind": "wrapper"
+    },
+    {
+      "repo": "toolbox",
+      "name": "GetActionLabel_Func",
+      "var": "GetActionLabel_Func",
+      "file": "GWToolboxdll/Windows/HotkeysWindow.cpp",
+      "line": 123,
+      "owning_site_line": 122,
+      "owning_site_kind": "raw"
+    }
+  ]
+}

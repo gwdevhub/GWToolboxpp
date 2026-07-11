@@ -13,6 +13,7 @@
 #include <Defines.h>
 #include <Timer.h>
 #include <Utils/GameWorldCompositor.h>
+#include <Utils/TerrainDrape.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Windows/Pathfinding/NavMesh.h>           // per-sample plane resolution for path/overlay draping
@@ -31,10 +32,8 @@ namespace {
     // Stencil the round compass out of overlays so they don't bleed across the minimap.
     bool exclude_compass = true;
 
-    // Test overlays against the scene depth buffer so world geometry hides them; z_near/z_far must match GW's projection (near clip ~47, valid 45-48; far insensitive 50k-200k).
+    // Test overlays against the scene depth buffer so world geometry hides them.
     bool occlude_behind_terrain = false;
-    float z_near = 47.0f;
-    float z_far = 100000.f;
 
 
     GameWorldRenderer::RenderableVectors renderables;
@@ -122,13 +121,12 @@ namespace {
 
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
-    // Highest terrain surface at (x,y) among candidate planes (GW up is -z, so highest = min altitude). QueryAltitude returns 0.f out-of-bounds (ignored); ALTITUDE_UNKNOWN if no plane has data.
+    // Highest static surface at (x,y) among candidate planes (GW up is -z, so highest = min altitude). QueryAltitude returns 0.f out-of-bounds (ignored); ALTITUDE_UNKNOWN if no plane has data.
     float HighestSurfaceZ(const float x, const float y, const std::vector<uint32_t>& planes)
     {
         float best = ALTITUDE_UNKNOWN;
         for (const uint32_t zp : planes) {
-            GW::GamePos p = {x, y, zp};
-            const float a = GW::Map::QueryAltitude(&p);
+            const float a = TerrainDrape::QueryAltAt(x, y, zp);
             if (a != 0.f && (best == ALTITUDE_UNKNOWN || a < best))
                 best = a;
         }
@@ -140,8 +138,7 @@ namespace {
     {
         float best = ALTITUDE_UNKNOWN, best_d = std::numeric_limits<float>::max();
         for (uint32_t zp = 0; zp < num_planes; ++zp) {
-            GW::GamePos p = {x, y, zp};
-            const float a = GW::Map::QueryAltitude(&p);
+            const float a = TerrainDrape::QueryAltAt(x, y, zp);
             if (a == 0.f) continue;
             const float d = std::abs(a - prev);
             if (d < best_d) { best_d = d; best = a; }
@@ -164,7 +161,7 @@ namespace {
         bool vb_dirty = false;                             // verts changed since last upload
     };
     NavmeshBatch navmesh_batch;
-    float navmesh_sample_spacing = 5.f; // gw between terrain-altitude samples when draping overlay edges (user-tunable)
+    float navmesh_sample_spacing = 5.f; // gw between surface samples when draping overlay edges (user-tunable)
 
     // Full mesh (not draped) for the 2D top-down M-key world map. WorldMapWidget redraws these flat each frame.
     std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
@@ -189,12 +186,11 @@ namespace {
             // that plane's heightfield (which ramps/steps where the floor does). Querying the plane directly per point —
             // not the globally-closest surface — makes the line ride that surface: flat stays flat, a ramp rises, a
             // deck stays on the deck, and an edge under a bridge stays on the ground rather than snapping to the deck.
-            // Sampling density is `spacing` gw; QueryAltitude is exact at each point, so the only error is the chord
+            // Sampling density is `spacing` gw; each surface query is exact at that point, so the only error is the chord
             // between samples — tighten `spacing` to shrink it.
             const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
             auto surfaceZ = [&](float x, float y, float fallback) -> float {
-                GW::GamePos p{x, y, plane};
-                const float a = GW::Map::QueryAltitude(&p);
+                const float a = TerrainDrape::QueryAltAt(x, y, plane);
                 if (a != 0.f) return a;                                      // edge's plane has floor here (the common case)
                 const float c = ClosestSurfaceZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
                 return c == ALTITUDE_UNKNOWN ? fallback : c;
@@ -328,7 +324,7 @@ namespace {
             // plane covers the sample (so cross-plane edges with no waypoint on the higher plane still drape sanely).
             auto* nav = PathfindingWindow::GetResidentNavMesh();
             GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
-            float prev = GW::Map::QueryAltitude(&seed_pos);
+            float prev = TerrainDrape::QueryAltAt(seed_pos.x, seed_pos.y, seed_pos.zplane);
             if (prev == 0.f) prev = ClosestSurfaceZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
             for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
                 float z;
@@ -518,7 +514,7 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         // Sync on the render thread: creating vertex buffers needs the D3D device.
         SyncAllMarkers();
     }
-    StepNavmeshBatchBuild(); // advance the incremental, terrain-draped navmesh line buffer (bounded per frame)
+    StepNavmeshBatchBuild(); // advance the incremental, surface-draped navmesh line buffer (bounded per frame)
     if (renderables.empty() && navmesh_batch.verts.empty()) {
         return;
     }
@@ -529,11 +525,11 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         return;
     }
 
-    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, z_near, z_far, render_max_distance, fog_factor)) {
+    if (GameWorldCompositor::SetupPipeline(device, occlude_behind_terrain, render_max_distance, fog_factor)) {
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
 
-        // Bound first-time terrain draping to a frame slice: AddPolyToDevice samples QueryAltitude per new line, so a burst of fresh edges would freeze the game thread; QueryAltitude can't run off-thread, so spread draping across frames. Already-draped renderables (cached vb) always draw.
+        // Bound first-time surface draping to a frame slice: AddPolyToDevice samples QueryAltitude per new line, so a burst of fresh edges would freeze the game thread; QueryAltitude can't run off-thread, so spread draping across frames. Already-draped renderables (cached vb) always draw.
         const auto drape_timer = TIMER_INIT();
         bool drape_budget_spent = false;
 
@@ -608,8 +604,6 @@ void GameWorldRenderer::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "lerp_steps_per_line", &lerp_steps_per_line);
     SettingsRegistry::RegisterField(module, "fog_factor", &fog_factor);
     SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
-    SettingsRegistry::RegisterField(module, "depth_z_near", &z_near);
-    SettingsRegistry::RegisterField(module, "depth_z_far", &z_far);
     SettingsRegistry::RegisterField(module, "render_under_ui", &render_under_ui);
     SettingsRegistry::RegisterField(module, "exclude_compass", &exclude_compass);
 }
@@ -618,8 +612,6 @@ void GameWorldRenderer::OnSettingsLoaded()
 {
     render_max_distance = std::max(render_max_distance, 10.0f);
     fog_factor = std::clamp(fog_factor, 0.0f, 1.0f);
-    z_near = std::max(z_near, 0.01f);
-    z_far = std::max(z_far, z_near + 1.0f);
     need_sync_markers = true;
     UpdateCompositorRegistration();
 }
@@ -656,15 +648,7 @@ void GameWorldRenderer::DrawSettings()
                     "would otherwise bleed across the inside of the minimap.");
 
     ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
-    ImGui::ShowHelp("Hide overlays behind walls, buildings and terrain using the game's depth buffer.\n"
-                    "If overlays vanish or z-fight badly, disable this or tune the depth values below.");
-    if (occlude_behind_terrain) {
-        ImGui::DragFloat("Projection near plane", &z_near, 0.1f, 1.f, 100.f, "%.1f");
-        ImGui::ShowHelp("Must match the game's near clip for occlusion to be accurate.\n"
-                        "~47 is correct; too low hides visible overlays, too high lets them show through walls.");
-        ImGui::DragFloat("Projection far plane", &z_far, 50.f, 1000.f, 200000.f, "%.0f");
-        ImGui::ShowHelp("Insensitive anywhere from ~50000 to 200000.");
-    }
+    ImGui::ShowHelp("Hide overlays behind walls, buildings and terrain using the game's depth buffer.");
 }
 
 void GameWorldRenderer::TriggerSyncAllMarkers()
@@ -724,6 +708,7 @@ void GameWorldRenderer::ClearNavmeshLines()
 const std::vector<GameWorldRenderer::BatchedLine>& GameWorldRenderer::GetNavmeshWorldMapLines() { return navmesh_worldmap_lines; }
 GW::Constants::MapID GameWorldRenderer::GetNavmeshWorldMapMapId() { return navmesh_worldmap_map; }
 float GameWorldRenderer::GetRenderMaxDistance() { return render_max_distance; }
+bool GameWorldRenderer::GetOccludeBehindTerrain() { return occlude_behind_terrain; }
 
 void GameWorldRenderer::Terminate()
 {

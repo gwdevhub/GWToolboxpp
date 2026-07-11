@@ -54,6 +54,40 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
+    // Fix for a vanilla GW freeze: dying in first-person and then resurrecting can leave
+    // the camera's pitch_to_go as NaN (the death-orbit -> follow-cam transition clamps
+    // pitch against the wrong limits and pushes it out of its valid [-1,1] range). That
+    // NaN eases into pitch and then into the eye position; the game's terrain
+    // line-of-sight ray-march (Gw.exe @0x0070eb40) only exits on an *ordered* float
+    // compare, so a NaN coordinate makes it loop forever and the render thread hangs
+    // (recoverable only by dying again). We hook the per-frame "get camera eye" routine
+    // (Gw.exe @0x004f7b80, which asserts "*fov != 0.0f") and clamp pitch/pitch_to_go back
+    // into [-1,1] (mapping NaN -> 0) before the renderer and ray-march read the camera.
+    typedef void(__fastcall* GetCameraEye_pt)(void* cam, void* edx, uint32_t flag, void* out_pos, void* out_look, void* out_fov);
+    GetCameraEye_pt GetCameraEye_Func = nullptr, GetCameraEye_Ret = nullptr;
+
+    float SanitizePitch(const float pitch) {
+        if (pitch != pitch) return 0.f; // NaN
+        return std::clamp(pitch, -1.f, 1.f);
+    }
+
+    void __fastcall OnGetCameraEye(void* cam_ptr, void* edx, uint32_t flag, void* out_pos, void* out_look, void* out_fov) {
+        GW::Hook::EnterHook();
+        const auto cam = GW::CameraMgr::GetCamera();
+        if (cam) {
+            cam->pitch = SanitizePitch(cam->pitch);
+            cam->pitch_to_go = SanitizePitch(cam->pitch_to_go);
+            // If an earlier frame already produced a NaN eye position, fall back to the
+            // focus point for this frame so the ray-march gets a finite coordinate.
+            const auto& p = cam->position;
+            if (p.x != p.x || p.y != p.y || p.z != p.z) {
+                cam->position = cam->look_at_target;
+            }
+        }
+        GetCameraEye_Ret(cam_ptr, edx, flag, out_pos, out_look, out_fov);
+        GW::Hook::LeaveHook();
+    }
+
     bool ForwardMovement(float amount, bool true_forward)
     {
         const auto cam = GW::CameraMgr::GetCamera();
@@ -179,6 +213,9 @@ void CameraUnlockModule::Terminate()
     if (OnSetCameraMode_Func) {
         GW::Hook::RemoveHook(OnSetCameraMode_Func);
     }
+    if (GetCameraEye_Func) {
+        GW::Hook::RemoveHook(GetCameraEye_Func);
+    }
 }
 
 void CameraUnlockModule::Initialize()
@@ -194,6 +231,13 @@ void CameraUnlockModule::Initialize()
         GW::Hook::EnableHooks(OnSetCameraMode_Func);
     }
     DEBUG_ASSERT(OnSetCameraMode_Func);
+
+    GetCameraEye_Func = (GetCameraEye_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindNthUseOfString("*fov != 0.0f", 0));
+    if (GetCameraEye_Func) {
+        GW::Hook::CreateHook((void**)&GetCameraEye_Func, OnGetCameraEye, (void**)&GetCameraEye_Ret);
+        GW::Hook::EnableHooks(GetCameraEye_Func);
+    }
+    DEBUG_ASSERT(GetCameraEye_Func);
 }
 void CameraUnlockModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) {
     ToolboxModule::LoadSettings(doc, legacy);

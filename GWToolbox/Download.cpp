@@ -10,6 +10,7 @@
 
 #include "Install.h"
 #include "Settings.h"
+#include "WindowsDefender.h"
 
 namespace {
     std::unordered_map<std::string, std::string> cached_download_data;
@@ -65,24 +66,8 @@ void AsyncDownload(const char* url, AsyncFileDownloader* downloader)
     downloader->ExecuteAsync();
 }
 
-struct Asset {
-    std::string name{};
-    size_t size = 0;
-    std::string browser_download_url{};
-    std::string digest{}; // e.g. "sha256:<hex>"; absent on older releases
-};
-
-struct Release {
-    std::string tag_name{};
-    std::string body{};
-    std::vector<Asset> assets{};
-};
-
-// One Github request shared by the exe and dll checks, so we only tap the (rate-limited) API once per launch.
-static bool DownloadReleases(std::vector<Release>& releases)
+static bool ParseReleases(const std::string& content, std::vector<Release>& releases)
 {
-    std::string content;
-    if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30")) return false;
     // Parse the JSON array, tolerating unknown keys so Github can add response fields without breaking us.
     constexpr glz::opts opts{.error_on_unknown_keys = false};
     if (auto ec = glz::read<opts>(releases, content); ec) {
@@ -90,6 +75,14 @@ static bool DownloadReleases(std::vector<Release>& releases)
         return false;
     }
     return true;
+}
+
+// One Github request shared by the exe and dll checks, so we only tap the (rate-limited) API once per launch.
+static bool DownloadReleases(std::vector<Release>& releases)
+{
+    std::string content;
+    if (!Download(content, "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30")) return false;
+    return ParseReleases(content, releases);
 }
 
 std::string GetDllRelease(const std::filesystem::path& dllpath)
@@ -156,8 +149,7 @@ static std::string Sha256Hex(const std::filesystem::path& path)
     return result;
 }
 
-// True if the installed file already matches the release asset. Prefers Github's sha256 digest (exact identity)
-// and falls back to file size when the digest is absent or the local file can't be hashed.
+// True if the installed file already matches the release asset: prefers Github's sha256 digest, falls back to file size.
 static bool FileMatchesAsset(const std::filesystem::path& file_path, const Asset& asset, size_t file_size)
 {
     std::error_code ec;
@@ -172,11 +164,14 @@ static bool FileMatchesAsset(const std::filesystem::path& file_path, const Asset
     return false;
 }
 
-bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstring& error)
+// Compares the installed dll against the latest release; doesn't download anything.
+static DllUpdateInfo FindDllUpdate(const std::vector<Release>& releases)
 {
-    std::filesystem::path dllpath = GetInstallationDir();
-    if (dllpath.empty()) return error = L"GetInstallPath failed", false;
-    dllpath = dllpath.parent_path() / "GWToolboxdll.dll";
+    DllUpdateInfo info;
+
+    info.dll_path = GetInstallationDir();
+    if (info.dll_path.empty()) return info;
+    info.dll_path = info.dll_path.parent_path() / "GWToolboxdll.dll";
 
     // Most recent release that ships the dll (normally the latest; scan to be safe).
     const Release* release = nullptr;
@@ -191,164 +186,40 @@ bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstr
         }
         if (release_dll_asset) break;
     }
-    if (!release_dll_asset) {
-        return error = L"Failed to find dll in latest release", false;
-    }
-    if (std::filesystem::exists(dllpath)) {
+    if (!release_dll_asset) return info;
+    info.asset_found = true;
+
+    if (std::filesystem::exists(info.dll_path)) {
         std::error_code ec;
-        const auto current_filesize = std::filesystem::file_size(dllpath, ec);
-        if (!ec && FileMatchesAsset(dllpath, *release_dll_asset, current_filesize)) {
-            return true;
+        const auto current_filesize = std::filesystem::file_size(info.dll_path, ec);
+        if (!ec && FileMatchesAsset(info.dll_path, *release_dll_asset, current_filesize)) {
+            info.up_to_date = true;
+            return info;
         }
-        const auto current_version = GetDllRelease(dllpath);
+        const auto current_version = GetDllRelease(info.dll_path);
         const auto available_version = std::regex_replace(release->tag_name, std::regex(R"([^0-9.])"), "");
         if (current_version.starts_with(available_version)) {
             // NB: keeps locally-built betas (8.6 Beta1, 8.6 Beta123, ...) from being overwritten by the release.
-            return true;
+            info.up_to_date = true;
+            return info;
         }
     }
 
-    // Convert tag_name to wstring for MessageBox
-    std::wstring tag_name_w(release->tag_name.begin(), release->tag_name.end());
-    std::wstring buffer = std::format(L"Downloading version '{}'", tag_name_w);
-    ShowMessageBoxW(nullptr, buffer.c_str(), L"Downloading...", 0);
-
-    if (release_dll_asset->browser_download_url.empty()) return error = L"Didn't find GWTooolboxdll.dll", false;
-
-
-    const auto& url = release_dll_asset->browser_download_url;
-    const auto& file_size = release_dll_asset->size;
-
-    DownloadWindow window;
-    window.Create();
-    window.SetChangelog(release->body.c_str(), release->body.size());
-
-    AsyncFileDownloader downloader;
-    AsyncDownload(url.c_str(), &downloader);
-
-    bool download_complete = false;
-    while (!window.ShouldClose()) {
-        window.PollMessages(16);
-
-        if (!download_complete && !downloader.IsCompleted()) {
-            size_t BytesDownloaded = downloader.GetDownloadCount();
-            const auto progress = BytesDownloaded * 100 / file_size;
-            SendMessageW(window.m_hProgressBar, PBM_SETPOS, progress, 0);
-        }
-        else if (!download_complete) {
-            if (!downloader.IsSuccessful()) {
-                // Convert error message to wstring
-                std::wstring url_w(url.begin(), url.end());
-                std::string status_str = downloader.GetStatusStr();
-                std::wstring status_w(status_str.begin(), status_str.end());
-                return error = std::format(L"Failed to download '{}'. (Status: {}, StatusCode: {})", url_w, status_w, downloader.GetStatusCode()), false;
-            }
-
-            std::string& file_content = downloader.GetContent();
-            if (!WriteEntireFile(dllpath.wstring().c_str(), file_content.c_str(), file_content.size())) {
-                std::wstring dllpath_str = dllpath.wstring();
-                return error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", dllpath_str, file_content.size()), false;
-            }
-
-            downloader.Clear();
-            SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
-            SetWindowTextW(window.m_hStatusLabel, L"Download complete! Review the release notes above, then click 'Continue' to proceed.");
-            SetWindowTextW(window.m_hCloseButton, L"Continue");
-            download_complete = true;
-        }
-    }
-
-    //
-    // The user could close the window, before the download is complete
-    //
-    if (downloader.IsPending()) {
-        downloader.Abort();
-        return false;
-    }
-
-    return true;
+    info.asset = release_dll_asset;
+    info.tag_name = release->tag_name;
+    return info;
 }
 
-static constexpr wchar_t kReleasesPage[] = L"https://github.com/gwdevhub/GWToolboxpp/releases";
-
-// Windows locks a running exe against being overwritten, but still allows it to be renamed; so we move
-// the running file aside and drop the new one in its place. The new exe takes effect on the next launch.
-static bool UpdateExe(const std::filesystem::path& exe_path, const Asset& asset, std::wstring& error)
+// Scans releases newest-first for the most recent one shipping a GWToolbox.exe, then compares both the installed copy and the currently-running exe (if different) against it; doesn't download.
+static ExeUpdateInfo FindExeUpdate(const std::vector<Release>& releases)
 {
-    const auto asset_filename = exe_path.filename();
+    ExeUpdateInfo info;
 
-    const std::string& url = asset.browser_download_url;
-    std::string data;
-    if (!Download(data, url.c_str(), 30) || data.empty())
-        return error = std::format(
-                   L"Couldn't download the update.\n\nAnti-virus software may be blocking it. "
-                   L"Download the latest {} manually from {}.",
-                   asset_filename.wstring(), kReleasesPage
-               ),
-               false;
-
-    auto new_path = exe_path;
-    new_path += L".new";
-    auto old_path = exe_path;
-    old_path += L".old";
-
-    if (!WriteEntireFile(new_path.wstring().c_str(), data.c_str(), data.size()))
-        return error = std::format(
-                   L"Couldn't write the update to {}.\n\nThe folder may be read-only, or anti-virus may "
-                   L"have quarantined the file. Run GWToolbox from a writable folder, or download the "
-                   L"latest version manually from {}.",
-                   new_path.wstring(), kReleasesPage
-               ),
-               false;
-
-    DeleteFileW(old_path.wstring().c_str()); // leftover from a previous update, if any
-
-    if (!MoveFileW(exe_path.wstring().c_str(), old_path.wstring().c_str())) {
-        const DWORD err = GetLastError();
-        DeleteFileW(new_path.wstring().c_str());
-        return error = std::format(
-                   L"Couldn't replace {} (error {}).\n\nIf it lives in a protected folder such "
-                   L"as Program Files, run GWToolbox as administrator or move it to a normal folder. You "
-                   L"can also download the latest version manually from {}.",
-                   asset_filename.wstring(), err, kReleasesPage
-               ),
-               false;
-    }
-    if (!MoveFileW(new_path.wstring().c_str(), exe_path.wstring().c_str())) {
-        const DWORD err = GetLastError();
-        MoveFileW(old_path.wstring().c_str(), exe_path.wstring().c_str()); // roll back the rename
-        return error = std::format(
-                   L"Couldn't move the update into place (error {}).\n\nDownload the latest {} "
-                   L"manually from {}.",
-                   asset_filename.wstring(), err, kReleasesPage
-               ),
-               false;
-    }
-
-    // Confirm the new file actually landed; anti-virus has been seen to silently restore the old exe or quarantine
-    // the replacement, which would otherwise leave us re-prompting to update on every launch.
-    std::error_code ec;
-    const auto written_size = std::filesystem::file_size(exe_path, ec);
-    if (ec || !FileMatchesAsset(exe_path, asset, written_size))
-        return error = std::format(
-                   L"The update didn't stick - GWToolbox.exe still doesn't match the new version.\n\n"
-                   L"Anti-virus software may be reverting or quarantining it. Add an exclusion for the "
-                   L"GWToolbox folder, or download the latest version manually from {}.",
-                   kReleasesPage
-               ),
-               false;
-    return true;
-}
-
-// Not every release ships a GWToolbox.exe, so we scan the release list newest-first for the most recent one
-// that does, and offer it if it differs from ours.
-static void CheckForExeUpdate(const std::vector<Release>& releases)
-{
     std::filesystem::path exe_path;
-    if (!PathGetExeFullPath(exe_path)) return;
+    if (!PathGetExeFullPath(exe_path)) return info;
 
     const auto install_dir = GetInstallationDir();
-    const auto installed_exe = install_dir.empty() ? L"" : install_dir.parent_path() / L"GWToolbox.exe";
+    const auto installed_exe = install_dir.empty() ? std::filesystem::path{} : install_dir.parent_path() / L"GWToolbox.exe";
 
     const Asset* exe_asset = nullptr;
     std::string tag_name;
@@ -362,47 +233,236 @@ static void CheckForExeUpdate(const std::vector<Release>& releases)
         }
         if (exe_asset) break;
     }
-    if (!exe_asset || exe_asset->browser_download_url.empty()) return;
+    if (!exe_asset || exe_asset->browser_download_url.empty()) return info;
 
     std::error_code ec;
     const auto current_size = std::filesystem::file_size(exe_path, ec);
 
-    bool installed_exe_out_of_date = !installed_exe.empty() && std::filesystem::exists(installed_exe) && !FileMatchesAsset(installed_exe, *exe_asset, current_size);
-    bool this_exe_out_of_date = !exe_path.empty() && exe_path != installed_exe && std::filesystem::exists(exe_path) && !FileMatchesAsset(exe_path, *exe_asset, current_size);
+    if (!installed_exe.empty() && std::filesystem::exists(installed_exe) && !FileMatchesAsset(installed_exe, *exe_asset, current_size))
+        info.targets.push_back(installed_exe);
+    if (!exe_path.empty() && exe_path != installed_exe && std::filesystem::exists(exe_path) && !FileMatchesAsset(exe_path, *exe_asset, current_size))
+        info.targets.push_back(exe_path);
 
-    if (!installed_exe_out_of_date && !this_exe_out_of_date) return; // up-to-date
+    if (info.targets.empty()) return info; // up-to-date
 
-    const std::wstring tag_w(tag_name.begin(), tag_name.end());
-    const std::wstring prompt = std::format(
-        L"A newer version of GWToolbox.exe ({}) is available.\n\n"
-        L"Update now? GWToolbox will replace its own program file; the new version takes effect next launch.",
-        tag_w
-    );
-    if (ShowMessageBoxW(nullptr, prompt.c_str(), L"GWToolbox - Update available", MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST) != IDYES) return;
-
-    std::wstring error;
-    if ((installed_exe_out_of_date && !UpdateExe(installed_exe, *exe_asset, error)) || (this_exe_out_of_date && !UpdateExe(exe_path, *exe_asset, error))) {
-        ShowMessageBoxW(nullptr, error.c_str(), L"GWToolbox - Update failed", MB_OK | MB_ICONERROR | MB_TOPMOST);
-        return;
-    }
-    ShowMessageBoxW(nullptr, L"GWToolbox.exe was updated.\n\nClick the button below to restart the launcher and start using the new version.", L"GWToolbox - Update complete", MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
-    RestartWithSameArgs();
+    info.asset = exe_asset;
+    info.tag_name = tag_name;
+    return info;
 }
 
-bool DownloadWindow::CheckForUpdates(std::wstring& error)
+static constexpr wchar_t kReleasesPage[] = L"https://github.com/gwdevhub/GWToolboxpp/releases";
+
+// Windows won't let a running exe be overwritten but does allow it to be renamed, so we move it aside and drop the already-downloaded `data` in its place; the swap takes effect next launch since this process keeps running its already-loaded image.
+static bool ReplaceExeFile(const std::filesystem::path& exe_path, const std::string& data, const Asset& asset, std::wstring& error)
 {
-    // Fetch the release list once and run both checks off it, rather than tapping Github twice.
-    std::vector<Release> releases;
-    if (!DownloadReleases(releases)) return error = L"Couldn't download the latest releases of GWToolboxpp", true; // non-fatal: don't block the launch
+    const auto asset_filename = exe_path.filename();
 
-    // Exe first: if it's out of date its dialog wins and may relaunch before we ever touch the dll.
-    if (!settings.noexecheck) CheckForExeUpdate(releases);
+    auto new_path = exe_path;
+    new_path += L".new";
+    auto old_path = exe_path;
+    old_path += L".old";
 
-    if (settings.noupdate) return true;
-    return DownloadDll(releases, error);
+    if (!WriteEntireFile(new_path.wstring().c_str(), data.c_str(), data.size()))
+        return error = std::format(
+                   L"Couldn't write the update to {}.\n\nThe folder may be read-only, or anti-virus may have quarantined the file.", new_path.wstring()
+               ),
+               false;
+
+    DeleteFileW(old_path.wstring().c_str()); // leftover from a previous update, if any
+
+    if (!MoveFileW(exe_path.wstring().c_str(), old_path.wstring().c_str())) {
+        const DWORD err = GetLastError();
+        DeleteFileW(new_path.wstring().c_str());
+        return error = std::format(
+                   L"Couldn't replace {} (error {}).\n\nIf it lives in a protected folder such as Program Files, run GWToolbox as administrator.", asset_filename.wstring(), err
+               ),
+               false;
+    }
+    if (!MoveFileW(new_path.wstring().c_str(), exe_path.wstring().c_str())) {
+        const DWORD err = GetLastError();
+        MoveFileW(old_path.wstring().c_str(), exe_path.wstring().c_str()); // roll back the rename
+        return error = std::format(L"Couldn't move the update into place (error {}).", err), false;
+    }
+
+    // Confirm the new file actually landed; anti-virus has been seen to silently restore or quarantine the replacement.
+    std::error_code ec;
+    const auto written_size = std::filesystem::file_size(exe_path, ec);
+    if (ec || !FileMatchesAsset(exe_path, asset, written_size))
+        return error = std::format(
+                   L"The update didn't stick - {} still doesn't match the new version.\n\nAnti-virus software may be reverting or quarantining it. Add an exclusion for the GWToolbox folder, or download the latest version manually from {}.",
+                   asset_filename.wstring(), kReleasesPage
+               ),
+               false;
+    return true;
 }
 
-// dll-only entry (used by the installer); fetches its own release list since there's no exe check to share it with.
+// Bodies of whichever releases are being applied, newest/most-relevant first, deduped when exe and dll share a tag.
+static std::string BuildChangelog(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info)
+{
+    std::string changelog;
+    const auto append_body = [&](const std::string& tag_name) {
+        for (const auto& release : releases) {
+            if (release.tag_name != tag_name) continue;
+            if (!changelog.empty()) changelog += "\n\n----------\n\n";
+            changelog += release.body.value_or("");
+            return;
+        }
+    };
+
+    if (exe_info.asset) append_body(exe_info.tag_name);
+    if (dll_info.asset && !dll_info.up_to_date && dll_info.tag_name != exe_info.tag_name) append_body(dll_info.tag_name);
+    return changelog;
+}
+
+bool DownloadWindow::DownloadAssetWithProgress(DownloadWindow& window, const std::string& url, const size_t file_size, std::string& out_content, std::wstring& error)
+{
+    AsyncFileDownloader downloader;
+    AsyncDownload(url.c_str(), &downloader);
+
+    while (!downloader.IsCompleted()) {
+        if (window.ShouldClose()) {
+            downloader.Abort();
+            return error = L"Update cancelled", false;
+        }
+        window.PollMessages(16);
+        const size_t bytes_downloaded = downloader.GetDownloadCount();
+        const auto progress = file_size ? (bytes_downloaded * 100 / file_size) : 0;
+        SendMessageW(window.m_hProgressBar, PBM_SETPOS, static_cast<WPARAM>(progress), 0);
+    }
+
+    if (!downloader.IsSuccessful()) {
+        std::wstring url_w(url.begin(), url.end());
+        std::string status_str = downloader.GetStatusStr();
+        std::wstring status_w(status_str.begin(), status_str.end());
+        return error = std::format(L"Failed to download '{}'. (Status: {}, StatusCode: {})", url_w, status_w, downloader.GetStatusCode()), false;
+    }
+
+    out_content = std::move(downloader.GetContent());
+    SendMessageW(window.m_hProgressBar, PBM_SETPOS, 100, 0);
+    return true;
+}
+
+bool DownloadWindow::DownloadDll(const std::vector<Release>& releases, std::wstring& error)
+{
+    const DllUpdateInfo info = FindDllUpdate(releases);
+    if (!info.asset_found) return error = L"Failed to find dll in latest release", false;
+    if (info.up_to_date) return true;
+
+    DownloadWindow window;
+    window.Create();
+
+    const std::string changelog = BuildChangelog(releases, {}, info);
+    window.SetChangelog(changelog.c_str(), changelog.size());
+
+    std::string data;
+    if (!DownloadAssetWithProgress(window, info.asset->browser_download_url, info.asset->size, data, error)) return false;
+
+    if (!WriteEntireFile(info.dll_path.wstring().c_str(), data.c_str(), data.size()))
+        return error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", info.dll_path.wstring(), data.size()), false;
+
+    SetWindowTextW(window.m_hStatusLabel, L"Download complete! Review the release notes above, then click 'Close' to continue.");
+    if (!window.ShouldClose()) window.WaitMessages();
+
+    return true;
+}
+
+bool DownloadWindow::ApplyUpdates(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info, std::wstring& error)
+{
+    const bool exe_available = exe_info.asset != nullptr;
+    const bool dll_available = dll_info.asset != nullptr && !dll_info.up_to_date;
+    if (!exe_available && !dll_available) return true;
+
+    DownloadWindow window;
+    window.Create();
+
+    const std::string changelog = BuildChangelog(releases, exe_info, dll_info);
+    window.SetChangelog(changelog.c_str(), changelog.size());
+
+    bool ok = true;
+    if (exe_available) {
+        SetWindowTextW(window.m_hStatusLabel, L"Downloading GWToolbox.exe...");
+        std::string data;
+        ok = DownloadAssetWithProgress(window, exe_info.asset->browser_download_url, exe_info.asset->size, data, error);
+        for (size_t i = 0; ok && i < exe_info.targets.size(); i++) {
+            ok = ReplaceExeFile(exe_info.targets[i], data, *exe_info.asset, error);
+        }
+    }
+
+    if (ok && dll_available) {
+        SetWindowTextW(window.m_hStatusLabel, L"Downloading GWToolboxdll.dll...");
+        SendMessageW(window.m_hProgressBar, PBM_SETPOS, 0, 0);
+        std::string data;
+        ok = DownloadAssetWithProgress(window, dll_info.asset->browser_download_url, dll_info.asset->size, data, error);
+        if (ok && !WriteEntireFile(dll_info.dll_path.wstring().c_str(), data.c_str(), data.size())) {
+            error = std::format(L"WriteEntireFile failed on '{}' with {} bytes", dll_info.dll_path.wstring(), data.size());
+            ok = false;
+        }
+    }
+
+    SetWindowTextW(window.m_hStatusLabel, ok ? L"Update complete! Any exe update takes effect next launch." : error.c_str());
+    if (!window.ShouldClose()) window.WaitMessages();
+
+    return ok;
+}
+
+UpdateChecker::~UpdateChecker()
+{
+    m_ReleasesFetch.Abort(); // safe no-op if the fetch was never started or already finished
+}
+
+void UpdateChecker::Start(const bool check_exe, const bool check_dll)
+{
+    if (m_Started || (!check_exe && !check_dll)) return;
+    m_Started = true;
+    m_CheckExe = check_exe;
+    m_CheckDll = check_dll;
+
+    m_ReleasesFetch.SetUrl("https://api.github.com/repos/gwdevhub/GWToolboxpp/releases?per_page=30");
+    m_ReleasesFetch.SetFollowLocation(true);
+    m_ReleasesFetch.SetVerifyPeer(false);
+    m_ReleasesFetch.SetTimeoutSec(10);
+    m_ReleasesFetch.SetUserAgent("curl/7.71.1");
+    m_ReleasesFetch.ExecuteAsync();
+}
+
+bool UpdateChecker::Poll()
+{
+    if (!m_Started || m_Completed) return false;
+    if (!m_ReleasesFetch.IsCompleted()) return false;
+
+    m_Completed = true;
+    if (m_ReleasesFetch.IsSuccessful() && ParseReleases(m_ReleasesFetch.GetContent(), m_Releases)) {
+        if (m_CheckExe) m_ExeInfo = FindExeUpdate(m_Releases);
+        if (m_CheckDll) m_DllInfo = FindDllUpdate(m_Releases);
+    }
+    else {
+        fprintf(stderr, "UpdateChecker: failed to fetch/parse releases\n");
+    }
+    return true;
+}
+
+bool UpdateChecker::ApplyUpdates(std::wstring& error)
+{
+    if (!IsAnyUpdateAvailable()) return true;
+
+    // Unlike main.cpp's pre-injection check (which only covers Gw.exe), these writes are made by this launcher process itself.
+    if (!settings.quiet) {
+        const auto install_dir = GetInstallationDir();
+        if (!install_dir.empty()) {
+            std::vector<std::filesystem::path> cfa_apps = m_ExeInfo.targets; // installed and/or running exe, whichever are stale
+            std::filesystem::path running_exe;
+            if (PathGetExeFullPath(running_exe)) cfa_apps.push_back(running_exe); // covers a dll-only update, where m_ExeInfo.targets is empty
+            EnsureDefenderReadiness(install_dir.parent_path(), cfa_apps);
+        }
+    }
+
+    if (!DownloadWindow::ApplyUpdates(m_Releases, m_ExeInfo, m_DllInfo, error)) return false;
+
+    m_ExeInfo = {};
+    m_DllInfo = {};
+    return true;
+}
+
 bool DownloadWindow::DownloadDll(std::wstring& error)
 {
     std::vector<Release> releases;
@@ -465,6 +525,10 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam,
                 DestroyWindow(hWnd);
             }
             break;
+
+        case WM_DPICHANGED:
+            OnDpiChanged(wParam, lParam);
+            break;
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -472,23 +536,25 @@ LRESULT DownloadWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam,
 
 void DownloadWindow::OnCreate(HWND hWnd, UINT, WPARAM, LPARAM)
 {
-    m_hProgressBar = CreateWindowW(PROGRESS_CLASSW, L"Inject", WS_VISIBLE | WS_CHILD, 5, 215, 475, 15, hWnd, nullptr, m_hInstance, nullptr);
+    ApplyDpiScaling(hWnd);
+
+    m_hProgressBar = CreateWindowW(PROGRESS_CLASSW, L"Inject", WS_VISIBLE | WS_CHILD, Scale(5), Scale(215), Scale(475), Scale(15), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hProgressBar, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
     SendMessageW(m_hProgressBar, PBM_SETPOS, 0, 0);
 
     m_hCloseButton = CreateWindowW(
         WC_BUTTONW, L"Close", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
-        400, // x
-        235, // y
-        80,  // width
-        25,  // height
+        Scale(400), // x
+        Scale(235), // y
+        Scale(80),  // width
+        Scale(25),  // height
         hWnd, nullptr, m_hInstance, nullptr
     );
     SendMessageW(m_hCloseButton, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 
-    m_hChangelog = CreateWindowW(WC_EDITW, L"", WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL, 5, 5, 475, 170, hWnd, nullptr, m_hInstance, nullptr);
+    m_hChangelog = CreateWindowW(WC_EDITW, L"", WS_VISIBLE | WS_CHILD | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | ES_AUTOHSCROLL, Scale(5), Scale(5), Scale(475), Scale(170), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hChangelog, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 
-    m_hStatusLabel = CreateWindowW(WC_STATICW, L"Downloading...", WS_VISIBLE | WS_CHILD | SS_LEFT, 5, 180, 475, 30, hWnd, nullptr, m_hInstance, nullptr);
+    m_hStatusLabel = CreateWindowW(WC_STATICW, L"Downloading...", WS_VISIBLE | WS_CHILD | SS_LEFT, Scale(5), Scale(180), Scale(475), Scale(30), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hStatusLabel, WM_SETFONT, reinterpret_cast<WPARAM>(m_hFont), MAKELPARAM(TRUE, 0));
 }

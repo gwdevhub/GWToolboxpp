@@ -123,7 +123,7 @@ namespace { // private module-only namespace
             // Close the WebSocket handle to unblock any pending receive in the
             // reader thread (forces a hard teardown).
             {
-                std::lock_guard lk(m_HandleMutex);
+                std::scoped_lock lk(m_HandleMutex);
                 if (m_hWebSocket) {
                     WinHttpCloseHandle(m_hWebSocket);
                     m_hWebSocket = nullptr;
@@ -133,7 +133,7 @@ namespace { // private module-only namespace
                 m_Reader.join();
             }
 
-            std::lock_guard lk(m_HandleMutex);
+            std::scoped_lock lk(m_HandleMutex);
             if (m_hRequest) { WinHttpCloseHandle(m_hRequest); m_hRequest = nullptr; }
             if (m_hConnect) { WinHttpCloseHandle(m_hConnect); m_hConnect = nullptr; }
             if (m_hSession) { WinHttpCloseHandle(m_hSession); m_hSession = nullptr; }
@@ -179,12 +179,12 @@ namespace { // private module-only namespace
         {
             HINTERNET h = nullptr;
             {
-                std::lock_guard lk(m_HandleMutex);
+                std::scoped_lock lk(m_HandleMutex);
                 h = m_hWebSocket;
             }
             if (!h) return;
             if (m_State.load() != OPEN) return;
-            std::lock_guard sl(m_SendMutex);
+            std::scoped_lock sl(m_SendMutex);
             const DWORD result = WinHttpWebSocketSend(
                 h,
                 WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE,
@@ -206,11 +206,11 @@ namespace { // private module-only namespace
             }
             HINTERNET h = nullptr;
             {
-                std::lock_guard lk(m_HandleMutex);
+                std::scoped_lock lk(m_HandleMutex);
                 h = m_hWebSocket;
             }
             if (h) {
-                std::lock_guard sl(m_SendMutex);
+                std::scoped_lock sl(m_SendMutex);
                 // Shutdown sends a close frame without blocking on the peer's
                 // response. The reader thread will see the peer's close and
                 // exit, which flips m_State to CLOSED.
@@ -224,7 +224,7 @@ namespace { // private module-only namespace
         {
             std::queue<std::string> drain;
             {
-                std::lock_guard lk(m_QueueMutex);
+                std::scoped_lock lk(m_QueueMutex);
                 drain.swap(m_IncomingQueue);
             }
             while (!drain.empty()) {
@@ -248,7 +248,7 @@ namespace { // private module-only namespace
             while (m_ReaderRunning.load()) {
                 HINTERNET h = nullptr;
                 {
-                    std::lock_guard lk(m_HandleMutex);
+                    std::scoped_lock lk(m_HandleMutex);
                     h = m_hWebSocket;
                 }
                 if (!h) return;
@@ -275,7 +275,7 @@ namespace { // private module-only namespace
                                         message.size());
                         message.clear();
                         {
-                            std::lock_guard lk(m_QueueMutex);
+                            std::scoped_lock lk(m_QueueMutex);
                             m_IncomingQueue.emplace(std::move(msg));
                         }
                         m_QueueCv.notify_all();

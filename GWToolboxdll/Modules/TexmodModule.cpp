@@ -379,7 +379,7 @@ namespace {
 
         Resources::EnqueueWorkerTask([desired, my_generation] {
             // Hold apply_mutex across the reconcile so add/remove sequences are serialised and only the newest request runs.
-            std::lock_guard lk(apply_mutex);
+            std::scoped_lock lk(apply_mutex);
             if (my_generation != apply_generation.load()) return; // superseded while queued
             if (!gmodReady) return;
             const int error = ReconcileLocked(*desired);
@@ -431,7 +431,7 @@ namespace {
         // Only tear down a gMod we loaded; a pre-loaded one is left running with its packs.
         if (gmodReady && gmodLoadedByToolbox) {
             // Unload synchronously (worker threads are stopping): hold apply_mutex, bump the generation to skip queued reconciles, then remove everything here so nothing reloads after.
-            std::lock_guard lk(apply_mutex);
+            std::scoped_lock lk(apply_mutex);
             ++apply_generation;
             for (auto& pack : packs)
                 pack.loaded = false;

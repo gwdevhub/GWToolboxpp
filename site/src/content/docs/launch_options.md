@@ -20,6 +20,7 @@ You can pass these by editing your shortcut's **Target** field, calling the exe 
 | `/reinstall` | Do a fresh installation (uninstall, then install), then exit. |
 | `/asadmin` | Relaunch as administrator if not already elevated. |
 | `/noupdate` | Don't check for or download an updated DLL on launch. |
+| `/noexecheck` | Don't check GitHub for a newer `GWToolbox.exe`. |
 | `/noinstall` | Don't offer to install the DLL if it's missing. |
 | `/localdll` | Inject the `GWToolboxdll.dll` sitting next to `GWToolbox.exe` instead of the installed copy. Implies `/noupdate` and `/noinstall`. |
 | `/pid <process id>` | Inject into the Guild Wars process with the given PID instead of searching for one. |

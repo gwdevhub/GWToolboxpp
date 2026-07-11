@@ -78,9 +78,8 @@ namespace Pathing {
         }
 
         // Read-only access to the underlying pathing map data (owned by MilePath).
-        // Used by sibling pathfinders (e.g. OpenTyria trapezoid AStar) so we don't
-        // re-load the same DAT data twice. Pointer remains valid for the MilePath's
-        // lifetime.
+        // Lets callers reuse the loaded DAT data without re-reading it. Pointer
+        // remains valid for the MilePath's lifetime.
         const Pathing::PathingMapData* GetMapData() const;
 
         NavMesh* GetNavMeshForDebug();

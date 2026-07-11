@@ -209,7 +209,7 @@ namespace {
         return true;
     }
 
-    bool SetWorldTransform(IDirect3DDevice9* device, const float z_near, const float z_far)
+    bool SetWorldTransform(IDirect3DDevice9* device)
     {
         // Build view/proj matrices matching GW's world-render camera.
         constexpr auto vertex_shader_view_matrix_offset = 0u;
@@ -240,7 +240,7 @@ namespace {
         XMStoreFloat4x4A(
             &mat_proj,
             XMMatrixTranspose(
-                DirectX::XMMatrixPerspectiveFovLH(fov, aspect_ratio, z_near, z_far)
+                DirectX::XMMatrixPerspectiveFovLH(fov, aspect_ratio, GameWorldCompositor::kZNear, GameWorldCompositor::kZFar)
             )
         );
         if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, reinterpret_cast<const float*>(&mat_proj), 4) != D3D_OK) {
@@ -291,9 +291,9 @@ void GameWorldCompositor::BeginFrame()
     drawn_this_frame = false;
 }
 
-bool GameWorldCompositor::SetWorldViewProj(IDirect3DDevice9* device, const float z_near, const float z_far)
+bool GameWorldCompositor::SetWorldViewProj(IDirect3DDevice9* device)
 {
-    return device && SetWorldTransform(device, z_near, z_far);
+    return device && SetWorldTransform(device);
 }
 
 void GameWorldCompositor::SetWorldRenderStates(IDirect3DDevice9* device, const bool occlude)
@@ -316,6 +316,8 @@ void GameWorldCompositor::SetWorldRenderStates(IDirect3DDevice9* device, const b
     device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
+    device->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, TRUE); // MULTISAMPLEANTIALIAS doesn't smooth native D3DPT_LINELIST/LINESTRIP draws (navmesh, in-world path lines)
 
     if (occlude) {
         // Depth-test against the scene so geometry occludes the overlay; never write depth (must not disturb GW's values).
@@ -343,8 +345,7 @@ void GameWorldCompositor::SetDistanceFog(IDirect3DDevice9* device, const float m
     device->SetPixelShaderConstantF(2, fog_starts_at_constant, 1);
 }
 
-bool GameWorldCompositor::SetupPipeline(IDirect3DDevice9* device, const bool occlude, const float z_near, const float z_far,
-                                        const float max_distance, const float fog_factor)
+bool GameWorldCompositor::SetupPipeline(IDirect3DDevice9* device, const bool occlude, const float max_distance, const float fog_factor)
 {
     if (!device) {
         return false;
@@ -355,7 +356,7 @@ bool GameWorldCompositor::SetupPipeline(IDirect3DDevice9* device, const bool occ
     if (device->SetVertexShader(vshader) != D3D_OK
         || device->SetPixelShader(pshader) != D3D_OK
         || device->SetVertexDeclaration(vertex_declaration) != D3D_OK
-        || !SetWorldTransform(device, z_near, z_far)) {
+        || !SetWorldTransform(device)) {
         return false;
     }
     SetWorldRenderStates(device, occlude);

@@ -4,6 +4,7 @@
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
+#include <GWCA/GameEntities/Pathing.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -11,7 +12,7 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <ImGuiAddons.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -47,12 +48,14 @@ namespace {
         float ax, ay;
         float bx, by;
         bool valid = false;
+        bool has_basis = false;
+        bool has_origin = false;
         clock_t last_rebuild = TIMER_INIT();
 
         float cached_basis_zoom = 0.f;
         void Rebuild();
 
-        void Project(float gx, float gy, float& sx, float& sy) const
+        void Project(const float gx, const float gy, float& sx, float& sy) const
         {
             sx = ox + gx * ax + gy * bx;
             sy = oy + gx * ay + gy * by;
@@ -150,7 +153,7 @@ namespace {
             py = player->pos.y;
         }
 
-        if (mission_map_zoom != cached_basis_zoom || !valid) {
+        if (mission_map_zoom != cached_basis_zoom || !has_basis) {
             cached_basis_zoom = mission_map_zoom;
 
             constexpr float STEP = 1000.f;
@@ -163,6 +166,7 @@ namespace {
             ay = (s10.y - s00.y) / STEP;
             bx = (s01.x - s00.x) / STEP;
             by = (s01.y - s00.y) / STEP;
+            has_basis = true;
         }
 
         const GW::Vec2f mm_offset = mm_pos - current_pan_offset;
@@ -170,8 +174,29 @@ namespace {
         const GW::Vec2f player_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
                                          mm_scaled.y * mission_map_zoom + mission_map_screen_pos.y};
 
-        ox = player_screen.x - px * ax - py * bx;
-        oy = player_screen.y - px * ay - py * by;
+        const float target_ox = player_screen.x - px * ax - py * bx;
+        const float target_oy = player_screen.y - px * ay - py * by;
+
+        // GW's own mission-map background pans with a follow-cam ease rather than snapping
+        // instantly to the player; matching that here (instead of tracking the raw position
+        // exactly) keeps our overlays visually glued to the backdrop instead of swimming
+        // against it. Snap instead of easing on the first frame or after a big jump (map
+        // change/teleport/zoom) so it doesn't visibly slide in from a stale position.
+        constexpr float SNAP_THRESHOLD_PX = 300.f;
+        const float dt_ms = static_cast<float>(TIMER_DIFF(last_rebuild));
+        last_rebuild = TIMER_INIT();
+
+        if (!has_origin || fabsf(target_ox - ox) > SNAP_THRESHOLD_PX || fabsf(target_oy - oy) > SNAP_THRESHOLD_PX) {
+            ox = target_ox;
+            oy = target_oy;
+            has_origin = true;
+        }
+        else {
+            constexpr float TAU_MS = 120.f;
+            const float alpha = 1.f - expf(-dt_ms / TAU_MS);
+            ox += (target_ox - ox) * alpha;
+            oy += (target_oy - oy) * alpha;
+        }
         valid = true;
     }
 
@@ -209,7 +234,7 @@ namespace {
 
         const auto root = GW::UI::GetRootFrame();
         mission_map_top_left = mission_map_frame->position.GetContentTopLeft(root);
-        if (!std::isfinite(mission_map_top_left.x)) 
+        if (!std::isfinite(mission_map_top_left.x))
             return false;
         mission_map_bottom_right = mission_map_frame->position.GetContentBottomRight(root);
         mission_map_scale = mission_map_frame->position.GetViewportScale(root);
@@ -255,6 +280,239 @@ namespace {
         return true;
     }
 
+    // --- Walkable terrain overlay -----------------------------------------------
+    // Shades non-walkable parts of the map grey and outlines walkable terrain.
+    // Unlike the Vanquish overlay's map grid, this has no reachability/BFS, no
+    // fog-of-war and no enemy tracking — it's a static rasterization of every
+    // trapezoid in the pathing map, independent of the Vanquish widget entirely.
+    constexpr float TERRAIN_CELL_SIZE = GW::Constants::Range::Adjacent / 2.f;
+
+    struct TerrainTrapezoidSnapshot {
+        float XTL, XTR, XBL, XBR, YB, YT;
+    };
+
+    struct TerrainBorderSegment {
+        GW::Vec2f p1, p2;
+    };
+
+    bool IsCellWalkableInTerrainTrapezoid(int gx, int gy, const TerrainTrapezoidSnapshot& trap)
+    {
+        const float cx0 = gx * TERRAIN_CELL_SIZE;
+        const float cy0 = gy * TERRAIN_CELL_SIZE;
+        const float cx1 = cx0 + TERRAIN_CELL_SIZE;
+        const float cy1 = cy0 + TERRAIN_CELL_SIZE;
+
+        if (cy1 <= trap.YB || cy0 >= trap.YT) return false;
+        const float y_lo = std::max(cy0, trap.YB);
+        const float y_hi = std::min(cy1, trap.YT);
+        const float height = trap.YT - trap.YB;
+        if (height < 0.001f) return cx1 > std::min(trap.XBL, trap.XTL) && cx0 < std::max(trap.XBR, trap.XTR);
+
+        const float t_lo = (y_lo - trap.YB) / height;
+        const float t_hi = (y_hi - trap.YB) / height;
+        const float left = std::min(trap.XBL + t_lo * (trap.XTL - trap.XBL), trap.XBL + t_hi * (trap.XTL - trap.XBL));
+        const float right = std::max(trap.XBR + t_lo * (trap.XTR - trap.XBR), trap.XBR + t_hi * (trap.XTR - trap.XBR));
+        return cx1 > left && cx0 < right;
+    }
+
+    struct TerrainGridData {
+        std::unique_ptr<bool[]> walkable;
+        int x0 = 0, y0 = 0, w = 0, h = 0, size = 0;
+        std::vector<TerrainBorderSegment> border_segments;
+        std::vector<D3DVertex> static_vertices;
+
+        int CellIndex(int gx, int gy) const
+        {
+            const int lx = gx - x0;
+            const int ly = gy - y0;
+            if (lx < 0 || lx >= w || ly < 0 || ly >= h) return -1;
+            return ly * w + lx;
+        }
+        bool IsWalkable(int gx, int gy) const
+        {
+            const int idx = CellIndex(gx, gy);
+            return idx >= 0 && walkable[idx];
+        }
+    };
+
+    class TerrainOverlayBuffer : public D3DTriangleBuffer {
+    public:
+        void Adopt(std::vector<D3DVertex>&& verts)
+        {
+            vertices = std::move(verts);
+            dirty = true;
+        }
+    };
+
+    TerrainGridData terrain_grid;
+    TerrainOverlayBuffer terrain_overlay_buffer;
+    GW::Constants::MapID terrain_map_id = static_cast<GW::Constants::MapID>(0);
+    float terrain_cached_zoom = 0.0f;
+    bool terrain_rebuild_pending = false;
+
+    template <size_t N>
+    void AppendTerrainShape(std::vector<D3DVertex>& out, const D3DShape<N>& shape)
+    {
+        for (const auto& tri : shape.t)
+            out.insert(out.end(), tri.v, tri.v + 3);
+    }
+
+    // Pure function, safe on a worker thread: build the grey shading + border vertices.
+    void BuildTerrainOverlayVertices(const TerrainGridData& data, float px_to_game, std::vector<D3DVertex>& out)
+    {
+        out.clear();
+        if (!data.walkable || data.size <= 0) return;
+
+        const float border_thickness_game = px_to_game;
+        const float gx0 = data.x0 * TERRAIN_CELL_SIZE;
+        const float gy0 = data.y0 * TERRAIN_CELL_SIZE;
+        const float gx1 = (data.x0 + data.w) * TERRAIN_CELL_SIZE;
+        const float gy1 = (data.y0 + data.h) * TERRAIN_CELL_SIZE;
+        const float ext = std::max(gx1 - gx0, gy1 - gy0) * 5.0f;
+        const DWORD shade_color = settings.terrain_shade_color;
+
+        AppendTerrainShape(out, D3DQuad({gx0 - ext, gy0 - ext}, {gx1 + ext, gy0}, shade_color));
+        AppendTerrainShape(out, D3DQuad({gx0 - ext, gy1}, {gx1 + ext, gy1 + ext}, shade_color));
+        AppendTerrainShape(out, D3DQuad({gx0 - ext, gy0}, {gx0, gy1}, shade_color));
+        AppendTerrainShape(out, D3DQuad({gx1, gy0}, {gx1 + ext, gy1}, shade_color));
+
+        for (int gy = data.y0; gy < data.y0 + data.h; gy++) {
+            const float y0 = gy * TERRAIN_CELL_SIZE;
+            const float y1 = y0 + TERRAIN_CELL_SIZE;
+            int run_start = -1;
+            for (int gx = data.x0; gx < data.x0 + data.w; gx++) {
+                if (!data.IsWalkable(gx, gy)) {
+                    if (run_start == -1) run_start = gx;
+                }
+                else if (run_start != -1) {
+                    AppendTerrainShape(out, D3DQuad({run_start * TERRAIN_CELL_SIZE, y0}, {gx * TERRAIN_CELL_SIZE, y1}, shade_color));
+                    run_start = -1;
+                }
+            }
+            if (run_start != -1) {
+                AppendTerrainShape(out, D3DQuad({run_start * TERRAIN_CELL_SIZE, y0}, {(data.x0 + data.w) * TERRAIN_CELL_SIZE, y1}, shade_color));
+            }
+        }
+
+        const DWORD border_color = settings.terrain_border_color;
+        for (const auto& seg : data.border_segments)
+            AppendTerrainShape(out, D3DLine(seg.p1, seg.p2, border_thickness_game, border_color));
+    }
+
+    // Game thread only: copy trapezoid coords out so the worker thread can rasterize
+    // without touching game memory.
+    std::vector<TerrainTrapezoidSnapshot> SnapshotTerrainPathingMap()
+    {
+        std::vector<TerrainTrapezoidSnapshot> out;
+        const auto pathing_map = GW::Map::GetPathingMap();
+        if (!pathing_map) return out;
+        for (size_t p = 0; p < pathing_map->size(); p++) {
+            const auto& plane = pathing_map->at(p);
+            for (uint32_t t = 0; t < plane.trapezoid_count; t++) {
+                const auto& trap = plane.trapezoids[t];
+                out.push_back({trap.XTL, trap.XTR, trap.XBL, trap.XBR, trap.YB, trap.YT});
+            }
+        }
+        return out;
+    }
+
+    // Pure function, safe on a worker thread: rasterize the snapshot into a walkable
+    // grid and compute border segments + vertex data.
+    TerrainGridData ComputeTerrainGrid(const std::vector<TerrainTrapezoidSnapshot>& traps, float px_to_game)
+    {
+        TerrainGridData data;
+        if (traps.empty()) return data;
+
+        float min_x = FLT_MAX, min_y = FLT_MAX, max_x = -FLT_MAX, max_y = -FLT_MAX;
+        for (const auto& trap : traps) {
+            min_x = std::min({min_x, trap.XTL, trap.XTR, trap.XBL, trap.XBR});
+            max_x = std::max({max_x, trap.XTL, trap.XTR, trap.XBL, trap.XBR});
+            min_y = std::min(min_y, trap.YB);
+            max_y = std::max(max_y, trap.YT);
+        }
+
+        data.x0 = static_cast<int>(floorf(min_x / TERRAIN_CELL_SIZE)) - 1;
+        data.y0 = static_cast<int>(floorf(min_y / TERRAIN_CELL_SIZE)) - 1;
+        data.w = static_cast<int>(ceilf(max_x / TERRAIN_CELL_SIZE)) + 1 - data.x0;
+        data.h = static_cast<int>(ceilf(max_y / TERRAIN_CELL_SIZE)) + 1 - data.y0;
+        data.size = data.w * data.h;
+        data.walkable = std::make_unique<bool[]>(data.size);
+
+        for (const auto& trap : traps) {
+            const int ty0 = std::max(0, static_cast<int>(floorf(trap.YB / TERRAIN_CELL_SIZE)) - data.y0);
+            const int ty1 = std::min(data.h - 1, static_cast<int>(ceilf(trap.YT / TERRAIN_CELL_SIZE)) - data.y0);
+            const int tx0 = std::max(0, static_cast<int>(floorf(std::min(trap.XTL, trap.XBL) / TERRAIN_CELL_SIZE)) - data.x0);
+            const int tx1 = std::min(data.w - 1, static_cast<int>(ceilf(std::max(trap.XTR, trap.XBR) / TERRAIN_CELL_SIZE)) - data.x0);
+            for (int cy = ty0; cy <= ty1; cy++) {
+                for (int cx = tx0; cx <= tx1; cx++) {
+                    const int idx = cy * data.w + cx;
+                    if (data.walkable[idx]) continue;
+                    if (IsCellWalkableInTerrainTrapezoid(data.x0 + cx, data.y0 + cy, trap))
+                        data.walkable[idx] = true;
+                }
+            }
+        }
+
+        for (int cy = 0; cy < data.h; cy++) {
+            for (int cx = 0; cx < data.w; cx++) {
+                if (!data.walkable[cy * data.w + cx]) continue;
+                const int gx = data.x0 + cx, gy = data.y0 + cy;
+                const float x0 = gx * TERRAIN_CELL_SIZE;
+                const float y0 = gy * TERRAIN_CELL_SIZE;
+                const float x1 = x0 + TERRAIN_CELL_SIZE;
+                const float y1 = y0 + TERRAIN_CELL_SIZE;
+                if (!data.IsWalkable(gx, gy - 1)) data.border_segments.push_back({{x0, y0}, {x1, y0}});
+                if (!data.IsWalkable(gx, gy + 1)) data.border_segments.push_back({{x0, y1}, {x1, y1}});
+                if (!data.IsWalkable(gx - 1, gy)) data.border_segments.push_back({{x0, y0}, {x0, y1}});
+                if (!data.IsWalkable(gx + 1, gy)) data.border_segments.push_back({{x1, y0}, {x1, y1}});
+            }
+        }
+
+        BuildTerrainOverlayVertices(data, px_to_game, data.static_vertices);
+        return data;
+    }
+
+    // Async rebuild: rasterization runs on a worker thread; only the snapshot and the
+    // final swap touch the game thread.
+    void QueueRebuildTerrainGrid()
+    {
+        if (terrain_rebuild_pending) return;
+        terrain_rebuild_pending = true;
+        const auto snapshot = std::make_shared<std::vector<TerrainTrapezoidSnapshot>>(SnapshotTerrainPathingMap());
+        const float px_to_game = cached_px_to_game;
+        const auto map_id = GW::Map::GetMapID();
+        Resources::EnqueueWorkerTask([snapshot, px_to_game, map_id] {
+            const auto data = std::make_shared<TerrainGridData>(ComputeTerrainGrid(*snapshot, px_to_game));
+            Resources::EnqueueMainTask([data, map_id] {
+                terrain_rebuild_pending = false;
+                if (map_id != GW::Map::GetMapID()) return;
+                terrain_overlay_buffer.Adopt(std::move(data->static_vertices));
+                terrain_grid = std::move(*data);
+            });
+        });
+    }
+
+    void UpdateTerrainOverlay()
+    {
+        if (!settings.show_walkable_terrain) return;
+
+        const auto map_id = GW::Map::GetMapID();
+        const bool map_changed = map_id != terrain_map_id;
+        const bool zoom_changed = mission_map_zoom != terrain_cached_zoom;
+
+        if (map_changed) {
+            terrain_map_id = map_id;
+            terrain_cached_zoom = mission_map_zoom;
+            QueueRebuildTerrainGrid();
+        }
+        else if (zoom_changed && terrain_grid.walkable) {
+            terrain_cached_zoom = mission_map_zoom;
+            std::vector<D3DVertex> verts;
+            BuildTerrainOverlayVertices(terrain_grid, cached_px_to_game, verts);
+            terrain_overlay_buffer.Adopt(std::move(verts));
+        }
+    }
+
     void SubmitVertexBuffers(IDirect3DDevice9* dx_device)
     {
         const D3DStateGuard guard(dx_device);
@@ -265,6 +523,7 @@ namespace {
         dx_device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
         dx_device->SetRenderState(D3DRS_LIGHTING, FALSE);
         dx_device->SetRenderState(D3DRS_ZENABLE, FALSE);
+        dx_device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
 
         RECT scissorRect;
         scissorRect.left = static_cast<LONG>(floorf(mission_map_top_left.x));
@@ -282,6 +541,8 @@ namespace {
         dx_device->SetTransform(D3DTS_WORLD, &gameToScreen);
         dx_device->SetTransform(D3DTS_VIEW, &IDENTITY_MATRIX);
         dx_device->SetTransform(D3DTS_PROJECTION, &ortho);
+
+        if (settings.show_walkable_terrain) terrain_overlay_buffer.Render(dx_device);
 
         for (const auto& cb : draw_callbacks) {
             cb(dx_device);
@@ -319,6 +580,11 @@ namespace {
         ctx.draw_background = false;
         ctx.draw_cardinals = false; // mission map is always north-aligned
         ctx.draw_pmap = settings.draw_pmap;
+        // The pmap shadow offset is applied in the view's output space, which for the mission map's
+        // game->px view is raw pixels; express a small game-unit offset in px so it stays subtle and
+        // scales with the mission-map zoom (the compass keeps the default, applied in its own space).
+        constexpr float shadow_gwinches = 180.f;
+        ctx.shadow_translation = shadow_gwinches / cached_px_to_game;
         ctx.draw_symbols = settings.draw_symbols;
         ctx.draw_ranges = settings.draw_ranges;
         ctx.draw_agents = settings.draw_agents;
@@ -340,6 +606,7 @@ namespace {
         const float LINE_HALF_THICKNESS = 1.f * cached_px_to_game;
         for (const auto& line : lines) {
             if (!line->visible) continue;
+            if (line->world_coords) continue; // world coords, not game coords; drawn by DrawWorldCoordRouteLines
             if (!line->draw_on_mission_map && !(settings.draw_all_minimap_lines && line->draw_on_minimap) && !(settings.draw_all_terrain_lines && line->draw_on_terrain)) continue;
             if (line->map != map_id) continue;
             if (line->from_player_pos && player_pos) {
@@ -349,7 +616,30 @@ namespace {
                 minimap_lines.push_back(D3DLine(line->p1, line->p2, LINE_HALF_THICKNESS, static_cast<DWORD>(line->color)));
             }
         }
-        
+
+    }
+
+    // Cross-map route tails are stored in world-map coords (the only form that can place other
+    // maps' positions). Draw them in an ImGui overlay via the world->mission-map transform,
+    // clipped to the widget. These cover the whole route (incl. the current map's exit stretch
+    // past the nearest portal, which the game-coord lines don't reach); the overlap with the
+    // game-coord current-map lines is the same path, so it's harmless - matches the world map.
+    void DrawWorldCoordRouteLines()
+    {
+        const auto& lines = Minimap::Instance().custom_renderer.GetLines();
+        if (lines.empty()) return;
+
+        auto* draw_list = ImGui::GetBackgroundDrawList();
+        draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y}, true);
+        const float thickness = 1.5f * mission_map_scale.x;
+        for (const auto& line : lines) {
+            if (!(line->visible && line->world_coords && line->draw_on_mission_map)) continue;
+            GW::Vec2f s1, s2;
+            WorldMapCoordsToMissionMapScreenPos({line->p1.x, line->p1.y}, s1);
+            WorldMapCoordsToMissionMapScreenPos({line->p2.x, line->p2.y}, s2);
+            draw_list->AddLine({s1.x, s1.y}, {s2.x, s2.y}, line->color, thickness);
+        }
+        draw_list->PopClipRect();
     }
 } // namespace
 
@@ -377,6 +667,8 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
 
     SubmitVertexBuffers(dx_device);
 
+    DrawWorldCoordRouteLines();
+
     // POC: mission map icons, desaturated. Res shrine icon (maybe others) are wrong colour by default so we desaturate, but this impacts other icons!
     #if 0
     const auto* world_ctx = GW::GetWorldContext();
@@ -394,7 +686,7 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
         IM_COL32_WHITE,                   // 7: gray (same as 0)
     };
     for (const auto& icon : world_ctx->mission_map_icons) {
-        auto** tex = GwDatTextureModule::LoadGreyscaleTextureFromFileId(icon.model_id);
+        auto** tex = GwDatModule::LoadGreyscaleTextureFromFileId(icon.model_id);
         if (!tex || !*tex) continue;
         GW::Vec2f pos;
         GamePosToMissionMapScreenPos({icon.X, icon.Y}, pos);
@@ -419,6 +711,8 @@ void MissionMapWidget::Update(float)
     cached_game_to_screen = {{g2s.ax, g2s.ay, 0.f, 0.f, g2s.bx, g2s.by, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, g2s.ox, g2s.oy, 0.f, 1.f}};
     render_ready = true;
 
+    UpdateTerrainOverlay();
+
     // Frame rate check — only throttle minimap line updates
     static clock_t last_check = TIMER_INIT();
     if (!ToolboxUtils::FrameRateCheck(last_check, 30)) return;
@@ -434,6 +728,20 @@ void MissionMapWidget::DrawSettingsInternal()
             ImGui::SetTooltip("Enable the Minimap module to use this.");
     };
 
+    ImGui::Checkbox("Show walkable terrain", &settings.show_walkable_terrain);
+    ImGui::ShowHelp("Shades non-walkable parts of the map grey and outlines walkable terrain.\nIndependent of the Vanquish overlay — no enemy tracking, fog or navigation.");
+    if (settings.show_walkable_terrain) {
+        bool terrain_colors_changed = false;
+        terrain_colors_changed |= Colors::DrawSettingHueWheel("Non-walkable shading", &settings.terrain_shade_color.value);
+        terrain_colors_changed |= Colors::DrawSettingHueWheel("Walkable border", &settings.terrain_border_color.value);
+        if (terrain_colors_changed && terrain_grid.walkable) {
+            std::vector<D3DVertex> verts;
+            BuildTerrainOverlayVertices(terrain_grid, cached_px_to_game, verts);
+            terrain_overlay_buffer.Adopt(std::move(verts));
+        }
+    }
+
+    ImGui::Separator();
     ImGui::BeginDisabled(!minimap_enabled);
     ImGui::Checkbox("Draw all terrain lines", &settings.draw_all_terrain_lines);
     needs_minimap();
@@ -516,6 +824,9 @@ void MissionMapWidget::Terminate()
     }
 
     minimap_lines.Terminate();
+    terrain_overlay_buffer.Terminate();
+    terrain_grid = {};
+    terrain_map_id = static_cast<GW::Constants::MapID>(0);
     render_ready = false;
 }
 

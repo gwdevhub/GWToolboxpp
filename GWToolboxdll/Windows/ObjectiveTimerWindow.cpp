@@ -192,7 +192,7 @@ namespace {
                 delete websocket_server;
                 websocket_server = nullptr;
             }
-            
+
         }
         else {
             if (websocket_server) return;
@@ -540,9 +540,9 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
                                     MapID::Heart_of_the_Shiverpeaks_Level_3});
             break;
         case MapID::Forsaken_Tunnels_Level2:
-            AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level2,
-                                    MapID::Forsaken_Tunnels_Level3,
-                                    MapID::Forsaken_Tunnels_Level4});
+            AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level1,
+                                    MapID::Forsaken_Tunnels_Level2,
+                                    MapID::Forsaken_Tunnels_Level3});
             break;
 
         // dungeons - 5 levels:
@@ -917,7 +917,7 @@ void ObjectiveTimerWindow::AddToPKObjectiveSet()
     );
 
 
-    
+
 }
 
 void ObjectiveTimerWindow::Update(float)
@@ -1023,9 +1023,9 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::CheckboxWithHelp("Automatic /age on completion", &settings.auto_send_age,
         "As soon as final objective is complete, send /age command to game server to receive server-side completion time.");
     ComputeNColumns();
-    
+
     bool enable_websocket_server = websocket_mode != WebsocketMode::None;
-    if (ImGui::Checkbox("Enable LiveSplit websocket server", &enable_websocket_server)) { 
+    if (ImGui::Checkbox("Enable LiveSplit websocket server", &enable_websocket_server)) {
         websocket_mode = enable_websocket_server ? WebsocketMode::LiveSplitOneJSON : WebsocketMode::None;
         EnableWebsocketServer(enable_websocket_server);
     }
@@ -1628,8 +1628,8 @@ DWORD ObjectiveTimerWindow::ObjectiveSet::GetDuration()
     }
     Objective* last_objective_done = nullptr;
     for (const auto objective : objectives) {
-        if (!objective->IsDone()) return TIME_UNKNOWN; 
-        if (!last_objective_done || last_objective_done->done < objective->done) 
+        if (!objective->IsDone()) return TIME_UNKNOWN;
+        if (!last_objective_done || last_objective_done->done < objective->done)
             last_objective_done = objective;
     }
     // ... but for completed runs, we can figure this out from the objectives.
