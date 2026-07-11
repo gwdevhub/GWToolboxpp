@@ -1,0 +1,24 @@
+---
+title: "Danger Rings"
+description: "Draw enemy ground AoE effects — Meteor Shower, Maelstrom, traps and more — as danger rings on the terrain in the 3D game world."
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this feature live under <ToolboxPath steps={["Settings", "Danger Rings"]} />.
+
+The Danger Rings module draws hostile ground area-of-effect skills — Meteor Shower, Maelstrom, traps and similar — as rings on the ground in the 3D game world. The rings are composited under the in-game UI and depth-tested against the terrain, so they sit on the floor and are hidden by hills and walls like real geometry.
+
+<p class="text-(--color-fg-meta)">This is a beta feature. If the in-world compositor fails to install, the settings panel says so at the top.</p>
+
+## Settings
+
+- **Occlude behind terrain** — hide the parts of a ring that fall behind hills, walls and other terrain. Off draws the whole ring on top.
+- **Maximum render distance** — how far from the camera rings are drawn.
+- **Ring thickness** — width of the ring band.
+- **Rim opacity** / **Fill opacity** — how solid the ring's outline and its filled interior are (0 = invisible).
+- **Height lift** — raises the rings slightly off the ground to avoid flicker (z-fighting) on flat terrain.
+- **Pulse speed** — how fast the rings pulse, in Hz (0 = no pulsing).
+
+[back](./)

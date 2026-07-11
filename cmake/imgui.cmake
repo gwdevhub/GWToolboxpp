@@ -1,15 +1,24 @@
 include_guard()
 include(FetchContent)
 
+# apply_patch.bat can't run directly when configuring from a non-Windows host (e.g. the
+# wine cross-compile toolchain in scripts/build-wine-prefix.sh); use the POSIX equivalent there.
+if(CMAKE_HOST_WIN32)
+    set(_IMGUI_PATCH_COMMAND "${CMAKE_CURRENT_LIST_DIR}/patches/apply_patch.bat")
+else()
+    set(_IMGUI_PATCH_COMMAND sh "${CMAKE_CURRENT_LIST_DIR}/patches/apply_patch.sh")
+endif()
+
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG v1.92.7-docking
-    PATCH_COMMAND ${CMAKE_CURRENT_LIST_DIR}/patches/apply_patch.bat imgui_transparent_viewports.patch
+    PATCH_COMMAND ${_IMGUI_PATCH_COMMAND} imgui_transparent_viewports.patch
     LOG_PATCH true
     LOG_MERGED_STDOUTERR true
     LOG_OUTPUT_ON_FAILURE true
     )
+unset(_IMGUI_PATCH_COMMAND)
 FetchContent_GetProperties(imgui)
 if (imgui_POPULATED)
     return()

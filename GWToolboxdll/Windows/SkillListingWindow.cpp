@@ -13,7 +13,7 @@
 #include <Windows/SkillListingWindow.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 
 static uintptr_t skill_array_addr;
 
@@ -147,7 +147,7 @@ void SkillListingWindow::ExportHiResIconsAsDDS() const
             continue;
         }
         const auto filename = std::format(L"{}.dds", skill_id);
-        GwDatTextureModule::SaveTextureFromFileIdToFile(file_id, folder / filename);
+        GwDatModule::SaveTextureFromFileIdToFile(file_id, folder / filename);
         count++;
     }
 
@@ -236,8 +236,8 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
             continue;
         }
         ImGui::SameLine(offset += tiny_text_width);
-        const auto low_res_img = skills[i]->skill->icon_file_id ? GwDatTextureModule::LoadTextureFromFileId(skills[i]->skill->icon_file_id) : nullptr;
-        const auto hi_res_img = skills[i]->skill->icon_file_id_2 ? GwDatTextureModule::LoadTextureFromFileId(skills[i]->skill->icon_file_id_2) : nullptr;
+        const auto low_res_img = skills[i]->skill->icon_file_id ? GwDatModule::LoadTextureFromFileId(skills[i]->skill->icon_file_id) : nullptr;
+        const auto hi_res_img = skills[i]->skill->icon_file_id_2 ? GwDatModule::LoadTextureFromFileId(skills[i]->skill->icon_file_id_2) : nullptr;
         const auto to_use = low_res_img ? low_res_img : hi_res_img;
         if (to_use) 
             ImGui::ImageCropped(to_use ? *to_use : nullptr, {20.f, 20.f});

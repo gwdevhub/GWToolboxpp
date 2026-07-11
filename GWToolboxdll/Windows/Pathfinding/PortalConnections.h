@@ -14,11 +14,12 @@ namespace Pathing {
         Dummy,          // one-way: arbitrary marker position (yellow)
     };
 
-    // Only Dummy connections are inherently one-way (they're position markers
-    // with no return path). Portal/NPC/Disabled default to bidirectional and
-    // can be marked one-way explicitly via the PortalConnection::one_way flag.
-    inline bool IsOneWayType(ConnectionType t) {
-        return t == ConnectionType::Dummy;
+    // Types whose connections default to one-way when first created (position
+    // markers / NPC teleports have no inherent return path). This only seeds the
+    // one_way flag in the editor — actual directionality is the flag alone (see
+    // IsOneWay), so a Dummy/NPC connection can still be made bidirectional.
+    inline bool DefaultsToOneWay(ConnectionType t) {
+        return t == ConnectionType::Dummy || t == ConnectionType::NPC;
     }
 
     // Kind of agent stored in an NPC endpoint. The "NPC" name is kept for the
@@ -53,10 +54,10 @@ namespace Pathing {
         uint32_t campaign = 0;      // campaign/continent ID
         std::string notes;
         bool no_draw = false;      // don't draw connection line (e.g. underground maps)
-        bool one_way = false;      // explicit one-way override (Dummy is always one-way)
+        bool one_way = false;      // sole source of truth for directionality (false = bidirectional)
 
         bool IsOneWay() const {
-            return IsOneWayType(from_type) || IsOneWayType(to_type) || one_way;
+            return one_way;
         }
     };
 

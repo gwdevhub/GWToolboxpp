@@ -1,0 +1,30 @@
+---
+title: "Party Statistics"
+description: "Per-party-member skill-usage tracking, its display options, and how to print the collected counts to team chat via Ctrl+LeftClick or the /skillstats command."
+section: widgets
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+The Party Statistics window records how many times each party member has cast each of their skills, and displays the counts as a grid of skill icons per member. It only collects data in explorable areas — in an outpost the window shows *Statistics will update in explorable area*, and the counts reset when you leave.
+
+This is separate from the [Damage Monitor](/docs/damage_monitor/), which tracks damage dealt rather than skill usage.
+
+## Display options
+
+Settings for this window live under <ToolboxPath steps={["Settings", "Party Statistics"]} />.
+
+- **Show the absolute skill count** — Shows the raw number of times each skill was cast under its icon.
+- **Show the percentage skill count** — Shows each skill's share of that member's total casts, as a percentage.
+- **Print skill statistics by Ctrl+LeftClick** — Enables printing a member's stats to chat: hold **Ctrl** and left-click a member's section in the window to send their per-skill counts to **team chat** (one line per skill, e.g. *PlayerName used Barrage 12 times.*).
+
+Printing is **text only** — nothing is saved to disk as a screenshot or file. The lines go into the in-game chat log like any other team-chat message.
+
+## Chat command
+
+The same output is available through the `/skillstats` command (see [Commands](/docs/commands/)):
+
+- `/skillstats` — Print your own skill statistics.
+- `/skillstats <player_number>` — Print statistics for the party member at that slot (1-based).
+- `/skillstats <player_number> <skill_number>` — Print a single skill (1–8) for that member.
+- `/skillstats reset` — Clear all collected statistics.

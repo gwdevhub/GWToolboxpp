@@ -364,7 +364,7 @@ void AudioSettings::DrawSettingsInternal() {
     if (ImGui::CollapsingHeader("In-Game Music Log")) {
             if (ImGui::Button("Clear Logged Music")) logged_music.clear();
             for (const auto& filename : logged_music) {
-                log_sound(filename, (PlaySoundInt_pt)PlayMusic, 0x83, 0, 0);
+                log_sound(filename, (PlaySoundInt_pt)PlayMusic, SoundFlags_MusicDefault, 0, 0);
             }
     }
 

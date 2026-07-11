@@ -11,6 +11,13 @@
 namespace GameWorldCompositor {
     using DrawCallback = std::function<void(IDirect3DDevice9* device)>;
 
+    // GW's in-world camera clip planes, hardcoded in the engine: far = 48000 at every world
+    // projection setup call site in Gw.exe, near = far/1024 (Q readback = 1024/1023). They are
+    // not queryable from the device (GW creates a PUREDEVICE and only sets identity FF
+    // transforms; the world projection lives in per-shader constants).
+    inline constexpr float kZNear = 46.875f;
+    inline constexpr float kZFar = 48000.f;
+
     // Register a per-frame draw, run between the world and HUD passes. The hook is installed
     // on the first registration and removed when the last callback is gone. Returns a token
     // (> 0) to pass to UnregisterDraw, or 0 on failure.
@@ -30,15 +37,14 @@ namespace GameWorldCompositor {
     // faded out with distance from the camera focus. Creates the shared shaders on first use.
     // Returns false if the pipeline could not be set (caller should skip drawing). Callers must
     // wrap this in a saved state block so GW's own device state is restored afterwards.
-    bool SetupPipeline(IDirect3DDevice9* device, bool occlude, float z_near, float z_far,
-                       float max_distance, float fog_factor);
+    bool SetupPipeline(IDirect3DDevice9* device, bool occlude, float max_distance, float fog_factor);
 
     // Building blocks of SetupPipeline, for modules that bring their OWN shaders/vertex format
     // (e.g. textured sprites) but still want the same world transform, occlusion states and
     // distance fade. Bind your shaders/declaration, then call these (inside a saved state block).
     // SetWorldViewProj fills vertex-shader constants c0-c3 (view) and c4-c7 (projection).
     // SetDistanceFog fills pixel-shader constants c0 (camera focus), c1 (max dist), c2 (fog start).
-    bool SetWorldViewProj(IDirect3DDevice9* device, float z_near, float z_far);
+    bool SetWorldViewProj(IDirect3DDevice9* device);
     void SetWorldRenderStates(IDirect3DDevice9* device, bool occlude);
     void SetDistanceFog(IDirect3DDevice9* device, float max_distance, float fog_factor);
 

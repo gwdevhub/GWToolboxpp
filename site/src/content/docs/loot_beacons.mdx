@@ -1,0 +1,30 @@
+---
+title: "Loot Beacons"
+description: "Mark valuable dropped loot with a pillar of light in the 3D game world, by item rarity and/or trader value."
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this feature live under <ToolboxPath steps={["Settings", "Loot Beacons"]} />.
+
+The Loot Beacons module marks dropped items worth picking up with a beacon — a vertical pillar of light and a ring on the ground — in the 3D game world. Beacons are composited under the in-game UI and depth-tested against the terrain. Choose what gets a beacon by rarity, by trader value, or both.
+
+<p class="text-(--color-fg-meta)">This is a beta feature. If the in-world compositor fails to install, the settings panel says so at the top.</p>
+
+## What gets a beacon
+
+- **Beacon on valuable items** — beacon any drop whose Kamadan trader price meets the **Value threshold (gold)**, regardless of rarity. This catches white-rarity valuables like ectos, gemstones and dyes.
+- **Beacon by rarity** — turn beacons on per rarity (White, Blue, Purple, Gold, Green), each with its own colour.
+- **Show beacons on items reserved for other party members** — also beacon drops assigned to other players (drawn dimmed). Off shows only unreserved drops and drops assigned to you.
+
+## Appearance
+
+- **Occlude behind terrain** — hide beacon parts that fall behind terrain.
+- **Maximum render distance** — how far from the camera beacons are drawn.
+- **Beam height** / **Beam width** / **Beam opacity** — the pillar of light above the item.
+- **Ring radius** / **Ring opacity** — the ring drawn on the ground at the item.
+- **Height lift** — raises the ground ring slightly to avoid flicker (z-fighting).
+- **Pulse speed** — pulse rate in Hz (0 = no pulsing).
+
+[back](./)

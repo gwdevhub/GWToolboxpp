@@ -22,7 +22,7 @@
 #include <GWCA/Managers/QuestMgr.h>
 
 #include <Modules/Resources.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 
 #include <Windows/RerollWindow.h>
 #include <Windows/CompletionWindow.h>
@@ -251,7 +251,7 @@ namespace {
             }
         }
         for (size_t i = 0; i < _countof(icon_file_ids) && icon_file_ids[i] != WorldMapIcon::None; i++) {
-            icons_out[i] = GwDatTextureModule::LoadTextureFromFileId(std::to_underlying(icon_file_ids[i]));
+            icons_out[i] = GwDatModule::LoadTextureFromFileId(std::to_underlying(icon_file_ids[i]));
         }
     }
 

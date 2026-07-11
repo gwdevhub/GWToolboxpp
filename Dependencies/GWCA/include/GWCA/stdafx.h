@@ -31,12 +31,12 @@
 #include <cstring>
 
 #include <map>
+#include <algorithm>
+#include <array>
 #include <atomic>
 #include <string>
 #include <vector>
 #include <sstream>
-#include <array>
-#include <algorithm>
 #include <functional>
 #include <unordered_map>
 #include <utility>

@@ -1,10 +1,6 @@
 #include "stdafx.h"
 
-#include <GWCA/Constants/Constants.h>
-
 #include <GWCA/GameEntities/Party.h>
-
-#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hook.h>
@@ -12,7 +8,6 @@
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <ImGuiAddons.h>
 #include <Modules/HeroPanelPositionModule.h>
-#include <Timer.h>
 #include <Utils/SettingsDoc.h>
 #include <Utils/ToolboxUtils.h>
 
@@ -78,11 +73,8 @@ namespace {
                 RememberPosition(i, hero_id, frame->position);
             }
             else {
-                // HERO-PANEL REGRESSION TEST: position restore disabled so the module never writes
-                // frame->position. If hero panels render correctly with this, this is the regression.
-                // Restore by un-commenting the two lines below.
-                // frame->position = found->second;
-                // GW::UI::TriggerFrameRedraw(frame);
+                frame->position = found->second;
+                GW::UI::TriggerFrameRedraw(frame);
             }
         }
     }

@@ -332,6 +332,10 @@ LRESULT SettingsWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam,
         case WM_COMMAND:
             OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
             break;
+
+        case WM_DPICHANGED:
+            OnDpiChanged(wParam, lParam);
+            break;
     }
 
     return DefWindowProcW(hWnd, uMsg, wParam, lParam);
@@ -339,14 +343,16 @@ LRESULT SettingsWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam,
 
 void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    ApplyDpiScaling(hWnd);
+
     m_hNoUpdate = CreateWindowW(
         WC_BUTTONW,
         L"Never check for update",
         WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
-        10,
-        10,
-        150,
-        15,
+        Scale(10),
+        Scale(10),
+        Scale(150),
+        Scale(15),
         hWnd,
         nullptr,
         m_hInstance,
@@ -357,10 +363,10 @@ void SettingsWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
         WC_BUTTONW,
         L"Always start as admin",
         WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_CHECKBOX,
-        10,
-        30,
-        150,
-        15,
+        Scale(10),
+        Scale(30),
+        Scale(150),
+        Scale(15),
         hWnd,
         nullptr,
         m_hInstance,

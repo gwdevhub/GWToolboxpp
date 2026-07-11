@@ -52,9 +52,10 @@ GWToolbox++ adds a wide variety of chat commands that you trigger by typing them
 
 - `/target` / `/tgt`: Targeting utilities.
   - `/target closest` (or `nearest`): Target the closest agent.
-  - `/target closest <filter> [name|model_id]`: Restrict the closest-target search to a type — `npc`, `player`, `gadget`, `ally`, `enemy`, etc.
-  - `/target <name|model_id> [index]`: Target the nearest NPC matching the name or model ID; `[index]` picks the N-th match.
+  - `/target closest <filter> [name|model_id]`: Restrict the closest-target search to a type — `npc`, `item`, `gadget`, `player`, `ally`, `enemy`.
+  - `/target <name|model_id> [index]`: Target the nearest NPC matching the name or model ID; `[index]` picks the N-th match. Names match on any substring, and `|` separates alternatives (e.g. `/target dhuum|dwayna`).
   - `/target player <name|player_number>`: Target the nearest player by name or player number.
+  - `/target item <name|model_id>`: Target the nearest dropped item by name or model ID.
   - `/target gadget <name|gadget_id>`: Target the nearest interactive gadget.
   - `/target priority [party_member]`: Target the priority target of the given party member (defaults to yourself).
   - `/target ee`: Target the furthest ally within spell range in front of you (for Ebon Escape).
@@ -90,7 +91,7 @@ GWToolbox++ adds a wide variety of chat commands that you trigger by typing them
 - `/loadbuild`: Load a [Builds](/docs/builds/) entry by name onto yourself. See [Builds → Chat commands](/docs/builds/#chat-commands).
 - `/pingbuild <template_name> [template_name...]`: Ping one or more saved skill templates to team chat as clickable build links.
 - `/herobuild` or `/heroteam <name>`: Load a saved [Hero Build](/docs/herobuilds/) onto the active hero team.
-- `/skillstats [reset|<player_number>]`: From the [Party Statistics](/docs/party_window/) module, print skill-usage statistics for yourself, for a specific party member (by number), or `reset` to clear collected stats.
+- `/skillstats [reset|<player_number>]`: From the [Party Statistics](/docs/party_statistics/) module, print skill-usage statistics for yourself, for a specific party member (by number), or `reset` to clear collected stats.
 - `/bonds (add|remove) <party_index|all> (<skill_id>|all)`: Add or remove maintained-bond highlights on the [Bonds Monitor](/docs/widgets/#bonds) widget.
 - `/dmg` or `/damage`: Control the [Damage Monitor](/docs/damage_monitor/#chat-commands). See that page for the full sub-command list.
 

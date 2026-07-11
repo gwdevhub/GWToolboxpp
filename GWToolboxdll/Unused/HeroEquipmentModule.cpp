@@ -16,7 +16,7 @@
 
 #include <ImGuiAddons.h>
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Utils/GuiUtils.h>
 
 namespace {
@@ -360,7 +360,7 @@ void HeroEquipmentModule::Initialize()
     }
 
     // Calculate icon uv coords
-    icon_texture = GwDatTextureModule::LoadTextureFromFileId(0x231a5);
+    icon_texture = GwDatModule::LoadTextureFromFileId(0x231a5);
     constexpr float icon_uv_size = 23.5f / 256.f; // An icon is 23px of the 256px texture
 
     // Define the indices for button states

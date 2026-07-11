@@ -1,13 +1,12 @@
 #pragma once
 
-#include <GWCA/GameContainers/GamePos.h>
-
-#include <GWCA/Packets/StoC.h>
-
 #include <D3DContainers.h>
 
 class SettingsDoc;
 
+// Minimap view of the shared AoE effect store (Utils/AoeEffects): draws each active effect as a
+// circle. Also owns the persistence of the shared per-skill colours (kept in the minimap settings
+// section for backwards compatibility).
 class EffectRenderer : public D3DVertexBuffer {
     friend class Minimap;
 
@@ -16,11 +15,7 @@ public:
 
     void Invalidate() override;
     void Terminate() override;
-    void PacketCallback(const GW::Packet::StoC::GenericValue* pak) const;
-    void PacketCallback(const GW::Packet::StoC::GenericValueTarget* pak) const;
-    void PacketCallback(GW::Packet::StoC::PlayEffect* pak) const;
 
-    static void LoadDefaults();
     static void DrawSettings();
     void LoadSettings(const SettingsDoc& doc, const ToolboxIni* legacy, const char* section);
     static void SaveSettings(SettingsDoc& doc, const char* section);
@@ -28,6 +23,5 @@ public:
 private:
     void Initialize(IDirect3DDevice9* device) override;
 
-    static void RemoveTriggeredEffect(uint32_t effect_id, GW::Vec2f* pos);
     void DrawAoeEffects(IDirect3DDevice9* device);
 };

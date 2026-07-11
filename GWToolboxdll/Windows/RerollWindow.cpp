@@ -23,7 +23,7 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/AgentMgr.h>
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
 #include <Windows/RerollWindow.h>
 #include <Timer.h>
@@ -641,7 +641,7 @@ void RerollWindow::Initialize()
 
     reroll_stage = RerollStage::None;
 
-    covenant_sprite = GwDatTextureModule::LoadTextureFromFileId(0x5e700);
+    covenant_sprite = GwDatModule::LoadTextureFromFileId(0x5e700);
 
     // Add an entry to check available characters at login screen
     RegisterUIMessageCallback(&OnGoToCharSelect_Entry, GW::UI::UIMessage::kCheckUIState, OnUIMessage, 0x4000);

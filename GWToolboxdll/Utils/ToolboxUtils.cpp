@@ -1004,9 +1004,18 @@ namespace ToolboxUtils {
         if (!player_number) {
             player = GW::PlayerMgr::GetPlayerByID(GW::PlayerMgr::GetPlayerNumber());
             if (!player || !player->name) {
-                // Map not loaded; try to get from character context
+                // Map not loaded; try to get from character context.
+                // player_name is a fixed-size buffer that may not be populated/null-terminated
+                // yet (e.g. still on the login/char select screen); reading it unbounded via
+                // wcslen can run off into unrelated memory and produce garbled (often CJK-looking)
+                // output. Bail out to an empty string instead so callers retry later.
                 const auto c = GW::GetCharContext();
-                return c ? c->player_name : L"";
+                if (!c) {
+                    return L"";
+                }
+                constexpr size_t max_len = sizeof(c->player_name) / sizeof(c->player_name[0]);
+                const size_t len = wcsnlen(c->player_name, max_len);
+                return len < max_len ? std::wstring(c->player_name, len) : L"";
             }
         }
         else {

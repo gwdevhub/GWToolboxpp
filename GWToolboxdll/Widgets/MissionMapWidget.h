@@ -40,6 +40,10 @@ public:
         bool draw_background = false;
         bool draw_pmap = false;
         bool draw_symbols = false;
+        // Static walkable/non-walkable terrain overlay, independent of the Vanquish overlay
+        bool show_walkable_terrain = false;
+        Colors::SettingColor terrain_shade_color = IM_COL32(90, 90, 90, 80);
+        Colors::SettingColor terrain_border_color = IM_COL32(220, 220, 220, 100);
     };
 
     void Initialize() override;

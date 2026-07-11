@@ -372,7 +372,7 @@ PartySearchWindow::TBParty* PartySearchWindow::GetPartyByName(const std::wstring
 void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet)
 {
     auto& instance = Instance();
-    const std::lock_guard lock(instance.party_mutex);
+    const std::scoped_lock lock(instance.party_mutex);
 
     // Unless pigs fly and district/party numbers go over 16 byte length, storing party_ids as uint16_t is fine.
     wchar_t* party_name = nullptr;

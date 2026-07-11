@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# fxc.exe wrapper for the wine cross-build (see scripts/build-wine-prefix.sh). fxc.exe ships
+# in the Windows SDK, not the VC toolset, so msvc-wine doesn't provide a wrapper for it.
+#
+# fxc.exe under wine non-deterministically corrupts its own /Fh output: a single stray byte
+# gets inserted right before the "#endif" that closes the generated disassembly comment block,
+# breaking the #if 0/#endif balance and causing a "C1004: unexpected end-of-file" wherever the
+# header later gets #included. It isn't tied to concurrency, repeated invocations, or a
+# particular wineserver/prefix state (all ruled out by testing) - it just happens sometimes,
+# consistent with a latent uninitialized-memory bug in fxc.exe itself that Windows' allocator
+# usually masks but wine's doesn't. Since the corruption always lands as extra characters
+# immediately before "#endif" on its own line, sanitize the output afterwards rather than
+# trying to prevent it.
+#
+# This also skips msvc-wine's wine-msvc.sh wrapper (used by cl/link/rc): its mkfifo-based
+# stdout/stderr piping isn't needed here, and only added noise while diagnosing the above.
+DIR="$(dirname "$0")"
+. "$DIR"/msvcenv.sh
+
+FXC_EXE=$(ls "$DIR"/../../kits/10/bin/*/x86/fxc.exe 2>/dev/null | head -1)
+if [ -z "$FXC_EXE" ]; then
+    echo "fxc.exe not found under Windows Kits (kits/10/bin/*/x86/fxc.exe)" >&2
+    exit 1
+fi
+
+WINE=$(command -v wine64 || command -v wine || false)
+export WINEDEBUG=${WINEDEBUG:-"-all"}
+
+OUT_FILES=()
+ARGS=()
+prev=
+for a; do
+    if [ "$prev" = "/Fh" ] || [ "$prev" = "-Fh" ]; then
+        OUT_FILES+=("$a")
+    fi
+
+    path=
+    case "$a" in
+    [-/][A-Za-z]/*)
+        path=${a#??}
+        ;;
+    [-/][A-Za-z][A-Za-z]/*)
+        path=${a#???}
+        ;;
+    [-/][A-Za-z][A-Za-z][A-Za-z]*:/*)
+        path=${a#*:}
+        ;;
+    /*)
+        path=$a
+        ;;
+    *)
+        ;;
+    esac
+    if [ -n "$path" ] && [ -d "$(dirname "$path")" ] && [ "$(dirname "$path")" != "/" ]; then
+        opt=${a%$path}
+        a="${opt}z:${path//\//\\}"
+    fi
+    ARGS+=("$a")
+    prev=$a
+done
+
+"$WINE" "$FXC_EXE" "${ARGS[@]}"
+ec=$?
+
+if [ $ec -eq 0 ]; then
+    for f in "${OUT_FILES[@]}"; do
+        [ -f "$f" ] && sed -i -E 's/^.+#endif[[:space:]]*\r?$/#endif\r/' "$f"
+    done
+fi
+exit $ec

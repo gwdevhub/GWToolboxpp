@@ -71,6 +71,8 @@ private:
 
     enum CombatState { InCombat, NotInCombat, EitherCombat };
     enum WeaponState { HasWeapon, NoWeapon, EitherWeapon };
+    enum DeadState { Dead, Alive, EitherDeadState };
+    enum QuestState { QuestGiver, NotQuestGiver, EitherQuestState };
 
     class CustomAgent {
         static unsigned int cur_ui_id;
@@ -88,10 +90,15 @@ private:
         struct Settings {
             bool active = true;
             std::string name;
+            std::string group;
             DWORD modelId = 0;
             DWORD mapId = 0;
             int combat_state = EitherCombat;
             int weapon_state = EitherWeapon;
+            int allegiance = -1; // -1 == match by modelId only; otherwise a GW::Constants::Allegiance value
+            int dead_state = EitherDeadState;
+            int quest_state = EitherQuestState;
+            bool is_default = false; // seeded from the old fixed agent-color/size categories; can't be deleted
             Colors::SettingColor color = 0xFFF00000;
             Colors::SettingColor color_text = 0xFFF00000;
             int shape = Tear;
@@ -117,10 +124,15 @@ private:
         // define the agent
         bool active = true;
         char name[128]{};
+        char group[64]{};
         DWORD modelId = 0;
         DWORD mapId = 0; // 0 for 'any map'
         CombatState combat_state = CombatState::EitherCombat;
         WeaponState weapon_state = WeaponState::EitherWeapon;
+        int allegiance = -1; // -1 == match by modelId only
+        DeadState dead_state = DeadState::EitherDeadState;
+        QuestState quest_state = QuestState::EitherQuestState;
+        bool is_default = false;
 
         // attributes to change
         Color color = 0xFFF00000;
@@ -174,6 +186,7 @@ private:
     Color color_qz = 0x320000FF;
     Color color_winnowing = 0x3200FFFF;
     Color color_frozen_soil = 0x00FEFFFF;
+    Color color_symbiosis = 0x00FF00FF;
     Color color_target = 0xFFFFFF00;
     Color color_player = 0xFFFF8000;
     Color color_player_dead = 0x64FF8000;
@@ -208,7 +221,11 @@ private:
 
     std::vector<CustomAgent*> custom_agents{};
     std::unordered_map<DWORD, std::vector<const CustomAgent*>> custom_agents_map{};
+    std::unordered_map<int, std::vector<const CustomAgent*>> custom_agents_by_allegiance{};
     void BuildCustomAgentsMap();
+    void SeedDefaultCustomAgents();
+    void SyncSeededDefaultsFromLegacyFields();
+    bool custom_agent_defaults_seeded = false;
     //const CustomAgent* FindValidCustomAgent(DWORD modelid) const;
 
     float size_default = 100.f;

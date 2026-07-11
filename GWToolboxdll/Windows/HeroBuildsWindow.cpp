@@ -22,7 +22,7 @@
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
 #include <Windows/HeroBuildsWindow.h>
 
@@ -270,7 +270,7 @@ void HeroBuildsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
     SettingsRegistry::Register(this, settings);
-    skill_toggle_sprite = GwDatTextureModule::LoadTextureFromFileId(0x268f6);
+    skill_toggle_sprite = GwDatModule::LoadTextureFromFileId(0x268f6);
     TeamBuild::SetSkillToggleSprite(skill_toggle_sprite);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"heroteam", &CmdHeroTeamBuild);
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"herobuild", &CmdHeroTeamBuild);

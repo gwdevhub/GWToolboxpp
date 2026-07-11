@@ -19,6 +19,7 @@
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/CustomRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
+#include <Widgets/WorldMapWidget.h>
 #include <Color.h>
 #include <GWToolbox.h>
 #include <Utils/GuiUtils.h>
@@ -988,7 +989,8 @@ void CustomRenderer::Render(IDirect3DDevice9* device)
         marker_file_dirty = true;
         markers_changed = false;
         Invalidate();
-        return;
+        // Don't return: the draw below re-uploads the buffer this frame. Skipping it blinks the
+        // lines for one frame when a quest path is cleared and re-added.
     }
 
     DrawCustomMarkers(device);
@@ -1042,6 +1044,18 @@ void CustomRenderer::DrawCustomLines(const IDirect3DDevice9*)
         if (!line->visible || !line->draw_on_minimap) continue;
         if (line->map != GW::Constants::MapID::None && line->map != GW::Map::GetMapID()) continue;
         if (doa_outpost && !line->draw_everywhere) continue;
+
+        if (line->world_coords) {
+            // Cross-map route tail stored in world-map coords; project into current-map game space
+            // so it renders on the compass (heads off toward the next map). WorldMapToGamePos is
+            // exact for the current map and continent-linear beyond it.
+            GW::GamePos g1, g2;
+            if (!WorldMapWidget::WorldMapToGamePos({line->p1.x, line->p1.y}, g1) || !WorldMapWidget::WorldMapToGamePos({line->p2.x, line->p2.y}, g2)) continue;
+            vertices.push_back({g1.x, g1.y, 0.f, line->color});
+            vertices.push_back({g2.x, g2.y, 0.f, line->color});
+            dirty = true;
+            continue;
+        }
 
         if (line->from_player_pos && my_pos) {
             vertices.push_back({my_pos->x, my_pos->y, 0.f, line->color});

@@ -25,4 +25,5 @@ target_link_libraries(GWToolbox PRIVATE
 
     version.lib # for GetFileVersionInfo
     bcrypt.lib # for sha256 of the launcher exe
+    comctl32.lib # for TaskDialogIndirect (Defender prompt checkbox)
     )

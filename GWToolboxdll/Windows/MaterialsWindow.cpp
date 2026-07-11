@@ -15,7 +15,7 @@
 #include <Constants/EncStrings.h>
 
 #include <Windows/MaterialsWindow.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Timer.h>
 #include <GWCA/GameEntities/Frame.h>
 
@@ -438,11 +438,11 @@ void MaterialsWindow::Initialize()
     }
 
     // @Cleanup: these need to be GW::Constants::ModelFileID insted of hard coded here
-    tex_essence = GwDatTextureModule::LoadTextureFromFileId(0x458A7);
-    tex_grail = GwDatTextureModule::LoadTextureFromFileId(0x24BB);
-    tex_armor = GwDatTextureModule::LoadTextureFromFileId(0x458A4);
-    tex_powerstone = GwDatTextureModule::LoadTextureFromFileId(0x17000);
-    tex_resscroll = GwDatTextureModule::LoadTextureFromFileId(0x38458);
+    tex_essence = GwDatModule::LoadTextureFromFileId(0x458A7);
+    tex_grail = GwDatModule::LoadTextureFromFileId(0x24BB);
+    tex_armor = GwDatModule::LoadTextureFromFileId(0x458A4);
+    tex_powerstone = GwDatModule::LoadTextureFromFileId(0x17000);
+    tex_resscroll = GwDatModule::LoadTextureFromFileId(0x38458);
 
     for (int& i : price) {
         i = PRICE_DEFAULT;

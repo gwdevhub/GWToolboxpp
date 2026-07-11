@@ -1557,7 +1557,6 @@ namespace GWArmory {
     };
     Armor weapons[] = {
         // Axes
-        {"Celestial Axe", 0x2AF80, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 0, 0x22130001},
         {"Chaos Axe", 0x213B9, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Eaglecrest Axe", 0x5370C, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Envoy Axe", 0x5A525, Profession::None, ItemType::Axe, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1700,7 +1699,6 @@ namespace GWArmory {
         {"Tureksin's Spear", 0x38753, Profession::None, ItemType::Spear, Campaign::BonusMissionPack, 3, 0x20000000},
 
         // Staves
-        {"Anniversary Staff \"Unveil\"", 0x38728, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x2E330001},
         {"Bedlam Staff", 0x387B2, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bo Staff", 0x2AE68, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Bone Dragon Staff", 0x53756, Profession::None, ItemType::Staff, Campaign::BonusMissionPack, 3, 0x20000000},
@@ -1733,7 +1731,6 @@ namespace GWArmory {
 
         // Swords
         {"Butterfly Sword", 0x3843, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 0, 0x20000000},
-        {"Celestial Sword", 0x2AFD0, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 0, 0x2E130001},
         {"Colossal Scimitar", 0x387F8, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Crystalline Sword", 0x383E, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x20000000},
         {"Embersteel Blade", 0x49C17, Profession::None, ItemType::Sword, Campaign::BonusMissionPack, 3, 0x2E134441},
@@ -1763,7 +1760,6 @@ namespace GWArmory {
         {"Amber Wand", 0x28415, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
         {"Channeling Rod", 0x2B208, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
         {"Frog Scepter", 0x53733, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x2E120641},
-        {"Gazing Scepter", 0x2B1CE, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020001},
         {"Holy Rod", 0x172B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 0, 0x22000001},
         {"Jade Wand", 0x28412, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 2, 0x22020041},
         {"Jellyfish Wand", 0x2B1B8, Profession::None, ItemType::Wand, Campaign::BonusMissionPack, 3, 0x20000000},

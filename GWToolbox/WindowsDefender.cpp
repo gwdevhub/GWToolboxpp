@@ -5,11 +5,67 @@
 #include "WindowsDefender.h"
 
 #include "Inject.h"
+#include "Registry.h"
 #include "Settings.h"
 
 namespace fs = std::filesystem;
 
 namespace {
+    // Registry value under HKCU\Software\GWToolbox holding the build for which the user ticked
+    // "don't ask again"; the prompt stays hidden only while it matches the running version.
+    constexpr auto kDefenderPromptSuppressKey = L"DefenderPromptSuppressedVersion";
+
+    std::wstring CurrentVersion()
+    {
+        const std::string v = GWTOOLBOXEXE_VERSION;
+        return {v.begin(), v.end()};
+    }
+
+    bool DefenderPromptSuppressed()
+    {
+        wchar_t buffer[64] = {};
+        std::wstring error;
+        if (!RegReadStr(kDefenderPromptSuppressKey, buffer, _countof(buffer), error))
+            return false;
+        return CurrentVersion() == buffer;
+    }
+
+    void SuppressDefenderPromptForThisVersion()
+    {
+        std::wstring error;
+        RegWriteStr(kDefenderPromptSuppressKey, CurrentVersion().c_str(), error);
+    }
+
+    // Yes/No prompt carrying a "don't ask again" checkbox. Returns true for Yes and reports the
+    // checkbox state; falls back to a plain (checkbox-less) message box if TaskDialog is unavailable.
+    bool AskYesNoWithSuppressOption(const wchar_t* base_title, const std::wstring& instruction,
+                                    const std::wstring& content, const std::wstring& verification,
+                                    bool& dont_ask_again)
+    {
+        const std::wstring title = GwtbDialogTitle(base_title);
+
+        TASKDIALOGCONFIG config = {sizeof(config)};
+        config.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION;
+        config.dwCommonButtons = TDCBF_YES_BUTTON | TDCBF_NO_BUTTON;
+        config.pszWindowTitle = title.c_str();
+        config.pszMainIcon = TD_INFORMATION_ICON;
+        config.pszMainInstruction = instruction.c_str();
+        config.pszContent = content.c_str();
+        config.pszVerificationText = verification.c_str();
+        config.nDefaultButton = IDYES;
+
+        int button = 0;
+        BOOL checked = FALSE;
+        if (FAILED(TaskDialogIndirect(&config, &button, nullptr, &checked))) {
+            dont_ask_again = false;
+            const std::wstring text = instruction + L"\n\n" + content;
+            return ShowMessageBoxW(nullptr, text.c_str(), base_title, MB_YESNO | MB_ICONINFORMATION) == IDYES;
+        }
+
+        dont_ask_again = checked == TRUE;
+        return button == IDYES;
+    }
+
     // A snapshot of the Windows Defender settings that decide whether Toolbox can use its folder.
     struct DefenderState {
         bool readable = false;             // false when Get-MpPreference couldn't be read (locked-down host, third-party AV, ...)
@@ -35,11 +91,20 @@ namespace {
         return s;
     }
 
+    // Strips a trailing separator so folder exclusions with/without one still compare equal.
+    void TrimTrailingSeparators(std::wstring& s)
+    {
+        while (!s.empty() && (s.back() == L'\\' || s.back() == L'/'))
+            s.pop_back();
+    }
+
     std::wstring LowerCanonical(const fs::path& path)
     {
         std::error_code ec;
         const fs::path canonical = fs::canonical(path, ec);
-        return ToLower((ec ? path : canonical).wstring());
+        std::wstring result = ToLower((ec ? path : canonical).wstring());
+        TrimTrailingSeparators(result);
+        return result;
     }
 
     // True if `target` is one of `list`, or (when prefix is set) sits inside a listed folder.
@@ -83,7 +148,12 @@ namespace {
                 continue;
 
             switch (section) {
-                case Exclusions: out.exclusion_paths.push_back(ToLower(line)); break;
+                case Exclusions: {
+                    std::wstring path = ToLower(line);
+                    TrimTrailingSeparators(path);
+                    out.exclusion_paths.push_back(std::move(path));
+                    break;
+                }
                 case ControlledFolderAccess: out.controlled_folder_access = _wtoi(line.c_str()); break;
                 case Apps: out.cfa_apps.push_back(ToLower(line)); break;
                 default: break;
@@ -186,21 +256,29 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
     const bool is_admin = IsRunningAsAdmin();
 
     if (!is_admin && !quiet) {
-        const int iRet = ShowMessageBoxW(
-            nullptr,
+        bool dont_ask_again = false;
+        const bool proceed = AskYesNoWithSuppressOption(
+            L"Windows Defender Exclusion",
+            L"Add Windows Security exceptions for GWToolbox?",
             L"GWToolbox would like to add Windows Security exceptions for itself (a Defender exclusion and "
             L"Controlled Folder Access permissions) to prevent false positives and let it save settings and crash dumps.\n\n"
-            L"This requires administrator privileges. Would you like to add them?",
-            L"Windows Defender Exclusion",
-            MB_YESNO | MB_ICONINFORMATION);
+            L"This requires administrator privileges.",
+            L"Don't ask again until GWToolbox is updated",
+            dont_ask_again);
 
-        if (iRet != IDYES) {
-            ShowMessageBoxW(
-                nullptr,
-                L"GWToolbox will likely not function correctly without these exceptions.\n\n"
-                L"You will be prompted again next time until they are added.",
-                L"Windows Defender Exclusion - Warning",
-                MB_OK | MB_ICONWARNING);
+        if (dont_ask_again)
+            SuppressDefenderPromptForThisVersion();
+
+        if (!proceed) {
+            // A ticked checkbox already tells the user they won't be nagged again; skip the contradictory warning.
+            if (!dont_ask_again) {
+                ShowMessageBoxW(
+                    nullptr,
+                    L"GWToolbox will likely not function correctly without these exceptions.\n\n"
+                    L"You will be prompted again next time until they are added.",
+                    L"Windows Defender Exclusion - Warning",
+                    MB_OK | MB_ICONWARNING);
+            }
             return true;
         }
     }
@@ -240,7 +318,7 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
     }
 
     // The folder exclusion we can verify directly; Controlled Folder Access entries we trust to the exit code.
-    const bool verified = !is_admin || IsPathExcludedFromDefender(exclusion_path);
+    const bool verified = IsPathExcludedFromDefender(exclusion_path);
 
     if (!quiet) {
         if (verified) {
@@ -276,6 +354,10 @@ bool AddDefenderExceptions(const std::filesystem::path& exclusion_path,
 void EnsureDefenderReadiness(const std::filesystem::path& exclusion_path,
                              const std::vector<std::filesystem::path>& controlled_folder_access_apps)
 {
+    // The user asked not to be reminded again for this build.
+    if (DefenderPromptSuppressed())
+        return;
+
     DefenderState state;
     if (!QueryDefenderState(state)) {
         // Can't read Defender state (locked-down host, third-party AV): don't nag on a guess.

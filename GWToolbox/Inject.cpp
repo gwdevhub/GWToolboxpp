@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <Defender.h>
 #include <Str.h>
 
 #include "Inject.h"
@@ -15,20 +16,6 @@
 #pragma comment(linker, "\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
-struct InjectProcess {
-    InjectProcess(const bool injected, Process&& process, std::wstring&& charname) : m_Injected(injected), m_Process(std::move(process)), m_Charname(std::move(charname)) {}
-
-    InjectProcess(const InjectProcess&) = delete;
-    InjectProcess(InjectProcess&&) = default;
-
-    InjectProcess& operator=(const InjectProcess&) = delete;
-    InjectProcess& operator=(InjectProcess&&) = default;
-
-    bool m_Injected;
-    Process m_Process;
-    std::wstring m_Charname;
-};
 
 static bool FindTopMostProcess(const std::vector<InjectProcess>& processes, size_t* top_most_index)
 {
@@ -97,13 +84,20 @@ std::vector<std::filesystem::path> GetGuildWarsExecutablePaths()
     return paths;
 }
 
-InjectReply InjectWindow::AskInjectProcess(Process* target_process)
+// Scans for injectable Guild Wars processes; callable repeatedly (initial load, and every Retry click).
+static InjectScanResult RunScan()
 {
+    InjectScanResult result;
+
     std::vector<Process> processes = GetGuildWarsProcesses();
 
     if (processes.empty()) {
         fprintf(stderr, "Didn't find any potential process to inject GWToolbox\n");
-        return InjectReply_NoProcess;
+        const bool gw2_running = !GetGuildWars2Processes().empty();
+        result.m_ErrorMessage = gw2_running
+                                     ? L"GWToolbox is for Guild Wars, not Guild Wars 2.\nStart Guild Wars, then click Retry."
+                                     : L"Guild Wars isn't running.\nStart the game, then click Retry.";
+        return result;
     }
 
     uintptr_t charname_rva = 0;
@@ -133,10 +127,17 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
     if (!charname_rva || !email_rva) {
         if (read_blocked) {
             fprintf(stderr, "Couldn't read Guild Wars memory to scan for RVAs (error %lu) - likely anti-virus interference\n", read_error);
-            return InjectReply_MemoryBlocked;
+            std::wstring detail;
+            if (FindRecentDefenderBlock(L"Gw.exe", 5, detail)) {
+                fprintf(stderr, "Windows Defender reported: %ls\n", detail.c_str());
+            }
+            result.m_ErrorMessage = L"Couldn't read Guild Wars' memory to find your character.\nThis is usually antivirus or Controlled Folder Access blocking GWToolbox.";
+            result.m_TroubleshootingUrl = Troubleshooting::CantReadMemory;
+            return result;
         }
         fprintf(stderr, "Couldn't find charname/email RVAs in any potential process\n");
-        return InjectReply_PatternError;
+        result.m_ErrorMessage = L"Couldn't locate your character name in memory.\nUpdate GWToolbox or contact the developers.";
+        return result;
     }
 
     std::vector<InjectProcess> inject_processes;
@@ -197,12 +198,11 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
     processes.clear();
 
     if (inject_processes.empty()) {
-        return InjectReply_NoValidProcess;
-    }
-
-    if (settings.quiet && inject_processes.size() == 1) {
-        *target_process = std::move(inject_processes[0].m_Process);
-        return InjectReply_Inject; // Inject if 1 process found
+        fprintf(stderr, "No process with a readable character name\n");
+        result.m_ErrorMessage = IsRunningAsAdmin()
+                                     ? L"Couldn't find a valid character to inject into."
+                                     : L"Couldn't find a valid character.\nGWToolbox may need administrator privileges.";
+        return result;
     }
 
     // Sort by name
@@ -210,30 +210,35 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
         return proc1.m_Charname < proc2.m_Charname;
     });
 
+    result.m_Found = true;
+    result.m_Processes = std::move(inject_processes);
+    return result;
+}
+
+InjectReply InjectWindow::AskInjectProcess(Process* target_process)
+{
+    InjectScanResult scan = RunScan();
+
+    if (settings.quiet) {
+        if (scan.m_Found && scan.m_Processes.size() == 1) {
+            *target_process = std::move(scan.m_Processes[0].m_Process);
+            return InjectReply_Inject; // Inject if 1 process found
+        }
+        if (!scan.m_Found) {
+            fprintf(stderr, "%ls\n", scan.m_ErrorMessage.c_str());
+            return InjectReply_Cancel;
+        }
+        // Multiple candidates with no way to pick one non-interactively: fall through and show the window anyway.
+    }
+
     InjectWindow inject;
+    inject.SetInitialScanResult(std::move(scan));
     inject.Create();
 
-    for (size_t i = 0; i < inject_processes.size(); i++) {
-        const InjectProcess* process = &inject_processes[i];
-
-        wchar_t buffer[128];
-        StrCopyW(buffer, _countof(buffer), process->m_Charname.c_str());
-        if (process->m_Injected) {
-            StrAppendW(buffer, _countof(buffer), L" (injected)");
-        }
-
-        SendMessageW(inject.m_hCharacters, CB_ADDSTRING, 0, (LPARAM)buffer);
+    while (!inject.ShouldClose()) {
+        inject.PollMessages(16);
+        inject.Tick();
     }
-
-    size_t TopMostIdx;
-    if (FindTopMostProcess(inject_processes, &TopMostIdx)) {
-        SendMessageW(inject.m_hCharacters, CB_SETCURSEL, TopMostIdx, 0);
-    }
-    else {
-        SendMessageW(inject.m_hCharacters, CB_SETCURSEL, 0, 0);
-    }
-
-    inject.WaitMessages();
 
     size_t index;
     if (!inject.GetSelected(&index)) {
@@ -241,18 +246,44 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
         return InjectReply_Cancel;
     }
 
-    *target_process = std::move(inject_processes[index].m_Process);
+    *target_process = inject.TakeSelectedProcess(index);
     return InjectReply_Inject;
 }
 
-InjectWindow::InjectWindow() : m_hCharacters(nullptr), m_hLaunchButton(nullptr), m_hRestartAsAdmin(nullptr), m_hSettings(nullptr), m_Selected(-1) {}
+InjectWindow::InjectWindow()
+    : m_hCharacters(nullptr)
+    , m_hLaunchButton(nullptr)
+    , m_hErrorText(nullptr)
+    , m_hRetryButton(nullptr)
+    , m_hTroubleshootingLink(nullptr)
+    , m_hRestartAsAdmin(nullptr)
+    , m_hSettings(nullptr)
+    , m_hUpdateStatus(nullptr)
+    , m_hUpdateButton(nullptr)
+    , m_hErrorBrush(CreateSolidBrush(RGB(255, 214, 224)))
+    , m_Selected(-1)
+{
+}
 
-InjectWindow::~InjectWindow() {}
+InjectWindow::~InjectWindow()
+{
+    if (m_hErrorBrush) {
+        DeleteObject(m_hErrorBrush);
+    }
+}
+
+void InjectWindow::SetInitialScanResult(InjectScanResult result)
+{
+    m_PendingScanResult = std::move(result);
+}
 
 bool InjectWindow::Create()
 {
+    if (!m_PendingScanResult) {
+        m_PendingScanResult = RunScan();
+    }
     SetWindowName(L"GWToolbox - Launch");
-    SetWindowDimension(305, 135);
+    SetWindowDimension(305, 165);
     return Window::Create();
 }
 
@@ -263,6 +294,11 @@ bool InjectWindow::GetSelected(size_t* index) const
         return true;
     }
     return false;
+}
+
+Process InjectWindow::TakeSelectedProcess(const size_t index)
+{
+    return std::move(m_ScanResult.m_Processes[index].m_Process);
 }
 
 LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -284,14 +320,32 @@ LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, c
             OnCommand(reinterpret_cast<HWND>(lParam), LOWORD(wParam), HIWORD(wParam));
             break;
 
+        case WM_CTLCOLORSTATIC:
+            if (reinterpret_cast<HWND>(lParam) == m_hErrorText) {
+                const auto hDc = reinterpret_cast<HDC>(wParam);
+                SetBkColor(hDc, RGB(255, 214, 224));
+                SetTextColor(hDc, RGB(120, 0, 20));
+                return reinterpret_cast<LRESULT>(m_hErrorBrush);
+            }
+            break;
+
         case WM_KEYUP:
             if (wParam == VK_ESCAPE) {
                 DestroyWindow(hWnd);
             }
             else if (wParam == VK_RETURN) {
-                m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
-                DestroyWindow(hWnd);
+                if (m_ScanResult.m_Found) {
+                    m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
+                    DestroyWindow(hWnd);
+                }
+                else {
+                    Rescan();
+                }
             }
+            break;
+
+        case WM_DPICHANGED:
+            OnDpiChanged(wParam, lParam);
             break;
     }
 
@@ -300,37 +354,141 @@ LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, c
 
 void InjectWindow::OnCreate(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    const HWND hGroupBox = CreateWindowW(WC_BUTTONW, L"Select Character", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 5, 270, 55, hWnd, nullptr, m_hInstance, nullptr);
-    SendMessageW(hGroupBox, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+    ApplyDpiScaling(hWnd);
 
-    m_hCharacters = CreateWindowW(
-        WC_COMBOBOXW, L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST,
-        20,  // x
-        25,  // y
-        155, // width
-        25,  // height
-        hWnd, nullptr, m_hInstance, nullptr
-    );
-    SendMessageW(m_hCharacters, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+    if (m_PendingScanResult) {
+        m_ScanResult = std::move(*m_PendingScanResult);
+        m_PendingScanResult.reset();
+    }
 
-    m_hLaunchButton = CreateWindowW(
-        WC_BUTTONW, L"Launch", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
-        180, // x
-        24,  // y
-        90,  // width
-        25,  // height
-        hWnd, nullptr, m_hInstance, nullptr
-    );
-    SendMessageW(m_hLaunchButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+    m_UpdateChecker.Start(!settings.noexecheck, !settings.noupdate);
 
-    if (!IsRunningAsAdmin()) {
-        m_hRestartAsAdmin = CreateWindowW(WC_BUTTONW, L"Can't find your character?", WS_VISIBLE | WS_CHILD | WS_TABSTOP, 10, 65, 165, 25, hWnd, nullptr, m_hInstance, nullptr);
+    BuildControls(hWnd);
+}
+
+void InjectWindow::BuildControls(HWND hWnd)
+{
+    // A Retry rebuild starts from a blank slate rather than patching the previous state in place.
+    for (const auto handle :
+         {&m_hCharacters, &m_hLaunchButton, &m_hErrorText, &m_hRetryButton, &m_hTroubleshootingLink, &m_hRestartAsAdmin, &m_hSettings, &m_hUpdateStatus, &m_hUpdateButton}) {
+        if (*handle) {
+            DestroyWindow(*handle);
+            *handle = nullptr;
+        }
+    }
+
+    if (m_ScanResult.m_Found) {
+        const HWND hGroupBox = CreateWindowW(WC_BUTTONW, L"Select Character", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, Scale(10), Scale(5), Scale(270), Scale(55), hWnd, nullptr, m_hInstance, nullptr);
+        SendMessageW(hGroupBox, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+        m_hCharacters = CreateWindowW(
+            WC_COMBOBOXW, L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST,
+            Scale(20),  // x
+            Scale(25),  // y
+            Scale(155), // width
+            Scale(25),  // height when dropped only - Windows fixes the closed-box height from the font, ignoring this
+            hWnd, nullptr, m_hInstance, nullptr
+        );
+        SendMessageW(m_hCharacters, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+        // Read back the combo box's real rendered rect so the button matches it exactly, since its closed height isn't the one requested above.
+        RECT comboRect;
+        GetWindowRect(m_hCharacters, &comboRect);
+        MapWindowPoints(nullptr, hWnd, reinterpret_cast<LPPOINT>(&comboRect), 2);
+
+        m_hLaunchButton = CreateWindowW(
+            WC_BUTTONW, L"Launch", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON,
+            Scale(180),                       // x
+            comboRect.top,                    // y
+            Scale(90),                        // width
+            comboRect.bottom - comboRect.top, // height
+            hWnd, nullptr, m_hInstance, nullptr
+        );
+        SendMessageW(m_hLaunchButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+        for (size_t i = 0; i < m_ScanResult.m_Processes.size(); i++) {
+            const InjectProcess& process = m_ScanResult.m_Processes[i];
+
+            wchar_t buffer[128];
+            StrCopyW(buffer, _countof(buffer), process.m_Charname.c_str());
+            if (process.m_Injected) {
+                StrAppendW(buffer, _countof(buffer), L" (injected)");
+            }
+
+            SendMessageW(m_hCharacters, CB_ADDSTRING, 0, (LPARAM)buffer);
+        }
+
+        size_t top_most_index;
+        if (FindTopMostProcess(m_ScanResult.m_Processes, &top_most_index)) {
+            SendMessageW(m_hCharacters, CB_SETCURSEL, top_most_index, 0);
+        }
+        else {
+            SendMessageW(m_hCharacters, CB_SETCURSEL, 0, 0);
+        }
+    }
+    else {
+        m_hErrorText = CreateWindowW(WC_STATICW, m_ScanResult.m_ErrorMessage.c_str(), WS_VISIBLE | WS_CHILD | SS_LEFT, Scale(10), Scale(5), Scale(165), Scale(55), hWnd, nullptr, m_hInstance, nullptr);
+        SendMessageW(m_hErrorText, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+        m_hRetryButton = CreateWindowW(WC_BUTTONW, L"Retry", WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_DEFPUSHBUTTON, Scale(190), Scale(15), Scale(90), Scale(35), hWnd, nullptr, m_hInstance, nullptr);
+        SendMessageW(m_hRetryButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+    }
+
+    if (m_ScanResult.m_TroubleshootingUrl) {
+        m_hTroubleshootingLink = CreateWindowW(WC_BUTTONW, L"Open troubleshooting guide", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(95), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
+        SendMessageW(m_hTroubleshootingLink, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+    }
+    else if (!IsRunningAsAdmin()) {
+        m_hRestartAsAdmin = CreateWindowW(WC_BUTTONW, L"Can't find your character?", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(10), Scale(95), Scale(165), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
         SendMessageW(m_hRestartAsAdmin, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
         Button_SetElevationRequiredState(m_hRestartAsAdmin, TRUE);
     }
 
-    m_hSettings = CreateWindowW(WC_BUTTONW, L"Settings...", WS_VISIBLE | WS_CHILD | WS_TABSTOP, 200, 65, 80, 25, hWnd, nullptr, m_hInstance, nullptr);
+    // Update status row: status text and (when available) an Update button, both to the left of Settings.
+    m_hUpdateStatus = CreateWindowW(WC_STATICW, L"", WS_VISIBLE | WS_CHILD | SS_LEFT, Scale(10), Scale(65), Scale(115), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
+    SendMessageW(m_hUpdateStatus, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+    m_hUpdateButton = CreateWindowW(WC_BUTTONW, L"Update", WS_CHILD | WS_TABSTOP, Scale(130), Scale(65), Scale(60), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
+    SendMessageW(m_hUpdateButton, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+    m_hSettings = CreateWindowW(WC_BUTTONW, L"Settings...", WS_VISIBLE | WS_CHILD | WS_TABSTOP, Scale(200), Scale(65), Scale(80), Scale(25), hWnd, nullptr, m_hInstance, nullptr);
     SendMessageW(m_hSettings, WM_SETFONT, (WPARAM)m_hFont, MAKELPARAM(TRUE, 0));
+
+    RefreshUpdateStatus();
+}
+
+void InjectWindow::Rescan()
+{
+    m_ScanResult = RunScan();
+    BuildControls(m_hWnd);
+}
+
+void InjectWindow::Tick()
+{
+    if (m_UpdateChecker.Poll()) {
+        RefreshUpdateStatus();
+    }
+}
+
+void InjectWindow::RefreshUpdateStatus()
+{
+    if (!m_hUpdateStatus) return; // controls not built yet
+
+    if (m_UpdateChecker.IsAnyUpdateAvailable()) {
+        SetWindowTextW(m_hUpdateStatus, L"Updates available!");
+        ShowWindow(m_hUpdateButton, SW_SHOW);
+        return;
+    }
+
+    ShowWindow(m_hUpdateButton, SW_HIDE);
+    SetWindowTextW(m_hUpdateStatus, m_UpdateChecker.IsChecking() ? L"Checking..." : L"");
+}
+
+void InjectWindow::SetControlsEnabled(const bool enabled)
+{
+    for (const HWND handle : {m_hCharacters, m_hLaunchButton, m_hRetryButton, m_hTroubleshootingLink, m_hRestartAsAdmin, m_hSettings, m_hUpdateButton}) {
+        if (handle) EnableWindow(handle, enabled);
+    }
 }
 
 void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationCode)
@@ -339,8 +497,23 @@ void InjectWindow::OnCommand(HWND hWnd, const LONG ControlId, LONG NotificationC
         m_Selected = SendMessageW(m_hCharacters, CB_GETCURSEL, 0, 0);
         DestroyWindow(m_hWnd);
     }
+    else if (hWnd == m_hRetryButton && ControlId == STN_CLICKED) {
+        Rescan();
+    }
     else if (hWnd == m_hRestartAsAdmin && ControlId == STN_CLICKED) {
         RestartWithSameArgs(true);
+    }
+    else if (hWnd == m_hTroubleshootingLink && ControlId == STN_CLICKED) {
+        ShellExecuteW(nullptr, L"open", m_ScanResult.m_TroubleshootingUrl, nullptr, nullptr, SW_SHOWNORMAL);
+    }
+    else if (hWnd == m_hUpdateButton && ControlId == STN_CLICKED) {
+        SetControlsEnabled(false);
+        std::wstring error;
+        if (!m_UpdateChecker.ApplyUpdates(error)) {
+            fprintf(stderr, "ApplyUpdates failed: %ls\n", error.c_str());
+        }
+        SetControlsEnabled(true);
+        RefreshUpdateStatus();
     }
     else if (hWnd == m_hSettings && ControlId == STN_CLICKED) {
         m_SettingsWindow.Create();

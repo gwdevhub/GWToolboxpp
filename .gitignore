@@ -11,6 +11,7 @@ vcpkg_installed/
 /bin/
 build/
 build-clang/
+build-wine/
 
 # Cmake generated
 _deps/

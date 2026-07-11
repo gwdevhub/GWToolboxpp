@@ -279,6 +279,7 @@ namespace GW {
 
             constexpr int Winnowing = 2926;
             constexpr int EoE = 2927;
+            constexpr int Symbiosis = 2930;
             constexpr int FrozenSoil = 2933;
             constexpr int QZ = 2937;
 

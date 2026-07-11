@@ -17,7 +17,7 @@ namespace github_api {
 
     struct Release {
         std::string tag_name;
-        std::string body;
+        std::optional<std::string> body; // Github sends null when a release has no description text
         bool prerelease = false;
         std::vector<ReleaseAsset> assets;
     };
@@ -97,7 +97,7 @@ namespace {
                     release->version += js.tag_name.substr(version_number_len + 1);
                 }
                 std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
-                release->body = js.body;
+                release->body = js.body.value_or("");
                 const auto size_bytes = static_cast<uintmax_t>(asset.size); // Slight rounding, GitHub isn't always correct down to the byte.
                 release->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
                 return release;

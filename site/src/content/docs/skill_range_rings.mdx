@@ -1,0 +1,31 @@
+---
+title: "Skill Range Rings"
+description: "Hover a skill to see its ranges — cast/use range, AoE radius, earshot and spirit range — drawn on the ground in the 3D game world."
+section: features
+---
+
+import ToolboxPath from '../../components/ToolboxPath.astro';
+
+All settings for this feature live under <ToolboxPath steps={["Settings", "Skill Range Rings"]} />.
+
+The Skill Range Rings module draws a hovered skill's ranges on the ground in the 3D game world. Hover any skill — on your skillbar, in the Skills window, in template previews — and its relevant ranges are draped onto the terrain:
+
+- **Cast / use range** around you.
+- **AoE radius** around your current target (or yourself).
+- **Earshot** for shouts and chants.
+- **Constant effect (spirit range)** where a skill has one.
+
+The rings are composited under the in-game UI and depth-tested against the terrain.
+
+<p class="text-(--color-fg-meta)">This is a beta feature. If the in-world compositor fails to install, the settings panel says so at the top.</p>
+
+## Settings
+
+- **Show AoE ring at your current target** — for targeted skills with an area effect, draw the AoE ring around your target instead of around you. Off always draws it around you.
+- **Occlude behind terrain** — hide ring segments that fall behind terrain.
+- **Maximum render distance** — how far from the camera rings are drawn.
+- **Ring thickness** / **Opacity** — the ring band width and how solid it is.
+- **Height lift** — raises rings slightly off the ground to avoid flicker (z-fighting).
+- **Colours** — each range (AoE, earshot, constant effect) has its own colour.
+
+[back](./)

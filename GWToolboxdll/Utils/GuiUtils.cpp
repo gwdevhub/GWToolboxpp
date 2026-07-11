@@ -11,7 +11,7 @@
 
 #include "GuiUtils.h"
 #include <Utils/TextUtils.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 
 namespace {
     struct AttributeConstData {
@@ -136,7 +136,7 @@ namespace GuiUtils {
     {
         // Icons from GW_BUTTON_ICONS_FILE_ID
         if (icon == GwButtonIcon::ChatIcon) {
-            IDirect3DTexture9** tex = GwDatTextureModule::LoadTextureFromFileId(GW_BUTTON_ICONS_FILE_ID);
+            IDirect3DTexture9** tex = GwDatModule::LoadTextureFromFileId(GW_BUTTON_ICONS_FILE_ID);
             if (!tex || !*tex) return false;
 
             static constexpr float SPRITE_W = 64.f;
@@ -152,7 +152,7 @@ namespace GuiUtils {
         }
 
         // Icons from TEMPLATE_ICONS_FILE_ID
-        IDirect3DTexture9** tex = GwDatTextureModule::LoadTextureFromFileId(TEMPLATE_ICONS_FILE_ID);
+        IDirect3DTexture9** tex = GwDatModule::LoadTextureFromFileId(TEMPLATE_ICONS_FILE_ID);
         if (!tex || !*tex) return false;
 
         static constexpr float SPRITE_W = 128.f;

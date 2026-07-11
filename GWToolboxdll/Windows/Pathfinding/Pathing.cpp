@@ -564,6 +564,7 @@ namespace Pathing {
             case 0xa825:  // Prophecies, Factions
             case 0xe723:  // Prophecies
             case 0x858b:  // Prophecies
+			case 0x28da0: // Factions
             case 0x1c533:
             case 0x5e77a:
                 return true;

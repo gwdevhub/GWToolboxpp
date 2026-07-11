@@ -2,6 +2,17 @@
 
 #include "Window.h"
 
+namespace {
+    using GetDpiForWindowFn = UINT(WINAPI*)(HWND);
+
+    // GetDpiForWindow is Windows 10 1607+; resolve it dynamically so older Windows still starts, just without per-monitor scaling.
+    GetDpiForWindowFn ResolveGetDpiForWindow()
+    {
+        const HMODULE user32 = GetModuleHandleW(L"user32.dll");
+        return user32 ? reinterpret_cast<GetDpiForWindowFn>(GetProcAddress(user32, "GetDpiForWindow")) : nullptr;
+    }
+}
+
 LRESULT CALLBACK Window::MainWndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
     Window* window;
@@ -26,12 +37,14 @@ Window::Window()
     : m_hWnd(nullptr)
     , m_hFont(nullptr)
     , m_hIcon(nullptr)
+    , m_hInstance(nullptr)
+    , m_Dpi(USER_DEFAULT_SCREEN_DPI)
+    , m_Width(CW_USEDEFAULT)
+    , m_Height(CW_USEDEFAULT)
     , m_hEvent(nullptr)
     , m_WindowName(nullptr)
     , m_X(CW_USEDEFAULT)
     , m_Y(CW_USEDEFAULT)
-    , m_Width(CW_USEDEFAULT)
-    , m_Height(CW_USEDEFAULT)
 {
     m_hInstance = GetModuleHandleW(nullptr);
 }
@@ -44,6 +57,30 @@ Window::~Window()
     if (m_hFont) {
         DeleteObject(m_hFont);
     }
+}
+
+int Window::Scale(const int value) const
+{
+    return MulDiv(value, m_Dpi, USER_DEFAULT_SCREEN_DPI);
+}
+
+void Window::ApplyDpiScaling(HWND hWnd)
+{
+    static const GetDpiForWindowFn pGetDpiForWindow = ResolveGetDpiForWindow();
+    m_Dpi = pGetDpiForWindow ? static_cast<int>(pGetDpiForWindow(hWnd)) : USER_DEFAULT_SCREEN_DPI;
+
+    if (m_Dpi != USER_DEFAULT_SCREEN_DPI) {
+        SetWindowPos(hWnd, nullptr, 0, 0, Scale(m_Width), Scale(m_Height), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+}
+
+void Window::OnDpiChanged(const WPARAM wParam, const LPARAM lParam)
+{
+    m_Dpi = HIWORD(wParam);
+    const auto suggested = reinterpret_cast<const RECT*>(lParam);
+    SetWindowPos(
+        m_hWnd, nullptr, suggested->left, suggested->top, suggested->right - suggested->left, suggested->bottom - suggested->top, SWP_NOZORDER | SWP_NOACTIVATE
+    );
 }
 
 bool Window::Create()

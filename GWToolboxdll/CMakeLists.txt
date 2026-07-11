@@ -162,11 +162,24 @@ add_custom_target(compile_shaders DEPENDS ${SHADER_OUTPUTS})
 
 add_dependencies(GWToolboxdll compile_shaders) 
 
-add_custom_command(TARGET GWToolboxdll POST_BUILD
-    COMMAND powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass
-            -File "${CMAKE_CURRENT_SOURCE_DIR}/compress.ps1"
-            "$<TARGET_PDB_FILE:GWToolboxdll>"
-            "$<CONFIG>"
-    COMMENT "Compressing PDB for distribution (RelWithDebInfo only)"
-    VERBATIM
-)
+# compress.ps1 needs PowerShell, which isn't available when configuring from a non-Windows
+# host (e.g. the wine cross-build in scripts/build-wine-prefix.sh); gzip is a POSIX
+# equivalent for the RelWithDebInfo-only PDB compression it does.
+if(CMAKE_HOST_WIN32)
+    add_custom_command(TARGET GWToolboxdll POST_BUILD
+        COMMAND powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass
+                -File "${CMAKE_CURRENT_SOURCE_DIR}/compress.ps1"
+                "$<TARGET_PDB_FILE:GWToolboxdll>"
+                "$<CONFIG>"
+        COMMENT "Compressing PDB for distribution (RelWithDebInfo only)"
+        VERBATIM
+    )
+else()
+    add_custom_command(TARGET GWToolboxdll POST_BUILD
+        COMMAND $<IF:$<CONFIG:RelWithDebInfo>,gzip,${CMAKE_COMMAND}>
+                $<IF:$<CONFIG:RelWithDebInfo>,-kf,-E>
+                $<IF:$<CONFIG:RelWithDebInfo>,$<TARGET_PDB_FILE:GWToolboxdll>,true>
+        COMMENT "Compressing PDB for distribution (RelWithDebInfo only)"
+        VERBATIM
+    )
+endif()

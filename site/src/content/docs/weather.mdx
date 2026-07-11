@@ -16,6 +16,7 @@ The Weather module draws camera-anchored weather — rain, snow, ash and similar
 
 Each condition is one weather effect. Only one runs at a time — turning a condition on (via its checkbox or [chat command](#chat-commands)) turns the others off. Expand a condition to edit it:
 
+- **Enabled** — turn the condition off entirely: it's skipped by automatic weather and can't be turned on manually or via chat command until re-enabled. A disabled condition shows `[Disabled]` in its header. Fog is disabled by default, as it's quite invasive to gameplay (it obscures vision); enable it here if you want it in the rotation.
 - **Type** — Rain (streaked drops) or Snow (square flakes; also used for ash).
 - **Density** — how densely the volume is filled, 1–100%. The particle count is derived from this and the range, so it stays consistent if you change the radius. Higher = denser and heavier on FPS; the estimated particle count is shown below the slider.
 - **Range** — radius of the weather volume around the focus. A small range concentrates the effect close in; a large one fills out to compass range.

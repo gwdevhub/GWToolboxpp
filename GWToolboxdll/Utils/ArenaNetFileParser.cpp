@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cstring>
 #include <vector>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 
 namespace {
     // FVF lookup tables (from the pattern)
@@ -59,7 +59,7 @@ namespace ArenaNetFileParser {
         file_id = FileHashToFileId(file_hash);
         data_size = 0;
         data.clear();
-        if (!GwDatTextureModule::ReadDatFile(file_hash, &bytes, stream_id)) return false;
+        if (!GwDatModule::ReadDatFile(file_hash, &bytes, stream_id)) return false;
         return parse(bytes);
     }
     const uint8_t ArenaNetFile::getFFNAType() const
