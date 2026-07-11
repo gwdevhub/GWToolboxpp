@@ -8,12 +8,14 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Hero.h>
+#include <GWCA/GameEntities/Agent.h>
 
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/PartyMgr.h>
+#include <GWCA/Managers/AgentMgr.h>
 
 #include <EmbeddedResource.h>
 #include <GWToolbox.h>
@@ -36,7 +38,7 @@
 #include <bcrypt.h>
 #pragma comment(lib, "bcrypt.lib")
 
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Constants/EncStrings.h>
 #include <Utils/TextUtils.h>
 #include <wincodec.h>
@@ -1098,12 +1100,12 @@ std::filesystem::path Resources::GetExePath()
 IDirect3DTexture9** Resources::GetSkillImage(GW::Constants::SkillID skill_id)
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    return skill && skill->icon_file_id ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id) : &empty_texture_ptr;
+    return skill && skill->icon_file_id ? GwDatModule::LoadTextureFromFileId(skill->icon_file_id) : &empty_texture_ptr;
 }
 IDirect3DTexture9** Resources::GetSkillHiResImage(GW::Constants::SkillID skill_id)
 {
     const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-    return skill && skill->icon_file_id_hi_res ? GwDatTextureModule::LoadTextureFromFileId(skill->icon_file_id_hi_res) : &empty_texture_ptr;
+    return skill && skill->icon_file_id_hi_res ? GwDatModule::LoadTextureFromFileId(skill->icon_file_id_hi_res) : &empty_texture_ptr;
 }
 
 IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill_id)
@@ -1204,7 +1206,8 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
 
 GuiUtils::EncString* Resources::GetSkillName(const GW::Constants::SkillID skill_id)
 {
-    return DecodeStringId(GW::SkillbarMgr::GetSkillConstantData(skill_id)->name);
+    const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    return DecodeStringId(skill ? skill->name : 0);
 }
 
 GuiUtils::EncString* Resources::GetHeroName(const GW::Constants::HeroID hero_id)
@@ -1346,7 +1349,7 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
 }
 
 namespace {
-    // Packs the item's four dye slots one per byte; GwDatTextureModule blends them (as GW
+    // Packs the item's four dye slots one per byte; GwDatModule blends them (as GW
     // combines up to four dyes) into the icon's colour. 0 when the item is undyed.
     uint32_t ItemDyes(GW::Item* item)
     {
@@ -1357,27 +1360,48 @@ namespace {
     }
 }
 
+IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes, bool is_female, bool* failed_out)
+{
+    if (failed_out)
+        *failed_out = false;
+    if (!model_file_id)
+        return nullptr;
+
+    // Composite items (armor/runes): mirrors the client's own CICompositePlayer::GetCompositeGeometry
+    // slot order - file_ids[10] is the shared geometry/icon slot, tried first regardless of gender;
+    // only when that's absent does it fall back to the gendered slot (file_ids[5] female, [0] male).
+    // The other slots are skin/pattern textures for the 3D worn model, not icons.
+    if (interaction & 4) {
+        const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
+        if (model_file_info) {
+            const size_t slots_to_try[] = {10u, is_female ? 5u : 0u};
+            static IDirect3DTexture9* null_tex = nullptr;
+            IDirect3DTexture9** result = &null_tex;
+            for (const size_t i : slots_to_try) {
+                const uint32_t slot_id = model_file_info->file_ids[i];
+                if (!slot_id)
+                    continue;
+                bool slot_failed = false;
+                result = GwDatModule::LoadItemImage(slot_id, dyes, &slot_failed);
+                if (*result || !slot_failed)
+                    return result; // succeeded, or still resolving - stop here either way
+            }
+            if (failed_out)
+                *failed_out = true;
+            return result;
+        }
+    }
+
+    return GwDatModule::LoadItemImage(model_file_id, dyes, failed_out);
+}
+
 IDirect3DTexture9** Resources::GetItemImage(GW::Item* item)
 {
     if (!(item && item->model_file_id))
         return nullptr;
-    uint32_t model_id_to_load = 0;
-    const bool is_composite_item = (item->interaction & 4) != 0;
-
-    const bool is_female = true;
-
-    if (is_composite_item) {
-        // Armor/runes
-        const auto model_file_info = GW::Items::GetCompositeModelInfo(item->model_file_id);
-        if (model_file_info && !model_id_to_load)
-            model_id_to_load = model_file_info->file_ids[0xa];
-        if (model_file_info && !model_id_to_load)
-            model_id_to_load = is_female ? model_file_info->file_ids[5] : model_file_info->file_ids[0];
-    }
-    if (!model_id_to_load)
-        model_id_to_load = item->model_file_id;
-    // The UI icon is stream 1 of the model file; the item's dyes recolour its stream 0xc mask region.
-    return GwDatTextureModule::LoadItemImage(model_id_to_load, ItemDyes(item));
+    const auto player = GW::Agents::GetControlledCharacter();
+    const bool is_female = player && player->GetIsFemale();
+    return GetItemImage(item->model_file_id, item->interaction, ItemDyes(item), is_female);
 }
 
 IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)

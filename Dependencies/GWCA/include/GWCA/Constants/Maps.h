@@ -895,10 +895,10 @@ namespace GW {
             Forsaken_Tunnels_Presearing_Level2,
             Forsaken_Tunnels_Presearing_Level3,
 
+            Unknown_879,
             Forsaken_Tunnels_Level1,
             Forsaken_Tunnels_Level2,
-            Forsaken_Tunnels_Level3,
-            Forsaken_Tunnels_Level4, 
+            Forsaken_Tunnels_Level3, 
 
             Count = 0x373,
         };

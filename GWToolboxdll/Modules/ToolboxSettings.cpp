@@ -107,6 +107,9 @@
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Modules/WeatherModule.h>
+#include <Modules/DangerRingsModule.h>
+#include <Modules/LootBeaconsModule.h>
+#include <Modules/SkillRangeRingsModule.h>
 #ifdef _DEBUG
 #include <Modules/RiverModule.h>
 #endif
@@ -201,7 +204,10 @@ namespace {
         {DistanceWidget::Instance(), false},
         Minimap::Instance(),
         GameWorldRenderer::Instance(),
-        {WeatherModule::Instance(), false},
+        WeatherModule::Instance(),
+        {DangerRingsModule::Instance(), false},
+        LootBeaconsModule::Instance(),
+        {SkillRangeRingsModule::Instance(), false},
 #ifdef _DEBUG
         {RiverModule::Instance(), false},
 #endif

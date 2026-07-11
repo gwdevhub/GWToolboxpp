@@ -8,14 +8,25 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Pathing.h>
+#include <GWCA/GameEntities/Party.h>
+#include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/PreGameContext.h>
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Managers/QuestMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
+#include <GWCA/Managers/StoCMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+
+#include <GWCA/Packets/StoC.h>
 
 #include <Logger.h>
 #include <Timer.h>
@@ -24,9 +35,20 @@
 #include "Modules/QuestModule.h"
 #include "Modules/Resources.h"
 #include "Modules/TestHarness.h"
+
+#include <GWCA/Managers/PartyMgr.h>
+
+#include "Modules/SkillRangeRingsModule.h"
+#include "Utils/GameWorldCompositor.h"
+#include "Utils/SettingsRegistry.h"
+#include "Utils/TerrainDrape.h"
+#include "Utils/TextUtils.h"
 #include "Utils/ToolboxUtils.h"
 #include "Widgets/WorldMapWidget.h"
 #include "Windows/Pathfinding/PathfindingWindow.h"
+#include "Windows/TravelWindow.h"
+#include "Modules/GwDatModule.h"
+#include "Utils/ArenaNetFileParser.h"
 
 // Dev iteration tool: compiled in Debug (_DEBUG) and RelWithDebInfo (GWTB_HARNESS, which
 // logs to log.txt), excluded from the shipped Release build.
@@ -41,6 +63,13 @@ namespace {
     clock_t last_poll = 0;
     bool fired_waypoint_this_load = false;
     bool terminating = false; // set once shutdown is signalled; Update no-ops after
+    int chest_on_load_remaining = 0; // regress the Xunlai auto-open crash: toggle the chest across the post-load window, N loads
+    int chest_burst = -1;            // -1 idle; 0..N counts the post-load toggle burst polls
+
+    // Effect-injection experiment (Ray-of-Judgment-at-a-point R&D): log incoming PlayEffect ids to discover a
+    // skill's visual effect id, and locally emulate a PlayEffect to confirm it renders at chosen coords.
+    bool log_play_effects = false;
+    GW::HookEntry PlayEffect_Entry;
 
     std::filesystem::path cmd_path() { return Resources::GetPath(L"harness_command.txt"); }
     std::filesystem::path status_path() { return Resources::GetPath(L"harness_status.txt"); }
@@ -233,6 +262,44 @@ namespace {
             }
             return;
         }
+        if (verb == "surfaceprobe") { // surfaceprobe [radius step]: compare preferred-plane terrain with all-plane surface choices near the player
+            float radius = 1200.f, step = 120.f;
+            is >> radius >> step;
+            radius = std::clamp(radius, 100.f, 5000.f);
+            step = std::clamp(step, 25.f, 500.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("surfaceprobe: no character or pathing map");
+                return;
+            }
+            Log::Log("[surfaceprobe] map=%d player=(%.0f,%.0f,z%u) player_z=%.1f radius=%.0f step=%.0f planes=%u",
+                     static_cast<int>(GW::Map::GetMapID()), self->pos.x, self->pos.y, self->pos.zplane, self->z, radius, step, pm->size());
+            uint32_t samples = 0, diffs = 0, logged = 0;
+            float max_delta = 0.f;
+            for (float dx = -radius; dx <= radius; dx += step) {
+                for (float dy = -radius; dy <= radius; dy += step) {
+                    const float x = self->pos.x + dx, y = self->pos.y + dy;
+                    const float preferred_z = TerrainDrape::QueryAltAt(x, y, self->pos.zplane);
+                    const float surface_z = TerrainDrape::SurfaceZ(x, y, self->pos.zplane, pm->size());
+                    const float draped_z = TerrainDrape::DrapeZ(x, y, self->pos.zplane, pm->size(), self->z);
+                    ++samples;
+                    if ((preferred_z == 0.f && surface_z == 0.f) || std::fabs(preferred_z - surface_z) <= 1.f) continue;
+                    ++diffs;
+                    max_delta = std::max(max_delta, std::fabs(preferred_z - surface_z));
+                    if (logged++ < 20) {
+                        Log::Log("[surfaceprobe]   diff (%.0f,%.0f) preferred=%.1f surface=%.1f draped=%.1f delta=%.1f",
+                                 x, y, preferred_z, surface_z, draped_z, surface_z - preferred_z);
+                    }
+                }
+            }
+            char b[128];
+            snprintf(b, sizeof(b), "surfaceprobe: samples=%u diffs=%u max_delta=%.1f", samples, diffs, max_delta);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
         if (verb == "waypoint") {
             float x = 0, y = 0;
             uint32_t plane = 0;
@@ -243,6 +310,215 @@ namespace {
             else {
                 write_status("waypoint: bad args (need: waypoint <x> <y> [plane])");
             }
+            return;
+        }
+        if (verb == "heropanels") {
+            const auto party = GW::PartyMgr::GetPartyInfo();
+            const auto hero_count = party ? party->heroes.size() : 0;
+            Log::Log("[heropanels] party=%p heroes=%u instance=%d", static_cast<void*>(party), static_cast<unsigned>(hero_count), static_cast<int>(GW::Map::GetInstanceType()));
+            wchar_t label[] = L"AgentCommander0";
+            for (int i = 0; i < 7; i++) {
+                label[_countof(label) - 2] = static_cast<wchar_t>(L'0' + i);
+                const auto frame = GW::UI::GetFrameByLabel(label);
+                if (!frame) continue;
+                const auto* w = reinterpret_cast<const uint32_t*>(&frame->position);
+                Log::Log("[heropanels] AgentCommander%d frame=%p created=%d visible=%d pos=[%u,%u,%u,%u,%u]", i, static_cast<void*>(frame),
+                         frame->IsCreated(), frame->IsVisible(), w[0], w[1], w[2], w[3], w[4]);
+            }
+            Log::FlushFile();
+            write_status("heropanels: logged");
+            return;
+        }
+        if (verb == "chest") {
+            int n = 1;
+            is >> n;
+            if (n < 0) n = 0;
+            if (n > 1000) n = 1000;
+            const bool can = GW::Items::CanAccessXunlaiChest();
+            const auto inv = GW::UI::GetFrameByLabel(L"InvAccount");
+            Log::Log("[harness] chest x%d: CanAccessXunlai=%d InvAccount=%p (OnShowXunlaiChest crash branch runs only when CanAccess=0)", n, static_cast<int>(can), static_cast<void*>(inv));
+            for (int i = 0; i < n; ++i) GW::Chat::SendChat('/', L"chest");
+            write_status("chest: sent");
+            return;
+        }
+        if (verb == "chestonload") {
+            int n = 50;
+            is >> n;
+            if (n < 1) n = 1;
+            if (n > 5000) n = 5000;
+            chest_on_load_remaining = n;
+            chest_burst = -1;
+            Log::Log("[chestonload] armed for %d map loads", n);
+            write_status("chestonload: armed");
+            return;
+        }
+        if (verb == "logeffects") { // logeffects <0|1>: log incoming PlayEffect {effect_id, coords} to discover a skill's effect id
+            int on = 1;
+            is >> on;
+            log_play_effects = on != 0;
+            write_status(log_play_effects ? "logeffects: on (cast the skill now)" : "logeffects: off");
+            return;
+        }
+        if (verb == "playeffect") { // playeffect <effect_id> [x y plane]: locally emulate a PlayEffect (default: player pos)
+            uint32_t effect_id = 0, plane = 0;
+            float x = 0, y = 0;
+            if (!(is >> effect_id) || !effect_id) {
+                write_status("playeffect: bad args (need: playeffect <effect_id> [x y plane])");
+                return;
+            }
+            if (!(is >> x >> y)) {
+                const auto self = GW::Agents::GetControlledCharacter();
+                if (!self) { write_status("playeffect: no coords and no character"); return; }
+                x = self->pos.x;
+                y = self->pos.y;
+                plane = self->pos.zplane;
+            }
+            else {
+                is >> plane;
+            }
+            GW::Packet::StoC::PlayEffect packet;
+            packet.coords = {x, y};
+            packet.plane = plane;
+            packet.agent_id = 0;
+            packet.effect_id = effect_id;
+            packet.data5 = 0;
+            packet.data6 = 0;
+            GW::StoC::EmulatePacket(&packet);
+            char b[96];
+            snprintf(b, sizeof(b), "playeffect: id=%u at (%.0f,%.0f,z%u)", effect_id, x, y, plane);
+            Log::Log("[harness] %s", b);
+            write_status(b);
+            return;
+        }
+        if (verb == "hoverskill") { // hoverskill <skill_id>: force skill-range rings as if hovering (0 clears)
+            uint32_t skill_id = 0;
+            is >> skill_id;
+            SkillRangeRingsModule::SetDebugSkill(skill_id);
+            char b[64];
+            snprintf(b, sizeof(b), "hoverskill: %u", skill_id);
+            Log::Log("[harness] %s", b);
+            write_status(b);
+            return;
+        }
+        if (verb == "hoverinfo") { // hoverinfo: report the live tooltip payload and resolved hovered skill
+            const auto tooltip = GW::UI::GetCurrentTooltip();
+            const auto hovered = GW::SkillbarMgr::GetHoveredSkill();
+            char b[192];
+            if (tooltip) {
+                snprintf(b, sizeof(b), "hoverinfo: tooltip payload_len=0x%x payload0=0x%x hovered_skill=%d campaign=%d",
+                         tooltip->payload_len, tooltip->payload && tooltip->payload_len >= 4 ? tooltip->payload[0] : 0,
+                         hovered ? static_cast<int>(hovered->skill_id) : -1,
+                         hovered ? static_cast<int>(hovered->campaign) : -1);
+            }
+            else {
+                snprintf(b, sizeof(b), "hoverinfo: no tooltip");
+            }
+            Log::Log("[harness] %s", b);
+            write_status(b);
+            return;
+        }
+        if (verb == "skillinfo") { // skillinfo <skill_id>: log the constant skill data fields the range rings use
+            uint32_t skill_id = 0;
+            is >> skill_id;
+            const auto skill = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
+            char b[256];
+            if (skill) {
+                char rings[96];
+                SkillRangeRingsModule::DebugSpecs(skill_id, rings, sizeof(rings));
+                snprintf(b, sizeof(b), "skillinfo %u: type=%u target=%u special=0x%x aoe_range=%.1f const_effect=%.1f rings=[%s]",
+                         skill_id, static_cast<uint32_t>(skill->type), skill->target, skill->special, skill->aoe_range, skill->const_effect, rings);
+            }
+            else {
+                snprintf(b, sizeof(b), "skillinfo %u: no data", skill_id);
+            }
+            Log::Log("[harness] %s", b);
+            write_status(b);
+            return;
+        }
+        if (verb == "settingsearch") { // settingsearch <query>: log registered settings matching <query>, same fields the settings-window search scans
+            std::string query;
+            std::getline(is, query);
+            query = TextUtils::ToLower(TextUtils::trim(query));
+            if (query.empty()) {
+                write_status("settingsearch: bad args (need: settingsearch <query>)");
+                return;
+            }
+            uint32_t hits = 0;
+            for (const auto& e : SettingsRegistry::GetEntries()) {
+                const bool hit = TextUtils::ToLower(e.label).find(query) != std::string::npos
+                                 || TextUtils::ToLower(e.section).find(query) != std::string::npos
+                                 || TextUtils::ToLower(e.description).find(query) != std::string::npos;
+                if (!hit) continue;
+                ++hits;
+                Log::Log("[settingsearch] %s > %s (%s.%s)", e.module->SettingsName(), e.label.c_str(), e.section.c_str(), e.key.c_str());
+            }
+            char b[96];
+            snprintf(b, sizeof(b), "settingsearch '%s': %u entries", query.c_str(), hits);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "frcache") { // log the FrCache render buffer layout for the next ~50 calls
+            GameWorldCompositor::RequestBufferDump();
+            write_status("frcache: dump queued");
+            return;
+        }
+        if (verb == "mapinfo") {
+            const auto self = GW::Agents::GetControlledCharacter();
+            char b[160];
+            snprintf(b, sizeof(b), "mapinfo: map=%d instance=%d pos=(%.0f,%.0f,z%u)",
+                     static_cast<int>(GW::Map::GetMapID()), static_cast<int>(GW::Map::GetInstanceType()),
+                     self ? self->pos.x : 0.f, self ? self->pos.y : 0.f, self ? self->pos.zplane : 0);
+            Log::Log("[harness] %s", b);
+            write_status(b);
+            return;
+        }
+        if (verb == "dropitem") { // dropitem <bag 1-5> <slot 1-N>: drop an inventory item at the player (loot beacon testing)
+            uint32_t bag_id = 0, slot = 0;
+            if (is >> bag_id >> slot && slot > 0) {
+                const auto bag = GW::Items::GetBag(static_cast<GW::Constants::Bag>(bag_id));
+                const auto item = bag ? GW::Items::GetItemBySlot(bag, slot) : nullptr;
+                const bool ok = item && GW::Items::DropItem(item, item->quantity);
+                char b[96];
+                snprintf(b, sizeof(b), "dropitem: bag=%u slot=%u item=%p queued=%d", bag_id, slot, static_cast<const void*>(item), static_cast<int>(ok));
+                Log::Log("[harness] %s", b);
+                write_status(b);
+            }
+            else {
+                write_status("dropitem: bad args (need: dropitem <bag 1-5> <slot 1-N>)");
+            }
+            return;
+        }
+        if (verb == "travel") {
+            int mapid = 0;
+            is >> mapid;
+            if (mapid > 0) {
+                // TravelWindow::Travel handles the cases raw GW::Map::Travel silently drops (e.g. leaving a guild hall).
+                const bool ok = TravelWindow::Instance().Travel(static_cast<GW::Constants::MapID>(mapid), GW::Constants::District::Current, 0);
+                Log::Log("[harness] travel -> map %d (queued=%d)", mapid, static_cast<int>(ok));
+                char b[48];
+                snprintf(b, sizeof(b), "travel: %d queued=%d", mapid, static_cast<int>(ok));
+                write_status(b);
+            }
+            else {
+                write_status("travel: bad mapid (need: travel <mapid>)");
+            }
+            return;
+        }
+        if (verb == "dattex") {
+            uint32_t id = 0;
+            is >> std::hex >> id;
+            if (!id) { write_status("dattex: bad id (need hex file_id)"); return; }
+            ArenaNetFileParser::GameAssetFile asset;
+            const bool read_ok = asset.readFromDat(id, 0);
+            char magic[8] = {0};
+            const size_t sz = read_ok ? asset.data.size() : 0;
+            if (sz >= 4) memcpy(magic, asset.data.data(), 4);
+            Log::Log("[harness] dattex 0x%x: read=%d size=%u magic=[%s]", id, static_cast<int>(read_ok), static_cast<unsigned>(sz), magic);
+            const std::wstring fn = L"dattex_" + std::to_wstring(id) + L".png";
+            GwDatModule::SaveTextureFromFileIdToFile(id, Resources::GetPath(fn.c_str()));
+            write_status("dattex: queued");
             return;
         }
         write_status("unknown_command: " + verb);
@@ -261,6 +537,11 @@ void TestHarness::Initialize()
             "# waypoint=<x> <y> <plane>        (fixed startup destination)\n"
             "# autostart=1                     (fire the waypoint once each map load)\n");
     }
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayEffect>(&PlayEffect_Entry, [](GW::HookStatus*, GW::Packet::StoC::PlayEffect* pak) {
+        if (log_play_effects)
+            Log::Log("[playeffect] id=%u coords=(%.0f,%.0f) plane=%u agent=%u d5=%u d6=%u",
+                     pak->effect_id, pak->coords.x, pak->coords.y, pak->plane, pak->agent_id, pak->data5, pak->data6);
+    });
     write_status("harness_initialized");
     Log::Log("[harness] initialized; command file: %s", cmd_path().string().c_str());
 #endif
@@ -277,8 +558,28 @@ void TestHarness::Update(float)
 
     const Config cfg = read_config();
 
-    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading)
-        fired_waypoint_this_load = false; // re-arm the auto-waypoint for the next map
+    if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) {
+        fired_waypoint_this_load = false;                       // re-arm the auto-waypoint for the next map
+        if (chest_on_load_remaining > 0) chest_burst = 0;       // arm the post-load chest-toggle burst
+    }
+
+    // Toggle the Xunlai panel every poll (~250ms) for ~3s from map-ready -- the exact work /chest enqueues,
+    // minus the chat+foreground gates that silently drop SendChat when GW isn't the active window.
+    if (chest_on_load_remaining > 0 && chest_burst >= 0 && GW::Map::GetIsMapLoaded()) {
+        constexpr int kChestBurstPolls = 13;
+        if (chest_burst == 0) {
+            Log::Log("[chestonload] fire map=%d remaining=%d", static_cast<int>(GW::Map::GetMapID()), chest_on_load_remaining - 1);
+            Log::FlushFile();
+        }
+        if (const auto frame = GW::UI::GetFrameByLabel(L"InvAccount"))
+            GW::UI::DestroyUIComponent(frame);
+        else
+            GW::Items::OpenXunlaiWindow();
+        if (++chest_burst >= kChestBurstPolls) {
+            chest_burst = -1;
+            chest_on_load_remaining--;
+        }
+    }
 
     // Consume one queued command per poll FIRST, so shutdown works in ANY game state
     // (incl. the login screen) -- I must always be able to unload the DLL to relink.
@@ -326,6 +627,7 @@ void TestHarness::Terminate()
 {
     ToolboxModule::Terminate();
 #ifdef HARNESS_ENABLED
+    GW::StoC::RemoveCallback<GW::Packet::StoC::PlayEffect>(&PlayEffect_Entry);
     write_status("terminated");
 #endif
 }

@@ -783,6 +783,11 @@ namespace GW {
 
 		GWCA_API bool DestroyUIComponent(Frame* frame);
 
+		// Frame layout primitives (GW's Frame::SetBounds/SetPosition), for measuring and
+		// stacking child frames from a custom container's kMeasureContent/kSetLayout handler.
+		GWCA_API void SetFrameBounds(Frame* frame, uint32_t mode, float* rect, float* size_out);
+		GWCA_API void SetFramePosition(Frame* frame, uint32_t mode, float* rect);
+
 		GWCA_API bool SelectDropdownOption(Frame* frame, uint32_t value);
 
 		GWCA_API void* GetFrameContext(GW::UI::Frame* frame);

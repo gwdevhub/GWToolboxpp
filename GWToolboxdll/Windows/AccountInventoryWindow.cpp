@@ -1231,7 +1231,7 @@ namespace {
             Resources::EnqueueWorkerTask([batch, only_foreign, captured_account, state] {
                 for (const auto& path : batch) {
                     auto r = LoadIniFile(path, only_foreign, captured_account);
-                    std::lock_guard lock(state->mutex);
+                    std::scoped_lock lock(state->mutex);
                     state->results.push_back(std::move(r));
                 }
                 --state->tasks_remaining;

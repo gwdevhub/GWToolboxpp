@@ -135,8 +135,23 @@ namespace {
             }
         }
 
+        // A second GPU_RENDER block after the boundary (e.g. a 3D bust in the hero/character panel)
+        // means GW is about to run its full world-render dispatch again this frame. That dispatch
+        // drives per-object animation/physics ticks off a fixed 1/30s accumulator that isn't safe to
+        // advance twice within one real frame -- doing so desyncs a cloth/hair object's constraint
+        // indices from its double-buffered positions (crash: garbage index in the spring solver, or
+        // a degenerate bounding volume asserting in GrBound.cpp). Bail out to a single untouched call
+        // in that case; our overlay draws on top of that rare secondary 3D content instead of under it.
+        bool has_second_gpu_render = false;
+        for (uint32_t i = boundary; i < buffer.size(); i++) {
+            if (buffer[i].type == FRCACHE_GPU_RENDER) {
+                has_second_gpu_render = true;
+                break;
+            }
+        }
+
         // Only the main world-then-HUD pass draws; others pass through, and the guard draws exactly once per frame.
-        if (boundary == 0 || boundary >= buffer.size() || drawn_this_frame) {
+        if (boundary == 0 || boundary >= buffer.size() || drawn_this_frame || has_second_gpu_render) {
             FrCacheRenderAll_Ret(param_1, param_2);
             GW::Hook::LeaveHook();
             return;
@@ -209,7 +224,7 @@ namespace {
         return true;
     }
 
-    bool SetWorldTransform(IDirect3DDevice9* device, const float z_near, const float z_far)
+    bool SetWorldTransform(IDirect3DDevice9* device)
     {
         // Build view/proj matrices matching GW's world-render camera.
         constexpr auto vertex_shader_view_matrix_offset = 0u;
@@ -240,7 +255,7 @@ namespace {
         XMStoreFloat4x4A(
             &mat_proj,
             XMMatrixTranspose(
-                DirectX::XMMatrixPerspectiveFovLH(fov, aspect_ratio, z_near, z_far)
+                DirectX::XMMatrixPerspectiveFovLH(fov, aspect_ratio, GameWorldCompositor::kZNear, GameWorldCompositor::kZFar)
             )
         );
         if (device->SetVertexShaderConstantF(vertex_shader_proj_matrix_offset, reinterpret_cast<const float*>(&mat_proj), 4) != D3D_OK) {
@@ -291,9 +306,9 @@ void GameWorldCompositor::BeginFrame()
     drawn_this_frame = false;
 }
 
-bool GameWorldCompositor::SetWorldViewProj(IDirect3DDevice9* device, const float z_near, const float z_far)
+bool GameWorldCompositor::SetWorldViewProj(IDirect3DDevice9* device)
 {
-    return device && SetWorldTransform(device, z_near, z_far);
+    return device && SetWorldTransform(device);
 }
 
 void GameWorldCompositor::SetWorldRenderStates(IDirect3DDevice9* device, const bool occlude)
@@ -316,6 +331,8 @@ void GameWorldCompositor::SetWorldRenderStates(IDirect3DDevice9* device, const b
     device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
     device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+    device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, TRUE);
+    device->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, TRUE); // MULTISAMPLEANTIALIAS doesn't smooth native D3DPT_LINELIST/LINESTRIP draws (navmesh, in-world path lines)
 
     if (occlude) {
         // Depth-test against the scene so geometry occludes the overlay; never write depth (must not disturb GW's values).
@@ -343,8 +360,7 @@ void GameWorldCompositor::SetDistanceFog(IDirect3DDevice9* device, const float m
     device->SetPixelShaderConstantF(2, fog_starts_at_constant, 1);
 }
 
-bool GameWorldCompositor::SetupPipeline(IDirect3DDevice9* device, const bool occlude, const float z_near, const float z_far,
-                                        const float max_distance, const float fog_factor)
+bool GameWorldCompositor::SetupPipeline(IDirect3DDevice9* device, const bool occlude, const float max_distance, const float fog_factor)
 {
     if (!device) {
         return false;
@@ -355,7 +371,7 @@ bool GameWorldCompositor::SetupPipeline(IDirect3DDevice9* device, const bool occ
     if (device->SetVertexShader(vshader) != D3D_OK
         || device->SetPixelShader(pshader) != D3D_OK
         || device->SetVertexDeclaration(vertex_declaration) != D3D_OK
-        || !SetWorldTransform(device, z_near, z_far)) {
+        || !SetWorldTransform(device)) {
         return false;
     }
     SetWorldRenderStates(device, occlude);

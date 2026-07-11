@@ -114,10 +114,15 @@ namespace {
         GW::Vec2f calculated_to{};   // world-map goal
         clock_t calculated_at = 0;
         clock_t route_failed_at = 0; // backs off retries of an unroutable marker
+        clock_t last_check = 0;      // per-path Update() throttle (a shared static here starves every other path)
         GW::Constants::QuestID quest_id{};
         clock_t calculating = 0;
         GW::Vec2f goal_world{};
         bool has_full_route = false;
+        // Latched once the on-map A* proves the goal is unreachable on the current map though it projects onto it — an
+        // isolate region that only shares a file id with a co-located map. Forces cross-map routing for this goal so we
+        // don't re-fail the on-map attempt every position update. Cleared when the goal changes.
+        bool goal_cross_map = false;
         std::vector<GW::Vec2f> route_world{}; // world-map coords (PATH_BREAK between maps)
         std::vector<GW::GamePos> route_map{};
         bool IsCalculating() { return calculating && TIMER_DIFF(calculating) < 5000; }
@@ -130,7 +135,7 @@ namespace {
             minimap_lines.clear();
         }
 
-        // Current-map segments draw on in-game surfaces; off-map segments stay world coords (world map only) to avoid overflow.
+        // Current-map segments draw on in-game surfaces; off-map segments stay world coords (world & mission map) to avoid overflow.
         void DrawLines()
         {
             ClearMinimapLines();
@@ -157,8 +162,10 @@ namespace {
                 l = Minimap::Instance().custom_renderer.AddCustomLine({route_world[i].x, route_world[i].y, 0}, {route_world[i + 1].x, route_world[i + 1].y, 0}, label.c_str(), true);
                 l->world_coords = true;
                 l->draw_on_terrain = false;
-                l->draw_on_minimap = false;
-                l->draw_on_mission_map = false;
+                // World coords render on the world map, mission map, and compass (each projects them
+                // into its own space); in-world terrain can't place other maps' positions.
+                l->draw_on_minimap = settings.draw_quest_path_on_minimap;
+                l->draw_on_mission_map = settings.draw_quest_path_on_mission_map;
                 l->created_by_toolbox = true;
                 l->color = color;
                 minimap_lines.push_back(l);
@@ -201,9 +208,15 @@ namespace {
                     }
                     if (route_map_end_idx) pts->erase(pts->begin(), pts->begin() + route_map_end_idx);
                 }
-                Resources::EnqueueMainTask([qid, route_map, pts, ok] {
+                Resources::EnqueueMainTask([qid, route_map, pts, ok, gw] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
-                    if (cqp && ok) {
+                    if (cqp && cqp->goal_world != gw) {
+                        // Marker moved mid-calculation — this route is for the old goal. Drop it and force a re-plot for
+                        // the current goal (calculated_at=0 makes Update recalc next tick regardless of player movement).
+                        cqp->calculating = 0;
+                        cqp->calculated_at = 0;
+                    }
+                    else if (cqp && ok) {
                         cqp->route_world = std::move(*pts);
                         cqp->route_map = std::move(*route_map);
                         cqp->has_full_route = true;
@@ -227,7 +240,7 @@ namespace {
         void RecalculateMap(const GW::GamePos& from)
         {
             // Direct single-map A* to the on-map endpoint (goal, or where the route leaves this map).
-            const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world);
+            const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world) && !goal_cross_map;
             GW::GamePos target{};
             if (same_map) {
                 if (!WorldMapWidget::WorldMapToGamePos(goal_world, target)) return;
@@ -246,13 +259,21 @@ namespace {
                 if (sq(out.front(), target) < sq(out.back(), target)) std::ranges::reverse(out);
             };
 
-            Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map, orient] {
+            Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map, orient, gw = goal_world] {
                 auto pts = new std::vector<GW::Vec2f>();         // required out-param; unused here
                 auto route_map = new std::vector<GW::GamePos>(); // current-map game coords with carried zplane
                 const bool ok = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, pts, route_map);
                 if (ok) orient(*route_map);
-                Resources::EnqueueMainTask([qid, route_map, pts, ok, same_map] {
+                Resources::EnqueueMainTask([qid, from, route_map, pts, ok, same_map, gw] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
+                    if (cqp && cqp->goal_world != gw) {
+                        // Marker moved mid-calculation — stale leg. Drop it and force a re-plot for the current goal.
+                        cqp->calculating = 0;
+                        cqp->calculated_at = 0;
+                        delete pts;
+                        delete route_map;
+                        return;
+                    }
                     if (cqp && ok) {
                         cqp->route_map = std::move(*route_map);
                         if (same_map) {
@@ -264,6 +285,16 @@ namespace {
                         cqp->route_failed_at = 0;
                         cqp->calculating = 0;
                         cqp->UpdateUI();
+                    }
+                    else if (cqp && same_map) {
+                        // The goal projects onto this map but the on-map A* couldn't reach it — an isolate region that only
+                        // shares a file id with a co-located map. Latch cross-map so future position updates route through
+                        // other maps directly, and compute that full route now.
+                        cqp->goal_cross_map = true;
+                        GW::Vec2f from_world{};
+                        WorldMapWidget::GamePosToWorldMap(from, from_world);
+                        cqp->calculating = TIMER_INIT();
+                        cqp->RecalculateWorld(from_world);
                     }
                     else if (cqp) {
                         cqp->calculating = 0;
@@ -293,9 +324,10 @@ namespace {
 
             calculating = TIMER_INIT();
             const bool goal_changed = calculated_to != goal_world;
+            if (goal_changed) goal_cross_map = false; // new goal — re-test whether it's reachable on the current map
             calculated_from = from_game; // anchor for Update's move threshold
             calculated_to = goal_world;
-            const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world);
+            const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world) && !goal_cross_map;
             if (!same_map && goal_changed) {
                 RecalculateWorld(from_world);
             }
@@ -322,7 +354,7 @@ namespace {
 
         bool Update(const GW::GamePos& from)
         {
-            static clock_t last_check = TIMER_INIT();
+            // Per-path throttle (member, not a shared static — a static here would starve every other path's recalc).
             if (TIMER_DIFF(last_check) < 33) return false;
             last_check = TIMER_INIT();
 

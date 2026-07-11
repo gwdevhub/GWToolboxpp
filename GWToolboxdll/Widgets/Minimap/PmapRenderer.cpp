@@ -108,7 +108,7 @@ void PmapRenderer::Render(IDirect3DDevice9* device, const MinimapRenderContext& 
 
     if (ctx.shadow_color & IM_COL32_A_MASK) {
         D3DMATRIX oldview;
-        SetDeviceTranslation(device, 0, -100.f, 0.f, &oldview);
+        SetDeviceTranslation(device, 0, ctx.shadow_translation, 0.f, &oldview);
 
         SetDeviceColor(device, ctx.shadow_color);
         D3DVertexBuffer::Render(device);

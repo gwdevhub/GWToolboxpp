@@ -53,7 +53,7 @@
 #include <Windows/NotepadWindow.h>
 
 #include <Modules/DialogModule.h>
-#include <Modules/GwDatTextureModule.h>
+#include <Modules/GwDatModule.h>
 #include <Modules/HallOfMonumentsModule.h>
 #include <Modules/ItemDescriptionHandler.h>
 #include <Modules/ResignLogModule.h>
@@ -613,7 +613,7 @@ namespace {
         const auto out = CreateTexture_Ret(file_name, flags);
         uint32_t file_id = FileHashToFileId(file_name);
         if (textures_created_by_file_id.find(file_id) == textures_created_by_file_id.end()) {
-            const auto f = GwDatTextureModule::LoadTextureFromFileId(file_id);
+            const auto f = GwDatModule::LoadTextureFromFileId(file_id);
             textures_created.push_back(f);
             textures_created_by_file_id[file_id] = f;
             texture_file_ids[f] = file_id;

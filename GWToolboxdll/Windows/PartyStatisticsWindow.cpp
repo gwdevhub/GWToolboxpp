@@ -43,8 +43,7 @@ namespace {
 
         if (found_it == skill_names.end()) {
             const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-            ASSERT(skill_data);
-            skill_names[skill_id] = std::make_unique<GuiUtils::EncString>(skill_data->name);
+            skill_names[skill_id] = std::make_unique<GuiUtils::EncString>(skill_data ? skill_data->name : 0);
         }
         return skill_names[skill_id].get();
     }

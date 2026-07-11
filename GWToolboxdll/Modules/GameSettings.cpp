@@ -86,7 +86,11 @@ namespace {
         }
         const std::wstring title = GetPlayerName();
         if (!title.empty()) {
-            SetWindowTextW(hwnd, title.c_str());
+            // Guild Wars' window may be registered as an ANSI (non-Unicode) window class; in that
+            // case SetWindowTextW() gets thunked down to the system codepage before being applied,
+            // corrupting any character outside it. Sending WM_SETTEXT via DefWindowProcW directly
+            // bypasses that thunking, same trick already used for our own windows in imgui_impl_win32.cpp.
+            DefWindowProcW(hwnd, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(title.c_str()));
         }
     }
 
@@ -377,7 +381,8 @@ namespace {
         bool block_description = settings.disable_skill_descriptions_in_outpost && IsOutpost() || settings.disable_skill_descriptions_in_explorable && IsExplorable();
         block_description = block_description && GetKeyState(modifier_key_skill_descriptions) >= 0;
         if (block_description) {
-            GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)L"\x101");
+            if (frame)
+                GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)L"\x101");
             GW::Hook::LeaveHook();
             return;
         }
@@ -397,12 +402,13 @@ namespace {
 
         // Add campaign info
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(param->skill_id);
-        const auto campaign_id = static_cast<uint32_t>(skill->campaign);
+        const auto campaign_id = skill ? static_cast<uint32_t>(skill->campaign) : static_cast<uint32_t>(-1);
         if (campaign_id < _countof(GW::EncStrings::Campaign)) {
             wchar_t buf[16] = {0};
             if (GW::UI::UInt32ToEncStr(GW::EncStrings::Campaign[static_cast<uint32_t>(skill->campaign)], buf, _countof(buf))) {
                 encoded_text_set += std::format(L"\x2\x102\x2\x108\x107<c=@SkillDull>\x1\x2{}\x2\x108\x107</c>\x1", buf);
-                GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)encoded_text_set.c_str());
+                if (frame)
+                    GW::UI::SendFrameUIMessage(frame, frame_set_text_ui_message, (void*)encoded_text_set.c_str());
             }
         }
         GW::Hook::LeaveHook();
@@ -1123,7 +1129,9 @@ namespace {
     {
         const auto xp_bar = static_cast<GW::ProgressBar*>(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"LevelProgress"), 1));
         if (!xp_bar) return false;
-        const auto current_xp = GW::GetWorldContext()->experience;
+        const auto world = GW::GetWorldContext();
+        if (!world) return false;
+        const auto current_xp = world->experience;
         const auto current_level = LevelFromXp(current_xp);
         if (settings.useful_level_progress_label) {
             const auto current_level_req = XpReqForLevel(current_level);
