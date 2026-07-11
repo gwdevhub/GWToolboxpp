@@ -135,8 +135,23 @@ namespace {
             }
         }
 
+        // A second GPU_RENDER block after the boundary (e.g. a 3D bust in the hero/character panel)
+        // means GW is about to run its full world-render dispatch again this frame. That dispatch
+        // drives per-object animation/physics ticks off a fixed 1/30s accumulator that isn't safe to
+        // advance twice within one real frame -- doing so desyncs a cloth/hair object's constraint
+        // indices from its double-buffered positions (crash: garbage index in the spring solver, or
+        // a degenerate bounding volume asserting in GrBound.cpp). Bail out to a single untouched call
+        // in that case; our overlay draws on top of that rare secondary 3D content instead of under it.
+        bool has_second_gpu_render = false;
+        for (uint32_t i = boundary; i < buffer.size(); i++) {
+            if (buffer[i].type == FRCACHE_GPU_RENDER) {
+                has_second_gpu_render = true;
+                break;
+            }
+        }
+
         // Only the main world-then-HUD pass draws; others pass through, and the guard draws exactly once per frame.
-        if (boundary == 0 || boundary >= buffer.size() || drawn_this_frame) {
+        if (boundary == 0 || boundary >= buffer.size() || drawn_this_frame || has_second_gpu_render) {
             FrCacheRenderAll_Ret(param_1, param_2);
             GW::Hook::LeaveHook();
             return;
