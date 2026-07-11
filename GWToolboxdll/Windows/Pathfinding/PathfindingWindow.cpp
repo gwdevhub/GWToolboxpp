@@ -448,6 +448,18 @@ namespace {
             }
         }
 
+        // A ctx-fallback entry (bounds mismatch below) is keyed by map_id + live node count, not fid — probe for it
+        // or the resident-only path never sees it and the prewarm loop re-reads the DAT forever.
+        if (map_id == GW::Map::GetMapID()) {
+            if (const auto mc = GW::GetMapContext(); mc && mc->path && mc->path->staticData) {
+                const auto ctx_hash = static_cast<uint64_t>(map_id) | (static_cast<uint64_t>(mc->path->pathNodes.size()) << 32);
+                if (const auto it = mile_paths_by_coords.find(ctx_hash); it != mile_paths_by_coords.end()) {
+                    TouchLru(ctx_hash);
+                    return it->second;
+                }
+            }
+        }
+
         // Not resident: the DAT read + parse below blocks the caller. Refuse on the game thread.
         if (!allow_load) return nullptr;
 
@@ -478,7 +490,9 @@ namespace {
         auto& map_data = *chosen;
 
         // file_id was not resident above, so this full key (file_id + pathNodeSize) is new too.
-        auto hash = static_cast<uint64_t>(fid);
+        // Ctx-fallback data must not be cached under the (stale) fid: it would shadow the real file's mesh
+        // for every other map sharing that fid. Key it by map_id like LoadMapFromContext does.
+        auto hash = chosen == &ctx_data ? static_cast<uint64_t>(map_id) : static_cast<uint64_t>(fid);
         hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
 
         // Cache map info for bounds drawing
@@ -2396,8 +2410,20 @@ namespace {
 
     std::set<uint32_t> file_id_mismatch_warned; // maps already warned about
 
+    // Maps whose outpost shares the explorable's MapID but loads a different map file (the constant table holds the
+    // explorable file; the outpost's kLoadMapContext file_name doesn't decode, so the runtime override can't catch it).
+    constexpr std::pair<GW::Constants::MapID, uint32_t> outpost_file_id_overrides[] = {
+        {GW::Constants::MapID::Domain_of_Anguish, 0x3452b}, // outpost = shared torment gate room; explorable = 0x3584f
+    };
+
     uint32_t GetMapFileId(GW::Constants::MapID map_id)
     {
+        if (map_id == GW::Map::GetMapID() && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+            for (const auto& [mid, outpost_fid] : outpost_file_id_overrides) {
+                if (mid == map_id) return outpost_fid;
+            }
+        }
+
         // Check runtime lookup table (populated from constant_maps_info + StoC packets)
         auto it = map_id_to_file_hash.find(map_id);
         if (it != map_id_to_file_hash.end()) return it->second;

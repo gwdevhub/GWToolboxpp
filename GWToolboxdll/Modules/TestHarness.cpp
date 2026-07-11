@@ -530,6 +530,10 @@ void TestHarness::Initialize()
 {
     ToolboxModule::Initialize();
 #ifdef HARNESS_ENABLED
+    // A command written before this instance existed is stale (e.g. the reload script's `shutdown`
+    // left unconsumed when no toolbox was loaded); executing it would kill the fresh instance.
+    std::error_code ec;
+    std::filesystem::remove(cmd_path(), ec);
     std::string existing;
     if (!Resources::ReadFile(config_path(), existing)) {
         Resources::WriteFile(config_path(),
