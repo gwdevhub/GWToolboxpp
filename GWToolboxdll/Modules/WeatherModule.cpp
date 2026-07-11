@@ -88,6 +88,7 @@ namespace weather_module {
         bool center_on_camera = false;            // centre the volume on the camera itself, not its target (wraps tightly around the viewer)
         float column_height = 2500.f;             // vertical extent of the falling-particle column above the focus, capped at column_height_max
         CloudCover cloud;                         // optional cloud-cover layer (overhead clouds / fog / sandstorm), composable with the falling particles
+        bool enabled = true;                      // if false, excluded from manual toggling and automatic weather selection
     };
 
     // A broad weather climate. Maps/regions are grouped into one of these (see ClimateForRegion), so weather is
@@ -195,7 +196,7 @@ namespace {
             // Ash: snow's drift (no floor decal) with a dark warm-grey tint and a heavier overcast.
             {"Ashfall", kTypeSnow, false, 10, 9.f, 350.f, 2500.f, 30.f, 55.f, 8.f, 0.f, {}, 12.f, 35.f, false, 0.45f, 0xFF42464Au, 0xFFA09078u, kDecalNone},
             // Cloud-cover-only conditions (low density = sparse/no falling particles); the look is mostly the cloud layer below.
-            {"Fog", kTypeRain, true, 2, 10.f, 300.f, 1500.f, 0.f, 25.f, 0.f, 1.0f, {}, 10.f, 30.f, false, 0.0f, 0xFFFFFFFFu, 0xFFFFFFFFu},
+            {"Fog", kTypeRain, false, 2, 10.f, 300.f, 1500.f, 0.f, 25.f, 0.f, 1.0f, {}, 10.f, 30.f, false, 0.0f, 0xFFFFFFFFu, 0xFFFFFFFFu},
             {"Sandstorm", kTypeRain, false, 10, 4.f, 500.f, 1000.f, 90.f, 90.f, 85.f, 0.f, {}, 10.f, 30.f, false, 0.0f, 0xFFC8B080u, 0xFFA09078u, kDecalNone},
             // Blizzard: heavy snow + a low white fog band.
             {"Blizzard", kTypeSnow, false, 85, 6.f, 700.f, 1500.f, 35.f, 60.f, 39.f, 0.f, {}, 10.f, 30.f, false, 0.55f, 0xFFFFFFFFu, 0xFFA09078u, kDecalAuto, 23.f},
@@ -211,6 +212,7 @@ namespace {
         v[4].cloud = {-500.f, 100.f, 0x11C8C8D0u, 10, 800.f, 10.f, 1500.f}; // Fog: white, low, slow, thin
         v[5].cloud = {-400.f, 60.f, 0x38C8B080u, 10, 500.f, 700.f, 600.f};  // Sandstorm: tan, ground-level, fast, tight (Wind sets the heading)
         v[6].cloud = {0.f, 1000.f, 0x2ED0D8E0u, 3, 800.f, 0.f, 1500.f}; // Blizzard: faint white fog under the snow
+        v[4].enabled = false; // Fog: quite invasive to gameplay (obscures vision), so off by default
         return v;
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -526,9 +528,9 @@ namespace {
             for (const auto& e : prof->entries) {
                 const float w = std::max(0.f, e.weight);
                 if (w <= 0.f) continue;
-                if (r < w) { // this entry won the roll; resolve its name to a live condition (clear if it's gone)
+                if (r < w) { // this entry won the roll; resolve its name to a live, enabled condition (clear if it's gone/disabled)
                     for (int i = 0; i < static_cast<int>(conditions.size()); i++)
-                        if (conditions[i].name == e.condition) { chosen = i; break; }
+                        if (conditions[i].name == e.condition && conditions[i].enabled) { chosen = i; break; }
                     break;
                 }
                 r -= w;
@@ -1242,6 +1244,7 @@ namespace {
         for (size_t i = 0; i < conditions.size(); i++) {
             if (TextUtils::ToLower(conditions[i].name) != want) continue;
             const bool on = state == 2 ? !conditions[i].active : state == 1;
+            if (on && !conditions[i].enabled) return Log::Error("%s is disabled; enable it in the weather settings first.", conditions[i].name.c_str());
             // Only one condition at a time: activate this one and clear the rest (deactivating just turns it off).
             for (auto& o : conditions)
                 o.active = false;
@@ -1404,6 +1407,7 @@ void WeatherModule::OnSettingsLoaded()
 {
     bool seen_active = false; // single-active: keep only the first active condition (older configs may have several)
     for (auto& c : conditions) {
+        if (!c.enabled) c.active = false; // a disabled condition can't be the active one
         if (c.active && std::exchange(seen_active, true)) c.active = false;
         c.type = std::clamp(c.type, 0, kTypeCount - 1);
         c.floor_decal = std::clamp(c.floor_decal, kDecalAuto, kDecalCount - 1);
@@ -1469,17 +1473,21 @@ void WeatherModule::DrawSettings()
     for (int i = 0; i < static_cast<int>(conditions.size()); i++) {
         auto& c = conditions[i];
         ImGui::PushID(i);
-        ImGui::BeginDisabled(auto_weather); // automatic weather owns the active state; show it read-only
+        ImGui::BeginDisabled(auto_weather || !c.enabled); // automatic weather owns the active state; a disabled condition can't be activated
         if (ImGui::Checkbox("##active", &c.active) && c.active) // only one condition at a time: turning one on turns the rest off
             for (int j = 0; j < static_cast<int>(conditions.size()); j++)
                 if (j != i) conditions[j].active = false;
-        if (auto_weather && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) // explain the disabled state
-            ImGui::SetTooltip("Automatic weather is on and controls which condition is active.\nTurn off \"Automatic weather\" below to switch conditions manually.");
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) { // explain the disabled state
+            if (!c.enabled) ImGui::SetTooltip("This condition is disabled.\nTick \"Enabled\" in its settings below to allow it to be used.");
+            else if (auto_weather) ImGui::SetTooltip("Automatic weather is on and controls which condition is active.\nTurn off \"Automatic weather\" below to switch conditions manually.");
+        }
         ImGui::EndDisabled();
         ImGui::SameLine();
-        char header[64];
-        snprintf(header, sizeof(header), "%s###cond", c.name.empty() ? "(unnamed)" : c.name.c_str()); // stable id so editing the name doesn't collapse/unfocus the section
+        char header[80];
+        snprintf(header, sizeof(header), "%s%s###cond", c.name.empty() ? "(unnamed)" : c.name.c_str(), c.enabled ? "" : " [Disabled]"); // stable id so editing the name doesn't collapse/unfocus the section
         if (ImGui::CollapsingHeader(header)) {
+            if (ImGui::Checkbox("Enabled", &c.enabled) && !c.enabled) c.active = false; // a disabled condition can't stay active
+            ImGui::ShowHelp("Untick to exclude this condition from manual selection and automatic weather rolls.");
             ImGui::InputText("Name", c.name, 32);
             ImGui::TextDisabled("Falling particles (set Density 0 for a cloud-cover-only condition like fog).");
             const char* type_names[kTypeCount] = {"Rain", "Snow"};
