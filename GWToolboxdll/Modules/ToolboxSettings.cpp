@@ -203,9 +203,9 @@ namespace {
         Minimap::Instance(),
         GameWorldRenderer::Instance(),
         {WeatherModule::Instance(), false},
-        DangerRingsModule::Instance(),
+        {DangerRingsModule::Instance(), false},
         LootBeaconsModule::Instance(),
-        SkillRangeRingsModule::Instance(),
+        {SkillRangeRingsModule::Instance(), false},
 #ifdef _DEBUG
         {RiverModule::Instance(), false},
 #endif
