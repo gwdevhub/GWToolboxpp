@@ -416,10 +416,11 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::BeginTable("skills_used_table", 2);
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
             for (const auto skill_id : current_agent_info->wiki_skills) {
+                const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                if (!skill) continue;
                 ImGui::TableNextColumn();
                 const float btnw = ImGui::GetContentRegionAvail().x;
                 const ImVec2 btn_dims = {btnw, .0f};
-                const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
                 const auto skill_img = Resources::GetSkillImage(skill_id);
                 if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
                     wchar_t url_buf[64];
@@ -435,10 +436,11 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::BeginTable("skills_offered_table", 2);
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
             for (const auto skill_id : current_agent_info->skills_offered) {
+                const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+                if (!skill) continue;
                 ImGui::TableNextColumn();
                 const float btnw = ImGui::GetContentRegionAvail().x;
                 const ImVec2 btn_dims = {btnw, .0f};
-                const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
                 const auto skill_img = Resources::GetSkillImage(skill_id);
                 if (ImGui::IconButton(Resources::DecodeStringId(skill->name)->string().c_str(), *skill_img, btn_dims)) {
                     wchar_t url_buf[64];

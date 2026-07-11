@@ -397,6 +397,23 @@ namespace {
             write_status(b);
             return;
         }
+        if (verb == "hoverinfo") { // hoverinfo: report the live tooltip payload and resolved hovered skill
+            const auto tooltip = GW::UI::GetCurrentTooltip();
+            const auto hovered = GW::SkillbarMgr::GetHoveredSkill();
+            char b[192];
+            if (tooltip) {
+                snprintf(b, sizeof(b), "hoverinfo: tooltip payload_len=0x%x payload0=0x%x hovered_skill=%d campaign=%d",
+                         tooltip->payload_len, tooltip->payload && tooltip->payload_len >= 4 ? tooltip->payload[0] : 0,
+                         hovered ? static_cast<int>(hovered->skill_id) : -1,
+                         hovered ? static_cast<int>(hovered->campaign) : -1);
+            }
+            else {
+                snprintf(b, sizeof(b), "hoverinfo: no tooltip");
+            }
+            Log::Log("[harness] %s", b);
+            write_status(b);
+            return;
+        }
         if (verb == "skillinfo") { // skillinfo <skill_id>: log the constant skill data fields the range rings use
             uint32_t skill_id = 0;
             is >> skill_id;
