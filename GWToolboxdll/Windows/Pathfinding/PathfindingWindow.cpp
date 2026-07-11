@@ -2416,6 +2416,11 @@ namespace {
         {GW::Constants::MapID::Domain_of_Anguish, 0x3452b}, // outpost = shared torment gate room; explorable = 0x3584f
     };
 
+    bool IsDualInstanceMap(GW::Constants::MapID map_id)
+    {
+        return std::ranges::any_of(outpost_file_id_overrides, [map_id](const auto& e) { return e.first == map_id; });
+    }
+
     uint32_t GetMapFileId(GW::Constants::MapID map_id)
     {
         if (map_id == GW::Map::GetMapID() && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
@@ -2482,6 +2487,11 @@ namespace {
         return result;
     }
 
+    // Bumped only when a dual-instance map loads (DoA outpost/explorable share id 474): its mesh can change
+    // without the MapID changing, so MapID-keyed overlays must also compare against this. Everywhere else
+    // MapID → mesh caching stays untouched.
+    uint32_t map_load_generation = 0;
+
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (status->blocked) return;
@@ -2506,6 +2516,12 @@ namespace {
                             map_graph_built = false;
                         }
                     }
+                }
+
+                if (IsDualInstanceMap(packet->map_id)) {
+                    ++map_load_generation;
+                    GameWorldRenderer::ClearNavmeshLines();
+                    GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID::None, {});
                 }
 
                 // Clear all lines on map change to avoid stale renders
@@ -2556,6 +2572,7 @@ static void UpdateNavmeshOverlay()
 {
     static bool was_on = false;
     static GW::Constants::MapID built_map = GW::Constants::MapID::None;
+    static uint32_t built_generation = 0;
     static GW::GamePos last_build_pos{};
     static std::vector<Pathing::NavMesh::DebugEdge> cached_edges; // whole-map edges, extracted once per map
     if (!settings.draw_navmesh_overlay) {
@@ -2572,7 +2589,7 @@ static void UpdateNavmeshOverlay()
 
     const auto cur_map = GW::Map::GetMapID();
     const auto me = GW::Agents::GetControlledCharacter();
-    const bool map_changed = cur_map != built_map;
+    const bool map_changed = cur_map != built_map || built_generation != map_load_generation;
     float moved2 = 1e30f;
     if (me && !map_changed) { const float dx = me->pos.x - last_build_pos.x, dy = me->pos.y - last_build_pos.y; moved2 = dx * dx + dy * dy; }
     if (!map_changed && moved2 < 600.f * 600.f) return; // near set still fresh; nothing to rebuild
@@ -2616,7 +2633,9 @@ static void UpdateNavmeshOverlay()
         lines.push_back({e.a, e.b, edge_color(e)});
     }
     GameWorldRenderer::SetNavmeshLines(cur_map, std::move(lines));
+    if (map_changed) Log::Log("[navmesh] overlay rebuilt: map=%d gen=%u edges=%d", (int)cur_map, map_load_generation, (int)cached_edges.size());
     built_map = cur_map;
+    built_generation = map_load_generation;
     if (me) last_build_pos = me->pos;
 }
 
