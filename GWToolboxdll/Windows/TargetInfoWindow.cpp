@@ -406,12 +406,12 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         ImGui::TextUnformatted(current_agent_info->name.string().c_str());
         ImGui::PopFont();
         ImGui::Separator();
-        if (current_agent_info->infobox_deets.size()) {
-            for (const auto it : current_agent_info->infobox_deets) {
-                ImGui::Text("%s: %s", it.first.c_str(), it.second.c_str());
+        if (!current_agent_info->infobox_deets.empty()) {
+            for (const auto [key, value] : current_agent_info->infobox_deets) {
+                ImGui::Text("%s: %s", key.c_str(), value.c_str());
             }
         }
-        if (current_agent_info->wiki_skills.size()) {
+        if (!current_agent_info->wiki_skills.empty()) {
             ImGui::Text("Skills Used:");
             ImGui::BeginTable("skills_used_table", 2);
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
@@ -431,7 +431,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::PopStyleVar();
             ImGui::EndTable();
         }
-        if (current_agent_info->skills_offered.size()) {
+        if (!current_agent_info->skills_offered.empty()) {
             ImGui::Text("Skills Offered:");
             ImGui::BeginTable("skills_offered_table", 2);
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
@@ -454,7 +454,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::PopStyleVar();
             ImGui::EndTable();
         }
-        if (current_agent_info->wiki_armor_ratings.size()) {
+        if (!current_agent_info->wiki_armor_ratings.empty()) {
             ImGui::Text("Armor Ratings:");
             ImGui::BeginTable("armor_rating_table", 2);
             for (const auto [damage_type, armour_rating] : current_agent_info->wiki_armor_ratings) {
@@ -485,7 +485,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             }
             ImGui::EndTable();
         }
-        if (current_agent_info->items_dropped.size()) {
+        if (!current_agent_info->items_dropped.empty()) {
             ImGui::Text("Items Dropped:");
             ImGui::BeginTable("items_dropped_table", 2);
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
@@ -502,7 +502,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::PopStyleVar();
             ImGui::EndTable();
         }
-        if (current_agent_info->notes.size()) {
+        if (!current_agent_info->notes.empty()) {
             ImGui::Text("Notes:");
             for (const auto& note : current_agent_info->notes) {
                 ImGui::TextWrapped("%s", note.c_str());
