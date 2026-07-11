@@ -49,8 +49,6 @@ namespace {
         float bx, by;
         bool valid = false;
         bool has_basis = false;
-        bool has_origin = false;
-        clock_t last_rebuild = TIMER_INIT();
 
         float cached_basis_zoom = 0.f;
         void Rebuild();
@@ -174,29 +172,8 @@ namespace {
         const GW::Vec2f player_screen = {mm_scaled.x * mission_map_zoom + mission_map_screen_pos.x,
                                          mm_scaled.y * mission_map_zoom + mission_map_screen_pos.y};
 
-        const float target_ox = player_screen.x - px * ax - py * bx;
-        const float target_oy = player_screen.y - px * ay - py * by;
-
-        // GW's own mission-map background pans with a follow-cam ease rather than snapping
-        // instantly to the player; matching that here (instead of tracking the raw position
-        // exactly) keeps our overlays visually glued to the backdrop instead of swimming
-        // against it. Snap instead of easing on the first frame or after a big jump (map
-        // change/teleport/zoom) so it doesn't visibly slide in from a stale position.
-        constexpr float SNAP_THRESHOLD_PX = 300.f;
-        const float dt_ms = static_cast<float>(TIMER_DIFF(last_rebuild));
-        last_rebuild = TIMER_INIT();
-
-        if (!has_origin || fabsf(target_ox - ox) > SNAP_THRESHOLD_PX || fabsf(target_oy - oy) > SNAP_THRESHOLD_PX) {
-            ox = target_ox;
-            oy = target_oy;
-            has_origin = true;
-        }
-        else {
-            constexpr float TAU_MS = 120.f;
-            const float alpha = 1.f - expf(-dt_ms / TAU_MS);
-            ox += (target_ox - ox) * alpha;
-            oy += (target_oy - oy) * alpha;
-        }
+        ox = roundf(player_screen.x - px * ax - py * bx);
+        oy = roundf(player_screen.y - px * ay - py * by);
         valid = true;
     }
 
