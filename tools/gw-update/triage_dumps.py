@@ -60,6 +60,12 @@ TRACE_RE = re.compile(r"Pc:([0-9a-fA-F]{6,8}) Fr:([0-9a-fA-F]{6,8}) Rt:([0-9a-fA
 CI_PATH_RE = re.compile(r"(?i)^.*[\\/](gwtoolboxpp|gwca)[\\/]")
 
 
+def win_basename(path):
+    """os.path.basename() only splits on '/' on POSIX -- module names recovered
+    from the dump are always Windows paths, so split on both separators."""
+    return path.replace("\\", "/").rsplit("/", 1)[-1]
+
+
 # === minidump extras (beyond symbolize_dump) ===
 
 def parse_modules_ex(data, streams):
@@ -354,7 +360,7 @@ def classify_addr(addr, mods, ctx):
     m = sd.module_for(addr, mods)
     if not m:
         return {"addr": addr, "module": None, "sym": None}
-    bn = os.path.basename(m["name"])
+    bn = win_basename(m["name"])
     rva = addr - m["base"]
     fr = {"addr": addr, "module": bn, "rva": rva, "sym": None}
     lbn = bn.lower()
@@ -398,7 +404,7 @@ def triage_dump(path, args):
         comment = first_line + (f"  ...(+{extra} more lines)" if extra > 0 else "")
 
     dump_dir = os.path.dirname(os.path.abspath(path))
-    by_name = {os.path.basename(m["name"]).lower(): m for m in mods}
+    by_name = {win_basename(m["name"]).lower(): m for m in mods}
     tb_mod = by_name.get("gwtoolboxdll.dll")
     tb_obj, tb_note = resolve_toolbox_binary(dump_dir, tb_mod and tb_mod["pdb_guid"], args.tb_binary, args.cache_dir)
     gwca_exports, gwca_note = resolve_gwca(dump_dir, by_name.get("gwca.dll"), args.gwca_binary)
@@ -461,7 +467,7 @@ def triage_dump(path, args):
             m = sd.module_for(val, mods)
             if not m or val in seen:
                 continue
-            bn = os.path.basename(m["name"]).lower()
+            bn = win_basename(m["name"]).lower()
             if bn not in ("gwtoolboxdll.dll", "gwca.dll", "gw.exe"):
                 continue
             seen.add(val)
@@ -506,7 +512,7 @@ def first_project_frame(r):
 
 def derive_signature(r):
     if r.get("assert_site"):
-        return f"GW assert {os.path.basename(r['assert_site'])}"
+        return f"GW assert {win_basename(r['assert_site'])}"
     project = first_project_frame(r)
     if r.get("tb_assert_counter") is not None:
         return (f"release assert __COUNTER__={r['tb_assert_counter']}"
