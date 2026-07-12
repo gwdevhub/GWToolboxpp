@@ -9,6 +9,7 @@ the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.32
 * [Fix] Quest paths (both custom markers and quest markers) no longer sometimes fail to appear after changing maps — previously this could require a Toolbox restart to recover.
+* [Fix] Account Inventory: reduced the delay when loading into the game with the module enabled. Item icons are now loaded from `Gw.dat` on demand as they are displayed, rather than decoding an icon for every stored item on every map load — which flooded Toolbox's texture-loading threads and stalled load-in.
 
 ## Version 8.31
 * [New] Danger Rings: draws enemy ground AoE effects (Meteor Shower, Maelstrom, traps, and more) as rings on the ground in the 3D game world — depth-tested against the terrain and drawn under the interface. Ring thickness, fill/rim opacity and whether rings are hidden behind terrain are configurable.
