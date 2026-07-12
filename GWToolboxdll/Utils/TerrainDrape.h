@@ -25,4 +25,12 @@ namespace TerrainDrape {
 
     // Plane count of the current pathing map; 0 while the map is still loading.
     uint32_t PathingPlaneCount();
+
+    // Verification helper (harness `drapeverify`). Fills three altitudes at (x,y):
+    //   old_all   -- the previous behavior: GW::Map::QueryAltitude on EVERY plane, highest surface (min z)
+    //   new_z     -- the current SurfaceZ (native plane-0 read + trapezoid-pruned non-zero planes)
+    //   prune_gp0 -- the pruned non-zero planes combined with the GAME's plane-0 value, so the trapezoid
+    //                pruning can be checked in isolation from the native-vs-game plane-0 sampling delta.
+    // Any nullptr out-pointer is skipped. Render thread only (uses QueryAltitude).
+    void DrapeCompare(float x, float y, uint32_t n_planes, float* old_all, float* new_z, float* prune_gp0);
 }

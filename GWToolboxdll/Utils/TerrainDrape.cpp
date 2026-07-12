@@ -208,3 +208,37 @@ uint32_t TerrainDrape::PathingPlaneCount()
     const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
     return pm ? static_cast<uint32_t>(pm->size()) : 0;
 }
+
+void TerrainDrape::DrapeCompare(const float x, const float y, const uint32_t n_planes,
+                                float* old_all, float* new_z, float* prune_gp0)
+{
+    // OLD behavior: QueryAltitude on every plane, keep the highest surface (min z); 0 = no data.
+    if (old_all) {
+        float best = 0.f;
+        for (uint32_t zp = 0; zp < n_planes; ++zp) {
+            GW::GamePos p{x, y, zp};
+            const float a = GW::Map::QueryAltitude(&p);
+            if (a != 0.f && (best == 0.f || a < best)) best = a;
+        }
+        *old_all = best;
+    }
+
+    if (new_z) *new_z = SurfaceZ(x, y, 0, n_planes);
+
+    // Pruning isolated: game's plane-0 value + only the trapezoid-containing non-zero planes.
+    if (prune_gp0) {
+        GW::GamePos p0{x, y, 0};
+        float best = GW::Map::QueryAltitude(&p0); // raw game plane-0, identical to old_all's zp==0 step
+        const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
+        if (pm) {
+            const auto planes = std::min<uint32_t>(n_planes, static_cast<uint32_t>(pm->size()));
+            for (uint32_t zp = 1; zp < planes; ++zp) {
+                if (!PlaneContains((*pm)[zp], x, y)) continue;
+                GW::GamePos p{x, y, zp};
+                const float a = GW::Map::QueryAltitude(&p);
+                if (a != 0.f && (best == 0.f || a < best)) best = a;
+            }
+        }
+        *prune_gp0 = best;
+    }
+}

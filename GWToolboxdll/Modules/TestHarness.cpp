@@ -612,6 +612,78 @@ namespace {
             write_status(b);
             return;
         }
+        if (verb == "drapeverify") { // drapeverify [n radius]: does new SurfaceZ match the old all-planes-highest-point query?
+            uint32_t n = 1500;
+            float radius = 1500.f;
+            is >> n >> radius;
+            n = std::clamp(n, 100u, 100000u);
+            radius = std::clamp(radius, 100.f, 5000.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("drapeverify: no character or pathing map");
+                return;
+            }
+            const auto n_planes = static_cast<uint32_t>(pm->size());
+            uint32_t seed = 0x1234567u;
+            const auto next01 = [&seed] {
+                seed = seed * 1664525u + 1013904223u;
+                return (seed >> 8) * (1.f / 16777216.f);
+            };
+            Log::Log("[drapeverify] map=%d n=%u planes=%u radius=%.0f", static_cast<int>(GW::Map::GetMapID()), n, n_planes, radius);
+            uint32_t both = 0;             // points with data on both old and new
+            uint32_t prune_mismatch = 0;   // points where pruned selection != all-planes selection (the real test)
+            uint32_t nonzero_hits = 0;     // points whose highest surface came from a non-zero plane
+            uint32_t logged = 0;
+            float max_prune = 0.f, max_total = 0.f;
+            double sum_total = 0.0;
+            for (uint32_t i = 0; i < n; ++i) {
+                const float ang = next01() * 6.2831853f, r = radius * std::sqrt(next01());
+                const float x = self->pos.x + std::cos(ang) * r, y = self->pos.y + std::sin(ang) * r;
+                float old_all = 0.f, new_z = 0.f, prune = 0.f;
+                TerrainDrape::DrapeCompare(x, y, n_planes, &old_all, &new_z, &prune);
+
+                // Pruning correctness: prune uses the SAME game values as old_all, differing only in which
+                // planes are considered. Any gap here is a plane the trapezoid pruning wrongly dropped/added.
+                const float dp = std::fabs(old_all - prune);
+                if (dp > max_prune) max_prune = dp;
+                if (dp > 0.5f) {
+                    ++prune_mismatch;
+                    if (logged++ < 15)
+                        Log::Log("[drapeverify]   PRUNE MISMATCH (%.0f,%.0f) old_all=%.1f prune=%.1f new=%.1f d=%.1f",
+                                 x, y, old_all, prune, new_z, dp);
+                }
+                // Did the highest surface come from a non-zero plane here? (i.e. was a bridge/prop plane picked)
+                if (old_all != 0.f) {
+                    GW::GamePos g0{x, y, 0};
+                    if (std::fabs(GW::Map::QueryAltitude(&g0) - old_all) > 0.5f) ++nonzero_hits;
+                }
+                // Total new-vs-old (includes native point vs game radius-5 on plane 0).
+                if (old_all != 0.f && new_z != 0.f) {
+                    ++both;
+                    const float dt = std::fabs(old_all - new_z);
+                    sum_total += dt;
+                    if (dt > max_total) max_total = dt;
+                    if (dt > 25.f && logged < 25) {
+                        ++logged;
+                        // Sample the game terrain in a tiny cross to reveal a cliff (why radius-5 disk-max != point).
+                        GW::GamePos c(x, y, 0), e(x + 8.f, y, 0), w(x - 8.f, y, 0), nq(x, y + 8.f, 0), s(x, y - 8.f, 0);
+                        Log::Log("[drapeverify]   BIG DELTA (%.0f,%.0f) old=%.1f new=%.1f d=%.1f | game@center=%.1f nbrs(+-8gw)=[%.0f %.0f %.0f %.0f]",
+                                 x, y, old_all, new_z, dt, GW::Map::QueryAltitude(&c),
+                                 GW::Map::QueryAltitude(&e), GW::Map::QueryAltitude(&w),
+                                 GW::Map::QueryAltitude(&nq), GW::Map::QueryAltitude(&s));
+                    }
+                }
+            }
+            char b[240];
+            snprintf(b, sizeof(b),
+                     "drapeverify: n=%u both=%u nonzero_plane_hits=%u | PRUNE mismatches=%u max=%.2f | total new-vs-old avg=%.2f max=%.2f",
+                     n, both, nonzero_hits, prune_mismatch, max_prune, both ? sum_total / both : 0.0, max_total);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
         if (verb == "drapebench") { // drapebench [n radius]: A/B the old all-planes QueryAltitude loop vs the new pruned SurfaceZ
             uint32_t n = 2000;
             float radius = 1200.f;
