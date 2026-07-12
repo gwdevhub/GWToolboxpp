@@ -607,6 +607,27 @@ namespace {
         return a.Min.x < b.Max.x && a.Max.x > b.Min.x && a.Min.y < b.Max.y && a.Max.y > b.Min.y;
     }
 
+    // Minimum translation needed to push `self` out of every overlapping breakout button.
+    // Returns {0,0} when it already clears all of them.
+    ImVec2 ResolveBreakoutOverlap(const char* window_id, const ImRect& self)
+    {
+        ImVec2 push = {0.f, 0.f};
+        for (const auto& [id, other] : breakout_button_rects) {
+            if (id == window_id) continue;
+            const ImRect moved({self.Min.x + push.x, self.Min.y + push.y}, {self.Max.x + push.x, self.Max.y + push.y});
+            const float ox = ImMin(moved.Max.x, other.Max.x) - ImMax(moved.Min.x, other.Min.x);
+            const float oy = ImMin(moved.Max.y, other.Max.y) - ImMax(moved.Min.y, other.Min.y);
+            if (ox <= 0.f || oy <= 0.f) continue; // no overlap
+            if (ox < oy) {
+                push.x += moved.GetCenter().x < other.GetCenter().x ? -ox : ox;
+            }
+            else {
+                push.y += moved.GetCenter().y < other.GetCenter().y ? -oy : oy;
+            }
+        }
+        return push;
+    }
+
     // Pick a position starting from the centre of the screen, cascading until it clears every other breakout button.
     ImVec2 GetDefaultBreakoutPos(const char* window_id, const ImVec2& size)
     {
@@ -664,6 +685,19 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         breakout_pos[0] = pos.x;
         breakout_pos[1] = pos.y;
         breakout_pos_set = true;
+    }
+    else if (const auto bw = ImGui::FindWindowByName(window_id); bw && !(flags & ImGuiWindowFlags_NoMove)) {
+        // Keep buttons from overlapping: push this one clear of the others, unless the user is dragging it
+        // (in which case the buttons it's dragged onto move out of the way instead). Locked buttons never move,
+        // so the other button yields to them.
+        const ImGuiContext* g = ImGui::GetCurrentContext();
+        const bool being_moved = g && g->MovingWindow && g->MovingWindow->RootWindow == bw->RootWindow;
+        if (!being_moved) {
+            const ImVec2 push = ResolveBreakoutOverlap(window_id, ImRect(bw->Pos, {bw->Pos.x + bw->Size.x, bw->Pos.y + bw->Size.y}));
+            if (push.x != 0.f || push.y != 0.f) {
+                ImGui::SetNextWindowPos({bw->Pos.x + push.x, bw->Pos.y + push.y}, ImGuiCond_Always);
+            }
+        }
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {6.f, 6.f});
