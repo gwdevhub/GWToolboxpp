@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cmath>
 #include <filesystem>
+#include <set>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -14,6 +15,7 @@
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/MapContext.h>
 #include <GWCA/Context/PreGameContext.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/AgentMgr.h>
@@ -607,6 +609,54 @@ namespace {
             char b[160];
             snprintf(b, sizeof(b), "nativez: samples=%u both=%u max_delta=%.2f avg_delta=%.3f", samples, both, max_delta,
                      both ? sum_delta / both : 0.0);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "propprobe") { // propprobe [radius]: enumerate map props, their world z, and which ones back a walkable pathing plane
+            float radius = 2500.f;
+            is >> radius;
+            radius = std::clamp(radius, 200.f, 20000.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* mc = GW::GetMapContext();
+            if (!self || !mc || !mc->props) { write_status("propprobe: no character or props"); return; }
+            const auto& props = mc->props->propArray;
+            const auto* pm = GW::Map::GetPathingMap();
+            const auto n_planes = pm ? static_cast<uint32_t>(pm->size()) : 0u;
+
+            // Which prop indices back a walkable pathing plane? PathingMap+0x00 (GWCA 'zplane') is the prop index
+            // for non-ground planes (ground plane = UINT_MAX).
+            std::set<uint32_t> walkable_props;
+            for (uint32_t zp = 0; pm && zp < n_planes; ++zp) {
+                const uint32_t pidx = (*pm)[zp].zplane;
+                if (pidx != 0xFFFFFFFFu) walkable_props.insert(pidx);
+            }
+
+            Log::Log("[propprobe] map=%d props=%u planes=%u walkable_prop_planes=%u player=(%.0f,%.0f,z%u,%.0f)",
+                     static_cast<int>(GW::Map::GetMapID()), static_cast<unsigned>(props.size()), n_planes,
+                     static_cast<unsigned>(walkable_props.size()), self->pos.x, self->pos.y, self->pos.zplane, self->z);
+
+            uint32_t near_count = 0, elevated = 0, elevated_nonwalkable = 0, logged = 0;
+            for (uint32_t i = 0; i < props.size(); ++i) {
+                const GW::MapProp* p = props[i];
+                if (!p) continue;
+                const float dx = p->position.x - self->pos.x, dy = p->position.y - self->pos.y;
+                if (dx * dx + dy * dy > radius * radius) continue;
+                ++near_count;
+                const float terrain = TerrainDrape::NativeTerrainZ(p->position.x, p->position.y);
+                const float above = terrain != 0.f ? (terrain - p->position.z) : 0.f; // >0 means prop origin sits above ground (up=-z)
+                const bool walkable = walkable_props.count(i) != 0;
+                if (above > 50.f) { ++elevated; if (!walkable) ++elevated_nonwalkable; }
+                if (logged++ < 25)
+                    Log::Log("[propprobe]   prop[%u] file=0x%X pos=(%.0f,%.0f,z=%.0f) terrain_z=%.0f above=%.0f walkable=%d model=%p",
+                             i, p->model_file_id, p->position.x, p->position.y, p->position.z, terrain, above,
+                             static_cast<int>(walkable), static_cast<const void*>(p->interactive_model));
+            }
+            char b[224];
+            snprintf(b, sizeof(b), "propprobe: props=%u near=%u elevated=%u elevated_nonwalkable=%u walkable_planes=%u",
+                     static_cast<unsigned>(props.size()), near_count, elevated, elevated_nonwalkable,
+                     static_cast<unsigned>(walkable_props.size()));
             Log::Log("[harness] %s", b);
             Log::FlushFile();
             write_status(b);
