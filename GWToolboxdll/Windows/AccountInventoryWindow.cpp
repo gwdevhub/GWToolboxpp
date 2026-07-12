@@ -248,7 +248,8 @@ namespace {
         // display (no decoded text is persisted). .encoded() is what we save.
         GuiUtils::EncString description{};
         uint32_t item_id{};                    // live-session only; 0 for items loaded from disk
-        IDirect3DTexture9** texture = nullptr; // cache (GetItemImage), not serialized
+        uint32_t dyes{};                       // packed dye colours; 0 (undyed) for disk items
+        IDirect3DTexture9** texture = nullptr; // GetItemImage cache, fetched lazily on first draw; not serialized
     };
 
     // Free-slot occupancy, folded out of the old CharacterFreeSlots into the nodes.
@@ -1112,10 +1113,8 @@ namespace {
         item.equipped = j.equipped.value_or(0);
         const std::wstring enc = DecodeDescription(j.description);
         item.description.reset(enc.c_str()); // EncString decodes lazily for display
-        GW::Item gw_item;
-        gw_item.model_file_id = item.model_file_id;
-        gw_item.interaction = item.interaction;
-        item.texture = Resources::GetItemImage(&gw_item);
+        // texture is fetched on demand in Draw (see below) so loading files doesn't flood
+        // the worker pool with an icon decode per stored item, most of which are never shown.
     }
 
     void ApplyFreeSlots(FreeSlotInfo& fs, const FreeSlotsJson& j)
@@ -1466,7 +1465,10 @@ namespace {
         it.quantity = item->quantity;
         it.equipped = item->equipped;
         it.item_id = item->item_id;
-        it.texture = Resources::GetItemImage(item);
+        // Keep the dyes so Draw can fetch the correctly-tinted icon on demand; don't decode
+        // the image here (see ApplyItemJson) - it would decode icons for items never shown.
+        it.dyes = static_cast<uint32_t>(item->dye.dye1) | (static_cast<uint32_t>(item->dye.dye2) << 8)
+                | (static_cast<uint32_t>(item->dye.dye3) << 16) | (static_cast<uint32_t>(item->dye.dye4) << 24);
         it.description.reset(GetItemEncDescription(item).c_str()); // EncString decodes for display
 
         ItemLoc loc;
@@ -2254,8 +2256,15 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         }
         else {
             const auto pos = ImGui::GetCursorPos();
-            if (i_front->item->texture && *(i_front->item->texture))
-                clicked = ImGui::IconButton(nullptr, *i_front->item->texture, button_size, ImGuiButtonFlags_None, button_size);
+            Item* it = i_front->item;
+            // Fetch (and cache) the icon only now that we're actually drawing it. The returned
+            // pointer is stable, so this runs once per item - not once per stored item on load.
+            if (!it->texture) {
+                const auto player = GW::Agents::GetControlledCharacter();
+                it->texture = Resources::GetItemImage(it->model_file_id, it->interaction, it->dyes, player && player->GetIsFemale());
+            }
+            if (it->texture && *(it->texture))
+                clicked = ImGui::IconButton(nullptr, *(it->texture), button_size, ImGuiButtonFlags_None, button_size);
             else
                 clicked = ImGui::Button("???", button_size);
 
