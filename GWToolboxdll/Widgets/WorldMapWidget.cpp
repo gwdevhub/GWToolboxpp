@@ -217,6 +217,8 @@ namespace {
         return GW::Map::GetMapWorldMapBounds(map, &map_bounds) && map_bounds.Contains(world_map_pos);
     }
 
+    std::vector<WorldMapWidget::ContextMenuCallback> context_menu_callbacks;
+
     bool ContextMenuMarkerButtons()
     {
         if (ImGui::Button("Place Marker")) {
@@ -251,6 +253,9 @@ namespace {
         ImGui::TextUnformatted(Resources::GetMapName(map_id)->string().c_str());
 
         if (!ContextMenuMarkerButtons()) return false;
+        for (const auto& cb : context_menu_callbacks) {
+            if (!cb()) return false;
+        }
         return true;
     }
 
@@ -1042,6 +1047,10 @@ bool& WorldMapWidget::ShowLinesOnWorldMap()
 {
     return settings.show_lines_on_world_map;
 }
+
+void WorldMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_menu_callbacks.push_back(cb); }
+void WorldMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }
+GW::Vec2f WorldMapWidget::GetContextMenuWorldMapPos() { return world_map_click_pos; }
 
 void WorldMapWidget::ShowAllOutposts(const bool show = settings.showing_all_outposts)
 {

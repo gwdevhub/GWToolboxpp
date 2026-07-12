@@ -38,6 +38,7 @@
 
 #include <GWCA/Managers/PartyMgr.h>
 
+#include "Modules/CartographerModule.h"
 #include "Modules/SkillRangeRingsModule.h"
 #include "Utils/GameWorldCompositor.h"
 #include "Utils/SettingsRegistry.h"
@@ -388,6 +389,54 @@ namespace {
             snprintf(b, sizeof(b), "playeffect: id=%u at (%.0f,%.0f,z%u)", effect_id, x, y, plane);
             Log::Log("[harness] %s", b);
             write_status(b);
+            return;
+        }
+        if (verb == "carto") { // carto <on|off|skip [forever]|point <game_x> <game_y>|pointwm <wm_x> <wm_y>|clearpoints|cleardeclines|status>
+            std::string arg;
+            is >> arg;
+            if (arg == "on" || arg == "1") {
+                CartographerModule::SetEnabled(true);
+            }
+            else if (arg == "off" || arg == "0") {
+                CartographerModule::SetEnabled(false);
+            }
+            else if (arg == "skip") {
+                std::string v;
+                is >> v;
+                CartographerModule::SkipCurrentTarget(v == "forever");
+            }
+            else if (arg == "point") {
+                float x, y;
+                GW::Vec2f wm;
+                if ((is >> x >> y) && WorldMapWidget::GamePosToWorldMap(GW::GamePos(x, y, 0), wm)) {
+                    CartographerModule::AddCustomPoint(wm);
+                }
+                else {
+                    write_status("carto point: bad args or conversion failed (need game <x> <y>)");
+                    return;
+                }
+            }
+            else if (arg == "pointwm") {
+                float x, y;
+                if (is >> x >> y) {
+                    CartographerModule::AddCustomPoint({x, y});
+                }
+                else {
+                    write_status("carto pointwm: bad args (need world-map <x> <y>)");
+                    return;
+                }
+            }
+            else if (arg == "clearpoints") {
+                CartographerModule::ClearCustomPoints();
+            }
+            else if (arg == "cleardeclines") {
+                CartographerModule::ClearDeclined();
+            }
+            char buf[224];
+            CartographerModule::GetStatus(buf, sizeof(buf));
+            write_status(buf);
+            Log::Log("[harness] %s", buf);
+            Log::FlushFile();
             return;
         }
         if (verb == "hoverskill") { // hoverskill <skill_id>: force skill-range rings as if hovering (0 clears)

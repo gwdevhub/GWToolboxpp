@@ -819,3 +819,4 @@ void MissionMapWidget::AddDrawCallback(DrawCallback cb) { draw_callbacks.push_ba
 void MissionMapWidget::RemoveDrawCallback(DrawCallback cb) { std::erase(draw_callbacks, cb); }
 void MissionMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_menu_callbacks.push_back(cb); }
 void MissionMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }
+GW::Vec2f MissionMapWidget::GetContextMenuWorldMapPos() { return world_map_click_pos; }
