@@ -7,6 +7,9 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.32
+* [Minor] Weather: sandstorms now only occur automatically in desert regions (Crystal Desert, Desolation, Istan) — the drier scrublands of Kourna and Vabbi no longer roll a sandstorm. Sandstorm is also off by default (like fog), since it obscures vision; you can re-enable it in Weather settings.
+
 ## Version 8.31
 * [New] Danger Rings: draws enemy ground AoE effects (Meteor Shower, Maelstrom, traps, and more) as rings on the ground in the 3D game world — depth-tested against the terrain and drawn under the interface. Ring thickness, fill/rim opacity and whether rings are hidden behind terrain are configurable.
 * [New] Loot Beacons: marks dropped loot worth grabbing with a pillar of light in the game world, selectable by item rarity (white/blue/purple/gold/green) and/or trader value, with an option to also beacon items reserved for other party members.
