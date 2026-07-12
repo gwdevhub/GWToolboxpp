@@ -7,6 +7,9 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.32
+* [Fix] Quest paths (both custom markers and quest markers) no longer sometimes fail to appear after changing maps — previously this could require a Toolbox restart to recover.
+
 ## Version 8.31
 * [New] Danger Rings: draws enemy ground AoE effects (Meteor Shower, Maelstrom, traps, and more) as rings on the ground in the 3D game world — depth-tested against the terrain and drawn under the interface. Ring thickness, fill/rim opacity and whether rings are hidden behind terrain are configurable.
 * [New] Loot Beacons: marks dropped loot worth grabbing with a pillar of light in the game world, selectable by item rarity (white/blue/purple/gold/green) and/or trader value, with an option to also beacon items reserved for other party members.
