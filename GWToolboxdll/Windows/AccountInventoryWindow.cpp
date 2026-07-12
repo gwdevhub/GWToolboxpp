@@ -1010,19 +1010,12 @@ namespace {
         bool success = false;
     };
 
-    // One dispatched load. A worker thread fills `results` and sets `done`; the main
-    // thread applies them (in Update, or a blocking flush) once done. Held behind a
-    // shared_ptr so an in-flight worker never dangles if the module is torn down or a
-    // newer load supersedes this one mid-parse.
+    // Dispatched load: a worker fills results + sets done, the main thread applies it once done.
     struct PendingLoad {
         std::vector<LoadResult> results;
-        std::atomic<bool> done{false};
+        std::atomic<bool> done{false}; // shared_ptr-owned, so a superseded/torn-down worker orphans safely
     };
-    // Serialises file access only: a worker holds it around each file read, SyncAccountFile
-    // around each write/delete, so a save can't rewrite/delete a file mid-read. Parsing and
-    // JSON serialisation run outside it. (Completion is signalled by PendingLoad::done, not
-    // this mutex.)
-    std::mutex load_mutex;
+    std::mutex load_mutex; // guards file access only (worker read vs SyncAccountFile write); done signals completion
     std::shared_ptr<PendingLoad> active_load;
 
     // Encode the wide game string as fixed-width 4-hex code units with no separators
@@ -1114,8 +1107,7 @@ namespace {
         item.equipped = j.equipped.value_or(0);
         const std::wstring enc = DecodeDescription(j.description);
         item.description.reset(enc.c_str()); // EncString decodes lazily for display
-        // texture is fetched on demand in Draw (see below) so loading files doesn't flood
-        // the worker pool with an icon decode per stored item, most of which are never shown.
+        // texture fetched on demand in Draw, so loading doesn't decode an icon per stored item
     }
 
     void ApplyFreeSlots(FreeSlotInfo& fs, const FreeSlotsJson& j)
@@ -1158,8 +1150,7 @@ namespace {
         return true;
     }
 
-    // Worker-thread: parse one already-read account file into a LoadResult. Pure CPU on local
-    // memory - no file access, no hierarchy access - so it runs outside load_mutex.
+    // Worker-thread: parse one already-read account file; pure local work, runs outside load_mutex.
     LoadResult ParseIniFile(const std::filesystem::path& path, const std::string& contents, bool only_foreign, const GUID& account)
     {
         LoadResult r;
@@ -1227,10 +1218,8 @@ namespace {
             return;
         }
 
-        // Reading + parsing the files off the game thread. A newer load simply replaces
-        // active_load; any superseded worker keeps its own PendingLoad alive and finishes
-        // harmlessly into an orphan.
-        const GUID captured_account = current_account;
+        // parse off the game thread; a newer load replaces active_load and orphans this one
+        const auto captured_account = current_account;
         auto pending = std::make_shared<PendingLoad>();
         active_load = pending;
         Resources::EnqueueWorkerTask([pending, to_load, only_foreign, captured_account] {
@@ -1238,9 +1227,7 @@ namespace {
                 std::string contents;
                 bool read_ok;
                 {
-                    // Only the file read races a concurrent save/delete; the parse below is
-                    // pure local work, so the lock is held for the read alone.
-                    std::scoped_lock lock(load_mutex);
+                    std::scoped_lock lock(load_mutex); // only the read races a save/delete; parse is unlocked
                     read_ok = ReadFileToString(path, contents);
                 }
                 if (!read_ok) {
@@ -1254,18 +1241,14 @@ namespace {
             pending->done.store(true, std::memory_order_release);
         });
 
-        // A foreign-only reload (map/character change, module toggle) is applied later in
-        // Update(), so it never stalls the game thread - this is the load-in cost we're
-        // removing. A full load feeds the current account's own stored history that
-        // Initialize()/Delete All immediately build on, so it must complete before we return.
+        // foreign reload applies later in Update (no stall); a full load must finish now, callers build on it
         if (only_foreign)
             needs_sorting = true;
         else
             FlushPendingLoad();
     }
 
-    // Apply a finished load's parsed results into the hierarchy (main thread). The caller
-    // must have observed active_load->done, so the worker is no longer touching results.
+    // Apply a finished load into the hierarchy (main thread); caller must have observed done.
     void ApplyPendingLoad()
     {
         if (!active_load) return;
@@ -1275,24 +1258,20 @@ namespace {
         needs_sorting = true;
     }
 
-    // Non-blocking: apply the in-flight load if its worker has finished. Called every Update.
+    // Called from Update: apply a finished load without blocking the game thread.
     void DrainPendingLoad()
     {
         if (active_load && active_load->done.load(std::memory_order_acquire))
             ApplyPendingLoad();
     }
 
-    // Blocking: wait for the in-flight load to finish, then apply it. Used before tearing
-    // the module down or before a save that may delete/overwrite files a worker is reading.
+    // Blocking: wait for the load to finish then apply it (before teardown / a mass file rewrite).
     void FlushPendingLoad()
     {
         const auto pending = active_load;
         if (!pending) return;
-        const clock_t start = TIMER_INIT();
-        // The worker sets `done` only after its last read, so waiting on it means no file
-        // access is left in flight (the read/write races are handled by load_mutex directly).
-        // The worker may still be queued behind other pool work; wait for it to publish. If it
-        // never ran (pool starved past the timeout) done stays false and a later Update applies it.
+        const auto start = TIMER_INIT();
+        // if the pool starved the worker past the timeout, done stays false and a later Update applies it
         while (!pending->done.load(std::memory_order_acquire) && TIMER_DIFF(start) < 15000)
             Sleep(5);
         if (pending->done.load(std::memory_order_acquire))
@@ -1483,8 +1462,7 @@ namespace {
         it.quantity = item->quantity;
         it.equipped = item->equipped;
         it.item_id = item->item_id;
-        // Keep the dyes so Draw can fetch the correctly-tinted icon on demand; don't decode
-        // the image here (see ApplyItemJson) - it would decode icons for items never shown.
+        // stash dyes so Draw fetches the tinted icon lazily (see ApplyItemJson); no decode here
         it.dyes = static_cast<uint32_t>(item->dye.dye1) | (static_cast<uint32_t>(item->dye.dye2) << 8)
                 | (static_cast<uint32_t>(item->dye.dye3) << 16) | (static_cast<uint32_t>(item->dye.dye4) << 24);
         it.description.reset(GetItemEncDescription(item).c_str()); // EncString decodes for display
@@ -2274,9 +2252,8 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         }
         else {
             const auto pos = ImGui::GetCursorPos();
-            Item* it = i_front->item;
-            // Fetch (and cache) the icon only now that we're actually drawing it. The returned
-            // pointer is stable, so this runs once per item - not once per stored item on load.
+            const auto it = i_front->item;
+            // fetch+cache the icon only when drawn; stable pointer, so once per shown item
             if (!it->texture) {
                 const auto player = GW::Agents::GetControlledCharacter();
                 it->texture = Resources::GetItemImage(it->model_file_id, it->interaction, it->dyes, player && player->GetIsFemale());
