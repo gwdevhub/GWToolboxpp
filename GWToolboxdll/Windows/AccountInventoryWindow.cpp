@@ -1018,9 +1018,10 @@ namespace {
         std::vector<LoadResult> results;
         std::atomic<bool> done{false};
     };
-    // The worker holds this for the whole duration of its file reads; Terminate() and
-    // full-file saves acquire it (via FlushPendingLoad) so they can't delete or overwrite
-    // a file while the load is still reading it.
+    // Serialises file access only: a worker holds it around each file read, SyncAccountFile
+    // around each write/delete, so a save can't rewrite/delete a file mid-read. Parsing and
+    // JSON serialisation run outside it. (Completion is signalled by PendingLoad::done, not
+    // this mutex.)
     std::mutex load_mutex;
     std::shared_ptr<PendingLoad> active_load;
 
@@ -1157,13 +1158,12 @@ namespace {
         return true;
     }
 
-    // Worker-thread: read + parse one account file into a LoadResult (no hierarchy access).
-    LoadResult LoadIniFile(const std::filesystem::path& path, bool only_foreign, const GUID& account)
+    // Worker-thread: parse one already-read account file into a LoadResult. Pure CPU on local
+    // memory - no file access, no hierarchy access - so it runs outside load_mutex.
+    LoadResult ParseIniFile(const std::filesystem::path& path, const std::string& contents, bool only_foreign, const GUID& account)
     {
         LoadResult r;
         r.path = path;
-        std::string contents;
-        if (!ReadFileToString(path, contents)) return r;
         constexpr glz::opts opts{.error_on_unknown_keys = false};
         if (glz::read<opts>(r.account_json, contents)) return r; // parse error
         GUID file_account{};
@@ -1234,9 +1234,23 @@ namespace {
         auto pending = std::make_shared<PendingLoad>();
         active_load = pending;
         Resources::EnqueueWorkerTask([pending, to_load, only_foreign, captured_account] {
-            std::scoped_lock lock(load_mutex);
-            for (const auto& path : to_load)
-                pending->results.push_back(LoadIniFile(path, only_foreign, captured_account));
+            for (const auto& path : to_load) {
+                std::string contents;
+                bool read_ok;
+                {
+                    // Only the file read races a concurrent save/delete; the parse below is
+                    // pure local work, so the lock is held for the read alone.
+                    std::scoped_lock lock(load_mutex);
+                    read_ok = ReadFileToString(path, contents);
+                }
+                if (!read_ok) {
+                    LoadResult r;
+                    r.path = path;
+                    pending->results.push_back(std::move(r));
+                    continue;
+                }
+                pending->results.push_back(ParseIniFile(path, contents, only_foreign, captured_account));
+            }
             pending->done.store(true, std::memory_order_release);
         });
 
@@ -1275,13 +1289,12 @@ namespace {
         const auto pending = active_load;
         if (!pending) return;
         const clock_t start = TIMER_INIT();
-        // The worker may still be queued behind other pool work; wait for it to publish.
+        // The worker sets `done` only after its last read, so waiting on it means no file
+        // access is left in flight (the read/write races are handled by load_mutex directly).
+        // The worker may still be queued behind other pool work; wait for it to publish. If it
+        // never ran (pool starved past the timeout) done stays false and a later Update applies it.
         while (!pending->done.load(std::memory_order_acquire) && TIMER_DIFF(start) < 15000)
             Sleep(5);
-        // Acquiring load_mutex guarantees the worker has released the files it read. It sets
-        // `done` before unlocking, so a released mutex implies done; if it never ran (pool
-        // starved past the timeout) done stays false and we leave it for a later Update.
-        std::scoped_lock lock(load_mutex);
         if (pending->done.load(std::memory_order_acquire))
             ApplyPendingLoad();
     }
@@ -1296,18 +1309,23 @@ namespace {
         if (acc) aj = BuildAccountJson(*acc);
         if (!acc || !AccountJsonHasData(aj)) {
             // nothing to store -> remove the file and forget it
-            DeleteFileW(ini->location_on_disk.wstring().c_str());
+            {
+                std::scoped_lock lock(load_mutex); // file access only - excludes a concurrent load's read
+                DeleteFileW(ini->location_on_disk.wstring().c_str());
+            }
             const auto path = ini->location_on_disk;
             ini_by_character.erase(ini_ID);
             ini_by_path.erase(path);
             return;
         }
+        // BuildAccountJson (above) and serialisation are pure work; only the write is gated.
         const auto compact = glz::write_json(aj).value_or(std::string{});
         if (compact.empty()) {
             Log::Error("Account Inventory: Failed to serialise inventory. Inventory tracking data will be lost.");
             return;
         }
         const std::string json = glz::prettify_json(compact);
+        std::scoped_lock lock(load_mutex); // guard the file write against a concurrent load's read
         std::ofstream f(ini->location_on_disk, std::ios::binary | std::ios::trunc);
         if (!f) {
             Log::Error("Account Inventory: Failed to save inventory file. Inventory tracking data will be lost.");
