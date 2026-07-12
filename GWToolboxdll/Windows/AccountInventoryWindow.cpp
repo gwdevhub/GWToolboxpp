@@ -465,6 +465,8 @@ namespace {
     static bool CheckIniDirty(InventoryFile* ini, std::filesystem::file_time_type write_time);
     InventoryFile* GetIni(const std::string& ini_ID, const GUID& account);
     void LoadFromFiles(bool only_foreign);
+    void FlushPendingLoad();
+    void DrainPendingLoad();
     void SaveToFiles(bool include_foreign);
     void SortSlots(ImGuiTableSortSpecs* sort_specs);
     std::wstring GetItemEncDescription(GW::Item* item);
@@ -1007,11 +1009,19 @@ namespace {
         bool success = false;
     };
 
-    struct BatchLoadState {
-        std::mutex mutex;
+    // One dispatched load. A worker thread fills `results` and sets `done`; the main
+    // thread applies them (in Update, or a blocking flush) once done. Held behind a
+    // shared_ptr so an in-flight worker never dangles if the module is torn down or a
+    // newer load supersedes this one mid-parse.
+    struct PendingLoad {
         std::vector<LoadResult> results;
-        std::atomic<int> tasks_remaining{0};
+        std::atomic<bool> done{false};
     };
+    // The worker holds this for the whole duration of its file reads; Terminate() and
+    // full-file saves acquire it (via FlushPendingLoad) so they can't delete or overwrite
+    // a file while the load is still reading it.
+    std::mutex load_mutex;
+    std::shared_ptr<PendingLoad> active_load;
 
     // Encode the wide game string as fixed-width 4-hex code units with no separators
     // (lossless, and ~20% smaller than GuiUtils::ArrayToIni's space-separated form).
@@ -1218,34 +1228,63 @@ namespace {
             return;
         }
 
-        const size_t batch_count = std::min<size_t>(4, to_load.size());
-        auto state = std::make_shared<BatchLoadState>();
-        state->tasks_remaining = static_cast<int>(batch_count);
+        // Reading + parsing the files off the game thread. A newer load simply replaces
+        // active_load; any superseded worker keeps its own PendingLoad alive and finishes
+        // harmlessly into an orphan.
         const GUID captured_account = current_account;
+        auto pending = std::make_shared<PendingLoad>();
+        active_load = pending;
+        Resources::EnqueueWorkerTask([pending, to_load, only_foreign, captured_account] {
+            std::scoped_lock lock(load_mutex);
+            for (const auto& path : to_load)
+                pending->results.push_back(LoadIniFile(path, only_foreign, captured_account));
+            pending->done.store(true, std::memory_order_release);
+        });
 
-        for (size_t b = 0; b < batch_count; b++) {
-            std::vector<std::filesystem::path> batch;
-            for (size_t i = b; i < to_load.size(); i += batch_count)
-                batch.push_back(to_load[i]);
+        // A foreign-only reload (map/character change, module toggle) is applied later in
+        // Update(), so it never stalls the game thread - this is the load-in cost we're
+        // removing. A full load feeds the current account's own stored history that
+        // Initialize()/Delete All immediately build on, so it must complete before we return.
+        if (only_foreign)
+            needs_sorting = true;
+        else
+            FlushPendingLoad();
+    }
 
-            Resources::EnqueueWorkerTask([batch, only_foreign, captured_account, state] {
-                for (const auto& path : batch) {
-                    auto r = LoadIniFile(path, only_foreign, captured_account);
-                    std::scoped_lock lock(state->mutex);
-                    state->results.push_back(std::move(r));
-                }
-                --state->tasks_remaining;
-            });
-        }
-
-        const clock_t load_start = TIMER_INIT();
-        while (state->tasks_remaining > 0 && TIMER_DIFF(load_start) < 15000)
-            Sleep(10);
-
-        for (const auto& r : state->results)
+    // Apply a finished load's parsed results into the hierarchy (main thread). The caller
+    // must have observed active_load->done, so the worker is no longer touching results.
+    void ApplyPendingLoad()
+    {
+        if (!active_load) return;
+        for (const auto& r : active_load->results)
             ApplyLoadResult(r);
-
+        active_load.reset();
         needs_sorting = true;
+    }
+
+    // Non-blocking: apply the in-flight load if its worker has finished. Called every Update.
+    void DrainPendingLoad()
+    {
+        if (active_load && active_load->done.load(std::memory_order_acquire))
+            ApplyPendingLoad();
+    }
+
+    // Blocking: wait for the in-flight load to finish, then apply it. Used before tearing
+    // the module down or before a save that may delete/overwrite files a worker is reading.
+    void FlushPendingLoad()
+    {
+        const auto pending = active_load;
+        if (!pending) return;
+        const clock_t start = TIMER_INIT();
+        // The worker may still be queued behind other pool work; wait for it to publish.
+        while (!pending->done.load(std::memory_order_acquire) && TIMER_DIFF(start) < 15000)
+            Sleep(5);
+        // Acquiring load_mutex guarantees the worker has released the files it read. It sets
+        // `done` before unlocking, so a released mutex implies done; if it never ran (pool
+        // starved past the timeout) done stays false and we leave it for a later Update.
+        std::scoped_lock lock(load_mutex);
+        if (pending->done.load(std::memory_order_acquire))
+            ApplyPendingLoad();
     }
 
     // Write (or delete) the JSON file for one account.
@@ -1285,6 +1324,7 @@ namespace {
     void SaveToFiles(bool include_foreign)
     {
         if (include_foreign) {
+            FlushPendingLoad(); // this rewrites/deletes every file, incl. ones a load may be reading
             // sync every account we know a file for (used by "Delete All": accounts is
             // empty by then, so all files are removed). Snapshot first - SyncAccountFile
             // mutates ini_by_path/ini_by_character.
@@ -1569,6 +1609,8 @@ void AccountInventoryWindow::Initialize()
 
 void AccountInventoryWindow::Terminate()
 {
+    FlushPendingLoad(); // don't tear down state (or delete the file) while a worker is reading it
+    active_load.reset();
     GW::UI::RemoveUIMessageCallback(&OnUIMessage_HookEntry);
     accounts.clear();
     inventory_lookup.clear();
@@ -1776,6 +1818,7 @@ void ItemReroller::Update()
 
 void AccountInventoryWindow::Update(float)
 {
+    DrainPendingLoad(); // apply a finished background load without blocking the game thread
     inventory_scan.Update();
     item_reroll.Update();
     if (save_dirty_inventories_timer && !inventory_dirty.empty() && TIMER_DIFF(save_dirty_inventories_timer) > SAVE_DIRTY_INVENTORIES_TIMEOUT) {
