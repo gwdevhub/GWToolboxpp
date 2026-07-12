@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <sstream>
@@ -71,6 +72,11 @@ namespace {
     // skill's visual effect id, and locally emulate a PlayEffect to confirm it renders at chosen coords.
     bool log_play_effects = false;
     GW::HookEntry PlayEffect_Entry;
+
+    bool fps_active = false;
+    int fps_frames = 0;
+    clock_t fps_start = 0;
+    long fps_duration_ms = 0;
 
     std::filesystem::path cmd_path() { return Resources::GetPath(L"harness_command.txt"); }
     std::filesystem::path status_path() { return Resources::GetPath(L"harness_status.txt"); }
@@ -570,6 +576,110 @@ namespace {
             write_status("dattex: queued");
             return;
         }
+        if (verb == "nativez") { // nativez [radius step]: compare native terrain z vs GW::Map::QueryAltitude(plane 0) on a grid
+            float radius = 1200.f, step = 96.f;
+            is >> radius >> step;
+            radius = std::clamp(radius, 100.f, 5000.f);
+            step = std::clamp(step, 24.f, 500.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            if (!self) { write_status("nativez: no character"); return; }
+            Log::Log("[nativez] map=%d player=(%.0f,%.0f,z%u) radius=%.0f step=%.0f",
+                     static_cast<int>(GW::Map::GetMapID()), self->pos.x, self->pos.y, self->pos.zplane, radius, step);
+            uint32_t samples = 0, both = 0, logged = 0;
+            float max_delta = 0.f;
+            double sum_delta = 0.0;
+            for (float dx = -radius; dx <= radius; dx += step) {
+                for (float dy = -radius; dy <= radius; dy += step) {
+                    const float x = self->pos.x + dx, y = self->pos.y + dy;
+                    const float native = TerrainDrape::NativeTerrainZ(x, y);
+                    GW::GamePos p(x, y, 0);
+                    const float game = GW::Map::QueryAltitude(&p);
+                    ++samples;
+                    if (native == 0.f || game == 0.f) continue; // OOB on either side
+                    ++both;
+                    const float d = std::fabs(native - game);
+                    max_delta = std::max(max_delta, d);
+                    sum_delta += d;
+                    if (d > 5.f && logged++ < 20)
+                        Log::Log("[nativez]   (%.0f,%.0f) native=%.1f game=%.1f delta=%.1f", x, y, native, game, d);
+                }
+            }
+            char b[160];
+            snprintf(b, sizeof(b), "nativez: samples=%u both=%u max_delta=%.2f avg_delta=%.3f", samples, both, max_delta,
+                     both ? sum_delta / both : 0.0);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "drapebench") { // drapebench [n radius]: A/B the old all-planes QueryAltitude loop vs the new pruned SurfaceZ
+            uint32_t n = 2000;
+            float radius = 1200.f;
+            is >> n >> radius;
+            n = std::clamp(n, 100u, 200000u);
+            radius = std::clamp(radius, 100.f, 5000.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("drapebench: no character or pathing map");
+                return;
+            }
+            const auto n_planes = static_cast<uint32_t>(pm->size());
+            // Same pseudo-random disk of sample points for both methods.
+            std::vector<std::pair<float, float>> pts(n);
+            uint32_t seed = 0x9E3779B9u;
+            const auto next01 = [&seed] {
+                seed = seed * 1664525u + 1013904223u;
+                return (seed >> 8) * (1.f / 16777216.f);
+            };
+            for (uint32_t i = 0; i < n; ++i) {
+                const float ang = next01() * 6.2831853f, r = radius * std::sqrt(next01());
+                pts[i] = {self->pos.x + std::cos(ang) * r, self->pos.y + std::sin(ang) * r};
+            }
+
+            // OLD path: QueryAltitude on every plane, keep highest surface (min z). This is what SurfaceZ did before.
+            float sink_old = 0.f;
+            const auto t_old0 = std::chrono::steady_clock::now();
+            for (uint32_t i = 0; i < n; ++i) {
+                float best = 0.f;
+                for (uint32_t zp = 0; zp < n_planes; ++zp) {
+                    GW::GamePos p(pts[i].first, pts[i].second, zp);
+                    const float a = GW::Map::QueryAltitude(&p);
+                    if (a != 0.f && (best == 0.f || a < best)) best = a;
+                }
+                sink_old += best;
+            }
+            const auto us_old = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t_old0).count();
+
+            // NEW path: native plane-0 read + trapezoid-pruned non-zero planes.
+            float sink_new = 0.f;
+            const auto t_new0 = std::chrono::steady_clock::now();
+            for (uint32_t i = 0; i < n; ++i)
+                sink_new += TerrainDrape::SurfaceZ(pts[i].first, pts[i].second, self->pos.zplane, n_planes);
+            const auto us_new = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t_new0).count();
+
+            char b[220];
+            snprintf(b, sizeof(b),
+                     "drapebench: n=%u planes=%u | OLD %.2fms (%.2fus/q) | NEW %.2fms (%.2fus/q) | speedup %.1fx | sink d=%.0f",
+                     n, n_planes, us_old / 1000.0, static_cast<double>(us_old) / n, us_new / 1000.0,
+                     static_cast<double>(us_new) / n, us_new ? static_cast<double>(us_old) / us_new : 0.0,
+                     std::fabs(sink_old - sink_new));
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "fpsprobe") { // fpsprobe [seconds]: count frames over a window, report avg fps
+            float seconds = 3.f;
+            is >> seconds;
+            seconds = std::clamp(seconds, 0.5f, 30.f);
+            fps_duration_ms = static_cast<long>(seconds * 1000.f);
+            fps_frames = 0;
+            fps_start = TIMER_INIT();
+            fps_active = true;
+            write_status("fpsprobe: running");
+            return;
+        }
         write_status("unknown_command: " + verb);
     }
 } // namespace
@@ -604,6 +714,18 @@ void TestHarness::Update(float)
 {
 #ifdef HARNESS_ENABLED
     if (terminating) return;
+    if (fps_active) {
+        ++fps_frames;
+        const long elapsed = TIMER_DIFF(fps_start);
+        if (elapsed >= fps_duration_ms) {
+            fps_active = false;
+            char b[96];
+            snprintf(b, sizeof(b), "fpsprobe: frames=%d secs=%.2f avg_fps=%.1f", fps_frames, elapsed / 1000.f, fps_frames * 1000.f / elapsed);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+        }
+    }
     if (last_poll && TIMER_DIFF(last_poll) < kPollMs) return;
     last_poll = TIMER_INIT();
 
