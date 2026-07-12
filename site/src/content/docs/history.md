@@ -12,8 +12,21 @@ the latest version, go to the [Home Page](./) instead.
 * [New] Loot Beacons: marks dropped loot worth grabbing with a pillar of light in the game world, selectable by item rarity (white/blue/purple/gold/green) and/or trader value, with an option to also beacon items reserved for other party members.
 * [New] Skill Range Rings: hover any skill (skillbar, skills window, template previews) to see its ranges drawn on the ground — cast/use range around you, the AoE radius around your target or yourself, earshot for shouts and chants, and spirit/constant-effect range.
 * [New] When an item icon isn't present in your local `Gw.dat` — common on the Steam release, which downloads game data on demand — the Armory now shows a warning and explains the fix: launch Guild Wars once with the `-image` command line option to download all game data. A new [Troubleshooting](/docs/troubleshooting/#missing-images-in-toolbox) section walks through the setup for Steam and standalone installs.
+* [New] Mission Map: minimap overlays can now be drawn directly on the in-game mission map frame — toggle "Show minimap on mission map" in Mission Map settings, then individually enable agents, range rings, pings, AoE effects, background, terrain pmap and symbols. All layers default off.
+* [New] Mission Map: new "Show walkable terrain" overlay shades walkable vs non-walkable terrain on the mission map, independent of the vanquish overlay, with configurable fill and border colours.
+* [New] Quest paths can now be drawn on the 3D game terrain — draped along the ground at correct heights including bridges and steps — in addition to the minimap and world map. Quest paths are also drawn on the in-game mission map by default. Both are configurable in Quest module settings.
+* [New] Armory: right-clicking any armor or weapon piece now opens a context menu with "Copy chat command" (copies the `/armory` command with current dye slots to clipboard) and "Guild Wars Wiki" to look up the piece.
+* [New] Minimap: added "Show props on minimap" option in minimap settings to display map objects (barrels, containers, environment props) as dots on the minimap.
+* [New] Game Settings: added options to disable the camera's built-in mouse-movement smoothing and controller-movement smoothing independently, for snappier camera response.
+* [New] Game Settings: added option to suppress the sparkle/glow particle effect that plays on newly dropped items.
+* [New] Game Settings: added options to block the full-screen popup shown when completing a vanquish and when opening a dungeon chest.
+* [New] Audio Settings: added "Blocked In-Game Sounds" section to permanently mute specific audio files from playing in-game; an optional "In-Game Sound Log" records every sound as it plays so you can identify files to block.
+* [New] Launcher: the character-selection window now checks for exe and dll updates in the background and shows status inline with an Update button, so updates can be applied without closing the dialog.
 * [Fix] Fixed occasional crashing.
 * [Fix] Fixed layout bugs with the party window position module.
+* [Fix] Camera unlock: fixed a vanilla Guild Wars hang when dying while in first-person camera mode (camera unlock active) and then resurrecting — a NaN camera pitch left by the death-orbit transition caused the game's terrain ray-march to loop forever, hanging the render thread until you died again.
+* [Minor] Launcher: Windows Defender exclusion prompt now includes a "don't ask again for this version" option, suppressing repeat nags on the same build.
+* [Minor] Launcher: the launch window now uses per-monitor DPI awareness for correct layout on HiDPI and 4K displays.
 
 ## Version 8.30
 * [New] Item icons are now shown in the item's applied dye colour — including combined multi-dye colours — wherever Toolbox draws an item icon, such as the item info window and the Armory piece previews.
