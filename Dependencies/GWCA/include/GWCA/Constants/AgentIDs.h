@@ -455,6 +455,8 @@ namespace GW {
 
             constexpr int LockedChest = 8192; // this is actually ->ExtraType
 
+            constexpr int VarnyTheZealot = 8258;
+
             namespace Minipet {
                 constexpr int MiniatureConfessorDorian = 8344;
                 constexpr int MiniaturePrincessSalma = 8349;
