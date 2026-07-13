@@ -1119,6 +1119,13 @@ void GWToolbox::Update(GW::HookStatus*)
 
 void GWToolbox::Draw(IDirect3DDevice9* device)
 {
+    // GW frees d3d9.dll in its renderer teardown on exit while hooked device state can still trigger
+    // driver->runtime callbacks; pin the module so those callbacks can't land in unmapped memory.
+    static bool d3d9_pinned = false;
+    if (!d3d9_pinned) {
+        HMODULE d3d9 = nullptr;
+        d3d9_pinned = GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"d3d9.dll", &d3d9);
+    }
     HookUiRoot();
     switch (gwtoolbox_state) {
         case GWToolboxState::DrawTerminating:
