@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.32
+* [Fix] Skill Range Rings: fixed severe FPS drops (down to single digits for large rings) while hovering a skill. The rings were re-projected onto the terrain every frame; the draped geometry is now cached and only recomputed when you or your target moves, so inspecting a skill's range no longer tanks the framerate.
 * [Fix] Quest paths (both custom markers and quest markers) no longer sometimes fail to appear after changing maps — previously this could require a Toolbox restart to recover.
 * [Fix] Account Inventory: reduced the delay when loading into the game with the module enabled. Item icons are now loaded from `Gw.dat` on demand as they are displayed, rather than decoding an icon for every stored item on every map load — which flooded Toolbox's texture-loading threads and stalled load-in.
 
