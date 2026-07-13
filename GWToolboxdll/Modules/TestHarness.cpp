@@ -261,8 +261,7 @@ namespace {
                 for (uint32_t i = 0; i < n; ++i) {
                     const float t = (float)i / (float)(n - 1);
                     const float x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t;
-                    GW::GamePos p(x, y, plane);
-                    const float a = GW::Map::QueryAltitude(&p);
+                    const float a = TerrainDrape::QueryAltAt(x, y, plane);
                     Log::Log("[heightline]   t=%.2f (%.0f,%.0f) plane%u_alt=%.1f", t, x, y, plane, a);
                 }
                 write_status("heightline: logged");
