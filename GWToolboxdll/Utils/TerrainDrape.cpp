@@ -13,9 +13,7 @@
 #include <Utils/TerrainDrape.h>
 
 namespace {
-    // GW's terrain heightfield object (MapContext+0x84). Only the fields the altitude sampler touches
-    // are named; layout reverse-engineered from Terrain_QueryAltitude (Gw.exe FUN_0074eb10). See
-    // memory reference-gw-terrain-altitude-internals for the full derivation.
+    // GW's terrain heightfield object (MapContext+0x84); layout RE'd from Terrain_QueryAltitude (Gw.exe FUN_0074eb10). See memory reference-gw-terrain-altitude-internals.
     struct GwTerrain {
         uint32_t type;           // +0x00
         uint32_t dim_x;          // +0x04 tiles in x (multiple of 32)
@@ -82,10 +80,7 @@ namespace {
         return true;
     }
 
-    // Walk one plane's point-location DAG (root at PathingMap::root_node) to the containing trapezoid.
-    // Returns true iff a real trapezoid of this plane covers (x,y). Mirrors GW's exact locator
-    // (FUN_0072aa80); the toolbox's older Pathing::FindTrapezoid has an inverted entry guard, so this is
-    // implemented fresh rather than reused.
+    // Walk one plane's point-location DAG to the trapezoid containing (x,y); true iff one covers it. Mirrors GW's locator FUN_0072aa80 (reimplemented: Pathing::FindTrapezoid has an inverted entry guard).
     bool PlaneContains(const GW::PathingMap& pm, const float x, const float y)
     {
         const GW::Node* n = pm.root_node;
@@ -168,8 +163,7 @@ float TerrainDrape::DrapeZ(const float x, const float y, const uint32_t zplane, 
         best = ground;
     }
 
-    // The prop index covers every collision surface (walkable planes included), so when it is live the
-    // QueryAltitude plane loop is redundant; while it bakes, fall back to the pruned plane loop.
+    // Prop index covers every collision surface (walkable planes included); the plane loop is a fallback while it bakes.
     float prop_z;
     if (PropSurface::ClosestZAt(x, y, ref, &prop_z)) {
         if (prop_z != PropSurface::kNoData && std::fabs(prop_z - ref) < best_d) {
@@ -197,10 +191,7 @@ float TerrainDrape::DrapeZ(const float x, const float y, const uint32_t zplane, 
 
 float TerrainDrape::SurfaceZ(const float x, const float y, const uint32_t, const uint32_t n_planes)
 {
-    // Highest surface = min z. Plane-0 ground is a native read. The prop index adds every prop
-    // collision surface -- including NON-walkable props (railings, fences) the pathing planes can't
-    // reach -- and subsumes the walkable planes, so the QueryAltitude loop only runs as a fallback
-    // while the per-map bake is still in flight.
+    // Highest surface = min z. Plane-0 is a native read; the prop index adds all prop surfaces (incl. non-walkable railings/fences) and subsumes the walkable planes, so the QueryAltitude loop is only a fallback while it bakes.
     float best = NativeTerrainZ(x, y); // 0.f when off-terrain
 
     float prop_z;

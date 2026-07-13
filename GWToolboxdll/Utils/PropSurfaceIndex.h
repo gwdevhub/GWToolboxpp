@@ -2,27 +2,18 @@
 
 #include <cstdint>
 
-// Prop-surface height oracle (tasks/prop-height-oracle-plan.md): the world-space collision triangles of
-// every map prop ('mgrg' meshes reachable from MapProp+0x58) baked once per map into a uniform XY grid.
-// The snapshot of the live model data is taken on GW's main thread; the heavy transform/grid build runs
-// on a Resources worker; the finished immutable index is published by atomic pointer swap. Queries are
-// pure math on that index -- no game call, no allocation -- cheap enough for thousands per frame.
-// Until the bake lands (or after a map change invalidates the key) queries return false and callers fall
-// back to walkable-plane draping. Unlike the pathing planes, this covers NON-walkable props (railings,
-// fences, statues), so overlays can drape on top of them.
+// Prop-surface height oracle (tasks/prop-height-oracle-plan.md): every map prop's world-space collision triangles ('mgrg' meshes from MapProp+0x58) baked once per map into a uniform XY grid.
+// Main-thread snapshot -> Resources-worker build -> immutable index published by atomic pointer swap; queries are pure math (no game call, no allocation, thousands/frame).
+// Queries return false until the bake lands / after a map change (caller falls back to walkable-plane draping); unlike the pathing planes this covers NON-walkable props (railings, fences, statues).
 namespace PropSurface {
     // "No covering prop surface" sentinel (up is -z; real surfaces are finite, usually negative).
     inline constexpr float kNoData = 3.402823466e+38f;
 
-    // Master switch (default OFF): overlays currently drape on terrain + walkable planes only, as
-    // before the prop oracle. While disabled the queries no-op and never kick the per-map bake, so the
-    // whole PropSurfaceIndex stays dormant. Flip on to drape onto non-walkable props (railings/fences).
+    // Master switch (default OFF): while disabled queries no-op and never kick the per-map bake, so overlays drape on terrain + walkable planes only. On = drape onto non-walkable props (railings/fences).
     void SetEnabled(bool on);
     bool Enabled();
 
-    // Highest covering prop surface at (x,y): min z among triangles containing the point, or kNoData.
-    // Returns false while no index for the live map is published (caller falls back to QueryAltitude).
-    // Main thread only: lazily snapshots the live map context to kick the bake.
+    // Highest covering prop surface at (x,y): min z among triangles containing the point, or kNoData; false while no index for the live map is published (caller falls back to QueryAltitude). Main thread only: lazily kicks the bake.
     bool HighestZAt(float x, float y, float* out);
 
     // Covering prop surface nearest to `ref` (continuity draping for paths). Same contract as above.
@@ -31,12 +22,10 @@ namespace PropSurface {
     // True when the published index was baked from the currently-loaded map.
     bool Ready();
 
-    // Once per frame from GWToolbox::Draw: lets the queries re-validate the index's map key only once
-    // per frame instead of per query.
+    // Once per frame from GWToolbox::Draw: re-validate the index's map key once per frame instead of per query.
     void BeginFrame();
 
-    // Frees the published index. Call only after draw callbacks are gone and workers are joined
-    // (GWToolbox::Terminate, next to GameWorldCompositor::Terminate).
+    // Frees the published index; call only after draw callbacks are gone and workers are joined (GWToolbox::Terminate, next to GameWorldCompositor::Terminate).
     void Terminate();
 
     struct Stats {

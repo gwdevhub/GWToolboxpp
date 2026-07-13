@@ -54,8 +54,7 @@ namespace {
     constexpr uint32_t kMaxVerts = 2u * 1024 * 1024;
     constexpr uint32_t kMaxTotalTris = 4u * 1024 * 1024;
     constexpr float kMinTriArea2 = 1e-4f; // twice-area below this in XY = never contains a strict point
-    // Steeper than ~78 deg from horizontal can never be a useful drape surface (its XY footprint is a
-    // sliver) but dominates the cell lists of walls/columns/railing sides; nz is 2x the signed XY area.
+    // Steeper than ~78 deg from horizontal is never a useful drape surface (XY footprint is a sliver) but floods the cell lists of walls/columns/railing sides; nz is 2x the signed XY area.
     constexpr float kMinNzFrac2 = 0.04f; // keep when nz^2 >= 4% of |n|^2, i.e. |cos(slope)| >= 0.2
     constexpr float kMaxTriSpan = 10000.f; // gwinches; no real prop surface triangle is wider
 
@@ -129,9 +128,7 @@ namespace {
         sp->meshes.push_back(std::move(sm));
     }
 
-    // Model->world transform of a prop's 'mdl ' object, mirroring PropModelPushWorldTransform
-    // (FUN_007835d0): translation-only unless flag 0x20000 selects the two-basis-vector rotation, whose
-    // rows are (-cross(A,B).x, +.y, -.z) / (-A.x, +A.y, -A.z) / (-B.x, +B.y, -B.z).
+    // Model->world transform of a prop's 'mdl ' object, mirroring PropModelPushWorldTransform (FUN_007835d0): translation-only unless flag 0x20000 selects the two-basis-vector rotation (uniform scale folded in).
     void BuildTransform(const void* mdl, SnapProp* out)
     {
         out->t[0] = Read<float>(mdl, 0x10);
@@ -193,8 +190,7 @@ namespace {
         return true;
     }
 
-    // Main thread only: copies every prop's collision geometry out of live game memory so the worker
-    // never touches structures the engine could tear down.
+    // Main thread only: copies every prop's collision geometry out of live game memory so the worker never touches structures the engine could tear down.
     void TakeSnapshot(const MapKey& key, Snapshot* out)
     {
         const auto t0 = std::chrono::steady_clock::now();
@@ -219,9 +215,7 @@ namespace {
                 CopyMesh(mv, &sp);
                 ++out->meshes;
             }
-            // Render records are needed even on props WITH collision: e.g. the Temple staircases'
-            // collision is just the walkable ramp, while the flanking balustrades exist only in the
-            // render mesh. Collision stays in as the game's canonical (smooth) walkable surface.
+            // Render records are needed even on props WITH collision (e.g. Temple staircases: collision = walkable ramp, balustrades only in the render mesh); collision stays in as the canonical smooth walkable surface.
             const bool had_collision = !sp.meshes.empty();
             const uint32_t render_n = Read<uint32_t>(md, 0xa4);
             const auto* recs = render_n && render_n <= 4096 ? Read<const uint8_t* const*>(md, 0xa0) : nullptr;
@@ -263,9 +257,7 @@ namespace {
     std::atomic<uint32_t> g_generation{0};
     std::atomic<bool> g_enabled{false}; // prop draping off by default; see PropSurface::SetEnabled
 
-    // Superseded indices parked by the worker until the next main-thread BeginFrame: a query somewhere
-    // in the current frame may still be reading the old pointer, but nothing can hold it across the
-    // frame boundary (queries never cache it). Owned here so shutdown ordering never leaks one.
+    // Superseded indices parked until the next main-thread BeginFrame: a query this frame may still read the old pointer, but nothing holds it across the frame boundary (queries never cache it). Owned here so shutdown never leaks one.
     std::mutex g_retired_mutex;
     std::vector<const PropIndex*> g_retired;
 
@@ -286,8 +278,7 @@ namespace {
         for (const PropIndex* d : dead) delete d;
     }
 
-    // Main-thread-only memo: the index needs its map key checked against the live context only once per
-    // frame, not per query (the context can only change between frames, on the game thread).
+    // Main-thread-only memo: check the index's map key against the live context once per frame, not per query (context changes only between frames, on the game thread).
     uint32_t g_frame = 0;
     uint32_t g_validated_frame = ~0u;
     const PropIndex* g_validated = nullptr;
@@ -324,8 +315,7 @@ namespace {
                     Tri t{world[a * 3], world[a * 3 + 1], world[a * 3 + 2],
                           world[b * 3], world[b * 3 + 1], world[b * 3 + 2],
                           world[c * 3], world[c * 3 + 1], world[c * 3 + 2]};
-                    // A non-finite or absurdly large triangle (garbage payload) would poison the grid
-                    // math and the zmin sort; real prop surfaces are well under kMaxTriSpan across.
+                    // A non-finite / absurdly large triangle (garbage payload) would poison the grid math and the zmin sort; real prop surfaces are well under kMaxTriSpan across.
                     const float txmin = std::min({t.ax, t.bx, t.cx}), txmax = std::max({t.ax, t.bx, t.cx});
                     const float tymin = std::min({t.ay, t.by, t.cy}), tymax = std::max({t.ay, t.by, t.cy});
                     const float tzmin = std::min({t.az, t.bz, t.cz}), tzmax = std::max({t.az, t.bz, t.cz});
@@ -392,8 +382,7 @@ namespace {
             for (uint32_t ti = 0; ti < idx->tris.size(); ++ti) {
                 for_cells(idx->tris[ti], [&](const size_t c) { idx->refs[cursor[c]++] = ti; });
             }
-            // Highest surface = min z, so with each cell sorted by tri zmin the query can stop as soon
-            // as the next triangle's whole z-range is below the best hit.
+            // Highest surface = min z: with each cell sorted by tri zmin the query stops once the next triangle's whole z-range is below the best hit.
             const auto tri_zmin = [&](const uint32_t ti) {
                 const Tri& t = idx->tris[ti];
                 return std::min({t.az, t.bz, t.cz});
@@ -431,8 +420,7 @@ namespace {
             return;
         }
         Resources::EnqueueWorkerTask([snap, gen] {
-            // The worker pool runs tasks bare inside a jthread: an escaping exception (e.g. bad_alloc
-            // on a torn snapshot) would std::terminate the game, so everything is contained here.
+            // The worker pool runs tasks bare inside a jthread: an escaping exception (e.g. bad_alloc on a torn snapshot) would std::terminate the game, so contain everything here.
             try {
                 std::unique_ptr<PropIndex> idx(BuildIndex(*snap));
                 if (g_generation.load() == gen) {
@@ -464,8 +452,7 @@ namespace {
         return nullptr;
     }
 
-    // Exact plane z of the triangle at (x,y), clamped to the triangle's z-range like the game's
-    // RayTriangleMinZ (FUN_0065d5f0).
+    // Exact plane z of the triangle at (x,y), clamped to its z-range like the game's RayTriangleMinZ (FUN_0065d5f0).
     float TriZAt(const Tri& t, const float x, const float y)
     {
         const float zmin = std::min({t.az, t.bz, t.cz});
@@ -506,8 +493,7 @@ namespace {
 bool PropSurface::HighestZAt(const float x, const float y, float* out)
 {
     if (!g_enabled.load(std::memory_order_relaxed)) return false; // caller falls back to QueryAltitude
-    // An empty index (bake saw no usable prop geometry) keeps callers on the QueryAltitude fallback
-    // instead of silently degrading every drape to terrain-only.
+    // An empty index (bake saw no usable prop geometry) keeps callers on the QueryAltitude fallback instead of silently degrading every drape to terrain-only.
     const PropIndex* idx = Acquire();
     if (!idx || idx->tris.empty()) return false;
     float best = kNoData;

@@ -625,8 +625,7 @@ namespace {
             const auto* pm = GW::Map::GetPathingMap();
             const auto n_planes = pm ? static_cast<uint32_t>(pm->size()) : 0u;
 
-            // Which prop indices back a walkable pathing plane? PathingMap+0x00 (GWCA 'zplane') is the prop index
-            // for non-ground planes (ground plane = UINT_MAX).
+            // Prop indices backing a walkable plane: PathingMap+0x00 (GWCA 'zplane') is the prop index for non-ground planes (ground = UINT_MAX).
             std::set<uint32_t> walkable_props;
             for (uint32_t zp = 0; pm && zp < n_planes; ++zp) {
                 const uint32_t pidx = (*pm)[zp].zplane;
@@ -693,8 +692,7 @@ namespace {
                 float old_all = 0.f, new_z = 0.f, prune = 0.f;
                 TerrainDrape::DrapeCompare(x, y, n_planes, &old_all, &new_z, &prune);
 
-                // Pruning correctness: prune uses the SAME game values as old_all, differing only in which
-                // planes are considered. Any gap here is a plane the trapezoid pruning wrongly dropped/added.
+                // Pruning correctness: prune uses the SAME game values as old_all, differing only in planes considered; any gap = a plane the pruning wrongly dropped/added.
                 const float dp = std::fabs(old_all - prune);
                 if (dp > max_prune) max_prune = dp;
                 if (dp > 0.5f) {
@@ -834,8 +832,7 @@ namespace {
                 seed = seed * 1664525u + 1013904223u;
                 return (seed >> 8) * (1.f / 16777216.f);
             };
-            // The walkable baseline can't see non-walkable props, so new being HIGHER (more negative) is
-            // the feature; new being LOWER means the oracle missed a walkable surface = transform bug.
+            // Walkable baseline can't see non-walkable props: new HIGHER (more negative) is the feature; new LOWER = oracle missed a walkable surface (transform bug).
             uint32_t both = 0, match = 0, prop_higher = 0, missing = 0, logged = 0;
             float max_missing = 0.f, max_higher = 0.f;
             for (uint32_t i = 0; i < n; ++i) {
