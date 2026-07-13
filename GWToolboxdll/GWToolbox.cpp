@@ -26,6 +26,7 @@
 #include <Timer.h>
 #include <Utils/AoeEffects.h>
 #include <Utils/GameWorldCompositor.h>
+#include <Utils/PropSurfaceIndex.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/TeamBuild.h>
 
@@ -1079,6 +1080,9 @@ void GWToolbox::Update(GW::HookStatus*)
     UpdateModulesTerminating(delta_f);
 
     Build::Update();
+    // From Update rather than Draw so the per-frame memo keeps ticking while rendering is gated
+    // (minimized, device lost) and a map change during that window can't serve a stale index.
+    PropSurface::BeginFrame();
 
     // Update loop
     for (const auto m : modules_enabled) {
@@ -1151,6 +1155,7 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     // Once-per-frame tick for the shared in-world compositor (installs its hook lazily, resets the
     // per-frame draw guard) so any module that registered an under-UI draw runs this frame.
     GameWorldCompositor::BeginFrame();
+    PropSurface::BeginFrame();
 
     ImGui_ImplDX9_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -1335,6 +1340,7 @@ void GWToolbox::UpdateTerminating(float delta_f, bool panicking)
     // All modules are gone (so the shared compositor has no registered draws); release its hook and GPU resources.
     GameWorldCompositor::Terminate();
     AoeEffects::Terminate();
+    PropSurface::Terminate();
 
     GW::DisableHooks();
 

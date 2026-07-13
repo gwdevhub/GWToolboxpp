@@ -44,6 +44,7 @@
 #include "Modules/CartographerModule.h"
 #include "Modules/SkillRangeRingsModule.h"
 #include "Utils/GameWorldCompositor.h"
+#include "Utils/PropSurfaceIndex.h"
 #include "Utils/SettingsRegistry.h"
 #include "Utils/TerrainDrape.h"
 #include "Utils/TextUtils.h"
@@ -788,6 +789,166 @@ namespace {
                      std::fabs(sink_old - sink_new));
             Log::Log("[harness] %s", b);
             Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "propmesh") { // propmesh [prop_index]: dump one prop's collision-model chain; default = the prop backing the player's plane
+            uint32_t idx = 0xFFFFFFFFu;
+            is >> idx;
+            if (idx == 0xFFFFFFFFu) {
+                const auto self = GW::Agents::GetControlledCharacter();
+                const auto* pm = GW::Map::GetPathingMap();
+                if (self && pm && self->pos.zplane < pm->size()) idx = (*pm)[self->pos.zplane].zplane;
+            }
+            if (idx == 0xFFFFFFFFu) {
+                write_status("propmesh: no prop index (need: propmesh <idx>, or stand on a non-ground plane)");
+                return;
+            }
+            PropSurface::DebugDumpProp(idx);
+            Log::FlushFile();
+            char b[96];
+            snprintf(b, sizeof(b), "propmesh: dumped prop %u (see [propmesh] log lines)", idx);
+            write_status(b);
+            return;
+        }
+        if (verb == "propverify") { // propverify [n radius qradius]: prop-aware SurfaceZ vs the game's all-planes QueryAltitude ground truth
+            uint32_t n = 2000;
+            float radius = 1500.f, qradius = 0.1f; // qradius ~0 = point sample; the default-5 disk-max inflates the game answer on slopes/edges
+            is >> n >> radius >> qradius;
+            n = std::clamp(n, 100u, 100000u);
+            radius = std::clamp(radius, 100.f, 5000.f);
+            qradius = std::clamp(qradius, 0.01f, 10.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("propverify: no character or pathing map");
+                return;
+            }
+            if (!PropSurface::Ready()) {
+                write_status("propverify: prop index not baked yet (queries trigger the bake; retry)");
+                TerrainDrape::SurfaceZ(self->pos.x, self->pos.y, 0, 1);
+                return;
+            }
+            const auto n_planes = static_cast<uint32_t>(pm->size());
+            uint32_t seed = 0xBADC0DEu;
+            const auto next01 = [&seed] {
+                seed = seed * 1664525u + 1013904223u;
+                return (seed >> 8) * (1.f / 16777216.f);
+            };
+            // The walkable baseline can't see non-walkable props, so new being HIGHER (more negative) is
+            // the feature; new being LOWER means the oracle missed a walkable surface = transform bug.
+            uint32_t both = 0, match = 0, prop_higher = 0, missing = 0, logged = 0;
+            float max_missing = 0.f, max_higher = 0.f;
+            for (uint32_t i = 0; i < n; ++i) {
+                const float ang = next01() * 6.2831853f, r = radius * std::sqrt(next01());
+                const float x = self->pos.x + std::cos(ang) * r, y = self->pos.y + std::sin(ang) * r;
+                float old_all = 0.f;
+                for (uint32_t zp = 0; zp < n_planes; ++zp) {
+                    GW::GamePos p{x, y, zp};
+                    const float a = GW::Map::QueryAltitude(&p, qradius);
+                    if (a != 0.f && (old_all == 0.f || a < old_all)) old_all = a;
+                }
+                const float new_z = TerrainDrape::SurfaceZ(x, y, 0, n_planes);
+                if (old_all == 0.f || new_z == 0.f) continue;
+                ++both;
+                const float d = new_z - old_all; // <0: new is higher (prop win); >0: new is lower (MISSING surface)
+                if (d > 8.f) {
+                    ++missing;
+                    max_missing = std::max(max_missing, d);
+                    if (logged++ < 15)
+                        Log::Log("[propverify]   MISSING (%.0f,%.0f) game=%.1f new=%.1f d=%.1f", x, y, old_all, new_z, d);
+                }
+                else if (d < -8.f) {
+                    ++prop_higher;
+                    max_higher = std::max(max_higher, -d);
+                }
+                else {
+                    ++match;
+                }
+            }
+            char b[224];
+            snprintf(b, sizeof(b), "propverify: n=%u both=%u match=%u prop_higher=%u (max %.0f) MISSING=%u (max %.0f)",
+                     n, both, match, prop_higher, max_higher, missing, max_missing);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "proptransect") { // proptransect [len step]: walkable-only vs prop-aware SurfaceZ along 8 rays from the player
+            float len = 600.f, step = 25.f;
+            is >> len >> step;
+            len = std::clamp(len, 100.f, 5000.f);
+            step = std::clamp(step, 5.f, 200.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("proptransect: no character or pathing map");
+                return;
+            }
+            const auto n_planes = static_cast<uint32_t>(pm->size());
+            Log::Log("[proptransect] map=%d player=(%.0f,%.0f,z%u,%.0f) len=%.0f step=%.0f ready=%d",
+                     static_cast<int>(GW::Map::GetMapID()), self->pos.x, self->pos.y, self->pos.zplane, self->z,
+                     len, step, static_cast<int>(PropSurface::Ready()));
+            uint32_t wins = 0;
+            for (int dir = 0; dir < 8; ++dir) {
+                const float ang = dir * 0.7853981f;
+                const float dx = std::cos(ang), dy = std::sin(ang);
+                uint32_t dir_wins = 0;
+                float peak = 0.f, peak_d = 0.f;
+                for (float d = step; d <= len; d += step) {
+                    const float x = self->pos.x + dx * d, y = self->pos.y + dy * d;
+                    float old_all = 0.f, new_z = 0.f;
+                    TerrainDrape::DrapeCompare(x, y, n_planes, &old_all, &new_z, nullptr);
+                    if (old_all == 0.f || new_z == 0.f) continue;
+                    const float lift = old_all - new_z; // >0: prop surface rides ABOVE the walkable answer
+                    if (lift > 5.f) {
+                        ++dir_wins;
+                        if (lift > peak) {
+                            peak = lift;
+                            peak_d = d;
+                        }
+                        if (dir_wins <= 4)
+                            Log::Log("[proptransect]   dir=%d d=%.0f (%.0f,%.0f) walkable=%.1f prop=%.1f lift=%.1f",
+                                     dir * 45, d, x, y, old_all, new_z, lift);
+                    }
+                }
+                wins += dir_wins;
+                if (dir_wins)
+                    Log::Log("[proptransect] dir=%d: %u prop-win samples, peak lift %.1f at d=%.0f", dir * 45, dir_wins, peak, peak_d);
+            }
+            char b[160];
+            snprintf(b, sizeof(b), "proptransect: prop_wins=%u across 8 dirs (len=%.0f step=%.0f) ready=%d",
+                     wins, len, step, static_cast<int>(PropSurface::Ready()));
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "propstats") { // propstats: published prop-surface index stats
+            PropSurface::Stats st;
+            if (!PropSurface::GetStats(&st)) {
+                const auto self = GW::Agents::GetControlledCharacter();
+                if (self) TerrainDrape::SurfaceZ(self->pos.x, self->pos.y, 0, 1); // kick the lazy bake
+                write_status("propstats: no index published yet (bake kicked; retry)");
+                return;
+            }
+            char b[240];
+            snprintf(b, sizeof(b), "propstats: ready=%d props=%u (render %u) skipped=%u meshes=%u tris=%u grid=%ux%u refs=%u snap=%.1fms bake=%.1fms",
+                     static_cast<int>(PropSurface::Ready()), st.props, st.render_props, st.skipped_props, st.meshes,
+                     st.triangles, st.cells_x, st.cells_y, st.refs, st.snapshot_ms, st.bake_ms);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "propdrape") { // propdrape [0|1]: master switch for prop draping (off by default = terrain+planes only)
+            int on = -1;
+            is >> on;
+            if (on == 0 || on == 1) PropSurface::SetEnabled(on != 0);
+            char b[96];
+            snprintf(b, sizeof(b), "propdrape: %s%s", PropSurface::Enabled() ? "ENABLED" : "disabled",
+                     on == 0 || on == 1 ? " (set)" : " (state)");
+            Log::Log("[harness] %s", b);
             write_status(b);
             return;
         }

@@ -17,10 +17,12 @@ namespace TerrainDrape {
 
     float QueryAltAt(float x, float y, uint32_t zplane);
 
-    // Surface altitude at (x,y), choosing the plane closest to `ref`.
+    // Surface altitude at (x,y), choosing the surface closest to `ref`. Once the PropSurface index is
+    // baked, candidates are terrain + every prop collision surface; until then, terrain + walkable planes.
     float DrapeZ(float x, float y, uint32_t zplane, uint32_t n_planes, float ref);
 
-    // Highest static surface at (x,y) across all planes. Returns 0.f when nothing has data.
+    // Highest static surface at (x,y). Returns 0.f when nothing has data. Once the PropSurface index is
+    // baked this includes NON-walkable props (railings, fences), so overlays drape on top of them.
     float SurfaceZ(float x, float y, uint32_t zplane, uint32_t n_planes);
 
     // Plane count of the current pathing map; 0 while the map is still loading.

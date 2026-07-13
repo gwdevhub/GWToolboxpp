@@ -9,6 +9,7 @@
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/Managers/MapMgr.h>
 
+#include <Utils/PropSurfaceIndex.h>
 #include <Utils/TerrainDrape.h>
 
 namespace {
@@ -167,6 +168,16 @@ float TerrainDrape::DrapeZ(const float x, const float y, const uint32_t zplane, 
         best = ground;
     }
 
+    // The prop index covers every collision surface (walkable planes included), so when it is live the
+    // QueryAltitude plane loop is redundant; while it bakes, fall back to the pruned plane loop.
+    float prop_z;
+    if (PropSurface::ClosestZAt(x, y, ref, &prop_z)) {
+        if (prop_z != PropSurface::kNoData && std::fabs(prop_z - ref) < best_d) {
+            best = prop_z;
+        }
+        return best;
+    }
+
     const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
     if (pm) {
         const auto planes = std::min<uint32_t>(n_planes, static_cast<uint32_t>(pm->size()));
@@ -186,10 +197,17 @@ float TerrainDrape::DrapeZ(const float x, const float y, const uint32_t zplane, 
 
 float TerrainDrape::SurfaceZ(const float x, const float y, const uint32_t, const uint32_t n_planes)
 {
-    // Highest surface = min z. Plane-0 ground is a native read; only planes whose trapezoid actually
-    // covers (x,y) can add a higher (bridge/prop) surface, so the old blind all-planes loop is pruned
-    // to those candidates.
+    // Highest surface = min z. Plane-0 ground is a native read. The prop index adds every prop
+    // collision surface -- including NON-walkable props (railings, fences) the pathing planes can't
+    // reach -- and subsumes the walkable planes, so the QueryAltitude loop only runs as a fallback
+    // while the per-map bake is still in flight.
     float best = NativeTerrainZ(x, y); // 0.f when off-terrain
+
+    float prop_z;
+    if (PropSurface::HighestZAt(x, y, &prop_z)) {
+        if (prop_z != PropSurface::kNoData && (best == 0.f || prop_z < best)) best = prop_z;
+        return best;
+    }
 
     const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
     if (pm) {
