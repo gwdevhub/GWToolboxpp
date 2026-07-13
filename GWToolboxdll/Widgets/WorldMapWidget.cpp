@@ -789,6 +789,7 @@ namespace {
     bool DrawQuestMarkerOnWorldMap(const GW::Quest* quest)
     {
         if (!(world_map_context && quest)) return false;
+        if (!(quest_icon_texture && *quest_icon_texture)) return false;
 
 
         bool is_hovered = false;
@@ -909,6 +910,7 @@ namespace {
     bool DrawPortalOnWorldMap(const MapPortal& portal)
     {
         if (!world_map_context) return false;
+        if (!(quest_icon_texture && *quest_icon_texture)) return false;
 
         auto& pos = portal.world_pos;
         const auto viewport_pos = CalculateViewportPos(pos, world_map_context->top_left);
