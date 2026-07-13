@@ -602,10 +602,10 @@ std::unordered_map<int, std::vector<MapConstantInfo>> constant_maps_info = {
     {GW::Constants::MapID::Piken_Square_pre_Searing_outpost, 0x1c539}}},
   {0x5E78F,
    {{GW::Constants::MapID::Forsaken_Tunnels_Presearing_Level1, 0x5E78F}}},
-  {0x5E9F9, 
-   {{static_cast<GW::Constants::MapID>(880)/*"Tunnels of the Forsaken"*/, 0x5E9F9}}}, //fix this in gwca
-  {0x5E9FA, 
-   {{static_cast<GW::Constants::MapID>(881)/*"Tunnels of the Forsaken: Level 2"*/, 0x5E9FA}}}, //fix this in gwca
+  {0x5E9F9,
+   {{GW::Constants::MapID::Forsaken_Tunnels_Level1, 0x5E9F9}}},
+  {0x5E9FA,
+   {{GW::Constants::MapID::Forsaken_Tunnels_Level2, 0x5E9FA}}},
   {0x1bb1d,
    {{GW::Constants::MapID::Regent_Valley_pre_Searing, 0x1bb1d},
     {GW::Constants::MapID::Fort_Ranik_pre_Searing_outpost, 0x1bb1d}}},
