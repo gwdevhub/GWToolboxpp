@@ -542,14 +542,12 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
         case MapID::Forsaken_Tunnels_Level1:
             AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level1,
                                     MapID::Forsaken_Tunnels_Level2,
-                                    MapID::Forsaken_Tunnels_Level3},
-                                   ModelID::VarnyTheZealot);
+                                    MapID::Forsaken_Tunnels_Level3});
             break;
         case MapID::Forsaken_Tunnels_Presearing_Level1:
             AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Presearing_Level1,
                                     MapID::Forsaken_Tunnels_Presearing_Level2,
-                                    MapID::Forsaken_Tunnels_Presearing_Level3},
-                                   ModelID::VarnyTheZealot);
+                                    MapID::Forsaken_Tunnels_Presearing_Level3});
             break;
 
         // dungeons - 5 levels:
