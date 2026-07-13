@@ -23,7 +23,7 @@ namespace MathUtil {
         }
 
         GW::Vec3f pos{ gp.x, gp.y, 0.0f };
-        pos.z = TerrainDrape::QueryAltAt(pos.x, pos.y, 0); // preserves the old (GamePos*)&pos cast, which reinterpreted the 0.0f z as zplane 0
+        pos.z = TerrainDrape::QueryAltAt(pos.x, pos.y, gp.zplane); // sample on the point's own plane (guarded valid above)
         return pos;
     }
 
