@@ -42,6 +42,9 @@ namespace {
     bool compositor_failed = false;
     bool compositor_hooked = false;
     bool drawn_this_frame = false; // guard: draw only in the first world pass per frame
+#ifdef _DEBUG
+    int dump_calls_remaining = 0; // harness `frcache` diagnostics: log buffer layout for the next N calls
+#endif
 
     // Registered overlay draws, invoked in registration order between world and HUD.
     std::vector<std::pair<int, GameWorldCompositor::DrawCallback>> callbacks;
@@ -113,6 +116,20 @@ namespace {
         GW::Hook::EnterHook();
         IDirect3DDevice9* device = GW::Render::GetDevice();
 
+#ifdef _DEBUG
+        if (dump_calls_remaining > 0 && render_buffer) {
+            dump_calls_remaining--;
+            auto& buf = *render_buffer;
+            Log::Log("[frcache] call size=%u drawn_this_frame=%d", buf.size(), drawn_this_frame ? 1 : 0);
+            for (uint32_t i = 0; i < buf.size(); i++) {
+                const auto& e = buf[i];
+                const GW::UI::Frame* f = (e.type != FRCACHE_GPU_RENDER && frame_array && e.index < frame_array->size()) ? (*frame_array)[e.index] : nullptr;
+                Log::Log("[frcache]   i=%u type=%u index=%u param=0x%x frame_id=%d visible=%d",
+                         i, (uint32_t)e.type, e.index, e.param, f ? (int)f->frame_id : -1, f && f->IsVisible() ? 1 : 0);
+            }
+        }
+#endif
+
         // Nothing to do (no overlays, unusable buffer/device) -> run the original untouched.
         if (callbacks.empty() || !render_buffer || !device) {
             FrCacheRenderAll_Ret(param_1, param_2);
@@ -122,22 +139,45 @@ namespace {
 
         auto& buffer = *render_buffer;
 
-        // The main 3D scene is the FIRST GPU_RENDER block; everything after is HUD - including the 2D HUD and
-        // agent/UI 3D renders, which all correctly draw over us. Split right after the first GPU block. (Skipping
-        // further consecutive GPU blocks would swallow GPU-rendered HUD entries into the world side, so our
-        // overlays would then draw on top of them.) UI-only/sub-render passes have no GPU block, so boundary
-        // stays == size and is skipped below.
-        uint32_t boundary = buffer.size();
+        // The main 3D scene starts with the FIRST GPU_RENDER entry; the HUD follows, possibly interleaved
+        // with further GPU entries (e.g. Domain of Anguish's frame keeps GPU slices to the very end). GPU
+        // entries are (index, count) slices of ONE contiguous GR command stream - FlushCommandQueue at the
+        // boundary materialises the whole queued world regardless of where the slices sit, so splitting
+        // right after the first GPU entry is safe. A GPU entry whose index does NOT continue the stream
+        // (index != previous index + count) is a SECOND world-render dispatch (e.g. a 3D bust in the
+        // hero/character panel): running that in a split-off second call re-runs the per-object cloth/hair
+        // physics off a fixed 1/30s accumulator not designed to advance twice in one real frame, desyncing
+        // constraint indices from the double-buffered positions (garbage spring-solver index / GrBound.cpp
+        // assert in wild dumps). UI-only/sub-render passes have no GPU entry, so boundary stays 0 and is
+        // skipped below.
+        uint32_t boundary = 0;
+        bool stream_restart = false;
+        uint32_t stream_expect = 0;
         for (uint32_t i = 0; i < buffer.size(); i++) {
-            if (buffer[i].type == FRCACHE_GPU_RENDER) {
-                boundary = i + 1;
+            const auto& e = buffer[i];
+            if (e.type != FRCACHE_GPU_RENDER) continue;
+            if (boundary == 0) boundary = i + 1;
+            else if (e.index != stream_expect) {
+                stream_restart = true;
                 break;
             }
+            stream_expect = e.index + e.param;
         }
 
         // Only the main world-then-HUD pass draws; others pass through, and the guard draws exactly once per frame.
         if (boundary == 0 || boundary >= buffer.size() || drawn_this_frame) {
             FrCacheRenderAll_Ret(param_1, param_2);
+            GW::Hook::LeaveHook();
+            return;
+        }
+
+        // Second dispatch present: keep GW's calls untouched (single call, single physics tick) and draw the
+        // overlays on top of the HUD for just this frame.
+        if (stream_restart) {
+            FrCacheRenderAll_Ret(param_1, param_2);
+            GW::Render::FlushCommandQueue();
+            RunCallbacks(device);
+            drawn_this_frame = true;
             GW::Hook::LeaveHook();
             return;
         }
@@ -271,6 +311,13 @@ void GameWorldCompositor::UnregisterDraw(const int token)
         RemoveHook();
     }
 }
+
+#ifdef _DEBUG
+void GameWorldCompositor::RequestBufferDump()
+{
+    dump_calls_remaining = 50;
+}
+#endif
 
 bool GameWorldCompositor::IsActive()
 {

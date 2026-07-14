@@ -27,7 +27,11 @@ public:
 
     const char* Name() const override { return "GW Dat Module"; };
     bool HasSettings() override { return false; }
+    void Update(float) override;
     void Terminate() override;
+
+    // True once the client's Gw.dat has been located and its index parsed (no load attempt of its own).
+    static bool IsLoaded();
 
     // --- Texture decoding ---
     static IDirect3DTexture9** LoadGreyscaleTextureFromFileId(uint32_t file_id);

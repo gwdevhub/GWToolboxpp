@@ -2251,7 +2251,12 @@ void SkillToUse::Update()
         slot = 0;
         return;
     }
-    const GW::Skill& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+    const auto skilldata_ptr = GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+    if (!skilldata_ptr) {
+        slot = 0;
+        return;
+    }
+    const GW::Skill& skilldata = *skilldata_ptr;
     if ((skilldata.adrenaline == 0 && skill.GetRecharge() == 0) || (skilldata.adrenaline > 0 && skill.adrenaline_a == skilldata.adrenaline)) {
         const auto wait_for_queue = !(skilldata.type == GW::Constants::SkillType::Shout || skilldata.type == GW::Constants::SkillType::Stance || skilldata.type == GW::Constants::SkillType::PetAttack);
         if (wait_for_queue && skillbar->cast_array.size()) return; // Don't use skill if we've got something queued

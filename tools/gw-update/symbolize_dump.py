@@ -18,11 +18,14 @@ Read-only. Writes only the --out JSON if given.
 import argparse
 import json
 import os
+import shutil
 import struct
 import subprocess
 import sys
 
 LLVM_SYMBOLIZER = r"C:\Users\m\tools\clang+llvm-22.1.5-x86_64-pc-windows-msvc\bin\llvm-symbolizer.exe"
+if not os.path.isfile(LLVM_SYMBOLIZER):
+    LLVM_SYMBOLIZER = shutil.which("llvm-symbolizer") or LLVM_SYMBOLIZER
 
 # module basename (lowercase) -> binary that carries symbols (PDB found alongside)
 DEFAULT_BINARIES = {

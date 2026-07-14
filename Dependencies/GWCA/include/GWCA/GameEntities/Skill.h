@@ -11,7 +11,7 @@ namespace GW {
         enum class SkillType;
     }
 
-    struct Skill { // total : 0xA0/160
+    struct Skill { // total : 0xA4/164
         /* +h0000 */ GW::Constants::SkillID skill_id;
         /* +h0004 */ uint32_t h0004;
         /* +h0008 */ GW::Constants::Campaign campaign;

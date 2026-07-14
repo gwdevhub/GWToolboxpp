@@ -33,6 +33,7 @@
 #include <GWToolbox.h>
 #include <ImGuiAddons.h>
 #include <Utils/EncString.h>
+#include <Utils/SettingsRegistry.h>
 #include <Utils/TextUtils.h>
 
 #include <GWCA/Context/GameplayContext.h>
@@ -447,6 +448,18 @@ namespace {
             }
         }
 
+        // A ctx-fallback entry (bounds mismatch below) is keyed by map_id + live node count, not fid — probe for it
+        // or the resident-only path never sees it and the prewarm loop re-reads the DAT forever.
+        if (map_id == GW::Map::GetMapID()) {
+            if (const auto mc = GW::GetMapContext(); mc && mc->path && mc->path->staticData) {
+                const auto ctx_hash = static_cast<uint64_t>(map_id) | (static_cast<uint64_t>(mc->path->pathNodes.size()) << 32);
+                if (const auto it = mile_paths_by_coords.find(ctx_hash); it != mile_paths_by_coords.end()) {
+                    TouchLru(ctx_hash);
+                    return it->second;
+                }
+            }
+        }
+
         // Not resident: the DAT read + parse below blocks the caller. Refuse on the game thread.
         if (!allow_load) return nullptr;
 
@@ -477,7 +490,9 @@ namespace {
         auto& map_data = *chosen;
 
         // file_id was not resident above, so this full key (file_id + pathNodeSize) is new too.
-        auto hash = static_cast<uint64_t>(fid);
+        // Ctx-fallback data must not be cached under the (stale) fid: it would shadow the real file's mesh
+        // for every other map sharing that fid. Key it by map_id like LoadMapFromContext does.
+        auto hash = chosen == &ctx_data ? static_cast<uint64_t>(map_id) : static_cast<uint64_t>(fid);
         hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
 
         // Cache map info for bounds drawing
@@ -598,6 +613,9 @@ namespace {
 
     std::vector<CustomRenderer::CustomLine*> navmesh_edge_lines; // viz-only navmesh poly-edge overlay
     PathfindingWindow::Settings settings;
+    constexpr const char* path_recalc_distance_help = "How far you must move (game units / gwinches) before the rendered quest path recomputes. Lower = more responsive but heavier; the recompute is also rate-capped to ~30/s.";
+    constexpr const char* navmesh_overlay_help = "Draw the navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included).";
+    constexpr const char* navmesh_sample_spacing_help = "How often the overlay samples terrain height when draping edges (game units). Lower = lines hug the floor/steps more exactly, but more vertices to build and draw.";
     std::vector<CustomRenderer::CustomLine*> bounds_lines;
     std::vector<CustomRenderer::CustomLine*> graph_edge_lines;
     std::vector<CustomRenderer::CustomLine*> portal_marker_lines;
@@ -2392,8 +2410,25 @@ namespace {
 
     std::set<uint32_t> file_id_mismatch_warned; // maps already warned about
 
+    // Maps whose outpost shares the explorable's MapID but loads a different map file (the constant table holds the
+    // explorable file; the outpost's kLoadMapContext file_name doesn't decode, so the runtime override can't catch it).
+    constexpr std::pair<GW::Constants::MapID, uint32_t> outpost_file_id_overrides[] = {
+        {GW::Constants::MapID::Domain_of_Anguish, 0x3452b}, // outpost = shared torment gate room; explorable = 0x3584f
+    };
+
+    bool IsDualInstanceMap(GW::Constants::MapID map_id)
+    {
+        return std::ranges::any_of(outpost_file_id_overrides, [map_id](const auto& e) { return e.first == map_id; });
+    }
+
     uint32_t GetMapFileId(GW::Constants::MapID map_id)
     {
+        if (map_id == GW::Map::GetMapID() && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
+            for (const auto& [mid, outpost_fid] : outpost_file_id_overrides) {
+                if (mid == map_id) return outpost_fid;
+            }
+        }
+
         // Check runtime lookup table (populated from constant_maps_info + StoC packets)
         auto it = map_id_to_file_hash.find(map_id);
         if (it != map_id_to_file_hash.end()) return it->second;
@@ -2452,6 +2487,11 @@ namespace {
         return result;
     }
 
+    // Bumped only when a dual-instance map loads (DoA outpost/explorable share id 474): its mesh can change
+    // without the MapID changing, so MapID-keyed overlays must also compare against this. Everywhere else
+    // MapID → mesh caching stays untouched.
+    uint32_t map_load_generation = 0;
+
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
     {
         if (status->blocked) return;
@@ -2461,12 +2501,27 @@ namespace {
                 const auto packet = static_cast<GW::UI::UIPacket::kLoadMapContext*>(wParam);
                 if (packet->file_name && *packet->file_name) {
                     const uint32_t fid = ArenaNetFileParser::FileHashToFileId(packet->file_name);
-                    if (fid && !map_id_to_file_hash.contains(packet->map_id)) {
-                        map_id_to_file_hash[packet->map_id] = fid;
-                        // Rebuild graph to include newly discovered map
-                        map_graph_built = false;
-                        PATH_LOG_INFO("Discovered map %d file_id=0x%X", (int)packet->map_id, fid);
+                    if (fid) {
+                        const auto it = map_id_to_file_hash.find(packet->map_id);
+                        if (it == map_id_to_file_hash.end()) {
+                            map_id_to_file_hash[packet->map_id] = fid;
+                            // Rebuild graph to include newly discovered map
+                            map_graph_built = false;
+                            PATH_LOG_INFO("Discovered map %d file_id=0x%X", (int)packet->map_id, fid);
+                        }
+                        else if (it->second != fid) {
+                            // The client-loaded file is ground truth; a differing cached id means stale constant data.
+                            PATH_LOG_WARNING("[FileId] map %d: loaded file 0x%X overrides cached 0x%X", (int)packet->map_id, fid, it->second);
+                            it->second = fid;
+                            map_graph_built = false;
+                        }
                     }
+                }
+
+                if (IsDualInstanceMap(packet->map_id)) {
+                    ++map_load_generation;
+                    GameWorldRenderer::ClearNavmeshLines();
+                    GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID::None, {});
                 }
 
                 // Clear all lines on map change to avoid stale renders
@@ -2517,6 +2572,7 @@ static void UpdateNavmeshOverlay()
 {
     static bool was_on = false;
     static GW::Constants::MapID built_map = GW::Constants::MapID::None;
+    static uint32_t built_generation = 0;
     static GW::GamePos last_build_pos{};
     static std::vector<Pathing::NavMesh::DebugEdge> cached_edges; // whole-map edges, extracted once per map
     if (!settings.draw_navmesh_overlay) {
@@ -2533,7 +2589,7 @@ static void UpdateNavmeshOverlay()
 
     const auto cur_map = GW::Map::GetMapID();
     const auto me = GW::Agents::GetControlledCharacter();
-    const bool map_changed = cur_map != built_map;
+    const bool map_changed = cur_map != built_map || built_generation != map_load_generation;
     float moved2 = 1e30f;
     if (me && !map_changed) { const float dx = me->pos.x - last_build_pos.x, dy = me->pos.y - last_build_pos.y; moved2 = dx * dx + dy * dy; }
     if (!map_changed && moved2 < 600.f * 600.f) return; // near set still fresh; nothing to rebuild
@@ -2577,7 +2633,9 @@ static void UpdateNavmeshOverlay()
         lines.push_back({e.a, e.b, edge_color(e)});
     }
     GameWorldRenderer::SetNavmeshLines(cur_map, std::move(lines));
+    if (map_changed) Log::Log("[navmesh] overlay rebuilt: map=%d gen=%u edges=%d", (int)cur_map, map_load_generation, (int)cached_edges.size());
     built_map = cur_map;
+    built_generation = map_load_generation;
     if (me) last_build_pos = me->pos;
 }
 
@@ -2615,9 +2673,9 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
 void PathfindingWindow::DrawSettingsInternal()
 {
     ImGui::DragFloat("Path recalc distance", &settings.path_recalc_distance, 1.f, 1.f, 1000.f, "%.0f");
-    ImGui::ShowHelp("How far you must move (game units / gwinches) before the rendered quest path recomputes. Lower = more responsive but heavier; the recompute is also rate-capped to ~30/s.");
+    ImGui::ShowHelp(path_recalc_distance_help);
     ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
-    ImGui::ShowHelp("Draw the navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included).");
+    ImGui::ShowHelp(navmesh_overlay_help);
     ImGui::Separator();
     if (settings.draw_navmesh_overlay) {
         auto color_edit = [](const char* label, uint32_t* argb) {
@@ -2631,7 +2689,7 @@ void PathfindingWindow::DrawSettingsInternal()
             GameWorldRenderer::SetNavmeshSampleSpacing(settings.navmesh_sample_spacing);
             GameWorldRenderer::RedrapeNavmesh(); // re-drape live so the change is visible immediately
         }
-        ImGui::ShowHelp("How often the overlay samples terrain height when draping edges (game units). Lower = lines hug the floor/steps more exactly, but more vertices to build and draw.");
+        ImGui::ShowHelp(navmesh_sample_spacing_help);
         color_edit("Wall colour (ground plane)", &settings.navmesh_wall_color);
         color_edit("Wall colour (other planes)", &settings.navmesh_wall_color_hi);
         color_edit("Connection colour (ground plane)", &settings.navmesh_connection_color);
@@ -3085,6 +3143,14 @@ bool PathfindingWindow::IsRouteBreak(const GW::Vec2f& p)
 void PathfindingWindow::Initialize()
 {
     ToolboxModule::Initialize();
+    SettingsRegistry::Register(this, settings);
+    SettingsRegistry::Describe(this, "draw_navmesh_overlay", "Navmesh overlay", navmesh_overlay_help);
+    SettingsRegistry::Describe(this, "path_recalc_distance", "Path recalc distance", path_recalc_distance_help);
+    SettingsRegistry::Describe(this, "navmesh_sample_spacing", "Terrain sample spacing", navmesh_sample_spacing_help);
+    SettingsRegistry::Describe(this, "navmesh_wall_color", "Wall colour (ground plane)");
+    SettingsRegistry::Describe(this, "navmesh_wall_color_hi", "Wall colour (other planes)");
+    SettingsRegistry::Describe(this, "navmesh_connection_color", "Connection colour (ground plane)");
+    SettingsRegistry::Describe(this, "navmesh_connection_color_hi", "Connection colour (other planes)");
     pending_terminate = false; // module is now optional; a prior disable left this set, which would abort all routing
     pathing_enabled = true;
     BuildMapFileHashLookup();
