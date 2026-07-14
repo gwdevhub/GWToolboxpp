@@ -8,9 +8,23 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.32
-* [Fix] Skill Range Rings: fixed severe FPS drops (down to single digits for large rings) while hovering a skill. The rings were re-projected onto the terrain every frame; the draped geometry is now cached and only recomputed when you or your target moves, so inspecting a skill's range no longer tanks the framerate.
+* [Perf] In-world overlays that drape on the ground — quest paths, Skill Range Rings, Loot Beacons, Danger Rings and Weather — now read the terrain height straight from the game's heightfield instead of asking the game to recalculate it once per vertex every frame. Large overlays that used to drag the framerate down are now a fraction of the cost.
+* [Fix] Skill Range Rings: fixed severe FPS drops while hovering a skill. The rings were re-projected onto the terrain every frame; the draped geometry is now cached and only recomputed when you or your target moves, so inspecting a skill's range no longer tanks the framerate.
+* [Fix] Guild Wars no longer crashes when you exit the game with Toolbox loaded.
 * [Fix] Quest paths (both custom markers and quest markers) no longer sometimes fail to appear after changing maps — previously this could require a Toolbox restart to recover.
+* [Fix] World map: quest markers and other icons no longer show up as blank white squares when Toolbox is injected before Guild Wars has finished opening its data file.
 * [Fix] Account Inventory: reduced the delay when loading into the game with the module enabled. Item icons are now loaded from `Gw.dat` on demand as they are displayed, rather than decoding an icon for every stored item on every map load — which flooded Toolbox's texture-loading threads and stalled load-in.
+* [Fix] Domain of Anguish: quest pathing now rebuilds its navigation mesh when moving between the outpost and the explorable area, so paths are correct in both.
+* [Fix] In-world overlays now draw correctly beneath the in-game interface.
+* [Fix] Fixed a crash and cloth/hair physics glitches that could occur when a rotating 3D character model was on screen (such as the hero or character-select panel) with in-world overlays enabled.
+* [Fix] Mission map: overlays no longer lag behind the map while you drag it.
+* [Fix] Objective Timer: added the Forsaken Tunnels dungeon, fixed the Cathedral of Flames level list, and corrected dungeon level numbering (levels now count from 1 instead of 0).
+* [Fix] Added extra safety checks to prevent occasional crashes across the enemy, party statistics and target info windows and in skill handling.
+* [Minor] Weather: Sandstorm now only appears automatically in true desert climates (Crystal Desert, Desolation, Istan) instead of all arid regions, and is disabled by default like Fog since it heavily obscures vision.
+* [Minor] Pathfinding settings are now found by the settings window's search box.
+* [Minor] Launcher: warns when Guild Wars is running under ARM/CPU emulation (e.g. an Apple Silicon or ARM Windows machine), which is unsupported and known to crash texture-pack hooking.
+* [Minor] Launcher: the update changelog now shows line breaks correctly instead of stray box characters.
+* [Minor] Save and open file dialogs now pre-fill the suggested file name.
 
 ## Version 8.31
 * [New] Danger Rings: draws enemy ground AoE effects (Meteor Shower, Maelstrom, traps, and more) as rings on the ground in the 3D game world — depth-tested against the terrain and drawn under the interface. Ring thickness, fill/rim opacity and whether rings are hidden behind terrain are configurable.
