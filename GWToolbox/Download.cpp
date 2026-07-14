@@ -480,7 +480,14 @@ bool DownloadWindow::Create()
 
 void DownloadWindow::SetChangelog(const char* str, const size_t length) const
 {
-    const std::wstring content(str, str + length);
+    // Win32 Edit control requires CRLF; GitHub release bodies use bare LF
+    std::wstring content;
+    content.reserve(length);
+    for (const char* p = str; p != str + length; ++p) {
+        if (*p == '\n' && (p == str || p[-1] != '\r'))
+            content += L'\r';
+        content += static_cast<wchar_t>(*p);
+    }
     SendMessageW(m_hChangelog, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(content.c_str()));
 }
 

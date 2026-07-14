@@ -95,8 +95,7 @@ namespace {
         }
         else {
             const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-            ASSERT(skill);
-            casttime = skill->activation;
+            if (skill) casttime = skill->activation;
         }
         if (casting != skill_history->end()) {
             casting->status = COMPLETED;
@@ -127,8 +126,7 @@ namespace {
         }
         else {
             const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
-            ASSERT(skill);
-            casttime = skill->activation;
+            if (skill) casttime = skill->activation;
         }
         if (casting != skill_history->end()) {
             casting->status = CANCELLED;

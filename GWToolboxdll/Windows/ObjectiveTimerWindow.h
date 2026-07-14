@@ -252,7 +252,7 @@ private:
     void AddDeepObjectiveSet();
     void AddUrgozObjectiveSet();
     void AddToPKObjectiveSet();
-    void AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels);
+    void AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels, uint32_t boss_model_id = 0);
 
     void ClearObjectiveSets();
     void StopObjectives(); // called on partydefeated or back to outpost

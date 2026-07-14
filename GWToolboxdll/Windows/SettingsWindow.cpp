@@ -163,7 +163,7 @@ namespace {
         }
         for (const auto& e : SettingsRegistry::GetEntries()) {
             auto best = MatchScore(TextUtils::ToLower(e.label), query_lower);
-            for (const auto& text : {e.key, e.section, e.description}) {
+            for (const auto& text : {e.section, e.description}) {
                 if (text.empty()) {
                     continue;
                 }

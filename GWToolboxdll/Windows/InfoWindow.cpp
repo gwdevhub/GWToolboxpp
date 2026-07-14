@@ -132,7 +132,12 @@ namespace {
     }
     bool FileIdField(const char* label, const wchar_t* enc_str)
     {
-        return FileIdField(label, ArenaNetFileParser::FileHashToFileId(enc_str));
+        // Show the raw enc chars, not a re-encoding of the decoded id — when decode fails (0), the raw
+        // string is the only clue to what the game actually passed.
+        EncInfoField(label, enc_str);
+        const std::string label2 = std::format("{} (File ID)", label);
+        InfoField(label2.c_str(), "0x%X", ArenaNetFileParser::FileHashToFileId(enc_str));
+        return false;
     }
 
     void GetIdsFromFileId(const uint32_t param_1, short* param_2)
@@ -1034,7 +1039,13 @@ namespace {
         switch (message_id) {
             case GW::UI::UIMessage::kLoadMapContext: {
                 const auto packet = static_cast<GW::UI::UIPacket::kLoadMapContext*>(wParam);
-                wcscpy(mapfile, packet->file_name);
+                if (packet->file_name) {
+                    wcsncpy(mapfile, packet->file_name, _countof(mapfile) - 1);
+                    mapfile[_countof(mapfile) - 1] = 0;
+                }
+                else {
+                    mapfile[0] = 0;
+                }
             } break;
         }
     }

@@ -54,6 +54,11 @@ namespace GameWorldCompositor {
     [[nodiscard]] IDirect3DPixelShader9* PixelShader();
     [[nodiscard]] IDirect3DVertexDeclaration9* VertexDeclaration();
 
+#ifdef _DEBUG
+    // Log every FrCacheRenderAll invocation's buffer layout for the next few calls (harness diagnostics).
+    void RequestBufferDump();
+#endif
+
     // Remove the hook and release shared GPU resources (shutdown).
     void Terminate();
 } // namespace GameWorldCompositor

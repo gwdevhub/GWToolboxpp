@@ -7,6 +7,8 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Context/MapContext.h>
 
+#include <Utils/TerrainDrape.h>
+
 namespace MathUtil {
     GW::Vec2f GetVec2f(const GW::Vec3f &r) {
         return { r.x, r.y };
@@ -21,7 +23,7 @@ namespace MathUtil {
         }
 
         GW::Vec3f pos{ gp.x, gp.y, 0.0f };
-        pos.z = GW::Map::QueryAltitude((GW::GamePos*) & pos);
+        pos.z = TerrainDrape::QueryAltAt(pos.x, pos.y, gp.zplane); // sample on the point's own plane (guarded valid above)
         return pos;
     }
 

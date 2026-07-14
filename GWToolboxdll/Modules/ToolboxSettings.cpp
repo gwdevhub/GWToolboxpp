@@ -109,6 +109,7 @@
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/SkillRangeRingsModule.h>
 #ifdef _DEBUG
+#include <Modules/CartographerModule.h>
 #include <Modules/RiverModule.h>
 #endif
 #include <Widgets/MissionMapWidget.h>
@@ -208,6 +209,7 @@ namespace {
         {SkillRangeRingsModule::Instance(), false},
 #ifdef _DEBUG
         {RiverModule::Instance(), false},
+        CartographerModule::Instance(),
 #endif
         PartyDamage::Instance(),
         BondsWidget::Instance(),

@@ -504,7 +504,7 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
         case MapID::Cathedral_of_Flames_Level_1:
             AddDungeonObjectiveSet({MapID::Cathedral_of_Flames_Level_1,
                                     MapID::Cathedral_of_Flames_Level_2,
-                                    MapID::Catacombs_of_Kathandrax_Level_3});
+                                    MapID::Cathedral_of_Flames_Level_3});
             break;
         case MapID::Darkrime_Delves_Level_1:
             AddDungeonObjectiveSet({MapID::Darkrime_Delves_Level_1,
@@ -539,10 +539,15 @@ void ObjectiveTimerWindow::AddObjectiveSet(const GW::Constants::MapID map_id)
                                     MapID::Heart_of_the_Shiverpeaks_Level_2,
                                     MapID::Heart_of_the_Shiverpeaks_Level_3});
             break;
-        case MapID::Forsaken_Tunnels_Level2:
+        case MapID::Forsaken_Tunnels_Level1:
             AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Level1,
                                     MapID::Forsaken_Tunnels_Level2,
                                     MapID::Forsaken_Tunnels_Level3});
+            break;
+        case MapID::Forsaken_Tunnels_Presearing_Level1:
+            AddDungeonObjectiveSet({MapID::Forsaken_Tunnels_Presearing_Level1,
+                                    MapID::Forsaken_Tunnels_Presearing_Level2,
+                                    MapID::Forsaken_Tunnels_Presearing_Level3});
             break;
 
         // dungeons - 5 levels:
@@ -606,18 +611,21 @@ void ObjectiveTimerWindow::AddObjectiveSet(ObjectiveSet* os)
     runs_dirty = true;
 }
 
-void ObjectiveTimerWindow::AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels)
+void ObjectiveTimerWindow::AddDungeonObjectiveSet(const std::vector<GW::Constants::MapID>& levels, const uint32_t boss_model_id)
 {
     const auto os = new ObjectiveSet;
     ASSERT(!levels.empty());
     os->name = Resources::GetMapName(levels[0])->string();
     for (size_t i = 0; i < levels.size(); i++) {
         char name[256];
-        snprintf(name, sizeof(name), "Level %d", i);
+        snprintf(name, sizeof(name), "Level %zu", i + 1);
         os->AddObjectiveAfterAll(new Objective(name))->AddStartEvent(EventType::InstanceLoadInfo, static_cast<uint32_t>(levels[i]));
     }
     os->objectives.front()->SetStarted();                         // start first level
     os->objectives.back()->AddEndEvent(EventType::DungeonReward); // last level finished with dungeon reward
+    if (boss_model_id) {
+        os->objectives.back()->AddEndEvent(EventType::AgentUpdateAllegiance, boss_model_id, 0x6E6F6E63);
+    }
     AddObjectiveSet(os);
 }
 

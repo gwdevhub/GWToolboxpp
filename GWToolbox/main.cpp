@@ -78,6 +78,24 @@ static bool GetWineDiagnostics(std::wstring& out)
     return true;
 }
 
+// IsWow64Process2's native-machine field reveals the real host CPU even for our 32-bit process; ARM64 there means Gw.exe is running under x86 emulation. Loaded dynamically (Windows 10 1511+ only). Returns false on a native x86/x64 host.
+static bool GetEmulationDiagnostics(std::wstring& out)
+{
+    const HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+    if (!kernel32) return false;
+    using IsWow64Process2_t = BOOL(WINAPI*)(HANDLE, USHORT*, USHORT*);
+    const auto is_wow64_process2 = reinterpret_cast<IsWow64Process2_t>(GetProcAddress(kernel32, "IsWow64Process2"));
+    if (!is_wow64_process2) return false;
+
+    USHORT process_machine = IMAGE_FILE_MACHINE_UNKNOWN;
+    USHORT native_machine = IMAGE_FILE_MACHINE_UNKNOWN;
+    if (!is_wow64_process2(GetCurrentProcess(), &process_machine, &native_machine)) return false;
+    if (native_machine != IMAGE_FILE_MACHINE_ARM64) return false; // AMD64/I386 hosts run x86 natively via ordinary WOW64
+
+    out = L"ARM64 host (running via CPU emulation)";
+    return true;
+}
+
 static bool InjectInstalledDllInProcess(const Process* process, std::wstring& error)
 {
     std::wstring exe_filename;
@@ -296,6 +314,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 
     if (!InjectInstalledDllInProcess(&proc, error)) {
         std::wstring wine;
+        std::wstring emulation;
         if (GetWineDiagnostics(wine)) {
             error += std::format(
                 L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The "
@@ -303,6 +322,16 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
                 wine
             );
             fprintf(stderr, "Wine detected: %S\n", wine.c_str());
+        }
+        else if (GetEmulationDiagnostics(emulation)) {
+            error += std::format(
+                L"\n\nGWToolbox is running under CPU emulation, which is not supported. Guild Wars and GWToolbox "
+                L"are x86 software; running them on non-x86 hardware (e.g. Windows on ARM, or a VM on an Apple "
+                L"Silicon Mac) is known to cause crashes, particularly with texture packs and other hooking-based "
+                L"features.\n\nDetected: {}",
+                emulation
+            );
+            fprintf(stderr, "CPU emulation detected: %S\n", emulation.c_str());
         }
         ShowError(error.c_str());
         fprintf(stderr, "InjectInstalledDllInProcess failed\n");

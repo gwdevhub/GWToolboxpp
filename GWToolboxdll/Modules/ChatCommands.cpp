@@ -2281,7 +2281,12 @@ void SkillToUse::Update()
             entry.active = false;
             continue;
         }
-        const GW::Skill& skilldata = *GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+        const auto skilldata_ptr = GW::SkillbarMgr::GetSkillConstantData(skill.skill_id);
+        if (!skilldata_ptr) {
+            entry.active = false;
+            return;
+        }
+        const GW::Skill& skilldata = *skilldata_ptr;
         if ((skilldata.adrenaline == 0 && skill.GetRecharge() == 0) || (skilldata.adrenaline > 0 && skill.adrenaline_a == skilldata.adrenaline)) {
             GW::SkillbarMgr::UseSkill(i, GW::Agents::GetTargetId());
             entry.skill_usage_delay = std::max(skilldata.activation + skilldata.aftercast, 0.25f);

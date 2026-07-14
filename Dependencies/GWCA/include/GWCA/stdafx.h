@@ -54,6 +54,11 @@
 
 #pragma warning(pop)
 
+#ifndef _MSC_VER
+// GCC/MinGW diagnostic-build compatibility shim (not needed on MSVC).
+#define _ReturnAddress() __builtin_return_address(0)
+#endif
+
 
 #pragma warning(disable: 4061) // enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
 #pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union

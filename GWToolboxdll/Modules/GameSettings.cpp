@@ -402,7 +402,7 @@ namespace {
 
         // Add campaign info
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(param->skill_id);
-        const auto campaign_id = static_cast<uint32_t>(skill->campaign);
+        const auto campaign_id = skill ? static_cast<uint32_t>(skill->campaign) : static_cast<uint32_t>(-1);
         if (campaign_id < _countof(GW::EncStrings::Campaign)) {
             wchar_t buf[16] = {0};
             if (GW::UI::UInt32ToEncStr(GW::EncStrings::Campaign[static_cast<uint32_t>(skill->campaign)], buf, _countof(buf))) {

@@ -213,6 +213,7 @@ namespace {
         v[5].cloud = {-400.f, 60.f, 0x38C8B080u, 10, 500.f, 700.f, 600.f};  // Sandstorm: tan, ground-level, fast, tight (Wind sets the heading)
         v[6].cloud = {0.f, 1000.f, 0x2ED0D8E0u, 3, 800.f, 0.f, 1500.f}; // Blizzard: faint white fog under the snow
         v[4].enabled = false; // Fog: quite invasive to gameplay (obscures vision), so off by default
+        v[5].enabled = false; // Sandstorm: same - invasive to gameplay, so off by default
         return v;
     }
     std::vector<WeatherCondition> conditions = DefaultConditions();
@@ -226,7 +227,7 @@ namespace {
         return {
             p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}, {"Fog", 0.02f}}),
             p(Climate::Tropical, {{"Heavy Rain", 0.2f}, {"Light Rain", 0.1f}, {"Fog", 0.05f}}),
-            p(Climate::Arid, {{"Light Rain", 0.1f}, {"Sandstorm", 0.05f}}),
+            p(Climate::Arid, {{"Light Rain", 0.1f}}),
             p(Climate::Desertous, {{"Light Rain", 0.05f}, {"Sandstorm", 0.15f}}),
             p(Climate::Mountainous, {{"Snow", 0.4f}, {"Blizzard", 0.15f}}),
             p(Climate::Volcanic, {{"Ashfall", 0.4f}, {"Fog", 0.05f}}),

@@ -37,6 +37,9 @@ namespace {
     bool QuestPathingAvailable() { return PathfindingWindow::IsPathingEnabled(); }
 
     bool fetch_missing_quest_info_queued = false;
+    // Quest messages and map loads only flag a refresh; QuestModule::Update() consumes it behind the loading-screen and
+    // pathing guards, so we never kick a route calc off against transitional map data mid-load.
+    bool refresh_all_quest_paths_queued = false;
 
     std::vector<QuestModule::CustomMarkerChangedCallback> custom_marker_callbacks;
 
@@ -560,10 +563,10 @@ namespace {
                     // Quest assigned without user interaction
                     QuestModule::SetActiveQuestId(player_chosen_quest_id, true);
                 }
-                RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
+                refresh_all_quest_paths_queued = true;
             } break;
             case GW::UI::UIMessage::kServerActiveQuestChanged:
-                RefreshQuestPath(*static_cast<GW::Constants::QuestID*>(packet));
+                refresh_all_quest_paths_queued = true;
                 break;
             case GW::UI::UIMessage::kMapLoaded:
                 BlockQuestSound();
@@ -583,10 +586,8 @@ namespace {
         if (custom_quest_marker_world_pos.y != 0 || custom_quest_marker_world_pos.x != 0) {
             QuestModule::SetCustomQuestMarker(custom_quest_marker_world_pos, quest_id_before_map_load == custom_quest_id);
         }
-        RefreshAllQuestPaths();
+        refresh_all_quest_paths_queued = true;
     }
-
-    bool refresh_all_quest_paths_queued = 0;
 
     // Dangerously frees gw memory!
     void RemoveQuest(GW::Constants::QuestID quest_id)
@@ -927,6 +928,13 @@ void QuestModule::Update(float)
     if (!QuestPathingAvailable()) {
         if (!calculated_quest_paths.empty()) ClearCalculatedPaths();
         return;
+    }
+
+    // Consume any refresh flagged by quest messages / map loads. We're past the loading-screen and pathing guards here,
+    // so this is the one place a route calc kicks off — never against transitional map data mid-load.
+    if (refresh_all_quest_paths_queued) {
+        refresh_all_quest_paths_queued = false;
+        RefreshAllQuestPaths();
     }
 
     const size_t size = calculated_quest_paths.size();

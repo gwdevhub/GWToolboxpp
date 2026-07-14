@@ -162,9 +162,11 @@ namespace {
 
                 if (enemy_info.last_skill != GW::Constants::SkillID::No_Skill) {
                     const auto skill_data = GW::SkillbarMgr::GetSkillConstantData(enemy_info.last_skill);
-                    auto enc_skillname = Resources::DecodeStringId(skill_data->name);
-                    ASSERT(enc_skillname);
-                    skill_name = &enc_skillname->string();
+                    if (skill_data) {
+                        auto enc_skillname = Resources::DecodeStringId(skill_data->name);
+                        ASSERT(enc_skillname);
+                        skill_name = &enc_skillname->string();
+                    }
                 }
 
                 WriteEnemyName(pos1, agent_name_str, skill_name, living->level, enemy_info.last_casted);

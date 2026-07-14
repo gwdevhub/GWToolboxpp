@@ -1206,7 +1206,8 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
 
 GuiUtils::EncString* Resources::GetSkillName(const GW::Constants::SkillID skill_id)
 {
-    return DecodeStringId(GW::SkillbarMgr::GetSkillConstantData(skill_id)->name);
+    const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);
+    return DecodeStringId(skill ? skill->name : 0);
 }
 
 GuiUtils::EncString* Resources::GetHeroName(const GW::Constants::HeroID hero_id)

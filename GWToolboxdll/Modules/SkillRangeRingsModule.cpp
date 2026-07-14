@@ -13,6 +13,7 @@
 #include <ImGuiAddons.h>
 #include <Modules/SkillRangeRingsModule.h>
 #include <Utils/GameWorldCompositor.h>
+#include <Utils/PropSurfaceIndex.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/TerrainDrape.h>
 
@@ -51,15 +52,24 @@ namespace {
         bool at_target;
     };
 
-    // Rings are rebuilt into `scratch` (absolute world coords) every frame and drawn with DrawPrimitiveUP,
-    // so following the character is smooth. The per-ring specs only change when the hovered skill or the
-    // settings change.
+    // Draped ring geometry (absolute world coords) drawn with DrawPrimitiveUP. The per-vertex terrain drape
+    // is expensive, so `scratch` is cached and only rebuilt when an anchor moves, the hovered skill changes,
+    // or settings change - not every frame.
     std::vector<RingSpec> built_specs;
     std::vector<RingVertex> scratch;
     GW::Constants::SkillID built_skill = static_cast<GW::Constants::SkillID>(0);
     bool rings_dirty = false;
     uint32_t debug_skill_id = 0;
     int compositor_token = 0;
+
+    // Anchor state `scratch` was last draped at; a change beyond kAnchorMoveEpsilon triggers a rebuild.
+    constexpr float kAnchorMoveEpsilon = 1.f;
+    float built_me_x = 0.f, built_me_y = 0.f;
+    uint32_t built_me_zplane = 0, built_target_id = 0, built_target_zplane = 0;
+    float built_target_x = 0.f, built_target_y = 0.f;
+    bool built_tgt_valid = false;
+    // SurfaceZ output changes when the async prop-surface bake lands, so re-drape on that transition too.
+    bool built_prop_ready = false;
 
     int RingSegments(const float radius)
     {
@@ -147,11 +157,13 @@ namespace {
         SpecsForSkill(skill, built_specs);
         built_skill = skill.skill_id;
         rings_dirty = false;
+        scratch.clear();
     }
 
     void ResetRings()
     {
         built_specs.clear();
+        scratch.clear();
         built_skill = static_cast<GW::Constants::SkillID>(0);
     }
 } // namespace
@@ -199,16 +211,33 @@ void SkillRangeRingsModule::DrawInWorld(IDirect3DDevice9* device)
     if (rings_dirty || skill->skill_id != built_skill) BuildSpecs(*skill);
     if (built_specs.empty()) return;
 
-    // Rebuild the draped rings at the current anchor positions every frame, so movement is smooth. Each
-    // ring anchors to the current target (targeted AoE skills) or the player, draped onto that surface.
+    // Re-drape only when an anchor actually moves; otherwise reuse the cached geometry. Each ring anchors to
+    // the current target (targeted AoE skills) or the player, draped onto that surface.
     const GW::Agent* target = GW::Agents::GetTarget();
     const bool tgt_valid = aoe_at_target && target && target->agent_id != me->agent_id;
-    const auto n_planes = TerrainDrape::PathingPlaneCount();
-    scratch.clear();
-    for (const auto& spec : built_specs) {
-        const GW::Agent* anchor = (spec.at_target && tgt_valid) ? target : static_cast<const GW::Agent*>(me);
-        const float ref_z = TerrainDrape::SurfaceZ(anchor->pos.x, anchor->pos.y, anchor->pos.zplane, n_planes);
-        EmitBand(scratch, anchor->pos.x, anchor->pos.y, anchor->pos.zplane, n_planes, ref_z ? ref_z : anchor->z, spec);
+    const uint32_t target_id = tgt_valid ? target->agent_id : 0;
+    const bool prop_ready = PropSurface::Enabled() && PropSurface::Ready();
+    const auto moved = [](const float ax, const float ay, const float bx, const float by) {
+        return std::fabs(ax - bx) > kAnchorMoveEpsilon || std::fabs(ay - by) > kAnchorMoveEpsilon;
+    };
+    const bool rebuild = scratch.empty() || prop_ready != built_prop_ready
+                         || tgt_valid != built_tgt_valid || target_id != built_target_id
+                         || me->pos.zplane != built_me_zplane || moved(me->pos.x, me->pos.y, built_me_x, built_me_y)
+                         || (tgt_valid && (target->pos.zplane != built_target_zplane
+                                           || moved(target->pos.x, target->pos.y, built_target_x, built_target_y)));
+    if (rebuild) {
+        const auto n_planes = TerrainDrape::PathingPlaneCount();
+        scratch.clear();
+        for (const auto& spec : built_specs) {
+            const GW::Agent* anchor = (spec.at_target && tgt_valid) ? target : static_cast<const GW::Agent*>(me);
+            const float ref_z = TerrainDrape::SurfaceZ(anchor->pos.x, anchor->pos.y, anchor->pos.zplane, n_planes);
+            EmitBand(scratch, anchor->pos.x, anchor->pos.y, anchor->pos.zplane, n_planes, ref_z ? ref_z : anchor->z, spec);
+        }
+        built_me_x = me->pos.x, built_me_y = me->pos.y, built_me_zplane = me->pos.zplane;
+        built_target_id = target_id, built_tgt_valid = tgt_valid;
+        built_target_x = tgt_valid ? target->pos.x : 0.f, built_target_y = tgt_valid ? target->pos.y : 0.f;
+        built_target_zplane = tgt_valid ? target->pos.zplane : 0;
+        built_prop_ready = prop_ready;
     }
     if (scratch.size() < 3) return;
 

@@ -659,8 +659,7 @@ namespace Pathing {
             ++dumped;
             const int plane = (i < (int)m_poly_plane.size()) ? m_poly_plane[i] : -1;
             const GW::PathingTrapezoid* t = (i < (int)m_poly_trap.size()) ? m_poly_trap[i] : nullptr;
-            GW::GamePos cpos(cx, cz, (uint32_t)(plane < 0 ? 0 : plane));
-            const float calt = GW::Map::QueryAltitude(&cpos); // terrain height of this poly's surface (GW up = -z)
+            const float calt = TerrainDrape::QueryAltAt(cx, cz, (uint32_t)(plane < 0 ? 0 : plane)); // terrain height of this poly's surface (GW up = -z)
             if (t)
                 Log::Log("[navdump] poly=%d plane=%d trap=%u alt=%.0f T=(%.0f,%.0f,%.0f) B=(%.0f,%.0f,%.0f) pL=%u pR=%u",
                          i, plane, t->id, calt, t->XTL, t->XTR, t->YT, t->XBL, t->XBR, t->YB, t->portal_left, t->portal_right);
@@ -682,8 +681,7 @@ namespace Pathing {
                         // Cross-plane edge: query terrain height on BOTH planes at the shared edge midpoint. A large
                         // delta = a cliff (this edge should be a WALL, not a walkable connection); ~0 = a same-height seam.
                         const float mx = 0.5f * (va[0] + vb[0]), mz = 0.5f * (va[2] + vb[2]);
-                        GW::GamePos ma(mx, mz, (uint32_t)plane), mb(mx, mz, (uint32_t)nplane);
-                        const float za = GW::Map::QueryAltitude(&ma), zb = GW::Map::QueryAltitude(&mb);
+                        const float za = TerrainDrape::QueryAltAt(mx, mz, (uint32_t)plane), zb = TerrainDrape::QueryAltAt(mx, mz, (uint32_t)nplane);
                         Log::Log("[navdump]   e (%.0f,%.0f)->(%.0f,%.0f) CONN->poly=%d(plane=%d,trap=%u) [CROSS-PLANE] alt_here=%.0f alt_there=%.0f d=%.0f",
                                  va[0], va[2], vb[0], vb[2], ni, nplane, nid, za, zb, za - zb);
                     }

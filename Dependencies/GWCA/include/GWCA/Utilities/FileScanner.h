@@ -2,7 +2,7 @@
 
 #include <Windows.h>
 #include <stdint.h>
-#include <GWCA\Utilities\Scanner.h>
+#include <GWCA/Utilities/Scanner.h>
 
 class FileScanner
 {

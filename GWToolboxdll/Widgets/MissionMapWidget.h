@@ -75,4 +75,6 @@ public:
     using ContextMenuCallback = bool(*)();
     static void AddContextMenuCallback(ContextMenuCallback cb);
     static void RemoveContextMenuCallback(ContextMenuCallback cb);
+    // World-map coords of the right-click that opened the context menu.
+    static GW::Vec2f GetContextMenuWorldMapPos();
 };

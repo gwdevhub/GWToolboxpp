@@ -62,4 +62,12 @@ public:
     static bool WorldMapToGamePos(const GW::Vec2f& world_map_pos, GW::GamePos& game_map_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);
     static bool GamePosToWorldMap(const GW::GamePos& game_map_pos, GW::Vec2f& world_map_pos, GW::Constants::MapID map_id = (GW::Constants::MapID)0);
     static bool& ShowLinesOnWorldMap();
+
+    // Context menu callback system — registered callbacks contribute items to the
+    // world map right-click context menu. Return false to close the menu.
+    using ContextMenuCallback = bool(*)();
+    static void AddContextMenuCallback(ContextMenuCallback cb);
+    static void RemoveContextMenuCallback(ContextMenuCallback cb);
+    // World-map coords of the right-click that opened the context menu.
+    static GW::Vec2f GetContextMenuWorldMapPos();
 };
