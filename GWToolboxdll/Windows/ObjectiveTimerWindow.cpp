@@ -433,6 +433,7 @@ void ObjectiveTimerWindow::Event(const EventType type, const uint32_t id1, const
     if (ObjectiveSet* os = GetCurrentObjectiveSet()) {
         os->Event(type, id1, id2);
 
+#ifdef _DEBUG
         if (show_debug_events) {
             switch (type) {
                 case EventType::ServerMessage:
@@ -446,6 +447,7 @@ void ObjectiveTimerWindow::Event(const EventType type, const uint32_t id1, const
                     Log::Info("Event: %d, %d, %d", type, id1, id2);
             }
         }
+#endif
     }
 }
 
@@ -1013,9 +1015,11 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show detailed objectives", &settings.show_detailed_objectives, "Currently only affects DoA objectives");
     ImGui::NextSpacedElement();
+#ifdef _DEBUG
     ImGui::CheckboxWithHelp("Debug: log events", &show_debug_events,
         "Will spam your chat with the events used in the objective timer. \nUse for debugging and to ask for more stuff to be added");
     ImGui::NextSpacedElement();
+#endif
     ImGui::Checkbox("Show run start date/time", &settings.show_start_date_time);
     ImGui::NextSpacedElement();
     ImGui::CheckboxWithHelp("Show current run in separate window", &settings.show_current_run_window, "Toggle via chat: /tb_setting show_current_run_window");

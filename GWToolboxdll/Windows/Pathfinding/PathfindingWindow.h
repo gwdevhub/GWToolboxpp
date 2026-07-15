@@ -28,13 +28,15 @@ public:
     bool HasSettings() { return true; }
 
     struct Settings {
+#ifdef _DEBUG
         bool     draw_navmesh_overlay = false;
         uint32_t navmesh_wall_color = 0xC0FF3030;          // ARGB: wall edge on plane 0 (red)
         uint32_t navmesh_wall_color_hi = 0xC0FF30FF;       // wall edge on planes != 0 (magenta)
         uint32_t navmesh_connection_color = 0x6030FF30;    // connection edge on plane 0 (green)
         uint32_t navmesh_connection_color_hi = 0x6030C0FF; // connection edge on planes != 0 (cyan)
-        float    path_recalc_distance = 5.f;               // game units the player must move before the quest path recomputes
         float    navmesh_sample_spacing = 5.f;             // gw between terrain-height samples when draping the overlay (lower = tighter to floor)
+#endif
+        float    path_recalc_distance = 5.f;               // game units the player must move before the quest path recomputes
     };
 
     // Game units the player must move before the rendered quest path recomputes (persisted setting). Read by

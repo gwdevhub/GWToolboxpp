@@ -238,7 +238,9 @@ private:
 
     ObjectiveSet* GetCurrentObjectiveSet() const;
     bool clear_cached_times = false;
+#ifdef _DEBUG
     bool show_debug_events = false;
+#endif
     ObjectiveSet* current_objective_set = nullptr;
 
     void Event(EventType type, uint32_t id1 = 0, uint32_t id2 = 0) const;

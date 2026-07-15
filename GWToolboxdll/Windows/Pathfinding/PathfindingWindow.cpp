@@ -2568,6 +2568,7 @@ void LoadAndShowMapsAtWorldPos(const GW::Vec2f& wm_pos); // forward decl
 
 // Editor UI was trimmed in this branch; the pathing API needs no window. Draw renders nothing but must still drain the
 // deferred line-removal queue each frame, else cleared route lines stay on screen. WndProc is a no-op vtable stub.
+#ifdef _DEBUG
 static void UpdateNavmeshOverlay()
 {
     static bool was_on = false;
@@ -2638,6 +2639,7 @@ static void UpdateNavmeshOverlay()
     built_generation = map_load_generation;
     if (me) last_build_pos = me->pos;
 }
+#endif // _DEBUG
 
 float PathfindingWindow::GetPathRecalcDistance() { return settings.path_recalc_distance; }
 
@@ -2667,13 +2669,16 @@ Pathing::NavMesh* PathfindingWindow::GetResidentNavMesh()
 void PathfindingWindow::Draw(IDirect3DDevice9*)
 {
     ProcessDeferredRemovals();
+#ifdef _DEBUG
     UpdateNavmeshOverlay();
+#endif
 }
 
 void PathfindingWindow::DrawSettingsInternal()
 {
     ImGui::DragFloat("Path recalc distance", &settings.path_recalc_distance, 1.f, 1.f, 1000.f, "%.0f");
     ImGui::ShowHelp(path_recalc_distance_help);
+#ifdef _DEBUG
     ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
     ImGui::ShowHelp(navmesh_overlay_help);
     ImGui::Separator();
@@ -2695,13 +2700,16 @@ void PathfindingWindow::DrawSettingsInternal()
         color_edit("Connection colour (ground plane)", &settings.navmesh_connection_color);
         color_edit("Connection colour (other planes)", &settings.navmesh_connection_color_hi);
     }
+#endif
 }
 
 void PathfindingWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
+#ifdef _DEBUG
     GameWorldRenderer::SetNavmeshSampleSpacing(settings.navmesh_sample_spacing);
+#endif
 }
 
 void PathfindingWindow::SaveSettings(SettingsDoc& doc)
@@ -3144,13 +3152,15 @@ void PathfindingWindow::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
+#ifdef _DEBUG
     SettingsRegistry::Describe(this, "draw_navmesh_overlay", "Navmesh overlay", navmesh_overlay_help);
-    SettingsRegistry::Describe(this, "path_recalc_distance", "Path recalc distance", path_recalc_distance_help);
     SettingsRegistry::Describe(this, "navmesh_sample_spacing", "Terrain sample spacing", navmesh_sample_spacing_help);
     SettingsRegistry::Describe(this, "navmesh_wall_color", "Wall colour (ground plane)");
     SettingsRegistry::Describe(this, "navmesh_wall_color_hi", "Wall colour (other planes)");
     SettingsRegistry::Describe(this, "navmesh_connection_color", "Connection colour (ground plane)");
     SettingsRegistry::Describe(this, "navmesh_connection_color_hi", "Connection colour (other planes)");
+#endif
+    SettingsRegistry::Describe(this, "path_recalc_distance", "Path recalc distance", path_recalc_distance_help);
     pending_terminate = false; // module is now optional; a prior disable left this set, which would abort all routing
     pathing_enabled = true;
     BuildMapFileHashLookup();
