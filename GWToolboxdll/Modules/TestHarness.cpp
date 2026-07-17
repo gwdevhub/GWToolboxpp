@@ -959,6 +959,42 @@ namespace {
             write_status("fpsprobe: running");
             return;
         }
+        if (verb == "agentdump") { // agentdump [radius]: log ally NPC player_number + elite (from skillbar) to re-derive summon model-ids
+            float radius = 1400.f;
+            is >> radius;
+            radius = std::clamp(radius, 100.f, 6000.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto agents = GW::Agents::GetAgentArray();
+            if (!self || !agents) { write_status("agentdump: no agents/character"); return; }
+            Log::Log("[agentdump] map=%d radius=%.0f player=(%.0f,%.0f)",
+                     static_cast<int>(GW::Map::GetMapID()), radius, self->pos.x, self->pos.y);
+            uint32_t logged = 0;
+            for (const auto agent : *agents) {
+                const auto living = agent ? agent->GetAsAgentLiving() : nullptr;
+                if (!living || !living->IsNPC()) { continue; }
+                if (living->allegiance != GW::Constants::Allegiance::Ally_NonAttackable) { continue; }
+                const float dx = living->pos.x - self->pos.x;
+                const float dy = living->pos.y - self->pos.y;
+                if (dx * dx + dy * dy > radius * radius) { continue; }
+                int elite_skill = -1;
+                const auto sb = GW::SkillbarMgr::GetSkillbar(living->agent_id);
+                const bool has_sb = sb && sb->IsValid();
+                if (has_sb) {
+                    for (const auto& s : sb->skills) {
+                        const auto sk = GW::SkillbarMgr::GetSkillConstantData(s.skill_id);
+                        if (sk && sk->IsElite()) { elite_skill = static_cast<int>(s.skill_id); break; }
+                    }
+                }
+                Log::Log("[agentdump] id=%u player_number=%u allegiance=%u has_skillbar=%d elite_skill_id=%d",
+                         living->agent_id, static_cast<uint32_t>(living->player_number),
+                         static_cast<uint32_t>(living->allegiance), static_cast<int>(has_sb), elite_skill);
+                logged++;
+            }
+            char b[64];
+            snprintf(b, sizeof(b), "agentdump: logged %u ally npcs", logged);
+            write_status(b);
+            return;
+        }
         write_status("unknown_command: " + verb);
     }
 } // namespace
