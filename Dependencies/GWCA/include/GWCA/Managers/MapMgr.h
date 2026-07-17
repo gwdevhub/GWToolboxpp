@@ -125,6 +125,8 @@ namespace GW {
         // Get the district number you are in.
         GWCA_API int GetDistrict();
 
+		GWCA_API size_t GetDistrictCount();
+
         // Get time, in ms, since the instance you are residing in has been created.
         GWCA_API uint32_t GetInstanceTime();
 
