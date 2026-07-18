@@ -1117,14 +1117,14 @@ namespace {
         }
 
         const auto font_size = ImGui::CalcTextSize(" ");
-        auto DrawOrder = [font_size](const MarketItem& order) {
+        auto DrawOrder = [font_size](const MarketItem& order, size_t index) {
             // NB: Seems to be an array of prices given by the API, but the website only shows the first one?
             const auto& price = order.prices[0];
             if (order_view_currency != Currency::All && order_view_currency != price.type) return;
 
-            // Use the order's address for a unique ID; descriptions are often empty and would collide,
+            // Use the row index for a unique ID; descriptions are often empty and would collide,
             // making the per-row "Whisper" buttons share an ImGui ID.
-            ImGui::PushID(&order);
+            ImGui::PushID(static_cast<int>(index));
             const auto top = ImGui::GetCursorPosY();
             ImGui::TextUnformatted(order.player.c_str());
             const auto timetext = TextUtils::RelativeTime(order.lastRefresh);
@@ -1199,15 +1199,17 @@ namespace {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "SELL ORDERS:");
         ImGui::Separator();
 
-        for (const auto& order : current_item_orders) {
-            if (order.orderType == OrderType::Sell && order.valid()) DrawOrder(order);
+        for (size_t i = 0; i < current_item_orders.size(); i++) {
+            const auto& order = current_item_orders[i];
+            if (order.orderType == OrderType::Sell && order.valid()) DrawOrder(order, i);
         }
 
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "BUY ORDERS:");
         ImGui::Separator();
 
-        for (const auto& order : current_item_orders) {
-            if (order.orderType == OrderType::Buy && order.valid()) DrawOrder(order);
+        for (size_t i = 0; i < current_item_orders.size(); i++) {
+            const auto& order = current_item_orders[i];
+            if (order.orderType == OrderType::Buy && order.valid()) DrawOrder(order, i);
         }
     }
 
@@ -1239,13 +1241,13 @@ namespace {
         }
 
         const auto font_size = ImGui::CalcTextSize(" ");
-        auto DrawOrder = [font_size](const MarketItem& order) {
+        auto DrawOrder = [font_size](const MarketItem& order, size_t index) {
             if (order.prices.empty()) return;
 
             const auto& price = order.prices[0];
 
-            // Use the order's address for a unique ID; descriptions are often empty and would collide.
-            ImGui::PushID(&order);
+            // Use the row index for a unique ID; descriptions are often empty and would collide.
+            ImGui::PushID(static_cast<int>(index));
             // const auto top = ImGui::GetCursorPosY();
 
             // Player name and time
@@ -1291,27 +1293,29 @@ namespace {
 
         // Show sell orders first
         bool has_sell_orders = false;
-        for (const auto& order : edit_window_matching_orders) {
+        for (size_t i = 0; i < edit_window_matching_orders.size(); i++) {
+            const auto& order = edit_window_matching_orders[i];
             if (order.orderType == OrderType::Sell && order.valid()) {
                 if (!has_sell_orders) {
                     ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "SELL ORDERS:");
                     ImGui::Separator();
                     has_sell_orders = true;
                 }
-                DrawOrder(order);
+                DrawOrder(order, i);
             }
         }
 
         // Show buy orders
         bool has_buy_orders = false;
-        for (const auto& order : edit_window_matching_orders) {
+        for (size_t i = 0; i < edit_window_matching_orders.size(); i++) {
+            const auto& order = edit_window_matching_orders[i];
             if (order.orderType == OrderType::Buy && order.valid()) {
                 if (!has_buy_orders) {
                     ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "BUY ORDERS:");
                     ImGui::Separator();
                     has_buy_orders = true;
                 }
-                DrawOrder(order);
+                DrawOrder(order, i);
             }
         }
 
