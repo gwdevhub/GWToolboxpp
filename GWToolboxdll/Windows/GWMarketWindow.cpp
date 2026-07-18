@@ -1122,7 +1122,9 @@ namespace {
             const auto& price = order.prices[0];
             if (order_view_currency != Currency::All && order_view_currency != price.type) return;
 
-            ImGui::PushID(order.description.c_str());
+            // Use the order's address for a unique ID; descriptions are often empty and would collide,
+            // making the per-row "Whisper" buttons share an ImGui ID.
+            ImGui::PushID(&order);
             const auto top = ImGui::GetCursorPosY();
             ImGui::TextUnformatted(order.player.c_str());
             const auto timetext = TextUtils::RelativeTime(order.lastRefresh);
@@ -1242,7 +1244,8 @@ namespace {
 
             const auto& price = order.prices[0];
 
-            ImGui::PushID(order.description.c_str());
+            // Use the order's address for a unique ID; descriptions are often empty and would collide.
+            ImGui::PushID(&order);
             // const auto top = ImGui::GetCursorPosY();
 
             // Player name and time
