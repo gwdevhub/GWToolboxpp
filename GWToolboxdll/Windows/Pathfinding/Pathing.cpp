@@ -85,7 +85,7 @@ namespace Pathing {
 
     GW::PathingTrapezoid* FindTrapezoid(const GW::GamePos& point, GW::PathingMapArray* map)
     {
-        if (!(map && map->size() <= point.zplane)) return nullptr;
+        if (!(map && point.zplane < map->size())) return nullptr;
 
         auto& pm = (*map)[point.zplane];
         GW::Node* n = pm.root_node;
@@ -365,6 +365,19 @@ namespace Pathing {
         auto* mapContext = GW::GetMapContext();
         if (!mapContext || !mapContext->path || !mapContext->path->staticData) return nullptr;
         return FindClosestPositionOnTrapezoid(point, &mapContext->path->staticData->map);
+    }
+
+    bool IsPositionWalkable(const GW::GamePos& point)
+    {
+        auto* mapContext = GW::GetMapContext();
+        if (!mapContext || !mapContext->path || !mapContext->path->staticData) return false;
+        auto* map = &mapContext->path->staticData->map;
+        for (uint32_t z = 0; z < map->size(); ++z) {
+            GW::GamePos probe = point;
+            probe.zplane = z;
+            if (FindTrapezoid(probe, map)) return true;
+        }
+        return false;
     }
 
     // PathingMapData-based overloads (no MapContext needed)

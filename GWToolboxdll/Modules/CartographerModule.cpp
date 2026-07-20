@@ -1,5 +1,8 @@
 #include "stdafx.h"
 
+#include <fstream>
+#include <map>
+
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/GameEntities/Agent.h>
@@ -14,6 +17,7 @@
 #include <Timer.h>
 #include <Modules/CartographerModule.h>
 #include <Modules/QuestModule.h>
+#include <Modules/Resources.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/MissionMapWidget.h>
@@ -21,10 +25,8 @@
 #include <Windows/Pathfinding/Pathing.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 
-#ifdef _DEBUG
-
 namespace {
-    bool enabled = false;
+    bool enabled = true;
 
     // The client stores world-map fog as one flat bitfield spanning the whole world map:
     // each cell is 32 world-map units (= 3072 gwinches) square, bit index = cell_y * width + cell_x.
@@ -96,6 +98,14 @@ namespace {
         return dirs[(idx + 8) % 8];
     }
 
+    bool show_cappable_fog = true;
+    // How far walkable ground may sit from a foggy cell for it to count as reachable.
+    float reveal_reach_gwinches = 3072.f;
+    // Distance from each foggy cell to the nearest ground you can stand on, measured once and
+    // kept. The slider only compares against these, so moving it recolours instantly instead
+    // of re-measuring the map.
+    std::map<std::pair<int, int>, float> cell_reach;
+    bool sweep_complete = false;
     std::set<std::pair<int, int>> skipped_cells;
     std::set<std::pair<int, int>> declined_cells;
     std::vector<GW::Vec2f> custom_points;
@@ -142,66 +152,336 @@ namespace {
         }
     }
 
-    bool FindNearestUnexploredCell(const CartoGrid& grid, const GW::Vec2f& player_wm, int& out_cx, int& out_cy, float& out_d2, bool& out_on_current_map)
-    {
-        float best_d2 = FLT_MAX;
-        const auto consider = [&](const int cx, const int cy) {
-            if (cx < 0 || cy < 0 || static_cast<uint32_t>(cx) >= grid.width || static_cast<uint32_t>(cy) >= grid.height) return;
-            if (grid.IsExplored(cx, cy)) return;
-            if (skipped_cells.contains({cx, cy})) return;
-            if (declined_cells.contains({cx, cy})) return;
-            const float d2 = Dist2(CellCenterWorldMap(cx, cy), player_wm);
-            if (d2 < best_d2) {
-                best_d2 = d2;
-                out_cx = cx;
-                out_cy = cy;
-            }
-        };
+    constexpr float kWmPerTexel = 8.f;
 
-        ImRect bounds;
-        const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
-        if (map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds) && bounds.GetWidth() >= 1.f && bounds.GetHeight() >= 1.f) {
-            const int x0 = static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell));
-            const int y0 = static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell));
-            const int x1 = static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell));
-            const int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
-            for (int cy = y0; cy < y1; cy++) {
-                for (int cx = x0; cx < x1; cx++) {
-                    consider(cx, cy);
+    struct CappableMask {
+        int layer = -1;
+        int w = 0, h = 0;
+        std::vector<uint8_t> bits;
+        int tw = 0, th = 0;
+        std::vector<uint8_t> texel_frac;
+        int cw = 0, ch = 0;
+        std::vector<uint8_t> cell_bits;
+    };
+    std::shared_ptr<const CappableMask> cappable_mask;
+    int cappable_mask_pending = -1;
+
+    bool MaskBit(const std::vector<uint8_t>& bits, const size_t bit)
+    {
+        return bits[bit >> 3] >> (bit & 7) & 1;
+    }
+
+    int TexelFrac(const int tx, const int ty)
+    {
+        const auto m = cappable_mask.get();
+        if (!m || tx < 0 || ty < 0 || tx >= m->tw || ty >= m->th) return 0;
+        return m->texel_frac[static_cast<size_t>(ty) * m->tw + tx];
+    }
+
+    bool CellCappable(const int cx, const int cy)
+    {
+        const auto m = cappable_mask.get();
+        if (!m || cx < 0 || cy < 0 || cx >= m->cw || cy >= m->ch) return false;
+        return MaskBit(m->cell_bits, static_cast<size_t>(cy) * m->cw + cx);
+    }
+
+    bool MaskCappableAtWm(const GW::Vec2f& wm)
+    {
+        const auto m = cappable_mask.get();
+        const int x = static_cast<int>(floorf(wm.x));
+        const int y = static_cast<int>(floorf(wm.y));
+        if (!m || x < 0 || y < 0 || x >= m->w || y >= m->h) return false;
+        return MaskBit(m->bits, static_cast<size_t>(y) * m->w + x);
+    }
+
+    bool MaskUsable()
+    {
+        return cappable_mask && !cappable_mask->bits.empty();
+    }
+
+    struct CartoSnapshot {
+        std::vector<uint32_t> dwords;
+        uint32_t width = 0;
+        uint32_t height = 0;
+
+        bool IsExplored(const int cx, const int cy) const
+        {
+            if (cx < 0 || cy < 0 || static_cast<uint32_t>(cx) >= width || static_cast<uint32_t>(cy) >= height) return false;
+            const uint32_t bit = static_cast<uint32_t>(cy) * width + static_cast<uint32_t>(cx);
+            if (bit / 32 >= dwords.size()) return false;
+            return (dwords[bit / 32] >> (bit % 32)) & 1;
+        }
+    };
+
+    struct FogTexState {
+        IDirect3DTexture9* tex = nullptr;
+        IDirect3DTexture9* retired = nullptr;
+        int tw = 0, th = 0;
+        int layer = -1;
+        uint64_t built_hash = 0;
+        bool building = false;
+        bool shutdown = false;
+    };
+    FogTexState fog_tex;
+
+    constexpr uint32_t kCappableFogRgb = 0x50FF78;
+    constexpr float kFogTexMaxAlpha = 135.f;
+
+    uint64_t HashCartoBits(const CartoGrid& grid, const int layer)
+    {
+        uint64_t h = 1469598103934665603ull;
+        const auto mix = [&h](const uint64_t v) { h = (h ^ v) * 1099511628211ull; };
+        mix(static_cast<uint64_t>(layer));
+        mix(grid.width);
+        mix(grid.height);
+        for (uint32_t i = 0; grid.bits && i < grid.dword_count; i++) mix(grid.bits[i]);
+        return h;
+    }
+
+    float UnexploredCoverageAtWm(const CartoSnapshot& g, const float wmx, const float wmy)
+    {
+        const float u = wmx / kWorldMapUnitsPerCell - 0.5f;
+        const float v = wmy / kWorldMapUnitsPerCell - 0.5f;
+        const int cx = static_cast<int>(floorf(u));
+        const int cy = static_cast<int>(floorf(v));
+        const float fx = u - cx;
+        const float fy = v - cy;
+        const float tl = g.IsExplored(cx, cy) ? 0.f : 1.f;
+        const float tr = g.IsExplored(cx + 1, cy) ? 0.f : 1.f;
+        const float bl = g.IsExplored(cx, cy + 1) ? 0.f : 1.f;
+        const float br = g.IsExplored(cx + 1, cy + 1) ? 0.f : 1.f;
+        return (tl + (tr - tl) * fx) * (1.f - fy) + (bl + (br - bl) * fx) * fy;
+    }
+
+    void BuildFogTexture(const CartoGrid& grid)
+    {
+        const auto mask = cappable_mask;
+        if (!mask || mask->bits.empty() || !mask->tw || !mask->th) return;
+        if (fog_tex.building || fog_tex.shutdown) return;
+        uint64_t hash = HashCartoBits(grid, mask->layer);
+        std::vector<std::pair<int, int>> ghost_cells;
+        for (const auto& [cell, reach] : cell_reach) {
+            if (reach < 0.f || reach > reveal_reach_gwinches) ghost_cells.push_back(cell);
+        }
+        for (const auto& [cx, cy] : ghost_cells) {
+            hash = (hash ^ (static_cast<uint64_t>(cx) << 20 ^ static_cast<uint64_t>(cy))) * 1099511628211ull;
+        }
+        if (fog_tex.tex && fog_tex.built_hash == hash && fog_tex.layer == mask->layer) return;
+        fog_tex.building = true;
+        auto snap = std::make_shared<CartoSnapshot>();
+        snap->width = grid.width;
+        snap->height = grid.height;
+        if (grid.bits && grid.dword_count) snap->dwords.assign(grid.bits, grid.bits + grid.dword_count);
+        for (const auto& [cx, cy] : ghost_cells) {
+            if (cx < 0 || cy < 0 || static_cast<uint32_t>(cx) >= snap->width || static_cast<uint32_t>(cy) >= snap->height) continue;
+            const uint32_t bit = static_cast<uint32_t>(cy) * snap->width + static_cast<uint32_t>(cx);
+            if (bit / 32 < snap->dwords.size()) snap->dwords[bit / 32] |= 1u << (bit % 32);
+        }
+        Resources::EnqueueWorkerTask([mask, snap, hash] {
+            const int tw = mask->tw, th = mask->th;
+            auto argb = std::make_shared<std::vector<uint32_t>>(static_cast<size_t>(tw) * th);
+            for (int ty = 0; ty < th; ty++) {
+                for (int tx = 0; tx < tw; tx++) {
+                    const uint8_t frac = mask->texel_frac[static_cast<size_t>(ty) * tw + tx];
+                    if (!frac) continue;
+                    const float unexplored = UnexploredCoverageAtWm(*snap, (tx + 0.5f) * kWmPerTexel, (ty + 0.5f) * kWmPerTexel);
+                    if (unexplored <= 0.4f) continue;
+                    const float edge = std::min((unexplored - 0.4f) * 5.f, 1.f);
+                    const float coast = std::clamp((frac * (1.f / 64.f) - 0.4f) * 5.f, 0.f, 1.f);
+                    const uint32_t a = static_cast<uint32_t>(kFogTexMaxAlpha * edge * coast + 0.5f);
+                    if (!a) continue;
+                    (*argb)[static_cast<size_t>(ty) * tw + tx] = (a << 24) | kCappableFogRgb;
                 }
             }
-            if (best_d2 != FLT_MAX) {
-                out_d2 = best_d2;
-                out_on_current_map = true;
-                return true;
-            }
-        }
+            Resources::EnqueueDxTask([argb, tw, th, hash, layer = mask->layer](IDirect3DDevice9* device) {
+                if (fog_tex.shutdown) return;
+                if (fog_tex.retired) {
+                    fog_tex.retired->Release();
+                    fog_tex.retired = nullptr;
+                }
+                if (fog_tex.tex && (fog_tex.tw != tw || fog_tex.th != th)) {
+                    fog_tex.retired = fog_tex.tex;
+                    fog_tex.tex = nullptr;
+                }
+                if (!fog_tex.tex) {
+                    if (!device || device->CreateTexture(tw, th, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &fog_tex.tex, nullptr) != D3D_OK || !fog_tex.tex) {
+                        fog_tex.tex = nullptr;
+                        fog_tex.building = false;
+                        Log::Log("[cartographer] fog texture create failed (%dx%d)", tw, th);
+                        return;
+                    }
+                    fog_tex.tw = tw;
+                    fog_tex.th = th;
+                }
+                D3DLOCKED_RECT lr;
+                if (fog_tex.tex->LockRect(0, &lr, nullptr, 0) == D3D_OK) {
+                    for (int y = 0; y < th; y++) {
+                        memcpy(static_cast<uint8_t*>(lr.pBits) + static_cast<size_t>(y) * lr.Pitch, argb->data() + static_cast<size_t>(y) * tw, static_cast<size_t>(tw) * 4);
+                    }
+                    fog_tex.tex->UnlockRect(0);
+                }
+                fog_tex.layer = layer;
+                fog_tex.built_hash = hash;
+                fog_tex.building = false;
+            });
+        });
+    }
 
-        out_on_current_map = false;
-        const int pcx = static_cast<int>(floorf(player_wm.x / kWorldMapUnitsPerCell));
-        const int pcy = static_cast<int>(floorf(player_wm.y / kWorldMapUnitsPerCell));
-        constexpr int max_radius = 256;
-        const auto ring = [&](const int r) {
-            for (int i = -r; i <= r; i++) {
-                consider(pcx + i, pcy - r);
-                consider(pcx + i, pcy + r);
-                consider(pcx - r, pcy + i);
-                consider(pcx + r, pcy + i);
-            }
-        };
-        for (int r = 1; r <= max_radius; r++) {
-            ring(r);
-            if (best_d2 == FLT_MAX) continue;
-            // Chebyshev rings aren't euclidean-ordered; expand until no farther ring can hold a closer center.
-            for (int k = r + 1; k <= max_radius; k++) {
-                const float min_d = (k - 1) * kWorldMapUnitsPerCell;
-                if (min_d * min_d >= best_d2) break;
-                ring(k);
-            }
-            out_d2 = best_d2;
-            return true;
+    void ReleaseFogTexture()
+    {
+        fog_tex.shutdown = true;
+        if (fog_tex.tex) {
+            fog_tex.tex->Release();
+            fog_tex.tex = nullptr;
         }
-        return false;
+        if (fog_tex.retired) {
+            fog_tex.retired->Release();
+            fog_tex.retired = nullptr;
+        }
+    }
+
+    void LoadCappableMask(const int layer)
+    {
+        if (cappable_mask && cappable_mask->layer == layer) return;
+        if (cappable_mask_pending == layer) return;
+        cappable_mask_pending = layer;
+        Resources::EnqueueWorkerTask([layer] {
+            const auto mask = std::make_shared<CappableMask>();
+            mask->layer = layer;
+            const auto path = Resources::GetPath(L"cartography", std::format(L"cappable_L{}.bin", layer));
+            std::ifstream in(path, std::ios::binary);
+            bool ok = false;
+            char magic[4];
+            uint32_t hdr[3];
+            if (in && in.read(magic, 4) && memcmp(magic, "CCM1", 4) == 0 && in.read(reinterpret_cast<char*>(hdr), sizeof(hdr)) && hdr[0] == static_cast<uint32_t>(layer)) {
+                mask->w = static_cast<int>(hdr[1]);
+                mask->h = static_cast<int>(hdr[2]);
+                if (mask->w > 0 && mask->h > 0 && mask->w <= 32768 && mask->h <= 32768) {
+                    const size_t bytes = (static_cast<size_t>(mask->w) * mask->h + 7) / 8;
+                    mask->bits.resize(bytes);
+                    ok = static_cast<bool>(in.read(reinterpret_cast<char*>(mask->bits.data()), bytes));
+                }
+            }
+            if (ok) {
+                const auto px = [&mask](const int x, const int y) -> int {
+                    return MaskBit(mask->bits, static_cast<size_t>(y) * mask->w + x);
+                };
+                mask->tw = mask->w / 8;
+                mask->th = mask->h / 8;
+                mask->texel_frac.assign(static_cast<size_t>(mask->tw) * mask->th, 0);
+                for (int ty = 0; ty < mask->th; ty++) {
+                    for (int tx = 0; tx < mask->tw; tx++) {
+                        int set = 0;
+                        for (int y = 0; y < 8; y++) {
+                            for (int x = 0; x < 8; x++) {
+                                set += px(tx * 8 + x, ty * 8 + y);
+                            }
+                        }
+                        mask->texel_frac[static_cast<size_t>(ty) * mask->tw + tx] = static_cast<uint8_t>(set);
+                    }
+                }
+                mask->cw = mask->w / 32;
+                mask->ch = mask->h / 32;
+                mask->cell_bits.assign((static_cast<size_t>(mask->cw) * mask->ch + 7) / 8, 0);
+                for (int cy = 0; cy < mask->ch; cy++) {
+                    for (int cx = 0; cx < mask->cw; cx++) {
+                        bool any = false;
+                        for (int y = 0; y < 32 && !any; y++) {
+                            for (int x = 0; x < 32 && !any; x++) {
+                                any = px(cx * 32 + x, cy * 32 + y) != 0;
+                            }
+                        }
+                        if (any) {
+                            const size_t bit = static_cast<size_t>(cy) * mask->cw + cx;
+                            mask->cell_bits[bit >> 3] |= 1 << (bit & 7);
+                        }
+                    }
+                }
+            }
+            else {
+                mask->bits.clear();
+                mask->w = mask->h = 0;
+            }
+            GW::GameThread::Enqueue([mask] {
+                cappable_mask = mask;
+                cappable_mask_pending = -1;
+                fog_tex.built_hash = 0;
+                Log::Log("[cartographer] cappable mask L%d: %s (%dx%d wm)", mask->layer, mask->bits.empty() ? "missing" : "loaded", mask->w, mask->h);
+            });
+        });
+    }
+
+    // Distance from a foggy cell to the nearest ground you can stand on. Coastlines and cliffs
+    // ignore the cell grid, so the cell is sampled across its area and the closest footing wins:
+    // a cell that is mostly cliff but clips a walkable ledge is somewhere you can reach.
+    // Returns -1 when the map has no walkable ground anywhere near it.
+    float MeasureCellReach(const int cx, const int cy)
+    {
+        // Cheap pass first: if any part of the cell is standable, the answer is zero and no
+        // expensive search is needed. Only cells with no footing at all pay for the full
+        // nearest-ground lookup, and then just once.
+        // Cheap pass: if any part of the cell is standable the answer is zero, no search needed.
+        constexpr int kSamples = 4;
+        for (int sy = 0; sy < kSamples; sy++) {
+            for (int sx = 0; sx < kSamples; sx++) {
+                const GW::Vec2f wm{
+                    (cx + (sx + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
+                    (cy + (sy + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
+                };
+                GW::GamePos gp{};
+                if (WorldMapWidget::WorldMapToGamePos(wm, gp) && Pathing::IsPositionWalkable(gp)) return 0.f;
+            }
+        }
+        // No footing inside it, so find how far away the nearest is. Measured from several
+        // points across the cell, not just the middle: ground beside one corner is what you
+        // would actually walk to, and judging by the midpoint alone reports it as further away
+        // than it is and wrongly writes the cell off.
+        const GW::Vec2f probes[5] = {
+            CellCenterWorldMap(cx, cy),
+            {(cx + 0.1f) * kWorldMapUnitsPerCell, (cy + 0.1f) * kWorldMapUnitsPerCell},
+            {(cx + 0.9f) * kWorldMapUnitsPerCell, (cy + 0.1f) * kWorldMapUnitsPerCell},
+            {(cx + 0.1f) * kWorldMapUnitsPerCell, (cy + 0.9f) * kWorldMapUnitsPerCell},
+            {(cx + 0.9f) * kWorldMapUnitsPerCell, (cy + 0.9f) * kWorldMapUnitsPerCell},
+        };
+        float best = -1.f;
+        for (const auto& wm : probes) {
+            GW::GamePos gp{};
+            if (!WorldMapWidget::WorldMapToGamePos(wm, gp)) continue;
+            GW::GamePos walkable = gp;
+            if (!Pathing::FindClosestPositionOnTrapezoid(walkable)) continue;
+            const float d = sqrtf(GW::GetSquareDistance(gp, walkable));
+            if (best < 0.f || d < best) best = d;
+        }
+        return best;
+    }
+
+    // Measure a few unmeasured foggy cells per tick. Measuring is the expensive part and never
+    // depends on the slider, so it happens once per cell and the results are kept.
+    void SweepCellReach(const CartoGrid& grid, GW::AreaInfo* map_info)
+    {
+        ImRect bounds;
+        if (!(map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds))) return;
+        const int x0 = static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell));
+        const int y0 = static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell));
+        const int x1 = static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell));
+        const int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
+        int budget = 1;
+        for (int cy = y0; cy < y1 && budget > 0; cy++) {
+            for (int cx = x0; cx < x1 && budget > 0; cx++) {
+                if (grid.IsExplored(cx, cy)) continue;
+                if (!CellCappable(cx, cy)) continue;
+                if (cell_reach.contains({cx, cy})) continue;
+                cell_reach[{cx, cy}] = MeasureCellReach(cx, cy);
+                budget--;
+            }
+        }
+        sweep_complete = budget > 0;
+    }
+
+    bool CellReachable(const std::pair<int, int>& cell)
+    {
+        const auto it = cell_reach.find(cell);
+        return it != cell_reach.end() && it->second >= 0.f && it->second <= reveal_reach_gwinches;
     }
 
     struct Target {
@@ -270,6 +550,8 @@ namespace {
         map_fog_cells = -1;
         marker_recheck_at = 0;
         skipped_cells.clear();
+        cell_reach.clear();
+        sweep_complete = false;
         ClearMarker();
     }
 
@@ -286,7 +568,10 @@ namespace {
         int count = 0;
         for (int cy = y0; cy < y1; cy++) {
             for (int cx = x0; cx < x1; cx++) {
-                if (!grid.IsExplored(cx, cy)) count++;
+                if (grid.IsExplored(cx, cy) || !CellCappable(cx, cy)) continue;
+                const auto it = cell_reach.find({cx, cy});
+                if (it != cell_reach.end() && (it->second < 0.f || it->second > reveal_reach_gwinches)) continue;
+                count++;
             }
         }
         map_fog_cells = count;
@@ -355,7 +640,10 @@ namespace {
             return;
         }
         if (!target.valid || marker_recheck_at) {
-            snprintf(buf, len, "%s", map_fog_cells == 0 ? "nothing left to uncover on this map" : "looking for unexplored areas...");
+            const char* idle = map_fog_cells == 0 ? "nothing left to uncover on this map"
+                : !sweep_complete ? "scanning this map's fog..."
+                : "nothing reachable left here - travel on, or add a fog point";
+            snprintf(buf, len, "%s", idle);
             return;
         }
         if (arrived && !target.custom) {
@@ -384,19 +672,14 @@ namespace {
 
     bool ContextMenuItems(const GW::Vec2f& click_wm, const float px_per_wm_unit)
     {
+        if (!enabled) return true;
         bool keep_open = true;
         ImGui::PushID("carto_ctx");
         ImGui::Separator();
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         const ImVec2 item_size = {250.f * ImGui::FontScale(), 0.f};
-        if (!enabled) {
-            if (ImGui::Button(ICON_FA_MAP_MARKED_ALT " Enable cartographer helper", item_size)) {
-                GW::GameThread::Enqueue([] { CartographerModule::SetEnabled(true); });
-                keep_open = false;
-            }
-        }
-        else {
+        {
             ImGui::TextColored(ImColor(kTargetColor).Value, ICON_FA_MAP_MARKED_ALT " Cartographer");
             char status[160];
             BuildStatusText(status, sizeof(status));
@@ -404,23 +687,31 @@ namespace {
             if (map_fog_cells > 0) ImGui::TextDisabled("%d cappable fog cells left on this map", map_fog_cells);
 
             const float near_dist = px_per_wm_unit > 0.f ? 12.f / px_per_wm_unit : 8.f;
-            if (FindCustomPointNear(click_wm, near_dist) >= 0) {
-                if (ImGui::Button("Remove fog point", item_size)) {
-                    CartographerModule::RemoveCustomPointNear(click_wm, near_dist);
-                    keep_open = false;
-                }
-            }
-            else if (ImGui::Button("Add fog point here", item_size)) {
-                CartographerModule::AddCustomPoint(click_wm);
-                keep_open = false;
-            }
-            if (target.valid) {
-                if (ImGui::Button(target.custom ? "Remove current target point" : "Skip this suggestion", item_size)) {
+            const int point_here = FindCustomPointNear(click_wm, near_dist);
+            // Clicking the suggestion itself means acting on it — offering to drop a fog point
+            // on the very spot already being suggested is nonsense.
+            const bool on_suggestion = target.valid && !target.custom
+                && static_cast<int>(floorf(click_wm.x / kWorldMapUnitsPerCell)) == target.cx
+                && static_cast<int>(floorf(click_wm.y / kWorldMapUnitsPerCell)) == target.cy;
+            if (target.valid && (on_suggestion || (target.custom && point_here >= 0))) {
+                if (ImGui::Button(target.custom ? "Remove this fog point" : "Skip this suggestion", item_size)) {
                     CartographerModule::SkipCurrentTarget(false);
                     keep_open = false;
                 }
                 if (!target.custom && ImGui::Button("Never suggest this spot again", item_size)) {
                     CartographerModule::SkipCurrentTarget(true);
+                    keep_open = false;
+                }
+            }
+            else if (point_here >= 0) {
+                if (ImGui::Button("Remove fog point", item_size)) {
+                    CartographerModule::RemoveCustomPointNear(click_wm, near_dist);
+                    keep_open = false;
+                }
+            }
+            else {
+                if (ImGui::Button("Add fog point here", item_size)) {
+                    CartographerModule::AddCustomPoint(click_wm);
                     keep_open = false;
                 }
             }
@@ -432,10 +723,36 @@ namespace {
                     keep_open = false;
                 }
             }
-            if (ImGui::Button("Disable cartographer helper", item_size)) {
-                GW::GameThread::Enqueue([] { CartographerModule::SetEnabled(false); });
+#ifdef _DEBUG
+            if (ImGui::Button("Log what the helper sees here", item_size)) {
+                const GW::Vec2f at = click_wm;
+                GW::GameThread::Enqueue([at] {
+                    CartoGrid g;
+                    if (!GetCartoGrid(g)) {
+                        Log::Log("[cartographer] probe: no cartography data");
+                        return;
+                    }
+                    const int cx = static_cast<int>(floorf(at.x / kWorldMapUnitsPerCell));
+                    const int cy = static_cast<int>(floorf(at.y / kWorldMapUnitsPerCell));
+                    GW::GamePos gp{};
+                    const bool converted = WorldMapWidget::WorldMapToGamePos(at, gp);
+                    GW::GamePos snap = gp;
+                    const bool snapped = converted && Pathing::FindClosestPositionOnTrapezoid(snap) != nullptr;
+                    Log::Log("[cartographer] probe wm(%.0f,%.0f) cell(%d,%d): explored=%d, cappable px=%d texel=%d cell=%d (mask L%d %s), grid %ux%u, game(%.0f,%.0f), standable here=%d, nearest ground %.0f away, limit %.0f",
+                             at.x, at.y, cx, cy, static_cast<int>(g.IsExplored(cx, cy)),
+                             static_cast<int>(MaskCappableAtWm(at)),
+                             TexelFrac(static_cast<int>(floorf(at.x / kWmPerTexel)), static_cast<int>(floorf(at.y / kWmPerTexel))),
+                             static_cast<int>(CellCappable(cx, cy)),
+                             cappable_mask ? cappable_mask->layer : -1, MaskUsable() ? "loaded" : "missing",
+                             g.width, g.height,
+                             gp.x, gp.y, converted && Pathing::IsPositionWalkable(gp),
+                             snapped ? sqrtf(GW::GetSquareDistance(gp, snap)) : -1.f,
+                             reveal_reach_gwinches);
+                    Log::FlushFile();
+                });
                 keep_open = false;
             }
+#endif
         }
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
@@ -466,10 +783,24 @@ namespace {
 
     using ProjectToScreen = bool(*)(const GW::Vec2f&, ImVec2&);
 
+    void DrawCappableFog(ImDrawList* dl, const ProjectToScreen project)
+    {
+        if (!fog_tex.tex) return;
+        const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
+        if (!map_info || fog_tex.layer != static_cast<int>(map_info->continent)) return;
+        ImVec2 p0, p1;
+        if (!project({0.f, 0.f}, p0)) return;
+        if (!project({fog_tex.tw * kWmPerTexel, fog_tex.th * kWmPerTexel}, p1)) return;
+        dl->AddImage(reinterpret_cast<ImTextureID>(fog_tex.tex), p0, p1);
+    }
+
     void DrawMapOverlay(ImDrawList* dl, const ProjectToScreen project, const bool cell_tooltip)
     {
         const ImVec2 mouse = ImGui::GetMousePos();
         const char* tooltip = nullptr;
+        if (show_cappable_fog) {
+            DrawCappableFog(dl, project);
+        }
         // While marker ownership is in question (user removed/moved it; yield pending) the
         // target visuals hide immediately so the removal feels instant.
         const bool target_active = target.valid && !marker_recheck_at;
@@ -521,6 +852,8 @@ void CartographerModule::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::RegisterField(this, "enabled", &enabled);
+    SettingsRegistry::RegisterField(this, "show_cappable_fog", &show_cappable_fog);
+    SettingsRegistry::RegisterField(this, "reveal_reach", &reveal_reach_gwinches);
     SettingsRegistry::RegisterField(this, "declined_cells", &declined_cells_str);
     SettingsRegistry::RegisterField(this, "custom_points", &custom_points_str);
     MissionMapWidget::AddContextMenuCallback(&OnMissionMapContextMenu);
@@ -539,11 +872,13 @@ void CartographerModule::SignalTerminate()
     QuestModule::RemoveCustomMarkerChangedCallback(&OnCustomMarkerChanged);
     enabled = false;
     ResetState();
+    ReleaseFogTexture();
 }
 
 void CartographerModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
+    reveal_reach_gwinches = std::clamp(reveal_reach_gwinches, 500.f, 3072.f);
     ParseDeclined();
     ParsePoints();
 }
@@ -621,7 +956,14 @@ void CartographerModule::Update(float)
     GW::Vec2f player_wm;
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
+    const int continent = static_cast<int>(map_info->continent);
+    LoadCappableMask(continent);
+    if (!(cappable_mask && cappable_mask->layer == continent)) return;
     UpdateMapFogCount(grid);
+    SweepCellReach(grid, map_info);
+    if (MaskUsable()) {
+        BuildFogTexture(grid);
+    }
 
     if (target.valid && target.on_map && GW::GetSquareDistance(player->pos, goal_game) < 150.f * 150.f) {
         if (target.custom) {
@@ -652,22 +994,31 @@ void CartographerModule::Update(float)
         }
     }
     bool on_current_map = true;
+    GW::GamePos goal_override{};
+    bool have_goal_override = false;
     if (cand.valid) {
         ImRect bounds;
         on_current_map = GW::Map::GetMapWorldMapBounds(map_info, &bounds) && bounds.Contains({cand.wm.x, cand.wm.y});
     }
     else {
-        int cx = 0, cy = 0;
-        float d2 = FLT_MAX;
-        if (FindNearestUnexploredCell(grid, player_wm, cx, cy, d2, on_current_map)) {
-            cand = {true, false, cx, cy, CellCenterWorldMap(cx, cy)};
-            cand_d2 = d2;
+        // The nearest cappable foggy cell with walkable ground within the configured reach.
+        for (const auto& [cell, reach] : cell_reach) {
+            if (reach < 0.f || reach > reveal_reach_gwinches) continue;
+            if (skipped_cells.contains(cell) || declined_cells.contains(cell)) continue;
+            if (grid.IsExplored(cell.first, cell.second)) continue;
+            if (!CellCappable(cell.first, cell.second)) continue;
+            const auto centre = CellCenterWorldMap(cell.first, cell.second);
+            const float d2 = Dist2(centre, player_wm);
+            if (d2 < cand_d2) {
+                cand_d2 = d2;
+                cand = {true, false, cell.first, cell.second, centre};
+            }
         }
     }
     if (!cand.valid) {
         if (!warned_no_fog) {
             warned_no_fog = true;
-            Log::Log("[cartographer] no unexplored cells within search radius");
+            Log::Log("[cartographer] no fogged walkable ground left on this map");
         }
         if (target.valid) ClearTarget();
         return;
@@ -680,14 +1031,18 @@ void CartographerModule::Update(float)
         // Hysteresis: keep the current target unless it became ineligible or the candidate is meaningfully closer.
         const bool current_eligible = target.custom
             ? std::ranges::any_of(custom_points, [&](const GW::Vec2f& p) { return Dist2(p, target.wm) < 1.f; })
-            : !grid.IsExplored(target.cx, target.cy) && !skipped_cells.contains({target.cx, target.cy}) && !declined_cells.contains({target.cx, target.cy});
+            : !grid.IsExplored(target.cx, target.cy) && CellCappable(target.cx, target.cy) && !skipped_cells.contains({target.cx, target.cy}) && !declined_cells.contains({target.cx, target.cy});
         if (current_eligible && cand_d2 >= 0.7f * Dist2(target.wm, player_wm)) same = true;
     }
     if (same) return;
 
     GW::GamePos gp{};
     GW::Vec2f marker_wm = cand.wm;
-    if (on_current_map) {
+    if (have_goal_override) {
+        // Already a point on walkable ground — nothing to snap.
+        gp = goal_override;
+    }
+    else if (on_current_map) {
         if (!WorldMapWidget::WorldMapToGamePos(cand.wm, gp)) return;
         // The marker goes on the closest walkable spot toward the fog, not into the void.
         Pathing::FindClosestPositionOnTrapezoid(gp);
@@ -705,7 +1060,8 @@ void CartographerModule::Update(float)
         else Log::Log("[cartographer] target: custom point wm(%.0f, %.0f) on another map; marker set there for cross-map routing", target.wm.x, target.wm.y);
     }
     else if (on_current_map) {
-        Log::Log("[cartographer] fog target: cell (%d, %d) wm(%.0f, %.0f), marker at game(%.0f, %.0f)", target.cx, target.cy, target.wm.x, target.wm.y, gp.x, gp.y);
+        Log::Log("[cartographer] fog target: cell (%d, %d) wm(%.0f, %.0f), marker at game(%.0f, %.0f), walkable ground %.0f away",
+                 target.cx, target.cy, target.wm.x, target.wm.y, gp.x, gp.y, cell_reach.count({target.cx, target.cy}) ? cell_reach[{target.cx, target.cy}] : -1.f);
     }
     else {
         Log::Log("[cartographer] fog target: cell (%d, %d) wm(%.0f, %.0f) on another map; marker set there for cross-map routing", target.cx, target.cy, target.wm.x, target.wm.y);
@@ -714,11 +1070,47 @@ void CartographerModule::Update(float)
 
 void CartographerModule::DrawSettingsInternal()
 {
-    ImGui::TextDisabled("Debug tool: every second, suggests the nearest unexplored (foggy) world-map cell and\nplaces the custom quest marker on the closest walkable spot toward it - the regular\nquest path leads you there. The suggestion, your queued fog points and a status line\nare drawn on the world map and mission map; right-click either map to manage the\nhelper (toggle, add/remove fog points, skip suggestions).");
+    ImGui::TextDisabled("Debug tool: every second, suggests the nearest unexplored world-map cell that can\nactually be uncovered (per the cartography mod's data) and places the custom quest\nmarker on the closest walkable spot toward it - the regular quest path leads you there.\nThe cappable fog, your queued fog points and a status line are drawn on the world map\nand mission map; right-click either map to manage the helper.");
     bool on = enabled;
     if (ImGui::Checkbox("Enabled", &on)) {
         GW::GameThread::Enqueue([on] { SetEnabled(on); });
     }
+    ImGui::Checkbox("Show cappable fog on the maps", &show_cappable_fog);
+    ImGui::ShowHelp("Green: everything still unexplored that can actually be uncovered, straight from the cartography mod's data. Areas the mod marks as unreachable draw nothing.");
+    if (MaskUsable()) {
+        ImGui::Text("Cappable mask: continent %d, %dx%d world-map units", cappable_mask->layer, cappable_mask->w, cappable_mask->h);
+    }
+    else {
+        ImGui::TextColored(ImVec4(1.f, .6f, .3f, 1.f), "Cappable mask: %s", cappable_mask ? "no data for this continent" : "not loaded yet");
+    }
+    // Double-click (or ctrl-click) the slider to type an exact figure rather than hunt for it.
+    static bool typing_reach = false;
+    static bool focus_reach = false;
+    if (typing_reach) {
+        if (focus_reach) {
+            ImGui::SetKeyboardFocusHere();
+            focus_reach = false;
+        }
+        // InputScalar does not accept EnterReturnsTrue; losing focus covers Enter and clicking away.
+        ImGui::InputFloat("Max distance to walkable ground", &reveal_reach_gwinches, 0.f, 0.f, "%.0f");
+        if (ImGui::IsItemDeactivated()) {
+            reveal_reach_gwinches = std::clamp(reveal_reach_gwinches, 500.f, 3072.f);
+            typing_reach = false;
+        }
+    }
+    else {
+        ImGui::SliderFloat("Max distance to walkable ground", &reveal_reach_gwinches, 500.f, 3072.f, "%.0f");
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+            typing_reach = true;
+            focus_reach = true;
+        }
+    }
+    ImGui::ShowHelp("A foggy cell counts as reachable when you can stand within this distance of it. Moving this recolours the maps immediately. Double-click to type an exact value.");
+    unsigned reachable = 0;
+    for (const auto& [cell, reach] : cell_reach) {
+        if (reach >= 0.f && reach <= reveal_reach_gwinches) reachable++;
+    }
+    ImGui::Text("Foggy cells: %u measured, %u reachable at this distance", static_cast<unsigned>(cell_reach.size()), reachable);
     ImGui::Text("Declined forever: %u cells", static_cast<unsigned>(declined_cells.size()));
     ImGui::SameLine();
     if (ImGui::SmallButton("Clear##declined")) ClearDeclined();
@@ -733,6 +1125,11 @@ void CartographerModule::SetEnabled(const bool on)
     enabled = on;
     if (!on) ResetState();
     Log::Log("[cartographer] %s", on ? "enabled" : "disabled");
+}
+
+bool CartographerModule::GetEnabled()
+{
+    return enabled;
 }
 
 void CartographerModule::OnUserMarkerAction()
@@ -800,6 +1197,8 @@ void CartographerModule::ClearDeclined()
     GW::GameThread::Enqueue([] {
         declined_cells.clear();
         skipped_cells.clear();
+        cell_reach.clear();
+        sweep_complete = false;
         SerializeDeclined();
         if (target.valid) ClearTarget();
         Log::Log("[cartographer] declined cells cleared");
@@ -813,20 +1212,11 @@ void CartographerModule::GetStatus(char* buf, const size_t len)
     if (!target.valid) snprintf(target_desc, sizeof(target_desc), "none");
     else if (target.custom) snprintf(target_desc, sizeof(target_desc), "point(%.0f,%.0f)", target.wm.x, target.wm.y);
     else snprintf(target_desc, sizeof(target_desc), "cell(%d,%d)", target.cx, target.cy);
-    snprintf(buf, len, "carto: enabled=%d pathing=%s target=%s marker=%d arrived=%d skipped=%u declined=%u points=%u fogcells=%d",
+    snprintf(buf, len, "carto: enabled=%d pathing=%s target=%s marker=%d arrived=%d skipped=%u measured=%u declined=%u points=%u fogcells=%d mask=L%d/%s fogtex=%s",
              enabled, pathing, target_desc, marker_owned, arrived,
-             static_cast<unsigned>(skipped_cells.size()), static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells);
+             static_cast<unsigned>(skipped_cells.size()), static_cast<unsigned>(cell_reach.size()),
+             static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells,
+             cappable_mask ? cappable_mask->layer : -1, MaskUsable() ? "ok" : "none",
+             fog_tex.tex ? "ok" : fog_tex.building ? "building" : "none");
 }
 
-#else
-
-void CartographerModule::Initialize() { ToolboxModule::Initialize(); }
-void CartographerModule::SignalTerminate() {}
-void CartographerModule::Update(float) {}
-void CartographerModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy) { ToolboxModule::LoadSettings(doc, legacy); }
-void CartographerModule::DrawSettingsInternal() {}
-void CartographerModule::SetEnabled(bool) {}
-void CartographerModule::OnUserMarkerAction() {}
-bool CartographerModule::GetCurrentTargetWorldPos(GW::Vec2f&) { return false; }
-
-#endif

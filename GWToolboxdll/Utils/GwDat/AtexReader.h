@@ -32,4 +32,13 @@ struct DatTexture
     TextureType texture_type;
 };
 
+struct DatTextureRaw
+{
+    int width = 0;
+    int height = 0;
+    char cmptype = 0;
+    std::vector<uint8_t> blocks;
+};
+
 DatTexture ProcessImageFile(unsigned char* img, int size);
+DatTextureRaw ProcessImageFileRaw(unsigned char* img, int size);

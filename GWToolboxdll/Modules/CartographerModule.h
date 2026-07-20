@@ -35,6 +35,7 @@ public:
     void DrawSettingsInternal() override;
 
     static void SetEnabled(bool on);
+    static bool GetEnabled();
     // The user explicitly placed/removed the quest marker via toolbox UI — yield instantly.
     static void OnUserMarkerAction();
     // World-map position of the current suggestion (fog cell or custom point); false if none.

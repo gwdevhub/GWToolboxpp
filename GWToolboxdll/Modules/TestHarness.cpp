@@ -3,6 +3,8 @@
 #include <chrono>
 #include <cmath>
 #include <filesystem>
+#include <format>
+#include <fstream>
 #include <set>
 #include <sstream>
 #include <string>
@@ -10,6 +12,7 @@
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Pathing.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
@@ -22,6 +25,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
@@ -56,6 +60,7 @@
 #include "Windows/TravelWindow.h"
 #include "Modules/GwDatModule.h"
 #include "Utils/ArenaNetFileParser.h"
+#include <Utils/GwDat/AtexReader.h>
 
 // Dev iteration tool: compiled in Debug (_DEBUG) and RelWithDebInfo (GWTB_HARNESS, which
 // logs to log.txt), excluded from the shipped Release build.
@@ -88,6 +93,74 @@ namespace {
     std::filesystem::path config_path() { return Resources::GetPath(L"harness_config.txt"); }
 
     void write_status(const std::string& s) { Resources::WriteFile(status_path(), s); }
+
+    std::vector<uint32_t> tpfhash_ids;
+    size_t tpfhash_next = 0;
+    size_t tpfhash_ok = 0;
+    std::string tpfhash_lines;
+    bool tpfhash_active = false;
+
+    void TpfHashQueueBatch()
+    {
+        Resources::EnqueueWorkerTask([] {
+            constexpr size_t kBatch = 32;
+            const size_t end = std::min(tpfhash_next + kBatch, tpfhash_ids.size());
+            for (size_t i = tpfhash_next; i < end; i++) {
+                const uint32_t id = tpfhash_ids[i];
+                ArenaNetFileParser::GameAssetFile asset;
+                if (!asset.readFromDat(id, 0) || asset.data.size() < 16) {
+                    tpfhash_lines += std::format("{} read_failed\n", id);
+                    continue;
+                }
+                uint8_t* bytes = asset.data.data();
+                size_t size = asset.data.size();
+                if (memcmp(bytes, "ffna", 4) == 0) {
+                    const auto anet_file = reinterpret_cast<ArenaNetFileParser::ArenaNetFile*>(&asset);
+                    const ArenaNetFileParser::Chunk* found = nullptr;
+                    if (anet_file->isValid()) {
+                        found = anet_file->FindChunk(ArenaNetFileParser::ChunkType::FA3_InlineTextureDXT3);
+                        if (!found) found = anet_file->FindChunk(ArenaNetFileParser::ChunkType::FAA_InlineTextureDXTA);
+                    }
+                    if (!found) {
+                        tpfhash_lines += std::format("{} ffna_no_texture\n", id);
+                        continue;
+                    }
+                    const auto chunk = reinterpret_cast<const ArenaNetFileParser::UnknownChunk*>(found);
+                    uint8_t* cdata = const_cast<uint8_t*>(chunk->data);
+                    uint8_t* file_end = asset.data.data() + asset.data.size();
+                    if (cdata < asset.data.data() || cdata >= file_end || chunk->chunk_size < 16 || chunk->chunk_size > static_cast<size_t>(file_end - cdata)) {
+                        tpfhash_lines += std::format("{} bad_chunk\n", id);
+                        continue;
+                    }
+                    bytes = cdata;
+                    size = chunk->chunk_size;
+                }
+                const auto raw = ProcessImageFileRaw(bytes, static_cast<int>(size));
+                if (raw.blocks.empty()) {
+                    char magic[5] = {0};
+                    memcpy(magic, bytes, 4);
+                    tpfhash_lines += std::format("{} decode_failed magic={}\n", id, magic);
+                    continue;
+                }
+                const uint32_t hash = Resources::GetTexmodHash(reinterpret_cast<const char*>(raw.blocks.data()), raw.blocks.size());
+                tpfhash_lines += std::format("{} 0x{:08x} {} {} {:c}\n", id, hash, raw.width, raw.height, raw.cmptype);
+                tpfhash_ok++;
+            }
+            tpfhash_next = end;
+            GW::GameThread::Enqueue([] {
+                if (!tpfhash_active) return;
+                if (tpfhash_next < tpfhash_ids.size()) {
+                    TpfHashQueueBatch();
+                    return;
+                }
+                Resources::WriteFile(Resources::GetPath(L"texmod_hashes.txt"), tpfhash_lines);
+                Log::Log("[harness] tpfhash: hashed %u/%u ids -> texmod_hashes.txt", static_cast<unsigned>(tpfhash_ok), static_cast<unsigned>(tpfhash_ids.size()));
+                Log::FlushFile();
+                write_status(std::format("tpfhash: done {}/{}", tpfhash_ok, tpfhash_ids.size()));
+                tpfhash_active = false;
+            });
+        });
+    }
 
     std::string trim(const std::string& s)
     {
@@ -599,6 +672,25 @@ namespace {
             write_status("dattex: queued");
             return;
         }
+        if (verb == "maprects") {
+            std::ofstream out(Resources::GetPath(L"maprects.txt"));
+            if (!out) { write_status("maprects: open failed"); return; }
+            size_t written = 0;
+            for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
+                const auto info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
+                if (!info) continue;
+                ImRect bounds{};
+                const bool has_bounds = GW::Map::GetMapWorldMapBounds(info, &bounds);
+                out << i << ' ' << static_cast<int>(info->campaign) << ' ' << static_cast<int>(info->continent) << ' '
+                    << static_cast<int>(info->region) << ' ' << static_cast<int>(info->type) << ' '
+                    << std::hex << info->flags << std::dec << ' ' << (info->GetIsOnWorldMap() ? 1 : 0) << ' '
+                    << (has_bounds ? 1 : 0) << ' '
+                    << bounds.Min.x << ' ' << bounds.Min.y << ' ' << bounds.Max.x << ' ' << bounds.Max.y << '\n';
+                ++written;
+            }
+            write_status(std::format("maprects: wrote {} maps", written));
+            return;
+        }
         if (verb == "nativez") { // nativez [radius step]: compare native terrain z vs GW::Map::QueryAltitude(plane 0) on a grid
             float radius = 1200.f, step = 96.f;
             is >> radius >> step;
@@ -1016,6 +1108,32 @@ namespace {
             write_status(b);
             return;
         }
+        if (verb == "tpfhash") {
+            if (tpfhash_active) {
+                write_status("tpfhash: already running");
+                return;
+            }
+            tpfhash_ids.clear();
+            {
+                std::ifstream in(Resources::GetPath(L"texmod_hash_input.txt"));
+                std::string tok;
+                while (in >> tok) {
+                    const uint32_t id = static_cast<uint32_t>(strtoul(tok.c_str(), nullptr, 0));
+                    if (id) tpfhash_ids.push_back(id);
+                }
+            }
+            if (tpfhash_ids.empty()) {
+                write_status("tpfhash: no ids in texmod_hash_input.txt");
+                return;
+            }
+            tpfhash_next = 0;
+            tpfhash_ok = 0;
+            tpfhash_lines.clear();
+            tpfhash_active = true;
+            write_status(std::format("tpfhash: queued {} ids", tpfhash_ids.size()));
+            TpfHashQueueBatch();
+            return;
+        }
         write_status("unknown_command: " + verb);
     }
 } // namespace
@@ -1139,6 +1257,7 @@ void TestHarness::Terminate()
     ToolboxModule::Terminate();
 #ifdef HARNESS_ENABLED
     GW::StoC::RemoveCallback<GW::Packet::StoC::PlayEffect>(&PlayEffect_Entry);
+    tpfhash_active = false;
     write_status("terminated");
 #endif
 }
