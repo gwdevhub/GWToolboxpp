@@ -40,6 +40,7 @@
 #if defined(_DEBUG) || defined(GWTB_HARNESS)
 #include <Modules/TestHarness.h>
 #endif
+
 #include <Modules/MouseFix.h>
 #include <Modules/PartyBroadcastModule.h>
 #include <Modules/PriceCheckerModule.h>
@@ -48,9 +49,7 @@
 #include <Modules/TextToSpeechModule.h>
 #include <Modules/ToastNotifications.h>
 #include <Modules/VendorFix.h>
-
 #include <Widgets/VanquishMapOverlayWidget.h>
-
 #include <Windows/AccountInventoryWindow.h>
 #include <Windows/ArmoryWindow.h>
 #include <Windows/BuildsWindow.h>
@@ -77,18 +76,20 @@
 #include <Windows/RerollWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/TravelWindow.h>
+
 #ifdef _DEBUG
 #include <Windows/DoorMonitorWindow.h>
 #include <Windows/PacketLoggerWindow.h>
 #include <Windows/SkillListingWindow.h>
 #include <Windows/StringDecoderWindow.h>
+#include <Modules/RiverModule.h>
 #endif
+
 #include <Windows/GWMarketWindow.h>
 #include <Windows/InventorySorting.h>
 #include <Windows/PerformanceWindow.h>
 #include <Windows/SettingsWindow.h>
 #include <Windows/TargetInfoWindow.h>
-
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/ActiveQuestWidget.h>
 #include <Widgets/AlcoholWidget.h>
@@ -108,10 +109,7 @@
 #include <Modules/DangerRingsModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/SkillRangeRingsModule.h>
-#ifdef _DEBUG
 #include <Modules/CartographerModule.h>
-#include <Modules/RiverModule.h>
-#endif
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/PartyDamage.h>
 #include <Widgets/SkillMonitorWidget.h>
@@ -209,8 +207,8 @@ namespace {
         {SkillRangeRingsModule::Instance(), false},
 #ifdef _DEBUG
         {RiverModule::Instance(), false},
-        CartographerModule::Instance(),
 #endif
+        CartographerModule::Instance(),
         PartyDamage::Instance(),
         BondsWidget::Instance(),
         ClockWidget::Instance(),

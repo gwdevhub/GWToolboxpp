@@ -141,6 +141,7 @@ namespace {
 
     bool world_map_clicking = false;
     GW::Vec2f world_map_click_pos;
+    bool world_map_click_pos_valid = false;
 
     GW::Constants::QuestID hovered_quest_id = GW::Constants::QuestID::None;
     GuiUtils::EncString hovered_quest_name;
@@ -284,6 +285,14 @@ namespace {
         ImGui::PopStyleVar();
         ImGui::Separator();
         if (!ContextMenuMarkerButtons()) return false;
+        // The cartographer's suggestion carries a custom quest marker, so right-clicking it
+        // lands here rather than on the plain map menu — its actions belong here too. Their
+        // actions act on the clicked position, which only resolves at zoom 1.0.
+        if (world_map_click_pos_valid) {
+            for (const auto& cb : context_menu_callbacks) {
+                if (!cb()) return false;
+            }
+        }
 
         if (set_active) {
             GW::GameThread::Enqueue([quest_id] {
@@ -1180,6 +1189,12 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     mouse_offset.y *= -1;
     if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
         window = ImGui::GetCurrentWindowRead();
+        bool carto_enabled = CartographerModule::GetEnabled();
+        if (ImGui::Checkbox("Cartographer helper", &carto_enabled)) {
+            GW::GameThread::Enqueue([carto_enabled] {
+                CartographerModule::SetEnabled(carto_enabled);
+            });
+        }
         if (ImGui::Checkbox("Show all areas", &settings.showing_all_outposts)) {
             GW::GameThread::Enqueue([] {
                 ShowAllOutposts(settings.showing_all_outposts);
@@ -1430,17 +1445,23 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
     switch (Message) {
         case WM_GW_RBUTTONCLICK: {
             if (!(world_map_context && GW::UI::GetIsWorldMapShowing())) break;
+            // Resolve the click position before dispatching: the hovered-quest menu carries
+            // contributed items that act on where the user clicked, so it needs it too.
+            const bool have_click_pos = world_map_context->zoom == 1.0f;
+            world_map_click_pos_valid = have_click_pos;
+            if (have_click_pos) {
+                world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                world_map_click_pos.x /= ui_scale.x;
+                world_map_click_pos.y /= ui_scale.y;
+                world_map_click_pos.x += world_map_context->top_left.x;
+                world_map_click_pos.y += world_map_context->top_left.y;
+            }
             if (GW::QuestMgr::GetQuest(hovered_quest_id)) {
                 ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
                 break;
             }
 
-            if (!(world_map_context && world_map_context->zoom == 1.0f)) break;
-            world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-            world_map_click_pos.x /= ui_scale.x;
-            world_map_click_pos.y /= ui_scale.y;
-            world_map_click_pos.x += world_map_context->top_left.x;
-            world_map_click_pos.y += world_map_context->top_left.y;
+            if (!have_click_pos) break;
             if (hovered_boss) {
                 ImGui::SetContextMenu(EliteBossLocationContextMenu, (void*)hovered_boss);
                 break;
