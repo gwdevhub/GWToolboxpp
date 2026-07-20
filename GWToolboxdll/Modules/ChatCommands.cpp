@@ -2084,11 +2084,8 @@ void ChatCommands::Update(const float delta)
     if (title_names.empty()) {
         const auto* titles = GetTitles();
         for (size_t i = 0; titles && i < titles->size(); i++) {
-            switch (static_cast<GW::Constants::TitleID>(i)) {
-                case GW::Constants::TitleID::Deprecated_SkillHunter:
-                case GW::Constants::TitleID::Deprecated_TreasureHunter:
-                case GW::Constants::TitleID::Deprecated_Wisdom:
-                    continue;
+            if (GW::PlayerMgr::IsDeprecatedTitle(static_cast<GW::Constants::TitleID>(i))) {
+                continue;
             }
             auto dtn = new DecodedTitleName(static_cast<GW::Constants::TitleID>(i));
             title_names.push_back(dtn);
