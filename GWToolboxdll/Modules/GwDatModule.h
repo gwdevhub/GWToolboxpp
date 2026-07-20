@@ -50,6 +50,8 @@ public:
     // Decodes the texture for file_id from the dat and writes it to disk (format chosen by extension).
     static void SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path);
 
+
+
     // --- Archive reading ---
     // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.
     static bool ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t stream_id = 0);

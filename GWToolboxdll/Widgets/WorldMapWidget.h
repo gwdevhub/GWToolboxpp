@@ -70,4 +70,14 @@ public:
     static void RemoveContextMenuCallback(ContextMenuCallback cb);
     // World-map coords of the right-click that opened the context menu.
     static GW::Vec2f GetContextMenuWorldMapPos();
+
+    // ImGui overlay callback system — registered callbacks draw into the background
+    // draw list each frame the world map is showing, after the built-in markers.
+    using OverlayCallback = void(*)(ImDrawList*);
+    static void AddOverlayCallback(OverlayCallback cb);
+    static void RemoveOverlayCallback(OverlayCallback cb);
+    // Project world-map coords to screen space; false when the world map isn't showing
+    // or is viewing a different continent than the current map's.
+    static bool WorldMapToScreen(const GW::Vec2f& world_map_pos, ImVec2& out);
+    static float GetPxPerWorldMapUnit();
 };

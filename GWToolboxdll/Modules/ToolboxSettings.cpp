@@ -588,6 +588,15 @@ void ToolboxSettings::DrawSettingsCogButtons()
     }
 }
 
+void ToolboxSettings::RequestFullscreenScreenshot(const std::filesystem::path& path)
+{
+    const ImVec2 display = ImGui::GetIO().DisplaySize;
+    pending_screenshot.active = true;
+    pending_screenshot.rect = ImRect({0.f, 0.f}, display);
+    pending_screenshot.path = path;
+    pending_screenshot.capture_at_frame = ImGui::GetFrameCount() + 1;
+}
+
 void ToolboxSettings::FlushPendingScreenshot(IDirect3DDevice9* device)
 {
     if (!pending_screenshot.active) return;

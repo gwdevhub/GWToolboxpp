@@ -17,6 +17,7 @@
 #include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/MapContext.h>
 #include <GWCA/Context/PreGameContext.h>
+#include <GWCA/Context/WorldContext.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
@@ -42,6 +43,7 @@
 #include <GWCA/Managers/PartyMgr.h>
 
 #include "Modules/CartographerModule.h"
+#include "Modules/ToolboxSettings.h"
 #include "Modules/SkillRangeRingsModule.h"
 #include "Utils/GameWorldCompositor.h"
 #include "Utils/PropSurfaceIndex.h"
@@ -336,6 +338,25 @@ namespace {
             }
             Log::FlushFile();
             write_status("heropanels: logged");
+            return;
+        }
+        if (verb == "screenshot") { // screenshot: save the next rendered frame (full backbuffer) to <harness_dir>\harness_shot.jpg
+            const auto path = Resources::GetPath(L"harness_shot.jpg");
+            ToolboxSettings::RequestFullscreenScreenshot(path);
+            char buf[320];
+            snprintf(buf, sizeof(buf), "screenshot: queued -> %s", path.string().c_str());
+            write_status(buf);
+            return;
+        }
+        if (verb == "mapview") { // mapview <world|mission>: toggle the world map or mission map (exercises the map overlay draw paths)
+            std::string which;
+            is >> which;
+            bool ok = false;
+            if (which == "world") ok = GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap);
+            else if (which == "mission") ok = GW::UI::Keypress(GW::UI::ControlAction_OpenMissionMap);
+            char buf[96];
+            snprintf(buf, sizeof(buf), "mapview %s: keypress=%d worldmap_showing=%d", which.c_str(), ok, GW::UI::GetIsWorldMapShowing());
+            write_status(buf);
             return;
         }
         if (verb == "chest") {

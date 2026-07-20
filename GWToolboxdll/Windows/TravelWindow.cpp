@@ -21,6 +21,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Utils/GuiUtils.h>
+#include <Modules/CartographerModule.h>
 #include <Modules/Resources.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
@@ -483,6 +484,15 @@ namespace {
             if (quest && quest->map_to != GW::Constants::MapID::None) {
                 instance.TravelNearest(quest->map_to);
             }
+            return;
+        }
+        if (argOutpost == L"carto") {
+            GW::Vec2f target_wm;
+            if (!CartographerModule::GetCurrentTargetWorldPos(target_wm)) {
+                Log::Error("[Error] The cartographer helper has no current target");
+                return;
+            }
+            instance.TravelNearest(WorldMapWidget::GetMapIdForLocation(target_wm));
             return;
         }
         if (argOutpost.size() > 2 && argOutpost.compare(0, 3, L"fav", 3) == 0) {

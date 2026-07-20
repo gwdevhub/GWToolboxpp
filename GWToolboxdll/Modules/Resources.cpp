@@ -1622,6 +1622,26 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     D3DSURFACE_DESC desc;
     backbuffer->GetDesc(&desc);
 
+    // A multisampled back buffer can't be read with GetRenderTargetData;
+    // resolve it into a plain render target first.
+    if (desc.MultiSampleType != D3DMULTISAMPLE_NONE) {
+        IDirect3DSurface9* resolved = nullptr;
+        hr = device->CreateRenderTarget(desc.Width, desc.Height, desc.Format, D3DMULTISAMPLE_NONE, 0, FALSE, &resolved, nullptr);
+        if (FAILED(hr) || !resolved) {
+            backbuffer->Release();
+            Log::Warning("SaveBackbufferRectToFile: CreateRenderTarget (msaa resolve) failed: 0x%X", hr);
+            return false;
+        }
+        hr = device->StretchRect(backbuffer, nullptr, resolved, nullptr, D3DTEXF_NONE);
+        backbuffer->Release();
+        if (FAILED(hr)) {
+            resolved->Release();
+            Log::Warning("SaveBackbufferRectToFile: StretchRect (msaa resolve) failed: 0x%X", hr);
+            return false;
+        }
+        backbuffer = resolved;
+    }
+
     // GetRenderTargetData requires a SYSTEMMEM destination of identical
     // dimensions & format. We copy the whole back buffer, then construct a
     // DirectX::Image that points at just the sub-rect.
