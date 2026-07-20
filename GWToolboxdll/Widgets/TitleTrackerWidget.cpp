@@ -51,6 +51,20 @@ namespace {
     std::vector<TitleProgress*> title_progress_by_id;
     std::vector<TitleProgress*> title_progress_by_title;
 
+    // Old title variants the game still exposes but no longer accrue; hide them from the widget
+    bool IsDeprecatedTitle(GW::Constants::TitleID title_id)
+    {
+        using namespace GW::Constants;
+        switch (title_id) {
+            case TitleID::Deprecated_SkillHunter:
+            case TitleID::Deprecated_TreasureHunter:
+            case TitleID::Deprecated_Wisdom:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     const uint32_t GetTitleMax(GW::Constants::TitleID title_id)
     {
         using namespace GW::Constants;
@@ -333,7 +347,9 @@ void TitleTrackerWidget::Initialize()
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, msg, OnPostUIMessage, 0x8000);
     }
     for (size_t i = 0; i != (size_t)GW::Constants::TitleID::Codex; i++) {
-        title_progress_by_id.push_back(new TitleProgress(static_cast<GW::Constants::TitleID>(i)));
+        const auto title_id = static_cast<GW::Constants::TitleID>(i);
+        if (IsDeprecatedTitle(title_id)) continue;
+        title_progress_by_id.push_back(new TitleProgress(title_id));
         title_progress_by_title.push_back(title_progress_by_id.back());
     }
     GW::GameThread::Enqueue(RefreshTitleProgress, true);
