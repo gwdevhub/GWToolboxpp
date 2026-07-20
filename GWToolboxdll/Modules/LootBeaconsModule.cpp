@@ -57,11 +57,13 @@ namespace {
         bool enabled;
         Color color;
     };
-    RarityBeacon rarity_white = {"White items", false, Colors::ARGB(170, 255, 255, 255)};
-    RarityBeacon rarity_blue = {"Blue items", false, Colors::ARGB(170, 80, 160, 255)};
-    RarityBeacon rarity_purple = {"Purple items", true, Colors::ARGB(170, 180, 80, 250)};
-    RarityBeacon rarity_gold = {"Gold items", true, Colors::ARGB(170, 255, 210, 60)};
-    RarityBeacon rarity_green = {"Green items", true, Colors::ARGB(170, 40, 220, 40)};
+    // Default colours match the game's own item-name palette (GW::Chat::TextColor), so a beacon
+    // is the same hue as the nametag the client draws for that rarity. Alpha stays at 170 for the beam.
+    RarityBeacon rarity_white = {"White items", false, Colors::ARGB(170, 255, 255, 255)};  // ColorItemCommon   #FFFFFF
+    RarityBeacon rarity_blue = {"Blue items", false, Colors::ARGB(170, 160, 245, 248)};    // ColorItemEnhance  #A0F5F8
+    RarityBeacon rarity_purple = {"Purple items", true, Colors::ARGB(170, 179, 138, 236)}; // ColorItemUncommon #B38AEC
+    RarityBeacon rarity_gold = {"Gold items", true, Colors::ARGB(170, 255, 210, 79)};      // ColorItemRare     #FFD24F
+    RarityBeacon rarity_green = {"Green items", true, Colors::ARGB(170, 0, 255, 0)};        // ColorItemUnique   #00FF00
 
     struct BeaconVertex {
         float x, y, z;
