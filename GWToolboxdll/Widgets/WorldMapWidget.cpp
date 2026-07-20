@@ -24,6 +24,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <Modules/CartographerModule.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -218,10 +219,12 @@ namespace {
     }
 
     std::vector<WorldMapWidget::ContextMenuCallback> context_menu_callbacks;
+    std::vector<WorldMapWidget::OverlayCallback> overlay_callbacks;
 
     bool ContextMenuMarkerButtons()
     {
         if (ImGui::Button("Place Marker")) {
+            CartographerModule::OnUserMarkerAction();
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
             });
@@ -229,6 +232,7 @@ namespace {
         }
         if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
+                CartographerModule::OnUserMarkerAction();
                 GW::GameThread::Enqueue([] {
                     QuestModule::SetCustomQuestMarker({0, 0});
                 });
@@ -1054,6 +1058,20 @@ void WorldMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_me
 void WorldMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }
 GW::Vec2f WorldMapWidget::GetContextMenuWorldMapPos() { return world_map_click_pos; }
 
+void WorldMapWidget::AddOverlayCallback(OverlayCallback cb) { overlay_callbacks.push_back(cb); }
+void WorldMapWidget::RemoveOverlayCallback(OverlayCallback cb) { std::erase(overlay_callbacks, cb); }
+
+bool WorldMapWidget::WorldMapToScreen(const GW::Vec2f& world_map_pos, ImVec2& out)
+{
+    if (!(world_map_context && GW::UI::GetIsWorldMapShowing())) return false;
+    const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    if (!(map_info && map_info->continent == world_map_context->continent)) return false;
+    out = CalculateViewportPos(world_map_pos, world_map_context->top_left);
+    return true;
+}
+
+float WorldMapWidget::GetPxPerWorldMapUnit() { return world_map_proj_scale.x; }
+
 void WorldMapWidget::ShowAllOutposts(const bool show = settings.showing_all_outposts)
 {
     if (view_all_outposts_patch.IsValid()) view_all_outposts_patch.TogglePatch(show);
@@ -1395,6 +1413,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     if (PathfindingWindow::IsCalculatingPath()) {
         const auto rect = draw_list->GetClipRectMax();
         draw_list->AddText({16.f, rect.y - 48.f}, ImGui::GetColorU32(ImGuiCol_Text), "Calculating path...");
+    }
+    for (const auto cb : overlay_callbacks) {
+        cb(draw_list);
     }
     drawn = true;
 }

@@ -44,6 +44,9 @@ public:
     // write the queued window screenshot to disk. No-op when no capture is
     // pending.
     static void FlushPendingScreenshot(IDirect3DDevice9* device);
+    // Queue a full-backbuffer capture (same end-of-frame pipeline as the
+    // title-bar camera button); captures the next rendered frame.
+    static void RequestFullscreenScreenshot(const std::filesystem::path& path);
 
     static inline bool move_all = false;
     static inline bool clamp_windows_to_screen = false;

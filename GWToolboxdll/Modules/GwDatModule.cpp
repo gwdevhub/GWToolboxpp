@@ -325,6 +325,8 @@ IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t 
     return &img->m_tex;
 }
 
+
+
 void GwDatModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path)
 {
     std::vector<uint32_t> argb;
