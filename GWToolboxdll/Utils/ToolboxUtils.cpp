@@ -550,6 +550,18 @@ namespace GW {
             const auto player = GW::Agents::GetControlledCharacter();
             return player ? &player->pos : nullptr;
         }
+        bool IsDeprecatedTitle(GW::Constants::TitleID title_id)
+        {
+            using namespace GW::Constants;
+            switch (title_id) {
+                case TitleID::Deprecated_SkillHunter:
+                case TitleID::Deprecated_TreasureHunter:
+                case TitleID::Deprecated_Wisdom:
+                    return true;
+                default:
+                    return false;
+            }
+        }
     } // namespace PlayerMgr
     namespace Agents {
         bool IsAgentCarryingBundle(uint32_t agent_id)

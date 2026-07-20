@@ -333,7 +333,9 @@ void TitleTrackerWidget::Initialize()
         RegisterUIMessageCallback(&OnPostUIMessage_HookEntry, msg, OnPostUIMessage, 0x8000);
     }
     for (size_t i = 0; i != (size_t)GW::Constants::TitleID::Codex; i++) {
-        title_progress_by_id.push_back(new TitleProgress(static_cast<GW::Constants::TitleID>(i)));
+        const auto title_id = static_cast<GW::Constants::TitleID>(i);
+        if (GW::PlayerMgr::IsDeprecatedTitle(title_id)) continue;
+        title_progress_by_id.push_back(new TitleProgress(title_id));
         title_progress_by_title.push_back(title_progress_by_id.back());
     }
     GW::GameThread::Enqueue(RefreshTitleProgress, true);
