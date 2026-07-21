@@ -45,6 +45,7 @@
 #include <Modules/PriceCheckerModule.h>
 #include <Modules/ResignLogModule.h>
 #include <Modules/TexmodModule.h>
+#include <Modules/SplashScreenModule.h>
 #include <Modules/TextToSpeechModule.h>
 #include <Modules/ToastNotifications.h>
 #include <Modules/VendorFix.h>
@@ -259,7 +260,8 @@ namespace {
         LoginModule::Instance(),
         {AccountInventoryWindow::Instance(), false},
         {PerformanceWindow::Instance(), false},
-        TexmodModule::Instance()
+        TexmodModule::Instance(),
+        {SplashScreenModule::Instance(), false}
     };
 
     bool modules_sorted = false;
