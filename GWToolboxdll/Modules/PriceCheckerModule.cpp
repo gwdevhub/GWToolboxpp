@@ -16,6 +16,7 @@
 
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <Timer.h>
+#include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
 namespace pricechecker_api {
@@ -399,14 +400,6 @@ namespace {
         return !prices_by_identifier.empty();
     }
 
-    std::string Trim(const std::string& s)
-    {
-        const auto first = s.find_first_not_of(" \t\r\n");
-        if (first == std::string::npos) return {};
-        const auto last = s.find_last_not_of(" \t\r\n");
-        return s.substr(first, last - first + 1);
-    }
-
     // Minimal RFC4180-ish CSV line splitter - handles quoted fields, commas inside quotes, and "" as an escaped quote.
     std::vector<std::string> ParseCsvLine(const std::string& line)
     {
@@ -440,7 +433,7 @@ namespace {
     // Parses "500g"/"1k"/"1.5k"; other units (e.g. presearing.com's unconfirmed "BD") are left unparsed rather than guessed at.
     bool ParseGoldAmount(const std::string& cell, double& out_gold)
     {
-        const auto trimmed = Trim(cell);
+        const auto trimmed = TextUtils::trim(cell);
         if (trimmed.empty()) return false;
 
         const auto unit = static_cast<char>(std::tolower(static_cast<unsigned char>(trimmed.back())));
@@ -460,21 +453,14 @@ namespace {
     // Merges recognised rows into prices_by_identifier; only touches ids owned by this tab, leaving other tabs' cached prices intact.
     bool ParsePresearingSheetCsv(const char* tab_name, const std::string& csv)
     {
-        std::vector<std::string> lines;
-        size_t start = 0;
-        while (start <= csv.size()) {
-            const auto pos = csv.find('\n', start);
-            lines.push_back(pos == std::string::npos ? csv.substr(start) : csv.substr(start, pos - start));
-            if (pos == std::string::npos) break;
-            start = pos + 1;
-        }
+        const auto lines = TextUtils::Split(csv, "\n");
         if (lines.empty()) return false;
 
         const auto header = ParseCsvLine(lines.front());
         int item_name_col = -1, low_col = -1, high_col = -1;
         constexpr int category_col = 0;
         for (size_t i = 0; i < header.size(); i++) {
-            const auto cell = Trim(header[i]);
+            const auto cell = TextUtils::trim(header[i]);
             if (cell == "Item Name") item_name_col = static_cast<int>(i);
             else if (cell.starts_with("Price Low")) low_col = static_cast<int>(i); // rightmost column wins - latest date
             else if (cell.starts_with("Price High")) high_col = static_cast<int>(i);
@@ -485,16 +471,15 @@ namespace {
         const std::string tab_name_str = tab_name;
         std::string current_category;
         for (size_t i = 1; i < lines.size(); i++) {
-            if (lines[i].empty()) continue;
             const auto fields = ParseCsvLine(lines[i]);
             const auto max_col = std::max({item_name_col, low_col, high_col});
             if (fields.size() <= static_cast<size_t>(max_col)) continue;
 
-            if (const auto category_cell = Trim(fields[category_col]); !category_cell.empty()) {
+            if (const auto category_cell = TextUtils::trim(fields[category_col]); !category_cell.empty()) {
                 current_category = category_cell;
             }
 
-            const auto item_name = Trim(fields[item_name_col]);
+            const auto item_name = TextUtils::trim(fields[item_name_col]);
             if (item_name.empty()) continue; // extra description row for the item above, not a distinct item
 
             const auto entry = std::ranges::find_if(presearing_sheet_items, [&](const PresearingSheetItem& item) {
