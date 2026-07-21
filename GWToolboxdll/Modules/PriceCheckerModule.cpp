@@ -35,9 +35,7 @@ namespace {
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
 
-    // Pre-searing has no live trader-quote service; presearing.com's own price-check page is fed
-    // straight from this public, manually-curated, community-maintained Google Sheet (no API key or
-    // auth needed - it's the same CSV export the sheet's own "File > Share > Publish" flow produces).
+    // No live pre-searing trader-quote service exists - this is presearing.com's own public, community-maintained price sheet.
     const char* presearing_sheet_id = "1u8-n_EJe9Nfl1twUHExLeuuYNT0Szo_7ss4HmmNytqk";
 
     constexpr clock_t request_interval = 1000 * 60 * 5;
@@ -300,10 +298,7 @@ namespace {
         const char* id;            // matches an id in price_info_by_unique_mod_struct above
     };
 
-    // Hand-mapped from the sheet's "Runes" and "Insignias" tabs onto the mod-struct ids above -
-    // the sheet only has free-text item names, no ids of its own. Rows the sheet itself flags as not
-    // usable in pre-searing (e.g. Heralds), or that carry no price of their own (extra description
-    // rows for a multi-tier bonus, e.g. Radiant's leg/other-armor tiers), are intentionally omitted.
+    // Hand-mapped onto the mod-struct ids above, since the sheet only has free-text item names; rows it flags as pre-searing-unusable or with no price of their own are omitted.
     const std::vector<PresearingSheetItem> presearing_sheet_items = {
         {"Runes", "Common", "Attunement", "08038225300423"},
         {"Runes", "Common", "Minor Vigor", "08038227e802c2"},
@@ -448,15 +443,13 @@ namespace {
         return fields;
     }
 
-    // Parses cells like "500g" / "1k" / "1.5k" into a gold amount. Cells using a unit we don't
-    // recognise (e.g. presearing.com's "BD" - meaning unconfirmed) or that are blank are left
-    // unparsed rather than guessed at, since a wrong price is worse than a missing one.
+    // Parses "500g"/"1k"/"1.5k"; other units (e.g. presearing.com's unconfirmed "BD") are left unparsed rather than guessed at.
     bool ParseGoldAmount(const std::string& cell, double& out_gold)
     {
         const auto trimmed = Trim(cell);
         if (trimmed.empty()) return false;
 
-        const char unit = static_cast<char>(std::tolower(static_cast<unsigned char>(trimmed.back())));
+        const auto unit = static_cast<char>(std::tolower(static_cast<unsigned char>(trimmed.back())));
         if (unit != 'g' && unit != 'k') return false;
 
         const auto number_part = trimmed.substr(0, trimmed.size() - 1);
@@ -470,8 +463,7 @@ namespace {
         return true;
     }
 
-    // Parses one presearing.com sheet tab's CSV export and merges any recognised items into
-    // prices_by_identifier - only touches ids owned by this tab, leaving other tabs' cached prices intact.
+    // Merges recognised rows into prices_by_identifier; only touches ids owned by this tab, leaving other tabs' cached prices intact.
     bool ParsePresearingSheetCsv(const char* tab_name, const std::string& csv)
     {
         std::vector<std::string> lines;
