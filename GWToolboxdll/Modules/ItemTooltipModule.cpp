@@ -516,7 +516,7 @@ void ItemTooltipModule::DrawSettingsInternal()
     }
 
     // --- Trader prices -------------------------------------------------------
-    ImGui::CheckboxWithHelp("Show trader prices in item tooltip", &settings.show_trader_prices, "Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com");
+    ImGui::CheckboxWithHelp("Show trader prices in item tooltip", &settings.show_trader_prices, "Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com (or, while pre-searing, presearing.com's community price sheet)");
     if (settings.show_trader_prices) {
         ImGui::Indent();
 
