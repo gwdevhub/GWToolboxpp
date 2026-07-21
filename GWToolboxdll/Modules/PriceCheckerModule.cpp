@@ -34,9 +34,11 @@ namespace {
 
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
+    const char* presearing_quotes_url = "https://presearing.gwtoolbox.com/trader_quotes";
 
     constexpr clock_t request_interval = 1000 * 60 * 5;
     clock_t last_request_time = -request_interval;
+    bool last_request_was_presearing = false;
     std::unordered_map<std::string, uint32_t> prices_by_identifier;
 
     PriceCheckerModule::Settings settings;
@@ -358,9 +360,15 @@ void PriceCheckerModule::DrawSettingsInternal()
 
 const std::unordered_map<std::string, uint32_t>& PriceCheckerModule::FetchPrices()
 {
+    const bool is_presearing = GW::Map::IsPreSearing();
+    if (is_presearing != last_request_was_presearing) {
+        // Crossing the pre/post-searing boundary invalidates the cached quotes - force a refetch from the right source.
+        last_request_time = -request_interval;
+    }
     if (TIMER_DIFF(last_request_time) > request_interval) {
         last_request_time = TIMER_INIT();
-        Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
+        last_request_was_presearing = is_presearing;
+        Resources::Download(is_presearing ? presearing_quotes_url : trader_quotes_url, [](bool success, const std::string& response, void*) {
             if (!success) {
                 last_request_time -= request_interval;
                 return;
