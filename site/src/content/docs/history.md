@@ -11,6 +11,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Loot Beacons: each beacon now always matches the colour of the item's name tag, and the per-rarity colour pickers have been removed — the rarity colours were also realigned to the game's own item palette so beacons read the same as the drop text.
 * [Fix] Title Tracker: the old, no-longer-obtainable versions of the Treasure Hunter and Wisdom title tracks (and the pre-hard-mode Skill Hunter) no longer appear in the widget's title list or the `/title` command.
 * [Fix] Trader window: the per-order "Whisper" buttons no longer share a click target when order descriptions are blank, so whispering a specific seller works reliably.
+* [Fix] Price Checker: rune and insignia tooltips while in pre-searing now show pre-searing prices, sourced from presearing.com's community price sheet, instead of the unrelated post-searing Kamadan Trading Post price for the same item.
 
 ## Version 8.32
 * [Perf] In-world overlays that drape on the ground — quest paths, Skill Range Rings, Loot Beacons, Danger Rings and Weather — now read the terrain height straight from the game's heightfield instead of asking the game to recalculate it once per vertex every frame. Large overlays that used to drag the framerate down are now a fraction of the cost.

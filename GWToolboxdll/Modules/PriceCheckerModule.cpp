@@ -16,6 +16,7 @@
 
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <Timer.h>
+#include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
 namespace pricechecker_api {
@@ -35,8 +36,12 @@ namespace {
     bool fetching_prices;
     const char* trader_quotes_url = "https://kamadan.gwtoolbox.com/trader_quotes";
 
+    // No live pre-searing trader-quote service exists - this is presearing.com's own public, community-maintained price sheet.
+    const char* presearing_sheet_id = "1u8-n_EJe9Nfl1twUHExLeuuYNT0Szo_7ss4HmmNytqk";
+
     constexpr clock_t request_interval = 1000 * 60 * 5;
     clock_t last_request_time = -request_interval;
+    bool last_request_was_presearing = false;
     std::unordered_map<std::string, uint32_t> prices_by_identifier;
 
     PriceCheckerModule::Settings settings;
@@ -283,6 +288,85 @@ namespace {
         {0x000b1985, {"Jadeite Shard", "0b1985"}},
     };
 
+    // -------------------------------------------------------------------------
+    // Pre-searing price sheet (presearing.com's community-maintained Google Sheet)
+    // -------------------------------------------------------------------------
+
+    struct PresearingSheetItem {
+        const char* tab_name;      // Google Sheets tab ("sheet=" query param)
+        const char* category;      // the sheet's grouping column, carried forward over blank cells
+        const char* item_name;     // the sheet's "Item Name" column, verbatim
+        const char* id;            // matches an id in price_info_by_unique_mod_struct above
+    };
+
+    // Hand-mapped onto the mod-struct ids above, since the sheet only has free-text item names; rows it flags as pre-searing-unusable or with no price of their own are omitted.
+    const std::vector<PresearingSheetItem> presearing_sheet_items = {
+        {"Runes", "Common", "Attunement", "08038225300423"},
+        {"Runes", "Common", "Minor Vigor", "08038227e802c2"},
+        {"Runes", "Common", "Vitae", "08038225300425"},
+        {"Runes", "Elementalist", "Air Magic", "08038521e80801"},
+        {"Runes", "Elementalist", "Earth Magic", "08038521e80901"},
+        {"Runes", "Elementalist", "Energy Storage", "08038521e80c01"},
+        {"Runes", "Elementalist", "Fire Magic", "08038521e80a01"},
+        {"Runes", "Elementalist", "Water Magic", "08038521e80b01"},
+        {"Runes", "Mesmer", "Domination", "08038321e80201"},
+        {"Runes", "Mesmer", "Fast Casting", "08038321e80001"},
+        {"Runes", "Mesmer", "Illusion", "08038321e80101"},
+        {"Runes", "Mesmer", "Inspiration", "08038321e80301"},
+        {"Runes", "Monk", "Divine Favor", "08038621e81001"},
+        {"Runes", "Monk", "Healing Prayers", "08038621e80d01"},
+        {"Runes", "Monk", "Protection Prayers", "08038621e80f01"},
+        {"Runes", "Monk", "Smiting", "08038621e80e01"},
+        {"Runes", "Necromancer", "Blood Magic", "08038421e80401"},
+        {"Runes", "Necromancer", "Curses", "08038421e80701"},
+        {"Runes", "Necromancer", "Death Magic", "08038421e80501"},
+        {"Runes", "Necromancer", "Soul Reaping", "08038421e80601"},
+        {"Runes", "Ranger", "Beast Mastery", "08038821e81601"},
+        {"Runes", "Ranger", "Expertise", "08038821e81701"},
+        {"Runes", "Ranger", "Marksmanship", "08038821e81901"},
+        {"Runes", "Ranger", "Wilderness Survival", "08038821e81801"},
+        {"Runes", "Warrior", "Absorption", "08038727e802ea"},
+        {"Runes", "Warrior", "Axe Mastery", "08038721e81201"},
+        {"Runes", "Warrior", "Hammer Mastery", "08038721e81301"},
+        {"Runes", "Warrior", "Strength", "08038721e81101"},
+        {"Runes", "Warrior", "Swordsmanship", "08038721e81401"},
+        {"Runes", "Warrior", "Tactics", "08038721e81501"},
+
+        {"Insignias", "Common", "Blessed", "084abfa53003d2"},
+        {"Insignias", "Common", "Brawler's", "084abea53003d0"},
+        {"Insignias", "Common", "Radiant", "084abb253003ca"},
+        {"Insignias", "Common", "Sentry's", "084ac1a53003d6"},
+        {"Insignias", "Common", "Stalwart", "084abda53003ce"},
+        {"Insignias", "Common", "Survivor", "084abc253003cc"},
+        {"Insignias", "Elementalist", "Aeromancer", "084acca53003ea"},
+        {"Insignias", "Elementalist", "Geomancer", "084acaa53003e6"},
+        {"Insignias", "Elementalist", "Hydromancer", "084ac9a53003e4"},
+        {"Insignias", "Elementalist", "Prismatic", "084ac8a53003e2"},
+        {"Insignias", "Elementalist", "Pyromancer", "084acba53003e8"},
+        {"Insignias", "Mesmer", "Artificer's", "084ab8a53003c4"},
+        {"Insignias", "Mesmer", "Prodigy's", "084ab9a53003c6"},
+        {"Insignias", "Mesmer", "Virtuoso's", "084abaa53003c8"},
+        {"Insignias", "Monk", "Anchorite's", "084acfa53003f0"},
+        {"Insignias", "Monk", "Disciple's", "084acea53003ee"},
+        {"Insignias", "Monk", "Wanderer's", "084acda53003ec"},
+        {"Insignias", "Necromancer", "Blighter's", "084ac7a53003e0"},
+        {"Insignias", "Necromancer", "Bonelace", "084ac5a53003dc"},
+        {"Insignias", "Necromancer", "Minion Master's", "084ac6a53003de"},
+        {"Insignias", "Necromancer", "Tormentor's", "084ac3253003d8"},
+        {"Insignias", "Necromancer", "Undertaker's", "084ac4a53003da"},
+        {"Insignias", "Ranger", "Beastmaster's", "084ad9a5300400"},
+        {"Insignias", "Ranger", "Earthbound", "084ad6a53003fa"},
+        {"Insignias", "Ranger", "Frostbound", "084ad5a53003f8"},
+        {"Insignias", "Ranger", "Pyrebound", "084ad7a53003fc"},
+        {"Insignias", "Ranger", "Scout's", "084adaa5300402"},
+        {"Insignias", "Ranger", "Stormbound", "084ad8a53003fe"},
+        {"Insignias", "Warrior", "Dreadnought", "084ad3a53003f4"},
+        {"Insignias", "Warrior", "Knight's", "084ad0a53003f2"},
+        {"Insignias", "Warrior", "Sentinel's", "084ad4a53003f6"},
+    };
+
+    const char* presearing_sheet_tabs[] = {"Runes", "Insignias"};
+
     int MaterialSlotToModelID(GW::Constants::MaterialSlot mat)
     {
         const auto info = GW::Items::GetMaterialInfo(mat);
@@ -314,6 +398,105 @@ namespace {
             prices_by_identifier[key] = static_cast<uint32_t>(entry.p);
         }
         return !prices_by_identifier.empty();
+    }
+
+    // Minimal RFC4180-ish CSV line splitter - handles quoted fields, commas inside quotes, and "" as an escaped quote.
+    std::vector<std::string> ParseCsvLine(const std::string& line)
+    {
+        std::vector<std::string> fields;
+        std::string field;
+        bool in_quotes = false;
+        for (size_t i = 0; i < line.size(); i++) {
+            const char c = line[i];
+            if (in_quotes) {
+                if (c == '"' && i + 1 < line.size() && line[i + 1] == '"') {
+                    field += '"';
+                    i++;
+                } else if (c == '"') {
+                    in_quotes = false;
+                } else {
+                    field += c;
+                }
+            } else if (c == '"') {
+                in_quotes = true;
+            } else if (c == ',') {
+                fields.push_back(std::move(field));
+                field.clear();
+            } else {
+                field += c;
+            }
+        }
+        fields.push_back(std::move(field));
+        return fields;
+    }
+
+    // Parses "500g"/"1k"/"1.5k"; other units (e.g. presearing.com's unconfirmed "BD") are left unparsed rather than guessed at.
+    bool ParseGoldAmount(const std::string& cell, double& out_gold)
+    {
+        const auto trimmed = TextUtils::trim(cell);
+        if (trimmed.empty()) return false;
+
+        const auto unit = static_cast<char>(std::tolower(static_cast<unsigned char>(trimmed.back())));
+        if (unit != 'g' && unit != 'k') return false;
+
+        const auto number_part = trimmed.substr(0, trimmed.size() - 1);
+        if (number_part.empty()) return false;
+
+        char* end = nullptr;
+        const double value = std::strtod(number_part.c_str(), &end);
+        if (end != number_part.c_str() + number_part.size()) return false;
+
+        out_gold = unit == 'k' ? value * 1000.0 : value;
+        return true;
+    }
+
+    // Merges recognised rows into prices_by_identifier; only touches ids owned by this tab, leaving other tabs' cached prices intact.
+    bool ParsePresearingSheetCsv(const char* tab_name, const std::string& csv)
+    {
+        const auto lines = TextUtils::Split(csv, "\n");
+        if (lines.empty()) return false;
+
+        const auto header = ParseCsvLine(lines.front());
+        int item_name_col = -1, low_col = -1, high_col = -1;
+        constexpr int category_col = 0;
+        for (size_t i = 0; i < header.size(); i++) {
+            const auto cell = TextUtils::trim(header[i]);
+            if (cell == "Item Name") item_name_col = static_cast<int>(i);
+            else if (cell.starts_with("Price Low")) low_col = static_cast<int>(i); // rightmost column wins - latest date
+            else if (cell.starts_with("Price High")) high_col = static_cast<int>(i);
+        }
+        if (item_name_col < 0 || low_col < 0 || high_col < 0) return false;
+
+        size_t found_count = 0;
+        const std::string tab_name_str = tab_name;
+        std::string current_category;
+        for (size_t i = 1; i < lines.size(); i++) {
+            const auto fields = ParseCsvLine(lines[i]);
+            const auto max_col = std::max({item_name_col, low_col, high_col});
+            if (fields.size() <= static_cast<size_t>(max_col)) continue;
+
+            if (const auto category_cell = TextUtils::trim(fields[category_col]); !category_cell.empty()) {
+                current_category = category_cell;
+            }
+
+            const auto item_name = TextUtils::trim(fields[item_name_col]);
+            if (item_name.empty()) continue; // extra description row for the item above, not a distinct item
+
+            const auto entry = std::ranges::find_if(presearing_sheet_items, [&](const PresearingSheetItem& item) {
+                return item.tab_name == tab_name_str && item.category == current_category && item.item_name == item_name;
+            });
+            if (entry == presearing_sheet_items.end()) continue;
+
+            double low = 0.0, high = 0.0;
+            const bool has_low = ParseGoldAmount(fields[low_col], low);
+            const bool has_high = ParseGoldAmount(fields[high_col], high);
+            if (!has_low && !has_high) continue;
+
+            const double price = has_low && has_high ? (low + high) / 2.0 : (has_low ? low : high);
+            prices_by_identifier[entry->id] = static_cast<uint32_t>(std::lround(price));
+            found_count++;
+        }
+        return found_count > 0;
     }
 
     void SignalItemDescriptionUpdated()
@@ -358,16 +541,37 @@ void PriceCheckerModule::DrawSettingsInternal()
 
 const std::unordered_map<std::string, uint32_t>& PriceCheckerModule::FetchPrices()
 {
+    const bool is_presearing = GW::Map::IsPreSearing();
+    if (is_presearing != last_request_was_presearing) {
+        // Crossing the pre/post-searing boundary invalidates the cached quotes - force a refetch from the right source.
+        last_request_time = -request_interval;
+    }
     if (TIMER_DIFF(last_request_time) > request_interval) {
         last_request_time = TIMER_INIT();
-        Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
-            if (!success) {
-                last_request_time -= request_interval;
-                return;
+        last_request_was_presearing = is_presearing;
+        if (is_presearing) {
+            for (const char* tab_name : presearing_sheet_tabs) {
+                // Same CSV export a published Google Sheet's "File > Share > Publish to web" produces - no key/auth needed.
+                const auto csv_url = std::format("https://docs.google.com/spreadsheets/d/{}/gviz/tq?tqx=out:csv&sheet={}", presearing_sheet_id, tab_name);
+                Resources::Download(csv_url, [tab_name](bool success, const std::string& response, void*) {
+                    if (!success) {
+                        last_request_time -= request_interval;
+                        return;
+                    }
+                    ParsePresearingSheetCsv(tab_name, response);
+                    SignalItemDescriptionUpdated();
+                });
             }
-            ParsePriceJson(response);
-            SignalItemDescriptionUpdated();
-        });
+        } else {
+            Resources::Download(trader_quotes_url, [](bool success, const std::string& response, void*) {
+                if (!success) {
+                    last_request_time -= request_interval;
+                    return;
+                }
+                ParsePriceJson(response);
+                SignalItemDescriptionUpdated();
+            });
+        }
     }
     return prices_by_identifier;
 }
