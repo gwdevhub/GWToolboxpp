@@ -264,9 +264,14 @@ namespace GW {
             if (!(name && *name && IsCharSelectReady())) return false;
 
             const auto selector = GetSelectorFrame();
+            if (!(selector && selector->IsVisible())) return false;
+
             const auto ctx = (CharSelectorContext*)GW::UI::GetFrameContext(selector);
+            if (!(((uintptr_t)ctx > 0xFFFF) && ctx->frame_id == selector->frame_id)) return false;
 
             const auto panes = GW::UI::GetChildFrame(selector, 0);
+            const auto parent = GW::UI::GetParentFrame(selector);
+            if (!(panes && parent)) return false;
 
             uint32_t selected_idx = 0;
             GW::UI::SendFrameUIMessage(panes, GW::UI::UIMessage::kFrameMessage_0x4a, 0, (void*)&selected_idx);
@@ -274,6 +279,7 @@ namespace GW {
             uint32_t target_idx = 0xffff;
 
             const auto len = ctx->chars.size();
+            if (!len) return false;
 
             if (selected_idx >= len) selected_idx = 0;
 
@@ -284,10 +290,14 @@ namespace GW {
                 target_idx = i;
                 break;
             }
-            if (target_idx > len) return false;
+            if (target_idx >= len) return false;
 
 
             auto select_char = [&](size_t idx) {
+                if (idx >= ctx->chars.size()) return false;
+                const auto c = ctx->chars[idx];
+                if (!(c && c->name[0])) return false;
+
                 GW::UI::UIPacket::kMouseAction action{};
                 action.frame_id = selector->frame_id;
                 action.child_offset_id = selector->child_offset_id;
@@ -295,11 +305,11 @@ namespace GW {
                     const wchar_t* name;
                     uint32_t play;
                 };
-                button_param wparam = {ctx->chars[idx]->name, 0u};
+                button_param wparam = {c->name, 0u};
                 action.wparam = &wparam;
                 action.current_state = GW::UI::UIPacket::ActionState::MouseClick;
 
-                if (!GW::UI::SendFrameUIMessage(GW::UI::GetParentFrame(selector), GW::UI::UIMessage::kMouseClick2, &action)) return false;
+                if (!GW::UI::SendFrameUIMessage(parent, GW::UI::UIMessage::kMouseClick2, &action)) return false;
                 GW::UI::SendFrameUIMessage(panes, GW::UI::UIMessage::kFrameMessage_0x4a, 0, (void*)&selected_idx);
                 return selected_idx == idx;
             };
@@ -313,7 +323,8 @@ namespace GW {
 
             while (target_idx > selected_idx) {
                 // Need to go forwards - select the next character
-                if (selected_idx >= ctx->chars.size() - 1) break; // Can't go past last character
+                const auto chars_size = ctx->chars.size();
+                if (!chars_size || selected_idx + 1 >= chars_size) break; // Can't go past last character
                 if (!select_char(selected_idx + 1)) return false;
             }
             chosen = selected_idx == target_idx;
