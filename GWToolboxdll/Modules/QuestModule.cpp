@@ -596,6 +596,10 @@ namespace {
         if (!quest) return;
         auto w = GW::GetWorldContext();
         auto& quest_log = w->quest_log;
+        // Grab the owned buffers before the shift below overwrites this slot; otherwise
+        // we'd free the trailing duplicate's pointers, which the last live quest still uses.
+        wchar_t* const owned[] = {quest->objectives, quest->description, quest->npc, quest->name, quest->location};
+
         const auto idx = quest - quest_log.m_buffer;
         const auto remaining = quest_log.m_size - idx - 1;
         if (remaining > 0) memmove(quest, quest + 1, remaining * sizeof(*quest_log.m_buffer));
@@ -603,12 +607,12 @@ namespace {
             w->active_quest_id = GW::Constants::QuestID::None;
         }
         quest_log.m_size--;
-        auto* removed = &quest_log.m_buffer[quest_log.m_size];
-        GW::MemoryMgr::MemFree(removed->objectives);
-        GW::MemoryMgr::MemFree(removed->description);
-        GW::MemoryMgr::MemFree(removed->npc);
-        GW::MemoryMgr::MemFree(removed->name);
-        GW::MemoryMgr::MemFree(removed->location);
+        // Clear the vacated slot so its stale copy can't alias the live quest's buffers.
+        memset(&quest_log.m_buffer[quest_log.m_size], 0, sizeof(*quest_log.m_buffer));
+
+        for (auto* buf : owned) {
+            GW::MemoryMgr::MemFree(buf);
+        }
 
         GW::UI::SendUIMessage(GW::UI::UIMessage::kMessage_0x10000152, (void*)&quest_id);
     }
