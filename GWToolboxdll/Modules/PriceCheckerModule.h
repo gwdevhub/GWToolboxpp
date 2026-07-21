@@ -33,8 +33,8 @@ public:
 
     void DrawSettingsInternal() override;
 
-    // Fetch (and cache) prices from kamadan.gwtoolbox.com, or presearing.gwtoolbox.com
-    // while in pre-searing (see GW::Map::IsPreSearing()).
+    // Fetch (and cache) prices from kamadan.gwtoolbox.com, or directly from presearing.com's
+    // community price-check spreadsheet while in pre-searing (see GW::Map::IsPreSearing()).
     // Returns the current price map; triggers a background refresh if stale.
     static const std::unordered_map<std::string, uint32_t>& FetchPrices();
 
