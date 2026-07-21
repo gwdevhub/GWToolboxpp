@@ -29,6 +29,15 @@ namespace Pathing {
 
     class NavMesh; // hand-built Detour mesh exposed for the debug overlay
 
+    // Snap `point` (x/y and zplane) to the closest position on the current map's live
+    // pathing trapezoids. Game thread only. Returns the trapezoid, or nullptr if no map.
+    GW::PathingTrapezoid* FindClosestPositionOnTrapezoid(GW::GamePos& point);
+
+    // True if `point` is inside a walkable trapezoid on the current map. Cheap (a BSP descent),
+    // unlike the snap above, which falls back to scanning every trapezoid when the point is
+    // outside the walkable area. Game thread only.
+    bool IsPositionWalkable(const GW::GamePos& point);
+
     class MilePath {
         volatile bool m_processing = false;
         volatile bool m_done = false;

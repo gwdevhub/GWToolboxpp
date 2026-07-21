@@ -24,6 +24,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
+#include <Modules/CartographerModule.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -140,6 +141,7 @@ namespace {
 
     bool world_map_clicking = false;
     GW::Vec2f world_map_click_pos;
+    bool world_map_click_pos_valid = false;
 
     GW::Constants::QuestID hovered_quest_id = GW::Constants::QuestID::None;
     GuiUtils::EncString hovered_quest_name;
@@ -217,9 +219,13 @@ namespace {
         return GW::Map::GetMapWorldMapBounds(map, &map_bounds) && map_bounds.Contains(world_map_pos);
     }
 
+    std::vector<WorldMapWidget::ContextMenuCallback> context_menu_callbacks;
+    std::vector<WorldMapWidget::OverlayCallback> overlay_callbacks;
+
     bool ContextMenuMarkerButtons()
     {
         if (ImGui::Button("Place Marker")) {
+            CartographerModule::OnUserMarkerAction();
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
             });
@@ -227,6 +233,7 @@ namespace {
         }
         if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
+                CartographerModule::OnUserMarkerAction();
                 GW::GameThread::Enqueue([] {
                     QuestModule::SetCustomQuestMarker({0, 0});
                 });
@@ -251,6 +258,9 @@ namespace {
         ImGui::TextUnformatted(Resources::GetMapName(map_id)->string().c_str());
 
         if (!ContextMenuMarkerButtons()) return false;
+        for (const auto& cb : context_menu_callbacks) {
+            if (!cb()) return false;
+        }
         return true;
     }
 
@@ -275,6 +285,14 @@ namespace {
         ImGui::PopStyleVar();
         ImGui::Separator();
         if (!ContextMenuMarkerButtons()) return false;
+        // The cartographer's suggestion carries a custom quest marker, so right-clicking it
+        // lands here rather than on the plain map menu — its actions belong here too. Their
+        // actions act on the clicked position, which only resolves at zoom 1.0.
+        if (world_map_click_pos_valid) {
+            for (const auto& cb : context_menu_callbacks) {
+                if (!cb()) return false;
+            }
+        }
 
         if (set_active) {
             GW::GameThread::Enqueue([quest_id] {
@@ -784,6 +802,7 @@ namespace {
     bool DrawQuestMarkerOnWorldMap(const GW::Quest* quest)
     {
         if (!(world_map_context && quest)) return false;
+        if (!(quest_icon_texture && *quest_icon_texture)) return false;
 
 
         bool is_hovered = false;
@@ -904,6 +923,7 @@ namespace {
     bool DrawPortalOnWorldMap(const MapPortal& portal)
     {
         if (!world_map_context) return false;
+        if (!(quest_icon_texture && *quest_icon_texture)) return false;
 
         auto& pos = portal.world_pos;
         const auto viewport_pos = CalculateViewportPos(pos, world_map_context->top_left);
@@ -1043,6 +1063,24 @@ bool& WorldMapWidget::ShowLinesOnWorldMap()
     return settings.show_lines_on_world_map;
 }
 
+void WorldMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_menu_callbacks.push_back(cb); }
+void WorldMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }
+GW::Vec2f WorldMapWidget::GetContextMenuWorldMapPos() { return world_map_click_pos; }
+
+void WorldMapWidget::AddOverlayCallback(OverlayCallback cb) { overlay_callbacks.push_back(cb); }
+void WorldMapWidget::RemoveOverlayCallback(OverlayCallback cb) { std::erase(overlay_callbacks, cb); }
+
+bool WorldMapWidget::WorldMapToScreen(const GW::Vec2f& world_map_pos, ImVec2& out)
+{
+    if (!(world_map_context && GW::UI::GetIsWorldMapShowing())) return false;
+    const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
+    if (!(map_info && map_info->continent == world_map_context->continent)) return false;
+    out = CalculateViewportPos(world_map_pos, world_map_context->top_left);
+    return true;
+}
+
+float WorldMapWidget::GetPxPerWorldMapUnit() { return world_map_proj_scale.x; }
+
 void WorldMapWidget::ShowAllOutposts(const bool show = settings.showing_all_outposts)
 {
     if (view_all_outposts_patch.IsValid()) view_all_outposts_patch.TogglePatch(show);
@@ -1151,6 +1189,12 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     mouse_offset.y *= -1;
     if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
         window = ImGui::GetCurrentWindowRead();
+        bool carto_enabled = CartographerModule::GetEnabled();
+        if (ImGui::Checkbox("Cartographer helper", &carto_enabled)) {
+            GW::GameThread::Enqueue([carto_enabled] {
+                CartographerModule::SetEnabled(carto_enabled);
+            });
+        }
         if (ImGui::Checkbox("Show all areas", &settings.showing_all_outposts)) {
             GW::GameThread::Enqueue([] {
                 ShowAllOutposts(settings.showing_all_outposts);
@@ -1385,6 +1429,9 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
         const auto rect = draw_list->GetClipRectMax();
         draw_list->AddText({16.f, rect.y - 48.f}, ImGui::GetColorU32(ImGuiCol_Text), "Calculating path...");
     }
+    for (const auto cb : overlay_callbacks) {
+        cb(draw_list);
+    }
     drawn = true;
 }
 
@@ -1398,17 +1445,23 @@ bool WorldMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
     switch (Message) {
         case WM_GW_RBUTTONCLICK: {
             if (!(world_map_context && GW::UI::GetIsWorldMapShowing())) break;
+            // Resolve the click position before dispatching: the hovered-quest menu carries
+            // contributed items that act on where the user clicked, so it needs it too.
+            const bool have_click_pos = world_map_context->zoom == 1.0f;
+            world_map_click_pos_valid = have_click_pos;
+            if (have_click_pos) {
+                world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                world_map_click_pos.x /= ui_scale.x;
+                world_map_click_pos.y /= ui_scale.y;
+                world_map_click_pos.x += world_map_context->top_left.x;
+                world_map_click_pos.y += world_map_context->top_left.y;
+            }
             if (GW::QuestMgr::GetQuest(hovered_quest_id)) {
                 ImGui::SetContextMenu(HoveredQuestContextMenu, (void*)hovered_quest_id);
                 break;
             }
 
-            if (!(world_map_context && world_map_context->zoom == 1.0f)) break;
-            world_map_click_pos = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-            world_map_click_pos.x /= ui_scale.x;
-            world_map_click_pos.y /= ui_scale.y;
-            world_map_click_pos.x += world_map_context->top_left.x;
-            world_map_click_pos.y += world_map_context->top_left.y;
+            if (!have_click_pos) break;
             if (hovered_boss) {
                 ImGui::SetContextMenu(EliteBossLocationContextMenu, (void*)hovered_boss);
                 break;

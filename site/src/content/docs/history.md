@@ -7,13 +7,50 @@ section: meta
 Previous releases are available on Github as dll files. There is no support for older releases. If you are looking for
 the latest version, go to the [Home Page](./) instead.
 
+## Version 8.33
+* [Fix] Loot Beacons: each beacon now always matches the colour of the item's name tag, and the per-rarity colour pickers have been removed — the rarity colours were also realigned to the game's own item palette so beacons read the same as the drop text.
+* [Fix] Title Tracker: the old, no-longer-obtainable versions of the Treasure Hunter and Wisdom title tracks (and the pre-hard-mode Skill Hunter) no longer appear in the widget's title list or the `/title` command.
+* [Fix] Trader window: the per-order "Whisper" buttons no longer share a click target when order descriptions are blank, so whispering a specific seller works reliably.
+
+## Version 8.32
+* [Perf] In-world overlays that drape on the ground — quest paths, Skill Range Rings, Loot Beacons, Danger Rings and Weather — now read the terrain height straight from the game's heightfield instead of asking the game to recalculate it once per vertex every frame. Large overlays that used to drag the framerate down are now a fraction of the cost.
+* [Fix] Skill Range Rings: fixed severe FPS drops while hovering a skill. The rings were re-projected onto the terrain every frame; the draped geometry is now cached and only recomputed when you or your target moves, so inspecting a skill's range no longer tanks the framerate.
+* [Fix] Guild Wars no longer crashes when you exit the game with Toolbox loaded.
+* [Fix] Quest paths (both custom markers and quest markers) no longer sometimes fail to appear after changing maps — previously this could require a Toolbox restart to recover.
+* [Fix] World map: quest markers and other icons no longer show up as blank white squares when Toolbox is injected before Guild Wars has finished opening its data file.
+* [Fix] Account Inventory: reduced the delay when loading into the game with the module enabled. Item icons are now loaded from `Gw.dat` on demand as they are displayed, rather than decoding an icon for every stored item on every map load — which flooded Toolbox's texture-loading threads and stalled load-in.
+* [Fix] Domain of Anguish: quest pathing now rebuilds its navigation mesh when moving between the outpost and the explorable area, so paths are correct in both.
+* [Fix] In-world overlays now draw correctly beneath the in-game interface.
+* [Fix] Fixed a crash and cloth/hair physics glitches that could occur when a rotating 3D character model was on screen (such as the hero or character-select panel) with in-world overlays enabled.
+* [Fix] Mission map: overlays no longer lag behind the map while you drag it.
+* [Fix] Objective Timer: added the Forsaken Tunnels dungeon, fixed the Cathedral of Flames level list, and corrected dungeon level numbering (levels now count from 1 instead of 0).
+* [Fix] Added extra safety checks to prevent occasional crashes across the enemy, party statistics and target info windows and in skill handling.
+* [Minor] Weather: Sandstorm now only appears automatically in true desert climates (Crystal Desert, Desolation, Istan) instead of all arid regions, and is disabled by default like Fog since it heavily obscures vision.
+* [Minor] Pathfinding settings are now found by the settings window's search box.
+* [Minor] Launcher: warns when Guild Wars is running under ARM/CPU emulation (e.g. an Apple Silicon or ARM Windows machine), which is unsupported and known to crash texture-pack hooking.
+* [Minor] Launcher: the update changelog now shows line breaks correctly instead of stray box characters.
+* [Minor] Save and open file dialogs now pre-fill the suggested file name.
+
 ## Version 8.31
 * [New] Danger Rings: draws enemy ground AoE effects (Meteor Shower, Maelstrom, traps, and more) as rings on the ground in the 3D game world — depth-tested against the terrain and drawn under the interface. Ring thickness, fill/rim opacity and whether rings are hidden behind terrain are configurable.
 * [New] Loot Beacons: marks dropped loot worth grabbing with a pillar of light in the game world, selectable by item rarity (white/blue/purple/gold/green) and/or trader value, with an option to also beacon items reserved for other party members.
 * [New] Skill Range Rings: hover any skill (skillbar, skills window, template previews) to see its ranges drawn on the ground — cast/use range around you, the AoE radius around your target or yourself, earshot for shouts and chants, and spirit/constant-effect range.
 * [New] When an item icon isn't present in your local `Gw.dat` — common on the Steam release, which downloads game data on demand — the Armory now shows a warning and explains the fix: launch Guild Wars once with the `-image` command line option to download all game data. A new [Troubleshooting](/docs/troubleshooting/#missing-images-in-toolbox) section walks through the setup for Steam and standalone installs.
+* [New] Mission Map: minimap overlays can now be drawn directly on the in-game mission map frame — toggle "Show minimap on mission map" in Mission Map settings, then individually enable agents, range rings, pings, AoE effects, background, terrain pmap and symbols. All layers default off.
+* [New] Mission Map: new "Show walkable terrain" overlay shades walkable vs non-walkable terrain on the mission map, independent of the vanquish overlay, with configurable fill and border colours.
+* [New] Quest paths can now be drawn on the 3D game terrain — draped along the ground at correct heights including bridges and steps — in addition to the minimap and world map. Quest paths are also drawn on the in-game mission map by default. Both are configurable in Quest module settings.
+* [New] Armory: right-clicking any armor or weapon piece now opens a context menu with "Copy chat command" (copies the `/armory` command with current dye slots to clipboard) and "Guild Wars Wiki" to look up the piece.
+* [New] Minimap: added "Show props on minimap" option in minimap settings to display map objects (barrels, containers, environment props) as dots on the minimap.
+* [New] Game Settings: added options to disable the camera's built-in mouse-movement smoothing and controller-movement smoothing independently, for snappier camera response.
+* [New] Game Settings: added option to suppress the sparkle/glow particle effect that plays on newly dropped items.
+* [New] Game Settings: added options to block the full-screen popup shown when completing a vanquish and when opening a dungeon chest.
+* [New] Audio Settings: added "Blocked In-Game Sounds" section to permanently mute specific audio files from playing in-game; an optional "In-Game Sound Log" records every sound as it plays so you can identify files to block.
+* [New] Launcher: the character-selection window now checks for exe and dll updates in the background and shows status inline with an Update button, so updates can be applied without closing the dialog.
 * [Fix] Fixed occasional crashing.
 * [Fix] Fixed layout bugs with the party window position module.
+* [Fix] Camera unlock: fixed a vanilla Guild Wars hang when dying while in first-person camera mode (camera unlock active) and then resurrecting — a NaN camera pitch left by the death-orbit transition caused the game's terrain ray-march to loop forever, hanging the render thread until you died again.
+* [Minor] Launcher: Windows Defender exclusion prompt now includes a "don't ask again for this version" option, suppressing repeat nags on the same build.
+* [Minor] Launcher: the launch window now uses per-monitor DPI awareness for correct layout on HiDPI and 4K displays.
 
 ## Version 8.30
 * [New] Item icons are now shown in the item's applied dye colour — including combined multi-dye colours — wherever Toolbox draws an item icon, such as the item info window and the Armory piece previews.

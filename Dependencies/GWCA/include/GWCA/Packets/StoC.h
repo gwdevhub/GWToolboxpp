@@ -776,7 +776,12 @@ namespace GW {
                 uint8_t type;   // JumboMessageType
                 uint32_t value; // JumboMessageValue
             };
-            template<> const uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = GAME_SMSG_JUMBO_MESSAGE;
+            // Diagnostic GCC/MinGW build: unlike the other specializations
+            // here, this one isn't constexpr (so isn't implicitly inline),
+            // causing an ODR multiple-definition link error across TUs that
+            // MSVC's linker tolerates but GCC's doesn't. Match the pattern
+            // used everywhere else in this file.
+            template<> constexpr uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = GAME_SMSG_JUMBO_MESSAGE;
 
             struct InstanceLoadFile : Packet<InstanceLoadFile> {
                 uint32_t map_fileID;

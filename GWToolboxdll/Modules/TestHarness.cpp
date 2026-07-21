@@ -1,23 +1,31 @@
 #include "stdafx.h"
 
+#include <chrono>
 #include <cmath>
 #include <filesystem>
+#include <format>
+#include <fstream>
+#include <set>
 #include <sstream>
 #include <string>
 #include <system_error>
 
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Agent.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Pathing.h>
 #include <GWCA/GameEntities/Party.h>
 #include <GWCA/GameEntities/Skill.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/MapContext.h>
 #include <GWCA/Context/PreGameContext.h>
+#include <GWCA/Context/WorldContext.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
 #include <GWCA/Managers/ChatMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/MemoryMgr.h>
@@ -38,8 +46,11 @@
 
 #include <GWCA/Managers/PartyMgr.h>
 
+#include "Modules/CartographerModule.h"
+#include "Modules/ToolboxSettings.h"
 #include "Modules/SkillRangeRingsModule.h"
 #include "Utils/GameWorldCompositor.h"
+#include "Utils/PropSurfaceIndex.h"
 #include "Utils/SettingsRegistry.h"
 #include "Utils/TerrainDrape.h"
 #include "Utils/TextUtils.h"
@@ -49,6 +60,7 @@
 #include "Windows/TravelWindow.h"
 #include "Modules/GwDatModule.h"
 #include "Utils/ArenaNetFileParser.h"
+#include <Utils/GwDat/AtexReader.h>
 
 // Dev iteration tool: compiled in Debug (_DEBUG) and RelWithDebInfo (GWTB_HARNESS, which
 // logs to log.txt), excluded from the shipped Release build.
@@ -71,11 +83,84 @@ namespace {
     bool log_play_effects = false;
     GW::HookEntry PlayEffect_Entry;
 
+    bool fps_active = false;
+    int fps_frames = 0;
+    clock_t fps_start = 0;
+    long fps_duration_ms = 0;
+
     std::filesystem::path cmd_path() { return Resources::GetPath(L"harness_command.txt"); }
     std::filesystem::path status_path() { return Resources::GetPath(L"harness_status.txt"); }
     std::filesystem::path config_path() { return Resources::GetPath(L"harness_config.txt"); }
 
     void write_status(const std::string& s) { Resources::WriteFile(status_path(), s); }
+
+    std::vector<uint32_t> tpfhash_ids;
+    size_t tpfhash_next = 0;
+    size_t tpfhash_ok = 0;
+    std::string tpfhash_lines;
+    bool tpfhash_active = false;
+
+    void TpfHashQueueBatch()
+    {
+        Resources::EnqueueWorkerTask([] {
+            constexpr size_t kBatch = 32;
+            const size_t end = std::min(tpfhash_next + kBatch, tpfhash_ids.size());
+            for (size_t i = tpfhash_next; i < end; i++) {
+                const uint32_t id = tpfhash_ids[i];
+                ArenaNetFileParser::GameAssetFile asset;
+                if (!asset.readFromDat(id, 0) || asset.data.size() < 16) {
+                    tpfhash_lines += std::format("{} read_failed\n", id);
+                    continue;
+                }
+                uint8_t* bytes = asset.data.data();
+                size_t size = asset.data.size();
+                if (memcmp(bytes, "ffna", 4) == 0) {
+                    const auto anet_file = reinterpret_cast<ArenaNetFileParser::ArenaNetFile*>(&asset);
+                    const ArenaNetFileParser::Chunk* found = nullptr;
+                    if (anet_file->isValid()) {
+                        found = anet_file->FindChunk(ArenaNetFileParser::ChunkType::FA3_InlineTextureDXT3);
+                        if (!found) found = anet_file->FindChunk(ArenaNetFileParser::ChunkType::FAA_InlineTextureDXTA);
+                    }
+                    if (!found) {
+                        tpfhash_lines += std::format("{} ffna_no_texture\n", id);
+                        continue;
+                    }
+                    const auto chunk = reinterpret_cast<const ArenaNetFileParser::UnknownChunk*>(found);
+                    uint8_t* cdata = const_cast<uint8_t*>(chunk->data);
+                    uint8_t* file_end = asset.data.data() + asset.data.size();
+                    if (cdata < asset.data.data() || cdata >= file_end || chunk->chunk_size < 16 || chunk->chunk_size > static_cast<size_t>(file_end - cdata)) {
+                        tpfhash_lines += std::format("{} bad_chunk\n", id);
+                        continue;
+                    }
+                    bytes = cdata;
+                    size = chunk->chunk_size;
+                }
+                const auto raw = ProcessImageFileRaw(bytes, static_cast<int>(size));
+                if (raw.blocks.empty()) {
+                    char magic[5] = {0};
+                    memcpy(magic, bytes, 4);
+                    tpfhash_lines += std::format("{} decode_failed magic={}\n", id, magic);
+                    continue;
+                }
+                const uint32_t hash = Resources::GetTexmodHash(reinterpret_cast<const char*>(raw.blocks.data()), raw.blocks.size());
+                tpfhash_lines += std::format("{} 0x{:08x} {} {} {:c}\n", id, hash, raw.width, raw.height, raw.cmptype);
+                tpfhash_ok++;
+            }
+            tpfhash_next = end;
+            GW::GameThread::Enqueue([] {
+                if (!tpfhash_active) return;
+                if (tpfhash_next < tpfhash_ids.size()) {
+                    TpfHashQueueBatch();
+                    return;
+                }
+                Resources::WriteFile(Resources::GetPath(L"texmod_hashes.txt"), tpfhash_lines);
+                Log::Log("[harness] tpfhash: hashed %u/%u ids -> texmod_hashes.txt", static_cast<unsigned>(tpfhash_ok), static_cast<unsigned>(tpfhash_ids.size()));
+                Log::FlushFile();
+                write_status(std::format("tpfhash: done {}/{}", tpfhash_ok, tpfhash_ids.size()));
+                tpfhash_active = false;
+            });
+        });
+    }
 
     std::string trim(const std::string& s)
     {
@@ -251,8 +336,7 @@ namespace {
                 for (uint32_t i = 0; i < n; ++i) {
                     const float t = (float)i / (float)(n - 1);
                     const float x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t;
-                    GW::GamePos p(x, y, plane);
-                    const float a = GW::Map::QueryAltitude(&p);
+                    const float a = TerrainDrape::QueryAltAt(x, y, plane);
                     Log::Log("[heightline]   t=%.2f (%.0f,%.0f) plane%u_alt=%.1f", t, x, y, plane, a);
                 }
                 write_status("heightline: logged");
@@ -329,6 +413,25 @@ namespace {
             write_status("heropanels: logged");
             return;
         }
+        if (verb == "screenshot") { // screenshot: save the next rendered frame (full backbuffer) to <harness_dir>\harness_shot.jpg
+            const auto path = Resources::GetPath(L"harness_shot.jpg");
+            ToolboxSettings::RequestFullscreenScreenshot(path);
+            char buf[320];
+            snprintf(buf, sizeof(buf), "screenshot: queued -> %s", path.string().c_str());
+            write_status(buf);
+            return;
+        }
+        if (verb == "mapview") { // mapview <world|mission>: toggle the world map or mission map (exercises the map overlay draw paths)
+            std::string which;
+            is >> which;
+            bool ok = false;
+            if (which == "world") ok = GW::UI::Keypress(GW::UI::ControlAction_OpenWorldMap);
+            else if (which == "mission") ok = GW::UI::Keypress(GW::UI::ControlAction_OpenMissionMap);
+            char buf[96];
+            snprintf(buf, sizeof(buf), "mapview %s: keypress=%d worldmap_showing=%d", which.c_str(), ok, GW::UI::GetIsWorldMapShowing());
+            write_status(buf);
+            return;
+        }
         if (verb == "chest") {
             int n = 1;
             is >> n;
@@ -388,6 +491,54 @@ namespace {
             snprintf(b, sizeof(b), "playeffect: id=%u at (%.0f,%.0f,z%u)", effect_id, x, y, plane);
             Log::Log("[harness] %s", b);
             write_status(b);
+            return;
+        }
+        if (verb == "carto") { // carto <on|off|skip [forever]|point <game_x> <game_y>|pointwm <wm_x> <wm_y>|clearpoints|cleardeclines|status>
+            std::string arg;
+            is >> arg;
+            if (arg == "on" || arg == "1") {
+                CartographerModule::SetEnabled(true);
+            }
+            else if (arg == "off" || arg == "0") {
+                CartographerModule::SetEnabled(false);
+            }
+            else if (arg == "skip") {
+                std::string v;
+                is >> v;
+                CartographerModule::SkipCurrentTarget(v == "forever");
+            }
+            else if (arg == "point") {
+                float x, y;
+                GW::Vec2f wm;
+                if ((is >> x >> y) && WorldMapWidget::GamePosToWorldMap(GW::GamePos(x, y, 0), wm)) {
+                    CartographerModule::AddCustomPoint(wm);
+                }
+                else {
+                    write_status("carto point: bad args or conversion failed (need game <x> <y>)");
+                    return;
+                }
+            }
+            else if (arg == "pointwm") {
+                float x, y;
+                if (is >> x >> y) {
+                    CartographerModule::AddCustomPoint({x, y});
+                }
+                else {
+                    write_status("carto pointwm: bad args (need world-map <x> <y>)");
+                    return;
+                }
+            }
+            else if (arg == "clearpoints") {
+                CartographerModule::ClearCustomPoints();
+            }
+            else if (arg == "cleardeclines") {
+                CartographerModule::ClearDeclined();
+            }
+            char buf[224];
+            CartographerModule::GetStatus(buf, sizeof(buf));
+            write_status(buf);
+            Log::Log("[harness] %s", buf);
+            Log::FlushFile();
             return;
         }
         if (verb == "hoverskill") { // hoverskill <skill_id>: force skill-range rings as if hovering (0 clears)
@@ -521,6 +672,468 @@ namespace {
             write_status("dattex: queued");
             return;
         }
+        if (verb == "maprects") {
+            std::ofstream out(Resources::GetPath(L"maprects.txt"));
+            if (!out) { write_status("maprects: open failed"); return; }
+            size_t written = 0;
+            for (size_t i = 0; i < static_cast<size_t>(GW::Constants::MapID::Count); i++) {
+                const auto info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(i));
+                if (!info) continue;
+                ImRect bounds{};
+                const bool has_bounds = GW::Map::GetMapWorldMapBounds(info, &bounds);
+                out << i << ' ' << static_cast<int>(info->campaign) << ' ' << static_cast<int>(info->continent) << ' '
+                    << static_cast<int>(info->region) << ' ' << static_cast<int>(info->type) << ' '
+                    << std::hex << info->flags << std::dec << ' ' << (info->GetIsOnWorldMap() ? 1 : 0) << ' '
+                    << (has_bounds ? 1 : 0) << ' '
+                    << bounds.Min.x << ' ' << bounds.Min.y << ' ' << bounds.Max.x << ' ' << bounds.Max.y << '\n';
+                ++written;
+            }
+            write_status(std::format("maprects: wrote {} maps", written));
+            return;
+        }
+        if (verb == "nativez") { // nativez [radius step]: compare native terrain z vs GW::Map::QueryAltitude(plane 0) on a grid
+            float radius = 1200.f, step = 96.f;
+            is >> radius >> step;
+            radius = std::clamp(radius, 100.f, 5000.f);
+            step = std::clamp(step, 24.f, 500.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            if (!self) { write_status("nativez: no character"); return; }
+            Log::Log("[nativez] map=%d player=(%.0f,%.0f,z%u) radius=%.0f step=%.0f",
+                     static_cast<int>(GW::Map::GetMapID()), self->pos.x, self->pos.y, self->pos.zplane, radius, step);
+            uint32_t samples = 0, both = 0, logged = 0;
+            float max_delta = 0.f;
+            double sum_delta = 0.0;
+            for (float dx = -radius; dx <= radius; dx += step) {
+                for (float dy = -radius; dy <= radius; dy += step) {
+                    const float x = self->pos.x + dx, y = self->pos.y + dy;
+                    const float native = TerrainDrape::NativeTerrainZ(x, y);
+                    GW::GamePos p(x, y, 0);
+                    const float game = GW::Map::QueryAltitude(&p);
+                    ++samples;
+                    if (native == 0.f || game == 0.f) continue; // OOB on either side
+                    ++both;
+                    const float d = std::fabs(native - game);
+                    max_delta = std::max(max_delta, d);
+                    sum_delta += d;
+                    if (d > 5.f && logged++ < 20)
+                        Log::Log("[nativez]   (%.0f,%.0f) native=%.1f game=%.1f delta=%.1f", x, y, native, game, d);
+                }
+            }
+            char b[160];
+            snprintf(b, sizeof(b), "nativez: samples=%u both=%u max_delta=%.2f avg_delta=%.3f", samples, both, max_delta,
+                     both ? sum_delta / both : 0.0);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "propprobe") { // propprobe [radius]: enumerate map props, their world z, and which ones back a walkable pathing plane
+            float radius = 2500.f;
+            is >> radius;
+            radius = std::clamp(radius, 200.f, 20000.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* mc = GW::GetMapContext();
+            if (!self || !mc || !mc->props) { write_status("propprobe: no character or props"); return; }
+            const auto& props = mc->props->propArray;
+            const auto* pm = GW::Map::GetPathingMap();
+            const auto n_planes = pm ? static_cast<uint32_t>(pm->size()) : 0u;
+
+            // Prop indices backing a walkable plane: PathingMap+0x00 (GWCA 'zplane') is the prop index for non-ground planes (ground = UINT_MAX).
+            std::set<uint32_t> walkable_props;
+            for (uint32_t zp = 0; pm && zp < n_planes; ++zp) {
+                const uint32_t pidx = (*pm)[zp].zplane;
+                if (pidx != 0xFFFFFFFFu) walkable_props.insert(pidx);
+            }
+
+            Log::Log("[propprobe] map=%d props=%u planes=%u walkable_prop_planes=%u player=(%.0f,%.0f,z%u,%.0f)",
+                     static_cast<int>(GW::Map::GetMapID()), static_cast<unsigned>(props.size()), n_planes,
+                     static_cast<unsigned>(walkable_props.size()), self->pos.x, self->pos.y, self->pos.zplane, self->z);
+
+            uint32_t near_count = 0, elevated = 0, elevated_nonwalkable = 0, logged = 0;
+            for (uint32_t i = 0; i < props.size(); ++i) {
+                const GW::MapProp* p = props[i];
+                if (!p) continue;
+                const float dx = p->position.x - self->pos.x, dy = p->position.y - self->pos.y;
+                if (dx * dx + dy * dy > radius * radius) continue;
+                ++near_count;
+                const float terrain = TerrainDrape::NativeTerrainZ(p->position.x, p->position.y);
+                const float above = terrain != 0.f ? (terrain - p->position.z) : 0.f; // >0 means prop origin sits above ground (up=-z)
+                const bool walkable = walkable_props.count(i) != 0;
+                if (above > 50.f) { ++elevated; if (!walkable) ++elevated_nonwalkable; }
+                if (logged++ < 25)
+                    Log::Log("[propprobe]   prop[%u] file=0x%X pos=(%.0f,%.0f,z=%.0f) terrain_z=%.0f above=%.0f walkable=%d model=%p",
+                             i, p->model_file_id, p->position.x, p->position.y, p->position.z, terrain, above,
+                             static_cast<int>(walkable), static_cast<const void*>(p->interactive_model));
+            }
+            char b[224];
+            snprintf(b, sizeof(b), "propprobe: props=%u near=%u elevated=%u elevated_nonwalkable=%u walkable_planes=%u",
+                     static_cast<unsigned>(props.size()), near_count, elevated, elevated_nonwalkable,
+                     static_cast<unsigned>(walkable_props.size()));
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "drapeverify") { // drapeverify [n radius]: does new SurfaceZ match the old all-planes-highest-point query?
+            uint32_t n = 1500;
+            float radius = 1500.f;
+            is >> n >> radius;
+            n = std::clamp(n, 100u, 100000u);
+            radius = std::clamp(radius, 100.f, 5000.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("drapeverify: no character or pathing map");
+                return;
+            }
+            const auto n_planes = static_cast<uint32_t>(pm->size());
+            uint32_t seed = 0x1234567u;
+            const auto next01 = [&seed] {
+                seed = seed * 1664525u + 1013904223u;
+                return (seed >> 8) * (1.f / 16777216.f);
+            };
+            Log::Log("[drapeverify] map=%d n=%u planes=%u radius=%.0f", static_cast<int>(GW::Map::GetMapID()), n, n_planes, radius);
+            uint32_t both = 0;             // points with data on both old and new
+            uint32_t prune_mismatch = 0;   // points where pruned selection != all-planes selection (the real test)
+            uint32_t nonzero_hits = 0;     // points whose highest surface came from a non-zero plane
+            uint32_t logged = 0;
+            float max_prune = 0.f, max_total = 0.f;
+            double sum_total = 0.0;
+            for (uint32_t i = 0; i < n; ++i) {
+                const float ang = next01() * 6.2831853f, r = radius * std::sqrt(next01());
+                const float x = self->pos.x + std::cos(ang) * r, y = self->pos.y + std::sin(ang) * r;
+                float old_all = 0.f, new_z = 0.f, prune = 0.f;
+                TerrainDrape::DrapeCompare(x, y, n_planes, &old_all, &new_z, &prune);
+
+                // Pruning correctness: prune uses the SAME game values as old_all, differing only in planes considered; any gap = a plane the pruning wrongly dropped/added.
+                const float dp = std::fabs(old_all - prune);
+                if (dp > max_prune) max_prune = dp;
+                if (dp > 0.5f) {
+                    ++prune_mismatch;
+                    if (logged++ < 15)
+                        Log::Log("[drapeverify]   PRUNE MISMATCH (%.0f,%.0f) old_all=%.1f prune=%.1f new=%.1f d=%.1f",
+                                 x, y, old_all, prune, new_z, dp);
+                }
+                // Did the highest surface come from a non-zero plane here? (i.e. was a bridge/prop plane picked)
+                if (old_all != 0.f) {
+                    GW::GamePos g0{x, y, 0};
+                    if (std::fabs(GW::Map::QueryAltitude(&g0) - old_all) > 0.5f) ++nonzero_hits;
+                }
+                // Total new-vs-old (includes native point vs game radius-5 on plane 0).
+                if (old_all != 0.f && new_z != 0.f) {
+                    ++both;
+                    const float dt = std::fabs(old_all - new_z);
+                    sum_total += dt;
+                    if (dt > max_total) max_total = dt;
+                    if (dt > 25.f && logged < 25) {
+                        ++logged;
+                        // Sample the game terrain in a tiny cross to reveal a cliff (why radius-5 disk-max != point).
+                        GW::GamePos c(x, y, 0), e(x + 8.f, y, 0), w(x - 8.f, y, 0), nq(x, y + 8.f, 0), s(x, y - 8.f, 0);
+                        Log::Log("[drapeverify]   BIG DELTA (%.0f,%.0f) old=%.1f new=%.1f d=%.1f | game@center=%.1f nbrs(+-8gw)=[%.0f %.0f %.0f %.0f]",
+                                 x, y, old_all, new_z, dt, GW::Map::QueryAltitude(&c),
+                                 GW::Map::QueryAltitude(&e), GW::Map::QueryAltitude(&w),
+                                 GW::Map::QueryAltitude(&nq), GW::Map::QueryAltitude(&s));
+                    }
+                }
+            }
+            char b[240];
+            snprintf(b, sizeof(b),
+                     "drapeverify: n=%u both=%u nonzero_plane_hits=%u | PRUNE mismatches=%u max=%.2f | total new-vs-old avg=%.2f max=%.2f",
+                     n, both, nonzero_hits, prune_mismatch, max_prune, both ? sum_total / both : 0.0, max_total);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "drapebench") { // drapebench [n radius]: A/B the old all-planes QueryAltitude loop vs the new pruned SurfaceZ
+            uint32_t n = 2000;
+            float radius = 1200.f;
+            is >> n >> radius;
+            n = std::clamp(n, 100u, 200000u);
+            radius = std::clamp(radius, 100.f, 5000.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("drapebench: no character or pathing map");
+                return;
+            }
+            const auto n_planes = static_cast<uint32_t>(pm->size());
+            // Same pseudo-random disk of sample points for both methods.
+            std::vector<std::pair<float, float>> pts(n);
+            uint32_t seed = 0x9E3779B9u;
+            const auto next01 = [&seed] {
+                seed = seed * 1664525u + 1013904223u;
+                return (seed >> 8) * (1.f / 16777216.f);
+            };
+            for (uint32_t i = 0; i < n; ++i) {
+                const float ang = next01() * 6.2831853f, r = radius * std::sqrt(next01());
+                pts[i] = {self->pos.x + std::cos(ang) * r, self->pos.y + std::sin(ang) * r};
+            }
+
+            // OLD path: QueryAltitude on every plane, keep highest surface (min z). This is what SurfaceZ did before.
+            float sink_old = 0.f;
+            const auto t_old0 = std::chrono::steady_clock::now();
+            for (uint32_t i = 0; i < n; ++i) {
+                float best = 0.f;
+                for (uint32_t zp = 0; zp < n_planes; ++zp) {
+                    GW::GamePos p(pts[i].first, pts[i].second, zp);
+                    const float a = GW::Map::QueryAltitude(&p);
+                    if (a != 0.f && (best == 0.f || a < best)) best = a;
+                }
+                sink_old += best;
+            }
+            const auto us_old = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t_old0).count();
+
+            // NEW path: native plane-0 read + trapezoid-pruned non-zero planes.
+            float sink_new = 0.f;
+            const auto t_new0 = std::chrono::steady_clock::now();
+            for (uint32_t i = 0; i < n; ++i)
+                sink_new += TerrainDrape::SurfaceZ(pts[i].first, pts[i].second, self->pos.zplane, n_planes);
+            const auto us_new = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t_new0).count();
+
+            char b[220];
+            snprintf(b, sizeof(b),
+                     "drapebench: n=%u planes=%u | OLD %.2fms (%.2fus/q) | NEW %.2fms (%.2fus/q) | speedup %.1fx | sink d=%.0f",
+                     n, n_planes, us_old / 1000.0, static_cast<double>(us_old) / n, us_new / 1000.0,
+                     static_cast<double>(us_new) / n, us_new ? static_cast<double>(us_old) / us_new : 0.0,
+                     std::fabs(sink_old - sink_new));
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "propmesh") { // propmesh [prop_index]: dump one prop's collision-model chain; default = the prop backing the player's plane
+            uint32_t idx = 0xFFFFFFFFu;
+            is >> idx;
+            if (idx == 0xFFFFFFFFu) {
+                const auto self = GW::Agents::GetControlledCharacter();
+                const auto* pm = GW::Map::GetPathingMap();
+                if (self && pm && self->pos.zplane < pm->size()) idx = (*pm)[self->pos.zplane].zplane;
+            }
+            if (idx == 0xFFFFFFFFu) {
+                write_status("propmesh: no prop index (need: propmesh <idx>, or stand on a non-ground plane)");
+                return;
+            }
+            PropSurface::DebugDumpProp(idx);
+            Log::FlushFile();
+            char b[96];
+            snprintf(b, sizeof(b), "propmesh: dumped prop %u (see [propmesh] log lines)", idx);
+            write_status(b);
+            return;
+        }
+        if (verb == "propverify") { // propverify [n radius qradius]: prop-aware SurfaceZ vs the game's all-planes QueryAltitude ground truth
+            uint32_t n = 2000;
+            float radius = 1500.f, qradius = 0.1f; // qradius ~0 = point sample; the default-5 disk-max inflates the game answer on slopes/edges
+            is >> n >> radius >> qradius;
+            n = std::clamp(n, 100u, 100000u);
+            radius = std::clamp(radius, 100.f, 5000.f);
+            qradius = std::clamp(qradius, 0.01f, 10.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("propverify: no character or pathing map");
+                return;
+            }
+            if (!PropSurface::Ready()) {
+                write_status("propverify: prop index not baked yet (queries trigger the bake; retry)");
+                TerrainDrape::SurfaceZ(self->pos.x, self->pos.y, 0, 1);
+                return;
+            }
+            const auto n_planes = static_cast<uint32_t>(pm->size());
+            uint32_t seed = 0xBADC0DEu;
+            const auto next01 = [&seed] {
+                seed = seed * 1664525u + 1013904223u;
+                return (seed >> 8) * (1.f / 16777216.f);
+            };
+            // Walkable baseline can't see non-walkable props: new HIGHER (more negative) is the feature; new LOWER = oracle missed a walkable surface (transform bug).
+            uint32_t both = 0, match = 0, prop_higher = 0, missing = 0, logged = 0;
+            float max_missing = 0.f, max_higher = 0.f;
+            for (uint32_t i = 0; i < n; ++i) {
+                const float ang = next01() * 6.2831853f, r = radius * std::sqrt(next01());
+                const float x = self->pos.x + std::cos(ang) * r, y = self->pos.y + std::sin(ang) * r;
+                float old_all = 0.f;
+                for (uint32_t zp = 0; zp < n_planes; ++zp) {
+                    GW::GamePos p{x, y, zp};
+                    const float a = GW::Map::QueryAltitude(&p, qradius);
+                    if (a != 0.f && (old_all == 0.f || a < old_all)) old_all = a;
+                }
+                const float new_z = TerrainDrape::SurfaceZ(x, y, 0, n_planes);
+                if (old_all == 0.f || new_z == 0.f) continue;
+                ++both;
+                const float d = new_z - old_all; // <0: new is higher (prop win); >0: new is lower (MISSING surface)
+                if (d > 8.f) {
+                    ++missing;
+                    max_missing = std::max(max_missing, d);
+                    if (logged++ < 15)
+                        Log::Log("[propverify]   MISSING (%.0f,%.0f) game=%.1f new=%.1f d=%.1f", x, y, old_all, new_z, d);
+                }
+                else if (d < -8.f) {
+                    ++prop_higher;
+                    max_higher = std::max(max_higher, -d);
+                }
+                else {
+                    ++match;
+                }
+            }
+            char b[224];
+            snprintf(b, sizeof(b), "propverify: n=%u both=%u match=%u prop_higher=%u (max %.0f) MISSING=%u (max %.0f)",
+                     n, both, match, prop_higher, max_higher, missing, max_missing);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "proptransect") { // proptransect [len step]: walkable-only vs prop-aware SurfaceZ along 8 rays from the player
+            float len = 600.f, step = 25.f;
+            is >> len >> step;
+            len = std::clamp(len, 100.f, 5000.f);
+            step = std::clamp(step, 5.f, 200.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto* pm = GW::Map::GetPathingMap();
+            if (!self || !pm || !pm->size()) {
+                write_status("proptransect: no character or pathing map");
+                return;
+            }
+            const auto n_planes = static_cast<uint32_t>(pm->size());
+            Log::Log("[proptransect] map=%d player=(%.0f,%.0f,z%u,%.0f) len=%.0f step=%.0f ready=%d",
+                     static_cast<int>(GW::Map::GetMapID()), self->pos.x, self->pos.y, self->pos.zplane, self->z,
+                     len, step, static_cast<int>(PropSurface::Ready()));
+            uint32_t wins = 0;
+            for (int dir = 0; dir < 8; ++dir) {
+                const float ang = dir * 0.7853981f;
+                const float dx = std::cos(ang), dy = std::sin(ang);
+                uint32_t dir_wins = 0;
+                float peak = 0.f, peak_d = 0.f;
+                for (float d = step; d <= len; d += step) {
+                    const float x = self->pos.x + dx * d, y = self->pos.y + dy * d;
+                    float old_all = 0.f, new_z = 0.f;
+                    TerrainDrape::DrapeCompare(x, y, n_planes, &old_all, &new_z, nullptr);
+                    if (old_all == 0.f || new_z == 0.f) continue;
+                    const float lift = old_all - new_z; // >0: prop surface rides ABOVE the walkable answer
+                    if (lift > 5.f) {
+                        ++dir_wins;
+                        if (lift > peak) {
+                            peak = lift;
+                            peak_d = d;
+                        }
+                        if (dir_wins <= 4)
+                            Log::Log("[proptransect]   dir=%d d=%.0f (%.0f,%.0f) walkable=%.1f prop=%.1f lift=%.1f",
+                                     dir * 45, d, x, y, old_all, new_z, lift);
+                    }
+                }
+                wins += dir_wins;
+                if (dir_wins)
+                    Log::Log("[proptransect] dir=%d: %u prop-win samples, peak lift %.1f at d=%.0f", dir * 45, dir_wins, peak, peak_d);
+            }
+            char b[160];
+            snprintf(b, sizeof(b), "proptransect: prop_wins=%u across 8 dirs (len=%.0f step=%.0f) ready=%d",
+                     wins, len, step, static_cast<int>(PropSurface::Ready()));
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "propstats") { // propstats: published prop-surface index stats
+            PropSurface::Stats st;
+            if (!PropSurface::GetStats(&st)) {
+                const auto self = GW::Agents::GetControlledCharacter();
+                if (self) TerrainDrape::SurfaceZ(self->pos.x, self->pos.y, 0, 1); // kick the lazy bake
+                write_status("propstats: no index published yet (bake kicked; retry)");
+                return;
+            }
+            char b[240];
+            snprintf(b, sizeof(b), "propstats: ready=%d props=%u (render %u) skipped=%u meshes=%u tris=%u grid=%ux%u refs=%u snap=%.1fms bake=%.1fms",
+                     static_cast<int>(PropSurface::Ready()), st.props, st.render_props, st.skipped_props, st.meshes,
+                     st.triangles, st.cells_x, st.cells_y, st.refs, st.snapshot_ms, st.bake_ms);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+            return;
+        }
+        if (verb == "propdrape") { // propdrape [0|1]: master switch for prop draping (off by default = terrain+planes only)
+            int on = -1;
+            is >> on;
+            if (on == 0 || on == 1) PropSurface::SetEnabled(on != 0);
+            char b[96];
+            snprintf(b, sizeof(b), "propdrape: %s%s", PropSurface::Enabled() ? "ENABLED" : "disabled",
+                     on == 0 || on == 1 ? " (set)" : " (state)");
+            Log::Log("[harness] %s", b);
+            write_status(b);
+            return;
+        }
+        if (verb == "fpsprobe") { // fpsprobe [seconds]: count frames over a window, report avg fps
+            float seconds = 3.f;
+            is >> seconds;
+            seconds = std::clamp(seconds, 0.5f, 30.f);
+            fps_duration_ms = static_cast<long>(seconds * 1000.f);
+            fps_frames = 0;
+            fps_start = TIMER_INIT();
+            fps_active = true;
+            write_status("fpsprobe: running");
+            return;
+        }
+        if (verb == "agentdump") { // agentdump [radius]: log ally NPC player_number + elite (from skillbar) to re-derive summon model-ids
+            float radius = 1400.f;
+            is >> radius;
+            radius = std::clamp(radius, 100.f, 6000.f);
+            const auto self = GW::Agents::GetControlledCharacter();
+            const auto agents = GW::Agents::GetAgentArray();
+            if (!self || !agents) { write_status("agentdump: no agents/character"); return; }
+            Log::Log("[agentdump] map=%d radius=%.0f player=(%.0f,%.0f)",
+                     static_cast<int>(GW::Map::GetMapID()), radius, self->pos.x, self->pos.y);
+            uint32_t logged = 0;
+            for (const auto agent : *agents) {
+                const auto living = agent ? agent->GetAsAgentLiving() : nullptr;
+                if (!living || !living->IsNPC()) { continue; }
+                if (living->allegiance != GW::Constants::Allegiance::Ally_NonAttackable) { continue; }
+                const float dx = living->pos.x - self->pos.x;
+                const float dy = living->pos.y - self->pos.y;
+                if (dx * dx + dy * dy > radius * radius) { continue; }
+                int elite_skill = -1;
+                const auto sb = GW::SkillbarMgr::GetSkillbar(living->agent_id);
+                const bool has_sb = sb && sb->IsValid();
+                if (has_sb) {
+                    for (const auto& s : sb->skills) {
+                        const auto sk = GW::SkillbarMgr::GetSkillConstantData(s.skill_id);
+                        if (sk && sk->IsElite()) { elite_skill = static_cast<int>(s.skill_id); break; }
+                    }
+                }
+                Log::Log("[agentdump] id=%u player_number=%u allegiance=%u has_skillbar=%d elite_skill_id=%d",
+                         living->agent_id, static_cast<uint32_t>(living->player_number),
+                         static_cast<uint32_t>(living->allegiance), static_cast<int>(has_sb), elite_skill);
+                logged++;
+            }
+            char b[64];
+            snprintf(b, sizeof(b), "agentdump: logged %u ally npcs", logged);
+            write_status(b);
+            return;
+        }
+        if (verb == "tpfhash") {
+            if (tpfhash_active) {
+                write_status("tpfhash: already running");
+                return;
+            }
+            tpfhash_ids.clear();
+            {
+                std::ifstream in(Resources::GetPath(L"texmod_hash_input.txt"));
+                std::string tok;
+                while (in >> tok) {
+                    const uint32_t id = static_cast<uint32_t>(strtoul(tok.c_str(), nullptr, 0));
+                    if (id) tpfhash_ids.push_back(id);
+                }
+            }
+            if (tpfhash_ids.empty()) {
+                write_status("tpfhash: no ids in texmod_hash_input.txt");
+                return;
+            }
+            tpfhash_next = 0;
+            tpfhash_ok = 0;
+            tpfhash_lines.clear();
+            tpfhash_active = true;
+            write_status(std::format("tpfhash: queued {} ids", tpfhash_ids.size()));
+            TpfHashQueueBatch();
+            return;
+        }
         write_status("unknown_command: " + verb);
     }
 } // namespace
@@ -530,6 +1143,10 @@ void TestHarness::Initialize()
 {
     ToolboxModule::Initialize();
 #ifdef HARNESS_ENABLED
+    // A command written before this instance existed is stale (e.g. the reload script's `shutdown`
+    // left unconsumed when no toolbox was loaded); executing it would kill the fresh instance.
+    std::error_code ec;
+    std::filesystem::remove(cmd_path(), ec);
     std::string existing;
     if (!Resources::ReadFile(config_path(), existing)) {
         Resources::WriteFile(config_path(),
@@ -551,6 +1168,18 @@ void TestHarness::Update(float)
 {
 #ifdef HARNESS_ENABLED
     if (terminating) return;
+    if (fps_active) {
+        ++fps_frames;
+        const long elapsed = TIMER_DIFF(fps_start);
+        if (elapsed >= fps_duration_ms) {
+            fps_active = false;
+            char b[96];
+            snprintf(b, sizeof(b), "fpsprobe: frames=%d secs=%.2f avg_fps=%.1f", fps_frames, elapsed / 1000.f, fps_frames * 1000.f / elapsed);
+            Log::Log("[harness] %s", b);
+            Log::FlushFile();
+            write_status(b);
+        }
+    }
     if (last_poll && TIMER_DIFF(last_poll) < kPollMs) return;
     last_poll = TIMER_INIT();
 
@@ -628,6 +1257,7 @@ void TestHarness::Terminate()
     ToolboxModule::Terminate();
 #ifdef HARNESS_ENABLED
     GW::StoC::RemoveCallback<GW::Packet::StoC::PlayEffect>(&PlayEffect_Entry);
+    tpfhash_active = false;
     write_status("terminated");
 #endif
 }

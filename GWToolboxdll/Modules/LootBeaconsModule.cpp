@@ -7,6 +7,7 @@
 #include <GWCA/GameEntities/Item.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/CameraMgr.h>
+#include <GWCA/Managers/ChatMgr.h>
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
@@ -55,13 +56,30 @@ namespace {
     struct RarityBeacon {
         const char* label;
         bool enabled;
-        Color color;
     };
-    RarityBeacon rarity_white = {"White items", false, Colors::ARGB(170, 255, 255, 255)};
-    RarityBeacon rarity_blue = {"Blue items", false, Colors::ARGB(170, 80, 160, 255)};
-    RarityBeacon rarity_purple = {"Purple items", true, Colors::ARGB(170, 180, 80, 250)};
-    RarityBeacon rarity_gold = {"Gold items", true, Colors::ARGB(170, 255, 210, 60)};
-    RarityBeacon rarity_green = {"Green items", true, Colors::ARGB(170, 40, 220, 40)};
+    RarityBeacon rarity_white = {"White items", false};
+    RarityBeacon rarity_blue = {"Blue items", false};
+    RarityBeacon rarity_purple = {"Purple items", true};
+    RarityBeacon rarity_gold = {"Gold items", true};
+    RarityBeacon rarity_green = {"Green items", true};
+
+    constexpr int kRarityBeaconAlpha = 170; // beam/ring alpha; the palette itself is opaque (0xFF)
+
+    // A rarity beacon isn't user-colourable: it always takes the exact hue the client paints the
+    // item's name (GW::Chat::TextColor), so the beacon matches the nametag drawn for that drop.
+    Color RarityBeaconColor(const GW::Constants::Rarity rarity)
+    {
+        uint32_t argb; // palette entries are 0xAARRGGBB
+        switch (rarity) {
+            case GW::Constants::Rarity::White: argb = GW::Chat::TextColor::ColorItemCommon; break;
+            case GW::Constants::Rarity::Blue: argb = GW::Chat::TextColor::ColorItemEnhance; break;
+            case GW::Constants::Rarity::Purple: argb = GW::Chat::TextColor::ColorItemUncommon; break;
+            case GW::Constants::Rarity::Gold: argb = GW::Chat::TextColor::ColorItemRare; break;
+            case GW::Constants::Rarity::Green: argb = GW::Chat::TextColor::ColorItemUnique; break;
+            default: return 0;
+        }
+        return Colors::ARGB(kRarityBeaconAlpha, (argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
+    }
 
     struct BeaconVertex {
         float x, y, z;
@@ -202,8 +220,9 @@ namespace {
                 draw = true;
             }
             else {
+                const auto rarity = GW::Items::GetRarity(&item);
                 const RarityBeacon* by_rarity = nullptr;
-                switch (GW::Items::GetRarity(&item)) {
+                switch (rarity) {
                     case GW::Constants::Rarity::White: by_rarity = &rarity_white; break;
                     case GW::Constants::Rarity::Blue: by_rarity = &rarity_blue; break;
                     case GW::Constants::Rarity::Purple: by_rarity = &rarity_purple; break;
@@ -212,7 +231,7 @@ namespace {
                     default: break;
                 }
                 if (by_rarity && by_rarity->enabled) {
-                    color = by_rarity->color;
+                    color = RarityBeaconColor(rarity);
                     draw = true;
                 }
             }
@@ -418,15 +437,10 @@ void LootBeaconsModule::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "value_high_threshold", &value_high.threshold);
     SettingsRegistry::RegisterField(module, "value_high_color", &value_high.color);
     SettingsRegistry::RegisterField(module, "white_enabled", &rarity_white.enabled);
-    SettingsRegistry::RegisterField(module, "white_color", &rarity_white.color);
     SettingsRegistry::RegisterField(module, "blue_enabled", &rarity_blue.enabled);
-    SettingsRegistry::RegisterField(module, "blue_color", &rarity_blue.color);
     SettingsRegistry::RegisterField(module, "purple_enabled", &rarity_purple.enabled);
-    SettingsRegistry::RegisterField(module, "purple_color", &rarity_purple.color);
     SettingsRegistry::RegisterField(module, "gold_enabled", &rarity_gold.enabled);
-    SettingsRegistry::RegisterField(module, "gold_color", &rarity_gold.color);
     SettingsRegistry::RegisterField(module, "green_enabled", &rarity_green.enabled);
-    SettingsRegistry::RegisterField(module, "green_color", &rarity_green.color);
 }
 
 void LootBeaconsModule::Initialize()
@@ -471,12 +485,9 @@ void LootBeaconsModule::DrawSettingsInternal()
     }
     ImGui::Separator();
     ImGui::TextUnformatted("Beacon by rarity");
+    ImGui::ShowHelp("The beacon colour always matches the item's name tag, so it can't be changed here.");
     for (auto* rarity : {&rarity_gold, &rarity_green, &rarity_purple, &rarity_blue, &rarity_white}) {
-        ImGui::PushID(rarity->label);
         if (ImGui::Checkbox(rarity->label, &rarity->enabled)) beacons_dirty = true;
-        ImGui::SameLine(180.f);
-        Colors::DrawSettingHueWheel("##color", &rarity->color);
-        ImGui::PopID();
     }
     if (ImGui::Checkbox("Show beacons on items reserved for other party members", &show_reserved_for_others)) beacons_dirty = true;
     ImGui::ShowHelp("Drawn dimmed. Off: only unreserved drops and drops assigned to you.");

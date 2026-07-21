@@ -46,8 +46,23 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/GwDat/AtexDecompress.cpp"
     PROPERTIES COMPILE_FLAGS "/W0")
 
+# Re-embed the current Dependencies/GWCA/bin/gwca.dll on every build
+set(GWCA_EMBED_DLL "${CMAKE_SOURCE_DIR}/Dependencies/GWCA/bin/gwca.dll")
+set(GWCA_EMBED_STAMP "${CMAKE_CURRENT_BINARY_DIR}/gwca_embed_stamp.h")
+if(NOT EXISTS "${GWCA_EMBED_STAMP}")
+    file(WRITE "${GWCA_EMBED_STAMP}" "#define GWCA_EMBED_HASH \"\"\n")
+endif()
+add_custom_target(gwca_embed_stamp ALL
+    COMMAND "${CMAKE_COMMAND}"
+            -D "GWCA_EMBED_DLL=${GWCA_EMBED_DLL}"
+            -D "GWCA_EMBED_STAMP=${GWCA_EMBED_STAMP}"
+            -P "${CMAKE_SOURCE_DIR}/cmake/embed_gwca_stamp.cmake"
+    BYPRODUCTS "${GWCA_EMBED_STAMP}"
+    COMMENT "Checking embedded gwca.dll is current"
+    VERBATIM)
+add_dependencies(GWToolboxdll gwca_embed_stamp)
 set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/GWToolbox.rc"
-    PROPERTIES OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/Dependencies/GWCA/bin/gwca.dll")
+    PROPERTIES OBJECT_DEPENDS "${GWCA_EMBED_DLL};${GWCA_EMBED_STAMP}")
 
 # auto-generated files - export header & pch 
 include(GenerateExportHeader)

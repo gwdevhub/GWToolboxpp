@@ -209,6 +209,8 @@ namespace GW {
     namespace PlayerMgr {
         bool IsMelandrusAccord();
         GW::GamePos* GetPlayerPosition();
+        // Old title variants the game still exposes but that no longer accrue
+        bool IsDeprecatedTitle(GW::Constants::TitleID title_id);
     }
     namespace Agents {
         bool IsAgentCarryingBundle(uint32_t agent_id);

@@ -455,6 +455,8 @@ namespace GW {
 
             constexpr int LockedChest = 8192; // this is actually ->ExtraType
 
+            constexpr int VarnyTheZealot = 8258;
+
             namespace Minipet {
                 constexpr int MiniatureConfessorDorian = 8344;
                 constexpr int MiniaturePrincessSalma = 8349;
@@ -468,26 +470,26 @@ namespace GW {
             } // namespace Minipet
 
             namespace SummoningStone {
-                constexpr int ImperialCripplingSlash = 9043;
-                constexpr int ImperialTripleChop = 9044;
-                constexpr int ImperialBarrage = 9045;
-                constexpr int ImperialQuiveringBlade = 9046;
-                constexpr int TenguHundredBlades = 9047;
-                constexpr int TenguBroadHeadArrow = 9048;
-                constexpr int TenguPalmStrike = 9049;
-                constexpr int TenguLifeSheath = 9050;
-                constexpr int TenguAngchuElementalist = 9051;
-                constexpr int TenguFeveredDreams = 9052;
-                constexpr int TenguSpitefulSpirit = 9053;
-                constexpr int TenguPreservation = 9054;
-                constexpr int TenguPrimalRage = 9055;
-                constexpr int TenguGlassArrows = 9056;
-                constexpr int TenguWayOftheAssassin = 9057;
-                constexpr int TenguPeaceandHarmony = 9058;
-                constexpr int TenguSandstorm = 9059;
-                constexpr int TenguPanic = 9060;
-                constexpr int TenguAuraOftheLich = 9061;
-                constexpr int TenguDefiantWasXinrae = 9062;
+                constexpr int ImperialCripplingSlash = 9268;
+                constexpr int ImperialTripleChop = 9269;
+                constexpr int ImperialBarrage = 9270;
+                constexpr int ImperialQuiveringBlade = 9271;
+                constexpr int TenguHundredBlades = 9272;
+                constexpr int TenguBroadHeadArrow = 9273;
+                constexpr int TenguPalmStrike = 9274;
+                constexpr int TenguLifeSheath = 9275;
+                constexpr int TenguAngchuElementalist = 9276;
+                constexpr int TenguFeveredDreams = 9277;
+                constexpr int TenguSpitefulSpirit = 9278;
+                constexpr int TenguPreservation = 9279;
+                constexpr int TenguPrimalRage = 9280;
+                constexpr int TenguGlassArrows = 9281;
+                constexpr int TenguWayOftheAssassin = 9282;
+                constexpr int TenguPeaceandHarmony = 9283;
+                constexpr int TenguSandstorm = 9284;
+                constexpr int TenguPanic = 9285;
+                constexpr int TenguAuraOftheLich = 9286;
+                constexpr int TenguDefiantWasXinrae = 9287;
             } // namespace SummoningStone
         } // namespace ModelID
     } // namespace Constants

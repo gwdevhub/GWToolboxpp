@@ -12,6 +12,7 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <ImGuiAddons.h>
+#include <Modules/CartographerModule.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
@@ -29,6 +30,7 @@ namespace {
 
     std::vector<MissionMapWidget::DrawCallback> draw_callbacks;
     std::vector<MissionMapWidget::ContextMenuCallback> context_menu_callbacks;
+    std::vector<MissionMapWidget::OverlayCallback> overlay_callbacks;
 
     // Pixel-to-game-unit scale — converts pixel thickness to game units
     float cached_px_to_game = 1.f;
@@ -239,6 +241,7 @@ namespace {
         }
 #endif
         if (ImGui::Button("Place Marker")) {
+            CartographerModule::OnUserMarkerAction();
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
             });
@@ -246,6 +249,7 @@ namespace {
         }
         if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
+                CartographerModule::OnUserMarkerAction();
                 GW::GameThread::Enqueue([] { QuestModule::ClearCustomQuestMarker(); });
                 return false;
             }
@@ -646,6 +650,15 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
 
     DrawWorldCoordRouteLines();
 
+    if (!overlay_callbacks.empty()) {
+        auto* draw_list = ImGui::GetBackgroundDrawList();
+        draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y}, true);
+        for (const auto cb : overlay_callbacks) {
+            cb(draw_list);
+        }
+        draw_list->PopClipRect();
+    }
+
     // POC: mission map icons, desaturated. Res shrine icon (maybe others) are wrong colour by default so we desaturate, but this impacts other icons!
     #if 0
     const auto* world_ctx = GW::GetWorldContext();
@@ -819,3 +832,21 @@ void MissionMapWidget::AddDrawCallback(DrawCallback cb) { draw_callbacks.push_ba
 void MissionMapWidget::RemoveDrawCallback(DrawCallback cb) { std::erase(draw_callbacks, cb); }
 void MissionMapWidget::AddContextMenuCallback(ContextMenuCallback cb) { context_menu_callbacks.push_back(cb); }
 void MissionMapWidget::RemoveContextMenuCallback(ContextMenuCallback cb) { std::erase(context_menu_callbacks, cb); }
+GW::Vec2f MissionMapWidget::GetContextMenuWorldMapPos() { return world_map_click_pos; }
+
+void MissionMapWidget::AddOverlayCallback(OverlayCallback cb) { overlay_callbacks.push_back(cb); }
+void MissionMapWidget::RemoveOverlayCallback(OverlayCallback cb) { std::erase(overlay_callbacks, cb); }
+
+bool MissionMapWidget::WorldMapToScreen(const GW::Vec2f& world_map_pos, ImVec2& out)
+{
+    if (!mission_map_ready) return false;
+    GW::Vec2f screen_pos;
+    if (!WorldMapCoordsToMissionMapScreenPos(world_map_pos, screen_pos)) return false;
+    out = {screen_pos.x, screen_pos.y};
+    return true;
+}
+
+float MissionMapWidget::GetPxPerWorldMapUnit()
+{
+    return mission_map_ready ? mission_map_zoom * mission_map_scale.x : 0.f;
+}

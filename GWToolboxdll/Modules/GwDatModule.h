@@ -27,7 +27,11 @@ public:
 
     const char* Name() const override { return "GW Dat Module"; };
     bool HasSettings() override { return false; }
+    void Update(float) override;
     void Terminate() override;
+
+    // True once the client's Gw.dat has been located and its index parsed (no load attempt of its own).
+    static bool IsLoaded();
 
     // --- Texture decoding ---
     static IDirect3DTexture9** LoadGreyscaleTextureFromFileId(uint32_t file_id);
@@ -45,6 +49,8 @@ public:
 
     // Decodes the texture for file_id from the dat and writes it to disk (format chosen by extension).
     static void SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path);
+
+
 
     // --- Archive reading ---
     // Decompressed bytes for a GW file id; stream_id picks a stream (0 = the file's own data). False if absent.

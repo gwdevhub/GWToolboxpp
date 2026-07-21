@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <cstring>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -235,21 +236,41 @@ namespace {
     // failure (missing dat data) rather than merely not-yet-decoded.
     bool HasFailed(const GwImg* img) { return img->m_completed && !img->m_tex; }
 
+    using DecodeFn = std::function<bool(std::vector<uint32_t>&, Vec2i&)>;
+
+    // Decodes dispatched before the client opened Gw.dat (e.g. injected at process start): parked here and
+    // retried from Update() once the dat appears, instead of caching the failure for the whole session.
+    std::mutex deferred_mutex;
+    std::vector<std::pair<std::shared_ptr<GwImg>, DecodeFn>> deferred_decodes;
+    std::atomic<size_t> deferred_count{0};
+    std::atomic<bool> deferred_retry_in_flight{false};
+
+    void RunDecode(const std::shared_ptr<GwImg>& img, const DecodeFn& decode)
+    {
+        std::vector<uint32_t> argb;
+        Vec2i dims;
+        const bool ok = decode(argb, dims) && dims.x > 0 && dims.y > 0;
+        if (!ok && !GwDatModule::IsLoaded()) {
+            std::scoped_lock lock(deferred_mutex);
+            deferred_decodes.emplace_back(img, decode);
+            deferred_count.store(deferred_decodes.size(), std::memory_order_release);
+            Log::Log("[dat] decode deferred until Gw.dat is mapped (%u parked)", static_cast<unsigned>(deferred_decodes.size()));
+            return;
+        }
+        Resources::Instance().EnqueueDxTask([img, argb, dims, ok](IDirect3DDevice9* device) {
+            if (ok)
+                img->m_tex = MakeTextureFromArgb(device, argb, dims);
+            img->m_dims = dims;
+            img->m_completed = true;
+        });
+    }
+
     // Reads/decodes on a worker thread (was inline on the render thread, stalling the game); only the GPU upload needs the DX thread.
-    template <typename Decode>
-    void QueueDecode(std::shared_ptr<GwImg> img, Decode decode)
+    void QueueDecode(std::shared_ptr<GwImg> img, DecodeFn decode)
     {
         img->m_pending = true;
-        Resources::Instance().EnqueueWorkerTask([img, decode] {
-            std::vector<uint32_t> argb;
-            Vec2i dims;
-            const bool ok = decode(argb, dims) && dims.x > 0 && dims.y > 0;
-            Resources::Instance().EnqueueDxTask([img, argb, dims, ok](IDirect3DDevice9* device) {
-                if (ok)
-                    img->m_tex = MakeTextureFromArgb(device, argb, dims);
-                img->m_dims = dims;
-                img->m_completed = true;
-            });
+        Resources::Instance().EnqueueWorkerTask([img = std::move(img), decode = std::move(decode)] {
+            RunDecode(img, decode);
         });
     }
 
@@ -304,6 +325,8 @@ IDirect3DTexture9** GwDatModule::LoadItemImage(uint32_t model_file_id, uint32_t 
     return &img->m_tex;
 }
 
+
+
 void GwDatModule::SaveTextureFromFileIdToFile(uint32_t file_id, const std::filesystem::path& file_path)
 {
     std::vector<uint32_t> argb;
@@ -343,6 +366,11 @@ void GwDatModule::Terminate()
     // The cache is shared_ptr-owned: clearing it here only drops our references; any DX-upload task still in
     // flight holds its own reference and frees its GwImg (releasing the texture) when it finishes. The dat
     // mapping is left open (written once, read lock-free) and released by the OS on unload.
+    {
+        std::scoped_lock lock(deferred_mutex);
+        deferred_decodes.clear();
+        deferred_count.store(0, std::memory_order_release);
+    }
     textures_by_file_id.clear();
     greyscale_textures_by_file_id.clear();
     item_images_by_file_id.clear();
@@ -472,6 +500,41 @@ bool GwDatModule::EnsureLoaded()
     if (!m_loaded.load(std::memory_order_relaxed) && ParseIndex())
         m_loaded.store(true, std::memory_order_release);
     return m_loaded.load(std::memory_order_relaxed);
+}
+
+bool GwDatModule::IsLoaded()
+{
+    return Instance().m_loaded.load(std::memory_order_acquire);
+}
+
+void GwDatModule::Update(float)
+{
+    if (!deferred_count.load(std::memory_order_acquire))
+        return;
+    if (deferred_retry_in_flight.load(std::memory_order_acquire))
+        return;
+    static ULONGLONG next_retry_ms = 0;
+    const ULONGLONG now = GetTickCount64();
+    if (now < next_retry_ms)
+        return;
+    next_retry_ms = now + 2000;
+    deferred_retry_in_flight.store(true, std::memory_order_release);
+    // EnsureLoaded's handle scan blocks, so the retry itself runs on a worker, never the game thread.
+    Resources::Instance().EnqueueWorkerTask([this] {
+        if (EnsureLoaded()) {
+            std::vector<std::pair<std::shared_ptr<GwImg>, DecodeFn>> retry;
+            {
+                std::scoped_lock lock(deferred_mutex);
+                retry.swap(deferred_decodes);
+                deferred_count.store(0, std::memory_order_release);
+            }
+            if (!retry.empty())
+                Log::Log("[dat] Gw.dat mapped, retrying %u deferred decodes", static_cast<unsigned>(retry.size()));
+            for (const auto& [img, decode] : retry)
+                RunDecode(img, decode);
+        }
+        deferred_retry_in_flight.store(false, std::memory_order_release);
+    });
 }
 
 bool GwDatModule::AcquireMappingInto(void*& out_mapping, long long& out_size)
