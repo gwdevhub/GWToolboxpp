@@ -399,12 +399,6 @@ namespace {
         return !prices_by_identifier.empty();
     }
 
-    std::string PresearingSheetCsvUrl(const char* tab_name)
-    {
-        // Same CSV export a published Google Sheet's "File > Share > Publish to web" produces - no key/auth needed.
-        return std::format("https://docs.google.com/spreadsheets/d/{}/gviz/tq?tqx=out:csv&sheet={}", presearing_sheet_id, tab_name);
-    }
-
     std::string Trim(const std::string& s)
     {
         const auto first = s.find_first_not_of(" \t\r\n");
@@ -572,7 +566,9 @@ const std::unordered_map<std::string, uint32_t>& PriceCheckerModule::FetchPrices
         last_request_was_presearing = is_presearing;
         if (is_presearing) {
             for (const char* tab_name : presearing_sheet_tabs) {
-                Resources::Download(PresearingSheetCsvUrl(tab_name), [tab_name](bool success, const std::string& response, void*) {
+                // Same CSV export a published Google Sheet's "File > Share > Publish to web" produces - no key/auth needed.
+                const auto csv_url = std::format("https://docs.google.com/spreadsheets/d/{}/gviz/tq?tqx=out:csv&sheet={}", presearing_sheet_id, tab_name);
+                Resources::Download(csv_url, [tab_name](bool success, const std::string& response, void*) {
                     if (!success) {
                         last_request_time -= request_interval;
                         return;
