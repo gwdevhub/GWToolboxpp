@@ -78,6 +78,7 @@
 #include <Windows/SplitsWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/TravelWindow.h>
+#include <Windows/PacketLoggerWindow.h>
 
 #ifdef _DEBUG
 #include <Windows/DoorMonitorWindow.h>
