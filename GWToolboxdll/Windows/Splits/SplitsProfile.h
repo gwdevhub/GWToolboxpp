@@ -17,10 +17,7 @@ struct SplitsProfile {
 
     // ---- Behavioural flags -------------------------------------------------
     bool stop_on_party_defeated = true;
-    // Fails the run if a VanquishComplete/MissionComplete/MissionBonus goal's target map
-    // is left (rezoned out of) while that goal is still Started — i.e. attempted and
-    // abandoned without completing it. Mirrors stop_on_party_defeated's semantics (whole
-    // run fails), just a different detection condition.
+    // Fails the run if a Vanquish/Mission/Bonus goal's map is left while still Started (attempted and abandoned); same whole-run-fails semantics as stop_on_party_defeated.
     bool auto_fail_on_rezone    = true;
     bool auto_send_age          = false;
 
@@ -28,20 +25,14 @@ struct SplitsProfile {
     enum class TimeDisplay : uint8_t { Real = 0, Game = 1, Both = 2 };
     TimeDisplay time_display       = TimeDisplay::Game;
     bool        both_header_only   = false; // Both: show Real+Game in clock only, rows stay game-only
-    // What the Ahead/Behind delta is computed against. PB = fastest completed run in history;
-    // Average = mean of every non-failed run's time at that goal; LastRun = the most recent
-    // attempt in history (whatever it reached, failed or not). Same color_pb_ahead/behind
-    // pair is reused regardless of mode — only the comparison data source changes.
+    // PB = fastest completed run; Average = mean of non-failed runs; LastRun = most recent attempt regardless of outcome. color_pb_ahead/behind is reused across all three — only the data source changes.
     enum class ComparisonMode : uint8_t { PB = 0, Average = 1, LastRun = 2 };
     ComparisonMode comparison_mode = ComparisonMode::PB;
     bool show_split_pb    = true;  // shows the cumulative-time-vs-comparison delta under the time column
     bool show_segment     = true;
     bool show_segment_pb  = true;  // shows the segment-vs-comparison-segment delta under the split column
     bool show_paused_time = false; // shows running total of manually-paused real time next to the clock
-    // SC: every goal renders GoalEntry::DisplayStyle::Dynamic (Start/End/Duration) regardless
-    // of its own display_style field, no PB/Average/Last-Run comparison — SC's whole point is
-    // parallel/independent-start objectives (start_trigger), which that comparison math isn't
-    // meaningful for. Manual/Running leave this false and stay Splits-style throughout.
+    // SC forces every goal to DisplayStyle::Dynamic regardless of its own field — SC's parallel/independent-start objectives don't fit PB/Average/Last-Run comparison math. Manual/Running leave this false.
     bool dynamic_by_default = false;
 
     Color color_completed = Colors::RGB(0,   255, 0  );   // goal label: done

@@ -22,19 +22,19 @@ public:
     // can both fire in the same tick.
     // When sequential=true, MapEnter goals fire on any explorable entry (map_id ignored) —
     // used by the Running profile to advance splits in order without map-ID matching.
+    // is_explorable must be synchronous with just_entered_map, not a live GetInstanceType() poll (can lag a frame and miss the one-shot tick).
     int Update(const GoalClock& clock,
                GW::Constants::MapID current_map,
                bool just_entered_map,
                bool came_from_explorable,
-               GW::Constants::InstanceType instance_type,
+               bool is_explorable,
                int  player_level,
                bool sequential = false);
 
     void TriggerManual(const GoalClock& clock);
 
-    // Returns true if the bonus bit was also set (WorldContext bitmask check).
+    // Returns true if the bonus bit was also set (WorldContext bitmask check) — the only source for bonus completion; no separate server event exists for it.
     bool NotifyMissionComplete(GW::Constants::MapID map);
-    void NotifyMissionBonus(GW::Constants::MapID map);
     void NotifyVanquishComplete(GW::Constants::MapID map);
     // Tracks which objective is the base/primary (type_flags without BULLET bit).
     // When that objective fires ObjectiveDone, GoalEngine synthesizes both

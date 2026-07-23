@@ -166,8 +166,7 @@ void GoalList::ResetRunState()
 
 void GoalList::RenumberDuplicateLabels()
 {
-    // Strips a trailing " (N)" suffix this function previously added, so re-running it
-    // (e.g. after a goal is deleted) renumbers from a clean base label each time.
+    // Strips a trailing " (N)" suffix this function previously added, so re-running it after a deletion renumbers from a clean base label.
     auto strip_suffix = [](const std::string& label) -> std::string {
         const size_t open = label.rfind(" (");
         if (open == std::string::npos || label.back() != ')') return label;

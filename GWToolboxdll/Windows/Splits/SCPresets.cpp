@@ -2,6 +2,7 @@
 #include "SCPresets.h"
 
 #include <Modules/Resources.h>
+#include <Utils/EncString.h>
 
 namespace SCPresets {
 
@@ -141,9 +142,7 @@ GoalEntry BuildCheckpointGoal(const EliteCheckpoint& c, GW::Constants::MapID are
         GoalTrigger alt; alt.type = c.type; alt.pattern = c.extra_pattern_a;
         g.extra_triggers.push_back(alt);
     }
-    // Real map-entry gated start (not an unconditional "starts_immediately") — see the
-    // struct's doc comment for why that distinction actually matters here.
-    if (c.starts_on_area_entry) {
+    if (c.starts_on_area_entry) { // real map-entry gated start, not starts_immediately — see the struct's own comment
         g.start_trigger = GoalTrigger{};
         g.start_trigger->type   = GoalTrigger::Type::MapEnter;
         g.start_trigger->map_id = area_map_id;
@@ -185,23 +184,16 @@ GoalList BuildDungeonPresetList(const Dungeon& dungeon)
         g.label   = label;
         g.indent  = 1;
         if (i + 1 < dungeon.level_count) {
-            // This level's completion = the next level's own entry (matches OT's
-            // AddObjectiveAfterAll chaining: starting the next objective auto-completes
-            // every one before it).
+            // Completes on the next level's own entry, matching OT's AddObjectiveAfterAll chaining.
             g.trigger.type   = GoalTrigger::Type::MapEnter;
             g.trigger.map_id = dungeon.levels[i + 1];
         } else {
-            // Final level: the actual dungeon chest. map_id is this level's own map (not a
-            // "next" map like the MapEnter branch above) — matchesPendingTrigger() ignores it
-            // for Pass 2 completion, but GoalEngine's auto-fail-on-rezone check needs it to know
-            // which map this goal is active on, same as Mission/Bonus/VQ goals.
+            // Final level's own map (not a "next" map) — unused by Pass 2 but needed by the auto-fail-on-rezone check, same as Mission/Bonus/VQ goals.
             g.trigger.type   = GoalTrigger::Type::DungeonReward;
             g.trigger.map_id = dungeon.levels[i];
         }
         if (i == 0) {
-            // Real map-entry gated start, not an unconditional one — matches OT's
-            // objectives.front()->SetStarted(), which itself only ever runs once the
-            // ObjectiveSet has actually been created by loading into this dungeon.
+            // Real map-entry gated start, matching OT's objectives.front()->SetStarted() (only runs once the ObjectiveSet is created by loading into this dungeon).
             g.start_trigger = GoalTrigger{};
             g.start_trigger->type   = GoalTrigger::Type::MapEnter;
             g.start_trigger->map_id = dungeon.levels[0];
@@ -250,14 +242,7 @@ std::optional<GoalList> BuildPresetForMap(GW::Constants::MapID map_id)
 // ---------------------------------------------------------------------------
 // Domain of Anguish
 // ---------------------------------------------------------------------------
-// All zone-word/door/dialogue constants below are copied verbatim from
-// ObjectiveTimerWindow.cpp's own DoA_ObjId/DoorID enums and AddDoAObjectiveSet — not
-// independently re-derived. Unlike the elite areas above, every row here gets its own real
-// explicit start_trigger matching OT's own AddStartEvent calls 1:1 (using the new
-// extra_start_triggers for OT's OR'd/multi-door starts) rather than relying on relay — DoA's
-// zone order rotates per run, and relying on "starts when the previous row completes" would
-// misdate a zone's actual start to whenever the *previous* zone finished, which can be a real
-// time gap (return to the hub, walk to the next entrance) rather than the same instant.
+// Constants copied verbatim from ObjectiveTimerWindow.cpp's DoA_ObjId/DoorID enums and AddDoAObjectiveSet. Every row gets its own explicit start_trigger (not relay), since DoA's zone order rotates per run and relay would misdate a zone's start to whenever the previous one finished.
 namespace {
     // DoACompleteZone's param1 ("zone message word") — OT's DoA_ObjId enum.
     constexpr uint32_t kDoAFoundry = 0x273F;
@@ -293,10 +278,7 @@ namespace {
     constexpr wchar_t kDoADarknessesDialogue[] = L"\x8101\x273B\xB5DB\x8B13";
     constexpr wchar_t kDoATendrilsDialogue[]   = L"\x8101\x34C1\x9FA1\xED8F\x1BE4";
 
-    // Nearest-neighbor rotation detection — matches AddDoAObjectiveSet's own starting_area
-    // lambda exactly. Domain of Anguish's map/file_id is shared with the separate solo "Mallyx
-    // the Unfathomable" challenge; if the Mallyx spawn is the closest of all 5 candidates,
-    // this isn't a DoA run at all.
+    // Nearest-neighbor rotation detection matching AddDoAObjectiveSet's own starting_area lambda; if Mallyx's spawn is closest of all 5 candidates, this isn't a DoA run at all.
     constexpr GW::Vec2f kDoAMallyxSpawn(-3931, -6214);
     constexpr GW::Vec2f kDoAAreaSpawns[4] = {
         {-10514, 15231}, // Foundry
@@ -319,9 +301,7 @@ namespace {
         return starting_area; // -1 = Mallyx, not DoA
     }
 
-    // Builds one DoA sub-objective with its own real start/end, matching OT's per-objective
-    // AddStartEvent/AddEndEvent pairs directly. start_extra/end_extra are alternate doors (OR
-    // semantics via extra_start_triggers/extra_triggers) for OT's multi-door starts/ends.
+    // Builds one DoA sub-objective matching OT's per-objective AddStartEvent/AddEndEvent pairs; start_extra/end_extra are alternate doors (OR semantics) for OT's multi-door starts/ends.
     GoalEntry MakeDoAGoal(const char* label,
                           GoalTrigger::Type start_type, uint32_t start_param1,
                           std::initializer_list<uint32_t> start_extra,
@@ -387,9 +367,7 @@ namespace {
     std::vector<GoalEntry> BuildDoAVeilChildren()
     {
         std::vector<GoalEntry> goals;
-        // "360"/"Underlords"/"Lords" have no explicit end event in OT's own code (informational
-        // start-only tracking) — each one's completion here borrows the next row's own real
-        // start condition, landing on the same real-world moment rather than never completing.
+        // "360"/"Underlords"/"Lords" have no explicit end event in OT (informational start-only) — each one's completion here borrows the next row's own start condition instead.
         goals.push_back(MakeDoAGoal("360", T::DoorOpen, kDoAVeil360Left,
                                      {kDoAVeil360Middle, kDoAVeil360Right}, nullptr,
                                      T::DoorOpen, kDoAVeilRanger, {kDoAVeilDerv}));
@@ -486,10 +464,7 @@ GoalList BuildToPKPresetList()
         g.trigger.param1 = static_cast<uint32_t>(kToPKLevels[i]); // matched via matchesPendingTrigger
         g.trigger.map_id = kToPKLevels[i]; // read by GoalEngine's auto-fail rezone check, not Pass 2
         g.start_trigger  = GoalTrigger{};
-        // Only the entry map is explorable-ambiguous (shared with a non-ToPK outpost use
-        // elsewhere) — the other 3 are only ever reached mid-run, so plain MapEnter is
-        // unambiguous there, matching OT's own gate (only the outer AddObjectiveSet(map_id)
-        // switch checks instance type, only for The_Underworld_PvP).
+        // Only the entry map is explorable-ambiguous (shared with a non-ToPK outpost); the other 3 are only reached mid-run, so plain MapEnter is unambiguous there.
         g.start_trigger->type   = (i == 0) ? T::EnterExplorable : T::MapEnter;
         g.start_trigger->map_id = kToPKLevels[i];
         list.goals.push_back(std::move(g));

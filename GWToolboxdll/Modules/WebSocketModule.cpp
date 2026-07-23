@@ -18,8 +18,7 @@ void WebSocketModule::Terminate()
 
 void WebSocketModule::RegisterSettingsContent()
 {
-    // No section of our own — see the class comment. "Splits" already registers its own icon
-    // for this section, so pass nullptr here rather than risk the icon-mismatch assert.
+    // No section of our own — "Splits" already registers its own icon, so pass nullptr rather than risk the icon-mismatch assert.
     ToolboxModule::RegisterSettingsContent(
         "Splits", nullptr,
         [this](const std::string&, const bool is_showing) {
@@ -96,8 +95,7 @@ void WebSocketModule::Send(const std::string_view msg, const std::string_view co
 {
     if (!context.empty()) last_command_ = std::string(context);
     if (!app_) return;
-    // @Cleanup: same "should this send from a different thread" question OT's own version
-    // has always had — carried over as-is, not solved here.
+    // @Cleanup: same "should this send from a different thread" question OT's own version has always had — carried over as-is.
     if (mode_ == Mode::LiveSplitOneJSON) {
         const std::string command = "{\"command\": \"" + std::string(msg) + "\"}";
         app_->publish("objective_events", command, uWS::OpCode::TEXT);
@@ -137,8 +135,7 @@ void WebSocketModule::DrawSettings()
         }
         ImGui::RadioButton("LiveSplit One JSON Format", reinterpret_cast<int*>(&mode_), static_cast<int>(Mode::LiveSplitOneJSON));
         ImGui::RadioButton("LiveSplit Server Command Format", reinterpret_cast<int*>(&mode_), static_cast<int>(Mode::LiveSplitServerCommand));
-        // reinterpret_cast is safe now that Mode is explicitly int-backed (see the enum's own
-        // comment) — this is no longer punning across different-sized/signedness types.
+        // Safe: Mode is explicitly int-backed (see enum declaration), so this isn't punning across sizes/signedness.
         ImGui::Spacing();
         if (last_command_.empty())
             ImGui::TextDisabled("Last command: none");

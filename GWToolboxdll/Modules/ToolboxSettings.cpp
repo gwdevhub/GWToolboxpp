@@ -48,7 +48,6 @@
 #include <Modules/TexmodModule.h>
 #include <Modules/TextToSpeechModule.h>
 #include <Modules/ToastNotifications.h>
-#include <Modules/GWEventBus.h>
 #include <Modules/VendorFix.h>
 #include <Modules/WebSocketModule.h>
 #include <Widgets/VanquishMapOverlayWidget.h>
@@ -238,7 +237,6 @@ namespace {
         MaterialsWindow::Instance(),
         TradeWindow::Instance(),
         NotePadWindow::Instance(),
-        GWEventBus::Instance(),
         WebSocketModule::Instance(),
         ObjectiveTimerWindow::Instance(),
         SplitsWindow::Instance(),
