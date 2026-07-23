@@ -3,7 +3,6 @@
 #include <cctype>
 
 #include <Windows/SplitsWindow.h>
-#include <Windows/Splits/MapNames.h>
 #include <Windows/Splits/SCPresets.h>
 #include <Modules/Resources.h>
 #include <Utils/EncString.h>
@@ -119,19 +118,25 @@ static bool IsMissionQueueMap(GW::Constants::MapID map)
 void SplitsWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    // MapNames::Init() deferred to first Update() — GW UI context may not be ready yet.
 
     GWEventBus::Instance().Subscribe(this, [this](const GWEvent& e) {
         using T = GWEvent::Type;
         switch (e.type) {
             case T::MissionComplete:
                 engine_.NotifyMissionComplete(static_cast<GW::Constants::MapID>(e.id1));
+                // id1 here is GW::Map::GetMapID() at the exact moment kMissionComplete fired —
+                // logged so a goal that silently never completes can be diagnosed by comparing
+                // this against the goal's own trigger.map_id (some missions report a different/
+                // transient map_id here, e.g. a "_cinematic" variant, than their normal one).
+                PushDbgEvent("MissComplete", e.id1, 0);
                 break;
             case T::MissionBonus:
                 engine_.NotifyMissionBonus(static_cast<GW::Constants::MapID>(e.id1));
+                PushDbgEvent("MissBonus", e.id1, 0);
                 break;
             case T::VanquishComplete:
                 engine_.NotifyVanquishComplete(static_cast<GW::Constants::MapID>(e.id1));
+                PushDbgEvent("VqComplete", e.id1, 0);
                 break;
             case T::PartyDefeated:
                 // Latched rather than acted on directly — consumed by ApplyTimerPolicy()
@@ -1227,7 +1232,6 @@ void SplitsWindow::UpdateReferenceIfPB()
 // ---------------------------------------------------------------------------
 void SplitsWindow::Update(float delta)
 {
-    MapNames::Init(); // no-op after first successful call; deferred here so GW UI is ready
     NuzlockeUpdate();
 
     const auto instance_type   = GW::Map::GetInstanceType();
@@ -1606,6 +1610,7 @@ void SplitsWindow::DrawSettingsInternal()
         ImGui::TextDisabled("DoorOpen/Close: v1=object_id  |  AgentAllg: v1=player_number v2=allegiance_bits  |  DungeonRwd: (no params)");
         ImGui::TextDisabled("DoAZone: v1=zone message word  |  Countdown: v1=map_id  |  InstLoadFile: v1=file_id v2=spawn.x");
         ImGui::TextDisabled("SrvMsg/DispDlg: v1=pattern length v2=first wchar (not the full pattern)");
+        ImGui::TextDisabled("MissComplete/MissBonus/VqComplete: v1=map_id (GetMapID() at that instant \xe2\x80\x94 compare against the goal's own map_id if it's not firing)");
         ImGui::BeginChild("##cdbglog", {0, 160}, true, ImGuiWindowFlags_HorizontalScrollbar);
         for (const auto& e : challenge_dbg_events_) {
             ImGui::Text("%-10s  v1=%-6u (0x%04X)  v2=%-6u (0x%04X)",

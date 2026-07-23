@@ -6,8 +6,8 @@
 #include <Windows/Splits/GoalEntry.h>
 #include <Windows/Splits/GoalList.h>
 #include <Windows/Splits/GoalClock.h>
-#include <Windows/Splits/MapNames.h>
 #include <Windows/Splits/SCPresets.h>
+#include <Modules/Resources.h>
 #include <Windows/SettingsWindow.h>
 #include <Windows/InfoWindow.h>
 #include <Utils/TextUtils.h>
@@ -61,47 +61,6 @@ static void DrawPBDelta(double actual, double pb_split, ImVec4 col_ahead, ImVec4
     char dbuf[32];
     FormatTime(dbuf, sizeof(dbuf), std::abs(delta));
     ImGui::TextColored(delta < 0.0 ? col_ahead : col_behind, delta < 0.0 ? "-%s" : "+%s", dbuf);
-}
-
-// ---------------------------------------------------------------------------
-// Campaign/Region name lookups (batch pickers' filter dropdowns)
-// ---------------------------------------------------------------------------
-static const char* CampaignName(GW::Constants::Campaign c)
-{
-    switch (c) {
-        case GW::Constants::Campaign::Prophecies:    return "Prophecies";
-        case GW::Constants::Campaign::Factions:      return "Factions";
-        case GW::Constants::Campaign::Nightfall:     return "Nightfall";
-        case GW::Constants::Campaign::EyeOfTheNorth: return "Eye of the North";
-        default: return nullptr;
-    }
-}
-
-static const char* RegionName(GW::Region r)
-{
-    switch (r) {
-        case GW::Region_Ascalon:             return "Ascalon";
-        case GW::Region_NorthernShiverpeaks: return "Northern Shiverpeaks";
-        case GW::Region_Kryta:               return "Kryta";
-        case GW::Region_Maguuma:             return "Maguuma Jungle";
-        case GW::Region_CrystalDesert:       return "Crystal Desert";
-        case GW::Region_FissureOfWoe:        return "Southern Shiverpeaks";
-        case GW::Region_ShingJea:            return "Shing Jea Island";
-        case GW::Region_Kaineng:             return "Kaineng City";
-        case GW::Region_Kurzick:             return "Echovald Forest";
-        case GW::Region_Luxon:               return "The Jade Sea";
-        case GW::Region_Istan:               return "Istan";
-        case GW::Region_Kourna:              return "Kourna";
-        case GW::Region_Vaabi:               return "Vabbi";
-        case GW::Region_Desolation:          return "The Desolation";
-        case GW::Region_DomainOfAnguish:     return "Realm of Torment";
-        case GW::Region_TarnishedCoast:      return "Tarnished Coast";
-        case GW::Region_DepthsOfTyria:       return "Depths of Tyria";
-        case GW::Region_FarShiverpeaks:      return "Far Shiverpeaks";
-        case GW::Region_CharrHomelands:      return "Charr Homelands";
-        case GW::Region_Presearing:          return "Pre-Searing";
-        default: return nullptr;
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -878,7 +837,7 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
                 } else if (g.trigger.type == GoalTrigger::Type::MissionComplete ||
                            g.trigger.type == GoalTrigger::Type::MissionBonus ||
                            g.trigger.type == GoalTrigger::Type::VanquishComplete) {
-                    const std::string& map_name = MapNames::Get(g.trigger.map_id);
+                    const std::string& map_name = Resources::GetMapName(g.trigger.map_id)->string();
                     ImGui::TextDisabled("Autostart --> entering %s",
                         map_name.empty() ? "target map" : map_name.c_str());
                 } else {
@@ -1261,7 +1220,7 @@ void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
             if (inf->region != GW::Region_Presearing && !inf->GetIsOnWorldMap()) continue;
             if (seen.count(inf->name_id)) continue;
             seen[inf->name_id] = id;
-            out.push_back({ id, MapNames::Get(mid) });
+            out.push_back({ id, Resources::GetMapName(mid)->string() });
         }
         std::sort(out.begin(), out.end(), [](const MapRow& a, const MapRow& b) {
             return a.name < b.name;
@@ -1272,7 +1231,7 @@ void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
     static std::vector<MapRow> s_map_list;
     if (s_map_list.empty()) s_map_list = build_map_list();
 
-    const std::string sel_name = run_map_id_ > 0 ? MapNames::Get(static_cast<MapID>(run_map_id_)) : std::string{};
+    const std::string sel_name = run_map_id_ > 0 ? Resources::GetMapName(static_cast<MapID>(run_map_id_))->string() : std::string{};
     const char* preview = run_map_id_ > 0 ? sel_name.c_str() : "(pick map)";
     ImGui::SetNextItemWidth(200.f);
     if (ImGui::BeginCombo("##runmap", preview)) {
@@ -1289,7 +1248,7 @@ void SplitsGoalListWindow::DrawRunningLegPicker(SplitsWindow& plugin)
             const bool sel = (row.id == run_map_id_);
             if (ImGui::Selectable(row.name.c_str(), sel)) {
                 run_map_id_ = row.id;
-                const auto nm = MapNames::Get(static_cast<MapID>(row.id));
+                const auto nm = Resources::GetMapName(static_cast<MapID>(row.id))->string();
                 snprintf(edit_label_, sizeof(edit_label_), "%s", nm.c_str());
                 run_filter_[0] = '\0';
             }
@@ -1358,7 +1317,7 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
         std::vector<TownRow> out;
         out.reserve(best.size());
         for (const auto& kv : best)
-            out.push_back({ kv.second.id, MapNames::Get(static_cast<MapID>(kv.second.id)), kv.second.region });
+            out.push_back({ kv.second.id, Resources::GetMapName(static_cast<MapID>(kv.second.id))->string(), kv.second.region });
         std::sort(out.begin(), out.end(), [](const TownRow& a, const TownRow& b) {
             if (a.region != b.region) return a.region < b.region;
             return a.name < b.name;
@@ -1409,8 +1368,8 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
                         prev_reg = r->region;
                         ImGui::TableNextRow();
                         ImGui::TableSetColumnIndex(0);
-                        const char* rname = RegionName(r->region);
-                        if (rname) ImGui::TextDisabled("%s", rname);
+                        const std::string& rname = Resources::GetRegionName(r->region)->string();
+                        if (!rname.empty()) ImGui::TextDisabled("%s", rname.c_str());
                     }
                     ImGui::TableNextRow();
                     uint8_t& bits = batch_town_checked_[r->id];
@@ -1449,7 +1408,7 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
                 std::vector<TownRow> out;
                 out.reserve(best.size());
                 for (const auto& kv : best)
-                    out.push_back({ kv.second, MapNames::Get(static_cast<MapID>(kv.second)), GW::Region_Presearing });
+                    out.push_back({ kv.second, Resources::GetMapName(static_cast<MapID>(kv.second))->string(), GW::Region_Presearing });
                 std::sort(out.begin(), out.end(), [](const TownRow& a, const TownRow& b) { return a.name < b.name; });
                 return out;
             };
@@ -1526,7 +1485,7 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
             const auto* inf = GW::Map::GetMapInfo(mid);
             const Camp c = inf ? inf->campaign : Camp::Prophecies;
             const GW::Region reg = inf ? inf->region : static_cast<GW::Region>(0);
-            const std::string nm = MapNames::Get(mid);
+            const std::string nm = Resources::GetMapName(mid)->string();
             if (bits & BIT_ENTER) items.push_back({ id, GoalTrigger::Type::EnterOutpost, c, reg, nm });
             if (bits & BIT_LEAVE) items.push_back({ id, GoalTrigger::Type::ExitOutpost,  c, reg, nm });
         }
@@ -1582,7 +1541,7 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
         std::vector<ExpRow> out;
         out.reserve(best.size());
         for (const auto& kv : best)
-            out.push_back({ kv.second.id, MapNames::Get(static_cast<MapID>(kv.second.id)), kv.second.region });
+            out.push_back({ kv.second.id, Resources::GetMapName(static_cast<MapID>(kv.second.id))->string(), kv.second.region });
         std::sort(out.begin(), out.end(), [](const ExpRow& a, const ExpRow& b) {
             if (a.region != b.region) return a.region < b.region;
             return a.name < b.name;
@@ -1639,8 +1598,8 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
                         prev_reg = r->region;
                         ImGui::TableNextRow();
                         ImGui::TableSetColumnIndex(0);
-                        const char* rname = RegionName(r->region);
-                        if (rname) ImGui::TextDisabled("%s", rname);
+                        const std::string& rname = Resources::GetRegionName(r->region)->string();
+                        if (!rname.empty()) ImGui::TextDisabled("%s", rname.c_str());
                     }
                     ImGui::TableNextRow();
                     uint8_t& bits = batch_exp_checked_[r->id];
@@ -1680,7 +1639,7 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
                 std::vector<ExpRow> out;
                 out.reserve(best.size());
                 for (const auto& kv : best)
-                    out.push_back({ kv.second, MapNames::Get(static_cast<MapID>(kv.second)), GW::Region_Presearing });
+                    out.push_back({ kv.second, Resources::GetMapName(static_cast<MapID>(kv.second))->string(), GW::Region_Presearing });
                 std::sort(out.begin(), out.end(), [](const ExpRow& a, const ExpRow& b) { return a.name < b.name; });
                 return out;
             };
@@ -1757,7 +1716,7 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
             const auto* inf = GW::Map::GetMapInfo(mid);
             const Camp c = inf ? inf->campaign : Camp::Prophecies;
             const GW::Region reg = inf ? inf->region : static_cast<GW::Region>(0);
-            const std::string nm = MapNames::Get(mid);
+            const std::string nm = Resources::GetMapName(mid)->string();
             if (bits & BIT_ENTER) items.push_back({ id, GoalTrigger::Type::EnterExplorable,   c, reg, nm });
             if (bits & BIT_VQ)    items.push_back({ id, GoalTrigger::Type::VanquishComplete,  c, reg, nm });
             if (bits & BIT_LEAVE) items.push_back({ id, GoalTrigger::Type::ExitExplorable,    c, reg, nm });
@@ -1821,7 +1780,7 @@ void SplitsGoalListWindow::DrawMissionBatchPicker(SplitsWindow& plugin)
             std::vector<MissionRow> out;
             out.reserve(std::size(order));
             for (uint32_t i = 0; i < static_cast<uint32_t>(std::size(order)); ++i)
-                out.push_back({ static_cast<int>(order[i]), MapNames::Get(order[i]), i + 1 });
+                out.push_back({ static_cast<int>(order[i]), Resources::GetMapName(order[i])->string(), i + 1 });
             return out;
         }
         if (camp == Camp::Factions) {
@@ -1837,7 +1796,7 @@ void SplitsGoalListWindow::DrawMissionBatchPicker(SplitsWindow& plugin)
             std::vector<MissionRow> out;
             out.reserve(std::size(order));
             for (uint32_t i = 0; i < static_cast<uint32_t>(std::size(order)); ++i)
-                out.push_back({ static_cast<int>(order[i]), MapNames::Get(order[i]), i + 1 });
+                out.push_back({ static_cast<int>(order[i]), Resources::GetMapName(order[i])->string(), i + 1 });
             return out;
         }
         if (camp == Camp::Prophecies) {
@@ -1855,7 +1814,7 @@ void SplitsGoalListWindow::DrawMissionBatchPicker(SplitsWindow& plugin)
             std::vector<MissionRow> out;
             out.reserve(std::size(order));
             for (uint32_t i = 0; i < static_cast<uint32_t>(std::size(order)); ++i)
-                out.push_back({ static_cast<int>(order[i]), MapNames::Get(order[i]), i + 1 });
+                out.push_back({ static_cast<int>(order[i]), Resources::GetMapName(order[i])->string(), i + 1 });
             return out;
         }
         // Dynamic scan for other campaigns
@@ -1885,7 +1844,7 @@ void SplitsGoalListWindow::DrawMissionBatchPicker(SplitsWindow& plugin)
         std::vector<MissionRow> out;
         out.reserve(best.size());
         for (const auto& kv : best)
-            out.push_back({ kv.second.id, MapNames::Get(static_cast<MapID>(kv.second.id)), kv.second.chron });
+            out.push_back({ kv.second.id, Resources::GetMapName(static_cast<MapID>(kv.second.id))->string(), kv.second.chron });
         std::sort(out.begin(), out.end(),
             [](const MissionRow& a, const MissionRow& b) { return a.chron < b.chron; });
         return out;
@@ -1966,7 +1925,7 @@ void SplitsGoalListWindow::DrawMissionBatchPicker(SplitsWindow& plugin)
         GoalList* list = plugin.List();
         for (const auto& item : items) {
             GoalEntry g;
-            g.label = MapNames::Get(static_cast<MapID>(item.id));
+            g.label = Resources::GetMapName(static_cast<MapID>(item.id))->string();
             if (item.bonus) g.label += " - Bonus";
             if (batch_hm_)  g.label += " (HM)";
             g.trigger.type      = item.bonus ? GoalTrigger::Type::MissionBonus : GoalTrigger::Type::MissionComplete;
@@ -1994,7 +1953,7 @@ void SplitsGoalListWindow::DrawDungeonBatchPicker(SplitsWindow& plugin)
     std::vector<DungeonRow> rows;
     rows.reserve(std::size(SCPresets::kDungeons));
     for (const auto& dungeon : SCPresets::kDungeons)
-        rows.push_back({ static_cast<int>(dungeon.levels[0]), MapNames::Get(dungeon.levels[0]), &dungeon });
+        rows.push_back({ static_cast<int>(dungeon.levels[0]), Resources::GetMapName(dungeon.levels[0])->string(), &dungeon });
     std::sort(rows.begin(), rows.end(), [](const DungeonRow& a, const DungeonRow& b) { return a.name < b.name; });
 
     std::vector<const DungeonRow*> filtered;

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "SCPresets.h"
 
-#include <Windows/Splits/MapNames.h>
+#include <Modules/Resources.h>
 
 namespace SCPresets {
 
@@ -160,7 +160,7 @@ GoalList BuildDungeonPresetList(const Dungeon& dungeon)
 {
     GoalList list;
     list.is_preset = true;
-    list.name      = MapNames::Get(dungeon.levels[0]);
+    list.name      = Resources::GetMapName(dungeon.levels[0])->string();
 
     if (dungeon.level_count <= 1) {
         // Nothing to break down — same flat single goal as Manual's picker.
@@ -434,7 +434,7 @@ std::optional<GoalList> BuildDoAPresetList(const GW::Vec2f spawn)
 
     GoalList list;
     list.is_preset = true;
-    list.name      = MapNames::Get(GW::Constants::MapID::Domain_of_Anguish);
+    list.name      = Resources::GetMapName(GW::Constants::MapID::Domain_of_Anguish)->string();
 
     GoalEntry hdr;
     hdr.is_header      = true;
@@ -470,7 +470,7 @@ GoalList BuildToPKPresetList()
 {
     GoalList list;
     list.is_preset = true;
-    list.name      = MapNames::Get(MapID::Tomb_of_the_Primeval_Kings);
+    list.name      = Resources::GetMapName(MapID::Tomb_of_the_Primeval_Kings)->string();
 
     GoalEntry hdr;
     hdr.is_header      = true;
@@ -480,7 +480,7 @@ GoalList BuildToPKPresetList()
 
     for (size_t i = 0; i < 4; ++i) {
         GoalEntry g;
-        g.label          = MapNames::Get(kToPKLevels[i]);
+        g.label          = Resources::GetMapName(kToPKLevels[i])->string();
         g.indent         = 1;
         g.trigger.type   = T::CountdownStart;
         g.trigger.param1 = static_cast<uint32_t>(kToPKLevels[i]); // matched via matchesPendingTrigger

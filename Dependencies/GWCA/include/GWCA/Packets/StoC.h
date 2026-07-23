@@ -215,15 +215,6 @@ namespace GW {
 
             static_assert(sizeof(QuestAdd) == 0x50);
 
-            // Layout unverified against a GWCA-side struct — inferred from GWToolbox's generic
-            // packet logger, which showed a single leading Dword matching the quest_id seen
-            // across QuestAdd/QuestDescription/QuestUpdateMarker for the same quest. Confirm
-            // quest_id looks sane in-game before relying on this for anything besides logging.
-            struct QuestRemove : Packet<QuestRemove> {
-                GW::Constants::QuestID quest_id;
-            };
-            template<> constexpr uint32_t Packet<QuestRemove>::STATIC_HEADER = GAME_SMSG_QUEST_REMOVE;
-
             struct NpcGeneralStats : Packet<NpcGeneralStats> {
                 uint32_t npc_id;
                 uint32_t file_id;

@@ -10,6 +10,7 @@
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Packets/Opcodes.h>
@@ -257,23 +258,29 @@ void GWEventBus::Initialize()
                 Emit({GWEvent::Type::AgentDied, p->agent_id, p->state});
         });
 
-    // QuestAdd fires when a quest is added or its log_state changes (active→complete etc.).
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuestAdd>(
+    // kQuestAdded fires when a quest is added or its log_state changes (active->complete etc.).
+    // wparam is a QuestID directly (UIMessages.h:468) — log_state itself isn't in the message,
+    // so it's read back off the quest log the same way QuestModule.cpp already does.
+    GW::UI::RegisterUIMessageCallback(
         &on_quest_update_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::QuestAdd* p) {
+        GW::UI::UIMessage::kQuestAdded,
+        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+            const auto quest_id = *static_cast<GW::Constants::QuestID*>(wparam);
+            const auto* quest   = GW::QuestMgr::GetQuest(quest_id);
             Emit({GWEvent::Type::QuestUpdate,
-                  static_cast<uint32_t>(p->quest_id),
-                  static_cast<uint32_t>(p->log_state)});
+                  static_cast<uint32_t>(quest_id),
+                  quest ? quest->log_state : 0});
         });
 
-    // QuestRemove fires when a quest leaves the log — turn-in (the common case) or abandon.
-    // QuestAdd does not refire with a completed log_state, so this is the only observable
-    // signal for quest completion.
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuestRemove>(
+    // kQuestRemoved fires when a quest leaves the log — turn-in (the common case) or abandon.
+    // wparam is a QuestID directly (UIMessages.h:470). kQuestAdded does not refire with a
+    // completed log_state, so this is the only observable signal for quest completion.
+    GW::UI::RegisterUIMessageCallback(
         &on_quest_remove_,
-        [this](GW::HookStatus*, const GW::Packet::StoC::QuestRemove* p) {
-            Emit({GWEvent::Type::QuestRemoved,
-                  static_cast<uint32_t>(p->quest_id)});
+        GW::UI::UIMessage::kQuestRemoved,
+        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+            const auto quest_id = *static_cast<GW::Constants::QuestID*>(wparam);
+            Emit({GWEvent::Type::QuestRemoved, static_cast<uint32_t>(quest_id)});
         });
 }
 
@@ -308,7 +315,7 @@ void GWEventBus::SignalTerminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::PartyHenchmanAdd>(&on_party_henchman_add_);
     GW::StoC::RemoveCallback<GW::Packet::StoC::PartyHenchmanRemove>(&on_party_henchman_remove_);
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentState>(&on_agent_state_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::QuestAdd>(&on_quest_update_);
-    GW::StoC::RemoveCallback<GW::Packet::StoC::QuestRemove>(&on_quest_remove_);
+    GW::UI::RemoveUIMessageCallback(&on_quest_update_);
+    GW::UI::RemoveUIMessageCallback(&on_quest_remove_);
     ToolboxModule::SignalTerminate();
 }
