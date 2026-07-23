@@ -226,9 +226,14 @@ namespace {
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
+            if (ImGui::Checkbox("I've already starred###gwtoolbox_has_starred", &settings.has_starred)) {
+                show_star_request = false;
+            }
+            ImGui::Spacing();
             if (ImGui::Button("Star us on GitHub###gwtoolbox_open_star", ImVec2(200.0f * ImGui::FontScale(), 0))) {
                 ShellExecute(nullptr, "open", "https://github.com/gwdevhub/GWToolboxpp", nullptr, nullptr, SW_SHOWNORMAL);
                 show_star_request = false;
+                settings.has_starred = true;
             }
             ImGui::SameLine();
             if (ImGui::Button("Maybe later###gwtoolbox_dismiss_star", ImVec2(120.0f * ImGui::FontScale(), 0))) {
@@ -284,8 +289,9 @@ void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     // If the version we ran last differs from this one, Toolbox was just updated
     // (in-app or by hand) — show the star request once. SaveSettings rewrites
     // dllversion below, so it won't fire again until the next update.
+    // Don't show if user has already starred.
     std::string previous_version;
-    if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION) {
+    if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION && !settings.has_starred) {
         show_star_request = true;
     }
 #endif
