@@ -7,6 +7,7 @@
 #include <GWCA/GameEntities/Title.h>
 #include <GWCA/Managers/PartyMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/SkillbarMgr.h>
 
 void GoalEngine::Attach(GoalList* list)
 {
@@ -41,18 +42,25 @@ void GoalEngine::Reset()
     mission_bonus_map_      = GW::Constants::MapID::None;
     vanquish_complete_map_  = GW::Constants::MapID::None;
     primary_obj_id_         = 0;
-    bonus_was_set_at_entry_ = false;
+    incomplete_rezone_pending_ = false;
     if (list_) list_->ResetRunState();
+}
+
+bool GoalEngine::ConsumeIncompleteRezone()
+{
+    const bool v = incomplete_rezone_pending_;
+    incomplete_rezone_pending_ = false;
+    return v;
 }
 
 bool GoalEngine::NotifyMissionComplete(GW::Constants::MapID map)
 {
     mission_complete_map_ = map;
 
-    // missions_bonus bitmask is historical — bit stays set from previous runs.
-    // Only count it if the bit was clear when this instance loaded (earned this run).
-    if (bonus_was_set_at_entry_) return false;
-
+    // missions_bonus bitmask is historical — once earned, it never clears, so this reads
+    // true on every subsequent attempt of this mission on this character regardless of
+    // whether the bonus is actually re-earned that run. Known, accepted limitation (see the
+    // Settings warning) rather than trying to disambiguate "earned this run" from historical.
     const auto* w = GW::GetWorldContext();
     if (!w) return false;
     const uint32_t idx  = static_cast<uint32_t>(map);
@@ -116,22 +124,6 @@ int GoalEngine::Update(const GoalClock& clock,
     if (!started_ && just_entered_map)
         started_ = true;
 
-    // Snapshot the WorldContext bonus bit on map entry so NotifyMissionComplete can
-    // distinguish "earned this run" (bit was clear at entry) from a historical bit
-    // left over from a previous completion.
-    if (just_entered_map && current_map != GW::Constants::MapID::None) {
-        const auto* w = GW::GetWorldContext();
-        if (w) {
-            const uint32_t idx  = static_cast<uint32_t>(current_map);
-            const uint32_t word = idx >> 5;
-            const uint32_t bit  = 1u << (idx & 31);
-            bonus_was_set_at_entry_ = (word < w->missions_bonus.size()) &&
-                                      ((w->missions_bonus[word] & bit) != 0);
-        } else {
-            bonus_was_set_at_entry_ = false;
-        }
-    }
-
     int fired = 0;
 
     // Returns true for trigger types that act as barriers in Pass 2:
@@ -151,6 +143,9 @@ int GoalEngine::Update(const GoalClock& clock,
             case GoalTrigger::Type::ServerMessage:
             case GoalTrigger::Type::DisplayDialogue:
             case GoalTrigger::Type::ObjectiveStarted:
+            case GoalTrigger::Type::QuestPickup:
+            case GoalTrigger::Type::QuestComplete:
+            case GoalTrigger::Type::MobKill:
                 return false;
             default:
                 return true;
@@ -216,21 +211,35 @@ int GoalEngine::Update(const GoalClock& clock,
             if (!g.start_trigger.has_value())      continue;
             const GoalTrigger& st = g.start_trigger.value();
             bool start_fire = false;
+            const GoalTrigger* fired_trigger = &st;
             switch (st.type) {
                 case GoalTrigger::Type::MapEnter:
                     start_fire = just_entered_map && (current_map == st.map_id);
                     break;
+                // Same map_id can be an Outpost or Explorable instance at different points (e.g.
+                // ToPK's The_Underworld_PvP) — needed as a start_trigger for ToPK's entry level,
+                // matching OT's own explorable-only gate before AddToPKObjectiveSet().
+                case GoalTrigger::Type::EnterExplorable:
+                    start_fire = just_entered_map && is_explorable && (current_map == st.map_id);
+                    break;
                 default:
                     start_fire = matchesPendingTrigger(st);
+                    // OR alternates (e.g. Domain of Anguish's "360" room, reachable through any
+                    // of 3 doors) — same idea as extra_triggers below but for starting a goal.
+                    if (!start_fire) {
+                        for (const auto& est : g.extra_start_triggers) {
+                            if (matchesPendingTrigger(est)) { start_fire = true; fired_trigger = &est; break; }
+                        }
+                    }
                     break;
             }
             if (start_fire) {
                 bool already_claimed = false;
                 for (const GoalTrigger* claimed : claimed_this_tick) {
-                    if (triggersEqual(*claimed, st)) { already_claimed = true; break; }
+                    if (triggersEqual(*claimed, *fired_trigger)) { already_claimed = true; break; }
                 }
                 if (already_claimed) continue;
-                claimed_this_tick.push_back(&st);
+                claimed_this_tick.push_back(fired_trigger);
 
                 g.start_real_time = clock.RealTime();
                 g.start_game_time = clock.GameTime();
@@ -263,6 +272,13 @@ int GoalEngine::Update(const GoalClock& clock,
 
                 case GoalTrigger::Type::EnterExplorable:
                     fire = just_entered_map && is_explorable && (current_map == t.map_id);
+                    break;
+
+                // Same map_id can be an Outpost (town/mission-staging) or Explorable instance
+                // at different points (e.g. The Great Northern Wall) — require !is_explorable
+                // so this only fires for the genuine town/staging entry, not the mission itself.
+                case GoalTrigger::Type::EnterOutpost:
+                    fire = just_entered_map && !is_explorable && (current_map == t.map_id);
                     break;
 
                 case GoalTrigger::Type::ExitExplorable:
@@ -317,13 +333,36 @@ int GoalEngine::Update(const GoalClock& clock,
                 case GoalTrigger::Type::DungeonReward:
                 case GoalTrigger::Type::ServerMessage:
                 case GoalTrigger::Type::DisplayDialogue:
-                case GoalTrigger::Type::CountdownStart: {
+                case GoalTrigger::Type::CountdownStart:
+                case GoalTrigger::Type::QuestPickup:
+                case GoalTrigger::Type::QuestComplete: {
                     fire = matchesPendingTrigger(t);
                     if (!fire) {
                         for (const auto& et : g.extra_triggers) {
                             if ((fire = matchesPendingTrigger(et))) break;
                         }
                     }
+                    break;
+                }
+
+                // SkillLearnt has no event at all, it's pure state — must be polled.
+                case GoalTrigger::Type::SkillLearnt:
+                    fire = GW::SkillbarMgr::GetIsSkillLearnt(static_cast<GW::Constants::SkillID>(t.param1));
+                    break;
+
+                // Counts toward param2 rather than firing on the first match — a burst of
+                // simultaneous deaths (AoE wipe) can add more than one matching event to
+                // pending_events_ in the same tick, so this counts all of them rather than
+                // reusing matchesPendingTrigger's single-match boolean.
+                case GoalTrigger::Type::MobKill: {
+                    int kills_this_tick = 0;
+                    for (const auto& ev : pending_events_) {
+                        if (ev.type == GoalTrigger::Type::MobKill && ev.id1 == t.param1)
+                            ++kills_this_tick;
+                    }
+                    g.trigger_progress += kills_this_tick;
+                    const uint32_t target = t.param2 > 0 ? t.param2 : 1;
+                    fire = g.trigger_progress >= static_cast<int>(target);
                     break;
                 }
 
@@ -358,6 +397,74 @@ int GoalEngine::Update(const GoalClock& clock,
                 break;
             }
         } // end Pass 2
+
+        // Auto-fail detection: the currently-active goal's target map was just left without
+        // completing it. "Currently active" is the first non-header, non-Completed/Failed
+        // goal in list order — NOT GoalStatus::Started. Goals built through the normal editor
+        // never get a start_trigger, so Pass 1 never promotes them to Started; they sit at
+        // NotStarted right up until FireGoal() sets them straight to Completed. Checking for
+        // Started here (as an earlier version of this did) meant the check almost never
+        // matched, since a first-in-list or non-relay-started goal is NotStarted the entire
+        // time it's being attempted.
+        // Runs after Pass 2 so a completion signal that arrived this same tick (normally
+        // just before the zone transition) has already updated the goal's status — avoiding
+        // a false positive on a goal that DID finish.
+        //
+        // Mirrors OT's own ObjectiveSet::StopObjectives(): any objective still in progress
+        // when the run's context is left gets marked failed, not just party wipes. Dungeon
+        // goals carry their own map_id (like Mission/Bonus/VQ); Elite Area checkpoints
+        // (ObjectiveDone/DoorOpen/DisplayDialogue/ServerMessage) don't, so the owning area
+        // header's map_id (set by the Elite Areas picker's full-set "select all" path) is used
+        // instead — same fallback pattern as SplitsWindow::ApplyTimerPolicy's SC autostart.
+        if (just_entered_map && came_from_explorable) {
+            using TT = GoalTrigger::Type;
+            GW::Constants::MapID owning_header_map = GW::Constants::MapID::None;
+            // Map the currently-checked goal is active on. Starts at the header's map (level 1
+            // of a dungeon); each completed MapEnter-type goal hands its own completion target
+            // (= the map the *next* level's goal is active on) forward as we walk the list — so
+            // this always reflects the map the first still-incomplete goal was attempted from,
+            // not just the dungeon's original entry map. Without this, every legitimate level
+            // transition (e.g. CoF level 1 -> 2) read as "left level 1" and misfired a fail the
+            // instant the player progressed normally (confirmed live).
+            GW::Constants::MapID segment_start_map = GW::Constants::MapID::None;
+            for (const auto& g : list_->goals) {
+                if (g.is_header) {
+                    owning_header_map = g.trigger.map_id;
+                    segment_start_map = g.trigger.map_id;
+                    continue;
+                }
+                if (g.status == GoalStatus::Completed || g.status == GoalStatus::Failed) {
+                    if (g.trigger.type == TT::MapEnter) segment_start_map = g.trigger.map_id;
+                    continue;
+                }
+                bool map_matches = false;
+                if (g.trigger.type == TT::VanquishComplete || g.trigger.type == TT::MissionComplete ||
+                    g.trigger.type == TT::MissionBonus || g.trigger.type == TT::DungeonReward ||
+                    g.trigger.type == TT::CountdownStart) {
+                    // CountdownStart (ToPK, SCPresets::BuildToPKPresetList) carries its own
+                    // level's real map_id directly, same as Mission/Bonus/VQ/DungeonReward.
+                    map_matches = (g.trigger.map_id == prev_map_);
+                } else if (g.trigger.type == TT::ObjectiveDone || g.trigger.type == TT::DoorOpen ||
+                           g.trigger.type == TT::DisplayDialogue || g.trigger.type == TT::ServerMessage ||
+                           g.trigger.type == TT::DoACompleteZone || g.trigger.type == TT::AgentUpdateAllegiance) {
+                    // DoACompleteZone/AgentUpdateAllegiance are Domain of Anguish's own
+                    // checkpoint types (SCPresets::BuildDoAPresetList) — same header-map
+                    // fallback as the Elite Area types, since DoA's whole run (all 4 rotated
+                    // zones) shares one map_id (Domain_of_Anguish) stamped on both the overall
+                    // and per-zone headers.
+                    map_matches = (owning_header_map != GW::Constants::MapID::None &&
+                                    owning_header_map == prev_map_);
+                } else if (g.trigger.type == TT::MapEnter) {
+                    // SC's per-level dungeon goals (SCPresets::BuildDungeonPresetList) — this
+                    // goal's own map_id is the *next* level (its completion target), so the map
+                    // it's active on is segment_start_map, not owning_header_map.
+                    map_matches = (segment_start_map != GW::Constants::MapID::None &&
+                                    segment_start_map == prev_map_);
+                }
+                if (map_matches) incomplete_rezone_pending_ = true;
+                break; // only the current goal can be the one just abandoned
+            }
+        }
     }
 
     mission_complete_map_  = GW::Constants::MapID::None;

@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <cwchar>
+
 #include <Modules/GWEventBus.h>
 
 #include <GWCA/Context/GameContext.h>
@@ -30,7 +32,13 @@ void GWEventBus::Unsubscribe(const void* owner)
 
 void GWEventBus::Emit(const GWEvent& e) const
 {
-    for (const auto& [_, cb] : subscribers_)
+    // Snapshot rather than iterate subscribers_ directly: a callback that Subscribes or
+    // Unsubscribes (e.g. a module tearing itself down mid-event) would otherwise mutate
+    // the vector out from under this loop. Only ~2 subscribers exist today, so the copy
+    // is free; it buys correctness regardless of what a callback does instead of relying
+    // on subscribers never reentering.
+    const auto subscribers_snapshot = subscribers_;
+    for (const auto& [_, cb] : subscribers_snapshot)
         cb(e);
 }
 
@@ -199,6 +207,74 @@ void GWEventBus::Initialize()
             Emit({GWEvent::Type::GameSrvTransfer, p->map_id,
                   static_cast<uint32_t>(p->is_explorable)});
         });
+
+    // --- Party composition events ---
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(
+        &on_party_player_add_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd* p) {
+            Emit({GWEvent::Type::PartyPlayerAdd, p->player_id});
+        });
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(
+        &on_party_player_remove_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::PartyPlayerRemove* p) {
+            Emit({GWEvent::Type::PartyPlayerRemove, p->player_id});
+        });
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyHeroAdd>(
+        &on_party_hero_add_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::PartyHeroAdd* p) {
+            Emit({GWEvent::Type::PartyHeroAdd, p->agent_id, p->hero_id});
+        });
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyHeroRemove>(
+        &on_party_hero_remove_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::PartyHeroRemove* p) {
+            Emit({GWEvent::Type::PartyHeroRemove, p->agent_id});
+        });
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyHenchmanAdd>(
+        &on_party_henchman_add_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::PartyHenchmanAdd* p) {
+            Emit({GWEvent::Type::PartyHenchmanAdd, p->agent_id,
+                  static_cast<uint32_t>(p->profession), p->name_enc,
+                  wcsnlen(p->name_enc, 8)});
+        });
+
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyHenchmanRemove>(
+        &on_party_henchman_remove_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::PartyHenchmanRemove* p) {
+            Emit({GWEvent::Type::PartyHenchmanRemove, p->agent_id});
+        });
+
+    // AgentState fires frequently for all agents — filter to dead-state transitions only.
+    // The dead flag is bit 0x10 of the state bitmap (value 16).
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentState>(
+        &on_agent_state_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::AgentState* p) {
+            if (p->state & 0x10)
+                Emit({GWEvent::Type::AgentDied, p->agent_id, p->state});
+        });
+
+    // QuestAdd fires when a quest is added or its log_state changes (active→complete etc.).
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuestAdd>(
+        &on_quest_update_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::QuestAdd* p) {
+            Emit({GWEvent::Type::QuestUpdate,
+                  static_cast<uint32_t>(p->quest_id),
+                  static_cast<uint32_t>(p->log_state)});
+        });
+
+    // QuestRemove fires when a quest leaves the log — turn-in (the common case) or abandon.
+    // QuestAdd does not refire with a completed log_state, so this is the only observable
+    // signal for quest completion.
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::QuestRemove>(
+        &on_quest_remove_,
+        [this](GW::HookStatus*, const GW::Packet::StoC::QuestRemove* p) {
+            Emit({GWEvent::Type::QuestRemoved,
+                  static_cast<uint32_t>(p->quest_id)});
+        });
 }
 
 // ---------------------------------------------------------------------------
@@ -225,5 +301,14 @@ void GWEventBus::SignalTerminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::InstanceLoadFile>(&on_instance_load_file_);
     GW::StoC::RemoveCallback<GW::Packet::StoC::InstanceTimer>(&on_instance_timer_);
     GW::StoC::RemoveCallback<GW::Packet::StoC::GameSrvTransfer>(&on_game_srv_transfer_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::PartyPlayerAdd>(&on_party_player_add_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::PartyPlayerRemove>(&on_party_player_remove_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::PartyHeroAdd>(&on_party_hero_add_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::PartyHeroRemove>(&on_party_hero_remove_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::PartyHenchmanAdd>(&on_party_henchman_add_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::PartyHenchmanRemove>(&on_party_henchman_remove_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::AgentState>(&on_agent_state_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::QuestAdd>(&on_quest_update_);
+    GW::StoC::RemoveCallback<GW::Packet::StoC::QuestRemove>(&on_quest_remove_);
     ToolboxModule::SignalTerminate();
 }

@@ -39,6 +39,21 @@ struct GWEvent {
         InstanceLoadFile,       // id1 = map_fileID, spawn = DoA spawn point
         InstanceTimer,          // map instance timer started
         GameSrvTransfer,        // id1 = map_id, id2 = is_explorable
+
+        // Party composition
+        PartyPlayerAdd,         // id1 = player_number (login_number)
+        PartyPlayerRemove,      // id1 = player_number
+        PartyHeroAdd,           // id1 = agent_id, id2 = hero_id
+        PartyHeroRemove,        // id1 = agent_id
+        PartyHenchmanAdd,       // id1 = agent_id, id2 = profession, str/str_len = raw encoded name
+        PartyHenchmanRemove,    // id1 = agent_id
+
+        // Agent state
+        AgentDied,              // id1 = agent_id
+
+        // Quest log
+        QuestUpdate,            // id1 = quest_id, id2 = log_state
+        QuestRemoved,           // id1 = quest_id — fires on turn-in AND on abandon
     };
 
     Type           type    = {};
@@ -73,7 +88,8 @@ public:
     void Initialize() override;
     void SignalTerminate() override;
 
-    // Re-registering the same owner replaces its callback. Do not call from within a callback.
+    // Re-registering the same owner replaces its callback. Safe to call from within a
+    // callback (Emit() iterates a snapshot, not subscribers_ directly).
     void Subscribe(const void* owner, GWBusCallback cb);
     void Unsubscribe(const void* owner);
 
@@ -101,4 +117,13 @@ private:
     GW::HookEntry on_instance_load_file_;
     GW::HookEntry on_instance_timer_;
     GW::HookEntry on_game_srv_transfer_;
+    GW::HookEntry on_party_player_add_;
+    GW::HookEntry on_party_player_remove_;
+    GW::HookEntry on_party_hero_add_;
+    GW::HookEntry on_party_hero_remove_;
+    GW::HookEntry on_party_henchman_add_;
+    GW::HookEntry on_party_henchman_remove_;
+    GW::HookEntry on_agent_state_;
+    GW::HookEntry on_quest_update_;
+    GW::HookEntry on_quest_remove_;
 };

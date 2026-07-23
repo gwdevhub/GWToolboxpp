@@ -50,6 +50,7 @@
 #include <Modules/ToastNotifications.h>
 #include <Modules/GWEventBus.h>
 #include <Modules/VendorFix.h>
+#include <Modules/WebSocketModule.h>
 #include <Widgets/VanquishMapOverlayWidget.h>
 #include <Windows/AccountInventoryWindow.h>
 #include <Windows/ArmoryWindow.h>
@@ -238,6 +239,7 @@ namespace {
         TradeWindow::Instance(),
         NotePadWindow::Instance(),
         GWEventBus::Instance(),
+        WebSocketModule::Instance(),
         ObjectiveTimerWindow::Instance(),
         SplitsWindow::Instance(),
         FactionLeaderboardWindow::Instance(),

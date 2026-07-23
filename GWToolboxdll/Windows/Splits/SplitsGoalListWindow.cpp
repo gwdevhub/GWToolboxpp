@@ -7,15 +7,37 @@
 #include <Windows/Splits/GoalList.h>
 #include <Windows/Splits/GoalClock.h>
 #include <Windows/Splits/MapNames.h>
+#include <Windows/Splits/SCPresets.h>
 #include <Windows/SettingsWindow.h>
+#include <Windows/InfoWindow.h>
+#include <Utils/TextUtils.h>
 
 #include <GWCA/GameContainers/Array.h>
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/PlayerMgr.h>
+#include <GWCA/Managers/UIMgr.h>
+#include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/WorldContext.h>
+#include <GWCA/GameEntities/Map.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/GameEntities/Title.h>
+
+// ---------------------------------------------------------------------------
+// Opens the wiki's Game_integration index (quest/skill ID lookup tables) so a
+// goal author can find the numeric ID to type into the Quest/Skill ID field.
+// Routed through kOpenWikiUrl (the client's own Game_integration link handler)
+// rather than ShellExecute, same mechanism the skill listing's Wiki button
+// uses — must be enqueued since this fires from an ImGui render callback,
+// not the game thread.
+// ---------------------------------------------------------------------------
+static void OpenGameIntegrationWikiPage()
+{
+    GW::GameThread::Enqueue([] {
+        GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl,
+                               const_cast<char*>("https://wiki.guildwars.com/wiki/Guild_Wars_Wiki:Game_integration"));
+    });
+}
 
 // ---------------------------------------------------------------------------
 // Formatting helpers
@@ -42,7 +64,7 @@ static void DrawPBDelta(double actual, double pb_split, ImVec4 col_ahead, ImVec4
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Campaign/Region name lookups (batch pickers' filter dropdowns)
 // ---------------------------------------------------------------------------
 static const char* CampaignName(GW::Constants::Campaign c)
 {
@@ -134,6 +156,12 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
         const float start_x = min_x + (avail - total_w) * 0.5f;
         const float clamped_start_x = start_x < min_x ? min_x : start_x;
 
+        if (plugin.NuzlockePointsEnabled()) {
+            ImGui::SetCursorPosX(min_x);
+            ImGui::TextColored({0.6f, 0.85f, 1.f, 1.f}, "Points: %d", plugin.NuzlockeTotalPoints());
+            ImGui::SameLine(0, 0);
+        }
+
         if (hp.show_paused_time) {
             char pbuf[32]; FormatTime(pbuf, sizeof(pbuf), plugin.TotalPausedReal());
             char ptext[48]; snprintf(ptext, sizeof(ptext), "Paused: %s", pbuf);
@@ -220,6 +248,8 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
 
     if (!list || list->goals.empty()) {
         ImGui::TextDisabled("No goal list loaded. Open Settings to create one.");
+        ImGui::Separator();
+        plugin.DrawNuzlockeSection();
         ImGui::End();
         return;
     }
@@ -236,8 +266,8 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
     // so the start-time column never shows anything the row above didn't already say. SC's
     // parallel start_trigger objectives (e.g. Deep rooms) are the only case where it can differ.
     SplitsProfile profile = plugin.ActiveProfile();
-    const std::vector<double>& pb_real = plugin.PBSplits();
-    const std::vector<double>& pb_game = plugin.PBSplitsGame();
+    const std::vector<double>& pb_real = plugin.CompareSplits();
+    const std::vector<double>& pb_game = plugin.CompareSplitsGame();
     const auto nan = std::numeric_limits<double>::quiet_NaN();
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -294,6 +324,9 @@ void SplitsGoalListWindow::Draw(SplitsWindow& plugin)
                            IM_COL32(80, 80, 80, 140), 2.f);
     }
 
+    ImGui::Separator();
+    plugin.DrawNuzlockeSection();
+
     ImGui::End();
 }
 
@@ -321,6 +354,53 @@ void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*cl
     const ImVec4 ahead_col  = ImGui::ColorConvertU32ToFloat4(profile.color_pb_ahead);
     const ImVec4 behind_col = ImGui::ColorConvertU32ToFloat4(profile.color_pb_behind);
     auto muted = [](ImVec4 c) { return ImVec4{c.x, c.y, c.z, c.w * 0.55f}; };
+
+    // SC forces Dynamic for every goal regardless of its own display_style (see
+    // SplitsProfile::dynamic_by_default) — Manual/Running never set that flag, so this is a
+    // no-op for them; a goal can still opt into Dynamic individually outside SC too (e.g. Quest,
+    // if that's ever revisited) via its own display_style.
+    if (g.display_style == GoalEntry::DisplayStyle::Dynamic || profile.dynamic_by_default) {
+        // Dynamic: Start(pickup)/End(complete)/Duration for THIS goal specifically (not "vs
+        // previous row", like Splits' own Time/Segment columns) — needed since this goal can
+        // have its own independent start_trigger (e.g. a Quest's Pickup, or Deep's
+        // simultaneous rooms) rather than starting when the row above completes. No
+        // PB/Average/Last-Run comparison — there's no meaningful "segment vs history" for a
+        // goal whose start isn't relay-locked to the list order.
+        const bool started = g.start_real_time >= 0.0;
+        auto draw_or_dash = [&](const ImVec4& col, double t, bool valid) {
+            char buf[32];
+            if (valid) FormatTime(buf, sizeof(buf), t);
+            else snprintf(buf, sizeof(buf), "--:--");
+            ImGui::TextColored(col, "%s", buf);
+        };
+
+        if (!ImGui::BeginTable("##goalrow_dyn", 4, ImGuiTableFlags_None)) return;
+        ImGui::TableSetupColumn("name",  ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("start", ImGuiTableColumnFlags_WidthFixed, 70.f);
+        ImGui::TableSetupColumn("end",   ImGuiTableColumnFlags_WidthFixed, 70.f);
+        ImGui::TableSetupColumn("dur",   ImGuiTableColumnFlags_WidthFixed, 70.f);
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        if (g.indent > 0) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + g.indent * 12.f);
+        ImGui::TextColored(color, "%s", g.label.c_str());
+
+        ImGui::TableSetColumnIndex(1); // Start
+        if (show_real) draw_or_dash(real_col, g.start_real_time, started);
+        if (show_game) draw_or_dash(game_col, g.start_game_time, started);
+
+        ImGui::TableSetColumnIndex(2); // End
+        if (show_real) draw_or_dash(real_col, g.split.real_time, done);
+        if (show_game) draw_or_dash(game_col, g.split.game_time, done);
+
+        ImGui::TableSetColumnIndex(3); // Duration = End - Start
+        const bool have_duration = started && done;
+        if (show_real) draw_or_dash(real_col, g.split.real_time - g.start_real_time, have_duration);
+        if (show_game) draw_or_dash(game_col, g.split.game_time - g.start_game_time, have_duration);
+
+        ImGui::EndTable();
+        return;
+    }
 
     if (!ImGui::BeginTable("##goalrow", 3, ImGuiTableFlags_None)) return;
     ImGui::TableSetupColumn("name",  ImGuiTableColumnFlags_WidthStretch);
@@ -365,6 +445,11 @@ void SplitsGoalListWindow::DrawGoalRow(const GoalEntry& g, const GoalClock& /*cl
             ImGui::TextDisabled("%s", buf);
             } // end else (has progress)
         }
+    }
+
+    if (g.status != GoalStatus::Completed && g.trigger.type == GoalTrigger::Type::MobKill) {
+        const uint32_t target = g.trigger.param2 > 0 ? g.trigger.param2 : 1;
+        ImGui::TextDisabled("kills: %d / %u", g.trigger_progress, target);
     }
 
     {
@@ -565,17 +650,54 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Show Real+Game in the header clock only;\ngoal rows display game time.");
     }
-    ImGui::Checkbox("Show total PB", &p.show_split_pb);
-    ImGui::Checkbox("Show split column", &p.show_segment);
-    if (p.show_segment) {
+    // Comparison-vs-history settings are meaningless for SC: dynamic_by_default forces every
+    // row into Start/End/Duration display, which never shows a PB/Average/Last-Run delta at
+    // all (see DrawGoalRow's Dynamic branch) — hidden here rather than left as dead controls.
+    if (!p.dynamic_by_default) {
+        ImGui::TextUnformatted("Compare vs:");
         ImGui::SameLine();
-        ImGui::Checkbox("Show split PB", &p.show_segment_pb);
+        ImGui::SetNextItemWidth(110.f);
+        {
+            using CM = SplitsProfile::ComparisonMode;
+            static const char* cm_labels[] = { "PB", "Average", "Last Run" };
+            int cm_idx = static_cast<int>(p.comparison_mode);
+            if (ImGui::Combo("##cmpmode", &cm_idx, cm_labels, 3))
+                p.comparison_mode = static_cast<CM>(cm_idx);
+        }
+        ImGui::Checkbox("Show total delta", &p.show_split_pb);
+        ImGui::Checkbox("Show split column", &p.show_segment);
+        if (p.show_segment) {
+            ImGui::SameLine();
+            ImGui::Checkbox("Show split delta", &p.show_segment_pb);
+        }
     }
     ImGui::Checkbox("Auto /age on completion", &p.auto_send_age);
     ImGui::Checkbox("Show paused time",        &p.show_paused_time);
 
     ImGui::Spacing();
     ImGui::Checkbox("Stop on party wipe", &p.stop_on_party_defeated);
+    // Label/tooltip reflect what this profile's goals actually use — the underlying check
+    // (GoalEngine::Update()) covers both sets of trigger types regardless of profile, this is
+    // purely so the wording doesn't say "VQ/Mission/Bonus" while looking at a Dungeon/Elite
+    // Area-only SC list, or vice versa.
+    if (p.dynamic_by_default) {
+        ImGui::Checkbox("Auto-fail on rezone (Dungeon/Elite Area)", &p.auto_fail_on_rezone);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(
+                "Fails the run if you leave the current Dungeon/Elite Area goal's map\n"
+                "while it's still in progress \xe2\x80\x94 mirrors OT's own ObjectiveSet::StopObjectives():\n"
+                "any objective still in progress when you leave the area is marked failed,\n"
+                "not just on a party wipe.");
+        }
+    } else {
+        ImGui::Checkbox("Auto-fail on rezone (VQ/Mission/Bonus)", &p.auto_fail_on_rezone);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(
+                "Fails the run if you leave a Vanquish/Mission/Bonus goal's map\n"
+                "while it's still in progress \xe2\x80\x94 i.e. you attempted it and\n"
+                "left without finishing, rather than completing it first.");
+        }
+    }
 
     ImGui::NextColumn();
 
@@ -594,9 +716,14 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
     ImGui::ColorButtonPicker("Real##sc",      &p.color_real_time); ImGui::SameLine(); ImGui::TextUnformatted("Real");
     ImGui::SameLine(0, 12.f);
     ImGui::ColorButtonPicker("Game##sc",      &p.color_game_time); ImGui::SameLine(); ImGui::TextUnformatted("Game");
-    ImGui::ColorButtonPicker("Ahead##sc",     &p.color_pb_ahead);  ImGui::SameLine(); ImGui::TextUnformatted("Ahead PB");
-    ImGui::SameLine(0, 12.f);
-    ImGui::ColorButtonPicker("Behind##sc",    &p.color_pb_behind); ImGui::SameLine(); ImGui::TextUnformatted("Behind PB");
+    // Ahead is only ever used for the comparison delta (see above) — never drawn in Dynamic
+    // mode, so hidden for SC. Behind stays visible either way: it doubles as the Failed
+    // goal-label color, which still applies regardless of display style.
+    if (!p.dynamic_by_default) {
+        ImGui::ColorButtonPicker("Ahead##sc", &p.color_pb_ahead); ImGui::SameLine(); ImGui::TextUnformatted("Ahead");
+        ImGui::SameLine(0, 12.f);
+    }
+    ImGui::ColorButtonPicker("Behind##sc",    &p.color_pb_behind); ImGui::SameLine(); ImGui::TextUnformatted("Behind");
     ImGui::Spacing();
 
     ImGui::NextColumn();
@@ -641,18 +768,35 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
             }
             ImGui::Unindent();
         }
-
+        // SC's Dungeon/Elite Area presets aren't browsed here — they're built live from
+        // SCPresets on demand (auto-detected on map entry, or picked via Add Goal below),
+        // never saved to disk, so there's nothing to list or regenerate.
     }
 
     ImGui::Columns(1);
     ImGui::Separator();
 
-    {
+    if (plugin.ActiveProfile().dynamic_by_default) {
+        // SC lists are always a complete, tool-generated structure (header + every level/
+        // checkpoint, matching the preset exactly) — editing them by hand (reordering,
+        // deleting a level, etc.) would just break the relay chain the picker built, and
+        // there's nothing to hand-add either (the dropdown only offers Dungeons/Elite Areas,
+        // which always start a fresh list rather than appending). So no editable rows here;
+        // the live Splits window already shows the actual goals nicely once you're running.
+        list = plugin.List();
+        int goal_count = 0;
+        for (const auto& g : list->goals) if (!g.is_header) ++goal_count;
+        ImGui::Text("Goals: %d (%s)", goal_count, list->name.empty() ? "none loaded" : list->name.c_str());
+    } else {
         // Existing goals list
         ImGui::TextUnformatted("Goals:");
         list = plugin.List();
         bool erased = false;
         bool moved = false;
+        int first_goal_idx = -1;
+        for (int k = 0; k < static_cast<int>(list->goals.size()); ++k) {
+            if (!list->goals[k].is_header) { first_goal_idx = k; break; }
+        }
         for (int i = 0; i < static_cast<int>(list->goals.size()) && !erased && !moved; ++i) {
             auto& g = list->goals[i];
             ImGui::PushID(i);
@@ -665,6 +809,7 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
                     case GoalTrigger::Type::MapEnter:         tname = "Map";  break;
                     case GoalTrigger::Type::EnterExplorable:  tname = "Exp";  break;
                     case GoalTrigger::Type::ExitExplorable:   tname = "Exit"; break;
+                    case GoalTrigger::Type::EnterOutpost:     tname = "Out";  break;
                     case GoalTrigger::Type::VanquishComplete: tname = "VQ";   break;
                     case GoalTrigger::Type::MissionComplete:  tname = g.trigger.hard_mode ? "HM"  : "Mis"; break;
                     case GoalTrigger::Type::MissionBonus:     tname = g.trigger.hard_mode ? "HMB" : "Bon"; break;
@@ -718,19 +863,44 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
                 list->RenumberDuplicateLabels();
                 erased = true;
             }
+
+            // Only the first goal's start behavior is ever in question — every later goal
+            // always relays immediately off the previous one's completion (start_trigger is
+            // never set through this editor, only by hand-authored preset JSON like Deep's
+            // parallel rooms), so annotating every row would just repeat the same fact.
+            // Whether the run's clock itself needs a manual Start press hinges entirely on
+            // this one goal.
+            if (i == first_goal_idx) {
+                if (plugin.ActiveProfileIdx() == 1) {
+                    ImGui::TextDisabled("Autostart --> movement detected in an explorable");
+                } else if (g.starts_immediately) {
+                    ImGui::TextDisabled("Autostart --> begins at run start");
+                } else if (g.trigger.type == GoalTrigger::Type::MissionComplete ||
+                           g.trigger.type == GoalTrigger::Type::MissionBonus ||
+                           g.trigger.type == GoalTrigger::Type::VanquishComplete) {
+                    const std::string& map_name = MapNames::Get(g.trigger.map_id);
+                    ImGui::TextDisabled("Autostart --> entering %s",
+                        map_name.empty() ? "target map" : map_name.c_str());
+                } else {
+                    ImGui::TextDisabled("Not an autostart goal \xe2\x80\x94 press Start manually");
+                }
+            }
+
             ImGui::PopID();
         }
+    }
 
-        ImGui::Separator();
+    ImGui::Separator();
 
-        // Add goal / header form
-        ImGui::TextUnformatted("Add Goal:");
+    // Add goal / header form
+    ImGui::TextUnformatted("Add Goal:");
 
         if (plugin.ActiveProfileIdx() == 1) {
             // Running profile: combined from/to leg picker only.
             DrawRunningLegPicker(plugin);
         } else {
-        // Trigger type combo — sentinel -1 means "Header (no trigger)".
+        // Trigger type combo — sentinel -1 means "Header (no trigger)", -2 means
+        // "Quest" (adds a QuestPickup + QuestComplete pair from one label/ID entry).
         struct TriggerOpt { const char* label; int type_int; };
         static const TriggerOpt trigger_opts_full[] = {
             { "Header",      -1 },
@@ -740,9 +910,28 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
             { "Towns",       static_cast<int>(GoalTrigger::Type::EnterExplorable)  },
             { "Titles",      static_cast<int>(GoalTrigger::Type::ReachTitleRank)   },
             { "Reach Level", static_cast<int>(GoalTrigger::Type::ReachLevel)       },
+            { "Quest",       -2 },
+            { "Skill Learnt",   static_cast<int>(GoalTrigger::Type::SkillLearnt)   },
+            { "Mob Kill",       static_cast<int>(GoalTrigger::Type::MobKill)       },
+            { "Dungeons",       static_cast<int>(GoalTrigger::Type::DungeonReward) },
+            { "Elite Areas",    static_cast<int>(GoalTrigger::Type::ObjectiveDone) },
         };
-        const TriggerOpt* trigger_opts      = trigger_opts_full;
-        int               trigger_opts_count = 7;
+        // SC is single-purpose (dungeons/elite areas, full breakdown, always a fresh named
+        // list) — none of Manual's other trigger types make sense there, so they're not
+        // offered at all rather than shown-but-unused.
+        static const TriggerOpt trigger_opts_sc[] = {
+            { "Dungeons",    static_cast<int>(GoalTrigger::Type::DungeonReward) },
+            { "Elite Areas", static_cast<int>(GoalTrigger::Type::ObjectiveDone) },
+        };
+        const bool is_sc = p.dynamic_by_default;
+        const TriggerOpt* trigger_opts      = is_sc ? trigger_opts_sc : trigger_opts_full;
+        int               trigger_opts_count = is_sc ? static_cast<int>(std::size(trigger_opts_sc))
+                                                        : static_cast<int>(std::size(trigger_opts_full));
+        // Default to a valid SC option the first time SC becomes active with a leftover
+        // Manual-only selection (e.g. the default Manual=0) — otherwise nothing in the loop
+        // below would match and the combo would silently show the wrong label.
+        if (is_sc && edit_trigger_type_ != trigger_opts_sc[0].type_int && edit_trigger_type_ != trigger_opts_sc[1].type_int)
+            edit_trigger_type_ = trigger_opts_sc[0].type_int;
         const char* current_trigger_label = trigger_opts[0].label;
         for (int i = 0; i < trigger_opts_count; ++i)
             if (trigger_opts[i].type_int == edit_trigger_type_) { current_trigger_label = trigger_opts[i].label; break; }
@@ -762,8 +951,14 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
                                           edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MissionBonus));
         const bool is_explorable_batch = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MapEnter));
         const bool is_town_batch       = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::EnterExplorable));
+        const bool is_dungeon_batch    = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::DungeonReward));
+        const bool is_elite_area_batch = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::ObjectiveDone));
         const bool is_title_picker     = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::ReachTitleRank));
         const bool needs_level         = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::ReachLevel));
+        const bool is_quest_mode       = (edit_trigger_type_ == -2);
+        const bool needs_quest_id      = is_quest_mode;
+        const bool needs_skill_id      = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::SkillLearnt));
+        const bool needs_mob_id        = (edit_trigger_type_ == static_cast<int>(GoalTrigger::Type::MobKill));
 
         if (is_mission_batch) {
             DrawMissionBatchPicker(plugin);
@@ -771,6 +966,10 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
             DrawExplorableBatchPicker(plugin);
         } else if (is_town_batch) {
             DrawTownBatchPicker(plugin);
+        } else if (is_dungeon_batch) {
+            DrawDungeonBatchPicker(plugin);
+        } else if (is_elite_area_batch) {
+            DrawEliteAreaBatchPicker(plugin);
         } else if (is_title_picker) {
             DrawTitlePicker(plugin);
         } else {
@@ -782,7 +981,24 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
                 if (edit_level_ < 1)  edit_level_ = 1;
                 if (edit_level_ > 20) edit_level_ = 20;
             }
-
+            if (needs_quest_id) {
+                ImGui::SetNextItemWidth(120.f);
+                ImGui::InputInt("Quest ID##add", &edit_quest_id_);
+                if (edit_quest_id_ < 0) edit_quest_id_ = 0;
+            }
+            if (needs_skill_id) {
+                ImGui::SetNextItemWidth(120.f);
+                ImGui::InputInt("Skill ID##add", &edit_skill_id_);
+                if (edit_skill_id_ < 0) edit_skill_id_ = 0;
+            }
+            if (needs_mob_id) {
+                ImGui::SetNextItemWidth(120.f);
+                ImGui::InputInt("Model ID##add", &edit_mob_id_);
+                if (edit_mob_id_ < 0) edit_mob_id_ = 0;
+                ImGui::SetNextItemWidth(120.f);
+                ImGui::InputInt("Kill Count##add", &edit_mob_kill_count_);
+                if (edit_mob_kill_count_ < 1) edit_mob_kill_count_ = 1;
+            }
             const bool can_add = edit_label_[0] != '\0';
             if (!can_add) ImGui::BeginDisabled();
             if (is_header_mode) {
@@ -793,6 +1009,29 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
                     list->goals.push_back(std::move(hdr));
                     edit_label_[0] = '\0';
                 }
+            } else if (is_quest_mode) {
+                if (ImGui::Button("Add Goal")) {
+                    // Flat: two plain completion-triggered goals, same as every other Manual
+                    // goal — a Manual list stays relay-chained/PB-comparable throughout rather
+                    // than mixing in Dynamic's Start/End/Duration look. Most Manual use (e.g. a
+                    // cross-dungeon/quest-chain run) only cares about completion times anyway.
+                    GoalEntry pickup;
+                    pickup.label          = std::string(edit_label_) + " Pickup";
+                    pickup.trigger.type   = GoalTrigger::Type::QuestPickup;
+                    pickup.trigger.map_id = GW::Constants::MapID::None;
+                    pickup.trigger.param1 = static_cast<uint32_t>(edit_quest_id_);
+                    list->goals.push_back(std::move(pickup));
+
+                    GoalEntry complete;
+                    complete.label          = std::string(edit_label_) + " Complete";
+                    complete.trigger.type   = GoalTrigger::Type::QuestComplete;
+                    complete.trigger.map_id = GW::Constants::MapID::None;
+                    complete.trigger.param1 = static_cast<uint32_t>(edit_quest_id_);
+                    list->goals.push_back(std::move(complete));
+
+                    list->RenumberDuplicateLabels();
+                    edit_label_[0] = '\0';
+                }
             } else {
                 if (ImGui::Button("Add Goal")) {
                     GoalEntry new_g;
@@ -800,15 +1039,38 @@ void SplitsGoalListWindow::DrawSettings(SplitsWindow& plugin)
                     new_g.trigger.type   = static_cast<GoalTrigger::Type>(edit_trigger_type_);
                     new_g.trigger.map_id = GW::Constants::MapID::None;
                     new_g.trigger.level  = edit_level_;
+                    if (needs_skill_id) new_g.trigger.param1 = static_cast<uint32_t>(edit_skill_id_);
+                    if (needs_mob_id) {
+                        new_g.trigger.param1 = static_cast<uint32_t>(edit_mob_id_);
+                        new_g.trigger.param2 = static_cast<uint32_t>(edit_mob_kill_count_);
+                    }
                     list->goals.push_back(std::move(new_g));
                     list->RenumberDuplicateLabels();
                     edit_label_[0] = '\0';
                 }
             }
             if (!can_add) ImGui::EndDisabled();
+
+            if (is_quest_mode || needs_skill_id) {
+                ImGui::SameLine();
+                if (ImGui::Button("Find ID##wiki")) {
+                    OpenGameIntegrationWikiPage();
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Opens the wiki's Quest/Skill ID lookup tables\n(no in-game ID list exists for either)");
+                }
+            }
+            if (needs_mob_id) {
+                ImGui::SameLine();
+                if (ImGui::Button("Find ID##info")) {
+                    InfoWindow::Instance().visible = true;
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Opens the Info window \xe2\x80\x94 target the mob in-game and\nread its Model ID off the Target section (no wiki needed).");
+                }
+            }
         }
         } // end else (non-Running add form)
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -878,12 +1140,7 @@ void SplitsGoalListWindow::DrawTitlePicker(SplitsWindow& plugin)
     if (ImGui::BeginListBox("##titlelist", { -1.f, 180.f })) {
         for (int i = 0; i < NUM_TITLES; ++i) {
             const TitleEntry& e = s_titles[i];
-            if (searching) {
-                auto it = std::search(e.name, e.name + strlen(e.name),
-                    title_filter_buf_, title_filter_buf_ + strlen(title_filter_buf_),
-                    [](char a, char b) { return tolower((unsigned char)a) == tolower((unsigned char)b); });
-                if (it == e.name + strlen(e.name)) continue;
-            }
+            if (searching && !TextUtils::CaseInsensitiveContains(e.name, title_filter_buf_)) continue;
             if (!searching && e.group != prev_group) {
                 prev_group = e.group;
                 ImGui::SeparatorText(e.group);
@@ -1123,12 +1380,8 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
 
             std::vector<const TownRow*> filtered;
             for (const auto& r : rows) {
-                if (town_filter_buf_[0] != '\0') {
-                    auto it = std::search(r.name.begin(), r.name.end(),
-                        town_filter_buf_, town_filter_buf_ + strlen(town_filter_buf_),
-                        [](char a, char b) { return tolower((unsigned char)a) == tolower((unsigned char)b); });
-                    if (it == r.name.end()) continue;
-                }
+                if (town_filter_buf_[0] != '\0' && !TextUtils::CaseInsensitiveContains(r.name, town_filter_buf_))
+                    continue;
                 filtered.push_back(&r);
             }
 
@@ -1204,12 +1457,8 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
 
             std::vector<const TownRow*> ps_filtered;
             for (const auto& r : ps_rows) {
-                if (town_filter_buf_[0] != '\0') {
-                    auto it = std::search(r.name.begin(), r.name.end(),
-                        town_filter_buf_, town_filter_buf_ + strlen(town_filter_buf_),
-                        [](char a, char b) { return tolower((unsigned char)a) == tolower((unsigned char)b); });
-                    if (it == r.name.end()) continue;
-                }
+                if (town_filter_buf_[0] != '\0' && !TextUtils::CaseInsensitiveContains(r.name, town_filter_buf_))
+                    continue;
                 ps_filtered.push_back(&r);
             }
 
@@ -1278,14 +1527,17 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
             const Camp c = inf ? inf->campaign : Camp::Prophecies;
             const GW::Region reg = inf ? inf->region : static_cast<GW::Region>(0);
             const std::string nm = MapNames::Get(mid);
-            if (bits & BIT_ENTER) items.push_back({ id, GoalTrigger::Type::MapEnter,    c, reg, nm });
-            if (bits & BIT_LEAVE) items.push_back({ id, GoalTrigger::Type::ExitOutpost, c, reg, nm });
+            if (bits & BIT_ENTER) items.push_back({ id, GoalTrigger::Type::EnterOutpost, c, reg, nm });
+            if (bits & BIT_LEAVE) items.push_back({ id, GoalTrigger::Type::ExitOutpost,  c, reg, nm });
         }
-        std::sort(items.begin(), items.end(), [](const Item& a, const Item& b) {
+        auto type_order = [](GoalTrigger::Type t) {
+            return t == GoalTrigger::Type::EnterOutpost ? 0 : 1; // Enter before Leave for the same town
+        };
+        std::sort(items.begin(), items.end(), [&](const Item& a, const Item& b) {
             if (a.camp   != b.camp)   return a.camp   < b.camp;
             if (a.region != b.region) return a.region < b.region;
             if (a.name   != b.name)   return a.name   < b.name;
-            return a.type < b.type;
+            return type_order(a.type) < type_order(b.type);
         });
         for (const auto& item : items) {
             GoalEntry g;
@@ -1353,12 +1605,8 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
 
             std::vector<const ExpRow*> filtered;
             for (const auto& r : rows) {
-                if (exp_filter_buf_[0] != '\0') {
-                    auto it = std::search(r.name.begin(), r.name.end(),
-                        exp_filter_buf_, exp_filter_buf_ + strlen(exp_filter_buf_),
-                        [](char a, char b) { return tolower((unsigned char)a) == tolower((unsigned char)b); });
-                    if (it == r.name.end()) continue;
-                }
+                if (exp_filter_buf_[0] != '\0' && !TextUtils::CaseInsensitiveContains(r.name, exp_filter_buf_))
+                    continue;
                 filtered.push_back(&r);
             }
 
@@ -1440,12 +1688,8 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
 
             std::vector<const ExpRow*> ps_filtered;
             for (const auto& r : ps_rows) {
-                if (exp_filter_buf_[0] != '\0') {
-                    auto it = std::search(r.name.begin(), r.name.end(),
-                        exp_filter_buf_, exp_filter_buf_ + strlen(exp_filter_buf_),
-                        [](char a, char b) { return tolower((unsigned char)a) == tolower((unsigned char)b); });
-                    if (it == r.name.end()) continue;
-                }
+                if (exp_filter_buf_[0] != '\0' && !TextUtils::CaseInsensitiveContains(r.name, exp_filter_buf_))
+                    continue;
                 ps_filtered.push_back(&r);
             }
 
@@ -1514,13 +1758,13 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
             const Camp c = inf ? inf->campaign : Camp::Prophecies;
             const GW::Region reg = inf ? inf->region : static_cast<GW::Region>(0);
             const std::string nm = MapNames::Get(mid);
-            if (bits & BIT_ENTER) items.push_back({ id, GoalTrigger::Type::MapEnter,         c, reg, nm });
+            if (bits & BIT_ENTER) items.push_back({ id, GoalTrigger::Type::EnterExplorable,   c, reg, nm });
             if (bits & BIT_VQ)    items.push_back({ id, GoalTrigger::Type::VanquishComplete,  c, reg, nm });
             if (bits & BIT_LEAVE) items.push_back({ id, GoalTrigger::Type::ExitExplorable,    c, reg, nm });
         }
         auto type_order = [](GoalTrigger::Type t) {
             switch (t) {
-                case GoalTrigger::Type::MapEnter:        return 0;
+                case GoalTrigger::Type::EnterExplorable: return 0;
                 case GoalTrigger::Type::VanquishComplete:return 1;
                 case GoalTrigger::Type::ExitExplorable:  return 2;
                 default: return 3;
@@ -1535,7 +1779,7 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
         GoalList* list = plugin.List();
         for (const auto& item : items) {
             GoalEntry g;
-            if (item.type == GoalTrigger::Type::MapEnter)               g.label = "Enter " + item.name;
+            if (item.type == GoalTrigger::Type::EnterExplorable)        g.label = "Enter " + item.name;
             else if (item.type == GoalTrigger::Type::VanquishComplete)  g.label = "VQ " + item.name;
             else if (item.type == GoalTrigger::Type::ExitExplorable)    g.label = "Leave " + item.name;
             else                                                         g.label = item.name;
@@ -1647,6 +1891,11 @@ void SplitsGoalListWindow::DrawMissionBatchPicker(SplitsWindow& plugin)
         return out;
     };
 
+    ImGui::TextColored({1.f, 0.8f, 0.2f, 1.f},
+        "Note: Bonus is read from the mission-complete bitmask, which never clears once earned. "
+        "On a character that's already earned a mission's bonus before, Bonus will always show "
+        "complete on every later attempt of that mission, whether or not it's actually re-earned that run.");
+
     if (ImGui::BeginTabBar("##batch_campaigns")) {
         for (int ci = 0; ci < NUM_CAMPS; ++ci) {
             if (!ImGui::BeginTabItem(s_camp_labels[ci])) continue;
@@ -1730,4 +1979,234 @@ void SplitsGoalListWindow::DrawMissionBatchPicker(SplitsWindow& plugin)
         batch_bon_checked_.clear();
     }
     if (total == 0) ImGui::EndDisabled();
+}
+
+// ---------------------------------------------------------------------------
+// Dungeon batch picker (EotN's 20 regular dungeons — not the 5 pre-EotN elite
+// areas, which each need their own specific finish condition; see kBonusRules-
+// style follow-up work).
+// ---------------------------------------------------------------------------
+void SplitsGoalListWindow::DrawDungeonBatchPicker(SplitsWindow& plugin)
+{
+    using MapID = GW::Constants::MapID;
+
+    struct DungeonRow { int id; std::string name; const SCPresets::Dungeon* dungeon; };
+    std::vector<DungeonRow> rows;
+    rows.reserve(std::size(SCPresets::kDungeons));
+    for (const auto& dungeon : SCPresets::kDungeons)
+        rows.push_back({ static_cast<int>(dungeon.levels[0]), MapNames::Get(dungeon.levels[0]), &dungeon });
+    std::sort(rows.begin(), rows.end(), [](const DungeonRow& a, const DungeonRow& b) { return a.name < b.name; });
+
+    std::vector<const DungeonRow*> filtered;
+    for (const auto& r : rows) {
+        if (dungeon_filter_buf_[0] != '\0' && !TextUtils::CaseInsensitiveContains(r.name, dungeon_filter_buf_))
+            continue;
+        filtered.push_back(&r);
+    }
+
+    if (plugin.ActiveProfile().dynamic_by_default) {
+        // SC: single click = the full per-level breakdown (matching the generated preset
+        // exactly) in a brand-new list named after the dungeon — rename before Save if you
+        // want something more specific (e.g. "2 Man CoF"). No partial picks; SC always wants
+        // the complete thing, same rule as the generated presets.
+        ImGui::TextColored({1.f, 0.8f, 0.2f, 1.f},
+            "Click a dungeon to start a new list with its full level breakdown. Rename it\n"
+            "below (e.g. \"2 Man CoF\") before saving if you want something more specific.");
+        ImGui::SetNextItemWidth(-1.f);
+        ImGui::InputText("##dungeonfilter", dungeon_filter_buf_, sizeof(dungeon_filter_buf_));
+        ImGui::SameLine(); if (ImGui::SmallButton("x##dungeonfx")) dungeon_filter_buf_[0] = '\0';
+
+        ImGui::BeginChild("##dungeonlist_sc", { -1.f, 220.f }, true);
+        for (const auto* r : filtered) {
+            if (ImGui::Selectable(r->name.c_str())) {
+                plugin.SetActiveList(SCPresets::BuildDungeonPresetList(*r->dungeon));
+                snprintf(list_name_buf_, sizeof(list_name_buf_), "%s", r->name.c_str());
+            }
+        }
+        ImGui::EndChild();
+        return;
+    }
+
+    // Manual stays flat (deliberately, unlike SC) — only the first level's map_id is used,
+    // purely to name/identify the dungeon; the goal itself is one generic DungeonReward
+    // completion, same multi-select-and-batch-add flow as Missions/Dungeons always had.
+    ImGui::TextColored({1.f, 0.8f, 0.2f, 1.f},
+        "Note: completion is a generic \"dungeon reward chest opened\" signal, not specific to "
+        "this dungeon \xe2\x80\x94 correct as long as the list is run in order, same as any other "
+        "sequential Manual goal.");
+
+    ImGui::SetNextItemWidth(-1.f);
+    ImGui::InputText("##dungeonfilter", dungeon_filter_buf_, sizeof(dungeon_filter_buf_));
+    ImGui::SameLine(); if (ImGui::SmallButton("x##dungeonfx")) dungeon_filter_buf_[0] = '\0';
+
+    if (ImGui::SmallButton("All"))  { for (const auto* r : filtered) batch_dungeon_checked_.insert(r->id); }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("None")) { for (const auto* r : filtered) batch_dungeon_checked_.erase(r->id); }
+
+    constexpr ImGuiTableFlags tflags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY;
+    if (ImGui::BeginTable("##dungeontbl", 2, tflags, { -1.f, 220.f })) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("Dungeon", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Add",     ImGuiTableColumnFlags_WidthFixed, 40.f);
+        ImGui::TableHeadersRow();
+
+        for (const auto* r : filtered) {
+            ImGui::PushID(r->id);
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(r->name.c_str());
+            ImGui::TableSetColumnIndex(1);
+            bool checked = batch_dungeon_checked_.count(r->id) > 0;
+            if (ImGui::Checkbox("##d", &checked)) {
+                if (checked) batch_dungeon_checked_.insert(r->id);
+                else batch_dungeon_checked_.erase(r->id);
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+
+    const int total = static_cast<int>(batch_dungeon_checked_.size());
+    if (total == 0) ImGui::BeginDisabled();
+    char add_lbl[48];
+    snprintf(add_lbl, sizeof(add_lbl), "Add %d Goal%s##batchadddungeon", total, total == 1 ? "" : "s");
+    if (ImGui::Button(add_lbl)) {
+        GoalList* list = plugin.List();
+        // Iterate the name-sorted rows (not the raw std::set, which orders by map_id) so
+        // multi-add lands in a sensible/predictable order in the list.
+        for (const auto& r : rows) {
+            if (!batch_dungeon_checked_.count(r.id)) continue;
+            GoalEntry g;
+            g.label          = r.name;
+            g.trigger.type   = GoalTrigger::Type::DungeonReward;
+            g.trigger.map_id = static_cast<MapID>(r.id);
+            list->goals.push_back(std::move(g));
+        }
+        list->RenumberDuplicateLabels();
+        batch_dungeon_checked_.clear();
+    }
+    if (total == 0) ImGui::EndDisabled();
+}
+
+// ---------------------------------------------------------------------------
+// Elite area batch picker — Fissure of Woe, Underworld, Urgoz's Warren, The
+// Deep (ToPK deferred: its arenas are map-based, InstanceLoadInfo/CountdownStart
+// per map, not an objective/door checklist — doesn't fit this picker's shape and
+// its exact finish signal is still ambiguous; needs its own approach later).
+//
+// Every checkpoint below is Manual's usual flat completion point (no Dynamic
+// Start/End/Duration, no per-objective parallel tracking the way OT itself
+// does it) — reduced from ObjectiveTimerWindow's own preset definitions down
+// to "what fires when this segment is done": for FoW/UW that's their
+// ObjectiveDone objective_id (mission-checklist mechanism, not
+// QuestPickup/Complete); for Urgoz/Deep it's whatever door/dialogue/message
+// OT itself uses to START the *next* segment (since neither area gives most
+// segments their own explicit end event). Multiple alternative triggers
+// (e.g. a room with two entry doors) go through GoalEntry::extra_triggers'
+// OR semantics.
+//
+// All of FoW/UW/Urgoz's checkpoints (and most of Deep's) can be done in any
+// order in-game, so "area complete" is a derived state (all done, any
+// order), not a single trigger — solved for free by header-row aggregation
+// (DrawHeaderRow already computes all_done from all descendants regardless
+// of order), same as FoW originally: check every checkpoint + Add wraps them
+// in a header that reads as overall completion; a partial pick adds flat,
+// ungrouped goals instead.
+// ---------------------------------------------------------------------------
+void SplitsGoalListWindow::DrawEliteAreaBatchPicker(SplitsWindow& plugin)
+{
+    struct AreaTab {
+        const SCPresets::EliteArea* area;
+        std::set<int>*              checked; // keyed by checkpoint index, not param1 — safe across mixed trigger types
+    };
+    const AreaTab areas[] = {
+        { &SCPresets::kEliteAreas[0], &batch_fow_checked_   },
+        { &SCPresets::kEliteAreas[1], &batch_uw_checked_    },
+        { &SCPresets::kEliteAreas[2], &batch_urgoz_checked_ },
+        { &SCPresets::kEliteAreas[3], &batch_deep_checked_  },
+    };
+
+    if (plugin.ActiveProfile().dynamic_by_default) {
+        // SC: single click = every checkpoint (matching the generated preset exactly) in a
+        // brand-new list named after the area — rename before Save for something more
+        // specific. No partial picks; SC always wants the complete thing.
+        ImGui::TextColored({1.f, 0.8f, 0.2f, 1.f},
+            "Click an area to start a new list with its full checkpoint set. Rename it below\n"
+            "(e.g. \"2 Man FoW\") before saving if you want something more specific.");
+        ImGui::BeginChild("##elitelist_sc", { -1.f, 220.f }, true);
+        for (const auto& tab : areas) {
+            if (ImGui::Selectable(tab.area->label)) {
+                plugin.SetActiveList(SCPresets::BuildEliteAreaPresetList(*tab.area));
+                snprintf(list_name_buf_, sizeof(list_name_buf_), "%s", tab.area->label);
+            }
+        }
+        ImGui::EndChild();
+        return;
+    }
+
+    if (ImGui::BeginTabBar("##elite_areas")) {
+        for (const auto& tab : areas) {
+            const auto& area = *tab.area;
+            if (!ImGui::BeginTabItem(area.label)) continue;
+
+            ImGui::TextColored({1.f, 0.8f, 0.2f, 1.f},
+                "For overall completion tracking (one header, complete once every checkpoint\n"
+                "below is done \xe2\x80\x94 order doesn't matter), check all of them. Checking only some\n"
+                "adds just those as individual flat goals, with no completion header.");
+
+            if (ImGui::SmallButton("All"))  { for (size_t i = 0; i < area.count; ++i) tab.checked->insert(static_cast<int>(i)); }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("None")) { tab.checked->clear(); }
+
+            constexpr ImGuiTableFlags tflags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY;
+            if (ImGui::BeginTable("##elitetbl", 2, tflags, { -1.f, 220.f })) {
+                ImGui::TableSetupColumn("Checkpoint", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Add",        ImGuiTableColumnFlags_WidthFixed, 40.f);
+                ImGui::TableHeadersRow();
+
+                for (size_t i = 0; i < area.count; ++i) {
+                    ImGui::PushID(static_cast<int>(i));
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0); ImGui::TextUnformatted(area.checkpoints[i].name);
+                    ImGui::TableSetColumnIndex(1);
+                    bool checked = tab.checked->count(static_cast<int>(i)) > 0;
+                    if (ImGui::Checkbox("##e", &checked)) {
+                        if (checked) tab.checked->insert(static_cast<int>(i));
+                        else tab.checked->erase(static_cast<int>(i));
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::EndTable();
+            }
+
+            const int total = static_cast<int>(tab.checked->size());
+            if (total == 0) ImGui::BeginDisabled();
+            char add_lbl[48];
+            snprintf(add_lbl, sizeof(add_lbl), "Add %d Goal%s##batchaddelite", total, total == 1 ? "" : "s");
+            if (ImGui::Button(add_lbl)) {
+                GoalList* list = plugin.List();
+                // Every checkpoint checked = the whole area = wrap in a header so it reads as
+                // one completion (see banner comment); a partial pick is just flat goals.
+                const bool all_checked = (tab.checked->size() == area.count);
+                if (all_checked) {
+                    GoalEntry hdr;
+                    hdr.is_header      = true;
+                    hdr.label          = area.label;
+                    hdr.trigger.map_id = area.map_id; // read by ApplyTimerPolicy's autostart, not the engine
+                    list->goals.push_back(std::move(hdr));
+                }
+                for (size_t i = 0; i < area.count; ++i) {
+                    if (!tab.checked->count(static_cast<int>(i))) continue;
+                    GoalEntry g = SCPresets::BuildCheckpointGoal(area.checkpoints[i], area.map_id);
+                    g.indent    = all_checked ? 1 : 0;
+                    list->goals.push_back(std::move(g));
+                }
+                list->RenumberDuplicateLabels();
+                tab.checked->clear();
+            }
+            if (total == 0) ImGui::EndDisabled();
+
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
 }

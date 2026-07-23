@@ -19,6 +19,11 @@ namespace TextUtils {
     std::wstring Replace(const std::wstring_view subject, const std::wstring& pattern, const std::wstring& replacement);
     std::string Replace(const std::string_view subject, const std::string& pattern, const std::string& replacement);
 
+    // Case-insensitive substring search (ASCII only — tolower per byte). An empty needle
+    // always matches. Shared so filter boxes don't each reimplement the same std::search +
+    // tolower comparator.
+    bool CaseInsensitiveContains(std::string_view haystack, std::string_view needle);
+
     template<typename CharT>
     std::basic_string<CharT> Base64Decode(std::string_view encoded)
     {

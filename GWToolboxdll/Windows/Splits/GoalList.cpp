@@ -28,10 +28,12 @@ namespace GoalListJson {
         std::optional<std::vector<uint16_t>> pattern;
         std::optional<bool> starts_immediately;
         std::optional<SerializedTrigger> start_trigger;
+        std::optional<std::vector<SerializedTrigger>> extra_start_triggers;
         std::optional<std::vector<SerializedTrigger>> extra_triggers;
         std::optional<int> auto_complete_previous;
         std::optional<bool> is_header;
         std::optional<int>  indent;
+        std::optional<uint8_t> display_style;
     };
 
     struct SerializedReference {
@@ -44,6 +46,7 @@ namespace GoalListJson {
         std::string name;
         std::vector<SerializedGoal> goals;
         std::optional<SerializedReference> reference;
+        std::optional<bool> is_preset;
     };
 
     std::vector<uint16_t> EncodePattern(const std::wstring& pattern)
@@ -89,6 +92,11 @@ static std::string TriggerTypeName(GoalTrigger::Type t)
         case GoalTrigger::Type::DisplayDialogue:         return "DisplayDialogue";
         case GoalTrigger::Type::CountdownStart:          return "CountdownStart";
         case GoalTrigger::Type::ObjectiveStarted:        return "ObjectiveStarted";
+        case GoalTrigger::Type::QuestPickup:             return "QuestPickup";
+        case GoalTrigger::Type::QuestComplete:           return "QuestComplete";
+        case GoalTrigger::Type::SkillLearnt:             return "SkillLearnt";
+        case GoalTrigger::Type::MobKill:                 return "MobKill";
+        case GoalTrigger::Type::EnterOutpost:            return "EnterOutpost";
         default:                                         return "Manual";
     }
 }
@@ -114,6 +122,11 @@ static GoalTrigger::Type TriggerTypeFromString(const std::string& s)
     if (s == "DisplayDialogue")        return GoalTrigger::Type::DisplayDialogue;
     if (s == "CountdownStart")         return GoalTrigger::Type::CountdownStart;
     if (s == "ObjectiveStarted")        return GoalTrigger::Type::ObjectiveStarted;
+    if (s == "QuestPickup")            return GoalTrigger::Type::QuestPickup;
+    if (s == "QuestComplete")          return GoalTrigger::Type::QuestComplete;
+    if (s == "SkillLearnt")            return GoalTrigger::Type::SkillLearnt;
+    if (s == "MobKill")                return GoalTrigger::Type::MobKill;
+    if (s == "EnterOutpost")           return GoalTrigger::Type::EnterOutpost;
     return GoalTrigger::Type::Manual;
 }
 
@@ -143,10 +156,11 @@ static GoalTrigger FromSerialized(const SerializedTrigger& jt)
 void GoalList::ResetRunState()
 {
     for (auto& g : goals) {
-        g.status          = GoalStatus::NotStarted;
-        g.split           = {};
-        g.start_real_time = -1.0;
-        g.start_game_time = -1.0;
+        g.status           = GoalStatus::NotStarted;
+        g.split            = {};
+        g.start_real_time  = -1.0;
+        g.start_game_time  = -1.0;
+        g.trigger_progress = 0;
     }
 }
 
@@ -188,6 +202,7 @@ bool GoalList::SaveToFile(const std::wstring& path) const
 {
     SerializedGoalList j;
     j.name = name;
+    if (is_preset) j.is_preset = true;
     j.goals.reserve(goals.size());
 
     for (const auto& g : goals) {
@@ -205,7 +220,15 @@ bool GoalList::SaveToFile(const std::wstring& path) const
         if (g.auto_complete_previous != 0) jg.auto_complete_previous = g.auto_complete_previous;
         if (g.is_header)  jg.is_header = true;
         if (g.indent != 0) jg.indent   = g.indent;
+        if (g.display_style != GoalEntry::DisplayStyle::Splits)
+            jg.display_style = static_cast<uint8_t>(g.display_style);
         if (g.start_trigger.has_value()) jg.start_trigger = ToSerialized(g.start_trigger.value());
+        if (!g.extra_start_triggers.empty()) {
+            std::vector<SerializedTrigger> jextra_starts;
+            jextra_starts.reserve(g.extra_start_triggers.size());
+            for (const auto& est : g.extra_start_triggers) jextra_starts.push_back(ToSerialized(est));
+            jg.extra_start_triggers = std::move(jextra_starts);
+        }
         if (!g.extra_triggers.empty()) {
             std::vector<SerializedTrigger> jextras;
             jextras.reserve(g.extra_triggers.size());
@@ -242,6 +265,7 @@ bool GoalList::LoadFromFile(const std::wstring& path)
     if (glz::read<opts>(j, ss.str())) return false;
 
     name = j.name;
+    is_preset = j.is_preset.value_or(false);
     goals.clear();
     goals.reserve(j.goals.size());
 
@@ -260,7 +284,12 @@ bool GoalList::LoadFromFile(const std::wstring& path)
         g.auto_complete_previous  = jg.auto_complete_previous.value_or(0);
         g.is_header               = jg.is_header.value_or(false);
         g.indent                  = jg.indent.value_or(0);
+        g.display_style           = static_cast<GoalEntry::DisplayStyle>(jg.display_style.value_or(0));
         if (jg.start_trigger) g.start_trigger = FromSerialized(*jg.start_trigger);
+        if (jg.extra_start_triggers) {
+            g.extra_start_triggers.reserve(jg.extra_start_triggers->size());
+            for (const auto& je : *jg.extra_start_triggers) g.extra_start_triggers.push_back(FromSerialized(je));
+        }
         if (jg.extra_triggers) {
             g.extra_triggers.reserve(jg.extra_triggers->size());
             for (const auto& je : *jg.extra_triggers) g.extra_triggers.push_back(FromSerialized(je));

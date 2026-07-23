@@ -53,6 +53,13 @@ public:
     // Goals that never started (NotStarted) and goals already Completed are untouched.
     void FailRun(const GoalClock& clock);
 
+    // True if, during the most recent Update(), a Started VanquishComplete/MissionComplete/
+    // MissionBonus goal's target map was just left (rezoned out of) without completing it.
+    // Detection only — GoalEngine doesn't know about SplitsProfile's auto_fail_on_rezone
+    // toggle, so acting on this (calling FailRun) is the caller's policy decision. Clears
+    // the flag on read so it's only ever consumed once per occurrence.
+    [[nodiscard]] bool ConsumeIncompleteRezone();
+
     [[nodiscard]] bool     HasList()       const { return list_ != nullptr; }
     [[nodiscard]] bool     IsStarted()     const { return started_; }
     [[nodiscard]] GoalList* List()         const { return list_; }
@@ -85,9 +92,8 @@ private:
     // When this objective fires ObjectiveDone, both mission_complete_map_ and
     // mission_bonus_map_ are set using the reliable server-side map_id (Prophecies path).
     uint32_t             primary_obj_id_        = 0;
-    // WorldContext missions_bonus bitmask is historical (not cleared on instance load).
-    // Snapshot the bit at entry so we can distinguish "earned this run" from "done before".
-    bool                 bonus_was_set_at_entry_ = false;
+    // See ConsumeIncompleteRezone().
+    bool                 incomplete_rezone_pending_ = false;
 
     std::vector<PendingEvent> pending_events_;
 };

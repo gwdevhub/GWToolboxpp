@@ -54,40 +54,4 @@ const std::string& Get(GW::Constants::MapID id)
     return fb;
 }
 
-std::vector<std::pair<int, std::string>> Filter(
-    const char* query,
-    std::initializer_list<GW::RegionType> types)
-{
-    std::string q = query ? query : "";
-    for (char& c : q) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-
-    std::vector<std::pair<int, std::string>> result;
-    result.reserve(128);
-
-    for (const auto& [id, name] : s_cache) {
-        if (types.size() > 0) {
-            const auto* info = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(id));
-            if (!info) continue;
-            bool type_ok = false;
-            for (const auto t : types) {
-                if (info->type == t) { type_ok = true; break; }
-            }
-            if (!type_ok) continue;
-        }
-
-        if (q.empty()) {
-            result.emplace_back(id, name);
-        } else {
-            std::string lower = name;
-            for (char& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-            if (lower.find(q) != std::string::npos)
-                result.emplace_back(id, name);
-        }
-    }
-
-    std::sort(result.begin(), result.end(),
-        [](const auto& a, const auto& b) { return a.second < b.second; });
-    return result;
-}
-
 } // namespace MapNames
