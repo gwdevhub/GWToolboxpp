@@ -39,6 +39,7 @@ public:
     struct Settings {
         Mode update_mode = Mode::CheckAndAsk;
         ReleaseType update_release_type = ReleaseType::Stable;
+        bool has_starred = false;
     };
 
     void RegisterSettingsContent() override
