@@ -1,0 +1,8 @@
+---
+description: Quest tracker product and safety boundaries
+alwaysApply: true
+---
+# Boundaries
+Allowed: observe quest log, active quest, objective text/flags, character/map changes, mission completion; display metadata; local history; manual corrections; import/export.
+Forbidden: automate quest acceptance, dialogue, movement, combat, rewards, or arbitrary memory writes; send gameplay actions without explicit user action; fabricate completion; treat disappearance as certain completion.
+Prefer observation and local persistence.

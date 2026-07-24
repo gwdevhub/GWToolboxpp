@@ -1,0 +1,8 @@
+---
+description: Confidence model for game observations
+alwaysApply: true
+---
+# Confidence
+Sources: game_snapshot, game_event, mission_completion_data, toolbox_existing_data, manual_user_input, imported_history.
+Levels: confirmed, probable, uncertain, manual.
+Presence/objective flags are confirmed only for the current observation. Disappearance alone is uncertain. Permanent completion requires reliable event/state or manual confirmation. Never collapse uncertain into confirmed.
