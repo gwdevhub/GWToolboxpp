@@ -2011,6 +2011,7 @@ void ChatCommands::Initialize()
         {L"xunlai", CmdChest},
         {L"useskill", CmdUseSkill},
         {L"scwiki", CmdSCWiki},
+        {L"wiki", CmdWiki},
         {L"load", CmdLoad},
         {L"pingbuild", CmdPingBuild},
         {L"quest", CmdPingQuest},
@@ -2724,6 +2725,25 @@ void CHAT_CMD_FUNC(ChatCommands::CmdSCWiki)
         wcscat_s(link, argv[i]);
         ShellExecuteW(nullptr, L"open", link, nullptr, nullptr, SW_SHOWNORMAL);
     }
+}
+
+// Opens a page on the official wiki via the client's own Game_integration link
+// handler (kOpenWikiUrl) rather than ShellExecute — same mechanism the skill
+// listing's "Wiki" button uses. Multiple args are joined with '_' so a page
+// title typed with real spaces (MediaWiki convention) still resolves.
+void CHAT_CMD_FUNC(ChatCommands::CmdWiki)
+{
+    std::string page = "Main_Page";
+    if (argc > 1) {
+        page.clear();
+        for (int i = 1; i < argc; i++) {
+            if (i > 1) page += "_";
+            page += TextUtils::WStringToString(argv[i]);
+        }
+    }
+    char url[256];
+    snprintf(url, _countof(url), "https://wiki.guildwars.com/wiki/%s", page.c_str());
+    GW::UI::SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, url);
 }
 
 void CHAT_CMD_FUNC(ChatCommands::CmdLoad)

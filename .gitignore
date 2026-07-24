@@ -67,6 +67,9 @@ Gemfile.lock
 GWToolbox/~*.tmp
 GWToolbox.aps
 
+# Local archive folders (deferred/future code, kept off remote)
+**/_archive/
+
 # Sublime Text stuff
 *.sublime-project*
 *.sublime-workspace*

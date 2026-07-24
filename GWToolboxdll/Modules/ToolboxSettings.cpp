@@ -50,6 +50,7 @@
 #include <Modules/TextToSpeechModule.h>
 #include <Modules/ToastNotifications.h>
 #include <Modules/VendorFix.h>
+#include <Modules/WebSocketModule.h>
 #include <Widgets/VanquishMapOverlayWidget.h>
 #include <Windows/AccountInventoryWindow.h>
 #include <Windows/ArmoryWindow.h>
@@ -75,12 +76,13 @@
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/PconsWindow.h>
 #include <Windows/RerollWindow.h>
+#include <Windows/SplitsWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/TravelWindow.h>
+#include <Windows/PacketLoggerWindow.h>
 
 #ifdef _DEBUG
 #include <Windows/DoorMonitorWindow.h>
-#include <Windows/PacketLoggerWindow.h>
 #include <Windows/SkillListingWindow.h>
 #include <Windows/StringDecoderWindow.h>
 #include <Modules/RiverModule.h>
@@ -236,7 +238,9 @@ namespace {
         MaterialsWindow::Instance(),
         TradeWindow::Instance(),
         NotePadWindow::Instance(),
+        WebSocketModule::Instance(),
         ObjectiveTimerWindow::Instance(),
+        SplitsWindow::Instance(),
         FactionLeaderboardWindow::Instance(),
         DailyQuests::Instance(),
         FriendListWindow::Instance(),
@@ -258,6 +262,8 @@ namespace {
         LoginModule::Instance(),
         {AccountInventoryWindow::Instance(), false},
         {PerformanceWindow::Instance(), false},
+        {PacketLoggerWindow::Instance(), false},
+        TexmodModule::Instance()
         TexmodModule::Instance(),
         {SplashScreenModule::Instance(), false}
     };
