@@ -233,7 +233,6 @@ namespace {
             if (ImGui::Button("Star us on GitHub###gwtoolbox_open_star", ImVec2(200.0f * ImGui::FontScale(), 0))) {
                 ShellExecute(nullptr, "open", "https://github.com/gwdevhub/GWToolboxpp", nullptr, nullptr, SW_SHOWNORMAL);
                 show_star_request = false;
-                settings.has_starred = true;
             }
             ImGui::SameLine();
             if (ImGui::Button("Maybe later###gwtoolbox_dismiss_star", ImVec2(120.0f * ImGui::FontScale(), 0))) {
