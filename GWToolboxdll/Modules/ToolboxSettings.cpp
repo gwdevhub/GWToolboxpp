@@ -66,6 +66,9 @@
 #include <Windows/InfoWindow.h>
 #include <Windows/MaterialsWindow.h>
 #include <Windows/NotePadWindow.h>
+#include <Windows/PartyStatisticsWindow.h>
+#include <Windows/EnemyStatisticsWindow.h>
+#include <Windows/TradeWindow.h>
 #include <Windows/ObjectiveTimerWindow.h>
 #include <Windows/ObserverExportWindow.h>
 #include <Windows/ObserverPartyWindow.h>
@@ -247,6 +250,7 @@ namespace {
         CompletionWindow::Instance(),
         RerollWindow::Instance(),
         PartyStatisticsWindow::Instance(),
+        EnemyStatisticsWindow::Instance(),
         DupingWindow::Instance(),
         ArmoryWindow::Instance(),
         EnemyWindow::Instance(),
