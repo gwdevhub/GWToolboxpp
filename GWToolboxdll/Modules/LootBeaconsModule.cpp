@@ -472,7 +472,7 @@ void LootBeaconsModule::DrawSettingsInternal()
         ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "In-world compositor FAILED to install." : "In-world compositor: not installed yet.");
 
     ImGui::TextUnformatted("Beacon by gold value");
-    ImGui::ShowHelp("Any drop whose Kamadan trader price meets a threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.\nAn item that clears both thresholds uses the higher tier's colour.");
+    ImGui::ShowHelp("Any drop whose trader price (Kamadan, or presearing.com's price sheet while pre-searing) meets a threshold gets a beacon,\nregardless of rarity - catches ectos, gemstones, dyes and other white-rarity valuables.\nAn item that clears both thresholds uses the higher tier's colour.");
     for (auto* value : {&value_low, &value_high}) {
         ImGui::PushID(value->label);
         if (ImGui::Checkbox("##enabled", &value->enabled)) beacons_dirty = true;

@@ -1,8 +1,14 @@
 name: CMake (clang-cl)
 
 on:
+  # push covers dev/master (post-merge validation); pull_request covers PRs
+  # against dev - including from forks - so feature branches only build once
+  # a PR is open instead of on every push. See cmake.yml for the same setup.
   push:
-    paths:
+    branches:
+      - dev
+      - master
+    paths: &cmake-clang-paths
       # C/C++ source and headers
       - '**/*.cpp'
       - '**/*.c'
@@ -21,6 +27,14 @@ on:
       - 'vcpkg-overlays/**'
       # The workflow itself
       - '.github/workflows/cmake-clang.yml'
+  pull_request:
+    branches:
+      - dev
+    paths: *cmake-clang-paths
+
+concurrency:
+  group: cmake-clang-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
