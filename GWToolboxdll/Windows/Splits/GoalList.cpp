@@ -70,63 +70,48 @@ using namespace GoalListJson;
 // ---------------------------------------------------------------------------
 // Serialization helpers
 // ---------------------------------------------------------------------------
+namespace {
+    // Single source of truth for the trigger type <-> string mapping, searched by both TriggerTypeName and TriggerTypeFromString below. Manual is deliberately absent — it's the implicit fallback on both sides (default enum value / unrecognized string).
+    struct TriggerTypeNameEntry { GoalTrigger::Type type; const char* name; };
+    constexpr TriggerTypeNameEntry kTriggerTypeNames[] = {
+        { GoalTrigger::Type::MapEnter,              "MapEnter" },
+        { GoalTrigger::Type::EnterExplorable,       "EnterExplorable" },
+        { GoalTrigger::Type::ExitExplorable,        "ExitExplorable" },
+        { GoalTrigger::Type::VanquishComplete,      "VanquishComplete" },
+        { GoalTrigger::Type::MissionComplete,       "MissionComplete" },
+        { GoalTrigger::Type::MissionBonus,          "MissionBonus" },
+        { GoalTrigger::Type::ReachLevel,            "ReachLevel" },
+        { GoalTrigger::Type::ExitOutpost,           "ExitOutpost" },
+        { GoalTrigger::Type::ReachTitleRank,        "ReachTitleRank" },
+        { GoalTrigger::Type::ObjectiveDone,         "ObjectiveDone" },
+        { GoalTrigger::Type::DoorOpen,              "DoorOpen" },
+        { GoalTrigger::Type::DoorClose,             "DoorClose" },
+        { GoalTrigger::Type::AgentUpdateAllegiance, "AgentUpdateAllegiance" },
+        { GoalTrigger::Type::DoACompleteZone,       "DoACompleteZone" },
+        { GoalTrigger::Type::DungeonReward,         "DungeonReward" },
+        { GoalTrigger::Type::ServerMessage,         "ServerMessage" },
+        { GoalTrigger::Type::DisplayDialogue,       "DisplayDialogue" },
+        { GoalTrigger::Type::CountdownStart,        "CountdownStart" },
+        { GoalTrigger::Type::ObjectiveStarted,      "ObjectiveStarted" },
+        { GoalTrigger::Type::QuestPickup,           "QuestPickup" },
+        { GoalTrigger::Type::QuestComplete,         "QuestComplete" },
+        { GoalTrigger::Type::SkillLearnt,           "SkillLearnt" },
+        { GoalTrigger::Type::MobKill,               "MobKill" },
+        { GoalTrigger::Type::EnterOutpost,          "EnterOutpost" },
+    };
+}
+
 static std::string TriggerTypeName(GoalTrigger::Type t)
 {
-    switch (t) {
-        case GoalTrigger::Type::MapEnter:                return "MapEnter";
-        case GoalTrigger::Type::EnterExplorable:         return "EnterExplorable";
-        case GoalTrigger::Type::ExitExplorable:          return "ExitExplorable";
-        case GoalTrigger::Type::VanquishComplete:        return "VanquishComplete";
-        case GoalTrigger::Type::MissionComplete:         return "MissionComplete";
-        case GoalTrigger::Type::MissionBonus:            return "MissionBonus";
-        case GoalTrigger::Type::ReachLevel:              return "ReachLevel";
-        case GoalTrigger::Type::ExitOutpost:             return "ExitOutpost";
-        case GoalTrigger::Type::ReachTitleRank:          return "ReachTitleRank";
-        case GoalTrigger::Type::ObjectiveDone:           return "ObjectiveDone";
-        case GoalTrigger::Type::DoorOpen:                return "DoorOpen";
-        case GoalTrigger::Type::DoorClose:               return "DoorClose";
-        case GoalTrigger::Type::AgentUpdateAllegiance:   return "AgentUpdateAllegiance";
-        case GoalTrigger::Type::DoACompleteZone:         return "DoACompleteZone";
-        case GoalTrigger::Type::DungeonReward:           return "DungeonReward";
-        case GoalTrigger::Type::ServerMessage:           return "ServerMessage";
-        case GoalTrigger::Type::DisplayDialogue:         return "DisplayDialogue";
-        case GoalTrigger::Type::CountdownStart:          return "CountdownStart";
-        case GoalTrigger::Type::ObjectiveStarted:        return "ObjectiveStarted";
-        case GoalTrigger::Type::QuestPickup:             return "QuestPickup";
-        case GoalTrigger::Type::QuestComplete:           return "QuestComplete";
-        case GoalTrigger::Type::SkillLearnt:             return "SkillLearnt";
-        case GoalTrigger::Type::MobKill:                 return "MobKill";
-        case GoalTrigger::Type::EnterOutpost:            return "EnterOutpost";
-        default:                                         return "Manual";
-    }
+    for (const auto& e : kTriggerTypeNames)
+        if (e.type == t) return e.name;
+    return "Manual";
 }
 
 static GoalTrigger::Type TriggerTypeFromString(const std::string& s)
 {
-    if (s == "MapEnter")               return GoalTrigger::Type::MapEnter;
-    if (s == "EnterExplorable")        return GoalTrigger::Type::EnterExplorable;
-    if (s == "ExitExplorable")         return GoalTrigger::Type::ExitExplorable;
-    if (s == "VanquishComplete")       return GoalTrigger::Type::VanquishComplete;
-    if (s == "MissionComplete")        return GoalTrigger::Type::MissionComplete;
-    if (s == "MissionBonus")           return GoalTrigger::Type::MissionBonus;
-    if (s == "ReachLevel")             return GoalTrigger::Type::ReachLevel;
-    if (s == "ExitOutpost")            return GoalTrigger::Type::ExitOutpost;
-    if (s == "ReachTitleRank")         return GoalTrigger::Type::ReachTitleRank;
-    if (s == "ObjectiveDone")          return GoalTrigger::Type::ObjectiveDone;
-    if (s == "DoorOpen")               return GoalTrigger::Type::DoorOpen;
-    if (s == "DoorClose")              return GoalTrigger::Type::DoorClose;
-    if (s == "AgentUpdateAllegiance")  return GoalTrigger::Type::AgentUpdateAllegiance;
-    if (s == "DoACompleteZone")        return GoalTrigger::Type::DoACompleteZone;
-    if (s == "DungeonReward")          return GoalTrigger::Type::DungeonReward;
-    if (s == "ServerMessage")          return GoalTrigger::Type::ServerMessage;
-    if (s == "DisplayDialogue")        return GoalTrigger::Type::DisplayDialogue;
-    if (s == "CountdownStart")         return GoalTrigger::Type::CountdownStart;
-    if (s == "ObjectiveStarted")        return GoalTrigger::Type::ObjectiveStarted;
-    if (s == "QuestPickup")            return GoalTrigger::Type::QuestPickup;
-    if (s == "QuestComplete")          return GoalTrigger::Type::QuestComplete;
-    if (s == "SkillLearnt")            return GoalTrigger::Type::SkillLearnt;
-    if (s == "MobKill")                return GoalTrigger::Type::MobKill;
-    if (s == "EnterOutpost")           return GoalTrigger::Type::EnterOutpost;
+    for (const auto& e : kTriggerTypeNames)
+        if (s == e.name) return e.type;
     return GoalTrigger::Type::Manual;
 }
 

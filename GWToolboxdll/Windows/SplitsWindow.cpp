@@ -913,15 +913,8 @@ void SplitsWindow::SaveActiveList()
     cached_saved_lists_dirty_ = true;
 }
 
-void SplitsWindow::LoadActiveList(const std::wstring& path)
+void SplitsWindow::ResetRunFlags()
 {
-    DeleteResumeState();
-    engine_.Detach();
-    active_list_.LoadFromFile(path);
-    clock_.Reset();
-    engine_.Attach(&active_list_);
-    LoadPB();
-
     run_complete_              = false;
     run_failed_                = false;
     running_awaiting_movement_ = false;
@@ -933,6 +926,29 @@ void SplitsWindow::LoadActiveList(const std::wstring& path)
     total_paused_real_         = 0.0;
     pending_map_enter_            = false;
     pending_came_from_explorable_ = false;
+}
+
+std::wstring SplitsWindow::RunHistoryFilePath() const
+{
+    std::wstring safe_name(active_list_.name.begin(), active_list_.name.end());
+    for (auto& c : safe_name) {
+        if (c == L' ') c = L'_';
+        else if (c == L'/' || c == L'\\' || c == L':' || c == L'*' ||
+                 c == L'?' || c == L'"'  || c == L'<' || c == L'>' || c == L'|')
+            c = L'-';
+    }
+    return ActiveRunsFolder() + safe_name + L".json";
+}
+
+void SplitsWindow::LoadActiveList(const std::wstring& path)
+{
+    DeleteResumeState();
+    engine_.Detach();
+    active_list_.LoadFromFile(path);
+    clock_.Reset();
+    engine_.Attach(&active_list_);
+    LoadPB();
+    ResetRunFlags();
 }
 
 void SplitsWindow::SetActiveList(GoalList list)
@@ -946,18 +962,7 @@ void SplitsWindow::SetActiveList(GoalList list)
     clock_.Reset();
     engine_.Attach(&active_list_);
     LoadPB();
-
-    run_complete_              = false;
-    run_failed_                = false;
-    running_awaiting_movement_ = false;
-    running_load_paused_       = false;
-    pending_skill_id_          = 0;
-    in_mission_queue_          = false;
-    manually_paused_           = false;
-    manual_pause_accum_        = 0.0;
-    total_paused_real_         = 0.0;
-    pending_map_enter_            = false;
-    pending_came_from_explorable_ = false;
+    ResetRunFlags();
 }
 
 void SplitsWindow::LoadPB(bool refresh_comparisons)
@@ -971,14 +976,7 @@ void SplitsWindow::LoadPB(bool refresh_comparisons)
 
     if (runs_folder_.empty() || active_list_.name.empty()) return;
 
-    std::wstring safe_name(active_list_.name.begin(), active_list_.name.end());
-    for (auto& c : safe_name) {
-        if (c == L' ') c = L'_';
-        else if (c == L'/' || c == L'\\' || c == L':' || c == L'*' ||
-                 c == L'?' || c == L'"'  || c == L'<' || c == L'>' || c == L'|')
-            c = L'-';
-    }
-    const std::wstring runs_path = ActiveRunsFolder() + safe_name + L".json";
+    const std::wstring runs_path = RunHistoryFilePath();
     std::ifstream rf(runs_path);
     if (!rf.is_open()) return;
 
@@ -1196,14 +1194,7 @@ void SplitsWindow::SaveRunToHistory(bool failed)
 {
     if (runs_folder_.empty() || active_list_.name.empty()) return;
 
-    std::wstring safe_name(active_list_.name.begin(), active_list_.name.end());
-    for (auto& c : safe_name) {
-        if (c == L' ') c = L'_';
-        else if (c == L'/' || c == L'\\' || c == L':' || c == L'*' ||
-                 c == L'?' || c == L'"'  || c == L'<' || c == L'>' || c == L'|')
-            c = L'-';
-    }
-    const std::wstring runs_path = ActiveRunsFolder() + safe_name + L".json";
+    const std::wstring runs_path = RunHistoryFilePath();
 
     std::vector<SerializedRun> runs;
     {
@@ -1675,19 +1666,9 @@ void SplitsWindow::ResetRun()
     if (clock_.IsRunning() || run_complete_ || run_failed_)
         WebSocketModule::Instance().Send("reset", "Splits: Reset - run reset");
     DeleteResumeState();
-    run_complete_              = false;
-    run_failed_                = false;
-    running_awaiting_movement_ = false;
-    running_load_paused_       = false;
-    pending_skill_id_          = 0;
-    in_mission_queue_          = false;
-    manually_paused_           = false;
-    manual_pause_accum_        = 0.0;
-    total_paused_real_         = 0.0;
+    ResetRunFlags();
     engine_.Reset();
     clock_.Reset();
-    pending_map_enter_            = false;
-    pending_came_from_explorable_ = false;
     // last_map_ deliberately left untouched: re-entry only fires when InstanceLoadInfo arrives, so no spurious MapEnter re-trigger on reset.
     // Full refresh, unlike SaveCompletedRun()'s PB-only rescan.
     LoadPB();

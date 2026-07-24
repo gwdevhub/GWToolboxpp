@@ -193,6 +193,10 @@ private:
     // refresh_comparisons=false only rescans pb_splits_/pb_total_real_ (for UpdateReferenceIfPB's is-this-a-new-PB check), leaving avg_splits_/last_splits_ untouched so a just-finished run's "Run complete!" screen still compares against the PRE-run history rather than itself.
     void LoadPB(bool refresh_comparisons = true);
     void UpdateReferenceIfPB();
+    // Shared by LoadActiveList/SetActiveList/ResetRun — resets every run-progress flag to its pre-run state (not the clock/engine, which each caller handles differently around this call).
+    void ResetRunFlags();
+    // Filesystem-safe "<active_list_.name>.json" path under ActiveRunsFolder() — shared by LoadPB (reads it) and SaveRunToHistory (reads+writes it).
+    [[nodiscard]] std::wstring RunHistoryFilePath() const;
 
     // Timer policy: auto-fail conditions and Manual's per-goal-type auto-start rules. Deliberately separate from GoalEngine's fire/complete switch — trigger firing and clock policy are independent pieces, so some structural duplication between the two switches is accepted.
     void ApplyTimerPolicy(bool just_entered_map, int player_level);

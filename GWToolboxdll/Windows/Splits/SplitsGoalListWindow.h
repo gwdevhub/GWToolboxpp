@@ -31,6 +31,16 @@ private:
                      double pb_split_real, double pb_seg_real,
                      double pb_split_game, double pb_seg_game,
                      const struct SplitsProfile& profile);
+
+    // DrawSettings sections — one profile's UI per named method (see .cpp header comment).
+    void DrawProfileSwitcher(SplitsWindow& window);
+    void DrawTimeAndBehaviorColumn(SplitsWindow& window);
+    void DrawKeybindsAndColorsColumn(SplitsWindow& window);
+    void DrawGoalListManagementColumn(SplitsWindow& window);
+    void DrawSCGoalsSummary(SplitsWindow& window);
+    void DrawEditableGoalsList(SplitsWindow& window);
+    void DrawStandardAddGoalForm(SplitsWindow& window);
+
     void DrawMissionBatchPicker(SplitsWindow& window);
     void DrawExplorableBatchPicker(SplitsWindow& window);
     void DrawTownBatchPicker(SplitsWindow& window);
