@@ -1,8 +1,15 @@
 name: CMake
 
 on:
+  # push covers dev (post-merge validation) and master (release builds, gated
+  # below on should_release). pull_request covers PRs against dev - including
+  # from forks, where CERTUM_OTP_URI is unset and signing/release is skipped -
+  # so branches only build once a PR is open instead of on every push.
   push:
-    paths:
+    branches:
+      - dev
+      - master
+    paths: &cmake-paths
       # C/C++ source and headers
       - '**/*.cpp'
       - '**/*.c'
@@ -21,6 +28,16 @@ on:
       - 'vcpkg-overlays/**'
       # The workflow itself
       - '.github/workflows/cmake.yml'
+  pull_request:
+    branches:
+      - dev
+    paths: *cmake-paths
+
+# Cancel a still-running build for the same ref when a new commit supersedes
+# it, instead of letting both run to completion on the paid Windows runner.
+concurrency:
+  group: cmake-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
