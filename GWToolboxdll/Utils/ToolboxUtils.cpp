@@ -1251,6 +1251,12 @@ namespace ToolboxUtils {
         return player && IsPlayerInParty(player->player_number);
     }
 
+    // Check if agent is in player's own party (0)
+    bool IsAgentInMyParty(const uint32_t agent_id)
+    {
+        return GW::PartyMgr::IsAgentInParty(agent_id, 0);
+    }
+
     float GetSkillRange(const GW::Constants::SkillID skill_id)
     {
         const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id);

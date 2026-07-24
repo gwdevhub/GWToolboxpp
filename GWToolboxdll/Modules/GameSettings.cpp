@@ -8,6 +8,7 @@
 #include <GWCA/Constants/Skills.h>
 
 #include <GWCA/Context/CharContext.h>
+#include <GWCA/Context/GuildContext.h>
 #include <GWCA/Context/WorldContext.h>
 
 #include <GWCA/GameContainers/Array.h>
@@ -185,16 +186,37 @@ namespace {
         const char* label;
         DEFAULT_NAMETAG_COLOR default_val;
         Color* ptr;
+        bool player_override = false;
     };
     NametagColor nametag_color_settings[] = {
         {"NPC", DEFAULT_NAMETAG_COLOR::NPC, &settings.nametag_color_npc.value},
         {"Myself", DEFAULT_NAMETAG_COLOR::PLAYER_SELF, &settings.nametag_color_player_self.value},
         {"Other Player", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_player_other.value},
         {"Other Player (In Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY, &settings.nametag_color_player_in_party.value},
+        {"Other Player (In My Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_MY_PARTY, &settings.nametag_color_player_in_my_party.value},
+        {"Friends", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_friends.value, true},
+        {"Guild Members", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_guild_members.value, true},
         {"Gadget", DEFAULT_NAMETAG_COLOR::GADGET, &settings.nametag_color_gadget.value},
         {"Enemy", DEFAULT_NAMETAG_COLOR::ENEMY, &settings.nametag_color_enemy.value},
         {"Item", DEFAULT_NAMETAG_COLOR::ITEM, &settings.nametag_color_item.value},
     };
+
+    bool IsGuildMemberPlayer(const wchar_t* player_name)
+    {
+        if (!(player_name && *player_name)) {
+            return false;
+        }
+        const auto guild_context = GW::GetGuildContext();
+        if (!guild_context) {
+            return false;
+        }
+        for (const GW::GuildPlayer* player : guild_context->player_roster) {
+            if (player && player->current_name[0] && !wcsncmp(player->current_name, player_name, _countof(player->current_name))) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     struct ChannelColorDef {
         const char* key;
@@ -2494,12 +2516,35 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
         return;
     }
     const auto tag = static_cast<GW::UI::AgentNameTagInfo*>(wParam);
+    // Apply default colors for nametags
     for (const auto& c : nametag_color_settings) {
+        if (c.player_override) {
+            continue;
+        }
         if (tag->text_color == static_cast<Color>(c.default_val)) {
             tag->text_color = *c.ptr;
             break;
         }
     }
+    // Override colors for friends, guildies and party members
+    if (tag->name_enc) {
+        const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
+        if (!player_name.empty() && player_name != GetPlayerName()) {
+            // friends
+            if (GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) {
+                tag->text_color = settings.nametag_color_friends;
+            }
+            // guildies
+            else if (IsGuildMemberPlayer(player_name.c_str())) {
+                tag->text_color = settings.nametag_color_guild_members;
+            }
+            // in your party
+            else if (IsAgentInMyParty(tag->agent_id)) {
+                tag->text_color = settings.nametag_color_player_in_my_party;
+            }
+        }
+    }
+    // Show amount of lockpicks under locked chest nametag
     if (settings.show_amount_of_lockpicks_under_locked_chest_nametag && tag->name_enc && wcseq(tag->name_enc, GW::EncStrings::LockedChest) && !tag->underline) {
         static wchar_t you_have_n_lockpicks[12];
         const auto count = GW::Items::CountItemByModelId(GW::Constants::ItemID::Lockpick, (int)GW::Constants::Bag::Backpack, (int)GW::Constants::Bag::Bag_2);
