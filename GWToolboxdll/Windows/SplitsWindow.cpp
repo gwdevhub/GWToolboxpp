@@ -347,15 +347,29 @@ void SplitsWindow::Initialize()
             PushDbgEvent("AgentDied", p->agent_id, p->state);
         });
 
-    // kQuestAdded fires when a quest is added or its log_state changes (active->complete etc.); log_state itself isn't in the message, so it's read back off the quest log.
+    // kQuestAdded fires on pickup, and again (re-announcing already-current log_state) as part of a full quest-log resync at zone transitions — not a live per-objective push. The IsCompleted() check here is a safety-net fallback (e.g. picked up already-complete); kQuestDetailsChanged below is the actual live "objective just finished" signal.
     GW::UI::RegisterUIMessageCallback(
         &on_quest_update_,
         GW::UI::UIMessage::kQuestAdded,
         [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             const auto quest_id = *static_cast<GW::Constants::QuestID*>(wparam);
-            const auto* quest   = GW::QuestMgr::GetQuest(quest_id);
+            auto* quest = GW::QuestMgr::GetQuest(quest_id);
             engine_.NotifyEvent(GoalTrigger::Type::QuestPickup, static_cast<uint32_t>(quest_id));
+            if (quest && quest->IsCompleted())
+                engine_.NotifyEvent(GoalTrigger::Type::QuestComplete, static_cast<uint32_t>(quest_id));
             PushDbgEvent("QuestUpd", static_cast<uint32_t>(quest_id), quest ? quest->log_state : 0);
+        });
+
+    // kQuestDetailsChanged fires live when a quest's own state changes (e.g. an objective completing) — unlike kQuestAdded, not tied to a zone-transition resync.
+    GW::UI::RegisterUIMessageCallback(
+        &on_quest_details_changed_,
+        GW::UI::UIMessage::kQuestDetailsChanged,
+        [this](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
+            const auto quest_id = *static_cast<GW::Constants::QuestID*>(wparam);
+            auto* quest = GW::QuestMgr::GetQuest(quest_id);
+            if (quest && quest->IsCompleted())
+                engine_.NotifyEvent(GoalTrigger::Type::QuestComplete, static_cast<uint32_t>(quest_id));
+            PushDbgEvent("QuestDetail", static_cast<uint32_t>(quest_id), quest ? quest->log_state : 0);
         });
 
     // kQuestRemoved fires on turn-in AND abandon — doesn't distinguish the two, so an abandoned QuestComplete goal fires early. Acceptable for run-tracking; revisit if it causes false splits.
@@ -405,6 +419,7 @@ void SplitsWindow::Terminate()
     GW::StoC::RemoveCallback<GW::Packet::StoC::PartyHenchmanRemove>(&on_party_henchman_remove_);
     GW::StoC::RemoveCallback<GW::Packet::StoC::AgentState>(&on_agent_state_);
     GW::UI::RemoveUIMessageCallback(&on_quest_update_);
+    GW::UI::RemoveUIMessageCallback(&on_quest_details_changed_);
     GW::UI::RemoveUIMessageCallback(&on_quest_remove_);
     engine_.Detach();
     ToolboxWindow::Terminate();
@@ -1508,10 +1523,12 @@ void SplitsWindow::ApplySCAutoLoadPreset(const bool just_entered_map)
     auto preset = SCPresets::BuildPresetForMap(last_map_);
     if (!preset) return; // not a tracked dungeon/elite area
 
-    if (active_list_.name == preset->name) return; // already the right list loaded
-
-    // Never override a genuine user-authored list — only auto-swap when nothing's loaded yet, or what's loaded is itself just a preset from an earlier auto-load.
-    if (!active_list_.name.empty() && !active_list_.is_preset) return;
+    // Compare by anchor map_id (the header's, or the single goal's — every preset type stamps this as its dungeon/area identity), not by name or is_preset: a renamed or explicitly-loaded list for the SAME dungeon still counts as correct, but one for a DIFFERENT dungeon gets swapped regardless of how it was loaded.
+    auto anchor_map_id = [](const GoalList& list) {
+        return list.goals.empty() ? GW::Constants::MapID::None : list.goals.front().trigger.map_id;
+    };
+    if (anchor_map_id(*preset) != GW::Constants::MapID::None && anchor_map_id(active_list_) == anchor_map_id(*preset))
+        return; // already the right dungeon/area
 
     SetActiveList(std::move(*preset));
     // SetActiveList always clears is_preset, but this path is auto-detection, not a user pick, so it must stay swappable for the next dungeon/area the player walks into.

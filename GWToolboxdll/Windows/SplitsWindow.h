@@ -182,6 +182,7 @@ private:
     GW::HookEntry on_party_henchman_remove_;
     GW::HookEntry on_agent_state_;
     GW::HookEntry on_quest_update_;
+    GW::HookEntry on_quest_details_changed_;
     GW::HookEntry on_quest_remove_;
 
     void SaveResumeState();

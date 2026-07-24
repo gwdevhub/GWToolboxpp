@@ -1317,17 +1317,20 @@ void SplitsGoalListWindow::DrawTownBatchPicker(SplitsWindow& plugin)
         for (int ci = 0; ci < NUM_CAMPS; ++ci) {
             if (!ImGui::BeginTabItem(s_camp_labels[ci])) continue;
             const Camp camp = s_camps[ci];
-            const auto filtered = filter_rows(build_town_list([camp](const GW::AreaInfo& inf) {
+            // Named locals, not chained directly into filter_rows(): that would bind filtered's pointers into a temporary that's destroyed at the end of the full expression (a real use-after-free).
+            const auto rows = build_town_list([camp](const GW::AreaInfo& inf) {
                 return inf.GetIsOnWorldMap() && inf.campaign == camp;
-            }));
+            });
+            const auto filtered = filter_rows(rows);
             draw_bulk_buttons(filtered);
             draw_table("##towntbl", filtered, /*show_region_header=*/true);
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Pre-Searing")) {
-            const auto ps_filtered = filter_rows(build_town_list([](const GW::AreaInfo& inf) {
+            const auto ps_rows = build_town_list([](const GW::AreaInfo& inf) {
                 return inf.region == GW::Region_Presearing;
-            }));
+            });
+            const auto ps_filtered = filter_rows(ps_rows);
             draw_bulk_buttons(ps_filtered);
             draw_table("##towntbl_ps", ps_filtered, /*show_region_header=*/false);
             ImGui::EndTabItem();
@@ -1498,17 +1501,20 @@ void SplitsGoalListWindow::DrawExplorableBatchPicker(SplitsWindow& plugin)
         for (int ci = 0; ci < NUM_CAMPS; ++ci) {
             if (!ImGui::BeginTabItem(s_camp_labels[ci])) continue;
             const Camp camp = s_camps[ci];
-            const auto filtered = filter_rows(build_exp_list([camp](const GW::AreaInfo& inf) {
+            // Named locals, not chained directly into filter_rows(): that would bind filtered's pointers into a temporary that's destroyed at the end of the full expression (a real use-after-free).
+            const auto rows = build_exp_list([camp](const GW::AreaInfo& inf) {
                 return inf.GetIsOnWorldMap() && inf.campaign == camp;
-            }));
+            });
+            const auto filtered = filter_rows(rows);
             draw_bulk_buttons(filtered, /*show_vq=*/true);
             draw_table("##exptbl", filtered, /*show_vq=*/true, /*show_region_header=*/true);
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Pre-Searing")) {
-            const auto ps_filtered = filter_rows(build_exp_list([](const GW::AreaInfo& inf) {
+            const auto ps_rows = build_exp_list([](const GW::AreaInfo& inf) {
                 return inf.region == GW::Region_Presearing;
-            }));
+            });
+            const auto ps_filtered = filter_rows(ps_rows);
             draw_bulk_buttons(ps_filtered, /*show_vq=*/false);
             draw_table("##exptbl_ps", ps_filtered, /*show_vq=*/false, /*show_region_header=*/false);
             ImGui::EndTabItem();
