@@ -1,0 +1,2 @@
+# Add quest observation
+Separate QuestObservationService, QuestProgressReducer, QuestProgressStore, QuestHistoryStore, and QuestTrackerWindow. Capture raw observations, convert to immutable events, reduce state, append meaningful transitions, preserve source/confidence, avoid persistence in callbacks, handle character/map changes, never infer completion from disappearance, and unit-test reducer logic.

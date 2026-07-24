@@ -1,0 +1,13 @@
+---
+description: GWToolboxpp upstream fork safety
+alwaysApply: true
+---
+# Upstream safety
+- Treat gwdevhub/GWToolboxpp as upstream.
+- Keep tracker changes isolated and rebase-friendly.
+- Minimize existing-file modifications; no mass formatting or unrelated renames.
+- Do not update dependencies without approval.
+- Prefer new window/module/service/helper files.
+- Justify every upstream file touched.
+- Do not commit generated build output.
+- Fork-specific functionality is acceptable.
