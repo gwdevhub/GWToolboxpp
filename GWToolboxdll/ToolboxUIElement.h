@@ -54,6 +54,8 @@ public:
     bool lock_breakout_button = false;
     std::array<float, 2> breakout_pos = {60.f, 60.f};
     bool pending_breakout_pos = false;
+    // Runtime-only: set once the button has been positioned (from saved settings or a computed default)
+    bool breakout_pos_set = false;
 
     // Mobile-mode layout settings (separate from normal-mode settings above)
     bool mobile_lock_move = false;
