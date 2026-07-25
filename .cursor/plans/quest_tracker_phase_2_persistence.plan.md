@@ -160,11 +160,15 @@ Resources::GetPath(L"QuestProgress")/
 ```json
 {
   "storeFormat": "gwtoolbox-quest-progress",
-  "storeVersion": { "major": 1, "minor": 0 },
+  "storeVersion": { "major": 1, "minor": 1 },
   "accountKey": "<guid>",
   "characters": [ ... ]
 }
 ```
+
+Current write version is **1.1**. Loading **1.0** runs an explicit identity migration (canonicalize + bump minor). Unsupported newer major is rejected without modifying files.
+
+**This JSON is internal Toolbox persistence only — not Contract v1 export.**
 
 Version rules:
 
@@ -561,13 +565,16 @@ Note: `--clean-first --target GWToolboxdll` can remove `GWToolbox.exe`; rebuild 
 - [x] semanticEventKey scoped per-character (no characterKey in key); compare only within character
 - [x] Late exact evidence, conflict rejection, duplicate-index canonicalization, UTC timestamp contract documented
 
-### Batch 2B persistence reminders (not implemented yet)
+### Batch 2B persistence reminders (implemented foundation)
 
 - First file creation: `MoveFileExW(tmp, final, MOVEFILE_WRITE_THROUGH)`
-- Replacing existing file: `ReplaceFileW(final, tmp, bak, ...)` with required `.bak`
-- Mutex: `Local\GWToolbox.QuestProgress.<normalized-guid-or-fixed-length-hash>` (FNV-1a-64 hex of account key)
-- Abandoned mutex acquisition requires: re-read primary → validate → try `.bak` if necessary → merge only after recovery validation
+- Replacing existing file: `ReplaceFileW(final, tmp, bak, REPLACEFILE_WRITE_THROUGH, ...)` with required `.bak`
+- Mutex: `Local\GWToolbox.QuestProgress.<16-hex FNV-1a-64 of UTF-8 account key>` (never raw account key / email)
+- `WAIT_ABANDONED` is detected from `WaitForSingleObject` return value (not `GetLastError`)
+- Abandoned ownership triggers re-read + validate (+ `.bak` if needed) before merge-on-write
+- Runtime abandoned-mutex end-to-end (child process crash) remains a Batch 2C verification item; decision routing is unit-tested via `ClassifyWaitResult`
+- Internal store JSON is **not** Contract v1 export
 
-## STOP (planning / Batch 2A.1)
+## STOP (Batch 2B)
 
-Batch 2B (JSON codec / atomic store) is a separate approved implementation phase.
+Batch 2C (identity binder / observation wiring / lifecycle flush) is a separate approved phase.
