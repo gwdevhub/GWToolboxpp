@@ -89,6 +89,7 @@ private:
     bool active_quest_dirty_ = false;
     bool mission_objectives_dirty_ = false;
     bool loading_transition_pending_ = false;
+    bool request_cycle_reset_pending_ = false;
     bool published_loading_invalid_ = false;
 
     uint64_t next_revision_ = 1;
