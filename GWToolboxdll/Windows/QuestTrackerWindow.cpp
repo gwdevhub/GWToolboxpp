@@ -183,16 +183,7 @@ void QuestTrackerWindow::Draw(IDirect3DDevice9*)
                 }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Click to set active quest");
-                    ImGui::GetWindowDrawList()->AddRectFilled(
-                        row_pos,
-                        ImVec2(row_pos.x + row_width, row_pos.y + row_height),
-                        ImGui::GetColorU32(ImGuiCol_HeaderHovered));
-                }
-                else if (is_active) {
-                    ImGui::GetWindowDrawList()->AddRectFilled(
-                        row_pos,
-                        ImVec2(row_pos.x + row_width, row_pos.y + row_height),
-                        ImGui::GetColorU32(ImGuiCol_Header));
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
                 }
                 ImGui::SetCursorScreenPos(row_pos);
             }
