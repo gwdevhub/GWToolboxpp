@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: p1-build-verify
     content: Build RelWithDebInfo and run Phase 1 in-game verification checklist
-    status: in_progress
+    status: completed
 isProject: false
 ---
 
