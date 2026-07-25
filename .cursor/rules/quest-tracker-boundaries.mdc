@@ -6,3 +6,4 @@ alwaysApply: true
 Allowed: observe quest log, active quest, objective text/flags, character/map changes, mission completion; display metadata; local history; manual corrections; import/export.
 Forbidden: automate quest acceptance, dialogue, movement, combat, rewards, or arbitrary memory writes; send gameplay actions without explicit user action; fabricate completion; treat disappearance as certain completion.
 Prefer observation and local persistence.
+Quest Progress Contract v1 interchange: GWToolboxpp produces, GuildWarsCodex consumes; exporters must follow mirrored `docs/contracts/` (see `quest-progress-contract.mdc`).

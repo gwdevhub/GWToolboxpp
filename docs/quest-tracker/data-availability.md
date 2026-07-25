@@ -1,8 +1,10 @@
 # Data availability — quest tracker
 
-What GWCA and existing Toolbox code can observe, at what confidence, and what absence means. Aligns with [quest_progress_contract_v1.md](../contracts/quest_progress_contract_v1.md) and `.cursor/rules/game-state-confidence.mdc`.
+What GWCA and existing Toolbox code can observe, at what confidence, and what absence means. Aligns with [quest_progress_contract_v1.md](../contracts/quest_progress_contract_v1.md), [quest_progress_contract_v1_toolbox_capability_notes.md](../contracts/quest_progress_contract_v1_toolbox_capability_notes.md), and `.cursor/rules/game-state-confidence.mdc`.
 
-**Rule:** never treat quest disappearance alone as completion.
+**Roles:** GWToolboxpp is the Quest Progress Contract v1 **producer**; GuildWarsCodex is the **consumer**. The Contract is observational and does not authorize gameplay automation.
+
+**Rule:** never treat quest disappearance alone as completion. Source and confidence must stay honest. `producer.version` is metadata, not event identity. Exporters (when approved) must conform to the mirrored canonical Contract files.
 
 ## Scope model
 

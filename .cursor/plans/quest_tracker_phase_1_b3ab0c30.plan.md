@@ -313,6 +313,10 @@ Compilation alone does not verify game-state behavior.
 
 UUID-keyed persistence/history, abandon/reward correlation, mission/bonus bitsets, reducer unit tests, export/manual/Codex.
 
+## Phase B3 note (documentation only)
+
+Quest Progress Contract v1 docs are synchronized from GuildWarsCodex (`docs/contracts/`). This does **not** implement an exporter, history persistence, or start a new implementation phase by itself. Observation capabilities remain subject to [data-availability.md](docs/quest-tracker/data-availability.md) and [capability notes](docs/contracts/quest_progress_contract_v1_toolbox_capability_notes.md). Next implementation work requires separate approval.
+
 ---
 
 ## STOP
