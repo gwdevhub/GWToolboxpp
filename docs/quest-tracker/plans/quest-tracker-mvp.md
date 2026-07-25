@@ -20,7 +20,8 @@ Ship a safe, observation-only quest tracker in this GWToolboxpp fork: live quest
 | `ActiveQuestWidget` | Active quest + mission-objective display |
 | `CompletionWindow` | Mission/bonus persistence reference only |
 | `DialogModule::QuestDialogType` | Correlated REWARD / TAKE dialog encoding |
-| Contract v1 | [`docs/contracts/quest_progress_contract_v1.md`](../../contracts/quest_progress_contract_v1.md) |
+| Contract v1 | [`docs/contracts/quest_progress_contract_v1.md`](../../contracts/quest_progress_contract_v1.md) (mirrored from GuildWarsCodex; Toolbox = producer, Codex = consumer) |
+| Capability notes | [`docs/contracts/quest_progress_contract_v1_toolbox_capability_notes.md`](../../contracts/quest_progress_contract_v1_toolbox_capability_notes.md) (non-normative) |
 
 See [repository-investigation.md](../repository-investigation.md).
 
@@ -65,7 +66,7 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 
 ## UI
 
-- Phase 1: read-only list + objectives (quest vs mission channels separated)
+- Phase 1: live list + objectives (quest vs mission channels separated); clickable rows set the game's active quest (narrow user-initiated mutation; not progress persistence)
 - Phase 2: history visibility / character context
 - Phase 3: manual corrections + export/import controls
 
@@ -113,12 +114,15 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 ### Phase 1
 
 - [ ] Map load shows current quest log (excluding `0xfdd`)
+- [ ] Clicking a quest row sets the game's active quest (highlight + details; native quest log/marker)
+- [ ] Clicking already-active / mission_mode / loading does not mutate selection
 - [ ] Active quest selection updates list/highlight
 - [ ] Objective bullets update after `kQuestDetailsChanged` path (complete vs incomplete)
 - [ ] In-log `IsCompleted()` reflected without claiming permanent history
 - [ ] Mission objectives path (`qid == -1` / `kObjective*`) does not corrupt quest-log rows
 - [ ] Custom marker set/clear does not appear as real quest progress
 - [ ] No requests every frame when objectives missing (throttle observable)
+- [ ] Map transition follows game active quest (no forced reselection)
 
 ### Phase 2
 
@@ -140,7 +144,24 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 
 ## Phases
 
-### Phase 1 — Read-only list / objectives
+### Phase B3 — Contract v1 documentation synchronization (complete for docs)
+
+**Done in this documentation phase**
+
+- Mirrored canonical Contract files from GuildWarsCodex (`quest_progress_contract_v1.md` + example JSON)
+- Toolbox-local capability notes (non-normative)
+- Cursor rules / doc references for producer/consumer roles and honesty invariants
+
+**Explicitly not done by Phase B3**
+
+- No Contract exporter / parser implementation
+- No history persistence / `QuestProgressStore` / `QuestHistoryStore`
+- No new quest observation production work started by this task
+- Observation capabilities are **not** “complete” merely because Contract docs exist
+
+**Next:** any further Toolbox implementation phase (observation hardening, persistence, or export) must be **separately approved**.
+
+### Phase 1 — Live list / objectives / active-quest click
 
 **Scope**
 
@@ -150,8 +171,9 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 - Throttled `RequestQuestInfoId`
 - HookEntry ownership and copy-out rules
 - Settings only (no progress history file yet)
+- Clickable normal quest rows enqueue `SetActiveQuestId` on the game thread; refresh via existing active-quest callbacks; not stored in contract history
 
-**Out of scope:** persistence of history, export, manual completion, CompletionWindow calls
+**Out of scope:** persistence of history, export, manual completion, CompletionWindow calls, accept/abandon/reward, travel-on-click, map-load forced reselection, prerequisite inference
 
 **Exit criteria:** builds; Phase 1 in-game checklist passes
 
@@ -172,10 +194,11 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 
 **Scope**
 
-- Export/import per contract v1
+- Export/import per mirrored contract v1 (byte-identical `docs/contracts/`)
 - Manual complete/abandon with `manual` confidence
 - `mission_completion_data` from owned bitset reads (separate from quest-log states)
 - Idempotent import; reject unsupported major versions
+- Stable structured identity + SHA-256 fingerprints; no runtime `std::hash`
 
 **Exit criteria:** sample Codex-compatible file validated; manual corrections round-trip
 
@@ -188,6 +211,7 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 - Shared library of quest canon metadata (names, campaigns) — out of band from progress
 - Dedicated CTest executable (only if Phase 2 decision requires it)
 - UI polish, filters, search, multi-account browser
+- **Prerequisite-based historical completion inference:** only strict mandatory completion prerequisites; inferred completion distinguishable from observed/manual; not Phase 1
 
 ## Upstream-safety checklist (when implementing)
 

@@ -1,0 +1,14 @@
+---
+description: Quest Progress Contract v1 producer invariants
+alwaysApply: true
+---
+# Quest Progress Contract
+- GWToolboxpp is the Contract v1 producer; GuildWarsCodex is the consumer.
+- The Contract is observational and does not authorize gameplay automation (no quest accept, reward claim, movement, or combat automation).
+- Do not treat quest disappearance as confirmed completion.
+- Preserve source and confidence; never collapse uncertain into confirmed.
+- History is append-only; corrections supersede without erasing prior evidence.
+- `producer.version` is metadata only and must not participate in event identity.
+- Exporters must conform to the mirrored files in `docs/contracts/` (stable structured identity + SHA-256 fingerprint rules).
+- Do not use runtime `std::hash` for portable Contract event fingerprints.
+- Semantic Contract changes require synchronization with GuildWarsCodex before parser/exporter work proceeds.

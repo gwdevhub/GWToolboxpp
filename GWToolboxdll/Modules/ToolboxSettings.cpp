@@ -56,6 +56,7 @@
 #include <Windows/BuildsWindow.h>
 #include <Windows/CompletionWindow.h>
 #include <Windows/DailyQuestsWindow.h>
+#include <Windows/QuestTrackerWindow.h>
 #include <Windows/DropTrackerWindow.h>
 #include <Windows/DupingWindow.h>
 #include <Windows/EnemyWindow.h>
@@ -246,6 +247,7 @@ namespace {
         ObserverPartyWindow::Instance(),
         ObserverExportWindow::Instance(),
         CompletionWindow::Instance(),
+        {QuestTrackerWindow::Instance(), false},
         RerollWindow::Instance(),
         PartyStatisticsWindow::Instance(),
         DupingWindow::Instance(),

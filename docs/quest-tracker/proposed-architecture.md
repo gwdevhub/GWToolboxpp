@@ -10,7 +10,8 @@ Observation-only design for a safe in-game quest tracker. Follows [.cursor/skill
 
 - Observe quest log, active quest, in-log completion flags, objectives, and mission/bonus bitsets.
 - Persist per-character history with source + confidence.
-- Export/import compatible with Codex contract v1.
+- Export/import compatible with Codex contract v1 (GWToolboxpp producer → GuildWarsCodex consumer; mirrored `docs/contracts/`).
+- Observational Contract only — does not authorize gameplay automation.
 - Stay within quest-tracker boundaries (observation + local persistence + manual correction).
 
 **Non-goals**
@@ -96,7 +97,7 @@ Designed to be **unit-testable**. Concrete test harness/target is a Phase 2 deci
 
 ### `QuestTrackerWindow`
 
-- New `ToolboxWindow` (or module + window pair) for read-only display and later manual corrections / export.
+- New `ToolboxWindow` (or module + window pair) for live display, active-quest click selection, and later manual corrections / export.
 - Register later in `ToolboxSettings::optional_modules` only (expected minimal production touch).
 - Settings via `SettingsDoc`; progress data via owned JSON store.
 
@@ -177,7 +178,7 @@ Under the computer Toolbox folder (`Resources::GetPath`), an owned JSON document
 - Per-quest current state + objectives snapshot metadata
 - Append-only `history[]` entries with timestamps, source, confidence
 
-Exact field names should align with contract v1 for export; internal storage may be a strict producer of that envelope in Phase 3.
+Exact field names should align with contract v1 for export; internal storage may be a strict producer of that envelope in Phase 3. Exporter must use Contract structured identity and SHA-256 fingerprint rules (no runtime `std::hash`). `producer.version` is metadata only.
 
 ## Upstream touch list (future implementation)
 
