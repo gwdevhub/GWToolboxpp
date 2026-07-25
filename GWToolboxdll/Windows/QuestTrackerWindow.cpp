@@ -2,16 +2,36 @@
 
 #include <Windows/QuestTrackerWindow.h>
 
+#include <GWCA/Constants/Constants.h>
+#include <GWCA/Managers/GameThreadMgr.h>
+#include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/QuestMgr.h>
+
 #include <Utils/FontLoader.h>
 
 namespace {
     constexpr ImU32 TEXT_COLOR_COMPLETED = 0xffbbbbbb;
     constexpr ImU32 TEXT_COLOR_ACTIVE = 0xff00ff00;
     constexpr ImU32 TEXT_COLOR_READY = 0xff66ccff;
+    constexpr auto custom_marker_quest_id = static_cast<GW::Constants::QuestID>(0x0000fdd);
+
+    void EnqueueSetActiveQuest(GW::Constants::QuestID quest_id)
+    {
+        GW::GameThread::Enqueue([quest_id] {
+            if (quest_id == GW::Constants::QuestID::None) return;
+            if (quest_id == custom_marker_quest_id) return;
+            if (!GW::Map::GetIsMapLoaded()) return;
+            if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading) return;
+            if (!GW::QuestMgr::GetQuest(quest_id)) return;
+            if (GW::QuestMgr::GetActiveQuestId() == quest_id) return;
+            GW::QuestMgr::SetActiveQuestId(quest_id);
+        });
+    }
 }
 
 void QuestTrackerWindow::Initialize()
 {
+    terminating_ = false;
     ToolboxWindow::Initialize();
     observation_.Initialize();
 }
@@ -23,12 +43,14 @@ void QuestTrackerWindow::Update(float delta)
 
 void QuestTrackerWindow::SignalTerminate()
 {
+    terminating_ = true;
     observation_.SignalTerminate();
     ToolboxWindow::SignalTerminate();
 }
 
 void QuestTrackerWindow::Terminate()
 {
+    terminating_ = true;
     ClearDecodeCache();
     observation_.Terminate();
     ToolboxWindow::Terminate();
@@ -133,6 +155,8 @@ void QuestTrackerWindow::Draw(IDirect3DDevice9*)
     ImGui::TextUnformatted("Quest log");
     ImGui::Separator();
 
+    const bool allow_select = !terminating_ && !snap->mission_mode;
+
     if (snap->quests.empty()) {
         ImGui::TextDisabled("No quests in log");
     }
@@ -143,6 +167,34 @@ void QuestTrackerWindow::Draw(IDirect3DDevice9*)
             const char* name = name_decoder.string().c_str();
             if (!name || !*name) {
                 name = name_decoder.IsDecoding() ? "..." : "(unnamed quest)";
+            }
+
+            ImGui::PushID(static_cast<int>(static_cast<uint32_t>(quest.quest_id)));
+            const ImVec2 row_pos = ImGui::GetCursorScreenPos();
+            const float row_width = ImGui::GetContentRegionAvail().x;
+            const float row_height = ImGui::GetTextLineHeightWithSpacing();
+
+            if (allow_select) {
+                if (ImGui::InvisibleButton("##quest_row", ImVec2(row_width, row_height))) {
+                    if (!is_active) {
+                        const auto quest_id = quest.quest_id;
+                        EnqueueSetActiveQuest(quest_id);
+                    }
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Click to set active quest");
+                    ImGui::GetWindowDrawList()->AddRectFilled(
+                        row_pos,
+                        ImVec2(row_pos.x + row_width, row_pos.y + row_height),
+                        ImGui::GetColorU32(ImGuiCol_HeaderHovered));
+                }
+                else if (is_active) {
+                    ImGui::GetWindowDrawList()->AddRectFilled(
+                        row_pos,
+                        ImVec2(row_pos.x + row_width, row_pos.y + row_height),
+                        ImGui::GetColorU32(ImGuiCol_Header));
+                }
+                ImGui::SetCursorScreenPos(row_pos);
             }
 
             if (is_active) {
@@ -159,6 +211,11 @@ void QuestTrackerWindow::Draw(IDirect3DDevice9*)
                 ImGui::TextUnformatted("[ready]");
                 ImGui::PopStyleColor();
             }
+
+            if (allow_select) {
+                ImGui::SetCursorScreenPos(ImVec2(row_pos.x, row_pos.y + row_height));
+            }
+            ImGui::PopID();
         }
     }
 

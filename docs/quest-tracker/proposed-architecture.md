@@ -97,7 +97,7 @@ Designed to be **unit-testable**. Concrete test harness/target is a Phase 2 deci
 
 ### `QuestTrackerWindow`
 
-- New `ToolboxWindow` (or module + window pair) for read-only display and later manual corrections / export.
+- New `ToolboxWindow` (or module + window pair) for live display, active-quest click selection, and later manual corrections / export.
 - Register later in `ToolboxSettings::optional_modules` only (expected minimal production touch).
 - Settings via `SettingsDoc`; progress data via owned JSON store.
 

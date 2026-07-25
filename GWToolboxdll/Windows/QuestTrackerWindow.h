@@ -22,7 +22,7 @@ public:
     [[nodiscard]] const char* Name() const override { return "Quest Tracker"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Read-only live quest log, selected quest objectives, and mission objectives";
+        return "Live quest log, active quest selection, quest objectives, and mission objectives";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_LIST; }
 
@@ -59,6 +59,7 @@ private:
 
     QuestObservationService observation_;
     uint64_t cached_revision_ = 0;
+    bool terminating_ = false;
 
     std::unordered_map<GW::Constants::QuestID, std::unique_ptr<GuiUtils::EncString>> name_decoders_;
     std::unordered_map<ObjectiveKey, std::unique_ptr<GuiUtils::EncString>, ObjectiveKeyHash> quest_objective_decoders_;

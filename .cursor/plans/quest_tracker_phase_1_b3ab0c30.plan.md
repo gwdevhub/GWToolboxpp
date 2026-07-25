@@ -1,6 +1,6 @@
 ---
 name: Quest Tracker Phase 1
-overview: "Implement Phase 1 only: a safe observation-only QuestTrackerWindow backed by QuestObservationService with immutable snapshot publication across Update/Draw, a deterministic loading state machine, persistent EncString decode cache, throttled RequestQuestInfoId, and a fixed read-only UI layout. No persistence or history."
+overview: "Implement Phase 1: QuestTrackerWindow with QuestObservationService, immutable snapshots, and clickable rows to set the game's active quest (narrow user-initiated mutation). No persistence or history."
 todos:
   - id: p1-obs-service
     content: Add QuestObservationService (hooks, immutable snapshot publish, loading SM, throttle, idempotent teardown)
@@ -233,18 +233,23 @@ Callbacks: lightweight, no throw, no disk I/O, no GWCA pointer stash.
 
 ---
 
-## Read-only UI (fixed layout — no ambiguity)
+## Quest list UI (fixed layout — no ambiguity)
 
-Window name: `"Quest Tracker"`; icon e.g. `ICON_FA_SCROLL`.
+Window name: `"Quest Tracker"`; icon e.g. `ICON_FA_LIST`.
 
 `Draw` always uses this structure:
 
-1. **Quest name list** — one row per quest in the snapshot; highlight the row whose `quest_id == active_quest_id` (when not `mission_mode`); show an in-log completed badge when `in_log_completed` (label as ready / in-log completed — **not** permanent history). **No objective bullets inline in this list.**
-2. **Active quest details** — separate section below the list: objectives for the **active quest only** (lookup by `active_quest_id` in `quests`). If none selected (`QuestID::None`) or active quest missing from log, show a short empty state. Completed objectives grayed (ActiveQuestWidget-style colors allowed).
-3. **Mission objectives** — separate section, shown when `mission_mode` is active (and/or mission objectives present while in mission mode). Fed only from `mission_objectives`. When `mission_mode`, this is the selected/active objective display.
-4. If `snap->loading` or `!snap->world_ready`: status text (“Loading…”) instead of inventing quest rows.
+1. **Quest name list** — one full-width clickable row per quest; highlight active in green (`snap->active_quest_id`); show `[ready]` when `in_log_completed`. **No objective bullets inline.** Single left click enqueues `GW::QuestMgr::SetActiveQuestId` on the game thread (quest_id by value only); already-active click is a no-op. Disabled while loading, `!world_ready`, `mission_mode`, or terminating. Tooltip: "Click to set active quest". No double-click travel. Do not force reselection after map load — game active quest remains authoritative.
+2. **Active quest details** — separate section: objectives for the **active quest only**. Empty state when none / missing.
+3. **Mission objectives** — separate section when `mission_mode`.
+4. If `snap->loading` or `!snap->world_ready`: “Loading…”.
 
-No buttons that send abandon / set-active / travel. Read-only.
+### Active-quest click (narrow mutation)
+
+- User-initiated only; does **not** accept, abandon, complete, or reward quests.
+- Does **not** mutate published `LiveQuestView`, add local selection state, or write selection into persistence / contract history.
+- Authoritative selection remains `snap->active_quest_id` after existing `kClient/ServerActiveQuestChanged` refresh.
+- Contract `currentState="active"` continues to mean progress presence, not temporary UI selection.
 
 ---
 
@@ -287,6 +292,9 @@ Compilation alone does not verify game-state behavior.
 - [ ] Zone: `kMapLoaded` may arrive **before** loading screen disappears → dirty stays set; first world-ready frame snapshots correctly; no crash; no completion inferred from clears
 - [ ] Repeated **enable/disable** cycles: idempotent teardown/init; no leftover callbacks; decode cache cleared on terminate
 - [ ] While quests change, **Update and Draw** run concurrently without crashes or corrupted/torn rows (immutable snapshot publish)
+- [ ] Clicking a normal quest row sets the game's active quest (highlight + details update; GW quest log/marker update)
+- [ ] Clicking the already-active quest is a no-op; no selection in mission_mode / loading / terminating
+- [ ] Map transition: tracker follows game active quest (no forced reselection of prior click)
 - [ ] Disable module / terminate: clean teardown
 
 ---
@@ -299,8 +307,9 @@ Compilation alone does not verify game-state behavior.
 | EncString every frame | Persistent window decode cache; `reset` only on encoded change |
 | Encoded strings change underfoot | Copy wchars into snapshot `std::wstring` during snapshot only |
 | `ParseQuestObjectives` side-effect requests | Do not call it; own parse + `steady_clock` throttle + audio block |
-| Custom marker pollution | Always filter `0xfdd` |
-| Mission vs quest confusion | Separate vectors; fixed UI sections |
+| Custom marker pollution | Always filter `0xfdd`; cannot select via click validation |
+| SetActiveQuestId from Draw | Enqueue on `GW::GameThread` with quest_id by value; revalidate on game thread |
+| Mission vs quest confusion | Separate vectors; fixed UI sections; no click select in mission_mode |
 | `kMapLoaded` before load UI gone | Dirty retained until world-ready; loading-invalid view |
 | Enable mid-map | Initialize marks all dirty |
 | Callback re-entrancy / throw | Dirty flags only in callbacks; no I/O; no throw |
@@ -312,6 +321,8 @@ Compilation alone does not verify game-state behavior.
 ## Deferred to Phase 2+
 
 UUID-keyed persistence/history, abandon/reward correlation, mission/bonus bitsets, reducer unit tests, export/manual/Codex.
+
+**Prerequisite-based historical completion inference (backlog only):** only strict mandatory completion prerequisites may be used; inferred completion must remain distinguishable from observed and manual completion; **do not implement in Phase 1.**
 
 ## Phase B3 note (documentation only)
 
