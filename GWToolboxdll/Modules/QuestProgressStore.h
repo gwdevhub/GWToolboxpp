@@ -1,0 +1,96 @@
+#pragma once
+
+// Per-account quest progress store coordinator (Batch 2B). Offline-testable via explicit paths.
+// Internal persistence only — not Contract v1 export. No GWCA / UI / lifecycle wiring.
+
+#include <Modules/QuestProgressJsonCodec.h>
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+
+namespace QuestProgress {
+
+struct AccountStorePaths {
+    std::filesystem::path directory;
+    std::filesystem::path primary;
+    std::filesystem::path backup;
+    std::filesystem::path tmp;
+};
+
+enum class StoreOpStatus : uint8_t {
+    Ok = 0,
+    Empty,
+    RecoveredFromBak,
+    LockTimeout,
+    LockFailed,
+    UnsupportedDiskMajor,
+    MergeConflict,
+    CodecError,
+    IoError,
+    ValidationError,
+};
+
+enum class WaitAcquireKind : uint8_t {
+    Acquired = 0,
+    Abandoned,
+    Timeout,
+    Failed,
+};
+
+struct StoreDiagnostics {
+    std::vector<std::string> messages;
+    CodecDiagnostics codec;
+    unsigned long win_error = 0;
+    bool abandoned_lock = false;
+    bool dirty_retained = false;
+};
+
+struct LoadStoreResult {
+    StoreOpStatus status = StoreOpStatus::IoError;
+    AccountProgressStore store;
+    StoreDiagnostics diagnostics;
+};
+
+struct SaveStoreResult {
+    StoreOpStatus status = StoreOpStatus::IoError;
+    AccountProgressStore merged;
+    StoreDiagnostics diagnostics;
+    bool used_move_file_ex = false;
+    bool used_replace_file = false;
+};
+
+struct MergeStoreResult {
+    StoreOpStatus status = StoreOpStatus::MergeConflict;
+    AccountProgressStore merged;
+    StoreDiagnostics diagnostics;
+};
+
+// Path helpers (no I/O). account_key must already be NormalizeAccountKey()'d.
+AccountStorePaths BuildAccountStorePaths(
+    const std::filesystem::path& quest_progress_dir,
+    std::string_view normalized_account_key);
+
+// Mutex: Local\GWToolbox.QuestProgress.<16-hex FNV-1a-64 of UTF-8 account key>
+std::string BuildAccountMutexName(std::string_view normalized_account_key);
+
+// Testable classification of WaitForSingleObject results (do not use GetLastError for abandoned).
+WaitAcquireKind ClassifyWaitResult(unsigned long wait_result);
+
+MergeStoreResult MergeAccountStores(
+    const AccountProgressStore& disk,
+    const AccountProgressStore& memory);
+
+// Load primary; on missing → empty Ok; on empty/malformed → try .bak; never deletes files.
+LoadStoreResult LoadAccountStore(
+    const std::filesystem::path& quest_progress_dir,
+    std::string_view account_key);
+
+// Under mutex: re-read, merge memory into disk, atomic write. Timeout retains dirty (caller keeps memory).
+SaveStoreResult SaveMergedAccountStore(
+    const std::filesystem::path& quest_progress_dir,
+    std::string_view account_key,
+    const AccountProgressStore& memory_store,
+    unsigned long lock_timeout_ms = 2000);
+
+} // namespace QuestProgress

@@ -246,9 +246,12 @@ source_group(Generated FILES ${CMAKE_CURRENT_BINARY_DIR}/gwtoolboxdll_export.h)
 target_precompile_headers(GWToolboxdll PRIVATE "stdafx.h")
 source_group(Generated REGULAR_EXPRESSION cmake_pch)
 
-# Pure reducer compiles without DLL PCH so QuestProgressTests can reuse the same TU.
+# Pure quest-progress TUs compile without DLL PCH so QuestProgressTests can reuse them.
 set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressReducer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressJsonCodec.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressStore.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Utils/AtomicJsonFile.cpp"
     PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
 target_compile_definitions(GWToolboxdll PRIVATE

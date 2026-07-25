@@ -1,28 +1,14 @@
 #include <Modules/QuestProgressDomain.h>
 #include <Modules/QuestProgressReducer.h>
 
-#include <cstdio>
+#include "test_assert.h"
+
 #include <string>
 #include <vector>
 
 using namespace QuestProgress;
 
 namespace {
-
-int g_failed = 0;
-int g_passed = 0;
-
-void Expect(bool condition, const char* name)
-{
-    if (condition) {
-        ++g_passed;
-        std::printf("PASS %s\n", name);
-    }
-    else {
-        ++g_failed;
-        std::printf("FAIL %s\n", name);
-    }
-}
 
 CharacterProgress EmptyCharacter(const std::string& key, const std::string& display = {})
 {
@@ -631,6 +617,8 @@ int main()
     TestDuplicateObjectiveIndexDeterministic();
     TestCanonicalTimestampContract();
 
-    std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
-    return g_failed == 0 ? 0 : 1;
+    RunBatch2BStoreTests();
+
+    std::printf("\n%d passed, %d failed\n", g_test_passed, g_test_failed);
+    return g_test_failed == 0 ? 0 : 1;
 }
