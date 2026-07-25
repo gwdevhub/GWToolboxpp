@@ -28,6 +28,7 @@ void QuestObservationService::Initialize()
     RegisterCallbacks();
     MarkAllDirty();
     loading_transition_pending_ = false;
+    request_cycle_reset_pending_ = false;
     published_loading_invalid_ = false;
 }
 
@@ -81,6 +82,7 @@ void QuestObservationService::Terminate()
     active_quest_dirty_ = false;
     mission_objectives_dirty_ = false;
     loading_transition_pending_ = false;
+    request_cycle_reset_pending_ = false;
     published_loading_invalid_ = false;
 
     auto empty = std::make_shared<LiveQuestView>();
@@ -298,12 +300,12 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
         case GW::UI::UIMessage::kStartMapLoad:
             MarkAllDirty();
             loading_transition_pending_ = true;
-            ResetRequestAttemptCycle();
+            request_cycle_reset_pending_ = true;
             break;
         case GW::UI::UIMessage::kMapLoaded:
             MarkAllDirty();
             published_loading_invalid_ = false;
-            ResetRequestAttemptCycle();
+            request_cycle_reset_pending_ = true;
             break;
         default:
             break;
@@ -313,6 +315,11 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
 void QuestObservationService::Update(float)
 {
     if (terminated_) return;
+
+    if (request_cycle_reset_pending_) {
+        ResetRequestAttemptCycle();
+        request_cycle_reset_pending_ = false;
+    }
 
     if (loading_transition_pending_) {
         PublishLoadingInvalid();
