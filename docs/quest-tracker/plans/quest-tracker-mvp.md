@@ -20,7 +20,8 @@ Ship a safe, observation-only quest tracker in this GWToolboxpp fork: live quest
 | `ActiveQuestWidget` | Active quest + mission-objective display |
 | `CompletionWindow` | Mission/bonus persistence reference only |
 | `DialogModule::QuestDialogType` | Correlated REWARD / TAKE dialog encoding |
-| Contract v1 | [`docs/contracts/quest_progress_contract_v1.md`](../../contracts/quest_progress_contract_v1.md) |
+| Contract v1 | [`docs/contracts/quest_progress_contract_v1.md`](../../contracts/quest_progress_contract_v1.md) (mirrored from GuildWarsCodex; Toolbox = producer, Codex = consumer) |
+| Capability notes | [`docs/contracts/quest_progress_contract_v1_toolbox_capability_notes.md`](../../contracts/quest_progress_contract_v1_toolbox_capability_notes.md) (non-normative) |
 
 See [repository-investigation.md](../repository-investigation.md).
 
@@ -140,6 +141,23 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 
 ## Phases
 
+### Phase B3 — Contract v1 documentation synchronization (complete for docs)
+
+**Done in this documentation phase**
+
+- Mirrored canonical Contract files from GuildWarsCodex (`quest_progress_contract_v1.md` + example JSON)
+- Toolbox-local capability notes (non-normative)
+- Cursor rules / doc references for producer/consumer roles and honesty invariants
+
+**Explicitly not done by Phase B3**
+
+- No Contract exporter / parser implementation
+- No history persistence / `QuestProgressStore` / `QuestHistoryStore`
+- No new quest observation production work started by this task
+- Observation capabilities are **not** “complete” merely because Contract docs exist
+
+**Next:** any further Toolbox implementation phase (observation hardening, persistence, or export) must be **separately approved**.
+
 ### Phase 1 — Read-only list / objectives
 
 **Scope**
@@ -172,10 +190,11 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 
 **Scope**
 
-- Export/import per contract v1
+- Export/import per mirrored contract v1 (byte-identical `docs/contracts/`)
 - Manual complete/abandon with `manual` confidence
 - `mission_completion_data` from owned bitset reads (separate from quest-log states)
 - Idempotent import; reject unsupported major versions
+- Stable structured identity + SHA-256 fingerprints; no runtime `std::hash`
 
 **Exit criteria:** sample Codex-compatible file validated; manual corrections round-trip
 

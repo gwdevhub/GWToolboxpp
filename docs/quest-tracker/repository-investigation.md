@@ -99,7 +99,8 @@ Keyed today largely by character **name** plus an account string field — the t
 | `DailyQuests` | [`DailyQuestsWindow.*`](../../GWToolboxdll/Windows/DailyQuestsWindow.cpp) | Rotation calendars; incidental quest-log name checks |
 | `InfoWindow` quest section | [`InfoWindow.cpp`](../../GWToolboxdll/Windows/InfoWindow.cpp) | Debug: active quest / missing info / `RequestQuestInfo` |
 | World map / minimap | `WorldMapWidget`, `SymbolsRenderer` | Markers, set-active, colors via `QuestMgr` / `QuestModule` |
-| Contract | [`docs/contracts/quest_progress_contract_v1.md`](../contracts/quest_progress_contract_v1.md) | Export schema, sources, confidence |
+| Contract | [`docs/contracts/quest_progress_contract_v1.md`](../contracts/quest_progress_contract_v1.md) | Mirrored GuildWarsCodex Contract v1 (GWToolboxpp = producer, Codex = consumer) |
+| Capability notes | [`docs/contracts/quest_progress_contract_v1_toolbox_capability_notes.md`](../contracts/quest_progress_contract_v1_toolbox_capability_notes.md) | Non-normative observability vs Contract concepts |
 
 ## GWCA surfaces (summary)
 
@@ -130,7 +131,7 @@ Full reliability analysis: [data-availability.md](data-availability.md).
 | Permanent turn-in history | No game API; no Toolbox quest history store |
 | Confidence / disappearance semantics | Not modeled in production UI |
 | Character UUID–keyed quest progress | Not for quests (Completion uses name-centric map) |
-| Codex export | Contract exists; no producer yet |
+| Codex export | Mirrored Contract v1 docs present; **no producer/exporter implemented** |
 
 ## Upstream-safety notes
 

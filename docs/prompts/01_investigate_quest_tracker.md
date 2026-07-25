@@ -4,6 +4,7 @@ Use investigate-repository, inspect-gwca-state, and plan-toolbox-feature.
 Inspect QuestModule, ActiveQuestWidget, CompletionWindow, relevant GWCA QuestManager/StoC/UI APIs, character/account identification, map callbacks, persistence, registration, and build/test workflow.
 Determine reliability of current character/account, quest log, selected quest, objective text/flags, quest added/removed/abandoned/rewarded, permanent completion, mission/bonus completion, character switching, and reconstruction while Toolbox was offline.
 Never treat disappearance as completion.
+GWToolboxpp is the Quest Progress Contract v1 producer; GuildWarsCodex is the consumer. The Contract is observational (no gameplay automation). Preserve source/confidence; `producer.version` is not event identity. Exporters must conform to mirrored `docs/contracts/` files; Contract changes require Codex synchronization.
 Create docs/quest-tracker/repository-investigation.md, data-availability.md, proposed-architecture.md, and plans/quest-tracker-mvp.md.
 Plan phases: 1 read-only list/objectives; 2 per-character persistence/history; 3 export/manual corrections/Codex compatibility.
 Cite concrete files and symbols. End with STOP. Do not implement.

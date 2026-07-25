@@ -185,10 +185,17 @@ States/sources/confidence match contract v1 where applicable: `active`, `objecti
 - **Test integration decision**: document reducer as unit-testable; choose concrete harness/target separately (do not assume new test executable yet). Clarify TestHarness ≠ CTest
 
 ### Phase 3 — Export / manual corrections / Codex
-- Export/import envelope per [quest_progress_contract_v1.md](docs/contracts/quest_progress_contract_v1.md)
+- Export/import envelope per mirrored [quest_progress_contract_v1.md](docs/contracts/quest_progress_contract_v1.md) (GWToolboxpp producer, GuildWarsCodex consumer)
 - Manual mark complete/abandon with `confidence=manual`
 - Include `mission_completion_data` from owned GWCA bitset reads (separate from quest-log states)
 - Idempotent import; reject unsupported major schema versions
+- Stable structured identity + SHA-256 fingerprints; no runtime `std::hash`; `producer.version` not in identity
+
+### Phase B3 — Contract documentation synchronization (docs-only; complete)
+- Canonical Contract files mirrored byte-for-byte from GuildWarsCodex
+- Capability notes + Cursor rules updated
+- **No** exporter, history persistence, or new production implementation started by this phase
+- Further implementation phases require separate approval
 
 ### Explicit non-goals
 - Automate take/abandon/reward/travel/combat; fabricate completion from disappearance; runtime dependency on CompletionWindow; mass upstream refactors; dependency updates; committing to a new test executable in this investigation
