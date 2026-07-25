@@ -66,7 +66,7 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 
 ## UI
 
-- Phase 1: read-only list + objectives (quest vs mission channels separated)
+- Phase 1: live list + objectives (quest vs mission channels separated); clickable rows set the game's active quest (narrow user-initiated mutation; not progress persistence)
 - Phase 2: history visibility / character context
 - Phase 3: manual corrections + export/import controls
 
@@ -114,12 +114,15 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 ### Phase 1
 
 - [ ] Map load shows current quest log (excluding `0xfdd`)
+- [ ] Clicking a quest row sets the game's active quest (highlight + details; native quest log/marker)
+- [ ] Clicking already-active / mission_mode / loading does not mutate selection
 - [ ] Active quest selection updates list/highlight
 - [ ] Objective bullets update after `kQuestDetailsChanged` path (complete vs incomplete)
 - [ ] In-log `IsCompleted()` reflected without claiming permanent history
 - [ ] Mission objectives path (`qid == -1` / `kObjective*`) does not corrupt quest-log rows
 - [ ] Custom marker set/clear does not appear as real quest progress
 - [ ] No requests every frame when objectives missing (throttle observable)
+- [ ] Map transition follows game active quest (no forced reselection)
 
 ### Phase 2
 
@@ -158,7 +161,7 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 
 **Next:** any further Toolbox implementation phase (observation hardening, persistence, or export) must be **separately approved**.
 
-### Phase 1 — Read-only list / objectives
+### Phase 1 — Live list / objectives / active-quest click
 
 **Scope**
 
@@ -168,8 +171,9 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 - Throttled `RequestQuestInfoId`
 - HookEntry ownership and copy-out rules
 - Settings only (no progress history file yet)
+- Clickable normal quest rows enqueue `SetActiveQuestId` on the game thread; refresh via existing active-quest callbacks; not stored in contract history
 
-**Out of scope:** persistence of history, export, manual completion, CompletionWindow calls
+**Out of scope:** persistence of history, export, manual completion, CompletionWindow calls, accept/abandon/reward, travel-on-click, map-load forced reselection, prerequisite inference
 
 **Exit criteria:** builds; Phase 1 in-game checklist passes
 
@@ -207,6 +211,7 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 - Shared library of quest canon metadata (names, campaigns) — out of band from progress
 - Dedicated CTest executable (only if Phase 2 decision requires it)
 - UI polish, filters, search, multi-account browser
+- **Prerequisite-based historical completion inference:** only strict mandatory completion prerequisites; inferred completion distinguishable from observed/manual; not Phase 1
 
 ## Upstream-safety checklist (when implementing)
 
