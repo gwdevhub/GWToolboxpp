@@ -59,12 +59,14 @@ private:
     static constexpr GW::Constants::QuestID custom_marker_quest_id =
         static_cast<GW::Constants::QuestID>(0x0000fdd);
     static constexpr auto request_cooldown = std::chrono::seconds(2);
+    static constexpr int max_request_attempts = 3;
     static constexpr uint32_t OBJECTIVE_FLAG_BULLET = 0x1;
     static constexpr uint32_t OBJECTIVE_FLAG_COMPLETED = 0x2;
 
     void RegisterCallbacks();
     void UnregisterCallbacks();
     void MarkAllDirty();
+    void ResetRequestAttemptCycle();
     void Publish(std::shared_ptr<const LiveQuestView> view);
     void PublishLoadingInvalid();
     bool IsWorldReady() const;
@@ -72,7 +74,8 @@ private:
     void SnapshotQuestLog(LiveQuestView& view) const;
     void SnapshotActiveQuest(LiveQuestView& view) const;
     void SnapshotMissionObjectives(LiveQuestView& view) const;
-    void RequestMissingQuestInfo(const LiveQuestView& view);
+    void SyncPendingRequestsFromSnapshot(const LiveQuestView& view);
+    void ProcessPendingRequests();
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* lparam);
 
     static void ParseQuestObjectivesOwned(const wchar_t* objectives, std::vector<OwnedObjective>& out);
@@ -85,6 +88,7 @@ private:
     bool quest_log_dirty_ = false;
     bool active_quest_dirty_ = false;
     bool mission_objectives_dirty_ = false;
+    bool loading_transition_pending_ = false;
     bool published_loading_invalid_ = false;
 
     uint64_t next_revision_ = 1;
@@ -94,8 +98,7 @@ private:
 
     struct RequestState {
         std::chrono::steady_clock::time_point last_request{};
-        bool requested_since_details = false;
+        int attempts = 0;
     };
     std::unordered_map<GW::Constants::QuestID, RequestState> request_state_;
-    std::unordered_set<GW::Constants::QuestID> clear_inflight_ids_;
 };

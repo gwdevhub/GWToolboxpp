@@ -247,7 +247,7 @@ namespace {
         ObserverPartyWindow::Instance(),
         ObserverExportWindow::Instance(),
         CompletionWindow::Instance(),
-        QuestTrackerWindow::Instance(),
+        {QuestTrackerWindow::Instance(), false},
         RerollWindow::Instance(),
         PartyStatisticsWindow::Instance(),
         DupingWindow::Instance(),
