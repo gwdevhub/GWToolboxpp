@@ -1,7 +1,7 @@
 # Quest Tracker Phase 2 — Persistence Plan (revised)
 
-**Status:** Phase 2 plan finalized (docs); Batch 2A implementation proceeds separately  
-**Branch:** `feature/quest-tracker-phase-2-persistence` @ `8c5ca8c8`  
+**Status:** Phase 2 plan finalized; Batch 2A foundation landed (`21eb1c8e`); Batch 2A.1 review hardening in progress
+**Branch:** `feature/quest-tracker-phase-2-persistence`
 **Planning todos:** plan doc written; MVP pointer updated; docs commit precedes Batch 2A.
 
 ---
@@ -229,19 +229,55 @@ Stable internal event id, deterministic from:
 
 ```text
 semanticEventKey = hash(
-  characterKey, gameQuestId, eventType, state, source, confidence,
-  objectiveFingerprint, optional pairingPayloadFingerprint
+  gameQuestId, eventType, state, source, confidence,
+  objectiveFingerprint, evidenceKind
 )
 ```
 
+- **Does not include `characterKey`.** Phase 2 keys are per-character history identity and MUST only be compared within a single character record.
+- Cross-character / global event identity would require adding `characterKey` (or account+character scope) in a later phase if needed.
+- Timestamp is excluded.
 - Stored on every appended history row in Phase 2 (not deferred to Phase 3).
-- Phase 3 may later expose Contract `eventId` (e.g. SHA-256 hex) derived from the same inputs; Phase 2 keeps an internal stable key (hex string of the hash is fine).
+- Phase 3 may later expose Contract `eventId` (e.g. SHA-256 hex) derived from the same inputs; Phase 2 keeps an internal stable key (FNV-1a-64 hex).
+- UTF-16 objective content fingerprints hash native-endian code units — local/internal only; MUST NOT become a cross-platform Contract fingerprint without canonical byte encoding.
+
+### Objective canonicalization
+
+- Objectives are sorted by `(index, completed, content_fingerprint)` before keying.
+- Duplicate indices are allowed only after deterministic canonicalization; duplicate-index input order MUST NOT change `semanticEventKey`.
+- Duplicate indices set a diagnostic (`duplicate_objective_indices`).
 
 ### Idempotence rules
 
 1. Unchanged snapshot vs previous reduce input → **no history append**, **no immediate disk dirty** for progress content.
-2. Duplicate semantic event (same `semanticEventKey` already last or present in quest history) → skip append.
+2. Duplicate semantic event (same `semanticEventKey` already present in quest history) → skip append.
 3. `lastObservedAt`-only refresh → see heartbeat policy below (not an immediate write).
+
+### Late exact evidence upgrades
+
+Exact same-quest abandon/REWARD evidence may arrive in a **later** `Reduce` after presence-loss already recorded `unknown`/`uncertain`:
+
+- Evaluate actionable evidence **before** the repeated presence-loss short-circuit.
+- `unknown`/`uncertain` + matching Abandon → `abandoned_observed` / `probable`.
+- `unknown`/`uncertain` + matching REWARD + history previously showed `ready_for_reward` → `completed_observed` / `probable` with `completedAt`.
+- `ENQUIRE_REWARD` alone never completes.
+- Non-matching evidence never upgrades another quest.
+- Duplicate late evidence is idempotent (no duplicate history rows).
+
+### Conflicting evidence policy
+
+- Multiple actionable evidence rows for the **same** quest in one input (`Abandon` + `Reward`) are a **conflict**.
+- Emit diagnostic; **do not** silently pick by vector order.
+- Disappeared quest falls back to `unknown`/`uncertain` (no abandon/complete inference).
+- Duplicate identical actionable rows (e.g. two `Abandon`) are not a conflict.
+- `ENQUIRE_REWARD` is non-actionable and ignored for conflict detection.
+
+### Timestamp input contract
+
+- Reducer timestamps MUST be canonical UTC ISO-8601 with fixed-width fields and `Z` suffix: `YYYY-MM-DDTHH:MM:SS.sssZ`.
+- Non-canonical / malformed timestamps are rejected with diagnostic; history is not modified.
+- Batch 2C `SessionIdentityBinder` / input adapters MUST normalize to this form before calling `Reduce`.
+- Lexicographic compare is used only after canonical validation (no locale-dependent parsing in the reducer).
 
 ---
 
@@ -259,13 +295,13 @@ If session identity is ephemeral (no valid UUID): reduce into ephemeral memory o
 | C Objectives change | state `objective_progress` (unless ready); append if new `semanticEventKey` |
 | D In-log completed flag | state `ready_for_reward`; confirmed snapshot; append |
 | E Disappear, no exact pair | state `unknown`; confidence `uncertain`; **no** completedAt; append `presence_lost` |
-| F Abandon pair | Exact same `gameQuestId`: pending abandon evidence + remove → `abandoned_observed`, `game_event`, `probable` |
-| G Reward pair | Exact same `gameQuestId`: pending **REWARD** (turn-in) evidence + remove of that ready quest → `completed_observed`, `game_event`, `probable`. **`ENQUIRE_REWARD` alone is not turn-in evidence.** |
+| F Abandon pair | Exact same `gameQuestId`: abandon evidence + remove (same or later Reduce) → `abandoned_observed`, `game_event`, `probable` |
+| G Reward pair | Exact same `gameQuestId`: **REWARD** + remove of ready quest (same tick) OR late REWARD while `unknown` after history showed ready → `completed_observed`, `game_event`, `probable`. **`ENQUIRE_REWARD` alone is not turn-in evidence.** Conflicting Abandon+Reward → unknown, no inference. |
 | H Map load/unload | Expire unpaired pending evidence → unknown/uncertain; no invented completion |
 | I Toolbox disable/enable | Load account store under lock; offline gap (L) |
 | J Relogin | Rebind identity; L for missing quests |
 | K Character switch | Request flush for previous durable character; bind other key; never merge by name |
-| L Offline gap | Store quests absent from snap → unknown/uncertain; new → first observe; no auto-complete |
+| L Offline / session gap | Advisory `session_gap` context only; missing quests use the **same** safe unknown/uncertain policy as bare disappearance; new → first observe; no auto-complete |
 | M Mission | Update normalized `missions[]` by mapId; not quest disappearance |
 | N Dup | Identical snap/evidence → no-op |
 
@@ -298,6 +334,7 @@ If session identity is ephemeral (no valid UUID): reduce into ephemeral memory o
 | Reward turn-in | `kSendDialog` **REWARD** for quest Q then remove **Q** that was ready | **yes — same Q** | configurable (default 5s; validate) | completed_observed / probable | |
 | Enquire only | `ENQUIRE_REWARD` | n/a | — | **not** turn-in | May inform UI only; does not complete |
 | Arbitrary ready disappear + dialog type | mismatched / missing id | — | — | unknown/uncertain | Insufficient |
+| Conflicting Abandon+Reward same id | both actionable kinds | yes | — | unknown/uncertain | Order-independent; diagnostic; no inference |
 | Mission | bitset→mapId delta | mapId | — | mission record confirmed | |
 
 Pending evidence is owned POD (quest id + type + timestamp) in ObservationService; resolved in Update → reducer. Incomplete evidence expires to unknown. Pairing window is a named constant/setting; **pending runtime validation** before tightening confidence.
@@ -445,8 +482,8 @@ This prevents two GWToolbox processes from silently clobbering each other.
 ```powershell
 cmake --preset=vcpkg
 cmake --build build --config RelWithDebInfo --target QuestProgressTests
-.\build\bin\RelWithDebInfo\QuestProgressTests.exe
-# or path as produced by CMake; non-zero exit = failure (do not ignore)
+D:\Development\C++\GWToolboxpp\bin\RelWithDebInfo\QuestProgressTests.exe
+# CMAKE_RUNTIME_OUTPUT_DIRECTORY is <repo>/bin/<config>/
 echo $LASTEXITCODE   # must be 0
 ```
 
@@ -463,7 +500,7 @@ cmake --preset=vcpkg
 cmake --build build --config RelWithDebInfo --clean-first
 cmake --build build --config RelWithDebInfo --target GWToolboxdll
 cmake --build build --config RelWithDebInfo --target QuestProgressTests
-.\build\bin\RelWithDebInfo\QuestProgressTests.exe
+D:\Development\C++\GWToolboxpp\bin\RelWithDebInfo\QuestProgressTests.exe
 ```
 
 Note: `--clean-first --target GWToolboxdll` can remove `GWToolbox.exe`; rebuild `GWToolbox` if needed for in-game checks.
@@ -520,7 +557,17 @@ Note: `--clean-first --target GWToolboxdll` can remove `GWToolbox.exe`; rebuild 
 - [x] MVP pointer updated (`docs/quest-tracker/plans/quest-tracker-mvp.md`)
 - [x] First-file `MoveFileExW` vs existing `ReplaceFileW` documented
 - [x] Hash-based mutex naming + abandoned-mutex re-read documented
+- [x] Batch 2A reducer foundation landed
+- [x] semanticEventKey scoped per-character (no characterKey in key); compare only within character
+- [x] Late exact evidence, conflict rejection, duplicate-index canonicalization, UTC timestamp contract documented
 
-## STOP (planning)
+### Batch 2B persistence reminders (not implemented yet)
 
-Production Batch 2A is a separate implementation commit after this docs commit.
+- First file creation: `MoveFileExW(tmp, final, MOVEFILE_WRITE_THROUGH)`
+- Replacing existing file: `ReplaceFileW(final, tmp, bak, ...)` with required `.bak`
+- Mutex: `Local\GWToolbox.QuestProgress.<normalized-guid-or-fixed-length-hash>` (FNV-1a-64 hex of account key)
+- Abandoned mutex acquisition requires: re-read primary → validate → try `.bak` if necessary → merge only after recovery validation
+
+## STOP (planning / Batch 2A.1)
+
+Batch 2B (JSON codec / atomic store) is a separate approved implementation phase.
