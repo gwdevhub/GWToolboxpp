@@ -179,16 +179,19 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 
 ### Phase 2 — Per-character persistence / history
 
+**Plan (docs):** [`.cursor/plans/quest_tracker_phase_2_persistence.plan.md`](../../../.cursor/plans/quest_tracker_phase_2_persistence.plan.md) — revised; Batch 2A not started until approved.
+
 **Scope**
 
-- `account_uuid + character_uuid` stores
-- Append-only history for add / objective change / in-log ready_for_reward / remove-unknown / abandon-probable / reward-probable
-- Offline diff policy: unknown/uncertain only
-- Owned mission/bonus bitset observation
-- Malformed/old-version JSON parsing designed for tests
-- **Decision checkpoint:** how to run pure reducer unit tests (existing process, ad-hoc harness, or future target) — document choice before expanding test surface
+- Per-account files under `QuestProgress/` keyed by account UUID; characters by validated non-zero character UUID (ephemeral session if UUID missing/zero)
+- Append-only history with Phase 2 `semanticEventKey`; objective fingerprint = index + completion + normalized encoded content
+- Exact quest-id pairing for abandon / REWARD; `ENQUIRE_REWARD` alone ≠ turn-in; offline gap → unknown/uncertain only
+- Windows-safe atomic replace (`FlushFileBuffers` + `ReplaceFileW` + `.bak`); cross-process named mutex + merge-on-write
+- Normalized mapId mission records (not raw bit vectors); `storeVersion` major/minor
+- `QuestProgressTests` console target (2A domain/reducer; 2B codec/atomic-store)
+- Reserved domain states `available` / `completed_manual` never produced by Phase 2 reducer
 
-**Exit criteria:** persistence survives relog and character switch; disappearance never becomes completed
+**Exit criteria:** persistence survives relog and character switch; disappearance never becomes completed; no silent multi-process clobber
 
 ### Phase 3 — Export / manual corrections / Codex compatibility
 
@@ -209,7 +212,7 @@ Rules: no GWCA pointer retention past callback/frame; no disk I/O in callbacks; 
 - Promoting probable reward/abandon to confirmed (needs contract language + runtime traces)
 - StoC typed `QUEST_REMOVE` if GWCA gains structs (optional; UI path sufficient)
 - Shared library of quest canon metadata (names, campaigns) — out of band from progress
-- Dedicated CTest executable (only if Phase 2 decision requires it)
+- CTest integration (Phase 2 chose console `QuestProgressTests`; CTest wrapper still optional)
 - UI polish, filters, search, multi-account browser
 - **Prerequisite-based historical completion inference:** only strict mandatory completion prerequisites; inferred completion distinguishable from observed/manual; not Phase 1
 
