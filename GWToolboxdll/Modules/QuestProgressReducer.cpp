@@ -47,23 +47,18 @@ bool HasSemanticKey(const QuestProgress& quest, const std::string& key)
     return false;
 }
 
-EvidenceKind FindEvidence(const std::vector<QuestEvidence>& evidence, uint32_t quest_id)
-{
-    for (const auto& item : evidence) {
-        if (item.game_quest_id == quest_id) {
-            return item.kind;
-        }
-    }
-    return EvidenceKind::None;
-}
-
 bool IsIsoOlder(const std::string& a, const std::string& b)
 {
-    // Lexicographic compare is valid for zero-padded UTC ISO-8601 used by callers/tests.
+    // Lexicographic compare is valid only for canonical UTC ISO-8601 (validated upstream).
     if (a.empty() || b.empty()) {
         return false;
     }
     return a < b;
+}
+
+bool IsDigit(char c)
+{
+    return c >= '0' && c <= '9';
 }
 
 void AppendDiag(ReducerOutput& out, std::string message)
@@ -114,9 +109,27 @@ bool TryAppend(
     return true;
 }
 
-ProgressState PresentStateOrActive(const LiveQuestObservation& obs)
+void ApplyPresenceLost(
+    QuestProgress& quest,
+    ReducerOutput& out,
+    uint32_t quest_id,
+    const std::string& observed_at)
 {
-    return DerivePresentState(obs);
+    quest.state = ProgressState::Unknown;
+    quest.source = ProgressSource::GameSnapshot;
+    quest.confidence = Confidence::Uncertain;
+    quest.last_observed_at = observed_at;
+    quest.completed_at.reset();
+    auto event = MakeEvent(
+        quest_id,
+        HistoryEventType::PresenceLost,
+        ProgressState::Unknown,
+        ProgressSource::GameSnapshot,
+        Confidence::Uncertain,
+        observed_at,
+        quest.objectives,
+        EvidenceKind::None);
+    TryAppend(quest, out, std::move(event));
 }
 
 void ApplyPresentQuest(
@@ -126,8 +139,13 @@ void ApplyPresentQuest(
     const std::string& observed_at)
 {
     auto objectives = obs.objectives;
-    NormalizeObjectives(objectives);
-    const auto state = PresentStateOrActive(obs);
+    bool duplicate_indices = false;
+    NormalizeObjectives(objectives, &duplicate_indices);
+    if (duplicate_indices) {
+        out.diagnostics.duplicate_objective_indices = true;
+        AppendDiag(out, "duplicate objective indices canonicalized deterministically");
+    }
+    const auto state = DerivePresentState(obs);
 
     auto it = next.quests.find(obs.game_quest_id);
     if (it == next.quests.end()) {
@@ -210,7 +228,128 @@ void ApplyMissingQuest(
     }
     auto& quest = it->second;
 
-    // Already stably unknown from a prior presence-loss — timestamp touch only.
+    // Exact evidence is evaluated before the repeated presence-loss short-circuit so
+    // late abandon/reward in a later Reduce can upgrade unknown/uncertain.
+    const auto resolution = ResolveEvidenceForQuest(evidence, quest_id);
+
+    if (resolution == EvidenceResolution::Conflict) {
+        out.diagnostics.conflicting_evidence = true;
+        AppendDiag(out, "conflicting actionable evidence; refusing abandon/complete inference");
+        if (quest.state == ProgressState::Unknown
+            && quest.confidence == Confidence::Uncertain
+            && HasSemanticKey(
+                   quest,
+                   BuildSemanticEventKey(
+                       quest_id,
+                       HistoryEventType::PresenceLost,
+                       ProgressState::Unknown,
+                       ProgressSource::GameSnapshot,
+                       Confidence::Uncertain,
+                       quest.objectives,
+                       EvidenceKind::None))) {
+            quest.last_observed_at = observed_at;
+            out.touch_last_observed = true;
+            return;
+        }
+        ApplyPresenceLost(quest, out, quest_id, observed_at);
+        return;
+    }
+
+    if (resolution == EvidenceResolution::Abandon) {
+        if (quest.state == ProgressState::AbandonedObserved) {
+            auto event = MakeEvent(
+                quest_id,
+                HistoryEventType::Abandoned,
+                ProgressState::AbandonedObserved,
+                ProgressSource::GameEvent,
+                Confidence::Probable,
+                observed_at,
+                quest.objectives,
+                EvidenceKind::Abandon);
+            if (!TryAppend(quest, out, std::move(event))) {
+                quest.last_observed_at = observed_at;
+                out.touch_last_observed = true;
+            }
+            return;
+        }
+        if (quest.state == ProgressState::CompletedObserved) {
+            AppendDiag(out, "abandon evidence ignored for completed_observed quest");
+            quest.last_observed_at = observed_at;
+            out.touch_last_observed = true;
+            return;
+        }
+        quest.state = ProgressState::AbandonedObserved;
+        quest.source = ProgressSource::GameEvent;
+        quest.confidence = Confidence::Probable;
+        quest.last_observed_at = observed_at;
+        quest.completed_at.reset();
+        auto event = MakeEvent(
+            quest_id,
+            HistoryEventType::Abandoned,
+            ProgressState::AbandonedObserved,
+            ProgressSource::GameEvent,
+            Confidence::Probable,
+            observed_at,
+            quest.objectives,
+            EvidenceKind::Abandon);
+        if (!TryAppend(quest, out, std::move(event))) {
+            out.touch_last_observed = true;
+        }
+        return;
+    }
+
+    if (resolution == EvidenceResolution::Reward) {
+        if (quest.state == ProgressState::CompletedObserved) {
+            auto event = MakeEvent(
+                quest_id,
+                HistoryEventType::Completed,
+                ProgressState::CompletedObserved,
+                ProgressSource::GameEvent,
+                Confidence::Probable,
+                observed_at,
+                quest.objectives,
+                EvidenceKind::Reward);
+            if (!TryAppend(quest, out, std::move(event))) {
+                quest.last_observed_at = observed_at;
+                out.touch_last_observed = true;
+            }
+            return;
+        }
+        if (quest.state == ProgressState::AbandonedObserved) {
+            AppendDiag(out, "reward evidence ignored for abandoned_observed quest");
+            quest.last_observed_at = observed_at;
+            out.touch_last_observed = true;
+            return;
+        }
+        // Same-tick: still ready_for_reward. Late: unknown after presence_lost, history showed ready.
+        const bool ready_now = quest.state == ProgressState::ReadyForReward;
+        const bool late_from_unknown =
+            quest.state == ProgressState::Unknown && HistoryShowsReadyForReward(quest);
+        if (ready_now || late_from_unknown) {
+            quest.state = ProgressState::CompletedObserved;
+            quest.source = ProgressSource::GameEvent;
+            quest.confidence = Confidence::Probable;
+            quest.last_observed_at = observed_at;
+            quest.completed_at = observed_at;
+            auto event = MakeEvent(
+                quest_id,
+                HistoryEventType::Completed,
+                ProgressState::CompletedObserved,
+                ProgressSource::GameEvent,
+                Confidence::Probable,
+                observed_at,
+                quest.objectives,
+                EvidenceKind::Reward);
+            if (!TryAppend(quest, out, std::move(event))) {
+                out.touch_last_observed = true;
+            }
+            return;
+        }
+        AppendDiag(out, "reward evidence ignored without ready_for_reward prior progress");
+        // Fall through to unknown / presence-lost path.
+    }
+
+    // Enquire-only is non-actionable (ResolveEvidence returns None).
     if (quest.state == ProgressState::Unknown
         && quest.confidence == Confidence::Uncertain) {
         const auto key = BuildSemanticEventKey(
@@ -228,69 +367,7 @@ void ApplyMissingQuest(
         }
     }
 
-    const auto kind = FindEvidence(evidence, quest_id);
-
-    if (kind == EvidenceKind::Abandon) {
-        quest.state = ProgressState::AbandonedObserved;
-        quest.source = ProgressSource::GameEvent;
-        quest.confidence = Confidence::Probable;
-        quest.last_observed_at = observed_at;
-        quest.completed_at.reset();
-        auto event = MakeEvent(
-            quest_id,
-            HistoryEventType::Abandoned,
-            ProgressState::AbandonedObserved,
-            ProgressSource::GameEvent,
-            Confidence::Probable,
-            observed_at,
-            quest.objectives,
-            EvidenceKind::Abandon);
-        TryAppend(quest, out, std::move(event));
-        return;
-    }
-
-    if (kind == EvidenceKind::Reward && quest.state == ProgressState::ReadyForReward) {
-        quest.state = ProgressState::CompletedObserved;
-        quest.source = ProgressSource::GameEvent;
-        quest.confidence = Confidence::Probable;
-        quest.last_observed_at = observed_at;
-        quest.completed_at = observed_at;
-        auto event = MakeEvent(
-            quest_id,
-            HistoryEventType::Completed,
-            ProgressState::CompletedObserved,
-            ProgressSource::GameEvent,
-            Confidence::Probable,
-            observed_at,
-            quest.objectives,
-            EvidenceKind::Reward);
-        TryAppend(quest, out, std::move(event));
-        return;
-    }
-
-    // EnquireReward alone, mismatched reward (not ready), or no evidence → unknown.
-    if (kind == EvidenceKind::EnquireReward) {
-        AppendDiag(out, "enquire_reward alone is not turn-in evidence");
-    }
-    else if (kind == EvidenceKind::Reward) {
-        AppendDiag(out, "reward evidence ignored without ready_for_reward prior state");
-    }
-
-    quest.state = ProgressState::Unknown;
-    quest.source = ProgressSource::GameSnapshot;
-    quest.confidence = Confidence::Uncertain;
-    quest.last_observed_at = observed_at;
-    quest.completed_at.reset();
-    auto event = MakeEvent(
-        quest_id,
-        HistoryEventType::PresenceLost,
-        ProgressState::Unknown,
-        ProgressSource::GameSnapshot,
-        Confidence::Uncertain,
-        observed_at,
-        quest.objectives,
-        EvidenceKind::None);
-    TryAppend(quest, out, std::move(event));
+    ApplyPresenceLost(quest, out, quest_id, observed_at);
 }
 
 } // namespace
@@ -367,6 +444,23 @@ bool IsSyntheticQuestId(uint32_t game_quest_id)
     return game_quest_id == kSyntheticCustomMarkerQuestId;
 }
 
+bool IsCanonicalUtcTimestamp(std::string_view timestamp)
+{
+    // YYYY-MM-DDTHH:MM:SS.sssZ — fixed-width, Z suffix, no locale parsing.
+    if (timestamp.size() != 24) {
+        return false;
+    }
+    const auto at = [&](size_t i) { return timestamp[i]; };
+    for (size_t i : {0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18, 20, 21, 22}) {
+        if (!IsDigit(at(i))) {
+            return false;
+        }
+    }
+    return at(4) == '-' && at(7) == '-' && at(10) == 'T'
+        && at(13) == ':' && at(16) == ':' && at(19) == '.'
+        && at(23) == 'Z';
+}
+
 std::string FingerprintEncodedContent(std::u16string_view encoded)
 {
     // Strip trailing NULs so padding differences do not churn identity.
@@ -377,14 +471,33 @@ std::string FingerprintEncodedContent(std::u16string_view encoded)
     return ToHex64(hash);
 }
 
-void NormalizeObjectives(std::vector<ObjectiveObservation>& objectives)
+void NormalizeObjectives(
+    std::vector<ObjectiveObservation>& objectives,
+    bool* duplicate_indices_out)
 {
-    std::sort(objectives.begin(), objectives.end(),
-        [](const ObjectiveObservation& a, const ObjectiveObservation& b) {
-            return a.index < b.index;
-        });
     for (auto& objective : objectives) {
         objective.content_fingerprint = FingerprintEncodedContent(objective.encoded_content);
+    }
+    std::sort(objectives.begin(), objectives.end(),
+        [](const ObjectiveObservation& a, const ObjectiveObservation& b) {
+            if (a.index != b.index) {
+                return a.index < b.index;
+            }
+            if (a.completed != b.completed) {
+                return !a.completed && b.completed;
+            }
+            return a.content_fingerprint < b.content_fingerprint;
+        });
+
+    bool duplicates = false;
+    for (size_t i = 1; i < objectives.size(); ++i) {
+        if (objectives[i].index == objectives[i - 1].index) {
+            duplicates = true;
+            break;
+        }
+    }
+    if (duplicate_indices_out) {
+        *duplicate_indices_out = duplicates;
     }
 }
 
@@ -433,16 +546,68 @@ ProgressState DerivePresentState(const LiveQuestObservation& obs)
     return ProgressState::Active;
 }
 
+EvidenceResolution ResolveEvidenceForQuest(
+    const std::vector<QuestEvidence>& evidence,
+    uint32_t quest_id)
+{
+    bool saw_abandon = false;
+    bool saw_reward = false;
+    for (const auto& item : evidence) {
+        if (item.game_quest_id != quest_id) {
+            continue;
+        }
+        if (item.kind == EvidenceKind::Abandon) {
+            saw_abandon = true;
+        }
+        else if (item.kind == EvidenceKind::Reward) {
+            saw_reward = true;
+        }
+        // EnquireReward is non-actionable and ignored for resolution.
+    }
+    if (saw_abandon && saw_reward) {
+        return EvidenceResolution::Conflict;
+    }
+    if (saw_abandon) {
+        return EvidenceResolution::Abandon;
+    }
+    if (saw_reward) {
+        return EvidenceResolution::Reward;
+    }
+    return EvidenceResolution::None;
+}
+
+bool HistoryShowsReadyForReward(const QuestProgress& quest)
+{
+    if (quest.state == ProgressState::ReadyForReward) {
+        return true;
+    }
+    for (const auto& event : quest.history) {
+        if (event.state == ProgressState::ReadyForReward) {
+            return true;
+        }
+    }
+    return false;
+}
+
 ReducerOutput Reduce(const ReducerInput& input)
 {
     ReducerOutput out;
     out.next = input.previous;
-
-    if (input.previous.character_key.empty() && out.next.character_key.empty()) {
-        // Caller may supply key only on previous; keep empty if both empty.
-    }
     if (!input.previous.character_key.empty()) {
         out.next.character_key = input.previous.character_key;
+    }
+
+    if (!IsCanonicalUtcTimestamp(input.observed_at_utc)) {
+        out.diagnostics.invalid_timestamp = true;
+        AppendDiag(out, "rejected non-canonical UTC timestamp; history not modified");
+        return out;
+    }
+
+    if (!input.previous.last_reduced_at.empty()
+        && !IsCanonicalUtcTimestamp(input.previous.last_reduced_at)) {
+        out.diagnostics.invalid_timestamp = true;
+        AppendDiag(out, "previous last_reduced_at is non-canonical; refusing reduce");
+        return out;
     }
 
     if (input.treat_as_stale_if_older
@@ -462,13 +627,11 @@ ReducerOutput Reduce(const ReducerInput& input)
         present[obs.game_quest_id] = obs;
     }
 
-    // Update / insert present quests.
     for (const auto& [quest_id, obs] : present) {
         (void)quest_id;
         ApplyPresentQuest(out.next, out, obs, input.observed_at_utc);
     }
 
-    // Missing from snapshot: pair evidence or become unknown (including session_gap).
     std::vector<uint32_t> missing;
     for (const auto& [quest_id, quest] : out.next.quests) {
         (void)quest;
@@ -477,16 +640,14 @@ ReducerOutput Reduce(const ReducerInput& input)
         }
     }
     for (const auto quest_id : missing) {
-        // Evidence for a different quest must not affect this disappearance.
         ApplyMissingQuest(out.next, out, quest_id, input.evidence, input.observed_at_utc);
     }
 
-    // session_gap is informational for callers; missing-path already applies unknown.
+    // Advisory only — missing quests already use the same safe unknown policy.
     if (input.session_gap) {
         AppendDiag(out, "session_gap: missing quests resolved without fabricating completion");
     }
 
-    // Guard: never leave reserved states in output.
     for (auto& [quest_id, quest] : out.next.quests) {
         (void)quest_id;
         if (IsReservedState(quest.state)) {
@@ -497,7 +658,7 @@ ReducerOutput Reduce(const ReducerInput& input)
         }
     }
 
-    if (!out.diagnostics.rejected_stale) {
+    if (!out.diagnostics.rejected_stale && !out.diagnostics.invalid_timestamp) {
         out.next.last_reduced_at = input.observed_at_utc;
     }
 

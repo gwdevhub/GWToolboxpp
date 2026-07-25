@@ -56,12 +56,22 @@ enum class EvidenceKind : uint8_t {
     EnquireReward, // never turn-in by itself
 };
 
+// Result of resolving zero-or-more evidence rows for one quest id.
+enum class EvidenceResolution : uint8_t {
+    None = 0,      // no actionable evidence (incl. enquire-only)
+    Abandon,
+    Reward,
+    Conflict,      // Abandon + Reward (or other actionable conflict) in same input
+};
+
 struct ObjectiveObservation {
     uint32_t index = 0;
     bool completed = false;
     // Owned encoded objective content (UTF-16 code units); used for fingerprinting only.
+    // Fingerprint hashes native-endian char16_t bytes — local/internal identity only.
+    // Must not become a cross-platform Contract fingerprint without canonical byte encoding.
     std::u16string encoded_content;
-    // Filled by NormalizeObjective / BuildSemanticEventKey helpers.
+    // Filled by NormalizeObjectives / BuildSemanticEventKey helpers.
     std::string content_fingerprint;
 };
 
@@ -113,8 +123,11 @@ struct ReducerInput {
     CharacterProgress previous;
     std::vector<LiveQuestObservation> observed_quests;
     std::vector<QuestEvidence> evidence;
+    // Must be canonical UTC ISO-8601: YYYY-MM-DDTHH:MM:SS.sssZ (fixed-width, Z suffix).
+    // SessionIdentityBinder / input adapters (Batch 2C) must normalize before Reduce.
     std::string observed_at_utc;
-    // Offline / session gap: missing quests become unknown without pairing.
+    // Advisory session/offline-gap context. Missing quests still use the same safe
+    // unknown/uncertain policy; this flag does not invent completion/abandonment.
     bool session_gap = false;
     // Stale: observed_at older than previous.last_reduced_at → no mutations.
     bool treat_as_stale_if_older = true;
@@ -124,6 +137,9 @@ struct ReducerDiagnostics {
     std::vector<std::string> messages;
     bool rejected_stale = false;
     bool reserved_state_attempt = false;
+    bool conflicting_evidence = false;
+    bool duplicate_objective_indices = false;
+    bool invalid_timestamp = false;
 };
 
 struct ReducerOutput {
@@ -145,12 +161,23 @@ const char* ToString(EvidenceKind kind);
 bool IsReservedState(ProgressState state);
 bool IsSyntheticQuestId(uint32_t game_quest_id);
 
-// Normalize encoded content (strip trailing NULs) and return FNV-1a-64 hex fingerprint.
-std::string FingerprintEncodedContent(std::u16string_view encoded);
-void NormalizeObjectives(std::vector<ObjectiveObservation>& objectives);
+// Canonical UTC form required by the reducer: YYYY-MM-DDTHH:MM:SS.sssZ
+bool IsCanonicalUtcTimestamp(std::string_view timestamp);
 
-// Deterministic semantic identity (timestamp excluded). Algorithm: UTF-8 canonical
-// string → FNV-1a 64-bit → lowercase hex. Not cryptographic; collision assumption ~2^-64.
+// Normalize encoded content (strip trailing NULs) and return FNV-1a-64 hex fingerprint.
+// Local/internal only (native-endian UTF-16 code units) — not a Contract interchange fingerprint.
+std::string FingerprintEncodedContent(std::u16string_view encoded);
+
+// Sort by (index, completed, content_fingerprint). Duplicate indices are kept but ordered
+// deterministically; sets diagnostics.duplicate_objective_indices when duplicates exist.
+void NormalizeObjectives(
+    std::vector<ObjectiveObservation>& objectives,
+    bool* duplicate_indices_out = nullptr);
+
+// Deterministic semantic identity (timestamp and characterKey excluded).
+// Algorithm: UTF-8 canonical string → FNV-1a 64-bit → lowercase hex.
+// Phase 2: compare keys only within a single character record.
+// Not cryptographic; collision assumption ~2^-64. Not std::hash.
 std::string BuildSemanticEventKey(
     uint32_t game_quest_id,
     HistoryEventType event_type,
@@ -161,5 +188,11 @@ std::string BuildSemanticEventKey(
     EvidenceKind evidence_kind);
 
 ProgressState DerivePresentState(const LiveQuestObservation& obs);
+
+EvidenceResolution ResolveEvidenceForQuest(
+    const std::vector<QuestEvidence>& evidence,
+    uint32_t quest_id);
+
+bool HistoryShowsReadyForReward(const QuestProgress& quest);
 
 } // namespace QuestProgress
