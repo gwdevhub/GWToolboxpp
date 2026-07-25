@@ -27,6 +27,7 @@ void QuestObservationService::Initialize()
     terminated_ = false;
     RegisterCallbacks();
     MarkAllDirty();
+    loading_transition_pending_ = false;
     published_loading_invalid_ = false;
 }
 
@@ -76,10 +77,10 @@ void QuestObservationService::Terminate()
     UnregisterCallbacks();
     terminated_ = true;
     request_state_.clear();
-    clear_inflight_ids_.clear();
     quest_log_dirty_ = false;
     active_quest_dirty_ = false;
     mission_objectives_dirty_ = false;
+    loading_transition_pending_ = false;
     published_loading_invalid_ = false;
 
     auto empty = std::make_shared<LiveQuestView>();
@@ -95,6 +96,11 @@ void QuestObservationService::MarkAllDirty()
     quest_log_dirty_ = true;
     active_quest_dirty_ = true;
     mission_objectives_dirty_ = true;
+}
+
+void QuestObservationService::ResetRequestAttemptCycle()
+{
+    request_state_.clear();
 }
 
 void QuestObservationService::Publish(std::shared_ptr<const LiveQuestView> view)
@@ -191,7 +197,6 @@ void QuestObservationService::SnapshotActiveQuest(LiveQuestView& view) const
     view.active_quest_id = qid;
     view.mission_mode = static_cast<int32_t>(qid) == -1;
     if (!view.mission_mode && qid == custom_marker_quest_id) {
-        // Treat custom marker as no real selection for tracker highlighting
         view.active_quest_id = GW::Constants::QuestID::None;
     }
 }
@@ -228,30 +233,46 @@ LiveQuestView QuestObservationService::SnapshotAllChannels(uint64_t revision) co
     return view;
 }
 
-void QuestObservationService::RequestMissingQuestInfo(const LiveQuestView& view)
+void QuestObservationService::SyncPendingRequestsFromSnapshot(const LiveQuestView& view)
 {
-    if (terminated_ || !IsWorldReady()) return;
-
-    const auto now = std::chrono::steady_clock::now();
+    std::unordered_set<GW::Constants::QuestID> still_missing;
     for (const auto& quest : view.quests) {
         if (!quest.objectives_missing) continue;
         if (quest.quest_id == custom_marker_quest_id) continue;
         if (quest.quest_id == GW::Constants::QuestID::None) continue;
+        still_missing.insert(quest.quest_id);
+        request_state_.try_emplace(quest.quest_id);
+    }
 
-        auto& state = request_state_[quest.quest_id];
-        if (state.requested_since_details) continue;
+    for (auto it = request_state_.begin(); it != request_state_.end();) {
+        if (still_missing.contains(it->first)) {
+            ++it;
+        }
+        else {
+            it = request_state_.erase(it);
+        }
+    }
+}
+
+void QuestObservationService::ProcessPendingRequests()
+{
+    if (terminated_ || !IsWorldReady() || request_state_.empty()) return;
+
+    const auto now = std::chrono::steady_clock::now();
+    for (auto& [quest_id, state] : request_state_) {
+        if (state.attempts >= max_request_attempts) continue;
         if (state.last_request.time_since_epoch().count() != 0 && now - state.last_request < request_cooldown) {
             continue;
         }
 
         BlockQuestInfoSound();
-        GW::QuestMgr::RequestQuestInfoId(quest.quest_id, false);
+        GW::QuestMgr::RequestQuestInfoId(quest_id, false);
         state.last_request = now;
-        state.requested_since_details = true;
+        ++state.attempts;
     }
 }
 
-void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
+void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void*, void*)
 {
     if (terminated_) return;
 
@@ -261,13 +282,10 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
             quest_log_dirty_ = true;
             active_quest_dirty_ = true;
             break;
-        case GW::UI::UIMessage::kQuestDetailsChanged: {
+        case GW::UI::UIMessage::kQuestDetailsChanged:
+            // Snapshot decides whether the request remains pending
             quest_log_dirty_ = true;
-            if (wparam) {
-                const auto quest_id = *static_cast<GW::Constants::QuestID*>(wparam);
-                clear_inflight_ids_.insert(quest_id);
-            }
-        } break;
+            break;
         case GW::UI::UIMessage::kClientActiveQuestChanged:
         case GW::UI::UIMessage::kServerActiveQuestChanged:
             active_quest_dirty_ = true;
@@ -279,11 +297,13 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
             break;
         case GW::UI::UIMessage::kStartMapLoad:
             MarkAllDirty();
-            PublishLoadingInvalid();
+            loading_transition_pending_ = true;
+            ResetRequestAttemptCycle();
             break;
         case GW::UI::UIMessage::kMapLoaded:
             MarkAllDirty();
             published_loading_invalid_ = false;
+            ResetRequestAttemptCycle();
             break;
         default:
             break;
@@ -294,50 +314,55 @@ void QuestObservationService::Update(float)
 {
     if (terminated_) return;
 
-    for (const auto quest_id : clear_inflight_ids_) {
-        if (auto it = request_state_.find(quest_id); it != request_state_.end()) {
-            it->second.requested_since_details = false;
-        }
+    if (loading_transition_pending_) {
+        PublishLoadingInvalid();
+        loading_transition_pending_ = false;
+        // Dirty flags remain set until a successful world-ready snapshot
     }
-    clear_inflight_ids_.clear();
 
     const bool any_dirty = quest_log_dirty_ || active_quest_dirty_ || mission_objectives_dirty_;
-    if (!any_dirty) return;
 
-    if (!IsWorldReady()) {
-        if (!published_loading_invalid_) {
-            PublishLoadingInvalid();
+    if (any_dirty) {
+        if (!IsWorldReady()) {
+            if (!published_loading_invalid_) {
+                PublishLoadingInvalid();
+            }
+            // Keep dirty flags set; do not process pending requests while not ready
+            return;
         }
-        // Keep dirty flags set until a successful ready snapshot
-        return;
+
+        const auto previous = AcquireSnapshot();
+        const bool need_full = !previous || !previous->world_ready
+            || (quest_log_dirty_ && active_quest_dirty_ && mission_objectives_dirty_);
+        const bool snapshotted_quest_log = need_full || quest_log_dirty_;
+
+        LiveQuestView local;
+        if (need_full) {
+            local = SnapshotAllChannels(next_revision_++);
+        }
+        else {
+            local = *previous;
+            local.revision = next_revision_++;
+            local.loading = false;
+            local.world_ready = true;
+            if (quest_log_dirty_) SnapshotQuestLog(local);
+            if (active_quest_dirty_) SnapshotActiveQuest(local);
+            if (mission_objectives_dirty_) SnapshotMissionObjectives(local);
+        }
+
+        auto published = std::make_shared<const LiveQuestView>(std::move(local));
+        Publish(published);
+        published_loading_invalid_ = false;
+
+        quest_log_dirty_ = false;
+        active_quest_dirty_ = false;
+        mission_objectives_dirty_ = false;
+
+        if (snapshotted_quest_log) {
+            SyncPendingRequestsFromSnapshot(*published);
+        }
     }
 
-    // Prefer full refresh when all channels dirty or no prior ready view
-    const auto previous = AcquireSnapshot();
-    const bool need_full = !previous || !previous->world_ready
-        || (quest_log_dirty_ && active_quest_dirty_ && mission_objectives_dirty_);
-
-    LiveQuestView local;
-    if (need_full) {
-        local = SnapshotAllChannels(next_revision_++);
-    }
-    else {
-        local = *previous;
-        local.revision = next_revision_++;
-        local.loading = false;
-        local.world_ready = true;
-        if (quest_log_dirty_) SnapshotQuestLog(local);
-        if (active_quest_dirty_) SnapshotActiveQuest(local);
-        if (mission_objectives_dirty_) SnapshotMissionObjectives(local);
-    }
-
-    auto published = std::make_shared<const LiveQuestView>(std::move(local));
-    Publish(published);
-    published_loading_invalid_ = false;
-
-    quest_log_dirty_ = false;
-    active_quest_dirty_ = false;
-    mission_objectives_dirty_ = false;
-
-    RequestMissingQuestInfo(*published);
+    // Process due pending requests even when no snapshot channel is dirty
+    ProcessPendingRequests();
 }
