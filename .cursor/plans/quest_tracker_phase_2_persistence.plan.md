@@ -170,15 +170,20 @@ Current write version is **1.1**. Loading **1.0** runs an explicit identity migr
 
 **This JSON is internal Toolbox persistence only — not Contract v1 export.**
 
-Version rules:
+Version / load-status rules:
 
-| Condition | Behavior |
-|-----------|----------|
-| Missing / empty file | Start empty account store in memory; do not delete anything |
-| Primary malformed | Attempt load of `.bak`; if `.bak` loads, use it; **never delete** primary or `.bak` on failed recovery |
-| Unsupported newer **major** | Reject load **without modification** of any file; keep last-good memory or empty; UI diagnostic |
-| Supported older **minor** | Explicit migrate in codec to current minor |
-| Write failure mid-replace | Leave primary and `.bak` intact; keep dirty in memory |
+| Condition | `StoreOpStatus` | Behavior |
+|-----------|-----------------|----------|
+| Primary **and** backup missing | `Empty` | Empty in-memory store; later save may create first primary |
+| Primary missing, valid backup | `RecoveredFromBak` | Use backup; never delete files |
+| Primary missing, backup present but unusable | `CodecError` | Block automatic save; preserve files |
+| Primary exists but zero-byte / whitespace-only / malformed | try `.bak` | Valid bak → `RecoveredFromBak`; else `CodecError` (**not** `Empty`) |
+| Unsupported newer **major** on primary | `UnsupportedDiskMajor` | Reject **without** falling back to an older `.bak`; save blocked |
+| Account-key mismatch | blocked error (`CodecError` / validation) | No overwrite |
+| Supported older **minor** | migrate in codec | Canonicalize + bump; load does **not** auto-write |
+| Write failure mid-replace | — | Leave primary and `.bak` intact; keep dirty in memory |
+
+**Critical:** an existing empty or corrupted primary must never be treated like a never-created file. Only true absence of both primary and backup yields `Empty` (save-eligible create).
 
 ### Per character / quest
 
@@ -210,6 +215,8 @@ missions[]: { mapId, completedNormal, completedHard, bonusNormal, bonusHard, las
 ```
 
 Derived from owned copies of `WorldContext::missions_*` bitsets via mapId enumeration; source `mission_completion_data`.
+
+**Equal-timestamp mission merge:** completion flags are **monotonic game facts**. Same `mapId` + same canonical `lastObservedAt` + differing flags → order-independent **OR** of true bits (never clears a previously observed completion; input order must not matter). Newer `lastObservedAt` wins the whole record.
 
 ---
 
@@ -388,8 +395,8 @@ Lock / merge rules:
 3. Under lock before write: re-read disk (always, including after `WAIT_ABANDONED`). For each `characterKey`:
    - If only on disk → keep disk character.
    - If only in memory (dirty) → keep memory.
-   - If both → merge: union `history[]` by `semanticEventKey`; for quest fields prefer the side with newer `lastObservedAt` when content differs; never drop unique history keys.
-4. Mission records merge by `mapId` (OR completion flags if either side true; timestamps max).
+   - If both → merge: union `history[]` by `semanticEventKey`; select quest projection by max **canonical** `(observedAt, semanticEventKey)` over `lastObservedAt` + history (insertion order ignored; non-canonical timestamps ineligible); never drop unique history keys; same key with different payload → `MergeConflict` with **no** usable `merged` store.
+4. Mission records merge by `mapId`: newer `lastObservedAt` wins; equal timestamp → monotonic OR of completion flags (order-independent; never clears true).
 
 This prevents two GWToolbox processes from silently clobbering each other.
 
@@ -573,8 +580,11 @@ Note: `--clean-first --target GWToolboxdll` can remove `GWToolbox.exe`; rebuild 
 - `WAIT_ABANDONED` is detected from `WaitForSingleObject` return value (not `GetLastError`)
 - Abandoned ownership triggers re-read + validate (+ `.bak` if needed) before merge-on-write
 - Runtime abandoned-mutex end-to-end (child process crash) remains a Batch 2C verification item; decision routing is unit-tested via `ClassifyWaitResult`
+- `Empty` only when primary **and** backup are absent; existing empty/whitespace/malformed primary → `CodecError` (save blocked) unless `.bak` recovers
+- Merge conflict returns disengaged `std::optional` merged store (not a partial persistable projection)
+- Projection selection does not depend on caller history order
 - Internal store JSON is **not** Contract v1 export
 
-## STOP (Batch 2B)
+## STOP (Batch 2B hardening)
 
 Batch 2C (identity binder / observation wiring / lifecycle flush) is a separate approved phase.
