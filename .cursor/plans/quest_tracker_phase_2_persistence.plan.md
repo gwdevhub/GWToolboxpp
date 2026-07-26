@@ -598,6 +598,17 @@ Batch 2C (identity binder / observation wiring / lifecycle flush) is a separate 
 - Debounce ~1s idle for semantic dirty; heartbeat ≤1 / 5 min / character for `lastObservedAt`-only
 - Abandoned-mutex child-process E2E not automated in 2C — keep `ClassifyWaitResult` coverage; verify manually under dual-process crash if needed
 
-## STOP (Batch 2C)
+### Batch 2C review corrections (session switch / failure lifecycle)
+
+- **Evidence scope:** each stamp carries `account_generation` / `character_generation` (plus keys) captured at drain time against the then-bound identity — never inferred from a later bind
+- **Switch order:** drain/classify old evidence → finalize outgoing actionable evidence → flush or **retain detached dirty session** → bind new → drain only new-scoped evidence → ingest new snapshot. Map-load without identity change does not unbind
+- **Failed switch flush:** dirty old-session store is retained in an append-only `detached_sessions_` vector (no overwrite of earlier retained sessions). New character binds without waiting indefinitely for the old save
+- **Detached retry:** controlled backoff (`500ms` initial, exponential up to `30s`); retries use the **old account** path/mutex. Permanent blocks (`CodecError`, `UnsupportedDiskMajor`, `ValidationError`) do not retry per frame
+- **Active persist latch:** `Clean` / `DirtyDebouncing` / `ReadyToSave` / `Saving` / `BlockedPermanent` / `BlockedRetryable`; successful save clears dirty only for the captured `dirty_generation`
+- **Diagnostics:** bounded ring (`kMaxDiagnostics = 100`), consecutive-dedupe, no account email/credentials
+- **Logout:** `kLogout` → `QuestObservationService::ConsumeLogoutSignal` → `UnbindIdentity` (finalize + flush/retain + unbound). **`kStartMapLoad` is not logout.** World-not-ready alone does not unbind
+- **In-game gate before Batch 2D:** multi-character switch with forced save failure / logout / map-load must be validated manually
+
+## STOP (Batch 2C corrections)
 
 Batch 2D / Contract export / mission-bit observation / history UI remain deferred.
