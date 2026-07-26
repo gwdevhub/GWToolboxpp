@@ -588,3 +588,16 @@ Note: `--clean-first --target GWToolboxdll` can remove `GWToolbox.exe`; rebuild 
 ## STOP (Batch 2B hardening)
 
 Batch 2C (identity binder / observation wiring / lifecycle flush) is a separate approved phase.
+
+### Batch 2C runtime integration (implemented)
+
+- `QuestSessionIdentity` + `QuestProgressService` (offline-testable) + `QuestProgressLive` GWCA adapters
+- Evidence stamps from `kSendAbandonQuest` / `kSendDialog` (REWARD / ENQUIRE_REWARD) in `QuestObservationService`
+- Persistence ownership on `QuestProgressService`, driven from `QuestTrackerWindow` Update/Terminate (no Draw I/O)
+- Pairing window default: **5 seconds** (internal constant; pending in-game validation)
+- Debounce ~1s idle for semantic dirty; heartbeat ≤1 / 5 min / character for `lastObservedAt`-only
+- Abandoned-mutex child-process E2E not automated in 2C — keep `ClassifyWaitResult` coverage; verify manually under dual-process crash if needed
+
+## STOP (Batch 2C)
+
+Batch 2D / Contract export / mission-bit observation / history UI remain deferred.
