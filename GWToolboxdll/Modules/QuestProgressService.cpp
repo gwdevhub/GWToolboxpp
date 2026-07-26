@@ -19,6 +19,12 @@ StoredCharacter* FindCharacter(AccountProgressStore& store, const std::string& k
     return it == store.characters.end() ? nullptr : &it->second;
 }
 
+const StoredCharacter* FindCharacter(const AccountProgressStore& store, const std::string& key)
+{
+    auto it = store.characters.find(key);
+    return it == store.characters.end() ? nullptr : &it->second;
+}
+
 std::chrono::milliseconds BackoffForAttempt(uint32_t attempts)
 {
     const auto max_ms = static_cast<uint64_t>(
@@ -33,6 +39,11 @@ std::chrono::milliseconds BackoffForAttempt(uint32_t attempts)
         }
     }
     return std::chrono::milliseconds(static_cast<int64_t>(ms));
+}
+
+bool LatchBlocksAutoRetry(PersistLatch latch)
+{
+    return latch == PersistLatch::BlockedPermanent || latch == PersistLatch::NeedsIntervention;
 }
 
 } // namespace
@@ -69,12 +80,24 @@ bool QuestProgressService::IsPermanentBlockStatus(StoreOpStatus status)
         || status == StoreOpStatus::ValidationError;
 }
 
+bool QuestProgressService::IsInterventionStatus(StoreOpStatus status)
+{
+    return status == StoreOpStatus::MergeConflict;
+}
+
 bool QuestProgressService::IsRetryableBlockStatus(StoreOpStatus status)
 {
     return status == StoreOpStatus::LockTimeout
         || status == StoreOpStatus::LockFailed
-        || status == StoreOpStatus::IoError
-        || status == StoreOpStatus::MergeConflict;
+        || status == StoreOpStatus::IoError;
+}
+
+DetachedSessionKey QuestProgressService::MakeDetachedKey(const SessionIdentity& identity)
+{
+    DetachedSessionKey key;
+    key.account_key = identity.account_key;
+    key.character_key = identity.character_key;
+    return key;
 }
 
 void QuestProgressService::SetStoreDirectory(std::filesystem::path directory)
@@ -93,21 +116,31 @@ void QuestProgressService::AddDiag(std::string message)
     diagnostics_.push_back(std::move(message));
 }
 
-void QuestProgressService::NotePersistStatus(StoreOpStatus status, const char* operation)
+void QuestProgressService::NotePersistStatus(
+    StoreOpStatus status,
+    const char* operation,
+    uint64_t scope_account_gen,
+    uint64_t scope_character_gen,
+    std::string_view scope_character_key)
 {
     if (has_persist_status_ && last_persist_status_ == status) {
         return;
     }
     has_persist_status_ = true;
     last_persist_status_ = status;
-    char buf[160];
+    if (IsPermanentBlockStatus(status) || IsInterventionStatus(status) || IsRetryableBlockStatus(status)) {
+        ++blocked_save_count_;
+    }
+    char buf[256];
     std::snprintf(
         buf, sizeof(buf),
-        "persist %s status=%u gen_a=%llu gen_c=%llu",
+        "persist %s status=%u gen_a=%llu gen_c=%llu char=%.*s",
         operation,
         static_cast<unsigned>(status),
-        static_cast<unsigned long long>(account_generation_),
-        static_cast<unsigned long long>(character_generation_));
+        static_cast<unsigned long long>(scope_account_gen),
+        static_cast<unsigned long long>(scope_character_gen),
+        static_cast<int>(std::min<size_t>(scope_character_key.size(), 96)),
+        scope_character_key.data());
     AddDiag(buf);
 }
 
@@ -116,12 +149,15 @@ void QuestProgressService::Initialize()
     if (initialized_) {
         return;
     }
+    // Re-enable in the same process: keep detached_sessions_ (dirty gens + latch intact).
     initialized_ = true;
     terminate_signaled_ = false;
     accept_input_ = true;
     final_flush_requested_ = false;
     diagnostics_.clear();
     has_persist_status_ = false;
+    last_persist_status_ = StoreOpStatus::Ok;
+    AddDiag("quest progress service initialized");
 }
 
 void QuestProgressService::SignalTerminate()
@@ -138,19 +174,26 @@ void QuestProgressService::Terminate()
     if (final_flush_requested_ || semantic_dirty_ || heartbeat_pending_) {
         if (!Flush(true) && (semantic_dirty_ || heartbeat_pending_)
             && identity_.kind == IdentityKind::Persistent) {
-            RetainActiveAsDetached(last_persist_status_);
+            RetainActiveAsDetached(has_persist_status_ ? last_persist_status_ : StoreOpStatus::IoError);
             ClearActiveSessionMemory();
         }
     }
-    // Best-effort detached flush; retain leftovers rather than discard.
-    for (size_t i = 0; i < detached_sessions_.size();) {
-        if (TryPersistDetached(i, last_tick_steady_)) {
-            // erased inside success path
-        }
-        else {
-            ++i;
+
+    // One orderly attempt per eligible retryable detached entry; never clear failures.
+    std::vector<DetachedSessionKey> keys;
+    keys.reserve(detached_sessions_.size());
+    for (const auto& [key, detached] : detached_sessions_) {
+        if (!LatchBlocksAutoRetry(detached.latch) && (detached.semantic_dirty || detached.heartbeat_pending)) {
+            keys.push_back(key);
         }
     }
+    for (const auto& key : keys) {
+        TryPersistDetached(key, last_tick_steady_);
+    }
+    if (!detached_sessions_.empty()) {
+        AddDiag("terminate retained unsaved detached sessions (process-memory only)");
+    }
+
     pending_evidence_.clear();
     ClearCharacter(character_);
     account_store_ = {};
@@ -193,35 +236,166 @@ void QuestProgressService::MarkSemanticDirty(std::chrono::steady_clock::time_poi
     semantic_dirty_ = true;
     last_semantic_change_ = steady_now;
     heartbeat_pending_ = false;
-    if (persist_latch_ != PersistLatch::BlockedPermanent) {
+    if (!LatchBlocksAutoRetry(persist_latch_)) {
         persist_latch_ = PersistLatch::DirtyDebouncing;
     }
 }
 
+StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
+{
+    StoredCharacter stored;
+    stored.character_key = identity_.character_key;
+    stored.display_name = identity_.display_name;
+    stored.profession = identity_.profession;
+    stored.is_pre_searing = identity_.is_pre_searing;
+    stored.quests = character_.quests;
+    stored.last_observed_at = character_.last_reduced_at;
+    stored.first_observed_at = character_.last_reduced_at;
+    if (const auto* existing = FindCharacter(account_store_, identity_.character_key)) {
+        if (!existing->first_observed_at.empty()) {
+            stored.first_observed_at = existing->first_observed_at;
+        }
+        if (!existing->last_observed_at.empty() && stored.last_observed_at.empty()) {
+            stored.last_observed_at = existing->last_observed_at;
+        }
+        stored.missions = existing->missions;
+    }
+    return stored;
+}
+
+AccountProgressStore QuestProgressService::BuildMinimalAccountStore(const StoredCharacter& character) const
+{
+    AccountProgressStore store;
+    store.store_format = kStoreFormatId;
+    store.store_version = {kStoreFormatMajor, kStoreFormatMinor};
+    store.account_key = identity_.account_key;
+    store.characters.emplace(character.character_key, character);
+    return store;
+}
+
+void QuestProgressService::RemoveOutgoingCharacterFromActiveStore()
+{
+    if (identity_.character_key.empty()) {
+        return;
+    }
+    account_store_.characters.erase(identity_.character_key);
+}
+
 void QuestProgressService::RetainActiveAsDetached(StoreOpStatus last_status)
 {
-    if (identity_.kind != IdentityKind::Persistent) {
+    if (identity_.kind != IdentityKind::Persistent || identity_.character_key.empty()) {
         return;
     }
     SyncCharacterIntoAccountStore();
-    DetachedDirtySession detached;
-    detached.identity = identity_;
-    detached.account_generation = account_generation_;
-    detached.character_generation = character_generation_;
-    detached.account_store = account_store_;
-    detached.character = character_;
-    detached.semantic_dirty = semantic_dirty_;
-    detached.heartbeat_pending = heartbeat_pending_;
-    detached.dirty_generation = dirty_generation_;
-    detached.last_status = last_status;
-    detached.latch = IsPermanentBlockStatus(last_status)
-        ? PersistLatch::BlockedPermanent
-        : PersistLatch::BlockedRetryable;
-    detached.retry_attempts = 0;
-    detached.next_retry_at = last_tick_steady_ + kPersistRetryInitialBackoff;
-    detached.pending_evidence = pending_evidence_;
-    detached_sessions_.push_back(std::move(detached));
-    AddDiag("retained detached dirty session after failed flush");
+    const auto key = MakeDetachedKey(identity_);
+    auto outgoing = BuildOutgoingStoredCharacter();
+    auto minimal = BuildMinimalAccountStore(outgoing);
+
+    const auto apply_latch = [&](DetachedDirtySession& detached) {
+        if (IsInterventionStatus(last_status) || !detached.conflict_variants.empty()) {
+            detached.latch = PersistLatch::NeedsIntervention;
+            detached.last_status = StoreOpStatus::MergeConflict;
+        }
+        else if (IsPermanentBlockStatus(last_status)) {
+            detached.latch = PersistLatch::BlockedPermanent;
+            detached.last_status = last_status;
+        }
+        else if (IsRetryableBlockStatus(last_status)) {
+            if (!LatchBlocksAutoRetry(detached.latch)) {
+                detached.latch = PersistLatch::BlockedRetryable;
+                detached.next_retry_at = last_tick_steady_ + kPersistRetryInitialBackoff;
+            }
+            detached.last_status = last_status;
+        }
+        else {
+            if (!LatchBlocksAutoRetry(detached.latch)) {
+                detached.latch = PersistLatch::BlockedRetryable;
+                detached.next_retry_at = last_tick_steady_ + kPersistRetryInitialBackoff;
+            }
+            detached.last_status = last_status;
+        }
+    };
+
+    auto it = detached_sessions_.find(key);
+    if (it == detached_sessions_.end()) {
+        DetachedDirtySession detached;
+        detached.key = key;
+        detached.identity = identity_;
+        detached.account_generation = account_generation_;
+        detached.character_generation = character_generation_;
+        detached.account_store = std::move(minimal);
+        detached.character = character_;
+        detached.character.character_key = identity_.character_key;
+        detached.semantic_dirty = semantic_dirty_;
+        detached.heartbeat_pending = heartbeat_pending_;
+        detached.dirty_generation = dirty_generation_;
+        detached.pending_evidence = pending_evidence_;
+        apply_latch(detached);
+        detached_sessions_.emplace(key, std::move(detached));
+        AddDiag("retained detached dirty session");
+    }
+    else {
+        auto& detached = it->second;
+        const auto* existing_char = FindCharacter(detached.account_store, key.character_key);
+        StoredCharacter existing_stored = existing_char ? *existing_char : StoredCharacter{};
+        if (existing_stored.character_key.empty()) {
+            existing_stored.character_key = key.character_key;
+        }
+        auto coalesced = CoalesceStoredCharacters(existing_stored, outgoing);
+        for (const auto& m : coalesced.diagnostics.messages) {
+            AddDiag(m);
+        }
+        for (auto& [sem_key, variants] : coalesced.conflict_variants) {
+            auto& dest = detached.conflict_variants[sem_key];
+            for (auto& variant : variants) {
+                bool dup = false;
+                for (const auto& existing_variant : dest) {
+                    if (existing_variant.semantic_event_key == variant.semantic_event_key
+                        && existing_variant.state == variant.state
+                        && existing_variant.event_type == variant.event_type
+                        && existing_variant.evidence_kind == variant.evidence_kind
+                        && existing_variant.observed_at == variant.observed_at) {
+                        dup = true;
+                        break;
+                    }
+                }
+                if (!dup) {
+                    dest.push_back(std::move(variant));
+                }
+            }
+        }
+        detached.account_store = BuildMinimalAccountStore(coalesced.character);
+        detached.account_store.account_key = key.account_key;
+        detached.character.character_key = key.character_key;
+        detached.character.display_name = coalesced.character.display_name;
+        detached.character.quests = coalesced.character.quests;
+        detached.character.last_reduced_at = coalesced.character.last_observed_at;
+        detached.identity = identity_;
+        detached.account_generation = account_generation_;
+        detached.character_generation = character_generation_;
+        detached.semantic_dirty = true;
+        detached.dirty_generation = (std::max)(detached.dirty_generation, dirty_generation_);
+        if (heartbeat_pending_) {
+            detached.heartbeat_pending = true;
+        }
+        detached.pending_evidence.insert(
+            detached.pending_evidence.end(),
+            pending_evidence_.begin(), pending_evidence_.end());
+        if (coalesced.status == StoreOpStatus::MergeConflict || !detached.conflict_variants.empty()) {
+            detached.latch = PersistLatch::NeedsIntervention;
+            detached.last_status = StoreOpStatus::MergeConflict;
+            NotePersistStatus(
+                StoreOpStatus::MergeConflict, "coalesce",
+                detached.account_generation, detached.character_generation, detached.key.character_key);
+        }
+        else {
+            apply_latch(detached);
+        }
+        AddDiag("coalesced detached dirty session");
+    }
+
+    // Active store must not keep a stale copy of the outgoing character.
+    RemoveOutgoingCharacterFromActiveStore();
 }
 
 void QuestProgressService::SyncCharacterIntoAccountStore()
@@ -294,6 +468,9 @@ void QuestProgressService::LoadAccountForIdentity()
     if (store_directory_.empty()) {
         load_status_ = StoreOpStatus::ValidationError;
         persist_latch_ = PersistLatch::BlockedPermanent;
+        NotePersistStatus(
+            StoreOpStatus::ValidationError, "load",
+            account_generation_, character_generation_, identity_.character_key);
         AddDiag("store directory not set; persistence disabled");
         return;
     }
@@ -322,14 +499,26 @@ void QuestProgressService::LoadAccountForIdentity()
         case StoreOpStatus::CodecError:
             persistence_allowed_ = false;
             persist_latch_ = PersistLatch::BlockedPermanent;
-            NotePersistStatus(StoreOpStatus::CodecError, "load");
+            NotePersistStatus(
+                StoreOpStatus::CodecError, "load",
+                account_generation_, character_generation_, identity_.character_key);
             AddDiag("account store CodecError; automatic save blocked");
             break;
         case StoreOpStatus::UnsupportedDiskMajor:
             persistence_allowed_ = false;
             persist_latch_ = PersistLatch::BlockedPermanent;
-            NotePersistStatus(StoreOpStatus::UnsupportedDiskMajor, "load");
+            NotePersistStatus(
+                StoreOpStatus::UnsupportedDiskMajor, "load",
+                account_generation_, character_generation_, identity_.character_key);
             AddDiag("account store UnsupportedDiskMajor; automatic save blocked");
+            break;
+        case StoreOpStatus::MergeConflict:
+            persistence_allowed_ = false;
+            persist_latch_ = PersistLatch::NeedsIntervention;
+            NotePersistStatus(
+                StoreOpStatus::MergeConflict, "load",
+                account_generation_, character_generation_, identity_.character_key);
+            AddDiag("account store MergeConflict; NeedsIntervention");
             break;
         default:
             persistence_allowed_ = false;
@@ -339,7 +528,9 @@ void QuestProgressService::LoadAccountForIdentity()
             else {
                 persist_latch_ = PersistLatch::BlockedPermanent;
             }
-            NotePersistStatus(loaded.status, "load");
+            NotePersistStatus(
+                loaded.status, "load",
+                account_generation_, character_generation_, identity_.character_key);
             AddDiag("account store load failed; automatic save blocked");
             break;
     }
@@ -352,7 +543,6 @@ void QuestProgressService::BindIdentity(const SessionIdentity& next, bool force_
     }
 
     if (SamePersistentCharacter(identity_, next) && !force_session_gap) {
-        // Map-load / metadata refresh without character switch.
         identity_.display_name = next.display_name;
         identity_.profession = next.profession;
         identity_.is_pre_searing = next.is_pre_searing;
@@ -367,14 +557,17 @@ void QuestProgressService::BindIdentity(const SessionIdentity& next, bool force_
 
     const bool leaving_bound = identity_.kind != IdentityKind::Unbound;
     if (leaving_bound) {
-        // Apply scoped pending evidence to the outgoing session before flush/retain.
         FinalizeOutgoingEvidence();
-        // Flush or retain — never discard dirty old-session progress.
         if (identity_.kind == IdentityKind::Persistent
             && (semantic_dirty_ || heartbeat_pending_)) {
             if (!Flush(true)) {
                 RetainActiveAsDetached(
                     has_persist_status_ ? last_persist_status_ : StoreOpStatus::IoError);
+            }
+            else {
+                // Successful flush: still drop outgoing char if same-account bind follows? Disk has it.
+                // Active store may still hold it until account reload; erase to avoid stale republish
+                // only when we also had retained — on success disk is authoritative.
             }
         }
         ClearActiveSessionMemory();
@@ -424,15 +617,18 @@ void QuestProgressService::BindIdentity(const SessionIdentity& next, bool force_
         LoadAccountForIdentity();
     }
     else {
-        // Same account, new character: do not inherit prior permanent block from another char
-        // unless the loaded store itself is permanently blocked.
         if (load_status_ == StoreOpStatus::CodecError
             || load_status_ == StoreOpStatus::UnsupportedDiskMajor) {
             persistence_allowed_ = false;
             persist_latch_ = PersistLatch::BlockedPermanent;
         }
+        else if (load_status_ == StoreOpStatus::MergeConflict) {
+            persistence_allowed_ = false;
+            persist_latch_ = PersistLatch::NeedsIntervention;
+        }
         else if (!persistence_allowed_
-                 && !IsPermanentBlockStatus(load_status_)) {
+                 && !IsPermanentBlockStatus(load_status_)
+                 && !IsInterventionStatus(load_status_)) {
             LoadAccountForIdentity();
         }
         else {
@@ -474,24 +670,29 @@ void QuestProgressService::UnbindIdentity()
     AddDiag("explicit logout unbound");
 }
 
-void QuestProgressService::FinalizeOutgoingEvidence()
+bool QuestProgressService::ApplyEvidenceToCharacter(
+    CharacterProgress& target_character,
+    SessionIdentity& identity_meta,
+    std::vector<EvidenceStamp>& pending,
+    uint64_t& dirty_generation,
+    bool& semantic_dirty,
+    bool& heartbeat_pending,
+    PersistLatch& latch,
+    std::chrono::system_clock::time_point wall_now,
+    std::chrono::steady_clock::time_point steady_now)
 {
-    if (identity_.kind == IdentityKind::Unbound || !has_reduced_once_ || pending_evidence_.empty()) {
-        return;
+    if (pending.empty()) {
+        return false;
     }
-
-    const auto wall_now = std::chrono::system_clock::now();
-    const auto steady_now = std::chrono::steady_clock::now();
-    last_tick_steady_ = steady_now;
     const auto observed_at = FormatCanonicalUtc(wall_now);
     if (!IsCanonicalUtcTimestamp(observed_at)) {
-        AddDiag("refusing outgoing evidence finalize: non-canonical timestamp");
-        return;
+        AddDiag("refusing evidence finalize: non-canonical timestamp");
+        return false;
     }
 
-    const auto evidence = CollectActiveEvidence(steady_now);
+    auto evidence = CollectEvidenceFrom(pending, steady_now);
     if (evidence.empty()) {
-        return;
+        return false;
     }
 
     std::unordered_set<uint32_t> actionable;
@@ -501,17 +702,16 @@ void QuestProgressService::FinalizeOutgoingEvidence()
         }
     }
     if (actionable.empty()) {
-        return;
+        return false;
     }
 
-    // Keep non-evidence quests present so only actionable IDs take the missing/evidence path.
     ReducerInput input;
-    input.previous = character_;
+    input.previous = target_character;
     input.observed_at_utc = observed_at;
     input.session_gap = false;
     input.treat_as_stale_if_older = true;
     input.evidence = evidence;
-    for (const auto& [quest_id, quest] : character_.quests) {
+    for (const auto& [quest_id, quest] : target_character.quests) {
         if (actionable.count(quest_id)) {
             continue;
         }
@@ -528,30 +728,66 @@ void QuestProgressService::FinalizeOutgoingEvidence()
     }
 
     const auto out = Reduce(input);
-    character_ = out.next;
-    character_.character_key =
-        identity_.kind == IdentityKind::Persistent ? identity_.character_key : character_.character_key;
-    character_.display_name = identity_.display_name;
+    target_character = out.next;
+    target_character.character_key = identity_meta.character_key;
+    target_character.display_name = identity_meta.display_name;
     for (const auto& m : out.diagnostics.messages) {
         AddDiag(m);
     }
     if (out.semantic_changed) {
-        MarkSemanticDirty(steady_now);
+        ++dirty_generation;
+        semantic_dirty = true;
+        if (!LatchBlocksAutoRetry(latch)) {
+            latch = PersistLatch::DirtyDebouncing;
+        }
     }
     else if (out.touch_last_observed) {
-        heartbeat_pending_ = true;
+        heartbeat_pending = true;
     }
-    SyncCharacterIntoAccountStore();
 
-    pending_evidence_.erase(
+    pending.erase(
         std::remove_if(
-            pending_evidence_.begin(), pending_evidence_.end(),
-            [&](const EvidenceStamp& e) {
-                return e.character_generation == character_generation_
-                    && actionable.count(e.game_quest_id) != 0;
-            }),
-        pending_evidence_.end());
-    AddDiag("finalized outgoing scoped evidence");
+            pending.begin(), pending.end(),
+            [&](const EvidenceStamp& e) { return actionable.count(e.game_quest_id) != 0; }),
+        pending.end());
+    return out.semantic_changed || out.touch_last_observed;
+}
+
+void QuestProgressService::FinalizeOutgoingEvidence()
+{
+    if (identity_.kind == IdentityKind::Unbound || !has_reduced_once_ || pending_evidence_.empty()) {
+        return;
+    }
+    const auto wall_now = std::chrono::system_clock::now();
+    const auto steady_now = std::chrono::steady_clock::now();
+    last_tick_steady_ = steady_now;
+    if (ApplyEvidenceToCharacter(
+            character_, identity_, pending_evidence_, dirty_generation_, semantic_dirty_,
+            heartbeat_pending_, persist_latch_, wall_now, steady_now)) {
+        SyncCharacterIntoAccountStore();
+        AddDiag("finalized outgoing scoped evidence");
+    }
+}
+
+void QuestProgressService::FinalizeDetachedEvidence(
+    DetachedDirtySession& detached, std::chrono::steady_clock::time_point steady_now)
+{
+    if (detached.pending_evidence.empty()) {
+        return;
+    }
+    const auto wall_now = std::chrono::system_clock::now();
+    if (ApplyEvidenceToCharacter(
+            detached.character, detached.identity, detached.pending_evidence,
+            detached.dirty_generation, detached.semantic_dirty, detached.heartbeat_pending,
+            detached.latch, wall_now, steady_now)) {
+        if (auto* stored = FindCharacter(detached.account_store, detached.key.character_key)) {
+            stored->quests = detached.character.quests;
+            stored->last_observed_at = detached.character.last_reduced_at;
+            stored->display_name = detached.character.display_name;
+        }
+        AddDiag("finalized detached scoped evidence");
+    }
+    (void)steady_now;
 }
 
 void QuestProgressService::RouteOrDropEvidence(EvidenceStamp stamp)
@@ -561,7 +797,6 @@ void QuestProgressService::RouteOrDropEvidence(EvidenceStamp stamp)
         return;
     }
 
-    // Unscoped stamps attach to the current bound generation when bound.
     if (stamp.account_generation == 0 && stamp.character_generation == 0) {
         if (identity_.kind == IdentityKind::Unbound) {
             AddDiag("dropped unscoped evidence while unbound");
@@ -580,10 +815,15 @@ void QuestProgressService::RouteOrDropEvidence(EvidenceStamp stamp)
         return;
     }
 
-    for (auto& detached : detached_sessions_) {
-        if (detached.character_generation == stamp.character_generation
-            && detached.account_generation == stamp.account_generation) {
+    // Route by durable keys so coalesced sessions still accept late evidence.
+    for (auto& [key, detached] : detached_sessions_) {
+        const bool key_match = !stamp.account_key.empty() && !stamp.character_key.empty()
+            && stamp.account_key == key.account_key && stamp.character_key == key.character_key;
+        const bool gen_match = stamp.account_generation == detached.account_generation
+            && stamp.character_generation == detached.character_generation;
+        if (key_match || gen_match) {
             detached.pending_evidence.push_back(std::move(stamp));
+            FinalizeDetachedEvidence(detached, last_tick_steady_);
             AddDiag("routed evidence to detached session");
             return;
         }
@@ -604,36 +844,43 @@ void QuestProgressService::IngestEvidence(std::vector<EvidenceStamp> stamps)
 
 void QuestProgressService::ExpireEvidence(std::chrono::steady_clock::time_point steady_now)
 {
+    const auto expired = [&](const EvidenceStamp& e) {
+        return steady_now - e.steady_at > kEvidencePairingWindow;
+    };
+    const auto before = pending_evidence_.size();
     pending_evidence_.erase(
-        std::remove_if(
-            pending_evidence_.begin(), pending_evidence_.end(),
-            [&](const EvidenceStamp& e) {
-                return steady_now - e.steady_at > kEvidencePairingWindow;
-            }),
+        std::remove_if(pending_evidence_.begin(), pending_evidence_.end(), expired),
         pending_evidence_.end());
+    if (pending_evidence_.size() != before) {
+        AddDiag("expired unpaired active evidence");
+    }
 
-    for (auto& detached : detached_sessions_) {
+    for (auto& [key, detached] : detached_sessions_) {
+        (void)key;
+        const auto d_before = detached.pending_evidence.size();
         detached.pending_evidence.erase(
-            std::remove_if(
-                detached.pending_evidence.begin(), detached.pending_evidence.end(),
-                [&](const EvidenceStamp& e) {
-                    return steady_now - e.steady_at > kEvidencePairingWindow;
-                }),
+            std::remove_if(detached.pending_evidence.begin(), detached.pending_evidence.end(), expired),
             detached.pending_evidence.end());
+        if (detached.pending_evidence.size() != d_before) {
+            AddDiag("expired unpaired detached evidence");
+        }
     }
 }
 
-std::vector<QuestEvidence> QuestProgressService::CollectActiveEvidence(
+std::vector<QuestEvidence> QuestProgressService::CollectEvidenceFrom(
+    std::vector<EvidenceStamp>& pending,
     std::chrono::steady_clock::time_point steady_now)
 {
-    ExpireEvidence(steady_now);
+    pending.erase(
+        std::remove_if(
+            pending.begin(), pending.end(),
+            [&](const EvidenceStamp& e) {
+                return steady_now - e.steady_at > kEvidencePairingWindow;
+            }),
+        pending.end());
     std::vector<QuestEvidence> out;
-    out.reserve(pending_evidence_.size());
-    for (const auto& e : pending_evidence_) {
-        if (e.character_generation != character_generation_
-            || e.account_generation != account_generation_) {
-            continue;
-        }
+    out.reserve(pending.size());
+    for (const auto& e : pending) {
         QuestEvidence qe;
         qe.game_quest_id = e.game_quest_id;
         qe.kind = e.kind;
@@ -670,7 +917,7 @@ void QuestProgressService::ReduceFromSnapshot(
     input.observed_at_utc = observed_at;
     input.session_gap = session_gap_pending_;
     input.treat_as_stale_if_older = true;
-    input.evidence = CollectActiveEvidence(steady_now);
+    input.evidence = CollectEvidenceFrom(pending_evidence_, steady_now);
 
     for (const auto& q : snap.quests) {
         if (IsSyntheticQuestId(q.game_quest_id) || q.game_quest_id == 0) {
@@ -732,11 +979,11 @@ void QuestProgressService::ScheduleRetryBackoff(std::chrono::steady_clock::time_
 bool QuestProgressService::ShouldAttemptPersist(
     std::chrono::steady_clock::time_point steady_now, bool session_boundary) const
 {
-    if (persist_latch_ == PersistLatch::BlockedPermanent) {
+    if (LatchBlocksAutoRetry(persist_latch_)) {
         return false;
     }
     if (!persistence_allowed_ && identity_.kind == IdentityKind::Persistent) {
-        if (IsPermanentBlockStatus(load_status_)) {
+        if (IsPermanentBlockStatus(load_status_) || IsInterventionStatus(load_status_)) {
             return false;
         }
     }
@@ -788,7 +1035,7 @@ void QuestProgressService::Tick(
     }
     else if (heartbeat_pending_ && persistence_allowed_
              && identity_.kind == IdentityKind::Persistent
-             && persist_latch_ != PersistLatch::BlockedPermanent) {
+             && !LatchBlocksAutoRetry(persist_latch_)) {
         if (last_heartbeat_save_.time_since_epoch().count() == 0
             || (steady_now - last_heartbeat_save_) >= kHeartbeatInterval) {
             if (ShouldAttemptPersist(steady_now, false)) {
@@ -799,17 +1046,20 @@ void QuestProgressService::Tick(
 }
 
 bool QuestProgressService::TryPersistDetached(
-    size_t index, std::chrono::steady_clock::time_point steady_now)
+    DetachedSessionKey key, std::chrono::steady_clock::time_point steady_now)
 {
-    if (index >= detached_sessions_.size()) {
+    auto it = detached_sessions_.find(key);
+    if (it == detached_sessions_.end()) {
         return false;
     }
-    auto& detached = detached_sessions_[index];
+    auto& detached = it->second;
+    FinalizeDetachedEvidence(detached, steady_now);
+
     if (!detached.semantic_dirty && !detached.heartbeat_pending) {
-        detached_sessions_.erase(detached_sessions_.begin() + static_cast<std::ptrdiff_t>(index));
+        detached_sessions_.erase(it);
         return true;
     }
-    if (detached.latch == PersistLatch::BlockedPermanent) {
+    if (LatchBlocksAutoRetry(detached.latch)) {
         return false;
     }
     if (detached.latch == PersistLatch::BlockedRetryable && steady_now < detached.next_retry_at) {
@@ -820,12 +1070,10 @@ bool QuestProgressService::TryPersistDetached(
     }
 
     ++persist_attempt_count_;
-    detached.account_store.account_key = detached.identity.account_key;
+    detached.account_store.account_key = detached.key.account_key;
     detached.account_store.store_format = kStoreFormatId;
     detached.account_store.store_version = {kStoreFormatMajor, kStoreFormatMinor};
-
-    // Ensure character blob is synced from retained character progress.
-    if (auto* stored = FindCharacter(detached.account_store, detached.identity.character_key)) {
+    if (auto* stored = FindCharacter(detached.account_store, detached.key.character_key)) {
         stored->quests = detached.character.quests;
         if (!detached.character.last_reduced_at.empty()) {
             stored->last_observed_at = detached.character.last_reduced_at;
@@ -834,23 +1082,31 @@ bool QuestProgressService::TryPersistDetached(
 
     const uint64_t gen_at_start = detached.dirty_generation;
     const auto saved = SaveMergedAccountStore(
-        store_directory_, detached.identity.account_key, detached.account_store, lock_timeout_ms_);
+        store_directory_, detached.key.account_key, detached.account_store, lock_timeout_ms_);
     for (const auto& m : saved.diagnostics.messages) {
         AddDiag(m);
     }
 
     if (saved.status != StoreOpStatus::Ok || !saved.merged.has_value()) {
-        ++blocked_save_count_;
+        NotePersistStatus(
+            saved.status, "detached",
+            detached.account_generation, detached.character_generation, detached.key.character_key);
         detached.last_status = saved.status;
-        if (IsPermanentBlockStatus(saved.status)) {
+        if (IsInterventionStatus(saved.status)) {
+            detached.latch = PersistLatch::NeedsIntervention;
+        }
+        else if (IsPermanentBlockStatus(saved.status)) {
             detached.latch = PersistLatch::BlockedPermanent;
-            NotePersistStatus(saved.status, "detached");
+        }
+        else if (IsRetryableBlockStatus(saved.status)) {
+            detached.latch = PersistLatch::BlockedRetryable;
+            detached.next_retry_at = steady_now + BackoffForAttempt(detached.retry_attempts);
+            ++detached.retry_attempts;
         }
         else {
             detached.latch = PersistLatch::BlockedRetryable;
             detached.next_retry_at = steady_now + BackoffForAttempt(detached.retry_attempts);
             ++detached.retry_attempts;
-            NotePersistStatus(saved.status, "detached");
         }
         return false;
     }
@@ -859,33 +1115,39 @@ bool QuestProgressService::TryPersistDetached(
         detached.semantic_dirty = false;
         detached.heartbeat_pending = false;
     }
-    detached.account_store = *saved.merged;
     ++successful_save_count_;
     AddDiag("detached session flush ok");
-    detached_sessions_.erase(detached_sessions_.begin() + static_cast<std::ptrdiff_t>(index));
+    detached_sessions_.erase(key);
     return true;
 }
 
 void QuestProgressService::TickDetachedRetries(std::chrono::steady_clock::time_point steady_now)
 {
-    for (size_t i = 0; i < detached_sessions_.size();) {
-        auto& d = detached_sessions_[i];
-        if (d.latch == PersistLatch::BlockedPermanent) {
-            ++i;
+    std::vector<DetachedSessionKey> keys;
+    keys.reserve(detached_sessions_.size());
+    for (const auto& [key, detached] : detached_sessions_) {
+        if (LatchBlocksAutoRetry(detached.latch)) {
             continue;
         }
-        if (!d.semantic_dirty && !d.heartbeat_pending) {
-            detached_sessions_.erase(detached_sessions_.begin() + static_cast<std::ptrdiff_t>(i));
+        if (!detached.semantic_dirty && !detached.heartbeat_pending) {
+            keys.push_back(key);
             continue;
         }
-        if (d.latch == PersistLatch::BlockedRetryable && steady_now < d.next_retry_at) {
-            ++i;
+        if (detached.latch == PersistLatch::BlockedRetryable && steady_now < detached.next_retry_at) {
             continue;
         }
-        if (!TryPersistDetached(i, steady_now)) {
-            ++i;
+        keys.push_back(key);
+    }
+    for (const auto& key : keys) {
+        auto it = detached_sessions_.find(key);
+        if (it == detached_sessions_.end()) {
+            continue;
         }
-        // On success, index i is the next element after erase.
+        if (!it->second.semantic_dirty && !it->second.heartbeat_pending) {
+            detached_sessions_.erase(it);
+            continue;
+        }
+        TryPersistDetached(key, steady_now);
     }
 }
 
@@ -910,12 +1172,15 @@ bool QuestProgressService::TryPersist(
         return false;
     }
     if (!ShouldAttemptPersist(steady_now, session_boundary)) {
-        if (persist_latch_ == PersistLatch::BlockedPermanent
-            || IsPermanentBlockStatus(load_status_)) {
-            ++blocked_save_count_;
+        // Permanent/intervention: counter/diagnostic only on status transition via NotePersistStatus.
+        if (LatchBlocksAutoRetry(persist_latch_) || IsPermanentBlockStatus(load_status_)
+            || IsInterventionStatus(load_status_)) {
             NotePersistStatus(
-                IsPermanentBlockStatus(load_status_) ? load_status_ : last_persist_status_,
-                "blocked");
+                IsPermanentBlockStatus(load_status_) || IsInterventionStatus(load_status_)
+                    ? load_status_
+                    : last_persist_status_,
+                "blocked",
+                account_generation_, character_generation_, identity_.character_key);
         }
         return false;
     }
@@ -923,21 +1188,31 @@ bool QuestProgressService::TryPersist(
     ++persist_attempt_count_;
 
     if (!persistence_allowed_) {
-        ++blocked_save_count_;
-        if (IsPermanentBlockStatus(load_status_)) {
+        if (IsInterventionStatus(load_status_)) {
+            persist_latch_ = PersistLatch::NeedsIntervention;
+            NotePersistStatus(
+                load_status_, "blocked",
+                account_generation_, character_generation_, identity_.character_key);
+        }
+        else if (IsPermanentBlockStatus(load_status_)) {
             persist_latch_ = PersistLatch::BlockedPermanent;
-            NotePersistStatus(load_status_, "blocked");
+            NotePersistStatus(
+                load_status_, "blocked",
+                account_generation_, character_generation_, identity_.character_key);
         }
         else {
             ScheduleRetryBackoff(steady_now);
-            NotePersistStatus(load_status_, "blocked");
+            NotePersistStatus(
+                load_status_, "blocked",
+                account_generation_, character_generation_, identity_.character_key);
         }
         return false;
     }
     if (store_directory_.empty()) {
-        ++blocked_save_count_;
         persist_latch_ = PersistLatch::BlockedPermanent;
-        NotePersistStatus(StoreOpStatus::ValidationError, "blocked");
+        NotePersistStatus(
+            StoreOpStatus::ValidationError, "blocked",
+            account_generation_, character_generation_, identity_.character_key);
         return false;
     }
 
@@ -959,9 +1234,14 @@ bool QuestProgressService::TryPersist(
     }
 
     if (saved.status != StoreOpStatus::Ok || !saved.merged.has_value()) {
-        ++blocked_save_count_;
-        NotePersistStatus(saved.status, "save");
-        if (IsPermanentBlockStatus(saved.status)) {
+        NotePersistStatus(
+            saved.status, "save",
+            account_generation_, character_generation_, identity_.character_key);
+        if (IsInterventionStatus(saved.status)) {
+            persist_latch_ = PersistLatch::NeedsIntervention;
+            persistence_allowed_ = false;
+        }
+        else if (IsPermanentBlockStatus(saved.status)) {
             persist_latch_ = PersistLatch::BlockedPermanent;
             persistence_allowed_ = false;
         }
@@ -973,7 +1253,6 @@ bool QuestProgressService::TryPersist(
 
     account_store_ = *saved.merged;
     EnsureCharacterRecord();
-    // Clear dirty only for the generation captured at save start.
     if (dirty_generation_ == gen_at_start) {
         semantic_dirty_ = false;
         heartbeat_pending_ = false;

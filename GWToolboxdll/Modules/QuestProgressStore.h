@@ -6,9 +6,11 @@
 #include <Modules/QuestProgressJsonCodec.h>
 
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace QuestProgress {
 
@@ -82,6 +84,22 @@ WaitAcquireKind ClassifyWaitResult(unsigned long wait_result);
 MergeStoreResult MergeAccountStores(
     const AccountProgressStore& disk,
     const AccountProgressStore& memory);
+
+// Coalesce two StoredCharacter snapshots for the same characterKey (detached-session union).
+// On semanticEventKey payload conflict: status=MergeConflict, character still holds a
+// preferred projection + unioned non-conflicting history; conflict_variants retains
+// alternate payloads (deduped). Caller must not auto-retry unchanged conflicts.
+struct CoalesceCharacterResult {
+    StoreOpStatus status = StoreOpStatus::Ok;
+    StoredCharacter character;
+    // semantic_event_key → alternate payloads not selected as the canonical history row
+    std::map<std::string, std::vector<QuestHistoryEvent>> conflict_variants;
+    StoreDiagnostics diagnostics;
+};
+
+CoalesceCharacterResult CoalesceStoredCharacters(
+    const StoredCharacter& existing,
+    const StoredCharacter& incoming);
 
 // Missing primary+backup → Empty. Existing empty/whitespace/malformed primary → try .bak;
 // unusable primary+bak → CodecError (never treated as Empty). Never deletes files.

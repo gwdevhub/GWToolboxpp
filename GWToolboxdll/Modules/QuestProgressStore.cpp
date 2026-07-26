@@ -252,6 +252,183 @@ StoredCharacter MergeCharacter(const StoredCharacter& disk, const StoredCharacte
     return out;
 }
 
+namespace {
+
+void AppendConflictVariant(
+    std::map<std::string, std::vector<QuestHistoryEvent>>& conflicts,
+    const QuestHistoryEvent& canonical,
+    const QuestHistoryEvent& alternate)
+{
+    if (HistoryPayloadEqual(canonical, alternate)) {
+        return;
+    }
+    auto& variants = conflicts[canonical.semantic_event_key];
+    for (const auto& existing : variants) {
+        if (HistoryPayloadEqual(existing, alternate)) {
+            return;
+        }
+    }
+    variants.push_back(alternate);
+}
+
+// Like ProjectQuest, but retains alternate payloads under the same semanticEventKey.
+QuestProgress ProjectQuestKeepConflicts(
+    const QuestProgress& disk,
+    const QuestProgress& memory,
+    StoreDiagnostics& d,
+    bool& conflict,
+    std::map<std::string, std::vector<QuestHistoryEvent>>& conflict_variants)
+{
+    QuestProgress out = PreferMemoryProjection(disk, memory) ? memory : disk;
+
+    std::map<std::string, QuestHistoryEvent> by_key;
+    auto ingest = [&](const QuestHistoryEvent& ev) {
+        auto it = by_key.find(ev.semantic_event_key);
+        if (it == by_key.end()) {
+            by_key.emplace(ev.semantic_event_key, ev);
+            return;
+        }
+        if (!HistoryPayloadEqual(it->second, ev)) {
+            conflict = true;
+            AppendConflictVariant(conflict_variants, it->second, ev);
+            AddDiag(d, "history semanticEventKey payload conflict: " + ev.semantic_event_key);
+        }
+    };
+    for (const auto& ev : disk.history) {
+        ingest(ev);
+    }
+    for (const auto& ev : memory.history) {
+        ingest(ev);
+    }
+    out.history.clear();
+    for (auto& [k, ev] : by_key) {
+        (void)k;
+        out.history.push_back(std::move(ev));
+    }
+    std::sort(out.history.begin(), out.history.end(),
+        [](const QuestHistoryEvent& a, const QuestHistoryEvent& b) {
+            if (a.observed_at != b.observed_at) {
+                return a.observed_at < b.observed_at;
+            }
+            return a.semantic_event_key < b.semantic_event_key;
+        });
+
+    const QuestProgress& preferred = PreferMemoryProjection(disk, memory) ? memory : disk;
+    out.state = preferred.state;
+    out.source = preferred.source;
+    out.confidence = preferred.confidence;
+    out.objectives = preferred.objectives;
+    out.completed_at = preferred.completed_at;
+    out.last_observed_at = preferred.last_observed_at;
+    out.game_quest_id = preferred.game_quest_id;
+    if (disk.first_observed_at.empty()) {
+        out.first_observed_at = memory.first_observed_at;
+    }
+    else if (memory.first_observed_at.empty()) {
+        out.first_observed_at = disk.first_observed_at;
+    }
+    else {
+        out.first_observed_at = std::min(disk.first_observed_at, memory.first_observed_at);
+    }
+    NormalizeObjectives(out.objectives);
+    return out;
+}
+
+} // namespace
+
+CoalesceCharacterResult CoalesceStoredCharactersImpl(
+    const StoredCharacter& existing,
+    const StoredCharacter& incoming)
+{
+    CoalesceCharacterResult result;
+    if (!existing.character_key.empty() && !incoming.character_key.empty()
+        && existing.character_key != incoming.character_key) {
+        result.status = StoreOpStatus::ValidationError;
+        AddDiag(result.diagnostics, "coalesce characterKey mismatch");
+        return result;
+    }
+
+    bool conflict = false;
+    StoredCharacter out;
+    out.character_key = existing.character_key.empty() ? incoming.character_key : existing.character_key;
+
+    const bool mem_newer = incoming.last_observed_at > existing.last_observed_at
+        || (incoming.last_observed_at == existing.last_observed_at
+            && incoming.display_name >= existing.display_name);
+    const StoredCharacter& meta = mem_newer ? incoming : existing;
+    out.display_name = meta.display_name;
+    out.profession = meta.profession;
+    out.is_pre_searing = meta.is_pre_searing;
+    out.last_observed_at = meta.last_observed_at;
+    if (existing.first_observed_at.empty()) {
+        out.first_observed_at = incoming.first_observed_at;
+    }
+    else if (incoming.first_observed_at.empty()) {
+        out.first_observed_at = existing.first_observed_at;
+    }
+    else {
+        out.first_observed_at = std::min(existing.first_observed_at, incoming.first_observed_at);
+    }
+
+    std::map<uint32_t, char> ids;
+    for (const auto& [id, _] : existing.quests) {
+        (void)_;
+        ids[id] = 1;
+    }
+    for (const auto& [id, _] : incoming.quests) {
+        (void)_;
+        ids[id] = 1;
+    }
+    for (const auto& [id, _] : ids) {
+        (void)_;
+        const auto e_it = existing.quests.find(id);
+        const auto i_it = incoming.quests.find(id);
+        if (e_it == existing.quests.end()) {
+            out.quests.emplace(id, i_it->second);
+        }
+        else if (i_it == incoming.quests.end()) {
+            out.quests.emplace(id, e_it->second);
+        }
+        else {
+            out.quests.emplace(
+                id,
+                ProjectQuestKeepConflicts(
+                    e_it->second, i_it->second, result.diagnostics, conflict, result.conflict_variants));
+        }
+    }
+
+    std::map<uint32_t, char> maps;
+    for (const auto& [id, _] : existing.missions) {
+        (void)_;
+        maps[id] = 1;
+    }
+    for (const auto& [id, _] : incoming.missions) {
+        (void)_;
+        maps[id] = 1;
+    }
+    for (const auto& [id, _] : maps) {
+        (void)_;
+        const auto e_it = existing.missions.find(id);
+        const auto i_it = incoming.missions.find(id);
+        if (e_it == existing.missions.end()) {
+            out.missions.emplace(id, i_it->second);
+        }
+        else if (i_it == incoming.missions.end()) {
+            out.missions.emplace(id, e_it->second);
+        }
+        else {
+            out.missions.emplace(id, ProjectMission(e_it->second, i_it->second));
+        }
+    }
+
+    result.character = std::move(out);
+    result.status = conflict ? StoreOpStatus::MergeConflict : StoreOpStatus::Ok;
+    if (conflict) {
+        AddDiag(result.diagnostics, "coalesce NeedsIntervention: semanticEventKey payload conflict");
+    }
+    return result;
+}
+
 class AccountMutex {
 public:
     explicit AccountMutex(std::string mutex_name)
@@ -389,6 +566,13 @@ LoadStoreResult LoadFromPaths(const AccountStorePaths& paths, std::string_view a
 }
 
 } // namespace
+
+CoalesceCharacterResult CoalesceStoredCharacters(
+    const StoredCharacter& existing,
+    const StoredCharacter& incoming)
+{
+    return CoalesceStoredCharactersImpl(existing, incoming);
+}
 
 AccountStorePaths BuildAccountStorePaths(
     const std::filesystem::path& quest_progress_dir,

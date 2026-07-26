@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -30,6 +31,7 @@ enum class PersistLatch : uint8_t {
     ReadyToSave,
     Saving,
     BlockedPermanent,
+    NeedsIntervention, // MergeConflict / coalesce payload conflict — no auto-retry
     BlockedRetryable,
     RetainedDetachedSession,
 };
@@ -61,11 +63,32 @@ struct EvidenceStamp {
     std::string character_key;
 };
 
-// Detached dirty session retained when switch/logout flush fails (never silently discarded).
+// Phase-2 detached identity: accountKey + characterKey (never displayName).
+struct DetachedSessionKey {
+    std::string account_key;
+    std::string character_key;
+
+    bool operator<(const DetachedSessionKey& other) const
+    {
+        if (account_key != other.account_key) {
+            return account_key < other.account_key;
+        }
+        return character_key < other.character_key;
+    }
+
+    bool operator==(const DetachedSessionKey& other) const
+    {
+        return account_key == other.account_key && character_key == other.character_key;
+    }
+};
+
+// One keyed detached dirty session (minimal one-character account store).
 struct DetachedDirtySession {
+    DetachedSessionKey key{};
     SessionIdentity identity{};
     uint64_t account_generation = 0;
     uint64_t character_generation = 0;
+    // Minimal store: format/version/account_key + exactly this character.
     AccountProgressStore account_store{};
     CharacterProgress character{};
     bool semantic_dirty = false;
@@ -76,9 +99,10 @@ struct DetachedDirtySession {
     std::chrono::steady_clock::time_point next_retry_at{};
     uint32_t retry_attempts = 0;
     std::vector<EvidenceStamp> pending_evidence;
+    // Alternate history payloads for the same semanticEventKey (coalesce conflicts).
+    std::map<std::string, std::vector<QuestHistoryEvent>> conflict_variants;
 };
 
-// Canonical UTC timestamp for reducer input: YYYY-MM-DDTHH:MM:SS.sssZ
 std::string FormatCanonicalUtc(std::chrono::system_clock::time_point wall_now);
 
 class QuestProgressService {
@@ -88,7 +112,6 @@ public:
     void SetStoreDirectory(std::filesystem::path directory);
     const std::filesystem::path& store_directory() const { return store_directory_; }
 
-    // Invoked after dirty_generation_ is captured and before disk write (tests only).
     void SetPersistTestHook(PersistTestHook hook) { persist_test_hook_ = std::move(hook); }
     void SetLockTimeoutMs(unsigned long timeout_ms) { lock_timeout_ms_ = timeout_ms; }
 
@@ -96,13 +119,11 @@ public:
     void SignalTerminate();
     void Terminate();
 
-    // Drive identity/snapshot/evidence then scheduling. Call after adapters feed data.
     void Tick(
         std::chrono::steady_clock::time_point steady_now,
         std::chrono::system_clock::time_point wall_now);
 
     void BindIdentity(const SessionIdentity& identity, bool force_session_gap = false);
-    // Explicit logout / character-select unbound (not map-load).
     void UnbindIdentity();
     void IngestEvidence(std::vector<EvidenceStamp> stamps);
     void IngestSnapshot(
@@ -110,7 +131,6 @@ public:
         std::chrono::system_clock::time_point wall_now,
         std::chrono::steady_clock::time_point steady_now);
 
-    // session_boundary=true bypasses debounce (character switch / terminate).
     bool Flush(bool session_boundary);
 
     const SessionIdentity& identity() const { return identity_; }
@@ -132,23 +152,47 @@ public:
     uint64_t dirty_generation() const { return dirty_generation_; }
     PersistLatch persist_latch() const { return persist_latch_; }
     size_t detached_session_count() const { return detached_sessions_.size(); }
-    const std::vector<DetachedDirtySession>& detached_sessions() const { return detached_sessions_; }
+    const std::map<DetachedSessionKey, DetachedDirtySession>& detached_sessions() const
+    {
+        return detached_sessions_;
+    }
     size_t persist_attempt_count() const { return persist_attempt_count_; }
     std::chrono::steady_clock::time_point next_persist_retry_at() const { return next_persist_retry_at_; }
 
 private:
     void AddDiag(std::string message);
-    void NotePersistStatus(StoreOpStatus status, const char* operation);
+    void NotePersistStatus(
+        StoreOpStatus status,
+        const char* operation,
+        uint64_t scope_account_gen,
+        uint64_t scope_character_gen,
+        std::string_view scope_character_key);
     void SyncCharacterIntoAccountStore();
     void LoadAccountForIdentity();
     void EnsureCharacterRecord();
     void ClearActiveSessionMemory();
     void RetainActiveAsDetached(StoreOpStatus last_status);
+    void RemoveOutgoingCharacterFromActiveStore();
+    StoredCharacter BuildOutgoingStoredCharacter() const;
+    AccountProgressStore BuildMinimalAccountStore(const StoredCharacter& character) const;
     void ResetActivePersistLatch();
     void MarkSemanticDirty(std::chrono::steady_clock::time_point steady_now);
     void RouteOrDropEvidence(EvidenceStamp stamp);
+    bool ApplyEvidenceToCharacter(
+        CharacterProgress& character,
+        SessionIdentity& identity_meta,
+        std::vector<EvidenceStamp>& pending,
+        uint64_t& dirty_generation,
+        bool& semantic_dirty,
+        bool& heartbeat_pending,
+        PersistLatch& latch,
+        std::chrono::system_clock::time_point wall_now,
+        std::chrono::steady_clock::time_point steady_now);
     void FinalizeOutgoingEvidence();
-    std::vector<QuestEvidence> CollectActiveEvidence(std::chrono::steady_clock::time_point steady_now);
+    void FinalizeDetachedEvidence(DetachedDirtySession& detached, std::chrono::steady_clock::time_point steady_now);
+    std::vector<QuestEvidence> CollectEvidenceFrom(
+        std::vector<EvidenceStamp>& pending,
+        std::chrono::steady_clock::time_point steady_now);
     void ExpireEvidence(std::chrono::steady_clock::time_point steady_now);
     void ReduceFromSnapshot(
         const QuestSnapshot& snap,
@@ -156,12 +200,14 @@ private:
         std::chrono::steady_clock::time_point steady_now);
     bool TryPersist(bool session_boundary);
     bool TryPersist(bool session_boundary, std::chrono::steady_clock::time_point steady_now);
-    bool TryPersistDetached(size_t index, std::chrono::steady_clock::time_point steady_now);
+    bool TryPersistDetached(DetachedSessionKey key, std::chrono::steady_clock::time_point steady_now);
     void TickDetachedRetries(std::chrono::steady_clock::time_point steady_now);
     bool ShouldAttemptPersist(std::chrono::steady_clock::time_point steady_now, bool session_boundary) const;
     void ScheduleRetryBackoff(std::chrono::steady_clock::time_point steady_now);
     static bool IsPermanentBlockStatus(StoreOpStatus status);
     static bool IsRetryableBlockStatus(StoreOpStatus status);
+    static bool IsInterventionStatus(StoreOpStatus status);
+    static DetachedSessionKey MakeDetachedKey(const SessionIdentity& identity);
 
     std::filesystem::path store_directory_;
     bool initialized_ = false;
@@ -194,7 +240,7 @@ private:
     std::chrono::steady_clock::time_point last_heartbeat_save_{};
     std::chrono::steady_clock::time_point last_tick_steady_{};
 
-    std::vector<DetachedDirtySession> detached_sessions_;
+    std::map<DetachedSessionKey, DetachedDirtySession> detached_sessions_;
 
     std::vector<std::string> diagnostics_;
     size_t successful_save_count_ = 0;
