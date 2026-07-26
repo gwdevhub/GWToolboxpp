@@ -66,6 +66,9 @@ public:
     // Drain owned evidence stamps (abandon/reward/enquire). Callbacks never reduce/I/O.
     void DrainPendingEvidence(std::vector<QuestEvidenceStamp>& out);
 
+    // kLogout observed (character select / session end) — not map-load.
+    bool ConsumeLogoutSignal();
+
 private:
     static constexpr GW::Constants::QuestID custom_marker_quest_id =
         static_cast<GW::Constants::QuestID>(0x0000fdd);
@@ -111,6 +114,7 @@ private:
 
     mutable std::mutex evidence_mutex_;
     std::vector<QuestEvidenceStamp> pending_evidence_;
+    bool logout_pending_ = false;
 
     struct RequestState {
         std::chrono::steady_clock::time_point last_request{};

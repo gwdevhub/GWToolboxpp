@@ -50,14 +50,14 @@ void QuestTrackerWindow::Update(float delta)
 
         const auto snap = observation_.AcquireSnapshot();
         const bool world_ready = snap && snap->world_ready && !snap->loading;
-        // Map-load: keep prior identity; do not treat loading as unbound logout.
-        if (world_ready) {
-            progress_.BindIdentity(QuestProgress::SampleLiveSessionIdentity(true));
-        }
+        const bool logout = observation_.ConsumeLogoutSignal();
 
-        std::vector<QuestEvidenceStamp> evidence;
-        observation_.DrainPendingEvidence(evidence);
-        if (!evidence.empty()) {
+        auto drain_scoped_evidence = [&]() {
+            std::vector<QuestEvidenceStamp> evidence;
+            observation_.DrainPendingEvidence(evidence);
+            if (evidence.empty()) {
+                return;
+            }
             std::vector<QuestProgress::EvidenceStamp> owned;
             owned.reserve(evidence.size());
             for (const auto& e : evidence) {
@@ -65,12 +65,34 @@ void QuestTrackerWindow::Update(float delta)
                 s.game_quest_id = e.game_quest_id;
                 s.kind = e.kind;
                 s.steady_at = e.steady_at;
-                owned.push_back(s);
+                // Scope captured against the currently bound identity before any rebind.
+                s.account_generation = progress_.account_generation();
+                s.character_generation = progress_.character_generation();
+                s.account_key = progress_.identity().account_key;
+                s.character_key = progress_.identity().character_key;
+                owned.push_back(std::move(s));
             }
             progress_.IngestEvidence(std::move(owned));
+        };
+
+        // 1–3) Drain/classify evidence for the currently bound identity first.
+        drain_scoped_evidence();
+
+        if (logout) {
+            // Explicit session end — not map-load. Do not apply a post-logout snap to the old char.
+            progress_.UnbindIdentity();
+        }
+        else if (world_ready) {
+            const auto next = QuestProgress::SampleLiveSessionIdentity(true);
+            // 5–7) Flush/retain old session if needed, then bind new identity.
+            // Never feed the live snap into the outgoing character — it already belongs to `next`.
+            progress_.BindIdentity(next);
+            // 8) Evidence arriving after rebind is scoped to the new identity only.
+            drain_scoped_evidence();
         }
 
-        if (snap) {
+        // 9) Ingest snapshot for the active bound identity (map-load skips via loading flag).
+        if (snap && progress_.identity().kind != QuestProgress::IdentityKind::Unbound) {
             progress_.IngestSnapshot(QuestProgress::ToQuestSnapshot(*snap), wall_now, steady_now);
         }
     }

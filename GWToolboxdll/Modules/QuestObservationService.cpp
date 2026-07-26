@@ -49,6 +49,7 @@ void QuestObservationService::RegisterCallbacks()
         GW::UI::UIMessage::kMapLoaded,
         GW::UI::UIMessage::kSendAbandonQuest,
         GW::UI::UIMessage::kSendDialog,
+        GW::UI::UIMessage::kLogout,
     };
 
     for (const auto message_id : messages) {
@@ -89,6 +90,7 @@ void QuestObservationService::Terminate()
     {
         std::scoped_lock lock(evidence_mutex_);
         pending_evidence_.clear();
+        logout_pending_ = false;
     }
 
     auto empty = std::make_shared<LiveQuestView>();
@@ -117,6 +119,14 @@ void QuestObservationService::DrainPendingEvidence(std::vector<QuestEvidenceStam
     std::scoped_lock lock(evidence_mutex_);
     out.insert(out.end(), pending_evidence_.begin(), pending_evidence_.end());
     pending_evidence_.clear();
+}
+
+bool QuestObservationService::ConsumeLogoutSignal()
+{
+    std::scoped_lock lock(evidence_mutex_);
+    const bool pending = logout_pending_;
+    logout_pending_ = false;
+    return pending;
 }
 
 void QuestObservationService::MarkAllDirty()
@@ -352,6 +362,12 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
             else if (dialog_type == 0x800006) {
                 PushEvidence(quest_id, QuestProgress::EvidenceKind::EnquireReward);
             }
+            break;
+        }
+        case GW::UI::UIMessage::kLogout: {
+            // Character-select / session end — not kStartMapLoad.
+            std::scoped_lock lock(evidence_mutex_);
+            logout_pending_ = true;
             break;
         }
         default:

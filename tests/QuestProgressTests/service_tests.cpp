@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <thread>
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -315,12 +316,19 @@ void TestBlockedStoreStatuses()
     svc.BindIdentity(PersistentId(kAcct, kCharA, "Hero"));
     Expect(svc.load_status() == StoreOpStatus::CodecError, "block_codec_load");
     Expect(!svc.persistence_allowed(), "block_codec_no_persist");
+    Expect(svc.persist_latch() == PersistLatch::BlockedPermanent, "block_codec_latch");
     const auto before = ReadAll(paths.primary);
     auto t0 = std::chrono::steady_clock::now();
     svc.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(1), t0);
+    Expect(svc.semantic_dirty(), "block_codec_dirty_retained");
+    const auto attempts0 = svc.persist_attempt_count();
+    const auto diag0 = svc.diagnostics().size();
     svc.Tick(t0 + 2s, Wall(2));
+    svc.Tick(t0 + 3s, Wall(3));
+    svc.Tick(t0 + 4s, Wall(4));
+    Expect(svc.persist_attempt_count() == attempts0, "block_codec_no_per_frame_retry");
+    Expect(svc.diagnostics().size() <= diag0 + 2, "block_codec_diag_not_spam");
     Expect(ReadAll(paths.primary) == before, "block_codec_bytes_preserved");
-    Expect(svc.blocked_save_count() >= 1, "block_codec_save_counted");
 
     // Unsupported major
     const auto dir2 = MakeTempDir();
@@ -336,8 +344,13 @@ void TestBlockedStoreStatuses()
     svc2.SetStoreDirectory(dir2);
     svc2.BindIdentity(PersistentId(kAcct, kCharA, "Hero"));
     Expect(svc2.load_status() == StoreOpStatus::UnsupportedDiskMajor, "block_major_load");
+    Expect(svc2.persist_latch() == PersistLatch::BlockedPermanent, "block_major_latch");
     const auto before2 = ReadAll(paths2.primary);
+    const auto attempts2 = svc2.persist_attempt_count();
     svc2.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(1), t0);
+    svc2.Tick(t0 + 2s, Wall(2));
+    svc2.Tick(t0 + 3s, Wall(3));
+    Expect(svc2.persist_attempt_count() == attempts2, "block_major_no_per_frame_retry");
     svc2.Flush(true);
     Expect(ReadAll(paths2.primary) == before2, "block_major_bytes_preserved");
 }
@@ -413,6 +426,358 @@ void TestMergeOptionalIgnored()
     Expect(!conflict.merged.has_value(), "merge_opt_no_store");
 }
 
+struct MutexHold {
+    HANDLE ready = nullptr;
+    HANDLE release_event = nullptr;
+    HANDLE held = nullptr;
+    std::thread holder;
+
+    explicit MutexHold(const std::string& mutex_name)
+    {
+        const std::wstring wide(mutex_name.begin(), mutex_name.end());
+        ready = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        release_event = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        holder = std::thread([this, wide]() {
+            held = CreateMutexW(nullptr, FALSE, wide.c_str());
+            if (!held) {
+                SetEvent(ready);
+                return;
+            }
+            if (WaitForSingleObject(held, 0) != WAIT_OBJECT_0) {
+                SetEvent(ready);
+                return;
+            }
+            SetEvent(ready);
+            WaitForSingleObject(release_event, INFINITE);
+            ReleaseMutex(held);
+            CloseHandle(held);
+            held = nullptr;
+        });
+        WaitForSingleObject(ready, 5000);
+    }
+
+    void Release()
+    {
+        if (release_event) {
+            SetEvent(release_event);
+        }
+        if (holder.joinable()) {
+            holder.join();
+        }
+        if (ready) {
+            CloseHandle(ready);
+            ready = nullptr;
+        }
+        if (release_event) {
+            CloseHandle(release_event);
+            release_event = nullptr;
+        }
+    }
+
+    ~MutexHold() { Release(); }
+
+    bool ok() const { return held != nullptr; }
+};
+
+void TestFailedSwitchFlushRetainsAndRetries()
+{
+    const auto dir = MakeTempDir();
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    svc.SetLockTimeoutMs(100);
+
+    auto id_a = PersistentId(kAcct, kCharA, "HeroA");
+    auto id_b = PersistentId(kAcct, kCharB, "HeroB");
+    svc.BindIdentity(id_a);
+    auto t0 = std::chrono::steady_clock::now();
+    svc.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(100), t0);
+    Expect(svc.semantic_dirty(), "fail_switch_a_dirty");
+    Expect(svc.character_progress().quests.count(100) == 1, "fail_switch_a_has_100");
+
+    {
+        MutexHold hold(BuildAccountMutexName(NormalizeAccountKey(kAcct)));
+        Expect(hold.ok(), "fail_switch_mutex_held");
+        svc.BindIdentity(id_b);
+    }
+    Expect(svc.detached_session_count() == 1, "fail_switch_retained_a");
+    Expect(svc.character_progress().quests.count(100) == 0, "fail_switch_b_no_a");
+    Expect(svc.identity().character_key == id_b.character_key, "fail_switch_bound_b");
+    Expect(svc.detached_sessions()[0].character.quests.count(100) == 1, "fail_switch_a_in_detached");
+    Expect(!std::filesystem::exists(BuildAccountStorePaths(dir, NormalizeAccountKey(kAcct)).primary),
+        "fail_switch_no_file_yet");
+
+    svc.IngestSnapshot(MakeSnap(10, {Q(200)}), Wall(110), t0 + 1s);
+    Expect(svc.character_progress().quests.count(200) == 1, "fail_switch_b_own");
+    Expect(svc.character_progress().quests.count(100) == 0, "fail_switch_b_still_isolated");
+
+    // Detached retry for A after lock released (initial backoff 500ms).
+    svc.Tick(t0 + 2s, Wall(120));
+    svc.Tick(t0 + 3s, Wall(121));
+    Expect(svc.detached_session_count() == 0, "fail_switch_a_retry_cleared");
+    Expect(std::filesystem::exists(BuildAccountStorePaths(dir, NormalizeAccountKey(kAcct)).primary),
+        "fail_switch_file_after_retry");
+
+    QuestProgressService verify;
+    verify.Initialize();
+    verify.SetStoreDirectory(dir);
+    verify.BindIdentity(id_a);
+    Expect(verify.character_progress().quests.count(100) == 1, "fail_switch_a_reloaded");
+    verify.BindIdentity(id_b);
+    Expect(verify.character_progress().quests.count(100) == 0, "fail_switch_b_reload_isolated");
+}
+
+void TestMultipleFailedSwitchesPreserveBoth()
+{
+    const auto dir = MakeTempDir();
+    const char* kCharC = "cccccccc-dddd-eeee-ffff-000000000001";
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    svc.SetLockTimeoutMs(100);
+
+    auto id_a = PersistentId(kAcct, kCharA, "A");
+    auto id_b = PersistentId(kAcct, kCharB, "B");
+    auto id_c = PersistentId(kAcct, kCharC, "C");
+    auto t0 = std::chrono::steady_clock::now();
+
+    svc.BindIdentity(id_a);
+    svc.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(1), t0);
+    {
+        MutexHold hold(BuildAccountMutexName(NormalizeAccountKey(kAcct)));
+        Expect(hold.ok(), "multi_fail_mutex_a");
+        svc.BindIdentity(id_b);
+    }
+    Expect(svc.detached_session_count() == 1, "multi_fail_retained_a");
+    Expect(svc.detached_sessions()[0].identity.character_key == id_a.character_key, "multi_fail_a_key");
+
+    svc.IngestSnapshot(MakeSnap(2, {Q(200)}), Wall(2), t0 + 1s);
+    {
+        MutexHold hold(BuildAccountMutexName(NormalizeAccountKey(kAcct)));
+        Expect(hold.ok(), "multi_fail_mutex_b");
+        svc.BindIdentity(id_c);
+    }
+    Expect(svc.detached_session_count() == 2, "multi_fail_retained_ab");
+    Expect(svc.detached_sessions()[0].identity.character_key == id_a.character_key, "multi_fail_a_kept");
+    Expect(svc.detached_sessions()[1].identity.character_key == id_b.character_key, "multi_fail_b_kept");
+    Expect(svc.detached_sessions()[0].character.quests.count(100) == 1, "multi_fail_a_data");
+    Expect(svc.detached_sessions()[1].character.quests.count(200) == 1, "multi_fail_b_data");
+    Expect(svc.identity().character_key == id_c.character_key, "multi_fail_bound_c");
+}
+
+void TestEvidenceOrderingAcrossSwitch()
+{
+    const auto dir = MakeTempDir();
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    auto id_a = PersistentId(kAcct, kCharA, "A");
+    auto id_b = PersistentId(kAcct, kCharB, "B");
+    auto t0 = std::chrono::steady_clock::now();
+
+    svc.BindIdentity(id_a);
+    const auto gen_a_acct = svc.account_generation();
+    const auto gen_a_char = svc.character_generation();
+    svc.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(1), t0);
+
+    EvidenceStamp ab;
+    ab.game_quest_id = 100;
+    ab.kind = EvidenceKind::Abandon;
+    ab.steady_at = t0 + 5ms;
+    ab.account_generation = gen_a_acct;
+    ab.character_generation = gen_a_char;
+    ab.account_key = id_a.account_key;
+    ab.character_key = id_a.character_key;
+    svc.IngestEvidence({ab});
+    svc.BindIdentity(id_b);
+    Expect(svc.character_progress().quests.count(100) == 0, "ev_order_b_no_100");
+    if (svc.detached_session_count() == 0) {
+        QuestProgressService reload;
+        reload.Initialize();
+        reload.SetStoreDirectory(dir);
+        reload.BindIdentity(id_a);
+        Expect(reload.character_progress().quests.at(100).state == ProgressState::AbandonedObserved,
+            "ev_order_a_abandoned_persisted");
+    }
+    else {
+        Expect(svc.detached_sessions()[0].character.quests.at(100).state == ProgressState::AbandonedObserved,
+            "ev_order_a_abandoned_detached");
+    }
+
+    QuestProgressService svc2;
+    svc2.Initialize();
+    svc2.SetStoreDirectory(MakeTempDir());
+    svc2.BindIdentity(id_a);
+    auto t1 = std::chrono::steady_clock::now();
+    svc2.IngestSnapshot(MakeSnap(1, {Q(400, true)}), Wall(10), t1);
+    EvidenceStamp rw;
+    rw.game_quest_id = 400;
+    rw.kind = EvidenceKind::Reward;
+    rw.steady_at = t1 + 5ms;
+    rw.account_generation = svc2.account_generation();
+    rw.character_generation = svc2.character_generation();
+    svc2.IngestEvidence({rw});
+    svc2.BindIdentity(id_b);
+    Expect(svc2.character_progress().quests.count(400) == 0, "ev_reward_b_clear");
+
+    QuestProgressService svc3;
+    svc3.Initialize();
+    svc3.SetStoreDirectory(MakeTempDir());
+    EvidenceStamp orphan;
+    orphan.game_quest_id = 500;
+    orphan.kind = EvidenceKind::Abandon;
+    orphan.steady_at = t1;
+    svc3.IngestEvidence({orphan});
+    svc3.BindIdentity(id_b);
+    svc3.IngestSnapshot(MakeSnap(1, {Q(500)}), Wall(20), t1 + 1s);
+    svc3.IngestSnapshot(MakeSnap(2, {}), Wall(21), t1 + 2s);
+    Expect(svc3.character_progress().quests.at(500).state == ProgressState::Unknown, "ev_unbound_no_abandon");
+
+    QuestProgressService svc4;
+    svc4.Initialize();
+    svc4.SetStoreDirectory(MakeTempDir());
+    svc4.BindIdentity(id_a);
+    auto t2 = std::chrono::steady_clock::now();
+    svc4.IngestSnapshot(MakeSnap(1, {Q(600)}), Wall(30), t2);
+    EvidenceStamp keep;
+    keep.game_quest_id = 600;
+    keep.kind = EvidenceKind::Abandon;
+    keep.steady_at = t2 + 5ms;
+    keep.account_generation = svc4.account_generation();
+    keep.character_generation = svc4.character_generation();
+    svc4.IngestEvidence({keep});
+    svc4.BindIdentity(id_a);
+    svc4.IngestSnapshot(MakeSnap(2, {}), Wall(31), t2 + 10ms);
+    Expect(svc4.character_progress().quests.at(600).state == ProgressState::AbandonedObserved,
+        "ev_mapload_same_char_preserves");
+
+    QuestProgressService svc5;
+    svc5.Initialize();
+    svc5.SetStoreDirectory(MakeTempDir());
+    svc5.BindIdentity(id_a);
+    auto t3 = std::chrono::steady_clock::now();
+    svc5.IngestSnapshot(MakeSnap(1, {Q(700)}), Wall(40), t3);
+    const auto old_gen = svc5.character_generation();
+    svc5.BindIdentity(id_b);
+    svc5.BindIdentity(id_a);
+    Expect(svc5.character_generation() != old_gen, "ev_new_gen_after_rebind");
+    svc5.IngestSnapshot(MakeSnap(1, {Q(700)}), Wall(41), t3 + 1s);
+    EvidenceStamp stale;
+    stale.game_quest_id = 700;
+    stale.kind = EvidenceKind::Abandon;
+    stale.steady_at = t3 + 2s;
+    stale.account_generation = svc5.account_generation();
+    stale.character_generation = old_gen;
+    svc5.IngestEvidence({stale});
+    svc5.IngestSnapshot(MakeSnap(2, {}), Wall(42), t3 + 3s);
+    Expect(svc5.character_progress().quests.at(700).state == ProgressState::Unknown, "ev_stale_gen_ignored");
+}
+
+void TestLockTimeoutBackoff()
+{
+    const auto dir = MakeTempDir();
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    svc.SetLockTimeoutMs(100);
+    svc.BindIdentity(PersistentId(kAcct, kCharA, "Hero"));
+    auto t0 = std::chrono::steady_clock::now();
+    svc.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(1), t0);
+
+    MutexHold hold(BuildAccountMutexName(NormalizeAccountKey(kAcct)));
+    Expect(hold.ok(), "backoff_mutex");
+    const auto attempts0 = svc.persist_attempt_count();
+    svc.Tick(t0 + 1100ms, Wall(2));
+    Expect(svc.persist_attempt_count() == attempts0 + 1, "backoff_first_attempt");
+    Expect(svc.persist_latch() == PersistLatch::BlockedRetryable, "backoff_latch");
+    Expect(svc.semantic_dirty(), "backoff_dirty_kept");
+    const auto retry_at = svc.next_persist_retry_at();
+    const auto retry_ms = std::chrono::duration_cast<std::chrono::milliseconds>(retry_at - t0).count();
+    Expect(retry_ms >= 1500, "backoff_deadline_ge_1500");
+    const auto attempts1 = svc.persist_attempt_count();
+    svc.Tick(t0 + 1200ms, Wall(3));
+    Expect(svc.persist_attempt_count() == attempts1, "backoff_no_immediate_retry");
+    svc.Tick(t0 + 1100ms + kPersistRetryInitialBackoff + 10ms, Wall(4));
+    Expect(svc.persist_attempt_count() >= attempts1 + 1, "backoff_retry_after_delay");
+}
+
+void TestDirtyGenerationSafety()
+{
+    const auto dir = MakeTempDir();
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    svc.BindIdentity(PersistentId(kAcct, kCharA, "Hero"));
+    auto t0 = std::chrono::steady_clock::now();
+    svc.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(1), t0);
+    Expect(svc.dirty_generation() == 1, "dirty_gen_1");
+
+    svc.SetPersistTestHook([&]() {
+        svc.IngestSnapshot(MakeSnap(2, {Q(100), Q(101)}), Wall(2), t0 + 50ms);
+    });
+    svc.Tick(t0 + 1100ms, Wall(3));
+    Expect(svc.dirty_generation() >= 2, "dirty_gen_bumped_during_save");
+    Expect(svc.semantic_dirty(), "dirty_gen_n1_still_dirty");
+    Expect(svc.character_progress().quests.count(101) == 1, "dirty_gen_n1_present");
+
+    svc.SetPersistTestHook({});
+    svc.Tick(t0 + 2200ms, Wall(4));
+    Expect(!svc.semantic_dirty(), "dirty_gen_cleared_after_followup");
+}
+
+void TestDiagnosticsBounded()
+{
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(MakeTempDir());
+    auto id_a = PersistentId(kAcct, kCharA, "Hero");
+    for (int i = 0; i < 150; ++i) {
+        svc.BindIdentity(id_a, true);
+    }
+    Expect(svc.diagnostics().size() <= kMaxDiagnostics, "diag_bounded_max");
+    Expect(svc.diagnostics().size() == kMaxDiagnostics, "diag_at_capacity");
+    Expect(!svc.diagnostics().empty(), "diag_newest_retained");
+}
+
+void TestLogoutUnbindAndMapLoad()
+{
+    const auto dir = MakeTempDir();
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    auto id_a = PersistentId(kAcct, kCharA, "Hero");
+    svc.BindIdentity(id_a);
+    auto t0 = std::chrono::steady_clock::now();
+    svc.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(1), t0);
+    svc.Tick(t0 + 2s, Wall(2));
+    Expect(svc.successful_save_count() >= 1, "logout_saved_before");
+
+    svc.UnbindIdentity();
+    Expect(svc.identity().kind == IdentityKind::Unbound, "logout_unbound");
+    Expect(svc.character_progress().quests.empty(), "logout_clears_active");
+
+    svc.BindIdentity(id_a);
+    svc.IngestSnapshot(MakeSnap(1, {Q(100)}), Wall(3), t0 + 3s);
+    svc.BindIdentity(id_a);
+    Expect(svc.identity().kind == IdentityKind::Persistent, "mapload_still_bound");
+    Expect(svc.character_progress().quests.count(100) == 1, "mapload_preserves");
+
+    QuestProgressService svc2;
+    svc2.Initialize();
+    svc2.SetStoreDirectory(MakeTempDir());
+    svc2.SetLockTimeoutMs(100);
+    svc2.BindIdentity(id_a);
+    svc2.IngestSnapshot(MakeSnap(2, {Q(100), Q(101)}), Wall(4), t0 + 4s);
+    Expect(svc2.semantic_dirty(), "logout_fail_dirty");
+    {
+        MutexHold hold(BuildAccountMutexName(NormalizeAccountKey(kAcct)));
+        Expect(hold.ok(), "logout_fail_mutex");
+        svc2.UnbindIdentity();
+    }
+    Expect(svc2.identity().kind == IdentityKind::Unbound, "logout_fail_unbound");
+    Expect(svc2.detached_session_count() == 1, "logout_fail_retained");
+}
+
 } // namespace
 
 void RunBatch2CServiceTests()
@@ -424,4 +789,11 @@ void RunBatch2CServiceTests()
     TestBlockedStoreStatuses();
     TestHeartbeatAndLifecycle();
     TestMergeOptionalIgnored();
+    TestFailedSwitchFlushRetainsAndRetries();
+    TestMultipleFailedSwitchesPreserveBoth();
+    TestEvidenceOrderingAcrossSwitch();
+    TestLockTimeoutBackoff();
+    TestDirtyGenerationSafety();
+    TestDiagnosticsBounded();
+    TestLogoutUnbindAndMapLoad();
 }
