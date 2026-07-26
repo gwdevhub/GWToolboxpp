@@ -609,6 +609,17 @@ Batch 2C (identity binder / observation wiring / lifecycle flush) is a separate 
 - **Logout:** `kLogout` → `QuestObservationService::ConsumeLogoutSignal` → `UnbindIdentity` (finalize + flush/retain + unbound). **`kStartMapLoad` is not logout.** World-not-ready alone does not unbind
 - **In-game gate before Batch 2D:** multi-character switch with forced save failure / logout / map-load must be validated manually
 
+### Batch 2C.1 detached-session hardening
+
+- **Keyed detach:** `DetachedSessionKey = accountKey + characterKey` in a deterministic `std::map` (never displayName; never unbounded `push_back`)
+- **Coalesce:** repeated visits merge into one entry via `CoalesceStoredCharacters`; minimal one-character `AccountProgressStore` payload
+- **Conflicts:** same `semanticEventKey` with different payloads → `NeedsIntervention` / `MergeConflict`; alternate payloads retained in `conflict_variants` (deduped); **no automatic Tick retry**
+- **Same-account cleanup:** after retain/coalesce, outgoing character is erased from the **active** in-memory account store so a later B save cannot republish stale A
+- **Late evidence:** scoped evidence matching detached keys runs the same finalize/reducer path against the detached character (pairing window 5s)
+- **Terminate / re-Initialize:** one orderly retryable flush attempt; failed/permanent detached entries survive in process memory; re-enable does not duplicate or clear dirty gens / permanent latch; unsaved data does **not** survive process exit
+- **Diagnostics:** detached status messages include detached character key + generations; `blocked_save_count_` increments on status transition only
+- Multi-character in-game validation remains required before Batch 2D
+
 ## STOP (Batch 2C corrections)
 
 Batch 2D / Contract export / mission-bit observation / history UI remain deferred.
