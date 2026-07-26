@@ -6,6 +6,7 @@
 #include <Modules/QuestProgressJsonCodec.h>
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -54,15 +55,16 @@ struct LoadStoreResult {
 
 struct SaveStoreResult {
     StoreOpStatus status = StoreOpStatus::IoError;
-    AccountProgressStore merged;
+    std::optional<AccountProgressStore> merged;
     StoreDiagnostics diagnostics;
     bool used_move_file_ex = false;
     bool used_replace_file = false;
 };
 
+// merged is engaged only when status == Ok; conflict/error leaves it disengaged.
 struct MergeStoreResult {
     StoreOpStatus status = StoreOpStatus::MergeConflict;
-    AccountProgressStore merged;
+    std::optional<AccountProgressStore> merged;
     StoreDiagnostics diagnostics;
 };
 
@@ -81,7 +83,8 @@ MergeStoreResult MergeAccountStores(
     const AccountProgressStore& disk,
     const AccountProgressStore& memory);
 
-// Load primary; on missing → empty Ok; on empty/malformed → try .bak; never deletes files.
+// Missing primary+backup → Empty. Existing empty/whitespace/malformed primary → try .bak;
+// unusable primary+bak → CodecError (never treated as Empty). Never deletes files.
 LoadStoreResult LoadAccountStore(
     const std::filesystem::path& quest_progress_dir,
     std::string_view account_key);

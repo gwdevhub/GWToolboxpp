@@ -4,11 +4,13 @@
 
 #include "test_assert.h"
 
+#include <algorithm>
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <thread>
-#include <atomic>
+#include <vector>
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -40,6 +42,12 @@ void WriteRaw(const std::filesystem::path& path, std::string_view text)
 {
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     out.write(text.data(), static_cast<std::streamsize>(text.size()));
+}
+
+std::string ReadAll(const std::filesystem::path& path)
+{
+    std::ifstream in(path, std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
 }
 
 const char* kAcct = "01234567-89ab-cdef-0123-456789abcdef";
@@ -156,7 +164,6 @@ void TestCodecOrderingIndependent()
 
 void TestCodecEnumsAndValidation()
 {
-    // Valid enums via round-trip covering reserved states in storage (codec allows; reducer does not emit).
     auto store = MakeStore(kAcct);
     store.characters.begin()->second.quests.at(100).state = ProgressState::Available;
     auto ser = SerializeAccountStoreJson(store);
@@ -276,7 +283,6 @@ void TestAtomicCreateReplaceBak()
     Expect(second.ok && second.used_replace_file, "atomic_replace_file");
     Expect(std::filesystem::exists(paths.backup), "atomic_bak_created");
 
-    // Malformed primary, valid bak.
     WriteRaw(paths.primary, "{not-json");
     auto loaded = LoadAccountStore(dir, kAcct);
     Expect(loaded.status == StoreOpStatus::RecoveredFromBak, "load_recover_bak");
@@ -291,7 +297,6 @@ void TestAtomicCreateReplaceBak()
     Expect(std::filesystem::exists(paths.primary) && std::filesystem::exists(paths.backup),
         "load_both_bad_files_kept");
 
-    // Missing primary → empty, no file created.
     std::error_code ec;
     std::filesystem::remove(paths.primary, ec);
     std::filesystem::remove(paths.backup, ec);
@@ -299,15 +304,240 @@ void TestAtomicCreateReplaceBak()
     Expect(missing.status == StoreOpStatus::Empty, "load_missing_empty");
     Expect(!std::filesystem::exists(paths.primary), "load_missing_no_create");
 
-    // Stale tmp does not override primary.
     auto recreate = AtomicJson::WriteAtomicUtf8(paths.primary, paths.backup, ser.utf8_json);
     Expect(recreate.ok, "atomic_recreate_ok");
     WriteRaw(paths.tmp, "{stale-tmp");
     auto still = LoadAccountStore(dir, kAcct);
-    Expect(still.status == StoreOpStatus::Ok || still.status == StoreOpStatus::Empty
-            || still.status == StoreOpStatus::RecoveredFromBak,
-        "stale_tmp_ignored_for_load");
-    Expect(still.store.account_key == kAcct || still.status == StoreOpStatus::Empty, "stale_tmp_not_primary");
+    Expect(still.status == StoreOpStatus::Ok, "stale_tmp_ignored_for_load");
+    Expect(still.store.account_key == NormalizeAccountKey(kAcct), "stale_tmp_not_primary");
+}
+
+void TestLoadSaveStatusMatrix()
+{
+    const auto dir = MakeTempDir();
+    const auto paths = BuildAccountStorePaths(dir, kAcct);
+    auto memory = MakeStore(kAcct);
+    const auto valid_json = SerializeAccountStoreJson(MakeStore(kAcct)).utf8_json;
+
+    // A: missing primary + missing backup → Empty
+    auto missing = LoadAccountStore(dir, kAcct);
+    Expect(missing.status == StoreOpStatus::Empty, "matrix_missing_empty");
+    Expect(missing.store.characters.empty(), "matrix_missing_empty_store");
+
+    // B: zero-byte primary + no backup → CodecError; save blocked; bytes unchanged
+    WriteRaw(paths.primary, "");
+    Expect(std::filesystem::file_size(paths.primary) == 0, "matrix_zero_byte_exists");
+    auto zero = LoadAccountStore(dir, kAcct);
+    Expect(zero.status == StoreOpStatus::CodecError, "matrix_zero_codec_error");
+    const auto zero_bytes = ReadAll(paths.primary);
+    auto save_zero = SaveMergedAccountStore(dir, kAcct, memory, 2000);
+    Expect(save_zero.status == StoreOpStatus::CodecError, "matrix_zero_save_blocked");
+    Expect(!save_zero.merged.has_value(), "matrix_zero_save_no_merged");
+    Expect(ReadAll(paths.primary) == zero_bytes, "matrix_zero_bytes_preserved");
+    Expect(!std::filesystem::exists(paths.backup), "matrix_zero_no_bak_created");
+
+    // whitespace-only primary + no backup → CodecError
+    WriteRaw(paths.primary, " \n\t  ");
+    const auto ws_bytes = ReadAll(paths.primary);
+    auto ws = LoadAccountStore(dir, kAcct);
+    Expect(ws.status == StoreOpStatus::CodecError, "matrix_whitespace_codec_error");
+    auto save_ws = SaveMergedAccountStore(dir, kAcct, memory, 2000);
+    Expect(save_ws.status == StoreOpStatus::CodecError, "matrix_whitespace_save_blocked");
+    Expect(ReadAll(paths.primary) == ws_bytes, "matrix_whitespace_bytes_preserved");
+
+    // malformed primary + no backup → CodecError
+    WriteRaw(paths.primary, "{not-json");
+    const auto bad_bytes = ReadAll(paths.primary);
+    auto bad = LoadAccountStore(dir, kAcct);
+    Expect(bad.status == StoreOpStatus::CodecError, "matrix_malformed_codec_error");
+    auto save_bad = SaveMergedAccountStore(dir, kAcct, memory, 2000);
+    Expect(save_bad.status == StoreOpStatus::CodecError, "matrix_malformed_save_blocked");
+    Expect(ReadAll(paths.primary) == bad_bytes, "matrix_malformed_bytes_preserved");
+
+    // zero-byte primary + valid backup → recovered
+    WriteRaw(paths.primary, "");
+    WriteRaw(paths.backup, valid_json);
+    auto zero_bak = LoadAccountStore(dir, kAcct);
+    Expect(zero_bak.status == StoreOpStatus::RecoveredFromBak, "matrix_zero_valid_bak");
+    Expect(zero_bak.store.characters.size() == 1, "matrix_zero_valid_bak_store");
+
+    // malformed primary + valid backup → recovered
+    WriteRaw(paths.primary, "{broken");
+    WriteRaw(paths.backup, valid_json);
+    auto mal_bak = LoadAccountStore(dir, kAcct);
+    Expect(mal_bak.status == StoreOpStatus::RecoveredFromBak, "matrix_malformed_valid_bak");
+    Expect(mal_bak.store.characters.begin()->second.display_name == "Hero", "matrix_malformed_valid_bak_name");
+
+    // unsupported-major primary + valid older backup → UnsupportedDiskMajor, no downgrade
+    const std::string newer_major = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 2, "minor": 0 },
+  "accountKey": "01234567-89ab-cdef-0123-456789abcdef",
+  "characters": []
+})";
+    WriteRaw(paths.primary, newer_major);
+    WriteRaw(paths.backup, valid_json);
+    const auto major_primary = ReadAll(paths.primary);
+    const auto major_bak = ReadAll(paths.backup);
+    auto major = LoadAccountStore(dir, kAcct);
+    Expect(major.status == StoreOpStatus::UnsupportedDiskMajor, "matrix_newer_major_no_downgrade");
+    auto save_major = SaveMergedAccountStore(dir, kAcct, memory, 2000);
+    Expect(save_major.status == StoreOpStatus::UnsupportedDiskMajor, "matrix_newer_major_save_blocked");
+    Expect(ReadAll(paths.primary) == major_primary, "matrix_newer_major_primary_preserved");
+    Expect(ReadAll(paths.backup) == major_bak, "matrix_newer_major_bak_preserved");
+
+    // account-key mismatch → blocked, no write
+    const std::string other_acct = R"({
+  "storeFormat": "gwtoolbox-quest-progress",
+  "storeVersion": { "major": 1, "minor": 1 },
+  "accountKey": "fedcba98-7654-3210-fedc-ba9876543210",
+  "characters": []
+})";
+    WriteRaw(paths.primary, other_acct);
+    std::error_code ec;
+    std::filesystem::remove(paths.backup, ec);
+    const auto mismatch_bytes = ReadAll(paths.primary);
+    auto mismatch_load = LoadAccountStore(dir, kAcct);
+    Expect(mismatch_load.status == StoreOpStatus::CodecError, "matrix_account_mismatch_load");
+    auto mismatch_save = SaveMergedAccountStore(dir, kAcct, memory, 2000);
+    Expect(mismatch_save.status == StoreOpStatus::CodecError, "matrix_account_mismatch_save_blocked");
+    Expect(ReadAll(paths.primary) == mismatch_bytes, "matrix_account_mismatch_bytes_preserved");
+}
+
+void TestMergeHistoryCanonicalization()
+{
+    auto base = MakeStore(kAcct);
+    const auto ck = base.characters.begin()->first;
+
+    // Disk history unsorted: latest valid event is in the middle.
+    auto disk = base;
+    auto& dq = disk.characters.at(ck).quests.at(100);
+    dq.history.clear();
+    dq.history.push_back(MakeHist(100, HistoryEventType::Observation, ProgressState::Active,
+        "2026-07-25T20:00:00.000Z", "key-early"));
+    dq.history.push_back(MakeHist(100, HistoryEventType::Observation, ProgressState::ObjectiveProgress,
+        "2026-07-25T22:00:00.000Z", "key-latest"));
+    dq.history.push_back(MakeHist(100, HistoryEventType::Observation, ProgressState::ReadyForReward,
+        "2026-07-25T21:00:00.000Z", "key-mid"));
+    dq.last_observed_at = "2026-07-25T20:00:00.000Z";
+    dq.state = ProgressState::Active;
+
+    auto memory_old = base;
+    memory_old.characters.at(ck).quests.at(100).state = ProgressState::Active;
+    memory_old.characters.at(ck).quests.at(100).last_observed_at = "2026-07-25T19:00:00.000Z";
+    memory_old.characters.at(ck).quests.at(100).history = {
+        MakeHist(100, HistoryEventType::Observation, ProgressState::Active,
+            "2026-07-25T19:00:00.000Z", "key-mem-old")};
+
+    // Prefer disk because history contains newer valid event despite unsorted order / stale last_observed_at.
+    auto from_disk = MergeAccountStores(disk, memory_old);
+    Expect(from_disk.status == StoreOpStatus::Ok && from_disk.merged.has_value(), "hist_disk_unsorted_ok");
+    // Effective recency on disk is 22:00 via history → disk projection (Active) wins over older memory.
+    Expect(from_disk.merged->characters.at(ck).quests.at(100).state == ProgressState::Active,
+        "hist_disk_unsorted_selects_latest_valid");
+
+    // Memory history unsorted with latest buried; should win over older disk.
+    auto disk_old = base;
+    auto memory = base;
+    auto& mq = memory.characters.at(ck).quests.at(100);
+    mq.state = ProgressState::ObjectiveProgress;
+    mq.last_observed_at = "2026-07-25T20:00:00.000Z";
+    mq.history.clear();
+    mq.history.push_back(MakeHist(100, HistoryEventType::Observation, ProgressState::Active,
+        "2026-07-25T20:00:00.000Z", "key-a"));
+    mq.history.push_back(MakeHist(100, HistoryEventType::Observation, ProgressState::ObjectiveProgress,
+        "2026-07-25T23:00:00.000Z", "key-late"));
+    mq.history.push_back(MakeHist(100, HistoryEventType::Observation, ProgressState::ReadyForReward,
+        "2026-07-25T21:00:00.000Z", "key-mid"));
+
+    auto from_mem = MergeAccountStores(disk_old, memory);
+    Expect(from_mem.status == StoreOpStatus::Ok && from_mem.merged.has_value(), "hist_mem_unsorted_ok");
+    Expect(from_mem.merged->characters.at(ck).quests.at(100).state == ProgressState::ObjectiveProgress,
+        "hist_mem_unsorted_selects_latest_valid");
+
+    // Differently ordered equivalent histories → same projection.
+    auto mem_a = memory;
+    auto mem_b = memory;
+    std::reverse(mem_b.characters.at(ck).quests.at(100).history.begin(),
+        mem_b.characters.at(ck).quests.at(100).history.end());
+    auto m1 = MergeAccountStores(disk_old, mem_a);
+    auto m2 = MergeAccountStores(disk_old, mem_b);
+    Expect(m1.status == StoreOpStatus::Ok && m2.status == StoreOpStatus::Ok, "hist_order_independent_ok");
+    Expect(m1.merged->characters.at(ck).quests.at(100).state
+            == m2.merged->characters.at(ck).quests.at(100).state,
+        "hist_order_independent_state");
+    Expect(SerializeAccountStoreJson(*m1.merged).utf8_json == SerializeAccountStoreJson(*m2.merged).utf8_json,
+        "hist_order_independent_bytes");
+
+    // Equal timestamps: higher semanticEventKey wins.
+    auto disk_tie = base;
+    auto mem_tie = base;
+    disk_tie.characters.at(ck).quests.at(100).state = ProgressState::Active;
+    disk_tie.characters.at(ck).quests.at(100).last_observed_at = "2026-07-25T20:00:00.000Z";
+    disk_tie.characters.at(ck).quests.at(100).history = {
+        MakeHist(100, HistoryEventType::Observation, ProgressState::Active,
+            "2026-07-25T20:00:00.000Z", "key-aaa")};
+    mem_tie.characters.at(ck).quests.at(100).state = ProgressState::ObjectiveProgress;
+    mem_tie.characters.at(ck).quests.at(100).last_observed_at = "2026-07-25T20:00:00.000Z";
+    mem_tie.characters.at(ck).quests.at(100).history = {
+        MakeHist(100, HistoryEventType::Observation, ProgressState::ObjectiveProgress,
+            "2026-07-25T20:00:00.000Z", "key-zzz")};
+    auto tied = MergeAccountStores(disk_tie, mem_tie);
+    Expect(tied.status == StoreOpStatus::Ok && tied.merged.has_value(), "hist_tie_ok");
+    Expect(tied.merged->characters.at(ck).quests.at(100).state == ProgressState::ObjectiveProgress,
+        "hist_tie_semantic_key");
+
+    // Malformed trailing event must not override a valid newer canonical event.
+    auto disk_mal = base;
+    auto mem_mal = base;
+    disk_mal.characters.at(ck).quests.at(100).state = ProgressState::ObjectiveProgress;
+    disk_mal.characters.at(ck).quests.at(100).last_observed_at = "2026-07-25T22:00:00.000Z";
+    disk_mal.characters.at(ck).quests.at(100).history = {
+        MakeHist(100, HistoryEventType::Observation, ProgressState::ObjectiveProgress,
+            "2026-07-25T22:00:00.000Z", "key-good")};
+    mem_mal.characters.at(ck).quests.at(100).state = ProgressState::ReadyForReward;
+    mem_mal.characters.at(ck).quests.at(100).last_observed_at = "2026-07-25T21:00:00.000Z";
+    mem_mal.characters.at(ck).quests.at(100).history = {
+        MakeHist(100, HistoryEventType::Observation, ProgressState::Active,
+            "2026-07-25T21:00:00.000Z", "key-older"),
+        MakeHist(100, HistoryEventType::Observation, ProgressState::ReadyForReward,
+            "not-a-timestamp", "key-malformed-trailing")};
+    auto mal = MergeAccountStores(disk_mal, mem_mal);
+    Expect(mal.status == StoreOpStatus::Ok && mal.merged.has_value(), "hist_malformed_ok");
+    Expect(mal.merged->characters.at(ck).quests.at(100).state == ProgressState::ObjectiveProgress,
+        "hist_malformed_trailing_ignored");
+}
+
+void TestMergeConflictUnusable()
+{
+    const auto dir = MakeTempDir();
+    const auto paths = BuildAccountStorePaths(dir, kAcct);
+    auto disk = MakeStore(kAcct);
+    auto ser = SerializeAccountStoreJson(disk);
+    Expect(AtomicJson::WriteAtomicUtf8(paths.primary, paths.backup, ser.utf8_json).ok, "conflict_seed_write");
+    // Create a bak with known bytes via second write.
+    disk.characters.begin()->second.display_name = "HeroBak";
+    auto ser2 = SerializeAccountStoreJson(disk);
+    Expect(AtomicJson::WriteAtomicUtf8(paths.primary, paths.backup, ser2.utf8_json).ok, "conflict_seed_bak");
+    // Restore primary content for conflict scenario: write original Hero store as primary again.
+    disk.characters.begin()->second.display_name = "Hero";
+    auto ser_primary = SerializeAccountStoreJson(disk);
+    WriteRaw(paths.primary, ser_primary.utf8_json);
+
+    const auto primary_before = ReadAll(paths.primary);
+    const auto bak_before = ReadAll(paths.backup);
+
+    auto conflict_mem = disk;
+    conflict_mem.characters.begin()->second.quests.at(100).history[0].state = ProgressState::ReadyForReward;
+    auto conflict = MergeAccountStores(disk, conflict_mem);
+    Expect(conflict.status == StoreOpStatus::MergeConflict, "merge_conflict_same_key");
+    Expect(!conflict.merged.has_value(), "merge_conflict_no_usable_store");
+
+    auto saved = SaveMergedAccountStore(dir, kAcct, conflict_mem, 2000);
+    Expect(saved.status == StoreOpStatus::MergeConflict, "merge_conflict_save_blocked");
+    Expect(!saved.merged.has_value(), "merge_conflict_save_no_merged");
+    Expect(ReadAll(paths.primary) == primary_before, "merge_conflict_primary_unchanged");
+    Expect(ReadAll(paths.backup) == bak_before, "merge_conflict_bak_unchanged");
 }
 
 void TestMergeOnWrite()
@@ -330,45 +560,79 @@ void TestMergeOnWrite()
         "2026-07-25T21:00:00.000Z", "key-b"));
     q.state = ProgressState::ObjectiveProgress;
 
-    // Same key different payload → conflict
-    auto conflict_mem = disk;
-    conflict_mem.characters.begin()->second.quests.at(100).history[0].state = ProgressState::ReadyForReward;
-    auto conflict = MergeAccountStores(disk, conflict_mem);
-    Expect(conflict.status == StoreOpStatus::MergeConflict, "merge_conflict_same_key");
-
     auto merged = MergeAccountStores(disk, memory);
-    Expect(merged.status == StoreOpStatus::Ok, "merge_ok");
-    Expect(merged.merged.characters.size() == 2, "merge_keeps_separate_characters");
-    Expect(merged.merged.characters.begin()->second.display_name == "HeroRenamed"
-            || merged.merged.characters.at(memory.characters.begin()->first).display_name == "HeroRenamed",
+    Expect(merged.status == StoreOpStatus::Ok && merged.merged.has_value(), "merge_ok");
+    Expect(merged.merged->characters.size() == 2, "merge_keeps_separate_characters");
+    Expect(merged.merged->characters.at(memory.characters.begin()->first).display_name == "HeroRenamed",
         "merge_newer_display_name");
-    const auto& mq = merged.merged.characters.at(memory.characters.begin()->first).quests.at(100);
+    const auto& mq = merged.merged->characters.at(memory.characters.begin()->first).quests.at(100);
     Expect(mq.history.size() == 2, "merge_history_union");
     Expect(mq.state == ProgressState::ObjectiveProgress, "merge_newer_projection");
 
-    // Older cannot roll back
     auto older = memory;
     older.characters.begin()->second.last_observed_at = "2026-07-25T19:00:00.000Z";
     older.characters.begin()->second.quests.at(100).last_observed_at = "2026-07-25T19:00:00.000Z";
+    older.characters.begin()->second.quests.at(100).history = {
+        MakeHist(100, HistoryEventType::Observation, ProgressState::Active,
+            "2026-07-25T19:00:00.000Z", "key-old")};
     older.characters.begin()->second.quests.at(100).state = ProgressState::Active;
-    auto no_rollback = MergeAccountStores(merged.merged, older);
-    Expect(no_rollback.merged.characters.at(memory.characters.begin()->first).quests.at(100).state
+    auto no_rollback = MergeAccountStores(*merged.merged, older);
+    Expect(no_rollback.status == StoreOpStatus::Ok && no_rollback.merged.has_value(), "merge_no_rollback_ok");
+    Expect(no_rollback.merged->characters.at(memory.characters.begin()->first).quests.at(100).state
             == ProgressState::ObjectiveProgress,
         "merge_no_rollback");
 
-    // Missions by mapId
     MissionRecord m1{10, true, false, false, false, "2026-07-25T20:00:00.000Z"};
     MissionRecord m2{10, false, true, false, false, "2026-07-25T22:00:00.000Z"};
     disk.characters.begin()->second.missions[10] = m1;
     memory.characters.begin()->second.missions[10] = m2;
     auto mm = MergeAccountStores(disk, memory);
-    Expect(mm.merged.characters.at(memory.characters.begin()->first).missions.at(10).completed_hard, "merge_mission_newer");
+    Expect(mm.status == StoreOpStatus::Ok && mm.merged.has_value(), "merge_mission_ok");
+    Expect(mm.merged->characters.at(memory.characters.begin()->first).missions.at(10).completed_hard,
+        "merge_mission_newer");
 
-    // Display name cannot merge two character keys
-    Expect(merged.merged.characters.count(other.character_key) == 1, "merge_no_name_key_collapse");
+    Expect(merged.merged->characters.count(other.character_key) == 1, "merge_no_name_key_collapse");
 
     auto saved = SaveMergedAccountStore(dir, kAcct, memory, 2000);
-    Expect(saved.status == StoreOpStatus::Ok, "save_merged_ok");
+    Expect(saved.status == StoreOpStatus::Ok && saved.merged.has_value(), "save_merged_ok");
+}
+
+void TestMissionEqualTimestampOr()
+{
+    auto disk = MakeStore(kAcct);
+    auto memory = MakeStore(kAcct);
+    const auto ck = disk.characters.begin()->first;
+    const char* ts = "2026-07-25T20:00:00.000Z";
+
+    MissionRecord a{10, true, false, true, false, ts};
+    MissionRecord b{10, false, true, false, true, ts};
+    disk.characters.at(ck).missions[10] = a;
+    memory.characters.at(ck).missions[10] = b;
+
+    auto ab = MergeAccountStores(disk, memory);
+    auto ba = MergeAccountStores(memory, disk);
+    Expect(ab.status == StoreOpStatus::Ok && ba.status == StoreOpStatus::Ok, "mission_or_ok");
+    const auto& m_ab = ab.merged->characters.at(ck).missions.at(10);
+    const auto& m_ba = ba.merged->characters.at(ck).missions.at(10);
+    Expect(m_ab.completed_normal && m_ab.completed_hard && m_ab.bonus_normal && m_ab.bonus_hard,
+        "mission_or_all_flags");
+    Expect(m_ab.completed_normal == m_ba.completed_normal
+            && m_ab.completed_hard == m_ba.completed_hard
+            && m_ab.bonus_normal == m_ba.bonus_normal
+            && m_ab.bonus_hard == m_ba.bonus_hard,
+        "mission_or_order_independent");
+
+    // Never clears a previously observed completion when merging equal timestamps.
+    MissionRecord only_true{10, true, true, true, true, ts};
+    MissionRecord only_false{10, false, false, false, false, ts};
+    disk.characters.at(ck).missions[10] = only_true;
+    memory.characters.at(ck).missions[10] = only_false;
+    auto keep = MergeAccountStores(disk, memory);
+    Expect(keep.merged->characters.at(ck).missions.at(10).completed_normal
+            && keep.merged->characters.at(ck).missions.at(10).completed_hard
+            && keep.merged->characters.at(ck).missions.at(10).bonus_normal
+            && keep.merged->characters.at(ck).missions.at(10).bonus_hard,
+        "mission_or_never_clears");
 }
 
 void TestMutexNamingAndWaitClassify()
@@ -438,7 +702,11 @@ void RunBatch2BStoreTests()
     TestCodecEnumsAndValidation();
     TestCodecVersioning();
     TestAtomicCreateReplaceBak();
+    TestLoadSaveStatusMatrix();
+    TestMergeHistoryCanonicalization();
+    TestMergeConflictUnusable();
     TestMergeOnWrite();
+    TestMissionEqualTimestampOr();
     TestMutexNamingAndWaitClassify();
     TestSaveTimeoutDoesNotWrite();
 }

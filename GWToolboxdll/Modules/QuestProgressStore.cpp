@@ -65,16 +65,43 @@ bool HistoryPayloadEqual(const QuestHistoryEvent& a, const QuestHistoryEvent& b)
     return true;
 }
 
+// Latest valid (canonical observedAt, semanticEventKey) over last_observed_at + history.
+// Insertion order is ignored; non-canonical timestamps are ineligible.
+struct ProjectionRecency {
+    std::string observed_at;
+    std::string tie_key;
+};
+
+ProjectionRecency QuestProjectionRecency(const QuestProgress& quest)
+{
+    ProjectionRecency best;
+    auto consider = [&](const std::string& observed_at, const std::string& tie_key) {
+        if (!IsCanonicalUtcTimestamp(observed_at)) {
+            return;
+        }
+        if (best.observed_at.empty()
+            || observed_at > best.observed_at
+            || (observed_at == best.observed_at && tie_key > best.tie_key)) {
+            best.observed_at = observed_at;
+            best.tie_key = tie_key;
+        }
+    };
+    consider(quest.last_observed_at, {});
+    for (const auto& ev : quest.history) {
+        consider(ev.observed_at, ev.semantic_event_key);
+    }
+    return best;
+}
+
 bool PreferMemoryProjection(const QuestProgress& disk, const QuestProgress& memory)
 {
-    if (memory.last_observed_at != disk.last_observed_at) {
-        return memory.last_observed_at > disk.last_observed_at;
+    const auto disk_r = QuestProjectionRecency(disk);
+    const auto mem_r = QuestProjectionRecency(memory);
+    if (mem_r.observed_at != disk_r.observed_at) {
+        return mem_r.observed_at > disk_r.observed_at;
     }
-    // Same timestamp: deterministic tie-break via latest history semantic key.
-    const auto disk_key = disk.history.empty() ? std::string{} : disk.history.back().semantic_event_key;
-    const auto mem_key = memory.history.empty() ? std::string{} : memory.history.back().semantic_event_key;
-    if (mem_key != disk_key) {
-        return mem_key > disk_key;
+    if (mem_r.tie_key != disk_r.tie_key) {
+        return mem_r.tie_key > disk_r.tie_key;
     }
     return false; // stable: keep disk on total tie
 }
@@ -137,12 +164,13 @@ QuestProgress ProjectQuest(const QuestProgress& disk, const QuestProgress& memor
     return out;
 }
 
+// Mission completion flags are monotonic game facts: once observed true, merge never clears them.
+// Same mapId + same lastObservedAt + differing flags → order-independent OR (never invents false→clear).
 MissionRecord ProjectMission(const MissionRecord& disk, const MissionRecord& memory)
 {
     if (memory.last_observed_at != disk.last_observed_at) {
         return memory.last_observed_at > disk.last_observed_at ? memory : disk;
     }
-    // Tie: OR completion flags, prefer memory map_id (same).
     MissionRecord out = disk;
     out.completed_normal = disk.completed_normal || memory.completed_normal;
     out.completed_hard = disk.completed_hard || memory.completed_hard;
@@ -300,26 +328,45 @@ LoadStoreResult LoadFromPaths(const AccountStorePaths& paths, std::string_view a
         if (parsed.status == CodecStatus::UnsupportedNewerMajor) {
             result.status = StoreOpStatus::UnsupportedDiskMajor;
             AddDiag(result.diagnostics, "unsupported newer major on disk");
-            return true; // handled terminal
+            return true; // handled terminal — do not fall back to older .bak
         }
         result.status = StoreOpStatus::CodecError;
         return false;
     };
 
     const auto primary = AtomicJson::ReadFileUtf8(paths.primary);
+    const auto bak = AtomicJson::ReadFileUtf8(paths.backup);
+
+    auto try_backup = [&]() -> bool {
+        if (bak.ok && !bak.missing && !bak.empty && try_parse(bak.utf8, true)) {
+            return true;
+        }
+        return false;
+    };
+
     if (primary.missing) {
+        if (try_backup()) {
+            return result;
+        }
+        // Present-but-unusable backup must not look like a never-created store.
+        if (!bak.missing && !bak.empty) {
+            result.status = StoreOpStatus::CodecError;
+            AddDiag(result.diagnostics, "primary missing; backup unusable; files preserved");
+            return result;
+        }
         result.status = StoreOpStatus::Empty;
         result.store.account_key = normalized;
         result.store.store_format = kStoreFormatId;
         result.store.store_version = {kStoreFormatMajor, kStoreFormatMinor};
-        AddDiag(result.diagnostics, "primary missing; empty store");
+        AddDiag(result.diagnostics, "primary and backup missing; empty store");
         return result;
     }
+
+    // Primary exists: valid body → parse; unsupported major is terminal (no .bak downgrade).
     if (primary.ok && !primary.empty && try_parse(primary.utf8, false)) {
         return result;
     }
 
-    // Empty or malformed primary → try .bak; do not delete either.
     if (primary.empty) {
         AddDiag(result.diagnostics, "primary empty; attempting .bak");
     }
@@ -330,30 +377,14 @@ LoadStoreResult LoadFromPaths(const AccountStorePaths& paths, std::string_view a
         AddDiag(result.diagnostics, "primary malformed; attempting .bak");
     }
 
-    const auto bak = AtomicJson::ReadFileUtf8(paths.backup);
-    if (bak.ok && !bak.missing && !bak.empty && try_parse(bak.utf8, true)) {
+    if (try_backup()) {
         return result;
     }
 
-    if (primary.missing == false && (primary.empty || !primary.ok || result.status == StoreOpStatus::CodecError)
-        && (bak.missing || bak.empty || !bak.ok)) {
-        result.status = StoreOpStatus::CodecError;
-        AddDiag(result.diagnostics, "primary and .bak unusable; files preserved");
-        return result;
-    }
-
-    // Empty primary, no bak → empty store (documented policy).
-    if (primary.empty && (bak.missing || bak.empty)) {
-        result.status = StoreOpStatus::Empty;
-        result.store.account_key = normalized;
-        result.store.store_format = kStoreFormatId;
-        result.store.store_version = {kStoreFormatMajor, kStoreFormatMinor};
-        AddDiag(result.diagnostics, "empty primary and no bak; empty store");
-        return result;
-    }
-
+    // Existing primary that is empty/whitespace/malformed with no usable bak → CodecError.
+    // Never return Empty for an existing zero-byte primary (would allow silent overwrite).
     result.status = StoreOpStatus::CodecError;
-    AddDiag(result.diagnostics, "load failed; files preserved");
+    AddDiag(result.diagnostics, "primary and .bak unusable; files preserved");
     return result;
 }
 
@@ -442,7 +473,7 @@ MergeStoreResult MergeAccountStores(
 
     if (conflict) {
         result.status = StoreOpStatus::MergeConflict;
-        result.merged = std::move(out);
+        result.merged.reset();
         return result;
     }
     CanonicalizeAccountStore(out);
@@ -520,14 +551,15 @@ SaveStoreResult SaveMergedAccountStore(
     }
 
     auto merged = MergeAccountStores(loaded.store, memory);
-    if (merged.status != StoreOpStatus::Ok) {
+    if (merged.status != StoreOpStatus::Ok || !merged.merged.has_value()) {
         result.status = merged.status;
         result.diagnostics = std::move(merged.diagnostics);
         result.diagnostics.dirty_retained = true;
+        result.merged.reset();
         return result;
     }
 
-    auto serialized = SerializeAccountStoreJson(merged.merged);
+    auto serialized = SerializeAccountStoreJson(*merged.merged);
     if (serialized.status != CodecStatus::Ok) {
         result.status = StoreOpStatus::CodecError;
         result.diagnostics.codec = serialized.diagnostics;
@@ -547,7 +579,7 @@ SaveStoreResult SaveMergedAccountStore(
 
     result.used_move_file_ex = write.used_move_file_ex;
     result.used_replace_file = write.used_replace_file;
-    result.merged = std::move(merged.merged);
+    result.merged = std::move(*merged.merged);
     result.status = StoreOpStatus::Ok;
     AddDiag(result.diagnostics, write.message);
     return result;
