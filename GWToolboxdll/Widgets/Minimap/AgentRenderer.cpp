@@ -1249,6 +1249,20 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
     return IM_COL32(0, 0, 0, 0);
 }
 
+float AgentRenderer::GetSeededDefaultSize(const GW::Constants::Allegiance allegiance, const float fallback) const
+{
+    const auto it = custom_agents_by_allegiance.find(static_cast<int>(allegiance));
+    if (it == custom_agents_by_allegiance.end()) {
+        return fallback;
+    }
+    for (const CustomAgent* ca : it->second) {
+        if (ca->is_default && ca->active && ca->size_active && ca->size >= 0) {
+            return ca->size;
+        }
+    }
+    return fallback;
+}
+
 float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) const
 {
     if (ca && ca->size_active && ca->size >= 0) {
@@ -1282,22 +1296,22 @@ float AgentRenderer::GetSize(const GW::Agent* agent, const CustomAgent* ca) cons
             if (!living->GetIsDead() && living->GetHasQuest()) {
                 return size_ally_npc_quest;
             }
-            return size_ally;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Ally_NonAttackable, size_ally);
 
         case GW::Constants::Allegiance::Neutral: // neutral
-            return size_neutral;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Neutral, size_neutral);
 
         case GW::Constants::Allegiance::Spirit_Pet: // spirit / pet
-            return size_ally_spirit;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Spirit_Pet, size_ally_spirit);
 
         case GW::Constants::Allegiance::Npc_Minipet: // npc / minipet
             if (!living->GetIsDead() && living->GetHasQuest()) {
                 return size_ally_npc_quest;
             }
-            return size_ally_npc;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Npc_Minipet, size_ally_npc);
 
         case GW::Constants::Allegiance::Minion: // minion
-            return size_minion;
+            return GetSeededDefaultSize(GW::Constants::Allegiance::Minion, size_minion);
 
         case GW::Constants::Allegiance::Enemy: // hostile
             switch (living->player_number) {
