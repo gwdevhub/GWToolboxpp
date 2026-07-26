@@ -2,6 +2,7 @@
 
 #include <ToolboxWindow.h>
 #include <Modules/QuestObservationService.h>
+#include <Modules/QuestProgressService.h>
 #include <Utils/EncString.h>
 
 #include <memory>
@@ -58,6 +59,7 @@ private:
     GuiUtils::EncString& MissionObjectiveDecoder(uint32_t objective_id, const std::wstring& encoded);
 
     QuestObservationService observation_;
+    QuestProgress::QuestProgressService progress_;
     uint64_t cached_revision_ = 0;
     bool terminating_ = false;
 

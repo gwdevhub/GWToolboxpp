@@ -4,6 +4,8 @@
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Utilities/Hook.h>
 
+#include <Modules/QuestProgressDomain.h>
+
 #include <chrono>
 #include <memory>
 #include <mutex>
@@ -45,6 +47,12 @@ struct LiveQuestView {
     std::vector<OwnedMissionObjective> mission_objectives;
 };
 
+struct QuestEvidenceStamp {
+    uint32_t game_quest_id = 0;
+    QuestProgress::EvidenceKind kind = QuestProgress::EvidenceKind::None;
+    std::chrono::steady_clock::time_point steady_at{};
+};
+
 // Game-thread observation helper; not a ToolboxModule. Publishes immutable snapshots for Draw.
 class QuestObservationService {
 public:
@@ -54,6 +62,9 @@ public:
     void Terminate();
 
     std::shared_ptr<const LiveQuestView> AcquireSnapshot() const;
+
+    // Drain owned evidence stamps (abandon/reward/enquire). Callbacks never reduce/I/O.
+    void DrainPendingEvidence(std::vector<QuestEvidenceStamp>& out);
 
 private:
     static constexpr GW::Constants::QuestID custom_marker_quest_id =
@@ -77,6 +88,7 @@ private:
     void SyncPendingRequestsFromSnapshot(const LiveQuestView& view);
     void ProcessPendingRequests();
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* lparam);
+    void PushEvidence(uint32_t quest_id, QuestProgress::EvidenceKind kind);
 
     static void ParseQuestObjectivesOwned(const wchar_t* objectives, std::vector<OwnedObjective>& out);
     static std::wstring CopyEnc(const wchar_t* enc);
@@ -96,6 +108,9 @@ private:
 
     mutable std::mutex snapshot_mutex_;
     std::shared_ptr<const LiveQuestView> published_;
+
+    mutable std::mutex evidence_mutex_;
+    std::vector<QuestEvidenceStamp> pending_evidence_;
 
     struct RequestState {
         std::chrono::steady_clock::time_point last_request{};

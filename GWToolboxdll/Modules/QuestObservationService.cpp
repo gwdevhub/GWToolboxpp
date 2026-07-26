@@ -47,6 +47,8 @@ void QuestObservationService::RegisterCallbacks()
         GW::UI::UIMessage::kObjectiveUpdated,
         GW::UI::UIMessage::kStartMapLoad,
         GW::UI::UIMessage::kMapLoaded,
+        GW::UI::UIMessage::kSendAbandonQuest,
+        GW::UI::UIMessage::kSendDialog,
     };
 
     for (const auto message_id : messages) {
@@ -84,6 +86,10 @@ void QuestObservationService::Terminate()
     loading_transition_pending_ = false;
     request_cycle_reset_pending_ = false;
     published_loading_invalid_ = false;
+    {
+        std::scoped_lock lock(evidence_mutex_);
+        pending_evidence_.clear();
+    }
 
     auto empty = std::make_shared<LiveQuestView>();
     empty->revision = next_revision_++;
@@ -91,6 +97,26 @@ void QuestObservationService::Terminate()
     empty->world_ready = false;
     empty->active_quest_id = GW::Constants::QuestID::None;
     Publish(std::shared_ptr<const LiveQuestView>(std::move(empty)));
+}
+
+void QuestObservationService::PushEvidence(uint32_t quest_id, QuestProgress::EvidenceKind kind)
+{
+    if (terminated_ || quest_id == 0 || quest_id == static_cast<uint32_t>(custom_marker_quest_id)) {
+        return;
+    }
+    QuestEvidenceStamp stamp;
+    stamp.game_quest_id = quest_id;
+    stamp.kind = kind;
+    stamp.steady_at = std::chrono::steady_clock::now();
+    std::scoped_lock lock(evidence_mutex_);
+    pending_evidence_.push_back(stamp);
+}
+
+void QuestObservationService::DrainPendingEvidence(std::vector<QuestEvidenceStamp>& out)
+{
+    std::scoped_lock lock(evidence_mutex_);
+    out.insert(out.end(), pending_evidence_.begin(), pending_evidence_.end());
+    pending_evidence_.clear();
 }
 
 void QuestObservationService::MarkAllDirty()
@@ -274,7 +300,7 @@ void QuestObservationService::ProcessPendingRequests()
     }
 }
 
-void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void*, void*)
+void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*)
 {
     if (terminated_) return;
 
@@ -307,6 +333,27 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
             published_loading_invalid_ = false;
             request_cycle_reset_pending_ = true;
             break;
+        case GW::UI::UIMessage::kSendAbandonQuest: {
+            const auto quest_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+            PushEvidence(quest_id, QuestProgress::EvidenceKind::Abandon);
+            break;
+        }
+        case GW::UI::UIMessage::kSendDialog: {
+            // Dialog bit layout mirrors DialogModule (avoid private API coupling).
+            const auto dialog_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
+            if ((dialog_id & 0x800000) == 0) {
+                break;
+            }
+            const auto quest_id = (dialog_id ^ 0x800000) >> 8;
+            const auto dialog_type = dialog_id & 0xf0000f;
+            if (dialog_type == 0x800007) {
+                PushEvidence(quest_id, QuestProgress::EvidenceKind::Reward);
+            }
+            else if (dialog_type == 0x800006) {
+                PushEvidence(quest_id, QuestProgress::EvidenceKind::EnquireReward);
+            }
+            break;
+        }
         default:
             break;
     }

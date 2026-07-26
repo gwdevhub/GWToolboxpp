@@ -1,6 +1,8 @@
 #include "stdafx.h"
 
 #include <Windows/QuestTrackerWindow.h>
+#include <Modules/QuestProgressLive.h>
+#include <Modules/Resources.h>
 
 #include <GWCA/Constants/Constants.h>
 #include <GWCA/Managers/GameThreadMgr.h>
@@ -34,16 +36,52 @@ void QuestTrackerWindow::Initialize()
     terminating_ = false;
     ToolboxWindow::Initialize();
     observation_.Initialize();
+    progress_.Initialize();
+    progress_.SetStoreDirectory(Resources::GetPath(L"QuestProgress"));
 }
 
 void QuestTrackerWindow::Update(float delta)
 {
-    observation_.Update(delta);
+    const auto steady_now = std::chrono::steady_clock::now();
+    const auto wall_now = std::chrono::system_clock::now();
+
+    if (!terminating_) {
+        observation_.Update(delta);
+
+        const auto snap = observation_.AcquireSnapshot();
+        const bool world_ready = snap && snap->world_ready && !snap->loading;
+        // Map-load: keep prior identity; do not treat loading as unbound logout.
+        if (world_ready) {
+            progress_.BindIdentity(QuestProgress::SampleLiveSessionIdentity(true));
+        }
+
+        std::vector<QuestEvidenceStamp> evidence;
+        observation_.DrainPendingEvidence(evidence);
+        if (!evidence.empty()) {
+            std::vector<QuestProgress::EvidenceStamp> owned;
+            owned.reserve(evidence.size());
+            for (const auto& e : evidence) {
+                QuestProgress::EvidenceStamp s;
+                s.game_quest_id = e.game_quest_id;
+                s.kind = e.kind;
+                s.steady_at = e.steady_at;
+                owned.push_back(s);
+            }
+            progress_.IngestEvidence(std::move(owned));
+        }
+
+        if (snap) {
+            progress_.IngestSnapshot(QuestProgress::ToQuestSnapshot(*snap), wall_now, steady_now);
+        }
+    }
+
+    progress_.Tick(steady_now, wall_now);
 }
 
 void QuestTrackerWindow::SignalTerminate()
 {
     terminating_ = true;
+    progress_.SignalTerminate();
     observation_.SignalTerminate();
     ToolboxWindow::SignalTerminate();
 }
@@ -51,6 +89,7 @@ void QuestTrackerWindow::SignalTerminate()
 void QuestTrackerWindow::Terminate()
 {
     terminating_ = true;
+    progress_.Terminate();
     ClearDecodeCache();
     observation_.Terminate();
     ToolboxWindow::Terminate();

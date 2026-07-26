@@ -618,6 +618,7 @@ int main()
     TestCanonicalTimestampContract();
 
     RunBatch2BStoreTests();
+    RunBatch2CServiceTests();
 
     std::printf("\n%d passed, %d failed\n", g_test_passed, g_test_failed);
     return g_test_failed == 0 ? 0 : 1;

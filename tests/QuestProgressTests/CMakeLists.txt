@@ -1,9 +1,12 @@
 add_executable(QuestProgressTests
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/main.cpp"
     "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/store_tests.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/QuestProgressTests/service_tests.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressReducer.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressJsonCodec.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressStore.cpp"
+    "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestSessionIdentity.cpp"
+    "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressService.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Utils/AtomicJsonFile.cpp"
 )
 
@@ -24,6 +27,8 @@ set_source_files_properties(
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressReducer.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressJsonCodec.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressStore.cpp"
+    "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestSessionIdentity.cpp"
+    "${CMAKE_SOURCE_DIR}/GWToolboxdll/Modules/QuestProgressService.cpp"
     "${CMAKE_SOURCE_DIR}/GWToolboxdll/Utils/AtomicJsonFile.cpp"
     PROPERTIES SKIP_PRECOMPILE_HEADERS ON
 )
