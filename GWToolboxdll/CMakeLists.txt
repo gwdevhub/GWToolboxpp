@@ -253,6 +253,7 @@ set_source_files_properties(
     "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressStore.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestSessionIdentity.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestProgressService.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Modules/QuestAbandonProbe.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Utils/AtomicJsonFile.cpp"
     PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 

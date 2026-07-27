@@ -74,6 +74,8 @@ void QuestObservationService::SignalTerminate()
 {
     UnregisterCallbacks();
     terminated_ = true;
+    abandon_probes_.Clear();
+    abandon_probe_diagnostics_.clear();
 }
 
 void QuestObservationService::Terminate()
@@ -92,6 +94,8 @@ void QuestObservationService::Terminate()
         pending_evidence_.clear();
         logout_pending_ = false;
     }
+    abandon_probes_.Clear();
+    abandon_probe_diagnostics_.clear();
 
     auto empty = std::make_shared<LiveQuestView>();
     empty->revision = next_revision_++;
@@ -99,6 +103,51 @@ void QuestObservationService::Terminate()
     empty->world_ready = false;
     empty->active_quest_id = GW::Constants::QuestID::None;
     Publish(std::shared_ptr<const LiveQuestView>(std::move(empty)));
+}
+
+void QuestObservationService::ScheduleAbandonProbe(uint32_t quest_id)
+{
+    if (terminated_ || quest_id == 0 || quest_id == static_cast<uint32_t>(custom_marker_quest_id)) {
+        return;
+    }
+    const auto now = std::chrono::steady_clock::now();
+    abandon_probes_.OnAbandon(quest_id, now);
+
+    // Do not wait for kQuestRemoved — request an immediate re-observation, then bounded retries.
+    quest_log_dirty_ = true;
+
+    const auto snap = AcquireSnapshot();
+    if (snap && snap->world_ready && !snap->loading
+        && static_cast<uint32_t>(snap->active_quest_id) == quest_id) {
+        active_quest_dirty_ = true;
+    }
+    else {
+        // May still be selected; cheap to refresh active channel alongside the log.
+        active_quest_dirty_ = true;
+    }
+}
+
+void QuestObservationService::ResolveAbandonProbes(
+    const LiveQuestView& view, std::chrono::steady_clock::time_point now)
+{
+    // Map load / world-not-ready must not count as disappearance.
+    if (!view.world_ready || view.loading) {
+        return;
+    }
+    std::unordered_set<uint32_t> present;
+    present.reserve(view.quests.size());
+    for (const auto& q : view.quests) {
+        present.insert(static_cast<uint32_t>(q.quest_id));
+    }
+    // Bounded timeout diagnostics retained for runtime verification (cap 8).
+    std::vector<std::string> diagnostics;
+    abandon_probes_.OnWorldReadyQuestLog(now, present, &diagnostics);
+    for (auto& line : diagnostics) {
+        if (abandon_probe_diagnostics_.size() >= 8) {
+            break;
+        }
+        abandon_probe_diagnostics_.push_back(std::move(line));
+    }
 }
 
 void QuestObservationService::PushEvidence(uint32_t quest_id, QuestProgress::EvidenceKind kind)
@@ -346,6 +395,7 @@ void QuestObservationService::OnUIMessage(GW::HookStatus*, GW::UI::UIMessage mes
         case GW::UI::UIMessage::kSendAbandonQuest: {
             const auto quest_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(wparam));
             PushEvidence(quest_id, QuestProgress::EvidenceKind::Abandon);
+            ScheduleAbandonProbe(quest_id);
             break;
         }
         case GW::UI::UIMessage::kSendDialog: {
@@ -390,14 +440,22 @@ void QuestObservationService::Update(float)
         // Dirty flags remain set until a successful world-ready snapshot
     }
 
+    const auto now = std::chrono::steady_clock::now();
+    const bool world_ready = IsWorldReady();
+    // Bounded abandon re-observation (not every frame): mark dirty when a probe offset is due.
+    if (abandon_probes_.Tick(now, world_ready)) {
+        quest_log_dirty_ = true;
+    }
+
     const bool any_dirty = quest_log_dirty_ || active_quest_dirty_ || mission_objectives_dirty_;
 
     if (any_dirty) {
-        if (!IsWorldReady()) {
+        if (!world_ready) {
             if (!published_loading_invalid_) {
                 PublishLoadingInvalid();
             }
             // Keep dirty flags set; do not process pending requests while not ready
+            // Abandon probes remain suspended (Tick already no-op'd).
             return;
         }
 
@@ -430,6 +488,7 @@ void QuestObservationService::Update(float)
 
         if (snapshotted_quest_log) {
             SyncPendingRequestsFromSnapshot(*published);
+            ResolveAbandonProbes(*published, now);
         }
     }
 

@@ -19,3 +19,4 @@ inline void Expect(bool condition, const char* name)
 
 void RunBatch2BStoreTests();
 void RunBatch2CServiceTests();
+void RunAbandonProbeTests();

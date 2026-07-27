@@ -5,6 +5,7 @@
 #include <GWCA/Utilities/Hook.h>
 
 #include <Modules/QuestProgressDomain.h>
+#include <Modules/QuestAbandonProbe.h>
 
 #include <chrono>
 #include <memory>
@@ -92,6 +93,8 @@ private:
     void ProcessPendingRequests();
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wparam, void* lparam);
     void PushEvidence(uint32_t quest_id, QuestProgress::EvidenceKind kind);
+    void ScheduleAbandonProbe(uint32_t quest_id);
+    void ResolveAbandonProbes(const LiveQuestView& view, std::chrono::steady_clock::time_point now);
 
     static void ParseQuestObjectivesOwned(const wchar_t* objectives, std::vector<OwnedObjective>& out);
     static std::wstring CopyEnc(const wchar_t* enc);
@@ -115,6 +118,9 @@ private:
     mutable std::mutex evidence_mutex_;
     std::vector<QuestEvidenceStamp> pending_evidence_;
     bool logout_pending_ = false;
+
+    QuestProgress::QuestAbandonProbeTracker abandon_probes_;
+    std::vector<std::string> abandon_probe_diagnostics_;
 
     struct RequestState {
         std::chrono::steady_clock::time_point last_request{};

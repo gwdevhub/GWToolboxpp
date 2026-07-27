@@ -619,6 +619,7 @@ int main()
 
     RunBatch2BStoreTests();
     RunBatch2CServiceTests();
+    RunAbandonProbeTests();
 
     std::printf("\n%d passed, %d failed\n", g_test_passed, g_test_failed);
     return g_test_failed == 0 ? 0 : 1;
