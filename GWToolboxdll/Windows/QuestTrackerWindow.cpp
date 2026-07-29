@@ -84,14 +84,28 @@ void QuestTrackerWindow::Update(float delta)
         }
         else if (world_ready) {
             const auto next = QuestProgress::SampleLiveSessionIdentity(true);
+            const bool character_changed =
+                progress_.identity().kind != next.kind
+                || progress_.identity().account_key != next.account_key
+                || progress_.identity().character_key != next.character_key;
+            const uint64_t barrier_rev = snap ? snap->revision : 0;
             // 5–7) Flush/retain old session if needed, then bind new identity.
             // Never feed the live snap into the outgoing character — it already belongs to `next`.
-            progress_.BindIdentity(next);
+            progress_.BindIdentity(
+                next,
+                false,
+                character_changed ? barrier_rev : progress_.snapshot_barrier_revision(),
+                character_changed);
+            if (character_changed) {
+                // Force a fresh identity-stamped observation; do not reuse pre-bind LiveQuestView.
+                observation_.RequestFullRefresh();
+            }
             // 8) Evidence arriving after rebind is scoped to the new identity only.
             drain_scoped_evidence();
         }
 
         // 9) Ingest snapshot for the active bound identity (map-load skips via loading flag).
+        // Identity barrier rejects pre-bind / cross-character published views.
         if (snap && progress_.identity().kind != QuestProgress::IdentityKind::Unbound) {
             progress_.IngestSnapshot(QuestProgress::ToQuestSnapshot(*snap), wall_now, steady_now);
         }

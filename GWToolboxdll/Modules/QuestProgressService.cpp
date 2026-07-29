@@ -230,6 +230,36 @@ void QuestProgressService::ClearActiveSessionMemory()
     ResetActivePersistLatch();
 }
 
+void QuestProgressService::ApplyIdentityMetadataBackfill()
+{
+    // Never replace a valid non-empty name/profession with an empty transient value.
+    if (identity_.kind == IdentityKind::Persistent && !identity_.character_key.empty()) {
+        if (auto* stored = FindCharacter(account_store_, identity_.character_key)) {
+            if (!identity_.display_name.empty()) {
+                stored->display_name = identity_.display_name;
+            }
+            if (!identity_.profession.empty()) {
+                stored->profession = identity_.profession;
+            }
+            if (identity_.is_pre_searing.has_value()) {
+                stored->is_pre_searing = identity_.is_pre_searing;
+            }
+            if (!stored->display_name.empty() && character_.display_name.empty()) {
+                character_.display_name = stored->display_name;
+            }
+            else if (!identity_.display_name.empty()) {
+                character_.display_name = identity_.display_name;
+            }
+        }
+        else if (!identity_.display_name.empty()) {
+            character_.display_name = identity_.display_name;
+        }
+    }
+    else if (!identity_.display_name.empty()) {
+        character_.display_name = identity_.display_name;
+    }
+}
+
 void QuestProgressService::MarkSemanticDirty(std::chrono::steady_clock::time_point steady_now)
 {
     ++dirty_generation_;
@@ -252,6 +282,15 @@ StoredCharacter QuestProgressService::BuildOutgoingStoredCharacter() const
     stored.last_observed_at = character_.last_reduced_at;
     stored.first_observed_at = character_.last_reduced_at;
     if (const auto* existing = FindCharacter(account_store_, identity_.character_key)) {
+        if (stored.display_name.empty()) {
+            stored.display_name = existing->display_name;
+        }
+        if (stored.profession.empty()) {
+            stored.profession = existing->profession;
+        }
+        if (!stored.is_pre_searing.has_value()) {
+            stored.is_pre_searing = existing->is_pre_searing;
+        }
         if (!existing->first_observed_at.empty()) {
             stored.first_observed_at = existing->first_observed_at;
         }
@@ -407,9 +446,15 @@ void QuestProgressService::SyncCharacterIntoAccountStore()
     if (!stored) {
         return;
     }
-    stored->display_name = identity_.display_name;
-    stored->profession = identity_.profession;
-    stored->is_pre_searing = identity_.is_pre_searing;
+    if (!identity_.display_name.empty()) {
+        stored->display_name = identity_.display_name;
+    }
+    if (!identity_.profession.empty()) {
+        stored->profession = identity_.profession;
+    }
+    if (identity_.is_pre_searing.has_value()) {
+        stored->is_pre_searing = identity_.is_pre_searing;
+    }
     stored->quests = character_.quests;
     if (!character_.last_reduced_at.empty()) {
         stored->last_observed_at = character_.last_reduced_at;
@@ -536,22 +581,43 @@ void QuestProgressService::LoadAccountForIdentity()
     }
 }
 
-void QuestProgressService::BindIdentity(const SessionIdentity& next, bool force_session_gap)
+void QuestProgressService::BindIdentity(
+    const SessionIdentity& next,
+    bool force_session_gap,
+    uint64_t reject_revision_at_or_below,
+    bool require_fresh_identity_snapshot)
 {
     if (!accept_input_ && !terminate_signaled_) {
         return;
     }
 
     if (SamePersistentCharacter(identity_, next) && !force_session_gap) {
-        identity_.display_name = next.display_name;
-        identity_.profession = next.profession;
-        identity_.is_pre_searing = next.is_pre_searing;
-        if (auto* stored = FindCharacter(account_store_, identity_.character_key)) {
-            if (!next.display_name.empty()) {
-                stored->display_name = next.display_name;
-            }
+        if (!next.display_name.empty()) {
+            identity_.display_name = next.display_name;
         }
-        character_.display_name = identity_.display_name;
+        if (!next.profession.empty()) {
+            identity_.profession = next.profession;
+        }
+        if (next.is_pre_searing.has_value()) {
+            identity_.is_pre_searing = next.is_pre_searing;
+        }
+        ApplyIdentityMetadataBackfill();
+        return;
+    }
+
+    // Stable ephemeral session: metadata only — do not clear progress or raise a snapshot barrier.
+    if (identity_.kind == IdentityKind::Ephemeral && next.kind == IdentityKind::Ephemeral
+        && SameAccount(identity_, next) && !force_session_gap) {
+        if (!next.display_name.empty()) {
+            identity_.display_name = next.display_name;
+            character_.display_name = next.display_name;
+        }
+        if (!next.profession.empty()) {
+            identity_.profession = next.profession;
+        }
+        if (next.is_pre_searing.has_value()) {
+            identity_.is_pre_searing = next.is_pre_searing;
+        }
         return;
     }
 
@@ -583,14 +649,18 @@ void QuestProgressService::BindIdentity(const SessionIdentity& next, bool force_
     session_gap_pending_ = force_session_gap || leaving_bound;
     has_reduced_once_ = false;
     last_reduced_revision_ = 0;
+    snapshot_barrier_revision_ = reject_revision_at_or_below;
+    awaiting_post_bind_snapshot_ = require_fresh_identity_snapshot;
 
     char gen_buf[96];
     std::snprintf(
         gen_buf, sizeof(gen_buf),
-        "identity bind gen_a=%llu gen_c=%llu kind=%u",
+        "identity bind gen_a=%llu gen_c=%llu kind=%u barrier_rev=%llu await_fresh=%d",
         static_cast<unsigned long long>(account_generation_),
         static_cast<unsigned long long>(character_generation_),
-        static_cast<unsigned>(identity_.kind));
+        static_cast<unsigned>(identity_.kind),
+        static_cast<unsigned long long>(snapshot_barrier_revision_),
+        awaiting_post_bind_snapshot_ ? 1 : 0);
     AddDiag(gen_buf);
 
     if (identity_.kind == IdentityKind::Unbound) {
@@ -598,6 +668,7 @@ void QuestProgressService::BindIdentity(const SessionIdentity& next, bool force_
         load_status_ = StoreOpStatus::Empty;
         persistence_allowed_ = false;
         ResetActivePersistLatch();
+        awaiting_post_bind_snapshot_ = false;
         AddDiag("identity unbound");
         return;
     }
@@ -607,7 +678,9 @@ void QuestProgressService::BindIdentity(const SessionIdentity& next, bool force_
         load_status_ = StoreOpStatus::Empty;
         persistence_allowed_ = false;
         character_.character_key.clear();
-        character_.display_name = identity_.display_name;
+        if (!identity_.display_name.empty()) {
+            character_.display_name = identity_.display_name;
+        }
         ResetActivePersistLatch();
         AddDiag("ephemeral identity; no persistent file I/O");
         return;
@@ -639,6 +712,7 @@ void QuestProgressService::BindIdentity(const SessionIdentity& next, bool force_
         }
     }
     EnsureCharacterRecord();
+    ApplyIdentityMetadataBackfill();
 }
 
 void QuestProgressService::UnbindIdentity()
@@ -666,6 +740,8 @@ void QuestProgressService::UnbindIdentity()
     load_status_ = StoreOpStatus::Empty;
     persistence_allowed_ = false;
     session_gap_pending_ = false;
+    snapshot_barrier_revision_ = 0;
+    awaiting_post_bind_snapshot_ = false;
     ResetActivePersistLatch();
     AddDiag("explicit logout unbound");
 }
@@ -900,6 +976,10 @@ void QuestProgressService::ReduceFromSnapshot(
     if (snap.loading || !snap.world_ready) {
         return;
     }
+    if (!SnapshotPassesIdentityBarrier(snap)) {
+        AddDiag("rejected snapshot: identity mismatch, unstamped post-bind, or pre-bind revision");
+        return;
+    }
     if (has_reduced_once_ && snap.revision == last_reduced_revision_) {
         return;
     }
@@ -935,9 +1015,15 @@ void QuestProgressService::ReduceFromSnapshot(
     character_ = out.next;
     character_.character_key =
         identity_.kind == IdentityKind::Persistent ? identity_.character_key : character_.character_key;
-    character_.display_name = identity_.display_name;
+    if (!identity_.display_name.empty()) {
+        character_.display_name = identity_.display_name;
+    }
+    else if (character_.display_name.empty()) {
+        ApplyIdentityMetadataBackfill();
+    }
     last_reduced_revision_ = snap.revision;
     has_reduced_once_ = true;
+    awaiting_post_bind_snapshot_ = false;
     session_gap_pending_ = false;
 
     for (const auto& m : out.diagnostics.messages) {
@@ -955,6 +1041,27 @@ void QuestProgressService::ReduceFromSnapshot(
     }
 
     SyncCharacterIntoAccountStore();
+}
+
+bool QuestProgressService::SnapshotPassesIdentityBarrier(const QuestSnapshot& snap) const
+{
+    if (snap.revision <= snapshot_barrier_revision_) {
+        return false;
+    }
+
+    if (snap.identity_captured) {
+        if (snap.account_key != identity_.account_key
+            || snap.character_key != identity_.character_key) {
+            return false;
+        }
+        return true;
+    }
+
+    // Unstamped snaps are rejected while awaiting a post-bind identity-scoped observation.
+    if (awaiting_post_bind_snapshot_) {
+        return false;
+    }
+    return true;
 }
 
 void QuestProgressService::IngestSnapshot(

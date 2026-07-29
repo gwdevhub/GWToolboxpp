@@ -350,6 +350,14 @@ void ApplyMissingQuest(
     }
 
     // Enquire-only is non-actionable (ResolveEvidence returns None).
+    if (quest.state == ProgressState::AbandonedObserved
+        || quest.state == ProgressState::CompletedObserved) {
+        // Terminal observed states survive repeated absence without new evidence.
+        quest.last_observed_at = observed_at;
+        out.touch_last_observed = true;
+        return;
+    }
+
     if (quest.state == ProgressState::Unknown
         && quest.confidence == Confidence::Uncertain) {
         const auto key = BuildSemanticEventKey(

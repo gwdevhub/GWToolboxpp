@@ -47,6 +47,10 @@ struct QuestSnapshot {
     uint64_t revision = 0;
     bool loading = false;
     bool world_ready = false;
+    // Owned identity captured with the quest log; never inferred after bind.
+    bool identity_captured = false;
+    std::string account_key;
+    std::string character_key;
     // Transient UI selection — never passed into ReducerInput.
     uint32_t selected_active_quest_id = 0;
     std::vector<QuestSnapshotQuest> quests;
@@ -123,7 +127,13 @@ public:
         std::chrono::steady_clock::time_point steady_now,
         std::chrono::system_clock::time_point wall_now);
 
-    void BindIdentity(const SessionIdentity& identity, bool force_session_gap = false);
+    // reject_revision_at_or_below: discard published snaps at/under this revision after a character bind.
+    // require_fresh_identity_snapshot: reject unstamped/pre-bind snaps until a matching post-bind snap arrives.
+    void BindIdentity(
+        const SessionIdentity& identity,
+        bool force_session_gap = false,
+        uint64_t reject_revision_at_or_below = 0,
+        bool require_fresh_identity_snapshot = false);
     void UnbindIdentity();
     void IngestEvidence(std::vector<EvidenceStamp> stamps);
     void IngestSnapshot(
@@ -144,6 +154,8 @@ public:
     bool terminate_signaled() const { return terminate_signaled_; }
     const std::vector<std::string>& diagnostics() const { return diagnostics_; }
     uint64_t last_reduced_revision() const { return last_reduced_revision_; }
+    uint64_t snapshot_barrier_revision() const { return snapshot_barrier_revision_; }
+    bool awaiting_post_bind_snapshot() const { return awaiting_post_bind_snapshot_; }
     size_t successful_save_count() const { return successful_save_count_; }
     size_t blocked_save_count() const { return blocked_save_count_; }
     bool last_flush_ok() const { return last_flush_ok_; }
@@ -194,6 +206,8 @@ private:
         std::vector<EvidenceStamp>& pending,
         std::chrono::steady_clock::time_point steady_now);
     void ExpireEvidence(std::chrono::steady_clock::time_point steady_now);
+    bool SnapshotPassesIdentityBarrier(const QuestSnapshot& snap) const;
+    void ApplyIdentityMetadataBackfill();
     void ReduceFromSnapshot(
         const QuestSnapshot& snap,
         std::chrono::system_clock::time_point wall_now,
@@ -226,6 +240,8 @@ private:
 
     std::vector<EvidenceStamp> pending_evidence_;
     uint64_t last_reduced_revision_ = 0;
+    uint64_t snapshot_barrier_revision_ = 0;
+    bool awaiting_post_bind_snapshot_ = false;
     bool has_reduced_once_ = false;
 
     bool semantic_dirty_ = false;

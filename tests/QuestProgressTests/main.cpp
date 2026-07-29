@@ -181,6 +181,72 @@ void TestExactAbandon()
     Expect(out.appended.size() == 1, "abandon_one_append");
 }
 
+void TestTerminalAbandonedAbsencePreserved()
+{
+    auto input1 = BaseInput(EmptyCharacter("acct/char-a"));
+    input1.observed_quests.push_back(MakeObs(100));
+    auto mid = Reduce(input1);
+
+    auto input2 = BaseInput(mid.next, "2026-07-25T20:07:10.000Z");
+    input2.evidence.push_back({100, EvidenceKind::Abandon});
+    auto abandoned = Reduce(input2);
+    Expect(abandoned.next.quests.at(100).state == ProgressState::AbandonedObserved, "term_ab_state");
+    const auto hist_after_abandon = abandoned.next.quests.at(100).history.size();
+
+    auto input3 = BaseInput(abandoned.next, "2026-07-25T20:07:20.000Z");
+    const auto again = Reduce(input3);
+    Expect(again.next.quests.at(100).state == ProgressState::AbandonedObserved, "term_ab_absence_keeps");
+    Expect(again.next.quests.at(100).confidence == Confidence::Probable, "term_ab_absence_probable");
+    Expect(again.appended.empty(), "term_ab_absence_no_append");
+    Expect(again.next.quests.at(100).history.size() == hist_after_abandon, "term_ab_history_stable");
+    Expect(again.touch_last_observed, "term_ab_touch");
+
+    auto input4 = BaseInput(again.next, "2026-07-25T20:07:30.000Z");
+    const auto third = Reduce(input4);
+    Expect(third.next.quests.at(100).state == ProgressState::AbandonedObserved, "term_ab_third_keeps");
+    Expect(third.appended.empty(), "term_ab_third_no_append");
+}
+
+void TestTerminalCompletedAbsencePreserved()
+{
+    auto input1 = BaseInput(EmptyCharacter("acct/char-a"));
+    input1.observed_quests.push_back(MakeObs(100, true));
+    auto mid = Reduce(input1);
+
+    auto input2 = BaseInput(mid.next, "2026-07-25T20:09:10.000Z");
+    input2.evidence.push_back({100, EvidenceKind::Reward});
+    auto completed = Reduce(input2);
+    Expect(completed.next.quests.at(100).state == ProgressState::CompletedObserved, "term_co_state");
+    const auto hist = completed.next.quests.at(100).history.size();
+
+    auto input3 = BaseInput(completed.next, "2026-07-25T20:09:20.000Z");
+    const auto again = Reduce(input3);
+    Expect(again.next.quests.at(100).state == ProgressState::CompletedObserved, "term_co_absence_keeps");
+    Expect(again.next.quests.at(100).confidence == Confidence::Probable, "term_co_absence_probable");
+    Expect(again.appended.empty(), "term_co_absence_no_append");
+    Expect(again.next.quests.at(100).history.size() == hist, "term_co_history_stable");
+}
+
+void TestTerminalAbandonedReacquisition()
+{
+    auto input1 = BaseInput(EmptyCharacter("acct/char-a"));
+    input1.observed_quests.push_back(MakeObs(100));
+    auto mid = Reduce(input1);
+
+    auto input2 = BaseInput(mid.next, "2026-07-25T20:07:40.000Z");
+    input2.evidence.push_back({100, EvidenceKind::Abandon});
+    auto abandoned = Reduce(input2);
+
+    auto input3 = BaseInput(abandoned.next, "2026-07-25T20:07:50.000Z");
+    input3.observed_quests.push_back(MakeObs(100));
+    const auto again = Reduce(input3);
+    Expect(again.next.quests.at(100).state == ProgressState::Active, "term_ab_reacquire_active");
+    Expect(again.next.quests.at(100).confidence == Confidence::Confirmed, "term_ab_reacquire_confirmed");
+    // Semantic key may match the original Active observation; state must still supersede abandon.
+    Expect(again.next.quests.at(100).state != ProgressState::AbandonedObserved, "term_ab_reacquire_not_abandoned");
+}
+
+
 void TestNonMatchingAbandon()
 {
     auto input1 = BaseInput(EmptyCharacter("acct/char-a"));
@@ -595,6 +661,9 @@ int main()
     TestBareDisappearance();
     TestRepeatedDisappearanceIdempotent();
     TestExactAbandon();
+    TestTerminalAbandonedAbsencePreserved();
+    TestTerminalCompletedAbsencePreserved();
+    TestTerminalAbandonedReacquisition();
     TestNonMatchingAbandon();
     TestExactReward();
     TestEnquireRewardRejected();

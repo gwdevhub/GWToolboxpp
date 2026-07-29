@@ -42,6 +42,10 @@ struct LiveQuestView {
     uint64_t revision = 0;
     bool loading = false;
     bool world_ready = false;
+    // Owned identity keys captured with the quest log (never borrowed CharContext pointers).
+    bool identity_captured = false;
+    std::string account_key;
+    std::string character_key;
     GW::Constants::QuestID active_quest_id = GW::Constants::QuestID::None;
     bool mission_mode = false;
     std::vector<OwnedQuestEntry> quests;
@@ -64,6 +68,9 @@ public:
 
     std::shared_ptr<const LiveQuestView> AcquireSnapshot() const;
 
+    // Force a complete post-bind re-observation (quest log + active + mission).
+    void RequestFullRefresh();
+
     // Drain owned evidence stamps (abandon/reward/enquire). Callbacks never reduce/I/O.
     void DrainPendingEvidence(std::vector<QuestEvidenceStamp>& out);
 
@@ -81,6 +88,7 @@ private:
     void RegisterCallbacks();
     void UnregisterCallbacks();
     void MarkAllDirty();
+    void StampOwnedIdentity(LiveQuestView& view) const;
     void ResetRequestAttemptCycle();
     void Publish(std::shared_ptr<const LiveQuestView> view);
     void PublishLoadingInvalid();

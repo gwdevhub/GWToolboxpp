@@ -2,9 +2,12 @@
 
 #include <Modules/QuestObservationService.h>
 #include <Modules/AudioSettings.h>
+#include <Modules/QuestSessionIdentity.h>
 #include <Utils/ToolboxUtils.h>
+#include <Utils/TextUtils.h>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/GameEntities/Quest.h>
 #include <GWCA/Managers/MapMgr.h>
@@ -184,6 +187,45 @@ void QuestObservationService::MarkAllDirty()
     active_quest_dirty_ = true;
     mission_objectives_dirty_ = true;
 }
+
+void QuestObservationService::RequestFullRefresh()
+{
+    if (terminated_) {
+        return;
+    }
+    MarkAllDirty();
+}
+
+void QuestObservationService::StampOwnedIdentity(LiveQuestView& view) const
+{
+    view.identity_captured = false;
+    view.account_key.clear();
+    view.character_key.clear();
+
+    // Copy owned UUID strings only — never retain CharContext pointers past this call.
+    const auto account_guid = GW::AccountMgr::GetAccountUuid();
+    const auto account_str = TextUtils::GuidToString(&account_guid);
+
+    QuestProgress::UuidWords character_words{};
+    if (const auto* ctx = GW::GetCharContext()) {
+        character_words = QuestProgress::UuidWords{
+            ctx->player_uuid[0], ctx->player_uuid[1], ctx->player_uuid[2], ctx->player_uuid[3]};
+    }
+
+    const auto identity = QuestProgress::MakeSessionIdentity(
+        account_str,
+        QuestProgress::FormatUuidWords(character_words),
+        {},
+        {},
+        std::nullopt);
+    if (identity.kind == QuestProgress::IdentityKind::Unbound) {
+        return;
+    }
+    view.identity_captured = true;
+    view.account_key = identity.account_key;
+    view.character_key = identity.character_key;
+}
+
 
 void QuestObservationService::ResetRequestAttemptCycle()
 {
@@ -477,6 +519,7 @@ void QuestObservationService::Update(float)
             if (active_quest_dirty_) SnapshotActiveQuest(local);
             if (mission_objectives_dirty_) SnapshotMissionObjectives(local);
         }
+        StampOwnedIdentity(local);
 
         auto published = std::make_shared<const LiveQuestView>(std::move(local));
         Publish(published);

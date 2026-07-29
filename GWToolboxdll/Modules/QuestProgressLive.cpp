@@ -73,6 +73,9 @@ QuestSnapshot ToQuestSnapshot(const LiveQuestView& view)
     snap.revision = view.revision;
     snap.loading = view.loading;
     snap.world_ready = view.world_ready;
+    snap.identity_captured = view.identity_captured;
+    snap.account_key = view.account_key;
+    snap.character_key = view.character_key;
     snap.selected_active_quest_id = static_cast<uint32_t>(view.active_quest_id);
     snap.quests.reserve(view.quests.size());
     for (const auto& q : view.quests) {

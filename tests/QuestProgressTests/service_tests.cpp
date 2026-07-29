@@ -72,6 +72,14 @@ QuestSnapshot MakeSnap(uint64_t rev, std::initializer_list<QuestSnapshotQuest> q
     return s;
 }
 
+QuestSnapshot StampFor(QuestSnapshot snap, const SessionIdentity& id)
+{
+    snap.identity_captured = true;
+    snap.account_key = id.account_key;
+    snap.character_key = id.character_key;
+    return snap;
+}
+
 QuestSnapshotQuest Q(uint32_t id, bool ready = false)
 {
     QuestSnapshotQuest q;
@@ -1265,6 +1273,135 @@ void TestBlockedCounterTransitionOnly()
     Expect(svc.blocked_save_count() == blocked_after_load, "block_counter_no_spam");
 }
 
+void TestCrossCharacterSnapshotBarrier()
+{
+    const auto dir = MakeTempDir();
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    auto id_a = PersistentId(kAcct, kCharA, "HeroA");
+    auto id_b = PersistentId(kAcct, kCharB, "HeroB");
+    auto t0 = std::chrono::steady_clock::now();
+
+    // Publish A snapshot containing quests 36, 38, 39 (observed contamination fixture).
+    auto snap_a = StampFor(MakeSnap(10, {Q(36), Q(38), Q(39), Q(40), Q(41)}), id_a);
+    svc.BindIdentity(id_a, false, 0, true);
+    Expect(svc.awaiting_post_bind_snapshot(), "xchar_a_await_fresh");
+    svc.IngestSnapshot(snap_a, Wall(100), t0);
+    Expect(svc.character_progress().quests.size() == 5, "xchar_a_has_five");
+    Expect(svc.character_progress().quests.count(36) == 1, "xchar_a_has_36");
+    Expect(!svc.awaiting_post_bind_snapshot(), "xchar_a_barrier_cleared");
+
+    // Switch to B while A's published snap is still exposed.
+    svc.BindIdentity(id_b, false, snap_a.revision, true);
+    Expect(svc.awaiting_post_bind_snapshot(), "xchar_b_await_fresh");
+    Expect(svc.character_progress().quests.empty(), "xchar_b_starts_empty");
+    Expect(svc.snapshot_barrier_revision() == snap_a.revision, "xchar_b_barrier_rev");
+
+    // Still-published A snapshot must not contaminate B.
+    svc.IngestSnapshot(snap_a, Wall(101), t0 + 10ms);
+    Expect(svc.character_progress().quests.empty(), "xchar_b_rejects_a_snap");
+    Expect(svc.awaiting_post_bind_snapshot(), "xchar_b_still_awaiting");
+
+    // Fresh B snapshot containing only quest 261.
+    auto snap_b = StampFor(MakeSnap(11, {Q(261)}), id_b);
+    svc.IngestSnapshot(snap_b, Wall(102), t0 + 20ms);
+    Expect(svc.character_progress().quests.size() == 1, "xchar_b_only_one");
+    Expect(svc.character_progress().quests.count(261) == 1, "xchar_b_has_261");
+    Expect(svc.character_progress().quests.count(36) == 0, "xchar_b_no_36");
+    Expect(!svc.awaiting_post_bind_snapshot(), "xchar_b_cleared");
+
+    // A remains unchanged on disk/in store when rebound.
+    svc.BindIdentity(id_a, false, snap_b.revision, true);
+    auto snap_a2 = StampFor(MakeSnap(12, {Q(36), Q(38), Q(39), Q(40), Q(41)}), id_a);
+    svc.IngestSnapshot(snap_a2, Wall(103), t0 + 30ms);
+    Expect(svc.character_progress().quests.size() == 5, "xchar_a_restored_five");
+    Expect(svc.character_progress().quests.count(261) == 0, "xchar_a_no_b_quest");
+
+    // B→A→B rapid variant: no cross-character presence_lost on B.
+    svc.BindIdentity(id_b, false, snap_a2.revision, true);
+    Expect(svc.character_progress().quests.empty()
+            || svc.character_progress().quests.count(261) == 1,
+        "xchar_rapid_b_memory_cleared_or_loaded");
+    // Reject A content again.
+    svc.IngestSnapshot(snap_a2, Wall(104), t0 + 40ms);
+    Expect(svc.character_progress().quests.count(36) == 0, "xchar_rapid_b_no_a_rows");
+    auto snap_b2 = StampFor(MakeSnap(13, {Q(261)}), id_b);
+    svc.IngestSnapshot(snap_b2, Wall(105), t0 + 50ms);
+    Expect(svc.character_progress().quests.size() == 1, "xchar_rapid_b_only_261");
+    Expect(svc.character_progress().quests.count(36) == 0, "xchar_rapid_no_36_row");
+    Expect(svc.character_progress().quests.at(261).state != ProgressState::Unknown
+            || svc.character_progress().quests.at(261).confidence != Confidence::Uncertain,
+        "xchar_rapid_261_not_presence_lost_unknown");
+
+    // Stale rejection does not cause mass disappearance on B.
+    const auto hist_261 = svc.character_progress().quests.at(261).history.size();
+    svc.IngestSnapshot(snap_a, Wall(106), t0 + 60ms);
+    Expect(svc.character_progress().quests.at(261).history.size() == hist_261, "xchar_stale_no_mass_loss");
+    Expect(svc.character_progress().quests.at(261).state == ProgressState::Active, "xchar_stale_261_active");
+}
+
+void TestMetadataBackfill()
+{
+    const auto dir = MakeTempDir();
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    auto id_empty = MakeSessionIdentity(kAcct, kCharA, "", "", std::nullopt);
+    svc.BindIdentity(id_empty, false, 0, true);
+    Expect(svc.character_progress().display_name.empty(), "meta_starts_empty_name");
+    Expect(svc.account_store().characters.at(id_empty.character_key).display_name.empty(), "meta_store_empty_name");
+    Expect(svc.account_store().characters.at(id_empty.character_key).profession.empty(), "meta_store_empty_prof");
+
+    auto id_filled = MakeSessionIdentity(kAcct, kCharA, "HeroFilled", "1", false);
+    svc.BindIdentity(id_filled);
+    Expect(svc.identity().display_name == "HeroFilled", "meta_backfill_name");
+    Expect(svc.identity().profession == "1", "meta_backfill_prof");
+    Expect(svc.character_progress().display_name == "HeroFilled", "meta_char_name");
+    Expect(svc.account_store().characters.at(id_empty.character_key).display_name == "HeroFilled",
+        "meta_store_name");
+    Expect(svc.account_store().characters.at(id_empty.character_key).profession == "1", "meta_store_prof");
+    Expect(svc.account_store().characters.at(id_empty.character_key).is_pre_searing.has_value()
+            && !*svc.account_store().characters.at(id_empty.character_key).is_pre_searing,
+        "meta_store_pre");
+
+    // Empty transient must not wipe valid metadata.
+    auto id_blank_again = MakeSessionIdentity(kAcct, kCharA, "", "", std::nullopt);
+    svc.BindIdentity(id_blank_again);
+    Expect(svc.identity().display_name == "HeroFilled", "meta_no_wipe_name");
+    Expect(svc.identity().profession == "1", "meta_no_wipe_prof");
+    Expect(svc.character_progress().display_name == "HeroFilled", "meta_char_no_wipe");
+
+    // Identity remains characterKey.
+    Expect(svc.identity().character_key == id_empty.character_key, "meta_key_stable");
+}
+
+void TestTerminalAbsenceViaService()
+{
+    const auto dir = MakeTempDir();
+    QuestProgressService svc;
+    svc.Initialize();
+    svc.SetStoreDirectory(dir);
+    auto id = PersistentId(kAcct, kCharA, "Hero");
+    auto t0 = std::chrono::steady_clock::now();
+    svc.BindIdentity(id);
+    svc.IngestSnapshot(MakeSnap(1, {Q(500)}), Wall(1), t0);
+    EvidenceStamp ab;
+    ab.game_quest_id = 500;
+    ab.kind = EvidenceKind::Abandon;
+    ab.steady_at = t0 + 5ms;
+    svc.IngestEvidence({ab});
+    svc.IngestSnapshot(MakeSnap(2, {}), Wall(2), t0 + 10ms);
+    Expect(svc.character_progress().quests.at(500).state == ProgressState::AbandonedObserved,
+        "svc_term_abandoned");
+    const auto hist = svc.character_progress().quests.at(500).history.size();
+    svc.IngestSnapshot(MakeSnap(3, {}), Wall(3), t0 + 20ms);
+    svc.IngestSnapshot(MakeSnap(4, {}), Wall(4), t0 + 30ms);
+    Expect(svc.character_progress().quests.at(500).state == ProgressState::AbandonedObserved,
+        "svc_term_keeps_abandoned");
+    Expect(svc.character_progress().quests.at(500).history.size() == hist, "svc_term_no_dup_hist");
+}
+
 } // namespace
 
 void RunBatch2CServiceTests()
@@ -1292,4 +1429,7 @@ void RunBatch2CServiceTests()
     TestMergeConflictNoAutoRetry();
     TestTerminateReinitializeDetached();
     TestBlockedCounterTransitionOnly();
+    TestCrossCharacterSnapshotBarrier();
+    TestMetadataBackfill();
+    TestTerminalAbsenceViaService();
 }
