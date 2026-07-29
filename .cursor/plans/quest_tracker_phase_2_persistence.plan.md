@@ -620,6 +620,17 @@ Batch 2C (identity binder / observation wiring / lifecycle flush) is a separate 
 - **Diagnostics:** detached status messages include detached character key + generations; `blocked_save_count_` increments on status transition only
 - Multi-character in-game validation remains required before Batch 2D
 
-## STOP (Batch 2C corrections)
+### Batch 2C.2 identity-scoped snapshot barrier
+
+- Every world-ready `LiveQuestView` stamps owned `account_key` / `character_key` at publish time (copied UUID strings; never borrowed `CharContext*`)
+- On character/account bind, `QuestTrackerWindow` raises a revision barrier (`reject_revision_at_or_below` = last published revision) and `RequestFullRefresh()`; `QuestProgressService` rejects pre-bind / mismatched / unstamped snaps until a matching post-bind observation arrives
+- Map-load without identity change does not raise the barrier
+- **Terminal states:** `abandoned_observed` / `completed_observed` survive repeated absence without new evidence (no redundant `presence_lost`); later explicit presence may reacquire
+- **Metadata backfill:** empty `displayName` / profession / Pre-Searing may be filled from later valid observation for the same `characterKey`; never wipe non-empty with empty
+- **Contaminated development stores:** stores produced before this barrier may contain cross-character quest rows. Do **not** auto-migrate or silently delete history. Archive/rename the old `QuestProgress` folder and recreate a clean store for validation
+
+## STOP (Batch 2C.2 identity barrier)
+
+Batch 2D is not started.
 
 Batch 2D / Contract export / mission-bit observation / history UI remain deferred.
