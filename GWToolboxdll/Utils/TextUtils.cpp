@@ -168,57 +168,6 @@ namespace TextUtils {
         return result;
     }
 
-    std::string RemovePunctuation(std::string s)
-    {
-        std::erase_if(s, [](auto c) { return std::ispunct(c, std::locale()); });
-        return s;
-    }
-
-    std::wstring RemovePunctuation(std::wstring s)
-    {
-        std::erase_if(s, [](auto c) { return std::ispunct(c, std::locale()); });
-        return s;
-    }
-
-    std::string ToSlug(std::string s)
-    {
-        s = RemovePunctuation(s);
-        std::ranges::transform(s, s.begin(), [](const char c) {
-            if (c == ' ') {
-                return '_';
-            }
-            return std::tolower(c, std::locale());
-        });
-        return s;
-    }
-
-    std::wstring ToSlug(std::wstring s)
-    {
-        s = RemovePunctuation(s);
-        std::ranges::transform(s, s.begin(), [](const wchar_t c) {
-            if (c == L' ') {
-                return L'_';
-            }
-            return std::tolower(c, std::locale());
-        });
-        return s;
-    }
-
-    std::string ToLower(std::string s)
-    {
-        std::ranges::transform(s, s.begin(), [](const char c) {
-            return std::tolower(c, std::locale());
-        });
-        return s;
-    }
-
-    std::wstring ToLower(std::wstring s)
-    {
-        std::ranges::transform(s, s.begin(), [](const wchar_t c) {
-            return std::tolower(c, std::locale());
-        });
-        return s;
-    }
 
 
     std::wstring StripTags(std::wstring_view str)
@@ -597,66 +546,34 @@ namespace TextUtils {
         return SanitizePlayerName(name);
     }
 
-    bool ParseInt(const char* str, int* val, const int base)
+    bool ParseInt(const char* str, int* val, int base)
     {
-        char* end;
-        *val = strtol(str, &end, base);
-        if (*end != 0 || errno == ERANGE) {
-            return false;
-        }
-
-        return true;
+        return Parse(str, val, base);
     }
 
-    bool ParseInt(const wchar_t* str, int* val, const int base)
+    bool ParseInt(const wchar_t* str, int* val, int base)
     {
-        wchar_t* end;
-        *val = wcstol(str, &end, base);
-        if (*end != 0 || errno == ERANGE) {
-            return false;
-        }
-
-        return true;
+        return Parse(str, val, base);
     }
 
-    bool ParseUInt(const char* str, unsigned int* val, const int base)
+    bool ParseUInt(const char* str, unsigned int* val, int base)
     {
-        char* end;
-        if (!str) {
-            return false;
-        }
-        *val = strtoul(str, &end, base);
-        if (str == end || errno == ERANGE) {
-            return false;
-        }
-        return true;
+        return Parse(str, val, base);
     }
 
-    bool ParseUInt(const wchar_t* str, unsigned int* val, const int base)
+    bool ParseUInt(const wchar_t* str, unsigned int* val, int base)
     {
-        wchar_t* end;
-        if (!str) {
-            return false;
-        }
-        *val = wcstoul(str, &end, base);
-        if (str == end || errno == ERANGE) {
-            return false;
-        }
-        return true;
+        return Parse(str, val, base);
     }
 
     bool ParseFloat(const char* str, float* val)
     {
-        char* end;
-        *val = strtof(str, &end);
-        return str != end && errno != ERANGE;
+        return Parse(str, val);
     }
 
     bool ParseFloat(const wchar_t* str, float* val)
     {
-        wchar_t* end;
-        *val = wcstof(str, &end);
-        return str != end && errno != ERANGE;
+        return Parse(str, val);
     }
 
     bool IsUrl(const wchar_t* str)
@@ -767,83 +684,6 @@ namespace TextUtils {
         return Time::FilenameTimestamp();
     }
 
-    std::vector<std::string> Split(const std::string& in, const std::string& token)
-    {
-        std::vector<std::string> result;
-        size_t start = 0;
-        size_t pos = 0;
-
-        while ((pos = in.find(token, start)) != std::string::npos) {
-            auto part = in.substr(start, pos - start);
-            if (!part.empty()) {
-                // Skip empty substrings
-                result.push_back(part);
-            }
-            start = pos + token.length();
-        }
-
-        // Add the last remaining part if it's not empty
-        auto lastPart = in.substr(start);
-        if (!lastPart.empty()) {
-            result.push_back(lastPart);
-        }
-
-        return result;
-    }
-    std::vector<std::wstring> Split(const std::wstring& in, const std::wstring& token)
-    {
-        std::vector<std::wstring> result;
-        size_t start = 0;
-        size_t pos = 0;
-
-        while ((pos = in.find(token, start)) != std::wstring::npos) {
-            auto part = in.substr(start, pos - start);
-            if (!part.empty()) {
-                // Skip empty substrings
-                result.push_back(part);
-            }
-            start = pos + token.length();
-        }
-
-        // Add the last remaining part if it's not empty
-        auto lastPart = in.substr(start);
-        if (!lastPart.empty()) {
-            result.push_back(lastPart);
-        }
-
-        return result;
-    }
-
-    std::wstring Join(const std::vector<std::wstring>& parts, const std::wstring& token)
-    {
-        std::wstring result;
-        bool first = true;
-        for (const auto& part : parts) {
-            if (!part.empty()) {
-                if (!first) {
-                    result += token;
-                }
-                result += part;
-                first = false;
-            }
-        }
-        return result;
-    }
-    std::string Join(const std::vector<std::string>& parts, const std::string& token)
-    {
-        std::string result;
-        bool first = true;
-        for (const auto& part : parts) {
-            if (!part.empty()) {
-                if (!first) {
-                    result += token;
-                }
-                result += part;
-                first = false;
-            }
-        }
-        return result;
-    }
 
     std::string UcWords(const std::string_view input)
     {
