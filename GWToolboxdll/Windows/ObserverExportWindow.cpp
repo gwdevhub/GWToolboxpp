@@ -9,6 +9,7 @@
 
 #include <Windows/ObserverExportWindow.h>
 #include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 
 #include <RestClient.h>
 
@@ -703,9 +704,8 @@ void ObserverExportWindow::ExportToJSON(Version version)
 {
     glz::generic json;
     std::string filename;
-    SYSTEMTIME time;
-    GetLocalTime(&time);
-    std::string export_time = std::format("{:04}-{:02}-{:02}T{:02}-{:02}-{:02}", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
+    const auto time = TextUtils::Time::GetCurrentSystemTime();
+    std::string export_time = std::format("{:04}-{:02}-{:02}T{:02}-{:02}-{:02}", time.year, time.month, time.day, time.hour, time.minute, time.second);
 
     switch (version) {
         case Version::V_0_1: {
@@ -909,9 +909,8 @@ void ObserverExportWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 
     // Prefill match_date with current date if empty
     if (settings.match_date.empty()) {
-        SYSTEMTIME time;
-        GetLocalTime(&time);
-        settings.match_date = std::format("{:04}-{:02}-{:02}", time.wYear, time.wMonth, time.wDay);
+        const auto time = TextUtils::Time::GetCurrentSystemTime();
+        settings.match_date = std::format("{:04}-{:02}-{:02}", time.year, time.month, time.day);
     }
 }
 

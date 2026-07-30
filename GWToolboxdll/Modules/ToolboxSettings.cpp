@@ -91,6 +91,8 @@
 #include <Windows/TargetInfoWindow.h>
 
 #include <Utils/ToolboxUtils.h>
+#include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 #include <Widgets/ActiveQuestWidget.h>
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/BondsWidget.h>
@@ -494,10 +496,9 @@ namespace {
 
         // Local-time timestamp; precision down to the second is enough
         // to disambiguate consecutive captures.
-        SYSTEMTIME st;
-        GetLocalTime(&st);
+        const auto st = TextUtils::Time::GetCurrentSystemTime();
         char stamp[32];
-        snprintf(stamp, sizeof(stamp), "%04d%02d%02d-%02d%02d%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+        snprintf(stamp, sizeof(stamp), "%04d%02d%02d-%02d%02d%02d", st.year, st.month, st.day, st.hour, st.minute, st.second);
 
         const auto folder = Resources::GetPath(L"Screens");
         Resources::EnsureFolderExists(folder);
@@ -649,10 +650,9 @@ void ToolboxSettings::Update(float)
             prof_string += ToolboxUtils::GetProfessionAcronym(static_cast<GW::Constants::Profession>(me->secondary))->wstring();
         }
 
-        SYSTEMTIME localtime;
-        GetLocalTime(&localtime);
-        const std::wstring filename = std::to_wstring(localtime.wYear) + L"-" + std::to_wstring(localtime.wMonth) + L"-" + std::to_wstring(localtime.wDay) + L" - " + std::to_wstring(localtime.wHour) + L"-" + std::to_wstring(localtime.wMinute) + L"-" +
-                                      std::to_wstring(localtime.wSecond) + L" - " + map_string + prof_string + L".log";
+        const auto localtime = TextUtils::Time::GetCurrentSystemTime();
+        const std::wstring filename = std::to_wstring(localtime.year) + L"-" + std::to_wstring(localtime.month) + L"-" + std::to_wstring(localtime.day) + L" - " + std::to_wstring(localtime.hour) + L"-" + std::to_wstring(localtime.minute) + L"-" +
+                                      std::to_wstring(localtime.second) + L" - " + map_string + prof_string + L".log";
 
         if (location_file && location_file.is_open()) {
             location_file.close();
