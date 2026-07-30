@@ -13,13 +13,13 @@ namespace {
     int portable_stricmp(const char* a, const char* b)
     {
         while (*a && *b) {
-            char c1 = std::tolower(static_cast<unsigned char>(*a));
-            char c2 = std::tolower(static_cast<unsigned char>(*b));
+            char c1 = static_cast<char>(std::tolower(static_cast<unsigned char>(*a)));
+            char c2 = static_cast<char>(std::tolower(static_cast<unsigned char>(*b)));
             if (c1 != c2) return c1 - c2;
             ++a;
             ++b;
         }
-        return std::tolower(static_cast<unsigned char>(*a)) - std::tolower(static_cast<unsigned char>(*b));
+        return static_cast<char>(std::tolower(static_cast<unsigned char>(*a))) - static_cast<char>(std::tolower(static_cast<unsigned char>(*b)));
     }
 
     constexpr auto diacritics = std::to_array<const wchar_t*>({
