@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "TextUtils.h"
 #include "TextUtils_Encoding.h"
+#include "TextUtils_Time.h"
 
 bool wcseq(const wchar_t* a, const wchar_t* b)
 {
@@ -75,12 +76,6 @@ namespace {
         L"z\u007A\u24E9\uFF5A\u017A\u1E91\u017C\u017E\u1E93\u1E95\u01B6\u0225\u0240\u2C6C\uA763"
     });
     std::map<wchar_t, wchar_t> diacritics_charmap;
-
-    time_t filetime_to_timet(const FILETIME& ft)
-    {
-        const ULARGE_INTEGER ull{ft.dwLowDateTime, ft.dwHighDateTime};
-        return ull.QuadPart / 10000000ULL - 11644473600ULL;
-    }
 }
 
 namespace TextUtils {
@@ -274,12 +269,9 @@ namespace TextUtils {
     std::string GetFormattedDateTime()
     {
         auto now = std::chrono::system_clock::now();
-        auto time_t = std::chrono::system_clock::to_time_t(now);
+        time_t time_t_now = std::chrono::system_clock::to_time_t(now);
+        std::tm tm_buf = Time::SafeLocaltime(time_t_now);
 
-        std::tm tm_buf;
-        localtime_s(&tm_buf, &time_t);
-
-        // Format: "Jan 15, 2024 2:30 PM"
         char buffer[64];
         std::strftime(buffer, sizeof(buffer), "%b %d, %Y %I:%M %p", &tm_buf);
 
@@ -735,9 +727,8 @@ namespace TextUtils {
     {
         const time_t now = time(nullptr);
         if (!utc_timestamp) utc_timestamp = now;
-        std::tm timeinfo, nowinfo;
-        localtime_s(&timeinfo, &utc_timestamp);
-        localtime_s(&nowinfo, &now);
+        std::tm timeinfo = Time::SafeLocaltime(utc_timestamp);
+        std::tm nowinfo = Time::SafeLocaltime(now);
 
         std::string out;
         out.reserve(32);
@@ -762,19 +753,17 @@ namespace TextUtils {
         return TimeToString(static_cast<time_t>(utc_timestamp), include_seconds, milliseconds);
     }
 
+#ifndef __EMSCRIPTEN__
     std::string TimeToString(const FILETIME utc_timestamp, bool include_seconds, int milliseconds)
     {
-        return TimeToString(filetime_to_timet(utc_timestamp), include_seconds, milliseconds);
+        uint64_t filetime_value = (static_cast<uint64_t>(utc_timestamp.dwHighDateTime) << 32) | utc_timestamp.dwLowDateTime;
+        return TimeToString(Time::FiletimeToTimeT(filetime_value), include_seconds, milliseconds);
     }
+#endif
 
     std::string FilenameTimestamp()
     {
-        SYSTEMTIME st;
-        GetLocalTime(&st);
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%04d-%02d-%02d_%02d-%02d-%02d",
-                 st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-        return buf;
+        return Time::FilenameTimestamp();
     }
 
     std::vector<std::string> Split(const std::string& in, const std::string& token)
