@@ -2,6 +2,7 @@
 #include "TextUtils.h"
 #include "TextUtils_Encoding.h"
 #include "TextUtils_Time.h"
+#include <cwchar>
 
 bool wcseq(const wchar_t* a, const wchar_t* b)
 {
