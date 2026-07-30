@@ -4,6 +4,16 @@
 #include <ctre.hpp>
 #undef __forceinline
 
+#include <cstdint>
+
+#ifdef __EMSCRIPTEN__
+struct GUID {
+    uint32_t Data1;
+    uint16_t Data2;
+    uint16_t Data3;
+    uint8_t Data4[8];
+};
+#endif
 
 bool wcseq(const wchar_t* a, const wchar_t* b);
 
@@ -130,8 +140,9 @@ namespace TextUtils {
     std::wstring RelativeTimeW(time_t utc_timestamp, RelativeTimeFormat fmt = RelativeTimeFormat::Full);
     std::string TimeToString(time_t utc_timestamp = 0, bool include_seconds = false, int milliseconds = -1);
     std::string TimeToString(uint32_t utc_timestamp, bool include_seconds = false, int milliseconds = -1);
+#ifndef __EMSCRIPTEN__
     std::string TimeToString(FILETIME utc_timestamp, bool include_seconds = false, int milliseconds = -1);
-    // Returns "YYYY-MM-DD_HH-MM-SS" from local time — safe for use in filenames.
+#endif
     std::string FilenameTimestamp();
 
     std::vector<std::string> Split(const std::string& in, const std::string& token);

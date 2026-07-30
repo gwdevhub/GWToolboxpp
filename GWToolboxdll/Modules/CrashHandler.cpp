@@ -14,6 +14,7 @@
 #include <Defender.h>
 #include <Path.h>
 #include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 
 namespace {
     char* tb_exception_message = nullptr;
@@ -237,12 +238,11 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     const DWORD ProcessId = GetCurrentProcessId();
     const DWORD ThreadId = GetCurrentThreadId();
 
-    SYSTEMTIME stLocalTime;
-    GetLocalTime(&stLocalTime);
+    const auto stLocalTime = TextUtils::Time::GetCurrentSystemTime();
     wchar_t szFileName[MAX_PATH];
     const auto fn_print = swprintf(
-        szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.wYear, stLocalTime.wMonth, stLocalTime.wDay, stLocalTime.wHour, stLocalTime.wMinute,
-        stLocalTime.wSecond, ProcessId, ThreadId
+        szFileName, MAX_PATH, L"%s\\%S%S-%04d%02d%02d-%02d%02d%02d-%ld-%ld.dmp", crash_folder.c_str(), GWTOOLBOXDLL_VERSION, GWTOOLBOXDLL_VERSION_BETA, stLocalTime.year, stLocalTime.month, stLocalTime.day, stLocalTime.hour, stLocalTime.minute,
+        stLocalTime.second, ProcessId, ThreadId
     );
 
     if (fn_print < 0) {

@@ -23,6 +23,7 @@
 
 #include <GWToolbox.h>
 #include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 #include <Utils/ToolboxUtils.h>
 
 namespace packetlogger_export {
@@ -595,13 +596,12 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
 
     switch (settings.timestamp_type) {
         case TimestampType_Local: {
-            SYSTEMTIME time;
-            GetLocalTime(&time);
+            const auto time = TextUtils::Time::GetCurrentSystemTime();
             bool prependColon = false;
             char t[4];
             std::string time_s = "[";
             if (settings.timestamp_show_hours) {
-                snprintf(t, 4, "%02d", time.wHour);
+                snprintf(t, 4, "%02d", time.hour);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -609,7 +609,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(":");
                 }
-                snprintf(t, 4, "%02d", time.wMinute);
+                snprintf(t, 4, "%02d", time.minute);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -617,7 +617,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(":");
                 }
-                snprintf(t, 4, "%02d", time.wSecond);
+                snprintf(t, 4, "%02d", time.second);
                 time_s.append(t);
                 prependColon = true;
             }
@@ -625,7 +625,7 @@ std::string PacketLoggerWindow::PrefixTimestamp(std::string message) const
                 if (prependColon) {
                     time_s.append(".");
                 }
-                snprintf(t, 4, "%03d", time.wMilliseconds);
+                snprintf(t, 4, "%03d", time.millisecond);
                 time_s.append(t);
             }
             return time_s + "] " + message;

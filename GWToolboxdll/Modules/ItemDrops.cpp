@@ -21,6 +21,7 @@
 #include <Modules/Resources.h>
 #include <Timer.h>
 #include <Utils/TextUtils.h>
+#include <Utils/TextUtils_Time.h>
 
 #define MAP_ENTRY(var) \
     {                  \
@@ -212,8 +213,7 @@ namespace {
         // Generate filename with current date
         const auto now = std::chrono::system_clock::now();
         const auto time = std::chrono::system_clock::to_time_t(now);
-        std::tm tm;
-        localtime_s(&tm, &time);
+        std::tm tm = TextUtils::Time::SafeLocaltime(time);
 
         wchar_t date_buffer[32];
         std::wcsftime(date_buffer, sizeof(date_buffer) / sizeof(wchar_t), L"%Y-%m-%d", &tm);
