@@ -137,6 +137,11 @@ namespace TextUtils {
         return s;
     }
 
+    inline std::wstring RemovePunctuation(const wchar_t* s) { return RemovePunctuation(std::wstring(s ? s : L"")); }
+    inline std::string RemovePunctuation(const char* s) { return RemovePunctuation(std::string(s ? s : "")); }
+    inline std::wstring RemovePunctuation(std::wstring_view s) { return RemovePunctuation(std::wstring(s)); }
+    inline std::string RemovePunctuation(std::string_view s) { return RemovePunctuation(std::string(s)); }
+
     template <typename CharT>
     std::basic_string<CharT> ToSlug(std::basic_string<CharT> s)
     {
@@ -151,6 +156,11 @@ namespace TextUtils {
         return s;
     }
 
+    inline std::wstring ToSlug(const wchar_t* s) { return ToSlug(std::wstring(s ? s : L"")); }
+    inline std::string ToSlug(const char* s) { return ToSlug(std::string(s ? s : "")); }
+    inline std::wstring ToSlug(std::wstring_view s) { return ToSlug(std::wstring(s)); }
+    inline std::string ToSlug(std::string_view s) { return ToSlug(std::string(s)); }
+
     template <typename CharT>
     std::basic_string<CharT> ToLower(std::basic_string<CharT> s)
     {
@@ -159,6 +169,11 @@ namespace TextUtils {
         });
         return s;
     }
+
+    inline std::wstring ToLower(const wchar_t* s) { return ToLower(std::wstring(s ? s : L"")); }
+    inline std::string ToLower(const char* s) { return ToLower(std::string(s ? s : "")); }
+    inline std::wstring ToLower(std::wstring_view s) { return ToLower(std::wstring(s)); }
+    inline std::string ToLower(std::string_view s) { return ToLower(std::string(s)); }
     std::wstring RemoveDiacritics(std::wstring_view s);
     std::wstring FormatFloat(float value, int max_decimal_places = 3);
 
@@ -236,6 +251,11 @@ namespace TextUtils {
         if (!lastPart.empty()) result.push_back(lastPart);
         return result;
     }
+
+    inline std::vector<std::wstring> Split(const std::wstring& in, const wchar_t* token) { return Split(in, std::wstring(token ? token : L"")); }
+    inline std::vector<std::string> Split(const std::string& in, const char* token) { return Split(in, std::string(token ? token : "")); }
+    inline std::vector<std::wstring> Split(std::wstring_view in, std::wstring_view token) { return Split(std::wstring(in), std::wstring(token)); }
+    inline std::vector<std::string> Split(std::string_view in, std::string_view token) { return Split(std::string(in), std::string(token)); }
 
     template <typename CharT>
     std::basic_string<CharT> Join(const std::vector<std::basic_string<CharT>>& parts, const std::basic_string<CharT>& token)
