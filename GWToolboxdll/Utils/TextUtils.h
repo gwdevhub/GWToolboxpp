@@ -271,6 +271,11 @@ namespace TextUtils {
         }
         return result;
     }
+
+    inline std::wstring Join(const std::vector<std::wstring>& parts, const wchar_t* token) { return Join(parts, std::wstring(token ? token : L"")); }
+    inline std::string Join(const std::vector<std::string>& parts, const char* token) { return Join(parts, std::string(token ? token : "")); }
+    inline std::wstring Join(const std::vector<std::wstring>& parts, std::wstring_view token) { return Join(parts, std::wstring(token)); }
+    inline std::string Join(const std::vector<std::string>& parts, std::string_view token) { return Join(parts, std::string(token)); }
     // Capitalise the first letter of each word. Replaces original.
     std::string UcWords(std::string_view input);
 
