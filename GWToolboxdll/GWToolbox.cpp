@@ -779,7 +779,7 @@ bool GWToolbox::IsProfilingEnabled()
 bool GWToolbox::ShouldDisableToolbox(GW::Constants::MapID map_id)
 {
     const auto m = GW::Map::GetMapInfo(map_id);
-    return m && m->GetIsPvP();
+    return m && (m->GetIsPvP() || m->GetIsGuildHall());
 }
 
 bool GWToolbox::IsInitialized()
