@@ -360,8 +360,8 @@ namespace TextUtils {
             constexpr auto has_escaped_dollar = ctre::search<LR"(\$\$)">(Replacement);
             if constexpr (has_escaped_dollar) replacements.emplace_back(L"$$", L"###ESCAPED_DOLLAR###");
             if constexpr (ctre::search<LR"(\$&)">(Replacement)) replacements.emplace_back(L"$&", match.to_string());
-            if constexpr (ctre::search<LR"(\$')">(Replacement)) replacements.emplace_back(L"$'", std::string(match.end(), subject.end()));
-            if constexpr (ctre::search<LR"(\$`)">(Replacement)) replacements.emplace_back(L"$`", std::string(subject.begin(), match.begin()));
+            if constexpr (ctre::search<LR"(\$')">(Replacement)) replacements.emplace_back(L"$'", std::wstring(match.end(), subject.end()));
+            if constexpr (ctre::search<LR"(\$`)">(Replacement)) replacements.emplace_back(L"$`", std::wstring(subject.begin(), match.begin()));
             if constexpr (ctre::search<LR"(\$1)">(Replacement) && cnt > 1) replacements.emplace_back(L"$1", match.template get<1>().to_string());
             if constexpr (ctre::search<LR"(\$2)">(Replacement) && cnt > 2) replacements.emplace_back(L"$2", match.template get<2>().to_string());
             if constexpr (ctre::search<LR"(\$3)">(Replacement) && cnt > 3) replacements.emplace_back(L"$3", match.template get<3>().to_string());
