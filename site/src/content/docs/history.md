@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.33
+* [Fix] Minimap: Custom Agents size edits now apply to other party members/players — previously the per-allegiance sizes (Ally, Neutral, Ally (NPC), Ally (Spirit/Pet), Ally (Minion)) set in the Custom Agents list had no effect on players, who always fell through to a legacy field that could no longer be changed from the UI.
 * [Fix] Loot Beacons: each beacon now always matches the colour of the item's name tag, and the per-rarity colour pickers have been removed — the rarity colours were also realigned to the game's own item palette so beacons read the same as the drop text.
 * [Fix] Title Tracker: the old, no-longer-obtainable versions of the Treasure Hunter and Wisdom title tracks (and the pre-hard-mode Skill Hunter) no longer appear in the widget's title list or the `/title` command.
 * [Fix] Trader window: the per-order "Whisper" buttons no longer share a click target when order descriptions are blank, so whispering a specific seller works reliably.
