@@ -1651,7 +1651,11 @@ void WeatherModule::DrawSettings()
                 }
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(110.f);
-                ImGui::DragFloat("##weight", &cp.entries[e].weight, 0.01f, 0.f, 1.f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+                // Shown as a 0-100% chance, but stored as the 0..1 fraction it has always been (existing configs load unchanged).
+                float weight_pct = cp.entries[e].weight * 100.f;
+                if (ImGui::DragFloat("##weight", &weight_pct, 0.1f, 0.f, 100.f, "%.1f%%", ImGuiSliderFlags_AlwaysClamp))
+                    cp.entries[e].weight = std::clamp(weight_pct / 100.f, 0.f, 1.f);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Chance this condition is picked for the climate on each weather roll.");
                 ImGui::SameLine();
                 if (ImGui::SmallButton("Remove##ent")) ent_remove = e;
                 ImGui::PopID();
@@ -1660,7 +1664,7 @@ void WeatherModule::DrawSettings()
             if (ImGui::SmallButton("Add condition##ent")) cp.entries.push_back({conditions.empty() ? "" : conditions.front().name, 0.3f});
             float sum = 0.f;
             for (const auto& e : cp.entries) sum += std::max(0.f, e.weight);
-            ImGui::Text("Clear weather: %.0f%%", std::max(0.f, 1.f - sum) * 100.f);
+            ImGui::Text("Clear weather: %.1f%%", std::max(0.f, 1.f - sum) * 100.f);
             if (ImGui::Button("Remove climate")) climate_remove = i;
         }
         ImGui::PopID();

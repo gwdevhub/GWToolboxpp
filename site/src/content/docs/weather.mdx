@@ -10,6 +10,8 @@ All settings for this feature live under <ToolboxPath steps={["Settings", "Weath
 
 The Weather module draws camera-anchored weather — rain, snow, ash and similar — into the 3D game world. The effect is composited under the in-game UI and occluded by terrain, and can dim the scene with an overcast tint. It ships with a few presets (Heavy Rain, Light Rain, Snow, Ashfall) and lets you author your own.
 
+The module is off by default. Tick **Weather** in the "Enable the following features" list under <ToolboxPath steps={["Settings", "General"]} /> and restart Toolbox to use it.
+
 <p class="text-(--color-fg-meta)">This is a beta feature. If the in-world compositor fails to install, the settings panel will say so at the top.</p>
 
 ## Conditions
@@ -37,7 +39,7 @@ Use **Duplicate** / **Remove condition** per condition, **Add condition** to cre
 
 Enable **Automatic weather (by climate)** to pick the active condition automatically from the climate of the region you're in, re-rolling every few minutes (set the **Change interval** range). While on, the manual on/off toggles are disabled.
 
-Below it is the climate table. Each climate lists conditions with a weight (0–1 probability per roll); the leftover probability is clear weather, shown as a percentage. Add or remove conditions per climate, **Add climate**, **Remove climate**, or **Reset climate table**. The current map's climate and the condition currently showing are displayed at the top of the panel.
+Below it is the climate table. Each climate lists conditions with a chance (0–100% per roll); the leftover chance is clear weather, shown below the list. Add or remove conditions per climate, **Add climate**, **Remove climate**, or **Reset climate table**. The current map's climate and the condition currently showing are displayed at the top of the panel.
 
 By default the climate follows the map you're in. You can force a specific climate regardless of map with `/climate <climate>` (see below); while a climate is forced, the panel shows it and offers a **Follow map** button to clear it.
 

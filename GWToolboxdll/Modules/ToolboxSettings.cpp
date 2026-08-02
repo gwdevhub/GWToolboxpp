@@ -204,7 +204,7 @@ namespace {
         {DistanceWidget::Instance(), false},
         Minimap::Instance(),
         GameWorldRenderer::Instance(),
-        WeatherModule::Instance(),
+        {WeatherModule::Instance(), false},
         {DangerRingsModule::Instance(), false},
         LootBeaconsModule::Instance(),
         {SkillRangeRingsModule::Instance(), false},
