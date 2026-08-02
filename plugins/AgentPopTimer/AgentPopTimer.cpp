@@ -315,42 +315,36 @@ void AgentPopTimer::LoadSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::LoadSettings(folder);
 
-    const auto ini = LoadIni(folder);
-
-    radius = (float)ini.GetDoubleValue(Name(), VAR_NAME(radius), radius);
-    color.x = (float)ini.GetDoubleValue(Name(), "BorderColorR", color.x);
-    color.y = (float)ini.GetDoubleValue(Name(), "BorderColorG", color.y);
-    color.z = (float)ini.GetDoubleValue(Name(), "BorderColorB", color.z);
-    offset.x = (float)ini.GetDoubleValue(Name(), "offsetX", offset.x);
-    offset.y = (float)ini.GetDoubleValue(Name(), "offsetY", offset.y);
-    showIcon = ini.GetBoolValue(Name(), VAR_NAME(showIcon), showIcon);
-    showText = ini.GetBoolValue(Name(), VAR_NAME(showText), showText);
-    showCircle = ini.GetBoolValue(Name(), VAR_NAME(showCircle), showCircle);
-    showBackground = ini.GetBoolValue(Name(), VAR_NAME(showBackground), showBackground);
-    fontSizeIndex = ini.GetLongValue(Name(), VAR_NAME(fontSizeIndex), fontSizeIndex);
-    imageSizeIndex = ini.GetLongValue(Name(), VAR_NAME(imageSizeIndex), imageSizeIndex);
+    LoadSetting(VAR_NAME(radius), radius);
+    LoadSetting("BorderColorR", color.x);
+    LoadSetting("BorderColorG", color.y);
+    LoadSetting("BorderColorB", color.z);
+    LoadSetting("offsetX", offset.x);
+    LoadSetting("offsetY", offset.y);
+    LoadSetting(VAR_NAME(showIcon), showIcon);
+    LoadSetting(VAR_NAME(showText), showText);
+    LoadSetting(VAR_NAME(showCircle), showCircle);
+    LoadSetting(VAR_NAME(showBackground), showBackground);
+    LoadSetting(VAR_NAME(fontSizeIndex), fontSizeIndex);
+    LoadSetting(VAR_NAME(imageSizeIndex), imageSizeIndex);
 }
 
 void AgentPopTimer::SaveSettings(const wchar_t* folder)
 {
+    SaveSetting(VAR_NAME(radius), radius);
+    SaveSetting("BorderColorR", color.x);
+    SaveSetting("BorderColorG", color.y);
+    SaveSetting("BorderColorB", color.z);
+    SaveSetting("offsetX", offset.x);
+    SaveSetting("offsetY", offset.y);
+    SaveSetting(VAR_NAME(showIcon), showIcon);
+    SaveSetting(VAR_NAME(showText), showText);
+    SaveSetting(VAR_NAME(showCircle), showCircle);
+    SaveSetting(VAR_NAME(showBackground), showBackground);
+    SaveSetting(VAR_NAME(fontSizeIndex), fontSizeIndex);
+    SaveSetting(VAR_NAME(imageSizeIndex), imageSizeIndex);
+
     ToolboxUIPlugin::SaveSettings(folder);
-
-    auto ini = LoadIni(folder);
-
-    ini.SetDoubleValue(Name(), VAR_NAME(radius), radius);
-    ini.SetDoubleValue(Name(), "BorderColorR", color.x);
-    ini.SetDoubleValue(Name(), "BorderColorG", color.y);
-    ini.SetDoubleValue(Name(), "BorderColorB", color.z);
-    ini.SetDoubleValue(Name(), "offsetX", offset.x);
-    ini.SetDoubleValue(Name(), "offsetY", offset.y);
-    ini.SetBoolValue(Name(), VAR_NAME(showIcon), showIcon);
-    ini.SetBoolValue(Name(), VAR_NAME(showText), showText);
-    ini.SetBoolValue(Name(), VAR_NAME(showCircle), showCircle);
-    ini.SetBoolValue(Name(), VAR_NAME(showBackground), showBackground);
-    ini.SetLongValue(Name(), VAR_NAME(fontSizeIndex), fontSizeIndex);
-    ini.SetLongValue(Name(), VAR_NAME(imageSizeIndex), imageSizeIndex);
-
-    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
 }
 
 void AgentPopTimer::Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll)

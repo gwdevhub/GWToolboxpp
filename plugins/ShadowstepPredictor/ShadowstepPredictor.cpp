@@ -194,51 +194,45 @@ void ShadowstepPredictor::Draw(IDirect3DDevice9*)
 void ShadowstepPredictor::LoadSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::LoadSettings(folder);
-    
-    const auto ini = LoadIni(folder);
 
     const auto loadColor = [&](ImVec4& color, std::string varName) 
     {
-        color.x = (float)ini.GetDoubleValue(Name(), (varName + "x").c_str(), color.x);
-        color.y = (float)ini.GetDoubleValue(Name(), (varName + "y").c_str(), color.y);
-        color.z = (float)ini.GetDoubleValue(Name(), (varName + "z").c_str(), color.z);
-        color.w = (float)ini.GetDoubleValue(Name(), (varName + "w").c_str(), color.w);
+        LoadSetting((varName + "x").c_str(), color.x);
+        LoadSetting((varName + "y").c_str(), color.y);
+        LoadSetting((varName + "z").c_str(), color.z);
+        LoadSetting((varName + "w").c_str(), color.w);
     };
     loadColor(successColor, VAR_NAME(successColor));
     loadColor(partialColor, VAR_NAME(partialColor));
     loadColor(failureColor, VAR_NAME(failureColor));
-    
-    showRecall           = ini.GetBoolValue(Name(), VAR_NAME(showRecall),           showRecall);
-    showSoH              = ini.GetBoolValue(Name(), VAR_NAME(showSoH),              showSoH);
-    showShadowWalk       = ini.GetBoolValue(Name(), VAR_NAME(showShadowWalk),       showShadowWalk);
-    showAllyShadowSteps  = ini.GetBoolValue(Name(), VAR_NAME(showAllyShadowSteps),  showAllyShadowSteps);
-    showEnemyShadowSteps = ini.GetBoolValue(Name(), VAR_NAME(showEnemyShadowSteps), showEnemyShadowSteps);
+
+    LoadSetting(VAR_NAME(showRecall),           showRecall);
+    LoadSetting(VAR_NAME(showSoH),              showSoH);
+    LoadSetting(VAR_NAME(showShadowWalk),       showShadowWalk);
+    LoadSetting(VAR_NAME(showAllyShadowSteps),  showAllyShadowSteps);
+    LoadSetting(VAR_NAME(showEnemyShadowSteps), showEnemyShadowSteps);
 }
 
 void ShadowstepPredictor::SaveSettings(const wchar_t* folder)
 {
-    ToolboxUIPlugin::SaveSettings(folder);
-
-    auto ini = LoadIni(folder);
-    
     const auto saveColor = [&](const ImVec4& color, std::string varName) 
     {
-        ini.SetDoubleValue(Name(), (varName + "x").c_str(), color.x);
-        ini.SetDoubleValue(Name(), (varName + "y").c_str(), color.y);
-        ini.SetDoubleValue(Name(), (varName + "z").c_str(), color.z);
-        ini.SetDoubleValue(Name(), (varName + "w").c_str(), color.w);
+        SaveSetting((varName + "x").c_str(), color.x);
+        SaveSetting((varName + "y").c_str(), color.y);
+        SaveSetting((varName + "z").c_str(), color.z);
+        SaveSetting((varName + "w").c_str(), color.w);
     };
     saveColor(successColor, VAR_NAME(successColor));
     saveColor(partialColor, VAR_NAME(partialColor));
     saveColor(failureColor, VAR_NAME(failureColor));
-    
-    ini.SetBoolValue(Name(), VAR_NAME(showRecall),           showRecall);
-    ini.SetBoolValue(Name(), VAR_NAME(showSoH),              showSoH);
-    ini.SetBoolValue(Name(), VAR_NAME(showShadowWalk),       showShadowWalk);
-    ini.SetBoolValue(Name(), VAR_NAME(showAllyShadowSteps),  showAllyShadowSteps);
-    ini.SetBoolValue(Name(), VAR_NAME(showEnemyShadowSteps), showEnemyShadowSteps);
 
-    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
+    SaveSetting(VAR_NAME(showRecall),           showRecall);
+    SaveSetting(VAR_NAME(showSoH),              showSoH);
+    SaveSetting(VAR_NAME(showShadowWalk),       showShadowWalk);
+    SaveSetting(VAR_NAME(showAllyShadowSteps),  showAllyShadowSteps);
+    SaveSetting(VAR_NAME(showEnemyShadowSteps), showEnemyShadowSteps);
+
+    ToolboxUIPlugin::SaveSettings(folder);
 }
 
 void ShadowstepPredictor::DrawSettings()

@@ -881,7 +881,34 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 {
     ToolboxPlugin::LoadSettings(folder);
     BackupManager::getInstance().initialize(folder);
-    const auto ini = LoadIni(folder);
+
+    long version = 1;
+    bool runInOutpostSetting = false;
+    bool blockHotkeysSetting = false;
+    long clearKeySetting = 0;
+    long clearModSetting = 0;
+    std::string scriptsSetting;
+    std::string groupsSetting;
+    LoadSetting("version", version);
+    LoadSetting("runInOutpost", runInOutpostSetting);
+    LoadSetting("alwaysBlockHotkeyKeys", blockHotkeysSetting);
+    LoadSetting("clearScriptsKey", clearKeySetting);
+    LoadSetting("clearScriptsMod", clearModSetting);
+    LoadSetting("scripts", scriptsSetting);
+    LoadSetting("groups", groupsSetting);
+
+    // loadFromIniFile expects a ToolboxIni; build one in-memory from the JSON-backed
+    // values above so the existing parsing/deserialization logic can stay untouched
+    // (it is also reused by the backup-restore and clipboard-import code paths).
+    ToolboxIni ini;
+    ini.SetLongValue(Name(), "version", version);
+    ini.SetBoolValue(Name(), "runInOutpost", runInOutpostSetting);
+    ini.SetBoolValue(Name(), "alwaysBlockHotkeyKeys", blockHotkeysSetting);
+    ini.SetLongValue(Name(), "clearScriptsKey", clearKeySetting);
+    ini.SetLongValue(Name(), "clearScriptsMod", clearModSetting);
+    ini.SetValue(Name(), "scripts", scriptsSetting.c_str());
+    ini.SetValue(Name(), "groups", groupsSetting.c_str());
+
     loadFromIniFile(ini);
     if (m_scripts.empty() && m_groups.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) {
         logMessage("No scripts loaded, but automatic backups found. Type \"/restore SST help\" to see options for restoring backups", Name());
@@ -890,14 +917,11 @@ void SpeedrunScriptingTools::LoadSettings(const wchar_t* folder)
 
 void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
 {
-    ToolboxPlugin::SaveSettings(folder);
-    auto ini = LoadIni(folder);
-
-    ini.SetLongValue(Name(), "version", currentVersion);
-    ini.SetBoolValue(Name(), "runInOutpost", runInOutposts);
-    ini.SetBoolValue(Name(), "alwaysBlockHotkeyKeys", alwaysBlockHotkeyKeys);
-    ini.SetLongValue(Name(), "clearScriptsKey", clearScriptsKey.keyData);
-    ini.SetLongValue(Name(), "clearScriptsMod", clearScriptsKey.modifier);
+    SaveSetting("version", currentVersion);
+    SaveSetting("runInOutpost", runInOutposts);
+    SaveSetting("alwaysBlockHotkeyKeys", alwaysBlockHotkeyKeys);
+    SaveSetting("clearScriptsKey", clearScriptsKey.keyData);
+    SaveSetting("clearScriptsMod", clearScriptsKey.modifier);
 
     {
         OutputStream stream;
@@ -906,7 +930,7 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
         }
 
         if (const auto encoded = encodeString(stream.str())) {
-            ini.SetValue(Name(), "scripts", encoded->c_str());   
+            SaveSetting("scripts", *encoded);
         }
     }
     {
@@ -917,10 +941,12 @@ void SpeedrunScriptingTools::SaveSettings(const wchar_t* folder)
         }
         if (const auto encoded = encodeString(stream.str())) 
         {
-            ini.SetValue(Name(), "groups", encoded->c_str());
+            SaveSetting("groups", *encoded);
         }
     }
-    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
+
+    ToolboxPlugin::SaveSettings(folder);
+
     if (!m_scripts.empty() || !m_groups.empty()) {
         BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
     }

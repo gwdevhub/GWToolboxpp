@@ -196,13 +196,11 @@ void ProjectileIndicator::LoadSettings(const wchar_t* folder)
 {
     ToolboxUIPlugin::LoadSettings(folder);
 
-    const auto ini = LoadIni(folder);
-
     const auto loadColor = [&](ImVec4& color, std::string varName) {
-        color.x = (float)ini.GetDoubleValue(Name(), (varName + "x").c_str(), color.x);
-        color.y = (float)ini.GetDoubleValue(Name(), (varName + "y").c_str(), color.y);
-        color.z = (float)ini.GetDoubleValue(Name(), (varName + "z").c_str(), color.z);
-        color.w = (float)ini.GetDoubleValue(Name(), (varName + "w").c_str(), color.w);
+        LoadSetting((varName + "x").c_str(), color.x);
+        LoadSetting((varName + "y").c_str(), color.y);
+        LoadSetting((varName + "z").c_str(), color.z);
+        LoadSetting((varName + "w").c_str(), color.w);
     };
     const auto split = [](std::string_view input, auto type)
     {
@@ -217,48 +215,51 @@ void ProjectileIndicator::LoadSettings(const wchar_t* folder)
     };
 
     loadColor(color, VAR_NAME(color));
-    filled = ini.GetBoolValue(Name(), VAR_NAME(filled), filled);
-    projectileTimer = ini.GetLongValue(Name(), VAR_NAME(projectileTimer), projectileTimer);
+    LoadSetting(VAR_NAME(filled), filled);
+    LoadSetting(VAR_NAME(projectileTimer), projectileTimer);
 
-    trackedSkills = split(ini.GetValue(Name(), "skills", "3075 3074"), GW::Constants::SkillID{});
-    trackedEnemyModels = split(ini.GetValue(Name(), "models", ""), int{});
-    suppressedProjecitileAnimationSources = split(ini.GetValue(Name(), "suppressed", "2333"), int{});
+    std::string skills = "3075 3074";
+    std::string models;
+    std::string suppressed = "2333";
+    LoadSetting("skills", skills);
+    LoadSetting("models", models);
+    LoadSetting("suppressed", suppressed);
+
+    trackedSkills = split(skills, GW::Constants::SkillID{});
+    trackedEnemyModels = split(models, int{});
+    suppressedProjecitileAnimationSources = split(suppressed, int{});
 }
 
 void ProjectileIndicator::SaveSettings(const wchar_t* folder)
 {
-    ToolboxUIPlugin::SaveSettings(folder);
-
-    auto ini = LoadIni(folder);
-
     const auto saveColor = [&](const ImVec4& color, std::string varName) {
-        ini.SetDoubleValue(Name(), (varName + "x").c_str(), color.x);
-        ini.SetDoubleValue(Name(), (varName + "y").c_str(), color.y);
-        ini.SetDoubleValue(Name(), (varName + "z").c_str(), color.z);
-        ini.SetDoubleValue(Name(), (varName + "w").c_str(), color.w);
+        SaveSetting((varName + "x").c_str(), color.x);
+        SaveSetting((varName + "y").c_str(), color.y);
+        SaveSetting((varName + "z").c_str(), color.z);
+        SaveSetting((varName + "w").c_str(), color.w);
     };
     saveColor(color, VAR_NAME(color));
-    ini.SetBoolValue(Name(), VAR_NAME(filled), filled);
-    ini.SetLongValue(Name(), VAR_NAME(projectileTimer), projectileTimer);
+    SaveSetting(VAR_NAME(filled), filled);
+    SaveSetting(VAR_NAME(projectileTimer), projectileTimer);
 
     std::string skills;
     for (const auto& skill : trackedSkills) 
     {
         skills += std::to_string((int)skill) + " ";
     }
-    ini.SetValue(Name(), "skills", skills.c_str());
+    SaveSetting("skills", skills);
 
     std::string models;
     for (const auto& model : trackedEnemyModels) {
         models += std::to_string(model) + " ";
     }
-    ini.SetValue(Name(), "models", models.c_str());
+    SaveSetting("models", models);
 
     std::string suppressed;
     for (const auto& source : suppressedProjecitileAnimationSources) {
         suppressed += std::to_string(source) + " ";
     }
-    ini.SetValue(Name(), "suppressed", suppressed.c_str());
+    SaveSetting("suppressed", suppressed);
 
-    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
+    ToolboxUIPlugin::SaveSettings(folder);
 }

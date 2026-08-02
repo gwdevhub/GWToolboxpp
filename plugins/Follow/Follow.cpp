@@ -56,20 +56,14 @@ void FollowPlugin::LoadSettings(const wchar_t* folder)
 {
     ToolboxPlugin::LoadSettings(folder);
 
-    const auto ini = LoadIni(folder);
-
-    followDistance = (float)ini.GetDoubleValue(Name(), VAR_NAME(followDistance), followDistance);
+    LoadSetting(VAR_NAME(followDistance), followDistance);
 }
 
 void FollowPlugin::SaveSettings(const wchar_t* folder)
 {
+    SaveSetting(VAR_NAME(followDistance), followDistance);
+
     ToolboxPlugin::SaveSettings(folder);
-
-    auto ini = LoadIni(folder);
-
-    ini.SetDoubleValue(Name(), VAR_NAME(followDistance), followDistance);
-
-    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
 }
 
 void FollowPlugin::DrawSettings()

@@ -996,7 +996,45 @@ void GWSplits::LoadSettings(const wchar_t* folder)
     BackupManager::getInstance().initialize(folder);
     settingsFolder = folder;
 
-    const auto ini = LoadIni(folder);
+    long version = 11;
+    long totalSplitsSetting = 0;
+    long upcomingSplitsSetting = 0;
+    bool showRunTimeSetting = true;
+    bool showSegmentTimeSetting = true;
+    bool showBestPossibleTimeSetting = true;
+    bool showSumOfBestSetting = true;
+    bool showLastSegmentSetting = true;
+    long fontSizeSetting = 2;
+    std::string splitMessageSetting = "[$name] ~ Time: $time ~ Duration: $duration";
+    std::string runsSetting;
+    LoadSetting("version", version);
+    LoadSetting("totalSplits", totalSplitsSetting);
+    LoadSetting("upcomingSplits", upcomingSplitsSetting);
+    LoadSetting("showRunTime", showRunTimeSetting);
+    LoadSetting("showSegmentTime", showSegmentTimeSetting);
+    LoadSetting("showBestPossibleTime", showBestPossibleTimeSetting);
+    LoadSetting("showSumOfBest", showSumOfBestSetting);
+    LoadSetting("showLastSegment", showLastSegmentSetting);
+    LoadSetting("fontSize", fontSizeSetting);
+    LoadSetting("splitMessage", splitMessageSetting);
+    LoadSetting("runs", runsSetting);
+
+    // loadFromIniFile expects a ToolboxIni; build one in-memory from the JSON-backed
+    // values above so the existing parsing/deserialization logic can stay untouched
+    // (it is also reused by the backup-restore code path).
+    ToolboxIni ini;
+    ini.SetLongValue(Name(), "version", version);
+    ini.SetLongValue(Name(), "totalSplits", totalSplitsSetting);
+    ini.SetLongValue(Name(), "upcomingSplits", upcomingSplitsSetting);
+    ini.SetBoolValue(Name(), "showRunTime", showRunTimeSetting);
+    ini.SetBoolValue(Name(), "showSegmentTime", showSegmentTimeSetting);
+    ini.SetBoolValue(Name(), "showBestPossibleTime", showBestPossibleTimeSetting);
+    ini.SetBoolValue(Name(), "showSumOfBest", showSumOfBestSetting);
+    ini.SetBoolValue(Name(), "showLastSegment", showLastSegmentSetting);
+    ini.SetLongValue(Name(), "fontSize", fontSizeSetting);
+    ini.SetValue(Name(), "splitMessage", splitMessageSetting.c_str());
+    ini.SetValue(Name(), "runs", runsSetting.c_str());
+
     loadFromIniFile(ini);
 
     if (runs.empty() && BackupManager::getInstance().backupCount(PluginUtils::StringToWString(Name())) > 0) 
@@ -1078,20 +1116,16 @@ bool GWSplits::WndProc(const UINT Message, const WPARAM wParam, LPARAM lparam)
 
 void GWSplits::SaveSettings(const wchar_t* folder)
 {
-    ToolboxUIPlugin::SaveSettings(folder);
-
-    auto ini = LoadIni(folder);
-
-    ini.SetLongValue(Name(), "version", currentVersion);
-    ini.SetLongValue(Name(), "totalSplits", totalSplits);
-    ini.SetLongValue(Name(), "upcomingSplits", upcomingSplits);
-    ini.SetBoolValue(Name(), "showRunTime", showRunTime);
-    ini.SetBoolValue(Name(), "showSegmentTime", showSegmentTime);
-    ini.SetBoolValue(Name(), "showBestPossibleTime", showBestPossibleTime);
-    ini.SetBoolValue(Name(), "showSumOfBest", showSumOfBest);
-    ini.SetBoolValue(Name(), "showLastSegment", showLastSegment);
-    ini.SetLongValue(Name(), "fontSize", fontSizeIndex);
-    ini.SetValue(Name(), "splitMessage", splitMessage.c_str());
+    SaveSetting("version", currentVersion);
+    SaveSetting("totalSplits", totalSplits);
+    SaveSetting("upcomingSplits", upcomingSplits);
+    SaveSetting("showRunTime", showRunTime);
+    SaveSetting("showSegmentTime", showSegmentTime);
+    SaveSetting("showBestPossibleTime", showBestPossibleTime);
+    SaveSetting("showSumOfBest", showSumOfBest);
+    SaveSetting("showLastSegment", showLastSegment);
+    SaveSetting("fontSize", fontSizeIndex);
+    SaveSetting("splitMessage", splitMessage);
 
     OutputStream stream;
     for (const auto& run : runs) {
@@ -1099,10 +1133,10 @@ void GWSplits::SaveSettings(const wchar_t* folder)
     }
 
     if (const auto encoded = encodeString(stream.str())) {
-        ini.SetValue(Name(), "runs", encoded->c_str());
+        SaveSetting("runs", *encoded);
     }
-    
-    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
+
+    ToolboxUIPlugin::SaveSettings(folder);
     if (runs.size())
         BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
 }

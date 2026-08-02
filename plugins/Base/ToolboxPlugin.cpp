@@ -33,6 +33,26 @@ void ToolboxPlugin::LoadSettings(const wchar_t* folder)
     settings.LoadFile(GetSettingFile(folder));
     legacy_ini.Reset();
     legacy_ini.LoadIfExists(GetLegacySettingFile(folder));
+
+    // Some plugins used to (or still) save raw INI text under the .json path instead of
+    // real JSON. Recover any such values here so LoadSetting() still finds them: parsing
+    // valid JSON as INI yields no sections and is a harmless no-op. Values already present
+    // in legacy_ini (from the real .ini file) take priority and are left untouched.
+    ToolboxIni half_migrated;
+    if (half_migrated.LoadIfExists(GetSettingFile(folder)) == SI_OK && !half_migrated.IsEmpty()) {
+        TNamesDepend sections;
+        half_migrated.GetAllSections(sections);
+        for (const auto& section : sections) {
+            TNamesDepend keys;
+            half_migrated.GetAllKeys(section.pItem, keys);
+            for (const auto& key : keys) {
+                if (legacy_ini.KeyExists(section.pItem, key.pItem)) {
+                    continue;
+                }
+                legacy_ini.SetValue(section.pItem, key.pItem, half_migrated.GetValue(section.pItem, key.pItem));
+            }
+        }
+    }
 }
 
 void ToolboxPlugin::SaveSettings(const wchar_t* folder)

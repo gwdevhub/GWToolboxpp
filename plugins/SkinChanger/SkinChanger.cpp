@@ -664,16 +664,22 @@ void SkinChanger::LoadSettings(const wchar_t* folder)
     ToolboxPlugin::LoadSettings(folder);
     BackupManager::getInstance().initialize(folder);
 
-    const auto ini = LoadIni(folder);
+    std::string itemChangesSetting;
+    std::string minipetTransmogsSetting;
+    LoadSetting(VAR_NAME(itemChanges), itemChangesSetting);
+    LoadSetting(VAR_NAME(minipetTransmogs), minipetTransmogsSetting);
+
+    // loadFromIniFile expects a ToolboxIni; build one in-memory from the JSON-backed
+    // values above so the existing parsing logic can stay untouched (it is also
+    // reused by the backup-restore code path).
+    ToolboxIni ini;
+    ini.SetValue(Name(), VAR_NAME(itemChanges), itemChangesSetting.c_str());
+    ini.SetValue(Name(), VAR_NAME(minipetTransmogs), minipetTransmogsSetting.c_str());
     loadFromIniFile(ini);
 }
 
 void SkinChanger::SaveSettings(const wchar_t* folder)
 {
-    ToolboxPlugin::SaveSettings(folder);
-    
-    auto ini = LoadIni(folder);
-
     std::string itemsToSave;
     itemsToSave.reserve(4096);
     for (const auto& itemChange : itemChanges) 
@@ -691,7 +697,7 @@ void SkinChanger::SaveSettings(const wchar_t* folder)
         itemsToSave += std::to_string((int)itemChange.enableDyes) + " ";
         itemsToSave += "END ";
     }
-    ini.SetValue(Name(), VAR_NAME(itemChanges), itemsToSave.c_str());
+    SaveSetting(VAR_NAME(itemChanges), itemsToSave);
 
     std::string transmogsToSave;
     transmogsToSave.reserve(4096);
@@ -708,9 +714,9 @@ void SkinChanger::SaveSettings(const wchar_t* folder)
         transmogsToSave += std::to_string(minipetTransmog.npcTransmog.scale) + " ";
         transmogsToSave += "END ";
     }
-    ini.SetValue(Name(), VAR_NAME(minipetTransmogs), transmogsToSave.c_str());
+    SaveSetting(VAR_NAME(minipetTransmogs), transmogsToSave);
 
-    PLUGIN_ASSERT(ini.SaveFile(ini.location_on_disk) == SI_OK);
+    ToolboxPlugin::SaveSettings(folder);
 
     if (itemChanges.size() || minipetTransmogs.size()) BackupManager::getInstance().save(PluginUtils::StringToWString(Name()), GetSettingFile(folder));
 }
