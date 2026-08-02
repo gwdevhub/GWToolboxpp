@@ -225,12 +225,12 @@ namespace {
     {
         const auto p = [](const Climate c, std::vector<ClimateWeather> e) { return ClimateProfile{c, std::move(e)}; };
         return {
-            p(Climate::Temperate, {{"Light Rain", 0.1f}, {"Heavy Rain", 0.05f}, {"Fog", 0.02f}}),
-            p(Climate::Tropical, {{"Heavy Rain", 0.2f}, {"Light Rain", 0.1f}, {"Fog", 0.05f}}),
-            p(Climate::Arid, {{"Light Rain", 0.1f}}),
-            p(Climate::Desertous, {{"Light Rain", 0.05f}, {"Sandstorm", 0.15f}}),
-            p(Climate::Mountainous, {{"Snow", 0.4f}, {"Blizzard", 0.15f}}),
-            p(Climate::Volcanic, {{"Ashfall", 0.4f}, {"Fog", 0.05f}}),
+            p(Climate::Temperate, {{"Light Rain", 0.01f}, {"Heavy Rain", 0.005f}, {"Fog", 0.002f}}),
+            p(Climate::Tropical, {{"Heavy Rain", 0.02f}, {"Light Rain", 0.01f}, {"Fog", 0.005f}}),
+            p(Climate::Arid, {{"Light Rain", 0.01f}}),
+            p(Climate::Desertous, {{"Light Rain", 0.005f}, {"Sandstorm", 0.015f}}),
+            p(Climate::Mountainous, {{"Snow", 0.04f}, {"Blizzard", 0.015f}}),
+            p(Climate::Volcanic, {{"Ashfall", 0.04f}, {"Fog", 0.005f}}),
         };
     }
     std::vector<ClimateProfile> climate_profiles = DefaultClimateProfiles();
@@ -1651,7 +1651,7 @@ void WeatherModule::DrawSettings()
                 }
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(110.f);
-                ImGui::DragFloat("##weight", &cp.entries[e].weight, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("##weight", &cp.entries[e].weight, 0.01f, 0.f, 1.f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
                 ImGui::SameLine();
                 if (ImGui::SmallButton("Remove##ent")) ent_remove = e;
                 ImGui::PopID();
