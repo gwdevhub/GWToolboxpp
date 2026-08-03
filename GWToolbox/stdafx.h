@@ -88,3 +88,43 @@ inline int ShowMessageBoxA(HWND hwnd, const char* text, const char* title, UINT 
 {
     return MessageBoxA(hwnd, text, (std::string(title) + " (v" GWTOOLBOXEXE_VERSION ")").c_str(), type);
 }
+
+// MessageBoxW can't render links, so the fallback path turns `<a href="url">text</a>` back into `text`.
+inline std::wstring StripLinkMarkup(const std::wstring& text)
+{
+    static const std::wregex link(L"<a href=\"[^\"]*\">([^<]*)</a>");
+    return std::regex_replace(text, link, L"$1");
+}
+
+// TaskDialog passes the clicked link's href in lParam.
+inline HRESULT CALLBACK OpenClickedLinkCallback(HWND, const UINT msg, WPARAM, const LPARAM lParam, LONG_PTR)
+{
+    if (msg == TDN_HYPERLINK_CLICKED) {
+        const auto url = reinterpret_cast<const wchar_t*>(lParam);
+        if (url && (wcsncmp(url, L"https://", 8) == 0 || wcsncmp(url, L"http://", 7) == 0)) {
+            ShellExecuteW(nullptr, L"open", url, nullptr, nullptr, SW_SHOWNORMAL);
+        }
+    }
+    return S_OK;
+}
+
+// Like ShowMessageBoxW, but `<a href="url">text</a>` in `text` renders as a clickable link;
+// falls back to a plain message box (markup stripped) if TaskDialog is unavailable.
+inline void ShowMessageBoxWithLinksW(HWND hwnd, const wchar_t* text, const wchar_t* title, PCWSTR icon = TD_ERROR_ICON)
+{
+    const std::wstring window_title = GwtbDialogTitle(title);
+
+    TASKDIALOGCONFIG config = {sizeof(config)};
+    config.hwndParent = hwnd;
+    config.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_ENABLE_HYPERLINKS | TDF_SIZE_TO_CONTENT;
+    config.dwCommonButtons = TDCBF_OK_BUTTON;
+    config.pszWindowTitle = window_title.c_str();
+    config.pszMainIcon = icon;
+    config.pszContent = text;
+    config.pfCallback = OpenClickedLinkCallback;
+
+    if (SUCCEEDED(TaskDialogIndirect(&config, nullptr, nullptr, nullptr))) {
+        return;
+    }
+    ShowMessageBoxW(hwnd, StripLinkMarkup(text).c_str(), title, MB_OK | MB_ICONERROR);
+}

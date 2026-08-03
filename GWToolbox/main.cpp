@@ -37,7 +37,7 @@ static void OpenLogFile(const std::filesystem::path& exe_path)
 
 static void ShowError(const wchar_t* message)
 {
-    ShowMessageBoxW(nullptr, message, L"GWToolbox - Error", 0);
+    ShowMessageBoxWithLinksW(nullptr, message, L"GWToolbox - Error");
 }
 
 static void ShowError(const char* message)
@@ -318,7 +318,8 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
         if (GetWineDiagnostics(wine)) {
             error += std::format(
                 L"\n\nGWToolbox is running under Wine on a non-Windows host, which is not supported. The "
-                L"Linux guide at https://www.gwtoolbox.com/linux is provided as-is for convenience only.\n\nDetected: {}",
+                L"Linux guide at <a href=\"https://www.gwtoolbox.com/docs/linux/\">gwtoolbox.com/docs/linux</a> "
+                L"is provided as-is for convenience only.\n\nDetected: {}",
                 wine
             );
             fprintf(stderr, "Wine detected: %S\n", wine.c_str());
