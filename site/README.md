@@ -46,6 +46,10 @@ Links between docs use absolute paths (`[Settings](/docs/settings/)`). The
 legacy Jekyll-style relative links (`[Settings](settings)`) were rewritten
 during the port.
 
+Every doc slug also gets an automatic redirect from its legacy prefix-less URL
+(`/linux` → `/docs/linux/`), generated in `astro.config.mjs` by scanning
+`src/content/docs/` — no per-page bookkeeping needed.
+
 ## Where things live
 
 - `src/layouts/Base.astro` — site chrome (head, header, footer).
