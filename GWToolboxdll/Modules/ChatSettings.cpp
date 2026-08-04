@@ -305,7 +305,9 @@ namespace {
             status->blocked = true;
             return;
         }
-        if (!ImGui::GetIO().KeyCtrl) {
+        // UI messages dispatch on the game thread, which outlives the ImGui context (before the first
+        // Present, and after DetachImgui on shutdown); GetIO() would deref a null GImGui.
+        if (!ImGui::GetCurrentContext() || !ImGui::GetIO().KeyCtrl) {
             return; // - Next logic only applicable when Ctrl is held
         }
 
