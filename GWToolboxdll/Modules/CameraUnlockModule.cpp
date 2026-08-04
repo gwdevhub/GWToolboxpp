@@ -312,7 +312,8 @@ void CameraUnlockModule::Update(float delta) {
     if (delta == 0.f) {
         return;
     }
-    if (GW::CameraMgr::GetCameraUnlock() && !GW::Chat::GetIsTyping() && !ImGui::GetIO().WantTextInput) {
+    // Update runs on the game thread, which outlives the ImGui context; no context means no text input
+    if (GW::CameraMgr::GetCameraUnlock() && !GW::Chat::GetIsTyping() && !(ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput)) {
         static bool keep_forward;
 
         float forward = 0;

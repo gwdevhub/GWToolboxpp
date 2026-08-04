@@ -88,6 +88,10 @@ void GamepadModule::Update(float delta)
 {
     UNREFERENCED_PARAMETER(delta);
     HookXInput();
+    // Update runs on the game thread, which outlives the ImGui context; everything below touches it
+    if (!ImGui::GetCurrentContext()) {
+        return;
+    }
     if (!GetGamepadCursorPos(&gamepad_cursor_pos_client)) {
         if (was_in_cursor_mode && ImGui::ShowingContextMenu()) {
             // Close current popup menu if we're in gamepad mode and didn't get cursor position
