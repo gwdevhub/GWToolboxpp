@@ -217,6 +217,7 @@ namespace {
         BYTE* ppvBits = nullptr;
         BOOL bResult = 0;
         HBITMAP outBitmap = nullptr;
+        HGDIOBJ oldDestBitmap = nullptr, oldSrcBitmap = nullptr;
 
         // create a destination bitmap and DC with size w/h
         BITMAPINFO bmi;
@@ -224,7 +225,7 @@ namespace {
         bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
         bmi.bmiHeader.biBitCount = 32;
         bmi.bmiHeader.biWidth = outWidth;
-        bmi.bmiHeader.biHeight = outWidth;
+        bmi.bmiHeader.biHeight = outHeight;
         bmi.bmiHeader.biPlanes = 1;
 
         // Do not use CreateCompatibleBitmap otherwise api will not allocate memory for bitmap
@@ -236,7 +237,8 @@ namespace {
         if (outBitmap == nullptr) {
             goto cleanup;
         }
-        if (SelectObject(destDC, outBitmap) == nullptr) {
+        oldDestBitmap = SelectObject(destDC, outBitmap);
+        if (oldDestBitmap == nullptr) {
             goto cleanup;
         }
 
@@ -244,7 +246,8 @@ namespace {
         if (!srcDC) {
             goto cleanup;
         }
-        if (SelectObject(srcDC, inBitmap) == nullptr) {
+        oldSrcBitmap = SelectObject(srcDC, inBitmap);
+        if (oldSrcBitmap == nullptr) {
             goto cleanup;
         }
 
@@ -254,6 +257,13 @@ namespace {
         }
         bResult = StretchBlt(destDC, 0, 0, outWidth, outHeight, srcDC, 0, 0, inWidth, inHeight, SRCCOPY);
     cleanup:
+        // a bitmap still selected into a DC can't be deleted, so restore the originals first
+        if (oldDestBitmap) {
+            SelectObject(destDC, oldDestBitmap);
+        }
+        if (oldSrcBitmap) {
+            SelectObject(srcDC, oldSrcBitmap);
+        }
         if (!bResult) {
             if (outBitmap) {
                 DeleteObject(outBitmap);
@@ -299,10 +309,15 @@ namespace {
         if (!scaledColor) {
             goto cleanup;
         }
-        icon_info.hbmColor = scaledColor;
-        icon_info.hbmMask = scaledMask;
-        new_cursor = CreateIconIndirect(&icon_info);
+        {
+            // CreateIconIndirect copies these, so the scaled bitmaps are still ours to free below
+            ICONINFO scaled_icon_info = icon_info;
+            scaled_icon_info.hbmColor = scaledColor;
+            scaled_icon_info.hbmMask = scaledMask;
+            new_cursor = CreateIconIndirect(&scaled_icon_info);
+        }
     cleanup:
+        // GetIconInfo hands out private copies of the bitmaps; failing to free them leaks 2 GDI objects per cursor change
         if (icon_info.hbmColor)
             DeleteObject(icon_info.hbmColor);
         if (icon_info.hbmMask)
