@@ -97,6 +97,8 @@ When Toolbox crashes it writes a **crash dump** — a `.dmp` file — that the d
 
 If there is no recent `.dmp` file, Toolbox skipped creating one on purpose. In a crash, Toolbox will **not** write a dump if you are running an outdated version or have plugins loaded — update to the latest version from [gwtoolbox.com](https://gwtoolbox.com/) and disable plugins, then reproduce the crash to get a usable dump.
 
+If Guild Wars vanished with no Toolbox popup *and* no `.dmp` file, check whether Windows logged the crash instead — see [Finding crashes in Event Viewer](/docs/event_viewer/).
+
 ## In-game issues and how-to
 
 ### Can I bind the same hotkey to perform multiple actions?

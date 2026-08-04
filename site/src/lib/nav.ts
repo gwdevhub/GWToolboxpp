@@ -14,6 +14,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { slug: 'faq', label: 'FAQ' },
       { slug: 'troubleshooting', label: 'Troubleshooting' },
+      { slug: 'event_viewer', label: 'Event Viewer Crashes' },
       { slug: 'launch_options', label: 'Launcher Arguments' },
       { slug: 'linux', label: 'Linux Install Guide' },
       { slug: 'analytics', label: 'Anonymous Analytics' },

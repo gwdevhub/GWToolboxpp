@@ -124,6 +124,8 @@ The popup also shows the **original error** that caused the crash. If you report
 
 Once a dump is written, see the FAQ for [how to send a crash dump to the team](/docs/faq/#gwtoolbox-just-crashed-how-do-i-send-a-crash-dump-to-the-team).
 
+If Guild Wars closed to desktop with **no popup and no dump file at all**, the crash never reached Toolbox's handler — in that case Windows may have logged it instead. See [Finding crashes in Event Viewer](/docs/event_viewer/).
+
 ## Blocked or quarantined files
 
 If the launcher says a file such as `GWToolboxdll.dll`, `gwca.dll`, or `gMod.dll` **"did exist, but now it doesn't"**, or a plugin/texture mod fails to load, antivirus has quarantined or deleted that file:
