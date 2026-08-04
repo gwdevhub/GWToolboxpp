@@ -1468,6 +1468,7 @@ void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
+    SettingsRegistry::Describe(this, "automatically_flag_pet_to_fight_called_target", "Automatically lock heroes and pets onto your called target");
     SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
 
     OnSkillTomeWindow_UIMessage_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmSkTome.cpp", "selection.skillId", 0, 0), 0xfff);
