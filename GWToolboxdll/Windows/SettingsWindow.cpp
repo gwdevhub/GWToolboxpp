@@ -216,7 +216,7 @@ namespace {
         }
         const auto results = BuildSearchResults(TextUtils::ToLower(search_buf));
         if (results.empty()) {
-            ImGui::TextDisabled("No settings match '%s'", search_buf);
+            ImGui::TextDisabled("没有与 '%s' 匹配的设置", search_buf);
             return;
         }
         if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
@@ -337,7 +337,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         drawn_settings.clear();
         ImGui::SetNextItemWidth(-1.f);
-        const bool enter_pressed = ImGui::InputTextWithHint("##settings_search", ICON_FA_SEARCH "  Search settings...", search_buf, sizeof(search_buf), ImGuiInputTextFlags_EnterReturnsTrue);
+        const bool enter_pressed = ImGui::InputTextWithHint("##settings_search", ICON_FA_SEARCH "  搜索设置...", search_buf, sizeof(search_buf), ImGuiInputTextFlags_EnterReturnsTrue);
         if (search_buf[0] && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             search_buf[0] = 0;
         }
@@ -354,7 +354,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         ImGui::SameLine(0, 0);
         ImGui::TextColored(sCol, " v%s ", GWTOOLBOXDLL_VERSION);
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Go to %s", GWTOOLBOX_WEBSITE);
+            ImGui::SetTooltip("转到 %s", GWTOOLBOX_WEBSITE);
         }
         if (ImGui::IsItemClicked()) {
             ShellExecute(nullptr, "open", GWTOOLBOX_WEBSITE, nullptr, nullptr, SW_SHOWNORMAL);
@@ -368,87 +368,84 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
             if (!server_version.empty()) {
                 if (server_version == GWTOOLBOXDLL_VERSION) {
                     ImGui::SameLine();
-                    ImGui::Text("(Up to date)");
+                    ImGui::Text("（已是最新）");
                 }
                 else {
-                    ImGui::Text("Version %s is available!", server_version.c_str());
+                    ImGui::Text("版本 %s 已可用！", server_version.c_str());
                 }
             }
         }
 #ifdef _DEBUG
         ImGui::SameLine();
-        ImGui::Text("(Debug)");
+        ImGui::Text("（调试）");
 #endif
 #ifdef __clang__
         ImGui::SameLine();
-        ImGui::Text("(Clang)");
+        ImGui::Text("（Clang）");
 #endif
         const float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
-        if (ImGui::Button("Open current settings folder", ImVec2(w, 0))) {
+        if (ImGui::Button("打开当前设置文件夹", ImVec2(w, 0))) {
             ShellExecuteW(nullptr, L"open", Resources::GetSettingsFolderPath().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
         }
         ImGui::SameLine();
-        if (ImGui::Button("Open GWToolbox++ Website", ImVec2(w, 0))) {
+        if (ImGui::Button("打开 GWToolbox++ 网站", ImVec2(w, 0))) {
             ShellExecuteA(nullptr, "open", GWTOOLBOX_WEBSITE, nullptr, nullptr, SW_SHOWNORMAL);
         }
-        ImGui::Checkbox("Hide Settings when entering explorable area", &hide_when_entering_explorable);
-        ImGui::CheckboxWithHelp("Send anonymous gameplay stats", &ToolboxSettings::send_anonymous_gameplay_info, "Some features of toolbox allow you to contribute to the community\nby sending in-game data to remote websites.\
-        \n\nFeatures that use this info:\
-        \n\t- Sending outpost party information to https://party.gwtoolbox.com\
-        \n\t- Sending purchase analytics to https://gwmarket.net when whispering a seller/buyer from the Market Browser");
-        ImGui::Text("General:");
+        ImGui::Checkbox("进入可探索区域时隐藏设置", &hide_when_entering_explorable);
+        ImGui::CheckboxWithHelp("发送匿名游戏统计数据", &ToolboxSettings::send_anonymous_gameplay_info, "工具箱的某些功能允许您通过向远程网站发送游戏内数据来为社区做出贡献。\n\n使用此信息的功能：\n\t- 将前哨战队伍信息发送至 https://party.gwtoolbox.com\n\t- 当通过市场浏览器向卖家/买家发送密语时，将购买分析发送至 https://gwmarket.net");
+        ImGui::Text("常规：");
 
-        if (ImGui::CollapsingHeader("Help")) {
-            if (ImGui::TreeNodeEx("General Interface", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (ImGui::CollapsingHeader("帮助")) {
+            if (ImGui::TreeNodeEx("通用界面", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::Bullet();
-                ImGui::Text("Double-click on the title bar to collapse a window.");
+                ImGui::Text("双击标题栏可折叠窗口。");
                 ImGui::Bullet();
-                ImGui::Text("Click and drag on the lower right corner to resize a window.");
+                ImGui::Text("点击并拖动右下角可调整窗口大小。");
                 ImGui::Bullet();
-                ImGui::Text("Click and drag on any empty space to move a window.");
+                ImGui::Text("点击并拖动任何空白区域可移动窗口。");
                 ImGui::Bullet();
-                ImGui::Text("Mouse Wheel to scroll.");
+                ImGui::Text("鼠标滚轮可滚动。");
                 if (ImGui::GetIO().FontAllowUserScaling) {
                     ImGui::Bullet();
-                    ImGui::Text("CTRL+Mouse Wheel to zoom window contents.");
+                    ImGui::Text("Ctrl+鼠标滚轮可缩放窗口内容。");
                 }
                 ImGui::Bullet();
-                ImGui::Text("TAB or SHIFT+TAB to cycle through keyboard editable fields.");
+                ImGui::Text("Tab 或 Shift+Tab 可在可编辑字段间循环切换。");
                 ImGui::Bullet();
-                ImGui::Text("CTRL+Click or Double Click on a slider or drag box to input text.");
+                ImGui::Text("Ctrl+单击或双击滑块或拖拽框可输入文本。");
                 ImGui::Bullet();
                 ImGui::Text(
-                    "While editing text:\n"
-                    "- Hold SHIFT or use mouse to select text\n"
-                    "- CTRL+Left/Right to word jump\n"
-                    "- CTRL+A or double-click to select all\n"
-                    "- CTRL+X,CTRL+C,CTRL+V clipboard\n"
-                    "- CTRL+Z,CTRL+Y undo/redo\n"
-                    "- ESCAPE to revert\n"
-                    "- You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract.\n"
+                    "编辑文本时：\n"
+                    "- 按住 Shift 或使用鼠标选择文本\n"
+                    "- Ctrl+左/右 逐词跳转\n"
+                    "- Ctrl+A 或双击全选\n"
+                    "- Ctrl+X、Ctrl+C、Ctrl+V 剪贴板操作\n"
+                    "- Ctrl+Z、Ctrl+Y 撤销/重做\n"
+                    "- Esc 取消更改\n"
+                    "- 可在数值上使用算术运算符 +、*、/，使用 +- 进行减法。\n"
                 );
                 ImGui::TreePop();
             }
-            if (ImGui::TreeNodeEx("Opening and closing windows", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-                ImGui::Text("There are several ways to open and close toolbox windows and widgets:");
+            if (ImGui::TreeNodeEx("打开和关闭窗口", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+                ImGui::Text("有几种方式可以打开和关闭工具箱窗口和小部件：");
                 ImGui::Bullet();
-                ImGui::Text("Buttons in the main window.");
+                ImGui::Text("主窗口中的按钮。");
                 ImGui::Bullet();
-                ImGui::Text("Checkboxes in the Info window.");
+                ImGui::Text("信息窗口中的复选框。");
                 ImGui::Bullet();
-                ImGui::Text("Checkboxes on the right of each setting header below.");
+                ImGui::Text("下方每个设置标题右侧的复选框。");
                 ImGui::Bullet();
-                ImGui::Text("Chat command '/hide <name>' to hide a window or widget.");
+                ImGui::Text("聊天命令 '/hide <名称>' 可隐藏窗口或小部件。");
                 ImGui::Bullet();
-                ImGui::Text("Chat command '/show <name>' to show a window or widget.");
+                ImGui::Text("聊天命令 '/show <名称>' 可显示窗口或小部件。");
                 ImGui::Bullet();
-                ImGui::Text("Chat command '/tb <name>' to toggle a window or widget.");
+                ImGui::Text("聊天命令 '/tb <名称>' 可切换窗口或小部件。");
                 ImGui::Indent();
-                ImGui::Text("In the commands above, <name> is the title of the window as shown in the title bar. For example, try '/hide settings' and '/show settings'.");
-                ImGui::Text("Note: the names of the widgets without a visible title bar are the same as in the setting headers below.");
+                ImGui::Text("在上述命令中，<名称> 是标题栏中显示的窗口标题。例如，尝试 '/hide settings' 和 '/show settings'。");
+                ImGui::Text("注意：没有可见标题栏的小部件名称与下方设置标题中的名称相同。");
                 ImGui::Unindent();
                 ImGui::Bullet();
-                ImGui::Text("Send Chat hotkey to enter one of the commands above.");
+                ImGui::Text("发送聊天热键可输入上述命令。");
                 ImGui::TreePop();
             }
             for (const auto module : GWToolbox::GetAllModules()) {
@@ -498,7 +495,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         auto windows = GWToolbox::GetWindows();
         std::ranges::sort(windows, sort);
         if (!windows.empty()) {
-            ImGui::Text("Windows:");
+            ImGui::Text("窗口：");
         }
         for (const auto m : windows) {
             if (m->HasSettings()) {
@@ -510,7 +507,7 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         auto widgets = GWToolbox::GetWidgets();
         std::ranges::sort(widgets, sort);
         if (!widgets.empty()) {
-            ImGui::Text("Widgets:");
+            ImGui::Text("小部件：");
         }
         for (const auto m : widgets) {
             if (m->HasSettings()) {
@@ -519,18 +516,18 @@ void SettingsWindow::Draw(IDirect3DDevice9*)
         }
         sort_and_draw_settings();
 
-        if (ImGui::Button("Save Now", ImVec2(w, 0))) {
+        if (ImGui::Button("立即保存", ImVec2(w, 0))) {
             GWToolbox::SaveSettings();
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Toolbox normally saves settings on exit.\nClick to save to disk now.");
+            ImGui::SetTooltip("工具箱通常在退出时保存设置。\n点击立即保存到磁盘。");
         }
         ImGui::SameLine();
-        if (ImGui::Button("Load Now", ImVec2(w, 0))) {
+        if (ImGui::Button("立即加载", ImVec2(w, 0))) {
             GWToolbox::LoadSettings();
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Toolbox normally loads settings on launch.\nClick to re-load from disk now.");
+            ImGui::SetTooltip("工具箱通常在启动时加载设置。\n点击立即从磁盘重新加载。");
         }
         ImGui::PopTextWrapPos();
     }

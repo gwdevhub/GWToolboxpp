@@ -176,21 +176,73 @@ namespace {
         }
 
         ImFont* font = nullptr;
-        // Load fonts from disk, merging glyph ranges
-        for (const auto& [glyph_ranges, font_name] : GetFontData()) {
+
+        // ★★★ 优先加载系统微软雅黑字体 (确保中文支持) ★★★
+        const char* system_font_paths[] = {
+            "C:\\Windows\\Fonts\\msyh.ttf",   // 微软雅黑
+            "C:\\Windows\\Fonts\\msyhbd.ttf", // 微软雅黑加粗
+            "C:\\Windows\\Fonts\\simsun.ttc", // 宋体 (备选)
+        };
+        for (const char* path : system_font_paths) {
+            printf("Attempting to load system font: %s\n", path);
             size_t data_size;
-
-            ASSERT(!font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
-            const auto font_name_str = TextUtils::WStringToString(font_name);
-            void* data = ImFileLoadToMemory(font_name_str.c_str(), "rb", &data_size, 0);
-
-            if (!data)
-                continue; // Failed to load data from disk
-            font = atlas->AddFontFromMemoryTTF(data, data_size, size, &cfg, glyph_ranges.data());
-            cfg.MergeMode = true;
+            void* data = ImFileLoadToMemory(path, "rb", &data_size, 0);
+            if (data) {
+                // 使用包含中文和英文的完整字符范围
+                static const ImWchar glyph_ranges[] = {
+                    0x0020, 0x00FF,   // Basic Latin + Latin Supplement
+                    0x2000, 0x206F,   // General Punctuation
+                    0x3000, 0x30FF,   // CJK Symbols, Hiragana, Katakana
+                    0x4e00, 0x9FAF,   // CJK Ideograms
+                    0xFF00, 0xFFEF,   // Half-width
+                    0
+                };
+                ImFontConfig sys_cfg = cfg;
+                sys_cfg.MergeMode = false; // 作为主字体
+                font = atlas->AddFontFromMemoryTTF(data, data_size, size, &sys_cfg, glyph_ranges);
+                printf("Loaded system font: %s\n", path);
+                break; // 成功加载一个即可
+            } else {
+                printf("Failed to load system font: %s\n", path);
+            }
         }
 
-        // Merge fontawesome icons
+        // 如果系统字体加载失败，尝试加载项目自带的字体（原有逻辑）
+        if (!font) {
+            // Load fonts from disk, merging glyph ranges
+            for (const auto& [glyph_ranges, font_name] : GetFontData()) {
+                size_t data_size;
+
+                ASSERT(!font_name.empty() && "Font name is empty, this shouldn't happen. Contact the developers.");
+                const auto font_name_str = TextUtils::WStringToString(font_name);
+                printf("Attempting to load project font: %s\n", font_name_str.c_str());
+
+                void* data = ImFileLoadToMemory(font_name_str.c_str(), "rb", &data_size, 0);
+
+                if (!data) {
+                    printf("Failed to load project font: %s\n", font_name_str.c_str());
+                    continue; // Failed to load data from disk
+                }
+                printf("Successfully loaded project font: %s (size: %zu bytes)\n", font_name_str.c_str(), data_size);
+                if (!font) {
+                    // 第一个加载的字体作为主字体
+                    ImFontConfig first_cfg = cfg;
+                    first_cfg.MergeMode = false;
+                    font = atlas->AddFontFromMemoryTTF(data, data_size, size, &first_cfg, glyph_ranges.data());
+                } else {
+                    // 后续字体合并
+                    ImFontConfig merge_cfg = cfg;
+                    merge_cfg.MergeMode = true;
+                    atlas->AddFontFromMemoryTTF(data, data_size, size, &merge_cfg, glyph_ranges.data());
+                }
+            }
+        } else {
+            // 如果系统字体已加载，可以合并项目字体作为补充 (例如补充其他语言)
+            // 但项目字体可能包含中文字符，可能导致重复，跳过或合并均可。这里为了简单，跳过项目字体。
+            // 但为了保留图标，我们仍需要合并 FontAwesome，这个在后面会处理。
+        }
+
+        // 合并 fontawesome 图标 (必须执行)
         cfg.MergeMode = true;
         cfg.GlyphExcludeRanges = nullptr;
         atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
@@ -235,12 +287,16 @@ namespace FontLoader {
             ImFont* fallback = atlas->Fonts.Size > 0 ? atlas->Fonts[0] : nullptr;
             if (auto* font = BuildFont(base_size)) {
                 loaded_font = font;
-                // ImGui::GetIO().FontDefault = font;
+                // ★★★ 关键：将加载的字体设为默认字体，这样中文才能显示 ★★★
+                ImGui::GetIO().FontDefault = font;
                 // remove first-pass default built in font
                 if (fallback && fallback != font) {
                     atlas->RemoveFont(fallback);
                     atlas->CompactCache();
                 }
+            } else {
+                // 如果磁盘字体加载失败，保留默认字体
+                printf("No disk fonts loaded, keeping default font.\n");
             }
             printf("Loaded all fonts\n");
         });
