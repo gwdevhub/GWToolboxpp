@@ -280,14 +280,14 @@ namespace {
     void DrawSelectHotkeyPopup() {
         if (pending_being_assigned) {
             keys_being_assigned = pending_being_assigned;
-            ImGui::OpenPopup("Select Hotkey");
+            ImGui::OpenPopup("选择快捷键");
             pending_being_assigned = nullptr;
             return;
         }
         if (!keys_being_assigned) {
             return;
         }
-        if (!ImGui::BeginPopup("Select Hotkey")) {
+        if (!ImGui::BeginPopup("选择快捷键")) {
             keys_selected.reset();
             hotkey_popup_first_draw = true;
             keys_being_assigned = nullptr;
@@ -304,15 +304,15 @@ namespace {
         std::string keys_held_buf = ModKeyName(keys_selected);
 
         ImGui::TextUnformatted(keys_held_buf.c_str());
-        if (ImGui::Button("Clear")) {
+        if (ImGui::Button("清除")) {
             keys_selected.reset();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel")) {
+        if (ImGui::Button("取消")) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save")) {
+        if (ImGui::Button("保存")) {
             keys_being_assigned->key_combo = keys_selected;
             ImGui::CloseCurrentPopup();
         }
@@ -381,89 +381,89 @@ void HotkeysWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        if (ImGui::Button("Create Hotkey...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-            ImGui::OpenPopup("Create Hotkey");
+        if (ImGui::Button("创建快捷键...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            ImGui::OpenPopup("创建快捷键");
         }
-        if (ImGui::BeginPopup("Create Hotkey")) {
+        if (ImGui::BeginPopup("创建快捷键")) {
             TBHotkey* new_hotkey = nullptr;
-            if (ImGui::Selectable("Send Chat")) {
+            if (ImGui::Selectable("发送聊天消息")) {
                 new_hotkey = new HotkeySendChat(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Send a message or command to chat");
+                ImGui::SetTooltip("向聊天发送消息或命令");
             }
-            if (ImGui::Selectable("Use Item")) {
+            if (ImGui::Selectable("使用物品")) {
                 new_hotkey = new HotkeyUseItem(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Use an item from your inventory");
+                ImGui::SetTooltip("从背包中使用一个物品");
             }
-            if (ImGui::Selectable("Drop or Use Buff")) {
+            if (ImGui::Selectable("丢弃或使用增益")) {
                 new_hotkey = new HotkeyDropUseBuff(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Use or cancel a skill such as Recall or UA");
+                ImGui::SetTooltip("使用或取消一个技能，如召回或虔诚姿态");
             }
-            if (ImGui::Selectable("Toggle...")) {
+            if (ImGui::Selectable("切换...")) {
                 new_hotkey = new HotkeyToggle(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Toggle a GWToolbox++ functionality such as clicker");
+                ImGui::SetTooltip("切换 GWToolbox++ 功能，如自动点击器");
             }
-            if (ImGui::Selectable("Execute...")) {
+            if (ImGui::Selectable("执行...")) {
                 new_hotkey = new HotkeyAction(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Execute a single task such as opening chests\nor reapplying lightbringer title");
+                ImGui::SetTooltip("执行单个任务，如打开宝箱或重新应用光辉称号");
             }
-            if (ImGui::Selectable("Guild Wars Key")) {
+            if (ImGui::Selectable("激战游戏按键")) {
                 new_hotkey = new HotkeyGWKey(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Trigger an in-game hotkey via toolbox");
+                ImGui::SetTooltip("通过工具箱触发游戏内快捷键");
             }
-            if (ImGui::Selectable("Target")) {
+            if (ImGui::Selectable("目标定位")) {
                 new_hotkey = new HotkeyTarget(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Target a game entity by its ID");
+                ImGui::SetTooltip("根据 ID 定位一个游戏实体");
             }
-            if (ImGui::Selectable("Move to")) {
+            if (ImGui::Selectable("移动到")) {
                 new_hotkey = new HotkeyMove(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Move to a specific (x,y) coordinate");
+                ImGui::SetTooltip("移动到指定坐标 (x, y)");
             }
-            if (ImGui::Selectable("Dialog")) {
+            if (ImGui::Selectable("对话")) {
                 new_hotkey = new HotkeyDialog(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Send a Dialog");
+                ImGui::SetTooltip("发送对话");
             }
-if (ImGui::Selectable("Equip Item")) {
+            if (ImGui::Selectable("装备物品")) {
                 new_hotkey = new HotkeyEquipItem(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Equip an item from your inventory");
+                ImGui::SetTooltip("从背包中装备一个物品");
             }
-            if (ImGui::Selectable("Flag Hero")) {
+            if (ImGui::Selectable("标记英雄")) {
                 new_hotkey = new HotkeyFlagHero(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Flag a hero relative to your position");
+                ImGui::SetTooltip("相对你的位置标记英雄");
             }
-            if (ImGui::Selectable("Command Pet")) {
+            if (ImGui::Selectable("指挥宠物")) {
                 new_hotkey = new HotkeyCommandPet(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Change behavior of your pet");
+                ImGui::SetTooltip("改变你宠物的行为");
             }
             ImGui::Separator();
-            if (ImGui::Selectable("Hotkey Group")) {
+            if (ImGui::Selectable("快捷键组")) {
                 new_hotkey = new HotkeyGroup(nullptr, nullptr);
             }
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Create a named group to organise and reorder hotkeys");
+                ImGui::SetTooltip("创建一个命名的组来组织和排序快捷键");
             }
             ImGui::EndPopup();
             hotkeys_changed = new_hotkey != 0;
@@ -487,9 +487,9 @@ if (ImGui::Selectable("Equip Item")) {
 void HotkeysWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::Checkbox("Show 'Active' checkbox in header", &settings.show_active_in_header);
-    ImGui::Checkbox("Show 'Run' button in header", &settings.show_run_in_header);
-    ImGui::SliderInt("Autoclicker delay (ms)", &settings.clicker_delay_ms, 1, 1'000);
+    ImGui::Checkbox("在标题中显示“启用”复选框", &settings.show_active_in_header);
+    ImGui::Checkbox("在标题中显示“运行”按钮", &settings.show_run_in_header);
+    ImGui::SliderInt("自动点击器延迟（毫秒）", &settings.clicker_delay_ms, 1, 1'000);
 }
 
 void HotkeysWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
