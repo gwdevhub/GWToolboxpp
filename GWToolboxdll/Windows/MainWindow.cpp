@@ -34,10 +34,10 @@ void MainWindow::SaveSettings(SettingsDoc& doc)
 
 void MainWindow::DrawSettingsInternal()
 {
-    ImGui::CheckboxWithHelp("Close other windows when opening a new one", &settings.one_panel_at_time_only, "Only affects windows (with a title bar), not widgets");
+    ImGui::CheckboxWithHelp("打开新窗口时关闭其他窗口", &settings.one_panel_at_time_only, "仅影响有标题栏的窗口，不影响小部件");
 
-    ImGui::Checkbox("Show Icons", &settings.show_icons);
-    ImGui::Checkbox("Center-align text", &settings.center_align_text);
+    ImGui::Checkbox("显示图标", &settings.show_icons);
+    ImGui::Checkbox("文本居中对齐", &settings.center_align_text);
 }
 
 void MainWindow::RegisterSettingsContent()
@@ -50,7 +50,7 @@ void MainWindow::RegisterSettingsContent()
             if (!is_showing) {
                 return;
             }
-            ImGui::Text("Main Window Visibility");
+            ImGui::Text("主窗口可见性");
             ShowVisibleRadio();
             DrawSizeAndPositionSettings();
             DrawSettingsInternal();

@@ -18,9 +18,9 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Toolbox"; }
+    [[nodiscard]] const char* Name() const override { return "工具箱"; }
 
-    [[nodiscard]] const char* SettingsName() const override { return "Toolbox Settings"; }
+    [[nodiscard]] const char* SettingsName() const override { return "工具箱设置"; }
 
     struct Settings {
         bool one_panel_at_time_only = false;
