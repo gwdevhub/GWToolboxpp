@@ -419,30 +419,30 @@ void ToolboxTheme::Draw(IDirect3DDevice9*)
 void ToolboxTheme::DrawSettingsInternal()
 {
     ImGuiStyle& style = ImGui::GetStyle();
-    if (ImGui::SmallButton("Restore Default")) {
+    if (ImGui::SmallButton("恢复默认")) {
         style = DefaultTheme();
     }
-    ImGui::Text("Note: window position/size is stored in 'Layout.json' in settings folder. You can share the file or parts of it with other people.");
-    ImGui::Text("Note: theme is stored in 'Theme.json' in settings folder. You can share the file or parts of it with other people.");
-    ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
+    ImGui::Text("注意：窗口位置/大小存储在设置文件夹的 'Layout.json' 中。您可以与他人分享该文件或其中的部分内容。");
+    ImGui::Text("注意：主题存储在设置文件夹的 'Theme.json' 中。您可以与他人分享该文件或其中的部分内容。");
+    ImGui::DragFloat("全局透明度", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f");
     style.Alpha = std::clamp(style.Alpha, 0.2f, 1.f);
-    ImGui::DragFloat("Global Font Scale", &ImGui::GetStyle().FontScaleMain, 0.005f, 0.3f, 2.0f, "%.2f");
-    ImGui::Text("Sizes");
-    ImGui::SliderFloat2("Window Padding", reinterpret_cast<float*>(&style.WindowPadding), 0.0f, 20.0f, "%.0f");
-    ImGui::SliderFloat("Window Rounding", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
-    ImGui::SliderFloat2("Frame Padding", reinterpret_cast<float*>(&style.FramePadding), 0.0f, 20.0f, "%.0f");
-    ImGui::SliderFloat("Frame Rounding", &style.FrameRounding, 0.0f, 16.0f, "%.0f");
-    ImGui::SliderFloat2("Item Spacing", reinterpret_cast<float*>(&style.ItemSpacing), 0.0f, 20.0f, "%.0f");
-    ImGui::SliderFloat2("Item InnerSpacing", reinterpret_cast<float*>(&style.ItemInnerSpacing), 0.0f, 20.0f, "%.0f");
-    ImGui::SliderFloat("Indent Spacing", &style.IndentSpacing, 0.0f, 30.0f, "%.0f");
-    ImGui::SliderFloat("Scrollbar Size", &style.ScrollbarSize, 1.0f, 20.0f, "%.0f");
-    ImGui::SliderFloat("Scrollbar Rounding", &style.ScrollbarRounding, 0.0f, 16.0f, "%.0f");
-    ImGui::SliderFloat("Grab MinSize", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
-    ImGui::SliderFloat("Grab Rounding", &style.GrabRounding, 0.0f, 16.0f, "%.0f");
-    ImGui::Text("Alignment");
-    ImGui::SliderFloat2("Window Title Align", reinterpret_cast<float*>(&style.WindowTitleAlign), 0.0f, 1.0f, "%.2f");
-    ImGui::SliderFloat2("Button Text Align", reinterpret_cast<float*>(&style.ButtonTextAlign), 0.0f, 1.0f, "%.2f");
-    ImGui::Text("Colors");
+    ImGui::DragFloat("全局字体缩放", &ImGui::GetStyle().FontScaleMain, 0.005f, 0.3f, 2.0f, "%.2f");
+    ImGui::Text("尺寸");
+    ImGui::SliderFloat2("窗口内边距", reinterpret_cast<float*>(&style.WindowPadding), 0.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat("窗口圆角", &style.WindowRounding, 0.0f, 16.0f, "%.0f");
+    ImGui::SliderFloat2("框架内边距", reinterpret_cast<float*>(&style.FramePadding), 0.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat("框架圆角", &style.FrameRounding, 0.0f, 16.0f, "%.0f");
+    ImGui::SliderFloat2("项目间距", reinterpret_cast<float*>(&style.ItemSpacing), 0.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat2("项目内部间距", reinterpret_cast<float*>(&style.ItemInnerSpacing), 0.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat("缩进间距", &style.IndentSpacing, 0.0f, 30.0f, "%.0f");
+    ImGui::SliderFloat("滚动条大小", &style.ScrollbarSize, 1.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat("滚动条圆角", &style.ScrollbarRounding, 0.0f, 16.0f, "%.0f");
+    ImGui::SliderFloat("滑块最小尺寸", &style.GrabMinSize, 1.0f, 20.0f, "%.0f");
+    ImGui::SliderFloat("滑块圆角", &style.GrabRounding, 0.0f, 16.0f, "%.0f");
+    ImGui::Text("对齐");
+    ImGui::SliderFloat2("窗口标题对齐", reinterpret_cast<float*>(&style.WindowTitleAlign), 0.0f, 1.0f, "%.2f");
+    ImGui::SliderFloat2("按钮文本对齐", reinterpret_cast<float*>(&style.ButtonTextAlign), 0.0f, 1.0f, "%.2f");
+    ImGui::Text("颜色");
     for (auto i = 0; i < ImGuiCol_COUNT; i++) {
         const char* name = ImGui::GetStyleColorName(i);
         ImGui::PushID(i);
@@ -450,7 +450,7 @@ void ToolboxTheme::DrawSettingsInternal()
         const Color cur = ImColor(style.Colors[i]);
         if (cur != ImColor(ini_style.Colors[i])) {
             ImGui::SameLine();
-            if (ImGui::Button("Revert")) {
+            if (ImGui::Button("还原")) {
                 style.Colors[i] = ini_style.Colors[i];
             }
         }

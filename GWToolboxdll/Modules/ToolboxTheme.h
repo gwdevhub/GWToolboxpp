@@ -14,7 +14,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Theme"; }
+    [[nodiscard]] const char* Name() const override { return "主题设置"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_PALETTE; }
 
     // MSVC can't reflect member names of internal-linkage types, so glaze-serialized structs are nested in the class
