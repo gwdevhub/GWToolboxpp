@@ -312,44 +312,44 @@ void ToolboxSettings::DrawSettingsInternal()
 {
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Unlock Move All", &move_all, "Will allow movement and resize of all widgets and windows");
+    ImGui::CheckboxWithHelp("解锁全部移动", &move_all, "允许移动和调整所有小部件和窗口的大小");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Clamp growing windows to screen bounds", &clamp_windows_to_screen);
+    ImGui::Checkbox("将超出屏幕的窗口限制在屏幕范围内", &clamp_windows_to_screen);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide toolbox on loading screens", &hide_on_loading_screen);
+    ImGui::Checkbox("加载界面时隐藏工具箱", &hide_on_loading_screen);
     ImGui::Spacing();
-    ImGui::Text("Show close button in:");
+    ImGui::Text("在以下位置显示关闭按钮：");
     ImGui::Indent();
-    ImGui::Checkbox("Outpost##close", &show_close_in_outpost);
+    ImGui::Checkbox("前哨站##close", &show_close_in_outpost);
     ImGui::SameLine();
-    ImGui::Checkbox("Explorable##close", &show_close_in_explorable);
+    ImGui::Checkbox("可探索区域##close", &show_close_in_explorable);
     ImGui::Unindent();
-    ImGui::Text("Show cog in:");
-    ImGui::ShowHelp("Show a " ICON_FA_COG " button in the title bar of each window.\nClick it to quickly open that window's settings.");
+    ImGui::Text("在以下位置显示齿轮图标：");
+    ImGui::ShowHelp("在窗口标题栏中显示 " ICON_FA_COG " 按钮。\n点击可快速打开该窗口的设置。");
     ImGui::Indent();
-    ImGui::Checkbox("Outpost", &show_cog_in_outpost);
+    ImGui::Checkbox("前哨站", &show_cog_in_outpost);
     ImGui::SameLine();
-    ImGui::Checkbox("Explorable", &show_cog_in_explorable);
+    ImGui::Checkbox("可探索区域", &show_cog_in_explorable);
     ImGui::Unindent();
-    ImGui::Text("Show screenshot button in:");
-    ImGui::ShowHelp("Show a " ICON_FA_CAMERA " button in the title bar of each window.\nClick it to save a PNG of just that window to the Toolbox Screens folder.\nIntended for capturing screenshots for documentation or bug reports.");
+    ImGui::Text("在以下位置显示截图按钮：");
+    ImGui::ShowHelp("在窗口标题栏中显示 " ICON_FA_CAMERA " 按钮。\n点击可将该窗口保存为 PNG 图片到工具箱截图文件夹。\n用于截取文档或错误报告所需的截图。");
     ImGui::Indent();
-    ImGui::Checkbox("Outpost##scrn", &show_screenshot_button_in_outpost);
+    ImGui::Checkbox("前哨站##scrn", &show_screenshot_button_in_outpost);
     ImGui::SameLine();
-    ImGui::Checkbox("Explorable##scrn", &show_screenshot_button_in_explorable);
+    ImGui::Checkbox("可探索区域##scrn", &show_screenshot_button_in_explorable);
     ImGui::Unindent();
     ImGui::Separator();
 
     Updater::Instance().DrawSettingsInternal();
     ImGui::Separator();
 
-    ImGui::CheckboxWithHelp("Save Location Data", &save_location_data, "Toolbox will save your location every second in a file in Settings Folder.");
+    ImGui::CheckboxWithHelp("保存位置数据", &save_location_data, "工具箱将每隔一秒将您的位置保存到设置文件夹中的文件里。");
     const auto cols = static_cast<size_t>(floor(ImGui::GetWindowWidth() / (170.0f * ImGui::FontScale())));
 
     ImGui::Separator();
     ImGui::PushID("global_enable");
-    ImGui::TextUnformatted("Enable the following features:");
-    ImGui::TextDisabled("Unticking will completely disable a feature from initializing and running. Requires Toolbox restart.");
+    ImGui::TextUnformatted("启用以下功能：");
+    ImGui::TextDisabled("取消勾选将完全禁用该功能的初始化和运行。需要重启工具箱。");
 
     auto items_per_col = static_cast<size_t>(ceil(optional_modules.size() / static_cast<float>(cols)));
     size_t col_count = 0;
@@ -581,10 +581,10 @@ void ToolboxSettings::DrawSettingsCogButtons()
     }
 
     if (hovered_cog) {
-        ImGui::SetTooltip("Open %s settings", hovered_cog->SettingsName());
+        ImGui::SetTooltip("打开 %s 的设置", hovered_cog->SettingsName());
     }
     else if (hovered_cam) {
-        ImGui::SetTooltip("Save a PNG screenshot of '%s'", hovered_cam->Name());
+        ImGui::SetTooltip("保存 '%s' 的 PNG 截图", hovered_cam->Name());
     }
 }
 

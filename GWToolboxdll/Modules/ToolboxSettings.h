@@ -17,7 +17,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Toolbox Settings"; }
+    [[nodiscard]] const char* Name() const override { return "工具箱设置"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_TOOLBOX; }
 
     static void LoadModules(ToolboxIni* ini);
