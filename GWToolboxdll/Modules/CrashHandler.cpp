@@ -84,8 +84,19 @@ namespace {
         EXCEPTION_RECORD exceptionRecord = {0};
         EXCEPTION_POINTERS exceptionPointers = {nullptr};
 
+        // GW has already written "Exception: <code>" into its own crash text; recover the real code from
+        // there, otherwise every dump is stamped EXCEPTION_BREAKPOINT and debuggers chase a phantom int3.
+        DWORD exception_code = EXCEPTION_BREAKPOINT;
+        if (message_buffer && message_buffer->buffer) {
+            unsigned int parsed = 0;
+            if (const auto exception_line = strstr(message_buffer->buffer, "Exception: ");
+                exception_line && sscanf(&exception_line[11], "%8x", &parsed) == 1 && parsed) {
+                exception_code = parsed;
+            }
+        }
+
         // Fill in exception record with info from CONTEXT
-        exceptionRecord.ExceptionCode = EXCEPTION_BREAKPOINT; // Or appropriate code
+        exceptionRecord.ExceptionCode = exception_code;
         exceptionRecord.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
         exceptionRecord.ExceptionAddress = reinterpret_cast<PVOID>(pContext->Eip);
         exceptionRecord.NumberParameters = 0;
