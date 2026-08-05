@@ -126,7 +126,7 @@ namespace {
         wchar_t enc_string[8] = {0};
         GW::UI::UInt32ToEncStr(file_id, enc_string, 8);
         EncInfoField(label, enc_string);
-        std::string label2 = std::format("{} (File ID)", label);
+        std::string label2 = std::format("{} (文件 ID)", label);
         InfoField(label2.c_str(), "0x%X", file_id);
         return false;
     }
@@ -135,7 +135,7 @@ namespace {
         // Show the raw enc chars, not a re-encoding of the decoded id — when decode fails (0), the raw
         // string is the only clue to what the game actually passed.
         EncInfoField(label, enc_str);
-        const std::string label2 = std::format("{} (File ID)", label);
+        const std::string label2 = std::format("{} (文件 ID)", label);
         InfoField(label2.c_str(), "0x%X", ArenaNetFileParser::FileHashToFileId(enc_str));
         return false;
     }
@@ -154,52 +154,52 @@ namespace {
         auto type = "";
         switch (GW::Map::GetInstanceType()) {
             case GW::Constants::InstanceType::Outpost:
-                type = "Outpost\0\0\0";
+                type = "前哨站";
                 break;
             case GW::Constants::InstanceType::Explorable:
-                type = "Explorable";
+                type = "探索区域";
                 break;
             case GW::Constants::InstanceType::Loading:
-                type = "Loading\0\0\0";
+                type = "加载中";
                 break;
         }
-        InfoField("Map ID", "%d", map_id);
-        ImGui::ShowHelp("Map ID is unique for each area");
-        InfoField("Map Region", "%d", GW::Map::GetRegion());
-        InfoField("Map District", "%d", GW::Map::GetDistrict());
-        InfoField("Map Type", type);
-        FileIdField("Map File ID", mapfile);
-        ImGui::ShowHelp("Map file is unique for each pathing map (e.g. used by minimap).\nMany different maps use the same map file");
+        InfoField("地图 ID", "%d", map_id);
+        ImGui::ShowHelp("每个区域的地图 ID 是唯一的");
+        InfoField("地图区域", "%d", GW::Map::GetRegion());
+        InfoField("地图分区", "%d", GW::Map::GetDistrict());
+        InfoField("地图类型", type);
+        FileIdField("地图文件 ID", mapfile);
+        ImGui::ShowHelp("地图文件对于每个路径地图（例如小地图使用）是唯一的。\n许多不同的地图使用同一个地图文件");
         const GW::AreaInfo* map_info = GW::Map::GetMapInfo(map_id);
         if (map_info) {
             static wchar_t name_enc[8];
             if (GW::UI::UInt32ToEncStr(map_info->name_id, name_enc, 8)) {
-                FileIdField("Name Enc", name_enc);
-                InfoField("Name", "%s", Resources::DecodeStringId(map_info->name_id)->string().c_str());
+                FileIdField("名称加密", name_enc);
+                InfoField("名称", "%s", Resources::DecodeStringId(map_info->name_id)->string().c_str());
             }
 
             static wchar_t desc_enc[8];
             if (GW::UI::UInt32ToEncStr(map_info->description_id, desc_enc, 8)) {
-                FileIdField("Desc Enc", desc_enc);
-                InfoField("Desc", "%s", Resources::DecodeStringId(map_info->description_id)->string().c_str());
+                FileIdField("描述加密", desc_enc);
+                InfoField("描述", "%s", Resources::DecodeStringId(map_info->description_id)->string().c_str());
             }
         }
 
-        if (ImGui::TreeNodeEx("Advanced##map_advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (ImGui::TreeNodeEx("高级##map_advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             if (map_info) {
-                InfoField("Campaign", "%d", map_info->campaign);
-                InfoField("Continent", "%d", map_info->continent);
-                InfoField("Region", "%d", map_info->region);
-                InfoField("Type", "%d", map_info->type);
-                InfoField("Mission Complete?", "%d", ToolboxUtils::GetMissionState(map_id, GW::PartyMgr::GetIsPartyInHardMode()));
-                InfoField("Flags", "0x%X", map_info->flags);
-                InfoField("Thumbnail ID", "%d", map_info->thumbnail_id);
+                InfoField("战役", "%d", map_info->campaign);
+                InfoField("大陆", "%d", map_info->continent);
+                InfoField("区域", "%d", map_info->region);
+                InfoField("类型", "%d", map_info->type);
+                InfoField("任务完成?", "%d", ToolboxUtils::GetMissionState(map_id, GW::PartyMgr::GetIsPartyInHardMode()));
+                InfoField("标记", "0x%X", map_info->flags);
+                InfoField("缩略图 ID", "%d", map_info->thumbnail_id);
                 const auto m = GW::GetMapContext();
                 if (m) {
-                    InfoField("Map Boundaries", "%.0f, %.0f, %.0f, %.0f, %.0f", m->start_pos.x, m->start_pos.y, m->end_pos.x, m->end_pos.y);
+                    InfoField("地图边界", "%.0f, %.0f, %.0f, %.0f, %.0f", m->start_pos.x, m->start_pos.y, m->end_pos.x, m->end_pos.y);
                 }
                 GW::Vec2f pos = {static_cast<float>(map_info->x), static_cast<float>(map_info->y)};
-                InfoField("Map Pos", "%.2f, %.2f", pos.x, pos.y);
+                InfoField("地图坐标", "%.2f, %.2f", pos.x, pos.y);
                 if (!pos.x) {
                     pos.x = static_cast<float>(map_info->icon_start_x + (map_info->icon_end_x - map_info->icon_start_x) / 2);
                     pos.y = static_cast<float>(map_info->icon_start_y + (map_info->icon_end_y - map_info->icon_start_y) / 2);
@@ -208,7 +208,7 @@ namespace {
                     pos.x = static_cast<float>(map_info->icon_start_x_dupe + (map_info->icon_end_x_dupe - map_info->icon_start_x_dupe) / 2);
                     pos.y = static_cast<float>(map_info->icon_start_y_dupe + (map_info->icon_end_y_dupe - map_info->icon_start_y_dupe) / 2);
                 }
-                InfoField("Calculated Pos", "%.2f, %.2f", pos.x, pos.y);
+                InfoField("计算坐标", "%.2f, %.2f", pos.x, pos.y);
             }
             ImGui::TreePop();
         }
@@ -224,26 +224,26 @@ namespace {
         static char info_id[16];
         snprintf(info_id, _countof(info_id), "skill_info_%d", skill->skill_id);
         ImGui::PushID(info_id);
-        InfoField("SkillID", "%d", skill->skill_id);
-        InfoField("Name", "%s", name->string().c_str());
+        InfoField("技能 ID", "%d", skill->skill_id);
+        InfoField("名称", "%s", name->string().c_str());
         auto draw_advanced = [&, skill] {
-            InfoField("Addr", "%p", skill);
-            InfoField("Type", "%d", skill->type);
-            InfoField("Flags", "%08x", skill->special);
+            InfoField("地址", "%p", skill);
+            InfoField("类型", "%d", skill->type);
+            InfoField("标记", "%08x", skill->special);
             short file_ids[2];
             GetIdsFromFileId(skill->icon_file_id, file_ids);
-            InfoField("FileIds", "%08x %04x %04x", skill->icon_file_id, file_ids[0], file_ids[1]);
+            InfoField("文件 ID", "%08x %04x %04x", skill->icon_file_id, file_ids[0], file_ids[1]);
             GetIdsFromFileId(skill->icon_file_id_2, file_ids);
-            InfoField("FileIds2", "%04x %04x", file_ids[0], file_ids[1]);
-            EncInfoField("Name Enc", name->encoded().c_str());
+            InfoField("文件 ID 2", "%04x %04x", file_ids[0], file_ids[1]);
+            EncInfoField("名称加密", name->encoded().c_str());
             wchar_t out[8];
             GW::UI::UInt32ToEncStr(skill->description, out, _countof(out));
-            EncInfoField("Desc Enc", out);
+            EncInfoField("描述加密", out);
         };
         if (force_advanced) {
             draw_advanced();
         }
-        else if (ImGui::TreeNodeEx("Advanced##skill", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        else if (ImGui::TreeNodeEx("高级##skill", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             draw_advanced();
             ImGui::TreePop();
         }
@@ -256,11 +256,11 @@ namespace {
             return;
         }
         ImGui::PushID(guild->index);
-        if (ImGui::TreeNodeEx("Guild Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (ImGui::TreeNodeEx("公会信息", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             ImGui::PushID("guild_info");
-            InfoField("Addr", "0x%p", guild);
-            InfoField("Name", "%s [%s]", TextUtils::WStringToString(guild->name).c_str(), TextUtils::WStringToString(guild->tag).c_str());
-            InfoField("Faction", "%d (%s)", guild->faction_point, guild->faction ? "Luxon" : "Kurzick");
+            InfoField("地址", "0x%p", guild);
+            InfoField("名称", "%s [%s]", TextUtils::WStringToString(guild->name).c_str(), TextUtils::WStringToString(guild->tag).c_str());
+            InfoField("势力值", "%d (%s)", guild->faction_point, guild->faction ? "勒克森" : "库兹柯");
             ImGui::PopID();
             ImGui::TreePop();
         }
@@ -269,7 +269,7 @@ namespace {
 
     void DrawHomAchievements(const GW::Player* player)
     {
-        if (ImGui::TreeNodeEx("Hall of Monuments Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (ImGui::TreeNodeEx("纪念堂信息", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             if (!target_achievements.contains(player->name)) {
                 auto* achievements = new HallOfMonumentsAchievements();
                 achievements->character_name = player->name;
@@ -277,14 +277,14 @@ namespace {
                 HallOfMonumentsModule::AsyncGetAccountAchievements(achievements->character_name, achievements);
             }
             const auto hom_result = target_achievements[player->name];
-            if (ImGui::Button("Go to Hom Calculator")) {
+            if (ImGui::Button("前往纪念堂计算器")) {
                 hom_result->OpenInBrowser();
             }
-            InfoField("Devotion Points", "%d/%d", hom_result->devotion_points_total, 8);
-            InfoField("Fellowship Points", "%d/%d", hom_result->fellowship_points_total, 8);
-            InfoField("Honor Points", "%d/%d", hom_result->honor_points_total, 18);
-            InfoField("Resilience Points", "%d/%d", hom_result->resilience_points_total, 8);
-            InfoField("Valor Points", "%d/%d", hom_result->valor_points_total, 8);
+            InfoField("虔诚点数", "%d/%d", hom_result->devotion_points_total, 8);
+            InfoField("伙伴点数", "%d/%d", hom_result->fellowship_points_total, 8);
+            InfoField("荣誉点数", "%d/%d", hom_result->honor_points_total, 18);
+            InfoField("坚韧点数", "%d/%d", hom_result->resilience_points_total, 8);
+            InfoField("勇气点数", "%d/%d", hom_result->valor_points_total, 8);
             ImGui::TreePop();
         }
     }
@@ -299,23 +299,23 @@ namespace {
         if (item->bag) {
             snprintf(slot, _countof(slot), "%d/%d", item->bag->index + 1, item->slot + 1);
         }
-        InfoField("Bag/Slot", "%s", slot);
-        InfoField("ModelID", "%d", item->model_id);
-        InfoField("Name", "%s", name->string().c_str());
+        InfoField("背包/槽位", "%s", slot);
+        InfoField("模型 ID", "%d", item->model_id);
+        InfoField("名称", "%s", name->string().c_str());
         ImGui::Image(*Resources::GetItemImage(item), {48, 48});
         auto draw_advanced = [&, item] {
-            InfoField("Addr", "%p", item);
-            InfoField("Id", "%d", item->item_id);
-            InfoField("Type", "%d", item->type);
-            InfoField("Interaction", "0x%X", item->interaction);
+            InfoField("地址", "%p", item);
+            InfoField("ID", "%d", item->item_id);
+            InfoField("类型", "%d", item->type);
+            InfoField("交互", "0x%X", item->interaction);
             InfoField("model_file_id", "0x%X", item->model_file_id);
-            EncInfoField("Name Enc", item->name_enc);
-            EncInfoField("Name Enc no mods", ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str());
-            EncInfoField("Complete Name Enc", item->complete_name_enc);
-            EncInfoField("Desc Enc", item->info_string);
+            EncInfoField("名称加密", item->name_enc);
+            EncInfoField("名称加密（无修饰）", ItemDescriptionHandler::GetItemEncNameWithoutMods(item).c_str());
+            EncInfoField("完整名称加密", item->complete_name_enc);
+            EncInfoField("描述加密", item->info_string);
             if (item->mod_struct_size) {
-                ImGui::Text("Mod Struct (identifier, arg1, arg2)");
-                char mod_struct_label[] = "###Mod Struct 1";
+                ImGui::Text("修饰结构（标识符, 参数1, 参数2）");
+                char mod_struct_label[] = "###修饰结构 1";
                 for (size_t i = 0; i < item->mod_struct_size; i++) {
                     const GW::ItemModifier* mod = &item->mod_struct[i];
                     mod_struct_label[14] = static_cast<char>(i + 1) + '0';
@@ -326,7 +326,7 @@ namespace {
         if (force_advanced) {
             draw_advanced();
         }
-        else if (ImGui::TreeNodeEx("Advanced##item", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        else if (ImGui::TreeNodeEx("高级##item", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             draw_advanced();
             ImGui::TreePop();
         }
@@ -359,41 +359,41 @@ namespace {
         }
 
         InfoField("Agent ID", "%d", agent->agent_id);
-        ImGui::ShowHelp("Agent ID is unique for each agent in the instance,\nIt's generated on spawn and will change in different instances.");
-        InfoField("X pos", "%.2f", agent->pos.x);
-        InfoField("Y pos", "%.2f", agent->pos.y);
+        ImGui::ShowHelp("Agent ID 在实例中对每个 agent 是唯一的，\n它会在生成时产生，并在不同实例中改变。");
+        InfoField("X 坐标", "%.2f", agent->pos.x);
+        InfoField("Y 坐标", "%.2f", agent->pos.y);
         GW::Vec2f world_map_pos;
         WorldMapWidget::GamePosToWorldMap(agent->pos, world_map_pos);
-        InfoField("World Map X pos", "%.2f", world_map_pos.x);
-        InfoField("World Map Y pos", "%.2f", world_map_pos.y);
+        InfoField("世界地图 X 坐标", "%.2f", world_map_pos.x);
+        InfoField("世界地图 Y 坐标", "%.2f", world_map_pos.y);
         const float speed = sqrtf(agent->move_x * agent->move_x + agent->move_y * agent->move_y);
-        InfoField("Speed (Relative)", "%.2f (%.2f) ", speed, speed > 0.f ? speed / 288.0f : 0.f);
+        InfoField("速度（相对）", "%.2f (%.2f) ", speed, speed > 0.f ? speed / 288.0f : 0.f);
         if (living) {
-            InfoField(living->IsPlayer() ? "Player ID" : "Model ID", "%d", living->player_number);
+            InfoField(living->IsPlayer() ? "玩家 ID" : "模型 ID", "%d", living->player_number);
             ImGui::ShowHelp(
-                "Model ID is unique for each kind of agent.\n"
-                "It is static and shared by the same agents.\n"
-                "When targeting players, this is Player ID instead, unique for each player in the instance.\n"
-                "For the purpose of targeting hotkeys and commands, use this value"
+                "模型 ID 对每种 agent 是唯一的。\n"
+                "它是静态的，相同的 agent 共享此 ID。\n"
+                "当目标为玩家时，此值为玩家 ID，在实例中对每个玩家唯一。\n"
+                "对于目标热键和命令，请使用此值"
             );
         }
         if (item && item_actual) {
-            if (ImGui::TreeNodeEx("Item Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            if (ImGui::TreeNodeEx("物品信息", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 static GuiUtils::EncString item_name;
                 DrawItemInfo(item_actual, &item_name);
                 ImGui::TreePop();
             }
         }
         if (player) {
-            if (ImGui::TreeNodeEx("Player Info", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            if (ImGui::TreeNodeEx("玩家信息", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
                 ImGui::PushID("player_info");
-                InfoField("Addr", "%p", player);
-                InfoField("Name", "%s", TextUtils::WStringToString(player->name).c_str());
+                InfoField("地址", "%p", player);
+                InfoField("名称", "%s", TextUtils::WStringToString(player->name).c_str());
                 if (player->active_title_tier) {
                     const GW::TitleTier& tier = GW::GetGameContext()->world->title_tiers[player->active_title_tier];
                     static GuiUtils::EncString title_enc_string;
                     title_enc_string.reset(tier.tier_name_enc);
-                    InfoField("Current Title", "%s", title_enc_string.string().c_str());
+                    InfoField("当前称号", "%s", title_enc_string.string().c_str());
                 }
                 ImGui::PopID();
                 ImGui::TreePop();
@@ -401,7 +401,7 @@ namespace {
             DrawHomAchievements(player);
         }
         DrawGuildInfo(guild);
-        if (is_player && ImGui::TreeNodeEx("Effects", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (is_player && ImGui::TreeNodeEx("效果", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             GW::EffectArray* effects = GW::Effects::GetAgentEffects(agent->agent_id);
             if (effects) {
                 for (auto& effect : *effects) {
@@ -410,7 +410,7 @@ namespace {
             }
             ImGui::TreePop();
         }
-        if (is_player && ImGui::TreeNodeEx("Buffs", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (is_player && ImGui::TreeNodeEx("增益", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             GW::BuffArray* effects = GW::Effects::GetAgentBuffs(agent->agent_id);
             if (effects) {
                 for (const auto& effect : *effects) {
@@ -423,19 +423,19 @@ namespace {
             }
             ImGui::TreePop();
         }
-        if (ImGui::TreeNodeEx("Advanced", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            InfoField("Addr", "%p", agent);
-            EncInfoField("Name", GW::Agents::GetAgentEncName(agent));
-            InfoField("Plane", "%d", agent->plane);
-            InfoField("Type", "0x%X", agent->type);
-            InfoField("Width", "%f", agent->width1);
-            InfoField("Height", "%f", agent->height1);
-            InfoField("Rotation", "%f", agent->rotation_angle);
-            InfoField("NameProperties", "0x%X", agent->name_properties);
-            InfoField("Distance", "%.2f", me ? GetDistance(me->pos, agent->pos) : 0.f);
-            InfoField("Visual effects", "0x%X", agent->visual_effects);
+        if (ImGui::TreeNodeEx("高级", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            InfoField("地址", "%p", agent);
+            EncInfoField("名称", GW::Agents::GetAgentEncName(agent));
+            InfoField("平面", "%d", agent->plane);
+            InfoField("类型", "0x%X", agent->type);
+            InfoField("宽度", "%f", agent->width1);
+            InfoField("高度", "%f", agent->height1);
+            InfoField("旋转", "%f", agent->rotation_angle);
+            InfoField("名称属性", "0x%X", agent->name_properties);
+            InfoField("距离", "%.2f", me ? GetDistance(me->pos, agent->pos) : 0.f);
+            InfoField("视觉效果", "0x%X", agent->visual_effects);
             if (item_actual) {
-                InfoField("Owner", "%d", item->owner);
+                InfoField("拥有者", "%d", item->owner);
                 InfoField("ItemId", "%d", item->item_id);
                 InfoField("ExtraType", "%d", item->extra_type);
             }
@@ -444,41 +444,41 @@ namespace {
                 InfoField("ExtraType", "%d", gadget->extra_type);
             }
             if (living) {
-                InfoField("AS of Weapon", "%f", living->weapon_attack_speed);
-                InfoField("AS modifier", "%f", living->attack_speed_modifier);
-                InfoField("Primary Prof", "%d", living->primary);
-                InfoField("Secondary Prof", "%d", living->secondary);
-                InfoField("Level", "%d", living->level);
-                InfoField("TeamId", "%d", living->team_id);
-                InfoField("Effects", "0x%X", living->effects);
-                InfoField("ModelState", "0x%X", living->model_state);
+                InfoField("武器攻击速度", "%f", living->weapon_attack_speed);
+                InfoField("攻击速度修正", "%f", living->attack_speed_modifier);
+                InfoField("主职", "%d", living->primary);
+                InfoField("副职", "%d", living->secondary);
+                InfoField("等级", "%d", living->level);
+                InfoField("队伍 ID", "%d", living->team_id);
+                InfoField("效果", "0x%X", living->effects);
+                InfoField("模型状态", "0x%X", living->model_state);
                 InfoField("typeMap", "0x%X", living->type_map);
-                InfoField("Allegiance", "0x%X", living->allegiance);
-                InfoField("WeaponType", "%d", living->weapon_type);
-                InfoField("Skill", "%d", living->skill);
-                InfoField("Animation code", "0x%X", living->animation_code);
-                InfoField("Animation id", "0x%X", living->animation_id);
-                InfoField("Animation type", "0x%X", living->animation_type);
-                InfoField("Animation code", "%.3f", living->animation_speed);
+                InfoField("阵营", "0x%X", living->allegiance);
+                InfoField("武器类型", "%d", living->weapon_type);
+                InfoField("技能", "%d", living->skill);
+                InfoField("动画代码", "0x%X", living->animation_code);
+                InfoField("动画 ID", "0x%X", living->animation_id);
+                InfoField("动画类型", "0x%X", living->animation_type);
+                InfoField("动画速度", "%.3f", living->animation_speed);
             }
             if (npc) {
                 ImGui::PushID("npc_info");
-                InfoField("Addr", "%p", npc);
+                InfoField("地址", "%p", npc);
                 InfoField("NPC ID", "%d", npc_id);
-                InfoField("NPC Model File ID", "0x%X", npc->model_file_id);
-                InfoField("NPC Skin File ID", "0x%X", npc->skin_file_id);
-                InfoField("NPC Adjustment", "0x%X", npc->visual_adjustment);
-                InfoField("NPC Appearance", "0x%X", npc->appearance);
+                InfoField("NPC 模型文件 ID", "0x%X", npc->model_file_id);
+                InfoField("NPC 皮肤文件 ID", "0x%X", npc->skin_file_id);
+                InfoField("NPC 调整", "0x%X", npc->visual_adjustment);
+                InfoField("NPC 外观", "0x%X", npc->appearance);
                 if (npc->files_count) {
-                    InfoField("NPC ModelFile", "0x%X", npc->model_files[0]);
+                    InfoField("NPC 模型文件", "0x%X", npc->model_files[0]);
                 }
-                InfoField("NPC Flags", "0x%X", npc->npc_flags);
-                EncInfoField("NPC Name", npc->name_enc);
+                InfoField("NPC 标记", "0x%X", npc->npc_flags);
+                EncInfoField("NPC 名称", npc->name_enc);
                 ImGui::PopID();
             }
             const auto map_agent = GW::Agents::GetMapAgentByID(agent->agent_id);
             if (map_agent) {
-                InfoField("Map agent effects", "0x%X", map_agent->effects);
+                InfoField("地图 agent 效果", "0x%X", map_agent->effects);
             }
             ImGui::TreePop();
         }
@@ -497,7 +497,7 @@ namespace {
         for (auto& partymember : *players) {
             if (!ResignLogModule::PrintResignStatus(partymember.login_number, buf, true)) continue;
             ImGui::PushID(static_cast<int>(partymember.login_number));
-            if (ImGui::Button("Send")) {
+            if (ImGui::Button("发送")) {
                 GW::Chat::SendChat('#', buf.c_str());
             }
             ImGui::SameLine();
@@ -742,7 +742,7 @@ namespace {
                 const auto write_to = Resources::GetPath("language_files", filename);
 
                 if (!Resources::WriteFile(write_to, std::string(reinterpret_cast<const char*>(asset.data.data()), asset.data.size()))) {
-                    Log::Warning("Failed to write to disk in DownloadStringFiles");
+                    Log::Warning("写入磁盘失败 DownloadStringFiles");
                     return false;
                 }
             }
@@ -772,15 +772,15 @@ namespace {
                 GW::Hook::EnableHooks(SetFpsLimits_Func);
             }
         }
-        ImGui::Text("Fps limit: %d", target_fps);
-        if (ImGui::CollapsingHeader("Account Features")) {
+        ImGui::Text("FPS 限制: %d", target_fps);
+        if (ImGui::CollapsingHeader("账号特性")) {
             const auto& features = GW::GetGameContext()->account->account_unlocked_counts;
             ImGui::PushItemWidth(140.f);
             ImGui::TextUnformatted("ID");
             ImGui::SameLine();
-            ImGui::TextUnformatted("Value 1");
+            ImGui::TextUnformatted("值 1");
             ImGui::SameLine();
-            ImGui::TextUnformatted("Value 2");
+            ImGui::TextUnformatted("值 2");
             for (const auto& feature : features) {
                 ImGui::PushID(feature.id);
                 ImGui::Text("0x%x", feature.id);
@@ -791,17 +791,17 @@ namespace {
                 ImGui::PopID();
             }
         }
-        if (ImGui::CollapsingHeader("Quoted Item")) {
-            ImGui::Text("Most recently quoted item (buy or sell) from trader");
+        if (ImGui::CollapsingHeader("引用的物品")) {
+            ImGui::Text("最近引用的物品（从交易者购买或出售）");
             static GuiUtils::EncString quoted_name;
             DrawItemInfo(GW::Items::GetItemById(quoted_item_id), &quoted_name);
         }
 
 
-        if (ImGui::CollapsingHeader("UI Message Log")) {
+        if (ImGui::CollapsingHeader("UI 消息日志")) {
             record_ui_messages = true;
             ImGui::PushID("ui_message_packets_recorded");
-            if (ImGui::SmallButton("Reset")) {
+            if (ImGui::SmallButton("重置")) {
                 ui_message_packets_recorded.clear();
             }
             for (const auto packet : ui_message_packets_recorded) {
@@ -812,9 +812,9 @@ namespace {
                 ImGui::SetScrollHereY();
             }
         }
-        if (ImGui::CollapsingHeader("Event Message Log")) {
+        if (ImGui::CollapsingHeader("事件消息日志")) {
             record_event_messages = true;
-            if (ImGui::SmallButton("Reset")) {
+            if (ImGui::SmallButton("重置")) {
                 event_message_packets_recorded.clear();
             }
             for (const auto packet : event_message_packets_recorded) {
@@ -827,9 +827,9 @@ namespace {
 
 
 
-        if (ImGui::CollapsingHeader("Async Str Log")) {
+        if (ImGui::CollapsingHeader("异步字符串日志")) {
             record_enc_strings = true;
-            if (ImGui::SmallButton("Reset")) {
+            if (ImGui::SmallButton("重置")) {
                 while (enc_strings_recorded.begin() != enc_strings_recorded.end()) {
                     delete enc_strings_recorded.begin()->second;
                     enc_strings_recorded.erase(enc_strings_recorded.begin());
@@ -838,22 +838,22 @@ namespace {
             size_t i = 0;
             for (const auto& [key, value] : enc_strings_recorded) {
                 ImGui::PushID(i++);
-                EncInfoField("Encoded", value->s.c_str());
-                InfoField("Decoded", "%s", value->decoded_str.c_str());
+                EncInfoField("加密", value->s.c_str());
+                InfoField("解码", "%s", value->decoded_str.c_str());
                 ImGui::PopID();
             }
         }
         const auto target = GW::Agents::GetTarget();
-        if (target && ImGui::CollapsingHeader("Props within range of target")) {
+        if (target && ImGui::CollapsingHeader("目标范围内的道具")) {
             float range = GW::Constants::Range::Area;
             const auto props = target ? GW::Map::GetMapProps() : nullptr;
             if (props) {
                 ImGui::Indent();
-                ImGui::TextUnformatted("Model File ID");
+                ImGui::TextUnformatted("模型文件 ID");
                 ImGui::SameLine(128.f);
-                ImGui::TextUnformatted("Distance");
+                ImGui::TextUnformatted("距离");
                 ImGui::SameLine(256.f);
-                ImGui::TextUnformatted("Location");
+                ImGui::TextUnformatted("位置");
                 ImGui::Separator();
                 for (size_t i = 0, cnt = props->size(); i < cnt; i++) {
                     const auto& prop = (*props)[i];
@@ -873,14 +873,14 @@ namespace {
                 ImGui::Unindent();
             }
         }
-        if (ImGui::CollapsingHeader("Loaded Textures by GW File")) {
+        if (ImGui::CollapsingHeader("按 GW 文件加载的纹理")) {
             record_textures = true;
             constexpr ImVec2 scaled_size = {64.f, 64.f};
             constexpr ImVec4 tint(1, 1, 1, 1);
             const auto normal_bg = ImColor(IM_COL32(0, 0, 0, 0));
             constexpr auto uv0 = ImVec2(0, 0);
 
-            if (ImGui::SmallButton("Reset")) {
+            if (ImGui::SmallButton("重置")) {
                 textures_created_by_file_id.clear();
                 textures_created.clear();
                 texture_file_ids.clear();
@@ -906,18 +906,18 @@ namespace {
                 static wchar_t out[3];
                 if (ImGui::IsItemHovered()) {
                     ArenaNetFileParser::FileIdToFileHash(texture_file_ids[texture], out);
-                    ImGui::SetTooltip("File ID: 0x%08x\nFile Hash: 0x%04x 0x%04x", texture_file_ids[texture], out[0], out[1]);
+                    ImGui::SetTooltip("文件 ID: 0x%08x\n文件哈希: 0x%04x 0x%04x", texture_file_ids[texture], out[0], out[1]);
                 }
                 if (clicked) {
                     ImGui::SetContextMenu([texture](void*) {
-                        if (ImGui::Button("Download as DDS (naming by gw file id)")) {
+                        if (ImGui::Button("下载为 DDS（按 GW 文件 ID 命名）")) {
                             const auto filename = std::format("{:#010x}.dds", texture_file_ids[texture]);
                             const auto write_to = Resources::GetPath("extracted_textures", filename);
                             Resources::EnsureFolderExists(Resources::GetPath("extracted_textures"));
                             Resources::SaveTextureToFile(*texture, write_to);
                             return false;
                         }
-                        if (ImGui::Button("Download as DDS (naming by hash for gMod)")) {
+                        if (ImGui::Button("下载为 DDS（按 gMod 哈希命名）")) {
                             const auto hash = Resources::GetTexmodHash(*texture);
                             const auto filename = std::format("GW.EXE_0x{:08X}.dds", hash);
                             const auto write_to = Resources::GetPath("extracted_textures", filename);
@@ -936,7 +936,7 @@ namespace {
             ImGui::PopStyleVar();
         }
         static bool game_master_mode = false;
-        if (ImGui::Checkbox("Game Master Mode", &game_master_mode)) {
+        if (ImGui::Checkbox("游戏大师模式", &game_master_mode)) {
             if (game_master_mode) {
                 GW::GetCharContext()->player_flags |= 0x8;
             }
@@ -944,7 +944,7 @@ namespace {
                 GW::GetCharContext()->player_flags ^= 0x8;
             }
         }
-        if (ImGui::Button("Open Text Dev Window")) {
+        if (ImGui::Button("打开文本开发窗口")) {
             GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::UIPacket::kKeyAction packet;
@@ -954,7 +954,7 @@ namespace {
                 GW::GetCharContext()->player_flags ^= 0x8;
             });
         }
-        if (ImGui::Button("Open GM Start Menu?")) {
+        if (ImGui::Button("打开 GM 开始菜单？")) {
             GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::SendUIMessage((GW::UI::UIMessage)0x1000008a, 0, 0);
@@ -962,11 +962,11 @@ namespace {
             });
         }
         // DownloadStringFiles
-        if (ImGui::Button("DownloadStringFiles")) {
+        if (ImGui::Button("下载字符串文件")) {
             Resources::EnqueueWorkerTask([]() {
-                Log::Info("Downloading strings...");
-                DownloadStringFiles() || (Log::Error("Failed to DownloadStringFiles"), true);
-                Log::Info("Done");
+                Log::Info("下载字符串中...");
+                DownloadStringFiles() || (Log::Error("下载字符串文件失败"), true);
+                Log::Info("完成");
             });
         }
 
@@ -999,17 +999,17 @@ namespace {
         [[maybe_unused]] const auto secondary = ac ? ac->secondary() : (GW::Constants::Profession)0;
         [[maybe_unused]] const auto salvage_session = GW::Items::GetSalvageSessionInfo();
 #ifdef _DEBUG
-        if (ImGui::CollapsingHeader("Frame Finder")) {
+        if (ImGui::CollapsingHeader("框架查找器")) {
             static char frame_label[64] = "";
             static int child_offsets[3] = {0, 0, 0};
             static int depth = 0;
 
-            ImGui::InputText("Frame label", frame_label, sizeof(frame_label));
-            ImGui::ShowHelp("Passed to GW::UI::GetFrameByLabel, e.g. \"Vendor\", \"Game\", \"Compass\".");
-            ImGui::SliderInt("Child depth", &depth, 0, 3);
+            ImGui::InputText("框架标签", frame_label, sizeof(frame_label));
+            ImGui::ShowHelp("传递给 GW::UI::GetFrameByLabel，例如 \"Vendor\", \"Game\", \"Compass\"。");
+            ImGui::SliderInt("子级深度", &depth, 0, 3);
             for (int j = 0; j < depth; j++) {
                 char lbl[24];
-                snprintf(lbl, sizeof(lbl), "Child offset %d", j);
+                snprintf(lbl, sizeof(lbl), "子级偏移 %d", j);
                 ImGui::InputInt(lbl, &child_offsets[j]);
                 if (child_offsets[j] < 0) child_offsets[j] = 0;
             }
@@ -1022,13 +1022,13 @@ namespace {
             }
 
             if (frame) {
-                InfoField("Frame address", "%p", static_cast<void*>(frame));
-                InfoField("Frame ID", "%u", frame->frame_id);
-                InfoField("Child offset ID", "%u", frame->child_offset_id);
+                InfoField("框架地址", "%p", static_cast<void*>(frame));
+                InfoField("框架 ID", "%u", frame->frame_id);
+                InfoField("子级偏移 ID", "%u", frame->child_offset_id);
                 HighlightFrame(frame); // draws a box around the frame's on-screen bounds
             }
             else {
-                ImGui::TextDisabled("%s", frame_label[0] ? "No frame for that label + offsets." : "Enter a frame label.");
+                ImGui::TextDisabled("%s", frame_label[0] ? "该标签+偏移没有找到框架。" : "输入框架标签。");
             }
         }
 #endif
@@ -1126,66 +1126,66 @@ void InfoWindow::Draw(IDirect3DDevice9*)
         }
 
         if (settings.show_open_chest) {
-            if (ImGui::Button("Open Xunlai Chest", ImVec2(-1.0f, 0))) {
+            if (ImGui::Button("打开快捷仓库", ImVec2(-1.0f, 0))) {
                 GW::GameThread::Enqueue([] {
                     GW::Items::OpenXunlaiWindow();
                 });
             }
         }
 
-        if (ImGui::CollapsingHeader("Camera")) {
+        if (ImGui::CollapsingHeader("摄像机")) {
             const GW::Camera* cam = GW::CameraMgr::GetCamera();
             if (cam != nullptr) {
-                InfoField("Position##cam_pos", "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
-                InfoField("Target##cam_target", "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
-                InfoField("Yaw/Pitch##cam_angle", "%.2f, %.2f", cam->GetCurrentYaw(), cam->pitch);
+                InfoField("位置##cam_pos", "%.2f, %.2f, %.2f", cam->position.x, cam->position.y, cam->position.z);
+                InfoField("目标##cam_target", "%.2f, %.2f, %.2f", cam->look_at_target.x, cam->look_at_target.y, cam->look_at_target.z);
+                InfoField("偏航/俯仰##cam_angle", "%.2f, %.2f", cam->GetCurrentYaw(), cam->pitch);
             }
         }
-        if (settings.show_player && ImGui::CollapsingHeader("Player")) {
+        if (settings.show_player && ImGui::CollapsingHeader("玩家")) {
             ImGui::PushID("player_info");
-            InfoField("Is Typing?", "%s", GW::Chat::GetIsTyping() ? "Yes" : "No");
+            InfoField("正在输入?", "%s", GW::Chat::GetIsTyping() ? "是" : "否");
             DrawAgentInfo(GW::Agents::GetObservingAgent());
             ImGui::PopID();
         }
-        if (settings.show_target && ImGui::CollapsingHeader("Target")) {
+        if (settings.show_target && ImGui::CollapsingHeader("目标")) {
             ImGui::PushID("target_info");
             DrawAgentInfo(GW::Agents::GetTarget());
             ImGui::PopID();
         }
-        if (settings.show_map && ImGui::CollapsingHeader("Map")) {
+        if (settings.show_map && ImGui::CollapsingHeader("地图")) {
             DrawMapInfo(GW::Map::GetMapID());
         }
-        if (settings.show_map && ImGui::CollapsingHeader("Lookup Map")) {
+        if (settings.show_map && ImGui::CollapsingHeader("查找地图")) {
             static int map_id = 0;
-            ImGui::InputInt("Map ID", &map_id, 1, 1);
+            ImGui::InputInt("地图 ID", &map_id, 1, 1);
             const auto current = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
             if (current) DrawMapInfo(static_cast<GW::Constants::MapID>(map_id));
         }
-        if (settings.show_dialog && ImGui::CollapsingHeader("Dialog")) {
-            EncInfoField("Dialog Body", DialogModule::GetDialogBody());
-            InfoField("Last Dialog", "0x%X", DialogModule::LastDialogId());
-            ImGui::Text("Available NPC Dialogs:");
-            ImGui::ShowHelp("Talk to an NPC to see available dialogs");
+        if (settings.show_dialog && ImGui::CollapsingHeader("对话框")) {
+            EncInfoField("对话框内容", DialogModule::GetDialogBody());
+            InfoField("最后对话框", "0x%X", DialogModule::LastDialogId());
+            ImGui::Text("可用的 NPC 对话框：");
+            ImGui::ShowHelp("与 NPC 交谈可查看可用对话框");
             const auto& messages = DialogModule::GetDialogButtonMessages();
             const auto& buttons = DialogModule::GetDialogButtons();
             char bbuf[48];
             for (size_t i = 0; i < buttons.size(); i++) {
                 snprintf(bbuf, _countof(bbuf), "send_dialog_%d", i);
                 ImGui::PushID(bbuf);
-                if (ImGui::Button("Send")) {
+                if (ImGui::Button("发送")) {
                     uint32_t dialog_id = buttons[i]->dialog_id;
                     GW::GameThread::Enqueue([dialog_id] {
                         DialogModule::SendDialog(dialog_id);
                     });
                 }
                 ImGui::SameLine();
-                InfoField("Icon", "0x%X", buttons[i]->button_icon);
-                EncInfoField("Encoded", messages[i]->encoded().c_str());
+                InfoField("图标", "0x%X", buttons[i]->button_icon);
+                EncInfoField("加密", messages[i]->encoded().c_str());
                 InfoField(messages[i]->string().c_str(), "0x%X", buttons[i]->dialog_id);
                 ImGui::PopID();
             }
         }
-        if (ImGui::CollapsingHeader("Hovered Skill")) {
+        if (ImGui::CollapsingHeader("悬停技能")) {
             static GuiUtils::EncString skill_name;
             const auto current = GW::SkillbarMgr::GetHoveredSkill();
             if (current) {
@@ -1193,14 +1193,14 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             }
             DrawSkillInfo(GW::SkillbarMgr::GetSkillConstantData(last_hovered_skill_id), &skill_name, true);
         }
-        if (ImGui::CollapsingHeader("Lookup Skill")) {
+        if (ImGui::CollapsingHeader("查找技能")) {
             static GuiUtils::EncString skill_name;
             static int skill_id = 0;
-            ImGui::InputInt("Skill ID", &skill_id, 1, 1);
+            ImGui::InputInt("技能 ID", &skill_id, 1, 1);
             const auto current = GW::SkillbarMgr::GetSkillConstantData(static_cast<GW::Constants::SkillID>(skill_id));
             if (current) DrawSkillInfo(current, &skill_name, true);
         }
-        if (settings.show_item && ImGui::CollapsingHeader("Hovered Item")) {
+        if (settings.show_item && ImGui::CollapsingHeader("悬停物品")) {
             static GuiUtils::EncString item_name;
             ImGui::PushID("hovered_item");
             const GW::Item* current = GW::Items::GetHoveredItem();
@@ -1210,22 +1210,22 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             DrawItemInfo(GW::Items::GetItemById(last_hovered_item_id), &item_name, true);
             ImGui::PopID();
         }
-        if (settings.show_item && ImGui::CollapsingHeader("Item")) {
-            ImGui::Text("First item in inventory");
+        if (settings.show_item && ImGui::CollapsingHeader("物品")) {
+            ImGui::Text("背包中的第一个物品");
             static GuiUtils::EncString item_name;
             DrawItemInfo(GW::Items::GetItemBySlot(GW::Items::GetBag(GW::Constants::Bag::Backpack), 1), &item_name);
         }
-        if (settings.show_quest && ImGui::CollapsingHeader("Quest")) {
+        if (settings.show_quest && ImGui::CollapsingHeader("任务")) {
             const GW::Quest* q = GW::QuestMgr::GetActiveQuest();
             if (q) {
                 ImGui::Text("ID: 0x%X", q->quest_id);
-                ImGui::Text("Marker: (%.0f, %.0f)", q->marker.x, q->marker.y);
-                ImGui::Text("State: 0x%08x", q->log_state);
-                EncInfoField("Location:", q->location);
+                ImGui::Text("标记: (%.0f, %.0f)", q->marker.x, q->marker.y);
+                ImGui::Text("状态: 0x%08x", q->log_state);
+                EncInfoField("地点:", q->location);
                 static wchar_t name_buf[128];
                 GetQuestEntryGroupName(q->quest_id, name_buf, _countof(name_buf));
-                EncInfoField("Quest Entry:", name_buf);
-                EncInfoField("Objectives:", q->objectives);
+                EncInfoField("任务条目:", name_buf);
+                EncInfoField("目标:", q->objectives);
             }
 #ifdef _DEBUG
             std::string quests;
@@ -1238,16 +1238,16 @@ void InfoWindow::Draw(IDirect3DDevice9*)
                     }
                 }
             }
-            ImGui::Text("Quests missing info: %d", quests_missing_info.size());
+            ImGui::Text("缺少信息的任务: %d", quests_missing_info.size());
             ImGui::SameLine();
-            if (ImGui::SmallButton("Request quest info")) {
+            if (ImGui::SmallButton("请求任务信息")) {
                 for (const auto& quest : quests_missing_info) {
                     GW::QuestMgr::RequestQuestInfo(quest, true);
                 }
             }
 #endif
         }
-        if (settings.show_mobcount && ImGui::CollapsingHeader("Enemy count")) {
+        if (settings.show_mobcount && ImGui::CollapsingHeader("敌人数量")) {
             constexpr float sqr_soul_range = 1400.0f * 1400.0f;
             int soul_count = 0;
             int cast_count = 0;
@@ -1281,14 +1281,14 @@ void InfoWindow::Draw(IDirect3DDevice9*)
             }
 
             if (GW::Map::GetMapID() == GW::Constants::MapID::Domain_of_Anguish) {
-                ImGui::Text("%d Soul Tormentors", soul_count);
-                ImGui::ShowHelp("Only in Domain of Anguish, within 1400 range");
+                ImGui::Text("%d 个灵魂折磨者", soul_count);
+                ImGui::ShowHelp("仅在痛苦领域，1400 范围内");
             }
-            ImGui::Text("%d foes in casting range", cast_count);
-            ImGui::Text("%d foes in spirit range", spirit_count);
-            ImGui::Text("%d foes in compass range", compass_count);
+            ImGui::Text("%d 个敌人在施法范围内", cast_count);
+            ImGui::Text("%d 个敌人在灵范围", spirit_count);
+            ImGui::Text("%d 个敌人在罗盘范围内", compass_count);
         }
-        if (settings.show_resignlog && ImGui::CollapsingHeader("Resign Log") && GWToolbox::IsModuleEnabled("Resign Log")) {
+        if (settings.show_resignlog && ImGui::CollapsingHeader("退出记录") && GWToolbox::IsModuleEnabled("Resign Log")) {
             DrawResignlog();
         }
     }
@@ -1304,23 +1304,23 @@ void InfoWindow::DrawSettingsInternal()
     ImGui::Separator();
     ImGui::StartSpacedElements(250.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show widget toggles", &settings.show_widgets);
+    ImGui::Checkbox("显示小部件开关", &settings.show_widgets);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show 'Open Xunlai Chest' button", &settings.show_open_chest);
+    ImGui::Checkbox("显示 '打开快捷仓库' 按钮", &settings.show_open_chest);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Player", &settings.show_player);
+    ImGui::Checkbox("显示玩家", &settings.show_player);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Target", &settings.show_target);
+    ImGui::Checkbox("显示目标", &settings.show_target);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Map", &settings.show_map);
+    ImGui::Checkbox("显示地图", &settings.show_map);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Dialog", &settings.show_dialog);
+    ImGui::Checkbox("显示对话框", &settings.show_dialog);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Item", &settings.show_item);
+    ImGui::Checkbox("显示物品", &settings.show_item);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Quest", &settings.show_quest);
+    ImGui::Checkbox("显示任务", &settings.show_quest);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Enemy Count", &settings.show_mobcount);
+    ImGui::Checkbox("显示敌人数量", &settings.show_mobcount);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Resign Log", &settings.show_resignlog);
+    ImGui::Checkbox("显示退出记录", &settings.show_resignlog);
 }
