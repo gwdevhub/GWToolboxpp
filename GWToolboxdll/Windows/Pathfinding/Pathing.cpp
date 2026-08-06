@@ -2292,8 +2292,8 @@ namespace Pathing {
             PATH_LOG_INFO("[AStar] insert: start=(%.0f,%.0f,z%d) trap=%d edges=%zu | goal=(%.0f,%.0f,z%d) trap=%d edges=%zu",
                 start_pos.x, start_pos.y, (int)start_pos.zplane, (int)spt->id, sb.start_edges.size(),
                 goal_pos.x, goal_pos.y, (int)goal_pos.zplane, (int)gpt->id, sb.goal_edges.size());
+            m_path.insertPoint(goal_pos); // goal-first: finalize() reverses to start..goal
             m_path.insertPoint(start_pos);
-            m_path.insertPoint(goal_pos);
             m_path.setCost(GW::GetDistance(start_pos, goal_pos));
             m_path.finalize();
             return Error::FailedToFinializePath;
@@ -2307,8 +2307,9 @@ namespace Pathing {
             const auto& vis = SE[i];
             if (vis.point_id != GOAL_ID) continue;
             if ((vis.blocked_planes & current_blocked_planes).none()) {
-                m_path.insertPoint(start_pos);
+                // Goal-first, like BuildPath: finalize() reverses, so points() comes back start..goal.
                 m_path.insertPoint(goal_pos);
+                m_path.insertPoint(start_pos);
                 m_path.setCost(vis.distance);
                 m_path.finalize();
                 return Error::OK;
