@@ -210,16 +210,16 @@ void DangerRingsModule::DrawSettingsInternal()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
     if (!GameWorldCompositor::IsActive())
-        ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "In-world compositor FAILED to install." : "In-world compositor: not installed yet.");
+        ImGui::TextColored(red, GameWorldCompositor::HasFailed() ? "世界内合成器安装失败。" : "世界内合成器：尚未安装。");
 
-    ImGui::TextDisabled("Occlusion behind terrain follows the \"In-game rendering\" module's setting.");
-    ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    if (ImGui::DragFloat("Ring thickness", &ring_thickness, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
-    if (ImGui::DragFloat("Rim opacity", &rim_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
-    if (ImGui::DragFloat("Fill opacity", &fill_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
-    if (ImGui::DragFloat("Height lift", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
-    ImGui::DragFloat("Pulse speed", &pulse_speed, 0.05f, 0.f, 5.f, "%.2f Hz", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("0 = no pulsing.");
+    ImGui::TextDisabled("地形遮挡遵循\"游戏内渲染\"模块的设置。");
+    ImGui::DragFloat("最大渲染距离", &render_max_distance, 5.f, 10.f, 100000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+    if (ImGui::DragFloat("光环厚度", &ring_thickness, 1.f, 5.f, 500.f, "%.0f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
+    if (ImGui::DragFloat("边缘透明度", &rim_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
+    if (ImGui::DragFloat("填充透明度", &fill_opacity, 0.01f, 0.f, 1.f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
+    if (ImGui::DragFloat("高度提升", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) meshes_dirty = true;
+    ImGui::DragFloat("脉冲速度", &pulse_speed, 0.05f, 0.f, 5.f, "%.2f 赫兹", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("0 = 无脉冲。");
 
     ImGui::Separator();
     if (AoeEffects::DrawColorSettings()) meshes_dirty = true;

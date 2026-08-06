@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Item Tooltip"; }
+    [[nodiscard]] const char* Name() const override { return "物品提示"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_TAG; }
 
     void Initialize() override;

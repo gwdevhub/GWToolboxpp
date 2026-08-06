@@ -23,7 +23,7 @@ namespace {
     {
         std::wstring detail;
         if (FindRecentDefenderBlock(needle, 15, detail))
-            return L"\n\nWindows Defender reported a block moments ago:\n" + detail;
+            return L"\n\nWindows Defender 在片刻前报告了拦截：\n" + detail;
         return L"";
     }
 
@@ -32,7 +32,7 @@ namespace {
     {
         const char* message = extra_info && *extra_info ? extra_info : tb_exception_message;
         if (message && *message)
-            return L"\n\nOriginal error:\n" + TextUtils::StringToWString(message);
+            return L"\n\n原始错误：\n" + TextUtils::StringToWString(message);
         return L"";
     }
 
@@ -104,14 +104,14 @@ namespace {
     {
         wchar_t error_info[512];
         swprintf(error_info, _countof(error_info),
-                 L"Guild Wars crashed!\n\n"
-                 "GWToolbox tried to create a crash dump, but failed\n\n"
+                 L"Guild Wars 崩溃了！\n\n"
+                 "GWToolbox 尝试创建崩溃转储，但失败了\n\n"
                  "%S\n"
-                 "GetLastError code: %d\n\n"
-                 "I don't really know what to do, sorry, contact the developers.\n",
+                 "GetLastError 代码：%d\n\n"
+                 "抱歉，我不知道该怎么办，请联系开发者。\n",
                  failure_message, GetLastError());
 
-        MessageBoxW(nullptr, error_info, L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+        MessageBoxW(nullptr, error_info, L"GWToolbox++ 崩溃转储错误", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_SETFOREGROUND);
         return 1;
     }
 
@@ -146,7 +146,7 @@ void CrashHandler::GWCAPanicHandler(
 void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigned line)
 {
     __try {
-        auto fmt = "Assertion Error: '%s' in '%s' line %u";
+        auto fmt = "断言错误：'%s' 位于 '%s' 第 %u 行";
         const size_t len = snprintf(nullptr, 0, fmt, expr, file, line);
         tb_exception_message = new char[len + 1];
         snprintf(tb_exception_message, len + 1, fmt, expr, file, line);
@@ -168,13 +168,12 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     static volatile LONG crashing = 0;
     if (InterlockedExchange(&crashing, 1) != 0) {
         std::wstring error =
-            L"Guild Wars crashed, and GWToolbox crashed again while trying to write the crash dump.\n\n"
-            L"This almost always means something is blocking your Documents\\GWToolboxpp folder - "
-            L"usually Windows Defender Controlled Folder Access or antivirus.\n\n"
-            L"Allow Guild Wars through Controlled Folder Access, or add an exclusion for your "
-            L"GWToolbox folder, then try again.";
+            L"Guild Wars 崩溃了，GWToolbox 在尝试写入崩溃转储时再次崩溃。\n\n"
+            L"这几乎总是意味着有东西阻止了对 Documents\\GWToolboxpp 文件夹的访问 -\n"
+            L"通常是 Windows Defender 受控文件夹访问或杀毒软件。\n\n"
+            L"请允许 Guild Wars 通过受控文件夹访问，或为您的 GWToolbox 文件夹添加排除项，然后重试。";
         error += OriginalError(extra_info);
-        ShowTroubleshootingError(error, L"GWToolbox++ crash dump error", Troubleshooting::CrashDumps);
+        ShowTroubleshootingError(error, L"GWToolbox++ 崩溃转储错误", Troubleshooting::CrashDumps);
         TerminateProcess(GetCurrentProcess(), 1);
         return EXCEPTION_EXECUTE_HANDLER;
     }
@@ -194,19 +193,19 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
 
 #ifndef _DEBUG
     if (!Updater::IsLatestVersion()) {
-        const std::wstring error_message = L"YOU ARE NOT USING THE LATEST VERSION OF GWTOOLBOX++!\n\n"
-            L"Please update to the latest version before reporting any issues.\n"
-            L"No crash dump will be created because the issue may have already been fixed.";
+        const std::wstring error_message = L"您没有使用最新版本的 GWToolbox++！\n\n"
+            L"请在报告任何问题之前更新到最新版本。\n"
+            L"不会创建崩溃转储，因为该问题可能已经修复。";
 
-        MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Outdated Version", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - 版本过旧", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
     if (!PluginModule::GetPlugins().empty()) {
-        const std::wstring error_message = L"YOU ARE USING PLUGINS!\n\n"
-            L"Do not report issues that happen while you are using plugins.\n"
-            L"No crash dump will be created because the issue may not come from Toolbox.";
+        const std::wstring error_message = L"您正在使用插件！\n\n"
+            L"请不要报告使用插件时发生的问题。\n"
+            L"不会创建崩溃转储，因为问题可能不是来自工具箱。";
 
-        MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - Plugins used", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        MessageBoxW(nullptr, error_message.c_str(), L"GWToolbox++ - 使用了插件", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 #endif
@@ -216,19 +215,19 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     std::wstring ensure_folder_error;
     if (crash_folder.empty()) {
         std::wstring error =
-            L"Guild Wars crashed!\n\n"
-            L"GWToolbox couldn't find your Documents folder to write a crash dump.\n\n"
-            L"This is usually Windows Defender Controlled Folder Access or antivirus blocking access - "
-            L"allow Guild Wars through Controlled Folder Access, or add an exclusion for your GWToolbox folder.";
+            L"Guild Wars 崩溃了！\n\n"
+            L"GWToolbox 找不到您的 Documents 文件夹来写入崩溃转储。\n\n"
+            L"这通常是 Windows Defender 受控文件夹访问或杀毒软件阻止了访问 -\n"
+            L"请允许 Guild Wars 通过受控文件夹访问，或为您的 GWToolbox 文件夹添加排除项。";
         error += RecentDefenderBlock(L"GWToolbox");
         error += OriginalError(extra_info);
-        ShowTroubleshootingError(error, L"GWToolbox++ crash dump error", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        ShowTroubleshootingError(error, L"GWToolbox++ 崩溃转储错误", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
     if (!Resources::EnsureFolderExists(crash_folder.c_str(), ensure_folder_error)) {
         ensure_folder_error += RecentDefenderBlock(crash_folder);
         ensure_folder_error += OriginalError(extra_info);
-        ShowTroubleshootingError(ensure_folder_error, L"GWToolbox++ crash dump error", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        ShowTroubleshootingError(ensure_folder_error, L"GWToolbox++ 崩溃转储错误", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
@@ -246,7 +245,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     );
 
     if (fn_print < 0) {
-        MessageBoxW(nullptr, L"Failed to format crash file name", L"GWToolbox++ crash dump error", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        MessageBoxW(nullptr, L"格式化崩溃文件名失败", L"GWToolbox++ 崩溃转储错误", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
@@ -256,16 +255,16 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     if (hFile == INVALID_HANDLE_VALUE) {
         const DWORD last_error = GetLastError();
         std::wstring error = std::format(
-            L"Guild Wars crashed!\n\n"
-            L"GWToolbox tried to create a crash file, but Windows refused to create it.\n\n"
-            L"GetLastError: {} ({})\n\n"
-            L"File: {}\n\n"
+            L"Guild Wars 崩溃了！\n\n"
+            L"GWToolbox 尝试创建崩溃文件，但 Windows 拒绝创建。\n\n"
+            L"GetLastError：{}（{}）\n\n"
+            L"文件：{}\n\n"
             L"{}",
             last_error, FormatWindowsError(last_error), szFileName, PathDiagnoseWritability(crash_folder)
         );
         error += RecentDefenderBlock(szFileName);
         error += OriginalError(extra_info);
-        ShowTroubleshootingError(error, L"GWToolbox++ crash dump error", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
+        ShowTroubleshootingError(error, L"GWToolbox++ 崩溃转储错误", Troubleshooting::CrashDumps, MB_ICONERROR | MB_SYSTEMMODAL | MB_TOPMOST);
         TerminateProcess(GetCurrentProcess(), 1);
     }
 
@@ -315,19 +314,19 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     if (!dump_ok) {
         if (!success) {
             error_info = std::format(
-                L"Guild Wars crashed!\n\n"
-                L"GWToolbox tried to create a crash dump, but MiniDumpWriteDump failed.\n\n"
-                L"GetLastError: {} ({})\n\n"
-                L"File: {}\n\n"
+                L"Guild Wars 崩溃了！\n\n"
+                L"GWToolbox 尝试创建崩溃转储，但 MiniDumpWriteDump 失败。\n\n"
+                L"GetLastError：{}（{}）\n\n"
+                L"文件：{}\n\n"
                 L"{}",
                 lastError, FormatWindowsError(lastError), szFileName, PathDiagnoseWritability(crash_folder)
             );
         }
         else {
             error_info = std::format(
-                L"Guild Wars crashed!\n\n"
-                L"GWToolbox wrote a crash dump, but the file is now empty or gone.\n\n"
-                L"File: {}\n\n"
+                L"Guild Wars 崩溃了！\n\n"
+                L"GWToolbox 写入了崩溃转储，但文件现在是空的或已被删除。\n\n"
+                L"文件：{}\n\n"
                 L"{}",
                 szFileName, PathDiagnoseWritability(crash_folder)
             );
@@ -336,14 +335,14 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
         error_info += OriginalError(extra_info);
     }
     else {
-        error_info = L"Guild Wars crashed!\n\n";
+        error_info = L"Guild Wars 崩溃了！\n\n";
 
         if (tb_exception_message && *tb_exception_message) {
             error_info += std::format(L"{}\n\n", TextUtils::StringToWString(tb_exception_message));
         }
         error_info += std::format(
-            L"GWToolbox created a crash dump for more info\n\n"
-            L"Crash file created @ {}\n\n",
+            L"GWToolbox 创建了崩溃转储以获取更多信息\n\n"
+            L"崩溃文件创建于：{}\n\n",
             szFileName
         );
     }
@@ -358,7 +357,7 @@ LONG WINAPI CrashHandler::Crash(EXCEPTION_POINTERS* pExceptionPointers, const ch
     }
     delete ExpParam;
 
-    ShowTroubleshootingError(error_info, dump_ok ? L"GWToolbox++ crash dump created!" : L"GWToolbox++ crash dump failed!", dump_ok ? nullptr : Troubleshooting::CrashDumps);
+    ShowTroubleshootingError(error_info, dump_ok ? L"GWToolbox++ 崩溃转储已创建！" : L"GWToolbox++ 崩溃转储失败！", dump_ok ? nullptr : Troubleshooting::CrashDumps);
 
     #ifdef _DEBUG
     if (IsDebuggerPresent()) {

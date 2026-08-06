@@ -163,11 +163,11 @@ namespace {
         static auto encoded_sep = std::format(L"\x2{}\x2",EncodedLiteral(L", "));
         if (!common_materials.empty()) {
             NewLineIfNotEmpty(items);
-            items += std::format(L"{}\x2{}", EncodedLiteral(L"Common Materials: "), TextUtils::Join(common_materials, encoded_sep));
+            items += std::format(L"{}\x2{}", EncodedLiteral(L"普通材料："), TextUtils::Join(common_materials, encoded_sep));
         }
         if (!rare_materials.empty()) {
             NewLineIfNotEmpty(items);
-            items += std::format(L"{}\x2{}", EncodedLiteral(L"Rare Materials: "), TextUtils::Join(rare_materials, encoded_sep));
+            items += std::format(L"{}\x2{}", EncodedLiteral(L"稀有材料："), TextUtils::Join(rare_materials, encoded_sep));
         }
 
         if (!description.empty()) description += L"\x2";
@@ -205,9 +205,9 @@ namespace {
             if (!info) return;
             const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(info);
             if (collection_time <= current_time)
-                append(std::format(L"Nicholas Sandford collects {} of these right now!", 5));
+                append(std::format(L"Nicholas Sandford 现在收集 {} 个这种物品！", 5));
             else
-                append(std::format(L"Nicholas Sandford collects {} of these {}!", 5, TextUtils::RelativeTimeW(collection_time)));
+                append(std::format(L"Nicholas Sandford 将在 {} 收集 {} 个这种物品！", TextUtils::RelativeTimeW(collection_time), 5));
             return;
         }
 
@@ -223,17 +223,17 @@ namespace {
         if (info && info_time <= ingredient_time) {
             const auto quantity_for_total_gifts = info->quantity * 5;
             if (info_time <= current_time)
-                append(std::format(L"Nicholas The Traveler collects {} of these right now!", quantity_for_total_gifts));
+                append(std::format(L"Nicholas The Traveler 现在收集 {} 个这种物品！", quantity_for_total_gifts));
             else
-                append(std::format(L"Nicholas The Traveler collects {} of these {}!", quantity_for_total_gifts, TextUtils::RelativeTimeW(info_time)));
+                append(std::format(L"Nicholas The Traveler 将在 {} 收集 {} 个这种物品！", TextUtils::RelativeTimeW(info_time), quantity_for_total_gifts));
         }
         else if (ingredient_nick_info) {
             const auto quantity_for_total_gifts = ingredient_nick_info->quantity * 5;
             const auto total_qty = ingredient->ingredient_quantity * quantity_for_total_gifts;
             if (ingredient_time <= current_time)
-                append(std::format(L"Collect {} of these to craft {} Nicholas The Traveler items right now!", total_qty, quantity_for_total_gifts));
+                append(std::format(L"收集 {} 个这种物品来制作 {} 个 Nicholas The Traveler 物品！", total_qty, quantity_for_total_gifts));
             else
-                append(std::format(L"Collect {} of these to craft {} Nicholas The Traveler items {}!", total_qty, quantity_for_total_gifts, TextUtils::RelativeTimeW(ingredient_time)));
+                append(std::format(L"收集 {} 个这种物品来在 {} 制作 {} 个 Nicholas The Traveler 物品！", total_qty, TextUtils::RelativeTimeW(ingredient_time), quantity_for_total_gifts));
         }
     }
 
@@ -245,9 +245,9 @@ namespace {
 
     std::wstring PrintPrice(const uint32_t price, const char* name = nullptr)
     {
-        const auto subject = EncodedLiteral(name && *name ? TextUtils::StringToWString(name) : L"Trader Value");
+        const auto subject = EncodedLiteral(name && *name ? TextUtils::StringToWString(name) : L"交易价格");
         const auto currency = EncodedCurrencyString(price, false, settings.high_price_threshold, high_price_color);
-        return std::format(L"{}\x2{}\x2{}", subject, EncodedLiteral(L": "), currency);
+        return std::format(L"{}\x2{}\x2{}", subject, EncodedLiteral(L"："), currency);
     }
 
     void AppendPriceInfo(const uint32_t item_id, std::wstring& description)
@@ -468,78 +468,78 @@ void ItemTooltipModule::SaveSettings(SettingsDoc& doc)
 void ItemTooltipModule::DrawSettingsInternal()
 {
     ImGui::NewLine();
-    ImGui::TextDisabled("Control what information appears in item tooltips");
+    ImGui::TextDisabled("控制物品悬浮提示中显示的信息");
     ImGui::Separator();
-    ImGui::Text("Hide item descriptions in:");
-    ImGui::ShowHelp("When hovering an item in inventory or weapon sets,\nonly show the item name in the tooltip that appears.");
+    ImGui::Text("隐藏物品描述：");
+    ImGui::ShowHelp("悬停背包或武器套装中的物品时，\n在出现的提示框中只显示物品名称。");
     ImGui::Indent();
-    ImGui::Checkbox("Explorable Area###disable_item_descriptions_in_explorable", &settings.disable_item_descriptions_in_explorable);
+    ImGui::Checkbox("可探索区域###disable_item_descriptions_in_explorable", &settings.disable_item_descriptions_in_explorable);
     ImGui::Unindent();
     ImGui::SameLine();
-    ImGui::Checkbox("Outpost###disable_item_descriptions_in_outpost", &settings.disable_item_descriptions_in_outpost);
+    ImGui::Checkbox("前哨站###disable_item_descriptions_in_outpost", &settings.disable_item_descriptions_in_outpost);
     if (settings.disable_item_descriptions_in_explorable || settings.disable_item_descriptions_in_outpost) {
         ImGui::Indent();
-        ImGui::TextDisabled("Hold Alt when hovering an item to show full description");
+        ImGui::TextDisabled("悬停物品时按住 Alt 键显示完整描述");
         ImGui::Unindent();
     }
 
     // --- Salvage info --------------------------------------------------------
-    ImGui::CheckboxWithHelp("Show salvage materials in item tooltip", &settings.show_salvage_info, "When hovering over a salvageable item, display which common and rare materials can be salvaged from it");
+    ImGui::CheckboxWithHelp("在物品提示中显示拆解材料", &settings.show_salvage_info, "悬停可拆解物品时，显示可以从中拆解出的普通和稀有材料");
     if (settings.show_salvage_info) {
         ImGui::Indent();
 
-        ImGui::Checkbox("Show trader value next to salvage materials", &settings.show_trader_value_for_mats);
+        ImGui::Checkbox("在拆解材料旁显示交易价格", &settings.show_trader_value_for_mats);
 
-        ImGui::TextUnformatted("Text color:");
+        ImGui::TextUnformatted("文本颜色：");
         ImGui::SameLine();
-        ImGui::ColorButtonPicker("Salvage info text color", &settings.salvage_color.value);
+        ImGui::ColorButtonPicker("拆解信息文本颜色", &settings.salvage_color.value);
         ImGui::SameLine();
         bool reset_salvage = false;
-        if (ImGui::ConfirmButton("Reset##salvage", &reset_salvage)) settings.salvage_color = salvage_color_default;
+        if (ImGui::ConfirmButton("重置##salvage", &reset_salvage)) settings.salvage_color = salvage_color_default;
 
         ImGui::Unindent();
     }
 
     // --- Nicholas info -------------------------------------------------------
-    ImGui::CheckboxWithHelp("Show Nicholas the Traveler info in item tooltip", &settings.show_nicholas_info, "When hovering over an item that Nicholas collects, display when he will collect it and how many he wants");
+    ImGui::CheckboxWithHelp("在物品提示中显示 Nicholas the Traveler 信息", &settings.show_nicholas_info, "悬停 Nicholas 收集的物品时，显示他何时收集以及需要多少个");
     if (settings.show_nicholas_info) {
         ImGui::Indent();
 
-        ImGui::TextUnformatted("Text color:");
+        ImGui::TextUnformatted("文本颜色：");
         ImGui::SameLine();
-        ImGui::ColorButtonPicker("Nicholas info text color", &settings.nicholas_color.value);
+        ImGui::ColorButtonPicker("Nicholas 信息文本颜色", &settings.nicholas_color.value);
         ImGui::SameLine();
         bool reset_nicholas = false;
-        if (ImGui::ConfirmButton("Reset##nicholas", &reset_nicholas)) settings.nicholas_color = nicholas_color_default;
+        if (ImGui::ConfirmButton("重置##nicholas", &reset_nicholas)) settings.nicholas_color = nicholas_color_default;
 
         ImGui::Unindent();
     }
 
     // --- Trader prices -------------------------------------------------------
-    ImGui::CheckboxWithHelp("Show trader prices in item tooltip", &settings.show_trader_prices, "Current rune, dye and mod prices are fetched from https://kamadan.gwtoolbox.com");
+    ImGui::CheckboxWithHelp("在物品提示中显示交易价格", &settings.show_trader_prices, "当前的符文、染料和组件价格从 https://kamadan.gwtoolbox.com 获取");
     if (settings.show_trader_prices) {
         ImGui::Indent();
 
-        ImGui::TextUnformatted("Text color:");
+        ImGui::TextUnformatted("文本颜色：");
         ImGui::SameLine();
-        ImGui::ColorButtonPicker("Trader price text color", &settings.price_color.value);
+        ImGui::ColorButtonPicker("交易价格文本颜色", &settings.price_color.value);
         ImGui::SameLine();
         bool reset_price = false;
-        if (ImGui::ConfirmButton("Reset##price", &reset_price)) settings.price_color = price_color_default;
+        if (ImGui::ConfirmButton("重置##price", &reset_price)) settings.price_color = price_color_default;
 
 
 
         ImGui::Unindent();
     }
-    ImGui::SliderInt("High price threshold", (int*)&settings.high_price_threshold, 100, 50000);
-    ImGui::ShowHelp("Prices above this threshold will be highlighted in gold");
+    ImGui::SliderInt("高价格阈值", (int*)&settings.high_price_threshold, 100, 50000);
+    ImGui::ShowHelp("高于此阈值的价格将以金色高亮显示");
     ImGui::NewLine();
 }
 
 void ItemTooltipModule::RegisterSettingsContent()
 {
     ToolboxModule::RegisterSettingsContent(
-        "Inventory Settings", ICON_FA_BOXES,
+        "物品栏设置", ICON_FA_BOXES,
         [this](const std::string&, const bool is_showing) {
             if (is_showing) DrawSettingsInternal();
         },

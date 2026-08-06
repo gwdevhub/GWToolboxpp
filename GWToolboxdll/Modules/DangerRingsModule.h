@@ -16,10 +16,10 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Danger Rings"; }
+    [[nodiscard]] const char* Name() const override { return "危险范围指示"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Draws enemy AoE effects (Meteor Shower, traps, ...) as danger rings on the ground in the game world.";
+        return "在游戏世界中，将敌人的范围效果（如流星雨、陷阱等）以危险光环的形式绘制在地面上。";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BULLSEYE; }
 

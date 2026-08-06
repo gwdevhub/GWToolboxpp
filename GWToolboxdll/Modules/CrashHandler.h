@@ -12,7 +12,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Crash Handler"; }
+    [[nodiscard]] const char* Name() const override { return "崩溃提示"; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;
