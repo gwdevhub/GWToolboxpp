@@ -73,7 +73,7 @@ namespace {
     GW::MemoryPatcher gold_confirm_patch;
     GW::MemoryPatcher remove_skill_warmup_duration_patch;
 
-    constexpr char combine_overhead_numbers_help[] = "Merges damage/heal numbers stacking on an agent into a single floater to reduce UI noise";
+    constexpr char combine_overhead_numbers_help[] = "将叠加在单位上的伤害/治疗数字合并为一个浮动文本，减少界面噪音";
 
     void SetWindowTitle(const bool enabled)
     {
@@ -188,12 +188,12 @@ namespace {
     };
     NametagColor nametag_color_settings[] = {
         {"NPC", DEFAULT_NAMETAG_COLOR::NPC, &settings.nametag_color_npc.value},
-        {"Myself", DEFAULT_NAMETAG_COLOR::PLAYER_SELF, &settings.nametag_color_player_self.value},
-        {"Other Player", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_player_other.value},
-        {"Other Player (In Party)", DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY, &settings.nametag_color_player_in_party.value},
-        {"Gadget", DEFAULT_NAMETAG_COLOR::GADGET, &settings.nametag_color_gadget.value},
-        {"Enemy", DEFAULT_NAMETAG_COLOR::ENEMY, &settings.nametag_color_enemy.value},
-        {"Item", DEFAULT_NAMETAG_COLOR::ITEM, &settings.nametag_color_item.value},
+        {"自己", DEFAULT_NAMETAG_COLOR::PLAYER_SELF, &settings.nametag_color_player_self.value},
+        {"其他玩家", DEFAULT_NAMETAG_COLOR::PLAYER_OTHER, &settings.nametag_color_player_other.value},
+        {"其他玩家（队伍中）", DEFAULT_NAMETAG_COLOR::PLAYER_IN_PARTY, &settings.nametag_color_player_in_party.value},
+        {"装置", DEFAULT_NAMETAG_COLOR::GADGET, &settings.nametag_color_gadget.value},
+        {"敌人", DEFAULT_NAMETAG_COLOR::ENEMY, &settings.nametag_color_enemy.value},
+        {"物品", DEFAULT_NAMETAG_COLOR::ITEM, &settings.nametag_color_item.value},
     };
 
     struct ChannelColorDef {
@@ -496,13 +496,13 @@ namespace {
         const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
         if (!me) {
             // Can't find myself
-            Log::Error("Failed to find me");
+            Log::Error("找不到自己");
             return pending_reinvite.reset();
         }
         GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
         if (!party || !party->players.valid()) {
             // Can't find party
-            Log::Error("Failed to find party");
+            Log::Error("找不到队伍");
             return pending_reinvite.reset();
         }
         // Find leader and next valid player
@@ -520,7 +520,7 @@ namespace {
             }
         }
         if (!first_player) {
-            Log::Error("Failed to find party leader");
+            Log::Error("找不到队伍领袖");
             return pending_reinvite.reset();
         }
         if (next_player && next_player->player_number == me->login_number) {
@@ -532,7 +532,7 @@ namespace {
         switch (pending_reinvite.stage) {
             case PendingReinvite::Stage::Kick: {
                 if (!IsAgentInParty(pending_reinvite.identifier)) {
-                    Log::Error("Choose target party member to reinvite");
+                    Log::Error("请选择要重新邀请的队伍成员");
                     return pending_reinvite.reset();
                 }
                 // Player kick
@@ -540,7 +540,7 @@ namespace {
                 if (GetPlayerByAgentId(pending_reinvite.identifier, &target_living)) {
                     if (target_living == me) {
                         if (!next_player) {
-                            Log::Error("Couldn't find next player in party to re-join");
+                            Log::Error("找不到队伍中要重新加入的下一个玩家");
                             return pending_reinvite.reset();
                         }
                         pending_reinvite.identifier = next_player->player_number;
@@ -549,7 +549,7 @@ namespace {
                         return;
                     }
                     if (!is_leader) {
-                        Log::Error("Only party leader can reinvite players");
+                        Log::Error("只有队伍领袖可以重新邀请玩家");
                         return pending_reinvite.reset();
                     }
                     pending_reinvite.identifier = target_living->player_number;
@@ -566,7 +566,7 @@ namespace {
                         return;
                     }
                     if (hero_info->owner_player_id != me->login_number) {
-                        Log::Error("The targetted hero doesn't belong to you");
+                        Log::Error("目标英雄不属于您");
                         return pending_reinvite.reset();
                     }
                     pending_reinvite.identifier = hero_info->hero_id;
@@ -581,20 +581,20 @@ namespace {
                         return;
                     }
                     if (!is_leader) {
-                        Log::Error("Only party leader can reinvite henchmen");
+                        Log::Error("只有队伍领袖可以重新邀请雇佣兵");
                         return pending_reinvite.reset();
                     }
                     GW::PartyMgr::KickHenchman(pending_reinvite.identifier);
                     pending_reinvite.stage = PendingReinvite::Stage::InviteHenchman;
                     return;
                 }
-                Log::Error("Failed to determine agent type for %d", pending_reinvite.identifier);
+                Log::Error("无法确定 %d 的单位类型", pending_reinvite.identifier);
                 return pending_reinvite.reset();
             }
             case PendingReinvite::Stage::InviteHero: {
                 const GW::HeroInfo* hero_info = GW::PartyMgr::GetHeroInfo((GW::Constants::HeroID)pending_reinvite.identifier);
                 if (!hero_info) {
-                    Log::Error("Failed to get hero info for %d", pending_reinvite.identifier);
+                    Log::Error("获取英雄 %d 的信息失败", pending_reinvite.identifier);
                     return pending_reinvite.reset();
                 }
                 if (hero_info->agent_id && IsHeroInParty(hero_info->agent_id)) {
@@ -606,7 +606,7 @@ namespace {
             case PendingReinvite::Stage::InvitePlayer: {
                 const GW::Player* player = GW::PlayerMgr::GetPlayerByID(pending_reinvite.identifier);
                 if (!player) {
-                    Log::Error("Failed to get player info for %d", pending_reinvite.identifier);
+                    Log::Error("获取玩家 %d 的信息失败", pending_reinvite.identifier);
                     return pending_reinvite.reset();
                 }
                 if (IsPlayerInParty(pending_reinvite.identifier)) {
@@ -624,7 +624,7 @@ namespace {
             }
             case PendingReinvite::Stage::InviteHenchman: {
                 if (!IsHenchman(pending_reinvite.identifier)) {
-                    Log::Error("Failed to get henchman info for %d", pending_reinvite.identifier);
+                    Log::Error("获取雇佣兵 %d 的信息失败", pending_reinvite.identifier);
                     return pending_reinvite.reset();
                 }
                 if (IsHenchmanInParty(pending_reinvite.identifier)) {
@@ -795,69 +795,67 @@ namespace {
             return;
         }
         if (is_online && settings.notify_when_friends_online) {
-            WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) has just logged in.", new_state->charname, new_state->alias).c_str());
+            WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a>（{}）刚刚上线了。", new_state->charname, new_state->alias).c_str());
         }
         else if (settings.notify_when_friends_offline) {
-            WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"{} ({}) has just logged out.", old_state->charname, old_state->alias).c_str());
+            WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"{}（{}）刚刚下线了。", old_state->charname, old_state->alias).c_str());
         }
     }
 
     void DrawNotificationsSettings()
     {
-        ImGui::Text("Flash Guild Wars taskbar icon when:");
-        ImGui::ShowHelp("Only triggers when Guild Wars is not the active window");
+        ImGui::Text("在以下情况闪烁 Guild Wars 任务栏图标：");
+        ImGui::ShowHelp("仅当 Guild Wars 不是活动窗口时触发");
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Zoning in a new map", &settings.flash_window_on_zoning);
+        ImGui::Checkbox("进入新地图时", &settings.flash_window_on_zoning);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Cinematic start/end", &settings.flash_window_on_cinematic);
+        ImGui::Checkbox("过场动画开始/结束时", &settings.flash_window_on_cinematic);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("A player starts trade with you###flash_window_on_trade", &settings.flash_window_on_trade);
+        ImGui::Checkbox("玩家向您发起交易时", &settings.flash_window_on_trade);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("A party member pings your name", &settings.flash_window_on_name_ping);
+        ImGui::Checkbox("队伍成员提到您的名字时", &settings.flash_window_on_name_ping);
         ImGui::Unindent();
 
-        ImGui::Text("Show Guild Wars in foreground when:");
+        ImGui::Text("在以下情况将 Guild Wars 置于前台：");
         ImGui::ShowHelp(
-            "When enabled, GWToolbox++ can automatically restore\n"
-            "the window from a minimized state when important events\n"
-            "occur, such as entering instances."
+            "启用后，GWToolbox++ 可以在重要事件发生时自动将窗口从最小化状态恢复。"
         );
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Launching GWToolbox++###focus_window_on_launch", &settings.focus_window_on_launch);
+        ImGui::Checkbox("启动 GWToolbox++ 时", &settings.focus_window_on_launch);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Zoning in a new map###focus_window_on_zoning", &settings.focus_window_on_zoning);
+        ImGui::Checkbox("进入新地图时###focus_window_on_zoning", &settings.focus_window_on_zoning);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("A player starts trade with you###focus_window_on_trade", &settings.focus_window_on_trade);
+        ImGui::Checkbox("玩家向您发起交易时###focus_window_on_trade", &settings.focus_window_on_trade);
         ImGui::Unindent();
 
-        ImGui::Text("Show a chat message when a friend:");
+        ImGui::Text("在好友以下情况时显示聊天消息：");
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Logs in", &settings.notify_when_friends_online);
+        ImGui::Checkbox("上线", &settings.notify_when_friends_online);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your outpost###notify_when_friends_join_outpost", &settings.notify_when_friends_join_outpost);
+        ImGui::Checkbox("进入您的前哨站###notify_when_friends_join_outpost", &settings.notify_when_friends_join_outpost);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Logs out", &settings.notify_when_friends_offline);
+        ImGui::Checkbox("下线", &settings.notify_when_friends_offline);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your outpost###notify_when_friends_leave_outpost", &settings.notify_when_friends_leave_outpost);
+        ImGui::Checkbox("离开您的前哨站###notify_when_friends_leave_outpost", &settings.notify_when_friends_leave_outpost);
         ImGui::Unindent();
 
-        ImGui::Text("Show a chat message when a player:");
+        ImGui::Text("在玩家以下情况时显示聊天消息：");
         ImGui::Indent();
         ImGui::StartSpacedElements(checkbox_w);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your party", &settings.notify_when_party_member_joins);
+        ImGui::Checkbox("加入您的队伍", &settings.notify_when_party_member_joins);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Joins your outpost###notify_when_players_join_outpost", &settings.notify_when_players_join_outpost);
+        ImGui::Checkbox("进入您的前哨站###notify_when_players_join_outpost", &settings.notify_when_players_join_outpost);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your party", &settings.notify_when_party_member_leaves);
+        ImGui::Checkbox("离开您的队伍", &settings.notify_when_party_member_leaves);
         ImGui::NextSpacedElement();
-        ImGui::Checkbox("Leaves your outpost###notify_when_players_leave_outpost", &settings.notify_when_players_leave_outpost);
+        ImGui::Checkbox("离开您的前哨站###notify_when_players_leave_outpost", &settings.notify_when_players_leave_outpost);
         ImGui::Unindent();
     }
 
@@ -930,10 +928,10 @@ namespace {
         };
         const char* confirm_text = nullptr;
         if (GW::PartyMgr::GetIsPartyInHardMode() && hm_complete && !nm_complete) {
-            confirm_text = "You're about to enter a mission in Hard Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Normal Mode?";
+            confirm_text = "您即将在困难模式下进入一个任务，\n但您已经在此角色上完成了该任务。\n\n是否切换到普通模式？";
         }
         if (!GW::PartyMgr::GetIsPartyInHardMode() && GW::PartyMgr::GetIsHardModeUnlocked() && nm_complete && !hm_complete) {
-            confirm_text = "You're about to enter a mission in Normal Mode,\nbut you've already completed it on this character.\n\nWould you like to switch to Hard Mode?";
+            confirm_text = "您即将在普通模式下进入一个任务，\n但您已经在此角色上完成了该任务。\n\n是否切换到困难模式？";
         }
         if (confirm_text) {
             ImGui::ConfirmDialog(confirm_text, on_enter_mission_prompt);
@@ -1044,7 +1042,7 @@ namespace {
             lStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
             if ((lStyle & remove_styles) != 0) {
                 lStyle &= ~remove_styles;
-                // SetWindowLong(hwnd, GWL_EXSTYLE, lStyle);
+                // SetWindowLong(hwnd, GWL_EXSTYLE, lExStyle);
             }
             // SetWindowLong(hwnd, GWL_EXSTYLE, lExStyle);
 
@@ -1224,7 +1222,7 @@ namespace {
                 if (packet->preference_id == GW::UI::NumberPreference::ScreenBorderless) CheckRemoveWindowBorder();
             } break;
             case GW::UI::UIMessage::kPartyDefeated: {
-                if (settings.auto_return_on_defeat && GW::PartyMgr::GetIsLeader()) GW::PartyMgr::ReturnToOutpost() || (Log::Warning("Failed to return to outpost"), true);
+                if (settings.auto_return_on_defeat && GW::PartyMgr::GetIsLeader()) GW::PartyMgr::ReturnToOutpost() || (Log::Warning("返回前哨站失败"), true);
             } break;
             case GW::UI::UIMessage::kMapChange: {
                 RecordTitleTiers();
@@ -1240,13 +1238,13 @@ namespace {
             } break;
             case GW::UI::UIMessage::kShowCancelEnterMissionBtn: {
                 CheckPromptBeforeEnterMission(status);
-                if (status->blocked) GW::Map::CancelEnterChallenge() || (Log::Warning("Failed to cancel mission entry"), true);
+                if (status->blocked) GW::Map::CancelEnterChallenge() || (Log::Warning("取消任务进入失败"), true);
                 break;
             } break;
             case GW::UI::UIMessage::kVanquishComplete: {
                 if (settings.auto_age_on_vanquish) GW::Chat::SendChat('/', L"age");
                 if (settings.auto_screenshot_on_vanquish) pending_screenshot = TIMER_INIT();
-                if (settings.block_vanquish_complete_popup) GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 8), false) || (Log::Warning("Failed to hide vanquish popup"), true);
+                if (settings.block_vanquish_complete_popup) GW::UI::SetFrameVisible(GW::UI::GetChildFrame(GW::UI::GetFrameByLabel(L"Game"), 6, 8), false) || (Log::Warning("隐藏清图弹出窗口失败"), true);
             } break;
             case GW::UI::UIMessage::kMissionComplete: {
                 if (settings.auto_screenshot_on_mission_complete) pending_screenshot = TIMER_INIT();
@@ -1273,7 +1271,7 @@ namespace {
 
     void DrawAudioSettings()
     {
-        if (ImGui::Button("Open Advanced Audio Window")) {
+        if (ImGui::Button("打开高级音频窗口")) {
             GW::GameThread::Enqueue([] {
                 GW::GetCharContext()->player_flags |= 0x8;
                 GW::UI::Keypress(static_cast<GW::UI::ControlAction>(0x24));
@@ -1446,11 +1444,11 @@ bool PendingChatMessage::PrintMessage()
         case GW::Chat::Channel::CHANNEL_EMOTE:
             GW::Chat::Color dummy, messageCol;                                        // Needed for GW::Chat::GetChannelColors
             GetChannelColors(GW::Chat::Channel::CHANNEL_ALLIES, &dummy, &messageCol); // ...but set the message to be same color as ally chat
-            swprintf(buffer, 512, L"<a=2>%ls</a>: <c=#%06X>%ls</c>", output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
+            swprintf(buffer, 512, L"<a=2>%ls</a>：<c=#%06X>%ls</c>", output_sender.c_str(), messageCol & 0x00FFFFFF, output_message.c_str());
             WriteChat(channel, buffer);
             break;
         default:
-            swprintf(buffer, 512, L"<a=2>%ls</a>: %ls", output_sender.c_str(), output_message.c_str());
+            swprintf(buffer, 512, L"<a=2>%ls</a>：%ls", output_sender.c_str(), output_message.c_str());
             WriteChat(channel, buffer);
             break;
     }
@@ -1468,7 +1466,7 @@ void GameSettings::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
-    SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
+    SettingsRegistry::Describe(this, "combine_overhead_numbers", "合并角色上方的浮动数字", combine_overhead_numbers_help);
 
     OnSkillTomeWindow_UIMessage_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmSkTome.cpp", "selection.skillId", 0, 0), 0xfff);
     Log::Log("[GameSettings] OnSkillTomeWindow_UIMessage_Func = %p\n", OnSkillTomeWindow_UIMessage_Func);
@@ -1679,7 +1677,7 @@ void GameSettings::MessageOnPartyChange()
                 found = previous_party_names[j] == current_party_names[i];
             }
             if (!found) {
-                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> joined the party.", current_party_names[i]).c_str(), nullptr, true);
+                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> 加入了队伍。", current_party_names[i]).c_str(), nullptr, true);
             }
         }
     }
@@ -1694,7 +1692,7 @@ void GameSettings::MessageOnPartyChange()
                 found = previous_party_names[i] == current_party_names[j];
             }
             if (!found) {
-                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> left the party.", previous_party_names[i]).c_str(), nullptr, true);
+                WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> 离开了队伍。", previous_party_names[i]).c_str(), nullptr, true);
             }
         }
     }
@@ -1728,7 +1726,7 @@ void GameSettings::RegisterSettingsContent()
     ToolboxModule::RegisterSettingsContent();
 
     ToolboxModule::RegisterSettingsContent(
-        "Party Settings", ICON_FA_USERS,
+        "队伍设置", ICON_FA_USERS,
         [this](const std::string&, const bool is_showing) {
             if (is_showing) {
                 DrawPartySettings();
@@ -1738,7 +1736,7 @@ void GameSettings::RegisterSettingsContent()
     );
 
     ToolboxModule::RegisterSettingsContent(
-        "Notifications", ICON_FA_BULLHORN,
+        "通知", ICON_FA_BULLHORN,
         [this](const std::string&, const bool is_showing) {
             if (is_showing) {
                 DrawNotificationsSettings();
@@ -1748,7 +1746,7 @@ void GameSettings::RegisterSettingsContent()
     );
 
     ToolboxModule::RegisterSettingsContent(
-        "Inventory Settings", ICON_FA_BOXES,
+        "物品栏设置", ICON_FA_BOXES,
         [this](const std::string&, const bool is_showing) {
             if (is_showing) {
                 DrawInventorySettings();
@@ -1757,7 +1755,7 @@ void GameSettings::RegisterSettingsContent()
         0.9f
     );
     ToolboxModule::RegisterSettingsContent(
-        "Audio Settings", ICON_FA_MUSIC,
+        "音频设置", ICON_FA_MUSIC,
         [](const std::string&, const bool is_showing) {
             if (is_showing) {
                 DrawAudioSettings();
@@ -1797,206 +1795,205 @@ void GameSettings::SaveSettings(SettingsDoc& doc)
 
 void GameSettings::DrawInventorySettings()
 {
-    ImGui::Checkbox("Move items from/to storage with Control+Click", &settings.move_item_on_ctrl_click);
+    ImGui::Checkbox("使用 Control+点击 将物品移入/移出存储", &settings.move_item_on_ctrl_click);
     ImGui::Indent();
-    ImGui::CheckboxWithHelp("Move items to current open storage pane on click", &settings.move_item_to_current_storage_pane, "Materials follow different logic, see below");
+    ImGui::CheckboxWithHelp("点击时将物品移至当前打开的存储面板", &settings.move_item_to_current_storage_pane, "材料遵循不同的逻辑，见下方");
     ImGui::Indent();
-    auto logic = "Storage logic: Any available stack/slot";
+    auto logic = "存储逻辑：任何可用的堆叠/槽位";
     if (settings.move_item_to_current_storage_pane) {
-        logic = "Storage logic: Current storage pane > Any available stack/slot";
+        logic = "存储逻辑：当前存储面板 > 任何可用的堆叠/槽位";
     }
     ImGui::TextDisabled(logic);
     ImGui::Unindent();
-    ImGui::Checkbox("Move materials to current open storage pane on click", &settings.move_materials_to_current_storage_pane);
+    ImGui::Checkbox("点击时将材料移至当前打开的存储面板", &settings.move_materials_to_current_storage_pane);
     ImGui::Indent();
-    logic = "Storage logic: Materials pane > Any available stack/slot";
+    logic = "存储逻辑：材料面板 > 任何可用的堆叠/槽位";
     if (settings.move_materials_to_current_storage_pane) {
-        logic = "Storage logic: Current storage pane > Materials pane > Any available stack/slot";
+        logic = "存储逻辑：当前存储面板 > 材料面板 > 任何可用的堆叠/槽位";
     }
     else if (settings.move_item_to_current_storage_pane) {
-        logic = "Storage logic: Materials pane > Current storage pane > Any available stack/slot";
+        logic = "存储逻辑：材料面板 > 当前存储面板 > 任何可用的堆叠/槽位";
     }
     ImGui::TextDisabled(logic);
     ImGui::Unindent();
     ImGui::Unindent();
 
-    ImGui::CheckboxWithHelp("Shorthand item description on weapon ping", &settings.shorthand_item_ping, "Include a concise description of your equipped weapon when ctrl+clicking a weapon set");
+    ImGui::CheckboxWithHelp("武器标记时使用简略物品描述", &settings.shorthand_item_ping, "在 Ctrl+点击 武器套装时包含您装备武器的简要描述");
 
-    ImGui::CheckboxWithHelp("Lazy chest looting", &settings.lazy_chest_looting, "Toolbox will try to target any nearby reserved items\nwhen using the 'target nearest item' key next to a chest\nto pick stuff up.");
+    ImGui::CheckboxWithHelp("偷懒拾取宝箱物品", &settings.lazy_chest_looting, "使用'定位最近物品'按键时，工具箱会尝试定位宝箱附近\n任何已分配给您自己的物品，以便拾取。");
 }
 
 void GameSettings::DrawPartySettings()
 {
-    if (ImGui::Checkbox("Tick is a toggle", &settings.tick_is_toggle)) {
+    if (ImGui::Checkbox("勾选是切换开关", &settings.tick_is_toggle)) {
         GW::PartyMgr::SetTickToggle(settings.tick_is_toggle);
     }
-    ImGui::ShowHelp("Ticking in party window will work as a toggle instead of opening the menu");
-    ImGui::CheckboxWithHelp("Automatically accept party invitations when ticked", &settings.auto_accept_invites, "When you're invited to join someone elses party");
-    ImGui::CheckboxWithHelp("Automatically accept party join requests when ticked", &settings.auto_accept_join_requests, "When a player wants to join your existing party");
-    ImGui::Checkbox("Automatically lock heroes and pets onto your called target", &settings.automatically_flag_pet_to_fight_called_target);
+    ImGui::ShowHelp("队伍窗口中的勾选将作为切换开关而不是打开菜单");
+    ImGui::CheckboxWithHelp("勾选时自动接受队伍邀请", &settings.auto_accept_invites, "当您被邀请加入其他人的队伍时");
+    ImGui::CheckboxWithHelp("勾选时自动接受队伍加入请求", &settings.auto_accept_join_requests, "当玩家想要加入您现有队伍时");
+    ImGui::Checkbox("自动将英雄和宠物锁定到您标记的目标", &settings.automatically_flag_pet_to_fight_called_target);
 }
 
 void GameSettings::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Hide in-game store message on character select screen", &settings.hide_store_page_on_char_select);
-    ImGui::CheckboxWithHelp("Apply Collector's Edition animations on player dance", &settings.collectors_edition_emotes, "Only applies to your own character");
+    ImGui::Checkbox("在角色选择界面隐藏游戏内商店消息", &settings.hide_store_page_on_char_select);
+    ImGui::CheckboxWithHelp("在玩家跳舞时应用收藏版动画", &settings.collectors_edition_emotes, "仅适用于您自己的角色");
 
-    ImGui::Checkbox("Automatically cancel Unyielding Aura when re-casting", &settings.drop_ua_on_cast);
+    ImGui::Checkbox("重新施放时自动取消不屈光环", &settings.drop_ua_on_cast);
 
-    ImGui::Checkbox("Automatically use available keys when interacting with locked chest", &settings.auto_open_locked_chest_with_key);
+    ImGui::Checkbox("与锁定的宝箱交互时自动使用可用钥匙", &settings.auto_open_locked_chest_with_key);
 
-    ImGui::Checkbox("Automatically use lockpick when interacting with locked chest", &settings.auto_open_locked_chest);
+    ImGui::Checkbox("与锁定的宝箱交互时自动使用开锁工具", &settings.auto_open_locked_chest);
 
-    ImGui::CheckboxWithHelp("Automatically return to outpost on defeat", &settings.auto_return_on_defeat, "Automatically return party to outpost on party wipe if player is leading");
+    ImGui::CheckboxWithHelp("失败时自动返回前哨站", &settings.auto_return_on_defeat, "队伍全灭时自动将队伍返回前哨站（如果玩家是领袖）");
 
-    ImGui::Checkbox("Automatically set 'Away' after ", &settings.auto_set_away);
+    ImGui::Checkbox("在 ", &settings.auto_set_away);
     ImGui::SameLine();
     ImGui::PushItemWidth(50.0f * ImGui::FontScale());
     ImGui::InputInt("##awaydelay", &settings.auto_set_away_delay, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
-    ImGui::Text("minutes of inactivity");
-    ImGui::ShowHelp("Only if you were 'Online'");
+    ImGui::Text(" 分钟无活动后自动设置为\"离开\"");
+    ImGui::ShowHelp("仅当您之前是\"在线\"状态");
 
-    ImGui::CheckboxWithHelp("Automatically set 'Online' after an input to Guild Wars", &settings.auto_set_online, "Only if you were 'Away'");
+    ImGui::CheckboxWithHelp("对 Guild Wars 进行输入后自动设置为\"在线\"", &settings.auto_set_online, "仅当您之前是\"离开\"状态");
 
-    ImGui::Checkbox("Automatically skip cinematics", &settings.auto_skip_cinematic);
+    ImGui::Checkbox("自动跳过过场动画", &settings.auto_skip_cinematic);
 
-    ImGui::CheckboxWithHelp("Automatic /age on vanquish", &settings.auto_age_on_vanquish, "As soon as a vanquish is complete, send /age command to game server to receive server-side completion time.");
+    ImGui::CheckboxWithHelp("清图时自动 /age", &settings.auto_age_on_vanquish, "清图完成后立即向游戏服务器发送 /age 命令以获取服务器端完成时间。");
 
-    ImGui::CheckboxWithHelp("Automatic /age2 on /age", &settings.auto_age2_on_age, "GWToolbox++ will show /age2 time after /age is shown in chat");
+    ImGui::CheckboxWithHelp("/age 时自动 /age2", &settings.auto_age2_on_age, "GWToolbox++ 将在 /age 显示后显示 /age2 时间");
 
-    ImGui::TextUnformatted("Automatic screenshot on:");
+    ImGui::TextUnformatted("以下情况自动截图：");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Vanquish", &settings.auto_screenshot_on_vanquish);
+    ImGui::Checkbox("清图", &settings.auto_screenshot_on_vanquish);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Boss kill", &settings.auto_screenshot_on_boss_kill);
+    ImGui::Checkbox("首领击杀", &settings.auto_screenshot_on_boss_kill);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Mission complete", &settings.auto_screenshot_on_mission_complete);
+    ImGui::Checkbox("任务完成", &settings.auto_screenshot_on_mission_complete);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Dungeon complete", &settings.auto_screenshot_on_dungeon_complete);
+    ImGui::Checkbox("地下城完成", &settings.auto_screenshot_on_dungeon_complete);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Title maxed", &settings.auto_screenshot_on_title_maxed);
+    ImGui::Checkbox("称号满级", &settings.auto_screenshot_on_title_maxed);
     ImGui::Unindent();
 
-    ImGui::Checkbox("Block full screen message when entering a new area", &settings.block_enter_area_message);
+    ImGui::Checkbox("进入新区域时屏蔽全屏消息", &settings.block_enter_area_message);
 
-    ImGui::Checkbox("Block full screen popup what shows when completing a vanquish", &settings.block_vanquish_complete_popup);
+    ImGui::Checkbox("屏蔽清图完成时的全屏弹出窗口", &settings.block_vanquish_complete_popup);
 
-    ImGui::Checkbox("Block full screen popup what shows when opening a dungeon chest", &settings.hide_dungeon_chest_popup);
+    ImGui::Checkbox("屏蔽打开地下城宝箱时的全屏弹出窗口", &settings.hide_dungeon_chest_popup);
 
-    ImGui::CheckboxWithHelp("Block sparkle effect on dropped items", &settings.block_sparkly_drops_effect, "Applies to drops that appear after this setting has been changed");
+    ImGui::CheckboxWithHelp("屏蔽掉落物品的闪光效果", &settings.block_sparkly_drops_effect, "适用于更改此设置后出现的掉落物");
 
-    auto hint = "The default mouse camera movement isn't instant, and instead smoothes the action when you move the mouse.\nTick this to disable this smoothing behaviour.";
-    ImGui::CheckboxWithHelp("Disable camera smoothing with mouse", &settings.disable_camera_smoothing, hint);
-    ImGui::CheckboxWithHelp("Disable camera smoothing with controller", &settings.disable_camera_smoothing_with_controller, hint);
-    if (ImGui::Checkbox("Disable Gold/Green items confirmation", &settings.disable_gold_selling_confirmation)) {
+    auto hint = "默认的鼠标镜头移动不是即时的，而是在移动鼠标时平滑操作。\n勾选此项可禁用此平滑行为。";
+    ImGui::CheckboxWithHelp("禁用鼠标镜头平滑", &settings.disable_camera_smoothing, hint);
+    ImGui::CheckboxWithHelp("禁用手柄镜头平滑", &settings.disable_camera_smoothing_with_controller, hint);
+    if (ImGui::Checkbox("禁用金色/绿色物品确认", &settings.disable_gold_selling_confirmation)) {
         gold_confirm_patch.TogglePatch(settings.disable_gold_selling_confirmation);
     }
     ImGui::ShowHelp(
-        "Disable the confirmation request when\n"
-        "selling Gold and Green items introduced\n"
-        "in February 5, 2019 update."
+        "禁用 2019 年 2 月 5 日更新中引入的\n"
+        "出售金色和绿色物品时的确认请求。"
     );
 
-    ImGui::CheckboxWithHelp("Limit signet of capture to 10 in skills window", &settings.limit_signets_of_capture, "If your character has purchased more than 10 signets of capture, only show 10 of them in the skills window");
+    ImGui::CheckboxWithHelp("在技能窗口中限制捕捉纹章为 10 个", &settings.limit_signets_of_capture, "如果您角色购买了超过 10 个捕捉纹章，技能窗口中只显示 10 个");
 
     ImGui::CheckboxWithHelp(
-        "Hide known skills when using a tome, capturing a skill or talking to a skill trainer", &settings.hide_known_skills,
-        "When you double click on a tome, the skills window that appears has all skills available for that profession.\nTick this to hide skills that your current character already has."
+        "使用典籍、捕捉技能或与技能训练师对话时隐藏已学技能", &settings.hide_known_skills,
+        "当您双击典籍时，显示的技能窗口包含该职业所有可用技能。\n勾选此项可隐藏您当前角色已拥有的技能。"
     );
 
-    ImGui::Checkbox("Hide all non-elite skills when capturing a skill", &settings.hide_nonelites_on_capture);
+    ImGui::Checkbox("捕捉技能时隐藏所有非精英技能", &settings.hide_nonelites_on_capture);
 
-    ImGui::Checkbox("Prevent weapon spell skin showing on player weapons", &settings.prevent_weapon_spell_animation_on_player);
+    ImGui::Checkbox("防止武器法术外观显示在玩家武器上", &settings.prevent_weapon_spell_animation_on_player);
 
-    ImGui::Checkbox("Prevent dervish avatar elites from changing your character's appearance", &settings.block_dervish_avatar_form);
+    ImGui::Checkbox("防止神唤使精英化身改变您角色的外观", &settings.block_dervish_avatar_form);
 
     ImGui::CheckboxWithHelp(
-        "Prompt if entering a mission you've already completed", &settings.check_and_prompt_if_mission_already_completed,
-        "Sometimes a player can forget to set Hard Mode/Normal Mode when starting a mission for their character.\nGwtoolbox can catch this and check your current character's achievements,\nand can show an 'Are you sure?' prompt if you're trying to do a mission\nthat you've already completed in the chosen mode."
+        "进入已完成任务时提示", &settings.check_and_prompt_if_mission_already_completed,
+        "有时玩家在开始任务时可能忘记为角色设置困难/普通模式。\nGWToolbox 可以检测此情况并检查您当前角色的成就，\n如果您尝试进行已在选定模式下完成的任务，则会显示\"您确定吗？\"提示。"
     );
 
     ImGui::CheckboxWithHelp(
-        "Remember my online status when returning to character select screen", &settings.remember_online_status,
-        "Guild Wars doesn't remember your friend list status when you return to the character select screen,\n and sets your status to 'Online' when you select a character to play.\nTick this to avoid having to change it when you switch characters."
+        "返回角色选择界面时记住我的在线状态", &settings.remember_online_status,
+        "Guild Wars 在您返回角色选择界面时不会记住好友列表状态，\n并在您选择角色进入游戏时将状态设置为\"在线\"。\n勾选此项可避免切换角色时重新设置。"
     );
 
-    if (ImGui::Checkbox("Remove 1.5 second minimum for the cast bar to show.", &settings.remove_min_skill_warmup_duration)) {
+    if (ImGui::Checkbox("移除施法条显示的最低 1.5 秒限制", &settings.remove_min_skill_warmup_duration)) {
         remove_skill_warmup_duration_patch.TogglePatch(settings.remove_min_skill_warmup_duration);
     }
-    ImGui::ShowHelp("When casting a skill, the in-game cast bar only shows up if the skill's cast time is more than 1.5 seconds.\nTick this to show the cast bar regardless of casting time.");
+    ImGui::ShowHelp("施放技能时，游戏内施法条只在技能施法时间超过 1.5 秒时显示。\n勾选此项可让施法条在任何施法时间都显示。");
 
-    if (ImGui::Checkbox("Set Guild Wars window title as current logged-in character", &settings.set_window_title_as_charname)) {
+    if (ImGui::Checkbox("将 Guild Wars 窗口标题设置为当前登录角色名", &settings.set_window_title_as_charname)) {
         SetWindowTitle(settings.set_window_title_as_charname);
     }
 
-    if (ImGui::Checkbox("Hide minimize/restore/close buttons in borderless and fullscreen modes", &settings.hide_window_buttons_in_fullscreen)) {
+    if (ImGui::Checkbox("在无边框和全屏模式下隐藏最小化/恢复/关闭按钮", &settings.hide_window_buttons_in_fullscreen)) {
         GW::GameThread::Enqueue(CheckRemoveWindowBorder);
     }
 
-    ImGui::Checkbox("Show warning when earned faction reaches ", &settings.faction_warn_percent);
+    ImGui::Checkbox("获得阵营点数达到 ", &settings.faction_warn_percent);
     ImGui::SameLine();
     ImGui::PushItemWidth(40.0f * ImGui::FontScale());
     ImGui::InputInt("##faction_warn_percent_amount", &settings.faction_warn_percent_amount, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
-    ImGui::Text("%%");
-    ImGui::ShowHelp("Displays when in a challenge mission or elite mission outpost");
+    ImGui::Text("%% 时显示警告");
+    ImGui::ShowHelp("在挑战任务或精英任务前哨站中显示");
 
-    ImGui::Checkbox("Skip character name input when donating faction", &settings.skip_entering_name_for_faction_donate);
+    ImGui::Checkbox("捐赠阵营点数时跳过角色名输入", &settings.skip_entering_name_for_faction_donate);
 
-    ImGui::CheckboxWithHelp("Stop screen shake from skills or effects", &settings.stop_screen_shake, "e.g. Aftershock, Earth shaker, Avalanche effect");
+    ImGui::CheckboxWithHelp("停止技能或效果引起的屏幕震动", &settings.stop_screen_shake, "例如 余震、地裂者、雪崩效果");
 
     ImGui::NewLine();
-    ImGui::Text("Block floating numbers above character on:");
+    ImGui::Text("屏蔽角色上方的浮动数字：");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Faction gain", &settings.block_faction_gain);
+    ImGui::Checkbox("阵营点数获得", &settings.block_faction_gain);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("XP Gain", &settings.block_experience_gain);
+    ImGui::Checkbox("经验值获得", &settings.block_experience_gain);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("0 XP Gain", &settings.block_zero_experience_gain);
+    ImGui::Checkbox("0 经验值获得", &settings.block_zero_experience_gain);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Zero damage/heal/energy", &settings.block_zero_damage_or_energy);
+    ImGui::Checkbox("0 伤害/治疗/能量", &settings.block_zero_damage_or_energy);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Damage received", &settings.block_receiving_damage);
+    ImGui::Checkbox("受到伤害", &settings.block_receiving_damage);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Damage dealt", &settings.block_dealing_damage);
+    ImGui::Checkbox("造成伤害", &settings.block_dealing_damage);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Healing received", &settings.block_receiving_heals);
+    ImGui::Checkbox("受到治疗", &settings.block_receiving_heals);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Healing given", &settings.block_giving_heals);
+    ImGui::Checkbox("造成治疗", &settings.block_giving_heals);
     ImGui::Unindent();
-    ImGui::CheckboxWithHelp("Combine floating numbers above character", &settings.combine_overhead_numbers, combine_overhead_numbers_help);
-    if (ImGui::Checkbox("Show experience progress instead of current level on your experience bar", &settings.useful_level_progress_label)) {
+    ImGui::CheckboxWithHelp("合并角色上方的浮动数字", &settings.combine_overhead_numbers, combine_overhead_numbers_help);
+    if (ImGui::Checkbox("在经验条上显示经验进度而非当前等级", &settings.useful_level_progress_label)) {
         GW::GameThread::Enqueue(SetXpBarLabel);
     }
 
     ImGui::NewLine();
-    ImGui::Text("Disable animation and sound from consumables:");
+    ImGui::Text("禁用消耗品的动画和音效：");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    constexpr auto doesnt_affect_me = "Only applies to other players";
+    constexpr auto doesnt_affect_me = "仅适用于其他玩家";
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Tonics", &settings.block_transmogrify_effect, doesnt_affect_me);
+    ImGui::CheckboxWithHelp("药剂", &settings.block_transmogrify_effect, doesnt_affect_me);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Sweets", &settings.block_sugar_rush_effect, doesnt_affect_me);
+    ImGui::CheckboxWithHelp("糖果", &settings.block_sugar_rush_effect, doesnt_affect_me);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Bottle rockets", &settings.block_bottle_rockets, doesnt_affect_me);
+    ImGui::CheckboxWithHelp("瓶装火箭", &settings.block_bottle_rockets, doesnt_affect_me);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Party poppers", &settings.block_party_poppers);
+    ImGui::Checkbox("派对爆竹", &settings.block_party_poppers);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Snowman Summoners", &settings.block_snowman_summoner, doesnt_affect_me);
-    ImGui::Checkbox("Fireworks", &settings.block_fireworks);
+    ImGui::CheckboxWithHelp("雪人召唤器", &settings.block_snowman_summoner, doesnt_affect_me);
+    ImGui::Checkbox("烟花", &settings.block_fireworks);
     ImGui::Unindent();
     ImGui::NewLine();
-    ImGui::Checkbox("Show 'You have N Lockpicks' on Locked Chest name tags", &settings.show_amount_of_lockpicks_under_locked_chest_nametag);
-    ImGui::Text("In-game name tag colors:");
-    ImGui::ShowHelp("These set global name tag colors by category.\nTo set a custom color for a specific agent, see Minimap > Custom Agents > Text Color.");
+    ImGui::Checkbox("在锁定宝箱名称标签下显示\"您有 N 个开锁工具\"", &settings.show_amount_of_lockpicks_under_locked_chest_nametag);
+    ImGui::Text("游戏内名称标签颜色：");
+    ImGui::ShowHelp("这些设置按类别设置全局名称标签颜色。\n要为特定单位设置自定义颜色，请查看 小地图 > 自定义单位 > 文本颜色。");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
     constexpr uint32_t flags = ImGuiColorEditFlags_NoInputs;
@@ -2007,15 +2004,15 @@ void GameSettings::DrawSettingsInternal()
     ImGui::Unindent();
 
     ImGui::NewLine();
-    ImGui::Text("Hide skill descriptions in:");
-    ImGui::ShowHelp("When hovering a skill in the game,\nonly show the skill name  and cooldown etc in the tooltip that appears.");
+    ImGui::Text("隐藏技能描述：");
+    ImGui::ShowHelp("悬停技能时，在出现的提示框中只显示技能名称和冷却时间等信息。");
     ImGui::Indent();
-    ImGui::Checkbox("Explorable Area###disable_skill_descriptions_in_explorable", &settings.disable_skill_descriptions_in_explorable);
+    ImGui::Checkbox("可探索区域###disable_skill_descriptions_in_explorable", &settings.disable_skill_descriptions_in_explorable);
     ImGui::SameLine();
-    ImGui::Checkbox("Outpost###disable_skill_descriptions_in_outpost", &settings.disable_skill_descriptions_in_outpost);
+    ImGui::Checkbox("前哨站###disable_skill_descriptions_in_outpost", &settings.disable_skill_descriptions_in_outpost);
     if (settings.disable_skill_descriptions_in_explorable || settings.disable_skill_descriptions_in_outpost) {
         ImGui::Indent();
-        ImGui::TextDisabled("Hold Alt when hovering a skill to show full description");
+        ImGui::TextDisabled("悬停技能时按住 Alt 键显示完整描述");
         ImGui::Unindent();
     }
     ImGui::Unindent();
@@ -2072,9 +2069,9 @@ void GameSettings::FactionEarnedCheckAndWarn()
 
     const float pct = 100.0f * static_cast<float>(*current) / static_cast<float>(*max);
     if (pct >= static_cast<float>(settings.faction_warn_percent_amount))
-        Log::Warning("%s faction earned is %d of %d", name, *current, *max);
+        Log::Warning("%s 阵营点数已获得 %d 中的 %d", name, *current, *max);
     else if (*other_current > 4999 && *other_current > *current)
-        Log::Warning("%s faction earned is greater than %s", other_name, name);
+        Log::Warning("%s 阵营点数大于 %s", other_name, name);
 }
 
 void GameSettings::Update(float)
@@ -2184,12 +2181,12 @@ void GameSettings::OnPlayerJoinInstance(GW::HookStatus*, GW::Packet::StoC::Playe
     }
     if (settings.notify_when_friends_join_outpost) {
         if (const auto f = GetFriend(nullptr, pak->player_name, GW::FriendType::Friend, GW::FriendStatus::Online)) {
-            WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> ({}) entered the outpost.", f->charname, f->alias).c_str(), nullptr, true);
+            WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a>（{}）进入了前哨站。", f->charname, f->alias).c_str(), nullptr, true);
             return;
         }
     }
     if (settings.notify_when_players_join_outpost) {
-        WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> entered the outpost.", pak->player_name).c_str(), nullptr, true);
+        WriteChat(GW::Chat::Channel::CHANNEL_GLOBAL, std::format(L"<a=1>{}</a> 进入了前哨站。", pak->player_name).c_str(), nullptr, true);
     }
 }
 
@@ -2316,12 +2313,12 @@ void GameSettings::OnPlayerLeaveInstance(GW::HookStatus*, const GW::Packet::StoC
     }
     if (settings.notify_when_friends_leave_outpost) {
         if (const auto f = GetFriend(nullptr, player_name, GW::FriendType::Friend, GW::FriendStatus::Online)) {
-            WriteChatF(GW::Chat::Channel::CHANNEL_GLOBAL, L"<a=1>%ls</a> (%ls) left the outpost.", f->charname, f->alias);
+            WriteChatF(GW::Chat::Channel::CHANNEL_GLOBAL, L"<a=1>%ls</a>（%ls）离开了前哨站。", f->charname, f->alias);
             return;
         }
     }
     if (settings.notify_when_players_leave_outpost) {
-        WriteChatF(GW::Chat::Channel::CHANNEL_GLOBAL, L"<a=1>%ls</a> left the outpost.", player_name);
+        WriteChatF(GW::Chat::Channel::CHANNEL_GLOBAL, L"<a=1>%ls</a> 离开了前哨站。", player_name);
     }
 }
 
@@ -2454,7 +2451,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage me
             SendUIMessage(message_id, redirected_url);
         }
         else {
-            Log::Error("No current active quest");
+            Log::Error("没有当前活动任务");
         }
     }
     else if (strstr(url.c_str(), "?search=target")) {
@@ -2465,7 +2462,7 @@ void GameSettings::OnOpenWiki(GW::HookStatus* status, const GW::UI::UIMessage me
             pending_wiki_search_term = std::make_unique<EncString>(GW::Agents::GetAgentEncName(a));
         }
         else {
-            Log::Error("No current target");
+            Log::Error("没有当前目标");
         }
     }
 }

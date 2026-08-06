@@ -28,7 +28,7 @@ namespace {
 
     GW::MemoryPatcher bypass_chat_codepage_limitation;
 
-    const char* chat_window_font_names = "Default\0Large\0Larger\0Largest";
+    const char* chat_window_font_names = "默认\0大\0更大\0最大";
     const uint32_t chat_window_font_ids[] = {0, 7, 8, 9};
 
     std::map<std::wstring, GW::Chat::Color> chat_token_colors_original = {
@@ -120,15 +120,15 @@ namespace {
         DWORD time = 0;
         auto time_unit = L"";
         if (hours != 0) {
-            time_unit = L"hour";
+            time_unit = L"小时";
             time = hours;
         }
         else if (minutes != 0) {
-            time_unit = L"minute";
+            time_unit = L"分钟";
             time = minutes;
         }
         else {
-            time_unit = L"second";
+            time_unit = L"秒";
             time = secs;
         }
         if (time > 1)
@@ -148,18 +148,18 @@ namespace {
 
         ImGui::SameLine(chat_colors_grid_x[1] * scale);
         color = sender_col;
-        if (Colors::DrawSettingHueWheel("Sender Color:", &color, flags) && color != sender_col) {
+        if (Colors::DrawSettingHueWheel("发送者颜色：", &color, flags) && color != sender_col) {
             SetSenderColor(chan, color);
         }
 
         ImGui::SameLine(chat_colors_grid_x[2] * scale);
         color = message_col;
-        if (Colors::DrawSettingHueWheel("Message Color:", &color, flags) && color != message_col) {
+        if (Colors::DrawSettingHueWheel("消息颜色：", &color, flags) && color != message_col) {
             SetMessageColor(chan, color);
         }
 
         ImGui::SameLine(chat_colors_grid_x[3] * scale);
-        if (ImGui::Button("Reset")) {
+        if (ImGui::Button("重置")) {
             GW::Chat::Color col1, col2;
             GetDefaultColors(chan, &col1, &col2);
             SetSenderColor(chan, col1);
@@ -311,7 +311,7 @@ namespace {
 
         const std::wstring sanitised_name = TextUtils::SanitizePlayerName(name);
         if (ImGui::GetIO().KeyShift && GW::PartyMgr::GetIsLeader()) {
-            const auto cmd = std::format(L"invite {}", sanitised_name);
+            const auto cmd = std::format(L"邀请 {}", sanitised_name);
             GW::Chat::SendChat('/', cmd.c_str());
             status->blocked = true;
             return;
@@ -330,9 +330,9 @@ namespace {
             case GW::UI::UIMessage::kAddCustomChatLink: {
                 const auto packet = (GW::UI::UIPacket::kAddCustomChatLink*)wParam;
                 if (TextUtils::IsUrl(packet->url))
-                    wcscpy(packet->link_prefix, L"URL: ");
+                    wcscpy(packet->link_prefix, L"网址：");
                 else if (!wcsncmp(packet->url, L"file://", 7))
-                    wcscpy(packet->link_prefix, L"File: ");
+                    wcscpy(packet->link_prefix, L"文件：");
             } break;
             case GW::UI::UIMessage::kDialogueMessage: {
                 const auto packet = (GW::UI::UIPacket::kDialogueMessage*)wParam;
@@ -367,7 +367,7 @@ namespace {
                 // Remember user setting for chat timestamps
                 const auto packet = static_cast<GW::UI::UIPacket::kPreferenceValueChanged*>(wParam);
                 if (settings.clear_chat_message_when_hiding_chat && packet->preference_id == GW::UI::NumberPreference::ChatState && packet->new_value == 0) {
-                    const auto frame = (GW::EditableTextFrame*)GW::UI::GetFrameByLabel(L"EditMessage");
+                    const auto frame = (GW::EditableTextFrame*)GW::UI::GetFrameByLabel(L"编辑消息");
                     frame && frame->SetValue(L"");
                 }
             } break;
@@ -421,7 +421,7 @@ namespace {
                 const auto param = static_cast<GW::UI::UIPacket::kRecvWhisper*>(wParam);
                 if (!(GW::FriendListMgr::GetMyStatus() == GW::FriendStatus::Away && !afk_message.empty() && ToolboxUtils::GetPlayerName() != param->from))
                     break;
-                const auto reply = std::format(L"Automatic message: \"{}\" ({} ago)", afk_message, PrintTime((clock() - afk_message_time) / CLOCKS_PER_SEC));
+                const auto reply = std::format(L"自动消息：\"{}\"（{} 前）", afk_message, PrintTime((clock() - afk_message_time) / CLOCKS_PER_SEC));
                 GW::Chat::SendChat(param->from, reply.c_str());
             } break;
 
@@ -492,34 +492,34 @@ void ChatSettings::DrawSettingsInternal()
 {
     ToolboxModule::DrawSettingsInternal();
 
-    ImGui::Combo("Chat window font size", &settings.chat_window_font_id_index, chat_window_font_names);
+    ImGui::Combo("聊天窗口字体大小", &settings.chat_window_font_id_index, chat_window_font_names);
 
     constexpr ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel;
-    if (ImGui::TreeNodeEx("Chat Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::Text("Channel");
+    if (ImGui::TreeNodeEx("聊天颜色", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        ImGui::Text("频道");
         ImGui::SameLine(chat_colors_grid_x[1]);
-        ImGui::Text("Sender");
+        ImGui::Text("发送者");
         ImGui::SameLine(chat_colors_grid_x[2]);
-        ImGui::Text("Message");
+        ImGui::Text("消息");
         ImGui::Spacing();
 
-        DrawChannelColor("Local", GW::Chat::Channel::CHANNEL_ALL);
-        DrawChannelColor("Guild", GW::Chat::Channel::CHANNEL_GUILD);
-        DrawChannelColor("Team", GW::Chat::Channel::CHANNEL_GROUP);
-        DrawChannelColor("Trade", GW::Chat::Channel::CHANNEL_TRADE);
-        DrawChannelColor("Alliance", GW::Chat::Channel::CHANNEL_ALLIANCE);
-        DrawChannelColor("Whispers", GW::Chat::Channel::CHANNEL_WHISPER);
-        DrawChannelColor("Emotes", GW::Chat::Channel::CHANNEL_EMOTE);
-        DrawChannelColor("Other", GW::Chat::Channel::CHANNEL_GLOBAL);
+        DrawChannelColor("本地", GW::Chat::Channel::CHANNEL_ALL);
+        DrawChannelColor("公会", GW::Chat::Channel::CHANNEL_GUILD);
+        DrawChannelColor("队伍", GW::Chat::Channel::CHANNEL_GROUP);
+        DrawChannelColor("交易", GW::Chat::Channel::CHANNEL_TRADE);
+        DrawChannelColor("联盟", GW::Chat::Channel::CHANNEL_ALLIANCE);
+        DrawChannelColor("密语", GW::Chat::Channel::CHANNEL_WHISPER);
+        DrawChannelColor("表情", GW::Chat::Channel::CHANNEL_EMOTE);
+        DrawChannelColor("其他", GW::Chat::Channel::CHANNEL_GLOBAL);
 
-        ImGui::TextDisabled("(Left-click on a color to edit it)");
+        ImGui::TextDisabled("（左键单击颜色可编辑）");
         ImGui::TreePop();
         ImGui::Spacing();
     }
-    if (chat_token_colors.size() && ImGui::TreeNodeEx("Chat Token Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (chat_token_colors.size() && ImGui::TreeNodeEx("聊天标记颜色", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         const auto scale = ImGui::FontScale();
 
-        ImGui::TextDisabled("Some text throughout the game are highlighted depending on their rarity or other properties.");
+        ImGui::TextDisabled("游戏中的某些文本会根据其稀有度或其他属性进行高亮显示。");
         for (auto& [token,color] : chat_token_colors) {
             const auto token_s = TextUtils::WStringToString(token)+":";
             ImGui::PushID(token_s.c_str());
@@ -529,52 +529,52 @@ void ChatSettings::DrawSettingsInternal()
             Colors::DrawSettingHueWheel(token_s.c_str(), &color, chat_token_color_flags);
 
             ImGui::SameLine(chat_colors_grid_x[3] * scale);
-            if (ImGui::Button("Reset")) {
+            if (ImGui::Button("重置")) {
                 color = chat_token_colors_original[token];
             }
                 
             ImGui::PopID();
         }
-        ImGui::TextDisabled("(Left-click on a color to edit it)");
+        ImGui::TextDisabled("（左键单击颜色可编辑）");
         ImGui::TreePop();
         ImGui::Spacing();
     }
 
     settings.show_timestamps = GW::UI::GetPreference(GW::UI::FlagPreference::ShowChatTimestamps);
-    if (ImGui::Checkbox("Show chat messages timestamp", &settings.show_timestamps)) {
+    if (ImGui::Checkbox("显示聊天消息时间戳", &settings.show_timestamps)) {
         GW::Chat::ToggleTimestamps(settings.show_timestamps);
     }
-    ImGui::ShowHelp("Show timestamps in message history.");
+    ImGui::ShowHelp("在消息历史中显示时间戳。");
     if (settings.show_timestamps) {
         ImGui::Indent();
-        if (ImGui::Checkbox("Use 24h", &settings.show_timestamp_24h)) {
+        if (ImGui::Checkbox("使用 24 小时制", &settings.show_timestamp_24h)) {
             GW::Chat::SetTimestampsFormat(settings.show_timestamp_24h, settings.show_timestamp_seconds);
         }
         ImGui::SameLine();
-        if (ImGui::Checkbox("Show seconds", &settings.show_timestamp_seconds)) {
+        if (ImGui::Checkbox("显示秒数", &settings.show_timestamp_seconds)) {
             GW::Chat::SetTimestampsFormat(settings.show_timestamp_24h, settings.show_timestamp_seconds);
         }
         ImGui::SameLine();
-        ImGui::Text("Color:");
+        ImGui::Text("颜色：");
         ImGui::SameLine();
-        if (Colors::DrawSettingHueWheel("Color:", &settings.timestamps_color.value, flags)) {
+        if (Colors::DrawSettingHueWheel("颜色：", &settings.timestamps_color.value, flags)) {
             GW::Chat::SetTimestampsColor(settings.timestamps_color);
         }
         ImGui::Unindent();
     }
-    ImGui::CheckboxWithHelp("Hide player chat speech bubbles", &settings.hide_player_speech_bubbles, "Don't show in-game speech bubbles over player characters that send a message in chat");
-    ImGui::CheckboxWithHelp("Hide all friendly speech bubbles", &settings.hide_all_friendly_speech_bubbles, "Don't show any in-game speech bubbles");
-    ImGui::CheckboxWithHelp("Show NPC speech bubbles in emote channel", &settings.npc_speech_bubbles_as_chat, "Speech bubbles from NPCs and Heroes will appear as emote messages in chat");
-    ImGui::CheckboxWithHelp("Redirect NPC dialog to emote channel", &settings.redirect_npc_messages_to_emote_chat, "Messages from NPCs that would normally show on-screen and in team chat are instead redirected to the emote channel");
-    ImGui::CheckboxWithHelp("Redirect outgoing whispers to whisper channel", &settings.redirect_outgoing_whisper_to_whisper_channel, "Whispers that you send are typically shown in colour of the global channel (green).\n"
-                    "This setting makes them appear blue like an incoming message, with -> before the name.");
-    if (ImGui::Checkbox("Open web links from templates", &settings.openlinks)) {
+    ImGui::CheckboxWithHelp("隐藏玩家聊天气泡", &settings.hide_player_speech_bubbles, "不在游戏中的玩家角色上方显示发送聊天消息的气泡");
+    ImGui::CheckboxWithHelp("隐藏所有友方气泡", &settings.hide_all_friendly_speech_bubbles, "不显示任何游戏内气泡");
+    ImGui::CheckboxWithHelp("在表情频道显示 NPC 气泡", &settings.npc_speech_bubbles_as_chat, "NPC 和英雄的气泡将作为表情消息显示在聊天中");
+    ImGui::CheckboxWithHelp("将 NPC 对话重定向到表情频道", &settings.redirect_npc_messages_to_emote_chat, "通常显示在屏幕上和队伍聊天中的 NPC 消息将被重定向到表情频道");
+    ImGui::CheckboxWithHelp("将发出的密语重定向到密语频道", &settings.redirect_outgoing_whisper_to_whisper_channel, "您发送的密语通常以全局频道的颜色（绿色）显示。\n"
+                    "此设置使其像接收到的消息一样显示为蓝色，名称前带有 ->。");
+    if (ImGui::Checkbox("从模板中打开网页链接", &settings.openlinks)) {
         GW::UI::SetOpenLinks(settings.openlinks);
     }
-    ImGui::ShowHelp("Clicking on template that has a URL as name will open that URL in your browser");
+    ImGui::ShowHelp("单击名称是 URL 的模板将在浏览器中打开该 URL");
 
-    ImGui::CheckboxWithHelp("Automatically change urls into build templates.", &settings.auto_url, "When you write a message starting with 'http://' or 'https://', it will be converted in template format");
-    ImGui::Checkbox("Clear chat message when hiding the in-game chat window", &settings.clear_chat_message_when_hiding_chat);
+    ImGui::CheckboxWithHelp("自动将网址转换为配装模板格式", &settings.auto_url, "当您写一条以 'http://' 或 'https://' 开头的消息时，它将被转换为模板格式");
+    ImGui::Checkbox("隐藏聊天窗口时清空聊天消息", &settings.clear_chat_message_when_hiding_chat);
 }
 
 void ChatSettings::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
@@ -654,9 +654,9 @@ void ChatSettings::SetAfkMessage(std::wstring&& message)
     else if (message.size() <= MAX_AFK_MSG_LEN) {
         afk_message = std::move(message);
         afk_message_time = clock();
-        Log::Info("Afk message set to \"%S\"", afk_message.c_str());
+        Log::Info("离开消息已设置为 \"%S\"", afk_message.c_str());
     }
     else {
-        Log::Error("Afk message must be under 80 characters. (Yours is %zu)", message.size());
+        Log::Error("离开消息必须少于 80 个字符。（您的是 %zu 个）", message.size());
     }
 }

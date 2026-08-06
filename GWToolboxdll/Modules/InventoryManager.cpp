@@ -53,11 +53,11 @@ namespace {
     ImVec4 ItemGold = ImColor(255, 204, 86).Value;
 
     const char* bag_names[5] = {
-        "None",
-        "Backpack",
-        "Belt Pouch",
-        "Bag 1",
-        "Bag 2"
+        "无",
+        "背包",
+        "腰包",
+        "背包 1",
+        "背包 2"
     };
 
     bool show_item_context_menu = false;
@@ -651,8 +651,8 @@ namespace {
             ImGui::OpenPopup(popup_id);
         }
         if (ImGui::BeginPopupModal(popup_id, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Sure you want to destroy this item?");
-            if (ImGui::Button("Destroy", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+            ImGui::Text("确定要销毁此物品吗？");
+            if (ImGui::Button("销毁", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
                 GW::Items::DestroyItem(pending_destroy_item_id);
                 pending_destroy_item_id = 0;
                 ImGui::CloseCurrentPopup();
@@ -661,7 +661,7 @@ namespace {
                 ImGui::SetFocusID(ImGui::GetItemID(), ImGui::GetCurrentWindow());
             }
             ImGui::SameLine();
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            if (ImGui::Button("取消", ImVec2(120, 0))) {
                 pending_destroy_item_id = 0;
                 ImGui::CloseCurrentPopup();
             }
@@ -681,9 +681,9 @@ namespace {
             return;
         }
         const GW::AgentLiving* player = GW::Agents::GetControlledCharacter();
-        constexpr auto popup_label = "Change secondary profession?###change-secondary";
+        constexpr auto popup_label = "更改副职业？###change-secondary";
         if (tome_pending_timeout && TIMER_INIT() > tome_pending_timeout) {
-            Log::Error("Timeout reached trying to change profession for tome use");
+            Log::Error("更改副职业超时");
             goto cancel;
         }
         if (!player) {
@@ -700,8 +700,8 @@ namespace {
             tome_pending_stage = AwaitPromptReply;
         }
         if (ImGui::BeginPopupModal(popup_label, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Changing your secondary profession will change your skills and attributes.\nDo you want to continue?");
-            if (ImGui::Button("OK", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+            ImGui::Text("更改副职业将改变您的技能和属性。\n是否继续？");
+            if (ImGui::Button("确定", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
                 tome_pending_stage = ChangeProfession;
                 tome_pending_timeout = TIMER_INIT() + 3000;
                 ImGui::CloseCurrentPopup();
@@ -710,7 +710,7 @@ namespace {
                 ImGui::SetFocusID(ImGui::GetItemID(), ImGui::GetCurrentWindow());
             }
             ImGui::SameLine();
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            if (ImGui::Button("取消", ImVec2(120, 0))) {
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
@@ -848,20 +848,20 @@ namespace {
             return false;
         auto mod = item->GetModifier(0x2788);
         switch (mod ? mod->arg2() : 0) {
-        case 0xF1: // Double click to drink. Excessive alcohol consumption...
-        case 0x1: // Double click to use. Excessive alcohol consumption...
-        case 0x8: // Double click to use. Eating excessive sweets...
-        case 0x24: //Double click to use in town
+        case 0xF1: // 双击饮用。过量饮酒...
+        case 0x1: // 双击使用。过量饮酒...
+        case 0x8: // 双击使用。过量食用糖果...
+        case 0x24: // 在城镇中双击使用
             return true;
         }
 
         mod = item->GetModifier(0x25e8);
         switch (mod ? mod->arg1() : 0) {
-        case 0x7: // Nicholas keg quote
+        case 0x7: // Nicholas 木桶任务
             return true;
         }
         switch (item->model_file_id) {
-        case 0x26858: // Squash serum
+        case 0x26858: // 南瓜血清
             return true;
         }
         return false;
@@ -916,7 +916,7 @@ namespace {
             if (!quote_help_text) return;
             const auto current_text = quote_help_text->GetEncodedLabel();
             if (!(current_text && wcslen(current_text) < 10)) return;
-            std::wstring new_text = std::format(L"{}\x2\x108\x107{}\x1", current_text, L"\n\nNeed to buy or sell in bulk? Hold Ctrl when clicking \"Request Quote\" to choose a quantity.");
+            std::wstring new_text = std::format(L"{}\x2\x108\x107{}\x1", current_text, L"\n\n需要批量购买或出售？按住 Ctrl 键点击\"请求报价\"选择数量。");
             quote_help_text->SetLabel(new_text.c_str());
         };
 
@@ -946,7 +946,7 @@ namespace {
                 return;
             }
             pending_cancel_transaction = true;
-            Log::WarningW(L"Trader rejected transaction");
+            Log::WarningW(L"商人拒绝交易");
         });
         transaction_listeners_attached = true;
     }
@@ -1088,7 +1088,7 @@ namespace {
         const auto kit = context_item.item();
         if (!kit || !kit->IsIdentificationKit()) {
             CancelIdentify();
-            Log::Warning("The identification kit was consumed");
+            Log::Warning("鉴定工具已消耗");
             return;
         }
         Identify(unid, kit);
@@ -1162,7 +1162,7 @@ namespace {
                 const auto packet = (GW::UI::UIPacket::kVendorQuote*)wparam;
 
                 if (transaction.item_id != packet->item_id) {
-                    Log::ErrorW(L"Received quote for item %u, but expected %u", packet->item_id, transaction.item_id);
+                    Log::ErrorW(L"收到物品 %u 的报价，但期望 %u", packet->item_id, transaction.item_id);
                     CancelTransaction();
                     return;
                 }
@@ -1251,19 +1251,19 @@ namespace {
         ImGui::NewLine();
         // Two-column layout for merchant items using tables
         if (ImGui::BeginTable("merchant_settings_table", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV)) {
-            ImGui::TableSetupColumn("Hidden from Merchant", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Ignored when Salvaging", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("从商人处隐藏", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("拆解时忽略", ImGuiTableColumnFlags_WidthStretch);
 
             // Header row
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
-            ImGui::Text("Hidden items from merchant sell window:");
+            ImGui::Text("从商人出售窗口中隐藏的物品：");
             ImGui::SameLine();
-            ImGui::TextDisabled("(Click on an item to remove it)");
+            ImGui::TextDisabled("（点击物品可移除）");
             ImGui::TableSetColumnIndex(1);
-            ImGui::Text("Ignored items when salvaging:");
+            ImGui::Text("拆解时忽略的物品：");
             ImGui::SameLine();
-            ImGui::TextDisabled("(Click on an item to remove it)");
+            ImGui::TextDisabled("（点击物品可移除）");
 
             // Content row
             ImGui::TableNextRow();
@@ -1294,7 +1294,7 @@ namespace {
                 clicked = ImGui::ConfirmButton(button_label.c_str(), &clicked);
 
                 if (clicked) {
-                    Log::Flash("Removed Item %s with ID (%d)", item_name.c_str(), item_id);
+                    Log::Flash("已移除物品 %s (ID: %d)", item_name.c_str(), item_id);
                     hide_from_merchant_items.erase(item_id);
                     ImGui::PopID();
                     break;
@@ -1305,7 +1305,7 @@ namespace {
             }
 
             ImGui::EndChild();
-            ImGui::Text("To add an item to this list, right click the item from your inventory and select 'Hide this when selling'");
+            ImGui::Text("要将物品添加到此列表，请从背包中右键点击物品并选择\"出售时隐藏此物品\"");
 
             // Right column: Salvage ignore list
             ImGui::TableSetColumnIndex(1);
@@ -1333,7 +1333,7 @@ namespace {
                 clicked = ImGui::ConfirmButton(button_label.c_str(), &clicked);
 
                 if (clicked) {
-                    Log::Flash("Removed %s", it.second.c_str());
+                    Log::Flash("已移除 %s", it.second.c_str());
                     block_from_being_salvaged.erase(it.first);
                     ImGui::PopID();
                     break;
@@ -1344,7 +1344,7 @@ namespace {
             }
 
             ImGui::EndChild();
-            ImGui::Text("To add an item to this list, right click the item from your inventory and select 'Ignore this when salvaging'");
+            ImGui::Text("要将物品添加到此列表，请从背包中右键点击物品并选择\"拆解时忽略此物品\"");
 
             ImGui::EndTable();
         }
@@ -1389,7 +1389,7 @@ namespace {
         const auto available_slot = InventoryManager::GetAvailableInventorySlot();
         if (!available_slot.first) {
             CancelSalvage();
-            Log::Warning("No more space in inventory");
+            Log::Warning("背包已满，没有剩余空间");
             return;
         }
         if (!has_prompted_salvage) {
@@ -1397,7 +1397,7 @@ namespace {
             FetchPotentialItems();
             if (!potential_salvage_all_items.size()) {
                 CancelSalvage();
-                Log::Warning("No items to salvage");
+                Log::Warning("没有可拆解的物品");
                 return;
             }
             show_salvage_all_popup = true;
@@ -1410,11 +1410,11 @@ namespace {
         const auto kit = context_item.item();
         if (!kit || !kit->IsSalvageKit()) {
             CancelSalvage();
-            Log::Warning("The salvage kit was consumed");
+            Log::Warning("拆解工具已消耗");
             return;
         }
         if (!potential_salvage_all_items.size()) {
-            Log::Info("Salvaged %d items", salvaged_count);
+            Log::Info("已拆解 %d 个物品", salvaged_count);
             CancelSalvage();
             return;
         }
@@ -1457,7 +1457,7 @@ namespace {
             return;
         }
         if (TIMER_DIFF(pending_salvage_at) > 5000) {
-            Log::Warning("Failed to salvage item in slot %d/%d", pending_salvage_item.bag, pending_salvage_item.slot);
+            Log::Warning("拆解槽位 %d/%d 中的物品失败", pending_salvage_item.bag, pending_salvage_item.slot);
             CancelSalvage();
             return;
         }
@@ -1469,12 +1469,12 @@ namespace {
             const auto salvage_info = GW::Items::GetSalvageSessionInfo();
             if (salvage_info) {
                 if (salvage_info->item_id != pending_salvage_item.item_id) {
-                    Log::Warning("Unexpected salvage item prompt - different item id!");
+                    Log::Warning("拆解物品提示异常 - 物品 ID 不匹配！");
                     CancelSalvage();
                     return;
                 }
                 if (!GW::Items::SalvageMaterials()) {
-                    Log::Warning("GW::Items::SalvageMaterials failure");
+                    Log::Warning("GW::Items::SalvageMaterials 失败");
                     CancelSalvage();
                     return;
                 }
@@ -1511,14 +1511,14 @@ namespace {
                 }
                 // Check if we need any more of this item; send quote if yes, complete if no.
                 if (pending_transaction_amount <= 0) {
-                    Log::Flash("Transaction complete");
+                    Log::Flash("交易完成");
                     CancelTransaction();
                     return;
                 }
                 Log::Log("PendingTransaction pending, ask for quote\n");
                 pending_transaction.setState(PendingTransaction::State::Quoting);
                 if (!RequestQuote(pending_transaction.type, pending_transaction.item_id)) {
-                    Log::ErrorW(L"Failed to request quote");
+                    Log::ErrorW(L"请求报价失败");
                     CancelTransaction();
                     return;
                 }
@@ -1527,7 +1527,7 @@ namespace {
                 // Check for timeout having asked for a quote.
                 if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
                     if (pending_transaction.retries > 0) {
-                        Log::ErrorW(L"Timeout waiting for item quote");
+                        Log::ErrorW(L"等待物品报价超时");
                         CancelTransaction();
                         return;
                     }
@@ -1545,7 +1545,7 @@ namespace {
                 // Got a quote; begin transaction
                 pending_transaction.setState(PendingTransaction::State::Transacting);
                 if (!GW::Merchant::TransactItems()) {
-                    Log::ErrorW(L"Failed to transact items");
+                    Log::ErrorW(L"执行交易失败");
                     CancelTransaction();
                     return;
                 }
@@ -1554,7 +1554,7 @@ namespace {
                 // Check for timeout having agreed to buy or sell
                 if (TIMER_DIFF(pending_transaction.state_timestamp) > 3000) {
                     if (pending_transaction.retries > 0) {
-                        Log::ErrorW(L"Timeout waiting for item sell/buy");
+                        Log::ErrorW(L"等待物品买卖超时");
                         CancelTransaction();
                         return;
                     }
@@ -2008,48 +2008,48 @@ bool InventoryManager::IsSameItem(const GW::Item* item1, const GW::Item* item2)
 void InventoryManager::DrawSettingsInternal()
 {
     ImGui::NewLine();
-    ImGui::TextDisabled("Control extra item functions via ctrl+click, right click or double click");
+    ImGui::TextDisabled("通过 Ctrl+点击、右键点击或双击控制额外的物品功能");
     ImGui::Separator();
-    ImGui::Checkbox("Hide unsellable items from merchant window", &settings.hide_unsellable_items);
-    ImGui::Checkbox("Hide weapon sets and customized items from merchant window", &settings.hide_weapon_sets_and_customized_items);
-    ImGui::Checkbox("Hide gold items from merchant window", &settings.hide_golds_from_merchant);
-    ImGui::CheckboxWithHelp("Move whole stacks by default", &settings.trade_whole_stacks, "Shift drag to prompt for amount, drag without shift to move the whole stack without any item quantity prompts");
-    ImGui::TextUnformatted("Move items to trade on:");
-    ImGui::ShowHelp("When trading with another player, you normally have to drag an item from inventory to the trade window. Enable an option below to make it easier.");
+    ImGui::Checkbox("从商人窗口隐藏不可出售的物品", &settings.hide_unsellable_items);
+    ImGui::Checkbox("从商人窗口隐藏武器套装和定制物品", &settings.hide_weapon_sets_and_customized_items);
+    ImGui::Checkbox("从商人窗口隐藏金色物品", &settings.hide_golds_from_merchant);
+    ImGui::CheckboxWithHelp("默认移动整堆物品", &settings.trade_whole_stacks, "按住 Shift 拖拽以提示数量，不按住 Shift 拖拽则移动整堆无需数量提示");
+    ImGui::TextUnformatted("在以下情况将物品移至交易窗口：");
+    ImGui::ShowHelp("当与其他玩家交易时，通常需要将物品从背包拖到交易窗口。启用下方选项可简化操作。");
     ImGui::Indent();
-    if (ImGui::Checkbox("Double Click", &settings.move_to_trade_on_double_click) && settings.move_to_trade_on_alt_click) settings.move_to_trade_on_alt_click = false;
+    if (ImGui::Checkbox("双击", &settings.move_to_trade_on_double_click) && settings.move_to_trade_on_alt_click) settings.move_to_trade_on_alt_click = false;
     ImGui::SameLine();
-    if (ImGui::Checkbox("Alt+Click", &settings.move_to_trade_on_alt_click) && settings.move_to_trade_on_alt_click) settings.move_to_trade_on_double_click = false;
+    if (ImGui::Checkbox("Alt+点击", &settings.move_to_trade_on_alt_click) && settings.move_to_trade_on_alt_click) settings.move_to_trade_on_double_click = false;
     ImGui::Unindent();
-    ImGui::Checkbox("Show 'Guild Wars Wiki' link on item context menu", &settings.wiki_link_on_context_menu);
-    ImGui::Checkbox("Show 'Search on Market' link on item context menu", &settings.market_search_on_context_menu);
-    ImGui::Checkbox("Prompt to change secondary profession when using a tome", &settings.change_secondary_for_tome);
-    ImGui::Text("Right click an item to open context menu in:");
+    ImGui::Checkbox("在物品右键菜单中显示\"Guild Wars Wiki\"链接", &settings.wiki_link_on_context_menu);
+    ImGui::Checkbox("在物品右键菜单中显示\"在市场搜索\"链接", &settings.market_search_on_context_menu);
+    ImGui::Checkbox("使用典籍时提示更改副职业", &settings.change_secondary_for_tome);
+    ImGui::Text("在以下位置右键点击物品打开上下文菜单：");
     ImGui::Indent();
-    ImGui::Checkbox("Exporable Area", &settings.right_click_context_menu_in_explorable);
+    ImGui::Checkbox("可探索区域", &settings.right_click_context_menu_in_explorable);
     ImGui::SameLine();
-    ImGui::Checkbox("Outpost", &settings.right_click_context_menu_in_outpost);
+    ImGui::Checkbox("前哨站", &settings.right_click_context_menu_in_outpost);
     ImGui::Unindent();
-    ImGui::Text("Salvage All options:");
+    ImGui::Text("全部拆解选项：");
     ImGui::SameLine();
-    ImGui::TextDisabled("Note: Salvage All will only salvage items that are identified.");
-    ImGui::CheckboxWithHelp("Salvage Rare Materials", &settings.salvage_rare_mats, "Untick to skip salvagable rare materials when checking for salvagable items");
+    ImGui::TextDisabled("注意：全部拆解只会拆解已鉴定的物品。");
+    ImGui::CheckboxWithHelp("拆解稀有材料", &settings.salvage_rare_mats, "取消勾选可在检查可拆解物品时跳过可拆解的稀有材料");
     ImGui::SameLine();
-    ImGui::CheckboxWithHelp("Salvage Nicholas Items", &settings.salvage_nicholas_items, "Untick to skip items that Nicholas the Traveller collects when checking for salvagable items");
-    ImGui::Text("Salvage from:");
-    ImGui::ShowHelp("Only ticked bags will be checked for salvagable items");
-    ImGui::Checkbox("Backpack", &settings.salvage_from_backpack);
+    ImGui::CheckboxWithHelp("拆解 Nicholas 物品", &settings.salvage_nicholas_items, "取消勾选可在检查可拆解物品时跳过 Nicholas the Traveller 收集的物品");
+    ImGui::Text("从以下位置拆解：");
+    ImGui::ShowHelp("只有勾选的背包会被检查是否有可拆解物品");
+    ImGui::Checkbox("背包", &settings.salvage_from_backpack);
     ImGui::SameLine();
-    ImGui::Checkbox("Belt Pouch", &settings.salvage_from_belt_pouch);
+    ImGui::Checkbox("腰包", &settings.salvage_from_belt_pouch);
     ImGui::SameLine();
-    ImGui::Checkbox("Bag 1", &settings.salvage_from_bag_1);
+    ImGui::Checkbox("背包 1", &settings.salvage_from_bag_1);
     ImGui::SameLine();
-    ImGui::Checkbox("Bag 2", &settings.salvage_from_bag_2);
-    ImGui::CheckboxWithHelp("Salvage All with Control+Click", &settings.salvage_all_on_ctrl_click, "Control+Click a salvage kit to open the Salvage All window");
-    ImGui::CheckboxWithHelp("Identify green items", &settings.identify_greens, "Untick to skip green items when doing Identify All");
-    ImGui::CheckboxWithHelp("Identify All with Control+Click", &settings.identify_all_on_ctrl_click, "Control+Click an identification kit to identify all items with it");
-    ImGui::CheckboxWithHelp("Auto re-use salvage kit", &settings.auto_reuse_salvage_kit, "When a salvage kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been salvaged.");
-    ImGui::CheckboxWithHelp("Auto re-use identification kit", &settings.auto_reuse_id_kit, "When an identification kit is used without right-clicking,\nthe kit will immediately be readied for 're-use' after each item has been identified.");
+    ImGui::Checkbox("背包 2", &settings.salvage_from_bag_2);
+    ImGui::CheckboxWithHelp("Ctrl+点击 拆解工具打开全部拆解窗口", &settings.salvage_all_on_ctrl_click, "Ctrl+点击 拆解工具打开全部拆解窗口");
+    ImGui::CheckboxWithHelp("鉴定绿色物品", &settings.identify_greens, "取消勾选可在执行全部鉴定时跳过绿色物品");
+    ImGui::CheckboxWithHelp("Ctrl+点击 鉴定工具鉴定所有物品", &settings.identify_all_on_ctrl_click, "Ctrl+点击 鉴定工具可鉴定所有物品");
+    ImGui::CheckboxWithHelp("自动重复使用拆解工具", &settings.auto_reuse_salvage_kit, "当拆解工具被使用（非右键点击）后，\n每次拆解完一个物品后工具将立即准备\"重复使用\"。");
+    ImGui::CheckboxWithHelp("自动重复使用鉴定工具", &settings.auto_reuse_id_kit, "当鉴定工具被使用（非右键点击）后，\n每次鉴定完一个物品后工具将立即准备\"重复使用\"。");
     DrawMerchantHiddenItemsSettings();
 }
 
@@ -2077,7 +2077,7 @@ void InventoryManager::Update(float)
         if (IsPendingIdentify()) {
             if (clock() / CLOCKS_PER_SEC - pending_identify_at > 5) {
                 is_identifying = is_identifying_all = false;
-                Log::Warning("Failed to identify item in slot %d/%d", pending_identify_item.bag, pending_identify_item.slot);
+                Log::Warning("鉴定槽位 %d/%d 中的物品失败", pending_identify_item.bag, pending_identify_item.slot);
             }
         }
         else {
@@ -2113,10 +2113,10 @@ void InventoryManager::Draw(IDirect3DDevice9*)
     show_item_context_menu = false;
 
     if (show_transact_quantity_popup) {
-        ImGui::OpenPopup("Transaction quantity");
+        ImGui::OpenPopup("交易数量");
         pending_transaction.setState(PendingTransaction::State::Prompt);
     }
-    if (ImGui::BeginPopupModal("Transaction quantity", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("交易数量", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         switch (pending_transaction.state) {
             case PendingTransaction::State::None:
                 // Transaction has just completed, progress window still open - close it now.
@@ -2138,7 +2138,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                     }
                 }
                 // Prompt user for amount
-                ImGui::Text(pending_transaction.selling() ? "Enter quantity to sell:" : "Enter quantity to buy:");
+                ImGui::Text(pending_transaction.selling() ? "输入要出售的数量：" : "输入要购买的数量：");
                 if (ImGui::InputInt("###transacting_quantity", &pending_transaction_amount, 1, 1)) {
                     if (pending_transaction_amount < 1) {
                         pending_transaction_amount = 1;
@@ -2150,13 +2150,13 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                 }
                 show_transact_quantity_popup = false;
                 bool begin_transaction = ImGui::GetFocusID() == id && ImGui::IsKeyPressed(ImGuiKey_Enter);
-                begin_transaction |= ImGui::Button("Continue");
+                begin_transaction |= ImGui::Button("继续");
                 if (begin_transaction) {
                     pending_cancel_transaction = false;
                     pending_transaction.setState(PendingTransaction::State::Pending);
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Cancel")) {
+                if (ImGui::Button("取消")) {
                     pending_cancel_transaction = true;
                     ImGui::CloseCurrentPopup();
                 }
@@ -2164,8 +2164,8 @@ void InventoryManager::Draw(IDirect3DDevice9*)
             break;
             default:
                 // Anything else is in progress.
-                ImGui::Text(pending_transaction.selling() ? "Selling items..." : "Buying items...");
-                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                ImGui::Text(pending_transaction.selling() ? "正在出售物品..." : "正在购买物品...");
+                if (ImGui::Button("取消", ImVec2(120, 0))) {
                     pending_cancel_transaction = true;
                     ImGui::CloseCurrentPopup();
                 }
@@ -2174,11 +2174,11 @@ void InventoryManager::Draw(IDirect3DDevice9*)
         ImGui::EndPopup();
     }
     if (show_salvage_all_popup) {
-        ImGui::OpenPopup("Salvage All?");
+        ImGui::OpenPopup("全部拆解？");
         show_salvage_all_popup = false;
         check_all_items = true;
     }
-    if (ImGui::BeginPopupModal("Salvage All?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("全部拆解？", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         if (!is_salvaging_all && salvage_all_type == SalvageAllType::None) {
             // Salvage has just completed, progress window still open - close it now.
             CancelSalvage();
@@ -2186,22 +2186,22 @@ void InventoryManager::Draw(IDirect3DDevice9*)
         }
         else if (is_salvaging_all) {
             // Salvage in progress
-            ImGui::Text("Salvaging items...");
-            if (ImGui::Button("Cancel", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ImGui::Text("正在拆解物品...");
+            if (ImGui::Button("取消", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 pending_cancel_salvage = true;
                 ImGui::CloseCurrentPopup();
             }
         }
         else {
             // Are you sure prompt; at this point we've already got the list of items via FetchPotentialItems()
-            ImGui::Text("You're about to salvage %d item%s:", potential_salvage_all_items.size(), potential_salvage_all_items.size() == 1 ? "" : "s");
-            ImGui::TextDisabled("Untick an item to skip salvaging");
+            ImGui::Text("您即将拆解 %d 个物品：", potential_salvage_all_items.size());
+            ImGui::TextDisabled("取消勾选以跳过拆解该物品");
             const float& font_scale = ImGui::FontScale();
             const float wiki_btn_width = 50.0f * font_scale;
             static float longest_item_name_length = 280.0f * font_scale;
             const GW::Bag* bag = nullptr;
             bool has_items_to_salvage = false;
-            if (ImGui::Checkbox("Select All", &check_all_items)) {
+            if (ImGui::Checkbox("全选", &check_all_items)) {
                 for (size_t i = 0; i < potential_salvage_all_items.size(); i++) {
                     potential_salvage_all_items[i]->proceed = check_all_items;
                 }
@@ -2252,18 +2252,18 @@ void InventoryManager::Draw(IDirect3DDevice9*)
                 ImGui::PopID();
                 has_items_to_salvage |= pi->proceed;
             }
-            ImGui::Text("\n\nAre you sure?");
+            ImGui::Text("\n\n确定要拆解吗？");
             auto btn_width = ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x, 0);
             if (has_items_to_salvage) {
                 btn_width.x /= 2;
-                if (ImGui::Button("OK", btn_width) || ImGui::IsKeyDown(ImGuiKey_Space) || ImGui::IsKeyDown(ImGuiKey_Enter)) {
+                if (ImGui::Button("确定", btn_width) || ImGui::IsKeyDown(ImGuiKey_Space) || ImGui::IsKeyDown(ImGuiKey_Enter)) {
                     is_salvaging_all = true;
                 }
                 ImGui::SameLine();
             }
             // Pressing [Escape] when no item is selected results in the window being closed.
             // Or pressing [Escape] when some items are selected results in everything being unselected.
-            if (ImGui::Button("Cancel", btn_width) || ImGui::IsKeyPressed(ImGuiKey_Escape) && !has_items_to_salvage) {
+            if (ImGui::Button("取消", btn_width) || ImGui::IsKeyPressed(ImGuiKey_Escape) && !has_items_to_salvage) {
                 CancelSalvage();
                 ImGui::CloseCurrentPopup();
             }
@@ -2281,7 +2281,7 @@ void InventoryManager::Draw(IDirect3DDevice9*)
 
 bool InventoryManager::DrawItemContextMenu(const bool open)
 {
-    const auto context_menu_id = "Item Context Menu";
+    const auto context_menu_id = "物品右键菜单";
     const auto has_context_menu = [&](const Item* item) {
         if (!item) {
             return false;
@@ -2328,17 +2328,17 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     bool can_use_storage = GW::Items::CanAccessXunlaiChest();
     // Shouldn't really fetch item() every frame, but its only when the menu is open and better than risking a crash
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        if (bag && can_use_storage && ImGui::Button(context_item_actual->IsInventoryItem() ? "Store Item" : "Withdraw Item", size)) {
+        if (bag && can_use_storage && ImGui::Button(context_item_actual->IsInventoryItem() ? "存入物品" : "取出物品", size)) {
             ImGui::CloseCurrentPopup();
             MoveItem(context_item_actual);
             goto end_popup;
         }
         char c_all_label[128];
         *c_all_label = 0;
-        snprintf(c_all_label, _countof(c_all_label), "Consume All %s", context_item.plural_item_name->string().c_str());
+        snprintf(c_all_label, _countof(c_all_label), "全部使用 %s", context_item.plural_item_name->string().c_str());
         if (CanBulkConsume(context_item_actual) && ImGui::Button(c_all_label, size)) {
             ImGui::CloseCurrentPopup();
-            const auto msg = std::format("Are you sure you want to consume all {} {}(s)?", context_item_actual->GetUses(), context_item.plural_item_name->string());
+            const auto msg = std::format("确定要全部使用 {} 个 {} 吗？", context_item_actual->GetUses(), context_item.plural_item_name->string());
             ImGui::ConfirmDialog(msg.c_str(), [](bool result, void* wparam) {
                 if(result)
                     consume_all((InventoryManager::Item *)GW::Items::GetItemById((uint32_t)wparam));
@@ -2350,72 +2350,72 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         *move_all_label = 0;
         if (can_use_storage && context_item_actual->IsInventoryItem()) {
             if (IsUnid(context_item_actual)) {
-                if (ImGui::Button("Store All Unids", size)) {
+                if (ImGui::Button("存入所有未鉴定物品", size)) {
                     ImGui::CloseCurrentPopup();
                     store_all_unids();
                     goto end_popup;
                 }
             }
             if (context_item_actual->GetIsMaterial()) {
-                if (ImGui::Button("Store All Materials", size)) {
+                if (ImGui::Button("存入所有材料", size)) {
                     ImGui::CloseCurrentPopup();
                     store_all_materials();
                     goto end_popup;
                 }
             }
             else if (context_item_actual->IsTome()) {
-                if (ImGui::Button("Store All Tomes", size)) {
+                if (ImGui::Button("存入所有典籍", size)) {
                     ImGui::CloseCurrentPopup();
                     store_all_tomes();
                     goto end_popup;
                 }
             }
             else if (context_item_actual->type == GW::Constants::ItemType::Rune_Mod) {
-                if (ImGui::Button("Store All Upgrades", size)) {
+                if (ImGui::Button("存入所有升级组件", size)) {
                     ImGui::CloseCurrentPopup();
                     store_all_upgrades();
                     goto end_popup;
                 }
             }
             else if (context_item_actual->type == GW::Constants::ItemType::Dye) {
-                if (ImGui::Button("Store All Dyes", size)) {
+                if (ImGui::Button("存入所有染料", size)) {
                     ImGui::CloseCurrentPopup();
                     store_all_dyes();
                     goto end_popup;
                 }
             }
             if (DailyQuests::IsNicholasItem(context_item_actual)) {
-                if (ImGui::Button("Store All Nicholas Items", size)) {
+                if (ImGui::Button("存入所有 Nicholas 物品", size)) {
                     ImGui::CloseCurrentPopup();
                     store_all_nicholas_items();
                     goto end_popup;
                 }
             }
-            snprintf(move_all_label, _countof(move_all_label), "Store All %s", context_item.plural_item_name->string().c_str());
+            snprintf(move_all_label, _countof(move_all_label), "存入所有 %s", context_item.plural_item_name->string().c_str());
         }
         if (can_use_storage && context_item_actual->IsStorageItem()) {
             if (IsUnid(context_item_actual)) {
-                if (ImGui::Button("Withdraw All Unids", size)) {
+                if (ImGui::Button("取出所有未鉴定物品", size)) {
                     ImGui::CloseCurrentPopup();
                     withdraw_all_unids();
                     goto end_popup;
                 }
             }
             if (context_item_actual->type == GW::Constants::ItemType::Dye) {
-                if (ImGui::Button("Withdraw All Dyes", size)) {
+                if (ImGui::Button("取出所有染料", size)) {
                     ImGui::CloseCurrentPopup();
                     withdraw_all_dyes();
                     goto end_popup;
                 }
             }
             if (context_item_actual->IsTome()) {
-                if (ImGui::Button("Withdraw All Tomes", size)) {
+                if (ImGui::Button("取出所有典籍", size)) {
                     ImGui::CloseCurrentPopup();
                     withdraw_all_tomes();
                     goto end_popup;
                 }
             }
-            snprintf(move_all_label, _countof(move_all_label), "Withdraw All %s", context_item.plural_item_name->string().c_str());
+            snprintf(move_all_label, _countof(move_all_label), "取出所有 %s", context_item.plural_item_name->string().c_str());
         }
         if (*move_all_label && ImGui::Button(move_all_label, size)) {
             ImGui::CloseCurrentPopup();
@@ -2425,19 +2425,19 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     }
     if (bag && context_item_actual->IsIdentificationKit()) {
         auto type = IdentifyAllType::None;
-        if (ImGui::Button("Identify All Items", size)) {
+        if (ImGui::Button("鉴定所有物品", size)) {
             type = IdentifyAllType::All;
         }
         ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
-        if (ImGui::Button("Identify All Blue Items", size)) {
+        if (ImGui::Button("鉴定所有蓝色物品", size)) {
             type = IdentifyAllType::Blue;
         }
         ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
-        if (ImGui::Button("Identify All Purple Items", size)) {
+        if (ImGui::Button("鉴定所有紫色物品", size)) {
             type = IdentifyAllType::Purple;
         }
         ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
-        if (ImGui::Button("Identify All Gold Items", size)) {
+        if (ImGui::Button("鉴定所有金色物品", size)) {
             type = IdentifyAllType::Gold;
         }
         ImGui::PopStyleColor(3);
@@ -2454,19 +2454,19 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
     }
     if (bag && context_item_actual->IsSalvageKit()) {
         auto type = SalvageAllType::None;
-        if (ImGui::Button("Salvage All White Items", size)) {
+        if (ImGui::Button("拆解所有白色物品", size)) {
             type = SalvageAllType::White;
         }
         ImGui::PushStyleColor(ImGuiCol_Text, ItemBlue);
-        if (ImGui::Button("Salvage All Blue & Lesser Items", size)) {
+        if (ImGui::Button("拆解所有蓝色及以下物品", size)) {
             type = SalvageAllType::BlueAndLower;
         }
         ImGui::PushStyleColor(ImGuiCol_Text, ItemPurple);
-        if (ImGui::Button("Salvage All Purple & Lesser Items", size)) {
+        if (ImGui::Button("拆解所有紫色及以下物品", size)) {
             type = SalvageAllType::PurpleAndLower;
         }
         ImGui::PushStyleColor(ImGuiCol_Text, ItemGold);
-        if (ImGui::Button("Salvage All Gold & Lesser Items", size)) {
+        if (ImGui::Button("拆解所有金色及以下物品", size)) {
             type = SalvageAllType::GoldAndLower;
         }
         ImGui::PopStyleColor(3);
@@ -2481,7 +2481,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         }
     }
     if (bag) {
-        const auto btn_text = std::format("Destroy {}", context_item.name->string());
+        const auto btn_text = std::format("销毁 {}", context_item.name->string());
         if (ImGui::Button(btn_text.c_str())) {
             ImGui::CloseCurrentPopup();
             pending_destroy_item_id = context_item.item_id;
@@ -2495,19 +2495,19 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         ImGui::CloseCurrentPopup();
         GuiUtils::SearchWiki(context_item.wiki_name->wstring());
     }
-    if (settings.market_search_on_context_menu && context_item_actual->IsTradable() && ImGui::Button("Search on Market", size)) {
+    if (settings.market_search_on_context_menu && context_item_actual->IsTradable() && ImGui::Button("在市场搜索", size)) {
         ImGui::CloseCurrentPopup();
         GWMarketWindow::SearchItem(context_item.wiki_name->string());
     }
     if (ArmoryWindow::CanPreviewItem(context_item.item())) {
-        if (ImGui::Button("Preview Item", size)) {
+        if (ImGui::Button("预览物品", size)) {
             ImGui::CloseCurrentPopup();
             ArmoryWindow::PreviewItem(context_item.item());
             goto end_popup;
         }
     }
     if (GWMarketWindow::CanSellItem(context_item.item())) {
-        if (ImGui::Button("Sell Item on Market", size)) {
+        if (ImGui::Button("在市场出售物品", size)) {
             ImGui::CloseCurrentPopup();
             GWMarketWindow::AddItemToSell(context_item.item());
             goto end_popup;
@@ -2517,7 +2517,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         context_item.single_item_name->string(); // Pre-decode
         const auto identifier = context_item_actual->name_enc;
         bool flagged = block_from_being_salvaged.contains(identifier);
-        if (ImGui::Button(!flagged ? "Hide this when salvaging" : "Show this when salvaging", size)) {
+        if (ImGui::Button(!flagged ? "拆解时隐藏此物品" : "拆解时显示此物品", size)) {
             ImGui::CloseCurrentPopup();
             if (flagged) {
                 block_from_being_salvaged.erase(identifier);
@@ -2533,7 +2533,7 @@ bool InventoryManager::DrawItemContextMenu(const bool open)
         context_item.single_item_name->string(); // Pre-decode
         const auto identifier = context_item_actual->model_id;
         bool flagged = hide_from_merchant_items.contains(identifier);
-        if (ImGui::Button(!flagged ? "Hide this when selling" : "Show this when selling", size)) {
+        if (ImGui::Button(!flagged ? "出售时隐藏此物品" : "出售时显示此物品", size)) {
             ImGui::CloseCurrentPopup();
             if (flagged) {
                 hide_from_merchant_items.erase(identifier);
@@ -2567,7 +2567,7 @@ uint16_t InventoryManager::MoveItem(const Item* item, const uint16_t quantity)
 
     // @Cleanup: Bad
     if (item->model_file_id == 0x0002f301) {
-        Log::Error("Ctrl+click doesn't work with birthday presents yet");
+        Log::Error("Ctrl+点击 暂不支持生日礼物");
         return 0;
     }
     const bool is_inventory_item = item->IsInventoryItem();
@@ -2642,7 +2642,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                 if (!item->bag->IsInventoryBag()) {
                     const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2);
                     if (!moved) {
-                        Log::ErrorW(L"Failed to move item to inventory for trading");
+                        Log::ErrorW(L"移动物品到背包用于交易失败");
                         return;
                     }
                 }
@@ -2659,7 +2659,7 @@ void InventoryManager::ItemClickCallback(GW::HookStatus* status, GW::UI::UIPacke
                 if (!item->bag->IsInventoryBag()) {
                     const uint16_t moved = move_to_first_empty_slot(item, GW::Constants::Bag::Backpack, GW::Constants::Bag::Bag_2);
                     if (!moved) {
-                        Log::ErrorW(L"Failed to move item to inventory for trading");
+                        Log::ErrorW(L"移动物品到背包用于交易失败");
                         return;
                     }
                 }
@@ -2803,4 +2803,3 @@ bool PendingTransaction::selling()
 {
     return type == GW::Merchant::TransactionType::MerchantSell || type == GW::Merchant::TransactionType::TraderSell;
 }
-

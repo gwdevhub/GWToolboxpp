@@ -71,7 +71,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Chat Settings"; }
+    [[nodiscard]] const char* Name() const override { return "聊天设置"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_COMMENTS; }
 
     struct Settings {

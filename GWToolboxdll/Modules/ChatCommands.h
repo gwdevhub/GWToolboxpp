@@ -23,8 +23,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Chat Commands"; }
-    [[nodiscard]] const char* SettingsName() const override { return "Chat Settings"; }
+    [[nodiscard]] const char* Name() const override { return "聊天命令"; }
+    [[nodiscard]] const char* SettingsName() const override { return "聊天命令设置"; }
 
     // MSVC can't reflect member names of internal-linkage types, so settings structs are nested in the class
     struct Settings {

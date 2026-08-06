@@ -298,54 +298,54 @@ namespace {
     GW::UI::UIInteractionCallback OnChatInteraction_Callback_Func = nullptr;
     GW::UI::UIInteractionCallback OnChatInteraction_Callback_Ret = nullptr;
 
-    constexpr auto chat_tab_syntax = "'/chat [all|guild|team|trade|alliance|whisper]' open chat channel.";
-    constexpr auto dialog_syntax = "'/dialog [dialog_id]' (e.g. '/dialog 0x184') sends a dialog id to the current NPC you're talking to.\n"
-                                   "'/dailog take' automatically takes the first available quest/reward from the NPC you're talking to.";
-    constexpr auto dropbuff_syntax = "'/dropbuff [skill_id]' drops the first instance of an upkept skill/buff";
-    constexpr auto dropitem_syntax = "'/dropitem <model_id> [quantity]' drops items from your inventory matching the model id.\n"
-                                     "Without a quantity, every matching stack is dropped.";
-    constexpr auto fps_syntax = "'/fps [limit (15-400)]' sets a hard frame limit for Guild Wars. Pass '0' to remove the limit.\n'/fps' shows current frame limit";
-    constexpr auto pref_syntax = "'/pref [preference] [number (0-4)]' set the in-game preference setting in Guild Wars.\n'/pref list' to list the preferences available to set.";
+    constexpr auto chat_tab_syntax = "'/chat [all|guild|team|trade|alliance|whisper]' 打开聊天频道。";
+    constexpr auto dialog_syntax = "'/dialog [dialog_id]'（例如 '/dialog 0x184'）向当前对话的 NPC 发送对话 ID。\n"
+                                   "'/dialog take' 自动从当前 NPC 接受第一个可用任务/奖励。";
+    constexpr auto dropbuff_syntax = "'/dropbuff [skill_id]' 移除第一个维持技能/增益效果";
+    constexpr auto dropitem_syntax = "'/dropitem <model_id> [quantity]' 从背包中丢弃匹配模型 ID 的物品。\n"
+                                     "不指定数量则丢弃每个匹配的堆叠。";
+    constexpr auto fps_syntax = "'/fps [limit (15-400)]' 设置 Guild Wars 的帧率限制。传入 '0' 移除限制。\n'/fps' 显示当前帧率限制";
+    constexpr auto pref_syntax = "'/pref [preference] [number (0-4)]' 设置 Guild Wars 中的游戏内偏好设置。\n'/pref list' 列出可设置的偏好选项。";
 
-    constexpr auto tb_syntax = "'/tb <name>' toggles the window or widget titled <name>.\n"
-                               "'/tb save [profile]' saves current Toolbox settings to disk; if [profile] is given, write to that profile, otherwise write to the default config.\n"
-                               "'/tb load [profile]' loads Toolbox settings from disk; if [profile] is given, read from that profile, otherwise read from the default config.\n"
-                               "'/tb reset' moves Toolbox and Settings window to the top-left corner.\n"
-                               "'/tb quit' or '/tb exit' completely closes toolbox and all its windows.";
+    constexpr auto tb_syntax = "'/tb <名称>' 切换名为 <名称> 的窗口或小部件的显示状态。\n"
+                               "'/tb save [配置]' 将当前工具箱设置保存到磁盘；如果指定 [配置]，则写入该配置，否则写入默认配置。\n"
+                               "'/tb load [配置]' 从磁盘加载工具箱设置；如果指定 [配置]，则从该配置读取，否则从默认配置读取。\n"
+                               "'/tb reset' 将工具箱和设置窗口移动到左上角。\n"
+                               "'/tb quit' 或 '/tb exit' 完全关闭工具箱及其所有窗口。";
 
-    constexpr auto withdraw_syntax = "'/withdraw [quantity (1-65535)] [model_id1 model_id2 ...]' tops up your inventory "
-                                     "with a minimum quantity of 1 or more items, identified by model_id\n"
-                                     "If no model_ids are passed, withdraws [quantity][k] gold from storage\n"
-                                     "If quantity is 'all' and you do not pass model_ids, withdraws all gold you have or can hold.";
-    constexpr auto deposit_syntax = "'/deposit [quantity (1-65535)] [model_id1 model_id2 ...]' deposits [quantity] items, "
-                                    "identified by model ids, from your inventory to your storage.\n"
-                                    "If no model_ids are passed, deposits [quantity][k] gold from your inventory\n"
-                                    "If quantity is 'all' and you do not pass model_ids, deposits all gold [platinum] from your inventory to your storage.";
+    constexpr auto withdraw_syntax = "'/withdraw [数量 (1-65535)] [model_id1 model_id2 ...]' 补货背包 "
+                                     "至少 1 个或多个物品，通过 model_id 识别\n"
+                                     "如果不传 model_ids，则从存储中提取 [数量][k] 金币\n"
+                                     "如果数量为 'all' 且不传 model_ids，则提取所有可以持有或已拥有的金币。";
+    constexpr auto deposit_syntax = "'/deposit [数量 (1-65535)] [model_id1 model_id2 ...]' 存入 [数量] 个物品，"
+                                    "通过 model_id 识别，从背包存入存储。\n"
+                                    "如果不传 model_ids，则从背包存入 [数量][k] 金币\n"
+                                    "如果数量为 'all' 且不传 model_ids，则从背包中存入所有金币到存储。";
 
-    constexpr auto CmdHeroBehaviour_syntax = "'/hero [avoid|guard|attack|target] [hero_index] [silent]' to set your hero behavior or target in an explorable area.\n"
-                                             "If hero_index is not provided, all heroes behaviours will be adjusted.\n"
-                                             "Add 'silent' to suppress chat message from the hero.";
+    constexpr auto CmdHeroBehaviour_syntax = "'/hero [avoid|guard|attack|target] [hero_index] [silent]' 在可探索区域中设置英雄行为或目标。\n"
+                                             "如果不提供 hero_index，则调整所有英雄的行为。\n"
+                                             "添加 'silent' 以抑制英雄的聊天消息。";
 
-    constexpr auto disableheroskill_syntax = "'/disableheroskill <hero_index (1-7)> <slot (1-8)> [1|0]' to disable, enable, or toggle a hero's skill slot.\n"
-                                             "Omit the last argument to toggle the current state.";
+    constexpr auto disableheroskill_syntax = "'/disableheroskill <hero_index (1-7)> <slot (1-8)> [1|0]' 禁用、启用或切换英雄技能栏的技能槽。\n"
+                                             "省略最后一个参数则切换当前状态。";
 
-    constexpr auto target_syntax = "'/target closest' to target the closest agent to you.\n"
-                                   "'/target ee' to target best ebon escape agent.\n"
-                                   "'/target hos' to target best vipers/hos agent.\n"
-                                   "'/target [name|model_id] [index]' target nearest NPC by name or model_id.\n   If index is specified, it will target index-th by ID.\n"
-                                   "'/target player [name|player_number]' target nearest player by name or player number.\n"
-                                   "'/target gadget [name|gadget_id]' target nearest interactive object by name or gadget_id.\n"
-                                   "'/target priority [partymember]' to target priority target of party member.";
+    constexpr auto target_syntax = "'/target closest' 定位离你最近的单位。\n"
+                                   "'/target ee' 定位最佳的 \"黑檀逃脱\" 目标。\n"
+                                   "'/target hos' 定位最佳的 \"毒蛇\" 目标。\n"
+                                   "'/target [名称|model_id] [索引]' 按名称或模型 ID 定位最近的 NPC。\n   如果指定索引，则按 ID 定位第 index 个。\n"
+                                   "'/target player [名称|player_number]' 按名称或玩家编号定位最近的玩家。\n"
+                                   "'/target gadget [名称|gadget_id]' 按名称或 gadget_id 定位最近的交互对象。\n"
+                                   "'/target priority [队伍成员]' 定位队伍成员的优先目标。";
 
-    constexpr auto button_syntax = "'/button [button_label] [button_label...]' e.g. /button \"BtnBuy\" \"BtnAccept\" \"BtnOk\"\n"
-                                   "Allows you to interact with UI buttons on-screen if you know the labels";
+    constexpr auto button_syntax = "'/button [button_label] [button_label...]' 例如 /button \"BtnBuy\" \"BtnAccept\" \"BtnOk\"\n"
+                                   "如果您知道标签，可以通过此命令与屏幕上的 UI 按钮交互";
 
-    constexpr auto useskill_syntax = "'/useskill [slot]' starts using the skill on recharge.\n"
-                                     "Use the skill number instead of [slot] (e.g. '/useskill 5').\n"
-                                     "Use '/useskill [stop|off|slot|0]' to stop the skill.";
+    constexpr auto useskill_syntax = "'/useskill [slot]' 开始按冷却使用技能。\n"
+                                     "使用技能编号代替 [slot]（例如 '/useskill 5'）。\n"
+                                     "使用 '/useskill [stop|off|slot|0]' 停止使用技能。";
 
-    constexpr auto custommarker_syntax = "'/custommarker <x> <y>' to place a custom marker at world map coordinates (x, y).\n"
-                                         "'/custommarker clear' to remove the custom marker.";
+    constexpr auto custommarker_syntax = "'/custommarker <x> <y>' 在世界地图坐标 (x, y) 放置自定义标记。\n"
+                                         "'/custommarker clear' 移除自定义标记。";
 
     void CHAT_CMD_FUNC(CmdChatTab)
     {
@@ -383,9 +383,9 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdDuncan)
     {
-        std::wstring out_message = std::format(L"{}\x2\x108\x107 Status: \x1", GW::EncStrings::Quest::TheLastHeirophant);
+        std::wstring out_message = std::format(L"{}\x2\x108\x107状态：\x1", GW::EncStrings::Quest::TheLastHeirophant);
         if (!GW::QuestMgr::GetQuest(GW::Constants::QuestID::The_Last_Hierophant)) {
-            out_message += L"\x108\x107I don't have the quest!\x1";
+            out_message += L"\x108\x107我没有这个任务！\x1";
         }
         else {
             const auto objectives = QuestModule::ParseQuestObjectives(GW::Constants::QuestID::The_Last_Hierophant);
@@ -468,7 +468,7 @@ namespace {
         const auto buff = GW::Effects::GetPlayerBuffBySkillId(skill->skill_id);
         if (!buff) return;
         if (!GW::Effects::DropBuff(buff->buff_id)) {
-            Log::Warning("Failed to drop buff!");
+            Log::Warning("移除增益失败！");
             return;
         }
     }
@@ -479,7 +479,7 @@ namespace {
             return;
         }
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
-            Log::Warning("You can only drop items in an explorable area");
+            Log::Warning("只能在可探索区域丢弃物品");
             return;
         }
         uint32_t model_id = 0;
@@ -512,7 +512,7 @@ namespace {
             }
         }
         if (!dropped) {
-            Log::Warning("No droppable item with model id %u found in your inventory", model_id);
+            Log::Warning("在背包中未找到模型 ID %u 的可丢弃物品", model_id);
             return;
         }
     }
@@ -532,10 +532,10 @@ namespace {
         if (argc < 2) {
             const auto current_limit = GW::Render::GetFrameLimit();
             if (!current_limit) {
-                Log::Flash("Frame limit is not set");
+                Log::Flash("未设置帧率限制");
             }
             else {
-                Log::Flash("Frame limit set to %dfps", current_limit);
+                Log::Flash("帧率限制设置为 %d FPS", current_limit);
             }
         }
         uint32_t frame_limit = 0;
@@ -564,7 +564,7 @@ namespace {
         if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
             GW::GameThread::Enqueue([pref, value, pref_str = std::wstring(argv[1])] {
                 if (!GW::UI::SetPreference(pref, value)) {
-                    Log::ErrorW(L"Failed to set preference %s to %d", pref_str.c_str(), value);
+                    Log::ErrorW(L"设置偏好 %s 为 %d 失败", pref_str.c_str(), value);
                 }
             });
             return;
@@ -572,7 +572,7 @@ namespace {
 
         // Print current value
         if (argc < 3) {
-            Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
+            Log::InfoW(L"%s 的当前偏好值为 %d", argv[1], GetPreference(pref));
         }
         return Log::Error(pref_syntax);
     }
@@ -588,7 +588,7 @@ namespace {
         if (argc > 2 && TextUtils::ParseUInt(argv[2], &value)) {
             GW::GameThread::Enqueue([pref, value, pref_str = std::wstring(argv[1])] {
                 if (!GW::UI::SetPreference(pref, value)) {
-                    Log::ErrorW(L"Failed to set preference %s to %d", pref_str.c_str(), value);
+                    Log::ErrorW(L"设置偏好 %s 为 %d 失败", pref_str.c_str(), value);
                 }
             });
             return;
@@ -596,7 +596,7 @@ namespace {
 
         // Print current value
         if (argc < 3) {
-            Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
+            Log::InfoW(L"%s 的当前偏好值为 %d", argv[1], GetPreference(pref));
         }
 
         // Got this far; print out available values for this preference.
@@ -604,7 +604,7 @@ namespace {
         const auto available = GetPreferenceOptions(pref, &values);
         wchar_t available_vals_buffer[120];
         uint32_t offset = 0;
-        offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), L"Available values for %s: ", argv[1]);
+        offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), L"%s 的可用值：", argv[1]);
         for (size_t i = 0; i < available; i++) {
             offset += swprintf(&available_vals_buffer[offset], offset - _countof(available_vals_buffer), i > 0 ? L", %d" : L"%d", values[i]);
         }
@@ -630,7 +630,7 @@ namespace {
             return;
         }
         // Print current value
-        Log::InfoW(L"Current preference value for %s is %d", argv[1], GetPreference(pref));
+        Log::InfoW(L"%s 的当前偏好值为 %d", argv[1], GetPreference(pref));
     }
 
     // Reduce a preference name to a comparable slug so user input matches the label regardless of case, spacing or punctuation.
@@ -695,11 +695,11 @@ namespace {
             pref_map.emplace_back(GW::UI::NumberPreference::VolMaster, GW::EncStrings::MasterVolume);
             pref_map.emplace_back(GW::UI::NumberPreference::VolMusic, GW::EncStrings::MusicVolume);
             pref_map.emplace_back(GW::UI::FlagPreference::DisableMouseWalking, GW::EncStrings::DisableMouseWalking);
-            pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107Show Foe Names\x1");
-            pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107Show Ally Names\x1");
+            pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowFoeNames, L"\x108\x107显示敌人名称\x1");
+            pref_map.emplace_back(GW::UI::FlagPreference::AlwaysShowAllyNames, L"\x108\x107显示友方名称\x1");
             pref_map.emplace_back(
                 GW::UI::FlagPreference::EnableGamepad, L"\x108\x107"
-                                                       "Enable Gamepad\x1"
+                                                       "启用游戏手柄\x1"
             );
             pref_map.emplace_back(GW::UI::FlagPreference::LegacyStartMissionButton, GW::EncStrings::LegacyStartMissionButton);
             pref_map.emplace_back(GW::UI::FlagPreference::EnableMobileHUD, GW::EncStrings::EnableMobileHUD);
@@ -725,7 +725,7 @@ namespace {
                 if (!buffer.empty()) buffer += L", ";
                 buffer += option.label->wstring();
             }
-            return Log::InfoW(L"/pref options:\n%s", buffer.c_str());
+            return Log::InfoW(L"/pref 选项：\n%s", buffer.c_str());
         }
 
         // Match leniently: slug both sides so the input accepts any case/spacing/punctuation
@@ -735,7 +735,7 @@ namespace {
             return SanitisePrefName(cmd.label->wstring()) == requested;
         });
         if (found == options.end()) {
-            return Log::ErrorW(L"Unknown preference \"%s\". Type '/pref list' to see the preferences you can set.", argv[1]);
+            return Log::ErrorW(L"未知偏好 \"%s\"。输入 '/pref list' 查看可设置的偏好选项。", argv[1]);
         }
         const PrefMapCommand* pref = &(*found);
 
@@ -923,7 +923,7 @@ namespace {
         size_t hero_index = 0; // This is 1 based!
         if (TextUtils::ParseUInt(hero_name.c_str(), &hero_index)) {
             if (hero_index < 1 || hero_index > flags->size()) {
-                Log::LogW(L"Failed to find hero %d", hero_index);
+                Log::LogW(L"未找到英雄 %d", hero_index);
                 return;
             }
             size_t out_index = 0;
@@ -948,7 +948,7 @@ namespace {
                 }
             }
             if (!flagged) {
-                Log::LogW(L"Failed to find hero %s", hero_name.c_str());
+                Log::LogW(L"未找到英雄 %s", hero_name.c_str());
             }
         });
     }
@@ -1003,13 +1003,13 @@ namespace {
 
         if (arg1 == L"getid") {
             const auto target = GW::Agents::GetTargetAsAgentLiving();
-            if (!target) return Log::Error("No target selected!");
-            return Log::Info("Target model id (PlayerNumber) is %d", target->player_number);
+            if (!target) return Log::Error("未选择目标！");
+            return Log::Info("目标模型 ID（PlayerNumber）为 %d", target->player_number);
         }
         if (arg1 == L"getpos") {
             const auto target = GW::Agents::GetTargetAsAgentLiving();
-            if (!target) return Log::Error("No target selected!");
-            return Log::Info("Target coordinates are (%f, %f)", target->pos.x, target->pos.y);
+            if (!target) return Log::Error("未选择目标！");
+            return Log::Info("目标坐标为 (%.2f, %.2f)", target->pos.x, target->pos.y);
         }
         if (arg1 == L"priority") {
             const GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
@@ -1030,7 +1030,7 @@ namespace {
                 uint32_t partySize = party->players.size();
                 if (party->heroes.valid()) partySize += party->heroes.size();
                 if (!TextUtils::ParseUInt(argv[2], &partyMemberNumber) || partyMemberNumber == 0 || partyMemberNumber > partySize) {
-                    return Log::Error("Invalid argument '%ls', please use an integer value of 1 to %u", argv[2], partySize);
+                    return Log::Error("无效参数 '%ls'，请输入 1 到 %u 之间的整数", argv[2], partySize);
                 }
                 uint32_t count = 0;
                 for (const GW::PlayerPartyMember& player : party->players) {
@@ -1093,13 +1093,13 @@ namespace {
             case SettingsRegistry::Type::Int:
             case SettingsRegistry::Type::Uint:
             case SettingsRegistry::Type::Float:
-                return "<number>";
+                return "<数字>";
             case SettingsRegistry::Type::Color:
                 return "<0xAARRGGBB>";
             case SettingsRegistry::Type::Float2:
                 return "<x> <y>";
             default:
-                return "<text>";
+                return "<文本>";
         }
     }
 
@@ -1152,10 +1152,10 @@ namespace {
             return partial_matches.front();
         }
         if (partial_matches.empty()) {
-            Log::Warning("No setting found matching '%s'", arg_lower.c_str());
+            Log::Warning("未找到匹配 '%s' 的设置", arg_lower.c_str());
             return nullptr;
         }
-        Log::Warning("'%s' matches %d settings:", arg_lower.c_str(), static_cast<int>(partial_matches.size()));
+        Log::Warning("'%s' 匹配了 %d 个设置：", arg_lower.c_str(), static_cast<int>(partial_matches.size()));
         for (size_t i = 0; i < partial_matches.size() && i < 10; i++) {
             Log::Warning("  %s", SettingSlug(*partial_matches[i]).c_str());
         }
@@ -1226,7 +1226,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdSettingViaChatCommand)
     {
         if (argc < 2) {
-            Log::Warning("Syntax: '/tb_setting <name> [value]'");
+            Log::Warning("语法：'/tb_setting <名称> [值]'");
             return;
         }
         const auto entry = ResolveSettingEntry(TextUtils::ToLower(TextUtils::WStringToString(argv[1])));
@@ -1235,7 +1235,7 @@ namespace {
         }
         const auto slug = SettingSlug(*entry);
         if (argc < 3 && entry->type == SettingsRegistry::Type::Bool) {
-            auto& val = *static_cast<bool*>(entry->ptr);
+            auto& val = *static_cast<bool*>(entry.ptr);
             val = !val;
         }
         else if (argc > 2) {
@@ -1244,7 +1244,7 @@ namespace {
                 float x = 0.f, y = 0.f;
                 ok = argc > 3 && TextUtils::ParseFloat(argv[2], &x) && TextUtils::ParseFloat(argv[3], &y);
                 if (ok) {
-                    *static_cast<std::array<float, 2>*>(entry->ptr) = {x, y};
+                    *static_cast<std::array<float, 2>*>(entry.ptr) = {x, y};
                 }
             }
             else {
@@ -1252,7 +1252,7 @@ namespace {
                 ok = SettingValueFromString(*entry, entry->type == SettingsRegistry::Type::String ? GetRemainingArgsWstr(message, 2) : argv[2]);
             }
             if (!ok) {
-                Log::Warning("Syntax: '/tb_setting %s %s'", slug.c_str(), SettingValueSyntax(entry->type));
+                Log::Warning("语法：'/tb_setting %s %s'", slug.c_str(), SettingValueSyntax(entry->type));
                 return;
             }
         }
@@ -1330,13 +1330,13 @@ namespace {
             }
             const auto entry = FindSettingEntry(section, key);
             if (!entry) {
-                Log::Warning("ignoring unknown setting '%s %s'", section.c_str(), key.c_str());
+                Log::Warning("忽略未知设置 '%s %s'", section.c_str(), key.c_str());
                 continue;
             }
             switch (action) {
                 case Set:
                     if (!SettingValueFromString(*entry, value)) {
-                        Log::Warning("invalid value for '%s', expected %s", SettingSlug(*entry).c_str(), SettingValueSyntax(entry->type));
+                        Log::Warning("'%s' 的值无效，期望 %s", SettingSlug(*entry).c_str(), SettingValueSyntax(entry->type));
                         continue;
                     }
                     break;
@@ -1347,7 +1347,7 @@ namespace {
                     const auto before = SettingValueToString(*entry);
                     SettingsRegistry::LoadEntryFromDoc(*entry, *doc);
                     if (SettingValueToString(*entry) == before && !SettingValueFromString(*entry, value)) {
-                        Log::Warning("invalid value for '%s', expected %s", SettingSlug(*entry).c_str(), SettingValueSyntax(entry->type));
+                        Log::Warning("'%s' 的值无效，期望 %s", SettingSlug(*entry).c_str(), SettingValueSyntax(entry->type));
                         continue;
                     }
                     break;
@@ -1407,7 +1407,7 @@ namespace {
                 }
             }
             else {
-                Log::Error("Timed out resolving party member names");
+                Log::Error("解析队伍成员名称超时");
             }
 
             delete agent_names;
@@ -1415,7 +1415,7 @@ namespace {
         });
     }
 
-    constexpr std::array profession_names = {L"", L"warrior", L"ranger", L"monk", L"necromancer", L"mesmer", L"elementalist", L"assassin", L"ritualist", L"paragon", L"dervish"};
+    constexpr std::array profession_names = {L"", L"战士", L"游侠", L"僧侣", L"死灵法师", L"幻术师", L"元素使", L"刺客", L"祭祀", L"圣言者", L"神唤使"};
 
     // Returns matching profession index (1-10), or 0 if no match
     static GW::Constants::ProfessionByte FindProfessionMatch(const std::wstring& search)
@@ -1534,56 +1534,56 @@ namespace {
 
     void DrawChatCommandsHelp()
     {
-        if (!ImGui::TreeNodeEx("Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (!ImGui::TreeNodeEx("聊天命令", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             return;
         }
 
-        ImGui::Text("You can create a 'Send Chat' hotkey to perform any command.");
+        ImGui::Text("您可以创建\"发送聊天\"快捷键来执行任何命令。");
         ImGui::TextDisabled(
-            "Below, <xyz> denotes an argument, use an appropriate value without the quotes.\n"
-            "(a|b) denotes a mandatory argument, in this case 'a' or 'b'.\n"
-            "[a|b] denotes an optional argument, in this case nothing, 'a' or 'b'."
+            "下方 <xyz> 表示参数，请使用适当的值（不含引号）。\n"
+            "(a|b) 表示必选参数，此情况下为 'a' 或 'b'。\n"
+            "[a|b] 表示可选参数，此情况下可为空、'a' 或 'b'。"
         );
 
         ImGui::Bullet();
-        ImGui::Text("'/age2' prints the instance time to chat.");
+        ImGui::Text("'/age2' 将当前地图时间输出到聊天。");
         ImGui::Bullet();
-        ImGui::Text("'/armor' is an alias for '/pingitem armor'.");
+        ImGui::Text("'/armor' 是 '/pingitem armor' 的别名。");
         ImGui::Bullet();
-        ImGui::Text("'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members");
+        ImGui::Text("'/bonds [remove|add] [party_member_index|all] [all|skill_id]' 从单个队伍成员或所有队伍成员移除或添加增益。");
         ImGui::Bullet();
-        ImGui::Text("'/borderless [on|off]' toggles, enables or disables borderless window.");
+        ImGui::Text("'/borderless [on|off]' 切换、启用或禁用无边框窗口。");
         ImGui::Bullet();
         ImGui::Text(button_syntax);
         ImGui::Bullet();
-        ImGui::Text("'/call' ping current target.");
+        ImGui::Text("'/call' 标记当前目标。");
         ImGui::Bullet();
         ImGui::Text(CameraUnlockModule::camera_syntax);
         ImGui::Bullet();
         ImGui::Text(chat_tab_syntax);
         ImGui::Bullet();
-        ImGui::Text("'/chest' opens xunlai in outposts.");
+        ImGui::Text("'/chest' 在前哨站打开迅雷仓库。");
         ImGui::Bullet();
         ImGui::Text(
-            "'/climate' shows the automatic weather state and the current climate.\n"
-            "'/climate [auto|off|<climate>]' drives automatic weather: 'auto' follows the map, a climate name forces one, 'off' stops automatic weather and clears any running weather."
+            "'/climate' 显示自动天气状态和当前气候。\n"
+            "'/climate [auto|off|<climate>]' 控制自动天气：'auto' 跟随地图，指定气候名称强制使用该气候，'off' 停止自动天气并清除当前天气。"
         );
         ImGui::Bullet();
         ImGui::Text(
-            "'/config set|get|toggle|load [section key [value]]...' edit configuration values from GWToolbox.ini.\n"
-            "\t'set' apply a setting to the running configuration.\n"
-            "\t'get' show value of given key.\n"
-            "\t'toggle' alternate between given value and configuration on disk.\n"
-            "\t'load' reset key to its disk configuration."
+            "'/config set|get|toggle|load [section key [value]]...' 编辑 GWToolbox.ini 中的配置值。\n"
+            "\t'set' 将设置应用到运行中的配置。\n"
+            "\t'get' 显示给定键的值。\n"
+            "\t'toggle' 在给定值和磁盘配置之间切换。\n"
+            "\t'load' 将键重置为磁盘配置。"
         );
         ImGui::Bullet();
         ImGui::Text(custommarker_syntax);
         ImGui::Bullet();
         ImGui::Text(
-            "'/damage' or '/dmg' to print party damage to chat.\n"
-            "'/damage me' sends your own damage only.\n"
-            "'/damage <number>' sends the damage of a party member (e.g. '/damage 3').\n"
-            "'/damage reset' resets the damage in party window."
+            "'/damage' 或 '/dmg' 将队伍伤害输出到聊天。\n"
+            "'/damage me' 仅发送您自己的伤害。\n"
+            "'/damage <number>' 发送队伍成员的伤害（例如 '/damage 3'）。\n"
+            "'/damage reset' 重置队伍窗口中的伤害统计。"
         );
         ImGui::Bullet();
         ImGui::Text(deposit_syntax);
@@ -1595,79 +1595,79 @@ namespace {
         ImGui::Text(dropitem_syntax);
         ImGui::Bullet();
         ImGui::Text(
-            "'/enter [fow|uw]' to enter the mission for your outpost.\n"
-            "If in embark, toa, urgoz or deep, it will use a scroll.\n"
-            "If in an outpost with an available mission, it will begin the mission countdown."
+            "'/enter [fow|uw]' 进入您所在前哨站的任务。\n"
+            "如果在启程海滩、命运之流、乌尔戈茨深渊或深渊，将使用卷轴。\n"
+            "如果在前哨站有可用任务，将开始任务倒计时。"
         );
         ImGui::Bullet();
-        ImGui::Text("'/ff' alias for '/resign'");
+        ImGui::Text("'/ff' 是 '/resign' 的别名");
         ImGui::Bullet();
-        ImGui::Text("'/flag [all|clear|<number>]' to flag a hero in the minimap (same as using the buttons by the minimap).");
+        ImGui::Text("'/flag [all|clear|<number>]' 在小地图上标记英雄（与小地图旁的按钮功能相同）。");
         ImGui::Bullet();
-        ImGui::Text("'/flag [all|<number>] [x] [y]' to flag a hero to coordinates [x],[y].");
+        ImGui::Text("'/flag [all|<number>] [x] [y]' 将英雄标记到坐标 [x],[y]。");
         ImGui::Bullet();
-        ImGui::Text("'/flag <number> clear' to clear flag for a hero.");
+        ImGui::Text("'/flag <number> clear' 清除英雄标记。");
         ImGui::Bullet();
         ImGui::Text(fps_syntax);
-        if (GWToolbox::IsModuleEnabled("Hero Equipment")) {
+        if (GWToolbox::IsModuleEnabled("英雄装备")) {
             ImGui::Bullet();
-            ImGui::Text("'/heroinventory [hero_index]' to toggle separate inventory windows for a hero");
+            ImGui::Text("'/heroinventory [hero_index]' 切换英雄的独立物品窗口");
         }
 
         ImGui::Bullet();
         ImGui::Text(CmdHeroBehaviour_syntax);
         ImGui::Bullet();
         ImGui::Text(disableheroskill_syntax);
-        const auto toggle_hint = "<name> options: helm, costume, costume_head, cape, <window_or_widget_name>";
+        const auto toggle_hint = "<name> 选项：盔甲、服装、服装头饰、披风、<窗口或小部件名称>";
         ImGui::Bullet();
-        ImGui::Text("'/hide <name>' closes the window, in-game feature or widget titled <name>.");
+        ImGui::Text("'/hide <名称>' 关闭名为 <名称> 的窗口、游戏内功能或小部件。");
         ImGui::ShowHelp(toggle_hint);
         ImGui::Bullet();
-        ImGui::Text("'/hm' or '/hardmode' to set hard mode difficulty in an outpost.");
+        ImGui::Text("'/hm' 或 '/hardmode' 在前哨站设置困难模式。");
         ImGui::Bullet();
-        ImGui::Text("'/hom' opens the Hall of Monuments calculator with the current target player's achievements.");
+        ImGui::Text("'/hom' 使用当前目标玩家的成就打开纪念堂计算器。");
         ImGui::Bullet();
-        ImGui::Text("'/load [build template|build name] [Hero index]' loads a build. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
-        ImGui::Bullet();
-        ImGui::TextUnformatted(
-            "'/loadprefs' to load GW settings from '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
-            "'/loadprefs <filename>' to load GW settings from '<GWToolbox Dir>/<filename>.ini'"
-        );
-        ImGui::Bullet();
-        ImGui::TextUnformatted("'/nm' or '/normalmode' to set normal mode difficulty in an outpost.");
-        ImGui::Bullet();
-        ImGui::TextUnformatted("'/morale' to send your current morale/death penalty info to team chat.");
+        ImGui::Text("'/load [build template|build name] [Hero index]' 加载配装。配装名称如含空格需加引号。第一个英雄索引为 1，最后一个为 7。留空则用于玩家自己。");
         ImGui::Bullet();
         ImGui::TextUnformatted(
-            "'/marktarget' to highlight the current target on the gwtoolbox minimap.\n"
-            "'/marktarget clear' to unhighlight the current target on the gwtoolbox minimap.\n"
-            "'/marktarget clearall' to clear all highlighted targets on the gwtoolbox minimap."
+            "'/loadprefs' 从 '<GWToolbox Dir>/<当前 GW 账号邮箱>_GuildWarsSettings.ini' 加载 GW 设置\n"
+            "'/loadprefs <文件名>' 从 '<GWToolbox Dir>/<文件名>.ini' 加载 GW 设置"
         );
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/observer:reset' resets observer mode data.");
+        ImGui::TextUnformatted("'/nm' 或 '/normalmode' 在前哨站设置普通模式。");
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/morale' 将您当前的士气/死亡惩罚信息发送到队伍聊天。");
         ImGui::Bullet();
         ImGui::TextUnformatted(
-            "'/pingitem <equipped_item>' to ping your equipment in chat.\n"
-            "<equipped_item> options: armor, head, chest, legs, boots, gloves, offhand, weapon, weapons, costume"
+            "'/marktarget' 在工具箱小地图上高亮当前目标。\n"
+            "'/marktarget clear' 在工具箱小地图上取消高亮当前目标。\n"
+            "'/marktarget clearall' 在工具箱小地图上清除所有高亮目标。"
         );
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/pcons [on|off]' toggles, enables or disables pcons.");
+        ImGui::TextUnformatted("'/observer:reset' 重置观察者模式数据。");
+        ImGui::Bullet();
+        ImGui::TextUnformatted(
+            "'/pingitem <装备部位>' 在聊天中标记您的装备。\n"
+            "<装备部位> 选项：armor、head、chest、legs、boots、gloves、offhand、weapon、weapons、costume"
+        );
+        ImGui::Bullet();
+        ImGui::TextUnformatted("'/pcons [on|off]' 切换、启用或禁用消耗品。");
         ImGui::Bullet();
         ImGui::TextUnformatted(pref_syntax);
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/resize <width> <height>' resize the GW window");
+        ImGui::TextUnformatted("'/resize <width> <height>' 调整 GW 窗口大小");
         ImGui::Bullet();
         ImGui::TextUnformatted(
-            "'/saveprefs' to save GW settings to '<GWToolbox Dir>/<Current GW Account Email>_GuildWarsSettings.ini'\n"
-            "'/saveprefs <filename>' to save GW settings to '<GWToolbox Dir>/<filename>.ini'"
+            "'/saveprefs' 将 GW 设置保存到 '<GWToolbox Dir>/<当前 GW 账号邮箱>_GuildWarsSettings.ini'\n"
+            "'/saveprefs <文件名>' 将 GW 设置保存到 '<GWToolbox Dir>/<文件名>.ini'"
         );
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/scwiki [<search_term>]' search https://wiki.fbgmguild.com.");
+        ImGui::TextUnformatted("'/scwiki [<搜索词>]' 搜索 https://wiki.fbgmguild.com。");
         ImGui::Bullet();
-        ImGui::TextUnformatted("'/show <name>' opens the window, in-game feature or widget titled <name>.");
+        ImGui::TextUnformatted("'/show <名称>' 打开名为 <名称> 的窗口、游戏内功能或小部件。");
         ImGui::ShowHelp(toggle_hint);
         ImGui::Bullet();
-        ImGui::Text("'/toggle <name> [on|off|toggle]' toggles the window, in-game feature or widget titled <name>.");
+        ImGui::Text("'/toggle <名称> [on|off|toggle]' 切换名为 <名称> 的窗口、游戏内功能或小部件。");
         ImGui::ShowHelp(toggle_hint);
         ImGui::Bullet();
         ImGui::Text(target_syntax);
@@ -1675,25 +1675,25 @@ namespace {
         ImGui::Text(tb_syntax);
         ImGui::Bullet();
         ImGui::Text(
-            "'/travel <town> [dis]', '/tp <town> [dis]' or '/to <town> [dis]' travel to outpost best matching <town> name. \n"
-            "[dis] can be any of: ae, ae1, ee, eg, int, etc"
+            "'/travel <城镇> [dis]'、'/tp <城镇> [dis]' 或 '/to <城镇> [dis]' 传送到与 <城镇> 名称最匹配的前哨站。\n"
+            "[dis] 可以是：ae、ae1、ee、eg、int 等"
         );
         ImGui::Bullet();
-        ImGui::Text("'/travel outpost' travel to nearest unlocked outpost to your current position.");
+        ImGui::Text("'/travel outpost' 传送到离您当前位置最近的已解锁前哨站。");
         ImGui::Bullet();
-        ImGui::Text("'/travel [zv|zb|zm]' travel to nearest unlocked outpost to daily quest.");
+        ImGui::Text("'/travel [zv|zb|zm]' 传送到离每日任务最近的已解锁前哨站。");
         ImGui::Bullet();
         ImGui::Text(useskill_syntax);
         ImGui::Bullet();
-        ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' set in-game volume.");
+        ImGui::Text("'/volume [master|music|background|effects|dialog|ui] <amount (0-100)>' 设置游戏内音量。");
         ImGui::Bullet();
         ImGui::Text(
-            "'/weather' lists the weather conditions and whether each is on.\n"
-            "'/weather <condition> [on|off|toggle]' toggles a condition by name (turning one on turns the rest off).\n"
-            "'/weather auto' starts automatic weather (same as '/climate auto'); '/weather off' stops all weather (same as '/climate off')."
+            "'/weather' 列出天气状况及其是否开启。\n"
+            "'/weather <condition> [on|off|toggle]' 按名称切换天气状况（开启一个会关闭其他）。\n"
+            "'/weather auto' 开启自动天气（同 '/climate auto'）；'/weather off' 停止所有天气（同 '/climate off'）。"
         );
         ImGui::Bullet();
-        ImGui::Text("'/wiki [quest|<search_term>]' search GWW for current quest or search term. By default, will search for the current map.");
+        ImGui::Text("'/wiki [quest|<搜索词>]' 搜索 GWW 当前任务或搜索词。默认搜索当前地图。");
         ImGui::Bullet();
         ImGui::Text(withdraw_syntax);
 
@@ -1705,12 +1705,12 @@ namespace {
     void DrawToolboxSettingChatCommandsHelp()
     {
         const auto& entries = SettingsRegistry::GetEntries();
-        if (entries.empty() || !ImGui::TreeNodeEx("Chat Commands for Toolbox Settings", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (entries.empty() || !ImGui::TreeNodeEx("工具箱设置的聊天命令", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             return;
         }
-        ImGui::TextUnformatted("These commands allow you to directly toggle or change values inside toolbox as you play.");
+        ImGui::TextUnformatted("这些命令允许您在游戏过程中直接切换或更改工具箱内的值。");
         static char filter_buf[128] = "";
-        ImGui::InputTextWithHint("##tb_setting_filter", "Filter settings...", filter_buf, sizeof(filter_buf));
+        ImGui::InputTextWithHint("##tb_setting_filter", "过滤设置...", filter_buf, sizeof(filter_buf));
         const auto draw_entry_syntax = [](const SettingsRegistry::Entry& entry) {
             ImGui::Bullet();
             auto syntax = std::format("'/{} {} {}'", "tb_setting", SettingSlug(entry), SettingValueSyntax(entry.type));
@@ -1729,12 +1729,12 @@ namespace {
                 }
                 draw_entry_syntax(entry);
                 if (++shown >= max_shown) {
-                    ImGui::TextDisabled("... more results hidden, refine the filter");
+                    ImGui::TextDisabled("... 更多结果已隐藏，请细化过滤条件");
                     break;
                 }
             }
             if (!shown) {
-                ImGui::TextDisabled("No settings match the filter");
+                ImGui::TextDisabled("没有匹配过滤条件的设置");
             }
         }
         else {
@@ -1757,24 +1757,24 @@ namespace {
 
     void CmdGoldItemCommand(int argc, const LPWSTR* argv, const char* syntax, std::function<void(uint32_t)> gold_fn, std::function<void(uint16_t, std::vector<uint32_t>&)> item_fn)
     {
-        if (argc < 2) return Log::Error("Incorrect syntax:\n%s", syntax);
+        if (argc < 2) return Log::Error("语法错误：\n%s", syntax);
         uint32_t wanted_quantity = 0;
         if (argc < 3) {
             std::wstring amount = argv[1];
             const bool platinum = amount.ends_with(L'k') || amount.ends_with(L'p');
             if (amount != L"max" && amount != L"all") {
                 if (platinum) amount.pop_back();
-                if (!(TextUtils::ParseUInt(amount.c_str(), &wanted_quantity) && wanted_quantity <= 0xFFFF)) return Log::Error("Incorrect syntax:\n%s", syntax);
+                if (!(TextUtils::ParseUInt(amount.c_str(), &wanted_quantity) && wanted_quantity <= 0xFFFF)) return Log::Error("语法错误：\n%s", syntax);
                 if (platinum) wanted_quantity *= 1000;
             }
             gold_fn(wanted_quantity);
             return;
         }
-        if (!(TextUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) return Log::Error("Incorrect syntax:\n%s", syntax);
+        if (!(TextUtils::ParseUInt(argv[1], &wanted_quantity) && wanted_quantity <= 0xFFFF)) return Log::Error("语法错误：\n%s", syntax);
         std::vector<uint32_t> model_ids;
         for (auto i = 2; i < argc; i++) {
             uint32_t model_id;
-            if (!TextUtils::ParseUInt(argv[i], &model_id)) return Log::Error("Incorrect syntax:\n%s", syntax);
+            if (!TextUtils::ParseUInt(argv[i], &model_id)) return Log::Error("语法错误：\n%s", syntax);
             model_ids.push_back(model_id);
         }
         item_fn(static_cast<uint16_t>(wanted_quantity), model_ids);
@@ -1813,13 +1813,13 @@ void ChatCommands::DrawHelp()
 
 void ChatCommands::DrawSettingsInternal()
 {
-    std::string preview = "Select...";
+    std::string preview = "选择...";
     switch (settings.default_title_id) {
         case CMDTITLE_KEEP_CURRENT:
-            preview = "Keep current title";
+            preview = "保持当前称号";
             break;
         case CMDTITLE_REMOVE_CURRENT:
-            preview = "Remove title";
+            preview = "移除称号";
             break;
         default:
             const auto selected = std::ranges::find_if(title_names, [&](auto* it) {
@@ -1832,14 +1832,14 @@ void ChatCommands::DrawSettingsInternal()
             break;
     }
 
-    ImGui::Text("Default '/title' command fallback action");
-    ImGui::ShowHelp("Toolbox will reapply this title if there isn't an approriate title for the area you're in.\nIf your current character doesn't have the selected title, nothing will happen.");
+    ImGui::Text("'/title' 命令的默认回退操作");
+    ImGui::ShowHelp("如果您所在的区域没有合适的称号，工具箱将重新应用此称号。\n如果您当前角色没有选中的称号，则不会发生任何变化。");
     ImGui::Indent();
     if (ImGui::BeginCombo("###title_command_fallback", preview.c_str())) {
-        if (ImGui::Selectable("Keep current title", CMDTITLE_KEEP_CURRENT == settings.default_title_id)) {
+        if (ImGui::Selectable("保持当前称号", CMDTITLE_KEEP_CURRENT == settings.default_title_id)) {
             settings.default_title_id = CMDTITLE_KEEP_CURRENT;
         }
-        if (ImGui::Selectable("Remove title", CMDTITLE_REMOVE_CURRENT == settings.default_title_id)) {
+        if (ImGui::Selectable("移除称号", CMDTITLE_REMOVE_CURRENT == settings.default_title_id)) {
             settings.default_title_id = CMDTITLE_REMOVE_CURRENT;
         }
         for (auto* it : title_names) {
@@ -1851,8 +1851,8 @@ void ChatCommands::DrawSettingsInternal()
     }
     ImGui::Unindent();
 
-    ImGui::TextUnformatted("Chat Command aliases");
-    ImGui::TextDisabled("First matching command alias found will be triggered");
+    ImGui::TextUnformatted("聊天命令别名");
+    ImGui::TextDisabled("将触发找到的第一个匹配的命令别名");
 
     static auto OnConfirmDeleteAlias = [](bool result, void* wparam) {
         if (!result) return;
@@ -1874,7 +1874,7 @@ void ChatCommands::DrawSettingsInternal()
             swprintf(alias->alias_wstr, _countof(CmdAlias::alias_wstr), L"%S", alias->alias_cstr);
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Alias for this command");
+            ImGui::SetTooltip("此命令的别名");
         }
         ImGui::PopItemWidth();
         ImGui::SameLine();
@@ -1884,20 +1884,20 @@ void ChatCommands::DrawSettingsInternal()
             swprintf(alias->command_wstr, _countof(CmdAlias::command_wstr), L"%S", alias->command_cstr);
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Chat command to trigger");
+            ImGui::SetTooltip("要触发的聊天命令");
         }
         ImGui::SameLine(avail_w);
         static bool confirm_delete = false;
-        ImGui::SmallConfirmButton("Delete", "Are you sure you want to delete this entry?", OnConfirmDeleteAlias, alias);
+        ImGui::SmallConfirmButton("删除", "确定要删除此条目吗？", OnConfirmDeleteAlias, alias);
         ImGui::PopID();
     }
-    if (ImGui::Button("Add New Alias")) {
+    if (ImGui::Button("添加新别名")) {
         wchar_t tmp[32];
         swprintf(tmp, _countof(tmp), L"alias_%d", cmd_aliases.size());
         CreateAlias(tmp, L"#hello world");
     }
     ImGui::SameLine();
-    if (ImGui::Button("Sort")) {
+    if (ImGui::Button("排序")) {
         sort_cmd_aliases();
     }
 }
@@ -2129,7 +2129,7 @@ void ChatCommands::QuestPing::Update()
 {
     if (!name.wstring().empty()) {
         wchar_t print_buf[128];
-        swprintf(print_buf, _countof(print_buf), L"Current Quest: %s", name.wstring().c_str());
+        swprintf(print_buf, _countof(print_buf), L"当前任务：%s", name.wstring().c_str());
         GW::Chat::SendChat('#', print_buf);
     }
     if (!objectives.wstring().empty()) {
@@ -2187,7 +2187,7 @@ void SearchAgent::Update()
         return;
     }
     if (TIMER_DIFF(started) > 3000) {
-        Log::Error("Timeout getting NPC names");
+        Log::Error("获取 NPC 名称超时");
         Reset();
         return;
     }
@@ -2277,14 +2277,14 @@ bool ChatCommands::ReadTemplateFile(const std::wstring& path, char* buff, const 
 
     const auto fileSize = GetFileSize(fileHandle, nullptr);
     if (fileSize >= buffSize) {
-        Log::Error("Buffer size too small, file size is %d", fileSize);
+        Log::Error("缓冲区大小不足，文件大小为 %d", fileSize);
         CloseHandle(fileHandle);
         return false;
     }
 
     DWORD bytesReaded; // @Remark, necessary !!!!! failed on some Windows 7.
     if (ReadFile(fileHandle, buff, fileSize, &bytesReaded, nullptr) == FALSE) {
-        Log::Error("ReadFile failed ! (%u)", GetLastError());
+        Log::Error("ReadFile 失败！（%u）", GetLastError());
         CloseHandle(fileHandle);
         return false;
     }
@@ -2296,10 +2296,10 @@ bool ChatCommands::ReadTemplateFile(const std::wstring& path, char* buff, const 
 
 void CHAT_CMD_FUNC(ChatCommands::CmdEnterMission)
 {
-    const auto error_use_from_outpost = "Use '/enter' to start a mission or elite area from an outpost";
-    const auto error_fow_uw_syntax = "Use '/enter fow' or '/enter uw' to trigger entry";
-    const auto error_no_scrolls = "Unable to enter elite area; no scroll found";
-    const auto error_not_leading = "Unable to enter mission; you're not party leader";
+    const auto error_use_from_outpost = "请在前哨站使用 '/enter' 开始任务或精英区域";
+    const auto error_fow_uw_syntax = "使用 '/enter fow' 或 '/enter uw' 触发进入";
+    const auto error_no_scrolls = "无法进入精英区域；未找到卷轴";
+    const auto error_not_leading = "无法进入任务；您不是队伍领袖";
 
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return Log::Error(error_use_from_outpost);
@@ -2349,7 +2349,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdEnterMission)
 void CHAT_CMD_FUNC(ChatCommands::CmdMorale)
 {
     if (GW::GetGameContext()->world->morale == 100) {
-        GW::Chat::SendChat('#', L"I have no Morale Boost or Death Penalty!");
+        GW::Chat::SendChat('#', L"我没有士气加成或死亡惩罚！");
     }
     else {
         auto packet = GW::UI::UIPacket::kSendCallTarget{.call_type = GW::CallTargetType::Morale, .agent_id = GW::Agents::GetControlledCharacterId()};
@@ -2447,7 +2447,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings saved to [%s;file://%s]", printable.c_str(), printable.c_str());
+            Log::InfoW(L"设置已保存到 [%s;file://%s]", printable.c_str(), printable.c_str());
         }
         else if (arg1 == L"load") {
             // e.g. /tb load
@@ -2456,7 +2456,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
             const auto dir = file_location.parent_path();
             const auto dirstr = dir.wstring();
             const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-            Log::InfoW(L"Settings loaded from [%s;file://%s]", printable.c_str() ,printable.c_str());
+            Log::InfoW(L"设置已从 [%s;file://%s] 加载", printable.c_str(), printable.c_str());
         }
         else if (arg1 == L"reset") {
             // e.g. /tb reset
@@ -2526,7 +2526,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
         const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-        Log::InfoW(L"Settings saved to %s", printable.c_str());
+        Log::InfoW(L"设置已保存到 %s", printable.c_str());
     }
     else if (arg1 == L"load") {
         // e.g. /tb load tas
@@ -2539,7 +2539,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const bool has_settings = (std::filesystem::exists(modules_folder, ec) && !std::filesystem::is_empty(modules_folder, ec)) || std::filesystem::exists(Resources::GetSettingFile(GWTOOLBOX_JSON_FILENAME), ec) ||
                                   std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_JSON_FILENAME), ec) || std::filesystem::exists(Resources::GetLegacySettingFile(GWTOOLBOX_INI_FILENAME), ec);
         if (!has_settings) {
-            Log::ErrorW(L"Settings folder '%s' does not exist", arg2.c_str());
+            Log::ErrorW(L"设置文件夹 '%s' 不存在", arg2.c_str());
             GWToolbox::SetSettingsFolder(old_settings_folder);
             return;
         }
@@ -2547,7 +2547,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdTB)
         const auto dir = file_location.parent_path();
         const auto dirstr = dir.wstring();
         const auto printable = TextUtils::str_replace_all(dirstr, LR"(\)", L"/");
-        Log::InfoW(L"Settings loaded from %s", printable.c_str());
+        Log::InfoW(L"设置已从 %s 加载", printable.c_str());
     }
     else {
         // Invalid argument
@@ -2618,7 +2618,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdHide)
 void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
 {
     if (argc < 2) {
-        Log::ErrorW(L"Invalid syntax: %s", message);
+        Log::ErrorW(L"语法无效：%s", message);
         return;
     }
     const std::wstring last_arg = TextUtils::ToLower(argv[argc - 1]);
@@ -2667,7 +2667,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdToggle)
     }
     const std::vector<ToolboxUIElement*> windows = MatchingWindows(status, message, ignore_last_arg ? argc - 1 : argc, argv);
     /*if (windows.empty()) {
-        Log::Error("Cannot find window or command '%ls'", argc > 1 ? argv[1] : L"");
+        Log::Error("找不到窗口或命令 '%ls'", argc > 1 ? argv[1] : L"");
         return;
     }*/
     for (ToolboxUIElement* window : windows) {
@@ -2786,7 +2786,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingEquipment)
         return;
     }
     if (argc < 2) {
-        Log::Error("Missing argument for /pingitem");
+        Log::Error("缺少 /pingitem 的参数");
         return;
     }
     const auto equipped_items_bag = GW::Items::GetBag(GW::Constants::Bag::Equipped_Items);
@@ -2829,14 +2829,14 @@ void CHAT_CMD_FUNC(ChatCommands::CmdPingEquipment)
         GameSettings::PingItem(GW::Items::GetItemBySlot(equipped_items_bag, 9), 1);
     }
     else {
-        Log::Error("Unrecognised /pingitem %ls", argv[1]);
+        Log::Error("无法识别的 /pingitem %ls", argv[1]);
     }
 }
 
 void GetAchievements(const std::wstring& player_name)
 {
     if (!(!player_name.empty() && player_name.size() < 20)) {
-        return Log::Error("Invalid player name for hall of monuments command");
+        return Log::Error("纪念堂命令的玩家名称无效");
     }
     hom_achievements = HallOfMonumentsAchievements{};
     HallOfMonumentsModule::AsyncGetAccountAchievements(player_name, &hom_achievements, OnAchievementsLoaded);
@@ -2878,12 +2878,12 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDeposit)
 void CHAT_CMD_FUNC(ChatCommands::CmdResize)
 {
     if (argc != 3) {
-        Log::Error("The syntax is /resize width height");
+        Log::Error("语法为 /resize 宽度 高度");
         return;
     }
     int width, height;
     if (!(TextUtils::ParseInt(argv[1], &width) && TextUtils::ParseInt(argv[2], &height))) {
-        Log::Error("The syntax is /resize width height");
+        Log::Error("语法为 /resize 宽度 高度");
         return;
     }
     const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
@@ -2898,7 +2898,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdReapplyTitle)
     const auto title_for_map = std::to_underlying(GW::Map::GetTitleForMap(GW::Map::GetMapID()));
     if (argc > 1) {
         if (!TextUtils::ParseUInt(argv[1], &title_id)) {
-            Log::Error("Syntax: /title [title_id]");
+            Log::Error("语法：/title [title_id]");
             return;
         }
         goto apply;
@@ -2923,7 +2923,7 @@ apply:
             break;
         default:
             if (title_id > std::to_underlying(GW::Constants::TitleID::Codex)) {
-                Log::Error("Invalid title_id %d", title_id);
+                Log::Error("无效的 title_id %d", title_id);
                 return;
             }
             GW::PlayerMgr::SetActiveTitle(static_cast<GW::Constants::TitleID>(title_id));
@@ -2935,7 +2935,7 @@ apply:
 
 void CHAT_CMD_FUNC(ChatCommands::CmdVolume)
 {
-    const auto syntax = "Syntax: '/volume [master|music|background|effects|dialog|ui] [amount (0-100)]'";
+    const auto syntax = "语法：'/volume [master|music|background|effects|dialog|ui] [数值 (0-100)]'";
     wchar_t* value;
     GW::UI::NumberPreference pref;
     switch (argc) {

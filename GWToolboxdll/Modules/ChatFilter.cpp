@@ -32,10 +32,10 @@ namespace {
     };
     std::vector<SuppressedMessage> suppressed_messages;
 
-    const char* targetting_messages_help = "'I'm following <target>.'\n\
-'I'm attacking <target>.'\n\
-'I'm targetting <target>.'\n\
-'I'm using <skill> on <target>'";
+    const char* targetting_messages_help = "'我在跟随 <目标>。'\n\
+'我在攻击 <目标>。'\n\
+'我在锁定 <目标>。'\n\
+'我在对 <目标> 使用 <技能>'";
 
     constexpr size_t FILTER_BUF_SIZE = 1024 * 16;
 
@@ -189,7 +189,7 @@ namespace {
                     regex.emplace_back(word, std::regex_constants::optimize);
                 }
             } catch (const std::regex_error&) {
-                Log::Warning("Cannot parse regular expression '%s'", word.c_str());
+                Log::Warning("无法解析正则表达式 '%s'", word.c_str());
             }
         }
     }
@@ -206,9 +206,9 @@ namespace {
     }
 
     const wchar_t* rare_item_names[] = {
-        L"\x22D9\xE7B8\xE9DD\x2322", // Glob of ectoplasm
-        L"\x22EA\xFDA9\xDE53\x2D16", // Obsidian shard
-        L"\x8101\x730E"              // Lockpick
+        L"\x22D9\xE7B8\xE9DD\x2322", // 幻化精华
+        L"\x22EA\xFDA9\xDE53\x2D16", // 黑曜石碎片
+        L"\x8101\x730E"              // 开锁工具
     };
 
     bool IsRare(const wchar_t* encoded_string)
@@ -925,142 +925,142 @@ void ChatFilter::SaveSettings(SettingsDoc& doc)
 
 void ChatFilter::DrawSettingsInternal()
 {
-    ImGui::Text("Block the following messages:");
+    ImGui::Text("屏蔽以下消息：");
     ImGui::Separator();
-    ImGui::Text("Drops");
+    ImGui::Text("掉落");
     ImGui::SameLine();
-    ImGui::TextDisabled("('Rare' stands for Gold item, Ecto, Obby shard or Lockpick)");
+    ImGui::TextDisabled("（“稀有”指金色物品、幻化精华、黑曜石碎片或开锁工具）");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("A rare item drops for you", &settings.self_drop_rare);
+    ImGui::Checkbox("稀有物品掉落在你身上", &settings.self_drop_rare);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("A common item drops for you", &settings.self_drop_common);
+    ImGui::Checkbox("普通物品掉落在你身上", &settings.self_drop_common);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("A rare item drops for an ally", &settings.ally_drop_rare);
+    ImGui::Checkbox("稀有物品掉落在队友身上", &settings.ally_drop_rare);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("A common item drops for an ally", &settings.ally_drop_common);
+    ImGui::Checkbox("普通物品掉落在队友身上", &settings.ally_drop_common);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("An ally picks up a rare item", &settings.ally_pickup_rare);
+    ImGui::Checkbox("队友拾取稀有物品", &settings.ally_pickup_rare);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("An ally picks up a common item", &settings.ally_pickup_common);
+    ImGui::Checkbox("队友拾取普通物品", &settings.ally_pickup_common);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("You pick up a rare item", &settings.player_pickup_rare);
+    ImGui::Checkbox("你拾取稀有物品", &settings.player_pickup_rare);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("You pick up a common item", &settings.player_pickup_common);
+    ImGui::Checkbox("你拾取普通物品", &settings.player_pickup_common);
 
     ImGui::Separator();
-    ImGui::Text("Announcements");
+    ImGui::Text("公告");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Guild Announcement", &settings.guild_announcement);
+    ImGui::Checkbox("公会公告", &settings.guild_announcement);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hall of Heroes winners", &settings.hoh_messages);
+    ImGui::Checkbox("英雄殿堂获胜者", &settings.hoh_messages);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Favor of the Gods announcements", &settings.favor);
+    ImGui::Checkbox("众神恩典公告", &settings.favor);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'You have been playing for...'", &settings.you_have_been_playing_for);
+    ImGui::Checkbox("'你已经游戏了...'", &settings.you_have_been_playing_for);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'Player x has achieved title...'", &settings.player_has_achieved_title);
+    ImGui::Checkbox("'玩家 x 获得了称号...'", &settings.player_has_achieved_title);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'You gain x faction'", &settings.faction_gain);
+    ImGui::Checkbox("'你获得了 x 阵营点数'", &settings.faction_gain);
 
     ImGui::Separator();
-    ImGui::Text("Warnings");
+    ImGui::Text("警告");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Unable to use item", &settings.item_cannot_be_used, "'Item can only/cannot be used in towns or outposts.'\n\
-'This item cannot be used here.'\n\
-'Cannot use this item when no party members are dead.'\n\
-'There is already an ally from a summoning stone present in this instance.'\n\
-'You have already used a summoning stone within the last 10 minutes.'\n\
-'That item has no uses remaining.'\n\
-'You must wait before using another tonic.'\n\
-'This item can only be used in a guild hall'");
+    ImGui::CheckboxWithHelp("无法使用物品", &settings.item_cannot_be_used, "'物品只能/不能在城市或前哨站使用。'\n\
+'此物品无法在此处使用。'\n\
+'当没有队伍成员死亡时无法使用此物品。'\n\
+'此实例中已存在召唤石召唤的盟友。'\n\
+'你在过去 10 分钟内已使用过召唤石。'\n\
+'该物品已无剩余使用次数。'\n\
+'使用另一种药剂前请等待。'\n\
+'此物品只能在公会大厅使用'");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Invalid target", &settings.invalid_target, "'Invalid spell/attack target.'\n\
-'Spell failed. Spirits are not affected by this spell.'\n\
-'Your view of the target is obstructed.'\n\
-'That skill requires a different weapon type.'\n\
-'Target is out of range.'\n\
-'Target is immune to bleeding/disease/poison (no flesh.)'");
+    ImGui::CheckboxWithHelp("无效目标", &settings.invalid_target, "'无效的法术/攻击目标。'\n\
+'法术失败。精魂不受此法术影响。'\n\
+'目标视线被阻挡。'\n\
+'该技能需要不同的武器类型。'\n\
+'目标超出范围。'\n\
+'目标免疫流血/疾病/中毒（没有血肉。）'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'Inventory is full'", &settings.inventory_is_full);
+    ImGui::Checkbox("'背包已满'", &settings.inventory_is_full);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Opening chests", &settings.opening_chest_messages, "'Chest is being used'\n\
-'The chest is locked. You must use a lockpick to open it.'\n\
-'The chest is locked. You must have the correct key or a lockpick.'\n\
-'The chest is empty.'");
+    ImGui::CheckboxWithHelp("开启宝箱", &settings.opening_chest_messages, "'宝箱正在使用中'\n\
+'宝箱已锁。你必须使用开锁工具打开它。'\n\
+'宝箱已锁。你必须拥有正确的钥匙或开锁工具。'\n\
+'宝箱是空的。'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Item already identified", &settings.item_already_identified);
+    ImGui::Checkbox("物品已鉴定", &settings.item_already_identified);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Not enough Adrenaline/Energy", &settings.not_enough_energy);
+    ImGui::Checkbox("肾上腺素/能量不足", &settings.not_enough_energy);
 
     ImGui::Separator();
-    ImGui::Text("Others");
+    ImGui::Text("其他");
     ImGui::StartSpacedElements(350.f * ImGui::FontScale());
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Earning skill points", &settings.skill_points);
+    ImGui::Checkbox("获得技能点", &settings.skill_points);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("PvP messages", &settings.pvp_messages, "Such as 'A skill was updated for pvp!'");
+    ImGui::CheckboxWithHelp("PvP 消息", &settings.pvp_messages, "例如 '技能已为 PvP 更新！'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("9 Rings messages", &settings.ninerings);
+    ImGui::Checkbox("九宫格消息", &settings.ninerings);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Lunar fortunes messages", &settings.lunars);
+    ImGui::Checkbox("新年运势消息", &settings.lunars);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Challenge mission messages", &settings.challenge_mission_messages, "Such as 'Hold-out bonus: +2 points'");
+    ImGui::CheckboxWithHelp("挑战任务消息", &settings.challenge_mission_messages, "例如 '坚守奖励：+2 分'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("'No one hears you...'", &settings.noonehearsyou);
+    ImGui::Checkbox("'没有人听到你...'", &settings.noonehearsyou);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("'Player x might not reply...", &settings.away, "...because his / her status is set to away'");
+    ImGui::CheckboxWithHelp("'玩家 x 可能不会回复...'", &settings.away, "...因为他的/她的状态设置为离开'");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Salvaging messages", &settings.salvage_messages);
+    ImGui::Checkbox("拆解消息", &settings.salvage_messages);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Ashes dropped messages", &settings.ashes_dropped);
+    ImGui::Checkbox("灰烬掉落消息", &settings.ashes_dropped);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Targetting messages from me", &settings.targetting_messages_from_me, targetting_messages_help);
+    ImGui::CheckboxWithHelp("来自我的目标消息", &settings.targetting_messages_from_me, targetting_messages_help);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Targetting messages from others", &settings.targetting_messages_from_others, targetting_messages_help);
+    ImGui::CheckboxWithHelp("来自其他人的目标消息", &settings.targetting_messages_from_others, targetting_messages_help);
 
     ImGui::Separator();
-    ImGui::CheckboxWithHelp("Block messages from inactive chat channels", &settings.block_messages_from_inactive_channels, "Chat history in Guild Wars isn't unlimited.\n\nEnable this to prevent the game from logging messages in channels that you have turned off.");
+    ImGui::CheckboxWithHelp("屏蔽来自非活跃聊天频道的消息", &settings.block_messages_from_inactive_channels, "Guild Wars 中的聊天历史是有限制的。\n\n启用此选项可防止游戏记录您已关闭的频道中的消息。");
     if (settings.block_messages_from_inactive_channels) {
-        ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "Messages from channels you have turned off in chat are not being logged in-game");
+        ImGui::TextColored(ImVec4(1.f, 1.f, 0.f, 1.f), "来自您已在聊天中关闭的频道的消息将不会被记录到游戏中");
     }
-    ImGui::Checkbox("Hide any messages containing:", &settings.messagebycontent);
+    ImGui::Checkbox("屏蔽包含以下内容的任何消息：", &settings.messagebycontent);
     ImGui::Indent();
-    ImGui::TextDisabled("(Each in a separate line. Not case sensitive)");
-    ImGui::Checkbox("Local", &settings.filter_channel_local);
+    ImGui::TextDisabled("（每行一个。不区分大小写）");
+    ImGui::Checkbox("本地", &settings.filter_channel_local);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Guild", &settings.filter_channel_guild);
+    ImGui::Checkbox("公会", &settings.filter_channel_guild);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Team", &settings.filter_channel_team);
+    ImGui::Checkbox("队伍", &settings.filter_channel_team);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Trade", &settings.filter_channel_trade);
+    ImGui::Checkbox("交易", &settings.filter_channel_trade);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Alliance", &settings.filter_channel_alliance);
+    ImGui::Checkbox("联盟", &settings.filter_channel_alliance);
     ImGui::SameLine(0.0f, -1.0f);
-    ImGui::Checkbox("Emotes", &settings.filter_channel_emotes);
+    ImGui::Checkbox("表情", &settings.filter_channel_emotes);
 
     if (ImGui::InputTextMultiline("##bycontentfilter", bycontent_word_buf,
                                   FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
         timer_parse_filters = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
     }
-    ImGui::Text("And messages matching regular expressions:");
-    ImGui::ShowHelp("Regular expressions allow you to specify wildcards and express more.\n"
-        "The default syntax is described at www.cplusplus.com/reference/regex/ECMAScript\n"
-        "If you wish to only block if the entire message is matched, use the ^...$ syntax (^ for start, $ for end).\n"
-        "You can apply flags to your regexes by using the form /^...$/ics\n"
-        "i (icase) for case-insensitive\n"
-        "c (collate) for locale sensitive character ranges\n"
-        "n (nosubs) for non marking sub expressions\n"
-        "s (ECMAScript) for modified ECMAScript syntax (default)\n"
-        "b (basic) for BASIC regex syntax\n"
-        "x (extended) for extended POSIX regex syntax\n"
-        "a (awk) for awk grep syntax\n"
-        "g (grep) for grep syntax\n"
-        "e (egrep) for egrep synax\n"
-        "You must supply at most one syntax flag.\n"
-        "See https://en.cppreference.com/w/cpp/regex/syntax_option_type for further documentation.");
+    ImGui::Text("以及匹配正则表达式的消息：");
+    ImGui::ShowHelp("正则表达式允许您指定通配符并进行更复杂的匹配。\n"
+        "默认语法在 www.cplusplus.com/reference/regex/ECMAScript 中描述\n"
+        "如果您希望仅在整个消息匹配时才屏蔽，请使用 ^...$ 语法（^ 表示开头，$ 表示结尾）。\n"
+        "您可以通过使用 /^...$/ics 形式为正则表达式添加标志\n"
+        "i（icase）表示不区分大小写\n"
+        "c（collate）表示区域设置敏感的字符范围\n"
+        "n（nosubs）表示非标记子表达式\n"
+        "s（ECMAScript）表示修改后的 ECMAScript 语法（默认）\n"
+        "b（basic）表示基本正则表达式语法\n"
+        "x（extended）表示扩展 POSIX 正则表达式语法\n"
+        "a（awk）表示 awk grep 语法\n"
+        "g（grep）表示 grep 语法\n"
+        "e（egrep）表示 egrep 语法\n"
+        "您最多只能提供一个语法标志。\n"
+        "请参阅 https://en.cppreference.com/w/cpp/regex/syntax_option_type 获取更多文档。");
     if (ImGui::InputTextMultiline("##bycontentfilter_regex", bycontent_regex_buf,
                                   FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0))) {
         timer_parse_regexes = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
@@ -1068,9 +1068,9 @@ void ChatFilter::DrawSettingsInternal()
     ImGui::Unindent();
 
     ImGui::Separator();
-    ImGui::Checkbox("Hide any messages from these players:", &settings.messagebyauthor);
+    ImGui::Checkbox("屏蔽来自以下玩家的任何消息：", &settings.messagebyauthor);
     ImGui::Indent();
-    ImGui::TextDisabled("(One player name per line. Not case sensitive. Also hides their Kamadan/Ascalon trade chat.)");
+    ImGui::TextDisabled("（每行一个玩家名称。不区分大小写。也会屏蔽他们在卡玛丹/阿斯卡隆的交易聊天。）");
     if (ImGui::InputTextMultiline("##byauthorfilter", byauthor_buf, FILTER_BUF_SIZE, ImVec2(-1.0f, 0.0f))) {
         timer_parse_authors = GetTickCount() + NOISE_REDUCTION_DELAY_MS;
     }

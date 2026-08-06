@@ -56,8 +56,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Inventory Management"; }
-    [[nodiscard]] const char* SettingsName() const override { return "Inventory Settings"; }
+    [[nodiscard]] const char* Name() const override { return "物品管理"; }
+    [[nodiscard]] const char* SettingsName() const override { return "物品管理设置"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BOXES; }
 
     struct Settings {
