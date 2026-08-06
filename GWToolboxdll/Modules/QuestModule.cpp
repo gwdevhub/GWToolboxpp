@@ -246,27 +246,29 @@ namespace {
             const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world) && !goal_cross_map;
             GW::GamePos target{};
             if (same_map) {
-                if (!WorldMapWidget::WorldMapToGamePos(goal_world, target)) return;
+                if (!WorldMapWidget::WorldMapToGamePos(goal_world, target)) {
+                    // Nothing enqueued, so clear the in-flight flag — leaving it set blocks every Update for 5s.
+                    calculating = 0;
+                    calculated_at = 0;
+                    return;
+                }
             }
             else {
-                if (route_world.empty() || route_map.empty()) return;
+                if (route_world.empty() || route_map.empty()) {
+                    // No cross-map route to walk toward: bailing left `calculating` set with no work queued, freezing the path.
+                    has_full_route = false;
+                    GW::Vec2f from_world{};
+                    WorldMapWidget::GamePosToWorldMap(from, from_world);
+                    RecalculateWorld(from_world);
+                    return;
+                }
                 target = route_map.back();
             }
-            // RecalculateSegment's game-coord leg keeps the A* per-waypoint zplane (a world-coord round-trip would zero it), so the line drapes on the real surface; only orient it (point nearest target last).
-            auto orient = [target](std::vector<GW::GamePos>& out) {
-                if (out.size() <= 1) return;
-                const auto sq = [](const GW::GamePos& a, const GW::GamePos& b) {
-                    const float dx = a.x - b.x, dy = a.y - b.y;
-                    return dx * dx + dy * dy;
-                };
-                if (sq(out.front(), target) < sq(out.back(), target)) std::ranges::reverse(out);
-            };
-
-            Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map, orient, gw = goal_world] {
+            // RecalculateSegment's game-coord leg keeps the A* per-waypoint zplane (a world-coord round-trip would zero it), so the line drapes on the real surface.
+            Resources::EnqueueWorkerTask([qid = quest_id, from, target, same_map, gw = goal_world] {
                 auto pts = new std::vector<GW::Vec2f>();         // required out-param; unused here
                 auto route_map = new std::vector<GW::GamePos>(); // current-map game coords with carried zplane
                 const bool ok = PathfindingWindow::RecalculateSegment(static_cast<GW::Constants::MapID>(0), from, target, pts, route_map);
-                if (ok) orient(*route_map);
                 Resources::EnqueueMainTask([qid, from, route_map, pts, ok, same_map, gw] {
                     const auto cqp = GetCalculatedQuestPath(qid, false);
                     if (cqp && cqp->goal_world != gw) {
@@ -327,11 +329,15 @@ namespace {
 
             calculating = TIMER_INIT();
             const bool goal_changed = calculated_to != goal_world;
-            if (goal_changed) goal_cross_map = false; // new goal — re-test whether it's reachable on the current map
+            if (goal_changed) {
+                goal_cross_map = false; // new goal — re-test whether it's reachable on the current map
+                has_full_route = false; // and plot it from scratch instead of re-walking the old route's leg
+            }
             calculated_from = from_game; // anchor for Update's move threshold
             calculated_to = goal_world;
             const bool same_map = PathfindingWindow::IsWorldPosOnMap(goal_world) && !goal_cross_map;
-            if (!same_map && goal_changed) {
+            // Gate on the route we hold, not on `goal_changed`: a failed plot otherwise left us re-walking a leg that no longer exists.
+            if (!same_map && !has_full_route) {
                 RecalculateWorld(from_world);
             }
             else {
@@ -339,7 +345,7 @@ namespace {
             }
         }
 
-        // Drop only points we've walked past
+        // Drop points we've walked past; the drawn head starts at the live player pos, so anything behind us draws backwards.
         bool TrimLeadingWaypoints(const GW::GamePos& from)
         {
             bool dropped = false;
@@ -348,7 +354,11 @@ namespace {
                 const float segx = b.x - a.x, segy = b.y - a.y;
                 const float len2 = segx * segx + segy * segy;
                 const float t = len2 > 0.f ? ((from.x - a.x) * segx + (from.y - a.y) * segy) / len2 : 1.f;
-                if (t < 1.f) break; // route_map[1] still ahead
+                // Also drop when standing on b: walking off the line keeps the projection short of 1 and pins the head to a reached waypoint.
+                constexpr float waypoint_reached_sqr = 166.f * 166.f; // adjacent range
+                const float bx = from.x - b.x, by = from.y - b.y;
+                const bool reached = bx * bx + by * by < waypoint_reached_sqr;
+                if (t < 1.f && !reached) break; // route_map[1] still ahead
                 route_map.erase(route_map.begin());
                 dropped = true;
             }
