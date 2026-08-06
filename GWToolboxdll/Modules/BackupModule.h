@@ -21,9 +21,9 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Backup"; }
+    [[nodiscard]] const char* Name() const override { return "备份模块"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_SAVE; }
-    [[nodiscard]] const char* Description() const override { return "Create and restore ZIP archives of GWToolbox settings files"; }
+    [[nodiscard]] const char* Description() const override { return "创建和恢复GWToolbox设置文件的ZIP文件。"; }
 
     void Initialize() override;
     void DrawSettingsInternal() override;

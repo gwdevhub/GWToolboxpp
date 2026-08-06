@@ -20,10 +20,10 @@ public:
                                                  "'/camera speed [number|default]' sets camera speed when camera is unlocked.\n"
                                                  "'/camera distance [number|default]' sets camera max distance in gwinches.";
 
-    [[nodiscard]] const char* Name() const override { return "Camera Unlock"; }
-    [[nodiscard]] const char* Description() const override { return "Allows free-roaming camera functionality via /cam unlock, and other camera related functions"; }
+    [[nodiscard]] const char* Name() const override { return "视角解锁"; }
+    [[nodiscard]] const char* Description() const override { return "通过/cam unlock实现自由漫游视角功能，以及其他与视角相关的功能。"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CAMERA; }
-    [[nodiscard]] const char* SettingsName() const override { return "Camera Settings"; }
+    [[nodiscard]] const char* SettingsName() const override { return "视角设置"; }
 
     struct Settings {
         bool forward_fix_z = true;

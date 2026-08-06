@@ -363,7 +363,7 @@ namespace {
         get_dos_dt(t, d);
 
         const std::string info = std::format(
-            "GWToolbox++ Settings Backup\nTimestamp: {}\nVersion: {}\n",
+            "GWToolbox++ 设置备份\n时间戳: {}\n版本: {}\n",
             ts, GWTOOLBOXDLL_VERSION);
 
         ZipEntry e;
@@ -406,7 +406,7 @@ namespace {
 
         const std::filesystem::path p(path);
         if (!is_valid_zip(p)) {
-            Log::Error("The selected file is not a valid ZIP archive.");
+            Log::Error("所选文件不是有效的 ZIP 存档。");
             return;
         }
 
@@ -424,9 +424,9 @@ namespace {
         Resources::EnqueueWorkerTask([zip_path] {
             const bool ok = do_create_backup(zip_path, false);
             if (ok)
-                Log::Flash("Backup created: %s", zip_path.filename().string().c_str());
+                Log::Flash("备份已创建：%s", zip_path.filename().string().c_str());
             else
-                Log::Error("Failed to create backup.");
+                Log::Error("创建备份失败。");
         });
     }
 
@@ -437,9 +437,9 @@ namespace {
         restore_succeeded = zip_extract(zip_path, dest);
         restore_step = RestoreStep::Done;
         if (restore_succeeded)
-            Log::Flash("Settings restored from %s", zip_path.filename().string().c_str());
+            Log::Flash("已从 %s 恢复设置", zip_path.filename().string().c_str());
         else
-            Log::Error("Failed to restore settings from backup.");
+            Log::Error("从备份恢复设置失败。");
     }
 
 } // namespace
@@ -477,15 +477,15 @@ bool BackupModule::CreateAutoBackup()
 void BackupModule::DrawSettingsInternal()
 {
     // ---- Create Backup section ------------------------------------------
-    ImGui::TextUnformatted("File types to include in the backup:");
+    ImGui::TextUnformatted("备份中包含的文件类型：");
 
-    ImGui::Checkbox("Text files (.ini, .json, .txt, .csv, .tsv, .xml)", &settings.backup_text_files);
-    ImGui::Checkbox("Image files (.png, .jpg, .bmp, .dds)", &settings.backup_image_files);
-    ImGui::Checkbox("Audio files (.mp3, .wav, .ogg)", &settings.backup_audio_files);
+    ImGui::Checkbox("文本文件 (.ini, .json, .txt, .csv, .tsv, .xml)", &settings.backup_text_files);
+    ImGui::Checkbox("图片文件 (.png, .jpg, .bmp, .dds)", &settings.backup_image_files);
+    ImGui::Checkbox("音频文件 (.mp3, .wav, .ogg)", &settings.backup_audio_files);
 
     ImGui::Spacing();
 
-    if (ImGui::Button("Create backup now...")) {
+    if (ImGui::Button("立即创建备份...")) {
         const auto ts  = TextUtils::FilenameTimestamp();
         const auto def = Resources::GetSettingsFolderPath() / std::format("backup_{}.zip", ts);
         Resources::SaveFileDialog(on_save_file_chosen, "zip", def.string().c_str());
@@ -494,10 +494,10 @@ void BackupModule::DrawSettingsInternal()
     ImGui::Separator();
 
     // ---- Restore section ------------------------------------------------
-    ImGui::TextUnformatted("Restore from a previously created backup archive:");
+    ImGui::TextUnformatted("从之前创建的备份存档恢复：");
     ImGui::Spacing();
 
-    if (ImGui::Button("Browse for backup...")) {
+    if (ImGui::Button("浏览备份文件...")) {
         const auto def = Resources::GetSettingsFolderPath();
         Resources::OpenFileDialog(on_restore_file_chosen, "zip", def.string().c_str());
     }
@@ -506,17 +506,17 @@ void BackupModule::DrawSettingsInternal()
     // These are opened once the file dialog callback sets restore_step.
 
     if (restore_step == RestoreStep::AskPreBackup) {
-        ImGui::OpenPopup("Restore from backup?###backup_pre_restore");
+        ImGui::OpenPopup("从备份恢复？###backup_pre_restore");
         restore_step = RestoreStep::AskRestore; // prevent re-opening each frame
     }
 
     ImGui::SetNextWindowSize(ImVec2(-1.f, -1.f), ImGuiCond_Appearing);
     ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
-    if (ImGui::BeginPopupModal("Restore from backup?###backup_pre_restore", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Restore from: %s", pending_restore_path.filename().string().c_str());
+    if (ImGui::BeginPopupModal("从备份恢复？###backup_pre_restore", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("从以下位置恢复：%s", pending_restore_path.filename().string().c_str());
         ImGui::Spacing();
-        ImGui::TextUnformatted("This will overwrite existing GWToolbox settings.");
-        ImGui::TextUnformatted("Would you like to create a backup of current settings first?");
+        ImGui::TextUnformatted("这将覆盖现有的 GWToolbox 设置。");
+        ImGui::TextUnformatted("您想先创建当前设置的备份吗？");
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -524,25 +524,25 @@ void BackupModule::DrawSettingsInternal()
         const float scale  = ImGui::FontScale();
         const float btn_w  = 130.f * scale;
 
-        if (ImGui::Button("Backup & Restore", ImVec2(btn_w + 20.f * scale, 0))) {
+        if (ImGui::Button("备份并恢复", ImVec2(btn_w + 20.f * scale, 0))) {
             ImGui::CloseCurrentPopup();
             const auto zip_path = pending_restore_path;
             Resources::EnqueueWorkerTask([zip_path] {
                 if (!BackupModule::CreateAutoBackup())
-                    Log::Warning("Pre-restore backup failed; proceeding with restore anyway.");
+                    Log::Warning("恢复前备份失败；仍将继续恢复。");
                 do_restore(zip_path);
             });
             restore_step = RestoreStep::Restoring;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Restore Now", ImVec2(btn_w, 0))) {
+        if (ImGui::Button("立即恢复", ImVec2(btn_w, 0))) {
             ImGui::CloseCurrentPopup();
             const auto zip_path = pending_restore_path;
             Resources::EnqueueWorkerTask([zip_path] { do_restore(zip_path); });
             restore_step = RestoreStep::Restoring;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(btn_w - 30.f * scale, 0))) {
+        if (ImGui::Button("取消", ImVec2(btn_w - 30.f * scale, 0))) {
             ImGui::CloseCurrentPopup();
             restore_step = RestoreStep::Idle;
         }
@@ -550,7 +550,7 @@ void BackupModule::DrawSettingsInternal()
         ImGui::EndPopup();
     }
     else if (restore_step == RestoreStep::AskRestore &&
-             !ImGui::IsPopupOpen("Restore from backup?###backup_pre_restore")) {
+             !ImGui::IsPopupOpen("从备份恢复？###backup_pre_restore")) {
         // Popup dismissed without a button (Escape / click outside) → cancel.
         restore_step = RestoreStep::Idle;
     }
@@ -563,6 +563,6 @@ void BackupModule::DrawSettingsInternal()
 
     // ---- Auto-backup info -----------------------------------------------
     const auto backups_dir = Resources::GetSettingsFolderPath() / "backups";
-    ImGui::TextUnformatted("A text-file backup is automatically created before each toolbox update.");
-    ImGui::TextDisabled("Auto-backup folder: %s", backups_dir.string().c_str());
+    ImGui::TextUnformatted("在每次工具箱更新前会自动创建文本文件备份。");
+    ImGui::TextDisabled("自动备份文件夹：%s", backups_dir.string().c_str());
 }

@@ -63,7 +63,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Audio Settings"; }
+    [[nodiscard]] const char* Name() const override { return "音频设置"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MUSIC; }
 
     static bool PlayMusic(const wchar_t* filename, uint32_t flags = SoundFlags_MusicDefault);

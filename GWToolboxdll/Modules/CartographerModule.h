@@ -19,10 +19,10 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Cartographer Helper"; }
+    [[nodiscard]] const char* Name() const override { return "地图绘制"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Suggests the closest unexplored (foggy) part of the world map and routes you to the nearest walkable point toward it.";
+        return "解锁世界地图上最近的未探索（迷雾）区域，并绘制前往该区域最近的路线。";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 

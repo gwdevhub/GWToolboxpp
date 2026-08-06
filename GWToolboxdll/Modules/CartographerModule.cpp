@@ -295,16 +295,16 @@ namespace {
     bool ContextMenuItems(const GW::Vec2f& click_wm)
     {
         if (!enabled) return true;
-        if (ImGui::Button("Cartographer: add fog point here")) {
+        if (ImGui::Button("绘图师：在此添加迷雾点")) {
             CartographerModule::AddCustomPoint(click_wm);
             return false;
         }
         if (target.valid) {
-            if (ImGui::Button(target.custom ? "Cartographer: remove target point" : "Cartographer: decline target (once)")) {
+            if (ImGui::Button(target.custom ? "绘图师：移除目标点" : "绘图师：跳过此目标（一次）")) {
                 CartographerModule::SkipCurrentTarget(false);
                 return false;
             }
-            if (!target.custom && ImGui::Button("Cartographer: decline target (forever)")) {
+            if (!target.custom && ImGui::Button("绘图师：跳过此目标（永久）")) {
                 CartographerModule::SkipCurrentTarget(true);
                 return false;
             }
@@ -486,35 +486,35 @@ void CartographerModule::Draw(IDirect3DDevice9*)
 {
     if (!enabled || !target.valid) return;
     ImGui::SetNextWindowSize({0, 0});
-    if (ImGui::Begin("Cartographer###cartographer_suggestion", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
+    if (ImGui::Begin("绘图师###cartographer_suggestion", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
         if (target.custom) {
-            ImGui::Text("Next: your fog point at wm(%.0f, %.0f)", target.wm.x, target.wm.y);
+            ImGui::Text("下一个：您的迷雾点 wm(%.0f, %.0f)", target.wm.x, target.wm.y);
         }
         else {
-            ImGui::Text("Next: unexplored cell (%d, %d) at wm(%.0f, %.0f)", target.cx, target.cy, target.wm.x, target.wm.y);
+            ImGui::Text("下一个：未探索格子 (%d, %d) wm(%.0f, %.0f)", target.cx, target.cy, target.wm.x, target.wm.y);
         }
-        ImGui::Text("Quest marker set at game(%.0f, %.0f)%s", goal_game.x, goal_game.y, arrived ? " (arrived)" : "");
-        if (!custom_points.empty()) ImGui::Text("Queued fog points: %u", static_cast<unsigned>(custom_points.size()));
-        if (ImGui::Button(target.custom ? "Remove point" : "Decline once")) SkipCurrentTarget(false);
+        ImGui::Text("任务标记设置于游戏坐标(%.0f, %.0f)%s", goal_game.x, goal_game.y, arrived ? " （已到达）" : "");
+        if (!custom_points.empty()) ImGui::Text("待处理迷雾点：%u", static_cast<unsigned>(custom_points.size()));
+        if (ImGui::Button(target.custom ? "移除点" : "跳过（一次）")) SkipCurrentTarget(false);
         if (!target.custom) {
             ImGui::SameLine();
-            if (ImGui::Button("Decline forever")) SkipCurrentTarget(true);
+            if (ImGui::Button("永久跳过")) SkipCurrentTarget(true);
         }
-        ImGui::TextDisabled("Right-click the world map or mission map\nto add fog points or decline this suggestion.");
+        ImGui::TextDisabled("在 世界地图 或 任务地图 上右键单击\n可添加迷雾点或跳过此建议。");
     }
     ImGui::End();
 }
 
 void CartographerModule::DrawSettingsInternal()
 {
-    ImGui::TextDisabled("Debug tool: every second, suggests the nearest unexplored (foggy) world-map cell and\nplaces the custom quest marker on the closest walkable spot toward it - the regular\nquest path leads you there. Right-click the world map or mission map to add your own\nfog points or decline suggestions.");
-    if (ImGui::Checkbox("Enabled", &enabled) && !enabled) ResetState();
-    ImGui::Text("Declined forever: %u cells", static_cast<unsigned>(declined_cells.size()));
+    ImGui::TextDisabled("调试工具：每秒建议最近未探索（迷雾）的世界地图格子，并\n将自定义任务标记放置在最接近的可行走位置——常规任务路径会\n引导您到达那里。在世界地图或任务地图上右键单击可添加您自己的\n迷雾点或跳过建议。");
+    if (ImGui::Checkbox("启用", &enabled) && !enabled) ResetState();
+    ImGui::Text("永久跳过的格子：%u", static_cast<unsigned>(declined_cells.size()));
     ImGui::SameLine();
-    if (ImGui::SmallButton("Clear##declined")) ClearDeclined();
-    ImGui::Text("Custom fog points: %u", static_cast<unsigned>(custom_points.size()));
+    if (ImGui::SmallButton("清除##declined")) ClearDeclined();
+    ImGui::Text("自定义迷雾点：%u", static_cast<unsigned>(custom_points.size()));
     ImGui::SameLine();
-    if (ImGui::SmallButton("Clear##points")) ClearCustomPoints();
+    if (ImGui::SmallButton("清除##points")) ClearCustomPoints();
 }
 
 void CartographerModule::SetEnabled(const bool on)
@@ -522,7 +522,7 @@ void CartographerModule::SetEnabled(const bool on)
     if (enabled == on) return;
     enabled = on;
     if (!on) ResetState();
-    Log::Log("[cartographer] %s", on ? "enabled" : "disabled");
+    Log::Log("[cartographer] %s", on ? "已启用" : "已禁用");
 }
 
 void CartographerModule::SkipCurrentTarget(const bool forever)
@@ -562,12 +562,12 @@ void CartographerModule::ClearDeclined()
 
 void CartographerModule::GetStatus(char* buf, const size_t len)
 {
-    const char* pathing = !PathfindingWindow::IsPathingEnabled() ? "off" : PathfindingWindow::ReadyForPathing() ? "ready" : "prewarming";
+    const char* pathing = !PathfindingWindow::IsPathingEnabled() ? "关闭" : PathfindingWindow::ReadyForPathing() ? "就绪" : "预热中";
     char target_desc[64];
-    if (!target.valid) snprintf(target_desc, sizeof(target_desc), "none");
-    else if (target.custom) snprintf(target_desc, sizeof(target_desc), "point(%.0f,%.0f)", target.wm.x, target.wm.y);
-    else snprintf(target_desc, sizeof(target_desc), "cell(%d,%d)", target.cx, target.cy);
-    snprintf(buf, len, "carto: enabled=%d pathing=%s target=%s marker=%d arrived=%d skipped=%u declined=%u points=%u",
+    if (!target.valid) snprintf(target_desc, sizeof(target_desc), "无");
+    else if (target.custom) snprintf(target_desc, sizeof(target_desc), "点(%.0f,%.0f)", target.wm.x, target.wm.y);
+    else snprintf(target_desc, sizeof(target_desc), "格子(%d,%d)", target.cx, target.cy);
+    snprintf(buf, len, "绘图师: 启用=%d 寻路=%s 目标=%s 标记=%d 已到达=%d 已跳过=%u 已永久跳过=%u 自定义点=%u",
              enabled, pathing, target_desc, marker_owned, arrived,
              static_cast<unsigned>(skipped_cells.size()), static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()));
 }
@@ -587,7 +587,7 @@ void CartographerModule::ClearCustomPoints() {}
 void CartographerModule::ClearDeclined() {}
 void CartographerModule::GetStatus(char* buf, const size_t len)
 {
-    snprintf(buf, len, "carto: unavailable (built without _DEBUG)");
+    snprintf(buf, len, "绘图师: 不可用（非调试构建）");
 }
 
 #endif

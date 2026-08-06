@@ -154,7 +154,7 @@ namespace {
         }
         if (arg1 == L"unlock") {
             GW::CameraMgr::UnlockCam(true);
-            Log::Flash("Use Q/E, A/D, W/S, X/Z, R and arrows for camera movement");
+            Log::Flash("使用 Q/E、A/D、W/S、X/Z、R 和方向键进行视角移动");
             return;
         }
         if (arg1 == L"fog") {
@@ -183,7 +183,7 @@ namespace {
                 }
                 settings.cam_speed = speed;
             }
-            return Log::Flash("Camera speed is now %f", settings.cam_speed);
+            return Log::Flash("视角移动速度当前为 %f", settings.cam_speed);
         }
         else if (arg1 == L"distance") {
             if (argc > 2) {
@@ -198,7 +198,7 @@ namespace {
                 GW::CameraMgr::SetMaxDist(dist);
                 settings.cam_max_distance = dist;
             }
-            return Log::Flash("Camera distance is now %f", settings.cam_max_distance);
+            return Log::Flash("视角距离当前为 %f", settings.cam_max_distance);
         }
     print_warning:
         Log::Warning(CameraUnlockModule::camera_syntax);
@@ -260,12 +260,12 @@ void CameraUnlockModule::SaveSettings(SettingsDoc& doc)
 void CameraUnlockModule::DrawSettingsInternal()
 {
     ToolboxModule::DrawSettingsInternal();
-    ImGui::Text("'/cam unlock' options");
+    ImGui::Text("'/cam unlock' 选项");
     ImGui::Indent();
-    ImGui::Checkbox("Fix height when moving forward", &settings.forward_fix_z);
-    ImGui::InputFloat("Camera speed", &settings.cam_speed);
+    ImGui::Checkbox("向前移动时固定高度", &settings.forward_fix_z);
+    ImGui::InputFloat("视角移动速度", &settings.cam_speed);
     ImGui::Unindent();
-    if (ImGui::InputFloat("Camera max distance", &settings.cam_max_distance, 100.f, 100.f, "%.f")) {
+    if (ImGui::InputFloat("视角最大距离", &settings.cam_max_distance, 100.f, 100.f, "%.f")) {
         settings.cam_max_distance = std::clamp(settings.cam_max_distance, 25.f, 5000.f);
         GW::CameraMgr::SetMaxDist(settings.cam_max_distance);
     }

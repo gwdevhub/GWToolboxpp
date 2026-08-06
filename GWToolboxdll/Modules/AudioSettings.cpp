@@ -321,20 +321,20 @@ void AudioSettings::DrawSettingsInternal() {
         ImGui::PushID(buf.c_str());
         ImGui::TextUnformatted(buf.c_str());
         ImGui::SameLine(200.f * ImGui::FontScale());
-        if (ImGui::Button("Play")) {
+        if (ImGui::Button("播放")) {
             PlaySound_pt(filename.c_str(),arg1,arg2,arg3);
         }
         const auto found = std::ranges::find(blocked_sounds, filename);
         ImGui::SameLine();
         if (found == blocked_sounds.end()) {
-            if (ImGui::Button("Block")) {
+            if (ImGui::Button("屏蔽")) {
                 blocked_sounds.push_back(filename);
                 ImGui::PopID();
                 return true;
             }
         }
         else {
-            if (ImGui::Button("Unblock")) {
+            if (ImGui::Button("取消屏蔽")) {
                 blocked_sounds.erase(found);
                 ImGui::PopID();
                 return true;
@@ -344,15 +344,15 @@ void AudioSettings::DrawSettingsInternal() {
         return false;
         };
     ImGui::Indent();
-    if (ImGui::CollapsingHeader("Blocked In-Game Sounds")) {
+    if (ImGui::CollapsingHeader("已屏蔽的游戏内音效")) {
         for (const auto& filename : blocked_sounds) {
             if (log_sound(filename, (PlaySoundInt_pt)PlaySound,0,0,0))
                 break;
         }
     }
-    log_sounds = ImGui::CollapsingHeader("In-Game Sound Log");
+    log_sounds = ImGui::CollapsingHeader("游戏内音效日志");
     if (log_sounds) {
-        if(ImGui::Button("Clear Logged Sounds"))
+        if(ImGui::Button("清空已记录的音效"))
             logged_sounds.clear();
         for (const auto& filename : logged_sounds) {
             log_sound(filename, (PlaySoundInt_pt)PlaySound, 0, 0, 0);
@@ -361,8 +361,8 @@ void AudioSettings::DrawSettingsInternal() {
     else {
         logged_sounds.clear();
     }
-    if (ImGui::CollapsingHeader("In-Game Music Log")) {
-            if (ImGui::Button("Clear Logged Music")) logged_music.clear();
+    if (ImGui::CollapsingHeader("游戏内音乐日志")) {
+            if (ImGui::Button("清空已记录的音乐")) logged_music.clear();
             for (const auto& filename : logged_music) {
                 log_sound(filename, (PlaySoundInt_pt)PlayMusic, SoundFlags_MusicDefault, 0, 0);
             }
