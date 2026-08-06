@@ -179,9 +179,10 @@ namespace {
 
         // ★★★ 优先加载系统微软雅黑字体 (确保中文支持) ★★★
         const char* system_font_paths[] = {
-            "C:\\Windows\\Fonts\\msyh.ttf",   // 微软雅黑
-            "C:\\Windows\\Fonts\\msyhbd.ttf", // 微软雅黑加粗
-            "C:\\Windows\\Fonts\\simsun.ttc", // 宋体 (备选)
+            "C:\\Windows\\Fonts\\msyh.ttc",   // windows10 微软雅黑
+            "C:\\Windows\\Fonts\\msyh.ttf",   // windows7 微软雅黑
+            "C:\\Windows\\Fonts\\msyhbd.ttc", // windows10 微软雅黑加粗
+            "C:\\Windows\\Fonts\\msyhbd.ttf", // windows7 微软雅黑加粗
         };
         for (const char* path : system_font_paths) {
             printf("Attempting to load system font: %s\n", path);
