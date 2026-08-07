@@ -100,6 +100,9 @@ namespace {
     GW::HookEntry Summon_AgentAdd_Entry;
     GW::HookEntry Summon_GameThreadCallback_Entry;
 
+    // Names are round-tripped through AgentName packets, so every copy has to fit that field.
+    constexpr size_t agent_enc_name_len = sizeof(GW::Packet::StoC::AgentName::name_enc) / sizeof(wchar_t);
+
     std::vector<uint32_t> allies_added_to_party;
     std::vector<PendingAddToParty> pending_add;
     std::queue<uint32_t> pending_remove;
@@ -176,7 +179,8 @@ namespace {
         GW::Packet::StoC::AgentName packet;
         packet.header = GW::Packet::StoC::AgentName::STATIC_HEADER;
         packet.agent_id = agent_id;
-        wcscpy(packet.name_enc, name);
+        wcsncpy(packet.name_enc, name, _countof(packet.name_enc) - 1);
+        packet.name_enc[_countof(packet.name_enc) - 1] = 0;
         GW::StoC::EmulatePacket(&packet);
         return true;
     }
@@ -377,9 +381,11 @@ namespace {
         packet.agent_id = agent_id;
 
         const auto* a = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(agent_id));
-        wchar_t prev_name[8] = {0};
+        wchar_t prev_name[agent_enc_name_len] = {0};
         if (a) {
-            wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
+            if (const auto* enc_name = GW::Agents::GetAgentEncName(a)) {
+                wcsncpy(prev_name, enc_name, _countof(prev_name) - 1);
+            }
         }
         // 1. Remove NPC from window.
         GW::StoC::EmulatePacket(&packet);
@@ -399,8 +405,10 @@ namespace {
         if (!a || a->GetIsDead() || a->GetIsDeadByTypeMap()) {
             return;
         }
-        wchar_t prev_name[8] = {0};
-        wcscpy(prev_name, GW::Agents::GetAgentEncName(a));
+        wchar_t prev_name[agent_enc_name_len] = {0};
+        if (const auto* enc_name = GW::Agents::GetAgentEncName(a)) {
+            wcsncpy(prev_name, enc_name, _countof(prev_name) - 1);
+        }
         GW::Packet::StoC::PartyAllyAdd packet;
 
         packet.header = GW::Packet::StoC::PartyAllyAdd::STATIC_HEADER;
