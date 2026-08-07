@@ -430,7 +430,7 @@ namespace {
     // Whole-file read-only mapping, or nullptr unless the contents start with the 3ANa magic.
     HANDLE MapDat(HANDLE file)
     {
-        const HANDLE mapping = CreateFileMappingW(file, PAGE_READONLY, 0, 0, nullptr);
+        const HANDLE mapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
         if (!mapping)
             return nullptr;
         void* head = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, sizeof(kDatMagic));

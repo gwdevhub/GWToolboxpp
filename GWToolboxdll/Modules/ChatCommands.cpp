@@ -1235,7 +1235,7 @@ namespace {
         }
         const auto slug = SettingSlug(*entry);
         if (argc < 3 && entry->type == SettingsRegistry::Type::Bool) {
-            auto& val = *static_cast<bool*>(entry.ptr);
+            auto& val = *static_cast<bool*>(entry->ptr);
             val = !val;
         }
         else if (argc > 2) {
@@ -1244,7 +1244,7 @@ namespace {
                 float x = 0.f, y = 0.f;
                 ok = argc > 3 && TextUtils::ParseFloat(argv[2], &x) && TextUtils::ParseFloat(argv[3], &y);
                 if (ok) {
-                    *static_cast<std::array<float, 2>*>(entry.ptr) = {x, y};
+                    *static_cast<std::array<float, 2>*>(entry->ptr) = {x, y};
                 }
             }
             else {
