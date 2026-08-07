@@ -10,8 +10,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Keyboard Layout Fix"; }
-    [[nodiscard]] const char* Description() const override { return "Prevents Guild Wars from adding en-US keyboard language to Windows > 8 without your permission"; }
+    [[nodiscard]] const char* Name() const override { return "键盘布局调整"; }
+    [[nodiscard]] const char* Description() const override { return "防止激战在 Windows8及以上系统上未经您的许可添加 en-US 键盘语言"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MOUSE_POINTER; }
 
     bool HasSettings() override { return false; }

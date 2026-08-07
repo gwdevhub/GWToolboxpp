@@ -321,7 +321,7 @@ namespace {
         std::error_code ec;
         const bool file_exists = std::filesystem::exists(drops_filename, ec);
         if (ec) {
-            Log::WarningW(L"std::filesystem::exists for %s failed", drops_filename.wstring().c_str());
+            Log::WarningW(L"std::filesystem::exists 检查 %s 失败", drops_filename.wstring().c_str());
             return;
         }
         std::filesystem::create_directories(drops_filename.parent_path(),ec);
@@ -332,7 +332,7 @@ namespace {
         my_file.open(drops_filename.c_str(), std::ios::app);
 
         if (!my_file.is_open() || my_file.fail()) {
-            Log::WarningW(L"std::wofstream for %s failed", drops_filename.wstring().c_str());
+            Log::WarningW(L"std::wofstream 打开 %s 失败", drops_filename.wstring().c_str());
             return;
         }
 
@@ -559,33 +559,33 @@ void ItemDrops::SaveSettings(SettingsDoc& doc)
 
 void ItemDrops::DrawSettingsInternal()
 {
-    ImGui::Text("Drop Tracking Settings");
-    ImGui::CheckboxWithHelp("Drop Tracking Enabled", &settings.track_drops, "This creates a CSV at DIRECTORY which contains all the information about drops you've gotten.");
+    ImGui::Text("掉落追踪设置");
+    ImGui::CheckboxWithHelp("启用掉落追踪", &settings.track_drops, "这会在指定目录创建一个 CSV 文件，包含您获得的所有掉落信息。");
     ImGui::Separator();
-    ImGui::Text("Item Filter Settings");
+    ImGui::Text("物品过滤设置");
     ImGui::NewLine();
-    ImGui::Text("Block the following item drops:");
+    ImGui::Text("屏蔽以下物品掉落：");
     ImGui::Separator();
-    ImGui::TextDisabled("First column is for items you can pick up, second for items reserved for a party member");
+    ImGui::TextDisabled("第一列为您可以拾取的物品，第二列为保留给队伍成员的物品");
     ImGui::Columns(2, "player_or_ally");
 
-    ImGui::Checkbox("White##player", &settings.hide_player_white);
-    ImGui::Checkbox("Blue##player", &settings.hide_player_blue);
-    ImGui::Checkbox("Purple##player", &settings.hide_player_purple);
-    ImGui::Checkbox("Gold##player", &settings.hide_player_gold);
-    ImGui::Checkbox("Green##player", &settings.hide_player_green);
+    ImGui::Checkbox("白色##player", &settings.hide_player_white);
+    ImGui::Checkbox("蓝色##player", &settings.hide_player_blue);
+    ImGui::Checkbox("紫色##player", &settings.hide_player_purple);
+    ImGui::Checkbox("金色##player", &settings.hide_player_gold);
+    ImGui::Checkbox("绿色##player", &settings.hide_player_green);
 
     ImGui::NextColumn();
 
-    ImGui::Checkbox("White##party", &settings.hide_party_white);
-    ImGui::Checkbox("Blue##party", &settings.hide_party_blue);
-    ImGui::Checkbox("Purple##party", &settings.hide_party_purple);
-    ImGui::Checkbox("Gold##party", &settings.hide_party_gold);
-    ImGui::Checkbox("Green##party", &settings.hide_party_green);
+    ImGui::Checkbox("白色##party", &settings.hide_party_white);
+    ImGui::Checkbox("蓝色##party", &settings.hide_party_blue);
+    ImGui::Checkbox("紫色##party", &settings.hide_party_purple);
+    ImGui::Checkbox("金色##party", &settings.hide_party_gold);
+    ImGui::Checkbox("绿色##party", &settings.hide_party_green);
 
     ImGui::EndColumns();
 
-    const auto itembtn = std::format("Spawn all blocked items ({})", suppressed_packets.size());
+    const auto itembtn = std::format("生成所有被屏蔽的物品（{}）", suppressed_packets.size());
 
     if (ImGui::Button(itembtn.c_str())) {
         SpawnSuppressedItems();
@@ -593,15 +593,15 @@ void ItemDrops::DrawSettingsInternal()
 
     ImGui::Separator();
 
-    ImGui::TextDisabled("Below, you can define items that should never be blocked for you or party members.");
+    ImGui::TextDisabled("下方可定义永远不应为您或队伍成员屏蔽的物品。");
 
     auto& style = ImGui::GetStyle();
     const auto old_color = style.Colors[ImGuiCol_Header];
     style.Colors[ImGuiCol_Header] = ImColor{};
-    if (ImGui::CollapsingHeader("Don't hide items for you with model ids")) {
+    if (ImGui::CollapsingHeader("按模型 ID 不为您屏蔽物品")) {
         ImGui::PushID("BlockPlayerItems");
 
-        if (ImGui::Button("Restore defaults##player")) {
+        if (ImGui::Button("恢复默认##player")) {
             dont_hide_for_player = default_dont_hide_for_player;
         }
         ImGui::BeginChild("dont_block_for_player", ImVec2(0.0f, dont_hide_for_player.size() * 26.f));
@@ -619,17 +619,17 @@ void ItemDrops::DrawSettingsInternal()
         ImGui::EndChild();
         ImGui::Separator();
         bool submitted = false;
-        ImGui::Text("Add new item:");
+        ImGui::Text("添加新物品：");
         static int new_item_id;
         static char buf[50];
-        ImGui::InputText("Item Name##player", buf, 50);
-        ImGui::InputInt("Item Model ID##player", &new_item_id);
-        submitted |= ImGui::Button("Add");
+        ImGui::InputText("物品名称##player", buf, 50);
+        ImGui::InputInt("物品模型 ID##player", &new_item_id);
+        submitted |= ImGui::Button("添加");
         if (submitted && new_item_id > 0) {
             const auto new_id = static_cast<uint32_t>(new_item_id);
             if (!dont_hide_for_player.contains(new_id)) {
                 dont_hide_for_player[new_id] = std::string(buf);
-                Log::Flash("Added Item %s with ID (%d)", buf, new_id);
+                Log::Flash("已添加物品 %s（ID：%d）", buf, new_id);
                 std::ranges::fill(buf, '\0');
                 new_item_id = 0;
             }
@@ -639,9 +639,9 @@ void ItemDrops::DrawSettingsInternal()
     }
 
     ImGui::Separator();
-    if (ImGui::CollapsingHeader("Don't hide items for party members with model ids")) {
+    if (ImGui::CollapsingHeader("按模型 ID 不为队伍成员屏蔽物品")) {
         ImGui::PushID("BlockPartyItems");
-        if (ImGui::Button("Restore defaults##party")) {
+        if (ImGui::Button("恢复默认##party")) {
             dont_hide_for_party = default_dont_hide_for_party;
         }
         ImGui::BeginChild("dont_block_for_party", ImVec2(0.0f, dont_hide_for_party.size() * 26.f));
@@ -659,17 +659,17 @@ void ItemDrops::DrawSettingsInternal()
         ImGui::EndChild();
         ImGui::Separator();
         bool submitted = false;
-        ImGui::Text("Add new item:");
+        ImGui::Text("添加新物品：");
         static int new_item_id_party;
         static char buf[50];
-        ImGui::InputText("Item Name##party", buf, 50);
-        ImGui::InputInt("Item Model ID##party", &new_item_id_party);
-        submitted |= ImGui::Button("Add");
+        ImGui::InputText("物品名称##party", buf, 50);
+        ImGui::InputInt("物品模型 ID##party", &new_item_id_party);
+        submitted |= ImGui::Button("添加");
         if (submitted && new_item_id_party > 0) {
             const auto new_id = static_cast<uint32_t>(new_item_id_party);
             if (!dont_hide_for_party.contains(new_id)) {
                 dont_hide_for_party[new_id] = std::string(buf);
-                Log::Flash("Added Item %s with ID (%d)", buf, new_id);
+                Log::Flash("已添加物品 %s（ID：%d）", buf, new_id);
                 std::ranges::fill(buf, '\0');
                 new_item_id_party = 0;
             }
@@ -679,13 +679,13 @@ void ItemDrops::DrawSettingsInternal()
     }
 
     ImGui::Separator();
-    ImGui::TextDisabled("Below, you can define items that should always be blocked by model id, regardless of rarity settings.");
+    ImGui::TextDisabled("下方可定义无论稀有度设置如何，始终按模型 ID 屏蔽的物品。");
 
     ImGui::Separator();
-    if (ImGui::CollapsingHeader("Always hide items for you with model ids")) {
+    if (ImGui::CollapsingHeader("按模型 ID 始终为您屏蔽物品")) {
         ImGui::PushID("AlwaysHidePlayerItems");
 
-        if (ImGui::Button("Clear all##always_player")) {
+        if (ImGui::Button("全部清除##always_player")) {
             always_hide_for_player.clear();
         }
         ImGui::BeginChild("always_hide_for_player", ImVec2(0.0f, always_hide_for_player.size() * 26.f));
@@ -703,17 +703,17 @@ void ItemDrops::DrawSettingsInternal()
         ImGui::EndChild();
         ImGui::Separator();
         bool submitted = false;
-        ImGui::Text("Add new item:");
+        ImGui::Text("添加新物品：");
         static int new_always_hide_player_id;
         static char always_hide_player_buf[50];
-        ImGui::InputText("Item Name##always_player", always_hide_player_buf, 50);
-        ImGui::InputInt("Item Model ID##always_player", &new_always_hide_player_id);
-        submitted |= ImGui::Button("Add##always_player");
+        ImGui::InputText("物品名称##always_player", always_hide_player_buf, 50);
+        ImGui::InputInt("物品模型 ID##always_player", &new_always_hide_player_id);
+        submitted |= ImGui::Button("添加##always_player");
         if (submitted && new_always_hide_player_id > 0) {
             const auto new_id = static_cast<uint32_t>(new_always_hide_player_id);
             if (!always_hide_for_player.contains(new_id)) {
                 always_hide_for_player[new_id] = std::string(always_hide_player_buf);
-                Log::Flash("Added Item %s with ID (%d)", always_hide_player_buf, new_id);
+                Log::Flash("已添加物品 %s（ID：%d）", always_hide_player_buf, new_id);
                 std::ranges::fill(always_hide_player_buf, '\0');
                 new_always_hide_player_id = 0;
             }
@@ -723,10 +723,10 @@ void ItemDrops::DrawSettingsInternal()
     }
 
     ImGui::Separator();
-    if (ImGui::CollapsingHeader("Always hide items for party members with model ids")) {
+    if (ImGui::CollapsingHeader("按模型 ID 始终为队伍成员屏蔽物品")) {
         ImGui::PushID("AlwaysHidePartyItems");
 
-        if (ImGui::Button("Clear all##always_party")) {
+        if (ImGui::Button("全部清除##always_party")) {
             always_hide_for_party.clear();
         }
         ImGui::BeginChild("always_hide_for_party", ImVec2(0.0f, always_hide_for_party.size() * 26.f));
@@ -744,17 +744,17 @@ void ItemDrops::DrawSettingsInternal()
         ImGui::EndChild();
         ImGui::Separator();
         bool submitted = false;
-        ImGui::Text("Add new item:");
+        ImGui::Text("添加新物品：");
         static int new_always_hide_party_id;
         static char always_hide_party_buf[50];
-        ImGui::InputText("Item Name##always_party", always_hide_party_buf, 50);
-        ImGui::InputInt("Item Model ID##always_party", &new_always_hide_party_id);
-        submitted |= ImGui::Button("Add##always_party");
+        ImGui::InputText("物品名称##always_party", always_hide_party_buf, 50);
+        ImGui::InputInt("物品模型 ID##always_party", &new_always_hide_party_id);
+        submitted |= ImGui::Button("添加##always_party");
         if (submitted && new_always_hide_party_id > 0) {
             const auto new_id = static_cast<uint32_t>(new_always_hide_party_id);
             if (!always_hide_for_party.contains(new_id)) {
                 always_hide_for_party[new_id] = std::string(always_hide_party_buf);
-                Log::Flash("Added Item %s with ID (%d)", always_hide_party_buf, new_id);
+                Log::Flash("已添加物品 %s（ID：%d）", always_hide_party_buf, new_id);
                 std::ranges::fill(always_hide_party_buf, '\0');
                 new_always_hide_party_id = 0;
             }
@@ -853,11 +853,11 @@ ItemDrops::PendingDrop::~PendingDrop() {
 
 const wchar_t* ItemDrops::PendingDrop::GetCSVHeader()
 {
-    return L"SystemTime,InstanceTime,Map,ItemName,Quantity,Value,"
-           L"ItemType,Rarity,DamageType,MinDamage,MaxDamage,"
-           L"RequirementAttribute,RequirementValue,"
-           L"PlayerCount,HeroCount,HenchmanCount,HardMode,"
-           L"ModelFileID";
+    return L"系统时间,实例时间,地图,物品名称,数量,价值,"
+           L"物品类型,稀有度,伤害类型,最小伤害,最大伤害,"
+           L"需求属性,需求等级,"
+           L"玩家数量,英雄数量,雇佣兵数量,困难模式,"
+           L"模型文件ID";
 }
 
 GuiUtils::EncString* ItemDrops::PendingDrop::GetItemName()

@@ -28,7 +28,7 @@ namespace {
         GW::Hook::EnterHook();
         wchar_t* parameter_value = GetStringParameter_Ret(param_id);
         wchar_t* cmp = nullptr;
-        [[maybe_unused]] const bool ok = GW::UI::GetCommandLinePref(L"character", &cmp);
+        [[maybe_unused]] const bool ok = GW::UI::GetCommandLinePref(L"角色", &cmp);
         DEBUG_ASSERT(ok);
         if (cmp && cmp == parameter_value && wcslen(cmp) > 0) {
             // charname parameter

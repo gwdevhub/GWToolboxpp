@@ -16,10 +16,10 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Loot Beacons"; }
+    [[nodiscard]] const char* Name() const override { return "战利品标记"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Draws a pillar of light in the game world on valuable drops (by rarity or trader price).";
+        return "根据稀有度或交易价格，在游戏中为高价值掉落物绘制光柱。";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GEM; }
 

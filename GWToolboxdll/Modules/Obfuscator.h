@@ -10,7 +10,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Obfuscator"; }
+    [[nodiscard]] const char* Name() const override { return "模糊处理器"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_USER_SECRET; }
 
     struct Settings {

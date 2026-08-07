@@ -16,8 +16,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Item Description Handler"; }
-    [[nodiscard]] const char* Description() const override { return "Allows dynamic modification of inventory item descriptions"; }
+    [[nodiscard]] const char* Name() const override { return "物品描述处理"; }
+    [[nodiscard]] const char* Description() const override { return "允许动态修改库存物品描述"; }
 
     void Initialize() override;
     void SignalTerminate() override;

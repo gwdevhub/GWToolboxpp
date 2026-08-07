@@ -141,20 +141,20 @@ namespace {
         L"\x108\x107" "Droknar's Key" "\x1",
     };
 
-    constexpr TBHint HINT_Q9_STR_SHIELDS = {0x20000001, L"PvP Strength shields give 9 armor when you don't meet the requirement, so unless you can meet the req on a different attribute, use a Strength shield."};
-    constexpr TBHint HINT_HERO_EXP = {0x20000002, L"Heroes in your party gain experience from quests, so remember to add your low level heroes when accepting quest rewards."};
-    constexpr TBHint CHEST_CMD = {0x20000003, L"Type '/chest' into chat to open your Xunlai Chest from anywhere in an outpost, so you won't have to run to the chest every time."};
-    constexpr TBHint BULK_BUY = {0x20000004, L"Hold Ctrl when requesting a quote to bulk buy or sell from a trader"};
-    constexpr TBHint EMBARK_WITHOUT_HOMELAND = {0x20001000, L"To get back from Embark Beach to where you came from, talk to \x1\x2%s\x2\x108\x107 or use the '/tb travel' chat command."};
+    constexpr TBHint HINT_Q9_STR_SHIELDS = {0x20000001, L"PvP 力量盾牌在您不满足需求时提供 9 点护甲，因此除非您能在其他属性上满足需求，否则请使用力量盾牌。"};
+    constexpr TBHint HINT_HERO_EXP = {0x20000002, L"队伍中的英雄会从任务中获得经验，因此记得在接受任务奖励时带上您的低等级英雄。"};
+    constexpr TBHint CHEST_CMD = {0x20000003, L"在聊天中输入 '/chest' 可在前哨站的任何位置打开您的迅雷仓库，无需每次都跑到仓库处。"};
+    constexpr TBHint BULK_BUY = {0x20000004, L"在请求报价时按住 Ctrl 键可批量购买或出售商品。"};
+    constexpr TBHint EMBARK_WITHOUT_HOMELAND = {0x20001000, L"要从启程海滩返回您来的地方，请与 \x1\x2%s\x2\x108\x107 对话或使用 '/tb travel' 聊天命令。"};
     constexpr TBHint ENDGAME_TROPHY = {
-        0x20002000, L"Talk to \x1\x2%s\x2\x108\x107 to receive a \x1\x2%s\x2\x108\x107. Those are worth a lot of money if you sell to another player, so rather than trading it in for a weapon, search on https://kamadan.gwtoolbox.com for a buyer."};
+        0x20002000, L"与 \x1\x2%s\x2\x108\x107 对话可获得一个 \x1\x2%s\x2\x108\x107。如果您将其出售给其他玩家，可以卖很多钱，因此与其用它兑换武器，不如在 https://kamadan.gwtoolbox.com 上搜索买家。"};
     constexpr TBHint QUEST_HINT_ADVENTURE_WITH_AN_ALLY = {
-        0x20000005, L"If you don't have a friend available to join you for this quest, try adding everyone in Ascalon City (America English district) to your party. Someone will surely be happy to help you."};
-    constexpr TBHint NOLANI_ACADEMY_SHORTCUT = {0x20000006, L"Turn right and head south to kill Bonfaaz Burntfur.It's a quicker route to the end - Prince Rurik will be fine on his own."};
-    constexpr TBHint CHARM_ANIMAL = {0x20000007, L"Charm Animal is only needed for charming a pet. Consider bringing Comfort Animal instead."};
-    constexpr TBHint HEROS_HANDBOOK = {0x2000008, L"Talk to Gedrel of Ascalon in Eye of the North to get a Hero's Handbook and Master Dungeon Guide."};
-    constexpr TBHint BLACK_WIDOW_CHARM = {0x2000009, L"If you're planning to charm a Black Widow, remember to flag your heroes away so they don't kill it."};
-    constexpr TBHint JUNUNDU_HERO_AVOID_COMBAT = {0x200000A, L"One or more of your heroes is set to 'Avoid Combat'. Heroes in this mode won't fight while you're in Junundu form."};
+        0x20000005, L"如果您没有朋友可以一起完成这个任务，可以尝试将阿斯卡隆城（美洲英语分区）中的所有人添加到您的队伍中。一定会有人乐意帮助您的。"};
+    constexpr TBHint NOLANI_ACADEMY_SHORTCUT = {0x20000006, L"向右转并向南走击杀 Bonfaaz Burntfur。这是通往终点的更快捷径——Prince Rurik 自己会没事的。"};
+    constexpr TBHint CHARM_ANIMAL = {0x20000007, L"驯服动物只在驯服宠物时需要。请考虑携带舒适动物代替。"};
+    constexpr TBHint HEROS_HANDBOOK = {0x2000008, L"在北方之眼与 Ascalon 的 Gedrel 对话可获得英雄手册和大师地下城指南。"};
+    constexpr TBHint BLACK_WIDOW_CHARM = {0x2000009, L"如果您计划驯服黑寡妇，记得让您的英雄远离，以免它们杀死它。"};
+    constexpr TBHint JUNUNDU_HERO_AVOID_COMBAT = {0x200000A, L"您的英雄中有一个或多个被设置为'回避战斗'。在您处于 Junundu 形态时，处于此模式的英雄不会战斗。"};
 
     HintsModule::Settings settings;
     GW::HookEntry hints_entry;
@@ -331,10 +331,10 @@ void HintsModule::Update(float)
 
 void HintsModule::DrawSettingsInternal()
 {
-    ImGui::CheckboxWithHelp("Only show hints once", &settings.only_show_hints_once, "GWToolbox will stop hint messages (e.g. 'ordering your character to attack repeatedly') from showing more than once in-game");
+    ImGui::CheckboxWithHelp("每个提示只显示一次", &settings.only_show_hints_once, "工具箱将阻止提示消息（例如\"命令您的角色重复攻击\"）在游戏中多次显示");
     if (settings.only_show_hints_once) {
-        ImGui::TextDisabled("%d hint(s) have already been shown in-game and won't be shown again", hints_shown.size());
-        if (ImGui::Button("Clear cached hints")) {
+        ImGui::TextDisabled("已有 %d 条提示在游戏中显示过，将不会再次显示", hints_shown.size());
+        if (ImGui::Button("清除缓存的提示")) {
             hints_shown.clear();
         }
     }

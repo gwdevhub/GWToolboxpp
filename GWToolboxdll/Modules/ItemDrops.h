@@ -13,9 +13,9 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Item Filter"; }
+    [[nodiscard]] const char* Name() const override { return "物品筛选"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_COINS; }
-    [[nodiscard]] const char* SettingsName() const override { return "Item Settings"; }
+    [[nodiscard]] const char* SettingsName() const override { return "物品筛选设置"; }
 
     struct Settings {
         bool hide_player_white = false;

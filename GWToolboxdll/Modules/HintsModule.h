@@ -11,8 +11,8 @@ public:
     }
 
     [[nodiscard]] const char* Icon() const override { return ICON_FA_LIGHTBULB; }
-    [[nodiscard]] const char* Name() const override { return "Hints"; }
-    [[nodiscard]] const char* SettingsName() const override { return "In-Game Hints"; }
+    [[nodiscard]] const char* Name() const override { return "模块提示"; }
+    [[nodiscard]] const char* SettingsName() const override { return "游戏内模块提示"; }
 
     struct Settings {
         bool only_show_hints_once = false;

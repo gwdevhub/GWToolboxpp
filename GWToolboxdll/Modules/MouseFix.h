@@ -13,8 +13,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Mouse Settings"; }
-    [[nodiscard]] const char* Description() const override { return " - Fixes occasional camera glitch when looking around in-game\n - Adds option to scale cursor size"; }
+    [[nodiscard]] const char* Name() const override { return "鼠标设置"; }
+    [[nodiscard]] const char* Description() const override { return " - 修复在游戏内环视时偶尔出现的视角故障\n - 添加了缩放光标大小的选项"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MOUSE_POINTER; }
 
     struct Settings {

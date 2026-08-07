@@ -14,8 +14,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Hero Panel Positions"; }
-    [[nodiscard]] const char* Description() const override { return "Remembers the on-screen position of each hero's command panel and restores it when the panel reappears."; }
+    [[nodiscard]] const char* Name() const override { return "英雄面板位置"; }
+    [[nodiscard]] const char* Description() const override { return "记住每个英雄命令面板在屏幕上的位置，并在面板显示时恢复其位置。"; }
     [[nodiscard]] bool HasSettings() override { return false; }
 
     // Registers the keying-mode radio buttons into the existing Party Settings section.

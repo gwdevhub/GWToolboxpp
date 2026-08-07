@@ -13,8 +13,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Login Module"; }
-    [[nodiscard]] const char* Description() const override { return "Allows fix to allow reconnect when starting GW with charname argument."; }
+    [[nodiscard]] const char* Name() const override { return "登录模块"; }
+    [[nodiscard]] const char* Description() const override { return "允许在启动激战时使用charname参数进行重新连接。"; }
     [[nodiscard]] bool HasSettings() override { return false; }
 
     void Initialize() override;
