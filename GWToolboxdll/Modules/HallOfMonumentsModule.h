@@ -308,7 +308,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Hall of Monuments"; }
+    [[nodiscard]] const char* Name() const override { return "纪念堂"; }
 
     bool HasSettings() override { return false; }
 
@@ -316,15 +316,15 @@ public:
     {
         switch (id) {
             case DevotionPoints::AnyMiniatureStatue:
-                return "Any Miniature Statue";
+                return "所有微型雕像";
             case DevotionPoints::RareMiniatureStatue:
-                return "Rare Miniature Statue";
+                return "稀有微型雕像";
             case DevotionPoints::TwentyMiniatureStatues:
-                return "20 Miniature Statues";
+                return "20 微型雕像";
             case DevotionPoints::ThirtyMiniatureStatues:
-                return "30 Miniature Statues";
+                return "30 微型雕像";
             case DevotionPoints::FourtyMiniatureStatues:
-                return "40 Miniature Statues";
+                return "40 微型雕像";
         }
         return "";
     }

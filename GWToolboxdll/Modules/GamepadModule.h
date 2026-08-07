@@ -18,8 +18,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Gamepad Module"; }
-    [[nodiscard]] const char* Description() const override { return "Enables gamepad interaction with toolbox"; }
+    [[nodiscard]] const char* Name() const override { return "手柄模块"; }
+    [[nodiscard]] const char* Description() const override { return "允许使用游戏手柄操作工具箱。"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GAMEPAD; }
     bool HasSettings() override { return false; }
 

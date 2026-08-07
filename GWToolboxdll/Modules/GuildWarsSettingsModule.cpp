@@ -223,11 +223,11 @@ namespace {
     };
     static_assert(_countof(flag_pref_names) == std::to_underlying(GW::UI::FlagPreference::Count));
 
-    const char* ini_label_numbers = "Preference Values";
-    const char* ini_label_enums = "Preference Enums";
-    const char* ini_label_flags = "Preference Flags";
-    const char* ini_label_key_mappings = "Key Mappings";
-    const char* ini_label_windows = "Window Positions";
+    const char* ini_label_numbers = "偏好值";
+    const char* ini_label_enums = "枚举偏好";
+    const char* ini_label_flags = "标志偏好";
+    const char* ini_label_key_mappings = "按键映射";
+    const char* ini_label_windows = "窗口位置";
     std::map<std::wstring, bool> quest_entry_group_visibility;
 
     GW::HookEntry ChatCmd_HookEntry;
@@ -402,7 +402,7 @@ namespace {
         GW::GameThread::Enqueue([filename_cpy = std::filesystem::path(result)] {
             PreferencesStruct prefs;
             if (!exists(filename_cpy)) {
-                Log::Error("File name %s doesn't exist", filename_cpy.string().c_str());
+                Log::Error("文件 %s 不存在", filename_cpy.string().c_str());
                 return;
             }
 
@@ -411,7 +411,7 @@ namespace {
                 ToolboxIni ini;
                 const auto err = ini.LoadFile(filename_cpy.string().c_str());
                 if (err != SI_OK) {
-                    Log::Error("Failed to load ini file %s - error code %d", filename_cpy.string().c_str(), err);
+                    Log::Error("加载 INI 文件 %s 失败 - 错误代码 %d", filename_cpy.string().c_str(), err);
                     return;
                 }
                 LoadPreferences(prefs, ini);
@@ -421,14 +421,14 @@ namespace {
                 const std::string buffer{std::istreambuf_iterator(file), {}};
                 guild_wars_settings_json::PreferencesJson json;
                 if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(json, buffer)) {
-                    Log::Error("Failed to load json file %s", filename_cpy.string().c_str());
+                    Log::Error("加载 JSON 文件 %s 失败", filename_cpy.string().c_str());
                     return;
                 }
                 LoadPreferences(prefs, json);
             }
             SetPreferences(prefs);
 
-            Log::Info("Preferences loaded from %s", filename_cpy.filename().string().c_str());
+            Log::Info("已从 %s 加载偏好设置", filename_cpy.filename().string().c_str());
         });
     }
 
@@ -468,16 +468,16 @@ namespace {
             SavePreferences(current_prefs, json);
             std::string buffer;
             if (glz::write<glz::opts{.prettify = true}>(json, buffer)) {
-                Log::Error("Failed to serialise preferences for %s", filename_cpy.string().c_str());
+                Log::Error("序列化偏好设置到 %s 失败", filename_cpy.string().c_str());
                 return;
             }
             std::ofstream file(filename_cpy, std::ios::binary | std::ios::trunc);
             file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
             if (file.good()) {
-                Log::Info("Preferences saved to %s", filename_cpy.filename().string().c_str());
+                Log::Info("已保存偏好设置到 %s", filename_cpy.filename().string().c_str());
             }
             else {
-                Log::Error("Failed to save json file %s", filename_cpy.string().c_str());
+                Log::Error("保存 JSON 文件 %s 失败", filename_cpy.string().c_str());
             }
         });
     }
@@ -512,7 +512,7 @@ namespace {
         OnPreferencesLoadFileChosen(filename.string().c_str());
     }
 
-    const char* section_name = "GuildWarsSettingsModule:Quest Log Entries Visible";
+    const char* section_name = "GuildWarsSettingsModule:任务日志条目可见";
 
     bool DoesDeviceSupportInterface(IDirect3DDevice9* d3d9Device, const GUID interface_iid) {
         if (!d3d9Device)
@@ -615,35 +615,35 @@ namespace {
         std::string dll_base_name;
 
         std::wstring new_name_enc;
-        new_name_enc += L"\x108\x107Renderer: ";
+        new_name_enc += L"\x108\x107渲染器：";
         new_name_enc += GetGraphicsAPIName();
         new_name_enc += L"\x1\x2\x102\x2\x108\x107";
 
         GetModuleFileInfo(GetModuleHandle("d3d9.dll"), dll_product_name, dll_product_version, dll_base_name);
 
         if (dll_product_name.size()) {
-            new_name_enc += L" (";
+            new_name_enc += L"（";
             new_name_enc += TextUtils::StringToWString(dll_base_name);
-            new_name_enc += L", ";
+            new_name_enc += L"，";
             new_name_enc += TextUtils::StringToWString(dll_product_name);
             if (dll_product_version.size()) {
-                new_name_enc += L", ";
+                new_name_enc += L"，";
                 new_name_enc += TextUtils::StringToWString(dll_product_version);
             }
-            new_name_enc += L")";
+            new_name_enc += L"）";
         }
 
         GetModuleFileInfo(GetModuleHandle("dxgi.dll"), dll_product_name, dll_product_version, dll_base_name);
         if (dll_product_name.size()) {
-            new_name_enc += L" (";
+            new_name_enc += L"（";
             new_name_enc += TextUtils::StringToWString(dll_base_name);
-            new_name_enc += L", ";
+            new_name_enc += L"，";
             new_name_enc += TextUtils::StringToWString(dll_product_name);
             if (dll_product_version.size()) {
-                new_name_enc += L", ";
+                new_name_enc += L"，";
                 new_name_enc += TextUtils::StringToWString(dll_product_version);
             }
-            new_name_enc += L")";
+            new_name_enc += L"）";
         }
         new_name_enc += L"\x1";
 
@@ -677,14 +677,14 @@ void GuildWarsSettingsModule::Terminate()
 
 void GuildWarsSettingsModule::DrawSettingsInternal()
 {
-    ImGui::TextUnformatted("Choose a file from your computer to load Guild Wars settings");
-    if (ImGui::Button("Load from disk...")) {
+    ImGui::TextUnformatted("从您的计算机中选择一个文件来加载 Guild Wars 设置");
+    if (ImGui::Button("从磁盘加载...")) {
         const auto filename = ResolveExistingPreset(Resources::GetPath(GetDefaultFilename()));
         Resources::OpenFileDialog(OnPreferencesLoadFileChosen, "json,ini", filename.string().c_str());
     }
     ImGui::Separator();
-    ImGui::TextUnformatted("Choose a file from your computer to save Guild Wars settings");
-    if (ImGui::Button("Save to disk...")) {
+    ImGui::TextUnformatted("从您的计算机中选择一个文件来保存 Guild Wars 设置");
+    if (ImGui::Button("保存到磁盘...")) {
         const auto filename = Resources::GetPath(GetDefaultFilename());
         Resources::SaveFileDialog(OnPreferencesSaveFileChosen, "json", filename.string().c_str());
     }

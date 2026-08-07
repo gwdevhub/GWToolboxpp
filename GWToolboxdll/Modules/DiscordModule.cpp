@@ -1,13 +1,13 @@
 /*
-Thanks to KAOS for original version from https://github.com/GregLando113/gw-discord
+感谢 KAOS 提供了 https://github.com/GregLando113/gw-discord 的原始版本
 
-HOW TO TEST WITH 2 DISCORD INSTANCES IN DEBUG MODE:
-1. Close DiscordCanary.exe, load first GW client and start toolbox
-    Client 1 is now sending statuses to Discord.exe
-2. Open DiscordCanary.exe, load second GW client and start toolbox
-    Client 2 is now sending statuses to DiscordCanary.exe
+如何在调试模式下用 2 个 Discord 实例测试：
+1. 关闭 DiscordCanary.exe，加载第一个 GW 客户端并启动工具箱
+    客户端 1 现在正在向 Discord.exe 发送状态
+2. 打开 DiscordCanary.exe，加载第二个 GW 客户端并启动工具箱
+    客户端 2 现在正在向 DiscordCanary.exe 发送状态
 
-NOTE: Disconnecting/reconnecting will mess this up so repeat process.
+注意：断开/重新连接会打乱这个设置，所以请重复此过程。
 */
 
 #include "stdafx.h"
@@ -116,66 +116,66 @@ namespace {
         "region_swat"
     };
     const char* region_names[] = {
-        "Kryta",
-        "Maguuma",
-        "Ascalon",
-        "Shiverpeak Mountains",
-        "Heroes' Ascent",
-        "Crystal Desert",
-        "Fissure of Woe",
-        "Presearing",
-        "Kaineng",
-        "Kurzick",
-        "Luxon",
-        "Shing Jea",
-        "Kourna",
-        "Vabbi",
-        "The Desolation",
-        "Istan",
-        "Realm of Torment",
-        "The Tarnished Coast",
-        "The Depths of Tyria",
-        "Far Shiverpeaks",
-        "Charr Homelands",
-        "Battle Isles",
-        "Battle of Jahai",
-        "The Flight North",
-        "The Tengu Accords",
-        "The Rise of The White Mantle",
+        "克瑞塔",
+        "玛古玛丛林",
+        "阿斯卡隆",
+        "席瓦山脉",
+        "英雄殿堂",
+        "水晶沙漠",
+        "哀伤之熔炉",
+        "前席瓦山脉",
+        "凯宁",
+        "库兹柯",
+        "卢克森",
+        "星岬岛",
+        "柯尔纳",
+        "瓦比",
+        "荒芜之地",
+        "伊斯坦",
+        "痛苦领域",
+        "锈蚀海岸",
+        "泰瑞亚深渊",
+        "远北席瓦山脉",
+        "夏尔家园",
+        "战斗群岛",
+        "贾海之战",
+        "北逃之路",
+        "天狗协议",
+        "白斗篷崛起",
         "Swat",
-        "Dev Region"
+        "开发区域"
     };
 
     const char* map_languages[] = {
-        "English",
-        "Unknown",
-        "French",
-        "German",
-        "Italian",
-        "Spanish",
-        "Unknown",
-        "Unknown",
-        "Unknown",
-        "Polish",
-        "Russian"
+        "英语",
+        "未知",
+        "法语",
+        "德语",
+        "意大利语",
+        "西班牙语",
+        "未知",
+        "未知",
+        "未知",
+        "波兰语",
+        "俄语"
     };
     const char* region_abbreviations[] = {
-        "America",      // America
-        "Asia Korea",   // Asia Korean
-        "Europe",       // Europe
-        "Asia Chinese", // Asia Chinese
-        "Asia Japan"    // Asia Japanese
+        "美洲",      // America
+        "亚洲韩国",   // Asia Korean
+        "欧洲",       // Europe
+        "亚洲中国",   // Asia Chinese
+        "亚洲日本"    // Asia Japanese
     };
     const char* language_abbreviations[] = {
-        "E", // English
+        "E", // 英语
         "",
-        "F", // French
-        "G", // German
-        "I", // Italian
-        "S", // Spanish
+        "F", // 法语
+        "G", // 德语
+        "I", // 意大利语
+        "S", // 西班牙语
         "", "", "",
-        "P", // Polish
-        "R"  // Russian
+        "P", // 波兰语
+        "R"  // 俄语
     };
 
     DiscordCreate_pt discordCreate;
@@ -214,27 +214,27 @@ namespace {
 
     void DISCORD_API UpdateActivityCallback(void*, const EDiscordResult result)
     {
-        Log::Log(result == DiscordResult_Ok ? "Activity updated successfully.\n" : "Activity update FAILED!\n");
+        Log::Log(result == DiscordResult_Ok ? "活动已成功更新。\n" : "活动更新失败！\n");
     }
 
     void DISCORD_API OnJoinRequestReplyCallback(void*, const EDiscordResult result)
     {
-        Log::Log(result == DiscordResult_Ok ? "Join request reply sent successfully.\n" : "Join request reply send FAILED!\n");
+        Log::Log(result == DiscordResult_Ok ? "加入请求回复已成功发送。\n" : "加入请求回复发送失败！\n");
     }
 
     void DISCORD_API OnSendInviteCallback(void*, const EDiscordResult result)
     {
-        Log::Log(result == DiscordResult_Ok ? "Invite sent successfully.\n" : "Invite send FAILED!\n");
+        Log::Log(result == DiscordResult_Ok ? "邀请已成功发送。\n" : "邀请发送失败！\n");
     }
 
     void DISCORD_API OnNetworkMessage(void*, DiscordNetworkPeerId, DiscordNetworkChannelId, uint8_t*, const uint32_t)
     {
-        Log::Log("Discord: Network message\n");
+        Log::Log("Discord：网络消息\n");
     }
 
     void DISCORD_API OnJoinParty([[maybe_unused]] void* event_data, const char* secret)
     {
-        Log::Log("Discord: on_activity_join %s\n", secret);
+        Log::Log("Discord：on_activity_join %s\n", secret);
         memset(&join_in_progress, 0, sizeof(join_in_progress));
         b64_dec(secret, &join_in_progress);
     }
@@ -242,18 +242,18 @@ namespace {
     // NOTE: In our game, anyone can join anyone else's party - work around for "ask to join" by auto-accepting.
     void DISCORD_API OnJoinRequest([[maybe_unused]] void* data, DiscordUser* user)
     {
-        Log::Log("Join request received from %s; automatically accept\n", user->username);
+        Log::Log("收到来自 %s 的加入请求；自动接受\n", user->username);
         app.activities->send_request_reply(app.activities, user->id, DiscordActivityJoinRequestReply_Yes, &app, OnJoinRequestReplyCallback);
     }
 
     void DISCORD_API OnPartyInvite([[maybe_unused]] void* event_data, EDiscordActivityActionType, DiscordUser* user, DiscordActivity*)
     {
-        Log::Log("Party invite received from %s\n", user->username);
+        Log::Log("收到来自 %s 的队伍邀请\n", user->username);
     }
 
     void DISCORD_API OnDiscordLog([[maybe_unused]] void* data, const EDiscordLogLevel level, const char* message)
     {
-        Log::Log("Discord Log Level %d: %s\n", level, message);
+        Log::Log("Discord 日志级别 %d：%s\n", level, message);
     }
 
     // Get pid from executable name (i.e. DiscordCanary.exe)
@@ -306,7 +306,7 @@ namespace {
 
     void FailedJoin(const char* error_msg)
     {
-        Log::Error("Join Party Failed: %s", error_msg);
+        Log::Error("加入队伍失败：%s", error_msg);
         join_party_started = 0;
         join_party_next_action = 0;
         join_in_progress.map_id = 0;
@@ -323,25 +323,25 @@ namespace {
         }
         if (join_party_started < time(nullptr) - 10) // Join timeout (try again please!)
         {
-            return FailedJoin("Failed to join party after 10 seconds");
+            return FailedJoin("10 秒后加入队伍失败");
         }
         if (join_party_next_action > time(nullptr)) {
             return; // Delay between steps. Used to wait for packets to load etc
         }
         if (!join_in_progress.map_id) {
-            return FailedJoin("No Party to join");
+            return FailedJoin("没有要加入的队伍");
         }
         if (!IsInJoinablePartyMap()) {
-            Log::Log("Not in the same map; try to travel there.\n");
+            Log::Log("不在同一地图；尝试传送过去。\n");
             if (!GW::Map::GetIsMapUnlocked(static_cast<GW::Constants::MapID>(join_in_progress.map_id))) {
-                return FailedJoin("Cannot enter outpost on this character");
+                return FailedJoin("此角色无法进入该前哨站");
             }
             if (join_in_progress.ghkey[0]) {
-                Log::Log("Travelling to guild hall\n");
+                Log::Log("传送至公会大厅\n");
                 GW::GuildMgr::TravelGH({ join_in_progress.ghkey[0], join_in_progress.ghkey[1], join_in_progress.ghkey[2], join_in_progress.ghkey[3] });
             }
             else {
-                Log::Log("Travelling to outpost\n");
+                Log::Log("传送至前哨站\n");
                 GW::Map::Travel(
                     static_cast<GW::Constants::MapID>(join_in_progress.map_id),
                     static_cast<GW::Constants::ServerRegion>(join_in_progress.region_id),
@@ -358,7 +358,7 @@ namespace {
         const HWND hwnd = GW::MemoryMgr::GetGWWindowHandle();
         SetForegroundWindow(hwnd);
         ShowWindow(hwnd, SW_RESTORE);
-        Log::Log("Join process complete\n");
+        Log::Log("加入过程完成\n");
         join_party_started = 0;
         join_party_next_action = 0;
         join_in_progress.map_id = 0;
@@ -381,7 +381,7 @@ namespace {
                 Log::Warning("TODO: GW::UI::UIPacket::kErrorMessage");
                 switch (packet->error_id) {
                     case 0x35: // Cannot enter outpost (e.g. char has no access to outpost or GH)
-                        FailedJoin("Cannot enter outpost on this character");
+                        FailedJoin("此角色无法进入该前哨站");
                         break;
                     case 0x3C: // Already in active district (try to join party)
                         JoinParty();
@@ -412,21 +412,21 @@ namespace {
         }
         const HINSTANCE hGetProcIDDLL = LoadLibraryW(dll_location.c_str());
         if (!hGetProcIDDLL) {
-            Log::LogW(L"Failed to LoadLibraryW %s\n", dll_location.c_str());
+            Log::LogW(L"LoadLibraryW 失败 %s\n", dll_location.c_str());
             return false;
         }
 
         DiscordVersion_pt discordVersion = (DiscordVersion_pt)GetProcAddress(hGetProcIDDLL, "DiscordVersion");
         if (!discordVersion) {
             ASSERT(UnloadDll());
-            Log::LogW(L"Failed to find address for DiscordVersion\n");
+            Log::LogW(L"找不到 DiscordVersion 的地址\n");
             return false;
         }
         int out[3] = { 0 };
         const auto res = discordVersion(0, out);
         if (res || *out != DISCORD_VERSION) {
             ASSERT(UnloadDll());
-            Log::LogW(L"Discord version mismatch: %d %d.%d.%d\n", DISCORD_VERSION, out[0],out[1],out[2]);
+            Log::LogW(L"Discord 版本不匹配：%d %d.%d.%d\n", DISCORD_VERSION, out[0],out[1],out[2]);
             return false;
         }
 
@@ -434,10 +434,10 @@ namespace {
         discordCreate = (DiscordCreate_pt)(uintptr_t)GetProcAddress(hGetProcIDDLL, "DiscordCreate");
         if (!discordCreate) {
             ASSERT(UnloadDll());
-            Log::LogW(L"Failed to find address for DiscordCreate\n");
+            Log::LogW(L"找不到 DiscordCreate 的地址\n");
             return false;
         }
-        Log::Log("Discord DLL hooked!\n");
+        Log::Log("Discord DLL 已挂钩！\n");
         return true;
     }
     // Sets DISCORD_INSTANCE_ID to match DiscordCanary.exe if its open. debug only.
@@ -477,12 +477,12 @@ namespace {
         }
 #ifdef _DEBUG
         /*
-            HOW TO TEST WITH 2 DISCORD INSTANCES IN DEBUG MODE:
-            1. Close DiscordCanary.exe, load first GW client and start toolbox
-                Client 1 is now sending statuses to Discord.exe
-            2. Open DiscordCanary.exe, load second GW client and start toolbox
-                Client 2 is now sending statuses to DiscordCanary.exe
-            NOTE: Disconnecting/reconnecting will mess this up so repeat process.
+            如何在调试模式下用 2 个 Discord 实例测试：
+            1. 关闭 DiscordCanary.exe，加载第一个 GW 客户端并启动工具箱
+                客户端 1 现在正在向 Discord.exe 发送状态
+            2. 打开 DiscordCanary.exe，加载第二个 GW 客户端并启动工具箱
+                客户端 2 现在正在向 DiscordCanary.exe 发送状态
+            注意：断开/重新连接会打乱这个设置，所以请重复此过程。
         */
         ConnectCanary(); // Sets env var to attach to canary if its open.
 #endif
@@ -490,7 +490,7 @@ namespace {
         const auto result = discordCreate(DISCORD_VERSION, &params, &app.core);
         if (result != DiscordResult_Ok) {
 #ifdef _DEBUG
-            Log::ErrorW(L"Failed to create discord connection; error code %d, last error %d", result, GetLastError());
+            Log::ErrorW(L"创建 Discord 连接失败；错误代码 %d，最后错误 %d", result, GetLastError());
 #endif
             return false;
         }
@@ -500,7 +500,7 @@ namespace {
         app.core->set_log_hook(app.core, DiscordLogLevel_Info, &app, OnDiscordLog);
         app.activities = app.core->get_activity_manager(app.core);
         app.network = app.core->get_network_manager(app.core);
-        Log::Log("Discord connected\n");
+        Log::Log("Discord 已连接\n");
         discord_connected_at = time(nullptr);
         return true;
     }
@@ -609,7 +609,7 @@ namespace {
 
             if (settings.show_character_info) {
                 sprintf(activity.assets.small_image, "profession_%d_512px", a->primary);
-                sprintf(activity.assets.small_text, "%S (%s)", GW::GetGameContext()->character->player_name, ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(a->primary))->string().c_str());
+                sprintf(activity.assets.small_text, "%S（%s）", GW::GetGameContext()->character->player_name, ToolboxUtils::GetProfessionName(static_cast<GW::Constants::Profession>(a->primary))->string().c_str());
             }
 
             if (settings.show_location_info) {
@@ -623,7 +623,7 @@ namespace {
                 if (instance_type == GW::Constants::InstanceType::Outpost && !is_guild_hall) {
                     switch (static_cast<GW::Constants::ServerRegion>(server_region)) {
                     case GW::Constants::ServerRegion::International:
-                        sprintf(region_info, "International %d", map_district);
+                        sprintf(region_info, "国际 %d", map_district);
                         break;
                     case GW::Constants::ServerRegion::China:
                     case GW::Constants::ServerRegion::Korea:
@@ -637,14 +637,14 @@ namespace {
                 }
                 // State
                 if (is_guild_hall) {
-                    sprintf(activity.state, "In Guild Hall");
+                    sprintf(activity.state, "在公会大厅中");
                     map_region = static_cast<short>(GW::Region::Region_BattleIslands);
                 }
                 else if (instance_type == GW::Constants::InstanceType::Outpost) {
                     sprintf(activity.state, "%s", region_info);
                 }
                 else {
-                    sprintf(activity.state, "In Explorable");
+                    sprintf(activity.state, "在可探索区域中");
                 }
                 if (is_guild_hall) {
                     sprintf(activity.details, "%S [%S]", g->name, g->tag);
@@ -653,29 +653,29 @@ namespace {
                     sprintf(activity.details, "%s", map_name_decoded.string().c_str());
                 }
                 sprintf(activity.assets.large_image, "%s", region_assets[map_region]);
-                sprintf(activity.assets.large_text, "Region: %s", region_names[map_region]);
+                sprintf(activity.assets.large_text, "区域：%s", region_names[map_region]);
                 activity.instance = instance_type == GW::Constants::InstanceType::Explorable;
                 activity.timestamps.start = zone_entered_time;
             }
             else {
-                sprintf(activity.state, "In Game");
+                sprintf(activity.state, "游戏中");
             }
         }
         if (memcmp(&last_activity, &activity, sizeof(last_activity)) != 0) {
             // Only update if activity is new.
             last_activity_update = time(nullptr);
             if (show_activity) {
-                Log::Log("Outgoing discord state = %s, %s\n", activity.details, activity.state);
+                Log::Log("传出 Discord 状态 = %s, %s\n", activity.details, activity.state);
                 app.activities->update_activity(app.activities, &activity, &app, UpdateActivityCallback);
             }
             else {
-                Log::Log("Clearing activity details\n");
+                Log::Log("清除活动详情\n");
                 app.activities->clear_activity(app.activities, &app, UpdateActivityCallback);
             }
             last_activity = activity;
         }
         else {
-            Log::Log("Tried to update discord activity, but nothing has changed.");
+            Log::Log("尝试更新 Discord 活动，但没有任何变化。");
         }
 
         pending_activity_update = false;
@@ -736,7 +736,7 @@ void DiscordModule::Initialize()
                                 "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/discord_game_sdk.dll",
                                 [&](const bool success, const std::wstring& error) {
                                     if (!success || !LoadDll()) {
-                                        Log::LogW(L"Failed to load discord_game_sdk.dll. To try again, please restart GWToolbox\n%s", error.c_str());
+                                        Log::LogW(L"加载 discord_game_sdk.dll 失败。请重启 GWToolbox 重试\n%s", error.c_str());
                                         return;
                                     }
                                     pending_discord_connect = pending_activity_update = settings.discord_enabled;
@@ -760,11 +760,11 @@ void DiscordModule::SaveSettings(SettingsDoc& doc)
 void DiscordModule::DrawSettingsInternal()
 {
     bool edited = false;
-    edited |= ImGui::CheckboxWithHelp("Enable Discord integration", &settings.discord_enabled, "Allows GWToolbox to send in-game information to Discord");
+    edited |= ImGui::CheckboxWithHelp("启用 Discord 集成", &settings.discord_enabled, "允许 GWToolbox 向 Discord 发送游戏内信息");
     if (settings.discord_enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, discord_connected ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-        if (ImGui::Button(discord_connected ? "Connected" : "Disconnected", ImVec2(0, 0))) {
+        if (ImGui::Button(discord_connected ? "已连接" : "已断开", ImVec2(0, 0))) {
             if (discord_connected) {
                 Disconnect();
             }
@@ -774,17 +774,17 @@ void DiscordModule::DrawSettingsInternal()
         }
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(discord_connected ? "Click to disconnect" : "Click to connect");
+            ImGui::SetTooltip(discord_connected ? "点击断开连接" : "点击连接");
         }
 
         ImGui::Indent();
-        edited |= ImGui::CheckboxWithHelp("Hide in-game info when appearing offline", &settings.hide_activity_when_offline, "Setting your status to offline in friend list hides your info from Discord");
+        edited |= ImGui::CheckboxWithHelp("离线时隐藏游戏内信息", &settings.hide_activity_when_offline, "在好友列表中设置离线状态将从 Discord 隐藏您的信息");
 
-        edited |= ImGui::CheckboxWithHelp("Display in-game location info", &settings.show_location_info, "e.g. 'Sifhalla, America English 1'");
+        edited |= ImGui::CheckboxWithHelp("显示游戏内位置信息", &settings.show_location_info, "例如 'Sifhalla, 美洲 英语 1'");
 
-        edited |= ImGui::CheckboxWithHelp("Display character info", &settings.show_character_info, "i.e. Profession icon and character name");
+        edited |= ImGui::CheckboxWithHelp("显示角色信息", &settings.show_character_info, "即职业图标和角色名称");
 
-        edited |= ImGui::CheckboxWithHelp("Display party info", &settings.show_party_info, "Allows other players to join you when in an outpost,\nalso shows current party status e.g. (3 of 8)");
+        edited |= ImGui::CheckboxWithHelp("显示队伍信息", &settings.show_party_info, "允许其他玩家在前哨站时加入您，\n同时显示当前队伍状态，例如（3/8）");
         ImGui::Unindent();
     }
     if (edited) // Picked up in the Update() loop
@@ -802,7 +802,7 @@ void DiscordModule::Update(const float)
         Connect();
     }
     if (discord_connected && app.core->run_callbacks(app.core) != DiscordResult_Ok) {
-        Log::Error("Discord disconnected");
+        Log::Error("Discord 已断开连接");
         discord_connected = false;
         // Note that when not logged into discord (but Discord.exe running), DiscordCreate will still return an OK result but a subsequent transaction will disconnect the API.
         // Don't auto-reconnect here; if discord API is borked, you can retry to connect on map load or if user tried to click connect.

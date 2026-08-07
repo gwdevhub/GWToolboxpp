@@ -26,7 +26,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Dialogs"; }
+    [[nodiscard]] const char* Name() const override { return "对话"; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;

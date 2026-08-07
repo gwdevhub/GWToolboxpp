@@ -11,8 +11,7 @@
 namespace {
     constexpr char _Base64ToValue[128] = {
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // [0,   16)
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // [16,  32)
-        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63, // [32,  48)
+        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63, // [16,  48)
         52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1, // [48,  64)
         -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,           // [64,  80)
         15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1, // [80,  96)
@@ -50,7 +49,7 @@ namespace {
         for (auto i = 0; i < in_len; i++) {
             const auto numeric_value = _Base64ToValue[in[i]];
             if (numeric_value == -1) {
-                Log::Error("Unvalid base64 character '%c' in string '%s'\n", in[i], in);
+                Log::Error("字符串 '%s' 中存在无效的 base64 字符 '%c'\n", in, in[i]);
                 return -1;
             }
             bitStrLen += _WriteBits(numeric_value, &out[bitStrLen], 6);
@@ -72,7 +71,7 @@ bool HallOfMonumentsModule::DecodeHomCode(HallOfMonumentsAchievements* out)
     char bitStr[bufSize]; // @Cleanup: Confirm that the buffer is alway big enough.
     const int bitStrLen = Base64ToBitString(out->hom_code, bitStr, bufSize);
     if (bitStrLen == -1) {
-        Log::Error("DecodeHomCode: Failed to Base64ToBitString");
+        Log::Error("DecodeHomCode: Base64ToBitString 失败");
         return false;
     }
     // Resilience
@@ -301,7 +300,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
         std::string response;
         bool success = Resources::Instance().Download(cpy, response);
         if (!success) {
-            Log::Log("Failed to load account hom code %s\n%s", TextUtils::WStringToString(out->character_name).c_str(), response.c_str());
+            Log::Log("加载账号 %s 的纪念堂代码失败\n%s", TextUtils::WStringToString(out->character_name).c_str(), response.c_str());
             out->error_str_from_request = std::move(response);
             out->state = HallOfMonumentsAchievements::State::Error;
             if (callback) {
@@ -316,7 +315,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
             const std::string hom_code = m.get<1>().to_string();
 
             if (!Instance().DecodeHomCode(hom_code.c_str(), out)) {
-                Log::Log("Failed to DecodeHomCode from %s", hom_code.c_str());
+                Log::Log("从 %s 解码纪念堂代码失败", hom_code.c_str());
                 out->state = HallOfMonumentsAchievements::State::Error;
                 if (callback) {
                     callback(out);
@@ -330,7 +329,7 @@ void HallOfMonumentsModule::AsyncGetAccountAchievements(const std::wstring& char
             }
         }
         else {
-            Log::Log("Failed to find regex code from %s", response.c_str());
+            Log::Log("从 %s 中未找到正则表达式匹配", response.c_str());
             out->state = HallOfMonumentsAchievements::State::Error;
             if (callback) {
                 callback(out);

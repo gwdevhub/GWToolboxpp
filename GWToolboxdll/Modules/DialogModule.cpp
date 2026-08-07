@@ -56,7 +56,7 @@ namespace {
 
         for (auto m : ctre::search_all<button_pattern>(subject)) {
             if (!TextUtils::ParseUInt(m.get<1>().to_string().c_str(), &embedded_button.dialog_id)) {
-                Log::ErrorW(L"Failed to parse dialog id for %s, %s", m.get<1>().to_string().c_str(), m.get<2>().to_string().c_str());
+                Log::ErrorW(L"解析对话 ID 失败 %s, %s", m.get<1>().to_string().c_str(), m.get<2>().to_string().c_str());
                 return;
             }
 

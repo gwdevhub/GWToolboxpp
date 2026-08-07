@@ -254,7 +254,7 @@ namespace {
             std::scoped_lock lock(deferred_mutex);
             deferred_decodes.emplace_back(img, decode);
             deferred_count.store(deferred_decodes.size(), std::memory_order_release);
-            Log::Log("[dat] decode deferred until Gw.dat is mapped (%u parked)", static_cast<unsigned>(deferred_decodes.size()));
+            Log::Log("[dat] 解码已延迟，等待 Gw.dat 被映射（%u 个待处理）", static_cast<unsigned>(deferred_decodes.size()));
             return;
         }
         Resources::Instance().EnqueueDxTask([img, argb, dims, ok](IDirect3DDevice9* device) {
@@ -430,7 +430,7 @@ namespace {
     // Whole-file read-only mapping, or nullptr unless the contents start with the 3ANa magic.
     HANDLE MapDat(HANDLE file)
     {
-        const HANDLE mapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
+        const HANDLE mapping = CreateFileMappingW(file, PAGE_READONLY, 0, 0, nullptr);
         if (!mapping)
             return nullptr;
         void* head = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, sizeof(kDatMagic));
@@ -527,7 +527,7 @@ void GwDatModule::Update(float)
                 deferred_count.store(0, std::memory_order_release);
             }
             if (!retry.empty())
-                Log::Log("[dat] Gw.dat mapped, retrying %u deferred decodes", static_cast<unsigned>(retry.size()));
+                Log::Log("[dat] Gw.dat 已映射，正在重试 %u 个延迟的解码", static_cast<unsigned>(retry.size()));
             for (const auto& [img, decode] : retry)
                 RunDecode(img, decode);
         }
@@ -689,8 +689,8 @@ bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t
         if (self.m_handle_enum_failed.load(std::memory_order_acquire)) {
             static std::once_flag warned;
             std::call_once(warned, [] {
-                Log::Warning("GWToolbox can't read Gw.dat: it was blocked from listing its own file handles, "
-                             "usually by anti-virus or anti-cheat. In-game images won't load until it's allowed.");
+                Log::Warning("GWToolbox 无法读取 Gw.dat：它被阻止枚举自己的文件句柄，"
+                             "通常由杀毒软件或反作弊系统导致。游戏内图像将无法加载，直到允许访问。");
             });
         }
         return false;
@@ -707,9 +707,9 @@ bool GwDatModule::ReadFile(uint32_t file_id, std::vector<uint8_t>& out, uint32_t
             self.m_missing_data.store(true, std::memory_order_relaxed);
             static std::once_flag warned;
             std::call_once(warned, [file_id] {
-                Log::Warning("GWToolbox couldn't find some image data in your Gw.dat - your local game data looks "
-                             "incomplete (Steam downloads it on demand). Run Guild Wars once with the -image "
-                             "command-line option to download all game data, then restart. file_id %d. Setup steps: "
+                Log::Warning("GWToolbox 在您的 Gw.dat 中找不到某些图像数据 - 您的本地游戏数据看起来"
+                             "不完整（Steam 按需下载）。请使用 -image 命令行选项运行一次 Guild Wars"
+                             "来下载所有游戏数据，然后重新启动。file_id %d。设置步骤："
                              "https://gwtoolbox.com/docs/troubleshooting/#missing-images-in-toolbox",
                              file_id);
             });

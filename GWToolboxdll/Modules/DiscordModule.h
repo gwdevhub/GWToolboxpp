@@ -15,11 +15,11 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Discord"; }
-    [[nodiscard]] const char* Description() const override { return "Show better 'Now Playing' info in Discord from Guild Wars"; }
+    [[nodiscard]] const char* Name() const override { return "Discord频道"; }
+    [[nodiscard]] const char* Description() const override { return "在《激战》的Discord频道中展示更清晰的展示当前信息。"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_HEADSET; }
 
-    [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }
+    [[nodiscard]] const char* SettingsName() const override { return "第三方客户端"; }
 
     struct Settings {
         bool discord_enabled = true;
