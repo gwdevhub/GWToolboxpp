@@ -17,10 +17,10 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Skill Range Rings"; }
+    [[nodiscard]] const char* Name() const override { return "技能范围"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Shows a hovered skill's area of effect (AoE radius, earshot, spirit range) as a ring on the ground in the game world.";
+        return "显示悬停技能的影响力范围 (AoE半径, 耳语范围, 精灵范围) 作为游戏世界中的圆环。";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CIRCLE_NOTCH; }
 

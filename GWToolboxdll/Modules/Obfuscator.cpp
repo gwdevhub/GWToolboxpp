@@ -833,11 +833,11 @@ void Obfuscator::Obfuscate(const bool obfuscate)
     }
     if (obfuscate) {
         pending_state = ObfuscatorState::Enabled;
-        Log::Flash("Player name will be hidden on next map change");
+        Log::Flash("玩家名称将在下次切换地图时隐藏");
     }
     else {
         pending_state = ObfuscatorState::Disabled;
-        Log::Flash("Player name will be visible on next map change");
+        Log::Flash("玩家名称将在下次切换地图时可见");
     }
 }
 
@@ -974,29 +974,29 @@ void Obfuscator::SaveSettings(SettingsDoc& doc)
 void Obfuscator::DrawSettingsInternal()
 {
     bool enabled = pending_state == ObfuscatorState::Enabled;
-    if (ImGui::Checkbox("Randomize character names on-screen", &enabled)) {
+    if (ImGui::Checkbox("在屏幕上随机显示角色名称", &enabled)) {
         Obfuscate(enabled);
         pending_guild_obfuscate = true;
     }
-    ImGui::ShowHelp("Hides and overrides player names at character selection and in-game.\nThis change is applied on next map change.");
-    ImGui::TextDisabled("You can also use the /hideme or /obfuscate command to toggle this at any time");
+    ImGui::ShowHelp("在角色选择和游戏中隐藏并覆盖玩家名称。\n此更改将在下次切换地图时生效。");
+    ImGui::TextDisabled("你也可以随时使用/hideme或/obfuscate命令切换");
 
-    if (ImGui::Checkbox("Rename friends to their alias", &settings.rename_friends_to_alias)) {
+    if (ImGui::Checkbox("将好友重命名为其别名", &settings.rename_friends_to_alias)) {
         Obfuscate(enabled);
         pending_guild_obfuscate = true;
     }
-    ImGui::ShowHelp("May require a GW restart to take effect.");
-    if (ImGui::Checkbox("Rename other players", &settings.rename_other_players)) {
+    ImGui::ShowHelp("可能需要重启激战才能生效。");
+    if (ImGui::Checkbox("重命名其他玩家", &settings.rename_other_players)) {
         Obfuscate(enabled);
         pending_guild_obfuscate = true;
     }
-    ImGui::ShowHelp("May lead to bugs. May require a GW restart to take effect.");
-    if (ImGui::Checkbox("Rename self", &settings.rename_self)) {
+    ImGui::ShowHelp("可能导致错误。可能需要重启激战才能生效。");
+    if (ImGui::Checkbox("重命名自己", &settings.rename_self)) {
         Obfuscate(enabled);
         pending_guild_obfuscate = true;
     }
-    ImGui::ShowHelp("Renames yourself in-game and in character select.");
-    if (ImGui::InputText("Set own character name", own_player_name, _countof(own_player_name))) {
+    ImGui::ShowHelp("在游戏中和角色选择界面重命名自己。");
+    if (ImGui::InputText("设置自己的角色名", own_player_name, _countof(own_player_name))) {
         if (own_player_name[0] != '\0') {
             own_player_name_w = TextUtils::StringToWString(own_player_name);
         }
@@ -1006,7 +1006,7 @@ void Obfuscator::DrawSettingsInternal()
         Obfuscate(enabled);
         Reset();
     }
-    ImGui::ShowHelp("If empty, a random name will be chosen. May require a GW restart to take effect.");
+    ImGui::ShowHelp("如果为空，将随机选择一个名字。可能需要重启激战才能生效。");
 }
 
 bool Obfuscator::IsObfuscatedName(const std::wstring& name)

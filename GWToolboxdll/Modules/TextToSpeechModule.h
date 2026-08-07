@@ -12,8 +12,8 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Text-to-speech"; }
-    const char* Description() const override { return "AI-generated voices for NPCs using ElevenLabs or OpenAI TTS with cost optimization"; }
+    const char* Name() const override { return "文本转语音"; }
+    const char* Description() const override { return "使用ElevenLabs或OpenAI TTS为NPC生成AI语音，同时进行成本优化。"; }
     const char* Icon() const override { return ICON_FA_VOLUME_UP; }
 
     struct Settings {

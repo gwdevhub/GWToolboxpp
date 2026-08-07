@@ -484,17 +484,16 @@ void MouseFix::Terminate()
 
 void MouseFix::DrawSettingsInternal()
 {
-    if (ImGui::Checkbox("Enable cursor fix", &settings.enable_cursor_fix)) {
+    if (ImGui::Checkbox("启用鼠标调整", &settings.enable_cursor_fix)) {
         CursorFixEnable(settings.enable_cursor_fix);
     }
-    ImGui::SliderInt("Guild Wars cursor size", &settings.cursor_size, 16, 64);
-    ImGui::ShowHelp("Sizes other than 32 might lead the the cursor disappearing at random.\n"
-        "Right click to make the cursor dis- and reappear for this to take effect.");
+    ImGui::SliderInt("激战光标大小", &settings.cursor_size, 16, 64);
+    ImGui::ShowHelp("除32以外的尺寸可能会导致光标随机消失。\n右键单击可使光标消失并重新出现，以使此设置生效。");
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         SetCursorSize(settings.cursor_size);
         RedrawCursorIcon();
     }
-    if (ImGui::Button("Reset")) {
+    if (ImGui::Button("重置")) {
         SetCursorSize(32);
         RedrawCursorIcon();
     }

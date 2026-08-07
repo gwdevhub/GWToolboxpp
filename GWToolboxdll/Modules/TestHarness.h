@@ -29,10 +29,10 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Test Harness"; }
+    [[nodiscard]] const char* Name() const override { return "测试工具集"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Autonomous test driver (debug): file-command channel, auto-login, auto-waypoint.";
+        return "自主测试驱动程序 (调试): 文件命令通道, 自动登录, 自动路径点.";
     }
     [[nodiscard]] bool HasSettings() override { return false; }
 

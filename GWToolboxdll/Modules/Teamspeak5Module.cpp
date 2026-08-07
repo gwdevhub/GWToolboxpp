@@ -1,14 +1,13 @@
 /*
-    Module to keep track of current Teamspeak 3 status
+    模块：跟踪当前 Teamspeak 5 状态
 
-    Created it initially because I was pissed off with having to bind
-    different hotkeys to send different TS3 servers to chat.
+    最初创建是因为我厌倦了为不同的 TS5 服务器绑定不同的热键来发送到聊天。
 
-    Enhancements:
-     + Filter incoming http URLs to refactor to ts3server URL protocol where applicable.
-     + Teamspeak overlay like Overwolf, but not as shit
-     + Messages to/from your current channel
-     + Whispers to/from other TS3 users
+    增强功能：
+     + 过滤传入的 HTTP URL，在适用时重构为 ts5server URL 协议。
+     + 类似 Overwolf 的 Teamspeak 覆盖层，但没那么糟糕
+     + 向/从当前频道的消息
+     + 向/从其他 TS5 用户的耳语
 
      -- Jon
 */
@@ -60,7 +59,7 @@ namespace ts5_api {
         HandshakePayload payload;
     };
 
-    // Incoming websocket envelope: peek at `type`, re-parse `payload` as the concrete struct.
+    // 传入的 WebSocket 信封：查看 `type`，将 `payload` 重新解析为具体结构体。
     struct IncomingEnvelope {
         std::string type;
         glz::raw_json payload;
@@ -125,7 +124,7 @@ namespace {
     const char* gwtoolbox_teamspeak5_identifier = "com.guildwars.gwtoolboxpp";
     const char* gwtoolbox_teamspeak5_version = "1.0.0";
     const char* gwtoolbox_teamspeak5_name = "GWToolbox++ Teamspeak 5";
-    const char* gwtoolbox_teamspeak5_description = "Allows GWToolbox retrieve info from Teamspeak 5";
+    const char* gwtoolbox_teamspeak5_description = "允许 GWToolbox 从 Teamspeak 5 获取信息";
 
     enum ConnectionStep : uint8_t {
         Idle,
@@ -207,17 +206,17 @@ namespace {
 
         Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
-                Log::Error("Failed to get teamspeak invite link (1)");
+                Log::Error("获取 Teamspeak 邀请链接失败 (1)");
                 Log::Log("%s", response.c_str());
                 return;
             }
             ts5_api::InviteCreateResponse res{};
             if (auto ec = glz::read<json_opts>(res, response); ec) {
-                Log::Error("Failed to get teamspeak invite link (2)");
+                Log::Error("获取 Teamspeak 邀请链接失败 (2)");
                 return;
             }
             if (res.id.empty()) {
-                Log::Error("Failed to get teamspeak invite link (3)");
+                Log::Error("获取 Teamspeak 邀请链接失败 (3)");
                 return;
             }
             const std::string url = std::format("https://tmspk.gg/{}", res.id);
@@ -228,16 +227,16 @@ namespace {
     void CHAT_CMD_FUNC(OnTeamspeakCommand)
     {
         if (!IsConnected()) {
-            Log::Error("GWToolbox isn't connected to Teamspeak 5");
+            Log::Error("GWToolbox 未连接到 Teamspeak 5");
             return;
         }
         const auto teamspeak_server = GetCurrentServer();
         if (!(teamspeak_server && !teamspeak_server->host.empty())) {
-            Log::Error("Teamspeak 5 isn't connected to a server");
+            Log::Error("Teamspeak 5 未连接到服务器");
             return;
         }
         wchar_t buf[120];
-        swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
+        swprintf(buf, _countof(buf) - 1, L"%s（%d 名用户）",
                  TextUtils::StringToWString(teamspeak_server->name).c_str(),
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
@@ -286,7 +285,7 @@ namespace {
         int res;
         if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
             if (user_invoked) {
-                Log::Error("Failed to call WSAStartup: %d\n", res);
+                Log::Error("调用 WSAStartup 失败：%d\n", res);
             }
             step = Idle;
             return false;
@@ -296,12 +295,12 @@ namespace {
             websocket = WebSocket::from_url(GetWebsocketHost());
             if (websocket == nullptr) {
                 if (user_invoked) {
-                    Log::Error("Couldn't connect to the teamspeak 5 websocket; ensure Teamspeak 5 is running and that the 'Remote Apps' feature is enabled");
+                    Log::Error("无法连接到 Teamspeak 5 WebSocket；请确保 Teamspeak 5 正在运行且启用了“Remote Apps”功能");
                 }
             }
             else {
                 if (user_invoked) {
-                    Log::Flash("Teamspeak 5 connected");
+                    Log::Flash("Teamspeak 5 已连接");
                 }
                 SendTeamspeakHandshake();
                 GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"ts", OnTeamspeakCommand);
@@ -359,14 +358,14 @@ namespace {
             const auto& connection = payload.connections[connection_id];
             const auto teamspeak_server = UpsertServer(connection.properties, static_cast<uint32_t>(connection_id));
             teamspeak_server->my_client_id = connection.clientId;
-            // Cycle and find our channel
+            // 循环查找我们的频道
             for (const auto& client : connection.clientInfos) {
                 if (client.id == teamspeak_server->my_client_id) {
                     teamspeak_server->my_channel_id = client.channelId;
                     break;
                 }
             }
-            Log::Log("Teamspeak server info updated:\n%s (%s:%d), %d users", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->user_count);
+            Log::Log("Teamspeak 服务器信息已更新：\n%s (%s:%d)，%d 名用户", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->user_count);
         }
         current_server = payload.currentConnectionId;
         return true;
@@ -380,7 +379,7 @@ namespace {
         }
         if (!payload.apiKey.empty()) settings.gwtoolbox_teamspeak5_api_key = payload.apiKey;
         const auto teamspeak_server = UpsertServer(payload.properties, payload.connectionId);
-        Log::Log("Teamspeak server info updated:\n%s (%s:%d), %d users", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->user_count);
+        Log::Log("Teamspeak 服务器信息已更新：\n%s (%s:%d)，%d 名用户", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->user_count);
         return true;
     }
 
@@ -397,14 +396,14 @@ namespace {
         }
 
         switch (payload.status) {
-            case 0: // Disconnected
+            case 0: // 已断开
                 RemoveServer(payload.connectionId);
                 break;
-            case 1: // Connected (current server)
+            case 1: // 已连接（当前服务器）
                 current_server = payload.connectionId;
                 break;
         }
-        Log::Log("OnTeamspeakConnectStatusChanged, status %d, connectionId %d", payload.status, payload.connectionId);
+        Log::Log("OnTeamspeakConnectStatusChanged，状态 %d，连接ID %d", payload.status, payload.connectionId);
         return true;
     }
 
@@ -428,7 +427,7 @@ namespace {
         //Log::Log("%s\n", data.c_str());
         ts5_api::IncomingEnvelope envelope{};
         if (auto ec = glz::read<json_opts>(envelope, data); ec) {
-            Log::Log("ERROR: Failed to parse res JSON from response in websocket->dispatch\n");
+            Log::Log("错误：从 websocket->dispatch 解析响应 JSON 失败\n");
             return false;
         }
 
@@ -445,16 +444,16 @@ namespace {
             OnTeamspeakClientMoved(envelope.payload);
         }
         else {
-            Log::Log("Unhandled TS5 websocket type %s", envelope.type.c_str());
+            Log::Log("未处理的 TS5 WebSocket 类型 %s", envelope.type.c_str());
         }
 
         const auto teamspeak_server = GetCurrentServer();
         if (teamspeak_server) {
-            Log::Log("Current server:\n%s (%s:%d), channel id %s, client_id %d, %d users", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->my_channel_id.c_str(), teamspeak_server->my_client_id,
+            Log::Log("当前服务器：\n%s (%s:%d)，频道ID %s，client_id %d，%d 名用户", teamspeak_server->name.c_str(), teamspeak_server->host.c_str(), teamspeak_server->port, teamspeak_server->my_channel_id.c_str(), teamspeak_server->my_client_id,
                      teamspeak_server->user_count);
         }
         else {
-            Log::Log("Current server: None");
+            Log::Log("当前服务器：无");
         }
 
         return true;
@@ -535,7 +534,7 @@ void Teamspeak5Module::Update(float)
 void Teamspeak5Module::DrawSettingsInternal()
 {
     ImGui::PushID("Teamspeak5Module");
-    if (ImGui::Checkbox("Enable Teamspeak 5 integration", &settings.enabled)) {
+    if (ImGui::Checkbox("启用 Teamspeak 5 集成", &settings.enabled)) {
         if (settings.enabled) {
             Connect(true);
         }
@@ -549,15 +548,15 @@ void Teamspeak5Module::DrawSettingsInternal()
         ImGui::PushStyleColor(ImGuiCol_Text, IsConnected() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
         auto status_str = [] {
             if (IsConnected()) {
-                return "Connected";
+                return "已连接";
             }
             if (step == Connecting) {
-                return "Connecting";
+                return "连接中";
             }
             if (step == Downloading) {
-                return "Downloading";
+                return "下载中";
             }
-            return "Disconnected";
+            return "已断开";
         };
         if (ImGui::Button(status_str(), ImVec2(0, 0))) {
             if (IsConnected()) {
@@ -569,28 +568,28 @@ void Teamspeak5Module::DrawSettingsInternal()
         }
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(IsConnected() ? "Click to disconnect" : "Click to connect");
+            ImGui::SetTooltip(IsConnected() ? "点击断开" : "点击连接");
         }
         if (IsConnected()) {
             ImGui::Indent();
-            ImGui::TextUnformatted("Server:");
+            ImGui::TextUnformatted("服务器：");
             ImGui::SameLine();
             const auto& teamspeak_server = GetCurrentServer();
             if (!teamspeak_server) {
-                ImGui::TextDisabled("Not Connected");
+                ImGui::TextDisabled("未连接");
             }
             else {
                 ImGui::Text("%s", teamspeak_server->name.c_str());
-                ImGui::Text("Host:");
+                ImGui::Text("主机：");
                 ImGui::SameLine();
                 ImGui::Text("%s:%d", teamspeak_server->host.c_str(), teamspeak_server->port);
-                ImGui::Text("Users:");
+                ImGui::Text("用户数：");
                 ImGui::SameLine();
                 ImGui::Text("%d", teamspeak_server->user_count);
             }
             ImGui::Unindent();
         }
-        ImGui::TextDisabled("Use the /ts5 command to send your current server info in chat");
+        ImGui::TextDisabled("使用 /ts5 命令将当前服务器信息发送到聊天");
     }
     ImGui::PopID();
 }

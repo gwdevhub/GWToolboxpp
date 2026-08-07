@@ -1,14 +1,13 @@
 /*
-    Module to keep track of current Teamspeak 3 status
+    模块：跟踪当前 Teamspeak 3 状态
 
-    Created it initially because I was pissed off with having to bind
-    different hotkeys to send different TS3 servers to chat.
+    最初创建是因为我厌倦了为不同的 TS3 服务器绑定不同的热键来发送到聊天。
 
-    Enhancements:
-     + Filter incoming http URLs to refactor to ts3server URL protocol where applicable.
-     + Teamspeak overlay like Overwolf, but not as shit
-     + Messages to/from your current channel
-     + Whispers to/from other TS3 users
+    增强功能：
+     + 过滤传入的 HTTP URL，在适用时重构为 ts3server URL 协议。
+     + 类似 Overwolf 的 Teamspeak 覆盖层，但没那么糟糕
+     + 向/从当前频道的消息
+     + 向/从其他 TS3 用户的耳语
 
      -- Jon
 */
@@ -31,7 +30,7 @@ namespace teamspeak_invite_api {
     struct CreateRequest {
         std::string address;
         std::string name;
-        std::string password; // empty when no password
+        std::string password; // 无密码时为空
         std::string channel_id;
         std::string channel_name;
         double expires_in_days = 1.0;
@@ -289,29 +288,29 @@ namespace {
         //BOOL is_x64 = false;
         //std::filesystem::path running_teamspeak_exe;
         //if (!GetTeamspeakProcess(&running_teamspeak_exe, &is_x64))
-        //    return failed("Error finding running teamspeak executable (%04X)",GetLastError());
+        //    return failed("查找运行中的 Teamspeak 可执行文件失败 (%04X)",GetLastError());
         //if (running_teamspeak_exe.empty())
-        //    return failed("Failed to find running teamspeak executable; is Teamspeak 3 running?");
+        //    return failed("未找到运行中的 Teamspeak 可执行文件；Teamspeak 3 是否在运行？");
         if (settings.teamspeak3_api_key.empty()) {
-            return failed("No API Key provided; find this in Teamspeak > Tools > Options > Addons > ClientQuery > Settings");
+            return failed("未提供 API Key；请在 Teamspeak > 工具 > 选项 > 插件 > ClientQuery > 设置 中查找");
         }
         int res;
         if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
-            return failed("Failed to call WSAStartup: %d\n", res);
+            return failed("调用 WSAStartup 失败：%d\n", res);
         }
         server_socket = socket(AF_INET, SOCK_STREAM, 0);
         if (server_socket == INVALID_SOCKET) {
-            return failed("Couldn't connect to teamspeak 3; socket failure");
+            return failed("无法连接到 Teamspeak 3；套接字创建失败");
         }
 
         constexpr DWORD timeout = 500;
         res = setsockopt(server_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof timeout);
         if (res == SOCKET_ERROR) {
-            return failed("Couldn't connect to teamspeak 3; setsockopt failure");
+            return failed("无法连接到 Teamspeak 3；setsockopt 失败");
         }
         res = setsockopt(server_socket, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof timeout);
         if (res == SOCKET_ERROR) {
-            return failed("Couldn't connect to teamspeak 3; setsockopt failure");
+            return failed("无法连接到 Teamspeak 3；setsockopt 失败");
         }
 
         u_long ip = 0;
@@ -319,7 +318,7 @@ namespace {
         u_long* ptr = &ip;
         res = inet_pton(AF_INET, teamspeak3_host, ptr);
         if (res != 1) {
-            return failed("Couldn't connect to teamspeak 3; inet_pton failure");
+            return failed("无法连接到 Teamspeak 3；inet_pton 失败");
         }
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
@@ -328,25 +327,25 @@ namespace {
 
         res = connect(server_socket, (SOCKADDR*)&addr, sizeof(addr));
         if (res == SOCKET_ERROR) {
-            return failed("Couldn't connect to teamspeak 3; connect failure - is Teamspeak 3 running with the ClientQuery Addon enabled?");
+            return failed("无法连接到 Teamspeak 3；连接失败 - Teamspeak 3 是否正在运行且启用了 ClientQuery 插件？");
         }
 
         auto response = PollSocket("");
         if (!response) {
-            return failed("Couldn't connect to teamspeak 3; auth failure or empty response");
+            return failed("无法连接到 Teamspeak 3；认证失败或空响应");
         }
-        Log::Log("Teamspeak 3 welcome message:\n%s", response->content.c_str());
+        Log::Log("Teamspeak 3 欢迎消息：\n%s", response->content.c_str());
 
-        // Send auth message
+        // 发送认证消息
         const std::string to_send = std::format("auth apikey={}\r\n", settings.teamspeak3_api_key);
         response = PollSocket(to_send);
         if (!response) {
-            return failed("Couldn't connect to teamspeak 3; auth failure or empty response");
+            return failed("无法连接到 Teamspeak 3；认证失败或空响应");
         }
-        Log::Log("Teamspeak 3 auth response:\n%s", response->content.c_str());
+        Log::Log("Teamspeak 3 认证响应：\n%s", response->content.c_str());
 
         if (user_invoked) {
-            Log::Flash("Teamspeak 3 connected");
+            Log::Flash("Teamspeak 3 已连接");
         }
 
         GW::Chat::CreateCommand(&ChatCmd_HookEntry,L"ts", OnTeamspeakCommand);
@@ -380,17 +379,17 @@ namespace {
 
         Resources::Post("https://invites.teamspeak.com/servers/create", glz::write_json(packet).value_or(std::string{}), [callback](const bool success, const std::string& response, void*) {
             if (!success) {
-                Log::Error("Failed to get teamspeak invite link (1)");
+                Log::Error("获取 Teamspeak 邀请链接失败 (1)");
                 Log::Log("%s", response.c_str());
                 return;
             }
             teamspeak_invite_api::CreateResponse res{};
             if (auto ec = glz::read<json_opts>(res, response); ec) {
-                Log::Error("Failed to get teamspeak invite link (2)");
+                Log::Error("获取 Teamspeak 邀请链接失败 (2)");
                 return;
             }
             if (res.id.empty()) {
-                Log::Error("Failed to get teamspeak invite link (3)");
+                Log::Error("获取 Teamspeak 邀请链接失败 (3)");
                 return;
             }
             const std::string url = std::format("https://tmspk.gg/{}", res.id);
@@ -401,16 +400,16 @@ namespace {
     void OnGotServerInfo()
     {
         if (!IsConnected()) {
-            Log::Error("GWToolbox isn't connected to Teamspeak 3");
+            Log::Error("GWToolbox 未连接到 Teamspeak 3");
             return;
         }
         const auto teamspeak_server = GetCurrentServer();
         if (!(teamspeak_server && !teamspeak_server->host.empty())) {
-            Log::Error("Teamspeak 3 isn't connected to a server");
+            Log::Error("Teamspeak 3 未连接到服务器");
             return;
         }
         wchar_t buf[120];
-        swprintf(buf, _countof(buf) - 1, L"%s (%d users)",
+        swprintf(buf, _countof(buf) - 1, L"%s（%d 名用户）",
                  TextUtils::StringToWString(teamspeak_server->name).c_str(),
                  teamspeak_server->user_count);
         GW::Chat::SendChat('#', buf);
@@ -492,7 +491,7 @@ void TeamspeakModule::DrawSettingsInternal()
 {
     check_interval = 5000;
     ImGui::PushID("TeamspeakModule");
-    if (ImGui::Checkbox("Enable Teamspeak 3 integration", &settings.enabled)) {
+    if (ImGui::Checkbox("启用 Teamspeak 3 集成", &settings.enabled)) {
         if (settings.enabled) {
             Connect(true);
         }
@@ -500,18 +499,18 @@ void TeamspeakModule::DrawSettingsInternal()
             pending_disconnect = true;
         }
     }
-    ImGui::ShowHelp("Allows GWToolbox retrieve info from Teamspeak 3");
+    ImGui::ShowHelp("允许 GWToolbox 从 Teamspeak 3 获取信息");
     if (settings.enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, IsConnected() ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
         auto status_str = [] {
             if (IsConnected()) {
-                return "Connected";
+                return "已连接";
             }
             if (step == Connecting) {
-                return "Connecting";
+                return "连接中";
             }
-            return "Disconnected";
+            return "已断开";
         };
         if (ImGui::Button(status_str(), ImVec2(0, 0))) {
             if (IsConnected()) {
@@ -523,30 +522,30 @@ void TeamspeakModule::DrawSettingsInternal()
         }
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(IsConnected() ? "Click to disconnect" : "Click to connect");
+            ImGui::SetTooltip(IsConnected() ? "点击断开" : "点击连接");
         }
         if (IsConnected()) {
             ImGui::Indent();
-            ImGui::TextUnformatted("Server:");
+            ImGui::TextUnformatted("服务器：");
             ImGui::SameLine();
             const auto teamspeak_server = GetCurrentServer();
             if (!teamspeak_server) {
-                ImGui::TextDisabled("Not Connected");
+                ImGui::TextDisabled("未连接");
             }
             else {
                 ImGui::Text("%s", teamspeak_server->name.c_str());
-                ImGui::Text("Host:");
+                ImGui::Text("主机：");
                 ImGui::SameLine();
                 ImGui::Text("%s:%s", teamspeak_server->host.c_str(), teamspeak_server->port.c_str());
-                ImGui::Text("Users:");
+                ImGui::Text("用户数：");
                 ImGui::SameLine();
                 ImGui::Text("%d", teamspeak_server->user_count);
             }
             ImGui::Unindent();
         }
         ImGui::InputText("Teamspeak 3 ClientQuery API Key", settings.teamspeak3_api_key, 127);
-        ImGui::ShowHelp("Find this in Teamspeak > Tools > Options > Addons > ClientQuery > Settings");
-        ImGui::TextDisabled("Use the /ts3 command to send your current server info in chat");
+        ImGui::ShowHelp("请在 Teamspeak > 工具 > 选项 > 插件 > ClientQuery > 设置 中查找");
+        ImGui::TextDisabled("使用 /ts3 命令将当前服务器信息发送到聊天");
     }
     ImGui::PopID();
 }

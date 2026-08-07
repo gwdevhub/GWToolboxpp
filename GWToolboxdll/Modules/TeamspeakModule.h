@@ -10,8 +10,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Teamspeak 3"; }
-    [[nodiscard]] const char* Description() const override { return "Enables /teamspeak command to send current teamspeak 3 server info to chat"; }
+    [[nodiscard]] const char* Name() const override { return "TeamSpeak 3"; }
+    [[nodiscard]] const char* Description() const override { return "启用 /teamspeak 命令以将当前 TeamSpeak 3 服务器信息发送到聊天中"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_HEADSET; }
 
     [[nodiscard]] const char* SettingsName() const override { return "Third Party Integration"; }

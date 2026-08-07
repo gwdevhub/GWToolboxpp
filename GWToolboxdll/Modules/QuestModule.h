@@ -38,9 +38,9 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Quest Module"; }
+    [[nodiscard]] const char* Name() const override { return "任务模块"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_COMPASS; }
-    [[nodiscard]] const char* Description() const override { return "A set of QoL improvements to the quest log and related behavior"; }
+    [[nodiscard]] const char* Description() const override { return "对任务日志及相关提示行为的一系列质量改善"; }
 
     struct Settings {
         bool draw_quest_path_on_minimap = true;

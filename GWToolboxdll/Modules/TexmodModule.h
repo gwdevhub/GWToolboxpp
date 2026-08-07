@@ -25,7 +25,7 @@ public:
     [[nodiscard]] const char* Icon() const override { return ICON_FA_IMAGE; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Load texture replacement packs (TPF/ZIP) via gMod at runtime.";
+        return "在运行时通过gMod加载纹理替换包（TPF/ZIP）。";
     }
 
     // Persisted shape of one texture pack entry (path stored as UTF-8)

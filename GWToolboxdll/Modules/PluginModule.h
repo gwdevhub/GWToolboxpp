@@ -26,7 +26,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Plugins"; }
+    [[nodiscard]] const char* Name() const override { return "插件管理"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_PUZZLE_PIECE; }
 
     [[nodiscard]] bool ShowOnWorldMap() const override { return true; }

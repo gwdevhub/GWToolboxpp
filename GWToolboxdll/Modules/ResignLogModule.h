@@ -14,8 +14,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Resign Log"; }
-    [[nodiscard]] const char* Description() const override { return "Tracks player resign state in an explorable area, adds /resignlog command"; }
+    [[nodiscard]] const char* Name() const override { return "登出记录"; }
+    [[nodiscard]] const char* Description() const override { return "跟踪玩家在可探索区域的登出状态，添加 /resignlog 命令"; }
     bool HasSettings() override { return false; }
 
     struct Settings {

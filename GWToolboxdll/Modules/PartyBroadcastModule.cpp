@@ -28,21 +28,21 @@
 #include "ToolboxSettings.h"
 
 namespace party_broadcast_api {
-    // Compact field names + std::optional omission match the existing wire format.
+    // 紧凑字段名 + std::optional 省略匹配现有的有线格式。
     struct PartyEntry {
-        uint32_t i = 0;             // party id
-        std::optional<uint32_t> r;  // remove flag (when party_size == 0)
-        std::optional<uint32_t> t;  // search type
-        std::optional<uint32_t> p;  // primary
-        std::optional<std::string> s; // sender
-        std::optional<uint32_t> ps; // party size (>1)
-        std::optional<uint32_t> hc; // hero count
-        std::optional<uint32_t> hm; // hardmode
-        std::optional<uint32_t> dl; // district language
-        std::optional<uint32_t> sc; // secondary
-        std::optional<uint32_t> dn; // district number
-        std::optional<std::string> ms; // message
-        std::optional<uint32_t> l;  // level (when != 20)
+        uint32_t i = 0;             // 队伍ID
+        std::optional<uint32_t> r;  // 移除标志（当party_size == 0时）
+        std::optional<uint32_t> t;  // 搜索类型
+        std::optional<uint32_t> p;  // 主职业
+        std::optional<std::string> s; // 发送者
+        std::optional<uint32_t> ps; // 队伍大小（>1）
+        std::optional<uint32_t> hc; // 英雄数量
+        std::optional<uint32_t> hm; // 困难模式
+        std::optional<uint32_t> dl; // 地区语言
+        std::optional<uint32_t> sc; // 副职业
+        std::optional<uint32_t> dn; // 地区编号
+        std::optional<std::string> ms; // 消息
+        std::optional<uint32_t> l;  // 等级（当 != 20 时）
     };
 
     struct PartiesPayload {
@@ -77,7 +77,7 @@ namespace {
         uint32_t party_id = 0;
         uint8_t party_size = 0;
         uint8_t hero_count = 0;
-        uint8_t search_type = 0; // 0=hunting, 1=mission, 2=quest, 3=trade, 4=guild
+        uint8_t search_type = 0; // 0=狩猎, 1=任务, 2=任务, 3=交易, 4=公会
         uint8_t hardmode = 0;
         uint16_t district_number = 0;
         uint8_t language = 0;
@@ -96,7 +96,7 @@ namespace {
     {
         party_broadcast_api::PartyEntry j{.i = p.party_id};
         if (!p.party_size) {
-            j.r = 1u; // "remove"
+            j.r = 1u; // "移除"
             return j;
         }
         j.t = p.search_type;
@@ -117,7 +117,7 @@ namespace {
     {
         GWToolboxRelease current_release;
         if (!Updater::GetCurrentVersionInfo(&current_release)) {
-            Log::Error("Failed to get current toolbox version info");
+            Log::Error("获取当前工具箱版本信息失败");
             return false;
         }
         out = std::format("gwtoolbox-{}-{}", current_release.version, current_release.size);
@@ -126,14 +126,13 @@ namespace {
 
     void on_websocket_closed()
     {
-        // NOTE: called on the worker thread by ThreadedWebSocket.
-        // Only touch atomics / self-contained state here; anything requiring
-        // the game thread should be enqueued via GW::GameThread::Enqueue.
+        // 注意：由 ThreadedWebSocket 在工作线程上调用。
+        // 仅在此处触碰原子变量或自包含状态；任何需要游戏线程的操作都应通过 GW::GameThread::Enqueue 排队。
         last_update_timestamp = 0;
         server_parties.clear();
         need_to_send_party_searches = TIMER_INIT();
         memset(&last_sent_district_info, 0, sizeof(last_sent_district_info));
-        Log::Log("Websocket disconnected");
+        Log::Log("WebSocket 已断开");
     }
 
     void InitWebSocket()
@@ -147,18 +146,18 @@ namespace {
             const auto acct_uuid = GW::AccountMgr::GetAccountUuid();
             const auto uuid = TextUtils::GuidToString(&acct_uuid);
             easywsclient::HeaderKeyValuePair headers = {{"User-Agent", "GWToolboxpp"}, {"X-Api-Key", api_key}, {"X-Account-Uuid", uuid}, {"X-Bot-Version", "101"}};
-            Log::Log("Connecting to wss://party.gwtoolbox.com (X-Api-Key: %s, X-Account-Uuid: %s)", api_key.c_str(), uuid.c_str());
+            Log::Log("正在连接 wss://party.gwtoolbox.com (X-Api-Key: %s, X-Account-Uuid: %s)", api_key.c_str(), uuid.c_str());
             return headers;
         });
 
         party_ws.SetOnMessage([](const std::string&) {
-            // Log::Log("Websocket message\n%s", message.c_str());
+            // Log::Log("Websocket 消息\n%s", message.c_str());
         });
 
         party_ws.SetOnClose(on_websocket_closed);
     }
 
-    // Run on game thread!
+    // 在游戏线程上运行！
     std::vector<PartySearchAdvertisement> collect_party_searches()
     {
         ASSERT(GW::GameThread::IsInGameThread());
@@ -197,12 +196,12 @@ namespace {
             for (const auto& player : *players) {
                 if (!(player.party_size > 1 && player.name)) continue;
                 const auto agent = static_cast<GW::AgentLiving*>(GW::Agents::GetAgentByID(player.agent_id));
-                if (!(agent && agent->GetIsLivingType())) continue; // Although the player might be present, the party size depends on the agent being in compass range
+                if (!(agent && agent->GetIsLivingType())) continue; // 虽然玩家可能存在，但队伍大小取决于代理是否在罗盘范围内
                 const auto sender = TextUtils::WStringToString(player.name);
                 const auto found = std::ranges::find_if(ads.begin(), ads.end(), [sender](const PartySearchAdvertisement& e) {
                     return sender == e.sender;
                 });
-                if (found != ads.end()) continue; // Player has a party search entry
+                if (found != ads.end()) continue; // 玩家已有队伍搜索条目
                 PartySearchAdvertisement ad;
                 ad.party_id = (0xf00 | player.player_number);
                 ad.party_size = static_cast<uint8_t>(player.party_size);
@@ -219,7 +218,7 @@ namespace {
         return ads;
     }
 
-    // Run on game thread!
+    // 在游戏线程上运行！
     bool send_all_party_searches()
     {
         if (!GW::Map::GetIsMapLoaded()) {
@@ -265,7 +264,7 @@ namespace {
 
         const auto current_map_info = GetDistrictInfo();
         if (memcmp(&current_map_info, &last_sent_district_info, sizeof(current_map_info)) != 0) {
-            // Map has changed since last attempt; send full list
+            // 地图自上次尝试后已更改；发送完整列表
             return send_all_party_searches();
         }
 
@@ -274,26 +273,26 @@ namespace {
         for (auto& existing_party : parties) {
             const auto found = server_parties.find(existing_party.party_id);
             if (found != server_parties.end() && memcmp(&existing_party, &found->second, sizeof(existing_party)) == 0) {
-                continue; // No change, don't send
+                continue; // 无变化，不发送
             }
             to_send.push_back(existing_party);
         }
 
         for (auto& it : server_parties) {
             const auto& last_sent_party = it.second;
-            if (!last_sent_party.party_size) continue; // Already flagged for removal
+            if (!last_sent_party.party_size) continue; // 已标记为移除
             const auto found = std::ranges::find_if(parties.begin(), parties.end(), [last_sent_party](const PartySearchAdvertisement& entry) {
                 return entry.party_id == last_sent_party.party_id;
             });
             if (found == parties.end()) {
-                // Party no longer exists, flag for removal
+                // 队伍不再存在，标记为移除
                 auto cpy = last_sent_party;
-                cpy.party_size = 0; // Aka "remove"
+                cpy.party_size = 0; // 即“移除”
                 to_send.push_back(cpy);
             }
         }
 
-        if (to_send.empty()) return true; // No change
+        if (to_send.empty()) return true; // 无变化
         party_broadcast_api::PartiesPayload j{
             .type = "updated_parties",
             .map_id = static_cast<uint32_t>(GW::Map::GetMapID()),
@@ -327,9 +326,9 @@ namespace {
 
 void PartyBroadcast::Update(float)
 {
-    // Join the worker thread once it's finished, then reset for potential re-use.
+    // 一旦工作线程完成，即加入它，然后重置以便可能重用。
     if (party_ws.Update()) {
-        // Thread just completed a graceful disconnect; re-init resets the rate limiter.
+        // 线程刚刚完成优雅断开；重新初始化以重置速率限制器。
         InitWebSocket();
     }
 
@@ -371,9 +370,9 @@ void PartyBroadcast::Initialize()
         GW::UI::UIMessage::kMapLoaded,
         (GW::UI::UIMessage)((uint32_t)GW::UI::UIMessage::kMoraleChange + 1), // wparam = player_id
         GW::UI::UIMessage::kPartySearchRemoved,
-        GW::UI::UIMessage::kPartySearchUpdated,  // Party search updated
-        GW::UI::UIMessage::kPartySearchCreated,  // Party search updated
-        GW::UI::UIMessage::kPartySearchIdChanged // Party search Remove
+        GW::UI::UIMessage::kPartySearchUpdated,  // 队伍搜索更新
+        GW::UI::UIMessage::kPartySearchCreated,  // 队伍搜索创建
+        GW::UI::UIMessage::kPartySearchIdChanged // 队伍搜索移除
     };
     for (const auto message_id : ui_messages) {
         RegisterUIMessageCallback(&OnUIMessage_Hook, message_id, OnUIMessage, 0x8000);

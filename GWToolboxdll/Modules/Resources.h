@@ -31,7 +31,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Resources"; }
+    [[nodiscard]] const char* Name() const override { return "资源加载"; }
     bool HasSettings() override { return false; }
 
     void Initialize() override;

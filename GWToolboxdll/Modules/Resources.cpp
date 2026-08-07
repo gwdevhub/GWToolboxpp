@@ -28,8 +28,8 @@
 #include <Modules/Resources.h>
 #include <Utils/GuiUtils.h>
 
-#pragma warning(push) // Save current warning state
-#pragma warning(disable : 4189) // local variable is initialized but not referenced
+#pragma warning(push) // 保存当前警告状态
+#pragma warning(disable : 4189) // 局部变量已初始化但未引用
 #include <include/nfd.h>
 #include <nfd_common.c>
 #include <nfd_win.cpp>
@@ -50,15 +50,15 @@
 
 
 namespace {
-    // Define the IID if not already defined
+    // 如果尚未定义则定义 IID
 
     DXGI_FORMAT ConvertD3D9FormatToDXGI(D3DFORMAT d3d9Format)
     {
         switch (d3d9Format) {
             case D3DFMT_A8R8G8B8:
-                return DXGI_FORMAT_B8G8R8A8_UNORM;
+                return DXGI_FORMAT_B8R8G8A8_UNORM;
             case D3DFMT_X8R8G8B8:
-                return DXGI_FORMAT_B8G8R8X8_UNORM;
+                return DXGI_FORMAT_B8R8G8X8_UNORM;
             case D3DFMT_R5G6B5:
                 return DXGI_FORMAT_B5G6R5_UNORM;
             case D3DFMT_A1R5G5B5:
@@ -66,7 +66,7 @@ namespace {
             case D3DFMT_A4R4G4B4:
                 return DXGI_FORMAT_B4G4R4A4_UNORM;
             case D3DFMT_R8G8B8:
-                return DXGI_FORMAT_UNKNOWN; // No direct equivalent
+                return DXGI_FORMAT_UNKNOWN; // 无直接等效项
             case D3DFMT_A8:
                 return DXGI_FORMAT_A8_UNORM;
             case D3DFMT_DXT1:
@@ -90,7 +90,7 @@ namespace {
     {
         switch (code) {
             case E_INVALIDARG:
-                return "E_INVALIDARG One or more arguments are invalid.";
+                return "E_INVALIDARG 一个或多个参数无效。";
             case D3DERR_NOTAVAILABLE:
                 return "D3DERR_NOTAVAILABLE";
             case D3DERR_OUTOFVIDEOMEMORY:
@@ -103,7 +103,7 @@ namespace {
                 return "D3D_OK";
             default:
                 static std::string str;
-                str = std::format("Unknown D3D error {:#08x}", code);
+                str = std::format("未知 D3D 错误 {:#08x}", code);
                 return str.c_str();
         }
     }
@@ -153,17 +153,17 @@ namespace {
     std::recursive_mutex main_mutex;
     std::recursive_mutex dx_mutex;
 
-    // tasks to be done async by the worker thread
+    // 由工作线程异步执行的任务
     std::queue<std::function<void()>> thread_jobs;
-    // tasks to be done in the render thread
+    // 在渲染线程中执行的任务
     std::queue<std::function<void(IDirect3DDevice9*)>> dx_jobs;
-    // tasks to be done in main thread
+    // 在主线程中执行的任务
     std::queue<std::function<void()>> main_jobs;
 
     IDirect3DTexture9* empty_texture_ptr = nullptr;
     bool should_stop = false;
 
-    // snprintf error message, pass to callback as a failure. Used internally.
+    // snprintf 错误消息，传递给回调作为失败信息。内部使用。
     void trigger_failure_callback(const std::function<void(bool, const std::wstring&)>& callback, const wchar_t* format, ...)
     {
         std::wstring out;
@@ -184,7 +184,7 @@ namespace {
         switch (message_id) {
             case GW::UI::UIMessage::kPreferenceEnumChanged:
                 if (wparam && *static_cast<GW::UI::EnumPreference*>(wparam) == GW::UI::EnumPreference::InterfaceSize) {
-                    Resources::GetGWScaleMultiplier(true); // Re-fetch ui scale indicator
+                    Resources::GetGWScaleMultiplier(true); // 重新获取UI缩放指示器
                 }
                 break;
         }
@@ -231,7 +231,7 @@ namespace {
         ASSERT(snprintf(user_agent_str, sizeof(user_agent_str), "GWToolboxpp/%s", GWTOOLBOXDLL_VERSION) != -1);
         r->SetUserAgent(user_agent_str);
         r->SetFollowLocation(true);
-        r->SetVerifyPeer(false); // idc about mitm or out of date certs
+        r->SetVerifyPeer(false); // 不关心 MITM 或过期的证书
         r->SetMethod(HttpMethod::Get);
         r->SetVerifyHost(false);
         r->SetConnectTimeoutSec(5);
@@ -304,7 +304,7 @@ void Resources::OpenFileDialog(std::function<void(const char*)> callback, const 
             case NFD_CANCEL:
                 break;
             default:
-                Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+                Log::Log("NFD_OpenDialog 错误：%s\n", NFD_GetError());
                 break;
         }
 
@@ -334,7 +334,7 @@ void Resources::SaveFileDialog(std::function<void(const char*)> callback, const 
                 callback(nullptr);
                 break;
             default:
-                Log::Log("NFD_OpenDialog Error: %s\n", NFD_GetError());
+                Log::Log("NFD_OpenDialog 错误：%s\n", NFD_GetError());
                 break;
         }
         if (outPath) {
@@ -378,43 +378,40 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     }
     IShellLink* psl = nullptr;
 
-    // buffer that receives the null-terminated string
-    // for the drive and path
+    // 用于接收以 null 结尾的驱动器路径字符串的缓冲区
     TCHAR szPath[MAX_PATH];
-    // buffer that receives the null-terminated
-    // string for the description
+    // 用于接收以 null 结尾的描述字符串的缓冲区
     TCHAR szDesc[MAX_PATH];
-    // structure that receives the information about the shortcut
+    // 接收快捷方式信息的结构
     WIN32_FIND_DATA wfd{};
 
-    // Get a pointer to the IShellLink interface
+    // 获取 IShellLink 接口指针
     hRes = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&psl);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
-    // Get a pointer to the IPersistFile interface
+    // 获取 IPersistFile 接口指针
     IPersistFile* ppf = nullptr;
     psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&ppf));
 
-    // IPersistFile is using LPCOLESTR,
-    // Open the shortcut file and initialize it from its contents
+    // IPersistFile 使用 LPCOLESTR，
+    // 打开快捷方式文件并从中初始化其内容
     hRes = ppf->Load(in_shortcut_path.wstring().c_str(), STGM_READ);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
-    // Try to find the target of a shortcut,
-    // even if it has been moved or renamed
+    // 尝试查找快捷方式的目标，即使它已被移动或重命名
     hRes = psl->Resolve(nullptr, SLR_UPDATE);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
-    // Get the path to the shortcut target
+    // 获取快捷方式目标的路径
     hRes = psl->GetPath(szPath, MAX_PATH, &wfd, SLGP_RAWPATH);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
 
-    // Get the description of the target
+    // 获取目标的描述
     hRes = psl->GetDescription(szDesc, MAX_PATH);
     if (!SUCCEEDED(hRes)) {
         return hRes;
@@ -441,7 +438,7 @@ void Resources::Cleanup()
                 break;
             Sleep(10);
         }
-        delete worker; // Will trigger assertion
+        delete worker; // 将触发断言
     }
     workers.clear();
     for (const auto& tex : skill_images | std::views::values) {
@@ -456,10 +453,10 @@ void Resources::Cleanup()
     item_images.clear();
     profession_icons.clear();
     damagetype_icons.clear();
-    map_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
-    skill_names.clear(); // NB: pointers to encoded_string_ids, no need to free memory
+    map_names.clear(); // 注意：指向 encoded_string_ids 的指针，无需释放内存
+    skill_names.clear(); // 注意：指向 encoded_string_ids 的指针，无需释放内存
     hero_names.clear();
-    region_names.clear(); // owns its EncStrings (built from raw encoded strings, not encoded_string_ids)
+    region_names.clear(); // 拥有其 EncStrings（根据原始编码字符串构建，非 encoded_string_ids）
     encoded_string_ids.clear();
 }
 
@@ -516,7 +513,7 @@ std::filesystem::path Resources::GetComputerFolderPath()
 
 std::filesystem::path Resources::GetSettingsFolderName()
 {
-    // Bare config name (no configs\ prefix) so it can be passed back to SetSettingsFolder
+    // 纯净配置名称（无 configs\ 前缀），以便传递给 SetSettingsFolder
     return current_settings_folder.empty() ? std::filesystem::path() : current_settings_folder.filename();
 }
 
@@ -528,7 +525,7 @@ std::filesystem::path Resources::GetSettingsFolderPath()
 
 std::filesystem::path Resources::GetLegacySettingsFolderPath()
 {
-    // Pre-configs/default layout: the default config lived at the computer root
+    // 预 configs/default 布局：默认配置位于计算机根目录
     const auto computer_path = GetComputerFolderPath();
     return current_settings_folder.empty() ? computer_path : computer_path / current_settings_folder;
 }
@@ -581,19 +578,19 @@ bool Resources::EnsureFolderExists(const std::filesystem::path& path, std::wstri
 {
     error_description.clear();
     if (path.empty()) {
-        error_description = L"No folder path was provided";
+        error_description = L"未提供文件夹路径";
         return false;
     }
     if (exists(path)) return true;
     std::error_code ec;
     if (create_directories(path, ec)) return true;
 
-    error_description = std::format(L"Failed to create folder:\n{}\n\nReason: {} (code {})\n\n{}",
+    error_description = std::format(L"创建文件夹失败：\n{}\n\n原因：{} (代码 {})\n\n{}",
                                     path.wstring(), FormatWindowsError(ec.value()), ec.value(), PathDiagnoseWritability(path.parent_path()));
-    // ERROR_ACCESS_DENIED / ERROR_VIRUS_INFECTED / ERROR_VIRUS_DELETED are what antivirus and Controlled Folder Access return when blocking the write
+    // ERROR_ACCESS_DENIED / ERROR_VIRUS_INFECTED / ERROR_VIRUS_DELETED 是防病毒软件和受控文件夹访问阻止写入时返回的错误
     if (ec.value() == ERROR_ACCESS_DENIED || ec.value() == ERROR_VIRUS_INFECTED || ec.value() == ERROR_VIRUS_DELETED) {
-        error_description += L"\n\nIf this is your Documents folder, Windows Defender Controlled Folder Access "
-            L"may be the cause - try allowing Guild Wars, or turning Controlled Folder Access off.";
+        error_description += L"\n\n如果这是您的“文档”文件夹，可能是 Windows Defender 受控文件夹访问\n"
+            L"导致的 — 请尝试允许激战，或关闭受控文件夹访问。";
     }
     return false;
 }
@@ -605,7 +602,7 @@ bool Resources::Download(const std::filesystem::path& path_to_file, const std::s
         return StrSwprintf(response, L"%S", content.c_str()), false;
     }
     if (!content.length()) {
-        return StrSwprintf(response, L"Failed to download %S, no content length", url.c_str()), false;
+        return StrSwprintf(response, L"下载 %S 失败，无内容长度", url.c_str()), false;
     }
     return WriteFile(path_to_file, content);
 }
@@ -615,14 +612,14 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
     EnqueueWorkerTask([this, path_to_file, url, callback] {
         std::wstring error_message;
         bool success = Download(path_to_file, url, error_message);
-        // and call the callback in the main thread
+        // 在主线程中调用回调
         if (callback) {
             EnqueueMainTask([callback, success, error_message] {
                 callback(success, error_message);
             });
         }
         else if (!success) {
-            Log::LogW(L"Failed to download %s from %S\n%S", path_to_file.wstring().c_str(), url.c_str(), error_message.c_str());
+            Log::LogW(L"从 %S 下载 %s 失败\n%S", url.c_str(), path_to_file.wstring().c_str(), error_message.c_str());
         }
     });
 }
@@ -680,7 +677,7 @@ bool Resources::Download(const std::string& url, std::string& response, int& sta
     response = std::move(r.GetContent());
     if (!r.IsSuccessful()) {
         if (response.empty()) {
-            response = std::format("Failed to download {}, curl status {} {}", url, r.GetStatusCode(), r.GetStatusStr());
+            response = std::format("下载 {} 失败，curl 状态 {} {}", url, r.GetStatusCode(), r.GetStatusStr());
         }
         return false;
     }
@@ -715,14 +712,14 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
             const std::string http = "http://";
             const std::string https = "https://";
 
-            // Check if the URL starts with http:// or https:// and remove it
+            // 检查 URL 是否以 http:// 或 https:// 开头，并移除之
             if (url.substr(0, http.size()) == http) {
                 return url.substr(http.size());
             }
             if (url.substr(0, https.size()) == https) {
                 return url.substr(https.size());
             }
-            return url; // Return the original if no match is found
+            return url; // 若无匹配则返回原 URL
         };
         const auto cache_path = Resources::GetPath("cache") / HashStr(remove_protocol(url));
         const auto expiration = get_cache_modified_time(cache_path);
@@ -754,13 +751,13 @@ bool Resources::Post(const std::string& url, const std::string& payload, std::st
     r.SetMethod(HttpMethod::Post);
     r.SetPostContent(payload.c_str(), payload.size(), ContentFlag::ByRef);
 
-    // Probe whether the payload is valid JSON so we can set the right Content-Type.
+    // 探测 payload 是否为有效 JSON 以设置正确的 Content-Type
     const std::string content_type = glz::validate_json(payload) ? "application/x-www-form-urlencoded" : "application/json";
     r.SetHeader("Content-Type", content_type.c_str());
     r.SetUrl(url.c_str());
     r.Execute();
     if (!(r.IsSuccessful() || r.GetStatusCode() == 415)) {
-        StrSprintf(response, "Failed to POST %s, curl status %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
+        StrSprintf(response, "POST %s 失败，curl 状态 %d %s", url.c_str(), r.GetStatusCode(), r.GetStatusStr());
         return false;
     }
     response = std::move(r.GetContent());
@@ -781,18 +778,18 @@ void Resources::Post(const std::string& url, const std::string& payload, AsyncLo
 void Resources::EnsureFileExists(const std::filesystem::path& path_to_file, const std::string& url, const AsyncLoadCallback& callback)
 {
     if (exists(path_to_file)) {
-        // if file exists, run the callback immediately in the same thread
+        // 如果文件已存在，在同一线程中立即运行回调
         callback(true, L"");
     }
     else {
-        // otherwise try to download it in the worker
+        // 否则尝试在工作线程中下载
         Instance().Download(path_to_file, url, callback);
     }
 }
 
 HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesystem::path& path_to_file, IDirect3DTexture9** texture, std::wstring& error)
 {
-    // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
+    // 注意：某些显卡在加载纹理时会返回 D3DERR_NOTAVAILABLE，原因尚未查明，但若报告此错误则重试
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     const auto ext = path_to_file.extension();
@@ -806,25 +803,25 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* device, const std::filesys
     }
     if (res != D3D_OK) {
         std::filesystem::remove(path_to_file);
-        StrSwprintf(error, L"Error loading resource from file %s - Error is %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
+        StrSwprintf(error, L"从文件 %s 加载资源时出错 - 错误为 %S", path_to_file.filename().wstring().c_str(), d3dErrorMessage(res));
         return res;
     }
     if (!*texture) {
         res = D3DERR_NOTFOUND;
-        StrSwprintf(error, L"Error loading resource from file %s - texture loaded is null", path_to_file.filename().wstring().c_str());
+        StrSwprintf(error, L"从文件 %s 加载资源时出错 - 加载的纹理为空", path_to_file.filename().wstring().c_str());
     }
     return res;
 }
 
 HRESULT Resources::TryCreateTexture(IDirect3DDevice9* pDevice, const HMODULE hSrcModule, const LPCSTR pSrcResource, IDirect3DTexture9** texture, std::wstring& error)
 {
-    // NB: Some Graphics cards seem to spit out D3DERR_NOTAVAILABLE when loading textures, haven't figured out why but retry if this error is reported
+    // 注意：某些显卡在加载纹理时会返回 D3DERR_NOTAVAILABLE，原因尚未查明，但若报告此错误则重试
     HRESULT res = D3DERR_NOTAVAILABLE;
     size_t tries = 0;
     while (res == D3DERR_NOTAVAILABLE && tries++ < 3) {
         EmbeddedResource resource(pSrcResource, RT_RCDATA, hSrcModule);
         if (!resource.data()) {
-            StrSwprintf(error, L"Error loading resource for id %p, module %p - texture not found", pSrcResource, hSrcModule);
+            StrSwprintf(error, L"加载资源 id %p，模块 %p 时出错 - 未找到纹理", pSrcResource, hSrcModule);
             return D3DERR_NOTFOUND;
         }
         res = CreateWICTextureFromMemoryEx(pDevice, static_cast<const uint8_t*>(resource.data()), resource.size(), 0, 0, D3DPOOL_MANAGED, DirectX::WIC_LOADER_DEFAULT, texture);
@@ -833,11 +830,11 @@ HRESULT Resources::TryCreateTexture(IDirect3DDevice9* pDevice, const HMODULE hSr
         }
     }
     if (res != D3D_OK) {
-        StrSwprintf(error, L"Error loading resource for id %p, module %p - Error is %s", pSrcResource, hSrcModule, d3dErrorMessage(res));
+        StrSwprintf(error, L"加载资源 id %p，模块 %p 时出错 - 错误为 %s", pSrcResource, hSrcModule, d3dErrorMessage(res));
     }
     else if (!*texture) {
         res = D3DERR_NOTFOUND;
-        StrSwprintf(error, L"Error loading resource for id %p, module %p - texture loaded is null", pSrcResource, hSrcModule);
+        StrSwprintf(error, L"加载资源 id %p，模块 %p 时出错 - 加载的纹理为空", pSrcResource, hSrcModule);
     }
     return res;
 }
@@ -852,7 +849,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
             callback(success, error);
         }
         else if (!success) {
-            Log::LogW(L"Failed to load texture from file %s\n%s", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
+            Log::LogW(L"从文件 %s 加载纹理失败\n%s", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
         }
     });
 }
@@ -866,7 +863,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, WORD id, AsyncLoadCallb
             callback(success, error);
         }
         else if (!success) {
-            Log::LogW(L"Failed to load texture from id %d\n%s", id, error.c_str());
+            Log::LogW(L"从 id %d 加载纹理失败\n%s", id, error.c_str());
         }
     });
 }
@@ -882,7 +879,7 @@ void Resources::LoadTexture(IDirect3DTexture9** texture, const std::filesystem::
                 callback(success, error);
             }
             else {
-                Log::LogW(L"Failed to EnsureFileExists %s\n%S", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
+                Log::LogW(L"EnsureFileExists 失败 %s\n%S", TextUtils::PrintFilename(path_to_file.wstring()).c_str(), error.c_str());
             }
         }
     });
@@ -904,7 +901,7 @@ bool Resources::ResourceToFile(const WORD id, const std::filesystem::path& path_
 {
     const EmbeddedResource resource(id, RT_RCDATA, GWToolbox::GetDLLModule());
     if (!resource.data()) {
-        StrSwprintf(error, L"Error calling on resource id %u - Error is %lu", id, GetLastError());
+        StrSwprintf(error, L"调用资源 id %u 时出错 - 错误为 %lu", id, GetLastError());
         return false;
     }
     return WriteFile(path_to_file, std::string(static_cast<char*>(resource.data()), resource.size()));
@@ -956,7 +953,7 @@ IDirect3DTexture9** Resources::GetProfessionIcon(GW::Constants::Profession p)
         snprintf(remote_image, _countof(remote_image), "https://wiki.guildwars.com/images/%s.png", profession_icon_urls[prof_id]);
         LoadTexture(texture, local_image, remote_image, [prof_id](const bool success, const std::wstring& error) {
             if (!success) {
-                Log::ErrorW(L"Failed to load icon for profession %d\n%s", prof_id, error.c_str());
+                Log::ErrorW(L"为职业 %d 加载图标失败\n%s", prof_id, error.c_str());
             }
         });
     }
@@ -992,7 +989,7 @@ IDirect3DTexture9** Resources::GetDamagetypeImage(std::string dmg_type)
         LoadTexture(texture, local_path, remote_path, [dmg_type](const bool success, const std::wstring& error) {
             if (!success) {
                 const auto dmg_type_wstr = TextUtils::StringToWString(dmg_type);
-                Log::ErrorW(L"Failed to load icon for %d\n%s", dmg_type_wstr.c_str(), error.c_str());
+                Log::ErrorW(L"为 %d 加载图标失败\n%s", dmg_type_wstr.c_str(), error.c_str());
             }
         });
     }
@@ -1015,10 +1012,10 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
     }
     const auto callback = [filename_sanitised](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::LogW(L"Failed to load Guild Wars Wiki file%S\n%s", filename_sanitised.c_str(), error.c_str());
+            Log::LogW(L"加载 Guild Wars Wiki 文件 %S 失败\n%s", filename_sanitised.c_str(), error.c_str());
         }
         else {
-            Log::LogW(L"Loaded Guild Wars Wiki file %S", filename_sanitised.c_str());
+            Log::LogW(L"已加载 Guild Wars Wiki 文件 %S", filename_sanitised.c_str());
         }
     };
     const auto texture = new IDirect3DTexture9*;
@@ -1031,21 +1028,21 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
         return texture;
     }
     const auto path_to_file = std::format("{}\\{}", path.string(), filename_sanitised);
-    // Check for local file
+    // 检查本地文件
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
     }
-    // No local file found; download from wiki via skill link URL
+    // 未找到本地文件；通过技能链接 URL 从维基下载
     std::string wiki_url = "https://wiki.guildwars.com/wiki/File:";
     wiki_url.append(urlencode_filename ? TextUtils::UrlEncode(filename, '_') : filename);
     Instance().Download(wiki_url, [texture, filename_sanitised, callback, width](const bool ok, const std::string& response, void*) {
         if (!ok) {
             callback(ok, TextUtils::StringToWString(response));
-            return; // Already logged whatever errors
+            return; // 已记录错误
         }
 
-        // Find a valid png or jpg image inside the HTML response
+        // 在 HTML 响应中查找有效的 png 或 jpg 图像
         static constexpr ctll::fixed_string image_pattern = R"(class="fullMedia"[\s\S]*?href=['"]([^"']+))";
 
         if (auto m = ctre::search<image_pattern>(response)) {
@@ -1053,7 +1050,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             const auto path_to_file2 = std::format("{}\\{}", path.string(), filename_sanitised);
 
             if (width) {
-                // Divert to resized version using MediaWiki's method
+                // 使用 MediaWiki 的方法重定向到调整大小的版本
                 static constexpr ctll::fixed_string thumb_pattern = R"(/images/(.*)/([^/]+)$)";
 
                 if (auto m2 = ctre::search<thumb_pattern>(image_url)) {
@@ -1065,12 +1062,12 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
                         m2.get<2>().to_string());
                 }
                 else {
-                    trigger_failure_callback(callback, L"Regex failed evaluating GWW thumbnail from %S", image_url.c_str());
+                    trigger_failure_callback(callback, L"从 %S 评估 GWW 缩略图时正则表达式失败", image_url.c_str());
                     return;
                 }
             }
 
-            // Ensure the image URL is absolute
+            // 确保图像 URL 是绝对的
             if (!image_url.starts_with("http")) {
                 image_url = std::format("https://wiki.guildwars.com{}", image_url);
             }
@@ -1078,7 +1075,7 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
             LoadTexture(texture, path_to_file2, image_url, callback);
         }
         else {
-            trigger_failure_callback(callback, L"Regex failed loading file %S", filename_sanitised.c_str());
+            trigger_failure_callback(callback, L"加载文件 %S 时正则表达式失败", filename_sanitised.c_str());
         }
     });
     return texture;
@@ -1090,7 +1087,7 @@ std::filesystem::path Resources::GetExePath()
     const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
 
     if (length == 0 || length == MAX_PATH) {
-        Log::LogW(L"Failed to get exe path, error %lu", GetLastError());
+        Log::LogW(L"获取 exe 路径失败，错误 %lu", GetLastError());
         return {};
     }
 
@@ -1115,10 +1112,10 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
     }
     const auto callback = [skill_id](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::ErrorW(L"Failed to load skill image %d\n%s", skill_id, error.c_str());
+            Log::ErrorW(L"加载技能图像 %d 失败\n%s", skill_id, error.c_str());
         }
         else {
-            Log::LogW(L"Loaded skill image %d", skill_id);
+            Log::LogW(L"已加载技能图像 %d", skill_id);
         }
     };
     const auto texture = new IDirect3DTexture9*;
@@ -1134,25 +1131,25 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
         return texture;
     }
     wchar_t path_to_file[MAX_PATH];
-    // Check for local jpg file
+    // 检查本地 jpg 文件
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
     }
-    // Check for local png file
+    // 检查本地 png 文件
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.png", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
     }
-    // No local file found; download from wiki via skill link URL
+    // 未找到本地文件；通过技能链接 URL 从维基下载
     char url[128];
     snprintf(url, _countof(url), "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skill_id);
     Instance().Download(url, [texture, skill_id, callback](const bool ok, const std::string& response, void*) {
         if (!ok) {
             callback(ok, TextUtils::StringToWString(response));
-            return; // Already logged whatever errors
+            return; // 已记录错误
         }
 
         static constexpr ctll::fixed_string skill_image_regex =
@@ -1183,7 +1180,7 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
             image_extension = m3.get<2>().to_string();
         }
         else {
-            trigger_failure_callback(callback, L"Regex failed loading skill id %d", skill_id);
+            trigger_failure_callback(callback, L"为技能 id %d 加载图像时正则表达式失败", skill_id);
             return;
         }
 
@@ -1251,7 +1248,7 @@ GuiUtils::EncString* Resources::GetRegionName(const GW::Region region)
             enc = GW::EncStrings::MapRegion::BattleIsles;
             break;
 
-        // Prophecies
+        // 预言
         case GW::Region::Region_Maguuma:
             enc = GW::EncStrings::MapRegion::MaguumaJungle;
             break;
@@ -1263,18 +1260,18 @@ GuiUtils::EncString* Resources::GetRegionName(const GW::Region region)
             enc = GW::EncStrings::MapRegion::Kryta;
             break;
         case GW::Region::Region_NorthernShiverpeaks:
-            // TODO: Southern vs northern shivers
+            // TODO: 南/北席瓦山脉
             enc = GW::EncStrings::MapRegion::NorthernShiverpeaks;
             break;
         case GW::Region_CrystalDesert:
             enc = GW::EncStrings::MapRegion::CrystalDesert;
             break;
         case GW::Region_FissureOfWoe:
-            // TODO: Ring of fire? Underworld
+            // TODO: 火焰之环？地下世界
             enc = GW::EncStrings::MapRegion::FissureOfWoe;
             break;
 
-        // Factions
+        // 盟约
         case GW::Region::Region_Kurzick:
             enc = GW::EncStrings::MapRegion::EchovaldForest;
             break;
@@ -1288,7 +1285,7 @@ GuiUtils::EncString* Resources::GetRegionName(const GW::Region region)
             enc = GW::EncStrings::MapRegion::KainengCity;
             break;
 
-        // Nightfall
+        // 黄昏
         case GW::Region::Region_Kourna:
             enc = GW::EncStrings::MapRegion::Kourna;
             break;
@@ -1305,7 +1302,7 @@ GuiUtils::EncString* Resources::GetRegionName(const GW::Region region)
             enc = GW::EncStrings::MapRegion::RealmOfTorment;
             break;
 
-        // Eye of the north
+        // 北方之眼
         case GW::Region::Region_CharrHomelands:
             enc = GW::EncStrings::MapRegion::CharrHomelands;
             break;
@@ -1320,7 +1317,7 @@ GuiUtils::EncString* Resources::GetRegionName(const GW::Region region)
             break;
 
         default:
-            enc = L"\x108\107No region name yet :(\x1";
+            enc = L"\x108\107暂无区域名称 :(\x1";
             break;
     }
     return region_names.emplace(region, std::make_unique<GuiUtils::EncString>(enc)).first->second.get();
@@ -1349,8 +1346,8 @@ GuiUtils::EncString* Resources::DecodeStringId(const uint32_t enc_str_id, GW::Co
 }
 
 namespace {
-    // Packs the item's four dye slots one per byte; GwDatModule blends them (as GW
-    // combines up to four dyes) into the icon's colour. 0 when the item is undyed.
+    // 将物品的四个染料槽打包为每字节一个；GwDatModule 将其混合（如同 GW 合并最多四种染料）到图标颜色中。
+    // 未染色时值为 0。
     uint32_t ItemDyes(GW::Item* item)
     {
         return static_cast<uint32_t>(item->dye.dye1)
@@ -1367,10 +1364,10 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
     if (!model_file_id)
         return nullptr;
 
-    // Composite items (armor/runes): mirrors the client's own CICompositePlayer::GetCompositeGeometry
-    // slot order - file_ids[10] is the shared geometry/icon slot, tried first regardless of gender;
-    // only when that's absent does it fall back to the gendered slot (file_ids[5] female, [0] male).
-    // The other slots are skin/pattern textures for the 3D worn model, not icons.
+    // 组合物品（护甲/符文）：模拟客户端自身的 CICompositePlayer::GetCompositeGeometry
+    // 槽顺序 - file_ids[10] 是共享几何/图标槽，无论性别如何都首先尝试；
+    // 仅当该槽不存在时，才回退到性别槽（file_ids[5] 女性，[0] 男性）。
+    // 其他槽是 3D 穿戴模型的皮肤/纹理纹理，而非图标。
     if (interaction & 4) {
         const auto model_file_info = GW::Items::GetCompositeModelInfo(model_file_id);
         if (model_file_info) {
@@ -1384,7 +1381,7 @@ IDirect3DTexture9** Resources::GetItemImage(uint32_t model_file_id, uint32_t int
                 bool slot_failed = false;
                 result = GwDatModule::LoadItemImage(slot_id, dyes, &slot_failed);
                 if (*result || !slot_failed)
-                    return result; // succeeded, or still resolving - stop here either way
+                    return result; // 成功，或仍在解析 — 无论哪种情况都停止
             }
             if (failed_out)
                 *failed_out = true;
@@ -1414,10 +1411,10 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     }
     const auto callback = [item_name](const bool success, const std::wstring& error) {
         if (!success) {
-            Log::LogW(L"Error: Failed to load item image %s\n%s", item_name.c_str(), error.c_str());
+            Log::LogW(L"错误：加载物品图像 %s 失败\n%s", item_name.c_str(), error.c_str());
         }
         else {
-            Log::LogW(L"Loaded item image %s", item_name.c_str());
+            Log::LogW(L"已加载物品图像 %s", item_name.c_str());
         }
     };
     const auto texture = new IDirect3DTexture9*;
@@ -1427,14 +1424,14 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     ASSERT(EnsureFolderExists(path));
 
     wchar_t path_to_file[MAX_PATH];
-    // Check for local png image
+    // 检查本地 png 图像
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%s.png", path.c_str(), item_name.c_str());
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
     }
 
-    // No local file found; download from wiki via searching by the item name; the wiki will usually return a 302 redirect if its an exact item match
+    // 未找到本地文件；通过物品名称搜索从维基下载；如果完全匹配物品，维基通常会返回 302 重定向
     const std::string search_str = GuiUtils::WikiUrl(item_name);
     Instance().Download(search_str, [texture, item_name, callback](const bool ok, const std::string& response, void*) {
         if (!ok) {
@@ -1442,24 +1439,24 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
             return;
         }
         const std::string item_name_str = TextUtils::WStringToString(item_name);
-        // matches any characters that need to be escaped in RegEx
+        // 匹配需要在正则表达式中转义的任何字符
         static constexpr ctll::fixed_string SPECIAL_CHARS{R"([\-\[\]{}()*+?.,\^$|#\s])"};
         const std::string sanitized = TextUtils::ctre_regex_replace<SPECIAL_CHARS, R"(\$&)">(item_name_str);
         std::smatch m;
-        // Find first png image that has an alt tag matching the html encoded title of the page
+        // 查找第一个 alt 标签匹配页面 HTML 编码标题的 png 图像
         char regex_str[255];
         snprintf(regex_str, sizeof(regex_str), R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", sanitized.c_str());
         if (!std::regex_search(response, m, std::regex(regex_str))) {
-            // Failed to find via item name; try via page title
+            // 未能通过物品名称找到；尝试通过页面标题
             const std::regex title_finder("<title>(.*) - Guild Wars Wiki.*</title>");
             if (!std::regex_search(response, m, title_finder)) {
-                trigger_failure_callback(callback, L"Failed to find title HTML for %s from wiki", item_name.c_str());
+                trigger_failure_callback(callback, L"从维基为 %s 查找标题 HTML 失败", item_name.c_str());
                 return;
             }
             const std::string html_item_name = TextUtils::HtmlEncode(m[1].str());
             snprintf(regex_str, sizeof(regex_str), R"(<img[^>]+alt=['"][^>]*%s[^>]*['"][^>]+src=['"]([^"']+)([.](png)))", html_item_name.c_str());
             if (!std::regex_search(response, m, std::regex(regex_str))) {
-                trigger_failure_callback(callback, L"Failed to find image HTML for %s from wiki", item_name.c_str());
+                trigger_failure_callback(callback, L"从维基为 %s 查找图像 HTML 失败", item_name.c_str());
                 return;
             }
         }
@@ -1469,11 +1466,11 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
         swprintf(path_to_file, _countof(path_to_file), L"%s\\%s%S", path.c_str(), item_name.c_str(), image_extension.c_str());
         char url[128];
         if (strncmp(image_path.c_str(), "http", 4) == 0) {
-            // Image URL is absolute
+            // 图像 URL 是绝对的
             snprintf(url, _countof(url), "%s%s", image_path.c_str(), image_extension.c_str());
         }
         else {
-            // Image URL is relative to domain
+            // 图像 URL 相对于域
             snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str());
         }
         LoadTexture(texture, path_to_file, url, callback);
@@ -1484,14 +1481,14 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
 bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesystem::path& file_path)
 {
     if (!texture) {
-        Log::Warning("SaveTextureToFile: texture is null");
+        Log::Warning("SaveTextureToFile: 纹理为空");
         return false;
     }
 
     D3DSURFACE_DESC desc;
     HRESULT hr = texture->GetLevelDesc(0, &desc);
     if (FAILED(hr)) {
-        Log::Warning("SaveTextureToFile: Failed to get texture description: 0x%X", hr);
+        Log::Warning("SaveTextureToFile: 获取纹理描述失败：0x%X", hr);
         return false;
     }
 
@@ -1499,11 +1496,11 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
     if (ext == ".dds") {
-        // Original DDS path
+        // 原始 DDS 路径
         D3DLOCKED_RECT lockedRect;
         hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
         if (FAILED(hr)) {
-            Log::Warning("SaveTextureToFile: Failed to lock texture: 0x%X", hr);
+            Log::Warning("SaveTextureToFile: 锁定纹理失败：0x%X", hr);
             return false;
         }
 
@@ -1519,16 +1516,16 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
         texture->UnlockRect(0);
 
         if (FAILED(hr)) {
-            Log::Warning("SaveTextureToFile: Failed to save DDS: 0x%X", hr);
+            Log::Warning("SaveTextureToFile: 保存 DDS 失败：0x%X", hr);
             return false;
         }
     }
     else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") {
-        // Lock the texture
+        // 锁定纹理
         D3DLOCKED_RECT lockedRect;
         hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
         if (FAILED(hr)) {
-            Log::Warning("SaveTextureToFile: Failed to lock texture: 0x%X", hr);
+            Log::Warning("SaveTextureToFile: 锁定纹理失败：0x%X", hr);
             return false;
         }
 
@@ -1542,29 +1539,29 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
 
         if (srcImage.format == DXGI_FORMAT_UNKNOWN) {
             texture->UnlockRect(0);
-            Log::Warning("SaveTextureToFile: Unsupported D3D9 format: 0x%X", desc.Format);
+            Log::Warning("SaveTextureToFile: 不支持的 D3D9 格式：0x%X", desc.Format);
             return false;
         }
 
         DirectX::ScratchImage scratchImage;
 
-        // Check if format needs decompression
+        // 检查格式是否需要解压缩
         if (DirectX::IsCompressed(srcImage.format)) {
             hr = DirectX::Decompress(srcImage, DXGI_FORMAT_R8G8B8A8_UNORM, scratchImage);
         }
         else {
-            // Just copy the image data
+            // 仅复制图像数据
             hr = scratchImage.InitializeFromImage(srcImage);
         }
 
         texture->UnlockRect(0);
 
         if (FAILED(hr)) {
-            Log::Warning("SaveTextureToFile: Failed to prepare texture: 0x%X", hr);
+            Log::Warning("SaveTextureToFile: 准备纹理失败：0x%X", hr);
             return false;
         }
 
-        // Determine codec GUID
+        // 确定编解码器 GUID
         GUID guid;
         if (ext == ".png") {
             guid = GUID_ContainerFormatPng;
@@ -1579,28 +1576,27 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
         hr = DirectX::SaveToWICFile(*scratchImage.GetImage(0, 0, 0), DirectX::WIC_FLAGS_NONE, guid, file_path.c_str());
 
         if (FAILED(hr)) {
-            Log::Warning("SaveTextureToFile: Failed to save image: 0x%X", hr);
+            Log::Warning("SaveTextureToFile: 保存图像失败：0x%X", hr);
             return false;
         }
     }
     else {
-        Log::Warning("SaveTextureToFile: Unsupported file format: %s", ext.c_str());
+        Log::Warning("SaveTextureToFile: 不支持的文件格式：%s", ext.c_str());
         return false;
     }
 
-    Log::Info("Successfully saved texture to %s (%dx%d)", file_path.string().c_str(), desc.Width, desc.Height);
+    Log::Info("已成功将纹理保存到 %s (%dx%d)", file_path.string().c_str(), desc.Width, desc.Height);
     return true;
 }
 
 bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* region, const std::filesystem::path& file_path)
 {
     if (!device) {
-        Log::Warning("SaveBackbufferRectToFile: device is null");
+        Log::Warning("SaveBackbufferRectToFile: 设备为空");
         return false;
     }
 
-    // Pick the WIC codec from the extension up front so we fail fast on
-    // unsupported output formats before we copy any pixels.
+    // 提前从扩展名选择 WIC 编解码器，以便在复制任何像素之前对不支持的输出格式快速失败。
     auto ext = file_path.extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     GUID codec_guid;
@@ -1608,28 +1604,26 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     else if (ext == ".jpg" || ext == ".jpeg") codec_guid = GUID_ContainerFormatJpeg;
     else if (ext == ".bmp") codec_guid = GUID_ContainerFormatBmp;
     else {
-        Log::Warning("SaveBackbufferRectToFile: unsupported file format: %s", ext.c_str());
+        Log::Warning("SaveBackbufferRectToFile: 不支持的文件格式：%s", ext.c_str());
         return false;
     }
 
     IDirect3DSurface9* backbuffer = nullptr;
     HRESULT hr = device->GetRenderTarget(0, &backbuffer);
     if (FAILED(hr) || !backbuffer) {
-        Log::Warning("SaveBackbufferRectToFile: GetRenderTarget failed: 0x%X", hr);
+        Log::Warning("SaveBackbufferRectToFile: GetRenderTarget 失败：0x%X", hr);
         return false;
     }
 
     D3DSURFACE_DESC desc;
     backbuffer->GetDesc(&desc);
 
-    // GetRenderTargetData requires a SYSTEMMEM destination of identical
-    // dimensions & format. We copy the whole back buffer, then construct a
-    // DirectX::Image that points at just the sub-rect.
+    // GetRenderTargetData 需要相同尺寸和格式的 SYSTEMMEM 目标。我们复制整个后缓冲区，然后构造一个指向子矩形的 DirectX::Image。
     IDirect3DSurface9* sysmem = nullptr;
     hr = device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_SYSTEMMEM, &sysmem, nullptr);
     if (FAILED(hr) || !sysmem) {
         backbuffer->Release();
-        Log::Warning("SaveBackbufferRectToFile: CreateOffscreenPlainSurface failed: 0x%X", hr);
+        Log::Warning("SaveBackbufferRectToFile: CreateOffscreenPlainSurface 失败：0x%X", hr);
         return false;
     }
 
@@ -1637,18 +1631,18 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     backbuffer->Release();
     if (FAILED(hr)) {
         sysmem->Release();
-        Log::Warning("SaveBackbufferRectToFile: GetRenderTargetData failed: 0x%X", hr);
+        Log::Warning("SaveBackbufferRectToFile: GetRenderTargetData 失败：0x%X", hr);
         return false;
     }
 
     const DXGI_FORMAT dxgi = ConvertD3D9FormatToDXGI(desc.Format);
     if (dxgi == DXGI_FORMAT_UNKNOWN) {
         sysmem->Release();
-        Log::Warning("SaveBackbufferRectToFile: unsupported back buffer format: 0x%X", desc.Format);
+        Log::Warning("SaveBackbufferRectToFile: 不支持的后缓冲区格式：0x%X", desc.Format);
         return false;
     }
 
-    // Clamp the requested rect to the back buffer; degenerate rects fail out.
+    // 将请求的矩形裁剪到后缓冲区；退化矩形失败退出。
     LONG x = 0, y = 0;
     LONG w = static_cast<LONG>(desc.Width);
     LONG h = static_cast<LONG>(desc.Height);
@@ -1660,7 +1654,7 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     }
     if (w <= 0 || h <= 0) {
         sysmem->Release();
-        Log::Warning("SaveBackbufferRectToFile: degenerate region after clamp (%dx%d)", w, h);
+        Log::Warning("SaveBackbufferRectToFile: 裁剪后区域退化 (%dx%d)", w, h);
         return false;
     }
 
@@ -1668,7 +1662,7 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     hr = sysmem->LockRect(&locked, nullptr, D3DLOCK_READONLY);
     if (FAILED(hr)) {
         sysmem->Release();
-        Log::Warning("SaveBackbufferRectToFile: LockRect failed: 0x%X", hr);
+        Log::Warning("SaveBackbufferRectToFile: LockRect 失败：0x%X", hr);
         return false;
     }
 
@@ -1688,11 +1682,11 @@ bool Resources::SaveBackbufferRectToFile(IDirect3DDevice9* device, const RECT* r
     sysmem->Release();
 
     if (FAILED(save_hr)) {
-        Log::Warning("SaveBackbufferRectToFile: SaveToWICFile failed: 0x%X", save_hr);
+        Log::Warning("SaveBackbufferRectToFile: SaveToWICFile 失败：0x%X", save_hr);
         return false;
     }
 
-    Log::Info("Saved screenshot to %s (%dx%d)", file_path.string().c_str(), (int)w, (int)h);
+    Log::Info("已将截图保存到 %s (%dx%d)", file_path.string().c_str(), (int)w, (int)h);
     return true;
 }
 
@@ -1704,29 +1698,29 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
 
     D3DSURFACE_DESC desc;
     if (cubeTexture->GetLevelDesc(0, &desc) != D3D_OK) {
-        Log::Warning("GetTexmodHashCube: Failed to get texture description");
+        Log::Warning("GetTexmodHashCube: 获取纹理描述失败");
         return 0;
     }
 
     D3DLOCKED_RECT d3dlr;
     IDirect3DSurface9* pResolvedSurface = nullptr;
 
-    // CRITICAL: Only hash the POSITIVE_X face to match gmod behavior!
-    // gmod's uMod_IDirect3DCubeTexture9::GetHash() only hashes D3DCUBEMAP_FACE_POSITIVE_X
+    // 关键：仅对 POSITIVE_X 面进行哈希以匹配 gmod 行为！
+    // gmod 的 uMod_IDirect3DCubeTexture9::GetHash() 仅对 D3DCUBEMAP_FACE_POSITIVE_X 进行哈希
     if (cubeTexture->LockRect(D3DCUBEMAP_FACE_POSITIVE_X, 0, &d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
-        // Try via surface level as fallback
+        // 回退到通过表面级别获取
         if (cubeTexture->GetCubeMapSurface(D3DCUBEMAP_FACE_POSITIVE_X, 0, &pResolvedSurface) != D3D_OK) {
-            Log::Warning("GetTexmodHashCube: Failed to get cube map surface");
+            Log::Warning("GetTexmodHashCube: 获取立方体贴图表面失败");
             return 0;
         }
         if (pResolvedSurface->LockRect(&d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
             pResolvedSurface->Release();
-            Log::Warning("GetTexmodHashCube: Failed to lock surface");
+            Log::Warning("GetTexmodHashCube: 锁定表面失败");
             return 0;
         }
     }
 
-    // Calculate size based on actual pixel dimensions, not pitch
+    // 根据实际像素尺寸计算大小，而不是 pitch
     const int bits_per_pixel = GetBitsPerPixel(desc.Format);
     const int total_size = (bits_per_pixel * desc.Width * desc.Height) / 8;
     const int bytes_per_pixel = bits_per_pixel / 8;
@@ -1741,10 +1735,10 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
         offset += row_size;
     }
 
-    // Hash the compact data (without pitch padding)
+    // 对紧凑数据（无 pitch 填充）进行哈希
     uint32_t hash = GetTexmodHash(reinterpret_cast<const char*>(compact_data.data()), compact_data.size());
 
-    // Cleanup
+    // 清理
     if (pResolvedSurface != nullptr) {
         pResolvedSurface->UnlockRect();
         pResolvedSurface->Release();
@@ -1753,11 +1747,11 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
         cubeTexture->UnlockRect(D3DCUBEMAP_FACE_POSITIVE_X, 0);
     }
 
-    Log::Info("GetTexmodHashCube: Hash 0x%08X for cube texture (%dx%d, format %d)", hash, desc.Width, desc.Height, desc.Format);
+    Log::Info("GetTexmodHashCube: 立方体贴图哈希 0x%08X (%dx%d, 格式 %d)", hash, desc.Width, desc.Height, desc.Format);
 
     return hash;
 }
-// Bytes per 4x4 block for block-compressed formats, or 0 if not block compressed.
+// 块压缩格式每 4x4 块的字节数，若不是块压缩格式则为 0。
 static UINT DxtBlockBytes(D3DFORMAT fmt)
 {
     switch (fmt) {
@@ -1773,9 +1767,8 @@ static UINT DxtBlockBytes(D3DFORMAT fmt)
     }
 }
 
-// SEH-guarded row copy (no unwinding objects, so __try is allowed). LockRect can
-// return a pointer whose backing store is gone (lost surface, reused memory); on a
-// fault we bail instead of crashing. Callers must keep row_bytes <= pitch.
+// SEH 保护的行复制（无展开对象，因此允许 __try）。LockRect 可能返回已消失的存储（丢失表面、重用内存）的指针；
+// 若发生错误则退出而不是崩溃。调用者必须确保 row_bytes <= pitch。
 static bool SafeCopyRows(uint8_t* dst, const uint8_t* src, size_t rows, size_t row_bytes, size_t pitch)
 {
     __try {
@@ -1806,11 +1799,11 @@ uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
     uint32_t hash = 0;
 
     if (const UINT block = DxtBlockBytes(desc.Format)) {
-        // Block-compressed: hash the blocks contiguously.
+        // 块压缩：连续地对块进行哈希。
         const size_t blocks_wide = (desc.Width + 3) / 4;
         const size_t blocks_high = (desc.Height + 3) / 4;
         const size_t total_size = blocks_wide * blocks_high * block;
-        if (total_size && total_size <= pitch * blocks_high) { // reject an implausibly small pitch
+        if (total_size && total_size <= pitch * blocks_high) { // 拒绝小得不合理的 pitch
             std::vector<uint8_t> compact(total_size);
             if (SafeCopyRows(compact.data(), bits, 1, total_size, total_size)) {
                 hash = GetTexmodHash(reinterpret_cast<const char*>(compact.data()), compact.size());
@@ -1818,10 +1811,10 @@ uint32_t Resources::GetTexmodHash(IDirect3DTexture9* texture)
         }
     }
     else {
-        // Uncompressed: repack row-by-row, stripping the pitch padding.
+        // 未压缩：逐行重新打包，去除 pitch 填充。
         const int bits_per_pixel = GetBitsPerPixel(desc.Format);
         const size_t row_size = bits_per_pixel ? static_cast<size_t>(desc.Width) * (bits_per_pixel / 8) : 0;
-        // row_size > pitch means a wrong/unknown format; skip rather than overrun.
+        // row_size > pitch 表示格式错误/未知；跳过而不是溢出。
         if (row_size && desc.Height && row_size <= pitch) {
             std::vector<uint8_t> compact(static_cast<size_t>(desc.Height) * row_size);
             if (SafeCopyRows(compact.data(), bits, desc.Height, row_size, pitch)) {
@@ -1873,11 +1866,11 @@ int Resources::GetBitsPerPixel(D3DFORMAT format)
         case D3DFMT_DXT5:
             return 8;
         default:
-            return 32; // Default assumption
+            return 32; // 默认假设
     }
 }
 uint32_t Resources::GetTexmodHash(const char* data, size_t size)
 {
-    // uMod format omits the final XOR that standard CRC32 applies, so invert the result.
+    // uMod 格式省略标准 CRC32 的最终异或，因此反转结果。
     return ~CodeOptimiserModule::Crc32(data, size);
 }

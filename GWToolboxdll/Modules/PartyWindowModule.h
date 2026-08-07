@@ -13,9 +13,9 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Party Window"; }
-    [[nodiscard]] const char* Description() const override { return "Includes features to:\nAdd player numbers to party window in explorable area\nAbility to add other NPCs to the party window"; }
-    [[nodiscard]] const char* SettingsName() const override { return "Party Settings"; }
+    [[nodiscard]] const char* Name() const override { return "队伍窗口"; }
+    [[nodiscard]] const char* Description() const override { return "包含以下功能：\n在可探索区域的组队窗口中添加玩家编号\n能够将其他非玩家角色（NPC）添加到组队窗口"; }
+    [[nodiscard]] const char* SettingsName() const override { return "队伍设置"; }
 
     struct Settings {
         bool add_npcs_to_party_window = true; // Quick tickbox to disable the module without restarting TB
