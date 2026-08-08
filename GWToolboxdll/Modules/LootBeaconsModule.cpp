@@ -28,6 +28,14 @@
 #include "Widgets/Minimap/Shaders/loot_beacon_ring_ps.h"
 #include "Widgets/Minimap/Shaders/loot_beacon_ring_vs.h"
 
+// User-defined rules matched against the decoded item name. Must be at file scope (not anonymous
+// namespace) so glaze's reflection can create the required external-linkage template specialisation.
+struct NameBeacon {
+    std::string match;
+    Colors::SettingColor color = Colors::ARGB(170, 0, 255, 255);
+    bool enabled = true;
+};
+
 namespace {
     constexpr int kMaxBuildsPerFrame = 4;   // caps terrain-drape heightfield builds spent per frame
     constexpr int kDrapeGrid = 16;          // heightfield resolution sampled across a beacon's footprint
@@ -66,13 +74,6 @@ namespace {
     RarityBeacon rarity_gold = {"Gold items", true};
     RarityBeacon rarity_green = {"Green items", true};
 
-    // User-defined rules, matched against the decoded item name as a case-insensitive substring, or
-    // as a regex when the text is wrapped in slashes (same /pattern/flags syntax as the chat filter).
-    struct NameBeacon {
-        std::string match;
-        Colors::SettingColor color = Colors::ARGB(170, 0, 255, 255);
-        bool enabled = true;
-    };
     std::vector<NameBeacon> name_beacons;
 
     struct CachedName {
