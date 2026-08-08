@@ -15,6 +15,8 @@
 #include <GWCA/Managers/MapMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 
+#include <Defines.h>
+
 #include <Logger.h>
 #include <Utils/GuiUtils.h>
 
@@ -184,6 +186,7 @@ namespace {
     StoCHandlerArray* GetStoCHandlerArray() {
 
         uintptr_t address = GW::Scanner::Find("\x75\x04\x33\xC0\x5D\xC3\x8B\x41\x08\xA8\x01\x75", "xxxxxxxxxxxx", -6);
+        DEBUG_ASSERT(address);
         const uintptr_t StoCHandler_Addr = *(uintptr_t*)address;
 
         struct GameServer {

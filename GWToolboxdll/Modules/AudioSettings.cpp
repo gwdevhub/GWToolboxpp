@@ -10,6 +10,8 @@
 #include <ImGuiAddons.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/UIMgr.h>
+
+#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Timer.h>
 
@@ -222,11 +224,13 @@ void AudioSettings::Initialize()
 {
     ToolboxModule::Initialize();
     PlaySound_Func = (PlaySound_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("SndMain.cpp","filename",0,0));
+    DEBUG_ASSERT(PlaySound_Func);
     if (PlaySound_Func) {
         GW::Hook::CreateHook((void**)&PlaySound_Func, OnPlaySound, reinterpret_cast<void**>(&PlaySound_Ret));
         GW::Hook::EnableHooks(PlaySound_Func);
     }
     PlayMusicFromSoundScript_Func = (PlayMusicFromSoundScript_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x8d\x77\x0c\x83\xe0\xf3", "xxxxxx", 0));
+    DEBUG_ASSERT(PlayMusicFromSoundScript_Func);
     if (PlayMusicFromSoundScript_Func) {
         GW::Hook::CreateHook((void**)&PlayMusicFromSoundScript_Func, OnPlayMusicFromSoundScript, reinterpret_cast<void**>(&PlayMusicFromSoundScript_Ret));
         GW::Hook::EnableHooks(PlayMusicFromSoundScript_Func);

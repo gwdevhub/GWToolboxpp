@@ -1472,27 +1472,33 @@ void GameSettings::Initialize()
     SettingsRegistry::Describe(this, "combine_overhead_numbers", "Combine floating numbers above character", combine_overhead_numbers_help);
 
     OnSkillTomeWindow_UIMessage_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmSkTome.cpp", "selection.skillId", 0, 0), 0xfff);
+    DEBUG_ASSERT(OnSkillTomeWindow_UIMessage_Func);
     Log::Log("[GameSettings] OnSkillTomeWindow_UIMessage_Func = %p\n", OnSkillTomeWindow_UIMessage_Func);
 
     SkillList_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmCtlSkList.cpp", "!obj", 0xc71, 0));
+    DEBUG_ASSERT(SkillList_UICallback_Func);
     Log::Log("[GameSettings] SkillList_UICallback_Func = %p\n", SkillList_UICallback_Func);
 
     auto address = GW::Scanner::Find("\xF7\x40\x0C\x10\x00\x02\x00\x75", "xxxxxx??", +7);
+    DEBUG_ASSERT(address);
     if (address) gold_confirm_patch.SetPatch(address, "\x90\x90", 2);
     Log::Log("[GameSettings] gold_confirm_patch = %p\n", gold_confirm_patch.GetAddress());
 
     address = GW::Scanner::Find("\xdf\xe0\xf6\xc4\x41\x7a\x79", "xxxxxxx", 0x5);
+    DEBUG_ASSERT(address);
     if (address) remove_skill_warmup_duration_patch.SetPatch(address, "\x90\x90", 2);
     Log::Log("[GameSettings] remove_skill_warmup_duration_patch = %p\n", remove_skill_warmup_duration_patch.GetAddress());
 
     // Call our CreateCodedTextLabel function instead of default CreateCodedTextLabel for patching skill descriptions
     SetFrameSkillDescription_Func = (SetFrameSkillDescription_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmTipSkill.cpp", "No valid case for switch variable \'m_powerType\'", 0, 0));
+    DEBUG_ASSERT(SetFrameSkillDescription_Func);
 
     Log::Log("[GameSettings] SetFrameSkillDescription_Func = %p\n", SetFrameSkillDescription_Func);
 
     // See OnAgentAllegianceChanged
     address = GW::Scanner::Find("\x81\xce\xa0\x06\x00\x00", "xxxxxx");
     if (address) address = GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange("\xe8", "x", 0, address, address + 0xff));
+    DEBUG_ASSERT(address);
     if (address) {
         SetGlobalNameTagVisibility_Func = (SetGlobalNameTagVisibility_pt)address;
         if (GW::Scanner::IsValidPtr(*(uintptr_t*)(address + 0xa)))

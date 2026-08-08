@@ -37,6 +37,8 @@
 #include <Windows/GWMarketWindow.h>
 
 #include <GWCA/GameEntities/Frame.h>
+
+#include <Defines.h>
 #include <Utils/ToolboxUtils.h>
 #include <Utils/TextUtils.h>
 
@@ -1617,6 +1619,7 @@ void InventoryManager::Initialize()
 
     AddItemRowToWindow_Func = reinterpret_cast<AddItemRowToWindow_pt>(GW::Scanner::Find(
         "\x83\xc4\x04\x80\x78\x04\x06\x0f\x84\xd3\x00\x00\x00\x6a\x02\xff\x37", nullptr, -0x10));
+    DEBUG_ASSERT(AddItemRowToWindow_Func);
     if (AddItemRowToWindow_Func) {
         GW::Hook::CreateHook((void**)&AddItemRowToWindow_Func, OnAddItemToWindow, reinterpret_cast<void**>(&RetAddItemRowToWindow));
         GW::Hook::EnableHooks(AddItemRowToWindow_Func);
