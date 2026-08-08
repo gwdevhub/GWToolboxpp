@@ -60,9 +60,6 @@ private:
     bool should_stop = false;
     std::thread* worker = nullptr;
 
-    static void ParseBuffer(const char* text, std::vector<std::string>& words);
-    static void ParseBuffer(const char* text, std::vector<TextUtils::SearchPattern<char>>& words);
-    static void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
     static void DeleteWebSocket(easywsclient::WebSocket* ws);
     void SwitchSockets();

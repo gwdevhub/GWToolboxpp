@@ -745,7 +745,7 @@ void PartySearchWindow::DrawAlertsWindowContent(bool)
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
                                   ImVec2(-1.0f, 0.0f))) {
-        ParseBuffer(alert_buf, alert_words);
+        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
         alertfile_dirty = true;
     }
 }
@@ -765,7 +765,7 @@ void PartySearchWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     if (alert_file.is_open()) {
         alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
         alert_file.close();
-        ParseBuffer(alert_buf, alert_words);
+        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
     }
     alert_file.close();
 }
@@ -783,19 +783,6 @@ void PartySearchWindow::SaveSettings(SettingsDoc& doc)
             bycontent_file.close();
             alertfile_dirty = false;
         }
-    }
-}
-
-void PartySearchWindow::ParseBuffer(const char* text, std::vector<TextUtils::SearchPattern<char>>& words)
-{
-    words.clear();
-    std::istringstream stream(text);
-    std::string word;
-    while (std::getline(stream, word)) {
-        if (word.empty()) {
-            continue;
-        }
-        words.emplace_back(word);
     }
 }
 

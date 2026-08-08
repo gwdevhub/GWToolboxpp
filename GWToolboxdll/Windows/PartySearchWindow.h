@@ -122,7 +122,6 @@ private:
     void AsyncWindowConnect(bool force = false);
     void fetch();
     static bool parse_json_message(const std::string& data, Message* msg);
-    static void ParseBuffer(const char* text, std::vector<TextUtils::SearchPattern<char>>& words);
     static void DeleteWebSocket(easywsclient::WebSocket* ws);
     bool IsLfpAlert(std::string& message) const;
     static void OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::PacketBase* packet);

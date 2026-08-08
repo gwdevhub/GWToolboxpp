@@ -432,11 +432,13 @@ namespace TextUtils {
     // "/pattern/flags", the syntax the chat filter has always used; unknown flag letters are ignored.
     template <typename CharT>
     SearchPattern<CharT>::SearchPattern(const std::basic_string_view<CharT> pattern, const Fallback fallback, std::regex_constants::syntax_option_type flags)
+        : source(pattern)
     {
         const auto last_slash = pattern.rfind(static_cast<CharT>('/'));
         const bool slash_wrapped = pattern.starts_with(static_cast<CharT>('/')) && last_slash != 0 && last_slash != std::basic_string_view<CharT>::npos;
-        if (!slash_wrapped && fallback == Fallback::Substring) {
+        if (!slash_wrapped && fallback != Fallback::Regex) {
             lowered = ToLower(std::basic_string<CharT>(pattern));
+            exact = fallback == Fallback::Exact;
             return;
         }
         auto expression = pattern;
@@ -472,11 +474,30 @@ namespace TextUtils {
         if (regex) return std::regex_search(subject.begin(), subject.end(), *regex);
         if (lowered.empty()) return false;
         // `lowered` is already lowercased, so only the subject needs folding as we go.
-        return !std::ranges::search(subject, lowered, [](const CharT a, const CharT b) { return std::tolower(a, std::locale()) == b; }).empty();
+        const auto folded_equals = [](const CharT a, const CharT b) { return std::tolower(a, std::locale()) == b; };
+        if (exact) return std::ranges::equal(subject, lowered, folded_equals);
+        return !std::ranges::search(subject, lowered, folded_equals).empty();
+    }
+
+    template <typename CharT>
+    std::vector<SearchPattern<CharT>> ParsePatterns(const std::basic_string_view<CharT> text, const typename SearchPattern<CharT>::Fallback fallback, const std::regex_constants::syntax_option_type flags)
+    {
+        std::vector<SearchPattern<CharT>> patterns;
+        std::basic_istringstream<CharT> stream{std::basic_string<CharT>(text)};
+        std::basic_string<CharT> line;
+        while (std::getline(stream, line)) {
+            if (line.empty()) {
+                continue;
+            }
+            patterns.emplace_back(line, fallback, flags);
+        }
+        return patterns;
     }
 
     template class SearchPattern<char>;
     template class SearchPattern<wchar_t>;
+    template std::vector<SearchPattern<char>> ParsePatterns(std::basic_string_view<char>, SearchPattern<char>::Fallback, std::regex_constants::syntax_option_type);
+    template std::vector<SearchPattern<wchar_t>> ParsePatterns(std::basic_string_view<wchar_t>, SearchPattern<wchar_t>::Fallback, std::regex_constants::syntax_option_type);
 
     std::wstring RemoveDiacritics(const std::wstring_view s)
     {

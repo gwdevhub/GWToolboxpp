@@ -108,7 +108,7 @@ namespace {
     char search_buffer[256] = {};
 
     std::vector<TextUtils::SearchPattern<char>> alert_words{};
-    std::vector<std::string> searched_words{};
+    std::vector<TextUtils::SearchPattern<char>> searched_words{};
 
     CircularBuffer<Message> messages;
 
@@ -343,8 +343,8 @@ void TradeWindow::fetch()
     const bool search_pending = !pending_query_sent && !pending_query_string.empty();
     if (search_pending) {
         //strcpy(search_buffer, pending_query_string.c_str());
-        // Fill searched_words; query to lower to ease on-the-fly search in ::fetch
-        ParseBuffer(search_buffer, searched_words);
+        // Fill searched_words for the on-the-fly search in ::fetch
+        searched_words = TextUtils::ParsePatterns<char>(search_buffer);
 
         // Send request
         const tradechat_api::SearchRequest request{.query = pending_query_string};
@@ -404,14 +404,9 @@ void TradeWindow::fetch()
         if (!add_to_window) {
             // Currently showing a search term in-window. Only add if it matches all words.
             add_to_window = true;
-            std::string input(msg.message);
-            std::ranges::transform(input, input.begin(),
-                                   [](const char c) -> char {
-                                       return static_cast<char>(tolower(c));
-                                   });
-            for (auto& term : searched_words) {
-                if (input.find(term) != std::string::npos) {
-                    continue; // Searched word no found; drop out
+            for (const auto& term : searched_words) {
+                if (term.Matches(msg.message)) {
+                    continue;
                 }
                 add_to_window = false;
                 break;
@@ -669,7 +664,7 @@ void TradeWindow::DrawAlertsWindowContent(bool)
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
                                   ImVec2(-1.0f, 0.0f))) {
-        ParseBuffer(alert_buf, alert_words);
+        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
         alertfile_dirty = true;
     }
     DrawChatSettings(true);
@@ -704,7 +699,7 @@ void TradeWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     if (alert_file.is_open()) {
         alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
         alert_file.close();
-        ParseBuffer(alert_buf, alert_words);
+        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
     }
     alert_file.close();
     SwitchSockets();
@@ -724,44 +719,6 @@ void TradeWindow::SaveSettings(SettingsDoc& doc)
             bycontent_file.close();
             alertfile_dirty = false;
         }
-    }
-}
-
-void TradeWindow::ParseBuffer(const char* text, std::vector<std::string>& words)
-{
-    words.clear();
-    std::istringstream stream(text);
-    std::string word;
-    while (std::getline(stream, word)) {
-        for (size_t i = 0; i < word.length(); i++) {
-            word[i] = static_cast<char>(tolower(word[i]));
-        }
-        words.push_back(word);
-    }
-}
-
-void TradeWindow::ParseBuffer(const char* text, std::vector<TextUtils::SearchPattern<char>>& words)
-{
-    words.clear();
-    std::istringstream stream(text);
-    std::string word;
-    while (std::getline(stream, word)) {
-        if (word.empty()) {
-            continue;
-        }
-        words.emplace_back(word);
-    }
-}
-
-void TradeWindow::ParseBuffer(std::fstream stream, std::vector<std::string>& words)
-{
-    words.clear();
-    std::string word;
-    while (std::getline(stream, word)) {
-        for (size_t i = 0; i < word.length(); i++) {
-            word[i] = static_cast<char>(tolower(word[i]));
-        }
-        words.push_back(word);
     }
 }
 
