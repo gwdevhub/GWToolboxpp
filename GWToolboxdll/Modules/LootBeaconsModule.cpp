@@ -65,7 +65,8 @@ namespace {
     RarityBeacon rarity_gold = {"Gold items", true};
     RarityBeacon rarity_green = {"Green items", true};
 
-    // User-defined rules, matched as a case-insensitive substring of the decoded item name.
+    // User-defined rules, matched against the decoded item name as a case-insensitive substring, or
+    // as a regex when the text is wrapped in slashes (same /pattern/flags syntax as the chat filter).
     struct NameBeacon {
         std::string match;
         Colors::SettingColor color = Colors::ARGB(170, 0, 255, 255);
@@ -75,24 +76,74 @@ namespace {
 
     struct CachedName {
         GuiUtils::EncString enc;
+        std::wstring decoded;
         std::wstring lowered;
     };
     std::map<std::wstring, CachedName> decoded_item_names; // keyed by the encoded name
 
-    // Lowercased decoded name, or nullptr while the async decode is still pending (a scan tick or two).
-    const std::wstring* DecodedItemName(const GW::Item& item)
+    // Decoded item name, or nullptr while the async decode is still pending (a scan tick or two).
+    const CachedName* DecodedItemName(const GW::Item& item)
     {
         const wchar_t* name_enc = nullptr;
         if (item.single_item_name && *item.single_item_name) name_enc = item.single_item_name;
         else if (item.name_enc && *item.name_enc) name_enc = item.name_enc;
         if (!name_enc) return nullptr;
         auto& cached = decoded_item_names[name_enc];
-        if (cached.lowered.empty()) {
-            const auto& decoded = cached.enc.reset(name_enc)->wstring();
-            if (decoded.empty()) return nullptr;
-            cached.lowered = TextUtils::ToLower(decoded);
+        if (cached.decoded.empty()) {
+            cached.decoded = cached.enc.reset(name_enc)->wstring();
+            if (cached.decoded.empty()) return nullptr;
+            cached.lowered = TextUtils::ToLower(cached.decoded);
         }
-        return &cached.lowered;
+        return &cached;
+    }
+
+    // Parsed form of the enabled rules; rebuilt only when the list changes, since building a regex isn't free.
+    struct CompiledNameBeacon {
+        std::wstring substring; // lowercased; empty when this rule is a regex
+        std::optional<std::wregex> regex;
+        Color color = 0;
+    };
+    std::vector<CompiledNameBeacon> compiled_name_beacons;
+    std::vector<size_t> invalid_name_beacons; // rules whose regex didn't parse, flagged in the settings panel
+    bool name_beacons_dirty = true;
+
+    void CompileNameBeacons()
+    {
+        name_beacons_dirty = false;
+        compiled_name_beacons.clear();
+        invalid_name_beacons.clear();
+        for (size_t i = 0; i < name_beacons.size(); i++) {
+            const auto& name_beacon = name_beacons[i];
+            if (!name_beacon.enabled || name_beacon.match.empty()) continue;
+            const auto match = TextUtils::StringToWString(name_beacon.match);
+            const auto last_slash = match.rfind('/');
+            if (!match.starts_with('/') || last_slash == 0 || last_slash == std::wstring::npos) {
+                compiled_name_beacons.emplace_back(TextUtils::ToLower(match), std::nullopt, name_beacon.color.value);
+                continue;
+            }
+            // Same /pattern/flags syntax as the chat filter, except icase is on unless flags say otherwise.
+            auto flags = std::regex_constants::optimize | std::regex_constants::icase;
+            for (const auto chr : std::wstring_view(match).substr(last_slash + 1)) {
+                switch (chr) {
+                    case 'i': break; // already on
+                    case 'I': flags &= ~std::regex_constants::icase; break;
+                    case 'c': flags |= std::regex_constants::collate; break;
+                    case 'n': flags |= std::regex_constants::nosubs; break;
+                    case 's': flags |= std::regex_constants::ECMAScript; break;
+                    case 'b': flags |= std::regex_constants::basic; break;
+                    case 'x': flags |= std::regex_constants::extended; break;
+                    case 'a': flags |= std::regex_constants::awk; break;
+                    case 'g': flags |= std::regex_constants::grep; break;
+                    case 'e': flags |= std::regex_constants::egrep; break;
+                    default: break;
+                }
+            }
+            try {
+                compiled_name_beacons.emplace_back(std::wstring(), std::wregex(match.substr(1, last_slash - 1), flags), name_beacon.color.value);
+            } catch (const std::regex_error&) {
+                invalid_name_beacons.push_back(i);
+            }
+        }
     }
 
     constexpr int kRarityBeaconAlpha = 170; // beam/ring alpha; the palette itself is opaque (0xFF)
@@ -233,7 +284,7 @@ namespace {
         }
     }
 
-    void Classify(const GW::AgentItem& agent_item, const GW::Item& item, const uint32_t my_agent_id, const std::vector<std::pair<std::wstring, Color>>& compiled_names, Beacon& beacon)
+    void Classify(const GW::AgentItem& agent_item, const GW::Item& item, const uint32_t my_agent_id, Beacon& beacon)
     {
         const bool mine = !agent_item.owner || agent_item.owner == my_agent_id;
         beacon.dimmed = !mine;
@@ -242,10 +293,13 @@ namespace {
         if (mine || show_reserved_for_others) {
             // Name rules outrank value and rarity, and the first one that matches wins - so the user
             // can order the list by priority.
-            if (const auto* item_name = compiled_names.empty() ? nullptr : DecodedItemName(item)) {
-                for (const auto& [match, name_color] : compiled_names) {
-                    if (item_name->find(match) == std::wstring::npos) continue;
-                    beacon.color = name_color;
+            if (const auto* item_name = compiled_name_beacons.empty() ? nullptr : DecodedItemName(item)) {
+                for (const auto& name_beacon : compiled_name_beacons) {
+                    const bool matched = name_beacon.regex
+                                             ? std::regex_search(item_name->decoded, *name_beacon.regex)
+                                             : item_name->lowered.find(name_beacon.substring) != std::wstring::npos;
+                    if (!matched) continue;
+                    beacon.color = name_beacon.color;
                     beacon.draw = true;
                     return;
                 }
@@ -291,12 +345,7 @@ namespace {
             return;
         }
         const auto my_agent_id = GW::Agents::GetControlledCharacterId();
-        // Lowercased once per scan rather than per item; the list is user-sized and tiny.
-        std::vector<std::pair<std::wstring, Color>> compiled_names;
-        for (const auto& name_beacon : name_beacons) {
-            if (!name_beacon.enabled || name_beacon.match.empty()) continue;
-            compiled_names.emplace_back(TextUtils::ToLower(TextUtils::StringToWString(name_beacon.match)), name_beacon.color.value);
-        }
+        if (name_beacons_dirty) CompileNameBeacons();
         for (const auto* agent : *agents) {
             const auto* agent_item = agent ? agent->GetAsAgentItem() : nullptr;
             if (!agent_item) continue;
@@ -513,6 +562,7 @@ void LootBeaconsModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     ToolboxModule::LoadSettings(doc, legacy);
     doc.Get(Name(), VAR_NAME(name_beacons), name_beacons);
     beacons_dirty = true;
+    name_beacons_dirty = true;
 }
 
 void LootBeaconsModule::SaveSettings(SettingsDoc& doc)
@@ -543,29 +593,42 @@ void LootBeaconsModule::DrawSettingsInternal()
     ImGui::TextUnformatted("Beacon by item name");
     ImGui::ShowHelp("Any drop whose name contains the text gets a beacon in the colour next to it, whatever its rarity or value.\n"
                     "Matching ignores case and uses the item name as it's shown in-game, e.g. \"scroll\" or \"glob of ectoplasm\".\n"
+                    "Text wrapped in slashes is a regular expression instead, e.g. /^Superb Charr Carving$/ - add flags after\n"
+                    "the closing slash as in the chat filter (I turns case sensitivity back on).\n"
                     "Name rules are checked first; the first matching rule in this list wins.");
+    if (name_beacons_dirty) CompileNameBeacons();
     for (size_t i = 0; i < name_beacons.size(); i++) {
         auto& name_beacon = name_beacons[i];
         ImGui::PushID(static_cast<int>(i));
-        if (ImGui::Checkbox("##enabled", &name_beacon.enabled)) beacons_dirty = true;
+        bool changed = ImGui::Checkbox("##enabled", &name_beacon.enabled);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(160.f);
-        if (ImGui::InputText("##match", name_beacon.match, 64)) beacons_dirty = true;
+        changed |= ImGui::InputText("##match", name_beacon.match, 64);
         ImGui::SameLine(240.f);
-        Colors::DrawSettingHueWheel("##color", &name_beacon.color.value);
+        changed |= Colors::DrawSettingHueWheel("##color", &name_beacon.color.value);
         ImGui::SameLine();
         const bool remove = ImGui::Button("x##delete");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Delete");
+        if (std::ranges::contains(invalid_name_beacons, i)) {
+            ImGui::SameLine();
+            ImGui::TextColored(red, "Invalid regex");
+        }
         ImGui::PopID();
+        if (changed) {
+            beacons_dirty = true;
+            name_beacons_dirty = true;
+        }
         if (remove) {
             name_beacons.erase(name_beacons.begin() + static_cast<int>(i));
             beacons_dirty = true;
+            name_beacons_dirty = true;
             break;
         }
     }
     if (ImGui::Button("Add item name")) {
         name_beacons.emplace_back();
         beacons_dirty = true;
+        name_beacons_dirty = true;
     }
 
     ImGui::Separator();
