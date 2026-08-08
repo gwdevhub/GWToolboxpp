@@ -5,6 +5,10 @@
 #undef __forceinline
 
 #include <cstdint>
+#include <optional>
+#include <regex>
+#include <string>
+#include <string_view>
 
 #ifdef __EMSCRIPTEN__
 struct GUID {
@@ -176,6 +180,35 @@ namespace TextUtils {
     inline std::string ToLower(std::string_view s) { return ToLower(std::string(s)); }
     std::wstring RemoveDiacritics(std::wstring_view s);
     std::wstring FormatFloat(float value, int max_decimal_places = 3);
+
+    // A string the user typed to match text with, where "/pattern/flags" means a regular expression -
+    // the chat filter, party search alerts and loot beacon name rules all take input in this form.
+    template <typename CharT>
+    class SearchPattern {
+    public:
+        // What a string that isn't wrapped in slashes means.
+        enum class Fallback : uint8_t {
+            Substring, // case-insensitive substring
+            Regex      // the whole string is the expression
+        };
+
+        static constexpr auto default_flags = std::regex_constants::optimize | std::regex_constants::icase;
+
+        SearchPattern() = default;
+        explicit SearchPattern(std::basic_string_view<CharT> pattern, Fallback fallback = Fallback::Substring, std::regex_constants::syntax_option_type flags = default_flags);
+
+        // False only for an expression that didn't compile; such a pattern never matches.
+        [[nodiscard]] bool IsValid() const { return valid; }
+        [[nodiscard]] bool Matches(std::basic_string_view<CharT> subject) const;
+
+    private:
+        std::optional<std::basic_regex<CharT>> regex;
+        std::basic_string<CharT> lowered; // substring path
+        bool valid = true;
+    };
+
+    extern template class SearchPattern<char>;
+    extern template class SearchPattern<wchar_t>;
 
     std::wstring SanitizePlayerName(std::wstring_view str);
     std::wstring SanitizeForCSV(const std::wstring_view str);

@@ -77,12 +77,11 @@ namespace {
     struct CachedName {
         GuiUtils::EncString enc;
         std::wstring decoded;
-        std::wstring lowered;
     };
     std::map<std::wstring, CachedName> decoded_item_names; // keyed by the encoded name
 
     // Decoded item name, or nullptr while the async decode is still pending (a scan tick or two).
-    const CachedName* DecodedItemName(const GW::Item& item)
+    const std::wstring* DecodedItemName(const GW::Item& item)
     {
         const wchar_t* name_enc = nullptr;
         if (item.single_item_name && *item.single_item_name) name_enc = item.single_item_name;
@@ -92,15 +91,13 @@ namespace {
         if (cached.decoded.empty()) {
             cached.decoded = cached.enc.reset(name_enc)->wstring();
             if (cached.decoded.empty()) return nullptr;
-            cached.lowered = TextUtils::ToLower(cached.decoded);
         }
-        return &cached;
+        return &cached.decoded;
     }
 
     // Parsed form of the enabled rules; rebuilt only when the list changes, since building a regex isn't free.
     struct CompiledNameBeacon {
-        std::wstring substring; // lowercased; empty when this rule is a regex
-        std::optional<std::wregex> regex;
+        TextUtils::SearchPattern<wchar_t> pattern;
         Color color = 0;
     };
     std::vector<CompiledNameBeacon> compiled_name_beacons;
@@ -115,34 +112,12 @@ namespace {
         for (size_t i = 0; i < name_beacons.size(); i++) {
             const auto& name_beacon = name_beacons[i];
             if (!name_beacon.enabled || name_beacon.match.empty()) continue;
-            const auto match = TextUtils::StringToWString(name_beacon.match);
-            const auto last_slash = match.rfind('/');
-            if (!match.starts_with('/') || last_slash == 0 || last_slash == std::wstring::npos) {
-                compiled_name_beacons.emplace_back(TextUtils::ToLower(match), std::nullopt, name_beacon.color.value);
+            TextUtils::SearchPattern<wchar_t> pattern(TextUtils::StringToWString(name_beacon.match));
+            if (!pattern.IsValid()) {
+                invalid_name_beacons.push_back(i);
                 continue;
             }
-            // Same /pattern/flags syntax as the chat filter, except icase is on unless flags say otherwise.
-            auto flags = std::regex_constants::optimize | std::regex_constants::icase;
-            for (const auto chr : std::wstring_view(match).substr(last_slash + 1)) {
-                switch (chr) {
-                    case 'i': break; // already on
-                    case 'I': flags &= ~std::regex_constants::icase; break;
-                    case 'c': flags |= std::regex_constants::collate; break;
-                    case 'n': flags |= std::regex_constants::nosubs; break;
-                    case 's': flags |= std::regex_constants::ECMAScript; break;
-                    case 'b': flags |= std::regex_constants::basic; break;
-                    case 'x': flags |= std::regex_constants::extended; break;
-                    case 'a': flags |= std::regex_constants::awk; break;
-                    case 'g': flags |= std::regex_constants::grep; break;
-                    case 'e': flags |= std::regex_constants::egrep; break;
-                    default: break;
-                }
-            }
-            try {
-                compiled_name_beacons.emplace_back(std::wstring(), std::wregex(match.substr(1, last_slash - 1), flags), name_beacon.color.value);
-            } catch (const std::regex_error&) {
-                invalid_name_beacons.push_back(i);
-            }
+            compiled_name_beacons.emplace_back(std::move(pattern), name_beacon.color.value);
         }
     }
 
@@ -295,10 +270,7 @@ namespace {
             // can order the list by priority.
             if (const auto* item_name = compiled_name_beacons.empty() ? nullptr : DecodedItemName(item)) {
                 for (const auto& name_beacon : compiled_name_beacons) {
-                    const bool matched = name_beacon.regex
-                                             ? std::regex_search(item_name->decoded, *name_beacon.regex)
-                                             : item_name->lowered.find(name_beacon.substring) != std::wstring::npos;
-                    if (!matched) continue;
+                    if (!name_beacon.pattern.Matches(*item_name)) continue;
                     beacon.color = name_beacon.color;
                     beacon.draw = true;
                     return;

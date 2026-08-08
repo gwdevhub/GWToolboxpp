@@ -429,6 +429,55 @@ namespace TextUtils {
         return path;
     }
 
+    // "/pattern/flags", the syntax the chat filter has always used; unknown flag letters are ignored.
+    template <typename CharT>
+    SearchPattern<CharT>::SearchPattern(const std::basic_string_view<CharT> pattern, const Fallback fallback, std::regex_constants::syntax_option_type flags)
+    {
+        const auto last_slash = pattern.rfind(static_cast<CharT>('/'));
+        const bool slash_wrapped = pattern.starts_with(static_cast<CharT>('/')) && last_slash != 0 && last_slash != std::basic_string_view<CharT>::npos;
+        if (!slash_wrapped && fallback == Fallback::Substring) {
+            lowered = ToLower(std::basic_string<CharT>(pattern));
+            return;
+        }
+        auto expression = pattern;
+        if (slash_wrapped) {
+            expression = pattern.substr(1, last_slash - 1);
+            for (const auto chr : pattern.substr(last_slash + 1)) {
+                switch (chr) {
+                    case 'i': flags |= std::regex_constants::icase; break;
+                    case 'I': flags &= ~std::regex_constants::icase; break;
+                    case 'c': flags |= std::regex_constants::collate; break;
+                    case 'n': flags |= std::regex_constants::nosubs; break;
+                    case 's': flags |= std::regex_constants::ECMAScript; break;
+                    case 'b': flags |= std::regex_constants::basic; break;
+                    case 'x': flags |= std::regex_constants::extended; break;
+                    case 'a': flags |= std::regex_constants::awk; break;
+                    case 'g': flags |= std::regex_constants::grep; break;
+                    case 'e': flags |= std::regex_constants::egrep; break;
+                    default: break;
+                }
+            }
+        }
+        try {
+            regex.emplace(expression.begin(), expression.end(), flags);
+        } catch (const std::regex_error&) {
+            valid = false;
+        }
+    }
+
+    template <typename CharT>
+    bool SearchPattern<CharT>::Matches(const std::basic_string_view<CharT> subject) const
+    {
+        if (!valid) return false;
+        if (regex) return std::regex_search(subject.begin(), subject.end(), *regex);
+        if (lowered.empty()) return false;
+        // `lowered` is already lowercased, so only the subject needs folding as we go.
+        return !std::ranges::search(subject, lowered, [](const CharT a, const CharT b) { return std::tolower(a, std::locale()) == b; }).empty();
+    }
+
+    template class SearchPattern<char>;
+    template class SearchPattern<wchar_t>;
+
     std::wstring RemoveDiacritics(const std::wstring_view s)
     {
         if (diacritics_charmap.empty()) {

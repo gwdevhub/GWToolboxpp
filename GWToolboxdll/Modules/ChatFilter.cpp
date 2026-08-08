@@ -49,7 +49,7 @@ namespace {
     char bycontent_word_buf[FILTER_BUF_SIZE] = "";
     bool bycontent_filedirty = false;
 
-    std::vector<std::wregex> bycontent_regex;
+    std::vector<TextUtils::SearchPattern<wchar_t>> bycontent_regex;
     char bycontent_regex_buf[FILTER_BUF_SIZE] = "";
 
     std::vector<std::wstring> byauthor_words;
@@ -133,7 +133,7 @@ namespace {
         }
     }
 
-    void ParseBuffer(const char* text, std::vector<std::wregex>& regex)
+    void ParseBuffer(const char* text, std::vector<TextUtils::SearchPattern<wchar_t>>& regex)
     {
         using namespace TextUtils;
         regex.clear();
@@ -144,53 +144,14 @@ namespace {
             if (word.empty()) {
                 continue;
             }
-            try {
-                const auto last_slash = word.rfind('/');
-                if (word.starts_with('/') && last_slash != std::wstring::npos && last_slash != 0) {
-                    const auto regex_str = word.substr(1, last_slash - 1);
-                    const auto flags = word.substr(last_slash + 1);
-                    auto regex_flags = std::regex_constants::optimize;
-                    for (const auto chr : flags) {
-                        switch (chr) {
-                            case 'i':
-                                regex_flags |= std::regex_constants::icase;
-                                break;
-                            case 'c':
-                                regex_flags |= std::regex_constants::collate;
-                                break;
-                            case 'n':
-                                regex_flags |= std::regex_constants::nosubs;
-                                break;
-                            case 's':
-                                regex_flags |= std::regex_constants::ECMAScript;
-                                break;
-                            case 'b':
-                                regex_flags |= std::regex_constants::basic;
-                                break;
-                            case 'x':
-                                regex_flags |= std::regex_constants::extended;
-                                break;
-                            case 'a':
-                                regex_flags |= std::regex_constants::awk;
-                                break;
-                            case 'g':
-                                regex_flags |= std::regex_constants::grep;
-                                break;
-                            case 'e':
-                                regex_flags |= std::regex_constants::egrep;
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    regex.emplace_back(regex_str, regex_flags);
-                }
-                else {
-                    regex.emplace_back(word, std::regex_constants::optimize);
-                }
-            } catch (const std::regex_error&) {
-                Log::Warning("Cannot parse regular expression '%s'", word.c_str());
+            // Every line of this list is an expression, whether or not it's wrapped in /slashes/, and
+            // stays case sensitive unless the line asks for /i.
+            SearchPattern<wchar_t> pattern(word, SearchPattern<wchar_t>::Fallback::Regex, std::regex_constants::optimize);
+            if (!pattern.IsValid()) {
+                Log::Warning("Cannot parse regular expression '%S'", word.c_str());
+                continue;
             }
+            regex.push_back(std::move(pattern));
         }
     }
 
@@ -695,7 +656,7 @@ namespace {
             }
         }
         for (const auto& r : bycontent_regex) {
-            if (std::regex_search(sanitized, r)) {
+            if (r.Matches(sanitized)) {
                 return true;
             }
         }
