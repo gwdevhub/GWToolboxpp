@@ -107,7 +107,7 @@ namespace {
 
     char search_buffer[256] = {};
 
-    std::vector<std::string> alert_words{};
+    std::vector<TextUtils::SearchPattern<char>> alert_words{};
     std::vector<std::string> searched_words{};
 
     CircularBuffer<Message> messages;
@@ -176,27 +176,10 @@ namespace {
         if (!settings.filter_alerts) {
             return true;
         }
-        std::regex word_regex;
-        std::smatch m;
-        static const auto regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
+        // A word wrapped in slashes is a regex, anything else a case-insensitive substring.
         for (const auto& word : alert_words) {
-            if (std::regex_search(word, m, regex_check)) {
-                try {
-                    word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
-                } catch (const std::exception&) {
-                    // Silent fail; invalid regex
-                }
-                if (std::regex_search(message, word_regex)) {
-                    return true;
-                }
-            }
-            else {
-                auto found = std::ranges::search(message, word, [](const char c1, const char c2) -> bool {
-                                 return tolower(c1) == c2;
-                             }).begin();
-                if (found != message.end()) {
-                    return true;
-                }
+            if (word.Matches(message)) {
+                return true;
             }
         }
         return false;
@@ -754,6 +737,19 @@ void TradeWindow::ParseBuffer(const char* text, std::vector<std::string>& words)
             word[i] = static_cast<char>(tolower(word[i]));
         }
         words.push_back(word);
+    }
+}
+
+void TradeWindow::ParseBuffer(const char* text, std::vector<TextUtils::SearchPattern<char>>& words)
+{
+    words.clear();
+    std::istringstream stream(text);
+    std::string word;
+    while (std::getline(stream, word)) {
+        if (word.empty()) {
+            continue;
+        }
+        words.emplace_back(word);
     }
 }
 
