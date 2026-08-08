@@ -12,6 +12,7 @@
 #include <GWCA/Managers/MapMgr.h>
 
 #include <Color.h>
+#include <Defines.h>
 #include <ImGuiAddons.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/LootBeaconsModule.h>
@@ -328,7 +329,7 @@ namespace {
             beacon.pos = {agent_item->pos.x, agent_item->pos.y};
             beacon.z = agent_item->z;
             beacon.zplane = agent_item->pos.zplane;
-            Classify(*agent_item, *item, my_agent_id, compiled_names, beacon);
+            Classify(*agent_item, *item, my_agent_id, beacon);
         }
         std::erase_if(beacons, [](const auto& entry) { return entry.second.seen != scan_counter; });
     }
