@@ -80,6 +80,10 @@ namespace {
         dialog_button_messages.clear();
 
         dialog_body.reset(nullptr);
+        // Remember who we were talking to; needed to re-open the dialog if the server closes it mid-conversation
+        if (dialog_info.agent_id) {
+            last_agent_id = dialog_info.agent_id;
+        }
         dialog_info = {};
     }
 
@@ -88,10 +92,6 @@ namespace {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
             ResetDialog();
-            if (dialog_info.agent_id) {
-                last_agent_id = dialog_info.agent_id;
-            }
-            dialog_info.agent_id = 0;
         }
         NPCDialogUICallback_Ret(message, wparam, lparam);
         GW::Hook::LeaveHook();
@@ -102,7 +102,9 @@ namespace {
         if (queued_dialogs_to_send.empty()) {
             return;
         }
-        const auto npc = GW::Agents::GetAgentByID(last_agent_id);
+        // dialog_info may not have been reset yet, depending on which of the close messages arrived first
+        const auto agent_id = dialog_info.agent_id ? dialog_info.agent_id : last_agent_id;
+        const auto npc = GW::Agents::GetAgentByID(agent_id);
         const auto me =  npc ? GW::Agents::GetControlledCharacter() : nullptr;
         if (me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area) {
             GW::Agents::InteractAgent(npc);
