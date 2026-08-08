@@ -11,6 +11,7 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
+#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Modules/DialogModule.h>
 #include <Logger.h>
@@ -245,6 +246,7 @@ void DialogModule::Initialize()
 
     // NB: Don't pin the assertion line number; it shifts whenever ArenaNet edits GmNpc.cpp (0x3fe -> 0x40c)
     NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmNpc.cpp", "msg.createParam", 0, 0));
+    DEBUG_ASSERT(NPCDialogUICallback_Func);
     if (NPCDialogUICallback_Func) {
         GW::Hook::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::Hook::EnableHooks(NPCDialogUICallback_Func);
