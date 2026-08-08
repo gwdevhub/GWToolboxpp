@@ -243,10 +243,14 @@ void DialogModule::Initialize()
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPostUIMessage, 0x500);
     }
 
-    NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmNpc.cpp", "msg.createParam", 0x3fe, 0));
+    // NB: Don't pin the assertion line number; it shifts whenever ArenaNet edits GmNpc.cpp (0x3fe -> 0x40c)
+    NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmNpc.cpp", "msg.createParam", 0, 0));
     if (NPCDialogUICallback_Func) {
         GW::Hook::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::Hook::EnableHooks(NPCDialogUICallback_Func);
+    }
+    else {
+        Log::Error("Failed to find NPC dialog UI callback; dialog state won't be reset when a conversation ends");
     }
 }
 
