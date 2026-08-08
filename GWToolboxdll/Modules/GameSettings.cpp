@@ -941,6 +941,24 @@ namespace {
         }
     }
 
+    // Last party leader state the server told us about, so we can spot a change of leadership
+    bool was_party_leader = true;
+
+    void OnPartyLeaderChanged(GW::HookStatus*, const GW::Packet::StoC::PlayerIsPartyLeader* packet)
+    {
+        const auto is_leader = packet->is_leader != 0;
+        const auto became_leader = is_leader && !was_party_leader;
+        was_party_leader = is_leader;
+        if (!became_leader || !settings.fix_legacy_enter_mission_button) return;
+        if (!GW::UI::GetPreference(GW::UI::FlagPreference::LegacyStartMissionButton)) return;
+        if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
+        const auto map_info = GW::Map::GetCurrentMapInfo();
+        if (!map_info || !map_info->GetHasEnterButton()) return;
+        // The client only wires the legacy Enter Mission button up when the party window is built; toggling the preference rebuilds it
+        GW::UI::SetPreference(GW::UI::FlagPreference::LegacyStartMissionButton, false);
+        GW::UI::SetPreference(GW::UI::FlagPreference::LegacyStartMissionButton, true);
+    }
+
     GW::HookEntry OnPreUIMessage_HookEntry;
 
     bool need_to_hide_inventory_window_after_trade = false;
@@ -1556,6 +1574,7 @@ void GameSettings::Initialize()
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, OnPartyInviteReceived);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, OnPartyPlayerJoined);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, OnMapTravel);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerIsPartyLeader>(&PartyLeaderChanged_Entry, OnPartyLeaderChanged);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, OnCinematic);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, OnDungeonReward);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, OnMapLoaded);
@@ -1835,6 +1854,10 @@ void GameSettings::DrawPartySettings()
     ImGui::CheckboxWithHelp("Automatically accept party invitations when ticked", &settings.auto_accept_invites, "When you're invited to join someone elses party");
     ImGui::CheckboxWithHelp("Automatically accept party join requests when ticked", &settings.auto_accept_join_requests, "When a player wants to join your existing party");
     ImGui::Checkbox("Automatically lock heroes and pets onto your called target", &settings.automatically_flag_pet_to_fight_called_target);
+    ImGui::CheckboxWithHelp(
+        "Restore the legacy Enter Mission button when party leadership changes", &settings.fix_legacy_enter_mission_button,
+        "Guild Wars only sets up the legacy Enter Mission button when the party window is built,\nso the button goes missing for whoever becomes party leader afterwards.\nTick this to have Toolbox rebuild the party window for you, the same as toggling\nthe 'legacy Enter Mission button' option off and on again.\n\nOnly applies if you have that game option enabled."
+    );
 }
 
 void GameSettings::DrawSettingsInternal()
@@ -2376,6 +2399,8 @@ void GameSettings::OnMapTravel(const GW::HookStatus*, const GW::Packet::StoC::Ga
     if (settings.focus_window_on_zoning && pak->is_explorable) {
         FocusWindow();
     }
+    // The server tells us who leads on arrival; don't treat that as a change of leadership
+    was_party_leader = true;
 }
 
 // Turn screenshots into clickable links

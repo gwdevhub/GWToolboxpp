@@ -69,6 +69,9 @@ public:
         // When entering a mission you've completed, check whether you should be doing it in HM/NM instead
         bool check_and_prompt_if_mission_already_completed = true;
 
+        // Work around the client losing the legacy Enter Mission button when party leadership changes
+        bool fix_legacy_enter_mission_button = true;
+
         unsigned int last_online_status = 1; // GW::FriendStatus::Online
         bool remember_online_status = true;
 
@@ -218,6 +221,7 @@ private:
     GW::HookEntry PartyPlayerAdd_Entry;
     GW::HookEntry PartyPlayerReady_Entry;
     GW::HookEntry PartyPlayerRemove_Entry;
+    GW::HookEntry PartyLeaderChanged_Entry;
     GW::HookEntry GameSrvTransfer_Entry;
     GW::HookEntry CinematicPlay_Entry;
     GW::HookEntry PlayerJoinInstance_Entry;
