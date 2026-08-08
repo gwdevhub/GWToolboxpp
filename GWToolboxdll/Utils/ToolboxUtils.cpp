@@ -34,6 +34,8 @@
 #include <GWCA/Managers/ItemMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 #include <GWCA/Utilities/Scanner.h>
+
+#include <Defines.h>
 #include <Modules/Resources.h>
 #include <Timer.h>
 #include <Utils/GuiUtils.h>
@@ -428,6 +430,7 @@ namespace GW {
         {
             if (!account_uuid) {
                 auto address = GW::Scanner::Find("\x50\x6a\x18\x6a\x02\xff\x15", "xxxxxxx", 0x7);
+                DEBUG_ASSERT(address);
                 if (address && GW::Scanner::IsValidPtr(*(uintptr_t*)address, GW::ScannerSection::Section_DATA)) {
                     address = *(uintptr_t*)address;
                     account_uuid = (GUID*)(address + 0x90);

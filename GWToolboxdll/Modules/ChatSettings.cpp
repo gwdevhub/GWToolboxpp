@@ -443,6 +443,7 @@ void ChatSettings::Initialize()
         RegisterUIMessageCallback(&OnUIMessage_Entry, message_id, OnUIMessage);
     }
     ColorHexOrLabelToColor_Func = (ColorHexOrLabelToColor_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("CtlTextMl.cpp", "value", 0, 0));
+    DEBUG_ASSERT(ColorHexOrLabelToColor_Func);
     if (ColorHexOrLabelToColor_Func) {
         GW::Hook::CreateHook((void**)&ColorHexOrLabelToColor_Func, OnColorHexOrLabelToColor, (void**)&ColorHexOrLabelToColor_Ret);
         GW::Hook::EnableHooks(ColorHexOrLabelToColor_Func);
@@ -450,6 +451,7 @@ void ChatSettings::Initialize()
     // b'\x75\x16\x68\x88\xe1\x00\x00'
 
     ChatLogLine_UICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x75\x16\x68\x88\xe1\x00\x00", "xxxxxxx"),0xfff);
+    DEBUG_ASSERT(ChatLogLine_UICallback_Func);
     if (ChatLogLine_UICallback_Func) {
         GW::Hook::CreateHook((void**)&ChatLogLine_UICallback_Func, OnChatLogLine_UICallback, (void**)&ChatLogLine_UICallback_Ret);
         GW::Hook::EnableHooks(ChatLogLine_UICallback_Func);

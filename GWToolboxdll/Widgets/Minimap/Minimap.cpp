@@ -839,6 +839,7 @@ void Minimap::Initialize()
     }
 
     uintptr_t address = GW::Scanner::Find("\x8b\x46\x40\x85\xc0\x74\x0c", "xxxxx?x", 0x5);
+    DEBUG_ASSERT(address);
     if (address) {
         hide_flagging_controls_patch.SetPatch(address, "\xeb", 1);
     }

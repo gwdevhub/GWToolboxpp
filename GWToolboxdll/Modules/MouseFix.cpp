@@ -169,12 +169,15 @@ namespace {
             return false;
         }
         uintptr_t address = GW::Scanner::Find("\xc7\x45\xf0\x10\x00\x00\x00\xc7\x45\xf4\x02\x00\x00\x00", "xx?xxxxxx?xxxx", 0x15);
+        DEBUG_ASSERT(address);
         if(address && GW::Scanner::IsValidPtr(*(uintptr_t*)address)) {
             ProcessInput_Func = (OnProcessInput_pt)GW::Scanner::ToFunctionStart(address, 0xfff);
             HasRegisteredTrackMouseEvent = *(bool**)address;
             gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x20);
             SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange("\x89\x46\x08\xe8????", "xxxx????", 3, address, address + 0xff));
         }
+        DEBUG_ASSERT(ProcessInput_Func);
+        DEBUG_ASSERT(SetCursorPosCenter_Func);
 
         GWCA_INFO("[SCAN] ProcessInput_Func = %p", ProcessInput_Func);
         GWCA_INFO("[SCAN] HasRegisteredTrackMouseEvent = %p", HasRegisteredTrackMouseEvent);

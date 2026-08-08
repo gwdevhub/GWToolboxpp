@@ -24,6 +24,8 @@
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/Managers/MemoryMgr.h>
 #include <GWCA/Utilities/MemoryPatcher.h>
+
+#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/WorldMapWidget.h>
@@ -845,6 +847,7 @@ void QuestModule::Initialize()
 
     memset(&custom_quest_marker, 0, sizeof(custom_quest_marker));
     uintptr_t address = GW::Scanner::FindAssertion("UiCtlWebLink.cpp", "challengeId < CHALLENGES", 0, -0x7);
+    DEBUG_ASSERT(address);
     if (address) {
         bypass_custom_quest_assertion_patch.SetPatch(address, "\xeb", 1);
         bypass_custom_quest_assertion_patch.TogglePatch(true);

@@ -15,6 +15,8 @@
 #include <GWCA/Utilities/Hooker.h>
 #include <GWCA/Utilities/Scanner.h>
 
+#include <Defines.h>
+
 namespace {
     FILE* logfile = nullptr;
     FILE* logfile2 = nullptr; // Debug: a second sink (log.txt on disk) so the harness can read it while the console stays
@@ -108,6 +110,7 @@ namespace {
     void HookGWLogger() {
         if (LogWithArguments_Func) return;
         LogWithArguments_Func = (LogWithArguments_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("Log.cpp", "argListPtr", 0, 0));
+        DEBUG_ASSERT(LogWithArguments_Func);
         if (!LogWithArguments_Func) return;
         GW::Hook::CreateHook((void**)&LogWithArguments_Func, OnLogWithArguments, (void**)&LogWithArguments_Ret);
         GW::Hook::EnableHooks(LogWithArguments_Func);

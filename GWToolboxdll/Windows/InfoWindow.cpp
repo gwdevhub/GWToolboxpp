@@ -46,6 +46,8 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/StoCMgr.h>
 
+#include <Defines.h>
+
 #include <Widgets/AlcoholWidget.h>
 #include <Widgets/Minimap/Minimap.h>
 #include <Widgets/PartyDamage.h>
@@ -632,6 +634,7 @@ namespace {
         if (hook && ValidateAsyncDecodeStr_Func) return;
         if (hook) {
             ValidateAsyncDecodeStr_Func = (DoAsyncDecodeStr_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("(codedString[0] & ~WORD_BIT_MORE) >= WORD_VALUE_BASE"));
+            DEBUG_ASSERT(ValidateAsyncDecodeStr_Func);
             if (ValidateAsyncDecodeStr_Func) {
                 GW::Hook::CreateHook((void**)&ValidateAsyncDecodeStr_Func, OnValidateAsyncDecodeStr, (void**)&ValidateAsyncDecodeStr_Ret);
                 GW::Hook::EnableHooks(ValidateAsyncDecodeStr_Func);
@@ -651,6 +654,7 @@ namespace {
         if (hook && CreateTexture_Func) return;
         if (hook) {
             CreateTexture_Func = (CreateTexture_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GrTex2d.cpp", "!(flags & GR_TEXTURE_TRANSFER_OWNERSHIP)", 0, 0));
+            DEBUG_ASSERT(CreateTexture_Func);
             if (CreateTexture_Func) {
                 GW::Hook::CreateHook((void**)&CreateTexture_Func, OnCreateTexture, (void**)&CreateTexture_Ret);
                 GW::Hook::EnableHooks(CreateTexture_Func);
@@ -727,6 +731,7 @@ namespace {
         wchar_t** file_ids = 0;
         ArenaNetFileParser::GameAssetFile asset;
         auto addr = GW::Scanner::FindUseOfString("index < arrsize(s_fileId)", 0x11);
+        DEBUG_ASSERT(addr);
         if (!(addr && GW::Scanner::IsValidPtr(*(uintptr_t*)addr, GW::ScannerSection::Section_DATA))) {
             return false;
         }
@@ -767,6 +772,7 @@ namespace {
     {
         if (!SetFpsLimits_Func) {
             SetFpsLimits_Func = (SetFpsLimits_pt)GW::Scanner::ToFunctionStart(GW::Scanner::Find("\x68\x40\x42\x0f\x00\xe8", "xxxxxx"));
+            DEBUG_ASSERT(SetFpsLimits_Func);
             if (SetFpsLimits_Func) {
                 GW::Hook::CreateHook((void**)&SetFpsLimits_Func, OnSetFpsLimits, (void**)&SetFpsLimits_Ret);
                 GW::Hook::EnableHooks(SetFpsLimits_Func);
