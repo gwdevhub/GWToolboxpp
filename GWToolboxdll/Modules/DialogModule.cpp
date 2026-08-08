@@ -11,6 +11,7 @@
 #include <GWCA/Utilities/Scanner.h>
 #include <GWCA/Utilities/Hooker.h>
 
+#include <Defines.h>
 #include <Utils/GuiUtils.h>
 #include <Modules/DialogModule.h>
 #include <Logger.h>
@@ -80,6 +81,10 @@ namespace {
         dialog_button_messages.clear();
 
         dialog_body.reset(nullptr);
+        // Remember who we were talking to; needed to re-open the dialog if the server closes it mid-conversation
+        if (dialog_info.agent_id) {
+            last_agent_id = dialog_info.agent_id;
+        }
         dialog_info = {};
     }
 
@@ -88,10 +93,6 @@ namespace {
         GW::Hook::EnterHook();
         if (message->message_id == GW::UI::UIMessage::kDestroyFrame) {
             ResetDialog();
-            if (dialog_info.agent_id) {
-                last_agent_id = dialog_info.agent_id;
-            }
-            dialog_info.agent_id = 0;
         }
         NPCDialogUICallback_Ret(message, wparam, lparam);
         GW::Hook::LeaveHook();
@@ -102,7 +103,9 @@ namespace {
         if (queued_dialogs_to_send.empty()) {
             return;
         }
-        const auto npc = GW::Agents::GetAgentByID(last_agent_id);
+        // dialog_info may not have been reset yet, depending on which of the close messages arrived first
+        const auto agent_id = dialog_info.agent_id ? dialog_info.agent_id : last_agent_id;
+        const auto npc = GW::Agents::GetAgentByID(agent_id);
         const auto me =  npc ? GW::Agents::GetControlledCharacter() : nullptr;
         if (me && GetDistance(npc->pos, me->pos) < GW::Constants::Range::Area) {
             GW::Agents::InteractAgent(npc);
@@ -241,10 +244,15 @@ void DialogModule::Initialize()
         RegisterUIMessageCallback(&dialog_hook, message_id, OnPostUIMessage, 0x500);
     }
 
-    NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmNpc.cpp", "msg.createParam", 0x3fe, 0));
+    // NB: Don't pin the assertion line number; it shifts whenever ArenaNet edits GmNpc.cpp (0x3fe -> 0x40c)
+    NPCDialogUICallback_Func = (GW::UI::UIInteractionCallback)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("GmNpc.cpp", "msg.createParam", 0, 0));
+    DEBUG_ASSERT(NPCDialogUICallback_Func);
     if (NPCDialogUICallback_Func) {
         GW::Hook::CreateHook((void**)&NPCDialogUICallback_Func, OnNPCDialogUICallback, reinterpret_cast<void**>(&NPCDialogUICallback_Ret));
         GW::Hook::EnableHooks(NPCDialogUICallback_Func);
+    }
+    else {
+        Log::Error("Failed to find NPC dialog UI callback; dialog state won't be reset when a conversation ends");
     }
 }
 

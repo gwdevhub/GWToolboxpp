@@ -2387,7 +2387,7 @@ void CHAT_CMD_FUNC(ChatCommands::CmdDialog)
     if (!DialogModule::GetDialogAgent()) {
         const auto* target = GW::Agents::GetTargetAsAgentLiving();
         const auto* me = GW::Agents::GetControlledCharacter();
-        if (target && target->allegiance == GW::Constants::Allegiance::Npc_Minipet && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
+        if (target && me && target->allegiance == GW::Constants::Allegiance::Npc_Minipet && GetDistance(me->pos, target->pos) < GW::Constants::Range::Area) {
             GW::Agents::InteractAgent(target);
         }
     }
