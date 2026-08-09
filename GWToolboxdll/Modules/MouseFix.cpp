@@ -174,8 +174,8 @@ namespace {
             ProcessInput_Func = (OnProcessInput_pt)GW::Scanner::ToFunctionStart(address, 0xfff);
             HasRegisteredTrackMouseEvent = *(bool**)address;
             gw_mouse_move = (GwMouseMove*)(HasRegisteredTrackMouseEvent - 0x20);
-            SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange("\x89\x46\x08\xe8????", "xxxx????", 3, address, address + 0xff));
         }
+        SetCursorPosCenter_Func = (SetCursorPosCenter_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindAssertion("OsInput.cpp", "basis", 0, 0));
         DEBUG_ASSERT(ProcessInput_Func);
         DEBUG_ASSERT(SetCursorPosCenter_Func);
 
