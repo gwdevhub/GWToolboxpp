@@ -8,6 +8,7 @@ Previous releases are available on Github as dll files. There is no support for 
 the latest version, go to the [Home Page](./) instead.
 
 ## Version 8.33
+* [Fix] `/dialog` (including `/dialog take` and `/dialog 0`) works again. A Guild Wars update stopped Toolbox from noticing when a conversation window closed, so the command still believed you were talking to the previous NPC: it would no longer start a conversation with your current target, and queued steps — such as taking a quest and then accepting its reward — stalled for a few seconds and were dropped instead of being sent. Conversations that the game ends part-way through a sequence are also reopened again.
 * [Fix] Minimap: Custom Agents size edits now apply to other party members/players — previously the per-allegiance sizes (Ally, Neutral, Ally (NPC), Ally (Spirit/Pet), Ally (Minion)) set in the Custom Agents list had no effect on players, who always fell through to a legacy field that could no longer be changed from the UI.
 * [Fix] Loot Beacons: each beacon now always matches the colour of the item's name tag, and the per-rarity colour pickers have been removed — the rarity colours were also realigned to the game's own item palette so beacons read the same as the drop text.
 * [Fix] Title Tracker: the old, no-longer-obtainable versions of the Treasure Hunter and Wisdom title tracks (and the pre-hard-mode Skill Hunter) no longer appear in the widget's title list or the `/title` command.
