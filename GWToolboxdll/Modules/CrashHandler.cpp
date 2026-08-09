@@ -1,5 +1,9 @@
 #include "stdafx.h"
 
+#include <csignal>
+#include <cstdlib>
+#include <exception>
+
 #include <GWCA/Managers/UIMgr.h>
 
 #include <GWCA/Utilities/Hooker.h>
@@ -127,8 +131,108 @@ namespace {
         return 1;
     }
 
+    // The CRT kills the process for these without ever raising an SEH exception, so they never reach
+    // TopLevelExceptionFilter. Route them into Crash() with a context captured at the point of failure.
+    constexpr DWORD EXCEPTION_TOOLBOX_CRT_FAILURE = 0xE0435254;
+
+    _invalid_parameter_handler previous_invalid_parameter_handler = nullptr;
+    _purecall_handler previous_purecall_handler = nullptr;
+    std::terminate_handler previous_terminate_handler = nullptr;
+    void(__cdecl* previous_sigabrt_handler)(int) = SIG_DFL;
+    bool crt_handlers_installed = false;
+
+    void CrashFromCrtHandler(const char* message)
+    {
+        // Crash() keeps this pointer for the dump's comment stream, and the process dies before it could be reused.
+        static char crt_failure_message[512];
+        strncpy_s(crt_failure_message, message && *message ? message : "Unknown CRT failure", _TRUNCATE);
+
+        CONTEXT context{};
+        RtlCaptureContext(&context);
+
+        EXCEPTION_RECORD record{};
+        record.ExceptionCode = EXCEPTION_TOOLBOX_CRT_FAILURE;
+        record.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
+        record.ExceptionAddress = reinterpret_cast<PVOID>(context.Eip);
+
+        EXCEPTION_POINTERS pointers{&record, &context};
+        CrashHandler::Crash(&pointers, crt_failure_message);
+
+        // Crash() doesn't return, but don't let the CRT carry on if it somehow did.
+        TerminateProcess(GetCurrentProcess(), 1);
+    }
+
+    // Release CRTs pass null for everything but the line number, hence the placeholders.
+    void __cdecl OnInvalidParameter(const wchar_t* expression, const wchar_t* function, const wchar_t* file, const unsigned int line, uintptr_t)
+    {
+        char message[512];
+        snprintf(message, _countof(message), "Invalid parameter: '%S' in '%S', '%S' line %u",
+                 expression ? expression : L"<no expression>",
+                 function ? function : L"<unknown function>",
+                 file ? file : L"<unknown file>",
+                 line);
+        CrashFromCrtHandler(message);
+    }
+
+    void __cdecl OnPureCall()
+    {
+        CrashFromCrtHandler("Pure virtual function call");
+    }
+
+    void OnTerminate()
+    {
+        char message[512];
+        const char* description = "std::terminate called";
+
+        if (std::current_exception()) {
+            try {
+                std::rethrow_exception(std::current_exception());
+            }
+            catch (const std::exception& e) {
+                snprintf(message, _countof(message), "Unhandled C++ exception: %s", e.what());
+                description = message;
+            }
+            catch (...) {
+                description = "Unhandled C++ exception (not derived from std::exception)";
+            }
+        }
+
+        CrashFromCrtHandler(description);
+    }
+
+    void __cdecl OnAbortSignal(int)
+    {
+        CrashFromCrtHandler("abort() called");
+    }
+
+    void InstallCrtHandlers()
+    {
+        if (crt_handlers_installed) return;
+        crt_handlers_installed = true;
+
+        previous_invalid_parameter_handler = _set_invalid_parameter_handler(OnInvalidParameter);
+        previous_purecall_handler = _set_purecall_handler(OnPureCall);
+        previous_terminate_handler = std::set_terminate(OnTerminate);
+        previous_sigabrt_handler = signal(SIGABRT, OnAbortSignal);
+        // Stop the CRT showing its own abort dialog or handing the fault to WER if our handler ever returns.
+        _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+    }
+
+    void RemoveCrtHandlers()
+    {
+        if (!crt_handlers_installed) return;
+        crt_handlers_installed = false;
+
+        // Leaving these pointing into an unloaded toolbox dll would be worse than no handler at all.
+        _set_invalid_parameter_handler(previous_invalid_parameter_handler);
+        _set_purecall_handler(previous_purecall_handler);
+        std::set_terminate(previous_terminate_handler);
+        signal(SIGABRT, previous_sigabrt_handler);
+    }
+
     void Cleanup()
     {
+        RemoveCrtHandlers();
         if (AppendStackTraceToCrashMessage_Func) {
             GW::Hook::RemoveHook(AppendStackTraceToCrashMessage_Func);
             AppendStackTraceToCrashMessage_Func = nullptr;
@@ -411,6 +515,7 @@ void CrashHandler::Initialize()
     }
 
     SetUnhandledExceptionFilter(TopLevelExceptionFilter);
+    InstallCrtHandlers();
     GW::RegisterPanicHandler(GWCAPanicHandler, nullptr);
 
     AppendStackTraceToCrashMessage_Func = (AppendStackTraceToCrashMessage_pt)GW::Scanner::ToFunctionStart(GW::Scanner::FindUseOfString("%p  %08x %08x %08x %08x "), 0xfff);
