@@ -976,9 +976,9 @@ namespace {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) return;
         const auto map_info = GW::Map::GetCurrentMapInfo();
         if (!map_info || !map_info->GetHasEnterButton()) return;
-        // The client only wires the legacy Enter Mission button up when the party window is built; toggling the preference rebuilds it
-        GW::UI::SetPreference(GW::UI::FlagPreference::LegacyStartMissionButton, false);
-        GW::UI::SetPreference(GW::UI::FlagPreference::LegacyStartMissionButton, true);
+        const auto party_frame = GW::UI::GetFrameByLabel(L"Party");
+        if (!party_frame) return;
+        GW::UI::SendFrameUIMessage(party_frame, GW::UI::UIMessage::kDisableEnterMissionBtn, nullptr);
     }
 
     GW::HookEntry OnPreUIMessage_HookEntry;
@@ -1602,7 +1602,7 @@ void GameSettings::Initialize()
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::PartyInviteReceived_Create>(&PartyPlayerAdd_Entry, OnPartyInviteReceived);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerAdd>(&PartyPlayerAdd_Entry, OnPartyPlayerJoined);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GameSrvTransfer>(&GameSrvTransfer_Entry, OnMapTravel);
-    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerIsPartyLeader>(&PartyLeaderChanged_Entry, OnPartyLeaderChanged);
+    GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PlayerIsPartyLeader>(&PartyLeaderChanged_Entry, OnPartyLeaderChanged, 0x8000);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::CinematicPlay>(&CinematicPlay_Entry, OnCinematic);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::DungeonReward>(&VanquishComplete_Entry, OnDungeonReward);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::MapLoaded>(&PlayerJoinInstance_Entry, OnMapLoaded);
