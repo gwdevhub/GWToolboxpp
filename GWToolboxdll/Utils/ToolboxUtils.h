@@ -319,6 +319,8 @@ namespace ToolboxUtils {
     const GW::PlayerPartyMember* GetPlayerPartyMember(uint32_t, GW::PartyInfo** = nullptr);
     bool IsPlayerInParty(uint32_t);
     bool IsAgentInParty(uint32_t);
+    bool IsAgentInOtherParty(uint32_t);
+    bool IsAgentInMyParty(uint32_t);
 
     // Skills
 
