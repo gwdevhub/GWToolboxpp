@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ToolboxWindow.h>
+#include <Utils/TextUtils.h>
 
 class TradeWindow : public ToolboxWindow {
     TradeWindow() : ToolboxWindow() { show_menubutton = can_show_in_main_window; }
@@ -59,8 +60,6 @@ private:
     bool should_stop = false;
     std::thread* worker = nullptr;
 
-    static void ParseBuffer(const char* text, std::vector<std::string>& words);
-    static void ParseBuffer(std::fstream stream, std::vector<std::string>& words);
 
     static void DeleteWebSocket(easywsclient::WebSocket* ws);
     void SwitchSockets();

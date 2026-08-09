@@ -572,25 +572,10 @@ bool PartySearchWindow::IsLfpAlert(std::string& message) const
     if (!settings.filter_alerts) {
         return true;
     }
-    std::regex word_regex;
-    std::smatch m;
-    static const auto regex_check = std::regex("^/(.*)/[a-z]?$", std::regex::ECMAScript | std::regex::icase);
+    // A word wrapped in slashes is a regex, anything else a case-insensitive substring.
     for (const auto& word : alert_words) {
-        if (std::regex_search(word, m, regex_check)) {
-            try {
-                word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
-            } catch (const std::exception&) {
-                // Silent fail; invalid regex
-            }
-            if (std::regex_search(message, word_regex)) {
-                return true;
-            }
-        }
-        else {
-            auto found = std::ranges::search(message, word, [](const char c1, const char c2) -> bool { return tolower(c1) == c2; }).begin();
-            if (found != message.end()) {
-                return true;
-            }
+        if (word.Matches(message)) {
+            return true;
         }
     }
     return false;
@@ -760,7 +745,7 @@ void PartySearchWindow::DrawAlertsWindowContent(bool)
     ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
                                   ImVec2(-1.0f, 0.0f))) {
-        ParseBuffer(alert_buf, alert_words);
+        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
         alertfile_dirty = true;
     }
 }
@@ -780,7 +765,7 @@ void PartySearchWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     if (alert_file.is_open()) {
         alert_file.get(alert_buf, ALERT_BUF_SIZE, '\0');
         alert_file.close();
-        ParseBuffer(alert_buf, alert_words);
+        alert_words = TextUtils::ParsePatterns<char>(alert_buf);
     }
     alert_file.close();
 }
@@ -798,19 +783,6 @@ void PartySearchWindow::SaveSettings(SettingsDoc& doc)
             bycontent_file.close();
             alertfile_dirty = false;
         }
-    }
-}
-
-void PartySearchWindow::ParseBuffer(const char* text, std::vector<std::string>& words)
-{
-    words.clear();
-    std::istringstream stream(text);
-    std::string word;
-    while (std::getline(stream, word)) {
-        for (size_t i = 0; i < word.length(); i++) {
-            word[i] = static_cast<char>(tolower(word[i]));
-        }
-        words.push_back(word);
     }
 }
 

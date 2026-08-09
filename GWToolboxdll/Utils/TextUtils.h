@@ -5,6 +5,10 @@
 #undef __forceinline
 
 #include <cstdint>
+#include <optional>
+#include <regex>
+#include <string>
+#include <string_view>
 
 #ifdef __EMSCRIPTEN__
 struct GUID {
@@ -176,6 +180,48 @@ namespace TextUtils {
     inline std::string ToLower(std::string_view s) { return ToLower(std::string(s)); }
     std::wstring RemoveDiacritics(std::wstring_view s);
     std::wstring FormatFloat(float value, int max_decimal_places = 3);
+
+    // A string the user typed to match text with, where "/pattern/flags" means a regular expression -
+    // the chat filter, party search alerts and loot beacon name rules all take input in this form.
+    template <typename CharT>
+    class SearchPattern {
+    public:
+        // What a string that isn't wrapped in slashes means.
+        enum class Fallback : uint8_t {
+            Substring, // case-insensitive substring
+            Exact,     // case-insensitive whole-string match
+            Regex      // the whole string is the expression
+        };
+
+        static constexpr auto default_flags = std::regex_constants::optimize | std::regex_constants::icase;
+
+        SearchPattern() = default;
+        explicit SearchPattern(std::basic_string_view<CharT> pattern, Fallback fallback = Fallback::Substring, std::regex_constants::syntax_option_type flags = default_flags);
+
+        // False only for an expression that didn't compile; such a pattern never matches.
+        [[nodiscard]] bool IsValid() const { return valid; }
+        [[nodiscard]] const std::basic_string<CharT>& Source() const { return source; }
+        [[nodiscard]] bool Matches(std::basic_string_view<CharT> subject) const;
+
+    private:
+        std::basic_string<CharT> source; // as typed, for error messages
+        std::optional<std::basic_regex<CharT>> regex;
+        std::basic_string<CharT> lowered; // plain-text path
+        bool exact = false;
+        bool valid = true;
+    };
+
+    extern template class SearchPattern<char>;
+    extern template class SearchPattern<wchar_t>;
+
+    // One pattern per line, blank lines skipped. Patterns that failed to compile are kept (they never
+    // match), so callers can report them - see SearchPattern::IsValid.
+    template <typename CharT>
+    std::vector<SearchPattern<CharT>> ParsePatterns(std::basic_string_view<CharT> text, typename SearchPattern<CharT>::Fallback fallback = SearchPattern<CharT>::Fallback::Substring,
+                                                    std::regex_constants::syntax_option_type flags = SearchPattern<CharT>::default_flags);
+
+    extern template std::vector<SearchPattern<char>> ParsePatterns(std::basic_string_view<char>, SearchPattern<char>::Fallback, std::regex_constants::syntax_option_type);
+    extern template std::vector<SearchPattern<wchar_t>> ParsePatterns(std::basic_string_view<wchar_t>, SearchPattern<wchar_t>::Fallback, std::regex_constants::syntax_option_type);
 
     std::wstring SanitizePlayerName(std::wstring_view str);
     std::wstring SanitizeForCSV(const std::wstring_view str);

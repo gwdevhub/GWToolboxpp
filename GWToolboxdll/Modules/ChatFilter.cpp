@@ -45,14 +45,16 @@ namespace {
     constexpr uint32_t NOISE_REDUCTION_DELAY_MS = 1000;
 
     // Chat filter
-    std::vector<std::wstring> bycontent_words;
+    using Pattern = TextUtils::SearchPattern<wchar_t>;
+
+    std::vector<Pattern> bycontent_words;
     char bycontent_word_buf[FILTER_BUF_SIZE] = "";
     bool bycontent_filedirty = false;
 
-    std::vector<std::wregex> bycontent_regex;
+    std::vector<Pattern> bycontent_regex;
     char bycontent_regex_buf[FILTER_BUF_SIZE] = "";
 
-    std::vector<std::wstring> byauthor_words;
+    std::vector<Pattern> byauthor_words;
     char byauthor_buf[FILTER_BUF_SIZE] = "";
     bool byauthor_filedirty = false;
 
@@ -118,78 +120,15 @@ namespace {
         return 0;
     }
 
-    void ParseBuffer(const char* text, std::vector<std::wstring>& words)
+    // Every user-typed filter list takes the same input: one pattern per line, "/pattern/flags" for a
+    // regex, and `fallback` deciding what a bare line means.
+    void ParseBuffer(const char* text, std::vector<Pattern>& out, const Pattern::Fallback fallback, const std::regex_constants::syntax_option_type flags = Pattern::default_flags)
     {
         using namespace TextUtils;
-        words.clear();
-        const auto text_ws = RemoveDiacritics(ToLower(StringToWString(text)));
-        std::wstringstream stream(text_ws.c_str());
-        std::wstring word;
-        while (std::getline(stream, word)) {
-            if (word.empty()) {
-                continue;
-            }
-            words.push_back(word);
-        }
-    }
-
-    void ParseBuffer(const char* text, std::vector<std::wregex>& regex)
-    {
-        using namespace TextUtils;
-        regex.clear();
-        const auto text_ws = RemoveDiacritics(StringToWString(text));
-        std::wstringstream stream(text_ws.c_str());
-        std::wstring word;
-        while (std::getline(stream, word)) {
-            if (word.empty()) {
-                continue;
-            }
-            try {
-                const auto last_slash = word.rfind('/');
-                if (word.starts_with('/') && last_slash != std::wstring::npos && last_slash != 0) {
-                    const auto regex_str = word.substr(1, last_slash - 1);
-                    const auto flags = word.substr(last_slash + 1);
-                    auto regex_flags = std::regex_constants::optimize;
-                    for (const auto chr : flags) {
-                        switch (chr) {
-                            case 'i':
-                                regex_flags |= std::regex_constants::icase;
-                                break;
-                            case 'c':
-                                regex_flags |= std::regex_constants::collate;
-                                break;
-                            case 'n':
-                                regex_flags |= std::regex_constants::nosubs;
-                                break;
-                            case 's':
-                                regex_flags |= std::regex_constants::ECMAScript;
-                                break;
-                            case 'b':
-                                regex_flags |= std::regex_constants::basic;
-                                break;
-                            case 'x':
-                                regex_flags |= std::regex_constants::extended;
-                                break;
-                            case 'a':
-                                regex_flags |= std::regex_constants::awk;
-                                break;
-                            case 'g':
-                                regex_flags |= std::regex_constants::grep;
-                                break;
-                            case 'e':
-                                regex_flags |= std::regex_constants::egrep;
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    regex.emplace_back(regex_str, regex_flags);
-                }
-                else {
-                    regex.emplace_back(word, std::regex_constants::optimize);
-                }
-            } catch (const std::regex_error&) {
-                Log::Warning("Cannot parse regular expression '%s'", word.c_str());
+        out = ParsePatterns<wchar_t>(RemoveDiacritics(StringToWString(text)), fallback, flags);
+        for (const auto& pattern : out) {
+            if (!pattern.IsValid()) {
+                Log::Warning("Cannot parse regular expression '%S'", pattern.Source().c_str());
             }
         }
     }
@@ -293,9 +232,9 @@ namespace {
             return false;
         }
         // Normalise the same way ParseBuffer normalises the stored names.
-        const auto normalised = RemoveDiacritics(ToLower(SanitizePlayerName(sender)));
+        const auto normalised = RemoveDiacritics(SanitizePlayerName(sender));
         for (const auto& blocked : byauthor_words) {
-            if (blocked == normalised) {
+            if (blocked.Matches(normalised)) {
                 return true;
             }
         }
@@ -688,14 +627,13 @@ namespace {
             return false;
         }
         const auto sanitized = RemoveDiacritics(str);
-        const auto lowercase = ToLower(sanitized);
         for (const auto& s : bycontent_words) {
-            if (lowercase.find(s) != std::wstring::npos) {
+            if (s.Matches(sanitized)) {
                 return true;
             }
         }
         for (const auto& r : bycontent_regex) {
-            if (std::regex_search(sanitized, r)) {
+            if (r.Matches(sanitized)) {
                 return true;
             }
         }
@@ -853,14 +791,14 @@ void ChatFilter::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     if (file1.is_open()) {
         file1.get(bycontent_word_buf, FILTER_BUF_SIZE, '\0');
         file1.close();
-        ParseBuffer(bycontent_word_buf, bycontent_words);
+        ParseBuffer(bycontent_word_buf, bycontent_words, Pattern::Fallback::Substring);
     }
     std::ifstream file2;
     file2.open(Resources::GetSettingFileOrLegacy(L"FilterByContent_regex.txt"));
     if (file2.is_open()) {
         file2.get(bycontent_regex_buf, FILTER_BUF_SIZE, '\0');
         file2.close();
-        ParseBuffer(bycontent_regex_buf, bycontent_regex);
+        ParseBuffer(bycontent_regex_buf, bycontent_regex, Pattern::Fallback::Regex, std::regex_constants::optimize);
     }
 
     strcpy_s(byauthor_buf, "");
@@ -869,7 +807,7 @@ void ChatFilter::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     if (byauthor_file.is_open()) {
         byauthor_file.get(byauthor_buf, FILTER_BUF_SIZE, '\0');
         byauthor_file.close();
-        ParseBuffer(byauthor_buf, byauthor_words);
+        ParseBuffer(byauthor_buf, byauthor_words, Pattern::Fallback::Exact);
     }
 }
 
@@ -880,19 +818,19 @@ void ChatFilter::SaveSettings(SettingsDoc& doc)
 
     if (timer_parse_filters) {
         timer_parse_filters = 0;
-        ParseBuffer(bycontent_word_buf, bycontent_words);
+        ParseBuffer(bycontent_word_buf, bycontent_words, Pattern::Fallback::Substring);
         bycontent_filedirty = true;
     }
 
     if (timer_parse_regexes) {
         timer_parse_regexes = 0;
-        ParseBuffer(bycontent_regex_buf, bycontent_regex);
+        ParseBuffer(bycontent_regex_buf, bycontent_regex, Pattern::Fallback::Regex, std::regex_constants::optimize);
         bycontent_filedirty = true;
     }
 
     if (timer_parse_authors) {
         timer_parse_authors = 0;
-        ParseBuffer(byauthor_buf, byauthor_words);
+        ParseBuffer(byauthor_buf, byauthor_words, Pattern::Fallback::Exact);
         byauthor_filedirty = true;
     }
 
@@ -1082,19 +1020,19 @@ void ChatFilter::Update(const float)
     const uint32_t timestamp = GetTickCount();
     if (timer_parse_filters && timer_parse_filters < timestamp) {
         timer_parse_filters = 0;
-        ParseBuffer(bycontent_word_buf, bycontent_words);
+        ParseBuffer(bycontent_word_buf, bycontent_words, Pattern::Fallback::Substring);
         bycontent_filedirty = true;
     }
 
     if (timer_parse_regexes && timer_parse_regexes < timestamp) {
         timer_parse_regexes = 0;
-        ParseBuffer(bycontent_regex_buf, bycontent_regex);
+        ParseBuffer(bycontent_regex_buf, bycontent_regex, Pattern::Fallback::Regex, std::regex_constants::optimize);
         bycontent_filedirty = true;
     }
 
     if (timer_parse_authors && timer_parse_authors < timestamp) {
         timer_parse_authors = 0;
-        ParseBuffer(byauthor_buf, byauthor_words);
+        ParseBuffer(byauthor_buf, byauthor_words, Pattern::Fallback::Exact);
         byauthor_filedirty = true;
     }
 }
