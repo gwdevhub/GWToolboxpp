@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Account Inventory"; }
+    [[nodiscard]] const char* Name() const override { return "账户物品"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
     struct Settings {

@@ -131,7 +131,7 @@ namespace {
                 *icon_file_ids = WorldMapIcon::HardMode_CompleteAll;
         }
         else {
-            // TODO: Change these icons out for Hard Mode
+            // TODO: 将这些图标替换为困难模式图标
             switch (area_info->continent) {
                 case GW::Continent::Kryta: {
                     switch (area_info->type) {
@@ -324,11 +324,11 @@ namespace {
     void OnCycleDisplayedMinipetsButton(const GW::UI::DialogButtonInfo* button)
     {
         if (wcsncmp(button->message, L"\x8102\x2B96\xA802\xD212\x380C", 5) != 0) {
-            return; // Not "Cycle displayed minipets"
+            return; // 不是 "循环展示迷你宠物"
         }
         const wchar_t* dialog_body = DialogModule::GetDialogBody();
         if (!(dialog_body && wcsncmp(dialog_body, L"\x8102\x2B9D\xDE1D\xB19F\x52DD", 5) == 0)) {
-            return; // Not devotion dialog "Miniatures on display"
+            return; // 不是奉献对话 "展示中的迷你宠物"
         }
         static constexpr ctll::fixed_string displayed_miniatures = L"\x2\x102\x2([^\x102\x2]+)";
         std::wstring_view subject(dialog_body);
@@ -361,11 +361,11 @@ namespace {
     void OnFestivalHatButton(const GW::UI::DialogButtonInfo* button)
     {
         if (wcsncmp(button->message, L"\x8101\x62E2\xAD6D\x82EB\x4C26 ", 5) != 0) {
-            return; // Not "Lets talk about something else"
+            return; // 不是 "让我们谈谈别的"
         }
         const wchar_t* dialog_body = DialogModule::GetDialogBody();
         if (!(dialog_body && wcsncmp(dialog_body, L"\x8101\x62E3\x8BAE\xA150\x1329", 5) == 0)) {
-            return; // Not "Which festival hat would you like me to make you?"
+            return; // 不是 "您想要我为您制作哪顶节日帽子？"
         }
 
         const auto& buttons = DialogModule::GetDialogButtons();
@@ -382,7 +382,7 @@ namespace {
         Instance().CheckProgress();
     }
 
-    // Flag miniature as unlocked for current character when dedicated
+    // 当玩家与 NPC 对话时标记迷你宠物为已解锁
     void OnSendDialog(GW::HookStatus*, const GW::UI::UIMessage message_id, void* wparam, void*)
     {
         ASSERT(message_id == GW::UI::UIMessage::kSendDialog);
@@ -417,7 +417,7 @@ namespace {
     void OnHomLoaded(HallOfMonumentsAchievements* result)
     {
         if (result->state != HallOfMonumentsAchievements::State::Done) {
-            Log::LogW(L"Failed to load Hall of Monuments achievements for %s", result->character_name.c_str());
+            Log::LogW(L"为 %s 加载纪念大厅成就失败", result->character_name.c_str());
             if (result->error_str_from_request.contains("ErrCharacterNotFound")) {
                 auto found = character_completion.find(result->character_name);
                 if (found != character_completion.end()) {
@@ -427,7 +427,7 @@ namespace {
             }
             return;
         }
-        //Log::InfoW(L"Loaded Hom for %s", result->character_name);
+        //Log::InfoW(L"已为 %s 加载纪念大厅", result->character_name);
         CompletionWindow::Instance().CheckProgress();
     }
 
@@ -497,7 +497,7 @@ namespace {
                     buffer = static_cast<uint32_t*>(w->unlocked_map.m_buffer);
                     len = w->unlocked_map.m_size;
                     break;
-                default: ASSERT("Invalid CompletionType" && false);
+                default: ASSERT("无效的 CompletionType" && false);
             }
         }
         const auto this_character_completion = CompletionWindow::GetCharacterCompletion(character_name, true);
@@ -524,7 +524,7 @@ namespace {
             case CompletionType::Heroes: {
                 write_buf = &this_character_completion->heroes;
                 if (from_game) {
-                    // Writing from game memory, not from file
+                    // 从游戏内存写入，而非从文件
                     std::vector<uint32_t>& write = *write_buf;
                     const GW::HeroInfo* hero_arr = (GW::HeroInfo*)buffer;
                     if (write.size() < len) {
@@ -546,7 +546,7 @@ namespace {
             case CompletionType::FestivalHats:
                 write_buf = &this_character_completion->festival_hats;
                 break;
-            default: ASSERT("Invalid CompletionType" && false);
+            default: ASSERT("无效的 CompletionType" && false);
         }
         std::vector<uint32_t>& write = *write_buf;
         if (write.size() < len) {
@@ -571,7 +571,7 @@ namespace {
         pending_refresh_account_characters = true;
     }
 
-    // Check login screen; assign missing characters to account guid
+    // 检查登录屏幕；将缺失的角色分配给账户 GUID
     bool UpdateRefreshAccountCharacters()
     {
         const auto account_id = GetCurrentAccountId();
@@ -590,7 +590,7 @@ namespace {
                 cc->is_pvp = character.is_pvp();
                 cc->is_pre_searing = GW::Map::IsPreSearing(character.map_id());
             }
-            // Remove any account chars that no longer exist
+            // 移除不再存在的账户角色
             auto it = character_completion.begin();
             while (it != character_completion.end()) {
                 if (it->second->account == account_id) {
@@ -617,7 +617,7 @@ namespace {
         return true;
     }
 
-    // Cycle through all available professions - this will trigger the ui message to update the skills unlocked
+    // 循环所有可用副职业 - 这将触发 UI 消息以更新已解锁技能
     void CheckAllSkills()
     {
         if (GW::Map::GetInstanceType() != InstanceType::Outpost)
@@ -631,7 +631,7 @@ namespace {
         for (size_t i = (size_t)Profession::Dervish; i > 0; i--) {
             GW::PlayerMgr::ChangeSecondProfession((Profession)i);
         }
-        ASSERT(GW::PlayerMgr::ChangeSecondProfession(original_template.secondary) && "Failed to restore original build/profession");;
+        ASSERT(GW::PlayerMgr::ChangeSecondProfession(original_template.secondary) && "恢复原始配装/职业失败");;
         GW::SkillbarMgr::LoadSkillTemplate(my_id, original_template);
     }
 
@@ -650,7 +650,7 @@ namespace {
         if (map_id == MapID::None)
             return true;
         if (map_id == MapID::Tomb_of_the_Primeval_Kings)
-            return true; // Topk special case
+            return true; // 托普克特殊处理
 
         const auto map = GW::Map::GetMapInfo();
         const auto w = GW::GetWorldContext();
@@ -661,7 +661,7 @@ namespace {
                 return true;
             case GW::RegionType::ExplorableZone:
                 if (map->continent == GW::Continent::BattleIsles)
-                    return true; // Fow, Uw
+                    return true; // 火岛、地下世界
                 return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
         }
 
@@ -684,7 +684,7 @@ namespace {
         if (map_id == MapID::None)
             return true;
         if (map_id == MapID::Tomb_of_the_Primeval_Kings)
-            return true; // Topk special case
+            return true; // 托普克特殊处理
         const auto completion = CompletionWindow::GetCharacterCompletion(player_name, false);
         if (!(map && completion)) return false;
 
@@ -693,7 +693,7 @@ namespace {
                 return true;
             case GW::RegionType::ExplorableZone:
                 if (map->continent == GW::Continent::BattleIsles)
-                    return true; // Fow, Uw
+                    return true; // 火岛、地下世界
                 return !map->GetIsOnWorldMap() || ArrayBoolAt(completion->vanquishes, static_cast<uint32_t>(map_id));
         }
 
@@ -898,7 +898,7 @@ void Mission::OnClick()
         return;
     }
     if (travel_to == MapID::None) {
-        Log::Error("Failed to find nearest outpost");
+        Log::Error("查找最近前哨站失败");
     }
     else {
         TravelWindow::Instance().Travel(travel_to, District::Current, 0);
@@ -912,7 +912,7 @@ void Mission::OnHover()
         const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaComplete(outpost);
         if (!chars_without_completed.empty()) {
             ImGui::Separator();
-            ImGui::TextUnformatted("Characters who have not completed this area:");
+            ImGui::TextUnformatted("尚未完成此区域的角色：");
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
             const auto map = GW::Map::GetMapInfo(outpost);
@@ -921,7 +921,7 @@ void Mission::OnHover()
                 bool is_hm_complete = ::IsAreaComplete(TextUtils::StringToWString(char_completion->name_str).c_str(), outpost, CompletionCheck::HardMode, map);
                 bool is_nm_complete = ::IsAreaComplete(TextUtils::StringToWString(char_completion->name_str).c_str(), outpost, CompletionCheck::NormalMode, map);
                 ImGui::SameLine();
-                ImGui::Text("%s (%s)", char_completion->name_str.c_str(), TextUtils::Join({is_nm_complete ? "" : "NM", is_hm_complete ? "" : "HM"}, ",").c_str());
+                ImGui::Text("%s（%s）", char_completion->name_str.c_str(), TextUtils::Join({is_nm_complete ? "" : "普通", is_hm_complete ? "" : "困难"}, ",").c_str());
             }
         }
     });
@@ -984,7 +984,7 @@ void OutpostUnlock::OnHover()
         const auto chars_without_completed = CompletionWindow::GetCharactersWithoutAreaUnlocked(outpost);
         if (!chars_without_completed.empty()) {
             ImGui::Separator();
-            ImGui::TextUnformatted("Characters who have not unlocked this area:");
+            ImGui::TextUnformatted("尚未解锁此区域的角色：");
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
             for (auto char_completion : chars_without_completed) {
@@ -1021,7 +1021,7 @@ void EotNMission::CheckProgress(const std::wstring& player_name)
 {
     Mission::CheckProgress(player_name);
     bonus = is_completed;
-    // EotN mission icons are sprited - first sprite for incomplete, second for complete
+    // EotN 任务图标是雪碧图 - 第一帧为未完成，第二帧为已完成
     if (is_completed) {
         icon_uv_offset[0] = {.5f, 0.f};
         icon_uv_offset[1] = {1.f, 1.f};
@@ -1153,7 +1153,6 @@ PvESkill::PvESkill(const SkillID _skill_id)
 void PvESkill::OnClick()
 {
     const auto wtf = std::format(L"Game_link:Skill_{}", static_cast<std::underlying_type_t<SkillID>>(skill_id));
-    // revert this dumb shit once Microsoft fixes the weird bug
     GW::GameThread::Enqueue([url = wtf] {
         GuiUtils::OpenWiki(url);
     });
@@ -1166,7 +1165,7 @@ void PvESkill::OnHover()
         const auto chars_without_completed = CompletionWindow::GetCharactersWithoutSkillUnlocked(skill_id);
         if (!chars_without_completed.empty()) {
             ImGui::Separator();
-            ImGui::TextUnformatted("Players without this skill unlocked:");
+            ImGui::TextUnformatted("尚未解锁此技能的角色：");
             auto icon_size = ImGui::CalcTextSize(" ");
             icon_size.x = icon_size.y;
             for (auto char_completion : chars_without_completed) {
@@ -1404,117 +1403,117 @@ void CompletionWindow::Initialize()
     }
 
 
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Canthan Armor\x1", "Elementalist_Elite_Canthan_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Exotic Armor\x1", "Assassin_Exotic_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Kurzick Armor\x1", "Warrior_Elite_Kurzick_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Luxon Armor\x1", "Monk_Elite_Luxon_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Imperial Ascended Armor\x1", "Ritualist_Elite_Imperial_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Ancient Armor\x1", "Assassin_Ancient_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Elite Sunspear Armor\x1", "Dervish_Elite_Sunspear_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Vabbian Armor\x1", "Mesmer_Vabbian_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Primeval Armor\x1", "Necromancer_Primeval_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Asuran Armor\x1", "Paragon_Asuran_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Norn Armor\x1", "Ritualist_Norn_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Silver Eagle Armor\x1", "Warrior_Silver_Eagle_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Monument Armor\x1", "Monk_Monument_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Obsidian Armor\x1", "Elementalist_Obsidian_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Elite Armor\x1", "Ranger_Elite_Fur-Lined_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Exclusive Armor\x1", "Elementalist_Elite_Iceforged_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Granite Citadel Ascended Armor\x1", "Warrior_Elite_Platemail_armor_m.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Elite Armor\x1", "Ranger_Elite_Druid_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Exclusive Armor\x1", "Elementalist_Elite_Stormforged_armor_f.jpg"));
-    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "Marhan's Grotto Ascended Armor\x1", "Warrior_Elite_Templar_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "精英凯珊护甲\x1", "Elementalist_Elite_Canthan_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "精英异域护甲\x1", "Assassin_Exotic_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "精英库兹柯护甲\x1", "Warrior_Elite_Kurzick_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "精英路克森护甲\x1", "Monk_Elite_Luxon_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "帝国飞升护甲\x1", "Ritualist_Elite_Imperial_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "远古护甲\x1", "Assassin_Ancient_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "精英日灼护甲\x1", "Dervish_Elite_Sunspear_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "法比护甲\x1", "Mesmer_Vabbian_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "原初护甲\x1", "Necromancer_Primeval_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "阿苏拉护甲\x1", "Paragon_Asuran_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "诺恩护甲\x1", "Ritualist_Norn_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "银鹰护甲\x1", "Warrior_Silver_Eagle_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "纪念碑护甲\x1", "Monk_Monument_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "黑曜石护甲\x1", "Elementalist_Obsidian_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "花岗岩城堡精英护甲\x1", "Ranger_Elite_Fur-Lined_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "花岗岩城堡专属护甲\x1", "Elementalist_Elite_Iceforged_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "花岗岩城堡飞升护甲\x1", "Warrior_Elite_Platemail_armor_m.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "马汗洞穴精英护甲\x1", "Ranger_Elite_Druid_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "马汗洞穴专属护甲\x1", "Elementalist_Elite_Stormforged_armor_f.jpg"));
+    hom_armor.push_back(new ArmorAchievement(hom_armor.size(), L"\x108\x107" "马汗洞穴飞升护甲\x1", "Warrior_Elite_Templar_armor_m.jpg"));
 
     ASSERT(hom_armor.size() == static_cast<size_t>(ResilienceDetail::Count));
 
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zenmai\x1", "Zenmai_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Norgu\x1", "Norgu_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Goren\x1", "Goren_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Zhed Shadowhoof\x1", "Zhed_Shadowhoof_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "General Morgahn\x1", "General_Morgahn_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Margrid The Sly\x1", "Margrid_the_Sly_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Tahlkora\x1", "Tahlkora_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Razah\x1", "Razah_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Master Of Whispers\x1", "Master_of_Whispers_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Koss\x1", "Koss_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Dunkoro\x1", "Dunkoro_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Melonni\x1", "Melonni_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Acolyte Jin\x1", "Acolyte_Jin_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Acolyte Sousuke\x1", "Acolyte_Sousuke_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Vekk\x1", "Vekk_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Livia\x1", "Livia_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Hayda\x1", "Hayda_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Ogden Stonehealer\x1", "Ogden_Stonehealer_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Pyre Fierceshot\x1", "Pyre_Fierceshot_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Jora\x1", "Jora_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Kahmu\x1", "Kahmu_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Xandra\x1", "Xandra_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Anton\x1", "Anton_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Gwen\x1", "Gwen_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Animal Companion\x1", "Animal_Companion_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Black Moa\x1", "Black_Moa_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Imperial Phoenix\x1", "Phoenix_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Black Widow Spider\x1", "Black_Widow_statue.jpg"));
-    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "Olias\x1", "Olias_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "泽奈\x1", "Zenmai_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "诺古\x1", "Norgu_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "戈伦\x1", "Goren_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "泽德·暗蹄\x1", "Zhed_Shadowhoof_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "莫甘将军\x1", "General_Morgahn_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "狡猾的玛格丽特\x1", "Margrid_the_Sly_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "塔尔科拉\x1", "Tahlkora_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "拉扎\x1", "Razah_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "低语大师\x1", "Master_of_Whispers_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "科斯\x1", "Koss_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "邓科罗\x1", "Dunkoro_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "梅洛尼\x1", "Melonni_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "学徒金\x1", "Acolyte_Jin_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "学徒苏苏科\x1", "Acolyte_Sousuke_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "维克\x1", "Vekk_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "莉维亚\x1", "Livia_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "海达\x1", "Hayda_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "奥格登·石疗者\x1", "Ogden_Stonehealer_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "派尔·火击\x1", "Pyre_Fierceshot_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "约拉\x1", "Jora_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "卡穆\x1", "Kahmu_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "珊德拉\x1", "Xandra_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "安东\x1", "Anton_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "格温\x1", "Gwen_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "动物伙伴\x1", "Animal_Companion_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "黑恐鸟\x1", "Black_Moa_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "帝国凤凰\x1", "Phoenix_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "黑寡妇蜘蛛\x1", "Black_Widow_statue.jpg"));
+    hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "奥利亚斯\x1", "Olias_statue.jpg"));
     hom_companions.push_back(new CompanionAchievement(hom_companions.size(), L"\x108\x107" "MOX\x1", "M.O.X._statue.jpg"));
 
     ASSERT(hom_companions.size() == static_cast<size_t>(FellowshipDetail::Count));
 
     size_t hom_titles_index = 0;
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Champion\x1", "Eternal_Champion.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Commander\x1", "Eternal_Commander.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Skillz\x1", "Eternal_Skillz.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Gladiator\x1", "Eternal_Gladiator.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero\x1", "Eternal_Hero.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Lightbringer\x1", "Eternal_Lightbringer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Bookah\x1", "Eternal_Bookah.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Delver\x1", "Eternal_Delver.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Slayer\x1", "Eternal_Slayer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Ebon Vanguard Agent\x1", "Eternal_Ebon_Vanguard_Agent.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Defender of Ascalon\x1", "Eternal_Defender_of_Ascalon.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Cartographer\x1", "Eternal_Tyrian_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Tyria\x1", "Eternal_Guardian_of_Tyria.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Tyria\x1", "Eternal_Protector_of_Tyria.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Skill Hunter\x1", "Eternal_Tyrian_Skill_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Tyrian Vanquisher\x1", "Eternal_Tyrian_Vanquisher.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Cartographer\x1", "Eternal_Canthan_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Cantha\x1", "Eternal_Guardian_of_Cantha.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Cantha\x1", "Eternal_Protector_of_Cantha.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Skill Hunter\x1", "Eternal_Canthan_Skill_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Canthan Vanquisher\x1", "Eternal_Canthan_Vanquisher.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Savior of the Kurzicks\x1", "Eternal_Savior_of_the_Kurzicks.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Savior of the Luxons\x1", "Eternal_Savior_of_the_Luxons.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Cartographer\x1", "Eternal_Elonian_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Guardian of Elona\x1", "Eternal_Guardian_of_Elona.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Protector of Elona\x1", "Eternal_Protector_of_Elona.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Skill Hunter\x1", "Eternal_Elonian_Skill_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Elonian Vanquisher\x1", "Eternal_Elonian_Vanquisher.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Ale Hound\x1", "Eternal_Ale_Hound.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Party Animal\x1", "Eternal_Party_Animal.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Master of the North\x1", "Eternal_Master_of_the_North.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Cartographer\x1", "Eternal_Legendary_Cartographer.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Guardian\x1", "Eternal_Legendary_Guardian.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Skill Hunter\x1", "Eternal_Legendary_Skill_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Legendary Vanquisher\x1", "Eternal_Legendary_Vanquisher.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Fortune\x1", "Eternal_Fortune.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Sweet Tooth\x1", "Eternal_Sweet_Tooth.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Spearmarshal\x1", "Eternal_Spearmarshal.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Survivor\x1", "Eternal_Survivor.jpg"));
-    hom_titles_index++; // NB: This is the character based survivor title, which isn't used anymore.
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Treasure Hunter\x1", "Eternal_Treasure_Hunter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Misfortune\x1", "Eternal_Misfortune.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Source of Wisdom\x1", "Eternal_Source_of_Wisdom.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Tyria\x1", "Eternal_Hero_of_Tyria.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Cantha\x1", "Eternal_Hero_of_Cantha.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Hero of Elona\x1", "Eternal_Hero_of_Elona.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of Sorrow's Furnace\x1", "Eternal_Conqueror_of_Sorrow's_Furnace.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Deep\x1", "Eternal_Conqueror_of_the_Deep.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of Urgoz's Warren\x1", "Eternal_Conqueror_of_Urgoz's_Warren.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Fissure of Woe\x1", "Eternal_Conqueror_of_the Fissure of Woe.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Underworld\x1", "Eternal_Conqueror_of_the Underworld.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Conqueror of The Domain of Anguish\x1", "Eternal_Conqueror_of_the_Domain_of_Anguish.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Zaishen Supporter\x1", "Eternal_Zaishen_Supporter.jpg"));
-    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "Eternal Codex Disciple\x1", "Eternal_Codex_Disciple.png"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒冠军\x1", "Eternal_Champion.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒指挥官\x1", "Eternal_Commander.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒技巧\x1", "Eternal_Skillz.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒角斗士\x1", "Eternal_Gladiator.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒英雄\x1", "Eternal_Hero.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒光明使者\x1", "Eternal_Lightbringer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒书呆\x1", "Eternal_Bookah.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒探索者\x1", "Eternal_Delver.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒屠戮者\x1", "Eternal_Slayer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒黑檀先锋特工\x1", "Eternal_Ebon_Vanguard_Agent.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒阿斯卡隆保卫者\x1", "Eternal_Defender_of_Ascalon.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒泰瑞亚制图师\x1", "Eternal_Tyrian_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒泰瑞亚守护者\x1", "Eternal_Guardian_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒泰瑞亚保卫者\x1", "Eternal_Protector_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒泰瑞亚技能猎人\x1", "Eternal_Tyrian_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒泰瑞亚征服者\x1", "Eternal_Tyrian_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒凯珊制图师\x1", "Eternal_Canthan_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒凯珊守护者\x1", "Eternal_Guardian_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒凯珊保卫者\x1", "Eternal_Protector_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒凯珊技能猎人\x1", "Eternal_Canthan_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒凯珊征服者\x1", "Eternal_Canthan_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒库兹柯拯救者\x1", "Eternal_Savior_of_the_Kurzicks.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒路克森拯救者\x1", "Eternal_Savior_of_the_Luxons.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒伊洛纳制图师\x1", "Eternal_Elonian_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒伊洛纳守护者\x1", "Eternal_Guardian_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒伊洛纳保卫者\x1", "Eternal_Protector_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒伊洛纳技能猎人\x1", "Eternal_Elonian_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒伊洛纳征服者\x1", "Eternal_Elonian_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒酒鬼\x1", "Eternal_Ale_Hound.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒派对动物\x1", "Eternal_Party_Animal.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒北方大师\x1", "Eternal_Master_of_the_North.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒传奇制图师\x1", "Eternal_Legendary_Cartographer.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒传奇守护者\x1", "Eternal_Legendary_Guardian.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒传奇技能猎人\x1", "Eternal_Legendary_Skill_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒传奇征服者\x1", "Eternal_Legendary_Vanquisher.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒财富\x1", "Eternal_Fortune.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒甜食爱好者\x1", "Eternal_Sweet_Tooth.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒矛术统帅\x1", "Eternal_Spearmarshal.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒幸存者\x1", "Eternal_Survivor.jpg"));
+    hom_titles_index++; // 注意：这是基于角色的幸存者称号，现已不再使用。
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒寻宝者\x1", "Eternal_Treasure_Hunter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒厄运\x1", "Eternal_Misfortune.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒智慧之源\x1", "Eternal_Source_of_Wisdom.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒泰瑞亚英雄\x1", "Eternal_Hero_of_Tyria.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒凯珊英雄\x1", "Eternal_Hero_of_Cantha.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒伊洛纳英雄\x1", "Eternal_Hero_of_Elona.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒哀伤熔炉征服者\x1", "Eternal_Conqueror_of_Sorrow's_Furnace.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒深渊征服者\x1", "Eternal_Conqueror_of_the_Deep.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒乌戈兹巢穴征服者\x1", "Eternal_Conqueror_of_Urgoz's_Warren.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒哀伤之隙征服者\x1", "Eternal_Conqueror_of_the Fissure of Woe.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒地下世界征服者\x1", "Eternal_Conqueror_of_the Underworld.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒痛苦领域征服者\x1", "Eternal_Conqueror_of_the_Domain_of_Anguish.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒扎伊申支持者\x1", "Eternal_Zaishen_Supporter.jpg"));
+    hom_titles.push_back(new HonorAchievement(hom_titles_index++, L"\x108\x107" "永恒法典信徒\x1", "Eternal_Codex_Disciple.png"));
 
     ASSERT(hom_titles_index == static_cast<size_t>(HonorDetail::Count));
 
@@ -1974,19 +1973,19 @@ void CompletionWindow::Initialize_Nightfall()
 void CompletionWindow::Initialize_EotN()
 {
     auto& eotn_missions = missions.at(Campaign::EyeOfTheNorth);
-    // Asura
+    // 阿苏拉
     eotn_missions.push_back(new EotNMission(MapID::Finding_the_Bloodstone_mission));
     eotn_missions.push_back(new EotNMission(MapID::The_Elusive_Golemancer_mission));
     eotn_missions.push_back(new EotNMission(MapID::Genius_Operated_Living_Enchanted_Manifestation_mission, QuestID::ZaishenMission_G_O_L_E_M));
-    // Vanguard
+    // 黑檀先锋
     eotn_missions.push_back(new EotNMission(MapID::Against_the_Charr_mission));
     eotn_missions.push_back(new EotNMission(MapID::Warband_of_brothers_mission));
     eotn_missions.push_back(new EotNMission(MapID::Assault_on_the_Stronghold_mission, QuestID::ZaishenMission_Assault_on_the_Stronghold));
-    // Norn
+    // 诺恩
     eotn_missions.push_back(new EotNMission(MapID::Curse_of_the_Nornbear_mission, QuestID::ZaishenMission_Curse_of_the_Nornbear));
     eotn_missions.push_back(new EotNMission(MapID::A_Gate_Too_Far_mission, QuestID::ZaishenMission_A_Gate_Too_Far));
     eotn_missions.push_back(new EotNMission(MapID::Blood_Washes_Blood_mission));
-    // Destroyers
+    // 毁灭者
     eotn_missions.push_back(new EotNMission(MapID::Destructions_Depths_mission, QuestID::ZaishenMission_Destructions_Depths));
     eotn_missions.push_back(new EotNMission(MapID::A_Time_for_Heroes_mission, QuestID::ZaishenMission_A_Time_for_Heroes));
     auto& skills = pve_skills.at(Campaign::EyeOfTheNorth);
@@ -2143,7 +2142,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         return;
     }
 
-    // TODO Button at the top to go to current daily
+    // TODO: 顶部按钮跳转到今日任务
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSizeConstraints(ImVec2(min_size[0], min_size[1]), ImVec2(max_size[0], max_size[1]));
 
@@ -2163,10 +2162,10 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     }
 
     const float gscale = ImGui::FontScale();
-    ImGui::Text("Choose Character");
+    ImGui::Text("选择角色");
     ImGui::SameLine();
     ImGui::PushItemWidth(200.f * gscale);
-    if (ImGui::BeginCombo("##completion_character_select", chosen_player_name_s.c_str())) // The second parameter is the label previewed before opening the combo.
+    if (ImGui::BeginCombo("##completion_character_select", chosen_player_name_s.c_str())) // 第二个参数是打开下拉前显示的标签预览
     {
         const auto account_id = GetCurrentAccountId();
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {2.f, 8.f});
@@ -2178,10 +2177,10 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
                 sel = &it.first;
             }
             if (!is_selected && settings.only_show_account_chars && !account_id.empty() && it.second->account != account_id) {
-                continue; // Different account
+                continue; // 不同账户
             }
             if (it.second->is_pvp || it.second->is_pre_searing)
-                continue; // Not applicable
+                continue; // 不适用
 
             if (it.second->name_str.size() > 0 && ImGui::Selectable(it.second->name_str.c_str(), is_selected)) {
                 chosen_player_name = it.first;
@@ -2196,21 +2195,21 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
 
 #if 1
     ImGui::SameLine();
-    if (ImGui::Button("Change") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0) {
+    if (ImGui::Button("切换") && wcscmp(GetPlayerName(), chosen_player_name.c_str()) != 0) {
         if (!RerollWindow::Instance().Reroll(chosen_player_name.data(), false, false)) {
-            Log::Warning("Failed to reroll to character");
+            Log::Warning("切换角色失败");
         }
     }
 #endif
     ImGui::SameLine();
-    if (ImGui::Checkbox("This Account", &settings.only_show_account_chars)) {
+    if (ImGui::Checkbox("本账户", &settings.only_show_account_chars)) {
         RefreshAccountCharacters();
     }
-    ImGui::ShowHelp("Limits the character dropdown to only show the characters belonging to this account.");
+    ImGui::ShowHelp("将角色下拉列表限制为仅显示此账户的角色。");
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - 200.f * gscale);
-    ImGui::Checkbox("View as list", &settings.show_as_list);
+    ImGui::Checkbox("列表视图", &settings.show_as_list);
     ImGui::SameLine();
-    if (ImGui::Checkbox("Hard mode", &hard_mode)) {
+    if (ImGui::Checkbox("困难模式", &hard_mode)) {
         CheckProgress();
     }
     ImGui::Separator();
@@ -2282,10 +2281,10 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             pending_sort = false;
         }
     }
-    ImGui::Text("Outposts");
+    ImGui::Text("前哨站");
     ImGui::SameLine(checkbox_offset);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
-    ImGui::Checkbox("Hide unlocked outposts", &settings.hide_completed_missions);
+    ImGui::Checkbox("隐藏已解锁前哨站", &settings.hide_completed_missions);
     ImGui::PopStyleVar();
     for (auto& [campaign, unlockable_outposts] : outposts) {
         size_t completed = 0;
@@ -2303,16 +2302,16 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             continue;
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###campaign_outposts_%d",
+        snprintf(label, _countof(label), "%s（已解锁 %d of %d）- %.0f%%###campaign_outposts_%d",
                  CampaignName(campaign), completed, unlockable_outposts.size(), static_cast<float>(completed) / static_cast<float>(unlockable_outposts.size()) * 100.f, campaign);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
     }
-    ImGui::Text("Missions");
+    ImGui::Text("任务");
     ImGui::SameLine(checkbox_offset);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
-    ImGui::Checkbox("Hide completed missions", &settings.hide_completed_missions);
+    ImGui::Checkbox("隐藏已完成任务", &settings.hide_completed_missions);
     ImGui::PopStyleVar();
     for (auto& camp : missions) {
         auto& camp_missions = camp.second;
@@ -2331,15 +2330,15 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             continue;
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s（已完成 %d of %d）- %.0f%%###campaign_missions_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
     }
-    ImGui::Text("Vanquishes");
+    ImGui::Text("征服");
     ImGui::SameLine(checkbox_offset);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
-    ImGui::Checkbox("Hide completed vanquishes", &settings.hide_completed_vanquishes);
+    ImGui::Checkbox("隐藏已完成征服", &settings.hide_completed_vanquishes);
     ImGui::PopStyleVar();
     for (auto& camp : vanquishes) {
         auto& camp_missions = camp.second;
@@ -2361,7 +2360,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             continue;
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f,
+        snprintf(label, _countof(label), "%s（已完成 %d of %d）- %.0f%%###campaign_vanquishes_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f,
                  camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
@@ -2371,25 +2370,25 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     auto skills_title = [&](const char* title) {
         ImGui::PushID(title);
         ImGui::Text(title);
-        ImGui::ShowHelp("Guild Wars only shows skills learned for the current primary/secondary profession.\n\n"
-            "GWToolbox remembers skills learned for other professions,\nbut is only able to update this info when you switch to that profession.");
+        ImGui::ShowHelp("激战仅显示当前主/副职业已学习的技能。\n\n"
+            "GWToolbox 会记住其他职业已学习的技能，\n但仅在您切换到该职业时才能更新此信息。");
         const float skills_checkbox_offset = ImGui::GetContentRegionAvail().x - 280.f * ImGui::FontScale();
         ImGui::SameLine(skills_checkbox_offset - 100.f * ImGui::FontScale());
-        if (ImGui::Button("Check Now")) {
+        if (ImGui::Button("立即检查")) {
             GW::GameThread::Enqueue(CheckAllSkills);
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Will cycle through your available secondary professions to detect all unlocked skills");
+            ImGui::SetTooltip("将循环您的可用副职业以检测所有已解锁技能");
         }
         ImGui::SameLine(skills_checkbox_offset);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
-        ImGui::Checkbox("Hide learnt skills", &settings.hide_unlocked_skills);
+        ImGui::Checkbox("隐藏已学习技能", &settings.hide_unlocked_skills);
         ImGui::SameLine();
-        ImGui::Checkbox("Hide unlocked skills", &settings.hide_account_unlocked_skills);
+        ImGui::Checkbox("隐藏已解锁技能", &settings.hide_account_unlocked_skills);
         ImGui::PopStyleVar();
         ImGui::PopID();
     };
-    skills_title("Elite Skills");
+    skills_title("精英技能");
     for (auto& camp : elite_skills) {
         auto& camp_missions = camp.second;
         size_t completed = 0;
@@ -2410,12 +2409,12 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             continue;
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s（已完成 %d of %d）- %.0f%%###campaign_eskills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
     }
-    skills_title("PvE Skills");
+    skills_title("PvE 技能");
     for (auto& camp : pve_skills) {
         auto& camp_missions = camp.second;
         size_t completed = 0;
@@ -2436,12 +2435,12 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             continue;
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s（已完成 %d of %d）- %.0f%%###campaign_skills_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(filtered);
         }
     }
-    ImGui::Text("Heroes");
+    ImGui::Text("英雄");
     for (auto& camp : heros) {
         auto& camp_missions = camp.second;
         size_t completed = 0;
@@ -2451,12 +2450,12 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d completed) - %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s（已解锁 %d of %d）- %.0f%%###campaign_heros_%d", CampaignName(camp.first), completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(camp_missions);
         }
     }
-    ImGui::Text("Unlocked Item Upgrades");
+    ImGui::Text("已解锁物品升级");
     for (auto& camp : unlocked_pvp_items) {
         auto& camp_missions = camp.second;
         size_t completed = 0;
@@ -2466,17 +2465,17 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
             }
         }
         char label[128];
-        snprintf(label, _countof(label), "%s (%d of %d unlocked) - %.0f%%###unlocked_pvp_items_%d", (const char*)camp.first, completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
+        snprintf(label, _countof(label), "%s（已解锁 %d of %d）- %.0f%%###unlocked_pvp_items_%d", (const char*)camp.first, completed, camp_missions.size(), static_cast<float>(completed) / static_cast<float>(camp_missions.size()) * 100.f, camp.first);
         if (ImGui::CollapsingHeader(label)) {
             draw_missions(camp_missions);
         }
     }
 
-    ImGui::Text("Festival Hats");
-    ImGui::ShowHelp("To update this list, talk to a Festival Hat Keeper and select \"Please make me a new hat.\"");
+    ImGui::Text("节日帽子");
+    ImGui::ShowHelp("要更新此列表，请与节日帽子保管人对话并选择\"请为我制作一顶新帽子。\"");
     ImGui::SameLine(checkbox_offset);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
-    ImGui::Checkbox("Hide collected hats", &settings.hide_collected_hats);
+    ImGui::Checkbox("隐藏已收集帽子", &settings.hide_collected_hats);
     ImGui::PopStyleVar();
 
     size_t completed = 0;
@@ -2485,7 +2484,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
     const size_t cnt = festival_hats.size();
     char label[128];
     std::vector<FestivalHat*> filtered;
-    // Halloween hats
+    // 万圣节帽子
     completed = 0;
     to_index = wintersday_index;
     filtered.clear();
@@ -2499,13 +2498,13 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Halloween Hats (%d of %d collected) - %.0f%%###halloween_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
+    snprintf(label, _countof(label), "万圣节帽子（已收集 %d of %d）- %.0f%%###halloween_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
     offset = to_index;
 
-    // Wintersday hats
+    // 冬幕节帽子
     filtered.clear();
     completed = 0;
     to_index = dragon_festival_index;
@@ -2519,13 +2518,13 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Wintersday Hats (%d of %d collected) - %.0f%%###wintersday_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
+    snprintf(label, _countof(label), "冬幕节帽子（已收集 %d of %d）- %.0f%%###wintersday_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
     offset = to_index;
 
-    // Dragon festival hats
+    // 龙节帽子
     filtered.clear();
     completed = 0;
     to_index = festival_hats.size();
@@ -2539,7 +2538,7 @@ void CompletionWindow::Draw(IDirect3DDevice9* device)
         }
         filtered.push_back(m);
     }
-    snprintf(label, _countof(label), "Dragon Festival Hats (%d of %d collected) - %.0f%%###dragon_festival_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
+    snprintf(label, _countof(label), "龙节帽子（已收集 %d of %d）- %.0f%%###dragon_festival_hats", completed, to_index - offset, static_cast<float>(completed) / static_cast<float>(to_index - offset) * 100.f);
     if (ImGui::CollapsingHeader(label)) {
         draw_missions(filtered);
     }
@@ -2565,13 +2564,13 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
     }
     const int missions_per_row = static_cast<int>(std::floor(ImGui::GetContentRegionAvail().x / (ImGui::FontScale() * single_item_width + ImGui::GetStyle().ItemSpacing.x)));
     const float checkbox_offset = ImGui::GetContentRegionAvail().x - 200.f * ImGui::FontScale();
-    ImGui::Text("Hall of Monuments");
+    ImGui::Text("纪念大厅");
     ImGui::SameLine(checkbox_offset);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
-    ImGui::Checkbox("Hide unlocked achievements", &settings.hide_unlocked_achievements);
+    ImGui::Checkbox("隐藏已解锁成就", &settings.hide_unlocked_achievements);
     ImGui::PopStyleVar();
     const auto hom = GetCharacterHom(chosen_player_name);
-    // Devotion
+    // 奉献
     uint32_t completed = 0;
     if (hom && hom->isReady()) {
         for (size_t i = 0; i < _countof(hom->devotion_points); i++) {
@@ -2591,14 +2590,14 @@ void CompletionWindow::DrawHallOfMonuments(IDirect3DDevice9* device)
     }
 
     char label[128];
-    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d minipets dedicated) - %.0f%%###devotion_points", "Devotion",
+    snprintf(label, _countof(label), "%s（已获得 %d of %d 点数，已供奉 %d of %d 迷你宠物）- %.0f%%###devotion_points", "奉献",
              completed, DevotionPoints::TotalAvailable,
              dedicated, minipets.size(),
              static_cast<float>(dedicated) / static_cast<float>(minipets.size()) * 100.f);
 
     if (ImGui::CollapsingHeader(label)) {
-        ImGui::TextDisabled(R"(To update this list, talk to the "Devotion" pedestal in Eye of the North,
-then press "Examine the Monument to Devotion.")");
+        ImGui::TextDisabled(R"(要更新此列表，请与北方之眼中的"奉献"神龛对话，
+然后按下"检查奉献纪念碑"。)");
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
         ImGui::Columns(missions_per_row, "###completion_section_cols", false);
         const size_t items_per_col = static_cast<size_t>(ceil(drawn / static_cast<float>(missions_per_row)));
@@ -2634,7 +2633,7 @@ then press "Examine the Monument to Devotion.")");
         ImGui::Columns(1);
         ImGui::PopStyleVar();
     }
-    // Valor
+    // 英勇
     completed = 0;
     if (hom && hom->isReady()) {
         for (size_t i = 0; i < _countof(hom->valor_points); i++) {
@@ -2652,7 +2651,7 @@ then press "Examine the Monument to Devotion.")");
         }
         drawn++;
     }
-    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d weapons displayed) - %.0f%%###valor_points", "Valor",
+    snprintf(label, _countof(label), "%s（已获得 %d of %d 点数，已展示 %d of %d 武器）- %.0f%%###valor_points", "英勇",
              completed, ValorPoints::TotalAvailable,
              dedicated, hom_weapons.size(),
              static_cast<float>(dedicated) / static_cast<float>(hom_weapons.size()) * 100.f);
@@ -2680,7 +2679,7 @@ then press "Examine the Monument to Devotion.")");
         ImGui::PopStyleVar();
     }
 
-    // Resilience
+    // 坚韧
     completed = 0;
     if (hom && hom->isReady()) {
         for (size_t i = 0; i < _countof(hom->resilience_points); i++) {
@@ -2698,7 +2697,7 @@ then press "Examine the Monument to Devotion.")");
         }
         drawn++;
     }
-    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d armor sets displayed) - %.0f%%###resilience_points", "Resilience",
+    snprintf(label, _countof(label), "%s（已获得 %d of %d 点数，已展示 %d of %d 护甲套）- %.0f%%###resilience_points", "坚韧",
              completed, ResiliencePoints::TotalAvailable,
              dedicated, hom_armor.size(),
              static_cast<float>(dedicated) / static_cast<float>(hom_armor.size()) * 100.f);
@@ -2726,7 +2725,7 @@ then press "Examine the Monument to Devotion.")");
         ImGui::PopStyleVar();
     }
 
-    // Fellowship
+    // 伙伴
     completed = 0;
     if (hom && hom->isReady()) {
         for (size_t i = 0; i < _countof(hom->fellowship_points); i++) {
@@ -2744,7 +2743,7 @@ then press "Examine the Monument to Devotion.")");
         }
         drawn++;
     }
-    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d companions displayed) - %.0f%%###fellowship_points", "Fellowship",
+    snprintf(label, _countof(label), "%s（已获得 %d of %d 点数，已展示 %d of %d 伙伴）- %.0f%%###fellowship_points", "伙伴",
              completed, FellowshipPoints::TotalAvailable,
              dedicated, hom_companions.size(),
              static_cast<float>(dedicated) / static_cast<float>(hom_companions.size()) * 100.f);
@@ -2772,7 +2771,7 @@ then press "Examine the Monument to Devotion.")");
         ImGui::PopStyleVar();
     }
 
-    // Honor
+    // 荣誉
     completed = 0;
     if (hom && hom->isReady()) {
         for (size_t i = 0; i < _countof(hom->honor_points); i++) {
@@ -2790,7 +2789,7 @@ then press "Examine the Monument to Devotion.")");
         }
         drawn++;
     }
-    snprintf(label, _countof(label), "%s (%d of %d points gained, %d of %d titles achieved) - %.0f%%###honor_points", "Honor",
+    snprintf(label, _countof(label), "%s（已获得 %d of %d 点数，已达成 %d of %d 称号）- %.0f%%###honor_points", "荣誉",
              completed, HonorPoints::TotalAvailable,
              dedicated, hom_titles.size(),
              static_cast<float>(dedicated) / static_cast<float>(hom_titles.size()) * 100.f);
@@ -2835,7 +2834,7 @@ void CompletionWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         const std::string buffer{std::istreambuf_iterator(file), {}};
         std::map<std::string, CharacterCompletionJson> loaded;
         if (!file || glz::read<glz::opts{.error_on_unknown_keys = false}>(loaded, buffer)) {
-            return Log::Error("Failed to load completion json");
+            return Log::Error("加载完成度 JSON 失败");
         }
         auto read_json_to_buf = [](const CompletionType type, std::vector<uint32_t>& buf, const std::wstring_view name_ws) {
             if (!buf.empty()) {
@@ -2868,7 +2867,7 @@ void CompletionWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         ToolboxIni completion_ini(false, false, false);
         const auto success = completion_ini.LoadFile(Resources::GetPath(completion_ini_filename).c_str());
         if (success < 0) {
-            return Log::Error("Failed to load completion ini");
+            return Log::Error("加载完成度 INI 失败");
         }
 
         auto read_ini_to_buf = [&](const CompletionType type, const char* section, const char* ini_section, const std::wstring_view name_ws) {
@@ -3048,7 +3047,7 @@ bool CompletionWindow::IsAreaComplete(const MapID map_id, CompletionCheck check)
     if (map_id == MapID::None)
         return true;
     if (map_id == MapID::Tomb_of_the_Primeval_Kings)
-        return true; // Topk special case
+        return true; // 托普克特殊处理
 
     const auto map = GW::Map::GetMapInfo();
     const auto w = GW::GetWorldContext();
@@ -3059,7 +3058,7 @@ bool CompletionWindow::IsAreaComplete(const MapID map_id, CompletionCheck check)
             return true;
         case GW::RegionType::ExplorableZone:
             if (map->continent == GW::Continent::BattleIsles)
-                return true; // Fow, Uw
+                return true; // 火岛、地下世界
             return !map->GetIsOnWorldMap() || ArrayBoolAt(w->vanquished_areas, static_cast<uint32_t>(map_id));
     }
 

@@ -36,19 +36,19 @@
 
 #define memeq(a, b) (memcmp((a), (b), sizeof(*(a))) == 0)
 
-// JSON persistence DTOs (one file per account). These live in a NAMED namespace
-// because glaze's reflection cannot derive names for internal-linkage (anonymous
-// namespace) types. Bags/heroes are keyed by their integer enum value; slots by integer.
+// JSON 持久化 DTO（每个账户一个文件）。这些位于命名命名空间中，
+// 因为 glaze 的反射无法为内部链接（匿名命名空间）类型派生名称。
+// 背包/英雄按其整型枚举值作为键；槽位按整数键。
 namespace account_inventory_json {
-    // Member names stay readable; the glz::meta blocks map them to terse JSON keys
-    // (they repeat on every item/section) to keep the files small.
+    // 成员名称保持可读；glz::meta 块将它们映射到简洁的 JSON 键
+    //（在每个物品/节上重复）以保持文件小巧。
     struct ItemJson {
         uint32_t model_id{};
         uint32_t model_file_id{};
         uint32_t interaction{};
         uint16_t quantity{};
-        std::optional<uint8_t> equipped; // omitted when not equipped (default 0)
-        std::string description;         // encoded game string as concatenated 4-hex code units
+        std::optional<uint8_t> equipped; // 未装备时省略（默认 0）
+        std::string description;         // 编码的游戏字符串，以 4 位十六进制编码单元的连接形式
         struct glaze {
             using T = ItemJson;
             static constexpr auto value = glz::object("m", &T::model_id, "f", &T::model_file_id, "i", &T::interaction, "q", &T::quantity, "e", &T::equipped, "d", &T::description);
@@ -66,7 +66,7 @@ namespace account_inventory_json {
         };
     };
     struct CharacterJson {
-        std::optional<FreeSlotsJson> free_slots; // absent => not known
+        std::optional<FreeSlotsJson> free_slots; // 不存在 => 未知
         std::map<uint32_t /*bag_id*/, BagJson> bags;
         std::map<uint32_t /*hero_id*/, BagJson> heroes;
         struct glaze {
@@ -76,7 +76,7 @@ namespace account_inventory_json {
     };
     struct ChestJson {
         bool anniversary_pane_active{};
-        std::optional<FreeSlotsJson> free_slots; // inventory only; absent => not known
+        std::optional<FreeSlotsJson> free_slots; // 仅限库存；不存在 => 未知
         std::map<uint32_t /*bag_id*/, BagJson> bags;
         struct glaze {
             using T = ChestJson;
@@ -84,7 +84,7 @@ namespace account_inventory_json {
         };
     };
     struct AccountJson {
-        std::string account; // GUID string
+        std::string account; // GUID 字符串
         std::string representing_character;
         ChestJson chest;
         std::map<std::string /*character*/, CharacterJson> characters;
@@ -99,7 +99,7 @@ namespace account_inventory_json {
 namespace {
     using namespace account_inventory_json;
 
-    // Based on boost::hash_combine
+    // 基于 boost::hash_combine
     template <typename... Args>
     std::size_t hash_combine(const Args&... args)
     {
@@ -115,8 +115,8 @@ namespace {
     constexpr clock_t MAP_LOADED_DELAYED_TIMEOUT = 400;
     constexpr clock_t SAVE_DIRTY_INVENTORIES_TIMEOUT = 1000;
 
-    const char* BAG_NAME[] = {"",          "Backpack",  "Belt Pouch", "Bag 1",     "Bag 2",     "Equipment Pack", "Material Storage", "Unclaimed Items", "Storage 1",  "Storage 2",  "Storage 3",     "Storage 4",
-                              "Storage 5", "Storage 6", "Storage 7",  "Storage 8", "Storage 9", "Storage 10",     "Storage 11",       "Storage 12",      "Storage 13", "Storage 14", "Equipped Items"};
+    const char* BAG_NAME[] = {"",          "背包",  "腰带包", "背包 1",     "背包 2",     "装备包", "材料存储", "未认领物品", "仓库 1",  "仓库 2",  "仓库 3",     "仓库 4",
+                              "仓库 5", "仓库 6", "仓库 7",  "仓库 8", "仓库 9", "仓库 10",     "仓库 11",       "仓库 12",      "仓库 13", "仓库 14", "已装备物品"};
     uint32_t GetMaxBagCapacity(GW::Constants::Bag bag_id)
     {
         if (bag_id == GW::Constants::Bag::None || bag_id >= GW::Constants::Bag::Max) return 0;
@@ -137,7 +137,7 @@ namespace {
             case GW::Constants::Bag::Equipped_Items:
                 return 9;
             default:
-                return 25; // Storage_1 through Storage_14
+                return 25; // 仓库 1 到 仓库 14
         }
     }
 
@@ -184,10 +184,10 @@ namespace {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && GW::Map::GetIsMapLoaded() && GW::Agents::GetControlledCharacter();
     }
 
-    // Identity of an inventory ini. There is one ini file per account; every
-    // character/hero/chest of that account is stored together in it (disambiguated
-    // by per-item sections), so the id is just the account GUID. The character
-    // arg is kept for call-site convenience but no longer affects the id.
+    // 库存 ini 的标识。每个账户有一个 ini 文件；该账户的每个
+    // 角色/英雄/仓库都存储在其中（通过每个物品节进行区分），
+    // 因此标识仅为账户 GUID。保留 character 参数是为了
+    // 调用点便利，但不再影响标识。
     std::string GetIniID(const GUID& account, const std::string& /*character*/)
     {
         return TextUtils::GuidToString(&account);
@@ -236,25 +236,25 @@ namespace {
 
 
 
-    // Intrinsic item data only. Its account/character/hero/bag/slot are implied by
-    // where it sits in the hierarchy (Account -> chest/characters -> bags -> items).
+    // 仅限物品固有数据。其账户/角色/英雄/背包/槽位由
+    // 其在层次结构中的位置决定（账户 -> 仓库/角色 -> 背包 -> 物品）。
     struct Item {
         uint32_t model_id{};
         uint32_t model_file_id{};
         uint32_t interaction{};
         uint16_t quantity{};
         uint8_t equipped{};
-        // Encoded game string is the source of truth; EncString decodes it lazily for
-        // display (no decoded text is persisted). .encoded() is what we save.
+        // 编码的游戏字符串是事实来源；EncString 对其惰性解码以供
+        // 显示（解码后的文本不持久化）。.encoded() 是我们保存的内容。
         GuiUtils::EncString description{};
-        uint32_t item_id{};                    // live-session only; 0 for items loaded from disk
-        uint32_t dyes{};                       // packed dye colours; 0 (undyed) for disk items
-        IDirect3DTexture9** texture = nullptr; // GetItemImage cache, fetched lazily on first draw; not serialized
+        uint32_t item_id{};                    // 仅限实时会话；从磁盘加载的物品为 0
+        uint32_t dyes{};                       // 打包的染料颜色；磁盘物品为 0（未染色）
+        IDirect3DTexture9** texture = nullptr; // GetItemImage 缓存，首次绘制时惰性获取；不序列化
     };
 
-    // Free-slot occupancy, folded out of the old CharacterFreeSlots into the nodes.
+    // 空闲槽信息，从旧的 CharacterFreeSlots 中提取到节点中。
     struct FreeSlotInfo {
-        bool known = false; // true once we have free-slot data for this node
+        bool known = false; // 一旦我们有此节点的空闲槽数据则为 true
         uint32_t max_inventory{};
         uint32_t max_equipment{};
         uint32_t occupied_inventory{};
@@ -263,11 +263,11 @@ namespace {
 
     struct Bag {
         GW::Constants::Bag bag_id{};
-        std::unordered_map<uint32_t /*slot*/, Item> items; // node-stable: raw Item* stay valid
+        std::unordered_map<uint32_t /*slot*/, Item> items; // 节点稳定：原始 Item* 保持有效
     };
     struct Hero {
         GW::Constants::HeroID hero_id{};
-        Bag bag; // single Equipped_Items bag
+        Bag bag; // 单个 Equipped_Items 背包
     };
     struct Character {
         std::string name;
@@ -277,40 +277,40 @@ namespace {
     };
     struct Account {
         GUID uuid{};
-        std::unordered_map<GW::Constants::Bag, Bag> chest; // 15 chest panels
+        std::unordered_map<GW::Constants::Bag, Bag> chest; // 15 个仓库面板
         std::unordered_map<std::string, Character> characters;
-        std::string account_representing_character; // tooltip helper
+        std::string account_representing_character; // 工具提示辅助
         bool anniversary_pane_active = false;
-        FreeSlotInfo chest_free_slots; // equipment unused for chest
+        FreeSlotInfo chest_free_slots; // 仓库的装备栏未使用
     };
 
-    // Ephemeral flattened view of one item, rebuilt by traversing the hierarchy.
-    // Carries the denormalized fields the display/sort/tooltip need.
+    // 展平的临时物品视图，通过遍历层次结构重建。
+    // 携带显示/排序/工具提示所需的非规范化字段。
     struct ItemRef {
-        Account* account = nullptr;     // never null
-        Character* character = nullptr; // null for chest items
-        Hero* hero = nullptr;           // null unless on a hero
+        Account* account = nullptr;     // 永不为空
+        Character* character = nullptr; // 仓库物品为 null
+        Hero* hero = nullptr;           // 仅在英雄上时非空
         GW::Constants::Bag bag_id{};
         GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
         uint32_t slot{};
         Item* item = nullptr;
-        std::string character_name; // "(Chest)" | Character::name
-        std::string location;       // "(Player)" | hero name | BAG_NAME[bag]
+        std::string character_name; // "(仓库)" | Character::name
+        std::string location;       // "(玩家)" | 英雄名称 | BAG_NAME[bag]
     };
 
-    // A storage path: enough to locate (or re-locate) an item in the hierarchy.
+    // 存储路径：足以在层次结构中定位（或重新定位）一个物品。
     struct ItemPath {
         GUID account{};
-        std::string character; // "(Chest)" or player name
+        std::string character; // "(仓库)" 或玩家名称
         GW::Constants::HeroID hero_id = GW::Constants::HeroID::NoHero;
         GW::Constants::Bag bag_id{};
         uint32_t slot{};
     };
 
-    // Resolved live item: where it lives + the owning bag (so it can be erased).
+    // 解析后的实时物品：它所在的位置 + 所属背包（以便删除）。
     struct ItemLoc {
         Account* account = nullptr;
-        Character* character = nullptr; // null for chest items
+        Character* character = nullptr; // 仓库物品为 null
         GW::Constants::Bag bag_id{};
         uint32_t slot{};
         Bag* bag = nullptr;
@@ -369,7 +369,7 @@ namespace {
                 if (delta != 0) return delta * sort_direction < 0;
             }
         }
-        // fallback
+        // 回退
         if (delta == 0) delta = l->character_name.compare(r->character_name);
         if (delta == 0) delta = l->location.compare(r->location);
         if (delta == 0) delta = (int)l->bag_id - (int)r->bag_id;
@@ -380,7 +380,7 @@ namespace {
     bool ItemCompare::operator()(ItemRef* l, ItemRef* r) const
     {
         if (l->account->uuid != r->account->uuid) {
-            // lowest item is the one that can be interacted with. Make sure it is one on this account if there is one
+            // 最低的物品是当前账户中可以交互的那个。确保它优先于其他账户。
             if (memeq(&l->account->uuid, &current_account)) return true;
             if (memeq(&r->account->uuid, &current_account)) return false;
         }
@@ -397,7 +397,7 @@ namespace {
         description = _description;
     }
 
-    // One row in the Free Slots table, built from a Character (or an Account's chest).
+    // 空闲槽表的一行，从 Character（或 Account 的仓库）构建。
     struct SlotRow {
         UUID account{};
         std::string character{};
@@ -443,15 +443,15 @@ namespace {
                     if (delta != 0) return delta * sort_direction < 0;
                 }
             }
-            // fallback
+            // 回退
             if (delta == 0) delta = l->character.compare(r->character);
             if (delta == 0) delta = memcmp(&l->account, &r->account, sizeof(r->account));
             return delta * sort_direction < 0;
         }
     };
 
-    // Tracks one on-disk account file. Replaces the old SimpleIni-backed wrapper;
-    // the file contents are now JSON, so this only carries identity + dirty state.
+    // 跟踪一个磁盘上的账户文件。取代了旧的 SimpleIni 包装器；
+    // 文件内容现在为 JSON，因此仅携带标识 + 脏状态。
     struct InventoryFile {
         std::filesystem::path location_on_disk;
         std::filesystem::file_time_type last_change_time{};
@@ -471,22 +471,22 @@ namespace {
     std::wstring GetItemEncDescription(GW::Item* item);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot);
 
-    // collective callback hook
+    // 集体回调钩子
     GW::HookEntry OnUIMessage_HookEntry{};
-    // main item storage: the account hierarchy, keyed by canonical GUID string.
+    // 主物品存储：账户层次结构，以规范 GUID 字符串为键。
     std::unordered_map<std::string, Account> accounts{};
-    // On*SlotCleared send only an item_id, so we keep item_id -> resolved location
-    // for live items to remove them without traversing the hierarchy.
+    // On*SlotCleared 仅发送 item_id，因此我们保持 item_id -> 解析位置的映射
+    // 以便在不遍历层次结构的情况下删除实时物品。
     std::unordered_map<uint32_t, ItemLoc> inventory_lookup{};
-    // sorted/filtered view for display + its backing ItemRef store (stable addresses)
+    // 用于显示的排序/过滤视图 + 其支持的 ItemRef 存储（稳定地址）
     std::deque<ItemRef> item_refs{};
     std::vector<MergeStack> inventory_sorted{};
-    // ini files, 1 per character/chest
+    // ini 文件，每个角色/仓库一个
     std::unordered_map<std::filesystem::path, std::unique_ptr<InventoryFile>> ini_by_path{};
     std::unordered_map<std::string, InventoryFile*> ini_by_character{};
-    // change tracker to reduce writes
+    // 变更追踪器以减少写入
     std::unordered_set<std::string> inventory_dirty{};
-    // sorted/filtered view for the Free Slots table + its backing rows
+    // 用于空闲槽表的排序/过滤视图 + 其支持的行
     std::vector<SlotRow> slot_rows{};
     std::set<SlotRow*, SlotCompare> free_slots_sorted{};
 
@@ -574,10 +574,10 @@ namespace {
     clock_t save_dirty_inventories_timer{};
     bool map_loaded_delayed_trigger = false;
 
-    // config options
+    // 配置选项
     AccountInventoryWindow::Settings settings;
 
-    // input buffers
+    // 输入缓冲区
     inline static const size_t BUFFER_SIZE = 128;
     char name_filter_buf[BUFFER_SIZE]{};
     char location_filter_buf[BUFFER_SIZE]{};
@@ -587,7 +587,7 @@ namespace {
     GUID current_account;
     std::string current_character;
 
-    // member variables
+    // 成员变量
     ImVec4 color_chest_item{};
     ImVec4 color_chest_item_hovered{};
     ImVec4 color_chest_item_active{};
@@ -622,8 +622,8 @@ namespace {
         return hero_ids;
     }
 
-    // jump to location of clicked item, i.e. open chest/add hero/change character
-    // with Ctrl: move item to/from chest after jump
+    // 跳转到点击物品的位置，即打开仓库/添加英雄/切换角色
+    // 按住 Ctrl：跳转后将物品移动至/从仓库
     void OnAccountInventoryItemClicked(const ItemPath& path, bool move)
     {
         item_reroll.Begin(path, move);
@@ -637,7 +637,7 @@ namespace {
         auto loc_key = [](const ItemRef* i, const std::string& arc) {
             return arc + "\x1f" + i->character_name + "\x1f" + i->location;
         };
-        // Only one tooltip is visible at a time; cache aggregates and recompute only when the hovered item changes.
+        // 一次只显示一个工具提示；缓存聚合值，仅在悬停物品变化时重新计算。
         static const MergeStack* last_ms = nullptr;
         static std::unordered_map<std::string, uint32_t> char_totals;
         static std::unordered_map<std::string, uint32_t> loc_totals;
@@ -666,14 +666,14 @@ namespace {
             bool reprint = (*it)->character_name != prev_character || account_representing_character != prev_account_representing_character;
             if (reprint) {
                 std::string suffix = "";
-                if (!is_this_account && (*it)->character_name == "(Chest)" && !account_representing_character.empty()) {
+                if (!is_this_account && (*it)->character_name == "(仓库)" && !account_representing_character.empty()) {
                     suffix = " [" + account_representing_character + "]";
                 }
-                ImGui::Text("%s%s: %u", (*it)->character_name.c_str(), suffix.c_str(), char_totals[char_key(*it, account_representing_character)]);
+                ImGui::Text("%s%s：%u", (*it)->character_name.c_str(), suffix.c_str(), char_totals[char_key(*it, account_representing_character)]);
             }
             reprint |= (*it)->location != prev_location;
             if (reprint) {
-                ImGui::Text("- %s: %u", (*it)->location.c_str(), loc_totals[loc_key(*it, account_representing_character)]);
+                ImGui::Text("- %s：%u", (*it)->location.c_str(), loc_totals[loc_key(*it, account_representing_character)]);
             }
             ImGui::PopStyleColor(style_count);
             prev_account_representing_character = account_representing_character;
@@ -686,7 +686,7 @@ namespace {
         ImGui::PopTextWrapPos();
     }
 
-    // ===== hierarchy routing / lookup helpers =====
+    // ===== 层次结构路由 / 查找辅助函数 =====
 
     std::string AccountKey(const GUID& account)
     {
@@ -705,8 +705,8 @@ namespace {
         return it == accounts.end() ? nullptr : &it->second;
     }
 
-    // Resolve (creating Account/Character/Hero/Bag as needed) the bag a storage path
-    // lives in. Encapsulates the IsChestBag / IsOnHero routing.
+    // 解析（按需创建 Account/Character/Hero/Bag）存储路径所在的背包。
+    // 封装 IsChestBag / IsOnHero 路由逻辑。
     Bag& GetOrCreateBag(const GUID& account, const std::string& character, GW::Constants::HeroID hero_id, GW::Constants::Bag bag_id)
     {
         Account& acc = GetOrCreateAccount(account);
@@ -733,7 +733,7 @@ namespace {
         return GetOrCreateBag(account, character, hero_id, bag_id).items[slot];
     }
 
-    // Find-only resolution: returns where an item lives, or nullopt if any level is missing.
+    // 仅查找解析：返回物品所在位置，若任何层级缺失则返回 nullopt。
     std::optional<ItemLoc> FindItemLoc(const GUID& account, const std::string& character, GW::Constants::HeroID hero_id, GW::Constants::Bag bag_id, uint32_t slot)
     {
         Account* acc = FindAccount(account);
@@ -768,13 +768,13 @@ namespace {
         return loc;
     }
 
-    // Free-slot record for an (account, character) pair. "(Chest)" -> the account's
-    // chest record. Returns nullptr unless the record is known.
+    // 账户-角色对的空闲槽记录。"(仓库)" -> 账户的仓库记录。
+    // 若记录未知则返回 nullptr。
     FreeSlotInfo* FindFreeSlots(const GUID& account, const std::string& character)
     {
         Account* acc = FindAccount(account);
         if (!acc) return nullptr;
-        if (character == "(Chest)") return acc->chest_free_slots.known ? &acc->chest_free_slots : nullptr;
+        if (character == "(仓库)") return acc->chest_free_slots.known ? &acc->chest_free_slots : nullptr;
         const auto it = acc->characters.find(character);
         if (it == acc->characters.end() || !it->second.free_slots.known) return nullptr;
         return &it->second.free_slots;
@@ -782,7 +782,7 @@ namespace {
     FreeSlotInfo& GetOrCreateFreeSlots(const GUID& account, const std::string& character)
     {
         Account& acc = GetOrCreateAccount(account);
-        if (character == "(Chest)") {
+        if (character == "(仓库)") {
             acc.chest_free_slots.known = true;
             return acc.chest_free_slots;
         }
@@ -792,7 +792,7 @@ namespace {
         return ch.free_slots;
     }
 
-    // Rebuild the flattened ItemRef view from the whole hierarchy (all accounts).
+    // 从整个层次结构（所有账户）重建展平的 ItemRef 视图。
     void RebuildItemRefs()
     {
         item_refs.clear();
@@ -804,7 +804,7 @@ namespace {
                     r.bag_id = bag_id;
                     r.slot = slot;
                     r.item = &item;
-                    r.character_name = "(Chest)";
+                    r.character_name = "(仓库)";
                     r.location = BAG_NAME[(int)bag_id];
                     item_refs.push_back(std::move(r));
                 }
@@ -819,7 +819,7 @@ namespace {
                         r.slot = slot;
                         r.item = &item;
                         r.character_name = ch.name;
-                        r.location = "(Player)";
+                        r.location = "(玩家)";
                         item_refs.push_back(std::move(r));
                     }
                 }
@@ -844,14 +844,14 @@ namespace {
 
     void SortSlots(ImGuiTableSortSpecs* sort_specs)
     {
-        // Build one row per character (with known free-slot data) and one per account
-        // chest, into a stable backing vector, then sort pointers into it.
+        // 为每个拥有已知空闲槽数据的角色和每个账户仓库构建一行，
+        // 放入稳定的支持向量中，然后对指向它的指针进行排序。
         slot_rows.clear();
         for (auto& [key, acc] : accounts) {
             if (acc.chest_free_slots.known) {
                 SlotRow row;
                 row.account = acc.uuid;
-                row.character = "(Chest)";
+                row.character = "(仓库)";
                 row.account_representing_character = acc.account_representing_character;
                 row.max_inventory = acc.chest_free_slots.max_inventory;
                 row.occupied_inventory = acc.chest_free_slots.occupied_inventory;
@@ -902,7 +902,7 @@ namespace {
 
 
         RebuildItemRefs();
-        bool any_decoding = false; // keep re-sorting until every visible description has decoded
+        bool any_decoding = false; // 持续重新排序直到每个可见描述都已解码
         std::unordered_map<std::wstring, size_t> merged_stacks{};
         for (auto& r : item_refs) {
             if (settings.hide_other_accounts && r.account->uuid != current_account) continue;
@@ -920,7 +920,7 @@ namespace {
                 if (!location_check.contains(location_filter)) continue;
             }
             if (!model_ID_filter.empty() && model_ID_filter != std::to_string(r.item->model_id)) continue;
-            // Accessing the EncString lazily kicks off decoding for visible items.
+            // 访问 EncString 会惰性启动可见物品的解码。
             const std::wstring& desc = r.item->description.wstring();
             if (!item_filter_w.empty()) {
                 const auto description_check = item_is_lower ? TextUtils::ToLower(desc) : desc;
@@ -956,17 +956,17 @@ namespace {
     }
 
 
-    // Deterministic on-disk location for an account's inventory file. One JSON file
-    // per account, named by the account GUID - e.g. "inventories/tmp<account-uuid>.json".
+    // 账户库存文件的确定性磁盘位置。每个账户一个 JSON 文件，
+    // 以账户 GUID 命名——例如 "inventories/tmp<account-uuid>.json"。
     std::filesystem::path AccountIniPath(const GUID& account)
     {
         const auto name = L"tmp" + TextUtils::StringToWString(TextUtils::GuidToString(&account)) + L".json";
         return Resources::GetPath(L"inventories", name);
     }
 
-    // True only for a canonical inventory filename, tmp<account-uuid>.json. The GUID
-    // is parsed and the name rebuilt to reject anything else (stray files, the old
-    // flat "tmp<uuid>.tmp" / "inv####.tmp" files, trailing junk, wrong-case hex).
+    // 仅当文件名是规范的库存文件名 tmp<account-uuid>.json 时返回 true。
+    // 解析 GUID 并重建名称以拒绝任何其他文件（零散文件、旧的
+    // 平坦 "tmp<uuid>.tmp" / "inv####.tmp" 文件、尾部垃圾、错误大小写的十六进制）。
     bool IsInventoryIniFilename(const std::filesystem::path& path)
     {
         if (path.extension() != L".json") return false;
@@ -982,8 +982,8 @@ namespace {
         if (const auto found = ini_by_character.find(ini_ID); found != ini_by_character.end()) {
             return found->second;
         }
-        // First time we touch this account this session: bind to its canonical file,
-        // reusing the InventoryFile already created for that path if one exists.
+        // 此会话中首次触及此账户：绑定到其规范文件，
+        // 若已存在则重用该路径的 InventoryFile。
         const auto path = AccountIniPath(account);
         InventoryFile* ini;
         if (const auto existing = ini_by_path.find(path); existing != ini_by_path.end()) {
@@ -1014,8 +1014,8 @@ namespace {
         std::atomic<int> tasks_remaining{0};
     };
 
-    // Encode the wide game string as fixed-width 4-hex code units with no separators
-    // (lossless, and ~20% smaller than GuiUtils::ArrayToIni's space-separated form).
+    // 将宽游戏字符串编码为固定宽度 4 位十六进制编码单元，无分隔符
+    //（无损，且比 GuiUtils::ArrayToIni 的空格分隔形式小约 20%）。
     std::string EncodeDescription(const std::wstring& w)
     {
         std::string s;
@@ -1046,7 +1046,7 @@ namespace {
         j.model_file_id = item.model_file_id;
         j.interaction = item.interaction;
         j.quantity = item.quantity;
-        if (item.equipped) j.equipped = item.equipped; // omit the common default
+        if (item.equipped) j.equipped = item.equipped; // 省略常见默认值
         j.description = EncodeDescription(item.description.encoded());
         return j;
     }
@@ -1055,8 +1055,7 @@ namespace {
         return FreeSlotsJson{fs.max_inventory, fs.max_equipment, fs.occupied_inventory, fs.occupied_equipment};
     }
 
-    // Build the serializable view of an account from the hierarchy. Empty characters
-    // (no items and no known free slots) are omitted.
+    // 从层次结构构建账户的可序列化视图。空角色（无物品且无已知空闲槽）被省略。
     AccountJson BuildAccountJson(const Account& acc)
     {
         AccountJson aj;
@@ -1102,8 +1101,8 @@ namespace {
         item.quantity = j.quantity;
         item.equipped = j.equipped.value_or(0);
         const std::wstring enc = DecodeDescription(j.description);
-        item.description.reset(enc.c_str()); // EncString decodes lazily for display
-        // texture fetched on demand in Draw, so loading doesn't decode an icon per stored item
+        item.description.reset(enc.c_str()); // EncString 惰性解码以供显示
+        // 纹理在 Draw 中按需获取，因此加载不会为每个存储的物品解码图标
     }
 
     void ApplyFreeSlots(FreeSlotInfo& fs, const FreeSlotsJson& j)
@@ -1115,7 +1114,7 @@ namespace {
         fs.occupied_equipment = j.occupied_equipment;
     }
 
-    // Populate the hierarchy from a parsed account file (main thread).
+    // 从解析的账户文件填充层次结构（主线程）。
     void ApplyAccountJson(const GUID& account, const AccountJson& aj)
     {
         Account& acc = GetOrCreateAccount(account);
@@ -1124,7 +1123,7 @@ namespace {
         if (aj.chest.free_slots) ApplyFreeSlots(acc.chest_free_slots, *aj.chest.free_slots);
         for (const auto& [bag_id, bag] : aj.chest.bags)
             for (const auto& [slot, item] : bag)
-                ApplyItemJson(GetOrCreateItem(account, "(Chest)", GW::Constants::HeroID::NoHero, (GW::Constants::Bag)bag_id, slot), item);
+                ApplyItemJson(GetOrCreateItem(account, "(仓库)", GW::Constants::HeroID::NoHero, (GW::Constants::Bag)bag_id, slot), item);
         for (const auto& [name, cj] : aj.characters) {
             Character& ch = acc.characters[name];
             ch.name = name;
@@ -1146,7 +1145,7 @@ namespace {
         return true;
     }
 
-    // Worker-thread: read + parse one account file into a LoadResult (no hierarchy access).
+    // 工作线程：将一个账户文件读入 LoadResult（不访问层次结构）。
     LoadResult LoadIniFile(const std::filesystem::path& path, bool only_foreign, const GUID& account)
     {
         LoadResult r;
@@ -1154,10 +1153,10 @@ namespace {
         std::string contents;
         if (!ReadFileToString(path, contents)) return r;
         constexpr glz::opts opts{.error_on_unknown_keys = false};
-        if (glz::read<opts>(r.account_json, contents)) return r; // parse error
+        if (glz::read<opts>(r.account_json, contents)) return r; // 解析错误
         GUID file_account{};
         if (!TextUtils::StringToGuid(r.account_json.account, &file_account)) return r;
-        if (only_foreign && file_account == account) return r; // skip our own account on a foreign-only refresh
+        if (only_foreign && file_account == account) return r; // 在仅刷新外部时跳过自己的账户
         r.account = file_account;
         r.success = true;
         return r;
@@ -1184,7 +1183,7 @@ namespace {
             for (auto& [path, ini] : ini_by_path) {
                 if (ini->account != current_account) ini->is_loaded = false;
             }
-            // drop all foreign accounts (items + free slots); they get reloaded below
+            // 丢弃所有外部账户（物品 + 空闲槽）；它们将在下面重新加载
             for (auto it = accounts.begin(); it != accounts.end();)
                 it = it->second.uuid != current_account ? accounts.erase(it) : std::next(it);
         }
@@ -1195,7 +1194,7 @@ namespace {
         std::vector<std::filesystem::path> to_load;
         for (const auto& file : std::filesystem::directory_iterator{Resources::GetPath(L"inventories")}) {
             const auto path = file.path();
-            if (!IsInventoryIniFilename(path)) continue; // ignore legacy/unrelated files
+            if (!IsInventoryIniFilename(path)) continue; // 忽略旧版/无关文件
             visited.insert(path);
             if (!ini_by_path.contains(path)) ini_by_path[path] = std::make_unique<InventoryFile>(path);
             auto* ini = ini_by_path[path].get();
@@ -1246,7 +1245,7 @@ namespace {
         needs_sorting = true;
     }
 
-    // Write (or delete) the JSON file for one account.
+    // 为一个账户写入（或删除）JSON 文件。
     void SyncAccountFile(const std::string& ini_ID, const GUID& account)
     {
         if (ini_ID.empty()) return;
@@ -1255,7 +1254,7 @@ namespace {
         AccountJson aj;
         if (acc) aj = BuildAccountJson(*acc);
         if (!acc || !AccountJsonHasData(aj)) {
-            // nothing to store -> remove the file and forget it
+            // 无内容存储 -> 删除文件并遗忘
             DeleteFileW(ini->location_on_disk.wstring().c_str());
             const auto path = ini->location_on_disk;
             ini_by_character.erase(ini_ID);
@@ -1264,18 +1263,18 @@ namespace {
         }
         const auto compact = glz::write_json(aj).value_or(std::string{});
         if (compact.empty()) {
-            Log::Error("Account Inventory: Failed to serialise inventory. Inventory tracking data will be lost.");
+            Log::Error("账户库存：序列化库存失败。库存跟踪数据将丢失。");
             return;
         }
         const std::string json = glz::prettify_json(compact);
         std::ofstream f(ini->location_on_disk, std::ios::binary | std::ios::trunc);
         if (!f) {
-            Log::Error("Account Inventory: Failed to save inventory file. Inventory tracking data will be lost.");
+            Log::Error("账户库存：保存库存文件失败。库存跟踪数据将丢失。");
             return;
         }
         f.write(json.data(), static_cast<std::streamsize>(json.size()));
         f.close();
-        // remember our own write so the next scan doesn't treat it as an external change
+        // 记住自己的写入，使下一次扫描不会将其视为外部更改
         std::error_code ec;
         ini->last_change_time = std::filesystem::last_write_time(ini->location_on_disk, ec);
     }
@@ -1283,9 +1282,8 @@ namespace {
     void SaveToFiles(bool include_foreign)
     {
         if (include_foreign) {
-            // sync every account we know a file for (used by "Delete All": accounts is
-            // empty by then, so all files are removed). Snapshot first - SyncAccountFile
-            // mutates ini_by_path/ini_by_character.
+            // 同步我们知道的每个账户的文件（由“删除全部”使用：此时 accounts 为空，
+            // 因此所有文件都被删除）。先快照——SyncAccountFile 会修改 ini_by_path/ini_by_character。
             std::vector<std::pair<std::string, GUID>> targets;
             for (auto& [path, file] : ini_by_path)
                 targets.emplace_back(file->ini_ID, file->account);
@@ -1293,15 +1291,15 @@ namespace {
                 SyncAccountFile(ini_ID, account);
         }
         else {
-            // only the current account is ever modified; foreign accounts are read-only.
+            // 只有当前账户会被修改；外部账户是只读的。
             const std::string ini_ID = GetIniID(current_account, "");
             if (inventory_dirty.contains(ini_ID)) SyncAccountFile(ini_ID, current_account);
         }
         inventory_dirty.clear();
     }
 
-    // Build the encoded description string for a live item (name + shorthand stats).
-    // This is the canonical form we persist; the readable text is decoded from it.
+    // 为实时物品构建编码描述字符串（名称 + 简写属性）。
+    // 这是我们持久化的规范形式；可读文本从此解码。
     std::wstring GetItemEncDescription(GW::Item* item)
     {
         std::wstring enc;
@@ -1311,10 +1309,10 @@ namespace {
             case GW::Constants::ItemType::Chestpiece:
             case GW::Constants::ItemType::Gloves:
             case GW::Constants::ItemType::Leggings:
-                // ShorthandItemDescription includes item name for these
+                // ShorthandItemDescription 包含这些的物品名称
                 break;
             default:
-                // Default to single_item_name so merge_stacks can combine stacks of single and multiple items.
+                // 默认使用 single_item_name，以便 merge_stacks 可以合并单件和多件物品的堆叠。
                 if (item->single_item_name) {
                     enc += item->single_item_name;
                 }
@@ -1327,9 +1325,9 @@ namespace {
         }
         if (item->info_string) {
             auto shorthand_description = ToolboxUtils::ShorthandItemDescription(item);
-            // If item info_string starts with "Value:", ShorthandItemDescription doesn't filter the "Value:" part out.
-            // Since "Value:" is typically at the end of the description, there is nothing left that we care about anyway.
-            // Add description only if it does not start with "Value:".
+            // 如果物品 info_string 以 "Value:" 开头，ShorthandItemDescription 不会过滤掉 "Value:" 部分。
+            // 由于 "Value:" 通常在描述末尾，我们不再关心后续内容。
+            // 仅当描述不以 "Value:" 开头时才添加。
             if (shorthand_description.find(L"\xA3E\x10A\xA8A\x10A\xA59\x1\x10B") != 0) {
                 if (!enc.empty()) {
                     enc += L"\x2\x102\x2";
@@ -1357,36 +1355,36 @@ namespace {
         auto item = GW::Items::GetItemById(item_id);
         if (!(item && item->bag)) return;
 
-        // gather information for this items storage location, i.e.:
-        // account, player character, hero, bag, slot within bag
+        // 收集此物品存储位置的信息，即：
+        // 账户、玩家角色、英雄、背包、背包内槽位
 
         ItemPath path;
         path.account = current_account;
         path.bag_id = item->bag->bag_id();
         if (IsChestBag(path.bag_id)) {
-            path.character = "(Chest)";
+            path.character = "(仓库)";
         }
         else {
             path.character = GetCurrentPlayerNameS();
             if (path.character.empty()) {
-                path.character = "Unavailable";
+                path.character = "不可用";
             }
         }
         path.slot = item->slot;
 
-        // This is a workaround because I could not find a way to get a hero_id from an item currently equipped on a hero.
-        // item->bag->bag_array is a separate array for each hero with only the Equipped_Items bag set, but seemingly no reference back to the hero.
-        // The workaround uses the fact that items are added by GW in the order of the respective heroes in the party.
+        // 这是一个变通方案，因为我找不到从当前装备在英雄上的物品获取 hero_id 的方法。
+        // item->bag->bag_array 是每个英雄的单独数组，仅设置了 Equipped_Items 背包，但似乎没有指向英雄的反向引用。
+        // 变通方案利用 GW 按照队伍中相应英雄的顺序添加物品这一事实。
         path.hero_id = GW::Constants::HeroID::NoHero;
         if (item->bag->inventory != GW::Items::GetInventory()) {
             if (initializing) return;
             path.hero_id = GetHeroIDForInventory((GW::Inventory*)item->bag->inventory);
             if (path.hero_id == GW::Constants::HeroID::NoHero) {
-                Log::Log("Account Inventory: Failed to determine hero for equipped item.");
+                Log::Log("账户库存：确定装备物品的英雄失败。");
                 return;
             }
         }
-        // END hero_id workaround
+        // hero_id 变通方案结束
 
         FreeSlotInfo* fs = FindFreeSlots(current_account, path.character);
         if (fs) {
@@ -1399,11 +1397,11 @@ namespace {
         }
         if (auto existing = FindItemLoc(path.account, path.character, path.hero_id, path.bag_id, path.slot)) {
             const auto o_item_id = existing->item->item_id;
-            // make sure the lookup entry has not already been overwritten by another item being loaded during map load.
+            // 确保查找条目尚未被地图加载期间加载的另一个物品覆盖。
             if (const auto found = inventory_lookup.find(o_item_id); found != inventory_lookup.end() && found->second.item == existing->item) {
                 inventory_lookup.erase(found);
-                // when stacks are split or merged, the source and target stack will be readded by gw without being deleted first.
-                // if we already know the item in the source/target slot, the number of occupied spaces did not actually change.
+                // 当堆叠被拆分或合并时，源堆叠和目标堆叠将由 GW 重新添加，而无需先删除。
+                // 如果我们已经知道源/目标槽位中的物品，则占用空间数实际未变化。
                 if (fs) {
                     if (path.bag_id == GW::Constants::Bag::Equipment_Pack) {
                         fs->occupied_equipment--;
@@ -1424,10 +1422,10 @@ namespace {
         it.quantity = item->quantity;
         it.equipped = item->equipped;
         it.item_id = item->item_id;
-        // stash dyes so Draw fetches the tinted icon lazily (see ApplyItemJson); no decode here
+        // 存储染料以便 Draw 惰性获取着色图标（参见 ApplyItemJson）；此处不解码
         it.dyes = static_cast<uint32_t>(item->dye.dye1) | (static_cast<uint32_t>(item->dye.dye2) << 8)
                 | (static_cast<uint32_t>(item->dye.dye3) << 16) | (static_cast<uint32_t>(item->dye.dye4) << 24);
-        it.description.reset(GetItemEncDescription(item).c_str()); // EncString decodes for display
+        it.description.reset(GetItemEncDescription(item).c_str()); // EncString 惰性解码以供显示
 
         ItemLoc loc;
         loc.account = &acc;
@@ -1449,8 +1447,8 @@ namespace {
         if (!loc) return;
         inventory_dirty.insert(GetIniID(*account, character));
         save_dirty_inventories_timer = TIMER_INIT();
-        // Live items go through RemoveItem (drops the lookup + occupancy). Items only
-        // present in the ini (item_id 0) aren't in the lookup, so erase them directly.
+        // 实时物品通过 RemoveItem（删除查找 + 占用）处理。仅存在于 ini 中的物品（item_id 为 0）
+        // 不在查找表中，因此直接删除。
         const auto item_id = loc->item->item_id;
         if (!(item_id != 0 && RemoveItem(item_id))) {
             loc->bag->items.erase(slot);
@@ -1464,7 +1462,7 @@ namespace {
         if (found == inventory_lookup.end()) return false;
 
         const ItemLoc loc = found->second;
-        const std::string character = loc.character ? loc.character->name : "(Chest)";
+        const std::string character = loc.character ? loc.character->name : "(仓库)";
         if (FreeSlotInfo* fs = FindFreeSlots(loc.account->uuid, character)) {
             if (loc.bag_id == GW::Constants::Bag::Equipment_Pack) {
                 fs->occupied_equipment--;
@@ -1540,12 +1538,12 @@ void AccountInventoryWindow::Initialize()
                     PostMapLoad();
                     break;
                 case GW::UI::UIMessage::kLogout: {
-                    // prepare for potentially changing accounts.
+                    // 为可能的账户切换做准备。
                     SaveToFiles(false);
                     LoadFromFiles(true);
                     show_delete_note = false;
-                    // can not reset reroll_stage here, since reroll trigger kLogout.
-                    // instead we check whether accounts changed during PreMapLoad.
+                    // 不能在此处重置 reroll_stage，因为 reroll 触发 kLogout。
+                    // 而是在 PreMapLoad 中检查账户是否已更改。
                     break;
                 }
             }
@@ -1555,7 +1553,7 @@ void AccountInventoryWindow::Initialize()
     LoadFromFiles(false);
     auto ic = GW::GetItemContext();
     if (ic) {
-        // fake a map load to clear missing items and remove deleted characters.
+        // 伪造一次地图加载以清除缺失物品并删除已删除的角色。
         PreMapLoad();
         for (const auto& i : ic->item_array) {
             if (i) {
@@ -1590,7 +1588,7 @@ void InventoryScanner::Update()
 {
     if (current_stage == InventoryScanner::Stage::None) return;
     if (TIMER_DIFF(stage_set_at) > 10000) {
-        Log::Warning("InventoryScanner: timeout at stage %d", current_stage);
+        Log::Warning("InventoryScanner：阶段 %d 超时", current_stage);
         Cancel();
     }
 
@@ -1614,13 +1612,13 @@ void InventoryScanner::Update()
         } break;
         case InventoryScanner::Stage::NextCharacter: {
             if (reroll_char_queue.empty()) {
-                // Restore original heroes
+                // 恢复原始英雄
                 for (auto hero_id : original_player_heroes) {
                     GW::PartyMgr::AddHero(hero_id);
                 }
                 SaveToFiles(false);
                 Cancel();
-                Log::Info("Inventory scan completed");
+                Log::Info("库存扫描完成");
                 break;
             }
             current_reroll_char = reroll_char_queue.back();
@@ -1632,7 +1630,7 @@ void InventoryScanner::Update()
             if (!wcseq(GW::AccountMgr::GetCurrentPlayerName(), current_reroll_char.c_str())) break;
             original_heroes = GetPartyHeroIDs();
             queued_hero_ids.clear();
-            // Grab unlocked hero ids
+            // 获取已解锁的英雄 ID
             const auto w = GW::GetWorldContext();
             const auto h = w ? &w->hero_info : nullptr;
             if (h) {
@@ -1645,11 +1643,11 @@ void InventoryScanner::Update()
         } break;
         case InventoryScanner::Stage::WaitForEmptyParty: {
             const auto party = GW::PartyMgr::GetPartyInfo();
-            if (!(party && party->GetPartySize() == 1)) break; // Party not empty
+            if (!(party && party->GetPartySize() == 1)) break; // 队伍未空
 
-            // Add any queued heroes that need checking
+            // 添加任何需要检查的排队英雄
             if (queued_hero_ids.empty()) {
-                // Checked all heroes for this character, restore original heroes
+                // 已检查此角色的所有英雄，恢复原始英雄
                 for (auto hero_id : original_heroes) {
                     GW::PartyMgr::AddHero(hero_id);
                 }
@@ -1664,7 +1662,7 @@ void InventoryScanner::Update()
                 const auto next_hero = queued_hero_ids.back();
                 queued_hero_ids.pop_back();
                 if (!GW::PartyMgr::AddHero(next_hero)) {
-                    Cancel("Failed to add hero");
+                    Cancel("添加英雄失败");
                     break;
                 }
                 heroes_pending_load.push_back(next_hero);
@@ -1680,7 +1678,7 @@ void InventoryScanner::Update()
                 }
             }
             if (waiting) break;
-            // Assume at this stage that our code has added the hero's inventory to our list?
+            // 假设在此阶段我们的代码已将英雄的库存添加到列表中？
             GW::PartyMgr::KickAllHeroes();
             Set(InventoryScanner::Stage::WaitForEmptyParty);
         } break;
@@ -1694,7 +1692,7 @@ void ItemReroller::Update()
 {
     if (current_stage == ItemReroller::Stage::None) return;
     if (TIMER_DIFF(stage_set_at) > 10000) {
-        Log::Warning("ItemReroller: timeout at stage %d", current_stage);
+        Log::Warning("ItemReroller：阶段 %d 超时", current_stage);
         Cancel();
     }
 
@@ -1703,7 +1701,7 @@ void ItemReroller::Update()
     switch (current_stage) {
         case ItemReroller::Stage::Start: {
             if (!memeq(&item.account, &current_account)) {
-                Cancel("Item belongs to another account");
+                Cancel("物品属于另一个账户");
                 break;
             }
             move = move && !IsHeroArmor(item.hero_id, item.slot);
@@ -1761,7 +1759,7 @@ void ItemReroller::Update()
                 auto loc = FindItemLoc(item.account, item.character, item.hero_id, item.bag_id, item.slot);
                 if (!loc) break;
 
-                // can only move from current player or from chest
+                // 只能从当前玩家或仓库移动
                 if (item.character != GetCurrentPlayerNameS() && !IsChestBag(item.bag_id)) {
                     Cancel();
                     break;
@@ -1769,7 +1767,7 @@ void ItemReroller::Update()
                 InventoryManager::MoveItem((InventoryManager::Item*)GW::Items::GetItemById(loc->item->item_id));
             }
             Cancel();
-            // Done.
+            // 完成
         } break;
     }
 }
@@ -1792,13 +1790,13 @@ void AccountInventoryWindow::PreMapLoad()
 {
     current_account = GW::AccountMgr::GetAccountUuid();
     current_character = GetCurrentPlayerNameS();
-    inventory_lookup.clear(); // discard now outdated id caches
+    inventory_lookup.clear(); // 丢弃现在过时的 ID 缓存
 
     Account& acc = GetOrCreateAccount(current_account);
     if (acc.account_representing_character.empty()) {
         auto available_characters = GW::AccountMgr::GetAvailableChars();
         if (available_characters->size() > 0) {
-            // alphabetically first character name, to be shown in tooltip to distinguish chests from multiple accounts without showing email addresses
+            // 按字母顺序排列的第一个角色名称，用于在工具提示中区分多个账户的仓库，而不显示电子邮件地址
             const wchar_t* min = nullptr;
             for (const auto& available_char : *available_characters) {
                 if (!min || wcscmp(available_char.player_name, min) < 0) min = available_char.player_name;
@@ -1806,7 +1804,7 @@ void AccountInventoryWindow::PreMapLoad()
             acc.account_representing_character = TextUtils::WStringToString(min ? min : L"");
         }
     }
-    std::string characters[] = {"(Chest)", current_character};
+    std::string characters[] = {"(仓库)", current_character};
     for (auto& character : characters) {
         if (character.empty()) continue;
         FreeSlotInfo& fs = GetOrCreateFreeSlots(current_account, character);
@@ -1835,9 +1833,9 @@ void AccountInventoryWindow::PostMapLoad()
         HandleHeroBag(hero_id);
     }
 
-    // clear empty slots in case inventory was changed without toolbox running.
-    // update item->equipped flags.
-    // track inventory size in order to display number of free slots
+    // 清除空槽位，以防在没有工具箱运行时库存发生变化。
+    // 更新 item->equipped 标志。
+    // 跟踪库存大小以显示空闲槽位数。
     if (gw_inventory) {
         uint32_t max_chest = 0;
         uint32_t max_equipment = 0;
@@ -1846,9 +1844,9 @@ void AccountInventoryWindow::PostMapLoad()
         for (uint32_t j = 1; j < _countof(gw_inventory->bags); ++j) {
             auto bag = gw_inventory->bags[j];
             const auto bag_id = static_cast<GW::Constants::Bag>(j);
-            const auto character = IsChestBag(bag_id) ? "(Chest)" : current_character;
+            const auto character = IsChestBag(bag_id) ? "(仓库)" : current_character;
             if (!bag) {
-                // clear slots in case a previously present bag was removed
+                // 清除之前存在的背包的槽位
                 for (uint32_t slot = 0, len = GetMaxBagCapacity(bag_id); slot < len; ++slot) {
                     ClearMissingItem(&current_account, character, GW::Constants::HeroID::NoHero, bag_id, slot);
                 }
@@ -1866,13 +1864,13 @@ void AccountInventoryWindow::PostMapLoad()
                     if (!inventory_lookup.contains(item->item_id)) {
                         AddItem(item->item_id);
                     }
-                    // item->equipped is never set when an item triggers InventorySlotUpdated on map load.
-                    // manually check and reapply after every map load.
+                    // item->equipped 在地图加载时触发 InventorySlotUpdated 时从未设置。
+                    // 每次地图加载后手动检查和重新应用。
                     if (const auto found = inventory_lookup.find(item->item_id); found != inventory_lookup.end()) {
                         ItemLoc& loc = found->second;
                         if (loc.item->equipped != item->equipped) {
                             loc.item->equipped = item->equipped;
-                            const std::string ch_name = loc.character ? loc.character->name : "(Chest)";
+                            const std::string ch_name = loc.character ? loc.character->name : "(仓库)";
                             inventory_dirty.insert(GetIniID(loc.account->uuid, ch_name));
                         }
                     }
@@ -1899,8 +1897,8 @@ void AccountInventoryWindow::PostMapLoad()
                 it->second.free_slots.max_inventory = max_inventory;
             }
             if (acc->chest_free_slots.known) {
-                // Since we do not know whether the anniversary storage pane is actually available,
-                // assume it is not, unless there has been at least one item in it at some point.
+                // 由于我们不知道周年仓库面板是否实际可用，
+                // 假设它不可用，除非曾经在其中有过至少一个物品。
                 if (acc->anniversary_pane_active || last_chest_pane_contains_any_item) {
                     acc->anniversary_pane_active = true;
                 }
@@ -1912,7 +1910,7 @@ void AccountInventoryWindow::PostMapLoad()
         }
     }
 
-    // erase deleted characters
+    // 删除已删除的角色
     if (character_changed) {
         std::set<std::string> availableChars{};
         const auto chars = GW::AccountMgr::GetAvailableChars();
@@ -1926,8 +1924,8 @@ void AccountInventoryWindow::PostMapLoad()
                         ++it;
                         continue;
                     }
-                    // character was deleted in-game: drop the whole node (its bags,
-                    // heroes and free slots) and any live lookup entries pointing into it.
+                    // 角色已在游戏中被删除：丢弃整个节点（其背包、
+                    // 英雄和空闲槽）以及指向它的任何实时查找条目。
                     inventory_dirty.insert(GetIniID(current_account, it->first));
                     Character* ch = &it->second;
                     for (auto lit = inventory_lookup.begin(); lit != inventory_lookup.end();)
@@ -1941,7 +1939,7 @@ void AccountInventoryWindow::PostMapLoad()
 
     needs_sorting = true;
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
-        SaveToFiles(false); // save inventory in outposts only to avoid impacting gameplay
+        SaveToFiles(false); // 仅在前哨站保存库存以避免影响游戏体验
     }
 }
 
@@ -1954,7 +1952,7 @@ void AccountInventoryWindow::HandleHeroBag(GW::Constants::HeroID hero_id)
         const auto bag = *bag_ptr;
         if (!bag) continue;
         if (bag->bag_id() != GW::Constants::Bag::Equipped_Items) {
-            Log::Warning("Account Inventory: Unexpected bag id %d in hero inventory", bag->bag_id());
+            Log::Warning("账户库存：英雄库存中出现意外的背包 ID %d", bag->bag_id());
             continue;
         }
         for (uint32_t slot = 0; slot < std::size(bag->items); ++slot) {
@@ -2000,9 +1998,9 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     if (reroll_stage != InventoryScanner::Stage::None) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300.f * font_scale, 0.f), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("Account Inventory loading in progress")) {
-            ImGui::TextWrapped("Please do not interrupt inventory loading.");
-            if (ImGui::Button("Abort!")) {
+        if (ImGui::Begin("账户库存加载进行中")) {
+            ImGui::TextWrapped("请不要中断库存加载。");
+            if (ImGui::Button("中止！")) {
                 inventory_scan.Cancel();
             }
         }
@@ -2025,46 +2023,46 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         return;
     }
 
-    // view related settings
-    ImGui::Checkbox("Detailed View", &settings.detailed_view);
+    // 视图相关设置
+    ImGui::Checkbox("详细视图", &settings.detailed_view);
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Merge Stacks", &settings.merge_stacks)) needs_sorting = true;
+    if (ImGui::Checkbox("合并堆叠", &settings.merge_stacks)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide other Accounts", &settings.hide_other_accounts)) needs_sorting = true;
+    if (ImGui::Checkbox("隐藏其他账户", &settings.hide_other_accounts)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide Equipment", &settings.hide_equipment)) needs_sorting = true;
+    if (ImGui::Checkbox("隐藏装备", &settings.hide_equipment)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide Equipment Packs", &settings.hide_equipment_pack)) needs_sorting = true;
+    if (ImGui::Checkbox("隐藏装备包", &settings.hide_equipment_pack)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide Hero Armor", &settings.hide_hero_armor)) needs_sorting = true;
+    if (ImGui::Checkbox("隐藏英雄护甲", &settings.hide_hero_armor)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();
-    if (ImGui::Checkbox("Hide unclaimed Items", &settings.hide_unclaimed_items)) needs_sorting = true;
+    if (ImGui::Checkbox("隐藏未认领物品", &settings.hide_unclaimed_items)) needs_sorting = true;
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < 110.f * font_scale) ImGui::NewLine();
-    if (ImGui::Button("Gather Inventories")) {
-        ImGui::ConfirmDialog("In order to load all available items, this will cycle\nthrough all characters and all heroes.\nThis will take a few minutes if you have many characters.\nAre you sure?", [](bool result, void*) {
+    if (ImGui::Button("收集所有库存")) {
+        ImGui::ConfirmDialog("为了加载所有可用物品，这将遍历\n所有角色和所有英雄。\n如果您有很多角色，这将需要几分钟。\n确定要继续吗？", [](bool result, void*) {
             if (result) AccountInventoryWindow::Instance().GatherAllInventories();
         });
     }
 
     const auto color_disabled = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
 
-    if (ImGui::CollapsingHeader("Free Slots")) {
+    if (ImGui::CollapsingHeader("空闲槽位")) {
         if (!ImGui::BeginTable("###freeslots", SlotColumnID_Max, ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti | ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_SizingFixedFit)) {
             ImGui::End();
             return;
         }
-        ImGui::TableSetupColumn("Character", ImGuiTableColumnFlags_WidthFixed, 0.f, SlotColumnID_Character);
-        ImGui::TableSetupColumn("Inventory", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthFixed, 0.f, SlotColumnID_Inventory);
-        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_InventorySize);
-        ImGui::TableSetupColumn("Equipment", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_Equipment);
-        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_EquipmentSize);
+        ImGui::TableSetupColumn("角色", ImGuiTableColumnFlags_WidthFixed, 0.f, SlotColumnID_Character);
+        ImGui::TableSetupColumn("背包", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthFixed, 0.f, SlotColumnID_Inventory);
+        ImGui::TableSetupColumn("总量", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_InventorySize);
+        ImGui::TableSetupColumn("装备", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_Equipment);
+        ImGui::TableSetupColumn("总量", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending, 0.f, SlotColumnID_EquipmentSize);
         ImGui::TableHeadersRow();
         ImGui::TableNextRow();
         ImGuiTableSortSpecs* slot_sort_specs = ImGui::TableGetSortSpecs();
@@ -2075,7 +2073,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
             const auto free_equipment = free_slot->max_equipment - free_slot->occupied_equipment;
             const auto free_inventory = free_slot->max_inventory - free_slot->occupied_inventory;
             const auto is_current_account = memeq(&free_slot->account, &current_account);
-            const bool is_chest = free_slot->character == "(Chest)";
+            const bool is_chest = free_slot->character == "(仓库)";
             std::string suffix;
             int style_count = 0;
             if (!is_current_account) {
@@ -2123,15 +2121,15 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         flags |= ImGuiTableFlags_SizingFixedFit;
     }
 
-    // filter/sort header table
+    // 过滤/排序头表
     if (!ImGui::BeginTable("###itemstable", ItemColumnID_Max, flags, ImVec2(inner_width, settings.detailed_view ? items_table_height : 2 * ImGui::GetFrameHeight()))) {
         ImGui::End();
         return;
     }
-    ImGui::TableSetupColumn("Character", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Character);
-    ImGui::TableSetupColumn("Location / Hero", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Location);
-    ImGui::TableSetupColumn("Model ID", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_ModelID);
-    ImGui::TableSetupColumn("Item", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Description);
+    ImGui::TableSetupColumn("角色", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Character);
+    ImGui::TableSetupColumn("位置 / 英雄", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Location);
+    ImGui::TableSetupColumn("模型 ID", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_ModelID);
+    ImGui::TableSetupColumn("物品", ImGuiTableColumnFlags_WidthFixed, 0.f, ItemColumnID_Description);
     ImGui::TableSetupScrollFreeze(3, 2);
     ImGui::TableHeadersRow();
     ImGui::TableNextRow();
@@ -2152,7 +2150,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextItemWidth(300.f * font_scale);
     if (ImGui::InputText("###item_filter", item_filter_buf, _countof(item_filter_buf))) needs_sorting = true;
     ImGui::SameLine();
-    ImGui::Text("Filter   %d/%d Items", filtered_item_count, item_refs.size());
+    ImGui::Text("筛选   %d/%d 件物品", filtered_item_count, item_refs.size());
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
 
@@ -2212,7 +2210,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         else {
             const auto pos = ImGui::GetCursorPos();
             const auto it = i_front->item;
-            // fetch+cache the icon only when drawn; stable pointer, so once per shown item
+            // 仅在绘制时获取并缓存图标；指针稳定，因此每个显示的物品一次
             if (!it->texture) {
                 const auto player = GW::Agents::GetControlledCharacter();
                 it->texture = Resources::GetItemImage(it->model_file_id, it->interaction, it->dyes, player && player->GetIsFemale());
@@ -2220,7 +2218,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
             if (it->texture && *(it->texture))
                 clicked = ImGui::IconButton(nullptr, *(it->texture), button_size, ImGuiButtonFlags_None, button_size);
             else
-                clicked = ImGui::Button("???", button_size);
+                clicked = ImGui::Button("？？？", button_size);
 
             if (ims.quantity > 1) {
                 const auto rect_min = ImGui::GetItemRectMin();
@@ -2263,7 +2261,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         ImGui::EndTable();
     }
     else {
-        ImGui::EndTable(); // end the filter/sort header table
+        ImGui::EndTable(); // 结束过滤/排序头表
         const int cols = std::max(1, (int)(inner_width / (button_height + item_spacing)));
         const int row_count = (item_count + cols - 1) / cols;
 
@@ -2289,7 +2287,7 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         clipper.End();
 
         ImGui::EndChild();
-        // ImGui::Text("Rendered: %d / %d", rendered_cells, item_count);
+        // ImGui::Text("已渲染：%d / %d", rendered_cells, item_count);
     }
 
     ImGui::End();
@@ -2299,15 +2297,15 @@ void AccountInventoryWindow::DrawSettingsInternal()
 {
     auto font_scale = ImGui::FontScale();
     ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
-    ImGui::Text("Account Inventory shows a combined view of all player, hero and storage inventories.");
-    if (ImGui::Button("Gather Inventories")) {
+    ImGui::Text("账户库存显示所有玩家、英雄和仓库库存的合并视图。");
+    if (ImGui::Button("收集所有库存")) {
         visible = true;
-        ImGui::ConfirmDialog("In order to load all available items, this will cycle\nthrough all characters and all heroes.\nThis will take a few minutes if you have many characters.\nAre you sure?", [](bool result, void*) {
+        ImGui::ConfirmDialog("为了加载所有可用物品，这将遍历\n所有角色和所有英雄。\n如果您有很多角色，这将需要几分钟。\n确定要继续吗？", [](bool result, void*) {
             if (result) AccountInventoryWindow::Instance().GatherAllInventories();
         });
     }
     ImGui::SameLine();
-    if (ImGui::Button("Delete Account Inventory")) {
+    if (ImGui::Button("删除账户库存")) {
         show_delete_note = true;
         accounts.clear();
         inventory_lookup.clear();
@@ -2321,46 +2319,46 @@ void AccountInventoryWindow::DrawSettingsInternal()
         SaveToFiles(false);
     }
     ImGui::SameLine();
-    if (ImGui::Button("Delete All Inventories")) {
+    if (ImGui::Button("删除所有库存")) {
         show_delete_note = true;
-        LoadFromFiles(false); // reload everything first, so we are aware of all inventory files currently on disk
+        LoadFromFiles(false); // 首先重新加载所有内容，以便我们知道当前磁盘上的所有库存文件
         accounts.clear();
         inventory_lookup.clear();
         item_refs.clear();
         inventory_sorted.clear();
         slot_rows.clear();
         free_slots_sorted.clear();
-        SaveToFiles(true); // accounts is empty -> deletes every known inventory file
+        SaveToFiles(true); // accounts 为空 -> 删除每个已知的库存文件
     }
     ImGui::Checkbox("###account_inventory_detailed_view", &settings.detailed_view);
     ImGui::SameLine();
-    ImGui::Text("Detailed View - Toggle between detailed list and icon grid view.");
+    ImGui::Text("详细视图 - 在详细列表和图标网格视图之间切换。");
     ImGui::Checkbox("###account_inventory_merge_stacks", &settings.merge_stacks);
     ImGui::SameLine();
-    ImGui::Text("Merge Stacks - Combine multiple of the same item, including non-stackable items.");
+    ImGui::Text("合并堆叠 - 合并相同物品的多个堆叠，包括不可堆叠物品。");
     ImGui::Checkbox("###account_inventory_hide_other_accounts", &settings.hide_other_accounts);
     ImGui::SameLine();
-    ImGui::Text("Hide other Accounts - Hide item which do not belong to the currently active account.");
+    ImGui::Text("隐藏其他账户 - 隐藏不属于当前活动账户的物品。");
     ImGui::Checkbox("###account_inventory_hide_equipment", &settings.hide_equipment);
     ImGui::SameLine();
-    ImGui::Text("Hide Equipment - Hide items currently equipped or part of a weapon set.");
+    ImGui::Text("隐藏装备 - 隐藏当前装备或属于武器套装的物品。");
     ImGui::Checkbox("###account_inventory_hide_equipment_pack", &settings.hide_equipment_pack);
     ImGui::SameLine();
-    ImGui::Text("Hide Equipment Packs - Hide contents of equipment packs.");
+    ImGui::Text("隐藏装备包 - 隐藏装备包的内容。");
     ImGui::Checkbox("###account_inventory_hide_hero_armor", &settings.hide_hero_armor);
     ImGui::SameLine();
-    ImGui::Text("Hide Hero Armor - Hide armor worn by heroes.");
+    ImGui::Text("隐藏英雄护甲 - 隐藏英雄穿戴的护甲。");
     ImGui::Checkbox("###account_inventory_hide_unclaimed_items", &settings.hide_unclaimed_items);
     ImGui::SameLine();
-    ImGui::Text("Hide unclaimed Items - Hide items from the unclaimed items window.");
+    ImGui::Text("隐藏未认领物品 - 隐藏未认领物品窗口中的物品。");
     ImGui::PopTextWrapPos();
     if (show_delete_note) {
-        // we could just disable this module ourselves, if ToolboxSettings' ModuleToggle.enabled was part of ToolboxModule
+        // 我们可以在此处禁用此模块自身，如果 ToolboxSettings 的 ModuleToggle.enabled 是 ToolboxModule 的一部分的话
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300.f * font_scale, 0.f), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("Deleting Inventories", &show_delete_note)) {
-            ImGui::TextWrapped("Make sure to disable Account Inventory in Toolbox Settings -> Windows to stop it from regathering inventory data.");
-            if (ImGui::Button("Ok")) {
+        if (ImGui::Begin("删除库存中", &show_delete_note)) {
+            ImGui::TextWrapped("请确保在 工具箱设置 -> 窗口 中禁用账户库存以阻止其重新收集库存数据。");
+            if (ImGui::Button("确定")) {
                 show_delete_note = false;
             }
         }
@@ -2375,7 +2373,7 @@ void AccountInventoryWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     current_account = GW::AccountMgr::GetAccountUuid();
     current_character = GetCurrentPlayerNameS();
     needs_sorting = true;
-    // only LoadFromFiles foreign items here. allowing the user to reload inventory data of the active account, may cause temporary inconsistencies
+    // 仅从文件加载外部物品。允许用户重新加载活动账户的库存数据可能导致临时不一致
     LoadFromFiles(true);
 }
 

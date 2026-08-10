@@ -124,8 +124,8 @@ namespace GWArmory {
 
     FestivalHatData* festival_hat_data_ptr = nullptr;
 
-    // Returns pointer to the model_file_id for the profession and slot given that matches the costume for the costume_model_file_id
-    // If nullptr, costume_model_file_id isn't a costume.
+    // 返回与 costume_model_file_id 匹配的、指定职业和槽位的模型文件 ID 指针。
+    // 若返回 nullptr，则 costume_model_file_id 不是服装。
     const uint32_t* GetFileIdsForCostume(uint32_t costume_model_file_id, GW::Constants::Profession profession = GW::Constants::Profession::Warrior, ItemSlot slot = ItemSlot::Boots) {
         if (!(costume_data_ptr && costume_model_file_id))
             return nullptr;
@@ -158,8 +158,8 @@ namespace GWArmory {
         }
         return nullptr;
     }
-    // Returns pointer to the headpiece model_file_id for the profession given that matches the festival hat for the festival_hat_model_file_id
-    // If nullptr, festival_hat_model_file_id isn't a festival hat.
+    // 返回与 festival_hat_model_file_id 匹配的、指定职业的头盔模型文件 ID 指针。
+    // 若返回 nullptr，则 festival_hat_model_file_id 不是节日帽子。
     const uint32_t* GetFileIdForFestivalHat(uint32_t festival_hat_model_file_id, GW::Constants::Profession profession = GW::Constants::Profession::Warrior) {
         if (!(festival_hat_data_ptr && festival_hat_model_file_id))
             return nullptr;
@@ -180,9 +180,8 @@ namespace GWArmory {
         switch (slot) {
         case ItemSlot::LeftHand:
         case ItemSlot::RightHand:
-            // @Enhancement: atm weapons aren't being redrawn after being set - the hand will change, but the model of the weapon remains.
-
-            // Set this to true to play around
+            // @增强功能：目前设置武器后不会重新绘制 - 手会改变，但武器的模型保持不变。
+            // 设置为 true 以试用
             return true;
         case ItemSlot::Unknown:
             return false;
@@ -190,7 +189,7 @@ namespace GWArmory {
         return true;
     }
 
-    // Record of armor pieces actually drawn; this will differ from the Equipment because we spoof it.
+    // 实际绘制的护甲部件记录；这与装备不同，因为我们进行伪造。
     GW::ItemData original_pieces[_countof(GW::NPCEquipment::items)];
     GW::ItemData drawn_pieces[_countof(GW::NPCEquipment::items)];
     GW::ItemData imgui_armor_pieces[_countof(GW::NPCEquipment::items)];
@@ -206,7 +205,7 @@ namespace GWArmory {
     bool pending_reset_equipment = true;
     bool pending_initialise_equipment = true;
 
-    // Fake item storage - static to keep it alive
+    // 假物品存储 - 静态保持存活
     GW::ItemModifier empty_mod_struct[1] = {0xc0000000};
 
     void ItemDataToGWItem(const GW::ItemData* in, GW::Item* out)
@@ -358,22 +357,22 @@ namespace GWArmory {
     {
         switch (static_cast<GW::Constants::Campaign>(idx)) {
             case GW::Constants::Campaign::Core:
-                *out_text = "Core";
+                *out_text = "核心";
                 break;
             case GW::Constants::Campaign::Prophecies:
-                *out_text = "Prophecies";
+                *out_text = "预言";
                 break;
             case GW::Constants::Campaign::Factions:
-                *out_text = "Factions";
+                *out_text = "盟约";
                 break;
             case GW::Constants::Campaign::Nightfall:
-                *out_text = "Nightfall";
+                *out_text = "黄昏";
                 break;
             case GW::Constants::Campaign::EyeOfTheNorth:
-                *out_text = "Eye of the North";
+                *out_text = "北方之眼";
                 break;
             default:
-                *out_text = "All";
+                *out_text = "全部";
                 break;
         }
         return true;
@@ -405,42 +404,42 @@ namespace GWArmory {
     const char* GetSlotName(ItemSlot slot) {
         switch (slot) {
         case ItemSlot::RightHand:
-            return "Right Hand";
+            return "右手";
         case ItemSlot::LeftHand:
-            return "Left Hand";
+            return "左手";
         case ItemSlot::Chestpiece:
-            return "Chest";
+            return "胸甲";
         case ItemSlot::Leggings:
-            return "Legs";
+            return "腿甲";
         case ItemSlot::Boots:
-            return "Boots";
+            return "靴子";
         case ItemSlot::Gloves:
-            return "Gloves";
+            return "手套";
         case ItemSlot::Headpiece:
-            return "Head";
+            return "头盔";
         case ItemSlot::CostumeBody:
-            return "Costume";
+            return "服装";
         case ItemSlot::CostumeHead:
-            return "Costume Head";
+            return "服装头饰";
         }
-        return "Unknown";
+        return "未知";
     }
 
     const char* GetWeaponTypeName(ItemType type)
     {
         switch (type) {
-        case ItemType::Axe:     return "Axes";
-        case ItemType::Bow:     return "Bows";
-        case ItemType::Daggers: return "Daggers";
-        case ItemType::Hammer:  return "Hammers";
-        case ItemType::Offhand: return "Off-hand";
-        case ItemType::Scythe:  return "Scythes";
-        case ItemType::Shield:  return "Shields";
-        case ItemType::Spear:   return "Spears";
-        case ItemType::Staff:   return "Staves";
-        case ItemType::Sword:   return "Swords";
-        case ItemType::Wand:    return "Wands";
-        default:                return "Weapons";
+        case ItemType::Axe:     return "斧";
+        case ItemType::Bow:     return "弓";
+        case ItemType::Daggers: return "匕首";
+        case ItemType::Hammer:  return "锤";
+        case ItemType::Offhand: return "副手";
+        case ItemType::Scythe:  return "镰刀";
+        case ItemType::Shield:  return "盾牌";
+        case ItemType::Spear:   return "矛";
+        case ItemType::Staff:   return "法杖";
+        case ItemType::Sword:   return "剑";
+        case ItemType::Wand:    return "魔杖";
+        default:                return "武器";
         }
     }
 
@@ -566,7 +565,7 @@ namespace GWArmory {
 
     void CHAT_CMD_FUNC(CmdArmory)
     {
-        const auto syntax = "Syntax: '/armory [armor_item_name] [dye1] [dye2] [dye3] [dye4]' (e.g. '/armory \"Elite Sunspear Raiment\"  2 1 10 4')";
+        const auto syntax = "语法：'/armory [护甲物品名称] [染料1] [染料2] [染料3] [染料4]'（例如 '/armory \"精英日灼法袍\"  2 1 10 4'）";
         if (argc <= 1) {
             Log::Warning(syntax);
             return;
@@ -579,7 +578,7 @@ namespace GWArmory {
 
         const auto found = FindArmorItem(item_name);
         if (!found) {
-            Log::Warning("Failed to find armor item: %s", item_name.c_str());
+            Log::Warning("未找到护甲物品：%s", item_name.c_str());
             return;
         }
 
@@ -671,8 +670,8 @@ namespace GWArmory {
         return player && player->GetIsFemale();
     }
 
-    // The four chosen dye slots for the piece being previewed (global override wins),
-    // packed one per byte for LoadItemImage, which blends them like GW combines dyes.
+    // 预览部件选择的四个染料槽（全局覆盖优先），
+    // 按每字节一个打包，供 LoadItemImage 使用，其混合方式与 GW 合并染料相同。
     uint32_t ChosenDyes(const GW::ItemData* player_piece) {
         const GW::DyeColor slots[4] = {player_piece->dye.dye1, player_piece->dye.dye2,
                                        player_piece->dye.dye3, player_piece->dye.dye4};
@@ -682,19 +681,19 @@ namespace GWArmory {
         return dyes;
     }
 
-    // Set by GetArmorPieceImage whenever a piece it returns has no icon loaded; consumed (and reset) by
-    // Draw() each frame to decide whether to show the missing-data warning at the top of the window.
+    // 由 GetArmorPieceImage 在其返回的部件无图标时设置；每帧由 Draw() 消费（并重置）
+    // 以决定是否在窗口顶部显示数据缺失警告。
     bool armor_icon_missing = false;
 
     IDirect3DTexture9** GetArmorPieceImage(uint32_t model_file_id, uint32_t interaction, uint32_t dyes = 0, bool* failed_out = nullptr) {
         IDirect3DTexture9** result = Resources::GetItemImage(model_file_id, interaction, dyes, GetIsFemale(), failed_out);
         if (!*result)
-            armor_icon_missing = true; // a shown piece has no icon (yet) - flag for the warning
+            armor_icon_missing = true; // 显示的部件无图标（尚未）——标记警告
         return result;
     }
 
-    // Grid slot for an icon whose decode has permanently failed - keeps the piece selectable and in the
-    // grid (rather than silently vanishing), but visually distinct from a loaded icon.
+    // 图标解码永久失败的网格槽位——使部件保持可选择且保留在网格中（而非静默消失），
+    // 但在视觉上与已加载图标不同。
     bool DrawFailedIconButton(const ImVec2& size)
     {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.1f, 0.1f, 0.6f));
@@ -721,15 +720,15 @@ namespace GWArmory {
         const auto chat_cmd = GetChatCommand(armor_item, &context_menu_piece);
         ImGui::TextDisabled(chat_cmd.c_str());
         ImGui::Separator();
-        if (ImGui::Button("Copy chat command", size)) {
+        if (ImGui::Button("复制聊天命令", size)) {
             ImGui::CloseCurrentPopup();
             ImGui::SetClipboardText(chat_cmd.c_str());
-            Log::Info("'%s' copied to clipboard", chat_cmd.c_str());
+            Log::Info("'%s' 已复制到剪贴板", chat_cmd.c_str());
             ImGui::PopStyleColor();
             ImGui::PopStyleVar();
             return false;
         }
-        if (ImGui::Button("Guild Wars Wiki", size)) {
+        if (ImGui::Button("激战维基百科", size)) {
             ImGui::CloseCurrentPopup();
             GuiUtils::SearchWiki(TextUtils::StringToWString(armor_item->label));
             ImGui::PopStyleColor();
@@ -768,40 +767,40 @@ namespace GWArmory {
 
         auto tmpDyeColor = player_piece->dye.dye1;
         ImGui::SameLine(128.f * scale);
-        if (DyePicker("color1", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[0]) {
+        if (DyePicker("颜色1", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[0]) {
             value_changed = true;
             player_piece->dye.dye1 = use_global_color ? global_dyes[0] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye2;
         ImGui::SameLine();
-        if (DyePicker("color2", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[1]) {
+        if (DyePicker("颜色2", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[1]) {
             value_changed = true;
             player_piece->dye.dye2 = use_global_color ? global_dyes[1] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye3;
         ImGui::SameLine();
-        if (DyePicker("color3", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[2]) {
+        if (DyePicker("颜色3", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[2]) {
             value_changed = true;
             player_piece->dye.dye3 = use_global_color ? global_dyes[2] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye4;
         ImGui::SameLine();
-        if (DyePicker("color4", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[3]) {
+        if (DyePicker("颜色4", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[3]) {
             value_changed = true;
             player_piece->dye.dye4 = use_global_color ? global_dyes[3] : tmpDyeColor;
         }
 
         ImGui::SameLine(280.f * scale);
-        if (ImGui::SmallButton("None")) {
+        if (ImGui::SmallButton("无")) {
             player_piece->model_file_id = 0;
             value_changed = true;
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip([slot]() {
-                ImGui::TextUnformatted("Empty Slot");
+                ImGui::TextUnformatted("空槽位");
                 ImGui::TextDisabled("/armory %s", empty_slot_names.at(slot).data());
             });
         }
@@ -826,13 +825,13 @@ namespace GWArmory {
         ImGui::StartSpacedElements(icon_size.x);
 
 #if 0
-        static Armor debug_piece("Debug Piece", 0, Profession::None, ItemType::Unknown, Campaign::Core, 0, 0);
-        if (ImGui::CollapsingHeader("Debug Item")) {
+        static Armor debug_piece("调试部件", 0, Profession::None, ItemType::Unknown, Campaign::Core, 0, 0);
+        if (ImGui::CollapsingHeader("调试物品")) {
             constexpr static std::array profession_names = {
-                "None", "Warrior", "Ranger", "Monk", "Necromancer", "Mesmer", "Elementalist", "Assassin", "Ritualist", "Paragon", "Dervish"
+                "无", "战士", "游侠", "僧侣", "死灵法师", "幻术师", "元素使", "刺客", "祭祀", "圣言者", "神唤使"
             };
             constexpr static std::array campaign_names = {
-                "Core", "Prophecies", "Factions", "Nightfall", "Eye of the North", "BonusMissionPack"
+                "核心", "预言", "盟约", "黄昏", "北方之眼", "奖励任务包"
             };
             if (slot == Headpiece) {
                 ImGui::InputInt("model_file_id", (int*)&debug_piece.model_file_id);
@@ -867,7 +866,7 @@ namespace GWArmory {
             const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction, ChosenDyes(player_piece), &image_failed);
             if (!texture || (!*texture && !image_failed)) {
                 ImGui::PopID();
-                continue; // not decoded yet - skip for now, will show once it resolves
+                continue; // 尚未解码 - 暂时跳过，解析后会显示
             }
 
             const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
@@ -891,7 +890,7 @@ namespace GWArmory {
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip([piece, player_piece, image_failed]() {
                     if (image_failed) {
-                        ImGui::TextUnformatted(std::format("Image load failed for {}", piece->label).c_str());
+                        ImGui::TextUnformatted(std::format("图像加载失败：{}", piece->label).c_str());
                     }
                     else {
                         ImGui::TextUnformatted(piece->label);
@@ -938,40 +937,40 @@ namespace GWArmory {
 
         auto tmpDyeColor = player_piece->dye.dye1;
         ImGui::SameLine(128.f * scale);
-        if (DyePicker("color1", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[0]) {
+        if (DyePicker("颜色1", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[0]) {
             value_changed = true;
             player_piece->dye.dye1 = use_global_color ? global_dyes[0] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye2;
         ImGui::SameLine();
-        if (DyePicker("color2", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[1]) {
+        if (DyePicker("颜色2", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[1]) {
             value_changed = true;
             player_piece->dye.dye2 = use_global_color ? global_dyes[1] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye3;
         ImGui::SameLine();
-        if (DyePicker("color3", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[2]) {
+        if (DyePicker("颜色3", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[2]) {
             value_changed = true;
             player_piece->dye.dye3 = use_global_color ? global_dyes[2] : tmpDyeColor;
         }
 
         tmpDyeColor = player_piece->dye.dye4;
         ImGui::SameLine();
-        if (DyePicker("color4", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[3]) {
+        if (DyePicker("颜色4", &tmpDyeColor) || use_global_color && tmpDyeColor != global_dyes[3]) {
             value_changed = true;
             player_piece->dye.dye4 = use_global_color ? global_dyes[3] : tmpDyeColor;
         }
 
         ImGui::SameLine(280.f * scale);
-        if (ImGui::SmallButton("None")) {
+        if (ImGui::SmallButton("无")) {
             player_piece->model_file_id = 0;
             value_changed = true;
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip([slot]() {
-                ImGui::TextUnformatted("Empty Slot");
+                ImGui::TextUnformatted("空槽位");
                 ImGui::TextDisabled("/armory %s", empty_slot_names.at(slot).data());
             });
         }
@@ -999,7 +998,7 @@ namespace GWArmory {
             const auto texture = GetArmorPieceImage(piece->model_file_id, piece->interaction, ChosenDyes(player_piece), &image_failed);
             if (!texture || (!*texture && !image_failed)) {
                 ImGui::PopID();
-                continue; // not decoded yet - skip for now, will show once it resolves
+                continue; // 尚未解码 - 暂时跳过，解析后会显示
             }
 
             const auto& bg = player_piece->model_file_id == piece->model_file_id ? equipped_color : normal_bg;
@@ -1023,7 +1022,7 @@ namespace GWArmory {
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip([piece, player_piece, image_failed]() {
                     if (image_failed) {
-                        ImGui::TextUnformatted(std::format("Image load failed for {}", piece->label).c_str());
+                        ImGui::TextUnformatted(std::format("图像加载失败：{}", piece->label).c_str());
                     }
                     else {
                         ImGui::TextUnformatted(piece->label);
@@ -1065,19 +1064,19 @@ namespace GWArmory {
                         if (!(item && IsWeapon(item->type))) continue;
                         if (pending_items.contains(item->model_file_id)) continue;
                         pending_decodes[item->model_file_id] = std::make_unique<GuiUtils::EncString>(item->name_enc);
-                        pending_decodes[item->model_file_id]->string(); // Trigger decode
+                        pending_decodes[item->model_file_id]->string(); // 触发解码
                         pending_items[item->model_file_id] = item;
                     }
                 }
                 state = SnapshotState::WaitingForDecode;
             } break;
             case SnapshotState::WaitingForDecode: {
-                // Check if all strings are decoded
+                // 检查所有字符串是否已解码
                 for (auto& it : pending_decodes) {
                     if (it.second->IsDecoding()) return;
                 }
 
-                // Build JSON output
+                // 构建 JSON 输出
                 std::vector<armory_snapshot::WeaponEntry> output;
                 output.reserve(pending_decodes.size());
                 for (auto& it : pending_decodes) {
@@ -1091,19 +1090,19 @@ namespace GWArmory {
                     });
                 }
 
-                // Write to file
+                // 写入文件
                 const auto filename = Resources::GetPath("weapon_snapshot.json");
                 std::ofstream file(filename);
                 if (file.is_open()) {
-                    file << glz::write<glz::opts{.prettify = true}>(output).value_or(std::string{}); // Pretty print
+                    file << glz::write<glz::opts{.prettify = true}>(output).value_or(std::string{}); // 美化打印
                     file.close();
-                    Log::Info("Weapon snapshot saved to %s", filename.string().c_str());
+                    Log::Info("武器快照已保存到 %s", filename.string().c_str());
                 }
                 else {
-                    Log::Error("Failed to write weapon snapshot to %s", filename.string().c_str());
+                    Log::Error("写入武器快照到 %s 失败", filename.string().c_str());
                 }
 
-                // Cleanup
+                // 清理
                 pending_decodes.clear();
                 pending_items.clear();
                 state = SnapshotState::Idle;
@@ -1303,7 +1302,7 @@ namespace GWArmory {
         equip->vtable->EquipItem(equip, 0, slot);
         
         if (slot == ItemSlot::CostumeHead) {
-            // If we're a festival hat, set the correct model file id for this character's profession
+            // 如果是节日帽子，为此角色职业设置正确的模型文件 ID
             if (const auto hat_found = GetFileIdForFestivalHat(cpy.model_file_id, current_profession)) {
                 equip->items[ItemSlot::Headpiece] = cpy;
                 equip->items[ItemSlot::Headpiece].model_file_id = *hat_found;
@@ -1312,7 +1311,7 @@ namespace GWArmory {
         }
         if (slot == ItemSlot::CostumeBody) {
             if (const auto costume_found = GetFileIdsForCostume(cpy.model_file_id, current_profession)) {
-                // If we're a costume, set all of the other armor piece model file ids for this character's profession
+                // 如果是服装，为此角色职业设置所有其他护甲部件的模型文件 ID
                 equip->items[ItemSlot::Boots] = cpy;
                 equip->items[ItemSlot::Boots].model_file_id = costume_found[0];
                 equip->vtable->EquipItem(equip, 0, ItemSlot::Boots);
@@ -1340,7 +1339,7 @@ using namespace GWArmory;
 bool ArmoryWindow::CanPreviewItem(GW::Item* item) {
     if (!item) return false;
     if (IsWeapon(item->type)) return true;
-    if (!equip_cached) return false; // aka not initialised?
+    if (!equip_cached) return false; // 即尚未初始化？
     if (IsArmor(item->type)) {
         const auto profession = GetItemProfession(item);
         return profession == GW::Constants::ProfessionByte::None || profession == (GW::Constants::ProfessionByte)GetPlayerProfession();
@@ -1394,40 +1393,39 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
-        // From last frame's render: a shown piece had no icon and the dat is missing data. Warn, then reset
-        // so this frame's DrawArmorPiece*/DrawWeapons* calls below recompute it.
+        // 上一帧渲染显示：显示的部件无图标且 dat 数据缺失。警告，然后重置
+        // 以便本帧的 DrawArmorPiece*/DrawWeapons* 调用重新计算。
         if (armor_icon_missing && GwDatModule::MissingDatData()) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.0f, 1.0f)); // amber warning
-            ImGui::TextWrapped("Some images are missing because your Gw.dat is an incomplete (Steam/streaming) "
-                               "install. Run Guild Wars once with the -image command-line option to download "
-                               "all game data, then restart.");
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.82f, 0.0f, 1.0f)); // 琥珀色警告
+            ImGui::TextWrapped("部分图像缺失，因为您的 Gw.dat 是不完整的（Steam/流式）安装。"
+                               "请使用 -image 命令行选项运行一次激战以下载所有游戏数据，然后重启。");
             ImGui::PopStyleColor();
             ImGui::Separator();
         }
         armor_icon_missing = false;
 
-        ImGui::Text("Profession: %s", ToolboxUtils::GetProfessionName(current_profession)->string().c_str());
+        ImGui::Text("职业：%s", ToolboxUtils::GetProfessionName(current_profession)->string().c_str());
 
         ImGui::SameLine();
-        ImGui::CheckboxWithHelp("Use same colour for all pieces", &use_global_color, "When this is selected, all armour pieces will be coloured this way.");
+        ImGui::CheckboxWithHelp("所有部件使用相同颜色", &use_global_color, "启用此选项后，所有护甲部件将使用此颜色。");
 
         if (use_global_color) {
             ImGui::SameLine();
-            DyePicker("globalcolor0", &global_dyes[0]);
+            DyePicker("全局颜色0", &global_dyes[0]);
             ImGui::SameLine();
-            DyePicker("globalcolor1", &global_dyes[1]);
+            DyePicker("全局颜色1", &global_dyes[1]);
             ImGui::SameLine();
-            DyePicker("globalcolor2", &global_dyes[2]);
+            DyePicker("全局颜色2", &global_dyes[2]);
             ImGui::SameLine();
-            DyePicker("globalcolor3", &global_dyes[3]);
+            DyePicker("全局颜色3", &global_dyes[3]);
         }
 
         ImGui::SameLine(ImGui::GetWindowWidth() - 65.f);
-        if (ImGui::Button("Reset")) {
+        if (ImGui::Button("重置")) {
             pending_reset_equipment = true;
         }
 
-        if (ImGui::MyCombo("##filter", "All", reinterpret_cast<int*>(&current_campaign), armor_filter_array_getter, nullptr, 6)) {
+        if (ImGui::MyCombo("##filter", "全部", reinterpret_cast<int*>(&current_campaign), armor_filter_array_getter, nullptr, 6)) {
             UpdateArmorsFilter();
         }
         const auto armor_order = {Headpiece, Chestpiece, Gloves, Leggings, Boots, CostumeHead, CostumeBody};
@@ -1449,7 +1447,7 @@ void ArmoryWindow::Draw(IDirect3DDevice9*)
             }
         }
         #ifdef _DEBUG
-        if (ImGui::Button("Snapshot inventory weapons")) {
+        if (ImGui::Button("快照库存武器")) {
             state = SnapshotState::Pending;
         }
         #endif
@@ -1476,7 +1474,7 @@ void ArmoryWindow::Initialize()
 
 void ArmoryWindow::Terminate()
 {
-    Reset(); // NB: We're on the game thread, so this is ok
+    Reset(); // 注意：我们在游戏线程上，因此没问题
     if (EquipItem_Func) {
         GW::Hook::RemoveHook(EquipItem_Func);
         EquipItem_Func = nullptr;

@@ -38,7 +38,7 @@ namespace {
     BuildsWindow::Settings settings;
     bool order_by_index = !settings.order_by_name;
 
-    // Preferred skill orders
+    // 首选技能顺序
     bool preferred_skill_orders_visible = false;
 
     GuiUtils::EncString preferred_skill_order_tooltip;
@@ -46,12 +46,12 @@ namespace {
 
     bool order_by_changed = false;
 
-    constexpr auto INI_FILENAME = L"builds.ini"; // legacy, read-only fallback
+    constexpr auto INI_FILENAME = L"builds.ini"; // 旧版只读回退
     constexpr auto JSON_FILENAME = L"builds.json";
     GW::HookEntry ChatCmd_HookEntry;
     GW::HookEntry OnUIMessage_HookEntry;
 
-    // Locator for a build within a teambuild
+    // 团队配装中某个配装的定位器
     struct BuildRef {
         TeamBuild* tb = nullptr;
         size_t idx = 0;
@@ -102,7 +102,7 @@ namespace {
         preferred_skill_order_builds.clear();
     }
 
-    // Pass array of skills for a bar; if a preferred order is found, returns a new array of skills in order, otherwise nullptr.
+    // 传入一个技能栏的技能数组；如果找到首选顺序，则返回按顺序排列的新技能数组，否则返回 nullptr。
     const GW::Constants::SkillID* GetPreferredSkillOrder(const GW::Constants::SkillID* skill_ids, Build** build_out = nullptr)
     {
         for (auto& build : preferred_skill_order_builds) {
@@ -127,7 +127,7 @@ namespace {
         return nullptr;
     }
 
-    // Triggered when a set of skills is about to be loaded on player or hero
+    // 当一组技能即将加载到玩家或英雄上时触发
     void OnUIMessage(GW::HookStatus*, GW::UI::UIMessage message_id, void* wparam, void*) {
         switch (message_id) {
         case GW::UI::UIMessage::kSendLoadSkillTemplate: {
@@ -137,7 +137,7 @@ namespace {
             const auto found = GetPreferredSkillOrder(skills);
             if (found && memcmp(skills, found, sizeof(*skills) * 8) != 0) {
                 memcpy(skills, found, sizeof(*skills) * 8);
-                Log::Flash("Preferred skill order loaded");
+                Log::Flash("已加载首选技能顺序");
             }
         } break;
         }
@@ -200,7 +200,7 @@ namespace {
         const auto prof = static_cast<GW::Constants::Profession>(GW::Agents::GetControlledCharacter()->primary);
         const bool is_skill_template = DecodeSkillTemplate(t, build_name);
         if (is_skill_template && t.primary != prof) {
-            Log::Error("Invalid profession for %s (%s)", build_name, ToolboxUtils::GetProfessionAcronym(t.primary)->string().c_str());
+            Log::Error("无效职业：%s（%s）", build_name, ToolboxUtils::GetProfessionAcronym(t.primary)->string().c_str());
             return {};
         }
         const std::string tbuild_ws = tbuild_name ? TextUtils::ToLower(tbuild_name) : "";
@@ -289,7 +289,7 @@ namespace {
     {
         const auto found = Find(tbuild_name, build_name);
         if (!found.valid()) {
-            Log::Error("Failed to find build for %s", build_name);
+            Log::Error("未找到 %s 的配装", build_name);
             return false;
         }
         return Load(found);
@@ -304,7 +304,7 @@ namespace {
     {
         GW::SkillbarMgr::SkillTemplate templ;
         if (!DecodeSkillTemplate(templ, code)) {
-            return "Failed to decode skill template from build code";
+            return "从配装代码解码技能模板失败";
         }
         Build* found = nullptr;
         if (GetPreferredSkillOrder(templ.skills, &found)) {
@@ -330,11 +330,11 @@ namespace {
         }
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
-        if (!ImGui::Begin("Preferred Skill Orders", &preferred_skill_orders_visible, 0)) {
+        if (!ImGui::Begin("首选技能顺序", &preferred_skill_orders_visible, 0)) {
             ImGui::End();
             return;
         }
-        ImGui::Text("When a set of skills is loaded that matches a set from this list, reorder it to match");
+        ImGui::Text("当加载的技能组与此列表中的某个组匹配时，将其重新排序以匹配");
         const float skill_height = ImGui::CalcTextSize(" ").y * 2.f;
         ImGui::Indent();
         for (size_t bi = 0; bi < preferred_skill_order_builds.size(); bi++) {
@@ -355,33 +355,33 @@ namespace {
             }
             ImGui::SameLine();
             char btn_label[48];
-            snprintf(btn_label, sizeof(btn_label), "%s Remove###remove_preferred_skill_order_%zu", reinterpret_cast<const char*>(ICON_FA_TRASH), bi);
+            snprintf(btn_label, sizeof(btn_label), "%s 移除###remove_preferred_skill_order_%zu", reinterpret_cast<const char*>(ICON_FA_TRASH), bi);
             if (ImGui::Button(btn_label, ImVec2(0, skill_height))) {
                 preferred_skill_order_builds.erase(preferred_skill_order_builds.begin() + static_cast<ptrdiff_t>(bi));
-                Log::Flash("Preferred skill order removed");
+                Log::Flash("已移除首选技能顺序");
                 break;
             }
         }
         ImGui::Unindent();
         ImGui::Separator();
-        ImGui::InputText("Build code###preferred_skill_order_code", preferred_skill_order_code, sizeof(preferred_skill_order_code));
+        ImGui::InputText("配装代码###preferred_skill_order_code", preferred_skill_order_code, sizeof(preferred_skill_order_code));
         ImGui::SameLine();
         const bool add_current = ImGui::Button(ICON_FA_COPY "###use_current_build_code");
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Copy current build");
+            ImGui::SetTooltip("复制当前配装");
         }
         if (add_current) {
             GetCurrentSkillBar(preferred_skill_order_code, sizeof(preferred_skill_order_code));
         }
 
-        if (ImGui::Button("Add###add_preferred_skill_order")) {
+        if (ImGui::Button("添加###add_preferred_skill_order")) {
             const char* err = AddPreferredBuild(preferred_skill_order_code);
             if (err) {
                 Log::Warning("%s", err);
             }
             else {
                 builds_changed = true;
-                Log::Flash("Preferred skill order updated");
+                Log::Flash("已更新首选技能顺序");
             }
         }
         ImGui::End();
@@ -395,9 +395,9 @@ namespace {
         return nullptr;
     }
 
-    // Load builds from the Guild Wars Templates directory
+    // 从激战模板目录加载配装
     bool LoadFromBuildsFolder();
-    // Save toolbox builds to Guild Wars Templates directory
+    // 将工具箱配装保存到激战模板目录
     bool SaveToBuildsFolder();
 
     void LoadFromJson(const std::filesystem::path& path)
@@ -405,7 +405,7 @@ namespace {
         std::string buffer;
         BuildsWindow::BuildsFile file;
         if (!Resources::ReadFile(path, buffer) || glz::read<glz::opts{.error_on_unknown_keys = false}>(file, buffer)) {
-            Log::Warning("Failed to read %ls", path.filename().c_str());
+            Log::Warning("读取 %ls 失败", path.filename().c_str());
             return;
         }
         for (const auto& code : file.preferred_skill_orders) {
@@ -424,7 +424,7 @@ namespace {
         }
     }
 
-    // Legacy builds.ini parser; only used when builds.json doesn't exist yet.
+    // 旧版 builds.ini 解析器；仅在 builds.json 不存在时使用。
     void LoadFromIni()
     {
         ToolboxIni inifile(false, false, false);
@@ -491,7 +491,7 @@ namespace {
                 return _stricmp(a.name.c_str(), b.name.c_str()) < 0;
             });
         }
-        // Advance the shared counter past all restored IDs so new builds don't collide.
+        // 将共享计数器推进到所有已恢复 ID 之后，使新配装不会冲突。
         for (const auto& tb : teambuilds) {
             uint32_t numeric_id = 0;
             if (std::from_chars(tb.ui_id.data(), tb.ui_id.data() + tb.ui_id.size(), numeric_id).ec == std::errc{})
@@ -555,7 +555,7 @@ namespace {
                 std::error_code ec;
                 std::filesystem::remove_all(entry.path(), ec);
                 if (ec) {
-                    Log::Warning("Failed to remove stale build file: %s", ec.message().c_str());
+                    Log::Warning("移除过时配装文件失败：%s", ec.message().c_str());
                     break;
                 }
                 goto remove_stale_builds;
@@ -720,7 +720,7 @@ namespace {
             return;
         }
         if (argc < 2) {
-            Log::WarningW(L"Syntax: /%s [teambuild_name] [build_name|build_code]\n/%s [build_name|build_code]", *argv, *argv);
+            Log::WarningW(L"语法：/%s [团队配装名称] [配装名称|配装代码]\n/%s [配装名称|配装代码]", *argv, *argv);
             return;
         }
         Load(FindBuildFromChatCmd(argc, argv));
@@ -728,7 +728,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdPing)
     {
         if (argc < 2) {
-            Log::WarningW(L"Syntax: /%s [teambuild_name] [build_name|build_code]\n/%s [build_name|build_code]", *argv, *argv);
+            Log::WarningW(L"语法：/%s [团队配装名称] [配装名称|配装代码]\n/%s [配装名称|配装代码]", *argv, *argv);
             return;
         }
         const auto ref = FindBuildFromChatCmd(argc, argv);
@@ -755,22 +755,22 @@ void BuildsWindow::Terminate()
 
 void BuildsWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Hide Build windows when entering explorable area", &settings.hide_when_entering_explorable);
-    ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &settings.one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
-    ImGui::CheckboxWithHelp("Auto load pcons", &settings.auto_load_pcons, "Automatically load pcons for a build when loaded onto a character");
-    ImGui::CheckboxWithHelp("Send pcons when pinging a build", &settings.auto_send_pcons, "Automatically send a second message after the build template in team chat,\nshowing the pcons that the build uses.");
-    ImGui::Text("Order team builds by: ");
+    ImGui::Checkbox("进入可探索区域时隐藏配装窗口", &settings.hide_when_entering_explorable);
+    ImGui::CheckboxWithHelp("一次仅显示一个团队配装窗口", &settings.one_teambuild_at_a_time, "打开新窗口时关闭其他团队配装窗口");
+    ImGui::CheckboxWithHelp("自动加载 Pcons", &settings.auto_load_pcons, "将配装加载到角色时自动加载其 Pcons");
+    ImGui::CheckboxWithHelp("发送配装时附带 Pcons", &settings.auto_send_pcons, "在队伍聊天中发送配装模板后自动发送第二条消息，\n显示该配装使用的 Pcons。");
+    ImGui::Text("团队配装排序方式：");
     ImGui::SameLine(0, -1);
-    if (ImGui::Checkbox("Index", &order_by_index)) {
+    if (ImGui::Checkbox("序号", &order_by_index)) {
         order_by_changed = true;
         settings.order_by_name = !order_by_index;
     }
     ImGui::SameLine(0, -1);
-    if (ImGui::Checkbox("Name", &settings.order_by_name)) {
+    if (ImGui::Checkbox("名称", &settings.order_by_name)) {
         order_by_changed = true;
         order_by_index = !settings.order_by_name;
     }
-    if (ImGui::Button(ICON_FA_USER_COG " View Preferred Skill Orders")) {
+    if (ImGui::Button(ICON_FA_USER_COG " 查看首选技能顺序")) {
         preferred_skill_orders_visible = !preferred_skill_orders_visible;
     }
 }
@@ -817,13 +817,13 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
                 }
                 ImGui::GetStyle().ButtonTextAlign = ImVec2(0.5f, 0.5f);
                 ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
-                if (ImGui::Button("Send", ImVec2(60.0f * ImGui::FontScale(), 0))) {
+                if (ImGui::Button("发送", ImVec2(60.0f * ImGui::FontScale(), 0))) {
                     tbuild.Send(true);
                 }
                 ImGui::PopID();
             }
-            if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-                TeamBuild new_tbuild(std::format("My New Teambuild, {}", TextUtils::GetFormattedDateTime()));
+            if (ImGui::Button("添加团队配装", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                TeamBuild new_tbuild(std::format("我的新团队配装，{}", TextUtils::GetFormattedDateTime()));
                 new_tbuild.has_hero_slots = false;
                 new_tbuild.edit_open = true;
                 const auto party_agent_ids = GW::PartyMgr::GetPartyAgentIds();
@@ -842,11 +842,11 @@ void BuildsWindow::Draw(IDirect3DDevice9* pDevice)
         ImGui::End();
     }
 
-    // Draw edit windows using the unified DrawEditWindow
+    // 使用统一的 DrawEditWindow 绘制编辑窗口
     for (size_t i = 0; i < teambuilds.size(); i++) {
         if (!teambuilds[i].edit_open) continue;
         if (!teambuilds[i].DrawEditWindow(i, teambuilds, builds_changed)) {
-            break; // teambuild deleted; vector modified
+            break; // 团队配装已删除；vector 已修改
         }
     }
 }
@@ -883,7 +883,7 @@ void BuildsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     order_by_index = !settings.order_by_name;
 
     if (legacy && MoveOldBuilds(legacy)) {
-        // loaded
+        // 已加载
     }
     else {
         LoadFromFile();
@@ -909,12 +909,12 @@ void BuildsWindow::Initialize()
 
 void BuildsWindow::DrawHelp()
 {
-    if (!ImGui::TreeNodeEx("Build Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (!ImGui::TreeNodeEx("配装聊天命令", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         return;
     }
     ImGui::Bullet();
-    ImGui::Text("'/load [build template|build name] [Hero index]' loads a build via Guild Wars builds. The build name must be between quotes if it contains spaces. First Hero index is 1, last is 7. Leave out for player");
+    ImGui::Text("'/load [配装模板|配装名称] [英雄索引]' 通过激战配装系统加载配装。配装名称若含空格需用引号括起。英雄索引从 1 到 7，留空则为玩家自身。");
     ImGui::Bullet();
-    ImGui::Text("'/loadbuild [teambuild] <build name|build code>' loads a build via GWToolbox Builds window. Does a partial search on team build name/build name/build code. Matches current player's profession.");
+    ImGui::Text("'/loadbuild [团队配装] <配装名称|配装代码>' 通过 GWToolbox 配装窗口加载配装。对团队配装名称/配装名称/配装代码进行部分搜索。匹配当前玩家职业。");
     ImGui::TreePop();
 }

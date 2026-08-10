@@ -17,7 +17,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Builds"; }
+    [[nodiscard]] const char* Name() const override { return "装备配置"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_LIST; }
 
     struct Settings {

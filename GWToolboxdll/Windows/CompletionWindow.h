@@ -254,7 +254,7 @@ public:
 
     CompletionWindow() { show_menubutton = can_show_in_main_window; }
 
-    [[nodiscard]] const char* Name() const override { return "Completion"; }
+    [[nodiscard]] const char* Name() const override { return "成就完成度"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BOOK; }
 
     struct Settings {
