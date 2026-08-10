@@ -12,12 +12,12 @@ namespace github_api {
     struct ReleaseAsset {
         std::string name;
         std::string browser_download_url;
-        double size = 0.0; // bytes (double to survive 53-bit JSON precision)
+        double size = 0.0; // 字节（double 以承受 53 位 JSON 精度）
     };
 
     struct Release {
         std::string tag_name;
-        std::optional<std::string> body; // Github sends null when a release has no description text
+        std::optional<std::string> body; // 当发布没有描述文本时 Github 返回 null
         bool prerelease = false;
         std::vector<ReleaseAsset> assets;
     };
@@ -32,7 +32,7 @@ namespace {
 
     Updater::Settings settings;
 
-    // 0=checking, 1=asking, 2=downloading, 3=done
+    // 0=检查中, 1=询问中, 2=下载中, 3=完成
     enum Step {
         Checking,
         CheckAndAsk,
@@ -50,8 +50,8 @@ namespace {
     bool forced_ask = false;
     clock_t last_check = 0;
 
-    // Set once on launch when the running version differs from the version we
-    // last saved — i.e. Toolbox was just updated. Drives the one-time star request.
+    // 在启动时设置一次，当运行版本与我们上次保存的版本不同时 —
+    // 即工具箱刚刚更新。驱动一次性星标请求。
     bool show_star_request = false;
 
     GWToolboxRelease latest_release;
@@ -59,7 +59,7 @@ namespace {
 
     GWToolboxRelease* GetLatestRelease(GWToolboxRelease* release)
     {
-        // Get list of releases
+        // 获取发布列表
         std::string response;
         unsigned int tries = 0;
         const auto url = "https://api.github.com/repos/gwdevhub/GWToolboxpp/releases";
@@ -69,7 +69,7 @@ namespace {
             tries++;
         } while (!success && tries < 5);
         if (!success) {
-            Log::Log("Failed to download %s\n%s", url, response.c_str());
+            Log::Log("下载 %s 失败\n%s", url, response.c_str());
             return nullptr;
         }
         std::vector<github_api::Release> releases;
@@ -89,7 +89,7 @@ namespace {
             }
             for (const auto& asset : js.assets) {
                 if (asset.name != "GWToolbox.dll" && asset.name != "GWToolboxdll.dll") {
-                    continue; // This release doesn't have a dll download.
+                    continue; // 此发布没有 dll 下载。
                 }
                 release->download_url = asset.browser_download_url;
                 release->version = js.tag_name.substr(0, version_number_len);
@@ -98,7 +98,7 @@ namespace {
                 }
                 std::ranges::transform(release->version, release->version.begin(), [](const auto chr) { return static_cast<char>(std::tolower(chr)); });
                 release->body = js.body.value_or("");
-                const auto size_bytes = static_cast<uintmax_t>(asset.size); // Slight rounding, GitHub isn't always correct down to the byte.
+                const auto size_bytes = static_cast<uintmax_t>(asset.size); // 略微舍入，GitHub 不总是精确到字节。
                 release->size = static_cast<uintmax_t>(std::ceil(size_bytes / 16.0) * 16);
                 return release;
             }
@@ -112,14 +112,14 @@ namespace {
     {
         int written = 0;
         if (latest_release.version == current_release.version && latest_release.size != current_release.size) {
-            // Version matches, but file size is different
-            written = snprintf(update_available_text, sizeof(update_available_text) - 1, "GWToolbox++ version %s (%.2f kb) is available! You have %s (%.2f kb)",
+            // 版本匹配，但文件大小不同
+            written = snprintf(update_available_text, sizeof(update_available_text) - 1, "GWToolbox++ 版本 %s（%.2f KB）可用！您当前版本为 %s（%.2f KB）",
                                latest_release.version.c_str(), latest_release.size > 0 ? latest_release.size / 1024.f : 0.f,
                                current_release.version.c_str(), current_release.size > 0 ? current_release.size / 1024.f : 0.f);
         }
         else {
-            // Version mismatch
-            written = snprintf(update_available_text, sizeof(update_available_text) - 1, "GWToolbox++ version %s is available! You have %s", latest_release.version.c_str(), current_release.version.c_str());
+            // 版本不匹配
+            written = snprintf(update_available_text, sizeof(update_available_text) - 1, "GWToolbox++ 版本 %s 可用！您当前版本为 %s", latest_release.version.c_str(), current_release.version.c_str());
         }
         ASSERT(written > 0);
         return update_available_text;
@@ -127,26 +127,26 @@ namespace {
 
     void DoUpdate()
     {
-        Log::Warning("Creating settings backup before update...");
+        Log::Warning("更新前创建设置备份...");
         if (!BackupModule::CreateAutoBackup())
-            Log::Warning("Failed to create pre-update backup; continuing with update anyway.");
+            Log::Warning("创建更新前备份失败；继续更新。");
 
-        Log::Warning("Downloading update...");
+        Log::Warning("正在下载更新...");
 
         step = Downloading;
 
-        // 0. find toolbox dll path
+        // 0. 查找工具箱 dll 路径
         const HMODULE module = GWToolbox::GetDLLModule();
         WCHAR dllfile[MAX_PATH];
         const DWORD size = GetModuleFileNameW(module, dllfile, MAX_PATH);
         if (size == 0) {
-            Log::Error("Updater error - cannot find GWToolbox.dll path");
+            Log::Error("更新程序错误 - 找不到 GWToolbox.dll 路径");
             step = Done;
             return;
         }
-        Log::Log("dll file name is %s\n", dllfile);
+        Log::Log("dll 文件名为 %s\n", dllfile);
 
-        // Get name of dll from path
+        // 从路径中获取 dll 名称
         const std::wstring dll_path(dllfile);
         std::wstring dll_name;
         wchar_t sep = '/';
@@ -159,37 +159,36 @@ namespace {
             dll_name = dll_path.substr(i + 1, dll_path.length() - i);
         }
         if (dll_name.empty()) {
-            Log::Error("Updater error - failed to extract dll name from path");
+            Log::Error("更新程序错误 - 从路径提取 dll 名称失败");
             step = Done;
             return;
         }
 
-        // 1. rename toolbox dll
+        // 1. 重命名工具箱 dll
         const auto dllold = std::wstring(dllfile) + L".old";
-        Log::Log("moving to %s\n", dllold.c_str());
+        Log::Log("移动到 %s\n", dllold.c_str());
         DeleteFileW(dllold.c_str());
         MoveFileW(dllfile, dllold.c_str());
 
-        // 2. download new dll
+        // 2. 下载新 dll
         Resources::Instance().Download(
             dllfile, latest_release.download_url,
             [wdll = std::wstring(dllfile), dllold](const bool success, const std::wstring& error) -> void {
                 if (success) {
                     step = Success;
-                    Log::WarningW(L"Update successful, please restart toolbox.");
+                    Log::WarningW(L"更新成功，请重启工具箱。");
                 }
                 else {
-                    Log::ErrorW(L"Updated error - cannot download GWToolbox.dll\n%s", error.c_str());
+                    Log::ErrorW(L"更新错误 - 无法下载 GWToolbox.dll\n%s", error.c_str());
                     MoveFileW(dllold.c_str(), wdll.c_str());
                     step = Done;
                 }
             });
     }
 
-    // Shown once, the first time a freshly-updated build runs. A heartfelt, human
-    // ask — Toolbox gets flagged as a false positive because it injects into Gw.exe,
-    // and a lively, well-starred GitHub project reads as more trustworthy to AV
-    // vendors over time, which means fewer false detections for everyone.
+    // 在新鲜更新的版本首次运行时显示一次。一个真诚、人性化的请求——
+    // 工具箱因注入 Gw.exe 而被标记为误报，而一个活跃且星标众多的 GitHub
+    // 项目在杀毒软件厂商看来更可信，随着时间的推移，这意味着每个人的误报更少。
     void DrawStarRequest()
     {
         if (!show_star_request) {
@@ -198,40 +197,35 @@ namespace {
         bool keep_open = true;
         ImGui::SetNextWindowSize(ImVec2(440.0f * ImGui::FontScale(), -1), ImGuiCond_Appearing);
         ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
-        if (ImGui::Begin("Thank you for updating GWToolbox++!###gwtoolbox_star_request", &keep_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::Begin("感谢您更新 GWToolbox++！###gwtoolbox_star_request", &keep_open, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::PushTextWrapPos(0.0f);
             ImGui::TextUnformatted(
-                "GWToolbox++ is built and maintained by a small group of volunteers, in our "
-                "spare time, and given away for free. That's never going to change.");
+                "GWToolbox++ 由一小群志愿者在业余时间构建和维护，并免费提供。这一点永远不会改变。");
             ImGui::Spacing();
             ImGui::TextUnformatted(
-                "There is one small thing you can do that genuinely helps us. Because Toolbox "
-                "has to inject into Guild Wars and read its memory, antivirus software often "
-                "flags it as a false positive. A GitHub project with lots of stars and steady "
-                "activity looks far more legitimate to those vendors, and over time that means "
-                "fewer false detections for everyone who plays.");
+                "有一件小事您可以做，它确实能帮助我们。因为工具箱必须注入到激战中并读取其内存，"
+                "杀毒软件经常将其标记为误报。一个拥有大量星标和稳定活动的 GitHub 项目在那些厂商看来"
+                "要合法得多，久而久之，这意味着每个玩家的误报都会减少。");
             ImGui::Spacing();
             ImGui::TextUnformatted(
-                "Stars also help us qualify for the free developer tooling we rely on to keep "
-                "improving Toolbox - programs like JetBrains' open-source licences recently "
-                "tightened their requirements, and project activity is part of how they decide.");
+                "星标还能帮助我们获得维持和改进工具箱所需的免费开发者工具——比如 JetBrains 的开源许可证"
+                "最近收紧了要求，而项目活动是他们决定的一部分。");
             ImGui::Spacing();
             ImGui::TextUnformatted(
-                "So if Toolbox has been useful to you, would you take a few seconds to leave us "
-                "a star on GitHub? It is completely free, it helps our reputation with antivirus "
-                "software, and honestly - it makes our day every single time.");
+                "所以如果工具箱对您有用，您愿意花几秒钟在 GitHub 上给我们一个星标吗？"
+                "它是完全免费的，能帮助我们在杀毒软件中的声誉，而且说实话——每次收到星标都让我们一整天都开心。");
             ImGui::Spacing();
-            ImGui::TextUnformatted("Thank you for being part of this. <3");
+            ImGui::TextUnformatted("感谢您成为这个社区的一部分。<3");
             ImGui::PopTextWrapPos();
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-            if (ImGui::Button("Star us on GitHub###gwtoolbox_open_star", ImVec2(200.0f * ImGui::FontScale(), 0))) {
+            if (ImGui::Button("在 GitHub 上给我们星标###gwtoolbox_open_star", ImVec2(200.0f * ImGui::FontScale(), 0))) {
                 ShellExecute(nullptr, "open", "https://github.com/gwdevhub/GWToolboxpp", nullptr, nullptr, SW_SHOWNORMAL);
                 show_star_request = false;
             }
             ImGui::SameLine();
-            if (ImGui::Button("Maybe later###gwtoolbox_dismiss_star", ImVec2(120.0f * ImGui::FontScale(), 0))) {
+            if (ImGui::Button("稍后再说###gwtoolbox_dismiss_star", ImVec2(120.0f * ImGui::FontScale(), 0))) {
                 show_star_request = false;
             }
         }
@@ -249,7 +243,7 @@ const std::string& Updater::GetServerVersion()
 
 const GWToolboxRelease* Updater::GetCurrentVersionInfo(GWToolboxRelease* out)
 {
-    // server and client versions match
+    // 服务器和客户端版本匹配
     wchar_t path[MAX_PATH];
     if (GetModuleFileNameW(GWToolbox::GetDLLModule(), path, _countof(path)) == 0) {
         return nullptr;
@@ -268,7 +262,7 @@ void Updater::Initialize()
 {
     ToolboxUIElement::Initialize();
 #ifndef _DEBUG
-    // Debug builds never load/save update settings (forced values below), so don't register them
+    // 调试版本从不加载/保存更新设置（使用强制值），因此不注册它们
     SettingsRegistry::Register(this, settings);
 #endif
 }
@@ -281,9 +275,9 @@ void Updater::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     settings.update_mode = Mode::DontCheckForUpdates;
     settings.update_release_type = ReleaseType::Beta;
 #else
-    // If the version we ran last differs from this one, Toolbox was just updated
-    // (in-app or by hand) — show the star request once. SaveSettings rewrites
-    // dllversion below, so it won't fire again until the next update.
+    // 如果上次运行的版本与此版本不同，则工具箱刚刚被更新
+    //（应用内或手动）—— 显示一次性星标请求。下面的 SaveSettings 会重写
+    // dllversion，因此直到下次更新前不会再次触发。
     std::string previous_version;
     if (doc.Get(Name(), "dllversion", previous_version) && !previous_version.empty() && previous_version != GWTOOLBOXDLL_VERSION) {
         show_star_request = true;
@@ -308,55 +302,55 @@ void Updater::SaveSettings(SettingsDoc& doc)
 
 void Updater::DrawSettingsInternal()
 {
-    ImGui::Text("Release channel:");
+    ImGui::Text("发布频道：");
     const float btnWidth = 180.0f * ImGui::FontScale();
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - btnWidth);
-    if (ImGui::Button(step == Checking ? "Checking..." : "Check for updates", ImVec2(btnWidth, 0)) && step != Checking) {
+    if (ImGui::Button(step == Checking ? "检查中..." : "检查更新", ImVec2(btnWidth, 0)) && step != Checking) {
         CheckForUpdate(true);
     }
-    ImGui::RadioButton("Stable", (int*)&settings.update_release_type, static_cast<int>(ReleaseType::Stable));
-    ImGui::RadioButton("Beta", (int*)&settings.update_release_type, static_cast<int>(ReleaseType::Beta));
-    ImGui::Text("Update mode:");
-    ImGui::RadioButton("Do not check for updates", (int*)&settings.update_mode, static_cast<int>(Mode::DontCheckForUpdates));
-    ImGui::RadioButton("Check and display a message", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndWarn));
-    ImGui::RadioButton("Check and ask before updating", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndAsk));
-    ImGui::RadioButton("Check and automatically update", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndAutoUpdate));
+    ImGui::RadioButton("稳定版", (int*)&settings.update_release_type, static_cast<int>(ReleaseType::Stable));
+    ImGui::RadioButton("测试版", (int*)&settings.update_release_type, static_cast<int>(ReleaseType::Beta));
+    ImGui::Text("更新模式：");
+    ImGui::RadioButton("不检查更新", (int*)&settings.update_mode, static_cast<int>(Mode::DontCheckForUpdates));
+    ImGui::RadioButton("检查并显示消息", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndWarn));
+    ImGui::RadioButton("检查并询问后更新", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndAsk));
+    ImGui::RadioButton("检查并自动更新", (int*)&settings.update_mode, static_cast<int>(Mode::CheckAndAutoUpdate));
 }
 
 void Updater::CheckForUpdate(const bool forced)
 {
     if (!GetCurrentVersionInfo(&current_release)) {
-        Log::Error("Failed to get current toolbox version info");
+        Log::Error("获取当前工具箱版本信息失败");
     }
     step = Checking;
     last_check = clock();
     Resources::EnqueueWorkerTask([forced] {
-        // Here we are in the worker thread and can do blocking operations
-        // Reminder: do not send stuff to gw chat from this thread!
+        // 这里在工作线程中，可以进行阻塞操作
+        // 提醒：不要从此线程向 GW 聊天发送内容！
         if (!GetLatestRelease(&latest_release)) {
-            // Error getting server version. Server down? We can do nothing.
-            Log::Flash("Error checking for updates");
+            // 获取服务器版本出错。服务器宕机？我们无能为力。
+            Log::Flash("检查更新时出错");
             step = Done;
             return;
         }
 
         if (latest_release.version == current_release.version
             && latest_release.size == current_release.size) {
-            // Version and size match
+            // 版本和大小匹配
             step = Done;
             is_latest_version = true;
             if (forced) {
-                Log::Flash("GWToolbox++ is up-to-date");
+                Log::Flash("GWToolbox++ 已是最新版本");
             }
             return;
         }
         is_latest_version = false;
         if (!forced && settings.update_mode == Mode::DontCheckForUpdates) {
             step = Done;
-            return; // Do not check for updates
+            return; // 不检查更新
         }
 
-        // we have a new version!
+        // 有新版本！
         Mode iMode = forced ? Mode::CheckAndAsk : settings.update_mode;
         if constexpr (!std::string_view(GWTOOLBOXDLL_VERSION_BETA).empty()) {
             iMode = Mode::CheckAndAsk;
@@ -389,22 +383,22 @@ void Updater::Draw(IDirect3DDevice9*)
             step = Done;
             break;
         case CheckAndAsk: {
-            // check and ask
+            // 检查并询问
             if (!visible) {
                 visible = true;
             }
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
             ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
-            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::Begin("工具箱更新！", &visible);
             ImGui::TextUnformatted(UpdateAvailableText());
-            ImGui::TextUnformatted("Changes:");
+            ImGui::TextUnformatted("更新内容：");
             ImGui::TextUnformatted(latest_release.body.c_str());
-            ImGui::TextUnformatted("\nDo you want to update?");
-            if (ImGui::Button("Later###gwtoolbox_dont_update", ImVec2(100, 0))) {
+            ImGui::TextUnformatted("\n是否要更新？");
+            if (ImGui::Button("稍后###gwtoolbox_dont_update", ImVec2(100, 0))) {
                 step = Done;
             }
             ImGui::SameLine();
-            if (ImGui::Button("OK###gwtoolbox_do_update", ImVec2(100, 0))) {
+            if (ImGui::Button("确定###gwtoolbox_do_update", ImVec2(100, 0))) {
                 DoUpdate();
             }
             ImGui::End();
@@ -422,12 +416,12 @@ void Updater::Draw(IDirect3DDevice9*)
             }
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
             ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
-            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::Begin("工具箱更新！", &visible);
             ImGui::TextUnformatted(UpdateAvailableText());
-            ImGui::TextUnformatted("Changes:");
+            ImGui::TextUnformatted("更新内容：");
             ImGui::TextUnformatted(latest_release.body.c_str());
-            ImGui::Text("\nDownloading update...");
-            if (ImGui::Button("Hide", ImVec2(100, 0))) {
+            ImGui::Text("\n正在下载更新...");
+            if (ImGui::Button("隐藏", ImVec2(100, 0))) {
                 visible = false;
             }
             ImGui::End();
@@ -439,12 +433,12 @@ void Updater::Draw(IDirect3DDevice9*)
             }
             ImGui::SetNextWindowSize(ImVec2(-1, -1), ImGuiCond_Appearing);
             ImGui::SetNextWindowCenter(ImGuiCond_Appearing);
-            ImGui::Begin("Toolbox Update!", &visible);
+            ImGui::Begin("工具箱更新！", &visible);
             ImGui::TextUnformatted(UpdateAvailableText());
-            ImGui::TextUnformatted("Changes:");
+            ImGui::TextUnformatted("更新内容：");
             ImGui::TextUnformatted(latest_release.body.c_str());
-            ImGui::Text("\nUpdate successful, please restart toolbox.");
-            if (ImGui::Button("OK", ImVec2(100, 0))) {
+            ImGui::Text("\n更新成功，请重启工具箱。");
+            if (ImGui::Button("确定", ImVec2(100, 0))) {
                 visible = false;
             }
             if (!visible) {
@@ -454,5 +448,5 @@ void Updater::Draw(IDirect3DDevice9*)
         }
         break;
     }
-    // if step == Done do nothing
+    // 如果 step == Done 则不做任何事
 }

@@ -13,8 +13,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Vendor Fix"; }
-    [[nodiscard]] const char* Description() const override { return "Fixes bug preventing collectable items in latter inventory slots not being recognised by a vendor"; }
+    [[nodiscard]] const char* Name() const override { return "商店修复"; }
+    [[nodiscard]] const char* Description() const override { return "修复了后部物品栏中的可收集物品无法被商贩识别的问题"; }
 
     void Initialize() override;
     void Terminate() override;

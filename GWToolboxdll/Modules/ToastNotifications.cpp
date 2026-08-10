@@ -34,9 +34,9 @@ namespace {
     std::wstring original_window_title;
     std::vector<std::wstring> pending_title_notifications;
 
-    const wchar_t* party_ready_toast_title = L"Party Ready";
+    const wchar_t* party_ready_toast_title = L"队伍就绪";
 
-    // Pointers deleted in ChatSettings::Terminate
+    // 指针在 ChatSettings::Terminate 中删除
     std::map<std::wstring, ToastNotifications::Toast*> toasts;
 
     bool ShouldNotifyInstanceType(const bool notify)
@@ -140,7 +140,7 @@ namespace {
     void OnWhisperToastActivated(const ToastNotifications::Toast* toast, const bool activated)
     {
         if (!activated) {
-            return; // dismissed
+            return; // 已关闭
         }
         GuiUtils::FocusWindow();
         GW::GameThread::Enqueue([charname = toast->title] {
@@ -151,7 +151,7 @@ namespace {
     void OnGenericToastActivated(const ToastNotifications::Toast*, const bool activated)
     {
         if (!activated) {
-            return; // dismissed
+            return; // 已关闭
         }
         GuiUtils::FocusWindow();
     }
@@ -171,7 +171,7 @@ namespace {
         if (settings.flash_window_on_whisper) {
             FlashWindow();
         }
-        AddWindowTitleNotification(L"PM");
+        AddWindowTitleNotification(L"私聊");
     }
 
     void OnTeamChatMessage(GW::HookStatus* status, GW::UI::UIMessage, void* wparam, void*)
@@ -184,21 +184,21 @@ namespace {
             return;
         }
         if (packet->player_number == GW::PlayerMgr::GetPlayerNumber()) {
-            return; // Don't notify on own messages
+            return; // 不提示自己的消息
         }
         if (settings.flash_window_on_team_chat) {
             FlashWindow();
         }
-        AddWindowTitleNotification(L"Team");
+        AddWindowTitleNotification(L"队伍");
         if (!settings.show_notifications_on_team_chat) {
             return;
         }
         const auto sender = GW::PlayerMgr::GetPlayerByID(packet->player_number);
-        const wchar_t* sender_name = sender && sender->name ? sender->name : L"Unknown";
+        const wchar_t* sender_name = sender && sender->name ? sender->name : L"未知";
         const size_t msg_len = wcslen(sender_name) + wcslen(packet->message) + 10;
         const auto msg_with_sender = new wchar_t[msg_len];
         swprintf(msg_with_sender, msg_len, L"\x108\x107%s: \x1\x2%s", sender_name, packet->message);
-        SendEncodedToastMessage(L"Team Chat", msg_with_sender);
+        SendEncodedToastMessage(L"队伍聊天", msg_with_sender);
         delete[] msg_with_sender;
     }
 
@@ -207,7 +207,7 @@ namespace {
         if (toast->callback) {
             toast->callback(toast, result);
         }
-        // naughty but idc
+        // 不太规范但无所谓
         const auto nonconst = const_cast<ToastNotifications::Toast*>(toast);
         nonconst->callback = nullptr;
         nonconst->dismiss();
@@ -241,21 +241,21 @@ namespace {
         switch (packet->channel) {
             case GW::Chat::Channel::CHANNEL_GUILD:
                 if (settings.show_notifications_on_guild_chat) {
-                    title = L"Guild Chat";
+                    title = L"公会聊天";
                 }
                 if (settings.flash_window_on_guild_chat) {
                     FlashWindow();
                 }
-                AddWindowTitleNotification(L"Guild");
+                AddWindowTitleNotification(L"公会");
                 break;
             case GW::Chat::Channel::CHANNEL_ALLIANCE:
                 if (settings.show_notifications_on_ally_chat) {
-                    title = L"Alliance Chat";
+                    title = L"联盟聊天";
                 }
                 if (settings.flash_window_on_ally_chat) {
                     FlashWindow();
                 }
-                AddWindowTitleNotification(L"Zone");
+                AddWindowTitleNotification(L"联盟");
                 break;
         }
         if (!title) {
@@ -290,28 +290,28 @@ namespace {
                 continue;
             }
             if (!player.ticked()) {
-                return; // Other player not ticked yet.
+                return; // 其他玩家尚未就绪。
             }
         }
-        // This far; Everyone else is ticked up
+        // 到这里：其他所有人都已就绪
         if (!player_ticked) {
             if (settings.show_notifications_on_last_to_ready) {
-                ToastNotifications::SendToast(party_ready_toast_title, L"You're the last player in your party to tick up", OnGenericToastActivated);
+                ToastNotifications::SendToast(party_ready_toast_title, L"您是队伍中最后一个尚未就绪的玩家", OnGenericToastActivated);
             }
             if (settings.flash_window_on_last_to_ready) {
                 FlashWindow();
             }
-            AddWindowTitleNotification(L"Ticked");
+            AddWindowTitleNotification(L"未就绪");
         }
         else {
-            // Everyone including me is ticked
+            // 包括自己在内的所有人都已就绪
             if (settings.show_notifications_on_everyone_ready) {
-                ToastNotifications::SendToast(party_ready_toast_title, L"Everyone in your party is ticked up and ready to go!", OnGenericToastActivated);
+                ToastNotifications::SendToast(party_ready_toast_title, L"队伍中所有人都已就绪，可以出发了！", OnGenericToastActivated);
             }
             if (settings.flash_window_on_everyone_ready) {
                 FlashWindow();
             }
-            AddWindowTitleNotification(L"Ready");
+            AddWindowTitleNotification(L"已就绪");
         }
     }
 
@@ -345,13 +345,13 @@ namespace {
         if (packet->agent_id == current_character->agent_id) {
             if ((packet->state & AGENT_UPDATE_STATE_DEAD) == 0 && (current_character->type_map & AGENT_LIVING_TYPE_MAP_DEAD) != 0) {
                 if (settings.show_notifications_on_self_resurrected) {
-                    ToastNotifications::SendToast(L"Resurrected", L"You have been resurrected!", OnGenericToastActivated);
+                    ToastNotifications::SendToast(L"已复活", L"您已被复活！", OnGenericToastActivated);
                 }
 
                 if (settings.flash_window_on_self_resurrected) {
                     FlashWindow();
                 }
-                AddWindowTitleNotification(L"Rez");
+                AddWindowTitleNotification(L"复活");
             }
         }
     }
@@ -366,12 +366,12 @@ namespace {
         }
 
         if (settings.show_notifications_on_invite) {
-            ToastNotifications::SendToast(L"Party Invite", L"You have been invited to a party!", OnGenericToastActivated);
+            ToastNotifications::SendToast(L"队伍邀请", L"您收到了一个队伍邀请！", OnGenericToastActivated);
         }
         if (settings.flash_window_on_invite) {
             FlashWindow();
         }
-        AddWindowTitleNotification(L"Inv");
+        AddWindowTitleNotification(L"邀请");
     }
 
     struct StoC_Callback {
@@ -418,7 +418,7 @@ void ToastNotifications::Toast::toastDismissed(WinToastDismissalReason) const
 
 void ToastNotifications::Toast::toastFailed(HRESULT err) const
 {
-    Log::Log("Failed to show toast, error code: 0x%08x", err);
+    Log::Log("显示通知失败，错误代码：0x%08x", err);
     TriggerToastCallback(this, false);
 }
 
@@ -480,7 +480,7 @@ ToastNotifications::Toast* ToastNotifications::SendToast(const wchar_t* title, c
         toasts[toast->title] = toast;
     }
     else if (toast->message == message) {
-        return toast; // Avoid spamming desktop notifications
+        return toast; // 避免发送重复的桌面通知
     }
     toast->message = message;
     toast->callback = callback;
@@ -549,7 +549,7 @@ bool ToastNotifications::WndProc(const UINT Message, const WPARAM wParam, LPARAM
 void ToastNotifications::DrawSettingsInternal()
 {
     ToolboxModule::DrawSettingsInternal();
-    ImGui::TextDisabled("GWToolbox++ can send notifications and flash the taskbar on certain in-game triggers.");
+    ImGui::TextDisabled("GWToolbox++ 可以在特定的游戏内触发器触发时发送通知并闪烁任务栏。");
 
     constexpr float checkbox_w = 150.f;
     const auto NextCheckbox = [](const char* label, bool* v) {
@@ -558,52 +558,52 @@ void ToastNotifications::DrawSettingsInternal()
     };
 
     ImGui::PushID("desktop_notifications");
-    ImGui::Text("Send a desktop notification on:");
+    ImGui::Text("在以下情况发送桌面通知：");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    NextCheckbox("Whisper", &settings.show_notifications_on_whisper);
-    NextCheckbox("Guild Chat", &settings.show_notifications_on_guild_chat);
-    NextCheckbox("Alliance Chat", &settings.show_notifications_on_ally_chat);
-    NextCheckbox("Team Chat", &settings.show_notifications_on_team_chat);
-    NextCheckbox("Party Invite", &settings.show_notifications_on_invite);
-    NextCheckbox("Last to Tick", &settings.show_notifications_on_last_to_ready);
-    NextCheckbox("Everyone Ticked", &settings.show_notifications_on_everyone_ready);
-    NextCheckbox("Resurrection", &settings.show_notifications_on_self_resurrected);
+    NextCheckbox("私聊", &settings.show_notifications_on_whisper);
+    NextCheckbox("公会聊天", &settings.show_notifications_on_guild_chat);
+    NextCheckbox("联盟聊天", &settings.show_notifications_on_ally_chat);
+    NextCheckbox("队伍聊天", &settings.show_notifications_on_team_chat);
+    NextCheckbox("队伍邀请", &settings.show_notifications_on_invite);
+    NextCheckbox("最后就绪", &settings.show_notifications_on_last_to_ready);
+    NextCheckbox("全部就绪", &settings.show_notifications_on_everyone_ready);
+    NextCheckbox("复活", &settings.show_notifications_on_self_resurrected);
     ImGui::Unindent();
     ImGui::PopID();
 
     ImGui::PushID("flash_taskbar");
-    ImGui::Text("Flash taskbar on:");
+    ImGui::Text("在以下情况闪烁任务栏：");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    NextCheckbox("Whisper", &settings.flash_window_on_whisper);
-    NextCheckbox("Guild Chat", &settings.flash_window_on_guild_chat);
-    NextCheckbox("Alliance Chat", &settings.flash_window_on_ally_chat);
-    NextCheckbox("Team Chat", &settings.flash_window_on_team_chat);
-    NextCheckbox("Party Invite", &settings.flash_window_on_invite);
-    NextCheckbox("Last to Tick", &settings.flash_window_on_last_to_ready);
-    NextCheckbox("Everyone Ticked", &settings.flash_window_on_everyone_ready);
-    NextCheckbox("Resurrection", &settings.flash_window_on_self_resurrected);
+    NextCheckbox("私聊", &settings.flash_window_on_whisper);
+    NextCheckbox("公会聊天", &settings.flash_window_on_guild_chat);
+    NextCheckbox("联盟聊天", &settings.flash_window_on_ally_chat);
+    NextCheckbox("队伍聊天", &settings.flash_window_on_team_chat);
+    NextCheckbox("队伍邀请", &settings.flash_window_on_invite);
+    NextCheckbox("最后就绪", &settings.flash_window_on_last_to_ready);
+    NextCheckbox("全部就绪", &settings.flash_window_on_everyone_ready);
+    NextCheckbox("复活", &settings.flash_window_on_self_resurrected);
     ImGui::Unindent();
     ImGui::PopID();
 
-    ImGui::Text("Allow these notifications when Guild Wars is:");
+    ImGui::Text("当激战处于以下状态时允许这些通知：");
     ImGui::Indent();
     ImGui::StartSpacedElements(checkbox_w);
-    NextCheckbox("Minimised", &settings.show_notifications_when_minimised);
-    NextCheckbox("In Background", &settings.show_notifications_when_in_background);
-    NextCheckbox("In Focus", &settings.show_notifications_when_focussed);
-    NextCheckbox("In Outpost", &settings.show_notifications_when_in_outpost);
-    NextCheckbox("In Explorable", &settings.show_notifications_when_in_explorable);
+    NextCheckbox("最小化", &settings.show_notifications_when_minimised);
+    NextCheckbox("后台运行", &settings.show_notifications_when_in_background);
+    NextCheckbox("前台焦点", &settings.show_notifications_when_focussed);
+    NextCheckbox("前哨站", &settings.show_notifications_when_in_outpost);
+    NextCheckbox("可探索区域", &settings.show_notifications_when_in_explorable);
     ImGui::Unindent();
 
     ImGui::Separator();
-    ImGui::Checkbox("Change window title on notification", &settings.change_title_on_notification);
+    ImGui::Checkbox("通知时更改窗口标题", &settings.change_title_on_notification);
     if (settings.change_title_on_notification) {
-        ImGui::TextDisabled("Window title shows a short descriptor e.g. \"(PM) Guild Wars\" when unfocused.\nFocusing the window restores the original title.");
+        ImGui::TextDisabled("窗口标题会显示简短描述，例如 \"(私聊) Guild Wars\"（当未聚焦时）。\n聚焦窗口后恢复原标题。");
     }
 
-    if (ImGui::Button("Show Test Notification")) {
-        SendToast(L"Test toast", L"This is a test toast sent from GWToolbox");
+    if (ImGui::Button("显示测试通知")) {
+        SendToast(L"测试通知", L"这是 GWToolbox 发送的测试通知");
     }
 }

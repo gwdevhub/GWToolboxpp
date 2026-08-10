@@ -33,8 +33,8 @@ namespace {
 
     TwitchModule::Settings settings;
 
-    // IRC details
-    int irc_port = 443; // Not 6667, just in case router blocks it.
+    // IRC 详情
+    int irc_port = 443; // 不使用 6667，以防路由器封锁。
     const char* client_id = "8vlivyypw5qmaxtknh44t98h9uun6l";
 
     bool pending_connect = false;
@@ -55,26 +55,26 @@ namespace {
         fetch_oauth_token = true;
         Resources::EnqueueWorkerTask([] {
             const auto scopes = "chat:edit chat:read";
-            const auto url = "https://id.twitch.tv/oauth2/device"; // No parameters in URL
+            const auto url = "https://id.twitch.tv/oauth2/device"; // URL 中无参数
             std::string request_body = std::format("client_id={}&scope={}", client_id, scopes);
             std::string response;
-            if (!Resources::Post(url, request_body, response)) { // Set correct content type
+            if (!Resources::Post(url, request_body, response)) { // 设置正确的内容类型
                 return Log::Warning(response.c_str()), fetch_oauth_token = false;
             }
 
             twitch_api::DeviceAuthResponse auth{};
             if (auto ec = glz::read<json_opts>(auth, response); ec) {
-                return Log::Warning("Failed to parse Twitch auth response"), fetch_oauth_token = false;
+                return Log::Warning("解析 Twitch 认证响应失败"), fetch_oauth_token = false;
             }
             if (auth.verification_uri.empty() || auth.device_code.empty() || auth.interval <= 0) {
-                return Log::Warning("Invalid or missing response fields for Twitch auth"), fetch_oauth_token = false;
+                return Log::Warning("Twitch 认证响应字段无效或缺失"), fetch_oauth_token = false;
             }
 
             ShellExecuteA(nullptr, "open", auth.verification_uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 
             std::string access_token;
 
-            // Poll Twitch for token
+            // 轮询 Twitch 获取令牌
             const auto token_url = "https://id.twitch.tv/oauth2/token";
             auto start_time = TIMER_INIT();
             int interval = auth.interval;
@@ -83,9 +83,9 @@ namespace {
                 if (TIMER_DIFF(start_time) > 30000) {
                     break;
                 }
-                std::this_thread::sleep_for(std::chrono::seconds(interval)); // Wait for polling interval
+                std::this_thread::sleep_for(std::chrono::seconds(interval)); // 等待轮询间隔
 
-                // Manually format as form-urlencoded data
+                // 手动格式化为表单 URL 编码数据
                 std::string request_data = std::format("client_id={}&scopes={}&device_code={}&grant_type=urn:ietf:params:oauth:grant-type:device_code",
                         TextUtils::UrlEncode(client_id),
                         TextUtils::UrlEncode(scopes),
@@ -109,7 +109,7 @@ namespace {
                         continue;
                     }
                     if (token.error == "slow_down") {
-                        interval += 5; // Increase wait time
+                        interval += 5; // 增加等待时间
                         continue;
                     }
                     Log::Warning(token.error.c_str());
@@ -118,7 +118,7 @@ namespace {
             }
             if (!access_token.empty()) {
                 settings.irc_password = std::move(access_token);
-                Log::Info("Oauth token updated successfully");
+                Log::Info("Oauth 令牌更新成功");
             }
             return fetch_oauth_token = false;
         });
@@ -137,11 +137,11 @@ namespace {
             message_ws[message_len++] = '*';
         }
         for (size_t i = is_emote ? 8 : 0; i < original_len; i++) {
-            // Break on the end of the message
+            // 在消息结尾处中断
             if (message[i] == '\x1' || !message[i]) {
                 break;
             }
-            // Double escape backsashes
+            // 双重转义反斜杠
             if (message[i] == '\\') {
                 message_ws[message_len++] = message[i];
             }
@@ -159,7 +159,7 @@ namespace {
             return;
         }
         GW::GameThread::Enqueue([message_ws, sender_ws] {
-            // NOTE: Messages are sent to the GWCA_1 channel - unused atm as far as i can see
+            // 注意：消息发送到 GWCA_1 频道——据我所知目前未使用
             GW::Chat::WriteChat(GW::Chat::Channel::CHANNEL_GWCA1, message_ws, sender_ws.c_str());
             delete[] message_ws;
         });
@@ -169,22 +169,22 @@ namespace {
     int OnJoin(const char* params, irc_reply_data* hostd, void*)
     {
         if (!params[0] || !settings.show_messages) {
-            return 0; // Empty msg
+            return 0; // 空消息
         }
         wchar_t buf[600];
         if (strcmp(hostd->nick, settings.irc_username.c_str()) == 0) {
             if (strcmp(&params[1], settings.irc_username.c_str()) == 0) {
-                WriteChat(L"Connected");
+                WriteChat(L"已连接");
                 return 0;
             }
-            swprintf(buf, 599, L"Connected to %s as %S", TextUtils::StringToWString(&params[1]).c_str(), settings.irc_username.c_str());
+            swprintf(buf, 599, L"已连接到 %s 作为 %S", TextUtils::StringToWString(&params[1]).c_str(), settings.irc_username.c_str());
             WriteChat(buf);
             return 0;
         }
         if (!settings.notify_on_user_join) {
             return 0;
         }
-        swprintf(buf, 599, L"%s joined the channel.", TextUtils::StringToWString(hostd->nick).c_str());
+        swprintf(buf, 599, L"%s 加入了频道。", TextUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
@@ -193,11 +193,11 @@ namespace {
     int OnLeave(const char* params, irc_reply_data* hostd, void*)
     {
         if (!params[0] || !settings.show_messages || !settings.notify_on_user_leave) {
-            return 0; // Empty msg
+            return 0; // 空消息
         }
 
         wchar_t buf[600];
-        swprintf(buf, 599, L"%s left the channel.", TextUtils::StringToWString(hostd->nick).c_str());
+        swprintf(buf, 599, L"%s 离开了频道。", TextUtils::StringToWString(hostd->nick).c_str());
         WriteChat(buf);
         return 0;
     }
@@ -206,15 +206,15 @@ namespace {
     int OnConnected(const char* params, irc_reply_data*, void* wparam)
     {
         const auto conn = static_cast<IRC*>(wparam);
-        // Set the username to be the connected name.
+        // 将用户名设置为连接名称。
         settings.irc_username = params;
         settings.irc_username.erase(settings.irc_username.find_first_of(' '));
-        // Channel == username. This could be changed to connect to other Twitch channels/IRC channels.
+        // 频道 == 用户名。可以更改为连接其他 Twitch 频道/IRC 频道。
         if (settings.irc_channel.empty()) {
             settings.irc_channel = settings.irc_username;
         }
         char buf[128];
-        Log::Log("%s: Connected %s", settings.irc_alias.c_str(), params);
+        Log::Log("%s：已连接 %s", settings.irc_alias.c_str(), params);
         sprintf(buf, "#%s", settings.irc_channel.c_str());
         conn->join(buf);
         conn->raw("CAP REQ :twitch.tv/membership twitch.tv/commands\r\n");
@@ -225,25 +225,25 @@ namespace {
     int OnMessage(const char* params, irc_reply_data* hostd, void*)
     {
         if (!params[0] || !settings.show_messages) {
-            return 0; // Empty msg
+            return 0; // 空消息
         }
         const std::wstring message_ws = TextUtils::StringToWString(&params[1]);
         WriteChat(message_ws.c_str(), hostd->nick);
-        Log::Log("Message from %s: %s", hostd->nick, &params[1]);
+        Log::Log("来自 %s 的消息：%s", hostd->nick, &params[1]);
         return 0;
     }
 
     // ReSharper disable once CppParameterMayBeConstPtrOrRef
     int OnNotice(const char* params, irc_reply_data*, void* conn)
     {
-        Log::Log("NOTICE: %s\n", params);
+        Log::Log("NOTICE：%s\n", params);
         if (strcmp(params, "Login authentication failed") == 0) {
-            Log::Error("Twitch Failed to connect - Invalid Oauth token");
+            Log::Error("Twitch 连接失败 - Oauth 令牌无效");
             static_cast<IRC*>(conn)->disconnect();
             return 0;
         }
         if (params[1] && strcmp(&params[1], "Invalid NICK") == 0) {
-            Log::Error("Twitch Failed to connect - Invalid Username");
+            Log::Error("Twitch 连接失败 - 用户名无效");
             static_cast<IRC*>(conn)->disconnect();
             return 0;
         }
@@ -257,7 +257,7 @@ namespace {
             return;
         }
         hooked = true;
-        // When starting a whisper to "<irc_nickname> @ <irc_channel>", rewrite recipient to be "<irc_channel>"
+        // 当开始向 "<irc_nickname> @ <irc_channel>" 发送私聊时，将收件人重写为 "<irc_channel>"
         RegisterUIMessageCallback(&StartWhisperCallback_Entry, GW::UI::UIMessage::kStartWhisper, [](GW::HookStatus*, GW::UI::UIMessage, void* wparam, void*) {
             wchar_t* name = *(wchar_t**)wparam;
             if (!(name && *name)) {
@@ -279,16 +279,16 @@ namespace {
             std::string message = TextUtils::WStringToString(msg);
             const size_t sender_idx = message.find(',');
             if (sender_idx == std::string::npos) {
-                return; // Invalid sender
+                return; // 发送者无效
             }
             const std::string to = message.substr(1, sender_idx - 1);
             if (to != settings.irc_alias) {
                 return;
             }
             std::string content = message.substr(sender_idx + 1);
-            Log::Log("Sending to IRC: %s", content.c_str());
+            Log::Log("发送到 IRC：%s", content.c_str());
             if (irc_conn.raw("PRIVMSG #%s :%s\r\n", settings.irc_channel.c_str(), content.c_str())) {
-                Log::Error("Failed to send message");
+                Log::Error("发送消息失败");
             }
             else {
                 irc_reply_data d{};
@@ -352,19 +352,19 @@ bool TwitchModule::Connect()
     if (connected) {
         return true;
     }
-    printf("Connecting to IRC\n");
+    printf("正在连接到 IRC\n");
     if (settings.irc_server.empty()) {
-        printf("Invalid server name!\n");
+        printf("服务器名称无效！\n");
         return false;
     }
     if (settings.irc_password == "oauth:<your_token_here>") {
         return false;
     }
     /*if(irc_username.empty()) {
-        printf("Invalid username!\n");
+        printf("用户名无效！\n");
         return false;
     }*/
-    // Sanitise strings to lower case
+    // 将字符串规范化为小写
     std::ranges::transform(
         settings.irc_server, settings.irc_server.begin(),
         [](const char c) -> char {
@@ -385,10 +385,10 @@ bool TwitchModule::Connect()
             "unused",
             "unused",
             "unused", with_oauth_prefix.c_str()) != 0) {
-        printf("IRC::start failed!\n");
+        printf("IRC::start 失败！\n");
         return false;
     }
-    printf("Connected to IRC!\n");
+    printf("已连接到 IRC！\n");
     return connected = irc_connection->is_connected();
 }
 
@@ -411,14 +411,14 @@ void TwitchModule::Update(const float)
 void TwitchModule::DrawSettingsInternal()
 {
     ImGui::PushID("twitch_settings");
-    if (ImGui::Checkbox("Enable Twitch integration", &settings.twitch_enabled)) {
+    if (ImGui::Checkbox("启用 Twitch 集成", &settings.twitch_enabled)) {
         Disconnect();
     }
-    ImGui::ShowHelp("Allows GWToolbox to send & receive messages with Twitch using the in-game chat window.");
+    ImGui::ShowHelp("允许 GWToolbox 使用游戏内聊天窗口与 Twitch 收发消息。");
     if (settings.twitch_enabled) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, connected ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-        if (ImGui::Button(connected ? "Connected" : "Disconnected", ImVec2(0, 0))) {
+        if (ImGui::Button(connected ? "已连接" : "已断开", ImVec2(0, 0))) {
             if (connected) {
                 pending_disconnect = true;
             }
@@ -428,44 +428,38 @@ void TwitchModule::DrawSettingsInternal()
         }
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip(connected ? "Click to disconnect" : "Click to connect");
+            ImGui::SetTooltip(connected ? "点击断开" : "点击连接");
         }
         ImGui::Indent();
 
-        ImGui::Checkbox("Show messages in chat window. Color:", &settings.show_messages);
+        ImGui::Checkbox("在聊天窗口中显示消息。颜色：", &settings.show_messages);
         ImGui::SameLine();
         constexpr ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_PickerHueWheel;
-        if (Colors::DrawSettingHueWheel("Twitch Color:", &settings.irc_chat_color.value, flags)) {
+        if (Colors::DrawSettingHueWheel("Twitch 颜色：", &settings.irc_chat_color.value, flags)) {
             SetSenderColor(GW::Chat::Channel::CHANNEL_GWCA1, settings.irc_chat_color);
         }
-        ImGui::CheckboxWithHelp("Notify on user leave", &settings.notify_on_user_leave, "Receive a message in the chat window when a viewer leaves the Twitch Channel");
-        ImGui::CheckboxWithHelp("Notify on user join", &settings.notify_on_user_join, "Receive a message in the chat window when a viewer joins the Twitch Channel");
+        ImGui::CheckboxWithHelp("用户离开时通知", &settings.notify_on_user_leave, "当观众离开 Twitch 频道时在聊天窗口中收到消息");
+        ImGui::CheckboxWithHelp("用户加入时通知", &settings.notify_on_user_join, "当观众加入 Twitch 频道时在聊天窗口中收到消息");
 
         const float width = ImGui::GetContentRegionAvail().x / 2;
         ImGui::PushItemWidth(width);
-        /*ImGui::InputText("Twitch Alias", const_cast<char*>(irc_alias.c_str()), 32);
-        ImGui::ShowHelp("Sending a whisper to this name will send the message to Twitch.\nCannot contain spaces.");
-        ImGui::InputText("Twitch Server", const_cast<char*>(irc_server.c_str()), 255);
-        ImGui::ShowHelp("Shouldn't need to change this.\nDefault: irc.chat.twitch.tv");
-        ImGui::InputText("Twitch Username", const_cast<char*>(irc_username.c_str()), 32);
-        ImGui::ShowHelp("Your username that you use for Twitch.");*/
-        ImGui::InputText("Twitch Oauth Token", settings.irc_password, 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
+        ImGui::InputText("Twitch Oauth 令牌", settings.irc_password, 255, show_irc_password ? 0 : ImGuiInputTextFlags_Password);
         ImGui::PopItemWidth();
-        ImGui::ShowHelp("Used to connect to Twitch.\ne.g. oauth:3fplxiscsq1550zdkf8z2kh1jk7mqs");
+        ImGui::ShowHelp("用于连接 Twitch。\n例如 oauth:3fplxiscsq1550zdkf8z2kh1jk7mqs");
         ImGui::SameLine();
-        ImGui::Checkbox("Show", &show_irc_password);
+        ImGui::Checkbox("显示", &show_irc_password);
         ImGui::Indent();
         const ImColor col(102, 187, 238, 255);
-        ImGui::TextColored(col.Value, "Click Here to get a Twitch Oauth Token");
+        ImGui::TextColored(col.Value, "点击此处获取 Twitch Oauth 令牌");
         if (ImGui::IsItemClicked()) {
             GetOauthToken();
         }
         ImGui::Unindent();
         ImGui::PushItemWidth(width);
-        ImGui::InputText("Twitch Channel", settings.irc_channel, 56);
-        ImGui::ShowHelp("The Twitch username of the person who's channel you want to connect to.\nEnter your own Twitch username here to receive messages from your channel whilst streaming.");
+        ImGui::InputText("Twitch 频道", settings.irc_channel, 56);
+        ImGui::ShowHelp("您要连接的频道对应的 Twitch 用户名。\n在此输入您自己的 Twitch 用户名，以便在直播时接收频道消息。");
         ImGui::PopItemWidth();
-        ImGui::TextDisabled("Re-connect after making changes to use updated info");
+        ImGui::TextDisabled("更改后重新连接以使更新信息生效");
         ImGui::Unindent();
     }
     ImGui::PopID();

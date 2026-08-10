@@ -15,10 +15,10 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Weather"; }
+    [[nodiscard]] const char* Name() const override { return "天气"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Draws camera-anchored rain into the 3D game world - composited under the in-game UI and occluded by terrain.";
+        return "将视角定位的雨水效果引入3D游戏世界 —— 在游戏内用户界面下进行合成，并由地形遮挡。";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_TINT; }
 

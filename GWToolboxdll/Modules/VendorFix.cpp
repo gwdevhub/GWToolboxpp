@@ -16,12 +16,12 @@ namespace {
     void RefreshVendorItems(GW::UI::Frame* frame) {
         if (!frame) return;
         /*
-        If the vendor frame has just been created, look at our inventory.
-        Any valid item ID after thr 56th item won't be found immediately by a collector.
+        如果供应商框架刚被创建，查看我们的背包。
+        第56个物品之后的任何有效物品ID都不会被收集者立即找到。
 
-        Fortunately, triggering ui message GW::UI::UIMessage::kInventorySlotUpdated on the slot seems to work.
+        幸运的是，对该槽位触发 GW::UI::UIMessage::kInventorySlotUpdated 消息似乎有效。
 
-        Identify the "problem" slots, and let the vendor know by spoofing the packet.
+        识别“问题”槽位，并通过伪造数据包通知供应商。
         */
 
         const auto inventory = GW::Items::GetInventory();

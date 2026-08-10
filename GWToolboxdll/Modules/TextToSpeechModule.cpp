@@ -77,7 +77,7 @@ namespace {
         return nullptr;
     }
 
-    // API Configuration structure
+    // API 配置结构体
     struct APIConfig {
         GenerateVoiceCallback callback;
         const char* name;
@@ -105,12 +105,12 @@ namespace {
     std::string GenerateVoiceKokoro(PendingNPCAudio*);
 
     APIConfig api_configs[] = {
-        {GenerateVoiceGWDevHub, "GWDevHub TTS", "", "This is a free TTS service specifically for Guild Wars players, provided by GWDevHub"},
+        {GenerateVoiceGWDevHub, "GWDevHub TTS", "", "这是一项专为激战玩家提供的免费 TTS 服务，由 GWDevHub 提供"},
         {GenerateVoiceElevenLabs, "ElevenLabs", "https://elevenlabs.io/app/settings/api-keys"},
         {GenerateVoiceOpenAI, "OpenAI", "https://platform.openai.com/api-keys"},
-        {GenerateVoiceGoogle, "Google Cloud", "https://console.cloud.google.com/apis/credentials", "Note: Make sure to enable the Text-to-Speech API in your Google Cloud project"},
-        {GenerateVoicePlayHT, "Play.ht", "https://elevenlabs.io/app/settings/api-keys", "Note: Play.ht requires both an API Key and User ID", true},
-        {GenerateVoiceKokoro, "Kokoro (Self-Hosted)", "https://github.com/remsky/Kokoro-FastAPI", "Enter your Kokoro-FastAPI server URL in the API Key field (default: http://localhost:8880)"},
+        {GenerateVoiceGoogle, "Google Cloud", "https://console.cloud.google.com/apis/credentials", "注意：请确保在您的 Google Cloud 项目中启用了文本转语音 API"},
+        {GenerateVoicePlayHT, "Play.ht", "https://elevenlabs.io/app/settings/api-keys", "注意：Play.ht 需要同时提供 API Key 和 User ID", true},
+        {GenerateVoiceKokoro, "Kokoro（自托管）", "https://github.com/remsky/Kokoro-FastAPI", "请在 API Key 字段中输入您的 Kokoro-FastAPI 服务器 URL（默认：http://localhost:8880）"},
     };
 
     APIConfig* GetCurrentAPIConfig()
@@ -323,21 +323,21 @@ Gender GetGenderByFileId(const uint32_t file_id)
     {
         switch (race) {
             case GWRace::Human:
-                return "Human";
+                return "人类";
             case GWRace::Charr:
-                return "Charr";
+                return "夏尔";
             case GWRace::Norn:
-                return "Norn";
+                return "诺恩";
             case GWRace::Asura:
-                return "Asura";
+                return "阿苏拉";
             case GWRace::Tengu:
-                return "Tengu";
+                return "天狗";
             case GWRace::Dwarf:
-                return "Dwarf";
+                return "矮人";
             case GWRace::Centaur:
-                return "Centaur";
+                return "半人马";
             default:
-                return "Unknown";
+                return "未知";
         }
     }
 
@@ -357,10 +357,10 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     enum class TraderType : uint8_t { Merchant, RuneTrader, ArmorCrafter, WeaponCustomizer, MaterialTrader, RareMaterialTrader, DyeTrader, OtherItemCrafter, SkillTrainer };
 
-    const wchar_t* generic_goodbye_messages[] = {L"Farewell, traveler.",           L"Safe travels on your journey.", L"May your path be clear.", L"Until we meet again.", L"Go well, adventurer.",         L"Good luck on your quest.",
-                                                 L"May fortune favor you.",        L"Travel safely, friend.",        L"Goodbye, and take care.", L"Fare thee well.",      L"May the gods watch over you.", L"Be safe out there.",
-                                                 L"Good journey to you.",          L"May your travels be swift.",    L"Walk in safety.",         L"Go with my blessing.", L"May peace be with you.",       L"Safe passage, hero.",
-                                                 L"Good fortune on your travels.", L"May your way be protected."};
+    const wchar_t* generic_goodbye_messages[] = {L"再会，旅者。",           L"愿你的旅途平安。", L"愿你的前路清晰。", L"后会有期。", L"一路顺风，冒险者。",         L"祝你好运。",
+                                                 L"愿命运眷顾你。",        L"旅途平安，朋友。",        L"再见，保重。", L"愿你安好。",      L"愿众神守护你。", L"在外小心。",
+                                                 L"旅途愉快。",          L"愿你的旅程快捷。",    L"安全前行。",         L"带着我的祝福出发。", L"愿和平与你同在。",       L"英雄，一路平安。",
+                                                 L"旅途好运。", L"愿你的道路受到庇护。"};
 
     std::map<std::tuple<GW::Region, TraderType>, std::wstring> merchant_greetings;
 
@@ -440,7 +440,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     std::map<std::tuple<Gender, GWRace, GW::Region>, VoiceProfile> voice_matrix;
     std::map<uint32_t, VoiceProfile> special_npc_voices;
 
-    uint32_t npc_ids_to_ignore[] = {1991}; // Durmand
+    uint32_t npc_ids_to_ignore[] = {1991}; // 德曼德
 
     uint32_t last_dialog_agent_id = 0;
     size_t max_text_length = 512;
@@ -450,7 +450,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     VoiceProfile* GetVoiceProfile(uint32_t agent_id, GW::Constants::MapID map_id);
 
     // -------------------------------------------------------------------------
-    // PendingNPCAudio — shared_ptr managed, safe across threads
+    // PendingNPCAudio — shared_ptr 管理，跨线程安全
     // -------------------------------------------------------------------------
     struct PendingNPCAudio : std::enable_shared_from_this<PendingNPCAudio> {
         GW::Constants::Language language = GW::Constants::Language::English;
@@ -473,29 +473,28 @@ Gender GetGenderByFileId(const uint32_t file_id)
         void Play();
         void Stop();
 
-        // Factory — always construct via this so shared_ptr is established before
-        // the object touches pending_audio.
+        // 工厂方法 — 始终通过此方法构造，以便在对象接触 pending_audio 之前建立 shared_ptr。
         static std::shared_ptr<PendingNPCAudio> Create(uint32_t agent_id, const wchar_t* message, bool is_dialog_window = false);
 
         ~PendingNPCAudio();
 
     private:
-        // Private constructor — use Create()
+        // 私有构造函数 — 使用 Create()
         PendingNPCAudio(uint32_t _agent_id, const wchar_t* message, bool _is_dialog_window);
     };
 
     // -------------------------------------------------------------------------
-    // Global audio state
+    // 全局音频状态
     // -------------------------------------------------------------------------
     std::recursive_mutex playing_audio_mutex;
     std::vector<std::shared_ptr<PendingNPCAudio>> pending_audio;
     std::map<uint32_t, std::shared_ptr<PendingNPCAudio>> playing_audio_map;
 
-    // Atomic so worker thread and game thread can safely read/write without a lock.
+    // 原子变量，工作线程和游戏线程可以无锁安全读写。
     std::atomic<bool> generating_voice{false};
 
     // -------------------------------------------------------------------------
-    // Helpers that work on the shared collections (must hold playing_audio_mutex)
+    // 共享集合上的辅助函数（必须持有 playing_audio_mutex）
     // -------------------------------------------------------------------------
     bool IsPending(const std::shared_ptr<PendingNPCAudio>& audio)
     {
@@ -512,7 +511,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         std::error_code err;
         auto file_size = std::filesystem::file_size(audio_file, err);
         if (err.value() != 0) {
-            Log::Error("Failed to get file size for %s: %s", audio_file.string().c_str(), err.message().c_str());
+            Log::Error("获取 %s 文件大小失败：%s", audio_file.string().c_str(), err.message().c_str());
             return 0;
         }
         clock_t duration = static_cast<clock_t>(file_size / 16000.0f) * CLOCKS_PER_SEC;
@@ -526,7 +525,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     }
 
     // -------------------------------------------------------------------------
-    // PendingNPCAudio implementation
+    // PendingNPCAudio 实现
     // -------------------------------------------------------------------------
     PendingNPCAudio::PendingNPCAudio(uint32_t _agent_id, const wchar_t* message, bool _is_dialog_window) : agent_id(_agent_id), started(0), duration(0), is_dialog_window(_is_dialog_window)
     {
@@ -538,14 +537,13 @@ Gender GetGenderByFileId(const uint32_t file_id)
         encoded_message = NeedToPreprocessEncodedStr() ? PreprocessEncodedTextForTTS(message) : message;
         profile = GetVoiceProfile(agent_id, GW::Map::GetMapID());
         language = GetAudioLanguage();
-        // Note: NOT added to pending_audio here — Create() does that after
-        // shared_ptr is established, so shared_from_this() is valid.
+        // 注意：此处不添加到 pending_audio — Create() 在 shared_ptr 建立后执行此操作，
+        // 以便 shared_from_this() 有效。
     }
 
     /*static*/ std::shared_ptr<PendingNPCAudio> PendingNPCAudio::Create(uint32_t agent_id, const wchar_t* message, bool is_dialog_window)
     {
-        // Use new directly because the constructor is private; make_shared would
-        // need friendship or a public constructor.
+        // 直接使用 new，因为构造函数是私有的；make_shared 需要友元或公共构造函数。
         std::shared_ptr<PendingNPCAudio> audio(new PendingNPCAudio(agent_id, message, is_dialog_window));
         std::scoped_lock lock(playing_audio_mutex);
         pending_audio.push_back(audio);
@@ -554,8 +552,8 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     PendingNPCAudio::~PendingNPCAudio()
     {
-        // Stop playback. The shared_ptr holders in pending_audio / playing_audio_map
-        // are responsible for erasing themselves; the destructor just cleans the sound handle.
+        // 停止播放。pending_audio / playing_audio_map 中的 shared_ptr 持有者负责清除自身；
+        // 析构函数仅清理声音句柄。
         Stop();
     }
 
@@ -569,14 +567,14 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     void PendingNPCAudio::Play()
     {
-        // --- Phase 1: check for duplicate / prepare under lock ---
+        // --- 阶段 1：在锁下检查重复/准备 ---
         {
             std::scoped_lock lock(playing_audio_mutex);
 
             auto found = playing_audio_map.find(agent_id);
             if (found != playing_audio_map.end()) {
-                if (found->second->path == path && found->second->IsPlaying()) return; // Same audio already playing — nothing to do.
-                // Different audio for this agent: stop it.
+                if (found->second->path == path && found->second->IsPlaying()) return; // 同一音频已在播放 — 无需操作。
+                // 该代理的不同音频：停止它。
                 found->second->Stop();
                 playing_audio_map.erase(found);
             }
@@ -584,23 +582,23 @@ Gender GetGenderByFileId(const uint32_t file_id)
             if (!duration) duration = EstimateAudioDuration(path);
         }
 
-        // --- Phase 2: call into the audio system WITHOUT holding the lock ---
-        // shared_ptr keeps `this` alive even if another thread calls ClearSounds()
-        // or CancelDialogSpeech() here — they will Stop() and drop their shared_ptr
-        // but our refcount won't hit zero until this scope exits.
+        // --- 阶段 2：在不持有锁的情况下调用音频系统 ---
+        // shared_ptr 确保即使另一个线程在此处调用 ClearSounds() 或 CancelDialogSpeech()，
+        // `this` 仍然存活 — 它们将 Stop() 并释放其 shared_ptr，
+        // 但我们的引用计数在此作用域退出前不会归零。
         const auto pos = GetAgentVec3f(agent_id);
-        VoiceLog("Playing audio file: %s (estimated duration: %dms)", path.filename().string().c_str(), duration);
+        VoiceLog("正在播放音频文件：%s（估计时长：%dms）", path.filename().string().c_str(), duration);
         const uint32_t flags = is_dialog_window ? SoundFlags_Dialog : (SoundFlags_Dialog | SoundFlags_Positional);
         const bool success = AudioSettings::PlaySound(path.wstring().c_str(), &pos, flags, &gw_handle);
 
         if (!success) {
-            // PlaySound failed; remove ourselves from pending and bail.
+            // PlaySound 失败；从 pending 中移除并退出。
             std::scoped_lock lock(playing_audio_mutex);
             RemoveFromPending(shared_from_this());
             return;
         }
 
-        // --- Phase 3: register as playing under lock ---
+        // --- 阶段 3：在锁下注册为正在播放 ---
         {
             std::scoped_lock lock(playing_audio_mutex);
             started = TIMER_INIT();
@@ -631,11 +629,11 @@ Gender GetGenderByFileId(const uint32_t file_id)
         for (auto& [id, audio] : playing_audio_map)
             audio->Stop();
         playing_audio_map.clear();
-        pending_audio.clear(); // shared_ptrs drop; destructors run safely.
+        pending_audio.clear(); // shared_ptrs 释放；析构函数安全运行。
     }
 
     // -------------------------------------------------------------------------
-    // Voice generation helpers
+    // 语音生成辅助函数
     // -------------------------------------------------------------------------
     std::shared_ptr<PendingNPCAudio> FindAlreadyProcessingAudio(const std::shared_ptr<PendingNPCAudio>& compare)
     {
@@ -704,7 +702,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     {
         auto result = TextUtils::ctre_regex_replace<
             L"\x0ba9\x0107[^\x0001]+\x0001", L"\x0ba9\x0107"
-                                             "Chosen\x0001">(text);
+                                             "被选中者\x0001">(text);
         result = TextUtils::ctre_regex_replace<L"[\x0101\x102\x103\x104][\x8100-\xffff]*.", L"">(result);
         return result;
     }
@@ -770,12 +768,12 @@ Gender GetGenderByFileId(const uint32_t file_id)
     GW::HookEntry UIMessage_HookEntry;
     GW::HookEntry PreUIMessage_HookEntry;
 
-    // Forward declaration
+    // 前向声明
     void GenerateVoice(std::shared_ptr<PendingNPCAudio> audio);
 
     void GenerateVoiceFromDecodedString(std::shared_ptr<PendingNPCAudio> audio)
     {
-        if (!(audio && !audio->decoded_message.empty())) return; // shared_ptr drops, destructor handles cleanup
+        if (!(audio && !audio->decoded_message.empty())) return; // shared_ptr 释放，析构函数处理清理
         GenerateVoice(std::move(audio));
     }
 
@@ -792,12 +790,11 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     void GenerateVoiceFromEncodedString(std::shared_ptr<PendingNPCAudio> audio)
     {
-        if (!GetApiKey()) return; // shared_ptr drops
+        if (!GetApiKey()) return; // shared_ptr 释放
         if (!(audio && !audio->encoded_message.empty() && audio->profile)) return;
         if (FindAlreadyProcessingAudio(audio)) return;
 
-        // Keep audio alive across the async decode by storing in a raw context pointer.
-        // We use a new shared_ptr on the heap so the refcount stays elevated.
+        // 通过在堆上存储新的 shared_ptr 来保持 audio 在异步解码期间存活。
         auto* ctx = new std::shared_ptr<PendingNPCAudio>(audio);
 
         GW::UI::AsyncDecodeStr(
@@ -840,7 +837,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
             audio->decoded_message = PreprocessTextForTTS(goodbye_msg);
             audio->profile = GetVoiceProfile(last_dialog_agent_id, GW::Map::GetMapID());
             if (audio->profile) GenerateVoiceFromDecodedString(std::move(audio));
-            // else shared_ptr drops, object cleans itself up
+            // 否则 shared_ptr 释放，对象自行清理
         }
     }
 
@@ -929,7 +926,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
                     if (!(message_enc && current->agent_id)) return;
                     if (TIMER_DIFF(last_dialogue_message_time) < 2000 && current->agent_id == last_dialogue_message_agent_id) return;
                     CancelDialogSpeech(current->agent_id);
-                    Log::Log("GenerateVoiceFromEncodedString for %d (Dialogue Message)", current->agent_id);
+                    Log::Log("为 %d 生成语音（对话消息）", current->agent_id);
                     GenerateVoiceFromEncodedString(PendingNPCAudio::Create(current->agent_id, message_enc, true));
                     last_dialogue_message_time = TIMER_INIT();
                     last_dialogue_message_agent_id = current->agent_id;
@@ -962,7 +959,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
                         if (GetAudioLanguage() != GW::Constants::Language::English) return;
                         if (!settings.play_speech_from_vendors) return;
                         auto audio = PendingNPCAudio::Create(packet->unk, L"", true);
-                        // Keep audio alive across the async name lookup via shared_ptr on heap.
+                        // 通过堆上的 shared_ptr 在异步名称查找期间保持 audio 存活。
                         auto* ctx = new std::shared_ptr<PendingNPCAudio>(audio);
                         GetNPCName(
                             packet->unk,
@@ -977,7 +974,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
                                     audio->decoded_message = PreprocessTextForTTS(it->second);
                                     GenerateVoiceFromDecodedString(std::move(audio));
                                 }
-                                // else shared_ptr drops, cleanup automatic
+                                // 否则 shared_ptr 释放，自动清理
                             },
                             ctx
                         );
@@ -1017,9 +1014,9 @@ Gender GetGenderByFileId(const uint32_t file_id)
         client.SetTimeoutSec(timeout_sec);
         client.Execute();
         if (!client.IsSuccessful()) {
-            VoiceLog("%s returned error code: %ld", service_name.c_str(), client.GetStatusCode());
+            VoiceLog("%s 返回错误代码：%ld", service_name.c_str(), client.GetStatusCode());
             std::string error_response = std::move(client.GetContent());
-            if (!error_response.empty()) VoiceLog("Error response: %s", error_response.c_str());
+            if (!error_response.empty()) VoiceLog("错误响应：%s", error_response.c_str());
             return "";
         }
         return std::move(client.GetContent());
@@ -1027,9 +1024,9 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
     std::string GenerateVoiceOpenAI(PendingNPCAudio* audio)
     {
-        if (!(audio && audio->profile)) return VoiceLog("No Audio Profile"), "";
+        if (!(audio && audio->profile)) return VoiceLog("无音频配置"), "";
         const auto api_config = GetCurrentAPIConfig();
-        if (!(api_config && *api_config->api_key)) return VoiceLog("No API Key"), "";
+        if (!(api_config && *api_config->api_key)) return VoiceLog("无 API Key"), "";
 
         glz::generic request_body;
         request_body["model"] = "gpt-4o-mini-tts";
@@ -1042,15 +1039,15 @@ Gender GetGenderByFileId(const uint32_t file_id)
         RestClient client;
         client.SetHeader("Authorization", ("Bearer " + std::string(api_config->api_key)).c_str());
         const auto audio_data = PostJson(client, "https://api.openai.com/v1/audio/speech", request_body, api_config->name);
-        if (!audio_data.empty()) VoiceLog("OpenAI voice generation successful, received %zu bytes", audio_data.size());
+        if (!audio_data.empty()) VoiceLog("OpenAI 语音生成成功，收到 %zu 字节", audio_data.size());
         return audio_data;
     }
 
     std::string GenerateVoiceElevenLabs(PendingNPCAudio* audio)
     {
-        if (!(audio && audio->profile)) return VoiceLog("No Audio Profile"), "";
+        if (!(audio && audio->profile)) return VoiceLog("无音频配置"), "";
         const auto api_config = GetCurrentAPIConfig();
-        if (!(api_config && *api_config->api_key)) return VoiceLog("No API Key"), "";
+        if (!(api_config && *api_config->api_key)) return VoiceLog("无 API Key"), "";
 
         glz::generic voice_settings;
         voice_settings["stability"] = audio->profile->stability;
@@ -1068,7 +1065,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
         client.SetHeader("xi-api-key", api_config->api_key);
         client.SetHeader("Accept", "audio/mpeg");
         const auto audio_data = PostJson(client, "https://api.elevenlabs.io/v1/text-to-speech/" + audio->profile->voice_id, request_body, api_config->name);
-        if (!audio_data.empty()) VoiceLog("ElevenLabs voice generation successful, received %zu bytes", audio_data.size());
+        if (!audio_data.empty()) VoiceLog("ElevenLabs 语音生成成功，收到 %zu 字节", audio_data.size());
         return audio_data;
     }
 
@@ -1104,15 +1101,15 @@ Gender GetGenderByFileId(const uint32_t file_id)
         RestClient client;
         client.SetHeader("Accept", "audio/mpeg");
         const auto audio_data = PostJson(client, std::format("{}/decode.mp3", gwtts_hostname), request_body, "GWDevHub");
-        if (!audio_data.empty()) VoiceLog("GWDevHub voice generation successful, received %zu bytes", audio_data.size());
+        if (!audio_data.empty()) VoiceLog("GWDevHub 语音生成成功，收到 %zu 字节", audio_data.size());
         return audio_data;
     }
 
     std::string GenerateVoiceKokoro(PendingNPCAudio* audio)
     {
-        if (!(audio && audio->profile)) return VoiceLog("No Audio Profile"), "";
+        if (!(audio && audio->profile)) return VoiceLog("无音频配置"), "";
         const auto api_config = GetCurrentAPIConfig();
-        if (!api_config) return VoiceLog("No API config"), "";
+        if (!api_config) return VoiceLog("无 API 配置"), "";
 
         std::string base_url = *api_config->api_key ? api_config->api_key : "http://localhost:8880";
         if (!base_url.empty() && base_url.back() == '/') base_url.pop_back();
@@ -1151,17 +1148,17 @@ Gender GetGenderByFileId(const uint32_t file_id)
         request_body["lang_code"] = lang_code;
 
         RestClient client;
-        // Kokoro streams audio as it generates; long texts can take 60+ seconds on CPU hardware
+        // Kokoro 在生成时流式传输音频；在 CPU 硬件上长文本可能需要 60 秒以上
         const auto audio_data = PostJson(client, base_url + "/v1/audio/speech", request_body, api_config->name, 120);
-        if (!audio_data.empty()) VoiceLog("Kokoro voice generation successful, received %zu bytes", audio_data.size());
+        if (!audio_data.empty()) VoiceLog("Kokoro 语音生成成功，收到 %zu 字节", audio_data.size());
         return audio_data;
     }
 
     std::string GenerateVoiceGoogle(PendingNPCAudio* audio)
     {
-        if (!(audio && audio->profile)) return VoiceLog("No Audio Profile"), "";
+        if (!(audio && audio->profile)) return VoiceLog("无音频配置"), "";
         const auto api_config = GetCurrentAPIConfig();
-        if (!(api_config && *api_config->api_key)) return VoiceLog("No API Key"), "";
+        if (!(api_config && *api_config->api_key)) return VoiceLog("无 API Key"), "";
 
         const std::string voice_name = (audio->profile->voice_id == voice_id_human_female) ? "en-US-Studio-O" : "en-US-Studio-Q";
 
@@ -1179,27 +1176,27 @@ Gender GetGenderByFileId(const uint32_t file_id)
 
         glz::generic json_response;
         if (auto ec = glz::read_json(json_response, response_str); ec || !json_response.contains("audioContent") || !json_response.at("audioContent").is_string()) {
-            VoiceLog("Failed to parse Google TTS response JSON");
+            VoiceLog("解析 Google TTS 响应 JSON 失败");
             return "";
         }
 
         std::string base64_audio = json_response.at("audioContent").get<std::string>();
         if (base64_audio.empty()) {
-            VoiceLog("Google TTS returned empty audio content");
+            VoiceLog("Google TTS 返回空音频内容");
             return "";
         }
 
         std::string audio_data = TextUtils::Base64Decode<char>(base64_audio);
-        VoiceLog("Google voice generation successful, decoded %zu bytes", audio_data.size());
+        VoiceLog("Google 语音生成成功，解码 %zu 字节", audio_data.size());
         return audio_data;
     }
 
     std::string GenerateVoicePlayHT(PendingNPCAudio* audio)
     {
-        if (!(audio && audio->profile)) return VoiceLog("No Audio Profile"), "";
+        if (!(audio && audio->profile)) return VoiceLog("无音频配置"), "";
         const auto api_config = GetCurrentAPIConfig();
-        if (!(api_config && *api_config->api_key)) return VoiceLog("No API Key"), "";
-        if (!*api_config->user_id) return VoiceLog("No User ID"), "";
+        if (!(api_config && *api_config->api_key)) return VoiceLog("无 API Key"), "";
+        if (!*api_config->user_id) return VoiceLog("无 User ID"), "";
 
         const std::string voice_id = (GetAgentGender(audio->agent_id) == Gender::Female) ? playht_voice_female_default : playht_voice_male_default;
         const std::string lang_code = LanguageToAbbreviation(audio->language);
@@ -1217,29 +1214,28 @@ Gender GetGenderByFileId(const uint32_t file_id)
         client.SetHeader("X-User-ID", api_config->user_id);
         client.SetHeader("Accept", "audio/mpeg");
         const auto audio_data = PostJson(client, "https://api.play.ht/api/v2/tts", request_body, api_config->name);
-        if (!audio_data.empty()) VoiceLog("Play.ht voice generation successful, received %zu bytes", audio_data.size());
+        if (!audio_data.empty()) VoiceLog("Play.ht 语音生成成功，收到 %zu 字节", audio_data.size());
         return audio_data;
     }
 
     // -------------------------------------------------------------------------
-    // GenerateVoice — the main dispatch function
+    // GenerateVoice — 主分发函数
     //
-    // Takes shared ownership of `audio`. The worker lambda captures a weak_ptr so
-    // that if the audio is cancelled (ClearSounds / CancelDialogSpeech) while the
-    // worker is running, the lock() returns null and we bail out cleanly without
-    // touching freed memory.
+    // 获取 audio 的共享所有权。工作线程 lambda 捕获 weak_ptr，以便
+    // 如果音频在工作线程运行时被取消（ClearSounds / CancelDialogSpeech），
+    // lock() 返回 null，我们干净地退出而不触碰已释放的内存。
     // -------------------------------------------------------------------------
     void GenerateVoice(std::shared_ptr<PendingNPCAudio> audio)
     {
         if (!audio) return;
 
-        // Only one voice generation at a time. If we're busy, discard.
+        // 一次只允许一个语音生成。如果忙碌则丢弃。
         bool expected = false;
-        if (!generating_voice.compare_exchange_strong(expected, true)) return; // shared_ptr drops, pending_audio still holds a ref
+        if (!generating_voice.compare_exchange_strong(expected, true)) return; // shared_ptr 释放，pending_audio 仍持有引用
 
-        // --- Early-exit checks (game-thread side, before handing off to worker) ---
+        // --- 早期退出检查（游戏线程侧，在交给工作线程之前）---
         auto bail = [&]() {
-            // Remove from pending so it's not left dangling, then release.
+            // 从 pending 中移除以免残留，然后释放。
             {
                 std::scoped_lock lock(playing_audio_mutex);
                 RemoveFromPending(audio);
@@ -1248,46 +1244,45 @@ Gender GetGenderByFileId(const uint32_t file_id)
         };
 
         if (GW::MemoryMgr::GetGWWindowHandle() != GetActiveWindow()) {
-            VoiceLog("Guild Wars not in focus");
+            VoiceLog("激战窗口未处于焦点");
             return bail();
         }
         if (audio->gender == Gender::Unknown) {
-            VoiceLog("Unknown Gender");
+            VoiceLog("未知性别");
             return bail();
         }
         if (!play_speech_from_race[audio->race]) {
-            VoiceLog("Blocked race %s", GetRaceName(audio->race));
+            VoiceLog("已阻止种族 %s", GetRaceName(audio->race));
             return bail();
         }
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && !settings.play_tts_in_outposts) {
-            VoiceLog("Blocked TTS in outposts");
+            VoiceLog("已在前哨站阻止 TTS");
             return bail();
         }
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && !settings.play_tts_in_explorable_areas) {
-            VoiceLog("Blocked TTS in explorable areas");
+            VoiceLog("已在可探索区域阻止 TTS");
             return bail();
         }
         if (GetDialogVolume() * GetSystemVolume() == 0.f) {
-            VoiceLog("Dialog volume is 0");
+            VoiceLog("对话音量为 0");
             return bail();
         }
 
-        // --- Hand off to worker thread ---
-        // Capture a weak_ptr; if audio is cancelled while we're waiting for the
-        // network call, lock() will return nullptr and we bail safely.
+        // --- 交给工作线程 ---
+        // 捕获 weak_ptr；如果在等待网络调用时音频被取消，lock() 将返回 nullptr，我们安全退出。
         std::weak_ptr<PendingNPCAudio> weak_audio = audio;
-        // Release our strong ref now — pending_audio still holds one.
+        // 现在释放我们的强引用 — pending_audio 仍持有一个。
         audio.reset();
 
         Resources::EnqueueWorkerTask([weak_audio]() {
-            // Try to acquire strong ownership.
+            // 尝试获取强所有权。
             auto audio = weak_audio.lock();
             if (!audio) {
                 generating_voice = false;
                 return;
             }
 
-            // Confirm still in pending_audio (not cancelled between enqueue and execution).
+            // 确认仍在 pending_audio 中（在入队和执行之间未被取消）。
             {
                 std::scoped_lock lock(playing_audio_mutex);
                 if (!IsPending(audio)) {
@@ -1300,17 +1295,17 @@ Gender GetGenderByFileId(const uint32_t file_id)
             const auto cache_key = GenerateOptimizedCacheKey(audio.get());
             audio->path = Resources::GetPath("NPCVoiceCache") / LanguageToAbbreviation(audio->language) / cache_key;
 
-            // Cache hit — play immediately.
+            // 缓存命中 — 立即播放。
             if (std::filesystem::exists(audio->path)) {
                 audio->Play();
                 generating_voice = false;
                 return;
             }
 
-            // Generate audio data via the selected provider.
+            // 通过选定的提供商生成音频数据。
             std::string audio_data = api_config ? api_config->callback(audio.get()) : "";
 
-            // Re-check that audio wasn't cancelled during the (potentially slow) API call.
+            // 重新检查音频在（可能较慢的）API 调用期间是否被取消。
             {
                 std::scoped_lock lock(playing_audio_mutex);
                 if (!IsPending(audio)) {
@@ -1320,7 +1315,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
             }
 
             if (audio_data.empty()) {
-                VoiceLog("Failed to generate voice data");
+                VoiceLog("生成语音数据失败");
                 std::scoped_lock lock(playing_audio_mutex);
                 RemoveFromPending(audio);
                 generating_voice = false;
@@ -1328,14 +1323,14 @@ Gender GetGenderByFileId(const uint32_t file_id)
             }
 
             if (!Resources::WriteFile(audio->path, audio_data)) {
-                VoiceLog("Failed to write audio data to file: %s", TextUtils::WStringToString(audio->path.wstring()).c_str());
+                VoiceLog("写入音频数据到文件失败：%s", TextUtils::WStringToString(audio->path.wstring()).c_str());
                 std::scoped_lock lock(playing_audio_mutex);
                 RemoveFromPending(audio);
                 generating_voice = false;
                 return;
             }
 
-            // Final pending check before play.
+            // 播放前的最终 pending 检查。
             {
                 std::scoped_lock lock(playing_audio_mutex);
                 if (!IsPending(audio)) {
@@ -1350,7 +1345,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
     }
 
     // -------------------------------------------------------------------------
-    // OnPlaySound — block in-game NPC voice when we have TTS audio for the agent
+    // OnPlaySound — 当代理有 TTS 音频时阻止游戏内 NPC 语音
     // -------------------------------------------------------------------------
     void OnPlaySound(GW::HookStatus* status, const wchar_t* filename, SoundProps* props)
     {
@@ -1402,7 +1397,7 @@ Gender GetGenderByFileId(const uint32_t file_id)
                 if (!settings.play_speech_bubbles_from_party_members && GW::PartyMgr::IsAgentInParty(agent_id)) break;
                 if (GW::GetDistance(agent->pos, GetPlayerPosition()) > settings.npc_speech_bubble_range) break;
 
-                Log::Log("GenerateVoiceFromEncodedString for %d (Speech Bubble)", agent_id);
+                Log::Log("为 %d 生成语音（对话气泡）", agent_id);
                 GenerateVoiceFromEncodedString(PendingNPCAudio::Create(agent_id, msg_enc));
             } break;
         }
@@ -1447,7 +1442,7 @@ void TextToSpeechModule::Initialize()
     voice_matrix.clear();
     special_npc_voices.clear();
 
-    // Human voices by region and gender
+    // 按地区和性别的人类语音
     voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Ascalon}] = VoiceProfile(voice_id_human_male, 0.7f, 0.6f, 0.5f, 0.95f, "gruff");
     voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_Ascalon}] = VoiceProfile(voice_id_human_female, 0.6f, 0.7f, 0.6f, 1.0f, "determined");
     voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_Kryta}] = VoiceProfile(voice_id_human_male, 0.5f, 0.7f, 0.4f, 1.0f, "refined");
@@ -1491,227 +1486,227 @@ void TextToSpeechModule::Initialize()
     voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_BattleIslands}] = VoiceProfile(voice_id_human_male, 0.4f, 0.6f, 0.4f, 1.0f, "worldly");
     voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_BattleIslands}] = VoiceProfile(voice_id_human_female, 0.3f, 0.7f, 0.5f, 1.05f, "cosmopolitan");
 
-    // Non-human races
+    // 非人类种族
     voice_matrix[{Gender::Male, GWRace::Charr, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_male, 0.8f, 0.4f, 0.3f, 0.85f, "growling");
     voice_matrix[{Gender::Female, GWRace::Charr, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_female, 0.7f, 0.5f, 0.4f, 0.90f, "fierce");
     voice_matrix[{Gender::Male, GWRace::Dwarf, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_dwarven_male, 0.9f, 0.3f, 0.4f, 0.80f, "gravelly");
     voice_matrix[{Gender::Female, GWRace::Dwarf, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_dwarven_male, 0.8f, 0.4f, 0.5f, 0.85f, "robust");
 
-    // Default fallbacks
+    // 默认回退
     voice_matrix[{Gender::Male, GWRace::Human, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_male, 0.5f, 0.5f, 0.5f, 1.0f);
     voice_matrix[{Gender::Female, GWRace::Human, GW::Region::Region_DevRegion}] = VoiceProfile(voice_id_human_female, 0.5f, 0.5f, 0.5f, 1.0f);
 
-    // Merchant greetings
+    // 商人问候语（全部翻译为中文）
     merchant_greetings.clear();
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::Merchant}] = L"Welcome, traveler, times are hard but I still have goods to trade.";
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::ArmorCrafter}] = L"Need armor that can withstand Charr claws?";
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::WeaponCustomizer}] = L"Looking for a weapon that can pierce Charr hide?";
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::RuneTrader}] = L"Ancient runes, salvaged from the ruins of our kingdom.";
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::MaterialTrader}] = L"Materials salvaged from the ruins, at fair prices.";
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::RareMaterialTrader}] = L"Rare materials, recovered from the Searing's aftermath.";
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::DyeTrader}] = L"Colors to brighten these dark times.";
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::OtherItemCrafter}] = L"Need something crafted by skills that survived the Searing?";
-    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::SkillTrainer}] = L"I teach the combat skills needed to survive in these cursed lands.";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::Merchant}] = L"欢迎，旅者，时局艰难，但我仍有货物可交易。";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::ArmorCrafter}] = L"需要能抵御夏尔利爪的护甲吗？";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::WeaponCustomizer}] = L"想要能穿透夏尔皮毛的武器吗？";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::RuneTrader}] = L"古老的符文，从我们王国的废墟中发掘。";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::MaterialTrader}] = L"从废墟中回收的材料，价格公道。";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::RareMaterialTrader}] = L"稀有材料，从灼晶灾变中幸存。";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::DyeTrader}] = L"为这黑暗时代增添色彩的染料。";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::OtherItemCrafter}] = L"需要能在灼晶灾变中幸存的工艺制品吗？";
+    merchant_greetings[{GW::Region::Region_Ascalon, TraderType::SkillTrainer}] = L"我传授在这片被诅咒的土地上生存所需的战斗技能。";
 
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::Merchant}] = L"Good day, welcome to beautiful Ascalon!";
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::ArmorCrafter}] = L"The finest armor in all of prosperous Ascalon.";
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::WeaponCustomizer}] = L"Welcome, these weapons represent centuries of Ascalonian tradition.";
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::RuneTrader}] = L"Ancient runes from our kingdom's golden age.";
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::MaterialTrader}] = L"The finest materials from across our prosperous kingdom.";
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::RareMaterialTrader}] = L"Rare treasures from the abundant lands of Ascalon.";
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::DyeTrader}] = L"Vibrant colors from our peaceful realm.";
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::OtherItemCrafter}] = L"Greetings, I offer the finest craftsmanship in all of Ascalon.";
-    merchant_greetings[{GW::Region::Region_Presearing, TraderType::SkillTrainer}] = L"Welcome, I teach the honored traditions of Ascalonian warfare.";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::Merchant}] = L"日安，欢迎来到美丽的阿斯卡隆！";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::ArmorCrafter}] = L"繁荣的阿斯卡隆最精美的护甲。";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::WeaponCustomizer}] = L"欢迎，这些武器代表了阿斯卡隆数世纪的传承。";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::RuneTrader}] = L"来自我们王国黄金时代的古老符文。";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::MaterialTrader}] = L"来自我们繁荣王国各地的最优质材料。";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::RareMaterialTrader}] = L"来自阿斯卡隆富饶之地的稀有珍宝。";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::DyeTrader}] = L"来自我们和平国度的鲜艳色彩。";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::OtherItemCrafter}] = L"日安，我提供阿斯卡隆最精湛的工艺。";
+    merchant_greetings[{GW::Region::Region_Presearing, TraderType::SkillTrainer}] = L"欢迎，我传授阿斯卡隆战争艺术的尊贵传统。";
 
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::Merchant}] = L"Good day to you, welcome to my establishment!";
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::ArmorCrafter}] = L"Protection fit for nobles and heroes alike.";
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::WeaponCustomizer}] = L"Seeking a weapon of distinction?";
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::RuneTrader}] = L"Ah, a seeker of magical enhancement with excellent taste.";
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::MaterialTrader}] = L"Fine materials from across the kingdom, at your service.";
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::RareMaterialTrader}] = L"Rare treasures from the royal vaults of Kryta.";
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::DyeTrader}] = L"Royal colors for distinguished customers.";
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::OtherItemCrafter}] = L"Greetings, I offer the finest crafting services in Kryta.";
-    merchant_greetings[{GW::Region::Region_Kryta, TraderType::SkillTrainer}] = L"I shall teach you the refined combat arts of the Krytan nobility.";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::Merchant}] = L"日安，欢迎光临我的店铺！";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::ArmorCrafter}] = L"适合贵族和英雄的防护。";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::WeaponCustomizer}] = L"在寻找一把与众不同的武器吗？";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::RuneTrader}] = L"啊，一位品味高雅的魔法增强追求者。";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::MaterialTrader}] = L"来自王国各地的优质材料，为您服务。";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::RareMaterialTrader}] = L"来自科瑞塔皇家宝库的稀有珍宝。";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::DyeTrader}] = L"为尊贵顾客准备的皇家色彩。";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::OtherItemCrafter}] = L"日安，我提供科瑞塔最精湛的工艺服务。";
+    merchant_greetings[{GW::Region::Region_Kryta, TraderType::SkillTrainer}] = L"我将传授您科瑞塔贵族精炼的战斗艺术。";
 
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::Merchant}] = L"Welcome, brave soul, few venture this deep into the jungle.";
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::ArmorCrafter}] = L"Armor tested against the jungle's deadly creatures.";
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::WeaponCustomizer}] = L"Weapons tested against the beasts of the deep jungle.";
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::RuneTrader}] = L"Ancient magic, whispered by the jungle spirits.";
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::MaterialTrader}] = L"Exotic materials from the heart of the Maguuma.";
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::RareMaterialTrader}] = L"Rare jungle treasures, if you have the courage.";
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::DyeTrader}] = L"Wild colors from nature's most dangerous realm.";
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::OtherItemCrafter}] = L"Greetings, I craft with materials blessed by the jungle spirits.";
-    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::SkillTrainer}] = L"The jungle teaches harsh lessons. I can teach you to survive them.";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::Merchant}] = L"欢迎，勇敢的灵魂，很少有人深入这片丛林。";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::ArmorCrafter}] = L"经过丛林致命生物考验的护甲。";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::WeaponCustomizer}] = L"经过丛林深处猛兽考验的武器。";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::RuneTrader}] = L"丛林精灵低语的古老魔法。";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::MaterialTrader}] = L"来自马古马丛林深处的异国材料。";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::RareMaterialTrader}] = L"如果您有勇气，这里有稀有的丛林珍宝。";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::DyeTrader}] = L"来自自然最危险领域的野性色彩。";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::OtherItemCrafter}] = L"日安，我用丛林精灵祝福的材料进行制作。";
+    merchant_greetings[{GW::Region::Region_Maguuma, TraderType::SkillTrainer}] = L"丛林教会了严酷的教训。我可以教您如何在其中生存。";
 
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::Merchant}] = L"Welcome, desert wanderer, supplies are precious here.";
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::ArmorCrafter}] = L"Protection forged in the crystal caves.";
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::WeaponCustomizer}] = L"Weapons forged in the crystal caves, sharp as dragon glass.";
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::RuneTrader}] = L"Ancient power, crystallized in the desert sands.";
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::MaterialTrader}] = L"Rare crystals and desert treasures await the worthy.";
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::RareMaterialTrader}] = L"Mystical crystals from the heart of the desert.";
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::DyeTrader}] = L"Colors as brilliant as crystal formations.";
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::OtherItemCrafter}] = L"Greetings, I work with crystal and sand-blessed materials.";
-    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::SkillTrainer}] = L"I teach the ancient arts whispered by the desert winds.";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::Merchant}] = L"欢迎，沙漠流浪者，这里的补给很珍贵。";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::ArmorCrafter}] = L"在水晶洞穴中锻造的防护。";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::WeaponCustomizer}] = L"在水晶洞穴中锻造的武器，锋利如龙晶。";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::RuneTrader}] = L"凝聚在沙漠沙粒中的古老力量。";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::MaterialTrader}] = L"稀有的水晶和沙漠珍宝等待有缘人。";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::RareMaterialTrader}] = L"来自沙漠深处的神秘水晶。";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::DyeTrader}] = L"如水晶般绚丽的色彩。";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::OtherItemCrafter}] = L"日安，我用水晶和沙之祝福的材料工作。";
+    merchant_greetings[{GW::Region::Region_CrystalDesert, TraderType::SkillTrainer}] = L"我传授沙漠之风低语的古老技艺。";
 
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::Merchant}] = L"Welcome to the peaks, warm yourself and browse my wares.";
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::ArmorCrafter}] = L"Dwarven protection, built to last centuries!";
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::WeaponCustomizer}] = L"Weapons forged in the ancient dwarven tradition.";
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::RuneTrader}] = L"Ancient dwarven runes, carved in stone and memory.";
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::MaterialTrader}] = L"Mountain stone and dwarven steel, the finest materials.";
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::RareMaterialTrader}] = L"Precious gems from the deepest mountain veins.";
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::DyeTrader}] = L"Mountain colors, bold as dwarven courage.";
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::OtherItemCrafter}] = L"Greetings, dwarven craftsmanship built to last centuries!";
-    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::SkillTrainer}] = L"I'll teach ye the battle techniques passed down through generations of dwarven warriors!";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::Merchant}] = L"欢迎来到山峰，暖暖身子，看看我的货物吧。";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::ArmorCrafter}] = L"矮人的防护，经久耐用！";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::WeaponCustomizer}] = L"按照古老矮人传统锻造的武器。";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::RuneTrader}] = L"刻在石头和记忆中的古老矮人符文。";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::MaterialTrader}] = L"山石和矮人钢，最优质的材料。";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::RareMaterialTrader}] = L"来自最深矿脉的珍贵宝石。";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::DyeTrader}] = L"如矮人勇气般大胆的山地色彩。";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::OtherItemCrafter}] = L"日安，矮人工艺经久耐用！";
+    merchant_greetings[{GW::Region::Region_NorthernShiverpeaks, TraderType::SkillTrainer}] = L"我将教您世代相传的矮人战士战斗技巧！";
 
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::Merchant}] = L"By the forge, another traveler reaches these distant peaks!";
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::ArmorCrafter}] = L"Armor tempered by the harshest cold and winds.";
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::WeaponCustomizer}] = L"Weapons tempered by the coldest winds and hardest stone.";
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::RuneTrader}] = L"Forgotten runes from the edge of the world.";
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::MaterialTrader}] = L"Materials from the edge of the world, rare beyond measure.";
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::RareMaterialTrader}] = L"Treasures from where the world ends.";
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::DyeTrader}] = L"Colors from the world's frozen edge.";
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::OtherItemCrafter}] = L"Welcome, hardy soul, few seek crafting in these remote lands.";
-    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::SkillTrainer}] = L"At the world's edge, only the strongest techniques survive. Let me teach them to you.";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::Merchant}] = L"以熔炉之名，又一位旅者到达了这遥远山峰！";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::ArmorCrafter}] = L"经受最严酷严寒和狂风考验的护甲。";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::WeaponCustomizer}] = L"经最冷寒风和最硬岩石淬炼的武器。";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::RuneTrader}] = L"世界边缘被遗忘的符文。";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::MaterialTrader}] = L"来自世界边缘的材料，稀有无比。";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::RareMaterialTrader}] = L"来自世界尽头的珍宝。";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::DyeTrader}] = L"来自世界冰封边缘的色彩。";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::OtherItemCrafter}] = L"欢迎，坚韧的灵魂，在这偏远之地寻求工艺的人不多。";
+    merchant_greetings[{GW::Region::Region_FarShiverpeaks, TraderType::SkillTrainer}] = L"在世界边缘，只有最强的技巧才能生存。让我教给您。";
 
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::Merchant}] = L"Honorable student, welcome to this place of learning.";
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::ArmorCrafter}] = L"Protection crafted with the wisdom of ancient masters.";
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::WeaponCustomizer}] = L"Weapons forged in the sacred traditions of Shing Jea.";
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::RuneTrader}] = L"Ancient symbols blessed by monastery wisdom.";
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::MaterialTrader}] = L"Materials blessed by the monastery's ancient wisdom.";
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::RareMaterialTrader}] = L"Rare treasures from the sacred archives.";
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::DyeTrader}] = L"Colors harmonious as monastery gardens.";
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::OtherItemCrafter}] = L"Greetings, I craft with the wisdom of ancient masters.";
-    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::SkillTrainer}] = L"Welcome, young student - I shall guide you in the ancient martial ways of Shing Jea.";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::Merchant}] = L"可敬的学徒，欢迎来到这个学习之地。";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::ArmorCrafter}] = L"以古代大师智慧锻造的防护。";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::WeaponCustomizer}] = L"在星岬寺神圣传统中锻造的武器。";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::RuneTrader}] = L"受寺院智慧祝福的古老符号。";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::MaterialTrader}] = L"受寺院古老智慧祝福的材料。";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::RareMaterialTrader}] = L"来自神圣档案的稀有珍宝。";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::DyeTrader}] = L"如寺院花园般和谐的色彩。";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::OtherItemCrafter}] = L"日安，我以古代大师的智慧进行制作。";
+    merchant_greetings[{GW::Region::Region_ShingJea, TraderType::SkillTrainer}] = L"欢迎，年轻的学徒——我将指导您学习星岬寺古老的武术之道。";
 
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::Merchant}] = L"Welcome to Kaineng City, the finest goods from across the empire!";
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::ArmorCrafter}] = L"City armor, where tradition meets innovation.";
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::WeaponCustomizer}] = L"Weapons crafted in the heart of the empire's greatest city.";
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::RuneTrader}] = L"Imperial runes from the empire's vast collection.";
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::MaterialTrader}] = L"Urban treasures and exotic materials from every corner of Cantha.";
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::RareMaterialTrader}] = L"Rare goods from the empire's endless markets.";
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::DyeTrader}] = L"Imperial colors from the city of endless hues.";
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::OtherItemCrafter}] = L"Greetings, city craftsmanship meets ancient tradition.";
-    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::SkillTrainer}] = L"In the empire's greatest city, I teach the most refined combat techniques.";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::Merchant}] = L"欢迎来到凯宁城，帝国最优质的货物！";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::ArmorCrafter}] = L"城市护甲，传统与创新的结合。";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::WeaponCustomizer}] = L"在帝国最伟大城市中心锻造的武器。";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::RuneTrader}] = L"来自帝国庞大收藏的皇家符文。";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::MaterialTrader}] = L"来自凯珊各个角落的城市珍宝和异国材料。";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::RareMaterialTrader}] = L"来自帝国无尽市场的稀有商品。";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::DyeTrader}] = L"来自无尽色彩之城的帝国色彩。";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::OtherItemCrafter}] = L"日安，城市工艺与古老传统的结合。";
+    merchant_greetings[{GW::Region::Region_Kaineng, TraderType::SkillTrainer}] = L"在帝国最伟大的城市，我传授最精炼的战斗技巧。";
 
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::Merchant}] = L"Welcome to our sacred forests, nature's bounty awaits.";
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::ArmorCrafter}] = L"Protection blessed by the forest spirits.";
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::WeaponCustomizer}] = L"Weapons blessed by the ancient spirits of the wood.";
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::RuneTrader}] = L"Forest runes, whispered by ancient trees.";
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::MaterialTrader}] = L"Materials harvested with respect for the eternal forest.";
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::RareMaterialTrader}] = L"Sacred forest treasures, given freely by nature.";
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::DyeTrader}] = L"Forest colors, as eternal as the trees.";
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::OtherItemCrafter}] = L"Greetings, friend of the forest, I craft with nature's blessing.";
-    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::SkillTrainer}] = L"The eternal forest whispers its secrets. I can teach you its ancient fighting ways.";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::Merchant}] = L"欢迎来到我们神圣的森林，大自然的恩赐等待着你。";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::ArmorCrafter}] = L"受森林精灵祝福的防护。";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::WeaponCustomizer}] = L"受古老森林精灵祝福的武器。";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::RuneTrader}] = L"森林符文，由古老树木低语而成。";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::MaterialTrader}] = L"尊重永恒森林收获的材料。";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::RareMaterialTrader}] = L"大自然慷慨给予的神圣森林珍宝。";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::DyeTrader}] = L"如树木般永恒的森林色彩。";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::OtherItemCrafter}] = L"日安，森林之友，我以自然的祝福进行制作。";
+    merchant_greetings[{GW::Region::Region_Kurzick, TraderType::SkillTrainer}] = L"永恒森林低语着它的秘密。我可以教您它古老的战斗方式。";
 
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::Merchant}] = L"Welcome, sea-friend, the jade winds bring good fortune.";
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::ArmorCrafter}] = L"Protection blessed by the jade sea's power.";
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::WeaponCustomizer}] = L"Weapons forged with the strength of the eternal tides.";
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::RuneTrader}] = L"Sea runes, carved by tidal forces.";
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::MaterialTrader}] = L"Treasures from the jade sea, brought by favorable winds.";
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::RareMaterialTrader}] = L"Rare jade gifts from the eternal sea.";
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::DyeTrader}] = L"Sea colors, shifting like jade waters.";
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::OtherItemCrafter}] = L"Greetings, I craft with materials blessed by the jade sea.";
-    merchant_greetings[{GW::Region::Region_Luxon, TraderType::SkillTrainer}] = L"Like the shifting tides, I teach the fluid combat arts of the Luxon armadas.";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::Merchant}] = L"欢迎，海之友，翡翠之风带来好运。";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::ArmorCrafter}] = L"受翡翠海力量祝福的防护。";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::WeaponCustomizer}] = L"以永恒潮汐之力锻造的武器。";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::RuneTrader}] = L"由潮汐力量雕刻的海之符文。";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::MaterialTrader}] = L"来自翡翠海的珍宝，由顺风带来。";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::RareMaterialTrader}] = L"来自永恒之海的稀有翡翠馈赠。";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::DyeTrader}] = L"如翡翠之水般变幻的海之色彩。";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::OtherItemCrafter}] = L"日安，我用受翡翠海祝福的材料进行制作。";
+    merchant_greetings[{GW::Region::Region_Luxon, TraderType::SkillTrainer}] = L"如同变幻的潮汐，我传授路克森舰队流畅的战斗艺术。";
 
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::Merchant}] = L"Ahlan wa sahlan, welcome to the jewel of Elona!";
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::ArmorCrafter}] = L"Island protection, light as sea breeze.";
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::WeaponCustomizer}] = L"Weapons blessed by the island winds and morning sun.";
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::RuneTrader}] = L"Island runes, blessed by ocean spirits.";
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::MaterialTrader}] = L"Exotic materials from the trade winds of Istan.";
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::RareMaterialTrader}] = L"Precious island treasures from hidden coves.";
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::DyeTrader}] = L"Tropical colors, bright as paradise.";
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::OtherItemCrafter}] = L"Greetings, honored traveler, island craftsmanship at its finest.";
-    merchant_greetings[{GW::Region::Region_Istan, TraderType::SkillTrainer}] = L"Welcome, traveler! I teach the graceful combat arts perfected under Elonian sun.";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::Merchant}] = L"Ahlan wa sahlan，欢迎来到伊洛纳的明珠！";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::ArmorCrafter}] = L"海岛防护，轻如海风。";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::WeaponCustomizer}] = L"受海岛之风和晨光祝福的武器。";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::RuneTrader}] = L"受海洋精灵祝福的海岛符文。";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::MaterialTrader}] = L"来自伊斯坦贸易风带来的异国材料。";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::RareMaterialTrader}] = L"来自隐秘海湾的珍贵海岛珍宝。";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::DyeTrader}] = L"如天堂般明亮的热带色彩。";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::OtherItemCrafter}] = L"日安，尊敬的旅者，最精湛的海岛工艺。";
+    merchant_greetings[{GW::Region::Region_Istan, TraderType::SkillTrainer}] = L"欢迎，旅者！我传授在伊洛纳阳光下完善的优雅战斗艺术。";
 
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::Merchant}] = L"Welcome, desert warrior, Kourna's goods serve the strong.";
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::ArmorCrafter}] = L"Armor tested against centaurs and corsairs.";
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::WeaponCustomizer}] = L"Weapons tested against the centaurs and corsairs.";
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::RuneTrader}] = L"Battle runes, forged in conflict.";
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::MaterialTrader}] = L"Materials hardened by sun and survival, proven in battle.";
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::RareMaterialTrader}] = L"War spoils from the harsh mainland.";
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::DyeTrader}] = L"Desert colors, bold as warrior courage.";
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::OtherItemCrafter}] = L"Greetings, I forge in the harsh fires of the mainland.";
-    merchant_greetings[{GW::Region::Region_Kourna, TraderType::SkillTrainer}] = L"In Kourna, only the strong survive. I teach the brutal arts of desert warfare.";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::Merchant}] = L"欢迎，沙漠战士，库尔纳的货物属于强者。";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::ArmorCrafter}] = L"经受半人马和海盗考验的护甲。";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::WeaponCustomizer}] = L"经受半人马和海盗考验的武器。";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::RuneTrader}] = L"在冲突中锻造的战斗符文。";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::MaterialTrader}] = L"经受阳光和生存考验的材料，在战斗中证明了自己。";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::RareMaterialTrader}] = L"来自严酷大陆的战利品。";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::DyeTrader}] = L"如战士勇气般大胆的沙漠色彩。";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::OtherItemCrafter}] = L"日安，我在大陆的严酷火焰中锻造。";
+    merchant_greetings[{GW::Region::Region_Kourna, TraderType::SkillTrainer}] = L"在库尔纳，只有强者才能生存。我传授沙漠战争的残酷艺术。";
 
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::Merchant}] = L"Welcome to Vabbi, land of princes and prosperity!";
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::ArmorCrafter}] = L"Armor fit for princes, adorned with precious gems.";
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::WeaponCustomizer}] = L"Weapons fit for princes, adorned with precious gems.";
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::RuneTrader}] = L"Royal runes from the prince's collections.";
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::MaterialTrader}] = L"The finest materials gold can buy, from Vabbi's treasuries.";
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::RareMaterialTrader}] = L"Princely treasures from royal vaults.";
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::DyeTrader}] = L"Royal colors, luxurious as palace silks.";
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::OtherItemCrafter}] = L"Greetings, only the most exquisite craftsmanship in Vabbi.";
-    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::SkillTrainer}] = L"I teach the elegant combat arts favored by Vabbi's noble princes.";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::Merchant}] = L"欢迎来到法比，王子和繁荣之地！";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::ArmorCrafter}] = L"适合王子的护甲，饰以珍贵宝石。";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::WeaponCustomizer}] = L"适合王子的武器，饰以珍贵宝石。";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::RuneTrader}] = L"来自王子收藏的皇家符文。";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::MaterialTrader}] = L"黄金能买到的最优质材料，来自法比的宝库。";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::RareMaterialTrader}] = L"来自皇家宝库的王子珍宝。";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::DyeTrader}] = L"如宫殿丝绸般奢华的皇家色彩。";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::OtherItemCrafter}] = L"日安，法比只有最精湛的工艺。";
+    merchant_greetings[{GW::Region::Region_Vaabi, TraderType::SkillTrainer}] = L"我传授法比贵族王子们喜爱的优雅战斗艺术。";
 
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::Merchant}] = L"Welcome, brave soul, few dare trade in these cursed lands.";
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::ArmorCrafter}] = L"Protection against demons and cursed winds.";
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::WeaponCustomizer}] = L"Weapons forged to face demons and the undead hordes.";
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::RuneTrader}] = L"Cursed runes, powerful but dangerous.";
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::MaterialTrader}] = L"Materials touched by darkness, powerful but dangerous.";
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::RareMaterialTrader}] = L"Forbidden treasures from the cursed realm.";
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::DyeTrader}] = L"Dark colors from the realm of shadows.";
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::OtherItemCrafter}] = L"Greetings, I work despite the sulfurous winds and darkness.";
-    merchant_greetings[{GW::Region::Region_Desolation, TraderType::SkillTrainer}] = L"In this cursed realm, I teach the forbidden arts needed to fight demons.";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::Merchant}] = L"欢迎，勇敢的灵魂，很少有人敢在这片被诅咒的土地上交易。";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::ArmorCrafter}] = L"抵御恶魔和被诅咒之风的防护。";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::WeaponCustomizer}] = L"为面对恶魔和不死大军而锻造的武器。";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::RuneTrader}] = L"被诅咒的符文，强大但危险。";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::MaterialTrader}] = L"被黑暗触碰的材料，强大但危险。";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::RareMaterialTrader}] = L"来自被诅咒领域的禁忌珍宝。";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::DyeTrader}] = L"来自阴影领域的黑暗色彩。";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::OtherItemCrafter}] = L"日安，尽管硫磺之风和黑暗，我仍在工作。";
+    merchant_greetings[{GW::Region::Region_Desolation, TraderType::SkillTrainer}] = L"在这个被诅咒的领域，我传授对抗恶魔所需的禁忌技艺。";
 
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::Merchant}] = L"You dare trade in Charr lands, your courage impresses me.";
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::ArmorCrafter}] = L"Armor stolen from Charr forges.";
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::WeaponCustomizer}] = L"Weapons forged in the furnaces of our enemies.";
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::RuneTrader}] = L"Charr runes, taken from their shamans.";
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::MaterialTrader}] = L"Materials stolen from the very heart of Charr power.";
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::RareMaterialTrader}] = L"War trophies from the enemy homeland.";
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::DyeTrader}] = L"Colors of war from enemy territory.";
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::OtherItemCrafter}] = L"By the flame, a human seeks crafting in Charr territory!";
-    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::SkillTrainer}] = L"Incredible! A human seeks training in the heart of Charr territory. I admire your boldness.";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::Merchant}] = L"你敢在夏尔之地交易，你的勇气令我印象深刻。";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::ArmorCrafter}] = L"从夏尔锻造炉中偷来的护甲。";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::WeaponCustomizer}] = L"在我们敌人的熔炉中锻造的武器。";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::RuneTrader}] = L"从他们萨满那里夺来的夏尔符文。";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::MaterialTrader}] = L"从夏尔权力中心偷来的材料。";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::RareMaterialTrader}] = L"来自敌人国土的战利品。";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::DyeTrader}] = L"来自敌方领土的战争色彩。";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::OtherItemCrafter}] = L"以火焰之名，一个人类在夏尔领土寻求工艺！";
+    merchant_greetings[{GW::Region::Region_CharrHomelands, TraderType::SkillTrainer}] = L"难以置信！一个人类在夏尔领土中心寻求训练。我钦佩你的胆量。";
 
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::Merchant}] = L"Welcome, eternal warrior, even here commerce finds a way.";
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::ArmorCrafter}] = L"Protection forged in eternal fires.";
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::WeaponCustomizer}] = L"Weapons forged in the fires of the eternal realm.";
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::RuneTrader}] = L"Eternal runes from beyond mortal understanding.";
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::MaterialTrader}] = L"Materials from beyond the mortal realm, precious beyond gold.";
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::RareMaterialTrader}] = L"Treasures from the realm of eternal flame.";
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::DyeTrader}] = L"Colors from the eternal realm.";
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::OtherItemCrafter}] = L"Greetings, I craft with materials touched by eternity.";
-    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::SkillTrainer}] = L"In the realm of eternal flame, I teach techniques that transcend mortal understanding.";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::Merchant}] = L"欢迎，永恒战士，即使在这里，商业也能找到出路。";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::ArmorCrafter}] = L"在永恒之火中锻造的防护。";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::WeaponCustomizer}] = L"在永恒领域之火中锻造的武器。";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::RuneTrader}] = L"超越凡人理解的永恒符文。";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::MaterialTrader}] = L"来自凡人领域之外的材料，比黄金更珍贵。";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::RareMaterialTrader}] = L"来自永恒之焰领域的珍宝。";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::DyeTrader}] = L"来自永恒领域的色彩。";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::OtherItemCrafter}] = L"日安，我用受永恒触碰的材料进行制作。";
+    merchant_greetings[{GW::Region::Region_FissureOfWoe, TraderType::SkillTrainer}] = L"在永恒之焰的领域，我传授超越凡人理解的技术。";
 
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::Merchant}] = L"Welcome to this realm of shadows, trade persists even here.";
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::ArmorCrafter}] = L"Protection forged in anguish and shadow.";
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::WeaponCustomizer}] = L"Weapons forged in anguish, tempered by eternal suffering.";
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::RuneTrader}] = L"Runes of torment from the shadow realm.";
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::MaterialTrader}] = L"Materials born of anguish, powerful beyond mortal understanding.";
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::RareMaterialTrader}] = L"Treasures from the realm of eternal torment.";
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::DyeTrader}] = L"Shadow colors from the realm of anguish.";
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::OtherItemCrafter}] = L"Greetings, shadow-walker, I craft with the essence of torment.";
-    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::SkillTrainer}] = L"In this realm of endless torment, I teach the dark arts born of eternal suffering.";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::Merchant}] = L"欢迎来到这个阴影领域，即使在这里交易也持续存在。";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::ArmorCrafter}] = L"在痛苦和阴影中锻造的防护。";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::WeaponCustomizer}] = L"在痛苦中锻造，以永恒苦难淬炼的武器。";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::RuneTrader}] = L"来自阴影领域的折磨符文。";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::MaterialTrader}] = L"痛苦中诞生的材料，超越凡人理解的强大。";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::RareMaterialTrader}] = L"来自永恒折磨领域的珍宝。";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::DyeTrader}] = L"来自痛苦领域的阴影色彩。";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::OtherItemCrafter}] = L"日安，阴影行者，我用折磨的本质进行制作。";
+    merchant_greetings[{GW::Region::Region_DomainOfAnguish, TraderType::SkillTrainer}] = L"在这个无尽折磨的领域，我传授永恒苦难中诞生的黑暗技艺。";
 
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::Merchant}] = L"Welcome, scholar, the Asura have many wondrous inventions to trade.";
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::ArmorCrafter}] = L"Asura technology meets traditional protection.";
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::WeaponCustomizer}] = L"Weapons enhanced with Asura ingenuity and magical innovation.";
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::RuneTrader}] = L"Runic magic refined by Asura intellectual prowess.";
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::MaterialTrader}] = L"Advanced materials and technological components from Asura laboratories.";
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::RareMaterialTrader}] = L"Rare components from the most advanced Asura research facilities.";
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::DyeTrader}] = L"Pigments created through superior Asura alchemical processes.";
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::OtherItemCrafter}] = L"Greetings, I craft using the most advanced Asura methodologies.";
-    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::SkillTrainer}] = L"I teach combat techniques enhanced by superior Asura intellectual analysis.";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::Merchant}] = L"欢迎，学者，阿苏拉有许多奇妙的发明可供交易。";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::ArmorCrafter}] = L"阿苏拉技术与传统防护的结合。";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::WeaponCustomizer}] = L"以阿苏拉独创性和魔法创新增强的武器。";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::RuneTrader}] = L"经阿苏拉智力精炼的符文魔法。";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::MaterialTrader}] = L"来自阿苏拉实验室的先进材料和技术组件。";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::RareMaterialTrader}] = L"来自最先进阿苏拉研究设施的稀有组件。";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::DyeTrader}] = L"通过阿苏拉卓越炼金工艺创造的颜料。";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::OtherItemCrafter}] = L"日安，我使用最先进的阿苏拉方法论进行制作。";
+    merchant_greetings[{GW::Region::Region_TarnishedCoast, TraderType::SkillTrainer}] = L"我传授经阿苏拉卓越智力分析增强的战斗技巧。";
 
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::Merchant}] = L"Welcome to the depths, few surface dwellers venture this far below.";
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::ArmorCrafter}] = L"Protection forged in the deepest caverns and underground forges.";
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::WeaponCustomizer}] = L"Weapons crafted from the treasures hidden in Tyria's depths.";
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::RuneTrader}] = L"Ancient runes discovered in the deepest underground chambers.";
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::MaterialTrader}] = L"Materials mined from the deepest veins beneath the world.";
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::RareMaterialTrader}] = L"Precious stones and metals from the world's hidden depths.";
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::DyeTrader}] = L"Deep earth colors from the underground realm.";
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::OtherItemCrafter}] = L"Greetings, I work with materials from the deepest places of the world.";
-    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::SkillTrainer}] = L"In the depths where few dare tread, I teach the underground fighting arts.";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::Merchant}] = L"欢迎来到深处，很少有地表居民敢冒险到这么远的地下。";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::ArmorCrafter}] = L"在最深洞穴和地下锻造炉中锻造的防护。";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::WeaponCustomizer}] = L"用泰瑞亚深处隐藏的珍宝打造的武器。";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::RuneTrader}] = L"在最深地下密室中发现的古老符文。";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::MaterialTrader}] = L"从世界最深矿脉中开采的材料。";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::RareMaterialTrader}] = L"来自世界隐藏深处的珍贵宝石和金属。";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::DyeTrader}] = L"来自地下领域的深土色彩。";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::OtherItemCrafter}] = L"日安，我用来自世界最深处地方的材料工作。";
+    merchant_greetings[{GW::Region::Region_DepthsOfTyria, TraderType::SkillTrainer}] = L"在很少有人敢涉足的深处，我传授地下战斗艺术。";
 
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::Merchant}] = L"Welcome to Embark Beach! Goods from across the world.";
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::ArmorCrafter}] = L"Armor from every tradition, all in one place.";
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::WeaponCustomizer}] = L"Weapons from every corner of the world.";
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::RuneTrader}] = L"Runes from across the known world.";
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::MaterialTrader}] = L"Materials from every land, what do you need?";
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::RareMaterialTrader}] = L"Rare treasures from distant shores.";
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::DyeTrader}] = L"Colors from every culture and tradition.";
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::OtherItemCrafter}] = L"Greetings, I use techniques from across the world.";
-    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::SkillTrainer}] = L"Welcome! I teach arts from every tradition.";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::Merchant}] = L"欢迎来到启航滩！来自世界各地的商品。";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::ArmorCrafter}] = L"来自所有传统的护甲，汇聚一堂。";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::WeaponCustomizer}] = L"来自世界各个角落的武器。";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::RuneTrader}] = L"来自已知世界各地的符文。";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::MaterialTrader}] = L"来自所有土地的材料，您需要什么？";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::RareMaterialTrader}] = L"来自遥远海岸的稀有珍宝。";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::DyeTrader}] = L"来自每种文化和传统的色彩。";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::OtherItemCrafter}] = L"日安，我使用来自世界各地的技术。";
+    merchant_greetings[{GW::Region::Region_BattleIslands, TraderType::SkillTrainer}] = L"欢迎！我传授来自所有传统的技艺。";
 
     const GW::UI::UIMessage messages[] = {GW::UI::UIMessage::kDialogBody, GW::UI::UIMessage::kVendorWindow,           GW::UI::UIMessage::kAgentSpeechBubble,     GW::UI::UIMessage::kMapChange,
                                           GW::UI::UIMessage::kMapLoaded,  GW::UI::UIMessage::kPreferenceValueChanged, GW::UI::UIMessage::kDialogueMessageUpdated};
@@ -1817,7 +1812,7 @@ void TextToSpeechModule::DrawSettingsInternal()
 {
     static bool show_passwords = false;
     ImGui::Separator();
-    ImGui::Text("TTS Provider:");
+    ImGui::Text("TTS 提供商：");
 
     std::vector<const char*> provider_names;
     int current_provider = 0;
@@ -1825,25 +1820,25 @@ void TextToSpeechModule::DrawSettingsInternal()
         provider_names.push_back(api_configs[i].name);
         if (api_configs[i].name == settings.current_tts_provider) current_provider = (int)i;
     }
-    if (ImGui::Combo("TTS Service", &current_provider, provider_names.data(), (int)provider_names.size())) settings.current_tts_provider = api_configs[current_provider].name;
+    if (ImGui::Combo("TTS 服务", &current_provider, provider_names.data(), (int)provider_names.size())) settings.current_tts_provider = api_configs[current_provider].name;
 
     ImGui::Separator();
-    ImGui::Text("API Configuration:");
+    ImGui::Text("API 配置：");
     const ImColor col(102, 187, 238, 255);
     auto api_config = GetCurrentAPIConfig();
     bool is_api_locked_down = !(api_config && *api_config->signup_url);
 
     if (api_config) {
         if (!is_api_locked_down) {
-            ImGui::Text("%s API Key: ", api_config->name);
+            ImGui::Text("%s API Key：", api_config->name);
             ImGui::SameLine();
             ImGui::InputTextSecret("###current provider API Key", api_config->api_key, _countof(api_config->api_key), &show_passwords);
             if (api_config->has_user_id) {
-                ImGui::Text("%s User ID: ", api_config->name);
+                ImGui::Text("%s User ID：", api_config->name);
                 ImGui::SameLine();
                 ImGui::InputTextSecret("###current provider User ID", api_config->user_id, _countof(api_config->user_id), &show_passwords);
             }
-            ImGui::TextColored(col.Value, "Click Here to get %s API credentials", api_config->name);
+            ImGui::TextColored(col.Value, "点击此处获取 %s API 凭证", api_config->name);
             if (ImGui::IsItemClicked()) {
                 GW::GameThread::Enqueue([api_config]() {
                     SendUIMessage(GW::UI::UIMessage::kOpenWikiUrl, (void*)api_config->signup_url);
@@ -1858,57 +1853,57 @@ void TextToSpeechModule::DrawSettingsInternal()
 
     if (!is_api_locked_down) {
         ImGui::NextSpacedElement();
-        ImGui::CheckboxWithHelp("Only process the first sentence of a dialog", &settings.only_use_first_sentence, "If enabled, only the first sentence of an NPC dialog will be processed.");
+        ImGui::CheckboxWithHelp("仅处理对话的第一句话", &settings.only_use_first_sentence, "如果启用，将只处理 NPC 对话的第一句话。");
         show_warning |= !settings.only_use_first_sentence;
     }
     else {
-        ImGui::TextDisabled("Note: With the chosen TTS API, only the first sentence of an NPC's dialog will be processed.");
+        ImGui::TextDisabled("注意：使用所选 TTS API 时，将只处理 NPC 对话的第一句话。");
     }
 
-    ImGui::CheckboxWithHelp("Only process the first dialog of an NPC", &settings.only_use_first_dialog, "If enabled, only the first dialog of an NPC conversation will be processed.");
+    ImGui::CheckboxWithHelp("仅处理 NPC 的第一段对话", &settings.only_use_first_dialog, "如果启用，将只处理 NPC 对话的第一段。");
     show_warning |= !settings.only_use_first_dialog;
 
-    ImGui::CheckboxWithHelp("Play goodbye message when closing NPC dialog", &settings.play_goodbye_messages, "If enabled, NPCs will say a random goodbye when you close their dialog.\n\nNote: Only english language is currently supported.");
+    ImGui::CheckboxWithHelp("关闭 NPC 对话时播放告别消息", &settings.play_goodbye_messages, "如果启用，关闭对话时 NPC 会说随机告别语。\n\n注意：目前仅支持英语。");
     show_warning |= settings.play_goodbye_messages;
 
-    ImGui::CheckboxWithHelp("Play greetings from merchants and traders", &settings.play_speech_from_vendors, "Note: For some types of traders, Only english language is currently supported.");
+    ImGui::CheckboxWithHelp("播放商人和交易者的问候语", &settings.play_speech_from_vendors, "注意：对于某些类型的交易者，目前仅支持英语。");
 
-    ImGui::Checkbox("Stop speech when dialog window is closed", &settings.stop_speech_when_dialog_closed);
+    ImGui::Checkbox("对话窗口关闭时停止语音", &settings.stop_speech_when_dialog_closed);
 
-    ImGui::TextUnformatted("Play speech in:");
+    ImGui::TextUnformatted("在以下区域播放语音：");
     ImGui::Indent();
     ImGui::StartSpacedElements(264.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Explorable Areas", &settings.play_tts_in_explorable_areas);
+    ImGui::Checkbox("可探索区域", &settings.play_tts_in_explorable_areas);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Outposts", &settings.play_tts_in_outposts);
+    ImGui::Checkbox("前哨站", &settings.play_tts_in_outposts);
     ImGui::Unindent();
 
-    ImGui::TextUnformatted("Play speech bubbles:");
+    ImGui::TextUnformatted("播放对话气泡：");
     ImGui::Indent();
     ImGui::StartSpacedElements(264.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("When in an outpost", &settings.play_speech_bubbles_in_outpost, "If enabled, speech bubbles above an NPC when in an outpost will be processed");
+    ImGui::CheckboxWithHelp("在前哨站中", &settings.play_speech_bubbles_in_outpost, "如果启用，将处理前哨站中 NPC 上方的对话气泡");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("When in an explorable area", &settings.play_speech_bubbles_in_explorable, "If enabled, speech bubbles from skills and quotes from enemies and allies within speech bubble range will be processed.");
+    ImGui::CheckboxWithHelp("在可探索区域中", &settings.play_speech_bubbles_in_explorable, "如果启用，将处理可探索区域内技能和敌友对话气泡范围内的引用。");
     show_warning |= settings.play_speech_bubbles_in_explorable;
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("From other party members", &settings.play_speech_bubbles_from_party_members, "If enabled, speech bubbles from skills and quotes from party members within speech bubble range will be processed.");
+    ImGui::CheckboxWithHelp("来自其他队伍成员", &settings.play_speech_bubbles_from_party_members, "如果启用，将处理对话气泡范围内队伍成员的技能引用。");
     show_warning |= settings.play_speech_bubbles_from_party_members;
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("From non-friendly NPCs", &settings.play_speech_from_non_friendly_npcs);
+    ImGui::Checkbox("来自非友好 NPC", &settings.play_speech_from_non_friendly_npcs);
     show_warning |= settings.play_speech_from_non_friendly_npcs;
     ImGui::Unindent();
 
-    if (ImGui::InputFloat("NPC speech bubble range", &settings.npc_speech_bubble_range, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent)) {
+    if (ImGui::InputFloat("NPC 对话气泡范围", &settings.npc_speech_bubble_range, GW::Constants::Range::Adjacent, GW::Constants::Range::Adjacent)) {
         settings.npc_speech_bubble_range = std::clamp(settings.npc_speech_bubble_range, 0.f, 2500.f);
     }
-    ImGui::ShowHelp("The range at which NPC speech bubbles will be processed. Set to 0 to disable.");
+    ImGui::ShowHelp("处理 NPC 对话气泡的范围。设为 0 以禁用。");
     show_warning |= (settings.npc_speech_bubble_range > 166.f);
 
-    if (show_warning && !is_api_locked_down) ImGui::TextColored(ImColor(IM_COL32(245, 245, 0, 255)), "Warning: Processing more lines of dialog will use up more API credits!");
+    if (show_warning && !is_api_locked_down) ImGui::TextColored(ImColor(IM_COL32(245, 245, 0, 255)), "警告：处理更多对话行将消耗更多 API 额度！");
 
-    ImGui::TextUnformatted("Play speech from:");
+    ImGui::TextUnformatted("从以下种族播放语音：");
     ImGui::Indent();
     ImGui::StartSpacedElements(264.f);
     for (auto& it : play_speech_from_race) {
@@ -1919,31 +1914,31 @@ void TextToSpeechModule::DrawSettingsInternal()
 
     if (!is_api_locked_down) {
         ImGui::Separator();
-        ImGui::Text("Custom NPC Voice Assignment:");
-        ImGui::Text("Assign specific voices to individual NPCs by their NPC ID.");
-        ImGui::Text("Voice settings (stability, similarity, etc.) will be inherited from the NPC's region/gender.");
+        ImGui::Text("自定义 NPC 语音分配：");
+        ImGui::Text("通过 NPC ID 为个别 NPC 分配特定语音。");
+        ImGui::Text("语音设置（稳定性、相似度等）将从 NPC 的地区/性别继承。");
 
         ImGui::PushItemWidth(100);
-        ImGui::InputTextWithHint("##npc_id_custom", "e.g. 1234", custom_npc_id_buffer, sizeof(custom_npc_id_buffer), ImGuiInputTextFlags_CharsDecimal);
+        ImGui::InputTextWithHint("##npc_id_custom", "例如 1234", custom_npc_id_buffer, sizeof(custom_npc_id_buffer), ImGuiInputTextFlags_CharsDecimal);
         ImGui::SameLine();
         ImGui::Text("NPC ID");
         ImGui::SameLine();
         ImGui::PushItemWidth(300);
-        ImGui::InputTextWithHint("##voice_id_custom", "e.g. 2EiwWnXFnvU5JabPnv8n", custom_voice_id_buffer, sizeof(custom_voice_id_buffer));
+        ImGui::InputTextWithHint("##voice_id_custom", "例如 2EiwWnXFnvU5JabPnv8n", custom_voice_id_buffer, sizeof(custom_voice_id_buffer));
         ImGui::SameLine();
         ImGui::Text("Voice ID");
         ImGui::PopItemWidth();
 
-        if (ImGui::Button("Add Custom Voice Assignment")) {
+        if (ImGui::Button("添加自定义语音分配")) {
             if (strlen(custom_npc_id_buffer) > 0 && strlen(custom_voice_id_buffer) > 0) {
                 try {
                     uint32_t npc_id = std::stoul(custom_npc_id_buffer);
                     special_npc_voices[npc_id] = VoiceProfile(custom_voice_id_buffer, 0.5f, 0.5f, 0.5f, 1.0f, "");
                     memset(custom_npc_id_buffer, 0, sizeof(custom_npc_id_buffer));
                     memset(custom_voice_id_buffer, 0, sizeof(custom_voice_id_buffer));
-                    VoiceLog("Added custom voice assignment for NPC ID %u", npc_id);
+                    VoiceLog("为 NPC ID %u 添加了自定义语音分配", npc_id);
                 } catch (const std::exception&) {
-                    VoiceLog("Invalid NPC ID entered");
+                    VoiceLog("输入的 NPC ID 无效");
                 }
             }
         }
@@ -1951,30 +1946,30 @@ void TextToSpeechModule::DrawSettingsInternal()
 
         if (!special_npc_voices.empty()) {
             ImGui::Separator();
-            ImGui::Text("Current Custom Voice Assignments:");
+            ImGui::Text("当前自定义语音分配：");
             std::vector<uint32_t> to_remove;
             for (const auto& [npc_id, voice_profile] : special_npc_voices) {
                 ImGui::PushID(npc_id);
                 ImGui::Text("NPC ID: %u", npc_id);
                 ImGui::SameLine(120);
-                ImGui::Text("Voice: %s", voice_profile.voice_id.c_str());
+                ImGui::Text("语音：%s", voice_profile.voice_id.c_str());
                 ImGui::SameLine();
-                ImGui::TextColored(ImColor(150, 150, 150), "(inherits region/gender settings)");
+                ImGui::TextColored(ImColor(150, 150, 150), "（继承地区/性别设置）");
                 ImGui::SameLine();
-                if (ImGui::Button("Remove")) to_remove.push_back(npc_id);
+                if (ImGui::Button("移除")) to_remove.push_back(npc_id);
                 ImGui::PopID();
             }
             for (uint32_t npc_id : to_remove) {
                 special_npc_voices.erase(npc_id);
-                VoiceLog("Removed custom voice assignment for NPC ID %u", npc_id);
+                VoiceLog("移除了 NPC ID %u 的自定义语音分配", npc_id);
             }
         }
     }
 
     ImGui::Separator();
-    ImGui::Text("Recent Activity:");
+    ImGui::Text("最近活动：");
     if (voice_log_messages.empty()) {
-        ImGui::TextDisabled("No recent activity");
+        ImGui::TextDisabled("无最近活动");
     }
     else {
         std::string combined_log;

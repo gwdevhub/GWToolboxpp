@@ -123,11 +123,11 @@ namespace {
     {
         const auto target = GW::Agents::GetTargetAsAgentLiving();
         if (!target) {
-            Log::Error("No target selected");
+            Log::Error("未选中目标");
             return false;
         }
         if (target->IsPlayer()) {
-            Log::Error("Target must be an NPC");
+            Log::Error("目标必须是 NPC");
             return false;
         }
         DWORD npc_id = target->player_number;
@@ -157,7 +157,7 @@ namespace {
             e->model_file_data = static_cast<int>(pending_transmo_add_data.npc_model_file_data);
             e->flags = static_cast<int>(pending_transmo_add_data.flags);
             npc_transmo_list.push_back(e);
-            Log::Info("Transmo entry '%s' added", e->name);
+            Log::Info("已添加变形条目 '%s'", e->name);
             return true;
         }
         pending_transmo_add_name = std::make_unique<GuiUtils::EncString>(enc_name);
@@ -177,14 +177,14 @@ namespace {
         DWORD& scale = transmo.scale;
         const GW::NPCArray& npcs = GW::GetGameContext()->world->npcs;
         if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max() - 1)) {
-            // Scale only
+            // 仅调整大小
             npc_id = a->player_number;
             if (a->transmog_npc_id & 0x20000000) {
                 npc_id = a->transmog_npc_id ^ 0x20000000;
             }
         }
         else if (npc_id == static_cast<DWORD>(std::numeric_limits<int>::max())) {
-            // Reset
+            // 重置
             npc_id = 0;
             scale = 0x64000000;
         }
@@ -195,9 +195,9 @@ namespace {
             if (!npc_model_file_id) {
                 return;
             }
-            // Need to create the NPC.
-            // Those 2 packets (P074 & P075) are used to create a new model, for instance if we want to "use" a tonic.
-            // We have to find the data that are in the NPC structure and feed them to those 2 packets.
+            // 需要创建 NPC。
+            // 这两个数据包（P074 和 P075）用于创建新模型，例如当我们想要“使用”一个变形药水时。
+            // 我们需要找到 NPC 结构中的数据并将它们提供给这两个数据包。
             GW::NPC npc = {0};
             npc.model_file_id = npc_model_file_id;
             npc.npc_flags = flags;
@@ -277,7 +277,7 @@ namespace {
             if (!ParseScale(iscale, transmo)) return false;
         }
         else if (!GetNPCInfoByName(name_arg, transmo)) {
-            Log::Error("Unknown transmo '%ls'", name_arg);
+            Log::Error("未知变形名称 '%ls'", name_arg);
             return false;
         }
         const int scale_arg_index = name_arg_index + 1;
@@ -290,7 +290,7 @@ namespace {
     bool ParseScale(const int scale, PendingTransmo& transmo)
     {
         if (scale < 6 || scale > 255) {
-            Log::Error("scale must be between [6, 255]");
+            Log::Error("大小必须在 [6, 255] 范围内");
             return false;
         }
         transmo.scale = static_cast<DWORD>(scale) << 24;
@@ -341,9 +341,9 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdTransmoTarget)
     {
-        if (argc < 2) return Log::Error("Missing /transmotarget argument");
+        if (argc < 2) return Log::Error("缺少 /transmotarget 参数");
         const auto target = GW::Agents::GetTargetAsAgentLiving();
-        if (!target) return Log::Error("Invalid /transmotarget target");
+        if (!target) return Log::Error("无效的 /transmotarget 目标");
         PendingTransmo transmo;
         if (!ParseTransmoArgs(argc, argv, 1, transmo)) return;
         TransmoAgent(target->agent_id, transmo);
@@ -359,19 +359,19 @@ namespace {
             }
             if (wcsncmp(argv[1], L"model", 5) == 0) {
                 if (argc < 6) {
-                    Log::Info("HELP for /transmo model");
-                    Log::Info("Usage: /transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [SCALE]");
-                    Log::Info("Example, transmo as Gehraz: /transmo model 4581 204020 245127 540 [15]");
-                    Log::Info("The numbers required by the command can be obtained from the GWToolbox 'Info' window, in the 'Advanced' section under the 'Target' menu. Note: the numbers must be converted from hexadecimal to decimal.");
+                    Log::Info("/transmo model 帮助");
+                    Log::Info("用法：/transmo model NPC_ID MODEL_FILE_ID MODEL_FILE FLAGS [大小]");
+                    Log::Info("示例，变形为 Gehraz：/transmo model 4581 204020 245127 540 [15]");
+                    Log::Info("命令所需的数字可以从 GWToolbox 的 '信息' 窗口中的 '目标' 菜单下的 '高级' 部分获取。注意：数字必须从十六进制转换为十进制。");
                     return;
                 }
                 int npc_id = transmo.npc_id, model_file_id = transmo.npc_model_file_id, model_file_data = transmo.npc_model_file_data, flags = transmo.flags;
                 unsigned int scale = transmo.scale;
-                if (!TextUtils::ParseInt(argv[2], &npc_id)) return Log::Error("Transmo model: invalid NPC ID '%ls', expected an integer. Example: 4581", argv[2]);
-                if (!TextUtils::ParseInt(argv[3], &model_file_id)) return Log::Error("Transmo model: invalid NPC ModelFileID '%ls', expected an integer. Example: 204020", argv[3]);
-                if (!TextUtils::ParseInt(argv[4], &model_file_data)) return Log::Error("Transmo model: invalid NPC ModelFile '%ls', expected an integer. Example: 245127", argv[4]);
-                if (!TextUtils::ParseInt(argv[5], &flags)) return Log::Error("Transmo model: invalid NPC Flags '%ls', expected an integer. Example: 540", argv[5]);
-                if (argc > 6 && !TextUtils::ParseUInt(argv[6], &scale)) return Log::Error("Transmo model: invalid scale '%ls', expected an integer between 6 and 255", argv[6]);
+                if (!TextUtils::ParseInt(argv[2], &npc_id)) return Log::Error("Transmo model：无效的 NPC ID '%ls'，应为整数。示例：4581", argv[2]);
+                if (!TextUtils::ParseInt(argv[3], &model_file_id)) return Log::Error("Transmo model：无效的 NPC ModelFileID '%ls'，应为整数。示例：204020", argv[3]);
+                if (!TextUtils::ParseInt(argv[4], &model_file_data)) return Log::Error("Transmo model：无效的 NPC ModelFile '%ls'，应为整数。示例：245127", argv[4]);
+                if (!TextUtils::ParseInt(argv[5], &flags)) return Log::Error("Transmo model：无效的 NPC Flags '%ls'，应为整数。示例：540", argv[5]);
+                if (argc > 6 && !TextUtils::ParseUInt(argv[6], &scale)) return Log::Error("Transmo model：无效的大小 '%ls'，应为 6 到 255 之间的整数", argv[6]);
                 transmo.npc_id = npc_id;
                 transmo.npc_model_file_id = model_file_id;
                 transmo.npc_model_file_data = model_file_data;
@@ -390,9 +390,9 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdTransmoAgent)
     {
-        if (argc < 3) return Log::Error("Missing /transmoagent argument");
+        if (argc < 3) return Log::Error("缺少 /transmoagent 参数");
         uint32_t agent_id;
-        if (!TextUtils::ParseUInt(argv[1], &agent_id)) return Log::Error("Invalid /transmoagent agent_id");
+        if (!TextUtils::ParseUInt(argv[1], &agent_id)) return Log::Error("无效的 /transmoagent agent_id");
         PendingTransmo transmo;
         if (!ParseTransmoArgs(argc, argv, 2, transmo)) return;
         TransmoAgent(agent_id, transmo);
@@ -446,39 +446,39 @@ void TransmoModule::Update(float)
         e->model_file_data = static_cast<int>(pending_transmo_add_data.npc_model_file_data);
         e->flags = static_cast<int>(pending_transmo_add_data.flags);
         npc_transmo_list.push_back(e);
-        Log::Info("Transmo entry '%s' added", e->name);
+        Log::Info("已添加变形条目 '%s'", e->name);
         pending_transmo_add_name.reset();
     }
 }
 
 void TransmoModule::DrawHelp()
 {
-    if (!ImGui::TreeNodeEx("Transmo Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (!ImGui::TreeNodeEx("变形命令", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         return;
     }
-    constexpr auto transmo_hint = "NPC names are configured in Chat Settings > Transmo NPC List";
+    constexpr auto transmo_hint = "NPC 名称在 聊天设置 > 变形 NPC 列表 中配置";
     ImGui::Bullet();
-    ImGui::Text("'/transmo <npc_name> [size (6-255)]' to change your appearance into an NPC.\n"
-        "'/transmo' to change your appearance into target NPC.\n"
-        "'/transmo add' to add the current target as a named transmo entry.\n"
-        "'/transmo reset' to reset your appearance.");
+    ImGui::Text("'/transmo <npc_name> [大小 (6-255)]' 将你自己变形为 NPC。\n"
+        "'/transmo' 将你自己变形为目标 NPC。\n"
+        "'/transmo add' 将当前目标添加为命名的变形条目。\n"
+        "'/transmo reset' 重置你的外观。");
     ImGui::ShowHelp(transmo_hint);
     ImGui::Bullet();
-    ImGui::Text("'/transmoparty <npc_name> [size (6-255)]' to change your party's appearance into an NPC.\n"
-        "'/transmoparty' to change your party's appearance into target NPC.\n"
-        "'/transmoparty reset' to reset your party's appearance.");
+    ImGui::Text("'/transmoparty <npc_name> [大小 (6-255)]' 将你的队伍变形为 NPC。\n"
+        "'/transmoparty' 将你的队伍变形为目标 NPC。\n"
+        "'/transmoparty reset' 重置你队伍的外观。");
     ImGui::ShowHelp(transmo_hint);
     ImGui::Bullet();
-    ImGui::Text("'/transmotarget <npc_name> [size (6-255)]' to change your target's appearance into an NPC.\n"
-        "'/transmotarget reset' to reset your target's appearance.");
+    ImGui::Text("'/transmotarget <npc_name> [大小 (6-255)]' 将你的目标变形为 NPC。\n"
+        "'/transmotarget reset' 重置你目标的外观。");
     ImGui::ShowHelp(transmo_hint);
     ImGui::TreePop();
 }
 
 void TransmoModule::DrawSettingsInternal()
 {
-    ImGui::TextUnformatted("Transmo NPC List");
-    ImGui::ShowHelp("Named NPC models usable with '/transmo <name>', '/transmoparty <name>' etc.\nGet model data from the Info window (Advanced > Target section).");
+    ImGui::TextUnformatted("变形 NPC 列表");
+    ImGui::ShowHelp("可用于 '/transmo <名称>'、'/transmoparty <名称>' 等的命名 NPC 模型。\n从信息窗口（高级 > 目标部分）获取模型数据。");
 
     static auto OnConfirmDeleteTransmo = [](bool result, void* wparam) {
         if (!result) {
@@ -494,12 +494,12 @@ void TransmoModule::DrawSettingsInternal()
 
     constexpr ImGuiTableFlags table_flags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingFixedFit;
     if (ImGui::BeginTable("###transmo_npc_table", 7, table_flags)) {
-        ImGui::TableSetupColumn("Name",          ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("名称",          ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("NPC ID",        ImGuiTableColumnFlags_WidthFixed, 60.f);
-        ImGui::TableSetupColumn("Scale",         ImGuiTableColumnFlags_WidthFixed, 45.f);
-        ImGui::TableSetupColumn("Model File ID", ImGuiTableColumnFlags_WidthFixed, 80.f);
-        ImGui::TableSetupColumn("Model File",    ImGuiTableColumnFlags_WidthFixed, 80.f);
-        ImGui::TableSetupColumn("Flags",         ImGuiTableColumnFlags_WidthFixed, 70.f);
+        ImGui::TableSetupColumn("大小",         ImGuiTableColumnFlags_WidthFixed, 45.f);
+        ImGui::TableSetupColumn("模型文件 ID", ImGuiTableColumnFlags_WidthFixed, 80.f);
+        ImGui::TableSetupColumn("模型文件",    ImGuiTableColumnFlags_WidthFixed, 80.f);
+        ImGui::TableSetupColumn("标志",         ImGuiTableColumnFlags_WidthFixed, 70.f);
         ImGui::TableSetupColumn("##del",         ImGuiTableColumnFlags_WidthFixed, 30.f);
         ImGui::TableHeadersRow();
 
@@ -526,17 +526,17 @@ void TransmoModule::DrawSettingsInternal()
             ImGui::SetNextItemWidth(-1);
             ImGui::InputInt("##flags", &entry->flags, 0);
             ImGui::TableSetColumnIndex(6);
-            ImGui::SmallConfirmButton("X", "Delete this transmo entry?", OnConfirmDeleteTransmo, entry);
+            ImGui::SmallConfirmButton("X", "删除此变形条目？", OnConfirmDeleteTransmo, entry);
             ImGui::PopID();
         }
         ImGui::EndTable();
     }
 
     if (pending_transmo_add_name) {
-        ImGui::TextDisabled("Adding target... (decoding name)");
+        ImGui::TextDisabled("正在添加目标...（解码名称中）");
     }
 
-    if (ImGui::Button("Add Entry")) {
+    if (ImGui::Button("添加条目")) {
         auto* e = new TransmoEntry;
         snprintf(e->name, sizeof(e->name), "new_entry_%zu", npc_transmo_list.size());
         npc_transmo_list.push_back(e);
@@ -547,14 +547,14 @@ void TransmoModule::DrawSettingsInternal()
     if (!has_npc_target) {
         ImGui::BeginDisabled();
     }
-    if (ImGui::Button("Add current target")) {
+    if (ImGui::Button("添加当前目标")) {
         AddCurrentTargetToTransmoList();
     }
     if (!has_npc_target) {
         ImGui::EndDisabled();
     }
     ImGui::SameLine();
-    ImGui::SmallConfirmButton("Reset to defaults", "Reset the transmo list to built-in defaults?\nAll custom entries will be lost.", [](bool result, void*) {
+    ImGui::SmallConfirmButton("重置为默认", "将变形列表重置为内置默认值？\n所有自定义条目将丢失。", [](bool result, void*) {
         if (result) {
             ResetNpcTransmoListToDefaults();
         }
@@ -582,7 +582,7 @@ void TransmoModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         }
         return;
     }
-    // Legacy ini list; only override defaults if we've previously saved settings
+    // 旧版 ini 列表；仅当我们之前保存过设置时才覆盖默认值
     const auto transmo_section = "Transmo NPC List";
     if (legacy && legacy->GetValue(transmo_section, "_saved", nullptr) != nullptr) {
         for (auto* e : npc_transmo_list) {
