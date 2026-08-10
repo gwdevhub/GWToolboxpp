@@ -4,7 +4,7 @@
 namespace CompletionWindow_Constants {
     using namespace GW::Constants;
 
-    constexpr std::array campaign_names = {"核心", "预言", "盟约", "黄昏", "北方之眼", "地下城"};
+    constexpr std::array campaign_names = {"核心", "英雄之路", "盟与敌", "英雄世界", "北方之眼", "地监"};
 
     const char* CampaignName(const Campaign camp) { return campaign_names[std::to_underlying(camp)]; }
 
