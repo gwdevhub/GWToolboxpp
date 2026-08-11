@@ -30,7 +30,8 @@
 #include <Utils/TeamBuildEncoder.h>
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
-constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini"; // legacy, read-only fallback
+
+constexpr const wchar_t* INI_FILENAME = L"herobuilds.ini"; // 旧版只读备选
 constexpr const wchar_t* JSON_FILENAME = L"herobuilds.json";
 
 namespace {
@@ -38,14 +39,14 @@ namespace {
     GW::HookEntry OnRecvWhisper_Entry;
     GW::HookEntry OnOpenTemplate_Entry;
 
-    // Pool of received/detached teambuilds shown as standalone windows (not in the main list).
-    // Entries are removed when their window is closed and no other owner holds the shared_ptr.
+    // 收到的或分离的团队构建池，以独立窗口显示（不在主列表中）。
+    // 当窗口关闭且没有其他所有者持有 shared_ptr 时，条目会被移除。
     std::vector<std::shared_ptr<TeamBuild>> detached_pool{};
 
     HeroBuildsWindow::Settings settings;
 
     // ----------------------------------------------------------------
-    // Hero build group ordering
+    // 英雄构建分组排序
     // ----------------------------------------------------------------
 
     struct HerobuildGroup {
@@ -62,9 +63,8 @@ namespace {
         return it != hero_build_groups.end() ? it->second.sort_order : SIZE_MAX;
     }
 
-    // Creates the group if it doesn't exist, assigning a provisional sort_order
-    // equal to the current group count (so first-seen order is preserved).
-    // Returns the group (existing or newly created).
+    // 如果组不存在则创建，赋予一个临时的 sort_order（等于当前组数量，以保持首次出现的顺序）。
+    // 返回组（已存在或新建）。
     HerobuildGroup& UpsertGroup(const std::string& name)
     {
         if (!hero_build_groups.contains(name)) {
@@ -86,15 +86,15 @@ namespace {
 
     // ----------------------------------------------------------------
 
-    // GW file 0x268f6: 2x2 sprite sheet (tick/cross overlays)
-    // Bottom-left sprite (col 0, row 1) = semi-transparent cross = "disabled" overlay
+    // GW 文件 0x268f6: 2x2 精灵表（勾选/叉号叠加层）
+    // 左下角精灵（列0，行1）= 半透明叉号 = “禁用”叠加层
     IDirect3DTexture9** skill_toggle_sprite = nullptr;
 
     using GW::Constants::HeroID;
 
-    // hero index is an arbitrary index.
-    // We aim to have the same order as in the gw client.
-    // Razah is after the mesmers because all players that don't have mercenaries have it set as mesmer.
+    // hero index 是一个任意的索引。
+    // 我们旨在与 GW 客户端的顺序保持一致。
+    // Razah 排在幻术师后面，因为所有没有雇佣兵的玩家都将其设置为幻术师。
     constexpr std::array HeroIndexToID = {
         HeroID::NoHero,
         HeroID::Goren,
@@ -153,9 +153,9 @@ namespace {
 
         status->blocked = true;
 
-        wcscpy(packet->link_prefix, L"Teambuild: ");
+        wcscpy(packet->link_prefix, L"团队构建: ");
 
-        const auto new_name = std::format(L"{}'s Teambuild", packet->sender);
+        const auto new_name = std::format(L"{} 的团队构建", packet->sender);
 
         wcscpy(packet->label, new_name.c_str());
     }
@@ -185,7 +185,7 @@ namespace {
     }
 
     TeamBuild FromCurrentTeam() {
-        TeamBuild tb(std::format("{}'s Teambuild, {}", TextUtils::WStringToString(GW::AccountMgr::GetCurrentPlayerName()),TextUtils::GetFormattedDateTime()));
+        TeamBuild tb(std::format("{} 的团队构建, {}", TextUtils::WStringToString(GW::AccountMgr::GetCurrentPlayerName()),TextUtils::GetFormattedDateTime()));
         tb.has_hero_slots = true;
         tb.edit_open = true;
         GW::SkillbarMgr::SkillTemplate skill_template;
@@ -298,13 +298,13 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             const auto player_profession = me ? static_cast<GW::Constants::Profession>(me->primary) : GW::Constants::Profession::None;
             if (player_profession != GW::Constants::Profession::None) {
                 char filter_label[64];
-                snprintf(filter_label, sizeof(filter_label), "Filter by %s", ToolboxUtils::GetProfessionName(player_profession)->string().c_str());
+                snprintf(filter_label, sizeof(filter_label), "按 %s 过滤", ToolboxUtils::GetProfessionName(player_profession)->string().c_str());
                 ImGui::Checkbox(filter_label, &settings.filter_by_profession);
             }
             const float btn_width = 60.0f * ImGui::FontScale();
             const float& item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 
-            // Collect filtered builds, preserving order
+            // 收集过滤后的构建，保持顺序
             std::vector<TeamBuild*> filtered;
             for (TeamBuild& tbuild : teambuilds) {
                 if (settings.filter_by_profession && player_profession != GW::Constants::Profession::None) {
@@ -323,14 +323,13 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 
             bool vector_invalidated = false;
 
-            // Group builds by name
+            // 按组名分组构建
             std::unordered_map<std::string, std::vector<TeamBuild*>> by_group;
             for (TeamBuild* tbuild : filtered) {
                 by_group[std::string(tbuild->group)].push_back(tbuild);
             }
 
-            // Auto-register groups that were typed into the "Group" field but have
-            // not yet been written to file (and so have no herobuildgroup entry).
+            // 自动注册在“分组”字段中输入但尚未写入文件的组（因此没有 herobuildgroup 条目）。
             for (const auto& [gname, _] : by_group) {
                 if (!gname.empty() && !hero_build_groups.contains(gname)) {
                     UpsertGroup(gname);
@@ -339,7 +338,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 
 
 
-            // Order named groups by sort_order; ungrouped builds appear last.
+            // 按 sort_order 对命名组排序；未分组的构建显示在最后。
             std::vector<std::string> group_order;
             {
                 std::vector<const HerobuildGroup*> sorted_grps;
@@ -380,7 +379,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 const bool ctrl_held = ImGui::GetIO().KeyCtrl;
                 const bool send_disabled = ctrl_held && tbuild.ChatCodeTooLong();
                 if (send_disabled) ImGui::BeginDisabled();
-                if (ImGui::Button(ctrl_held ? "Send" : "Load", ImVec2(btn_width, 0))) {
+                if (ImGui::Button(ctrl_held ? "发送" : "加载", ImVec2(btn_width, 0))) {
                     if (ctrl_held) {
                         tbuild.Send();
                     }
@@ -391,10 +390,10 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 if (send_disabled) ImGui::EndDisabled();
                 if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
                     if (send_disabled) {
-                        ImGui::SetTooltip("Teambuild code is too long to send in chat.\n[TB;<code>] would exceed 120 characters.");
+                        ImGui::SetTooltip("团队构建代码太长，无法在聊天中发送。\n[TB;<code>] 将超过 120 个字符。");
                     }
                     else {
-                        ImGui::SetTooltip(ctrl_held ? "Click to send to team chat" : "Click to load builds to heroes and player. Ctrl + Click to send to chat.");
+                        ImGui::SetTooltip(ctrl_held ? "点击发送到团队聊天" : "点击将构建加载到英雄和玩家。按住 Ctrl 点击则发送到聊天。");
                     }
                 }
 
@@ -415,7 +414,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                 else {
                     ImGui::PushID(group_name.c_str());
 
-                    // A named group is "last" when no further named group follows it.
+                    // 当没有后续命名组时，该组被视为“最后”。
                     const bool is_first = (gi == 0);
                     const bool is_last = (gi + 1 >= group_order.size() || group_order[gi + 1].empty());
 
@@ -423,7 +422,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     const float btn_y = ImGui::GetCursorPosY();
                     const bool open = ImGui::CollapsingHeader(group_name.c_str(), header_flags);
 
-                    // Overlay ↑/↓ buttons on the right side of the header row.
+                    // 在标题行右侧覆盖显示 ↑/↓ 按钮。
                     {
                         const float btn_sz = ImGui::GetFrameHeight();
                         const float spacing = ImGui::GetStyle().ItemSpacing.x;
@@ -440,7 +439,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                                 SortTeambuilds(teambuilds);
                                 builds_changed = true;
                             }
-                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move group down");
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("将分组下移");
                             btn_x -= spacing;
                         }
                         if (!is_first) {
@@ -452,7 +451,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                                 SortTeambuilds(teambuilds);
                                 builds_changed = true;
                             }
-                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("Move group up");
+                            if (ImGui::IsItemHovered()) ImGui::SetTooltip("将分组上移");
                         }
                     }
 
@@ -466,7 +465,7 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
                     ImGui::PopID();
                 }
             }
-            if (ImGui::Button("Add Teambuild", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            if (ImGui::Button("添加团队构建", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 TeamBuild tb = FromCurrentTeam();
                 tb.has_hero_slots = tb.edit_open = true;
                 builds_changed = true;
@@ -477,15 +476,15 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
     }
 
-    // Draw edit windows for each open teambuild using unified DrawEditWindow
+    // 使用统一的 DrawEditWindow 为每个打开的团队构建绘制编辑窗口
     for (size_t i = 0; i < teambuilds.size(); i++) {
         if (!teambuilds[i].edit_open) continue;
         if (!teambuilds[i].DrawEditWindow(i, teambuilds, builds_changed)) {
-            break; // teambuild was deleted; teambuilds vector modified
+            break; // teambuild 被删除，teambuilds 向量被修改
         }
     }
 
-    // Draw detached teambuild windows (received builds not in the main list).
+    // 绘制分离的团队构建窗口（收到的构建，不在主列表中）
     for (auto& tbuild_ptr : detached_pool) {
         tbuild_ptr->DrawDetachedWindow(teambuilds, builds_changed);
     }
@@ -522,12 +521,12 @@ void HeroBuildsWindow::Update(float)
         last_instance_type = instance_type;
     }
 
-    // GC detached pool: remove closed entries with no external owners
+    // GC 分离池：移除已关闭且无外部所有者的条目
     std::erase_if(detached_pool, [](const auto& ptr) {
         return !ptr->edit_open && ptr.use_count() == 1;
     });
 
-    // if we open the window, load from file. If we close the window, save to file.
+    // 如果打开窗口，从文件加载；如果关闭窗口，保存到文件。
     static bool old_visible = false;
     bool cur_visible = visible;
     for (const TeamBuild& tbuild : teambuilds) cur_visible |= tbuild.edit_open;
@@ -542,7 +541,7 @@ void HeroBuildsWindow::Update(float)
 void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
 {
     if (argc < 2) {
-        Log::ErrorW(L"Syntax: /%s [hero_build_name|build_code]", argv[0]);
+        Log::ErrorW(L"语法: /%s [英雄构建名称|构建代码]", argv[0]);
         return;
     }
     std::wstring arg = argv[1];
@@ -554,7 +553,7 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
     if (TeamBuildEncoder::IsEncodedTeamBuild(arg)) {
         TeamBuild tbuild;
         if (!TeamBuildEncoder::EncodedToTeamBuild(arg, tbuild)) {
-            Log::ErrorW(L"Failed to decode team build code");
+            Log::ErrorW(L"解码团队构建代码失败");
             return;
         }
         tbuild.has_hero_slots = true;
@@ -566,7 +565,7 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
     if (TeamBuildEncoder::IsDaybreakTeamBuild(arg_s)) {
         TeamBuild tbuild;
         if (!TeamBuildEncoder::DaybreakToTeamBuild(arg_s, tbuild)) {
-            Log::ErrorW(L"Failed to decode team build code");
+            Log::ErrorW(L"解码团队构建代码失败");
             return;
         }
         tbuild.has_hero_slots = true;
@@ -576,7 +575,7 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
 
     const TeamBuild* found = Instance().GetTeambuildByName(arg_s);
     if (!found) {
-        Log::ErrorW(L"No hero build found for '%s'", arg.c_str());
+        Log::ErrorW(L"未找到 '%s' 的英雄构建", arg.c_str());
         return;
     }
     found->Load();
@@ -584,11 +583,11 @@ void CHAT_CMD_FUNC(HeroBuildsWindow::CmdHeroTeamBuild)
 
 void HeroBuildsWindow::DrawHelp()
 {
-    if (!ImGui::TreeNodeEx("Hero Team Build Chat Commands", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (!ImGui::TreeNodeEx("英雄团队构建聊天命令", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         return;
     }
     ImGui::Bullet();
-    ImGui::Text("'/heroteam <name|code>' or '/herobuild <name|code>' load a hero team build by partial name, Daybreak build code, or encoded wstring.");
+    ImGui::Text("'/heroteam <名称|代码>' 或 '/herobuild <名称|代码>' 按部分名称、Daybreak 构建代码或加密字符串加载英雄团队构建。");
     ImGui::TreePop();
 }
 
@@ -601,8 +600,8 @@ void HeroBuildsWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 
 void HeroBuildsWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Hide Hero Build windows when entering explorable area", &settings.hide_when_entering_explorable);
-    ImGui::CheckboxWithHelp("Only show one teambuild window at a time", &settings.one_teambuild_at_a_time, "Close other teambuild windows when you open a new one");
+    ImGui::Checkbox("进入探索区域时隐藏英雄构建窗口", &settings.hide_when_entering_explorable);
+    ImGui::CheckboxWithHelp("每次只显示一个团队构建窗口", &settings.one_teambuild_at_a_time, "打开新窗口时关闭其他团队构建窗口");
 }
 
 void HeroBuildsWindow::SaveSettings(SettingsDoc& doc)
@@ -622,7 +621,7 @@ void HeroBuildsWindow::LoadFromFile()
         std::string buffer;
         HeroBuildsFile file;
         if (!Resources::ReadFile(json_path, buffer) || glz::read<glz::opts{.error_on_unknown_keys = false}>(file, buffer)) {
-            Log::Warning("Failed to read %ls", json_path.filename().c_str());
+            Log::Warning("读取 %ls 失败", json_path.filename().c_str());
         }
         else {
             for (const auto& group : file.groups) {
@@ -636,14 +635,14 @@ void HeroBuildsWindow::LoadFromFile()
                 tb.has_hero_slots = true;
                 tb.mode = entry.mode;
                 tb.group = entry.group;
-                // Groups only referenced by a build get a provisional first-seen sort_order.
+                // 仅被构建引用的组会获得临时的首次出现 sort_order。
                 if (!tb.group.empty()) {
                     UpsertGroup(tb.group);
                 }
                 for (const auto& build : entry.builds) {
                     tb.builds.push_back(Build(build.name, build.code, build.hero_id, build.show_panel ? 1 : 0, build.behavior, build.disabled_skills));
                 }
-                // The legacy loader always produced 8 slots (player + 7 heroes).
+                // 旧版加载器总是产生 8 个槽位（玩家 + 7 个英雄）。
                 while (tb.builds.size() < 8) {
                     tb.builds.emplace_back();
                 }
@@ -652,7 +651,7 @@ void HeroBuildsWindow::LoadFromFile()
         }
     }
     else {
-        // Legacy herobuilds.ini parser; only used when herobuilds.json doesn't exist yet.
+        // 旧版 herobuilds.ini 解析器；仅在 herobuilds.json 不存在时使用。
         ToolboxIni inifile(false, false, false);
         inifile.LoadFile(Resources::GetLegacySettingFile(INI_FILENAME).c_str());
 
@@ -661,8 +660,8 @@ void HeroBuildsWindow::LoadFromFile()
         for (const auto& entry : entries) {
             const char* section = entry.pItem;
 
-            // herobuildgroup sections carry sort_order metadata for named groups.
-            // They may appear before or after the builds that reference them.
+            // herobuildgroup 节携带命名组的 sort_order 元数据。
+            // 它们可能出现在引用它们的构建之前或之后。
             if (strncmp(section, "herobuildgroup", 14) == 0) {
                 const char* name = inifile.GetValue(section, "name", "");
                 if (!*name) continue;
@@ -680,8 +679,8 @@ void HeroBuildsWindow::LoadFromFile()
             tb.mode = inifile.GetLongValue(section, "mode", false);
             tb.group = inifile.GetValue(section, "group", "");
 
-            // Create the group with a provisional sort_order if it hasn't been seen yet.
-            // An explicit herobuildgroup section (processed above or below) will overwrite it.
+            // 如果尚未见过该组，则创建并赋予临时 sort_order。
+            // 显式的 herobuildgroup 节（稍后或之前处理）会覆盖它。
             if (!tb.group.empty()) {
                 UpsertGroup(tb.group);
             }
@@ -704,7 +703,7 @@ void HeroBuildsWindow::LoadFromFile()
                 snprintf(dskillskey, buffer_size, "dskills%d", i);
                 const char* nameval = inifile.GetValue(section, namekey, "");
                 const char* templateval = inifile.GetValue(section, templatekey, "");
-                // Try new heroid key first; fall back to old heroindex key for backward compat
+                // 首先尝试新的 heroid 键；若没有则回退到旧的 heroindex 键以兼容旧版
                 HeroID hero_id = HeroID::NoHero;
                 const long saved_hero_id = inifile.GetLongValue(section, heroidkey, -1);
                 if (saved_hero_id >= 0) {
@@ -726,12 +725,10 @@ void HeroBuildsWindow::LoadFromFile()
         }
     }
 
-    // Sort so that builds belonging to the same group are contiguous and groups
-    // appear in ascending sort_order. Relative order within each group is preserved.
+    // 排序使得属于同一组的构建连续，且组按升序 sort_order 排列。组内相对顺序保持不变。
     SortTeambuilds(teambuilds);
 
-    // Advance the shared counter past all restored IDs so newly created builds
-    // don't collide with the persisted ones.
+    // 将共享计数器推进到所有已恢复 ID 之后，以便新创建的构建不会与持久化的冲突。
     for (const auto& tb : teambuilds) {
         uint32_t numeric_id = 0;
         if (std::from_chars(tb.ui_id.data(), tb.ui_id.data() + tb.ui_id.size(), numeric_id).ec == std::errc{})
@@ -762,13 +759,13 @@ void HeroBuildsWindow::SaveToFile() const
         }
     }
 
-    // Collect groups that are still referenced by at least one build.
+    // 收集仍被至少一个构建引用的组。
     std::unordered_set<std::string> used_groups;
     for (const auto& tb : teambuilds) {
         if (!tb.group.empty()) used_groups.insert(tb.group);
     }
 
-    // Build a sorted list of used groups; write with normalized 0-based sort_order.
+    // 构建已使用组的排序列表，写入归一化的 0 基 sort_order。
     std::vector<std::pair<std::string, size_t>> sorted_groups;
     for (const auto& [name, grp] : hero_build_groups) {
         if (used_groups.contains(name)) {
@@ -793,7 +790,7 @@ TeamBuild* HeroBuildsWindow::GetTeambuildByName(const std::string& build_name_se
     for (auto& tb : teambuilds) {
         std::string name = TextUtils::ToLower(TextUtils::RemovePunctuation(tb.name));
         if (name.length() < compare.length()) {
-            continue; // String entered by user is longer
+            continue; // 用户输入的字符串更长
         }
         if (name.rfind(compare) == 0) {
             return &tb;

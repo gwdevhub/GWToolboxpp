@@ -29,7 +29,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Hero Builds"; }
+    [[nodiscard]] const char* Name() const override { return "英雄配装"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
     struct Settings {

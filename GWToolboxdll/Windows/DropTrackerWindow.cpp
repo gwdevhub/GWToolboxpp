@@ -18,7 +18,7 @@ namespace {
     enum class GroupMode { None, ItemName, Map, Rarity, Type, Weapon };
 
     GroupMode current_group_mode = GroupMode::None;
-    const char* group_mode_names[] = {"None", "Item Name", "Map", "Rarity", "Type", "Weapon"};
+    const char* group_mode_names[] = {"无", "物品名称", "地图", "稀有度", "类型", "武器"};
     DropTrackerWindow::Settings settings;
     
     bool IsWeapon(const ItemDrops::PendingDrop* drop)
@@ -44,7 +44,7 @@ namespace {
     std::string GetWeaponCategory(const ItemDrops::PendingDrop* drop)
     {
         if (!IsWeapon(drop)) {
-            return "Non-Weapon";
+            return "非武器";
         }
 
         std::string category = GW::Items::GetItemTypeName(drop->type);
@@ -64,14 +64,14 @@ namespace {
     void DrawDefaultTable(std::vector<ItemDrops::PendingDrop*>& drops)
     {
         if (ImGui::BeginTable("drops_table", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("Icon", ImGuiTableColumnFlags_WidthFixed, 30.0f);
-            ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-            ImGui::TableSetupColumn("Item", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 60.0f);
-            ImGui::TableSetupColumn("Rarity", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-            ImGui::TableSetupColumn("Qty", ImGuiTableColumnFlags_WidthFixed, 30.0f);
-            ImGui::TableSetupColumn("Value(Gold)", ImGuiTableColumnFlags_WidthFixed, 40.0f);
-            ImGui::TableSetupColumn("Map", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("图标", ImGuiTableColumnFlags_WidthFixed, 30.0f);
+            ImGui::TableSetupColumn("时间", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableSetupColumn("物品", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("类型", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            ImGui::TableSetupColumn("稀有度", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+            ImGui::TableSetupColumn("数量", ImGuiTableColumnFlags_WidthFixed, 30.0f);
+            ImGui::TableSetupColumn("价值(金币)", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+            ImGui::TableSetupColumn("地图", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableHeadersRow();
 
             for (auto drop : drops) {
@@ -109,11 +109,11 @@ namespace {
     {
         if (ImGui::BeginTable("grouped_table", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn(group_mode_names[static_cast<int>(current_group_mode)], ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 60.0f);
-            ImGui::TableSetupColumn("Total Qty", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableSetupColumn("计数", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            ImGui::TableSetupColumn("总数量", ImGuiTableColumnFlags_WidthFixed, 70.0f);
             ImGui::TableHeadersRow();
 
-            int group_idx = 0; // Use a stable index for each group
+            int group_idx = 0; // 为每个组使用稳定的索引
             for (const auto& [key, items] : grouped) {
                 uint32_t total_qty = 0;
                 for (const auto* item : items) {
@@ -123,11 +123,11 @@ namespace {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
 
-                // Use the index as the ID, not the string content
+                // 使用索引作为ID，而不是字符串内容
                 ImGui::PushID(group_idx++);
 
-                // Use TreeNodeEx with a simple label
-                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(Unknown)" : key.c_str());
+                // 使用TreeNodeEx，简单的标签
+                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(未知)" : key.c_str());
 
                 ImGui::TableNextColumn();
                 ImGui::Text("%zu", items.size());
@@ -137,7 +137,7 @@ namespace {
                 if (open) {
                     int item_idx = 0;
                     for (auto drop : items) {
-                        ImGui::PushID(item_idx++); // Unique ID for each sub-item
+                        ImGui::PushID(item_idx++); // 为每个子项提供唯一ID
 
                         std::tm tm_buf{};
                         localtime_s(&tm_buf, &drop->system_time);
@@ -173,12 +173,12 @@ namespace {
     void DrawWeaponsTable(const std::map<std::string, std::vector<ItemDrops::PendingDrop*>>& grouped)
     {
         if (ImGui::BeginTable("grouped_table", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("Weapon Type", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-            ImGui::TableSetupColumn("Damage Range", ImGuiTableColumnFlags_WidthFixed, 100.0f);
-            ImGui::TableSetupColumn("Requirement", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-            ImGui::TableSetupColumn("Total Qty", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-            ImGui::TableSetupColumn("Avg Value", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableSetupColumn("武器类型", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("计数", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+            ImGui::TableSetupColumn("伤害范围", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            ImGui::TableSetupColumn("需求", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+            ImGui::TableSetupColumn("总数量", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableSetupColumn("平均价值", ImGuiTableColumnFlags_WidthFixed, 70.0f);
             ImGui::TableHeadersRow();
 
             int group_idx = 0;
@@ -207,7 +207,7 @@ namespace {
                 ImGui::TableNextColumn();
 
                 ImGui::PushID(group_idx++);
-                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(Unknown)" : key.c_str());
+                bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(未知)" : key.c_str());
 
                 ImGui::TableNextColumn();
                 ImGui::Text("%zu", items.size());
@@ -248,7 +248,7 @@ namespace {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
 
-                        // Show item details with weapon stats
+                        // 显示带有武器属性的物品详情
                         ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", drop->quantity);
@@ -292,15 +292,15 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
         auto& drops = ItemDrops::Instance().GetDropHistory();
 
         if (!ItemDrops::Instance().IsTrackingEnabled()) {
-            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Drop tracking is disabled. Enable it in Item Settings to use this.");
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "掉落追踪已禁用。请在物品设置中启用才能使用此功能。");
             ImGui::Separator();
         }
 
-        if (ImGui::Button("Clear")) {
+        if (ImGui::Button("清空")) {
             ItemDrops::Instance().ClearDropHistory();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save to disk")) {
+        if (ImGui::Button("保存到磁盘")) {
             std::filesystem::path filename = "drops.csv";
             filename = Resources::GetPath(filename);
             Resources::SaveFileDialog([](const char* chosen_path) {
@@ -310,14 +310,14 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
             }, "csv", filename.string().c_str());
         }
         ImGui::SameLine();
-        ImGui::Text("Total drops: %zu", drops.size());
+        ImGui::Text("总掉落数: %zu", drops.size());
         ImGui::SameLine();
-        ImGui::Text("Group By:");
+        ImGui::Text("分组方式:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(120.0f);
         ImGui::Combo("##GroupByCombo", reinterpret_cast<int*>(&current_group_mode), group_mode_names, IM_ARRAYSIZE(group_mode_names));
         ImGui::SameLine();
-        ImGui::Text("Total Gold Value:");
+        ImGui::Text("总金币价值:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(120.0f);
         ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "%d", ItemDrops::Instance().GetTotalGoldValue());
@@ -366,7 +366,7 @@ void DropTrackerWindow::Draw(IDirect3DDevice9*)
 }
 
 void DropTrackerWindow::DrawSettingsInternal() {
-    ImGui::DragFloat("Item Icon Size", &settings.icon_size, 16, 0, 64);
+    ImGui::DragFloat("物品图标大小", &settings.icon_size, 16, 0, 64);
 }
 
 void DropTrackerWindow::Initialize()

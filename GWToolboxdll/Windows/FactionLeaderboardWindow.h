@@ -14,7 +14,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Faction Leaderboard"; }
+    [[nodiscard]] const char* Name() const override { return "阵营排行榜"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
     // Draw user interface. Will be called every frame if the element is visible

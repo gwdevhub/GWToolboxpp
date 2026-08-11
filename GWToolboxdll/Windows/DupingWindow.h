@@ -13,8 +13,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Duping"; }
-    [[nodiscard]] const char* Description() const override { return "Keeps track of soul/water/mind tormentor counts in Ravenheart Gloom"; }
+    [[nodiscard]] const char* Name() const override { return "欺骗?"; }
+    [[nodiscard]] const char* Description() const override { return "在乌鸦之心的阴影中追踪灵魂/水/心灵折磨者的数量"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_COPY; }
 
     struct Settings {

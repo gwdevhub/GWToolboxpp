@@ -76,7 +76,7 @@ public:
         Instance().doors.emplace(object_id, d);
         return d;
     };
-    [[nodiscard]] const char* Name() const override { return "Door Monitor"; }
+    [[nodiscard]] const char* Name() const override { return "传送门监控"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_DOOR_OPEN; }
 
     void Initialize() override;

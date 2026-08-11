@@ -13,8 +13,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Drop Tracker"; }
-    [[nodiscard]] const char* Description() const override { return "Shows you what drops you've gotten"; }
+    [[nodiscard]] const char* Name() const override { return "掉落追踪"; }
+    [[nodiscard]] const char* Description() const override { return "显示获得的掉落物品"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_COINS; }
 
     struct Settings {

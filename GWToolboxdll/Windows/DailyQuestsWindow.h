@@ -14,7 +14,7 @@ public:
         return instance;
     }
     DailyQuests() { show_menubutton = can_show_in_main_window; }
-    [[nodiscard]] const char* Name() const override { return "Daily Quests"; }
+    [[nodiscard]] const char* Name() const override { return "日常任务"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CALENDAR_ALT; }
     void Initialize() override;
     void Terminate() override;

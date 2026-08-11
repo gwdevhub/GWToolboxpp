@@ -17,7 +17,7 @@ public:
         return instance;
     }
 
-    const char* Name() const override { return "Market Browser"; }
+    const char* Name() const override { return "在线市场"; }
     const char* Icon() const override { return ICON_FA_SHOPPING_CART; }
 
     struct Settings {

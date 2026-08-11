@@ -20,15 +20,15 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
     const float short_text_width = 80.0f * ImGui::FontScale();
     const float avail_width = ImGui::GetContentRegionAvail().x;
     const float long_text_width = 200.0f * ImGui::FontScale();
-    ImGui::Text("Rank");
+    ImGui::Text("排名");
     ImGui::SameLine(offset += tiny_text_width);
-    ImGui::Text("Allegiance");
+    ImGui::Text("阵营");
     ImGui::SameLine(offset += short_text_width);
-    ImGui::Text("Faction");
+    ImGui::Text("阵营点数");
     ImGui::SameLine(offset += short_text_width);
-    ImGui::Text("Outpost");
+    ImGui::Text("前哨站");
     ImGui::SameLine(offset += long_text_width);
-    ImGui::Text("Guild");
+    ImGui::Text("公会");
     ImGui::Separator();
     bool has_entries = false;
 
@@ -39,7 +39,7 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
             offset = 0.0f;
             ImGui::Text("%d", e.rank);
             ImGui::SameLine(offset += tiny_text_width);
-            ImGui::Text(e.allegiance == 1 ? "Luxon" : "Kurzick");
+            ImGui::Text(e.allegiance == 1 ? "路克森" : "库兹柯");
             ImGui::SameLine(offset += short_text_width);
             ImGui::Text("%d", e.faction);
             ImGui::SameLine(offset += short_text_width);
@@ -49,17 +49,17 @@ void FactionLeaderboardWindow::Draw(IDirect3DDevice9*)
             ImGui::Text("%s [%s]", name_s.c_str(), TextUtils::WStringToString(e.tag).c_str());
             ImGui::PushID(name_s.c_str());
             ImGui::SameLine(offset = avail_width - tiny_text_width);
-            if (ImGui::Button("Wiki", ImVec2(tiny_text_width, 0))) {
+            if (ImGui::Button("维基", ImVec2(tiny_text_width, 0))) {
                 GuiUtils::OpenWiki(std::format(L"Guild:{}", e.name));
             }
             ImGui::PopID();
         }
     }
     if (!has_entries) {
-        const ImVec2 w = ImGui::CalcTextSize("Enter a Canthan outpost to see data");
+        const ImVec2 w = ImGui::CalcTextSize("进入凯珊前哨站以查看数据");
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
         ImGui::SetCursorPosX(avail_width / 2 - w.x / 2);
-        ImGui::Text("Enter a Canthan outpost to see data");
+        ImGui::Text("进入凯珊前哨站以查看数据");
     }
     return ImGui::End();
 }

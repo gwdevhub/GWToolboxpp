@@ -24,19 +24,19 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9*)
     const float colWidth = 100.0f * ImGui::FontScale();
     float offset = 0.0f;
 
-    ImGui::Text("Door ID");
+    ImGui::Text("门 ID");
     ImGui::SameLine(offset += colWidth);
-    ImGui::Text("First Load");
+    ImGui::Text("首次加载");
     ImGui::SameLine(offset += colWidth);
-    ImGui::Text("First Open");
+    ImGui::Text("首次开启");
     ImGui::SameLine(offset += colWidth);
-    ImGui::Text("First Close");
+    ImGui::Text("首次关闭");
     ImGui::SameLine(offset += colWidth);
-    ImGui::Text("Last Open");
+    ImGui::Text("最后开启");
     ImGui::SameLine(offset += colWidth);
-    ImGui::Text("Last Close");
+    ImGui::Text("最后关闭");
     ImGui::SameLine(offset += colWidth);
-    ImGui::Text("Current State");
+    ImGui::Text("当前状态");
     ImGui::Separator();
 
     for (auto it = doors.begin(); it != doors.end(); ++it) {
@@ -78,7 +78,7 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9*)
         ImGui::Text("%s", mbstr);
         ImGui::SameLine(offset += colWidth);
         char name[128];
-        snprintf(name, 128, "%s (%d)", o.is_open ? "Open" : "Closed", o.animation_type);
+        snprintf(name, 128, "%s（%d）", o.is_open ? "开启" : "关闭", o.animation_type);
         if (ImGui::Button(name)) {
             GW::Packet::StoC::ManipulateMapObject packet;
             packet.header = GW::Packet::StoC::ManipulateMapObject::STATIC_HEADER;
@@ -106,7 +106,7 @@ void DoorMonitorWindow::Draw(IDirect3DDevice9*)
 void DoorMonitorWindow::Initialize()
 {
     ToolboxWindow::Initialize();
-    // Check on first load
+    // 首次加载时检查
     if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
         doors.clear();
         in_zone = true;

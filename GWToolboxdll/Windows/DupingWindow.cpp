@@ -36,7 +36,7 @@ namespace {
     uint32_t GetAgentMaxHP(const GW::AgentLiving* agent)
     {
         if (!agent) {
-            return 0; // Invalid agent
+            return 0; // 无效代理
         }
         if (agent->max_hp) {
             return agent->max_hp;
@@ -58,10 +58,10 @@ namespace {
     {
         const auto max_hp = GetAgentMaxHP(agent);
         if (!(max_hp && agent->hp_pips != .0f)) {
-            return 0; // Invalid agent, unknown max HP, or no regen or degen
+            return 0; // 无效代理、未知最大HP或无反/衰减
         }
         const float health_regen_per_second = max_hp * agent->hp_pips;
-        const float pips = std::ceil(health_regen_per_second / 2.f); // 1 pip = 2 health per second
+        const float pips = std::ceil(health_regen_per_second / 2.f); // 1 点 = 每秒 2 生命值
         return static_cast<int>(pips);
     }
 
@@ -90,11 +90,11 @@ namespace {
         ImGui::Spacing();
         ImGui::Text(label);
         if (ImGui::BeginTable(label, 5)) {
-            ImGui::TableSetupColumn("Selection", ImGuiTableColumnFlags_WidthFixed, 0, 0);
-            ImGui::TableSetupColumn("HP", ImGuiTableColumnFlags_WidthStretch, -1, 0);
-            ImGui::TableSetupColumn("Regen", ImGuiTableColumnFlags_WidthFixed, 70, 1);
-            ImGui::TableSetupColumn("Dupe Count", ImGuiTableColumnFlags_WidthFixed, 20, 2);
-            ImGui::TableSetupColumn("Last Duped", ImGuiTableColumnFlags_WidthFixed, 40, 3);
+            ImGui::TableSetupColumn("选择", ImGuiTableColumnFlags_WidthFixed, 0, 0);
+            ImGui::TableSetupColumn("生命值", ImGuiTableColumnFlags_WidthStretch, -1, 0);
+            ImGui::TableSetupColumn("回复", ImGuiTableColumnFlags_WidthFixed, 70, 1);
+            ImGui::TableSetupColumn("复制次数", ImGuiTableColumnFlags_WidthFixed, 20, 2);
+            ImGui::TableSetupColumn("上次复制", ImGuiTableColumnFlags_WidthFixed, 40, 3);
 
             const GW::Agent* target = GW::Agents::GetTarget();
 
@@ -197,7 +197,7 @@ void DupingWindow::Draw(IDirect3DDevice9*)
     int water_count = 0;
     int mind_count = 0;
 
-    // ==== Calculate the data ====
+    // ==== 计算数据 ====
     if (!is_in_doa) {
         ClearDupes();
     }
@@ -285,7 +285,7 @@ void DupingWindow::Draw(IDirect3DDevice9*)
         return;
     }
 
-    // ==== Draw the window ====
+    // ==== 绘制窗口 ====
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
@@ -295,9 +295,9 @@ void DupingWindow::Draw(IDirect3DDevice9*)
 
         if (total_counters > 0) {
             const auto total_width = ImGui::GetContentRegionAvail().x;
-            const auto souls_text = std::format("{} Souls", soul_count);
-            const auto waters_text = std::format("{} Waters", water_count);
-            const auto minds_text = std::format("{} Minds", mind_count);
+            const auto souls_text = std::format("{} 灵魂", soul_count);
+            const auto waters_text = std::format("{} 水", water_count);
+            const auto minds_text = std::format("{} 心灵", mind_count);
             const auto souls_width = ImGui::CalcTextSize(souls_text.c_str()).x;
             const auto waters_width = ImGui::CalcTextSize(waters_text.c_str()).x;
             const auto minds_width = ImGui::CalcTextSize(minds_text.c_str()).x;
@@ -325,35 +325,35 @@ void DupingWindow::Draw(IDirect3DDevice9*)
             }
         }
 
-        DrawDuping("Souls", souls);
-        DrawDuping("Waters", waters);
-        DrawDuping("Minds", minds);
+        DrawDuping("灵魂", souls);
+        DrawDuping("水", waters);
+        DrawDuping("心灵", minds);
     }
     ImGui::End();
 }
 
 void DupingWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Hide when there is nothing to show", &settings.hide_when_nothing);
-    ImGui::DragFloat("Range", &settings.range, 50, 0, 5000);
+    ImGui::Checkbox("无内容时隐藏", &settings.hide_when_nothing);
+    ImGui::DragFloat("范围", &settings.range, 50, 0, 5000);
 
     ImGui::Separator();
-    ImGui::Text("Enemy Counters:");
+    ImGui::Text("敌人计数器：");
     ImGui::StartSpacedElements(275.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show souls", &settings.show_souls_counter);
+    ImGui::Checkbox("显示灵魂", &settings.show_souls_counter);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show waters", &settings.show_waters_counter);
+    ImGui::Checkbox("显示水", &settings.show_waters_counter);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show minds", &settings.show_minds_counter);
+    ImGui::Checkbox("显示心灵", &settings.show_minds_counter);
 
     ImGui::Separator();
-    ImGui::Text("Duping thresholds:");
-    ImGui::ShowHelp("Threshold HP below which enemy duping info is displayed");
+    ImGui::Text("复制阈值：");
+    ImGui::ShowHelp("低于此阈值的生命值百分比将显示敌人复制信息");
 
-    ImGui::DragFloat("Souls", &settings.souls_threshhold, 0.01f, 0, 1);
-    ImGui::DragFloat("Waters", &settings.waters_threshhold, 0.01f, 0, 1);
-    ImGui::DragFloat("Minds", &settings.minds_threshhold, 0.01f, 0, 1);
+    ImGui::DragFloat("灵魂", &settings.souls_threshhold, 0.01f, 0, 1);
+    ImGui::DragFloat("水", &settings.waters_threshhold, 0.01f, 0, 1);
+    ImGui::DragFloat("心灵", &settings.minds_threshhold, 0.01f, 0, 1);
 }
 
 void DupingWindow::Initialize()

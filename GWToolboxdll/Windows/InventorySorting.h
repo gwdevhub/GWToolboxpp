@@ -21,7 +21,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Inventory Sorting"; }
+    [[nodiscard]] const char* Name() const override { return "物品排序"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_SORT; }
 
     struct Settings {
