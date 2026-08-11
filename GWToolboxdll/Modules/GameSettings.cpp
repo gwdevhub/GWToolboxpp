@@ -696,6 +696,7 @@ namespace {
     // Override the login status dropdown by sending ui message 0x51 if found
     void OverrideDefaultOnlineStatus()
     {
+        if (!settings.remember_online_status) return; // Opted out; leave GW's default status alone
         GW::GameThread::Enqueue([] {
             GW::UI::SelectDropdownOption(GW::UI::GetFrameByLabel(L"StatusOverride"), settings.last_online_status);
         });
