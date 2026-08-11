@@ -111,7 +111,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/GWToolboxpp/build-clang
-      run: cmake $GITHUB_WORKSPACE --preset=clang -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      run: cmake $GITHUB_WORKSPACE --preset=clang -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGWTOOLBOX_BUILD_EXAMPLE_PLUGIN=OFF
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
         VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
@@ -125,4 +125,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: GWToolbox-clang-RelWithDebInfo
-        path: ${{runner.workspace}}/GWToolboxpp/bin/
+        # GWToolboxdll.pdb.gz (compress.ps1, GWToolboxdll/CMakeLists.txt POST_BUILD) already carries the
+        # debug info the raw .pdb has - excluded so the artifact doesn't ship both.
+        path: |
+          ${{runner.workspace}}/GWToolboxpp/bin/**
+          !${{runner.workspace}}/GWToolboxpp/bin/**/GWToolboxdll.pdb

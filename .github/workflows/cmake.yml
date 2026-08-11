@@ -116,7 +116,7 @@ jobs:
       # access regardless of the host operating system
       shell: bash
       working-directory: ${{runner.workspace}}/GWToolboxpp/build
-      run: cmake $GITHUB_WORKSPACE --preset=vcpkg
+      run: cmake $GITHUB_WORKSPACE --preset=vcpkg -DGWTOOLBOX_BUILD_EXAMPLE_PLUGIN=OFF
       env:
         VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
         VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/vcpkg-bincache,readwrite"
@@ -130,7 +130,11 @@ jobs:
     - name: Save output
       uses: actions/upload-artifact@v4
       with:
-        path: ${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/
+        # GWToolboxdll.pdb.gz (compress.ps1, GWToolboxdll/CMakeLists.txt POST_BUILD) already carries the
+        # debug info the raw .pdb has - excluded so the artifact doesn't ship both.
+        path: |
+          ${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/*
+          !${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo/GWToolboxdll.pdb
 
     - name: Determine release version
       id: version
@@ -199,7 +203,8 @@ jobs:
         VERSION="${{ steps.version.outputs.version }}"
         BIN_DIR="${{runner.workspace}}/GWToolboxpp/bin/RelWithDebInfo"
 
-        gzip -c "$BIN_DIR/GWToolboxdll.pdb" > GWToolboxdll.pdb.gz
+        # Already built by compress.ps1 (GWToolboxdll/CMakeLists.txt POST_BUILD) - no need to re-gzip.
+        cp "$BIN_DIR/GWToolboxdll.pdb.gz" GWToolboxdll.pdb.gz
 
         # Pull this version's patch notes from history.md for the release body. Exact heading
         # match so "8.3" can't grab "8.30"; stop at the next version heading. Fall back to a
