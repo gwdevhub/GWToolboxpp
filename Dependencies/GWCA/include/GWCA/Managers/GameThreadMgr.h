@@ -16,8 +16,7 @@ namespace GW {
 
         GWCA_API void ClearCalls();
 
-        // force_enqueue = false; will check if we're already in the game thread, and run immediately if we are.
-        // force_enqueue = true; enqueue the function for the next loop regardless
+        // force_enqueue = false runs immediately if already on the game thread; true always enqueues for the next loop.
         GWCA_API void Enqueue(std::function<void ()> f, bool force_enqueue = false);
 
         typedef HookCallback<> GameThreadCallback;
@@ -31,9 +30,7 @@ namespace GW {
         GWCA_API bool IsInGameThread();
     };
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     typedef void(__cdecl* GW_GameThreadCallback)();
     typedef void(__cdecl* GW_GameThreadHookCallback)(GW::HookStatus* status);

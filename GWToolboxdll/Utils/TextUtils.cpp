@@ -741,14 +741,6 @@ namespace TextUtils {
         return TimeToString(static_cast<time_t>(utc_timestamp), include_seconds, milliseconds);
     }
 
-#ifndef __EMSCRIPTEN__
-    std::string TimeToString(const FILETIME utc_timestamp, bool include_seconds, int milliseconds)
-    {
-        uint64_t filetime_value = (static_cast<uint64_t>(utc_timestamp.dwHighDateTime) << 32) | utc_timestamp.dwLowDateTime;
-        return TimeToString(Time::FiletimeToTimeT(filetime_value), include_seconds, milliseconds);
-    }
-#endif
-
     std::string FilenameTimestamp()
     {
         return Time::FilenameTimestamp();

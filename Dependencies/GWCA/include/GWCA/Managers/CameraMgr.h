@@ -25,8 +25,7 @@ namespace GW {
         GWCA_API float GetFieldOfView();
         GWCA_API float GetYaw();
 
-        // ==== Camera patches ====
-        // Unlock camera & return the new state of it
+        // Camera patches -- unlock the camera and return its new state.
         GWCA_API bool UnlockCam(bool flag);
         GWCA_API bool GetCameraUnlock();
 
@@ -34,9 +33,7 @@ namespace GW {
         GWCA_API bool SetFog(bool flag);
     };
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API void* GetCamera();
     GWCA_API bool  SetMaxDist(float dist);

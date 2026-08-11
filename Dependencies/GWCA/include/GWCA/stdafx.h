@@ -1,5 +1,7 @@
 #pragma once
 
+// MSVC-only: every other compiler reports the whole block as unknown-pragma noise.
+#ifdef _MSC_VER
 #pragma warning(disable: 4619) // there is no warning number 'number'
 
 #pragma warning(push)
@@ -20,6 +22,7 @@
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
 #pragma warning(disable: 5039) // 'function': pointer or reference to potentially throwing function passed to extern C function under -EHc. Undefined behavior may occur if this function throws an exception.
 #pragma warning(disable: 5045) // Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+#endif
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 # define _CRT_SECURE_NO_WARNINGS 1
@@ -49,10 +52,18 @@
 # define WIN32_LEAN_AND_MEAN
 #endif
 
+// GWCA_WASM comes from the build, not a header, so an undefined macro takes the Win32 branch -- what a consumer wants.
+#if GWCA_WASM
+// No Win32 here: the shim keeps the few Windows typedefs in GWCA's public headers parsing, and does not ship.
+#include <Platform/Wasm/Win32Shim.h>
+#else
 #include <Windows.h>
 #include <ShellApi.h>
+#endif
 
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 
 #ifndef _MSC_VER
 // GCC/MinGW diagnostic-build compatibility shim (not needed on MSVC).
@@ -60,6 +71,7 @@
 #endif
 
 
+#ifdef _MSC_VER
 #pragma warning(disable: 4061) // enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label
 #pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union
 #pragma warning(disable: 4514) // 'function' : unreferenced inline function has been removed
@@ -77,3 +89,4 @@
 #pragma warning(disable: 5027) // 'type': move assignment operator was implicitly defined as deleted
 #pragma warning(disable: 5045) // Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
 #pragma warning(disable: 28159) // Consider using 'GetTickCount64' instead of 'GetTickCount'.
+#endif

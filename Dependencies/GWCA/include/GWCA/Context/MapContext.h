@@ -68,8 +68,7 @@ namespace GW {
     };
     static_assert(sizeof(MapStaticData) == 0xA0, "struct MapStaticData has incorrect size");
 
-    // Those are planes that are blocked and can be unblocked at runtime. e.g., the gates in foundry
-    // Those aren't in the dat file, but sent from the server
+    // Planes blocked but unblockable at runtime (e.g. the Foundry gates); sent by the server, not in the dat file.
     typedef BaseArray<uint32_t> BlockedPlaneArray;
     static_assert(sizeof(BlockedPlaneArray) == 0xC, "struct BlockedPlaneArray has incorrect size");
 
@@ -123,9 +122,7 @@ namespace GW {
     };
     static_assert(sizeof(PathContext) == 0x94, "struct PathContext has incorrect size");
 
-    // The game can optionally load a DLL to do the path finding.
-    // The DLL is named "PathEngine.dll", but not clear if it's a 3rd party or just their name
-    // for development.
+    // The game can optionally load "PathEngine.dll" for path finding; unclear if third party or their own dev name.
     struct PathEngineContext {
         /* +h0000 */ void **vtable;
         /* +h0004 */ uint32_t h0004;

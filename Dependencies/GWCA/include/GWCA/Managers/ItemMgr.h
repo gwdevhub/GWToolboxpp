@@ -97,9 +97,7 @@ namespace GW {
     };
 }
 
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     // Lookups
     GWCA_API void* GetSalvageSessionInfo();

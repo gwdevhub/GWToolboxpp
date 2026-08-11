@@ -35,6 +35,18 @@ struct DllUpdateInfo {
     std::filesystem::path dll_path;
 };
 
+// Result of comparing the installed gwtoolbox.gwmod against the latest release; asset_found stays false until some release ships one (see WasmInject.h/WASM_GWMOD_FILENAME).
+struct GwmodUpdateInfo {
+    bool asset_found = false;
+    bool up_to_date = false;
+    const Asset* asset = nullptr;
+    std::string tag_name;
+    std::filesystem::path gwmod_path;
+};
+
+// The "version" package.py stamps into a .gwmod's manifest.json (see tools/package.py --version) - the wasm build's equivalent of GetDllRelease's PE version read; empty on any read/parse failure.
+std::string GetGwmodVersion(const std::filesystem::path& gwmod_path);
+
 class DownloadWindow : public Window {
 public:
     DownloadWindow() = default;
@@ -46,8 +58,8 @@ public:
     bool Create() override;
     // dll-only update, fetching its own release list; used by the installer.
     static bool DownloadDll(std::wstring& error);
-    // Downloads and installs whichever of exe/dll are due for an update, sharing one progress window; the exe replacement takes effect on next launch, no restart.
-    static bool ApplyUpdates(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info, std::wstring& error);
+    // Downloads and installs whichever of exe/dll/gwmod are due for an update, sharing one progress window; the exe replacement takes effect on next launch, no restart.
+    static bool ApplyUpdates(const std::vector<Release>& releases, const ExeUpdateInfo& exe_info, const DllUpdateInfo& dll_info, const GwmodUpdateInfo& gwmod_info, std::wstring& error);
     void SetChangelog(const char* str, size_t length) const;
 
 private:
@@ -80,7 +92,9 @@ public:
 
     bool IsExeUpdateAvailable() const { return m_ExeInfo.asset != nullptr; }
     bool IsDllUpdateAvailable() const { return m_DllInfo.asset != nullptr && !m_DllInfo.up_to_date; }
-    bool IsAnyUpdateAvailable() const { return IsExeUpdateAvailable() || IsDllUpdateAvailable(); }
+    // Only ever true once some release actually ships a gwtoolbox.gwmod asset - see GwmodUpdateInfo.
+    bool IsGwmodUpdateAvailable() const { return m_GwmodInfo.asset != nullptr && !m_GwmodInfo.up_to_date; }
+    bool IsAnyUpdateAvailable() const { return IsExeUpdateAvailable() || IsDllUpdateAvailable() || IsGwmodUpdateAvailable(); }
 
     bool ApplyUpdates(std::wstring& error);
 
@@ -94,4 +108,5 @@ private:
     std::vector<Release> m_Releases;
     ExeUpdateInfo m_ExeInfo;
     DllUpdateInfo m_DllInfo;
+    GwmodUpdateInfo m_GwmodInfo; // checked alongside the dll, gated by the same m_CheckDll
 };

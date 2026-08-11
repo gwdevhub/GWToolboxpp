@@ -50,15 +50,7 @@ namespace GW {
     static_assert(sizeof(DyeInfo) == 3, "struct DyeInfo has incorrect size");
 
     struct ItemData {
-        // No default member initializers: this type is used as a member
-        // of a nested anonymous struct/union in Agent.h
-        // (NPCEquipment) — MSVC permits default member initializers
-        // there (making the implicit default constructor non-trivial),
-        // but GCC rejects any member with a non-trivial constructor in
-        // an anonymous struct/union. ItemData is a raw overlay onto
-        // existing game memory throughout this codebase, never
-        // meaningfully default-constructed for its own sake, so this
-        // doesn't change any real behavior.
+        // No default member initializers: GCC rejects non-trivial members in the anonymous struct/union in Agent.h that uses this.
         uint32_t model_file_id;
         GW::Constants::ItemType type;
         GW::DyeInfo dye;

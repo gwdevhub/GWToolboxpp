@@ -1,14 +1,19 @@
 #include "stdafx.h"
 
 #include <ToolboxModule.h>
+#ifndef __EMSCRIPTEN__
+// GWToolbox.h drags in the whole module graph, out of scope for the wasm build's curated source list; only IsProfilingEnabled() needs it, and that path is skipped under Emscripten anyway.
 #include <GWToolbox.h>
+#endif
 
 namespace {
+#ifndef __EMSCRIPTEN__
     uint64_t QpcToMicroseconds(LONGLONG ticks)
     {
         static LARGE_INTEGER freq = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
         return static_cast<uint64_t>(ticks * 1000000 / freq.QuadPart);
     }
+#endif
 
     // static function to register content
     std::unordered_map<std::string, SectionDrawCallbackList> settings_draw_callbacks{};
@@ -87,6 +92,7 @@ void ToolboxModule::RegisterUIMessageCallback(
 {
     GW::UI::RegisterUIMessageCallback(entry, message_id,
         [this, callback](GW::HookStatus* status, GW::UI::UIMessage msg, void* wparam, void* lparam) {
+#ifndef __EMSCRIPTEN__
             if (GWToolbox::IsProfilingEnabled()) {
                 LARGE_INTEGER t0, t1;
                 QueryPerformanceCounter(&t0);
@@ -94,7 +100,9 @@ void ToolboxModule::RegisterUIMessageCallback(
                 QueryPerformanceCounter(&t1);
                 last_ui_message_times_us_[static_cast<uint32_t>(msg)] += QpcToMicroseconds(t1.QuadPart - t0.QuadPart);
             }
-            else {
+            else
+#endif
+            {
                 callback(status, msg, wparam, lparam);
             }
         },

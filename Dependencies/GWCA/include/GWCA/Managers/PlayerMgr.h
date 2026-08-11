@@ -55,9 +55,7 @@ namespace GW {
         GWCA_API TitleClientData* GetTitleData(Constants::TitleID title_id);
     };
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API bool            SetActiveTitle(uint32_t title_id);
     GWCA_API bool            RemoveActiveTitle();

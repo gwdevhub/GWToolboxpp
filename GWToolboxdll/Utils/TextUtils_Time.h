@@ -18,9 +18,5 @@ namespace TextUtils {
         std::tm SafeLocaltime(time_t timestamp);
         SystemTime GetCurrentSystemTime();
         std::string FilenameTimestamp();
-
-#ifndef __EMSCRIPTEN__
-        time_t FiletimeToTimeT(uint64_t filetime_100ns);
-#endif
     }
 }

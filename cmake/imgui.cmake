@@ -38,6 +38,16 @@ set(SOURCES
     # we copied (and modified) impl_imgui_dx9.h/cpp files under GWToolboxdll
     # we copied (and modified) imgui_impl_win32.h/cpp files under GWToolboxdll
 )
+if(EMSCRIPTEN)
+    # Stock backend, unmodified (unlike the D3D9/Win32 pair above): the GLES3 surface
+    # gw_in_browser's loader wires up (harness/gllib.js) is real WebGL2, so this needs
+    # no wasm-specific changes -- see GWToolboxdll/Wasm/main_wasm.cpp.
+    list(APPEND SOURCES
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.h"
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
+        "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3_loader.h"
+    )
+endif()
 set(HOOK_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/imgui_test_engine_hooks/imgui_test_engine_hooks.h"
     "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/imgui_test_engine_hooks/imgui_test_engine_hooks.cpp"
@@ -47,8 +57,19 @@ target_sources(imgui PRIVATE ${SOURCES} ${HOOK_SOURCES})
 target_include_directories(imgui PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/../Dependencies"
     "${imgui_SOURCE_DIR}"
+    "${imgui_SOURCE_DIR}/backends"
 	)
-target_compile_definitions(imgui PUBLIC 
+target_compile_definitions(imgui PUBLIC
     IMGUI_USER_CONFIG="${CMAKE_CURRENT_LIST_DIR}/../GWToolboxdll/imconfig.h")
+if(EMSCRIPTEN)
+    target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_ES3)
+    # imconfig.h (IMGUI_USER_CONFIG above) includes GWCA/stdafx.h, which branches on
+    # this to pick Win32Shim.h over real Windows.h -- needed here too, not just on
+    # GWToolboxdll, since imgui.cpp itself is compiled against imconfig.h.
+    target_compile_definitions(imgui PUBLIC GWCA_WASM=1)
+    target_include_directories(imgui PUBLIC
+        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/GWCA/include"
+        "${CMAKE_CURRENT_LIST_DIR}/../Dependencies/GWCA/source")
+endif()
 
 set_target_properties(imgui PROPERTIES FOLDER "Dependencies/")

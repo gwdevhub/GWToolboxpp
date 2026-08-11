@@ -36,9 +36,7 @@ namespace GW {
         };
         static_assert(sizeof(SkillTemplate) == 140);
 
-        // Handlers run in altitude order around the hooked game function: altitude <= 0 before it
-        // (may set status->blocked to skip it), altitude > 0 after it. Handlers that produce a
-        // template write it into out_template and set *result to the game's success value.
+        // Handlers run in altitude order: <= 0 before the hooked function (may set status->blocked), > 0 after it.
         typedef HookCallback<SkillTemplate* /*out_template*/, void* /*reader*/, uint8_t* /*result*/> DecodeTemplateHeaderCallback;
         GWCA_API void RegisterDecodeTemplateHeaderCallback(HookEntry* entry, const DecodeTemplateHeaderCallback& callback, int altitude = -0x8000);
 
@@ -56,15 +54,13 @@ namespace GW {
 
         GWCA_API void RemoveTemplateCallback(HookEntry* entry);
 
-        // Get the skill slot in the player bar of the player.
-        // Returns -1 if the skill is not there
+        // Skill slot in the player's bar, or -1 if the skill is not there.
         GWCA_API int GetSkillSlot(Constants::SkillID skill_id);
 
         // Use Skill in slot (Slot) on (Agent), optionally call that you are using said skill.
         GWCA_API bool UseSkill(uint32_t slot, uint32_t target = 0);
 
-        // Send raw packet to use skill with ID (SkillID).
-        // Same as above except the skillbar client struct will not be registered as casting.
+        // Raw packet to use skill ID; unlike above, the skillbar client struct is not registered as casting.
         GWCA_API bool UseSkillByID(uint32_t skill_id, uint32_t target = 0);
 
         // Get skill structure of said id, houses pretty much everything you would want to know about the skill.
@@ -101,9 +97,7 @@ namespace GW {
         GWCA_API bool GetSkillTemplate(SkillTemplate& skill_template);
     }
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API int      GetSkillSlot(uint32_t skill_id);
     GWCA_API bool     UseSkill(uint32_t slot, uint32_t target);

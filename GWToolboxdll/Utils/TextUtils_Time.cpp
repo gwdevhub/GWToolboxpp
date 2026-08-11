@@ -49,14 +49,5 @@ namespace TextUtils {
                      now.year, now.month, now.day, now.hour, now.minute, now.second);
             return buf;
         }
-
-#ifndef __EMSCRIPTEN__
-        time_t FiletimeToTimeT(const uint64_t filetime_100ns)
-        {
-            constexpr uint64_t FILETIME_UNIX_DIFF = 11644473600ULL;
-            constexpr uint64_t FILETIME_UNIT = 10000000ULL;
-            return static_cast<time_t>(filetime_100ns / FILETIME_UNIT - FILETIME_UNIX_DIFF);
-        }
-#endif
     }
 }

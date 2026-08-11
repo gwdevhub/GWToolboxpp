@@ -89,13 +89,7 @@ namespace GW {
         FrameWithValue& operator=(const FrameWithValue&) = default;
         FrameWithValue& operator=(FrameWithValue&&) = default;
 
-        // Pure virtual: every concrete usage of this type is through one
-        // of its overriding subclasses below (ProgressBar, CheckboxFrame,
-        // DropdownFrame, SliderFrame all override both) — there was
-        // previously no definition anywhere in this codebase for a bare
-        // FrameWithValue's own GetValue/SetValue, which GCC's Itanium
-        // ABI (unlike MSVC's) requires in order to know where to emit a
-        // vtable for the class ("key function" rule).
+        // Pure virtual: GCC's Itanium ABI needs a key function to emit the vtable, and every concrete use is via an overriding subclass.
         virtual uint32_t GetValue() = 0;
         virtual bool SetValue(uint32_t value) = 0;
     };

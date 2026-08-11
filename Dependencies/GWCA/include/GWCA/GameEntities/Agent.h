@@ -6,6 +6,7 @@
 #include <GWCA/Constants/Constants.h>
 
 #include <GWCA/GameEntities/Item.h>
+#include <GWCA/Utilities/Export.h>
 
 namespace GW {
     typedef uint32_t AgentID;
@@ -90,19 +91,12 @@ namespace GW {
         /* +h0109 */ uint8_t offhand_item_type;     // Offhand item type for stance/animation
         /* +h010A */ uint16_t offhand_item_id;      // Offhand item id for stance/animation
 
-        inline uint32_t GetType() {
-            return vtable->GetType(this);
-        }
-        inline bool RedrawEquipmentSlot(uint32_t slot) {
-            if (!(slot < _countof(items) && items[slot].model_file_id))
-                return false;
-            return vtable->EquipItem(this, 0, slot), true;
-        }
-        inline bool UndrawEquipmentSlot(uint32_t slot) {
-            if (!(slot < _countof(items) && items[slot].model_file_id))
-                return false;
-            return vtable->RemoveItem(this, 0, slot), true;
-        }
+        // These three call through the game's vtable (see Source/Agent.cpp) -- kept
+        // out of line so the wasm table-adoption dance stays an implementation
+        // detail rather than something every caller's translation unit compiles.
+        GWCA_API uint32_t GetType();
+        GWCA_API bool RedrawEquipmentSlot(uint32_t slot);
+        GWCA_API bool UndrawEquipmentSlot(uint32_t slot);
     };
     static_assert(sizeof(NPCEquipment) == 0x10C);
 

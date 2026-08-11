@@ -5,6 +5,7 @@
 #include "Download.h"
 #include "Process.h"
 #include "Settings.h"
+#include "WasmInject.h"
 #include "Window.h"
 
 enum InjectReply {
@@ -12,9 +13,10 @@ enum InjectReply {
     InjectReply_Cancel,
 };
 
-// A running Guild Wars process paired with the character name (or email, if no character is selected yet) read from its memory.
+// One dropdown entry: a running Gw.exe (native DLL injection) or a gw_in_browser session (HTTP-brokered .gwmod, see WasmInject.h); exactly one of m_Process/m_WasmSession is populated.
 struct InjectProcess {
     InjectProcess(const bool injected, Process&& process, std::wstring&& charname) : m_Injected(injected), m_Process(std::move(process)), m_Charname(std::move(charname)) {}
+    InjectProcess(const bool injected, WasmSession&& session, std::wstring&& label) : m_Injected(injected), m_WasmSession(std::move(session)), m_Charname(std::move(label)) {}
 
     InjectProcess(const InjectProcess&) = delete;
     InjectProcess(InjectProcess&&) = default;
@@ -22,9 +24,19 @@ struct InjectProcess {
     InjectProcess& operator=(const InjectProcess&) = delete;
     InjectProcess& operator=(InjectProcess&&) = default;
 
+    bool IsWasm() const { return m_WasmSession.has_value(); }
+
     bool m_Injected;
     Process m_Process;
+    std::optional<WasmSession> m_WasmSession;
     std::wstring m_Charname;
+};
+
+// What got picked, handed back to main.cpp to drive the right injection path.
+struct InjectSelection {
+    bool is_wasm = false;
+    Process process;                        // valid when !is_wasm
+    std::optional<WasmSession> wasm_session; // valid when is_wasm
 };
 
 // Result of scanning for injectable Guild Wars processes: either a populated, ready-to-show character list, or an error to display in place of it.
@@ -38,7 +50,7 @@ struct InjectScanResult {
 
 class InjectWindow : public Window {
 public:
-    static InjectReply AskInjectProcess(Process* target_process);
+    static InjectReply AskInjectProcess(InjectSelection* selection);
 
 public:
     InjectWindow();
@@ -55,7 +67,7 @@ public:
 
     // Returns false if no character was selected, typically when the window was closed.
     bool GetSelected(size_t* index) const;
-    Process TakeSelectedProcess(size_t index);
+    InjectSelection TakeSelected(size_t index);
 
 private:
     LRESULT WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;

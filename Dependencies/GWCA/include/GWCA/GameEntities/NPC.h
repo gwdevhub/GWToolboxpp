@@ -24,8 +24,7 @@ namespace GW {
         /* +h0014 */ GW::Constants::Profession primary;
         /* +h0018 */ GW::Constants::Profession secondary;
         /* +h001C */ uint8_t  default_level;
-        // +h001D    uint8_t  padding;
-        // +h001E    uint16_t padding;
+        // +h001D uint8_t padding; +h001E uint16_t padding;
         /* +h0020 */ wchar_t *name_enc;
         /* +h0024 */ uint32_t *model_files;
         /* +h0028 */ uint32_t files_count; // length of ModelFile

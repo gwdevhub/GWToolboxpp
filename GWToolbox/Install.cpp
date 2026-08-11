@@ -4,6 +4,7 @@
 #include "Download.h"
 #include "Inject.h"
 #include "Install.h"
+#include "WasmInject.h"
 #include "WindowsDefender.h"
 
 namespace fs = std::filesystem;
@@ -111,6 +112,21 @@ bool DeleteInstallationDirectory(std::wstring& error)
     return true;
 }
 
+// Optional: copies gwtoolbox.gwmod alongside the installed dll if one sits next to the launcher (no release asset exists yet); its absence is the ordinary case and must never fail Install().
+static void InstallLocalWasmGwmodIfPresent(const fs::path& install_path)
+{
+    fs::path source_dir;
+    if (!PathGetProgramDirectory(source_dir)) return;
+    const fs::path source = source_dir / WASM_GWMOD_FILENAME;
+    if (!fs::exists(source)) return;
+
+    const fs::path dest = install_path.parent_path() / WASM_GWMOD_FILENAME;
+    if (source == dest) return;
+    if (!PathSafeCopy(source, dest, true)) {
+        fprintf(stderr, "Found %S but failed to copy it to %S\n", source.c_str(), dest.c_str());
+    }
+}
+
 bool Install(const bool quiet, std::wstring& error)
 {
     if (IsInstalled())
@@ -149,6 +165,9 @@ bool Install(const bool quiet, std::wstring& error)
                    dll_path.parent_path().wstring()
                ), false;
     }
+
+    InstallLocalWasmGwmodIfPresent(install_path);
+
     if (!quiet) {
         ShowMessageBoxW(nullptr, L"Installation successful", L"Installation", 0);
     }

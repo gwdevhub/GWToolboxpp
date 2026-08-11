@@ -142,8 +142,7 @@ namespace GW {
 
         GWCA_API Constants::Language LanguageFromDistrict(const GW::Constants::District _district);
 
-        // Returns array of icons (res shrines, quarries, traders, etc) on mission map.
-        // Look at MissionMapIcon struct for more info.
+        // Array of icons (res shrines, quarries, traders...) on the mission map; see MissionMapIcon.
         GWCA_API MissionMapIconArray* GetMissionMapIconArray();
 
         // Returns pointer of collision trapezoid array.
@@ -166,9 +165,7 @@ namespace GW {
         GWCA_API bool CancelEnterChallenge();
     };
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API void* GetMissionMapContext();
     GWCA_API void* GetWorldMapContext();

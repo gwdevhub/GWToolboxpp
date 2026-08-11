@@ -25,14 +25,18 @@ namespace GW {
     struct Module;
     extern Module AgentModule;
 
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4200) // nonstandard extension: zero-sized array in struct
+#endif
     struct AgentEffect {
         uint32_t effect_type;
         uint32_t data_size; // usually 0x34, detemines length of data in bytes
         uint32_t data[];
     };
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 
     enum class WorldActionId : uint32_t {
         InteractEnemy,
@@ -125,8 +129,7 @@ namespace GW {
     namespace Agents {
         typedef HookCallback<const GW::AgentLiving*, const AgentEffect*> AgentEffectCallback;
 
-        // === Dialogs ===
-        // Same as pressing button (id) while talking to an NPC.
+        // Dialogs -- same as pressing button (id) while talking to an NPC.
         GWCA_API bool SendDialog(uint32_t dialog_id);
 
         // === Agent Array ===
@@ -167,8 +170,7 @@ namespace GW {
 
         GWCA_API uint32_t GetAmountOfPlayersInInstance();
 
-        // Returns array of alternate agent array that can be read beyond compass range.
-        // Holds limited info and needs to be explored more.
+        // Alternate agent array readable beyond compass range; holds limited info and needs more exploration.
         GWCA_API MapAgentArray* GetMapAgentArray();
         GWCA_API uint32_t CountAllegianceInRange(GW::Constants::Allegiance allegiance, float sqr_range);
 
@@ -187,8 +189,7 @@ namespace GW {
         GWCA_API bool ChangeTarget(const Agent *agent);
         GWCA_API bool ChangeTarget(AgentID agent_id);
 
-        // Move to specified coordinates.
-        // Note: will do nothing if coordinate is outside the map!
+        // Move to specified coordinates. Does nothing if the coordinate is outside the map.
         GWCA_API bool Move(float x, float y, uint32_t zplane = 0);
         GWCA_API bool Move(GamePos pos);
 
@@ -205,18 +206,9 @@ namespace GW {
         // Might be bugged, avoid to use.
         GWCA_API wchar_t* GetAgentEncName(const Agent* agent);
         GWCA_API wchar_t* GetAgentEncName(uint32_t agent_id);
-
-        GWCA_API void RegisterAgentEffectCallback(
-            HookEntry* entry,
-            const AgentEffectCallback& callback,
-            int altitude = -0x8000);
-        GWCA_API void RemoveFrameUIMessageCallback(
-            HookEntry* entry);
     };
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API bool     SendDialog(uint32_t dialog_id);
 

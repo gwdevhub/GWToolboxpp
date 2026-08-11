@@ -148,7 +148,7 @@ namespace GW {
 			uint32_t field15_0x3c;
 			uint32_t field16_0x40;
 			uint32_t field17_0x44;
-			uint32_t field18_0x48;
+			uint32_t m_ctlSpec;
 			uint32_t field19_0x4c;
 			uint32_t field20_0x50;
 			uint32_t field21_0x54;
@@ -783,8 +783,7 @@ namespace GW {
 
 		GWCA_API bool DestroyUIComponent(Frame* frame);
 
-		// Frame layout primitives (GW's Frame::SetBounds/SetPosition), for measuring and
-		// stacking child frames from a custom container's kMeasureContent/kSetLayout handler.
+		// Frame layout primitives (GW's Frame::SetBounds/SetPosition) for a container's kMeasureContent/kSetLayout handler.
 		GWCA_API void SetFrameBounds(Frame* frame, uint32_t mode, float* rect, float* size_out);
 		GWCA_API void SetFramePosition(Frame* frame, uint32_t mode, float* rect);
 
@@ -867,6 +866,7 @@ namespace GW {
 		GWCA_API bool SetFrameVisible(UI::Frame* frame, bool flag);
 		GWCA_API bool SetFrameDisabled(UI::Frame* frame, bool flag);
 
+		// Stubbed: always returns false. The underlying game function is not scanned for.
 		GWCA_API bool AddFrameUIInteractionCallback(GW::UI::Frame*, UI::UIInteractionCallback callback, void* wparam);
 
 		GWCA_API bool TriggerFrameRedraw(UI::Frame* frame);

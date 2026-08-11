@@ -278,9 +278,6 @@ namespace TextUtils {
     std::wstring RelativeTimeW(time_t utc_timestamp, RelativeTimeFormat fmt = RelativeTimeFormat::Full);
     std::string TimeToString(time_t utc_timestamp = 0, bool include_seconds = false, int milliseconds = -1);
     std::string TimeToString(uint32_t utc_timestamp, bool include_seconds = false, int milliseconds = -1);
-#ifndef __EMSCRIPTEN__
-    std::string TimeToString(FILETIME utc_timestamp, bool include_seconds = false, int milliseconds = -1);
-#endif
     std::string FilenameTimestamp();
 
     template <typename CharT>

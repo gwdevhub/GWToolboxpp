@@ -3,15 +3,7 @@
 #include <GWCA/Packets/Opcodes.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-/*
-Server to client packets, sorted by header
-
-most packets are not filled in, however the list and types of
-fields is given as comments
-
-feel free to fill packets, and you can also add a suffix to
-the packet name, e.g. P391 -> P391_InstanceLoadMap
-*/
+// Server to client packets, sorted by header. Unfilled ones list their fields as comments -- fill them in, optionally suffixing the name (P391 -> P391_InstanceLoadMap).
 
 namespace GW {
     typedef uint32_t AgentID;
@@ -28,11 +20,7 @@ namespace GW {
             struct PacketBase {
                 uint32_t header;
             };
-            // Used for:
-            //  GenericValue
-            //  GenericValueTarget
-            //  GenericModifier (i.e. GenericFloatTarget)
-            //  GenericFloat
+            // Used for GenericValue, GenericValueTarget, GenericModifier (GenericFloatTarget) and GenericFloat.
             namespace GenericValueID {
                 const uint32_t melee_attack_finished    = 1;  // GenericValue. Last melee attack finished successfully.
                 const uint32_t attack_stopped           = 3;  // GenericValue. Last melee/ranged attack stopped unsuccessfully. May be followed by interrupted (35).
@@ -82,18 +70,9 @@ namespace GW {
             }
 
             namespace JumboMessageValue {
-                // The following values represent the first and second parties in an explorable areas
-                // (inc. observer mode) with 2 parties.
-                // if there are 3 parties in the explorable area (like some HA maps) then:
-                //  - party 1 = 6579558
-                //  - party 2 = 1635021873
-                //  - party 3 = 1635021874
+                // First and second parties in an explorable area; with 3 parties (some HA maps) they are 6579558, 1635021873, 1635021874.
 
-                // TODO:
-                // These numbers appear big and random, their origin or relation to other values
-                // is not understood.
-                // In addition, there may be a danger these variables could change with GW updates...
-                // Consider these values as experimental and use with caution
+                // TODO: these numbers are big, random and not understood, and may change with GW updates -- use with caution.
                 const uint32_t PARTY_ONE = 1635021873;
                 const uint32_t PARTY_TWO = 1635021874;
             }
@@ -456,12 +435,7 @@ namespace GW {
             };
             template<> constexpr uint32_t Packet<GenericFloat>::STATIC_HEADER = GAME_SMSG_AGENT_ATTR_UPDATE_FLOAT;
 
-            // damage or healing done packet, but also has other purposes.
-            // to be investigated further.
-            // all types have their value in the float field 'value'.
-            // in all types the value is in percentage, unless otherwise specified.
-            // the value can be negative (e.g. damage, sacrifice)
-            // or positive (e.g. heal, lifesteal).
+            // Damage or healing done, plus other uses; 'value' is a percentage unless stated, negative or positive by type.
             struct GenericModifier : Packet<GenericModifier> {
                 uint32_t type;         // type as specified above in P156_Type
                 uint32_t target_id;    // agent id of who is affected by the change
@@ -470,9 +444,7 @@ namespace GW {
             };
             template<> constexpr uint32_t Packet<GenericModifier>::STATIC_HEADER = GAME_SMSG_AGENT_ATTR_UPDATE_FLOAT_TARGET;
 
-            // Projectile launched from an agent
-            // Can be from a martial weapon (spear, bow), or projectile-launching skill
-            // also acts as an attack_finished packet for ranged weapons, if `is_attack == 1`
+            // Projectile launched from an agent, martial or skill; also an attack_finished for ranged weapons when is_attack == 1.
             struct AgentProjectileLaunched : Packet<AgentProjectileLaunched> {
                 uint32_t agent_id;
                 Vec2f destination;
@@ -657,8 +629,7 @@ namespace GW {
             };
             template<> constexpr uint32_t Packet<TownAllianceObject>::STATIC_HEADER = GAME_SMSG_TOWN_ALLIANCE_OBJECT;
 
-            // Info about any guilds applicable to current outpost.
-            // NOTE: When entering a guild hall, that guild will always be the first added (local_id = 1).
+            // Guilds applicable to the current outpost; entering a guild hall always adds that guild first (local_id = 1).
             struct GuildGeneral : Packet<GuildGeneral> {
                 uint32_t local_id;
                 uint32_t ghkey[4]; // blob[16]
@@ -770,17 +741,12 @@ namespace GW {
             };
             template<> constexpr uint32_t Packet<SalvageSessionSuccess>::STATIC_HEADER = GAME_SMSG_ITEM_SALVAGE_SESSION_SUCCESS;
 
-            // JumboMessage represents a message strewn across the center of the screen in big red or green characters.
-            // Things like moral boosts, flag captures, victory, defeat...
+            // A message strewn across the centre of the screen in big red or green characters -- moral boosts, captures, victory.
             struct JumboMessage : GW::Packet::StoC::Packet<JumboMessage> {
                 uint8_t type;   // JumboMessageType
                 uint32_t value; // JumboMessageValue
             };
-            // Diagnostic GCC/MinGW build: unlike the other specializations
-            // here, this one isn't constexpr (so isn't implicitly inline),
-            // causing an ODR multiple-definition link error across TUs that
-            // MSVC's linker tolerates but GCC's doesn't. Match the pattern
-            // used everywhere else in this file.
+            // Not constexpr unlike the others here, so GCC raises an ODR multiple-definition error MSVC tolerates -- match the pattern.
             template<> constexpr uint32_t GW::Packet::StoC::Packet<JumboMessage>::STATIC_HEADER = GAME_SMSG_JUMBO_MESSAGE;
 
             struct InstanceLoadFile : Packet<InstanceLoadFile> {
@@ -934,12 +900,7 @@ namespace GW {
             };
             template<> constexpr uint32_t Packet<PartyPlayerReady>::STATIC_HEADER = GAME_SMSG_PARTY_PLAYER_READY;
 
-            // When a new party is created:
-            // 1.   PartyPlayerStreamStart packet is sent
-            // 2.   PartyPlayerAdd packet per member
-            //      PartyHeroAdd packet per hero
-            //      PartyHenchmanAdd packer per henchman
-            // 3. PartyPlayerStreamEnd packet is sent
+            // New party: PartyPlayerStreamStart, then Add packets per player/hero/henchman, then PartyPlayerStreamEnd.
             struct PartyPlayerStreamStart : Packet<PartyPlayerStreamStart> {
                 uint32_t party_id; // word
             };

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.29)
 
-if(NOT CMAKE_GENERATOR MATCHES "Ninja|Makefile")
+if(NOT EMSCRIPTEN AND NOT CMAKE_GENERATOR MATCHES "Ninja|Makefile")
     set(CMAKE_GENERATOR_PLATFORM win32)
 endif()
 
@@ -12,6 +12,30 @@ set(GWTOOLBOXDLL_VERSION "8.32")
 set(GWTOOLBOXDLL_VERSION_BETA "") # can be anything. Marks beta version if not empty.
 set(GWTOOLBOX_MODULE_VERSION "8,32,0,0") # used for Dll module info. See GWToolboxdll/GWToolbox.rc
 
+
+# Everything below this point (toolset/arch checks, MSVC-only flags, native-only
+# dependency acquisition) assumes an MSVC/clang-cl Win32 build -- none of it applies
+# configuring for Emscripten.
+if(EMSCRIPTEN)
+    message(STATUS "Configuring for Emscripten: native-only dependencies "
+        "(minhook, DirectXTex, wintoast, Steamworks, Discord Game SDK) are skipped.")
+
+    set(CMAKE_CXX_STANDARD 23)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+    # imgui (portable core + the stock GLES3 backend, see cmake/imgui.cmake) is the
+    # one native-side dependency this configure still needs. Everything else
+    # GWToolboxdll/CMakeLists.txt's wasm branch links is header-only or part of the
+    # explicitly-curated wasm source list itself.
+    include(imgui)
+
+    # GWToolboxdll is the only wasm-relevant target: this is an MVP scaffold (mod_init,
+    # the render pipeline, a demo window -- see GWToolboxdll/Wasm/), not the real
+    # product yet, so Core/RestClient/GWToolbox (the native injector exe) stay out of
+    # this configure until something wasm-side actually needs them.
+    add_subdirectory(GWToolboxdll)
+else()
 
 if(MSVC_TOOLSET_VERSION LESS 143)
     message(FATAL_ERROR "Build using Visual Studio 2022 toolset (v143) or higher. Run cmake with `-T143`. You're currently using ${MSVC_TOOLSET_VERSION}")
@@ -166,3 +190,5 @@ add_subdirectory(RestClient)
 add_subdirectory(GWToolbox)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GWToolbox)
+
+endif() # EMSCRIPTEN

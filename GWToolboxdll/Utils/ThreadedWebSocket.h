@@ -9,7 +9,6 @@
 
 #include <Utils/RateLimiter.h>
 #include <easywsclient/easywsclient.hpp>
-#include <winsock2.h>
 
 // ThreadedWebSocket wraps easywsclient with a self-managed background thread,
 // send queue, rate-limited reconnect, and lifecycle callbacks.
@@ -80,7 +79,7 @@ public:
     void Connect();
 
     // Enqueue a message for sending. Starts the background thread if not already running.
-    // Returns false if WSA is not ready or a disconnect is pending.
+    // Returns false if a disconnect is pending.
     bool Send(std::string payload);
 
     // Request a graceful shutdown. Non-blocking: the thread will finish its current
@@ -98,19 +97,12 @@ public:
     // True when the socket is open and ready.
     bool IsReady() const;
 
-    // False if WSAStartup failed; Send() will always return false in this state.
-    bool IsWsaReady() const;
-
 private:
     void EnsureThreadRunning();
     void ThreadLoop();
     void TickSocket();
     void DrainSendQueue();
     void CloseSocket();
-
-    // WSA
-    WSAData wsa_data_ = {};
-    bool wsa_ok_ = false;
 
     // Config
     std::string url_;

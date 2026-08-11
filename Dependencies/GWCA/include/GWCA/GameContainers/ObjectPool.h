@@ -15,8 +15,4 @@ namespace GW {
     static_assert(sizeof(ObjectPool) == 0xC, "struct ObjectPool has incorrect size");
 }
 
-// The functions used to allocate looks like:
-// void *__thiscall ObjectPool::Alloc(ObjectPool *pool, int32_t typesize, const char *typename);
-// So, the typename & typesize are passed at every allocs, similar to `MemAlloc`.
-// It's worth nothing that the minimum typesize is 4, though Guild Wars doesn't assert it, it just
-// ends up crashing. This is due to the freeList pointer lists that are 4 bytes each.
+// ObjectPool::Alloc(pool, typesize, typename) passes type info per alloc; minimum typesize is 4 (freeList pointers) or it crashes.

@@ -42,6 +42,7 @@ static bool FindTopMostProcess(const std::vector<InjectProcess>& processes, size
         }
 
         for (size_t i = 0; i < processes.size(); ++i) {
+            if (processes[i].IsWasm()) continue; // never opened (no HWND/PID) - GetProcessId() would assert on its unset rights
             if (processes[i].m_Process.GetProcessId() == WindowPid) {
                 *top_most_index = i;
                 return true;
@@ -84,128 +85,157 @@ std::vector<std::filesystem::path> GetGuildWarsExecutablePaths()
     return paths;
 }
 
-// Scans for injectable Guild Wars processes; callable repeatedly (initial load, and every Retry click).
+// Appends every reachable gw_in_browser session as an InjectProcess; an unanswering session file (stale, or gw.py closed uncleanly) is skipped, not reported as an error - same treatment as a failed native process below.
+static void ScanWasmSessions(std::vector<InjectProcess>& inject_processes)
+{
+    for (WasmSession& session : GetWasmSessions()) {
+        WasmStatus status;
+        if (!GetWasmStatus(session, status)) {
+            fprintf(stderr, "gw_in_browser session on port %u isn't answering (stale session file?)\n", session.port);
+            continue;
+        }
+        const bool injected = WasmModIsLoaded(status.mods, WASM_GWMOD_FILENAME_A);
+        // The port stands in for a character name (unreadable from a sandboxed browser page) - same purpose as native's charname, telling instances apart.
+        std::wstring label = std::format(L"WASM client (port {})", session.port);
+        if (!status.page) {
+            label += L" - waiting for game window";
+        }
+        inject_processes.emplace_back(injected, std::move(session), std::move(label));
+    }
+}
+
+// Scans for injectable Guild Wars processes (native and wasm alike); callable repeatedly (initial load, and every Retry click).
 static InjectScanResult RunScan()
 {
     InjectScanResult result;
+    std::vector<InjectProcess> inject_processes;
+
+    std::wstring native_error; // set on any native-side failure, shown if wasm also comes up empty; overwritten only by a more specific native failure
+    const wchar_t* native_troubleshooting_url = nullptr;
 
     std::vector<Process> processes = GetGuildWarsProcesses();
 
     if (processes.empty()) {
         fprintf(stderr, "Didn't find any potential process to inject GWToolbox\n");
         const bool gw2_running = !GetGuildWars2Processes().empty();
-        result.m_ErrorMessage = gw2_running
-                                     ? L"GWToolbox is for Guild Wars, not Guild Wars 2.\nStart Guild Wars, then click Retry."
-                                     : L"Guild Wars isn't running.\nStart the game, then click Retry.";
-        return result;
+        native_error = gw2_running
+                           ? L"GWToolbox is for Guild Wars, not Guild Wars 2.\nStart Guild Wars, then click Retry."
+                           : L"Guild Wars isn't running.\nStart the game, then click Retry.";
     }
+    else {
+        uintptr_t charname_rva = 0;
+        uintptr_t email_rva = 0;
+        bool read_blocked = false;
+        DWORD read_error = 0;
 
-    uintptr_t charname_rva = 0;
-    uintptr_t email_rva = 0;
-    bool read_blocked = false;
-    DWORD read_error = 0;
-
-    for (int i = 0; i < processes.size(); i++) {
-        const ProcessScanner scanner(&processes[i]);
-        if (!scanner.IsValid()) {
-            // Couldn't read the GW image to scan it - almost always AV/anti-tamper stripping our access.
-            read_blocked = true;
-            read_error = scanner.GetError();
-            continue;
-        }
-        if (!scanner.FindPatternRva("\x6a\x14\x83\xc0\x18\x50\x68", "xxxxxxx", 7, &charname_rva)) {
-            continue;
-        }
-
-        if (!scanner.FindPatternRva("\x68\x80\x00\x00\x00\x51\x68", "xxxxxxx", 7, &email_rva)) {
-            continue;
-        }
-
-        break;
-    }
-
-    if (!charname_rva || !email_rva) {
-        if (read_blocked) {
-            fprintf(stderr, "Couldn't read Guild Wars memory to scan for RVAs (error %lu) - likely anti-virus interference\n", read_error);
-            std::wstring detail;
-            if (FindRecentDefenderBlock(L"Gw.exe", 5, detail)) {
-                fprintf(stderr, "Windows Defender reported: %ls\n", detail.c_str());
-            }
-            result.m_ErrorMessage = L"Couldn't read Guild Wars' memory to find your character.\nThis is usually antivirus or Controlled Folder Access blocking GWToolbox.";
-            result.m_TroubleshootingUrl = Troubleshooting::CantReadMemory;
-            return result;
-        }
-        fprintf(stderr, "Couldn't find charname/email RVAs in any potential process\n");
-        result.m_ErrorMessage = L"Couldn't locate your character name in memory.\nUpdate GWToolbox or contact the developers.";
-        return result;
-    }
-
-    std::vector<InjectProcess> inject_processes;
-
-    for (Process& process : processes) {
-        ProcessModule module;
-
-        if (!process.GetModule(&module)) {
-            fprintf(stderr, "Couldn't get module for process %lu\n", process.GetProcessId());
-            continue;
-        }
-
-        bool injected;
-        ProcessModule module2;
-        if (process.GetModule(&module2, L"GWToolboxdll.dll")) {
-            injected = true;
-        }
-        else {
-            injected = false;
-        }
-
-        uint32_t charname_ptr;
-        if (!process.Read(module.base + charname_rva, &charname_ptr, 4)) {
-            fprintf(stderr, "Can't read the address 0x%08X in process %lu\n", module.base + charname_rva, process.GetProcessId());
-            continue;
-        }
-        uint32_t email_ptr = 0;
-        if (!process.Read(module.base + email_rva, &email_ptr, 4)) {
-            fprintf(stderr, "Can't read the address 0x%08X in process %lu\n", module.base + email_rva, process.GetProcessId());
-            continue;
-        }
-        wchar_t charname[128] = {0};
-        if (!process.Read(charname_ptr, charname, 20 * sizeof(wchar_t))) {
-            fprintf(stderr, "Can't read the character name at address 0x%08X in process %lu\n", charname_ptr, process.GetProcessId());
-            continue;
-        }
-        if (!charname[0]) {
-            char email[_countof(charname)] = {0};
-            if (!process.Read(email_ptr, email, _countof(email) - 1)) {
-                fprintf(stderr, "Can't read the email at address 0x%08X in process %lu\n", email_ptr, process.GetProcessId());
+        for (int i = 0; i < processes.size(); i++) {
+            const ProcessScanner scanner(&processes[i]);
+            if (!scanner.IsValid()) {
+                // Couldn't read the GW image to scan it - almost always AV/anti-tamper stripping our access.
+                read_blocked = true;
+                read_error = scanner.GetError();
                 continue;
             }
-            for (int i = 0; i < _countof(email) && email[i]; i++) {
-                charname[i] = email[i];
+            if (!scanner.FindPatternRva("\x6a\x14\x83\xc0\x18\x50\x68", "xxxxxxx", 7, &charname_rva)) {
+                continue;
+            }
+
+            if (!scanner.FindPatternRva("\x68\x80\x00\x00\x00\x51\x68", "xxxxxxx", 7, &email_rva)) {
+                continue;
+            }
+
+            break;
+        }
+
+        if (!charname_rva || !email_rva) {
+            if (read_blocked) {
+                fprintf(stderr, "Couldn't read Guild Wars memory to scan for RVAs (error %lu) - likely anti-virus interference\n", read_error);
+                std::wstring detail;
+                if (FindRecentDefenderBlock(L"Gw.exe", 5, detail)) {
+                    fprintf(stderr, "Windows Defender reported: %ls\n", detail.c_str());
+                }
+                native_error = L"Couldn't read Guild Wars' memory to find your character.\nThis is usually antivirus or Controlled Folder Access blocking GWToolbox.";
+                native_troubleshooting_url = Troubleshooting::CantReadMemory;
+            }
+            else {
+                fprintf(stderr, "Couldn't find charname/email RVAs in any potential process\n");
+                native_error = L"Couldn't locate your character name in memory.\nUpdate GWToolbox or contact the developers.";
             }
         }
-        if (!charname[0]) {
-            fprintf(stderr, "Character name in process %lu is empty\n", process.GetProcessId());
-            wcscpy_s(charname, sizeof(L"<No character selected>"), L"<No character selected>");
+        else {
+            for (Process& process : processes) {
+                ProcessModule module;
+
+                if (!process.GetModule(&module)) {
+                    fprintf(stderr, "Couldn't get module for process %lu\n", process.GetProcessId());
+                    continue;
+                }
+
+                bool injected;
+                ProcessModule module2;
+                if (process.GetModule(&module2, L"GWToolboxdll.dll")) {
+                    injected = true;
+                }
+                else {
+                    injected = false;
+                }
+
+                uint32_t charname_ptr;
+                if (!process.Read(module.base + charname_rva, &charname_ptr, 4)) {
+                    fprintf(stderr, "Can't read the address 0x%08X in process %lu\n", module.base + charname_rva, process.GetProcessId());
+                    continue;
+                }
+                uint32_t email_ptr = 0;
+                if (!process.Read(module.base + email_rva, &email_ptr, 4)) {
+                    fprintf(stderr, "Can't read the address 0x%08X in process %lu\n", module.base + email_rva, process.GetProcessId());
+                    continue;
+                }
+                wchar_t charname[128] = {0};
+                if (!process.Read(charname_ptr, charname, 20 * sizeof(wchar_t))) {
+                    fprintf(stderr, "Can't read the character name at address 0x%08X in process %lu\n", charname_ptr, process.GetProcessId());
+                    continue;
+                }
+                if (!charname[0]) {
+                    char email[_countof(charname)] = {0};
+                    if (!process.Read(email_ptr, email, _countof(email) - 1)) {
+                        fprintf(stderr, "Can't read the email at address 0x%08X in process %lu\n", email_ptr, process.GetProcessId());
+                        continue;
+                    }
+                    for (int i = 0; i < _countof(email) && email[i]; i++) {
+                        charname[i] = email[i];
+                    }
+                }
+                if (!charname[0]) {
+                    fprintf(stderr, "Character name in process %lu is empty\n", process.GetProcessId());
+                    wcscpy_s(charname, sizeof(L"<No character selected>"), L"<No character selected>");
+                }
+
+                const size_t charname_len = wcsnlen(charname, _countof(charname));
+                std::wstring charname2(charname, charname + charname_len);
+
+                inject_processes.emplace_back(injected, std::move(process), std::wstring(charname2));
+            }
+
+            if (inject_processes.empty()) {
+                fprintf(stderr, "No process with a readable character name\n");
+                native_error = IsRunningAsAdmin()
+                                   ? L"Couldn't find a valid character to inject into."
+                                   : L"Couldn't find a valid character.\nGWToolbox may need administrator privileges.";
+            }
         }
-
-        const size_t charname_len = wcsnlen(charname, _countof(charname));
-        std::wstring charname2(charname, charname + charname_len);
-
-        inject_processes.emplace_back(injected, std::move(process), std::wstring(charname2));
     }
 
     processes.clear();
 
+    ScanWasmSessions(inject_processes);
+
     if (inject_processes.empty()) {
-        fprintf(stderr, "No process with a readable character name\n");
-        result.m_ErrorMessage = IsRunningAsAdmin()
-                                     ? L"Couldn't find a valid character to inject into."
-                                     : L"Couldn't find a valid character.\nGWToolbox may need administrator privileges.";
+        result.m_ErrorMessage = !native_error.empty() ? native_error : L"Guild Wars isn't running.\nStart the game, then click Retry.";
+        result.m_TroubleshootingUrl = native_troubleshooting_url;
         return result;
     }
 
-    // Sort by name
+    // Sort by name (native's character name, wasm's "WASM client (port N)" label alike)
     std::ranges::sort(inject_processes, [](const InjectProcess& proc1, const InjectProcess& proc2) {
         return proc1.m_Charname < proc2.m_Charname;
     });
@@ -215,13 +245,20 @@ static InjectScanResult RunScan()
     return result;
 }
 
-InjectReply InjectWindow::AskInjectProcess(Process* target_process)
+InjectReply InjectWindow::AskInjectProcess(InjectSelection* selection)
 {
     InjectScanResult scan = RunScan();
 
     if (settings.quiet) {
         if (scan.m_Found && scan.m_Processes.size() == 1) {
-            *target_process = std::move(scan.m_Processes[0].m_Process);
+            InjectProcess& only = scan.m_Processes[0];
+            selection->is_wasm = only.IsWasm();
+            if (selection->is_wasm) {
+                selection->wasm_session = std::move(only.m_WasmSession);
+            }
+            else {
+                selection->process = std::move(only.m_Process);
+            }
             return InjectReply_Inject; // Inject if 1 process found
         }
         if (!scan.m_Found) {
@@ -246,7 +283,7 @@ InjectReply InjectWindow::AskInjectProcess(Process* target_process)
         return InjectReply_Cancel;
     }
 
-    *target_process = inject.TakeSelectedProcess(index);
+    *selection = inject.TakeSelected(index);
     return InjectReply_Inject;
 }
 
@@ -296,9 +333,18 @@ bool InjectWindow::GetSelected(size_t* index) const
     return false;
 }
 
-Process InjectWindow::TakeSelectedProcess(const size_t index)
+InjectSelection InjectWindow::TakeSelected(const size_t index)
 {
-    return std::move(m_ScanResult.m_Processes[index].m_Process);
+    InjectProcess& picked = m_ScanResult.m_Processes[index];
+    InjectSelection selection;
+    selection.is_wasm = picked.IsWasm();
+    if (selection.is_wasm) {
+        selection.wasm_session = std::move(picked.m_WasmSession);
+    }
+    else {
+        selection.process = std::move(picked.m_Process);
+    }
+    return selection;
 }
 
 LRESULT InjectWindow::WndProc(HWND hWnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)

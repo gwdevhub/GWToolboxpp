@@ -38,9 +38,7 @@ namespace GW {
         /* +h0148 */ GW::Array<LoginCharacter> chars;
     };
 }
-// ============================================================
 // C Interop API
-// ============================================================
 extern "C" {
     GWCA_API void* GetAvailableChars();
 }
