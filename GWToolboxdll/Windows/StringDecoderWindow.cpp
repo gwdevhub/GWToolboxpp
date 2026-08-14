@@ -50,9 +50,9 @@ void StringDecoderWindow::Draw(IDirect3DDevice9*)
         encoded = new char[encoded_size];
         encoded[0] = 0;
     }
-    bool decodeIt = ImGui::InputInt("Encoded string id:", &encoded_id, 1, 1, ImGuiInputTextFlags_CharsHexadecimal);
-    decodeIt |= ImGui::InputText("Encoded string:", encoded, encoded_size, ImGuiInputTextFlags_EnterReturnsTrue);
-    decodeIt |= ImGui::Button("Decode");
+    bool decodeIt = ImGui::InputInt("加密字符串 ID：", &encoded_id, 1, 1, ImGuiInputTextFlags_CharsHexadecimal);
+    decodeIt |= ImGui::InputText("加密字符串：", encoded, encoded_size, ImGuiInputTextFlags_EnterReturnsTrue);
+    decodeIt |= ImGui::Button("解码");
     if (decodeIt) {
         wchar_t buf[8];
         if (encoded_id != 0 && GW::UI::UInt32ToEncStr(encoded_id, buf, _countof(buf))) {
@@ -63,8 +63,8 @@ void StringDecoderWindow::Draw(IDirect3DDevice9*)
         }
         Decode();
     }
-    ImGui::InputInt("Map ID:", &map_id);
-    if (ImGui::Button("Decode Map Name")) {
+    ImGui::InputInt("地图 ID：", &map_id);
+    if (ImGui::Button("解码地图名称")) {
         const GW::AreaInfo* map = GW::Map::GetMapInfo(static_cast<GW::Constants::MapID>(map_id));
         if (map) {
             wchar_t buf[8] = {0};
@@ -117,7 +117,7 @@ std::wstring StringDecoderWindow::GetEncodedString() const
         unsigned int lval = 0;
         const auto base = results[i].rfind("0x", 0) == 0 ? 0 : 16;
         if (!(TextUtils::ParseUInt(results[i].c_str(), &lval, base) && lval < 0xffff)) {
-            Log::Error("Failed to ParseUInt %s", results[i].c_str());
+            Log::Error("解析无符号整数失败 %s", results[i].c_str());
             return L"";
         }
         const wchar_t c = static_cast<wchar_t>(lval);

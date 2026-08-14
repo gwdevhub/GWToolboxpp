@@ -23,7 +23,7 @@ public:
     static glz::generic ToJSON_V_1_0();
     static void ExportToJSON(Version version);
 
-    [[nodiscard]] const char* Name() const override { return "Observer Export"; };
+    [[nodiscard]] const char* Name() const override { return "观察模式"; };
     [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
     void Draw(IDirect3DDevice9* pDevice) override;
     void Initialize() override;

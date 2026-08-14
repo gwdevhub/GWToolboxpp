@@ -19,7 +19,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Reroll"; }
+    [[nodiscard]] const char* Name() const override { return "重掷骰子"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_USERS; }
 
     struct Settings {

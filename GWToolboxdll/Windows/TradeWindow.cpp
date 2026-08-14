@@ -34,11 +34,11 @@ namespace tradechat_api {
         std::string query;
     };
 
-    // `t` (timestamp) is sometimes string, sometimes number — parse via raw_json downstream.
+    // `t`（时间戳）有时是字符串，有时是数字 — 通过 raw_json 下游解析。
     struct RawMessage {
-        std::string s; // sender
-        std::string m; // message
-        glz::raw_json t; // timestamp (string or number)
+        std::string s; // 发送者
+        std::string m; // 消息
+        glz::raw_json t; // 时间戳（字符串或数字）
     };
 
     struct WebsocketEnvelope {
@@ -46,7 +46,7 @@ namespace tradechat_api {
         uint32_t num_results = 0;
         std::vector<RawMessage> results;
 
-        // Fields below are only populated for raw-message envelopes.
+        // 以下字段仅用于原始消息信封。
         std::string s;
         std::string m;
         glz::raw_json t;
@@ -55,12 +55,12 @@ namespace tradechat_api {
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
-    // Every connection cost 30 seconds.
-    // You have 2 tries.
-    // After that, you can try every 30 seconds.
+    // 每次连接消耗 30 秒。
+    // 你有 2 次尝试机会。
+    // 之后，每 30 秒可以尝试一次。
     constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
     constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
-    static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    static const char* months[] = {"一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"};
     using easywsclient::WebSocket;
     constexpr glz::opts json_opts{.error_on_unknown_keys = false};
 
@@ -93,12 +93,12 @@ namespace {
 
     bool show_alert_window = false;
 
-    // Window could be visible but collapsed - use this var to check it.
+    // 窗口可能可见但已折叠 — 使用此变量检查状态。
     bool collapsed = false;
 
     static constexpr auto ALERT_BUF_SIZE = 1024 * 16;
     char alert_buf[ALERT_BUF_SIZE]{};
-    // set when the alert_buf was modified
+    // 当 alert_buf 被修改时设置
     bool alertfile_dirty = false;
 
     std::string pending_query_string;
@@ -127,8 +127,8 @@ namespace {
         pending_query_sent = 0;
     }
 
-    // The server may send `t` as either a JSON number or a JSON-quoted string.
-    // Both shapes resolve to the same underlying millisecond timestamp.
+    // 服务器可能以 JSON 数字或 JSON 引号字符串的形式发送 `t`。
+    // 两种形式都解析为相同的底层毫秒时间戳。
     uint64_t parse_timestamp_raw(std::string_view raw)
     {
         if (raw.empty()) return 0ull;
@@ -149,7 +149,7 @@ namespace {
         if (timestamp_ull == 0ull) return false;
         msg->name = raw.s;
         msg->message = raw.m;
-        msg->timestamp = static_cast<uint32_t>(timestamp_ull / 1000); // Messy?
+        msg->timestamp = static_cast<uint32_t>(timestamp_ull / 1000); // 有点乱？
         return true;
     }
 
@@ -157,7 +157,7 @@ namespace {
     void CHAT_CMD_FUNC(CmdPricecheck)
     {
         if (argc < 2) {
-            return Log::Error("Try '/pc [item]'");
+            return Log::Error("试试 '/pc [物品名称]'");
         }
 
         std::string item_to_search;
@@ -167,7 +167,7 @@ namespace {
             }
             item_to_search += TextUtils::WStringToString(argv[i]);
         }
-        Log::Flash("Searching trade for \"%s\"...", item_to_search.c_str());
+        Log::Flash("正在交易频道搜索 \"%s\"...", item_to_search.c_str());
         search(item_to_search, true);
     }
 
@@ -184,7 +184,7 @@ namespace {
                 try {
                     word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
                 } catch (const std::exception&) {
-                    // Silent fail; invalid regex
+                    // 静默失败；无效正则表达式
                 }
                 if (std::regex_search(message, word_regex)) {
                     return true;
@@ -259,7 +259,7 @@ void TradeWindow::Initialize()
         }
     });
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"pc", CmdPricecheck);
-    // local messages
+    // 本地消息
     GW::StoC::RegisterPostPacketCallback(&OnPartySearch_Entry, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, [](GW::HookStatus*, void* pak) {
         const struct Packet {
             uint32_t header;
@@ -347,7 +347,7 @@ void TradeWindow::Update(const float)
     if (!maintain_socket && ws_window && ws_window->getReadyState() == WebSocket::OPEN) {
         ws_window->close();
         messages.clear();
-        window_rate_limiter = RateLimiter(); // Deliberately closed; reset rate limiter.
+        window_rate_limiter = RateLimiter(); // 故意关闭；重置速率限制器。
     }
     fetch();
 }
@@ -360,10 +360,10 @@ void TradeWindow::fetch()
     const bool search_pending = !pending_query_sent && !pending_query_string.empty();
     if (search_pending) {
         //strcpy(search_buffer, pending_query_string.c_str());
-        // Fill searched_words; query to lower to ease on-the-fly search in ::fetch
+        // 填充 searched_words；将查询转为小写以便在 ::fetch 中方便实时搜索
         ParseBuffer(search_buffer, searched_words);
 
-        // Send request
+        // 发送请求
         const tradechat_api::SearchRequest request{.query = pending_query_string};
         pending_query_sent = clock();
         ws_window->send(glz::write_json(request).value_or(std::string{}));
@@ -372,17 +372,17 @@ void TradeWindow::fetch()
     ws_window->dispatch([this](const std::string& data) {
         tradechat_api::WebsocketEnvelope res{};
         if (auto ec = glz::read<json_opts>(res, data); ec) {
-            Log::Log("ERROR: Failed to parse res JSON from response in ws_window->dispatch\n");
+            Log::Log("错误：在 ws_window->dispatch 中解析响应 JSON 失败\n");
             return;
         }
         if (!res.query.empty()) {
             if (res.query != pending_query_string) {
-                return; // Different query has been made since this search.
+                return; // 自此次搜索以来已发起不同的查询
             }
             pending_query_string.clear();
             messages.clear();
             if (print_search_results && res.results.empty()) {
-                Log::Warning("No results found for %s", res.query.c_str());
+                Log::Warning("未找到 %s 的结果", res.query.c_str());
                 print_search_results = false;
                 return;
             }
@@ -396,7 +396,7 @@ void TradeWindow::fetch()
                 if (print_search_results && i < 12) {
                     std::wstring name_ws = TextUtils::StringToWString(msg.name);
                     if (ChatFilter::IsSenderBlocked(name_ws)) {
-                        continue; // Skip search results from blocked players
+                        continue; // 跳过已屏蔽玩家的搜索结果
                     }
                     std::wstring msg_ws = TextUtils::StringToWString(msg.message);
                     time_t ts = msg.timestamp;
@@ -411,15 +411,15 @@ void TradeWindow::fetch()
             print_search_results = false;
             return;
         }
-        // Add to message feed
+        // 添加到消息源
         Message msg;
         const tradechat_api::RawMessage raw{.s = res.s, .m = res.m, .t = res.t};
         if (!fill_message(raw, &msg)) {
-            return; // Not valid message object
+            return; // 不是有效的消息对象
         }
         bool add_to_window = searched_words.empty();
         if (!add_to_window) {
-            // Currently showing a search term in-window. Only add if it matches all words.
+            // 当前在窗口中显示搜索词。仅当匹配所有词时才添加。
             add_to_window = true;
             std::string input(msg.message);
             std::ranges::transform(input, input.begin(),
@@ -428,7 +428,7 @@ void TradeWindow::fetch()
                                    });
             for (auto& term : searched_words) {
                 if (input.find(term) != std::string::npos) {
-                    continue; // Searched word no found; drop out
+                    continue; // 未找到搜索词；退出
                 }
                 add_to_window = false;
                 break;
@@ -438,14 +438,14 @@ void TradeWindow::fetch()
             messages.add(msg);
         }
 
-        // Check alerts
-        // do not display trade chat while in kamadan AE district 1 or Pre-Searing Ascalon AE district 1
+        // 检查提醒
+        // 在 Kamadan AE 1 区或 Pre-Searing Ascalon AE 1 区时不显示交易聊天
         bool print_message = ((settings.is_kamadan_chat && settings.print_game_chat && !GetInKamadanAE1()) || (!settings.is_kamadan_chat && settings.print_game_chat_asc && !GetInAscalonAE1())) && IsTradeAlert(msg.message);
 
         if (print_message) {
             std::wstring name_ws = TextUtils::StringToWString(msg.name);
             if (FriendListWindow::GetIsPlayerIgnored(name_ws) || ChatFilter::IsSenderBlocked(name_ws)) {
-                return; // Skip messages from ignored or blocked players
+                return; // 跳过已忽略或已屏蔽玩家的消息
             }
             std::wstring msg_ws = std::format(L"<c=#f96677><quote>{}",TextUtils::StringToWString(msg.message));
             external_trade_message = true;
@@ -483,16 +483,16 @@ void TradeWindow::FindPlayerPartySearch(GW::HookStatus*, void*)
 
 void TradeWindow::Draw(IDirect3DDevice9*)
 {
-    /* Alerts window */
+    /* 提醒窗口 */
     if (show_alert_window) {
         const float& font_scale = ImGui::FontScale();
         ImGui::SetNextWindowSize(ImVec2(768.f * font_scale, 768.f * font_scale), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
+        if (ImGui::Begin("交易提醒", &show_alert_window)) {
             DrawAlertsWindowContent(true);
         }
         ImGui::End();
     }
-    /* Main trade window */
+    /* 主交易窗口 */
     if (!visible) {
         return;
     }
@@ -503,7 +503,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
         return;
     }
-    /* Search bar header */
+    /* 搜索栏标题 */
     const float& font_scale = ImGui::FontScale();
     const float btn_width = 80.0f * font_scale;
     const float search_bar_width = ImGui::GetContentRegionAvail().x - btn_width * 4 - ImGui::GetStyle().ItemInnerSpacing.x * 7;
@@ -515,17 +515,17 @@ void TradeWindow::Draw(IDirect3DDevice9*)
             search_type = static_cast<int>(player_party_search.party_search_type);
         }
         ImGui::PushItemWidth(search_bar_width);
-        if (ImGui::InputTextWithHint("##search_text", "Seek Party", player_party_search_text, _countof(player_party_search_text), ImGuiInputTextFlags_EnterReturnsTrue)) {
+        if (ImGui::InputTextWithHint("##search_text", "寻找队伍", player_party_search_text, _countof(player_party_search_text), ImGuiInputTextFlags_EnterReturnsTrue)) {
             is_seeking = strlen(player_party_search_text);
             advertise_dirty = true;
         }
         ImGui::PopItemWidth();
         ImGui::SameLine();
         ImGui::PushItemWidth(btn_width * 1.5f);
-        advertise_dirty |= ImGui::Combo("##search_type", &search_type, "Hunting\0Mission\0Quest\0Trade\0Guild\0\0");
+        advertise_dirty |= ImGui::Combo("##search_type", &search_type, "狩猎\0任务\0委托\0交易\0公会\0\0");
         ImGui::PopItemWidth();
         ImGui::SameLine();
-        advertise_dirty |= ImGui::Checkbox("Seek Party", &is_seeking);
+        advertise_dirty |= ImGui::Checkbox("寻找队伍", &is_seeking);
         if (advertise_dirty) {
             if (!is_seeking) {
                 if (player_party_search.message[0]) {
@@ -547,10 +547,10 @@ void TradeWindow::Draw(IDirect3DDevice9*)
     }
     bool do_search = false;
     ImGui::PushItemWidth(search_bar_width);
-    do_search |= ImGui::InputTextWithHint("##trade_search_buffer", settings.is_kamadan_chat ? "Search Kamadan Trade Chat" : "Search Ascalon Trade Chat", search_buffer, 256, flags);
+    do_search |= ImGui::InputTextWithHint("##trade_search_buffer", settings.is_kamadan_chat ? "搜索 Kamadan 交易频道" : "搜索 Ascalon 交易频道", search_buffer, 256, flags);
     ImGui::PopItemWidth();
     ImGui::SameLine();
-    do_search |= ImGui::Button(searching ? "Searching" : "Search", ImVec2(btn_width, 0));
+    do_search |= ImGui::Button(searching ? "搜索中" : "搜索", ImVec2(btn_width, 0));
     if (searching) {
         ImGui::PopStyleColor();
     }
@@ -558,12 +558,12 @@ void TradeWindow::Draw(IDirect3DDevice9*)
         search(search_buffer);
     }
     ImGui::SameLine();
-    if (ImGui::Button("Clear", ImVec2(btn_width, 0))) {
+    if (ImGui::Button("清空", ImVec2(btn_width, 0))) {
         std::snprintf(search_buffer, _countof(search_buffer), "");
         search("");
     }
     ImGui::SameLine();
-    if (ImGui::Button("Alerts", ImVec2(btn_width, 0))) {
+    if (ImGui::Button("提醒", ImVec2(btn_width, 0))) {
         show_alert_window = !show_alert_window;
     }
 
@@ -574,41 +574,41 @@ void TradeWindow::Draw(IDirect3DDevice9*)
     }
     if (settings.is_kamadan_chat) {
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Currently viewing messages from Kamadan AE1.\nClick to view messages from Pre-Searing Ascalon AE1 instead.");
+            ImGui::SetTooltip("当前查看 Kamadan AE1 的消息。\n点击切换到 Pre-Searing Ascalon AE1 的消息。");
         }
     }
     else {
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Currently viewing messages from Pre-Searing Ascalon AE1.\nClick to view messages from Kamadan AE1 instead.");
+            ImGui::SetTooltip("当前查看 Pre-Searing Ascalon AE1 的消息。\n点击切换到 Kamadan AE1 的消息。");
         }
     }
 
-    /* Main trade chat area */
+    /* 主交易聊天区域 */
     ImGui::BeginChild("trade_scroll", ImVec2(0, -20.0f - ImGui::GetStyle().ItemInnerSpacing.y));
-    /* Connection checks */
+    /* 连接检查 */
     if (!ws_window && !ws_window_connecting) {
         char buf[255];
-        snprintf(buf, 255, "The connection to %s has timed out.", settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
+        snprintf(buf, 255, "到 %s 的连接已超时。", settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(buf).x) / 2);
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
         ImGui::Text(buf);
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
-        if (ImGui::Button("Click to reconnect")) {
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("点击重新连接").x) / 2);
+        if (ImGui::Button("点击重新连接")) {
             AsyncWindowConnect(true);
         }
     }
     else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x) / 2);
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("连接中...").x) / 2);
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-        ImGui::Text("Connecting...");
+        ImGui::Text("连接中...");
     }
     else {
-        /* Display trade messages */
+        /* 显示交易消息 */
         const bool show_time = ImGui::GetWindowWidth() > 600.0f;
 
         const float& innerspacing = ImGui::GetStyle().ItemInnerSpacing.x;
         const float time_width = (show_time ? 100.0f : 0.0f) * font_scale;
-        const float playername_left = time_width + innerspacing; // player button left align
+        const float playername_left = time_width + innerspacing; // 玩家按钮左对齐
         const float playernamewidth = 160.0f * font_scale;
         const float message_left = playername_left + playernamewidth + innerspacing;
 
@@ -617,7 +617,7 @@ void TradeWindow::Draw(IDirect3DDevice9*)
             Message& msg = messages[i];
             ImGui::PushID(i);
 
-            // ==== time elapsed column ====
+            // ==== 时间列 ====
             if (show_time) {
 
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(.7f, .7f, .7f, 1.0f));
@@ -628,19 +628,19 @@ void TradeWindow::Draw(IDirect3DDevice9*)
                 ImGui::PopStyleColor();
             }
 
-            // ==== Sender name column ====
+            // ==== 发送者名称列 ====
             if (show_time) {
                 ImGui::SameLine(playername_left);
             }
             if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
-                // open whisper to player
+                // 向玩家打开密语
                 GW::GameThread::Enqueue([&msg] {
                     std::wstring name_ws = TextUtils::StringToWString(msg.name);
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, name_ws.data());
                 });
             }
 
-            // ==== Message column ====
+            // ==== 消息列 ====
             ImGui::SameLine(message_left);
             ImGui::TextWrapped("%s", msg.message.c_str());
             ImGui::PopID();
@@ -648,10 +648,10 @@ void TradeWindow::Draw(IDirect3DDevice9*)
     }
     ImGui::EndChild();
 
-    /* Link to website footer */
+    /* 网站链接脚注 */
     static char buf[128];
     if (!buf[0] || refresh_footer) {
-        snprintf(buf, 128, "Powered by %s", settings.is_kamadan_chat ? https_host_kmd : https_host_asc);
+        snprintf(buf, 128, "由 %s 提供", settings.is_kamadan_chat ? https_host_kmd : https_host_asc);
     }
 
     if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
@@ -664,7 +664,7 @@ void TradeWindow::RegisterSettingsContent()
 {
     ToolboxWindow::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
-        "Chat Settings",
+        "聊天设置",
         nullptr,
         [this](const std::string&, const bool is_showing) {
             if (!is_showing) {
@@ -677,13 +677,13 @@ void TradeWindow::RegisterSettingsContent()
 
 void TradeWindow::DrawAlertsWindowContent(bool)
 {
-    ImGui::Text("Alerts");
-    ImGui::CheckboxWithHelp("Send Kamadan AE1 trade chat to your trade chat", &settings.print_game_chat, "Only when trade chat channel is visible in-game");
-    ImGui::CheckboxWithHelp("Send Pre-Searing Ascalon AE1 trade chat to your trade chat", &settings.print_game_chat_asc, "Only when trade chat channel is visible in-game");
-    ImGui::Checkbox("Only show messages containing:", &settings.filter_alerts);
+    ImGui::Text("提醒");
+    ImGui::CheckboxWithHelp("将 Kamadan AE1 交易频道发送到你的交易频道", &settings.print_game_chat, "仅当游戏内交易频道可见时");
+    ImGui::CheckboxWithHelp("将 Pre-Searing Ascalon AE1 交易频道发送到你的交易频道", &settings.print_game_chat_asc, "仅当游戏内交易频道可见时");
+    ImGui::Checkbox("仅显示包含以下关键词的消息：", &settings.filter_alerts);
     ImGui::Indent();
-    ImGui::ShowHelp("Only shows messages from the currently active trade channel (Kamadan OR Ascalon)");
-    ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
+    ImGui::ShowHelp("仅显示当前活跃交易频道（Kamadan 或 Ascalon）的消息");
+    ImGui::TextDisabled("（每行一个关键词，不区分大小写）");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
                                   ImVec2(-1.0f, 0.0f))) {
         ParseBuffer(alert_buf, alert_words);
@@ -695,10 +695,10 @@ void TradeWindow::DrawAlertsWindowContent(bool)
 
 void TradeWindow::DrawChatSettings(const bool ownwindow)
 {
-    ImGui::CheckboxWithHelp("Apply trade filters to local trade messages", &settings.filter_local_trade, "If enabled, only trade messages matching your alerts will be shown in chat");
+    ImGui::CheckboxWithHelp("对本地交易消息应用交易过滤器", &settings.filter_local_trade, "启用后，只有匹配你提醒的交易消息才会显示在聊天中");
     if (!ownwindow) {
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 120.f * ImGui::FontScale(), 0);
-        if (ImGui::Button("Show Trade Alerts")) {
+        if (ImGui::Button("显示交易提醒")) {
             show_alert_window = !show_alert_window;
         }
     }
@@ -715,7 +715,7 @@ void TradeWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     doc.GetStruct(Name(), settings);
     strncpy(player_party_search_text, settings.player_party_search_text.c_str(), _countof(player_party_search_text) - 1);
 
-    // Alert keywords live in AlertKeywords.txt (shared with PartySearchWindow), not in the settings doc
+    // 提醒关键词位于 AlertKeywords.txt 中（与 PartySearchWindow 共享），不在设置文档中
     std::ifstream alert_file;
     alert_file.open(Resources::GetSettingFileOrLegacy(L"AlertKeywords.txt"));
     if (alert_file.is_open()) {
@@ -782,17 +782,17 @@ void TradeWindow::AsyncWindowConnect(const bool force)
     }
     int res;
     if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
-        printf("Failed to call WSAStartup: %d\n", res);
+        printf("调用 WSAStartup 失败: %d\n", res);
         return;
     }
     ws_window_connecting = true;
     thread_jobs.push([this] {
         if ((ws_window = WebSocket::from_url(settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc)) == nullptr) {
-            printf("Couldn't connect to the host '%s'", settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
+            printf("无法连接到主机 '%s'", settings.is_kamadan_chat ? ws_host_kmd : ws_host_asc);
         }
         ws_window_connecting = false;
         if (messages.size() == 0 && pending_query_string.empty()) {
-            search(""); // Initial draw, gets latest N messages
+            search(""); // 初始绘制，获取最新 N 条消息
         }
     });
 }

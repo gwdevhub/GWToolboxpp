@@ -23,7 +23,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Party Search"; }
+    [[nodiscard]] const char* Name() const override { return "队伍搜索"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_PEOPLE_ARROWS; }
 
     struct Settings {

@@ -15,7 +15,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Notepad"; }
+    [[nodiscard]] const char* Name() const override { return "记事本"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CLIPBOARD; }
 
     struct Settings {

@@ -28,7 +28,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Travel"; }
+    [[nodiscard]] const char* Name() const override { return "传送"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE_EUROPE; }
 
     struct Settings {

@@ -29,7 +29,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Objectives"; }
+    [[nodiscard]] const char* Name() const override { return "目标计时器"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BULLSEYE; }
 
     void Initialize() override;

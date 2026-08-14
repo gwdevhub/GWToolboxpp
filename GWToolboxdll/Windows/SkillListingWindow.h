@@ -102,7 +102,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Guild Wars Skill List"; }
+    [[nodiscard]] const char* Name() const override { return "技能列表"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_LIST; }
 
     void Draw(IDirect3DDevice9* pDevice) override;

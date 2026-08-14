@@ -36,9 +36,9 @@ namespace {
 
     GW::Agent* player = nullptr;
 
-    // Pcon Settings
-    // todo: tonic pop?
-    // todo: morale / dp removal
+    // 消耗品设置
+    // TODO: 变身药水？
+    // TODO: 士气/死亡惩罚移除
     GW::HookEntry AgentSetPlayer_Entry;
     GW::HookEntry AddExternalBond_Entry;
     GW::HookEntry PostProcess_Entry;
@@ -53,31 +53,31 @@ namespace {
     InstanceType previous_instance_type = InstanceType::Loading;
     bool in_vanquishable_area = false;
 
-    bool elite_area_disable_triggered = false; // Already triggered in this run?
+    bool elite_area_disable_triggered = false; // 本轮是否已触发？
     clock_t elite_area_check_timer = 0;
 
-    // Map of which objectives to check per map_id
+    // 每个地图需要检查的目标列表
     std::vector<DWORD> objectives_complete = {};
     const std::map<MapID, std::vector<DWORD>>
     objectives_to_complete_by_map_id = {
-        {MapID::The_Fissure_of_Woe, {309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319}}, // Can be done in any order - check them all.
+        {MapID::The_Fissure_of_Woe, {309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319}}, // 可按任意顺序完成 - 全部检查
         {MapID::The_Deep, {421}},
         {MapID::Urgozs_Warren, {357}},
-        {MapID::The_Underworld, {157}} // Only need to check for Nightman Cometh for Underworld.
+        {MapID::The_Underworld, {157}} // 地下世界只需检查 Nightman Cometh
     };
     std::vector<DWORD> current_objectives_to_check = {};
 
-    // Map of which locations to turn off near by map_id e.g. Kanaxai, Urgoz
+    // 按地图 ID 关闭消耗品的位置，例如 Kanaxai、Urgoz
     const std::map<MapID, GW::Vec2f>
     final_room_location_by_map_id = {
-        {MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},     // Rough location of Kanaxai
-        {MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Front entrance of Urgoz's room
+        {MapID::The_Deep, GW::Vec2f(30428.0f, -5842.0f)},     // Kanaxai 的大致位置
+        {MapID::Urgozs_Warren, GW::Vec2f(-2800.0f, 14316.0f)} // Urgoz 房间前门
     };
     GW::Vec2f current_final_room_location = GW::Vec2f(0, 0);
 
-    const char* disable_cons_on_objective_completion_hint = "Disable cons when final objective(s) completed";
-    const char* disable_cons_in_final_room_hint = "Disable cons when reaching the final room in Urgoz and Deep";
-    const char* disable_cons_on_vanquish_completion_hint = "Disable cons when completing a vanquish";
+    const char* disable_cons_on_objective_completion_hint = "目标完成时禁用消耗品";
+    const char* disable_cons_in_final_room_hint = "到达 Urgoz 或深渊最终房间时禁用消耗品";
+    const char* disable_cons_on_vanquish_completion_hint = "征服完成时禁用消耗品";
 
     constexpr std::initializer_list<std::wstring_view> air_of_superiority_messages = {
         L"\x8102\x2399", // Knowledge is power!
@@ -134,7 +134,7 @@ namespace {
         L"\x8101\x6695\x8ED8\xD572", // "Klaatu...barada...necktie?"
         L"\x8101\x6696\xE883\xFED7", // "You're disgusting, but I love you!"
         L"\x8101\x68BA\xA875\xA785", // "Cross over, children. All are welcome. All welcome. Go into the light. There is peace and serenity in the light."
-        L"\x8102\x4939\xD402\x99F3", // start grog messages
+        L"\x8102\x4939\xD402\x99F3", // 开始烈酒消息
         L"\x1FAA\xD6B1\x8599\x7B2D",
         L"\x1FB2\xD54E\x9029\x151A",
         L"\x1FAB\xFCDD\xA466\x3243",
@@ -167,10 +167,10 @@ namespace {
         L"\x8102\x4931\xEA9D\xD3D5",
         L"\x8102\x4921\xA36D\xCE7A",
         L"\x8102\x4937\xACEA\x8B90",
-        L"\x8102\x4928\xC8E9\x8953", // the ship, it's spinning
+        L"\x8102\x4928\xC8E9\x8953", // 船在转
         L"\x8102\x4919\xBC36\xB446",
         L"\x8102\x492B\xC39F\xD6FA",
-        L"\x8102\x4923\xAA60\x9F98", // end grog messages
+        L"\x8102\x4923\xAA60\x9F98", // 烈酒消息结束
     };
 
 
@@ -182,10 +182,10 @@ namespace {
     void CheckObjectivesCompleteAutoDisable()
     {
         if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
-            return; // Pcons disabled, auto disable already triggered, or not in explorable area.
+            return; // 消耗品已禁用、自动禁用已触发或不在探索区域
         }
         if (!Instance().settings.disable_cons_on_objective_completion || objectives_complete.empty() || current_objectives_to_check.empty()) {
-            return; // No objectives complete, or no objectives to check for this map.
+            return; // 无目标完成或该地图无检查目标
         }
         bool objective_complete = false;
         for (size_t i = 0; i < current_objectives_to_check.size(); i++) {
@@ -194,13 +194,13 @@ namespace {
                 objective_complete = current_objectives_to_check.at(i) == objectives_complete.at(j);
             }
             if (!objective_complete) {
-                return; // Not all objectives complete.
+                return; // 并非所有目标都完成
             }
         }
         if (objective_complete) {
             elite_area_disable_triggered = true;
             Instance().SetEnabled(false);
-            Log::Flash("Cons auto-disabled on completion");
+            Log::Flash("消耗品已在完成目标时自动禁用");
         }
     }
 
@@ -239,7 +239,7 @@ namespace {
             case GW::UI::UIMessage::kPostProcessingEffect: {
                 auto packet = (GW::UI::UIPacket::kPostProcessingEffect*)wparam;
                 PconAlcohol::alcohol_level = (uint32_t)(packet->amount * 5.f);
-                // printf("Level = %d, tint = %d\n", pak->level, pak->tint);
+                // printf("等级 = %d, 染色 = %d\n", pak->level, pak->tint);
                 if (enabled) {
                     pcon_alcohol->Update();
                 }
@@ -285,118 +285,118 @@ namespace {
 
 PconsWindow::PconsWindow()
 {
-    constexpr float s = 64.0f; // all icons are 64x64
+    constexpr float s = 64.0f; // 所有图标均为 64x64
 
-    pcons.push_back(new PconCons("Essence of Celerity", "Essence", "essence", L"Essence of Celerity",
+    pcons.push_back(new PconCons("迅捷精华", "精华", "essence", L"Essence of Celerity",
                                  ImVec2(5 / s, 10 / s), ImVec2(46 / s, 51 / s),
                                  ItemID::ConsEssence, SkillID::Essence_of_Celerity_item_effect, 5));
 
-    pcons.push_back(new PconCons("Grail of Might", "Grail", "grail", L"Grail of Might",
+    pcons.push_back(new PconCons("力量圣杯", "圣杯", "grail", L"Grail of Might",
                                  ImVec2(5 / s, 12 / s), ImVec2(49 / s, 56 / s),
                                  ItemID::ConsGrail, SkillID::Grail_of_Might_item_effect, 5));
 
-    pcons.push_back(new PconCons("Armor of Salvation", "Armor", "armor", L"Armor of Salvation",
+    pcons.push_back(new PconCons("救赎护甲", "护甲", "armor", L"Armor of Salvation",
                                  ImVec2(0 / s, 2 / s), ImVec2(56 / s, 58 / s),
                                  ItemID::ConsArmor, SkillID::Armor_of_Salvation_item_effect, 5));
 
-    pcons.push_back(new PconGeneric("Red Rock Candy", "Red Rock", "redrock", L"Red Rock Candy",
+    pcons.push_back(new PconGeneric("红色硬糖", "红硬糖", "redrock", L"Red Rock Candy",
                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
                                     ItemID::RRC, SkillID::Red_Rock_Candy_Rush, 5));
 
-    pcons.push_back(new PconGeneric("Blue Rock Candy", "Blue Rock", "bluerock", L"Blue Rock Candy",
+    pcons.push_back(new PconGeneric("蓝色硬糖", "蓝硬糖", "bluerock", L"Blue Rock Candy",
                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
                                     ItemID::BRC, SkillID::Blue_Rock_Candy_Rush, 10));
 
-    pcons.push_back(new PconGeneric("Green Rock Candy", "Green Rock", "greenrock", L"Green Rock Candy",
+    pcons.push_back(new PconGeneric("绿色硬糖", "绿硬糖", "greenrock", L"Green Rock Candy",
                                     ImVec2(0 / s, 4 / s), ImVec2(52 / s, 56 / s),
                                     ItemID::GRC, SkillID::Green_Rock_Candy_Rush, 15));
 
-    pcons.push_back(new PconGeneric("Golden Egg", "Egg", "egg", L"Golden Egg",
+    pcons.push_back(new PconGeneric("金蛋", "金蛋", "egg", L"Golden Egg",
                                     ImVec2(1 / s, 8 / s), ImVec2(48 / s, 55 / s),
                                     ItemID::Eggs, SkillID::Golden_Egg_skill, 20));
 
-    pcons.push_back(new PconGeneric("Candy Apple", "Apple", "apple", L"Candy Apple",
+    pcons.push_back(new PconGeneric("糖果苹果", "苹果", "apple", L"Candy Apple",
                                     ImVec2(0 / s, 7 / s), ImVec2(50 / s, 57 / s),
                                     ItemID::Apples, SkillID::Candy_Apple_skill, 10));
 
-    pcons.push_back(new PconGeneric("Candy Corn", "Corn", "corn", L"Candy Corn",
+    pcons.push_back(new PconGeneric("糖果玉米", "玉米", "corn", L"Candy Corn",
                                     ImVec2(5 / s, 10 / s), ImVec2(48 / s, 53 / s),
                                     ItemID::Corns, SkillID::Candy_Corn_skill, 10));
 
-    pcons.push_back(new PconGeneric("Birthday Cupcake", "Cupcake", "cupcake", L"Birthday Cupcake",
+    pcons.push_back(new PconGeneric("生日蛋糕杯", "蛋糕杯", "cupcake", L"Birthday Cupcake",
                                     ImVec2(1 / s, 5 / s), ImVec2(51 / s, 55 / s),
                                     ItemID::Cupcakes, SkillID::Birthday_Cupcake_skill, 10));
 
-    pcons.push_back(new PconGeneric("Slice of Pumpkin Pie", "Pie", "pie", L"Slice of Pumpkin Pie",
+    pcons.push_back(new PconGeneric("南瓜派", "南瓜派", "pie", L"Slice of Pumpkin Pie",
                                     ImVec2(0 / s, 7 / s), ImVec2(52 / s, 59 / s),
                                     ItemID::Pies, SkillID::Pie_Induced_Ecstasy, 10));
 
-    pcons.push_back(new PconGeneric("War Supplies", "War Supply", "warsupply", L"War Supplies",
+    pcons.push_back(new PconGeneric("战争补给", "战争补给", "warsupply", L"War Supplies",
                                     ImVec2(0 / s, 0 / s), ImVec2(63 / s, 63 / s),
                                     ItemID::Warsupplies, SkillID::Well_Supplied, 20));
 
-    pcons.push_back(pcon_alcohol = new PconAlcohol("Alcohol", "Alcohol", "alcohol", L"Dwarven Ale",
+    pcons.push_back(pcon_alcohol = new PconAlcohol("酒精", "酒精", "alcohol", L"Dwarven Ale",
                                                    ImVec2(-5 / s, 1 / s), ImVec2(57 / s, 63 / s),
                                                    10));
 
-    pcons.push_back(new PconLunar("Lunar Fortunes", "Lunars", "lunars", L"Lunar Fortune",
+    pcons.push_back(new PconLunar("月神运势", "月神", "lunars", L"Lunar Fortune",
                                   ImVec2(1 / s, 4 / s), ImVec2(56 / s, 59 / s),
                                   10));
 
-    pcons.push_back(new PconCity("City speedboost", "City IMS", "city", L"Sugary Blue Drink",
+    pcons.push_back(new PconCity("城市加速", "城市加速", "city", L"Sugary Blue Drink",
                                  ImVec2(0 / s, 1 / s), ImVec2(61 / s, 62 / s),
                                  20));
 
-    pcons.push_back(new PconGeneric("Drake Kabob", "Kabob", "kabob", L"Drake Kabob",
+    pcons.push_back(new PconGeneric("龙蜥烤肉", "烤肉", "kabob", L"Drake Kabob",
                                     ImVec2(0 / s, 0 / s), ImVec2(64 / s, 64 / s),
                                     ItemID::Kabobs, SkillID::Drake_Skin, 10));
 
-    pcons.push_back(new PconGeneric("Bowl of Skalefin Soup", "Soup", "soup", L"Bowl of Skalefin Soup",
+    pcons.push_back(new PconGeneric("鱼鳞汤", "鱼汤", "soup", L"Bowl of Skalefin Soup",
                                     ImVec2(2 / s, 5 / s), ImVec2(51 / s, 54 / s),
                                     ItemID::SkalefinSoup, SkillID::Skale_Vigor, 10));
 
-    pcons.push_back(new PconGeneric("Pahnai Salad", "Salad", "salad", L"Pahnai Salad",
+    pcons.push_back(new PconGeneric("帕奈沙拉", "沙拉", "salad", L"Pahnai Salad",
                                     ImVec2(0 / s, 5 / s), ImVec2(49 / s, 54 / s),
                                     ItemID::PahnaiSalad, SkillID::Pahnai_Salad_item_effect, 10));
 
-    pcons.push_back(new PconScroll("XP scroll", "XP scroll", "scroll", L"Scroll of Hunter's Insight",
+    pcons.push_back(new PconScroll("经验卷轴", "经验卷轴", "scroll", L"Scroll of Hunter's Insight",
                                    {0, 0}, {1, 1}, 20));
 
-    // Refillers
+    // 补充类
 
-    pcons.push_back(new PconRefiller(L"Scroll of Resurrection", ItemID::ResScrolls, 5));
+    pcons.push_back(new PconRefiller(L"复活卷轴", ItemID::ResScrolls, 5));
     pcons.back()->ini = "resscroll";
-    pcons.push_back(new PconRefiller(L"Lockpick", ItemID::Lockpick, 50));
+    pcons.push_back(new PconRefiller(L"开锁器", ItemID::Lockpick, 50));
     pcons.back()->ini = "lockpick";
-    pcons.push_back(new PconRefiller(L"Powerstone of Courage", ItemID::Powerstone, 5));
+    pcons.push_back(new PconRefiller(L"勇气能量石", ItemID::Powerstone, 5));
     pcons.back()->ini = "pstone";
-    pcons.push_back(new PconRefiller(L"Seal of the Dragon Empire", ItemID::SealOfTheDragonEmpire, 5));
+    pcons.push_back(new PconRefiller(L"龙帝国印章", ItemID::SealOfTheDragonEmpire, 5));
 
-    pcons.push_back(new PconRefiller(L"Honeycomb", ItemID::Honeycomb));
-    pcons.push_back(new PconRefiller(L"Pumpkin Cookie", ItemID::PumpkinCookie));
-    pcons.push_back(new PconRefiller(L"Ghost in the Box", ItemID::GhostInTheBox));
-    pcons.push_back(new PconRefiller(L"Everlasting Mobstopper", ItemID::Mobstopper));
+    pcons.push_back(new PconRefiller(L"蜂巢", ItemID::Honeycomb));
+    pcons.push_back(new PconRefiller(L"南瓜饼干", ItemID::PumpkinCookie));
+    pcons.push_back(new PconRefiller(L"盒子里的鬼魂", ItemID::GhostInTheBox));
+    pcons.push_back(new PconRefiller(L"永久的暴徒阻止器", ItemID::Mobstopper));
 
-    // Summoning Stones
-    pcons.push_back(new PconRefiller(L"Tengu Support Flare", ItemID::TenguSummon));
-    pcons.push_back(new PconRefiller(L"Imperial Guard Reinforcement Order", ItemID::ImperialGuardSummon));
-    pcons.push_back(new PconRefiller(L"Shining Blade War Horn", ItemID::WarhornSummon));
-    pcons.push_back(new PconRefiller(L"Ghastly Summoning Stone", ItemID::GhastlyStone));
-    // @Cleanup: Add these items to GWCA or something
-    pcons.push_back(new PconRefiller(L"Chitinous Summoning Stone", 30959));
-    pcons.push_back(new PconRefiller(L"Amber Summoning Stone", 30961));
-    pcons.push_back(new PconRefiller(L"Arctic Summoning Stone", 30962));
-    pcons.push_back(new PconRefiller(L"Celestial Summoning Stone", 34176));
-    pcons.push_back(new PconRefiller(L"Mystical Summoning Stone", 30960));
-    pcons.push_back(new PconRefiller(L"Demonic Summoning Stone", 30963));
-    pcons.push_back(new PconRefiller(L"Gelatinous Summoning Stone", 30964));
-    pcons.push_back(new PconRefiller(L"Fossilized Summoning Stone", 30965));
-    pcons.push_back(new PconRefiller(L"Jadeite Summoning Stone", 30966));
-    pcons.push_back(new PconRefiller(L"Mischievous Summoning Stone", 31022));
-    pcons.push_back(new PconRefiller(L"Frosty Summoning Stone", 31023));
-    pcons.push_back(new PconRefiller(L"Mercantile Summoning Stone", 31154));
-    pcons.push_back(new PconRefiller(L"Mysterious Summoning Stone", 31155));
-    pcons.push_back(new PconRefiller(L"Zaishen Summoning Stone", 31156));
+    // 召唤石
+    pcons.push_back(new PconRefiller(L"天狗支援信号弹", ItemID::TenguSummon));
+    pcons.push_back(new PconRefiller(L"帝国卫队增援令", ItemID::ImperialGuardSummon));
+    pcons.push_back(new PconRefiller(L"闪刃战号角", ItemID::WarhornSummon));
+    pcons.push_back(new PconRefiller(L"恐怖召唤石", ItemID::GhastlyStone));
+    // @清理：将这些物品添加到 GWCA 或类似地方
+    pcons.push_back(new PconRefiller(L"甲壳召唤石", 30959));
+    pcons.push_back(new PconRefiller(L"琥珀召唤石", 30961));
+    pcons.push_back(new PconRefiller(L"北极召唤石", 30962));
+    pcons.push_back(new PconRefiller(L"天界召唤石", 34176));
+    pcons.push_back(new PconRefiller(L"神秘召唤石", 30960));
+    pcons.push_back(new PconRefiller(L"恶魔召唤石", 30963));
+    pcons.push_back(new PconRefiller(L"凝胶召唤石", 30964));
+    pcons.push_back(new PconRefiller(L"化石召唤石", 30965));
+    pcons.push_back(new PconRefiller(L"翡翠召唤石", 30966));
+    pcons.push_back(new PconRefiller(L"淘气召唤石", 31022));
+    pcons.push_back(new PconRefiller(L"霜冻召唤石", 31023));
+    pcons.push_back(new PconRefiller(L"商业召唤石", 31154));
+    pcons.push_back(new PconRefiller(L"神秘召唤石", 31155));
+    pcons.push_back(new PconRefiller(L"扎伊圣召唤石", 31156));
 }
 
 void PconsWindow::Initialize()
@@ -416,7 +416,7 @@ void PconsWindow::Initialize()
     SettingsRegistry::RegisterField(this, "suppress_air_of_superiority_text", &Pcon::suppress_air_of_superiority_text);
     SettingsRegistry::RegisterField(this, "suppress_drunk_emotes", &Pcon::suppress_drunk_emotes);
     SettingsRegistry::RegisterField(this, "suppress_lunar_skills", &Pcon::suppress_lunar_skills);
-    AlcoholWidget::Instance().Initialize(); // Pcons depend on alcohol widget to track current drunk level.
+    AlcoholWidget::Instance().Initialize(); // 消耗品依赖酒精小部件来追踪当前醉酒等级。
 
     const GW::UI::UIMessage ui_messages[] = {
         GW::UI::UIMessage::kAgentSpeechBubble,
@@ -456,7 +456,7 @@ void PconsWindow::OnAddExternalBond(GW::HookStatus* status, const GW::Packet::St
         && pak->caster_id == GW::Agents::GetObservingId()
         && pak->receiver_id == 0
         && (pak->skill_id == static_cast<DWORD>(SkillID::Spiritual_Possession) || pak->skill_id == static_cast<DWORD>(SkillID::Lucky_Aura))) {
-        // printf("blocked skill %d\n", pak->skill_id);
+        // printf("已阻止技能 %d\n", pak->skill_id);
         status->blocked = true;
     }
 }
@@ -465,22 +465,22 @@ void PconsWindow::OnGenericValue(GW::HookStatus*, GW::Packet::StoC::GenericValue
 {
     if (PconAlcohol::suppress_drunk_emotes && pak->agent_id == GW::Agents::GetObservingId() && pak->value_id == 22) {
         if (pak->value == 0x33E807E5) {
-            pak->value = 0; // kneel
+            pak->value = 0; // 跪下
         }
         if (pak->value == 0x313AC9D1) {
-            pak->value = 0; // bored
+            pak->value = 0; // 无聊
         }
         if (pak->value == 0x3033596A) {
-            pak->value = 0; // moan
+            pak->value = 0; // 呻吟
         }
         if (pak->value == 0x305A7EF2) {
-            pak->value = 0; // flex
+            pak->value = 0; // 屈臂
         }
         if (pak->value == 0x74999B06) {
-            pak->value = 0; // fistshake
+            pak->value = 0; // 挥拳
         }
         if (pak->value == 0x30446E61) {
-            pak->value = 0; // roar
+            pak->value = 0; // 咆哮
         }
     }
 }
@@ -500,7 +500,7 @@ void CHAT_CMD_FUNC(PconsWindow::CmdPcons)
     else if (argc >= 2) {
         const std::wstring arg1 = TextUtils::ToLower(argv[1]);
         if (arg1 != L"on" && arg1 != L"off" && arg1 != L"toggle" && arg1 != L"refill") {
-            Log::Error("Invalid argument '%ls', please use /pcons [on|off|toggle] [pcon]", argv[1]);
+            Log::Error("无效参数 '%ls'，请使用 /pcons [on|off|toggle|refill] [消耗品名称]", argv[1]);
         }
         if (argc == 2) {
             if (arg1 == L"on") {
@@ -547,7 +547,7 @@ void CHAT_CMD_FUNC(PconsWindow::CmdPcons)
                 }
             }
             if (bestMatch == nullptr) {
-                Log::Error("Could not find pcon %ls", argPcon.c_str());
+                Log::Error("找不到消耗品 %ls", argPcon.c_str());
                 return;
             }
             if (arg1 == L"on") {
@@ -572,7 +572,7 @@ bool PconsWindow::DrawTabButton(const bool show_icon, const bool show_text, cons
 
     ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+    if (ImGui::Button(enabled ? "已启用###pconstoggle" : "已禁用###pconstoggle", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
         ToggleEnable();
     }
     ImGui::PopStyleColor();
@@ -612,7 +612,7 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
     }
     if (settings.show_enable_button) {
         ImGui::PushStyleColor(ImGuiCol_Text, enabled ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
-        if (ImGui::Button(enabled ? "Enabled###pconstoggle" : "Disabled###pconstoggle", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+        if (ImGui::Button(enabled ? "已启用###pconstoggle" : "已禁用###pconstoggle", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
             ToggleEnable();
         }
         ImGui::PopStyleColor();
@@ -635,13 +635,13 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
 
     if (instance_type == InstanceType::Explorable && settings.show_auto_disable_pcons_tickbox) {
         if (!current_objectives_to_check.empty()) {
-            ImGui::CheckboxWithHelp("Off @ end", &settings.disable_cons_on_objective_completion, disable_cons_on_objective_completion_hint);
+            ImGui::CheckboxWithHelp("目标完成时禁用", &settings.disable_cons_on_objective_completion, disable_cons_on_objective_completion_hint);
         }
         if (!(current_final_room_location == GW::Vec2f(0, 0))) {
-            ImGui::CheckboxWithHelp("Off @ boss", &settings.disable_cons_in_final_room, disable_cons_in_final_room_hint);
+            ImGui::CheckboxWithHelp("首领房间禁用", &settings.disable_cons_in_final_room, disable_cons_in_final_room_hint);
         }
         if (in_vanquishable_area) {
-            ImGui::CheckboxWithHelp("Off @ end", &settings.disable_cons_on_vanquish_completion, disable_cons_on_vanquish_completion_hint);
+            ImGui::CheckboxWithHelp("征服完成时禁用", &settings.disable_cons_on_vanquish_completion, disable_cons_on_vanquish_completion_hint);
         }
     }
     ImGui::End();
@@ -650,10 +650,10 @@ void PconsWindow::Draw(IDirect3DDevice9* device)
 void PconsWindow::Update(const float)
 {
     if (instance_type != GW::Map::GetInstanceType() || map_id != GW::Map::GetMapID()) {
-        MapChanged(); // Map changed.
+        MapChanged(); // 地图变化
     }
     if (!player && instance_type == InstanceType::Explorable) {
-        player = GW::Agents::GetControlledCharacter(); // Won't be immediately able to get player ptr on map load, so put here.
+        player = GW::Agents::GetControlledCharacter(); // 地图加载后不能立即获取玩家指针，所以放在这里
     }
     if (!Pcon::map_has_effects_array) {
         Pcon::map_has_effects_array = GW::Effects::GetPlayerEffectsArray() != nullptr;
@@ -674,14 +674,14 @@ void PconsWindow::MapChanged()
         previous_instance_type = instance_type;
     }
     instance_type = GW::Map::GetInstanceType();
-    // If we've just come from an explorable area then disable pcons.
+    // 如果刚从探索区域出来，则禁用消耗品
     if (settings.disable_pcons_on_map_change && previous_instance_type == InstanceType::Explorable) {
         SetEnabled(false);
     }
 
     player = nullptr;
     elite_area_disable_triggered = false;
-    // Find out which objectives we need to complete for this map.
+    // 查找该地图需要完成的目标
     const auto map_objectives_it = objectives_to_complete_by_map_id.find(map_id);
     if (map_objectives_it != objectives_to_complete_by_map_id.end()) {
         objectives_complete.clear();
@@ -690,7 +690,7 @@ void PconsWindow::MapChanged()
     else {
         current_objectives_to_check.clear();
     }
-    // Find out if we need to check for boss range for this map.
+    // 查找是否需要检查该地图的首领范围
     const auto map_location_it = final_room_location_by_map_id.find(map_id);
     if (map_location_it != final_room_location_by_map_id.end()) {
         current_final_room_location = map_location_it->second;
@@ -717,7 +717,7 @@ void PconsWindow::ToggleEnable() { SetEnabled(!enabled); }
 bool PconsWindow::SetEnabled(const bool b)
 {
     if (enabled == b) {
-        return enabled; // Do nothing - already enabled/disabled.
+        return enabled; // 已处于该状态，不操作
     }
     enabled = b;
     Refill(enabled && Pcon::refill_if_below_threshold);
@@ -728,12 +728,12 @@ bool PconsWindow::SetEnabled(const bool b)
             }
         case InstanceType::Explorable: {
             if (HotkeysWindow::CurrentHotkey() && !HotkeysWindow::CurrentHotkey()->show_message_in_emote_channel) {
-                break; // Selected hotkey doesn't allow a message.
+                break; // 选中的快捷键不允许发送消息
             }
             const ImGuiWindow* main = ImGui::FindWindowByName(MainWindow::Instance().Name());
             const ImGuiWindow* pcon = ImGui::FindWindowByName(Name());
             if ((pcon == nullptr || pcon->Collapsed || !visible) && (main == nullptr || main->Collapsed || !MainWindow::Instance().visible)) {
-                Log::Flash("Pcons %s", enabled ? "enabled" : "disabled");
+                Log::Flash("消耗品 %s", enabled ? "已启用" : "已禁用");
             }
             break;
         }
@@ -747,7 +747,7 @@ void PconsWindow::RegisterSettingsContent()
 {
     ToolboxUIElement::RegisterSettingsContent();
     ToolboxModule::RegisterSettingsContent(
-        "Game Settings", nullptr,
+        "游戏设置", nullptr,
         [this](const std::string&, const bool is_showing) {
             if (!is_showing) {
                 return;
@@ -760,42 +760,42 @@ void PconsWindow::RegisterSettingsContent()
 void PconsWindow::DrawLunarsAndAlcoholSettings()
 {
     ImGui::NewLine();
-    ImGui::Text("Lunars and Alcohol");
+    ImGui::Text("月神和酒精");
     ImGui::Indent();
-    ImGui::Text("Current drunk level: %d", Pcon::alcohol_level);
+    ImGui::Text("当前醉酒等级: %d", Pcon::alcohol_level);
     ImGui::StartSpacedElements(380.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Suppress lunar and drunk post-processing effects", &Pcon::suppress_drunk_effect);
+    ImGui::Checkbox("抑制月神和醉酒后期处理效果", &Pcon::suppress_drunk_effect);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Suppress lunar and drunk text", &Pcon::suppress_drunk_text, "Will hide drunk and lunars messages on top of your and other characters");
+    ImGui::CheckboxWithHelp("抑制月神和醉酒文字", &Pcon::suppress_drunk_text, "隐藏你和其他角色头顶的醉酒和月神消息");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Suppress air of superiority text", &Pcon::suppress_air_of_superiority_text);
+    ImGui::Checkbox("抑制卓越之息文字", &Pcon::suppress_air_of_superiority_text);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Suppress drunk emotes", &Pcon::suppress_drunk_emotes,
-        "Important:\n"
-        "This feature is experimental and might crash your game.\n"
-        "Using level 1 alcohol instead of this is recommended for preventing drunk emotes.\n"
-        "This will prevent kneel, bored, moan, flex, fistshake and roar.\n");
+    ImGui::CheckboxWithHelp("抑制醉酒动作", &Pcon::suppress_drunk_emotes,
+        "重要提示：\n"
+        "此功能为实验性，可能导致游戏崩溃。\n"
+        "建议使用 1 级酒精代替此功能来防止醉酒动作。\n"
+        "这将阻止跪下、无聊、呻吟、屈臂、挥拳和咆哮动作。\n");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Hide Spiritual Possession and Lucky Aura", &Pcon::suppress_lunar_skills, "Will hide the skills in your effect monitor");
+    ImGui::CheckboxWithHelp("隐藏灵体附身和幸运光环", &Pcon::suppress_lunar_skills, "在效果监视器中隐藏这些技能");
     ImGui::Unindent();
 }
 
 void PconsWindow::CheckBossRangeAutoDisable()
 {
-    // Trigger Elite area auto disable if applicable
+    // 如果适用则触发精英区域自动禁用
     if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
-        return; // Pcons disabled, auto disable already triggered, or not in explorable area.
+        return; // 消耗品已禁用、自动禁用已触发或不在探索区域
     }
     if (!settings.disable_cons_in_final_room || current_final_room_location == GW::Vec2f(0, 0) || !player || TIMER_DIFF(elite_area_check_timer) < 1000) {
-        return; // No boss location to check for this map, player ptr not loaded, or checked recently already.
+        return; // 该地图无首领位置可检查、玩家指针未加载或刚检查过
     }
     elite_area_check_timer = TIMER_INIT();
     const float d = GetDistance(GW::Vec2f(player->pos), current_final_room_location);
     if (d > 0 && d <= Range::Spirit) {
         elite_area_disable_triggered = true;
         SetEnabled(false);
-        Log::Flash("Cons auto-disabled in range of boss");
+        Log::Flash("已在首领范围内自动禁用消耗品");
     }
 }
 
@@ -846,60 +846,57 @@ void PconsWindow::SaveSettings(SettingsDoc& doc)
 void PconsWindow::DrawSettingsInternal()
 {
     ImGui::Separator();
-    ImGui::Text("Functionality:");
+    ImGui::Text("功能：");
     ImGui::StartSpacedElements(275.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Toggle Pcons per character", &Pcon::pcons_by_character, "Tick to remember pcon enable/disable per character.\nUntick to enable/disable regardless of current character.");
+    ImGui::CheckboxWithHelp("按角色切换消耗品", &Pcon::pcons_by_character, "勾选后按角色记住消耗品启用/禁用状态。\n取消勾选则全局启用/禁用，与当前角色无关。");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Tick with pcons", &settings.tick_with_pcons, "Enabling or disabling pcons will also Tick or Untick in party list");
+    ImGui::CheckboxWithHelp("消耗品开关同步队伍准备状态", &settings.tick_with_pcons, "启用或禁用消耗品时，队伍列表中的准备状态也将同步切换");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Disable when not found", &Pcon::disable_when_not_found, "Toolbox will disable a pcon if it is not found in the inventory");
+    ImGui::CheckboxWithHelp("找不到时禁用", &Pcon::disable_when_not_found, "如果背包中找不到该消耗品，工具箱将禁用它");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Refill from storage", &Pcon::refill_if_below_threshold, "Toolbox will refill pcons from storage if below the threshold");
+    ImGui::CheckboxWithHelp("从仓库补充", &Pcon::refill_if_below_threshold, "如果数量低于阈值，工具箱将从仓库补充消耗品");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show storage quantity in outpost", &settings.show_storage_quantity,
-        "Display a number on the bottom of each pcon icon, showing total quantity in storage.\n"
-        "This only displays when in an outpost.");
+    ImGui::CheckboxWithHelp("在前哨站显示仓库数量", &settings.show_storage_quantity,
+        "在每个消耗品图标底部显示仓库中的总数量。\n仅在前哨站时显示。");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Shift + Click toggles category", &settings.shift_click_toggles_category,
-        "If this is ticked, clicking on a pcon while holding shift will enable/disable all of the same category\n"
-        "Categories: Conset, Rock Candies, Kabob+Soup+Salad");
+    ImGui::CheckboxWithHelp("Shift + 点击切换分类", &settings.shift_click_toggles_category,
+        "勾选后，按住 Shift 点击消耗品将启用/禁用同一分类下的所有消耗品\n"
+        "分类：消耗品套装、硬糖、烤肉+汤+沙拉");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show Enable/Disable button", &settings.show_enable_button);
+    ImGui::Checkbox("显示启用/禁用按钮", &settings.show_enable_button);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show tick/cross icon on collapsed title bar", &settings.show_enabled_status_in_title, "Overlay a green tick or red cross icon on the title bar when the window is collapsed");
+    ImGui::CheckboxWithHelp("在折叠标题栏显示状态图标", &settings.show_enabled_status_in_title, "窗口折叠时在标题栏叠加绿色勾或红色叉图标");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show auto disable pcons checkboxes", &settings.show_auto_disable_pcons_tickbox, "Will show a tickbox in the pcons window when in an elite area");
+    ImGui::CheckboxWithHelp("显示自动禁用消耗品复选框", &settings.show_auto_disable_pcons_tickbox, "在精英区域时，消耗品窗口中显示复选框");
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide city Pcons in explorable areas", &Pcon::hide_city_pcons_in_explorable_areas);
+    ImGui::Checkbox("在探索区域隐藏城市消耗品", &Pcon::hide_city_pcons_in_explorable_areas);
 
-    ImGui::SliderInt("Pcons delay", &Pcon::pcons_delay, 100, 5000, "%d milliseconds");
-    ImGui::ShowHelp("After using a pcon, toolbox will not use it again for this amount of time.\n"
-        "It is needed to prevent toolbox from using a pcon twice, before it activates.\n"
-        "Decrease the value if you have good ping and you die a lot.");
-    ImGui::SliderInt("Lunars delay", &Pcon::lunar_delay, 100, 500, "%d milliseconds");
+    ImGui::SliderInt("消耗品延迟", &Pcon::pcons_delay, 100, 5000, "%d 毫秒");
+    ImGui::ShowHelp("使用消耗品后，工具箱在此时间内不会再次使用。\n防止在效果激活前重复使用消耗品。\n如果网络延迟低且经常死亡，可适当降低此值。");
+    ImGui::SliderInt("月神延迟", &Pcon::lunar_delay, 100, 500, "%d 毫秒");
 
     ImGui::Separator();
-    ImGui::Text("Interface:");
-    ImGui::SliderInt("Items per row", &settings.items_per_row, 1, 18);
-    ImGui::DragFloat("Pcon Size", &Pcon::size, 1.0f, 10.0f, 0.0f);
-    ImGui::ShowHelp("Size of each Pcon icon in the interface");
-    Colors::DrawSettingHueWheel("Enabled-Background", &Pcon::enabled_bg_color.value);
+    ImGui::Text("界面：");
+    ImGui::SliderInt("每行数量", &settings.items_per_row, 1, 18);
+    ImGui::DragFloat("消耗品图标大小", &Pcon::size, 1.0f, 10.0f, 0.0f);
+    ImGui::ShowHelp("界面中每个消耗品图标的大小");
+    Colors::DrawSettingHueWheel("启用背景色", &Pcon::enabled_bg_color.value);
     if (Pcon::size <= 1.0f) {
         Pcon::size = 1.0f;
     }
-    if (ImGui::TreeNodeEx("Visibility & Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (ImGui::TreeNodeEx("可见性与阈值", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         if (ImGui::BeginTable("pcons_visibility", 3)) {
             const auto font_size = ImGui::GetFontSize();
-            const auto threshold_hint = "When you have less than this amount:\n-The number in the interface becomes yellow.\n-Warning message is displayed when zoning into outpost.";
+            const auto threshold_hint = "当数量低于此值时：\n- 界面中的数字变为黄色。\n- 进入前哨站时显示警告消息。";
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
-            ImGui::TextDisabled("Label");
+            ImGui::TextDisabled("名称");
             ImGui::TableNextColumn();
-            ImGui::TextDisabled("Threshold");
+            ImGui::TextDisabled("阈值");
             ImGui::TableNextColumn();
-            ImGui::TextDisabled("Order");
+            ImGui::TextDisabled("顺序");
 
             for (auto it = pcons.begin(); it != pcons.end(); ++it) {
                 ImGui::TableNextRow();
@@ -956,18 +953,18 @@ void PconsWindow::DrawSettingsInternal()
     ImGui::Separator();
     DrawLunarsAndAlcoholSettings();
     ImGui::Separator();
-    ImGui::Text("Auto-Disabling Pcons");
+    ImGui::Text("自动禁用消耗品");
     ImGui::StartSpacedElements(380.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Auto Disable on Vanquish completion", &settings.disable_cons_on_vanquish_completion, disable_cons_on_vanquish_completion_hint);
+    ImGui::CheckboxWithHelp("征服完成时自动禁用", &settings.disable_cons_on_vanquish_completion, disable_cons_on_vanquish_completion_hint);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Auto Disable on Dungeon completion", &settings.disable_cons_on_dungeon_completion);
+    ImGui::Checkbox("地城完成时自动禁用", &settings.disable_cons_on_dungeon_completion);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Auto Disable on Mission completion", &settings.disable_cons_on_mission_completion);
+    ImGui::Checkbox("任务完成时自动禁用", &settings.disable_cons_on_mission_completion);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Auto Disable in final room of Urgoz/Deep", &settings.disable_cons_in_final_room, disable_cons_in_final_room_hint);
+    ImGui::CheckboxWithHelp("Urgoz/Deep 最终房间自动禁用", &settings.disable_cons_in_final_room, disable_cons_in_final_room_hint);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Auto Disable on final objective completion", &settings.disable_cons_on_objective_completion, disable_cons_on_objective_completion_hint);
+    ImGui::CheckboxWithHelp("最终目标完成时自动禁用", &settings.disable_cons_on_objective_completion, disable_cons_on_objective_completion_hint);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Disable on map change", &settings.disable_pcons_on_map_change, "Toolbox will disable pcons when leaving an explorable area");
+    ImGui::CheckboxWithHelp("地图切换时禁用", &settings.disable_pcons_on_map_change, "离开探索区域时工具箱将禁用消耗品");
 }

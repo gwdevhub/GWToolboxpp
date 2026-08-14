@@ -32,14 +32,14 @@ void ObserverPlayerWindow::SaveSettings(SettingsDoc& doc)
 }
 
 
-// Get the agent we're currently tracking
+// 获取当前正在追踪的成员
 uint32_t ObserverPlayerWindow::GetTracking()
 {
     if (!ObserverModule::Instance().IsActive()) {
         return previously_tracked_agent_id;
     }
 
-    // keep tracking up-to-date with the current desired target
+    // 保持追踪与当前期望目标同步
     const GW::Agent* agent = GW::Agents::GetObservingAgent();
     if (!agent) {
         return previously_tracked_agent_id;
@@ -55,14 +55,14 @@ uint32_t ObserverPlayerWindow::GetTracking()
     return living->agent_id;
 }
 
-// Get the agent we're comparing to
+// 获取用于比较的成员
 uint32_t ObserverPlayerWindow::GetComparison()
 {
     if (!ObserverModule::Instance().IsActive()) {
         return previously_compared_agent_id;
     }
 
-    // keep tracking up-to-date with the current desired target
+    // 保持比较与当前期望目标同步
     const GW::Agent* agent = GW::Agents::GetTarget();
     if (!agent) {
         return previously_compared_agent_id;
@@ -78,46 +78,46 @@ uint32_t ObserverPlayerWindow::GetComparison()
     return living->agent_id;
 }
 
-// Draw the headers for player skills
+// 绘制玩家技能的列头
 void ObserverPlayerWindow::DrawHeaders() const
 {
     float offset = 0;
-    ImGui::Text("Name");
+    ImGui::Text("技能名称");
     float offset_d = text_long;
-    // attempted
+    // 尝试
     if (settings.show_attempts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Attempts);
         offset_d = text_tiny;
     }
-    // cancelled
+    // 取消
     if (settings.show_cancels) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Cancels);
         offset_d = text_tiny;
     }
-    // interrupted
+    // 打断
     if (settings.show_interrupts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Interrupts);
         offset_d = text_tiny;
     }
-    // finished
+    // 完成
     if (settings.show_finishes) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Finishes);
         offset_d = text_tiny;
     }
-    // integrity
+    // 完整度
     if (settings.show_integrity) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(ObserverLabel::Integrity);
         offset_d = text_tiny;
     }
-    // damage
+    // 伤害
     if (settings.show_damage) {
         ImGui::SameLine(offset += offset_d);
-        ImGui::Text("Damage");
+        ImGui::Text("伤害");
     }
 }
 
@@ -126,44 +126,44 @@ void ObserverPlayerWindow::DrawAction(const std::string& name, const ObserverMod
     float offset = 0;
     ImGui::Text(name.c_str());
     float offset_d = text_long;
-    // attempted
+    // 尝试
     if (settings.show_attempts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->started).c_str());
         offset_d = text_tiny;
     }
-    // cancelled
+    // 取消
     if (settings.show_cancels) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->stopped).c_str());
         offset_d = text_tiny;
     }
-    // interrupted
+    // 打断
     if (settings.show_interrupts) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->interrupted).c_str());
         offset_d = text_tiny;
     }
-    // finished
+    // 完成
     if (settings.show_finishes) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->finished).c_str());
         offset_d = text_tiny;
     }
-    // integrity
+    // 完整度
     if (settings.show_integrity) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->integrity).c_str());
         offset_d = text_tiny;
     }
-    // damage
+    // 伤害
     if (settings.show_damage) {
         ImGui::SameLine(offset += offset_d);
         ImGui::Text(std::to_string(action->total_damage).c_str());
     }
 }
 
-// Draw the skills of a player
+// 绘制玩家的技能
 void ObserverPlayerWindow::DrawSkills(const std::unordered_map<GW::Constants::SkillID, ObserverModule::ObservedSkill*>& skills,
                                       const std::vector<GW::Constants::SkillID>& skill_ids) const
 {
@@ -183,7 +183,7 @@ void ObserverPlayerWindow::DrawSkills(const std::unordered_map<GW::Constants::Sk
 }
 
 
-// Draw the window
+// 绘制窗口
 void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
 {
     if (!visible) {
@@ -207,25 +207,25 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
     if (tracking) {
         ImGui::Text(tracking->DisplayName().c_str());
 
-        // Display health and energy information if available
+        // 如果可用，显示生命值和能量信息
         const GW::Agent* agent = GW::Agents::GetAgentByID(tracking_agent_id);
         if (agent) {
             const GW::AgentLiving* living = agent->GetAsAgentLiving();
             if (living) {
-                // Get max HP (from cache or direct if observed)
+                // 获取最大生命值（从缓存或直接观测）
                 uint32_t max_hp = om.GetCachedMaxHP(tracking_agent_id);
                 
-                // Calculate current HP from percentage
+                // 根据百分比计算当前生命值
                 uint32_t cur_hp = static_cast<uint32_t>(living->hp * max_hp);
                 
-                ImGui::Text(("HP: "s + std::to_string(cur_hp) + " / " + std::to_string(max_hp)).c_str());
+                ImGui::Text(("生命值: "s + std::to_string(cur_hp) + " / " + std::to_string(max_hp)).c_str());
                 
-                // Get energy from cache (will be 0 if never observed)
+                // 从缓存获取能量（如果从未观测到则为 0）
                 uint32_t cur_energy = om.GetCachedEnergy(tracking_agent_id);
                 uint32_t max_energy = om.GetCachedMaxEnergy(tracking_agent_id);
                 
                 if (max_energy > 0) {
-                    ImGui::Text(("Energy: "s + std::to_string(cur_energy) + " / " + std::to_string(max_energy)).c_str());
+                    ImGui::Text(("能量: "s + std::to_string(cur_energy) + " / " + std::to_string(max_energy)).c_str());
                 }
             }
         }
@@ -236,29 +236,29 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
         text_short = 80.0f * global;
         text_tiny = 40.0f * global;
 
-        // Display total damage dealt and received
+        // 显示总造成伤害和受到伤害
         if (settings.show_damage_details) {
             ImGui::Separator();
-            ImGui::Text("Damage & Healing Summary:");
-            ImGui::Text(("Total Damage Dealt: "s + std::to_string(tracking->stats.total_damage_dealt)).c_str());
-            ImGui::Text(("Total Damage Received: "s + std::to_string(tracking->stats.total_damage_received)).c_str());
-            ImGui::Text(("Total Healing Dealt: "s + std::to_string(tracking->stats.total_healing_dealt)).c_str());
-            ImGui::Text(("Total Healing Received: "s + std::to_string(tracking->stats.total_healing_received)).c_str());
+            ImGui::Text("伤害与治疗摘要：");
+            ImGui::Text(("总造成伤害: "s + std::to_string(tracking->stats.total_damage_dealt)).c_str());
+            ImGui::Text(("总受到伤害: "s + std::to_string(tracking->stats.total_damage_received)).c_str());
+            ImGui::Text(("总造成治疗: "s + std::to_string(tracking->stats.total_healing_dealt)).c_str());
+            ImGui::Text(("总受到治疗: "s + std::to_string(tracking->stats.total_healing_received)).c_str());
             
-            // Create separate tables for allies and opponents
+            // 为盟友和对手创建独立的表格
             if (!tracking->stats.damage_dealt_to_agents.empty() || 
                 !tracking->stats.damage_received_from_agents.empty() ||
                 !tracking->stats.healing_dealt_to_agents.empty() ||
                 !tracking->stats.healing_received_from_agents.empty()) {
                 
-                // Collect and separate agents into allies and opponents
+                // 收集并将成员区分为盟友和对手
                 std::set<uint32_t> ally_agent_ids;
                 std::set<uint32_t> opponent_agent_ids;
                 
-                // Get tracking agent's party
+                // 获取追踪成员的队伍
                 uint32_t tracking_party_id = tracking->party_id;
                 
-                // Collect all unique agent IDs and categorize them
+                // 收集所有唯一的成员 ID 并进行分类
                 std::set<uint32_t> all_agent_ids;
                 for (const auto& [agent_id, _] : tracking->stats.damage_dealt_to_agents) {
                     all_agent_ids.insert(agent_id);
@@ -273,7 +273,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                     all_agent_ids.insert(agent_id);
                 }
                 
-                // Categorize agents
+                // 对成员进行分类
                 for (const auto& agent_id : all_agent_ids) {
                     ObserverModule::ObservableAgent* categorized_agent = om.GetObservableAgentById(agent_id);
                     if (!categorized_agent) continue;
@@ -285,17 +285,17 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                     }
                 }
                 
-                // Draw Allies table (healing only)
+                // 绘制盟友表格（仅治疗）
                 if (!ally_agent_ids.empty()) {
                     ImGui::Text("");
-                    ImGui::Text("Allies:");
+                    ImGui::Text("盟友：");
                     
                     float offset = 0;
-                    ImGui::Text("Player");
+                    ImGui::Text("玩家");
                     ImGui::SameLine(offset += text_long);
-                    ImGui::Text("Heal+");
+                    ImGui::Text("治疗+");
                     ImGui::SameLine(offset += text_short);
-                    ImGui::Text("Heal-");
+                    ImGui::Text("治疗-");
                     ImGui::Separator();
                     
                     for (const auto& agent_id : ally_agent_ids) {
@@ -306,7 +306,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                         ImGui::Text(ally_agent->DisplayName().c_str());
                         ImGui::SameLine(offset += text_long);
                         
-                        // Healing dealt
+                        // 造成治疗
                         const auto it_heal_dealt = tracking->stats.healing_dealt_to_agents.find(agent_id);
                         if (it_heal_dealt != tracking->stats.healing_dealt_to_agents.end()) {
                             ImGui::Text(std::to_string(it_heal_dealt->second).c_str());
@@ -315,7 +315,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                         }
                         ImGui::SameLine(offset += text_short);
                         
-                        // Healing received
+                        // 受到治疗
                         const auto it_heal_recv = tracking->stats.healing_received_from_agents.find(agent_id);
                         if (it_heal_recv != tracking->stats.healing_received_from_agents.end()) {
                             ImGui::Text(std::to_string(it_heal_recv->second).c_str());
@@ -325,17 +325,17 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                     }
                 }
                 
-                // Draw Opponents table (damage only)
+                // 绘制对手表格（仅伤害）
                 if (!opponent_agent_ids.empty()) {
                     ImGui::Text("");
-                    ImGui::Text("Opponents:");
+                    ImGui::Text("对手：");
                     
                     float offset = 0;
-                    ImGui::Text("Player");
+                    ImGui::Text("玩家");
                     ImGui::SameLine(offset += text_long);
-                    ImGui::Text("Dmg+");
+                    ImGui::Text("伤害+");
                     ImGui::SameLine(offset += text_short);
-                    ImGui::Text("Dmg-");
+                    ImGui::Text("伤害-");
                     ImGui::Separator();
                     
                     for (const auto& agent_id : opponent_agent_ids) {
@@ -346,7 +346,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                         ImGui::Text(opponent_agent->DisplayName().c_str());
                         ImGui::SameLine(offset += text_long);
                         
-                        // Damage dealt
+                        // 造成伤害
                         const auto it_dmg_dealt = tracking->stats.damage_dealt_to_agents.find(agent_id);
                         if (it_dmg_dealt != tracking->stats.damage_dealt_to_agents.end()) {
                             ImGui::Text(std::to_string(it_dmg_dealt->second).c_str());
@@ -355,7 +355,7 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                         }
                         ImGui::SameLine(offset += text_short);
                         
-                        // Damage received
+                        // 受到伤害
                         const auto it_dmg_recv = tracking->stats.damage_received_from_agents.find(agent_id);
                         if (it_dmg_recv != tracking->stats.damage_received_from_agents.end()) {
                             ImGui::Text(std::to_string(it_dmg_recv->second).c_str());
@@ -368,18 +368,18 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
         }
 
         if (settings.show_tracking) {
-            // skills
+            // 技能
             ImGui::Separator();
-            ImGui::Text("Skills:");
+            ImGui::Text("技能：");
             DrawHeaders();
             ImGui::Separator();
             DrawSkills(tracking->stats.skills_used, tracking->stats.skill_ids_used);
         }
 
         if (settings.show_comparison && compared && !(!settings.show_skills_used_on_self && tracking && compared->agent_id == tracking->agent_id)) {
-            // skills
-            ImGui::Text(""); // new line
-            ImGui::Text(("Skills used on: "s + compared->DisplayName()).c_str());
+            // 技能
+            ImGui::Text(""); // 新行
+            ImGui::Text(("对 "s + compared->DisplayName() + " 使用的技能").c_str());
             DrawHeaders();
             ImGui::Separator();
             const auto it_used_on_agent_skills = tracking->stats.skills_used_on_agents.find(compared->agent_id);
@@ -389,14 +389,14 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
                 DrawSkills(it_used_on_agent_skills->second, it_used_on_agent_skill_ids->second);
             }
 
-            // Display damage and healing for this specific player
+            // 显示与特定玩家之间的伤害和治疗
             if (settings.show_damage_details) {
                 ImGui::Text("");
-                ImGui::Text(("Stats with "s + compared->DisplayName()).c_str());
-                ImGui::Text(("  Damage dealt: " + std::to_string(tracking->stats.LazyGetDamageDealedAgainst(compared->agent_id))).c_str());
-                ImGui::Text(("  Damage received: " + std::to_string(tracking->stats.LazyGetDamageReceivedFrom(compared->agent_id))).c_str());
-                ImGui::Text(("  Healing dealt: " + std::to_string(tracking->stats.LazyGetHealingDealedTo(compared->agent_id))).c_str());
-                ImGui::Text(("  Healing received: " + std::to_string(tracking->stats.LazyGetHealingReceivedFrom(compared->agent_id))).c_str());
+                ImGui::Text(("与 "s + compared->DisplayName() + " 的统计数据").c_str());
+                ImGui::Text(("  造成伤害: " + std::to_string(tracking->stats.LazyGetDamageDealedAgainst(compared->agent_id))).c_str());
+                ImGui::Text(("  受到伤害: " + std::to_string(tracking->stats.LazyGetDamageReceivedFrom(compared->agent_id))).c_str());
+                ImGui::Text(("  造成治疗: " + std::to_string(tracking->stats.LazyGetHealingDealedTo(compared->agent_id))).c_str());
+                ImGui::Text(("  受到治疗: " + std::to_string(tracking->stats.LazyGetHealingReceivedFrom(compared->agent_id))).c_str());
             }
         }
     }
@@ -404,18 +404,18 @@ void ObserverPlayerWindow::Draw(IDirect3DDevice9*)
     ImGui::End();
 }
 
-// Draw settings
+// 绘制设置
 void ObserverPlayerWindow::DrawSettingsInternal()
 {
-    ImGui::Text("Make sure the Observer Module is enabled.");
-    ImGui::Checkbox("Show tracking player", &settings.show_tracking);
-    ImGui::Checkbox("Show player comparison", &settings.show_comparison);
-    ImGui::Checkbox("Show skills used on self", &settings.show_skills_used_on_self);
-    ImGui::Checkbox(("Show attempts ("s + ObserverLabel::Attempts + ")").c_str(), &settings.show_attempts);
-    ImGui::Checkbox(("Show cancels ("s + ObserverLabel::Cancels + ")").c_str(), &settings.show_cancels);
-    ImGui::Checkbox(("Show interrupts ("s + ObserverLabel::Interrupts + ")").c_str(), &settings.show_interrupts);
-    ImGui::Checkbox(("Show finishes ("s + ObserverLabel::Finishes + ")").c_str(), &settings.show_finishes);
-    ImGui::Checkbox(("Show integrity ("s + ObserverLabel::Integrity + ")").c_str(), &settings.show_integrity);
-    ImGui::Checkbox("Show damage", &settings.show_damage);
-    ImGui::Checkbox("Show damage details", &settings.show_damage_details);
+    ImGui::Text("请确保观战模块已启用。");
+    ImGui::Checkbox("显示追踪玩家", &settings.show_tracking);
+    ImGui::Checkbox("显示玩家比较", &settings.show_comparison);
+    ImGui::Checkbox("显示对自身使用的技能", &settings.show_skills_used_on_self);
+    ImGui::Checkbox(("显示尝试次数 ("s + ObserverLabel::Attempts + ")").c_str(), &settings.show_attempts);
+    ImGui::Checkbox(("显示取消 ("s + ObserverLabel::Cancels + ")").c_str(), &settings.show_cancels);
+    ImGui::Checkbox(("显示打断 ("s + ObserverLabel::Interrupts + ")").c_str(), &settings.show_interrupts);
+    ImGui::Checkbox(("显示完成 ("s + ObserverLabel::Finishes + ")").c_str(), &settings.show_finishes);
+    ImGui::Checkbox(("显示完整度 ("s + ObserverLabel::Integrity + ")").c_str(), &settings.show_integrity);
+    ImGui::Checkbox("显示伤害", &settings.show_damage);
+    ImGui::Checkbox("显示伤害详情", &settings.show_damage_details);
 }

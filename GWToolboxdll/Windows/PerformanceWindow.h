@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Performance"; }
+    [[nodiscard]] const char* Name() const override { return "性能监控"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_TACHOMETER_ALT; }
 
     struct Settings {

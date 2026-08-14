@@ -56,7 +56,7 @@ const wchar_t* SkillListingWindow::Skill::GWWDescription()
         while ((pos = s.find(L"993")) != std::wstring::npos) {
             s.replace(pos, 3, scale3_txt);
         }
-        wsprintfW(desc_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
+        wsprintfW(desc_gww, L"%s。%s", GetSkillType().c_str(), s.c_str());
     }
     return desc_gww;
 }
@@ -82,7 +82,7 @@ const wchar_t* SkillListingWindow::Skill::GWWConcise()
         while ((pos = s.find(L"993")) != std::wstring::npos) {
             s.replace(pos, 3, scale3_txt);
         }
-        wsprintfW(concise_gww, L"%s. %s", GetSkillType().c_str(), s.c_str());
+        wsprintfW(concise_gww, L"%s。%s", GetSkillType().c_str(), s.c_str());
     }
     return concise_gww;
 }
@@ -111,11 +111,11 @@ void SkillListingWindow::ExportToJSON() const
     constexpr size_t max_len = _countof(file_location_wc) - 1;
 
     for (size_t i = 0; i < message.length(); i++) {
-        // Break on the end of the message
+        // 在消息结尾处停止
         if (!message[i]) {
             break;
         }
-        // Double escape backsashes
+        // 双反斜杠转义
         if (message[i] == '\\') {
             file_location_wc[msg_len++] = message[i];
         }
@@ -126,7 +126,7 @@ void SkillListingWindow::ExportToJSON() const
     }
     file_location_wc[msg_len] = 0;
     wchar_t chat_message[1024];
-    swprintf(chat_message, _countof(chat_message), L"Skills exported to <a=1>\x200C%s</a>", file_location_wc);
+    swprintf(chat_message, _countof(chat_message), L"技能已导出到 <a=1>\x200C%s</a>", file_location_wc);
     WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 
@@ -141,7 +141,7 @@ void SkillListingWindow::ExportHiResIconsAsDDS() const
         if (!skill) {
             continue;
         }
-        // Prefer the HD icon, falling back to the lower-res variants when a skill has none.
+        // 优先使用高清图标，若无则回退到低分辨率版本
         const auto file_id = skill->skill->icon_file_id_2 ? skill->skill->icon_file_id_2 : skill->skill->icon_file_id;
         if (!file_id) {
             continue;
@@ -166,7 +166,7 @@ void SkillListingWindow::ExportHiResIconsAsDDS() const
     }
     folder_wc[msg_len] = 0;
     wchar_t chat_message[1024];
-    swprintf(chat_message, _countof(chat_message), L"<quote>Exporting %zu HD skill icons to [%s,file://%s]", count, folder_wc, folder_wc);
+    swprintf(chat_message, _countof(chat_message), L"<quote>正在导出 %zu 个高清技能图标到 [%s,file://%s]", count, folder_wc, folder_wc);
     WriteChat(GW::Chat::CHANNEL_GLOBAL, chat_message);
 }
 
@@ -210,17 +210,17 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
 
     ImGui::Text("#");
     ImGui::SameLine(offset += tiny_text_width + tiny_text_width);
-    ImGui::Text("Name");
+    ImGui::Text("名称");
     ImGui::SameLine(offset += long_text_width);
-    ImGui::Text("Attr");
+    ImGui::Text("属性");
     ImGui::SameLine(offset += tiny_text_width);
-    ImGui::Text("Prof");
+    ImGui::Text("职业");
     ImGui::SameLine(offset += tiny_text_width);
-    ImGui::Text("Type");
+    ImGui::Text("类型");
     ImGui::Separator();
     char buf[16] = {};
     static std::wstring search_term;
-    if (ImGui::InputText("Search", buf, sizeof buf)) {
+    if (ImGui::InputText("搜索", buf, sizeof buf)) {
         search_term = TextUtils::ToLower(TextUtils::StringToWString(buf));
     }
     for (size_t i = 0; i < skills.size(); i++) {
@@ -273,7 +273,7 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
         ImGui::Text("%d", skills[i]->skill->type);
         ImGui::SameLine();
         char buf2[32];
-        snprintf(buf2, _countof(buf2), "Wiki###wiki_%d", i);
+        snprintf(buf2, _countof(buf2), "维基###wiki_%d", i);
         if (ImGui::SmallButton(buf2)) {
             auto url = new char[128];
             snprintf(url, 128, "https://wiki.guildwars.com/wiki/Game_link:Skill_%d", skills[i]->skill->skill_id);
@@ -283,11 +283,11 @@ void SkillListingWindow::Draw(IDirect3DDevice9*)
             });
         }
     }
-    if (ImGui::Button("Export to JSON")) {
+    if (ImGui::Button("导出为 JSON")) {
         ExportToJSON();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Export HD skill icons as DDS")) {
+    if (ImGui::Button("导出高清技能图标为 DDS")) {
         ExportHiResIconsAsDDS();
     }
     ImGui::End();
@@ -324,85 +324,85 @@ skilllist_export::SkillJson SkillListingWindow::Skill::ToJson()
 
 const std::wstring SkillListingWindow::Skill::GetSkillType() const
 {
-    std::wstring str(IsElite() ? L"Elite " : L"");
+    std::wstring str(IsElite() ? L"精英 " : L"");
     switch (skill->type) {
         case GW::Constants::SkillType::Stance:
-            return str += L"Stance", str;
+            return str += L"姿态", str;
         case GW::Constants::SkillType::Hex:
-            return str += L"Hex Spell", str;
+            return str += L"咒文", str;
         case GW::Constants::SkillType::Spell:
-            return str += L"Spell", str;
+            return str += L"魔法", str;
         case GW::Constants::SkillType::Enchantment:
             if (skill->special & 0x800000) {
-                str += L"Flash ";
+                str += L"瞬发 ";
             }
-            return str += L"Enchantment Spell", str;
+            return str += L"增益魔法", str;
         case GW::Constants::SkillType::Signet:
-            return str += L"Signet", str;
+            return str += L"纹章", str;
         case GW::Constants::SkillType::Well:
-            return str += L"Well Spell", str;
+            return str += L"井", str;
         case GW::Constants::SkillType::Skill:
-            return str += L"Touch Skill", str;
+            return str += L"接触技能", str;
         case GW::Constants::SkillType::Ward:
-            return str += L"Ward Spell", str;
+            return str += L"结界", str;
         case GW::Constants::SkillType::Glyph:
-            return str += L"Glyph", str;
+            return str += L"雕文", str;
         case GW::Constants::SkillType::Attack:
             switch (skill->weapon_req) {
                 case 1:
-                    return str += L"Axe Attack", str;
+                    return str += L"斧系攻击", str;
                 case 2:
-                    return str += L"Bow Attack", str;
+                    return str += L"弓系攻击", str;
                 case 8:
                     switch (skill->combo) {
                         case 1:
-                            return str += L"Lead Attack", str;
+                            return str += L"起手攻击", str;
                         case 2:
-                            return str += L"Off-Hand Attack", str;
+                            return str += L"副手攻击", str;
                         case 3:
-                            return str += L"Dual Attack", str;
+                            return str += L"双重攻击", str;
                     }
-                    return str += L"Dagger Attack", str;
+                    return str += L"匕首攻击", str;
                 case 16:
-                    return str += L"Hammer Attack", str;
+                    return str += L"锤系攻击", str;
                 case 32:
-                    return str += L"Scythe Attack", str;
+                    return str += L"镰刀攻击", str;
                 case 64:
-                    return str += L"Spear Attack", str;
+                    return str += L"长矛攻击", str;
                 case 70:
-                    return str += L"Ranged Attack", str;
+                    return str += L"远程攻击", str;
                 case 128:
-                    return str += L"Sword Attack", str;
+                    return str += L"剑系攻击", str;
             }
-            return str += L"Melee Attack", str;
+            return str += L"近战攻击", str;
         case GW::Constants::SkillType::Shout:
-            return str += L"Shout", str;
+            return str += L"呐喊", str;
         case GW::Constants::SkillType::Preparation:
-            return str += L"Preparation", str;
+            return str += L"准备", str;
         case GW::Constants::SkillType::PetAttack:
-            return str += L"Pet Attack", str;
+            return str += L"宠物攻击", str;
         case GW::Constants::SkillType::Trap:
-            return str += L"Trap", str;
+            return str += L"陷阱", str;
         case GW::Constants::SkillType::Ritual:
             switch (skill->profession) {
             case GW::Constants::ProfessionByte::Ritualist:
-                    return str += L"Binding Ritual", str;
+                    return str += L"束缚仪式", str;
                 case GW::Constants::ProfessionByte::Ranger:
-                    return str += L"Nature Ritual", str;
+                    return str += L"自然仪式", str;
             }
-            return str += L"Ebon Vanguard Ritual", str;
+            return str += L"黑檀先锋仪式", str;
         case GW::Constants::SkillType::ItemSpell:
-            return str += L"Item Spell", str;
+            return str += L"物品魔法", str;
         case GW::Constants::SkillType::WeaponSpell:
-            return str += L"Weapon Spell", str;
+            return str += L"武器魔法", str;
         case GW::Constants::SkillType::Form:
-            return str += L"Form", str;
+            return str += L"形态", str;
         case GW::Constants::SkillType::Chant:
-            return str += L"Chant", str;
+            return str += L"圣歌", str;
         case GW::Constants::SkillType::EchoRefrain:
-            return str += L"Echo", str;
+            return str += L"回响", str;
         default:
-            return str += L"Skill", str;
+            return str += L"技能", str;
     }
 }
 

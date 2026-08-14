@@ -32,9 +32,9 @@
 #include <Utils/TextUtils.h>
 #include <Utils/ToolboxUtils.h>
 
-// Every connection cost 30 seconds.
-// You have 2 tries.
-// After that, you can try every 30 seconds.
+// 每次连接消耗 30 秒。
+// 你有 2 次尝试机会。
+// 之后，每 30 秒可以尝试一次。
 static constexpr uint32_t COST_PER_CONNECTION_MS = 30 * 1000;
 static constexpr uint32_t COST_PER_CONNECTION_MAX_MS = 60 * 1000;
 using easywsclient::WebSocket;
@@ -43,9 +43,9 @@ constexpr glz::opts json_opts{.error_on_unknown_keys = false};
 
 namespace lfg_api {
     struct RawMessage {
-        std::string s; // sender
-        std::string m; // message
-        double t = 0.0; // timestamp ms
+        std::string s; // 发送者
+        std::string m; // 消息
+        double t = 0.0; // 时间戳（毫秒）
     };
 }
 
@@ -118,43 +118,43 @@ namespace {
     }
 
     const char* party_types[]{
-        "Hunting",
-        "Mission",
-        "Quest",
-        "Trade",
-        "Guild",
-        "Local"
+        "狩猎",
+        "任务",
+        "委托",
+        "交易",
+        "公会",
+        "本地"
     };
 
     const char* DistrictAbbr(int32_t region, int32_t language)
     {
         switch (static_cast<GW::Constants::ServerRegion>(region)) {
             case GW::Constants::ServerRegion::International:
-                return "INT";
+                return "国际";
             case GW::Constants::ServerRegion::America:
-                return "AE";
+                return "美服";
             case GW::Constants::ServerRegion::Korea:
-                return "KR";
+                return "韩服";
             case GW::Constants::ServerRegion::China:
-                return "CN";
+                return "国服";
             case GW::Constants::ServerRegion::Japan:
-                return "JP";
+                return "日服";
             default:
                 switch (static_cast<GW::Constants::Language>(language)) {
                     case GW::Constants::Language::French:
-                        return "FR";
+                        return "法语";
                     case GW::Constants::Language::German:
-                        return "DE";
+                        return "德语";
                     case GW::Constants::Language::Italian:
-                        return "IT";
+                        return "意大利语";
                     case GW::Constants::Language::Spanish:
-                        return "ES";
+                        return "西班牙语";
                     case GW::Constants::Language::Polish:
-                        return "PL";
+                        return "波兰语";
                     case GW::Constants::Language::Russian:
-                        return "RU";
+                        return "俄语";
                     default:
-                        return "EN";
+                        return "英语";
                 }
         }
     }
@@ -196,7 +196,7 @@ bool PartySearchWindow::TBParty::FromRegionParty(const GW::PartySearch* party)
     primary = party->primary;
     secondary = party->secondary;
     player_name = TextUtils::WStringToString(party->party_leader);
-    Log::Log("Party %d updated\n", concat_party_id);
+    Log::Log("队伍 %d 已更新\n", concat_party_id);
     return true;
 #pragma warning (pop)
 }
@@ -213,7 +213,7 @@ bool PartySearchWindow::TBParty::FromPlayerInMap(const GW::Player* player)
         return false;
     }
     party_size = player->party_size;
-    // TODO: Can we find out if the party is HM?
+    // TODO: 能否判断队伍是否在困难模式？
     map_id = static_cast<uint16_t>(GW::Map::GetMapID());
     district = GW::Map::GetDistrict();
     language = static_cast<uint8_t>(GW::Map::GetLanguage());
@@ -221,7 +221,7 @@ bool PartySearchWindow::TBParty::FromPlayerInMap(const GW::Player* player)
     primary = player->primary;
     secondary = player->secondary;
     player_name = TextUtils::WStringToString(player->name);
-    Log::Log("Party %d updated\n", concat_party_id);
+    Log::Log("队伍 %d 已更新\n", concat_party_id);
     return true;
 #pragma warning (pop)
 }
@@ -242,7 +242,7 @@ bool PartySearchWindow::TBParty::FromLocalParty(GW::PartyInfo* party)
     hero_count += party->henchmen.valid() ? party->henchmen.size() : 0;
     party_size = party->players.valid() ? party->players.size() : 0;
     party_size += hero_count;
-    // TODO: Can we find out if the party is HM?
+    // TODO: 能否判断队伍是否在困难模式？
     map_id = static_cast<uint16_t>(GW::Map::GetMapID());
     district = GW::Map::GetDistrict();
     language = static_cast<uint8_t>(GW::Map::GetLanguage());
@@ -250,7 +250,7 @@ bool PartySearchWindow::TBParty::FromLocalParty(GW::PartyInfo* party)
     primary = player->primary;
     secondary = player->secondary;
     player_name = TextUtils::WStringToString(player->name);
-    Log::Log("Party %d updated\n", concat_party_id);
+    Log::Log("队伍 %d 已更新\n", concat_party_id);
     return true;
 #pragma warning (pop)
 }
@@ -275,7 +275,7 @@ void PartySearchWindow::Initialize()
             }
         }
     });
-    // local messages
+    // 本地消息
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_SEARCH_REMOVE, OnRegionPartyUpdated);
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_SEARCH_SIZE, OnRegionPartyUpdated);
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, OnRegionPartyUpdated);
@@ -374,7 +374,7 @@ void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::
     auto& instance = Instance();
     const std::scoped_lock lock(instance.party_mutex);
 
-    // Unless pigs fly and district/party numbers go over 16 byte length, storing party_ids as uint16_t is fine.
+    // 除非出现意外（地区/队伍编号超过 16 位），将 party_id 存储为 uint16_t 没问题。
     wchar_t* party_name = nullptr;
     uint32_t party_id;
     TBParty* party = nullptr;
@@ -436,7 +436,7 @@ void PartySearchWindow::OnRegionPartyUpdated(GW::HookStatus*, GW::Packet::StoC::
         }
         break;
         case GAME_SMSG_PARTY_PLAYER_ADD:
-            // Redirect back around to the above case to remove the previous player's party listing.
+            // 重定向回上述情况以移除之前玩家的队伍列表。
             packet->header = GAME_SMSG_UPDATE_AGENT_PARTYSIZE;
             OnRegionPartyUpdated(nullptr, packet);
             packet->header = GAME_SMSG_PARTY_PLAYER_ADD;
@@ -507,7 +507,7 @@ void PartySearchWindow::Update(const float)
     if (ws_window && ws_window->getReadyState() == WebSocket::OPEN) {
         ws_window->close();
         messages.clear();
-        window_rate_limiter = RateLimiter(); // Deliberately closed; reset rate limiter.
+        window_rate_limiter = RateLimiter(); // 故意关闭；重置速率限制器。
     }
     fetch();
     if (refresh_parties && clock() > refresh_parties) {
@@ -535,7 +535,7 @@ bool PartySearchWindow::parse_json_message(const std::string& data, Message* msg
     }
     msg->name = std::move(raw.s);
     msg->message = std::move(raw.m);
-    msg->timestamp = static_cast<uint32_t>(raw.t / 1000.0); // Messy?
+    msg->timestamp = static_cast<uint32_t>(raw.t / 1000.0); // 有些混乱？
     return true;
 }
 
@@ -546,15 +546,15 @@ void PartySearchWindow::fetch()
     }
 
     ws_window->dispatch([this](const std::string& data) {
-        // Add to message feed
+        // 添加到消息源
         Message msg;
         if (!parse_json_message(data, &msg)) {
-            return; // Not valid message object
+            return; // 不是有效的消息对象
         }
         messages.add(msg);
 
-        // Check alerts
-        // do not display trade chat while in kamadan AE district 1
+        // 检查提醒
+        // 在 Kamadan AE 1 区时不显示交易聊天
         const bool print_message = settings.print_game_chat && IsLfpAlert(msg.message);
 
         if (print_message) {
@@ -580,7 +580,7 @@ bool PartySearchWindow::IsLfpAlert(std::string& message) const
             try {
                 word_regex = std::regex(m._At(1).str(), std::regex::ECMAScript | std::regex::icase);
             } catch (const std::exception&) {
-                // Silent fail; invalid regex
+                // 静默失败；无效正则表达式
             }
             if (std::regex_search(message, word_regex)) {
                 return true;
@@ -598,16 +598,16 @@ bool PartySearchWindow::IsLfpAlert(std::string& message) const
 
 void PartySearchWindow::Draw(IDirect3DDevice9*)
 {
-    /* Alerts window */
+    /* 提醒窗口 */
     if (show_alert_window) {
         const float& font_scale = ImGui::FontScale();
         ImGui::SetNextWindowSize(ImVec2(250.f * font_scale, 220.f), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin("Trade Alerts", &show_alert_window)) {
+        if (ImGui::Begin("交易提醒", &show_alert_window)) {
             DrawAlertsWindowContent(true);
         }
         ImGui::End();
     }
-    /* Main trade window */
+    /* 主交易窗口 */
     if (!visible) {
         return;
     }
@@ -618,28 +618,28 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
         return;
     }
-    /* Search bar header */
+    /* 搜索栏标题 */
     const float& font_scale = ImGui::FontScale();
     const float btn_width = 100.0f * font_scale;
     constexpr bool display_messages = true;
-    /* Main trade chat area */
+    /* 主交易聊天区域 */
 
-    /* Connection checks */
+    /* 连接检查 */
     /*if (!ws_window && !ws_window_connecting) {
         char buf[255];
-        snprintf(buf, 255, "The connection to %s has timed out.", ws_host);
+        snprintf(buf, 255, "到 %s 的连接已超时。", ws_host);
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(buf).x) / 2);
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
         ImGui::Text(buf);
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Click to reconnect").x) / 2);
-        if (ImGui::Button("Click to reconnect")) {
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("点击重新连接").x) / 2);
+        if (ImGui::Button("点击重新连接")) {
             AsyncWindowConnect(true);
         }
         display_messages = false;
     } else if (ws_window_connecting || (ws_window && ws_window->getReadyState() == WebSocket::CONNECTING)) {
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Connecting...").x) / 2);
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("连接中...").x) / 2);
         ImGui::SetCursorPosY(ImGui::GetWindowHeight() / 2);
-        ImGui::Text("Connecting...");
+        ImGui::Text("连接中...");
         display_messages = false;
     } */
     if (display_messages) {
@@ -664,16 +664,16 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
             ImGui::Checkbox(party_types[i], &display_party_types[i]);
         }
         ImGui::PopItemWidth();
-        ImGui::Text("Party Leader");
+        ImGui::Text("队长");
         ImGui::SameLine(partycountleft);
-        ImGui::Text("Size");
+        ImGui::Text("人数");
         ImGui::SameLine(districtleft);
-        ImGui::Text("District");
+        ImGui::Text("地区");
         ImGui::SameLine(message_left);
-        ImGui::Text("Description");
+        ImGui::Text("描述");
         ImGui::SameLine(message_left);
         ImGui::SetCursorPosX(ImGui::GetContentRegionAvail().x - btn_width);
-        if (ImGui::Button("Alerts", ImVec2(btn_width, 0))) {
+        if (ImGui::Button("提醒", ImVec2(btn_width, 0))) {
             show_alert_window = !show_alert_window;
         }
         ImGui::Separator();
@@ -713,7 +713,7 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
 
             if (ImGui::Button(label, ImVec2(playernamewidth, 0))) {
                 std::wstring leader_name = TextUtils::StringToWString(party->player_name);
-                // open whisper to player
+                // 向玩家打开密语
                 GW::GameThread::Enqueue([leader_name] {
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)leader_name.data(), nullptr);
                 });
@@ -735,16 +735,16 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
             }*/
 
             ImGui::SameLine(message_left);
-            ImGui::Text(party->is_hard_mode ? "[Hard Mode] [%s] %s" : "[%s] %s", party_types[party->search_type], party->message.c_str());
+            ImGui::Text(party->is_hard_mode ? "[困难模式] [%s] %s" : "[%s] %s", party_types[party->search_type], party->message.c_str());
             ImGui::PopID();
         }
         ImGui::EndChild();
     }
 
-    /* Link to website footer */
+    /* 网站链接脚注 */
     static char buf[128];
     if (!buf[0]) {
-        snprintf(buf, 128, "Powered by %s", https_host);
+        snprintf(buf, 128, "由 %s 提供", https_host);
     }
     if (ImGui::Button(buf, ImVec2(ImGui::GetContentRegionAvail().x, 20.0f))) {
         ShellExecuteA(nullptr, "open", https_host, nullptr, nullptr, SW_SHOWNORMAL);
@@ -754,10 +754,10 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
 
 void PartySearchWindow::DrawAlertsWindowContent(bool)
 {
-    ImGui::Text("Alerts");
-    ImGui::CheckboxWithHelp("Send party advertisements to your trade chat", &settings.print_game_chat, "Only when trade chat channel is visible in-game");
-    ImGui::Checkbox("Only show messages containing:", &settings.filter_alerts);
-    ImGui::TextDisabled("(Each line is a separate keyword. Not case sensitive.)");
+    ImGui::Text("提醒");
+    ImGui::CheckboxWithHelp("将队伍广告发送到你的交易频道", &settings.print_game_chat, "仅当游戏内交易频道可见时");
+    ImGui::Checkbox("仅显示包含以下关键词的消息：", &settings.filter_alerts);
+    ImGui::TextDisabled("（每行一个关键词，不区分大小写）");
     if (ImGui::InputTextMultiline("##alertfilter", alert_buf, ALERT_BUF_SIZE,
                                   ImVec2(-1.0f, 0.0f))) {
         ParseBuffer(alert_buf, alert_words);
@@ -827,13 +827,13 @@ void PartySearchWindow::AsyncWindowConnect(const bool force)
     }
     int res;
     if (!wsaData.wVersion && (res = WSAStartup(MAKEWORD(2, 2), &wsaData)) != 0) {
-        printf("Failed to call WSAStartup: %d\n", res);
+        printf("调用 WSAStartup 失败: %d\n", res);
         return;
     }
     ws_window_connecting = true;
     thread_jobs.push([this] {
         if ((ws_window = WebSocket::from_url(ws_host)) == nullptr) {
-            printf("Couldn't connect to the host '%s'", ws_host);
+            printf("无法连接到主机 '%s'", ws_host);
         }
         ws_window_connecting = false;
     });

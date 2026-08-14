@@ -87,7 +87,7 @@ namespace {
             GW::UI::AsyncDecodeStr(map->enc_desc, &map->description);
             maps.emplace(map_id, map);
         }
-        Log::Flash("Fetching map info now");
+        Log::Flash("正在获取地图信息");
     }
 
     void ExportMapInfo()
@@ -106,10 +106,10 @@ namespace {
         std::ofstream out(file_location);
         out << glz::write_json(output).value_or(std::string{});
         out.close();
-        Log::Info("Maps exported to %ls", file_location.c_str());
+        Log::Info("地图已导出到 %ls", file_location.c_str());
     }
 
-    // Taken from StoCMgr.cpp
+    // 取自 StoCMgr.cpp
     using StoCHandler_pt = bool(__fastcall*)(GW::Packet::StoC::PacketBase* pak);
 
     struct StoCHandler {
@@ -122,7 +122,7 @@ namespace {
 
 
     void TooltipHandlerInfo(StoCHandler& handler) {
-        ImGui::SetTooltip("Field Count: %d\nHandler Addr: %08x", handler.field_count, handler.handler_func);
+        ImGui::SetTooltip("字段数: %d\n处理函数地址: %08x", handler.field_count, handler.handler_func);
     }
 
     using StoCHandlerArray = GW::Array<StoCHandler>;
@@ -163,7 +163,7 @@ namespace {
     volatile bool running;
 
     StoCHandlerArray game_server_handler;
-    constexpr size_t packet_max = 512; // Increase if number of StoC packets exceeds this.
+    constexpr size_t packet_max = 512; // 如果 StoC 数据包数量超过此值则增加。
     bool ignored_packets[packet_max] = {false};
     bool blocked_packets[packet_max] = {false};
     GW::HookEntry hook_entry;
@@ -200,7 +200,7 @@ namespace {
                 }* ls_codec{};
 
                 uint8_t h0010[12]{};
-                // Client codec
+                // 客户端编解码器
                 uint32_t ClientCodecArray[4]{};
                 StoCHandlerArray handlers;
             } * gs_codec;
@@ -229,20 +229,20 @@ namespace {
 
         const auto original_handler_func = test_handler.handler_func;
 
-        // Hook packet 1 to grab the address for GWCA's function hook
+        // 挂钩数据包 1 以获取 GWCA 函数钩子的地址
         GW::HookEntry entry;
         GW::StoC::PacketCallback c;
 
         GW::StoC::RegisterPacketCallback(&entry, 1, c);
         if (original_handler_func == test_handler.handler_func) {
             GW::StoC::RemoveCallback(1, &entry);
-            return; // GWCA not ready yet
+            return; // GWCA 尚未就绪
         }
         GW::StoC::RemoveCallback(1, &entry);
 
         ASSERT(original_handler_func != test_handler.handler_func);
 
-        // Copy gs handler array; we're going to swap out m_buffer.
+        // 复制 gs 处理程序数组；我们将交换 m_buffer。
         memcpy(&game_server_handler, original_handler_arr, sizeof(*original_handler_arr));
 
 
@@ -337,7 +337,7 @@ namespace {
     void Serialize(uint8_t** bytes, T* val)
     {
         uint8_t* b = *bytes;
-        // if we want to allign
+        // 如果要对齐
         // b = (uint8_t*)(((uintptr_t)b + (sizeof(T) - 1)) & ~(sizeof(T) - 1));
         memcpy(val, b, sizeof(T));
         *bytes = b + sizeof(T);
@@ -496,10 +496,10 @@ namespace {
                 const uint32_t size = field >> 4 & 0xF;
                 const uint32_t count = field >> 8 & 0xFFFF;
 
-                // Just to make it easier to print
+                // 为便于打印
                 const FieldType field_type = GetField(type, size, count);
 
-                // Used to skip field that are not printable, for instance the array end
+                // 跳过不可打印的字段，例如数组末尾
                 if (field_type == FieldType::Ignore) {
                     continue;
                 }
@@ -520,7 +520,7 @@ namespace {
                     PrintIndent(indent + 4);
                     printf("}\n");
 
-                    // This isn't necessary, but Guild Wars always have the nested struct at the end and once max
+                    // 并非必需，但激战总是将嵌套结构放在末尾且最多一个
                     break;
                 }
             }
@@ -537,7 +537,7 @@ void PacketLoggerWindow::CtoSHandler(const GW::HookStatus*, void* packet) const
     if (!logger_enabled) {
         return;
     }
-    printf(PrefixTimestamp("CtoS packet(%u 0x%X) {\n").c_str(), *static_cast<uint32_t*>(packet), *static_cast<uint32_t*>(packet));
+    printf(PrefixTimestamp("CtoS 数据包(%u 0x%X) {\n").c_str(), *static_cast<uint32_t*>(packet), *static_cast<uint32_t*>(packet));
 }
 
 void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC::PacketBase* packet) const
@@ -572,12 +572,12 @@ void PacketLoggerWindow::PacketHandler(GW::HookStatus* status, GW::Packet::StoC:
     ASSERT(packet->header == header);
 
     if (log_packet_content) {
-        printf(PrefixTimestamp("StoC packet(%u 0x%X) {\n").c_str(), packet->header, packet->header);
+        printf(PrefixTimestamp("StoC 数据包(%u 0x%X) {\n").c_str(), packet->header, packet->header);
         PrintNestedField(handler.fields + 1, handler.field_count - 1, 1, bytes, 4);
-        printf("} endpacket(%u 0x%X)\n", packet->header, packet->header);
+        printf("} 数据包结束(%u 0x%X)\n", packet->header, packet->header);
     }
     else {
-        printf(PrefixTimestamp("StoC packet(%u 0x%X) {\n").c_str(), packet->header, packet->header);
+        printf(PrefixTimestamp("StoC 数据包(%u 0x%X) {\n").c_str(), packet->header, packet->header);
     }
 }
 
@@ -689,7 +689,7 @@ void PacketLoggerWindow::SaveMessageLog() const
     const auto filename = Resources::GetPath(L"message_log.csv");
     std::wofstream my_file(filename);
 
-    // Send column names to the stream
+    // 将列名写入流
     for (const auto& it : message_log) {
         if (!it.second || !it.second->length()) {
             continue;
@@ -699,7 +699,7 @@ void PacketLoggerWindow::SaveMessageLog() const
         my_file << it.second->c_str();
         my_file << "\n";
     }
-    // Close the file
+    // 关闭文件
     my_file.close();
 }
 
@@ -723,7 +723,7 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
     if (!ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         return ImGui::End();
     }
-    if (ImGui::Checkbox("Enable Packet Logging", &logger_enabled)) {
+    if (ImGui::Checkbox("启用数据包日志记录", &logger_enabled)) {
         logger_enabled = !logger_enabled;
         if (!logger_enabled) {
             Enable();
@@ -732,12 +732,12 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
             Disable();
         }
     }
-    ImGui::ShowHelp("Log outgoing and incoming packet contents in debug console");
+    ImGui::ShowHelp("在调试控制台中记录传出和传入的数据包内容");
     ImGui::SameLine();
-    ImGui::Checkbox("Log Packet Content", &log_packet_content);
+    ImGui::Checkbox("记录数据包内容", &log_packet_content);
     ImGui::SameLine();
-    ImGui::CheckboxWithHelp("Auto ignore incoming packets", &auto_ignore_packets, "While ticked, any StoC packets received will be added to the ignore list.");
-    /*if ( ImGui::Button("Export Map Info")) {
+    ImGui::CheckboxWithHelp("自动忽略传入数据包", &auto_ignore_packets, "勾选后，接收到的任何 StoC 数据包将被添加到忽略列表中。");
+    /*if ( ImGui::Button("导出地图信息")) {
         if (maps.empty()) {
             FetchMapInfo();
         }
@@ -745,17 +745,17 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
             ExportMapInfo();
         }
     }
-    ImGui::ShowHelp("Export current map info to disk");
+    ImGui::ShowHelp("将当前地图信息导出到磁盘");
     */
-    ImGui::CheckboxWithHelp("Log NPC Dialogs", &log_npc_dialogs, "Log encoded strings and their translated output to debug console");
-    if (ImGui::CollapsingHeader("Ignored Packets")) {
-        if (ImGui::Button("Select All")) {
+    ImGui::CheckboxWithHelp("记录 NPC 对话", &log_npc_dialogs, "将加密字符串及其译文输出到调试控制台");
+    if (ImGui::CollapsingHeader("已忽略的数据包")) {
+        if (ImGui::Button("全选")) {
             for (size_t i = 0; i < game_server_handler.size(); i++) {
                 ignored_packets[i] = true;
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Deselect All")) {
+        if (ImGui::Button("取消全选")) {
             for (size_t i = 0; i < game_server_handler.size(); i++) {
                 ignored_packets[i] = false;
             }
@@ -779,14 +779,14 @@ void PacketLoggerWindow::Draw(IDirect3DDevice9*)
             }
         }
     }
-    if (ImGui::CollapsingHeader("Blocked Packets")) {
-        if (ImGui::Button("Select All")) {
+    if (ImGui::CollapsingHeader("已阻止的数据包")) {
+        if (ImGui::Button("全选")) {
             for (size_t i = 0; i < game_server_handler.size(); i++) {
                 blocked_packets[i] = true;
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Deselect All")) {
+        if (ImGui::Button("取消全选")) {
             for (size_t i = 0; i < game_server_handler.size(); i++) {
                 blocked_packets[i] = false;
             }
@@ -899,7 +899,7 @@ void PacketLoggerWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     ToolboxWindow::LoadSettings(doc, legacy);
     doc.GetStruct(Name(), settings);
 
-    // The legacy ini stored timestamp_type via SetBoolValue; re-read it as a bool to match the old load behaviour
+    // 旧版 ini 通过 SetBoolValue 存储 timestamp_type；重新读取为布尔值以匹配旧版加载行为
     if (!doc.Has(Name(), VAR_NAME(timestamp_type)) && legacy && legacy->KeyExists(Name(), VAR_NAME(timestamp_type))) {
         settings.timestamp_type = legacy->GetBoolValue(Name(), VAR_NAME(timestamp_type), settings.timestamp_type != TimestampType_None) ? 1 : 0;
     }
@@ -961,11 +961,11 @@ void PacketLoggerWindow::Enable()
 }
 void PacketLoggerWindow::DrawSettingsInternal()
 {
-    ImGui::RadioButton("No timestamp", &settings.timestamp_type, TimestampType_None);
-    ImGui::RadioButton("Local timestmap", &settings.timestamp_type, TimestampType_Local);
-    ImGui::RadioButton("Instance timestamp", &settings.timestamp_type, TimestampType_Instance);
-    ImGui::Checkbox("Show hours", &settings.timestamp_show_hours);
-    ImGui::Checkbox("Show minutes", &settings.timestamp_show_minutes);
-    ImGui::Checkbox("Show seconds", &settings.timestamp_show_seconds);
-    ImGui::Checkbox("Show milliseconds", &settings.timestamp_show_milliseconds);
+    ImGui::RadioButton("无时间戳", &settings.timestamp_type, TimestampType_None);
+    ImGui::RadioButton("本地时间戳", &settings.timestamp_type, TimestampType_Local);
+    ImGui::RadioButton("实例时间戳", &settings.timestamp_type, TimestampType_Instance);
+    ImGui::Checkbox("显示小时", &settings.timestamp_show_hours);
+    ImGui::Checkbox("显示分钟", &settings.timestamp_show_minutes);
+    ImGui::Checkbox("显示秒", &settings.timestamp_show_seconds);
+    ImGui::Checkbox("显示毫秒", &settings.timestamp_show_milliseconds);
 }

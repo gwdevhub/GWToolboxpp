@@ -21,7 +21,7 @@ namespace {
     std::map<GW::Constants::SkillID, std::unique_ptr<GuiUtils::EncString>> skill_names_by_id;
     std::unordered_map<std::string, GW::Constants::SkillID> skill_ids_by_name;
 
-    // Make sure you pass valid html e.g. start with a < tag
+    // 确保传入有效的 HTML，例如以 < 标签开头
     std::string& strip_tags(std::string& html)
     {
 
@@ -67,8 +67,8 @@ namespace {
         std::vector<GW::Constants::SkillID> skills_offered;
         std::vector<std::string> items_dropped;
         std::vector<std::string> notes;
-        std::unordered_map<std::string, std::string> wiki_armor_ratings; // rating type, rating value
-        std::unordered_map<std::string, std::string> infobox_deets;      // key, value
+        std::unordered_map<std::string, std::string> wiki_armor_ratings; // 护甲类型，护甲值
+        std::unordered_map<std::string, std::string> infobox_deets;      // 键，值
         enum class TargetInfoState {
             DecodingName,
             FetchingWikiPage,
@@ -290,7 +290,7 @@ namespace {
                 return;
         }
         for (const auto& it : skill_names_by_id) {
-            // Only match the first of this name to the id
+            // 只匹配第一个该名称对应的 ID
             if (!skill_ids_by_name.contains(it.second->string()))
                 skill_ids_by_name[it.second->string()] = it.first;
         }
@@ -366,7 +366,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
     }
     const auto target = GW::Agents::GetTarget();
     const auto is_valid_target = target && target->GetIsLivingType() && target->GetAsAgentLiving()->IsNPC();
-    const auto window_name = std::format("Target Info - {}###TargetInfo", is_valid_target && current_agent_info ? current_agent_info->name.string() : "(No target)");
+    const auto window_name = std::format("目标信息 - {}###TargetInfo", is_valid_target && current_agent_info ? current_agent_info->name.string() : "(无目标)");
     ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(350, 208), ImGuiCond_FirstUseEver);
     if (settings.auto_hide) {
@@ -384,11 +384,11 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
     DecodeSkillNames();
     UpdateAgentInfos();
     if (!current_agent_info) {
-        ImGui::TextUnformatted("No target info");
+        ImGui::TextUnformatted("无目标信息");
         return ImGui::End();
     }
     if (current_agent_info->state != AgentInfo::TargetInfoState::Done) {
-        ImGui::TextUnformatted("Target info pending...");
+        ImGui::TextUnformatted("目标信息加载中...");
         return ImGui::End();
     }
     const auto has_image = current_agent_info->image;
@@ -408,11 +408,11 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
         ImGui::Separator();
         if (!current_agent_info->infobox_deets.empty()) {
             for (const auto [key, value] : current_agent_info->infobox_deets) {
-                ImGui::Text("%s: %s", key.c_str(), value.c_str());
+                ImGui::Text("%s：%s", key.c_str(), value.c_str());
             }
         }
         if (!current_agent_info->wiki_skills.empty()) {
-            ImGui::Text("Skills Used:");
+            ImGui::Text("使用的技能：");
             ImGui::BeginTable("skills_used_table", 2);
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
             for (const auto skill_id : current_agent_info->wiki_skills) {
@@ -432,7 +432,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::EndTable();
         }
         if (!current_agent_info->skills_offered.empty()) {
-            ImGui::Text("Skills Offered:");
+            ImGui::Text("提供的技能：");
             ImGui::BeginTable("skills_offered_table", 2);
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
             for (const auto skill_id : current_agent_info->skills_offered) {
@@ -455,7 +455,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::EndTable();
         }
         if (!current_agent_info->wiki_armor_ratings.empty()) {
-            ImGui::Text("Armor Ratings:");
+            ImGui::Text("护甲评级：");
             ImGui::BeginTable("armor_rating_table", 2);
             for (const auto [damage_type, armour_rating] : current_agent_info->wiki_armor_ratings) {
                 ImGui::TableNextColumn();
@@ -467,7 +467,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
                     GuiUtils::OpenWiki(damage_type_wstr.c_str());
                 };
                 ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
-                const auto label = std::format("{}: {}", damage_type, armour_rating);
+                const auto label = std::format("{}：{}", damage_type, armour_rating);
                 if (const auto dmgtype_img = Resources::GetDamagetypeImage(damage_type)) {
                     ImGui::PushID(damage_type.c_str());
                     if (ImGui::IconButton(label.c_str(), *dmgtype_img, btn_dims)) {
@@ -486,7 +486,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::EndTable();
         }
         if (!current_agent_info->items_dropped.empty()) {
-            ImGui::Text("Items Dropped:");
+            ImGui::Text("掉落的物品：");
             ImGui::BeginTable("items_dropped_table", 2);
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.f, .5f});
             for (const auto& item_name : current_agent_info->items_dropped) {
@@ -503,13 +503,13 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
             ImGui::EndTable();
         }
         if (!current_agent_info->notes.empty()) {
-            ImGui::Text("Notes:");
+            ImGui::Text("备注：");
             for (const auto& note : current_agent_info->notes) {
                 ImGui::TextWrapped("%s", note.c_str());
             }
         }
         ImGui::Separator();
-        if (ImGui::Button("View More on Guild Wars Wiki")) {
+        if (ImGui::Button("在激战维基上查看更多")) {
             GuiUtils::SearchWiki(TextUtils::StringToWString(current_agent_info->wiki_search_term));
         }
         ImGui::EndTable();
@@ -520,7 +520,7 @@ void TargetInfoWindow::Draw(IDirect3DDevice9*)
 void TargetInfoWindow::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
-    ImGui::Checkbox("Automatically hide when not targeting anything", &settings.auto_hide);
+    ImGui::Checkbox("无目标时自动隐藏", &settings.auto_hide);
 }
 
 void TargetInfoWindow::Update(const float x)

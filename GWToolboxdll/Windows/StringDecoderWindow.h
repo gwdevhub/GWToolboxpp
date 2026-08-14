@@ -18,7 +18,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "String Decoder"; }
+    [[nodiscard]] const char* Name() const override { return "字符串解码"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_LOCK_OPEN; }
 
     void Draw(IDirect3DDevice9* pDevice) override;

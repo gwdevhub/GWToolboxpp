@@ -47,7 +47,7 @@ bool Pcon::suppress_air_of_superiority_text = false;
 bool Pcon::pcons_by_character = true;
 bool Pcon::hide_city_pcons_in_explorable_areas = false;
 
-// 22 is the highest bag index. 25 is the most slots in any single bag.
+// 22 是最高背包索引，25 是单个背包的最大槽位数。
 std::array<std::array<clock_t, 25>, 22> Pcon::reserved_bag_slots{};
 
 // ================================================
@@ -81,7 +81,7 @@ Pcon::~Pcon()
     Terminate();
 }
 
-// Resets pcon counters so it needs to recalc number and refill.
+// 重置消耗品计数器，使其需要重新计算数量和补充。
 void Pcon::ResetCounts()
 {
     refill_attempted = false;
@@ -182,46 +182,46 @@ void Pcon::Terminate()
 void Pcon::Update(int delay)
 {
     if (mapid != GW::Map::GetMapID() || maptype != GW::Map::GetInstanceType()) {
-        // Map changed; reset vars
+        // 地图变化；重置变量
         mapid = GW::Map::GetMapID();
         maptype = GW::Map::GetInstanceType();
         SetPlayerName();
         ResetCounts();
         Refill(refill_if_below_threshold && IsEnabled() && PconsWindow::Instance().GetEnabled());
     }
-    // Refill pcons if needed.
+    // 需要时补充消耗品
     UpdateRefill();
     if (maptype == GW::Constants::InstanceType::Loading || GW::Map::GetIsObserving()) {
         return;
     }
-    // Check pcon count in inventory
+    // 检查背包中的消耗品数量
     if (!pcon_quantity_checked) {
         const auto qty = CheckInventory();
         if (qty < 0) {
-            return; // Inventory pointers not ready
+            return; // 背包指针未就绪
         }
         quantity = qty;
         if (maptype == GW::Constants::InstanceType::Outpost) {
             quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
             if (IsEnabled() && PconsWindow::Instance().GetEnabled() && !refilling) {
-                // Only warn user of low pcon count if is enabled and we're in an outpost.
+                // 仅在启用且处于前哨站时警告用户消耗品不足
                 if (quantity == 0) {
-                    Log::Error("No more %s items found", chat.c_str());
+                    Log::Error("未找到更多 %s 物品", chat.c_str());
                 }
                 else if (quantity < threshold) {
-                    Log::Warning("Low on %s", chat.c_str());
+                    Log::Warning("%s 数量不足", chat.c_str());
                 }
             }
         }
         pcon_quantity_checked = true;
     }
-    // === Use item if possible ===
+    // === 如果可能则使用物品 ===
     if (IsEnabled() && PconsWindow::Instance().GetEnabled()) {
         if (delay < 0) {
             delay = pcons_delay;
         }
         player = GW::Agents::GetControlledCharacter();
-        // NOTE: Only fails CanUseByEffect() if we've found an effects array for this map before.
+        // 注意：只有在此地图上找到过效果数组时，CanUseByEffect() 才会失败
         if (player != nullptr
             && !player->GetIsDead()
             && TIMER_DIFF(timer) > delay
@@ -258,7 +258,7 @@ bool Pcon::UnreserveSlotForMove(const size_t bagIndex, const size_t slot)
 bool Pcon::IsSlotReservedForMove(const size_t bagIndex, const size_t slot)
 {
     const clock_t slot_reserved_at = reserved_bag_slots.at(bagIndex).at(slot);
-    return slot_reserved_at && TIMER_DIFF(slot_reserved_at) < 3000; // 1000ms is reasonable for CtoS then StoC
+    return slot_reserved_at && TIMER_DIFF(slot_reserved_at) < 3000; // 1000ms 对 CtoS 到 StoC 来说是合理的
 }
 
 bool Pcon::IsControllingCurrentChar() {
@@ -267,31 +267,31 @@ bool Pcon::IsControllingCurrentChar() {
 void Pcon::AfterUsed(const bool used, const int qty)
 {
     if (qty >= 0) {
-        // if not, bag was undefined and we just ignore everything
+        // 如果不是，则背包未定义，忽略一切
         quantity = qty;
         if (used) {
             timer = TIMER_INIT();
             if (quantity == 0) {
-                // if we just used the last one
+                // 如果刚用完最后一个
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
-                Log::Warning("Just used the last %s", chat.c_str());
+                Log::Warning("刚用完最后一个 %s", chat.c_str());
                 if (disable_when_not_found) {
                     SetEnabled(false);
                 }
             }
         }
         else {
-            // we should have used but didn't find the item
+            // 本应使用但未找到物品
             if (disable_when_not_found) {
                 SetEnabled(false);
             }
             if (mapid != GW::Map::GetMapID()
                 || maptype != GW::Map::GetInstanceType()) {
-                // only yell at the user once
+                // 只警告用户一次
                 mapid = GW::Map::GetMapID();
                 maptype = GW::Map::GetInstanceType();
-                Log::Error("Cannot find %s", chat.c_str());
+                Log::Error("找不到 %s", chat.c_str());
             }
         }
     }
@@ -299,7 +299,7 @@ void Pcon::AfterUsed(const bool used, const int qty)
 
 bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* result)
 {
-    // Scan bags, find an incomplete stack, or otherwise an empty slot.
+    // 扫描背包，寻找未满的堆叠或空槽位。
     GW::Bag** bags = GW::Items::GetBagArray();
     if (bags == nullptr) {
         return false;
@@ -308,21 +308,21 @@ bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* 
     GW::Bag* emptyBag = nullptr;
 
     for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Bag_2); bagIndex > 0; --bagIndex) {
-        // Work from last bag to first; pcons at bottom of inventory
+        // 从最后一个背包到第一个；消耗品放在背包底部
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) {
-            continue; // No bag, skip
+            continue; // 无背包，跳过
         }
         GW::ItemArray& items = bag->items;
         if (!items.valid()) {
-            continue; // No item array, skip
+            continue; // 无物品数组，跳过
         }
         for (size_t i = items.size(); i > 0; i--) {
-            // Work from last slot to first; pcons at bottom of inventory
+            // 从最后一个槽位到第一个；消耗品放在背包底部
             const size_t slotIndex = i - 1;
             GW::Item* item = items[slotIndex];
             if (!item || item == nullptr) {
-                // Reserve this slot for later
+                // 为此槽位预留
                 if (!emptyBag && ReserveSlotForMove(bag->index, slotIndex)) {
                     emptySlotIdx = slotIndex;
                     emptyBag = bag;
@@ -330,32 +330,32 @@ bool Pcon::FindVacantStackOrSlotInInventory(const GW::Item* likeItem, GW::Item* 
                 continue;
             }
             if (!likeItem) {
-                continue; // Only compare with existing items if we have something to compare to.
+                continue; // 只有有可比较的物品时才比较
             }
             if (likeItem->mod_struct_size != item->mod_struct_size || likeItem->model_id != item->model_id) {
-                continue; // This is not the same item - apples and pears.
+                continue; // 不是同一种物品
             }
             if (likeItem->item_id == item->item_id || item->quantity >= 250) {
-                continue; // Comparing against yourself, or this item is already a full stack.
+                continue; // 与自己比较，或已是满堆叠
             }
             if (ReserveSlotForMove(bag->index, item->slot)) {
-                if (emptySlotIdx != static_cast<size_t>(-1)) // Unlock the empty slot.
+                if (emptySlotIdx != static_cast<size_t>(-1)) // 解锁空槽位
                 {
                     UnreserveSlotForMove(emptyBag->index, emptySlotIdx);
                 }
                 *result = *item;
-                return true; // Found a stack with space.
+                return true; // 找到有空间的堆叠
             }
         }
     }
     if (!emptyBag) {
         return false;
     }
-    memset(result, 0, sizeof(*result)); // Create a "fake" item...
-    result->bag = emptyBag;           // ...that belongs in the empty bag/slot we found...
+    memset(result, 0, sizeof(*result)); // 创建一个“假”物品...
+    result->bag = emptyBag;           // ...属于我们找到的空背包/槽位...
     result->slot = static_cast<uint8_t>(emptySlotIdx);
-    result->quantity = 0; // ...with 250 available slots.
-    result->item_id = 0;  // item_id to 0 for comparison
+    result->quantity = 0; // ...有 250 个可用槽位。
+    result->item_id = 0;  // item_id 设为 0 用于比较
     return true;
 }
 
@@ -413,11 +413,11 @@ std::vector<DWORD> Pcon::GetPrioritizedModelIdsFromInventory() const
          bagIndex <= static_cast<size_t>(GW::Constants::Bag::Bag_2); ++bagIndex) {
         GW::Bag* storageBag = bags[bagIndex];
         if (!storageBag) {
-            continue; // No bag, skip
+            continue; // 无背包，跳过
         }
         GW::ItemArray& items = storageBag->items;
         if (!items.valid()) {
-            continue; // No item array, skip
+            continue; // 无物品数组，跳过
         }
         for (size_t i = 0; i < items.size(); i++) {
             const GW::Item* item = items[i];
@@ -447,14 +447,14 @@ void Pcon::UpdateRefill()
     }
     if (pending_move_to_started) {
         if (TIMER_DIFF(pending_move_to_started) > 20000) {
-            Log::Warning("Timed out refilling pcon %s", chat.c_str());
+            Log::Warning("补充消耗品 %s 超时", chat.c_str());
             Refill(false);
             pcon_quantity_checked = false;
             return;
         }
         const GW::Item* item = GW::Items::GetItemBySlot(GW::Items::GetBag(pending_move_to_bag), pending_move_to_slot + 1);
         if (!item || !PointsPerUse(item) || item->quantity != pending_move_to_quantity) {
-            return; // Still waiting for move.
+            return; // 仍在等待移动完成
         }
         UnreserveSlotForMove(item->bag->index, item->slot);
     }
@@ -465,7 +465,7 @@ void Pcon::UpdateRefill()
         return;
     }
     quantity_storage = CheckInventory(nullptr, nullptr, static_cast<int>(GW::Constants::Bag::Storage_1), static_cast<int>(GW::Constants::Bag::Storage_14));
-    const auto points_needed = threshold - quantity; // quantity is actually points e.g. 20 grog = 60 quantity
+    const auto points_needed = threshold - quantity; // quantity 实际上是点数，例如 20 桶烈酒 = 60 数量
     GW::Bag** bags = GW::Items::GetBagArray();
     if (points_needed < 1 || bags == nullptr) {
         Refill(false);
@@ -473,37 +473,37 @@ void Pcon::UpdateRefill()
         return;
     }
 
-    // Lambda that scans storage for a matching item and moves it to inventory.
-    // If preferred_model_id != 0, only items with that model_id are considered.
-    // Returns true if a move was initiated, false if no matching item was found.
+    // Lambda：扫描仓库寻找匹配物品并移动到背包。
+    // 如果 preferred_model_id != 0，只考虑该 model_id 的物品。
+    // 如果启动移动则返回 true，否则返回 false。
     auto try_move_from_storage = [&](DWORD preferred_model_id) -> bool {
         GW::Item inventoryItem;
         for (auto bagIndex = static_cast<size_t>(GW::Constants::Bag::Storage_1); bagIndex <= static_cast<size_t>(GW::Constants::Bag::Storage_14); ++bagIndex) {
             GW::Bag* storageBag = bags[bagIndex];
             if (storageBag == nullptr) {
-                continue; // No bag, skip
+                continue; // 无背包，跳过
             }
             GW::ItemArray& storageItems = storageBag->items;
             if (!storageItems.valid()) {
-                continue; // No item array, skip
+                continue; // 无物品数组，跳过
             }
             for (size_t i = 0; i < storageItems.size() && storageItems.valid(); i++) {
                 const GW::Item* storageItem = storageItems[i];
                 if (storageItem == nullptr) {
-                    continue; // No item, skip
+                    continue; // 无物品，跳过
                 }
                 if (preferred_model_id != 0 && storageItem->model_id != preferred_model_id) {
                     continue;
                 }
                 const size_t points_per_item = PointsPerUse(storageItem);
                 if (points_per_item < 1) {
-                    continue; // This is not the pcon you're looking for...
+                    continue; // 这不是你要找的消耗品...
                 }
-                if (!FindVacantStackOrSlotInInventory(storageItem, &inventoryItem)) { // Now find a slot in inventory to move them to.
-                    printf("No more space for %s", chat.c_str());
+                if (!FindVacantStackOrSlotInInventory(storageItem, &inventoryItem)) { // 在背包中找空位移动
+                    printf("没有更多空间存放 %s", chat.c_str());
                     Refill(false);
                     pcon_quantity_checked = false;
-                    return true; // Signal that we handled the situation (no space).
+                    return true; // 表示已处理该情况（无空间）
                 }
                 auto quantity_to_move = static_cast<size_t>(ceil(static_cast<float>(points_needed) / static_cast<float>(points_per_item)));
                 if (quantity_to_move > storageItem->quantity) {
@@ -527,7 +527,7 @@ void Pcon::UpdateRefill()
             return;
         }
     }
-    // Fallback: any matching item in storage order (e.g. inventory is empty).
+    // 回退：按仓库顺序匹配任何物品（例如背包为空）
     try_move_from_storage(0);
 }
 
@@ -543,20 +543,20 @@ int Pcon::CheckInventory(bool* used, size_t* used_qty_ptr, const size_t from_bag
     for (size_t bagIndex = from_bag; bagIndex <= to_bag; ++bagIndex) {
         GW::Bag* bag = bags[bagIndex];
         if (bag == nullptr) {
-            continue; // No bag, skip
+            continue; // 无背包，跳过
         }
         GW::ItemArray& items = bag->items;
         if (!items.valid()) {
-            continue; // No item array, skip
+            continue; // 无物品数组，跳过
         }
         for (size_t i = 0; i < items.size(); i++) {
             const GW::Item* item = items[i];
             if (item == nullptr) {
-                continue; // No item, skip
+                continue; // 无物品，跳过
             }
             const size_t qtyea = PointsPerUse(item);
             if (qtyea < 1) {
-                continue; // This is not the pcon you're looking for...
+                continue; // 这不是你要找的消耗品...
             }
             if (used != nullptr && !*used && GW::Items::UseItem(item)) {
                 *used = true;
@@ -688,7 +688,7 @@ void PconGeneric::OnButtonClick()
 bool PconGeneric::CanUseByEffect() const
 {
     if (!GW::Agents::GetControlledCharacter()) {
-        return false; // player doesn't exist?
+        return false; // 玩家不存在？
     }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
@@ -739,7 +739,7 @@ bool PconCons::CanUseByEffect() const
 void PconRefiller::Draw(IDirect3DDevice9* device)
 {
     if (maptype == GW::Constants::InstanceType::Explorable) {
-        return; // Don't draw in explorable areas - this is only for refilling in an outpost!
+        return; // 不在探索区域绘制——仅用于前哨站补充！
     }
     Pcon::Draw(device);
 }
@@ -755,7 +755,7 @@ bool PconCity::CanUseByEffect() const
     using namespace GW::Constants;
     const GW::Agent* _player = GW::Agents::GetControlledCharacter();
     if (!_player || _player->move_x == 0.0f && _player->move_y == 0.0f) {
-        return false; // player doesn't exist?
+        return false; // 玩家不存在？
     }
 
     GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
@@ -772,7 +772,7 @@ bool PconCity::CanUseByEffect() const
             || effect.skill_id == SkillID::Sugar_Rush_long
             || effect.skill_id == SkillID::Sugar_Jolt_short
             || effect.skill_id == SkillID::Sugar_Jolt_long) {
-            return false; // already on
+            return false; // 已激活
         }
     }
     return true;
@@ -821,7 +821,7 @@ void PconAlcohol::ForceUse()
         int qty = CheckInventory(&used, &used_qty);
         if (used_qty == 1) {
             bool used2 = false;
-            qty = CheckInventory(&used2, &used_qty); // use another!
+            qty = CheckInventory(&used2, &used_qty); // 再使用一个！
         }
 
         AfterUsed(used, qty);

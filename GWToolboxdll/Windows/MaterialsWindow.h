@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Materials"; }
+    [[nodiscard]] const char* Name() const override { return "材料"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_FEATHER_ALT; }
 
     struct Settings {

@@ -15,7 +15,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Packet Logger"; }
+    [[nodiscard]] const char* Name() const override { return "数据日志"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BOX; };
 
     enum TimestampType : int {

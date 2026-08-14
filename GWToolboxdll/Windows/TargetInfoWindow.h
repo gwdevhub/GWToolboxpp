@@ -10,8 +10,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Target Info"; }
-    [[nodiscard]] const char* Description() const override { return "Displays info about current target including any notes from GWW"; }
+    [[nodiscard]] const char* Name() const override { return "目标信息"; }
+    [[nodiscard]] const char* Description() const override { return "显示有关当前目标的信息，包括GWW的全部注释"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CROSSHAIRS; }
 
     struct Settings {

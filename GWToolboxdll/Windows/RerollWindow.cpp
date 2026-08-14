@@ -41,7 +41,7 @@ namespace {
 
     RerollWindow::Settings settings;
 
-    // GW file 0x5e700: 256x64 sprite sheet with 4x64px icons: none, reforged, dhuum's covenant, melandru's accord
+    // GW 文件 0x5e700：256x64 精灵表，包含 4 个 64px 图标：无、重铸、杜姆契约、梅兰朵协定
     IDirect3DTexture9** covenant_sprite = nullptr;
 
     bool check_available_chars = true;
@@ -179,8 +179,8 @@ namespace {
     std::vector<std::wstring> exclude_charnames_from_reroll_cmd;
     char excluded_char_add_buf[20] = {0};
 
-    // Maps account_uuid_str → (profession_id → preferred character name).
-    // An empty profession entry means "no preference" for that profession.
+    // 映射 账号UUID字符串 → (职业ID → 首选角色名称)。
+    // 空的职业条目表示该职业“无偏好”。
     std::unordered_map<std::string, std::unordered_map<uint32_t, std::wstring>> preferred_chars_per_account;
 
     std::string GetCurrentAccountUuidStr()
@@ -206,7 +206,7 @@ namespace {
     void DrawExcludedCharacters()
     {
         ImGui::Spacing();
-        if (ImGui::TreeNodeEx("Excluded Characters from /reroll command", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        if (ImGui::TreeNodeEx("/reroll 命令排除角色", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
             for (size_t i = 0; i < exclude_charnames_from_reroll_cmd.size(); i++) {
                 auto& excluded = exclude_charnames_from_reroll_cmd[i];
                 ImGui::PushID(i);
@@ -216,7 +216,7 @@ namespace {
                 ImGui::PopID();
                 if (clicked) {
                     exclude_charnames_from_reroll_cmd.erase(exclude_charnames_from_reroll_cmd.begin() + i);
-                    break; // next loop
+                    break; // 下一轮循环
                 }
             }
             if (ImGui::InputText("###add_character_to_exclude", excluded_char_add_buf, _countof(excluded_char_add_buf), ImGuiInputTextFlags_EnterReturnsTrue)) {
@@ -233,11 +233,11 @@ namespace {
     void DrawPreferredCharacters()
     {
         ImGui::Spacing();
-        ImGui::TextUnformatted("Preferred Characters per Profession");
+        ImGui::TextUnformatted("按职业首选角色");
         ImGui::Separator();
         ImGui::Spacing();
         ImGui::Indent();
-        ImGui::TextDisabled("Choose which character to reroll to for each profession. Leave blank to use the first available character.");
+        ImGui::TextDisabled("选择每个职业要切换到的首选角色。留空则使用第一个可用角色。");
 
         const auto available_chars_ptr = GW::AccountMgr::GetAvailableChars();
 
@@ -255,7 +255,7 @@ namespace {
 
             ImGui::PushID(static_cast<int>(i));
 
-            // Collect available chars for this profession for the combo.
+            // 收集该职业的可用角色用于下拉列表
             std::vector<const wchar_t*> candidates;
             if (available_chars_ptr && available_chars_ptr->valid()) {
                 for (const auto& c : *available_chars_ptr) {
@@ -269,12 +269,12 @@ namespace {
             ImGui::SameLine();
 
             const auto current_str = TextUtils::WStringToString(pref);
-            const auto preview = pref.empty() ? "(any)" : current_str.c_str();
+            const auto preview = pref.empty() ? "(任意)" : current_str.c_str();
 
             ImGui::SetNextItemWidth(dropdown_w);
             if (ImGui::BeginCombo("##pref", preview)) {
-                // "(any)" option
-                if (ImGui::Selectable("(any)", pref.empty())) {
+                // "(任意)" 选项
+                if (ImGui::Selectable("(任意)", pref.empty())) {
                     pref.clear();
                 }
                 for (const auto* cname : candidates) {
@@ -317,7 +317,7 @@ namespace {
         }
         reroll_stage = None;
         if (reverting_reroll) {
-            return; // Can't do anything.
+            return; // 无法处理
         }
         failed_message = reason;
         if (!settings.return_on_fail) {
@@ -352,7 +352,7 @@ namespace {
         if (party_leader_name) {
             wcscpy(party_leader, party_leader_name);
             if (!_same_map && _same_party) {
-                _same_map = true; // Ensure we go to same map if we want to join the same party
+                _same_map = true; // 如果要加入同一队伍，确保前往同一地图
             }
         }
         else {
@@ -385,8 +385,8 @@ namespace {
         return true;
     }
 
-    // Finds the best available character for the given profession and initiates a reroll.
-    // Preferred characters (if configured) are tried first, then the first non-excluded match.
+    // 查找给定职业的最佳可用角色并发起切换。
+    // 首选角色（如果配置了）优先尝试，然后选择第一个非排除的匹配角色。
     bool RerollToProfession(const GW::Constants::Profession profession, const bool _same_map, const bool _same_party)
     {
         const auto available_characters = GW::AccountMgr::GetAvailableChars();
@@ -394,7 +394,7 @@ namespace {
             return false;
         }
 
-        // Check the configured preferred character first.
+        // 首先检查配置的首选角色
         const auto account_it = preferred_chars_per_account.find(GetCurrentAccountUuidStr());
         if (account_it != preferred_chars_per_account.end()) {
             const auto pref_it = account_it->second.find(static_cast<uint32_t>(profession));
@@ -406,7 +406,7 @@ namespace {
             }
         }
 
-        // Fall back to the first non-excluded available character with the matching profession.
+        // 回退到第一个非排除的匹配职业角色
         for (const auto& available_char : *available_characters) {
             if (IsExcludedFromReroll(available_char.player_name)) {
                 continue;
@@ -418,7 +418,7 @@ namespace {
         return false;
     }
 
-    // Returns the character name that RerollToProfession would use, or nullptr if none available.
+    // 返回 RerollToProfession 将使用的角色名称，若无可用则返回 nullptr
     const wchar_t* FindAvailableCharForProfession(const GW::Constants::Profession profession)
     {
         const auto available_characters = GW::AccountMgr::GetAvailableChars();
@@ -446,41 +446,41 @@ namespace {
     void CHAT_CMD_FUNC(CmdReroll)
     {
         if (argc < 2) {
-            Log::Error("Incorrect syntax: /reroll [profession|character_name]");
+            Log::Error("语法错误：/reroll [职业|角色名称]");
             return;
         }
         auto available_characters = GW::AccountMgr::GetAvailableChars();
         if (!available_characters || !available_characters->valid()) {
-            Log::Error("Failed to get available characters");
+            Log::Error("获取可用角色失败");
             return;
         }
         const auto character_or_profession = TextUtils::ToLower(GetRemainingArgsWstr(message, 1));
         constexpr std::array to_find = {
             L"",
-            L"warrior",
-            L"ranger",
-            L"monk",
-            L"necromancer",
-            L"mesmer",
-            L"elementalist",
-            L"assassin",
-            L"ritualist",
-            L"paragon",
-            L"dervish"
+            L"战士",
+            L"游侠",
+            L"僧侣",
+            L"死灵法师",
+            L"幻术师",
+            L"元素使",
+            L"刺客",
+            L"祭祀",
+            L"圣言者",
+            L"神唤使"
         };
 
-        // Search by profession name → use RerollToProfession (respects preferred chars).
+        // 按职业名称搜索 → 使用 RerollToProfession（遵循首选角色设置）
         for (size_t i = 1; i < to_find.size(); i++) {
             if (wcsstr(to_find.at(i), character_or_profession.c_str())) {
                 const auto prof = static_cast<GW::Constants::Profession>(i);
                 if (!RerollToProfession(prof, settings.travel_to_same_location_after_rerolling, settings.rejoin_party_after_rerolling)) {
-                    Log::Error("No available character found for that profession");
+                    Log::Error("未找到该职业的可用角色");
                 }
                 return;
             }
         }
 
-        // Search by character name (exact match first, then substring).
+        // 按角色名称搜索（先精确匹配，再子串匹配）
         const wchar_t* substring_match = nullptr;
         for (const auto& available_char : *available_characters) {
             const auto player_name = available_char.player_name;
@@ -497,7 +497,7 @@ namespace {
             Reroll(substring_match, settings.travel_to_same_location_after_rerolling, settings.rejoin_party_after_rerolling);
             return;
         }
-        Log::Error("Failed to match profession or character name for command");
+        Log::Error("未匹配到职业或角色名称");
     }
 
     void OnUIMessage(GW::HookStatus*, const GW::UI::UIMessage msg_id, void*, void*)
@@ -522,22 +522,22 @@ void RerollWindow::Draw(IDirect3DDevice9*)
 {
     if (reroll_stage == PromptPendingLogout) {
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable) {
-            ImGui::ConfirmDialog("You're currently in an explorable area.\nAre you sure you want to change character?", OnRerollPromptReply);
+            ImGui::ConfirmDialog("你当前在探索区域中。\n确定要切换角色吗？", OnRerollPromptReply);
             reroll_stage = PromptPendingReply;
             return;
         }
         const auto char_select_info = GW::AccountMgr::GetAvailableCharacter(reroll_to_player_name);
         if (!char_select_info) {
-            RerollFailed(L"Failed to find available character from char select list");
+            RerollFailed(L"从角色选择列表中找到可用角色失败");
             return;
         }
         const auto reroll_to_player_current_map = char_select_info->map_id();
         if (GWToolbox::ShouldDisableToolbox(reroll_to_player_current_map)) {
             const auto charname_str = TextUtils::WStringToString(char_select_info->player_name);
-            const auto msg = std::format("{} is currently in {}.\n"
-                "This is an outpost that toolbox won't work in.\n"
-                "You can still swap to this character, but won't automatically travel.\n\n"
-                "Continue?",
+            const auto msg = std::format("{} 当前在 {} 中。\n"
+                "这是一个工具箱无法工作的前哨站。\n"
+                "你仍然可以切换到该角色，但不会自动旅行。\n\n"
+                "继续？",
                 charname_str, Resources::GetMapName(reroll_to_player_current_map)->string());
             ImGui::ConfirmDialog(msg.c_str(), OnRerollPromptReply);
             reroll_stage = PromptPendingReply;
@@ -558,13 +558,13 @@ void RerollWindow::Draw(IDirect3DDevice9*)
 
     const auto available_chars_ptr = GW::AccountMgr::GetAvailableChars();
     if (!available_chars_ptr || !available_chars_ptr->valid()) {
-        ImGui::TextDisabled("Go to character select screen to record available characters");
+        ImGui::TextDisabled("前往角色选择界面以记录可用角色");
     }
     else {
-        ImGui::Text("Click on a character name to switch to that character.");
-        ImGui::Checkbox("Travel to same location after rerolling", &settings.travel_to_same_location_after_rerolling);
-        ImGui::Checkbox("Re-join your party after rerolling", &settings.rejoin_party_after_rerolling);
-        ImGui::Checkbox("Return to original character on fail", &settings.return_on_fail);
+        ImGui::Text("点击角色名称即可切换到该角色。");
+        ImGui::Checkbox("切换后前往相同地点", &settings.travel_to_same_location_after_rerolling);
+        ImGui::Checkbox("切换后重新加入队伍", &settings.rejoin_party_after_rerolling);
+        ImGui::Checkbox("失败时返回原角色", &settings.return_on_fail);
         const float btnw = ImGui::GetContentRegionAvail().x / 2.f - ImGui::GetStyle().ItemSpacing.x;
         const ImVec2 btn_dim = {btnw, 0.f};
         std::string buf;
@@ -643,7 +643,7 @@ void RerollWindow::Initialize()
 
     covenant_sprite = GwDatModule::LoadTextureFromFileId(0x5e700);
 
-    // Add an entry to check available characters at login screen
+    // 在登录界面添加检查可用角色的条目
     RegisterUIMessageCallback(&OnGoToCharSelect_Entry, GW::UI::UIMessage::kCheckUIState, OnUIMessage, 0x4000);
 
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"reroll", CmdReroll);
@@ -662,7 +662,7 @@ void RerollWindow::Terminate() {
 void RerollWindow::Update(float)
 {
     if (reroll_stage != None && TIMER_INIT() > reroll_timeout) {
-        RerollFailed(L"Reroll timed out");
+        RerollFailed(L"切换角色超时");
         return;
     }
     if (GWToolbox::ShouldDisableToolbox()) {
@@ -674,11 +674,11 @@ void RerollWindow::Update(float)
         case PendingLogout: {
             const auto char_select_info = GW::AccountMgr::GetAvailableCharacter(reroll_to_player_name);
             if (!char_select_info) {
-                RerollFailed(L"Failed to find available character from char select list");
+                RerollFailed(L"从角色选择列表中找到可用角色失败");
                 return;
             }
             if (GWToolbox::ShouldDisableToolbox(char_select_info->map_id())) {
-                // If toolbox isn't going to be available in the next map, make sure we don't try to do anything after reroll.
+                // 如果工具箱在下一张地图不可用，确保切换后不尝试做任何事
                 same_map = same_party = false;
             }
             auto packet = GW::UI::UIPacket::kLogout{.unknown = 0, .character_select = 1u};
@@ -702,7 +702,7 @@ void RerollWindow::Update(float)
             
             GW::FriendListMgr::SetFriendListStatus(online_status);
             if (!GW::LoginMgr::SelectCharacterToPlay(reroll_to_player_name, true)) {
-                RerollFailed(L"Failed to select character to play");
+                RerollFailed(L"选择要游玩的角色失败");
                 return;
             }
             reroll_stage = WaitForCharacterLoad;
@@ -717,28 +717,28 @@ void RerollWindow::Update(float)
             }
             const wchar_t* player_name = GW::AccountMgr::GetCurrentPlayerName();
             if (!player_name || wcscmp(player_name, reroll_to_player_name) != 0) {
-                RerollFailed(L"Wrong character was loaded");
+                RerollFailed(L"加载了错误的角色");
                 return;
             }
             if (same_map) {
                 if (!IsInMap()) {
                     if (guild_hall_uuid) {
-                        // Was previously in a guild hall
+                        // 之前在公会大厅中
                         GW::GuildMgr::TravelGH(guild_hall_uuid);
                     }
                     else {
                         if (!GW::Map::GetIsMapUnlocked(map_id)) {
-                            RerollFailed(L"Map isn't unlocked");
+                            RerollFailed(L"地图未解锁");
                             return;
                         }
                         reroll_scroll_from_map_id = GetScrollableOutpostForEliteArea(map_id);
                         if (reroll_scroll_from_map_id != GW::Constants::MapID::None) {
                             if (!GW::Map::GetIsMapUnlocked(reroll_scroll_from_map_id)) {
-                                RerollFailed(L"No scrollable outpost unlocked");
+                                RerollFailed(L"没有可传送的前哨站已解锁");
                                 return;
                             }
                             if (!GetScrollItemForEliteArea(map_id)) {
-                                RerollFailed(L"No scroll available for elite area");
+                                RerollFailed(L"精英区域没有可用卷轴");
                                 return;
                             }
                             if (GW::Map::GetMapID() != reroll_scroll_from_map_id) {
@@ -768,11 +768,11 @@ void RerollWindow::Update(float)
             }
             const GW::Item* scroll = GetScrollItemForEliteArea(map_id);
             if (!scroll) {
-                RerollFailed(L"No scroll available for elite area");
+                RerollFailed(L"精英区域没有可用卷轴");
                 return;
             }
             if (!GW::Items::UseItem(scroll)) {
-                RerollFailed(L"Failed to use scroll item");
+                RerollFailed(L"使用卷轴失败");
                 return;
             }
             reroll_stage = WaitForActiveDistrict;
@@ -788,7 +788,7 @@ void RerollWindow::Update(float)
                 return;
             }
             if (!IsInMap()) {
-                // Same map, wrong district
+                // 相同地图，错误的区域
                 GW::Map::Travel(map_id, region_id, district_id, language_id);
             }
             reroll_stage = WaitForMapLoad;
@@ -821,7 +821,7 @@ void RerollWindow::Update(float)
             }
             wchar_t msg_buf[32];
             ASSERT(same_party && party_leader[0]);
-            ASSERT(swprintf(msg_buf, _countof(msg_buf), L"invite %s", party_leader) != -1);
+            ASSERT(swprintf(msg_buf, _countof(msg_buf), L"邀请 %s", party_leader) != -1);
             GW::Chat::SendChat('/', msg_buf);
             RerollSuccess();
         }
@@ -879,7 +879,7 @@ void RerollWindow::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         }
     }
     else if (legacy) {
-        // Legacy per-account preferred characters. Keys are "pref_{uuid}_{n}" (n = 1-10).
+        // 旧版按账号首选角色。键为 "pref_{uuid}_{n}"（n = 1-10）。
         TNamesDepend keys;
         legacy->GetAllKeys(Name(), keys);
         for (const auto& entry : keys) {

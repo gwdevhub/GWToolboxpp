@@ -17,7 +17,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Pcons"; }
+    [[nodiscard]] const char* Name() const override { return "消耗品"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BIRTHDAY_CAKE; }
 
     struct Settings {

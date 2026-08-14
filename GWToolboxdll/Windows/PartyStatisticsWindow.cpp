@@ -24,16 +24,16 @@
 #include <Utils/TextUtils.h>
 
 /*************************/
-/* Static Helper Methods */
+/* 静态辅助方法 */
 /*************************/
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
 
-    constexpr wchar_t NONE_PLAYER_NAME[] = L"Hero/Henchman Slot";
+    constexpr wchar_t NONE_PLAYER_NAME[] = L"英雄/佣兵槽位";
     constexpr uint32_t NONE_SKILL = std::to_underlying(GW::Constants::SkillID::No_Skill);
-    constexpr wchar_t UNKNOWN_SKILL_NAME[] = L"Unknown Skill";
-    constexpr wchar_t UNKNOWN_PLAYER_NAME[] = L"Unknown Player";
+    constexpr wchar_t UNKNOWN_SKILL_NAME[] = L"未知技能";
+    constexpr wchar_t UNKNOWN_PLAYER_NAME[] = L"未知玩家";
 
     std::map<GW::Constants::SkillID, std::unique_ptr<GuiUtils::EncString>> skill_names;
 
@@ -84,22 +84,22 @@ namespace {
     };
 
 
-    /* Internal data  */
+    /* 内部数据 */
     std::vector<PartyMember*> party_members;
     bool pending_party_members = true;
     bool in_explorable = false;
     PartyMember* player_party_member = nullptr;
 
-    /* Chat messaging */
+    /* 聊天消息 */
     clock_t send_timer = 0;
     std::queue<std::wstring> chat_queue;
 
-    /* Callbacks */
+    /* 回调 */
     GW::HookEntry MapLoaded_Entry;
     GW::HookEntry GenericValueSelf_Entry;
     GW::HookEntry GenericValueTarget_Entry;
 
-    /* Window settings */
+    /* 窗口设置 */
     PartyStatisticsWindow::Settings settings;
 
 
@@ -134,7 +134,7 @@ namespace {
     {
         if (pending_party_members)
             return nullptr;
-        // NB: This function is called on the game thread whenever a skill is used. Would it be much performance difference to keep a std::map for this?
+        // 注意：此函数在游戏线程中每当使用技能时调用。使用 std::map 是否会带来显著的性能差异？
         const auto found = std::ranges::find_if(party_members, [agent_id](const auto party_member) {
             return party_member->agent_id == agent_id;
         });
@@ -143,14 +143,14 @@ namespace {
     PartyMember* GetPartyMemberByEncName(const wchar_t* enc_name)
     {
         /* 
-        @Cleanup: 
-         - What happens when 3 players each bring the same hero ? "Ebon Vanguard Mesmer" x 2
-         - GW sometimes sends the enc_name packet after the NPC is created; would this affect henchmen?
-         - Players can have names that match heros or henchmen in some edge cases
-         - Obfuscator could be a problem
+        @清理： 
+         - 当 3 个玩家各带同一个英雄（例如"Ebon Vanguard Mesmer" x 2）时会发生什么？
+         - GW 有时会在 NPC 创建后发送 enc_name 数据包；这会影响佣兵吗？
+         - 在某些边缘情况下，玩家的名字可能与英雄或佣兵重名
+         - 混淆器可能是个问题
 
-         Instead maybe hook into the PartyPlayerAdd / PartyAllyAdd / PartyHeroAdd packets, then identify by player owner / hero id instead of just using name
-         */
+         可以改为挂钩 PartyPlayerAdd / PartyAllyAdd / PartyHeroAdd 数据包，通过玩家拥有者/英雄 ID 来识别，而不仅仅是使用名称。
+        */
 
         if (pending_party_members)
             return nullptr;
@@ -163,7 +163,7 @@ namespace {
     int GetSkillString(const std::wstring& agent_name, const std::wstring& skill_name,
                        const uint32_t skill_count, wchar_t* out, const size_t len)
     {
-        const auto written = swprintf(out, len, skill_count == 1 ? L"%s used %s %d time." : L"%s used %s %d times.",
+        const auto written = swprintf(out, len, skill_count == 1 ? L"%s 使用了 %s %d 次。" : L"%s 使用了 %s %d 次。",
                                       agent_name.c_str(), skill_name.c_str(), skill_count);
         ASSERT(written != -1);
         return written;
@@ -197,7 +197,7 @@ namespace {
     }
 
     /***********************/
-    /* Draw Helper Methods */
+    /* 绘制辅助方法 */
     /***********************/
 
     void DrawPartyMember(PartyMember& party_member)
@@ -229,7 +229,7 @@ namespace {
                 for (size_t i = 0; i < party_member.skills.size(); i++) {
                     const Skill& skill = party_member.skills[i];
                     if (skill.id == GW::Constants::SkillID::No_Skill) {
-                        continue; // Skip empty skill slots (for heroes and yourself)
+                        continue; // 跳过空技能槽位（用于英雄和自身）
                     }
                     ImGui::TableNextColumn();
                     const float percentage = skill.count
@@ -267,7 +267,7 @@ namespace {
     }
 
     /********************/
-    /* Set Data Methods */
+    /* 设置数据方法 */
     /********************/
 
     void UnsetPartyStatistics()
@@ -308,9 +308,9 @@ namespace {
         auto set_party_member = [&valid_party_members,&party_idx](const uint32_t agent_id) {
             const wchar_t* agent_name = GW::Agents::GetAgentEncName(agent_id);
             if (!agent_name) {
-                return static_cast<PartyMember*>(nullptr); // Can fail if game hasn't got all the goodies yet
+                return static_cast<PartyMember*>(nullptr); // 如果游戏尚未获取全部信息则可能失败
             }
-            // NB: Sanitising removes [henchman type] and player numbers
+            // 注意：净化会移除 [佣兵类型] 和玩家编号
             const auto sanitised = TextUtils::SanitizePlayerName(agent_name);
             auto party_member = GetPartyMemberByEncName(sanitised.c_str());
             if (!party_member) {
@@ -360,7 +360,7 @@ namespace {
                 if (!skillbar) {
                     continue;
                 }
-                /* Skillbar for other players and henchmen is unknown in outpost init with No_Skill */
+                /* 其他玩家和佣兵的技能栏在前哨站初始化时未知，使用 No_Skill */
 
                 for (const GW::SkillbarSkill& skill : skillbar->skills) {
                     set_member_skill(party_member, skill.skill_id);
@@ -374,12 +374,12 @@ namespace {
         }
         ASSERT(player_party_member);
 
-        // Add player skills
+        // 添加玩家技能
         for (const GW::SkillbarSkill& skill : my_skillbar->skills) {
             set_member_skill(player_party_member, skill.skill_id);
         }
 
-        // Clear out any party members that are no longer in the party.
+        // 清除已不在队伍中的成员
         auto it = party_members.begin();
         while (it != party_members.end()) {
             const auto found = std::ranges::find_if(valid_party_members, [it](const auto valid) {
@@ -398,7 +398,7 @@ namespace {
     }
 
     /************************/
-    /* Chat Command Methods */
+    /* 聊天命令方法 */
     /************************/
 
     void WritePlayerStatistics(const uint32_t player_idx = -1, const uint32_t skill_idx = -1)
@@ -407,14 +407,14 @@ namespace {
             return;
         }
 
-        /* all skills for self player */
+        /* 自身玩家的所有技能 */
         if (static_cast<size_t>(-1) == player_idx) {
             WritePlayerStatisticsAllSkills(player_party_member);
-            /* single skill for some player */
+            /* 某玩家的单个技能 */
         }
         else if (std::numeric_limits<uint32_t>::max() != skill_idx) {
             WritePlayerStatisticsSingleSkill(GetPartyMemberByPartyIdx(player_idx), skill_idx);
-            /* all skills for some player */
+            /* 某玩家的所有技能 */
         }
         else {
             WritePlayerStatisticsAllSkills(GetPartyMemberByPartyIdx(player_idx));
@@ -423,8 +423,8 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdSkillStatistics)
     {
-        /* command: /skillstats */
-        /* will write the stats of the self player */
+        /* 命令: /skillstats */
+        /* 将输出自身玩家的统计 */
         if (argc < 2) {
             WritePlayerStatistics();
             return;
@@ -433,21 +433,21 @@ namespace {
         const std::wstring arg1 = TextUtils::ToLower(argv[1]);
 
         if (argc == 2) {
-            /* command: /skillstats reset */
+            /* 命令: /skillstats reset */
             if (arg1 == L"reset") {
                 UnsetPartyStatistics();
                 pending_party_members = true;
             }
-            /* command: /skllstats playerNum */
+            /* 命令: /skillstats 玩家编号 */
             else {
                 uint32_t player_number = 0;
                 if (TextUtils::ParseUInt(argv[1], &player_number) && player_number > 0 &&
                     player_number <= party_members.size()) {
-                    --player_number; // List will start at index zero
+                    --player_number; // 列表从索引 0 开始
                     WritePlayerStatistics(player_number);
                 }
                 else {
-                    Log::Error("Invalid player number '%ls', please use an integer value of 1 to %u", argv[1],
+                    Log::Error("无效的玩家编号 '%ls'，请使用 1 到 %u 之间的整数值", argv[1],
                                party_members.size() + 1);
                 }
             }
@@ -455,7 +455,7 @@ namespace {
             return;
         }
 
-        /* command: /skillstats playerNum skillNum */
+        /* 命令: /skillstats 玩家编号 技能编号 */
         if (argc >= 3) {
             uint32_t player_number = 0;
             if (TextUtils::ParseUInt(argv[1], &player_number) && player_number > 0 &&
@@ -467,24 +467,24 @@ namespace {
                     WritePlayerStatistics(player_number, skill_number);
                 }
                 else {
-                    Log::Error("Invalid skill number '%ls', please use an integer value of 1 to 8", argv[2]);
+                    Log::Error("无效的技能编号 '%ls'，请使用 1 到 8 之间的整数值", argv[2]);
                 }
             }
             else {
-                Log::Error("Invalid player number '%ls', please use an integer value of 1 to %u", argv[1],
+                Log::Error("无效的玩家编号 '%ls'，请使用 1 到 %u 之间的整数值", argv[1],
                            party_members.size());
             }
         }
     }
 
     /********************/
-    /* Callback Methods */
+    /* 回调方法 */
     /********************/
 
     void MapLoadedCallback(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
     {
         if (!in_explorable) {
-            // Just left an outpost.
+            // 刚刚离开前哨站。
             UnsetPartyStatistics();
         }
         pending_party_members = true;
@@ -539,7 +539,7 @@ namespace {
 
 
 /**********************/
-/* Overridden Methods */
+/* 重写方法 */
 /**********************/
 
 void PartyStatisticsWindow::Initialize()
@@ -553,7 +553,7 @@ void PartyStatisticsWindow::Initialize()
 
     GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::MapLoaded>(&MapLoaded_Entry, &MapLoadedCallback);
 
-    /* Skill on self or party player */
+    /* 自身或队伍玩家的技能 */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValue>(
         &GenericValueSelf_Entry, [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValue* packet) -> void {
             const uint32_t value_id = packet->value_id;
@@ -564,7 +564,7 @@ void PartyStatisticsWindow::Initialize()
             SkillCallback(value_id, caster_id, target_id, value, no_target);
         });
 
-    /* Skill on enemy player */
+    /* 对敌玩家的技能 */
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::GenericValueTarget>(
         &GenericValueTarget_Entry,
         [this](const GW::HookStatus*, const GW::Packet::StoC::GenericValueTarget* packet) -> void {
@@ -625,7 +625,7 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), GetVisiblePtr(), GetWinFlags())) {
         if (!in_explorable) {
-            ImGui::TextDisabled("Statistics will update in explorable area");
+            ImGui::TextDisabled("统计将在探索区域更新");
         }
         for (const auto party_member : party_members) {
             DrawPartyMember(*party_member);
@@ -636,11 +636,11 @@ void PartyStatisticsWindow::Draw(IDirect3DDevice9*)
 
 void PartyStatisticsWindow::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Show the absolute skill count", &settings.show_abs_values);
+    ImGui::Checkbox("显示技能绝对次数", &settings.show_abs_values);
     ImGui::SameLine();
-    ImGui::Checkbox("Show the percentage skill count", &settings.show_perc_values);
+    ImGui::Checkbox("显示技能百分比", &settings.show_perc_values);
     ImGui::SameLine();
-    ImGui::Checkbox("Print skill statistics by Ctrl+LeftClick", &settings.print_by_click);
+    ImGui::Checkbox("通过 Ctrl+左键点击输出技能统计", &settings.print_by_click);
 }
 
 void PartyStatisticsWindow::Terminate()
