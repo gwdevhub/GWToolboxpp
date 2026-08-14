@@ -45,7 +45,7 @@
 #include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/Pathfinding/Pathing.h>
-#include <Windows/Pathfinding/NavMesh.h> // viz-only navmesh for the debug overlay
+#include <Windows/Pathfinding/NavMesh.h> // 仅用于调试覆盖层
 
 #include "PathingLog.h"
 #include "PathingMapData.h"
@@ -59,48 +59,49 @@
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
 
-// Define PATHING_VERBOSE to re-enable this file's per-frame Log::Info chatter; PATH_LOG_ERROR/WARNING still reach chat in debug.
+// 取消注释 PATHING_VERBOSE 可重新启用此文件中每帧的 Log::Info 调试输出；
+// PATH_LOG_ERROR/WARNING 在调试版本中仍会输出到聊天。
 // #define PATHING_VERBOSE 1
 #ifdef PATHING_VERBOSE
 #define PATH_LOG_INFO(...) Log::Info(__VA_ARGS__)
 #else
 #define PATH_LOG_INFO(...) ((void)0)
-// Locals/params that exist only to be formatted into PATH_LOG_INFO are unused once logging is compiled out.
+// 当日志被编译排除时，仅用于格式化 PATH_LOG_INFO 的局部变量/参数变为未使用。
 #pragma warning(disable : 4189 4100)
 #endif
 
 namespace {
     struct CachedMapInfo {
         GW::Constants::MapID map_id = GW::Constants::MapID::None;
-        Pathing::Vec2f bounds_min{}, bounds_max{}; // game coords
+        Pathing::Vec2f bounds_min{}, bounds_max{}; // 游戏坐标
         std::vector<Pathing::PortalProp> portal_props;
     };
 
-    // Per-map caches (low 32 bits = file_hash), LRU-bounded — see MAX_CACHED_MAPS.
+    // 每地图缓存（低 32 位 = file_hash），LRU 限制 — 见 MAX_CACHED_MAPS。
     std::unordered_map<uint64_t, Pathing::MilePath*> mile_paths_by_coords;
     std::unordered_map<uint64_t, CachedMapInfo> cached_map_info;
 
-    // file_ids LoadMapFromDAT has already failed to parse this session — suppresses re-read + re-log spam on every route recompute.
+    // 本次会话中 LoadMapFromDAT 已解析失败的 file_ids — 抑制重复读取和重复日志垃圾。
     std::unordered_set<uint32_t> dat_load_failed_fids;
 
-    // map_ids already warned about having no cached file_id — suppresses re-log spam; the lookup itself still retries since it can resolve later.
+    // 已警告过无缓存 file_id 的 map_ids — 抑制重复日志；查找本身仍会重试，因为可能在之后解析成功。
     std::unordered_set<uint32_t> warned_no_fid_maps;
 
-    // Serializes whole route computations: the global route caches assume one build at a time (concurrent builds read
-    // half-inserted MilePaths → crash). Game thread try-locks so it never blocks; recursive since build helpers re-enter.
+    // 序列化整个路径计算：全局路径缓存假设一次只有一个构建（并发构建会读取半插入的 MilePath → 崩溃）。
+    // 游戏线程尝试锁定，因此永远不会阻塞；递归是安全的，因为构建辅助函数会重新进入。
     std::recursive_mutex route_mutex;
 
-    // Cache of portal props per file_hash (lightweight, loaded on demand).
+    // 每个 file_hash 的传送门属性缓存（轻量级，按需加载）。
     std::unordered_map<uint32_t, std::vector<Pathing::PortalProp>> portal_props_cache;
 
-    // ===== LRU eviction for the per-map caches =====
-    // Resident foreign-map cap (current map pinned on top). Memory/recompute trade-off.
+    // ===== 每地图缓存的 LRU 淘汰 =====
+    // 驻留外地图上限（当前地图固定在顶部）。内存/重新计算权衡。
     constexpr size_t MAX_CACHED_MAPS = 12;
 
-    std::list<uint64_t> lru_order; // mile_paths_by_coords keys, front = most recent
+    std::list<uint64_t> lru_order; // mile_paths_by_coords 的键，front = 最近使用
     std::unordered_map<uint64_t, std::list<uint64_t>::iterator> lru_pos;
 
-    // Guards lru_* and route_jobs_active; eviction may only run when no route worker holds a MilePath (route_jobs_active == 0).
+    // 保护 lru_* 和 route_jobs_active；仅当没有路径工作线程持有 MilePath 时才允许淘汰。
     std::mutex lru_mutex;
     int route_jobs_active = 0;
 
@@ -113,9 +114,9 @@ namespace {
         lru_pos[key] = lru_order.begin();
     }
 
-    void EnforceCacheLimitIfIdle(); // GetMapFileId fwd decl must be in scope first
+    void EnforceCacheLimitIfIdle(); // GetMapFileId 前向声明需在作用域内
 
-    // RAII guard: defers eviction while it holds MilePath*, then trims the cache on the main thread (renderer reads cached_map_info there).
+    // RAII 守卫：在持有 MilePath* 时延迟淘汰，然后在主线程中修剪缓存（渲染器在那里读取 cached_map_info）。
     struct RouteJobScope {
         RouteJobScope()
         {
@@ -136,9 +137,9 @@ namespace {
         RouteJobScope& operator=(const RouteJobScope&) = delete;
     };
 
-    // In-flight world-map route/path computations. Each async route worker holds a PathCalcScope; the world map
-    // polls IsCalculatingPath() to show a "calculating" indicator while one is running. Atomic: incremented on
-    // worker threads, read on the game/render thread.
+    // 正在进行的路径计算。每个异步路径工作线程持有一个 PathCalcScope；世界地图轮询
+    // IsCalculatingPath() 以在运行时显示“计算中”指示器。原子操作：在工作线程上递增，
+    // 在游戏/渲染线程上读取。
     std::atomic<int> path_calc_in_flight = 0;
     struct PathCalcScope {
         PathCalcScope() { ++path_calc_in_flight; }
@@ -150,38 +151,38 @@ namespace {
     bool draw_map_bounds = false;
     bool draw_graph_edges = false;
     bool draw_portals = false;
-    // Multiplier applied to the straight-line fallback when the pathfinder has VALID data but reports every
-    // candidate portal genuinely Unreachable (disconnected zone). Keeps the hop a finite last resort so the
-    // route still resolves, but deprioritised so any real (up to ~K× longer) detour wins. Data-quality failures
-    // (no MilePath / trapezoid-not-found) keep plain Euclidean — see ClosestPortalTrapezoidDistanceInMap.
+    // 当路径查找器拥有有效数据但报告每个候选传送门确实无法到达（断开的区域）时，
+    // 对直线回退应用的乘数。使跳跃保持有限的最后手段，以便路径仍然可以解析，
+    // 但优先级降低，以便任何真正的（最多约 K 倍更长）绕行获胜。数据质量问题
+    //（无 MilePath / 未找到梯形）保持普通欧几里得 — 见 ClosestPortalTrapezoidDistanceInMap。
     constexpr float portal_unreachable_penalty = 100.f;
-    GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map); // forward decl (early)
-    Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id, bool allow_load = true); // forward decl (early)
-    void BuildMapGraph();                                                                 // forward decl (early)
+    GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map); // 前向声明（早期）
+    Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id, bool allow_load = true); // 前向声明（早期）
+    void BuildMapGraph();                                                                 // 前向声明（早期）
 
-    void ClearEditorHighlightLines();                                                     // forward decl (early)
-    void UpdatePortalMarkers();                                                           // forward decl (early)
-    void UpdateBoundsLines();                                                             // forward decl (early)
-    void EnsureLightweightMapInfo(GW::Constants::MapID map_id, const char* caller = "?"); // forward decl (early)
-    const CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                   // forward decl (early)
-    uint32_t GetMapFileId(GW::Constants::MapID map_id);                                   // forward decl (early)
+    void ClearEditorHighlightLines();                                                     // 前向声明（早期）
+    void UpdatePortalMarkers();                                                           // 前向声明（早期）
+    void UpdateBoundsLines();                                                             // 前向声明（早期）
+    void EnsureLightweightMapInfo(GW::Constants::MapID map_id, const char* caller = "?"); // 前向声明（早期）
+    const CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                   // 前向声明（早期）
+    uint32_t GetMapFileId(GW::Constants::MapID map_id);                                   // 前向声明（早期）
     bool GamePosToWorldMapForMap(const GW::Vec2f& game_pos, GW::Constants::MapID map_id,
         const Pathing::Vec2f& game_bounds_min, const Pathing::Vec2f& game_bounds_max,
-        GW::Vec2f& world_map_pos); // forward decl (early)
+        GW::Vec2f& world_map_pos); // 前向声明（早期）
     bool WorldMapToGamePosForMap(const GW::Vec2f& world_map_pos, GW::Constants::MapID map_id,
         const Pathing::Vec2f& game_bounds_min, const Pathing::Vec2f& game_bounds_max,
-        GW::GamePos& game_pos); // forward decl (early)
+        GW::GamePos& game_pos); // 前向声明（早期）
 
-    bool IsOutpostMap(GW::Constants::MapID map_id); // forward decl
+    bool IsOutpostMap(GW::Constants::MapID map_id); // 前向声明
 
-    // Diagnostic: only log when these MapIDs are touched; edit the set to chase a different unintended-load case.
+    // 诊断：仅当触及这些 MapID 时才记录日志；编辑此集合以追踪其他意外加载情况。
     inline bool IsInterestingMapForCacheTrace(GW::Constants::MapID mid)
     {
         return mid == (GW::Constants::MapID)114 || mid == (GW::Constants::MapID)153;
     }
 
-    // Cache sibling MapIDs sharing this file_hash. Skip outposts: spreading to them would draw stray bounds rectangles
-    // at every sibling outpost icon (e.g. fh 0xce65 → 38, 119); their lookups still resolve via GetCachedMapInfo's fallback.
+    // 缓存共享此 file_hash 的相邻 MapID。跳过前哨站：将它们传播到每个相邻前哨站图标处会绘制杂散的边界矩形
+    //（例如 fh 0xce65 → 38, 119）；它们的查找仍通过 GetCachedMapInfo 的回退解析。
     void CacheSharedFileHashMaps(const CachedMapInfo& source_info)
     {
         uint32_t fh = GetMapFileId(source_info.map_id);
@@ -191,7 +192,7 @@ namespace {
             for (const auto& entry : entries) {
                 auto mid = entry.map_id;
                 if (mid == source_info.map_id) continue;
-                if (IsOutpostMap(mid)) continue; // see comment above
+                if (IsOutpostMap(mid)) continue; // 见上方注释
                 bool exists = false;
                 for (const auto& [h, inf] : cached_map_info) {
                     if (inf.map_id == mid) {
@@ -208,14 +209,14 @@ namespace {
                 shared.portal_props = source_info.portal_props;
                 cached_map_info[new_hash] = shared;
                 if (IsInterestingMapForCacheTrace(mid)) {
-                    PATH_LOG_INFO("[CacheTrace] CacheSharedFileHashMaps spread mid=%d source=%d fh=0x%X", (int)mid, (int)source_info.map_id, fh);
+                    PATH_LOG_INFO("[CacheTrace] CacheSharedFileHashMaps 传播 mid=%d source=%d fh=0x%X", (int)mid, (int)source_info.map_id, fh);
                 }
             }
         }
     }
 
-    // Free every cached allocation for one map and drop it from the LRU.
-    // Caller must hold lru_mutex.
+    // 释放一个地图的所有缓存分配并将其从 LRU 中移除。
+    // 调用者必须持有 lru_mutex。
     void EvictMapByKey(uint64_t mile_key)
     {
         const uint32_t fh = (uint32_t)(mile_key & 0xFFFFFFFF);
@@ -224,7 +225,7 @@ namespace {
             delete it->second;
             mile_paths_by_coords.erase(it);
         }
-        // Several cached_map_info entries can share a file_hash (sibling-map spread).
+        // 多个 cached_map_info 条目可以共享一个 file_hash（相邻地图传播）。
         std::erase_if(cached_map_info, [fh](const auto& kv) {
             return (uint32_t)(kv.first & 0xFFFFFFFF) == fh;
         });
@@ -236,14 +237,14 @@ namespace {
         }
     }
 
-    // Trim to MAX_CACHED_MAPS (LRU first, current map pinned), only when idle so no worker is mid-route holding a freed MilePath*.
+    // 修剪到 MAX_CACHED_MAPS（LRU 优先，当前地图固定），仅在空闲时执行，因此没有工作线程持有被释放的 MilePath*。
     void EnforceCacheLimitIfIdle()
     {
         std::vector<uint64_t> evicted;
         {
             std::scoped_lock lock(lru_mutex);
             if (route_jobs_active > 0) return;
-            // Current-map keys low32 = MapID, foreign-map keys low32 = file_hash — pin against both forms.
+            // 当前地图键 low32 = MapID，外地图键 low32 = file_hash — 针对两种形式固定。
             const uint32_t cur_fh = GetMapFileId(GW::Map::GetMapID());
             const uint32_t cur_mid = (uint32_t)GW::Map::GetMapID();
             auto is_current = [&](uint64_t key) {
@@ -260,7 +261,7 @@ namespace {
                 EvictMapByKey(key);
         }
         if (!evicted.empty()) {
-            // Evicted maps' bounds/portal lines need a refresh (main-thread line pool).
+            // 被淘汰的地图的边界/传送门线需要刷新（主线程线池）。
             Resources::EnqueueMainTask([] {
                 UpdateBoundsLines();
                 if (draw_portals) UpdatePortalMarkers();
@@ -268,9 +269,9 @@ namespace {
         }
     }
 
-    // LoadAllMapsAtPosition defined later in this namespace
+    // LoadAllMapsAtPosition 稍后在此命名空间中定义
 
-    // Portal connection editor
+    // 传送门连接编辑器
     Pathing::PortalConnections portal_connections;
 
     struct EditorEndpoint {
@@ -280,8 +281,7 @@ namespace {
         bool set = false;
     };
 
-    // NPC editor fields (per-endpoint). Stores either an AgentLiving (player_number)
-    // or AgentGadget (gadget_id) depending on agent_kind.
+    // NPC 编辑器字段（每个端点）。根据 agent_kind 存储 AgentLiving（player_number）或 AgentGadget（gadget_id）。
     struct EditorNpcFields {
         uint32_t agent_id = 0;
         uint32_t model_id = 0;
@@ -290,17 +290,17 @@ namespace {
         Pathing::AgentKind agent_kind = Pathing::AgentKind::Living;
     };
 
-    // Per-widget state for two-step selection (map → portal)
+    // 每个小部件的两步选择状态（地图 → 传送门）
     struct MapSearchState {
-        int pending_map_id = 0; // map selected, waiting for portal pick
+        int pending_map_id = 0; // 已选择地图，等待传送门选择
         std::vector<Pathing::PortalProp> pending_portals;
     };
     // =========================================================================
-    // Unified editor state — all From/To endpoint data in one struct for easy snapshotting and swap.
+    // 统一编辑器状态 — 所有 From/To 端点数据在一个结构体中，便于快照和交换。
     // =========================================================================
     struct EndpointEditorState {
         EditorEndpoint endpoint;
-        int type = 0; // ConnectionType combo index
+        int type = 0; // ConnectionType 组合索引
         EditorNpcFields npc;
         char search_buf[128] = {};
         MapSearchState search_state;
@@ -317,15 +317,15 @@ namespace {
 
     ConnectionEditorState editor;
 
-    // Backward-compat references so existing code doesn't need mass-rename.
+    // 向后兼容引用，使现有代码无需大规模重命名。
     auto& editor_from = editor.from.endpoint;
     auto& editor_to = editor.to.endpoint;
 
     bool pending_connection_lines_update = false;
 
 
-    // Deferred line removal so we don't invalidate iterators during WorldMapWidget::Draw; drained next Draw.
-    // Stale pointers are safe: RemoveCustomLines only frees pointers still in the live list, never dereferencing the queue.
+    // 延迟移除线条，以便在 WorldMapWidget::Draw 期间不会使迭代器失效；在下次 Draw 时排空。
+    // 旧指针是安全的：RemoveCustomLines 只会释放仍在活动列表中的指针，永远不会解引用队列。
     std::vector<CustomRenderer::CustomLine*> pending_line_removals;
 
     void DeferRemoveLines(std::vector<CustomRenderer::CustomLine*>& lines)
@@ -337,8 +337,8 @@ namespace {
     void ProcessDeferredRemovals()
     {
         if (pending_line_removals.empty()) return;
-        // Single O(N) pass: per-line RemoveCustomLine is O(N) each (linear find + vector erase), so removing the
-        // navmesh overlay's thousands of lines one-by-one was O(N^2) and a big chunk of the map-load hitch.
+        // 单次 O(N) 遍历：每次 RemoveCustomLine 是 O(N)（线性查找 + vector 擦除），
+        // 因此逐个移除导航网格覆盖层的数千条线曾经是 O(N²)，是地图加载卡顿的主要来源。
         Minimap::Instance().custom_renderer.RemoveCustomLines(pending_line_removals);
         pending_line_removals.clear();
     }
@@ -350,11 +350,11 @@ namespace {
         DeferRemoveLines(saved_connection_lines);
     }
 
-    bool connections_changed = false; // set when connections modified, consumed by BuildMapGraph callers
+    bool connections_changed = false; // 连接被修改时设置，由 BuildMapGraph 调用者消费
 
     void UpdateSavedConnectionLines()
     {
-        connections_changed = true; // invalidate graph on next BuildMapGraph call
+        connections_changed = true; // 在下次 BuildMapGraph 调用时使图无效
         ClearSavedConnectionLines();
         ClearEditorHighlightLines();
         if (!draw_portals) return;
@@ -363,13 +363,13 @@ namespace {
         const uint32_t cur_continent_cl = cur_area_cl ? (uint32_t)cur_area_cl->continent : 0;
 
         for (const auto& conn : portal_connections.GetAll()) {
-            // Skip reverse entry of bidirectional connections to avoid double-drawing
+            // 跳过双向连接的逆向条目以避免重复绘制
             if (!conn.IsOneWay() && conn.from_map > conn.to_map) continue;
             if (conn.no_draw) continue;
-            // Skip connections from other continents (campaign=0 always shown for compat)
+            // 跳过其他大陆的连接（campaign=0 始终显示以保持兼容）
             if (conn.campaign && conn.campaign != cur_continent_cl) continue;
 
-            // Skip entries with missing world map coords
+            // 跳过缺少世界地图坐标的条目
             if ((conn.from_wm_pos.x == 0.f && conn.from_wm_pos.y == 0.f) || (conn.to_wm_pos.x == 0.f && conn.to_wm_pos.y == 0.f)) continue;
 
             GW::GamePos p1{}, p2{};
@@ -377,7 +377,7 @@ namespace {
             if (!WorldMapWidget::WorldMapToGamePos(conn.to_wm_pos, p2)) continue;
             auto* line = Minimap::Instance().custom_renderer.AddCustomLine(p1, p2);
             line->map = cur_map;
-            // Color by the "most notable" endpoint type
+            // 按“最显著”端点类型着色
             auto notable_type = (conn.from_type > conn.to_type) ? conn.from_type : conn.to_type;
             switch (notable_type) {
                 case Pathing::ConnectionType::Disabled:
@@ -400,7 +400,7 @@ namespace {
         }
     }
 
-    // LoadAndShowMapsAtWorldPos defined after anonymous namespace
+    // LoadAndShowMapsAtWorldPos 在匿名命名空间之后定义
 
     std::vector<CustomRenderer::CustomLine*> editor_highlight_lines;
 
@@ -411,36 +411,38 @@ namespace {
 
 
 
-    void UpdateBoundsLines();    // forward decl
-    void UpdatePortalMarkers();  // forward decl
-    void UpdateGraphEdgeLines(); // forward decl
+    void UpdateBoundsLines();    // 前向声明
+    void UpdatePortalMarkers();  // 前向声明
+    void UpdateGraphEdgeLines(); // 前向声明
     struct PortalPair {
-        GW::GamePos pos_a, pos_b; // game coords in each map
-        GW::Vec2f wm_mid;         // world map midpoint
-        float pair_dist;          // world map distance between the two portals
+        GW::GamePos pos_a, pos_b; // 各自地图中的游戏坐标
+        GW::Vec2f wm_mid;         // 世界地图中点
+        float pair_dist;          // 两个传送门之间的世界地图距离
     };
-    std::vector<PortalPair> FindPortalPairs(GW::Constants::MapID map_a, GW::Constants::MapID map_b); // forward decl
-    const struct CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                       // forward decl
-    uint32_t GetMapFileId(GW::Constants::MapID map_id);                                              // forward decl
-    GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map);            // forward decl
+    std::vector<PortalPair> FindPortalPairs(GW::Constants::MapID map_a, GW::Constants::MapID map_b); // 前向声明
+    const struct CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id);                       // 前向声明
+    uint32_t GetMapFileId(GW::Constants::MapID map_id);                                              // 前向声明
+    GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map);            // 前向声明
 
-    // Load a map from DAT and create a MilePath for it. Returns the MilePath (may still be processing).
-    // allow_load=false makes this game-thread-safe: it returns a resident MilePath if present, else nullptr,
-    // and never touches the DAT. Only pass true off the game thread (the readFromDat below blocks).
+    // 从 DAT 加载地图并为其创建 MilePath。返回 MilePath（可能仍在处理中）。
+    // allow_load=false 使其在游戏线程上安全：如果存在驻留的 MilePath 则返回，否则返回 nullptr，
+    // 并且绝不触碰 DAT。仅在游戏线程外传递 true（下面的 readFromDat 会阻塞）。
     Pathing::MilePath* LoadMapFromDAT(GW::Constants::MapID map_id, bool allow_load)
     {
         if (IsInterestingMapForCacheTrace(map_id)) {
-            PATH_LOG_INFO("[CacheTrace] LoadMapFromDAT(%d) entered", (int)map_id);
+            PATH_LOG_INFO("[CacheTrace] LoadMapFromDAT(%d) 进入", (int)map_id);
         }
         const uint32_t fid = GetMapFileId(map_id);
         if (!fid) {
             if (allow_load && warned_no_fid_maps.insert((uint32_t)map_id).second) {
-                PATH_LOG_ERROR("LoadMapFromDAT: no file_id for map %d (visit the map once to cache it)", (int)map_id);
+                PATH_LOG_ERROR("LoadMapFromDAT: 地图 %d 没有 file_id（先访问该地图以缓存它）", (int)map_id);
             }
             return nullptr;
         }
 
-        // Fast path: file already resident. readFromDat routes into the game's serialized file subsystem, so re-reading it every recompute stalls the game thread; file_id alone keys the map within a session (mirrors GetMilepathForMap).
+        // 快速路径：文件已驻留。readFromDat 会路由到游戏的序列化文件子系统，
+        // 因此在每次重新计算时重新读取它会阻塞游戏线程；file_id 在会话内唯一标识地图
+        //（与 GetMilepathForMap 的行为一致）。
         for (const auto& [hash, mp] : mile_paths_by_coords) {
             if (static_cast<uint32_t>(hash & 0xFFFFFFFF) == fid) {
                 TouchLru(hash);
@@ -448,8 +450,8 @@ namespace {
             }
         }
 
-        // A ctx-fallback entry (bounds mismatch below) is keyed by map_id + live node count, not fid — probe for it
-        // or the resident-only path never sees it and the prewarm loop re-reads the DAT forever.
+        // ctx 回退条目（下面的边界不匹配）由 map_id + 实时节点数键控，而不是 fid —
+        // 探测它，否则驻留路径永远不会看到它，预热循环会永远重新读取 DAT。
         if (map_id == GW::Map::GetMapID()) {
             if (const auto mc = GW::GetMapContext(); mc && mc->path && mc->path->staticData) {
                 const auto ctx_hash = static_cast<uint64_t>(map_id) | (static_cast<uint64_t>(mc->path->pathNodes.size()) << 32);
@@ -460,42 +462,42 @@ namespace {
             }
         }
 
-        // Not resident: the DAT read + parse below blocks the caller. Refuse on the game thread.
+        // 未驻留：下面的 DAT 读取 + 解析会阻塞调用者。在游戏线程上拒绝。
         if (!allow_load) return nullptr;
 
-        // Already known unreadable this session — skip the blocking re-read and the repeat log.
+        // 本会话已知不可读 — 跳过阻塞的重新读取和重复日志。
         if (dat_load_failed_fids.contains(fid)) return nullptr;
 
-        PATH_LOG_INFO("LoadMapFromDAT: map=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
+        PATH_LOG_INFO("LoadMapFromDAT: 地图=%d file_id=%u (0x%X)", (int)map_id, fid, fid);
 
         auto dat_data = Pathing::PathingMapData();
         if (!Pathing::LoadPathingMapDataFromDAT(fid, &dat_data)) {
             dat_load_failed_fids.insert(fid);
-            PATH_LOG_ERROR("LoadMapFromDAT: DAT parse failed for map %d file_id=%u", (int)map_id, fid);
+            PATH_LOG_ERROR("LoadMapFromDAT: 地图 %d file_id=%u 的 DAT 解析失败", (int)map_id, fid);
             return nullptr;
         }
 
-        // For the current map, cross-check DAT against live memory: a bounds mismatch means a stale file_id, so use the MapContext copy.
+        // 对于当前地图，将 DAT 与实时内存交叉检查：边界不匹配意味着 file_id 过时，因此使用 MapContext 副本。
         Pathing::PathingMapData ctx_data;
         Pathing::PathingMapData* chosen = &dat_data;
         if (map_id == GW::Map::GetMapID()) {
             if (!Pathing::LoadFromMapContext(GW::GetMapContext(), fid, &ctx_data)) {
-                PATH_LOG_ERROR("LoadMapFromDAT: Context parse failed for map %d file_id=%u", (int)map_id, fid);
+                PATH_LOG_ERROR("LoadMapFromDAT: 地图 %d file_id=%u 的上下文解析失败", (int)map_id, fid);
             }
             else if (ctx_data.bounds_max.x != dat_data.bounds_max.x || ctx_data.bounds_max.y != dat_data.bounds_max.y) {
-                PATH_LOG_ERROR("LoadMapFromDAT: Context bounds_max dont match DAT portals for the current map, file_id=%u - check InfoWindow to update the map file id for this map! Using map context data for now.", fid);
+                PATH_LOG_ERROR("LoadMapFromDAT: 当前地图的上下文 bounds_max 与 DAT 传送门不匹配，file_id=%u - 检查 InfoWindow 以更新此地图的地图文件 ID！暂时使用地图上下文数据。", fid);
                 chosen = &ctx_data;
             }
         }
         auto& map_data = *chosen;
 
-        // file_id was not resident above, so this full key (file_id + pathNodeSize) is new too.
-        // Ctx-fallback data must not be cached under the (stale) fid: it would shadow the real file's mesh
-        // for every other map sharing that fid. Key it by map_id like LoadMapFromContext does.
+        // 上面未驻留 file_id，因此这个完整键（file_id + pathNodeSize）也是新的。
+        // 回退数据绝不能缓存在（过时的）fid 下：它会为共享该 fid 的每个其他地图遮蔽真实文件的网格。
+        // 像 LoadMapFromContext 那样按 map_id 键控。
         auto hash = chosen == &ctx_data ? static_cast<uint64_t>(map_id) : static_cast<uint64_t>(fid);
         hash |= static_cast<uint64_t>(map_data.pathNodeSize) << 32;
 
-        // Cache map info for bounds drawing
+        // 缓存地图信息用于边界绘制
         CachedMapInfo info;
         info.map_id = map_id;
         info.bounds_min = map_data.bounds_min;
@@ -504,9 +506,9 @@ namespace {
         cached_map_info[hash] = info;
         CacheSharedFileHashMaps(info);
 
-        PATH_LOG_INFO("Loaded DAT for map %d: %d portal props, bounds=(%.0f,%.0f)-(%.0f,%.0f)", (int)map_id, (int)map_data.portal_props.size(), info.bounds_min.x, info.bounds_min.y, info.bounds_max.x, info.bounds_max.y);
+        PATH_LOG_INFO("已加载地图 %d 的 DAT：%d 个传送门属性，边界=(%.0f,%.0f)-(%.0f,%.0f)", (int)map_id, (int)map_data.portal_props.size(), info.bounds_min.x, info.bounds_min.y, info.bounds_max.x, info.bounds_max.y);
 
-        // Collect all MapIDs sharing this file_hash so teleporters from any are included
+        // 收集共享此 file_hash 的所有 MapID，以便包含来自任何一个的传送器
         std::vector<GW::Constants::MapID> all_ids;
         for (const auto& [file_hash, entries] : constant_maps_info) {
             if ((uint32_t)file_hash != fid) continue;
@@ -514,11 +516,11 @@ namespace {
                 all_ids.push_back(entry.map_id);
         }
 
-        // Lightweight (full_build=false): keep only raw map data; the visgraph builds lazily on first AStar walk.
+        // 轻量级（full_build=false）：仅保留原始地图数据；可视图在首次 AStar 行走时延迟构建。
         auto* m = new Pathing::MilePath(std::move(map_data), map_id, all_ids, false);
         mile_paths_by_coords[hash] = m;
-        TouchLru(hash); // eviction itself is deferred until the route job ends (RouteJobScope)
-        // Defer these line-pool mutations to the main thread; LoadMapFromDAT runs on workers and AddCustomLine isn't thread-safe.
+        TouchLru(hash); // 淘汰本身延迟到路径工作结束（RouteJobScope）
+        // 将这些线池变异推迟到主线程；LoadMapFromDAT 在工作线程上运行，AddCustomLine 不是线程安全的。
         Resources::EnqueueMainTask([] {
             UpdateBoundsLines();
             if (draw_portals) UpdatePortalMarkers();
@@ -526,16 +528,16 @@ namespace {
         return m;
     }
 
-    // Fallback when no file_id is known: build PathingMapData from the live map context
-    // and hand it to the standard MilePath ctor (eager build — it's the player's map).
-    // allow_load=false is game-thread-safe: resident lookup only, never runs the deep-copy parse below.
+    // 当没有已知 file_id 时的回退：从实时地图上下文构建 PathingMapData
+    // 并交给标准 MilePath 构造函数（即时构建 — 它是玩家的地图）。
+    // allow_load=false 在游戏线程上是安全的：仅驻留查找，从不运行下面的深拷贝解析。
     Pathing::MilePath* LoadMapFromContext(GW::Constants::MapID map_id, bool allow_load = true)
     {
         const auto mc = GW::GetMapContext();
         if (!(mc && mc->path && mc->path->staticData)) return nullptr;
 
-        // pathNodeSize == pathNodes.size() (LoadFromMapContext sets it directly), so the cache key is
-        // available without the full deep-copy — check residency before paying the parse cost.
+        // pathNodeSize == pathNodes.size()（LoadFromMapContext 直接设置），因此缓存键可
+        // 在不进行完整深拷贝的情况下用于检查驻留状态 — 在支付解析成本之前先检查。
         const auto hash = static_cast<uint64_t>(map_id)
             | (static_cast<uint64_t>(mc->path->pathNodes.size()) << 32);
         if (const auto it = mile_paths_by_coords.find(hash); it != mile_paths_by_coords.end()) {
@@ -543,7 +545,7 @@ namespace {
             return it->second;
         }
 
-        // Not resident: LoadFromMapContext below is a full deep-copy + pointer-fixup. Refuse on the game thread.
+        // 未驻留：下面的 LoadFromMapContext 是完整的深拷贝 + 指针修复。在游戏线程上拒绝。
         if (!allow_load) return nullptr;
 
         auto map_data = Pathing::PathingMapData();
@@ -566,42 +568,42 @@ namespace {
         return m;
     }
 
-    // Returns milepath pointer for the current map, nullptr if we're not in a valid state.
-    // allow_load=false is game-thread-safe (resident lookup only); true blocks on the DAT and must run off the game thread.
+    // 返回当前地图的 milepath 指针，若处于无效状态则返回 nullptr。
+    // allow_load=false 在游戏线程上是安全的（仅驻留查找）；true 会在 DAT 上阻塞，必须在游戏线程外运行。
     Pathing::MilePath* GetMilepathForCurrentMap(bool allow_load = true)
     {
-        // todo: maybe use bool GetIsMapReady() from other modules?
+        // TODO：也许使用其他模块中的 bool GetIsMapReady()？
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
         const auto map_id = GW::Map::GetMapID();
         if (map_id == GW::Constants::MapID::None) return nullptr;
-        // Prefer DAT (shared with coordinate bounds); fall back to map context only with no file_id.
+        // 优先使用 DAT（与坐标边界共享）；仅在无 file_id 时回退到地图上下文。
         if (GetMapFileId(map_id)) return LoadMapFromDAT(map_id, allow_load);
         return LoadMapFromContext(map_id, allow_load);
     }
 
-    // Background prewarm so the game thread never blocks on a DAT read. ReadyForPathing/overlay probes call
-    // GetResidentMilepathOrPrewarm(); if the current map isn't resident yet, a single worker task loads it.
+    // 后台预热，使游戏线程永不在 DAT 读取上阻塞。ReadyForPathing/覆盖层探测调用
+    // GetResidentMilepathOrPrewarm()；如果当前地图尚未驻留，则单个工作线程任务加载它。
     std::atomic<bool> prewarm_in_flight = false;
 
     void PrewarmCurrentMap()
     {
         bool expected = false;
-        if (!prewarm_in_flight.compare_exchange_strong(expected, true)) return; // one load in flight at a time
+        if (!prewarm_in_flight.compare_exchange_strong(expected, true)) return; // 一次只允许一个加载
         Resources::EnqueueWorkerTask([] {
-            std::scoped_lock route_lock(route_mutex); // same serialization as a route build; see route_mutex
+            std::scoped_lock route_lock(route_mutex); // 与路径构建相同的序列化；见 route_mutex
             RouteJobScope job_scope;
-            GetMilepathForCurrentMap(true); // the blocking DAT read happens here, on the worker
+            GetMilepathForCurrentMap(true); // 阻塞的 DAT 读取在这里发生，在工作线程上
             prewarm_in_flight = false;
         });
     }
 
-    // Game-thread-safe current-map MilePath accessor: returns it only if already resident, otherwise kicks off
-    // the background load and returns nullptr. Never reads the DAT or parses map context on the caller's thread.
+    // 游戏线程安全的当前地图 MilePath 访问器：仅当已驻留时返回，否则启动后台加载并返回 nullptr。
+    // 绝不读取 DAT 或在调用者线程上解析地图上下文。
     Pathing::MilePath* GetResidentMilepathOrPrewarm()
     {
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded()) return nullptr;
         {
-            // Try-lock so we never block the game thread; a held lock means a worker is mid-build → treat as not-ready.
+            // 尝试锁定，以便从不在游戏线程上阻塞；持锁意味着工作线程正在构建中 → 视为未就绪。
             std::unique_lock route_lock(route_mutex, std::try_to_lock);
             if (route_lock.owns_lock()) {
                 if (const auto m = GetMilepathForCurrentMap(false)) return m;
@@ -611,11 +613,11 @@ namespace {
         return nullptr;
     }
 
-    std::vector<CustomRenderer::CustomLine*> navmesh_edge_lines; // viz-only navmesh poly-edge overlay
+    std::vector<CustomRenderer::CustomLine*> navmesh_edge_lines; // 仅用于可视化的导航网格多边形边覆盖层
     PathfindingWindow::Settings settings;
-    constexpr const char* path_recalc_distance_help = "How far you must move (game units / gwinches) before the rendered quest path recomputes. Lower = more responsive but heavier; the recompute is also rate-capped to ~30/s.";
-    constexpr const char* navmesh_overlay_help = "Draw the navmesh's polygon edges on the ground near you, at correct terrain heights (bridges included).";
-    constexpr const char* navmesh_sample_spacing_help = "How often the overlay samples terrain height when draping edges (game units). Lower = lines hug the floor/steps more exactly, but more vertices to build and draw.";
+    constexpr const char* path_recalc_distance_help = "在重新计算渲染的路径之前你必须移动多远（游戏单位/gwinches）。值越低响应越快，但负载越重；重新计算速率上限约为 30 次/秒。";
+    constexpr const char* navmesh_overlay_help = "在你附近的地面上绘制导航网格的多边形边，包含正确的地形高度（桥梁等）。";
+    constexpr const char* navmesh_sample_spacing_help = "覆盖层在绘制边时采样地形高度的间隔（游戏单位）。值越低，线条越贴合地面/台阶，但需要构建和绘制的顶点越多。";
     std::vector<CustomRenderer::CustomLine*> bounds_lines;
     std::vector<CustomRenderer::CustomLine*> graph_edge_lines;
     std::vector<CustomRenderer::CustomLine*> portal_marker_lines;
@@ -642,7 +644,7 @@ namespace {
         DeferRemoveLines(hover_highlight_lines);
     }
 
-    // Check if a portal position on a map has any connection
+    // 检查地图上的传送门位置是否有任何连接
     bool IsPortalConnected(GW::Constants::MapID map_id, const GW::Vec2f& pos, float threshold_sq = 500.f * 500.f)
     {
         for (const auto& c : portal_connections.GetAll()) {
@@ -678,7 +680,7 @@ namespace {
         };
 
         for (const auto& [hash, info] : cached_map_info) {
-            // Filter by continent
+            // 按大陆过滤
             const auto area = GW::Map::GetMapInfo(info.map_id);
             if (area && area->continent != cur_continent) continue;
 
@@ -699,7 +701,7 @@ namespace {
                     line->created_by_toolbox = true;
                     portal_marker_lines.push_back(line);
                 };
-                // Diamond shape for better visibility
+                // 菱形形状以获得更好的可见性
                 add({p.x - sz, p.y, p.zplane}, {p.x, p.y + sz, p.zplane});
                 add({p.x, p.y + sz, p.zplane}, {p.x + sz, p.y, p.zplane});
                 add({p.x + sz, p.y, p.zplane}, {p.x, p.y - sz, p.zplane});
@@ -717,13 +719,13 @@ namespace {
         auto cur_map = GW::Map::GetMapID();
 
         for (const auto& [hash, info] : cached_map_info) {
-            // 4 corners in source map's game coords
+            // 源地图游戏坐标中的 4 个角
             GW::GamePos tl = {info.bounds_min.x, info.bounds_min.y, 0};
             GW::GamePos tr = {info.bounds_max.x, info.bounds_min.y, 0};
             GW::GamePos br = {info.bounds_max.x, info.bounds_max.y, 0};
             GW::GamePos bl = {info.bounds_min.x, info.bounds_max.y, 0};
 
-            // Convert to current map coords for display
+            // 转换到当前地图坐标以显示
             tl = ToCurrentMapCoords(tl, info.map_id);
             tr = ToCurrentMapCoords(tr, info.map_id);
             br = ToCurrentMapCoords(br, info.map_id);
@@ -732,7 +734,7 @@ namespace {
             auto add = [&](const GW::GamePos& a, const GW::GamePos& b) {
                 auto* line = Minimap::Instance().custom_renderer.AddCustomLine(a, b);
                 line->map = cur_map;
-                line->color = 0x8000C8C8; // cyan, semi-transparent
+                line->color = 0x8000C8C8; // 青色，半透明
                 line->draw_on_mission_map = true;
                 line->draw_on_minimap = false;
                 line->created_by_toolbox = true;
@@ -746,13 +748,13 @@ namespace {
         }
     }
 
-    // UpdateGraphEdgeLines implemented after map graph declarations
+    // UpdateGraphEdgeLines 在地图图声明之后实现
 
     Pathing::AStar* astar = nullptr;
 
     volatile bool pending_terminate = false;
     volatile bool pending_worker_task = false;
-    std::atomic<bool> pathing_enabled = false; // true between Initialize() and SignalTerminate(); polled by QuestModule
+    std::atomic<bool> pathing_enabled = false; // Initialize() 和 SignalTerminate() 之间为 true；由 QuestModule 轮询
 
     GW::HookEntry gw_ui_hookentry;
 
@@ -763,13 +765,13 @@ namespace {
     GW::Constants::MapID path_from_map = GW::Constants::MapID::None;
     GW::Constants::MapID path_to_map = GW::Constants::MapID::None;
 
-    // Per-file-hash stored points (survive map switches, shared across maps with same file)
+    // 每个 file_hash 的存储点（在地图切换时保留，与共享相同 file 的地图共享）
     struct StoredPoints {
         GW::GamePos from{}, to{};
         GW::Vec2f from_world{}, to_world{};
         bool from_set = false, to_set = false;
     };
-    std::unordered_map<uint32_t, StoredPoints> points_by_hash; // keyed by file_hash
+    std::unordered_map<uint32_t, StoredPoints> points_by_hash; // 由 file_hash 键控
 
     std::vector<CustomRenderer::CustomLine*> marker_lines;
     std::vector<CustomRenderer::CustomLine*> path_lines;
@@ -807,7 +809,7 @@ namespace {
         add({pos.x - sz, pos.y + sz, pos.zplane}, {pos.x + sz, pos.y - sz, pos.zplane});
     }
 
-    // Convert a game pos from a source map to current map coords via world map
+    // 通过世界地图将游戏坐标从源地图转换到当前地图坐标
     GW::GamePos ToCurrentMapCoords(const GW::GamePos& pos, GW::Constants::MapID src_map)
     {
         if (src_map == GW::Map::GetMapID() || src_map == GW::Constants::MapID::None) return pos;
@@ -826,18 +828,18 @@ namespace {
         auto cur_map = GW::Map::GetMapID();
         if (from.x != 0.f || from.y != 0.f) {
             auto display_from = ToCurrentMapCoords(from, path_from_map);
-            AddMarkerCross(display_from, 0xFF00FF00, cur_map); // green
+            AddMarkerCross(display_from, 0xFF00FF00, cur_map); // 绿色
         }
         if (to.x != 0.f || to.y != 0.f) {
             auto display_to = ToCurrentMapCoords(to, path_to_map);
-            AddMarkerCross(display_to, 0xFFFF0000, cur_map); // red
+            AddMarkerCross(display_to, 0xFFFF0000, cur_map); // 红色
         }
     }
 
-    // Convert path points from source map coords to current map coords via world map
-    bool IsOutpostMap(GW::Constants::MapID map_id); // forward decl
+    // 将路径点从源地图坐标转换到当前地图坐标（通过世界地图）
+    bool IsOutpostMap(GW::Constants::MapID map_id); // 前向声明
 
-    // "Don't draw a line here" sentinel in flat full_path arrays; inserted between segments around underground (no_draw) maps.
+    // “此处不画线”哨兵，存放在扁平 full_path 数组中；插入到地下（no_draw）地图周围的段之间。
     constexpr float PATH_BREAK_VALUE = FLT_MAX;
     inline bool IsPathBreak(const GW::GamePos& p)
     {
@@ -848,14 +850,13 @@ namespace {
         return p.x == PATH_BREAK_VALUE;
     }
 
-    // A path segment hidden from the world map (underground map) but kept in native coords + map tag so it renders once entered.
+    // 隐藏在世界地图上的路径段（地下地图），但保留原生坐标 + 地图标签，以便进入后渲染。
     struct HiddenPathSegment {
         std::vector<GW::GamePos> points;
         GW::Constants::MapID map_id;
     };
 
-    // True if any manual connection between map_a and map_b (in either direction,
-    // with explorable→outpost file_hash spread) has no_draw=true.
+    // 如果 map_a 和 map_b 之间有任何手动连接（任意方向，且可探索→前哨站 file_hash 传播）的 no_draw=true。
     bool HasNoDrawConnection(GW::Constants::MapID map_a, GW::Constants::MapID map_b)
     {
         uint32_t fh_a = GetMapFileId(map_a);
@@ -874,8 +875,8 @@ namespace {
         return false;
     }
 
-    // src_map game positions -> world coords (the common cross-map space, no overflow);
-    // break sentinels pass through.
+    // src_map 游戏坐标 → 世界坐标（公共跨地图空间，无溢出）；
+    // 哨兵值透传。
     bool SegmentToWorld(const std::vector<GW::GamePos>& points, GW::Constants::MapID src_map, std::vector<GW::Vec2f>& out)
     {
         out.reserve(out.size() + points.size());
@@ -918,12 +919,11 @@ namespace {
         const auto& draw_points = (src_map != cur_map) ? ConvertPathToCurrentMap(points, src_map) : points;
 
         for (size_t i = 0; i + 1 < draw_points.size(); i++) {
-            // Skip lines that touch a path-break sentinel — used to hide segments
-            // through underground maps in multi-map paths.
+            // 跳过触及路径中断哨兵的线条 — 用于在多地图路径中隐藏穿过地下地图的段。
             if (IsPathBreak(draw_points[i]) || IsPathBreak(draw_points[i + 1])) continue;
             auto* line = Minimap::Instance().custom_renderer.AddCustomLine(draw_points[i], draw_points[i + 1]);
             line->map = cur_map;
-            line->color = 0xFFFFFF00; // yellow
+            line->color = 0xFFFFFF00; // 黄色
             line->draw_on_mission_map = true;
             line->draw_on_minimap = true;
             line->created_by_toolbox = true;
@@ -931,15 +931,15 @@ namespace {
         }
     }
 
-    // Append underground segments in native map coords tagged with their map_id: hidden on the world map but drawn in-world
-    // once the player enters that map. Call after DrawPathAsLines (doesn't clear) — segments share path_lines.
+    // 添加原生地图坐标中标记了 map_id 的地下段：在世界地图上隐藏，但一旦玩家进入该地图则在世界中绘制。
+    // 在 DrawPathAsLines 之后调用（不清除）— 段共享 path_lines。
     void AddHiddenUndergroundSegmentLines(const std::vector<HiddenPathSegment>& segs)
     {
         for (const auto& seg : segs) {
             for (size_t i = 0; i + 1 < seg.points.size(); i++) {
                 auto* line = Minimap::Instance().custom_renderer.AddCustomLine(seg.points[i], seg.points[i + 1]);
-                line->map = seg.map_id;   // native underground map, NOT cur_map
-                line->color = 0xFFFFFF00; // yellow
+                line->map = seg.map_id;   // 原生地下地图，不是 cur_map
+                line->color = 0xFFFFFF00; // 黄色
                 line->draw_on_mission_map = true;
                 line->draw_on_minimap = true;
                 line->created_by_toolbox = true;
@@ -949,18 +949,18 @@ namespace {
     }
 
 
-    // Returns false if our last AStar calculation matches what we're asking for.
+    // 如果上次 AStar 计算与我们请求的匹配，则返回 false。
     bool NeedsRecalculating(const GW::GamePos& from, const GW::GamePos& to)
     {
         if (!(astar && astar->m_path.ready() && astar->m_path.points().size())) return true;
         return from != astar->m_path.points().at(0) || to != astar->m_path.points().at(astar->m_path.points().size() - 1);
     }
 
-    // Find a cached MilePath for a given MapID
+    // 查找给定 MapID 的缓存 MilePath
     Pathing::MilePath* GetMilepathForMap(GW::Constants::MapID map_id)
     {
-        // Look up by file_hash so shared-hash maps (e.g. 107/135 with hash 0xC77A)
-        // can return the same MilePath regardless of which MapID requests it.
+        // 按 file_hash 查找，以便共享哈希的地图（例如 107/135 使用哈希 0xC77A）
+        // 无论哪个 MapID 请求，都可以返回相同的 MilePath。
         uint32_t fh = GetMapFileId(map_id);
         if (!fh) return nullptr;
         for (const auto& [hash, mp] : mile_paths_by_coords) {
@@ -973,13 +973,13 @@ namespace {
     }
 
     // =========================================================================
-    // Map connectivity graph — adjacency by overlapping world map bounds
+    // 地图连接图 — 通过重叠的世界地图边界
     // =========================================================================
 
     struct MapGraphNode {
         GW::Constants::MapID map_id;
         uint32_t file_hash;
-        ImRect wm_bounds; // world map bounds
+        ImRect wm_bounds; // 世界地图边界
         GW::Continent continent;
     };
 
@@ -996,16 +996,15 @@ namespace {
         map_graph_built = true;
         map_graph_nodes.clear();
 
-        // Collect maps, deduplicated by file_hash (same file = same physical map)
+        // 收集地图，按 file_hash 去重（相同文件 = 相同物理地图）
         std::set<uint32_t> seen_file_hashes;
         for (const auto& [file_hash, entries] : constant_maps_info) {
             if (!file_hash) continue;
             if (seen_file_hashes.contains((uint32_t)file_hash)) continue;
 
-            // Pick the representative for this file_hash, PREFERRING a non-outpost (explorable): the world-map
-            // picker resolves a marker to this node, and for shared-file outpost/explorable pairs (e.g. Lutgardis
-            // Conservatory 129 / Melandru's Hope 201) the explorable is the routing target, not the outpost. Fall
-            // back to the first valid entry (outpost-only file) when there's no explorable.
+            // 为此 file_hash 选择代表，优先选择非前哨站（可探索）：世界地图
+            // 选择器将标记解析为此节点，对于共享文件的 前哨站/可探索 对（例如 Lutgardis
+            // Conservatory 129 / Melandru's Hope 201），可探索地图是路由目标，而非前哨站。当没有可探索地图时回退到第一个有效条目（仅前哨站文件）。
             GW::Constants::MapID chosen = GW::Constants::MapID::None, first_valid = GW::Constants::MapID::None;
             ImRect chosen_bounds, first_bounds;
             for (const auto& entry : entries) {
@@ -1024,8 +1023,7 @@ namespace {
                 seen_file_hashes.insert((uint32_t)file_hash);
             }
         }
-        // Add connection-referenced maps not yet in the graph, deduped by EXACT MapID (not file_hash) — else an outpost in a
-        // connection chain gets dropped when its explorable sibling was picked, and Dijkstra would expand a missing node.
+        // 添加连接引用的尚未在图中的地图，按精确 MapID 去重（而非 file_hash）— 否则当可探索兄弟被选中时，连接链中的前哨站会被丢弃，Dijkstra 会扩展缺失节点。
         for (const auto& conn : portal_connections.GetAll()) {
             for (auto mid : {conn.from_map, conn.to_map}) {
                 if (mid == GW::Constants::MapID::None) continue;
@@ -1042,16 +1040,16 @@ namespace {
                 auto continent = area ? area->continent : GW::Continent::Kryta;
                 map_graph_nodes.push_back({mid, fh, ImRect(), continent});
                 if (IsInterestingMapForCacheTrace(mid)) {
-                    PATH_LOG_INFO("[CacheTrace] BuildMapGraph added mid=%d fh=0x%X (path=portal_connections, conn from=%d to=%d)", (int)mid, fh, (int)conn.from_map, (int)conn.to_map);
+                    PATH_LOG_INFO("[CacheTrace] BuildMapGraph 添加 mid=%d fh=0x%X（路径=portal_connections，连接 from=%d to=%d）", (int)mid, fh, (int)conn.from_map, (int)conn.to_map);
                 }
             }
         }
-        PATH_LOG_INFO("Map graph: %d nodes (incl. connection-referenced)", (int)map_graph_nodes.size());
+        PATH_LOG_INFO("地图图：%d 个节点（含连接引用的）", (int)map_graph_nodes.size());
     }
 
-    bool IsOutpostMap(GW::Constants::MapID map_id); // forward decl
+    bool IsOutpostMap(GW::Constants::MapID map_id); // 前向声明
 
-    // Find adjacent maps (overlapping bounds, same continent)
+    // 查找相邻地图（重叠边界，相同大陆）
     std::vector<GW::Constants::MapID> GetAdjacentMaps(GW::Constants::MapID map_id)
     {
         BuildMapGraph();
@@ -1064,7 +1062,7 @@ namespace {
         }
         if (!src) return {};
 
-        // Connection-referenced nodes have empty bounds; skip the overlap branch for them, else two empty rects "overlap" at origin.
+        // 连接引用的节点边界为空；跳过它们的分支，否则两个空矩形在原点“重叠”。
         const bool src_empty = src->wm_bounds.GetWidth() < 1.f || src->wm_bounds.GetHeight() < 1.f;
 
         std::vector<GW::Constants::MapID> result;
@@ -1073,8 +1071,8 @@ namespace {
             if (node.continent != src->continent) continue;
             if (src_empty) continue;
             if (node.wm_bounds.GetWidth() < 1.f || node.wm_bounds.GetHeight() < 1.f) continue;
-            // Check bounds overlap with tolerance for touching edges
-            constexpr float tolerance = 5.f; // world map units
+            // 检查边界重叠，带容差
+            constexpr float tolerance = 5.f; // 世界地图单位
             ImRect expanded = node.wm_bounds;
             expanded.Expand(tolerance);
             if (src->wm_bounds.Overlaps(expanded)) {
@@ -1082,8 +1080,8 @@ namespace {
             }
         }
 
-        // Add neighbors from manual connections. Connection-spread rule: a connection on an EXPLORABLE map applies to all
-        // file_hash siblings; one on an OUTPOST is local to that exact outpost (prevents 348/244/218 cross-pollination).
+        // 添加手动连接中的邻居。连接传播规则：可探索地图上的连接应用于所有 file_hash 兄弟；
+        // 前哨站上的连接仅局限于该确切前哨站（防止 348/244/218 交叉污染）。
         auto contains = [&](GW::Constants::MapID mid) {
             for (auto m : result)
                 if (m == mid) return true;
@@ -1094,24 +1092,24 @@ namespace {
         auto matches_current = [&](GW::Constants::MapID conn_map_id) -> bool {
             if (conn_map_id == map_id) return true;
             if (IsOutpostMap(conn_map_id)) return false;
-            // An outpost can't inherit its explorable siblings' connections: those portals need an extra outpost→explorable
-            // hop the picker doesn't model, so treating them as direct yields phantom-cheap edges (e.g. fh 0x85A8 57 inheriting 56→18).
+            // 前哨站不能继承其可探索兄弟的连接：那些传送门需要额外的前哨站→可探索跳转，
+            // 选择器没有建模，因此将其视为直接连接会产生虚幻的廉价边（例如 fh 0x85A8 57 继承 56→18）。
             if (src_is_outpost) return false;
             return fh_cur && GetMapFileId(conn_map_id) == fh_cur;
         };
-        PATH_LOG_INFO("[GetAdj] map=%d fh=0x%X is_outpost=%d", (int)map_id, fh_cur, IsOutpostMap(map_id) ? 1 : 0);
+        PATH_LOG_INFO("[GetAdj] 地图=%d fh=0x%X 是前哨站=%d", (int)map_id, fh_cur, IsOutpostMap(map_id) ? 1 : 0);
         for (const auto& conn : portal_connections.GetAll()) {
             if (conn.from_type == Pathing::ConnectionType::Disabled || conn.to_type == Pathing::ConnectionType::Disabled) continue;
             bool fwd_match = matches_current(conn.from_map);
             bool rev_match = !conn.IsOneWay() && matches_current(conn.to_map);
             if (fwd_match || rev_match) {
-                PATH_LOG_INFO("[GetAdj]   conn from=%d to=%d ftype=%d ttype=%d oneway=%d fwd=%d rev=%d", (int)conn.from_map, (int)conn.to_map, (int)conn.from_type, (int)conn.to_type, conn.IsOneWay() ? 1 : 0, fwd_match ? 1 : 0, rev_match ? 1 : 0);
+                PATH_LOG_INFO("[GetAdj]   连接 from=%d to=%d ftype=%d ttype=%d 单向=%d fwd=%d rev=%d", (int)conn.from_map, (int)conn.to_map, (int)conn.from_type, (int)conn.to_type, conn.IsOneWay() ? 1 : 0, fwd_match ? 1 : 0, rev_match ? 1 : 0);
             }
-            // Forward: conn.from matches current → conn.to is neighbor
+            // 正向：conn.from 匹配当前 → conn.to 是邻居
             if (fwd_match && conn.to_map != map_id && !contains(conn.to_map)) {
                 result.push_back(conn.to_map);
             }
-            // Reverse: only for bidirectional connections
+            // 反向：仅适用于双向连接
             if (rev_match && conn.from_map != map_id && !contains(conn.from_map)) {
                 result.push_back(conn.from_map);
             }
@@ -1120,7 +1118,7 @@ namespace {
         return result;
     }
 
-    // Distance from point (px,py) to axis-aligned rect [mn,mx]; 0 when inside.
+    // 点 (px,py) 到轴对齐矩形 [mn,mx] 的外部距离；内部时为 0。
     inline float RectOutsideDistance(float px, float py, const Pathing::Vec2f& mn, const Pathing::Vec2f& mx)
     {
         const float dx = std::max({mn.x - px, 0.f, px - mx.x});
@@ -1128,8 +1126,8 @@ namespace {
         return std::sqrt(dx * dx + dy * dy);
     }
 
-    // Clamp a goal position into a map's real game bounds, so a marker whose world->game projection lands a few units
-    // past a shared border still targets that map (A* then resolves it to the nearest walkable node). No-op inside.
+    // 将目标位置钳制到地图的真实游戏边界内，以便世界→游戏投影落在共享边界外几单位的标记仍以该地图为目标
+    //（A* 随后将其解析到最近的可行走节点）。在内部时无操作。
     inline GW::GamePos ClampGoalToMapBounds(const GW::GamePos& g, GW::Constants::MapID map_id)
     {
         Pathing::Vec2f mn, mx;
@@ -1137,11 +1135,10 @@ namespace {
         return {std::clamp(g.x, mn.x, mx.x), std::clamp(g.y, mn.y, mx.y), g.zplane};
     }
 
-    // Rank every map whose world-map bounds contain `wm_pos`, best-first, so an ambiguous marker over overlapping/nested
-    // bounds resolves to the map most likely to own it. Every world-bounds-containing map is a candidate (the resolver
-    // tries each until one connects); ranking only orders the attempts: maps whose real game bounds contain the point come
-    // first, then those where it lands just past a shared border (closest-fit first, e.g. the 239/241/31 seam). Within a
-    // tier, adjacency to `prefer_adjacent_to` then tighter bounds win (a nested detail map beats the region around it).
+    // 对包含 `wm_pos` 的每个地图按优先级排序，以便模糊标记（位于重叠/嵌套边界上）解析到最可能拥有它的地图。
+    // 包含世界边界的所有地图都是候选（解析器尝试每个候选直到一个连接成功）；排序仅决定尝试顺序：
+    // 点位于真实游戏边界内的地图优先，然后是点刚越过共享边界的地图（最接近优先，例如 239/241/31 接缝）。
+    // 在同一层级内，到 `prefer_adjacent_to` 的邻接性优先，然后是更紧的边界（嵌套细节地图胜过周围区域）。
     std::vector<GW::Constants::MapID> RankCandidateMapsForWorldPos(const GW::Vec2f& wm_pos, GW::Constants::MapID prefer_adjacent_to = GW::Constants::MapID::None)
     {
         BuildMapGraph();
@@ -1171,9 +1168,9 @@ namespace {
         for (const auto& node : map_graph_nodes) {
             if (node.continent != ctx_continent) continue;
 
-            // Connection-referenced nodes (a map co-located with an on-world-map sibling that shares its file id, so it lost
-            // the graph's file_hash dedup) carry empty bounds — recover their real world bounds so a click can still resolve
-            // to them. Without this they are invisible to the picker and routing falls back to the sibling.
+            // 连接引用的节点（与共享文件 ID 的在线世界地图兄弟共存的地图，因此在图的 file_hash 去重中丢失）
+            // 边界为空 — 恢复其真实世界边界，以便点击仍可解析到它们。否则它们对选择器不可见，
+            // 路由会回退到兄弟地图。
             ImRect wb = node.wm_bounds;
             if (wb.GetWidth() < 1.f || wb.GetHeight() < 1.f) {
                 auto* area = GW::Map::GetMapInfo(node.map_id);
@@ -1185,8 +1182,8 @@ namespace {
 
             GW::GamePos g;
             if (!WorldMapWidget::WorldMapToGamePos(wm_pos, g, node.map_id)) continue;
-            // Game-bounds fit only ranks the candidate; it never excludes it, so a marker on a map whose world->game
-            // projection lands a hair outside its playable bounds (the overlap seam) is still tried, just after in-bounds maps.
+            // 游戏边界适配仅用于排序候选，从不排除它，因此世界→游戏投影落在可玩边界外几单位的标记（重叠接缝处）
+            // 仍然会被尝试，只是排在内部地图之后。
             float outside = 0.f;
             Pathing::Vec2f bmin, bmax;
             if (Pathing::GetMapGameBoundsFromDAT(GetMapFileId(node.map_id), bmin, bmax)) {
@@ -1198,14 +1195,13 @@ namespace {
         }
 
         std::sort(cands.begin(), cands.end(), [](const Cand& a, const Cand& b) {
-            if (a.inside != b.inside) return a.inside;                              // in-bounds maps first
-            if (!a.inside && a.outside != b.outside) return a.outside < b.outside;  // then closest to a shared border
-            if (a.adjacent != b.adjacent) return a.adjacent;                        // then neighbours of the route's other end
-            // Prefer the explorable over its outpost sibling: they share a file id (identical game bounds), so a marker in
-            // the region resolves to both, but a world-map route should target the explorable unless ONLY the outpost's
-            // (small) icon rect contains the click — in which case the outpost is the sole candidate and still wins.
+            if (a.inside != b.inside) return a.inside;                              // 内部地图优先
+            if (!a.inside && a.outside != b.outside) return a.outside < b.outside;  // 然后最接近共享边界
+            if (a.adjacent != b.adjacent) return a.adjacent;                        // 然后路由另一端的地图邻居
+            // 优先选择可探索地图而非其前哨站兄弟：它们共享文件 ID（相同的游戏边界），因此区域内的标记可解析到两者，
+            // 但世界地图路径应以可探索地图为目标，除非只有前哨站的（小）图标矩形包含点击 — 此时前哨站是唯一候选，仍然胜出。
             if (a.is_outpost != b.is_outpost) return !a.is_outpost;
-            return a.area < b.area;                                                 // then tighter bounds
+            return a.area < b.area;                                                 // 然后更紧的边界
         });
         std::vector<GW::Constants::MapID> out;
         out.reserve(cands.size());
@@ -1222,7 +1218,7 @@ namespace {
         auto it = portal_props_cache.find(fh);
         if (it != portal_props_cache.end()) return it->second;
 
-        // Check if already in cached_map_info (from full DAT load)
+        // 检查是否已在 cached_map_info 中（来自完整 DAT 加载）
         for (const auto& [hash, info] : cached_map_info) {
             if (info.map_id == map_id && !info.portal_props.empty()) {
                 portal_props_cache[fh] = info.portal_props;
@@ -1230,38 +1226,38 @@ namespace {
             }
         }
 
-        // Lightweight load — just portal props
+        // 轻量级加载 — 仅传送门属性
         auto& props = portal_props_cache[fh];
         Pathing::LoadPortalPropsFromDAT(fh, props);
         return props;
     }
 
-    // Check if two maps have portal props (bounds overlap is already a precondition)
+    // 检查两个地图是否具有传送门属性（边界重叠已是先决条件）
     bool HasPortalConnection(GW::Constants::MapID map_a, GW::Constants::MapID map_b)
     {
         const auto& props_a = GetPortalPropsForMap(map_a);
         const auto& props_b = GetPortalPropsForMap(map_b);
-        // Both maps need at least one portal prop to be traversable
+        // 两个地图都需要至少一个传送门属性才能可穿越
         return !props_a.empty() && !props_b.empty();
     }
 
-    // Lightweight map info load — only bounds + portal props, no MilePath/vis graph
+    // 轻量级地图信息加载 — 仅边界 + 传送门属性，无 MilePath/可视区图
     void EnsureLightweightMapInfo(GW::Constants::MapID map_id, const char* caller)
     {
         if (IsInterestingMapForCacheTrace(map_id)) {
-            PATH_LOG_INFO("[CacheTrace] EnsureLightweightMapInfo(%d) caller=%s already_cached=%d", (int)map_id, caller, GetCachedMapInfo(map_id) ? 1 : 0);
+            PATH_LOG_INFO("[CacheTrace] EnsureLightweightMapInfo(%d) caller=%s 已缓存=%d", (int)map_id, caller, GetCachedMapInfo(map_id) ? 1 : 0);
         }
         if (map_id == GW::Map::GetMapID()) return;
-        if (GetCachedMapInfo(map_id)) return; // already have info
+        if (GetCachedMapInfo(map_id)) return; // 已有信息
 
         uint32_t fid = GetMapFileId(map_id);
         if (!fid) return;
 
-        // Load just the map info chunk for bounds + portal props
+        // 仅加载地图信息块以获取边界 + 传送门属性
         ArenaNetFileParser::ArenaNetFile game_asset;
         if (!game_asset.readFromDat(fid, 1)) return;
 
-        // Get bounds from Map_Info chunk
+        // 从 Map_Info 块获取边界
 #pragma pack(push, 1)
         struct MapInfoChunk : ArenaNetFileParser::Chunk {
             uint32_t signature;
@@ -1272,11 +1268,11 @@ namespace {
         const auto map_info_chunk = (MapInfoChunk*)game_asset.FindChunk(ArenaNetFileParser::ChunkType::Map_Info);
         if (!map_info_chunk) return;
 
-        // Parse portal props
+        // 解析传送门属性
         std::vector<Pathing::PortalProp> props;
         Pathing::LoadPortalPropsFromDAT(fid, props);
 
-        // Cache as lightweight info (no MilePath created)
+        // 缓存为轻量级信息（不创建 MilePath）
         auto hash = static_cast<uint64_t>(fid);
         CachedMapInfo info;
         info.map_id = map_id;
@@ -1287,14 +1283,15 @@ namespace {
         CacheSharedFileHashMaps(cached_map_info[hash]);
     }
 
-    bool IsOutpostMap(GW::Constants::MapID map_id); // forward decl
+    bool IsOutpostMap(GW::Constants::MapID map_id); // 前向声明
 
-    // NOTE: the old bounds-overlap edge model (GetConnectionCost / GetEdgeCost with HOP_PENALTY /
-    // OUTPOST_BONUS / TRANSIT_MULT) and the ClosestPortal*DistanceInMap / FindAnyPortalPosInMap portal-
-    // distance helpers were removed with the switch to the portal-graph LazySP router (ROUTING_REDESIGN.md).
+    // 注意：旧的边界重叠边模型（GetConnectionCost / GetEdgeCost 带 HOP_PENALTY /
+    // OUTPOST_BONUS / TRANSIT_MULT）以及在 ClosestPortal*DistanceInMap /
+    // FindAnyPortalPosInMap 中的传送门距离辅助函数已随着切换到传送门图 LazySP
+    // 路由器而被移除（ROUTING_REDESIGN.md）。
 
-    // True if a (non-disabled) portal connection links these two maps, honouring the connection-spread rule
-    // (explorable connections apply to file_hash siblings; outpost connections stay local) and one-way.
+    // 如果这两个地图之间存在（非禁用）传送门连接，则返回 true，遵守连接传播规则
+    //（可探索连接应用于 file_hash 兄弟；前哨站连接保持本地）和单向性。
     bool HasPortalConnectionBetween(GW::Constants::MapID map_a, GW::Constants::MapID map_b)
     {
         const uint32_t fh_a = GetMapFileId(map_a);
@@ -1313,7 +1310,7 @@ namespace {
         return false;
     }
 
-    // Blacklisted edges for retry (cleared on each FindPath call)
+    // 重试的黑名单边（每次 FindPath 调用时清除）
     std::set<uint64_t> blacklisted_edges;
 
     uint64_t EdgeKey(GW::Constants::MapID a, GW::Constants::MapID b)
@@ -1322,27 +1319,25 @@ namespace {
     }
 
     // =====================================================================
-    // Portal-connection graph + LazySP router (see ROUTING_REDESIGN.md).
-    // Topology is built PURELY from portal_connections.json — no world-map
-    // bounds. Nodes are portal endpoints keyed by MapID (never collapsed by
-    // file_hash); edges are portal crossings (a JSON connection) and intra-map
-    // walks (two endpoints on the same physical mesh). Search is LazySP:
-    // Dijkstra on optimistic euclidean intra-weights, then load+refine the first
-    // unevaluated intra-edge on the returned path, repeat.
+    // 传送门连接图 + LazySP 路由器（见 ROUTING_REDESIGN.md）。
+    // 拓扑完全基于 portal_connections.json 构建 — 不使用世界地图边界。
+    // 节点是按 MapID 键控的传送门端点（从不由 file_hash 合并）；
+    // 边是传送门穿越（JSON 连接）和地图内行走（同一物理网格上的两个端点）。
+    // 搜索为 LazySP：对乐观欧几里得地图内权重进行 Dijkstra，然后在返回的路径上
+    // 加载并细化第一个未评估的地图内边，重复进行。
     // =====================================================================
 
-    // Per-portal-crossing cost (game units): a modest per-zone bias so the router
-    // prefers fewer loading screens unless the walking detour saved exceeds it.
+    // 每次传送门穿越的成本（游戏单位）：适度的每区域偏向，以便路由器更喜欢更少的加载画面，
+    // 除非行走绕行节省的距离超过此值。
     constexpr float CROSSING_COST = 2500.f;
     constexpr int MAX_LAZYSP_ITERS = 512;
 
-    bool RunAStarOnMap(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::GamePos>& path_out); // fwd decl
+    bool RunAStarOnMap(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::GamePos>& path_out); // 前向声明
 
-    // Real walk distance between two game positions on one map, via the MilePath visgraph Walk A*
-    // (`RunAStarOnMap`). The visgraph is built once per map (lazily, on first query) and cached, so
-    // subsequent queries are cheap — unlike a per-call trapezoid search, which re-exhausted the
-    // whole mesh on every call (~seconds/query, the 20s-route bottleneck). Loads the DAT if the map isn't
-    // resident. Returns the path length; +inf and *out_unreachable set when no walkable path exists.
+    // 两个游戏位置在同一地图上的真实行走距离，通过 MilePath 可视区图行走 A*（`RunAStarOnMap`）。
+    // 可视区图在每个地图上延迟构建一次（首次查询时），并缓存，因此后续查询成本低廉 —
+    // 与每次调用都重新穷举整个网格的梯形搜索不同（~秒/查询，即 20 秒路径的瓶颈）。
+    // 如果地图未驻留则加载 DAT。返回路径长度；当不存在可行走路径时设置 +inf 和 *out_unreachable。
     float WalkDistanceOnMap(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to,
                             bool* out_unreachable = nullptr, bool* out_data_miss = nullptr)
     {
@@ -1358,7 +1353,7 @@ namespace {
         if (!mp) { if (out_data_miss) *out_data_miss = true; return INF; }
 
         std::vector<GW::GamePos> path;
-        const bool ok = RunAStarOnMap(map_id, from, to, path); // waits for build, does visgraph A* + offset-nudge retry
+        const bool ok = RunAStarOnMap(map_id, from, to, path); // 等待构建，进行可视区图 A* + 偏移微调重试
         if (!ok || path.size() < 2) {
             if (ok && path.size() == 1) return 0.f; // src==dst
             if (out_unreachable) *out_unreachable = true;
@@ -1372,12 +1367,12 @@ namespace {
         return len;
     }
 
-    // Intra-map grouping key: maps sharing a DAT file (file_hash) share one physical mesh, so their portal
-    // endpoints are intra-connected and the real walk distance (∞ if the mesh is gated/disconnected, e.g.
-    // Nahpui 216↔265) governs reachability. Grouping by file_hash — NOT by MapID — is what lets a query on
-    // an outpost use connections authored on its explorable sibling (the old connection-spread rule) and
-    // handles shared-file outpost/mission maps. Normal outposts have a distinct file_hash from their
-    // explorable, so they stay separate anyway. file_hash-less (fh==0) maps are each their own mesh.
+    // 地图内分组键：共享一个 DAT 文件（file_hash）的地图共享一个物理网格，因此它们的传送门
+    // 端点是地图内连接的，真实行走距离（如果网格被门阻挡/断开则为 ∞，例如 Nahpui 216↔265）
+    // 决定了可达性。按 file_hash 分组 — 而不是按 MapID — 是让前哨站上的查询使用
+    // 在其可探索兄弟上创作的连接（旧连接传播规则）的关键，并处理共享文件的前哨站/任务地图。
+    // 普通前哨站与其可探索地图有不同的 file_hash，因此它们保持分离。无 file_hash（fh==0）的
+    // 地图各自为独立网格。
     uint64_t MeshKeyFor(GW::Constants::MapID map_id)
     {
         const uint32_t fh = GetMapFileId(map_id);
@@ -1387,18 +1382,18 @@ namespace {
 
     struct PGNode {
         GW::Constants::MapID map_id;
-        GW::Vec2f pos;        // game coords
-        GW::Vec2f wm;         // world-map coords
-        uint64_t mesh;        // intra-map grouping key
+        GW::Vec2f pos;        // 游戏坐标
+        GW::Vec2f wm;         // 世界地图坐标
+        uint64_t mesh;        // 地图内分组键
         GW::Continent continent;
     };
     struct PGEdge {
         int to;
-        bool intra;                 // true = intra-map walk (refinable), false = portal crossing
-        float est;                  // optimistic weight (euclidean for intra, base for crossing)
-        bool evaluated;             // intra only
-        float real;                 // intra only, valid once evaluated
-        GW::Constants::MapID owner; // intra: the map to run the walk on (None for crossings/free edges)
+        bool intra;                 // true = 地图内行走（可细化），false = 传送门穿越
+        float est;                  // 乐观权重（地图内为欧几里得，穿越为基准）
+        bool evaluated;             // 仅地图内
+        float real;                 // 仅地图内，评估后有效
+        GW::Constants::MapID owner; // 地图内：运行行走的地图（穿越/自由边为 None）
     };
     struct PortalGraph {
         std::vector<PGNode> nodes;
@@ -1407,14 +1402,14 @@ namespace {
         int start_i = -1, goal_i = -1;
     };
 
-    // Build the portal graph for one query (src/dst positioned endpoints included). Rebuilt per call —
-    // the topology is tiny (~400 connections) so caching isn't worth the start/goal bookkeeping.
+    // 为一次查询构建传送门图（包含定位的起点/终点端点）。每次调用重新构建 —
+    // 拓扑很小（约 400 条连接），因此缓存不值得起终点簿记开销。
     void BuildPortalGraph(PortalGraph& g, GW::Constants::MapID src, const GW::GamePos* start_pos,
                           GW::Constants::MapID dst, const GW::GamePos* goal_pos,
                           bool same_continent, GW::Continent route_continent)
     {
         std::map<std::tuple<uint32_t, int, int>, int> node_index;
-        constexpr float Q = 32.f; // dedup portals within 32 game units → one node
+        constexpr float Q = 32.f; // 在 32 游戏单位内去重传送门 → 一个节点
         auto add_node = [&](GW::Constants::MapID mid, const GW::Vec2f& pos, const GW::Vec2f& wm) -> int {
             auto key = std::make_tuple((uint32_t)mid, (int)std::lround(pos.x / Q), (int)std::lround(pos.y / Q));
             if (auto f = node_index.find(key); f != node_index.end()) return f->second;
@@ -1430,11 +1425,11 @@ namespace {
             g.adj[a].push_back({b, intra, est, false, 0.f, owner});
         };
 
-        // Crossing edges from JSON connections (parallel edges = multiple portals per map pair).
+        // 来自 JSON 连接的穿越边（并行边 = 每地图对多个传送门）。
         for (const auto& c : portal_connections.GetAll()) {
             if (c.from_type == Pathing::ConnectionType::Disabled || c.to_type == Pathing::ConnectionType::Disabled) continue;
             if (c.from_map == GW::Constants::MapID::None || c.to_map == GW::Constants::MapID::None) continue;
-            // Same-continent prune: a boat/ferry hop can't belong to a same-continent route.
+            // 同大陆剪枝：船/渡轮跳转不能属于同大陆路径。
             if (same_continent) {
                 const auto* fa_area = GW::Map::GetMapInfo(c.from_map);
                 const auto* fb_area = GW::Map::GetMapInfo(c.to_map);
@@ -1452,12 +1447,12 @@ namespace {
                 add_edge(b, a, false, cross, GW::Constants::MapID::None);
         }
 
-        // Start / goal endpoints. A positioned endpoint joins its mesh with refinable intra edges; a
-        // null endpoint (topological query) joins with free, non-refinable edges.
+        // 起点 / 终点端点。定位端点通过可细化的地图内边加入其网格；空端点（拓扑查询）
+        // 通过自由、不可细化的边加入。
         g.start_i = add_node(src, start_pos ? GW::Vec2f{start_pos->x, start_pos->y} : GW::Vec2f{}, {});
         g.goal_i = add_node(dst, goal_pos ? GW::Vec2f{goal_pos->x, goal_pos->y} : GW::Vec2f{}, {});
 
-        // Intra-map edges: connect every pair of endpoints sharing a mesh.
+        // 地图内边：连接共享网格的每对端点。
         for (auto& [mesh, idxs] : g.by_mesh) {
             for (size_t i = 0; i < idxs.size(); i++) {
                 for (size_t j = i + 1; j < idxs.size(); j++) {
@@ -1467,7 +1462,7 @@ namespace {
                     const bool a_positionless = (ai == g.start_i && !start_pos) || (ai == g.goal_i && !goal_pos);
                     const bool b_positionless = (bi == g.start_i && !start_pos) || (bi == g.goal_i && !goal_pos);
                     if (a_positionless || b_positionless) {
-                        add_edge(ai, bi, false, 0.f, GW::Constants::MapID::None); // free, non-refinable
+                        add_edge(ai, bi, false, 0.f, GW::Constants::MapID::None); // 自由，不可细化
                         add_edge(bi, ai, false, 0.f, GW::Constants::MapID::None);
                         continue;
                     }
@@ -1479,7 +1474,7 @@ namespace {
         }
     }
 
-    // Load the edge's map and replace its optimistic estimate with the real navmesh walk distance.
+    // 加载边的地图并将其乐观估计替换为真实的导航网格行走距离。
     void RefineIntraEdge(PortalGraph& g, int from, int edge_idx)
     {
         PGEdge& ed = g.adj[from][edge_idx];
@@ -1488,20 +1483,20 @@ namespace {
         bool unreachable = false, data_miss = false;
         float real = WalkDistanceOnMap(ed.owner, {a.pos.x, a.pos.y, 0}, {b.pos.x, b.pos.y, 0}, &unreachable, &data_miss);
         if (std::isinf(real)) {
-            // Genuinely disconnected → penalised finite last-resort (an authored portal still wins, but a
-            // route can resolve). Data-quality miss / no mesh → plain euclidean (don't punish our own miss).
+            // 真正断开 → 带惩罚的有限最后手段（已创作的传送门仍然获胜，但路径可以解析）。
+            // 数据质量问题 / 无网格 → 普通欧几里得（不惩罚我们自己的缺失）。
             real = unreachable ? ed.est * portal_unreachable_penalty : ed.est;
         }
-        if (real < ed.est) real = ed.est; // never below the admissible lower bound
+        if (real < ed.est) real = ed.est; // 从不低于可接纳下界
         ed.evaluated = true;
         ed.real = real;
-        // Mirror onto the reverse edge (walk distance is symmetric on the same mesh) to save an eval.
+        // 镜像到反向边（行走距离在同一网格上对称）以节省一次评估。
         for (auto& re : g.adj[ed.to]) {
             if (re.to == from && re.intra && !re.evaluated) { re.evaluated = true; re.real = real; break; }
         }
     }
 
-    // Dijkstra over current edge weights; out_edges = ordered (node_u, edge_index) from s to t.
+    // 在当前边权重上运行 Dijkstra；out_edges = 从 s 到 t 的有序 (node_u, edge_index)。
     bool DijkstraPath(const PortalGraph& g, int s, int t, std::vector<std::pair<int, int>>& out_edges)
     {
         const int n = (int)g.nodes.size();
@@ -1541,10 +1536,10 @@ namespace {
         return true;
     }
 
-    // LazySP: Dijkstra on optimistic weights, refine the first unevaluated intra-edge on the returned
-    // path, repeat until the path's intra-edges are all real. Returns the MapID sequence — a new map is
-    // emitted only when the path traverses a portal CROSSING, so same-mesh siblings walked via an intra
-    // edge collapse (while an authored crossing between file_hash siblings, e.g. Nahpui 216↔265, does not).
+    // LazySP：在乐观权重上运行 Dijkstra，细化返回路径上第一个未评估的地图内边，
+    // 重复直到路径的地图内边全部为真实值。返回 MapID 序列 — 仅当路径穿越
+    // 传送门 CROSSING 时才发射新地图，因此通过地图内边行走的同一网格兄弟会被合并
+    //（而 file_hash 兄弟之间的已创作穿越，例如 Nahpui 216↔265，则不会合并）。
     std::vector<GW::Constants::MapID> FindMapRoute(GW::Constants::MapID src, GW::Constants::MapID dst, const GW::GamePos* start_pos = nullptr, const GW::GamePos* goal_pos = nullptr)
     {
         if (src == dst) return {src, dst};
@@ -1558,15 +1553,14 @@ namespace {
         BuildPortalGraph(g, src, start_pos, dst, goal_pos, same_continent, route_continent);
         if (g.start_i < 0 || g.goal_i < 0) return {};
 
-        // Connectivity diagnostics: mesh membership + degree tell us whether a failure is an isolated
-        // endpoint (start/goal has no edges — its map lacks authored connections, or the mesh grouping split
-        // it off) versus a genuine no-path between two connected components.
+        // 连接诊断：网格成员 + 度告诉我们故障是孤立的端点（起点/终点无边 — 其地图缺少
+        // 已创作连接，或网格分组将其分离）还是两个连接组件之间真正的无路径。
         {
             int goal_indeg = 0;
             for (const auto& al : g.adj)
                 for (const auto& e : al)
                     if (e.to == g.goal_i) goal_indeg++;
-            PATH_LOG_INFO("[LazySP] build src=%d(mesh=0x%llX out=%d) dst=%d(mesh=0x%llX in=%d) nodes=%d",
+            PATH_LOG_INFO("[LazySP] 构建 src=%d(网格=0x%llX 出度=%d) dst=%d(网格=0x%llX 入度=%d) 节点=%d",
                 (int)src, (unsigned long long)g.nodes[g.start_i].mesh, (int)g.adj[g.start_i].size(),
                 (int)dst, (unsigned long long)g.nodes[g.goal_i].mesh, goal_indeg, (int)g.nodes.size());
         }
@@ -1574,17 +1568,17 @@ namespace {
         for (int iter = 0; iter < MAX_LAZYSP_ITERS && !pending_terminate; iter++) {
             std::vector<std::pair<int, int>> path_edges;
             if (!DijkstraPath(g, g.start_i, g.goal_i, path_edges)) {
-                PATH_LOG_INFO("[LazySP] src=%d dst=%d FAIL: no path (iter %d)", (int)src, (int)dst, iter);
+                PATH_LOG_INFO("[LazySP] src=%d dst=%d 失败：无路径（迭代 %d）", (int)src, (int)dst, iter);
                 return {};
             }
-            // Refine the first unevaluated intra-edge on the path.
+            // 细化路径上第一个未评估的地图内边。
             int refine_from = -1, refine_ei = -1;
             for (const auto& [u, ei] : path_edges) {
                 const PGEdge& e = g.adj[u][ei];
                 if (e.intra && !e.evaluated) { refine_from = u; refine_ei = ei; break; }
             }
             if (refine_from < 0) {
-                // All intra-edges real → optimal. Emit a MapID per portal crossing.
+                // 所有地图内边都是真实的 → 最优。每次传送门穿越发射一个 MapID。
                 std::vector<GW::Constants::MapID> route{src};
                 for (const auto& [u, ei] : path_edges) {
                     const PGEdge& e = g.adj[u][ei];
@@ -1594,12 +1588,12 @@ namespace {
                     }
                 }
                 if (route.empty() || route.back() != dst) route.push_back(dst);
-                PATH_LOG_INFO("[LazySP] src=%d dst=%d OK: %d maps (%d iters)", (int)src, (int)dst, (int)route.size(), iter);
+                PATH_LOG_INFO("[LazySP] src=%d dst=%d 成功：%d 个地图（%d 次迭代）", (int)src, (int)dst, (int)route.size(), iter);
                 return route;
             }
             RefineIntraEdge(g, refine_from, refine_ei);
         }
-        PATH_LOG_INFO("[LazySP] src=%d dst=%d FAIL: iter cap", (int)src, (int)dst);
+        PATH_LOG_INFO("[LazySP] src=%d dst=%d 失败：迭代上限", (int)src, (int)dst);
         return {};
     }
 
@@ -1637,7 +1631,7 @@ namespace {
 
                     auto* line = Minimap::Instance().custom_renderer.AddCustomLine(ga, gb);
                     line->map = cur_map;
-                    line->color = 0x40FFFF00; // yellow, transparent
+                    line->color = 0x40FFFF00; // 黄色，透明
                     line->draw_on_mission_map = true;
                     line->draw_on_minimap = false;
                     line->created_by_toolbox = true;
@@ -1650,11 +1644,11 @@ namespace {
 
     const CachedMapInfo* GetCachedMapInfo(GW::Constants::MapID map_id)
     {
-        // Direct match by MapID
+        // 按 MapID 直接匹配
         for (const auto& [hash, info] : cached_map_info) {
             if (info.map_id == map_id) return &info;
         }
-        // Fallback: match by shared file_hash (outpost/explorable pairs share same data)
+        // 回退：按共享 file_hash 匹配（前哨站/可探索对共享相同数据）
         uint32_t fh = GetMapFileId(map_id);
         if (fh) {
             for (const auto& [hash, info] : cached_map_info) {
@@ -1664,7 +1658,7 @@ namespace {
         return nullptr;
     }
 
-    // True for outpost/city-type maps (not explorables); their small footprint inside shared bounds means inherited portals may be far off.
+    // 判断前哨站/城市类型地图（非可探索）；它们在共享边界内的小足迹意味着继承的传送门可能相距甚远。
     bool IsOutpostMap(GW::Constants::MapID map_id)
     {
         const auto* area = GW::Map::GetMapInfo(map_id);
@@ -1682,23 +1676,23 @@ namespace {
         }
     }
 
-    // Maximum world map distance from outpost icon to consider a portal valid (~24000 game units)
+    // 从前哨站图标到传送门的最大世界地图距离，以认为传送门有效（约 24000 游戏单位）
     constexpr float OUTPOST_PORTAL_MAX_WM_DIST = 250.f;
 
-    // Returns true if portal_wm is too far from the outpost icon to be reachable.
-    // Only filters when map_id is an outpost. Returns false otherwise.
+    // 如果 portal_wm 距前哨站图标太远以至于无法到达，则返回 true。
+    // 仅当 map_id 是前哨站时过滤。否则返回 false。
     bool IsPortalTooFarFromOutpost(GW::Constants::MapID map_id, const GW::Vec2f& portal_wm)
     {
         if (!IsOutpostMap(map_id)) return false;
         const auto* area = GW::Map::GetMapInfo(map_id);
-        if (!area || (!area->x && !area->y)) return false; // no icon position
+        if (!area || (!area->x && !area->y)) return false; // 无图标位置
         float dx = portal_wm.x - (float)area->x;
         float dy = portal_wm.y - (float)area->y;
         return (dx * dx + dy * dy) > (OUTPOST_PORTAL_MAX_WM_DIST * OUTPOST_PORTAL_MAX_WM_DIST);
     }
 
 
-    // Find all portal pairs between two adjacent maps, constrained to the overlap region.
+    // 查找两个相邻地图之间的所有传送门对，限制在重叠区域内。
     std::vector<PortalPair> FindPortalPairs(GW::Constants::MapID map_a, GW::Constants::MapID map_b)
     {
         std::vector<PortalPair> pairs;
@@ -1706,7 +1700,7 @@ namespace {
         const auto* info_b = GetCachedMapInfo(map_b);
         if (!info_a || !info_b) return pairs;
 
-        // Compute overlap region in world map coords
+        // 计算世界地图坐标中的重叠区域
         auto* area_a = GW::Map::GetMapInfo(map_a);
         auto* area_b = GW::Map::GetMapInfo(map_b);
         if (!area_a || !area_b) return pairs;
@@ -1714,17 +1708,17 @@ namespace {
         if (!GW::Map::GetMapWorldMapBounds(area_a, &wm_a)) return pairs;
         if (!GW::Map::GetMapWorldMapBounds(area_b, &wm_b)) return pairs;
 
-        constexpr float overlap_margin = 50.f; // expand overlap region slightly
+        constexpr float overlap_margin = 50.f; // 稍微扩大重叠区域
         ImRect overlap(std::max(wm_a.Min.x, wm_b.Min.x) - overlap_margin, std::max(wm_a.Min.y, wm_b.Min.y) - overlap_margin, std::min(wm_a.Max.x, wm_b.Max.x) + overlap_margin, std::min(wm_a.Max.y, wm_b.Max.y) + overlap_margin);
 
-        constexpr float max_pair_dist = 100.f; // world map units
+        constexpr float max_pair_dist = 100.f; // 世界地图单位
 
         for (const auto& pa : info_a->portal_props) {
             GW::Vec2f wm_pa;
             if (!WorldMapWidget::GamePosToWorldMap({pa.pos.x, pa.pos.y, 0}, wm_pa, map_a)) continue;
-            // Only consider portals near the overlap region
+            // 仅考虑靠近重叠区域的传送门
             if (!overlap.Contains({wm_pa.x, wm_pa.y})) continue;
-            // Outpost filter: portal must be near the outpost icon if map_a is an outpost
+            // 前哨站过滤：如果 map_a 是前哨站，传送门必须靠近前哨站图标
             if (IsPortalTooFarFromOutpost(map_a, wm_pa)) continue;
 
             for (const auto& pb : info_b->portal_props) {
@@ -1743,26 +1737,26 @@ namespace {
         return pairs;
     }
 
-    // Pick the best portal pair for a segment by proximity to start/goal. Priority: manual connections, auto pairs, then boundary fallback.
+    // 通过接近起点/终点来为段选择最佳传送门对。优先级：手动连接 > 自动对 > 边界回退。
     bool FindBestPortalPair(GW::Constants::MapID map_a, GW::Constants::MapID map_b, const GW::Vec2f& hint_wm_pos, GW::GamePos& portal_a_out, GW::GamePos& portal_b_out, const GW::GamePos* start_game = nullptr, const GW::GamePos* goal_game = nullptr)
     {
-        // Collect candidate pairs (manual + auto), then score by game-coord distance when start/goal are known, else by world-map hint.
+        // 收集候选对（手动 + 自动），然后在已知起点/终点时按游戏坐标距离评分，否则按世界地图提示评分。
         struct Candidate {
             GW::GamePos pos_a, pos_b;
-            GW::Vec2f wm_pos; // world map position for hint-based scoring
+            GW::Vec2f wm_pos; // 用于提示评分的世界地图位置
             const char* source;
         };
         std::vector<Candidate> candidates;
 
-        // 1) Manual portal connections
+        // 1) 手动传送门连接
         {
             uint32_t fh_a = GetMapFileId(map_a);
             uint32_t fh_b = GetMapFileId(map_b);
-            // A connection authored on any map sharing `target`'s file id applies to `target` — they are one
-            // physical mesh, so the portal is reachable by walking. This INCLUDES an outpost sibling (e.g. the
-            // 77->210 portal usable from Altrumm Ruins 272, which shares file 0x25e13 with House zu Heltzer 77):
-            // unlike the routing-cost graph, here the per-segment A* verifies actual reachability and reroutes
-            // if the portal turns out to be unreachable, so allowing it can't create a phantom shortcut.
+            // 在与 `target` 共享文件 ID 的任何地图上创作的连接都适用于 `target` — 它们是同一个
+            // 物理网格，因此传送门可以通过行走到达。这包括前哨站兄弟（例如 77→210 传送门可从
+            // Altrumm Ruins 272 使用，其与 House zu Heltzer 77 共享文件 0x25e13）：
+            // 与路由成本图不同，这里的每段 A* 会验证实际可达性，并在传送门确实无法到达时重新路由，
+            // 因此允许它不会产生幻影捷径。
             auto maps_match = [](GW::Constants::MapID mid, GW::Constants::MapID target, uint32_t target_fh) {
                 if (mid == target) return true;
                 return target_fh && GetMapFileId(mid) == target_fh;
@@ -1776,30 +1770,30 @@ namespace {
                 c.pos_a = fwd ? GW::GamePos{conn.from_pos.x, conn.from_pos.y, 0} : GW::GamePos{conn.to_pos.x, conn.to_pos.y, 0};
                 c.pos_b = fwd ? GW::GamePos{conn.to_pos.x, conn.to_pos.y, 0} : GW::GamePos{conn.from_pos.x, conn.from_pos.y, 0};
                 c.wm_pos = fwd ? conn.from_wm_pos : conn.to_wm_pos;
-                c.source = "Manual";
+                c.source = "手动";
                 candidates.push_back(c);
             }
         }
 
-        // 2) Automatic portal prop pairs (only if no manual connections found)
+        // 2) 自动传送门属性对（仅当未找到手动连接时）
         if (candidates.empty()) {
             auto pairs = FindPortalPairs(map_a, map_b);
             for (const auto& p : pairs) {
-                candidates.push_back({p.pos_a, p.pos_b, p.wm_mid, "Portal"});
+                candidates.push_back({p.pos_a, p.pos_b, p.wm_mid, "传送门"});
             }
         }
 
-        // Score and pick the best candidate
+        // 评分并选择最佳候选
         if (!candidates.empty()) {
             if (start_game || goal_game) {
-                // Score by actual AStar cost; penalize failures heavily (an unreachable portal must not beat a reachable one).
+                // 按实际 AStar 成本评分；对失败施加严厉惩罚（不可到达的传送门绝不能击败可到达的）。
                 constexpr float FAIL_PENALTY = 1e9f;
                 float best_score = std::numeric_limits<float>::infinity();
                 const Candidate* best = nullptr;
                 for (const auto& c : candidates) {
                     float cost_a = 0.f, cost_b = 0.f;
-                    const char* method_a = "none";
-                    const char* method_b = "none";
+                    const char* method_a = "无";
+                    const char* method_b = "无";
 
                     if (start_game) {
                         auto* mp = (map_a == GW::Map::GetMapID()) ? GetMilepathForCurrentMap() : GetMilepathForMap(map_a);
@@ -1812,12 +1806,12 @@ namespace {
                             }
                             else {
                                 cost_a = FAIL_PENALTY + GW::GetDistance(*start_game, c.pos_a);
-                                method_a = "FAIL";
+                                method_a = "失败";
                             }
                         }
                         else {
                             cost_a = GW::GetDistance(*start_game, c.pos_a);
-                            method_a = "line(nomp)";
+                            method_a = "直线(无网格)";
                         }
                     }
                     if (goal_game) {
@@ -1831,16 +1825,16 @@ namespace {
                             }
                             else {
                                 cost_b = FAIL_PENALTY + GW::GetDistance(c.pos_b, *goal_game);
-                                method_b = "FAIL";
+                                method_b = "失败";
                             }
                         }
                         else {
                             cost_b = GW::GetDistance(c.pos_b, *goal_game);
-                            method_b = "line(nomp)";
+                            method_b = "直线(无网格)";
                         }
                     }
                     float cost = cost_a + cost_b;
-                    PATH_LOG_INFO("  [%s] a=(%.0f,%.0f) b=(%.0f,%.0f) cost_a=%.0f(%s) cost_b=%.0f(%s) total=%.0f", c.source, c.pos_a.x, c.pos_a.y, c.pos_b.x, c.pos_b.y, cost_a, method_a, cost_b, method_b, cost);
+                    PATH_LOG_INFO("  [%s] a=(%.0f,%.0f) b=(%.0f,%.0f) cost_a=%.0f(%s) cost_b=%.0f(%s) 总计=%.0f", c.source, c.pos_a.x, c.pos_a.y, c.pos_b.x, c.pos_b.y, cost_a, method_a, cost_b, method_b, cost);
                     if (cost < best_score) {
                         best_score = cost;
                         best = &c;
@@ -1849,12 +1843,12 @@ namespace {
                 if (best) {
                     portal_a_out = best->pos_a;
                     portal_b_out = best->pos_b;
-                    PATH_LOG_INFO("%s winner: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) [%d candidates, cost=%.0f]", best->source, (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, (int)candidates.size(), best_score);
+                    PATH_LOG_INFO("%s 胜出：地图 %d (%.0f,%.0f) -- 地图 %d (%.0f,%.0f) [%d 个候选，cost=%.0f]", best->source, (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, (int)candidates.size(), best_score);
                     return true;
                 }
             }
             else {
-                // World map hint scoring (fallback when no game positions available)
+                // 世界地图提示评分（当没有游戏位置可用时的回退）
                 float best_score = std::numeric_limits<float>::infinity();
                 const Candidate* best = nullptr;
                 for (const auto& c : candidates) {
@@ -1869,14 +1863,14 @@ namespace {
                     portal_a_out = best->pos_a;
                     portal_b_out = best->pos_b;
                     PATH_LOG_INFO(
-                        "%s connection: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) [%d candidates, wm_score=%.0f]", best->source, (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, (int)candidates.size(), best_score
+                        "%s 连接：地图 %d (%.0f,%.0f) -- 地图 %d (%.0f,%.0f) [%d 个候选，wm_score=%.0f]", best->source, (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, (int)candidates.size(), best_score
                     );
                     return true;
                 }
             }
         }
 
-        // 3) Fallback: use center of world map bounds overlap as transition point
+        // 3) 回退：使用世界地图边界重叠中心作为过渡点
         auto* area_a = GW::Map::GetMapInfo(map_a);
         auto* area_b = GW::Map::GetMapInfo(map_b);
         if (!area_a || !area_b) return false;
@@ -1885,20 +1879,20 @@ namespace {
         if (!GW::Map::GetMapWorldMapBounds(area_a, &wm_a)) return false;
         if (!GW::Map::GetMapWorldMapBounds(area_b, &wm_b)) return false;
 
-        // Overlap center in world map coords
+        // 世界地图坐标中的重叠中心
         ImRect overlap(std::max(wm_a.Min.x, wm_b.Min.x), std::max(wm_a.Min.y, wm_b.Min.y), std::min(wm_a.Max.x, wm_b.Max.x), std::min(wm_a.Max.y, wm_b.Max.y));
         GW::Vec2f wm_center = {overlap.GetCenter().x, overlap.GetCenter().y};
 
-        // Convert to each map's game coords (fall back to the current map if unknown)
+        // 转换到每个地图的游戏坐标（如果未知则回退到当前地图）
         if (!WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out, map_a)) WorldMapWidget::WorldMapToGamePos(wm_center, portal_a_out);
         if (!WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out, map_b)) WorldMapWidget::WorldMapToGamePos(wm_center, portal_b_out);
 
-        PATH_LOG_INFO("Boundary fallback: map %d (%.0f,%.0f) -- map %d (%.0f,%.0f) wm=(%.0f,%.0f)", (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, wm_center.x, wm_center.y);
+        PATH_LOG_INFO("边界回退：地图 %d (%.0f,%.0f) -- 地图 %d (%.0f,%.0f) wm=(%.0f,%.0f)", (int)map_a, portal_a_out.x, portal_a_out.y, (int)map_b, portal_b_out.x, portal_b_out.y, wm_center.x, wm_center.y);
         return true;
     }
 
-    // Run AStar on a specific map between two game-coord positions
-    // Returns the path points in that map's coordinate system
+    // 在特定地图上运行 AStar，在两个游戏坐标位置之间
+    // 返回该地图坐标系中的路径点
     bool RunAStarOnMap(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::GamePos>& path_out)
     {
         Pathing::MilePath* mp = nullptr;
@@ -1909,7 +1903,7 @@ namespace {
             mp = GetMilepathForMap(map_id);
         }
         if (!mp) {
-            PATH_LOG_ERROR("[AStar] map %d FAILED: GetMilepath returned null", (int)map_id);
+            PATH_LOG_ERROR("[AStar] 地图 %d 失败：GetMilepath 返回空", (int)map_id);
             return false;
         }
 
@@ -1917,11 +1911,11 @@ namespace {
             Sleep(100);
         }
         if (pending_terminate) {
-            PATH_LOG_INFO("[AStar] map %d aborted: pending_terminate", (int)map_id);
+            PATH_LOG_INFO("[AStar] 地图 %d 中止：pending_terminate", (int)map_id);
             return false;
         }
         if (mp->build_failed()) {
-            PATH_LOG_ERROR("[AStar] map %d FAILED: MilePath build OOM'd", (int)map_id);
+            PATH_LOG_ERROR("[AStar] 地图 %d 失败：MilePath 构建内存不足", (int)map_id);
             return false;
         }
 
@@ -1929,18 +1923,18 @@ namespace {
         auto res = astr.Search(from, to);
         if (res == Pathing::Error::OK && astr.m_path.ready()) {
             path_out = astr.m_path.points();
-            PATH_LOG_INFO("[AStar] map %d OK, cost=%.0f, points=%d", (int)map_id, astr.m_path.cost(), (int)path_out.size());
+            PATH_LOG_INFO("[AStar] 地图 %d 成功，cost=%.0f，点=%d", (int)map_id, astr.m_path.cost(), (int)path_out.size());
             return true;
         }
 
-        // Portal endpoints lie on the navmesh, so a failed search means the two points aren't walk-connected on
-        // this mesh (e.g. gated/isolated regions sharing a file id) — an expected ∞ the router uses to route via
-        // the portal instead of walking. Not an error; logged only under PATHING_VERBOSE.
-        PATH_LOG_INFO("[AStar] map %d: no path (points not walk-connected)", (int)map_id);
+        // 传送门端点位于导航网格上，因此搜索失败意味着这两个点在此网格上不是行走连接的
+        //（例如共享文件 ID 的门控/隔离区域）— 这是路由器期望的通过传送门而不是行走来路由的∞。
+        // 不是错误；仅在 PATHING_VERBOSE 下记录。
+        PATH_LOG_INFO("[AStar] 地图 %d：无路径（点未行走连接）", (int)map_id);
         return false;
     }
 
-    // Multi-map pathfinding: run AStar segments connected by portal pairs
+    // 多地图寻路：通过传送门对连接运行 AStar 段
     void RecalculateMultiMapPath(const std::vector<GW::Constants::MapID>& route, const GW::GamePos& start, const GW::GamePos& goal)
     {
         ClearPathLines();
@@ -1948,7 +1942,7 @@ namespace {
         delete astar;
         astar = nullptr;
 
-        // Capture copies for worker thread
+        // 为工作线程捕获副本
         auto route_copy = route;
         auto start_copy = start;
         auto goal_copy = goal;
@@ -1962,74 +1956,74 @@ namespace {
         };
 
         Resources::EnqueueWorkerTask([route_copy, start_copy, goal_copy, start_wm, goal_wm, cur_map] {
-            RouteJobScope job_scope; // defer eviction while we hold MilePath*
-            PathCalcScope calc_scope; // flag a path calculation for the world-map indicator
+            RouteJobScope job_scope; // 在持有 MilePath* 时延迟淘汰
+            PathCalcScope calc_scope; // 为世界地图指示器标记路径计算
             std::vector<GW::GamePos> full_path;
             std::vector<HiddenPathSegment> hidden_segments;
             std::vector<PortalPairDraw> portal_draws;
 
-            // Track the last used portal's world map position for chaining
+            // 追踪最后使用的传送门的世界地图位置以进行链式传递
             GW::Vec2f last_portal_wm = start_wm;
-            GW::GamePos last_seg_end = start_copy; // last known game position (for portal scoring)
+            GW::GamePos last_seg_end = start_copy; // 最后已知的游戏位置（用于传送门评分）
 
             for (size_t seg = 0; seg < route_copy.size(); seg++) {
                 auto map_id = route_copy[seg];
                 GW::GamePos seg_from, seg_to;
 
-                // Determine segment start
+                // 确定段起点
                 if (seg == 0) {
                     seg_from = start_copy;
                 }
                 else {
-                    // Entry portal from previous map — score by distance from last position
+                    // 来自上一地图的入口传送门 — 按距最后位置的距离评分
                     GW::GamePos prev_exit, this_entry;
                     const GW::GamePos* gg = (seg == route_copy.size() - 1) ? &goal_copy : nullptr;
                     if (!FindBestPortalPair(route_copy[seg - 1], map_id, last_portal_wm, prev_exit, this_entry, &last_seg_end, gg)) {
-                        PATH_LOG_ERROR("No portal pair between map %d and %d", (int)route_copy[seg - 1], (int)map_id);
+                        PATH_LOG_ERROR("地图 %d 和 %d 之间无传送门对", (int)route_copy[seg - 1], (int)map_id);
                         return;
                     }
                     seg_from = this_entry;
                     portal_draws.push_back({prev_exit, this_entry, route_copy[seg - 1], map_id});
-                    // Update last_portal_wm to the entry portal's world map position
+                    // 将 last_portal_wm 更新到入口传送门的世界地图位置
                     WorldMapWidget::GamePosToWorldMap(this_entry, last_portal_wm, map_id);
                 }
 
-                // Determine segment end
+                // 确定段终点
                 if (seg == route_copy.size() - 1) {
                     seg_to = goal_copy;
                 }
                 else {
-                    // Exit portal to next map — score by distance from seg_from + to goal
+                    // 到下一地图的出口传送门 — 按距 seg_from + 到目标的距离评分
                     GW::GamePos this_exit, next_entry;
                     GW::Vec2f hint = last_portal_wm;
                     const GW::GamePos* gg = (seg == route_copy.size() - 2) ? &goal_copy : nullptr;
                     if (!FindBestPortalPair(map_id, route_copy[seg + 1], hint, this_exit, next_entry, &seg_from, gg)) {
-                        PATH_LOG_ERROR("No portal pair between map %d and %d", (int)map_id, (int)route_copy[seg + 1]);
+                        PATH_LOG_ERROR("地图 %d 和 %d 之间无传送门对", (int)map_id, (int)route_copy[seg + 1]);
                         return;
                     }
                     seg_to = this_exit;
-                    // Update chain hint to exit portal position
+                    // 将链提示更新到出口传送门位置
                     WorldMapWidget::GamePosToWorldMap(this_exit, last_portal_wm, map_id);
                 }
 
-                PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)", (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
+                PATH_LOG_INFO("段 %d：地图 %d from=(%.0f,%.0f) to=(%.0f,%.0f)", (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
 
                 std::vector<GW::GamePos> seg_path;
                 if (!RunAStarOnMap(map_id, seg_from, seg_to, seg_path)) {
-                    PATH_LOG_ERROR("AStar failed on segment %d (map %d)", (int)seg, (int)map_id);
+                    PATH_LOG_ERROR("AStar 在段 %d（地图 %d）上失败", (int)seg, (int)map_id);
                     return;
                 }
 
-                // Track last position for next portal scoring
+                // 为下一次传送门评分追踪最后位置
                 last_seg_end = seg_to;
 
-                // Hide intermediate segments whose entry AND exit are no_draw (underground maps). Never hide first/last or the current map.
+                // 隐藏入口和出口都是 no_draw 的中间段（地下地图）。从不隐藏第一/最后或当前地图。
                 bool is_first = (seg == 0);
                 bool is_last = (seg + 1 == route_copy.size());
                 bool segment_hidden = !is_first && !is_last && map_id != cur_map && HasNoDrawConnection(route_copy[seg - 1], map_id) && HasNoDrawConnection(map_id, route_copy[seg + 1]);
 
                 if (segment_hidden) {
-                    // Native-coord segment for underground rendering; path-break so the world-map line skips the gap.
+                    // 用于地下渲染的原生坐标段；路径中断使世界地图线跳过间隙。
                     hidden_segments.push_back({seg_path, map_id});
                     if (!full_path.empty() && !IsPathBreak(full_path.back())) {
                         full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE, 0});
@@ -2037,17 +2031,17 @@ namespace {
                     continue;
                 }
 
-                // Path-break between segments: the cross-map portal hop isn't walkable and would draw an off-map connector.
+                // 段间路径中断：跨地图传送门跳转不是可行走的，会绘制离屏连接线。
                 if (!full_path.empty() && !IsPathBreak(full_path.back())) {
                     full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE, 0});
                 }
 
-                // Convert segment to current map coords and append
+                // 将段转换到当前地图坐标并附加
                 auto converted = ConvertPathToCurrentMap(seg_path, map_id);
                 full_path.insert(full_path.end(), converted.begin(), converted.end());
             }
 
-            PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)", (int)full_path.size(), (int)route_copy.size(), (int)hidden_segments.size());
+            PATH_LOG_INFO("多地图路径：%d 个总点，跨越 %d 个地图（%d 个地下隐藏段）", (int)full_path.size(), (int)route_copy.size(), (int)hidden_segments.size());
             Resources::EnqueueMainTask([full_path, hidden_segments, cur_map] {
                 DrawPathAsLines(full_path, cur_map);
                 AddHiddenUndergroundSegmentLines(hidden_segments);
@@ -2055,8 +2049,8 @@ namespace {
         });
     }
 
-    // Blocking pure-computation core (caller owns the worker + RouteJobScope): builds the route's world-coord points (PATH_BREAK
-    // between maps) and hidden underground segments, retrying with edge-blacklisting on AStar failure. False if no route.
+    // 阻塞式纯计算核心（调用者拥有工作线程 + RouteJobScope）：构建路径的世界坐标点（地图间 PATH_BREAK）
+    // 和地下隐藏段，在 AStar 失败时使用边黑名单重试。若无路径则返回 false。
     bool BuildCrossMapRoute(GW::Constants::MapID from_map, GW::Constants::MapID to_map, const GW::GamePos& start, const GW::GamePos& goal, const GW::Vec2f& start_wm, std::vector<GW::Vec2f>& out_points, std::vector<HiddenPathSegment>& out_hidden)
     {
         const auto cur_map = GW::Map::GetMapID();
@@ -2064,8 +2058,8 @@ namespace {
         for (int attempt = 0; attempt <= max_retries; attempt++) {
             auto route = FindMapRoute(from_map, to_map, &start, &goal);
             if (route.empty()) {
-                // Expected for unreachable markers — keep it out of chat (the caller backs off).
-                PATH_LOG_INFO("No map route found from map %d to map %d", (int)from_map, (int)to_map);
+                // 对于不可达标记是预期的 — 将其保持在聊天之外（调用者回退）。
+                PATH_LOG_INFO("从地图 %d 到地图 %d 未找到地图路径", (int)from_map, (int)to_map);
                 blacklisted_edges.clear();
                 return false;
             }
@@ -2073,13 +2067,13 @@ namespace {
             for (auto m : route) {
                 route_str += std::to_string((int)m) + " ";
             }
-            PATH_LOG_INFO("Map route (attempt %d) %d->%d: %s (%d maps)", attempt, (int)from_map, (int)to_map, route_str.c_str(), (int)route.size());
+            PATH_LOG_INFO("地图路径（尝试 %d）%d->%d：%s（%d 个地图）", attempt, (int)from_map, (int)to_map, route_str.c_str(), (int)route.size());
 
             for (auto m : route) {
                 if (m != cur_map) LoadMapFromDAT(m);
             }
 
-            // Points accumulate as world-map coords (the common cross-map space) — never projected into another map's game space.
+            // 点累积为世界地图坐标（公共跨地图空间）— 绝不投影到另一个地图的游戏空间。
             std::vector<GW::Vec2f> full_path;
             std::vector<HiddenPathSegment> hidden_segments;
             GW::Vec2f last_portal_wm = start_wm;
@@ -2097,7 +2091,7 @@ namespace {
                     GW::GamePos prev_exit, this_entry;
                     const GW::GamePos* gg = (seg == route.size() - 1) ? &goal : nullptr;
                     if (!FindBestPortalPair(route[seg - 1], map_id, last_portal_wm, prev_exit, this_entry, &last_seg_end, gg)) {
-                        PATH_LOG_ERROR("No portal pair between map %d and %d", (int)route[seg - 1], (int)map_id);
+                        PATH_LOG_ERROR("地图 %d 和 %d 之间无传送门对", (int)route[seg - 1], (int)map_id);
                         blacklisted_edges.clear();
                         return false;
                     }
@@ -2112,7 +2106,7 @@ namespace {
                     GW::GamePos this_exit, next_entry;
                     const GW::GamePos* gg = (seg == route.size() - 2) ? &goal : nullptr;
                     if (!FindBestPortalPair(map_id, route[seg + 1], last_portal_wm, this_exit, next_entry, &seg_from, gg)) {
-                        PATH_LOG_ERROR("No portal pair between map %d and %d", (int)map_id, (int)route[seg + 1]);
+                        PATH_LOG_ERROR("地图 %d 和 %d 之间无传送门对", (int)map_id, (int)route[seg + 1]);
                         blacklisted_edges.clear();
                         return false;
                     }
@@ -2120,16 +2114,16 @@ namespace {
                     WorldMapWidget::GamePosToWorldMap(this_exit, last_portal_wm, map_id);
                 }
 
-                PATH_LOG_INFO("Segment %d: map %d from=(%.0f,%.0f) to=(%.0f,%.0f)", (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
+                PATH_LOG_INFO("段 %d：地图 %d from=(%.0f,%.0f) to=(%.0f,%.0f)", (int)seg, (int)map_id, seg_from.x, seg_from.y, seg_to.x, seg_to.y);
 
                 std::vector<GW::GamePos> seg_path;
                 if (!RunAStarOnMap(map_id, seg_from, seg_to, seg_path)) {
-                    // Transit map without DAT data (underground/instance): if both entry and exit connections exist, walk it as a straight line.
+                    // 无 DAT 数据的过渡地图（地下/实例）：如果入口和出口连接都存在，则直线行走。
                     bool has_entry = seg == 0 || HasPortalConnectionBetween(route[seg - 1], map_id);
                     bool has_exit = seg + 1 >= route.size() || HasPortalConnectionBetween(map_id, route[seg + 1]);
-                    // Only take the straight-line shortcut for maps that genuinely lack usable pathing data. If the
-                    // map HAS valid data but A* still failed, the chosen portal is physically unreachable (behind a
-                    // wall) — blacklisting + rerouting is correct; drawing a direct line through the wall is the bug.
+                    // 仅对真正缺乏可用寻路数据的地图采用直线捷径。如果地图有有效数据但 A* 仍然失败，
+                    // 则所选传送门物理上无法到达（在墙后）— 黑名单 + 重新路由是正确的；
+                    // 穿过墙壁画直线是错误。
                     auto map_has_pathing_data = [&](GW::Constants::MapID m) -> bool {
                         Pathing::MilePath* mp = (m == GW::Map::GetMapID()) ? GetMilepathForCurrentMap() : GetMilepathForMap(m);
                         if (!mp || !mp->ready() || mp->build_failed()) return false;
@@ -2137,11 +2131,11 @@ namespace {
                         return d && d->IsValid();
                     };
                     if (has_entry && has_exit && !map_has_pathing_data(map_id)) {
-                        PATH_LOG_INFO("AStar unavailable on map %d (no pathing data), using direct transition", (int)map_id);
+                        PATH_LOG_INFO("地图 %d 上 AStar 不可用（无寻路数据），使用直线过渡", (int)map_id);
                         seg_path = {seg_from, seg_to};
                     }
                     else {
-                        // Blacklist this map's entry/exit edges and retry. Resolve to graph representatives — Dijkstra works on graph nodes.
+                        // 黑名单此地图的入口/出口边并重试。解析为图代表 — Dijkstra 在图节点上工作。
                         auto resolve_graph = [](GW::Constants::MapID m) -> GW::Constants::MapID {
                             for (const auto& n : map_graph_nodes) {
                                 if (n.map_id == m) return m;
@@ -2157,7 +2151,7 @@ namespace {
                         auto map_g = resolve_graph(map_id);
                         if (seg > 0) {
                             auto prev_g = resolve_graph(route[seg - 1]);
-                            PATH_LOG_INFO("AStar failed on map %d, blacklisting edge %d->%d (graph %d->%d)", (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
+                            PATH_LOG_INFO("AStar 在地图 %d 上失败，黑名单边 %d->%d（图 %d->%d）", (int)map_id, (int)route[seg - 1], (int)map_id, (int)prev_g, (int)map_g);
                             blacklisted_edges.insert(EdgeKey(prev_g, map_g));
                             blacklisted_edges.insert(EdgeKey(map_g, prev_g));
                         }
@@ -2173,11 +2167,10 @@ namespace {
 
                 last_seg_end = seg_to;
 
-                // A segment is hidden (drawn only in native/in-world coords) exactly when its map is NOT on the
-                // world map — i.e. its points can't be projected to world-map coords at all (underground dungeon
-                // depths like Beneath Lion's Arch 691 / Bogroot L2 616). Maps that ARE on the world map — including
-                // hubs reached via no_draw asura gates (Boreal Station 675) and dungeon L1 entrances — draw on the
-                // world map. (no_draw still governs the connection LINE elsewhere, not the path segment here.)
+                // 当且仅当地图不在世界地图上时，段是隐藏的（仅在原生/世界坐标中绘制）—
+                // 即它的点根本无法投影到世界地图坐标（地下城深处，如 Lion's Arch 地下 691 / Bogroot L2 616）。
+                // 在世界地图上的地图 — 包括通过 no_draw 阿苏拉传送门到达的枢纽（Boreal Station 675）
+                // 和地城 L1 入口 — 在世界地图上绘制。（no_draw 仍然控制连接线，不控制此处的路径段。）
                 const bool is_first_seg = (seg == 0);
                 const bool is_last_seg = (seg + 1 == route.size());
                 const auto* seg_area = GW::Map::GetMapInfo(map_id);
@@ -2185,7 +2178,7 @@ namespace {
                 const bool segment_hidden = !is_first_seg && !is_last_seg && map_id != cur_map && seg_owm == 0;
 
                 if (segment_hidden) {
-                    // Record native-coord segment for underground-terrain / mission-map rendering.
+                    // 记录用于地下地形 / 任务地图渲染的原生坐标段。
                     hidden_segments.push_back({seg_path, map_id});
                     if (!full_path.empty() && !IsPathBreak(full_path.back())) {
                         full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE});
@@ -2193,7 +2186,7 @@ namespace {
                     continue;
                 }
 
-                // Path-break between segments — the cross-map portal hop isn't walkable in any single coord space.
+                // 段间路径中断 — 跨地图传送门跳转在任何单一坐标空间中都不是可行走的。
                 if (!full_path.empty() && !IsPathBreak(full_path.back())) {
                     full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE});
                 }
@@ -2202,7 +2195,7 @@ namespace {
             }
 
             if (!failed) {
-                PATH_LOG_INFO("Multi-map path: %d total points across %d maps (%d hidden underground segments)", (int)full_path.size(), (int)route.size(), (int)hidden_segments.size());
+                PATH_LOG_INFO("多地图路径：%d 个总点，跨越 %d 个地图（%d 个地下隐藏段）", (int)full_path.size(), (int)route.size(), (int)hidden_segments.size());
                 out_points = std::move(full_path);
                 out_hidden = std::move(hidden_segments);
                 blacklisted_edges.clear();
@@ -2210,25 +2203,25 @@ namespace {
             }
 
             if (attempt == max_retries) {
-                PATH_LOG_ERROR("All %d route attempts failed from map %d to map %d", max_retries + 1, (int)from_map, (int)to_map);
+                PATH_LOG_ERROR("从地图 %d 到地图 %d 的所有 %d 次路径尝试均失败", max_retries + 1, (int)from_map, (int)to_map);
             }
         }
         blacklisted_edges.clear();
         return false;
     }
 
-    // Resolve an ambiguous goal world-pos by trying each candidate destination map (ranked best-first) until one yields a
-    // real route. Overlapping bounds mean a single resolve can commit to a map with no path; enumerating recovers the
-    // interpretation that actually connects. Writes the winning map to `out_to_map` if provided.
+    // 通过按优先级顺序尝试每个候选目标地图（最佳优先）来解析模糊的目标世界位置，直到一个产生真实路径。
+    // 重叠边界意味着单次解析可能提交到无路径的地图；枚举可恢复实际连接的解释。
+    // 如果提供了 out_to_map，则将获胜地图写入其中。
     bool BuildCrossMapRouteResolvingDst(GW::Constants::MapID from_map, const GW::GamePos& start, const GW::Vec2f& start_wm, const GW::Vec2f& to_world, std::vector<GW::Vec2f>& out_points, std::vector<HiddenPathSegment>& out_hidden, GW::Constants::MapID* out_to_map = nullptr)
     {
         std::vector<GW::Constants::MapID> candidates;
-        // Same-map preference: if the goal falls inside from_map's own bounds, route there first (avoids an overlap detour).
+        // 同地图偏好：如果目标落在 from_map 的边界内，则优先路由到那里（避免重叠绕行）。
         if (PathfindingWindow::IsWorldPosOnMap(to_world, from_map)) candidates.push_back(from_map);
         for (auto m : RankCandidateMapsForWorldPos(to_world, from_map)) {
             if (std::find(candidates.begin(), candidates.end(), m) == candidates.end()) candidates.push_back(m);
         }
-        // Legacy single resolve as a last resort so behaviour never regresses when ranking finds nothing.
+        // 当排名未找到任何结果时，作为最后手段保留旧有的单次解析，以免行为退化。
         if (candidates.empty()) {
             const auto m = WorldMapWidget::GetMapIdForLocation(to_world);
             if (m != GW::Constants::MapID::None) candidates.push_back(m);
@@ -2239,20 +2232,19 @@ namespace {
             if (!GetCachedMapInfo(to_map)) LoadMapFromDAT(to_map);
             GW::GamePos goal;
             if (!WorldMapWidget::WorldMapToGamePos(to_world, goal, to_map)) continue;
-            // A marker on an overlap seam can project a few units outside this map's playable bounds — pull it back in so A* can path.
+            // 重叠接缝上的标记可能投影到该地图可玩边界外几单位 — 将其拉回以便 A* 可以寻路。
             goal = ClampGoalToMapBounds(goal, to_map);
             out_points.clear();
             out_hidden.clear();
 
-            // Same physical map as the source: a plain single-map A*, never the portal machinery (FindMapRoute would
-            // short-circuit to a degenerate self-hop). If it's unreachable — e.g. isolate regions that share a file id but
-            // have no walkable path between them — fall through and route this destination through other maps instead.
+            // 与源地图相同的物理地图：普通的单地图 A*，而非传送门机制（FindMapRoute 会短路为退化的自跳转）。
+            // 如果无法到达 — 例如共享文件 ID 但之间无可行走路径的隔离区域 — 则继续通过其他地图路由此目标。
             if (to_map == from_map) {
                 std::vector<GW::GamePos> leg;
                 if (RunAStarOnMap(from_map, start, goal, leg) && !leg.empty()) {
                     SegmentToWorld(leg, from_map, out_points);
                     if (out_to_map) *out_to_map = from_map;
-                    PATH_LOG_INFO("Resolved dst wm=(%.0f,%.0f) as direct same-map path on %d", to_world.x, to_world.y, (int)from_map);
+                    PATH_LOG_INFO("将 dst wm=(%.0f,%.0f) 解析为 %d 上的直接同地图路径", to_world.x, to_world.y, (int)from_map);
                     return true;
                 }
                 continue;
@@ -2260,7 +2252,7 @@ namespace {
 
             if (BuildCrossMapRoute(from_map, to_map, start, goal, start_wm, out_points, out_hidden) && !out_points.empty()) {
                 if (out_to_map) *out_to_map = to_map;
-                PATH_LOG_INFO("Resolved ambiguous dst wm=(%.0f,%.0f) to map %d (of %d candidates)", to_world.x, to_world.y, (int)to_map, (int)candidates.size());
+                PATH_LOG_INFO("将模糊 dst wm=(%.0f,%.0f) 解析为地图 %d（共 %d 个候选）", to_world.x, to_world.y, (int)to_map, (int)candidates.size());
                 return true;
             }
         }
@@ -2277,12 +2269,12 @@ namespace {
         auto cur_map = GW::Map::GetMapID();
 
         Resources::EnqueueWorkerTask([from_map, to_map, start, goal, start_wm, to_world, cur_map] {
-            std::lock_guard route_lock(route_mutex); // one build at a time; the shared caches + trapezoid pf scratch (nodes/prioq) aren't concurrency-safe
-            RouteJobScope job_scope; // defer eviction while we hold MilePath*
-            PathCalcScope calc_scope; // flag a path calculation for the world-map indicator
+            std::lock_guard route_lock(route_mutex); // 一次一个构建；共享缓存 + 梯形 pf 暂存区（节点/prioq）不是并发安全的
+            RouteJobScope job_scope; // 在持有 MilePath* 时延迟淘汰
+            PathCalcScope calc_scope; // 为世界地图指示器标记路径计算
             std::vector<GW::Vec2f> full_path;
             std::vector<HiddenPathSegment> hidden_segments;
-            // With a destination world-pos, resolve overlapping-bounds ambiguity by trying ranked candidate maps; else keep the fixed to_map.
+            // 有了目标世界位置，通过尝试排名候选地图来解决重叠边界歧义；否则保持固定的 to_map。
             const bool have_world = (to_world.x != 0.f || to_world.y != 0.f);
             const bool ok = have_world
                 ? BuildCrossMapRouteResolvingDst(from_map, start, start_wm, to_world, full_path, hidden_segments)
@@ -2290,9 +2282,9 @@ namespace {
             if (!ok) return;
             Resources::EnqueueMainTask([full_path, cur_map] {
                 ClearPathLines();
-                // Mirror QuestModule: current-map segments draw in game coords (compass + mission map);
-                // off-map segments stay world coords so the renderer projects them across the whole
-                // mission map + world map. Both flavours enable minimap + mission-map drawing.
+                // 镜像 QuestModule：当前地图段以游戏坐标绘制（指南针 + 任务地图）；
+                // 地图外段保持世界坐标，以便渲染器在整个任务地图 + 世界地图上投影它们。
+                // 两种风格都启用小地图 + 任务地图绘制。
                 const auto* cur_info = GetCachedMapInfo(cur_map);
                 auto in_bounds = [&](const GW::GamePos& g) {
                     return cur_info && g.x >= cur_info->bounds_min.x && g.x <= cur_info->bounds_max.x &&
@@ -2328,14 +2320,14 @@ namespace {
         ClearPathLines();
         delete astar;
         astar = nullptr;
-        // Use path_from_map if both are on the same map, otherwise current map
+        // 如果两者在同一地图上则使用 path_from_map，否则使用当前地图
         auto target_map = GW::Map::GetMapID();
         if (path_from_map != GW::Constants::MapID::None && path_from_map == path_to_map) target_map = path_from_map;
         const auto map_id = target_map;
         Resources::EnqueueWorkerTask([from, to, map_id] {
-            std::lock_guard route_lock(route_mutex); // one build at a time; the shared caches + trapezoid pf scratch (nodes/prioq) aren't concurrency-safe
-            RouteJobScope job_scope; // defer eviction while we hold MilePath*
-            PathCalcScope calc_scope; // flag a path calculation for the world-map indicator
+            std::lock_guard route_lock(route_mutex); // 一次一个构建；共享缓存 + 梯形 pf 暂存区（节点/prioq）不是并发安全的
+            RouteJobScope job_scope; // 在持有 MilePath* 时延迟淘汰
+            PathCalcScope calc_scope; // 为世界地图指示器标记路径计算
             Pathing::MilePath* milepath = nullptr;
             if (map_id == GW::Map::GetMapID()) {
                 milepath = GetMilepathForCurrentMap();
@@ -2344,17 +2336,17 @@ namespace {
                 milepath = GetMilepathForMap(map_id);
             }
             if (!milepath) {
-                PATH_LOG_ERROR("No milepath for map %d", (int)map_id);
+                PATH_LOG_ERROR("地图 %d 无 milepath", (int)map_id);
                 return;
             }
-            // Wait for vis graph to finish building
+            // 等待可视区图完成构建
             if (!milepath->ready()) {
-                PATH_LOG_INFO("Waiting for map %d vis graph...", (int)map_id);
+                PATH_LOG_INFO("等待地图 %d 可视区图...", (int)map_id);
                 while (!milepath->ready() && !pending_terminate) {
                     Sleep(100);
                 }
                 if (pending_terminate) return;
-                PATH_LOG_INFO("Map %d ready", (int)map_id);
+                PATH_LOG_INFO("地图 %d 就绪", (int)map_id);
             }
             const auto tmpAstar = new Pathing::AStar(milepath);
             const auto res = tmpAstar->Search(from, to);
@@ -2363,25 +2355,25 @@ namespace {
                 return;
             }
             if (res != Pathing::Error::OK) {
-                PATH_LOG_ERROR("Pathing failed; Pathing::Error code %d", res);
+                PATH_LOG_ERROR("寻路失败；Pathing::Error 代码 %d", res);
                 delete tmpAstar;
                 return;
             }
             if (!tmpAstar->m_path.ready()) {
-                PATH_LOG_ERROR("Pathing failed; tmpAstar->m_path not ready");
+                PATH_LOG_ERROR("寻路失败；tmpAstar->m_path 未就绪");
                 delete tmpAstar;
                 return;
             }
             astar = tmpAstar;
-            // Draw path on main thread
-            const auto points = astar->m_path.points(); // copy
+            // 在主线程上绘制路径
+            const auto points = astar->m_path.points(); // 副本
             Resources::EnqueueMainTask([points, map_id] {
                 DrawPathAsLines(points, map_id);
             });
         });
     }
 
-    // MapID → file_hash lookup built from maps_constant_data.h
+    // MapID → file_hash 查找表，从 maps_constant_data.h 构建
     std::unordered_map<GW::Constants::MapID, uint32_t> map_id_to_file_hash;
 
     void BuildMapFileHashLookup()
@@ -2391,29 +2383,29 @@ namespace {
                 if (entry.file_hash && !map_id_to_file_hash.contains(entry.map_id)) map_id_to_file_hash[entry.map_id] = (uint32_t)entry.file_hash;
             }
         }
-        PATH_LOG_INFO("Built map file hash lookup: %d entries", (int)map_id_to_file_hash.size());
+        PATH_LOG_INFO("已构建地图文件哈希查找表：%d 个条目", (int)map_id_to_file_hash.size());
         auto it837 = map_id_to_file_hash.find(GW::Constants::MapID::War_in_Kryta_Talmark_Wilderness);
-        PATH_LOG_INFO("  map 837: %s (0x%X)", it837 != map_id_to_file_hash.end() ? "found" : "NOT FOUND", it837 != map_id_to_file_hash.end() ? it837->second : 0);
+        PATH_LOG_INFO("  地图 837：%s (0x%X)", it837 != map_id_to_file_hash.end() ? "已找到" : "未找到", it837 != map_id_to_file_hash.end() ? it837->second : 0);
         auto it381 = map_id_to_file_hash.find(GW::Constants::MapID::Yohlon_Haven_outpost);
-        PATH_LOG_INFO("  map 381: %s (0x%X)", it381 != map_id_to_file_hash.end() ? "found" : "NOT FOUND", it381 != map_id_to_file_hash.end() ? it381->second : 0);
+        PATH_LOG_INFO("  地图 381：%s (0x%X)", it381 != map_id_to_file_hash.end() ? "已找到" : "未找到", it381 != map_id_to_file_hash.end() ? it381->second : 0);
         int found_381 = 0;
         for (const auto& [fh, entries] : constant_maps_info) {
             for (const auto& e : entries) {
                 if (e.map_id == GW::Constants::MapID::Yohlon_Haven_outpost) {
-                    PATH_LOG_INFO("  constant_maps_info: map=381 file_hash=0x%X outer_key=0x%X", e.file_hash, fh);
+                    PATH_LOG_INFO("  constant_maps_info：地图=381 file_hash=0x%X outer_key=0x%X", e.file_hash, fh);
                     found_381++;
                 }
             }
         }
-        PATH_LOG_INFO("  found 381 in constant_maps_info %d times", found_381);
+        PATH_LOG_INFO("  在 constant_maps_info 中找到 381 %d 次", found_381);
     }
 
-    std::set<uint32_t> file_id_mismatch_warned; // maps already warned about
+    std::set<uint32_t> file_id_mismatch_warned; // 已警告过的地图
 
-    // Maps whose outpost shares the explorable's MapID but loads a different map file (the constant table holds the
-    // explorable file; the outpost's kLoadMapContext file_name doesn't decode, so the runtime override can't catch it).
+    // 前哨站与可探索地图共享 MapID 但加载不同地图文件的地图（常量表保存可探索文件；
+    // 前哨站的 kLoadMapContext file_name 不解码，因此运行时覆盖无法捕获）。
     constexpr std::pair<GW::Constants::MapID, uint32_t> outpost_file_id_overrides[] = {
-        {GW::Constants::MapID::Domain_of_Anguish, 0x3452b}, // outpost = shared torment gate room; explorable = 0x3584f
+        {GW::Constants::MapID::Domain_of_Anguish, 0x3452b}, // 前哨站 = 共享痛苦之门房间；可探索 = 0x3584f
     };
 
     bool IsDualInstanceMap(GW::Constants::MapID map_id)
@@ -2429,15 +2421,15 @@ namespace {
             }
         }
 
-        // Check runtime lookup table (populated from constant_maps_info + StoC packets)
+        // 检查运行时查找表（从 constant_maps_info + StoC 数据包填充）
         auto it = map_id_to_file_hash.find(map_id);
         if (it != map_id_to_file_hash.end()) return it->second;
 
-        // Fall back to AreaInfo
+        // 回退到 AreaInfo
         const auto area_info = GW::Map::GetMapInfo(map_id);
         uint32_t runtime_fid = (area_info && area_info->file_id) ? area_info->file_id : 0;
 
-        // Fall back to constant_maps_info (covers custom/remapped map IDs)
+        // 回退到 constant_maps_info（覆盖自定义/重映射地图 ID）
         uint32_t constant_fid = 0;
         for (const auto& [file_hash, entries] : constant_maps_info) {
             if (!file_hash) continue;
@@ -2450,7 +2442,7 @@ namespace {
             if (constant_fid) break;
         }
 
-        // Warn once per map about runtime/constant file_id discrepancies; skip map 0 (None has no file_id and is looked up routinely).
+        // 对每个地图警告一次运行时/常量 file_id 不匹配；跳过地图 0（None 没有 file_id 且被例行查找）。
         if ((uint32_t)map_id != 0 && !file_id_mismatch_warned.contains((uint32_t)map_id)) {
             if (map_id == GW::Constants::MapID::Shing_Jea_Monastery_outpost) {
                 int found_count = 0;
@@ -2464,21 +2456,21 @@ namespace {
                     }
                 }
                 PATH_LOG_INFO(
-                    "[FileId] map 242 debug: runtime=0x%X constant=0x%X lookup=%s brute=%d(0x%X) total_groups=%d", runtime_fid, constant_fid, map_id_to_file_hash.contains(GW::Constants::MapID::Shing_Jea_Monastery_outpost) ? "in table" : "NOT in table",
+                    "[FileId] 地图 242 调试：runtime=0x%X constant=0x%X 查找=%s 暴力=%d(0x%X) 总组数=%d", runtime_fid, constant_fid, map_id_to_file_hash.contains(GW::Constants::MapID::Shing_Jea_Monastery_outpost) ? "在表中" : "不在表中",
                     found_count, found_fh, (int)constant_maps_info.size()
                 );
             }
             if (runtime_fid && constant_fid && runtime_fid != constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                PATH_LOG_WARNING("[FileId] map %d: runtime=0x%X constant=0x%X MISMATCH", (int)map_id, runtime_fid, constant_fid);
+                PATH_LOG_WARNING("[FileId] 地图 %d：runtime=0x%X constant=0x%X 不匹配", (int)map_id, runtime_fid, constant_fid);
             }
             else if (runtime_fid && !constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                PATH_LOG_WARNING("[FileId] map %d: runtime=0x%X but MISSING from maps_constant_data.h", (int)map_id, runtime_fid);
+                PATH_LOG_WARNING("[FileId] 地图 %d：runtime=0x%X 但 maps_constant_data.h 中缺失", (int)map_id, runtime_fid);
             }
             else if (!runtime_fid && !constant_fid) {
                 file_id_mismatch_warned.insert((uint32_t)map_id);
-                PATH_LOG_WARNING("[FileId] map %d: no file_id from runtime or constant data", (int)map_id);
+                PATH_LOG_WARNING("[FileId] 地图 %d：运行时或常量数据均无 file_id", (int)map_id);
             }
         }
 
@@ -2487,9 +2479,8 @@ namespace {
         return result;
     }
 
-    // Bumped only when a dual-instance map loads (DoA outpost/explorable share id 474): its mesh can change
-    // without the MapID changing, so MapID-keyed overlays must also compare against this. Everywhere else
-    // MapID → mesh caching stays untouched.
+    // 仅在双实例地图加载时递增（DoA 前哨站/可探索共享 ID 474）：其网格可以变化而 MapID 不变，
+    // 因此 MapID 键控的覆盖层也必须与此比较。其他任何地方 MapID→网格缓存保持不变。
     uint32_t map_load_generation = 0;
 
     void OnUIMessage(GW::HookStatus* status, GW::UI::UIMessage message_id, void* wParam, void*)
@@ -2497,7 +2488,7 @@ namespace {
         if (status->blocked) return;
         switch (message_id) {
             case GW::UI::UIMessage::kLoadMapContext: {
-                // Cache MapID → file_id from the packet (discovers maps not in maps_constant_data.h)
+                // 从数据包缓存 MapID → file_id（发现 maps_constant_data.h 中没有的地图）
                 const auto packet = static_cast<GW::UI::UIPacket::kLoadMapContext*>(wParam);
                 if (packet->file_name && *packet->file_name) {
                     const uint32_t fid = ArenaNetFileParser::FileHashToFileId(packet->file_name);
@@ -2505,13 +2496,13 @@ namespace {
                         const auto it = map_id_to_file_hash.find(packet->map_id);
                         if (it == map_id_to_file_hash.end()) {
                             map_id_to_file_hash[packet->map_id] = fid;
-                            // Rebuild graph to include newly discovered map
+                            // 重建图以包含新发现的地图
                             map_graph_built = false;
-                            PATH_LOG_INFO("Discovered map %d file_id=0x%X", (int)packet->map_id, fid);
+                            PATH_LOG_INFO("发现地图 %d file_id=0x%X", (int)packet->map_id, fid);
                         }
                         else if (it->second != fid) {
-                            // The client-loaded file is ground truth; a differing cached id means stale constant data.
-                            PATH_LOG_WARNING("[FileId] map %d: loaded file 0x%X overrides cached 0x%X", (int)packet->map_id, fid, it->second);
+                            // 客户端加载的文件是真实值；不同的缓存 ID 意味着过时的常量数据。
+                            PATH_LOG_WARNING("[FileId] 地图 %d：加载的文件 0x%X 覆盖了缓存的 0x%X", (int)packet->map_id, fid, it->second);
                             it->second = fid;
                             map_graph_built = false;
                         }
@@ -2524,7 +2515,7 @@ namespace {
                     GameWorldRenderer::SetNavmeshWorldMapLines(GW::Constants::MapID::None, {});
                 }
 
-                // Clear all lines on map change to avoid stale renders
+                // 地图切换时清除所有线以避免陈旧渲染
                 ClearBoundsLines();
                 ClearGraphEdgeLines();
                 ClearPortalMarkerLines();
@@ -2553,8 +2544,8 @@ bool PathfindingWindow::IsPathingEnabled()
 
 bool PathfindingWindow::ReadyForPathing()
 {
-    // Never load the DAT here: probe the resident cache and, if missing, kick a background load. Returns false
-    // until that load lands, so callers (e.g. the quest path) simply retry next frame — the game thread never stalls.
+    // 此处绝不加载 DAT：探测驻留缓存，如果缺失则启动后台加载。在加载完成前返回 false，
+    // 因此调用者（如任务路径）只需在下一帧重试 — 游戏线程永不阻塞。
     const auto m = GetResidentMilepathOrPrewarm();
     return m && m->ready();
 }
@@ -2564,21 +2555,21 @@ bool PathfindingWindow::IsCalculatingPath()
     return path_calc_in_flight.load() > 0;
 }
 
-void LoadAndShowMapsAtWorldPos(const GW::Vec2f& wm_pos); // forward decl
+void LoadAndShowMapsAtWorldPos(const GW::Vec2f& wm_pos); // 前向声明
 
-// Editor UI was trimmed in this branch; the pathing API needs no window. Draw renders nothing but must still drain the
-// deferred line-removal queue each frame, else cleared route lines stay on screen. WndProc is a no-op vtable stub.
+// 编辑器 UI 在此分支中已裁剪；寻路 API 不需要窗口。Draw 不渲染任何内容，但必须每帧排空延迟移除队列，
+// 否则清除的路径线会留在屏幕上。WndProc 是无操作虚函数表存根。
 static void UpdateNavmeshOverlay()
 {
     static bool was_on = false;
     static GW::Constants::MapID built_map = GW::Constants::MapID::None;
     static uint32_t built_generation = 0;
     static GW::GamePos last_build_pos{};
-    static std::vector<Pathing::NavMesh::DebugEdge> cached_edges; // whole-map edges, extracted once per map
+    static std::vector<Pathing::NavMesh::DebugEdge> cached_edges; // 每地图提取一次的全地图边
     if (!settings.draw_navmesh_overlay) {
         if (was_on) {
             GameWorldRenderer::ClearNavmeshLines();
-            DeferRemoveLines(navmesh_edge_lines); // drop any lines left by the old per-line path
+            DeferRemoveLines(navmesh_edge_lines); // 丢弃旧的逐线路径留下的任何线
             cached_edges.clear();
             built_map = GW::Constants::MapID::None;
             was_on = false;
@@ -2592,9 +2583,9 @@ static void UpdateNavmeshOverlay()
     const bool map_changed = cur_map != built_map || built_generation != map_load_generation;
     float moved2 = 1e30f;
     if (me && !map_changed) { const float dx = me->pos.x - last_build_pos.x, dy = me->pos.y - last_build_pos.y; moved2 = dx * dx + dy * dy; }
-    if (!map_changed && moved2 < 600.f * 600.f) return; // near set still fresh; nothing to rebuild
+    if (!map_changed && moved2 < 600.f * 600.f) return; // 仍在附近，无需重建
 
-    auto* mp = GetResidentMilepathOrPrewarm(); // Draw runs on the game thread — must not block on a DAT read
+    auto* mp = GetResidentMilepathOrPrewarm(); // Draw 在游戏线程上运行 — 绝不能阻塞 DAT 读取
     if (!mp || !mp->ready()) return;
     auto* nav = mp->GetNavMeshForDebug();
     if (!nav || !nav->IsReady()) {
@@ -2607,23 +2598,23 @@ static void UpdateNavmeshOverlay()
     }
 
     auto edge_color = [](const Pathing::NavMesh::DebugEdge& e) -> unsigned int {
-        const bool hi = e.a.zplane != 0; // edges off the ground plane get the "hi" colour
+        const bool hi = e.a.zplane != 0; // 离开地平面的边使用“高”颜色
         return e.wall ? (hi ? settings.navmesh_wall_color_hi : settings.navmesh_wall_color)
                       : (hi ? settings.navmesh_connection_color_hi : settings.navmesh_connection_color);
     };
 
     if (map_changed) {
         cached_edges.clear();
-        nav->DebugExtractEdges(cached_edges); // extract the whole mesh once; re-cull cheaply on movement
-        // Hand the FULL mesh to the 2D world map (it's flat + cheap there, no draping / no per-move re-cull needed).
+        nav->DebugExtractEdges(cached_edges); // 提取整个网格一次；在移动时重新裁剪成本低廉
+        // 将完整网格交给 2D 世界地图（平坦且低成本，无需每移动重新裁剪）。
         std::vector<GameWorldRenderer::BatchedLine> full;
         full.reserve(cached_edges.size());
         for (const auto& e : cached_edges) full.push_back({e.a, e.b, edge_color(e)});
         GameWorldRenderer::SetNavmeshWorldMapLines(cur_map, std::move(full));
     }
 
-    // In-world: cull to the shared in-world render distance around the player so the batch stays small (drapes fast,
-    // tracks the player) — handed to the renderer as ONE double-buffered batched VB (one draw call, no flicker).
+    // 在游戏世界中：裁剪到玩家周围的共享渲染距离，使批次保持较小（快速悬挂，跟随玩家）
+    // — 作为 ONE 双缓冲批处理 VB（一次绘制调用，无闪烁）交给渲染器。
     const float draw_range = GameWorldRenderer::GetRenderMaxDistance();
     const float range2 = draw_range * draw_range;
     std::vector<GameWorldRenderer::BatchedLine> lines;
@@ -2633,7 +2624,7 @@ static void UpdateNavmeshOverlay()
         lines.push_back({e.a, e.b, edge_color(e)});
     }
     GameWorldRenderer::SetNavmeshLines(cur_map, std::move(lines));
-    if (map_changed) Log::Log("[navmesh] overlay rebuilt: map=%d gen=%u edges=%d", (int)cur_map, map_load_generation, (int)cached_edges.size());
+    if (map_changed) Log::Log("[导航网格] 覆盖层已重建：地图=%d gen=%u 边=%d", (int)cur_map, map_load_generation, (int)cached_edges.size());
     built_map = cur_map;
     built_generation = map_load_generation;
     if (me) last_build_pos = me->pos;
@@ -2644,14 +2635,14 @@ float PathfindingWindow::GetPathRecalcDistance() { return settings.path_recalc_d
 bool PathfindingWindow::DebugDumpNavMeshNear(const GW::GamePos& center, float radius)
 {
     auto* mp = GetResidentMilepathOrPrewarm();
-    if (!mp || !mp->ready()) { Log::Log("[navdump] milepath not ready (retry)"); return false; }
+    if (!mp || !mp->ready()) { Log::Log("[navdump] milepath 未就绪（重试）"); return false; }
     auto* nav = mp->GetNavMeshForDebug();
     if (!nav || !nav->IsReady()) {
         if (!mp->build_failed()) Resources::EnqueueWorkerTask([mp] { mp->EnsureFullBuild(); });
-        Log::Log("[navdump] navmesh building (retry)");
+        Log::Log("[navdump] 导航网格正在构建（重试）");
         return false;
     }
-    Log::Log("[navdump] map=%d", (int)GW::Map::GetMapID());
+    Log::Log("[navdump] 地图=%d", (int)GW::Map::GetMapID());
     nav->DebugDumpNear(center, radius);
     return true;
 }
@@ -2672,9 +2663,9 @@ void PathfindingWindow::Draw(IDirect3DDevice9*)
 
 void PathfindingWindow::DrawSettingsInternal()
 {
-    ImGui::DragFloat("Path recalc distance", &settings.path_recalc_distance, 1.f, 1.f, 1000.f, "%.0f");
+    ImGui::DragFloat("路径重新计算距离", &settings.path_recalc_distance, 1.f, 1.f, 1000.f, "%.0f");
     ImGui::ShowHelp(path_recalc_distance_help);
-    ImGui::Checkbox("Navmesh overlay", &settings.draw_navmesh_overlay);
+    ImGui::Checkbox("导航网格覆盖层", &settings.draw_navmesh_overlay);
     ImGui::ShowHelp(navmesh_overlay_help);
     ImGui::Separator();
     if (settings.draw_navmesh_overlay) {
@@ -2685,15 +2676,15 @@ void PathfindingWindow::DrawSettingsInternal()
                 *argb = (q(c[3]) << 24) | (q(c[0]) << 16) | (q(c[1]) << 8) | q(c[2]);
             }
         };
-        if (ImGui::DragFloat("Terrain sample spacing", &settings.navmesh_sample_spacing, 0.5f, 1.f, 100.f, "%.0f gw")) {
+        if (ImGui::DragFloat("地形采样间距", &settings.navmesh_sample_spacing, 0.5f, 1.f, 100.f, "%.0f 游戏单位")) {
             GameWorldRenderer::SetNavmeshSampleSpacing(settings.navmesh_sample_spacing);
-            GameWorldRenderer::RedrapeNavmesh(); // re-drape live so the change is visible immediately
+            GameWorldRenderer::RedrapeNavmesh(); // 立即重新悬挂，使更改立即可见
         }
         ImGui::ShowHelp(navmesh_sample_spacing_help);
-        color_edit("Wall colour (ground plane)", &settings.navmesh_wall_color);
-        color_edit("Wall colour (other planes)", &settings.navmesh_wall_color_hi);
-        color_edit("Connection colour (ground plane)", &settings.navmesh_connection_color);
-        color_edit("Connection colour (other planes)", &settings.navmesh_connection_color_hi);
+        color_edit("墙颜色（地面层）", &settings.navmesh_wall_color);
+        color_edit("墙颜色（其他平面）", &settings.navmesh_wall_color_hi);
+        color_edit("连接颜色（地面层）", &settings.navmesh_connection_color);
+        color_edit("连接颜色（其他平面）", &settings.navmesh_connection_color_hi);
     }
 }
 
@@ -2730,7 +2721,7 @@ void PathfindingWindow::SignalTerminate()
     ClearPortalPairLines();
     ClearSavedConnectionLines();
     ClearEditorHighlightLines();
-    // Signal all milepaths to stop but don't delete yet (Terminate does that)
+    // 向所有 milepath 发送停止信号，但先不删除（Terminate 会删除）
     for (const auto mile_path : mile_paths_by_coords | std::views::values) {
         mile_path->stopProcessing();
     }
@@ -2754,8 +2745,8 @@ clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::Game
     pending_worker_task = true;
 
     Resources::EnqueueWorkerTask([from, to, callback, args] {
-        RouteJobScope job_scope; // defer eviction while we hold MilePath*
-        // Always fire the callback exactly once; silent-failing leaves the caller's "calculating" flag stuck and the path frozen.
+        RouteJobScope job_scope; // 在持有 MilePath* 时延迟淘汰
+        // 始终精确调用一次回调；静默失败会使调用者的“计算中”标志卡住，路径冻结。
         auto fire_empty = [callback, args] {
             Resources::EnqueueMainTask([callback, args] {
                 std::vector<GW::GamePos> empty_vec = {};
@@ -2771,7 +2762,7 @@ clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::Game
         const auto milepath = GetMilepathForCurrentMap();
         if (!milepath || !milepath->ready()) {
             if (milepath && milepath->build_failed()) {
-                PATH_LOG_ERROR("Pathing failed; MilePath build OOM'd, visgraph unavailable");
+                PATH_LOG_ERROR("寻路失败；MilePath 构建内存不足，可视区图不可用");
             }
             fire_empty();
             pending_worker_task = false;
@@ -2781,19 +2772,19 @@ clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::Game
         auto astr = Pathing::AStar(milepath);
         const auto res = astr.Search(from, to);
         if (res == Pathing::Error::FailedToFinializePath) {
-            // Path route is blocked; this is a valid result.
+            // 路径被阻挡；这是有效结果。
             fire_empty();
             pending_worker_task = false;
             return;
         }
         if (res != Pathing::Error::OK) {
-            PATH_LOG_ERROR("Pathing failed; Pathing::Error code %d", res);
+            PATH_LOG_ERROR("寻路失败；Pathing::Error 代码 %d", res);
             fire_empty();
             pending_worker_task = false;
             return;
         }
         if (!astr.m_path.ready()) {
-            Log::Log("Pathing failed; astar.m_path not ready");
+            Log::Log("寻路失败；astar.m_path 未就绪");
             fire_empty();
             pending_worker_task = false;
             return;
@@ -2818,7 +2809,7 @@ clock_t PathfindingWindow::CalculatePath(const GW::GamePos& from, const GW::Game
 void PathfindingWindow::Terminate()
 {
     ToolboxModule::Terminate();
-    // Workers are already stopped/joined, so each `delete mp` is pure allocator work; parallelize since the Debug allocator is slow serially.
+    // 工作线程已停止/加入，因此每次 `delete mp` 纯粹是分配器工作；由于调试分配器在串行下较慢，并行化删除。
     if (!mile_paths_by_coords.empty()) {
         std::vector<std::thread> deletes;
         deletes.reserve(mile_paths_by_coords.size());
@@ -2837,7 +2828,7 @@ void PathfindingWindow::Terminate()
         lru_pos.clear();
         route_jobs_active = 0;
     }
-    path_calc_in_flight = 0; // force-clear the indicator on shutdown (mirrors route_jobs_active above)
+    path_calc_in_flight = 0; // 强制清除指示器（镜像上面的 route_jobs_active）
     cached_map_info.clear();
     portal_props_cache.clear();
     map_graph_nodes.clear();
@@ -2887,9 +2878,9 @@ bool PathfindingWindow::GetNextPortalToward(GW::Constants::MapID from_map, const
 {
     if (from_map == GW::Constants::MapID::None || to_map == GW::Constants::MapID::None) return false;
     if (from_map == to_map) return false;
-    // Same physical file usually means the same walkable space (outpost ↔ explorable variant) — just walk,
-    // no portal. But when the JSON authors a portal between these two MapIDs (e.g. Nahpui 216↔265, whose
-    // sub-regions are gated and only reachable via the portal), the crossing IS required, so fall through.
+    // 相同物理文件通常意味着相同的可行走空间（前哨站 ↔ 可探索变体）— 直接行走，无需传送门。
+    // 但当 JSON 在这两个 MapID 之间创作了传送门（例如 Nahpui 216↔265，其子区域是门控的，只能通过传送门到达）时，
+    // 穿越是必需的，因此继续执行。
     const uint32_t fh_from = GetMapFileId(from_map);
     const uint32_t fh_to = GetMapFileId(to_map);
     if (fh_from && fh_from == fh_to &&
@@ -2898,7 +2889,7 @@ bool PathfindingWindow::GetNextPortalToward(GW::Constants::MapID from_map, const
         return false;
     }
 
-    // Resolve goal world pos → game pos in target map (force-load DAT if needed).
+    // 解析目标世界位置 → 目标地图中的游戏位置（需要时强制加载 DAT）。
     if (!GetCachedMapInfo(to_map)) LoadMapFromDAT(to_map);
     GW::GamePos goal_game{};
     const bool have_goal = WorldMapWidget::WorldMapToGamePos(goal_world_pos, goal_game, to_map);
@@ -2919,7 +2910,7 @@ bool PathfindingWindow::GetNextPortalToward(GW::Constants::MapID from_map, const
 }
 
 namespace {
-    // Blocking. Full cross-map route between two world-map positions into `out` (world coords, PATH_BREAK between maps). False on failure.
+    // 阻塞式。两个世界地图位置之间的完整跨地图路径到 `out`（世界坐标，地图间 PATH_BREAK）。失败时返回 false。
     bool ComputeRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>& out)
     {
         out.clear();
@@ -2929,13 +2920,13 @@ namespace {
         GW::GamePos start;
         if (!WorldMapWidget::WorldMapToGamePos(from_world, start, from_map)) return false;
 
-        // Resolve the (possibly ambiguous) destination by trying ranked candidate maps until one connects. The same-map
-        // preference lives inside the resolver, so a goal within the current bounds is still tried first.
+        // 通过按优先级顺序尝试排名候选地图来解析（可能模糊的）目标，直到一个连接成功。
+        // 同地图偏好存在于解析器内部，因此当前边界内的目标仍然首先被尝试。
         std::vector<HiddenPathSegment> hidden;
         return BuildCrossMapRouteResolvingDst(from_map, start, from_world, to_world, out, hidden);
     }
 
-    // Blocking. A* across `map_id` (its game coords), leg out in world coords. No shared state, so callers keep their route. False if no path.
+    // 阻塞式。跨 `map_id`（其游戏坐标）的 A*，段以世界坐标输出。无共享状态，因此调用者可保留其路径。失败时返回 false。
     bool ComputeSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>& out, std::vector<GW::GamePos>* out_game = nullptr)
     {
         out.clear();
@@ -2944,25 +2935,25 @@ namespace {
         if (map_id == GW::Constants::MapID::None) return false;
         std::vector<GW::GamePos> leg;
         if (!RunAStarOnMap(map_id, from, to, leg) || leg.empty()) return false;
-        // Hand back the raw leg (game coords with zplane, in map_id's space) before SegmentToWorld flattens it to plane-less world Vec2f.
+        // 在 SegmentToWorld 将其展平为无平面的世界 Vec2f 之前，返回原始段（游戏坐标，带 zplane，在 map_id 的空间中）。
         if (out_game) *out_game = leg;
-        SegmentToWorld(leg, map_id, out); // leg game -> world
+        SegmentToWorld(leg, map_id, out); // leg 游戏坐标 → 世界坐标
         return true;
     }
 } // namespace
 
-// Detect if click is near previous position (within ~5 world map units)
+// 检测点击是否靠近先前位置（在世界地图约 5 单位内）
 static bool IsNearby(const GW::Vec2f& a, const GW::Vec2f& b)
 {
     float dx = a.x - b.x, dy = a.y - b.y;
     return (dx * dx + dy * dy) < 25.f;
 }
 
-// Resolve map ID for a world map click, cycling through overlapping maps
+// 解析世界地图点击的地图 ID，在重叠地图间循环
 static GW::Constants::MapID ResolveMapForClick(const GW::Vec2f& world_map_pos, const GW::Vec2f& prev_world_pos, GW::Constants::MapID prev_map)
 {
     auto map_id = WorldMapWidget::GetMapIdForLocation(world_map_pos);
-    // If clicking near the same spot, cycle to next overlapping map
+    // 如果点击位置与上次相近，循环到下一个重叠地图
     if (map_id != GW::Constants::MapID::None && prev_map != GW::Constants::MapID::None && map_id == prev_map && IsNearby(world_map_pos, prev_world_pos)) {
         auto next = WorldMapWidget::GetMapIdForLocation(world_map_pos, prev_map);
         if (next != GW::Constants::MapID::None) map_id = next;
@@ -2970,16 +2961,16 @@ static GW::Constants::MapID ResolveMapForClick(const GW::Vec2f& world_map_pos, c
     return (map_id != GW::Constants::MapID::None) ? map_id : GW::Map::GetMapID();
 }
 
-// Load all maps whose world map bounds contain this position
+// 加载世界地图边界包含此位置的所有地图
 void LoadAllMapsAtPosition(const GW::Vec2f& world_map_pos)
 {
-    RouteJobScope job_scope; // trim cache only after the whole batch is loaded
+    RouteJobScope job_scope; // 仅在整批加载完成后修剪缓存
     BuildMapGraph();
     const auto cur_area = GW::Map::GetMapInfo();
     const auto cur_continent = cur_area ? cur_area->continent : GW::Continent::Kryta;
     const auto cur_map = GW::Map::GetMapID();
 
-    // Load maps whose bounds contain the click, plus their adjacent/overlapping neighbors
+    // 加载边界包含点击的地图，以及它们的相邻/重叠地图
     std::set<uint32_t> to_load;
     for (const auto& node : map_graph_nodes) {
         if (node.continent != cur_continent) continue;
@@ -2987,14 +2978,14 @@ void LoadAllMapsAtPosition(const GW::Vec2f& world_map_pos)
             to_load.insert((uint32_t)node.map_id);
             if (IsInterestingMapForCacheTrace(node.map_id)) {
                 PATH_LOG_INFO(
-                    "[CacheTrace] LoadAllMapsAtPosition click=(%.0f,%.0f) bounds=(%.0f,%.0f)-(%.0f,%.0f) added direct mid=%d", world_map_pos.x, world_map_pos.y, node.wm_bounds.Min.x, node.wm_bounds.Min.y, node.wm_bounds.Max.x, node.wm_bounds.Max.y,
+                    "[CacheTrace] LoadAllMapsAtPosition click=(%.0f,%.0f) bounds=(%.0f,%.0f)-(%.0f,%.0f) 添加直接 mid=%d", world_map_pos.x, world_map_pos.y, node.wm_bounds.Min.x, node.wm_bounds.Min.y, node.wm_bounds.Max.x, node.wm_bounds.Max.y,
                     (int)node.map_id
                 );
             }
             for (auto adj : GetAdjacentMaps(node.map_id)) {
                 to_load.insert((uint32_t)adj);
                 if (IsInterestingMapForCacheTrace(adj)) {
-                    PATH_LOG_INFO("[CacheTrace] LoadAllMapsAtPosition click=(%.0f,%.0f) added adj mid=%d via parent=%d", world_map_pos.x, world_map_pos.y, (int)adj, (int)node.map_id);
+                    PATH_LOG_INFO("[CacheTrace] LoadAllMapsAtPosition click=(%.0f,%.0f) 添加 adj mid=%d via parent=%d", world_map_pos.x, world_map_pos.y, (int)adj, (int)node.map_id);
                 }
             }
         }
@@ -3032,7 +3023,7 @@ void PathfindingWindow::SetFromWorldMap(const GW::Vec2f& world_map_pos)
         sp.from_set = true;
     }
 
-    PATH_LOG_INFO("SetFrom: wm=(%.1f,%.1f) game=(%.1f,%.1f) map=%d hash=0x%X cur=%d", world_map_pos.x, world_map_pos.y, game_pos.x, game_pos.y, (int)path_from_map, fh, (int)GW::Map::GetMapID());
+    PATH_LOG_INFO("SetFrom：wm=(%.1f,%.1f) game=(%.1f,%.1f) 地图=%d hash=0x%X cur=%d", world_map_pos.x, world_map_pos.y, game_pos.x, game_pos.y, (int)path_from_map, fh, (int)GW::Map::GetMapID());
     UpdateMarkers(path_from, path_to);
 }
 
@@ -3055,7 +3046,7 @@ void PathfindingWindow::SetToWorldMap(const GW::Vec2f& world_map_pos)
         sp.to_set = true;
     }
 
-    PATH_LOG_INFO("SetTo: wm=(%.1f,%.1f) game=(%.1f,%.1f) map=%d hash=0x%X cur=%d", world_map_pos.x, world_map_pos.y, game_pos.x, game_pos.y, (int)path_to_map, fh, (int)GW::Map::GetMapID());
+    PATH_LOG_INFO("SetTo：wm=(%.1f,%.1f) game=(%.1f,%.1f) 地图=%d hash=0x%X cur=%d", world_map_pos.x, world_map_pos.y, game_pos.x, game_pos.y, (int)path_to_map, fh, (int)GW::Map::GetMapID());
     UpdateMarkers(path_from, path_to);
 }
 
@@ -3063,12 +3054,11 @@ void PathfindingWindow::FindPath()
 {
     UpdateMarkers(path_from, path_to);
 
-    // A world-map destination always goes through the resolver: path_to_map can collapse to the source (a marker on a map
-    // that shares a file id with the current map resolves to the current map), so we can't trust from!=to to decide
-    // cross-map. The resolver picks the real destination from the world position and routes through other maps if needed.
+    // 世界地图目标始终通过解析器：path_to_map 可以折叠到源地图（与当前地图共享文件 ID 的地图上的标记解析到当前地图），
+    // 因此我们不能依赖 from!=to 来决定跨地图。解析器从世界位置选择真实目标，并在需要时通过其他地图路由。
     const bool have_to_world = (path_to_world.x != 0.f || path_to_world.y != 0.f);
     if (path_from_map != GW::Constants::MapID::None && have_to_world) {
-        // Fast path: if the goal lands in the current map's bounds, try a direct single-map A* first (draws in game coords).
+        // 快速路径：如果目标落在当前地图边界内，首先尝试直接单地图 A*（以游戏坐标绘制）。
         const auto* from_info = GetCachedMapInfo(path_from_map);
         if (from_info) {
             GW::GamePos to_on_from_map;
@@ -3080,12 +3070,12 @@ void PathfindingWindow::FindPath()
                         DrawPathAsLines(direct_path, path_from_map);
                         return;
                     }
-                    // Direct failed (e.g. an isolate region that only shares a file id) — fall through to multi-map routing.
+                    // 直接路径失败（例如仅共享文件 ID 的隔离区域）— 继续执行多地图路由。
                 }
             }
         }
 
-        // Cross-map pathfinding with retry on AStar segment failure
+        // 在 AStar 段失败时带重试的多地图寻路
         blacklisted_edges.clear();
         RecalculateMultiMapPath_WithRetry(path_from_map, path_to_map, path_from, path_to, path_from_world, path_to_world);
     }
@@ -3110,17 +3100,17 @@ void PathfindingWindow::ClearWorldMapRoute()
 bool PathfindingWindow::CalculateRoute(const GW::Vec2f& from_world, const GW::Vec2f& to_world, std::vector<GW::Vec2f>* out)
 {
     if (!out) return false;
-    std::scoped_lock route_lock(route_mutex); // one build at a time; see route_mutex
-    RouteJobScope job_scope;                 // defer eviction while we hold MilePath*
-    PathCalcScope calc_scope;                // flag the calc so the window's progress bar shows for this flow too
+    std::scoped_lock route_lock(route_mutex); // 一次一个构建；见 route_mutex
+    RouteJobScope job_scope;                 // 在持有 MilePath* 时延迟淘汰
+    PathCalcScope calc_scope;                // 为此流程也标记计算，以便窗口的进度条显示
     return ComputeRoute(from_world, to_world, *out);
 }
 
 bool PathfindingWindow::RecalculateSegment(GW::Constants::MapID map_id, const GW::GamePos& from, const GW::GamePos& to, std::vector<GW::Vec2f>* out, std::vector<GW::GamePos>* out_game)
 {
     if (!out) return false;
-    std::scoped_lock route_lock(route_mutex); // one build at a time; see route_mutex
-    RouteJobScope job_scope;                 // defer eviction while we hold MilePath*
+    std::scoped_lock route_lock(route_mutex); // 一次一个构建；见 route_mutex
+    RouteJobScope job_scope;                 // 在持有 MilePath* 时延迟淘汰
     return ComputeSegment(map_id, from, to, *out, out_game);
 }
 
@@ -3144,26 +3134,26 @@ void PathfindingWindow::Initialize()
 {
     ToolboxModule::Initialize();
     SettingsRegistry::Register(this, settings);
-    SettingsRegistry::Describe(this, "draw_navmesh_overlay", "Navmesh overlay", navmesh_overlay_help);
-    SettingsRegistry::Describe(this, "path_recalc_distance", "Path recalc distance", path_recalc_distance_help);
-    SettingsRegistry::Describe(this, "navmesh_sample_spacing", "Terrain sample spacing", navmesh_sample_spacing_help);
-    SettingsRegistry::Describe(this, "navmesh_wall_color", "Wall colour (ground plane)");
-    SettingsRegistry::Describe(this, "navmesh_wall_color_hi", "Wall colour (other planes)");
-    SettingsRegistry::Describe(this, "navmesh_connection_color", "Connection colour (ground plane)");
-    SettingsRegistry::Describe(this, "navmesh_connection_color_hi", "Connection colour (other planes)");
-    pending_terminate = false; // module is now optional; a prior disable left this set, which would abort all routing
+    SettingsRegistry::Describe(this, "draw_navmesh_overlay", "导航网格覆盖层", navmesh_overlay_help);
+    SettingsRegistry::Describe(this, "path_recalc_distance", "路径重新计算距离", path_recalc_distance_help);
+    SettingsRegistry::Describe(this, "navmesh_sample_spacing", "地形采样间距", navmesh_sample_spacing_help);
+    SettingsRegistry::Describe(this, "navmesh_wall_color", "墙颜色（地面层）");
+    SettingsRegistry::Describe(this, "navmesh_wall_color_hi", "墙颜色（其他平面）");
+    SettingsRegistry::Describe(this, "navmesh_connection_color", "连接颜色（地面层）");
+    SettingsRegistry::Describe(this, "navmesh_connection_color_hi", "连接颜色（其他平面）");
+    pending_terminate = false; // 模块现在是可选的；先前禁用会设置此项，会中止所有路由
     pathing_enabled = true;
     BuildMapFileHashLookup();
     RegisterUIMessageCallback(&gw_ui_hookentry, GW::UI::UIMessage::kLoadMapContext, OnUIMessage, 0x4000);
 
-    // Load portal connections from the JSON embedded as an RCDATA resource, so no loose file need sit next to the DLL at runtime.
+    // 从嵌入为 RCDATA 资源的 JSON 加载传送门连接，因此运行时无需将松散文件放在 DLL 旁边。
     const EmbeddedResource portal_json(IDR_PORTAL_CONNECTIONS_JSON, RT_RCDATA, GWToolbox::GetDLLModule());
     if (portal_json.data() && portal_json.size()) {
         portal_connections.LoadFromMemory(
-            static_cast<const char*>(portal_json.data()), portal_json.size(), "<embedded resource>");
+            static_cast<const char*>(portal_json.data()), portal_json.size(), "<嵌入式资源>");
     }
     else {
-        PATH_LOG_ERROR("Failed to load embedded portal connections resource");
+        PATH_LOG_ERROR("加载嵌入式传送门连接资源失败");
     }
     pending_connection_lines_update = true;
 }

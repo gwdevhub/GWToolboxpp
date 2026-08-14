@@ -22,7 +22,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Pathfinding"; }
+    [[nodiscard]] const char* Name() const override { return "寻路"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_DOOR_OPEN; }
 
     bool HasSettings() { return true; }
