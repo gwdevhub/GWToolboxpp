@@ -46,6 +46,11 @@ namespace {
         }
     };
 
+    // Refrains are read from the party effects array, which the game only populates for you and your own heroes.
+    const char* refrain_help_text =
+        "Only shown on yourself and your own heroes.\n"
+        "Guild Wars doesn't tell your client about refrains on other players, so a refrain you maintain on them can't be displayed.";
+
     // Skill ID => enabled by default
     AvailableBond available_bonds[] = {
         {GW::Constants::SkillID::Balthazars_Spirit, true},
@@ -64,16 +69,12 @@ namespace {
         {GW::Constants::SkillID::Vital_Blessing, true},
         {GW::Constants::SkillID::Watchful_Spirit, true},
         {GW::Constants::SkillID::Watchful_Intervention, false},
-        {
-            GW::Constants::SkillID::Heroic_Refrain, true,
-            "Only shown on yourself and your own heroes.\n"
-            "Guild Wars doesn't tell your client about refrains on other players, so Heroic Refrain you maintain on them can't be displayed."
-        },
-        {GW::Constants::SkillID::Burning_Refrain, true},
-        {GW::Constants::SkillID::Mending_Refrain, true},
-        {GW::Constants::SkillID::Bladeturn_Refrain, true},
-        {GW::Constants::SkillID::Hasty_Refrain, true},
-        {GW::Constants::SkillID::Aggressive_Refrain, false}
+        {GW::Constants::SkillID::Heroic_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Burning_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Mending_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Bladeturn_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Hasty_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Aggressive_Refrain, false, refrain_help_text}
     };
 
     AvailableBond* GetAvailableBond(const GW::Constants::SkillID skill_id)
