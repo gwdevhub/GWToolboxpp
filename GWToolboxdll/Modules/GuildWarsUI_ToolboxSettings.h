@@ -19,6 +19,5 @@ public:
     void Initialize() override;
     void SignalTerminate() override;
     bool CanTerminate() override;
-
-    static void AddCheckboxPref(const char* label, bool* variable);
+    void Update(float delta) override;
 };
