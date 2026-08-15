@@ -15,6 +15,7 @@ the latest version, go to the [Home Page](./) instead.
 * [Fix] Title Tracker: the old, no-longer-obtainable versions of the Treasure Hunter and Wisdom title tracks (and the pre-hard-mode Skill Hunter) no longer appear in the widget's title list or the `/title` command.
 * [Fix] Trader window: the per-order "Whisper" buttons no longer share a click target when order descriptions are blank, so whispering a specific seller works reliably.
 * [Fix] Price Checker: rune and insignia tooltips while in pre-searing now show pre-searing prices, sourced from presearing.com's community price sheet, instead of the unrelated post-searing Kamadan Trading Post price for the same item.
+* [Minor] Bonds: the refrain checkboxes in the bond monitor's settings (Heroic, Burning, Mending, Bladeturn, Hasty and Aggressive Refrain) now have a help tooltip explaining that refrains can only be shown on yourself and your own heroes — Guild Wars doesn't tell your client about refrains you maintain on other players, so they can't be displayed.
 * [Minor] Filters you type by hand now accept a regular expression anywhere: wrap the line in slashes, e.g. `/(wtb|wts).*ecto/`. This works in the chat filter's keyword and author lists, trade and party-search alert keywords, the trade window's search box and the new loot beacon name rules; flags go after the closing slash, and matching is case-insensitive unless you add `I` — the chat filter's dedicated regex list keeps its existing case-sensitive default. Filters written as plain text behave exactly as before.
 
 ## Version 8.32

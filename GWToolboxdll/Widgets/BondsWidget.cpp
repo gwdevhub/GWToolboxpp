@@ -32,9 +32,10 @@ namespace {
         GW::Constants::SkillID skill_id = GW::Constants::SkillID::No_Skill;
         GuiUtils::EncString skill_name;
         bool enabled = true;
+        const char* help_text = nullptr;
 
-        AvailableBond(const GW::Constants::SkillID _skill_id, const bool _enabled = true)
-            : skill_id(_skill_id), enabled(_enabled) { };
+        AvailableBond(const GW::Constants::SkillID _skill_id, const bool _enabled = true, const char* _help_text = nullptr)
+            : skill_id(_skill_id), enabled(_enabled), help_text(_help_text) { };
 
         void Initialize()
         {
@@ -44,6 +45,11 @@ namespace {
             }
         }
     };
+
+    // Refrains are read from the party effects array, which the game only populates for you and your own heroes.
+    const char* refrain_help_text =
+        "Only shown on yourself and your own heroes.\n"
+        "Guild Wars doesn't tell your client about refrains on other players, so a refrain you maintain on them can't be displayed.";
 
     // Skill ID => enabled by default
     AvailableBond available_bonds[] = {
@@ -63,12 +69,12 @@ namespace {
         {GW::Constants::SkillID::Vital_Blessing, true},
         {GW::Constants::SkillID::Watchful_Spirit, true},
         {GW::Constants::SkillID::Watchful_Intervention, false},
-        {GW::Constants::SkillID::Heroic_Refrain, true},
-        {GW::Constants::SkillID::Burning_Refrain, true},
-        {GW::Constants::SkillID::Mending_Refrain, true},
-        {GW::Constants::SkillID::Bladeturn_Refrain, true},
-        {GW::Constants::SkillID::Hasty_Refrain, true},
-        {GW::Constants::SkillID::Aggressive_Refrain, false}
+        {GW::Constants::SkillID::Heroic_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Burning_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Mending_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Bladeturn_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Hasty_Refrain, true, refrain_help_text},
+        {GW::Constants::SkillID::Aggressive_Refrain, false, refrain_help_text}
     };
 
     AvailableBond* GetAvailableBond(const GW::Constants::SkillID skill_id)
@@ -466,7 +472,10 @@ void BondsWidget::DrawSettingsInternal()
         ImGui::NextSpacedElement();
         const auto written = snprintf(label_buf, sizeof(label_buf), "%s##available_bond_%p", bond.skill_name.string().c_str(), &bond);
         ASSERT(written != -1);
-        if (ImGui::Checkbox(label_buf, &bond.enabled)) {
+        const bool changed = bond.help_text
+                                 ? ImGui::CheckboxWithHelp(label_buf, &bond.enabled, bond.help_text)
+                                 : ImGui::Checkbox(label_buf, &bond.enabled);
+        if (changed) {
             FetchBondSkills();
         }
     }
