@@ -201,6 +201,9 @@ namespace {
         {"Item", DEFAULT_NAMETAG_COLOR::ITEM, &settings.nametag_color_item.value},
     };
 
+    // Cached per-player nametag colors; cleared on map load and party changes so lookups run once per hover per map.
+    std::unordered_map<std::wstring, Color> nametag_color_cache;
+
     bool IsGuildMemberPlayer(const wchar_t* player_name)
     {
         if (!(player_name && *player_name)) {
@@ -1615,6 +1618,7 @@ void GameSettings::Initialize()
     // Trigger for message on party change
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::PartyPlayerRemove>(&PartyPlayerRemove_Entry, [&](const GW::HookStatus*, GW::Packet::StoC::PartyPlayerRemove*) {
         check_message_on_party_change = true;
+        nametag_color_cache.clear();
     });
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::ScreenShake>(&OnScreenShake_Entry, OnScreenShake);
     GW::StoC::RegisterPacketCallback<GW::Packet::StoC::AgentModel>(&OnAgentModel_Entry, [this](GW::HookStatus* status, const GW::Packet::StoC::AgentModel* packet) {
@@ -2273,6 +2277,7 @@ void GameSettings::OnPartyInviteReceived(const GW::HookStatus* status, const GW:
 // Flash window on player added
 void GameSettings::OnPartyPlayerJoined(const GW::HookStatus*, const GW::Packet::StoC::PartyPlayerAdd*)
 {
+    nametag_color_cache.clear();
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Outpost) {
         return;
     }
@@ -2530,6 +2535,7 @@ void GameSettings::OnMapLoaded(GW::HookStatus*, GW::Packet::StoC::MapLoaded*)
 {
     instance_entered_at = TIMER_INIT();
     SetWindowTitle(settings.set_window_title_as_charname);
+    nametag_color_cache.clear();
 }
 
 // Hide more than 10 signets of capture
@@ -2563,17 +2569,21 @@ void GameSettings::OnAgentNameTag(GW::HookStatus*, const GW::UI::UIMessage msgid
     if (tag->name_enc) {
         const auto player_name = TextUtils::GetPlayerNameFromEncodedString(tag->name_enc);
         if (!player_name.empty() && player_name != GetPlayerName()) {
-            // friends
-            if (GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) {
-                tag->text_color = settings.nametag_color_friends;
+            const auto cached = nametag_color_cache.find(player_name);
+            if (cached != nametag_color_cache.end()) {
+                tag->text_color = cached->second;
             }
-            // guildies
-            else if (IsGuildMemberPlayer(player_name.c_str())) {
-                tag->text_color = settings.nametag_color_guild_members;
-            }
-            // in your party
-            else if (IsAgentInMyParty(tag->agent_id)) {
-                tag->text_color = settings.nametag_color_player_in_my_party;
+            else {
+                if (GW::FriendListMgr::GetFriend(nullptr, player_name.c_str(), GW::FriendType::Friend)) {
+                    tag->text_color = settings.nametag_color_friends;
+                }
+                else if (IsGuildMemberPlayer(player_name.c_str())) {
+                    tag->text_color = settings.nametag_color_guild_members;
+                }
+                else if (IsAgentInMyParty(tag->agent_id)) {
+                    tag->text_color = settings.nametag_color_player_in_my_party;
+                }
+                nametag_color_cache[player_name] = tag->text_color;
             }
         }
     }
