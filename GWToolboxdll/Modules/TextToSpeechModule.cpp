@@ -86,7 +86,7 @@ namespace {
         bool has_user_id = false;
         // Some providers issue long keys (e.g. OpenAI project keys are ~200 chars), and Kokoro stores a server URL here
         char api_key[512] = {0};
-        char user_id[128] = {0};
+        char user_id[512] = {0};
     };
 
     GW::Constants::Language GetAudioLanguage()
