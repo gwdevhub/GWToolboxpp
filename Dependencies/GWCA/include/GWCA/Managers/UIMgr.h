@@ -783,9 +783,35 @@ namespace GW {
 
 		GWCA_API bool DestroyUIComponent(Frame* frame);
 
+		// Bitfield accepted by Frame::SetBounds/SetPositionInternal
+		enum FrameLayoutMode : uint32_t {
+			FrameLayoutMode_None = 0,
+			FrameLayoutMode_AnchorBottom = 0x1,           // vertical: anchor to the rect's bottom edge
+			FrameLayoutMode_Center = 0x2,                // required alongside centered placement on either axis (asserts otherwise)
+			FrameLayoutMode_AnchorLeft = 0x4,             // horizontal: anchor to the rect's left edge
+			FrameLayoutMode_AnchorRight = 0x8,            // horizontal: anchor to the rect's right edge
+			FrameLayoutMode_AnchorTop = 0x10,             // vertical: anchor to the rect's top edge
+			FrameLayoutMode_StretchWidth = 0x20,          // horizontal: fill the rect's full width (also behaves as a left anchor)
+			FrameLayoutMode_StretchHeight = 0x40,         // vertical: fill the rect's full height (also behaves as a bottom anchor)
+			FrameLayoutMode_AnchorHorizontalMargin = 0x80,  // gate: trim the resolved rect inward on the AnchorLeft/AnchorRight edge(s)
+			FrameLayoutMode_AnchorVerticalMargin = 0x100,   // gate: trim the resolved rect inward on the AnchorTop/AnchorBottom edge(s)
+		};
+		inline FrameLayoutMode operator|(FrameLayoutMode a, FrameLayoutMode b) {
+			return static_cast<FrameLayoutMode>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+		}
+		inline FrameLayoutMode operator&(FrameLayoutMode a, FrameLayoutMode b) {
+			return static_cast<FrameLayoutMode>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+		}
+		inline FrameLayoutMode operator~(FrameLayoutMode a) {
+			return static_cast<FrameLayoutMode>(~static_cast<uint32_t>(a));
+		}
+
 		// Frame layout primitives (GW's Frame::SetBounds/SetPosition) for a container's kMeasureContent/kSetLayout handler.
-		GWCA_API void SetFrameBounds(Frame* frame, uint32_t mode, float* rect, float* size_out);
-		GWCA_API void SetFramePosition(Frame* frame, uint32_t mode, float* rect);
+		GWCA_API void SetFrameBounds(Frame* frame, FrameLayoutMode mode, float* rect, float* size_out);
+		GWCA_API void SetFramePosition(Frame* frame, FrameLayoutMode mode, float* rect);
+
+		// Appends an additional handler onto frame->frame_callbacks
+		GWCA_API bool AddFrameCallback(Frame* frame, UIInteractionCallback callback, void* uictl_context = nullptr);
 
 		GWCA_API bool SelectDropdownOption(Frame* frame, uint32_t value);
 

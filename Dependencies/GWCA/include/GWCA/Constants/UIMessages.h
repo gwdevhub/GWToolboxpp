@@ -724,19 +724,34 @@ namespace GW {
 				uint32_t h0004;
 				uint32_t h0008;
 			};
+			// A handler that leaves both entries at 0 falls through to the engine's
+			// own default sizing (GetMinSize()-based) rather than being treated as "wants zero size".
+			//
+			// flags (offset 0xc) is passed through uninitialized in that call site and never visibly
+			// set before the dispatch - not confirmed as meaningful; treat as reserved/unused for now.
 			struct kMeasureContent {
-				float max_width;        // Maximum width constraint
-				float max_height;       // Maximum height constraint
-				float* size_output;     // Pointer to output buffer for calculated size
-				uint32_t flags;         // Layout flags (similar to the 0x100 flag we saw)
+				float max_width;        // Available width, after the frame's own margin/padding is already subtracted
+				float max_height;       // Available height, after the frame's own margin/padding is already subtracted
+				float* size_output;     // Points at a 2-float [width, height] buffer the handler must fill
+				uint32_t flags;         // Not confirmed meaningful - see comment above
 			};
+			// Every field here is relative to the frame's own content-origin rect (its content_left/
+			// content_bottom/content_right/content_top) - not absolute screen coordinates:
+			//   available_width  = content_right  - content_left
+			//   available_height = content_top    - content_bottom
+			//   local_left       = resolved_left  - content_left
+			//   local_bottom     = resolved_bottom - content_bottom
+			//   local_right      = resolved_right - content_left
+			//   local_top        = resolved_top   - content_bottom
+			// i.e. "here is how much room you have, and here is where your own just-resolved rect sits
+			// within it"
 			struct kSetLayout {
-				float field_0x0;
-				float field_0x4;
-				float field_0x8;
-				float field_0xc;
 				float available_width;
 				float available_height;
+				float local_left;
+				float local_bottom;
+				float local_right;
+				float local_top;
 			};
 			struct kSetAgentProfession {
 				AgentID agent_id;

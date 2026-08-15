@@ -5,7 +5,7 @@
 #include <GWCA/Utilities/Export.h>
 
 // Guards against headers and binary being from different releases -- struct offsets shift and nothing else catches it.
-#define GWCA_ABI_VERSION 0x04080000u
+#define GWCA_ABI_VERSION 0x04080100u
 
 extern "C" {
     // The version the binary was built at, against GWCA_ABI_VERSION which is what the caller compiled against.
