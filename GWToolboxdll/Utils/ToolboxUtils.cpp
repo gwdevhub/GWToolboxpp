@@ -608,7 +608,7 @@ namespace GW {
                 DEBUG_ASSERT(address);
                 if (address) {
                     agent_render_info_capacity = *(uint32_t**)(address + 0x1);
-                    agent_render_info_array = *(AgentRenderInfo***)(address + 0x8);
+                    agent_render_info_array = *(AgentRenderInfo****)(address + 0x8);
                 }
             }
             if (out_capacity) {
