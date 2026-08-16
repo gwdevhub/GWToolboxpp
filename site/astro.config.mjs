@@ -6,9 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { rehypeHeadingIds } from '@astrojs/markdown-remark';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 
-// Legacy Jekyll URLs (gwtoolbox.com/linux) are redirected to /docs/<slug>/ by
-// src/pages/[legacySlug].astro rather than by `redirects` here, so that the
-// anchor in a deep link like /minimap#agents survives the hop.
+// Legacy URLs (/linux → /docs/linux/) are handled by [legacySlug].astro to preserve fragment and query string.
 
 // Lucide "link" icon as a hast node, appended to each heading as a permalink.
 const linkIcon = {

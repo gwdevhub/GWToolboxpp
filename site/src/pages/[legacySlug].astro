@@ -1,9 +1,5 @@
 ---
-// Legacy Jekyll URLs had no /docs prefix (gwtoolbox.com/minimap), and links to
-// them are still in the wild — including deep links with an anchor
-// (/minimap#agents). Astro's built-in `redirects` would emit a bare meta
-// refresh, which drops the fragment and query string, so we render the
-// redirect page ourselves and carry them across client-side.
+// Redirects legacy prefix-less URLs (e.g. /minimap → /docs/minimap/) while preserving fragment and query string, which Astro's built-in redirects drops.
 import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
