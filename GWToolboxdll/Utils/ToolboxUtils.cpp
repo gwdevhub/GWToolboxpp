@@ -48,6 +48,12 @@ namespace {
 
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
+    // AvAgent.cpp; __thiscall modelled as __fastcall.
+    typedef void(__fastcall* SetNameTagFlags_pt)(GW::Agents::AgentRenderInfo* render_info, void* edx, uint32_t flags, uint32_t enable);
+    SetNameTagFlags_pt SetNameTagFlags_Func = nullptr;
+    GW::Agents::AgentRenderInfo*** agent_render_info_array = nullptr;
+    uint32_t* agent_render_info_capacity = nullptr;
+
     constexpr uint32_t bogus_area_info_flags = 0x5000000; // e.g. "wrong" Augury Rock is map 119, no NPCs.
     constexpr uint32_t debug_area_info_flag = 0x80000000;
 
@@ -589,6 +595,56 @@ namespace GW {
         void AsyncGetAgentName(const Agent* agent, std::wstring& out)
         {
             UI::AsyncDecodeStr(GetAgentEncName(agent), &out);
+        }
+
+        AgentRenderInfo** GetAgentRenderInfoArray(uint32_t* out_capacity)
+        {
+            if (!agent_render_info_array) {
+                // AvManager.cpp - the loop in the setter for the persistent name tag filter walks the
+                // whole array, so both globals are in one instruction pair.
+                const auto address = GW::Scanner::Find("\xa1\x00\x00\x00\x00\x56\x8b\x35\x00\x00\x00\x00\x8d\x04\x86", "x????xxx????xxx");
+                DEBUG_ASSERT(address);
+                if (address) {
+                    agent_render_info_capacity = *(uint32_t**)(address + 0x1);
+                    agent_render_info_array = *(AgentRenderInfo***)(address + 0x8);
+                }
+            }
+            if (out_capacity) {
+                *out_capacity = agent_render_info_capacity ? *agent_render_info_capacity : 0;
+            }
+            return agent_render_info_array ? *agent_render_info_array : nullptr;
+        }
+
+        AgentRenderInfo* GetAgentRenderInfo(const uint32_t agent_id)
+        {
+            uint32_t capacity = 0;
+            const auto arr = GetAgentRenderInfoArray(&capacity);
+            return arr && agent_id < capacity ? arr[agent_id] : nullptr;
+        }
+
+        bool SetNameTagFlags(const uint32_t agent_id, const uint32_t flags, const bool enable)
+        {
+            const auto render_info = GetAgentRenderInfo(agent_id);
+            if (!render_info) return false;
+            if (!SetNameTagFlags_Func) {
+                const auto address = GW::Scanner::Find("\x50\x68\x00\x04\x00\x00\x8b\xcf\xe8", "xxxxxxxxx", 0x8);
+                DEBUG_ASSERT(address);
+                if (address) {
+                    SetNameTagFlags_Func = (SetNameTagFlags_pt)GW::Scanner::FunctionFromNearCall(address);
+                }
+            }
+            if (!SetNameTagFlags_Func) return false;
+            SetNameTagFlags_Func(render_info, nullptr, flags, enable ? 1 : 0);
+            return true;
+        }
+
+        bool RefreshNameTag(const uint32_t agent_id)
+        {
+            const auto render_info = GetAgentRenderInfo(agent_id);
+            // Bail while name tags are globally suppressed, or clearing the bit would reveal this one tag.
+            if (!render_info || (render_info->name_tag_flags & NameTagFlags_Suppressed)) return false;
+            return SetNameTagFlags(agent_id, NameTagFlags_Suppressed, true) &&
+                   SetNameTagFlags(agent_id, NameTagFlags_Suppressed, false);
         }
     } // namespace Agents
     namespace Items {
