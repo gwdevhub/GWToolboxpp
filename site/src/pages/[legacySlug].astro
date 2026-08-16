@@ -1,0 +1,37 @@
+---
+// Legacy Jekyll URLs had no /docs prefix (gwtoolbox.com/minimap), and links to
+// them are still in the wild — including deep links with an anchor
+// (/minimap#agents). Astro's built-in `redirects` would emit a bare meta
+// refresh, which drops the fragment and query string, so we render the
+// redirect page ourselves and carry them across client-side.
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('docs', ({ data }) => !data.hidden);
+  return entries.map((entry) => ({
+    params: { legacySlug: entry.id },
+    props: { target: `/docs/${entry.id}/` },
+  }));
+}
+
+const { target } = Astro.props;
+const canonical = new URL(target, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting to {target}</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={canonical} />
+    <script is:inline define:vars={{ target }}>
+      // Runs before the meta refresh below, so the anchor survives.
+      location.replace(target + location.search + location.hash);
+    </script>
+    <meta http-equiv="refresh" content={`0;url=${target}`} />
+  </head>
+  <body>
+    <a href={target}>Redirecting to <code>{target}</code></a>
+  </body>
+</html>
