@@ -62,105 +62,107 @@ namespace GW {
         Include_Enemy = 0x000008,
         Include_SpiritPet = 0x000010,
         Accept_ActiveState = 0x000020,
-        Include_Minion = 0x000040,
-        Include_NPCMinipet = 0x000080,
-        Accept_Player = 0x000100,
-        Type_Gadget = 0x000200,
-        Type_Item = 0x000400,
-        Exclude_DeadAlly = 0x000800,
-        Exclude_DeadNeutral = 0x001000,
-        Exclude_DeadEnemy = 0x002000,
-        Exclude_DeadSpiritPet = 0x004000,
-        Exclude_DeadMinion = 0x008000,
-        Exclude_DeadNPCMinipet = 0x010000,
-        Exclude_UsedCorpse = 0x020000,
-        Exclude_AliveAlly = 0x040000,
-        Exclude_AliveNeutral = 0x080000,
-        Exclude_AliveEnemy = 0x100000,
-        Exclude_AliveSpiritPet = 0x200000,
-        Exclude_AliveMinion = 0x400000,
-        Exclude_AliveNPCMinipet = 0x800000,
-        Exclude_BeingObserved = 0x2000000,
-        ZeroPriority = 0x4000000,
-        NPCMinipet_ZeroPriority = 0x8000000,
-    };
+		Include_Minion = 0x000040,
+			Include_NPCMinipet = 0x000080,
+			Accept_Player = 0x000100,
+			Type_Gadget = 0x000200,
+			Type_Item = 0x000400,
+			Exclude_DeadAlly = 0x000800,
+			Exclude_DeadNeutral = 0x001000,
+			Exclude_DeadEnemy = 0x002000,
+			Exclude_DeadSpiritPet = 0x004000,
+			Exclude_DeadMinion = 0x008000,
+			Exclude_DeadNPCMinipet = 0x010000,
+			Exclude_UsedCorpse = 0x020000,
+			Exclude_AliveAlly = 0x040000,
+			Exclude_AliveNeutral = 0x080000,
+			Exclude_AliveEnemy = 0x100000,
+			Exclude_AliveSpiritPet = 0x200000,
+			Exclude_AliveMinion = 0x400000,
+			Exclude_AliveNPCMinipet = 0x800000,
+			Exclude_BeingObserved = 0x2000000,
+			ZeroPriority = 0x4000000,
+			NPCMinipet_ZeroPriority = 0x8000000,
+	};
 
-    inline AgentTargetFlags operator|(AgentTargetFlags a, AgentTargetFlags b) {
-        return static_cast<AgentTargetFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-    }
-    inline AgentTargetFlags operator&(AgentTargetFlags a, AgentTargetFlags b) {
-        return static_cast<AgentTargetFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
-    }
-    inline AgentTargetFlags operator~(AgentTargetFlags a) {
-        return static_cast<AgentTargetFlags>(~static_cast<uint32_t>(a));
-    }
+	inline AgentTargetFlags operator|(AgentTargetFlags a, AgentTargetFlags b) {
+		return static_cast<AgentTargetFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+	inline AgentTargetFlags operator&(AgentTargetFlags a, AgentTargetFlags b) {
+		return static_cast<AgentTargetFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
+	inline AgentTargetFlags operator~(AgentTargetFlags a) {
+		return static_cast<AgentTargetFlags>(~static_cast<uint32_t>(a));
+	}
 
-    namespace TargetFilter {
-        const AgentTargetFlags Enemies = static_cast<AgentTargetFlags>(
-            Include_Enemy | Exclude_DeadEnemy);
+	namespace TargetFilter {
+		const AgentTargetFlags Enemies = static_cast<AgentTargetFlags>(
+			Include_Enemy | Exclude_DeadEnemy);
 
-        const AgentTargetFlags Allies = static_cast<AgentTargetFlags>(
-            Include_Ally | Accept_Player | Exclude_DeadAlly);
+		const AgentTargetFlags Allies = static_cast<AgentTargetFlags>(
+			Include_Ally | Accept_Player | Exclude_DeadAlly);
 
-        const AgentTargetFlags Corpses = static_cast<AgentTargetFlags>(
-            Include_Enemy | Exclude_AliveEnemy | Exclude_UsedCorpse);
+		const AgentTargetFlags Corpses = static_cast<AgentTargetFlags>(
+			Include_Enemy | Exclude_AliveEnemy | Exclude_UsedCorpse);
 
-        const AgentTargetFlags Items = static_cast<AgentTargetFlags>(
-            Type_Item);
+		const AgentTargetFlags Items = static_cast<AgentTargetFlags>(
+			Type_Item);
 
-        const AgentTargetFlags Gadgets = static_cast<AgentTargetFlags>(
-            Type_Gadget);
+		const AgentTargetFlags Gadgets = static_cast<AgentTargetFlags>(
+			Type_Gadget);
 
-        const AgentTargetFlags AnyLiving = static_cast<AgentTargetFlags>(
-            Include_Ally | Include_Neutral | Include_Enemy |
-            Include_SpiritPet | Include_Minion | Include_NPCMinipet |
-            Accept_Player |
-            Exclude_DeadAlly | Exclude_DeadNeutral | Exclude_DeadEnemy |
-            Exclude_DeadSpiritPet | Exclude_DeadMinion | Exclude_DeadNPCMinipet);
+		const AgentTargetFlags AnyLiving = static_cast<AgentTargetFlags>(
+			Include_Ally | Include_Neutral | Include_Enemy |
+			Include_SpiritPet | Include_Minion | Include_NPCMinipet |
+			Accept_Player |
+			Exclude_DeadAlly | Exclude_DeadNeutral | Exclude_DeadEnemy |
+			Exclude_DeadSpiritPet | Exclude_DeadMinion | Exclude_DeadNPCMinipet);
 
-        const AgentTargetFlags Any = static_cast<AgentTargetFlags>(
-            Include_Ally | Include_Neutral | Include_Enemy |
-            Include_SpiritPet | Include_Minion | Include_NPCMinipet |
-            Accept_Player | Accept_HasQuest |
-            Type_Gadget | Type_Item);
-    }
+		const AgentTargetFlags Any = static_cast<AgentTargetFlags>(
+			Include_Ally | Include_Neutral | Include_Enemy |
+			Include_SpiritPet | Include_Minion | Include_NPCMinipet |
+			Accept_Player | Accept_HasQuest |
+			Type_Gadget | Type_Item);
+	}
 
 
-    namespace Agents {
-        typedef HookCallback<const GW::AgentLiving*, const AgentEffect*> AgentEffectCallback;
+	namespace Agents {
+		typedef HookCallback<const GW::AgentLiving*, const AgentEffect*> AgentEffectCallback;
 
-        // Dialogs -- same as pressing button (id) while talking to an NPC.
-        GWCA_API bool SendDialog(uint32_t dialog_id);
+		// Dialogs -- same as pressing button (id) while talking to an NPC.
+		GWCA_API bool SendDialog(uint32_t dialog_id);
 
-        // === Agent Array ===
+		// === Agent Array ===
 
-        // Get Agent ID of currently observed agent
-        GWCA_API uint32_t GetObservingId();
-        // Get Agent ID of client's logged in player
-        GWCA_API uint32_t GetControlledCharacterId();
-        // Get Agent ID of current target
-        GWCA_API uint32_t GetTargetId();
-        // Get Agent ID of current evaluated target - either auto target or actual target
-        GWCA_API uint32_t GetEvaluatedTargetId();
+		// Get Agent ID of currently observed agent
+		GWCA_API uint32_t GetObservingId();
+		// Get Agent ID of client's logged in player
+		GWCA_API uint32_t GetControlledCharacterId();
+		// Get Agent ID of current target
+		GWCA_API uint32_t GetTargetId();
+		// Get Agent ID of current evaluated target - either auto target or actual target
+		GWCA_API uint32_t GetEvaluatedTargetId();
 
-        // Returns Agentstruct Array of agents in compass range, full structs.
-        GWCA_API AgentArray* GetAgentArray();
+		// Returns Agentstruct Array of agents in compass range, full structs.
+		GWCA_API AgentArray* GetAgentArray();
 
-        // Get AgentArray Structures of player or target.
-        GWCA_API Agent *GetAgentByID(uint32_t id);
-        // Get agent that we're currently observing
-        inline Agent   *GetObservingAgent() { return GetAgentByID(GetObservingId()); }
-        // Get Agent of current target
-        inline Agent   *GetTarget() { return GetAgentByID(GetTargetId()); }
-        // Get Agent of current evaluated target - either auto target or actual target
-        inline Agent   *GetEvaluatedTarget() { return GetAgentByID(GetEvaluatedTargetId()); }
+		// Get AgentArray Structures of player or target.
+		GWCA_API Agent* GetAgentByID(uint32_t id);
+		// Get agent that we're currently observing
+		inline Agent* GetObservingAgent() { return GetAgentByID(GetObservingId()); }
+		// Get Agent of current target
+		inline Agent* GetTarget() { return GetAgentByID(GetTargetId()); }
+		// Get Agent of current evaluated target - either auto target or actual target
+		inline Agent* GetEvaluatedTarget() { return GetAgentByID(GetEvaluatedTargetId()); }
 
-        GWCA_API Agent *GetPlayerByID(uint32_t player_id);
+		GWCA_API Agent* GetPlayerByID(uint32_t player_id);
 
-        // Get Agent of current logged in character
-        GWCA_API AgentLiving* GetControlledCharacter();
+		// Get Agent of current logged in character
+		GWCA_API AgentLiving* GetControlledCharacter();
 
-        GWCA_API bool GetAgentMatchesFlags(const Agent*, AgentTargetFlags flags = TargetFilter::Any);
+		GWCA_API bool GetAgentMatchesFlags(const Agent*, AgentTargetFlags flags = TargetFilter::Any);
+
+		GWCA_API bool RefreshAgentNameTag(const Agent*);
 
         // Whether we're observing someone else
         GWCA_API bool IsObserving();

@@ -236,10 +236,10 @@ namespace GW {
 
 		struct AgentNameTagInfo {
 			/* +h0000 */ uint32_t agent_id;
-			/* +h0004 */ uint32_t h0002;
-			/* +h0008 */ uint32_t h0003;
+			/* +h0004 */ uint32_t h0004;
+			/* +h0008 */ uint32_t h0008;
 			/* +h000C */ wchar_t* name_enc;
-			/* +h0010 */ uint8_t h0010;
+			/* +h0010 */ uint8_t highlight;
 			/* +h0011 */ uint8_t h0012;
 			/* +h0012 */ uint8_t h0013;
 			/* +h0013 */ uint8_t background_alpha; // ARGB, NB: Actual color is ignored, only alpha is used
@@ -250,6 +250,8 @@ namespace GW {
 			/* +h001E */ uint8_t h001E;
 			/* +h001F */ uint8_t h001F;
 			/* +h0020 */ wchar_t* extra_info_enc; // Title etc
+			/* +h0024 */ uint32_t extra_info_color; // ARGB
+			/* +h0028 */ uint32_t extra_info_attributes; // bold/size etc
 		};
 
 		// Note: some windows are affected by UI scale (e.g. party members), others are not (e.g. compass)

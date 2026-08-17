@@ -594,36 +594,6 @@ namespace GW {
         {
             UI::AsyncDecodeStr(GetAgentEncName(agent), &out);
         }
-
-        bool RefreshNameTag(const uint32_t agent_id)
-        {
-            const auto agent = GetAgentByID(agent_id);
-            if (!agent) return false;
-
-            const auto flags = agent->name_properties;
-            // Mirrors the client's own visibility test - there is no tag to update otherwise.
-            const auto forced_visible = NameTagFlags_Picked | NameTagFlags_Highlighted | NameTagFlags_EvaluatedTarget |
-                                        NameTagFlags_ManualTarget | NameTagFlags_PassesFilter;
-            const auto in_range_visible = NameTagFlags_PassesTransientFilter | NameTagFlags_InRange;
-            if (flags & NameTagFlags_Suppressed) return false;
-            if (!(flags & forced_visible) &&
-                ((flags & NameTagFlags_NotOwnedByPlayer) || (flags & in_range_visible) != in_range_visible)) {
-                return false;
-            }
-
-            if (!RefreshNameTag_Func) {
-                // AvAgent.cpp - the client's own forced refresh, used when an agent's dye or model changes.
-                const auto address = GW::Scanner::Find("\x6a\x00\xff\x73\x2c\x68\x1a\x00\x00\x10", "xxxxxxxxxx");
-                DEBUG_ASSERT(address);
-                if (address) {
-                    RefreshNameTag_Func = (RefreshNameTag_pt)GW::Scanner::ToFunctionStart(address);
-                }
-            }
-            if (!RefreshNameTag_Func) return false;
-            // Same flags either side forces an in-place attribs update instead of a hide/show pair.
-            RefreshNameTag_Func(agent, nullptr, flags, flags, 1);
-            return true;
-        }
     } // namespace Agents
     namespace Items {
         GW::Constants::Rarity GetRarity(const GW::Item* item)

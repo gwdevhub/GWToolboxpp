@@ -216,34 +216,6 @@ namespace GW {
         bool IsAgentCarryingBundle(uint32_t agent_id);
         void AsyncGetAgentName(const uint32_t agent_id, std::wstring& out);
         void AsyncGetAgentName(const Agent* agent, std::wstring& out);
-
-        // Bits in GW::Agent::name_properties, which AvAgent.cpp recomputes name tag visibility from.
-        enum NameTagFlags : uint32_t {
-            // In the mouse pick list; cleared wholesale whenever that list is rebuilt.
-            NameTagFlags_Picked = 0x8,
-            // Moused-over agent: underlines the tag, glows the model, draws the selection decal.
-            NameTagFlags_Highlighted = 0x10,
-            // Within name tag draw distance (1500 gwinches from the camera).
-            NameTagFlags_InRange = 0x20,
-            // The evaluated target - manual target, else auto target.
-            NameTagFlags_EvaluatedTarget = 0x80,
-            // The manual target, while a different auto target exists.
-            NameTagFlags_ManualTarget = 0x100,
-            // Name tags globally suppressed (cutscenes, /hideui); refcounted by the client.
-            NameTagFlags_Suppressed = 0x200,
-            // Agent::type passes the persistent filter from the Guild Wars name tag options.
-            NameTagFlags_PassesFilter = 0x400,
-            // Dropped item reserved for another player, so it never gets a distance-based tag.
-            NameTagFlags_NotOwnedByPlayer = 0x800,
-            // Agent::type passes the transient filter, bound to the "show item names" key.
-            NameTagFlags_PassesTransientFilter = 0x1000,
-            // Name tag disabled for this agent regardless of any filter.
-            NameTagFlags_Disabled = 0x20000
-        };
-
-        // Re-reads an agent's name tag name/colour via kSetAgentNameTagAttribs; game thread only.
-        // Toggling flags can't: the client only emits on a visibility change, and targets stay visible.
-        bool RefreshNameTag(uint32_t agent_id);
     }
     namespace Items {
         GW::Constants::Rarity GetRarity(const GW::Item* item);
