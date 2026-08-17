@@ -35,6 +35,7 @@ namespace {
     // Test overlays against the scene depth buffer so world geometry hides them.
     bool occlude_behind_terrain = false;
 
+    float z_lift = 2.f; // raise above the surface so lines draw on top of terrain instead of z-fighting it (GW up is -z)
 
     GameWorldRenderer::RenderableVectors renderables;
     std::mutex renderables_mutex{};
@@ -318,6 +319,8 @@ namespace {
                 if (v.z == ALTITUDE_UNKNOWN) v.z = last;
                 else last = v.z;
             }
+            // After backfill so the sentinel is never lifted (the compare above is exact).
+            for (auto& v : vertices) v.z -= z_lift;
         }
 
         auto res = device->CreateVertexBuffer(vertices.size() * sizeof(D3DVertex), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &poly.vb, nullptr);
@@ -433,7 +436,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                 if (z != ALTITUDE_UNKNOWN) prev = z; else z = prev;
                 vertices[j].x = sx;
                 vertices[j].y = sy;
-                vertices[j].z = z;
+                vertices[j].z = z - z_lift; // `prev` stays unlifted: it seeds the next drape query
             }
 
             void* mem_loc = nullptr;
@@ -581,12 +584,14 @@ void GameWorldRenderer::RegisterSettings(ToolboxModule* module)
     SettingsRegistry::RegisterField(module, "occlude_behind_terrain", &occlude_behind_terrain);
     SettingsRegistry::RegisterField(module, "render_under_ui", &render_under_ui);
     SettingsRegistry::RegisterField(module, "exclude_compass", &exclude_compass);
+    SettingsRegistry::RegisterField(module, "z_lift", &z_lift);
 }
 
 void GameWorldRenderer::OnSettingsLoaded()
 {
     render_max_distance = std::max(render_max_distance, 10.0f);
     fog_factor = std::clamp(fog_factor, 0.0f, 1.0f);
+    z_lift = std::clamp(z_lift, 0.0f, 200.0f);
     need_sync_markers = true;
     UpdateCompositorRegistration();
 }
@@ -602,6 +607,14 @@ void GameWorldRenderer::DrawSettings()
     ImGui::ShowHelp("Number of points to interpolate. Affects smoothness of rendering.");
     ImGui::DragFloat("Fog factor", &fog_factor, 0.1f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::ShowHelp("Scales from 0.0 (disabled) to 1.0");
+    if (ImGui::DragFloat("Height lift", &z_lift, 0.5f, 0.f, 200.f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
+        // The lift is baked into each renderable's vertex buffer, so drop them and let the next sync re-drape.
+        renderables_mutex.lock();
+        renderables.clear();
+        renderables_mutex.unlock();
+        need_sync_markers = true;
+    }
+    ImGui::ShowHelp("Raise quest paths and other in-world overlays above the surface they're draped on, so they draw on top of the terrain instead of z-fighting it.");
 
     if (ImGui::Checkbox("Render under game UI", &render_under_ui)) {
         UpdateCompositorRegistration();
