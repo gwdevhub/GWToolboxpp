@@ -76,7 +76,6 @@ namespace {
     GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = nullptr, OnCompassFrame_UICallback_Func = nullptr;
     bool compass_position_dirty = true;
 
-    // Flagged when terminating minimap
     bool terminating = false;
     bool cardinal_upright = false;
 
@@ -89,7 +88,6 @@ namespace {
 
     Vec2i drag_start;
 
-    // vars for minimap movement
     clock_t last_moved = 0;
 
     /**
@@ -236,19 +234,15 @@ namespace {
         constexpr float w = 5000.0f;
         v *= 2.0f * w / size.x;
 
-        // translate by camera
         v -= translation;
 
-        // scale by camera
         v /= scale;
 
-        // rotate by current camera rotation
         const float angle = default_minimap_context.rotation - DirectX::XM_PIDIV2;
         const float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
         const float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
         v = GW::Vec2f(x1, y1);
 
-        // translate by character position
         v += me->pos;
 
         return v;
@@ -559,7 +553,6 @@ namespace {
     }
 
 
-    // Callbacks
     void OnKeydown(GW::HookStatus*, const uint32_t key)
     {
         if (key == GW::UI::ControlAction_ReverseCamera) {
@@ -613,19 +606,12 @@ namespace {
     {
         if ((context.cardinal_color & IM_COL32_A_MASK) == 0) return;
         // -------------------------------------------------------------------------
-        // Cardinal direction labels (N / S / E / W) — ImGui background draw list
-        //
-        // Font is dynamically scaled via ImGui 1.92's dynamic font atlas.
-        //
-        // Two modes controlled by cardinal_upright:
-        //   true  — labels always read upright relative to the screen (default).
-        //   false — labels rotate with the minimap; each letter faces outward
-        //           from the compass centre so it reads correctly when the map
-        //           is rotated.
+        // Cardinal direction labels (N / S / E / W) — ImGui background draw list.
+        // cardinal_upright: true = labels always read upright on screen (default);
+        // false = labels rotate with the map, each letter facing outward from the centre.
         // -------------------------------------------------------------------------
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
 
-        // Single font with dynamic scaling to the desired cardinal size.
         ImFont* font = FontLoader::GetFont();
         const float render_size = cardinal_font_size;
         ImFontBaked* baked = font->GetFontBaked(render_size);
@@ -636,15 +622,8 @@ namespace {
         const ImU32 label_col = context.cardinal_color;
         const ImU32 shadow_col = IM_COL32(0, 0, 0, (context.cardinal_color >> 24) & 0xFF);
 
-        // GW world axes: +X = east, +Y = north.
-        // label_angle: the angle (screen-space, CW from up) that this label's
-        //   top should point toward when in rotated mode.
-        //   N faces map-up   → base map angle
-        //   E faces map-right → base + PI/2
-        //   S faces map-down  → base + PI
-        //   W faces map-left  → base + 3*PI/2
-        //
-        // In upright mode label_angle is unused.
+        // GW world axes: +X = east, +Y = north. label_angle is the screen-space angle (CW from up)
+        // the label's top points toward in rotated mode (N = map angle, E/S/W offset by PI/2 each); unused when upright.
         const float map_angle = context.rotation - DirectX::XM_PIDIV2;
 
         struct Cardinal {
@@ -687,7 +666,6 @@ namespace {
                 const float ca = std::cos(angle);
                 const float sa = std::sin(angle);
 
-                // Rotate local offset (ox, oy) around pivot
                 auto rot = [&](float ox, float oy) -> ImVec2 {
                     return {pivot.x + ox * ca - oy * sa, pivot.y + ox * sa + oy * ca};
                 };
@@ -1329,7 +1307,6 @@ void Minimap::Draw(IDirect3DDevice9* device)
         return;
     }
 
-    // Check shadowstep location
     if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f) {
         GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
         if (!effects) {
@@ -1518,13 +1495,11 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         return;
     }
 
-    // Backup the DX9 state
     IDirect3DStateBlock9* d3d9_state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) {
         return;
     }
 
-    // Backup the DX9 transform
     D3DMATRIX reset_world;
     D3DMATRIX reset_view;
     D3DMATRIX reset_projection;
@@ -1572,17 +1547,13 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, res, vertices, sizeof(D3DVertex));
     };
 
-    // Use context instead of RenderSetupProjection()
     RenderSetupProjection(device, context);
 
-    // Use context background color (or from pmap_renderer if 0)
     auto& instance = Instance();
-    // Use context clipping rect instead of global
     const auto rect = context.rect();
     device->SetScissorRect(&rect);
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
 
-    // Use context.circular_map instead of global
     if (context.draw_background) {
         if (context.circular_map) {
             device->SetRenderState(D3DRS_STENCILENABLE, true);
@@ -1608,13 +1579,10 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
 
     auto translate_char = DirectX::XMMatrixTranslation(-me->pos.x, -me->pos.y, 0);
 
-    // Use context.rotation instead of GetMapRotation()
     const auto rotate_char = DirectX::XMMatrixRotationZ(-context.rotation + DirectX::XM_PIDIV2);
 
-    // Use context.zoom_scale instead of global scale
     const auto scaleM = DirectX::XMMatrixScaling(context.zoom_scale, context.zoom_scale, 1.0f);
 
-    // Use context.translation instead of global translation
     const auto translationM = DirectX::XMMatrixTranslation(context.translation.x, context.translation.y, 0);
 
     const auto view = translate_char * rotate_char * scaleM * translationM;
@@ -1642,7 +1610,6 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     }
 
 
-    // Use context.draw_center_marker or check context.translation
     if (context.draw_center_marker || context.translation.x) {
         const auto view2 = scaleM;
         device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view2));
@@ -1671,12 +1638,10 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         device->SetRenderState(D3DRS_STENCILENABLE, false);
     }
 
-    // Restore the DX9 transform
     device->SetTransform(D3DTS_WORLD, &reset_world);
     device->SetTransform(D3DTS_VIEW, &reset_view);
     device->SetTransform(D3DTS_PROJECTION, &reset_projection);
 
-    // Restore the DX9 state
     d3d9_state_block->Apply();
     d3d9_state_block->Release();
 }
@@ -1923,7 +1888,6 @@ bool Minimap::OnMouseWheel(const UINT, const WPARAM wParam, const LPARAM)
 
 bool Minimap::IsInside(const int x, const int y) const
 {
-    // if outside the minimap window rect, return false
     const auto& tl = default_minimap_context.top_left;
     const auto& br = default_minimap_context.bottom_right;
     if (static_cast<float>(x) < tl.x || static_cast<float>(x) > br.x ||

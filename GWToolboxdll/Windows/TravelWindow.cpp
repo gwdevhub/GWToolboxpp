@@ -88,7 +88,6 @@ namespace {
             }
             if (enc_name->IsDecoding())
                 return nullptr;
-            // Sanitise for searching my removing punctuation etc
             const auto sanitised = SanitiseForSearch(enc_name->wstring());
             name = new char[sanitised.length() + 1];
             strcpy(name, sanitised.c_str());
@@ -336,7 +335,6 @@ namespace {
             }
         }
 
-        // Helper function
         auto FindMatchingMap = [](const char* compare, const char* const* map_names, const GW::Constants::MapID* map_ids, const size_t map_count) -> GW::Constants::MapID {
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
@@ -363,7 +361,6 @@ namespace {
             }
             return bestMatchMapID;
         };
-        // Helper function
         auto FindMatchingMapVec = [](const char* compare, std::vector<SearchableArea*>& maps) -> GW::Constants::MapID {
             const char* bestMatchMapName = nullptr;
             auto bestMatchMapID = GW::Constants::MapID::None;
@@ -430,7 +427,6 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdTP)
     {
-        // zero argument error
         if (argc == 1) {
             Log::Error("[Error] Please provide an argument");
             return;
@@ -445,7 +441,6 @@ namespace {
             pending_map_travel.map_id = GW::Constants::MapID::None;
             return;
         }
-        // Guild hall
         if (argOutpost == L"gh") {
             if (IsInGH()) {
                 GW::GuildMgr::LeaveGH();
@@ -1191,13 +1186,11 @@ void TravelWindow::DrawSettingsInternal()
 
             ImGui::TableNextRow();
 
-            // Alias key
             ImGui::TableSetColumnIndex(0);
             ImGui::SetNextItemWidth(-1);
             if (ImGui::InputText("##alias", entry.alias, 32))
                 aliases_changed = true;
 
-            // Map combo
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-1);
             auto map_idx = OutpostIDToIndex(entry.map_id);
@@ -1206,7 +1199,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // District combo
             ImGui::TableSetColumnIndex(2);
             ImGui::SetNextItemWidth(-1);
             auto dist_idx = DistrictToAliasIndex(entry.district);
@@ -1215,7 +1207,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // District number
             ImGui::TableSetColumnIndex(3);
             ImGui::SetNextItemWidth(-1);
             auto dist_num = static_cast<int>(entry.district_number);
@@ -1224,7 +1215,6 @@ void TravelWindow::DrawSettingsInternal()
                 aliases_changed = true;
             }
 
-            // Delete button
             ImGui::TableSetColumnIndex(4);
             if (ImGui::ButtonWithHint(ICON_FA_TRASH, "Delete alias", ImVec2(btn_w, 0))) {
                 user_aliases.erase(user_aliases.begin() + i);

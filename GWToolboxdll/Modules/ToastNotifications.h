@@ -67,7 +67,6 @@ public:
         WinToastLib::WinToastTemplate* toast_template = nullptr;
         Toast(const std::wstring& _title, const std::wstring& _message);
         ~Toast() override;
-        // Public interfaces
         void toastActivated() const override;
         void toastActivated(int) const override;
         void toastDismissed(WinToastDismissalReason) const override;

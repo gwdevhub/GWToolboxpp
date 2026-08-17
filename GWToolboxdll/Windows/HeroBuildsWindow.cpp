@@ -304,7 +304,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
             const float btn_width = 60.0f * ImGui::FontScale();
             const float& item_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
 
-            // Collect filtered builds, preserving order
             std::vector<TeamBuild*> filtered;
             for (TeamBuild& tbuild : teambuilds) {
                 if (settings.filter_by_profession && player_profession != GW::Constants::Profession::None) {
@@ -323,7 +322,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
 
             bool vector_invalidated = false;
 
-            // Group builds by name
             std::unordered_map<std::string, std::vector<TeamBuild*>> by_group;
             for (TeamBuild* tbuild : filtered) {
                 by_group[std::string(tbuild->group)].push_back(tbuild);
@@ -477,7 +475,6 @@ void HeroBuildsWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
     }
 
-    // Draw edit windows for each open teambuild using unified DrawEditWindow
     for (size_t i = 0; i < teambuilds.size(); i++) {
         if (!teambuilds[i].edit_open) continue;
         if (!teambuilds[i].DrawEditWindow(i, teambuilds, builds_changed)) {

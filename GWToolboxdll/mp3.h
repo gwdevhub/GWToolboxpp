@@ -1,6 +1,5 @@
 #pragma once
 
-// Windows Header Files:
 #include <windows.h>
 #include <strmif.h>
 #include <control.h>
@@ -29,25 +28,14 @@ public:
     // -10000 is lowest volume and 0 is highest volume
     long GetVolume() const;
 
-    // Returns the duration in 1/10 millionth of a second,
-    // meaning 10,000,000 == 1 second
-    // You have to divide the result by 10,000,000
-    // to get the duration in seconds.
+    // Duration in units of 100ns (10,000,000 == 1 second).
     __int64 GetDuration() const;
 
-    // Returns the current playing position
-    // in 1/10 millionth of a second,
-    // meaning 10,000,000 == 1 second
-    // You have to divide the result by 10,000,000
-    // to get the duration in seconds.
+    // Playing position in units of 100ns (10,000,000 == 1 second).
     __int64 GetCurrentPosition() const;
 
-    // Seek to position with pCurrent and pStop
-    // bAbsolutePositioning specifies absolute or relative positioning.
-    // If pCurrent and pStop have the same value, the player will seek to the position
-    // and stop playing. Note: Even if pCurrent and pStop have the same value,
-    // avoid putting the same pointer into both of them, meaning put different
-    // pointers with the same dereferenced value.
+    // Equal pCurrent/pStop values seek then stop playing; they must still be two
+    // distinct pointers.
     bool SetPositions(__int64* pCurrent, __int64* pStop, bool bAbsolutePositioning) const;
 
 private:
@@ -57,6 +45,5 @@ private:
     IBasicAudio* piba;
     IMediaSeeking* pims;
     bool ready;
-    // Duration of the MP3.
     __int64 duration;
 };

@@ -168,7 +168,6 @@ bool HotkeyEquipItem::DrawSettings()
         }
         if (ImGui::BeginPopupModal("Choose Item to Equip", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (need_to_fetch_bag_items) {
-                // Free available_items ptrs
                 for (auto& it : available_items) {
                     for (auto atts : it.second) {
                         delete atts;
@@ -351,7 +350,6 @@ void HotkeyEquipItem::Execute()
     const GW::Skillbar* s = GW::SkillbarMgr::GetPlayerSkillbar();
     if (p->GetIsKnockedDown() || (s && s->cast_array.size())) {
         ongoing = true;
-        // Player knocked down or casting; wait.
         return;
     }
     if (p->skill) {

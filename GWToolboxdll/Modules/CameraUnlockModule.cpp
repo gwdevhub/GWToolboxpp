@@ -54,15 +54,9 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    // Fix for a vanilla GW freeze: dying in first-person and then resurrecting can leave
-    // the camera's pitch_to_go as NaN (the death-orbit -> follow-cam transition clamps
-    // pitch against the wrong limits and pushes it out of its valid [-1,1] range). That
-    // NaN eases into pitch and then into the eye position; the game's terrain
-    // line-of-sight ray-march (Gw.exe @0x0070eb40) only exits on an *ordered* float
-    // compare, so a NaN coordinate makes it loop forever and the render thread hangs
-    // (recoverable only by dying again). We hook the per-frame "get camera eye" routine
-    // (Gw.exe @0x004f7b80, which asserts "*fov != 0.0f") and clamp pitch/pitch_to_go back
-    // into [-1,1] (mapping NaN -> 0) before the renderer and ray-march read the camera.
+    // Vanilla GW freeze fix: resurrecting after a first-person death can leave pitch/pitch_to_go NaN, which
+    // reaches the eye position and hangs the terrain ray-march (Gw.exe @0x0070eb40, ordered float compare only).
+    // Hook the per-frame get-camera-eye (Gw.exe @0x004f7b80) and clamp pitch back into [-1,1] (NaN -> 0).
     typedef void(__fastcall* GetCameraEye_pt)(void* cam, void* edx, uint32_t flag, void* out_pos, void* out_look, void* out_fov);
     GetCameraEye_pt GetCameraEye_Func = nullptr, GetCameraEye_Ret = nullptr;
 

@@ -84,7 +84,6 @@ namespace {
 
         auto pContext = reinterpret_cast<PCONTEXT>(param_4);
 
-        // Create EXCEPTION_POINTERS structure
         EXCEPTION_RECORD exceptionRecord = {0};
         EXCEPTION_POINTERS exceptionPointers = {nullptr};
 
@@ -99,13 +98,11 @@ namespace {
             }
         }
 
-        // Fill in exception record with info from CONTEXT
         exceptionRecord.ExceptionCode = exception_code;
         exceptionRecord.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
         exceptionRecord.ExceptionAddress = reinterpret_cast<PVOID>(pContext->Eip);
         exceptionRecord.NumberParameters = 0;
 
-        // Set up exception pointers
         exceptionPointers.ExceptionRecord = &exceptionRecord;
         exceptionPointers.ContextRecord = pContext;
 
@@ -269,8 +266,7 @@ void CrashHandler::FatalAssert(const char* expr, const char* file, const unsigne
 
         throw std::runtime_error(tb_exception_message);
     } __except (EXCEPT_EXPRESSION_ENTRY) {
-        // The Crash() function should have terminated the process
-        // If we somehow get here, force termination
+        // Crash() should already have terminated the process; force it if not.
         TerminateProcess(GetCurrentProcess(), 1);
     }
 

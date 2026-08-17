@@ -182,12 +182,8 @@ namespace {
             const auto& ln = b.lines[b.build_cursor];
             const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
             const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / spacing));
-            // Drape each sample on the edge's OWN plane. A navmesh edge lies on a single trapezoid, so its surface IS
-            // that plane's heightfield (which ramps/steps where the floor does). Querying the plane directly per point —
-            // not the globally-closest surface — makes the line ride that surface: flat stays flat, a ramp rises, a
-            // deck stays on the deck, and an edge under a bridge stays on the ground rather than snapping to the deck.
-            // Sampling density is `spacing` gw; each surface query is exact at that point, so the only error is the chord
-            // between samples — tighten `spacing` to shrink it.
+            // Drape each sample on the edge's OWN plane (an edge lies on a single trapezoid, so that plane's heightfield
+            // IS its surface): unlike a globally-closest query, an edge under a bridge stays on the ground.
             const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
             auto surfaceZ = [&](float x, float y, float fallback) -> float {
                 const float a = TerrainDrape::QueryAltAt(x, y, plane);
@@ -316,12 +312,9 @@ namespace {
                 vertices[i].z = HighestSurfaceZ(vertices[i].x, vertices[i].y, candidate_planes);
         }
         else {
-            // Ordered, densely-sampled path: drape on the navmesh-walkable plane at each sample (point-location),
-            // choosing the surface closest to the running height. This follows the surface the path actually walks —
-            // e.g. up onto a monument plane between two ground hops — instead of sinking onto the ground beneath it,
-            // which the old all-planes "closest surface" did because plane 0's heightfield still reports the floor
-            // under the monument. Falls back to that all-planes query when the navmesh isn't built yet or no walkable
-            // plane covers the sample (so cross-plane edges with no waypoint on the higher plane still drape sanely).
+            // Ordered path: drape on the navmesh-walkable plane at each sample, closest to the running height, so it
+            // rides what the path walks (e.g. a monument) instead of the floor beneath. Falls back to an all-planes
+            // query when the navmesh isn't built or no walkable plane covers the sample.
             auto* nav = PathfindingWindow::GetResidentNavMesh();
             GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
             float prev = TerrainDrape::QueryAltAt(seed_pos.x, seed_pos.y, seed_pos.zplane);

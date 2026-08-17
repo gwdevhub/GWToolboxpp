@@ -16,7 +16,6 @@ protected:
 
     std::recursive_mutex window_mutex;
 
-    // Forward declarations of helper functions
     bool CreateDeviceD3D();
     void CleanupDeviceD3D();
     void ResetDevice();

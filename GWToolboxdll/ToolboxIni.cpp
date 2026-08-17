@@ -56,7 +56,6 @@ std::pair<FastIniEntry&, bool> FastIniSection::findOrCreate(std::string_view key
         return {vec.back(), true};
     }
     if (multiKey) {
-        // Append a new slot for this duplicate key
         vec.emplace_back();
         return {vec.back(), false}; // section existed, key existed → SI_UPDATED
     }
@@ -212,7 +211,6 @@ SI_Error ToolboxIni::LoadFile(const std::filesystem::path& a_pwszFile)
     SI_Error res = SI_FAIL;
 
     Reset();
-    // 3 tries to load from disk
     for (auto i = 0; i < 3 && res != SI_OK; i++) {
         res = LoadFileRaw(a_pwszFile) ? SI_OK : SI_FAIL;
     }

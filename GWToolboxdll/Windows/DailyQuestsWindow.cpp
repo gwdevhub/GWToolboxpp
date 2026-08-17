@@ -178,8 +178,6 @@ namespace {
     };
     static_assert(_countof(zaishen_bounty_cycles) == ZAISHEN_BOUNTY_COUNT);
 
-    // These vectors are good to go
-
     std::unordered_map<DailyQuests::NicholasCycleData*, uint16_t> nicholas_item_collected_count;
 
     DailyQuests::NicholasCycleData nicholas_cycles[] = {
@@ -1028,7 +1026,6 @@ namespace {
     {
         static clock_t last_inv_check_sandford = 0;
 
-        // If the map is empty, populate it with unique keys from the cycle array
         if (nicholas_sandford_item_collected_count.empty()) {
             for (auto& item : nicholas_sandford_cycles) {
                 nicholas_sandford_item_collected_count[item.enc_name] = 0;
@@ -1036,7 +1033,6 @@ namespace {
         }
 
         if (!last_inv_check_sandford || TIMER_DIFF(last_inv_check_sandford) > 10000) {
-            // Check inventory for each Nicholas Sandford item
             for (const auto& [enc_name, count] : nicholas_sandford_item_collected_count) {
                 nicholas_sandford_item_collected_count[enc_name] = InventoryManager::CountItemsByName(enc_name.c_str());
             }
@@ -1048,7 +1044,6 @@ namespace {
         return found->second;
     }
     const std::unordered_map<GW::Constants::QuestID, DailyQuests::ZaishenCoinReward> zaishen_coin_rewards = {
-        // ZaishenMission
         {QuestID::ZaishenMission_The_Great_Northern_Wall, {15, 74}},
         {QuestID::ZaishenMission_Fort_Ranik, {15, 74}},
         {QuestID::ZaishenMission_Ruins_of_Surmia, {15, 74}},
@@ -1119,7 +1114,6 @@ namespace {
         {QuestID::ZaishenMission_Minister_Chos_Estate, {15, 74}},
         {QuestID::ZaishenMission_Pogahn_Passage, {30, 150}},
 
-        // ZaishenBounty
         {QuestID::ZaishenBounty_Urgoz, {60, 210}},
         {QuestID::ZaishenBounty_Chung_The_Attuned, {20, 70}},
         {QuestID::ZaishenBounty_Mungri_Magicbox, {20, 70}},
@@ -1148,7 +1142,6 @@ namespace {
         {QuestID::ZaishenBounty_Magmus, {40, 140}},
         {QuestID::ZaishenBounty_Lord_Khobay, {40, 140}},
 
-        // ZaishenVanquish
         {QuestID::ZaishenVanquish_Dejarin_Estate, {150, 150}},
         {QuestID::ZaishenVanquish_Watchtower_Coast, {50, 50}},
         {QuestID::ZaishenVanquish_Arbor_Bay, {250, 250}},
@@ -1438,7 +1431,6 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         if (settings.show_other_searing_dailies) add_pre_cols();
     }
 
-    // Header row
     float offset = 0.0f;
     ImGui::Text("Date");
     ImGui::SameLine(offset += short_text_width);
@@ -1941,7 +1933,6 @@ size_t DailyQuests::NicholasCycleData::GetCollectedQuantity()
 {
     static clock_t last_inv_check = 0;
     if (!last_inv_check || TIMER_DIFF(last_inv_check) > 10000) {
-        // Check inventory
         for (auto& item : nicholas_cycles) {
             nicholas_item_collected_count[&item] = InventoryManager::CountItemsByName(item.enc_name.c_str());
         }

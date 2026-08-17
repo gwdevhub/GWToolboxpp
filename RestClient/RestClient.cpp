@@ -74,7 +74,6 @@ void AsyncRestClient::ExecuteAsync()
     m_Event.Reset();
     m_ThreadHandle = CreateThread(nullptr, 0, &AsyncRestClient::ThreadProc, this, 0, nullptr);
     if (!m_ThreadHandle) {
-        // Failed to spawn a worker; treat as immediately errored.
         m_Status = ResponseStatus::Error;
         m_Event.SetDone();
     }

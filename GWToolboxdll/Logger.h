@@ -31,7 +31,6 @@ namespace Log {
     // printf-style wide-string log
     GWTOOLBOXDLL_EXPORT void LogW(const wchar_t* msg, ...);
 
-    // flushes log file.
     GWTOOLBOXDLL_EXPORT void FlushFile();
 
     // === Game chat logging ===

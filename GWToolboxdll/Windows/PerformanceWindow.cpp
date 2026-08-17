@@ -13,7 +13,6 @@
 namespace {
     PerformanceWindow::Settings settings;
 
-    // QPC helper
     uint64_t QpcToMicroseconds(LONGLONG ticks)
     {
         static LARGE_INTEGER freq = [] { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
@@ -171,7 +170,6 @@ namespace {
     {
         if (settings.stream_to_csv) StreamSnapshotToCsv(tick);
 
-        // Store current 1s snapshot into ring buffer
         hist_frame[hist_index] = acc_frame;
         hist_tb_update[hist_index] = acc_tb_update;
         hist_tb_draw[hist_index] = acc_tb_draw;
@@ -179,7 +177,6 @@ namespace {
         hist_modules[hist_index] = acc_modules;
         hist_index = (hist_index + 1) % WINDOW_SECONDS;
 
-        // Merge all snapshots in the ring buffer
         displayed_frame = {};
         displayed_tb_update = {};
         displayed_tb_draw = {};
@@ -200,7 +197,6 @@ namespace {
             }
         }
 
-        // Reset accumulators for next 1s window
         acc_frame = {};
         acc_tb_update = {};
         acc_tb_draw = {};
@@ -283,7 +279,6 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
     }
     HookPresent(device);
 
-    // Frame period tracking
     static LARGE_INTEGER prev_frame_qpc = {};
     {
         LARGE_INTEGER now;
@@ -295,7 +290,6 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
         prev_frame_qpc = now;
     }
 
-    // Accumulate per-module times
     uint64_t total_update_us = 0, total_draw_us = 0;
 
     for (const auto* m : GWToolbox::GetAllModules()) {
@@ -316,7 +310,6 @@ void PerformanceWindow::Draw(IDirect3DDevice9* device)
     if (total_draw_us > 0) acc_tb_draw.Record(total_draw_us);
     if (present_time_us > 0) acc_present.Record(present_time_us);
 
-    // Flush every 1s
     const DWORD now = GetTickCount();
     if (window_start_tick == 0) window_start_tick = now;
     if (now - window_start_tick >= 1000) {

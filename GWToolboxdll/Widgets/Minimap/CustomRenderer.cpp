@@ -75,7 +75,6 @@ void CustomRenderer::RegisterSettings(ToolboxModule* module)
 
 void CustomRenderer::LoadMarkers()
 {
-    // clear current markers
     lines.clear();
     markers.clear();
     polygons.clear();
@@ -1006,17 +1005,14 @@ void CustomRenderer::DrawCustomMarkers(IDirect3DDevice9* device)
         return;
     }
 
-    // Custom polygons
     for (CustomPolygon& polygon : polygons) {
         polygon.Render(device);
     }
 
-    // Custom markers
     for (CustomMarker& marker : markers) {
         marker.Render(device);
     }
 
-    // Hero flag circles
     hero_circles_.Update(color_hero_flags_, hero_flag_line_thickness_, gwinches_per_pixel_);
     if (GW::HeroFlagArray& flags = GW::GetGameContext()->world->hero_flags; flags.valid()) {
         for (const auto& flag : flags) {

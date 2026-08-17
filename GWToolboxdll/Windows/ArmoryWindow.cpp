@@ -1072,12 +1072,10 @@ namespace GWArmory {
                 state = SnapshotState::WaitingForDecode;
             } break;
             case SnapshotState::WaitingForDecode: {
-                // Check if all strings are decoded
                 for (auto& it : pending_decodes) {
                     if (it.second->IsDecoding()) return;
                 }
 
-                // Build JSON output
                 std::vector<armory_snapshot::WeaponEntry> output;
                 output.reserve(pending_decodes.size());
                 for (auto& it : pending_decodes) {
@@ -1091,7 +1089,6 @@ namespace GWArmory {
                     });
                 }
 
-                // Write to file
                 const auto filename = Resources::GetPath("weapon_snapshot.json");
                 std::ofstream file(filename);
                 if (file.is_open()) {
@@ -1103,7 +1100,6 @@ namespace GWArmory {
                     Log::Error("Failed to write weapon snapshot to %s", filename.string().c_str());
                 }
 
-                // Cleanup
                 pending_decodes.clear();
                 pending_items.clear();
                 state = SnapshotState::Idle;

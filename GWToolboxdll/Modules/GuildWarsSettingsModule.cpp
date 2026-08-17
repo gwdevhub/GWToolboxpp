@@ -241,7 +241,6 @@ namespace {
         RECT gw_window_pos = { 0 };
     };
 
-    // Read preferences from in-game memory to a PreferencesStruct
     void GetPreferences(PreferencesStruct& out)
     {
         out.preference_values.resize(std::to_underlying(GW::UI::NumberPreference::Count), 0);
@@ -267,7 +266,7 @@ namespace {
         ASSERT(GetWindowRect(GW::MemoryMgr::GetGWWindowHandle(), &out.gw_window_pos));
     }
 
-    // Write preferences to the game from a PreferencesStruct. Run this on the game thread.
+    // Run this on the game thread.
     void SetPreferences(PreferencesStruct& in)
     {
         for (auto i = 0u; i < in.preference_values.size() && i < std::to_underlying(GW::UI::NumberPreference::Count); i++) {
@@ -296,7 +295,6 @@ namespace {
         }
     }
 
-    // Read preferences from an ini file to a PreferencesStruct
     void LoadPreferences(PreferencesStruct& prefs, const ToolboxIni& ini)
     {
         GetPreferences(prefs); // Use current settings as a default
@@ -334,7 +332,6 @@ namespace {
         prefs.gw_window_pos.bottom = ini.GetLongValue(ini_label_windows, "gw_window_bottom", 0);
     }
 
-    // Read preferences from a JSON preset to a PreferencesStruct
     void LoadPreferences(PreferencesStruct& prefs, const guild_wars_settings_json::PreferencesJson& json)
     {
         GetPreferences(prefs); // Use current settings as a default
@@ -365,7 +362,6 @@ namespace {
         prefs.gw_window_pos = {json.gw_window_left, json.gw_window_top, json.gw_window_right, json.gw_window_bottom};
     }
 
-    // Write preferences from a PreferencesStruct to a JSON preset
     void SavePreferences(const PreferencesStruct& prefs, guild_wars_settings_json::PreferencesJson& json)
     {
         for (size_t key = 0; key < prefs.preference_values.size(); key++) {
@@ -519,7 +515,6 @@ namespace {
             return false;
         IUnknown* dxvkInterface = nullptr;
 
-        // Use the locally defined GUID
         HRESULT hr = d3d9Device->QueryInterface(interface_iid, (void**)&dxvkInterface);
 
         if (SUCCEEDED(hr)) {
@@ -527,7 +522,6 @@ namespace {
             return true;
         }
 
-        // The device does not support the DXVK-specific interface.
         return false;
     }
 
@@ -544,7 +538,6 @@ namespace {
             return false;
         }
 
-        // Extract the base name using std::filesystem::path directly
         baseName = std::filesystem::path(dllPath).filename().string();
 
         DWORD dummy;
@@ -566,7 +559,6 @@ namespace {
         if (VerQueryValueA(versionInfo, "\\VarFileInfo\\Translation", &langCodepageInfo, &langCodepageSize)) {
             DWORD* langCodepage = static_cast<DWORD*>(langCodepageInfo);
 
-            // Get Product Name
             char nameQueryPath[256];
             snprintf(nameQueryPath, sizeof(nameQueryPath) / sizeof(nameQueryPath[0]), "\\StringFileInfo\\%04X%04X\\ProductName", LOWORD(*langCodepage), HIWORD(*langCodepage));
 
@@ -577,7 +569,6 @@ namespace {
                 productName.assign(static_cast<const char*>(productNameValue), productNameValueSize - 1);  // Exclude the null terminator
             }
 
-            // Get Product Version
             char versionQueryPath[256];
             snprintf(versionQueryPath, sizeof(versionQueryPath) / sizeof(versionQueryPath[0]), "\\StringFileInfo\\%04X%04X\\ProductVersion", LOWORD(*langCodepage), HIWORD(*langCodepage));
 

@@ -318,13 +318,11 @@ namespace GW {
 
             // Navigate to target character by selecting previous/next until we reach it
             while (target_idx < selected_idx) {
-                // Need to go backwards - select the previous character
                 if (selected_idx == 0) break; // Can't go before first character
                 if (!select_char(selected_idx - 1)) return false;
             }
 
             while (target_idx > selected_idx) {
-                // Need to go forwards - select the next character
                 const auto chars_size = ctx->chars.size();
                 if (!chars_size || selected_idx + 1 >= chars_size) break; // Can't go past last character
                 if (!select_char(selected_idx + 1)) return false;
@@ -1578,7 +1576,6 @@ namespace ToolboxUtils {
         if (item->customized && ctre::search<dmg_plus_20_pattern>(original)) {
             // Remove "\nDamage +20%" > "\n"
             original = TextUtils::ctre_regex_replace<dmg_plus_20_pattern, L"">(original);
-            // Append "Customized"
             original += L"\x2\x102\x2\x108\x107"
                         L"Customized\x1";
         }

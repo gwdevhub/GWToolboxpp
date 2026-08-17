@@ -12,7 +12,6 @@ namespace {
 
     static constexpr uint32_t fvf_array_2[16] = {0x0, 0xC, 0x4, 0x10, 0xC, 0x18, 0x10, 0x1C, 0x4, 0x10, 0x8, 0x14, 0x10, 0x1C, 0x14, 0x20};
 
-    // Helper functions
     uint32_t getFVF(uint32_t dat_fvf) {
         return ((dat_fvf & 0xff0) << 4) | ((dat_fvf >> 8) & 0x30) | (dat_fvf & 0xf);
     }
@@ -76,7 +75,6 @@ namespace ArenaNetFileParser {
     {
         ASSERT(isValid());
         size_t offset = 5;
-        // Parse chunk headers and record their locations
         while (offset + 8 <= data_size) {
             const auto chunk = (Chunk*)&data[offset];
             if (chunk->chunk_id == chunk_type)

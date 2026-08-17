@@ -26,7 +26,6 @@ namespace {
     GW::UI::FramePosition skillbar_skill_positions[8];
     ImVec2 skill_positions_calculated[8];
 
-    // Overall settings
     enum class Layout {
         Row,
         Rows,
@@ -106,7 +105,6 @@ namespace {
             }
         }
 
-        // Calculate columns/rows
         if (skillbar_skill_positions[0].screen_top == skillbar_skill_positions[7].screen_top) {
             layout = Layout::Row;
         }
@@ -281,13 +279,11 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         const ImVec2& top_left = skill_positions_calculated[i];
         const ImVec2 bottom_right = {skill_positions_calculated[i].x + m_skill_width, skill_positions_calculated[i].y + m_skill_height};
 
-        // draw overlay
         if (settings.display_skill_overlay) {
             draw_list->AddRectFilled(top_left, bottom_right, skill.color);
         }
         draw_list->AddRect(top_left, bottom_right, settings.color_border);
 
-        // label
         if (*skill.cooldown) {
             ImGui::PushFont(NULL, draw_list, font_size);
             const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);

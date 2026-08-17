@@ -302,7 +302,6 @@ namespace TeamBuildEncoder {
     // attributes' skills get the lowest indices.
     static void SortAttrsByInvestment(Attribute attrs[], int count, const GW::SkillbarMgr::SkillTemplate& tmpl)
     {
-        // Build investment lookup
         uint32_t investment[11] = {};
         for (uint32_t i = 0; i < tmpl.attributes_count; i++)
             investment[static_cast<int>(tmpl.attribute_ids[i])] = tmpl.attribute_values[i];

@@ -642,7 +642,6 @@ namespace {
         DeferRemoveLines(hover_highlight_lines);
     }
 
-    // Check if a portal position on a map has any connection
     bool IsPortalConnected(GW::Constants::MapID map_id, const GW::Vec2f& pos, float threshold_sq = 500.f * 500.f)
     {
         for (const auto& c : portal_connections.GetAll()) {
@@ -678,7 +677,6 @@ namespace {
         };
 
         for (const auto& [hash, info] : cached_map_info) {
-            // Filter by continent
             const auto area = GW::Map::GetMapInfo(info.map_id);
             if (area && area->continent != cur_continent) continue;
 
@@ -723,7 +721,6 @@ namespace {
             GW::GamePos br = {info.bounds_max.x, info.bounds_max.y, 0};
             GW::GamePos bl = {info.bounds_min.x, info.bounds_max.y, 0};
 
-            // Convert to current map coords for display
             tl = ToCurrentMapCoords(tl, info.map_id);
             tr = ToCurrentMapCoords(tr, info.map_id);
             br = ToCurrentMapCoords(br, info.map_id);
@@ -834,7 +831,6 @@ namespace {
         }
     }
 
-    // Convert path points from source map coords to current map coords via world map
     bool IsOutpostMap(GW::Constants::MapID map_id); // forward decl
 
     // "Don't draw a line here" sentinel in flat full_path arrays; inserted between segments around underground (no_draw) maps.
@@ -956,7 +952,6 @@ namespace {
         return from != astar->m_path.points().at(0) || to != astar->m_path.points().at(astar->m_path.points().size() - 1);
     }
 
-    // Find a cached MilePath for a given MapID
     Pathing::MilePath* GetMilepathForMap(GW::Constants::MapID map_id)
     {
         // Look up by file_hash so shared-hash maps (e.g. 107/135 with hash 0xC77A)
@@ -1107,11 +1102,9 @@ namespace {
             if (fwd_match || rev_match) {
                 PATH_LOG_INFO("[GetAdj]   conn from=%d to=%d ftype=%d ttype=%d oneway=%d fwd=%d rev=%d", (int)conn.from_map, (int)conn.to_map, (int)conn.from_type, (int)conn.to_type, conn.IsOneWay() ? 1 : 0, fwd_match ? 1 : 0, rev_match ? 1 : 0);
             }
-            // Forward: conn.from matches current → conn.to is neighbor
             if (fwd_match && conn.to_map != map_id && !contains(conn.to_map)) {
                 result.push_back(conn.to_map);
             }
-            // Reverse: only for bidirectional connections
             if (rev_match && conn.from_map != map_id && !contains(conn.from_map)) {
                 result.push_back(conn.from_map);
             }
@@ -1222,7 +1215,6 @@ namespace {
         auto it = portal_props_cache.find(fh);
         if (it != portal_props_cache.end()) return it->second;
 
-        // Check if already in cached_map_info (from full DAT load)
         for (const auto& [hash, info] : cached_map_info) {
             if (info.map_id == map_id && !info.portal_props.empty()) {
                 portal_props_cache[fh] = info.portal_props;
@@ -1261,7 +1253,6 @@ namespace {
         ArenaNetFileParser::ArenaNetFile game_asset;
         if (!game_asset.readFromDat(fid, 1)) return;
 
-        // Get bounds from Map_Info chunk
 #pragma pack(push, 1)
         struct MapInfoChunk : ArenaNetFileParser::Chunk {
             uint32_t signature;
@@ -1272,7 +1263,6 @@ namespace {
         const auto map_info_chunk = (MapInfoChunk*)game_asset.FindChunk(ArenaNetFileParser::ChunkType::Map_Info);
         if (!map_info_chunk) return;
 
-        // Parse portal props
         std::vector<Pathing::PortalProp> props;
         Pathing::LoadPortalPropsFromDAT(fid, props);
 
@@ -1722,9 +1712,7 @@ namespace {
         for (const auto& pa : info_a->portal_props) {
             GW::Vec2f wm_pa;
             if (!WorldMapWidget::GamePosToWorldMap({pa.pos.x, pa.pos.y, 0}, wm_pa, map_a)) continue;
-            // Only consider portals near the overlap region
             if (!overlap.Contains({wm_pa.x, wm_pa.y})) continue;
-            // Outpost filter: portal must be near the outpost icon if map_a is an outpost
             if (IsPortalTooFarFromOutpost(map_a, wm_pa)) continue;
 
             for (const auto& pb : info_b->portal_props) {
@@ -1789,7 +1777,6 @@ namespace {
             }
         }
 
-        // Score and pick the best candidate
         if (!candidates.empty()) {
             if (start_game || goal_game) {
                 // Score by actual AStar cost; penalize failures heavily (an unreachable portal must not beat a reachable one).
@@ -1976,7 +1963,6 @@ namespace {
                 auto map_id = route_copy[seg];
                 GW::GamePos seg_from, seg_to;
 
-                // Determine segment start
                 if (seg == 0) {
                     seg_from = start_copy;
                 }
@@ -1990,11 +1976,9 @@ namespace {
                     }
                     seg_from = this_entry;
                     portal_draws.push_back({prev_exit, this_entry, route_copy[seg - 1], map_id});
-                    // Update last_portal_wm to the entry portal's world map position
                     WorldMapWidget::GamePosToWorldMap(this_entry, last_portal_wm, map_id);
                 }
 
-                // Determine segment end
                 if (seg == route_copy.size() - 1) {
                     seg_to = goal_copy;
                 }
@@ -2008,7 +1992,6 @@ namespace {
                         return;
                     }
                     seg_to = this_exit;
-                    // Update chain hint to exit portal position
                     WorldMapWidget::GamePosToWorldMap(this_exit, last_portal_wm, map_id);
                 }
 
@@ -2042,7 +2025,6 @@ namespace {
                     full_path.push_back({PATH_BREAK_VALUE, PATH_BREAK_VALUE, 0});
                 }
 
-                // Convert segment to current map coords and append
                 auto converted = ConvertPathToCurrentMap(seg_path, map_id);
                 full_path.insert(full_path.end(), converted.begin(), converted.end());
             }
@@ -2328,7 +2310,6 @@ namespace {
         ClearPathLines();
         delete astar;
         astar = nullptr;
-        // Use path_from_map if both are on the same map, otherwise current map
         auto target_map = GW::Map::GetMapID();
         if (path_from_map != GW::Constants::MapID::None && path_from_map == path_to_map) target_map = path_from_map;
         const auto map_id = target_map;
@@ -2347,7 +2328,6 @@ namespace {
                 PATH_LOG_ERROR("No milepath for map %d", (int)map_id);
                 return;
             }
-            // Wait for vis graph to finish building
             if (!milepath->ready()) {
                 PATH_LOG_INFO("Waiting for map %d vis graph...", (int)map_id);
                 while (!milepath->ready() && !pending_terminate) {
@@ -2373,7 +2353,6 @@ namespace {
                 return;
             }
             astar = tmpAstar;
-            // Draw path on main thread
             const auto points = astar->m_path.points(); // copy
             Resources::EnqueueMainTask([points, map_id] {
                 DrawPathAsLines(points, map_id);

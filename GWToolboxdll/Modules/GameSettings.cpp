@@ -520,13 +520,11 @@ namespace {
         const GW::Player* next_player = nullptr;
         const GW::AgentLiving* me = GW::Agents::GetControlledCharacter();
         if (!me) {
-            // Can't find myself
             Log::Error("Failed to find me");
             return pending_reinvite.reset();
         }
         GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
         if (!party || !party->players.valid()) {
-            // Can't find party
             Log::Error("Failed to find party");
             return pending_reinvite.reset();
         }
@@ -1127,10 +1125,8 @@ namespace {
         if (!(sign_btn && sign_btn->IsVisible() && sign_btn->IsDisabled())) return; // If sign button isn't visible, the player doesn't have enough faction
         const auto name_input = static_cast<GW::EditableTextFrame*>(GW::UI::GetChildFrame(frame, 4, 2));
         if (!name_input) return;
-        // Prefill and hide the name input
         name_input->SetValue(GW::PlayerMgr::GetPlayerName());
         GW::UI::SetFrameVisible(name_input, false);
-        // Show and enable the "Sign" button
         GW::UI::SetFrameDisabled(sign_btn, false);
     }
 
@@ -1163,7 +1159,6 @@ namespace {
     {
         uint32_t level = 1; // This is correct - start at 0
         while (XpReqForLevel(level + 1) <= currentXp) {
-            // Check next level
             level++;
         }
         return level; // 1 Based
@@ -2471,7 +2466,6 @@ void GameSettings::OnWriteChat(GW::HookStatus* status, GW::UI::UIMessage, void* 
     lstrcpyW(ptr, file_path.c_str());
     GlobalUnlock(hGlobal);
 
-    // prepare the clipboard
     OpenClipboard(nullptr);
     EmptyClipboard();
     SetClipboardData(CF_HDROP, hGlobal);

@@ -62,7 +62,6 @@ public:
         Interrupted // "Interrupted" is received after "Stopped"
     };
 
-    // Death event tracking
     struct DeathEvent {
         uint32_t timestamp_ms;      // Match time when death occurred
         float position_x;           // X coordinate of death
@@ -75,7 +74,6 @@ public:
             : timestamp_ms(ts), position_x(x), position_y(y), killer_agent_id(killer), killing_skill_id(skill), is_npc(npc) {}
     };
 
-    // Morale boost event tracking
     struct MoraleBoostEvent {
         uint32_t timestamp_ms;      // Match time when morale boost occurred
         
@@ -251,10 +249,8 @@ public:
         // skills received from other team (inc. npcs)
         ObservedAction total_skills_received_from_other_teams;
 
-        // fired when the agent dies
         void HandleDeath();
 
-        // fired when the agent scores a kill
         void HandleKill();
     };
 
@@ -402,10 +398,8 @@ public:
         // Track the skill that last damaged this agent (for death tracking)
         GW::Constants::SkillID last_damage_skill_id = NO_SKILL;
 
-        // Track if agent is currently dead
         bool is_dead = false;
         
-        // Track who last used a resurrection skill on this agent
         uint32_t last_resurrector = NO_AGENT;
 
         // TODO: last_hit_at to limit the kill window
@@ -413,13 +407,10 @@ public:
         bool is_player;
         bool is_npc;
 
-        // stats:
         ObservableAgentStats stats;;
 
-        // Death event (if agent died)
         std::vector<DeathEvent> death_events;
         
-        // Resurrection events (if agent was resurrected)
         std::vector<ResurrectionEvent> resurrection_events;
 
         // name fns with excessive caching & lazy loading
@@ -519,7 +510,6 @@ public:
 
         bool SynchroniseParty();
 
-        // agent_ids representing the players
         std::vector<uint32_t> agent_ids = {};
 
         // Aggregate party health snapshots (every 15 seconds)
@@ -672,7 +662,6 @@ private:
     void HandleHealingDone(uint32_t caster_id, uint32_t target_id, float amount_pc);
     void HandleAgentAdd(uint32_t agent_id);
 
-    // Helper function to get or cache max HP for an agent
     uint32_t GetOrCacheMaxHP(uint32_t agent_id);
 
     void HandleAttackFinished(uint32_t agent_id);

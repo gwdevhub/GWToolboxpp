@@ -21,11 +21,8 @@ bool WriteEntireFile(const wchar_t* FilePath, const void* Content, size_t Length
     DWORD BytesWritten;
     auto Buffer = reinterpret_cast<const uint8_t*>(Content);
 
-    //
-    // We don't early quit, because there is a difference between writing a empty
-    // file and not writing the file at all. The file could already exist, in which
-    // case it would be "cleared" and if it doesn't exist, it would be created.
-    //
+    // No early quit on an empty Content: writing nothing still clears/creates the file,
+    // which isn't the same as not writing at all.
     while (Length != 0) {
         const size_t BytesToWrite = std::min<size_t>(Length, static_cast<DWORD>(-1));
         const DWORD dwBytesToWrite = BytesToWrite;
