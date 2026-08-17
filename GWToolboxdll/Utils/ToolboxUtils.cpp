@@ -48,10 +48,6 @@ namespace {
 
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
-    // AvAgent.cpp; __thiscall modelled as __fastcall. `force` skips the "did visibility change" guard.
-    typedef void(__fastcall* RefreshNameTag_pt)(GW::Agent* agent, void* edx, uint32_t old_flags, uint32_t new_flags, uint32_t force);
-    RefreshNameTag_pt RefreshNameTag_Func = nullptr;
-
     constexpr uint32_t bogus_area_info_flags = 0x5000000; // e.g. "wrong" Augury Rock is map 119, no NPCs.
     constexpr uint32_t debug_area_info_flag = 0x80000000;
 
