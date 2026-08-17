@@ -217,8 +217,10 @@ namespace GW {
         void AsyncGetAgentName(const uint32_t agent_id, std::wstring& out);
         void AsyncGetAgentName(const Agent* agent, std::wstring& out);
 
-        // Bits in AgentRenderInfo::name_tag_flags. The client recomputes name tag visibility
-        // from these on every change; see SetNameTagFlags for why that matters.
+        // Bits in GW::Agent::name_properties, which the client's AgentView code
+        // (P:\Code\Gw\AgentView\AvAgent.cpp) uses to decide whether an agent has a name tag and what
+        // it looks like. Visibility is recomputed from these on every change, which is what makes
+        // RefreshNameTag necessary.
         enum NameTagFlags : uint32_t {
             // Agent is in the mouse pick list (cleared wholesale each time the list is rebuilt).
             NameTagFlags_Picked = 0x8,
@@ -232,59 +234,21 @@ namespace GW {
             NameTagFlags_ManualTarget = 0x100,
             // All name tags suppressed globally (cutscenes, /hideui) - refcounted by the client.
             NameTagFlags_Suppressed = 0x200,
-            // Agent type passes the persistent name tag filter set from the Guild Wars name tag options.
+            // Agent::type passes the persistent name tag filter set from the Guild Wars name tag options.
             NameTagFlags_PassesFilter = 0x400,
             // Dropped item is reserved for another player, so it never gets a distance-based tag.
             NameTagFlags_NotOwnedByPlayer = 0x800,
-            // Agent type passes the transient filter (the one bound to the "show item names" key).
+            // Agent::type passes the transient filter (the one bound to the "show item names" key).
             NameTagFlags_PassesTransientFilter = 0x1000,
             // Name tag disabled for this agent specifically, regardless of any filter.
             NameTagFlags_Disabled = 0x20000
         };
 
-        // Per-agent view object owned by the client's AgentView subsystem (P:\Code\Gw\AgentView\AvAgent.cpp).
-        // One exists for every agent that draws something in the world; it owns that agent's name tag
-        // state, its selection decal and its mouse-picking bounds.
-        // Polymorphic base - AvChar (living), AvGadget and the item view all append their own fields,
-        // so there is deliberately no sizeof assert here.
-        struct AgentRenderInfo {
-            /* + h0000 */ void** vtable;
-            /* + h0004 */ uint32_t h0004[10];
-            /* + h002C */ uint32_t agent_id;
-            /* + h0030 */ uint32_t h0030[10];
-            /* + h0058 */ uint32_t name_tag_flags;
-            /* + h005C */ uint32_t h005C;
-            /* + h0060 */ void* model;
-            /* + h0064 */ uint32_t h0064[8];
-            /* + h0084 */ float position[3];
-            /* + h0090 */ uint16_t pick_shape_count;
-            /* + h0092 */ uint16_t pick_shape_index;
-            /* + h0094 */ uint32_t h0094;
-            /* + h0098 */ void* selection_decal;
-            // Bitmask of agent categories, tested against the name tag filters. Living agents are
-            // 0x200, dropped items 0x400, gadgets 0xdb.
-            /* + h009C */ uint32_t agent_type_flags;
-            /* + h00A0 */ float position_delta[3];
-            /* + h00AC */ float forward[3];
-            /* + h00B8 */ float up[3];
-        };
-        static_assert(offsetof(AgentRenderInfo, agent_id) == 0x2c);
-        static_assert(offsetof(AgentRenderInfo, name_tag_flags) == 0x58);
-        static_assert(offsetof(AgentRenderInfo, position) == 0x84);
-        static_assert(offsetof(AgentRenderInfo, selection_decal) == 0x98);
-        static_assert(offsetof(AgentRenderInfo, agent_type_flags) == 0x9c);
-        static_assert(offsetof(AgentRenderInfo, up) == 0xb8);
-
-        // Array of AgentRenderInfo, indexed by agent id - registration grows it to agent_id + 1 and
-        // stores at [agent_id]. Entries can be null; out_capacity is the allocated length, not a count.
-        // The client also threads every object onto two intrusive lists (gadgets and everything else)
-        // for iteration order; those are separate from this array, not a replacement for it.
-        AgentRenderInfo** GetAgentRenderInfoArray(uint32_t* out_capacity = nullptr);
-        AgentRenderInfo* GetAgentRenderInfo(uint32_t agent_id);
-
-        // Sets or clears NameTagFlags bits; game thread only. Always go through this rather than writing
-        // name_tag_flags directly - the client only emits kShowAgentNameTag/kSetAgentNameTagAttribs/
-        // kHideAgentNameTag from here, and only when the resulting visibility actually changed.
+        // Sets or clears NameTagFlags bits on an agent; game thread only. Always go through this rather
+        // than writing name_properties directly - the client only emits kShowAgentNameTag/
+        // kSetAgentNameTagAttribs/kHideAgentNameTag from here, and only when the resulting visibility
+        // actually changed. No vtable slot on the agent does it: the update slot only re-runs the
+        // distance check, so it cannot refresh a tag on an agent that stays in range.
         bool SetNameTagFlags(uint32_t agent_id, uint32_t flags, bool enable);
 
         // Forces the client to destroy and rebuild an agent's name tag by toggling
