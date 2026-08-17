@@ -275,8 +275,10 @@ namespace GW {
         static_assert(offsetof(AgentRenderInfo, agent_type_flags) == 0x9c);
         static_assert(offsetof(AgentRenderInfo, up) == 0xb8);
 
-        // Array of AgentRenderInfo, indexed by agent id. Entries can be null; out_capacity is the
-        // allocated length, not the agent count.
+        // Array of AgentRenderInfo, indexed by agent id - registration grows it to agent_id + 1 and
+        // stores at [agent_id]. Entries can be null; out_capacity is the allocated length, not a count.
+        // The client also threads every object onto two intrusive lists (gadgets and everything else)
+        // for iteration order; those are separate from this array, not a replacement for it.
         AgentRenderInfo** GetAgentRenderInfoArray(uint32_t* out_capacity = nullptr);
         AgentRenderInfo* GetAgentRenderInfo(uint32_t agent_id);
 

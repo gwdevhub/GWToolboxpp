@@ -600,13 +600,15 @@ namespace GW {
         AgentRenderInfo** GetAgentRenderInfoArray(uint32_t* out_capacity)
         {
             if (!agent_render_info_array) {
-                // AvManager.cpp - the loop in the setter for the persistent name tag filter walks the
-                // whole array, so both globals are in one instruction pair.
-                const auto address = GW::Scanner::Find("\xa1\x00\x00\x00\x00\x56\x8b\x35\x00\x00\x00\x00\x8d\x04\x86", "x????xxx????xxx");
+                // AvManager.cpp - the client's own `AgentRenderInfo* GetByAgentId(id)`, which is just the
+                // bounds check plus the indexed load, so it carries both globals and nothing else does.
+                const auto address = GW::Scanner::Find(
+                    "\x8b\x4d\x08\x3b\x0d\x00\x00\x00\x00\x72\x04\x33\xc0\x5d\xc3\xa1\x00\x00\x00\x00\x8b\x04\x88",
+                    "xxxxx????xxxxxxx????xxx", -0x3);
                 DEBUG_ASSERT(address);
                 if (address) {
-                    agent_render_info_capacity = *(uint32_t**)(address + 0x1);
-                    agent_render_info_array = *(AgentRenderInfo****)(address + 0x8);
+                    agent_render_info_capacity = *(uint32_t**)(address + 0x8);
+                    agent_render_info_array = *(AgentRenderInfo****)(address + 0x13);
                 }
             }
             if (out_capacity) {
