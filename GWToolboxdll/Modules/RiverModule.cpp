@@ -38,7 +38,7 @@ namespace {
     using namespace lava_river_module;
 
     constexpr float kSampleSpacing = 50.f;            // resample a river centerline every ~50 gu (follow slopes)
-    constexpr float kAltUnknown = 1e30f;              // sentinel: no terrain data at this (x,y)
+    constexpr float kAltUnknown = TerrainDrape::kNoAltitude; // sentinel: no terrain data at this (x,y)
     constexpr size_t kMaxVertices = 1500000;          // safety cap on total surface geometry per map (raise cell_size if hit)
 
     // Settings (persisted scalars via SettingsRegistry; rivers persisted separately as JSON).
@@ -144,34 +144,6 @@ namespace {
     // Authoring state (not persisted): which river of the current map "Add point" appends to.
     int active_river = -1;
 
-    // Highest static surface at (x,y) over all planes (GW up is -z, so highest = min altitude), or sentinel.
-    float HighestSurfaceZ(const float x, const float y, const uint32_t n_planes)
-    {
-        float best = kAltUnknown;
-        for (uint32_t zp = 0; zp < n_planes; ++zp) {
-            const float a = TerrainDrape::QueryAltAt(x, y, zp);
-            if (a != 0.f && (best == kAltUnknown || a < best)) best = a;
-        }
-        return best;
-    }
-
-    // Surface altitude at (x,y) closest to `prev` (so a draped ribbon follows the walked surface across
-    // ramps/bridges instead of snapping to the ground beneath), or sentinel if no plane has data.
-    float ClosestSurfaceZ(const float x, const float y, const uint32_t n_planes, const float prev)
-    {
-        float best = kAltUnknown, best_d = kAltUnknown;
-        for (uint32_t zp = 0; zp < n_planes; ++zp) {
-            const float a = TerrainDrape::QueryAltAt(x, y, zp);
-            if (a == 0.f) continue;
-            const float d = std::fabs(a - prev);
-            if (best == kAltUnknown || d < best_d) {
-                best_d = d;
-                best = a;
-            }
-        }
-        return best;
-    }
-
     // Build a draped, textured ribbon for one river and append it to the given vertex bucket.
     void BuildRiverMesh(const LavaRiver& river, const uint32_t n_planes, std::vector<LavaVertex>& out)
     {
@@ -204,7 +176,7 @@ namespace {
         xs.reserve(dense.size());
 
         float arc = 0.f;
-        float prevz = HighestSurfaceZ(dense[0].x, dense[0].y, n_planes);
+        float prevz = TerrainDrape::HighestZ(dense[0].x, dense[0].y, n_planes);
         if (prevz == kAltUnknown) prevz = 0.f;
 
         for (size_t i = 0; i < dense.size(); ++i) {
@@ -229,11 +201,11 @@ namespace {
             const float lx = dense[i].x + px * half, ly = dense[i].y + py * half;
             const float rx = dense[i].x - px * half, ry = dense[i].y - py * half;
 
-            float lz = ClosestSurfaceZ(lx, ly, n_planes, prevz);
+            float lz = TerrainDrape::ClosestZ(lx, ly, n_planes, prevz);
             if (lz == kAltUnknown) lz = prevz;
-            float rz = ClosestSurfaceZ(rx, ry, n_planes, prevz);
+            float rz = TerrainDrape::ClosestZ(rx, ry, n_planes, prevz);
             if (rz == kAltUnknown) rz = prevz;
-            const float cz = ClosestSurfaceZ(dense[i].x, dense[i].y, n_planes, prevz);
+            const float cz = TerrainDrape::ClosestZ(dense[i].x, dense[i].y, n_planes, prevz);
             if (cz != kAltUnknown) prevz = cz;
 
             xs.push_back({lx, ly, lz - z_lift, rx, ry, rz - z_lift, arc / tile});

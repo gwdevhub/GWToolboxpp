@@ -110,6 +110,16 @@ namespace {
         }
         return false;
     }
+
+    // Plane 0 is exempt from pruning: the terrain heightfield has data outside every walkable trapezoid and draping wants it there.
+    // Containment is strict while QueryAltitude searches within its radius, so samples in the narrow band just outside a plane's edge fall through to the next surface.
+    float PrunedPlaneZ(const GW::PathingMapArray* pm, const uint32_t zp, const float x, const float y)
+    {
+        if (zp != 0 && pm) { // no pathing map to prune with -> let QueryAltitude answer, as the unpruned loops did
+            if (zp >= pm->size() || !PlaneContains((*pm)[zp], x, y)) return 0.f;
+        }
+        return TerrainDrape::QueryAltAt(x, y, zp);
+    }
 }
 
 float TerrainDrape::NativeTerrainZ(const float x, const float y)
@@ -153,6 +163,44 @@ float TerrainDrape::QueryAltAt(const float x, const float y, const uint32_t zpla
     return GW::Map::QueryAltitude(&p);
 }
 
+float TerrainDrape::HighestZ(const float x, const float y, const uint32_t n_planes)
+{
+    const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
+    float best = kNoAltitude;
+    for (uint32_t zp = 0; zp < n_planes; ++zp) {
+        const float a = PrunedPlaneZ(pm, zp, x, y);
+        if (a != 0.f && (best == kNoAltitude || a < best)) best = a;
+    }
+    return best;
+}
+
+float TerrainDrape::HighestZOnPlanes(const float x, const float y, const std::span<const uint32_t> planes)
+{
+    const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
+    float best = kNoAltitude;
+    for (const uint32_t zp : planes) {
+        const float a = PrunedPlaneZ(pm, zp, x, y);
+        if (a != 0.f && (best == kNoAltitude || a < best)) best = a;
+    }
+    return best;
+}
+
+float TerrainDrape::ClosestZ(const float x, const float y, const uint32_t n_planes, const float ref)
+{
+    const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
+    float best = kNoAltitude, best_d = FLT_MAX;
+    for (uint32_t zp = 0; zp < n_planes; ++zp) {
+        const float a = PrunedPlaneZ(pm, zp, x, y);
+        if (a == 0.f) continue;
+        const float d = std::fabs(a - ref);
+        if (d < best_d) {
+            best_d = d;
+            best = a;
+        }
+    }
+    return best;
+}
+
 float TerrainDrape::DrapeZ(const float x, const float y, const uint32_t zplane, const uint32_t n_planes, const float ref)
 {
     float best = ref, best_d = FLT_MAX;
@@ -176,8 +224,7 @@ float TerrainDrape::DrapeZ(const float x, const float y, const uint32_t zplane, 
     if (pm) {
         const auto planes = std::min<uint32_t>(n_planes, static_cast<uint32_t>(pm->size()));
         for (uint32_t zp = 1; zp < planes; ++zp) {
-            if (!PlaneContains((*pm)[zp], x, y)) continue;
-            const float a = QueryAltAt(x, y, zp);
+            const float a = PrunedPlaneZ(pm, zp, x, y);
             if (a == 0.f) continue;
             const float d = std::fabs(a - ref);
             if (d < best_d || (d == best_d && zp == zplane)) {
@@ -204,8 +251,7 @@ float TerrainDrape::SurfaceZ(const float x, const float y, const uint32_t, const
     if (pm) {
         const auto planes = std::min<uint32_t>(n_planes, static_cast<uint32_t>(pm->size()));
         for (uint32_t zp = 1; zp < planes; ++zp) {
-            if (!PlaneContains((*pm)[zp], x, y)) continue;
-            const float a = QueryAltAt(x, y, zp);
+            const float a = PrunedPlaneZ(pm, zp, x, y);
             if (a != 0.f && (best == 0.f || a < best)) best = a;
         }
     }

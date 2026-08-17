@@ -119,32 +119,7 @@ namespace {
         return a * t + b * (1.f - t);
     }
 
-    constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
-
-    // Highest static surface at (x,y) among candidate planes (GW up is -z, so highest = min altitude). QueryAltitude returns 0.f out-of-bounds (ignored); ALTITUDE_UNKNOWN if no plane has data.
-    float HighestSurfaceZ(const float x, const float y, const std::vector<uint32_t>& planes)
-    {
-        float best = ALTITUDE_UNKNOWN;
-        for (const uint32_t zp : planes) {
-            const float a = TerrainDrape::QueryAltAt(x, y, zp);
-            if (a != 0.f && (best == ALTITUDE_UNKNOWN || a < best))
-                best = a;
-        }
-        return best;
-    }
-
-    // Surface altitude at (x,y) closest to `prev` over all planes (continuity tracking): the line follows whichever surface it walks (deck/ramp/ground), so a straight visgraph edge rides a bridge instead of cutting through, and unlike "highest wins" never floats a ground sample onto an overhead deck. 0.f is out-of-bounds (skipped); ALTITUDE_UNKNOWN if no data.
-    float ClosestSurfaceZ(const float x, const float y, const uint32_t num_planes, const float prev)
-    {
-        float best = ALTITUDE_UNKNOWN, best_d = std::numeric_limits<float>::max();
-        for (uint32_t zp = 0; zp < num_planes; ++zp) {
-            const float a = TerrainDrape::QueryAltAt(x, y, zp);
-            if (a == 0.f) continue;
-            const float d = std::abs(a - prev);
-            if (d < best_d) { best_d = d; best = a; }
-        }
-        return best;
-    }
+    constexpr auto ALTITUDE_UNKNOWN = TerrainDrape::kNoAltitude;
 
     // ===== Batched navmesh-overlay line buffer =====
     // One line-list buffer for the navmesh overlay's tens of thousands of edges (per-line CustomLines were O(N^2) per map-load and re-draped on every move): drape it incrementally on the game thread, draw in a single call, render-thread only (no mutex).
@@ -188,7 +163,7 @@ namespace {
             auto surfaceZ = [&](float x, float y, float fallback) -> float {
                 const float a = TerrainDrape::QueryAltAt(x, y, plane);
                 if (a != 0.f) return a;                                      // edge's plane has floor here (the common case)
-                const float c = ClosestSurfaceZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
+                const float c = TerrainDrape::ClosestZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
                 return c == ALTITUDE_UNKNOWN ? fallback : c;
             };
             float prev = surfaceZ(ln.a.x, ln.a.y, 0.f);
@@ -309,7 +284,7 @@ namespace {
                     candidate_planes.push_back(pt.zplane);
             }
             for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++)
-                vertices[i].z = HighestSurfaceZ(vertices[i].x, vertices[i].y, candidate_planes);
+                vertices[i].z = TerrainDrape::HighestZOnPlanes(vertices[i].x, vertices[i].y, candidate_planes);
         }
         else {
             // Ordered path: drape on the navmesh-walkable plane at each sample, closest to the running height, so it
@@ -318,7 +293,7 @@ namespace {
             auto* nav = PathfindingWindow::GetResidentNavMesh();
             GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
             float prev = TerrainDrape::QueryAltAt(seed_pos.x, seed_pos.y, seed_pos.zplane);
-            if (prev == 0.f) prev = ClosestSurfaceZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
+            if (prev == 0.f) prev = TerrainDrape::ClosestZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
             for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
                 float z;
                 if (nav) {
@@ -326,7 +301,7 @@ namespace {
                     if (z == ALTITUDE_UNKNOWN) z = prev; // over a gap with no walkable poly: hold height, don't sink to the ground
                 }
                 else {
-                    z = ClosestSurfaceZ(vertices[i].x, vertices[i].y, num_planes, prev); // navmesh not built yet
+                    z = TerrainDrape::ClosestZ(vertices[i].x, vertices[i].y, num_planes, prev); // navmesh not built yet
                 }
                 if (z != ALTITUDE_UNKNOWN) prev = z;
                 vertices[i].z = z;
@@ -453,7 +428,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                     if (z == ALTITUDE_UNKNOWN) z = prev; // gap with no walkable poly: hold height, don't sink to the ground
                 }
                 else {
-                    z = num_planes ? ClosestSurfaceZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN; // navmesh not built yet
+                    z = num_planes ? TerrainDrape::ClosestZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN; // navmesh not built yet
                 }
                 if (z != ALTITUDE_UNKNOWN) prev = z; else z = prev;
                 vertices[j].x = sx;
