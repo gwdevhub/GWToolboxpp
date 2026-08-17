@@ -183,7 +183,6 @@ public:
     void Update(float delta) override;
     bool WndProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
 
-    // callback functions
     static void OnPingWeaponSet(GW::HookStatus*, GW::UI::UIMessage, void*, void*);
     static void OnAgentLoopingAnimation(GW::HookStatus*, const GW::Packet::StoC::GenericValue*);
     static void OnAgentMarker(GW::HookStatus* status, GW::Packet::StoC::GenericValue* pak);

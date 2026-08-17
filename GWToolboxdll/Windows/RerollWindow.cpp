@@ -255,7 +255,6 @@ namespace {
 
             ImGui::PushID(static_cast<int>(i));
 
-            // Collect available chars for this profession for the combo.
             std::vector<const wchar_t*> candidates;
             if (available_chars_ptr && available_chars_ptr->valid()) {
                 for (const auto& c : *available_chars_ptr) {
@@ -273,7 +272,6 @@ namespace {
 
             ImGui::SetNextItemWidth(dropdown_w);
             if (ImGui::BeginCombo("##pref", preview)) {
-                // "(any)" option
                 if (ImGui::Selectable("(any)", pref.empty())) {
                     pref.clear();
                 }
@@ -394,7 +392,6 @@ namespace {
             return false;
         }
 
-        // Check the configured preferred character first.
         const auto account_it = preferred_chars_per_account.find(GetCurrentAccountUuidStr());
         if (account_it != preferred_chars_per_account.end()) {
             const auto pref_it = account_it->second.find(static_cast<uint32_t>(profession));
@@ -406,7 +403,6 @@ namespace {
             }
         }
 
-        // Fall back to the first non-excluded available character with the matching profession.
         for (const auto& available_char : *available_characters) {
             if (IsExcludedFromReroll(available_char.player_name)) {
                 continue;

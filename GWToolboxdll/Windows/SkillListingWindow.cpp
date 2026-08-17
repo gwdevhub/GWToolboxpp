@@ -111,7 +111,6 @@ void SkillListingWindow::ExportToJSON() const
     constexpr size_t max_len = _countof(file_location_wc) - 1;
 
     for (size_t i = 0; i < message.length(); i++) {
-        // Break on the end of the message
         if (!message[i]) {
             break;
         }

@@ -225,9 +225,7 @@ namespace {
 
     // All modules including widgets and windows
     std::vector<ToolboxModule*> modules_enabled{};
-    // Widgets
     std::vector<ToolboxWidget*> widgets_enabled{};
-    // Windows
     std::vector<ToolboxWindow*> windows_enabled{};
     // Modules that aren't widgets or windows
     std::vector<ToolboxModule*> other_modules_enabled{};
@@ -422,7 +420,6 @@ namespace {
     {
         const auto found = std::ranges::find(vec, &m);
         if (found != vec.end()) {
-            // Module found
             if (enable) {
                 return true;
             }
@@ -433,7 +430,6 @@ namespace {
             ReorderModules(vec);
             return false;
         }
-        // Module not found
         if (!enable) {
             return false;
         }
@@ -594,7 +590,6 @@ namespace {
             //}
             break;
 
-            // keyboard messages
             case WM_KEYUP:
             case WM_SYSKEYUP:
                 if (io.WantCaptureKeyboard || io.WantTextInput) {
@@ -620,7 +615,6 @@ namespace {
                     return true;
                 }
             case WM_ACTIVATE:
-                // send to toolbox modules and plugins
                 {
                     bool captured = false;
                     for (const auto m : tb.GetAllModules()) {
@@ -1085,7 +1079,6 @@ void GWToolbox::Update(GW::HookStatus*)
     // (minimized, device lost) and a map change during that window can't serve a stale index.
     PropSurface::BeginFrame();
 
-    // Update loop
     for (const auto m : modules_enabled) {
         if (profiling_enabled) {
             LARGE_INTEGER t0, t1;
@@ -1155,7 +1148,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
         return;
     }
 
-    // Draw loop
     Resources::DxUpdate(device);
 
     if (!CanRenderToolbox()) return;
@@ -1248,7 +1240,6 @@ void GWToolbox::Draw(IDirect3DDevice9* device)
     // actually read the pixels out and save them to disk.
     ToolboxSettings::FlushPendingScreenshot(device);
 
-    // Update and Render additional Platform Windows
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();

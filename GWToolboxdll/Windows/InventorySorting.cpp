@@ -24,7 +24,6 @@
 
 
 namespace {
-// Macro to wait for a game thread task to complete with timeout and cancellation checks
 #define WAIT_FOR_GAME_THREAD_TASK(task_done_flag, timeout_ms, error_message)               \
     for (size_t i = 0; i < (timeout_ms) && !(task_done_flag) && !pending_cancel; i += 5) { \
         Sleep(5);                                                                          \
@@ -42,7 +41,6 @@ namespace {
         return false;                                                                      \
     }
 
-    // Helper function to check if map is ready
     bool IsMapReady()
     {
         return GW::Map::GetInstanceType() != GW::Constants::InstanceType::Loading && !GW::Map::GetIsObserving() && GW::MemoryMgr::GetGWWindowHandle() == GetActiveWindow();
@@ -53,13 +51,11 @@ namespace {
     const ImVec4 ItemPurple = ImColor(187, 137, 237).Value;
     const ImVec4 ItemGold = ImColor(255, 204, 86).Value;
 
-    // State variables
     bool show_sort_popup = false;
     bool is_sorting = false;
     bool pending_cancel = false;
     size_t items_sorted_count = 0;
 
-    // Chat command hook entries
     GW::HookEntry sort_inventory_cmd_entry;
     GW::HookEntry sort_storage_cmd_entry;
 
@@ -67,7 +63,6 @@ namespace {
     bool pending_sortinventory_confirm = false;
     bool pending_sortstorage_confirm = false;
 
-    // Sort order configuration
     std::vector<GW::Constants::ItemType> sort_order;
     InventorySorting::Settings settings;
 
@@ -102,10 +97,6 @@ namespace {
         return (static_cast<uint32_t>(priority_by_type & 0xFF) << 24) | secondary;
     }
 
-    /**
-     * Compares two items for sorting purposes.
-     * Returns true if item_a should come before item_b.
-     */
     bool ShouldItemComeFirst(GW::Item* item_a, GW::Item* item_b)
     {
         if (!item_a || !item_b) return false;
@@ -126,14 +117,8 @@ namespace {
         pending_sortstorage_confirm = true;
     }
 
-    /**
-     * Draws the inventory sorting progress popup with cancel button.
-     */
     void DrawSortInventoryPopup();
 
-    /**
-     * Resets the sort order to default values.
-     */
     void ResetSortOrder()
     {
         sort_order = {GW::Constants::ItemType::Salvage,    GW::Constants::ItemType::Materials_Zcoins,
@@ -158,7 +143,6 @@ namespace {
 
         if (ImGui::BeginPopupModal("Sort Inventory", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             if (!is_sorting) {
-                // Sorting has completed, close the popup
                 ImGui::CloseCurrentPopup();
                 ImGui::EndPopup();
                 return;
@@ -189,7 +173,6 @@ namespace {
         }
     }
 
-    // Helper: iterate over all slots in a bag range
     template <typename Fn>
     void ForEachItemInBags(GW::Constants::Bag start, GW::Constants::Bag end, Fn&& fn)
     {
@@ -215,7 +198,6 @@ namespace {
         ItemId,   // expected_value is item_id
     };
 
-    // Helper: wait until all slot expectations are met
     bool WaitForExpectations(const std::vector<SlotExpectation>& expectations, ExpectationMode mode, uint32_t timeout_ms)
     {
         for (size_t t = 0; t < timeout_ms && !pending_cancel; t += 50) {
@@ -312,7 +294,6 @@ void InventorySorting::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
         }
     }
 
-    // If loading failed or no custom order, use default
     if (sort_order.empty()) {
         ResetSortOrder();
     }
@@ -379,7 +360,6 @@ void InventorySorting::DrawSettingsInternal()
 {
     ImGui::PushID("inventory_sorting_settings");
 
-    // Character inventory sorting
     {
         bool sort_char_inv = false;
         if (ImGui::ConfirmButton("Sort Character Inventory!", &sort_char_inv)) {
@@ -413,7 +393,6 @@ void InventorySorting::DrawSettingsInternal()
         ImGui::TextDisabled("Drag items to reorder priority (top = higher priority)");
         ImGui::Spacing();
 
-        // Drag and drop reordering for sort order
         for (size_t i = 0; i < sort_order.size(); i++) {
             const auto type = sort_order[i];
             const char* type_name = GW::Items::GetItemTypeName(type);
@@ -421,18 +400,15 @@ void InventorySorting::DrawSettingsInternal()
             ImGui::PushID(static_cast<int>(i));
             ImGui::Selectable(type_name, false, ImGuiSelectableFlags_None);
 
-            // Drag and drop source
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                 ImGui::SetDragDropPayload("SORT_ORDER_ITEM", &i, sizeof(i));
                 ImGui::TextUnformatted(type_name);
                 ImGui::EndDragDropSource();
             }
 
-            // Drag and drop target
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("SORT_ORDER_ITEM")) {
                     const size_t payload_i = *static_cast<const size_t*>(payload->Data);
-                    // Swap items
                     if (payload_i != i && payload_i < sort_order.size()) {
                         std::swap(sort_order[payload_i], sort_order[i]);
                     }

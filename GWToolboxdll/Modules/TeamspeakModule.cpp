@@ -337,7 +337,6 @@ namespace {
         }
         Log::Log("Teamspeak 3 welcome message:\n%s", response->content.c_str());
 
-        // Send auth message
         const std::string to_send = std::format("auth apikey={}\r\n", settings.teamspeak3_api_key);
         response = PollSocket(to_send);
         if (!response) {

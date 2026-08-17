@@ -110,7 +110,6 @@ namespace GuiUtils {
     void FlashWindow(bool force = false);
     void FocusWindow();
 
-    // Create an ImGui representation of the skill bar
     void DrawSkillbar(const char* build_code, bool show_attributes = true);
 
     void DrawSkillbar(const GW::SkillbarMgr::SkillTemplate* skill_template_pt, bool show_attributes = true);

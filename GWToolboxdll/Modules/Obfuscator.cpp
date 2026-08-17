@@ -256,14 +256,11 @@ namespace {
     std::wstring speech_message_temp_message;
 
 
-    // List of obfuscated names, keyed by obfuscated
     std::map<std::wstring, std::wstring> obfuscated_by_obfuscation;
-    // List of obfuscated names, keyed by original
     std::map<std::wstring, std::wstring> obfuscated_by_original;
     // Current position in the list of obfuscated names
     size_t pool_index = 0;
 
-    // Current state
     enum class ObfuscatorState : uint8_t {
         Disabled,
         Enabled
@@ -574,7 +571,6 @@ namespace {
             }
             break;
             case GW::UI::UIMessage::kDialogBody: {
-                // Dialog body
                 const auto packet_actual = static_cast<GW::UI::DialogBodyInfo*>(wParam);
                 if (packet_actual->message_enc && ObfuscateMessage(packet_actual->message_enc, ui_message_temp_message)) {
                     packet_actual->message_enc = ui_message_temp_message.data();

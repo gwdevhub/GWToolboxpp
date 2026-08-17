@@ -2,7 +2,7 @@
 
 Instructions for any AI agent in this repo. (`CLAUDE.md` just imports this.)
 
-- **Comments:** explain *why*, not *what*; one concise line, no prose blocks. Exempt: `// ===` banners, license/file headers.
+- **Comments (rule #1):** ZERO comments that just restate what the code does - if it's obvious from reading the code, don't write it. Comment ONLY what the code cannot express (e.g. *why* we hook a game function this way instead of the simpler one), and keep it SHORT - 1-2 lines, no prose blocks. Exempt: `// ===` banners, license/file headers.
 - **Variables:** prefer `auto` when the initializer makes the type clear (`const auto x = TIMER_INIT();`).
 - **Functions:** don't extract a function for a few lines of logic used at only one call site; inline it. Extract only when it's called from more than one place, or the logic is substantial enough to warrant a name of its own.
 - **Reuse:** before adding a string/formatting or ImGui/dialog helper, check `Utils/TextUtils.h` and `Utils/GuiUtils.h` - there's often one already.

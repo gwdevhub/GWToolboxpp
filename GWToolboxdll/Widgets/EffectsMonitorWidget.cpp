@@ -187,7 +187,6 @@ namespace {
 
         GW::Vec2f label_size = ImGui::CalcTextSize(text);
         if (label_size.x > skill_frame_size.x) {
-            // If the label is wider than the frame, scale text size.
             const auto scale_factor = skill_frame_size.x / label_size.x;
             const auto scaled_size = scale_factor * settings.font_effects;
             overridden_font = FontLoader::GetFont();

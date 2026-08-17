@@ -66,7 +66,6 @@ bool GamepadModule::GetGamepadState(_XINPUT_GAMEPAD* gamepad)
     memset(&state, 0, sizeof(XINPUT_STATE));
     bool success = false;
 
-    // Check all 4 possible controllers
     for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) {
         if (!(XInputGetState_Func && XInputGetState_Func(i, &state) == ERROR_SUCCESS)) continue;
         if (!success) {
@@ -114,7 +113,6 @@ void GamepadModule::Update(float delta)
         XINPUT_GAMEPAD_A_HELD = 0;
     }
     if (XINPUT_GAMEPAD_A_HELD && TIMER_DIFF(XINPUT_GAMEPAD_A_HELD) > 500) {
-        // A button held for more than 500ms
         const LPARAM mouse_lparam = MAKELPARAM(static_cast<int>(gamepad_cursor_pos_client.x), static_cast<int>(gamepad_cursor_pos_client.y));
         auto hwnd = GW::MemoryMgr::GetGWWindowHandle();
         SendMessage(hwnd, WM_GW_RBUTTONCLICK, 0, mouse_lparam);
@@ -128,9 +126,7 @@ void GamepadModule::Update(float delta)
         const auto prev_buttons_held = prev_state.wButtons;
         if (current_buttons_held != prev_buttons_held) {
             if ((current_buttons_held & XINPUT_GAMEPAD_A) != (prev_buttons_held & XINPUT_GAMEPAD_A)) {
-                // A Button state changed
                 if ((current_buttons_held & XINPUT_GAMEPAD_A)) {
-                    // A Button pressed
                     if (!XINPUT_GAMEPAD_A_HELD) {
                         XINPUT_GAMEPAD_A_HELD = TIMER_INIT();
                     }

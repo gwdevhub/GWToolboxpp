@@ -24,7 +24,6 @@ public:
         GenericPolyRenderable(GW::Constants::MapID map_id, const std::vector<GW::GamePos>& points, unsigned int col, bool filled) noexcept;
         ~GenericPolyRenderable() noexcept;
 
-        // copy not allowed
         GenericPolyRenderable(const GenericPolyRenderable& other) = delete;
 
         GenericPolyRenderable(GenericPolyRenderable&& other) noexcept
@@ -42,7 +41,6 @@ public:
             other.vertices.clear();
         }
 
-        // copy not allowed
         GenericPolyRenderable& operator=(const GenericPolyRenderable& other) = delete;
 
         GenericPolyRenderable& operator=(GenericPolyRenderable&& other) noexcept

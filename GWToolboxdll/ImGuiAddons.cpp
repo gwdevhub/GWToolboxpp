@@ -49,7 +49,6 @@ namespace ImGui {
     {
         if ((col & IM_COL32_A_MASK) == 0) return;
 
-        // Calculate scale to fit within max dimensions while preserving aspect ratio
         float scale_x = max_width / size.x;
         float scale_y = max_height / size.y;
         float scale = (scale_x < scale_y) ? scale_x : scale_y;
@@ -173,7 +172,6 @@ namespace ImGui {
     {
         bool value_changed = false;
 
-        // Choose input function and flags based on whether we have a hint
         ImGuiInputTextFlags flags = (show_password  && *show_password) ? ImGuiInputTextFlags_None : ImGuiInputTextFlags_Password;
 
 
@@ -227,7 +225,6 @@ namespace ImGui {
         ImFont* font = ImGui::GetFont();
         const float size = ImGui::GetFontSize();
 
-        // Draw outline passes
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 if (dx == 0 && dy == 0) continue;
@@ -235,10 +232,8 @@ namespace ImGui {
             }
         }
 
-        // Draw foreground text
         dl->AddText(font, size, pos, ImGui::GetColorU32(ImGuiCol_Text), label);
 
-        // Advance cursor as normal
         ImGui::Dummy(ImGui::CalcTextSize(label));
     }
 
@@ -488,9 +483,7 @@ namespace ImGui {
                     || (c >= '0' && c <= '9')
                     || (c >= 'A' && c <= 'Z')
                     || (c >= 'a' && c <= 'z')) {
-                    // build temporary word
                     if (time_since_last_update < word_building_delay) {
-                        // append
                         const size_t i = strnlen(word, 64);
                         if (i + 1 < 64) {
                             word[i] = static_cast<char>(c);
@@ -498,7 +491,6 @@ namespace ImGui {
                         }
                     }
                     else {
-                        // reset
                         word[0] = static_cast<char>(c);
                         word[1] = '\0';
                     }
@@ -544,7 +536,6 @@ namespace ImGui {
             keyboard_selected_now = true;
         }
 
-        // Display items
         bool value_changed = false;
         for (auto i = 0; i < items_count; i++) {
             PushID(reinterpret_cast<void*>(i));
@@ -649,19 +640,14 @@ namespace ImGui {
         ImVec2 image_size;  // Final image size
         ImVec2 offset = { 0.0f, 0.0f };  // Offset for centering the image
 
-        // Check if texture is wider or taller in relation to the container
         if (texture_ratio > container_ratio) {
-            // The texture is wider, scale by container width
             image_size.x = size_of_container.x;
             image_size.y = size_of_container.x / texture_ratio;
-            // Center the image vertically
             offset.y = (size_of_container.y - image_size.y) * 0.5f;
         }
         else {
-            // The texture is taller, scale by container height
             image_size.y = size_of_container.y;
             image_size.x = size_of_container.y * texture_ratio;
-            // Center the image horizontally
             offset.x = (size_of_container.x - image_size.x) * 0.5f;
         }
 
@@ -728,7 +714,6 @@ namespace ImGui {
         return value_changed;
     }
 
-    // Store original positions of the windows
     std::unordered_map<std::string_view, ImVec2> original_positions;
 
     void ClampWindowToScreen(ImGuiWindow* window)
@@ -739,28 +724,23 @@ namespace ImGui {
         const ImVec2 display_size = viewport->Size; // Get the display size
         const std::string_view window_name = window->Name;      // Get the window name
 
-        // Check if the window position needs to be clamped based on the original position if available
         const ImVec2 original_pos = original_positions.contains(window_name) ? original_positions[window_name] : window_pos;
 
-        // Determine if clamping is needed
         const bool needs_clamping = original_pos.x + window_size.x > display_size.x ||
                                     original_pos.y + window_size.y > display_size.y ||
                                     original_pos.x < 0 ||
                                     original_pos.y < 0;
 
         if (needs_clamping) {
-            // Save the original position if not already saved
             if (!original_positions.contains(window_name)) {
                 original_positions[window_name] = window_pos;
             }
 
-            // Clamp window position to ensure the entire content is on screen
             if (window_pos.x + window_size.x > display_size.x) window_pos.x = display_size.x - window_size.x;
             if (window_pos.x < 0) window_pos.x = 0;
             if (window_pos.y + window_size.y > display_size.y) window_pos.y = display_size.y - window_size.y;
             if (window_pos.y < 0) window_pos.y = 0;
 
-            // Set the new window position
             ImGui::SetWindowPos(window, window_pos, ImGuiCond_Always);
             if (window->Collapsed) {
                 original_positions[window_name] = window_pos;

@@ -218,7 +218,6 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
             ImVec2 cur = ImGui::GetCursorPos();
             if (settings.font_size_header > 0.f && show_titlebar) {
-                // 'health'
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_header);
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
                 ImGui::TextColored(background, "Health");
@@ -227,7 +226,6 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 ImGui::PopFont();
             }
 
-            // perc
             if (settings.font_size_perc_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_perc_value);
                 cur = ImGui::GetCursorPos();
@@ -239,7 +237,6 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 ImGui::PopFont();
             }
 
-            // abs
             if (settings.font_size_abs_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_abs_value);
                 cur = ImGui::GetCursorPos();

@@ -243,7 +243,6 @@ struct CharacterCompletion {
     std::vector<uint32_t> festival_hats{};
 };
 
-// class used to keep a list of hotkeys, capture keyboard event and fire hotkeys as needed
 class CompletionWindow : public ToolboxWindow {
 public:
     static CompletionWindow& Instance()

@@ -471,7 +471,6 @@ namespace {
     std::wstring GetItemEncDescription(GW::Item* item);
     void ClearMissingItem(const UUID* account, const std::string& character, const GW::Constants::HeroID hero_id, const GW::Constants::Bag bag_id, const uint32_t slot);
 
-    // collective callback hook
     GW::HookEntry OnUIMessage_HookEntry{};
     // main item storage: the account hierarchy, keyed by canonical GUID string.
     std::unordered_map<std::string, Account> accounts{};
@@ -574,10 +573,8 @@ namespace {
     clock_t save_dirty_inventories_timer{};
     bool map_loaded_delayed_trigger = false;
 
-    // config options
     AccountInventoryWindow::Settings settings;
 
-    // input buffers
     inline static const size_t BUFFER_SIZE = 128;
     char name_filter_buf[BUFFER_SIZE]{};
     char location_filter_buf[BUFFER_SIZE]{};
@@ -587,7 +584,6 @@ namespace {
     GUID current_account;
     std::string current_character;
 
-    // member variables
     ImVec4 color_chest_item{};
     ImVec4 color_chest_item_hovered{};
     ImVec4 color_chest_item_active{};
@@ -1614,7 +1610,6 @@ void InventoryScanner::Update()
         } break;
         case InventoryScanner::Stage::NextCharacter: {
             if (reroll_char_queue.empty()) {
-                // Restore original heroes
                 for (auto hero_id : original_player_heroes) {
                     GW::PartyMgr::AddHero(hero_id);
                 }
@@ -1632,7 +1627,6 @@ void InventoryScanner::Update()
             if (!wcseq(GW::AccountMgr::GetCurrentPlayerName(), current_reroll_char.c_str())) break;
             original_heroes = GetPartyHeroIDs();
             queued_hero_ids.clear();
-            // Grab unlocked hero ids
             const auto w = GW::GetWorldContext();
             const auto h = w ? &w->hero_info : nullptr;
             if (h) {
@@ -1769,7 +1763,6 @@ void ItemReroller::Update()
                 InventoryManager::MoveItem((InventoryManager::Item*)GW::Items::GetItemById(loc->item->item_id));
             }
             Cancel();
-            // Done.
         } break;
     }
 }
@@ -2025,7 +2018,6 @@ void AccountInventoryWindow::Draw(IDirect3DDevice9*)
         return;
     }
 
-    // view related settings
     ImGui::Checkbox("Detailed View", &settings.detailed_view);
     ImGui::SameLine();
     if (ImGui::GetContentRegionAvail().x < checkbox_max_width) ImGui::NewLine();

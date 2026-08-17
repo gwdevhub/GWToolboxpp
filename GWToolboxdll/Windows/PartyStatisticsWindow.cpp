@@ -374,7 +374,6 @@ namespace {
         }
         ASSERT(player_party_member);
 
-        // Add player skills
         for (const GW::SkillbarSkill& skill : my_skillbar->skills) {
             set_member_skill(player_party_member, skill.skill_id);
         }
@@ -407,14 +406,11 @@ namespace {
             return;
         }
 
-        /* all skills for self player */
         if (static_cast<size_t>(-1) == player_idx) {
             WritePlayerStatisticsAllSkills(player_party_member);
-            /* single skill for some player */
         }
         else if (std::numeric_limits<uint32_t>::max() != skill_idx) {
             WritePlayerStatisticsSingleSkill(GetPartyMemberByPartyIdx(player_idx), skill_idx);
-            /* all skills for some player */
         }
         else {
             WritePlayerStatisticsAllSkills(GetPartyMemberByPartyIdx(player_idx));

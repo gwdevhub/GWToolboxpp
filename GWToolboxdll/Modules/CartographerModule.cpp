@@ -417,9 +417,6 @@ namespace {
     // Returns -1 when the map has no walkable ground anywhere near it.
     float MeasureCellReach(const int cx, const int cy)
     {
-        // Cheap pass first: if any part of the cell is standable, the answer is zero and no
-        // expensive search is needed. Only cells with no footing at all pay for the full
-        // nearest-ground lookup, and then just once.
         // Cheap pass: if any part of the cell is standable the answer is zero, no search needed.
         constexpr int kSamples = 4;
         for (int sy = 0; sy < kSamples; sy++) {
@@ -432,10 +429,8 @@ namespace {
                 if (WorldMapWidget::WorldMapToGamePos(wm, gp) && Pathing::IsPositionWalkable(gp)) return 0.f;
             }
         }
-        // No footing inside it, so find how far away the nearest is. Measured from several
-        // points across the cell, not just the middle: ground beside one corner is what you
-        // would actually walk to, and judging by the midpoint alone reports it as further away
-        // than it is and wrongly writes the cell off.
+        // No footing inside it: probe several points across the cell, not just the midpoint, which
+        // would report ground beside a corner as further away than you would actually walk.
         const GW::Vec2f probes[5] = {
             CellCenterWorldMap(cx, cy),
             {(cx + 0.1f) * kWorldMapUnitsPerCell, (cy + 0.1f) * kWorldMapUnitsPerCell},

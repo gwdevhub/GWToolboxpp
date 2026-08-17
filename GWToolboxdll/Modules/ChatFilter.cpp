@@ -44,7 +44,6 @@ namespace {
     // It can be re-ajusted to be more enjoyable.
     constexpr uint32_t NOISE_REDUCTION_DELAY_MS = 1000;
 
-    // Chat filter
     using Pattern = TextUtils::SearchPattern<wchar_t>;
 
     std::vector<Pattern> bycontent_words;
@@ -563,7 +562,6 @@ namespace {
         return false;
     }
 
-    // Should this message be ignored by content?
     // Check programmatic suppressions (e.g. /hero silent) — not gated by channel filter
     bool IsSuppressedMessage(const wchar_t* message)
     {

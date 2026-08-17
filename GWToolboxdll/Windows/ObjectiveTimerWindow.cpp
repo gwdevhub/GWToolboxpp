@@ -943,7 +943,6 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
     if (loading) {
         return;
     }
-    // Main objective timer window
     if (visible && !loading) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
@@ -968,7 +967,6 @@ void ObjectiveTimerWindow::Draw(IDirect3DDevice9*)
         ImGui::End();
     }
 
-    // Breakout objective set for current run
     if (settings.show_current_run_window && current_objective_set) {
         ImGui::SetNextWindowCenter(ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowSize(ImVec2(300, 0), ImGuiCond_FirstUseEver);
@@ -1043,7 +1041,6 @@ void ObjectiveTimerWindow::DrawSettingsInternal()
             EnableWebsocketServer(false);
             EnableWebsocketServer(enable_websocket_server);
         }
-        // Display websocket server status
         ImGui::Text("LiveSplit Server status: %s", websocket_app && websocket_server ? "Running" : "Stopped");
         if (websocket_app && websocket_server) {
             ImGui::SameLine();
@@ -1112,7 +1109,6 @@ void ObjectiveTimerWindow::LoadRuns()
         }
         FindClose(hFind);
 
-        // Output the list of names found
         for (auto it = obj_timer_files.rbegin(); it != obj_timer_files.rend() && instance.objective_sets.size() < max_objectives_in_memory; ++it) {
             try {
                 std::ifstream file;

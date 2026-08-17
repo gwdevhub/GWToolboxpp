@@ -967,7 +967,6 @@ namespace {
                 // GW::GetCharContext()->player_flags ^= 0x8;
             });
         }
-        // DownloadStringFiles
         if (ImGui::Button("DownloadStringFiles")) {
             Resources::EnqueueWorkerTask([]() {
                 Log::Info("Downloading strings...");

@@ -55,7 +55,6 @@ protected:
     static bool UnreserveSlotForMove(size_t bagId, size_t slot); // Unlock slot.
     // Prevents more than 1 pcon from trying to add to the same slot at the same time.
     static bool ReserveSlotForMove(size_t bagId, size_t slot);
-    // Checks whether another pcon has reserved this slot.
     static bool IsSlotReservedForMove(size_t bagId, size_t slot);
 
     static bool IsControllingCurrentChar();

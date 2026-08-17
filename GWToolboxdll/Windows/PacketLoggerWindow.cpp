@@ -692,7 +692,6 @@ void PacketLoggerWindow::SaveMessageLog() const
     const auto filename = Resources::GetPath(L"message_log.csv");
     std::wofstream my_file(filename);
 
-    // Send column names to the stream
     for (const auto& it : message_log) {
         if (!it.second || !it.second->length()) {
             continue;
@@ -702,7 +701,6 @@ void PacketLoggerWindow::SaveMessageLog() const
         my_file << it.second->c_str();
         my_file << "\n";
     }
-    // Close the file
     my_file.close();
 }
 

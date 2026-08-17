@@ -287,7 +287,6 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
 {
     const auto window = ImGui::FindWindowByName(Name());
     if (is_mobile) {
-        // Save current (normal) position before switching
         if (window) {
             normal_pos[0] = window->Pos.x;
             normal_pos[1] = window->Pos.y;
@@ -295,14 +294,12 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
             normal_size[1] = window->SizeFull.y;
             has_normal_layout = true;
         }
-        // Apply stored mobile position if available
         if (has_mobile_layout && window) {
             ImGui::SetWindowPos(window, {mobile_pos[0], mobile_pos[1]});
             ImGui::SetWindowSize(window, {mobile_size[0], mobile_size[1]});
         }
     }
     else {
-        // Save current (mobile) position before switching
         if (window) {
             mobile_pos[0] = window->Pos.x;
             mobile_pos[1] = window->Pos.y;
@@ -310,13 +307,11 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
             mobile_size[1] = window->SizeFull.y;
             has_mobile_layout = true;
         }
-        // Restore stored normal position if available
         if (has_normal_layout && window) {
             ImGui::SetWindowPos(window, {normal_pos[0], normal_pos[1]});
             ImGui::SetWindowSize(window, {normal_size[0], normal_size[1]});
         }
     }
-    // Reset settings tab to reflect new mode
     settings_active_tab = is_mobile ? 1 : 0;
 }
 
@@ -331,7 +326,6 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
 
     const auto window = ImGui::FindWindowByName(Name());
 
-    // Sync the current mode's stored positions from the live window
     if (window) {
         if (is_mobile) {
             mobile_pos[0] = window->Pos.x;
@@ -420,13 +414,11 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         const bool pos_disabled = !is_movable || lm;
         ImGui::BeginDisabled(pos_disabled);
         if (!snap.empty()) {
-            // Show relative offset to the snapped GW frame
             if (ImGui::DragFloat2("Snap Offset", snap_off, 1.0f, 0.0f, 0.0f, "%.0f")) {
                 needs_init_ref = false; // user explicitly set offset; cancel pending init
             }
         }
         else {
-            // Show absolute screen coordinates
             if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
                 if (window) {
                     ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
@@ -450,7 +442,6 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // Size
     {
         const bool size_disabled = !is_resizable || ls || as_;
         ImGui::BeginDisabled(size_disabled);
@@ -476,7 +467,6 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // Lock / auto checkboxes
     ImGui::StartSpacedElements(180.f);
 
     ImGui::NextSpacedElement();

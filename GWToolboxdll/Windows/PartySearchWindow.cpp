@@ -275,7 +275,6 @@ void PartySearchWindow::Initialize()
             }
         }
     });
-    // local messages
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_SEARCH_REMOVE, OnRegionPartyUpdated);
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_SEARCH_SIZE, OnRegionPartyUpdated);
     GW::StoC::RegisterPostPacketCallback(&OnMessageLocal_Entry, GAME_SMSG_PARTY_SEARCH_ADVERTISEMENT, OnRegionPartyUpdated);
@@ -546,14 +545,12 @@ void PartySearchWindow::fetch()
     }
 
     ws_window->dispatch([this](const std::string& data) {
-        // Add to message feed
         Message msg;
         if (!parse_json_message(data, &msg)) {
             return; // Not valid message object
         }
         messages.add(msg);
 
-        // Check alerts
         // do not display trade chat while in kamadan AE district 1
         const bool print_message = settings.print_game_chat && IsLfpAlert(msg.message);
 
@@ -698,7 +695,6 @@ void PartySearchWindow::Draw(IDirect3DDevice9*)
 
             if (ImGui::Button(label, ImVec2(playernamewidth, 0))) {
                 std::wstring leader_name = TextUtils::StringToWString(party->player_name);
-                // open whisper to player
                 GW::GameThread::Enqueue([leader_name] {
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, (wchar_t*)leader_name.data(), nullptr);
                 });

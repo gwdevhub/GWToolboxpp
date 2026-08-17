@@ -71,7 +71,6 @@ namespace {
         }
     }
 
-    // Wipe dialog ready for new one
     void ResetDialog()
     {
         for (const auto d : dialog_buttons) {
@@ -370,7 +369,6 @@ uint32_t DialogModule::AcceptFirstAvailableQuest()
         if (!IsQuest(dialog_id)) {
             continue;
         }
-        // Quest related dialog
         uint32_t quest_id = GetQuestID(dialog_id);
         switch (GetQuestDialogType(dialog_id)) {
             case QuestDialogType::TAKE:

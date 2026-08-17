@@ -48,11 +48,9 @@ namespace {
 
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
-    // AvAgent.cpp; __thiscall modelled as __fastcall.
-    typedef void(__fastcall* SetNameTagFlags_pt)(GW::Agents::AgentRenderInfo* render_info, void* edx, uint32_t flags, uint32_t enable);
-    SetNameTagFlags_pt SetNameTagFlags_Func = nullptr;
-    GW::Agents::AgentRenderInfo*** agent_render_info_array = nullptr;
-    uint32_t* agent_render_info_capacity = nullptr;
+    // AvAgent.cpp; __thiscall modelled as __fastcall. `force` skips the "did visibility change" guard.
+    typedef void(__fastcall* RefreshNameTag_pt)(GW::Agent* agent, void* edx, uint32_t old_flags, uint32_t new_flags, uint32_t force);
+    RefreshNameTag_pt RefreshNameTag_Func = nullptr;
 
     constexpr uint32_t bogus_area_info_flags = 0x5000000; // e.g. "wrong" Augury Rock is map 119, no NPCs.
     constexpr uint32_t debug_area_info_flag = 0x80000000;
@@ -324,13 +322,11 @@ namespace GW {
 
             // Navigate to target character by selecting previous/next until we reach it
             while (target_idx < selected_idx) {
-                // Need to go backwards - select the previous character
                 if (selected_idx == 0) break; // Can't go before first character
                 if (!select_char(selected_idx - 1)) return false;
             }
 
             while (target_idx > selected_idx) {
-                // Need to go forwards - select the next character
                 const auto chars_size = ctx->chars.size();
                 if (!chars_size || selected_idx + 1 >= chars_size) break; // Can't go past last character
                 if (!select_char(selected_idx + 1)) return false;
@@ -599,54 +595,34 @@ namespace GW {
             UI::AsyncDecodeStr(GetAgentEncName(agent), &out);
         }
 
-        AgentRenderInfo** GetAgentRenderInfoArray(uint32_t* out_capacity)
-        {
-            if (!agent_render_info_array) {
-                // AvManager.cpp - the loop in the setter for the persistent name tag filter walks the
-                // whole array, so both globals are in one instruction pair.
-                const auto address = GW::Scanner::Find("\xa1\x00\x00\x00\x00\x56\x8b\x35\x00\x00\x00\x00\x8d\x04\x86", "x????xxx????xxx");
-                DEBUG_ASSERT(address);
-                if (address) {
-                    agent_render_info_capacity = *(uint32_t**)(address + 0x1);
-                    agent_render_info_array = *(AgentRenderInfo****)(address + 0x8);
-                }
-            }
-            if (out_capacity) {
-                *out_capacity = agent_render_info_capacity ? *agent_render_info_capacity : 0;
-            }
-            return agent_render_info_array ? *agent_render_info_array : nullptr;
-        }
-
-        AgentRenderInfo* GetAgentRenderInfo(const uint32_t agent_id)
-        {
-            uint32_t capacity = 0;
-            const auto arr = GetAgentRenderInfoArray(&capacity);
-            return arr && agent_id < capacity ? arr[agent_id] : nullptr;
-        }
-
-        bool SetNameTagFlags(const uint32_t agent_id, const uint32_t flags, const bool enable)
-        {
-            const auto render_info = GetAgentRenderInfo(agent_id);
-            if (!render_info) return false;
-            if (!SetNameTagFlags_Func) {
-                const auto address = GW::Scanner::Find("\x50\x68\x00\x04\x00\x00\x8b\xcf\xe8", "xxxxxxxxx", 0x8);
-                DEBUG_ASSERT(address);
-                if (address) {
-                    SetNameTagFlags_Func = (SetNameTagFlags_pt)GW::Scanner::FunctionFromNearCall(address);
-                }
-            }
-            if (!SetNameTagFlags_Func) return false;
-            SetNameTagFlags_Func(render_info, nullptr, flags, enable ? 1 : 0);
-            return true;
-        }
-
         bool RefreshNameTag(const uint32_t agent_id)
         {
-            const auto render_info = GetAgentRenderInfo(agent_id);
-            // Bail while name tags are globally suppressed, or clearing the bit would reveal this one tag.
-            if (!render_info || (render_info->name_tag_flags & NameTagFlags_Suppressed)) return false;
-            return SetNameTagFlags(agent_id, NameTagFlags_Suppressed, true) &&
-                   SetNameTagFlags(agent_id, NameTagFlags_Suppressed, false);
+            const auto agent = GetAgentByID(agent_id);
+            if (!agent) return false;
+
+            const auto flags = agent->name_properties;
+            // Mirrors the client's own visibility test - there is no tag to update otherwise.
+            const auto forced_visible = NameTagFlags_Picked | NameTagFlags_Highlighted | NameTagFlags_EvaluatedTarget |
+                                        NameTagFlags_ManualTarget | NameTagFlags_PassesFilter;
+            const auto in_range_visible = NameTagFlags_PassesTransientFilter | NameTagFlags_InRange;
+            if (flags & NameTagFlags_Suppressed) return false;
+            if (!(flags & forced_visible) &&
+                ((flags & NameTagFlags_NotOwnedByPlayer) || (flags & in_range_visible) != in_range_visible)) {
+                return false;
+            }
+
+            if (!RefreshNameTag_Func) {
+                // AvAgent.cpp - the client's own forced refresh, used when an agent's dye or model changes.
+                const auto address = GW::Scanner::Find("\x6a\x00\xff\x73\x2c\x68\x1a\x00\x00\x10", "xxxxxxxxxx");
+                DEBUG_ASSERT(address);
+                if (address) {
+                    RefreshNameTag_Func = (RefreshNameTag_pt)GW::Scanner::ToFunctionStart(address);
+                }
+            }
+            if (!RefreshNameTag_Func) return false;
+            // Same flags either side forces an in-place attribs update instead of a hide/show pair.
+            RefreshNameTag_Func(agent, nullptr, flags, flags, 1);
+            return true;
         }
     } // namespace Agents
     namespace Items {
@@ -1634,7 +1610,6 @@ namespace ToolboxUtils {
         if (item->customized && ctre::search<dmg_plus_20_pattern>(original)) {
             // Remove "\nDamage +20%" > "\n"
             original = TextUtils::ctre_regex_replace<dmg_plus_20_pattern, L"">(original);
-            // Append "Customized"
             original += L"\x2\x102\x2\x108\x107"
                         L"Customized\x1";
         }

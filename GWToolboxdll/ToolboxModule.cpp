@@ -15,7 +15,6 @@ namespace {
     }
 #endif
 
-    // static function to register content
     std::unordered_map<std::string, SectionDrawCallbackList> settings_draw_callbacks{};
     std::unordered_map<std::string, const char*> settings_icons{};
     std::unordered_map<std::string, ToolboxModule*> modules_loaded{};
@@ -48,7 +47,6 @@ void ToolboxModule::SaveSettings(SettingsDoc& doc)
 void ToolboxModule::Terminate()
 {
     SettingsRegistry::Unregister(this);
-    // Remove any settings draw callbacks associated with this module
     auto callbacks_it = settings_draw_callbacks.begin();
     while (callbacks_it != settings_draw_callbacks.end()) {
         auto modules_it = callbacks_it->second.begin();

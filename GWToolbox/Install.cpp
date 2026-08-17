@@ -191,7 +191,6 @@ bool Uninstall(const bool quiet, std::wstring& error)
     }
 
     if (DeleteAllFiles) {
-        // Delete all files
         DeleteInstallationDirectory(error);
     }
 

@@ -74,10 +74,8 @@ namespace Pathing {
         const std::vector<PortalConnection>& GetAll() const { return connections; }
         size_t Count() const { return connections.size(); }
 
-        // Get all connections involving a specific map
         std::vector<const PortalConnection*> GetConnectionsForMap(GW::Constants::MapID map) const;
 
-        // Get connections between two specific maps
         std::vector<const PortalConnection*> GetConnectionsBetween(
             GW::Constants::MapID a, GW::Constants::MapID b) const;
 
@@ -89,7 +87,6 @@ namespace Pathing {
         // Check if any connection exists between two maps (ignoring positions)
         bool HasConnection(GW::Constants::MapID from, GW::Constants::MapID to) const;
 
-        // Cost multiplier for a connection type
         static float GetCostMultiplier(ConnectionType type);
 
     private:

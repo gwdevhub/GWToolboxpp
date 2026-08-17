@@ -141,7 +141,6 @@ namespace {
     void CHAT_CMD_FUNC(CmdMarkTarget)
     {
         if (argc > 1 && wcscmp(argv[1], L"clearall") == 0) {
-            // /marktarget clearall
             RemoveMarkedTarget();
             return;
         }
@@ -150,7 +149,6 @@ namespace {
             return;
         }
         if (argc > 1 && (wcscmp(argv[1], L"clear") == 0 || wcscmp(argv[1], L"remove") == 0)) {
-            // /marktarget clear
             RemoveMarkedTarget(agent->agent_id);
             return;
         }
@@ -889,7 +887,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             }
         }
 
-        // get stuff
         GW::AgentArray* agents = GW::Agents::GetAgentArray();
         if (!agents) {
             return;
@@ -952,7 +949,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
 
         target_drawn = false;
 
-        // some helper lambads
 
         const auto add_custom_agents_to_draw = [this](const GW::Agent* agent) -> bool {
             const auto custom_agents_for_this_agent = GetCustomAgentsToDraw(agent);
@@ -995,7 +991,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             });
         };
 
-        // Sort through all agents, fill out arrays
         for (const auto agent : *agents) {
             if (!agent) {
                 continue;
@@ -1055,7 +1050,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
             if (!agent->GetIsAlive()) {
                 continue;
             }
-            // Apply custom size/shape if defined && marked_target_inherit_custom_agents == true
             const auto* cas = GetCustomAgentsToDraw(agent);
             const auto* ca = cas && !cas->empty() ? cas->front() : nullptr;
             const auto size = marked_target_inherit_custom_agents && ca && ca->size_active && ca->size >= 0 ? ca->size : size_marked_target;
@@ -1073,7 +1067,6 @@ void AgentRenderer::Render(IDirect3DDevice9* device)
                 }
             }
             if (marked) {
-                // Apply custom size/shape if defined && marked_target_inherit_custom_agents == true
                 const auto* ca = custom_agents_for_this_agent && !custom_agents_for_this_agent->empty() ? custom_agents_for_this_agent->front() : nullptr;
                 const auto size = marked_target_inherit_custom_agents && ca && ca->size_active && ca->size >= 0 ? ca->size : size_marked_target;
                 const auto shape = marked_target_inherit_custom_agents && ca && ca->shape_active ? ca->shape : default_shape;
@@ -1159,7 +1152,6 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         }
     }
 
-    // hostiles
     if (living->allegiance == GW::Constants::Allegiance::Enemy) {
         if (living->GetIsDead()) {
             return color_hostile_dead;
@@ -1221,7 +1213,6 @@ Color AgentRenderer::GetColor(const GW::Agent* agent, const CustomAgent* ca) con
         return Colors::Sub(*c, color_agent_damaged_modifier);
     }
 
-    // neutrals
     if (living->allegiance == GW::Constants::Allegiance::Neutral) {
         return color_neutral;
     }
@@ -1459,11 +1450,9 @@ void AgentRenderer::Enqueue(const Shape_e shape, const GW::Agent* agent, const f
         if (is_target && target_drawn) {
             return; // Don't draw target twice
         }
-        // Add agent border if applicable
         if (agent_border_thickness != 0.f && agent->GetIsLivingType()) {
             Enqueue(shape, pos, size + agent_border_thickness, Colors::ARGB(static_cast<int>(alpha * 0.8), 0, 0, 0));
         }
-        // Add target highlight if applicable
         if (is_target) {
             Enqueue(shape, pos, size + target_border_thickness, color_target);
             target_drawn = true;

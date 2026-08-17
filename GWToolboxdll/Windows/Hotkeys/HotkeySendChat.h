@@ -2,8 +2,6 @@
 
 #include <Windows/Hotkeys/TBHotkey.h>
 
-// hotkey to send a message in chat
-// can be used for anything that uses SendChat
 class HotkeySendChat : public TBHotkey {
     char message[139]{};
     char channel = '/';

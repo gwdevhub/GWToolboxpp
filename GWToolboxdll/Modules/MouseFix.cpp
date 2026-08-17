@@ -148,7 +148,6 @@ namespace {
 
         const RAWINPUT* raw = reinterpret_cast<RAWINPUT*>(lpb);
         if ((raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0) {
-            // If its a relative mouse move, process the action
             if (gw_mouse_move->move_camera) {
                 rawInputRelativePosX += raw->data.mouse.lLastX;
                 rawInputRelativePosY += raw->data.mouse.lLastY;
@@ -210,9 +209,6 @@ namespace {
         }
     }
 
-    /*
-     *  Logic for scaling gw cursor up or down
-     */
     HBITMAP ScaleBitmap(const HBITMAP inBitmap, const int inWidth, const int inHeight, const int outWidth, const int outHeight)
     {
         // NB: We could use GDIPlus for this logic which has better image res handling etc, but no need
@@ -222,7 +218,6 @@ namespace {
         HBITMAP outBitmap = nullptr;
         HGDIOBJ oldDestBitmap = nullptr, oldSrcBitmap = nullptr;
 
-        // create a destination bitmap and DC with size w/h
         BITMAPINFO bmi;
         memset(&bmi, 0, sizeof(bmi));
         bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -254,7 +249,6 @@ namespace {
             goto cleanup;
         }
 
-        // copy and scaling to new width/height (w,h)
         if (SetStretchBltMode(destDC, WHITEONBLACK) == 0) {
             goto cleanup;
         }
@@ -349,11 +343,9 @@ namespace {
     {
         GW::Hook::EnterHook();
 
-        // Cache the cursor arguments before calling the original function
         if (bitmap_data && bitmap_mask && hotspot) {
             cached_cursor.cursor_type = cursor_type;
 
-            // Determine bitmap data size based on cursor type
             size_t bitmap_size;
             if (cursor_type == 0) {
                 bitmap_size = 32 * 32 * 4; // 32-bit color (RGBA)
@@ -365,15 +357,12 @@ namespace {
                 bitmap_size = 32 * 32 * 4; // Default to 32-bit
             }
 
-            // Cache bitmap data
             cached_cursor.bitmap_data.resize(bitmap_size);
             memcpy(cached_cursor.bitmap_data.data(), bitmap_data, bitmap_size);
 
-            // Cache mask data (always 32x32x4 for RGBA)
             cached_cursor.bitmap_mask.resize(32 * 32 * 4);
             memcpy(cached_cursor.bitmap_mask.data(), bitmap_mask, 32 * 32 * 4);
 
-            // Cache hotspot
             cached_cursor.hotspot[0] = hotspot[0];
             cached_cursor.hotspot[1] = hotspot[1];
 
@@ -382,7 +371,6 @@ namespace {
 
         ChangeCursorIcon_Ret(user_data, edx, cursor_type, bitmap_data, bitmap_mask, hotspot);
 
-        // Your existing cursor scaling logic...
         if (settings.cursor_size < 0 || settings.cursor_size > 64 || settings.cursor_size == 32) {
             return GW::Hook::LeaveHook();
         }
@@ -410,7 +398,6 @@ namespace {
         }
         *cursor = new_cursor;
         SetCursor(new_cursor);
-        // Also override the window class for the cursor
         SetClassLongA(*window_handle, GCL_HCURSOR, reinterpret_cast<LONG>(new_cursor));
         current_cursor = new_cursor;
         GW::Hook::LeaveHook();
@@ -419,7 +406,6 @@ namespace {
     void RedrawCursorIcon()
     {
         GW::GameThread::Enqueue([] {
-            // Force redraw
             const auto user_data = Win32WindowUserData::Instance();
             current_cursor = nullptr;
             if (user_data && ChangeCursorIcon_Func && cached_cursor.is_valid) {

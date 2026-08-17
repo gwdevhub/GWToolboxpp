@@ -438,14 +438,12 @@ namespace {
 
     bool is_spoofing_quest_update = false;
 
-    // Settings
     GW::GamePos* GetPlayerPos()
     {
         const auto p = GW::Agents::GetControlledCharacter();
         return p ? &p->pos : nullptr;
     }
 
-    // Cast helper
     float GetSquareDistance(const GW::GamePos& a, const GW::GamePos& b)
     {
         return GetSquareDistance(static_cast<GW::Vec2f>(a), static_cast<GW::Vec2f>(b));

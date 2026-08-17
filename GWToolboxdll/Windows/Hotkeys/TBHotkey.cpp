@@ -35,7 +35,6 @@
 #include <Windows/Hotkeys/HotkeyUseItem.h>
 
 unsigned int TBHotkey::cur_ui_id = 0;
-// add these:
 std::vector<TBHotkey*> TBHotkey::all_hotkeys;
 std::vector<TBHotkey*> TBHotkey::top_level_hotkeys;
 std::unordered_map<std::string, HotkeyGroup*> TBHotkey::hotkey_groups;
@@ -814,7 +813,6 @@ bool TBHotkey::SetGroup(HotkeyGroup* to_set)
             ancestor = ancestor->group;
         }
     }
-    // Remove from old scope
     if (group) {
         auto& v = group->hotkeys;
         v.erase(std::remove(v.begin(), v.end(), this), v.end());
@@ -823,7 +821,6 @@ bool TBHotkey::SetGroup(HotkeyGroup* to_set)
         top_level_hotkeys.erase(std::remove(top_level_hotkeys.begin(), top_level_hotkeys.end(), this), top_level_hotkeys.end());
     }
     group = to_set;
-    // Add to new scope
     if (to_set) {
         to_set->hotkeys.push_back(this);
     }
@@ -845,7 +842,6 @@ void TBHotkey::SortHotkeys()
         return hk->sort_order;
     };
 
-    // Sort top_level_hotkeys and each group's children by sort_order
     std::function<void(std::vector<TBHotkey*>&)> sort_and_normalise = [&](std::vector<TBHotkey*>& vec) {
         std::ranges::sort(vec, [](const TBHotkey* a, const TBHotkey* b) {
             return a->sort_order < b->sort_order;
@@ -860,7 +856,6 @@ void TBHotkey::SortHotkeys()
 
     sort_and_normalise(top_level_hotkeys);
 
-    // Rebuild all_hotkeys in the correct flattened order
     auto size_before = all_hotkeys.size();
     all_hotkeys.clear();
     std::function<void(std::vector<TBHotkey*>&)> flatten = [&](std::vector<TBHotkey*>& vec) {

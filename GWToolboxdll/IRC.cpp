@@ -120,7 +120,6 @@ int IRC::start(const char* server, int port, const char* nick, const char* user,
     }
     ping_sent = 0;
 
-    //setup hints
     hints.ai_family = AF_UNSPEC;     //IPv4 or IPv6 doesnt matter
     hints.ai_socktype = SOCK_STREAM; //TCP stream socket
 
@@ -136,14 +135,12 @@ int IRC::start(const char* server, int port, const char* nick, const char* user,
         return 1;
     }
 
-    //setup socket
     if ((irc_socket = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == INVALID_SOCKET) {
         printf("Failed to socket: %d\n", WSAGetLastError());
         return 1;
     }
     disconnect();
 
-    //Connect
     if (connect(irc_socket, servinfo->ai_addr, servinfo->ai_addrlen) == SOCKET_ERROR) {
         printf("Failed to connect: %d\n", WSAGetLastError());
         closesocket(irc_socket);
@@ -180,7 +177,6 @@ void IRC::disconnect()
     shutdown(irc_socket, 2);
 #endif
     closesocket(irc_socket);
-    // Destroy thread.
     pending_disconnect = true;
     if (t.joinable()) {
         t.join();

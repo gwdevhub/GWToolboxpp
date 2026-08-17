@@ -17,11 +17,9 @@ namespace GuiUtils {
 struct QuestObjective {
     QuestObjective(GW::Constants::QuestID quest_id, const wchar_t* objective_enc, bool is_completed);
     ~QuestObjective() = default;
-    // copy not allowed
     QuestObjective(const QuestObjective& other) = delete;
     QuestObjective(QuestObjective&& other) noexcept = default;
 
-    // copy not allowed
     QuestObjective& operator=(const QuestObjective& other) = delete;
     QuestObjective& operator=(QuestObjective&& other) noexcept = default;
 

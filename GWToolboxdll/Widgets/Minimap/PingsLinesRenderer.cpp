@@ -486,7 +486,6 @@ bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
 
     drawings[my_player_id].player = my_player_id;
     if (!mouse_moved) {
-        // first time
         mouse_moved = true;
         BumpSessionID();
         drawings[my_player_id].session = static_cast<DWORD>(session_id);

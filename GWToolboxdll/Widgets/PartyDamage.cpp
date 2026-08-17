@@ -28,9 +28,6 @@ constexpr const wchar_t* JSON_FILENAME = L"healthlog.json";
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
 
-    // damage values
-
-
     uint32_t total = 0;
     uint32_t total_healing = 0;
 
@@ -75,7 +72,6 @@ namespace {
         return -1;
     }
 
-    // Finalize damage for all active conditions on a tracker, then remove it
     void FinalizeAndRemoveTracker(uint32_t ti) {
         if (ti >= cond_tracker_count) return;
         const clock_t now = TIMER_INIT();
@@ -107,7 +103,6 @@ namespace {
     std::map<DWORD, DWORD> hp_map_hm{};
     const std::pair<const char*, std::map<DWORD, DWORD>*> section_maps[] = {{"health_nm", &hp_map_nm}, {"health_hm", &hp_map_hm}};
 
-    // main routine variables
     bool in_explorable = false;
     clock_t send_timer = 0;
     std::queue<std::wstring> send_queue{};
@@ -163,7 +158,6 @@ void PartyDamage::ReconcileDamageIndices()
     if (party_agent_ids_by_index == prev_party_agent_ids) return;
     prev_party_agent_ids = party_agent_ids_by_index;
 
-    // Map old agent_id -> index in current damage array
     std::unordered_map<uint32_t, uint32_t> old_agent_to_idx;
     for (uint32_t i = 0; i < damage.size(); i++) {
         if (damage[i].agent_id != 0) old_agent_to_idx[damage[i].agent_id] = i;
@@ -182,7 +176,6 @@ void PartyDamage::ReconcileDamageIndices()
         if (new_idx >= new_damage.size()) continue;
         if (new_idx >= pets_start_idx) continue;
 
-        // Try matching by agent_id first
         auto it = old_agent_to_idx.find(agent_id);
         if (it != old_agent_to_idx.end()) {
             new_damage[new_idx] = damage[it->second];
@@ -195,7 +188,6 @@ void PartyDamage::ReconcileDamageIndices()
         if (new_idx < party_names_by_index.size()) {
             const auto& name = party_names_by_index[new_idx]->wstring();
             if (!name.empty()) {
-                // Check departed entries
                 auto dit = departed_by_name.find(name);
                 if (dit != departed_by_name.end()) {
                     new_damage[new_idx] = departed_damage[dit->second];
@@ -203,7 +195,6 @@ void PartyDamage::ReconcileDamageIndices()
                     departed_damage[dit->second].Reset();
                     continue;
                 }
-                // Check old damage entries by name
                 for (uint32_t i = 0; i < damage.size(); i++) {
                     if (!claimed_old_indices.count(i) && damage[i].name == name && !damage[i].name.empty()) {
                         new_damage[new_idx] = damage[i];
@@ -216,7 +207,6 @@ void PartyDamage::ReconcileDamageIndices()
         }
     }
 
-    // Move unclaimed entries with data to departed
     for (uint32_t i = 0; i < damage.size(); i++) {
         if (claimed_old_indices.count(i)) continue;
         if (damage[i].damage > 0 || damage[i].healing > 0)
@@ -368,7 +358,6 @@ void PartyDamage::ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC
         const double elapsed = static_cast<double>(now - cond_trackers[ti].apply_time[ci]) / 1000.0;
         cond_damage[ci] += static_cast<double>(CONDITION_DPS_RATES[ci]) * elapsed;
         cond_trackers[ti].apply_time[ci] = 0; // clear it
-        // If all conditions cleared, remove tracker
         bool all_cleared = true;
         for (int cj = 0; cj < 4; cj++) {
             if (cond_trackers[ti].apply_time[cj] != 0) { all_cleared = false; break; }
@@ -383,7 +372,6 @@ void PartyDamage::ConditionValueCallback(GW::HookStatus*, const GW::Packet::StoC
 
 void PartyDamage::DamagePacketCallback(GW::HookStatus*, const GW::Packet::StoC::GenericModifier* packet)
 {
-    // ignore non-damage/heal packets
     switch (packet->type) {
         case GW::Packet::StoC::P156_Type::damage:
         case GW::Packet::StoC::P156_Type::critical:
@@ -592,7 +580,6 @@ void PartyDamage::Update(const float)
         }
     }
 
-    // reset recent if needed
     for (auto& entry : damage) {
         if (TIMER_DIFF(entry.last_damage) > settings.recent_max_time) {
             entry.recent_damage = 0;
@@ -615,7 +602,6 @@ void PartyDamage::Update(const float)
             damage[party_idx].name = decoded;
         }
 
-        // Restore departed entry if this slot is empty but a departed member matches by name
         if (damage[party_idx].damage == 0 && damage[party_idx].healing == 0) {
             for (auto& dep : departed_damage) {
                 if (dep.name == decoded && (dep.damage > 0 || dep.healing > 0)) {
@@ -725,7 +711,6 @@ void PartyDamage::Draw(IDirect3DDevice9*)
         constexpr size_t buffer_size = 16;
         char buffer[buffer_size];
 
-        // Condition DPS header row
         if (settings.show_condition_dps) {
             const struct { uint32_t color; const char* icon; int ci; } conds[] = {
                 {IM_COL32(200, 50, 50, 255), ICON_FA_TINT, 0},
@@ -760,15 +745,12 @@ void PartyDamage::Draw(IDirect3DDevice9*)
             const auto x = damage_top_left.x;
 
             const float damage_float = static_cast<float>(entry->damage);
-            // Total damage bar
             DrawGradientBar(draw_list, x, width, damage_top_left.y, damage_bottom_right.y, settings.bars_left, max > 0 ? damage_float / max : 0, damage_col_from, damage_col_to);
 
-            // Recent damage bar (bottom)
             if (settings.show_damage && entry->recent_damage) {
                 DrawGradientBar(draw_list, x, width, damage_bottom_right.y - 6, damage_bottom_right.y, settings.bars_left, max_recent > 0 ? static_cast<float>(entry->recent_damage) / max_recent : 0, damage_recent_from, damage_recent_to);
             }
 
-            // Recent healing bar (top)
             if (settings.show_healing && entry->recent_healing) {
                 DrawGradientBar(draw_list, x, width, damage_top_left.y, damage_top_left.y + 6, settings.bars_left, max_recent_healing > 0 ? static_cast<float>(entry->recent_healing) / max_recent_healing : 0, healing_from, healing_to);
             }
@@ -781,7 +763,6 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 FormatValueString(buffer, buffer_size, damage_float);
                 draw_list->AddText(ImVec2(x + ImGui::GetStyle().ItemSpacing.x, text_y), IM_COL32(255, 255, 255, 255), buffer);
 
-                // Damage percentage
                 if (!settings.show_healing) {
                     const float perc_of_total = GetPercentageOfTotal(entry->damage);
                     snprintf(buffer, buffer_size, "%.1f %%", perc_of_total);
@@ -802,7 +783,6 @@ void PartyDamage::Draw(IDirect3DDevice9*)
                 const float heal_text_x = settings.show_damage ? x + width / 2 : x + ImGui::GetStyle().ItemSpacing.x;
                 draw_list->AddText(ImVec2(heal_text_x, text_y), settings.color_healing, buffer);
 
-                // Healing percentage
                 if (!settings.show_damage) {
                     const float perc_of_total_heal = GetPercentageOfTotalHealing(entry->healing);
                     snprintf(buffer, buffer_size, "%.1f %%", perc_of_total_heal);

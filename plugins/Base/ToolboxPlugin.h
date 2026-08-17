@@ -68,13 +68,11 @@ public:
     // Pre-JSON settings file (<folder>/<Name>.ini), only read as a legacy fallback - never written.
     [[nodiscard]] virtual std::filesystem::path GetLegacySettingFile(const wchar_t* folder) const;
 
-    // Initialize module
     virtual void Initialize(ImGuiContext* ctx, ImGuiAllocFns allocator_fns, HMODULE toolbox_dll);
 
     // Send termination signal to module, make sure Terminate can be called.
     virtual void SignalTerminate() {}
 
-    // Can we terminate this module?
     virtual bool CanTerminate() { return true; }
 
     // Terminate module. Release any resources used. Make sure to revert all callbacks

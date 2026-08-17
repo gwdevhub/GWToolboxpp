@@ -197,10 +197,8 @@ namespace {
     IDiscordNetworkEvents network_events{};
     IDiscordCoreEvents core_events{};
 
-    // setting vars
     DiscordModule::Settings settings;
 
-    // runtime vars
     bool discord_connected = false;
     time_t zone_entered_time = 0;
     bool pending_activity_update = false;
@@ -256,7 +254,6 @@ namespace {
         Log::Log("Discord Log Level %d: %s\n", level, message);
     }
 
-    // Get pid from executable name (i.e. DiscordCanary.exe)
     DWORD GetProcId(const char* ProcName)
     {
         PROCESSENTRY32 pe32;
@@ -430,7 +427,6 @@ namespace {
             return false;
         }
 
-        // resolve function address here
         discordCreate = (DiscordCreate_pt)(uintptr_t)GetProcAddress(hGetProcIDDLL, "DiscordCreate");
         if (!discordCreate) {
             ASSERT(UnloadDll());
@@ -662,7 +658,6 @@ namespace {
             }
         }
         if (memcmp(&last_activity, &activity, sizeof(last_activity)) != 0) {
-            // Only update if activity is new.
             last_activity_update = time(nullptr);
             if (show_activity) {
                 Log::Log("Outgoing discord state = %s, %s\n", activity.details, activity.state);
@@ -698,7 +693,6 @@ void DiscordModule::Initialize()
 
     strcpy(activity.name, "Guild Wars");
     activity.application_id = DISCORD_APP_ID;
-    // Initialise discord objects
     memset(&app, 0, sizeof(app));
     memset(&activities_events, 0, sizeof(activities_events));
     memset(&network_events, 0, sizeof(network_events));
