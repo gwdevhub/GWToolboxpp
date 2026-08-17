@@ -48,9 +48,9 @@ namespace {
 
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
-    // AvAgent.cpp; __thiscall modelled as __fastcall.
-    typedef void(__fastcall* SetNameTagFlags_pt)(GW::Agent* agent, void* edx, uint32_t flags, uint32_t enable);
-    SetNameTagFlags_pt SetNameTagFlags_Func = nullptr;
+    // AvAgent.cpp; __thiscall modelled as __fastcall. `force` skips the "did visibility change" guard.
+    typedef void(__fastcall* RefreshNameTag_pt)(GW::Agent* agent, void* edx, uint32_t old_flags, uint32_t new_flags, uint32_t force);
+    RefreshNameTag_pt RefreshNameTag_Func = nullptr;
 
     constexpr uint32_t bogus_area_info_flags = 0x5000000; // e.g. "wrong" Augury Rock is map 119, no NPCs.
     constexpr uint32_t debug_area_info_flag = 0x80000000;
@@ -595,29 +595,35 @@ namespace GW {
             UI::AsyncDecodeStr(GetAgentEncName(agent), &out);
         }
 
-        bool SetNameTagFlags(const uint32_t agent_id, const uint32_t flags, const bool enable)
-        {
-            const auto agent = GetAgentByID(agent_id);
-            if (!agent) return false;
-            if (!SetNameTagFlags_Func) {
-                const auto address = GW::Scanner::Find("\x50\x68\x00\x04\x00\x00\x8b\xcf\xe8", "xxxxxxxxx", 0x8);
-                DEBUG_ASSERT(address);
-                if (address) {
-                    SetNameTagFlags_Func = (SetNameTagFlags_pt)GW::Scanner::FunctionFromNearCall(address);
-                }
-            }
-            if (!SetNameTagFlags_Func) return false;
-            SetNameTagFlags_Func(agent, nullptr, flags, enable ? 1 : 0);
-            return true;
-        }
-
         bool RefreshNameTag(const uint32_t agent_id)
         {
             const auto agent = GetAgentByID(agent_id);
-            // Bail while name tags are globally suppressed, or clearing the bit would reveal this one tag.
-            if (!agent || (agent->name_properties & NameTagFlags_Suppressed)) return false;
-            return SetNameTagFlags(agent_id, NameTagFlags_Suppressed, true) &&
-                   SetNameTagFlags(agent_id, NameTagFlags_Suppressed, false);
+            if (!agent) return false;
+
+            const auto flags = agent->name_properties;
+            // Mirrors the client's own visibility test - there is no tag to update otherwise.
+            const auto forced_visible = NameTagFlags_Picked | NameTagFlags_Highlighted | NameTagFlags_EvaluatedTarget |
+                                        NameTagFlags_ManualTarget | NameTagFlags_PassesFilter;
+            const auto in_range_visible = NameTagFlags_PassesTransientFilter | NameTagFlags_InRange;
+            if (flags & NameTagFlags_Suppressed) return false;
+            if (!(flags & forced_visible) &&
+                ((flags & NameTagFlags_NotOwnedByPlayer) || (flags & in_range_visible) != in_range_visible)) {
+                return false;
+            }
+
+            if (!RefreshNameTag_Func) {
+                // AvAgent.cpp - the client's own forced refresh, used when an agent's dye or model changes.
+                const auto address = GW::Scanner::Find("\x6a\x00\xff\x73\x2c\x68\x1a\x00\x00\x10", "xxxxxxxxxx");
+                DEBUG_ASSERT(address);
+                if (address) {
+                    RefreshNameTag_Func = (RefreshNameTag_pt)GW::Scanner::ToFunctionStart(address);
+                }
+            }
+            if (!RefreshNameTag_Func) return false;
+            // Same flags either side, so this re-emits kSetAgentNameTagAttribs in place rather than a
+            // hide/show pair - no flicker, and it works on the current target.
+            RefreshNameTag_Func(agent, nullptr, flags, flags, 1);
+            return true;
         }
     } // namespace Agents
     namespace Items {

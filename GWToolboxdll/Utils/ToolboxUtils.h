@@ -244,17 +244,13 @@ namespace GW {
             NameTagFlags_Disabled = 0x20000
         };
 
-        // Sets or clears NameTagFlags bits on an agent; game thread only. Always go through this rather
-        // than writing name_properties directly - the client only emits kShowAgentNameTag/
-        // kSetAgentNameTagAttribs/kHideAgentNameTag from here, and only when the resulting visibility
-        // actually changed. No vtable slot on the agent does it: the update slot only re-runs the
-        // distance check, so it cannot refresh a tag on an agent that stays in range.
-        bool SetNameTagFlags(uint32_t agent_id, uint32_t flags, bool enable);
-
-        // Forces the client to destroy and rebuild an agent's name tag by toggling
-        // NameTagFlags_Suppressed, so its colour and attributes are recomputed from scratch.
-        // Needed for the current target: NameTagFlags_EvaluatedTarget already keeps the tag visible, so
-        // toggling any other flag leaves visibility unchanged and emits no UI message at all.
+        // Re-emits kSetAgentNameTagAttribs for an agent so its name, colour and attributes are re-read
+        // from the agent; game thread only. Returns false if the agent has no name tag to update.
+        // This calls the client's own forced-refresh helper, which the client uses when an agent's dye
+        // or model changes. The flag-toggling routes don't work here: the client only emits name tag
+        // messages when a flag change alters computed visibility, and the current target is already
+        // held visible by NameTagFlags_EvaluatedTarget. No vtable slot does it either - the update slot
+        // only re-runs the distance check.
         bool RefreshNameTag(uint32_t agent_id);
     }
     namespace Items {
