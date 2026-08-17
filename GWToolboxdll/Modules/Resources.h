@@ -152,11 +152,8 @@ public:
     void Download(const std::filesystem::path& path_to_file, const std::string& url, const AsyncLoadCallback& callback) const;
     // download to memory, blocking. If an error occurs, details are held in response string
     static bool Download(const std::string& url, std::string& response);
-    // Read file on disk
     static bool ReadFile(const std::filesystem::path& path, std::string& response);
-    // Read file on disk
     static bool ReadFile(const std::filesystem::path& path, std::wstring& response);
-    // Write file to disk
     static bool WriteFile(const std::filesystem::path& path_to_file, const std::string& content, bool append = false);
 
     // download to memory, blocking. If an error occurs, details are held in response string

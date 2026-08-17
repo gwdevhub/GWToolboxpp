@@ -87,7 +87,6 @@ struct MusicData {
 
     bool force_play_sound = false;
 
-    // Helper function to handle common logic
     template <typename CallbackMap>
     GW::RecObject* PlayAudioInternal(wchar_t* filename, SoundProps* props, CallbackMap& callbacks, PlaySound_pt ret_func)
     {
@@ -95,12 +94,10 @@ struct MusicData {
         GW::RecObject* ret = nullptr;
         GW::HookStatus status;
 
-        // Execute callbacks
         for (auto& [_, cb] : callbacks) {
             cb(&status, filename, props);
         }
 
-        // Check if sound should be played
         if (!status.blocked) {
             if (!force_play_sound) {
                 bool found = std::ranges::find(blocked_sounds, filename) != blocked_sounds.end();
@@ -123,7 +120,6 @@ struct MusicData {
     GW::RecObject* OnPlaySound(wchar_t* filename, SoundProps* props)
     {
         auto handle = PlayAudioInternal(filename, props, play_sound_callbacks, PlaySound_Ret);
-        // Log sound if enabled
         if (log_sounds && std::ranges::find(logged_sounds, filename) == logged_sounds.end()) {
             logged_sounds.push_back(filename);
         }

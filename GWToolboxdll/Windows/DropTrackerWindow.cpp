@@ -126,7 +126,6 @@ namespace {
                 // Use the index as the ID, not the string content
                 ImGui::PushID(group_idx++);
 
-                // Use TreeNodeEx with a simple label
                 bool open = ImGui::TreeNodeEx("##tree", ImGuiTreeNodeFlags_SpanAvailWidth, "%s", key.empty() ? "(Unknown)" : key.c_str());
 
                 ImGui::TableNextColumn();
@@ -246,7 +245,6 @@ namespace {
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
 
-                        // Show item details with weapon stats
                         ImGui::TextColored(GW::Items::GetRarityColor(drop->rarity), "%s", drop->GetItemName()->string().c_str());
                         ImGui::TableNextColumn();
                         ImGui::Text("%d", drop->quantity);

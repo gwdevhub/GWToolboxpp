@@ -153,7 +153,6 @@ namespace {
         return font_data;
     }
 
-    // Build a single font by merging all available font files.
     ImFont* BuildFont(const float size, const bool default_only = false)
     {
         ImFontAtlas* atlas = ImGui::GetIO().Fonts;
@@ -176,7 +175,6 @@ namespace {
         }
 
         ImFont* font = nullptr;
-        // Load fonts from disk, merging glyph ranges
         for (const auto& [glyph_ranges, font_name] : GetFontData()) {
             size_t data_size;
 
@@ -190,7 +188,6 @@ namespace {
             cfg.MergeMode = true;
         }
 
-        // Merge fontawesome icons
         cfg.MergeMode = true;
         cfg.GlyphExcludeRanges = nullptr;
         atlas->AddFontFromMemoryCompressedTTF(fontawesome5_compressed_data, fontawesome5_compressed_size, size, &cfg, fontawesome5_glyph_ranges.data());
@@ -201,7 +198,6 @@ namespace {
 }
 
 namespace FontLoader {
-    // Has LoadFonts() finished?
     bool FontsLoaded()
     {
         return fonts_loaded;

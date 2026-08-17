@@ -15,19 +15,15 @@ class D3DVertexBuffer;
 #  endif
 #endif
 
-// Context structure that encapsulates all rendering parameters
 struct MinimapRenderContext : RectF {
-    // Position and size
     ImVec2 anchor_point = {}; // Center of minimap - this may not necessarily be the center point of the clipping rect
 
-    // Camera/view parameters
     GW::Vec2f translation = {}; // World-space translation (for panning)
     float zoom_scale = 1.f; // Zoom level (scale factor)
     float rotation = 1.5708f; // Map rotation in radians
 
     float base_scale = 1.f; // The size (in px) of the base scale to use before zooming. Minimap sets this to size.x
 
-    // Visual options
     bool circular_map = false; // Whether to render as circle or square
     bool draw_center_marker = false; // Whether to draw center marker when panned
     D3DCOLOR background_color = D3DCOLOR_ARGB(50, 0, 0, 0); // Background color (or 0 to use renderer's default)

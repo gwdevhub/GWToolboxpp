@@ -23,19 +23,16 @@ namespace {
 
     bool waiting_for_login = true;
 
-    // Self-test for the close-then-reopen crash (P:\Code\Engine\Controls\CtlPage.cpp(558),
-    // assertion "btnFrame") - reproduces it automatically instead of needing a manual repro each
-    // build. See GuildWarsUIFrame.cpp's CreateNativeFrame comment for the fix under test.
+    // Self-test for the close-then-reopen crash (CtlPage.cpp(558), assertion "btnFrame"); see
+    // GuildWarsUIFrame.cpp's CreateNativeFrame comment for the fix under test.
     bool opened_once = false;
     bool closed_once = false;
     bool reopened_once = false;
     clock_t opened_at = 0;
     clock_t closed_at = 0;
 
-    // Diagnostic only: logs every native UI component creation while active, so we can compare
-    // what tab_index values GW's own real tabs (General/Graphics/...) use against ours (255/0xff)
-    // right up to the point of the reopen crash - the crash dump alone doesn't show this since the
-    // fault is inside the engine's own tab-button refresh code, not anything of ours on the stack.
+    // Diagnostic only: logs native UI component creations to compare GW's own tab_index values
+    // against ours (255/0xff) up to the reopen crash, which the crash dump alone doesn't show.
     bool log_create_ui = false;
     GW::HookEntry create_ui_hook;
 }
@@ -65,14 +62,8 @@ void GuildWarsUI_ToolboxSettings::Initialize()
 
 void GuildWarsUI_ToolboxSettings::Update(float)
 {
-    // Tried triggering this off kFrameVisibilityChanged instead of polling (GW::UI::
-    // RegisterFrameUIMessageCallback) - froze the game on opening Options. That hook fires for
-    // *every* frame in the game receiving the message, not just Options (confirmed via GWCA's own
-    // implementation, Source/UIMgr.cpp ~2191) - opening a window cascades visibility changes across
-    // dozens of children near-simultaneously, and our handler's GetOptionsTabs() walks Options'
-    // relation.children right as the engine may be mid-mutation of that same list from its own
-    // window-open cascade. Reverted to polling rather than chasing the exact reentrant mechanism
-    // further - Poll() itself already throttles and no-ops once active, so this is cheap.
+    // Poll rather than hook kFrameVisibilityChanged: that fires for every frame, and walking
+    // Options' relation.children mid open-cascade froze the game. Poll() throttles anyway.
     settings_tab.Poll(GetOptionsTabs());
 }
 
@@ -81,12 +72,8 @@ void GuildWarsUI_ToolboxSettings::SignalTerminate()
     ToolboxModule::SignalTerminate();
     terminating = true;
     GW::GameThread::Enqueue([]() {
-        // Close the Options window first if our tab is still showing under it - removing/destroying
-        // our tab while its parent window is open and visible leaves the TabsFrame mid-cascade for
-        // that same window (the same class of reentrancy that caused the kSetLayout freeze earlier
-        // in this file's history). Destroying the whole window first (see WorldMapWidget.cpp's
-        // TriggerWorldMapRedraw for the same DestroyUIComponent pattern) forces a clean teardown
-        // path before we touch our own tab at all.
+        // Destroy the visible Options window before removing our tab: pulling the tab out of a
+        // live TabsFrame leaves it mid-cascade (same reentrancy as the earlier kSetLayout freeze).
         if (settings_tab.IsActive()) {
             if (const auto options_frame = GW::UI::GetFrameByLabel(L"Options")) {
                 GW::UI::DestroyUIComponent(options_frame);
@@ -98,12 +85,7 @@ void GuildWarsUI_ToolboxSettings::SignalTerminate()
 
 bool GuildWarsUI_ToolboxSettings::CanTerminate()
 {
-    // Not blocking anything until SignalTerminate has actually been called (matches the original
-    // !terminating check for that case). Once it has, block DLL unload until our tab's native
-    // frame has genuinely been torn down - Remove() above only *requests* removal (TabsFrame::
-    // RemoveTab); the actual destruction, and our own kDestroyFrame handler nulling GuildWarsUI_
-    // Tab::frame (see HandleMessage), can lag a poll or two behind. Unloading before then leaves
-    // the engine holding a callback pointer (ItemCallback) into memory that's about to become
-    // invalid.
+    // Remove() only *requests* removal; the native frame teardown can lag a poll or two, and
+    // unloading before it completes leaves the engine holding our ItemCallback pointer.
     return !terminating || !settings_tab.IsActive();
 }

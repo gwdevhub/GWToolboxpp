@@ -6,12 +6,10 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
-// D3DVertex
 D3DVertex::D3DVertex(const float x, const float y, const float z, const DWORD color) : x(x), y(y), z(z), color(color) {}
 
 D3DVertex::D3DVertex(const float x, const float y, const DWORD color) : x(x), y(y), z(0.f), color(color) {}
 
-// D3DQuad
 D3DQuad::D3DQuad(const D3DVec2f& tl, const D3DVec2f& br, DWORD color)
 {
     const D3DVertex TL{tl.x, tl.y, color};
@@ -22,7 +20,6 @@ D3DQuad::D3DQuad(const D3DVec2f& tl, const D3DVec2f& br, DWORD color)
     t[1] = {TL, BR, BL};
 }
 
-// D3DLine
 D3DLine::D3DLine(const D3DVec2f& a, const D3DVec2f& b, float thickness, DWORD color)
 {
     const float dx = b.x - a.x;
@@ -38,7 +35,6 @@ D3DLine::D3DLine(const D3DVec2f& a, const D3DVec2f& b, float thickness, DWORD co
     t[1] = {TL, BR, BL};
 }
 
-// D3DDiamond
 D3DDiamond::D3DDiamond(const D3DVec2f& pos, float radius, DWORD color)
 {
     const D3DVertex top{pos.x, pos.y + radius, color};
@@ -49,7 +45,6 @@ D3DDiamond::D3DDiamond(const D3DVec2f& pos, float radius, DWORD color)
     t[1] = {top, bot, left};
 }
 
-// D3DVelocityArrow
 D3DVelocityArrow::D3DVelocityArrow(const D3DVec2f& pos, const D3DVec2f& velocity, float length, float half_width, DWORD color)
 {
     const float vlen_sq = velocity.x * velocity.x + velocity.y * velocity.y;
@@ -67,7 +62,6 @@ D3DVertexBuffer::~D3DVertexBuffer() {
     DEBUG_ASSERT(!buffer);
 }
 
-// D3DVertexBuffer
 void D3DVertexBuffer::Initialize(IDirect3DDevice9* device)
 {
     dirty = false;

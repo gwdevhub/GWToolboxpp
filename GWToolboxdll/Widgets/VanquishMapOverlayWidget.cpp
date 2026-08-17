@@ -26,7 +26,6 @@ namespace {
     Color vq_color_blocked = IM_COL32(60, 20, 20, 170);
     Color vq_color_blocked_border = IM_COL32(180, 100, 100, 140);
 
-    // Enemy tracking
     enum class EnemyState { NotApplicable, Alive, Stale };
     struct TrackedEnemy {
         GW::Vec2f pos;
@@ -1068,7 +1067,6 @@ void VanquishMapOverlayWidget::Update(float)
         }
     }
 
-    // Frame rate check for expensive updates
     static clock_t last_check = TIMER_INIT();
     if (!ToolboxUtils::FrameRateCheck(last_check, 30)) return;
 

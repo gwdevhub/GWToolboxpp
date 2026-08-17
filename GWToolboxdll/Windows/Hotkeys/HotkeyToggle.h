@@ -4,7 +4,6 @@
 
 #include <Windows/Hotkeys/TBHotkey.h>
 
-// hotkey to toggle a toolbox function
 class HotkeyToggle : public TBHotkey {
     enum ToggleTarget {
         Clicker,

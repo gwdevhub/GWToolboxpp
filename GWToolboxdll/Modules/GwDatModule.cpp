@@ -200,7 +200,6 @@ namespace {
         return true;
     }
 
-    // Decodes file_id and converts it to greyscale A8R8G8B8 in place.
     bool DecodeGreyscaleToArgb(uint32_t file_id, std::vector<uint32_t>& argb, Vec2i& dims)
     {
         if (!file_id || !DecodeTextureToArgb(file_id, argb, dims) || !dims.x || !dims.y)

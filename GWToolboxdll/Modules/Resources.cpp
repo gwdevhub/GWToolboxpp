@@ -50,7 +50,6 @@
 
 
 namespace {
-    // Define the IID if not already defined
 
     DXGI_FORMAT ConvertD3D9FormatToDXGI(D3DFORMAT d3d9Format)
     {
@@ -163,7 +162,6 @@ namespace {
     IDirect3DTexture9* empty_texture_ptr = nullptr;
     bool should_stop = false;
 
-    // snprintf error message, pass to callback as a failure. Used internally.
     void trigger_failure_callback(const std::function<void(bool, const std::wstring&)>& callback, const wchar_t* format, ...)
     {
         std::wstring out;
@@ -378,26 +376,17 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     }
     IShellLink* psl = nullptr;
 
-    // buffer that receives the null-terminated string
-    // for the drive and path
     TCHAR szPath[MAX_PATH];
-    // buffer that receives the null-terminated
-    // string for the description
     TCHAR szDesc[MAX_PATH];
-    // structure that receives the information about the shortcut
     WIN32_FIND_DATA wfd{};
 
-    // Get a pointer to the IShellLink interface
     hRes = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**)&psl);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
-    // Get a pointer to the IPersistFile interface
     IPersistFile* ppf = nullptr;
     psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&ppf));
 
-    // IPersistFile is using LPCOLESTR,
-    // Open the shortcut file and initialize it from its contents
     hRes = ppf->Load(in_shortcut_path.wstring().c_str(), STGM_READ);
     if (!SUCCEEDED(hRes)) {
         return hRes;
@@ -408,13 +397,11 @@ HRESULT Resources::ResolveShortcut(const std::filesystem::path& in_shortcut_path
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
-    // Get the path to the shortcut target
     hRes = psl->GetPath(szPath, MAX_PATH, &wfd, SLGP_RAWPATH);
     if (!SUCCEEDED(hRes)) {
         return hRes;
     }
 
-    // Get the description of the target
     hRes = psl->GetDescription(szDesc, MAX_PATH);
     if (!SUCCEEDED(hRes)) {
         return hRes;
@@ -615,7 +602,6 @@ void Resources::Download(const std::filesystem::path& path_to_file, const std::s
     EnqueueWorkerTask([this, path_to_file, url, callback] {
         std::wstring error_message;
         bool success = Download(path_to_file, url, error_message);
-        // and call the callback in the main thread
         if (callback) {
             EnqueueMainTask([callback, success, error_message] {
                 callback(success, error_message);
@@ -715,7 +701,6 @@ void Resources::Download(const std::string& url, AsyncLoadMbCallback callback, v
             const std::string http = "http://";
             const std::string https = "https://";
 
-            // Check if the URL starts with http:// or https:// and remove it
             if (url.substr(0, http.size()) == http) {
                 return url.substr(http.size());
             }
@@ -1031,7 +1016,6 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
         return texture;
     }
     const auto path_to_file = std::format("{}\\{}", path.string(), filename_sanitised);
-    // Check for local file
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
@@ -1070,7 +1054,6 @@ IDirect3DTexture9** Resources::GetGuildWarsWikiImage(const char* filename, size_
                 }
             }
 
-            // Ensure the image URL is absolute
             if (!image_url.starts_with("http")) {
                 image_url = std::format("https://wiki.guildwars.com{}", image_url);
             }
@@ -1134,13 +1117,11 @@ IDirect3DTexture9** Resources::GetSkillImageFromGWW(GW::Constants::SkillID skill
         return texture;
     }
     wchar_t path_to_file[MAX_PATH];
-    // Check for local jpg file
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.jpg", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
         return texture;
     }
-    // Check for local png file
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%d.png", path.wstring().c_str(), skill_id);
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
@@ -1427,7 +1408,6 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
     ASSERT(EnsureFolderExists(path));
 
     wchar_t path_to_file[MAX_PATH];
-    // Check for local png image
     swprintf(path_to_file, _countof(path_to_file), L"%s\\%s.png", path.c_str(), item_name.c_str());
     if (std::filesystem::exists(path_to_file)) {
         LoadTexture(texture, path_to_file, callback);
@@ -1469,11 +1449,9 @@ IDirect3DTexture9** Resources::GetItemImage(const std::wstring& item_name)
         swprintf(path_to_file, _countof(path_to_file), L"%s\\%s%S", path.c_str(), item_name.c_str(), image_extension.c_str());
         char url[128];
         if (strncmp(image_path.c_str(), "http", 4) == 0) {
-            // Image URL is absolute
             snprintf(url, _countof(url), "%s%s", image_path.c_str(), image_extension.c_str());
         }
         else {
-            // Image URL is relative to domain
             snprintf(url, _countof(url), "https://wiki.guildwars.com%s%s", image_path.c_str(), image_extension.c_str());
         }
         LoadTexture(texture, path_to_file, url, callback);
@@ -1499,7 +1477,6 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
     if (ext == ".dds") {
-        // Original DDS path
         D3DLOCKED_RECT lockedRect;
         hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
         if (FAILED(hr)) {
@@ -1524,7 +1501,6 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
         }
     }
     else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") {
-        // Lock the texture
         D3DLOCKED_RECT lockedRect;
         hr = texture->LockRect(0, &lockedRect, nullptr, D3DLOCK_READONLY);
         if (FAILED(hr)) {
@@ -1548,12 +1524,10 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
 
         DirectX::ScratchImage scratchImage;
 
-        // Check if format needs decompression
         if (DirectX::IsCompressed(srcImage.format)) {
             hr = DirectX::Decompress(srcImage, DXGI_FORMAT_R8G8B8A8_UNORM, scratchImage);
         }
         else {
-            // Just copy the image data
             hr = scratchImage.InitializeFromImage(srcImage);
         }
 
@@ -1564,7 +1538,6 @@ bool Resources::SaveTextureToFile(IDirect3DTexture9* texture, const std::filesys
             return false;
         }
 
-        // Determine codec GUID
         GUID guid;
         if (ext == ".png") {
             guid = GUID_ContainerFormatPng;
@@ -1734,7 +1707,6 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
     // CRITICAL: Only hash the POSITIVE_X face to match gmod behavior!
     // gmod's uMod_IDirect3DCubeTexture9::GetHash() only hashes D3DCUBEMAP_FACE_POSITIVE_X
     if (cubeTexture->LockRect(D3DCUBEMAP_FACE_POSITIVE_X, 0, &d3dlr, nullptr, D3DLOCK_READONLY) != D3D_OK) {
-        // Try via surface level as fallback
         if (cubeTexture->GetCubeMapSurface(D3DCUBEMAP_FACE_POSITIVE_X, 0, &pResolvedSurface) != D3D_OK) {
             Log::Warning("GetTexmodHashCube: Failed to get cube map surface");
             return 0;
@@ -1761,10 +1733,8 @@ uint32_t Resources::GetTexmodHashCube(IDirect3DCubeTexture9* cubeTexture)
         offset += row_size;
     }
 
-    // Hash the compact data (without pitch padding)
     uint32_t hash = GetTexmodHash(reinterpret_cast<const char*>(compact_data.data()), compact_data.size());
 
-    // Cleanup
     if (pResolvedSurface != nullptr) {
         pResolvedSurface->UnlockRect();
         pResolvedSurface->Release();

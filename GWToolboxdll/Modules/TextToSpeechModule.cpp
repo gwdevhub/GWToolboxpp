@@ -77,7 +77,6 @@ namespace {
         return nullptr;
     }
 
-    // API Configuration structure
     struct APIConfig {
         GenerateVoiceCallback callback;
         const char* name;
@@ -771,7 +770,6 @@ Gender GetGenderByFileId(const uint32_t file_id)
     GW::HookEntry UIMessage_HookEntry;
     GW::HookEntry PreUIMessage_HookEntry;
 
-    // Forward declaration
     void GenerateVoice(std::shared_ptr<PendingNPCAudio> audio);
 
     void GenerateVoiceFromDecodedString(std::shared_ptr<PendingNPCAudio> audio)

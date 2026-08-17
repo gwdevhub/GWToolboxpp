@@ -56,7 +56,6 @@ namespace {
     bool elite_area_disable_triggered = false; // Already triggered in this run?
     clock_t elite_area_check_timer = 0;
 
-    // Map of which objectives to check per map_id
     std::vector<DWORD> objectives_complete = {};
     const std::map<MapID, std::vector<DWORD>>
     objectives_to_complete_by_map_id = {
@@ -674,14 +673,12 @@ void PconsWindow::MapChanged()
         previous_instance_type = instance_type;
     }
     instance_type = GW::Map::GetInstanceType();
-    // If we've just come from an explorable area then disable pcons.
     if (settings.disable_pcons_on_map_change && previous_instance_type == InstanceType::Explorable) {
         SetEnabled(false);
     }
 
     player = nullptr;
     elite_area_disable_triggered = false;
-    // Find out which objectives we need to complete for this map.
     const auto map_objectives_it = objectives_to_complete_by_map_id.find(map_id);
     if (map_objectives_it != objectives_to_complete_by_map_id.end()) {
         objectives_complete.clear();
@@ -690,7 +687,6 @@ void PconsWindow::MapChanged()
     else {
         current_objectives_to_check.clear();
     }
-    // Find out if we need to check for boss range for this map.
     const auto map_location_it = final_room_location_by_map_id.find(map_id);
     if (map_location_it != final_room_location_by_map_id.end()) {
         current_final_room_location = map_location_it->second;
@@ -783,7 +779,6 @@ void PconsWindow::DrawLunarsAndAlcoholSettings()
 
 void PconsWindow::CheckBossRangeAutoDisable()
 {
-    // Trigger Elite area auto disable if applicable
     if (!enabled || elite_area_disable_triggered || instance_type != InstanceType::Explorable) {
         return; // Pcons disabled, auto disable already triggered, or not in explorable area.
     }

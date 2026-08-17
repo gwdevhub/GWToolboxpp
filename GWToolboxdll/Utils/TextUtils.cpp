@@ -312,7 +312,6 @@ namespace TextUtils {
                ) == 11;
     }
 
-    // Convert an UTF8 string to a wide Unicode String
     std::wstring StringToWString(const std::string_view str)
     {
         if (str.empty()) {
@@ -334,7 +333,6 @@ namespace TextUtils {
         return std::regex_replace(subject_str, regex, replacement);
     }
 
-    // Convert a wide Unicode string to an UTF8 string
     std::string WStringToString(const std::wstring_view str)
     {
         if (str.empty()) {
@@ -502,7 +500,6 @@ namespace TextUtils {
     std::wstring RemoveDiacritics(const std::wstring_view s)
     {
         if (diacritics_charmap.empty()) {
-            // Build static diacritics map if not already done so
             for (size_t i = 0; i < diacritics.size(); i++) {
                 for (size_t j = 1; diacritics[i][j]; j++) {
                     diacritics_charmap[diacritics[i][j]] = diacritics[i][0];

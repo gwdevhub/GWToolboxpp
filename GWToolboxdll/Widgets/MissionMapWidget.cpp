@@ -262,10 +262,8 @@ namespace {
     }
 
     // --- Walkable terrain overlay -----------------------------------------------
-    // Shades non-walkable parts of the map grey and outlines walkable terrain.
-    // Unlike the Vanquish overlay's map grid, this has no reachability/BFS, no
-    // fog-of-war and no enemy tracking — it's a static rasterization of every
-    // trapezoid in the pathing map, independent of the Vanquish widget entirely.
+    // Static rasterization of every pathing-map trapezoid; unlike the Vanquish overlay
+    // there is no reachability/BFS, fog-of-war or enemy tracking, and no shared state.
     constexpr float TERRAIN_CELL_SIZE = GW::Constants::Range::Adjacent / 2.f;
 
     struct TerrainTrapezoidSnapshot {

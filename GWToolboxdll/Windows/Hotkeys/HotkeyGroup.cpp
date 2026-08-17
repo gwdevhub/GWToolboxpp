@@ -93,7 +93,6 @@ int HotkeyGroup::Description(char* buf, size_t bufsz)
 bool HotkeyGroup::DrawSettings()
 {
     bool hotkey_changed = false;
-    // Draw child hotkeys
     ImGui::Spacing();
     ImGui::TextDisabled("Group hotkeys:");
     ImGui::Separator();

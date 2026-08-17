@@ -273,9 +273,7 @@ void ToolboxTheme::LoadUILayout()
     if (!ImGui::GetCurrentContext()) {
         return;
     }
-    // Copy theme over
     ImGui::GetStyle() = ini_style;
-    // Copy window positions over
     ImGui::GetStyle().FontScaleMain = font_scale_main;
 
     layout.clear();

@@ -167,7 +167,6 @@ namespace {
         }
     }
 
-    // Repopulates applicable_hotkeys based on current character/map context.
     // Used because its not necessary to check these vars on every keystroke, only when they change
     bool CheckSetValidHotkeys()
     {
@@ -208,7 +207,6 @@ namespace {
             return false;
         }
         bool is_in_controller_mode = GW::UI::IsInControllerMode();
-        // Check if the hotkey or any ancestor group has the trigger flag set.
         auto inherited_trigger = [&mt](const TBHotkey* hk) -> bool {
             for (const TBHotkey* cur = hk; cur; cur = cur->group) {
                 if (cur->trigger_on_explorable && mt == GW::Constants::InstanceType::Explorable) return true;
@@ -263,7 +261,6 @@ namespace {
         keysHeld.reset(); // Clear previous key states
         BYTE keyState[256];
 
-        // Get the current keyboard state
         if (GetKeyboardState(keyState)) {
             for (uint32_t vkey = 0; vkey < 256; ++vkey) {
                 // Check if the high-order bit is set (key is pressed)
@@ -299,7 +296,6 @@ namespace {
             hotkey_popup_first_draw = false;
         }
 
-        // Record any new key presses
         keys_selected |= wndproc_keys_held;
 
         std::string keys_held_buf = ModKeyName(keys_selected);
@@ -600,17 +596,10 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
         for (TBHotkey* hk : valid_hotkeys) {
             if (is_key_up) hk->pressed = false;
 
-            // A hotkey is considered "matching" if:
-            // - It hasn't already been triggered (`hk->pressed == false`)
-            // - It should trigger on key-up (if we're processing a key-up event)
-            // - All its required keys are currently held (`hk->key_combo & wndproc_keys_held == hk->key_combo`)
-            // - The key that was just pressed/released is part of this hotkey (`hk->key_combo.test(keyData)`)
             if (check_trigger(hk, is_key_up, keyData, is_in_controller_mode)) {
-                // Count how many keys (modifiers + main key) are required for this hotkey
                 size_t modifier_count = hk->key_combo.count();
                 matching_hotkeys.push_back(hk);
 
-                // Track the highest number of required keys (most specific hotkey)
                 max_modifier_count = std::max(max_modifier_count, modifier_count);
             }
         }
@@ -622,7 +611,6 @@ bool HotkeysWindow::WndProc(const UINT Message, const WPARAM wParam, LPARAM)
             if (hk->key_combo.count() == max_modifier_count) {
                 PushPendingHotkey(hk);
 
-                // If this hotkey is set to block Guild Wars input, mark it as triggered
                 if (!is_key_up && hk->block_gw) {
                     triggered = true;
                 }

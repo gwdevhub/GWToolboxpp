@@ -274,7 +274,6 @@ namespace {
         return false;
     }
 
-    // Climate for a specific map.
     Climate ClimateForMap(const GW::Constants::MapID map_id)
     {
         // @Enhancement: We could handle edge case maps by inspecting textures used by the DAT file matching the map and counting stuff like sand, snow etc, but thats overkill atm.
@@ -958,7 +957,6 @@ namespace {
         return true;
     }
 
-    // Advance every active condition and accumulate its geometry, then upload once per frame.
     // Build a soft round puff texture at runtime (no .dat asset): white RGB with a smooth radial alpha falloff,
     // so overlapping cloud billboards blend into a continuous fog bank instead of showing hard quad edges.
     bool BuildCloudTexture(IDirect3DDevice9* device)

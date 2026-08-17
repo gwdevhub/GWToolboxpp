@@ -206,7 +206,6 @@ namespace {
     int OnConnected(const char* params, irc_reply_data*, void* wparam)
     {
         const auto conn = static_cast<IRC*>(wparam);
-        // Set the username to be the connected name.
         settings.irc_username = params;
         settings.irc_username.erase(settings.irc_username.find_first_of(' '));
         // Channel == username. This could be changed to connect to other Twitch channels/IRC channels.
@@ -364,7 +363,6 @@ bool TwitchModule::Connect()
         printf("Invalid username!\n");
         return false;
     }*/
-    // Sanitise strings to lower case
     std::ranges::transform(
         settings.irc_server, settings.irc_server.begin(),
         [](const char c) -> char {

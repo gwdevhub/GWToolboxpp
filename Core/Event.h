@@ -11,9 +11,8 @@ public:
 
     ~Event();
 
-    // If the event is auto resetting only 1 thread is released. Otherwise
-    // all waiting threads are released. In both cases the event is reset
-    // after this call.
+    // Releases 1 waiting thread if auto-resetting, otherwise all of them;
+    // either way the event is reset after this call.
     void Pulse() const;
 
     // If the event is created with the auto-reset flag enabled, only one
@@ -24,37 +23,23 @@ public:
     // is called. This function is only useful for events that are not auto-resetting.
     void Reset() const;
 
-    // Blocks until the event is set to done.
     void WaitUntilDone() const;
 
-    // Returns True if event is set done. False otherwise.
     bool WaitWithTimeout(uint32_t WaitMs) const;
 
-    // True if the event is set done. False otherwise.
     bool TryWait() const;
 
-    // Blocks until at least one event is set to done.
-    // You can wait on most "MAX_WAIT_OBJECTS".
+    // The static wait helpers below take at most "MAX_WAIT_OBJECTS" events.
     static void WaitAny(Event* Events, size_t Count, Event** EventSignaled);
 
-    // Blocks until all events are set to done.
-    // You can wait on most "MAX_WAIT_OBJECTS".
     static void WaitAll(Event* Events, size_t Count);
 
-    // Wait up to the requested msecs for at least one event to be set to done.
-    // You can wait on most "MAX_WAIT_OBJECTS".
     static bool WaitAnyWithTimeout(Event* Events, size_t Count, uint32_t WaitMs, Event** EventSignaled);
 
-    // Wait up to the requested msecs for all events to be set to done.
-    // You can wait on most "MAX_WAIT_OBJECTS".
     static bool WaitAllWithTimeout(const Event* Events, size_t Count, uint32_t WaitMs);
 
-    //  Check if at least one event is set to done.
-    // You can wait on most "MAX_WAIT_OBJECTS".
     static bool TryWaitAny(Event* Events, size_t Count, Event** EventSignaled);
 
-    // Check if all events are set to done.
-    // You can wait on most "MAX_WAIT_OBJECTS".
     static bool TryWaitAll(Event* Events, size_t Count);
 
 private:

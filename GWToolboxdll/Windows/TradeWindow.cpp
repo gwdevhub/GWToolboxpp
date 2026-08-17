@@ -346,7 +346,6 @@ void TradeWindow::fetch()
         // Fill searched_words for the on-the-fly search in ::fetch
         searched_words = TextUtils::ParsePatterns<char>(search_buffer);
 
-        // Send request
         const tradechat_api::SearchRequest request{.query = pending_query_string};
         pending_query_sent = clock();
         ws_window->send(glz::write_json(request).value_or(std::string{}));
@@ -394,7 +393,6 @@ void TradeWindow::fetch()
             print_search_results = false;
             return;
         }
-        // Add to message feed
         Message msg;
         const tradechat_api::RawMessage raw{.s = res.s, .m = res.m, .t = res.t};
         if (!fill_message(raw, &msg)) {
@@ -416,7 +414,6 @@ void TradeWindow::fetch()
             messages.add(msg);
         }
 
-        // Check alerts
         // do not display trade chat while in kamadan AE district 1 or Pre-Searing Ascalon AE district 1
         bool print_message = ((settings.is_kamadan_chat && settings.print_game_chat && !GetInKamadanAE1()) || (!settings.is_kamadan_chat && settings.print_game_chat_asc && !GetInAscalonAE1())) && IsTradeAlert(msg.message);
 
@@ -611,7 +608,6 @@ void TradeWindow::Draw(IDirect3DDevice9*)
                 ImGui::SameLine(playername_left);
             }
             if (ImGui::Button(msg.name.c_str(), ImVec2(playernamewidth, 0))) {
-                // open whisper to player
                 GW::GameThread::Enqueue([&msg] {
                     std::wstring name_ws = TextUtils::StringToWString(msg.name);
                     SendUIMessage(GW::UI::UIMessage::kOpenWhisper, name_ws.data());

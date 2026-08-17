@@ -128,7 +128,6 @@ void ParseCommandLine()
 
 bool IsRunningAsAdmin()
 {
-    // Allocate and initialize a SID of the administrators group.
     PSID AdministratorsGroup = nullptr;
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     if (!AllocateAndInitializeSid(
@@ -142,8 +141,6 @@ bool IsRunningAsAdmin()
         return false;
     }
 
-    // Determine whether the SID of administrators group is enabled in
-    // the primary access token of the process.
     BOOL IsRunAsAdmin = FALSE;
     if (!CheckTokenMembership(nullptr, AdministratorsGroup, &IsRunAsAdmin)) {
         FreeSid(AdministratorsGroup);

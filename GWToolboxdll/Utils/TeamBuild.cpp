@@ -652,7 +652,6 @@ void TeamBuild::DrawPlayerBuildsContent(bool& builds_modified, bool editable)
             }
         }
         else {
-            // Static display — click to show skillbar tooltip
             ImGui::PushItemWidth(name_width);
             const auto& disp = !build.name.empty() ? build.name : build.GetFallbackBuildName();
             ImGui::TextUnformatted(disp.c_str());
@@ -1007,7 +1006,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
         // ---- Expanded edit section ----
         if (editing) {
             if (!is_player) {
-                // Hero selector
                 const auto& sorted_heroes = SortedHeroIDs();
                 const auto hero_it = std::ranges::find(sorted_heroes, build.hero_id);
                 int combo_idx = hero_it != sorted_heroes.end() ? static_cast<int>(std::distance(sorted_heroes.begin(), hero_it)) : -1;
@@ -1027,7 +1025,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 }
                 ImGui::PopItemWidth();
 
-                // Show panel toggle
                 ImGui::SameLine(0, spacing);
                 const auto* panel_icon = reinterpret_cast<const char*>(build.show_panel ? ICON_FA_EYE : ICON_FA_EYE_SLASH);
                 if (ImGui::Button(panel_icon, icon_btn_size)) {
@@ -1035,7 +1032,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(build.show_panel ? "Hero panel: Show" : "Hero panel: Hide");
 
-                // Behavior toggle
                 ImGui::SameLine(0, spacing);
                 const char* behavior_icon = reinterpret_cast<const char*>(ICON_FA_SHIELD_ALT);
                 const char* behavior_tooltip = "Hero behaviour: Guard";
@@ -1054,7 +1050,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip(behavior_tooltip);
 
-                // Disabled skills
                 ImGui::SameLine(0, spacing);
                 int enabled_count = 8;
                 for (int k = 0; k < 8; k++)
@@ -1098,7 +1093,6 @@ void TeamBuild::DrawHeroBuildsContent(bool& builds_modified, bool editable)
                 }
             }
 
-            // Pcons (player slot only)
             if (is_player) {
                 ImGui::TextUnformatted("Pcons:");
                 ImGui::ShowHelp("Enable or disable pcons when this build is loaded");
@@ -1193,7 +1187,6 @@ bool TeamBuild::DrawEditWindow(size_t index, std::vector<TeamBuild>& all_builds,
 
     ImGui::Spacing();
 
-    // Teambuild reordering and deletion
     if (ImGui::Button("Up") && index > 0) {
         std::swap(all_builds[index - 1], all_builds[index]);
         builds_modified = true;

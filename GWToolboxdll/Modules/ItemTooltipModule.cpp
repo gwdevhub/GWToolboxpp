@@ -276,7 +276,6 @@ namespace {
         }
     }
 
-        // Check and re-render item tooltips if modifier key held
     void UpdateItemTooltip()
     {
         if (GetKeyState(modifier_key_item_descriptions) == modifier_key_item_descriptions_key_state) {
