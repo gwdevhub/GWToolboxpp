@@ -243,7 +243,7 @@ namespace {
     float ambient_strength = 0.f;             // eased aggregate dimming of active conditions (runtime, not saved)
     float weather_intensity = 0.f;            // eased 0..1 cross-fade of the shown condition (runtime): 1 = full, 0 = faded out
 
-    bool auto_weather = true;    // drive which conditions are active from the climate->weather table
+    bool auto_weather = false;    // drive which conditions are active from the climate->weather table
     float auto_change_min = 2.f; // minutes between automatic weather rolls (random in [min, max])
     float auto_change_max = 5.f;
     Climate auto_climate = Climate::Temperate; // climate the current automatic weather was last rolled for (runtime)
