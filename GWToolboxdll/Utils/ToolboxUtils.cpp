@@ -48,9 +48,31 @@ namespace {
 
     GW::Array<GW::AvailableCharacterInfo>* available_chars_ptr = nullptr;
 
-    // AvAgent.cpp; __thiscall modelled as __fastcall. `force` skips the "did visibility change" guard.
-    typedef void(__fastcall* RefreshNameTag_pt)(GW::Agent* agent, void* edx, uint32_t old_flags, uint32_t new_flags, uint32_t force);
-    RefreshNameTag_pt RefreshNameTag_Func = nullptr;
+    // GW::UI::AgentNameTagInfo stops 8 bytes short of what the client builds, so it can be read from a
+    // name tag hook but not constructed to send one. Drop this once GWCA carries the trailing fields.
+    struct FullAgentNameTagInfo {
+        /* +h0000 */ uint32_t agent_id;
+        /* +h0004 */ uint32_t h0004;
+        /* +h0008 */ uint32_t h0008;
+        /* +h000C */ wchar_t* name_enc;
+        /* +h0010 */ uint8_t highlight; // 0 none, 1 held-key filter, 2 moused over
+        /* +h0011 */ uint8_t h0011;
+        /* +h0012 */ uint8_t h0012;
+        /* +h0013 */ uint8_t background_alpha;
+        /* +h0014 */ uint32_t text_color;
+        /* +h0018 */ uint32_t label_attributes;
+        /* +h001C */ uint8_t font_style;
+        /* +h001D */ uint8_t underline;
+        /* +h001E */ uint8_t h001E;
+        /* +h001F */ uint8_t h001F;
+        /* +h0020 */ wchar_t* extra_info_enc;
+        /* +h0024 */ uint32_t extra_info_color;
+        /* +h0028 */ uint32_t extra_info_attributes;
+    };
+    static_assert(sizeof(FullAgentNameTagInfo) == 0x2c);
+
+    // Agent vtable slot 1; __thiscall modelled as __fastcall. `extra` is only written when moused over.
+    typedef void(__fastcall* GetNameTagInfo_pt)(GW::Agent* agent, void* edx, uint32_t* label, uint32_t* extra);
 
     constexpr uint32_t bogus_area_info_flags = 0x5000000; // e.g. "wrong" Augury Rock is map 119, no NPCs.
     constexpr uint32_t debug_area_info_flag = 0x80000000;
@@ -598,31 +620,38 @@ namespace GW {
         bool RefreshNameTag(const uint32_t agent_id)
         {
             const auto agent = GetAgentByID(agent_id);
-            if (!agent) return false;
+            if (!agent || !agent->vtable) return false;
 
             const auto flags = agent->name_properties;
-            // Mirrors the client's own visibility test - there is no tag to update otherwise.
-            const auto forced_visible = NameTagFlags_Picked | NameTagFlags_Highlighted | NameTagFlags_EvaluatedTarget |
-                                        NameTagFlags_ManualTarget | NameTagFlags_PassesFilter;
-            const auto in_range_visible = NameTagFlags_PassesTransientFilter | NameTagFlags_InRange;
-            if (flags & NameTagFlags_Suppressed) return false;
-            if (!(flags & forced_visible) &&
-                ((flags & NameTagFlags_NotOwnedByPlayer) || (flags & in_range_visible) != in_range_visible)) {
-                return false;
-            }
+            const auto always_shown = NameTagFlags_Picked | NameTagFlags_Highlighted | NameTagFlags_EvaluatedTarget |
+                                      NameTagFlags_ManualTarget | NameTagFlags_PassesFilter;
+            const auto held_key_shown = NameTagFlags_PassesTransientFilter | NameTagFlags_InRange;
+            // The client's second visibility mode, where the tag only shows while the filter key is held.
+            const auto held_key_only = !(flags & always_shown) && !(flags & NameTagFlags_NotOwnedByPlayer) &&
+                                       (flags & held_key_shown) == held_key_shown;
+            if ((flags & NameTagFlags_Suppressed) || (!(flags & always_shown) && !held_key_only)) return false;
 
-            if (!RefreshNameTag_Func) {
-                // AvAgent.cpp - the client's own forced refresh, used when an agent's dye or model changes.
-                const auto address = GW::Scanner::Find("\x6a\x00\xff\x73\x2c\x68\x1a\x00\x00\x10", "xxxxxxxxxx");
-                DEBUG_ASSERT(address);
-                if (address) {
-                    RefreshNameTag_Func = (RefreshNameTag_pt)GW::Scanner::ToFunctionStart(address);
-                }
-            }
-            if (!RefreshNameTag_Func) return false;
-            // Same flags either side forces an in-place attribs update instead of a hide/show pair.
-            RefreshNameTag_Func(agent, nullptr, flags, flags, 1);
-            return true;
+            const auto highlighted = (flags & NameTagFlags_Highlighted) != 0;
+            const auto dimmed = held_key_only && !(flags & NameTagFlags_EvaluatedTarget);
+
+            uint32_t label[5]{};
+            uint32_t extra[5]{};
+            const auto get_name_tag_info = reinterpret_cast<GetNameTagInfo_pt>(agent->vtable[1]);
+            get_name_tag_info(agent, nullptr, label, highlighted ? extra : nullptr);
+            if (!label[0]) return false;
+
+            FullAgentNameTagInfo info{};
+            info.agent_id = agent->agent_id;
+            info.h0004 = info.h0008 = label[1] == 0 && dimmed ? 0 : 1;
+            info.name_enc = reinterpret_cast<wchar_t*>(label[0]);
+            info.highlight = highlighted ? 2 : static_cast<uint8_t>(flags >> 7 & 1);
+            info.text_color = dimmed ? label[3] : label[2];
+            info.label_attributes = label[4];
+            info.underline = highlighted;
+            info.extra_info_enc = reinterpret_cast<wchar_t*>(extra[0]);
+            info.extra_info_color = extra[2];
+            info.extra_info_attributes = extra[4];
+            return GW::UI::SendUIMessage(GW::UI::UIMessage::kSetAgentNameTagAttribs, &info);
         }
     } // namespace Agents
     namespace Items {
