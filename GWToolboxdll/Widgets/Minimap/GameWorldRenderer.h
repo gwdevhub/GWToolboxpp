@@ -78,7 +78,7 @@ public:
         bool from_player_pos = false;
         bool use_dotted_effect = false;
         unsigned int vertices_processed = 0u;
-        // Player position this from_player_pos line was last re-anchored to; gates the per-vertex re-drape.
+        // Player position this from_player_pos line was last re-anchored to; skips the re-drape while standing still.
         float anchor_x = 0.f;
         float anchor_y = 0.f;
         bool anchored = false;

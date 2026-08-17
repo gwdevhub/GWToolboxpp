@@ -427,10 +427,10 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         return;
 
     if (from_player_pos && vertices.size() > 1) {
-        // Re-anchoring drapes every vertex, so gate it on the player having actually moved: at 288 gw/s that still refreshes ~20x a second, and standing still costs nothing.
-        constexpr float reanchor_move_threshold = 15.f;
+        // Any movement re-anchors: a distance threshold leaves the line's start trailing the player and snapping forward, which reads as jitter.
+        // Standing still still costs nothing, and a few dozen vertices against the Y-row drape index is cheap per-frame.
         const auto player = GW::Agents::GetControlledCharacter();
-        if (player && (!anchored || std::abs(player->pos.x - anchor_x) + std::abs(player->pos.y - anchor_y) >= reanchor_move_threshold)) {
+        if (player && (!anchored || player->pos.x != anchor_x || player->pos.y != anchor_y)) {
             anchor_x = player->pos.x;
             anchor_y = player->pos.y;
             anchored = true;
