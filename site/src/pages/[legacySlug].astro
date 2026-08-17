@@ -1,0 +1,33 @@
+---
+// Redirects legacy prefix-less URLs (e.g. /minimap → /docs/minimap/) while preserving fragment and query string, which Astro's built-in redirects drops.
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('docs', ({ data }) => !data.hidden);
+  return entries.map((entry) => ({
+    params: { legacySlug: entry.id },
+    props: { target: `/docs/${entry.id}/` },
+  }));
+}
+
+const { target } = Astro.props;
+const canonical = new URL(target, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting to {target}</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={canonical} />
+    <script is:inline define:vars={{ target }}>
+      // Runs before the meta refresh below, so the anchor survives.
+      location.replace(target + location.search + location.hash);
+    </script>
+    <meta http-equiv="refresh" content={`0;url=${target}`} />
+  </head>
+  <body>
+    <a href={target}>Redirecting to <code>{target}</code></a>
+  </body>
+</html>

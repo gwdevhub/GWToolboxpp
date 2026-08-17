@@ -1,5 +1,3 @@
-import { readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import mdx from '@astrojs/mdx';
@@ -8,15 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { rehypeHeadingIds } from '@astrojs/markdown-remark';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 
-// Legacy Jekyll URLs had no /docs prefix (gwtoolbox.com/linux), so redirect
-// every bare doc slug to its current /docs/<slug>/ location.
-const docsDir = fileURLToPath(new URL('./src/content/docs', import.meta.url));
-const legacyDocRedirects = Object.fromEntries(
-  readdirSync(docsDir)
-    .filter((file) => /\.mdx?$/.test(file))
-    .map((file) => file.replace(/\.mdx?$/, ''))
-    .map((slug) => [`/${slug}`, `/docs/${slug}/`]),
-);
+// Legacy URLs (/linux → /docs/linux/) are handled by [legacySlug].astro to preserve fragment and query string.
 
 // Lucide "link" icon as a hast node, appended to each heading as a permalink.
 const linkIcon = {
@@ -52,7 +42,6 @@ const linkIcon = {
 
 export default defineConfig({
   site: 'https://www.gwtoolbox.com',
-  redirects: legacyDocRedirects,
   integrations: [react(), mdx(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
