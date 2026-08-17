@@ -352,7 +352,7 @@ namespace {
         }
 
         void* mem_loc = nullptr;
-        res = poly.vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+        res = poly.vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, 0);
         if (res != S_OK || !mem_loc) {
             poly.vb->Release();
             poly.vb = nullptr;
@@ -427,8 +427,14 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
         return;
 
     if (from_player_pos && vertices.size() > 1) {
-        if (const auto player = GW::Agents::GetControlledCharacter()) {
-            // Re-anchor the leading line to the player's live position each frame and drape on the navmesh-walkable
+        // Re-anchoring drapes every vertex, so gate it on the player having actually moved: at 288 gw/s that still refreshes ~20x a second, and standing still costs nothing.
+        constexpr float reanchor_move_threshold = 15.f;
+        const auto player = GW::Agents::GetControlledCharacter();
+        if (player && (!anchored || std::abs(player->pos.x - anchor_x) + std::abs(player->pos.y - anchor_y) >= reanchor_move_threshold)) {
+            anchor_x = player->pos.x;
+            anchor_y = player->pos.y;
+            anchored = true;
+            // Re-anchor the leading line to the player's live position and drape on the navmesh-walkable
             // plane at each sample, seeded from player->z (reliable even when the reported plane reads 0). This rides
             // the surface the player actually walks (up a monument/ramp between hops) instead of the ground beneath.
             const float ex = vertices.back().x, ey = vertices.back().y;
@@ -456,7 +462,8 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
             }
 
             void* mem_loc = nullptr;
-            auto res = vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, D3DLOCK_DISCARD);
+            // flags=0, not D3DLOCK_DISCARD: DISCARD needs D3DUSAGE_DYNAMIC but this is MANAGED, so it's ignored and the lock serialises against the GPU.
+            auto res = vb->Lock(0, vertices.size() * sizeof(D3DVertex), &mem_loc, 0);
             if (res == S_OK) {
                 memcpy(mem_loc, vertices.data(), vertices.size() * sizeof(D3DVertex));
                 vb->Unlock();

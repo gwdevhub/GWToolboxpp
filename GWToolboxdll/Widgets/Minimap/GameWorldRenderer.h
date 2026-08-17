@@ -32,6 +32,9 @@ public:
             , from_player_pos(other.from_player_pos)
             , use_dotted_effect(other.use_dotted_effect)
             , vertices_processed(other.vertices_processed)
+            , anchor_x(other.anchor_x)
+            , anchor_y(other.anchor_y)
+            , anchored(other.anchored)
             , vb(other.vb)
         {
             other.vb = nullptr;
@@ -59,6 +62,9 @@ public:
             vertices_processed = other.vertices_processed;
             from_player_pos = other.from_player_pos;
             use_dotted_effect = other.use_dotted_effect;
+            anchor_x = other.anchor_x;
+            anchor_y = other.anchor_y;
+            anchored = other.anchored;
 
             return *this;
         }
@@ -72,6 +78,10 @@ public:
         bool from_player_pos = false;
         bool use_dotted_effect = false;
         unsigned int vertices_processed = 0u;
+        // Player position this from_player_pos line was last re-anchored to; gates the per-vertex re-drape.
+        float anchor_x = 0.f;
+        float anchor_y = 0.f;
+        bool anchored = false;
         IDirect3DVertexBuffer9* vb = nullptr;
     };
 
