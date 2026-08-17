@@ -439,18 +439,10 @@ namespace {
         GW::Hook::LeaveHook();
     }
 
-    using SetGlobalNameTagVisibility_pt = void(__cdecl*)(uint32_t flags);
-    SetGlobalNameTagVisibility_pt SetGlobalNameTagVisibility_Func = nullptr;
-    uint32_t* GlobalNameTagVisibilityFlags = nullptr;
-
     // Refresh agent name tags when allegiance changes ( https://github.com/gwdevhub/GWToolboxpp/issues/781 )
-    void OnAgentAllegianceChanged(GW::HookStatus*, GW::Packet::StoC::AgentUpdateAllegiance*)
+    void OnAgentAllegianceChanged(GW::HookStatus*, const GW::Packet::StoC::AgentUpdateAllegiance* packet)
     {
-        // Backup the current name tag flag state, then "flash" nametags to update.
-        const uint32_t prev_flags = *GlobalNameTagVisibilityFlags;
-        SetGlobalNameTagVisibility_Func(0);
-        SetGlobalNameTagVisibility_Func(prev_flags);
-        ASSERT(*GlobalNameTagVisibilityFlags == prev_flags);
+        GW::Agents::RefreshAgentNameTag(GW::Agents::GetAgentByID(packet->agent_id));
     }
 
     uint32_t current_party_target_id = 0;
@@ -1534,27 +1526,12 @@ void GameSettings::Initialize()
 
     Log::Log("[GameSettings] SetFrameSkillDescription_Func = %p\n", SetFrameSkillDescription_Func);
 
-    // See OnAgentAllegianceChanged
-    address = GW::Scanner::Find("\x81\xce\xa0\x06\x00\x00", "xxxxxx");
-    if (address) address = GW::Scanner::FunctionFromNearCall(GW::Scanner::FindInRange("\xe8", "x", 0, address, address + 0xff));
-    DEBUG_ASSERT(address);
-    if (address) {
-        SetGlobalNameTagVisibility_Func = (SetGlobalNameTagVisibility_pt)address;
-        if (GW::Scanner::IsValidPtr(*(uintptr_t*)(address + 0xa)))
-            GlobalNameTagVisibilityFlags = *(uint32_t**)(address + 0xa);
-        else if (GW::Scanner::IsValidPtr(*(uintptr_t*)(address + 0xb)))
-            GlobalNameTagVisibilityFlags = *(uint32_t**)(address + 0xb);
-        GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&PartyDefeated_Entry, &OnAgentAllegianceChanged);
-    }
-    Log::Log("[GameSettings] SetGlobalNameTagVisibility_Func = %p", (void*)SetGlobalNameTagVisibility_Func);
-    Log::Log("[GameSettings] GlobalNameTagVisibilityFlags = %p", static_cast<void*>(GlobalNameTagVisibilityFlags));
+    GW::StoC::RegisterPostPacketCallback<GW::Packet::StoC::AgentUpdateAllegiance>(&PartyDefeated_Entry, &OnAgentAllegianceChanged);
 
 #ifdef _DEBUG
     ASSERT(SkillList_UICallback_Func);
     ASSERT(remove_skill_warmup_duration_patch.IsValid());
     ASSERT(SetFrameSkillDescription_Func);
-    ASSERT(SetGlobalNameTagVisibility_Func);
-    ASSERT(GlobalNameTagVisibilityFlags);
     ASSERT(OnSkillTomeWindow_UIMessage_Func);
 #endif
 
