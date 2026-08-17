@@ -620,8 +620,7 @@ namespace GW {
                 }
             }
             if (!RefreshNameTag_Func) return false;
-            // Same flags either side, so this re-emits kSetAgentNameTagAttribs in place rather than a
-            // hide/show pair - no flicker, and it works on the current target.
+            // Same flags either side forces an in-place attribs update instead of a hide/show pair.
             RefreshNameTag_Func(agent, nullptr, flags, flags, 1);
             return true;
         }

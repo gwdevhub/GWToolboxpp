@@ -217,40 +217,32 @@ namespace GW {
         void AsyncGetAgentName(const uint32_t agent_id, std::wstring& out);
         void AsyncGetAgentName(const Agent* agent, std::wstring& out);
 
-        // Bits in GW::Agent::name_properties, which the client's AgentView code
-        // (P:\Code\Gw\AgentView\AvAgent.cpp) uses to decide whether an agent has a name tag and what
-        // it looks like. Visibility is recomputed from these on every change, which is what makes
-        // RefreshNameTag necessary.
+        // Bits in GW::Agent::name_properties, which AvAgent.cpp recomputes name tag visibility from.
         enum NameTagFlags : uint32_t {
-            // Agent is in the mouse pick list (cleared wholesale each time the list is rebuilt).
+            // In the mouse pick list; cleared wholesale whenever that list is rebuilt.
             NameTagFlags_Picked = 0x8,
-            // Agent is the highlighted (moused-over) one - underlines the tag, glows the model, draws the decal.
+            // Moused-over agent: underlines the tag, glows the model, draws the selection decal.
             NameTagFlags_Highlighted = 0x10,
-            // Agent is within name tag draw distance (1500 gwinches from the camera).
+            // Within name tag draw distance (1500 gwinches from the camera).
             NameTagFlags_InRange = 0x20,
-            // Agent is the evaluated target (manual target, else auto target).
+            // The evaluated target - manual target, else auto target.
             NameTagFlags_EvaluatedTarget = 0x80,
-            // Agent is the manual target while a different auto target exists.
+            // The manual target, while a different auto target exists.
             NameTagFlags_ManualTarget = 0x100,
-            // All name tags suppressed globally (cutscenes, /hideui) - refcounted by the client.
+            // Name tags globally suppressed (cutscenes, /hideui); refcounted by the client.
             NameTagFlags_Suppressed = 0x200,
-            // Agent::type passes the persistent name tag filter set from the Guild Wars name tag options.
+            // Agent::type passes the persistent filter from the Guild Wars name tag options.
             NameTagFlags_PassesFilter = 0x400,
-            // Dropped item is reserved for another player, so it never gets a distance-based tag.
+            // Dropped item reserved for another player, so it never gets a distance-based tag.
             NameTagFlags_NotOwnedByPlayer = 0x800,
-            // Agent::type passes the transient filter (the one bound to the "show item names" key).
+            // Agent::type passes the transient filter, bound to the "show item names" key.
             NameTagFlags_PassesTransientFilter = 0x1000,
-            // Name tag disabled for this agent specifically, regardless of any filter.
+            // Name tag disabled for this agent regardless of any filter.
             NameTagFlags_Disabled = 0x20000
         };
 
-        // Re-emits kSetAgentNameTagAttribs for an agent so its name, colour and attributes are re-read
-        // from the agent; game thread only. Returns false if the agent has no name tag to update.
-        // This calls the client's own forced-refresh helper, which the client uses when an agent's dye
-        // or model changes. The flag-toggling routes don't work here: the client only emits name tag
-        // messages when a flag change alters computed visibility, and the current target is already
-        // held visible by NameTagFlags_EvaluatedTarget. No vtable slot does it either - the update slot
-        // only re-runs the distance check.
+        // Re-reads an agent's name tag name/colour via kSetAgentNameTagAttribs; game thread only.
+        // Toggling flags can't: the client only emits on a visibility change, and targets stay visible.
         bool RefreshNameTag(uint32_t agent_id);
     }
     namespace Items {
