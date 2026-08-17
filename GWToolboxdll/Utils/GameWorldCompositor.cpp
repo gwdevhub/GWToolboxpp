@@ -184,7 +184,7 @@ namespace {
 
         GW::Hook::LeaveHook();
     }
-    bool hook_attempted = true;
+    bool hook_attempted = false;
     bool EnsureHook()
     {
         if (hook_attempted)
