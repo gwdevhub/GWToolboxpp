@@ -3,18 +3,14 @@
 #include <ToolboxModule.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-// Debug-only cartography helper, built on how the client grids the world map: exploration is
-// tracked per 32x32 world-map-unit square in the account's exploration bitmap, and standing
-// inside a square is believed to credit that square plus the ring of squares around it
-// (Chebyshev distance, widened by a Bonus Explorer's Cape).
+// Debug-only cartography helper. Exploration is tracked per 32x32 world-map-unit square, and
+// standing in a square is believed to credit it plus the ring of squares around it (Chebyshev,
+// widened by a Bonus Explorer's Cape), so the module routes to squares to stand in rather than
+// at the fog. Reachability comes from the current map's pathing data - nothing else is needed.
 //
-// So rather than routing at the fog itself, the module works out which squares the player can
-// stand in on this map, how much still-foggy ground each of them would credit, and puts the
-// custom quest marker in the most worthwhile one — the regular quest path guides the player
-// there. All UI lives on the maps themselves: the squares worth visiting, the suggested
-// square, queued fog points and a status line are drawn on the world map and mission map, and
-// the right-click context menu of either map manages the helper (toggle, add/remove fog
-// points, skip suggestions once or forever).
+// All UI lives on the maps: the squares worth visiting, the suggested square, queued fog points
+// and a status line are drawn on the world map and mission map, and the right-click context menu
+// of either manages the helper (toggle, add/remove fog points, skip suggestions once or forever).
 class CartographerModule : public ToolboxModule {
     CartographerModule() = default;
     ~CartographerModule() override = default;
