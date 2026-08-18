@@ -3,12 +3,17 @@
 #include <ToolboxModule.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-// Debug-only cartography helper: every second, finds the nearest still-foggy cell of the
-// account's world-map exploration bitmap (or the nearest user-placed fog point) and places
-// the custom quest marker on the closest walkable spot toward it — the regular quest path
-// guides the player there. All UI lives on the maps themselves: the suggested cell, queued
-// fog points and a status line are drawn on the world map and mission map, and the
-// right-click context menu of either map manages the helper (toggle, add/remove fog
+// Debug-only cartography helper, built on how the client grids the world map: exploration is
+// tracked per 32x32 world-map-unit square in the account's exploration bitmap, and standing
+// inside a square is believed to credit that square plus the ring of squares around it
+// (Chebyshev distance, widened by a Bonus Explorer's Cape).
+//
+// So rather than routing at the fog itself, the module works out which squares the player can
+// stand in on this map, how much still-foggy ground each of them would credit, and puts the
+// custom quest marker in the most worthwhile one — the regular quest path guides the player
+// there. All UI lives on the maps themselves: the squares worth visiting, the suggested
+// square, queued fog points and a status line are drawn on the world map and mission map, and
+// the right-click context menu of either map manages the helper (toggle, add/remove fog
 // points, skip suggestions once or forever).
 class CartographerModule : public ToolboxModule {
     CartographerModule() = default;
@@ -24,7 +29,7 @@ public:
     [[nodiscard]] const char* Name() const override { return "Cartographer Helper"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Suggests the closest unexplored (foggy) part of the world map and routes you to the nearest walkable point toward it.";
+        return "Works out which 32x32 world-map squares you need to stand in to uncover the fog around you, draws them on the maps and routes you to the best one.";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 
