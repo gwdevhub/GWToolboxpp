@@ -184,6 +184,14 @@ namespace {
     };
     std::shared_ptr<const CappableMask> cappable_mask;
     int cappable_mask_pending = -1;
+    // Continent we are actually on; the cached mask lags it across a continent change.
+    int mask_continent = -1;
+
+    const CappableMask* ActiveMask()
+    {
+        const auto m = cappable_mask.get();
+        return m && m->layer == mask_continent && !m->bits.empty() ? m : nullptr;
+    }
 
     bool MaskBit(const std::vector<uint8_t>& bits, const size_t bit)
     {
@@ -197,10 +205,14 @@ namespace {
         return m->texel_frac[static_cast<size_t>(ty) * m->tw + tx];
     }
 
+    // Whether uncovering a cell moves the cartography percentage - the one thing the pathing map
+    // cannot answer, since the game's denominator excludes sea and filler the reveal rule will
+    // happily credit anyway. Without the mask nothing is vetoed and reachability alone decides.
     bool CellCappable(const int cx, const int cy)
     {
-        const auto m = cappable_mask.get();
-        if (!m || cx < 0 || cy < 0 || cx >= m->cw || cy >= m->ch) return false;
+        const auto m = ActiveMask();
+        if (!m) return true;
+        if (cx < 0 || cy < 0 || cx >= m->cw || cy >= m->ch) return false;
         return MaskBit(m->cell_bits, static_cast<size_t>(cy) * m->cw + cx);
     }
 
@@ -215,12 +227,15 @@ namespace {
 
     bool MaskUsable()
     {
-        return cappable_mask && !cappable_mask->bits.empty();
+        return ActiveMask() != nullptr;
     }
 
     // Foggy cells no standable cell can credit; drawn as explored so the overlay only ever shows
     // fog the player can do something about.
     std::set<std::pair<int, int>> uncoverable_cells;
+    // Foggy cells on this map that some square can credit. Only needed to draw fog without a
+    // mask, where there is no continent-wide texture to fall back on.
+    std::vector<std::pair<int, int>> coverable_fog_cells;
     int map_fog_cells = -1;
 
     // Everything counts as coverable until the sweep finishes, so the overlay does not blink
@@ -546,6 +561,7 @@ namespace {
         }
 
         uncoverable_cells.clear();
+        coverable_fog_cells.clear();
         map_fog_cells = -1;
         ImRect bounds;
         if (!(map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds) && bounds.GetWidth() >= 1.f && bounds.GetHeight() >= 1.f)) return;
@@ -557,7 +573,10 @@ namespace {
         for (int cy = y0; cy < y1; cy++) {
             for (int cx = x0; cx < x1; cx++) {
                 if (grid.IsExplored(cx, cy) || !CellCappable(cx, cy)) continue;
-                if (FogCellCoverable(cx, cy)) count++;
+                if (FogCellCoverable(cx, cy)) {
+                    count++;
+                    coverable_fog_cells.push_back({cx, cy});
+                }
                 else uncoverable_cells.insert({cx, cy});
             }
         }
@@ -633,6 +652,7 @@ namespace {
         skipped_cells.clear();
         stand_cells.clear();
         uncoverable_cells.clear();
+        coverable_fog_cells.clear();
         sweep_complete = false;
         ClearMarker();
     }
@@ -851,21 +871,31 @@ namespace {
 
     using ProjectToScreen = bool(*)(const GW::Vec2f&, ImVec2&);
 
-    void DrawCappableFog(ImDrawList* dl, const ProjectToScreen project)
-    {
-        if (!fog_tex.tex) return;
-        const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
-        if (!map_info || fog_tex.layer != static_cast<int>(map_info->continent)) return;
-        ImVec2 p0, p1;
-        if (!project({0.f, 0.f}, p0)) return;
-        if (!project({fog_tex.tw * kWmPerTexel, fog_tex.th * kWmPerTexel}, p1)) return;
-        dl->AddImage(reinterpret_cast<ImTextureID>(fog_tex.tex), p0, p1);
-    }
-
     bool ProjectCell(const ProjectToScreen project, const int cx, const int cy, ImVec2& min_out, ImVec2& max_out)
     {
         return project({cx * kWorldMapUnitsPerCell, cy * kWorldMapUnitsPerCell}, min_out) &&
             project({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, max_out);
+    }
+
+    void DrawCappableFog(ImDrawList* dl, const ProjectToScreen project)
+    {
+        const auto map_info = GW::Map::GetMapInfo(GW::Map::GetMapID());
+        if (!map_info) return;
+        if (fog_tex.tex && fog_tex.layer == static_cast<int>(map_info->continent)) {
+            ImVec2 p0, p1;
+            if (!project({0.f, 0.f}, p0)) return;
+            if (!project({fog_tex.tw * kWmPerTexel, fog_tex.th * kWmPerTexel}, p1)) return;
+            dl->AddImage(reinterpret_cast<ImTextureID>(fog_tex.tex), p0, p1);
+            return;
+        }
+        // No mask, so no continent texture and no sub-cell coastline shaping — fall back to flat
+        // cells on the current map, which is as fine-grained as the pathing map can justify.
+        for (const auto& [cx, cy] : coverable_fog_cells) {
+            ImVec2 cell_min, cell_max;
+            if (!ProjectCell(project, cx, cy, cell_min, cell_max)) continue;
+            // kCappableFogRgb is packed for the D3D texture (ARGB); ImGui wants the other order.
+            dl->AddRectFilled(cell_min, cell_max, IM_COL32(0x50, 0xFF, 0x78, 60));
+        }
     }
 
     // Drawn at true 32x32 size, shaded by how much fog the spot would credit.
@@ -1058,8 +1088,11 @@ void CartographerModule::Update(float)
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
     const int continent = static_cast<int>(map_info->continent);
+    mask_continent = continent;
     LoadCappableMask(continent);
-    if (!(cappable_mask && cappable_mask->layer == continent)) return;
+    // The mask only narrows what is worth uncovering; reachability comes from the pathing map, so
+    // a missing or still-loading mask degrades the suggestions rather than disabling the module.
+    if (cappable_mask_pending == continent) return;
     SweepStandCells(grid, map_info);
     RecomputeCoverage(grid, map_info);
     if (MaskUsable()) {
@@ -1201,20 +1234,22 @@ void CartographerModule::DrawSettingsInternal()
         GW::GameThread::Enqueue([on] { SetEnabled(on); });
     }
     ImGui::Checkbox("Show cappable fog on the maps", &show_cappable_fog);
-    ImGui::ShowHelp("Green: everything still unexplored that can actually be uncovered, straight from the cartography mod's data. Fog no square on this map can credit draws nothing.");
+    ImGui::ShowHelp("Green: everything still unexplored that some square on this map can credit. Fog nothing here can reach draws nothing.");
     ImGui::Checkbox("Show squares to stand in", &show_stand_cells);
     ImGui::ShowHelp("Draws every 32x32 square worth walking into, shaded by how many foggy squares standing there would credit. The current suggestion is outlined and pulses.");
     if (MaskUsable()) {
         ImGui::Text("Cappable mask: continent %d, %dx%d world-map units", cappable_mask->layer, cappable_mask->w, cappable_mask->h);
     }
     else {
-        ImGui::TextColored(ImVec4(1.f, .6f, .3f, 1.f), "Cappable mask: %s", cappable_mask ? "no data for this continent" : "not loaded yet");
+        ImGui::TextDisabled("Cappable mask: none - reachability only");
+        ImGui::ShowHelp("Optional. Reachability comes from the pathing map, so the helper works without it; the mask only adds which squares count toward cartography percentage (the game excludes sea and filler that standing nearby still uncovers) and sharpens the fog overlay below cell resolution.");
     }
     if (ImGui::SliderInt("Reveal radius (squares)", &reveal_radius_cells, 1, 3)) {
         GW::GameThread::Enqueue([] {
             // The radius decides which cells are worth probing at all, so the sweep restarts.
             stand_cells.clear();
             uncoverable_cells.clear();
+            coverable_fog_cells.clear();
             sweep_complete = false;
             fog_tex.built_hash = 0;
         });
@@ -1317,6 +1352,7 @@ void CartographerModule::ClearDeclined()
         skipped_cells.clear();
         stand_cells.clear();
         uncoverable_cells.clear();
+        coverable_fog_cells.clear();
         sweep_complete = false;
         SerializeDeclined();
         if (target.valid) ClearTarget();
