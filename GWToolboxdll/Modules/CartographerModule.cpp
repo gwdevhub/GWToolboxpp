@@ -36,8 +36,9 @@ namespace {
     // (+0x5B4, the grid dims): one bit per 32x32-world-map-unit cell, addressed as below.
     constexpr float kWorldMapUnitsPerCell = 32.f;
 
-    // Word-aligned rows with a truncating shift, so not a flat bit index: a width that is not a
-    // multiple of 32 leaves each row's tail columns unaddressable.
+    // The fog mesh builder strides rows by (width >> 5) words while the explored-query indexes
+    // bits flat as cy * width + cx; the client uses both interchangeably, so width is always a
+    // multiple of 32 and either form works.
     uint32_t RowWords(const uint32_t width)
     {
         return width >> 5;
@@ -176,10 +177,14 @@ namespace {
     // Fog nothing on this map can reach; excluded from the overlay so it only shows actionable fog.
     int unreachable_fog_cells = 0;
 
+    // The client's fog texture is this many texels per cartography cell, so the visible fog is
+    // four times finer than the 32-unit grid the bits live on.
+    constexpr int kFogSubdivisions = 4;
+
     // Corner alphas are baked on the game thread so the overlay never reads the live bitmap.
     struct FogCell {
         int cx = 0, cy = 0;
-        uint8_t corner_alpha[4] = {}; // tl, tr, bl, br
+        uint8_t corner_alpha[kFogSubdivisions + 1][kFogSubdivisions + 1] = {};
     };
     std::vector<FogCell> fog_cells;
     int map_fog_cells = -1;
@@ -201,13 +206,30 @@ namespace {
 
     constexpr float kFogMaxAlpha = 135.f;
 
-    // The client averages the four cells meeting at a vertex and lets the GPU interpolate between
-    // them; matching that lines the overlay up with the fog on screen.
-    uint8_t FogCornerAlpha(const CartoGrid& grid, const int cx, const int cy)
+    float ExploredAtCorner(const CartoGrid& grid, const int cx, const int cy)
     {
-        const float explored = (static_cast<float>(grid.IsExplored(cx - 1, cy - 1)) + static_cast<float>(grid.IsExplored(cx, cy - 1)) +
-                                static_cast<float>(grid.IsExplored(cx - 1, cy)) + static_cast<float>(grid.IsExplored(cx, cy))) * 0.25f;
-        return static_cast<uint8_t>(kFogMaxAlpha * (1.f - explored));
+        return (static_cast<float>(grid.IsExplored(cx - 1, cy - 1)) + static_cast<float>(grid.IsExplored(cx, cy - 1)) +
+                static_cast<float>(grid.IsExplored(cx - 1, cy)) + static_cast<float>(grid.IsExplored(cx, cy))) * 0.25f;
+    }
+
+    // The client averages the four cells meeting at a corner, then bakes that field into a fog
+    // texture at kFogSubdivisions texels per cell, 4 bits each - which is why the fog on screen
+    // steps at a quarter of a cell and bands rather than ramping smoothly.
+    void BakeFogCell(const CartoGrid& grid, FogCell& out)
+    {
+        const float tl = ExploredAtCorner(grid, out.cx, out.cy);
+        const float tr = ExploredAtCorner(grid, out.cx + 1, out.cy);
+        const float bl = ExploredAtCorner(grid, out.cx, out.cy + 1);
+        const float br = ExploredAtCorner(grid, out.cx + 1, out.cy + 1);
+        for (int j = 0; j <= kFogSubdivisions; j++) {
+            const float v = static_cast<float>(j) / kFogSubdivisions;
+            for (int i = 0; i <= kFogSubdivisions; i++) {
+                const float u = static_cast<float>(i) / kFogSubdivisions;
+                const float explored = (tl + (tr - tl) * u) * (1.f - v) + (bl + (br - bl) * u) * v;
+                const float quantised = roundf((1.f - explored) * 15.f) / 15.f;
+                out.corner_alpha[j][i] = static_cast<uint8_t>(kFogMaxAlpha * quantised);
+            }
+        }
     }
 
 
@@ -308,9 +330,11 @@ namespace {
                     unreachable_fog_cells++;
                     continue;
                 }
-                fog_cells.push_back({cx, cy,
-                                     {FogCornerAlpha(grid, cx, cy), FogCornerAlpha(grid, cx + 1, cy),
-                                      FogCornerAlpha(grid, cx, cy + 1), FogCornerAlpha(grid, cx + 1, cy + 1)}});
+                FogCell f;
+                f.cx = cx;
+                f.cy = cy;
+                BakeFogCell(grid, f);
+                fog_cells.push_back(f);
             }
         }
         map_fog_cells = static_cast<int>(fog_cells.size());
@@ -604,7 +628,8 @@ namespace {
             project({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, max_out);
     }
 
-    // One quad per cell, so ImGui interpolates the corner alphas exactly as the game does.
+    // One quad per fog texel, so ImGui interpolates them as the GPU does when it samples the
+    // client's texture.
     void DrawFog(ImDrawList* dl, const ProjectToScreen project)
     {
         const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
@@ -612,9 +637,17 @@ namespace {
             ImVec2 cell_min, cell_max;
             if (!ProjectCell(project, f.cx, f.cy, cell_min, cell_max)) continue;
             if (!clip.Overlaps(ImRect(cell_min, cell_max))) continue;
-            dl->AddRectFilledMultiColor(cell_min, cell_max,
-                                        WithAlpha(kFogColor, f.corner_alpha[0]), WithAlpha(kFogColor, f.corner_alpha[1]),
-                                        WithAlpha(kFogColor, f.corner_alpha[3]), WithAlpha(kFogColor, f.corner_alpha[2]));
+            const float w = (cell_max.x - cell_min.x) / kFogSubdivisions;
+            const float h = (cell_max.y - cell_min.y) / kFogSubdivisions;
+            for (int j = 0; j < kFogSubdivisions; j++) {
+                for (int i = 0; i < kFogSubdivisions; i++) {
+                    const ImVec2 t_min{cell_min.x + i * w, cell_min.y + j * h};
+                    const ImVec2 t_max{t_min.x + w, t_min.y + h};
+                    dl->AddRectFilledMultiColor(t_min, t_max,
+                                                WithAlpha(kFogColor, f.corner_alpha[j][i]), WithAlpha(kFogColor, f.corner_alpha[j][i + 1]),
+                                                WithAlpha(kFogColor, f.corner_alpha[j + 1][i + 1]), WithAlpha(kFogColor, f.corner_alpha[j + 1][i]));
+                }
+            }
         }
     }
 
