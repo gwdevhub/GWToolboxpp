@@ -110,9 +110,6 @@ namespace {
 
     bool show_fog = true;
     bool show_stand_cells = true;
-    // Purely how big the markers are drawn. The 32-unit grid they sit on is the client's and is
-    // not adjustable; this only stops the overlay swamping the map.
-    float stand_square_scale = 0.25f;
 
     // Standing in a cell credits it plus this many rings (Chebyshev). Unconfirmed theory, hence a
     // setting - a Bonus Explorer's Cape appears to add two.
@@ -607,14 +604,6 @@ namespace {
             project({(cx + 1) * kWorldMapUnitsPerCell, (cy + 1) * kWorldMapUnitsPerCell}, max_out);
     }
 
-    ImRect ScaledAboutCentre(const ImVec2& min_in, const ImVec2& max_in, const float scale)
-    {
-        const ImVec2 c{(min_in.x + max_in.x) * .5f, (min_in.y + max_in.y) * .5f};
-        const float hw = (max_in.x - min_in.x) * .5f * scale;
-        const float hh = (max_in.y - min_in.y) * .5f * scale;
-        return {{c.x - hw, c.y - hh}, {c.x + hw, c.y + hh}};
-    }
-
     // One quad per cell, so ImGui interpolates the corner alphas exactly as the game does.
     void DrawFog(ImDrawList* dl, const ProjectToScreen project)
     {
@@ -629,8 +618,7 @@ namespace {
         }
     }
 
-    // Shaded by how much fog the spot would credit. Hit-testing stays on the whole cell so the
-    // markers can be shrunk without becoming fiddly to hover.
+    // Drawn at true 32x32 size, shaded by how much fog the spot would credit.
     void DrawStandCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, const char*& tooltip)
     {
         const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
@@ -644,9 +632,8 @@ namespace {
             if (!ProjectCell(project, cell.first, cell.second, cell_min, cell_max)) continue;
             if (!clip.Overlaps(ImRect(cell_min, cell_max))) continue;
             const int strength = std::min(sc.reveals, 9);
-            const ImRect mark = ScaledAboutCentre(cell_min, cell_max, stand_square_scale);
-            dl->AddRectFilled(mark.Min, mark.Max, WithAlpha(kStandColor, 10 + 6 * strength));
-            dl->AddRect(mark.Min, mark.Max, WithAlpha(kStandColor, 60 + 12 * strength), 0.f, 0, 1.f);
+            dl->AddRectFilled(cell_min, cell_max, WithAlpha(kStandColor, 10 + 6 * strength));
+            dl->AddRect(cell_min, cell_max, WithAlpha(kStandColor, 60 + 12 * strength), 0.f, 0, 1.f);
             if (ImRect(cell_min, cell_max).Contains(mouse)) {
                 tooltip = "Cartographer: stand here to uncover nearby squares";
             }
@@ -672,9 +659,8 @@ namespace {
             ImVec2 cell_min, cell_max;
             if (ProjectCell(project, target.cx, target.cy, cell_min, cell_max)) {
                 const float pulse = Pulse();
-                const ImRect mark = ScaledAboutCentre(cell_min, cell_max, stand_square_scale);
-                dl->AddRectFilled(mark.Min, mark.Max, WithAlpha(kTargetColor, 16 + static_cast<int>(24.f * pulse)));
-                dl->AddRect(mark.Min, mark.Max, WithAlpha(kTargetColor, 210), 0.f, 0, 1.5f + pulse);
+                dl->AddRectFilled(cell_min, cell_max, WithAlpha(kTargetColor, 16 + static_cast<int>(24.f * pulse)));
+                dl->AddRect(cell_min, cell_max, WithAlpha(kTargetColor, 210), 0.f, 0, 1.5f + pulse);
                 if (cell_tooltip && ImRect(cell_min, cell_max).Contains(mouse)) {
                     tooltip = "Cartographer: stand in this square to uncover the fog around it\nRight-click the map for options";
                 }
@@ -718,7 +704,6 @@ void CartographerModule::Initialize()
     SettingsRegistry::RegisterField(this, "enabled", &enabled);
     SettingsRegistry::RegisterField(this, "show_fog", &show_fog);
     SettingsRegistry::RegisterField(this, "show_stand_cells", &show_stand_cells);
-    SettingsRegistry::RegisterField(this, "stand_square_scale", &stand_square_scale);
     SettingsRegistry::RegisterField(this, "reveal_radius_cells", &reveal_radius_cells);
     SettingsRegistry::RegisterField(this, "declined_cells", &declined_cells_str);
     SettingsRegistry::RegisterField(this, "custom_points", &custom_points_str);
@@ -744,7 +729,6 @@ void CartographerModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
     reveal_radius_cells = std::clamp(reveal_radius_cells, 1, 3);
-    stand_square_scale = std::clamp(stand_square_scale, 0.1f, 1.f);
     ParseDeclined();
     ParsePoints();
 }
@@ -961,8 +945,6 @@ void CartographerModule::DrawSettingsInternal()
     ImGui::ShowHelp("Green: everything still unexplored that some square on this map can credit. Fog nothing here can reach draws nothing.");
     ImGui::Checkbox("Show squares to stand in", &show_stand_cells);
     ImGui::ShowHelp("Draws every 32x32 square worth walking into, shaded by how many foggy squares standing there would credit. The current suggestion is outlined and pulses.");
-    ImGui::SliderFloat("Square marker size", &stand_square_scale, 0.1f, 1.f, "%.2f");
-    ImGui::ShowHelp("How much of the square each marker fills. The squares themselves are always 32 world-map units - that is the client's cartography grid, not a display choice - so this only affects how busy the map looks.");
     if (ImGui::SliderInt("Reveal radius (squares)", &reveal_radius_cells, 1, 3)) {
         GW::GameThread::Enqueue([] {
             // The radius decides which cells are worth probing at all, so the sweep restarts.
