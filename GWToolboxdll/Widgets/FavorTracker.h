@@ -14,9 +14,9 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Favor Overlay"; }
-    [[nodiscard]] const char* SettingsName() const override { return "Favor Tracker"; }
-    [[nodiscard]] const char* Description() const override { return "Shows an on-screen overlay of the current Favor of the Gods"; }
+    [[nodiscard]] const char* Name() const override { return "神恩展示"; }
+    [[nodiscard]] const char* SettingsName() const override { return "神恩追踪"; }
+    [[nodiscard]] const char* Description() const override { return "在屏幕上展示当前神恩的叠加效果"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_PRAY; }
 
     struct Settings {

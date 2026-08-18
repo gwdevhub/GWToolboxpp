@@ -23,11 +23,11 @@ namespace {
 void RangeRenderer::LoadDefaultCircles()
 {
     circles_ = {
-        {"Compass",         GW::Constants::Range::Compass,        1.f, 0xFF666611, true,  false},
-        {"Spirit Extended", GW::Constants::Range::SpiritExtended, 1.f, 0xFF337733, true,  false},
-        {"Spirit",          GW::Constants::Range::Spirit,         1.f, 0xFF337733, true,  false},
-        {"Cast",            GW::Constants::Range::Spellcast,      1.f, 0xFF117777, true,  false},
-        {"Aggro",           GW::Constants::Range::Earshot,        1.f, 0xFF994444, true,  false},
+        {"罗盘",         GW::Constants::Range::Compass,        1.f, 0xFF666611, true,  false},
+        {"灵范围（扩展）", GW::Constants::Range::SpiritExtended, 1.f, 0xFF337733, true,  false},
+        {"灵范围",       GW::Constants::Range::Spirit,         1.f, 0xFF337733, true,  false},
+        {"施法范围",     GW::Constants::Range::Spellcast,      1.f, 0xFF117777, true,  false},
+        {"仇恨范围",     GW::Constants::Range::Earshot,        1.f, 0xFF994444, true,  false},
     };
 }
 
@@ -77,7 +77,7 @@ void RangeRenderer::LoadSettings(const SettingsDoc& doc, const ToolboxIni* ini, 
             }
         }
         else {
-            // Migrate colors from the old per-name format
+            // 从旧的按名称格式迁移颜色
             if (circles_.size() >= 5) {
                 circles_[0].color = Colors::Load(ini, section, "color_range_compass", circles_[0].color);
                 circles_[1].color = Colors::Load(ini, section, "color_range_spirit_extended", circles_[1].color);
@@ -104,13 +104,13 @@ void RangeRenderer::DrawSettings()
 {
     bool changed = false;
 
-    ImGui::SmallConfirmButton("Restore Defaults##ranges", "Are you sure?", [&](const bool result, void*) {
+    ImGui::SmallConfirmButton("恢复默认##ranges", "确定吗？", [&](const bool result, void*) {
         if (result) {
             LoadDefaults();
         }
     });
 
-    ImGui::TextDisabled("Radius in gwinches: Aggro=1012, Cast=1248, Spirit=2512, Extended=3500, Compass=5000");
+    ImGui::TextDisabled("半径单位：仇恨=1012，施法=1248，灵=2512，扩展=3500，罗盘=5000");
     ImGui::Separator();
 
     const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
@@ -123,7 +123,7 @@ void RangeRenderer::DrawSettings()
 
         row_changed |= ImGui::Checkbox("##visible", &c.visible);
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Visible");
+            ImGui::SetTooltip("可见");
         }
         ImGui::SameLine(0.f, spacing);
 
@@ -131,7 +131,7 @@ void RangeRenderer::DrawSettings()
         row_changed |= ImGui::InputText("##label", c.label, 127);
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Label");
+            ImGui::SetTooltip("标签");
         }
         ImGui::SameLine(0.f, spacing);
 
@@ -139,12 +139,12 @@ void RangeRenderer::DrawSettings()
         row_changed |= ImGui::DragFloat("##radius", &c.radius, 10.f, 1.f, 10000.f, "%.0f");
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Radius (gwinches)");
+            ImGui::SetTooltip("半径（gwinches）");
         }
         ImGui::SameLine(0.f, spacing);
 
         ImGui::PushItemWidth(60.f);
-        constexpr const char* origins[] = {"Player", "Target"};
+        constexpr const char* origins[] = {"玩家", "目标"};
         int origin_idx = c.on_target ? 1 : 0;
         if (ImGui::Combo("##origin", &origin_idx, origins, 2)) {
             c.on_target = origin_idx == 1;
@@ -152,7 +152,7 @@ void RangeRenderer::DrawSettings()
         }
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Circle origin: centered on Player or current Target");
+            ImGui::SetTooltip("圆圈中心：以玩家或当前目标为中心");
         }
         ImGui::SameLine(0.f, spacing);
 
@@ -160,20 +160,20 @@ void RangeRenderer::DrawSettings()
         row_changed |= ImGui::DragFloat("##thick", &c.line_thickness, 0.1f, 0.1f, 20.f, "%.1fpx");
         ImGui::PopItemWidth();
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Line thickness (pixels)");
+            ImGui::SetTooltip("线条粗细（像素）");
         }
         ImGui::SameLine(0.f, spacing);
 
         row_changed |= ImGui::ColorButtonPicker("##color", &c.color.value);
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Circle color");
+            ImGui::SetTooltip("圆圈颜色");
         }
         ImGui::SameLine(0.f, spacing);
 
         if (i > 0) {
             const bool move_up = ImGui::Button(ICON_FA_ARROW_UP, ImVec2(BTN_WIDTH, 0));
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Move up");
+                ImGui::SetTooltip("上移");
             }
             if (move_up) {
                 std::swap(circles_[i], circles_[i - 1]);
@@ -188,7 +188,7 @@ void RangeRenderer::DrawSettings()
         if (i < circles_.size() - 1) {
             const bool move_down = ImGui::Button(ICON_FA_ARROW_DOWN, ImVec2(BTN_WIDTH, 0));
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Move down");
+                ImGui::SetTooltip("下移");
             }
             if (move_down) {
                 std::swap(circles_[i], circles_[i + 1]);
@@ -202,7 +202,7 @@ void RangeRenderer::DrawSettings()
 
         const bool remove = ImGui::Button("x##del", ImVec2(BTN_WIDTH, 0));
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Delete");
+            ImGui::SetTooltip("删除");
         }
 
         ImGui::PopID();
@@ -217,21 +217,21 @@ void RangeRenderer::DrawSettings()
     }
     ImGui::PopID();
 
-    if (ImGui::Button("Add Circle")) {
+    if (ImGui::Button("添加圆圈")) {
         RangeCircle c;
-        c.label = std::format("Custom {}", circles_.size() + 1);
+        c.label = std::format("自定义 {}", circles_.size() + 1);
         c.radius = GW::Constants::Range::Earshot;
         circles_.push_back(c);
         changed = true;
     }
 
     ImGui::Separator();
-    if (ImGui::TreeNodeEx("Special Range Circles", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-        ImGui::TextDisabled("These circles have special conditional rendering and are not user-configurable.");
-        changed |= Colors::DrawSettingHueWheel("HoS range", &color_range_hos);
-        changed |= Colors::DrawSettingHueWheel("Chain Aggro range (enemy target)", &color_range_chain_aggro);
-        changed |= Colors::DrawSettingHueWheel("Res Aggro range (dead ally target)", &color_range_res_aggro);
-        changed |= Colors::DrawSettingHueWheel("Shadow Step range", &color_range_shadowstep_aggro);
+    if (ImGui::TreeNodeEx("特殊范围圆圈", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+        ImGui::TextDisabled("这些圆圈具有特殊条件渲染，用户不可配置。");
+        changed |= Colors::DrawSettingHueWheel("HoS 范围", &color_range_hos);
+        changed |= Colors::DrawSettingHueWheel("连锁仇恨范围（敌人目标）", &color_range_chain_aggro);
+        changed |= Colors::DrawSettingHueWheel("复活仇恨范围（死亡盟友目标）", &color_range_res_aggro);
+        changed |= Colors::DrawSettingHueWheel("暗影步范围", &color_range_shadowstep_aggro);
         ImGui::TreePop();
     }
 
@@ -247,10 +247,10 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device)
     havehos_ = false;
 
     clear();
-    // configurable circles + 4 special circles (HoS, chain aggro, res aggro, shadowstep)
+    // 可配置圆圈 + 4 个特殊圆圈（HoS、连锁仇恨、复活仇恨、暗影步）
     vertices.reserve(circle_points * (circles_.size() + 4) + 6);
 
-    // xdiff/ydiff convert px thickness → game units using current zoom
+    // xdiff/ydiff 使用当前缩放将像素粗细转换为游戏单位
     auto CreateCircle = [&](const float radius, const DWORD color, const float thickness_px) {
         const float diff = thickness_px / gwinches_per_pixel;
         for (auto i = 0; i <= static_cast<int>(circle_triangles); i += 2) {
@@ -264,13 +264,13 @@ void RangeRenderer::Initialize(IDirect3DDevice9* device)
         CreateCircle(c.radius, c.color, c.line_thickness);
     }
 
-    // Special circles (conditionally rendered)
+    // 特殊圆圈（条件渲染）
     CreateCircle(360.f, color_range_hos, 1.f);                                  // HoS
-    CreateCircle(700.f, color_range_chain_aggro, 1.f);                          // Chain aggro
-    CreateCircle(GW::Constants::Range::Earshot, color_range_res_aggro, 1.f);    // Res aggro
-    CreateCircle(GW::Constants::Range::Earshot, color_range_shadowstep_aggro, 1.f); // Shadowstep
+    CreateCircle(700.f, color_range_chain_aggro, 1.f);                          // 连锁仇恨
+    CreateCircle(GW::Constants::Range::Earshot, color_range_res_aggro, 1.f);    // 复活仇恨
+    CreateCircle(GW::Constants::Range::Earshot, color_range_shadowstep_aggro, 1.f); // 暗影步
 
-    // HoS line (2 vertices) + draw_center cross (4 vertices)
+    // HoS 线（2 个顶点）+ 中心十字（4 个顶点）
     vertices.push_back({260.f, 0.f, 0.f, color_range_hos});
     vertices.push_back({460.f, 0.f, 0.f, color_range_hos});
     vertices.push_back({-150.f, 0.f, 0.f, color_range_hos});
@@ -337,7 +337,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device, float _gwinches_per_pixel)
 
     size_t offset = 0;
 
-    // User-configurable circles
+    // 用户可配置圆圈
     for (const auto& c : circles_) {
         if (!c.visible || (c.color & IM_COL32_A_MASK) == 0) {
             SkipCircle(offset);
@@ -353,11 +353,11 @@ void RangeRenderer::Render(IDirect3DDevice9* device, float _gwinches_per_pixel)
         }
     }
 
-    // HoS circle (only when player has HoS/Viper's)
+    // HoS 圆圈（仅当玩家拥有 HoS/蝰蛇防御时）
     if (havehos_) DrawCircle(offset);
     else SkipCircle(offset);
 
-    // Chain aggro — on enemy target
+    // 连锁仇恨 — 在敌人目标上
     if ((color_range_chain_aggro & IM_COL32_A_MASK) && target && target->allegiance == GW::Constants::Allegiance::Enemy) {
         DrawCircleAt(offset, target->x, target->y);
     }
@@ -365,7 +365,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device, float _gwinches_per_pixel)
         SkipCircle(offset);
     }
 
-    // Res aggro — on dead ally in explorable
+    // 复活仇恨 — 在探索区域中死亡的盟友上
     if ((color_range_res_aggro & IM_COL32_A_MASK) && target && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable && target->allegiance == GW::Constants::Allegiance::Ally_NonAttackable && target->GetIsDead()) {
         DrawCircleAt(offset, target->x, target->y);
     }
@@ -373,7 +373,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device, float _gwinches_per_pixel)
         SkipCircle(offset);
     }
 
-    // Shadowstep aggro
+    // 暗影步仇恨
     const GW::Vec2f& shadowstep_location = Minimap::Instance().ShadowstepLocation();
     if ((color_range_shadowstep_aggro & IM_COL32_A_MASK) && (shadowstep_location.x != 0.f || shadowstep_location.y != 0.f)) {
         DrawCircleAt(offset, shadowstep_location.x, shadowstep_location.y);
@@ -382,7 +382,7 @@ void RangeRenderer::Render(IDirect3DDevice9* device, float _gwinches_per_pixel)
         SkipCircle(offset);
     }
 
-    // HoS line
+    // HoS 线
     if (havehos_) {
         const auto me = target ? GW::Agents::GetControlledCharacter() : nullptr;
         if (me && me != target && !me->GetIsDead() && !target->GetIsDead() && GetSquareDistance(target->pos, me->pos) < GW::Constants::SqrRange::Spellcast) {

@@ -38,14 +38,15 @@ namespace {
 
         void Initialize()
         {
-            // Because AvialableBond is used statically in toolbox, we need to explicitly call this function in the render loop - otherwise GetSkillConstantData won't be called at the right time.
+            // 因为 AvailableBond 在工具箱中静态使用，我们需要在渲染循环中显式调用此函数
+            // - 否则 GetSkillConstantData 不会在正确的时间被调用。
             if (const auto skill = GW::SkillbarMgr::GetSkillConstantData(skill_id)) {
                 skill_name.reset(skill->name);
             }
         }
     };
 
-    // Skill ID => enabled by default
+    // 技能 ID => 默认启用
     AvailableBond available_bonds[] = {
         {GW::Constants::SkillID::Balthazars_Spirit, true},
         {GW::Constants::SkillID::Essence_Bond, true},
@@ -84,8 +85,8 @@ namespace {
 
     BondsWidget::Settings settings;
 
-    std::vector<GW::Constants::SkillID> bond_list{};               // index to skill id
-    std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // skill id to index
+    std::vector<GW::Constants::SkillID> bond_list{};               // 索引到技能 ID
+    std::unordered_map<GW::Constants::SkillID, size_t> bond_map{}; // 技能 ID 到索引
 
     bool UseBuff(GW::AgentID agent_id, GW::Constants::SkillID skill_id)
     {
@@ -110,7 +111,7 @@ namespace {
             return false;
         }
 
-        // capture by value!
+        // 按值捕获！
         GW::GameThread::Enqueue([slot, agent_id] {
             GW::SkillbarMgr::UseSkill(slot, agent_id);
         });
@@ -158,12 +159,12 @@ namespace {
         return DropBuffs(agent_id, skill_id) || UseBuff(agent_id, skill_id);
     }
 
-    const char* cmd_bonds_syntax = "'/bonds [remove|add] [party_member_index|all] [all|skill_id]' remove or add bonds from a single party member, or all party members";
+    const char* cmd_bonds_syntax = "'/bonds [remove|add] [队员索引|all] [all|技能ID]' 从单个队员或所有队员移除或添加增益";
 
     void CHAT_CMD_FUNC(CmdBondsAddRemove) {
 
         const auto syntax_err = [argc, argv] {
-            Log::WarningW(L"Invalid syntax for /%s; correct syntax:\n%S", argc ? argv[0] : L"Unk", cmd_bonds_syntax);
+            Log::WarningW(L"/%s 语法无效；正确语法：\n%S", argc ? argv[0] : L"未知", cmd_bonds_syntax);
             };
 
         if (argc < 4) {
@@ -184,7 +185,7 @@ namespace {
             syntax_err();
             return;
         }
-        // Party member (or all)
+        // 队员（或全部）
         if (wcscmp(argv[2], L"all") != 0) {
             uint32_t party_member_idx = 0;
             if (!TextUtils::ParseUInt(argv[2], &party_member_idx)) {
@@ -193,10 +194,10 @@ namespace {
             }
             agent_id = GW::PartyMgr::GetPartyMemberAgentId(party_member_idx);
             if (!agent_id) {
-                return; // Failed to find party member
+                return; // 未找到队员
             }
         }
-        // Skill
+        // 技能
         if (wcscmp(argv[3], L"all") != 0) {
             if (!TextUtils::ParseUInt(argv[3], &skill_id)) {
                 syntax_err();
@@ -204,17 +205,17 @@ namespace {
             }
         }
         if (add_bond && !skill_id) {
-            Log::WarningW(L"/%s: skill_id required when adding bond", argv[0]);
+            Log::WarningW(L"/%s：添加增益时需要技能 ID", argv[0]);
             syntax_err();
             return;
         }
         if (skill_id >= std::to_underlying(GW::Constants::SkillID::Count)) {
-            Log::WarningW(L"%d: is not a valid skill id", skill_id);
+            Log::WarningW(L"%d：不是有效的技能 ID", skill_id);
             syntax_err();
             return;
         }
         if (add_bond && !agent_id) {
-            Log::WarningW(L"/%s: party_member_index required when adding bond", argv[0]);
+            Log::WarningW(L"/%s：添加增益时需要队员索引", argv[0]);
             syntax_err();
             return;
         }
@@ -273,7 +274,7 @@ bool BondsWidget::GetBondPosition(uint32_t agent_id, GW::Constants::SkillID skil
         return false;
 
     if (!bond_map.contains(skill_id)) {
-        return false; // bond with a skill not in skillbar
+        return false; // 技能栏中没有此增益技能
     }
 
     const auto img_width = health_bar_pos->bottom_right.y - health_bar_pos->top_left.y;
@@ -298,21 +299,21 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     if (!players) {
         return;
     }
-    // note: info->heroes, ->henchmen, and ->others CAN be invalid during normal use.
+    // 注意：info->heroes、->henchmen 和 ->others 在正常使用期间可能无效。
 
-    // @Cleanup: This doesn't need to be done every frame - only when player skills have changed
+    // @清理：不必每帧都做 — 仅在玩家技能发生变化时执行
     if (!FetchBondSkills()) {
         return;
     }
     if (bond_list.empty()) {
-        return; // Don't display bonds widget if we've not got any bonds on our skillbar
+        return; // 如果技能栏中没有增益技能，则不显示增益小部件
     }
-    // @Cleanup: Only call when the party window has been moved or updated
+    // @清理：仅在队伍窗口移动或更新时调用
     if (!(FetchPartyInfo() && RecalculatePartyPositions())) {
         return;
     }
 
-    // ==== Draw ====
+    // ==== 绘制 ====
 
     const auto& first_health_bar_position = agent_health_bar_positions.begin()->second;
 
@@ -332,11 +333,11 @@ void BondsWidget::Draw(IDirect3DDevice9*)
     else {
         window_x = party_health_bars_position.top_left.x - user_offset_x - width;
         if (window_x < 0 || settings.user_offset < 0) {
-            // Right placement
+            // 右侧放置
             window_x = party_health_bars_position.bottom_right.x + user_offset_x;
         }
     }
-    // Add a window to capture mouse clicks.
+    // 添加一个窗口来捕获鼠标点击。
     ImGui::SetNextWindowPos({ window_x,party_health_bars_position.top_left.y });
     ImGui::SetNextWindowSize({ width, party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y });
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
@@ -366,7 +367,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
             }
         }
 
-        // Player and hero effects that aren't bonds
+        // 玩家和英雄的非增益效果
         if (const GW::AgentEffectsArray* agent_effects_array = GW::Effects::GetPartyEffectsArray(); agent_effects_array != nullptr) {
             for (auto& agent_effects_it : *agent_effects_array) {
                 auto& agent_effects = agent_effects_it.effects;
@@ -379,7 +380,7 @@ void BondsWidget::Draw(IDirect3DDevice9*)
 
                     const GW::Skill* skill_data = GW::SkillbarMgr::GetSkillConstantData(skill_id);
                     if (!skill_data || skill_data->duration0 == 0x20000) {
-                        continue; // Maintained skill/enchantment
+                        continue; // 维持技能/增益
                     }
 
                     if (!DrawBondImage(agent_id, skill_id, &bond_top_left, &bond_bottom_right))
@@ -448,17 +449,17 @@ void BondsWidget::SaveSettings(SettingsDoc& doc)
 void BondsWidget::DrawSettingsInternal()
 {
     ImGui::SameLine();
-    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
+    ImGui::Checkbox("在前哨站隐藏", &settings.hide_in_outpost);
     if (bond_list.empty()) {
-        ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "Equip a maintainable enchantment or refrain to show bonds widget on-screen");
+        ImGui::TextColored(ImVec4(0xFF, 0, 0, 0xFF), "装备可维持的增益或副歌以在屏幕上显示增益小部件");
     }
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show on top of health bars", &settings.overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("在生命条上方显示", &settings.overlay_party_window, "取消勾选以在队伍窗口左侧（或右侧）显示此小部件。\n勾选以在队伍窗口内队伍生命条上方显示此小部件。");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
-    ImGui::DragInt("Party window offset", &settings.user_offset);
-    ImGui::TextUnformatted("Skills enabled for bond monitor:");
+    ImGui::DragInt("队伍窗口偏移", &settings.user_offset);
+    ImGui::TextUnformatted("增益监视器启用的技能：");
     ImGui::Indent();
     ImGui::StartSpacedElements(180.f);
     for (auto& bond : available_bonds) {
@@ -472,14 +473,13 @@ void BondsWidget::DrawSettingsInternal()
     }
     ImGui::Unindent();
 
-    Colors::DrawSettingHueWheel("Background", &settings.background.value, 0);
-    ImGui::Checkbox("Click to cast bond", &settings.click_to_cast);
-    ImGui::Checkbox("Click to cancel bond", &settings.click_to_drop);
-    ImGui::CheckboxWithHelp("Show bonds for Allies", &settings.show_allies, "'Allies' meaning the ones that show in party window, such as summoning stones");
-    ImGui::CheckboxWithHelp("Flip bond order (left/right)", &settings.flip_bonds, "Bond order is based on your build. Check this to flip them left <-> right");
-    Colors::DrawSetting("Low Attribute Overlay", &settings.low_attribute_overlay.value);
+    Colors::DrawSettingHueWheel("背景", &settings.background.value, 0);
+    ImGui::Checkbox("点击施放增益", &settings.click_to_cast);
+    ImGui::Checkbox("点击取消增益", &settings.click_to_drop);
+    ImGui::CheckboxWithHelp("显示盟友的增益", &settings.show_allies, "'盟友' 指队伍窗口中显示的单位，如召唤石");
+    ImGui::CheckboxWithHelp("翻转增益顺序（左/右）", &settings.flip_bonds, "增益顺序基于你的配装。勾选以左右翻转");
+    Colors::DrawSetting("低属性覆盖层", &settings.low_attribute_overlay.value);
     ImGui::ShowHelp(
-        "Overlays effects casted with less than current attribute level.\n"
-        "Only works for yourself and your heroes and doesn't include bonds."
+        "覆盖以低于当前属性等级施放的效果。\n仅适用于你自己和你的英雄，不包括增益。"
     );
 }

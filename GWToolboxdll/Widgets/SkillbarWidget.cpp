@@ -20,13 +20,14 @@
 #include <Modules/ChatCommands.h>
 
 /*
- * Based off of @JuliusPunhal April skill timer - https://github.com/JuliusPunhal/April-old/blob/master/Source/April/SkillbarOverlay.cpp
+ * 基于 @JuliusPunhal 的 April 技能计时器 -
+ * https://github.com/JuliusPunhal/April-old/blob/master/Source/April/SkillbarOverlay.cpp
  */
 namespace {
     GW::UI::FramePosition skillbar_skill_positions[8];
     ImVec2 skill_positions_calculated[8];
 
-    // Overall settings
+    // 整体设置
     enum class Layout {
         Row,
         Rows,
@@ -56,7 +57,7 @@ namespace {
             case GW::UI::UIMessage::kFrameMessage_0x13:
             case GW::UI::UIMessage::kRenderFrame_0x30:
             case GW::UI::UIMessage::kSetLayout:
-                skillbar_position_dirty = true; // Forces a recalculation
+                skillbar_position_dirty = true; // 强制重新计算
                 break;
         }
         GW::Hook::LeaveHook();
@@ -89,7 +90,7 @@ namespace {
         }
         if (!GImGui)
             return false;
-        // Imgui viewport may not be limited to the game area.
+        // ImGui 视口可能不限于游戏区域
         const auto imgui_viewport = ImGui::GetMainViewport();
 
         for (size_t i = 0; i < _countof(skillbar_skill_positions); i++) {
@@ -106,7 +107,7 @@ namespace {
             }
         }
 
-        // Calculate columns/rows
+        // 计算列/行
         if (skillbar_skill_positions[0].screen_top == skillbar_skill_positions[7].screen_top) {
             layout = Layout::Row;
         }
@@ -267,7 +268,7 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
         return;
     }
     if (skillbar_position_dirty && !GetSkillbarPos()) {
-        return; // Failed to get skillbar pos
+        return; // 获取技能栏位置失败
     }
 
     const auto font_size = ImMin(settings.font_recharge, m_skill_width);
@@ -277,17 +278,17 @@ void SkillbarWidget::Draw(IDirect3DDevice9*)
     const auto draw_list = ImGui::GetBackgroundDrawList();
     for (size_t i = 0; i < m_skills.size(); i++) {
         const Skill& skill = m_skills[i];
-        // NB: Y axis inverted for imgui
+        // 注意：ImGui 的 Y 轴是反转的
         const ImVec2& top_left = skill_positions_calculated[i];
         const ImVec2 bottom_right = {skill_positions_calculated[i].x + m_skill_width, skill_positions_calculated[i].y + m_skill_height};
 
-        // draw overlay
+        // 绘制覆盖层
         if (settings.display_skill_overlay) {
             draw_list->AddRectFilled(top_left, bottom_right, skill.color);
         }
         draw_list->AddRect(top_left, bottom_right, settings.color_border);
 
-        // label
+        // 标签
         if (*skill.cooldown) {
             ImGui::PushFont(NULL, draw_list, font_size);
             const ImVec2 label_size = ImGui::CalcTextSize(skill.cooldown);
@@ -338,7 +339,7 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
     else if (layout == Layout::Columns) {
         if (settings.effects_symmetric && skill_idx % 2 == 0) {
             base.x += m_skill_width;
-            base.x -= widget_height; // not really correct but works
+            base.x -= widget_height; // 不完全准确但能工作
             base.x += settings.effect_monitor_offset;
         }
         else {
@@ -348,7 +349,7 @@ void SkillbarWidget::DrawEffect(const int skill_idx, const ImVec2& pos) const
 
     ImVec2 size;
     if (layout == Layout::Column || layout == Layout::Columns) {
-        size.x = widget_height; // not really correct but works
+        size.x = widget_height; // 不完全准确但能工作
         size.y = m_skill_height;
     }
     else {
@@ -428,34 +429,34 @@ void SkillbarWidget::SaveSettings(SettingsDoc& doc)
 void SkillbarWidget::DrawDurationThresholds()
 {
     ImGui::Indent();
-    ImGui::Text("Skill duration thresholds");
+    ImGui::Text("技能持续时间阈值");
     const float width = 150.f * ImGui::FontScale();
     ImGui::PushID("long");
-    ImGui::Text("Long: ");
+    ImGui::Text("长：");
     ImGui::SameLine(width);
-    Colors::DrawSettingHueWheel("Color", &settings.color_long.value);
+    Colors::DrawSettingHueWheel("颜色", &settings.color_long.value);
     ImGui::PopID();
     ImGui::Spacing();
 
     ImGui::PushID("medium");
-    ImGui::Text("Medium: ");
+    ImGui::Text("中：");
     ImGui::SameLine(width);
-    Colors::DrawSettingHueWheel("Color", &settings.color_medium.value);
+    Colors::DrawSettingHueWheel("颜色", &settings.color_medium.value);
     ImGui::NewLine();
     ImGui::SameLine(width);
-    ImGui::DragInt("Threshold", &settings.medium_treshold, 1.f, 1, 180000);
-    ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the medium color is used.");
+    ImGui::DragInt("阈值", &settings.medium_treshold, 1.f, 1, 180000);
+    ImGui::ShowHelp("效果剩余时间的毫秒数阈值，达到该值后使用中等颜色。");
     ImGui::PopID();
     ImGui::Spacing();
 
     ImGui::PushID("short");
-    ImGui::Text("Short: ");
+    ImGui::Text("短：");
     ImGui::SameLine(width);
-    Colors::DrawSettingHueWheel("Color", &settings.color_short.value);
+    Colors::DrawSettingHueWheel("颜色", &settings.color_short.value);
     ImGui::NewLine();
     ImGui::SameLine(width);
-    ImGui::DragInt("Threshold", &settings.short_treshold, 1.f, 1, 180000);
-    ImGui::ShowHelp("Number of milliseconds of effect uptime left, until the short color is used.");
+    ImGui::DragInt("阈值", &settings.short_treshold, 1.f, 1, 180000);
+    ImGui::ShowHelp("效果剩余时间的毫秒数阈值，达到该值后使用短颜色。");
     ImGui::PopID();
     ImGui::Spacing();
 
@@ -470,64 +471,64 @@ void SkillbarWidget::DrawSettingsInternal()
     const bool is_vertical = layout == Layout::Column || layout == Layout::Columns;
 
     ImGui::Separator();
-    ImGui::Text("Skill overlay settings");
+    ImGui::Text("技能覆盖层设置");
     ImGui::Spacing();
     ImGui::Indent();
     ImGui::PushID("skill_overlay_settings");
-    ImGui::DragFloat("Text size", &settings.font_recharge, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
-    Colors::DrawSettingHueWheel("Text color", &settings.color_text_recharge.value);
-    Colors::DrawSettingHueWheel("Text outline color", &settings.color_text_outline.value);
-    Colors::DrawSettingHueWheel("Border color", &settings.color_border.value);
-    ImGui::CheckboxWithHelp("Paint skills according to effect duration", &settings.display_skill_overlay, "Change the color of the skill dependent on the long/medium/short duration colors");
+    ImGui::DragFloat("文字大小", &settings.font_recharge, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
+    Colors::DrawSettingHueWheel("文字颜色", &settings.color_text_recharge.value);
+    Colors::DrawSettingHueWheel("文字描边颜色", &settings.color_text_outline.value);
+    Colors::DrawSettingHueWheel("边框颜色", &settings.color_border.value);
+    ImGui::CheckboxWithHelp("根据效果持续时间给技能着色", &settings.display_skill_overlay, "根据长/中/短持续时间颜色改变技能的颜色");
     if (settings.display_skill_overlay) {
         DrawDurationThresholds();
     }
-    ImGui::InputInt("Text decimal threshold", &settings.decimal_threshold);
-    ImGui::ShowHelp("When should decimal numbers start to show (in milliseconds)");
-    ImGui::Checkbox("Round up integers", &settings.round_up);
+    ImGui::InputInt("小数阈值（毫秒）", &settings.decimal_threshold);
+    ImGui::ShowHelp("何时开始显示小数（单位：毫秒）");
+    ImGui::Checkbox("整数向上取整", &settings.round_up);
     ImGui::PopID();
     ImGui::Unindent();
 
     ImGui::Spacing();
     ImGui::Separator();
-    ImGui::Text("Effect monitor settings");
+    ImGui::Text("效果监控设置");
     ImGui::Spacing();
     ImGui::Indent();
     ImGui::PushID("effect_monitor_settings");
-    ImGui::Checkbox("Display effect monitor", &settings.display_effect_monitor);
+    ImGui::Checkbox("显示效果监控", &settings.display_effect_monitor);
     if (settings.display_effect_monitor) {
-        ImGui::DragFloat(is_vertical ? "Effect width" : "Effect height", &settings.effect_monitor_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max,"%.f");
-        ImGui::ShowHelp(is_vertical ? "Width in pixels of a single effect on the effect monitor.\n0 matches font size." : "Height in pixels of a single effect on the effect monitor.\n0 matches font size.");
-        ImGui::DragInt("Offset", &settings.effect_monitor_offset, 1, -200, 200);
-        ImGui::ShowHelp(is_vertical ? "Distance to the left or right of an effect relative to the related skill on your skillbar" : "Distance above or below of an effect relative to the related skill on your skillbar");
+        ImGui::DragFloat(is_vertical ? "效果宽度" : "效果高度", &settings.effect_monitor_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max,"%.f");
+        ImGui::ShowHelp(is_vertical ? "效果监控中单个效果的宽度（像素）。\n0 匹配字体大小。" : "效果监控中单个效果的高度（像素）。\n0 匹配字体大小。");
+        ImGui::DragInt("偏移量", &settings.effect_monitor_offset, 1, -200, 200);
+        ImGui::ShowHelp(is_vertical ? "效果相对于技能栏上对应技能的左右距离" : "效果相对于技能栏上对应技能的上下距离");
         if (layout == Layout::Columns) {
-            ImGui::Checkbox("Show effects either side of your skillbar", &settings.effects_symmetric);
+            ImGui::Checkbox("在技能栏两侧显示效果", &settings.effects_symmetric);
         }
         else if (layout == Layout::Rows) {
-            ImGui::Checkbox("Show effects above and below your skillbar", &settings.effects_symmetric);
+            ImGui::Checkbox("在技能栏上下方显示效果", &settings.effects_symmetric);
         }
-        ImGui::CheckboxWithHelp("Display multiple effects", &settings.display_multiple_effects, "Show stacking effects for casted enchantments e.g. Shroud of Distress with Shadow Form");
+        ImGui::CheckboxWithHelp("显示多个效果", &settings.display_multiple_effects, "显示已施放增益的叠加效果，例如暗影形态下的痛苦之幕");
         if (settings.display_multiple_effects) {
             ImGui::Indent();
-            ImGui::CheckboxWithHelp("Flip effects order", &settings.effects_flip_order, "Newest effect is displayed last instead of first");
+            ImGui::CheckboxWithHelp("翻转效果顺序", &settings.effects_flip_order, "新效果显示在最后而非最前");
             ImGui::Unindent();
             ImGui::Spacing();
         }
 
-        ImGui::CheckboxWithHelp("Color text according to effect duration", &settings.effect_text_color, "Change the color of the font dependent on the long/medium/short duration colors");
-        ImGui::CheckboxWithHelp("Paint effects according to effect duration", &settings.effect_progress_bar_color, "Change the color of the effect progress bar dependent on the long/medium/short duration colors");
+        ImGui::CheckboxWithHelp("根据效果持续时间给文字着色", &settings.effect_text_color, "根据长/中/短持续时间颜色改变字体颜色");
+        ImGui::CheckboxWithHelp("根据效果持续时间给进度条着色", &settings.effect_progress_bar_color, "根据长/中/短持续时间颜色改变效果进度条颜色");
         if (settings.effect_text_color || settings.effect_progress_bar_color) {
             DrawDurationThresholds();
         }
-        ImGui::DragFloat("Text size", &settings.font_effects, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
+        ImGui::DragFloat("文字大小", &settings.font_effects, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
         if (!settings.effect_text_color) {
-            Colors::DrawSettingHueWheel("Text color", &settings.color_text_effects.value);
+            Colors::DrawSettingHueWheel("文字颜色", &settings.color_text_effects.value);
         }
-        Colors::DrawSettingHueWheel("Background color", &settings.color_effect_background.value);
+        Colors::DrawSettingHueWheel("背景颜色", &settings.color_effect_background.value);
         if (!settings.effect_progress_bar_color) {
-            Colors::DrawSettingHueWheel("Progress bar color", &settings.color_effect_progress.value);
+            Colors::DrawSettingHueWheel("进度条颜色", &settings.color_effect_progress.value);
         }
-        Colors::DrawSettingHueWheel("Border color", &settings.color_effect_border.value);
+        Colors::DrawSettingHueWheel("边框颜色", &settings.color_effect_border.value);
     }
     ImGui::PopID();
     ImGui::Unindent();

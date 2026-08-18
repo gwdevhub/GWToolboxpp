@@ -30,7 +30,7 @@ namespace {
     std::vector<MissionMapWidget::DrawCallback> draw_callbacks;
     std::vector<MissionMapWidget::ContextMenuCallback> context_menu_callbacks;
 
-    // Pixel-to-game-unit scale — converts pixel thickness to game units
+    // 像素到游戏单位的比例 — 将像素厚度转换为游戏单位
     float cached_px_to_game = 1.f;
 
     bool render_ready = false;
@@ -74,7 +74,7 @@ namespace {
 
     bool right_clicking = false;
 
-    // Left-click-to-target: a press that doesn't drag (the game uses drag to pan) selects a target
+    // 左键点击目标：不拖动的按下（游戏使用拖动平移）选择目标
     bool left_clicking = false;
     bool left_click_dragged = false;
     GW::Vec2f left_click_pos;
@@ -114,7 +114,7 @@ namespace {
         return WorldMapWidget::GamePosToWorldMap(game_map_position, world_map_pos) && WorldMapCoordsToMissionMapScreenPos(world_map_pos, screen_coords);
     }
 
-    // Invert the game->screen basis so a screen click maps back to game coords.
+    // 反转 game->screen 基，以便屏幕点击映射回游戏坐标
     bool ScreenPosToGamePos(const GW::Vec2f& screen, GW::Vec2f& game)
     {
         const float det = g2s.ax * g2s.by - g2s.bx * g2s.ay;
@@ -133,10 +133,8 @@ namespace {
         if (!mm_ctx || !mm_ctx->h003c) return;
         const GW::Vec2f mm_pos = mm_ctx->h003c->player_mission_map_pos;
 
-        // Use the controlled character's position when not spectating (works on
-        // underground maps where WorldMapToGamePos returns wrong coordinates).
-        // When spectating, mm_pos tracks the observed character so we must convert
-        // it back to game coords to stay consistent with the origin calculation.
+        // 未观战时使用受控角色的位置（在地下地图中 WorldMapToGamePos 返回错误坐标时有效）。
+        // 观战时 mm_pos 追踪被观察角色，因此必须将其转换回游戏坐标以与原点计算保持一致。
         float px, py;
         const auto* player = GW::Agents::GetControlledCharacter();
         const bool spectating = player && GW::Agents::GetObservingId() != player->agent_id;
@@ -238,14 +236,14 @@ namespace {
             ImGui::Text("%.2f, %.2f", game_pos.x, game_pos.y);
         }
 #endif
-        if (ImGui::Button("Place Marker")) {
+        if (ImGui::Button("放置标记")) {
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
             });
             return false;
         }
         if (QuestModule::GetCustomQuestMarker()) {
-            if (ImGui::Button("Remove Marker")) {
+            if (ImGui::Button("移除标记")) {
                 GW::GameThread::Enqueue([] { QuestModule::ClearCustomQuestMarker(); });
                 return false;
             }
@@ -257,11 +255,10 @@ namespace {
         return true;
     }
 
-    // --- Walkable terrain overlay -----------------------------------------------
-    // Shades non-walkable parts of the map grey and outlines walkable terrain.
-    // Unlike the Vanquish overlay's map grid, this has no reachability/BFS, no
-    // fog-of-war and no enemy tracking — it's a static rasterization of every
-    // trapezoid in the pathing map, independent of the Vanquish widget entirely.
+    // --- 可行走地形覆盖层 -----------------------------------------------
+    // 将地图不可行走部分着色为灰色，并勾勒可行走地形的轮廓。
+    // 与 Vanquish 覆盖层的网格不同，这里没有可达性/BFS、没有战争迷雾和敌人追踪 —
+    // 它是对路径地图中每个梯形的静态光栅化，完全独立于 Vanquish 小部件。
     constexpr float TERRAIN_CELL_SIZE = GW::Constants::Range::Adjacent / 2.f;
 
     struct TerrainTrapezoidSnapshot {
@@ -334,7 +331,7 @@ namespace {
             out.insert(out.end(), tri.v, tri.v + 3);
     }
 
-    // Pure function, safe on a worker thread: build the grey shading + border vertices.
+    // 纯函数，在工作线程上安全：构建灰色着色 + 边界顶点
     void BuildTerrainOverlayVertices(const TerrainGridData& data, float px_to_game, std::vector<D3DVertex>& out)
     {
         out.clear();
@@ -376,8 +373,7 @@ namespace {
             AppendTerrainShape(out, D3DLine(seg.p1, seg.p2, border_thickness_game, border_color));
     }
 
-    // Game thread only: copy trapezoid coords out so the worker thread can rasterize
-    // without touching game memory.
+    // 仅游戏线程：复制梯形坐标，以便工作线程可以光栅化而无需触碰游戏内存
     std::vector<TerrainTrapezoidSnapshot> SnapshotTerrainPathingMap()
     {
         std::vector<TerrainTrapezoidSnapshot> out;
@@ -393,8 +389,7 @@ namespace {
         return out;
     }
 
-    // Pure function, safe on a worker thread: rasterize the snapshot into a walkable
-    // grid and compute border segments + vertex data.
+    // 纯函数，在工作线程上安全：将快照光栅化为可行走网格并计算边界段 + 顶点数据
     TerrainGridData ComputeTerrainGrid(const std::vector<TerrainTrapezoidSnapshot>& traps, float px_to_game)
     {
         TerrainGridData data;
@@ -449,8 +444,7 @@ namespace {
         return data;
     }
 
-    // Async rebuild: rasterization runs on a worker thread; only the snapshot and the
-    // final swap touch the game thread.
+    // 异步重建：光栅化在工作线程上运行；只有快照和最终交换触及游戏线程
     void QueueRebuildTerrainGrid()
     {
         if (terrain_rebuild_pending) return;
@@ -525,8 +519,8 @@ namespace {
             cb(dx_device);
         }
 
-        // When the overlay is off (default), draw the lines directly — a single DrawPrimitive with the
-        // state already set above. Only the opt-in overlay pays for Minimap::Render (D3DSBT_ALL capture).
+        // 覆盖层关闭时（默认），直接绘制线 — 使用上面已设置的状态单次 DrawPrimitive。
+        // 只有选择加入的覆盖层才需支付 Minimap::Render（D3DSBT_ALL 捕获）的成本。
         if (settings.draw_minimap && Minimap::IsEnabled()) {
             RenderMinimapLayers(dx_device, gameToScreen, ortho);
         }
@@ -536,11 +530,11 @@ namespace {
         }
     }
 
-    // Overlay the minimap layers on the mission map; mission-map lines feed ctx.lines (a context layer,
-    // separate from the minimap's draw_on_minimap CustomRenderer). Only called when the overlay is on.
+    // 在任务地图上覆盖小地图层；任务地图线通过 ctx.lines 馈送（一个上下文层，
+    // 与小地图的 draw_on_minimap CustomRenderer 分开）。仅在覆盖层开启时调用。
     void RenderMinimapLayers(IDirect3DDevice9* dx_device, const D3DMATRIX& game_to_screen, const D3DMATRIX& projection)
     {
-        MinimapRenderContext ctx = Minimap::GetRenderContext(); // inherit user colours (symbols)
+        MinimapRenderContext ctx = Minimap::GetRenderContext(); // 继承用户颜色（符号）
         ctx.top_left = {mission_map_top_left.x, mission_map_top_left.y};
         ctx.bottom_right = {mission_map_bottom_right.x, mission_map_bottom_right.y};
         ctx.view_override = &game_to_screen;
@@ -552,14 +546,14 @@ namespace {
         ctx.zoom_scale = 1.f;
         ctx.circular_map = false;
         ctx.draw_center_marker = false;
-        ctx.draw_custom = false; // lines come from ctx.lines; minimap markers/polygons are not wanted here
+        ctx.draw_custom = false; // 线来自 ctx.lines；不需要小地图标记/多边形
 
         ctx.draw_background = false;
-        ctx.draw_cardinals = false; // mission map is always north-aligned
+        ctx.draw_cardinals = false; // 任务地图始终朝北
         ctx.draw_pmap = settings.draw_pmap;
-        // The pmap shadow offset is applied in the view's output space, which for the mission map's
-        // game->px view is raw pixels; express a small game-unit offset in px so it stays subtle and
-        // scales with the mission-map zoom (the compass keeps the default, applied in its own space).
+        // pmap 阴影偏移应用于视图的输出空间，对于任务地图的 game->px 视图是原始像素；
+        // 以像素表示一个小的游戏单位偏移，使其保持微妙并按任务地图缩放比例缩放
+        //（指南针使用其自己空间中的默认值）。
         constexpr float shadow_gwinches = 180.f;
         ctx.shadow_translation = shadow_gwinches / cached_px_to_game;
         ctx.draw_symbols = settings.draw_symbols;
@@ -568,7 +562,7 @@ namespace {
         ctx.draw_pings = settings.draw_pings;
         ctx.draw_effects = settings.draw_effects;
 
-        // Sub-renderers draw in game coords via the view override, so WORLD must be identity.
+        // 子渲染器通过视图覆盖以游戏坐标绘制，因此 WORLD 必须为 identity
         dx_device->SetTransform(D3DTS_WORLD, &IDENTITY_MATRIX);
         Minimap::Render(dx_device, ctx);
     }
@@ -583,7 +577,7 @@ namespace {
         const float LINE_HALF_THICKNESS = 1.f * cached_px_to_game;
         for (const auto& line : lines) {
             if (!line->visible) continue;
-            if (line->world_coords) continue; // world coords, not game coords; drawn by DrawWorldCoordRouteLines
+            if (line->world_coords) continue; // 世界坐标，非游戏坐标；由 DrawWorldCoordRouteLines 绘制
             if (!line->draw_on_mission_map && !(settings.draw_all_minimap_lines && line->draw_on_minimap) && !(settings.draw_all_terrain_lines && line->draw_on_terrain)) continue;
             if (line->map != map_id) continue;
             if (line->from_player_pos && player_pos) {
@@ -596,11 +590,10 @@ namespace {
 
     }
 
-    // Cross-map route tails are stored in world-map coords (the only form that can place other
-    // maps' positions). Draw them in an ImGui overlay via the world->mission-map transform,
-    // clipped to the widget. These cover the whole route (incl. the current map's exit stretch
-    // past the nearest portal, which the game-coord lines don't reach); the overlap with the
-    // game-coord current-map lines is the same path, so it's harmless - matches the world map.
+    // 跨地图路径尾部以世界地图坐标存储（唯一能将其他地图位置放置的形式）。
+    // 通过 world->mission-map 转换在 ImGui 覆盖层中绘制它们，并裁剪到小部件范围内。
+    // 这些覆盖整个路径（包括当前地图超出最近传送门的出口段，游戏坐标线无法到达）；
+    // 与游戏坐标当前地图线的重叠是相同的路径，因此无害 — 与世界地图匹配。
     void DrawWorldCoordRouteLines()
     {
         const auto& lines = Minimap::Instance().custom_renderer.GetLines();
@@ -646,21 +639,21 @@ void MissionMapWidget::Draw(IDirect3DDevice9* dx_device)
 
     DrawWorldCoordRouteLines();
 
-    // POC: mission map icons, desaturated. Res shrine icon (maybe others) are wrong colour by default so we desaturate, but this impacts other icons!
+    // POC：任务地图图标，去饱和。复活圣坛图标（可能还有其他）默认颜色错误，因此我们去饱和，但这会影响其他图标！
     #if 0
     const auto* world_ctx = GW::GetWorldContext();
     if (!world_ctx) return;
     auto* draw_list = ImGui::GetBackgroundDrawList();
     draw_list->PushClipRect({mission_map_top_left.x, mission_map_top_left.y}, {mission_map_bottom_right.x, mission_map_bottom_right.y});
     static constexpr ImU32 kAffiliationColors[] = {
-        IM_COL32_WHITE,                   // 0: gray
-        IM_COL32(0x20, 0x20, 0xFF, 0xFF), // 1: blue
-        IM_COL32(0xFF, 0x20, 0x20, 0xFF), // 2: red
-        IM_COL32(0xFF, 0xFF, 0x20, 0xFF), // 3: yellow
-        IM_COL32(0x20, 0xFF, 0xFF, 0xFF), // 4: teal
-        IM_COL32(0x80, 0x20, 0xFF, 0xFF), // 5: purple
-        IM_COL32(0x20, 0xFF, 0x20, 0xFF), // 6: green
-        IM_COL32_WHITE,                   // 7: gray (same as 0)
+        IM_COL32_WHITE,                   // 0: 灰色
+        IM_COL32(0x20, 0x20, 0xFF, 0xFF), // 1: 蓝色
+        IM_COL32(0xFF, 0x20, 0x20, 0xFF), // 2: 红色
+        IM_COL32(0xFF, 0xFF, 0x20, 0xFF), // 3: 黄色
+        IM_COL32(0x20, 0xFF, 0xFF, 0xFF), // 4: 青色
+        IM_COL32(0x80, 0x20, 0xFF, 0xFF), // 5: 紫色
+        IM_COL32(0x20, 0xFF, 0x20, 0xFF), // 6: 绿色
+        IM_COL32_WHITE,                   // 7: 灰色（同 0）
     };
     for (const auto& icon : world_ctx->mission_map_icons) {
         auto** tex = GwDatModule::LoadGreyscaleTextureFromFileId(icon.model_id);
@@ -690,7 +683,7 @@ void MissionMapWidget::Update(float)
 
     UpdateTerrainOverlay();
 
-    // Frame rate check — only throttle minimap line updates
+    // 帧率检查 — 仅限制小地图线更新
     static clock_t last_check = TIMER_INIT();
     if (!ToolboxUtils::FrameRateCheck(last_check, 30)) return;
 
@@ -702,15 +695,15 @@ void MissionMapWidget::DrawSettingsInternal()
     const bool minimap_enabled = Minimap::IsEnabled();
     const auto needs_minimap = [minimap_enabled] {
         if (!minimap_enabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-            ImGui::SetTooltip("Enable the Minimap module to use this.");
+            ImGui::SetTooltip("启用小地图模块以使用此功能。");
     };
 
-    ImGui::Checkbox("Show walkable terrain", &settings.show_walkable_terrain);
-    ImGui::ShowHelp("Shades non-walkable parts of the map grey and outlines walkable terrain.\nIndependent of the Vanquish overlay — no enemy tracking, fog or navigation.");
+    ImGui::Checkbox("显示可行走地形", &settings.show_walkable_terrain);
+    ImGui::ShowHelp("将地图不可行走部分着色为灰色，并勾勒可行走地形的轮廓。\n独立于 Vanquish 覆盖层 — 无敌人追踪、迷雾或导航。");
     if (settings.show_walkable_terrain) {
         bool terrain_colors_changed = false;
-        terrain_colors_changed |= Colors::DrawSettingHueWheel("Non-walkable shading", &settings.terrain_shade_color.value);
-        terrain_colors_changed |= Colors::DrawSettingHueWheel("Walkable border", &settings.terrain_border_color.value);
+        terrain_colors_changed |= Colors::DrawSettingHueWheel("不可行走着色", &settings.terrain_shade_color.value);
+        terrain_colors_changed |= Colors::DrawSettingHueWheel("可行走边界", &settings.terrain_border_color.value);
         if (terrain_colors_changed && terrain_grid.walkable) {
             std::vector<D3DVertex> verts;
             BuildTerrainOverlayVertices(terrain_grid, cached_px_to_game, verts);
@@ -720,37 +713,37 @@ void MissionMapWidget::DrawSettingsInternal()
 
     ImGui::Separator();
     ImGui::BeginDisabled(!minimap_enabled);
-    ImGui::Checkbox("Draw all terrain lines", &settings.draw_all_terrain_lines);
+    ImGui::Checkbox("绘制所有地形线", &settings.draw_all_terrain_lines);
     needs_minimap();
-    ImGui::Checkbox("Draw all minimap lines", &settings.draw_all_minimap_lines);
+    ImGui::Checkbox("绘制所有小地图线", &settings.draw_all_minimap_lines);
     needs_minimap();
 
     ImGui::Separator();
-    ImGui::Checkbox("Show minimap on mission map", &settings.draw_minimap);
+    ImGui::Checkbox("在任务地图上显示小地图", &settings.draw_minimap);
     needs_minimap();
     ImGui::BeginDisabled(!settings.draw_minimap);
-    ImGui::TextDisabled("Minimap layers drawn on the mission map");
-    ImGui::Checkbox("Range rings", &settings.draw_ranges);
+    ImGui::TextDisabled("在任务地图上绘制的小地图层");
+    ImGui::Checkbox("范围环", &settings.draw_ranges);
     needs_minimap();
-    ImGui::Checkbox("Agents", &settings.draw_agents);
+    ImGui::Checkbox("单位", &settings.draw_agents);
     needs_minimap();
-    ImGui::Checkbox("Pings & drawings", &settings.draw_pings);
+    ImGui::Checkbox("标记与绘图", &settings.draw_pings);
     needs_minimap();
-    ImGui::Checkbox("Effects", &settings.draw_effects);
+    ImGui::Checkbox("效果", &settings.draw_effects);
     needs_minimap();
-    ImGui::Checkbox("Background", &settings.draw_background);
+    ImGui::Checkbox("背景", &settings.draw_background);
     needs_minimap();
-    ImGui::Checkbox("Pathing map (terrain)", &settings.draw_pmap);
+    ImGui::Checkbox("路径地图（地形）", &settings.draw_pmap);
     needs_minimap();
-    ImGui::Checkbox("Symbols", &settings.draw_symbols);
+    ImGui::Checkbox("符号", &settings.draw_symbols);
     needs_minimap();
-    ImGui::Checkbox("Click to target", &settings.click_to_target);
+    ImGui::Checkbox("点击选择目标", &settings.click_to_target);
     needs_minimap();
-    ImGui::ShowHelp("Left-click (without dragging) on the mission map to target the nearest agent");
+    ImGui::ShowHelp("在任务地图上左键单击（不拖动）以选择最近的单位");
     ImGui::EndDisabled();
     ImGui::EndDisabled();
 
-    if (ImGui::Button("Customise minimap (colours, agents, ranges)...")) {
+    if (ImGui::Button("自定义小地图（颜色、单位、范围）...")) {
         SettingsWindow::Instance().NavigateToSection(Minimap::Instance().SettingsName());
     }
 }
@@ -768,7 +761,7 @@ bool MissionMapWidget::WndProc(const UINT Message, WPARAM, LPARAM lParam)
             ImGui::SetContextMenu(MissionMapContextMenu);
         } break;
 
-        // A left click that doesn't drag selects a target; drags are left to the game (it pans the map), so never capture.
+        // 不拖动的左键单击选择目标；拖动留给游戏（它平移地图），因此绝不捕获
         case WM_LBUTTONDOWN: {
             left_clicking = settings.draw_minimap && Minimap::IsEnabled() && settings.click_to_target && IsScreenPosOnMissionMap(cursor_pos) && !GW::UI::GetCurrentTooltip();
             left_click_dragged = false;

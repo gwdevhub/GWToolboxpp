@@ -26,7 +26,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Health"; }
+    [[nodiscard]] const char* Name() const override { return "生命值"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_PERCENTAGE; }
 
     struct Settings {

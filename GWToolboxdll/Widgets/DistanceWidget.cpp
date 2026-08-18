@@ -19,23 +19,23 @@ namespace {
 void DistanceWidget::DrawSettingsInternal()
 {
     ImGui::SameLine();
-    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
-    ImGui::Text("Text sizes:");
-    ImGui::ShowHelp("A text size of 0 means that it's not drawn.");
+    ImGui::Checkbox("在前哨站隐藏", &settings.hide_in_outpost);
+    ImGui::Text("文字大小：");
+    ImGui::ShowHelp("文字大小为 0 表示不绘制。");
     ImGui::Indent();
-    ImGui::DragFloat("'Distance' header", &settings.font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
-    ImGui::DragFloat("Percent value", &settings.font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
-    ImGui::DragFloat("Absolute value", &settings.font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("'距离' 标题", &settings.font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("百分比数值", &settings.font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("绝对数值", &settings.font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
     ImGui::Unindent();
-    ImGui::Text("Colors:");
+    ImGui::Text("颜色：");
     ImGui::Indent();
-    Colors::DrawSettingHueWheel("Adjacent Range", &settings.color_adjacent.value, 0);
-    Colors::DrawSettingHueWheel("Nearby Range", &settings.color_nearby.value, 0);
-    Colors::DrawSettingHueWheel("Area Range", &settings.color_area.value, 0);
-    Colors::DrawSettingHueWheel("Earshot Range", &settings.color_earshot.value, 0);
-    Colors::DrawSettingHueWheel("Cast Range", &settings.color_cast.value, 0);
-    Colors::DrawSettingHueWheel("Spirit Range", &settings.color_spirit.value, 0);
-    Colors::DrawSettingHueWheel("Compass Range", &settings.color_compass.value, 0);
+    Colors::DrawSettingHueWheel("邻近范围", &settings.color_adjacent.value, 0);
+    Colors::DrawSettingHueWheel("附近范围", &settings.color_nearby.value, 0);
+    Colors::DrawSettingHueWheel("区域范围", &settings.color_area.value, 0);
+    Colors::DrawSettingHueWheel("听觉范围", &settings.color_earshot.value, 0);
+    Colors::DrawSettingHueWheel("施法范围", &settings.color_cast.value, 0);
+    Colors::DrawSettingHueWheel("灵范围", &settings.color_spirit.value, 0);
+    Colors::DrawSettingHueWheel("罗盘范围", &settings.color_compass.value, 0);
     ImGui::Unindent();
 }
 
@@ -99,17 +99,17 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
 
             ImVec2 cur = ImGui::GetCursorPos();
             constexpr auto background = ImColor(Colors::Black());
-            // 'distance'
+            // '距离'
             if (settings.font_size_header > 0.f && show_titlebar) {
                 ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::header1));
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-                ImGui::TextColored(background, "Distance");
+                ImGui::TextColored(background, "距离");
                 ImGui::SetCursorPos(cur);
-                ImGui::Text("Distance");
+                ImGui::Text("距离");
                 ImGui::PopFont();
             }
 
-            // perc
+            // 百分比
             if (settings.font_size_perc_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_perc_value);
                 cur = ImGui::GetCursorPos();
@@ -121,7 +121,7 @@ void DistanceWidget::Draw(IDirect3DDevice9*)
                 ImGui::PopFont();
             }
 
-            // abs
+            // 绝对值
             if (settings.font_size_abs_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_abs_value);
                 cur = ImGui::GetCursorPos();

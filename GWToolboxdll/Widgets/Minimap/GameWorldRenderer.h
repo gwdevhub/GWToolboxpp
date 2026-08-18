@@ -80,10 +80,10 @@ public:
     using RenderableVectors = std::vector<GenericPolyRenderable>;
 
     // ToolboxModule
-    [[nodiscard]] const char* Name() const override { return "In-game rendering"; }
+    [[nodiscard]] const char* Name() const override { return "游戏内渲染"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Draws custom markers, lines and polygons into the 3D game world - occluded by terrain and drawn under the in-game UI.";
+        return "在3D游戏世界中绘制自定义标记、线条和多边形——这些图形会被地形遮挡，并绘制在游戏内用户界面之下。";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CUBES; }
     void Initialize() override;

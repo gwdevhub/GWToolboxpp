@@ -22,12 +22,12 @@ namespace {
 
     GW::UI::Frame* GetPartyWindowHealthBars(GW::UI::Frame** party_frame_out = nullptr) {
         const auto party = GW::PartyMgr::GetPartyInfo();
-        // @Cleanup: Fetch party frame once, only update when it has been destroyed
+        // @清理：获取一次队伍窗口框架，仅在销毁时更新
         const auto party_frame = party ? GW::UI::GetFrameByLabel(L"Party") : nullptr;
         if (party_frame_out) *party_frame_out = party_frame;
         if (!(party_frame && party_frame->IsVisible())) return nullptr;
 
-        // Traverse to health bars
+        // 遍历到生命条
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
             auto sub_frame = GW::UI::GetChildFrame(party_frame, 1);
             sub_frame = GW::UI::GetChildFrame(sub_frame, 8);
@@ -45,7 +45,7 @@ namespace {
             return false;
         if (!GImGui)
             return false;
-        // Imgui viewport may not be limited to the game area.
+        // ImGui 视口可能不限于游戏区域
         const auto imgui_viewport = ImGui::GetMainViewport();
         if (top_left) {
             *top_left = frame->position.GetTopLeftOnScreen(relative_to);
@@ -71,7 +71,7 @@ namespace {
         case GW::UI::UIMessage::kDestroyFrame:
         case GW::UI::UIMessage::kFrameMessage_0x15:
         case GW::UI::UIMessage::kSetLayout:
-            party_window_health_bars = nullptr; // Forces a recalculation
+            party_window_health_bars = nullptr; // 强制重新计算
             break;
         }
         OnPartyWindowHealthBars_UICallback_Ret(message, wParam, lParam);
@@ -108,7 +108,7 @@ bool SnapsToPartyWindow::FetchPartyInfo()
     }
     for (const auto& str : party_names_by_index) {
         if (str->IsDecoding())
-            return false; // Wait for last pass before retry
+            return false; // 等待上一轮完成后再重试
     }
 
     auto append_agent = [&](uint32_t agent_id, const wchar_t* enc_name = nullptr) {
@@ -121,11 +121,11 @@ bool SnapsToPartyWindow::FetchPartyInfo()
         }
         auto* str = party_names_by_index[party_agent_ids_by_index.size() - 1].get();
         str->reset(enc_name ? enc_name : GW::Agents::GetAgentEncName(agent_id))
-            ->wstring(); // Trigger decode
+            ->wstring(); // 触发解码
         };
 
     for (const auto& player : info->players) {
-        // NB: Player may have left the game, meaning GW::Agents::GetAgentEncName(agent_id) would fail because agent is gone. Pass enc_name. 
+        // 注意：玩家可能已离开游戏，意味着 GW::Agents::GetAgentEncName(agent_id) 会因 agent 消失而失败。传入 enc_name。
         if (const auto gwplayer = GW::PlayerMgr::GetPlayerByID(player.login_number)) {
             append_agent(gwplayer->agent_id, gwplayer->name_enc);
         }
@@ -169,7 +169,7 @@ void SnapsToPartyWindow::Initialize()
 void SnapsToPartyWindow::Terminate()
 {
     ToolboxWidget::Terminate();
-    // NB: Don't remove the ui callback! Other modules that extend this class will use it. Toolbox will remove all hooks at the end
+    // 注意：不要移除 UI 回调！其他扩展此类的模块会使用它。工具箱会在最后移除所有钩子
 }
 
 ImGuiWindowFlags SnapsToPartyWindow::GetWinFlags(ImGuiWindowFlags flags, const bool noinput_if_frozen) const
@@ -183,7 +183,7 @@ ImGuiWindowFlags SnapsToPartyWindow::GetWinFlags(ImGuiWindowFlags flags, const b
 void SnapsToPartyWindow::Draw(IDirect3DDevice9* device)
 {
     ToolboxWidget::Draw(device);
-    // @Cleanup: don't do this every loop
+    // @清理：不要每帧都执行此操作
     RecalculatePartyPositions();
 }
 
@@ -207,13 +207,13 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
     }
 
     const auto player_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 0);
-    if (!player_health_bars) // Child frames by player id (includes heroes)
+    if (!player_health_bars) // 按玩家 ID 的子框架（包括英雄）
         return false;
 
     const auto relative_to = party_frame;
     GetFramePosition(party_window_health_bars->relation.GetParent(), relative_to, &party_health_bars_position.top_left, &party_health_bars_position.bottom_right);
 
-    // Add some padding left and right
+    // 左右添加一些内边距
     GetFramePosition(party_frame, relative_to, &top_left, &bottom_right);
     const auto diff = (party_health_bars_position.top_left.x - top_left.x) / 2.f;
     party_health_bars_position.top_left.x -= diff;
@@ -241,7 +241,7 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
             agent_health_bar_positions[hero.agent_id] = { top_left, bottom_right };
         }
     }
-    const auto henchmen_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 1); // Find matching henchmen frames by agent_id
+    const auto henchmen_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 1); // 按 agent_id 查找匹配的佣兵框架
     for (auto& henchman : party->henchmen) {
         if (!henchmen_health_bars)
             return false;
@@ -251,11 +251,11 @@ bool SnapsToPartyWindow::RecalculatePartyPositions() {
         GetFramePosition(agent_health_bar, relative_to, &top_left, &bottom_right);
         agent_health_bar_positions[henchman.agent_id] = { top_left, bottom_right };
     }
-    auto pet_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 3); // Find matching agent frames frames by agent_id
+    auto pet_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 3); // 按 agent_id 查找匹配的宠物框架
     if (!(pet_health_bars && pet_health_bars->IsVisible()))
         pet_health_bars = nullptr;
 
-    auto allies_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 4); // Find matching agent frames frames by agent_id
+    auto allies_health_bars = GW::UI::GetChildFrame(party_window_health_bars, 4); // 按 agent_id 查找匹配的盟友框架
     if (!(allies_health_bars && allies_health_bars->IsVisible()))
         allies_health_bars = nullptr;
 

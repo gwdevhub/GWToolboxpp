@@ -16,7 +16,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Timer"; }
+    [[nodiscard]] const char* Name() const override { return "计时器"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
     struct Settings {

@@ -21,7 +21,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Vanquish Overlay"; }
+    [[nodiscard]] const char* Name() const override { return "战利品覆盖"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_SKULL; }
 
     struct Settings {

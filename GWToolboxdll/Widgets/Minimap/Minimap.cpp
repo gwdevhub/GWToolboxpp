@@ -61,7 +61,7 @@ namespace {
 
     enum class MinimapModifierBehaviour : int { Draw, Target, Drag, MoveTo };
 
-    const char* available_modifiers_combo[] = {"None", "Ctrl", "Shift", "Alt", "Disabled"};
+    const char* available_modifiers_combo[] = {"无", "Ctrl", "Shift", "Alt", "禁用"};
     constexpr uint32_t available_modifiers[] = {0, ImGuiMod_Ctrl, ImGuiMod_Shift, ImGuiMod_Alt, 0xffff};
 
     std::unordered_map<MinimapModifierBehaviour, uint32_t> MinimapModifierBehaviour_Keymap = {{MinimapModifierBehaviour::Draw, 0}, {MinimapModifierBehaviour::Target, 1}, {MinimapModifierBehaviour::Drag, 2}, {MinimapModifierBehaviour::MoveTo, 3}};
@@ -76,7 +76,7 @@ namespace {
     GW::UI::UIInteractionCallback OnCompassFrame_UICallback_Ret = nullptr, OnCompassFrame_UICallback_Func = nullptr;
     bool compass_position_dirty = true;
 
-    // Flagged when terminating minimap
+    // 终止小地图时标记
     bool terminating = false;
     bool cardinal_upright = false;
 
@@ -89,11 +89,11 @@ namespace {
 
     Vec2i drag_start;
 
-    // vars for minimap movement
+    // 小地图移动变量
     clock_t last_moved = 0;
 
     /**
-     * Wrap runtime variables in o MinimapRenderContext - expose them as refs for our internal settings
+     * 将运行时变量包装在 MinimapRenderContext 中 — 作为内部设置引用暴露它们
      */
     MinimapRenderContext default_minimap_context{
         .background_color = 0,
@@ -109,7 +109,7 @@ namespace {
     Color& color_mapbackground = reinterpret_cast<Color&>(default_minimap_context.background_color);
     float& scale = default_minimap_context.zoom_scale;
 
-    bool loading = false; // only consider some cases but still good
+    bool loading = false; // 只考虑某些情况但仍然有用
     bool compass_fix_pending = false;
     bool mouse_clickthrough_in_explorable = false;
     bool mouse_clickthrough_in_outpost = false;
@@ -135,36 +135,35 @@ namespace {
     bool in_interface_settings = false;
 
     // -------------------------------------------------------------------------
-    // Cardinal direction labels (N / S / E / W)
+    // 方向标签（北 / 南 / 东 / 西）
     // -------------------------------------------------------------------------
     Color& cardinal_color = reinterpret_cast<Color&>(default_minimap_context.cardinal_color);
-    float cardinal_offset = 0.0f;     // game-unit offset from compass edge; +ve = outward
-    float cardinal_font_size = 13.0f; // screen-space font size in pixels
+    float cardinal_offset = 0.0f;     // 从罗盘边缘的游戏单位偏移；正 = 向外
+    float cardinal_font_size = 13.0f; // 屏幕空间字体大小（像素）
 
-    // Projects a game-world position to an ImGui screen pixel, using the same
-    // transform chain that Minimap::Render / RenderSetupProjection applies.
+    // 将游戏世界位置投影到 ImGui 屏幕像素，使用与 Minimap::Render / RenderSetupProjection 相同的变换链。
     //
-    // View chain (Minimap::Render):
+    // 视图链（Minimap::Render）：
     //   translate(-me->pos) * rotateZ(-rotation + PI/2) * scale(zoom) * translate(pan)
-    // Projection (RenderSetupProjection):
-    //   ortho: ±5000 game units → ±1 NDC
-    //   viewport: NDC → pixels via base_scale and anchor_point
+    // 投影（RenderSetupProjection）：
+    //   正交：±5000 游戏单位 → ±1 NDC
+    //   视口：通过 base_scale 和 anchor_point 将 NDC → 像素
     ImVec2 WorldToScreen(const GW::Vec2f& world_pos, const MinimapRenderContext& ctx, const GW::Vec2f& me_pos)
     {
-        GW::Vec2f v = world_pos - me_pos; // translate so player is at origin
-        v += ctx.translation;             // apply pan
-        v *= ctx.zoom_scale;              // apply zoom
+        GW::Vec2f v = world_pos - me_pos; // 平移使玩家在原点
+        v += ctx.translation;             // 应用平移
+        v *= ctx.zoom_scale;              // 应用缩放
 
-        // Rotate: view uses RotationZ(-rotation + PI/2)
+        // 旋转：视图使用 RotationZ(-rotation + PI/2)
         const float angle = DirectX::XM_PIDIV2 - ctx.rotation;
         const float rx = v.x * std::cos(angle) - v.y * std::sin(angle);
         const float ry = v.x * std::sin(angle) + v.y * std::cos(angle);
 
-        // Orthographic: ±5000 game units → ±1 NDC
+        // 正交：±5000 游戏单位 → ±1 NDC
         const float nx = rx * (2.0f / 10000.0f);
         const float ny = ry * (2.0f / 10000.0f);
 
-        // NDC → screen pixels (Y flipped: +Y world = up = smaller screen Y)
+        // NDC → 屏幕像素（Y 翻转：+Y 世界 = 向上 = 较小的屏幕 Y）
         const float half = ctx.base_scale * 0.5f;
         return {ctx.anchor_point.x + nx * half, ctx.anchor_point.y - ny * half};
     }
@@ -200,7 +199,7 @@ namespace {
         uint32_t field14_0x38;
         uint32_t field15_0x3c;
         CompassAiControl* ai_controls;
-        void* compass_canvas; // size 0x138
+        void* compass_canvas; // 大小 0x138
         uint32_t field18_0x48;
         uint32_t field19_0x4c;
         uint32_t field20_0x50;
@@ -227,28 +226,28 @@ namespace {
 
         GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
 
-        // Translate so the minimap center is the origin, and flip Y
+        // 平移使小地图中心为原点，并翻转 Y
         const auto size = default_minimap_context.size();
         v.x = v.x - (default_minimap_context.top_left.x + size.x * 0.5f);
         v.y = (default_minimap_context.top_left.y + size.y * 0.5f) - v.y;
 
-        // Scale to game units: base_scale (= size.x) spans ±5000
+        // 缩放到游戏单位：base_scale（= size.x）跨越 ±5000
         constexpr float w = 5000.0f;
         v *= 2.0f * w / size.x;
 
-        // translate by camera
+        // 按相机平移
         v -= translation;
 
-        // scale by camera
+        // 按相机缩放
         v /= scale;
 
-        // rotate by current camera rotation
+        // 按当前相机旋转旋转
         const float angle = default_minimap_context.rotation - DirectX::XM_PIDIV2;
         const float x1 = v.x * std::cos(angle) - v.y * std::sin(angle);
         const float y1 = v.x * std::sin(angle) + v.y * std::cos(angle);
         v = GW::Vec2f(x1, y1);
 
-        // translate by character position
+        // 按角色位置平移
         v += me->pos;
 
         return v;
@@ -258,10 +257,10 @@ namespace {
     {
         GW::Vec2f v(static_cast<float>(pos.x), static_cast<float>(pos.y));
 
-        // Flip Y (no translation needed for vectors)
+        // 翻转 Y（向量不需要平移）
         v.y = -v.y;
 
-        // Scale to game units: base_scale (= size.x) spans ±5000
+        // 缩放到游戏单位：base_scale（= size.x）跨越 ±5000
         const auto size = default_minimap_context.size();
         constexpr float w = 5000.0f;
         v *= 2.0f * w / size.x;
@@ -269,7 +268,7 @@ namespace {
         return v;
     }
 
-    // Just send the UI message to update frames, bypassing use settings.
+    // 仅发送 UI 消息更新框架，绕过使用设置。
     bool SetWindowVisibleTmp(GW::UI::WindowID window_id, bool visible)
     {
         auto position = GW::UI::GetWindowPosition(window_id);
@@ -282,7 +281,7 @@ namespace {
         else {
             position->state &= ~1;
         }
-        // Swap position out, send UI message to cascade to frames, then set back to original
+        // 交换位置，发送 UI 消息级联到框架，然后恢复原始位置
         GW::UI::SendUIMessage(GW::UI::UIMessage::kUIPositionChanged, &packet);
         *position = original_position;
         return true;
@@ -310,7 +309,7 @@ namespace {
     bool RepositionMinimapToCompass();
 
 
-    // Check whether the compass ought to be hidden or not depending on user settings
+    // 根据用户设置检查罗盘是否应该隐藏
     bool OverrideCompassVisibility()
     {
         const auto frame = GetCompassFrame();
@@ -329,7 +328,7 @@ namespace {
         return ResetWindowPosition(GW::UI::WindowID_Compass, frame);
     }
 
-    // If we've messed around with the window visibility, reset it here.
+    // 如果我们搞乱了窗口可见性，在此重置。
     bool ResetWindowPosition(GW::UI::WindowID window_id, GW::UI::Frame* frame)
     {
         if (in_interface_settings) return false;
@@ -353,11 +352,11 @@ namespace {
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
             } break;
             case GW::UI::UIMessage::kResize: {
-                // NB: Resize packet creates flagging controls and compass canvas
+                // 注意：调整大小数据包创建标记控件和罗盘画布
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 OverrideCompassVisibility();
             } break;
-            case GW::UI::UIMessage::kFrameMessage_0x4a: // 0x4a need to pass through to allow hotkey flagging
+            case GW::UI::UIMessage::kFrameMessage_0x4a: // 0x4a 需要传递以允许快捷键标记
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
                 break;
             case GW::UI::UIMessage::kDestroyFrame:
@@ -372,7 +371,7 @@ namespace {
             case GW::UI::UIMessage::kFrameVisibilityChanged:
             case GW::UI::UIMessage::kSetLayout:
                 OnCompassFrame_UICallback_Ret(message, wParam, lParam);
-                compass_position_dirty = true; // Forces a recalculation
+                compass_position_dirty = true; // 强制重新计算
                 break;
             case GW::UI::UIMessage::kQuestAdded:
             case GW::UI::UIMessage::kClientActiveQuestChanged:
@@ -390,7 +389,7 @@ namespace {
                 break;
             default:
                 if (compass_context && hide_flagging_controls) {
-                    // Temporarily nullify the pointer to flagging controls for all other message ids
+                    // 对所有其他消息 ID 临时将标记控件指针置空
                     const auto prev = compass_context->ai_controls;
                     compass_context->ai_controls = nullptr;
                     OnCompassFrame_UICallback_Ret(message, wParam, lParam);
@@ -449,7 +448,7 @@ namespace {
         if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
             return false;
         }
-        // keep an internal flag for the minimap flagging until StartCaptureMouseClick_Func is working
+        // 在 StartCaptureMouseClick_Func 工作之前，为小地图标记保留内部标志
         // minimap_flagging_state = set_state;
         if (GetFlaggingState() == set_state) {
             return true;
@@ -489,7 +488,7 @@ namespace {
         return Keypress(key);
     }
 
-    // Same as GW::PartyMgr::GetPlayerIsLeader() but has an extra check to ignore disconnected people.
+    // 与 GW::PartyMgr::GetPlayerIsLeader 相同，但增加了检查以忽略已断开连接的人。
     bool GetPlayerIsLeader()
     {
         GW::PartyInfo* party = GW::PartyMgr::GetPartyInfo();
@@ -559,7 +558,7 @@ namespace {
     }
 
 
-    // Callbacks
+    // 回调
     void OnKeydown(GW::HookStatus*, const uint32_t key)
     {
         if (key == GW::UI::ControlAction_ReverseCamera) {
@@ -613,56 +612,54 @@ namespace {
     {
         if ((context.cardinal_color & IM_COL32_A_MASK) == 0) return;
         // -------------------------------------------------------------------------
-        // Cardinal direction labels (N / S / E / W) — ImGui background draw list
+        // 方向标签（北 / 南 / 东 / 西）— ImGui 背景绘制列表
         //
-        // Font is dynamically scaled via ImGui 1.92's dynamic font atlas.
+        // 字体通过 ImGui 1.92 的动态字体图集动态缩放。
         //
-        // Two modes controlled by cardinal_upright:
-        //   true  — labels always read upright relative to the screen (default).
-        //   false — labels rotate with the minimap; each letter faces outward
-        //           from the compass centre so it reads correctly when the map
-        //           is rotated.
+        // 两种模式由 cardinal_upright 控制：
+        //   true  — 标签始终相对于屏幕保持正立（默认）。
+        //   false — 标签随小地图旋转；每个字母从罗盘中心向外指向，
+        //           因此当地图旋转时文字可正确阅读。
         // -------------------------------------------------------------------------
         ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
 
-        // Single font with dynamic scaling to the desired cardinal size.
+        // 单一字体，动态缩放到所需方向尺寸
         ImFont* font = FontLoader::GetFont();
         const float render_size = cardinal_font_size;
         ImFontBaked* baked = font->GetFontBaked(render_size);
 
         const float radius = GW::Constants::Range::Compass + cardinal_offset;
 
-        // Convert GWToolbox ARGB (0xAARRGGBB) → ImGui ABGR (0xAABBGGRR)
+        // 将 GWToolbox ARGB（0xAARRGGBB）→ ImGui ABGR（0xAABBGGRR）
         const ImU32 label_col = context.cardinal_color;
         const ImU32 shadow_col = IM_COL32(0, 0, 0, (context.cardinal_color >> 24) & 0xFF);
 
-        // GW world axes: +X = east, +Y = north.
-        // label_angle: the angle (screen-space, CW from up) that this label's
-        //   top should point toward when in rotated mode.
-        //   N faces map-up   → base map angle
-        //   E faces map-right → base + PI/2
-        //   S faces map-down  → base + PI
-        //   W faces map-left  → base + 3*PI/2
+        // GW 世界轴：+X = 东，+Y = 北。
+        // label_angle：此标签顶部在旋转模式下应指向的角度（屏幕空间，从向上顺时针）。
+        //   N 指向地图上方 → 基础地图角度
+        //   E 指向地图右方 → 基础 + PI/2
+        //   S 指向地图下方 → 基础 + PI
+        //   W 指向地图左方 → 基础 + 3*PI/2
         //
-        // In upright mode label_angle is unused.
+        // 在正立模式下 label_angle 不使用。
         const float map_angle = context.rotation - DirectX::XM_PIDIV2;
 
         struct Cardinal {
             const char* text;
             GW::Vec2f offset;
-            float label_angle; // per-label rotation for rotated mode
+            float label_angle; // 旋转模式下每个标签的旋转
         };
         const Cardinal cardinals[] = {
-            {"N", {0.f, radius}, map_angle},
-            {"S", {0.f, -radius}, map_angle + DirectX::XM_PI},
-            {"E", {radius, 0.f}, map_angle + DirectX::XM_PIDIV2},
-            {"W", {-radius, 0.f}, map_angle + DirectX::XM_PI + DirectX::XM_PIDIV2},
+            {"北", {0.f, radius}, map_angle},
+            {"南", {0.f, -radius}, map_angle + DirectX::XM_PI},
+            {"东", {radius, 0.f}, map_angle + DirectX::XM_PIDIV2},
+            {"西", {-radius, 0.f}, map_angle + DirectX::XM_PI + DirectX::XM_PIDIV2},
         };
 
         auto cardinal_offset_scale = context.base_scale * 0.5f / GW::Constants::Range::Compass;
         if (cardinal_upright) {
             // ------------------------------------------------------------------
-            // Fast path: axis-aligned text via AddText.
+            // 快速路径：通过 AddText 绘制轴对齐文本
             // ------------------------------------------------------------------
             for (const auto& c : cardinals) {
                 auto offset = GW::Rotate(c.offset * cardinal_offset_scale, -map_angle);
@@ -670,31 +667,31 @@ namespace {
                 const ImVec2 text_size = font->CalcTextSizeA(render_size, FLT_MAX, 0.f, c.text);
                 const ImVec2 draw_pos = {screen.x - text_size.x * 0.5f, screen.y - text_size.y * 0.5f};
 
-                // 1-pixel drop shadow for legibility on any background
+                // 1 像素阴影以提高在任何背景上的可读性
                 draw_list->AddText(font, render_size, {draw_pos.x + 1.f, draw_pos.y + 1.f}, shadow_col, c.text);
                 draw_list->AddText(font, render_size, draw_pos, label_col, c.text);
             }
         }
         else {
             // ------------------------------------------------------------------
-            // Rotated path: emit glyph quads manually with a per-label angle
-            // so each letter faces outward from its compass point.
+            // 旋转路径：手动发出字形四边形，每个标签有单独角度
+            // 使每个字母从罗盘点向外指
             // ------------------------------------------------------------------
 
-            // Emit one glyph string centred on `pivot`, rotated by `angle`.
-            // The shadow offset is 1 px in the label's own "down" direction.
+            // 以 `pivot` 为中心发射一个字形字符串，旋转 `angle`。
+            // 阴影偏移为 1 像素，沿标签自身的“向下”方向。
             auto AddTextRotated = [&](ImVec2 pivot, ImU32 col, const char* text, float angle) {
                 const float ca = std::cos(angle);
                 const float sa = std::sin(angle);
 
-                // Rotate local offset (ox, oy) around pivot
+                // 围绕 pivot 旋转局部偏移 (ox, oy)
                 auto rot = [&](float ox, float oy) -> ImVec2 {
                     return {pivot.x + ox * ca - oy * sa, pivot.y + ox * sa + oy * ca};
                 };
 
                 const float half_h = baked->Size * 0.5f;
 
-                // Total advance width for horizontal centring
+                // 水平居中的总前进宽度
                 float total_w = 0.f;
                 for (const char* p = text; *p;) {
                     unsigned int cp;
@@ -730,7 +727,7 @@ namespace {
                 auto offset = GW::Rotate(c.offset * cardinal_offset_scale, -map_angle);
                 const ImVec2 screen = {context.anchor_point.x + offset.x, context.anchor_point.y - offset.y};
 
-                // Shadow: 1 px along the label's own screen-down direction
+                // 阴影：沿标签自身屏幕向下方向 1 像素
                 const float ca_s = std::cos(c.label_angle);
                 const float sa_s = std::sin(c.label_angle);
                 const ImVec2 shadow_pivot = {screen.x + sa_s, screen.y - ca_s};
@@ -748,16 +745,16 @@ namespace {
 
 void Minimap::DrawHelp()
 {
-    if (!ImGui::TreeNodeEx("Minimap", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (!ImGui::TreeNodeEx("小地图", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         return;
     }
 
     ImGui::Bullet();
-    ImGui::Text("'/marktarget' highlights the current target on your minimap.");
+    ImGui::Text("'/marktarget' 在小地图上高亮当前目标。");
     ImGui::Bullet();
-    ImGui::Text("'/marktarget clear' removes the current target as a marked target on your minimap.");
+    ImGui::Text("'/marktarget clear' 移除当前目标在小地图上的高亮。");
     ImGui::Bullet();
-    ImGui::Text("'/clearmarktarget clear' removes all marked target highlights on your minimap.");
+    ImGui::Text("'/clearmarktarget clear' 移除小地图上所有标记的目标高亮。");
     ImGui::TreePop();
 }
 
@@ -796,7 +793,7 @@ void Minimap::Initialize()
 {
     ToolboxWidget::Initialize();
 
-    // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
+    // SettingColor 与 Color 布局兼容；强制转换使注册表能将其持久化为十六进制字符串
     const auto register_color = [this](const char* key, Color* color) {
         SettingsRegistry::RegisterField(this, key, reinterpret_cast<Colors::SettingColor*>(color));
     };
@@ -834,7 +831,7 @@ void Minimap::Initialize()
     symbols_renderer.RegisterSettings(this);
     custom_renderer.RegisterSettings(this);
 
-    for (const char* sub : {"Ranges", "Pings and drawings", "AoE Effects", "Symbols", "Terrain", "Hero flagging"}) {
+    for (const char* sub : {"范围", "标记与绘图", "范围效果", "符号", "地形", "英雄标记"}) {
         SettingsWindow::RegisterSubSection(SettingsName(), sub);
     }
 
@@ -908,7 +905,7 @@ void Minimap::OnUIMessage(GW::HookStatus* status, const GW::UI::UIMessage msgid,
             GameWorldRenderer::TriggerSyncAllMarkers();
             loading = false;
             is_observing = GW::Map::GetIsObserving();
-            // Cycle active quests to cache their markers
+            // 循环激活任务以缓存其标记
             PreloadQuestMarkers();
             pending_refresh_quest_marker = true;
         } break;
@@ -942,7 +939,7 @@ GW::Vec2f Minimap::ShadowstepLocation() const
 void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
 {
     if (GW::Map::GetInstanceType() != GW::Constants::InstanceType::Explorable) {
-        return; // Not explorable - "/flag" can be typed in chat to bypass flag hero buttons, so this is needed.
+        return; // 非探索区域 - "/flag" 可在聊天中输入以绕过标记英雄按钮，因此需要此检查。
     }
     if (argc <= 1) {
         FlagHero(0); // "/flag"
@@ -972,8 +969,8 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
     const std::wstring arg1 = TextUtils::ToLower(argv[1]);
     float x;
     float y;
-    unsigned int n_heros = 0; // Count of heros available
-    unsigned int f_hero = 0;  // Hero number to flag
+    unsigned int n_heros = 0; // 可用英雄数量
+    unsigned int f_hero = 0;  // 要标记的英雄编号
     if (arg1 == L"all" || arg1 == L"0") {
         if (argc < 3) {
             FlagHero(0); // "/flag all" == "/flag"
@@ -995,7 +992,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
             return;
         }
         if (argc < 4 || !TextUtils::ParseFloat(argv[2], &x) || !TextUtils::ParseFloat(argv[3], &y)) {
-            Log::Error("Please provide command in format /flag all [x] [y]"); // Not enough args or coords not valid float vals.
+            Log::Error("请提供格式为 /flag all [x] [y] 的命令"); // 参数不足或坐标不是有效浮点数
             return;
         }
         GW::PartyMgr::FlagAll(GW::GamePos(x, y, 0)); // "/flag all -2913.41 3004.78"
@@ -1007,7 +1004,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
         n_heros = heroarray.size();
     }
     if (n_heros < 1) {
-        return; // Player has no heroes, so no need to continue.
+        return; // 玩家没有英雄，无需继续
     }
     if (arg1 == L"clear") {
         for (unsigned int i = 1; i <= n_heros; ++i) {
@@ -1017,8 +1014,8 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
         return;
     }
     if (!TextUtils::ParseUInt(argv[1], &f_hero) || f_hero < 1 || f_hero > n_heros) {
-        Log::Error("Invalid hero number");
-        return; // Invalid hero number
+        Log::Error("无效的英雄编号");
+        return; // 无效的英雄编号
     }
     if (argc < 3) {
         FlagHero(f_hero); // "/flag 5"
@@ -1040,7 +1037,7 @@ void CHAT_CMD_FUNC(Minimap::OnFlagHeroCmd)
         return;
     }
     if (argc < 4 || !TextUtils::ParseFloat(argv[2], &x) || !TextUtils::ParseFloat(argv[3], &y)) {
-        Log::Error("Please provide command in format /flag [hero number] [x] [y]"); // Invalid coords
+        Log::Error("请提供格式为 /flag [英雄编号] [x] [y] 的命令"); // 坐标无效
         return;
     }
     GW::PartyMgr::FlagHero(f_hero, GW::GamePos(x, y, 0)); // "/flag 5 -2913.41 3004.78"
@@ -1051,25 +1048,25 @@ void Minimap::DrawSettingsInternal()
     if (snap_to_compass) {
         ImGui::NextSpacedElement();
     }
-    if (ImGui::Checkbox("Snap to GW compass", &snap_to_compass)) {
+    if (ImGui::Checkbox("吸附到游戏罗盘", &snap_to_compass)) {
         compass_position_dirty = true;
     }
-    ImGui::ShowHelp("Resize and position minimap to match in-game compass size and position.");
-    ImGui::Checkbox("Hide GW compass agents", &hide_compass_agents);
-    if (ImGui::Checkbox("Hide GW compass quest marker", &hide_compass_quest_marker)) {
+    ImGui::ShowHelp("调整小地图大小和位置以匹配游戏内罗盘大小和位置。");
+    ImGui::Checkbox("隐藏游戏罗盘单位", &hide_compass_agents);
+    if (ImGui::Checkbox("隐藏游戏罗盘任务标记", &hide_compass_quest_marker)) {
         pending_refresh_quest_marker = true;
     }
-    ImGui::ShowHelp("To disable the toolbox minimap quest marker, set the quest marker color to transparent in the Symbols section below.");
-    ImGui::CheckboxWithHelp("Draw all quest markers", &render_all_quests, "Draw quest markers for all quests in your quest log, not just the active quest");
+    ImGui::ShowHelp("要禁用工具箱小地图任务标记，请在下面的“符号”部分将任务标记颜色设为透明。");
+    ImGui::CheckboxWithHelp("绘制所有任务标记", &render_all_quests, "为任务日志中的所有任务绘制任务标记，而不仅仅是激活的任务");
 
-    ImGui::CheckboxWithHelp("Hide GW compass drawings", &hide_compass_drawings, "Drawings made by other players will be visible on the minimap, but not the compass");
-    if (ImGui::Checkbox("Hide GW compass when minimap is visible", &hide_compass_when_minimap_draws)) {
+    ImGui::CheckboxWithHelp("隐藏游戏罗盘绘图", &hide_compass_drawings, "其他玩家绘制的标记将显示在小地图上，但不显示在罗盘上");
+    if (ImGui::Checkbox("小地图可见时隐藏游戏罗盘", &hide_compass_when_minimap_draws)) {
         GW::GameThread::Enqueue(OverrideCompassVisibility);
     }
-    if (ImGui::Checkbox("Hide GW compass flagging controls", &hide_flagging_controls)) {
+    if (ImGui::Checkbox("隐藏游戏罗盘标记控件", &hide_flagging_controls)) {
         hide_flagging_controls_patch.TogglePatch(hide_flagging_controls);
     }
-    ImGui::ShowHelp("Takes effect on map change. Doesn't work in PvP as Toolbox is disabled there.");
+    ImGui::ShowHelp("在地图切换时生效。在 PvP 中无效，因为工具箱在那里被禁用。");
 
     is_movable = is_resizable = !snap_to_compass;
     if (is_resizable) {
@@ -1077,88 +1074,88 @@ void Minimap::DrawSettingsInternal()
         if (const auto window = ImGui::FindWindowByName(Name())) {
             winsize = window->Size;
         }
-        if (ImGui::DragFloat("Size", &winsize.x, 1.0f, 0.0f, 0.0f, "%.0f")) {
+        if (ImGui::DragFloat("大小", &winsize.x, 1.0f, 0.0f, 0.0f, "%.0f")) {
             winsize.y = winsize.x;
             ImGui::SetWindowSize(Name(), winsize);
         }
     }
 
-    ImGui::Text("General");
+    ImGui::Text("常规");
     static float a = scale;
-    if (ImGui::DragFloat("Scale", &a, 0.01f, 0.1f, 10.f)) {
+    if (ImGui::DragFloat("缩放", &a, 0.01f, 0.1f, 10.f)) {
         scale = a;
     }
-    ImGui::Text("You can set the color alpha to 0 to disable any minimap feature.");
-    // agent_rendered has its own TreeNodes
+    ImGui::Text("你可以将颜色 Alpha 设为 0 以禁用任何小地图功能。");
+    // agent_renderer 有自己的树节点
     agent_renderer.DrawSettings();
-    if (SettingsWindow::SubSectionHeader(SettingsName(), "Ranges")) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "范围")) {
         range_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (SettingsWindow::SubSectionHeader(SettingsName(), "Pings and drawings")) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "标记与绘图")) {
         pingslines_renderer.DrawSettings();
         ImGui::TreePop();
     }
-    if (SettingsWindow::SubSectionHeader(SettingsName(), "AoE Effects")) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "范围效果")) {
         EffectRenderer::DrawSettings();
         ImGui::TreePop();
     }
-    if (SettingsWindow::SubSectionHeader(SettingsName(), "Symbols")) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "符号")) {
         symbols_renderer.DrawSettings();
         ImGui::Separator();
-        ImGui::Text("Cardinal (N/S/E/W) directions");
-        Colors::DrawSettingHueWheel("Color##cardinal", &cardinal_color);
-        ImGui::ShowHelp("Colour of the N/S/E/W labels shown at the compass edge.");
-        ImGui::SliderFloat("Offset##cardinal", &cardinal_offset, -1000.f, 1000.f, "%.0f gwinches");
-        ImGui::ShowHelp("Game-unit offset from the compass edge.\nPositive = outward, negative = inward.");
-        ImGui::SliderFloat("Font size##cardinal", &cardinal_font_size, 16.f, 56.f, "%.0f px");
+        ImGui::Text("方向（北/南/东/西）");
+        Colors::DrawSettingHueWheel("颜色##cardinal", &cardinal_color);
+        ImGui::ShowHelp("罗盘边缘显示的北/南/东/西标签颜色。");
+        ImGui::SliderFloat("偏移##cardinal", &cardinal_offset, -1000.f, 1000.f, "%.0f 游戏单位");
+        ImGui::ShowHelp("从罗盘边缘的游戏单位偏移。\n正 = 向外，负 = 向内。");
+        ImGui::SliderFloat("字体大小##cardinal", &cardinal_font_size, 16.f, 56.f, "%.0f px");
         ImGui::TreePop();
     }
-    if (SettingsWindow::SubSectionHeader(SettingsName(), "Terrain")) {
-        ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "地形")) {
+        ImGui::SmallConfirmButton("恢复默认", "确定吗？", [&](bool result, void*) {
             if (result) {
                 color_map = 0xFF999999;
                 color_mapshadow = 0xFF120808;
                 color_mapbackground = 0x00000000;
             }
         });
-        Colors::DrawSettingHueWheel("Map", &color_map);
-        Colors::DrawSettingHueWheel("Shadow", &color_mapshadow);
-        Colors::DrawSettingHueWheel("Background", &color_mapbackground);
+        Colors::DrawSettingHueWheel("地图", &color_map);
+        Colors::DrawSettingHueWheel("阴影", &color_mapshadow);
+        Colors::DrawSettingHueWheel("背景", &color_mapbackground);
         ImGui::TreePop();
     }
     custom_renderer.DrawSettings();
-    if (SettingsWindow::SubSectionHeader(SettingsName(), "Hero flagging")) {
-        ImGui::Checkbox("Show hero flag controls", &hero_flag_controls_show);
-        ImGui::CheckboxWithHelp("Attach to minimap", &hero_flag_window_attach, "If disabled, you can move/resize the window with 'Unlock Move All'.");
-        Colors::DrawSettingHueWheel("Background", &hero_flag_controls_background);
+    if (SettingsWindow::SubSectionHeader(SettingsName(), "英雄标记")) {
+        ImGui::Checkbox("显示英雄标记控件", &hero_flag_controls_show);
+        ImGui::CheckboxWithHelp("吸附到小地图", &hero_flag_window_attach, "如果禁用，你可以通过“解锁全部移动”来移动/调整窗口大小。");
+        Colors::DrawSettingHueWheel("背景", &hero_flag_controls_background);
         ImGui::TreePop();
     }
     ImGui::StartSpacedElements(300.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Color enemies by profession", &agent_renderer.enemies_colors_by_profession);
+    ImGui::Checkbox("按职业颜色标记敌人", &agent_renderer.enemies_colors_by_profession);
     if (agent_renderer.enemies_colors_by_profession) {
         ImGui::Indent();
-        if (ImGui::RadioButton("Color only bosses", agent_renderer.only_color_bosses == true)) {
+        if (ImGui::RadioButton("仅为首领着色", agent_renderer.only_color_bosses == true)) {
             agent_renderer.only_color_bosses = true;
         }
-        if (ImGui::RadioButton("Color all enemies", agent_renderer.only_color_bosses == false)) {
+        if (ImGui::RadioButton("为所有敌人着色", agent_renderer.only_color_bosses == false)) {
             agent_renderer.only_color_bosses = false;
         }
-        if (ImGui::TreeNodeEx("Profession colors", ImGuiTreeNodeFlags_FramePadding)) {
+        if (ImGui::TreeNodeEx("职业颜色", ImGuiTreeNodeFlags_FramePadding)) {
             constexpr uint32_t color_flags = ImGuiColorEditFlags_NoInputs;
             static const char* prof_names[] = {
-                nullptr,        // 0 = None, hidden
-                "Warrior",      // 1
-                "Ranger",       // 2
-                "Monk",         // 3
-                "Necromancer",  // 4
-                "Mesmer",       // 5
-                "Elementalist", // 6
-                "Assassin",     // 7
-                "Ritualist",    // 8
-                "Paragon",      // 9
-                "Dervish",      // 10
+                nullptr,        // 0 = 无，隐藏
+                "战士",         // 1
+                "游侠",         // 2
+                "僧侣",         // 3
+                "死灵法师",     // 4
+                "幻术师",       // 5
+                "元素使",       // 6
+                "刺客",         // 7
+                "祭祀",         // 8
+                "圣言者",       // 9
+                "神唤使",       // 10
             };
             ImGui::StartSpacedElements(180.f);
             for (size_t i = 1; i < _countof(prof_names); ++i) {
@@ -1171,42 +1168,42 @@ void Minimap::DrawSettingsInternal()
         ImGui::StartSpacedElements(300.f);
     }
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show hidden NPCs", &agent_renderer.show_hidden_npcs, "Show NPCs that aren't usually visible on the minimap\ne.g. minipets, invisible NPCs");
+    ImGui::CheckboxWithHelp("显示隐藏的 NPC", &agent_renderer.show_hidden_npcs, "显示通常在小地图上不可见的 NPC\n例如小宠物、隐形 NPC");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show symbol for quest NPCs", &agent_renderer.show_quest_npcs_on_minimap, "Show a star for NPCs that have quest progress available");
+    ImGui::CheckboxWithHelp("显示任务 NPC 符号", &agent_renderer.show_quest_npcs_on_minimap, "为有任务进度的 NPC 显示星星");
 
-    ImGui::SliderFloat("Agent Border thickness", &agent_renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
-    ImGui::SliderFloat("Target Border thickness", &agent_renderer.target_border_thickness, 0.f, 100.f, "%.0f");
+    ImGui::SliderFloat("单位边框粗细", &agent_renderer.agent_border_thickness, 0.f, 100.f, "%.0f");
+    ImGui::SliderFloat("目标边框粗细", &agent_renderer.target_border_thickness, 0.f, 100.f, "%.0f");
 
-    ImGui::Text("Allow mouse click-through in:");
+    ImGui::Text("允许鼠标点击穿透：");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Explorable areas", &mouse_clickthrough_in_explorable);
+    ImGui::Checkbox("探索区域", &mouse_clickthrough_in_explorable);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Outposts", &mouse_clickthrough_in_outpost);
+    ImGui::Checkbox("前哨站", &mouse_clickthrough_in_outpost);
 
     ImGui::Unindent();
-    ImGui::Text("Hold + Click modifiers");
+    ImGui::Text("按住 + 点击修饰键");
     ImGui::SameLine();
-    ImGui::TextDisabled(" - Define behaviour of holding keyboard keys and clicking the minimap.");
+    ImGui::TextDisabled(" - 定义按住键盘按键并点击小地图时的行为。");
     ImGui::Indent();
     ImGui::PushItemWidth(140.f);
-    ImGui::TextUnformatted("Draw: ");
-    ImGui::ShowHelp("Ping and draw on the compass.");
+    ImGui::TextUnformatted("绘制：");
+    ImGui::ShowHelp("在罗盘上标记和绘制。");
     ImGui::SameLine(140.f);
     ImGui::Combo("##Draw_key", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Draw]), available_modifiers_combo, _countof(available_modifiers_combo));
-    ImGui::TextUnformatted("Target: ");
-    ImGui::ShowHelp("Click to target agents.");
+    ImGui::TextUnformatted("目标：");
+    ImGui::ShowHelp("点击选择单位。");
     ImGui::SameLine(140.f);
     ImGui::Combo("##Target", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Target]), available_modifiers_combo, _countof(available_modifiers_combo));
-    ImGui::CheckboxWithHelp("Target gadgets", &target_gadgets_on_ctrl_click, "Allow clicking the minimap to target gadgets (e.g. chests, signposts) as well as living agents.");
-    ImGui::TextUnformatted("Drag: ");
-    ImGui::ShowHelp("Drag the minimap outside of compass range.");
+    ImGui::CheckboxWithHelp("选择设备", &target_gadgets_on_ctrl_click, "允许点击小地图选择设备（如宝箱、路标）以及活体单位。");
+    ImGui::TextUnformatted("拖动：");
+    ImGui::ShowHelp("在罗盘范围外拖动小地图。");
     ImGui::SameLine(140.f);
     ImGui::Combo("##Drag", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::Drag]), available_modifiers_combo, _countof(available_modifiers_combo));
-    ImGui::TextUnformatted("MoveTo: ");
-    ImGui::ShowHelp("Start walking character to selected location.");
+    ImGui::TextUnformatted("移动至：");
+    ImGui::ShowHelp("开始移动角色到所选位置。");
     ImGui::SameLine(140.f);
     ImGui::Combo("##MoveTo", reinterpret_cast<int*>(&MinimapModifierBehaviour_Keymap[MinimapModifierBehaviour::MoveTo]), available_modifiers_combo, _countof(available_modifiers_combo));
     ImGui::PopItemWidth();
@@ -1214,15 +1211,15 @@ void Minimap::DrawSettingsInternal()
 
     ImGui::StartSpacedElements(256.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Reduce agent ping spam", &pingslines_renderer.reduce_ping_spam, "Additional pings on the same agents will increase the duration of the existing ping, rather than create a new one.");
+    ImGui::CheckboxWithHelp("减少单位标记垃圾信息", &pingslines_renderer.reduce_ping_spam, "对同一单位的额外标记将增加现有标记的持续时间，而不是创建新标记。");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Map Rotation", &rotate_minimap, "Map rotation on (e.g. Compass), or off (e.g. Mission Map).");
+    ImGui::CheckboxWithHelp("地图旋转", &rotate_minimap, "地图旋转开启（如罗盘），或关闭（如任务地图）。");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Flip when reversed", &flip_on_reverse, "Whether the minimap rotation should flip 180 degrees when you reverse your camera.");
+    ImGui::CheckboxWithHelp("反向时翻转", &flip_on_reverse, "当你反向相机时小地图旋转是否应翻转 180 度。");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Map rotation smoothing", &smooth_rotation, "Minimap rotation speed matches compass rotation speed.");
+    ImGui::CheckboxWithHelp("地图旋转平滑", &smooth_rotation, "小地图旋转速度匹配罗盘旋转速度。");
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Circular", &circular_map, "Whether the map should be circular like the compass (default) or a square.");
+    ImGui::CheckboxWithHelp("圆形", &circular_map, "地图是否应为圆形（默认，如罗盘）还是方形。");
 }
 
 void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
@@ -1230,13 +1227,13 @@ void Minimap::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     ToolboxWidget::LoadSettings(doc, legacy);
     std::error_code ec;
     if (!std::filesystem::exists(Resources::GetSettingFile(L"Markers.json"), ec)) {
-        // No Markers.json yet; fetch the legacy ini if needed and parse it via the ini fallback. TODO: download Markers.json once it exists on master.
+        // 尚无 Markers.json；如有需要，获取旧版 ini 并通过 ini 回退解析。TODO：一旦 master 上存在 Markers.json，下载它。
         Resources::EnsureFileExists(Resources::GetPath(L"Markers.ini"), "https://raw.githubusercontent.com/gwdevhub/GWToolboxpp/master/resources/Markers.ini", [](const bool success, const std::wstring& error) {
             if (success) {
                 Instance().custom_renderer.LoadMarkers();
             }
             else {
-                Log::ErrorW(L"Failed to download Markers.ini\n%s", error.c_str());
+                Log::ErrorW(L"下载 Markers.ini 失败\n%s", error.c_str());
             }
         });
     }
@@ -1328,7 +1325,7 @@ void Minimap::Draw(IDirect3DDevice9* device)
         return;
     }
 
-    // Check shadowstep location
+    // 检查暗影步位置
     if (shadowstep_location.x != 0.0f || shadowstep_location.y != 0.0f) {
         GW::EffectArray* effects = GW::Effects::GetPlayerEffects();
         if (!effects) {
@@ -1348,7 +1345,7 @@ void Minimap::Draw(IDirect3DDevice9* device)
         }
     }
 
-    // if not center and want to move, move center towards player
+    // 如果不居中且想要移动，将中心移向玩家
     if ((translation.x != 0 || translation.y != 0) && (me->move_x != 0 || me->move_y != 0) && TIMER_DIFF(last_moved) > ms_before_back) {
         const GW::Vec2f v(translation.x, translation.y);
         const auto speed = std::min(static_cast<float>(TIMER_DIFF(last_moved) - ms_before_back) * acceleration, 500.0f);
@@ -1375,7 +1372,7 @@ void Minimap::Draw(IDirect3DDevice9* device)
         compass_position_dirty = false;
     }
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(win_flags, true))) {
-        // window pos are already rounded by imgui, so casting is no big deal
+        // ImGui 已对窗口位置四舍五入，因此转换无大碍
         if (!snap_to_compass) {
             default_minimap_context.move_to(ImGui::GetWindowPos());
             default_minimap_context.resize(ImGui::GetWindowSize());
@@ -1388,7 +1385,7 @@ void Minimap::Draw(IDirect3DDevice9* device)
 
     const auto sz = default_minimap_context.size();
     default_minimap_context.anchor_point = {default_minimap_context.top_left.x + sz.x * 0.5f, default_minimap_context.top_left.y + sz.y * 0.5f};
-    // Scale the minimap relative to the window width
+    // 相对于窗口宽度缩放小地图
     default_minimap_context.base_scale = sz.x;
 
     default_minimap_context.rotation = GetMapRotation();
@@ -1407,8 +1404,8 @@ void Minimap::Draw(IDirect3DDevice9* device)
                 ImGui::SetNextWindowSize(ImVec2(default_minimap_context.width(), 40.0f));
             }
             ImGui::PushStyleColor(ImGuiCol_WindowBg, ImColor(hero_flag_controls_background).Value);
-            if (ImGui::Begin("Hero Controls", nullptr, GetWinFlags(hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
-                static const char* flag_txt[] = {"All", "1", "2", "3", "4", "5", "6", "7", "8"};
+            if (ImGui::Begin("英雄控件", nullptr, GetWinFlags(hero_flag_window_attach ? ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove : 0, false))) {
+                static const char* flag_txt[] = {"全部", "1", "2", "3", "4", "5", "6", "7", "8"};
                 const unsigned int num_heroflags = player_heroes.size() + 1;
                 const float w_but = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * static_cast<float>(num_heroflags)) / static_cast<float>(num_heroflags + 1);
 
@@ -1428,7 +1425,6 @@ void Minimap::Draw(IDirect3DDevice9* device)
                         else {
                             SetFlaggingState(static_cast<FlaggingState>(i));
                         }
-                        // flagging[i] ^= 1;
                     }
                     if (is_flagging) {
                         ImGui::PopStyleColor();
@@ -1444,7 +1440,7 @@ void Minimap::Draw(IDirect3DDevice9* device)
                     }
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Clear", ImVec2(-1, 0))) {
+                if (ImGui::Button("清除", ImVec2(-1, 0))) {
                     GW::PartyMgr::UnflagAll();
                 }
             }
@@ -1498,7 +1494,7 @@ bool Minimap::ShouldMarkersDrawOnMap()
 
 bool Minimap::ShouldDrawAllQuests()
 {
-    // NB: Drawing all quest markers is unstable; there are a bunch of times when the quest marker is stale and we don't know about it. Disable unless debug.
+    // 注意：绘制所有任务标记不稳定；任务标记过时的情况很多且我们无法得知。除非调试，否则禁用。
     return render_all_quests;
 }
 
@@ -1517,13 +1513,13 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         return;
     }
 
-    // Backup the DX9 state
+    // 备份 DX9 状态
     IDirect3DStateBlock9* d3d9_state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0) {
         return;
     }
 
-    // Backup the DX9 transform
+    // 备份 DX9 变换
     D3DMATRIX reset_world;
     D3DMATRIX reset_view;
     D3DMATRIX reset_projection;
@@ -1531,11 +1527,11 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     device->GetTransform(D3DTS_VIEW, &reset_view);
     device->GetTransform(D3DTS_PROJECTION, &reset_projection);
 
-    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
+    // 设置渲染状态：固定管道、Alpha 混合、无面剔除、无深度测试
     device->SetIndices(nullptr);
     device->SetFVF(D3DFVF_CUSTOMVERTEX);
     device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, true);
-    device->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, true); // MULTISAMPLEANTIALIAS alone doesn't smooth native D3DPT_LINELIST/LINESTRIP draws (range rings, custom lines/polygons, ping lines)
+    device->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, true); // 仅 MULTISAMPLEANTIALIAS 不足以平滑本地 D3DPT_LINELIST/LINESTRIP 绘制（范围环、自定义线/多边形、标记线）
     device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
     device->SetPixelShader(nullptr);
     device->SetVertexShader(nullptr);
@@ -1571,17 +1567,17 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         device->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, res, vertices, sizeof(D3DVertex));
     };
 
-    // Use context instead of RenderSetupProjection()
+    // 使用上下文而非 RenderSetupProjection()
     RenderSetupProjection(device, context);
 
-    // Use context background color (or from pmap_renderer if 0)
+    // 使用上下文背景色（若为 0 则使用 pmap_renderer 的）
     auto& instance = Instance();
-    // Use context clipping rect instead of global
+    // 使用上下文裁剪矩形而非全局
     const auto rect = context.rect();
     device->SetScissorRect(&rect);
     device->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
 
-    // Use context.circular_map instead of global
+    // 使用 context.circular_map 而非全局
     if (context.draw_background) {
         if (context.circular_map) {
             device->SetRenderState(D3DRS_STENCILENABLE, true);
@@ -1607,13 +1603,13 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
 
     auto translate_char = DirectX::XMMatrixTranslation(-me->pos.x, -me->pos.y, 0);
 
-    // Use context.rotation instead of GetMapRotation()
+    // 使用 context.rotation 而非 GetMapRotation()
     const auto rotate_char = DirectX::XMMatrixRotationZ(-context.rotation + DirectX::XM_PIDIV2);
 
-    // Use context.zoom_scale instead of global scale
+    // 使用 context.zoom_scale 而非全局 scale
     const auto scaleM = DirectX::XMMatrixScaling(context.zoom_scale, context.zoom_scale, 1.0f);
 
-    // Use context.translation instead of global translation
+    // 使用 context.translation 而非全局 translation
     const auto translationM = DirectX::XMMatrixTranslation(context.translation.x, context.translation.y, 0);
 
     const auto view = translate_char * rotate_char * scaleM * translationM;
@@ -1632,7 +1628,7 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
 
 
 
-    // Move the rings to the char position
+    // 将范围环移动到角色位置
     if (context.draw_ranges) {
         translate_char = DirectX::XMMatrixTranslation(me->pos.x, me->pos.y, 0);
         device->SetTransform(D3DTS_WORLD, reinterpret_cast<const D3DMATRIX*>(&translate_char));
@@ -1641,7 +1637,7 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
     }
 
 
-    // Use context.draw_center_marker or check context.translation
+    // 使用 context.draw_center_marker 或检查 context.translation
     if (context.draw_center_marker || context.translation.x) {
         const auto view2 = scaleM;
         device->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&view2));
@@ -1670,12 +1666,12 @@ void Minimap::Render(IDirect3DDevice9* device, const MinimapRenderContext& conte
         device->SetRenderState(D3DRS_STENCILENABLE, false);
     }
 
-    // Restore the DX9 transform
+    // 恢复 DX9 变换
     device->SetTransform(D3DTS_WORLD, &reset_world);
     device->SetTransform(D3DTS_VIEW, &reset_view);
     device->SetTransform(D3DTS_PROJECTION, &reset_projection);
 
-    // Restore the DX9 state
+    // 恢复 DX9 状态
     d3d9_state_block->Apply();
     d3d9_state_block->Release();
 }
@@ -1723,7 +1719,7 @@ bool Minimap::WndProc(const UINT Message, const WPARAM wParam, const LPARAM lPar
         return false;
     }
     if (ShouldClickThrough() && !IsAnyModifierKeyDown()) {
-        // Even through clickthrough might be disabled, we still allow flags to be placed on the minimap.
+        // 即使点击穿透被禁用，我们仍然允许在小地图上放置标记。
         return Message == WM_LBUTTONDOWN && FlagHeros(lParam);
     }
     switch (Message) {
@@ -1903,7 +1899,7 @@ bool Minimap::OnMouseWheel(const UINT, const WPARAM wParam, const LPARAM)
         return false;
     }
 
-    // Mouse wheel x and y are in absolute coords, not window coords! (Windows why...)
+    // 鼠标滚轮的 x 和 y 是绝对坐标，不是窗口坐标！（Windows 为何如此...）
     const ImVec2 mouse = ImGui::GetMousePos();
     if (!IsInside(static_cast<int>(mouse.x), static_cast<int>(mouse.y))) {
         return false;
@@ -1922,7 +1918,7 @@ bool Minimap::OnMouseWheel(const UINT, const WPARAM wParam, const LPARAM)
 
 bool Minimap::IsInside(const int x, const int y) const
 {
-    // if outside the minimap window rect, return false
+    // 如果在小地图窗口矩形外，返回 false
     const auto& tl = default_minimap_context.top_left;
     const auto& br = default_minimap_context.bottom_right;
     if (static_cast<float>(x) < tl.x || static_cast<float>(x) > br.x ||
@@ -1930,7 +1926,7 @@ bool Minimap::IsInside(const int x, const int y) const
         return false;
     }
 
-    // if centered, use radar range
+    // 如果居中，使用雷达范围
     if (translation.x == 0 && translation.y == 0) {
         const GW::Vec2f gamepos = InterfaceToWorldPoint(Vec2i(x, y));
         const GW::Agent* me = GW::Agents::GetObservingAgent();
@@ -1967,9 +1963,9 @@ void Minimap::RenderSetupProjection(IDirect3DDevice9* device, const MinimapRende
     const float xscale = context.base_scale / width_f;
     const float yscale = context.base_scale / height_f;
 
-    // anchor_point is where world (0,0) maps to on screen.
-    // After the view transform, the player IS at world (0,0),
-    // so this controls where the player appears on screen.
+    // anchor_point 是世界 (0,0) 映射到屏幕的位置。
+    // 在视图变换后，玩家就在世界 (0,0)，
+    // 因此这控制玩家在屏幕上的位置。
     const float xtrans = (context.anchor_point.x * 2.0f) / width_f - 1.0f;
     const float ytrans = -(context.anchor_point.y * 2.0f) / height_f + 1.0f;
 

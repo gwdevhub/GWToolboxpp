@@ -15,7 +15,7 @@ public:
     }
 
 
-    [[nodiscard]] const char* Name() const override { return "Latency"; }
+    [[nodiscard]] const char* Name() const override { return "延迟"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_STOPWATCH; }
 
     struct Settings {

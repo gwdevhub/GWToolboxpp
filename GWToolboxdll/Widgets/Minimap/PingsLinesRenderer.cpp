@@ -23,7 +23,7 @@ namespace {
 
 void PingsLinesRenderer::RegisterSettings(ToolboxModule* module)
 {
-    // SettingColor is layout-compatible with Color; the cast lets the registry persist it as a hex string
+    // SettingColor 与 Color 布局兼容；强制转换使注册表能将其持久化为十六进制字符串
     const auto register_color = [module](const char* key, Color* color) {
         SettingsRegistry::RegisterField(module, key, reinterpret_cast<Colors::SettingColor*>(color));
     };
@@ -40,7 +40,7 @@ void PingsLinesRenderer::RegisterSettings(ToolboxModule* module)
 void PingsLinesRenderer::DrawSettings()
 {
     bool changed = false;
-    ImGui::SmallConfirmButton("Restore Defaults", "Are you sure?", [&](bool result, void*) {
+    ImGui::SmallConfirmButton("恢复默认", "确定吗？", [&](bool result, void*) {
         if (result) {
             color_drawings = Colors::ARGB(0xFF, 0xFF, 0xFF, 0xFF);
             ping_circle.color = Colors::ARGB(128, 255, 0, 0);
@@ -51,16 +51,16 @@ void PingsLinesRenderer::DrawSettings()
             marker.Invalidate();
         }
         });
-    changed |= Colors::DrawSettingHueWheel("Drawings", &color_drawings);
-    changed |= Colors::DrawSettingHueWheel("Pings", &ping_circle.color);
-    changed |= Colors::DrawSettingHueWheel("Shadow Step Marker", &marker.color);
-    changed |= Colors::DrawSettingHueWheel("Shadow Step Line", &color_shadowstep_line);
-    changed |= Colors::DrawSettingHueWheel("Shadow Step Line (Max range)", &color_shadowstep_line_maxrange);
-    if (ImGui::SliderFloat("Max range start", &maxrange_interp_begin, 0.0f, 1.0f)
+    changed |= Colors::DrawSettingHueWheel("绘图", &color_drawings);
+    changed |= Colors::DrawSettingHueWheel("标记", &ping_circle.color);
+    changed |= Colors::DrawSettingHueWheel("暗影步标记", &marker.color);
+    changed |= Colors::DrawSettingHueWheel("暗影步线条", &color_shadowstep_line);
+    changed |= Colors::DrawSettingHueWheel("暗影步线条（最大范围）", &color_shadowstep_line_maxrange);
+    if (ImGui::SliderFloat("最大范围起始", &maxrange_interp_begin, 0.0f, 1.0f)
         && maxrange_interp_end < maxrange_interp_begin) {
         maxrange_interp_end = maxrange_interp_begin;
     }
-    if (ImGui::SliderFloat("Max range end", &maxrange_interp_end, 0.0f, 1.0f)
+    if (ImGui::SliderFloat("最大范围结束", &maxrange_interp_end, 0.0f, 1.0f)
         && maxrange_interp_begin > maxrange_interp_end) {
         maxrange_interp_begin = maxrange_interp_end;
     }
@@ -80,7 +80,7 @@ void PingsLinesRenderer::P046Callback(const GW::Packet::StoC::AgentPinged* pak)
     if (reduce_ping_spam) {
         for (Ping* ping : pings) {
             if (ping->GetAgentID() == pak->agent_id) {
-                // extend the duration to count for the current ping.
+                // 延长持续时间以计入当前标记
                 const clock_t diff = TIMER_DIFF(ping->start);
                 ping->duration = 3000 + diff;
                 found = true;
@@ -171,14 +171,14 @@ void PingsLinesRenderer::Initialize(IDirect3DDevice9* device)
     initialized = true;
     type = D3DPT_LINELIST;
 
-    vertices_max = 0x1000; // support for up to 4096 line segments, should be enough
+    vertices_max = 0x1000; // 支持最多 4096 条线段，应该足够了
 
     vertices = nullptr;
 
     const HRESULT hr = device->CreateVertexBuffer(sizeof(D3DVertex) * vertices_max, 0,
                                                   D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &buffer, nullptr);
     if (FAILED(hr)) {
-        printf("Error setting up PingsLinesRenderer vertex buffer: HRESULT: 0x%lX\n", hr);
+        printf("设置 PingsLinesRenderer 顶点缓冲区时出错：HRESULT: 0x%lX\n", hr);
     }
 }
 
@@ -193,7 +193,7 @@ void PingsLinesRenderer::Render(IDirect3DDevice9* device)
     vertices_count = 0;
     const HRESULT res = buffer->Lock(0, sizeof(D3DVertex) * vertices_max, reinterpret_cast<void**>(&vertices), D3DLOCK_DISCARD);
     if (FAILED(res)) {
-        printf("PingsLinesRenderer Lock() error: HRESULT 0x%lX\n", res);
+        printf("PingsLinesRenderer Lock() 错误：HRESULT 0x%lX\n", res);
     }
 
     DrawShadowstepLine(device);
@@ -277,10 +277,10 @@ void PingsLinesRenderer::DrawDrawings(IDirect3DDevice9*)
             for (const DrawingLine& line : lines) {
                 const uint32_t max_alpha = (color_drawings & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
                 const uint32_t left = static_cast<uint32_t>(drawing_timeout - TIMER_DIFF(line.start));
-                // @Robustness:
-                // This is not safe, casting time to uint32_t is unsafe.
+                // @健壮性：
+                // 这不太安全，将时间强制转换为 uint32_t 是不安全的。
                 if (left > static_cast<uint32_t>(drawing_timeout)) {
-                    continue; // This is actually a negative integer i.e. no time left.
+                    continue; // 这实际上是一个负数，即没有剩余时间。
                 }
                 uint32_t alpha = left * max_alpha / 2000;
                 if (alpha > max_alpha) {
@@ -350,7 +350,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9*)
     const GW::Agent* player = recall && recall->skill_id != GW::Constants::SkillID::No_Skill ? GW::Agents::GetControlledCharacter() : nullptr;
     const GW::Agent* target = player ? GW::Agents::GetAgentByID(recall_target) : nullptr;
     if (target == nullptr) {
-        // This can happen if you recall something that then despawns before you drop recall.
+        // 这可能在召回某个单位后，在取消召回之前该单位消失时发生
         recall_target = 0;
         return;
     }
@@ -376,7 +376,7 @@ void PingsLinesRenderer::DrawRecallLine(IDirect3DDevice9*)
 void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device)
 {
     type = D3DPT_TRIANGLESTRIP;
-    count = 96; // polycount
+    count = 96; // 多边形数量
     const auto vertex_count = count + 2;
     D3DVertex* _vertices = nullptr;
 
@@ -406,7 +406,7 @@ void PingsLinesRenderer::PingCircle::Initialize(IDirect3DDevice9* device)
 void PingsLinesRenderer::Marker::Initialize(IDirect3DDevice9* device)
 {
     type = D3DPT_TRIANGLEFAN;
-    count = 16; // polycount
+    count = 16; // 多边形数量
     const unsigned int vertex_count = count + 2;
     D3DVertex* _vertices = nullptr;
 
@@ -486,7 +486,7 @@ bool PingsLinesRenderer::OnMouseMove(const float x, const float y)
 
     drawings[my_player_id].player = my_player_id;
     if (!mouse_moved) {
-        // first time
+        // 第一次
         mouse_moved = true;
         BumpSessionID();
         drawings[my_player_id].session = static_cast<DWORD>(session_id);

@@ -16,7 +16,7 @@
 #include <Utils/TerrainDrape.h>
 #include <Widgets/Minimap/GameWorldRenderer.h>
 #include <Widgets/Minimap/Minimap.h>
-#include <Windows/Pathfinding/NavMesh.h>           // per-sample plane resolution for path/overlay draping
+#include <Windows/Pathfinding/NavMesh.h>           // 用于路径/覆盖层悬挂的每采样平面分辨率
 #include <Windows/Pathfinding/PathfindingWindow.h> // GetResidentNavMesh
 #include <ImGuiAddons.h>
 
@@ -29,22 +29,23 @@ namespace {
     float fog_factor = 0.5f;
     bool need_sync_markers = true;
     bool render_under_ui = true;
-    // Stencil the round compass out of overlays so they don't bleed across the minimap.
+    // 使用模板将圆形罗盘从小地图覆盖层中剔除，防止它们渗透到整个小地图上。
     bool exclude_compass = true;
 
-    // Test overlays against the scene depth buffer so world geometry hides them.
+    // 根据场景深度缓冲区测试覆盖层，使世界几何体遮挡它们。
     bool occlude_behind_terrain = false;
 
 
     GameWorldRenderer::RenderableVectors renderables;
     std::mutex renderables_mutex{};
 
-    // Hash index over `renderables`, rebuilt per sync, so the Sync* passes reuse already-draped polys in O(1) instead of O(N^2) matching (which froze the compositor draw on the navmesh overlay's thousands of edges).
+    // 对 `renderables` 的哈希索引，每次同步时重建，以便 Sync* 传递以 O(1) 而非 O(N^2) 的方式重用已悬挂的多边形
+    //（而 O(N^2) 匹配会导致导航网格覆盖层数千条边上的合成器绘制冻结）。
     std::unordered_multimap<uint64_t, size_t> renderable_index;
 
     uint64_t PolyMatchKey(const GameWorldRenderer::GenericPolyRenderable& p)
     {
-        uint64_t h = 1469598103934665603ull; // FNV-1a over the fields find_matching_poly compares
+        uint64_t h = 1469598103934665603ull; // FNV-1a 对 find_matching_poly 比较的字段
         const auto mix = [&h](uint32_t v) { h = (h ^ v) * 1099511628211ull; };
         mix(static_cast<uint32_t>(p.map_id));
         mix(p.col);
@@ -58,10 +59,10 @@ namespace {
         return h;
     }
 
-    // Token for our under-UI draw registered with the shared compositor (0 = not registered).
+    // 我们注册到共享合成器的 UI 下层绘制令牌（0 = 未注册）。
     int compositor_token = 0;
 
-    // Screen-space circle of GW's compass terrain (inside the frame), or false when hidden. Mirrors Minimap's RepositionMinimapToCompass: inset by compass_padding, square off, inscribe.
+    // 屏幕空间中的游戏罗盘地形圆圈（在框架内部），如果隐藏则返回 false。镜像 Minimap 的 RepositionMinimapToCompass：按 compass_padding 内缩，正方形化，内接。
     bool GetCompassTerrainCircle(float& cx, float& cy, float& radius)
     {
         const auto* frame = GW::UI::GetFrameByLabel(L"Compass");
@@ -86,7 +87,8 @@ namespace {
         return radius > 0.f;
     }
 
-    // Set/clear `bit` in a screen-space disc over the compass terrain (fixed-function) so the overlay can be punched out to the circular minimap; touches only `bit` to spare GW's stencil, leaves pipeline unset for the caller to restore.
+    // 在罗盘地形上的屏幕空间圆盘中设置/清除 `bit`（固定功能），以便将覆盖层挖空成圆形小地图；
+    // 只触及 `bit` 以节省 GW 的模板，让调用者恢复管道。
     void MarkCompassStencil(IDirect3DDevice9* device, const float cx, const float cy, const float radius, const DWORD bit, const bool set)
     {
         struct ScreenVertex { float x, y, z, rhw; };
@@ -121,7 +123,7 @@ namespace {
 
     constexpr auto ALTITUDE_UNKNOWN = std::numeric_limits<float>::max();
 
-    // Highest static surface at (x,y) among candidate planes (GW up is -z, so highest = min altitude). QueryAltitude returns 0.f out-of-bounds (ignored); ALTITUDE_UNKNOWN if no plane has data.
+    // 候选平面中 (x,y) 处的最高静态表面（GW 的向上是 -z，所以最高 = 最小海拔）。QueryAltitude 对越界返回 0.f（忽略）；若无平面有数据则返回 ALTITUDE_UNKNOWN。
     float HighestSurfaceZ(const float x, const float y, const std::vector<uint32_t>& planes)
     {
         float best = ALTITUDE_UNKNOWN;
@@ -133,7 +135,9 @@ namespace {
         return best;
     }
 
-    // Surface altitude at (x,y) closest to `prev` over all planes (continuity tracking): the line follows whichever surface it walks (deck/ramp/ground), so a straight visgraph edge rides a bridge instead of cutting through, and unlike "highest wins" never floats a ground sample onto an overhead deck. 0.f is out-of-bounds (skipped); ALTITUDE_UNKNOWN if no data.
+    // 所有平面中最接近 `prev` 的表面海拔（连续性追踪）：线条跟随它行走的任何表面（甲板/坡道/地面），
+    // 因此一条笔直的可视图边会骑在桥上而不是穿过去，并且不同于“最高胜出”不会将地面样本浮动到头顶甲板上。
+    // 0.f 是越界（跳过）；若无数据则返回 ALTITUDE_UNKNOWN。
     float ClosestSurfaceZ(const float x, const float y, const uint32_t num_planes, const float prev)
     {
         float best = ALTITUDE_UNKNOWN, best_d = std::numeric_limits<float>::max();
@@ -146,53 +150,53 @@ namespace {
         return best;
     }
 
-    // ===== Batched navmesh-overlay line buffer =====
-    // One line-list buffer for the navmesh overlay's tens of thousands of edges (per-line CustomLines were O(N^2) per map-load and re-draped on every move): drape it incrementally on the game thread, draw in a single call, render-thread only (no mutex).
+    // ===== 批处理导航网格覆盖层线缓冲 =====
+    // 一个用于导航网格覆盖层数万条边的线列表缓冲（逐条 CustomLine 在每次地图加载时是 O(N^2) 且每次移动都重新悬挂）：
+    // 在游戏线程上增量悬挂，单次绘制调用，仅渲染线程（无互斥锁）。
     struct NavmeshBatch {
-        GW::Constants::MapID map_id = GW::Constants::MapID::None;     // map the LIVE verts belong to
-        GW::Constants::MapID pending_map = GW::Constants::MapID::None; // map `lines`/`staging` are being built for
-        std::vector<GameWorldRenderer::BatchedLine> lines; // source segments (game coords + colour) being draped
-        std::vector<D3DVertex> verts;                      // LIVE draped line-list vertices (drawn)
-        std::vector<D3DVertex> staging;                    // next set, draped incrementally; swapped in when done
-        size_t build_cursor = 0;                           // next source line to drape into staging
-        bool building = false;                             // a staging build is in progress
+        GW::Constants::MapID map_id = GW::Constants::MapID::None;     // 实时顶点所属的地图
+        GW::Constants::MapID pending_map = GW::Constants::MapID::None; // 正在为 `lines`/`staging` 构建的地图
+        std::vector<GameWorldRenderer::BatchedLine> lines; // 源段（游戏坐标 + 颜色）正在悬挂
+        std::vector<D3DVertex> verts;                      // 实时悬挂的线列表顶点（绘制）
+        std::vector<D3DVertex> staging;                    // 下一组，增量悬挂；完成后交换
+        size_t build_cursor = 0;                           // 下一个要悬挂到 staging 的源线
+        bool building = false;                             // 正在进行 staging 构建
         IDirect3DVertexBuffer9* vb = nullptr;
-        size_t vb_cap = 0;                                 // capacity in vertices
-        bool vb_dirty = false;                             // verts changed since last upload
+        size_t vb_cap = 0;                                 // 顶点容量
+        bool vb_dirty = false;                             // 自上次上传以来顶点已更改
     };
     NavmeshBatch navmesh_batch;
-    float navmesh_sample_spacing = 5.f; // gw between surface samples when draping overlay edges (user-tunable)
+    float navmesh_sample_spacing = 5.f; // 悬挂覆盖层边时表面采样之间的游戏单位（用户可调）
 
-    // Full mesh (not draped) for the 2D top-down M-key world map. WorldMapWidget redraws these flat each frame.
+    // 用于 2D 俯视图 M 键世界地图的完整网格（未悬挂）。WorldMapWidget 每帧重新绘制这些平面线条。
     std::vector<GameWorldRenderer::BatchedLine> navmesh_worldmap_lines;
     GW::Constants::MapID navmesh_worldmap_map = GW::Constants::MapID::None;
 
-    // Drape a per-frame, wall-clock-bounded slice into `staging`; LIVE `verts` keep drawing until complete, then swap (double-buffer) so a rebuild never blanks the overlay.
+    // 将每帧的、受墙钟限制的切片悬挂到 `staging` 中；实时 `verts` 在完成前持续绘制，然后交换（双缓冲）因此重建不会使覆盖层空白。
     void StepNavmeshBatchBuild()
     {
         auto& b = navmesh_batch;
         if (!b.building) return;
         const GW::PathingMapArray* pm = GW::Map::GetPathingMap();
         const uint32_t num_planes = pm ? static_cast<uint32_t>(pm->size()) : 0;
-        if (!num_planes) return; // pathing map not ready yet; retry next frame
+        if (!num_planes) return; // 路径图尚未就绪；下一帧重试
         const auto budget_timer = TIMER_INIT();
-        const float spacing = std::max(1.f, navmesh_sample_spacing); // user-tunable: smaller = closer to the floor, more verts
+        const float spacing = std::max(1.f, navmesh_sample_spacing); // 用户可调：越小越贴合地面，顶点越多
         for (; b.build_cursor < b.lines.size(); ++b.build_cursor) {
-            if (TIMER_DIFF(budget_timer) >= 2) break; // budget spent; resume next frame
+            if (TIMER_DIFF(budget_timer) >= 2) break; // 预算用尽；下一帧继续
             const auto& ln = b.lines[b.build_cursor];
             const float dx = ln.b.x - ln.a.x, dy = ln.b.y - ln.a.y;
             const int steps = std::max(1, static_cast<int>(std::sqrt(dx * dx + dy * dy) / spacing));
-            // Drape each sample on the edge's OWN plane. A navmesh edge lies on a single trapezoid, so its surface IS
-            // that plane's heightfield (which ramps/steps where the floor does). Querying the plane directly per point —
-            // not the globally-closest surface — makes the line ride that surface: flat stays flat, a ramp rises, a
-            // deck stays on the deck, and an edge under a bridge stays on the ground rather than snapping to the deck.
-            // Sampling density is `spacing` gw; each surface query is exact at that point, so the only error is the chord
-            // between samples — tighten `spacing` to shrink it.
-            const uint32_t plane = ln.a.zplane; // == ln.b.zplane: both verts come from the same trapezoid
+            // 在边自身的平面上对每个采样点进行悬挂。导航网格边位于单个梯形上，因此其表面就是
+            // 该平面的高度场（在地面有斜坡/台阶的地方也是如此）。直接按点查询平面 — 而非全局最近表面 —
+            // 使线条跟随该表面：平坦的保持平坦，斜坡上升，甲板保持在甲板上，桥下的边保持在
+            // 地面而非吸附到甲板。采样密度为 `spacing` 游戏单位；每个表面查询在该点精确，
+            // 因此唯一误差是采样点之间的弦 — 减小 `spacing` 可缩小它。
+            const uint32_t plane = ln.a.zplane; // == ln.b.zplane：两个顶点来自同一梯形
             auto surfaceZ = [&](float x, float y, float fallback) -> float {
                 const float a = TerrainDrape::QueryAltAt(x, y, plane);
-                if (a != 0.f) return a;                                      // edge's plane has floor here (the common case)
-                const float c = ClosestSurfaceZ(x, y, num_planes, fallback); // only at an edge lip with no plane surface
+                if (a != 0.f) return a;                                      // 边所在平面在此有地面（常见情况）
+                const float c = ClosestSurfaceZ(x, y, num_planes, fallback); // 仅在无平面表面的边唇处
                 return c == ALTITUDE_UNKNOWN ? fallback : c;
             };
             float prev = surfaceZ(ln.a.x, ln.a.y, 0.f);
@@ -201,13 +205,13 @@ namespace {
                 const float t = static_cast<float>(s) / static_cast<float>(steps);
                 const float x = ln.a.x + dx * t, y = ln.a.y + dy * t;
                 const float z = surfaceZ(x, y, prev);
-                b.staging.push_back({px, py, pz, ln.color}); // LINELIST: each consecutive pair is one sub-segment
+                b.staging.push_back({px, py, pz, ln.color}); // LINELIST：每对连续顶点是一个子段
                 b.staging.push_back({x, y, z, ln.color});
                 px = x; py = y; pz = z; prev = z;
             }
         }
         if (b.build_cursor >= b.lines.size()) {
-            // Staging complete: swap it in as the live, drawn set (atomic — no blank frame).
+            // 暂存完成：交换为实时绘制集（原子操作 — 无空白帧）
             b.verts.swap(b.staging);
             b.staging.clear();
             b.map_id = b.pending_map;
@@ -216,7 +220,7 @@ namespace {
         }
     }
 
-    // (Re)create and upload the batch VB when it grew or its contents changed.
+    // 当批处理 VB 增长或内容变化时（重新）创建并上传。
     bool EnsureNavmeshBatchVb(IDirect3DDevice9* device)
     {
         auto& b = navmesh_batch;
@@ -224,7 +228,7 @@ namespace {
         if (need < 2) return false;
         if (!b.vb || b.vb_cap < need) {
             if (b.vb) { b.vb->Release(); b.vb = nullptr; }
-            const size_t cap = need + need / 2; // headroom so the growing build doesn't reallocate every frame
+            const size_t cap = need + need / 2; // 预留空间，使增长构建不会每帧重新分配
             if (device->CreateVertexBuffer(static_cast<UINT>(cap * sizeof(D3DVertex)), D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_MANAGED, &b.vb, nullptr) != D3D_OK) {
                 b.vb_cap = 0;
                 return false;
@@ -234,7 +238,7 @@ namespace {
         }
         if (b.vb_dirty) {
             void* mem = nullptr;
-            // flags=0, not D3DLOCK_DISCARD: DISCARD needs D3DUSAGE_DYNAMIC but this is MANAGED (like RiverModule's VB), and the batch is rebuilt rarely (once per map).
+            // flags=0，不是 D3DLOCK_DISCARD：DISCARD 需要 D3DUSAGE_DYNAMIC，但这是 MANAGED（如 RiverModule 的 VB），且批处理很少重建（每地图一次）。
             if (b.vb->Lock(0, static_cast<UINT>(need * sizeof(D3DVertex)), &mem, 0) != D3D_OK || !mem) return false;
             memcpy(mem, b.verts.data(), need * sizeof(D3DVertex));
             b.vb->Unlock();
@@ -243,7 +247,7 @@ namespace {
         return true;
     }
 
-    // Draw the whole navmesh as one line list (called inside the shared world pipeline, with the compass stencil).
+    // 将整个导航网格绘制为一个线列表（在共享世界管道内调用，带罗盘模板）。
     void DrawNavmeshBatch(IDirect3DDevice9* device, GW::Constants::MapID map_id)
     {
         auto& b = navmesh_batch;
@@ -265,13 +269,13 @@ namespace {
             const auto angle = slice * static_cast<float>(i);
             points.emplace_back(marker.x + size * std::cos(angle), marker.y + size * std::sin(angle), marker.zplane);
         }
-        points.push_back(points.at(0)); // close the loop
+        points.push_back(points.at(0)); // 闭合环路
         return points;
     }
 
     GameWorldRenderer::GenericPolyRenderable* find_matching_poly(const GameWorldRenderer::GenericPolyRenderable& poly_to_find)
     {
-        // Reuse an already-plotted poly (keeps its draped vertex buffer) via the prebuilt index — O(1) average instead of an O(N) scan, so a full sync is O(N) not O(N^2).
+        // 通过预构建索引重用已绘制的多边形（保持其悬挂的顶点缓冲）— 平均 O(1) 而非 O(N) 扫描，因此完整同步是 O(N) 而非 O(N^2)。
         const auto range = renderable_index.equal_range(PolyMatchKey(poly_to_find));
         for (auto it = range.first; it != range.second; ++it) {
             auto& check = renderables[it->second];
@@ -285,18 +289,18 @@ namespace {
                 if (check.points[i] != poly_to_find.points[i]) { same = false; break; }
             }
             if (same) {
-                renderable_index.erase(it); // consume: the caller moves-from it, so it can't be claimed twice
+                renderable_index.erase(it); // 消费：调用者移走它，因此不能再次被认领
                 return &check;
             }
         }
         return nullptr;
     }
 
-    // Compute vertex altitudes (once, requires the correct map) then upload to the device buffer.
+    // 计算顶点海拔（一次，需要正确的地图）然后上传到设备缓冲区。
     bool AddPolyToDevice(GameWorldRenderer::GenericPolyRenderable& poly, IDirect3DDevice9* device)
     {
         if (poly.vb)
-            return true; // vb exists => altitudes already done
+            return true; // vb 存在 => 海拔已计算
         auto& vertices = poly.vertices;
         if (poly.vertices_processed == vertices.size())
             return true;
@@ -306,7 +310,7 @@ namespace {
         const uint32_t num_planes = static_cast<uint32_t>(pathing_map->size());
 
         if (poly.filled) {
-            // Filled shapes are an earcut triangle soup (no vertex order), so no continuity: drape each vertex on the highest surface among the shape's own planes.
+            // 填充形状是耳切三角形汤（无顶点顺序），因此无连续性：将每个顶点悬挂在形状自身平面中的最高表面上。
             std::vector<uint32_t> candidate_planes;
             for (const auto& pt : poly.points) {
                 if (std::ranges::find(candidate_planes, pt.zplane) == candidate_planes.end())
@@ -316,31 +320,31 @@ namespace {
                 vertices[i].z = HighestSurfaceZ(vertices[i].x, vertices[i].y, candidate_planes);
         }
         else {
-            // Ordered, densely-sampled path: drape on the navmesh-walkable plane at each sample (point-location),
-            // choosing the surface closest to the running height. This follows the surface the path actually walks —
-            // e.g. up onto a monument plane between two ground hops — instead of sinking onto the ground beneath it,
-            // which the old all-planes "closest surface" did because plane 0's heightfield still reports the floor
-            // under the monument. Falls back to that all-planes query when the navmesh isn't built yet or no walkable
-            // plane covers the sample (so cross-plane edges with no waypoint on the higher plane still drape sanely).
+            // 有序、密集采样的路径：在每个采样点按导航网格可行走平面悬挂（点定位），
+            // 选择最接近运行高度的表面。这跟随路径实际行走的表面 —
+            // 例如从两次地面跳跃之间上升到纪念碑平面 — 而不是沉入其下方的地面，
+            // 旧的“所有平面最近表面”由于平面 0 的高度场仍报告纪念碑下方的地面而这样做。
+            // 当导航网格尚未构建或没有可行走平面覆盖采样点时，回退到该所有平面查询
+            //（因此没有较高平面路径点的跨平面边仍能合理悬挂）。
             auto* nav = PathfindingWindow::GetResidentNavMesh();
             GW::GamePos seed_pos = poly.points.empty() ? GW::GamePos{} : poly.points.front();
             float prev = TerrainDrape::QueryAltAt(seed_pos.x, seed_pos.y, seed_pos.zplane);
-            if (prev == 0.f) prev = ClosestSurfaceZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // highest surface
+            if (prev == 0.f) prev = ClosestSurfaceZ(seed_pos.x, seed_pos.y, num_planes, -1.0e9f); // 最高表面
             for (size_t i = poly.vertices_processed; i < vertices.size(); i++, poly.vertices_processed++) {
                 float z;
                 if (nav) {
                     z = nav->DrapeHeightAt(vertices[i].x, vertices[i].y, prev);
-                    if (z == ALTITUDE_UNKNOWN) z = prev; // over a gap with no walkable poly: hold height, don't sink to the ground
+                    if (z == ALTITUDE_UNKNOWN) z = prev; // 在无可行走多边形的间隙中：保持高度，不沉到地面
                 }
                 else {
-                    z = ClosestSurfaceZ(vertices[i].x, vertices[i].y, num_planes, prev); // navmesh not built yet
+                    z = ClosestSurfaceZ(vertices[i].x, vertices[i].y, num_planes, prev); // 导航网格尚未构建
                 }
                 if (z != ALTITUDE_UNKNOWN) prev = z;
                 vertices[i].z = z;
             }
         }
 
-        // Backfill no-data vertices by holding the last known altitude so the line never spikes off-screen.
+        // 回填无数据顶点的海拔，保持最后已知海拔，使线条不会跳到屏幕外。
         float fill = ALTITUDE_UNKNOWN;
         for (const auto& v : vertices)
             if (v.z != ALTITUDE_UNKNOWN) { fill = v.z; break; }
@@ -393,7 +397,7 @@ GameWorldRenderer::GenericPolyRenderable::~GenericPolyRenderable() noexcept
 void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 {
     if (vertices.empty()) {
-        if (filled && points.size() >= 3) { // need >= 3 points for one triangle
+        if (filled && points.size() >= 3) { // 至少需要 3 个点才能形成一个三角形
             std::vector<GW::GamePos> lerp_points{};
             for (size_t i = 0; i < points.size(); i++) {
                 if (!lerp_points.empty() && lerp_steps_per_line > 0) {
@@ -412,7 +416,7 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
             }
         }
         else {
-            // Sample each segment ~every 50 gwinches so a slope/stairs/bridge between hops follows the surface instead of a straight chord; lerp_steps_per_line is the floor. Plane draping is resolved in AddPolyToDevice.
+            // 大约每 50 游戏单位采样一个段，使斜坡/楼梯/桥梁在跳跃之间跟随表面而不是直线弦；lerp_steps_per_line 是下限。平面悬挂在 AddPolyToDevice 中解析。
             constexpr float sample_spacing = 50.f;
             for (size_t i = 0; i < points.size(); i++) {
                 const auto& pt = points[i];
@@ -435,9 +439,9 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 
     if (from_player_pos && vertices.size() > 1) {
         if (const auto player = GW::Agents::GetControlledCharacter()) {
-            // Re-anchor the leading line to the player's live position each frame and drape on the navmesh-walkable
-            // plane at each sample, seeded from player->z (reliable even when the reported plane reads 0). This rides
-            // the surface the player actually walks (up a monument/ramp between hops) instead of the ground beneath.
+            // 将引导线重新锚定到玩家的实时位置，并在每个采样点按导航网格可行走平面悬挂，
+            // 从 player->z 开始（即使报告的平面读数为 0 也是可靠的）。这跟随玩家实际行走的表面
+            //（在跳跃之间上升纪念碑/坡道）而不是下方的地面。
             const float ex = vertices.back().x, ey = vertices.back().y;
             const GW::PathingMapArray* pathing_map = GW::Map::GetPathingMap();
             const uint32_t num_planes = pathing_map ? static_cast<uint32_t>(pathing_map->size()) : 0;
@@ -451,10 +455,10 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
                 float z;
                 if (nav) {
                     z = nav->DrapeHeightAt(sx, sy, prev);
-                    if (z == ALTITUDE_UNKNOWN) z = prev; // gap with no walkable poly: hold height, don't sink to the ground
+                    if (z == ALTITUDE_UNKNOWN) z = prev; // 无可行走多边形的间隙：保持高度，不沉到地面
                 }
                 else {
-                    z = num_planes ? ClosestSurfaceZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN; // navmesh not built yet
+                    z = num_planes ? ClosestSurfaceZ(sx, sy, num_planes, prev) : ALTITUDE_UNKNOWN; // 导航网格尚未构建
                 }
                 if (z != ALTITUDE_UNKNOWN) prev = z; else z = prev;
                 vertices[j].x = sx;
@@ -477,11 +481,11 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 
     const BOOL dotted_effect_constant[1] = {static_cast<BOOL>(use_dotted_effect)};
     if (device->SetPixelShaderConstantB(0, dotted_effect_constant, 1) != D3D_OK) {
-        Log::Error("GameWorldRenderer: unable to SetPixelShaderConstantF#3, aborting render.");
+        Log::Error("GameWorldRenderer：无法设置像素着色器常量 B#3，中止渲染。");
         return;
     }
 
-    // Guard the counts: an empty line would underflow vertices.size()-1 (size_t) and crash DrawPrimitive.
+    // 保护计数：空行会使 vertices.size()-1（size_t）下溢并导致 DrawPrimitive 崩溃。
     if (filled) {
         if (vertices.size() >= 3) device->DrawPrimitive(D3DPT_TRIANGLELIST, 0, vertices.size() / 3);
     }
@@ -492,8 +496,8 @@ void GameWorldRenderer::GenericPolyRenderable::Draw(IDirect3DDevice9* device)
 
 void GameWorldRenderer::UpdateCompositorRegistration()
 {
-    // Register our under-UI draw with the shared compositor only while that mode is wanted; the
-    // module's enabled state is handled by Initialize()/SignalTerminate().
+    // 仅在需要该模式时向共享合成器注册我们的 UI 下层绘制；
+    // 模块的启用状态由 Initialize()/SignalTerminate() 处理。
     if (render_under_ui && !compositor_token) {
         compositor_token = GameWorldCompositor::RegisterDraw(&GameWorldRenderer::DrawInWorld);
     }
@@ -503,23 +507,23 @@ void GameWorldRenderer::UpdateCompositorRegistration()
     }
 }
 
-// The actual world draw: sync markers, set up the shared world pipeline, draw (compass punched out).
-// Invoked either by the compositor (under the UI) or by Render() (on top), never both in one frame.
+// 实际的世界绘制：同步标记，设置共享世界管道，绘制（罗盘挖空）。
+// 由合成器（在 UI 下层）或 Render()（在顶部）调用，同一帧中不会同时调用两者。
 void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
 {
     if (GW::UI::GetIsWorldMapShowing()) {
         return;
     }
     if (need_sync_markers) {
-        // Sync on the render thread: creating vertex buffers needs the D3D device.
+        // 在渲染线程上同步：创建顶点缓冲区需要 D3D 设备。
         SyncAllMarkers();
     }
-    StepNavmeshBatchBuild(); // advance the incremental, surface-draped navmesh line buffer (bounded per frame)
+    StepNavmeshBatchBuild(); // 推进增量、表面悬挂的导航网格线缓冲（每帧受预算限制）
     if (renderables.empty() && navmesh_batch.verts.empty()) {
         return;
     }
 
-    // Snapshot all device state; restored unconditionally on exit (incl. error paths) so GW's later rendering isn't corrupted.
+    // 快照所有设备状态；在退出时无条件恢复（包括错误路径），以免破坏 GW 后续渲染。
     IDirect3DStateBlock9* state_block = nullptr;
     if (device->CreateStateBlock(D3DSBT_ALL, &state_block) != D3D_OK) {
         return;
@@ -529,15 +533,17 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
         const auto map_id = GW::Map::GetMapID();
         renderables_mutex.lock();
 
-        // Bound first-time surface draping to a frame slice: AddPolyToDevice samples QueryAltitude per new line, so a burst of fresh edges would freeze the game thread; QueryAltitude can't run off-thread, so spread draping across frames. Already-draped renderables (cached vb) always draw.
+        // 将首次表面悬挂限制为每帧切片：AddPolyToDevice 为每条新线采样 QueryAltitude，
+        // 因此新边的大量突发会冻结游戏线程；QueryAltitude 不能离线运行，因此跨帧分布悬挂。
+        // 已悬挂的渲染对象（缓存的 vb）始终绘制。
         const auto drape_timer = TIMER_INIT();
         bool drape_budget_spent = false;
 
         auto draw_renderables = [&] {
             for (auto& renderable : renderables) {
                 if (renderable.map_id != map_id) continue;
-                if (renderable.vb == nullptr) { // first draw computes altitudes (heavy)
-                    if (drape_budget_spent) continue; // out of time this frame; drape it next frame
+                if (renderable.vb == nullptr) { // 首次绘制计算海拔（繁重）
+                    if (drape_budget_spent) continue; // 本帧时间用尽；下一帧悬挂
                     renderable.Draw(device);
                     if (TIMER_DIFF(drape_timer) >= 2) drape_budget_spent = true;
                 }
@@ -545,16 +551,17 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
                     renderable.Draw(device);
                 }
             }
-            DrawNavmeshBatch(device, map_id); // batched navmesh overlay: one draw call, same pipeline + compass stencil
+            DrawNavmeshBatch(device, map_id); // 批处理导航网格覆盖层：一次绘制调用，相同管道 + 罗盘模板
         };
 
-        // GW draws the compass disc (world pass) and its frame (later HUD pass) separately, so the overlay lands between and bleeds across the minimap; stencil the disc out.
+        // GW 分别绘制罗盘圆盘（世界通道）和其框架（后续 HUD 通道），因此覆盖层落在两者之间并渗透到小地图上；
+        // 用模板将圆盘挖空。
         float compass_cx, compass_cy, compass_radius;
         if (exclude_compass && GetCompassTerrainCircle(compass_cx, compass_cy, compass_radius)) {
             constexpr DWORD compass_stencil_bit = 0x80;
             MarkCompassStencil(device, compass_cx, compass_cy, compass_radius, compass_stencil_bit, true);
 
-            // restore the programmable pipeline + render state the mark pass changed
+            // 恢复标记通道更改的可编程管道 + 渲染状态
             device->SetVertexShader(GameWorldCompositor::VertexShader());
             device->SetPixelShader(GameWorldCompositor::PixelShader());
             device->SetVertexDeclaration(GameWorldCompositor::VertexDeclaration());
@@ -562,7 +569,7 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
                                    D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA);
             device->SetRenderState(D3DRS_ZENABLE, occlude_behind_terrain ? D3DZB_TRUE : D3DZB_FALSE);
 
-            // draw the overlay only where our bit is clear, i.e. outside the compass disc
+            // 仅在我们的位清零的地方绘制覆盖层，即罗盘圆盘外部
             device->SetRenderState(D3DRS_STENCILENABLE, TRUE);
             device->SetRenderState(D3DRS_STENCILMASK, compass_stencil_bit);
             device->SetRenderState(D3DRS_STENCILREF, 0);
@@ -573,7 +580,7 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
 
             draw_renderables();
 
-            // clear our bit back so GW's shared stencil is left exactly as we found it
+            // 清除我们的位，使 GW 的共享模板恢复到我们找到时的状态
             MarkCompassStencil(device, compass_cx, compass_cy, compass_radius, compass_stencil_bit, false);
             device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
         }
@@ -589,9 +596,8 @@ void GameWorldRenderer::DrawInWorld(IDirect3DDevice9* device)
 
 void GameWorldRenderer::Render(IDirect3DDevice9* device)
 {
-    // On-top (End Scene) path. When under-UI is wanted and the shared compositor is running, it
-    // draws our markers between GW's world and HUD instead (and runs the marker sync itself), so
-    // skip here. Otherwise draw on top - this is also the fallback if the compositor failed.
+    // 顶层（End Scene）路径。当需要 UI 下层且共享合成器运行时，它在 GW 的世界和 HUD 之间绘制我们的标记
+    //（并自行运行标记同步），因此在此跳过。否则在顶层绘制 — 这也是合成器失败时的回退。
     if (render_under_ui && GameWorldCompositor::IsActive()) {
         return;
     }
@@ -619,36 +625,35 @@ void GameWorldRenderer::OnSettingsLoaded()
 void GameWorldRenderer::DrawSettings()
 {
     const auto red = ImGui::ColorConvertU32ToFloat4(Colors::Red());
-    ImGui::TextColored(red, "Warning: This is a beta feature.");
-    ImGui::Text("Note: custom markers are only rendered in-game if the option is enabled for a particular marker (check settings).");
-    ImGui::DragFloat("Maximum render distance", &render_max_distance, 5.f, 0.f, 10000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("Maximum distance to render custom markers on the in-game terrain.");
-    need_sync_markers |= ImGui::DragInt("Interpolation granularity", reinterpret_cast<int*>(&lerp_steps_per_line), 1.0f, 0, 100, "%d", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("Number of points to interpolate. Affects smoothness of rendering.");
-    ImGui::DragFloat("Fog factor", &fog_factor, 0.1f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::ShowHelp("Scales from 0.0 (disabled) to 1.0");
+    ImGui::TextColored(red, "警告：此功能为测试版。");
+    ImGui::Text("注意：自定义标记仅在游戏内渲染，如果特定标记启用了该选项（请检查设置）。");
+    ImGui::DragFloat("最大渲染距离", &render_max_distance, 5.f, 0.f, 10000.f, "%.0f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("在游戏内地形上渲染自定义标记的最大距离。");
+    need_sync_markers |= ImGui::DragInt("插值粒度", reinterpret_cast<int*>(&lerp_steps_per_line), 1.0f, 0, 100, "%d", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("插值点数。影响渲染平滑度。");
+    ImGui::DragFloat("雾效因子", &fog_factor, 0.1f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::ShowHelp("从 0.0（禁用）到 1.0 缩放");
 
-    if (ImGui::Checkbox("Render under game UI", &render_under_ui)) {
+    if (ImGui::Checkbox("在游戏 UI 下层渲染", &render_under_ui)) {
         UpdateCompositorRegistration();
     }
-    ImGui::ShowHelp("Draw overlays beneath the in-game UI (menus, party window, etc.) instead of on top.\n"
-                    "Experimental: hooks GW's UI render pass. Turn off to restore the original on-top drawing.");
+    ImGui::ShowHelp("在游戏内 UI（菜单、队伍窗口等）下层绘制覆盖层，而非顶层。\n"
+                    "实验性：钩入 GW 的 UI 渲染通道。关闭以恢复原始的顶层绘制。");
     if (render_under_ui) {
         if (GameWorldCompositor::HasFailed())
-            ImGui::TextColored(red, "  under-UI hook FAILED to install - drawing on top.");
+            ImGui::TextColored(red, "  UI 下层钩子安装失败 — 在顶层绘制。");
         else if (GameWorldCompositor::IsActive())
-            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(Colors::Green()), "  under-UI hook active.");
+            ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(Colors::Green()), "  UI 下层钩子已激活。");
         else
-            ImGui::TextDisabled("  under-UI hook: not installed yet.");
+            ImGui::TextDisabled("  UI 下层钩子：尚未安装。");
     }
 
-    ImGui::Checkbox("Keep clear of the compass", &exclude_compass);
-    ImGui::ShowHelp("Don't draw in-world overlays over the in-game compass/minimap.\n"
-                    "GW renders the compass terrain and its frame in separate passes, so overlays "
-                    "would otherwise bleed across the inside of the minimap.");
+    ImGui::Checkbox("避开罗盘区域", &exclude_compass);
+    ImGui::ShowHelp("不在游戏内罗盘/小地图上方绘制世界覆盖层。\n"
+                    "GW 在单独的通道中渲染罗盘地形及其框架，否则覆盖层会渗透到小地图内部。");
 
-    ImGui::Checkbox("Occlude behind terrain", &occlude_behind_terrain);
-    ImGui::ShowHelp("Hide overlays behind walls, buildings and terrain using the game's depth buffer.");
+    ImGui::Checkbox("地形遮挡", &occlude_behind_terrain);
+    ImGui::ShowHelp("使用游戏深度缓冲区隐藏墙壁、建筑物和地形后面的覆盖层。");
 }
 
 void GameWorldRenderer::TriggerSyncAllMarkers()
@@ -658,8 +663,8 @@ void GameWorldRenderer::TriggerSyncAllMarkers()
 
 void GameWorldRenderer::SetNavmeshLines(GW::Constants::MapID map_id, std::vector<BatchedLine> lines)
 {
-    // Render-thread only (called from PathfindingWindow::Draw, same thread as DrawInWorld) — no lock needed.
-    // Start a NEW build into staging; the live `verts` keep drawing until it completes, so the swap is seamless.
+    // 仅渲染线程（从 PathfindingWindow::Draw 调用，与 DrawInWorld 同一线程）— 无需锁定。
+    // 开始一个新的构建到 staging 中；实时 `verts` 在完成前持续绘制，因此交换是无缝的。
     auto& b = navmesh_batch;
     b.pending_map = map_id;
     b.lines = std::move(lines);
@@ -675,8 +680,8 @@ void GameWorldRenderer::SetNavmeshSampleSpacing(float gw)
 
 void GameWorldRenderer::RedrapeNavmesh()
 {
-    // Re-drape the current edge set (e.g. after the sample-spacing slider changed) without re-culling: restart the
-    // incremental build from the existing source lines. No-op if nothing is loaded.
+    // 重新悬挂当前边集（例如在采样间距滑块更改后）而不重新裁剪：从现有源线重新开始增量构建。
+    // 如果未加载任何内容则为空操作。
     auto& b = navmesh_batch;
     if (b.lines.empty()) return;
     b.pending_map = b.map_id;
@@ -729,7 +734,7 @@ void GameWorldRenderer::Terminate()
 void GameWorldRenderer::SyncAllMarkers()
 {
     renderables_mutex.lock();
-    // Index the current renderables so the three Sync* passes match in O(1); find_matching_poly reads it.
+    // 索引当前渲染对象，使三个 Sync* 传递以 O(1) 匹配；find_matching_poly 读取它。
     renderable_index.clear();
     renderable_index.reserve(renderables.size());
     for (size_t i = 0; i < renderables.size(); i++)
@@ -771,7 +776,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncLines()
         if (!(line->map == map_id || line->map == GW::Constants::MapID::None))
             continue;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && map_id == GW::Constants::MapID::Domain_of_Anguish && !line->draw_everywhere) {
-            // don't draw normal lines in doa outpost
+            // 在痛苦领域前哨站不绘制普通线条
             continue;
         }
         std::vector points = {line->p1, line->p2};
@@ -808,7 +813,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncPolys()
         if (!(poly.map == map_id || poly.map == GW::Constants::MapID::None))
             continue;
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && map_id == GW::Constants::MapID::Domain_of_Anguish) {
-            // don't draw normal polys in doa outpost
+            // 在痛苦领域前哨站不绘制普通多边形
             continue;
         }
         const std::vector<GW::GamePos> pts(poly.points.begin(), poly.points.end());
@@ -841,7 +846,7 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
             continue;
         }
         if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost && map_id == GW::Constants::MapID::Domain_of_Anguish) {
-            // don't draw normal markers in doa outpost
+            // 在痛苦领域前哨站不绘制普通标记
             continue;
         }
 
@@ -864,13 +869,13 @@ GameWorldRenderer::RenderableVectors GameWorldRenderer::SyncMarkers()
 }
 
 // ===========================================================================
-// ToolboxModule lifecycle (own settings section / JSON file, separate from Minimap)
+// ToolboxModule 生命周期（自有设置部分 / JSON 文件，独立于 Minimap）
 // ===========================================================================
 
 void GameWorldRenderer::Initialize()
 {
-    ToolboxModule::Initialize(); // registers DrawSettingsInternal() under "In-game rendering"
-    // Register fields against this module so they persist in their own section, not under the Minimap.
+    ToolboxModule::Initialize(); // 在“游戏内渲染”下注册 DrawSettingsInternal()
+    // 针对此模块注册字段，使其持久化到自己的部分，而非 Minimap 下。
     RegisterSettings(this);
     UpdateCompositorRegistration();
 }
@@ -888,8 +893,8 @@ void GameWorldRenderer::DrawSettingsInternal()
 
 void GameWorldRenderer::SignalTerminate()
 {
-    // Drop our under-UI draw the instant the module is disabled; the shared compositor removes its
-    // hook once no module is registered. Render() stops being called too (gated on module enabled).
+    // 在模块禁用时立即移除我们的 UI 下层绘制；一旦没有模块注册，共享合成器会移除其钩子。
+    // Render() 也不再被调用（由模块启用状态控制）。
     if (compositor_token) {
         GameWorldCompositor::UnregisterDraw(compositor_token);
         compositor_token = 0;

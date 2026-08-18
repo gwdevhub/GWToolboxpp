@@ -28,7 +28,7 @@ public:
     void RegisterSettingsContent() override { };
 
     [[nodiscard]] bool ShowOnWorldMap() const override { return true; }
-    [[nodiscard]] const char* Name() const override { return "World Map"; }
+    [[nodiscard]] const char* Name() const override { return "世界地图"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
     struct Settings {

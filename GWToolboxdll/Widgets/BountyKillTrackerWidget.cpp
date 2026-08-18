@@ -38,9 +38,9 @@ namespace {
     std::unordered_map<GW::Constants::SkillID, BountyState> active_bounties;
     std::unordered_map<uint32_t, GW::Constants::SkillID> effect_id_to_skill;
 
-    // EotN bounties award 25/50/75/100 title points per kill for tiers 1-4.
-    // Nightfall and Factions bounties award 1 point per kill by default;
-    // exact values should be verified in-game and updated here.
+    // 北方之眼赏金在等级 1-4 分别奖励 25/50/75/100 称号点数。
+    // 夜幕和派系赏金默认每击杀奖励 1 点；
+    // 确切数值应在游戏中验证并在此更新。
     uint32_t GetPointsPerKill(const GW::Constants::SkillID skill_id)
     {
         using S = GW::Constants::SkillID;
@@ -70,14 +70,14 @@ namespace {
         using S = GW::Constants::SkillID;
         using T = GW::Constants::TitleID;
         switch (skill_id) {
-            // EotN - Asuran
+            // 北方之眼 - 阿苏拉
             case S::Asuran_Bodyguard:
             case S::Asuran_Bodyguard_Rank2:
             case S::Asuran_Bodyguard_Rank3:
             case S::Asuran_Bodyguard_Rank4:
             case S::Veteran_Asuran_Bodyguard:
                 return T::Asuran;
-            // EotN - Deldrimor
+            // 北方之眼 - 戴尔德里莫
             case S::Dwarven_Raider:
             case S::Dwarven_Raider_Rank2:
             case S::Dwarven_Raider_Rank3:
@@ -88,7 +88,7 @@ namespace {
             case S::Dwarven_Raider6:
             case S::Dwarven_Raider7:
                 return T::Deldrimor;
-            // EotN - Vanguard
+            // 北方之眼 - 先锋
             case S::Vanguard_Patrol:
             case S::Vanguard_Patrol_Rank2:
             case S::Vanguard_Patrol_Rank3:
@@ -96,7 +96,7 @@ namespace {
             case S::Veteran_Vanguard_Patrol:
             case S::Vanguard_Patrol4:
                 return T::Vanguard;
-            // EotN - Norn
+            // 北方之眼 - 诺恩
             case S::Norn_Hunting_Party:
             case S::Norn_Hunting_Party_Rank2:
             case S::Norn_Hunting_Party_Rank3:
@@ -107,7 +107,7 @@ namespace {
             case S::Norn_Hunting_Party6:
             case S::Norn_Hunting_Party7:
                 return T::Norn;
-            // Nightfall - Lightbringer (Abaddon's demons)
+            // 夜幕 - 光使者（阿巴顿的恶魔）
             case S::Demon_Hunt:
             case S::Margonite_Battle:
             case S::Margonite_Battle1:
@@ -116,7 +116,7 @@ namespace {
             case S::Titan_Hunt1:
             case S::Titan_Hunt2:
                 return T::Lightbringer;
-            // Nightfall - Sunspear
+            // 夜幕 - 日矛
             case S::Skale_Hunt:
             case S::Skale_Hunt1:
             case S::Skale_Hunt2:
@@ -163,11 +163,11 @@ namespace {
             case S::Monolith_Hunt1:
             case S::Giant_Hunt:
                 return T::Sunspear;
-            // Factions - Kurzick
+            // 派系 - 库兹柯
             case S::Blessing_of_the_Kurzicks:
             case S::Blessing_of_the_Kurzicks1:
                 return T::Kurzick;
-            // Factions - Luxon
+            // 派系 - 勒克森
             case S::Blessing_of_the_Luxons:
                 return T::Luxon;
             default:
@@ -276,8 +276,8 @@ namespace {
                 active_bounties.clear();
                 effect_id_to_skill.clear();
             } break;
-            // TODO: Add case for chat message(s) that announce kill milestones (e.g. "35 insects slain")
-            // and reset kill_count for the relevant active bounty. Encoded string IDs are not yet known.
+            // TODO：添加聊天消息的 case，宣布击杀里程碑（例如 "已击杀 35 只昆虫"）
+            // 并重置相关活跃赏金的 kill_count。加密字符串 ID 尚不清楚。
         }
     }
 }
@@ -287,7 +287,7 @@ void BountyKillTrackerWidget::Initialize()
     ToolboxWidget::Initialize();
     SettingsRegistry::Register(this, settings);
 
-    // Pick up bounties already active when the module loads
+    // 在模块加载时拾取已激活的赏金
     GW::GameThread::Enqueue([] {
         const auto* effects = GW::Effects::GetPlayerEffects();
         if (!effects) return;
@@ -357,9 +357,9 @@ void BountyKillTrackerWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
     ImGui::PushID("bounty_kill_tracker_settings");
-    ImGui::DragFloat("Text size", &settings.font_size, 1.f, 16.f, 48.f, "%.f");
-    Colors::DrawSettingHueWheel("Text color", &settings.color_text.value);
-    Colors::DrawSettingHueWheel("Text shadow", &settings.color_text_shadow.value);
-    Colors::DrawSettingHueWheel("Background", &settings.color_background.value);
+    ImGui::DragFloat("文字大小", &settings.font_size, 1.f, 16.f, 48.f, "%.f");
+    Colors::DrawSettingHueWheel("文字颜色", &settings.color_text.value);
+    Colors::DrawSettingHueWheel("文字阴影", &settings.color_text_shadow.value);
+    Colors::DrawSettingHueWheel("背景", &settings.color_background.value);
     ImGui::PopID();
 }

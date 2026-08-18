@@ -35,7 +35,7 @@ namespace {
     GW::HookEntry hook_entry;
     GW::Constants::QuestID active_quest_id = GW::Constants::QuestID::None;
     GuiUtils::EncString active_quest_name;
-    std::vector<QuestObjective> active_quest_objectives; // (index, objective, completed)
+    std::vector<QuestObjective> active_quest_objectives; // (索引，目标，已完成)
     IDirect3DTexture9** p_quest_marker_texture;
     bool force_update = false;
 
@@ -94,7 +94,7 @@ void ActiveQuestWidget::Update(float)
             active_quest_objectives = QuestModule::ParseQuestObjectives(qid);
         }
         else if (static_cast<int32_t>(qid) == -1) {
-            // Mission objectives
+            // 任务目标
             const auto world_context = GW::GetWorldContext();
             const auto area_info = GW::Map::GetCurrentMapInfo();
             active_quest_name.reset(area_info && area_info->name_id ? area_info->name_id : 3);

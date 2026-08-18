@@ -15,7 +15,7 @@
 
 namespace {
     GW::HookEntry ChatCmd_HookEntry;
-    constexpr size_t ping_history_len = 10; // GW checks last 10 pings for avg
+    constexpr size_t ping_history_len = 10; // 游戏检查最近 10 次延迟计算平均值
     uint32_t ping_history[ping_history_len] = {0};
     size_t ping_index = 0;
 
@@ -80,7 +80,7 @@ namespace {
 void LatencyWidget::SendPing()
 {
     char buffer[48];
-    snprintf(buffer, sizeof(buffer), "Current Ping: %ums, Avg Ping: %ums", LatencyWidget::GetPing(), LatencyWidget::GetAveragePing());
+    snprintf(buffer, sizeof(buffer), "当前延迟：%ums，平均延迟：%ums", LatencyWidget::GetPing(), LatencyWidget::GetAveragePing());
     GW::Chat::SendChat('#', buffer);
 }
 
@@ -153,9 +153,9 @@ void LatencyWidget::SaveSettings(SettingsDoc& doc)
 
 void LatencyWidget::DrawSettingsInternal()
 {
-    ImGui::SliderInt("Red ping threshold", &settings.red_threshold, 0, 1000);
-    ImGui::Checkbox("Show average ping", &settings.show_avg_ping);
-    ImGui::DragFloat("Text size", &settings.text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
+    ImGui::SliderInt("红色延迟阈值（毫秒）", &settings.red_threshold, 0, 1000);
+    ImGui::Checkbox("显示平均延迟", &settings.show_avg_ping);
+    ImGui::DragFloat("文字大小", &settings.text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
 }
 
 ImColor LatencyWidget::GetColorForPing(const uint32_t ping)

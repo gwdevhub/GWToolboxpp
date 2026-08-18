@@ -74,13 +74,13 @@ void HealthWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
     }
 
     if (thresholds.empty()) {
-        const auto thresholdFh = new Threshold("\"Finish Him!\"", Colors::RGB(255, 255, 0), 50);
+        const auto thresholdFh = new Threshold("\"终结他！\"", Colors::RGB(255, 255, 0), 50);
         thresholdFh->skillId = static_cast<int>(GW::Constants::SkillID::Finish_Him);
         thresholdFh->active = false;
         thresholds.push_back(thresholdFh);
         thresholds.back()->index = thresholds.size() - 1;
 
-        const auto thresholdEoe = new Threshold("Edge of Extinction", Colors::RGB(0, 255, 0), 90);
+        const auto thresholdEoe = new Threshold("灭绝之刃", Colors::RGB(0, 255, 0), 90);
         thresholdEoe->active = false;
         thresholds.push_back(thresholdEoe);
         thresholds.back()->index = thresholds.size() - 1;
@@ -104,20 +104,20 @@ void HealthWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
     ImGui::SameLine();
-    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
+    ImGui::Checkbox("在前哨站隐藏", &settings.hide_in_outpost);
     ImGui::SameLine();
-    ImGui::Checkbox("Ctrl+Click to print target health", &settings.click_to_print_health);
-    ImGui::Text("Text sizes:");
-    ImGui::ShowHelp("A text size of 0 means that it's not drawn.");
+    ImGui::Checkbox("Ctrl+点击打印目标生命值", &settings.click_to_print_health);
+    ImGui::Text("文字大小：");
+    ImGui::ShowHelp("文字大小为 0 表示不绘制。");
     ImGui::Indent();
-    ImGui::DragFloat("'Health' header", &settings.font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
-    ImGui::DragFloat("Percent value", &settings.font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
-    ImGui::DragFloat("Absolute value", &settings.font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("'生命值' 标题", &settings.font_size_header, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("百分比数值", &settings.font_size_perc_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
+    ImGui::DragFloat("绝对数值", &settings.font_size_abs_value, 1.f, FontLoader::text_size_min, FontLoader::text_size_max);
     ImGui::Unindent();
 
-    const bool thresholdsNode = ImGui::TreeNodeEx("Thresholds", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
+    const bool thresholdsNode = ImGui::TreeNodeEx("阈值", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth);
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("The first matching threshold will be used.");
+        ImGui::SetTooltip("将使用第一个匹配的阈值。");
     }
     if (thresholdsNode) {
         for (size_t i = 0; i < thresholds.size(); i++) {
@@ -156,8 +156,8 @@ void HealthWidget::DrawSettingsInternal()
             ImGui::PopID();
         }
 
-        if (ImGui::Button("Add Threshold")) {
-            thresholds.push_back(new Threshold("<name>", 0xFFFFFFFF, 0));
+        if (ImGui::Button("添加阈值")) {
+            thresholds.push_back(new Threshold("<名称>", 0xFFFFFFFF, 0));
             thresholds.back()->index = thresholds.size() - 1;
         }
 
@@ -218,16 +218,16 @@ void HealthWidget::Draw(IDirect3DDevice9*)
 
             ImVec2 cur = ImGui::GetCursorPos();
             if (settings.font_size_header > 0.f && show_titlebar) {
-                // 'health'
+                // '生命值'
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_header);
                 ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-                ImGui::TextColored(background, "Health");
+                ImGui::TextColored(background, "生命值");
                 ImGui::SetCursorPos(cur);
-                ImGui::Text("Health");
+                ImGui::Text("生命值");
                 ImGui::PopFont();
             }
 
-            // perc
+            // 百分比
             if (settings.font_size_perc_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_perc_value);
                 cur = ImGui::GetCursorPos();
@@ -239,7 +239,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                 ImGui::PopFont();
             }
 
-            // abs
+            // 绝对值
             if (settings.font_size_abs_value > 0.f) {
                 ImGui::PushFont(FontLoader::GetFont(), settings.font_size_abs_value);
                 cur = ImGui::GetCursorPos();
@@ -259,7 +259,7 @@ void HealthWidget::Draw(IDirect3DDevice9*)
                         if (!agent_name_ping.empty()) {
                             const std::string agent_name_str = TextUtils::WStringToString(agent_name_ping);
                             const auto current_hp = static_cast<int>(target->hp * target->max_hp);
-                            const auto message = std::format("{}'s health is {} of {} ({:.0f}%).", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
+                            const auto message = std::format("{} 的生命值为 {} / {}（{:.0f}%）。", agent_name_str.c_str(), current_hp, target->max_hp, target->hp * 100.f);
                             GW::Chat::SendChat('#', message.c_str());
                         }
                     }
@@ -297,7 +297,7 @@ bool HealthWidget::Threshold::DrawHeader()
     ImGui::SameLine();
     ImGui::ColorButton("", ImColor(color));
     ImGui::SameLine();
-    ImGui::Text("%s (<%d%%) %s", name, value, Resources::GetMapName((GW::Constants::MapID)mapId)->string().c_str());
+    ImGui::Text("%s（<%d%%）%s", name, value, Resources::GetMapName((GW::Constants::MapID)mapId)->string().c_str());
     return changed;
 }
 
@@ -310,40 +310,40 @@ bool HealthWidget::Threshold::DrawSettings(Operation& op)
 
         ImGui::PushID(static_cast<int>(ui_id));
 
-        changed |= ImGui::InputText("Name", name, 128);
-        ImGui::ShowHelp("A name to help you remember what this is. Optional.");
-        changed |= ImGui::InputInt("Model ID", &modelId);
-        ImGui::ShowHelp("The Agent to which this threshold will be applied. Optional. Leave 0 for any agent");
-        changed |= ImGui::InputInt("Skill ID", &skillId);
-        ImGui::ShowHelp("Only apply if this skill is on your bar. Optional. Leave 0 for any skills");
-        changed |= ImGui::InputInt("Map ID", &mapId);
-        ImGui::ShowHelp("The map where it will be applied. Optional. Leave 0 for any map");
-        changed |= ImGui::InputInt("Percentage", &value);
-        ImGui::ShowHelp("Percentage below which this color should be used");
-        changed |= Colors::DrawSettingHueWheel("Color", &color, 0);
-        ImGui::ShowHelp("The custom color for this threshold.");
+        changed |= ImGui::InputText("名称", name, 128);
+        ImGui::ShowHelp("帮助你记住此阈值的名称。可选。");
+        changed |= ImGui::InputInt("模型 ID", &modelId);
+        ImGui::ShowHelp("此阈值将应用的单位。可选。留 0 表示任意单位");
+        changed |= ImGui::InputInt("技能 ID", &skillId);
+        ImGui::ShowHelp("仅当此技能在你的技能栏上时应用。可选。留 0 表示任意技能");
+        changed |= ImGui::InputInt("地图 ID", &mapId);
+        ImGui::ShowHelp("将应用的地图。可选。留 0 表示任意地图");
+        changed |= ImGui::InputInt("百分比", &value);
+        ImGui::ShowHelp("低于此百分比时使用此颜色");
+        changed |= Colors::DrawSettingHueWheel("颜色", &color, 0);
+        ImGui::ShowHelp("此阈值的自定义颜色。");
 
         const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
         const float width = (ImGui::CalcItemWidth() - spacing * 2) / 3;
-        if (ImGui::Button("Move Up", ImVec2(width, 0))) {
+        if (ImGui::Button("上移", ImVec2(width, 0))) {
             op = Operation::MoveUp;
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Move the threshold up in the list");
+            ImGui::SetTooltip("在列表中上移此阈值");
         }
         ImGui::SameLine(0, spacing);
-        if (ImGui::Button("Move Down", ImVec2(width, 0))) {
+        if (ImGui::Button("下移", ImVec2(width, 0))) {
             op = Operation::MoveDown;
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Move the threshold down in the list");
+            ImGui::SetTooltip("在列表中下移此阈值");
         }
         ImGui::SameLine(0, spacing);
-        if (ImGui::Button("Delete", ImVec2(width, 0))) {
+        if (ImGui::Button("删除", ImVec2(width, 0))) {
             op = Operation::Delete;
         }
         if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Delete the threshold");
+            ImGui::SetTooltip("删除此阈值");
         }
 
         ImGui::TreePop();

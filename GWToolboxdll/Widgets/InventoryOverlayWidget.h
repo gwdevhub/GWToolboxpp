@@ -10,8 +10,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Inventory Overlay"; }
-    [[nodiscard]] const char* Description() const override { return "Draws over the top of inventory slots in-game to better identify items"; }
+    [[nodiscard]] const char* Name() const override { return "库存堆叠"; }
+    [[nodiscard]] const char* Description() const override { return "在游戏中的物品栏上方绘制堆叠，以便更好地识别物品"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_TH; }
 
     struct Settings {

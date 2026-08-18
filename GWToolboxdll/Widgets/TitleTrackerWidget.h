@@ -22,9 +22,9 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Title Tracker"; }
+    [[nodiscard]] const char* Name() const override { return "目标追踪"; }
 
-    [[nodiscard]] const char* Description() const override { return "Shows on-screen progress bar of selected title progress without having to open the Guild Wars Hero window all the time"; }
+    [[nodiscard]] const char* Description() const override { return "在屏幕上显示所选目标的进度条，无需一直打开目标窗口"; }
 
     [[nodiscard]] const char* Icon() const override { return ICON_FA_CHART_BAR; }
 

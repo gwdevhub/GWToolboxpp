@@ -33,16 +33,16 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
         static char foes_count[32] = "";
         snprintf(foes_count, 32, "%lu / %lu", killed, tokill + killed);
 
-        // vanquished
+        // 已征服
         ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::header1));
         ImVec2 cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 1, cur.y + 1));
-        ImGui::TextColored(ImColor(0, 0, 0), "Vanquished");
+        ImGui::TextColored(ImColor(0, 0, 0), "已征服");
         ImGui::SetCursorPos(cur);
-        ImGui::Text("Vanquished");
+        ImGui::Text("已征服");
         ImGui::PopFont();
 
-        // count
+        // 计数
         ImGui::PushFont(FontLoader::GetFont(), static_cast<float>(FontLoader::FontSize::widget_small));
         cur = ImGui::GetCursorPos();
         ImGui::SetCursorPos(ImVec2(cur.x + 2, cur.y + 2));
@@ -51,7 +51,7 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
         ImGui::Text(foes_count);
         ImGui::PopFont();
 
-        // Check if the widget was clicked
+        // 检查小部件是否被点击
         const ImVec2 size = ImGui::GetWindowSize();
         const ImVec2 min = ImGui::GetWindowPos();
         const ImVec2 max(min.x + size.x, min.y + size.y);
@@ -62,15 +62,12 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
             char buffer[256];
             if (located > 0) {
                 snprintf(buffer, sizeof(buffer),
-                         "We have vanquished %lu %s! %lu %s remaining, %d located.",
-                         killed, killed == 1 ? "foe" : "foes",
-                         tokill, tokill == 1 ? "foe" : "foes",
-                         located);
+                         "我们已征服 %lu 个敌人！还剩 %lu 个，已定位 %d 个。",
+                         killed, tokill, located);
             } else {
                 snprintf(buffer, sizeof(buffer),
-                         "We have vanquished %lu %s! %lu %s remaining.",
-                         killed, killed == 1 ? "foe" : "foes",
-                         tokill, tokill == 1 ? "foe" : "foes");
+                         "我们已征服 %lu 个敌人！还剩 %lu 个。",
+                         killed, tokill);
             }
             GW::Chat::SendChat('#', buffer);
         }
@@ -81,5 +78,5 @@ void VanquishWidget::Draw(IDirect3DDevice9*)
 
 void VanquishWidget::DrawSettingsInternal()
 {
-    ImGui::Text("Note: only visible in Hard Mode explorable areas.");
+    ImGui::Text("注意：仅在困难模式探索区域可见。");
 }

@@ -19,7 +19,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Distance"; }
+    [[nodiscard]] const char* Name() const override { return "距离显示"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_RULER; }
 
     struct Settings {

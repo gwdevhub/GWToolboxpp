@@ -34,8 +34,8 @@ namespace {
     ImGuiViewport* viewport = nullptr;
     ImDrawList* draw_list = nullptr;
 
-    // Maps an agent's encoded name to the skill_id of the spirit it represents.
-    // TODO: @3vcloud - populate with actual encoded names for all desired tracked spirits.
+    // 将单位的加密名称映射到其代表的灵魂技能 ID。
+    // TODO: @3vcloud - 为所有需要追踪的灵魂填入实际的加密名称。
     const std::unordered_map<std::wstring, GW::Constants::SkillID> spirit_enc_name_to_skill_id = {
         {L"\x416F\xD141\x9F0B\x5276", GW::Constants::SkillID::Disenchantment},
         {L"\x4164\x825C\xA2F2\x1235", GW::Constants::SkillID::Pain},
@@ -43,22 +43,22 @@ namespace {
         {L"\x8102\x5F66\xBE02\xB9AB\x1073", GW::Constants::SkillID::Signet_of_Spirits}
     };
 
-    // Deterministic effect ID per spirit skill: high byte 0x0f avoids collision with real effects.
+    // 每个灵魂技能的确定性效果 ID：高字节 0x0f 避免与真实效果冲突。
     constexpr uint32_t SpiritEffectId(const GW::Constants::SkillID skill_id)
     {
         return 0x0f000000 | static_cast<uint32_t>(skill_id);
     }
 
-    // Maps agent_id -> skill_id for currently tracked spirit agents.
+    // 映射 agent_id -> skill_id，用于当前追踪的灵魂单位。
     std::unordered_map<uint32_t, GW::Constants::SkillID> tracked_spirits;
 
-    // Set when the player completes a spirit-summoning cast; cleared once the spirit is detected.
+    // 当玩家完成灵魂召唤施法时设置；在检测到灵魂后清除。
     struct PendingSpiritSpawn {
         GW::Constants::SkillID skill_id = GW::Constants::SkillID::No_Skill;
         uint32_t timestamp_ms = 0;
     } pending_spirit_spawn;
 
-    // Set when a spirit agent spawns before the skill activation message arrives.
+    // 当灵魂单位在技能激活消息之前生成时设置。
     struct PendingAgentSpawn {
         uint32_t agent_id = 0;
         GW::Constants::SkillID skill_id = GW::Constants::SkillID::No_Skill;
@@ -89,12 +89,12 @@ namespace {
 
     void TrackSpirit(const uint32_t agent_id, const GW::Constants::SkillID skill_id)
     {
-        // Evict any previously tracked spirit for this skill_id.
-        // The old agent's kAgentDestroy may arrive after us, so we must unlink it
-        // from tracked_spirits now so RemoveTrackedSpirit doesn't kill our new effect.
+        // 移除之前为此 skill_id 追踪的灵魂。
+        // 旧的 agent 的 kAgentDestroy 可能在我们之后到达，因此我们必须
+        // 立即从 tracked_spirits 中解除关联，以免 RemoveTrackedSpirit 移除我们的新效果。
         for (auto it = tracked_spirits.begin(); it != tracked_spirits.end();) {
             if (it->second == skill_id && it->first != agent_id) {
-                tracked_spirits.erase(it); // don't call RemoveTrackedSpirit - that would remove the effect
+                tracked_spirits.erase(it); // 不调用 RemoveTrackedSpirit - 那会移除效果
                 break;
             }
             else
@@ -116,7 +116,7 @@ namespace {
                 spirit_enc_name_to_skill_id.begin(), spirit_enc_name_to_skill_id.end(),
                 [&](const auto& kv) { return kv.second == packet->skill_id; });
             if (!is_spirit) break;
-            // Agent may have already spawned before this activation message arrived.
+            // 单位可能在此激活消息到达之前就已经生成了。
             if (pending_agent_spawn.skill_id == packet->skill_id
                 && GW::MemoryMgr::GetSkillTimer() - pending_agent_spawn.timestamp_ms <= 500
                 && IsAlliedSpirit(GW::Agents::GetAgentByID(pending_agent_spawn.agent_id))) {
@@ -138,7 +138,7 @@ namespace {
             const auto name_it = spirit_enc_name_to_skill_id.find(enc_name);
             if (name_it == spirit_enc_name_to_skill_id.end()) break;
             if (pending_spirit_spawn.skill_id != GW::Constants::SkillID::No_Skill) {
-                // Skill activation arrived first: resolve now.
+                // 技能激活先到达：立即解析。
                 if (GW::MemoryMgr::GetSkillTimer() - pending_spirit_spawn.timestamp_ms > 500) {
                     pending_spirit_spawn = {};
                     break;
@@ -148,7 +148,7 @@ namespace {
                 pending_spirit_spawn = {};
             }
             else {
-                // Agent spawned before skill activation: store and wait.
+                // 单位在技能激活前生成：存储并等待。
                 pending_agent_spawn = {agent_id, name_it->second, GW::MemoryMgr::GetSkillTimer()};
             }
         } break;
@@ -187,7 +187,7 @@ namespace {
 
         GW::Vec2f label_size = ImGui::CalcTextSize(text);
         if (label_size.x > skill_frame_size.x) {
-            // If the label is wider than the frame, scale text size.
+            // 如果标签宽度大于框架宽度，缩放文字大小。
             const auto scale_factor = skill_frame_size.x / label_size.x;
             const auto scaled_size = scale_factor * settings.font_effects;
             overridden_font = FontLoader::GetFont();
@@ -325,9 +325,9 @@ void EffectsMonitorWidget::Update(float delta)
             const auto now = GW::MemoryMgr::GetSkillTimer();
             const clock_t diff = (now - timestamp) / 1000;
 
-            // a 30s timer starts when you enter the aspect
-            // a 30s timer starts 100s after you enter the aspect
-            // a 30s timer starts 200s after you enter the aspect
+            // 进入面相时启动 30 秒计时器
+            // 进入面相 100 秒后启动 30 秒计时器
+            // 进入面相 200 秒后启动 30 秒计时器
             long duration = 30 - diff % 30;
             if (diff > 100) duration = std::min(duration, 30 - (diff - 100) % 30);
             if (diff > 200) duration = std::min(duration, 30 - (diff - 200) % 30);
@@ -336,7 +336,7 @@ void EffectsMonitorWidget::Update(float delta)
         }
     }
 
-    // Expire pending states that never produced a matching counterpart.
+    // 使从未产生匹配对应状态的待处理状态过期。
     const auto now_ms = GW::MemoryMgr::GetSkillTimer();
     if (pending_spirit_spawn.skill_id != GW::Constants::SkillID::No_Skill && now_ms - pending_spirit_spawn.timestamp_ms > 500) {
         pending_spirit_spawn = {};
@@ -345,7 +345,7 @@ void EffectsMonitorWidget::Update(float delta)
         pending_agent_spawn = {};
     }
 
-    // Validate that tracked spirits still exist and are alive.
+    // 验证被追踪的灵魂仍然存在且存活。
     if (!tracked_spirits.empty()) {
         std::vector<uint32_t> to_remove;
         for (const auto& [agent_id, skill_id] : tracked_spirits) {
@@ -376,27 +376,27 @@ void EffectsMonitorWidget::DrawSettingsInternal()
 
     ImGui::PushID("effects_monitor_overlay_settings");
 
-    ImGui::DragFloat("Text size", &settings.font_effects, 1.f, 16.f, 48.f, "%.f");
-    Colors::DrawSettingHueWheel("Text color", &settings.color_text_effects.value);
-    Colors::DrawSettingHueWheel("Text shadow", &settings.color_text_shadow.value);
-    Colors::DrawSettingHueWheel("Effect duration background", &settings.color_background.value);
-    ImGui::Text("Don't show effect durations longer than");
+    ImGui::DragFloat("文字大小", &settings.font_effects, 1.f, 16.f, 48.f, "%.f");
+    Colors::DrawSettingHueWheel("文字颜色", &settings.color_text_effects.value);
+    Colors::DrawSettingHueWheel("文字阴影", &settings.color_text_shadow.value);
+    Colors::DrawSettingHueWheel("效果持续时间背景", &settings.color_background.value);
+    ImGui::Text("不显示持续时间超过以下秒数的效果");
     ImGui::SameLine();
     ImGui::PushItemWidth(64.f * ImGui::FontScale());
     ImGui::InputInt("###only_under_seconds", &settings.only_under_seconds, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
-    ImGui::Text("seconds");
-    ImGui::Text("Show decimal places when duration is less than");
+    ImGui::Text("秒");
+    ImGui::Text("当持续时间小于以下毫秒数时显示小数位");
     ImGui::SameLine();
     ImGui::PushItemWidth(64.f * ImGui::FontScale());
     ImGui::InputInt("###decimal_threshold", &settings.decimal_threshold, 0);
     ImGui::PopItemWidth();
     ImGui::SameLine();
-    ImGui::Text("milliseconds");
-    ImGui::Checkbox("Round up integers", &settings.round_up);
+    ImGui::Text("毫秒");
+    ImGui::Checkbox("整数向上取整", &settings.round_up);
     ImGui::SameLine();
-    ImGui::Checkbox("Show vanquish counter on Hard Mode effect icon", &settings.show_vanquish_counter);
-    ImGui::Checkbox("Track nearby spirit timers (Bloodsong, Vampirism, etc.)", &settings.track_spirit_effects);
+    ImGui::Checkbox("在困难模式效果图标上显示征服计数", &settings.show_vanquish_counter);
+    ImGui::Checkbox("追踪附近的灵魂计时器（血歌、吸血鬼等）", &settings.track_spirit_effects);
     ImGui::PopID();
 }

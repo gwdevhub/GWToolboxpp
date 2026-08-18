@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Vanquish"; }
+    [[nodiscard]] const char* Name() const override { return "征服模式"; }
 
     [[nodiscard]] const char* Icon() const override { return ICON_FA_SKULL; }
 

@@ -44,7 +44,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Damage"; }
+    [[nodiscard]] const char* Name() const override { return "伤害"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BARS; }
 
     struct Settings {

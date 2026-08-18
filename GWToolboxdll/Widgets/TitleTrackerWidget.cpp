@@ -31,7 +31,7 @@ namespace {
         GuiUtils::EncString title_label;
         GuiUtils::EncString tier_label;
         GuiUtils::EncString next_tier_label;
-        std::unique_ptr<GuiUtils::EncString> overlay_label; // Because this can change quickly, we may need to recycle it faster than the frame rate can handle
+        std::unique_ptr<GuiUtils::EncString> overlay_label; // 由于可能变化很快，可能需要比帧率更快的更新速度
         float percent = 0.f;
         float secondary_percent = 0.f;
         uint32_t current_rank = 0;
@@ -92,14 +92,14 @@ namespace {
             case TitleID::Luxon:
                 return 10000000;
         }
-        return 0; // Fall back to points_needed_next_rank if 0
+        return 0; // 如果为 0，则回退到 points_needed_next_rank
     }
     float GetTitleProgressRatio(GW::Constants::TitleID title_id, GW::Title* title, bool current_tier = false)
     {
         if (!title) return 0.f;
-        // Calculate progress ratio like original
+        // 像原版一样计算进度比例
         if (title->is_percentage_based()) {
-            // Percentage-based: min(current_points, 1000) / 1000
+            // 基于百分比：min(current_points, 1000) / 1000
             uint32_t capped_points = std::min(title->current_points, 1000u);
             return (float)capped_points / 1000.0f;
         }
@@ -124,19 +124,19 @@ namespace {
 
         if (!title_1 || !title_2) return false;
 
-        // Check for unavailable titles (points_needed_next_rank == -1)
+        // 检查不可用称号（points_needed_next_rank == -1）
         bool unavailable_1 = (title_1->points_needed_next_rank == 0xFFFFFFFF);
         bool unavailable_2 = (title_2->points_needed_next_rank == 0xFFFFFFFF);
 
         if (unavailable_1 != unavailable_2) {
-            return !unavailable_1; // available titles come first
+            return !unavailable_1; // 可用称号优先
         }
 
         float ratio_1 = GetTitleProgressRatio(t1->title_id, title_1, settings.show_overall_title_progress);
         float ratio_2 = GetTitleProgressRatio(t2->title_id, title_2, settings.show_overall_title_progress);
 
-        if (ratio_1 != ratio_2) return ratio_1 > ratio_2; // higher progress comes first
-            return t1->title_id < t2->title_id;               // stable tiebreaker
+        if (ratio_1 != ratio_2) return ratio_1 > ratio_2; // 进度高的优先
+            return t1->title_id < t2->title_id;               // 稳定平局判定
     }
     int TitleSortHandler(uint32_t frame_id_1, uint32_t frame_id_2)
     {
@@ -158,7 +158,7 @@ namespace {
 
         if (!title_1 || !title_2) return 0;
 
-        // Update progress bars as a side effect
+        // 作为副作用更新进度条
         auto update_progress = [](uint32_t frame_id, float ratio) {
             const auto progress = (GW::ProgressBar*)GW::UI::GetChildFrame(GW::UI::GetFrameById(frame_id), 2);
             if (progress) {
@@ -169,7 +169,7 @@ namespace {
         update_progress(frame_id_1, GetTitleProgressRatio(title_id_1, title_1, settings.show_overall_title_progress));
         update_progress(frame_id_2, GetTitleProgressRatio(title_id_2, title_2, settings.show_overall_title_progress));
 
-        // Reuse TitleProgress comparison logic via temporary wrappers
+        // 通过临时包装器复用 TitleProgress 比较逻辑
         TitleProgress p1(title_id_1), p2(title_id_2);
         return CompareTitleProgress(&p1, &p2) ? 1 : 0;
     }
@@ -225,7 +225,7 @@ namespace {
             GW::UI::UInt32ToEncStr(faction_gained, current_points_buf, _countof(current_points_buf));
             wchar_t points_needed_buf[3];
             GW::UI::UInt32ToEncStr(faction_max, points_needed_buf, _countof(points_needed_buf));
-            str_placeholder = std::format(L"{}\x2\x108\x107: \x1\x2\x8101\x29C\x101{}\x102{}", faction_name, current_points_buf, points_needed_buf);
+            str_placeholder = std::format(L"{}\x2\x108\x107：\x1\x2\x8101\x29C\x101{}\x102{}", faction_name, current_points_buf, points_needed_buf);
             secondary_label = std::make_unique<GuiUtils::EncString>(str_placeholder.c_str(), false);
         }
 
@@ -236,7 +236,7 @@ namespace {
         if (title_info && title_info->points_desc && *title_info->points_desc) {
 
             if (title_info->has_tiers()) {
-                // N/N
+                // 当前/最大
                 const auto points_needed = title_info->points_needed_next_rank == -1 ? title_info->points_needed_current_rank : title_info->points_needed_next_rank;
                 wchar_t current_points_buf[3];
                 GW::UI::UInt32ToEncStr(title_info->current_points, current_points_buf, _countof(current_points_buf));
@@ -245,7 +245,7 @@ namespace {
                 str_placeholder = std::format(L"{}\x10a\x8101\x29C\x101{}\x102{}\x1", title_info->points_desc, current_points_buf, points_needed_buf);
             }
             else if (title_info->is_percentage_based()) {
-                const auto rounded_percent = std::round(percent * 1000) / 10; // Round to 1dp
+                const auto rounded_percent = std::round(percent * 1000) / 10; // 四舍五入到 1 位小数
                 const auto integer_part = (uint32_t)rounded_percent;
                 const auto fractional_part = (uint32_t)std::round((rounded_percent - integer_part) * 10);
 
@@ -373,12 +373,12 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
         ImVec2 bar_size(available_width, settings.progress_bar_height);
         const auto draw_list = ImGui::GetWindowDrawList();
 
-        // Calculate progress bar colour
+        // 计算进度条颜色
         const ImVec4 base_color = ImGui::ColorConvertU32ToFloat4(settings.progress_bar_foreground_color);
-        const float lighten_factor = 1.5f; // Adjust to control how much lighter
+        const float lighten_factor = 1.5f; // 调整以控制亮度程度
         ImVec4 light_color(std::min(base_color.x * lighten_factor, 1.0f), std::min(base_color.y * lighten_factor, 1.0f), std::min(base_color.z * lighten_factor, 1.0f), base_color.w);
 
-        // Convert ImVec4 colors to ImU32
+        // 将 ImVec4 颜色转换为 ImU32
         ImU32 color_start = settings.progress_bar_foreground_color;
         ImU32 color_end = ImGui::ColorConvertFloat4ToU32(light_color);
 
@@ -388,14 +388,14 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                 continue;
             }
             if (p->overlay_label->encoded().empty()) continue;
-            // Get strings from EncString
+            // 从 EncString 获取字符串
             const auto& title_text = p->title_label.string();
             auto sub_title_text = p->tier_label.string();
             if (p->current_rank > 0)
-                sub_title_text += std::format(" ({})", p->current_rank);
+                sub_title_text += std::format("（{}）", p->current_rank);
             const auto& overlay_text = p->overlay_label->string();
 
-            // Draw title label (left aligned) and sub-title label (right aligned) on same line
+            // 绘制标题标签（左对齐）和副标题标签（右对齐）在同一行
             
             ImVec2 label_pos = ImGui::GetCursorPos();
             if (Colors::IsVisible(settings.title_label_color)) {
@@ -414,38 +414,38 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
 
             ImVec2 bar_pos = ImGui::GetCursorScreenPos();
             ImVec2 bar_pos_max = ImVec2(bar_pos.x + bar_size.x, bar_pos.y + bar_size.y);
-            // Background progress bar
+            // 背景进度条
             draw_list->AddRectFilled(bar_pos, bar_pos_max, settings.progress_bar_background_color);
 
-            // Foreground progress bar
+            // 前景进度条
             float fill_width = bar_size.x * p->percent;
             draw_list->AddRectFilledMultiColor(bar_pos, ImVec2(bar_pos.x + fill_width, bar_pos.y + bar_size.y), color_start, color_end, color_end, color_start);
 
-            // Secondary progress bar (faction progress)
+            // 次级进度条（势力进度）
             if (p->secondary_percent > 0.f) {
                 const float secondary_height = bar_size.y / 6.0f;
                 ImVec2 secondary_bar_pos(bar_pos.x, bar_pos_max.y - secondary_height);
                 float secondary_fill_width = bar_size.x * p->secondary_percent;
 
-                // Determine color based on progress thresholds
+                // 根据进度阈值确定颜色
                 ImU32 secondary_color;
                 if (p->secondary_percent >= 1.0f) {
-                    secondary_color = IM_COL32(255, 0, 0, 150); // Red when full
+                    secondary_color = IM_COL32(255, 0, 0, 150); // 满时红色
                 }
                 else if (p->secondary_percent >= 0.7f) {
-                    secondary_color = IM_COL32(255, 255, 0, 150); // Yellow at 70%+
+                    secondary_color = IM_COL32(255, 255, 0, 150); // 70%+ 黄色
                 }
                 else {
-                    secondary_color = IM_COL32(0, 255, 0, 150); // Green below 70%
+                    secondary_color = IM_COL32(0, 255, 0, 150); // 70% 以下绿色
                 }
 
                 draw_list->AddRectFilled(secondary_bar_pos, ImVec2(secondary_bar_pos.x + secondary_fill_width, secondary_bar_pos.y + secondary_height), secondary_color);
             }
 
-            // Border
+            // 边框
             draw_list->AddRect(bar_pos, bar_pos_max, progress_bar_border_color);
 
-            // Overlay label
+            // 叠加标签
             if (Colors::IsVisible(settings.progress_overlay_label_color)) {
                 ImVec2 overlay_size = ImGui::CalcTextSize(overlay_text.c_str());
                 ImVec2 overlay_pos(bar_pos.x + (bar_size.x - overlay_size.x) * 0.5f, bar_pos.y + (bar_size.y - overlay_size.y) * 0.5f);
@@ -458,7 +458,7 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                 if (!p->next_tier_label.encoded().empty()) {
                     const auto title_info = GW::PlayerMgr::GetTitleTrack(p->title_id);
                     if (title_info && title_info->points_needed_next_rank != 0xFFFFFFFF) {
-                        label += std::format("\nNext: {} at {}", p->next_tier_label.string(), title_info->points_needed_next_rank);
+                        label += std::format("\n下一级：{} 需要 {}", p->next_tier_label.string(), title_info->points_needed_next_rank);
                     }
                 }
                 if (!p->secondary_label->encoded().empty()) {
@@ -468,7 +468,7 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
                 ImGui::SetTooltip("%s", label.c_str());
             }
 
-            // Move cursor past the progress bar
+            // 将光标移到进度条之后
             ImGui::Dummy(bar_size);
             ImGui::Spacing();
         }
@@ -479,17 +479,17 @@ void TitleTrackerWidget::Draw(IDirect3DDevice9*)
 
 void TitleTrackerWidget::DrawSettingsInternal()
 {
-    if (ImGui::Checkbox("Override title sort order in Hero Panel", &settings.override_title_sort_order)) RefreshTitleProgress();
-    if (ImGui::Checkbox("Show progress by overall title, or by current tier", &settings.show_overall_title_progress)) RefreshTitleProgress();
+    if (ImGui::Checkbox("覆盖英雄面板中的称号排序", &settings.override_title_sort_order)) RefreshTitleProgress();
+    if (ImGui::Checkbox("按整体称号或当前等级显示进度", &settings.show_overall_title_progress)) RefreshTitleProgress();
     ImGui::Separator();
-    ImGui::TextUnformatted("Widget settings");
-    ImGui::Checkbox("Hide completed titles", &settings.hide_completed_titles);
-    if (ImGui::Checkbox("Automatically show title progress for current map", &settings.automatically_show_title_progress_for_current_map)) {
+    ImGui::TextUnformatted("小部件设置");
+    ImGui::Checkbox("隐藏已完成称号", &settings.hide_completed_titles);
+    if (ImGui::Checkbox("自动显示当前地图的称号进度", &settings.automatically_show_title_progress_for_current_map)) {
         RefreshTitleProgress();
     }
-    ImGui::ShowHelp("e.g. when in an Asuran area, display title progress for the Asuran title track");
-    ImGui::InputFloat("Progress bar height", &settings.progress_bar_height, 1.f, 4.f, "%.f");
-    ImGui::Text("Show/Hide Titles:");
+    ImGui::ShowHelp("例如：在阿苏拉区域时，显示阿苏拉称号的进度");
+    ImGui::InputFloat("进度条高度", &settings.progress_bar_height, 1.f, 4.f, "%.f");
+    ImGui::Text("显示/隐藏称号：");
     ImGui::Indent();
     ImGui::StartSpacedElements(240.f);
     for (auto p : title_progress_by_title) {
@@ -501,21 +501,21 @@ void TitleTrackerWidget::DrawSettingsInternal()
     }
     ImGui::Unindent();
 
-    ImGui::TextUnformatted("Widget colors");
+    ImGui::TextUnformatted("小部件颜色");
     ImGui::StartSpacedElements(240.f);
     ImGui::Indent();
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Widget background color", &settings.progress_bar_background_color.value, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("小部件背景颜色", &settings.progress_bar_background_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Title label color", &settings.title_label_color.value, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("称号标签颜色", &settings.title_label_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Tier label color", &settings.tier_label_color.value, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("等级标签颜色", &settings.tier_label_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Progress bar background color", &settings.progress_bar_background_color.value, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("进度条背景颜色", &settings.progress_bar_background_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Progress bar foreground color", &settings.progress_bar_foreground_color.value, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("进度条前景颜色", &settings.progress_bar_foreground_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::NextSpacedElement();
-    Colors::DrawSettingHueWheel("Progress bar overlay text color", &settings.progress_overlay_label_color.value, ImGuiColorEditFlags_NoInputs);
+    Colors::DrawSettingHueWheel("进度条叠加文字颜色", &settings.progress_overlay_label_color.value, ImGuiColorEditFlags_NoInputs);
     ImGui::Unindent();
 }
 

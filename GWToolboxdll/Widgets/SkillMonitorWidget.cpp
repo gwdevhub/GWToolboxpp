@@ -199,7 +199,7 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
     if (settings.hide_in_outpost && GW::Map::GetInstanceType() == GW::Constants::InstanceType::Outpost) {
         return;
     }
-    // @Cleanup: Only call when the party window has been moved or updated
+    // @清理：仅在队伍窗口移动或更新时调用
     if (!(FetchPartyInfo() && RecalculatePartyPositions())) {
         return;
     }
@@ -224,12 +224,12 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
     else {
         window_x = party_health_bars_position.top_left.x - user_offset_x - width;
         if (window_x < 0 || settings.user_offset < 0) {
-            // Right placement
+            // 右侧放置
             window_x = party_health_bars_position.bottom_right.x + user_offset_x;
         }
     }
 
-    // Add a window to capture mouse clicks.
+    // 添加一个窗口来捕获鼠标点击
     ImGui::SetNextWindowPos({ window_x, party_health_bars_position.top_left.y });
     ImGui::SetNextWindowSize({ width, party_health_bars_position.bottom_right.y - party_health_bars_position.top_left.y });
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
@@ -243,9 +243,9 @@ void SkillMonitorWidget::Draw(IDirect3DDevice9*)
         for (auto& [agent_id, party_slot] : party_indeces_by_agent_id) {
 
             if (party_slot >= pets_start_idx && party_slot < allies_start_idx)
-                continue; // Don't draw pets
+                continue; // 不绘制宠物
             if (!settings.show_non_party_members && party_slot >= allies_start_idx)
-                continue; // Don't draw allies
+                continue; // 不绘制盟友
 
             const auto health_bar_pos = GetAgentHealthBarPosition(agent_id);
             if (!health_bar_pos)
@@ -311,55 +311,53 @@ void SkillMonitorWidget::DrawSettingsInternal()
 {
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
+    ImGui::Checkbox("在前哨站隐藏", &settings.hide_in_outpost);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Show non party-members (allies)", &settings.show_non_party_members);
+    ImGui::Checkbox("显示非队伍成员（盟友）", &settings.show_non_party_members);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("Flip history direction (left/right)", &settings.history_flip_direction);
+    ImGui::Checkbox("翻转历史方向（左/右）", &settings.history_flip_direction);
     ImGui::StartSpacedElements(292.f);
     ImGui::NextSpacedElement();
-    ImGui::CheckboxWithHelp("Show on top of health bars", &settings.overlay_party_window, "Untick to show this widget to the left (or right) of the party window.\nTick to show this widget over the top of the party health bars inside the party window");
+    ImGui::CheckboxWithHelp("显示在生命条上方", &settings.overlay_party_window, "取消勾选以在队伍窗口左侧（或右侧）显示此小部件。\n勾选以在队伍窗口内队伍生命条上方显示此小部件。");
     ImGui::NextSpacedElement();
     ImGui::PushItemWidth(120.f);
-    ImGui::DragInt("Party window offset", &settings.user_offset);
+    ImGui::DragInt("队伍窗口偏移", &settings.user_offset);
     ImGui::PopItemWidth();
-    ImGui::ShowHelp("Distance away from the party window");
+    ImGui::ShowHelp("距离队伍窗口的距离");
 
-    ImGui::Text("Cast Indicator");
-    ImGui::DragInt("Threshold", &settings.cast_indicator_threshold, 1.0f, 0, 0, "%d milliseconds");
+    ImGui::Text("施法指示器");
+    ImGui::DragInt("阈值", &settings.cast_indicator_threshold, 1.0f, 0, 0, "%d 毫秒");
     ImGui::ShowHelp(
-        "Minimum cast time a skill has to have to display the indicator. Note that instantly casted skill will never be displayed.");
-    ImGui::InputInt("Height", &settings.cast_indicator_height);
-    Colors::DrawSettingHueWheel("Color", &settings.cast_indicator_color.value);
+        "技能需要达到的最小施法时间才能显示指示器。注意：瞬发技能永远不会显示。");
+    ImGui::InputInt("高度", &settings.cast_indicator_height);
+    Colors::DrawSettingHueWheel("颜色", &settings.cast_indicator_color.value);
 
-    Colors::DrawSettingHueWheel("Background", &settings.background.value, 0);
+    Colors::DrawSettingHueWheel("背景", &settings.background.value, 0);
 
-    ImGui::Text("Status Border");
-    ImGui::InputInt("Border Thickness", &settings.status_border_thickness);
-    ImGui::ShowHelp("Set to 0 to disable.");
+    ImGui::Text("状态边框");
+    ImGui::InputInt("边框粗细", &settings.status_border_thickness);
+    ImGui::ShowHelp("设为 0 以禁用。");
     if (settings.status_border_thickness < 0) {
         settings.status_border_thickness = 0;
     }
     if (settings.status_border_thickness != 0) {
-        if (ImGui::TreeNodeEx("Colors", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
-            Colors::DrawSettingHueWheel("Completed", &settings.status_color_completed.value);
-            Colors::DrawSettingHueWheel("Casting", &settings.status_color_casting.value);
-            Colors::DrawSettingHueWheel("Cancelled", &settings.status_color_cancelled.value);
-            Colors::DrawSettingHueWheel("Interrupted", &settings.status_color_interrupted.value);
+        if (ImGui::TreeNodeEx("颜色", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+            Colors::DrawSettingHueWheel("已完成", &settings.status_color_completed.value);
+            Colors::DrawSettingHueWheel("施法中", &settings.status_color_casting.value);
+            Colors::DrawSettingHueWheel("已取消", &settings.status_color_cancelled.value);
+            Colors::DrawSettingHueWheel("已打断", &settings.status_color_interrupted.value);
             ImGui::TreePop();
         }
     }
 
-    ImGui::Text("History");
-    ImGui::InputInt("Length", &settings.history_length, 0, 25);
+    ImGui::Text("历史记录");
+    ImGui::InputInt("长度", &settings.history_length, 0, 25);
     if (settings.history_length < 0) {
         settings.history_length = 0;
     }
-    ImGui::DragInt("Timeout", &settings.history_timeout, 1.0f, 0, 0, "%d milliseconds");
-    ImGui::ShowHelp("Amount of time after which a skill gets removed from the skill history. Set to 0 to disable.");
+    ImGui::DragInt("超时", &settings.history_timeout, 1.0f, 0, 0, "%d 毫秒");
+    ImGui::ShowHelp("技能从历史记录中移除的时间阈值。设为 0 以禁用。");
     if (settings.history_timeout < 0) {
         settings.history_timeout = 0;
     }
 }
-
-

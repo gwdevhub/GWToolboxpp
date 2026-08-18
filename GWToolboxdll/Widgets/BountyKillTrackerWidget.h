@@ -13,11 +13,11 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Bounty Kill Tracker"; }
+    [[nodiscard]] const char* Name() const override { return "赏金击杀追踪"; }
 
     [[nodiscard]] const char* Description() const override
     {
-        return "Overlays a kill counter on active bounty effect icons, similar to the vanquish counter on the Hard Mode effect icon";
+        return "在激活的赏金效果图标上覆盖击杀计数器，类似于困难模式效果图标上的征服计数器";
     }
 
     [[nodiscard]] const char* Icon() const override { return ICON_FA_SKULL; }

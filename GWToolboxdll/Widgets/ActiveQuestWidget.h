@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Active Quest Info"; }
+    [[nodiscard]] const char* Name() const override { return "活跃任务显示"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BAHAI; }
 
     void Initialize() override;

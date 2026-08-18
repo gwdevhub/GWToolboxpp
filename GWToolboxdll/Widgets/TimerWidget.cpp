@@ -50,28 +50,28 @@ namespace {
             case 3:
                 snprintf(buf, bufsize, "%d:%02d:%02lld.%03lld", hrs, mins, secs, time.count() % 1000);
                 break;
-            default: // and 0
+            default: // 0
                 snprintf(buf, bufsize, "%d:%02d:%02lld", hrs, mins, secs);
                 break;
         }
     }
 
-    // those function write to extra_buffer and extra_color.
-    // they return true if there is something to draw.
+    // 这些函数写入 extra_buffer 和 extra_color。
+    // 如果有内容需要绘制则返回 true。
 
     std::map<GW::Constants::SkillID, const char*> spirit_effects{
-        {GW::Constants::SkillID::Edge_of_Extinction, "EoE"},
-        {GW::Constants::SkillID::Quickening_Zephyr, "QZ"},
-        {GW::Constants::SkillID::Famine, "Famine"},
-        {GW::Constants::SkillID::Symbiosis, "Symbiosis"},
-        {GW::Constants::SkillID::Winnowing, "Winnowing"},
-        {GW::Constants::SkillID::Union, "Union"},
-        {GW::Constants::SkillID::Shelter, "Shelter"},
-        {GW::Constants::SkillID::Displacement, "Displacement"},
-        {GW::Constants::SkillID::Life, "Life"},
-        {GW::Constants::SkillID::Recuperation, "Recuperation"},
-        {GW::Constants::SkillID::Winds, "Winds"},
-        {GW::Constants::SkillID::Frozen_Soil, "Frozen Soil"}
+        {GW::Constants::SkillID::Edge_of_Extinction, "灭绝之刃"},
+        {GW::Constants::SkillID::Quickening_Zephyr, "疾风"},
+        {GW::Constants::SkillID::Famine, "饥荒"},
+        {GW::Constants::SkillID::Symbiosis, "共生"},
+        {GW::Constants::SkillID::Winnowing, "筛选"},
+        {GW::Constants::SkillID::Union, "联合"},
+        {GW::Constants::SkillID::Shelter, "庇护"},
+        {GW::Constants::SkillID::Displacement, "位移"},
+        {GW::Constants::SkillID::Life, "生命"},
+        {GW::Constants::SkillID::Recuperation, "恢复"},
+        {GW::Constants::SkillID::Winds, "风"},
+        {GW::Constants::SkillID::Frozen_Soil, "冻土"}
     };
 
     TimerWidget::Settings settings;
@@ -91,7 +91,7 @@ namespace {
 
     std::chrono::steady_clock::time_point run_started, run_completed, instance_started;
 
-    unsigned long cave_start = 0; // instance timer when cave started
+    unsigned long cave_start = 0; // 洞穴开始时的实例计时器值
     GW::HookEntry DisplayDialogue_Entry;
     GW::HookEntry PreGameSrvTransfer_Entry;
     GW::HookEntry InstanceTimer_Entry;
@@ -109,11 +109,11 @@ namespace {
         const unsigned long time = GW::Map::GetInstanceTime() / 1000;
         const unsigned long temp = (time - 1) % 25;
         if (temp < 15) {
-            snprintf(extra_buffer, 32, "Open - %lu", 15u - temp);
+            snprintf(extra_buffer, 32, "开启 - %lu", 15u - temp);
             extra_color = ImColor(0, 255, 0);
         }
         else {
-            snprintf(extra_buffer, 32, "Closed - %lu", 25u - temp);
+            snprintf(extra_buffer, 32, "关闭 - %lu", 25u - temp);
             extra_color = ImColor(255, 0, 0);
         }
         return true;
@@ -142,7 +142,7 @@ namespace {
             if (spirit_effect_enabled == spirit_effects_enabled.end() || !spirit_effect_enabled->second) {
                 continue;
             }
-            offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset - 1, "%s%s: %d", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
+            offset += snprintf(&spirits_buffer[offset], sizeof(spirits_buffer) - offset - 1, "%s%s：%d 秒", offset ? "\n" : "", spirit_effects[effect_id], effect.GetTimeRemaining() / 1000);
         }
         if (!offset) {
             return false;
@@ -195,9 +195,9 @@ namespace {
 
         const clock_t diff = TIMER_DIFF(start) / 1000;
 
-        // a 30s timer starts when you enter the aspect
-        // a 30s timer starts 100s after you enter the aspect
-        // a 30s timer starts 200s after you enter the aspect
+        // 进入面相时启动 30 秒计时器
+        // 进入面相 100 秒后启动 30 秒计时器
+        // 进入面相 200 秒后启动 30 秒计时器
         long timer = 30 - diff % 30;
         if (diff > 100) {
             timer = std::min(timer, 30 - (diff - 100) % 30);
@@ -207,13 +207,13 @@ namespace {
         }
         switch (skill) {
         case SkillID::Aspect_of_Exhaustion:
-            snprintf(extra_buffer, 32, "Exhaustion: %lu", timer);
+            snprintf(extra_buffer, 32, "力竭：%lu", timer);
             break;
         case SkillID::Aspect_of_Depletion_energy_loss:
-            snprintf(extra_buffer, 32, "Depletion: %lu", timer);
+            snprintf(extra_buffer, 32, "衰竭：%lu", timer);
             break;
         case SkillID::Scorpion_Aspect:
-            snprintf(extra_buffer, 32, "Scorpion: %lu", timer);
+            snprintf(extra_buffer, 32, "蝎子：%lu", timer);
             break;
         default:
             break;
@@ -224,7 +224,7 @@ namespace {
 
     bool GetDhuumTimer()
     {
-        // todo: implement
+        // TODO：实现
         return false;
     }
 
@@ -254,38 +254,38 @@ namespace {
         case MapID::Bloodstone_Caves_Level_1:
         case MapID::Arachnis_Haunt_Level_2:
         case MapID::Oolas_Lab_Level_2:
-            snprintf(extra_buffer, 32, "Fire Jet: %lu", timer);
+            snprintf(extra_buffer, 32, "火焰喷射：%lu", timer);
             return true;
         case MapID::Heart_of_the_Shiverpeaks_Level_3:
-            snprintf(extra_buffer, 32, "Fire Spout: %lu", timer);
+            snprintf(extra_buffer, 32, "火焰喷涌：%lu", timer);
             return true;
         case MapID::Shards_of_Orr_Level_3:
         case MapID::Cathedral_of_Flames_Level_3:
-            snprintf(extra_buffer, 32, "Fire Trap: %lu", timer);
+            snprintf(extra_buffer, 32, "火焰陷阱：%lu", timer);
             return true;
         case MapID::Sepulchre_of_Dragrimmar_Level_1:
         case MapID::Ravens_Point_Level_1:
         case MapID::Ravens_Point_Level_2:
         case MapID::Heart_of_the_Shiverpeaks_Level_1:
         case MapID::Darkrime_Delves_Level_2:
-            snprintf(extra_buffer, 32, "Ice Jet: %lu", timer);
+            snprintf(extra_buffer, 32, "寒冰喷射：%lu", timer);
             return true;
         case MapID::Darkrime_Delves_Level_1:
         case MapID::Secret_Lair_of_the_Snowmen:
-            snprintf(extra_buffer, 32, "Ice Spout: %lu", timer);
+            snprintf(extra_buffer, 32, "寒冰喷涌：%lu", timer);
             return true;
         case MapID::Bogroot_Growths_Level_1:
         case MapID::Arachnis_Haunt_Level_1:
         case MapID::Shards_of_Orr_Level_1:
         case MapID::Shards_of_Orr_Level_2:
-            snprintf(extra_buffer, 32, "Poison Jet: %lu", timer);
+            snprintf(extra_buffer, 32, "剧毒喷射：%lu", timer);
             return true;
         case MapID::Bloodstone_Caves_Level_2:
-            snprintf(extra_buffer, 32, "Poison Spout: %lu", timer);
+            snprintf(extra_buffer, 32, "剧毒喷涌：%lu", timer);
             return true;
         case MapID::Cathedral_of_Flames_Level_2:
         case MapID::Bloodstone_Caves_Level_3:
-            snprintf(extra_buffer, 32, "Poison Trap: %lu", timer);
+            snprintf(extra_buffer, 32, "剧毒陷阱：%lu", timer);
             return true;
         default:
             return false;
@@ -327,34 +327,34 @@ namespace {
             timer = CAVE_SPAWN_INTERVALS[currentWave] - time_since_previous_wave;
         }
 
-        snprintf(extra_buffer, 32, "Wave %d: %d", currentWave + 1, timer);
+        snprintf(extra_buffer, 32, "波次 %d：%d", currentWave + 1, timer);
         extra_color = ImColor(255, 255, 255);
 
         return true;
     }
 }
 
-// Called before map change
+// 地图切换前调用
 void TimerWidget::OnPreGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer*)
 {
     if (settings.print_time_zoning && in_explorable && !is_valid(run_completed)) {
-        // do this here, before we actually reset it
+        // 在真正重置之前执行
         PrintTimer();
     }
     run_completed = now();
 }
 
-// Called just after map change
+// 地图切换后调用
 void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameSrvTransfer* pak)
 {
-    cave_start = 0; // reset doa's cave timer
+    cave_start = 0; // 重置痛苦领域洞穴计时器
     instance_timer_valid = false;
     const steady_clock::time_point now_tp = now();
     run_completed = steady_clock::time_point();
 
     instance_started = now_tp;
 
-    // If reset_next_loading_screen, reset regardless of never_reset
+    // 如果 reset_next_loading_screen 为 true，则无论 never_reset 如何都重置
     if (reset_next_loading_screen) {
         run_started = now_tp;
         reset_next_loading_screen = false;
@@ -362,11 +362,11 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
 
     if (!settings.never_reset) {
         if (pak->is_explorable && !in_explorable) {
-            // if zoning from outpost to explorable
+            // 从前哨站进入探索区域
             run_started = now_tp;
         }
         else if (!pak->is_explorable) {
-            // zoning back to outpost
+            // 回到前哨站
             run_started = now_tp;
         }
 
@@ -375,7 +375,7 @@ void TimerWidget::OnPostGameSrvTransfer(GW::HookStatus*, GW::Packet::StoC::GameS
             const bool new_in_dungeon = info->type == GW::RegionType::Dungeon;
 
             if (new_in_dungeon && !in_dungeon) {
-                // zoning from explorable to dungeon
+                // 从探索区域进入地城
                 run_started = now_tp;
             }
 
@@ -430,7 +430,7 @@ void TimerWidget::Initialize()
     in_explorable = GW::Map::GetInstanceType() == GW::Constants::InstanceType::Explorable;
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"resettimer", [](GW::HookStatus*, const wchar_t*, const int, const LPWSTR*) {
         reset_next_loading_screen = true;
-        Log::Flash("Resetting timer at the next loading screen.");
+        Log::Flash("将在下一次加载画面时重置计时器。");
     });
     GW::Chat::CreateCommand(&ChatCmd_HookEntry, L"timerreset", [](GW::HookStatus*,const wchar_t*, const int, const LPWSTR*) {
         reset_next_loading_screen = true;
@@ -474,48 +474,45 @@ void TimerWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
 
-    ImGui::DragFloat("Text size", &settings.font_size, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
-    ImGui::Checkbox("Hide in outpost", &settings.hide_in_outpost);
-    if (ImGui::RadioButton("Instance timer", settings.use_instance_timer)) {
+    ImGui::DragFloat("文字大小", &settings.font_size, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
+    ImGui::Checkbox("在前哨站隐藏", &settings.hide_in_outpost);
+    if (ImGui::RadioButton("实例计时器", settings.use_instance_timer)) {
         settings.use_instance_timer = true;
     }
-    if (ImGui::RadioButton("Real-time timer", !settings.use_instance_timer)) {
+    if (ImGui::RadioButton("实时计时器", !settings.use_instance_timer)) {
         settings.use_instance_timer = false;
     }
-    ImGui::ShowHelp("Real-time timer does not reset when zoning between explorable areas.\n \
-        You can use /resettimer to force a reset at the next loading screen.");
+    ImGui::ShowHelp("实时计时器在探索区域之间传送时不会重置。\n可以使用 /resettimer 在下次加载画面时强制重置。");
     ImGui::Indent();
-    ImGui::CheckboxWithHelp("Never reset", &settings.never_reset,
-        "Don't reset when entering outposts, explorables (from outposts), and dungeons. \n"
-        "Useful for timing longer runs.\n"
-        "Requires 'Use instance timer' above NOT ticked");
-    ImGui::Checkbox("Stop at objective completion", &settings.stop_at_objective_completion);
-    ImGui::Checkbox("Also show instance timer", &settings.also_show_instance_timer);
+    ImGui::CheckboxWithHelp("永不重置", &settings.never_reset,
+        "进入前哨站、探索区域（从前哨站）和地城时不重置。\n用于计时较长的跑图。\n需要取消勾选上面的\"使用实例计时器\"");
+    ImGui::Checkbox("目标完成时停止", &settings.stop_at_objective_completion);
+    ImGui::Checkbox("同时显示实例计时器", &settings.also_show_instance_timer);
     ImGui::Unindent();
-    if (ImGui::SliderInt("Show decimals", &settings.show_decimals, 0, 3)) {
+    if (ImGui::SliderInt("显示小数位", &settings.show_decimals, 0, 3)) {
         settings.show_decimals = std::clamp(settings.show_decimals, 0, 3);
     }
-    ImGui::Text("Print time:");
+    ImGui::Text("打印时间：");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("With Ctrl+Click on timer", &settings.click_to_print_time);
+    ImGui::Checkbox("Ctrl+点击计时器时", &settings.click_to_print_time);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("At objective completion", &settings.print_time_objective);
+    ImGui::Checkbox("目标完成时", &settings.print_time_objective);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("When leaving explorables", &settings.print_time_zoning);
+    ImGui::Checkbox("离开探索区域时", &settings.print_time_zoning);
     ImGui::Unindent();
 
-    ImGui::DragFloat("Text size for extra timers", &settings.font_size_extra_timers, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
-    ImGui::Text("Show extra timers:");
+    ImGui::DragFloat("额外计时器文字大小", &settings.font_size_extra_timers, 1.0f, FontLoader::text_size_min, FontLoader::text_size_max, "%.0f");
+    ImGui::Text("显示额外计时器：");
     ImGui::Indent();
 
     const std::vector<std::pair<const char*, bool*>> timers = {
-        {"Deep aspects", &settings.show_deep_timer},
-        {"DoA cave", &settings.show_doa_timer},
-        {"Dhuum", &settings.show_dhuum_timer},
-        {"Urgoz doors", &settings.show_urgoz_timer},
-        {"Dungeon traps", &settings.show_dungeon_traps_timer}
+        {"深渊面相", &settings.show_deep_timer},
+        {"痛苦领域洞穴", &settings.show_doa_timer},
+        {"杜姆", &settings.show_dhuum_timer},
+        {"厄戈兹门", &settings.show_urgoz_timer},
+        {"地城陷阱", &settings.show_dungeon_traps_timer}
     };
     ImGui::StartSpacedElements(140.f);
     for (size_t i = 0; i < timers.size(); i++) {
@@ -523,7 +520,7 @@ void TimerWidget::DrawSettingsInternal()
         ImGui::Checkbox(timers[i].first, timers[i].second);
     }
     ImGui::Unindent();
-    ImGui::CheckboxWithHelp("Show spirit timers", &settings.show_spirit_timers, "Time until spirits die in seconds");
+    ImGui::CheckboxWithHelp("显示灵魂计时器", &settings.show_spirit_timers, "以秒为单位显示灵魂剩余时间");
     if (settings.show_spirit_timers) {
         ImGui::Indent();
         ImGui::StartSpacedElements(140.f);
@@ -538,7 +535,7 @@ void TimerWidget::DrawSettingsInternal()
 milliseconds TimerWidget::GetMapTimeElapsed()
 {
     if (!is_valid(instance_started)) {
-        // Can happen if toolbox was started after map load
+        // 可能在工具箱加载后地图才加载
         instance_started = now() - milliseconds(GW::Map::GetInstanceTime());
     }
     return duration_cast<milliseconds>(now() - instance_started);
@@ -560,7 +557,7 @@ milliseconds TimerWidget::GetRunTimeElapsed()
     if (is_valid(run_completed)) {
         return duration_cast<milliseconds>(run_completed - run_started);
     }
-    // rare case that OnPostGameSrvTransfer was not called
+    // OnPostGameSrvTransfer 未被调用的罕见情况
     if (duration_cast<milliseconds>(now() - run_started) - milliseconds{GW::Map::GetInstanceTime()} > 5000ms && !settings.never_reset) {
         const GW::AreaInfo* info = GW::Map::GetMapInfo(GW::Map::GetMapID());
         if (info) {
@@ -601,7 +598,7 @@ void TimerWidget::PrintTimer()
 {
     char buf[32];
     print_time(GetTimer(), 2, 32, buf);
-    Log::Info("Time: %s", buf);
+    Log::Info("用时：%s", buf);
 }
 
 ImGuiWindowFlags TimerWidget::GetWinFlags(const ImGuiWindowFlags flags, const bool noinput_if_frozen) const
@@ -626,7 +623,7 @@ void TimerWidget::Draw(IDirect3DDevice9*)
     ImGui::SetNextWindowSize(ImVec2(250.0f, 90.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(Name(), nullptr, GetWinFlags(0, !(settings.click_to_print_time && ctrl_pressed)))) {
         const auto font = FontLoader::GetFont();
-        // Main timer:
+        // 主计时器
         print_time(GetTimer(), settings.show_decimals, 32, timer_buffer);
         ImGui::PushFont(font, settings.font_size);
         ImGui::TextShadowed(timer_buffer, {2, 2});
@@ -692,4 +689,3 @@ void TimerWidget::Draw(IDirect3DDevice9*)
     ImGui::End();
     ImGui::PopStyleColor();
 }
-

@@ -19,7 +19,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Bonds"; }
+    [[nodiscard]] const char* Name() const override { return "增益监视器"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BARS; }
 
     struct Settings {

@@ -38,7 +38,7 @@ public:
     const float acceleration = 0.5f;
     const float max_speed = 15.0f; // game units per frame
 
-    [[nodiscard]] const char* Name() const override { return "Minimap"; }
+    [[nodiscard]] const char* Name() const override { return "小地图"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 
     [[nodiscard]] float Scale() const;

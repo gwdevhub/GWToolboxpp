@@ -100,11 +100,11 @@ void ServerInfoWidget::Update(float)
 {
     if (current_server_info && current_server_info->country.empty() && current_server_info->last_update < time(nullptr) - 60) {
         if (server_info_fetcher.joinable()) {
-            server_info_fetcher.join(); // Wait for thread to end.
+            server_info_fetcher.join(); // 等待线程结束
         }
         current_server_info->last_update = time(nullptr);
         server_info_fetcher = std::thread([this] {
-            // Need to check details
+            // 需要检查详情
             using namespace std::string_literals;
             const std::string url = "https://api.ipgeolocation.io/ipgeo?apiKey="s + IPGEO_API_KEY + "&ip=" + current_server_info->ip;
             int tries = 0;
@@ -115,7 +115,7 @@ void ServerInfoWidget::Update(float)
                 tries++;
             } while (!success && tries < 5);
             if (!success) {
-                Log::Log("Failed to download %s\n%s", url.c_str(), response.c_str());
+                Log::Log("下载失败 %s\n%s", url.c_str(), response.c_str());
                 return;
             }
             if (!response.empty()) {
@@ -183,5 +183,5 @@ void ServerInfoWidget::Draw(IDirect3DDevice9*)
 
 void ServerInfoWidget::DrawSettingsInternal()
 {
-    ImGui::Text("Displays current server IP Address and location if available");
+    ImGui::Text("显示当前服务器 IP 地址及位置信息（如可用）");
 }

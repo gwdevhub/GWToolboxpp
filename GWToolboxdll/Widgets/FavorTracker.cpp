@@ -96,12 +96,12 @@ namespace {
     {
         if (!msg || !*msg) return false;
         if (wcsncmp(L"\x8102\x223f", msg, 2) == 0) {
-            // "x minutes of favor of the gods remaining" (/favor)
+            // "神祇眷顾剩余 x 分钟" (/favor)
             SetFavorActive(ExtractEncodedValue(msg));
             return true;
         }
         if (wcsncmp(L"\x8102\x2240", msg, 2) == 0) {
-            // "x more achievements must be performed to earn the favor of the gods" (/favor)
+            // "还需完成 x 项成就才能获得神祇眷顾" (/favor)
             SetFavorActive(false, ExtractEncodedValue(msg));
             return true;
         }
@@ -113,12 +113,12 @@ namespace {
         if (!msg || !*msg) return false;
         if (IsRequestedFavorMessage(msg)) return true;
         if (wcsncmp(L"\x8101\x7b91", msg, 2) == 0) {
-            // "x minutes of favor of the gods remaining" (broadcast)
+            // "神祇眷顾剩余 x 分钟"（广播）
             SetFavorActive(ExtractEncodedValue(msg));
             return true;
         }
         if (wcsncmp(L"\x8101\x7b92", msg, 2) == 0) {
-            // "x more achievements must be performed to earn the favor of the gods" (broadcast)
+            // "还需完成 x 项成就才能获得神祇眷顾"（广播）
             SetFavorActive(false, ExtractEncodedValue(msg));
             return true;
         }
@@ -251,17 +251,17 @@ void FavorTracker::Update(float)
 
 void FavorTracker::DrawSettingsInternal()
 {
-    ImGui::DragFloat("Text size", &settings.text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
-    Colors::DrawSettingHueWheel("Text color", &settings.text_color.value);
-    ImGui::Checkbox("Hide when the world has no favor", &settings.hide_if_no_favor);
+    ImGui::DragFloat("文字大小", &settings.text_size, 1.f, FontLoader::text_size_min, FontLoader::text_size_max, "%.f");
+    Colors::DrawSettingHueWheel("文字颜色", &settings.text_color.value);
+    ImGui::Checkbox("世界无眷顾时隐藏", &settings.hide_if_no_favor);
 
     ImGui::Separator();
 
-    ImGui::CheckboxWithHelp("Enable Favor Tracking", &settings.enabled, "Periodically runs /favor to check Favor of the Gods status. Automated queries are hidden from chat.");
+    ImGui::CheckboxWithHelp("启用眷顾追踪", &settings.enabled, "定期运行 /favor 以检查神祇眷顾状态。自动查询将从聊天中隐藏。");
 
-    ImGui::Checkbox("Play sound on favor activation", &settings.play_sound_on_favor);
+    ImGui::Checkbox("眷顾激活时播放音效", &settings.play_sound_on_favor);
     if (settings.play_sound_on_favor) {
-        ImGui::InputInt("Sound File ID", (int*)&settings.favor_sound_file_id);
+        ImGui::InputInt("音效文件 ID", (int*)&settings.favor_sound_file_id);
         if (favor_sound_file.file_id != settings.favor_sound_file_id) {
             favor_sound_file.readFromDat(settings.favor_sound_file_id);
             ASSERT(favor_sound_file.file_id == settings.favor_sound_file_id);
@@ -269,26 +269,26 @@ void FavorTracker::DrawSettingsInternal()
         if (favor_sound_file.file_id) {
             ImGui::Indent();
             if (!isMp3(favor_sound_file)) {
-                ImGui::TextColored(ImVec4(255, 255, 0, 255), ICON_FA_TIMES "  File ID %d is not a valid sound file", favor_sound_file.file_id);
+                ImGui::TextColored(ImVec4(255, 255, 0, 255), ICON_FA_TIMES "  文件 ID %d 不是有效的音效文件", favor_sound_file.file_id);
             }
             else {
-                ImGui::TextColored(ImVec4(0, 255, 0, 255), ICON_FA_CHECK "  File ID %d is a valid sound file", favor_sound_file.file_id);
+                ImGui::TextColored(ImVec4(0, 255, 0, 255), ICON_FA_CHECK "  文件 ID %d 是有效的音效文件", favor_sound_file.file_id);
             }
             ImGui::Unindent();
         }
     }
     ImGui::SameLine();
-    if (settings.favor_sound_file_id && ImGui::Button("Play")) {
+    if (settings.favor_sound_file_id && ImGui::Button("播放")) {
         AudioSettings::PlaySoundFileId(settings.favor_sound_file_id);
     }
     bool reset = false;
-    if (default_favor_sound_file_id != settings.favor_sound_file_id && (ImGui::SameLine(), ImGui::ConfirmButton("Reset", &reset))) {
+    if (default_favor_sound_file_id != settings.favor_sound_file_id && (ImGui::SameLine(), ImGui::ConfirmButton("重置", &reset))) {
         settings.favor_sound_file_id = default_favor_sound_file_id;
     }
     ImGui::Separator();
     ImGui::TextUnformatted(GetFavorMessage());
     ImGui::SameLine();
-    if (ImGui::Button("Check Now")) {
+    if (ImGui::Button("立即检查")) {
         CheckFavor();
     }
 }

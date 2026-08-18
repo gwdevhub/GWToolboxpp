@@ -13,7 +13,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Skill Monitor"; }
+    [[nodiscard]] const char* Name() const override { return "技能监视器"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_HISTORY; }
 
     struct Settings {

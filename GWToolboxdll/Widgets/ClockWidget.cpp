@@ -39,10 +39,10 @@ void ClockWidget::Draw(IDirect3DDevice9*)
                 hour = 12;
             }
             if (settings.show_seconds) {
-                snprintf(timer, 32, "%d:%02d:%02d %s", hour, time.wMinute, time.wSecond, time.wHour >= 12 ? "p.m." : "a.m.");
+                snprintf(timer, 32, "%d:%02d:%02d %s", hour, time.wMinute, time.wSecond, time.wHour >= 12 ? "下午" : "上午");
             }
             else {
-                snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, time.wHour >= 12 ? "p.m." : "a.m.");
+                snprintf(timer, 32, "%d:%02d %s", hour, time.wMinute, time.wHour >= 12 ? "下午" : "上午");
             }
         }
         ImGui::PushFont(FontLoader::GetFont(), settings.font_size);
@@ -77,8 +77,8 @@ void ClockWidget::SaveSettings(SettingsDoc& doc)
 
 void ClockWidget::DrawSettingsInternal()
 {
-    ImGui::Checkbox("Use 24h clock", &settings.use_24h_clock);
-    ImGui::Checkbox("Show seconds", &settings.show_seconds);
-    ImGui::DragFloat("Text size in px", &settings.font_size, 1.f, 0.f, 48.f, "%.f");
+    ImGui::Checkbox("使用 24 小时制", &settings.use_24h_clock);
+    ImGui::Checkbox("显示秒", &settings.show_seconds);
+    ImGui::DragFloat("文字大小（像素）", &settings.font_size, 1.f, 0.f, 48.f, "%.f");
 
 }

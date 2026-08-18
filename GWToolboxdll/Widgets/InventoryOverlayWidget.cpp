@@ -18,14 +18,14 @@ namespace {
     std::vector<GW::UI::Frame*> inventory_slot_frames;
 
     std::unordered_map<std::wstring, ImColor> item_highlight_colors_by_name = {
-        { {0x8101, 0x222F, 0xE5B2, 0xB4FB, 0x1FED},IM_COL32_WHITE} // Creme Brulee in white
+        { {0x8101, 0x222F, 0xE5B2, 0xB4FB, 0x1FED},IM_COL32_WHITE} // 焦糖布丁显示为白色
     };
     std::unordered_map<GW::Constants::ItemType, ImColor> item_highlight_colors_by_type = {
-    { GW::Constants::ItemType::Usable,ImColor(255, 204, 86)} // Consumable items in gold
+    { GW::Constants::ItemType::Usable,ImColor(255, 204, 86)} // 消耗品显示为金色
     };
 
     void HighlightFrame(const GW::UI::Frame* frame, const ImColor& color, const GW::UI::Frame* root = GW::UI::GetRootFrame(), ImDrawList* draw_list = ImGui::GetBackgroundDrawList()) {
-        // @TODO: Check parent frame scrollable position and crop to fit.
+        // @待办：检查父框架滚动位置并裁剪适配
         const auto top_left = frame->position.GetTopLeftOnScreen(root);
         const auto bottom_right = frame->position.GetBottomRightOnScreen(root);
         draw_list->AddRect({ top_left.x, top_left.y }, { bottom_right.x, bottom_right.y }, color);
@@ -93,12 +93,12 @@ void InventoryOverlayWidget::DrawSettingsInternal()
 {
     ToolboxWidget::DrawSettingsInternal();
     ImGui::SameLine();
-    ImGui::Checkbox("Show overlay in outpost", &settings.show_in_outpost);
+    ImGui::Checkbox("在前哨站显示覆盖层", &settings.show_in_outpost);
     ImGui::SameLine();
-    ImGui::Checkbox("Show overlay explorable", &settings.show_in_explorable);
+    ImGui::Checkbox("在探索区域显示覆盖层", &settings.show_in_explorable);
 
-    // @TODO: Adding item colours by name (usability would be to add this to a context menu to manually add)
-    // @TODO: Adding item colours by type
+    // @待办：按名称添加物品颜色（可用性：将其添加到右键菜单以便手动添加）
+    // @待办：按类型添加物品颜色
 
 }
 
@@ -142,6 +142,6 @@ void InventoryOverlayWidget::Draw(IDirect3DDevice9*)
             continue;
         }
 
-        // @Enhancement: Other ways of colouring by item detail
+        // @增强：其他按物品详情着色的方式
     }
 }

@@ -24,7 +24,7 @@ public:
         static MissionMapWidget w;
         return w;
     }
-    [[nodiscard]] const char* Name() const override { return "Mission Map"; }
+    [[nodiscard]] const char* Name() const override { return "任务地图"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_GLOBE; }
 
     struct Settings {
