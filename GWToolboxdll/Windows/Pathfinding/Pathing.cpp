@@ -724,7 +724,7 @@ namespace Pathing {
         return closest;
     }
 
-    uint32_t FileHashToFileId(wchar_t* param_1)
+    uint32_t FileHashToFileId(const wchar_t* param_1)
     {
         if (!param_1) return 0;
         if (((0xff < *param_1) && (0xff < param_1[1])) && ((param_1[2] == 0 || ((0xff < param_1[2] && (param_1[3] == 0)))))) {
