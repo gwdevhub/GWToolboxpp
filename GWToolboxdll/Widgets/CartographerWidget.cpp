@@ -20,7 +20,6 @@
 #include <fstream>
 #include <Modules/Resources.h>
 #include <Windows/Pathfinding/PathingMapDataLoader.h>
-#include <Windows/Pathfinding/PathfindingWindow.h>
 #endif
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
@@ -565,9 +564,10 @@ namespace {
 
 #ifdef _DEBUG
     // Bakes, per continent, which 32x32 tiles have ground you can stand on. Everything it needs is
-    // reachable without visiting a map: constant_maps_info gives the DAT file, AreaInfo gives the
-    // continent and world-map bounds, and the DAT gives the trapezoids. Stores standable rather
-    // than discoverable so the reveal radius stays a runtime choice.
+    // reachable without visiting a map, and all of it from the client rather than a checked-in
+    // table: AreaInfo gives the continent, the world-map bounds and the DAT file id, and the DAT
+    // gives the trapezoids. Nothing here needs updating when ArenaNet ships a new build. Stores
+    // standable rather than discoverable so the reveal radius stays a runtime choice.
     struct ContinentBake {
         std::unordered_set<uint64_t> standable; // (cy << 32) | (uint32)cx
         int maps = 0;
@@ -642,9 +642,12 @@ namespace {
         return best;
     }
 
-    void BakeMap(const GW::Constants::MapID map_id, const int continent)
+    // AreaInfo::file_id straight from the client, not PathfindingWindow::GetMapFileId, which
+    // consults the checked-in constant_maps_info table first. The client's own table is what
+    // survives a game update; a table in the repo is a snapshot that silently rots.
+    void BakeMap(const GW::Constants::MapID map_id, const GW::AreaInfo* info, const int continent)
     {
-        const uint32_t file_id = PathfindingWindow::GetMapFileId(map_id);
+        const uint32_t file_id = info ? info->file_id : 0;
         if (!file_id) {
             bake.no_file_id++;
             return;
@@ -755,7 +758,7 @@ namespace {
             bake.running = false;
             unsigned tiles = 0;
             for (const auto& [continent, data] : bake.continents) tiles += static_cast<unsigned>(data.standable.size());
-            bake.summary = std::format("done in {:.1f}s: {} continents, {} tiles, {} maps skipped (no DAT file), {} failed to load, {} without bounds",
+            bake.summary = std::format("done in {:.1f}s: {} continents, {} tiles, {} maps with no file_id in AreaInfo, {} failed to load, {} without bounds",
                                        TIMER_DIFF(bake.started) / 1000.f, bake.continents.size(), tiles,
                                        bake.no_file_id, bake.load_failed, bake.no_bounds);
             CARTO_LOG("[carto-bake] %s", bake.summary.c_str());
@@ -763,7 +766,7 @@ namespace {
         }
         const auto map_id = bake.queue[bake.next++];
         const auto* info = GW::Map::GetMapInfo(map_id);
-        if (info) BakeMap(map_id, static_cast<int>(info->continent));
+        if (info) BakeMap(map_id, info, static_cast<int>(info->continent));
         bake.summary = std::format("{}/{} maps...", bake.next, bake.queue.size());
     }
 #endif
@@ -1414,7 +1417,7 @@ void CartographerWidget::DrawBakeSettings()
     }
     if (!bake.summary.empty()) ImGui::TextWrapped("%s", bake.summary.c_str());
     if (bake.on_world_map) {
-        ImGui::TextDisabled("%d maps on the world map; %d had no DAT file, %d failed to load, %d had no bounds",
+        ImGui::TextDisabled("%d maps on the world map; %d with no file_id in AreaInfo, %d failed to load, %d had no bounds",
                             bake.on_world_map, bake.no_file_id, bake.load_failed, bake.no_bounds);
     }
     for (const auto& [continent, data] : bake.continents) {
