@@ -369,9 +369,8 @@ namespace {
 
     uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
-        if (!(prop && prop->h0034[4])) return 0;
-        uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
-        return ArenaNetFileParser::FileHashToFileId((wchar_t*)sub_deets[1]);
+        if (!(prop && prop->model_info)) return 0;
+        return ArenaNetFileParser::FileHashToFileId(prop->model_info->model_file_name);
     };
 
     bool IsTravelPortal(GW::MapProp* prop)

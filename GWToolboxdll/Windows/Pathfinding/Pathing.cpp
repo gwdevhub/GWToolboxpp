@@ -384,17 +384,13 @@ namespace Pathing {
     }
 
     namespace {
-        // The prop's real extent is not exposed by anything we can read - PropModelInfo is
-        // undecoded and the DAT record's scale field is not parsed - so the doorway width is a
-        // per-model constant, in gwinches. Deliberately narrow: overshooting walls off ground
-        // beside the gate, which is worse than missing a crossing.
-        float PortalHalfWidth(const uint32_t model_file_id)
+        // Live props carry their own collision radius; DAT-loaded ones do not, and the record's
+        // scale field is still undecoded, so those fall back to a middling constant.
+        constexpr float kUnknownPortalHalfWidth = 250.f;
+
+        float PortalHalfWidth(const PortalProp& portal)
         {
-            switch (model_file_id) {
-                case 0x4e6b2: case 0x3c5ac: return 300.f; // asura gates - wide arches
-                case 0xa825: case 0xe723: return 200.f;
-                default: return 250.f;
-            }
+            return portal.radius > 0.f ? portal.radius : kUnknownPortalHalfWidth;
         }
 
         std::vector<PortalProp> portal_cache;
@@ -432,7 +428,7 @@ namespace Pathing {
     bool CrossesTravelPortal(const GW::Vec2f& a, const GW::Vec2f& b)
     {
         for (const auto& portal : CurrentMapPortals()) {
-            const float half_width = PortalHalfWidth(portal.model_file_id);
+            const float half_width = PortalHalfWidth(portal);
             if (!portal.has_facing) {
                 // No facing to build a doorway from, so fall back to the prop's footprint: block
                 // when the step ends up inside it.
@@ -739,9 +735,8 @@ namespace Pathing {
 
     const uint32_t GetMapPropModelFileId(GW::MapProp* prop)
     {
-        if (!(prop && prop->h0034[4])) return 0;
-        uint32_t* sub_deets = (uint32_t*)prop->h0034[4];
-        return FileHashToFileId((wchar_t*)sub_deets[1]);
+        if (!(prop && prop->model_info)) return 0;
+        return FileHashToFileId(prop->model_info->model_file_name);
     };
     bool IsTeleporter(GW::MapProp* prop)
     {

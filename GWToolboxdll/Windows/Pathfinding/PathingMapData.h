@@ -123,6 +123,9 @@ namespace Pathing {
         // callers fall back to a plain radius when it is absent.
         float facing_radians = 0.f;
         bool has_facing = false;
+        // Horizontal extent in world units, from the model's collision cylinder. Zero when it is
+        // not known - only the live-MapContext path can read it.
+        float radius = 0.f;
     };
 
     // Complete pathing map data

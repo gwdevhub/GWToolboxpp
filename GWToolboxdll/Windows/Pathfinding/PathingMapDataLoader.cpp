@@ -87,13 +87,20 @@ namespace Pathing {
         }
     }
 
-    // Decode a live prop's model file ID the way WorldMapWidget does:
-    // h0034[4] points at a sub-struct whose [1] is the model's file hash.
+    // The model info is shared by every prop using that model, and carries the file hash the
+    // portal check keys off plus the collision bounds the doorway width comes from.
     static uint32_t MapPropModelFileId(const GW::MapProp* prop)
     {
-        if (!(prop && prop->h0034[4])) return 0;
-        const auto* sub_deets = reinterpret_cast<const uint32_t*>(prop->h0034[4]);
-        return ArenaNetFileParser::FileHashToFileId(reinterpret_cast<const wchar_t*>(sub_deets[1]));
+        if (!(prop && prop->model_info)) return 0;
+        return ArenaNetFileParser::FileHashToFileId(prop->model_info->model_file_name);
+    }
+
+    // Horizontal extent of the prop in world units, from the same cylinder the client picks
+    // against. Zero when the model info is missing, which callers read as "unknown".
+    static float MapPropRadius(const GW::MapProp* prop)
+    {
+        if (!(prop && prop->model_info)) return 0.f;
+        return prop->scale * prop->model_info->bounding_radius;
     }
 
     // Extract travel-portal props from live map memory - the MapContext equivalent of
@@ -104,10 +111,8 @@ namespace Pathing {
         if (!props) return;
         for (auto* prop : props->propArray) {
             const uint32_t fid = MapPropModelFileId(prop);
-            // rotation_cos and rotation_sin are mapped to the same offset in the GWCA struct, so
-            // the angle is the only trustworthy source for the facing.
             if (IsPortalModelFileId(fid))
-                out.push_back({{prop->position.x, prop->position.y}, fid, prop->rotation_angle, true});
+                out.push_back({{prop->position.x, prop->position.y}, fid, prop->rotation_angle, true, MapPropRadius(prop)});
         }
     }
 

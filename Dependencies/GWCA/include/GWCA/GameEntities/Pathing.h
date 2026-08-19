@@ -88,12 +88,15 @@ namespace GW {
         uint32_t prop_index;
     };
 
+    // Per-model collision bounds, shared by every prop using that model. Offsets confirmed against
+    // the client's prop ray-pick, which builds a cylinder as
+    //   radius = MapProp::scale * bounding_radius
+    //   z      = MapProp::position.z - bounds_z_offsets[n] * MapProp::scale
     struct PropModelInfo {
         /* +h0000 */ uint32_t h0000;
-        /* +h0004 */ uint32_t h0004;
-        /* +h0008 */ uint32_t h0008;
-        /* +h000C */ uint32_t h000C;
-        /* +h0010 */ uint32_t h0010;
+        /* +h0004 */ const wchar_t* model_file_name; // hash-encoded; FileHashToFileId() turns it into a file id
+        /* +h0008 */ float bounding_radius;    // model space; scale by MapProp::scale for world units
+        /* +h000C */ float bounds_z_offsets[2];
         /* +h0014 */ uint32_t h0014;
     };
     static_assert(sizeof(PropModelInfo) == 0x18, "struct PropModelInfo has incorrect size");
@@ -111,7 +114,7 @@ namespace GW {
     };
     static_assert(sizeof(RecObject) == 0x24, "struct RecObject has incorrect size");
 
-    struct MapProp { // total: 0x54/84
+    struct MapProp { // total: 0x90/144
         /* +h0000 */ uint32_t h0000[5];
         /* +h0014 */ uint32_t uptime_seconds; // time since spawned
         /* +h0018 */ uint32_t h0018;
@@ -121,13 +124,15 @@ namespace GW {
         /* +h0030 */ uint32_t h0030[2];
         /* +h0038 */ float rotation_angle;
         /* +h003C */ float rotation_cos;
-        /* +h003C */ float rotation_sin;
-        /* +h0040 */ uint32_t h0034[5];
+        /* +h0040 */ float rotation_sin;
+        /* +h0044 */ uint32_t h0044[3];
+        /* +h0050 */ float scale;
+        /* +h0054 */ PropModelInfo* model_info;
         /* +h0058 */ RecObject* interactive_model;
         /* +h005C */ uint32_t h005C[4];
         /* +h006C */ uint32_t appearance_bitmap; // Modified when animation changes
         /* +h0070 */ uint32_t animation_bits;
-        /* +h0064 */ uint32_t h0064[5];
+        /* +h0074 */ uint32_t h0074[5];
         /* +h0088 */ PropByType* prop_object_info;
         /* +h008C */ uint32_t h008C;
     };
