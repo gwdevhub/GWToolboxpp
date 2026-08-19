@@ -73,6 +73,7 @@
 #include <Windows/PartyStatisticsWindow.h>
 #include <Windows/Pathfinding/PathfindingWindow.h>
 #include <Windows/PconsWindow.h>
+#include <Windows/PlaystyleRestrictionsWindow.h>
 #include <Windows/RerollWindow.h>
 #include <Windows/TradeWindow.h>
 #include <Windows/TravelWindow.h>
@@ -252,6 +253,7 @@ namespace {
         DropTrackerWindow::Instance(),
         GWMarketWindow::Instance(),
         InventorySorting::Instance(),
+        {PlaystyleRestrictionsWindow::Instance(), false},
         FavorTracker::Instance(),
         LoginModule::Instance(),
         {AccountInventoryWindow::Instance(), false},
