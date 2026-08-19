@@ -16,9 +16,9 @@
 #include <ImGuiAddons.h>
 #include <Logger.h>
 #include <Timer.h>
-#include <Modules/CartographerModule.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
+#include <Widgets/CartographerWidget.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Windows/Pathfinding/Pathing.h>
@@ -30,7 +30,6 @@
 #endif
 
 namespace {
-    bool enabled = true;
 
     // Gw.exe's fog mesh builder is handed WorldContext::cartographed_areas (+0x5A4) and h05B4
     // (+0x5B4, the grid dims): one bit per 32x32-world-map-unit cell, addressed as below.
@@ -602,7 +601,7 @@ namespace {
 
     bool ContextMenuItems(const GW::Vec2f& click_wm, const float px_per_wm_unit)
     {
-        if (!enabled) return true;
+        if (!GetEnabled()) return true;
         bool keep_open = true;
         ImGui::PushID("carto_ctx");
         ImGui::Separator();
@@ -625,23 +624,23 @@ namespace {
                 && static_cast<int>(floorf(click_wm.y / kWorldMapUnitsPerCell)) == target.cy;
             if (target.valid && (on_suggestion || (target.custom && point_here >= 0))) {
                 if (ImGui::Button(target.custom ? "Remove this fog point" : "Skip this suggestion", item_size)) {
-                    CartographerModule::SkipCurrentTarget(false);
+                    CartographerWidget::SkipCurrentTarget(false);
                     keep_open = false;
                 }
                 if (!target.custom && ImGui::Button("Never suggest this spot again", item_size)) {
-                    CartographerModule::SkipCurrentTarget(true);
+                    CartographerWidget::SkipCurrentTarget(true);
                     keep_open = false;
                 }
             }
             else if (point_here >= 0) {
                 if (ImGui::Button("Remove fog point", item_size)) {
-                    CartographerModule::RemoveCustomPointNear(click_wm, near_dist);
+                    CartographerWidget::RemoveCustomPointNear(click_wm, near_dist);
                     keep_open = false;
                 }
             }
             else {
                 if (ImGui::Button("Add fog point here", item_size)) {
-                    CartographerModule::AddCustomPoint(click_wm);
+                    CartographerWidget::AddCustomPoint(click_wm);
                     keep_open = false;
                 }
             }
@@ -649,7 +648,7 @@ namespace {
                 char label[48];
                 snprintf(label, sizeof(label), "Clear all %u fog points", static_cast<unsigned>(custom_points.size()));
                 if (ImGui::Button(label, item_size)) {
-                    CartographerModule::ClearCustomPoints();
+                    CartographerWidget::ClearCustomPoints();
                     keep_open = false;
                 }
             }
@@ -853,7 +852,7 @@ namespace {
 
     void OnWorldMapOverlayDraw(ImDrawList* dl)
     {
-        if (!enabled || !map_on_world_map) return;
+        if (!GetEnabled() || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return WorldMapWidget::WorldMapToScreen(wm, out); }, true);
         char status[160];
         BuildStatusText(status, sizeof(status));
@@ -864,15 +863,14 @@ namespace {
 
     void OnMissionMapOverlayDraw(ImDrawList* dl)
     {
-        if (!enabled || !map_on_world_map) return;
+        if (!GetEnabled() || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return MissionMapWidget::WorldMapToScreen(wm, out); }, false);
     }
 } // namespace
 
-void CartographerModule::Initialize()
+void CartographerWidget::Initialize()
 {
-    ToolboxModule::Initialize();
-    SettingsRegistry::RegisterField(this, "enabled", &enabled);
+    ToolboxWidget::Initialize();
     SettingsRegistry::RegisterField(this, "show_fog", &show_fog);
     SettingsRegistry::RegisterField(this, "show_stand_cells", &show_stand_cells);
     SettingsRegistry::RegisterField(this, "show_grid", &show_grid);
@@ -886,27 +884,27 @@ void CartographerModule::Initialize()
     RegisterUIMessageCallback(&carto_ui_entry, kCartographyUpdated, OnCartographyUpdated, 0x4000);
 }
 
-void CartographerModule::SignalTerminate()
+void CartographerWidget::SignalTerminate()
 {
     MissionMapWidget::RemoveContextMenuCallback(&OnMissionMapContextMenu);
     WorldMapWidget::RemoveContextMenuCallback(&OnWorldMapContextMenu);
     MissionMapWidget::RemoveOverlayCallback(&OnMissionMapOverlayDraw);
     WorldMapWidget::RemoveOverlayCallback(&OnWorldMapOverlayDraw);
     GW::UI::RemoveUIMessageCallback(&carto_ui_entry);
-    enabled = false;
+    visible = false;
     ResetState();
 }
 
-void CartographerModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
+void CartographerWidget::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
-    ToolboxModule::LoadSettings(doc, legacy);
+    ToolboxWidget::LoadSettings(doc, legacy);
     ParseDeclined();
     ParsePoints();
 }
 
-void CartographerModule::Update(float)
+void CartographerWidget::Update(float)
 {
-    if (!enabled) {
+    if (!GetEnabled()) {
         if (target.valid) ResetState();
         return;
     }
@@ -1091,19 +1089,14 @@ void CartographerModule::Update(float)
     }
 }
 
-void CartographerModule::DrawSettingsInternal()
+void CartographerWidget::DrawWorldMapOptions()
 {
-    ImGui::TextDisabled("Debug tool. Exploration is credited by 32x32 world-map square: standing inside a\nsquare credits it and the ring of squares around it. So this works out which squares\nyou could stand in, which of them would credit something still foggy, and draws those\non the world map and mission map with the most worthwhile one highlighted. Getting\nthere is up to you - plot a marker yourself if you want a route.\nRight-click either map to manage the helper.");
-    bool on = enabled;
-    if (ImGui::Checkbox("Enabled", &on)) {
-        GW::GameThread::Enqueue([on] { SetEnabled(on); });
-    }
-    ImGui::Checkbox("Show remaining fog on the maps", &show_fog);
+    ImGui::Checkbox("Show remaining fog", &show_fog);
     ImGui::ShowHelp("Green: everything still unexplored that some square on this map can credit. Fog nothing here can reach draws nothing.");
     ImGui::Checkbox("Show squares to stand in", &show_stand_cells);
     ImGui::ShowHelp("Draws every 32x32 square worth walking into, shaded by how many foggy squares standing there would credit. The current suggestion is outlined and pulses.");
     ImGui::Checkbox("Show the cartography grid", &show_grid);
-    ImGui::ShowHelp("Draws the 32x32 tile boundaries over this map. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together.");
+    ImGui::ShowHelp("Draws the 32x32 tile boundaries. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together.");
     if (ImGui::Checkbox("Using a Bird's Eye Compass", &using_bec)) {
         GW::GameThread::Enqueue([] {
             // Terrain has not moved, so the probed tiles stay; the radius only widens which tiles
@@ -1116,6 +1109,58 @@ void CartographerModule::DrawSettingsInternal()
         });
     }
     ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where in the tile you stand makes no difference. Rescans the map.");
+}
+
+void CartographerWidget::Draw(IDirect3DDevice9*)
+{
+    // Toggle on the mission map, so the helper can be turned on mid-run without opening settings
+    // or the world map. Sits beside the vanquish overlay's button rather than under it.
+    if (!MissionMapWidget::IsRenderReady()) return;
+    const auto top_left = MissionMapWidget::GetTopLeft();
+    const auto bottom_right = MissionMapWidget::GetBottomRight();
+
+    constexpr float padding = 4.f;
+    const float button_size = ImGui::GetTextLineHeight() + padding * 2;
+    ImGui::SetNextWindowPos({top_left.x + padding + button_size + padding, bottom_right.y - button_size - padding});
+    ImGui::SetNextWindowSize({0, 0});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {2, 2});
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, {0, 0});
+    if (ImGui::Begin("##carto_toggle", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(visible ? ImGuiCol_Text : ImGuiCol_TextDisabled));
+        if (ImGui::Button(ICON_FA_MAP_MARKED_ALT "##carto_toggler")) {
+            const bool on = !visible;
+            GW::GameThread::Enqueue([on] { SetEnabled(on); });
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(visible ? "Cartographer active. Click to hide." : "Cartographer hidden. Click to show.");
+        }
+        ImGui::PopStyleColor();
+    }
+    ImGui::End();
+    ImGui::PopStyleVar(2);
+}
+
+void CartographerWidget::DrawSettingsInternal()
+{
+    ImGui::TextDisabled("Exploration is credited by 32x32 world-map square: standing anywhere inside a square\ncredits it and the ring of squares around it. This works out which squares you could\nstand in, which of them would credit something still foggy, and draws those on the\nworld map and mission map with the most worthwhile one highlighted. Getting there is\nup to you.");
+    ImGui::Separator();
+    bool on = GetEnabled();
+    if (ImGui::Checkbox("Enabled", &on)) {
+        GW::GameThread::Enqueue([on] { SetEnabled(on); });
+    }
+    ImGui::ShowHelp("Also togglable from the button on the mission map, and from the world map's own Cartographer checkbox.");
+    DrawWorldMapOptions();
+
+    ImGui::Separator();
+    ImGui::TextDisabled("Right-click the world map or mission map to skip a suggestion or queue your own fog points.");
+    ImGui::Text("Declined forever: %u squares", static_cast<unsigned>(declined_cells.size()));
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Clear##declined")) ClearDeclined();
+    ImGui::Text("Custom fog points: %u", static_cast<unsigned>(custom_points.size()));
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Clear##points")) ClearCustomPoints();
+
+    if (!GetEnabled()) return;
     unsigned standable = 0;
     unsigned useful = 0;
     for (const auto& [cell, sc] : probe->cells) {
@@ -1123,30 +1168,26 @@ void CartographerModule::DrawSettingsInternal()
         standable++;
         if (sc.reveals > 0) useful++;
     }
-    ImGui::Text("Squares: %u probed, %u standable, %u worth visiting", static_cast<unsigned>(probe->cells.size()), standable, useful);
-    ImGui::Text("Foggy squares: %d reachable here, %d out of reach", map_fog_cells, unreachable_fog_cells);
-    ImGui::Text("Declined forever: %u squares", static_cast<unsigned>(declined_cells.size()));
-    ImGui::SameLine();
-    if (ImGui::SmallButton("Clear##declined")) ClearDeclined();
-    ImGui::Text("Custom fog points: %u", static_cast<unsigned>(custom_points.size()));
-    ImGui::SameLine();
-    if (ImGui::SmallButton("Clear##points")) ClearCustomPoints();
+    ImGui::Separator();
+    ImGui::TextDisabled("This map: %u squares probed, %u standable, %u worth visiting", static_cast<unsigned>(probe->cells.size()), standable, useful);
+    ImGui::TextDisabled("Foggy squares: %d reachable here, %d out of reach", map_fog_cells, unreachable_fog_cells);
 }
 
-void CartographerModule::SetEnabled(const bool on)
+void CartographerWidget::SetEnabled(const bool on)
 {
-    if (enabled == on) return;
-    enabled = on;
+    auto& self = Instance();
+    if (self.visible == on) return;
+    self.visible = on;
     if (!on) ResetState();
     CARTO_LOG("[cartographer] %s", on ? "enabled" : "disabled");
 }
 
-bool CartographerModule::GetEnabled()
+bool CartographerWidget::GetEnabled()
 {
-    return enabled;
+    return Instance().visible;
 }
 
-bool CartographerModule::GetCurrentTargetWorldPos(GW::Vec2f& out)
+bool CartographerWidget::GetCurrentTargetWorldPos(GW::Vec2f& out)
 {
     if (!target.valid) return false;
     out = target.wm;
@@ -1157,21 +1198,21 @@ bool CartographerModule::GetCurrentTargetWorldPos(GW::Vec2f& out)
 
 
 
-void CartographerModule::SkipCurrentTarget(const bool forever)
+void CartographerWidget::SkipCurrentTarget(const bool forever)
 {
     GW::GameThread::Enqueue([forever] {
         SkipTargetImpl(forever);
     });
 }
 
-void CartographerModule::AddCustomPoint(const GW::Vec2f& world_map_pos)
+void CartographerWidget::AddCustomPoint(const GW::Vec2f& world_map_pos)
 {
     GW::GameThread::Enqueue([world_map_pos] {
         AddCustomPointImpl(world_map_pos);
     });
 }
 
-void CartographerModule::RemoveCustomPointNear(const GW::Vec2f& world_map_pos, const float max_dist_wm)
+void CartographerWidget::RemoveCustomPointNear(const GW::Vec2f& world_map_pos, const float max_dist_wm)
 {
     GW::GameThread::Enqueue([world_map_pos, max_dist_wm] {
         const int idx = FindCustomPointNear(world_map_pos, max_dist_wm);
@@ -1185,7 +1226,7 @@ void CartographerModule::RemoveCustomPointNear(const GW::Vec2f& world_map_pos, c
     });
 }
 
-void CartographerModule::ClearCustomPoints()
+void CartographerWidget::ClearCustomPoints()
 {
     GW::GameThread::Enqueue([] {
         custom_points.clear();
@@ -1195,7 +1236,7 @@ void CartographerModule::ClearCustomPoints()
     });
 }
 
-void CartographerModule::ClearDeclined()
+void CartographerWidget::ClearDeclined()
 {
     GW::GameThread::Enqueue([] {
         declined_cells.clear();
@@ -1210,14 +1251,14 @@ void CartographerModule::ClearDeclined()
     });
 }
 
-void CartographerModule::GetStatus(char* buf, const size_t len)
+void CartographerWidget::GetStatus(char* buf, const size_t len)
 {
     char target_desc[64];
     if (!target.valid) snprintf(target_desc, sizeof(target_desc), "none");
     else if (target.custom) snprintf(target_desc, sizeof(target_desc), "point(%.0f,%.0f)", target.wm.x, target.wm.y);
     else snprintf(target_desc, sizeof(target_desc), "stand(%d,%d)+%d", target.cx, target.cy, target.reveals);
     snprintf(buf, len, "carto: enabled=%d target=%s arrived=%d radius=%d skipped=%u probed=%u declined=%u points=%u fogcells=%d",
-             enabled, target_desc, arrived, RevealRadius(),
+             GetEnabled(), target_desc, arrived, RevealRadius(),
              static_cast<unsigned>(probe->skipped.size()), static_cast<unsigned>(probe->cells.size()),
              static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells);
 }

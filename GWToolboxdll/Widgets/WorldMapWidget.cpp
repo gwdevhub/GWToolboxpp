@@ -24,7 +24,7 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <Modules/CartographerModule.h>
+#include <Widgets/CartographerWidget.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/Resources.h>
 #include <Widgets/Minimap/Minimap.h>
@@ -1178,11 +1178,16 @@ void WorldMapWidget::Draw(IDirect3DDevice9*)
     mouse_offset.y *= -1;
     if (ImGui::Begin(Name(), &visible, GetWinFlags() | ImGuiWindowFlags_AlwaysAutoResize)) {
         window = ImGui::GetCurrentWindowRead();
-        bool carto_enabled = CartographerModule::GetEnabled();
-        if (ImGui::Checkbox("Cartographer helper", &carto_enabled)) {
+        bool carto_enabled = CartographerWidget::GetEnabled();
+        if (ImGui::Checkbox("Cartographer", &carto_enabled)) {
             GW::GameThread::Enqueue([carto_enabled] {
-                CartographerModule::SetEnabled(carto_enabled);
+                CartographerWidget::SetEnabled(carto_enabled);
             });
+        }
+        if (carto_enabled) {
+            ImGui::Indent();
+            CartographerWidget::DrawWorldMapOptions();
+            ImGui::Unindent();
         }
         if (ImGui::Checkbox("Show all areas", &settings.showing_all_outposts)) {
             GW::GameThread::Enqueue([] {

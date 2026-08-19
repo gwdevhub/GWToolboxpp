@@ -21,7 +21,7 @@
 #include <GWCA/Managers/UIMgr.h>
 
 #include <Utils/GuiUtils.h>
-#include <Modules/CartographerModule.h>
+#include <Widgets/CartographerWidget.h>
 #include <Modules/Resources.h>
 #include <Windows/DailyQuestsWindow.h>
 #include <Windows/TravelWindow.h>
@@ -483,7 +483,7 @@ namespace {
         }
         if (argOutpost == L"carto") {
             GW::Vec2f target_wm;
-            if (!CartographerModule::GetCurrentTargetWorldPos(target_wm)) {
+            if (!CartographerWidget::GetCurrentTargetWorldPos(target_wm)) {
                 Log::Error("[Error] The cartographer helper has no current target");
                 return;
             }

@@ -111,7 +111,7 @@
 #include <Modules/DangerRingsModule.h>
 #include <Modules/LootBeaconsModule.h>
 #include <Modules/SkillRangeRingsModule.h>
-#include <Modules/CartographerModule.h>
+#include <Widgets/CartographerWidget.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/PartyDamage.h>
 #include <Widgets/SkillMonitorWidget.h>
@@ -207,7 +207,7 @@ namespace {
 #ifdef _DEBUG
         {RiverModule::Instance(), false},
 #endif
-        CartographerModule::Instance(),
+        CartographerWidget::Instance(),
         PartyDamage::Instance(),
         BondsWidget::Instance(),
         ClockWidget::Instance(),
