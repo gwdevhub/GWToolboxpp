@@ -5,7 +5,7 @@
 
 // Debug-only cartography helper. Exploration is tracked per 32x32 world-map-unit square, and
 // standing in a square is believed to credit it plus the ring of squares around it (Chebyshev,
-// widened by a Bonus Explorer's Cape), so the module routes to squares to stand in rather than
+// widened by a Bird's Eye Compass), so the module routes to squares to stand in rather than
 // at the fog. Reachability comes from the current map's pathing data - nothing else is needed.
 //
 // All UI lives on the maps: the squares worth visiting, the suggested square, queued fog points

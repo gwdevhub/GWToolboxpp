@@ -113,7 +113,7 @@ namespace {
     bool show_stand_cells = true;
 
     // Standing in a cell credits it plus this many rings (Chebyshev). Unconfirmed theory, hence a
-    // setting - a Bonus Explorer's Cape appears to add two.
+    // setting - a Bird's Eye Compass appears to add two.
     int reveal_radius_cells = 1;
 
     int RevealRadius()
@@ -987,7 +987,7 @@ void CartographerModule::DrawSettingsInternal()
             sweep_complete = false;
         });
     }
-    ImGui::ShowHelp("How far exploration credit spreads from the square you stand in, measured in squares (Chebyshev distance, so the credited area is a square block). 1 is a bare character; a Bonus Explorer's Cape is believed to add two more rings, so set 3 when wearing one. Changing this rescans the map.");
+    ImGui::ShowHelp("How far exploration credit spreads from the square you stand in, measured in squares (Chebyshev distance, so the credited area is a square block). 1 is a bare character; a Bird's Eye Compass is believed to add two more rings, so set 3 when using one. Changing this rescans the map.");
     unsigned standable = 0;
     unsigned useful = 0;
     for (const auto& [cell, sc] : stand_cells) {
