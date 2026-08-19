@@ -46,6 +46,8 @@
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl",
         "CMAKE_RC_COMPILER": "rc",
+        "CMAKE_JOB_POOL_COMPILE": "console",
+        "CMAKE_JOB_POOL_LINK": "console",
         "FXC": "/opt/msvc/bin/x86/fxc",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/scripts/wine-msvc/vcpkg-triplets;${sourceDir}/vcpkg-overlays/triplets"
       }
