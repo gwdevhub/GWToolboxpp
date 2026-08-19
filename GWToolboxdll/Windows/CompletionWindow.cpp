@@ -652,7 +652,7 @@ namespace {
         if (map_id == MapID::Tomb_of_the_Primeval_Kings)
             return true; // Topk special case
 
-        const auto map = GW::Map::GetMapInfo();
+        const auto map = GW::Map::GetMapInfo(map_id);
         const auto w = GW::GetWorldContext();
         if (!(map && w))
             return false;
