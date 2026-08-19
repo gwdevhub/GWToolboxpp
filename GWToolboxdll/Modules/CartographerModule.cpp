@@ -271,7 +271,8 @@ namespace {
                 };
                 GW::GamePos gp{};
                 if (!WorldMapWidget::WorldMapToGamePos(wm, gp) || !Pathing::IsPositionWalkable(gp)) continue;
-                // Deepest footing wins; near a border the server may credit the neighbour instead.
+                // Where in the tile you stand makes no difference to credit, but aiming central
+                // keeps our own routing error from landing you in the neighbouring tile.
                 const float d2 = Dist2(wm, centre);
                 if (!found || d2 < best_d2) {
                     best_d2 = d2;
