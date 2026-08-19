@@ -36,6 +36,7 @@ public:
         bool enforce_campaign_order = false;
         bool block_mission_skipping = false;
         bool require_campaign_titles_maxed = false;
+        bool require_hard_mode = false;
         bool gate_presearing_exit = false;
         std::vector<RequiredTitle> required_presearing_titles = {{22, 1}, {9, 1}}; // LDoA, Survivor
         uint32_t min_level_for_gated_areas = 0;

@@ -22,8 +22,6 @@
 #include <GWCA/Managers/SkillbarMgr.h>
 #include <GWCA/Managers/UIMgr.h>
 
-#include <GWCA/Context/WorldContext.h>
-
 #include <GWCA/Utilities/Hook.h>
 
 #include <ImGuiAddons.h>
@@ -33,6 +31,7 @@
 #include <Utils/SettingsDoc.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
+#include <Windows/CompletionWindow.h>
 #include <Windows/PlaystyleRestrictionsWindow.h>
 
 using GW::Constants::Campaign;
@@ -124,12 +123,9 @@ namespace {
 
     // ==== Progression state ====
 
-    // Primary objective only, Normal Mode: challenge rulesets gate on "did the story happen",
-    // not on bonuses, so CompletionWindow::IsAreaComplete (which also demands the bonus) is too strict.
     bool IsMissionComplete(const MapID map_id)
     {
-        const auto world = GW::GetWorldContext();
-        return world && ToolboxUtils::ArrayBoolAt(world->missions_completed, static_cast<uint32_t>(map_id));
+        return CompletionWindow::IsAreaComplete(map_id, profile.require_hard_mode ? CompletionCheck::Both : CompletionCheck::NormalMode);
     }
 
     bool IsCampaignComplete(const Campaign campaign)
@@ -552,6 +548,8 @@ void PlaystyleRestrictionsWindow::Draw(IDirect3DDevice9*)
             ImGui::Checkbox("Also require the previous campaign's titles maxed", &profile.require_campaign_titles_maxed);
             ImGui::ShowHelp("Protector, Guardian, Vanquisher, Skill Hunter and Cartographer for that campaign (plus Sunspear/Lightbringer for Nightfall). Account-wide titles are never counted.");
         }
+        ImGui::Checkbox("Missions count only when done in Hard Mode too", &profile.require_hard_mode);
+        ImGui::ShowHelp("Applies to every mission check below. Either way a mission counts as done only with its bonus objective, matching the Completion window.");
         ImGui::Checkbox("Missions must be done in story order", &profile.block_mission_skipping);
         ImGui::ShowHelp("Greys out Enter Mission until every earlier mission of that campaign is complete");
         ImGui::Checkbox("Require titles before leaving pre-Searing", &profile.gate_presearing_exit);
