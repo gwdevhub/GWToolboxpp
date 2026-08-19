@@ -95,6 +95,8 @@ namespace {
     constexpr ImU32 kStandColor = IM_COL32(255, 236, 170, 255);
     constexpr ImU32 kFogColor = IM_COL32(0x50, 0xFF, 0x78, 255);
     constexpr ImU32 kGridColor = IM_COL32(255, 255, 255, 40);
+    constexpr ImU32 kGridDotColor = IM_COL32(255, 255, 255, 70);
+    constexpr ImU32 kCurrentTileColor = IM_COL32(120, 185, 255, 255);
 
     ImU32 WithAlpha(const ImU32 color, const int alpha)
     {
@@ -134,12 +136,6 @@ namespace {
     // normal range uncovers, so these stop counting for anything further than one tile away.
     std::set<std::pair<int, int>> strict_fog_cells;
 
-    bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
-    {
-        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return true;
-        return !strict_fog_cells.contains({fx, fy});
-    }
-
     struct StandCell {
         bool walkable = false;
         GW::GamePos pos{}; // somewhere inside the cell you can actually stand
@@ -147,6 +143,27 @@ namespace {
     };
     std::map<std::pair<int, int>, StandCell> stand_cells;
     bool sweep_complete = false;
+
+    bool AnyWalkableAround(const int cx, const int cy)
+    {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                const auto it = stand_cells.find({cx + dx, cy + dy});
+                if (it != stand_cells.end() && it->second.walkable) return true;
+            }
+        }
+        return false;
+    }
+
+    // BEC's extra rings only apply "if there's standard pathfinding in any adjacent tile", so a
+    // sliver walled off from walkable ground still needs you within normal range.
+    bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
+    {
+        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return true;
+        if (strict_fog_cells.contains({fx, fy})) return false;
+        return !sweep_complete || AnyWalkableAround(fx, fy);
+    }
+
     std::set<std::pair<int, int>> skipped_cells;
     std::set<std::pair<int, int>> declined_cells;
     std::vector<GW::Vec2f> custom_points;
@@ -208,6 +225,8 @@ namespace {
     std::vector<FogCell> fog_cells;
     int map_fog_cells = -1;
     std::pair<int, int> map_cell_min{}, map_cell_max{};
+    std::pair<int, int> player_cell{};
+    bool player_cell_valid = false;
 
     // Everything counts as coverable until the sweep finishes, so the overlay does not blink
     // cells out and back in as probing progresses.
@@ -437,6 +456,7 @@ namespace {
         unreachable_fog_cells = 0;
         strict_fog_cells.clear();
         map_cell_min = map_cell_max = {};
+        player_cell_valid = false;
         sweep_complete = false;
         ClearMarker();
     }
@@ -705,6 +725,15 @@ namespace {
             const float y = origin.y + (cy - y0) * step_y;
             if (y >= clip.Min.y && y <= clip.Max.y) dl->AddLine({left, y}, {right, y}, kGridColor);
         }
+        if (step_x < 12.f || step_y < 12.f) return;
+        for (int cy = y0; cy < y1; cy++) {
+            const float y = origin.y + (cy - y0 + 0.5f) * step_y;
+            if (y < clip.Min.y || y > clip.Max.y) continue;
+            for (int cx = x0; cx < x1; cx++) {
+                const float x = origin.x + (cx - x0 + 0.5f) * step_x;
+                if (x >= clip.Min.x && x <= clip.Max.x) dl->AddCircleFilled({x, y}, 1.5f, kGridDotColor);
+            }
+        }
     }
 
     // Drawn at true 32x32 size, shaded by how much fog the spot would credit.
@@ -743,6 +772,15 @@ namespace {
             const char* stand_tooltip = nullptr;
             DrawStandCells(dl, project, mouse, stand_tooltip);
             if (cell_tooltip) tooltip = stand_tooltip;
+        }
+        // Which tile you are standing in is the question the whole thing turns on, and it is not
+        // answerable from the character marker alone - the ranges key off the tile, not the dot.
+        if (player_cell_valid) {
+            ImVec2 cell_min, cell_max;
+            if (ProjectCell(project, player_cell.first, player_cell.second, cell_min, cell_max)) {
+                dl->AddRectFilled(cell_min, cell_max, WithAlpha(kCurrentTileColor, 28));
+                dl->AddRect(cell_min, cell_max, WithAlpha(kCurrentTileColor, 150), 0.f, 0, 1.f);
+            }
         }
         // While marker ownership is in question (user removed/moved it; yield pending) the
         // target visuals hide immediately so the removal feels instant.
@@ -904,6 +942,8 @@ void CartographerModule::Update(float)
     // Arrival is being inside the square, not near the goal - on a ledge those are a square apart.
     const int player_cx = static_cast<int>(floorf(player_wm.x / kWorldMapUnitsPerCell));
     const int player_cy = static_cast<int>(floorf(player_wm.y / kWorldMapUnitsPerCell));
+    player_cell = {player_cx, player_cy};
+    player_cell_valid = true;
     if (target.valid && target.on_map) {
         if (target.custom) {
             if (GW::GetSquareDistance(player->pos, goal_game) < 150.f * 150.f) {
