@@ -601,7 +601,7 @@ namespace {
 
     bool ContextMenuItems(const GW::Vec2f& click_wm, const float px_per_wm_unit)
     {
-        if (!GetEnabled()) return true;
+        if (!CartographerWidget::GetEnabled()) return true;
         bool keep_open = true;
         ImGui::PushID("carto_ctx");
         ImGui::Separator();
@@ -852,7 +852,7 @@ namespace {
 
     void OnWorldMapOverlayDraw(ImDrawList* dl)
     {
-        if (!GetEnabled() || !map_on_world_map) return;
+        if (!CartographerWidget::GetEnabled() || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return WorldMapWidget::WorldMapToScreen(wm, out); }, true);
         char status[160];
         BuildStatusText(status, sizeof(status));
@@ -863,7 +863,7 @@ namespace {
 
     void OnMissionMapOverlayDraw(ImDrawList* dl)
     {
-        if (!GetEnabled() || !map_on_world_map) return;
+        if (!CartographerWidget::GetEnabled() || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return MissionMapWidget::WorldMapToScreen(wm, out); }, false);
     }
 } // namespace
