@@ -3,6 +3,7 @@
 #include <map>
 
 #include <GWCA/Constants/Constants.h>
+#include <GWCA/Context/CharContext.h>
 #include <GWCA/Context/WorldContext.h>
 #include <GWCA/GameEntities/Agent.h>
 #include <GWCA/GameEntities/Map.h>
@@ -132,24 +133,51 @@ namespace {
         return using_bec ? kRevealRadiusBec : kRevealRadius;
     }
 
-    // Slivers that a wide-range visit failed to credit. BEC range misses a few tiles that only
-    // normal range uncovers, so these stop counting for anything further than one tile away.
-    std::set<std::pair<int, int>> strict_fog_cells;
-
     struct StandCell {
         bool walkable = false;
         GW::GamePos pos{}; // somewhere inside the cell you can actually stand
         int reveals = 0;   // still-foggy cells this spot would credit
     };
-    std::map<std::pair<int, int>, StandCell> stand_cells;
-    bool sweep_complete = false;
+
+    // Probing a map costs a walkability query per sample per tile, and the answer never changes
+    // while you are on that map, so it is swept once and kept for the session. `strict` and
+    // `skipped` are learned the same way - by visiting - so they belong with it.
+    struct MapProbe {
+        std::map<std::pair<int, int>, StandCell> cells;
+        // Slivers a wide-range visit failed to credit. BEC range misses a few tiles that only
+        // normal range uncovers, so these stop counting beyond one tile away.
+        std::set<std::pair<int, int>> strict;
+        std::set<std::pair<int, int>> skipped;
+        bool complete = false;
+    };
+    std::map<GW::Constants::MapID, MapProbe> probe_cache;
+    // Which tiles are worth probing depends on where that character's fog is, so a different
+    // character invalidates the sweep even though the terrain has not moved.
+    std::wstring probe_cache_character;
+
+    // Always valid: off the world map it points at an empty probe, so everything downstream reads
+    // as "nothing here" without a null check on every access.
+    MapProbe no_map_probe;
+    MapProbe* probe = &no_map_probe;
+    bool map_on_world_map = false;
+
+    void SelectProbe(const GW::Constants::MapID map_id)
+    {
+        const auto* ctx = GW::GetCharContext();
+        const std::wstring character = ctx ? ctx->player_name : L"";
+        if (character != probe_cache_character) {
+            probe_cache.clear();
+            probe_cache_character = character;
+        }
+        probe = &probe_cache[map_id];
+    }
 
     bool AnyWalkableAround(const int cx, const int cy)
     {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
-                const auto it = stand_cells.find({cx + dx, cy + dy});
-                if (it != stand_cells.end() && it->second.walkable) return true;
+                const auto it = probe->cells.find({cx + dx, cy + dy});
+                if (it != probe->cells.end() && it->second.walkable) return true;
             }
         }
         return false;
@@ -160,11 +188,10 @@ namespace {
     bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
     {
         if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return true;
-        if (strict_fog_cells.contains({fx, fy})) return false;
-        return !sweep_complete || AnyWalkableAround(fx, fy);
+        if (probe->strict.contains({fx, fy})) return false;
+        return !probe->complete || AnyWalkableAround(fx, fy);
     }
 
-    std::set<std::pair<int, int>> skipped_cells;
     std::set<std::pair<int, int>> declined_cells;
     std::vector<GW::Vec2f> custom_points;
     std::string declined_cells_str;
@@ -232,13 +259,13 @@ namespace {
     // cells out and back in as probing progresses.
     bool FogCellCoverable(const int cx, const int cy)
     {
-        if (!sweep_complete) return true;
+        if (!probe->complete) return true;
         const int r = RevealRadius();
         for (int dy = -r; dy <= r; dy++) {
             for (int dx = -r; dx <= r; dx++) {
                 if (!CellCreditableFrom(dx, dy, cx, cy)) continue;
-                const auto it = stand_cells.find({cx + dx, cy + dy});
-                if (it != stand_cells.end() && it->second.walkable) return true;
+                const auto it = probe->cells.find({cx + dx, cy + dy});
+                if (it != probe->cells.end() && it->second.walkable) return true;
             }
         }
         return false;
@@ -315,9 +342,12 @@ namespace {
         return false;
     }
 
-    // Whether a cell is standable never changes within a map, so probe it once and keep it.
+    // Whether a cell is standable never changes within a map, so probe it once and keep it. Fog
+    // only ever shrinks, so once the sweep has covered the map nothing new becomes worth probing
+    // and revisits cost nothing.
     void SweepStandCells(const CartoGrid& grid, GW::AreaInfo* map_info)
     {
+        if (probe->complete) return;
         ImRect bounds;
         if (!(map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds))) return;
         // Only this map's squares are standable; the fog they credit may still be the next map's.
@@ -328,21 +358,21 @@ namespace {
         int budget = 6;
         for (int cy = y0; cy < y1 && budget > 0; cy++) {
             for (int cx = x0; cx < x1 && budget > 0; cx++) {
-                if (stand_cells.contains({cx, cy})) continue;
+                if (probe->cells.contains({cx, cy})) continue;
                 if (!CellWorthProbing(grid, cx, cy)) continue;
                 StandCell sc;
                 sc.walkable = ProbeStandCell(cx, cy, sc.pos);
-                stand_cells[{cx, cy}] = sc;
+                probe->cells[{cx, cy}] = sc;
                 budget--;
             }
         }
-        sweep_complete = budget > 0;
+        probe->complete = budget > 0;
     }
 
     void RecomputeCoverage(const CartoGrid& grid, GW::AreaInfo* map_info)
     {
         const int r = RevealRadius();
-        for (auto& [cell, sc] : stand_cells) {
+        for (auto& [cell, sc] : probe->cells) {
             sc.reveals = 0;
             if (!sc.walkable) continue;
             for (int dy = -r; dy <= r; dy++) {
@@ -450,14 +480,11 @@ namespace {
         warned_pathing_disabled = false;
         map_fog_cells = -1;
         marker_recheck_at = 0;
-        skipped_cells.clear();
-        stand_cells.clear();
         fog_cells.clear();
         unreachable_fog_cells = 0;
-        strict_fog_cells.clear();
         map_cell_min = map_cell_max = {};
         player_cell_valid = false;
-        sweep_complete = false;
+        map_on_world_map = false;
         ClearMarker();
     }
 
@@ -480,7 +507,7 @@ namespace {
             CARTO_LOG("[cartographer] stand cell (%d, %d) declined forever", target.cx, target.cy);
         }
         else {
-            skipped_cells.insert({target.cx, target.cy});
+            probe->skipped.insert({target.cx, target.cy});
             CARTO_LOG("[cartographer] stand cell (%d, %d) declined for this map", target.cx, target.cy);
         }
         ClearTarget();
@@ -525,7 +552,7 @@ namespace {
         }
         if (!target.valid || marker_recheck_at) {
             const char* idle = map_fog_cells == 0 ? "nothing left to uncover on this map"
-                : !sweep_complete ? "scanning this map's fog..."
+                : !probe->complete ? "scanning this map's fog..."
                 : "nothing reachable left here - travel on, or add a fog point";
             snprintf(buf, len, "%s", idle);
             return;
@@ -625,14 +652,14 @@ namespace {
                     const int cy = static_cast<int>(floorf(at.y / kWorldMapUnitsPerCell));
                     GW::GamePos gp{};
                     const bool converted = WorldMapWidget::WorldMapToGamePos(at, gp);
-                    const auto stand = stand_cells.find({cx, cy});
+                    const auto stand = probe->cells.find({cx, cy});
                     Log::Log("[cartographer] probe wm(%.0f,%.0f) cell(%d,%d): explored=%d, grid %ux%u (%u words/row), game(%.0f,%.0f), standable here=%d, probed=%d walkable=%d reveals=%d, coverable=%d, radius=%d",
                              at.x, at.y, cx, cy, static_cast<int>(g.IsExplored(cx, cy)),
                              g.width, g.height, RowWords(g.width),
                              gp.x, gp.y, converted && Pathing::IsPositionWalkable(gp),
-                             static_cast<int>(stand != stand_cells.end()),
-                             stand != stand_cells.end() ? static_cast<int>(stand->second.walkable) : 0,
-                             stand != stand_cells.end() ? stand->second.reveals : 0,
+                             static_cast<int>(stand != probe->cells.end()),
+                             stand != probe->cells.end() ? static_cast<int>(stand->second.walkable) : 0,
+                             stand != probe->cells.end() ? stand->second.reveals : 0,
                              static_cast<int>(FogCellCoverable(cx, cy)), RevealRadius());
                     Log::FlushFile();
                 });
@@ -648,11 +675,13 @@ namespace {
 
     bool OnMissionMapContextMenu()
     {
+        if (!map_on_world_map) return true;
         return ContextMenuItems(MissionMapWidget::GetContextMenuWorldMapPos(), MissionMapWidget::GetPxPerWorldMapUnit());
     }
 
     bool OnWorldMapContextMenu()
     {
+        if (!map_on_world_map) return true;
         return ContextMenuItems(WorldMapWidget::GetContextMenuWorldMapPos(), WorldMapWidget::GetPxPerWorldMapUnit());
     }
 
@@ -740,7 +769,7 @@ namespace {
     void DrawStandCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, const char*& tooltip)
     {
         const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
-        for (const auto& [cell, sc] : stand_cells) {
+        for (const auto& [cell, sc] : probe->cells) {
             if (!sc.walkable || sc.reveals <= 0) continue;
             if (declined_cells.contains(cell)) continue;
             // Skipped only while the suggestion is actually drawn on top, else a pending ownership
@@ -812,7 +841,7 @@ namespace {
 
     void OnWorldMapOverlayDraw(ImDrawList* dl)
     {
-        if (!enabled) return;
+        if (!enabled || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return WorldMapWidget::WorldMapToScreen(wm, out); }, true);
         char status[160];
         BuildStatusText(status, sizeof(status));
@@ -823,7 +852,7 @@ namespace {
 
     void OnMissionMapOverlayDraw(ImDrawList* dl)
     {
-        if (!enabled) return;
+        if (!enabled || !map_on_world_map) return;
         DrawMapOverlay(dl, [](const GW::Vec2f& wm, ImVec2& out) { return MissionMapWidget::WorldMapToScreen(wm, out); }, false);
     }
 } // namespace
@@ -883,7 +912,15 @@ void CartographerModule::Update(float)
         state_map_id = map_id;
         state_instance_type = instance_type;
         map_settled_at = TIMER_INIT();
+        SelectProbe(map_id);
     }
+
+    // Everything here is expressed in world-map coordinates, so a map that does not appear on the
+    // world map has nothing to compute and nothing to draw.
+    const auto map_info = GW::Map::GetMapInfo(map_id);
+    map_on_world_map = map_info && map_info->GetIsOnWorldMap();
+    if (!map_on_world_map) return;
+
     // Coordinate anchors can be transitional right after a map change; let them settle.
     if (TIMER_DIFF(map_settled_at) < 2000) return;
 
@@ -904,9 +941,6 @@ void CartographerModule::Update(float)
             return;
         }
     }
-
-    const auto map_info = GW::Map::GetMapInfo(map_id);
-    if (!map_info || !map_info->GetIsOnWorldMap()) return;
 
     const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return;
@@ -962,8 +996,8 @@ void CartographerModule::Update(float)
     // Credit is not always instant - it can need a step or a click-walk first - so give the square
     // a fair while before concluding anything.
     if (arrived && target.valid && !target.custom && TIMER_DIFF(arrived_at) > 15000) {
-        const auto it = stand_cells.find({target.cx, target.cy});
-        if (it != stand_cells.end() && it->second.reveals > 0) {
+        const auto it = probe->cells.find({target.cx, target.cy});
+        if (it != probe->cells.end() && it->second.reveals > 0) {
             // A wide visit that credits nothing usually means the tiles it was reaching for are the
             // ones only normal range uncovers; demote those rather than writing the square off.
             const int r = RevealRadius();
@@ -973,10 +1007,10 @@ void CartographerModule::Update(float)
                     if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) continue;
                     const std::pair cell{target.cx + dx, target.cy + dy};
                     if (!grid.InGrid(cell.first, cell.second) || grid.IsExplored(cell.first, cell.second)) continue;
-                    if (strict_fog_cells.insert(cell).second) demoted++;
+                    if (probe->strict.insert(cell).second) demoted++;
                 }
             }
-            if (!demoted) skipped_cells.insert({target.cx, target.cy});
+            if (!demoted) probe->skipped.insert({target.cx, target.cy});
             CARTO_LOG("[cartographer] cell (%d, %d) credited nothing; %d tiles demoted to normal range%s",
                       target.cx, target.cy, demoted, demoted ? "" : ", square skipped for this map");
             ClearTarget();
@@ -1000,9 +1034,9 @@ void CartographerModule::Update(float)
     else {
         // Ranked by cells-credited-per-square-walked: a spot crediting several is worth extra steps.
         float best_value = 0.f;
-        for (const auto& [cell, sc] : stand_cells) {
+        for (const auto& [cell, sc] : probe->cells) {
             if (!sc.walkable || sc.reveals <= 0) continue;
-            if (skipped_cells.contains(cell) || declined_cells.contains(cell)) continue;
+            if (probe->skipped.contains(cell) || declined_cells.contains(cell)) continue;
             const auto centre = CellCenterWorldMap(cell.first, cell.second);
             const float d2 = Dist2(centre, player_wm);
             const float dist_cells = sqrtf(d2) / kWorldMapUnitsPerCell;
@@ -1028,18 +1062,18 @@ void CartographerModule::Update(float)
         && (cand.custom ? Dist2(target.wm, cand.wm) < 1.f : (target.cx == cand.cx && target.cy == cand.cy));
     if (target.valid && !same && !(cand.custom && !target.custom)) {
         // Hysteresis: keep the current target unless it became ineligible or the candidate is meaningfully closer.
-        const auto current = stand_cells.find({target.cx, target.cy});
+        const auto current = probe->cells.find({target.cx, target.cy});
         const bool current_eligible = target.custom
             ? std::ranges::any_of(custom_points, [&](const GW::Vec2f& p) { return Dist2(p, target.wm) < 1.f; })
-            : current != stand_cells.end() && current->second.walkable && current->second.reveals > 0
-            && !skipped_cells.contains({target.cx, target.cy}) && !declined_cells.contains({target.cx, target.cy});
+            : current != probe->cells.end() && current->second.walkable && current->second.reveals > 0
+            && !probe->skipped.contains({target.cx, target.cy}) && !declined_cells.contains({target.cx, target.cy});
         if (current_eligible && cand_d2 >= 0.7f * Dist2(target.wm, player_wm)) same = true;
     }
     if (same) {
         // Same square, but the fog around it may have shrunk and the status line quotes it.
         if (target.valid && !target.custom) {
-            const auto it = stand_cells.find({target.cx, target.cy});
-            if (it != stand_cells.end()) target.reveals = it->second.reveals;
+            const auto it = probe->cells.find({target.cx, target.cy});
+            if (it != probe->cells.end()) target.reveals = it->second.reveals;
         }
         return;
     }
@@ -1054,8 +1088,8 @@ void CartographerModule::Update(float)
         }
         else {
             // Route to the footing the probe found, not the square's centre, which may be cliff.
-            const auto it = stand_cells.find({cand.cx, cand.cy});
-            if (it == stand_cells.end() || !it->second.walkable) return;
+            const auto it = probe->cells.find({cand.cx, cand.cy});
+            if (it == probe->cells.end() || !it->second.walkable) return;
             gp = it->second.pos;
         }
         if (!WorldMapWidget::GamePosToWorldMap(gp, marker_wm)) return;
@@ -1095,23 +1129,25 @@ void CartographerModule::DrawSettingsInternal()
     ImGui::ShowHelp("Draws the 32x32 tile boundaries over this map. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together.");
     if (ImGui::Checkbox("Using a Bird's Eye Compass", &using_bec)) {
         GW::GameThread::Enqueue([] {
-            // The radius decides which cells are worth probing at all, so the sweep restarts.
-            stand_cells.clear();
+            // Terrain has not moved, so the probed tiles stay; the radius only widens which tiles
+            // are worth probing, so every map's sweep reopens to cover the new fringe.
+            for (auto& [map_id, cached] : probe_cache) {
+                cached.strict.clear();
+                cached.complete = false;
+            }
             fog_cells.clear();
             unreachable_fog_cells = 0;
-            strict_fog_cells.clear();
-            sweep_complete = false;
         });
     }
     ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where in the tile you stand makes no difference. Rescans the map.");
     unsigned standable = 0;
     unsigned useful = 0;
-    for (const auto& [cell, sc] : stand_cells) {
+    for (const auto& [cell, sc] : probe->cells) {
         if (!sc.walkable) continue;
         standable++;
         if (sc.reveals > 0) useful++;
     }
-    ImGui::Text("Squares: %u probed, %u standable, %u worth visiting", static_cast<unsigned>(stand_cells.size()), standable, useful);
+    ImGui::Text("Squares: %u probed, %u standable, %u worth visiting", static_cast<unsigned>(probe->cells.size()), standable, useful);
     ImGui::Text("Foggy squares: %d reachable here, %d out of reach", map_fog_cells, unreachable_fog_cells);
     ImGui::Text("Declined forever: %u squares", static_cast<unsigned>(declined_cells.size()));
     ImGui::SameLine();
@@ -1198,12 +1234,10 @@ void CartographerModule::ClearDeclined()
 {
     GW::GameThread::Enqueue([] {
         declined_cells.clear();
-        skipped_cells.clear();
-        stand_cells.clear();
-        fog_cells.clear();
-        unreachable_fog_cells = 0;
-        strict_fog_cells.clear();
-        sweep_complete = false;
+        for (auto& [map_id, cached] : probe_cache) {
+            cached.skipped.clear();
+            cached.strict.clear();
+        }
         SerializeDeclined();
         if (target.valid) ClearTarget();
         CARTO_LOG("[cartographer] declined cells cleared");
@@ -1219,7 +1253,7 @@ void CartographerModule::GetStatus(char* buf, const size_t len)
     else snprintf(target_desc, sizeof(target_desc), "stand(%d,%d)+%d", target.cx, target.cy, target.reveals);
     snprintf(buf, len, "carto: enabled=%d pathing=%s target=%s marker=%d arrived=%d radius=%d skipped=%u probed=%u declined=%u points=%u fogcells=%d",
              enabled, pathing, target_desc, marker_owned, arrived, RevealRadius(),
-             static_cast<unsigned>(skipped_cells.size()), static_cast<unsigned>(stand_cells.size()),
+             static_cast<unsigned>(probe->skipped.size()), static_cast<unsigned>(probe->cells.size()),
              static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells);
 }
 
