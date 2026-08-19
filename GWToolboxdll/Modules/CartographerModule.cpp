@@ -17,13 +17,11 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <Modules/CartographerModule.h>
-#include <Modules/QuestModule.h>
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Windows/Pathfinding/Pathing.h>
-#include <Windows/Pathfinding/PathfindingWindow.h>
 
 #ifdef _DEBUG
 #define CARTO_LOG(...) Log::Log(__VA_ARGS__)
@@ -495,58 +493,29 @@ namespace {
     GW::Constants::MapID state_map_id = static_cast<GW::Constants::MapID>(0);
     GW::Constants::InstanceType state_instance_type = GW::Constants::InstanceType::Loading;
     Target target;
-    GW::GamePos goal_game{};
     GW::Vec2f player_wm_cached{};
     clock_t last_scan = 0;
     clock_t arrived_at = 0;
     clock_t map_settled_at = 0;
-    clock_t marker_recheck_at = 0;
     bool arrived = false;
-    bool self_changing_marker = false;
-    bool marker_owned = false;
-    GW::Vec2f last_marker_wm{};
     bool warned_no_data = false;
     bool warned_no_fog = false;
-    bool warned_pathing_disabled = false;
-
-    void SetMarkerAt(const GW::Vec2f& wm)
-    {
-        self_changing_marker = true;
-        QuestModule::SetCustomQuestMarker(wm, true);
-        self_changing_marker = false;
-        marker_owned = true;
-        last_marker_wm = wm;
-    }
-
-    void ClearMarker()
-    {
-        if (!marker_owned) return;
-        marker_owned = false;
-        self_changing_marker = true;
-        QuestModule::ClearCustomQuestMarker();
-        self_changing_marker = false;
-    }
 
     void ClearTarget()
     {
         target = {};
-        goal_game = {};
         arrived = false;
         arrived_at = 0;
-        ClearMarker();
     }
 
     void ResetState()
     {
         target = {};
-        goal_game = {};
         arrived_at = 0;
         arrived = false;
         warned_no_data = false;
         warned_no_fog = false;
-        warned_pathing_disabled = false;
         map_fog_cells = -1;
-        marker_recheck_at = 0;
         fog_cells.clear();
         unreachable_fog_cells = 0;
         map_cell_min = map_cell_max = {};
@@ -554,7 +523,6 @@ namespace {
         map_on_world_map = false;
         carto_snapshot.clear();
         coverage_stale = true;
-        ClearMarker();
     }
 
     void RemoveCustomPointAt(const GW::Vec2f& wm)
@@ -594,37 +562,9 @@ namespace {
         carto_dirty = true;
     }
 
-    void OnCustomMarkerChanged()
-    {
-        if (self_changing_marker) return;
-        if (!enabled) {
-            marker_owned = false;
-            return;
-        }
-        // Map transitions re-emit or drop the marker; only an in-map change by someone else is a takeover.
-        if (GW::Map::GetInstanceType() == GW::Constants::InstanceType::Loading || !GW::Map::GetIsMapLoaded() || !GW::Agents::GetControlledCharacter()) return;
-        if (marker_owned) {
-            const auto quest = QuestModule::GetCustomQuestMarker();
-            GW::Vec2f pos{};
-            if (quest && QuestModule::GetCustomQuestMarkerWorldPos(quest->quest_id, pos) && Dist2(pos, last_marker_wm) < 1.f) {
-                marker_recheck_at = 0;
-                return;
-            }
-            // The marker gets re-emitted as clear+set around us (map loads, world map interactions);
-            // judge ownership once the dust settles instead of yielding on the transient.
-            if (!marker_recheck_at) marker_recheck_at = TIMER_INIT();
-        }
-        // Markers we never owned (e.g. a stale persisted marker re-emitted on map load) are
-        // not a takeover — the next scan overwrites them with our target.
-    }
-
     void BuildStatusText(char* buf, const size_t len)
     {
-        if (!PathfindingWindow::IsPathingEnabled()) {
-            snprintf(buf, len, "idle, the pathfinding module is disabled");
-            return;
-        }
-        if (!target.valid || marker_recheck_at) {
+        if (!target.valid) {
             const char* idle = map_fog_cells == 0 ? "nothing left to uncover on this map"
                 : !probe->complete ? "scanning this map's fog..."
                 : "nothing reachable left here - travel on, or add a fog point";
@@ -638,12 +578,12 @@ namespace {
         const float dist_k = sqrtf(Dist2(player_wm_cached, target.wm)) * kGwinchesPerWorldMapUnit / 1000.f;
         if (target.custom) {
             snprintf(buf, len, "heading to your fog point, %.1fk units %s of you%s", dist_k, CompassDir(player_wm_cached, target.wm),
-                     target.on_map ? "" : " (another map - follow the route)");
+                     target.on_map ? "" : " (another map)");
             return;
         }
         snprintf(buf, len, "stand in the square %.1fk units %s of you to uncover %d %s%s", dist_k,
                  CompassDir(player_wm_cached, target.wm), target.reveals, target.reveals == 1 ? "square" : "squares",
-                 target.on_map ? "" : " (another map - follow the route)");
+                 target.on_map ? "" : " (another map)");
     }
 
     int FindCustomPointNear(const GW::Vec2f& wm, const float max_dist)
@@ -848,7 +788,7 @@ namespace {
             if (declined_cells.contains(cell)) continue;
             // Skipped only while the suggestion is actually drawn on top, else a pending ownership
             // recheck blanks the square entirely.
-            if (target.valid && !marker_recheck_at && !target.custom && target.cx == cell.first && target.cy == cell.second) continue;
+            if (target.valid && !target.custom && target.cx == cell.first && target.cy == cell.second) continue;
             ImVec2 cell_min, cell_max;
             if (!ProjectCell(project, cell.first, cell.second, cell_min, cell_max)) continue;
             if (!clip.Overlaps(ImRect(cell_min, cell_max))) continue;
@@ -885,9 +825,7 @@ namespace {
                 dl->AddRect(cell_min, cell_max, WithAlpha(kCurrentTileColor, 150), 0.f, 0, 1.f);
             }
         }
-        // While marker ownership is in question (user removed/moved it; yield pending) the
-        // target visuals hide immediately so the removal feels instant.
-        const bool target_active = target.valid && !marker_recheck_at;
+        const bool target_active = target.valid;
         if (target_active && !target.custom) {
             ImVec2 cell_min, cell_max;
             if (ProjectCell(project, target.cx, target.cy, cell_min, cell_max)) {
@@ -945,7 +883,6 @@ void CartographerModule::Initialize()
     WorldMapWidget::AddContextMenuCallback(&OnWorldMapContextMenu);
     MissionMapWidget::AddOverlayCallback(&OnMissionMapOverlayDraw);
     WorldMapWidget::AddOverlayCallback(&OnWorldMapOverlayDraw);
-    QuestModule::AddCustomMarkerChangedCallback(&OnCustomMarkerChanged);
     RegisterUIMessageCallback(&carto_ui_entry, kCartographyUpdated, OnCartographyUpdated, 0x4000);
 }
 
@@ -955,7 +892,6 @@ void CartographerModule::SignalTerminate()
     WorldMapWidget::RemoveContextMenuCallback(&OnWorldMapContextMenu);
     MissionMapWidget::RemoveOverlayCallback(&OnMissionMapOverlayDraw);
     WorldMapWidget::RemoveOverlayCallback(&OnWorldMapOverlayDraw);
-    QuestModule::RemoveCustomMarkerChangedCallback(&OnCustomMarkerChanged);
     GW::UI::RemoveUIMessageCallback(&carto_ui_entry);
     enabled = false;
     ResetState();
@@ -1000,39 +936,11 @@ void CartographerModule::Update(float)
     // Coordinate anchors can be transitional right after a map change; let them settle.
     if (TIMER_DIFF(map_settled_at) < 2000) return;
 
-    if (marker_recheck_at) {
-        // Ownership in question: freeze scanning/re-placing until resolved, so a user removing
-        // or moving the marker never has it snapped back by a racing target change.
-        if (TIMER_DIFF(marker_recheck_at) <= 1500) return;
-        marker_recheck_at = 0;
-        const auto quest = QuestModule::GetCustomQuestMarker();
-        GW::Vec2f pos{};
-        const bool still_ours = marker_owned && quest && QuestModule::GetCustomQuestMarkerWorldPos(quest->quest_id, pos) && Dist2(pos, last_marker_wm) < 1.f;
-        if (!still_ours) {
-            CARTO_LOG("[cartographer] quest marker changed externally (quest=%d wm=%.0f,%.0f vs ours %.0f,%.0f); cartographer disabled",
-                     quest ? 1 : 0, pos.x, pos.y, last_marker_wm.x, last_marker_wm.y);
-            marker_owned = false;
-            enabled = false;
-            ResetState();
-            return;
-        }
-    }
-
     const auto player = GW::Agents::GetControlledCharacter();
     if (!player) return;
 
     if (TIMER_DIFF(last_scan) < 1000) return;
     last_scan = TIMER_INIT();
-
-    if (!PathfindingWindow::IsPathingEnabled()) {
-        if (!warned_pathing_disabled) {
-            warned_pathing_disabled = true;
-            CARTO_LOG("[cartographer] pathfinding module is disabled; cartographer idle");
-        }
-        return;
-    }
-    warned_pathing_disabled = false;
-    if (!PathfindingWindow::ReadyForPathing()) return;
 
     CartoGrid grid;
     if (!GetCartoGrid(grid)) {
@@ -1072,7 +980,7 @@ void CartographerModule::Update(float)
     player_cell_valid = true;
     if (target.valid && target.on_map) {
         if (target.custom) {
-            if (GW::GetSquareDistance(player->pos, goal_game) < 150.f * 150.f) {
+            if (Dist2(player_wm, target.wm) < 2.f * 2.f) {
                 CARTO_LOG("[cartographer] reached custom point wm(%.0f, %.0f)", target.wm.x, target.wm.y);
                 RemoveCustomPointAt(target.wm);
                 ClearTarget();
@@ -1170,45 +1078,22 @@ void CartographerModule::Update(float)
         return;
     }
 
-    GW::GamePos gp{};
-    GW::Vec2f marker_wm = cand.wm;
-    if (on_current_map) {
-        if (cand.custom) {
-            if (!WorldMapWidget::WorldMapToGamePos(cand.wm, gp)) return;
-            // The marker goes on the closest walkable spot toward the point, not into the void.
-            Pathing::FindClosestPositionOnTrapezoid(gp);
-        }
-        else {
-            // Route to the footing the probe found, not the square's centre, which may be cliff.
-            const auto it = probe->cells.find({cand.cx, cand.cy});
-            if (it == probe->cells.end() || !it->second.walkable) return;
-            gp = it->second.pos;
-        }
-        if (!WorldMapWidget::GamePosToWorldMap(gp, marker_wm)) return;
-    }
-    // Off-map targets keep the raw position: QuestModule resolves the destination map from it
-    // and plots the cross-map route on the world map, same as a manually placed marker.
+    if (!on_current_map && !cand.custom) return;
     cand.on_map = on_current_map;
     target = cand;
-    goal_game = gp;
     arrived = false;
-    SetMarkerAt(marker_wm);
     if (target.custom) {
-        if (on_current_map) CARTO_LOG("[cartographer] target: custom point wm(%.0f, %.0f), marker at game(%.0f, %.0f)", target.wm.x, target.wm.y, gp.x, gp.y);
-        else CARTO_LOG("[cartographer] target: custom point wm(%.0f, %.0f) on another map; marker set there for cross-map routing", target.wm.x, target.wm.y);
-    }
-    else if (on_current_map) {
-        CARTO_LOG("[cartographer] stand target: cell (%d, %d) wm(%.0f, %.0f) credits %d cells at radius %d, marker at game(%.0f, %.0f)",
-                 target.cx, target.cy, target.wm.x, target.wm.y, target.reveals, RevealRadius(), gp.x, gp.y);
+        CARTO_LOG("[cartographer] target: custom point wm(%.0f, %.0f)%s", target.wm.x, target.wm.y, on_current_map ? "" : " on another map");
     }
     else {
-        CARTO_LOG("[cartographer] stand target: cell (%d, %d) wm(%.0f, %.0f) on another map; marker set there for cross-map routing", target.cx, target.cy, target.wm.x, target.wm.y);
+        CARTO_LOG("[cartographer] stand target: cell (%d, %d) wm(%.0f, %.0f) credits %d cells at radius %d",
+                 target.cx, target.cy, target.wm.x, target.wm.y, target.reveals, RevealRadius());
     }
 }
 
 void CartographerModule::DrawSettingsInternal()
 {
-    ImGui::TextDisabled("Debug tool. Exploration is credited by 32x32 world-map square: standing inside a\nsquare credits it and the ring of squares around it. So instead of routing you at the\nfog itself, this works out which squares you could stand in, which of them would\ncredit something still foggy, draws those on the world map and mission map, and puts\nthe custom quest marker in the best one - the regular quest path leads you there.\nRight-click either map to manage the helper.");
+    ImGui::TextDisabled("Debug tool. Exploration is credited by 32x32 world-map square: standing inside a\nsquare credits it and the ring of squares around it. So this works out which squares\nyou could stand in, which of them would credit something still foggy, and draws those\non the world map and mission map with the most worthwhile one highlighted. Getting\nthere is up to you - plot a marker yourself if you want a route.\nRight-click either map to manage the helper.");
     bool on = enabled;
     if (ImGui::Checkbox("Enabled", &on)) {
         GW::GameThread::Enqueue([on] { SetEnabled(on); });
@@ -1259,17 +1144,6 @@ void CartographerModule::SetEnabled(const bool on)
 bool CartographerModule::GetEnabled()
 {
     return enabled;
-}
-
-void CartographerModule::OnUserMarkerAction()
-{
-    if (!enabled) return;
-    enabled = false;
-    marker_owned = false;
-    GW::GameThread::Enqueue([] {
-        ResetState();
-        CARTO_LOG("[cartographer] user placed/removed the quest marker; cartographer disabled");
-    });
 }
 
 bool CartographerModule::GetCurrentTargetWorldPos(GW::Vec2f& out)
@@ -1338,13 +1212,12 @@ void CartographerModule::ClearDeclined()
 
 void CartographerModule::GetStatus(char* buf, const size_t len)
 {
-    const char* pathing = !PathfindingWindow::IsPathingEnabled() ? "off" : PathfindingWindow::ReadyForPathing() ? "ready" : "prewarming";
     char target_desc[64];
     if (!target.valid) snprintf(target_desc, sizeof(target_desc), "none");
     else if (target.custom) snprintf(target_desc, sizeof(target_desc), "point(%.0f,%.0f)", target.wm.x, target.wm.y);
     else snprintf(target_desc, sizeof(target_desc), "stand(%d,%d)+%d", target.cx, target.cy, target.reveals);
-    snprintf(buf, len, "carto: enabled=%d pathing=%s target=%s marker=%d arrived=%d radius=%d skipped=%u probed=%u declined=%u points=%u fogcells=%d",
-             enabled, pathing, target_desc, marker_owned, arrived, RevealRadius(),
+    snprintf(buf, len, "carto: enabled=%d target=%s arrived=%d radius=%d skipped=%u probed=%u declined=%u points=%u fogcells=%d",
+             enabled, target_desc, arrived, RevealRadius(),
              static_cast<unsigned>(probe->skipped.size()), static_cast<unsigned>(probe->cells.size()),
              static_cast<unsigned>(declined_cells.size()), static_cast<unsigned>(custom_points.size()), map_fog_cells);
 }

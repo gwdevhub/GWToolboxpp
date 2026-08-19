@@ -225,7 +225,6 @@ namespace {
     bool ContextMenuMarkerButtons()
     {
         if (ImGui::Button("Place Marker")) {
-            CartographerModule::OnUserMarkerAction();
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
             });
@@ -233,7 +232,6 @@ namespace {
         }
         if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
-                CartographerModule::OnUserMarkerAction();
                 GW::GameThread::Enqueue([] {
                     QuestModule::SetCustomQuestMarker({0, 0});
                 });

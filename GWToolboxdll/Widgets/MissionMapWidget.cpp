@@ -12,7 +12,6 @@
 #include <GWCA/Utilities/Hooker.h>
 
 #include <ImGuiAddons.h>
-#include <Modules/CartographerModule.h>
 #include <Modules/GwDatModule.h>
 #include <Modules/QuestModule.h>
 #include <Modules/Resources.h>
@@ -241,7 +240,6 @@ namespace {
         }
 #endif
         if (ImGui::Button("Place Marker")) {
-            CartographerModule::OnUserMarkerAction();
             GW::GameThread::Enqueue([] {
                 QuestModule::SetCustomQuestMarker(world_map_click_pos, true);
             });
@@ -249,7 +247,6 @@ namespace {
         }
         if (QuestModule::GetCustomQuestMarker()) {
             if (ImGui::Button("Remove Marker")) {
-                CartographerModule::OnUserMarkerAction();
                 GW::GameThread::Enqueue([] { QuestModule::ClearCustomQuestMarker(); });
                 return false;
             }

@@ -10,9 +10,10 @@
 // So the module routes to tiles to stand in rather than at the fog, taking reachability from the
 // current map's pathing data.
 //
-// All UI lives on the maps: the tile grid, the tiles worth visiting, the suggested tile, queued
-// fog points and a status line are drawn on the world map and mission map, and the right-click
-// context menu of either manages the helper (toggle, add/remove fog points, skip suggestions).
+// It only ever draws: the tile grid, the tiles worth visiting, the suggested tile, queued fog
+// points and a status line go on the world map and mission map, and the right-click context menu
+// of either manages the helper (toggle, add/remove fog points, skip suggestions). Walking there
+// is the player's business - nothing here touches the quest marker.
 class CartographerModule : public ToolboxModule {
     CartographerModule() = default;
     ~CartographerModule() override = default;
@@ -27,7 +28,7 @@ public:
     [[nodiscard]] const char* Name() const override { return "Cartographer Helper"; }
     [[nodiscard]] const char* Description() const override
     {
-        return "Works out which 32x32 world-map squares you need to stand in to uncover the fog around you, draws them on the maps and routes you to the best one.";
+        return "Works out which 32x32 world-map squares you need to stand in to uncover the fog around you, and draws them on the world map and mission map.";
     }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_MAP_MARKED_ALT; }
 
@@ -39,8 +40,6 @@ public:
 
     static void SetEnabled(bool on);
     static bool GetEnabled();
-    // The user explicitly placed/removed the quest marker via toolbox UI — yield instantly.
-    static void OnUserMarkerAction();
     // World-map position of the current suggestion (fog cell or custom point); false if none.
     static bool GetCurrentTargetWorldPos(GW::Vec2f& out);
     static void SkipCurrentTarget(bool forever);
