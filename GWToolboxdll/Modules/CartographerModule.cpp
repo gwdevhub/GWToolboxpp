@@ -149,6 +149,9 @@ namespace {
         // normal range uncovers, so these stop counting beyond one tile away.
         std::set<std::pair<int, int>> strict;
         std::set<std::pair<int, int>> skipped;
+        // Gate state the sweep was taken under; reachability depends on it, so a mismatch means
+        // the cached answers no longer describe this instance.
+        std::vector<uint32_t> blocked_planes;
         bool complete = false;
     };
     std::map<GW::Constants::MapID, MapProbe> probe_cache;
@@ -201,6 +204,21 @@ namespace {
             probe_cache_character = character;
         }
         probe = &probe_cache[map_id];
+    }
+
+    // Gates opening or closing move whole regions in and out of reach, so a sweep taken under the
+    // old state is worthless. Comparing the state itself rather than waiting on an event also
+    // covers arriving in an instance whose gates already differ from the last visit.
+    void DropProbeIfGatesMoved()
+    {
+        std::vector<uint32_t> blocked;
+        if (!Pathing::CopyBlockedPlanes(blocked) || blocked == probe->blocked_planes) return;
+        probe->cells.clear();
+        probe->strict.clear();
+        probe->blocked_planes = std::move(blocked);
+        probe->complete = false;
+        coverage_stale = true;
+        CARTO_LOG("[cartographer] blocked planes changed; re-probing this map");
     }
 
     // Gw.exe writes a tile when its own pathability byte is set OR it is within Chebyshev 1 of
@@ -324,7 +342,9 @@ namespace {
 
 
     // Coastlines ignore the cell grid, so sample the whole cell: one that is mostly cliff but
-    // clips a walkable ledge is still somewhere you can go.
+    // clips a walkable ledge is still somewhere you can go. Reachability rather than mere
+    // walkability: ground behind a closed gate paths fine but cannot be stood on, and suggesting
+    // it would send the player somewhere they cannot get to.
     bool ProbeStandCell(const int cx, const int cy, GW::GamePos& out)
     {
         // Fine enough to catch the shoreline slivers that are often the only footing near fog.
@@ -339,7 +359,7 @@ namespace {
                     (cy + (sy + 0.5f) / kSamples) * kWorldMapUnitsPerCell,
                 };
                 GW::GamePos gp{};
-                if (!WorldMapWidget::WorldMapToGamePos(wm, gp) || !Pathing::IsPositionWalkable(gp)) continue;
+                if (!WorldMapWidget::WorldMapToGamePos(wm, gp) || !Pathing::IsPositionReachable(gp)) continue;
                 // Where in the tile you stand makes no difference to credit, but aiming central
                 // keeps our own routing error from landing you in the neighbouring tile.
                 const float d2 = Dist2(wm, centre);
@@ -707,10 +727,10 @@ namespace {
                     GW::GamePos gp{};
                     const bool converted = WorldMapWidget::WorldMapToGamePos(at, gp);
                     const auto stand = probe->cells.find({cx, cy});
-                    Log::Log("[cartographer] probe wm(%.0f,%.0f) cell(%d,%d): explored=%d, grid %ux%u (%u words/row), game(%.0f,%.0f), standable here=%d, probed=%d walkable=%d reveals=%d, coverable=%d, radius=%d",
+                    Log::Log("[cartographer] probe wm(%.0f,%.0f) cell(%d,%d): explored=%d, grid %ux%u (%u words/row), game(%.0f,%.0f), walkable here=%d, reachable here=%d, probed=%d walkable=%d reveals=%d, coverable=%d, radius=%d",
                              at.x, at.y, cx, cy, static_cast<int>(g.IsExplored(cx, cy)),
                              g.width, g.height, RowWords(g.width),
-                             gp.x, gp.y, converted && Pathing::IsPositionWalkable(gp),
+                             gp.x, gp.y, converted && Pathing::IsPositionWalkable(gp), converted && Pathing::IsPositionReachable(gp),
                              static_cast<int>(stand != probe->cells.end()),
                              stand != probe->cells.end() ? static_cast<int>(stand->second.walkable) : 0,
                              stand != probe->cells.end() ? stand->second.reveals : 0,
@@ -1027,6 +1047,7 @@ void CartographerModule::Update(float)
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
     // A completing sweep still needs one last full pass, so the flag is read before the sweep.
+    DropProbeIfGatesMoved();
     const bool sweeping = !probe->complete;
     SweepStandCells(grid, map_info);
 

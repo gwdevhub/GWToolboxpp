@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <mutex>
+#include <unordered_set>
 #include <GWCA/Constants/Maps.h>
 #include <GWCA/GameContainers/GamePos.h>
 #include <GWCA/GameEntities/Pathing.h>
@@ -37,6 +38,24 @@ namespace Pathing {
     // unlike the snap above, which falls back to scanning every trapezoid when the point is
     // outside the walkable area. Game thread only.
     bool IsPositionWalkable(const GW::GamePos& point);
+
+    // BFS from the player's trapezoid through adjacency and unblocked portals. Blocking matches
+    // the game's native A* (IPath_ExpandPortalLeft/Right): portal.flags & 0x04, and
+    // blockedPlanes[neighbor_plane] & 1. Empty when the player's position is unknown, which
+    // callers should read as "assume everything is reachable" rather than "nothing is".
+    // Game thread only.
+    std::unordered_set<const GW::PathingTrapezoid*> FindReachableTrapezoids();
+
+    // True if `point` is walkable AND the player can actually get there. Terrain behind a closed
+    // gate or across a gap is walkable but not reachable, and the difference matters to anything
+    // that suggests somewhere to go. Result is cached until the map or the gate state changes.
+    // Game thread only.
+    bool IsPositionReachable(const GW::GamePos& point);
+
+    // Current blocked-plane state. Comparing the contents beats watching for a change event: it
+    // is exact, and it survives callers that were not listening at the moment a gate moved.
+    // False if there is no pathing context. Game thread only.
+    bool CopyBlockedPlanes(std::vector<uint32_t>& out);
 
     class MilePath {
         volatile bool m_processing = false;

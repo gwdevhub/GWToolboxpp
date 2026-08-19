@@ -3,7 +3,10 @@
 #include <array>
 #include <map>
 
+#include <GWCA/Constants/Constants.h>
 #include <GWCA/Context/MapContext.h>
+#include <GWCA/GameEntities/Agent.h>
+#include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
 
@@ -376,6 +379,109 @@ namespace Pathing {
             GW::GamePos probe = point;
             probe.zplane = z;
             if (FindTrapezoid(probe, map)) return true;
+        }
+        return false;
+    }
+
+    bool CopyBlockedPlanes(std::vector<uint32_t>& out)
+    {
+        auto* mapContext = GW::GetMapContext();
+        auto* path = mapContext ? mapContext->path : nullptr;
+        if (!path) return false;
+        const auto& blocked = path->blockedPlanes;
+        out.assign(blocked.begin(), blocked.begin() + blocked.size());
+        return true;
+    }
+
+    std::unordered_set<const GW::PathingTrapezoid*> FindReachableTrapezoids()
+    {
+        std::unordered_set<const GW::PathingTrapezoid*> reachable;
+        auto* mapContext = GW::GetMapContext();
+        auto* path = mapContext ? mapContext->path : nullptr;
+        if (!path || !path->staticData) return reachable;
+        auto* map = &path->staticData->map;
+
+        const auto* player = GW::Agents::GetControlledCharacter();
+        if (!player) return reachable;
+
+        GW::PathingTrapezoid* start_trap = nullptr;
+        size_t start_plane = player->pos.zplane;
+        if (player->pos.zplane < map->size()) start_trap = FindTrapezoid(player->pos, map);
+        for (uint32_t z = 0; !start_trap && z < map->size(); z++) {
+            GW::GamePos probe = player->pos;
+            probe.zplane = z;
+            start_trap = FindTrapezoid(probe, map);
+            start_plane = z;
+        }
+        if (!start_trap) return reachable;
+
+        struct TrapRef {
+            const GW::PathingTrapezoid* trap;
+            size_t plane;
+        };
+        std::vector<TrapRef> queue{{start_trap, start_plane}};
+        reachable.insert(start_trap);
+
+        for (size_t head = 0; head < queue.size(); head++) {
+            const auto [trap, plane_idx] = queue[head];
+            for (const auto* adj : trap->adjacent) {
+                if (adj && reachable.insert(adj).second) queue.push_back({adj, plane_idx});
+            }
+            if (plane_idx >= map->size()) continue;
+            const auto& pm = (*map)[plane_idx];
+            const auto expand_portal = [&](const uint16_t portal_idx) {
+                if (portal_idx >= pm.portal_count) return;
+                const auto& portal = pm.portals[portal_idx];
+                if (portal.flags & 0x04) return;
+                const auto* pair = portal.pair;
+                if (!pair) return;
+                const size_t target_plane = portal.neighbor_plane;
+                if (target_plane < path->blockedPlanes.size() && path->blockedPlanes[target_plane] & 1) return;
+                for (uint32_t i = 0; i < pair->count; i++) {
+                    const auto* t = pair->trapezoids[i];
+                    if (t && reachable.insert(t).second) queue.push_back({t, target_plane});
+                }
+            };
+            expand_portal(trap->portal_left);
+            expand_portal(trap->portal_right);
+        }
+        return reachable;
+    }
+
+    namespace {
+        std::unordered_set<const GW::PathingTrapezoid*> reachable_cache;
+        std::vector<uint32_t> reachable_cache_blocked_planes;
+        GW::Constants::MapID reachable_cache_map = static_cast<GW::Constants::MapID>(0);
+        GW::Constants::InstanceType reachable_cache_instance = GW::Constants::InstanceType::Loading;
+    } // namespace
+
+    bool IsPositionReachable(const GW::GamePos& point)
+    {
+        auto* mapContext = GW::GetMapContext();
+        auto* path = mapContext ? mapContext->path : nullptr;
+        if (!path || !path->staticData) return false;
+        auto* map = &path->staticData->map;
+
+        const auto map_id = GW::Map::GetMapID();
+        const auto instance_type = GW::Map::GetInstanceType();
+        std::vector<uint32_t> blocked;
+        CopyBlockedPlanes(blocked);
+        // Gates opening or closing move whole regions in and out of reach, so the set is rebuilt
+        // on any change to that state rather than held for the life of the map.
+        if (map_id != reachable_cache_map || instance_type != reachable_cache_instance || blocked != reachable_cache_blocked_planes) {
+            reachable_cache = FindReachableTrapezoids();
+            reachable_cache_blocked_planes = std::move(blocked);
+            reachable_cache_map = map_id;
+            reachable_cache_instance = instance_type;
+        }
+        // No start trapezoid means we cannot say what is cut off, so fall back to walkability
+        // rather than declaring the whole map unreachable.
+        if (reachable_cache.empty()) return IsPositionWalkable(point);
+
+        for (uint32_t z = 0; z < map->size(); ++z) {
+            GW::GamePos probe = point;
+            probe.zplane = z;
+            if (const auto* trap = FindTrapezoid(probe, map); trap && reachable_cache.contains(trap)) return true;
         }
         return false;
     }
