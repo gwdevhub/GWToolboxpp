@@ -125,7 +125,11 @@ namespace {
 
     bool IsMissionComplete(const MapID map_id)
     {
-        return CompletionWindow::IsAreaComplete(map_id, profile.require_hard_mode ? CompletionCheck::Both : CompletionCheck::NormalMode);
+        auto check = profile.require_hard_mode ? CompletionCheck::Both : CompletionCheck::NormalMode;
+        if (!profile.require_mission_bonuses) {
+            check = static_cast<CompletionCheck>(check | CompletionCheck::PrimaryOnly);
+        }
+        return CompletionWindow::IsAreaComplete(map_id, check);
     }
 
     bool IsCampaignComplete(const Campaign campaign)
@@ -549,7 +553,8 @@ void PlaystyleRestrictionsWindow::Draw(IDirect3DDevice9*)
             ImGui::ShowHelp("Protector, Guardian, Vanquisher, Skill Hunter and Cartographer for that campaign (plus Sunspear/Lightbringer for Nightfall). Account-wide titles are never counted.");
         }
         ImGui::Checkbox("Missions count only when done in Hard Mode too", &profile.require_hard_mode);
-        ImGui::ShowHelp("Applies to every mission check below. Either way a mission counts as done only with its bonus objective, matching the Completion window.");
+        ImGui::ShowHelp("Applies to every mission check on this page");
+        ImGui::Checkbox("Missions also need their bonus objective", &profile.require_mission_bonuses);
         ImGui::Checkbox("Missions must be done in story order", &profile.block_mission_skipping);
         ImGui::ShowHelp("Greys out Enter Mission until every earlier mission of that campaign is complete");
         ImGui::Checkbox("Require titles before leaving pre-Searing", &profile.gate_presearing_exit);

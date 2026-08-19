@@ -220,7 +220,9 @@ enum CompletionCheck : uint32_t {
     None,
     NormalMode,
     HardMode,
-    Both
+    Both,
+    // Primary objective only; drops the bonus requirement a mission otherwise carries.
+    PrimaryOnly = 4
 };
 
 struct CharacterCompletion {
