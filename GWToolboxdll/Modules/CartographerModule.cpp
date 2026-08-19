@@ -11,6 +11,7 @@
 #include <GWCA/Managers/AgentMgr.h>
 #include <GWCA/Managers/GameThreadMgr.h>
 #include <GWCA/Managers/MapMgr.h>
+#include <GWCA/Managers/UIMgr.h>
 
 #include <ImGuiAddons.h>
 #include <Logger.h>
@@ -161,6 +162,36 @@ namespace {
     MapProbe* probe = &no_map_probe;
     bool map_on_world_map = false;
 
+    // Gw.exe credits exploration in FUN_00811be0: it writes the (2r+1)^2 tile block around you and
+    // then broadcasts 0x10000090 with no payload. So the message says "something changed" and the
+    // bitmap itself says what - diffing a snapshot narrows the recompute to the tiles that flipped.
+    constexpr auto kCartographyUpdated = static_cast<GW::UI::UIMessage>(0x10000090);
+    GW::HookEntry carto_ui_entry;
+    std::vector<uint32_t> carto_snapshot;
+    bool carto_dirty = true;
+    bool coverage_stale = true;
+
+    void CollectChangedTiles(const CartoGrid& grid, std::vector<std::pair<int, int>>& out)
+    {
+        const uint32_t row_words = RowWords(grid.width);
+        if (!grid.bits || !grid.dword_count || !row_words) return;
+        if (carto_snapshot.size() != grid.dword_count) {
+            carto_snapshot.assign(grid.bits, grid.bits + grid.dword_count);
+            coverage_stale = true; // no basis for a diff, so rebuild wholesale
+            return;
+        }
+        for (uint32_t i = 0; i < grid.dword_count; i++) {
+            const uint32_t changed = carto_snapshot[i] ^ grid.bits[i];
+            if (!changed) continue;
+            carto_snapshot[i] = grid.bits[i];
+            const int cy = static_cast<int>(i / row_words);
+            const int base_x = static_cast<int>(i % row_words) * 32;
+            for (int b = 0; b < 32; b++) {
+                if (changed & 1u << b) out.push_back({base_x + b, cy});
+            }
+        }
+    }
+
     void SelectProbe(const GW::Constants::MapID map_id)
     {
         const auto* ctx = GW::GetCharContext();
@@ -172,24 +203,16 @@ namespace {
         probe = &probe_cache[map_id];
     }
 
-    bool AnyWalkableAround(const int cx, const int cy)
-    {
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                const auto it = probe->cells.find({cx + dx, cy + dy});
-                if (it != probe->cells.end() && it->second.walkable) return true;
-            }
-        }
-        return false;
-    }
-
-    // BEC's extra rings only apply "if there's standard pathfinding in any adjacent tile", so a
-    // sliver walled off from walkable ground still needs you within normal range.
+    // Gw.exe writes a tile when its own pathability byte is set OR it is within Chebyshev 1 of
+    // you, so the innermost ring is unconditional and the wide rings need pathable terrain in the
+    // tile itself - which is why BEC range misses slivers that normal range still uncovers.
     bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
     {
         if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return true;
         if (probe->strict.contains({fx, fy})) return false;
-        return !probe->complete || AnyWalkableAround(fx, fy);
+        if (!probe->complete) return true;
+        const auto it = probe->cells.find({fx, fy});
+        return it != probe->cells.end() && it->second.walkable;
     }
 
     std::set<std::pair<int, int>> declined_cells;
@@ -369,23 +392,39 @@ namespace {
         probe->complete = budget > 0;
     }
 
-    void RecomputeCoverage(const CartoGrid& grid, GW::AreaInfo* map_info)
+    void ScoreStandCell(const CartoGrid& grid, const std::pair<int, int>& cell, StandCell& sc)
+    {
+        sc.reveals = 0;
+        if (!sc.walkable) return;
+        const int r = RevealRadius();
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                const int fx = cell.first + dx;
+                const int fy = cell.second + dy;
+                if (!grid.InGrid(fx, fy) || grid.IsExplored(fx, fy)) continue;
+                if (!CellCreditableFrom(dx, dy, fx, fy)) continue;
+                sc.reveals++;
+            }
+        }
+    }
+
+    // Rescore only the tiles whose count could have moved: a tile's score counts fog within the
+    // reveal radius, so only stands that near a flipped tile are affected.
+    void RescoreAround(const CartoGrid& grid, const std::vector<std::pair<int, int>>& changed)
     {
         const int r = RevealRadius();
-        for (auto& [cell, sc] : probe->cells) {
-            sc.reveals = 0;
-            if (!sc.walkable) continue;
+        for (const auto& [fx, fy] : changed) {
             for (int dy = -r; dy <= r; dy++) {
                 for (int dx = -r; dx <= r; dx++) {
-                    const int fx = cell.first + dx;
-                    const int fy = cell.second + dy;
-                    if (!grid.InGrid(fx, fy) || grid.IsExplored(fx, fy)) continue;
-                    if (!CellCreditableFrom(dx, dy, fx, fy)) continue;
-                    sc.reveals++;
+                    const auto it = probe->cells.find({fx + dx, fy + dy});
+                    if (it != probe->cells.end()) ScoreStandCell(grid, it->first, it->second);
                 }
             }
         }
+    }
 
+    void RebuildFog(const CartoGrid& grid, GW::AreaInfo* map_info)
+    {
         unreachable_fog_cells = 0;
         fog_cells.clear();
         map_fog_cells = -1;
@@ -412,6 +451,14 @@ namespace {
             }
         }
         map_fog_cells = static_cast<int>(fog_cells.size());
+    }
+
+    void RecomputeCoverage(const CartoGrid& grid, GW::AreaInfo* map_info)
+    {
+        for (auto& [cell, sc] : probe->cells) {
+            ScoreStandCell(grid, cell, sc);
+        }
+        RebuildFog(grid, map_info);
     }
 
     struct Target {
@@ -485,6 +532,8 @@ namespace {
         map_cell_min = map_cell_max = {};
         player_cell_valid = false;
         map_on_world_map = false;
+        carto_snapshot.clear();
+        coverage_stale = true;
         ClearMarker();
     }
 
@@ -518,6 +567,11 @@ namespace {
         custom_points.push_back(wm);
         SerializePoints();
         CARTO_LOG("[cartographer] custom fog point added at wm(%.0f, %.0f)", wm.x, wm.y);
+    }
+
+    void OnCartographyUpdated(GW::HookStatus*, GW::UI::UIMessage, void*, void*)
+    {
+        carto_dirty = true;
     }
 
     void OnCustomMarkerChanged()
@@ -872,6 +926,7 @@ void CartographerModule::Initialize()
     MissionMapWidget::AddOverlayCallback(&OnMissionMapOverlayDraw);
     WorldMapWidget::AddOverlayCallback(&OnWorldMapOverlayDraw);
     QuestModule::AddCustomMarkerChangedCallback(&OnCustomMarkerChanged);
+    RegisterUIMessageCallback(&carto_ui_entry, kCartographyUpdated, OnCartographyUpdated, 0x4000);
 }
 
 void CartographerModule::SignalTerminate()
@@ -881,6 +936,7 @@ void CartographerModule::SignalTerminate()
     MissionMapWidget::RemoveOverlayCallback(&OnMissionMapOverlayDraw);
     WorldMapWidget::RemoveOverlayCallback(&OnWorldMapOverlayDraw);
     QuestModule::RemoveCustomMarkerChangedCallback(&OnCustomMarkerChanged);
+    GW::UI::RemoveUIMessageCallback(&carto_ui_entry);
     enabled = false;
     ResetState();
 }
@@ -970,8 +1026,23 @@ void CartographerModule::Update(float)
     GW::Vec2f player_wm;
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
+    // A completing sweep still needs one last full pass, so the flag is read before the sweep.
+    const bool sweeping = !probe->complete;
     SweepStandCells(grid, map_info);
-    RecomputeCoverage(grid, map_info);
+
+    std::vector<std::pair<int, int>> changed;
+    if (carto_dirty) CollectChangedTiles(grid, changed);
+    if (coverage_stale || sweeping) {
+        // Rebuilding from scratch supersedes any pending diff, so re-baseline the snapshot.
+        if (grid.bits && grid.dword_count) carto_snapshot.assign(grid.bits, grid.bits + grid.dword_count);
+        RecomputeCoverage(grid, map_info);
+    }
+    else if (!changed.empty()) {
+        RescoreAround(grid, changed);
+        RebuildFog(grid, map_info);
+    }
+    carto_dirty = false;
+    coverage_stale = false;
 
     // Arrival is being inside the square, not near the goal - on a ledge those are a square apart.
     const int player_cx = static_cast<int>(floorf(player_wm.x / kWorldMapUnitsPerCell));
@@ -1135,8 +1206,7 @@ void CartographerModule::DrawSettingsInternal()
                 cached.strict.clear();
                 cached.complete = false;
             }
-            fog_cells.clear();
-            unreachable_fog_cells = 0;
+            coverage_stale = true;
         });
     }
     ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where in the tile you stand makes no difference. Rescans the map.");
@@ -1238,6 +1308,7 @@ void CartographerModule::ClearDeclined()
             cached.skipped.clear();
             cached.strict.clear();
         }
+        coverage_stale = true;
         SerializeDeclined();
         if (target.valid) ClearTarget();
         CARTO_LOG("[cartographer] declined cells cleared");
