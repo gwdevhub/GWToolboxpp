@@ -50,11 +50,16 @@ namespace {
         uint32_t height = 0;
         uint32_t dword_count = 0;
 
+        bool InGrid(const int cx, const int cy) const
+        {
+            return cx >= 0 && cy >= 0 && static_cast<uint32_t>(cx) < width && static_cast<uint32_t>(cy) < height;
+        }
+
         // Anything without a set bit - off-grid, past the synced array - is unexplored, because
         // that is what the game fogs.
         bool IsExplored(const int cx, const int cy) const
         {
-            if (cx < 0 || cy < 0 || static_cast<uint32_t>(cx) >= width || static_cast<uint32_t>(cy) >= height) return false;
+            if (!InGrid(cx, cy)) return false;
             const uint32_t word = static_cast<uint32_t>(cy) * RowWords(width) + (static_cast<uint32_t>(cx) >> 5);
             if (!bits || word >= dword_count) return false;
             return (bits[word] >> (static_cast<uint32_t>(cx) & 31)) & 1;
@@ -89,6 +94,7 @@ namespace {
     constexpr ImU32 kTargetColor = IM_COL32(255, 190, 64, 255);
     constexpr ImU32 kStandColor = IM_COL32(255, 236, 170, 255);
     constexpr ImU32 kFogColor = IM_COL32(0x50, 0xFF, 0x78, 255);
+    constexpr ImU32 kGridColor = IM_COL32(255, 255, 255, 40);
 
     ImU32 WithAlpha(const ImU32 color, const int alpha)
     {
@@ -111,14 +117,27 @@ namespace {
 
     bool show_fog = true;
     bool show_stand_cells = true;
+    bool show_grid = false;
+    bool using_bec = false;
 
-    // Standing in a cell credits it plus this many rings (Chebyshev). Unconfirmed theory, hence a
-    // setting - a Bird's Eye Compass appears to add two.
-    int reveal_radius_cells = 1;
+    // Standing in a tile credits it plus the ring around it; a Bird's Eye Compass widens that to
+    // three rings. Chebyshev throughout, and where in the tile you stand makes no difference.
+    constexpr int kRevealRadius = 1;
+    constexpr int kRevealRadiusBec = 3;
 
     int RevealRadius()
     {
-        return std::clamp(reveal_radius_cells, 1, 3);
+        return using_bec ? kRevealRadiusBec : kRevealRadius;
+    }
+
+    // Slivers that a wide-range visit failed to credit. BEC range misses a few tiles that only
+    // normal range uncovers, so these stop counting for anything further than one tile away.
+    std::set<std::pair<int, int>> strict_fog_cells;
+
+    bool CellCreditableFrom(const int dx, const int dy, const int fx, const int fy)
+    {
+        if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) return true;
+        return !strict_fog_cells.contains({fx, fy});
     }
 
     struct StandCell {
@@ -188,6 +207,7 @@ namespace {
     };
     std::vector<FogCell> fog_cells;
     int map_fog_cells = -1;
+    std::pair<int, int> map_cell_min{}, map_cell_max{};
 
     // Everything counts as coverable until the sweep finishes, so the overlay does not blink
     // cells out and back in as probing progresses.
@@ -197,6 +217,7 @@ namespace {
         const int r = RevealRadius();
         for (int dy = -r; dy <= r; dy++) {
             for (int dx = -r; dx <= r; dx++) {
+                if (!CellCreditableFrom(dx, dy, cx, cy)) continue;
                 const auto it = stand_cells.find({cx + dx, cy + dy});
                 if (it != stand_cells.end() && it->second.walkable) return true;
             }
@@ -268,7 +289,7 @@ namespace {
         const int r = RevealRadius();
         for (int dy = -r; dy <= r; dy++) {
             for (int dx = -r; dx <= r; dx++) {
-                if (!grid.IsExplored(cx + dx, cy + dy)) return true;
+                if (grid.InGrid(cx + dx, cy + dy) && !grid.IsExplored(cx + dx, cy + dy)) return true;
             }
         }
         return false;
@@ -308,7 +329,8 @@ namespace {
                 for (int dx = -r; dx <= r; dx++) {
                     const int fx = cell.first + dx;
                     const int fy = cell.second + dy;
-                    if (grid.IsExplored(fx, fy)) continue;
+                    if (!grid.InGrid(fx, fy) || grid.IsExplored(fx, fy)) continue;
+                    if (!CellCreditableFrom(dx, dy, fx, fy)) continue;
                     sc.reveals++;
                 }
             }
@@ -323,9 +345,11 @@ namespace {
         const int y0 = static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell));
         const int x1 = static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell));
         const int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
+        map_cell_min = {x0, y0};
+        map_cell_max = {x1, y1};
         for (int cy = y0; cy < y1; cy++) {
             for (int cx = x0; cx < x1; cx++) {
-                if (grid.IsExplored(cx, cy)) continue;
+                if (!grid.InGrid(cx, cy) || grid.IsExplored(cx, cy)) continue;
                 if (!FogCellCoverable(cx, cy)) {
                     unreachable_fog_cells++;
                     continue;
@@ -410,6 +434,8 @@ namespace {
         stand_cells.clear();
         fog_cells.clear();
         unreachable_fog_cells = 0;
+        strict_fog_cells.clear();
+        map_cell_min = map_cell_max = {};
         sweep_complete = false;
         ClearMarker();
     }
@@ -484,7 +510,7 @@ namespace {
             return;
         }
         if (arrived && !target.custom) {
-            snprintf(buf, len, "standing in the right square - hold here a moment, or skip this suggestion");
+            snprintf(buf, len, "standing in the right tile - if it does not register, take a step or click-walk");
             return;
         }
         const float dist_k = sqrtf(Dist2(player_wm_cached, target.wm)) * kGwinchesPerWorldMapUnit / 1000.f;
@@ -651,6 +677,35 @@ namespace {
         }
     }
 
+    // The cartography grid itself. Every tile is credited as a unit, so seeing the boundaries is
+    // what makes "stand in that tile" actionable.
+    void DrawGrid(ImDrawList* dl, const ProjectToScreen project)
+    {
+        const auto [x0, y0] = map_cell_min;
+        const auto [x1, y1] = map_cell_max;
+        if (x1 <= x0 || y1 <= y0) return;
+        ImVec2 origin, corner;
+        if (!ProjectCell(project, x0, y0, origin, corner)) return;
+        const float step_x = corner.x - origin.x;
+        const float step_y = corner.y - origin.y;
+        if (step_x < 3.f || step_y < 3.f) return; // denser than this is a smear, not a grid
+        // Both projections are affine, so the far edge follows from the step rather than a second
+        // projection that could fail on its own.
+        const ImRect clip(dl->GetClipRectMin(), dl->GetClipRectMax());
+        const float top = std::max(origin.y, clip.Min.y);
+        const float bottom = std::min(origin.y + (y1 - y0) * step_y, clip.Max.y);
+        const float left = std::max(origin.x, clip.Min.x);
+        const float right = std::min(origin.x + (x1 - x0) * step_x, clip.Max.x);
+        for (int cx = x0; cx <= x1; cx++) {
+            const float x = origin.x + (cx - x0) * step_x;
+            if (x >= clip.Min.x && x <= clip.Max.x) dl->AddLine({x, top}, {x, bottom}, kGridColor);
+        }
+        for (int cy = y0; cy <= y1; cy++) {
+            const float y = origin.y + (cy - y0) * step_y;
+            if (y >= clip.Min.y && y <= clip.Max.y) dl->AddLine({left, y}, {right, y}, kGridColor);
+        }
+    }
+
     // Drawn at true 32x32 size, shaded by how much fog the spot would credit.
     void DrawStandCells(ImDrawList* dl, const ProjectToScreen project, const ImVec2& mouse, const char*& tooltip)
     {
@@ -679,6 +734,9 @@ namespace {
         const char* tooltip = nullptr;
         if (show_fog) {
             DrawFog(dl, project);
+        }
+        if (show_grid) {
+            DrawGrid(dl, project);
         }
         if (show_stand_cells) {
             const char* stand_tooltip = nullptr;
@@ -737,7 +795,8 @@ void CartographerModule::Initialize()
     SettingsRegistry::RegisterField(this, "enabled", &enabled);
     SettingsRegistry::RegisterField(this, "show_fog", &show_fog);
     SettingsRegistry::RegisterField(this, "show_stand_cells", &show_stand_cells);
-    SettingsRegistry::RegisterField(this, "reveal_radius_cells", &reveal_radius_cells);
+    SettingsRegistry::RegisterField(this, "show_grid", &show_grid);
+    SettingsRegistry::RegisterField(this, "using_bec", &using_bec);
     SettingsRegistry::RegisterField(this, "declined_cells", &declined_cells_str);
     SettingsRegistry::RegisterField(this, "custom_points", &custom_points_str);
     MissionMapWidget::AddContextMenuCallback(&OnMissionMapContextMenu);
@@ -761,7 +820,6 @@ void CartographerModule::SignalTerminate()
 void CartographerModule::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 {
     ToolboxModule::LoadSettings(doc, legacy);
-    reveal_radius_cells = std::clamp(reveal_radius_cells, 1, 3);
     ParseDeclined();
     ParsePoints();
 }
@@ -860,12 +918,26 @@ void CartographerModule::Update(float)
         }
     }
 
-    // Nothing credited after standing there: the theory does not hold here, so stop suggesting it.
-    if (arrived && target.valid && !target.custom && TIMER_DIFF(arrived_at) > 8000) {
+    // Credit is not always instant - it can need a step or a click-walk first - so give the square
+    // a fair while before concluding anything.
+    if (arrived && target.valid && !target.custom && TIMER_DIFF(arrived_at) > 15000) {
         const auto it = stand_cells.find({target.cx, target.cy});
         if (it != stand_cells.end() && it->second.reveals > 0) {
-            CARTO_LOG("[cartographer] cell (%d, %d) credited nothing after 8s; skipping it for this map", target.cx, target.cy);
-            skipped_cells.insert({target.cx, target.cy});
+            // A wide visit that credits nothing usually means the tiles it was reaching for are the
+            // ones only normal range uncovers; demote those rather than writing the square off.
+            const int r = RevealRadius();
+            int demoted = 0;
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    if (abs(dx) <= kRevealRadius && abs(dy) <= kRevealRadius) continue;
+                    const std::pair cell{target.cx + dx, target.cy + dy};
+                    if (!grid.InGrid(cell.first, cell.second) || grid.IsExplored(cell.first, cell.second)) continue;
+                    if (strict_fog_cells.insert(cell).second) demoted++;
+                }
+            }
+            if (!demoted) skipped_cells.insert({target.cx, target.cy});
+            CARTO_LOG("[cartographer] cell (%d, %d) credited nothing; %d tiles demoted to normal range%s",
+                      target.cx, target.cy, demoted, demoted ? "" : ", square skipped for this map");
             ClearTarget();
         }
     }
@@ -978,16 +1050,19 @@ void CartographerModule::DrawSettingsInternal()
     ImGui::ShowHelp("Green: everything still unexplored that some square on this map can credit. Fog nothing here can reach draws nothing.");
     ImGui::Checkbox("Show squares to stand in", &show_stand_cells);
     ImGui::ShowHelp("Draws every 32x32 square worth walking into, shaded by how many foggy squares standing there would credit. The current suggestion is outlined and pulses.");
-    if (ImGui::SliderInt("Reveal radius (squares)", &reveal_radius_cells, 1, 3)) {
+    ImGui::Checkbox("Show the cartography grid", &show_grid);
+    ImGui::ShowHelp("Draws the 32x32 tile boundaries over this map. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together.");
+    if (ImGui::Checkbox("Using a Bird's Eye Compass", &using_bec)) {
         GW::GameThread::Enqueue([] {
             // The radius decides which cells are worth probing at all, so the sweep restarts.
             stand_cells.clear();
             fog_cells.clear();
             unreachable_fog_cells = 0;
+            strict_fog_cells.clear();
             sweep_complete = false;
         });
     }
-    ImGui::ShowHelp("How far exploration credit spreads from the square you stand in, measured in squares (Chebyshev distance, so the credited area is a square block). 1 is a bare character; a Bird's Eye Compass is believed to add two more rings, so set 3 when using one. Changing this rescans the map.");
+    ImGui::ShowHelp("Standing in a tile credits it and the 8 tiles around it (Chebyshev distance, so a square block - not a circle, which is why the nearest-looking spot often is not the right one). A Bird's Eye Compass widens that to 3 tiles in each direction. Where in the tile you stand makes no difference. Rescans the map.");
     unsigned standable = 0;
     unsigned useful = 0;
     for (const auto& [cell, sc] : stand_cells) {
@@ -1086,6 +1161,7 @@ void CartographerModule::ClearDeclined()
         stand_cells.clear();
         fog_cells.clear();
         unreachable_fog_cells = 0;
+        strict_fog_cells.clear();
         sweep_complete = false;
         SerializeDeclined();
         if (target.valid) ClearTarget();

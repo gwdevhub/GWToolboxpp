@@ -3,14 +3,16 @@
 #include <ToolboxModule.h>
 #include <GWCA/GameContainers/GamePos.h>
 
-// Debug-only cartography helper. Exploration is tracked per 32x32 world-map-unit square, and
-// standing in a square is believed to credit it plus the ring of squares around it (Chebyshev,
-// widened by a Bird's Eye Compass), so the module routes to squares to stand in rather than
-// at the fog. Reachability comes from the current map's pathing data - nothing else is needed.
+// Debug-only cartography helper, implementing numma_cway's rules (r/GuildWars, "Cartography
+// Explained: Where to Stand for Any Sliver You Are Missing"): exploration is tracked per 32x32
+// world-map-unit tile, standing anywhere in a tile credits it plus the ring around it - Chebyshev
+// distance, three rings with a Bird's Eye Compass - and nothing beyond the grid is creditable.
+// So the module routes to tiles to stand in rather than at the fog, taking reachability from the
+// current map's pathing data.
 //
-// All UI lives on the maps: the squares worth visiting, the suggested square, queued fog points
-// and a status line are drawn on the world map and mission map, and the right-click context menu
-// of either manages the helper (toggle, add/remove fog points, skip suggestions once or forever).
+// All UI lives on the maps: the tile grid, the tiles worth visiting, the suggested tile, queued
+// fog points and a status line are drawn on the world map and mission map, and the right-click
+// context menu of either manages the helper (toggle, add/remove fog points, skip suggestions).
 class CartographerModule : public ToolboxModule {
     CartographerModule() = default;
     ~CartographerModule() override = default;
