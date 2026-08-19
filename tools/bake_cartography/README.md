@@ -1,0 +1,53 @@
+# Baking `CartographyData.h`
+
+Produces the per-continent table of 32x32 world-map tiles that have standable ground on
+them, which the Cartographer widget dilates by the reveal radius to decide which fog is
+still worth walking to.
+
+Nothing here runs in the game. It reads the same data the client does, from outside it.
+
+## Where each input comes from
+
+| input | source |
+|---|---|
+| which maps sit on the world map, their continent and world-map rectangle | `AreaInfo`, a `.rdata` array in `Gw.exe` (`0x0096de38` at time of writing, 888 entries of `0x7C`; `GetMapInfo` is the function that indexes it) -> `placed_maps.txt` |
+| map id -> map file id | `maps_constant_data.h` -> `fileids.txt` |
+| map geometry | `Gw.snapshot` from `patching.1.arenanetworks.com`, which is a raw `Gw.dat` |
+
+`placed_maps.txt` holds `id:continent:x0:y0:x1:y1` per map, filtered to those flagged for the
+world map **and** carrying a non-degenerate rectangle. That second condition matters: the flag
+test is negative (`flags & 0x20 == 0`), so the ~200 maps with `flags == 0` pass it trivially -
+dungeon interiors, cinematics, `Travel_*` pseudo-maps. Without the rectangle check the queue
+is 562 maps, most with nowhere to go; with it, 350.
+
+## Why stream 1
+
+`Gw.dat` files have multiple streams, chained through the MFT (`c` is the stream number, `id`
+the next slot - see `GwDatModule.cpp`). Stream 0 carries `0x1000xxxx` chunks whose pathfinding
+chunk is a 52-byte stub; stream 1 carries `0x2000xxxx` with the real trapezoids. The file
+server at `file<N>.arenanetworks.com` only serves stream 0, so the geometry has to come from a
+`Gw.dat`. `Gw.snapshot` is one, and it is served as content-addressed 256KB chunks - so
+`snapdat.py` fetches only the MFT plus the ranges each map occupies, a few hundred MB rather
+than 4.2GB.
+
+## Running it
+
+    pip install requests
+    python3 bake.py          # regenerates fileids.txt, writes out/standable_L<n>.bin
+
+Then regenerate the header from `out/`. Takes about 20 minutes; the chunk cache in `/tmp` makes
+re-runs much faster.
+
+## What it stores
+
+Standable, not discoverable. Discoverable is this dilated by the reveal radius, and that radius
+depends on the Bird's Eye Compass, so it stays a runtime choice.
+
+Each map is reduced to its **largest connected component** (trapezoid adjacency plus unblocked
+portals, all planes treated as open since blocked-plane state only exists at runtime) so terrain
+that exists but cannot be walked to is left out.
+
+## Coverage
+
+331 of the 350 placed maps. The other 19 have no map file id in `maps_constant_data.h` and are
+PvP, dev/test and event maps, plus four Nightfall mission maps and Divine Path.
