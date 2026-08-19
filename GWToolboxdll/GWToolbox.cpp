@@ -33,6 +33,7 @@
 #include <Modules/CameraUnlockModule.h>
 #include <Modules/ChatCommands.h>
 #include <Modules/ChatSettings.h>
+#include <Modules/CrashFixesModule.h>
 #include <Modules/CrashHandler.h>
 #include <Modules/DialogModule.h>
 #include <Modules/GameSettings.h>
@@ -1283,6 +1284,7 @@ void GWToolbox::UpdateInitialising(float)
 
     Log::Log("Creating Modules\n");
     ToggleModule(CrashHandler::Instance());
+    ToggleModule(CrashFixesModule::Instance());
     ToggleModule(Resources::Instance());
     ToggleModule(ToolboxTheme::Instance());
     ToggleModule(ItemDescriptionHandler::Instance());
