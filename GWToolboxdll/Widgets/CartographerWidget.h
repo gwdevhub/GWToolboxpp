@@ -60,8 +60,4 @@ public:
     static void ClearCustomPoints();
     static void ClearDeclined();
     static void GetStatus(char* buf, size_t len);
-#ifdef _DEBUG
-    // Debug-only: bake the per-continent standable-square matrix out of the DAT.
-    static void DrawBakeSettings();
-#endif
 };
