@@ -383,6 +383,74 @@ namespace Pathing {
         return false;
     }
 
+    namespace {
+        // The prop's real extent is not exposed by anything we can read - PropModelInfo is
+        // undecoded and the DAT record's scale field is not parsed - so the doorway width is a
+        // per-model constant, in gwinches. Deliberately narrow: overshooting walls off ground
+        // beside the gate, which is worse than missing a crossing.
+        float PortalHalfWidth(const uint32_t model_file_id)
+        {
+            switch (model_file_id) {
+                case 0x4e6b2: case 0x3c5ac: return 300.f; // asura gates - wide arches
+                case 0xa825: case 0xe723: return 200.f;
+                default: return 250.f;
+            }
+        }
+
+        std::vector<PortalProp> portal_cache;
+        GW::Constants::MapID portal_cache_map = static_cast<GW::Constants::MapID>(0);
+        GW::Constants::InstanceType portal_cache_instance = GW::Constants::InstanceType::Loading;
+
+        const std::vector<PortalProp>& CurrentMapPortals()
+        {
+            const auto map_id = GW::Map::GetMapID();
+            const auto instance_type = GW::Map::GetInstanceType();
+            if (map_id != portal_cache_map || instance_type != portal_cache_instance) {
+                portal_cache.clear();
+                ParsePortalPropsFromMapContext(GW::GetMapContext(), portal_cache);
+                portal_cache_map = map_id;
+                portal_cache_instance = instance_type;
+            }
+            return portal_cache;
+        }
+
+        float SideOfLine(const GW::Vec2f& a, const GW::Vec2f& b, const GW::Vec2f& p)
+        {
+            return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+        }
+
+        bool SegmentsCross(const GW::Vec2f& a, const GW::Vec2f& b, const GW::Vec2f& c, const GW::Vec2f& d)
+        {
+            const float d1 = SideOfLine(a, b, c);
+            const float d2 = SideOfLine(a, b, d);
+            const float d3 = SideOfLine(c, d, a);
+            const float d4 = SideOfLine(c, d, b);
+            return ((d1 > 0) != (d2 > 0)) && ((d3 > 0) != (d4 > 0));
+        }
+    } // namespace
+
+    bool CrossesTravelPortal(const GW::Vec2f& a, const GW::Vec2f& b)
+    {
+        for (const auto& portal : CurrentMapPortals()) {
+            const float half_width = PortalHalfWidth(portal.model_file_id);
+            if (!portal.has_facing) {
+                // No facing to build a doorway from, so fall back to the prop's footprint: block
+                // when the step ends up inside it.
+                const float dx = b.x - portal.pos.x;
+                const float dy = b.y - portal.pos.y;
+                if (dx * dx + dy * dy < half_width * half_width) return true;
+                continue;
+            }
+            // The doorway spans across the facing, so the gate line runs along the perpendicular.
+            const float cos_f = cosf(portal.facing_radians);
+            const float sin_f = sinf(portal.facing_radians);
+            const GW::Vec2f left{portal.pos.x - sin_f * half_width, portal.pos.y + cos_f * half_width};
+            const GW::Vec2f right{portal.pos.x + sin_f * half_width, portal.pos.y - cos_f * half_width};
+            if (SegmentsCross(a, b, left, right)) return true;
+        }
+        return false;
+    }
+
     bool CopyBlockedPlanes(std::vector<uint32_t>& out)
     {
         auto* mapContext = GW::GetMapContext();
@@ -422,10 +490,20 @@ namespace Pathing {
         std::vector<TrapRef> queue{{start_trap, start_plane}};
         reachable.insert(start_trap);
 
+        const auto centre = [](const GW::PathingTrapezoid* t) {
+            return GW::Vec2f{(t->XTL + t->XTR + t->XBL + t->XBR) * .25f, (t->YT + t->YB) * .5f};
+        };
+
         for (size_t head = 0; head < queue.size(); head++) {
             const auto [trap, plane_idx] = queue[head];
+            const GW::Vec2f from = centre(trap);
             for (const auto* adj : trap->adjacent) {
-                if (adj && reachable.insert(adj).second) queue.push_back({adj, plane_idx});
+                if (!adj || reachable.contains(adj)) continue;
+                // Stepping into a travel portal changes map, so the ground past one is not
+                // somewhere walking gets you - it belongs to the map on the other side.
+                if (CrossesTravelPortal(from, centre(adj))) continue;
+                reachable.insert(adj);
+                queue.push_back({adj, plane_idx});
             }
             if (plane_idx >= map->size()) continue;
             const auto& pm = (*map)[plane_idx];

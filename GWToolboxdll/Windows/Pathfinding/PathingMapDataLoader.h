@@ -29,6 +29,11 @@ namespace Pathing {
     // Lightweight: load only portal props from DAT (no pathfinding data)
     bool LoadPortalPropsFromDAT(uint32_t map_file_id, std::vector<PortalProp>& out);
 
+    // Travel-portal props of the live map, with facing. Shared so the reachability check and the
+    // loaders agree on what counts as a portal.
+    bool IsPortalModelFileId(uint32_t model_file_id);
+    void ParsePortalPropsFromMapContext(const GW::MapContext* map_context, std::vector<PortalProp>& out);
+
 } // namespace Pathing
 
 

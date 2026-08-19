@@ -52,6 +52,11 @@ namespace Pathing {
     // Game thread only.
     bool IsPositionReachable(const GW::GamePos& point);
 
+    // True if walking straight from `a` to `b` would pass through a travel portal's doorway.
+    // Stepping into one changes map, so the far side is not somewhere this map's pathing can
+    // actually deliver you. Game thread only.
+    bool CrossesTravelPortal(const GW::Vec2f& a, const GW::Vec2f& b);
+
     // Current blocked-plane state. Comparing the contents beats watching for a change event: it
     // is exact, and it survives callers that were not listening at the moment a gate moved.
     // False if there is no pathing context. Game thread only.

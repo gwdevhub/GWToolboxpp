@@ -79,7 +79,7 @@ namespace Pathing {
 
     // Travel-portal model file IDs (asura gates / ferry portals). Shared by the DAT
     // prop parser and the live MapContext extractor so both agree on what counts.
-    static bool IsPortalModelFileId(uint32_t fid)
+    bool IsPortalModelFileId(uint32_t fid)
     {
         switch (fid) {
             case 0x4e6b2: case 0x3c5ac: case 0xa825: case 0xe723: case 0x858b: case 0x28da0: case 0x1c533: case 0x5e77a: return true;
@@ -98,14 +98,16 @@ namespace Pathing {
 
     // Extract travel-portal props from live map memory - the MapContext equivalent of
     // ParsePortalProps' DAT chunk walk.
-    static void ParsePortalPropsFromMapContext(const GW::MapContext* map_context, std::vector<PortalProp>& out)
+    void ParsePortalPropsFromMapContext(const GW::MapContext* map_context, std::vector<PortalProp>& out)
     {
         const auto props = map_context ? map_context->props : nullptr;
         if (!props) return;
         for (auto* prop : props->propArray) {
             const uint32_t fid = MapPropModelFileId(prop);
+            // rotation_cos and rotation_sin are mapped to the same offset in the GWCA struct, so
+            // the angle is the only trustworthy source for the facing.
             if (IsPortalModelFileId(fid))
-                out.push_back({{prop->position.x, prop->position.y}, fid});
+                out.push_back({{prop->position.x, prop->position.y}, fid, prop->rotation_angle, true});
         }
     }
 
