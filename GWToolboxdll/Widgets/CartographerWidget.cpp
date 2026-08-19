@@ -25,6 +25,7 @@
 #include <Utils/SettingsRegistry.h>
 #include <Utils/ToolboxUtils.h>
 #include <Widgets/CartographerWidget.h>
+#include <Widgets/CartographyData.h>
 #include <Widgets/MissionMapWidget.h>
 #include <Widgets/WorldMapWidget.h>
 #include <Windows/Pathfinding/Pathing.h>
@@ -299,10 +300,69 @@ namespace {
     std::pair<int, int> player_cell{};
     bool player_cell_valid = false;
 
+    bool show_whole_continent = true;
+
+    // The baked standable tiles for the continent we are on, dilated by the reveal radius so a
+    // lookup answers "could standing somewhere credit this tile" in one test. Built once per
+    // continent and radius; the live probe still covers the map we are actually in, which the
+    // bake does not have for the handful of maps with no file id.
+    struct ContinentMask {
+        int continent = -1;
+        int radius = 0;
+        int x0 = 0, y0 = 0, w = 0, h = 0;
+        std::vector<uint8_t> coverable;
+
+        bool Get(const int cx, const int cy) const
+        {
+            const int lx = cx - x0, ly = cy - y0;
+            if (lx < 0 || ly < 0 || lx >= w || ly >= h) return false;
+            const size_t bit = static_cast<size_t>(ly) * w + lx;
+            return coverable[bit >> 3] >> (bit & 7) & 1;
+        }
+    };
+    ContinentMask continent_mask;
+
+    void BuildContinentMask(const int continent, const int radius)
+    {
+        if (continent_mask.continent == continent && continent_mask.radius == radius) return;
+        continent_mask = {};
+        continent_mask.continent = continent;
+        continent_mask.radius = radius;
+        const CartographyData::Continent* src = nullptr;
+        for (const auto& c : CartographyData::kContinents) {
+            if (c.id == continent) { src = &c; break; }
+        }
+        if (!src) return;
+        // Grow the grid by the radius so tiles credited from the edge are still representable.
+        continent_mask.x0 = src->x0 - radius;
+        continent_mask.y0 = src->y0 - radius;
+        continent_mask.w = src->width + radius * 2;
+        continent_mask.h = src->height + radius * 2;
+        continent_mask.coverable.assign((static_cast<size_t>(continent_mask.w) * continent_mask.h + 7) / 8, 0);
+        for (int y = 0; y < src->height; y++) {
+            for (int x = 0; x < src->width; x++) {
+                const size_t bit = static_cast<size_t>(y) * src->width + x;
+                if (bit / 8 >= static_cast<size_t>(src->byte_count)) continue;
+                if (!(src->bits[bit >> 3] >> (bit & 7) & 1)) continue;
+                for (int dy = -radius; dy <= radius; dy++) {
+                    for (int dx = -radius; dx <= radius; dx++) {
+                        const int lx = x + radius + dx, ly = y + radius + dy;
+                        if (lx < 0 || ly < 0 || lx >= continent_mask.w || ly >= continent_mask.h) continue;
+                        const size_t b = static_cast<size_t>(ly) * continent_mask.w + lx;
+                        continent_mask.coverable[b >> 3] |= 1 << (b & 7);
+                    }
+                }
+            }
+        }
+    }
+
     // Everything counts as coverable until the sweep finishes, so the overlay does not blink
     // cells out and back in as probing progresses.
     bool FogCellCoverable(const int cx, const int cy)
     {
+        // The bake knows the whole continent; the live probe knows the map we are standing in,
+        // including the few the bake has no file id for. Either is enough.
+        if (continent_mask.Get(cx, cy)) return true;
         if (!probe->complete) return true;
         const int r = RevealRadius();
         for (int dy = -r; dy <= r; dy++) {
@@ -453,12 +513,20 @@ namespace {
         map_fog_cells = -1;
         ImRect bounds;
         if (!(map_info && GW::Map::GetMapWorldMapBounds(map_info, &bounds) && bounds.GetWidth() >= 1.f && bounds.GetHeight() >= 1.f)) return;
-        const int x0 = static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell));
-        const int y0 = static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell));
-        const int x1 = static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell));
-        const int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
+        int x0 = static_cast<int>(floorf(bounds.Min.x / kWorldMapUnitsPerCell));
+        int y0 = static_cast<int>(floorf(bounds.Min.y / kWorldMapUnitsPerCell));
+        int x1 = static_cast<int>(ceilf(bounds.Max.x / kWorldMapUnitsPerCell));
+        int y1 = static_cast<int>(ceilf(bounds.Max.y / kWorldMapUnitsPerCell));
         map_cell_min = {x0, y0};
         map_cell_max = {x1, y1};
+        // With the baked data we can answer for the whole continent, not just the map we are in -
+        // which is the point of it: the world map then shows everything still worth walking to.
+        if (show_whole_continent && !continent_mask.coverable.empty()) {
+            x0 = continent_mask.x0;
+            y0 = continent_mask.y0;
+            x1 = continent_mask.x0 + continent_mask.w;
+            y1 = continent_mask.y0 + continent_mask.h;
+        }
         for (int cy = y0; cy < y1; cy++) {
             for (int cx = x0; cx < x1; cx++) {
                 if (!grid.InGrid(cx, cy) || grid.IsExplored(cx, cy)) continue;
@@ -1086,6 +1154,7 @@ void CartographerWidget::Initialize()
     SettingsRegistry::RegisterField(this, "show_fog", &show_fog);
     SettingsRegistry::RegisterField(this, "show_stand_cells", &show_stand_cells);
     SettingsRegistry::RegisterField(this, "show_grid", &show_grid);
+    SettingsRegistry::RegisterField(this, "show_whole_continent", &show_whole_continent);
     SettingsRegistry::RegisterField(this, "using_bec", &using_bec);
     SettingsRegistry::RegisterField(this, "declined_cells", &declined_cells_str);
     SettingsRegistry::RegisterField(this, "custom_points", &custom_points_str);
@@ -1167,6 +1236,7 @@ void CartographerWidget::Update(float)
     GW::Vec2f player_wm;
     if (!WorldMapWidget::GamePosToWorldMap(player->pos, player_wm)) return;
     player_wm_cached = player_wm;
+    BuildContinentMask(static_cast<int>(map_info->continent), RevealRadius());
     // A completing sweep still needs one last full pass, so the flag is read before the sweep.
     DropProbeIfGatesMoved();
     const bool sweeping = !probe->complete;
@@ -1310,6 +1380,10 @@ void CartographerWidget::DrawWorldMapOptions()
     ImGui::ShowHelp("Green: everything still unexplored that some square on this map can credit. Fog nothing here can reach draws nothing.");
     ImGui::Checkbox("Show squares to stand in", &show_stand_cells);
     ImGui::ShowHelp("Draws every 32x32 square worth walking into, shaded by how many foggy squares standing there would credit. The current suggestion is outlined and pulses.");
+    if (ImGui::Checkbox("Show the whole continent", &show_whole_continent)) {
+        GW::GameThread::Enqueue([] { coverage_stale = true; });
+    }
+    ImGui::ShowHelp("Draws every square still worth uncovering anywhere on this continent, not just the map you are in, using data baked from the game's own map files. Turn off to show only the current map.");
     ImGui::Checkbox("Show the cartography grid", &show_grid);
     ImGui::ShowHelp("Draws the 32x32 tile boundaries. Exploration is credited a whole tile at a time, so this is what tells you which tile you are actually standing in. Hidden when zoomed out far enough that the lines would smear together.");
     if (ImGui::Checkbox("Using a Bird's Eye Compass", &using_bec)) {
@@ -1385,7 +1459,14 @@ void CartographerWidget::DrawSettingsInternal()
     }
     ImGui::Separator();
     ImGui::TextDisabled("This map: %u squares probed, %u standable, %u worth visiting", static_cast<unsigned>(probe->cells.size()), standable, useful);
-    ImGui::TextDisabled("Foggy squares: %d reachable here, %d out of reach", map_fog_cells, unreachable_fog_cells);
+    ImGui::TextDisabled("Foggy squares: %d reachable, %d out of reach", map_fog_cells, unreachable_fog_cells);
+    if (continent_mask.coverable.empty()) {
+        ImGui::TextDisabled("No baked data for this continent - showing this map only.");
+    }
+    else {
+        ImGui::TextDisabled("Baked continent data: %dx%d squares at (%d,%d), radius %d",
+                            continent_mask.w, continent_mask.h, continent_mask.x0, continent_mask.y0, continent_mask.radius);
+    }
 #ifdef _DEBUG
     DrawBakeSettings();
 #endif
