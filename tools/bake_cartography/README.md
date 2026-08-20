@@ -34,9 +34,15 @@ than 4.2GB.
 
     pip install requests
     python3 bake.py          # regenerates fileids.txt, writes out/standable_L<n>.bin
+    python3 make_header.py   # out/ -> GWToolboxdll/Widgets/CartographyData.h
 
-Then regenerate the header from `out/`. Takes about 20 minutes; the chunk cache in `/tmp` makes
-re-runs much faster.
+`bake.py` takes about 20 minutes; the chunk cache in `/tmp` makes re-runs much faster.
+
+`make_header.py` reads its arrays back out of the header it just wrote and compares them to the
+`.bin` bytes before finishing. That check exists because the first version of this generator
+wrapped the byte list with a text wrapper - and a comma-separated list has no spaces in it, so
+it split numbers down the middle (`192` became `19`, `2`), which corrupted the data as well as
+breaking the syntax.
 
 ## What it stores
 
