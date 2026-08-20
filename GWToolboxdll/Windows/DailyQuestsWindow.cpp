@@ -39,9 +39,7 @@ namespace {
     constexpr size_t VANGUARD_COUNT = 9;
     constexpr size_t NICHOLAS_PRE_COUNT = 52;
     constexpr size_t NICHOLAS_POST_COUNT = 137;
-    constexpr time_t NICHOLAS_POST_START_DATE = 1405954800; // 2014年7月21日星期一下午3:00:00 | 与摄政谷的第一批红鸢尾花匹配
-    constexpr int SECONDSINAWEEK = 604800;
-
+    constexpr time_t NICHOLAS_POST_START_DATE = 1405954800; // 2014年7月21日（周一）15:00:00，与Regent Valley的第一朵Red Iris Flowers同步
 
     class ZaishenQuestData : public DailyQuests::QuestData {
     public:
@@ -64,22 +62,24 @@ namespace {
     };
 
 
-    constexpr std::array hard_coded_wanted_by_shining_blade_names = {"Justiciar Kimii",        "Zaln the Jaded",          "Justiciar Sevaan",  "Insatiable Vakar",   "Amalek the Unmerciful",     "Carnak the Hungry", "Valis the Rampant",       "Cerris",
-                                                                     "Sarnia the Red-Handed",  "Destor the Truth Seeker", "Selenas the Blunt", "Justiciar Amilyn",   "Maximilian the Meticulous", "Joh the Hostile",   "Barthimus the Provident", "Calamitous",
-                                                                     "Greves the Overbearing", "Lev the Condemned",       "Justiciar Marron",  "Justiciar Kasandra", "Vess the Disputant"};
+    constexpr std::array hard_coded_wanted_by_shining_blade_names = {
+        "Justiciar Kimii",        "Zaln the Jaded",          "Justiciar Sevaan",  "Insatiable Vakar",   "Amalek the Unmerciful",     "Carnak the Hungry", "Valis the Rampant",       "Cerris",
+        "Sarnia the Red-Handed",  "Destor the Truth Seeker", "Selenas the Blunt", "Justiciar Amilyn",   "Maximilian the Meticulous", "Joh the Hostile",   "Barthimus the Provident", "Calamitous",
+        "Greves the Overbearing", "Lev the Condemned",       "Justiciar Marron",  "Justiciar Kasandra", "Vess the Disputant"
+    };
 
     static_assert(hard_coded_wanted_by_shining_blade_names.size() == WANTED_COUNT);
 
     constexpr std::array hard_coded_vanguard_names = {
-        "Bandits",
-        "Utini Wupwup",
-        "Ascalonian Noble",
-        "Undead", // 0x8102 0x7050 0xFC72 0xBD17 0x552E
-        "Blazefiend Griefblade",
-        "Farmer Hamnet",
-        "Charr",
-        "Countess Nadya",
-        "Footman Tate"
+        "Bandits",           // 草寇
+        "Utini Wupwup",      // 尤提尼·乌坡乌坡
+        "Ascalonian Noble",  // 阿斯卡隆贵族
+        "Undead",            // 不死族
+        "Blazefiend Griefblade", // 火焰恶魔·悲伤刀片
+        "Farmer Hamnet",     // 农民哈姆奈特
+        "Charr",             // 夏尔
+        "Countess Nadya",    // 伯爵夫人娜佳
+        "Footman Tate"       // 仆从泰特
     };
 
     static_assert(hard_coded_vanguard_names.size() == VANGUARD_COUNT);
@@ -87,6 +87,7 @@ namespace {
     std::unordered_map<std::wstring, uint16_t> nicholas_sandford_item_collected_count;
 
     DailyQuests::QuestData nicholas_sandford_cycles[] = {
+        // 尼古拉斯·桑福德（灭前）52天循环
         {MapID::None, GW::EncStrings::GrawlNecklaces},      {MapID::None, GW::EncStrings::BakedHusks},     {MapID::None, GW::EncStrings::SkeletalLimbs},       {MapID::None, GW::EncStrings::UnnaturalSeeds},
         {MapID::None, GW::EncStrings::EnchantedLodestones}, {MapID::None, GW::EncStrings::SkaleFinPreSearing},      {MapID::None, GW::EncStrings::IcyLodestones},       {MapID::None, GW::EncStrings::GargoyleSkulls},
         {MapID::None, GW::EncStrings::DullCarapaces},       {MapID::None, GW::EncStrings::BakedHusks},     {MapID::None, GW::EncStrings::RedIrisFlowers},      {MapID::None, GW::EncStrings::SpiderLegs},
@@ -103,12 +104,12 @@ namespace {
     };
     static_assert(_countof(nicholas_sandford_cycles) == NICHOLAS_PRE_COUNT);
 
-    // 这些向量在 Initialise() 内部构建，因为字符串是硬编码的
-
+    // 这些向量在 Initialize() 中构建，因为字符串是硬编码的
     std::vector<WantedQuestData> wanted_by_shining_blade_cycles;
     std::vector<DailyQuests::QuestData> vanguard_cycles;
 
     ZaishenQuestData zaishen_bounty_cycles[] = {
+        // 战承悬赏 66天循环
         {MapID::Poisoned_Outcrops, L"Droajam, Mage of the Sands"},
         {MapID::Nahpui_Quarter_explorable, L"Royen Beastkeeper"},
         {MapID::Bloodstone_Caves_Level_1, L"Eldritch Ettin"},
@@ -116,19 +117,19 @@ namespace {
         {MapID::Fronis_Irontoes_Lair_mission, L"Fronis Irontoe"},
         {MapID::Urgozs_Warren, L"Urgoz"},
         {MapID::Norrhart_Domains, L"Fenrir"},
-        {MapID::Slavers_Exile_Level_1, L"Selvetarm"},
-        {MapID::Gyala_Hatchery, L"Mohby Windbeak"},
+        {MapID::Slavers_Exile_Level_1, L"希维塔姆"},          // 希维塔姆
+        {MapID::Gyala_Hatchery, L"莫比·风喙"},            // 莫比·风喙
         {MapID::The_Underworld, L"Charged Blackness"},
         {MapID::Majestys_Rest, L"Rotscale"},
-        {MapID::Vloxen_Excavations_Level_1, L"Zoldark the Unholy"},
+        {MapID::Vloxen_Excavations_Level_1, L"不洁·咒暗"}, // 不洁·咒暗
         {MapID::Forum_Highlands, L"Korshek the Immolated"},
         {MapID::Drakkar_Lake, L"Myish, Lady of the Lake"},
-        {MapID::Frostmaws_Burrows_Level_1, L"Frostmaw the Kinslayer"},
-        {MapID::Unwaking_Waters, L"Kunvie Firewing"},
-        {MapID::Bogroot_Growths_Level_1, L"Z'him Monns"},
+        {MapID::Frostmaws_Burrows_Level_1, L"冻击·弑族者"}, // 冻击·弑族者
+        {MapID::Unwaking_Waters, L"火翼·坤维"},           // 火翼·坤维
+        {MapID::Bogroot_Growths_Level_1, L"晶蒙"},      // 晶蒙
         {MapID::Domain_of_Anguish, L"The Greater Darkness"},
-        {MapID::Oolas_Lab_Level_1, L"TPS Regulator Golem"},
-        {MapID::Ravens_Point_Level_1, L"Plague of Destruction"},
+        {MapID::Oolas_Lab_Level_1, L"TPS调节高轮"},     // TPS调节高轮
+        {MapID::Ravens_Point_Level_1, L"疫之破坏者"}, // 疫之破坏者
         {MapID::Tomb_of_the_Primeval_Kings, L"The Darknesses"},
         {MapID::Jahai_Bluffs, L"Admiral Kantoh"},
         {MapID::Sacnoth_Valley, L"Borrguus Blisterbark"},
@@ -138,9 +139,9 @@ namespace {
         {MapID::Rragars_Menagerie_Level_1, L"Rragar Maneater"},
         {MapID::The_Undercity, L"Chung, the Attuned"},
         {MapID::Domain_of_Anguish, L"Lord Jadoth"},
-        {MapID::Drakkar_Lake, L"Nulfastu, Earthbound"},
+        {MapID::Drakkar_Lake, L"地缚·纳法斯图"},         // 地缚·纳法斯图
         {MapID::Sorrows_Furnace, L"The Iron Forgeman"},
-        {MapID::Heart_of_the_Shiverpeaks_Level_1, L"Magmus"},
+        {MapID::Heart_of_the_Shiverpeaks_Level_1, L"麦格默斯"},   // 麦格默斯
         {MapID::Sparkfly_Swamp, L"Mobrin, Lord of the Marsh"},
         {MapID::Vehtendi_Valley, L"Jarimiya the Unmerciful"},
         {MapID::Slavers_Exile_Level_1, L"Duncan the Black"},
@@ -150,7 +151,7 @@ namespace {
         {MapID::Domain_of_Anguish, L"The Black Beast of Arrgh"},
         {MapID::Arachnis_Haunt_Level_1, L"Arachni"},
         {MapID::The_Underworld, L"The Four Horsemen"},
-        {MapID::Sepulchre_of_Dragrimmar_Level_1, L"Remnant of Antiquities"},
+        {MapID::Sepulchre_of_Dragrimmar_Level_1, L"残余的断片"}, // 残余的断片
         {MapID::Morostav_Trail, L"Arbor Earthcall"},
         {MapID::Ooze_Pit_mission, L"Prismatic Ooze"},
         {MapID::The_Fissure_of_Woe, L"Lord Khobay"},
@@ -178,12 +179,13 @@ namespace {
     };
     static_assert(_countof(zaishen_bounty_cycles) == ZAISHEN_BOUNTY_COUNT);
 
-    // 这些向量已准备就绪
+    // 这些向量可直接使用
 
     std::unordered_map<DailyQuests::NicholasCycleData*, uint16_t> nicholas_item_collected_count;
 
     DailyQuests::NicholasCycleData nicholas_cycles[] = {
-        {GW::EncStrings::RedIrisFlowers, 3, MapID::Regent_Valley},
+        // 尼古拉斯·旅者 137周循环
+        {GW::EncStrings::RedIrisFlowers, 3, MapID::Regent_Valley},           // 红色鸢尾花
         {GW::EncStrings::FeatheredAvicaraScalps, 3, MapID::Mineral_Springs},
         {GW::EncStrings::MargoniteMasks, 2, MapID::Poisoned_Outcrops},
         {GW::EncStrings::QuetzalCrests, 2, MapID::Alcazia_Tangle},
@@ -324,6 +326,7 @@ namespace {
     static_assert(_countof(nicholas_cycles) == NICHOLAS_POST_COUNT);
 
     ZaishenQuestData zaishen_combat_cycles[] = {
+        // 战承对战 28天循环
         {MapID::The_Jade_Quarry_mission},
         {MapID::Codex_Arena_outpost},
         {MapID::Heroes_Ascent_outpost},
@@ -356,6 +359,7 @@ namespace {
     static_assert(_countof(zaishen_combat_cycles) == ZAISHEN_COMBAT_COUNT);
 
     ZaishenVanquishQuestData zaishen_vanquish_cycles[] = {
+        // 战承清图 136天循环
         {MapID::Jaya_Bluffs},
         {MapID::Holdings_of_Chokhin},
         {MapID::Ice_Cliff_Chasms},
@@ -496,6 +500,7 @@ namespace {
     static_assert(_countof(zaishen_vanquish_cycles) == ZAISHEN_VANQUISH_COUNT);
 
     ZaishenQuestData zaishen_mission_cycles[] = {
+        // 战承主线 69天循环
         MapID::Augury_Rock_mission,
         MapID::Grand_Court_of_Sebelkeh,
         MapID::Ice_Caves_of_Sorrow,
@@ -568,13 +573,17 @@ namespace {
     };
     static_assert(_countof(zaishen_mission_cycles) == ZAISHEN_MISSION_COUNT);
 
-    DailyQuests::QuestData pve_weekly_bonus_cycles[] = {{MapID::None, GW::EncStrings::ExtraLuckBonus},     {MapID::None, GW::EncStrings::ElonianSupportBonus},  {MapID::None, GW::EncStrings::ZaishenBountyBonus},
-                                                        {MapID::None, GW::EncStrings::FactionsEliteBonus}, {MapID::None, GW::EncStrings::NorthernSupportBonus}, {MapID::None, GW::EncStrings::ZaishenMissionBonus},
-                                                        {MapID::None, GW::EncStrings::PantheonBonus},      {MapID::None, GW::EncStrings::FactionSupportBonus},  {MapID::None, GW::EncStrings::ZaishenVanquishingBonus}};
+    DailyQuests::QuestData pve_weekly_bonus_cycles[] = {
+        // PvE 每周奖励 9周循环
+        {MapID::None, GW::EncStrings::ExtraLuckBonus},     {MapID::None, GW::EncStrings::ElonianSupportBonus},  {MapID::None, GW::EncStrings::ZaishenBountyBonus},
+        {MapID::None, GW::EncStrings::FactionsEliteBonus}, {MapID::None, GW::EncStrings::NorthernSupportBonus}, {MapID::None, GW::EncStrings::ZaishenMissionBonus},
+        {MapID::None, GW::EncStrings::PantheonBonus},      {MapID::None, GW::EncStrings::FactionSupportBonus},  {MapID::None, GW::EncStrings::ZaishenVanquishingBonus}};
     static_assert(_countof(pve_weekly_bonus_cycles) == WEEKLY_BONUS_PVE_COUNT);
 
-    DailyQuests::QuestData pvp_weekly_bonus_cycles[] = {{MapID::None, GW::EncStrings::RandomArenasBonus}, {MapID::None, GW::EncStrings::GuildVersusGuildBonus}, {MapID::None, GW::EncStrings::CompetitiveMissionBonus},
-                                                        {MapID::None, GW::EncStrings::HeroesAscentBonus}, {MapID::None, GW::EncStrings::CodexArenaBonus},       {MapID::None, GW::EncStrings::AllianceBattleBonus}};
+    DailyQuests::QuestData pvp_weekly_bonus_cycles[] = {
+        // PvP 每周奖励 6周循环
+        {MapID::None, GW::EncStrings::RandomArenasBonus}, {MapID::None, GW::EncStrings::GuildVersusGuildBonus}, {MapID::None, GW::EncStrings::CompetitiveMissionBonus},
+        {MapID::None, GW::EncStrings::HeroesAscentBonus}, {MapID::None, GW::EncStrings::CodexArenaBonus},       {MapID::None, GW::EncStrings::AllianceBattleBonus}};
     static_assert(_countof(pvp_weekly_bonus_cycles) == WEEKLY_BONUS_PVP_COUNT);
 
     uint32_t GetZaishenBountyIdx(const time_t* unix)
@@ -632,7 +641,7 @@ namespace {
         return static_cast<time_t>(floor((*unix - 1368457200) / SECONDSINAWEEK) * SECONDSINAWEEK) + 1368457200;
     }
 
-    // 返回给定时间 `unix` 之后的下一个轮换周期开始时间，给定周期的起始时间和周期长度。
+    // 返回 unix 之后下一个循环周期的开始时间
     time_t GetNextRotationTime(const time_t unix, const time_t epoch, const time_t period)
     {
         return epoch + (((unix - epoch) / period) + 1) * period;
@@ -656,13 +665,13 @@ namespace {
         const auto time_in_currentCycle = event_index * interval_in_seconds;
         auto next_event_time = current_cycle_start_time + time_in_currentCycle;
         if (next_event_time < current_time) {
-            // 事件已经开始于过去。我们需要检查事件是否正在进行或已经结束
+            // 事件已在过去开始，检查事件是否仍在进行或已结束
             if (next_event_time + interval_in_seconds < current_time) {
-                // 事件已经结束，因此我们将开始时间偏移一个周期
+                // 事件已结束，将开始时间偏移一个周期
                 next_event_time += cycle_duration;
             }
             else {
-                // 事件正在进行，因此我们将开始时间设为当前时间
+                // 事件正在进行，将开始时间设为当前时间
                 next_event_time = current_time;
             }
         }
@@ -703,8 +712,7 @@ namespace {
 
     GW::HookEntry ChatCmd_HookEntry;
 
-    // rollover：此任务将被下一个替换的时间戳。
-    // 传入 0 表示当前任务（不显示日期）。
+    // rollover: 此任务被下一个替换的时间戳。传 0 表示当前任务（不显示日期）。
     void PrintDaily(const wchar_t* quest_type_enc, const wchar_t* quest_name_enc, const time_t rollover)
     {
         std::wstring to_send;
@@ -733,8 +741,8 @@ namespace {
 
     void CHAT_CMD_FUNC(CmdWeeklyBonus)
     {
-        CmdDaily(L"\x108\x107每周 PvE 奖励\x1", DailyQuests::GetWeeklyPvEBonus, argc, argv);
-        CmdDaily(L"\x108\x107每周 PvP 奖励\x1", DailyQuests::GetWeeklyPvPBonus, argc, argv);
+        CmdDaily(L"\x108\x107每周奖励 PvE\x1", DailyQuests::GetWeeklyPvEBonus, argc, argv);
+        CmdDaily(L"\x108\x107每周奖励 PvP\x1", DailyQuests::GetWeeklyPvPBonus, argc, argv);
     }
 
     void CHAT_CMD_FUNC(CmdZaishenBounty)
@@ -781,7 +789,7 @@ namespace {
         }
         else {
             const auto [nick, rollover] = DailyQuests::GetNicholasTheTraveller(query_time);
-            buf = std::format(L"{}\x2\x108\x107（\x1\x2{}\x2\x108\x107）\x1", nick->GetQuestNameEnc(), Resources::GetMapName(nick->map_id)->encoded());
+            buf = std::format(L"{}\x2\x108\x107 (\x1\x2{}\x2\x108\x107)\x1", nick->GetQuestNameEnc(), Resources::GetMapName(nick->map_id)->encoded());
             PrintDaily(GW::EncStrings::NicholasTheTraveller, buf.c_str(), is_tomorrow ? rollover : 0);
         }
     }
@@ -850,19 +858,19 @@ namespace {
         return GetQuestByName(quest_name_english, location_enc) != nullptr;
     }
 
-    const char* you_have_this_quest = "您的任务日志中已有此任务";
+    const char* you_have_this_quest = "你的任务日志中已有此任务";
 
     bool OnNicholasContextMenu(void* wparam)
     {
         const auto info = (DailyQuests::NicholasCycleData*)wparam;
-        ImGui::Text("在 %s 收集 %s", info->GetQuestName(), info->GetMapName());
+        ImGui::Text("在 %s 收集 %s", info->GetMapName(), info->GetQuestName());
 
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0));
         ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0).Value);
         const auto size = ImVec2(250.0f * ImGui::FontScale(), 0);
         ImGui::Separator();
-        bool travel = ImGui::Button("前往最近的前哨站", size);
-        bool wiki = ImGui::Button("激战维基百科", size);
+        bool travel = ImGui::Button("传送到最近的前哨站", size);
+        bool wiki = ImGui::Button("Guild Wars Wiki", size);
         const auto withdraw_amount = static_cast<uint32_t>(info->quantity * settings.nicholas_withdraw_gott_count);
         char withdraw_label[64];
         snprintf(withdraw_label, sizeof(withdraw_label), "为 %d 个 GOTT 取出物品（%d 件）", settings.nicholas_withdraw_gott_count, withdraw_amount);
@@ -900,12 +908,12 @@ namespace {
         ImGui::Separator();
         bool travel = false;
         if (has_quest) {
-            travel = ImGui::Button("前往最近的前哨站", size);
+            travel = ImGui::Button("传送到最近的前哨站", size);
         }
         else if (quest_available) {
-            travel = ImGui::Button("前往接取任务", size);
+            travel = ImGui::Button("传送去接取任务", size);
         }
-        const bool wiki = info->GetWikiName().empty() ? false : ImGui::Button("激战维基百科", size);
+        const bool wiki = info->GetWikiName().empty() ? false : ImGui::Button("Guild Wars Wiki", size);
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
         if (travel) {
@@ -915,7 +923,7 @@ namespace {
             if (quest_available) {
                 if (TravelWindow::Instance().Travel(info->GetQuestGiverOutpost())) return false;
             }
-            Log::Error("前往任务前哨站失败");
+            Log::Error("传送到任务前哨站失败");
             return false;
         }
         if (wiki) {
@@ -962,9 +970,7 @@ namespace {
     bool IsZaishenMissionOutpost(GW::Constants::MapID current_map, GW::Constants::MapID zaishen_map)
     {
         if (current_map == zaishen_map) return true;
-        // 盟约联合任务没有单一的入口前哨站。为每个任务硬编码入口前哨站。
-        // （AreaInfo 有一个 mission_maps_to 字段，原则上可以替代此逻辑，
-        // 但代码库中其他地方未使用且未经测试。）
+        // 阵营联合任务没有单一的前哨站入口，为每个任务硬编码入口前哨站
         switch (zaishen_map) {
             case MapID::Vizunah_Square_mission:
                 return current_map == MapID::Vizunah_Square_Local_Quarter_outpost
@@ -998,13 +1004,13 @@ namespace {
             reward = DailyQuests::GetZaishenCoinReward(*quest_id);
         }
 
-        Log::Flash("今天是扎伊申任务：%s", zm_result.quest->GetQuestName());
+        Log::Flash("今日战承主线：%s", zm_result.quest->GetQuestName());
         if (reward) {
-            const auto bonus_suffix = bonus_active ? "（扎伊申任务奖励周：2倍）" : "";
-            Log::Info("扎伊申硬币奖励：%u（普通）/ %u（困难）%s", reward->nm * bonus_mult, reward->hm * bonus_mult, bonus_suffix);
+            const auto bonus_suffix = bonus_active ? "（战承主线奖励周：2倍）" : "";
+            Log::Info("战承币奖励：%u（普通）/ %u（困难）%s", reward->nm * bonus_mult, reward->hm * bonus_mult, bonus_suffix);
         }
         if (!has_quest) {
-            Log::Info("您还没有此任务 — 使用 \"/zm take\" 前往启航滩接取。");
+            Log::Info("你尚未接取此任务 — 使用 \"/zm take\" 传送到 embark 海滩接取。");
         }
     }
 
@@ -1028,7 +1034,6 @@ namespace {
     {
         static clock_t last_inv_check_sandford = 0;
 
-        // 如果 map 为空，则使用 cycle 数组中的唯一键填充它
         if (nicholas_sandford_item_collected_count.empty()) {
             for (auto& item : nicholas_sandford_cycles) {
                 nicholas_sandford_item_collected_count[item.enc_name] = 0;
@@ -1036,7 +1041,6 @@ namespace {
         }
 
         if (!last_inv_check_sandford || TIMER_DIFF(last_inv_check_sandford) > 10000) {
-            // 检查每个尼古拉斯·桑福德物品的库存
             for (const auto& [enc_name, count] : nicholas_sandford_item_collected_count) {
                 nicholas_sandford_item_collected_count[enc_name] = InventoryManager::CountItemsByName(enc_name.c_str());
             }
@@ -1048,7 +1052,7 @@ namespace {
         return found->second;
     }
     const std::unordered_map<GW::Constants::QuestID, DailyQuests::ZaishenCoinReward> zaishen_coin_rewards = {
-        // 扎伊申任务
+        // 战承主线奖励
         {QuestID::ZaishenMission_The_Great_Northern_Wall, {15, 74}},
         {QuestID::ZaishenMission_Fort_Ranik, {15, 74}},
         {QuestID::ZaishenMission_Ruins_of_Surmia, {15, 74}},
@@ -1119,7 +1123,7 @@ namespace {
         {QuestID::ZaishenMission_Minister_Chos_Estate, {15, 74}},
         {QuestID::ZaishenMission_Pogahn_Passage, {30, 150}},
 
-        // 扎伊申悬赏
+        // 战承悬赏奖励
         {QuestID::ZaishenBounty_Urgoz, {60, 210}},
         {QuestID::ZaishenBounty_Chung_The_Attuned, {20, 70}},
         {QuestID::ZaishenBounty_Mungri_Magicbox, {20, 70}},
@@ -1148,7 +1152,7 @@ namespace {
         {QuestID::ZaishenBounty_Magmus, {40, 140}},
         {QuestID::ZaishenBounty_Lord_Khobay, {40, 140}},
 
-        // 扎伊申征服
+        // 战承清图奖励
         {QuestID::ZaishenVanquish_Dejarin_Estate, {150, 150}},
         {QuestID::ZaishenVanquish_Watchtower_Coast, {50, 50}},
         {QuestID::ZaishenVanquish_Arbor_Bay, {250, 250}},
@@ -1310,8 +1314,8 @@ void DailyQuests::Draw(IDirect3DDevice9*)
 
     const bool is_pre = GW::Map::IsPreSearing();
 
-    // 右上角的复选框
-    const char* other_label = is_pre ? "显示后传日常任务" : "显示前传日常任务";
+    // 右上角复选框
+    const char* other_label = is_pre ? "显示灭后每日任务" : "显示灭前每日任务";
     const float checkbox_w = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(other_label).x;
     ImGui::SetCursorPosX(ImGui::GetWindowWidth() - checkbox_w - ImGui::GetStyle().WindowPadding.x);
     ImGui::Checkbox(other_label, &settings.show_other_searing_dailies);
@@ -1382,19 +1386,19 @@ void DailyQuests::Draw(IDirect3DDevice9*)
 
     auto add_post_cols = [&]() {
         if (settings.show_zaishen_missions_in_window)
-            columns.push_back({"扎伊申任务", zm_width, [&](time_t t) {
+            columns.push_back({"战承主线", zm_width, [&](time_t t) {
                 write_daily_info(&subscribed_zaishen_missions[GetZaishenMissionIdx(&t)], GetZaishenMission(t).quest, true);
             }});
         if (settings.show_zaishen_bounty_in_window)
-            columns.push_back({"扎伊申悬赏", zb_width, [&](time_t t) {
+            columns.push_back({"战承悬赏", zb_width, [&](time_t t) {
                 write_daily_info(&subscribed_zaishen_bounties[GetZaishenBountyIdx(&t)], GetZaishenBounty(t).quest, true);
             }});
         if (settings.show_zaishen_combat_in_window)
-            columns.push_back({"扎伊申对战", zc_width, [&](time_t t) {
+            columns.push_back({"战承对战", zc_width, [&](time_t t) {
                 write_daily_info(&subscribed_zaishen_combats[GetZaishenCombatIdx(&t)], GetZaishenCombat(t).quest, false);
             }});
         if (settings.show_zaishen_vanquishes_in_window)
-            columns.push_back({"扎伊申征服", zv_width, [&](time_t t) {
+            columns.push_back({"战承清图", zv_width, [&](time_t t) {
                 write_daily_info(&subscribed_zaishen_vanquishes[GetZaishenVanquishIdx(&t)], GetZaishenVanquish(t).quest, true);
             }});
         if (settings.show_wanted_quests_in_window)
@@ -1402,7 +1406,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                 write_daily_info(&subscribed_wanted_quests[GetWantedByShiningBladeIdx(&t)], GetWantedByShiningBlade(t).quest, false);
             }});
         if (settings.show_nicholas_in_window)
-            columns.push_back({"旅者尼古拉斯", nicholas_width, [&](time_t t) {
+            columns.push_back({"尼古拉斯·旅者", nicholas_width, [&](time_t t) {
                 const auto nick = static_cast<NicholasCycleData*>(GetNicholasTheTraveller(t).quest);
                 ImGui::TextUnformatted(nick->GetQuestName());
                 const auto rmb_clicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
@@ -1415,15 +1419,15 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                     ImGui::TextColored(*col, "（%d/%d）", collected, nick->quantity);
                 }
                 if (rmb_clicked) ImGui::SetContextMenu(OnNicholasContextMenu, nick);
-                if (hovered) ImGui::SetTooltip("%s 在 %s", nick->GetQuestName(), nick->GetMapName());
+                if (hovered) ImGui::SetTooltip("%s（%s）", nick->GetQuestName(), nick->GetMapName());
             }});
         if (settings.show_weekly_bonus_pve_in_window)
-            columns.push_back({"每周 PvE 奖励", wbe_width, [&](time_t t) {
+            columns.push_back({"每周奖励 PvE", wbe_width, [&](time_t t) {
                 const auto i = GetWeeklyBonusPvEIdx(&t);
                 write_daily_info(&subscribed_weekly_bonus_pve[i], &pve_weekly_bonus_cycles[i], false);
             }});
         if (settings.show_weekly_bonus_pvp_in_window)
-            columns.push_back({"每周 PvP 奖励", long_text_width, [&](time_t t) {
+            columns.push_back({"每周奖励 PvP", long_text_width, [&](time_t t) {
                 const auto i = GetWeeklyBonusPvPIdx(&t);
                 write_daily_info(&subscribed_weekly_bonus_pvp[i], &pvp_weekly_bonus_cycles[i], false);
             }});
@@ -1438,7 +1442,7 @@ void DailyQuests::Draw(IDirect3DDevice9*)
         if (settings.show_other_searing_dailies) add_pre_cols();
     }
 
-    // 标题行
+    // 表头行
     float offset = 0.0f;
     ImGui::Text("日期");
     ImGui::SameLine(offset += short_text_width);
@@ -1477,20 +1481,20 @@ void DailyQuests::Draw(IDirect3DDevice9*)
     }
 
     ImGui::EndChild();
-    ImGui::TextDisabled("点击日常任务可在其即将到来时收到通知。");
+    ImGui::TextDisabled("点击每日任务以在它出现时收到通知。");
 
     ImGui::TextDisabled("已订阅的任务以 ");
     ImGui::SameLine(0, 0);
     ImGui::TextColored(subscribed_color, "此颜色");
     ImGui::SameLine(0, 0);
-    ImGui::TextDisabled("高亮显示。");
+    ImGui::TextDisabled(" 高亮显示。");
     if (!is_pre) {
         ImGui::SameLine(0, 0);
-        ImGui::TextDisabled("此角色尚未完成的区域以 ");
+        ImGui::TextDisabled(" 当前角色尚未完成的区域以 ");
         ImGui::SameLine(0, 0);
         ImGui::TextColored(incomplete_color, "此颜色");
         ImGui::SameLine(0, 0);
-        ImGui::TextDisabled("高亮显示。");
+        ImGui::TextDisabled(" 高亮显示。");
     }
 
     return ImGui::End();
@@ -1498,30 +1502,30 @@ void DailyQuests::Draw(IDirect3DDevice9*)
 
 void DailyQuests::DrawHelp()
 {
-    if (!ImGui::TreeNodeEx("日常任务聊天命令", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (!ImGui::TreeNodeEx("每日任务聊天命令", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanAvailWidth)) {
         return;
     }
-    ImGui::Text("您可以创建\"发送聊天\"热键来执行任何命令。");
+    ImGui::Text("你可以创建\"发送聊天\"快捷键来执行任何命令。");
     ImGui::Bullet();
-    ImGui::Text("'/zb' 展示当前扎伊申悬赏。");
+    ImGui::Text("'/zb' 显示当前战承悬赏。");
     ImGui::Bullet();
-    ImGui::Text("'/zm' 展示当前扎伊申任务。");
+    ImGui::Text("'/zm' 显示当前战承主线。");
     ImGui::Bullet();
-    ImGui::Text("'/zv' 展示当前扎伊申征服。");
+    ImGui::Text("'/zv' 显示当前战承清图。");
     ImGui::Bullet();
-    ImGui::Text("'/zc' 展示当前扎伊申对战。");
+    ImGui::Text("'/zc' 显示当前战承对战。");
     ImGui::Bullet();
-    ImGui::Text("'/vanguard' 展示当前前传先锋任务。");
+    ImGui::Text("'/vanguard' 显示当前灭前先锋任务。");
     ImGui::Bullet();
-    ImGui::Text("'/wanted' 展示当前光刃通缉。");
+    ImGui::Text("'/wanted' 显示当前光刃通缉。");
     ImGui::Bullet();
-    ImGui::Text("'/nicholas' 展示当前尼古拉斯位置。");
+    ImGui::Text("'/nicholas' 显示当前尼古拉斯位置。");
     ImGui::Bullet();
-    ImGui::Text("'/weekly' 展示当前每周奖励。");
+    ImGui::Text("'/weekly' 显示当前每周奖励。");
     ImGui::Bullet();
-    ImGui::Text("'/today' 展示当前日常活动。");
+    ImGui::Text("'/today' 显示今日每日活动。");
     ImGui::Bullet();
-    ImGui::Text("'/tomorrow' 展示明天的日常活动。");
+    ImGui::Text("'/tomorrow' 显示明日每日活动。");
     ImGui::TreePop();
 }
 
@@ -1529,37 +1533,37 @@ void DailyQuests::DrawSettingsInternal()
 {
     ToolboxWindow::DrawSettingsInternal();
     ImGui::PushItemWidth(200.f * ImGui::FontScale());
-    ImGui::InputInt("显示未来 N 天的日常任务", &daily_quest_window_count);
-    ImGui::InputInt("为尼古拉斯取出的 GOTT 数量", &settings.nicholas_withdraw_gott_count);
+    ImGui::InputInt("显示未来 N 天的每日任务", &daily_quest_window_count);
+    ImGui::InputInt("为尼古拉斯取出物品的 GOTT 数量", &settings.nicholas_withdraw_gott_count);
     ImGui::PopItemWidth();
     ImGui::Text("在每日任务窗口中显示的任务：");
     ImGui::Indent();
     ImGui::StartSpacedElements(200.f);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("扎伊申悬赏", &settings.show_zaishen_bounty_in_window);
+    ImGui::Checkbox("战承悬赏", &settings.show_zaishen_bounty_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("扎伊申对战", &settings.show_zaishen_combat_in_window);
+    ImGui::Checkbox("战承对战", &settings.show_zaishen_combat_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("扎伊申任务", &settings.show_zaishen_missions_in_window);
+    ImGui::Checkbox("战承主线", &settings.show_zaishen_missions_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("扎伊申征服", &settings.show_zaishen_vanquishes_in_window);
+    ImGui::Checkbox("战承清图", &settings.show_zaishen_vanquishes_in_window);
     ImGui::NextSpacedElement();
     ImGui::Checkbox("光刃通缉", &settings.show_wanted_quests_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("旅者尼古拉斯", &settings.show_nicholas_in_window);
+    ImGui::Checkbox("尼古拉斯·旅者", &settings.show_nicholas_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("每周 PvE 奖励", &settings.show_weekly_bonus_pve_in_window);
+    ImGui::Checkbox("每周奖励（PvE）", &settings.show_weekly_bonus_pve_in_window);
     ImGui::NextSpacedElement();
-    ImGui::Checkbox("每周 PvP 奖励", &settings.show_weekly_bonus_pvp_in_window);
+    ImGui::Checkbox("每周奖励（PvP）", &settings.show_weekly_bonus_pvp_in_window);
 
     ImGui::Unindent();
 
-    ImGui::Checkbox("进入今日扎伊申任务前哨站时提醒", &settings.notify_zaishen_mission_outpost);
-    ImGui::ShowHelp("当您进入与今日扎伊申任务匹配的前哨站时，在聊天中显示任务名称和硬币奖励的闪信消息。");
+    ImGui::Checkbox("进入今日战承主线前哨站时提醒", &settings.notify_zaishen_mission_outpost);
+    ImGui::ShowHelp("当你进入与今日战承主线匹配的前哨站时，在聊天中显示任务名称和战承币奖励。");
 }
 
 namespace {
-    // 订阅保持在 JSON 中保留其旧的位置字符串编码（"0101..."），与 INI 相同。
+    // 订阅使用遗留的位字符串编码存储在 JSON 中（"0101..."），与 INI 相同
     template <size_t N>
     void LoadSubscriptions(const SettingsDoc& doc, const ToolboxIni* legacy, const char* section, const char* key, bool (&out)[N])
     {
@@ -1627,7 +1631,7 @@ void DailyQuests::Initialize()
 
 
     if (wanted_by_shining_blade_cycles.empty()) {
-        // TODO：找到这些的编码名称和地图
+        // TODO: 查找这些任务的地图和编码名称
         for (const auto hard_coded_name : hard_coded_wanted_by_shining_blade_names) {
             const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             wanted_by_shining_blade_cycles.push_back({MapID::None, wrapped.c_str()});
@@ -1635,7 +1639,7 @@ void DailyQuests::Initialize()
     }
 
     if (vanguard_cycles.empty()) {
-        // TODO：找到这些的编码名称和地图
+        // TODO: 查找这些任务的地图和编码名称
         for (const auto hard_coded_name : hard_coded_vanguard_names) {
             const auto wrapped = std::format(L"\x108\x107{}\x1", TextUtils::StringToWString(hard_coded_name));
             vanguard_cycles.push_back({MapID::None, wrapped.c_str()});
@@ -1787,7 +1791,6 @@ void DailyQuests::Update(const float)
         }
         else {
             auto map_to = has_quest->map_to;
-            // 注意：任务奖励从 gtob 更容易获取
             if (map_to == MapID::Embark_Beach) map_to = MapID::Great_Temple_of_Balthazar_outpost;
             TravelWindow::Instance().TravelNearest(map_to);
         }
@@ -1805,7 +1808,7 @@ void DailyQuests::Update(const float)
     }
     if (GW::Map::GetIsMapLoaded() && time(nullptr) - start_time > 1) {
         checked_subscriptions = true;
-        // 检查未来 6 天的日常任务，如果找到则发送消息。仅在打开工具箱时运行一次。
+        // 检查未来 6 天的每日任务，如果发现订阅的任务则发送消息。仅在工具箱打开时运行一次。
         const time_t now = time(nullptr);
         time_t unix = now + 0;
         uint32_t quest_idx;
@@ -1823,16 +1826,16 @@ void DailyQuests::Update(const float)
                     break;
             }
             if (subscribed_zaishen_missions[quest_idx = GetZaishenMissionIdx(&unix)]) {
-                Log::Flash("%s 是 %s 的扎伊申任务", zaishen_mission_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s 是 %s 的战承主线", zaishen_mission_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_zaishen_bounties[quest_idx = GetZaishenBountyIdx(&unix)]) {
-                Log::Flash("%s 是 %s 的扎伊申悬赏", zaishen_bounty_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s 是 %s 的战承悬赏", zaishen_bounty_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_zaishen_combats[quest_idx = GetZaishenCombatIdx(&unix)]) {
-                Log::Flash("%s 是 %s 的扎伊申对战", zaishen_combat_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s 是 %s 的战承对战", zaishen_combat_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_zaishen_vanquishes[quest_idx = GetZaishenVanquishIdx(&unix)]) {
-                Log::Flash("%s 是 %s 的扎伊申征服", zaishen_vanquish_cycles[quest_idx].GetQuestName(), date_str);
+                Log::Flash("%s 是 %s 的战承清图", zaishen_vanquish_cycles[quest_idx].GetQuestName(), date_str);
             }
             if (subscribed_wanted_quests[quest_idx = GetWantedByShiningBladeIdx(&unix)]) {
                 Log::Flash("%s 是 %s 的光刃通缉", wanted_by_shining_blade_cycles[quest_idx].GetQuestName(), date_str);
@@ -1840,16 +1843,16 @@ void DailyQuests::Update(const float)
             unix += 86400;
         }
 
-        // 检查每周奖励 / 特殊活动
+        // 检查每周奖励/特殊事件
         unix = GetWeeklyRotationTime(&now);
         for (auto i = 0u; i < 2; i++) {
             char date_str[32];
             switch (i) {
                 case 0:
-                    std::strftime(date_str, 32, "直到 %R 在 %A", std::localtime(&unix));
+                    std::strftime(date_str, 32, "直到 %R，%A", std::localtime(&unix));
                     break;
                 default:
-                    std::strftime(date_str, 32, "在 %R 在 %A", std::localtime(&unix));
+                    std::strftime(date_str, 32, "在 %A %R", std::localtime(&unix));
                     break;
             }
             if (subscribed_weekly_bonus_pve[quest_idx = GetWeeklyBonusPvPIdx(&unix)]) {
@@ -1932,7 +1935,7 @@ const char* DailyQuests::QuestData::GetMapName()
 
 const std::string& DailyQuests::QuestData::GetRegionName()
 {
-    return Resources::GetRegionName(map_id)->string(); // Resources 拥有解码和缓存
+    return Resources::GetRegionName(map_id)->string();
 }
 
 DailyQuests::NicholasCycleData::NicholasCycleData(const wchar_t* enc_name, uint32_t quantity, MapID map_id) : QuestData(map_id, enc_name), quantity(quantity) {}
@@ -1941,7 +1944,6 @@ size_t DailyQuests::NicholasCycleData::GetCollectedQuantity()
 {
     static clock_t last_inv_check = 0;
     if (!last_inv_check || TIMER_DIFF(last_inv_check) > 10000) {
-        // 检查库存
         for (auto& item : nicholas_cycles) {
             nicholas_item_collected_count[&item] = InventoryManager::CountItemsByName(item.enc_name.c_str());
         }
@@ -1995,9 +1997,8 @@ bool DailyQuests::IsNicholasItem(const GW::Item* item) {
 
 const DailyQuests::NicholasIngredientInfo* DailyQuests::GetNicholasIngredientInfo(const wchar_t* ingredient_enc)
 {
-    // 旅者尼古拉斯收集的最终产品的制作材料。
-    // 如果物品的编码名称未知，它将是一个无法匹配的占位符 - 在游戏中找到它并更新 EncStrings.h。
-    // TODO：更新 ingredient_quantity 值以反映制作一套完整尼古拉斯物品所需的实际数量
+    // 尼古拉斯·旅者收集物品的合成材料
+    // TODO: 更新 ingredient_quantity 值以反映合成一套尼古拉斯物品所需的实际数量
     static NicholasIngredientInfo ingredients[] = {
         {GW::EncStrings::SkaleFins, GW::EncStrings::BowlofSkalefinSoup, 2},
         {GW::EncStrings::ChunkOfDrakeFlesh, GW::EncStrings::DrakeKabob, 1},
@@ -2116,7 +2117,7 @@ const DailyQuests::ZaishenCoinReward* DailyQuests::GetZaishenCoinReward(GW::Cons
 time_t DailyQuests::GetTimestampFromNicholasTheTraveller(NicholasCycleData* data)
 {
     /*
-    此函数返回周期数据的下一个开始时间，如果周期正在进行则返回当前时间
+    此函数返回循环数据的下一个开始时间，如果循环正在进行则返回当前时间
     */
     auto index = -1;
     for (auto i = 0; i < NICHOLAS_POST_COUNT; i++) {

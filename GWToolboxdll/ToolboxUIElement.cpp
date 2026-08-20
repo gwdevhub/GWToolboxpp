@@ -19,6 +19,7 @@ namespace {
         const char* label;
         const wchar_t* label_ws;
     };
+    // 游戏内部界面名称（不可汉化，否则查找失败）
     constexpr FrameLabel available_frame_labels[] = {
         {"Compass", L"Compass"},   {"Effects Monitor", L"Effects"}, {"Inventory", L"Inventory"},        {"Mission Map", L"MapWindow"}, {"Quest Log", L"Quest"},
         {"Skillbar", L"Skillbar"}, {"Target", L"Target"},           {"Upkeep Monitor", L"SkillUpkeep"}, {"Weapon Bar", L"WeaponBar"},
@@ -75,14 +76,14 @@ void ToolboxUIElement::UpdateLocationAgainstSnappedFrame()
     if (!snapped_frame_state) return;
 
     const auto& frame_pos = snapped_frame_state->position;
-    if (ImVec2Eq(frame_pos, empty_imvec2)) return; // position not yet populated
+    if (ImVec2Eq(frame_pos, empty_imvec2)) return; // 位置尚未填充
 
     float* snap_off = (is_mobile ? mobile_snap_offset : snap_offset).data();
     bool& needs_init = is_mobile ? mobile_snap_offset_needs_init : snap_offset_needs_init;
 
     const auto window = ImGui::FindWindowByName(Name());
 
-    // On first valid frame position after snap is set: derive offset from current window position
+    // 在第一次获取到有效帧位置时，根据当前窗口位置计算偏移量
     if (needs_init) {
         needs_init = false;
         if (window) {
@@ -94,7 +95,7 @@ void ToolboxUIElement::UpdateLocationAgainstSnappedFrame()
     const float target_x = frame_pos.x + snap_off[0];
     const float target_y = frame_pos.y + snap_off[1];
 
-    // Keep fallback screen coords up-to-date so we have a valid position if the frame disappears
+    // 保留备用屏幕坐标，以便帧消失时仍能维持有效位置
     float* cur_pos = (is_mobile ? mobile_pos : normal_pos).data();
     cur_pos[0] = target_x;
     cur_pos[1] = target_y;
@@ -188,9 +189,8 @@ void ToolboxUIElement::LoadSettings(SettingsDoc& doc, ToolboxIni* legacy)
 
 void ToolboxUIElement::SaveSettings(SettingsDoc& doc)
 {
-    // Sync current mode's stored positions from the live window.
-    // Guard with context check: SaveSettings is called a second time after ImGui is destroyed
-    // (from UpdateTerminating -> ToggleModule), at which point FindWindowByName would crash.
+    // 保存当前模式下的窗口位置和大小（从实时窗口同步）
+    // 注意：若 ImGui 上下文已销毁，FindWindowByName 会导致崩溃，因此需要检查
     if (ImGui::GetCurrentContext()) {
         if (const auto window = ImGui::FindWindowByName(Name())) {
             if (ToolboxSettings::is_in_mobile_mode) {
@@ -287,7 +287,7 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
 {
     const auto window = ImGui::FindWindowByName(Name());
     if (is_mobile) {
-        // Save current (normal) position before switching
+        // 切换前保存当前（普通）布局
         if (window) {
             normal_pos[0] = window->Pos.x;
             normal_pos[1] = window->Pos.y;
@@ -295,14 +295,14 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
             normal_size[1] = window->SizeFull.y;
             has_normal_layout = true;
         }
-        // Apply stored mobile position if available
+        // 应用存储的移动布局
         if (has_mobile_layout && window) {
             ImGui::SetWindowPos(window, {mobile_pos[0], mobile_pos[1]});
             ImGui::SetWindowSize(window, {mobile_size[0], mobile_size[1]});
         }
     }
     else {
-        // Save current (mobile) position before switching
+        // 切换前保存当前（移动）布局
         if (window) {
             mobile_pos[0] = window->Pos.x;
             mobile_pos[1] = window->Pos.y;
@@ -310,13 +310,13 @@ void ToolboxUIElement::OnMobileModeChanged(const bool is_mobile)
             mobile_size[1] = window->SizeFull.y;
             has_mobile_layout = true;
         }
-        // Restore stored normal position if available
+        // 恢复存储的普通布局
         if (has_normal_layout && window) {
             ImGui::SetWindowPos(window, {normal_pos[0], normal_pos[1]});
             ImGui::SetWindowSize(window, {normal_size[0], normal_size[1]});
         }
     }
-    // Reset settings tab to reflect new mode
+    // 重置设置选项卡，以反映当前模式
     settings_active_tab = is_mobile ? 1 : 0;
 }
 
@@ -324,14 +324,14 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
 {
     const bool is_mobile = ToolboxSettings::is_in_mobile_mode;
 
-    // Auto-select tab based on current mode on first open
+    // 首次打开时根据当前模式自动选择选项卡
     if (settings_active_tab < 0) {
         settings_active_tab = is_mobile ? 1 : 0;
     }
 
     const auto window = ImGui::FindWindowByName(Name());
 
-    // Sync the current mode's stored positions from the live window
+    // 从实时窗口同步当前模式下的位置和大小
     if (window) {
         if (is_mobile) {
             mobile_pos[0] = window->Pos.x;
@@ -359,7 +359,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
     bool& needs_init_ref = is_mobile ? mobile_snap_offset_needs_init : snap_offset_needs_init;
 
     char need_show_buf[128];
-    snprintf(need_show_buf, sizeof(need_show_buf), "You need to show the %s for this control to work", TypeName());
+    snprintf(need_show_buf, sizeof(need_show_buf), "你需要显示 %s 才能使此控件生效", TypeName());
 
     {
         static const char* frame_label_options[_countof(available_frame_labels) + 1];
@@ -375,13 +375,13 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
                 break;
             }
         }
-        const char* preview = current_idx >= 0 ? frame_label_options[current_idx] : "None";
+        const char* preview = current_idx >= 0 ? frame_label_options[current_idx] : "无";
 
         const bool snap_disabled = !is_movable || lm;
         ImGui::BeginDisabled(snap_disabled);
         const std::string prev_snap = snap;
-        if (ImGui::BeginCombo("Snap to Frame", preview)) {
-            if (ImGui::Selectable("None", current_idx < 0)) {
+        if (ImGui::BeginCombo("吸附到界面元素", preview)) {
+            if (ImGui::Selectable("无", current_idx < 0)) {
                 snap.clear();
             }
             for (size_t i = 0; i < _countof(available_frame_labels); i++) {
@@ -396,7 +396,7 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             ImGui::EndCombo();
         }
         ImGui::EndDisabled();
-        // When snap target changes to a new frame, schedule snap_offset initialization from current window position
+        // 当吸附目标切换为新界面时，计划从当前窗口位置初始化偏移量
         if (snap != prev_snap && !snap.empty()) {
             needs_init_ref = true;
             snap_off[0] = 0.f;
@@ -404,10 +404,10 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
         if (snap_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
             if (!is_movable) {
-                ImGui::SetTooltip("This %s cannot be moved", TypeName());
+                ImGui::SetTooltip("此 %s 不可移动", TypeName());
             }
             else {
-                ImGui::SetTooltip("Uncheck 'Lock Position' to enable snap-to-frame");
+                ImGui::SetTooltip("取消勾选“锁定位置”以启用吸附功能");
             }
         }
         else {
@@ -415,19 +415,19 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // Position / Snap Offset — mutually exclusive
+    // 位置 / 吸附偏移 — 二者互斥
     {
         const bool pos_disabled = !is_movable || lm;
         ImGui::BeginDisabled(pos_disabled);
         if (!snap.empty()) {
-            // Show relative offset to the snapped GW frame
-            if (ImGui::DragFloat2("Snap Offset", snap_off, 1.0f, 0.0f, 0.0f, "%.0f")) {
-                needs_init_ref = false; // user explicitly set offset; cancel pending init
+            // 显示相对于吸附界面的偏移量
+            if (ImGui::DragFloat2("吸附偏移", snap_off, 1.0f, 0.0f, 0.0f, "%.0f")) {
+                needs_init_ref = false; // 用户手动设置了偏移，取消待初始化的状态
             }
         }
         else {
-            // Show absolute screen coordinates
-            if (ImGui::DragFloat2("Position", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
+            // 显示绝对屏幕坐标
+            if (ImGui::DragFloat2("位置", cur_pos, 1.0f, 0.0f, 0.0f, "%.0f")) {
                 if (window) {
                     ImGui::SetWindowPos(window, {cur_pos[0], cur_pos[1]});
                 }
@@ -436,25 +436,25 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         ImGui::EndDisabled();
         if (pos_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
             if (!is_movable) {
-                ImGui::SetTooltip("This %s cannot be moved", TypeName());
+                ImGui::SetTooltip("此 %s 不可移动", TypeName());
             }
             else {
-                ImGui::SetTooltip("Uncheck 'Lock Position' to adjust position");
+                ImGui::SetTooltip("取消勾选“锁定位置”以调整位置");
             }
         }
         else if (!snap.empty()) {
-            ImGui::ShowHelp("Pixel offset from the snapped GW frame's top-left corner");
+            ImGui::ShowHelp("相对于吸附界面左上角的像素偏移量");
         }
         else {
             ImGui::ShowHelp(need_show_buf);
         }
     }
 
-    // Size
+    // 大小
     {
         const bool size_disabled = !is_resizable || ls || as_;
         ImGui::BeginDisabled(size_disabled);
-        if (ImGui::DragFloat2("Size", cur_size, 1.0f, 0.0f, 0.0f, "%.0f")) {
+        if (ImGui::DragFloat2("大小", cur_size, 1.0f, 0.0f, 0.0f, "%.0f")) {
             if (window) {
                 ImGui::SetWindowSize(window, {cur_size[0], cur_size[1]});
             }
@@ -462,13 +462,13 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         ImGui::EndDisabled();
         if (size_disabled && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
             if (!is_resizable) {
-                ImGui::SetTooltip("This %s cannot be resized", TypeName());
+                ImGui::SetTooltip("此 %s 不可调整大小", TypeName());
             }
             else if (as_) {
-                ImGui::SetTooltip("Uncheck 'Auto Size' to adjust size");
+                ImGui::SetTooltip("取消勾选“自动大小”以调整尺寸");
             }
             else {
-                ImGui::SetTooltip("Uncheck 'Lock Size' to adjust size");
+                ImGui::SetTooltip("取消勾选“锁定大小”以调整尺寸");
             }
         }
         else {
@@ -476,93 +476,93 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
         }
     }
 
-    // Lock / auto checkboxes
+    // 锁定/自动复选框
     ImGui::StartSpacedElements(180.f);
 
     ImGui::NextSpacedElement();
     ImGui::BeginDisabled(!is_movable);
-    ImGui::Checkbox("Lock Position", &lm);
+    ImGui::Checkbox("锁定位置", &lm);
     ImGui::EndDisabled();
     if (!is_movable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("This %s cannot be moved", TypeName());
+        ImGui::SetTooltip("此 %s 不可移动", TypeName());
     }
 
     ImGui::NextSpacedElement();
     ImGui::BeginDisabled(!is_resizable);
-    ImGui::Checkbox("Lock Size", &ls);
+    ImGui::Checkbox("锁定大小", &ls);
     ImGui::EndDisabled();
     if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("This %s cannot be resized", TypeName());
+        ImGui::SetTooltip("此 %s 不可调整大小", TypeName());
     }
 
     ImGui::NextSpacedElement();
     ImGui::BeginDisabled(!is_resizable);
-    ImGui::Checkbox("Auto Size", &as_);
+    ImGui::Checkbox("自动大小", &as_);
     ImGui::EndDisabled();
     if (!is_resizable && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("This %s cannot be resized", TypeName());
+        ImGui::SetTooltip("此 %s 不可调整大小", TypeName());
     }
 
-    // Auto-resize on collapse/expand (only relevant when the window has a title bar)
+    // 折叠/展开时自动调整大小（仅当窗口有标题栏时有效）
     ImGui::BeginDisabled(!has_titlebar);
-    if (ImGui::Checkbox("Auto-resize on collapse/expand", &auto_resize_on_collapse)) {
+    if (ImGui::Checkbox("折叠/展开时自动调整大小", &auto_resize_on_collapse)) {
         collapse_size_initialized = false;
     }
     ImGui::EndDisabled();
     if (!has_titlebar && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("This %s has no titlebar", TypeName());
+        ImGui::SetTooltip("此 %s 没有标题栏", TypeName());
     }
     else {
-        ImGui::ShowHelp("Automatically resize this window when it is collapsed or expanded");
+        ImGui::ShowHelp("当窗口折叠或展开时自动调整其大小");
     }
     ImGui::Indent();
     ImGui::BeginDisabled(!auto_resize_on_collapse || !has_titlebar);
-    if (ImGui::DragFloat2("Collapsed size", collapsed_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
+    if (ImGui::DragFloat2("折叠时大小", collapsed_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
         collapse_size_initialized = false;
     }
-    ImGui::ShowHelp("Width and height when the title bar is collapsed; 0 = keep current");
-    if (ImGui::DragFloat2("Expanded size", expanded_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
+    ImGui::ShowHelp("标题栏折叠时的宽度和高度；0 表示保持当前尺寸");
+    if (ImGui::DragFloat2("展开时大小", expanded_size.data(), 1.f, 0.f, 0.f, "%.0f")) {
         collapse_size_initialized = false;
     }
-    ImGui::ShowHelp("Width and height when the window is expanded; 0 = keep current");
+    ImGui::ShowHelp("窗口展开时的宽度和高度；0 表示保持当前尺寸");
     ImGui::EndDisabled();
     ImGui::Unindent();
 
-    // Shared settings (not per-mode) drawn below the two-column layout
+    // 以下为通用设置（不区分模式）
     ImGui::StartSpacedElements(180.f);
 
     ImGui::NextSpacedElement();
     ImGui::BeginDisabled(!has_titlebar);
-    ImGui::Checkbox("Show titlebar", &show_titlebar);
+    ImGui::Checkbox("显示标题栏", &show_titlebar);
     ImGui::EndDisabled();
     if (!has_titlebar && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("This %s has no titlebar", TypeName());
+        ImGui::SetTooltip("此 %s 没有标题栏", TypeName());
     }
 
     ImGui::NextSpacedElement();
     ImGui::BeginDisabled(!has_closebutton);
-    ImGui::Checkbox("Show close button", &show_closebutton);
+    ImGui::Checkbox("显示关闭按钮", &show_closebutton);
     ImGui::EndDisabled();
     if (!has_closebutton && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("This %s has no close button", TypeName());
+        ImGui::SetTooltip("此 %s 没有关闭按钮", TypeName());
     }
 
     ImGui::NextSpacedElement();
     ImGui::BeginDisabled(!can_show_in_main_window);
-    if (ImGui::Checkbox("Show in main window", &show_menubutton)) {
+    if (ImGui::Checkbox("在主窗口中显示", &show_menubutton)) {
         if (can_show_in_main_window) {
             MainWindow::Instance().pending_refresh_buttons = true;
         }
     }
     ImGui::EndDisabled();
     if (!can_show_in_main_window && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
-        ImGui::SetTooltip("This %s cannot be shown in the main window", TypeName());
+        ImGui::SetTooltip("此 %s 无法在主窗口中显示", TypeName());
     }
 
-    ImGui::CheckboxWithHelp("Show breakout button", &show_breakout_button, "Shows a small floating button on screen that toggles this window.\nRight-click the button to remove it.");
+    ImGui::CheckboxWithHelp("显示浮动按钮", &show_breakout_button, "显示一个小型浮动按钮，用于切换此窗口的显示。\n右键点击该按钮可移除它。");
     if (show_breakout_button) {
         ImGui::Indent();
-        ImGui::Checkbox("Lock breakout button position", &lock_breakout_button);
+        ImGui::Checkbox("锁定浮动按钮位置", &lock_breakout_button);
         if (!lock_breakout_button) {
             char breakout_window_id[256];
             snprintf(breakout_window_id, sizeof(breakout_window_id), "%s##breakout_btn", Name());
@@ -571,10 +571,10 @@ void ToolboxUIElement::DrawSizeAndPositionSettings()
             if (breakout_window) {
                 _breakout_pos = breakout_window->Pos;
             }
-            if (ImGui::DragFloat2("Breakout position", reinterpret_cast<float*>(&_breakout_pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
+            if (ImGui::DragFloat2("浮动按钮位置", reinterpret_cast<float*>(&_breakout_pos), 1.0f, 0.0f, 0.0f, "%.0f")) {
                 ImGui::SetWindowPos(breakout_window_id, _breakout_pos);
             }
-            ImGui::ShowHelp("You need to show the breakout button for this control to work");
+            ImGui::ShowHelp("你需要显示浮动按钮才能调整其位置");
         }
         ImGui::Unindent();
     }
@@ -656,7 +656,7 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
         }
 
         if (ImGui::BeginPopupContextWindow()) {
-            if (ImGui::MenuItem("Remove breakout button")) {
+            if (ImGui::MenuItem("移除浮动按钮")) {
                 show_breakout_button = false;
             }
             ImGui::EndPopup();
@@ -665,7 +665,7 @@ void ToolboxUIElement::DrawBreakoutButton(IDirect3DDevice9*)
     ImGui::End();
     ImGui::PopStyleVar(2);
 
-    // Keep breakout_pos current so SaveSettings captures the right position even without a live ImGui context.
+    // 持续更新 breakout_pos，以便在无 ImGui 上下文时保存也能捕获正确位置
     if (const auto bw = ImGui::FindWindowByName(window_id)) {
         breakout_pos[0] = bw->Pos.x;
         breakout_pos[1] = bw->Pos.y;

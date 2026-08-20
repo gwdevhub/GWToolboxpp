@@ -579,7 +579,7 @@ public:
 
     const bool IsActive() const;
 
-    [[nodiscard]] const char* Name() const override { return "Observer Module"; }
+    [[nodiscard]] const char* Name() const override { return "观战模块"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_EYE; }
 
     struct Settings {

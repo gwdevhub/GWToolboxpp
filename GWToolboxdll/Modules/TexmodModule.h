@@ -21,7 +21,7 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "gMod/uMod/Texmod"; }
+    [[nodiscard]] const char* Name() const override { return "gMod/uMod/纯文本模式"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_IMAGE; }
     [[nodiscard]] const char* Description() const override
     {

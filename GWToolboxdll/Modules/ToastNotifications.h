@@ -15,8 +15,8 @@ public:
         return instance;
     }
 
-    [[nodiscard]] const char* Name() const override { return "Notifications"; }
-    [[nodiscard]] const char* Description() const override { return "Enables desktop notifications when in-game events happen."; }
+    [[nodiscard]] const char* Name() const override { return "通知桌面弹窗"; }
+    [[nodiscard]] const char* Description() const override { return "当游戏内事件发生时，启用桌面通知。"; }
     [[nodiscard]] const char* Icon() const override { return ICON_FA_BULLHORN; }
 
     struct Settings {
