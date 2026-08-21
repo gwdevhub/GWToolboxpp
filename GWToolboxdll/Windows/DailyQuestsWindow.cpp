@@ -2004,18 +2004,22 @@ const DailyQuests::NicholasIngredientInfo* DailyQuests::GetNicholasIngredientInf
     return 0;
 }
 
-time_t DailyQuests::GetTimestampFromNicholasSandford(QuestData* data)
+time_t DailyQuests::GetTimestampFromNicholasSandford(QuestData* data, time_t now)
 {
     constexpr time_t NICHOLAS_PRE_START_DATE = 1239260400;
     constexpr int SECONDSINADAY = 86400;
-    auto index = -1;
+    if (!now) now = time(nullptr);
+    // The 52 day cycle only contains 13 different items, so each one comes up several times.
+    // Check every slot holding this item and return the soonest, not just the first slot in the table.
+    auto next_event_time = std::numeric_limits<time_t>::max();
     for (auto i = 0; i < static_cast<int>(NICHOLAS_PRE_COUNT); i++) {
-        if (&nicholas_sandford_cycles[i] == data) {
-            index = i;
+        if (nicholas_sandford_cycles[i].enc_name != data->enc_name) {
+            continue;
         }
+        next_event_time = std::min(next_event_time, GetNextEventTime(NICHOLAS_PRE_START_DATE, now, i, NICHOLAS_PRE_COUNT, SECONDSINADAY));
     }
-    assert(index != -1);
-    return GetNextEventTime(NICHOLAS_PRE_START_DATE, time(nullptr), index, NICHOLAS_PRE_COUNT, SECONDSINADAY);
+    assert(next_event_time != std::numeric_limits<time_t>::max());
+    return next_event_time;
 }
 
 DailyQuests::DailyQuestResult DailyQuests::GetNicholasTheTraveller(time_t unix)
@@ -2104,12 +2108,13 @@ const DailyQuests::ZaishenCoinReward* DailyQuests::GetZaishenCoinReward(GW::Cons
     return it != zaishen_coin_rewards.end() ? &it->second : nullptr;
 }
 
-time_t DailyQuests::GetTimestampFromNicholasTheTraveller(NicholasCycleData* data)
+time_t DailyQuests::GetTimestampFromNicholasTheTraveller(NicholasCycleData* data, time_t now)
 {
     /*
     This function returns the next start time of the cycle data or the
     current time if the cycle is ongoing
     */
+    if (!now) now = time(nullptr);
     auto index = -1;
     for (auto i = 0; i < NICHOLAS_POST_COUNT; i++) {
         if (&nicholas_cycles[i] == data) {
@@ -2118,5 +2123,5 @@ time_t DailyQuests::GetTimestampFromNicholasTheTraveller(NicholasCycleData* data
     }
 
     assert(index != -1);
-    return GetNextEventTime(NICHOLAS_POST_START_DATE, time(nullptr), index, NICHOLAS_POST_COUNT, SECONDSINAWEEK);
+    return GetNextEventTime(NICHOLAS_POST_START_DATE, now, index, NICHOLAS_POST_COUNT, SECONDSINAWEEK);
 }
