@@ -39,7 +39,8 @@ namespace {
     constexpr size_t VANGUARD_COUNT = 9;
     constexpr size_t NICHOLAS_PRE_COUNT = 52;
     constexpr size_t NICHOLAS_POST_COUNT = 137;
-    constexpr time_t NICHOLAS_POST_START_DATE = 1405954800; // 2014年7月21日（周一）15:00:00，与Regent Valley的第一朵Red Iris Flowers同步
+    constexpr time_t NICHOLAS_POST_START_DATE = 1405954800; // 2014年7月21日（周一）15:00:00，与Regent Valley的第一朵红色鸢尾花同步
+    constexpr int SECONDSINAWEEK = 604800;
 
     class ZaishenQuestData : public DailyQuests::QuestData {
     public:
@@ -110,72 +111,72 @@ namespace {
 
     ZaishenQuestData zaishen_bounty_cycles[] = {
         // 战承悬赏 66天循环
-        {MapID::Poisoned_Outcrops, L"Droajam, Mage of the Sands"},
-        {MapID::Nahpui_Quarter_explorable, L"Royen Beastkeeper"},
-        {MapID::Bloodstone_Caves_Level_1, L"Eldritch Ettin"},
-        {MapID::The_Underworld, L"Vengeful Aatxe"},
-        {MapID::Fronis_Irontoes_Lair_mission, L"Fronis Irontoe"},
-        {MapID::Urgozs_Warren, L"Urgoz"},
-        {MapID::Norrhart_Domains, L"Fenrir"},
+        {MapID::Poisoned_Outcrops, L"沙之法师·卓加姆"},
+        {MapID::Nahpui_Quarter_explorable, L"野兽看守者罗彦"},
+        {MapID::Bloodstone_Caves_Level_1, L"怪异双头巨人"},
+        {MapID::The_Underworld, L"复仇牛头怪"},
+        {MapID::Fronis_Irontoes_Lair_mission, L"铁趾·弗朗尼"},
+        {MapID::Urgozs_Warren, L"尔果"},
+        {MapID::Norrhart_Domains, L"芬瑞"},
         {MapID::Slavers_Exile_Level_1, L"希维塔姆"},          // 希维塔姆
         {MapID::Gyala_Hatchery, L"莫比·风喙"},            // 莫比·风喙
-        {MapID::The_Underworld, L"Charged Blackness"},
-        {MapID::Majestys_Rest, L"Rotscale"},
+        {MapID::The_Underworld, L"暗黑幽灵"},
+        {MapID::Majestys_Rest, L"恶臭骨龙"},
         {MapID::Vloxen_Excavations_Level_1, L"不洁·咒暗"}, // 不洁·咒暗
-        {MapID::Forum_Highlands, L"Korshek the Immolated"},
-        {MapID::Drakkar_Lake, L"Myish, Lady of the Lake"},
+        {MapID::Forum_Highlands, L"宰杀者·科薛克"},
+        {MapID::Drakkar_Lake, L"湖之女·蜜希"},
         {MapID::Frostmaws_Burrows_Level_1, L"冻击·弑族者"}, // 冻击·弑族者
         {MapID::Unwaking_Waters, L"火翼·坤维"},           // 火翼·坤维
         {MapID::Bogroot_Growths_Level_1, L"晶蒙"},      // 晶蒙
-        {MapID::Domain_of_Anguish, L"The Greater Darkness"},
+        {MapID::Domain_of_Anguish, L"巨大暗影"},
         {MapID::Oolas_Lab_Level_1, L"TPS调节高轮"},     // TPS调节高轮
         {MapID::Ravens_Point_Level_1, L"疫之破坏者"}, // 疫之破坏者
-        {MapID::Tomb_of_the_Primeval_Kings, L"The Darknesses"},
-        {MapID::Jahai_Bluffs, L"Admiral Kantoh"},
-        {MapID::Sacnoth_Valley, L"Borrguus Blisterbark"},
-        {MapID::Slavers_Exile_Level_1, L"Forgewight"},
-        {MapID::The_Undercity, L"Baubao Wavewrath"},
-        {MapID::Riven_Earth, L"Joffs the Mitigator"},
-        {MapID::Rragars_Menagerie_Level_1, L"Rragar Maneater"},
-        {MapID::The_Undercity, L"Chung, the Attuned"},
-        {MapID::Domain_of_Anguish, L"Lord Jadoth"},
+        {MapID::Tomb_of_the_Primeval_Kings, L"暗影(先王之墓)"},
+        {MapID::Jahai_Bluffs, L"上将·坎托"},
+        {MapID::Sacnoth_Valley, L"风吼·柏格斯"},
+        {MapID::Slavers_Exile_Level_1, L"炼冶维特"},
+        {MapID::The_Undercity, L"怒浪·保博"},
+        {MapID::Riven_Earth, L"缓和者·卓夫"},
+        {MapID::Rragars_Menagerie_Level_1, L"拉喀·食人者"},
+        {MapID::The_Undercity, L"得道者·村"},
+        {MapID::Domain_of_Anguish, L"霸王·贾多斯"},
         {MapID::Drakkar_Lake, L"地缚·纳法斯图"},         // 地缚·纳法斯图
-        {MapID::Sorrows_Furnace, L"The Iron Forgeman"},
+        {MapID::Sorrows_Furnace, L"钢铁巨人"},
         {MapID::Heart_of_the_Shiverpeaks_Level_1, L"麦格默斯"},   // 麦格默斯
-        {MapID::Sparkfly_Swamp, L"Mobrin, Lord of the Marsh"},
-        {MapID::Vehtendi_Valley, L"Jarimiya the Unmerciful"},
-        {MapID::Slavers_Exile_Level_1, L"Duncan the Black"},
-        {MapID::Tahnnakai_Temple_explorable, L"Quansong Spiritspeak"},
-        {MapID::Domain_of_Anguish, L"The Stygian Underlords"},
-        {MapID::Sacnoth_Valley, L"Fozzy Yeoryios"},
-        {MapID::Domain_of_Anguish, L"The Black Beast of Arrgh"},
-        {MapID::Arachnis_Haunt_Level_1, L"Arachni"},
-        {MapID::The_Underworld, L"The Four Horsemen"},
+        {MapID::Sparkfly_Swamp, L"碎之主·魔兵"},
+        {MapID::Vehtendi_Valley, L"残酷·贾米里"},
+        {MapID::Slavers_Exile_Level_1, L"黑色 ·唐肯"},
+        {MapID::Tahnnakai_Temple_explorable, L"通灵者·魁嵩"},
+        {MapID::Domain_of_Anguish, L"冥狱地王"},
+        {MapID::Sacnoth_Valley, L"冻 耀尔伊欧"},
+        {MapID::Domain_of_Anguish, L"黑色魔兽·阿尔古"},
+        {MapID::Arachnis_Haunt_Level_1, L"奥拉赫妮"},
+        {MapID::The_Underworld, L"多姆四骑士"},
         {MapID::Sepulchre_of_Dragrimmar_Level_1, L"残余的断片"}, // 残余的断片
-        {MapID::Morostav_Trail, L"Arbor Earthcall"},
-        {MapID::Ooze_Pit_mission, L"Prismatic Ooze"},
-        {MapID::The_Fissure_of_Woe, L"Lord Khobay"},
-        {MapID::Crystal_Overlook, L"Jedeh the Mighty"},
-        {MapID::Archipelagos, L"Ssuns, Blessed of Dwayna"},
-        {MapID::Slavers_Exile_Level_1, L"Justiciar Thommis"},
-        {MapID::Perdition_Rock, L"Harn and Maxine Coldstone"},
-        {MapID::Alcazia_Tangle, L"Pywatt the Swift"},
-        {MapID::Shards_of_Orr_Level_1, L"Fendi Nin"},
-        {MapID::Ferndale, L"Mungri Magicbox"},
-        {MapID::The_Fissure_of_Woe, L"Priest of Menzies"},
-        {MapID::Catacombs_of_Kathandrax_Level_1, L"Ilsundur, Lord of Fire"},
-        {MapID::Prophets_Path, L"Kepkhet Marrowfeast"},
-        {MapID::Barbarous_Shore, L"Commander Wahli"},
-        {MapID::The_Deep, L"Kanaxai"},
-        {MapID::Bogroot_Growths_Level_1, L"Khabuus"},
-        {MapID::Dalada_Uplands, L"Molotov Rocktail"},
-        {MapID::Domain_of_Anguish, L"The Stygian Lords"},
-        {MapID::The_Fissure_of_Woe, L"Dragon Lich"},
-        {MapID::Darkrime_Delves_Level_1, L"Havok Soulwail"},
-        {MapID::Xaquang_Skyway, L"Ghial the Bone Dancer"},
-        {MapID::Cathedral_of_Flames_Level_1, L"Murakai, Lady of the Night"},
-        {MapID::Slavers_Exile_Level_1, L"Rand Stormweaver"},
-        {MapID::Kessex_Peak, L"Verata"}
+        {MapID::Morostav_Trail, L"大地之唤·亚伯"},
+        {MapID::Ooze_Pit_mission, L"多彩乌兹"},
+        {MapID::The_Fissure_of_Woe, L"领主库贝"},
+        {MapID::Crystal_Overlook, L"强者·捷地"},
+        {MapID::Archipelagos, L"薇娜的祝福·桑斯"},
+        {MapID::Slavers_Exile_Level_1, L"司法官·汤米兹"},
+        {MapID::Perdition_Rock, L"冰石哈恩/麦辛"},
+        {MapID::Alcazia_Tangle, L"迅捷·派维特"},
+        {MapID::Shards_of_Orr_Level_1, L"梵蒂宁"},
+        {MapID::Ferndale, L"魔法盒·牧格里"},
+        {MapID::The_Fissure_of_Woe, L"曼席斯的祭司"},
+        {MapID::Catacombs_of_Kathandrax_Level_1, L"火之主·音丧多"},
+        {MapID::Prophets_Path, L"柯博海特·食髓者"},
+        {MapID::Barbarous_Shore, L"指挥官·瓦里"},
+        {MapID::The_Deep, L"加奈赛"},
+        {MapID::Bogroot_Growths_Level_1, L"卡布斯"},
+        {MapID::Dalada_Uplands, L"石尾·摩洛托夫"},
+        {MapID::Domain_of_Anguish, L"冥狱霸主"},
+        {MapID::The_Fissure_of_Woe, L"巫妖之龙"},
+        {MapID::Darkrime_Delves_Level_1, L"霍克·灵叹"},
+        {MapID::Xaquang_Skyway, L"骨之舞者·葛西"},
+        {MapID::Cathedral_of_Flames_Level_1, L"夜之女·幕兰凯"},
+        {MapID::Slavers_Exile_Level_1, L"织暴者·硬皮"},
+        {MapID::Kessex_Peak, L"死灵法师·芙瑞达"}
     };
     static_assert(_countof(zaishen_bounty_cycles) == ZAISHEN_BOUNTY_COUNT);
 
