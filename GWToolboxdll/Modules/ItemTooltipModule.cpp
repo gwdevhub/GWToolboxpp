@@ -207,10 +207,12 @@ namespace {
             const auto info = DailyQuests::GetNicholasSandfordItemInfo(item->name_enc);
             if (!info) return;
             const auto collection_time = DailyQuests::GetTimestampFromNicholasSandford(info, current_time);
+            // Same as Nicholas the Traveler below: show the total needed for all 5 trades, not the amount for a single trade
+            constexpr auto quantity_for_total_gifts = DailyQuests::NICHOLAS_SANDFORD_ITEMS_PER_TRADE * DailyQuests::NICHOLAS_TRADES_PER_ROTATION;
             if (collection_time <= current_time)
-                append(std::format(L"Nicholas Sandford collects {} of these right now!", 5));
+                append(std::format(L"Nicholas Sandford collects {} of these right now!", quantity_for_total_gifts));
             else
-                append(std::format(L"Nicholas Sandford collects {} of these {}!", 5, TextUtils::RelativeTimeW(collection_time)));
+                append(std::format(L"Nicholas Sandford collects {} of these {}!", quantity_for_total_gifts, TextUtils::RelativeTimeW(collection_time)));
             return;
         }
 
@@ -224,14 +226,14 @@ namespace {
         const auto ingredient_time = ingredient_nick_info ? DailyQuests::GetTimestampFromNicholasTheTraveller(ingredient_nick_info, current_time) : std::numeric_limits<time_t>::max();
 
         if (info && info_time <= ingredient_time) {
-            const auto quantity_for_total_gifts = info->quantity * 5;
+            const auto quantity_for_total_gifts = info->quantity * DailyQuests::NICHOLAS_TRADES_PER_ROTATION;
             if (info_time <= current_time)
                 append(std::format(L"Nicholas The Traveler collects {} of these right now!", quantity_for_total_gifts));
             else
                 append(std::format(L"Nicholas The Traveler collects {} of these {}!", quantity_for_total_gifts, TextUtils::RelativeTimeW(info_time)));
         }
         else if (ingredient_nick_info) {
-            const auto quantity_for_total_gifts = ingredient_nick_info->quantity * 5;
+            const auto quantity_for_total_gifts = ingredient_nick_info->quantity * DailyQuests::NICHOLAS_TRADES_PER_ROTATION;
             const auto total_qty = ingredient->ingredient_quantity * quantity_for_total_gifts;
             if (ingredient_time <= current_time)
                 append(std::format(L"Collect {} of these to craft {} Nicholas The Traveler items right now!", total_qty, quantity_for_total_gifts));

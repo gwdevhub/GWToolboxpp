@@ -1355,14 +1355,16 @@ void DailyQuests::Draw(IDirect3DDevice9*)
             const auto si = GetNicholasSandfordIdx(&t);
             const bool prev = subscribed_nicholas_sandford[si];
             const auto sandford_quest = GetNicholasSandford(t).quest;
+            // Item counts are the total for all 5 trades, matching Nicholas the Traveler
+            constexpr auto sandford_total = NICHOLAS_SANDFORD_ITEMS_PER_TRADE * NICHOLAS_TRADES_PER_ROTATION;
             write_daily_info(&subscribed_nicholas_sandford[si], sandford_quest, false);
             const auto collected = GetNicholasSandfordCollectedQuantity(sandford_quest);
             if (collected > 0) {
                 ImGui::SameLine(0, 0);
                 const ImColor* col = &normal_color;
-                if (collected >= 5) col = &incomplete_color;
-                if (collected >= 25) col = &complete_color;
-                ImGui::TextColored(*col, " (%d/5)", static_cast<int>(collected));
+                if (collected >= NICHOLAS_SANDFORD_ITEMS_PER_TRADE) col = &incomplete_color;
+                if (collected >= sandford_total) col = &complete_color;
+                ImGui::TextColored(*col, " (%d/%d)", static_cast<int>(collected), static_cast<int>(sandford_total));
             }
             if (subscribed_nicholas_sandford[si] != prev) {
                 for (size_t j = 0; j < NICHOLAS_PRE_COUNT; ++j) {
@@ -1402,10 +1404,13 @@ void DailyQuests::Draw(IDirect3DDevice9*)
                 const auto hovered = ImGui::IsItemHovered();
                 const auto collected = nick->GetCollectedQuantity();
                 if (collected > 0) {
+                    // Item counts are the total for all 5 trades, as in the item tooltip
+                    const auto nick_total = nick->quantity * NICHOLAS_TRADES_PER_ROTATION;
                     ImGui::SameLine();
                     const ImColor* col = &normal_color;
                     if (collected >= nick->quantity) col = &incomplete_color;
-                    ImGui::TextColored(*col, "(%d/%d)", collected, nick->quantity);
+                    if (collected >= nick_total) col = &complete_color;
+                    ImGui::TextColored(*col, "(%d/%d)", static_cast<int>(collected), static_cast<int>(nick_total));
                 }
                 if (rmb_clicked) ImGui::SetContextMenu(OnNicholasContextMenu, nick);
                 if (hovered) ImGui::SetTooltip("%s in %s", nick->GetQuestName(), nick->GetMapName());
